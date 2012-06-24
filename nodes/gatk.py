@@ -67,7 +67,7 @@ class _IndelRealignerNode(node.Node):
 
 
 
-def add_indel_realigner(config, destination, reference, infile, outfile, dependencies = ()):
+def IndelRealignerNode(config, destination, reference, infile, outfile, dependencies = ()):
     trainer = _IndelTrainerNode(config = config,
                                 destination = destination, 
                                 reference = reference, 
@@ -80,5 +80,4 @@ def add_indel_realigner(config, destination, reference, infile, outfile, depende
                                   infile = infile, 
                                   outfile = outfile,
                                   dependencies = [trainer])
-
     return aligner

@@ -31,6 +31,9 @@ class Pypeline:
 
         self.print_nodes(self._nodes, states)
         while any((states.get(node) != Pypeline.FINISHED) for node in self._nodes):
+            if not self._check_running_nodes(states, running):
+                break
+
             while (len(running) < max_running):
                 node = self._get_runnable_node(self._nodes, states)
                 if not node:
@@ -43,15 +46,14 @@ class Pypeline:
                 self.print_nodes(self._nodes, states)
                 last_running = dict(running)
                 
-            if not self._check_running_nodes(states, running):
-                break
-
             time.sleep(1)
 
         pool.close()
         pool.join()
 
         self._check_running_nodes(states, running)
+
+        ui.print_msg("Done ...")
 
 
     @classmethod

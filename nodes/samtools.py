@@ -6,7 +6,7 @@ import fileutils
 from atomiccmd import AtomicCmd, ParallelCmds
 
 
-class Genotype(node.Node):
+class GenotypeNode(node.Node):
     pileup_args = "-EA"
     caller_args = "-g"
 
@@ -15,7 +15,7 @@ class Genotype(node.Node):
 
         pileup   = AtomicCmd(destination,
                              ["samtools", "mpileup", 
-                              Genotype.pileup_args,
+                              GenotypeNode.pileup_args,
                               "-uf", "%(IN_REFERENCE)s",
                               "%(IN_BAMFILE)s"],
                              IN_REFERENCE = reference,
@@ -23,7 +23,7 @@ class Genotype(node.Node):
                              stdout       = AtomicCmd.PIPE,
                              stderr       = outfile + ".pileup_log")
         
-        call_genotype = ["bcftools", "view", Genotype.caller_args, "-"]
+        call_genotype = ["bcftools", "view", GenotypeNode.caller_args, "-"]
         if regions:
             call_genotype[-1:-1] = ["-l", regions]
         genotype = AtomicCmd(destination,
@@ -48,7 +48,7 @@ class Genotype(node.Node):
 
 
 # FIXME: Should use temp folder ...
-class TabixIndex(node.Node):
+class TabixIndexNode(node.Node):
     def __init__(self, config, destination, infile, dependencies = ()):
         assert infile.lower().endswith(".vcf.bgz")
 

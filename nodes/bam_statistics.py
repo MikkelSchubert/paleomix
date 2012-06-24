@@ -7,7 +7,7 @@ import fileutils
 
 
 
-class PairedStatistics(node.Node):
+class PairedStatisticsNode(node.Node):
     def __init__(self, _, infile, dependencies = ()):
         self._infile = infile
         self._outfile = os.path.split(infile)[-1] + ".paired_stats"
