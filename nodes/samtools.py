@@ -1,27 +1,68 @@
 import os
 
 import node
-from atomiccmd import *
+import fileutils
+
+from atomiccmd import AtomicCmd, ParallelCmds
 
 
 class Genotype(node.Node):
-    def __init__(self, config, destination, reference, infile, outfile, dependencies = []):
-        cmd_pileup   = AtomicCmd(destination,
-                                 ["samtools", "mpileup", "-uf", "%(IN_REFERENCE)s", "-EA", "%(IN_BAMFILE)s"],
-                                 IN_REFERENCE = reference,
-                                 IN_BAMFILE   = infile,
-                                 stdout       = AtomicCmd.PIPE,
-                                 stderr       = outfile + ".pileup_log")
-        cmd_genotype = AtomicCmd(destination,
-                                 ["bcftools", "view", "-bg", "-"],
-                                 stdin        = cmd_pileup,
-                                 stdout       = outfile,
-                                 stderr       = outfile + ".genotype_log")
+    pileup_args = "-EA"
+    caller_args = "-g"
+
+    def __init__(self, config, destination, reference, infile, outfile, regions = None, dependencies = ()):
+        assert outfile.lower().endswith(".vcf.bgz")
+
+        pileup   = AtomicCmd(destination,
+                             ["samtools", "mpileup", 
+                              Genotype.pileup_args,
+                              "-uf", "%(IN_REFERENCE)s",
+                              "%(IN_BAMFILE)s"],
+                             IN_REFERENCE = reference,
+                             IN_BAMFILE   = infile,
+                             stdout       = AtomicCmd.PIPE,
+                             stderr       = outfile + ".pileup_log")
+        
+        call_genotype = ["bcftools", "view", Genotype.caller_args, "-"]
+        if regions:
+            call_genotype[-1:-1] = ["-l", regions]
+        genotype = AtomicCmd(destination,
+                             call_genotype,
+                             stdin        = pileup,
+                             stdout       = AtomicCmd.PIPE,
+                             stderr       = outfile + ".genotype_log")
+
+        bgzip    = AtomicCmd(destination,
+                             ["bgzip"],
+                             stdin        = genotype,
+                             stdout       = outfile)
 
         description = "<Genotyper: '%s' -> '%s'>" \
             % (infile, os.path.join(destination, outfile))
-            
+
         node.Node.__init__(self, 
-                           description = description,
-                           command = AtomicSet([cmd_pileup, cmd_genotype]),
+                           description  = description,
+                           command      = ParallelCmds([pileup, genotype, bgzip]),
                            dependencies = dependencies)
+
+
+
+# FIXME: Should use temp folder ...
+class TabixIndex(node.Node):
+    def __init__(self, config, destination, infile, dependencies = ()):
+        assert infile.lower().endswith(".vcf.bgz")
+
+        self._infile = infile
+        cmd_tabix = AtomicCmd(destination,
+                              ["tabix", "%(IN_VCFFILE)s"],
+                              IN_VCFFILE = infile)
+
+        node.Node.__init__(self, 
+                           description  = "<TabixIndex: '%s'>" % (infile,),
+                           command      = cmd_tabix,
+                           dependencies = dependencies)
+
+    def output_exists(self):
+        filename = self._infile + ".tbi"
+        
+        return fileutils.valid_file(filename)

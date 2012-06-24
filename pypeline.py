@@ -1,4 +1,15 @@
+import time
+import multiprocessing
+
 import ui
+
+
+def _call_run(node):
+    """Wrapper function, required in order to call Node.run()
+    in subprocesses, since it is not possible to pickle 
+    bound functions (e.g. self.run)"""
+    return node.run()
+        
 
 
 class Pypeline:
@@ -13,21 +24,59 @@ class Pypeline:
         self._nodes.append(node)
 
 
-    def run(self, max_threads = 1):
+    def run(self, max_running = 4):
+        running, last_running = {}, None
+        pool = multiprocessing.Pool(max_running)
         states = self._check_states(self._nodes, {})
 
-        self.print_nodes(self._nodes)
+        self.print_nodes(self._nodes, states)
         while any((states.get(node) != Pypeline.FINISHED) for node in self._nodes):
-            node = self._get_runnable_node(self._nodes, states)
+            while (len(running) < max_running):
+                node = self._get_runnable_node(self._nodes, states)
+                if not node:
+                    break
 
-            states[node] = Pypeline.RUNNING
-            if not node.run():
-                print "Error occurred, terminating gracefully."
+                states[node] = Pypeline.RUNNING
+                running[node] = pool.apply_async(_call_run, args = (node,))
+                
+            if running != last_running:
+                self.print_nodes(self._nodes, states)
+                last_running = dict(running)
+                
+            if not self._check_running_nodes(states, running):
                 break
+
+            time.sleep(1)
+
+        pool.close()
+        pool.join()
+
+        self._check_running_nodes(states, running)
+
+
+    @classmethod
+    def _check_running_nodes(cls, states, running):
+        errors = False
+        for (node, proc) in running.items():
+            if not proc.ready():
+                continue
+
             states[node] = Pypeline.FINISHED
+            running.pop(node)
+                    
+            try:
+                error = "Run() returned false."
+                result = proc.get()
+            except Exception, error:
+                result = False
 
-            self.print_nodes(self._nodes)
+            if not result:
+                errors = True
+                print "%s: Error occurred running command (terminating gracefully): %s" \
+                    % (node, error)
 
+        return not errors
+ 
 
     @classmethod
     def _check_states(cls, nodes, states):
@@ -55,24 +104,27 @@ class Pypeline:
 
 
     @classmethod
-    def print_nodes(cls, nodes):
+    def print_nodes(cls, nodes, states):
         print
         ui.print_msg("Pipeline:")
-        cls.print_sub_nodes(nodes, "   ")
+        cls.print_sub_nodes(nodes, states, "   ")
         
 
     @classmethod
-    def print_sub_nodes(cls, nodes, prefix = "", live = True):
+    def print_sub_nodes(cls, nodes, states, prefix = "", live = True):
         for node in nodes:
             is_live = live and not node.output_exists()
-            print_func = (ui.print_msg if is_live else ui.print_disabled)
+            if not is_live:
+                print_func = ui.print_disabled
+            elif states.get(node) == Pypeline.RUNNING:
+                print_func = ui.print_info
+            else:
+                print_func = ui.print_msg
             
             print_func(prefix + "+ " + str(node))
             current_prefix = prefix + ("  " if (node == nodes[-1]) else "|  ")
 
             if node.dependencies:
-                cls.print_sub_nodes(node.dependencies, current_prefix + "   ", is_live)
+                cls.print_sub_nodes(node.dependencies, states, current_prefix + "   ", is_live)
             else:
                 print_func(current_prefix)
-
-        

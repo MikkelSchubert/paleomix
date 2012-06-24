@@ -8,9 +8,9 @@ from atomiccmd import AtomicCmd
 
 
 class _IndelTrainerNode(node.Node):
-    def __init__(self, config, destination, reference, inFile, outFile, dependencies = []):
-        jarFile = os.path.join(config.gatk_root, "GenomeAnalysisTK.jar")
-        outFile += ".intervals"
+    def __init__(self, config, destination, reference, infile, outfile, dependencies = ()):
+        jarfile = os.path.join(config.gatk_root, "GenomeAnalysisTK.jar")
+        outfile += ".intervals"
         call  = ["java", "-jar", "%(IN_JAR)s",
                  "-T", "RealignerTargetCreator", 
                  "-R", "%(IN_REFERENCE)s",
@@ -19,15 +19,15 @@ class _IndelTrainerNode(node.Node):
 
         command = AtomicCmd(destination, 
                             call, 
-                            IN_JAR = jarFile,
+                            IN_JAR = jarfile,
                             IN_REFERENCE = reference,
-                            IN_BAMFILE = inFile,
-                            OUT_INTERVALS = outFile,
-                            stdout = outFile + ".log",
-                            stderr = outFile + ".log")
+                            IN_BAMFILE = infile,
+                            OUT_INTERVALS = outfile,
+                            stdout = outfile + ".log",
+                            stderr = outfile + ".log")
         
         description = "<Train Indel Realigner: '%s' -> '%s'>" \
-            % (inFile, os.path.join(destination, outFile))
+            % (infile, os.path.join(destination, outfile))
 
         node.Node.__init__(self, 
                            description = description,
@@ -36,9 +36,9 @@ class _IndelTrainerNode(node.Node):
 
 
 class _IndelRealignerNode(node.Node):
-    def __init__(self, config, destination, reference, inFile, outFile, dependencies = []):
-        jarFile = os.path.join(config.gatk_root, "GenomeAnalysisTK.jar")
-        intervalsFile = os.path.join(destination, outFile + ".intervals")
+    def __init__(self, config, destination, reference, infile, outfile, dependencies = ()):
+        jarfile = os.path.join(config.gatk_root, "GenomeAnalysisTK.jar")
+        intervalsfile = os.path.join(destination, outfile + ".intervals")
         call  = ["java", "-jar", "%(IN_JAR)s",
                  "-T", "IndelRealigner", 
                  "-R", "%(IN_REFERENCE)s",
@@ -48,17 +48,17 @@ class _IndelRealignerNode(node.Node):
 
         command = AtomicCmd(destination,
                             call, 
-                            IN_JAR = jarFile,
+                            IN_JAR = jarfile,
                             IN_REFERENCE = reference,
-                            IN_BAMFILE   = inFile,
-                            IN_INTERVALS = intervalsFile,
-                            OUT_BAMFILE = outFile,
-                            OUT_INDEX  = fileutils.swap_ext(outFile, ".bai"),
-                            stdout = outFile + ".log",
-                            stderr = outFile + ".log")
+                            IN_BAMFILE   = infile,
+                            IN_INTERVALS = intervalsfile,
+                            OUT_BAMFILE = outfile,
+                            OUT_INDEX  = fileutils.swap_ext(outfile, ".bai"),
+                            stdout = outfile + ".log",
+                            stderr = outfile + ".log")
 
         description = "<Indel Realigner: '%s' -> '%s'>" \
-            % (inFile, os.path.join(destination, outFile))
+            % (infile, os.path.join(destination, outfile))
 
         node.Node.__init__(self, 
                            description = description,
@@ -67,18 +67,18 @@ class _IndelRealignerNode(node.Node):
 
 
 
-def add_indel_realigner(config, destination, reference, inFile, outFile, dependencies = []):
+def add_indel_realigner(config, destination, reference, infile, outfile, dependencies = ()):
     trainer = _IndelTrainerNode(config = config,
                                 destination = destination, 
                                 reference = reference, 
-                                inFile = inFile,
-                                outFile = outFile,
+                                infile = infile,
+                                outfile = outfile,
                                 dependencies = dependencies)
     aligner = _IndelRealignerNode(config = config,
                                   destination = destination, 
                                   reference = reference, 
-                                  inFile = inFile, 
-                                  outFile = outFile,
+                                  infile = infile, 
+                                  outfile = outfile,
                                   dependencies = [trainer])
 
     return aligner

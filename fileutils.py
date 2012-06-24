@@ -54,9 +54,25 @@ def missing_files(filenames):
     """Given a list of filenames, returns a list of those that
     does not exist. Note that this function does not differentiate
     between files and folders."""
-    missing_files = []
+    result = []
     for filename in filenames:
-        if not os.path.exists(filename):
-            missing_files.append(filename)
+        if not valid_file(filename):
+            result.append(filename)
             
-    return missing_files
+    return result
+
+
+def is_executable(filename):
+    return os.path.isfile(filename) and os.access(filename, os.X_OK)
+
+
+def executable_exists(filename):
+    if os.path.dirname(filename):
+        print "dirname"
+        return is_executable(filename)
+
+    for path in os.environ["PATH"].split(os.pathsep):
+        if is_executable(os.path.join(path, filename)):
+            return True
+
+    return False

@@ -1,6 +1,4 @@
 import os
-import subprocess
-
 
 import ui
 import fileutils
@@ -10,28 +8,29 @@ SINGLE_THREAD = 1
 
 
 class Node:
-    def __init__(self, description = None, command = [], dependencies = []):
+    def __init__(self, description = None, command = None, dependencies = ()):
         self.__description = description
         self.__command = command
         self.dependencies = dependencies
 
-
-    def get_commands(self):
-        """Returns a list of sets of commands (AtomicCmd or AtomicSet),
-        each of which is run to completion, before the next set is requested. 
-        By default, only the commands set in the constructor are returned. 
-        Functions  doing inter-command processing may overload this function, 
-        rather than passing values to the constructor.
-
-        If this function is overloaded to add inter-command processing,
-        the 'out_exists' function should also be overloaded."""
-        yield self.__command
-
-
     def output_exists(self):
-        for command in self.get_commands():
-            if command.missing_output_files():
-                return False
+        assert self.__command
+        return not self.__command.missing_output_files()
+
+    def run(self):
+        temp = fileutils.create_temp_dir()
+        if not self._check_prerequisites(self.__command):
+            os.rmdir(temp)
+            return False
+            
+        self.__command.run(temp)
+            
+        if not self._wait_for_command(self.__command):
+            return False
+        elif not self._commit_command(self.__command):
+            return False
+
+        os.rmdir(temp)
         return True
 
 
@@ -41,27 +40,12 @@ class Node:
         return "<%s>" % (self.__class__.__name__,)
 
 
-    def run(self):
-        ui.print_info("%s: Running ..." % ((self,)))
-
-        temp = fileutils.create_temp_dir()
-        for command in self.get_commands():
-            if not self._check_prerequisites(command):
-                os.rmdir(temp)
-                return False
-            
-            command.run(temp)
-            
-            if not self._wait_and_commit(command):
-                ui.print_warn("%s: Failed ..." % (self,))
-                return False
-
-        os.rmdir(temp)        
-        ui.print_msg("%s: Finished" % ((self,)))
-        return True
-
-
     def _check_prerequisites(self, command):
+        if not command.executable_exists():
+            ui.print_err("%s: Executable does not exist for command: %s" \
+                              % (self, command))
+            return False
+            
         missing_input = command.missing_input_files()
         if missing_input:
             ui.print_warn("%s: Missing input files for command: %s -> %s" \
@@ -70,16 +54,21 @@ class Node:
 
         return True
 
-    def _wait_and_commit(self, command):
+
+    def _wait_for_command(self, command):
         return_codes = command.wait()
         if any(return_codes):
             ui.print_err("%s: Error(s) running '%s': Return-codes %s" \
                              % (self, command, return_codes))
             return False
-        
+
+        return True
+
+
+    def _commit_command(self, command):
         missing_files = command.missing_temp_files()
         if missing_files:
-            ui.print_err("%s: Expected temp files are missings '%s'" \
+            ui.print_err("%s: Expected temp files are missings for command '%s': %s" \
                              % (self, command, missing_files))
             return False
     
