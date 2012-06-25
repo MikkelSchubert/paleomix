@@ -16,38 +16,38 @@ class Pypeline:
     RUNNING, FINISHED = "Running", "Finished"
 
     def __init__(self, config):
-        self._nodes = []
+        self._top_nodes = []
         self._config = config
 
 
     def add_node(self, node):
-        self._nodes.append(node)
+        self._top_nodes.append(node)
 
 
-    def run(self, max_running = 4, dry_run = False, shallow_run = True):
+    def run(self, max_running = 4, dry_run = False):
         running, last_running = {}, None
-        pool = multiprocessing.Pool(max_running)
-        states = self._check_states(self._nodes, {})
 
-        self.print_nodes(self._nodes, states, shallow_run)
-        if dry_run:
-            ui.print_msg("Dry run, nothing is executed ...")
+        remaining_nodes = self._get_unfinished_nodes(self._top_nodes)
+        if dry_run or not remaining_nodes:
+            self.print_nodes(self._top_nodes, running, remaining_nodes)
+            ui.print_msg("Done ...")
             return            
 
-        while any((states.get(node) != Pypeline.FINISHED) for node in self._nodes):
-            if not self._check_running_nodes(states, running):
+        pool = multiprocessing.Pool(max_running)
+        while remaining_nodes:
+            if not self._check_running_nodes(running):
                 break
 
             while (len(running) < max_running):
-                node = self._get_runnable_node(self._nodes, states, shallow_run = shallow_run)
+                node = self._get_runnable_node(remaining_nodes)
                 if not node:
                     break
 
-                states[node] = Pypeline.RUNNING
                 running[node] = pool.apply_async(_call_run, args = (node, self._config))
+                remaining_nodes.remove(node)
                 
             if running != last_running:
-                self.print_nodes(self._nodes, states, shallow_run)
+                self.print_nodes(self._top_nodes, running, remaining_nodes)
                 last_running = dict(running)
                 
             time.sleep(1)
@@ -55,21 +55,20 @@ class Pypeline:
         pool.close()
         pool.join()
 
-        self._check_running_nodes(states, running)
+        self._check_running_nodes(running)
 
         ui.print_msg("Done ...")
 
 
     @classmethod
-    def _check_running_nodes(cls, states, running):
+    def _check_running_nodes(cls, running):
         errors = False
         for (node, proc) in running.items():
             if not proc.ready():
                 continue
 
-            states[node] = Pypeline.FINISHED
             running.pop(node)
-                    
+                   
             try:
                 error = "Run() returned false."
                 result = proc.get()
@@ -83,52 +82,45 @@ class Pypeline:
 
         return not errors
  
+    
+    @classmethod
+    def _get_unfinished_nodes(cls, nodes):
+        unfinished = []
+        for node in nodes:
+            if not node.output_exists():
+                unfinished.append(node)
+            unfinished.extend(cls._get_unfinished_nodes(node.dependencies))
+        return unfinished
+
 
     @classmethod
-    def _check_states(cls, nodes, states):
-        for node in nodes:
-            if node not in states:
-                if node.output_exists():
-                    states[node] = cls.FINISHED
-            
-            cls._check_states(node.dependencies, states)
+    def _get_runnable_node(cls, nodes):
+        """Returns a node for which all dependencies are met, or None if 
+        no such nodes exist."""
 
-        return states
-
-    @classmethod
-    def _get_runnable_node(cls, nodes, states, shallow_run = True):
         for node in nodes:
-            if states.get(node):
+            if node.output_exists():
                 continue
-            elif all((states.get(dep) == cls.FINISHED) for dep in node.dependencies):
-                if shallow_run:
-                    return node
+            elif all(dep.output_exists() for dep in node.dependencies):
+                return node
 
-                subnode = cls._get_runnable_node(node.dependencies, states)
-                return subnode or node
-            elif any((states.get(node) is None) for dep in node.dependencies):
-                node = cls._get_runnable_node(node.dependencies, states)
-                if node:
-                    return node
         return None
 
 
     @classmethod
-    def print_nodes(cls, nodes, states, shallow_run):
+    def print_nodes(cls, top_nodes, running, remaining):
         print
-        ui.print_msg("Pipeline:")
-        cls.print_sub_nodes(nodes, states, "   ", shallow_run = shallow_run)
+        ui.print_msg("Pipelin (%i nodes running, %i left):" \
+                         % (len(running), len(remaining)))
+        cls.print_sub_nodes(list(top_nodes), running, "   ")
         
 
     @classmethod
-    def print_sub_nodes(cls, nodes, states, prefix = "", live = True, shallow_run = True):
+    def print_sub_nodes(cls, nodes, running, prefix = ""):
         for node in nodes:
-            runnable = not node.output_exists()
-            is_live = (live and runnable) or not shallow_run
-
-            if not (runnable or is_live):
+            if node.output_exists():
                 print_func = ui.print_disabled
-            elif states.get(node) == Pypeline.RUNNING:
+            elif node in running:
                 print_func = ui.print_info
             else:
                 print_func = ui.print_msg
@@ -137,6 +129,6 @@ class Pypeline:
             current_prefix = prefix + ("  " if (node == nodes[-1]) else "|  ")
 
             if node.dependencies:
-                cls.print_sub_nodes(node.dependencies, states, current_prefix + "   ", is_live)
+                cls.print_sub_nodes(node.dependencies, running, current_prefix + "   ")
             else:
                 print_func(current_prefix)
