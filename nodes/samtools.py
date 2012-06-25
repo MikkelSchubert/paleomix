@@ -49,16 +49,16 @@ class GenotypeNode(node.Node):
 
 # FIXME: Should use temp folder ...
 class TabixIndexNode(node.Node):
-    def __init__(self, config, destination, infile, dependencies = ()):
+    def __init__(self, config, destination, infile, preset = "vcf", dependencies = ()):
         assert infile.lower().endswith(".vcf.bgz")
 
         self._infile = infile
         cmd_tabix = AtomicCmd(destination,
-                              ["tabix", "%(IN_VCFFILE)s"],
+                              ["tabix", "-p", preset, "%(IN_VCFFILE)s"],
                               IN_VCFFILE = infile)
 
         node.Node.__init__(self, 
-                           description  = "<TabixIndex: '%s'>" % (infile,),
+                           description  = "<TabixIndex (%s): '%s'>" % (preset, infile,),
                            command      = cmd_tabix,
                            dependencies = dependencies)
 
