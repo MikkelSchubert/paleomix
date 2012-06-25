@@ -8,14 +8,20 @@ SINGLE_THREAD = 1
 
 
 class Node:
-    def __init__(self, description = None, command = None, dependencies = ()):
+    def __init__(self, description = None, command = None, optional_files = (), dependencies = ()):
         self.__description = description
         self.__command = command
+        self.__optional_files = optional_files
         self.dependencies = dependencies
 
     def output_exists(self):
         assert self.__command
-        return not self.__command.missing_output_files()
+        missing_files = self.__command.missing_output_files()
+        for optional in self.__optional_files:
+            if optional in missing_files:
+                missing_files.remove(optional)
+
+        return not missing_files
 
     def run(self):
         temp = fileutils.create_temp_dir()

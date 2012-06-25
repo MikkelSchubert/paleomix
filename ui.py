@@ -32,4 +32,4 @@ def print_warn(*vargs, **kwargs):
 
 def print_disabled(*vargs, **kwargs):
     """Equivalent to print, but prints using shell colorcodes (gray)."""
-    _do_print_color(*vargs, colorcode = 37, **kwargs)
+    _do_print_color(*vargs, colorcode = 30, **kwargs)

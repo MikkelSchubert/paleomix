@@ -24,18 +24,22 @@ class Pypeline:
         self._nodes.append(node)
 
 
-    def run(self, max_running = 4):
+    def run(self, max_running = 4, dry_run = False, shallow_run = True):
         running, last_running = {}, None
         pool = multiprocessing.Pool(max_running)
         states = self._check_states(self._nodes, {})
 
-        self.print_nodes(self._nodes, states)
+        self.print_nodes(self._nodes, states, shallow_run)
+        if dry_run:
+            ui.print_msg("Dry run, nothing is executed ...")
+            return            
+
         while any((states.get(node) != Pypeline.FINISHED) for node in self._nodes):
             if not self._check_running_nodes(states, running):
                 break
 
             while (len(running) < max_running):
-                node = self._get_runnable_node(self._nodes, states)
+                node = self._get_runnable_node(self._nodes, states, shallow = shallow_run)
                 if not node:
                     break
 
@@ -43,7 +47,7 @@ class Pypeline:
                 running[node] = pool.apply_async(_call_run, args = (node,))
                 
             if running != last_running:
-                self.print_nodes(self._nodes, states)
+                self.print_nodes(self._nodes, states, shallow_run)
                 last_running = dict(running)
                 
             time.sleep(1)
@@ -92,7 +96,7 @@ class Pypeline:
         return states
 
     @classmethod
-    def _get_runnable_node(cls, nodes, states):
+    def _get_runnable_node(cls, nodes, states, shallow_run = True):
         for node in nodes:
             if states.get(node):
                 continue
@@ -106,17 +110,19 @@ class Pypeline:
 
 
     @classmethod
-    def print_nodes(cls, nodes, states):
+    def print_nodes(cls, nodes, states, shallow_run):
         print
         ui.print_msg("Pipeline:")
-        cls.print_sub_nodes(nodes, states, "   ")
+        cls.print_sub_nodes(nodes, states, "   ", shallow_run = shallow_run)
         
 
     @classmethod
-    def print_sub_nodes(cls, nodes, states, prefix = "", live = True):
+    def print_sub_nodes(cls, nodes, states, prefix = "", live = True, shallow_run = True):
         for node in nodes:
-            is_live = live and not node.output_exists()
-            if not is_live:
+            runnable = not node.output_exists()
+            is_live = (live and runnable) or not shallow_run
+
+            if not (runnable or is_live):
                 print_func = ui.print_disabled
             elif states.get(node) == Pypeline.RUNNING:
                 print_func = ui.print_info

@@ -32,7 +32,9 @@ class _IndelTrainerNode(node.Node):
         node.Node.__init__(self, 
                            description = description,
                            command = command,
-                           dependencies = dependencies)
+                           dependencies = dependencies,
+                           optional_files = [os.path.join(destination, outfile + ".log")])
+
 
 
 class _IndelRealignerNode(node.Node):
