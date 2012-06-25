@@ -39,11 +39,10 @@ def swap_ext(filename, ext):
     return filename + ext    
 
 
-TEMP_ROOT = "/tmp"
-def create_temp_dir():
+def create_temp_dir(root):
     while True:
         uuid4 = str(uuid.uuid4())
-        path = os.path.join(TEMP_ROOT, uuid4)
+        path = os.path.join(root, uuid4)
     
         if not os.path.exists(path):
             os.makedirs(path, mode = 0700)

@@ -23,8 +23,8 @@ class Node:
 
         return not missing_files
 
-    def run(self):
-        temp = fileutils.create_temp_dir()
+    def run(self, config):
+        temp = fileutils.create_temp_dir(config.temp_root)
         if not self._check_prerequisites(self.__command):
             os.rmdir(temp)
             return False

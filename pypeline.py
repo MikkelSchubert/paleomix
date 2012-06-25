@@ -4,11 +4,11 @@ import multiprocessing
 import ui
 
 
-def _call_run(node):
+def _call_run(node, config):
     """Wrapper function, required in order to call Node.run()
     in subprocesses, since it is not possible to pickle 
     bound functions (e.g. self.run)"""
-    return node.run()
+    return node.run(config)
         
 
 
@@ -16,8 +16,8 @@ class Pypeline:
     RUNNING, FINISHED = "Running", "Finished"
 
     def __init__(self, config):
-        self._config = config
         self._nodes = []
+        self._config = config
 
 
     def add_node(self, node):
@@ -39,12 +39,12 @@ class Pypeline:
                 break
 
             while (len(running) < max_running):
-                node = self._get_runnable_node(self._nodes, states, shallow = shallow_run)
+                node = self._get_runnable_node(self._nodes, states, shallow_run = shallow_run)
                 if not node:
                     break
 
                 states[node] = Pypeline.RUNNING
-                running[node] = pool.apply_async(_call_run, args = (node,))
+                running[node] = pool.apply_async(_call_run, args = (node, self._config))
                 
             if running != last_running:
                 self.print_nodes(self._nodes, states, shallow_run)
@@ -101,7 +101,11 @@ class Pypeline:
             if states.get(node):
                 continue
             elif all((states.get(dep) == cls.FINISHED) for dep in node.dependencies):
-                return node
+                if shallow_run:
+                    return node
+
+                subnode = cls._get_runnable_node(node.dependencies, states)
+                return subnode or node
             elif any((states.get(node) is None) for dep in node.dependencies):
                 node = cls._get_runnable_node(node.dependencies, states)
                 if node:

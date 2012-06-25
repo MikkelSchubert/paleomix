@@ -24,7 +24,7 @@ class PairedStatisticsNode(node.Node):
         return fileutils.valid_file(os.path.join(self._destination, self._outfile))
 
 
-    def run(self):
+    def run(self, config):
         table, count = {}, 0
         bamfile = pysam.Samfile(self._infile)
         for record in bamfile:
@@ -42,7 +42,7 @@ class PairedStatisticsNode(node.Node):
             else: # Singleton
                 subtable[0] += 1
 
-        temp = fileutils.create_temp_dir()
+        temp = fileutils.create_temp_dir(config.temp_root)
         with open(os.path.join(temp, self._outfile), "w") as table_file:
             table_file.write("Group\tChr\tSingle\tFirst\tSecond\tRatio\tHits\n")
 
