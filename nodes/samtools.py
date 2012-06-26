@@ -13,21 +13,23 @@ class GenotypeNode(node.Node):
     def __init__(self, config, destination, reference, infile, outfile, regions = None, dependencies = ()):
         assert outfile.lower().endswith(".vcf.bgz")
 
+        call_pileup = ["samtools", "mpileup", 
+                       GenotypeNode.pileup_args,
+                       "-uf", "%(IN_REFERENCE)s",
+                       "%(IN_BAMFILE)s"]
+        if regions:
+            call_pileup[-1:-1] = ["-l", "%(IN_REGIONS)s"]
+
         pileup   = AtomicCmd(destination,
-                             ["samtools", "mpileup", 
-                              GenotypeNode.pileup_args,
-                              "-uf", "%(IN_REFERENCE)s",
-                              "%(IN_BAMFILE)s"],
+                             call_pileup,
                              IN_REFERENCE = reference,
                              IN_BAMFILE   = infile,
+                             IN_REGIONS   = regions,
                              stdout       = AtomicCmd.PIPE,
                              stderr       = outfile + ".pileup_log")
         
-        call_genotype = ["bcftools", "view", GenotypeNode.caller_args, "-"]
-        if regions:
-            call_genotype[-1:-1] = ["-l", regions]
         genotype = AtomicCmd(destination,
-                             call_genotype,
+                             ["bcftools", "view", GenotypeNode.caller_args, "-"],
                              stdin        = pileup,
                              stdout       = AtomicCmd.PIPE,
                              stderr       = outfile + ".genotype_log")
