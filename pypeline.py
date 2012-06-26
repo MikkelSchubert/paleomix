@@ -85,12 +85,12 @@ class Pypeline:
     
     @classmethod
     def _get_unfinished_nodes(cls, nodes):
-        unfinished = []
+        unfinished = set()
         for node in nodes:
             if not node.output_exists():
-                unfinished.append(node)
-            unfinished.extend(cls._get_unfinished_nodes(node.dependencies))
-        return unfinished
+                unfinished.add(node)
+            unfinished.update(cls._get_unfinished_nodes(node.dependencies))
+        return list(unfinished)
 
 
     @classmethod
