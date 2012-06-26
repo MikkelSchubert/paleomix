@@ -90,7 +90,7 @@ class Pypeline:
             if not node.output_exists():
                 unfinished.add(node)
             unfinished.update(cls._get_unfinished_nodes(node.dependencies))
-        return list(unfinished)
+        return unfinished
 
 
     @classmethod
