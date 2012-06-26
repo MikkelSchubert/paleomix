@@ -12,7 +12,7 @@ class Node:
         self.__description = description
         self.__command = command
         self.__optional_files = optional_files
-        self.dependencies = dependencies
+        self.dependencies = tuple(dependencies)
 
     def output_exists(self):
         assert self.__command
