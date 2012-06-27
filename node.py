@@ -19,8 +19,14 @@ class Node:
         self.__description = description
         self.__command = command
         self.__optional_files = optional_files
-        self.dependencies = tuple(dependencies)
 
+
+        self.dependencies = tuple(dependencies)
+        for dependency in self.dependencies:
+            if not isinstance(dependency, Node):
+                raise NodeError("[%s]: Dependency is not a Node: %s" \
+                                    % (self, dependency))
+    
     def output_exists(self):
         assert self.__command
         missing_files = self.__command.missing_output_files()
