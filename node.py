@@ -1,10 +1,17 @@
 import os
+import sys
+import traceback
 
 import ui
 import fileutils
 
 
 SINGLE_THREAD = 1
+
+
+class NodeError(RuntimeError):
+    def __init__(self, *vargs):
+       	RuntimeError.__init__(self, *vargs)
 
 
 class Node:
@@ -24,20 +31,23 @@ class Node:
         return not missing_files
 
     def run(self, config):
-        temp = fileutils.create_temp_dir(config.temp_root)
-        if not self._check_prerequisites(self.__command):
-            os.rmdir(temp)
-            return False
+        try:
+            temp = fileutils.create_temp_dir(config.temp_root)
+            if not self._check_prerequisites(self.__command):
+                os.rmdir(temp)
+                return False
             
-        self.__command.run(temp)
+            self.__command.run(temp)
             
-        if not self._wait_for_command(self.__command):
-            return False
-        elif not self._commit_command(self.__command):
-            return False
+            if not self._wait_for_command(self.__command):
+                return False
+            elif not self._commit_command(self.__command):
+                return False
 
-        os.rmdir(temp)
-        return True
+            os.rmdir(temp)
+            return True
+        except Exception, exp:
+            raise NodeError(traceback.format_exc())
 
 
     def __str__(self):
