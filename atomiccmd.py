@@ -145,7 +145,13 @@ class AtomicCmd:
 
     def _group_io_by_prefix(self, io_kwords):
         for (key, value) in io_kwords.iteritems():
-            if type(value) not in (str, unicode):
+            if not (key.startswith("IN_") or key.startswith("OUT_")):
+                raise CmdError("Command contains unclassified argument: '%s' -> '%s'" \
+                                   % (self.__class__.__name__, key))
+            elif value is None:
+                # Simplifies use of optional arguments
+                continue
+            elif (value is not None) and (type(value) not in (str, unicode)):
                 raise RuntimeError("Invalid input file '%s' for '%s' is not a string: %s" \
                                      % (key, self.__class__.__name__, value))
 
@@ -154,8 +160,7 @@ class AtomicCmd:
             elif key.startswith("OUT_"):
                 self._out_files[key] = value
             else:
-                raise CmdError("Command contains unclassified argument: '%s' -> '%s'" \
-                                   % (self.__class__.__name__, key))
+		assert False
         
 
     def _open_pipe(self, root, pipe, mode):
