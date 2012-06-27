@@ -52,7 +52,8 @@ if __name__ == '__main__':
                                genome        = "data/reference.genome",
                                infile        = vcfraw,
                                outfile       = os.path.basename(vcfslop),
-                               amount        = 10)
+                               from_start    = 10,
+                               from_end      = 10)
 
         genotype = GenotypeNode(config       = Config,
                                 destination  = "dest",
