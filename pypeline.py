@@ -70,14 +70,14 @@ class Pypeline:
             running.pop(node)
                    
             try:
-                error = "Run() returned false."
+                error = "\tRun() returned false."
                 result = proc.get()
             except Exception, error:
                 result = False
 
             if not result:
                 errors = True
-                print "%s: Error occurred running command (terminating gracefully): %s" \
+                print "%s: Error occurred running command (terminating gracefully):\n%s" \
                     % (node, error)
 
         return not errors
