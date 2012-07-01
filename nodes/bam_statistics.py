@@ -16,7 +16,6 @@ class PairedStatisticsNode(node.Node):
         node.Node.__init__(self, 
                            description  = "<PairedStatistics: '%s' -> '%s'>" \
                                % (infile, os.path.join(self._destination, self._outfile)),
-                           command      = None,
                            dependencies = dependencies)
 
 

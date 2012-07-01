@@ -7,7 +7,7 @@ from atomiccmd import AtomicCmd
 
 
 
-class _IndelTrainerNode(node.Node):
+class _IndelTrainerNode(node.SimpleNode):
     def __init__(self, config, destination, reference, infile, outfile, dependencies = ()):
         jarfile = os.path.join(config.gatk_root, "GenomeAnalysisTK.jar")
         outfile += ".intervals"
@@ -29,15 +29,15 @@ class _IndelTrainerNode(node.Node):
         description = "<Train Indel Realigner: '%s' -> '%s'>" \
             % (infile, os.path.join(destination, outfile))
 
-        node.Node.__init__(self, 
-                           description = description,
-                           command = command,
-                           dependencies = dependencies,
-                           optional_files = [os.path.join(destination, outfile + ".log")])
+        node.SimpleNode.__init__(self, 
+                                 description = description,
+                                 command = command,
+                                 dependencies = dependencies,
+                                 optional_files = [os.path.join(destination, outfile + ".log")])
 
 
 
-class _IndelRealignerNode(node.Node):
+class _IndelRealignerNode(node.SimpleNode):
     def __init__(self, config, destination, reference, infile, outfile, dependencies = ()):
         jarfile = os.path.join(config.gatk_root, "GenomeAnalysisTK.jar")
         intervalsfile = os.path.join(destination, outfile + ".intervals")
@@ -62,10 +62,10 @@ class _IndelRealignerNode(node.Node):
         description = "<Indel Realigner: '%s' -> '%s'>" \
             % (infile, os.path.join(destination, outfile))
 
-        node.Node.__init__(self, 
-                           description = description,
-                           command = command,
-                           dependencies = dependencies)
+        node.SimpleNode.__init__(self, 
+                                 description = description,
+                                 command = command,
+                                 dependencies = dependencies)
 
 
 

@@ -1,5 +1,4 @@
 import os
-import sys
 import traceback
 
 import ui
@@ -8,52 +7,54 @@ import fileutils
 
 SINGLE_THREAD = 1
 
+def _validate_nodes(nodes, description):
+    nodes = tuple(nodes)
+    for dependency in nodes:
+        if not isinstance(dependency, Node):
+            raise NodeError("%s is not a Node: %s" \
+                                % (description, dependency))
+    return nodes
+
 
 class NodeError(RuntimeError):
     def __init__(self, *vargs):
-       	RuntimeError.__init__(self, *vargs)
+      RuntimeError.__init__(self, *vargs)
 
 
 class Node:
-    def __init__(self, description = None, command = None, optional_files = (), dependencies = ()):
+    def __init__(self, description = None, dependencies = ()):
         self.__description = description
-        self.__command = command
-        self.__optional_files = optional_files
-
-
-        self.dependencies = tuple(dependencies)
-        for dependency in self.dependencies:
-            if not isinstance(dependency, Node):
-                raise NodeError("[%s]: Dependency is not a Node: %s" \
-                                    % (self, dependency))
+        self.dependencies = _validate_nodes(dependencies, "Dependency")
     
     def output_exists(self):
-        assert self.__command
-        missing_files = self.__command.missing_output_files()
-        for optional in self.__optional_files:
-            if optional in missing_files:
-                missing_files.remove(optional)
-
-        return not missing_files
+        assert False
 
     def run(self, config):
         try:
             temp = fileutils.create_temp_dir(config.temp_root)
-            if not self._check_prerequisites(self.__command):
-                os.rmdir(temp)
-                return False
             
-            self.__command.run(temp)
-            
-            if not self._wait_for_command(self.__command):
+            if not self._setup(config, temp):
                 return False
-            elif not self._commit_command(self.__command):
+            elif not self._run(config, temp):
+                return False
+            elif not self._teardown(config, temp):
                 return False
 
             os.rmdir(temp)
+            
             return True
-        except Exception, exp:
+        except Exception:
             raise NodeError(traceback.format_exc())
+
+
+    def _setup(self, _config, _temp):
+        return True
+
+    def _run(self, _config, _temp):
+        return True
+
+    def _teardown(self, _config, _temp):
+        return True
 
 
     def __str__(self):
@@ -62,37 +63,58 @@ class Node:
         return "<%s>" % (self.__class__.__name__,)
 
 
-    def _check_prerequisites(self, command):
-        if not command.executable_exists():
+
+
+class SimpleNode(Node):
+    def __init__(self, command = None, description = None, optional_files = (), dependencies = ()):
+        Node.__init__(self, description, dependencies)
+
+        self._command = command
+        self._optional_files = frozenset(optional_files)
+
+    
+    def output_exists(self):
+        assert self._command
+        missing_files = self._command.missing_output_files()
+        for optional in self._optional_files:
+            if optional in missing_files:
+                missing_files.remove(optional)
+
+        return not missing_files
+
+
+    def _setup(self, _config, _temp):
+        if not self._command.executable_exists():
             ui.print_err("%s: Executable does not exist for command: %s" \
-                              % (self, command))
+                              % (self, self._command))
             return False
             
-        missing_input = command.missing_input_files()
+        missing_input = self._command.missing_input_files()
         if missing_input:
             ui.print_warn("%s: Missing input files for command: %s -> %s" \
-                              % (self, command, missing_input))
+                              % (self, self._command, missing_input))
             return False
 
         return True
 
 
-    def _wait_for_command(self, command):
-        return_codes = command.wait()
+    def _run(self, _config, temp):
+        self._command.run(temp)
+
+        return_codes = self._command.wait()
         if any(return_codes):
             ui.print_err("%s: Error(s) running '%s': Return-codes %s" \
-                             % (self, command, return_codes))
+                             % (self, self._command, return_codes))
             return False
 
         return True
 
 
-    def _commit_command(self, command):
-        missing_files = command.missing_temp_files()
+    def _teardown(self, _config, _temp):
+        missing_files = self._command.missing_temp_files()
         if missing_files:
             ui.print_err("%s: Expected temp files are missings for command '%s': %s" \
-                             % (self, command, missing_files))
+                             % (self, self._command, missing_files))
             return False
     
-        command.commit()
-        return True
+        return self._command.commit()

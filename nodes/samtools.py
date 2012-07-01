@@ -6,7 +6,7 @@ import fileutils
 from atomiccmd import AtomicCmd, ParallelCmds
 
 
-class GenotypeNode(node.Node):
+class GenotypeNode(node.SimpleNode):
     pileup_args = "-EA"
     caller_args = "-g"
 
@@ -42,15 +42,15 @@ class GenotypeNode(node.Node):
         description = "<Genotyper: '%s' -> '%s'>" \
             % (infile, os.path.join(destination, outfile))
 
-        node.Node.__init__(self, 
-                           description  = description,
-                           command      = ParallelCmds([pileup, genotype, bgzip]),
-                           dependencies = dependencies)
+        node.SimpleNode.__init__(self, 
+                                 description  = description,
+                                 command      = ParallelCmds([pileup, genotype, bgzip]),
+                                 dependencies = dependencies)
 
 
 
 # FIXME: Should use temp folder ...
-class TabixIndexNode(node.Node):
+class TabixIndexNode(node.SimpleNode):
     def __init__(self, config, destination, infile, preset = "vcf", dependencies = ()):
         assert infile.lower().endswith(".vcf.bgz")
 
@@ -59,10 +59,10 @@ class TabixIndexNode(node.Node):
                               ["tabix", "-p", preset, "%(IN_VCFFILE)s"],
                               IN_VCFFILE = infile)
 
-        node.Node.__init__(self, 
-                           description  = "<TabixIndex (%s): '%s'>" % (preset, infile,),
-                           command      = cmd_tabix,
-                           dependencies = dependencies)
+        node.SimpleNode.__init__(self, 
+                                 description  = "<TabixIndex (%s): '%s'>" % (preset, infile,),
+                                 command      = cmd_tabix,
+                                 dependencies = dependencies)
 
     def output_exists(self):
         filename = self._infile + ".tbi"
