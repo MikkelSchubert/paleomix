@@ -115,6 +115,7 @@ class AtomicCmd:
             os.rename(self._temp_files[key], self._final_files[key])
 
         self.proc = None
+        return True
 
 
     def __str__(self):
@@ -230,8 +231,10 @@ class _CommandSet:
         return missing_files
 
     def commit(self):
+        result = True
         for command in self._commands:
-            command.commit()
+            result &= command.commit()
+        return result
 
     def __str__(self):
         return "[%s]" % ", ".join(str(command) for command in self._commands)
