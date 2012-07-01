@@ -12,9 +12,9 @@ from nodes.bam_statistics import PairedStatisticsNode
 
 if __name__ == '__main__':
     class Config:
-	jar_root  = "opt/picard-tools"
-    	gatk_root = "opt/GATK"
-	temp_root = "temp"
+        jar_root  = "opt/picard-tools"
+        gatk_root = "opt/GATK"
+        temp_root = "temp"
 
 
     pipeline = pypeline.Pypeline(Config)
