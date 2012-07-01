@@ -4,7 +4,7 @@ import node
 from atomiccmd import AtomicCmd
 
 
-class ValidateBAMNode(node.SimpleNode):
+class ValidateBAMNode(node.CommandNode):
     def __init__(self, config, bamfile, ignore = (), dependencies = ()):
         call  = ["java", "-jar", "%(IN_JAR)s", "TMP_DIR=%s" % config.temp_root, "I=%(IN_BAM)s"]
         for error in ignore:
@@ -24,7 +24,7 @@ class ValidateBAMNode(node.SimpleNode):
         description =  "<Validate BAM: '%s' -> '%s'>" \
             % (bamfile, os.path.join(destination, logfile))
 
-        node.SimpleNode.__init__(self, 
+        node.CommandNode.__init__(self, 
                                  description = description,
                                  command = command,
                                  dependencies = dependencies)

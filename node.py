@@ -18,16 +18,30 @@ def _validate_nodes(nodes, description):
 
 class NodeError(RuntimeError):
     def __init__(self, *vargs):
-      RuntimeError.__init__(self, *vargs)
+        RuntimeError.__init__(self, *vargs)
 
 
 class Node:
-    def __init__(self, description = None, dependencies = ()):
-        self.__description = description
-        self.dependencies = _validate_nodes(dependencies, "Dependency")
+    EXISTS, MISSING, OUTDATED = range(3)
+
+    def __init__(self, description = None, input_files = (), output_files = (), dependencies = ()):
+        self.__description  = str(description)
+        self.__input_files  = tuple(input_files)
+        self.__output_files = tuple(output_files)
+        self.dependencies   = _validate_nodes(dependencies, "Dependency")
     
-    def output_exists(self):
-        assert False
+    def output_status(self):
+        if fileutils.missing_files(self.__output_files):
+            return Node.MISSING
+        elif fileutils.modified_after(self.__input_files, self.__output_files):
+            return Node.OUTDATED
+
+        for node in self.dependencies:
+            if node.output_status() == Node.OUTDATED:
+                return Node.OUTDATED
+
+        return Node.EXISTS
+
 
     def run(self, config):
         try:
@@ -65,31 +79,24 @@ class Node:
 
 
 
-class SimpleNode(Node):
-    def __init__(self, command = None, description = None, optional_files = (), dependencies = ()):
-        Node.__init__(self, description, dependencies)
+class CommandNode(Node):
+    def __init__(self, command, description = None, dependencies = ()):
+        Node.__init__(self, 
+                      description  = description,
+                      input_files  = command.input_files(),
+                      output_files = command.output_files(),
+                      dependencies = dependencies)
 
         self._command = command
-        self._optional_files = frozenset(optional_files)
-
-    
-    def output_exists(self):
-        assert self._command
-        missing_files = self._command.missing_output_files()
-        for optional in self._optional_files:
-            if optional in missing_files:
-                missing_files.remove(optional)
-
-        return not missing_files
-
+            
 
     def _setup(self, _config, _temp):
-        if not self._command.executable_exists():
-            ui.print_err("%s: Executable does not exist for command: %s" \
+        if not fileutils.missing_files(self._command.executables()):
+            ui.print_err("%s: Executable(s) does not exist for command: %s" \
                               % (self, self._command))
             return False
             
-        missing_input = self._command.missing_input_files()
+        missing_input = fileutils.missing_files(self._command.input_files())
         if missing_input:
             ui.print_warn("%s: Missing input files for command: %s -> %s" \
                               % (self, self._command, missing_input))
@@ -105,16 +112,20 @@ class SimpleNode(Node):
         if any(return_codes):
             ui.print_err("%s: Error(s) running '%s': Return-codes %s" \
                              % (self, self._command, return_codes))
+            ui.print_err("\t - Ran in directory '%s'." % temp)
             return False
 
         return True
 
 
     def _teardown(self, _config, _temp):
-        missing_files = self._command.missing_temp_files()
+        missing_files = fileutils.missing_files(self._command.temp_files())
         if missing_files:
             ui.print_err("%s: Expected temp files are missings for command '%s': %s" \
                              % (self, self._command, missing_files))
             return False
     
         return self._command.commit()
+
+
+

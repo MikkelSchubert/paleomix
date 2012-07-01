@@ -16,14 +16,12 @@ class PairedStatisticsNode(node.Node):
         node.Node.__init__(self, 
                            description  = "<PairedStatistics: '%s' -> '%s'>" \
                                % (infile, os.path.join(self._destination, self._outfile)),
+                           input_files  = [infile],
+                           output_files = [infile + ".paired_stats"],
                            dependencies = dependencies)
 
 
-    def output_exists(self):
-        return fileutils.valid_file(os.path.join(self._destination, self._outfile))
-
-
-    def run(self, config):
+    def _run(self, config, temp):
         table, count = {}, 0
         bamfile = pysam.Samfile(self._infile)
         for record in bamfile:
@@ -41,7 +39,6 @@ class PairedStatisticsNode(node.Node):
             else: # Singleton
                 subtable[0] += 1
 
-        temp = fileutils.create_temp_dir(config.temp_root)
         with open(os.path.join(temp, self._outfile), "w") as table_file:
             table_file.write("Group\tChr\tSingle\tFirst\tSecond\tRatio\tHits\n")
 
@@ -61,6 +58,5 @@ class PairedStatisticsNode(node.Node):
         bamfile.close()
         os.rename(os.path.join(temp, self._outfile), 
                   os.path.join(self._destination, self._outfile))
-        os.rmdir(temp)
 
         return True

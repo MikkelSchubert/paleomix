@@ -6,7 +6,7 @@ import fileutils
 from atomiccmd import AtomicCmd, ParallelCmds
 
 
-class GenotypeNode(node.SimpleNode):
+class GenotypeNode(node.CommandNode):
     pileup_args = "-EA"
     caller_args = "-g"
 
@@ -42,29 +42,39 @@ class GenotypeNode(node.SimpleNode):
         description = "<Genotyper: '%s' -> '%s'>" \
             % (infile, os.path.join(destination, outfile))
 
-        node.SimpleNode.__init__(self, 
-                                 description  = description,
-                                 command      = ParallelCmds([pileup, genotype, bgzip]),
-                                 dependencies = dependencies)
+        node.CommandNode.__init__(self, 
+                                  description  = description,
+                                  command      = ParallelCmds([pileup, genotype, bgzip]),
+                                  dependencies = dependencies)
 
 
 
 # FIXME: Should use temp folder ...
-class TabixIndexNode(node.SimpleNode):
+class TabixIndexNode(node.CommandNode):
     def __init__(self, config, destination, infile, preset = "vcf", dependencies = ()):
         assert infile.lower().endswith(".vcf.bgz")
 
         self._infile = infile
         cmd_tabix = AtomicCmd(destination,
-                              ["tabix", "-p", preset, "%(IN_VCFFILE)s"],
-                              IN_VCFFILE = infile)
+                              ["tabix", "-p", preset, "%(TEMP_IN_VCFFILE)s"],
+                              TEMP_IN_VCFFILE = os.path.basename(infile),
+                              IN_VCFFILE      = infile,
+                              OUT_TBI         = os.path.basename(infile) + ".tbi")
 
-        node.SimpleNode.__init__(self, 
-                                 description  = "<TabixIndex (%s): '%s'>" % (preset, infile,),
-                                 command      = cmd_tabix,
-                                 dependencies = dependencies)
+        node.CommandNode.__init__(self, 
+                                  description  = "<TabixIndex (%s): '%s'>" % (preset, infile,),
+                                  command      = cmd_tabix,
+                                  dependencies = dependencies)
 
-    def output_exists(self):
-        filename = self._infile + ".tbi"
-        
-        return fileutils.valid_file(filename)
+    def _setup(self, config, temp):
+        infile  = os.path.abspath(self._infile)
+        outfile = os.path.join(temp, os.path.basename(self._infile))
+        os.symlink(infile, outfile)
+
+        return node.CommandNode._setup(self, config, temp)
+
+
+    def _teardown(self, config, temp):
+        os.remove(os.path.join(temp, os.path.basename(self._infile)))
+
+        return node.CommandNode._teardown(self, config, temp)

@@ -6,7 +6,7 @@ from atomiccmd import AtomicCmd
 
 
 
-class SlopBedNode(node.SimpleNode):
+class SlopBedNode(node.CommandNode):
     def __init__(self, config, destination, infile, outfile, genome, from_start = 0, from_end = 0, strand_relative = False, dependencies = ()):
         if type(from_start) != type(from_end):
             raise ValueError("'from_start' and 'from_end' should be of same type!")
@@ -31,7 +31,7 @@ class SlopBedNode(node.SimpleNode):
         description = "<SlopBed: '%s' -> '%s'>" \
             % (infile, os.path.join(destination, outfile))
 
-        node.SimpleNode.__init__(self, 
-                           description  = description,
-                           command      = command,
-                           dependencies = dependencies)
+        node.CommandNode.__init__(self, 
+                                  description  = description,
+                                  command      = command,
+                                  dependencies = dependencies)

@@ -77,8 +77,8 @@ class Pypeline:
 
             if not result:
                 errors = True
-                print "%s: Error occurred running command (terminating gracefully):\n%s" \
-                    % (node, error)
+                ui.print_err("%s: Error occurred running command (terminating gracefully):\n%s" \
+                    % (node, error))
 
         return not errors
  
@@ -87,7 +87,7 @@ class Pypeline:
     def _get_unfinished_nodes(cls, nodes):
         unfinished = set()
         for node in nodes:
-            if not node.output_exists():
+            if node.output_status() != node.EXISTS:
                 unfinished.add(node)
             unfinished.update(cls._get_unfinished_nodes(node.dependencies))
         return unfinished
@@ -99,9 +99,9 @@ class Pypeline:
         no such nodes exist."""
 
         for node in nodes:
-            if node.output_exists():
+            if node.output_status() == node.EXISTS:
                 continue
-            elif all(dep.output_exists() for dep in node.dependencies):
+            elif all((dep.output_status() == node.EXISTS) for dep in node.dependencies):
                 return node
 
         return None
@@ -118,10 +118,12 @@ class Pypeline:
     @classmethod
     def print_sub_nodes(cls, nodes, running, prefix = ""):
         for node in nodes:
-            if node.output_exists():
-                print_func = ui.print_disabled
-            elif node in running:
+            if node in running:
                 print_func = ui.print_info
+            elif node.output_status() == node.EXISTS:
+                print_func = ui.print_disabled
+            elif node.output_status() == node.OUTDATED:
+                print_func = ui.print_warn
             else:
                 print_func = ui.print_msg
             

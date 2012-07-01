@@ -60,6 +60,14 @@ def missing_files(filenames):
             
     return result
 
+def modified_after(younger, older):
+    """Returns true any of the files expected to be 'younger' have
+    been modified after any of the files expected to be 'older'."""
+    younger_time = max([os.path.getmtime(filename) for filename in younger])
+    older_time   = min([os.path.getmtime(filename) for filename in older])
+    
+    return younger_time >= older_time
+
 
 def is_executable(filename):
     return os.path.isfile(filename) and os.access(filename, os.X_OK)
