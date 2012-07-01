@@ -19,7 +19,8 @@ if __name__ == '__main__':
 
     pipeline = pypeline.Pypeline(Config)
     for infile in ('data/small.bam', 'data/medium.bam', 'data/merged.bam'):
-        filename = os.path.split(infile)[-1]
+        filename = fileutils.add_postfix(os.path.basename(infile), ".realigned")
+        realigned_bam = os.path.join("dest", filename)
 
         validate   = ValidateBAMNode(Config,
                                      bamfile     = infile, 
@@ -28,16 +29,14 @@ if __name__ == '__main__':
         statistics = PairedStatisticsNode(Config,
                                           infile      = infile)
     
-        realigned_bam = fileutils.add_postfix(os.path.basename(infile), ".realigned")
         realigner = IndelRealignerNode(Config,
-                                       destination  = "dest",
                                        reference    = "data/reference.fasta",
                                        infile       = infile,
                                        outfile      = realigned_bam,
                                        dependencies = [validate, statistics])
 
-        validate = ValidateBAMNode(Config, 
-                                   bamfile      = os.path.join("dest", realigned_bam),
+        validate = ValidateBAMNode(Config,
+                                   bamfile      = realigned_bam,
                                    ignore       = ["MATE_NOT_FOUND"],
                                    dependencies = [realigner])
 
@@ -48,24 +47,21 @@ if __name__ == '__main__':
         vcffile = fileutils.swap_ext(realigned_bam, ".vcf.bgz")
         
         slop_bed = SlopBedNode(config        = Config,
-                               destination   = "dest",
                                genome        = "data/reference.genome",
                                infile        = vcfraw,
-                               outfile       = os.path.basename(vcfslop),
+                               outfile       = vcfslop,
                                from_start    = 10,
                                from_end      = 10)
 
         genotype = GenotypeNode(config       = Config,
-                                destination  = "dest",
                                 reference    = "data/reference.fasta",
-                                regions      = os.path.join("dest", vcfslop),
-                                infile       = os.path.join("dest", realigned_bam),
+                                regions      = vcfslop,
+                                infile       = realigned_bam,
                                 outfile      = vcffile,
                                 dependencies = [validate, slop_bed])
 
         tabix = TabixIndexNode(config       = Config,
-                               destination  = "dest",
-                               infile       = os.path.join("dest", vcffile),
+                               infile       = vcffile,
                                dependencies = [genotype])
 
         pipeline.add_node(tabix)

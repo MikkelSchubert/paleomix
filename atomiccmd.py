@@ -15,10 +15,9 @@ class AtomicCmd:
     restarting of a pipeline following errors (no cleanup)."""
     PIPE = subprocess.PIPE
 
-    def __init__(self, destination, command, stdin = None, stdout = None, stderr = None, **kwargs):
+    def __init__(self, command, stdin = None, stdout = None, stderr = None, **kwargs):
         self.proc  = None
         self._cmd  = command
-        self._dest = destination
         self._temp = None
         
         # Fill the in_files and out_files dictionaries 
@@ -38,7 +37,6 @@ class AtomicCmd:
             self._out_files["PIPE_STDERR"] = stderr
 
         self._temp_files = None
-        self._final_files = self._generate_filenames(root = destination)
 
 
     def run(self, temp):
@@ -50,7 +48,7 @@ class AtomicCmd:
         stderr = self._open_pipe(temp, self._stderr, "wb")
 
         self._temp = temp
-        self._temp_files = self._generate_filenames(root = temp)
+        self._temp_files = self._generate_temp_filenames(root = temp)
         
         kwords = dict(self._temp_files)
         for (key, filename) in self._in_files.iteritems():
@@ -90,8 +88,7 @@ class AtomicCmd:
 
     def output_files(self):
         """Checks that the expected output files have been generated."""
-        filenames = self._generate_filenames(root = self._dest)
-        for (key, filename) in filenames.iteritems():
+        for (key, filename) in self._out_files.iteritems():
             if not key.startswith("TEMP_"):
                 yield filename
 
@@ -111,9 +108,7 @@ class AtomicCmd:
             if key.startswith("TEMP_"):
                 os.remove(self._temp_files[key])
             else:
-                os.rename(self._temp_files[key], self._final_files[key])
-
-
+                os.rename(self._temp_files[key], self._out_files[key])
 
         self.proc = None
         return True
@@ -121,7 +116,7 @@ class AtomicCmd:
 
     def __str__(self):
         temp = self._temp or "${TEMP}"
-        kwords = self._generate_filenames(root = temp)
+        kwords = self._generate_temp_filenames(root = temp)
         kwords.update(self._in_files)
         
         def describe_pipe(pipe, prefix):
@@ -169,7 +164,9 @@ class AtomicCmd:
             return pipe.proc.stdout
         elif not (type(pipe) is str):
             return pipe
-        elif pipe not in self._handles:
+
+        pipe = os.path.basename(pipe)
+        if pipe not in self._handles:
             self._handles[pipe] = (mode, open(os.path.join(root, pipe), mode))
 
         pipe_mode, pipe = self._handles[pipe]
@@ -179,10 +176,11 @@ class AtomicCmd:
 
         return pipe
 
-    def _generate_filenames(self, root):
+
+    def _generate_temp_filenames(self, root):
         filenames = {}
         for (key, filename) in self._out_files.iteritems():
-            filenames[key] = os.path.join(root, filename)
+            filenames[key] = os.path.join(root, os.path.basename(filename))
         return filenames
 
 

@@ -10,7 +10,7 @@ class GenotypeNode(node.CommandNode):
     pileup_args = "-EA"
     caller_args = "-g"
 
-    def __init__(self, config, destination, reference, infile, outfile, regions = None, dependencies = ()):
+    def __init__(self, config, reference, infile, outfile, regions = None, dependencies = ()):
         assert outfile.lower().endswith(".vcf.bgz")
 
         call_pileup = ["samtools", "mpileup", 
@@ -20,28 +20,23 @@ class GenotypeNode(node.CommandNode):
         if regions:
             call_pileup[-1:-1] = ["-l", "%(IN_REGIONS)s"]
 
-        pileup   = AtomicCmd(destination,
-                             call_pileup,
+        pileup   = AtomicCmd(call_pileup,
                              IN_REFERENCE = reference,
                              IN_BAMFILE   = infile,
                              IN_REGIONS   = regions,
                              stdout       = AtomicCmd.PIPE,
                              stderr       = outfile + ".pileup_log")
         
-        genotype = AtomicCmd(destination,
-                             ["bcftools", "view", GenotypeNode.caller_args, "-"],
+        genotype = AtomicCmd(["bcftools", "view", GenotypeNode.caller_args, "-"],
                              stdin        = pileup,
                              stdout       = AtomicCmd.PIPE,
                              stderr       = outfile + ".genotype_log")
 
-        bgzip    = AtomicCmd(destination,
-                             ["bgzip"],
+        bgzip    = AtomicCmd(["bgzip"],
                              stdin        = genotype,
                              stdout       = outfile)
 
-        description = "<Genotyper: '%s' -> '%s'>" \
-            % (infile, os.path.join(destination, outfile))
-
+        description = "<Genotyper: '%s' -> '%s'>" % (infile, outfile)
         node.CommandNode.__init__(self, 
                                   description  = description,
                                   command      = ParallelCmds([pileup, genotype, bgzip]),
@@ -51,15 +46,14 @@ class GenotypeNode(node.CommandNode):
 
 # FIXME: Should use temp folder ...
 class TabixIndexNode(node.CommandNode):
-    def __init__(self, config, destination, infile, preset = "vcf", dependencies = ()):
+    def __init__(self, config, infile, preset = "vcf", dependencies = ()):
         assert infile.lower().endswith(".vcf.bgz")
 
         self._infile = infile
-        cmd_tabix = AtomicCmd(destination,
-                              ["tabix", "-p", preset, "%(TEMP_IN_VCFFILE)s"],
+        cmd_tabix = AtomicCmd(["tabix", "-p", preset, "%(TEMP_IN_VCFFILE)s"],
                               TEMP_IN_VCFFILE = os.path.basename(infile),
                               IN_VCFFILE      = infile,
-                              OUT_TBI         = os.path.basename(infile) + ".tbi")
+                              OUT_TBI         = infile + ".tbi")
 
         node.CommandNode.__init__(self, 
                                   description  = "<TabixIndex (%s): '%s'>" % (preset, infile,),

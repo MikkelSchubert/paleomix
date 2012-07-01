@@ -7,7 +7,7 @@ from atomiccmd import AtomicCmd
 
 
 class SlopBedNode(node.CommandNode):
-    def __init__(self, config, destination, infile, outfile, genome, from_start = 0, from_end = 0, strand_relative = False, dependencies = ()):
+    def __init__(self, config, infile, outfile, genome, from_start = 0, from_end = 0, strand_relative = False, dependencies = ()):
         if type(from_start) != type(from_end):
             raise ValueError("'from_start' and 'from_end' should be of same type!")
 
@@ -22,14 +22,12 @@ class SlopBedNode(node.CommandNode):
         if type(from_start) is float:
             call.append("-pct")
         
-        command = AtomicCmd(destination,
-                            call,
+        command = AtomicCmd(call,
                             IN_FILE = infile,
                             IN_GENOME = genome,
                             stdout  = outfile)
 
-        description = "<SlopBed: '%s' -> '%s'>" \
-            % (infile, os.path.join(destination, outfile))
+        description = "<SlopBed: '%s' -> '%s'>" % (infile, outfile)
 
         node.CommandNode.__init__(self, 
                                   description  = description,

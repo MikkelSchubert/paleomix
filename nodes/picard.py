@@ -11,18 +11,15 @@ class ValidateBAMNode(node.CommandNode):
             call.append("IGNORE=%s" % (error,))
 
         jarfile = os.path.join(config.jar_root, "ValidateSamFile.jar")
-        logfile = os.path.split(bamfile)[-1] + ".validated"
-        destination = os.path.split(bamfile)[0]
+        logfile = bamfile + ".validated"
 
-        command = AtomicCmd(destination,
-                              call,
-                              IN_JAR = jarfile,
-                              IN_BAM = bamfile,
-                              stdout = logfile,
-                              stderr = logfile)
+        command = AtomicCmd(call,
+                            IN_JAR = jarfile,
+                            IN_BAM = bamfile,
+                            stdout = logfile,
+                            stderr = logfile)
 
-        description =  "<Validate BAM: '%s' -> '%s'>" \
-            % (bamfile, os.path.join(destination, logfile))
+        description =  "<Validate BAM: '%s' -> '%s'>" % (bamfile, logfile)
 
         node.CommandNode.__init__(self, 
                                  description = description,
