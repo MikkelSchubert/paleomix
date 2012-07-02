@@ -129,12 +129,17 @@ def _get_runable_node(nodes, running):
     no such nodes exist."""
 
     for node in nodes:
-        if node in running:
+        if (node in running) or node.is_done:
             continue
-        elif not node.is_done and node.is_runable:
+        elif node.is_runable:
             return node
+        else:
+            subnode = _get_runable_node(node.subnodes, running)
+            if subnode:
+                return subnode
 
     return None
+
 
 def _any_nodes_left(nodes, running):
     for node in nodes:
