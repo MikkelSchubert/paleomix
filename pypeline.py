@@ -4,17 +4,9 @@ import multiprocessing
 import ui
 
 
-def _call_run(node, config):
-    """Wrapper function, required in order to call Node.run()
-    in subprocesses, since it is not possible to pickle 
-    bound functions (e.g. self.run)"""
-    return node.run(config)
-        
 
 
 class Pypeline:
-    RUNNING, FINISHED = "Running", "Finished"
-
     def __init__(self, config):
         self._top_nodes = []
         self._config = config
@@ -24,31 +16,32 @@ class Pypeline:
         self._top_nodes.append(node)
 
 
-    def run(self, max_running = 4, dry_run = False):
+    def run(self, max_running = 4, shallow_run = True, dry_run = False):
+        nodes = []
+        if not dry_run:
+            nodes = set(self._top_nodes) 
+            if not shallow_run:
+                nodes = _collect_nodes(self._top_nodes)
+
         running, last_running = {}, None
-
-        remaining_nodes = self._get_unfinished_nodes(self._top_nodes)
-        if dry_run or not remaining_nodes:
-            self.print_nodes(self._top_nodes, running, remaining_nodes)
-            ui.print_msg("Done ...")
-            return            
-
-        pool = multiprocessing.Pool(max_running)
-        while remaining_nodes:
+        pool = multiprocessing.Pool(min(len(nodes), max_running))
+        while True:
             if not self._check_running_nodes(running):
                 break
 
-            while (len(running) < max_running):
-                node = self._get_runnable_node(remaining_nodes)
-                if not node:
-                    break
-
-                running[node] = pool.apply_async(_call_run, args = (node, self._config))
-                remaining_nodes.remove(node)
-                
             if running != last_running:
-                self.print_nodes(self._top_nodes, running, remaining_nodes)
+                while (len(running) < max_running):
+                    node = _get_runable_node(nodes, running)
+                    if not node:
+                        break
+
+                    running[node] = pool.apply_async(_call_run, args = (node, self._config))
+                
+                self.print_nodes(self._top_nodes, running)
                 last_running = dict(running)
+
+                if not _any_nodes_left(nodes, running):
+                    break
                 
             time.sleep(1)
 
@@ -83,35 +76,11 @@ class Pypeline:
         return not errors
  
     
-    @classmethod
-    def _get_unfinished_nodes(cls, nodes):
-        unfinished = set()
-        for node in nodes:
-            if not node.is_done:
-                unfinished.add(node)
-            unfinished.update(cls._get_unfinished_nodes(node.subnodes))
-        return unfinished
-
 
     @classmethod
-    def _get_runnable_node(cls, nodes):
-        """Returns a node for which all subnodes are done, or None if 
-        no such nodes exist."""
-
-        for node in nodes:
-            if node.is_done:
-                continue
-            elif all(dep.is_done for dep in node.subnodes):
-                return node
-
-        return None
-
-
-    @classmethod
-    def print_nodes(cls, top_nodes, running, remaining):
+    def print_nodes(cls, top_nodes, running):
         print
-        ui.print_msg("Pipelin (%i nodes running, %i left):" \
-                         % (len(running), len(remaining)))
+        ui.print_msg("Pipeline (%i nodes running):" % (len(running),))
         cls.print_sub_nodes(list(top_nodes), running, "   ")
         
 
@@ -134,3 +103,41 @@ class Pypeline:
                 cls.print_sub_nodes(node.subnodes, running, current_prefix + "   ")
             else:
                 print_func(current_prefix)
+
+
+
+
+
+def _call_run(node, config):
+    """Wrapper function, required in order to call Node.run()
+    in subprocesses, since it is not possible to pickle 
+    bound functions (e.g. self.run)"""
+    return node.run(config)
+
+
+def _collect_nodes(nodes):
+    result = set()
+    for node in nodes:
+        result.add(node)
+        result.update(_collect_nodes(node.subnodes))
+
+    return result
+
+
+def _get_runable_node(nodes, running):
+    """Returns a node for which all subnodes are done, or None if 
+    no such nodes exist."""
+
+    for node in nodes:
+        if node in running:
+            continue
+        elif not node.is_done and node.is_runable:
+            return node
+
+    return None
+
+def _any_nodes_left(nodes, running):
+    for node in nodes:
+        if (node not in running) and not node.is_done:
+            return True
+    return False
