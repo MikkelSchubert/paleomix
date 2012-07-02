@@ -87,21 +87,21 @@ class Pypeline:
     def _get_unfinished_nodes(cls, nodes):
         unfinished = set()
         for node in nodes:
-            if node.output_status() != node.EXISTS:
+            if not node.is_done:
                 unfinished.add(node)
-            unfinished.update(cls._get_unfinished_nodes(node.dependencies))
+            unfinished.update(cls._get_unfinished_nodes(node.subnodes))
         return unfinished
 
 
     @classmethod
     def _get_runnable_node(cls, nodes):
-        """Returns a node for which all dependencies are met, or None if 
+        """Returns a node for which all subnodes are done, or None if 
         no such nodes exist."""
 
         for node in nodes:
-            if node.output_status() == node.EXISTS:
+            if node.is_done:
                 continue
-            elif all((dep.output_status() == node.EXISTS) for dep in node.dependencies):
+            elif all(dep.is_done for dep in node.subnodes):
                 return node
 
         return None
@@ -120,10 +120,9 @@ class Pypeline:
         for node in nodes:
             print_func = ui.print_info
             if node not in running:
-                status = node.output_status()
-                if status == node.EXISTS:
+                if node.is_done:
                     print_func = ui.print_disabled
-                elif status == node.OUTDATED:
+                elif node.is_outdated:
                     print_func = ui.print_warn
                 else:
                     print_func = ui.print_msg
@@ -131,7 +130,7 @@ class Pypeline:
             print_func(prefix + "+ " + str(node))
             current_prefix = prefix + ("  " if (node == nodes[-1]) else "|  ")
 
-            if node.dependencies:
-                cls.print_sub_nodes(node.dependencies, running, current_prefix + "   ")
+            if node.subnodes:
+                cls.print_sub_nodes(node.subnodes, running, current_prefix + "   ")
             else:
                 print_func(current_prefix)

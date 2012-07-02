@@ -22,25 +22,48 @@ class NodeError(RuntimeError):
 
 
 class Node:
-    EXISTS, MISSING, OUTDATED = range(3)
-
     def __init__(self, description = None, input_files = (), output_files = (), dependencies = ()):
         self.__description  = str(description)
         self.__input_files  = tuple(input_files)
         self.__output_files = tuple(output_files)
-        self.dependencies   = _validate_nodes(dependencies, "Dependency")
-    
-    def output_status(self):
+        self.subnodes       = _validate_nodes(dependencies, "Dependency")
+
+
+    @property
+    def is_done(self):
         if fileutils.missing_files(self.__output_files):
-            return Node.MISSING
-        elif fileutils.modified_after(self.__input_files, self.__output_files):
-            return Node.OUTDATED
+            return False
+        elif self.is_outdated:
+            return False
 
-        for node in self.dependencies:
-            if node.output_status() == Node.OUTDATED:
-                return Node.OUTDATED
+        return True
 
-        return Node.EXISTS
+
+    @property
+    def is_runable(self):
+        for subnode in self.subnodes:
+            if not subnode.is_done:
+                return False
+
+        return True
+
+
+    @property
+    def is_outdated(self):
+        for node in self.subnodes:
+            if node.is_outdated:
+                return True
+
+        for node in self.subnodes:
+            if not node.is_done:
+                return False
+
+        if not (self.__input_files and self.__output_files):
+            return False
+        elif fileutils.missing_files(self.__output_files):
+            return False
+
+        return fileutils.modified_after(self.__input_files, self.__output_files)
 
 
     def run(self, config):
