@@ -120,9 +120,11 @@ class Pypeline:
         for node in nodes:
             if node in running:
                 print_func = ui.print_info
-            elif node.output_status() == node.EXISTS:
+            
+            status = node.output_status()
+            if status == node.EXISTS:
                 print_func = ui.print_disabled
-            elif node.output_status() == node.OUTDATED:
+            elif status == node.OUTDATED:
                 print_func = ui.print_warn
             else:
                 print_func = ui.print_msg
