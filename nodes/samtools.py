@@ -44,7 +44,6 @@ class GenotypeNode(CommandNode):
 
 
 
-# FIXME: Should use temp folder ...
 class TabixIndexNode(CommandNode):
     def __init__(self, config, infile, preset = "vcf", dependencies = ()):
         assert infile.lower().endswith(".vcf.bgz")
@@ -58,6 +57,33 @@ class TabixIndexNode(CommandNode):
         CommandNode.__init__(self, 
                              description  = "<TabixIndex (%s): '%s'>" % (preset, infile,),
                              command      = cmd_tabix,
+                             dependencies = dependencies)
+
+    def _setup(self, config, temp):
+        infile  = os.path.abspath(self._infile)
+        outfile = os.path.join(temp, os.path.basename(self._infile))
+        os.symlink(infile, outfile)
+
+        return CommandNode._setup(self, config, temp)
+
+
+    def _teardown(self, config, temp):
+        os.remove(os.path.join(temp, os.path.basename(self._infile)))
+
+        return CommandNode._teardown(self, config, temp)
+
+
+class FastaIndexNode(CommandNode):
+    def __init__(self, config, infile, dependencies = ()):
+        self._infile = infile
+        cmd_faidx = AtomicCmd(["samtools", "faidx", "%(TEMP_IN_FASTA)s"],
+                              TEMP_IN_FASTA = os.path.basename(infile),
+                              IN_FASTA      = infile,
+                              OUT_TBI       = infile + ".fai")
+
+        CommandNode.__init__(self, 
+                             description  = "<FastaIndex: '%s'>" % (infile,),
+                             command      = cmd_faidx,
                              dependencies = dependencies)
 
     def _setup(self, config, temp):
