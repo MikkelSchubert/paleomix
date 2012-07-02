@@ -5,28 +5,22 @@ import ui
 import fileutils
 
 
-SINGLE_THREAD = 1
-
-def _validate_nodes(nodes, description):
-    nodes = tuple(nodes)
-    for dependency in nodes:
-        if not isinstance(dependency, Node):
-            raise NodeError("%s is not a Node: %s" \
-                                % (description, dependency))
-    return nodes
-
 
 class NodeError(RuntimeError):
     def __init__(self, *vargs):
         RuntimeError.__init__(self, *vargs)
 
 
-class Node:
+class Node(object):
     def __init__(self, description = None, input_files = (), output_files = (), dependencies = ()):
-        self.__description  = str(description)
+        self.__description  = description
         self.__input_files  = tuple(input_files)
         self.__output_files = tuple(output_files)
-        self.subnodes       = _validate_nodes(dependencies, "Dependency")
+
+        self.subnodes = tuple(dependencies)
+        for subnode in self.subnodes:
+            if not isinstance(subnode, Node):
+                raise NodeError("Subnode is not a Node: %s" % subnode)
 
 
     @property
@@ -50,17 +44,14 @@ class Node:
 
     @property
     def is_outdated(self):
+        if fileutils.missing_files(self.__output_files):
+            return False
+
         for node in self.subnodes:
-            if node.is_outdated:
+            if node.is_outdated or not node.is_done:
                 return True
 
-        for node in self.subnodes:
-            if not node.is_done:
-                return False
-
         if not (self.__input_files and self.__output_files):
-            return False
-        elif fileutils.missing_files(self.__output_files):
             return False
 
         return fileutils.modified_after(self.__input_files, self.__output_files)
@@ -152,3 +143,20 @@ class CommandNode(Node):
 
 
 
+class MetaNode(Node):
+    def __init__(self, description = None, subnodes = ()):
+        Node.__init__(self, 
+                      description  = description,
+                      dependencies = tuple(subnodes))
+
+    @property
+    def is_done(self):
+        for node in self.subnodes:
+            if not node.is_done:
+                return False
+
+        return True
+
+
+    def run(self):
+        return True

@@ -16,15 +16,13 @@ class Pypeline:
         self._top_nodes.append(node)
 
 
-    def run(self, max_running = 4, shallow_run = True, dry_run = False):
+    def run(self, max_running = 4, dry_run = False):
         nodes = []
         if not dry_run:
-            nodes = set(self._top_nodes) 
-            if not shallow_run:
-                nodes = _collect_nodes(self._top_nodes)
+            nodes = _collect_nodes(self._top_nodes)
 
         running, last_running = {}, None
-        pool = multiprocessing.Pool(min(len(nodes), max_running))
+        pool = multiprocessing.Pool(max_running)
         while True:
             if not self._check_running_nodes(running):
                 break
@@ -37,7 +35,7 @@ class Pypeline:
 
                     running[node] = pool.apply_async(_call_run, args = (node, self._config))
                 
-                self.print_nodes(self._top_nodes, running)
+                ui.print_node_tree(self._top_nodes, running)
                 last_running = dict(running)
 
                 if not _any_nodes_left(nodes, running):
@@ -75,35 +73,6 @@ class Pypeline:
 
         return not errors
  
-    
-
-    @classmethod
-    def print_nodes(cls, top_nodes, running):
-        print
-        ui.print_msg("Pipeline (%i nodes running):" % (len(running),))
-        cls.print_sub_nodes(list(top_nodes), running, "   ")
-        
-
-    @classmethod
-    def print_sub_nodes(cls, nodes, running, prefix = ""):
-        for node in nodes:
-            print_func = ui.print_info
-            if node not in running:
-                if node.is_done:
-                    print_func = ui.print_disabled
-                elif node.is_outdated:
-                    print_func = ui.print_warn
-                else:
-                    print_func = ui.print_msg
-            
-            print_func(prefix + "+ " + str(node))
-            current_prefix = prefix + ("  " if (node == nodes[-1]) else "|  ")
-
-            if node.subnodes:
-                cls.print_sub_nodes(node.subnodes, running, current_prefix + "   ")
-            else:
-                print_func(current_prefix)
-
 
 
 
