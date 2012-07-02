@@ -1,13 +1,14 @@
 import os
 
 import pypeline
-import fileutils
+import pypeline.nodes as nodes
+import pypeline.fileutils as fileutils
 
-from nodes.picard import ValidateBAMNode
-from nodes.gatk import IndelRealignerNode
-from nodes.bedtools import SlopBedNode
-from nodes.samtools import GenotypeNode, TabixIndexNode
-from nodes.bam_statistics import PairedStatisticsNode
+from pypeline.nodes.picard import ValidateBAMNode
+from pypeline.nodes.gatk import IndelRealignerNode
+from pypeline.nodes.bedtools import SlopBedNode
+from pypeline.nodes.samtools import GenotypeNode, TabixIndexNode
+from pypeline.nodes.bam_statistics import PairedStatisticsNode
 
 
 if __name__ == '__main__':
