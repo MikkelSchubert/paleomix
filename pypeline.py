@@ -118,16 +118,15 @@ class Pypeline:
     @classmethod
     def print_sub_nodes(cls, nodes, running, prefix = ""):
         for node in nodes:
-            if node in running:
-                print_func = ui.print_info
-            
-            status = node.output_status()
-            if status == node.EXISTS:
-                print_func = ui.print_disabled
-            elif status == node.OUTDATED:
-                print_func = ui.print_warn
-            else:
-                print_func = ui.print_msg
+            print_func = ui.print_info
+            if node not in running:
+                status = node.output_status()
+                if status == node.EXISTS:
+                    print_func = ui.print_disabled
+                elif status == node.OUTDATED:
+                    print_func = ui.print_warn
+                else:
+                    print_func = ui.print_msg
             
             print_func(prefix + "+ " + str(node))
             current_prefix = prefix + ("  " if (node == nodes[-1]) else "|  ")
