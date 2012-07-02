@@ -17,7 +17,7 @@ class AtomicCmd:
 
     def __init__(self, command, stdin = None, stdout = None, stderr = None, **kwargs):
         self.proc  = None
-        self._cmd  = command
+        self._cmd  = map(str, command)
         self._temp = None
         
         # Fill the in_files and out_files dictionaries 
