@@ -63,10 +63,11 @@ def missing_files(filenames):
 def modified_after(younger, older):
     """Returns true any of the files expected to be 'younger' have
     been modified after any of the files expected to be 'older'."""
-    younger_time = max([os.path.getmtime(filename) for filename in younger])
-    older_time   = min([os.path.getmtime(filename) for filename in older])
-    
-    return younger_time >= older_time
+    def get_mtimes(filenames):
+        for filename in filenames:
+            yield os.path.getmtime(os.path.realpath(filename))
+
+    return max(get_mtimes(younger)) >= min(get_mtimes(older))
 
 
 def is_executable(filename):
