@@ -1,24 +1,22 @@
 import os
 
-import node
-import fileutils
-
-from atomiccmd import AtomicCmd
-
+import pypeline.fileutils as fileutils
+from pypeline.node import CommandNode
+from pypeline.atomiccmd import AtomicCmd
 
 
-class _IndelTrainerNode(node.CommandNode):
+
+class _IndelTrainerNode(CommandNode):
     def __init__(self, config, reference, infile, outfile, dependencies = ()):
         jarfile = os.path.join(config.gatk_root, "GenomeAnalysisTK.jar")
         outfile += ".intervals"
-        call  = ["java", "-jar", "%(IN_JAR)s",
+        call  = ["java", "-jar", jarfile,
                  "-T", "RealignerTargetCreator", 
                  "-R", "%(IN_REFERENCE)s",
                  "-I", "%(IN_BAMFILE)s",
                  "-o", "%(OUT_INTERVALS)s"]
 
         command = AtomicCmd(call, 
-                            IN_JAR = jarfile,
                             IN_REFERENCE = reference,
                             IN_BAMFILE = infile,
                             OUT_INTERVALS = outfile,
@@ -28,18 +26,18 @@ class _IndelTrainerNode(node.CommandNode):
         description = "<Train Indel Realigner: '%s' -> '%s'>" \
             % (infile, outfile)
 
-        node.CommandNode.__init__(self, 
-                                  description = description,
-                                  command = command,
-                                  dependencies = dependencies)
+        CommandNode.__init__(self, 
+                             description = description,
+                             command = command,
+                             dependencies = dependencies)
 
 
 
-class _IndelRealignerNode(node.CommandNode):
+class _IndelRealignerNode(CommandNode):
     def __init__(self, config, reference, infile, outfile, dependencies = ()):
         jarfile = os.path.join(config.gatk_root, "GenomeAnalysisTK.jar")
         intervalsfile = outfile + ".intervals"
-        call  = ["java", "-jar", "%(IN_JAR)s",
+        call  = ["java", "-jar", jarfile,
                  "-T", "IndelRealigner", 
                  "-R", "%(IN_REFERENCE)s",
                  "-I", "%(IN_BAMFILE)s",
@@ -47,7 +45,6 @@ class _IndelRealignerNode(node.CommandNode):
                  "-o", "%(OUT_BAMFILE)s"]
         
         command = AtomicCmd(call, 
-                            IN_JAR = jarfile,
                             IN_REFERENCE = reference,
                             IN_BAMFILE   = infile,
                             IN_INTERVALS = intervalsfile,
@@ -59,10 +56,10 @@ class _IndelRealignerNode(node.CommandNode):
         description = "<Indel Realigner: '%s' -> '%s'>" \
             % (infile, outfile)
 
-        node.CommandNode.__init__(self, 
-                                  description = description,
-                                  command = command,
-                                  dependencies = dependencies)
+        CommandNode.__init__(self, 
+                             description = description,
+                             command = command,
+                             dependencies = dependencies)
 
 
 

@@ -2,23 +2,23 @@ import os
 
 import pysam
 
-import node
-import fileutils
+import pypeline.fileutils as fileutils
+from pypeline.node import Node
 
 
 
-class PairedStatisticsNode(node.Node):
+class PairedStatisticsNode(Node):
     def __init__(self, config, infile, dependencies = ()):
         self._infile = infile
         self._outfile = os.path.split(infile)[-1] + ".paired_stats"
         self._destination = os.path.split(infile)[0]
 
-        node.Node.__init__(self, 
-                           description  = "<PairedStatistics: '%s' -> '%s'>" \
-                               % (infile, os.path.join(self._destination, self._outfile)),
-                           input_files  = [infile],
-                           output_files = [infile + ".paired_stats"],
-                           dependencies = dependencies)
+        Node.__init__(self, 
+                      description  = "<PairedStatistics: '%s' -> '%s'>" \
+                          % (infile, os.path.join(self._destination, self._outfile)),
+                      input_files  = [infile],
+                      output_files = [infile + ".paired_stats"],
+                      dependencies = dependencies)
 
 
     def _run(self, config, temp):

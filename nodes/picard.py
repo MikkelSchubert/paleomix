@@ -1,10 +1,10 @@
 import os
 
-import node
-from atomiccmd import AtomicCmd
+from pypeline.node import CommandNode
+from pypeline.atomiccmd import AtomicCmd
 
 
-class ValidateBAMNode(node.CommandNode):
+class ValidateBAMNode(CommandNode):
     def __init__(self, config, bamfile, ignore = (), dependencies = ()):
         call  = ["java", "-jar", "%(IN_JAR)s", "TMP_DIR=%s" % config.temp_root, "I=%(IN_BAM)s"]
         for error in ignore:
@@ -21,7 +21,7 @@ class ValidateBAMNode(node.CommandNode):
 
         description =  "<Validate BAM: '%s' -> '%s'>" % (bamfile, logfile)
 
-        node.CommandNode.__init__(self, 
-                                 description = description,
-                                 command = command,
-                                 dependencies = dependencies)
+        CommandNode.__init__(self, 
+                             description = description,
+                             command = command,
+                             dependencies = dependencies)

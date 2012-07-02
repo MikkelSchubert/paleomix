@@ -1,12 +1,11 @@
 import os
 
-import node
-
-from atomiccmd import AtomicCmd
-
+from pypeline.node import CommandNode
+from pypeline.atomiccmd import AtomicCmd
 
 
-class SlopBedNode(node.CommandNode):
+
+class SlopBedNode(CommandNode):
     def __init__(self, config, infile, outfile, genome, from_start = 0, from_end = 0, strand_relative = False, dependencies = ()):
         if type(from_start) != type(from_end):
             raise ValueError("'from_start' and 'from_end' should be of same type!")
@@ -29,7 +28,7 @@ class SlopBedNode(node.CommandNode):
 
         description = "<SlopBed: '%s' -> '%s'>" % (infile, outfile)
 
-        node.CommandNode.__init__(self, 
-                                  description  = description,
-                                  command      = command,
-                                  dependencies = dependencies)
+        CommandNode.__init__(self, 
+                             description  = description,
+                             command      = command,
+                             dependencies = dependencies)
