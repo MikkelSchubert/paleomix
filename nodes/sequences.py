@@ -33,11 +33,7 @@ class CollectSequencesNode(Node):
                 
                 fasta.write(">%s\n%s\n" % (name, sequence))
 
-        return True
-
 
     def _teardown(self, _config, temp):
         filename = os.path.join(temp, os.path.basename(self._outfile))
         os.rename(filename, self._outfile)
-
-        return True

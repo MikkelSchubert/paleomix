@@ -71,8 +71,8 @@ class Pypeline:
 
             if not result:
                 errors = True
-                ui.print_err("%s: Error occurred running command (terminating gracefully):\n%s" \
-                    % (node, error))
+                ui.print_err("%s: Error occurred running command (terminating gracefully):\n%s\n" \
+                    % (node, "\n".join(("\t" + line) for line in str(error).strip().split("\n"))))
 
         return not errors
  

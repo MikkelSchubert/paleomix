@@ -63,5 +63,3 @@ class PairedStatisticsNode(Node):
         bamfile.close()
         os.rename(os.path.join(temp, self._outfile), 
                   os.path.join(self._destination, self._outfile))
-
-        return True

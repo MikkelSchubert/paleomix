@@ -1,7 +1,6 @@
 import os
 import traceback
 
-import ui
 import fileutils
 
 
@@ -9,6 +8,12 @@ import fileutils
 class NodeError(RuntimeError):
     def __init__(self, *vargs):
         RuntimeError.__init__(self, *vargs)
+
+
+class NodeUnhandledException(RuntimeError):
+    def __init__(self, *vargs):
+        RuntimeError.__init__(self, *vargs)
+
 
 
 class Node(object):
@@ -61,18 +66,17 @@ class Node(object):
         try:
             temp = fileutils.create_temp_dir(config.temp_root)
             
-            if not self._setup(config, temp):
-                return False
-            elif not self._run(config, temp):
-                return False
-            elif not self._teardown(config, temp):
-                return False
+            self._setup(config, temp)
+            self._run(config, temp)
+            self._teardown(config, temp)
 
             os.rmdir(temp)
             
             return True
+        except NodeError:
+            raise
         except Exception:
-            raise NodeError(traceback.format_exc())
+            raise NodeUnhandledException(traceback.format_exc())
 
 
     def _setup(self, _config, _temp):
@@ -106,17 +110,13 @@ class CommandNode(Node):
 
     def _setup(self, _config, _temp):
         if not fileutils.missing_files(self._command.executables()):
-            ui.print_err("%s: Executable(s) does not exist for command: %s" \
-                              % (self, self._command))
-            return False
+            raise NodeError("Executable(s) does not exist for command: %s" \
+                                % (self._command, ))
             
         missing_input = fileutils.missing_files(self._command.input_files())
         if missing_input:
-            ui.print_warn("%s: Missing input files for command: %s -> %s" \
-                              % (self, self._command, missing_input))
-            return False
-
-        return True
+            raise NodeError("Missing input files for command: %s -> %s" \
+                                % (self._command, missing_input))
 
 
     def _run(self, _config, temp):
@@ -124,20 +124,15 @@ class CommandNode(Node):
 
         return_codes = self._command.wait()
         if any(return_codes):
-            ui.print_err("%s: Error(s) running '%s': Return-codes %s" \
-                             % (self, self._command, return_codes))
-            ui.print_err("\t - Ran in directory '%s'." % temp)
-            return False
-
-        return True
+            raise NodeError("Error(s) running '%s':\n\tReturn-codes: %s\n\tTemporary directory: '%s'" \
+                             % (self._command, return_codes, temp))
 
 
-    def _teardown(self, _config, _temp):
+    def _teardown(self, _config, temp):
         missing_files = fileutils.missing_files(self._command.temp_files())
         if missing_files:
-            ui.print_err("%s: Expected temp files are missings for command '%s': %s" \
-                             % (self, self._command, missing_files))
-            return False
+            raise NodeError("Error(s) running '%s':\n\tMissing temporary files: %s\n\tTemporary directory: '%s'" \
+                             % (self._command, missing_files, temp))
     
         return self._command.commit()
 
@@ -158,5 +153,5 @@ class MetaNode(Node):
         return True
 
 
-    def run(self):
+    def run(self, config):
         return True
