@@ -2,6 +2,7 @@ import time
 import multiprocessing
 
 import ui
+import fileutils
 
 
 
@@ -28,18 +29,20 @@ class Pypeline:
                 break
 
             if running != last_running:
-                while (len(running) < max_running):
-                    node = _get_runable_node(nodes, running)
-                    if not node:
-                        break
+                # All subsequent calls to fileutils involving syscalls are cached
+                with fileutils.GlobalCache:
+                    while (len(running) < max_running):
+                        node = _get_runable_node(nodes, running)
+                        if not node:
+                            break
 
-                    running[node] = pool.apply_async(_call_run, args = (node, self._config))
+                        running[node] = pool.apply_async(_call_run, args = (node, self._config))
                 
-                ui.print_node_tree(self._top_nodes, running)
-                last_running = dict(running)
+                    ui.print_node_tree(self._top_nodes, running)
+                    last_running = dict(running)
 
-                if not _any_nodes_left(nodes, running):
-                    break
+                    if not _any_nodes_left(nodes, running):
+                        break
                 
             time.sleep(1)
 
