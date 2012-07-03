@@ -3,6 +3,7 @@ import signal
 import multiprocessing
 
 import ui
+import taskgraph
 import fileutils
 
 
@@ -19,58 +20,55 @@ class Pypeline:
 
 
     def run(self, max_running = 4, dry_run = False):
-        nodes = []
-        if not dry_run:
-            nodes = _collect_nodes(self._top_nodes)
-
         running, last_running = {}, None
         pool = multiprocessing.Pool(max_running, _init_worker)
-
+        nodes = taskgraph.TaskGraph(self._top_nodes)
+        
+        if dry_run:
+            ui.print_node_tree(self._top_nodes, nodes)
+            ui.print_msg("Dry run done ...")
+            return 0
+    
         try:
-            while True:
-                if not self._check_running_nodes(running):
+            while self._check_running_nodes(running, nodes):
+                if running == last_running:
+                    time.sleep(1)
+                    continue
+                elif not nodes.any_runable_left():
                     break
 
-                if running != last_running:
-                    # All subsequent calls to fileutils involving syscalls are cached
-                    with fileutils.GlobalCache():
-                        while (len(running) < max_running):
-                            node = _get_runable_node(nodes, running)
-                            if not node:
-                                break
-
-                            running[node] = pool.apply_async(_call_run, args = (node, self._config))
-                    
-                        ui.print_node_tree(self._top_nodes, running)
-                        last_running = dict(running)
-
-                        if not _any_nodes_left(nodes, running):
-                            break
-                    
-                time.sleep(1)
+                for task in nodes.get_runable_tasks(max_running):
+                    running[task] = pool.apply_async(_call_run, args = (task, self._config))
+                    nodes.mark_task(task, nodes.RUNNING)
+                last_running = dict(running)
+                
+                ui.print_node_tree(self._top_nodes, nodes)
         except KeyboardInterrupt:
-            ui.print_err("Keyboard interrupt detected, terminating ...")
-            pool.terminate()
+            ui.print_err("Keyboard interrupt detected, terminating gracefully ...")
+            pool.close()
             pool.join()
             return False
 
         pool.close()
         pool.join()
 
-        self._check_running_nodes(running)
+        if not self._check_running_nodes(running, nodes):
+            ui.print_err("Errors were detected ...")
+            return False
 
         ui.print_msg("Done ...")
         return True
 
 
     @classmethod
-    def _check_running_nodes(cls, running):
+    def _check_running_nodes(cls, running, graph):
         errors = False
         for (node, proc) in running.items():
             if not proc.ready():
                 continue
 
             running.pop(node)
+            graph.clear_task_state(node)
                    
             try:
                 error = "\tRun() returned false."

@@ -32,31 +32,15 @@ class Node(object):
     def is_done(self):
         if fileutils.missing_files(self.__output_files):
             return False
-        elif self.is_outdated:
-            return False
-
-        return True
-
-
-    @property
-    def is_runable(self):
-        for subnode in self.subnodes:
-            if not subnode.is_done:
-                return False
 
         return True
 
 
     @property
     def is_outdated(self):
-        if fileutils.missing_files(self.__output_files):
+        if not self.is_done:
             return False
-
-        for node in self.subnodes:
-            if node.is_outdated or not node.is_done:
-                return True
-
-        if not (self.__input_files and self.__output_files):
+        elif not (self.__input_files and self.__output_files):
             return False
 
         return fileutils.modified_after(self.__input_files, self.__output_files)

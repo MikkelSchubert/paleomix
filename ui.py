@@ -38,17 +38,18 @@ def print_disabled(*vargs, **kwargs):
 
 
 
-def print_node_tree(top_nodes, running, collapse = True):
-    print_msg("Pipeline (%i nodes running):" % (len(running),))
-    _print_sub_nodes(top_nodes, running, collapse, "   ")
+def print_node_tree(nodes, states, collapse = True):
+    print_msg("Pipeline (%i nodes running):" % (states.running_tasks(),))
+    _print_sub_nodes(nodes, states, collapse, "   ")
         
 
-def _print_sub_nodes(nodes, running, collapse, prefix = ""):
+def _print_sub_nodes(nodes, states, collapse, prefix = ""):
     nodes = list(nodes)
     nodes.sort(key = str)
 
     for node in nodes:
-        if node.is_runable and not node.is_done or node in running:
+        state = states.get_state(node)
+        if state in (states.RUNNING, states.RUNABLE):
             description = prefix + "R " + str(node)
         else:
             description = prefix + "+ " + str(node)
@@ -57,47 +58,49 @@ def _print_sub_nodes(nodes, running, collapse, prefix = ""):
             active, done, total = 0, 0, 0
             for subnode in node.subnodes:
                 total += 1
-                if subnode in running:
+                substate = states.get_state(subnode)
+                if substate == states.RUNNING:
                     active += 1
-                elif subnode.is_done:
+                elif substate == states.DONE:
                     done += 1
         
             description += " %i running, %i done of %i subnodes" % (active, done, total)
 
-        print_func = _get_print_function(node, running)
+        print_func = _get_print_function(node, states)
         print_func(description)
         current_prefix = prefix + ("  " if (node == nodes[-1]) else "|  ")
 
         dependencies = _collect_dependencies(node)
         if dependencies:
-            if collapse and _collapse_node(dependencies):
+            if collapse and _collapse_node(dependencies, states):
                 print_disabled(current_prefix + "+ ...")
                 print_disabled(current_prefix)
             else:
-                _print_sub_nodes(dependencies, running, collapse, current_prefix + "   ")
+                _print_sub_nodes(dependencies, states, collapse, current_prefix + "   ")
         else:
             print_func(current_prefix)
 
 
-def _collapse_node(dependencies):
+def _collapse_node(dependencies, states):
     for subnode in dependencies:
-        if not subnode.is_done:
+        if states.get_state(subnode) != states.DONE:
             return False
 
     return True
 
 
-def _get_print_function(node, running):
+def _get_print_function(node, states):
     if isinstance(node, MetaNode):
         for subnode in node.subnodes:
-            if subnode in running:
+            if states.get_state(subnode) == states.RUNNING:
                 return print_info
 
-    if node in running:
+    state = states.get_state(node)
+    if state is states.RUNNING:
         return print_info
-    elif node.is_done:
+    elif state is states.DONE:
         return print_disabled
-    elif node.is_outdated:
+    elif state is states.OUTDATED:
         return print_warn
     else:
         return print_msg
