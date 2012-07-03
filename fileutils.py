@@ -53,15 +53,15 @@ def file_is_empty(filename):
     if not os.path.exists(filename):
         return True
 
+    length = os.stat(filename).st_size
+    if length > 20:
+        return False
+
     with open(filename, "rb") as fobj:
         magic = fobj.read(2)
         if not magic:
             return True
-
-        fobj.seek(0, os.SEEK_END)
-        length = fobj.tell()
-        
-        if magic == "BZ":
+        elif magic == "BZ":
             return (length <= 14) # BZip2
         elif magic == "\x1f\x8b":
             return (length <= 20) # GZip
