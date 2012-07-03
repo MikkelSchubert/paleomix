@@ -1,4 +1,5 @@
 import time
+import signal
 import multiprocessing
 
 import ui
@@ -23,28 +24,35 @@ class Pypeline:
             nodes = _collect_nodes(self._top_nodes)
 
         running, last_running = {}, None
-        pool = multiprocessing.Pool(max_running)
-        while True:
-            if not self._check_running_nodes(running):
-                break
+        pool = multiprocessing.Pool(max_running, _init_worker)
 
-            if running != last_running:
-                # All subsequent calls to fileutils involving syscalls are cached
-                with fileutils.GlobalCache():
-                    while (len(running) < max_running):
-                        node = _get_runable_node(nodes, running)
-                        if not node:
+        try:
+            while True:
+                if not self._check_running_nodes(running):
+                    break
+
+                if running != last_running:
+                    # All subsequent calls to fileutils involving syscalls are cached
+                    with fileutils.GlobalCache():
+                        while (len(running) < max_running):
+                            node = _get_runable_node(nodes, running)
+                            if not node:
+                                break
+
+                            running[node] = pool.apply_async(_call_run, args = (node, self._config))
+                    
+                        ui.print_node_tree(self._top_nodes, running)
+                        last_running = dict(running)
+
+                        if not _any_nodes_left(nodes, running):
                             break
-
-                        running[node] = pool.apply_async(_call_run, args = (node, self._config))
-                
-                    ui.print_node_tree(self._top_nodes, running)
-                    last_running = dict(running)
-
-                    if not _any_nodes_left(nodes, running):
-                        break
-                
-            time.sleep(1)
+                    
+                time.sleep(1)
+        except KeyboardInterrupt:
+            ui.print_err("Keyboard interrupt detected, terminating ...")
+            pool.terminate()
+            pool.join()
+            return False
 
         pool.close()
         pool.join()
@@ -52,6 +60,7 @@ class Pypeline:
         self._check_running_nodes(running)
 
         ui.print_msg("Done ...")
+        return True
 
 
     @classmethod
@@ -79,6 +88,8 @@ class Pypeline:
 
 
 
+def _init_worker():
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 def _call_run(node, config):
     """Wrapper function, required in order to call Node.run()
