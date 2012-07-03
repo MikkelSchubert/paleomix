@@ -89,8 +89,6 @@ def _get_print_function(node, running):
         return print_warn
     else:
         return print_msg
-    
-    return print_func
 
 
 def _collect_dependencies(node):
