@@ -1,5 +1,3 @@
-import os
-
 from pypeline.node import CommandNode
 from pypeline.atomiccmd import AtomicCmd
 

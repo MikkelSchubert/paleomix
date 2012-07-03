@@ -1,13 +1,9 @@
-import os
-
-import pypeline.fileutils as fileutils
-
 from pypeline.node import CommandNode
 from pypeline.atomiccmd import AtomicCmd
 
 
 class MuscleNode(CommandNode):
-    def __init__(self, config, infile, outfile, dependencies = ()):
+    def __init__(self, infile, outfile, dependencies = ()):
         call = ["muscle", 
                 "-maxiters", 32,
                 "-in", "%(IN_FASTA)s",

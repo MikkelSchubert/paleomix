@@ -1,7 +1,5 @@
 import os
 
-import pypeline.fileutils as fileutils
-
 from pypeline.node import CommandNode
 from pypeline.atomiccmd import AtomicCmd, ParallelCmds
 
@@ -86,7 +84,7 @@ class FastaIndexNode(CommandNode):
                              command      = cmd_faidx,
                              dependencies = dependencies)
 
-    def _setup(self, config, temp):
+    def _setup(self, _config, temp):
         infile  = os.path.abspath(self._infile)
         outfile = os.path.join(temp, os.path.basename(self._infile))
         os.symlink(infile, outfile)
@@ -94,7 +92,7 @@ class FastaIndexNode(CommandNode):
         return CommandNode._setup(self, config, temp)
 
 
-    def _teardown(self, config, temp):
+    def _teardown(self, _config, temp):
         os.remove(os.path.join(temp, os.path.basename(self._infile)))
 
         return CommandNode._teardown(self, config, temp)

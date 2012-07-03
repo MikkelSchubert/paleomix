@@ -1,5 +1,6 @@
 from __future__ import with_statement
 
+import os
 import textwrap
 
 import pysam
@@ -17,11 +18,11 @@ class CollectSequencesNode(Node):
                       description  = "<CollectSequences: '%s' from %i files -> '%s'>" \
                             % (sequence, len(infiles), outfile),
                       input_files  = self._infiles.values(),
-                      output_files = [self._output_file],
+                      output_files = [self._outfile],
                       dependencies = dependencies)
 
 
-    def _run(self, config, temp):
+    def _run(self, _config, temp):
         filename = os.path.join(temp, os.path.basename(self._outfile))
 
         with open(filename, "w") as fasta:
@@ -35,7 +36,7 @@ class CollectSequencesNode(Node):
         return True
 
 
-    def _teardown(self, config, temp):
+    def _teardown(self, _config, temp):
         filename = os.path.join(temp, os.path.basename(self._outfile))
         os.rename(filename, self._outfile)
 
