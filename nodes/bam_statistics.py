@@ -3,7 +3,7 @@ import os
 import pysam
 
 import pypeline.fileutils as fileutils
-from pypeline.node import Node
+from pypeline.node import Node, NodeError
 
 
 
@@ -19,6 +19,11 @@ class PairedStatisticsNode(Node):
                       input_files  = [infile],
                       output_files = [infile + ".paired_stats"],
                       dependencies = dependencies)
+
+
+    def _setup(self, _config, _temp):
+        if not fileutils.valid_file(self._infile):
+            raise NodeError("Missing input file: '%s'" % (self._infile,))
 
 
     def _run(self, config, temp):
