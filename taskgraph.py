@@ -44,7 +44,7 @@ class TaskGraph:
 
     
     def running_tasks(self):
-        return self._get_states().count(self.RUNNING)
+        return self._get_states().values().count(self.RUNNING)
 
 
     def _get_states(self):
