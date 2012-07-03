@@ -38,12 +38,12 @@ def print_disabled(*vargs, **kwargs):
 
 
 
-def print_node_tree(top_nodes, running):
+def print_node_tree(top_nodes, running, collapse = True):
     print_msg("Pipeline (%i nodes running):" % (len(running),))
-    _print_sub_nodes(top_nodes, running, "   ")
+    _print_sub_nodes(top_nodes, running, collapse, "   ")
         
 
-def _print_sub_nodes(nodes, running, prefix = ""):
+def _print_sub_nodes(nodes, running, collapse, prefix = ""):
     nodes = list(nodes)
     nodes.sort(key = str)
 
@@ -70,9 +70,21 @@ def _print_sub_nodes(nodes, running, prefix = ""):
 
         dependencies = _collect_dependencies(node)
         if dependencies:
-            _print_sub_nodes(dependencies, running, current_prefix + "   ")
+            if collapse and _collapse_node(dependencies):
+                print_disabled(current_prefix + "+ ...")
+                print_disabled(current_prefix)
+            else:
+                _print_sub_nodes(dependencies, running, collapse, current_prefix + "   ")
         else:
             print_func(current_prefix)
+
+
+def _collapse_node(dependencies):
+    for subnode in dependencies:
+        if not subnode.is_done:
+            return False
+
+    return True
 
 
 def _get_print_function(node, running):
