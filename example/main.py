@@ -1,7 +1,6 @@
 import os
 
 import pypeline
-import pypeline.nodes as nodes
 import pypeline.fileutils as fileutils
 
 from pypeline.nodes.picard import ValidateBAMNode

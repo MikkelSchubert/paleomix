@@ -1,5 +1,4 @@
 import os
-import os.path
 import uuid
 import threading
 import functools
@@ -10,6 +9,9 @@ class GlobalCache:
     _cache   = {}
     _hits    = 0
     _misses  = 0
+
+    def __init__(self):
+        pass
 
     def __enter__(self):
         assert threading.current_thread().name == "MainThread"
