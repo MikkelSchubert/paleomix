@@ -30,7 +30,7 @@ class Pypeline:
 
             if running != last_running:
                 # All subsequent calls to fileutils involving syscalls are cached
-                with fileutils.GlobalCache:
+                with fileutils.GlobalCache():
                     while (len(running) < max_running):
                         node = _get_runable_node(nodes, running)
                         if not node:

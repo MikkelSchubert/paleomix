@@ -11,37 +11,35 @@ class GlobalCache:
     _hits    = 0
     _misses  = 0
 
-    @classmethod
-    def __enter__(cls):
+    def __enter__(self):
         assert threading.current_thread().name == "MainThread"
-        cls._enabled += 1
+        GlobalCache._enabled += 1
 
-    @classmethod
-    def __exit__(cls, _exc_type, _exc_value, _traceback):
+
+    def __exit__(self, _exc_type, _exc_value, _traceback):
         assert threading.current_thread().name == "MainThread"
-        assert cls._enabled
-        cls._enabled -= 1
+        assert GlobalCache._enabled
 
-        if not cls._enabled:
-            cls._cache = {}
+        GlobalCache._enabled -= 1
+        if not GlobalCache._enabled:
+            GlobalCache._cache = {}
+
 
     @classmethod
     def cache_enabled(cls, obj):
-        cache = obj.cache = {}
-
         @functools.wraps(obj)
         def memoizer(*args, **kwargs):
             if cls._enabled:
                 assert threading.current_thread().name == "MainThread"
 
-                key = (tuple(args), frozenset(kwargs.iteritems()))
-                if key not in cache:
+                key = (obj, tuple(args), frozenset(kwargs.iteritems()))
+                if key not in GlobalCache._cache:
                     cls._misses += 1
-                    result = cache[key] = obj(*args, **kwargs)
+                    result = GlobalCache._cache[key] = obj(*args, **kwargs)
                     return result
                 else:
                     cls._hits += 1
-                    return cache[key]
+                    return GlobalCache._cache[key]
             else:
                 return obj(*args, **kwargs)
 
