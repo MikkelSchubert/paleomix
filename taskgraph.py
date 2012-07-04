@@ -56,35 +56,36 @@ class TaskGraph:
 
     @classmethod
     def _build_state_map(cls, tasks, fixed_states):
-        states = dict(fixed_states)
+        states = {}
         for task in tasks:
-            cls._update_state_map(task, states)
+            cls._update_state_map(task, states, fixed_states)
 
         return states
 
 
     @classmethod
-    def _update_state_map(cls, task, states):
+    def _update_state_map(cls, task, states, fixed_states):
         if task in states:
             return states[task]
 
+        # Update sub-tasks, before checking for fixed states
         state = cls.DONE
         for subtask in task.subnodes:
-            state = max(state, cls._update_state_map(subtask, states))
+            state = max(state, cls._update_state_map(subtask, states, fixed_states))
 
-        if state == cls.DONE:
+        if task in fixed_states:
+            state = fixed_states[task]
+        elif state == cls.DONE:
             if not task.is_done:
                 state = cls.RUNABLE
             elif task.is_outdated:
                 state = cls.OUTDATED
-
-            states[task] = state
         elif state in (cls.RUNNING, cls.RUNABLE, cls.QUEUED):
             if task.is_done:
-                states[task] = cls.OUTDATED
+                state = cls.OUTDATED
             else:
-                states[task] = cls.QUEUED
-        else:
-            states[task] = state
+                state = cls.QUEUED
+
+        states[task] = state
 
         return state
