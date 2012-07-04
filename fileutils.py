@@ -1,5 +1,6 @@
 import os
 import uuid
+import shutil
 import threading
 import functools
 
@@ -133,3 +134,20 @@ def executable_exists(filename):
             return True
 
     return False
+
+
+def missing_executables(filenames):
+    result = []
+    for filename in filenames:
+        if not executable_exists(filename):
+            result.append(filename)
+            
+    return result
+
+
+def move_file(source, destination):
+    directory = os.path.dirname(destination)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    shutil.move(source, destination)
