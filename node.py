@@ -93,7 +93,7 @@ class CommandNode(Node):
             
 
     def _setup(self, _config, _temp):
-        if not fileutils.missing_files(self._command.executables()):
+        if fileutils.missing_executables(self._command.executables()):
             raise NodeError("Executable(s) does not exist for command: %s" \
                                 % (self._command, ))
             
