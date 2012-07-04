@@ -151,3 +151,11 @@ def move_file(source, destination):
         os.makedirs(directory)
 
     shutil.move(source, destination)
+
+
+def copy_file(source, destination):
+    directory = os.path.dirname(destination)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    shutil.copy(source, destination)
