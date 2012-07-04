@@ -156,9 +156,9 @@ class AtomicCmd:
                 raise RuntimeError("Invalid input file '%s' for '%s' is not a string: %s" \
                                      % (key, self.__class__.__name__, value))
 
-            if key.startswith("IN_") or key.startswith("TEMP_IN"):
+            if key.startswith("IN_") or key.startswith("TEMP_IN_"):
                 self._in_files[key] = value
-            elif key.startswith("OUT_") or key.startswith("TEMP_OUT"):
+            elif key.startswith("OUT_") or key.startswith("TEMP_OUT_"):
                 self._out_files[key] = value
             else:
                 if not (key.startswith("IN_") or key.startswith("OUT_")):
