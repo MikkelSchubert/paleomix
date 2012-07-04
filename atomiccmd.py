@@ -1,6 +1,8 @@
 import os
 import subprocess
 
+import fileutils
+
 
 class CmdError(RuntimeError):
     def __init__(self, msg):
@@ -55,6 +57,7 @@ class AtomicCmd:
             if key.startswith("TEMP_IN_"):
                 filename = os.path.join(temp, filename)
             kwords[key] = filename
+        kwords["TEMP_DIR"] = temp
 
         cmd = [(field % kwords) for field in self._cmd]
 
@@ -105,10 +108,14 @@ class AtomicCmd:
             handle.close()
 
         for key in self._temp_files:
-            if key.startswith("TEMP_"):
-                os.remove(self._temp_files[key])
-            else:
-                os.rename(self._temp_files[key], self._out_files[key])
+            temp_filename = self._temp_files[key]
+            final_filename = self._out_files[key]
+
+            if key.startswith("TEMP_OUT_"):
+                os.remove(temp_filename)
+                continue
+
+            fileutils.move_file(temp_filename, final_filename)
 
         self.proc = None
         return True
@@ -118,6 +125,7 @@ class AtomicCmd:
         temp = self._temp or "${TEMP}"
         kwords = self._generate_temp_filenames(root = temp)
         kwords.update(self._in_files)
+        kwords["TEMP_DIR"] = temp
         
         def describe_pipe(pipe, prefix):
             if type(pipe) is str:
