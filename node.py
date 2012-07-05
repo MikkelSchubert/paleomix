@@ -22,7 +22,15 @@ class Node(object):
         self.__input_files  = tuple(input_files)
         self.__output_files = tuple(output_files)
 
-        self.subnodes = tuple(dependencies)
+        if isinstance(dependencies, Node):
+            self.subnodes = (dependencies,)
+
+        try:
+            self.subnodes = tuple(dependencies)
+        except TypeError:
+            raise NodeError("Non Node/sequence passed as dependencies for '%s': %s" \
+                    % (self, repr(dependencies)))
+
         for subnode in self.subnodes:
             if not isinstance(subnode, Node):
                 raise NodeError("Subnode is not a Node: %s" % subnode)
