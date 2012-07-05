@@ -41,6 +41,35 @@ class GenotypeNode(CommandNode):
                              dependencies = dependencies)
 
 
+class MPileupNode(CommandNode):
+    pileup_args = "-EA"
+
+    def __init__(self, reference, infile, outfile, regions = None, dependencies = ()):
+        call = ["samtools", "mpileup", 
+                PileupNode.pileup_args,
+                "-f", "%(IN_REFERENCE)s",
+                "%(IN_BAMFILE)s"]
+        if regions:
+            call[-1:-1] = ["-l", "%(IN_REGIONS)s"]
+
+        pileup   = AtomicCmd(call_pileup,
+                             IN_REFERENCE = reference,
+                             IN_BAMFILE   = infile,
+                             IN_REGIONS   = regions,
+                             stdout       = AtomicCmd.PIPE,
+                             stderr       = outfile + ".pileup_log")
+
+        bgzip    = AtomicCmd(["bgzip"],
+                             stdin        = pileup,
+                             stdout       = outfile)
+
+        description = "<MPileup: '%s' -> '%s'>" % (infile, outfile)
+        CommandNode.__init__(self, 
+                             description  = description,
+                             command      = ParallelCmds([pileup, bgzip]),
+                             dependencies = dependencies)
+
+
 
 class TabixIndexNode(CommandNode):
     def __init__(self, config, infile, preset = "vcf", dependencies = ()):
