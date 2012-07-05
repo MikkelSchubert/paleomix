@@ -8,7 +8,7 @@ class GenotypeNode(CommandNode):
     pileup_args = "-EA"
     caller_args = "-g"
 
-    def __init__(self, config, reference, infile, outfile, regions = None, dependencies = ()):
+    def __init__(self, reference, infile, outfile, regions = None, dependencies = ()):
         assert outfile.lower().endswith(".vcf.bgz")
 
         call_pileup = ["samtools", "mpileup", 
@@ -46,13 +46,13 @@ class MPileupNode(CommandNode):
 
     def __init__(self, reference, infile, outfile, regions = None, dependencies = ()):
         call = ["samtools", "mpileup", 
-                PileupNode.pileup_args,
+                MPileupNode.pileup_args,
                 "-f", "%(IN_REFERENCE)s",
                 "%(IN_BAMFILE)s"]
         if regions:
             call[-1:-1] = ["-l", "%(IN_REGIONS)s"]
 
-        pileup   = AtomicCmd(call_pileup,
+        pileup   = AtomicCmd(call,
                              IN_REFERENCE = reference,
                              IN_BAMFILE   = infile,
                              IN_REGIONS   = regions,
@@ -72,11 +72,16 @@ class MPileupNode(CommandNode):
 
 
 class TabixIndexNode(CommandNode):
-    def __init__(self, config, infile, preset = "vcf", dependencies = ()):
-        assert infile.lower().endswith(".vcf.bgz")
+    def __init__(self, infile, preset = "vcf", dependencies = ()):
+        assert infile.lower().endswith(".bgz")
+        if preset == "pileup":
+            call = ["tabix", "-s", 1, "-b", 2, "-e", 2]
+        else:
+            call = ["tabix", "-p", preset]
+
 
         self._infile = infile
-        cmd_tabix = AtomicCmd(["tabix", "-p", preset, "%(TEMP_IN_VCFFILE)s"],
+        cmd_tabix = AtomicCmd(call + ["%(TEMP_IN_VCFFILE)s"],
                               TEMP_IN_VCFFILE = os.path.basename(infile),
                               IN_VCFFILE      = infile,
                               OUT_TBI         = infile + ".tbi")
@@ -100,8 +105,10 @@ class TabixIndexNode(CommandNode):
         CommandNode._teardown(self, config, temp)
 
 
+
+
 class FastaIndexNode(CommandNode):
-    def __init__(self, config, infile, dependencies = ()):
+    def __init__(self, infile, dependencies = ()):
         self._infile = infile
         cmd_faidx = AtomicCmd(["samtools", "faidx", "%(TEMP_IN_FASTA)s"],
                               TEMP_IN_FASTA = os.path.basename(infile),
