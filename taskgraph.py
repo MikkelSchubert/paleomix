@@ -76,10 +76,8 @@ class TaskGraph:
         if task in fixed_states:
             state = fixed_states[task]
         elif state == cls.DONE:
-            if not task.is_done:
+            if not task.is_done or task.is_outdated:
                 state = cls.RUNABLE
-            elif task.is_outdated:
-                state = cls.OUTDATED
         elif state in (cls.RUNNING, cls.RUNABLE, cls.QUEUED):
             if task.is_done:
                 state = cls.OUTDATED
