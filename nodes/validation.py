@@ -21,11 +21,6 @@ class PairedStatisticsNode(Node):
                       dependencies = dependencies)
 
 
-    def _setup(self, _config, _temp):
-        if not fileutils.valid_file(self._infile):
-            raise NodeError("Missing input file: '%s'" % (self._infile,))
-
-
     def _run(self, config, temp):
         table, count = {}, 0
         bamfile = pysam.Samfile(self._infile)
@@ -45,20 +40,15 @@ class PairedStatisticsNode(Node):
                 subtable[0] += 1
 
         with open(os.path.join(temp, self._outfile), "w") as table_file:
-            table_file.write("Group\tChr\tSingle\tFirst\tSecond\tRatio\tHits\n")
+            table_file.write("Group\tChr\tChrLen\tSingle\tFirst\tSecond\n")
 
             references = dict(zip(bamfile.references, bamfile.lengths))
             for ((group, tid), subtable) in sorted(table.items()):
-                chrom = bamfile.getrname(tid)
-                total = sum(subtable)
-    
-                if total:
-                    fractions  = ["%.2f" % (count / float(total)) for count in subtable]
-                    fractions += ["%.4f" % (float(total) / references[chrom]), str(total)]
-                else:
-                    fractions  = ["NA"] * 3 + ["0.0000", "0"]
-        
-                table_file.write("\t".join([group, chrom] + fractions) + "\n")
+                chrom  = bamfile.getrname(tid)
+                prefix = [group, chrom, references[chrom]]
+                row    = map(str, prefix + subtable)
+
+                table_file.write("\t".join(row) + "\n")
 
         bamfile.close()
         os.rename(os.path.join(temp, self._outfile), 
