@@ -23,7 +23,7 @@ class Node(object):
         self.__output_files = tuple(output_files)
 
         if isinstance(dependencies, Node):
-            self.subnodes = (dependencies,)
+            dependencies = (dependencies,)
 
         try:
             self.subnodes = tuple(dependencies)
@@ -72,19 +72,27 @@ class Node(object):
 
 
     def _setup(self, _config, _temp):
-        return True
+        self._check_for_missing_files(self.__input_files, "input")
 
     def _run(self, _config, _temp):
-        return True
+        pass
 
     def _teardown(self, _config, _temp):
-        return True
-
+        self._check_for_missing_files(self.__output_files, "output")
 
     def __str__(self):
         if self.__description:
             return self.__description
         return "<%s>" % (self.__class__.__name__,)
+
+
+    def _check_for_missing_files(self, filenames, description):
+        missing_files = fileutils.missing_files(filenames)
+        if missing_files:
+            message = "Missing %s files for command:\n\t- Command: %s\n\t- Files: %s" \
+                % (description, self, "\n\t         ".join(missing_files))
+            raise NodeError(message)
+
 
 
 
@@ -100,15 +108,12 @@ class CommandNode(Node):
         self._command = command
             
 
-    def _setup(self, _config, _temp):
+    def _setup(self, config, temp):
         if fileutils.missing_executables(self._command.executables()):
             raise NodeError("Executable(s) does not exist for command: %s" \
                                 % (self._command, ))
-            
-        missing_input = fileutils.missing_files(self._command.input_files())
-        if missing_input:
-            raise NodeError("Missing input files for command: %s -> %s" \
-                                % (self._command, missing_input))
+
+        Node._setup(self, config, temp)
 
 
     def _run(self, _config, temp):
@@ -120,13 +125,11 @@ class CommandNode(Node):
                              % (self._command, return_codes, temp))
 
 
-    def _teardown(self, _config, temp):
-        missing_files = fileutils.missing_files(self._command.temp_files())
-        if missing_files:
-            raise NodeError("Error(s) running '%s':\n\tMissing temporary files: %s\n\tTemporary directory: '%s'" \
-                             % (self._command, missing_files, temp))
-    
-        return self._command.commit()
+        def _teardown(self, config, temp):
+        self._check_for_missing_files(self._command.temp_files(), "")
+        self._command.commit()
+
+        Node._teardown(self, config, temp)
 
 
 
@@ -146,4 +149,4 @@ class MetaNode(Node):
 
 
     def run(self, config):
-        return True
+        pass
