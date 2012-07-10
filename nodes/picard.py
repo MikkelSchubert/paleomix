@@ -10,7 +10,7 @@ class ValidateBAMNode(CommandNode):
         for error in ignore:
             call.append("IGNORE=%s" % (error,))
 
-        jarfile = os.path.join(config.jar_root, "ValidateSamFile.jar")
+        jarfile = os.path.join(config.picard_root, "ValidateSamFile.jar")
         logfile = bamfile + ".validated"
 
         command = AtomicCmd(call,
