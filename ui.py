@@ -116,9 +116,8 @@ def _collect_dependencies(node):
 
     dependencies = set()
     for subnode in node.subnodes:
-        if isinstance(subnode, MetaNode):
-            dependencies.add(subnode)
-        else:
-            dependencies.update(subnode.subnodes)
-
+        for dependency in subnode.subnodes:
+            if dependency not in node.subnodes:
+                dependencies.add(dependency)
+                
     return dependencies
