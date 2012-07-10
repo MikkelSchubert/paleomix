@@ -1,7 +1,7 @@
 import os
 
 import pypeline.fileutils as fileutils
-from pypeline.node import CommandNode
+from pypeline.node import CommandNode, MetaNode
 from pypeline.atomiccmd import AtomicCmd
 
 
@@ -53,7 +53,7 @@ class _IndelRealignerNode(CommandNode):
                             stdout = outfile + ".log",
                             stderr = outfile + ".log")
 
-        description = "<Indel Realigner: '%s' -> '%s'>" \
+        description = "<Indel Realign: '%s' -> '%s'>" \
             % (infile, outfile)
 
         CommandNode.__init__(self, 
@@ -63,15 +63,20 @@ class _IndelRealignerNode(CommandNode):
 
 
 
-def IndelRealignerNode(config, reference, infile, outfile, dependencies = ()):
-    trainer = _IndelTrainerNode(config = config,
-                                reference = reference, 
-                                infile = infile,
-                                outfile = outfile,
-                                dependencies = dependencies)
-    aligner = _IndelRealignerNode(config = config,
-                                  reference = reference, 
-                                  infile = infile, 
-                                  outfile = outfile,
-                                  dependencies = [trainer])
-    return aligner
+class IndelRealignerNode(MetaNode):
+    def __init__(self, config, reference, infile, outfile, dependencies = ()):
+        trainer = _IndelTrainerNode(config = config,
+                                    reference = reference, 
+                                    infile = infile,
+                                    outfile = outfile,
+                                    dependencies = dependencies)
+        aligner = _IndelRealignerNode(config = config,
+                                      reference = reference, 
+                                      infile = infile, 
+                                      outfile = outfile,
+                                      dependencies = trainer)
+        
+        MetaNode.__init__(self, 
+                          description = "<GATK Indel Realigner: '%s' -> '%s'>" \
+                              % (infile, outfile),
+                          subnodes = [trainer, aligner])
