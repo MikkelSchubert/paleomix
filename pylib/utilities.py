@@ -1,7 +1,21 @@
 #!/usr/bin/python
 
+import types
 import itertools
 import binascii
+
+
+def safe_coerce_to_tuple(value):
+    """Takes a value which be a single object, or an an iterable and returns the content wrapped in
+    a tuple. In the case of strings, the original string object is returned in a tuple, and not as 
+    a tuple of chars."""
+    if isinstance(value, types.StringTypes):
+        return (value,)
+
+    try:
+        return tuple(value)
+    except TypeError:
+        return (value,)
 
 
 def crc32(s):

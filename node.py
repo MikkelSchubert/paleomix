@@ -3,6 +3,9 @@ import traceback
 
 import fileutils
 
+from pylib.utilities import safe_coerce_to_tuple
+
+
 
 
 class NodeError(RuntimeError):
@@ -19,18 +22,10 @@ class NodeUnhandledException(RuntimeError):
 class Node(object):
     def __init__(self, description = None, input_files = (), output_files = (), dependencies = ()):
         self.__description  = description
-        self.__input_files  = tuple(input_files)
-        self.__output_files = tuple(output_files)
+        self.__input_files  = safe_coerce_to_tuple(input_files)
+        self.__output_files = safe_coerce_to_tuple(output_files)
 
-        if isinstance(dependencies, Node):
-            dependencies = (dependencies,)
-
-        try:
-            self.subnodes = tuple(dependencies)
-        except TypeError:
-            raise NodeError("Non Node/sequence passed as dependencies for '%s': %s" \
-                    % (self, repr(dependencies)))
-
+        self.subnodes = safe_coerce_to_tuple(dependencies)
         for subnode in self.subnodes:
             if not isinstance(subnode, Node):
                 raise NodeError("Subnode is not a Node: %s" % subnode)
