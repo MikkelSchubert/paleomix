@@ -13,9 +13,9 @@ class NodeError(RuntimeError):
         RuntimeError.__init__(self, *vargs)
 
 
-class NodeUnhandledException(RuntimeError):
+class NodeUnhandledException(NodeError):
     def __init__(self, *vargs):
-        RuntimeError.__init__(self, *vargs)
+        NodeError.__init__(self, *vargs)
 
 
 
@@ -58,8 +58,6 @@ class Node(object):
             self._teardown(config, temp)
 
             os.rmdir(temp)
-            
-            return True
         except NodeError:
             raise
         except Exception:

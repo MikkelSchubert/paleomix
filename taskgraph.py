@@ -1,89 +1,119 @@
+#!/usr/bin/python
+
+class TaskError(RuntimeError):
+    pass
+    
 
 
 class TaskGraph:
-    DONE, RUNNING, RUNABLE, QUEUED, OUTDATED, ERROR = range(6)
+    class Node:
+        DONE, RUNNING, RUNABLE, QUEUED, OUTDATED, ERROR = range(6)
+
+        def __init__(self, task):
+            self.task          = task
+            self._state        = None
+            self._fixed_state  = None
+            self._subnodes     = set()
+            self._dependencies = set()
+
+
+        @property
+        def subnodes(self):
+            return self._subnodes | self._dependencies
+
+        @property
+        def state(self):
+            if self._fixed_state is not None:
+                return self._fixed_state
+
+            assert self._state is not None
+            return self._state
+
+
+        def __str__(self):
+            return str(self.task)
+
 
 
     def __init__(self, tasks):
-        self._tasks        = list(tasks)
-        self._states       = None
-        self._fixed_states = {}
+        self._graph = None
+        self._tasks = {}
+
+        def collapse(subtasks):
+            for task in subtasks:
+                if task not in self._tasks:
+                    self._tasks[task] = TaskGraph.Node(task)
+                    collapse(task.subnodes)
+        collapse(tasks)
+                    
+        # TODO: Check that all are 'Node's
 
 
-    def mark_task(self, task, state):
-        self._fixed_states[task] = state
-        self._states = None
+    def set_task_state(self, node, state):
+        if state not in (None, TaskGraph.Node.RUNNING, TaskGraph.Node.ERROR):
+            raise ValueError("Cannot set states other than RUNNING and ERROR, or cleared (None).")
+            
+        self._tasks[node.task]._fixed_state = state
+        self._graph = None
 
 
-    def clear_task_state(self, task):
-        del self._fixed_states[task]
-        self._states = None
+    def __iter__(self):
+        """Returns a graph of tasks."""
+        if self._graph is None:
+            self._graph = self._build_graph(self._tasks)
+        return iter(self._graph)
 
 
-    def get_state(self, task):
-        return self._get_states()[task]
-
-
-    def get_runable_tasks(self, max_tasks):
-        max_tasks = max(0, max_tasks - self.running_tasks())
-
-        for (task, state) in self._get_states().items():
-            if not max_tasks:
-                break
-            elif state == self.RUNABLE:
-                yield task
-                max_tasks -= 1
-
-
-    def any_runable_left(self):
-        for state in self._get_states().itervalues():
-            if state in (self.RUNNING, self.RUNABLE):
-                return True
-
-        return False
-
-    
-    def running_tasks(self):
-        return self._get_states().values().count(self.RUNNING)
-
-
-    def _get_states(self):
-        if self._states is None:
-            self._states = self._build_state_map(self._tasks, self._fixed_states)
-
-        return self._states
+    def iterflat(self):
+        if self._graph is None:
+            self._graph = self._build_graph(self._tasks)
+        return iter(self._tasks.values())
 
 
     @classmethod
-    def _build_state_map(cls, tasks, fixed_states):
-        states = {}
-        for task in tasks:
-            cls._update_state_map(task, states, fixed_states)
+    def _build_graph(cls, tasks):
+        reverse_dependencies = set()
+        for (task, node) in tasks.iteritems():
+            node._state = None
 
-        return states
+            # TODO: Detect missing dependencies by input/output files
+            node._subnodes = set()
+            for subnode in task.subnodes:
+                reverse_dependencies.add(subnode)
+                node._subnodes.add(tasks[subnode])
+        
+            # TODO: Detect missing dependencies by input/output files
+            node._dependencies = set()
 
-
+        top_nodes = set()
+        for (task, node) in tasks.iteritems():
+            if task not in reverse_dependencies:
+                cls._update_states(node)
+                top_nodes.add(node)
+        
+        return top_nodes
+                
+ 
     @classmethod
-    def _update_state_map(cls, task, states, fixed_states):
-        if task in states:
-            return states[task]
+    def _update_states(cls, node):
+        if node._state is not None:
+            # Possibly return a fixed state
+            return node.state
 
         # Update sub-tasks, before checking for fixed states
-        state = cls.DONE
-        for subtask in task.subnodes:
-            state = max(state, cls._update_state_map(subtask, states, fixed_states))
+        state = node.DONE
+        for subnode in node.subnodes:
+            state = max(state, cls._update_states(subnode))
 
-        if task in fixed_states:
-            state = fixed_states[task]
-        elif state == cls.DONE:
-            if not task.is_done or task.is_outdated:
-                state = cls.RUNABLE
-        elif state in (cls.RUNNING, cls.RUNABLE, cls.QUEUED):
-            if task.is_done:
-                state = cls.OUTDATED
+        if state == node.DONE:
+            if not node.task.is_done or node.task.is_outdated:
+                state = node.RUNABLE
+        elif state in (node.RUNNING, node.RUNABLE, node.QUEUED):
+            if node.task.is_done:
+                state = node.OUTDATED
             else:
-                state = cls.QUEUED
+                state = node.QUEUED
+        node._state = state
 
-        states[task] = state
-
-        return state
+        # Possibly return a fixed state
+        return node.state
