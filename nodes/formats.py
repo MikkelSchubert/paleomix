@@ -5,7 +5,7 @@ import itertools
 import collections
 
 from pypeline.node import Node, NodeError
-from pypeline.fileutils import swap_ext, move_file, reroot_path
+from pypeline.fileutils import move_file, reroot_path
 
 from pypeline.pylib.sequences import read_fasta
 from pypeline.pylib.utilities import grouper, safe_coerce_to_tuple

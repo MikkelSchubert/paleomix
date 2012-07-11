@@ -5,7 +5,9 @@ import textwrap
 
 import pysam
 
+import pypeline.fileutils as fileutils
 from pypeline.node import Node
+
 
 
 class CollectSequencesNode(Node):
@@ -45,12 +47,9 @@ class CollectSequencesNode(Node):
 
 
     def _teardown(self, _config, temp):
-        if not os.path.exists(self._destination):
-            os.makedirs(self._destination)
-
         for sequence in self._sequences:
             filename = sequence + ".fasta"
             infile   = os.path.join(temp, filename)
             outfile  = os.path.join(self._destination, filename)
         
-            os.rename(infile, outfile)
+            fileutils.move_file(infile, outfile)

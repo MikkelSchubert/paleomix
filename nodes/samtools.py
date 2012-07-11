@@ -1,6 +1,7 @@
 import os
 
 from pypeline.node import CommandNode
+from pypeline.fileutils import reroot_path
 from pypeline.atomiccmd import AtomicCmd, ParallelCmds
 
 
@@ -93,14 +94,14 @@ class TabixIndexNode(CommandNode):
 
     def _setup(self, config, temp):
         infile  = os.path.abspath(self._infile)
-        outfile = os.path.join(temp, os.path.basename(self._infile))
+        outfile = reroot_path(temp, self._infile)
         os.symlink(infile, outfile)
 
         CommandNode._setup(self, config, temp)
 
 
     def _teardown(self, config, temp):
-        os.remove(os.path.join(temp, os.path.basename(self._infile)))
+        os.remove(reroot_path(temp, self._infile))
 
         CommandNode._teardown(self, config, temp)
 
@@ -120,15 +121,16 @@ class FastaIndexNode(CommandNode):
                              command      = cmd_faidx,
                              dependencies = dependencies)
 
+
     def _setup(self, config, temp):
         infile  = os.path.abspath(self._infile)
-        outfile = os.path.join(temp, os.path.basename(self._infile))
+        outfile = reroot_path(temp, self._infile)
         os.symlink(infile, outfile)
 
         CommandNode._setup(self, config, temp)
 
 
     def _teardown(self, config, temp):
-        os.remove(os.path.join(temp, os.path.basename(self._infile)))
+        os.remove(reroot_path(temp, self._infile))
 
         CommandNode._teardown(self, config, temp)

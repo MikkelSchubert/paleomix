@@ -1,7 +1,7 @@
 import os
 import random
 
-import pypeline.fileutils
+import pypeline.fileutils as fileutils
 
 from pypeline.node import CommandNode
 from pypeline.atomiccmd import AtomicCmd
@@ -41,7 +41,7 @@ class RAxMLReduceNode(CommandNode):
             source      = self._kwargs[key]
             destination = os.path.join(temp, self._kwargs["TEMP_" + key])
 
-            pypeline.fileutils.copy_file(source, destination)
+            fileutils.copy_file(source, destination)
 
         CommandNode._setup(self, config, temp)
 
@@ -50,14 +50,14 @@ class RAxMLReduceNode(CommandNode):
         for postfix in ("ALIGNMENT", "PARTITIONS"):
             filenames = [self._kwargs["TEMP_IN_" + postfix],
                          self._kwargs["TEMP_IN_" + postfix] + ".reduced",
-                         os.path.basename(self._kwargs["OUT_" + postfix])]
+                         self._kwargs["OUT_" + postfix]]
 
             for (source, destination) in zip(filenames, filenames[1:]):
-                source      = os.path.join(temp, source)
-                destination = os.path.join(temp, destination)
+                source      = fileutils.reroot_path(temp, source)
+                destination = fileutils.reroot_path(temp, destination)
 
                 if not os.path.exists(destination):
-                    os.rename(source, destination)
+                    fileutils.move_file(source, destination)
                 elif source != destination:
                     os.remove(source)
         
