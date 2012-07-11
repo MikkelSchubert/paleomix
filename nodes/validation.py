@@ -2,13 +2,12 @@ import os
 
 import pysam
 
-import pypeline.fileutils as fileutils
-from pypeline.node import Node, NodeError
+from pypeline.node import Node
 
 
 
 class PairedStatisticsNode(Node):
-    def __init__(self, config, infile, dependencies = ()):
+    def __init__(self, infile, dependencies = ()):
         self._infile = infile
         self._outfile = os.path.split(infile)[-1] + ".paired_stats"
         self._destination = os.path.split(infile)[0]
@@ -21,8 +20,8 @@ class PairedStatisticsNode(Node):
                       dependencies = dependencies)
 
 
-    def _run(self, config, temp):
-        table, count = {}, 0
+    def _run(self, _config, temp):
+        table = {}
         bamfile = pysam.Samfile(self._infile)
         for record in bamfile:
             key = (dict(record.tags)["RG"], record.tid)
@@ -46,7 +45,7 @@ class PairedStatisticsNode(Node):
             for ((group, tid), subtable) in sorted(table.items()):
                 chrom  = bamfile.getrname(tid)
                 prefix = [group, chrom, references[chrom]]
-                row    = map(str, prefix + subtable)
+                row    = [str(value) for value in (prefix + subtable)]
 
                 table_file.write("\t".join(row) + "\n")
 

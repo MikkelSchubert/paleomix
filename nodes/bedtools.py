@@ -4,7 +4,7 @@ from pypeline.atomiccmd import AtomicCmd
 
 
 class SlopBedNode(CommandNode):
-    def __init__(self, config, infile, outfile, genome, from_start = 0, from_end = 0, strand_relative = False, dependencies = ()):
+    def __init__(self, infile, outfile, genome, from_start = 0, from_end = 0, strand_relative = False, dependencies = ()):
         if type(from_start) != type(from_end):
             raise ValueError("'from_start' and 'from_end' should be of same type!")
 
