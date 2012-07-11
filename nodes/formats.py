@@ -13,8 +13,10 @@ from pypeline.pylib.utilities import grouper, safe_coerce_to_tuple
 
 
 class FastaToPhyNode(Node):
-    def __init__(self, infiles, out_phy, out_partitions = None, strict = False, add_option_flag = False, dependencies = ()):
-        self._infiles   = safe_coerce_to_tuple(infiles)
+    def __init__(self, infiles, out_phy, out_partitions = None, 
+                 strict = False, add_option_flag = False, dependencies = ()):
+
+        self._infiles   = infiles = safe_coerce_to_tuple(infiles)
         self._add_flag  = add_option_flag
         self._strict    = strict
         self._out_phy   = out_phy
@@ -66,6 +68,9 @@ class FastaToPhyNode(Node):
         streams = []
         for (group, sequences) in sorted(by_group.iteritems()):
             sequence   = "".join((sequence for (_, sequence) in sorted(sequences.iteritems())))
+            if not self._is_valid_sequence(sequence):
+                continue
+
             sequence_length = len(sequence)
             
             name       = format_name(group)
@@ -87,7 +92,7 @@ class FastaToPhyNode(Node):
             streams.append(rows)
         
         with open(reroot_path(temp, self._out_phy), "w") as output:
-            output.write("   %i %i%s\n" % (len(by_group), sequence_length, " I" if self._add_flag else ""))
+            output.write("   %i %i%s\n" % (len(streams), sequence_length, " I" if self._add_flag else ""))
             for lst in itertools.izip(*streams):
                 for row in lst:
                     output.write(row + "\n")
@@ -105,7 +110,14 @@ class FastaToPhyNode(Node):
                 partitions.write("DNA, %s_12 = %i-%i\\3, %i-%i\\3\n" \
                                      % (sequence_name, start_pos, end_pos, start_pos + 1, end_pos))
                 partitions.write("DNA, %s_3 = %i-%i\\3\n" \
-                                     % (sequence_name, start_pos + 2, end_pos))                
+                                     % (sequence_name, start_pos + 2, end_pos))
+    
+
+    @classmethod
+    def _is_valid_sequence(cls, sequence):
+        """Returns false if the sequence contains only contains ambigious bases. Such sequences cause 
+        RAxML to fail, and even if a given program doesn't complain, they make no sense to include."""
+        return bool(set(sequence) - set("-?NXnx"))
 
 
     @classmethod
