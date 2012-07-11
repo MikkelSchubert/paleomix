@@ -1,7 +1,12 @@
 import os
+import sys
+import signal
+import weakref
 import subprocess
 
 import fileutils
+
+
 
 
 class CmdError(RuntimeError):
@@ -14,7 +19,12 @@ class AtomicCmd:
     """Executes a command, only moving resulting files to the destination
     directory if the command was succesful. This helps prevent the 
     accidential use of partial files in downstream analysis, and eases 
-    restarting of a pipeline following errors (no cleanup)."""
+    restarting of a pipeline following errors (no cleanup).
+
+    When an AtomicCmd is run(), a signal handler is installed for SIGTERM,
+    which ensures that any running processes are terminated. In the absence
+    of this, AtomicCmds run in terminated subprocesses can result in still
+    running children after the termination of the parents."""
     PIPE = subprocess.PIPE
 
     def __init__(self, command, stdin = None, stdout = None, stderr = None, **kwargs):
@@ -65,6 +75,9 @@ class AtomicCmd:
                                      stdin  = stdin,
                                      stdout = stdout,
                                      stderr = stderr)
+        
+        # Allow subprocesses to be killed in case of a SIGTERM
+        _add_to_killlist(self.proc)
 
 
     def wait(self):
@@ -294,3 +307,24 @@ class SequentialCmds(_CommandSet):
 
             if any(command.wait()):
                 break
+
+
+
+## The following ensures proper cleanup of child processes, for example in the case
+## where multiprocessing.Pool.terminate() is called. The current implementation will
+## leak weakref objects, but given the low number of commands called over the lifetime
+## of a pipeline, this is considered acceptable for now. FIXME
+_PROCS = []
+
+def _cleanup_children(signum, _frame):
+    for proc_ref in _PROCS:
+        proc = proc_ref()
+        if proc:
+            proc.terminate()
+    sys.exit(-signum)
+
+def _add_to_killlist(proc):
+    if not _PROCS:
+        signal.signal(signal.SIGTERM, _cleanup_children)
+
+    _PROCS.append(weakref.ref(proc))
