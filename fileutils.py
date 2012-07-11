@@ -87,6 +87,11 @@ def swap_ext(filename, ext):
     return filename + ext    
 
 
+def reroot_path(root, filename):
+    """Returns the basename of filename joined to root."""
+    return os.path.join(root, os.path.basename(filename))
+
+
 def create_temp_dir(root):
     while True:
         uuid4 = str(uuid.uuid4())
