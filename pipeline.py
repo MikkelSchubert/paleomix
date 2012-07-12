@@ -54,15 +54,16 @@ class Pypeline:
 
     def _start_new_tasks(self, running, nodes, max_running, pool):
         any_runable_left = False
-        max_running -= len(running)
+        idle_processes = max_running - len(running)
         for node in nodes.iterflat():
-            if max_running and (node.state == node.RUNABLE):
+            any_runable_left |= (node.state in (node.RUNABLE, node.RUNNING))
+            
+            if idle_processes and (node.state == node.RUNABLE):
                 running[node] = pool.apply_async(_call_run, args = (node.task, self._config))
                 nodes.set_task_state(node, node.RUNNING)
-                any_runable_left = True
-                max_running -= 1
-            elif node.state in (node.RUNABLE, node.RUNNING):
-                any_runable_left = True
+                idle_processes -= 1
+            
+            if any_runable_left and not idle_processes:
                 break
 
         return any_runable_left
@@ -75,7 +76,6 @@ class Pypeline:
             time.sleep(1)
 
             for (node, proc) in running.items():
-                print node, proc.ready()
                 if not proc.ready():
                     continue
                 changes = True
