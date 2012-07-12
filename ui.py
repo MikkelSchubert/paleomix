@@ -60,10 +60,15 @@ def print_node_tree(graph, collapse = True):
         
 
 def _print_sub_nodes(nodes, collapse, prefix = ""):
-    nodes = list(nodes)
-    nodes.sort(key = str)
-
+    viable_nodes, dead_nodes = [], []
     for node in nodes:
+        if collapse and (node.state == node.DONE):
+            dead_nodes.append(node)
+        else:
+            viable_nodes.append(node)
+    viable_nodes.sort(key = str)
+
+    for node in viable_nodes:
         if node.state in (node.RUNNING, node.RUNABLE):
             description = prefix + "R " + str(node)
         else:
@@ -86,17 +91,31 @@ def _print_sub_nodes(nodes, collapse, prefix = ""):
 
         print_func = _get_print_function(node)
         print_func(description)
-        current_prefix = prefix + ("  " if (node == nodes[-1]) else "|  ")
+
+        is_last_node = (node == viable_nodes[-1]) and not dead_nodes
+        current_prefix = prefix + ("  " if is_last_node else "|  ")
 
         dependencies = _collect_dependencies(node)
         if dependencies:
             if collapse and _collapse_node(dependencies):
-                print_disabled(current_prefix + "+ ...")
+                description = "+ %i nodes hidden ..." % _count_subnodes(dependencies)
+                print_disabled(current_prefix + description)
                 print_disabled(current_prefix)
             else:
                 _print_sub_nodes(dependencies, collapse, current_prefix + "   ")
         else:
             print_func(current_prefix)
+
+    if dead_nodes:
+        print_disabled(prefix + "+ %i nodes hidden ..." % _count_subnodes(dead_nodes))
+        print_disabled(prefix)
+
+
+def _count_subnodes(nodes):
+    counter = len(nodes)
+    for node in nodes:
+        counter += _count_subnodes(_collect_dependencies(node))
+    return counter
 
 
 def _collapse_node(dependencies):
