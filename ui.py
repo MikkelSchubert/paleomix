@@ -1,15 +1,19 @@
 """Functions relating to the CLI interface."""
 from __future__ import print_function
 
+import sys
+
 from node import MetaNode
 
 
 def _do_print_color(*vargs, **kwargs):
     """Utility function: Prints using shell colors."""
     colorcode = kwargs.pop("colorcode")
-    text = ["\033[00;%im%s\033[00m" % (colorcode, arg) for arg in vargs]
+    # No colors if stdout is redirected (e.g. less). 
+    if sys.stdout.isatty():
+        vargs = ["\033[00;%im%s\033[00m" % (colorcode, arg) for arg in vargs]
 
-    print(*text, **kwargs)
+    print(*vargs, **kwargs)
 
 
 def print_msg(*vargs, **kwargs):
