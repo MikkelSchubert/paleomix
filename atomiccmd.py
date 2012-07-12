@@ -109,26 +109,22 @@ class AtomicCmd:
                 yield filename
 
 
-    def temp_files(self):
-        return list(self._temp_files.itervalues())
-
-
     def commit(self):
         assert (self.poll() is not None)
 
         # Close any implictly opened pipes
         for (_, handle) in self._handles.itervalues():
             handle.close()
+            
+        for (key, filename) in self._temp_files.iteritems():
+            if key.startswith("OUT_") and not os.path.exists(filename):
+                raise CmdError("Command did not create expected output file: " + filename)
 
-        for key in self._temp_files:
-            temp_filename = self._temp_files[key]
-            final_filename = self._out_files[key]
-
-            if key.startswith("TEMP_OUT_"):
-                os.remove(temp_filename)
-                continue
-
-            fileutils.move_file(temp_filename, final_filename)
+        for (key, filename) in self._temp_files.iteritems():
+            if not key.startswith("TEMP_OUT_"):
+                fileutils.move_file(filename, self._out_files[key])
+            elif os.path.exists(filename):
+                os.remove(filename)
 
         self.proc = None
         return True

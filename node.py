@@ -119,7 +119,6 @@ class CommandNode(Node):
 
 
     def _teardown(self, config, temp):
-        self._check_for_missing_files(self._command.temp_files(), "")
         self._command.commit()
 
         Node._teardown(self, config, temp)
