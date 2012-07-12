@@ -67,15 +67,18 @@ def _print_sub_nodes(nodes, collapse, prefix = ""):
 
         # FIXME
         if isinstance(node.task, MetaNode):
-            active, done, total = 0, 0, 0
+            active, done, outdated, total = 0, 0, 0, 0
             for subnode in node.subnodes:
                 total += 1
                 if subnode.state == subnode.RUNNING:
                     active += 1
                 elif subnode.state == subnode.DONE:
                     done += 1
-        
-            description += " %i running, %i done of %i subnodes" % (active, done, total)
+                elif subnode.state == subnode.OUTDATED:
+                    outdated += 1
+         
+            description += " %i running, %i outdated, %i done of %i subnodes" \
+                % (active, outdated, done, total)
 
         print_func = _get_print_function(node)
         print_func(description)
