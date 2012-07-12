@@ -170,8 +170,7 @@ class AtomicCmd:
             elif key.startswith("OUT_") or key.startswith("TEMP_OUT_"):
                 self._out_files[key] = value
             else:
-                if not (key.startswith("IN_") or key.startswith("OUT_")):
-                    raise CmdError("Command contains unclassified argument: '%s' -> '%s'" \
+                raise CmdError("Command contains unclassified argument: '%s' -> '%s'" \
                                    % (self.__class__.__name__, key))
 
 
