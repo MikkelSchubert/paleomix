@@ -22,8 +22,8 @@ class MAFFTNode(CommandNode):
     def __init__(self, infile, outfile, preset = "auto", dependencies = ()):
         call = _PRESETS[preset] + ["--quiet", "%(IN_FASTA)s"]
         command = AtomicCmd(call,
-                            IN_FASTA = infile,
-                            stdout   = outfile)
+                            IN_FASTA   = infile,
+                            OUT_STDOUT = outfile)
 
         description = "<MAFFTNode: '%s' -> '%s'>" \
                 % (infile, outfile)

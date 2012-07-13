@@ -23,17 +23,15 @@ class GenotypeNode(CommandNode):
                              IN_REFERENCE = reference,
                              IN_BAMFILE   = infile,
                              IN_REGIONS   = regions,
-                             stdout       = AtomicCmd.PIPE,
-                             stderr       = outfile + ".pileup_log")
+                             OUT_STDOUT   = AtomicCmd.PIPE)
         
         genotype = AtomicCmd(["bcftools", "view", GenotypeNode.caller_args, "-"],
-                             stdin        = pileup,
-                             stdout       = AtomicCmd.PIPE,
-                             stderr       = outfile + ".genotype_log")
+                             IN_STDIN     = pileup,
+                             OUT_STDOUT   = AtomicCmd.PIPE)
 
         bgzip    = AtomicCmd(["bgzip"],
-                             stdin        = genotype,
-                             stdout       = outfile)
+                             IN_STDIN     = genotype,
+                             OUT_STDOUT   = outfile)
 
         description = "<Genotyper: '%s' -> '%s'>" % (infile, outfile)
         CommandNode.__init__(self, 
@@ -57,12 +55,11 @@ class MPileupNode(CommandNode):
                              IN_REFERENCE = reference,
                              IN_BAMFILE   = infile,
                              IN_REGIONS   = regions,
-                             stdout       = AtomicCmd.PIPE,
-                             stderr       = outfile + ".pileup_log")
+                             OUT_STDOUT   = AtomicCmd.PIPE)
 
         bgzip    = AtomicCmd(["bgzip"],
-                             stdin        = pileup,
-                             stdout       = outfile)
+                             IN_STDIN     = pileup,
+                             OUT_STDOUT   = outfile)
 
         description = "<MPileup: '%s' -> '%s'>" % (infile, outfile)
         CommandNode.__init__(self, 

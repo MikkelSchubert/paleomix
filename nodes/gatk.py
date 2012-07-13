@@ -17,11 +17,11 @@ class _IndelTrainerNode(CommandNode):
                  "-o", "%(OUT_INTERVALS)s"]
 
         command = AtomicCmd(call, 
-                            IN_REFERENCE = reference,
-                            IN_BAMFILE = infile,
+                            IN_REFERENCE  = reference,
+                            IN_BAMFILE    = infile,
                             OUT_INTERVALS = outfile,
-                            stdout = outfile + ".log",
-                            stderr = outfile + ".log")
+                            OUT_STDOUT    = outfile + ".log",
+                            OUT_STDERR    = outfile + ".log")
         
         description = "<Train Indel Realigner: '%s' -> '%s'>" \
             % (infile, outfile)
@@ -50,8 +50,8 @@ class _IndelRealignerNode(CommandNode):
                             IN_INTERVALS = intervalsfile,
                             OUT_BAMFILE = outfile,
                             OUT_INDEX  = fileutils.swap_ext(outfile, ".bai"),
-                            stdout = outfile + ".log",
-                            stderr = outfile + ".log")
+                            OUT_STDOUT = outfile + ".log",
+                            OUT_STDERR = outfile + ".log")
 
         description = "<Indel Realign: '%s' -> '%s'>" \
             % (infile, outfile)

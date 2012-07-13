@@ -33,7 +33,7 @@ class AtomicCmd:
     running children after the termination of the parents."""
     PIPE = subprocess.PIPE
 
-    def __init__(self, command, stdin = None, stdout = None, stderr = None, **kwargs):
+    def __init__(self, command, **kwargs):
         """
         
         If the above is prefixed with "TEMP_", the files are read from / written
@@ -55,10 +55,6 @@ class AtomicCmd:
         self._handles = {}
         self._files   = {}
         
-        # FIXME: Drop stdin, stderr, stdout parameters from constructor
-        kwargs["IN_STDIN"]  = stdin
-        kwargs["OUT_STDOUT"] = stdout
-        kwargs["OUT_STDERR"] = stderr
         self._process_arguments(kwargs)
 
         

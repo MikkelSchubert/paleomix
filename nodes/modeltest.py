@@ -23,7 +23,7 @@ class JModelTestNode(CommandNode):
 
         jmodeltest  = AtomicCmd(call,
                                 IN_ALIGNMENT = infile,
-                                stdout       = outfile)
+                                OUT_STDOUT   = outfile)
 
         description = "<jModelTest: '%s' -> '%s'>" % (infile, outfile)
         CommandNode.__init__(self, 

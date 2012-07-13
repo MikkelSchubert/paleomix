@@ -16,8 +16,8 @@ class ValidateBAMNode(CommandNode):
         command = AtomicCmd(call,
                             IN_JAR = jarfile,
                             IN_BAM = bamfile,
-                            stdout = logfile,
-                            stderr = logfile)
+                            OUT_STDOUT = logfile,
+                            OUT_STDERR = logfile)
 
         description =  "<Validate BAM: '%s' -> '%s'>" % (bamfile, logfile)
 

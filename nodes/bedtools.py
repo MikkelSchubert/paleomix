@@ -20,9 +20,9 @@ class SlopBedNode(CommandNode):
             call.append("-pct")
         
         command = AtomicCmd(call,
-                            IN_FILE = infile,
-                            IN_GENOME = genome,
-                            stdout  = outfile)
+                            IN_FILE    = infile,
+                            IN_GENOME  = genome,
+                            OUT_STDOUT = outfile)
 
         description = "<SlopBed: '%s' -> '%s'>" % (infile, outfile)
 
