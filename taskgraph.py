@@ -1,4 +1,8 @@
 #!/usr/bin/python
+import os
+import collections
+
+
 
 class TaskError(RuntimeError):
     pass
@@ -31,53 +35,58 @@ class TaskGraph:
 
 
     def __init__(self, tasks):
-        self._graph = None
         self._tasks = {}
-
         def collapse(subtasks):
             for task in subtasks:
+                # TODO: Check that all are 'Node's
                 if task not in self._tasks:
                     self._tasks[task] = TaskGraph.Node(task)
                     collapse(task.subnodes)
                     collapse(task.dependencies)
         collapse(tasks)
-                    
-        # TODO: Check that all are 'Node's
+
+        self._graph = self._build_graph(self._tasks)
+        self._graph_valid = False
+
+        self._check_file_dependencies(self._tasks)
 
 
     def set_task_state(self, node, state):
         if state not in (None, TaskGraph.Node.RUNNING, TaskGraph.Node.ERROR):
             raise ValueError("Cannot set states other than RUNNING and ERROR, or cleared (None).")
-            
+        
         self._tasks[node.task]._fixed_state = state
-        self._graph = None
+        self._graph_valid = False
 
 
     def __iter__(self):
         """Returns a graph of tasks."""
-        if self._graph is None:
-            self._graph = self._build_graph(self._tasks)
+        self._update_graph()
         return iter(self._graph)
 
 
     def iterflat(self):
-        if self._graph is None:
-            self._graph = self._build_graph(self._tasks)
+        self._update_graph()
         return iter(self._tasks.values())
 
 
+    def _update_graph(self):
+        if not self._graph_valid:
+            for node in self._graph:
+                self._update_states(node)
+            self._graph_valid = True
+        
+
     @classmethod
     def _build_graph(cls, tasks):
+        cls._check_file_dependencies(tasks)
+
         for (task, node) in tasks.iteritems():
             node._state       = None
             node.subnodes     = frozenset(tasks[subnode] for subnode in task.subnodes)
             node.dependencies = frozenset(tasks[dependency] for dependency in task.dependencies)
 
-        top_nodes = cls._get_top_nodes(tasks)
-        for node in top_nodes:
-            cls._update_states(node)
-
-        return top_nodes
+        return cls._get_top_nodes(tasks)
 
 
     @classmethod
@@ -117,3 +126,61 @@ class TaskGraph:
 
         # Possibly return a fixed state
         return node.state
+
+
+    @classmethod
+    def _check_file_dependencies(cls, tasks):
+        input_files = collections.defaultdict(list)
+        output_files = collections.defaultdict(list)
+
+        for task in tasks:
+            for filename in task.input_files:
+                input_files[filename].append(task)
+            
+            for filename in task.output_files:
+                output_files[filename].append(task)
+
+        error_messages = []
+        error_messages.extend(cls._check_output_files(output_files))
+        error_messages.extend(cls._check_input_dependencies(input_files, output_files))
+
+        if error_messages:
+            messages = []
+            for error in error_messages:
+                for line in error.split("\n"):
+                    messages.append("\t" + line)
+
+            raise TaskError("Errors detected during graph construction:\n%s" \
+                                % ("\n".join(messages)),)
+
+    @classmethod
+    def _check_output_files(cls, output_files):
+        for (filename, tasks) in output_files.iteritems():
+            if (len(tasks) > 1):
+                yield "%i nodes clobber a file: %s" % (len(tasks), filename)
+
+    @classmethod
+    def _check_input_dependencies(cls, input_files, output_files):
+        for (filename, nodes) in input_files.iteritems():
+            if (filename in output_files):
+                producer = output_files[filename][0]
+                for consumer in nodes:
+                    if not cls._node_has_dependency(consumer, producer):
+                        yield "Node depends on dynamically created file, but not on the node creating it:" + \
+                            "\n\tDependent node: %s\n\tFilename: %s\n\tCreated by: %s" \
+                            % (consumer, filename, producer)
+            elif not os.path.exists(filename):
+                yield "Required file does not exist, and is not created by a task: %s" % (filename, )
+
+
+    @classmethod
+    def _node_has_dependency(cls, node, dependency):
+        subnodes = node.dependencies | node.subnodes
+        if dependency in subnodes:
+            return True
+
+        for subnode in subnodes:
+            if cls._node_has_dependency(subnode, dependency):
+                return True
+
+        return False

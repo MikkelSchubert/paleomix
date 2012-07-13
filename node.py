@@ -54,6 +54,16 @@ class Node(object):
         return fileutils.modified_after(self.__input_files, self.__output_files)
 
 
+    @property
+    def input_files(self):
+        return self.__input_files
+
+
+    @property
+    def output_files(self):
+        return self.__output_files
+
+
     def run(self, config):
         try:
             temp = fileutils.create_temp_dir(config.temp_root)

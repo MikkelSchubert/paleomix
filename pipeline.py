@@ -26,7 +26,11 @@ class Pypeline:
 
 
     def run(self, max_running = 4, dry_run = False):
-        nodes = taskgraph.TaskGraph(self._nodes)
+        try:
+            nodes = taskgraph.TaskGraph(self._nodes)
+        except taskgraph.TaskError, error:
+            ui.print_err(error)
+            return False
 
         if dry_run:
             ui.print_node_tree(nodes)
@@ -49,6 +53,13 @@ class Pypeline:
             if not self._poll_running_nodes(running, nodes):
                 ui.print_err("Errors were detected ...")
                 return False
+
+        except taskgraph.TaskError, errors:
+            ui.print_err("Error in task-graph, terminating gracefully:\n%s\n" \
+                             % (node, "\n".join(("\t" + line) for line in str(errors).strip().split("\n"))))
+
+            pool.terminate()
+            pool.join()
 
         except KeyboardInterrupt:
             ui.print_err("Keyboard interrupt detected, terminating ...")
