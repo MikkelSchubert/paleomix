@@ -5,6 +5,9 @@ import multiprocessing
 import ui
 import taskgraph
 
+from node import Node
+from pylib.utilities import safe_coerce_to_tuple
+
 
 
 
@@ -14,8 +17,12 @@ class Pypeline:
         self._config = config
 
 
-    def add_node(self, node):
-        self._nodes.append(node)
+    def add_nodes(self, *nodes):
+        for subnodes in safe_coerce_to_tuple(nodes):
+            for node in safe_coerce_to_tuple(subnodes):
+                if not isinstance(node, Node):
+                    raise TypeError("Node object expected, recieved %s" % repr(node))
+                self._nodes.append(node)
 
 
     def run(self, max_running = 4, dry_run = False):
