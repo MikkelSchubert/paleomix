@@ -1,4 +1,5 @@
 import os
+import re
 import random
 
 import pypeline.fileutils as fileutils
@@ -68,12 +69,27 @@ class RAxMLReduceNode(CommandNode):
 
 class RAxMLRapidBSNode(CommandNode):
     def __init__(self, infile, partitions, destination, model = "GTRGAMMAI", threads = 1, dependencies = ()):
+        """ 
+        Arguments:
+        infile      -- An alignment file in a format readable by RAxML.
+        partitions  -- A set of partitions in a format readable by RAxML.
+        destination -- A template string used to construct final filenames. Should consist
+                       of a full path, including a single '%s', which is replaced with the
+                       variable part of RAxML output files (e.g. 'info', 'bestTree', ...).
+                       Example destination: '/disk/project/SN013420.RAxML.%s'
+                       Example output:      '/disk/project/SN013420.RAxML.bestTree'
+        model       -- DNA or Amino acid substitution model to use.
+        threads     -- Number of threads to use for each RAxML instance."""
+
+        self._symlinks = [infile, partitions]
+        self._template = os.path.basename(destination)
+
         call = ["raxmlHPC-PTHREADS" if (threads > 1) else "raxmlHPC",
                 "-f", "a",
                 "-m", model,
-                "-n", model,
-                "-s", "%(IN_ALIGNMENT)s",
-                "-q", "%(IN_PARTITIONS)s",
+                "-n", "RapidBS",
+                "-s", "%(TEMP_OUT_ALN)s",
+                "-q", "%(TEMP_OUT_PART)s",
                 "-w", "%(TEMP_DIR)s",
                 "-x", int(random.random() * 2**32),
                 "-p", int(random.random() * 2**32),
@@ -82,16 +98,22 @@ class RAxMLRapidBSNode(CommandNode):
             call.extend(("-T", threads))
 
 
-        out_tmpl = os.path.join(destination, "RAxML_%s." + model)
         command = AtomicCmd(call,
                             IN_ALIGNMENT    = infile,
                             IN_PARTITIONS   = partitions,
 
-                            OUT_INFO        = out_tmpl % "info",
-                            OUT_BESTTREE    = out_tmpl % "bestTree",
-                            OUT_BOOTSTRAP   = out_tmpl % "bootstrap",
-                            OUT_BIPART      = out_tmpl % "bipartitions",
-                            OUT_BIPARTLABEL = out_tmpl % "bipartitionsBranchLabels")
+                            OUT_INFO        = destination % "info",
+                            OUT_BESTTREE    = destination % "bestTree",
+                            OUT_BOOTSTRAP   = destination % "bootstrap",
+                            OUT_BIPART      = destination % "bipartitions",
+                            OUT_BIPARTLABEL = destination % "bipartitionsBranchLabels",
+
+                            # RAxML may write reduced alignment. These are not saved. If
+                            # needed, they may be generated upfront using RAxMLReduceNode.
+                            TEMP_OUT_ALN    = os.path.basename(infile),
+                            TEMP_OUT_PART   = os.path.basename(partitions),
+                            TEMP_OUT_R_ALN  = os.path.basename(infile) + ".reduced",
+                            TEMP_OUT_R_PART = os.path.basename(partitions) + ".reduced")
 
         CommandNode.__init__(self,
                              command      = command,
@@ -99,3 +121,24 @@ class RAxMLRapidBSNode(CommandNode):
                                      % (infile, destination),
                              dependencies = dependencies)
 
+    def _setup(self, config, temp):
+        CommandNode._setup(self, config, temp)
+
+        # Required to avoid the creation of files outside the temp folder
+        for filename in self._symlinks:
+            source      = os.path.abspath(filename)
+            destination = os.path.join(temp, os.path.basename(filename)) 
+
+            os.symlink(source, destination)
+
+    
+    def _teardown(self, config, temp):
+        for filename in os.listdir(temp):
+            match = re.match("RAxML_(.*).RapidBS", filename)
+            if match:
+                source      = os.path.join(temp, filename)
+                destination = os.path.join(temp, self._template % match.groups())
+
+                fileutils.move_file(source, destination)
+
+        CommandNode._teardown(self, config, temp)
