@@ -2,8 +2,9 @@
 from __future__ import print_function
 
 import sys
+import collections
 
-from node import MetaNode
+from taskgraph import TaskGraph
 
 
 def _do_print_color(*vargs, **kwargs):
@@ -43,19 +44,7 @@ def print_disabled(*vargs, **kwargs):
 
 
 def print_node_tree(graph, collapse = True):
-    total, done, running, failed = 0, 0, 0, 0
-    for node in graph.iterflat():
-        total += 1
-        if node.state == node.DONE:
-            done += 1
-        elif node.state == node.RUNNING:
-            running += 1
-        elif node.state == node.ERROR:
-            failed  += 1
-            
-
-    print_msg("Pipeline, \t%i running, %i done, %i failed of %i nodes:" \
-                  % (running, done, failed, total))
+    print_msg("Pipeline,%s" % _describe_nodes(graph.iterflat()))
     _print_sub_nodes(graph, collapse, "   ")
         
 
@@ -69,69 +58,67 @@ def _print_sub_nodes(nodes, collapse, prefix = ""):
     viable_nodes.sort(key = str)
 
     for node in viable_nodes:
-        if node.state in (node.RUNNING, node.RUNABLE):
-            description = prefix + "R " + str(node)
-        else:
-            description = prefix + "+ " + str(node)
-
-        # FIXME
-        if isinstance(node.task, MetaNode):
-            active, done, outdated, total = 0, 0, 0, 0
-            for subnode in node.subnodes:
-                total += 1
-                if subnode.state == subnode.RUNNING:
-                    active += 1
-                elif subnode.state == subnode.DONE:
-                    done += 1
-                elif subnode.state == subnode.OUTDATED:
-                    outdated += 1
-         
-            description += " %i running, %i outdated, %i done of %i subnodes" \
-                % (active, outdated, done, total)
-
+        description = "%s%s %s" % (prefix, _get_runable_prefix(node), node)
+        if node.subnodes:
+            description += _describe_nodes(node.subnodes)
+            
         print_func = _get_print_function(node)
         print_func(description)
 
         is_last_node = (node == viable_nodes[-1]) and not dead_nodes
-        current_prefix = prefix + ("  " if is_last_node else "|  ")
+        current_prefix = prefix + ("   " if is_last_node else "|  ")
 
-        dependencies = _collect_dependencies(node)
-        if dependencies:
-            if collapse and _collapse_node(dependencies):
-                description = "+ %i nodes hidden ..." % _count_subnodes(dependencies)
+        if node.dependencies:
+            if collapse and _collapse_node(node.dependencies):
+                description = "+ %i dependencies hidden ..." \
+                    % _count_dependencies(node.dependencies)
+
                 print_disabled(current_prefix + description)
                 print_disabled(current_prefix)
             else:
-                _print_sub_nodes(dependencies, collapse, current_prefix + "   ")
+                _print_sub_nodes(node.dependencies, collapse, current_prefix + "   ")
         else:
             print_func(current_prefix)
 
     if dead_nodes:
-        print_disabled(prefix + "+ %i nodes hidden ..." % _count_subnodes(dead_nodes))
+        print_disabled(prefix + "+ %i dependencies hidden ..." \
+                           % _count_dependencies(dead_nodes))
         print_disabled(prefix)
 
 
-def _count_subnodes(nodes):
-    counter = len(nodes)
-    for node in nodes:
-        counter += _count_subnodes(_collect_dependencies(node))
+def _count_dependencies(dependencies):
+    counter = len(dependencies)
+    for node in dependencies:
+        counter += _count_dependencies(node.dependencies)
+
     return counter
 
 
-def _collapse_node(dependencies):
-    for subnode in dependencies:
-        if subnode.state != subnode.DONE:
-            return False
+def _describe_nodes(nodes):
+    states = collections.defaultdict(int)
+    for node in nodes:
+        states[node.state] += 1
 
-    return True
+    return " %(running)i running, %(outdated)i outdated, %(failed)i failed, %(done)i done of %(total)i nodes" \
+        % {"running"  : states[TaskGraph.Node.RUNNING], 
+           "outdated" : states[TaskGraph.Node.OUTDATED], 
+           "done"     : states[TaskGraph.Node.DONE], 
+           "failed"   : states[TaskGraph.Node.ERROR], 
+           "total"    : sum(states.values())}
+
+
+def _collapse_node(dependencies):
+    """Returns true if a node may be collapsed in the dependency graph."""
+    if all((node.state == node.DONE) for node in dependencies):
+        return (_count_dependencies(dependencies) > 2)
+
+    return False
 
 
 def _get_print_function(node):
-    # FIXME
-    if isinstance(node.task, MetaNode):
-        for subnode in node.subnodes:
-            if subnode.state == subnode.RUNNING:
-                return print_info
+    for subnode in node.subnodes:
+        if subnode.state == subnode.RUNNING:
+            return print_info
 
     if node.state is node.RUNNING:
         return print_info
@@ -143,19 +130,15 @@ def _get_print_function(node):
         return print_msg
 
 
-def _collect_dependencies(node):
-    """For a regular node, this function returns the subnodes, which are taken
-    to be the dependencies of that node. For a MetaNode, the subnodes are 
-    considered part of that Node, and hence the dependencies of _those_ nodes
-    are returned."""
-    # FIXME
-    if not isinstance(node.task, MetaNode):
-        return node.subnodes
-
-    dependencies = set()
+def _get_runable_prefix(node):
+    """Returns either 'R' or '+', dependening on the state of the node. If the node, or any
+    of its subnodes, are runable, then 'R' is returned, otherwise '+' is returned. This is 
+    used to decorate the dependency graph."""
+    if node.state in (node.RUNNING, node.RUNABLE):
+        return "R"
+    
     for subnode in node.subnodes:
-        for dependency in subnode.subnodes:
-            if dependency not in node.subnodes:
-                dependencies.add(dependency)
-                
-    return dependencies
+        if subnode.state in (node.RUNNING, node.RUNABLE):
+            return "R"
+    
+    return "+"

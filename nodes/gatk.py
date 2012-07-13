@@ -77,6 +77,7 @@ class IndelRealignerNode(MetaNode):
                                       dependencies = trainer)
         
         MetaNode.__init__(self, 
-                          description = "<GATK Indel Realigner: '%s' -> '%s'>" \
+                          description  = "<GATK Indel Realigner: '%s' -> '%s'>" \
                               % (infile, outfile),
-                          subnodes = [trainer, aligner])
+                          subnodes     = [trainer, aligner],
+                          dependencies = dependencies)

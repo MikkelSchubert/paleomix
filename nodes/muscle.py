@@ -41,6 +41,7 @@ class MetaMuscleNode(MetaNode):
             subnodes.append(node)
 
         MetaNode.__init__(self,
-                          description = "<MuscleAlignSequences: In '%s'>" \
-                                % (rootdir,),
-                          subnodes    = subnodes)                            
+                          description  = "<MuscleAlignSequences: In '%s'>" \
+                              % (rootdir,),
+                          subnodes     = subnodes,
+                          dependencies = dependencies)

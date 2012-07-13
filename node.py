@@ -20,19 +20,24 @@ class NodeUnhandledException(NodeError):
 
 
 class Node(object):
-    def __init__(self, description = None, input_files = (), output_files = (), dependencies = ()):
+    def __init__(self, description = None, 
+                 input_files = (), output_files = (), 
+                 subnodes = (), dependencies = ()):
+
         self.__description  = description
         self.__input_files  = safe_coerce_to_tuple(input_files)
         self.__output_files = safe_coerce_to_tuple(output_files)
 
-        self.subnodes = safe_coerce_to_tuple(dependencies)
-        for subnode in self.subnodes:
-            if not isinstance(subnode, Node):
-                raise NodeError("Subnode is not a Node: %s" % subnode)
+        self.subnodes       = self._collect_nodes(subnodes, "Subnode")
+        self.dependencies   = self._collect_nodes(dependencies, "Dependency")
 
 
     @property
     def is_done(self):
+        for node in self.subnodes:
+            if not node.is_done:
+                return False
+
         if fileutils.missing_files(self.__output_files):
             return False
 
@@ -79,6 +84,18 @@ class Node(object):
         return "<%s>" % (self.__class__.__name__,)
 
 
+    def _collect_nodes(self, nodes, description):
+        nodes = frozenset(safe_coerce_to_tuple(nodes))
+        bad_nodes = [node for node in nodes if not isinstance(node, Node)]
+
+        if bad_nodes:
+            message = "%s-list contain non-Node objects:\n\t- Command: %s\n\t- Objects: %s" \
+                % (description, self, "\n\t           ".join(map(repr, bad_nodes)))
+            raise TypeError(message)
+
+        return nodes
+
+
     def _check_for_missing_files(self, filenames, description):
         missing_files = fileutils.missing_files(filenames)
         if missing_files:
@@ -91,11 +108,13 @@ class Node(object):
 
 
 class CommandNode(Node):
-    def __init__(self, command, description = None, dependencies = ()):
+    def __init__(self, command, description = None, 
+                 subnodes = (), dependencies = ()):
         Node.__init__(self, 
                       description  = description,
                       input_files  = command.input_files(),
                       output_files = command.output_files(),
+                      subnodes     = subnodes,
                       dependencies = dependencies)
 
         self._command = command
@@ -126,10 +145,15 @@ class CommandNode(Node):
 
 
 class MetaNode(Node):
-    def __init__(self, description = None, subnodes = ()):
+    """A MetaNode is a simplified node, which only serves the purpose of aggregating
+    a set of subnodes. It does not carry out any task itself (run() does nothing),
+    and is marked as done when all its subnodes are completed."""
+
+    def __init__(self, description = None, subnodes = (), dependencies = ()):
         Node.__init__(self, 
                       description  = description,
-                      dependencies = tuple(subnodes))
+                      subnodes     = subnodes,
+                      dependencies = dependencies)
 
     @property
     def is_done(self):

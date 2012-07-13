@@ -13,13 +13,9 @@ class TaskGraph:
             self.task          = task
             self._state        = None
             self._fixed_state  = None
-            self._subnodes     = set()
-            self._dependencies = set()
+            self.subnodes      = frozenset()
+            self.dependencies  = frozenset()
 
-
-        @property
-        def subnodes(self):
-            return self._subnodes | self._dependencies
 
         @property
         def state(self):
@@ -34,7 +30,6 @@ class TaskGraph:
             return str(self.task)
 
 
-
     def __init__(self, tasks):
         self._graph = None
         self._tasks = {}
@@ -44,6 +39,7 @@ class TaskGraph:
                 if task not in self._tasks:
                     self._tasks[task] = TaskGraph.Node(task)
                     collapse(task.subnodes)
+                    collapse(task.dependencies)
         collapse(tasks)
                     
         # TODO: Check that all are 'Node's
@@ -72,27 +68,29 @@ class TaskGraph:
 
     @classmethod
     def _build_graph(cls, tasks):
-        reverse_dependencies = set()
         for (task, node) in tasks.iteritems():
-            node._state = None
+            node._state       = None
+            node.subnodes     = frozenset(tasks[subnode] for subnode in task.subnodes)
+            node.dependencies = frozenset(tasks[dependency] for dependency in task.dependencies)
 
-            # TODO: Detect missing dependencies by input/output files
-            node._subnodes = set()
-            for subnode in task.subnodes:
-                reverse_dependencies.add(subnode)
-                node._subnodes.add(tasks[subnode])
-        
-            # TODO: Detect missing dependencies by input/output files
-            node._dependencies = set()
+        top_nodes = cls._get_top_nodes(tasks)
+        for node in top_nodes:
+            cls._update_states(node)
 
-        top_nodes = set()
-        for (task, node) in tasks.iteritems():
-            if task not in reverse_dependencies:
-                cls._update_states(node)
-                top_nodes.add(node)
-        
         return top_nodes
-                
+
+
+    @classmethod
+    def _get_top_nodes(cls, tasks):
+        """Returns a sequence of nodes that are not depended upon by any other nodes."""
+
+        dependencies = set()
+        for (_, node) in tasks.iteritems():
+            dependencies.update(node.subnodes)
+            dependencies.update(node.dependencies)
+        
+        return set(tasks.itervalues()) - dependencies
+        
  
     @classmethod
     def _update_states(cls, node):
@@ -103,6 +101,8 @@ class TaskGraph:
         # Update sub-tasks, before checking for fixed states
         state = node.DONE
         for subnode in node.subnodes:
+            state = max(state, cls._update_states(subnode))
+        for subnode in node.dependencies:
             state = max(state, cls._update_states(subnode))
 
         if state == node.DONE:

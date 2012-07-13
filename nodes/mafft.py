@@ -37,7 +37,7 @@ class MAFFTNode(CommandNode):
 
 
 class MetaMAFFTNode(MetaNode):
-    def __init__(self, rootdir, sequences, preset = "auto", dependencies = ()):
+    def __init__(self, rootdir, sequences, preset = "auto", subnodes = (), dependencies = ()):
         subnodes = []
         for sequence in sequences:
             prefix  = os.path.join(rootdir, sequence)
@@ -49,6 +49,7 @@ class MetaMAFFTNode(MetaNode):
             subnodes.append(node)
 
         MetaNode.__init__(self,
-                          description = "<MAFFTAlignSequences: In '%s'>" \
-                                % (rootdir,),
-                          subnodes    = subnodes)                            
+                          description  = "<MAFFTAlignSequences: In '%s'>" \
+                              % (rootdir,),
+                          subnodes     = subnodes,
+                          dependencies = dependencies)
