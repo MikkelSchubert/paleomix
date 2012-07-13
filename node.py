@@ -112,14 +112,14 @@ class CommandNode(Node):
     def _run(self, _config, temp):
         self._command.run(temp)
 
-        return_codes = self._command.wait()
+        return_codes = self._command.join()
         if any(return_codes):
             raise NodeError("Error(s) running '%s':\n\tReturn-codes: %s\n\tTemporary directory: '%s'" \
                              % (self._command, return_codes, temp))
 
 
     def _teardown(self, config, temp):
-        self._command.commit()
+        self._command.commit(temp)
 
         Node._teardown(self, config, temp)
 

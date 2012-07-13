@@ -1,10 +1,16 @@
 import os
 import sys
 import signal
+import types
 import weakref
 import subprocess
 
 import fileutils
+
+
+
+_PIPES = ('STDIN', 'STDOUT', 'STDERR')
+_PREFIXES = ('IN_', 'TEMP_IN', 'OUT_', 'TEMP_OUT')
 
 
 
@@ -28,175 +34,214 @@ class AtomicCmd:
     PIPE = subprocess.PIPE
 
     def __init__(self, command, stdin = None, stdout = None, stderr = None, **kwargs):
-        self.proc  = None
-        self._cmd  = [str(field) for field in command]
-        self._temp = None
+        """
         
-        # Fill the in_files and out_files dictionaries 
-        self._in_files, self._out_files = {}, {}
-        self._group_io_by_prefix(kwargs)
+        If the above is prefixed with "TEMP_", the files are read from / written
+        to the temporary folder in which the command is executed. Note that all
+        TEMP_OUT_ files are deleted when commit is called (if they exist).
 
-        self._stdin  = stdin
-        self._stderr = stderr
-        self._stdout = stdout
+        In addition, the follow special names may be used with the above:
+           STDIN  -- Takes a filename, or an AtomicCmd, in which case the stdout
+                     of that command is piped to the stdin of this instance.
+           STDOUT -- Takes a filename, or the special value PIPE to allow
+                     another AtomicCmd instance to use the output directly.
+           STDERR -- Takes a filename. If the filename is the same as STDOUT,
+                     all output is redirected to that file.
+                     
+        Each pipe can only be used once (either OUT_ or TEMP_OUT_)."""
+
+        self._proc    = None
+        self._command = [str(field) for field in command]
         self._handles = {}
+        self._files   = {}
+        
+        # FIXME: Drop stdin, stderr, stdout parameters from constructor
+        kwargs["IN_STDIN"]  = stdin
+        kwargs["OUT_STDOUT"] = stdout
+        kwargs["OUT_STDERR"] = stderr
+        self._process_arguments(kwargs)
 
-        if type(stdin) is str:
-            self._in_files["PIPE_STDIN"] = stdin
-        if type(stdout) is str:
-            self._out_files["PIPE_STDOUT"] = stdout
-        if (type(stderr) is str) and (stdout != stderr):
-            self._out_files["PIPE_STDERR"] = stderr
-
-        self._temp_files = None
-
+        
 
     def run(self, temp):
         """Runs the given command, saving files in the specified temp folder. To 
         move files to their final destination, call commit(). Note that in contexts
         where the *Cmds classes are used, this function may block."""
-        stdin  = self._open_pipe(temp, self._stdin , "rb")
-        stdout = self._open_pipe(temp, self._stdout, "wb")
-        stderr = self._open_pipe(temp, self._stderr, "wb")
 
-        self._temp = temp
-        self._temp_files = self._generate_temp_filenames(root = temp)
-        
-        kwords = dict(self._temp_files)
-        for (key, filename) in self._in_files.iteritems():
-            if key.startswith("TEMP_IN_"):
-                filename = os.path.join(temp, filename)
-            kwords[key] = filename
-        kwords["TEMP_DIR"] = temp
+        kwords = self._generate_filenames(root = temp)
+        stdin  = self._open_pipe(kwords, "IN_STDIN" , "rb")
+        stdout = self._open_pipe(kwords, "OUT_STDOUT", "wb")
+        stderr = self._open_pipe(kwords, "OUT_STDERR", "wb")
+        command = [(field % kwords) for field in self._command]
 
-        cmd = [(field % kwords) for field in self._cmd]
-
-        self.proc = subprocess.Popen(cmd, 
-                                     stdin  = stdin,
-                                     stdout = stdout,
-                                     stderr = stderr)
+        self._proc = subprocess.Popen(command, 
+                                      stdin  = stdin,
+                                      stdout = stdout,
+                                      stderr = stderr)
         
         # Allow subprocesses to be killed in case of a SIGTERM
-        _add_to_killlist(self.proc)
+        _add_to_killlist(self._proc)
 
 
-    def wait(self):
-        """Equivalent to Popen.wait(), but returns the value wrapped in a list."""
-        return [self.proc.wait()]
+    def join(self):
+        """Similar to Popen.wait(), but returns the value wrapped in a list,
+        and ensures that any opened handles are closed. Must be called before
+        calling commit."""
+        try:
+            return_codes = [self._proc.wait()]
+        finally:
+            # Close any implictly opened pipes
+            for (mode, handle) in self._handles.itervalues():
+                if "w" in mode:
+                    handle.flush()
+                handle.close()
+            self._handles = {}
+
+        return return_codes
 
 
     def poll(self):
         """Equivalent to Popen.poll(), but returns the value wrapped in a list."""
-        return [self.proc.poll()]
+        return [self._proc.poll()]
 
 
     def executables(self):
         """Returns a list of executables required for the AtomicCmd."""
-        return [self._cmd[0]]
+        return [self._command[0]]
 
 
     def input_files(self):
         """Returns a list of input files that are required by the AtomicCmd."""
-        for (key, filename) in self._in_files.iteritems():
-            if not key.startswith("TEMP_"):
+        for (key, filename) in self._files.iteritems():
+            if key.startswith("IN_") and isinstance(filename, types.StringTypes):
                 yield filename
         
 
     def output_files(self):
         """Checks that the expected output files have been generated."""
-        for (key, filename) in self._out_files.iteritems():
-            if not key.startswith("TEMP_"):
+        for (key, filename) in self._files.iteritems():
+            if key.startswith("OUT_") and isinstance(filename, types.StringTypes):
                 yield filename
 
 
-    def commit(self):
+    def commit(self, temp):
         assert (self.poll() is not None)
+        assert not self._handles
 
-        # Close any implictly opened pipes
-        for (_, handle) in self._handles.itervalues():
-            handle.close()
-            
-        for (key, filename) in self._temp_files.iteritems():
-            if key.startswith("OUT_") and not os.path.exists(filename):
-                raise CmdError("Command did not create expected output file: " + filename)
+        self._proc = None
 
-        for (key, filename) in self._temp_files.iteritems():
-            if not key.startswith("TEMP_OUT_"):
-                fileutils.move_file(filename, self._out_files[key])
-            elif os.path.exists(filename):
-                os.remove(filename)
+        temp_files = self._generate_filenames(root = temp)
+        for (key, filename) in temp_files.iteritems():
+            if isinstance(filename, types.StringTypes):
+                if key.startswith("OUT_") and not os.path.exists(filename):
+                    raise CmdError("Command did not create expected output file: " + filename)
 
-        self.proc = None
-        return True
+        for (key, filename) in temp_files.iteritems():
+            if isinstance(filename, types.StringTypes):
+                if key.startswith("OUT_"):
+                    fileutils.move_file(filename, self._files[key])
+                elif key.startswith("TEMP_OUT_") and os.path.exists(filename):
+                    os.remove(filename)
 
 
-    def __str__(self):
-        temp = self._temp or "${TEMP}"
-        kwords = self._generate_temp_filenames(root = temp)
-        kwords.update(self._in_files)
-        kwords["TEMP_DIR"] = temp
-        
-        def describe_pipe(pipe, prefix):
-            if type(pipe) is str:
-                return "%s '%s'" % (prefix, pipe)
+    def __str__(self):        
+        def describe_pipe(template, pipe):
+            if isinstance(pipe, types.StringTypes):
+                return template % pipe
             elif isinstance(pipe, AtomicCmd):
-                return "%s [AtomicCmd]" % (prefix)
-            elif pipe == AtomicCmd.PIPE:
-                return "%s [PIPE]" % prefix
+                return template % "[AtomicCmd]"
+            elif (pipe == AtomicCmd.PIPE):
+                return template % "[PIPE]"
             else:
                 return ""
 
-        if self._stdout != self._stderr:
-            out  = describe_pipe(self._stdout, " >")
-            out += describe_pipe(self._stderr, " 2>")
-        else:
-            out  = describe_pipe(self._stdout, " &>")
+        kwords = self._generate_filenames(root = "${TEMP}")
+        command = " ".join([(field % kwords) for field in self._command])
+
+        stdin = self._files.get("IN_STDIN")
+        if stdin:
+            command += describe_pipe(" < %s", stdin)
+
+        stdout = self._files.get("OUT_STDOUT")
+        stderr = self._files.get("OUT_STDERR")
+        if (stdout != stderr):
+            if stdout:
+                command += describe_pipe(" > %s", stdout)
+            if stderr:
+                command += describe_pipe(" 2> %s", stderr)
+        elif stdout:
+            command += describe_pipe(" &> %s", stdout)
+       
+        return "<%s>" % command
+
+
+    def _process_arguments(self, kwargs):
+        self._validate_pipes(kwargs)
+
+        for (key, value) in kwargs.iteritems():
+            if self._validate_argument(key, value):
+                self._files[key] = value
+
+        executable = os.path.basename(self._command[0])
+        for pipe in ("STDOUT", "STDERR"):
+            if not (kwargs.get("OUT_" + pipe) or kwargs.get("TEMP_OUT_" + pipe)):
+                filename = "pipe_%s_%i.%s" % (executable, id(self), pipe.lower())
+                self._files["TEMP_OUT_" + pipe] = filename
+
+
+    @classmethod
+    def _validate_pipes(cls, kwargs):
+        """Checks that no single pipe is specified multiple times, e.i. being specified
+        both for a temporary and a final (outside the temp dir) file. For example,
+        either IN_STDIN or TEMP_IN_STDIN must be specified, but not both."""
+        for pipe in _PIPES:
+            if (kwargs.get("IN_" + pipe) and kwargs.get("TEMP_IN_" + pipe)):
+                raise CmdError, "Pipe (%s) must be specified at most once." % pipe
+
+
+    @classmethod
+    def _validate_argument(cls, key, value):
+        if (value == cls.PIPE) and key not in ("OUT_STDOUT", "TEMP_OUT_STDOUT"):
+            raise ValueError, "PIPE is only allow for *_STDOUT, not " + key
+        elif not (value is None or isinstance(value, types.StringTypes)):
+            if not ((key == "IN_STDIN") and isinstance(value, AtomicCmd)):
+                ValueError("Invalid input file '%s' for '%s' is not a string: %s" \
+                                 % (key, cls.__name__, value))
+        elif not any(key.startswith(prefix) for prefix in _PREFIXES):
+            raise CmdError("Command contains invalid argument: '%s' -> '%s'" \
+                               % (cls.__name__, key))
         
-
-        command = [(field % kwords) for field in self._cmd]
-        return "<'%s'%s%s" % (" ".join(command), describe_pipe(self._stdin, " <"), out)
-
-
-    def _group_io_by_prefix(self, io_kwords):
-        for (key, value) in io_kwords.iteritems():
-            if value is None:
-                continue # Simplifies use of optional arguments
-            elif (value is not None) and (type(value) not in (str, unicode)):
-                raise RuntimeError("Invalid input file '%s' for '%s' is not a string: %s" \
-                                     % (key, self.__class__.__name__, value))
-
-            if key.startswith("IN_") or key.startswith("TEMP_IN_"):
-                self._in_files[key] = value
-            elif key.startswith("OUT_") or key.startswith("TEMP_OUT_"):
-                self._out_files[key] = value
-            else:
-                raise CmdError("Command contains unclassified argument: '%s' -> '%s'" \
-                                   % (self.__class__.__name__, key))
+        # Values are allowed to be none, but such entries are skipped
+        # This simplifies the use of keyword parameters with no default values.
+        return bool(value)
 
 
-    def _open_pipe(self, root, pipe, mode):
-        if isinstance(pipe, AtomicCmd):
-            assert mode == "rb"
-            return pipe.proc.stdout
-        elif not (type(pipe) is str):
-            return pipe
-
-        pipe = os.path.basename(pipe)
-        if pipe not in self._handles:
-            self._handles[pipe] = (mode, open(os.path.join(root, pipe), mode))
+    def _open_pipe(self, kwords, pipe, mode):
+        filename = kwords.get(pipe, kwords.get("TEMP_" + pipe))
+        if filename in (None, self.PIPE):
+            return filename
+        elif isinstance(filename, AtomicCmd):
+            return filename._proc.stdout
+        
+        if filename not in self._handles:
+            self._handles[pipe] = (mode, open(filename, mode))
 
         pipe_mode, pipe = self._handles[pipe]
         if pipe_mode != mode:
-            raise CmdError("Attempting to open pipe with different modes: '%s' -> '%s'" \
-                               % (self, pipe))
+            raise CmdError("Attempting to open pipe with multiple modes: '%s' -> '%s'" \
+                               % (self, filename))
 
         return pipe
 
 
-    def _generate_temp_filenames(self, root):
-        filenames = {}
-        for (key, filename) in self._out_files.iteritems():
-            filenames[key] = os.path.join(root, os.path.basename(filename))
+    def _generate_filenames(self, root):
+        filenames = {"TEMP_DIR" : root}
+        for (key, filename) in self._files.iteritems():
+            if isinstance(filename, types.StringTypes):
+                if key.startswith("TEMP_") or key.startswith("OUT_"):
+                    filename = os.path.join(root, os.path.basename(filename))
+            filenames[key] = filename
+
         return filenames
 
 
@@ -206,10 +251,10 @@ class _CommandSet:
     def __init__(self, commands):
         self._commands = list(commands)
 
-    def wait(self):
+    def join(self):
         return_codes = []
         for command in self._commands:
-            return_codes.extend(command.wait())
+            return_codes.extend(command.join())
         return return_codes
 
     def poll(self):
@@ -236,17 +281,9 @@ class _CommandSet:
             files.extend(command.output_files())
         return files
 
-    def temp_files(self):
-        files = []
+    def commit(self, temp):
         for command in self._commands:
-            files.extend(command.temp_files())
-        return files
-
-    def commit(self):
-        result = True
-        for command in self._commands:
-            result &= command.commit()
-        return result
+            command.commit(temp)
 
     def __str__(self):
         return "[%s]" % ", ".join(str(command) for command in self._commands)
@@ -300,7 +337,7 @@ class SequentialCmds(_CommandSet):
         for command in self._commands:
             command.run(temp)
 
-            if any(command.wait()):
+            if any(command.join()):
                 break
 
 
