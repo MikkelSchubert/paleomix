@@ -20,8 +20,7 @@ class _IndelTrainerNode(CommandNode):
                             IN_REFERENCE  = reference,
                             IN_BAMFILE    = infile,
                             OUT_INTERVALS = outfile,
-                            OUT_STDOUT    = outfile + ".log",
-                            OUT_STDERR    = outfile + ".log")
+                            OUT_STDOUT    = outfile + ".log")
         
         description = "<Train Indel Realigner: '%s' -> '%s'>" \
             % (infile, outfile)
@@ -50,8 +49,7 @@ class _IndelRealignerNode(CommandNode):
                             IN_INTERVALS = intervalsfile,
                             OUT_BAMFILE = outfile,
                             OUT_INDEX  = fileutils.swap_ext(outfile, ".bai"),
-                            OUT_STDOUT = outfile + ".log",
-                            OUT_STDERR = outfile + ".log")
+                            OUT_STDOUT = outfile + ".log")
 
         description = "<Indel Realign: '%s' -> '%s'>" \
             % (infile, outfile)

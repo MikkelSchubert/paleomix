@@ -4,11 +4,12 @@ import signal
 import types
 import weakref
 import subprocess
+import collections
 
 import fileutils
 
 
-_PIPES = ('STDIN', 'STDOUT', 'STDERR')
+_PIPES = ('IN_STDIN', 'OUT_STDOUT', 'OUT_STDERR')
 _PREFIXES = ('IN_', 'TEMP_IN', 'OUT_', 'TEMP_OUT')
 
 
@@ -44,14 +45,13 @@ class AtomicCmd:
                      of that command is piped to the stdin of this instance.
            STDOUT -- Takes a filename, or the special value PIPE to allow
                      another AtomicCmd instance to use the output directly.
-           STDERR -- Takes a filename. If the filename is the same as STDOUT,
-                     all output is redirected to that file.
+           STDERR -- Takes a filename.
                      
         Each pipe can only be used once (either OUT_ or TEMP_OUT_)."""
 
         self._proc    = None
         self._command = [str(field) for field in command]
-        self._handles = {}
+        self._handles = []
         self._files   = {}
         
         self._process_arguments(kwargs)
@@ -86,11 +86,11 @@ class AtomicCmd:
             return_codes = [self._proc.wait()]
         finally:
             # Close any implictly opened pipes
-            for (mode, handle) in self._handles.itervalues():
+            for (mode, handle) in self._handles:
                 if "w" in mode:
                     handle.flush()
                 handle.close()
-            self._handles = {}
+            self._handles = []
 
         return return_codes
 
@@ -183,15 +183,25 @@ class AtomicCmd:
                 filename = "pipe_%s_%i.%s" % (executable, id(self), pipe.lower())
                 self._files["TEMP_OUT_" + pipe] = filename
 
+        output_files = collections.defaultdict(list)
+        for (key, filename) in kwargs.iteritems():
+            if key.startswith("TEMP_OUT") or key.startswith("OUT_"):
+                if isinstance(filename, types.StringTypes):
+                    output_files[os.path.basename(filename)].append(key)
+
+        for (filename, keys) in output_files.iteritems():
+            if len(keys) > 1:
+                raise CmdError("Same filename (%s) is specified for multiple keys: %s" \
+                                   % (filename, ", ".join(keys)))
+
 
     @classmethod
     def _validate_pipes(cls, kwargs):
         """Checks that no single pipe is specified multiple times, e.i. being specified
         both for a temporary and a final (outside the temp dir) file. For example,
         either IN_STDIN or TEMP_IN_STDIN must be specified, but not both."""
-        for pipe in _PIPES:
-            if (kwargs.get("IN_" + pipe) and kwargs.get("TEMP_IN_" + pipe)):
-                raise CmdError, "Pipe (%s) must be specified at most once." % pipe
+        if any((kwargs.get(pipe) and kwargs.get("TEMP_" + pipe)) for pipe in _PIPES):
+            raise CmdError, "Pipes must be specified at most once (w/wo TEMP_)." % pipe
 
 
     @classmethod
@@ -218,13 +228,8 @@ class AtomicCmd:
         elif isinstance(filename, AtomicCmd):
             return filename._proc.stdout
         
-        if filename not in self._handles:
-            self._handles[pipe] = (mode, open(filename, mode))
-
-        pipe_mode, pipe = self._handles[pipe]
-        if pipe_mode != mode:
-            raise CmdError("Attempting to open pipe with multiple modes: '%s' -> '%s'" \
-                               % (self, filename))
+        pipe = open(filename, mode)
+        self._handles.append((mode, pipe))
 
         return pipe
 
