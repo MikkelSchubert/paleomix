@@ -72,8 +72,12 @@ class TaskGraph:
 
     def _update_graph(self):
         if not self._graph_valid:
+            for node in self._tasks.itervalues():
+                node._state = None
+
             for node in self._graph:
                 self._update_states(node)
+
             self._graph_valid = True
         
 
@@ -82,7 +86,6 @@ class TaskGraph:
         cls._check_file_dependencies(tasks)
 
         for (task, node) in tasks.iteritems():
-            node._state       = None
             node.subnodes     = frozenset(tasks[subnode] for subnode in task.subnodes)
             node.dependencies = frozenset(tasks[dependency] for dependency in task.dependencies)
 
