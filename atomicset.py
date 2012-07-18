@@ -1,9 +1,12 @@
 from atomiccmd import AtomicCmd, CmdError
+from pylib.utilities import safe_coerce_to_tuple
 
 
 class _CommandSet:
     def __init__(self, commands):
-        self._commands = list(commands)
+        self._commands = safe_coerce_to_tuple(commands)
+        if not self._commands:
+            raise CmdError("Empty list passed to command set")
 
     def join(self):
         return_codes = []
@@ -11,33 +14,30 @@ class _CommandSet:
             return_codes.extend(command.join())
         return return_codes
 
-    def poll(self):
-        return_codes = []
-        for command in self._commands:
-            return_codes.extend(command.poll())
-        return return_codes
-
-    def executables(self):
-        files = []
-        for command in self._commands:
-            files.extend(command.executables())
-        return files
-
-    def input_files(self):
-        files = []
-        for command in self._commands:
-            files.extend(command.input_files())
-        return files
-
-    def output_files(self):
-        files = []
-        for command in self._commands:
-            files.extend(command.output_files())
-        return files
-
     def commit(self, temp):
         for command in self._commands:
             command.commit(temp)
+
+    @property
+    def executables(self):
+        files = []
+        for command in self._commands:
+            files.extend(command.executables)
+        return files
+
+    @property
+    def input_files(self):
+        files = []
+        for command in self._commands:
+            files.extend(command.input_files)
+        return files
+
+    @property
+    def output_files(self):
+        files = []
+        for command in self._commands:
+            files.extend(command.output_files)
+        return files
 
     def __str__(self):
         return "[%s]" % ", ".join(str(command) for command in self._commands)
@@ -77,13 +77,15 @@ class SequentialCmds(_CommandSet):
     $ tabix snps.vcf.bgz
 
     The list of commands may include any type of command. Note that
-    the run function only returns once each sub-command has completed."""
+    the run function only returns once each sub-command has completed.
+    A command is only executed if the previous command in the sequence
+    was succesfully completed."""
 
     def __init__(self, commands):
         _CommandSet.__init__(self, commands)
 
         for command in self._commands:
-            if not isinstance(command, (AtomicCmd, ParallelCmds)):
+            if not isinstance(command, (AtomicCmd, _CommandSet)):
                 raise CmdError("ParallelCmds must only contain AtomicCmds or other ParallelCmds!")
 
 

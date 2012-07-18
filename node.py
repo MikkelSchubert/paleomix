@@ -1,21 +1,24 @@
-import os
 import traceback
 
 import fileutils
-
 from pylib.utilities import safe_coerce_to_tuple
 
+# Imported from, in order to allow monkeypatching in tests
+# FIXME: Make create_temp_dir a 'with' object
+from os import rmdir
+from fileutils import create_temp_dir
 
 
 
 class NodeError(RuntimeError):
-    def __init__(self, *vargs):
-        RuntimeError.__init__(self, *vargs)
-
+    pass
 
 class NodeUnhandledException(NodeError):
-    def __init__(self, *vargs):
-        NodeError.__init__(self, *vargs)
+    """This exception is thrown by Node.run() if a non-NodeError exception 
+    is raised in a subfunction (e.g. _setup, _run, or _teardown). The text
+    for this exception will include both the original error message and a 
+    stacktrace for that error."""
+    pass
 
 
 
@@ -25,8 +28,8 @@ class Node(object):
                  subnodes = (), dependencies = ()):
 
         self.__description  = description
-        self.__input_files  = safe_coerce_to_tuple(input_files)
-        self.__output_files = safe_coerce_to_tuple(output_files)
+        self.input_files  = safe_coerce_to_tuple(input_files)
+        self.output_files = safe_coerce_to_tuple(output_files)
 
         self.subnodes       = self._collect_nodes(subnodes, "Subnode")
         self.dependencies   = self._collect_nodes(dependencies, "Dependency")
@@ -34,11 +37,14 @@ class Node(object):
 
     @property
     def is_done(self):
-        for node in self.subnodes:
-            if not node.is_done:
-                return False
+        """Returns true if all subnodes of this node are done, and if all output
+        files of this node exists (empty files are considered as valid). If the
+        node doesn't produce output files, it is always considered done by. To 
+        change this behavior, override the 'is_done' property"""
 
-        if fileutils.missing_files(self.__output_files):
+        if not all(node.is_done for node in self.subnodes):
+            return False
+        elif fileutils.missing_files(self.output_files):
             return False
 
         return True
@@ -46,33 +52,39 @@ class Node(object):
 
     @property
     def is_outdated(self):
+        """Returns true if the output exists (is_done == True), but one or more
+        of the intput files appear to have been changed since the creation of the
+        output files (based on the timestamps). A node that lacks either input or
+        output files is never considered outdated."""
+
         if not self.is_done:
             return False
-        elif not (self.__input_files and self.__output_files):
+        elif not (self.input_files and self.output_files):
             return False
 
-        return fileutils.modified_after(self.__input_files, self.__output_files)
-
-
-    @property
-    def input_files(self):
-        return self.__input_files
-
-
-    @property
-    def output_files(self):
-        return self.__output_files
+        return fileutils.modified_after(self.input_files, self.output_files)
 
 
     def run(self, config):
+        """Runs the node, by calling _setup, _run, and _teardown in that order.
+        Prior to calling these functions, a temporary dir is created using the
+        'temp_root' prefix from the config object. Both the config object and
+        the temporary dir are passed to the above functions. The temporary
+        dir is removed after _teardown is called, and all expected files 
+        should have been removed/renamed at that point.
+
+        Any non-NodeError exception raised in this function is wrapped in a
+        NodeUnhandledException, which includes a full backtrace. This is needed
+        to allow showing these in the main process."""
+        
         try:
-            temp = fileutils.create_temp_dir(config.temp_root)
+            temp = create_temp_dir(config.temp_root)
             
             self._setup(config, temp)
             self._run(config, temp)
             self._teardown(config, temp)
 
-            os.rmdir(temp)
+            rmdir(temp)
         except NodeError:
             raise
         except Exception:
@@ -80,15 +92,23 @@ class Node(object):
 
 
     def _setup(self, _config, _temp):
-        self._check_for_missing_files(self.__input_files, "input")
+        """Is called prior to '_run()' by 'run()'. Any code used to copy/link files, 
+        or other steps needed to ready the node for running may be carried out in this
+        function. Checks that required input files exist, and raises an NodeError if 
+        this is not the case."""
+
+        self._check_for_missing_files(self.input_files, "input")
+
 
     def _run(self, _config, _temp):
         pass
 
     def _teardown(self, _config, _temp):
-        self._check_for_missing_files(self.__output_files, "output")
+        self._check_for_missing_files(self.output_files, "output")
 
     def __str__(self):
+        """Returns the description passed to the constructor, or a default
+        description if no description was passed to the constructor."""
         if self.__description:
             return self.__description
         return "<%s>" % (self.__class__.__name__,)
@@ -116,14 +136,13 @@ class Node(object):
 
 
 
-
 class CommandNode(Node):
     def __init__(self, command, description = None, 
                  subnodes = (), dependencies = ()):
         Node.__init__(self, 
                       description  = description,
-                      input_files  = command.input_files(),
-                      output_files = command.output_files(),
+                      input_files  = command.input_files,
+                      output_files = command.output_files,
                       subnodes     = subnodes,
                       dependencies = dependencies)
 
@@ -131,7 +150,11 @@ class CommandNode(Node):
             
 
     def _setup(self, config, temp):
-        if fileutils.missing_executables(self._command.executables()):
+        """Checks that the prerequisites for running the command is in place. If
+        either the input files, or the executables required are missing, this
+        function raises a NodeError."""
+
+        if fileutils.missing_executables(self._command.executables):
             raise NodeError("Executable(s) does not exist for command: %s" \
                                 % (self._command, ))
 
@@ -139,6 +162,9 @@ class CommandNode(Node):
 
 
     def _run(self, _config, temp):
+        """Runs the command object provided in the constructor, and waits for it to 
+        terminate. If any errors during the running of the command, this function
+        raises a NodeError detailing the returned error-codes."""
         self._command.run(temp)
 
         return_codes = self._command.join()
@@ -167,11 +193,9 @@ class MetaNode(Node):
 
     @property
     def is_done(self):
-        for node in self.subnodes:
-            if not node.is_done:
-                return False
+        """Is true if all subnodes are marked as 'is_done'."""
 
-        return True
+        return all(node.is_done for node in self.subnodes)
 
 
     def run(self, config):

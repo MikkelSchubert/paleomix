@@ -95,23 +95,20 @@ class AtomicCmd:
         return return_codes
 
 
-    def poll(self):
-        """Equivalent to Popen.poll(), but returns the value wrapped in a list."""
-        return [self._proc.poll()]
-
-
+    @property
     def executables(self):
         """Returns a list of executables required for the AtomicCmd."""
         return [self._command[0]]
 
 
+    @property
     def input_files(self):
         """Returns a list of input files that are required by the AtomicCmd."""
         for (key, filename) in self._files.iteritems():
             if key.startswith("IN_") and isinstance(filename, types.StringTypes):
                 yield filename
         
-
+    @property
     def output_files(self):
         """Checks that the expected output files have been generated."""
         for (key, filename) in self._files.iteritems():
@@ -120,7 +117,7 @@ class AtomicCmd:
 
 
     def commit(self, temp):
-        assert (self.poll() is not None)
+        assert self._proc.returncode is not None
         assert not self._handles
 
         self._proc = None
