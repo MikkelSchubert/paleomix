@@ -2,8 +2,8 @@ import nose
 
 from flexmock import flexmock
 
-from atomiccmd import AtomicCmd, CmdError
-from atomicset import ParallelCmds, SequentialCmds
+from pypeline.atomiccmd import AtomicCmd, CmdError
+from pypeline.atomicset import ParallelCmds, SequentialCmds
 
 
 ################################################################################
@@ -148,7 +148,7 @@ def test_sequential_commands__accept_sequential():
     SequentialCmds([seqcmd])
 
 @nose.tools.raises(CmdError)
-def test_parallel_commands__reject_noncommand():
+def test_sequential_commands__reject_noncommand():
     SequentialCmds([object()])
 
 

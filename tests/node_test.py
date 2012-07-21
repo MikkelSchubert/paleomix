@@ -3,9 +3,11 @@ import os
 import nose.tools
 from flexmock import flexmock
 
-import fileutils
-import node as node_module
-from node import Node, MetaNode, CommandNode, NodeError, NodeUnhandledException
+import pypeline.fileutils as fileutils
+import pypeline.node as node_module
+from pypeline.node import Node, MetaNode, CommandNode, NodeError, NodeUnhandledException
+
+
 
 # Monkey-patch create_tmp_dir, to avoid creating a lot of temp folders
 def create_temp_dir(root):
