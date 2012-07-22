@@ -6,6 +6,7 @@ from __future__ import print_function
 import sys
 import gzip
 import string
+import itertools
 
 from pypeline.common.utilities import grouper, split_before
 from pypeline.common.formats.fasta import *
@@ -123,3 +124,18 @@ def count_gc_diploid(sequence):
         total_gc += count * value
 
     return (total_gc, total_nts)
+
+
+def split(sequence, split_by = "123"):
+    if not split_by:
+        raise TypeError("No partitions to split by specified")
+
+    results = dict((key, []) for key in split_by)
+    keys = itertools.chain(itertools.cycle(split_by))
+    for (key, nt) in itertools.izip(keys, sequence):
+        results[key].append(nt)
+
+    for key in results:
+        results[key] = "".join(results[key])
+
+    return results

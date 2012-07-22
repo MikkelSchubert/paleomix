@@ -1,6 +1,7 @@
 import unittest
 import itertools
 import nose.tools
+from nose.tools import assert_equal
 
 from common.sequences import *
 
@@ -17,33 +18,36 @@ _REF_PAIRS = zip(_REF_SRC, _REF_DST)
 
 def test_complement__single_nt():
     def test_function(source, destination):
-        assert complement(source) == destination
+        assert_equal(complement(source), destination)
 
     for (src, dest) in _REF_PAIRS:
         yield test_function, src, dest
         yield test_function, src.lower(), dest.lower()
 
 def test_complement__multiple_nts_upper():
-    assert complement(_REF_SRC) == _REF_DST
+    assert_equal(complement(_REF_SRC), _REF_DST)
 
 def test_complement__multiple_nts_lower():
-    assert complement(_REF_SRC.lower()) == _REF_DST.lower()
+    assert_equal(complement(_REF_SRC.lower()), _REF_DST.lower())
 
 def test_complement__multiple_nts_mixed_case():
-    assert complement("aGtCn") == "tCaGn"
+    assert_equal(complement("aGtCn"), "tCaGn")
+
+
 
 
 ################################################################################
 ################################################################################
 ## Tests for 'complement'
 def test_reverse_complement():
-    assert reverse_complement(_REF_SRC) == _REF_DST[::-1]
+    assert_equal(reverse_complement(_REF_SRC), _REF_DST[::-1])
+
+
 
 
 ################################################################################
 ################################################################################
 ## Tests for 'genotype'
-
 
 _IUB_SRC = ("A", "C", "G", "T", 
             "AC", "AG", "AT", "CG", "CT", "GT", 
@@ -54,7 +58,7 @@ _IUB_PAIRS = zip(_IUB_SRC, _IUB_DST)
 
 def test_genotype__permutations():
     def test_function(src, dst):
-        assert encode_genotype(src) == dst
+        assert_equal(encode_genotype(src), dst)
         
     for (src, dst) in _IUB_PAIRS:
         for seq in itertools.permutations(src):
@@ -80,7 +84,40 @@ def test_genotype__bad_input__non_nucleotide():
 
 def test_comma_or_not():
     def test_function(sequence):
-        assert encode_genotype(sequence) == "Y"
+        assert_equal(encode_genotype(sequence), "Y")
 
     for sequence in ("CT", "C,T", ",C,T", "C,T,", ",C,T,"):
         yield test_function, sequence
+
+
+
+
+################################################################################
+################################################################################
+## Tests for 'split'
+
+def test_split__empty_sequence():
+    assert_equal(split(""), {"1" : "", "2" : "", "3" : ""})
+
+@nose.tools.raises(TypeError)
+def test_split__no_split_by():
+    split("", split_by = "")
+
+def test_split__single_group():
+    assert_equal(split("ACGCAT", "111"), {'1' : 'ACGCAT'})
+
+def test_split__two_groups(): 
+    assert_equal(split("ACGCAT", "112"), {"1" : "ACCA", "2" : "GT"})
+
+def test_split__three_groups():
+    expected = {"1" : "AC", "2" : "CA", "3" : "GT"}
+    assert_equal(split("ACGCAT", "123"), expected)
+    assert_equal(split("ACGCAT"), expected)
+
+def test_split__empty_group():
+    expected = {"1" : "A", "2" : "C", "3" : ""}
+    assert_equal(split("AC"), expected)
+
+def test_split__partial_group():
+    expected = {"1" : "AA", "2" : "CA", "3" : "G"}
+    assert_equal(split("ACGAA"), expected)
