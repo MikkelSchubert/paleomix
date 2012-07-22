@@ -3,7 +3,7 @@ from __future__ import print_function
 import sys
 import gzip
 
-from common.utilities import grouper, split_before
+from pypeline.common.utilities import grouper, split_before
 
 
 

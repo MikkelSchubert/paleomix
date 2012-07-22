@@ -6,7 +6,7 @@ import weakref
 import subprocess
 import collections
 
-import fileutils
+import pypeline.fileutils
 
 
 _PIPES = ('IN_STDIN', 'OUT_STDOUT', 'OUT_STDERR')
@@ -131,7 +131,7 @@ class AtomicCmd:
         for (key, filename) in temp_files.iteritems():
             if isinstance(filename, types.StringTypes):
                 if key.startswith("OUT_"):
-                    fileutils.move_file(filename, self._files[key])
+                    pypeline.fileutils.move_file(filename, self._files[key])
                 elif key.startswith("TEMP_OUT_") and os.path.exists(filename):
                     os.remove(filename)
 
@@ -198,7 +198,7 @@ class AtomicCmd:
         both for a temporary and a final (outside the temp dir) file. For example,
         either IN_STDIN or TEMP_IN_STDIN must be specified, but not both."""
         if any((kwargs.get(pipe) and kwargs.get("TEMP_" + pipe)) for pipe in _PIPES):
-            raise CmdError, "Pipes must be specified at most once (w/wo TEMP_)." % pipe
+            raise CmdError, "Pipes must be specified at most once (w/wo TEMP_)."
 
 
     @classmethod

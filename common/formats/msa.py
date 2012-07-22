@@ -2,7 +2,7 @@ import gzip
 from collections import defaultdict
 
 from pypeline.common.sequences import split
-from pypeline.common.formats.fasta import read_fasta, parse_fasta
+from pypeline.common.formats.fasta import parse_fasta
 
 
 class MSAError(RuntimeError):

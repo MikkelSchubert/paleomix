@@ -1,12 +1,12 @@
 import traceback
 
-import fileutils
-from pylib.utilities import safe_coerce_to_tuple
+import pypeline.fileutils as fileutils
+from pypeline.common.utilities import safe_coerce_to_tuple
 
 # Imported from, in order to allow monkeypatching in tests
 # FIXME: Make create_temp_dir a 'with' object
 from os import rmdir
-from fileutils import create_temp_dir
+from pypeline.fileutils import create_temp_dir
 
 
 
@@ -119,8 +119,9 @@ class Node(object):
         bad_nodes = [node for node in nodes if not isinstance(node, Node)]
 
         if bad_nodes:
+            bad_nodes = [repr(node) for node in bad_nodes]
             message = "%s-list contain non-Node objects:\n\t- Command: %s\n\t- Objects: %s" \
-                % (description, self, "\n\t           ".join(map(repr, bad_nodes)))
+                % (description, self, "\n\t           ".join(bad_nodes))
             raise TypeError(message)
 
         return nodes

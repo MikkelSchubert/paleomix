@@ -1,5 +1,5 @@
-from atomiccmd import AtomicCmd, CmdError
-from pylib.utilities import safe_coerce_to_tuple
+from pypeline.atomiccmd import AtomicCmd, CmdError
+from pypeline.common.utilities import safe_coerce_to_tuple
 
 
 class _CommandSet:

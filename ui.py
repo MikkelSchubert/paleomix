@@ -4,7 +4,7 @@ from __future__ import print_function
 import sys
 import collections
 
-from taskgraph import TaskGraph
+from pypeline.taskgraph import TaskGraph
 
 
 def _do_print_color(*vargs, **kwargs):

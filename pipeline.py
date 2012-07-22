@@ -2,11 +2,10 @@ import time
 import signal
 import multiprocessing
 
-import ui
-import taskgraph
-
-from node import Node
-from pylib.utilities import safe_coerce_to_tuple
+import pypeline.ui as ui
+import pypeline.taskgraph as taskgraph
+from pypeline.node import Node
+from pypeline.common.utilities import safe_coerce_to_tuple
 
 
 
@@ -55,9 +54,8 @@ class Pypeline:
                 return False
 
         except taskgraph.TaskError, errors:
-            ui.print_err("Error in task-graph, terminating gracefully:\n%s\n" \
-                             % (node, "\n".join(("\t" + line) for line in str(errors).strip().split("\n"))))
-
+            errors = "\n".join(("\t" + line) for line in str(errors).strip().split("\n"))
+            ui.print_err("Error in task-graph, terminating gracefully:\n%s" % errors)
             pool.terminate()
             pool.join()
 
