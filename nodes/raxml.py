@@ -91,8 +91,8 @@ class RAxMLRapidBSNode(CommandNode):
                 "-s", "%(TEMP_OUT_ALN)s",
                 "-q", "%(TEMP_OUT_PART)s",
                 "-w", "%(TEMP_DIR)s",
-                "-x", int(random.random() * 2**32),
-                "-p", int(random.random() * 2**32),
+                "-x", int(random.random() * 2**31 - 1),
+                "-p", int(random.random() * 2**31 - 1),
                 "-N", "autoMRE"]
         if threads > 1:
             call.extend(("-T", threads))
