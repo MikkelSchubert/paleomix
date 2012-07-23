@@ -7,151 +7,105 @@ import collections
 from pypeline.node import Node, NodeError
 from pypeline.fileutils import move_file, reroot_path
 
-from pypeline.pylib.sequences import read_fasta
-from pypeline.pylib.utilities import grouper, safe_coerce_to_tuple
+from pypeline.common.formats.msa import read_msa, join_msa
+from pypeline.common.formats.phylip import interleaved_phy
+from pypeline.common.utilities import grouper, safe_coerce_to_tuple
 
 
 
-class FastaToPhyNode(Node):
-    def __init__(self, infiles, out_phy, out_partitions = None, 
-                 strict = False, add_option_flag = False, dependencies = ()):
 
-        self._infiles   = infiles = safe_coerce_to_tuple(infiles)
-        self._add_flag  = add_option_flag
-        self._strict    = strict
-        self._out_phy   = out_phy
+
+
+
+
+class FastaToPartitionsNode(Node):
+    def __init__(self, infiles, out_partitions, partition_by = "123", dependencies = ()):
+        assert len(partition_by) == 3
         self._out_part  = out_partitions
+        self._part_by   = partition_by
 
-        description  = "<FastaToPhy: %s -> '%s'%s%s%s>" % \
-            (("%i files" % len(infiles)) if (len(infiles) > 1) else ("'%s'" % infiles[0]),
-             out_phy,
-             ", strict" if strict else "",
-             ", partitions" if out_partitions else "",
-             ", options flag" if add_option_flag else "")
+        description  = "<FastaToPartitions: %i file(s) -> '%s'>" % \
+            (len(infiles), out_partitions)
             
-        output_files = [out_phy]
-        if out_partitions:
-            output_files.append(out_partitions)
-
         Node.__init__(self, 
                       description  = description,
                       input_files  = infiles,
-                      output_files = output_files,
+                      output_files = out_partitions,
                       dependencies = dependencies)
 
 
     def _run(self, _config, temp):
-        by_group, by_sequence = self._read_sequences(self._infiles)
+        partition_by = {}
+        for (group, offset) in zip(self._part_by, range(3)):
+            partition_by.setdefault(group, []).append(offset)
+        partition_by = list(sorted(partition_by.items()))
 
-        # Length that can be handled by PHYLIP, PAML, etc.
-        name_length = 10
-        if not self._strict:
-            # Length that can be handled by PhyML, RAxML, etc.
-            name_length = min(30, max(len(group) for group in by_group))
-        
-        _name_format = '{0:<%i}' % name_length
-        def format_name(group):
-            return _name_format.format(group)[:name_length]
+        end = 0
+        partitions = []
+        for (name, msa) in _read_sequences(self.input_files):
+            length = len(msa.itervalues().next())
+            start, end = end + 1, end + length
 
-        self._write_sequences_interleaved(by_group, format_name, temp)
-        if self._out_part:
-            self._write_partitions(by_sequence, temp)
+            for (group, offsets) in partition_by:
+                if len(offsets) != 3:
+                    parts = [("%i-%i\\3" % (start + offset, end)) for offset in offsets]
+                else:
+                    parts = ["%i-%i" % (start, end)]
+
+                partition = "DNA, %s_%s = %s\n" \
+                    % (name, group, ", ".join(parts))
+                partitions.append(partition)
+
+        with open(reroot_path(temp, self._out_part), "w") as part_file:
+            part_file.writelines(partitions)
+
+
+    def  _teardown(self, _config, temp):
+        move_file(reroot_path(temp, self._out_part), self._out_part)
+
+
+
+
+class FastaToInterleavedPhyNode(Node):
+    def __init__(self, infiles, out_phy, add_flag = False, dependencies = ()):
+        self._add_flag  = add_flag
+        self._out_phy   = out_phy
+
+        description  = "<FastaToInterleavedPhy: %i file(s) -> '%s'%s>" % \
+            (len(infiles), out_phy, (" (w/ flag)" if add_flag else ""))
+            
+        Node.__init__(self, 
+                      description  = description,
+                      input_files  = infiles,
+                      output_files = [out_phy],
+                      dependencies = dependencies)
+
+
+    def _run(self, _config, temp):
+        msa = join_msa(*(read_msa(filename) for filename in self.input_files))
+
+        with open(reroot_path(temp, self._out_phy), "w") as output:
+            output.write(interleaved_phy(msa, add_flag = self._add_flag))
 
 
     def  _teardown(self, _config, temp):
         move_file(reroot_path(temp, self._out_phy), self._out_phy)
-        if self._out_part:
-            move_file(reroot_path(temp, self._out_part), self._out_part)
 
 
-    def _write_sequences_interleaved(self, by_group, format_name, temp):
-        streams = []
-        for (group, sequences) in sorted(by_group.iteritems()):
-            sequence   = "".join((sequence for (_, sequence) in sorted(sequences.iteritems())))
-            if not self._is_valid_sequence(sequence):
-                continue
 
-            sequence_length = len(sequence)
-            
-            name       = format_name(group)
-            row        = name
-            row       +=  ("  " if ((len(name) - 9) % 12) else " ")
-            
-            frag_size  = min(10, max(0, 10 - (len(name) + 2) % 12))
-            row       += sequence[:frag_size]
-            sequence   = sequence[frag_size:]
-            
-            while (len(row) < 70) and sequence:
-                row += "  " + sequence[:10]
-                sequence = sequence[10:]
 
-            rows = [row]
-            for fragment in grouper(60, sequence, fillvalue = ""):
-                rows.append(("  ".join("".join(column) for column in grouper(10, fragment, fillvalue = ""))))
 
-            streams.append(rows)
+def _read_sequences(filenames):
+    expected_groups = None
+    for filename in sorted(filenames):
+        name = os.path.splitext(os.path.basename(filename))[0]
+        msa  = read_msa(filename)
+
+        if not expected_groups:
+            expected_groups = set(msa)
+        elif set(msa) != expected_groups:
+            difference = expected_groups.symmetric_difference(msa)
+            raise NodeError("Unexpected/missing groups for sequence (%s): %s" \
+                                % (name, ", ".join(difference)))
         
-        with open(reroot_path(temp, self._out_phy), "w") as output:
-            output.write("   %i %i%s\n" % (len(streams), sequence_length, " I" if self._add_flag else ""))
-            for lst in itertools.izip(*streams):
-                for row in lst:
-                    output.write(row + "\n")
-                output.write("\n")
-
-
-    def _write_partitions(self, by_sequence, temp):
-        end_pos = 0
-        with open(reroot_path(temp, self._out_part), "w") as partitions:
-            for (sequence_name, groups) in sorted(by_sequence.iteritems()):
-                length = len(groups.itervalues().next())
-
-                start_pos, end_pos = end_pos + 1, end_pos + length
-        
-                partitions.write("DNA, %s_12 = %i-%i\\3, %i-%i\\3\n" \
-                                     % (sequence_name, start_pos, end_pos, start_pos + 1, end_pos))
-                partitions.write("DNA, %s_3 = %i-%i\\3\n" \
-                                     % (sequence_name, start_pos + 2, end_pos))
-    
-
-    @classmethod
-    def _is_valid_sequence(cls, sequence):
-        """Returns false if the sequence contains only contains ambigious bases. Such sequences cause 
-        RAxML to fail, and even if a given program doesn't complain, they make no sense to include."""
-        return bool(set(sequence) - set("-?NXnx"))
-
-
-    @classmethod
-    def _read_sequences(cls, filenames):
-        by_group    = collections.defaultdict(dict)
-        by_sequence = collections.defaultdict(dict)
-
-        for filename in sorted(filenames):
-            sequence_name = os.path.splitext(os.path.basename(filename))[0]
-
-            for (group, sequence) in read_fasta(filename):
-                if (group in by_sequence[sequence_name]) or (sequence_name in by_group[group]):
-                    raise NodeError("Multiple sequences with the same name (%s) for group '%s'." \
-                                        % (sequence_name, group))
-
-                by_group[group][sequence_name]    = sequence
-                by_sequence[sequence_name][group] = sequence
-                
-        return cls._validate_sequences(by_group, by_sequence)
-
-
-    @classmethod
-    def _validate_sequences(cls, by_group, by_sequence):
-        expected_groups = set(by_group)
-        for (sequence_name, groups) in by_sequence.iteritems():
-            missing_or_extra_groups = expected_groups.symmetric_difference(groups)
-            if missing_or_extra_groups:
-                raise NodeError("Unexpected/missing groups for sequence (%s): %s" \
-                                    % (sequence_name, ", ".join(missing_or_extra_groups)))
-        
-            sequence_lengths = set(len(sequences) for sequences in groups.itervalues())
-            if len(sequence_lengths) > 1:
-                sequence_lengths = [str(length) for length in sequence_lengths]
-                raise NodeError("Different lengths observed for the same sequence (%s): %s" \
-                                    % (sequence_name, ", ".join(sequence_lengths)))
-
-        return by_group, by_sequence
+        yield (name, msa)
