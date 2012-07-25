@@ -1,4 +1,5 @@
 import gzip
+import types
 from collections import defaultdict
 
 from pypeline.common.sequences import split
@@ -10,7 +11,7 @@ class MSAError(RuntimeError):
 
 
 def split_msa(msa, split_by = "123"):
-    _validate_msa_lengths(msa)
+    validate_msa(msa)
     if not split_by:
         raise TypeError("No partitions to split by specified")
 
@@ -28,17 +29,9 @@ def split_msa(msa, split_by = "123"):
     
 
 def join_msa(*msas):
-    if not msas:
-        raise TypeError("join_msa takes at least 1 argument (0 given)")
-
+    validate_msa(*msas)
     results = defaultdict(list)
-    keywords = set(msas[0])
     for msa in msas:
-        _validate_msa_lengths(msa)
-
-        if set(msa) != keywords:
-            raise MSAError("Cannot join MSAs with mismatching sequences")
-        
         for (name, sequence) in msa.iteritems():
             results[name].append(sequence)
 
@@ -52,8 +45,8 @@ def parse_msa(lines):
             raise MSAError("Duplicate names found, cannot be represented as MSA")
         msa[name] = sequence
 
-
-    return _validate_msa_lengths(msa)
+    validate_msa(msa)
+    return msa
 
 
 def read_msa(filename):
@@ -65,8 +58,17 @@ def read_msa(filename):
         fasta_file.close()
 
 
-def _validate_msa_lengths(msa):
-    if len(set(len(seq) for seq in msa.itervalues())) > 1:
-        raise MSAError("Sequence lengths differ in MSA")
+def validate_msa(*msas):
+    if not msas:
+        raise TypeError("No MSAs given as arguments")
 
-    return msa
+    keywords = set(msas[0])
+    for msa in msas:
+        if not msa:
+            raise MSAError("MSA with no sequences found")
+        elif not all((name and isinstance(name, types.StringTypes)) for name in msa):
+            raise MSAError("Names in MSA must be non-empty strings")
+        elif len(set(len(seq) for seq in msa.itervalues())) != 1:
+            raise MSAError("MSA contains sequences of differing lengths")
+        elif set(msa) != keywords:
+            raise MSAError("MSAs contain mismatching sequences")

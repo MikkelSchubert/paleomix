@@ -54,6 +54,14 @@ def test_join_msa__differing_lengths():
     msa_1["nc"] = "AC"
     join_msa(msa_1, msa_2)
 
+@nose.tools.raises(MSAError)
+def test_join_msa__empty_name():
+    join_msa({"" : "A"}, {"" : "T"})
+
+@nose.tools.raises(MSAError)
+def test_join_msa__non_string_name():
+    join_msa({1 : "A"}, {1 : "T"})
+
 
 
 ################################################################################
@@ -76,6 +84,9 @@ def test_parse_msa__duplicate_names():
 def test_parse_msa__mismatched_lengths():
     parse_msa([">seq1", "ACG", ">seq1", "TGAN"])
 
+@nose.tools.raises(MSAError)
+def test_parse_msa__empty_name():
+    parse_msa([">", "ACG", ">seq1", "TGAN"])
 
 
 
@@ -99,9 +110,6 @@ def test_read_msa__compressed():
 ################################################################################
 ################################################################################
 ## Tests for 'split_msa'
-
-def test_split_msa__empty_msa():
-    assert_equal(split_msa({}), {"1" : {}, "2" : {}, "3" : {}})
 
 def test_split_msa__single_group():
     msa = {"seq1" : "ACGCAT", "seq2" : "GAGTGA"}
@@ -137,10 +145,22 @@ def test_split__partial_group():
     assert_equal(split_msa(msa), expected)
 
 
+@nose.tools.raises(MSAError)
+def test_split_msa__empty_msa():
+    split_msa({})
+
 @nose.tools.raises(TypeError)
 def test_split_msa__no_split_by():
-    split_msa({}, split_by = "")
+    split_msa({"seq1" : "ACG", "seq2" : "GAT"}, split_by = "")
 
 @nose.tools.raises(MSAError)
 def test_split_msa__mismatching_lengths():
     split_msa({"seq1" : "ACG", "seq2" : "GA"})
+
+@nose.tools.raises(MSAError)
+def test_split_msa__empty_name():
+    split_msa({"" : "ACT"}, {"" : "TGA"})
+
+@nose.tools.raises(MSAError)
+def test_split_msa__non_string_name():
+    split_msa({1 : "ACT"}, {1 : "TGA"})

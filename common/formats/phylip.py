@@ -1,8 +1,7 @@
-import types
 import itertools
 
 from pypeline.common.utilities import grouper
-from pypeline.common.formats.msa import MSAError
+from pypeline.common.formats.msa import validate_msa, MSAError
 
 
 _NUM_BLOCKS      = 6
@@ -14,8 +13,7 @@ _LINE_SIZE       = _NUM_BLOCKS * _BLOCK_SIZE + (_NUM_BLOCKS - 1) * _BLOCK_SPACIN
 
 
 def sequential_phy(msa, add_flag = False, max_name_length = _MAX_NAME_LENGTH):
-    _validate_msa(msa)
-
+    validate_msa(msa)
     header = "%i %i" % (len(msa), len(msa.values()[0]))
     if add_flag:
         header += " S"
@@ -35,8 +33,7 @@ def sequential_phy(msa, add_flag = False, max_name_length = _MAX_NAME_LENGTH):
 
 
 def interleaved_phy(msa, add_flag = False, max_name_length = _MAX_NAME_LENGTH):
-    _validate_msa(msa)
-
+    validate_msa(msa)
     header = "%i %i" % (len(msa), len(msa.values()[0]))
     if add_flag:
         header += " I"
@@ -70,15 +67,3 @@ def interleaved_phy(msa, add_flag = False, max_name_length = _MAX_NAME_LENGTH):
     result.pop()
 
     return "\n".join(result)
-    
-
-
-
-def _validate_msa(msa):
-    if not msa:
-        raise MSAError("Cannot convert empty MSA to PHYLIP format")
-    elif not all((name and isinstance(name, types.StringTypes)) for name in msa):
-        # FIXME: Test this! Add to msa module
-        raise MSAError("Names in MSA must be non-empty strings")
-    elif len(set(len(seq) for seq in msa.itervalues())) != 1:
-        raise MSAError("MSA contains sequences of differing lenghts")
