@@ -126,6 +126,8 @@ def _get_print_function(node):
         return print_disabled
     elif node.state is node.OUTDATED:
         return print_warn
+    elif node.state is node.ERROR:
+        return print_err
     else:
         return print_msg
 
