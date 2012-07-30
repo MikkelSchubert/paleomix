@@ -83,7 +83,7 @@ def move_file(source, destination):
     if not os.path.exists(directory):
         try:
             os.makedirs(directory)
-        except OSError, e:
+        except OSError:
             if not os.path.isdir(directory):
                 raise
 
