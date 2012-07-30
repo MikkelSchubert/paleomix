@@ -5,8 +5,7 @@ import itertools
 import collections
 
 from pypeline.node import Node, NodeError
-from pypeline.fileutils import move_file, reroot_path
-
+from pypeline.common.fileutils import move_file, reroot_path
 from pypeline.common.formats.msa import read_msa, join_msa, split_msa
 from pypeline.common.formats.phylip import interleaved_phy, sequential_phy
 from pypeline.common.utilities import grouper, safe_coerce_to_tuple
@@ -20,9 +19,12 @@ _VALID_KEYS = frozenset(["name", "partition_by"])
 
 class FastaToPartitionsNode(Node):
     def __init__(self, infiles, out_partitions, partition_by = "123", dependencies = ()):
-        assert len(partition_by) == 3
-        if not isinstance(infiles, dict):
+        if (len(partition_by) != 3):
+            raise ValueError("Default 'partition_by' must be 3 entires long!")
+        elif not isinstance(infiles, dict):
             raise TypeError("'infiles' must be a dictionary")
+        elif any(len(dd.get("partition_by", "123")) != 3 for dd in infiles.itervalues()):
+            raise ValueError("'partition_by' must be 3 entires long!")
         elif not all(isinstance(dd, dict) for dd in infiles.values()):
             raise TypeError("'infiles' must be a dictionary of dictionaries")
         elif not any(("name" in dd) for dd in infiles.values()):
@@ -34,8 +36,8 @@ class FastaToPartitionsNode(Node):
         self._out_part  = out_partitions
         self._part_by   = partition_by
 
-        description  = "<FastaToPartitions: %i file(s) -> '%s'>" % \
-            (len(infiles), out_partitions)
+        description  = "<FastaToPartitions (default: %s): %i file(s) -> '%s'>" % \
+            (partition_by, len(infiles), out_partitions)
             
         Node.__init__(self, 
                       description  = description,
