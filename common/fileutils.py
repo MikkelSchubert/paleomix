@@ -81,7 +81,11 @@ def missing_executables(filenames):
 def move_file(source, destination):
     directory = os.path.dirname(destination)
     if not os.path.exists(directory):
-        os.makedirs(directory)
+        try:
+            os.makedirs(directory)
+        except OSError, e:
+            if not os.path.isdir(directory):
+                raise
 
     shutil.move(source, destination)
 

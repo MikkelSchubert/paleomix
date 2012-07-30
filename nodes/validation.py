@@ -1,6 +1,6 @@
 from pypeline.node import Node
 from pypeline.common.samwrap import SamfileReader
-from pypeline.fileutils import reroot_path, move_file
+from pypeline.common.fileutils import reroot_path, move_file
 
 
 

@@ -4,8 +4,8 @@ import os
 import textwrap
 
 import pysam
+import pypeline.common.fileutils as fileutils
 
-import pypeline.fileutils as fileutils
 from pypeline.node import Node
 
 

@@ -1,9 +1,9 @@
 import os
 
 from pypeline.node import CommandNode
-from pypeline.fileutils import reroot_path
 from pypeline.atomiccmd import AtomicCmd
 from pypeline.atomicset import ParallelCmds
+from pypeline.common.fileutils import reroot_path
 
 
 class GenotypeNode(CommandNode):

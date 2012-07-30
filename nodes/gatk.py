@@ -1,8 +1,8 @@
 import os
 
-import pypeline.fileutils as fileutils
 from pypeline.node import CommandNode, MetaNode
 from pypeline.atomiccmd import AtomicCmd
+import pypeline.common.fileutils as fileutils
 
 
 

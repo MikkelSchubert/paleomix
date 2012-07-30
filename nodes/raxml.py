@@ -2,7 +2,7 @@ import os
 import re
 import random
 
-import pypeline.fileutils as fileutils
+import pypeline.common.fileutils as fileutils
 
 from pypeline.node import CommandNode
 from pypeline.atomiccmd import AtomicCmd
