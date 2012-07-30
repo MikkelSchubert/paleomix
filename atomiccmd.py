@@ -6,7 +6,7 @@ import weakref
 import subprocess
 import collections
 
-import pypeline.fileutils
+import pypeline.common.fileutils as fileutils
 
 
 _PIPES = ('IN_STDIN', 'OUT_STDOUT', 'OUT_STDERR')
@@ -131,7 +131,7 @@ class AtomicCmd:
         for (key, filename) in temp_files.iteritems():
             if isinstance(filename, types.StringTypes):
                 if key.startswith("OUT_"):
-                    pypeline.fileutils.move_file(filename, self._files[key])
+                    fileutils.move_file(filename, self._files[key])
                 elif key.startswith("TEMP_OUT_") and os.path.exists(filename):
                     os.remove(filename)
 
