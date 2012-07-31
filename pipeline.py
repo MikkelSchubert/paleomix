@@ -24,7 +24,7 @@ class Pypeline:
                 self._nodes.append(node)
 
 
-    def run(self, max_running = 4, dry_run = False):
+    def run(self, max_running = 4, dry_run = False, terminate_on_error = False):
         try:
             nodes = taskgraph.TaskGraph(self._nodes)
         except taskgraph.TaskError, error:
@@ -39,7 +39,7 @@ class Pypeline:
         try:
             running = {}
             pool = multiprocessing.Pool(max_running, _init_worker)
-            while self._poll_running_nodes(running, nodes):
+            while self._poll_running_nodes(running, nodes) or not terminate_on_error:
                 if not self._start_new_tasks(running, nodes, max_running, pool):
                     ui.print_node_tree(nodes)
                     break
