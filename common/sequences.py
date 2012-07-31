@@ -3,33 +3,27 @@
 
 from __future__ import print_function
 
-import sys
-import gzip
-import string
 import itertools
-
-from pypeline.common.utilities import grouper, split_before
-from pypeline.common.formats.fasta import *
 
  
 # Pairs of complementary bases and ambigious basees
-_compl = [ "AT", "CG", 
+_COMPL = [ "AT", "CG", 
            "NN", "RY", 
            "KM", "SS", 
            "WW", "BV", 
            "DH", "XX" ]
-_compl_table = ["N"] * 256
-for (a, b) in _compl:
+_COMPL_TABLE = ["N"] * 256
+for (a, b) in _COMPL :
     # Complement both upper/lower-case bases
     for func in (str.upper, str.lower):
-        _compl_table[ord(func(a))] = func(b)
-        _compl_table[ord(func(b))] = func(a)
-_compl_table = "".join(_compl_table)
+        _COMPL_TABLE[ord(func(a))] = func(b)
+        _COMPL_TABLE[ord(func(b))] = func(a)
+_COMPL_TABLE = "".join(_COMPL_TABLE)
 
 
 
 # Table of nt codes used to encode (ambigious) bases
-_nt_codes = [
+_NT_CODES = [
     ["A", "A"],
     ["C", "C"],
     ["G", "G"],
@@ -47,34 +41,34 @@ _nt_codes = [
     ["V", "ACG"], 
     ["N", "ACGT"]]
 
-_nt_codes_table = {}
-for (abr, nts) in _nt_codes:
-    _nt_codes_table[frozenset(nts)] = abr
-    _nt_codes_table[frozenset(nts + ",")] = abr
+_NT_CODES_TABLE = {}
+for (abr, nts) in _NT_CODES:
+    _NT_CODES_TABLE[frozenset(nts)] = abr
+    _NT_CODES_TABLE[frozenset(nts + ",")] = abr
 
-_nt_codes = dict(_nt_codes)
+_NT_CODES = dict(_NT_CODES)
 
 
 
-def complement(s):
+def complement(sequence):
     """Returns the complement of a DNA sequence (string)."""
-    return s.translate(_compl_table)
+    return sequence.translate(_COMPL_TABLE)
 
 
-def reverse_complement(s):
+def reverse_complement(sequence):
     """Returns the reverse complement of a DNA sequence."""
-    return complement(s)[::-1]
+    return complement(sequence)[::-1]
 
 
-def encode_genotype(nts):
+def encode_genotype(nucleotides):
     """Parses a string representing a set of (potentially comma-seperated)
     nucleotides observed at a loci, and returns the corresponding IUPAC code.
     Does not handle lower-case nucleotides, due to lack of clear criteria for
     mixed case input. See e.g. http://www.ebi.ac.uk/2can/tutorials/aa.html"""
     try:
-        return _nt_codes_table[frozenset(nts)]
+        return _NT_CODES_TABLE[frozenset(nucleotides)]
     except KeyError:
-        raise ValueError("Invalid input for 'encode_genotype': '%s'" % (nts, ))
+        raise ValueError("Invalid input for 'encode_genotype': '%s'" % (nucleotides, ))
 
 
 
@@ -86,8 +80,8 @@ def count_nts(sequence):
     handled in a case-insensitive manner."""
     counts = {}
     sequence = sequence.upper()
-    for nt in _nt_codes:
-        counts[nt] = sequence.count(nt)
+    for nucleotide in _NT_CODES:
+        counts[nucleotide] = sequence.count(nucleotide)
 
     if len(sequence) != sum(counts.itervalues()):
         raise ValueError("Sequence contains non-(IUPAC-)nucleotides.")
@@ -112,13 +106,15 @@ def count_gc_diploid(sequence):
         if not count:
             continue
 
-        code_represents = _nt_codes[code]
+        code_represents = _NT_CODES[code]
         if (len(code_represents) > 2) and (code != 'N'):
             raise ValueError("calculate_gcp assumes diploid genome, nt code for tri-valued SNP observed: " + code)
         
         value = 0
-        if 'G' in code_represents: value += 1
-        if 'C' in code_represents: value += 1
+        if 'G' in code_represents: 
+            value += 1
+        if 'C' in code_represents: 
+            value += 1
 
         total_nts += count * 2
         total_gc += count * value
@@ -127,13 +123,21 @@ def count_gc_diploid(sequence):
 
 
 def split(sequence, split_by = "123"):
+    """Splits a sequence by position, as specified by the 'split_by' parameter. By
+    default, the function will split by codon position, and return a dictionary 
+    containing the keys '1', '2' and '3'. 
+
+    The 'split_by' parameter may contain any non-zero number of values, which must 
+    however be hashable. If a value is specified multiple times, then those positions
+    are interleaved (e.g. split_by = "112" returns the first two positions in a codon
+    as one sequence, as well as the last positions as one sequence."""
     if not split_by:
         raise TypeError("No partitions to split by specified")
 
     results = dict((key, []) for key in split_by)
     keys = itertools.chain(itertools.cycle(split_by))
-    for (key, nt) in itertools.izip(keys, sequence):
-        results[key].append(nt)
+    for (key, nucleotide) in itertools.izip(keys, sequence):
+        results[key].append(nucleotide)
 
     for key in results:
         results[key] = "".join(results[key])
