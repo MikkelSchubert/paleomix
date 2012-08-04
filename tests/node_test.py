@@ -3,7 +3,7 @@ import os
 import nose.tools
 from flexmock import flexmock
 
-import pypeline.fileutils as fileutils
+import pypeline.common.fileutils as fileutils
 import pypeline.node as node_module
 from pypeline.node import Node, MetaNode, CommandNode, NodeError, NodeUnhandledException
 

@@ -1,12 +1,12 @@
 import traceback
 
-import pypeline.fileutils as fileutils
+import pypeline.common.fileutils as fileutils
 from pypeline.common.utilities import safe_coerce_to_tuple
 
 # Imported from, in order to allow monkeypatching in tests
 # FIXME: Make create_temp_dir a 'with' object
 from os import rmdir
-from pypeline.fileutils import create_temp_dir
+from pypeline.common.fileutils import create_temp_dir
 
 
 
