@@ -160,7 +160,8 @@ class TaskGraph:
     def _check_output_files(cls, output_files):
         for (filename, tasks) in output_files.iteritems():
             if (len(tasks) > 1):
-                yield "%i nodes clobber a file: %s" % (len(tasks), filename)
+                yield "%i nodes clobber a file: %s:\n\t%s" \
+                    % (len(tasks), filename, "\n\t".join(str(task) for task in tasks))
 
     @classmethod
     def _check_input_dependencies(cls, input_files, output_files):
