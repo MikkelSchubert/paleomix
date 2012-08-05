@@ -1,3 +1,5 @@
+import time
+
 from pypeline.atomiccmd import AtomicCmd, CmdError
 from pypeline.common.utilities import safe_coerce_to_tuple
 
@@ -8,11 +10,8 @@ class _CommandSet:
         if not self._commands:
             raise CmdError("Empty list passed to command set")
 
-    def join(self):
-        return_codes = []
-        for command in self._commands:
-            return_codes.extend(command.join())
-        return return_codes
+    def ready(self):
+        return all(cmd.ready() for cmd in self._commands)
 
     def commit(self, temp):
         for command in self._commands:
@@ -67,6 +66,24 @@ class ParallelCmds(_CommandSet):
             command.run(temp)
 
 
+    def join(self):
+        commands = list(self._commands)
+        while commands:
+            time.sleep(1)
+
+            for command in commands:
+                if command.ready():
+                    command.join()
+                    commands.remove(command)
+
+
+        return_codes = []
+        for command in self._commands:
+            return_codes.extend(command.join())
+        return return_codes
+
+
+
 
 
 class SequentialCmds(_CommandSet):
@@ -87,6 +104,7 @@ class SequentialCmds(_CommandSet):
         for command in self._commands:
             if not isinstance(command, (AtomicCmd, _CommandSet)):
                 raise CmdError("ParallelCmds must only contain AtomicCmds or other ParallelCmds!")
+        self._ready = False
 
 
     def run(self, temp):
@@ -95,3 +113,17 @@ class SequentialCmds(_CommandSet):
 
             if any(command.join()):
                 break
+
+        self._ready = True
+
+    
+    def ready(self):
+        return self._ready
+
+
+    def join(self):
+        return_codes = []
+        for command in self._commands:
+            return_codes.extend(command.join())
+        return return_codes
+

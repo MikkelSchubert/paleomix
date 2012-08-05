@@ -10,7 +10,7 @@ import pypeline.common.fileutils as fileutils
 
 
 _PIPES = ('IN_STDIN', 'OUT_STDOUT', 'OUT_STDERR')
-_PREFIXES = ('IN_', 'TEMP_IN', 'OUT_', 'TEMP_OUT')
+_PREFIXES = ('IN_', 'TEMP_IN_', 'OUT_', 'TEMP_OUT_')
 
 
 
@@ -72,10 +72,17 @@ class AtomicCmd:
         self._proc = subprocess.Popen(command, 
                                       stdin  = stdin,
                                       stdout = stdout,
-                                      stderr = stderr)
+                                      stderr = stderr,
+                                      close_fds = True)
         
         # Allow subprocesses to be killed in case of a SIGTERM
         _add_to_killlist(self._proc)
+
+
+    def ready(self):
+        """Returns true if the command has been run to completion, 
+        regardless of wether or not an error occured."""
+        return (self._proc.poll() is not None)
 
 
     def join(self):
@@ -182,7 +189,7 @@ class AtomicCmd:
 
         output_files = collections.defaultdict(list)
         for (key, filename) in kwargs.iteritems():
-            if key.startswith("TEMP_OUT") or key.startswith("OUT_"):
+            if key.startswith("TEMP_OUT_") or key.startswith("OUT_"):
                 if isinstance(filename, types.StringTypes):
                     output_files[os.path.basename(filename)].append(key)
 
