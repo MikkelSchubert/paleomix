@@ -32,93 +32,108 @@ def bwa_prefix_name(bwa_prefix):
     return os.path.splitext(os.path.basename(bwa_prefix))[0]
 
 
-def collect_files(root, record):
+def collect_files(record):
     """ """
     files = {}
     for end in ("R1", "R2"):
-        template = "%%(SampleID)s_%%(Index)s_L*%%(Lane)s_%s_*.fastq.gz" % (end,)
-        files[end] = list(sorted(glob.glob(os.path.join(root, template % record))))
+        files[end] = list(sorted(glob.glob(record["Path"] % { "Pair" : end })))
     return files
 
 
-def read_alignment_records(root):
-    """ """
-    with open(os.path.join(root, "SampleSheet.csv")) as records:
-        header = records.readline().strip().split(",")
-        for line in records:
-            record = dict(zip(header, line.strip().split(",")))
-            record["files"] = collect_files(root, record)
+def collect_records(filenames):
+    def _split(line):
+        return filter(None, line.strip().split("\t"))
 
-            yield record
-
-
-def collect_records(roots):        
     records = collections.defaultdict(list)
-    for root in roots:
-        for record in read_alignment_records(root):
-            records[record["SampleID"]].append(record)
+    for filename in filenames:
+        with open(filename) as mkfile:
+            header = _split(mkfile.readline())
+
+            for line in mkfile:
+                record = dict(zip(header, _split(line)))
+                record["files"] = collect_files(record)
+                records[record["Name"]].append(record)
+                
     return records
 
 
-def build_SE_nodes(bwa_prefix, record):
-    read_group = "@RG\tID:%(Index)s\tSM:%(SampleID)s\tLB:%(Index)s\tPU:%(FCID)s\tPL:Illumina" % record
-    outdir = os.path.join("results", record["SampleID"] + "." + bwa_prefix_name(bwa_prefix), record["Index"], record["FCID"])
-    prefix = os.path.join(outdir, "reads.truncated")
 
-    trim = SE_AdapterRemovalNode(record["files"]["R1"], os.path.join(outdir, "reads"))
-    aln  = SE_BWANode(input_file   = prefix + ".gz",
-                      output_file  = prefix + ".bam",
+_ADAPTERRM_CACHE = {}
+def build_SE_nodes(config, bwa_prefix, record):
+    try:
+        trim_prefix, trim_node = _ADAPTERRM_CACHE[id(record)]
+    except KeyError:
+        trim_prefix = os.path.join("results", record["Name"], record["Library"], record["Barcode"], "reads")
+        trim_node   = SE_AdapterRemovalNode(record["files"]["R1"], trim_prefix)
+        _ADAPTERRM_CACHE[id(record)] = (trim_prefix, trim_node)
+
+
+    output_dir  = os.path.join("results", record["Name"] + "." + bwa_prefix_name(bwa_prefix), record["Library"], record["Barcode"])
+    output_file = os.path.join(output_dir, "reads.truncated.bam")
+    
+    read_group = "@RG\tID:%(Library)s\tSM:%(Sample)s\tLB:%(Library)s\tPU:%(Barcode)s\tPL:Illumina" % record
+    aln  = SE_BWANode(input_file   = trim_prefix + ".truncated.gz",
+                      output_file  = output_file,
                       prefix       = bwa_prefix,
                       read_group   = read_group,
-                      dependencies = trim)
+                      threads      = config.max_bwa_threads,
+                      dependencies = trim_node)
 
     return { "aligned"   : [],
-             "unaligned" : [prefix + ".bam"],
+             "unaligned" : [output_file],
              "nodes"     : [aln],
              "record"    : record}
 
 
 def build_PE_nodes(config, bwa_prefix, record):
-    read_group = "@RG\tID:%(Index)s\tSM:%(SampleID)s\tLB:%(Index)s\tPU:%(FCID)s\tPL:Illumina" % record
-    outdir = os.path.join("results", record["SampleID"] + "." + bwa_prefix_name(bwa_prefix), record["Index"], record["FCID"])
-    prefix = os.path.join(outdir, "reads")
+    try:
+        trim_prefix, trim_node = _ADAPTERRM_CACHE[id(record)]
+    except KeyError:
+        trim_prefix = os.path.join("results", record["Name"], record["Library"], record["Barcode"], "reads")
+        trim_node   = PE_AdapterRemovalNode(input_files_1 = record["files"]["R1"], 
+                                            input_files_2 = record["files"]["R2"], 
+                                            output_prefix = trim_prefix)
+        _ADAPTERRM_CACHE[id(record)] = (trim_prefix, trim_node)
 
-    trim = PE_AdapterRemovalNode(input_files_1 = record["files"]["R1"], 
-                                 input_files_2 = record["files"]["R2"], 
-                                 output_prefix = os.path.join(outdir, "reads"))
 
     nodes = []
+    output_dir = os.path.join("results", record["Name"] + "." + bwa_prefix_name(bwa_prefix), record["Library"], record["Barcode"])
+    read_group = "@RG\tID:%(Library)s\tSM:%(Sample)s\tLB:%(Library)s\tPU:%(Barcode)s\tPL:Illumina" % record
     for filename in ("aln", "unaln"):
-        filename_prefix = prefix + ".singleton.%s.truncated" % (filename,)
+        input_filename  = trim_prefix + ".singleton.%s.truncated.gz" % (filename,)
+        output_filename = os.path.join(output_dir, "reads.singleton.%s.truncated.bam" % (filename,))
 
-        aln = SE_BWANode(input_file    = filename_prefix + ".gz",
-                          output_file  = filename_prefix + ".bam",
-                          prefix       = bwa_prefix,
-                          read_group   = read_group,
-                          dependencies = trim)
+        aln = SE_BWANode(input_file   = input_filename,
+                         output_file  = output_filename,
+                         prefix       = bwa_prefix,
+                         read_group   = read_group,
+                         threads      = config.max_bwa_threads,
+                         dependencies = trim_node)
         val = ValidateBAMNode(config   = config, 
-                              bamfile  = filename_prefix + ".bam",
+                              bamfile  = output_filename,
                               ignore   = ["MATE_NOT_FOUND"],
                               dependencies = aln)
         nodes.append(val)
 
 
-    aln  = PE_BWANode(input_file_1 = prefix + ".pair1.truncated.gz",
-                        input_file_2 = prefix + ".pair2.truncated.gz",
-                        output_file  = prefix + ".pairs.truncated.bam",
-                        prefix       = bwa_prefix,
-                        read_group   = read_group,
-                        dependencies = trim)
+    output_filename = os.path.join(output_dir, "reads.pairs.truncated.bam")
+    aln  = PE_BWANode(input_file_1 = trim_prefix + ".pair1.truncated.gz",
+                      input_file_2 = trim_prefix + ".pair2.truncated.gz",
+                      output_file  = output_filename,
+                      prefix       = bwa_prefix,
+                      read_group   = read_group,
+                      threads      = config.max_bwa_threads,
+                      dependencies = trim_node)
     val = ValidateBAMNode(config   = config, 
-                          bamfile  = prefix + ".pairs.truncated.bam",
+                          bamfile  = output_filename,
                           ignore   = ["MATE_NOT_FOUND"],
                           dependencies = aln)
     nodes.append(val)
 
 
-    return { "aligned"   : [prefix + ".singleton.aln.truncated.bam"],
-             "unaligned" : [prefix + ".singleton.unaln.truncated.bam",
-                            prefix + ".pairs.truncated.bam"],
+    return { "aligned"   : [os.path.join(output_dir, "reads.singleton.aln.truncated.bam")],
+             "unaligned" : [os.path.join(output_dir, "reads.singleton.unaln.truncated.bam"),
+                            os.path.join(output_dir, "reads.pairs.truncated.bam")],
              "nodes"     : nodes,
              "record"    : record }
 
@@ -133,8 +148,8 @@ def build_lib_merge_nodes(config, bwa_prefix, nodes):
             continue
 
         record = node["record"]
-        outdir = os.path.join("results", record["SampleID"] + "." + bwa_prefix_name(bwa_prefix))
-        target = os.path.join(outdir, "%s.%s.bam" % (record["Index"], key))
+        outdir = os.path.join("results", record["Name"] + "." + bwa_prefix_name(bwa_prefix))
+        target = os.path.join(outdir, "%s.%s.bam" % (record["Library"], key))
         
         merge = MergeSamFilesNode(config       = config, 
                                   input_files  = files, 
@@ -181,11 +196,11 @@ def build_nodes(config, bwa_prefix, sample, records):
         if record["files"]["R2"]:
             node = build_PE_nodes(config, bwa_prefix, record)
         elif record["files"]["R1"]:
-            node = build_SE_nodes(bwa_prefix, record)
+            node = build_SE_nodes(config, bwa_prefix, record)
         else:
             assert False
 
-        nodes[record["Index"]].append(node)
+        nodes[record["Library"]].append(node)
     
     deduped = []
     for nodes in nodes.values():
@@ -209,20 +224,22 @@ def main(argv):
     parser.add_option("--picard-root", None)
     parser.add_option("--temp-root", default = "/tmp")
     parser.add_option("--bwa-prefix", action = "append", default = [])
+    parser.add_option("--max-threads", type = int, default = 14)
+    parser.add_option("--max-bwa-threads", type = int, default = 4)
     parser.add_option("--run", action = "store_true", default = False)
-    config, roots = parser.parse_args(argv)
+    config, args = parser.parse_args(argv)
     pipeline = pypeline.Pypeline(config)
 
     if not config.picard_root:
         ui.print_err("--picard-root must be set to the location of the Picard JARs.")
         return 1
 
-    records = collect_records(roots)
+    records = collect_records(args)
     for bwa_prefix in config.bwa_prefix:
         for (sample, runs) in records.iteritems():
             pipeline.add_nodes(build_nodes(config, bwa_prefix, sample, runs))
 
-    pipeline.run(dry_run = not config.run, max_running = 1)
+    pipeline.run(dry_run = not config.run, max_running = config.max_threads)
 
     return 0
 
