@@ -23,16 +23,19 @@ class NodeUnhandledException(NodeError):
 
 
 class Node(object):
-    def __init__(self, description = None, 
-                 input_files = (), output_files = (), 
+    def __init__(self, description = None, threads = 1,
+                 input_files = (), output_files = (), executables = (),
                  subnodes = (), dependencies = ()):
 
         self.__description  = description
         self.input_files  = safe_coerce_to_tuple(input_files)
         self.output_files = safe_coerce_to_tuple(output_files)
+        self.executables  = safe_coerce_to_tuple(executables)
 
         self.subnodes       = self._collect_nodes(subnodes, "Subnode")
         self.dependencies   = self._collect_nodes(dependencies, "Dependency")
+
+        self.threads        = int(threads)
 
 
     @property
@@ -96,7 +99,9 @@ class Node(object):
         or other steps needed to ready the node for running may be carried out in this
         function. Checks that required input files exist, and raises an NodeError if 
         this is not the case."""
-
+        if fileutils.missing_executables(self.executables):
+            raise NodeError("Executable(s) does not exist for command: %s" \
+                                % (self._command,))
         self._check_for_missing_files(self.input_files, "input")
 
 
@@ -138,29 +143,19 @@ class Node(object):
 
 
 class CommandNode(Node):
-    def __init__(self, command, description = None, 
+    def __init__(self, command, description = None, threads = 1,
                  subnodes = (), dependencies = ()):
         Node.__init__(self, 
                       description  = description,
                       input_files  = command.input_files,
                       output_files = command.output_files,
+                      executables  = command.executables,
+                      threads      = threads,
                       subnodes     = subnodes,
                       dependencies = dependencies)
 
         self._command = command
             
-
-    def _setup(self, config, temp):
-        """Checks that the prerequisites for running the command is in place. If
-        either the input files, or the executables required are missing, this
-        function raises a NodeError."""
-
-        if fileutils.missing_executables(self._command.executables):
-            raise NodeError("Executable(s) does not exist for command: %s" \
-                                % (self._command, ))
-
-        Node._setup(self, config, temp)
-
 
     def _run(self, _config, temp):
         """Runs the command object provided in the constructor, and waits for it to 
