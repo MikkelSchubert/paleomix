@@ -24,12 +24,18 @@ class Pypeline:
                 self._nodes.append(node)
 
 
-    def run(self, max_running = 4, dry_run = False, terminate_on_error = False):
+    def run(self, max_running = 1, dry_run = False, terminate_on_error = False):
         try:
             nodes = taskgraph.TaskGraph(self._nodes)
         except taskgraph.TaskError, error:
             ui.print_err(error)
             return False
+
+        for node in nodes.iterflat():
+            if node.threads > max_running:
+                ui.print_err("Node requires more threads than the maximum allowed:\n\t%s" % str(node))
+                return 1
+
 
         if dry_run:
             ui.print_node_tree(nodes)
@@ -68,16 +74,17 @@ class Pypeline:
         return True
 
 
-    def _start_new_tasks(self, running, nodes, max_running, pool):
+    def _start_new_tasks(self, running, nodes, max_threads, pool):
         any_runable_left = False
-        idle_processes = max_running - len(running)
+        idle_processes = max_threads - sum(node.threads for node in running)
         for node in nodes.iterflat():
             any_runable_left |= (node.state in (node.RUNABLE, node.RUNNING))
             
             if idle_processes and (node.state == node.RUNABLE):
-                running[node] = pool.apply_async(_call_run, args = (node.task, self._config))
-                nodes.set_task_state(node, node.RUNNING)
-                idle_processes -= 1
+                if idle_processes >= node.threads:
+                    running[node] = pool.apply_async(_call_run, args = (node.task, self._config))
+                    nodes.set_task_state(node, node.RUNNING)
+                    idle_processes -= node.threads
             
             if any_runable_left and not idle_processes:
                 break
