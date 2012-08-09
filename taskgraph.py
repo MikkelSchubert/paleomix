@@ -2,6 +2,8 @@
 import os
 import collections
 
+from pypeline.common.fileutils import missing_executables
+
 
 
 class TaskError(RuntimeError):
@@ -19,6 +21,7 @@ class TaskGraph:
             self._fixed_state  = None
             self.subnodes      = frozenset()
             self.dependencies  = frozenset()
+            self.threads       = int(task.threads)
 
 
         @property
@@ -49,6 +52,7 @@ class TaskGraph:
         self._graph_valid = False
 
         self._check_file_dependencies(self._tasks)
+        self._check_required_executables(self._tasks)
 
 
     def set_task_state(self, node, state):
@@ -130,6 +134,18 @@ class TaskGraph:
         # Possibly return a fixed state
         return node.state
 
+
+    @classmethod
+    def _check_required_executables(cls, tasks):
+        missing_exec = set()
+        for task in tasks:
+            missing_exec.update(missing_executables(task.executables))
+
+
+        if missing_exec:
+            raise TaskError("Required executables are missing:\n\t%s" \
+                                % ("\n\t".join(sorted(missing_exec))))
+            
 
     @classmethod
     def _check_file_dependencies(cls, tasks):
