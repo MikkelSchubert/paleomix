@@ -117,8 +117,9 @@ class RAxMLRapidBSNode(CommandNode):
 
         CommandNode.__init__(self,
                              command      = command,
-                             description  = "<RAxMLRapidBS: '%s' -> '%s'>" \
-                                     % (infile, destination),
+                             description  = "<RAxMLRapidBS (%i threads): '%s' -> '%s'>" \
+                                     % (threads, infile, destination),
+                             threads      = threads,
                              dependencies = dependencies)
 
     def _setup(self, config, temp):
