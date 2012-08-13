@@ -74,6 +74,7 @@ class PE_AdapterRemovalNode(CommandNode):
                 "--trimns", 
                 "--trimqualities",
                 "--qualitybase", 33,
+                "--collapse",
                 "--file1",    "%(TEMP_IN_READS_1)s",
                 "--file2",    "%(TEMP_IN_READS_2)s",
                 "--basename", "%(TEMP_OUT_BASENAME)s"]
