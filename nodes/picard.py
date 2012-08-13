@@ -2,6 +2,7 @@ import os
 
 from pypeline.node import CommandNode
 from pypeline.atomiccmd import AtomicCmd
+from pypeline.common.fileutils import swap_ext
 
 
 class ValidateBAMNode(CommandNode):
@@ -45,13 +46,18 @@ class MarkDuplicatesNode(CommandNode):
 
 
 class MergeSamFilesNode(CommandNode):
-    def __init__(self, config, input_files, output_file, dependencies = ()):
+    def __init__(self, config, input_files, output_file, create_index = True, dependencies = ()):
         jar  = os.path.join(config.picard_root, "MergeSamFiles.jar")
         call = ["java", "-jar", jar, 
                 "TMP_DIR=%s" % config.temp_root, 
                 "SO=coordinate",
                 "OUTPUT=%(OUT_BAM)s"]
         files = {"OUT_BAM" : output_file}
+
+        if create_index:
+            call.append("CREATE_INDEX=True")
+            files["OUT_BAI"] = swap_ext(output_file, ".bai")
+
 
         for (ii, filename) in enumerate(input_files, start = 1):
             call.append("INPUT=%%(IN_FILE_%i)s" % ii)
