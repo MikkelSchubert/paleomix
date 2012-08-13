@@ -45,7 +45,7 @@ def main(argv):
                     record["Index"],
                     record["FCID"],
                     "Illumina",
-                    os.path.join(root, "%(SampleID)s_%(Index)s_L%(Lane)03i_%%(Pair)s_*.fastq.gz" % record)]
+                    os.path.join(root, "%(SampleID)s_%(Index)s_L%(Lane)03i_R{Pair}_*.fastq.gz" % record)]
             lines.append(line)
     lines.sort(key = lambda v: map(str.lower, v))
     lines.insert(0, ["Name", "Sample", "Library", "Barcode", "Platform", "Path"])
