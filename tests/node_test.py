@@ -46,7 +46,7 @@ node_module.rmdir = rmdir
 _DESCRIPTION = "My description of a node"
 _IN_FILES    = ("tests/data/empty_file_1", "tests/data/empty_file_2")
 _OUT_FILES   = ("tests/data/missing_out_file_1", "tests/data/missing_out_file_2")
-
+_EXEC_FILES  = ("ls", "sh")
 
 ################################################################################
 ################################################################################
@@ -69,6 +69,16 @@ def test_constructor__single_output_file():
 def test_constructor__output_files():
     my_node = Node(output_files  = _OUT_FILES)
     assert my_node.output_files == _OUT_FILES
+
+
+
+def test_constructor__single_executable():
+    my_node = Node(executables  = _OUT_FILES[0])
+    assert my_node.executables == _OUT_FILES[:1]
+
+def test_constructor__output_files():
+    my_node = Node(executables  = _OUT_FILES)
+    assert my_node.executables == _OUT_FILES
 
 
 
@@ -162,21 +172,21 @@ def test_is_outdated__output_but_no_input():
     assert not Node(output_files = _OUT_FILES).is_outdated
 
 def test_is_outdated__not_outdated():
-    my_node = Node(input_files  = "tests/data/timestamp_younger",
-                   output_files = "tests/data/timestamp_older")
+    my_node = Node(input_files  = "tests/data/timestamp_older",
+                   output_files = "tests/data/timestamp_younger")
     assert not my_node.is_outdated
 
 def test_is_outdated__outdated():
-    my_node = Node(input_files  = "tests/data/timestamp_older",
-                   output_files = "tests/data/timestamp_younger")
+    my_node = Node(input_files  = "tests/data/timestamp_younger",
+                   output_files = "tests/data/timestamp_older")
     assert my_node.is_outdated
 
 def test_is_outdated__updates():
-    my_node = Node(input_files  = "tests/data/timestamp_younger",
-                   output_files = "tests/data/timestamp_older")
-    assert not my_node.is_outdated
     my_node = Node(input_files  = "tests/data/timestamp_older",
                    output_files = "tests/data/timestamp_younger")
+    assert not my_node.is_outdated
+    my_node = Node(input_files  = "tests/data/timestamp_younger",
+                   output_files = "tests/data/timestamp_older")
     assert my_node.is_outdated
 
 
@@ -246,7 +256,8 @@ def test__setup__output_files_missing():
 _SIMPLE_DEPS = Node()
 _SIMPLE_SUBS = Node()
 _SIMPLE_CMD_MOCK = flexmock(input_files  = _IN_FILES,
-                            output_files = _OUT_FILES)
+                            output_files = _OUT_FILES,
+                            executables  = _EXEC_FILES)
 _SIMPLE_CMD_NODE = CommandNode(command      = _SIMPLE_CMD_MOCK,
                                description  = "SimpleCommand",
                                subnodes     = _SIMPLE_SUBS,

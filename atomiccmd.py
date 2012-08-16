@@ -146,8 +146,10 @@ class AtomicCmd:
 
 
     def commit(self, temp):
-        assert self._proc.returncode is not None
-        assert not self._handles
+        if not self.ready():
+            raise CmdError("Attempting to commit command before it has completed")
+        elif self._handles:
+            raise CmdError("Called 'commit' before calling 'join'")
 
         self._proc = None
 

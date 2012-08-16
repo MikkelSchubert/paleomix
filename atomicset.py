@@ -89,20 +89,17 @@ class ParallelCmds(_CommandSet):
 
 
     def join(self):
-        commands = list(self._commands)
+        commands = list(enumerate(self._commands))
+        return_codes = [None] * len(commands)
         while commands:
             time.sleep(1)
 
-            for command in commands:
+            for (index, command) in commands:
                 if command.ready():
-                    command.join()
-                    commands.remove(command)
+                    return_codes[index] = command.join()
+                    commands.remove((index, command))
 
-
-        return_codes = []
-        for command in self._commands:
-            return_codes.extend(command.join())
-        return return_codes
+        return sum(return_codes, [])
 
 
 

@@ -47,6 +47,7 @@ def test_sets__common_functions():
         for return_value in _COMMON_RETURNS:
             cmd_mock = flexmock(AtomicCmd(["ls"]))
             cmd_mock.should_receive(func_name).with_args(*arguments).and_return([return_value]).once
+            cmd_mock.should_receive("ready").and_return([True]).at_least.never
             yield cmd_mock
 
     def test_function(cmdclass, func_name, arguments, return_value):
