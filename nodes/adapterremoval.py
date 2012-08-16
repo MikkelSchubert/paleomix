@@ -6,13 +6,14 @@ from pypeline.node import CommandNode
 from pypeline.atomiccmd import AtomicCmd
 from pypeline.atomicset import ParallelCmds
 
+import pypeline.tools.unicat as unicat
 
 
 
 
 class SE_AdapterRemovalNode(CommandNode):
     def __init__(self, input_files, output_prefix, dependencies = ()):
-        zcat = _build_zcat_command(input_files, "uncompressed_input")
+        zcat = unicat.build_atomiccmd(AtomicCmd, input_files, "uncompressed_input")
         gzip_truncated = _build_gzip_command(output_prefix, ".truncated")
         gzip_discarded = _build_gzip_command(output_prefix, ".discarded")
 
@@ -59,8 +60,8 @@ class SE_AdapterRemovalNode(CommandNode):
 
 class PE_AdapterRemovalNode(CommandNode):
     def __init__(self, input_files_1, input_files_2, output_prefix, dependencies = ()):
-        zcat_pair_1    = _build_zcat_command(input_files_1, "uncompressed_input_1")
-        zcat_pair_2    = _build_zcat_command(input_files_2, "uncompressed_input_2")
+        zcat_pair_1    = unicat.build_atomiccmd(AtomicCmd, input_files_1, "uncompressed_input_1")
+        zcat_pair_2    = unicat.build_atomiccmd(AtomicCmd, input_files_2, "uncompressed_input_2")
         gzip_pair_1    = _build_gzip_command(output_prefix, ".pair1.truncated")
         gzip_pair_2    = _build_gzip_command(output_prefix, ".pair2.truncated")
         gzip_aligned   = _build_gzip_command(output_prefix, ".singleton.aln.truncated")
@@ -134,18 +135,6 @@ def _build_gzip_command(prefix, name):
     return AtomicCmd(["gzip"],
                      TEMP_IN_STDIN = basename + name,
                      OUT_STDOUT    = prefix + name + ".gz")
-
-
-def _build_zcat_command(input_files, output_file):
-        counter = 1
-        zcat_call = ["zcat"]
-        zcat_dict = {"TEMP_OUT_STDOUT" : output_file}
-        for filename in sorted(input_files):
-            zcat_call.append(filename)
-            zcat_dict["IN_FILE_%04i" % counter] = filename
-            counter += 1
-
-        return AtomicCmd(zcat_call, **zcat_dict)
 
 
 def _desc_input(files):
