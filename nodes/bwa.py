@@ -8,7 +8,7 @@ from pypeline.tools import sam_to_bam
 
 
 class SE_BWANode(CommandNode):
-    def __init__(self, input_file, output_file, prefix, read_group, threads = 1, dependencies = ()):
+    def __init__(self, input_file, output_file, prefix, read_group, min_quality = 0, threads = 1, dependencies = ()):
         aln   = AtomicCmd(["bwa", "aln", 
                            "-l", 2 ** 20, 
                            "-t", threads,
@@ -22,7 +22,7 @@ class SE_BWANode(CommandNode):
                           OUT_STDOUT = AtomicCmd.PIPE)
 
         flt = sam_to_bam.build_atomiccmd(AtomicCmd,
-                                         min_quality   = 25,
+                                         min_quality   = min_quality,
                                          exclude_flags = 0x4,
                                          stdin         = samse,
                                          output_file   = output_file)
@@ -36,7 +36,7 @@ class SE_BWANode(CommandNode):
 
 
 class PE_BWANode(CommandNode):
-    def __init__(self, input_file_1, input_file_2, output_file, prefix, read_group, threads = 1, dependencies = ()):
+    def __init__(self, input_file_1, input_file_2, output_file, prefix, read_group, min_quality = 0, threads = 1, dependencies = ()):
         aln_call = ["bwa", "aln", 
                     "-l", 2 ** 20, 
                     "-t", max(1, threads / 2),
@@ -60,7 +60,7 @@ class PE_BWANode(CommandNode):
                           OUT_STDOUT    = AtomicCmd.PIPE)
 
         flt = sam_to_bam.build_atomiccmd(AtomicCmd,
-                                         min_quality   = 25,
+                                         min_quality   = min_quality,
                                          exclude_flags = 0x4,
                                          stdin         = samse,
                                          output_file   = output_file)
