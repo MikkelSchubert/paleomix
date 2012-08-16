@@ -40,6 +40,7 @@ class SummaryTableNode(Node):
                       description  = "<Summary: %s>" % self._output_file,
                       input_files  = input_files,
                       output_files = [self._output_file],
+                      executables  = ["samtools"],
                       dependencies = dependencies)
         
 
@@ -168,11 +169,12 @@ class SummaryTableNode(Node):
                 coverage  = float(total_hits_unique_nts) / (genomes["mito"] + genomes["nuclear"])
                 length    = float(total_hits_unique_nts) / total_hits_unique
 
-                ratio, genome_rt, genome_iv = "NA", "NA", "NA"
+                ratio_hits, ratio_genome, ratio_genome_inv = "NA", "NA", "NA"
                 if hits["mito"]["hits_unique(mito)"][0]:
-                    ratio     = float(hits["nuclear"]["hits_unique(nuclear)"][0]) / hits["mito"]["hits_unique(mito)"][0]
-                    genome_rt = ratio * float(genomes["mito"]) / genomes["nuclear"]
-                    genome_iv = genome_rt ** -1
+                    ratio_nts    = float(hits["nuclear"]["hits_unique_nts(nuclear)"][0]) / hits["mito"]["hits_unique_nts(mito)"][0]
+                    ratio_hits   = float(hits["nuclear"]["hits_unique(nuclear)"][0]) / hits["mito"]["hits_unique(mito)"][0]
+                    ratio_genome = ratio_nts / ((float(genome["nuclear"]) * 2) / float(genome["mito"]))
+                    ratio_genome_inv = ratio_genome ** -1                   
 
                 hits["endogenous"] = {
                     "hits_raw(endogenous)"       : (total_hits,                       "# Total number of hits against the nuclear and mitochondrial genome"),
@@ -181,9 +183,9 @@ class SummaryTableNode(Node):
                     "hits_clonality(endogenous)" : (clonality,                        "# Fraction of hits that were PCR duplicates"),
                     "hits_coverage(endogenous)"  : (coverage,                         "# Estimated coverage from unique hits"),
                     "hits_length(endogenous)"    : (length,                           "# Average length of unique hits"),
-                    "ratio_reads(nuc,mito)"      : (ratio,                            "# Ratio of unique hits"),
-                    "ratio_genome(nuc,mito)"     : (genome_rt,                        "# Ratio of unique hits (corrected by genome sizes)"),
-                    "ratio_genome(mito,nuc)"     : (genome_iv,                        "# Ratio of unique hits (corrected by genome sizes)"),
+                    "ratio_reads(nuc,mito)"      : (ratio_hits,                       "# Ratio of unique hits: Hits(nuc) / H(mito)"),
+                    "ratio_genome(nuc,mito)"     : (ratio_genome,                     "# Ratio of NTs of unique hits corrected by genome sizes: (NTs(nuc) / NTs(mito)) / ((2 * Size(nuc)) / Size(mito))"),
+                    "ratio_genome(mito,nuc)"     : (ratio_genome_inv,                 "# Ratio of NTs of unique hits corrected by genome sizes: (NTs(mito) / NTs(nuc)) / (Size(mito) / (2 * Size(nuc)))")
                     }
 
 
