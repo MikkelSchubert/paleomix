@@ -44,3 +44,14 @@ def collect_files(record):
     for (ii, name) in enumerate(("R1", "R2"), start = 1):
         files[name] = list(sorted(glob.glob(template.format(Pair = ii))))
     return files
+
+
+def reference_sequence(bwa_prefix):
+    if os.path.exists(bwa_prefix + ".fasta"):
+        return bwa_prefix + ".fasta"
+    elif os.path.exists(bwa_prefix + ".fa"):
+        return bwa_prefix + ".fa"
+
+    wo_ext = os.path.splitext(bwa_prefix)[0]
+    if bwa_prefix != wo_ext:
+        return reference_sequence(wo_ext)
