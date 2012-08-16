@@ -28,7 +28,8 @@ class MarkDuplicatesNode(CommandNode):
         jar  = os.path.join(config.picard_root, "MarkDuplicates.jar")
         call = ["java", "-jar", jar, 
                 "TMP_DIR=%s" % config.temp_root, 
-                "REMOVE_DUPLICATES=%s" % str(keep_duplicates).lower(),
+                "REMOVE_DUPLICATES=%s" % str(not keep_duplicates).lower(),
+                "CREATE_INDEX=True",
                 "INPUT=%(IN_BAM)s",
                 "OUTPUT=%(OUT_BAM)s",
                 "METRICS_FILE=%(OUT_METRICS)s"]
@@ -36,6 +37,7 @@ class MarkDuplicatesNode(CommandNode):
         command = AtomicCmd(call,
                             IN_BAM      = input_file,
                             OUT_BAM     = output_file,
+                            OUT_BAI     = swap_ext(output_file, ".bai"),
                             OUT_METRICS = output_file + ".metrics")
 
         description =  "<MarkDuplicates: '%s' -> '%s'>" % (input_file, output_file)
