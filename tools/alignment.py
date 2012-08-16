@@ -122,7 +122,7 @@ def validate_records(records):
 
 def collect_records(filenames):
     def _split(line):
-        return filter(None, line.strip().split("\t"))
+        return filter(None, line.strip().split())
 
     records = collections.defaultdict(list)
     for filename in filenames:
