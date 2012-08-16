@@ -3,7 +3,7 @@ import os
 from pypeline.node import CommandNode
 from pypeline.atomiccmd import AtomicCmd
 from pypeline.atomicset import ParallelCmds
-from pypeline.common.fileutils import reroot_path
+from pypeline.common.fileutils import reroot_path, swap_ext
 
 
 class GenotypeNode(CommandNode):
@@ -132,3 +132,17 @@ class FastaIndexNode(CommandNode):
         os.remove(reroot_path(temp, self._infile))
 
         CommandNode._teardown(self, config, temp)
+
+
+
+
+class BAMIndexNode(CommandNode):
+    def __init__(self, infile, dependencies = ()):
+        cmd_index = AtomicCmd(["samtools", "index", "%(IN_BAM)s", "%(OUT_BAI)s"],
+                              IN_BAM      = infile,
+                              OUT_BAI     = swap_ext(infile, ".bai"))
+
+        CommandNode.__init__(self, 
+                             description  = "<BAMIndex: '%s'>" % (infile,),
+                             command      = cmd_index,
+                             dependencies = dependencies)
