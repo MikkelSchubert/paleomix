@@ -8,9 +8,8 @@ import pypeline.common.fileutils as fileutils
 
 class _IndelTrainerNode(CommandNode):
     def __init__(self, config, reference, infile, outfile, dependencies = ()):
-        jarfile = os.path.join(config.gatk_root, "GenomeAnalysisTK.jar")
         outfile += ".intervals"
-        call  = ["java", "-jar", jarfile,
+        call  = ["java", "-jar", config.gatk_jar,
                  "-T", "RealignerTargetCreator", 
                  "-R", "%(IN_REFERENCE)s",
                  "-I", "%(IN_BAMFILE)s",
@@ -34,9 +33,8 @@ class _IndelTrainerNode(CommandNode):
 
 class _IndelRealignerNode(CommandNode):
     def __init__(self, config, reference, infile, outfile, dependencies = ()):
-        jarfile = os.path.join(config.gatk_root, "GenomeAnalysisTK.jar")
         intervalsfile = outfile + ".intervals"
-        call  = ["java", "-jar", jarfile,
+        call  = ["java", "-jar", config.gatk_jar,
                  "-T", "IndelRealigner", 
                  "-R", "%(IN_REFERENCE)s",
                  "-I", "%(IN_BAMFILE)s",
