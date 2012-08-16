@@ -86,7 +86,8 @@ class SummaryTableNode(Node):
         move_file(reroot_path(temp, self._output_file), self._output_file)
 
 
-    def _write_records(self, table, records):
+    @classmethod
+    def _write_records(cls, table, records):
         rows = [["Name", "Sample", "Library", "Barcode", "Platform", "Path"]]
         for record in records:
             rows.append([record[field] for field in rows[0]])
@@ -96,18 +97,19 @@ class SummaryTableNode(Node):
             table.write("#     %s\n" % (line,))        
 
 
-    def _write_genomes(self, table, config):
+    @classmethod
+    def _write_genomes(cls, table, config):
         table.write("# Genomes:\n")
         rows = [["Name", "Label", "Contigs", "Size", "Prefix"]]
         for prefix in config.bwa_prefix:
             label = _prefix_to_label(config, prefix, only_endogenous = True)
-            size, contigs = self._stat_bwa_prefix(prefix)
+            size, contigs = cls._stat_bwa_prefix(prefix)
             rows.append((common.paths.prefix_to_filename(prefix), label, contigs, size, prefix))
 
         for line in text.padded_table(rows):
             table.write("#     %s\n" % (line,))
 
-    
+
     def _write_table(self, table, config, records):
         annotated_table = self._annotate_summary_table(config, self._build_summary_table(config, records))
 
@@ -117,7 +119,7 @@ class SummaryTableNode(Node):
                 table_rows.append([self._target, sample, library, measure, value, comment])
             table_rows.extend("##")
 
-            for (genome, hit_table) in sorted(subtable["hits"].items()):
+            for (_, hit_table) in sorted(subtable["hits"].items()):
                 for (measure, (value, comment)) in sorted(hit_table.iteritems(), key = _measure_ordering):
                     table_rows.append([self._target, sample, library, measure, value, comment])
                 table_rows.append("#")
@@ -143,7 +145,7 @@ class SummaryTableNode(Node):
             genomes[label] = cls._stat_bwa_prefix(prefix)[0]
 
 
-        for ((sample, library), level) in table.iteritems():
+        for level in table.itervalues():
             sequences = level["seq"]
             for (numerator, denominator, measure, comment) in fractions:
                 if (numerator in sequences) and (denominator in sequences):
@@ -178,10 +180,6 @@ class SummaryTableNode(Node):
 
 
             if ("mito" in level["hits"]) and ("nuclear" in level["hits"]):
-                mito_size, _ = cls._stat_bwa_prefix(config.bwa_prefix_mito)
-                nuc_size,  _ = cls._stat_bwa_prefix(config.bwa_prefix_nuclear)
-                genome_size  = mito_size + nuc_size
-
                 total_hits            = hits["mito"]["hits_raw(mito)"][0]         + hits["nuclear"]["hits_raw(nuclear)"][0]
                 total_hits_unique     = hits["mito"]["hits_unique(mito)"][0]      + hits["nuclear"]["hits_unique(nuclear)"][0]
                 total_hits_unique_nts = hits["mito"]["hits_unique_nts(mito)"][0]  + hits["nuclear"]["hits_unique_nts(nuclear)"][0]
@@ -195,7 +193,7 @@ class SummaryTableNode(Node):
                 if hits["mito"]["hits_unique(mito)"][0]:
                     ratio_nts    = float(hits["nuclear"]["hits_unique_nts(nuclear)"][0]) / hits["mito"]["hits_unique_nts(mito)"][0]
                     ratio_hits   = float(hits["nuclear"]["hits_unique(nuclear)"][0]) / hits["mito"]["hits_unique(mito)"][0]
-                    ratio_genome = ratio_nts / ((float(genome["nuclear"]) * 2) / float(genome["mito"]))
+                    ratio_genome = ratio_nts / ((float(genomes["nuclear"]) * 2) / float(genomes["mito"]))
                     ratio_genome_inv = ratio_genome ** -1                   
 
                 hits["endogenous"] = {
@@ -340,8 +338,8 @@ class SummaryTableNode(Node):
     def _stat_read_settings(cls, record):
         # FIXME: Add as input!
         with open(os.path.join(common.paths.full_path(record), "reads.settings")) as settings:
-            text = settings.read()
-            if "Paired end mode" in text:
+            settings = settings.read()
+            if "Paired end mode" in settings:
                 return {
                     "lib_type"        : ("PE", "# SE, PE, or * (for both)"),
                     "seq_reads_pairs"   : (int(re.search("read pairs: ([0-9]+)", text).groups()[0]),  "# Total number of reads"),
@@ -350,7 +348,7 @@ class SummaryTableNode(Node):
                     "seq_nt_total"      : (int(re.search("retained nucleotides: ([0-9]+)", text).groups()[0]),  "# Total number of NTs in retained reads"),
                     "seq_collapsed"     : (int(re.search("well aligned pairs: ([0-9]+)", text).groups()[0]),  "# Total number of pairs collapsed into one read"),
                     }
-            elif "Single end mode" in text:
+            elif "Single end mode" in settings:
                 return {
                     "lib_type"          : ("SE", "# SE, PE, or * (for both)"),
                     "seq_reads_se"      : (int(re.search("read pairs: ([0-9]+)", text).groups()[0]),  "# Total number of single-ended reads"),

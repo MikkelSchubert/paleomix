@@ -38,7 +38,6 @@ from pypeline.nodes.picard import ValidateBAMNode, MergeSamFilesNode, MarkDuplic
 from pypeline.nodes.samtools import BAMIndexNode
 from pypeline.nodes.adapterremoval import SE_AdapterRemovalNode, PE_AdapterRemovalNode
 
-from pypeline.common.utilities import safe_coerce_to_tuple
 from pypeline.common.fileutils import swap_ext, add_postfix
 
 import pypeline.tools.alignment_common as common
@@ -69,16 +68,16 @@ class FilterUniqueBAMNode(CommandNode):
 
 def validate_records_unique(records):
     paths = collections.defaultdict(list)
-    for (name, runs) in records.iteritems():
+    for runs in records.itervalues():
         for record in runs:
             paths[common.paths.full_path(record)].append(record)
 
     errors = False
-    for (path, records) in paths.iteritems():
+    for records in paths.itervalues():
         if len(records) > 1:
             errors = True
             ui.print_err("ERROR: {0} too similar records found (combination of specified fields must be unique):".format(len(records)))
-            ui.print_err("\t- Name:    {Name}\n\t\t- Sample:  {Sample}\n\t\t- Library: {Library}\n\t\t- Barcode: {Barcode}\n".format(**record))
+            ui.print_err("\t- Name:    {Name}\n\t\t- Sample:  {Sample}\n\t\t- Library: {Library}\n\t\t- Barcode: {Barcode}\n".format(**records[0]))
 
     return not errors
 
@@ -104,7 +103,7 @@ def validate_records_libraries(records):
 
 def validate_records_paths(records):
     paths = collections.defaultdict(list)
-    for (target, runs) in records.iteritems():
+    for runs in records.itervalues():
         for record in runs:
             template = record["Path"]
             current_paths = [template]
@@ -120,7 +119,6 @@ def validate_records_paths(records):
         current_records = tuple(sorted(paths[path]))
         if (len(current_records) > 1) and (current_records not in printed):
             printed.append(current_records)
-            errors = True
             descriptions = []
             for (ii, record) in enumerate(current_records, start = 1):
                 descriptions.append("\t- Record {0}:\n\t\t- Name:    {Name}\n\t\t- Sample:  {Sample}\n\t\t- Library: {Library}\n\t\t- Barcode: {Barcode}".format(ii, **record))
@@ -137,8 +135,6 @@ def validate_records(records):
     return validate_records_unique(records) \
         and validate_records_libraries(records) \
         and validate_records_paths(records)
-
-    return not errors
 
 
 def collect_records(filenames):
@@ -180,7 +176,7 @@ def validate_bams(config, node, filename = None):
             
 
 
-def build_SE_nodes(config, bwa_prefix, record):
+def build_se_nodes(config, bwa_prefix, record):
     try:
         trim_prefix, trim_node = _ADAPTERRM_SE_CACHE[id(record)]
     except KeyError:
@@ -207,7 +203,7 @@ def build_SE_nodes(config, bwa_prefix, record):
              "record"    : record}
 
 
-def build_PE_nodes(config, bwa_prefix, record):
+def build_pe_nodes(config, bwa_prefix, record):
     try:
         trim_prefix, trim_node = _ADAPTERRM_PE_CACHE[id(record)]
     except KeyError:
@@ -264,7 +260,7 @@ def build_lib_merge_nodes(config, bwa_prefix, nodes):
         if not files:
             continue
 
-        record = node["record"]
+        record = nodes[0]["record"]
         outdir = common.paths.sample_path(record, bwa_prefix)
         target = os.path.join(outdir, "%s.%s.bam" % (record["Library"], key))
         
@@ -303,9 +299,9 @@ def build_nodes(config, bwa_prefix, name, records):
     nodes = collections.defaultdict(list)
     for record in records:
         if record["files"]["R2"]:
-            node = build_PE_nodes(config, bwa_prefix, record)
+            node = build_pe_nodes(config, bwa_prefix, record)
         elif record["files"]["R1"]:
-            node = build_SE_nodes(config, bwa_prefix, record)
+            node = build_se_nodes(config, bwa_prefix, record)
         else:
             ui.print_err("Could not find any files for record:\n\t- Name: %(Name)s\n\t- Sample: %(Sample)s\n\t- Library: %(Library)s\n\t- Barcode: %(Barcode)s" % record)
             return None
@@ -320,7 +316,7 @@ def build_nodes(config, bwa_prefix, name, records):
 
     merged = {}
     for ((sample, library), subnodes) in deduped.iteritems():
-        record = { "Name"    : target, 
+        record = { "Name"    : name, 
                    "Sample"  : sample,
                    "Library" : library }
 
@@ -351,12 +347,10 @@ def build_nodes(config, bwa_prefix, name, records):
                                    dependencies = validated)
 
     return validate_bams(config, realigned, target_aln)
-                                   
-
-    
 
 
-def main(argv):
+
+def parse_config(argv):                                   
     parser = optparse.OptionParser()
     parser.add_option("--picard-root", None)
     parser.add_option("--temp-root", default = "/tmp")
@@ -369,14 +363,13 @@ def main(argv):
     parser.add_option("--gatk-jar")
     parser.add_option("--run", action = "store_true", default = False)
     config, args = parser.parse_args(argv)
-    pipeline = pypeline.Pypeline(config)
 
     if not config.picard_root:
         ui.print_err("--picard-root must be set to the location of the Picard JARs.")
-        return 1
+        return None
     elif not config.gatk_jar or not os.path.exists(config.gatk_jar):
         ui.print_err("--gatk-jar must be set to the location of the GATK JAR.")
-        return 1
+        return None
 
     config.bwa_prefix = set(config.bwa_prefix)
     if config.bwa_prefix_mito:
@@ -388,23 +381,31 @@ def main(argv):
         if not common.paths.reference_sequence(prefix):
             ui.print_err("ERROR: Could not find reference sequence for prefix: '%s'" % prefix)
             ui.print_err("       Must have extension .fasta or .fa, and be located at '${prefix}', '${prefix}.fa' or '${prefix}.fasta'.")
-            return 1
+            return None
         elif (set(prefix) & set(string.whitespace)):
             ui.print_err("ERROR: BWA prefix must not contain whitespace:\n\t- Prefix: %s" % prefix)
-            return 1
+            return None
 
         label = common.paths.prefix_to_filename(prefix)
         if label in ("*", "mito", "nuclear"):
             ui.print_err("ERROR: Prefix name is reserved keyword ('*', 'mito', 'nuclear'), please rename:\n\t- Prefix: %s" % prefix)
-            return 1
-            
-               
+            return None
+    
+    return config, args
+    
 
 
+def main(argv):
+    config_args = parse_config(argv)
+    if not config_args:
+        return 1
+
+    config, args = config_args
     records = collect_records(args)
     if not validate_records(records):
         return 1
 
+    pipeline = pypeline.Pypeline(config)
     for (target, runs) in records.iteritems():
         nodes = []
         for bwa_prefix in config.bwa_prefix:

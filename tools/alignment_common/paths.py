@@ -23,7 +23,6 @@
 import os
 import glob
 
-from pypeline.common.fileutils import add_postfix
 
 def prefix_to_filename(bwa_prefix):
     return os.path.splitext(os.path.basename(bwa_prefix))[0]
