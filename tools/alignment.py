@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import os
 import sys
+import string
 import optparse
 import collections
 
@@ -277,7 +278,7 @@ def build_dedupe_node(config, key, filename, node):
     
 
 
-def build_nodes(config, bwa_prefix, sample, records):
+def build_nodes(config, bwa_prefix, name, records):
     nodes = collections.defaultdict(list)
     for record in records:
         if record["files"]["R2"]:
@@ -288,17 +289,20 @@ def build_nodes(config, bwa_prefix, sample, records):
             ui.print_err("Could not find any files for record:\n\t- Name: %(Name)s\n\t- Sample: %(Sample)s\n\t- Library: %(Library)s\n\t- Barcode: %(Barcode)s" % record)
             return None
 
-        nodes[record["Library"]].append(node)
+        nodes[(record["Sample"], record["Library"])].append(node)
     
     deduped = collections.defaultdict(dict)
-    for (library, nodes) in nodes.items():
+    for ((sample, library), nodes) in nodes.items():
         for (key, filename, node) in build_lib_merge_nodes(config, bwa_prefix, nodes):
             target, node = build_dedupe_node(config, key, filename, node)
-            deduped[library][target] = node
+            deduped[(sample, library)][target] = node
 
     merged = {}
-    for (library, subnodes) in deduped.iteritems():
-        record["Library"] = library # FIXME
+    for ((sample, library), subnodes) in deduped.iteritems():
+        record = { "Name"    : target, 
+                   "Sample"  : sample,
+                   "Library" : library }
+
         target = common.paths.library_path(record, bwa_prefix) + ".bam"
         merge  =  MergeSamFilesNode(config       = config,
                                     input_files  = subnodes.keys(),
@@ -306,7 +310,9 @@ def build_nodes(config, bwa_prefix, sample, records):
                                     dependencies = subnodes.values())
         assert target not in merged, target
         merged[target] = validate_bams(config, merge)
-        
+
+    record = { "Name"    : target, 
+               "Sample"  : sample }
     target_aln   = common.paths.target_path(record, bwa_prefix)
     target_unaln = add_postfix(target_aln, ".unaligned")
 
@@ -318,7 +324,7 @@ def build_nodes(config, bwa_prefix, sample, records):
     validated = validate_bams(config, merge)
 
     realigned = IndelRealignerNode(config       = config, 
-                                   reference    = bwa_prefix + ".fasta",
+                                   reference    = common.paths.reference_sequence(bwa_prefix),
                                    infile       = target_unaln,
                                    outfile      = target_aln,
                                    dependencies = validated)
@@ -358,9 +364,19 @@ def main(argv):
         config.bwa_prefix.add(config.bwa_prefix_nuclear)
 
     for prefix in config.bwa_prefix:
-        if not os.path.exists(prefix + ".fasta"):
-            ui.print_err("Could not find reference sequence for prefix, must be located at <prefix>.fasta:\n\tPrefix: %s" % prefix)
+        if not common.paths.reference_sequence(prefix):
+            ui.print_err("ERROR: Could not find reference sequence for prefix: '%s'" % prefix)
+            ui.print_err("       Must have extension .fasta or .fa, and be located at '${prefix}', '${prefix}.fa' or '${prefix}.fasta'.")
             return 1
+        elif (set(prefix) & set(string.whitespace)):
+            ui.print_err("ERROR: BWA prefix must not contain whitespace:\n\t- Prefix: %s" % prefix)
+            return 1
+
+        label = common.paths.prefix_to_filename(prefix)
+        if label in ("*", "mito", "nuclear"):
+            ui.print_err("ERROR: Prefix name is reserved keyword ('*', 'mito', 'nuclear'), please rename:\n\t- Prefix: %s" % prefix)
+            return 1
+            
                
 
 
@@ -368,10 +384,10 @@ def main(argv):
     if not validate_records(records):
         return 1
 
-    for (sample, runs) in records.iteritems():
+    for (target, runs) in records.iteritems():
         nodes = []
         for bwa_prefix in config.bwa_prefix:
-            current_nodes = build_nodes(config, bwa_prefix, sample, runs)
+            current_nodes = build_nodes(config, bwa_prefix, target, runs)
             if not current_nodes:
                 return 1
             nodes.append(current_nodes)
