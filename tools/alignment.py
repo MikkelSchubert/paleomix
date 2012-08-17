@@ -35,6 +35,7 @@ from pypeline.atomiccmd import AtomicCmd
 from pypeline.nodes.bwa import SE_BWANode, PE_BWANode
 from pypeline.nodes.gatk import IndelRealignerNode
 from pypeline.nodes.picard import ValidateBAMNode, MergeSamFilesNode, MarkDuplicatesNode
+from pypeline.nodes.coverage import CoverageNode
 from pypeline.nodes.samtools import BAMIndexNode
 from pypeline.nodes.adapterremoval import SE_AdapterRemovalNode, PE_AdapterRemovalNode
 
@@ -328,7 +329,7 @@ def build_nodes(config, bwa_prefix, name, records):
         assert target not in merged, target
         merged[target] = validate_bams(config, merge)
 
-    record = { "Name"    : target, 
+    record = { "Name"    : name, 
                "Sample"  : sample }
     target_aln   = common.paths.target_path(record, bwa_prefix)
     target_unaln = add_postfix(target_aln, ".unaligned")
@@ -340,13 +341,22 @@ def build_nodes(config, bwa_prefix, name, records):
 
     validated = validate_bams(config, merge)
 
-    realigned = IndelRealignerNode(config       = config, 
-                                   reference    = common.paths.reference_sequence(bwa_prefix),
-                                   infile       = target_unaln,
-                                   outfile      = target_aln,
-                                   dependencies = validated)
+    if config.gatk_jar:
+        realigned = IndelRealignerNode(config       = config, 
+                                       reference    = common.paths.reference_sequence(bwa_prefix),
+                                       infile       = target_unaln,
+                                       outfile      = target_aln,
+                                       dependencies = validated)
+        validated = validate_bams(config, realigned, target_aln)
 
-    return validate_bams(config, realigned, target_aln)
+        return CoverageNode(input_file   = target_aln,
+                            name         = name,
+                            dependencies = validated)
+    else:
+        return CoverageNode(input_file   = target_unaln,
+                            name         = name,
+                            dependencies = validated)
+    
 
 
 
@@ -368,8 +378,7 @@ def parse_config(argv):
         ui.print_err("--picard-root must be set to the location of the Picard JARs.")
         return None
     elif not config.gatk_jar or not os.path.exists(config.gatk_jar):
-        ui.print_err("--gatk-jar must be set to the location of the GATK JAR.")
-        return None
+        ui.print_warn("--gatk-jar not set, indel realigned bams will not be produced.")
 
     config.bwa_prefix = set(config.bwa_prefix)
     if config.bwa_prefix_mito:
