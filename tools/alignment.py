@@ -52,7 +52,6 @@ _ADAPTERRM_PE_CACHE = {}
 
 
 
-
 class FilterUniqueBAMNode(CommandNode):
     def __init__(self, input_file, output_file, dependencies = ()):
         command = AtomicCmd(["FilterUniqueBAM", "--PIPE", "--library"],
@@ -108,7 +107,7 @@ def validate_records_paths(records):
         for record in runs:
             template = record["Path"]
             current_paths = [template]
-            if template.format(Pair = 1) != template:
+            if common.paths.is_paired_end(record):
                 for end in (1, 2):
                     current_paths.append(template.format(Pair = end))
             
@@ -142,15 +141,17 @@ def collect_records(filenames):
     def _split(line):
         return filter(None, line.strip().split())
 
+    header = None
     records = collections.defaultdict(list)
     for filename in filenames:
         with open(filename) as mkfile:
-            header = _split(mkfile.readline())
-
             for line in mkfile:
                 if line.startswith("#") or not line.strip():
                     continue
-
+                elif not header:
+                    header = _split(line)
+                    continue
+                
                 record = dict(zip(header, _split(line)))
                 record["files"] = common.paths.collect_files(record)
                 records[record["Name"]].append(record)
@@ -183,7 +184,7 @@ def build_se_nodes(config, bwa_prefix, record):
         trim_prefix, trim_node = _ADAPTERRM_SE_CACHE[id(record)]
     except KeyError:
         trim_prefix = os.path.join(common.paths.full_path(record, "reads"), "reads")
-        trim_node   = SE_AdapterRemovalNode(record["files"]["R1"], trim_prefix)
+        trim_node   = SE_AdapterRemovalNode(record["files"]["SE"], trim_prefix)
         _ADAPTERRM_SE_CACHE[id(record)] = (trim_prefix, trim_node)
 
     output_dir  = common.paths.full_path(record, bwa_prefix)
@@ -210,8 +211,8 @@ def build_pe_nodes(config, bwa_prefix, record):
         trim_prefix, trim_node = _ADAPTERRM_PE_CACHE[id(record)]
     except KeyError:
         trim_prefix = os.path.join(common.paths.full_path(record, "reads"), "reads")
-        trim_node   = PE_AdapterRemovalNode(input_files_1 = record["files"]["R1"], 
-                                            input_files_2 = record["files"]["R2"], 
+        trim_node   = PE_AdapterRemovalNode(input_files_1 = record["files"]["PE_1"], 
+                                            input_files_2 = record["files"]["PE_2"], 
                                             output_prefix = trim_prefix)
         _ADAPTERRM_PE_CACHE[id(record)] = (trim_prefix, trim_node)
 
@@ -300,13 +301,19 @@ def build_dedupe_node(config, key, filename, node):
 def build_nodes(config, bwa_prefix, name, records):
     nodes = collections.defaultdict(list)
     for record in records:
-        if record["files"]["R2"]:
-            node = build_pe_nodes(config, bwa_prefix, record)
-        elif record["files"]["R1"]:
-            node = build_se_nodes(config, bwa_prefix, record)
-        else:
-            ui.print_err("Could not find any files for record:\n\t- Name: %(Name)s\n\t- Sample: %(Sample)s\n\t- Library: %(Library)s\n\t- Barcode: %(Barcode)s" % record)
+        if not all(record["files"].values()):
+            ui.print_err("Could not find files for record:")
+            ui.print_err("\t- Name: %(Name)s\n\t- Sample: %(Sample)s\n\t- Library: %(Library)s\n\t- Barcode: %(Barcode)s" % record)
+            if common.paths.is_paired_end(record):
+                ui.print_err("\t- Found %i mate 1 files" % len(record["files"]["PE_1"]))
+                ui.print_err("\t- Found %i mate 2 files" % len(record["files"]["PE_2"]))
+                ui.print_err("Maybe this is a SE lane?")
+
             return None
+        elif common.paths.is_paired_end(record):
+            node = build_pe_nodes(config, bwa_prefix, record)
+        else:
+            node = build_se_nodes(config, bwa_prefix, record)
 
         nodes[(record["Sample"], record["Library"])].append(node)
     

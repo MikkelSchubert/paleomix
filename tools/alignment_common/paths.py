@@ -54,15 +54,21 @@ def target_path(record, bwa_prefix):
     return os.path.join(ROOT, filename)
 
 
+
+def is_paired_end(record):
+    template = record["Path"]
+
+    return (template.format(Pair = 1) != template)
+
+
 def collect_files(record):
     """ """
     template = record["Path"]
-    if template.format(Pair = 1) == template:
-        return {"R1" : list(sorted(glob.glob(template))),
-                "R2" : []}
+    if not is_paired_end(record):
+        return {"SE" : list(sorted(glob.glob(template)))}
     
     files = {}
-    for (ii, name) in enumerate(("R1", "R2"), start = 1):
+    for (ii, name) in enumerate(("PE_1", "PE_2"), start = 1):
         files[name] = list(sorted(glob.glob(template.format(Pair = ii))))
     return files
 

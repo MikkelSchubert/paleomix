@@ -52,7 +52,7 @@ class SummaryTableNode(Node):
 
                 input_files.add(library_prefix + ".unaligned.bam")
                 input_files.add(library_prefix + ".unaligned.markdup.bam")
-                if record["files"]["R2"]:
+                if common.paths.is_paired_end(record):
                     input_files.add(library_prefix + ".aligned.bam")
                     input_files.add(library_prefix + ".aligned.kirdup.bam")
         input_files |= set(swap_ext(filename, ".bai") for filename in input_files)
@@ -260,7 +260,7 @@ class SummaryTableNode(Node):
         
         files_raw    = [library_prefix + ".unaligned.bam"]
         files_unique = [library_prefix + ".unaligned.markdup.bam"]
-        if record["files"]["R2"]:
+        if common.paths.is_paired_end(record):
             files_raw    += [library_prefix + ".aligned.bam"]
             files_unique += [library_prefix + ".aligned.kirdup.bam"]
 
