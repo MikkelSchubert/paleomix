@@ -28,16 +28,20 @@ from pypeline.common.fileutils import swap_ext
 
 
 class ValidateBAMNode(CommandNode):
-    def __init__(self, config, bamfile, ignore = (), dependencies = ()):
+    def __init__(self, config, bamfile, output_file = None, ignore = (), dependencies = ()):
         jar  = os.path.join(config.picard_root, "ValidateSamFile.jar")
         call = ["java", "-jar", jar,
                 "TMP_DIR=%s" % config.temp_root, "INPUT=%(IN_BAM)s"]
+
         for error in ignore:
             call.append("IGNORE=%s" % (error,))
 
+        if not output_file:
+            output_file = bamfile + ".validated"
+
         command = AtomicCmd(call,
                             IN_BAM     = bamfile,
-                            OUT_STDOUT = bamfile + ".validated")
+                            OUT_STDOUT = output_file)
 
         CommandNode.__init__(self, 
                              command      = command,
