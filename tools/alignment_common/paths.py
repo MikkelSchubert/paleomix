@@ -49,7 +49,7 @@ def full_path(record, bwa_prefix = ""):
 
 
 def target_path(record, bwa_prefix):
-    filename = "%s.%s.bam" % (record["Sample"], prefix_to_filename(bwa_prefix))
+    filename = "%s.%s.bam" % (record["Name"], prefix_to_filename(bwa_prefix))
     return os.path.join("results", filename)
 
 
