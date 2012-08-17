@@ -122,7 +122,7 @@ class CoverageNode(Node):
             for (library, contigs) in sorted(libraries.items()):
                 for (contig, subtable) in sorted(contigs.items()):
                     # Sum aligned bases ('M'), matches ('='), and mismatches ('X')
-                    aligned_nts = subtable["CIGAR"][0] + subtable["CIGAR"][8]
+                    aligned_nts = subtable["CIGAR"][0] + subtable["CIGAR"][7] + subtable["CIGAR"][8]
                     row = [name,
                            sample,
                            library, 

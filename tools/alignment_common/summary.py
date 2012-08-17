@@ -299,7 +299,9 @@ class SummaryTableNode(Node):
         for filename in filenames:
             bamfile = pysam.Samfile(filename)
             try:
-                nucleotides += sum(read.qlen for read in bamfile)
+                OPS = (0, 7, 8) #M, =, and X (aligned, match, mismatch)
+                for read in bamfile:
+                    nucleotides += sum(num for (op, num) in read.cigar if op in OPS)
             finally:
                 bamfile.close()
         
