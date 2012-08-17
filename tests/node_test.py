@@ -76,7 +76,7 @@ def test_constructor__single_executable():
     my_node = Node(executables  = _OUT_FILES[0])
     assert my_node.executables == _OUT_FILES[:1]
 
-def test_constructor__output_files():
+def test_constructor__executables():
     my_node = Node(executables  = _OUT_FILES)
     assert my_node.executables == _OUT_FILES
 
