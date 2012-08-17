@@ -23,6 +23,8 @@
 import os
 import glob
 
+ROOT = "results"
+
 
 def prefix_to_filename(bwa_prefix):
     return os.path.splitext(os.path.basename(bwa_prefix))[0]
@@ -31,9 +33,8 @@ def prefix_to_filename(bwa_prefix):
 def sample_path(record, bwa_prefix = ""):
     """Returns """
 
-    if bwa_prefix:
-        bwa_prefix = "." + prefix_to_filename(bwa_prefix)
-    return os.path.join("results", record["Name"] + bwa_prefix, record["Sample"])
+    bwa_prefix = prefix_to_filename(bwa_prefix)
+    return os.path.join(ROOT, record["Name"], bwa_prefix, record["Sample"])
 
 
 def library_path(record, bwa_prefix = ""):
@@ -50,7 +51,7 @@ def full_path(record, bwa_prefix = ""):
 
 def target_path(record, bwa_prefix):
     filename = "%s.%s.bam" % (record["Name"], prefix_to_filename(bwa_prefix))
-    return os.path.join("results", filename)
+    return os.path.join(ROOT, filename)
 
 
 def collect_files(record):

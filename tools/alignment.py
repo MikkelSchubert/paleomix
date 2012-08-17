@@ -158,7 +158,7 @@ def collect_records(filenames):
     return records
 
 
-def validate_bams(config, node, filename = None):
+def validate_bams(config, node, filename = None, output_file = None):
     if not filename:
         filenames = set()
         for filename in node.output_files:
@@ -170,9 +170,10 @@ def validate_bams(config, node, filename = None):
         assert len(filenames) == 1, filenames
         filename = filenames.pop()
 
-    return ValidateBAMNode(config   = config, 
-                           bamfile  = filename,
-                           ignore   = ["MATE_NOT_FOUND"],
+    return ValidateBAMNode(config       = config, 
+                           bamfile      = filename,
+                           output_file  = output_file,
+                           ignore       = ["MATE_NOT_FOUND"],
                            dependencies = node)
             
 
@@ -181,7 +182,7 @@ def build_se_nodes(config, bwa_prefix, record):
     try:
         trim_prefix, trim_node = _ADAPTERRM_SE_CACHE[id(record)]
     except KeyError:
-        trim_prefix = os.path.join(common.paths.full_path(record), "reads")
+        trim_prefix = os.path.join(common.paths.full_path(record, "reads"), "reads")
         trim_node   = SE_AdapterRemovalNode(record["files"]["R1"], trim_prefix)
         _ADAPTERRM_SE_CACHE[id(record)] = (trim_prefix, trim_node)
 
@@ -208,7 +209,7 @@ def build_pe_nodes(config, bwa_prefix, record):
     try:
         trim_prefix, trim_node = _ADAPTERRM_PE_CACHE[id(record)]
     except KeyError:
-        trim_prefix = os.path.join(common.paths.full_path(record), "reads")
+        trim_prefix = os.path.join(common.paths.full_path(record, "reads"), "reads")
         trim_node   = PE_AdapterRemovalNode(input_files_1 = record["files"]["R1"], 
                                             input_files_2 = record["files"]["R2"], 
                                             output_prefix = trim_prefix)
@@ -339,15 +340,20 @@ def build_nodes(config, bwa_prefix, name, records):
                                output_file  = target_unaln,
                                dependencies = merged.values())
 
-    validated = validate_bams(config, merge)
+    prefix = common.paths.prefix_to_filename(bwa_prefix)
+    validated_target = os.path.join(config.destination, name, prefix + ".unaligned.validated")
+    validated = validate_bams(config, merge, output_file = validated_target)
 
     if config.gatk_jar:
+        realigned_intervals = os.path.join(config.destination, name, prefix + ".unaligned.intervals")
         realigned = IndelRealignerNode(config       = config, 
                                        reference    = common.paths.reference_sequence(bwa_prefix),
                                        infile       = target_unaln,
                                        outfile      = target_aln,
+                                       intervals    = realigned_intervals,
                                        dependencies = validated)
-        validated = validate_bams(config, realigned, target_aln)
+        validated_target = os.path.join(config.destination, name, prefix + ".aligned.validated")
+        validated = validate_bams(config, realigned, target_aln, output_file = validated_target)
 
         return CoverageNode(input_file   = target_aln,
                             name         = name,
@@ -360,8 +366,9 @@ def build_nodes(config, bwa_prefix, name, records):
 
 
 
-def parse_config(argv):                                   
+def parse_config(argv):
     parser = optparse.OptionParser()
+    parser.add_option("--destination", default = "results")
     parser.add_option("--picard-root", None)
     parser.add_option("--temp-root", default = "/tmp")
     parser.add_option("--bwa-prefix", action = "append", default = [])
@@ -396,11 +403,12 @@ def parse_config(argv):
             return None
 
         label = common.paths.prefix_to_filename(prefix)
-        if label in ("*", "mito", "nuclear"):
-            ui.print_err("ERROR: Prefix name is reserved keyword ('*', 'mito', 'nuclear'), please rename:\n\t- Prefix: %s" % prefix)
+        if label in ("*", "mito", "nuclear", "reads"):
+            ui.print_err("ERROR: Prefix name is reserved keyword ('*', 'mito', 'nuclear', 'reads'), please rename:\n\t- Prefix: %s" % prefix)
             return None
     
     return config, args
+
     
 
 
@@ -410,6 +418,8 @@ def main(argv):
         return 1
 
     config, args = config_args
+    common.paths.ROOT = config.destination
+
     records = collect_records(args)
     if not validate_records(records):
         return 1

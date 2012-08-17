@@ -34,16 +34,16 @@ from pypeline.common.fileutils import swap_ext, move_file, reroot_path
 import pypeline.common.text as text
 import pypeline.tools.alignment_common as common
 from pypeline.node import Node
+from pypeline.common.utilities import safe_coerce_to_tuple
 
 
 
 class SummaryTableNode(Node):
     def __init__(self, config, records, dependencies = ()):
-        self._records = records
-        self._target = set(record["Name"] for record in records)
-        assert len(self._target) == 1, self._target
-        self._target = self._target.pop()
-        self._output_file = os.path.join("results", self._target + ".summary")
+        self._records     = safe_coerce_to_tuple(records)
+        self._name        = self._records[0]["Name"]
+        self._output_file = os.path.join(config.destination, self._name + ".summary")
+        assert all((self._name == record["Name"]) for record in self._records)
 
         input_files = set()
         for prefix in config.bwa_prefix:
