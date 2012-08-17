@@ -22,15 +22,14 @@
 #
 import os
 
+import pypeline.common.fileutils as fileutils
 from pypeline.node import CommandNode, MetaNode
 from pypeline.atomiccmd import AtomicCmd
-import pypeline.common.fileutils as fileutils
-
+from pypeline.common.fileutils import swap_ext
 
 
 class _IndelTrainerNode(CommandNode):
     def __init__(self, config, reference, infile, outfile, dependencies = ()):
-        outfile += ".intervals"
         call  = ["java", "-jar", config.gatk_jar,
                  "-T", "RealignerTargetCreator", 
                  "-R", "%(IN_REFERENCE)s",
@@ -54,8 +53,7 @@ class _IndelTrainerNode(CommandNode):
 
 
 class _IndelRealignerNode(CommandNode):
-    def __init__(self, config, reference, infile, outfile, dependencies = ()):
-        intervalsfile = outfile + ".intervals"
+    def __init__(self, config, reference, intervals, infile, outfile, dependencies = ()):
         call  = ["java", "-jar", config.gatk_jar,
                  "-T", "IndelRealigner", 
                  "-R", "%(IN_REFERENCE)s",
@@ -66,7 +64,7 @@ class _IndelRealignerNode(CommandNode):
         command = AtomicCmd(call, 
                             IN_REFERENCE = reference,
                             IN_BAMFILE   = infile,
-                            IN_INTERVALS = intervalsfile,
+                            IN_INTERVALS = intervals,
                             OUT_BAMFILE = outfile,
                             OUT_INDEX  = fileutils.swap_ext(outfile, ".bai"),
                             OUT_STDOUT = outfile + ".log")
@@ -82,16 +80,20 @@ class _IndelRealignerNode(CommandNode):
 
 
 class IndelRealignerNode(MetaNode):
-    def __init__(self, config, reference, infile, outfile, dependencies = ()):
-        trainer = _IndelTrainerNode(config = config,
-                                    reference = reference, 
-                                    infile = infile,
-                                    outfile = outfile,
-                                    dependencies = dependencies)
-        aligner = _IndelRealignerNode(config = config,
-                                      reference = reference, 
-                                      infile = infile, 
-                                      outfile = outfile,
+    def __init__(self, config, reference, infile, outfile, intervals = None, dependencies = ()):
+        if not intervals:
+            intervals = outfile + ".intervals"
+
+        trainer = _IndelTrainerNode(config         = config,
+                                    reference      = reference, 
+                                    infile         = infile,
+                                    outfile        = intervals,
+                                    dependencies   = dependencies)
+        aligner = _IndelRealignerNode(config       = config,
+                                      reference    = reference, 
+                                      intervals    = intervals,
+                                      infile       = infile, 
+                                      outfile      = outfile,
                                       dependencies = trainer)
         
         MetaNode.__init__(self, 
