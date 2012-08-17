@@ -25,9 +25,9 @@ import pysam
 
 
 class SamfileReader(pysam.Samfile):
-    def __init__(self, filename, **kws):
+    def __new__(cls, filename, **kws):
         kws["mode"] = None # Forces auto-detection of format, read-only
-        pysam.Samfile.__init__(self, filename, **kws)
+        return pysam.Samfile(filename, **kws)
 
     def __enter__(self):
         return self
