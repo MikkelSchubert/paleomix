@@ -141,10 +141,10 @@ def collect_records(filenames):
     def _split(line):
         return filter(None, line.strip().split())
 
-    header = None
     records = collections.defaultdict(list)
     for filename in filenames:
         with open(filename) as mkfile:
+            header = None
             for line in mkfile:
                 if line.startswith("#") or not line.strip():
                     continue
