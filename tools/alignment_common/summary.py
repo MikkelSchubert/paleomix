@@ -57,6 +57,8 @@ class SummaryTableNode(Node):
                     input_files.add(library_prefix + ".aligned.kirdup.bam")
         input_files |= set(swap_ext(filename, ".bai") for filename in input_files)
         
+        for record in records:
+            input_files.add(os.path.join(common.paths.full_path(record, "reads"), "reads.settings"))
 
         Node.__init__(self,
                       description  = "<Summary: %s>" % self._output_file,
@@ -116,12 +118,12 @@ class SummaryTableNode(Node):
         table_rows = [["Name", "Sample", "Library", "Measure", "Value", ""]]
         for ((sample, library), subtable) in sorted(annotated_table.items()):
             for (measure, (value, comment)) in sorted(subtable["seq"].iteritems(), key = _measure_ordering):
-                table_rows.append([self._target, sample, library, measure, value, comment])
+                table_rows.append([self._name, sample, library, measure, value, comment])
             table_rows.extend("##")
 
             for (_, hit_table) in sorted(subtable["hits"].items()):
                 for (measure, (value, comment)) in sorted(hit_table.iteritems(), key = _measure_ordering):
-                    table_rows.append([self._target, sample, library, measure, value, comment])
+                    table_rows.append([self._name, sample, library, measure, value, comment])
                 table_rows.append("#")
             table_rows.extend("##")
 
@@ -338,8 +340,7 @@ class SummaryTableNode(Node):
         
     @classmethod
     def _stat_read_settings(cls, record):
-        # FIXME: Add as input!
-        with open(os.path.join(common.paths.full_path(record), "reads.settings")) as settings:
+        with open(os.path.join(common.paths.full_path(record, "reads"), "reads.settings")) as settings:
             settings = settings.read()
             if "Paired end mode" in settings:
                 return {
