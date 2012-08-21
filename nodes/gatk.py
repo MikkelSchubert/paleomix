@@ -39,6 +39,7 @@ class _IndelTrainerNode(CommandNode):
         command = AtomicCmd(call, 
                             IN_REFERENCE  = reference,
                             IN_BAMFILE    = infile,
+                            IN_BAIFILE    = swap_ext(infile, ".bai"),
                             OUT_INTERVALS = outfile)
         
         description = "<Train Indel Realigner: '%s' -> '%s'>" \
@@ -63,9 +64,10 @@ class _IndelRealignerNode(CommandNode):
         command = AtomicCmd(call, 
                             IN_REFERENCE = reference,
                             IN_BAMFILE   = infile,
+                            IN_BAIFILE   = swap_ext(infile, ".bai"),
                             IN_INTERVALS = intervals,
-                            OUT_BAMFILE = outfile,
-                            OUT_INDEX  = fileutils.swap_ext(outfile, ".bai"))
+                            OUT_BAMFILE  = outfile,
+                            OUT_INDEX    = fileutils.swap_ext(outfile, ".bai"))
 
         description = "<Indel Realign: '%s' -> '%s'>" \
             % (infile, outfile)
