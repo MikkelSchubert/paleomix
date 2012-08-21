@@ -53,6 +53,10 @@ def target_path(record, bwa_prefix):
     filename = "%s.%s.bam" % (record["Name"], prefix_to_filename(bwa_prefix))
     return os.path.join(ROOT, filename)
 
+def mapdamage_path(record, bwa_prefix):
+    dirname = "%s.%s.mapDamage" % (record["Name"], prefix_to_filename(bwa_prefix))
+    return os.path.join(ROOT, dirname, record["Library"])
+
 
 
 def is_paired_end(record):

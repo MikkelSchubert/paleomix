@@ -30,13 +30,14 @@ import pypeline
 import pypeline.ui as ui
 import pypeline.common.fileutils as fileutils
 
-from pypeline.node import CommandNode
+from pypeline.node import CommandNode, MetaNode
 from pypeline.atomiccmd import AtomicCmd
 from pypeline.nodes.bwa import SE_BWANode, PE_BWANode
 from pypeline.nodes.gatk import IndelRealignerNode
 from pypeline.nodes.picard import ValidateBAMNode, MergeSamFilesNode, MarkDuplicatesNode
 from pypeline.nodes.coverage import CoverageNode
 from pypeline.nodes.samtools import BAMIndexNode
+from pypeline.nodes.filesystem import HardlinkNode
 from pypeline.nodes.adapterremoval import SE_AdapterRemovalNode, PE_AdapterRemovalNode
 
 from pypeline.common.fileutils import swap_ext, add_postfix
@@ -49,7 +50,22 @@ _ADAPTERRM_PE_CACHE = {}
 
 
 
+class MapDamageNode(CommandNode):
+    def __init__(self, reference, input_file, output_directory, dependencies):
+        command = AtomicCmd(["mapDamage.pl", "map", "-c",
+                             "-i", "%(IN_BAM)s",
+                             "-d", "%(OUT_DIR)s",
+                             "-r", reference],
+                            IN_BAM  = input_file,
+                            OUT_DIR = output_directory,
+                            OUT_STDOUT = output_directory + ".stdout",
+                            OUT_STDERR = output_directory + ".stderr")
 
+        description =  "<mapDamage: '%s' -> '%s'>" % (input_file, output_directory)
+        CommandNode.__init__(self, 
+                             command      = command,
+                             description  = description,
+                             dependencies = dependencies)
 
 
 class FilterUniqueBAMNode(CommandNode):
@@ -159,24 +175,47 @@ def collect_records(filenames):
     return records
 
 
-def validate_bams(config, node, filename = None, output_file = None):
-    if not filename:
+def validate_bams(config, node, input_file = None, output_file = None):
+    if not input_file:
         filenames = set()
         for filename in node.output_files:
             if filename.lower().endswith(".bai"):
                 filenames.add(swap_ext(filename, ".bam"))
             elif filename.lower().endswith(".bam"):
                 filenames.add(filename)
-
+            
         assert len(filenames) == 1, filenames
-        filename = filenames.pop()
+        input_file = filenames.pop()
 
     return ValidateBAMNode(config       = config, 
-                           bamfile      = filename,
+                           bamfile      = input_file,
                            output_file  = output_file,
                            ignore       = ["MATE_NOT_FOUND"],
                            dependencies = node)
-            
+
+
+def merge_or_hardlink(config, input_files, output_file, dependencies, validation_log = None):
+    if len(input_files) == 1:
+        link_bam = HardlinkNode(input_file    = input_files[0],
+                                output_file   = output_file,
+                                dependencies  = dependencies)
+
+        link_bai = HardlinkNode(input_file    = swap_ext(input_files[0], ".bai"),
+                                output_file   = swap_ext(output_file,    ".bai"),
+                                dependencies  = dependencies)
+        
+        return MetaNode(description  = str(link_bam), 
+                        subnodes     = [link_bam, link_bai],
+                        dependencies = dependencies)
+
+    node = MergeSamFilesNode(config       = config, 
+                             input_files  = input_files, 
+                             output_file  = output_file,
+                             dependencies = dependencies)
+    
+    return validate_bams(config      = config, 
+                         node        = node,
+                         output_file = validation_log)
 
 
 def build_se_nodes(config, bwa_prefix, record):
@@ -267,12 +306,15 @@ def build_lib_merge_nodes(config, bwa_prefix, nodes):
         outdir = common.paths.sample_path(record, bwa_prefix)
         target = os.path.join(outdir, "%s.%s.bam" % (record["Library"], key))
         
-        merge = MergeSamFilesNode(config       = config, 
-                                  input_files  = files, 
-                                  output_file  = target,
-                                  dependencies = deps)
-
-        yield (key, target, validate_bams(config, merge))
+        merge  = MergeSamFilesNode(config       = config, 
+                                   input_files  = files, 
+                                   output_file  = target,
+                                   dependencies = deps)
+        validate = ValidateBAMNode(config       = config,
+                                   bamfile      = target, 
+                                   dependencies = merge)
+        
+        yield (key, target, validate)
 
     
 def build_dedupe_node(config, key, filename, node):
@@ -330,26 +372,33 @@ def build_nodes(config, bwa_prefix, name, records):
                    "Library" : library }
 
         target = common.paths.library_path(record, bwa_prefix) + ".bam"
-        merge  =  MergeSamFilesNode(config       = config,
-                                    input_files  = subnodes.keys(),
-                                    output_file  = target,
-                                    dependencies = subnodes.values())
         assert target not in merged, target
-        merged[target] = validate_bams(config, merge)
+
+        merge = merge_or_hardlink(config       = config,
+                                  input_files  = subnodes.keys(),
+                                  output_file  = target,
+                                  dependencies = subnodes.values())
+
+        damage = MapDamageNode(reference        = common.paths.reference_sequence(bwa_prefix),
+                               input_file       = target,
+                               output_directory = common.paths.mapdamage_path(record, bwa_prefix),
+                               dependencies     = merge)
+        
+        merged[target] = damage
+
 
     record = { "Name"    : name, 
                "Sample"  : sample }
     target_aln   = common.paths.target_path(record, bwa_prefix)
     target_unaln = add_postfix(target_aln, ".unaligned")
-
-    merge  = MergeSamFilesNode(config       = config,
-                               input_files  = merged.keys(),
-                               output_file  = target_unaln,
-                               dependencies = merged.values())
-
     prefix = common.paths.prefix_to_filename(bwa_prefix)
     validated_target = os.path.join(config.destination, name, prefix + ".unaligned.validated")
-    validated = validate_bams(config, merge, output_file = validated_target)
+
+    validated  = merge_or_hardlink(config         = config,
+                               input_files    = merged.keys(),
+                               output_file    = target_unaln,
+                               dependencies   = merged.values(),
+                               validation_log = validated_target)
 
     if config.gatk_jar:
         realigned_intervals = os.path.join(config.destination, name, prefix + ".unaligned.intervals")
@@ -360,7 +409,10 @@ def build_nodes(config, bwa_prefix, name, records):
                                        intervals    = realigned_intervals,
                                        dependencies = validated)
         validated_target = os.path.join(config.destination, name, prefix + ".aligned.validated")
-        validated = validate_bams(config, realigned, target_aln, output_file = validated_target)
+        validated = validate_bams(config      = config, 
+                                  node        = realigned, 
+                                  input_file  = target_aln,
+                                  output_file = validated_target)
 
         return CoverageNode(input_file   = target_aln,
                             name         = name,
