@@ -90,7 +90,7 @@ class RAxMLReduceNode(CommandNode):
 
 
 class RAxMLRapidBSNode(CommandNode):
-    def __init__(self, infile, partitions, destination, model = "GTRGAMMAI", threads = 1, dependencies = ()):
+    def __init__(self, infile, partitions, destination, model = "GTRGAMMAI", replicates = "autoMRE", bs_branchln = False, threads = 1, dependencies = ()):
         """ 
         Arguments:
         infile      -- An alignment file in a format readable by RAxML.
@@ -101,6 +101,8 @@ class RAxMLRapidBSNode(CommandNode):
                        Example destination: '/disk/project/SN013420.RAxML.%s'
                        Example output:      '/disk/project/SN013420.RAxML.bestTree'
         model       -- DNA or Amino acid substitution model to use.
+        replicates  -- Number of bootstrap replicates. Defaults to automatic selection.
+        bs_branchln -- Calculate branch lengths for bootstrap trees.
         threads     -- Number of threads to use for each RAxML instance."""
 
         self._symlinks = [infile, partitions]
@@ -115,7 +117,9 @@ class RAxMLRapidBSNode(CommandNode):
                 "-w", "%(TEMP_DIR)s",
                 "-x", int(random.random() * 2**31 - 1),
                 "-p", int(random.random() * 2**31 - 1),
-                "-N", "autoMRE"]
+                "-N", replicates]
+        if bs_branchln:
+            call.append("-k")
         if threads > 1:
             call.extend(("-T", threads))
 
