@@ -182,7 +182,7 @@ class TaskGraph:
 
         error_messages = []
         error_messages.extend(cls._check_output_files(output_files))
-        error_messages.extend(cls._check_input_dependencies(input_files, output_files))
+        error_messages.extend(cls._check_input_dependencies(input_files, output_files, tasks))
 
         if error_messages:
             messages = []
@@ -201,12 +201,14 @@ class TaskGraph:
                     % (len(tasks), filename, "\n\t".join(str(task) for task in tasks))
 
     @classmethod
-    def _check_input_dependencies(cls, input_files, output_files):
+    def _check_input_dependencies(cls, input_files, output_files, tasks):
+        dependencies = cls._collect_dependencies(tasks, {})
+
         for (filename, nodes) in input_files.iteritems():
             if (filename in output_files):
                 producer = output_files[filename][0]
                 for consumer in nodes:
-                    if not cls._node_has_dependency(consumer, producer):
+                    if producer not in dependencies[consumer]:
                         yield "Node depends on dynamically created file, but not on the node creating it:" + \
                             "\n\tDependent node: %s\n\tFilename: %s\n\tCreated by: %s" \
                             % (consumer, filename, producer)
@@ -215,13 +217,19 @@ class TaskGraph:
 
 
     @classmethod
-    def _node_has_dependency(cls, node, dependency):
-        subnodes = node.dependencies | node.subnodes
-        if dependency in subnodes:
-            return True
+    def _collect_dependencies(cls, tasks, dependencies):
+        for task in tasks:
+            if task not in dependencies:
+                subnodes = task.subnodes | task.dependencies
+                if not subnodes:
+                    dependencies[task] = frozenset()
+                    continue
 
-        for subnode in subnodes:
-            if cls._node_has_dependency(subnode, dependency):
-                return True
+                cls._collect_dependencies(subnodes, dependencies)
+                
+                collected = set(subnodes)
+                for subnode in subnodes:
+                    collected.update(dependencies[subnode])
+                dependencies[task] = frozenset(collected)
 
-        return False
+        return dependencies
