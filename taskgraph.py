@@ -213,7 +213,9 @@ class TaskGraph:
                             "\n\tDependent node: %s\n\tFilename: %s\n\tCreated by: %s" \
                             % (consumer, filename, producer)
             elif not os.path.exists(filename):
-                yield "Required file does not exist, and is not created by a task: %s" % (filename, )
+                yield "Required file does not exist, and is not created by a task:" + \
+                            "\n\tFilename: %s\n\tDependent node(s): %s" \
+                            % (filename,    "\n\t                   ".join(map(str, nodes)))
 
 
     @classmethod
