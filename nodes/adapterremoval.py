@@ -23,7 +23,7 @@
 import os
 
 from pypeline.node import CommandNode
-from pypeline.atomiccmd import AtomicCmd
+from pypeline.atomiccmd import AtomicCmd, CmdError
 from pypeline.atomicset import ParallelCmds
 
 import pypeline.tools.unicat as unicat
@@ -65,8 +65,8 @@ class SE_AdapterRemovalNode(CommandNode):
 
         CommandNode.__init__(self,
                              command      = commands,
-                             description  = "<SE_AdapterRM: %s -> '%s.*'>" \
-                                     % (_desc_input(input_files), output_prefix),
+                             description  = "<SE_AdapterRM: %s>" \
+                                 % (self._desc_files(input_files),),
                              dependencies = dependencies)
 
     def _setup(self, config, temp):
@@ -80,6 +80,10 @@ class SE_AdapterRemovalNode(CommandNode):
 
 class PE_AdapterRemovalNode(CommandNode):
     def __init__(self, input_files_1, input_files_2, output_prefix, dependencies = ()):
+        if len(input_files_1) != len(input_files_2):
+            raise CmdError("Number of mate 1 files differ from mate 2 files: %i != %i" \
+                               % (len(input_files_1), len(input_files_2)))
+
         zcat_pair_1    = unicat.build_atomiccmd(AtomicCmd, input_files_1, "uncompressed_input_1")
         zcat_pair_2    = unicat.build_atomiccmd(AtomicCmd, input_files_2, "uncompressed_input_2")
         gzip_pair_1    = _build_gzip_command(output_prefix, ".pair1.truncated")
@@ -129,8 +133,8 @@ class PE_AdapterRemovalNode(CommandNode):
 
         CommandNode.__init__(self,
                              command      = commands,
-                             description  = "<PE_AdapterRM: %s -> '%s.*'>" \
-                                     % (_desc_input(input_files_1), output_prefix),
+                             description  = "<PE_AdapterRM: %s>" \
+                                     % (self._desc_files(input_files_1).replace("file", "pair"),),
                              dependencies = dependencies)
 
     def _setup(self, config, temp):
@@ -149,17 +153,7 @@ class PE_AdapterRemovalNode(CommandNode):
 
 def _build_gzip_command(prefix, name):
     basename = os.path.basename(prefix)
-#    return AtomicCmd(["gzip", "-c", "%(TEMP_IN)s"],
-#                     TEMP_IN    = basename + name,
-#                     OUT_STDOUT = prefix + name + ".gz")
-    return AtomicCmd(["gzip"],
-                     TEMP_IN_STDIN = basename + name,
-                     OUT_STDOUT    = prefix + name + ".gz")
+    return AtomicCmd(["gzip", "-c", "%(TEMP_IN_GZ)s"],
+                     TEMP_IN_GZ = basename + name,
+                     OUT_STDOUT = prefix + name + ".gz")
 
-
-def _desc_input(files):
-    paths = set(os.path.dirname(filename) for filename in files)
-    if len(paths) == 1:
-        return "%i file(s) in '%s'" % (len(files), paths.pop())
-    else:
-        return "%i file(s)" % (len(files),)
