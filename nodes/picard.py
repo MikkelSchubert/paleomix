@@ -25,6 +25,7 @@ import os
 from pypeline.node import CommandNode
 from pypeline.atomiccmd import AtomicCmd
 from pypeline.common.fileutils import swap_ext
+from pypeline.common.utilities import safe_coerce_to_tuple
 
 
 class ValidateBAMNode(CommandNode):
@@ -50,25 +51,34 @@ class ValidateBAMNode(CommandNode):
 
 
 class MarkDuplicatesNode(CommandNode):
-    def __init__(self, config, input_file, output_file, keep_duplicates = False, dependencies = ()):
+    def __init__(self, config, input_files, output_file, metrics_file = None, keep_duplicates = False, dependencies = ()):
+        if not metrics_file:
+            metrics_file = output_file + ".metrics"
+
         jar  = os.path.join(config.picard_root, "MarkDuplicates.jar")
         call = ["java", "-jar", jar, 
                 "TMP_DIR=%s" % config.temp_root, 
                 "REMOVE_DUPLICATES=%s" % str(not keep_duplicates).lower(),
                 "CREATE_INDEX=True",
-                "INPUT=%(IN_BAM)s",
+                # ASSUME_SORTED is required to allow use of 'samtools sort', which
+                # does not add a line to the header specifying sorting. In the case
+                # of unsorted files the command will abort.
+                "ASSUME_SORTED=True", 
                 "OUTPUT=%(OUT_BAM)s",
                 "METRICS_FILE=%(OUT_METRICS)s"]
 
-        command = AtomicCmd(call,
-                            IN_BAM      = input_file,
-                            OUT_BAM     = output_file,
-                            OUT_BAI     = swap_ext(output_file, ".bai"),
-                            OUT_METRICS = output_file + ".metrics")
+        args = {"OUT_BAM"     : output_file,
+                "OUT_BAI"     : swap_ext(output_file, ".bai"),
+                "OUT_METRICS" : metrics_file}       
 
-        description =  "<MarkDuplicates: '%s' -> '%s'>" % (input_file, output_file)
+        input_files = safe_coerce_to_tuple(input_files)
+        for (index, input_file) in enumerate(input_files):
+            call.append("INPUT=%%(IN_BAM_%i)s" % index)
+            args["IN_BAM_%i" % index] = input_file
+
+        description =  "<MarkDuplicates: %s>" % (self._desc_files(input_files),)
         CommandNode.__init__(self, 
-                             command      = command,
+                             command      = AtomicCmd(call, **args),
                              description  = description,
                              dependencies = dependencies)
 
