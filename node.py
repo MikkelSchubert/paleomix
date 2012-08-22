@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
 # SOFTWARE.
 #
+import os
 import traceback
 
 import pypeline.common.fileutils as fileutils
@@ -160,6 +161,15 @@ class Node(object):
             message = "Missing %s files for command:\n\t- Command: %s\n\t- Files: %s" \
                 % (description, self, "\n\t         ".join(missing_files))
             raise NodeError(message)
+
+
+    @classmethod
+    def _desc_files(cls, files):
+        paths = set(os.path.dirname(filename) for filename in files)
+        if len(paths) == 1:
+            return "%i file(s) in '%s'" % (len(files), paths.pop())
+        else:
+            return "%i file(s)" % (len(files),)
 
 
 
