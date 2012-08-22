@@ -47,11 +47,18 @@ class SE_BWANode(CommandNode):
                                          min_quality   = min_quality,
                                          exclude_flags = 0x4,
                                          stdin         = samse,
-                                         output_file   = output_file)
+                                         output_file   = AtomicCmd.PIPE)
 
-        description =  "<SE_BWA (%i threads): '%s' -> '%s'>" % (threads, input_file, output_file)
+        sort = AtomicCmd(["samtools", "sort", "-", "%(TEMP_OUT_BAM)s"],
+                         IN_STDIN     = flt,
+                         OUT_BAM      = output_file,
+                         # Prefix used by 'samtools sort', with .bam added to final file
+                         TEMP_OUT_BAM = os.path.splitext(output_file)[0])
+
+
+        description =  "<SE_BWA (%i threads): '%s'>" % (threads, input_file)
         CommandNode.__init__(self, 
-                             command      = ParallelCmds([aln, samse, flt]),
+                             command      = ParallelCmds([aln, samse, flt, sort]),
                              description  = description,
                              threads      = threads,
                              dependencies = dependencies)
@@ -85,11 +92,18 @@ class PE_BWANode(CommandNode):
                                          min_quality   = min_quality,
                                          exclude_flags = 0x4,
                                          stdin         = samse,
-                                         output_file   = output_file)
+                                         output_file   = AtomicCmd.PIPE)
 
-        description =  "<PE_BWA (%i threads): '%s' -> '%s'>" % (threads, input_file_1, output_file)
+        sort = AtomicCmd(["samtools", "sort", "-", "%(TEMP_OUT_BAM)s"],
+                         IN_STDIN     = flt,
+                         OUT_BAM      = output_file,
+                         # Prefix used by 'samtools sort', with .bam added to final file
+                         TEMP_OUT_BAM = os.path.splitext(output_file)[0])
+
+
+        description =  "<PE_BWA (%i threads): '%s'>" % (threads, input_file_1)
         CommandNode.__init__(self, 
-                             command      = ParallelCmds([aln_1, aln_2, samse, flt]),
+                             command      = ParallelCmds([aln_1, aln_2, samse, flt, sort]),
                              description  = description,
                              threads      = threads,
                              dependencies = dependencies)
