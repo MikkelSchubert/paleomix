@@ -30,11 +30,15 @@ def prefix_to_filename(bwa_prefix):
     return os.path.splitext(os.path.basename(bwa_prefix))[0]
 
 
+def prefix_path(record, bwa_prefix = ""):
+    bwa_prefix = prefix_to_filename(bwa_prefix)
+    return os.path.join(ROOT, record["Name"], bwa_prefix)
+
+
 def sample_path(record, bwa_prefix = ""):
     """Returns """
 
-    bwa_prefix = prefix_to_filename(bwa_prefix)
-    return os.path.join(ROOT, record["Name"], bwa_prefix, record["Sample"])
+    return os.path.join(prefix_path(record, bwa_prefix), record["Sample"])
 
 
 def library_path(record, bwa_prefix = ""):
@@ -53,9 +57,9 @@ def target_path(record, bwa_prefix):
     filename = "%s.%s.bam" % (record["Name"], prefix_to_filename(bwa_prefix))
     return os.path.join(ROOT, filename)
 
-def mapdamage_path(record, bwa_prefix):
-    dirname = "%s.%s.mapDamage" % (record["Name"], prefix_to_filename(bwa_prefix))
-    return os.path.join(ROOT, dirname, record["Library"])
+def mapdamage_path(name, library, bwa_prefix):
+    dirname = "%s.%s.mapDamage" % (name, prefix_to_filename(bwa_prefix))
+    return os.path.join(ROOT, dirname, library)
 
 
 
