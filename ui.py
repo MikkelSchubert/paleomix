@@ -125,12 +125,12 @@ def _describe_nodes(nodes):
               ("outdated", states[TaskGraph.Node.OUTDATED]),
               ("failed",   states[TaskGraph.Node.ERROR])]
 
-    line = []
+    line = [""]
     for (name, value) in fields:
         if value:
-            line.append("%i %s" % (name, value))
+            line.append("%i %s" % (value, name))
 
-    line.append(", %i done of %i nodes" \
+    line.append("%i done of %i tasks" \
                     % (states[TaskGraph.Node.DONE], 
                        sum(states.values())))
 
