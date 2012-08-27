@@ -29,6 +29,7 @@ import pysam
 import pypeline.common.fileutils as fileutils
 
 from pypeline.node import Node
+from pypeline.common.formats.fasta import read_fasta
 
 
 
@@ -51,21 +52,19 @@ class CollectSequencesNode(Node):
 
 
     def _run(self, _config, temp):
-        handles = []
-        for (name, source) in sorted(self._infiles.items()):
-            handles.append((name, pysam.Fastafile(source)))
+        fastas = {}
+        for (name, filename) in self._infiles.items():
+            fastas[name] = dict(read_fasta(filename))
+        fastas = list(sorted(fastas.items()))
 
         for sequence in self._sequences:
             filename = os.path.join(temp, sequence + ".fasta")
 
             with open(filename, "w") as fasta:
-                for (name, handle) in handles:
-                    fastaseq = textwrap.fill(handle.fetch(sequence), 60)
+                for (name, sequences) in fastas:
+                    fastaseq = textwrap.fill(sequences[sequence], 60)
                     assert fastaseq, (name, sequence)
                     fasta.write(">%s\n%s\n" % (name, fastaseq))
-
-        for (name, handle) in handles:
-            handle.close()
 
 
     def _teardown(self, _config, temp):
