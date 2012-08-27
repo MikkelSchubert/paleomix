@@ -263,6 +263,7 @@ class AtomicCmd:
 
 
     def _generate_filenames(self, root):
+        root = os.path.abspath(root)
         filenames = {"TEMP_DIR" : root}
         for (key, filename) in self._files.iteritems():
             if isinstance(filename, types.StringTypes):
