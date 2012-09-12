@@ -46,17 +46,11 @@ class SummaryTableNode(Node):
         assert all((self._name == record["Name"]) for record in self._records)
 
         input_files = set()
-        for prefix in config.bwa_prefix:
-            for record in records:
-                library_prefix = os.path.join(common.paths.sample_path(record, prefix), record["Library"])
-
-                input_files.add(library_prefix + ".unaligned.bam")
-                input_files.add(library_prefix + ".unaligned.markdup.bam")
-                if common.paths.is_paired_end(record):
-                    input_files.add(library_prefix + ".aligned.bam")
-                    input_files.add(library_prefix + ".aligned.kirdup.bam")
-        input_files |= set(swap_ext(filename, ".bai") for filename in input_files)
-        
+        for libraries in self._collect_input_files(config.bwa_prefix, records).values():
+            for library in libraries.values():
+                input_files.update(library["raw"])
+                input_files.update(library["dedup"])
+       
         for record in records:
             input_files.add(os.path.join(common.paths.full_path(record, "reads"), "reads.settings"))
 
@@ -210,7 +204,6 @@ class SummaryTableNode(Node):
                     "ratio_genome(mito,nuc)"     : (ratio_genome_inv,                 "# Ratio of NTs of unique hits corrected by genome sizes: (NTs(mito) / NTs(nuc)) / (Size(mito) / (2 * Size(nuc)))")
                     }
 
-
             # Cleanup 
             del sequences["seq_nt_total"]
             del sequences["seq_reads_total"]
@@ -229,14 +222,19 @@ class SummaryTableNode(Node):
             key = (record["Sample"], record["Library"])
             sequences[key].append(cls._stat_read_settings(record))
             
+        by_sample_library = collections.defaultdict(list)
+        for record in records:
+            key = (record["Sample"], record["Library"])
+            by_sample_library[key].append(record)
+
+
         hits = {}
         for prefix in config.bwa_prefix:
             label = _prefix_to_label(config, prefix, only_endogenous = False)
-            dd = hits[label] = collections.defaultdict(list)
+            dd = hits[label] = {}
             
-            for record in records:
-                key = (record["Sample"], record["Library"])
-                dd[key] = [cls._stat_hits(config, prefix, record)]
+            for key in by_sample_library:
+                dd[key] = [cls._stat_hits(config, prefix, by_sample_library[key])]
 
         keyfuncs = (lambda (sample, library): (sample, library),
                     lambda (sample, _): (sample, "*"),
@@ -249,6 +247,7 @@ class SummaryTableNode(Node):
 
             for prefix in config.bwa_prefix:
                 label = _prefix_to_label(config, prefix, only_endogenous = False)
+                print hits[label]
                 for (key, value) in cls._merge_tables(hits[label], keyfunc).iteritems():
                     levels[key]["hits"][label] = value
 
@@ -256,59 +255,38 @@ class SummaryTableNode(Node):
 
 
     @classmethod
-    def _stat_hits(cls, config, prefix, record):
-        label = _prefix_to_label(config, prefix, only_endogenous = False)
-        library_prefix = common.paths.library_path(record, prefix)
-        
-        files_raw    = [library_prefix + ".unaligned.bam"]
-        files_unique = [library_prefix + ".unaligned.markdup.bam"]
-        if common.paths.is_paired_end(record):
-            files_raw    += [library_prefix + ".aligned.bam"]
-            files_unique += [library_prefix + ".aligned.kirdup.bam"]
+    def _stat_hits(cls, config, prefix, records):
+        raw_files, dedup_files = set(), set()        
+        for libraries in cls._collect_input_files([prefix], records).values():
+            for (library, files) in libraries.items():
+                raw_files.update(files["raw"])
+                dedup_files.update(files["dedup"])
 
-        raw_hits    = cls._stat_bam_index(files_raw)
-        unique_hits = cls._stat_bam_index(files_unique)
-        unique_nts  = cls._stat_bam_files(files_unique)
+        raw_hits, _           = cls._stat_bam_files(raw_files)
+        dedup_hits, dedup_nts = cls._stat_bam_files(dedup_files)
  
+        label = _prefix_to_label(config, prefix, only_endogenous = False)
         return {
-            "hits_raw(%s)"        % label : (raw_hits,    "# Total number of hits (including PCR duplicates)"),
-            "hits_unique(%s)"     % label : (unique_hits, "# Total number of unique hits (excluding PCR duplicates)"),
-            "hits_unique_nts(%s)" % label : (unique_nts,  ""),
+            "hits_raw(%s)"        % label : (raw_hits,   "# Total number of hits (including PCR duplicates)"),
+            "hits_unique(%s)"     % label : (dedup_hits, "# Total number of unique hits (excluding PCR duplicates)"),
+            "hits_unique_nts(%s)" % label : (dedup_nts,  ""),
             }
 
 
     @classmethod
-    def _stat_bam_index(cls, filenames):
-        hits = 0
-        for filename in filenames:
-            command = ["samtools", "idxstats", filename]
-            proc = subprocess.Popen(command, stdout = subprocess.PIPE)
-            for line in proc.stdout:
-                fields = line.split("\t")
-                if fields[0] != "*":
-                    hits += int(fields[2])
-                    
-            if proc.wait():
-                raise RuntimeError("Error running samtools idxstats on '%s': %i" % (filename, proc.returncode))
-
-        return hits
-            
-
-
-    @classmethod
     def _stat_bam_files(cls, filenames):
-        nucleotides = 0
+        hits, nucleotides = 0, 0
         for filename in filenames:
             bamfile = pysam.Samfile(filename)
             try:
                 OPS = (0, 7, 8) #M, =, and X (aligned, match, mismatch)
                 for read in bamfile:
+                    hits += 1
                     nucleotides += sum(num for (op, num) in read.cigar if op in OPS)
             finally:
                 bamfile.close()
         
-        return nucleotides
-            
+        return hits, nucleotides
 
 
     @classmethod
@@ -335,8 +313,7 @@ class SummaryTableNode(Node):
                         merged[measure] = (value + other, comment)
 
         return merged_tables
-        
- 
+         
         
     @classmethod
     def _stat_read_settings(cls, record):
@@ -362,6 +339,29 @@ class SummaryTableNode(Node):
             else:
                 assert False
 
+    
+    @classmethod
+    def _collect_input_files(cls, prefixes, records):
+        by_prefix = {}
+        for prefix in prefixes:
+            by_library = by_prefix[prefix] = collections.defaultdict(dict)
+
+            for record in records:
+                library = record["Library"]
+                if library not in by_library:
+                    by_library[library] = {"raw" : set(), "dedup" : set()}
+                input_files = by_library[library]
+
+                full_path = common.paths.full_path(record, prefix)
+                if common.paths.is_paired_end(record):
+                    input_files["raw"].add(os.path.join(full_path, "reads.pairs.truncated.bam"))
+                    input_files["raw"].add(os.path.join(full_path, "reads.singleton.aln.truncated.bam"))
+                    input_files["raw"].add(os.path.join(full_path, "reads.singleton.unaln.truncated.bam"))
+                else: 
+                    input_files["raw"].add(os.path.join(full_path, "reads.truncated.bam"))
+                input_files["dedup"].add(common.paths.library_path(record, prefix) + ".unaligned.bam")
+
+        return by_prefix
 
 
 

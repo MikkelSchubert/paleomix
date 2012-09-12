@@ -27,7 +27,7 @@ import collections
 from pypeline.node import Node
 from pypeline.common.text import padded_table
 from pypeline.common.samwrap import SamfileReader
-from pypeline.common.fileutils import reroot_path, move_file
+from pypeline.common.fileutils import reroot_path, move_file, swap_ext
 from pypeline.common.utilities import get_in, set_in
 
 
@@ -35,7 +35,7 @@ class CoverageNode(Node):
     def __init__(self, input_file, name, dependencies = ()):
         self._name = name
         self._input_file  = input_file
-        self._output_file = input_file + ".coverage"
+        self._output_file = swap_ext(input_file, ".coverage")
 
         Node.__init__(self, 
                       description  = "<Coverage: '%s' -> '%s'>" \

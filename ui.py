@@ -66,7 +66,7 @@ def print_disabled(*vargs, **kwargs):
 
 
 def print_node_tree(graph, collapse = True):
-    print_msg("Pipeline,%s" % _describe_nodes(graph.iterflat()))
+    print_msg("Pipeline%s" % _describe_nodes(graph.iterflat()))
     _print_sub_nodes(graph, collapse, "   ")
         
 
@@ -121,13 +121,21 @@ def _describe_nodes(nodes):
     for node in nodes:
         states[node.state] += 1
 
-    return " %(running)i running, %(outdated)i outdated, %(failed)i failed, %(done)i done of %(total)i nodes" \
-        % {"running"  : states[TaskGraph.Node.RUNNING], 
-           "outdated" : states[TaskGraph.Node.OUTDATED], 
-           "done"     : states[TaskGraph.Node.DONE], 
-           "failed"   : states[TaskGraph.Node.ERROR], 
-           "total"    : sum(states.values())}
+    fields = [("running",  states[TaskGraph.Node.RUNNING]),
+              ("outdated", states[TaskGraph.Node.OUTDATED]),
+              ("failed",   states[TaskGraph.Node.ERROR])]
 
+    line = [""]
+    for (name, value) in fields:
+        if value:
+            line.append("%i %s" % (value, name))
+
+    line.append("%i done of %i tasks" \
+                    % (states[TaskGraph.Node.DONE], 
+                       sum(states.values())))
+
+    return ", ".join(line)
+    
 
 def _collapse_node(dependencies):
     """Returns true if a node may be collapsed in the dependency graph."""
