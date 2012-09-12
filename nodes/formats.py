@@ -35,6 +35,61 @@ from pypeline.common.utilities import grouper, safe_coerce_to_tuple
 _VALID_KEYS = frozenset(["name", "partition_by"])
 
 
+class FastaToPartitionedInterleavedPhyNode(Node):
+    def __init__(self, infiles, out_prefix, partition_by = "123", add_flag = False, dependencies = ()):
+        if (len(partition_by) != 3):
+            raise ValueError("Default 'partition_by' must be 3 entires long!")
+        elif not isinstance(infiles, dict):
+            raise TypeError("'infiles' must be a dictionary")
+        elif any(len(dd.get("partition_by", "123")) != 3 for dd in infiles.itervalues()):
+            raise ValueError("'partition_by' must be 3 entires long!")
+        elif not all(isinstance(dd, dict) for dd in infiles.values()):
+            raise TypeError("'infiles' must be a dictionary of dictionaries")
+        elif not any(("name" in dd) for dd in infiles.values()):
+            raise ValueError("'name' must be specified for all input files")
+        elif any((set(dd) - _VALID_KEYS) for dd in infiles.values()):
+            raise ValueError("Invalid keys found: %s" % ", ".join(set(dd) - _VALID_KEYS))
+
+        self._infiles    = infiles
+        self._out_prefix = out_prefix
+        self._part_by    = partition_by
+        self._add_flag   = add_flag
+
+        description  = "<FastaToPartitionedPhy (default: %s): %i file(s) -> '%s.*'>" % \
+            (partition_by, len(infiles), out_prefix)
+            
+        Node.__init__(self, 
+                      description  = description,
+                      input_files  = infiles,
+                      output_files = [out_prefix + ".phy", out_prefix + ".partitions"],
+                      dependencies = dependencies)
+
+
+    def _run(self, _config, temp):
+        msas = []
+        for filename in sorted(self._infiles):
+            split_by = self._infiles[filename].get("partition_by", self._part_by)
+            for (key, msa) in sorted(split_msa(read_msa(filename), split_by).items()):
+                msas.append(("%s_%s" % (self._infiles[filename]["name"], key), msa))
+        
+        msa = join_msa(*(msa for (_, msa) in msas))
+        with open(reroot_path(temp, self._out_prefix + ".phy"), "w") as output:
+            output.write(interleaved_phy(msa, add_flag = self._add_flag))
+
+        with open(reroot_path(temp, self._out_prefix + ".partitions"), "w") as output:
+            end = 0
+            for (name, msa) in msas:
+                length = len(msa.itervalues().next())
+                output.write("DNA, %s = %i-%i\n" % (name, end + 1, end + length))
+                end += length
+
+
+    def  _teardown(self, _config, temp):
+        move_file(reroot_path(temp, self._out_prefix + ".phy"), self._out_prefix + ".phy")
+        move_file(reroot_path(temp, self._out_prefix + ".partitions"), self._out_prefix + ".partitions")
+    
+
+
 
 
 class FastaToPartitionsNode(Node):
@@ -68,7 +123,7 @@ class FastaToPartitionsNode(Node):
 
     def _run(self, _config, temp):
         end = 0
-        partitions = []
+        partitions = collections.defaultdict(list)
         for (filename, msa) in _read_sequences(self._infiles):
             length = len(msa.itervalues().next())
             start, end = end + 1, end + length
@@ -79,12 +134,12 @@ class FastaToPartitionsNode(Node):
                 else:
                     parts = ["%i-%i" % (start, end)]
 
-                partition = "DNA, %s_%s = %s\n" \
-                    % (self._infiles[filename]["name"], group, ", ".join(parts))
-                partitions.append(partition)
+                name = "%s_%s" % (self._infiles[filename]["name"], group)
+                partitions[name].extend(parts)
 
         with open(reroot_path(temp, self._out_part), "w") as part_file:
-            part_file.writelines(partitions)
+            for (name, parts) in sorted(partitions.items()):
+                part_file.writelines("DNA, %s = %s\n" % (name, ", ".join(parts)))
 
 
     def  _teardown(self, _config, temp):
@@ -118,7 +173,7 @@ class FastaToInterleavedPhyNode(Node):
 
 
     def _run(self, _config, temp):
-        msa = join_msa(*(read_msa(filename) for filename in self.input_files))
+        msa = join_msa(*(read_msa(filename) for filename in sorted(self.input_files)))
 
         with open(reroot_path(temp, self._out_phy), "w") as output:
             output.write(interleaved_phy(msa, add_flag = self._add_flag))
@@ -146,7 +201,7 @@ class FastaToSequentialPhyNode(Node):
 
     def _run(self, _config, temp):
         # Read and check that MSAs share groups
-        msas = [read_msa(filename) for filename in self.input_files]        
+        msas = [read_msa(filename) for filename in sorted(self.input_files)]
         join_msa(*msas)
 
         blocks = []

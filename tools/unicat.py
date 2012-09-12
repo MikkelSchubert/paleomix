@@ -54,6 +54,10 @@ def select_cat(filename):
 def call(input_files, output_file):
     executable = select_cat(input_files[0])
     command = [executable] + input_files
+
+    if not output_file:
+        return subprocess.Popen(command, close_fds = True).wait()
+    
      
     with open(output_file, "w") as output:
         proc = subprocess.Popen(command, 
@@ -70,9 +74,6 @@ def main(argv):
     if not args:
         pypeline.ui.print_err("%s takes at least one input file" % sys.argv[0])
         sys.exit(1)
-    elif not config.output:
-        pypeline.ui.print_err("%s required that --output is set" % sys.argv[0])
-        sys.exit(1)
                                
     return call(input_files   = args,
                 output_file   = config.output)
@@ -83,8 +84,15 @@ def build_atomiccmd(cls, input_files, output_file):
     if filename.endswith(".pyc"):
         filename = filename[:-1]
          
-    command  = [filename, "--output", "%(TEMP_OUT_FILE)s"]
-    files = {"TEMP_OUT_FILE" : output_file}
+    command = [filename]
+    files = {}
+
+    if output_file == cls.PIPE:
+        files["OUT_STDOUT"] = cls.PIPE
+    else:
+        files["TEMP_OUT_FILE"] = output_file
+        command.extend(("--output", "%(TEMP_OUT_FILE)s"))
+
     for (counter, filename) in enumerate(safe_coerce_to_tuple(input_files), start = 1):
         files["IN_FILE_%02i" % counter] = filename
         command.append("%%(IN_FILE_%02i)s" % counter)

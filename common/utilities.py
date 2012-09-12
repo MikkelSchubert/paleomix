@@ -38,6 +38,13 @@ def safe_coerce_to_tuple(value):
         return (value,)
 
 
+def try_cast(value, cast_to):
+    try:
+        return cast_to(value)
+    except ValueError:
+        return value
+    
+
 def crc32(data):
     return binascii.crc32(data) & 0xffffffff
 
