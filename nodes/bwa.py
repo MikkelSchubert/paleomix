@@ -32,14 +32,14 @@ class BWAIndex(CommandNode):
     def __init__(self, input_file, prefix = None, algorithm = "is", dependencies = ()):
         prefix = prefix if prefix else input_file
         command = AtomicCmd(["bwa", "index", 
-                             "-a", algorthm,
-                             "-p", prefix]
+                             "-a", algorithm,
+                             "-p", prefix],
                             IN_FILE = input_file,
                             **_prefix_files(prefix, iotype = "OUT"))
         
-        description =  "<BWA Index '%s' -> '%s'>" % (threads, input_file, prefix)
+        description =  "<BWA Index '%s' -> '%s.*'>" % (input_file, prefix)
         CommandNode.__init__(self, 
-                             command      = command
+                             command      = command,
                              description  = description,
                              dependencies = dependencies)
 
@@ -133,8 +133,8 @@ class PE_BWANode(CommandNode):
 
 
 class BWASWNode(CommandNode):
-    def __init__(self, input_file_1, output_file, prefix, input_file_2 = None, min_quality = 0, threads = 1, dependencies = ()):
-        command = ["bwa", "bwasw", "-t", threads, prefix, "%(IN_FILE_1)s"]
+    def __init__(self, input_file_1, output_file, prefix, input_file_2 = None, min_quality = 0, threads = 1, parameters = [], dependencies = ()):
+        command = ["bwa", "bwasw", "-t", threads, prefix, "%(IN_FILE_1)s"] + parameters
         files   = {"IN_FILE_1"  : input_file_1,
                    "OUT_STDOUT" : AtomicCmd.PIPE}
         if input_file_2:
@@ -149,7 +149,11 @@ class BWASWNode(CommandNode):
                                          stdin         = aln,
                                          output_file   = output_file)
 
-        description =  "<PE_BWASW (%i threads): '%s' -> '%s'>" % (threads, input_file_1, output_file)
+        if input_file_2:
+            description =  "<PE_BWASW (%i threads): '%s', '%s' -> '%s'>" % (threads, input_file_1, input_file_2, output_file)
+        else:
+            description =  "<BWASW (%i threads): '%s' -> '%s'>" % (threads, input_file_1, output_file)
+
         CommandNode.__init__(self, 
                              command      = ParallelCmds([aln, flt]),
                              description  = description,
