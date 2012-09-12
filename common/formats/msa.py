@@ -20,12 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
 # SOFTWARE.
 #
+import sys
 import gzip
 import types
 from collections import defaultdict
 
 from pypeline.common.sequences import split
-from pypeline.common.formats.fasta import parse_fasta
+from pypeline.common.formats.fasta import parse_fasta, print_fasta
 
 
 class MSAError(RuntimeError):
@@ -78,6 +79,19 @@ def read_msa(filename):
         return parse_msa(iter(fasta_file))
     finally:
         fasta_file.close()
+
+
+def print_msa(msa, file = sys.stdout):
+    validate_msa(msa)
+    for group in sorted(msa):
+        print_fasta(group, msa[group], file)
+        
+
+
+def write_msa(msa, filename):
+    validate_msa(msa)
+    with open(filename, "w") as fileobj:
+        print_msa(msa, fileobj)
 
 
 def validate_msa(*msas):

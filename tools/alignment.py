@@ -374,24 +374,7 @@ def build_library_nodes(config, bwa_prefix, name, records):
     library_nodes = dict()
     
     for (library, library_prefix, nodes) in build_library_merge_nodes(config, bwa_prefix, records):
-        output_file    = library_prefix + ".unaligned.bam"
-        if config.gatk_jar:
-            intervals_file = library_prefix + ".unaligned.intervals"
-            input_file     = library_prefix + ".unaligned.bam"
-            output_file    = library_prefix + ".realigned.bam"
-            validated_file = library_prefix + ".realigned.validated"
-        
-            nodes = IndelRealignerNode(config       = config, 
-                                       reference    = common.paths.reference_sequence(bwa_prefix),
-                                       infile       = input_file,
-                                       outfile      = output_file,
-                                       intervals    = intervals_file,
-                                       dependencies = nodes)
-
-            nodes = ValidateBAMFile(config   = config,
-                                    node     = nodes,
-                                    log_file = validated_file)
-       
+        output_file    = library_prefix + ".unaligned.bam"      
         nodes = MapDamageNode(reference        = common.paths.reference_sequence(bwa_prefix),
                               input_file       = output_file,
                               output_directory = common.paths.mapdamage_path(name, library, bwa_prefix),
@@ -401,24 +384,41 @@ def build_library_nodes(config, bwa_prefix, name, records):
     return library_nodes
 
 
+
 def build_merged_nodes(config, bwa_prefix, name,records):
     library_nodes = build_library_nodes(config, bwa_prefix, name, records)
     nodes = library_nodes.values()
-    for (src_postfix, dst_postfix, use_postfix) in ((".unaligned", "", True), (".realigned", ".realigned", config.gatk_jar)):
-        if not use_postfix:
-            continue
 
-        input_files = [(prefix + src_postfix + ".bam") for prefix in library_nodes]
-        output_file = add_postfix(common.paths.target_path(records[0], bwa_prefix), dst_postfix)
-        nodes = MergeSamFilesNode(config        = config, 
-                                   input_files  = input_files,
-                                   output_file  = output_file,
+    input_files = [(prefix + ".unaligned.bam") for prefix in library_nodes]
+    output_file = common.paths.target_path(records[0], bwa_prefix)
+    nodes = MergeSamFilesNode(config       = config, 
+                              input_files  = input_files,
+                              output_file  = output_file,
+                              dependencies = nodes)
+
+    log_file = common.paths.prefix_path(records[0], bwa_prefix) + ".unaligned.validated"
+    nodes = ValidateBAMFile(config      = config,
+                            node        = nodes,
+                            log_file    = log_file)
+
+    if config.gatk_jar:
+        unaligned_bam  = output_file
+        output_file    = add_postfix(unaligned_bam, ".realigned")
+
+        prefix         = common.paths.prefix_path(records[0], bwa_prefix)
+        intervals_file = prefix + ".unaligned.intervals"
+        validated_file = prefix + ".realigned.validated"
+        
+        nodes = IndelRealignerNode(config       = config, 
+                                   reference    = common.paths.reference_sequence(bwa_prefix),
+                                   infile       = unaligned_bam,
+                                   outfile      = output_file,
+                                   intervals    = intervals_file,
                                    dependencies = nodes)
 
-        log_file = common.paths.prefix_path(records[0], bwa_prefix) + src_postfix + ".validated"
-        nodes = ValidateBAMFile(config      = config,
-                                node        = nodes,
-                                log_file    = log_file)
+        nodes = ValidateBAMFile(config   = config,
+                                node     = nodes,
+                                log_file = validated_file)
 
     return output_file, nodes
 
@@ -486,6 +486,11 @@ def parse_config(argv):
             ui.print_err("ERROR: Prefix name is reserved keyword ('*', 'mito', 'nuclear', 'reads'), please rename:\n\t- Prefix: %s" % prefix)
             return None
     
+    if not config.bwa_prefix:
+        ui.print_err("ERROR: At least one BWA prefix must be specified using --bwa-prefix, --bwa-prefix-mito, or --bwa-prefix-nucl.")
+        return None
+        
+
     return config, args
 
     
