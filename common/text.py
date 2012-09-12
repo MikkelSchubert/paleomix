@@ -21,6 +21,11 @@
 # SOFTWARE.
 #
 import string
+import operator
+
+from utilities import try_cast
+
+
 
 def padded_table(table, min_padding = 4):
     sizes = [0] * len(table[0])
@@ -35,3 +40,65 @@ def padded_table(table, min_padding = 4):
             padded.append(string.ljust(str(field), sizes[ii]))
         yield "".join(padded).rstrip()
 
+
+def parse_padded_table(lines, sep = None):
+    def _do_split(line):
+        fields = line.split(sep)
+        fields[-1] = fields[-1].strip()
+        return fields
+
+    lines = iter(lines)
+    header = _do_split(lines.next())
+
+    for line in lines:
+        yield dict(zip(header, _do_split(line)))
+
+    
+def merge_table_records(tables, sum_columns = ()):
+    if not any(tables):
+        yield {}
+
+    filtered = filter(None, tables)
+    fields = filtered[0][0].keys()
+    keys = [field for field in fields if field not in sum_columns]
+
+    if set(sum_columns) - set(fields):
+        raise RuntimeError("Unexpected column-names in 'sum_columns'")    
+
+    merged = {}
+    for table in filtered:
+        for row in table:
+            key = tuple(row[field] for field in keys)
+            values = [int(row[field]) for field in sum_columns]
+            
+            if key not in merged:
+                merged[key] = values
+            elif sum_columns:
+                merged[key] = map(operator.add, merged[key], values)
+    
+    for (key, values) in merged.iteritems():
+        record = {}
+        record.update(zip(keys, key))
+        record.update(zip(sum_columns, values))
+
+        yield record
+
+
+def merge_table_files(filenames, sum_columns = (), sep = None):
+    tables = []
+    for filename in filenames:
+        with open(filename) as table_file:
+            lines = table_file.readlines()
+            tables.append(list(parse_padded_table(lines, sep = sep)))
+    
+    header = lines[0].split(sep)
+    header[-1] = header[-1].strip()
+
+    rows = []
+    for row in merge_table_records(tables, sum_columns = ("Hits", "NTs")):
+        rows.append([try_cast(row[key], int) for key in header])
+    rows.sort()
+    rows.insert(0, header)
+    
+    for row in padded_table(rows):
+        yield row
