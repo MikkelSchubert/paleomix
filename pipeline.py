@@ -116,9 +116,11 @@ class Pypeline:
 
     @classmethod
     def _poll_running_nodes(cls, running, nodes):
+        sleep_time = 0.05
         changes = errors = False
         while running and not (errors or changes):
-            time.sleep(1)
+            time.sleep(sleep_time)
+            sleep_time = min(5, sleep_time * 2)
 
             for (node, proc) in running.items():
                 if not proc.ready():
