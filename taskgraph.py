@@ -26,6 +26,9 @@ import collections
 from pypeline.common.fileutils import missing_executables
 
 
+# Max number of error messages of each type
+_MAX_ERROR_MESSAGES = 10
+
 
 class TaskError(RuntimeError):
     pass
@@ -180,18 +183,19 @@ class TaskGraph:
             for filename in task.output_files:
                 output_files[filename].append(task)
 
+        max_messages = range(_MAX_ERROR_MESSAGES)
         error_messages = []
-        error_messages.extend(cls._check_output_files(output_files))
-        error_messages.extend(cls._check_input_dependencies(input_files, output_files, tasks))
+        error_messages.extend(zip(max_messages, cls._check_output_files(output_files)))
+        error_messages.extend(zip(max_messages, cls._check_input_dependencies(input_files, output_files, tasks)))
 
         if error_messages:
             messages = []
-            for error in error_messages:
+            for (_, error) in error_messages:
                 for line in error.split("\n"):
                     messages.append("\t" + line)
 
-            raise TaskError("Errors detected during graph construction:\n%s" \
-                                % ("\n".join(messages)),)
+            raise TaskError("Errors detected during graph construction (max %i shown):\n%s" \
+                                % (_MAX_ERROR_MESSAGES * 2, "\n".join(messages)),)
 
     @classmethod
     def _check_output_files(cls, output_files):
