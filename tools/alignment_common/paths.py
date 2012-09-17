@@ -82,10 +82,9 @@ def collect_files(record):
 
 
 def reference_sequence(bwa_prefix):
-    if os.path.exists(bwa_prefix + ".fasta"):
-        return bwa_prefix + ".fasta"
-    elif os.path.exists(bwa_prefix + ".fa"):
-        return bwa_prefix + ".fa"
+    for ext in (".fa", ".fasta"):
+        if os.path.exists(bwa_prefix + ext):
+            return bwa_prefix + ext
 
     wo_ext = os.path.splitext(bwa_prefix)[0]
     if bwa_prefix != wo_ext:
