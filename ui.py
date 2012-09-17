@@ -26,7 +26,7 @@ from __future__ import print_function
 import sys
 import collections
 
-from pypeline.taskgraph import TaskGraph
+from pypeline.nodegraph import NodeGraph
 
 
 def _do_print_color(*vargs, **kwargs):
@@ -121,9 +121,9 @@ def _describe_nodes(nodes):
     for node in nodes:
         states[node.state] += 1
 
-    fields = [("running",  states[TaskGraph.Node.RUNNING]),
-              ("outdated", states[TaskGraph.Node.OUTDATED]),
-              ("failed",   states[TaskGraph.Node.ERROR])]
+    fields = [("running",  states[NodeGraph.Node.RUNNING]),
+              ("outdated", states[NodeGraph.Node.OUTDATED]),
+              ("failed",   states[NodeGraph.Node.ERROR])]
 
     line = [""]
     for (name, value) in fields:
@@ -131,7 +131,7 @@ def _describe_nodes(nodes):
             line.append("%i %s" % (value, name))
 
     line.append("%i done of %i nodes" \
-                    % (states[TaskGraph.Node.DONE], 
+                    % (states[NodeGraph.Node.DONE], 
                        sum(states.values())))
 
     return ", ".join(line)

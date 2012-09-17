@@ -35,7 +35,7 @@ class TaskError(RuntimeError):
     
 
 
-class TaskGraph:
+class NodeGraph:
     class Node:
         DONE, RUNNING, RUNABLE, QUEUED, OUTDATED, ERROR = range(6)
 
@@ -67,7 +67,7 @@ class TaskGraph:
             for task in subtasks:
                 # TODO: Check that all are 'Node's
                 if task not in self._tasks:
-                    self._tasks[task] = TaskGraph.Node(task)
+                    self._tasks[task] = NodeGraph.Node(task)
                     collapse(task.subnodes)
                     collapse(task.dependencies)
         collapse(tasks)
@@ -80,7 +80,7 @@ class TaskGraph:
 
 
     def set_task_state(self, node, state):
-        if state not in (None, TaskGraph.Node.RUNNING, TaskGraph.Node.ERROR):
+        if state not in (None, NodeGraph.Node.RUNNING, NodeGraph.Node.ERROR):
             raise ValueError("Cannot set states other than RUNNING and ERROR, or cleared (None).")
         
         self._tasks[node.task]._fixed_state = state

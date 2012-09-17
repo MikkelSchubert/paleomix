@@ -25,7 +25,7 @@ import signal
 import multiprocessing
 
 import pypeline.ui as ui
-import pypeline.taskgraph as taskgraph
+import pypeline.nodegraph as nodegraph
 from pypeline.node import Node
 from pypeline.common.utilities import safe_coerce_to_tuple
 
@@ -48,8 +48,8 @@ class Pypeline:
 
     def run(self, max_running = 1, dry_run = False, terminate_on_error = False):
         try:
-            nodes = taskgraph.TaskGraph(self._nodes)
-        except taskgraph.TaskError, error:
+            nodes = nodegraph.NodeGraph(self._nodes)
+        except nodegraph.TaskError, error:
             ui.print_err(error)
             return False
 
@@ -81,7 +81,7 @@ class Pypeline:
                 ui.print_err("Errors were detected ...")
                 return False
 
-        except taskgraph.TaskError, errors:
+        except nodegraph.TaskError, errors:
             errors = "\n".join(("\t" + line) for line in str(errors).strip().split("\n"))
             ui.print_err("Error in task-graph, terminating gracefully:\n%s" % errors)
             pool.terminate()
