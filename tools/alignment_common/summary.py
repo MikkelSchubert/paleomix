@@ -247,7 +247,6 @@ class SummaryTableNode(Node):
 
             for prefix in config.bwa_prefix:
                 label = _prefix_to_label(config, prefix, only_endogenous = False)
-                print hits[label]
                 for (key, value) in cls._merge_tables(hits[label], keyfunc).iteritems():
                     levels[key]["hits"][label] = value
 
