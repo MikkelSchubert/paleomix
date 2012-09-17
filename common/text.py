@@ -47,10 +47,15 @@ def parse_padded_table(lines, sep = None):
         fields[-1] = fields[-1].strip()
         return fields
 
-    lines = iter(lines)
-    header = _do_split(lines.next())
-
+    header = None
     for line in lines:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        elif header is None:
+            header = _do_split(line)
+            continue
+
         yield dict(zip(header, _do_split(line)))
 
     
