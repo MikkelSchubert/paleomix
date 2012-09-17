@@ -153,7 +153,7 @@ class PE_AdapterRemovalNode(CommandNode):
 
 def _build_gzip_command(prefix, name):
     basename = os.path.basename(prefix)
-    return AtomicCmd(["gzip", "-c", "%(TEMP_IN_GZ)s"],
-                     TEMP_IN_GZ = basename + name,
-                     OUT_STDOUT = prefix + name + ".gz")
+    return AtomicCmd(["gzip", "-c"],
+                     TEMP_IN_STDIN = basename + name,
+                     OUT_STDOUT    = prefix + name + ".gz")
 
