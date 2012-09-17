@@ -130,7 +130,7 @@ def _describe_nodes(nodes):
         if value:
             line.append("%i %s" % (value, name))
 
-    line.append("%i done of %i tasks" \
+    line.append("%i done of %i nodes" \
                     % (states[TaskGraph.Node.DONE], 
                        sum(states.values())))
 

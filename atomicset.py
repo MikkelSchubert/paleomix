@@ -108,7 +108,7 @@ class ParallelCmds(_CommandSet):
 class SequentialCmds(_CommandSet):
     """This class wraps a set of AtomicCmds, running them sequentially.
     This class therefore corresponds a set of lines in a bash script, 
-    each of which invokes a foreground task. For example:
+    each of which invokes a forground job. For example:
     $ bcftools view snps.bcf | bgzip > snps.vcf.bgz
     $ tabix snps.vcf.bgz
 
