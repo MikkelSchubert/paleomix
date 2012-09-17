@@ -40,6 +40,7 @@ from pypeline.nodes.coverage import CoverageNode
 from pypeline.nodes.samtools import BAMIndexNode
 from pypeline.nodes.adapterremoval import SE_AdapterRemovalNode, PE_AdapterRemovalNode
 
+from pypeline.common.text import parse_padded_table
 from pypeline.common.fileutils import swap_ext, add_postfix
 
 import pypeline.tools.alignment_common as common
@@ -206,23 +207,16 @@ def validate_records(records):
 
 
 def collect_records(filenames):
-    def _split(line):
-        return filter(None, line.strip().split())
-
     records = collections.defaultdict(list)
     for filename in filenames:
-        with open(filename) as mkfile:
-            header = None
-            for line in mkfile:
-                if line.startswith("#") or not line.strip():
-                    continue
-                elif not header:
-                    header = _split(line)
-                    continue
-                
-                record = dict(zip(header, _split(line)))
-                record["files"] = common.paths.collect_files(record)
-                records[record["Name"]].append(record)
+        try:
+            with open(filename) as mkfile:
+                for record in parse_padded_table(mkfile):
+                    record["files"] = common.paths.collect_files(record)
+                    records[record["Name"]].append(record)
+        except IOError, expt:
+            ui.print_err("ERROR: Failed to read read makefile:\n\t%s\n" % (expt,))
+            return None                        
                 
     return records
 
@@ -385,7 +379,7 @@ def build_library_nodes(config, bwa_prefix, name, records):
 
 
 
-def build_merged_nodes(config, bwa_prefix, name,records):
+def build_merged_nodes(config, bwa_prefix, name, records):
     library_nodes = build_library_nodes(config, bwa_prefix, name, records)
     nodes = library_nodes.values()
 
@@ -401,26 +395,34 @@ def build_merged_nodes(config, bwa_prefix, name,records):
                             node        = nodes,
                             log_file    = log_file)
 
-    if config.gatk_jar:
-        unaligned_bam  = output_file
-        output_file    = add_postfix(unaligned_bam, ".realigned")
+    nodes = CoverageNode(input_file   = output_file,
+                         name         = name,
+                         dependencies = nodes)
 
-        prefix         = common.paths.prefix_path(records[0], bwa_prefix)
-        intervals_file = prefix + ".unaligned.intervals"
-        validated_file = prefix + ".realigned.validated"
+    if not config.gatk_jar:
+        return nodes
+
+    unaligned_bam  = output_file
+    output_file    = add_postfix(unaligned_bam, ".realigned")
+    
+    prefix         = common.paths.prefix_path(records[0], bwa_prefix)
+    intervals_file = prefix + ".unaligned.intervals"
+    validated_file = prefix + ".realigned.validated"
         
-        nodes = IndelRealignerNode(config       = config, 
-                                   reference    = common.paths.reference_sequence(bwa_prefix),
-                                   infile       = unaligned_bam,
-                                   outfile      = output_file,
-                                   intervals    = intervals_file,
-                                   dependencies = nodes)
+    nodes = IndelRealignerNode(config       = config, 
+                               reference    = common.paths.reference_sequence(bwa_prefix),
+                               infile       = unaligned_bam,
+                               outfile      = output_file,
+                               intervals    = intervals_file,
+                               dependencies = nodes)
 
-        nodes = ValidateBAMFile(config   = config,
-                                node     = nodes,
-                                log_file = validated_file)
-
-    return output_file, nodes
+    nodes = ValidateBAMFile(config   = config,
+                            node     = nodes,
+                            log_file = validated_file)
+    
+    return CoverageNode(input_file   = output_file,
+                    name         = name,
+                    dependencies = nodes)
 
 
 def build_nodes(config, bwa_prefix, name, records):
@@ -437,34 +439,51 @@ def build_nodes(config, bwa_prefix, name, records):
 
             return None
 
-    output_file, nodes = build_merged_nodes(config, bwa_prefix, name, records)
-    return CoverageNode(input_file   = output_file,
-                        name         = name,
-                        dependencies = nodes)
+    return build_merged_nodes(config, bwa_prefix, name, records)
 
 
 
 
 def parse_config(argv):
     parser = optparse.OptionParser()
-    parser.add_option("--destination", default = "results")
-    parser.add_option("--picard-root", None)
-    parser.add_option("--temp-root", default = "/tmp")
-    parser.add_option("--bwa-prefix", action = "append", default = [])
-    parser.add_option("--bwa-prefix-mito", default = None)
-    parser.add_option("--bwa-prefix-nuclear", default = None)
-    parser.add_option("--bwa-min-quality", default = 25, type = int)
-    parser.add_option("--bwa-max-threads", type = int, default = 4)
-    parser.add_option("--max-threads", type = int, default = 14)
-    parser.add_option("--gatk-jar")
-    parser.add_option("--run", action = "store_true", default = False)
+    parser.add_option("--destination", default = "results",
+                      help = "The destination folder for result files [%default]")
+    parser.add_option("--picard-root", default = None,
+                      help = "Folder containing Picard JARs (http://picard.sf.net)")
+    parser.add_option("--temp-root", default = "/tmp",
+                      help = "Location for temporary files and folders [%default]")
+    parser.add_option("--bwa-prefix", action = "append", default = [],
+                      help = "BWA prefix to align the input files against.")
+    parser.add_option("--bwa-prefix-mito", default = None,
+                      help = "BWA prefix of mitochondrial genome to align input files against (used in summary).")
+    parser.add_option("--bwa-prefix-nuclear", default = None,
+                      help = "BWA prefix of nuclear genome to align input files against (used in summary).")
+    parser.add_option("--bwa-min-quality", default = 25, type = int,
+                      help = "Minimum mapping quality (Phred score) of hits produced by BWA. " \
+                             "Hits with a mapping quality below this value are filtered. [%default]")
+    parser.add_option("--bwa-max-threads", type = int, default = 4,
+                      help = "Maximum number of threads to use per BWA instance [%default]")
+    parser.add_option("--max-threads", type = int, default = 14,
+                      help = "Maximum number of threads to use in total [%default]")
+    parser.add_option("--gatk-jar", default = None,
+                      help = "Location of GenomeAnalysisTK.jar (www.broadinstitute.org/gatk)." \
+                             "If specified, BAM files are realigned using the IndelRealigner tool.")
+    parser.add_option("--run", action = "store_true", default = False,
+                      help = "If not passed, only a dry-run in performed, and no tasks are executed.")
     config, args = parser.parse_args(argv)
 
     if not config.picard_root:
         ui.print_err("--picard-root must be set to the location of the Picard JARs.")
         return None
-    elif not config.gatk_jar or not os.path.exists(config.gatk_jar):
-        ui.print_warn("--gatk-jar not set, indel realigned bams will not be produced.")
+    elif not os.path.isdir(config.picard_root):
+        ui.print_err("ERROR: Path passed to --picard_root is not a directory: %s" % config.picard_root)
+        return None
+
+    if not config.gatk_jar:
+        ui.print_warn("WARNING: --gatk-jar not set, indel realigned bams will not be produced.")
+    elif not os.path.isfile(config.gatk_jar):
+        ui.print_err("ERROR: Path passed to --gatk-jar is not a file: %s" % config.gatk_jar)
+        return None
 
     config.bwa_prefix = set(config.bwa_prefix)
     if config.bwa_prefix_mito:
@@ -475,7 +494,8 @@ def parse_config(argv):
     for prefix in config.bwa_prefix:
         if not common.paths.reference_sequence(prefix):
             ui.print_err("ERROR: Could not find reference sequence for prefix: '%s'" % prefix)
-            ui.print_err("       Must have extension .fasta or .fa, and be located at '${prefix}', '${prefix}.fa' or '${prefix}.fasta'.")
+            ui.print_err("       Refernce sequences MUST have the extensions .fasta or .fa, and")
+            ui.print_err("       be located at '${prefix}', '${prefix}.fa' or '${prefix}.fasta'.")
             return None
         elif (set(prefix) & set(string.whitespace)):
             ui.print_err("ERROR: BWA prefix must not contain whitespace:\n\t- Prefix: %s" % prefix)
@@ -505,6 +525,9 @@ def main(argv):
     common.paths.ROOT = config.destination
 
     records = collect_records(args)
+    if records is None:
+        return 1
+
     if not validate_records(records):
         return 1
 
@@ -517,7 +540,6 @@ def main(argv):
                 return 1
             nodes.append(current_nodes)
 
-#        pipeline.add_nodes(nodes)
         pipeline.add_nodes(SummaryTableNode(config       = config,
                                             records      = runs,
                                             dependencies = nodes))
