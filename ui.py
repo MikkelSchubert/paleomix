@@ -66,39 +66,39 @@ def print_disabled(*vargs, **kwargs):
 
 
 def print_node_tree(graph, collapse = True):
-    print_msg("Pipeline%s" % _describe_nodes(graph.iterflat()))
-    _print_sub_nodes(graph, collapse, "   ")
+    print_msg("Pipeline%s" % _describe_nodes(graph, graph.iterflat()))
+    _print_sub_nodes(graph, graph, collapse, "   ")
         
 
-def _print_sub_nodes(nodes, collapse, prefix = ""):
+def _print_sub_nodes(graph, nodes, collapse, prefix = ""):
     viable_nodes, dead_nodes = [], []
     for node in nodes:
-        if collapse and (node.state == node.DONE):
+        if collapse and (graph.get_node_state(node) == NodeGraph.DONE):
             dead_nodes.append(node)
         else:
             viable_nodes.append(node)
     viable_nodes.sort(key = str)
 
     for node in viable_nodes:
-        description = "%s%s %s" % (prefix, _get_runable_prefix(node), node)
+        description = "%s%s %s" % (prefix, _get_runable_prefix(graph, node), node)
         if node.subnodes:
-            description += _describe_nodes(node.subnodes)
+            description += _describe_nodes(graph, node.subnodes)
             
-        print_func = _get_print_function(node)
+        print_func = _get_print_function(graph, node)
         print_func(description)
 
         is_last_node = (node == viable_nodes[-1]) and not dead_nodes
         current_prefix = prefix + ("   " if is_last_node else "|  ")
 
         if node.dependencies:
-            if collapse and _collapse_node(node.dependencies):
+            if collapse and _collapse_node(graph, node.dependencies):
                 description = "+ %i dependencies hidden ..." \
                     % _count_dependencies(node.dependencies)
 
                 print_disabled(current_prefix + description)
                 print_disabled(current_prefix)
             else:
-                _print_sub_nodes(node.dependencies, collapse, current_prefix + "   ")
+                _print_sub_nodes(graph, node.dependencies, collapse, current_prefix + "   ")
         else:
             print_func(current_prefix)
 
@@ -116,14 +116,14 @@ def _count_dependencies(dependencies):
     return counter
 
 
-def _describe_nodes(nodes):
+def _describe_nodes(graph, nodes):
     states = collections.defaultdict(int)
     for node in nodes:
-        states[node.state] += 1
+        states[graph.get_node_state(node)] += 1
 
-    fields = [("running",  states[NodeGraph.Node.RUNNING]),
-              ("outdated", states[NodeGraph.Node.OUTDATED]),
-              ("failed",   states[NodeGraph.Node.ERROR])]
+    fields = [("running",  states[NodeGraph.RUNNING]),
+              ("outdated", states[NodeGraph.OUTDATED]),
+              ("failed",   states[NodeGraph.ERROR])]
 
     line = [""]
     for (name, value) in fields:
@@ -131,46 +131,47 @@ def _describe_nodes(nodes):
             line.append("%i %s" % (value, name))
 
     line.append("%i done of %i nodes" \
-                    % (states[NodeGraph.Node.DONE], 
+                    % (states[NodeGraph.DONE], 
                        sum(states.values())))
 
     return ", ".join(line)
     
 
-def _collapse_node(dependencies):
+def _collapse_node(graph, dependencies):
     """Returns true if a node may be collapsed in the dependency graph."""
-    if all((node.state == node.DONE) for node in dependencies):
+    if all((graph.get_node_state(node) == NodeGraph.DONE) for node in dependencies):
         return (_count_dependencies(dependencies) > 2)
 
     return False
 
 
-def _get_print_function(node):
+def _get_print_function(graph, node):
     for subnode in node.subnodes:
-        if subnode.state == subnode.RUNNING:
+        if graph.get_node_state(subnode) == NodeGraph.RUNNING:
             return print_info
 
-    if node.state is node.RUNNING:
+    state = graph.get_node_state(node)
+    if state is NodeGraph.RUNNING:
         return print_info
-    elif node.state is node.DONE:
+    elif state is NodeGraph.DONE:
         return print_disabled
-    elif node.state is node.OUTDATED:
+    elif state is NodeGraph.OUTDATED:
         return print_warn
-    elif node.state is node.ERROR:
+    elif state is NodeGraph.ERROR:
         return print_err
     else:
         return print_msg
 
 
-def _get_runable_prefix(node):
+def _get_runable_prefix(graph, node):
     """Returns either 'R' or '+', dependening on the state of the node. If the node, or any
     of its subnodes, are runable, then 'R' is returned, otherwise '+' is returned. This is 
     used to decorate the dependency graph."""
-    if node.state in (node.RUNNING, node.RUNABLE):
+    if graph.get_node_state(node) in (NodeGraph.RUNNING, NodeGraph.RUNABLE):
         return "R"
     
     for subnode in node.subnodes:
-        if subnode.state in (node.RUNNING, node.RUNABLE):
+        if graph.get_node_state(subnode) in (NodeGraph.RUNNING, NodeGraph.RUNABLE):
             return "R"
     
     return "+"

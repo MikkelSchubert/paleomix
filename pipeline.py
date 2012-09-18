@@ -49,7 +49,7 @@ class Pypeline:
     def run(self, max_running = 1, dry_run = False, terminate_on_error = False):
         try:
             nodes = nodegraph.NodeGraph(self._nodes)
-        except nodegraph.TaskError, error:
+        except nodegraph.NodeGraphError, error:
             ui.print_err(error)
             return False
 
@@ -81,7 +81,7 @@ class Pypeline:
                 ui.print_err("Errors were detected ...")
                 return False
 
-        except nodegraph.TaskError, errors:
+        except nodegraph.NodeGraphError, errors:
             errors = "\n".join(("\t" + line) for line in str(errors).strip().split("\n"))
             ui.print_err("Error in task-graph, terminating gracefully:\n%s" % errors)
             pool.terminate()
