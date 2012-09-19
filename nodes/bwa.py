@@ -33,8 +33,10 @@ class BWAIndex(CommandNode):
         prefix = prefix if prefix else input_file
         command = AtomicCmd(["bwa", "index", 
                              "-a", algorithm,
-                             "-p", prefix],
+                             "-p", "%(TEMP_OUT_PREFIX)s",
+                             "%(IN_FILE)s"],
                             IN_FILE = input_file,
+                            TEMP_OUT_PREFIX = os.path.basename(prefix),
                             **_prefix_files(prefix, iotype = "OUT"))
         
         description =  "<BWA Index '%s' -> '%s.*'>" % (input_file, prefix)
