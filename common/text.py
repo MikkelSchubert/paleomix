@@ -41,13 +41,12 @@ def padded_table(table, min_padding = 4):
         yield "".join(padded).rstrip()
 
 
-def parse_padded_table(lines, sep = None):
+def parse_padded_table(lines, sep = None, header = None):
     def _do_split(line):
         fields = line.split(sep)
         fields[-1] = fields[-1].strip()
         return fields
 
-    header = None
     for line in lines:
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
