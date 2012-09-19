@@ -52,13 +52,13 @@ class NodeGraph:
 
 
     def get_node_state(self, node):
-        if node in self._fixed_states:
-            return self._states[node]
+        if self._fixed_states.get(node) is not None:
+            return self._fixed_states[node]
         return self._states.get(node)
 
 
     def set_node_state(self, node, state):
-        if state not in (None, NodeGraph.Node.RUNNING, NodeGraph.Node.ERROR):
+        if state not in (None, NodeGraph.RUNNING, NodeGraph.ERROR):
             raise ValueError("Cannot set states other than RUNNING and ERROR, or cleared (None).")
         
         self._fixed_states[node] = state
@@ -78,9 +78,7 @@ class NodeGraph:
 
     def _update_graph(self):
         if not self._graph_valid:
-            for node in self._reverse_dependencies:
-                node._state = None
-
+            self._states = {}
             for node in self._reverse_dependencies:
                 self._update_states(node)
 
@@ -92,7 +90,7 @@ class NodeGraph:
         if state is not None:
             # Possibly return a fixed state
             return state
-
+ 
         # Update sub-nodes before checking for fixed states
         state = NodeGraph.DONE
         for subnode in (node.subnodes | node.dependencies):
@@ -107,7 +105,7 @@ class NodeGraph:
             else:
                 state = NodeGraph.QUEUED
         self._states[node] = state
-
+ 
         # Possibly return a fixed state
         return self.get_node_state(node)
 

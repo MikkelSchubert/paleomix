@@ -100,12 +100,12 @@ class Pypeline:
         any_runable_left = False
         idle_processes = max_threads - sum(node.threads for node in running)
         for node in nodes.iterflat():
-            any_runable_left |= (node.state in (node.RUNABLE, node.RUNNING))
+            any_runable_left |= (nodes.get_node_state(node) in (nodes.RUNABLE, nodes.RUNNING))
             
-            if idle_processes and (node.state == node.RUNABLE):
+            if idle_processes and (nodes.get_node_state(node) == nodes.RUNABLE):
                 if idle_processes >= node.threads:
-                    running[node] = pool.apply_async(_call_run, args = (node.task, self._config))
-                    nodes.set_task_state(node, node.RUNNING)
+                    running[node] = pool.apply_async(_call_run, args = (node, self._config))
+                    nodes.set_node_state(node, nodes.RUNNING)
                     idle_processes -= node.threads
             
             if any_runable_left and not idle_processes:
@@ -128,12 +128,12 @@ class Pypeline:
                 changes = True
 
                 running.pop(node)
-                nodes.set_task_state(node, None)
+                nodes.set_node_state(node, None)
                    
                 try:
                     proc.get()
                 except Exception, errors:
-                    nodes.set_task_state(node, node.ERROR)                    
+                    nodes.set_node_state(node, nodes.ERROR)                    
                     ui.print_err("%s: Error occurred running command (terminating gracefully):\n%s\n" \
                                      % (node, "\n".join(("\t" + line) for line in str(errors).strip().split("\n"))))
 
