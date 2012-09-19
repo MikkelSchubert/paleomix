@@ -80,7 +80,7 @@ def modified_after(younger, older):
         for filename in filenames:
             yield os.path.getmtime(os.path.realpath(filename))
 
-    return max(get_mtimes(younger)) >= min(get_mtimes(older))
+    return max(get_mtimes(younger)) > min(get_mtimes(older))
 
 
 def is_executable(filename):
