@@ -23,7 +23,7 @@
 import os
 
 from pypeline.node import Node
-from pypeline.common.fileutils import reroot_path
+from pypeline.common.fileutils import make_dirs
 
 
 class HardlinkNode(Node):
@@ -33,11 +33,12 @@ class HardlinkNode(Node):
 
         Node.__init__(self, 
                       description  = "<Hardlink: '%s' -> '%s'>" \
-                          % (input_file, self._output_file),
+                          % (self._input_file, self._output_file),
                       input_files  = self._input_file,
                       output_files = self._output_file,
                       dependencies = dependencies)
 
 
     def _run(self, _config, _temp):
-        os.link(self._input_file, self._output_file)
+        make_dirs(os.path.dirname(self._output_file))
+        os.link(self._input_file,  self._output_file)
