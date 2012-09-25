@@ -20,3 +20,30 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
 # SOFTWARE.
 #
+import os
+import sys
+
+import pypeline.ui as ui
+import pypeline.tools.bam_pipeline.mkfile as mkfile
+import pypeline.tools.bam_pipeline.pipeline as pipeline
+
+
+def main(argv):
+    if (len(argv) == 0) or (argv[0] not in ("mkfile", "run", "dry_run", "dryrun")):
+        basename = os.path.basename(sys.argv[0])
+        ui.print_info("Usage:")
+        ui.print_info("  -- %s help            -- Display this message" % basename)
+        ui.print_info("  -- %s mkfile [...]    -- Generate makefile from 'SampleSheet.csv' files." % basename)
+        ui.print_info("  -- %s dry_run [...]   -- Perform dry run of pipeline on provided makefiles." % basename)
+        ui.print_info("  -- %s run [...]       -- Run pipeline on provided makefiles." % basename)
+    elif argv[0] == "mkfile":
+        return mkfile.main(argv[1:])
+    elif argv[0] == "run":
+        return pipeline.main(argv[1:])
+    elif argv[0] in ("dryrun", "dry_run"):
+        return pipeline.main(argv[1:] + ["--dry-run"])
+
+    return 1
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

@@ -29,12 +29,12 @@ import collections
 
 import pysam
 
-from pypeline.common.fileutils import swap_ext, move_file, reroot_path
-
-import pypeline.common.text as text
-import pypeline.tools.alignment_common as common
 from pypeline.node import Node
 from pypeline.common.utilities import safe_coerce_to_tuple
+from pypeline.common.fileutils import swap_ext, move_file, reroot_path
+import pypeline.common.text as text
+
+import pypeline.tools.bam_pipeline as common
 
 
 

@@ -43,8 +43,8 @@ from pypeline.nodes.adapterremoval import SE_AdapterRemovalNode, PE_AdapterRemov
 from pypeline.common.text import parse_padded_table
 from pypeline.common.fileutils import swap_ext, add_postfix
 
-import pypeline.tools.alignment_common as common
-from pypeline.tools.alignment_common.summary import SummaryTableNode
+import pypeline.tools.bam_pipeline as common
+from pypeline.tools.bam_pipeline.summary import SummaryTableNode
 
 _ADAPTERRM_SE_CACHE = {}
 _ADAPTERRM_PE_CACHE = {}
@@ -446,12 +446,12 @@ def build_nodes(config, bwa_prefix, name, records):
 
 def parse_config(argv):
     parser = optparse.OptionParser()
-    parser.add_option("--destination", default = "results",
-                      help = "The destination folder for result files [%default]")
+    parser.add_option("--destination", default = "./results",
+                      help = "The destination folder for result files [%default/]")
     parser.add_option("--picard-root", default = None,
                       help = "Folder containing Picard JARs (http://picard.sf.net)")
     parser.add_option("--temp-root", default = "/tmp",
-                      help = "Location for temporary files and folders [%default]")
+                      help = "Location for temporary files and folders [%default/]")
     parser.add_option("--bwa-prefix", action = "append", default = [],
                       help = "BWA prefix to align the input files against.")
     parser.add_option("--bwa-prefix-mito", default = None,
@@ -468,22 +468,21 @@ def parse_config(argv):
     parser.add_option("--gatk-jar", default = None,
                       help = "Location of GenomeAnalysisTK.jar (www.broadinstitute.org/gatk)." \
                              "If specified, BAM files are realigned using the IndelRealigner tool.")
-    parser.add_option("--run", action = "store_true", default = False,
-                      help = "If not passed, only a dry-run in performed, and no tasks are executed.")
+    parser.add_option("--dry-run", action = "store_true", default = False,
+                      help = "If passed, only a dry-run in performed, and no tasks are executed.")
     config, args = parser.parse_args(argv)
 
+    errors, warnings = [], []
     if not config.picard_root:
-        ui.print_err("--picard-root must be set to the location of the Picard JARs.")
-        return None
+        errors.append("ERROR: --picard-root must be set to the location of the Picard JARs: This is required")
+        errors.append("       for ValidateSamFile.jar, MarkDuplicates.jar, and possibly more.")
     elif not os.path.isdir(config.picard_root):
-        ui.print_err("ERROR: Path passed to --picard_root is not a directory: %s" % config.picard_root)
-        return None
+        errors.append("ERROR: Path passed to --picard_root is not a directory: %s" % config.picard_root)
 
     if not config.gatk_jar:
-        ui.print_warn("WARNING: --gatk-jar not set, indel realigned bams will not be produced.")
+        warnings.append("WARNING: --gatk-jar not set, indel realigned bams will not be produced.")
     elif not os.path.isfile(config.gatk_jar):
-        ui.print_err("ERROR: Path passed to --gatk-jar is not a file: %s" % config.gatk_jar)
-        return None
+        errors.append("ERROR: Path passed to --gatk-jar is not a file: %s" % config.gatk_jar)
 
     config.bwa_prefix = set(config.bwa_prefix)
     if config.bwa_prefix_mito:
@@ -493,23 +492,25 @@ def parse_config(argv):
 
     for prefix in config.bwa_prefix:
         if not common.paths.reference_sequence(prefix):
-            ui.print_err("ERROR: Could not find reference sequence for prefix: '%s'" % prefix)
-            ui.print_err("       Refernce sequences MUST have the extensions .fasta or .fa, and")
-            ui.print_err("       be located at '${prefix}', '${prefix}.fa' or '${prefix}.fasta'.")
-            return None
+            errors.append("ERROR: Could not find reference sequence for prefix: '%s'" % prefix)
+            errors.append("       Refernce sequences MUST have the extensions .fasta or .fa, and")
+            errors.append("       be located at '${prefix}', '${prefix}.fa' or '${prefix}.fasta'.")
         elif (set(prefix) & set(string.whitespace)):
-            ui.print_err("ERROR: BWA prefix must not contain whitespace:\n\t- Prefix: %s" % prefix)
-            return None
+            errors.append("ERROR: BWA prefix must not contain whitespace:\n\t- Prefix: %s" % prefix)
 
         label = common.paths.prefix_to_filename(prefix)
         if label in ("*", "mito", "nuclear", "reads"):
-            ui.print_err("ERROR: Prefix name is reserved keyword ('*', 'mito', 'nuclear', 'reads'), please rename:\n\t- Prefix: %s" % prefix)
-            return None
+            errors.append("ERROR: Prefix name is reserved keyword ('*', 'mito', 'nuclear', 'reads'), please rename:\n\t- Prefix: %s" % prefix)
     
     if not config.bwa_prefix:
-        ui.print_err("ERROR: At least one BWA prefix must be specified using --bwa-prefix, --bwa-prefix-mito, or --bwa-prefix-nucl.")
+        errors.append("ERROR: At least one BWA prefix must be specified using --bwa-prefix,")
+        errors.append("       --bwa-prefix-mito, or --bwa-prefix-nucl.")
+
+    map(ui.print_warn, warnings)
+    if errors:
+        map(ui.print_err, errors)
+        ui.print_err("See --help for more information")
         return None
-        
 
     return config, args
 
@@ -517,6 +518,7 @@ def parse_config(argv):
 
 
 def main(argv):
+    ui.print_info("Running BAM pipeline ...")
     config_args = parse_config(argv)
     if not config_args:
         return 1
@@ -544,7 +546,7 @@ def main(argv):
                                             records      = runs,
                                             dependencies = nodes))
 
-    pipeline.run(dry_run = not config.run, max_running = config.max_threads)
+    pipeline.run(dry_run = config.dry_run, max_running = config.max_threads)
 
     return 0
 

@@ -25,8 +25,7 @@ import os
 from pypeline.node import CommandNode
 from pypeline.atomiccmd import AtomicCmd, CmdError
 from pypeline.atomicset import ParallelCmds
-
-import pypeline.tools.unicat as unicat
+from pypeline.commands import unicat 
 
 
 

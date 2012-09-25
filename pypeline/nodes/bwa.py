@@ -25,7 +25,7 @@ import os
 from pypeline.node import CommandNode
 from pypeline.atomiccmd import AtomicCmd
 from pypeline.atomicset import ParallelCmds
-from pypeline.tools import sam_to_bam
+from pypeline.commands import sam_to_bam
 
 
 class BWAIndex(CommandNode):
