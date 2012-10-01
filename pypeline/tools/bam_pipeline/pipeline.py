@@ -105,12 +105,13 @@ class ValidateBAMFile(MetaNode):
         if isinstance(node, MetaNode):
             subnodes = list(node.subnodes)
         
-        validation =  ValidateBAMNode(config       = config, 
-                                      bamfile      = input_file,
-                                      output_file  = log_file,
-                                      ignore       = ["MATE_NOT_FOUND"],
-                                      dependencies = subnodes)
-        subnodes.append(validation)
+        validation_params = ValidateBAMNode.customize(config       = config,
+                                                      input_bam    = input_file,
+                                                      output_log   = log_file,
+                                                      dependencies = subnodes)
+        validation_params.command.push_parameter("IGNORE", "MATE_NOT_FOUND", sep = "=")
+
+        subnodes.append(validation_params.build_node())
 
         description = "<w/Validation: " + str(node)[1:]        
         MetaNode.__init__(self, 
@@ -298,13 +299,16 @@ def build_pe_trim_nodes(config, bwa_prefix, record):
 
 
 def build_markdup_node(config, input_files, output_file, dependencies):
-    node = MarkDuplicatesNode(config       = config, 
-                              input_files  = input_files,
-                              output_file  = output_file,
-                              metrics_file = swap_ext(output_file, ".metrics"),
-                              dependencies = dependencies)
+    mkdup_params = MarkDuplicatesNode.customize(config       = config, 
+                                                input_files  = input_files,
+                                                output_file  = output_file,
+                                                metrics_file = swap_ext(output_file, ".metrics"),
+                                                dependencies = dependencies)
+    # FIXME: BAMs should be properly marked previously
+    mkdup_params.command.push_parameter("ASSUME_SORTED", "True", sep = "=")
+
     return ValidateBAMFile(config      = config,
-                           node        = node)
+                           node        = mkdup_params.build_node())
 
 
 def build_kirdup_node(config, input_files, output_file, dependencies):

@@ -24,63 +24,63 @@ import os
 
 from pypeline.node import CommandNode
 from pypeline.atomiccmd import AtomicCmd
+from pypeline.atomicparams import *
 from pypeline.common.fileutils import swap_ext
 from pypeline.common.utilities import safe_coerce_to_tuple
 
 
 class ValidateBAMNode(CommandNode):
-    def __init__(self, config, bamfile, output_file = None, ignore = (), dependencies = ()):
-        jar  = os.path.join(config.picard_root, "ValidateSamFile.jar")
-        call = ["java", "-jar", jar,
-                "TMP_DIR=%s" % config.temp_root, "INPUT=%(IN_BAM)s"]
+    @create_customizable_cli_parameters
+    def customize(cls, config, input_bam, output_log = None, dependencies = ()):
+        jar_file = os.path.join(config.picard_root, "ValidateSamFile.jar")
+        params = AtomicJavaParams(config, jar_file)
 
-        for error in ignore:
-            call.append("IGNORE=%s" % (error,))
+        params.set_parameter("I", "%(IN_BAM)s", sep = "=")
+        params.set_paths(IN_BAM     = input_bam,
+                         OUT_STDOUT = output_log or (input_bam + ".log"))
+       
+        return {"command" : params}
 
-        if not output_file:
-            output_file = bamfile + ".validated"
 
-        command = AtomicCmd(call,
-                            IN_BAM     = bamfile,
-                            OUT_STDOUT = output_file)
-
+    @use_customizable_cli_parameters
+    def __init__(self, parameters):
         CommandNode.__init__(self, 
-                             command      = command,
-                             description  = "<Validate BAM: '%s'>" % (bamfile,),
-                             dependencies = dependencies)
+                             command      = parameters.command.create_cmd(),
+                             description  = "<Validate BAM: '%s'>" % (parameters.input_bam,),
+                             dependencies = parameters.dependencies)
 
 
 class MarkDuplicatesNode(CommandNode):
-    def __init__(self, config, input_files, output_file, metrics_file = None, keep_duplicates = False, dependencies = ()):
-        if not metrics_file:
-            metrics_file = output_file + ".metrics"
+    @create_customizable_cli_parameters
+    def customize(cls, config, input_bams, output_bam, output_metrics = None, dependencies = ()):
+        jar_file = os.path.join(config.picard_root, "MarkDuplicates.jar")
+        params = AtomicJavaParams(config, jar_file)
 
-        jar  = os.path.join(config.picard_root, "MarkDuplicates.jar")
-        call = ["java", "-jar", jar, 
-                "TMP_DIR=%s" % config.temp_root, 
-                "REMOVE_DUPLICATES=%s" % str(not keep_duplicates).lower(),
-                "CREATE_INDEX=True",
-                # ASSUME_SORTED is required to allow use of 'samtools sort', which
-                # does not add a line to the header specifying sorting. In the case
-                # of unsorted files the command will abort.
-                "ASSUME_SORTED=True", 
-                "OUTPUT=%(OUT_BAM)s",
-                "METRICS_FILE=%(OUT_METRICS)s"]
+        # Create .bai by default, since it is required by a lot of other programs
+        params.set_parameter("CREATE_INDEX", "True", sep = "=", fixed = False)
+        # Remove duplicates from output by default to save disk-space
+        params.set_parameter("REMOVE_DUPLICATES", "True", sep = "=", fixed = False)
 
-        args = {"OUT_BAM"     : output_file,
-                "OUT_BAI"     : swap_ext(output_file, ".bai"),
-                "OUT_METRICS" : metrics_file}       
+        params.set_option("OUTPUT", "%(OUT_BAM)s", sep = "=")
+        params.set_option("METRICS_FILE", "%(OUT_METRICS)s", sep = "=")
 
-        input_files = safe_coerce_to_tuple(input_files)
-        for (index, input_file) in enumerate(input_files):
-            call.append("INPUT=%%(IN_BAM_%i)s" % index)
-            args["IN_BAM_%i" % index] = input_file
+        for (index, filename) in enumerate(safe_coerce_to_tuple(input_files)):
+            params.push_parameter("I", "%%(IN_BAM_%02i)s" % index)
+            params.set_paths("IN_BAM_%02i" % index, filename)
 
-        description =  "<MarkDuplicates: %s>" % (self._desc_files(input_files),)
+        params.set_paths(OUT_BAM     = output_file,
+                         OUT_BAI     = swap_ext(output_file, ".bai"),
+                         OUT_METRICS = metrics_file or (output_file + ".metrics"))
+
+        return {"command" : params}
+        
+
+    def __init__(self, parameters):
+        description =  "<MarkDuplicates: %s>" % (self._desc_files(parameters.input_bams),)
         CommandNode.__init__(self, 
-                             command      = AtomicCmd(call, **args),
+                             command      = parameters.command.create_cmd(),
                              description  = description,
-                             dependencies = dependencies)
+                             dependencies = parameters.dependencies)
 
 
 class MergeSamFilesNode(CommandNode):
@@ -108,3 +108,18 @@ class MergeSamFilesNode(CommandNode):
                              command      = command,
                              description  = description,
                              dependencies = dependencies)
+
+
+if __name__ == '__main__':
+    class Config:
+        temp_root = "temp/tmp"
+        picard_root = "/home/mischu/archive/research/tools/bamPipeline/picard-tools-1.69"
+
+    params = ValidateBAMNode.customize(config     = Config, 
+                                       input_bam  = "/home/mischu/archive/research/tools/seqStats/test/data/exampleBAM.bam",
+                                       output_log = "temp/validated.log")
+    params.command.push_parameter("IGNORE=MATE_NOT_FOUND")
+    params.command.push_parameter("IGNORE=MISSING_TAG_NM")
+    node = params.build_node()
+
+    node.run(Config)
