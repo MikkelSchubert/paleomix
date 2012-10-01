@@ -66,7 +66,7 @@ class RAxMLReduceNode(CommandNode):
 
 
     @use_customizable_cli_parameters
-    def __init__(self, parameters = None, **kwargs):
+    def __init__(self, parameters):
         self._kwargs = parameters.command.paths
         CommandNode.__init__(self,
                              command      = parameters.command.create_cmd(),
@@ -173,7 +173,7 @@ class RAxMLRapidBSNode(CommandNode):
 
         CommandNode.__init__(self,
                              command      = parameters.command.create_cmd(),
-                             description  = "<RAxMLRapidBS: '{%s}' -> '{%s}'>" \
+                             description  = "<RAxMLRapidBS: '%s' -> '%s'>" \
                                  % (parameters.input_alignment, parameters.output_template),
                              threads      = parameters.threads,
                              dependencies = parameters.dependencies)
