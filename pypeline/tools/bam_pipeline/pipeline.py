@@ -226,7 +226,8 @@ def build_se_trim_nodes(config, bwa_prefix, record):
         trim_prefix, trim_node = _ADAPTERRM_SE_CACHE[id(record)]
     except KeyError:
         trim_prefix = os.path.join(common.paths.full_path(record, "reads"), "reads")
-        trim_node   = SE_AdapterRemovalNode(record["files"]["SE"], trim_prefix)
+        trim_node   = SE_AdapterRemovalNode(input_files     = record["files"]["SE"], 
+                                            output_template = trim_prefix)
         _ADAPTERRM_SE_CACHE[id(record)] = (trim_prefix, trim_node)
 
     output_dir  = common.paths.full_path(record, bwa_prefix)
