@@ -141,7 +141,7 @@ class AtomicParams:
                              "Value"  : value,
                              "Sep"    : sep,
                              "Fixed"  : fixed,
-                             "Singleton" : singleton})
+                             "Singleton" : False})
 
 
     def set_parameter(self, key, value = None, sep = None, fixed = True):
@@ -158,10 +158,10 @@ class AtomicParams:
         true, this particular parameter cannot be removed using 'pop_parameter', or 
         overwritten by subsequent calls to 'set_parameter'."""
         
-        if any(not opt["Single"] for opt in self._params if (opt["Key"] == key)):
+        if any(not opt["Singleton"] for opt in self._params if (opt["Key"] == key)):
             raise ParameterError("Attempted to overwrite non-singleton parameter: %s" % key)
 
-        param = {"Key" : key, "Value"  : value, "Sep" : sep, "Fixed"  : fixed, "Single" : True}
+        param = {"Key" : key, "Value"  : value, "Sep" : sep, "Fixed"  : fixed, "Singleton" : True}
         for o_param in self._params:
             if o_param["Key"] == key:
                 if o_param["Fixed"]:
@@ -183,7 +183,12 @@ class AtomicParams:
         raise KeyError("Could not pop parameter: %s" % key)
 
 
-    def set_paths(self, **kwargs):
+    def set_paths(self, key = None, value = None, **kwargs):
+        if key and value:
+            kwargs[key] = value
+        elif key or value:
+            raise ParameterError("Either neither or both 'key' and 'value' parameters must be specified.")
+        
         for (key, path) in kwargs.iteritems():
             if key in self._paths:
                 raise ParameterError("Attempted to overwrite existing path: %s" % key)
