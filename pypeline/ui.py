@@ -24,6 +24,7 @@
 from __future__ import print_function
 
 import sys
+import datetime
 import collections
 
 from pypeline.nodegraph import NodeGraph
@@ -66,6 +67,7 @@ def print_disabled(*vargs, **kwargs):
 
 
 def print_node_tree(graph, collapse = True):
+    print_msg(datetime.datetime.now().strftime("%F %T"))
     print_msg("Pipeline%s" % _describe_nodes(graph, graph.iterflat()))
     _print_sub_nodes(graph, graph, collapse, "   ")
         
