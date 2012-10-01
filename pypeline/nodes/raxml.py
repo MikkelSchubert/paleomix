@@ -28,39 +28,55 @@ import pypeline.common.fileutils as fileutils
 
 from pypeline.node import CommandNode
 from pypeline.atomiccmd import AtomicCmd
+from pypeline.atomicparams import *
 
 
 
 
 class RAxMLReduceNode(CommandNode):
-    def __init__(self, inalignment, outalignment, inpartitions, outpartitions, dependencies = ()):
-        call = ["raxmlHPC",
-                "-f", "c",
-                "-m", "GTRGAMMA", # Model required, but not used
-                "-n", "GTRGAMMA",
-                "-w", "%(TEMP_DIR)s",
-                "-s", "%(TEMP_IN_ALIGNMENT)s",
-                "-q", "%(TEMP_IN_PARTITIONS)s"]
+    @create_customizable_cli_parameters
+    def customize(cls, input_alignment, input_partition, output_alignment, output_partition, dependencies = ()):
+        command = AtomicParams("raxmlHPC")
 
-        self._kwargs = {"IN_ALIGNMENT"        : inalignment,
-                        "IN_PARTITIONS"       : inpartitions,
-                            
-                        "TEMP_IN_ALIGNMENT"   : "RAXML_alignment",
-                        "TEMP_IN_PARTITIONS"  : "RAXML_partitions",
-                        "TEMP_OUT_INFO"       : "RAxML_info.GTRGAMMA",
+        # Read and (in the case of empty columns) reduce input
+        command.set_parameter("-f", "c")
+        # Output files are saved with a .Pypeline postfix, and subsequently renamed
+        command.set_parameter("-n", "Pypeline")
+        # Model required, but not used
+        command.set_parameter("-m", "GTRGAMMA")
+        # Ensures that output is saved to the temporary directory
+        command.set_parameter("-w", "%(TEMP_DIR)s")
+        
+        # Symlink to sequence and partitions, to prevent the creation of *.reduced files outside temp folder
+        # In addition, it may be nessesary to remove the .reduced files if created
+        command.set_parameter("-s", "%(TEMP_IN_ALIGNMENT)s")
+        command.set_parameter("-q", "%(TEMP_IN_PARTITION)s")
 
-                        "OUT_ALIGNMENT"       : outalignment,
-                        "OUT_PARTITIONS"      : outpartitions}
+        command.set_paths(IN_ALIGNMENT      = input_alignment,
+                          IN_PARTITION      = input_partition,
+                          
+                          TEMP_IN_ALIGNMENT = "RAXML_alignment",
+                          TEMP_IN_PARTITION = "RAXML_partitions",
+                          TEMP_OUT_INFO     = "RAxML_info.GTRGAMMA",
+                          
+                          OUT_ALIGNMENT     = output_alignment,
+                          OUT_PARTITION     = output_partition)
 
+        return {"command" : command} 
+
+
+    @use_customizable_cli_parameters
+    def __init__(self, parameters = None, **kwargs):
+        self._kwargs = parameters.command.paths
         CommandNode.__init__(self,
-                             command      = AtomicCmd(call, **self._kwargs),
+                             command      = parameters.command.create_cmd(),
                              description  = "<RAxMLReduce: '%s' -> '%s'>" \
-                                     % (inalignment, outalignment),
-                             dependencies = dependencies)
+                                     % (parameters.input_alignment, parameters.output_alignment),
+                             dependencies = parameters.dependencies)
 
 
     def _setup(self, config, temp):
-        for key in ("IN_ALIGNMENT", "IN_PARTITIONS"):
+        for key in ("IN_ALIGNMENT", "IN_PARTITION"):
             source      = self._kwargs[key]
             destination = os.path.join(temp, self._kwargs["TEMP_" + key])
 
@@ -70,7 +86,7 @@ class RAxMLReduceNode(CommandNode):
 
 
     def _teardown(self, config, temp):
-        for postfix in ("ALIGNMENT", "PARTITIONS"):
+        for postfix in ("ALIGNMENT", "PARTITION"):
             filenames = [self._kwargs["TEMP_IN_" + postfix],
                          self._kwargs["TEMP_IN_" + postfix] + ".reduced",
                          self._kwargs["OUT_" + postfix]]
@@ -90,63 +106,78 @@ class RAxMLReduceNode(CommandNode):
 
 
 class RAxMLRapidBSNode(CommandNode):
-    def __init__(self, infile, partitions, destination, model = "GTRGAMMAI", replicates = "autoMRE", bs_branchln = False, threads = 1, dependencies = ()):
+    @create_customizable_cli_parameters
+    def customize(cls, input_alignment, input_partition, output_template, threads = 1, dependencies = ()):
         """ 
         Arguments:
-        infile      -- An alignment file in a format readable by RAxML.
-        partitions  -- A set of partitions in a format readable by RAxML.
-        destination -- A template string used to construct final filenames. Should consist
-                       of a full path, including a single '%s', which is replaced with the
-                       variable part of RAxML output files (e.g. 'info', 'bestTree', ...).
-                       Example destination: '/disk/project/SN013420.RAxML.%s'
-                       Example output:      '/disk/project/SN013420.RAxML.bestTree'
-        model       -- DNA or Amino acid substitution model to use.
-        replicates  -- Number of bootstrap replicates. Defaults to automatic selection.
-        bs_branchln -- Calculate branch lengths for bootstrap trees.
-        threads     -- Number of threads to use for each RAxML instance."""
+        input_alignment  -- An alignment file in a format readable by RAxML.
+        input_partition  -- A set of partitions in a format readable by RAxML.
+        output_template  -- A template string used to construct final filenames. Should consist
+                            of a full path, including a single '%s', which is replaced with the
+                            variable part of RAxML output files (e.g. 'info', 'bestTree', ...).
+                            Example destination: '/disk/project/SN013420.RAxML.%s'
+                            Example output:      '/disk/project/SN013420.RAxML.bestTree'"""
 
-        self._symlinks = [infile, partitions]
-        self._template = os.path.basename(destination)
-
-        call = ["raxmlHPC-PTHREADS" if (threads > 1) else "raxmlHPC",
-                "-f", "a",
-                "-m", model,
-                "-n", "RapidBS",
-                "-s", "%(TEMP_OUT_ALN)s",
-                "-q", "%(TEMP_OUT_PART)s",
-                "-w", "%(TEMP_DIR)s",
-                "-x", int(random.random() * 2**31 - 1),
-                "-p", int(random.random() * 2**31 - 1),
-                "-N", replicates]
-        if bs_branchln:
-            call.append("-k")
         if threads > 1:
-            call.extend(("-T", threads))
+            command = AtomicParams("raxmlHPC-PTHREADS")
+            command.set_parameter("-T", threads)
+        else:
+            command = AtomicParams("raxmlHPC")
+        
+        # Perform rapid bootstrapping
+        command.set_parameter("-f", "a")
+        # Output files are saved with a .Pypeline postfix, and subsequently renamed
+        command.set_parameter("-n", "Pypeline")
+        # Ensures that output is saved to the temporary directory
+        command.set_parameter("-w", "%(TEMP_DIR)s")
+        # Symlink to sequence and partitions, to prevent the creation of *.reduced files outside temp folder
+        # In addition, it may be nessesary to remove the .reduced files if created
+        command.set_parameter("-s", "%(TEMP_OUT_ALN)s")
+        command.set_parameter("-q", "%(TEMP_OUT_PART)s")
 
+        command.set_paths(# Auto-delete: Symlinks and .reduced files that RAxML may generate
+                          TEMP_OUT_PART   = os.path.basename(input_partition),
+                          TEMP_OUT_PART_R = os.path.basename(input_partition) + ".reduced",
+                          TEMP_OUT_ALN    = os.path.basename(input_alignment),
+                          TEMP_OUT_ALN_R  = os.path.basename(input_alignment) + ".reduced",
+        
+                          # Input files, are not used directly (see below)
+                          IN_ALIGNMENT    = input_alignment,
+                          IN_PARTITION    = input_partition,
 
-        command = AtomicCmd(call,
-                            IN_ALIGNMENT    = infile,
-                            IN_PARTITIONS   = partitions,
+                          # Final output files, are not created directly
+                          OUT_INFO        = output_template % "info",
+                          OUT_BESTTREE    = output_template % "bestTree",
+                          OUT_BOOTSTRAP   = output_template % "bootstrap",
+                          OUT_BIPART      = output_template % "bipartitions",
+                          OUT_BIPARTLABEL = output_template % "bipartitionsBranchLabels")
 
-                            OUT_INFO        = destination % "info",
-                            OUT_BESTTREE    = destination % "bestTree",
-                            OUT_BOOTSTRAP   = destination % "bootstrap",
-                            OUT_BIPART      = destination % "bipartitions",
-                            OUT_BIPARTLABEL = destination % "bipartitionsBranchLabels",
+        # Use the GTRGAMMAI model of NT substitution by default
+        command.set_parameter("-m", "GTRGAMMAI", fixed = False)
+        # Enable Rapid Boostrapping and set random seed. May be set to a fixed value to allow replicability.
+        command.set_parameter("-x", int(random.random() * 2**31 - 1), fixed = False)
+        # Set random seed for parsimony inference. May be set to a fixed value to allow replicability.
+        command.set_parameter("-p", int(random.random() * 2**31 - 1), fixed = False)
+        # Terminate bootstrapping upon convergence, rather than after a fixed number of repetitions      
+        command.set_parameter("-N", "autoMRE", fixed = False) 
+        
+        return {"command"         : command}
+    
 
-                            # RAxML may write reduced alignment. These are not saved. If
-                            # needed, they may be generated upfront using RAxMLReduceNode.
-                            TEMP_OUT_ALN    = os.path.basename(infile),
-                            TEMP_OUT_PART   = os.path.basename(partitions),
-                            TEMP_OUT_R_ALN  = os.path.basename(infile) + ".reduced",
-                            TEMP_OUT_R_PART = os.path.basename(partitions) + ".reduced")
+    @use_customizable_cli_parameters
+    def __init__(self, parameters):
+        self._symlinks = [parameters.input_alignment, 
+                          parameters.input_partition]
+        self._template = os.path.basename(parameters.output_template)
+
 
         CommandNode.__init__(self,
-                             command      = command,
-                             description  = "<RAxMLRapidBS (%i threads): '%s' -> '%s'>" \
-                                     % (threads, infile, destination),
-                             threads      = threads,
-                             dependencies = dependencies)
+                             command      = parameters.command.create_cmd(),
+                             description  = "<RAxMLRapidBS: '{%s}' -> '{%s}'>" \
+                                 % (parameters.input_alignment, parameters.output_template),
+                             threads      = parameters.threads,
+                             dependencies = parameters.dependencies)
+
 
     def _setup(self, config, temp):
         CommandNode._setup(self, config, temp)
@@ -161,7 +192,7 @@ class RAxMLRapidBSNode(CommandNode):
     
     def _teardown(self, config, temp):
         for filename in os.listdir(temp):
-            match = re.match("RAxML_(.*).RapidBS", filename)
+            match = re.match("RAxML_(.*).Pypeline", filename)
             if match:
                 source      = os.path.join(temp, filename)
                 destination = os.path.join(temp, self._template % match.groups())
