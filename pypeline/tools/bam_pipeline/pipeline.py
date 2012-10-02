@@ -228,7 +228,7 @@ def build_se_trim_nodes(config, bwa_prefix, record):
     except KeyError:
         trim_prefix = os.path.join(common.paths.full_path(record, "reads"), "reads")
         trim_node   = SE_AdapterRemovalNode(input_files     = record["files"]["SE"], 
-                                            output_template = trim_prefix)
+                                            output_prefix   = trim_prefix)
         _ADAPTERRM_SE_CACHE[id(record)] = (trim_prefix, trim_node)
 
     output_dir  = common.paths.full_path(record, bwa_prefix)
@@ -299,10 +299,10 @@ def build_pe_trim_nodes(config, bwa_prefix, record):
 
 
 def build_markdup_node(config, input_files, output_file, dependencies):
-    mkdup_params = MarkDuplicatesNode.customize(config       = config, 
-                                                input_files  = input_files,
-                                                output_file  = output_file,
-                                                metrics_file = swap_ext(output_file, ".metrics"),
+    mkdup_params = MarkDuplicatesNode.customize(config         = config, 
+                                                input_bams     = input_files,
+                                                output_bam     = output_file,
+                                                output_metrics = swap_ext(output_file, ".metrics"),
                                                 dependencies = dependencies)
     # FIXME: BAMs should be properly marked previously
     mkdup_params.command.push_parameter("ASSUME_SORTED", "True", sep = "=")
@@ -356,9 +356,9 @@ def build_library_merge_nodes(config, bwa_prefix, records):
                                        dependencies = nodes[library]["aligned"])
 
             merged = MergeSamFilesNode(config       = config,
-                                       input_files  = [paths[library] + ".unaligned.markdup.bam",
+                                       input_bams   = [paths[library] + ".unaligned.markdup.bam",
                                                        paths[library] + ".unaligned.kirdup.bam"],
-                                       output_file  = paths[library]  + ".unaligned.bam",
+                                       output_bam   = paths[library]  + ".unaligned.bam",
                                        dependencies = [markdup, kirdup])
 
             node = ValidateBAMFile(config      = config,
@@ -391,8 +391,8 @@ def build_merged_nodes(config, bwa_prefix, name, records):
     input_files = [(prefix + ".unaligned.bam") for prefix in library_nodes]
     output_file = common.paths.target_path(records[0], bwa_prefix)
     nodes = MergeSamFilesNode(config       = config, 
-                              input_files  = input_files,
-                              output_file  = output_file,
+                              input_bams   = input_files,
+                              output_bam   = output_file,
                               dependencies = nodes)
 
     log_file = common.paths.prefix_path(records[0], bwa_prefix) + ".unaligned.validated"

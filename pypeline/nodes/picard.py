@@ -37,8 +37,8 @@ class ValidateBAMNode(CommandNode):
 
         params.set_parameter("I", "%(IN_BAM)s", sep = "=")
         params.set_paths(IN_BAM     = input_bam,
-                         OUT_STDOUT = output_log or (input_bam + ".log"))
-       
+                         OUT_STDOUT = output_log or (input_bam + ".validated"))
+
         return {"command" : params}
 
 
@@ -50,27 +50,31 @@ class ValidateBAMNode(CommandNode):
                              dependencies = parameters.dependencies)
 
 
+
+
 class MarkDuplicatesNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, config, input_bams, output_bam, output_metrics = None, dependencies = ()):
         jar_file = os.path.join(config.picard_root, "MarkDuplicates.jar")
         params = AtomicJavaParams(config, jar_file)
 
-        # Create .bai by default, since it is required by a lot of other programs
-        params.set_parameter("CREATE_INDEX", "True", sep = "=", fixed = False)
-        # Remove duplicates from output by default to save disk-space
-        params.set_parameter("REMOVE_DUPLICATES", "True", sep = "=", fixed = False)
+        # Create .bai index, since it is required by a lot of other programs
+        params.set_parameter("CREATE_INDEX", "True", sep = "=")
 
-        params.set_option("OUTPUT", "%(OUT_BAM)s", sep = "=")
-        params.set_option("METRICS_FILE", "%(OUT_METRICS)s", sep = "=")
+        params.set_parameter("OUTPUT", "%(OUT_BAM)s", sep = "=")
+        params.set_parameter("METRICS_FILE", "%(OUT_METRICS)s", sep = "=")
 
-        for (index, filename) in enumerate(safe_coerce_to_tuple(input_files)):
+        input_bams = safe_coerce_to_tuple(input_bams)
+        for (index, filename) in enumerate(input_bams):
             params.push_parameter("I", "%%(IN_BAM_%02i)s" % index)
             params.set_paths("IN_BAM_%02i" % index, filename)
 
-        params.set_paths(OUT_BAM     = output_file,
-                         OUT_BAI     = swap_ext(output_file, ".bai"),
-                         OUT_METRICS = metrics_file or (output_file + ".metrics"))
+        # Remove duplicates from output by default to save disk-space
+        params.set_parameter("REMOVE_DUPLICATES", "True", sep = "=", fixed = False)
+
+        params.set_paths(OUT_BAM     = output_bam,
+                         OUT_BAI     = swap_ext(output_bam, ".bai"),
+                         OUT_METRICS = output_metrics or (output_bam + ".metrics"))
 
         return {"command" : params}
         
@@ -83,43 +87,35 @@ class MarkDuplicatesNode(CommandNode):
                              dependencies = parameters.dependencies)
 
 
+
+
 class MergeSamFilesNode(CommandNode):
-    def __init__(self, config, input_files, output_file, create_index = True, dependencies = ()):
-        jar  = os.path.join(config.picard_root, "MergeSamFiles.jar")
-        call = ["java", "-jar", jar, 
-                "TMP_DIR=%s" % config.temp_root, 
-                "SO=coordinate",
-                "OUTPUT=%(OUT_BAM)s"]
-        files = {"OUT_BAM" : output_file}
-
-        if create_index:
-            call.append("CREATE_INDEX=True")
-            files["OUT_BAI"] = swap_ext(output_file, ".bai")
-
-
-        for (ii, filename) in enumerate(input_files, start = 1):
-            call.append("INPUT=%%(IN_FILE_%i)s" % ii)
-            files["IN_FILE_%i" % ii] = filename
+    @create_customizable_cli_parameters
+    def customize(cls, config, input_bams, output_bam, dependencies = ()):
+        jar_file = os.path.join(config.picard_root, "MergeSamFiles.jar")
+        params = AtomicJavaParams(config, jar_file)
         
-        command = AtomicCmd(call, **files)
+        params.set_parameter("OUTPUT", "%(OUT_BAM)s", sep = "=")
+        params.set_parameter("CREATE_INDEX", "True", sep = "=")
+        params.set_paths(OUT_BAM = output_bam,
+                         OUT_BAI = swap_ext(output_bam, ".bai"))
 
-        description =  "<Merge BAMs: %i file(s) -> '%s'>" % (len(input_files), output_file)
+        for (index, filename) in enumerate(input_bams, start = 1):
+            params.push_parameter("I", "%%(IN_BAM_%02i)s" % index)
+            params.set_paths("IN_BAM_%02i" % index, filename)
+            
+        params.set_parameter("SO", "coordinate", sep = "=", fixed = False)
+
+        return {"command" : params}
+
+
+    @use_customizable_cli_parameters
+    def __init__(self, parameters):
+        description =  "<Merge BAMs: %i file(s) -> '%s'>" \
+            % (len(parameters.input_bams), parameters.output_bam)
         CommandNode.__init__(self, 
-                             command      = command,
+                             command      = parameters.command.create_cmd(),
                              description  = description,
-                             dependencies = dependencies)
+                             dependencies = parameters.dependencies)
 
 
-if __name__ == '__main__':
-    class Config:
-        temp_root = "temp/tmp"
-        picard_root = "/home/mischu/archive/research/tools/bamPipeline/picard-tools-1.69"
-
-    params = ValidateBAMNode.customize(config     = Config, 
-                                       input_bam  = "/home/mischu/archive/research/tools/seqStats/test/data/exampleBAM.bam",
-                                       output_log = "temp/validated.log")
-    params.command.push_parameter("IGNORE=MATE_NOT_FOUND")
-    params.command.push_parameter("IGNORE=MISSING_TAG_NM")
-    node = params.build_node()
-
-    node.run(Config)
