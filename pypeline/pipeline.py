@@ -66,34 +66,36 @@ class Pypeline:
     
         try:
             running = {}
+            errors = False
             pool = multiprocessing.Pool(max_running, _init_worker)
-            while self._poll_running_nodes(running, nodes) or not terminate_on_error:
-                if not self._start_new_tasks(running, nodes, max_running, pool):
-                    ui.print_node_tree(nodes, collapse)
+
+            while not (errors and terminate_on_error):
+                if not self._poll_running_nodes(running, nodes):
+                    errors = True
+                elif not self._start_new_tasks(running, nodes, max_running, pool):
                     break
 
                 ui.print_node_tree(nodes, collapse)
 
             pool.close()
             pool.join()
-
-            if not self._poll_running_nodes(running, nodes):
+            
+            if errors or not self._poll_running_nodes(running, nodes):
                 ui.print_err("Errors were detected ...")
                 return False
-
         except nodegraph.NodeGraphError, errors:
             errors = "\n".join(("\t" + line) for line in str(errors).strip().split("\n"))
             ui.print_err("Error in task-graph, terminating gracefully:\n%s" % errors)
             pool.terminate()
             pool.join()
 
-        except KeyboardInterrupt:
+        except KeyboardInterrupt, errors:
             ui.print_err("Keyboard interrupt detected, terminating ...")
             pool.terminate()
             pool.join()
 
         ui.print_msg("Done ...")
-        return True
+        return not errors
 
 
     def _start_new_tasks(self, running, nodes, max_threads, pool):
