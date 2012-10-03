@@ -66,7 +66,7 @@ class MarkDuplicatesNode(CommandNode):
 
         input_bams = safe_coerce_to_tuple(input_bams)
         for (index, filename) in enumerate(input_bams):
-            params.push_parameter("I", "%%(IN_BAM_%02i)s" % index)
+            params.push_parameter("I", "%%(IN_BAM_%02i)s" % index, sep = "=")
             params.set_paths("IN_BAM_%02i" % index, filename)
 
         # Remove duplicates from output by default to save disk-space
@@ -101,7 +101,7 @@ class MergeSamFilesNode(CommandNode):
                          OUT_BAI = swap_ext(output_bam, ".bai"))
 
         for (index, filename) in enumerate(input_bams, start = 1):
-            params.push_parameter("I", "%%(IN_BAM_%02i)s" % index)
+            params.push_parameter("I", "%%(IN_BAM_%02i)s" % index, sep = "=")
             params.set_paths("IN_BAM_%02i" % index, filename)
             
         params.set_parameter("SO", "coordinate", sep = "=", fixed = False)
