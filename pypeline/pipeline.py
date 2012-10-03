@@ -56,13 +56,13 @@ class Pypeline:
         for node in nodes.iterflat():
             if node.threads > max_running:
                 ui.print_err("Node requires more threads than the maximum allowed:\n\t%s" % str(node))
-                return 1
+                return False
 
 
         if dry_run:
             ui.print_node_tree(nodes, collapse)
             ui.print_msg("Dry run done ...")
-            return 0
+            return True
     
         try:
             running = {}
