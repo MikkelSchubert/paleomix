@@ -46,7 +46,7 @@ class Pypeline:
                 self._nodes.append(node)
 
 
-    def run(self, max_running = 1, dry_run = False, terminate_on_error = False):
+    def run(self, max_running = 1, dry_run = False, terminate_on_error = False, collapse = False):
         try:
             nodes = nodegraph.NodeGraph(self._nodes)
         except nodegraph.NodeGraphError, error:
@@ -60,7 +60,7 @@ class Pypeline:
 
 
         if dry_run:
-            ui.print_node_tree(nodes)
+            ui.print_node_tree(nodes, collapse)
             ui.print_msg("Dry run done ...")
             return 0
     
@@ -69,10 +69,10 @@ class Pypeline:
             pool = multiprocessing.Pool(max_running, _init_worker)
             while self._poll_running_nodes(running, nodes) or not terminate_on_error:
                 if not self._start_new_tasks(running, nodes, max_running, pool):
-                    ui.print_node_tree(nodes)
+                    ui.print_node_tree(nodes, collapse)
                     break
 
-                ui.print_node_tree(nodes)
+                ui.print_node_tree(nodes, collapse)
 
             pool.close()
             pool.join()
