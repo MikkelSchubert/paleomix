@@ -25,7 +25,7 @@ import itertools
 import nose.tools
 from nose.tools import assert_equal
 
-from common.sequences import *
+from pypeline.common.sequences import *
 
 
 
