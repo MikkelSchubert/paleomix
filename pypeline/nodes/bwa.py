@@ -28,7 +28,7 @@ from pypeline.atomicset import ParallelCmds
 from pypeline.commands import sam_to_bam
 
 
-class BWAIndex(CommandNode):
+class BWAIndexNode(CommandNode):
     def __init__(self, input_file, prefix = None, algorithm = "is", dependencies = ()):
         prefix = prefix if prefix else input_file
         command = AtomicCmd(["bwa", "index", 
