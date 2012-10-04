@@ -8,3 +8,5 @@ MODULES=$(find tests/unit pypeline/ -name '*.py' | grep -v "__init__" | sed -e '
 nosetests -d tests/ --with-coverage \
     --cover-tests \
     $(for module in $MODULES;do echo --cover-package=$module;done)
+
+exit $?

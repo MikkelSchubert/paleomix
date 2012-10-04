@@ -23,30 +23,46 @@
 import os
 
 import framework 
+from pypeline.node import Node
 from pypeline.nodes.adapterremoval import *
 
 
-def test_adapterremoval_se(config):
-    return SE_AdapterRemovalNode(input_files = ("tests/data/raw_reads/se_reads_R1_001.fastq.gz",
-                                                "tests/data/raw_reads/se_reads_R1_002.fastq.gz"),
-                                 output_prefix = os.path.join(config.destination, "adapterremoval_se"),
-                                 dependencies = config.dependencies)
+def _adapterremoval_se(config):
+    node_params = {"input_files"   : ("tests/data/raw_reads/se_reads_R1_001.fastq.gz",
+                                      "tests/data/raw_reads/se_reads_R1_002.fastq.gz"),
+                   "dependencies"  : config.dependencies}
 
-def test_adapterremoval_pe(config):
-    return PE_AdapterRemovalNode(input_files_1 = ("tests/data/raw_reads/pe_reads_R1_001.fastq.gz",
-                                                  "tests/data/raw_reads/pe_reads_R1_002.fastq.gz"),
-                                 input_files_2 = ("tests/data/raw_reads/pe_reads_R2_001.fastq.gz",
-                                                  "tests/data/raw_reads/pe_reads_R2_002.fastq.gz"),
-                                 output_prefix = os.path.join(config.destination, "adapterremoval_pe"),
-                                 dependencies = config.dependencies)
+    standard = SE_AdapterRemovalNode(output_prefix = os.path.join(config.destination, "se_standard"),
+                                     **node_params)
+    custom   = SE_AdapterRemovalNode.customize(output_prefix = os.path.join(config.destination, "se_custom"),
+                                               **node_params)
+    custom.command.set_parameter("--minlength", 30)
 
-    
+    return Node(description  = "AdapterRemoval_SE", 
+                dependencies = [standard, custom.build_node()])
 
 
 
+def _adapterremoval_pe(config):
+    node_params = {"input_files_1"  : ("tests/data/raw_reads/pe_reads_R1_001.fastq.gz",
+                                       "tests/data/raw_reads/pe_reads_R1_002.fastq.gz"),
+                   "input_files_2"  : ("tests/data/raw_reads/pe_reads_R2_001.fastq.gz",
+                                       "tests/data/raw_reads/pe_reads_R2_002.fastq.gz"),
+                   "dependencies"   : config.dependencies}
+
+    standard = PE_AdapterRemovalNode(output_prefix = os.path.join(config.destination, "pe_standard"),
+                                     **node_params)
+    custom   = PE_AdapterRemovalNode.customize(output_prefix = os.path.join(config.destination, "pe_custom"),
+                                               **node_params)
+    custom.command.set_parameter("--minlength", 30)
+
+    return Node(description  = "AdapterRemoval_PE", 
+                dependencies = [standard, custom.build_node()])
 
 
+def test_adapterremoval(config):
+    rm_se = _adapterremoval_se(config)
+    rm_pe = _adapterremoval_pe(config)
 
-if __name__ == '__main__':
-    framework.run(test_adapterremoval_se,
-                  test_adapterremoval_pe)
+    return Node(description = "AdapterRemoval",
+                dependencies = (rm_se, rm_pe))

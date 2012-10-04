@@ -22,6 +22,7 @@
 #
 import sys
 import time
+import inspect
 import traceback
 
 import pypeline.ui as ui
@@ -29,37 +30,61 @@ from pypeline.node import Node
 from pypeline.pipeline import Pypeline
 
 
-_epoch = time.time()
+# Test modules, see _collect_tests
+import adapterremoval_test
+import bwa_test
+import picard_test
+
+
+# Timestamp used to ensure that each run is kept seperate
+_EPOCH = time.time()
+
+
+def _collect_tests():
+    for (name, obj) in sorted(globals().items()):
+        if inspect.ismodule(obj) and name.endswith("_test"):
+            module = name
+            for (name, obj) in sorted(inspect.getmembers(obj)):
+                if inspect.isfunction(obj) and name.startswith("test_"):
+                    yield module, obj
+
+
 class Config:
-    temp_root    = "tests/runs/%i/temp/" % _epoch
-    destination  = "tests/runs/%i/output/" % _epoch
+    temp_root    = "tests/runs/%i/temp/" % (_EPOCH,)
+    picard_root  = "tests/links/picard"
     dependencies = Node(description = "DummyDependency")
 
 
-def run(*functions):
+def main(argv):
     ui.print_info("Running functional Node tests:")
-    ui.print_info("  - Destination = '%s' ..." % Config.destination)
-    ui.print_info("  - Temp root = '%s' ..." % Config.temp_root)
+    ui.print_info("  - Destination = 'tests/runs/%i' ..." % _EPOCH)
     ui.print_info()
 
     errors = False
     pipeline = Pypeline(Config)
-    for func in functions:
+    for (module, func) in _collect_tests():
+        Config.destination = "tests/runs/%i/%s" % (_EPOCH, module)
+    
         try: 
             ui.print_info("Adding node '%s' ..." % func.__name__)
             node = func(Config)
-            if list(node.dependencies) != [Config.dependencies]:
-                raise RuntimeError("Node did not pass dependencies")
-
             pipeline.add_nodes(node)
         except Exception, e:
             ui.print_err(traceback.format_exc())
             errors = True
 
-    if not pipeline.run(dry_run = True, collapse = False):
-        errors = True
-    elif not pipeline.run(collapse = False):
+
+#   TODO: Test all derived nodes
+#            if list(node.dependencies) != [Config.dependencies]:
+#                raise RuntimeError("Node did not pass dependencies")
+
+
+    if not pipeline.run(dry_run = False, collapse = True):
         errors = True
 
-            
-    sys.exit(1 if errors else 0)
+    return (1 if errors else 0)
+
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))

@@ -107,7 +107,7 @@ def test_is_executable__full_path__is_non_executable():
     assert not is_executable("/etc/fstab")
 
 def test_is_executable__rel_path__is_executable():
-    assert is_executable("tests/unit/run.sh")
+    assert is_executable("tests/unit/run")
 
 def test_is_executable__rel_path__is_non_executable():
     assert not is_executable("tests/data/empty_file_1")
@@ -132,7 +132,7 @@ def test_executable_exists__full_path__is_non_executable():
     assert not executable_exists("/etc/fstab")
 
 def test_executable_exists__rel_path__is_executable():
-    assert executable_exists("tests/unit/run.sh")
+    assert executable_exists("tests/unit/run")
 
 def test_executable_exists__rel_path__is_non_executable():
     assert not executable_exists("tests/data/empty_file_1")
