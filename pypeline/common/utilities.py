@@ -41,7 +41,7 @@ def safe_coerce_to_tuple(value):
 def try_cast(value, cast_to):
     try:
         return cast_to(value)
-    except ValueError:
+    except (ValueError, TypeError):
         return value
     
 
