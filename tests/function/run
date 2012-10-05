@@ -1,0 +1,90 @@
+#!/usr/bin/python
+#
+# Copyright (c) 2012 Mikkel Schubert <MSchubert@snm.ku.dk>
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
+# copies of the Software, and to permit persons to whom the Software is 
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+# SOFTWARE.
+#
+import sys
+import time
+import inspect
+import traceback
+
+import pypeline.ui as ui
+from pypeline.node import Node
+from pypeline.pipeline import Pypeline
+
+
+# Test modules, see _collect_tests
+import adapterremoval_test
+import bwa_test
+import picard_test
+
+
+# Timestamp used to ensure that each run is kept seperate
+_EPOCH = time.time()
+
+
+def _collect_tests():
+    for (name, obj) in sorted(globals().items()):
+        if inspect.ismodule(obj) and name.endswith("_test"):
+            module = name
+            for (name, obj) in sorted(inspect.getmembers(obj)):
+                if inspect.isfunction(obj) and name.startswith("test_"):
+                    yield module, obj
+
+
+class Config:
+    temp_root    = "tests/runs/%i/temp/" % (_EPOCH,)
+    picard_root  = "tests/links/picard"
+    dependencies = Node(description = "DummyDependency")
+
+
+def main(argv):
+    ui.print_info("Running functional Node tests:")
+    ui.print_info("  - Destination = 'tests/runs/%i' ..." % _EPOCH)
+    ui.print_info()
+
+    errors = False
+    pipeline = Pypeline(Config)
+    for (module, func) in _collect_tests():
+        Config.destination = "tests/runs/%i/%s" % (_EPOCH, module)
+    
+        try: 
+            ui.print_info("Adding node '%s' ..." % func.__name__)
+            node = func(Config)
+            pipeline.add_nodes(node)
+        except Exception, e:
+            ui.print_err(traceback.format_exc())
+            errors = True
+
+
+#   TODO: Test all derived nodes
+#            if list(node.dependencies) != [Config.dependencies]:
+#                raise RuntimeError("Node did not pass dependencies")
+
+
+    if not pipeline.run(dry_run = False, collapse = True):
+        errors = True
+
+    return (1 if errors else 0)
+
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))

@@ -1,0 +1,22 @@
+#!/bin/bash
+
+echo "Running unit-tests ..."
+tests/unit/run;
+RESULT_UNIT=$?
+
+echo
+echo "Running functional tests ..."
+env PYTHONPATH=. tests/function/run
+RESULT_FUNC=$?
+
+
+echo 
+if [ ${RESULT_UNIT} -ne 0 ];
+then
+    echo "THERE WERE ERRORS DURING UNIT TESTING."
+fi
+
+if [ ${RESULT_FUNC} -ne 0 ];
+then
+    echo "THERE WERE ERRORS DURING FUNCTIONAL TESTING."
+fi

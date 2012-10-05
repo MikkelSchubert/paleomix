@@ -74,8 +74,9 @@ class SE_AdapterRemovalNode(CommandNode):
         commands = ParallelCmds([adapterrm, gzip_discarded, gzip_truncated, zcat])
         CommandNode.__init__(self,
                              command      = commands,
-                             description  = "<SE_AdapterRM: %s>" \
-                                 % (self._desc_files(parameters.input_files),),
+                             description  = "<SE_AdapterRM: %s -> '%s.*'>" \
+                                 % (self._desc_files(parameters.input_files),
+                                    parameters.output_prefix),
                              dependencies = parameters.dependencies)
 
 
@@ -152,8 +153,9 @@ class PE_AdapterRemovalNode(CommandNode):
                                  zcat_pair_1,
                                  zcat_pair_2])
 
-        description  = "<PE_AdapterRM: %s>" \
-            % (self._desc_files(parameters.input_files_1).replace("file", "pair"),)
+        description  = "<PE_AdapterRM: %s -> '%s.*'>" \
+            % (self._desc_files(parameters.input_files_1).replace("file", "pair"),
+               parameters.output_prefix)
 
         CommandNode.__init__(self,
                              command      = commands,
@@ -177,7 +179,7 @@ class PE_AdapterRemovalNode(CommandNode):
 
 def _build_gzip_command(prefix, name):
     basename = os.path.basename(prefix)
-    return AtomicCmd(["gzip", "-c"],
+    return AtomicCmd(["gzip", "-c", "-n"],
                      TEMP_IN_STDIN = basename + name,
                      OUT_STDOUT    = prefix + name + ".gz")
 

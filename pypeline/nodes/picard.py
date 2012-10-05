@@ -79,6 +79,7 @@ class MarkDuplicatesNode(CommandNode):
         return {"command" : params}
         
 
+    @use_customizable_cli_parameters
     def __init__(self, parameters):
         description =  "<MarkDuplicates: %s>" % (self._desc_files(parameters.input_bams),)
         CommandNode.__init__(self, 

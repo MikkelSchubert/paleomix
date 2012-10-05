@@ -46,7 +46,7 @@ class Pypeline:
                 self._nodes.append(node)
 
 
-    def run(self, max_running = 1, dry_run = False, terminate_on_error = False):
+    def run(self, max_running = 1, dry_run = False, terminate_on_error = False, collapse = False):
         try:
             nodes = nodegraph.NodeGraph(self._nodes)
         except nodegraph.NodeGraphError, error:
@@ -56,44 +56,46 @@ class Pypeline:
         for node in nodes.iterflat():
             if node.threads > max_running:
                 ui.print_err("Node requires more threads than the maximum allowed:\n\t%s" % str(node))
-                return 1
+                return False
 
 
         if dry_run:
-            ui.print_node_tree(nodes)
+            ui.print_node_tree(nodes, collapse)
             ui.print_msg("Dry run done ...")
-            return 0
+            return True
     
         try:
             running = {}
+            errors = False
             pool = multiprocessing.Pool(max_running, _init_worker)
-            while self._poll_running_nodes(running, nodes) or not terminate_on_error:
-                if not self._start_new_tasks(running, nodes, max_running, pool):
-                    ui.print_node_tree(nodes)
+
+            while not (errors and terminate_on_error):
+                if not self._poll_running_nodes(running, nodes):
+                    errors = True
+                elif not self._start_new_tasks(running, nodes, max_running, pool):
                     break
 
-                ui.print_node_tree(nodes)
+                ui.print_node_tree(nodes, collapse)
 
             pool.close()
             pool.join()
-
-            if not self._poll_running_nodes(running, nodes):
+            
+            if errors or not self._poll_running_nodes(running, nodes):
                 ui.print_err("Errors were detected ...")
                 return False
-
         except nodegraph.NodeGraphError, errors:
             errors = "\n".join(("\t" + line) for line in str(errors).strip().split("\n"))
             ui.print_err("Error in task-graph, terminating gracefully:\n%s" % errors)
             pool.terminate()
             pool.join()
 
-        except KeyboardInterrupt:
+        except KeyboardInterrupt, errors:
             ui.print_err("Keyboard interrupt detected, terminating ...")
             pool.terminate()
             pool.join()
 
         ui.print_msg("Done ...")
-        return True
+        return not errors
 
 
     def _start_new_tasks(self, running, nodes, max_threads, pool):

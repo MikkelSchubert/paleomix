@@ -549,7 +549,8 @@ def main(argv):
                                             records      = runs,
                                             dependencies = nodes))
 
-    pipeline.run(dry_run = config.dry_run, max_running = config.max_threads)
+    if not pipeline.run(dry_run = config.dry_run, max_running = config.max_threads):
+        return 1
 
     return 0
 

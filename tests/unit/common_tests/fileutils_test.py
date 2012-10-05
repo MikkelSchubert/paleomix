@@ -31,7 +31,7 @@ from pypeline.common.fileutils import *
 ## Tests for 'add_postfix'
 
 def test_add_postfix__():
-    assert False
+    assert False, "TODO"
 
 
 
@@ -60,7 +60,7 @@ def test_swap_ext__dot_ext_vs_dot_ext():
 ## Tests for 'reroot_path'
 
 def test_reroot_path__():
-    assert False
+    assert False, "TODO"
 
 
 
@@ -91,7 +91,7 @@ def test_missing_files__mixed_files():
 ## Tests for 'modified_after'
 
 def test_modified_after__():
-    assert False
+    assert False, "TODO"
 
 
 
@@ -107,7 +107,7 @@ def test_is_executable__full_path__is_non_executable():
     assert not is_executable("/etc/fstab")
 
 def test_is_executable__rel_path__is_executable():
-    assert is_executable("tests/run.sh")
+    assert is_executable("tests/unit/run")
 
 def test_is_executable__rel_path__is_non_executable():
     assert not is_executable("tests/data/empty_file_1")
@@ -132,7 +132,7 @@ def test_executable_exists__full_path__is_non_executable():
     assert not executable_exists("/etc/fstab")
 
 def test_executable_exists__rel_path__is_executable():
-    assert executable_exists("tests/run.sh")
+    assert executable_exists("tests/unit/run")
 
 def test_executable_exists__rel_path__is_non_executable():
     assert not executable_exists("tests/data/empty_file_1")
