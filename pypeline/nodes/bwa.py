@@ -62,10 +62,11 @@ class SE_BWANode(CommandNode):
                           OUT_STDOUT = AtomicCmd.PIPE)
 
         flt = sam_to_bam.build_atomiccmd(AtomicCmd,
-                                         min_quality   = min_quality,
-                                         exclude_flags = 0x4,
-                                         stdin         = samse,
-                                         output_file   = AtomicCmd.PIPE)
+                                         min_quality    = min_quality,
+                                         exclude_flags  = 0x4,
+                                         stdin          = samse,
+                                         output_file    = AtomicCmd.PIPE,
+                                         flag_as_sorted = True)
 
         sort = AtomicCmd(["samtools", "sort", "-", "%(TEMP_OUT_BAM)s"],
                          IN_STDIN     = flt,
@@ -109,10 +110,11 @@ class PE_BWANode(CommandNode):
                           OUT_STDOUT    = AtomicCmd.PIPE)
 
         flt = sam_to_bam.build_atomiccmd(AtomicCmd,
-                                         min_quality   = min_quality,
-                                         exclude_flags = 0x4,
-                                         stdin         = samse,
-                                         output_file   = AtomicCmd.PIPE)
+                                         min_quality    = min_quality,
+                                         exclude_flags  = 0x4,
+                                         stdin          = samse,
+                                         output_file    = AtomicCmd.PIPE,
+                                         flag_as_sorted = True)
 
         sort = AtomicCmd(["samtools", "sort", "-", "%(TEMP_OUT_BAM)s"],
                          IN_STDIN     = flt,
@@ -149,7 +151,8 @@ class BWASWNode(CommandNode):
                                          min_quality   = min_quality,
                                          exclude_flags = 0x4,
                                          stdin         = aln,
-                                         output_file   = output_file)
+                                         output_file   = output_file,
+                                         flag_as_sorted = True)
 
         if input_file_2:
             description =  "<PE_BWASW (%i threads): '%s', '%s' -> '%s'>" % (threads, input_file_1, input_file_2, output_file)

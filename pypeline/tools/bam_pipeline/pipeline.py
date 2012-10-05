@@ -304,8 +304,6 @@ def build_markdup_node(config, input_files, output_file, dependencies):
                                                 output_bam     = output_file,
                                                 output_metrics = swap_ext(output_file, ".metrics"),
                                                 dependencies = dependencies)
-    # FIXME: BAMs should be properly marked previously
-    mkdup_params.command.push_parameter("ASSUME_SORTED", "True", sep = "=")
 
     return ValidateBAMFile(config      = config,
                            node        = mkdup_params.build_node())
