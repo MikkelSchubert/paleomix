@@ -46,7 +46,7 @@ class Pypeline:
                 self._nodes.append(node)
 
 
-    def run(self, max_running = 1, dry_run = False, terminate_on_error = False, collapse = False):
+    def run(self, max_running = 1, dry_run = False, terminate_on_error = False, collapse = True):
         try:
             nodes = nodegraph.NodeGraph(self._nodes)
         except nodegraph.NodeGraphError, error:
