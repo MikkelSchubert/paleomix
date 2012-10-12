@@ -84,7 +84,7 @@ def modified_after(younger, older):
     younger_time = max(get_mtimes(safe_coerce_to_tuple(younger)))
     older_time   = min(get_mtimes(safe_coerce_to_tuple(older)))
 
-    return younger > older
+    return younger_time > older_time
 
 
 def is_executable(filename):

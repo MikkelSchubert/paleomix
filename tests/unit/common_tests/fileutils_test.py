@@ -149,13 +149,19 @@ def test_missing_files__mixed_files():
 ## Tests for 'modified_after'
 
 def test_modified_after__modified_after():
-    assert modified_after("tests/data/timestamp_younger", "tests/data/timestamp_older")
+    assert modified_after("tests/data/timestamp_a_younger", "tests/data/timestamp_a_older")
+    assert modified_after("tests/data/timestamp_a_younger", "tests/data/timestamp_b_older")
+    assert modified_after("tests/data/timestamp_b_younger", "tests/data/timestamp_a_older")
 
 def test_modified_after__not_modified_after():
-    assert not modified_after("tests/data/timestamp_older", "tests/data/timestamp_younger")
+    assert not modified_after("tests/data/timestamp_a_older", "tests/data/timestamp_a_younger")
+    assert not modified_after("tests/data/timestamp_a_older", "tests/data/timestamp_b_younger")
+    assert not modified_after("tests/data/timestamp_b_older", "tests/data/timestamp_a_younger")
 
 def test_modified_after__same_file():
-    assert not modified_after("tests/data/timestamp_older", "tests/data/timestamp_older")
+    assert not modified_after("tests/data/timestamp_a_older", "tests/data/timestamp_a_older")
+    assert not modified_after("tests/data/timestamp_a_older", "tests/data/timestamp_b_older")
+    assert not modified_after("tests/data/timestamp_b_older", "tests/data/timestamp_a_older")
 
 
 
