@@ -22,6 +22,8 @@
 #
 import os
 import glob
+import itertools
+import collections
 
 ROOT = "results"
 
@@ -81,6 +83,31 @@ def collect_files(record):
     return files
 
 
+def collect_overlapping_files(records):
+    """Similar to collect_files, except that files are collected from multiple records,
+    and files collected for more than one record are returned. The results are a list
+    of pairs, containing a list of records that overlap, and the files for which these
+    overlap: [((record_1, record_2, ...), (filename_1, filename_2, ...)), ...].
+    
+    The canonical filename is used to determine overlap, and is the filename returned."""
+    by_filename = collections.defaultdict(list)
+    for target_records in records.itervalues():
+        for record in target_records:
+            for filenames in collect_files(record).values():
+                for filename in map(os.path.realpath, filenames):
+                    by_filename[filename].append(record)
+
+    has_overlap = {}
+    for (filename, records) in by_filename.iteritems():
+        if len(records) > 1:
+            # Filter out copies of the same record
+            has_overlap[filename] = dict(zip(map(id, records), records)).values()
+
+    by_records = sorted(zip(has_overlap.values(), has_overlap.keys()))
+    for (records, pairs) in itertools.groupby(by_records, lambda x: x[0]):
+        yield records, [pair[1] for pair in pairs]
+
+
 def reference_sequence(bwa_prefix):
     for ext in (".fa", ".fasta"):
         if os.path.exists(bwa_prefix + ext):
@@ -89,3 +116,6 @@ def reference_sequence(bwa_prefix):
     wo_ext = os.path.splitext(bwa_prefix)[0]
     if bwa_prefix != wo_ext:
         return reference_sequence(wo_ext)
+
+
+

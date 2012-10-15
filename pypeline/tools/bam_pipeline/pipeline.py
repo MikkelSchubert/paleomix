@@ -178,29 +178,18 @@ def validate_records_libraries(records):
 
 
 def validate_records_paths(records):
-    paths = collections.defaultdict(list)
-    for runs in records.itervalues():
-        for record in runs:
-            template = record["Path"]
-            current_paths = [template]
-            if common.paths.is_paired_end(record):
-                for end in (1, 2):
-                    current_paths.append(template.format(Pair = end))
-            
-            for path in current_paths:
-                paths[path].append(record)
+    errors = False
+    for records, filenames in common.paths.collect_overlapping_files(records):
+        errors = True
+        descriptions = []
+        for (ii, record) in enumerate(records, start = 1):
+            descriptions.append("\t- Record {0}: Name: {Name},  Sample: {Sample},  Library: {Library},  Barcode: {Barcode}\n\t            Path: {Path}".format(ii, **record))
+        for (ii, filename) in enumerate(filenames, start = 1):
+            descriptions.append("\t- Canonical path {0}: {1}".format(ii, filename))
 
-    printed = list()
-    for path in sorted(paths):
-        current_records = tuple(sorted(paths[path]))
-        if (len(current_records) > 1) and (current_records not in printed):
-            printed.append(current_records)
-            descriptions = []
-            for (ii, record) in enumerate(current_records, start = 1):
-                descriptions.append("\t- Record {0}:\n\t\t- Name:    {Name}\n\t\t- Sample:  {Sample}\n\t\t- Library: {Library}\n\t\t- Barcode: {Barcode}".format(ii, **record))
-            ui.print_err("ERROR: Multiple records specify same path(s):\n{0}\n".format("\n".join(descriptions)))
+        ui.print_err("ERROR: Path included multiple times by one or more records:\n{0}\n".format("\n".join(descriptions)))
 
-    return not bool(printed)
+    return not errors
 
 
 def validate_records(records):
