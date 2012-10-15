@@ -29,6 +29,53 @@ import pypeline.common.utilities as utils
 
 ################################################################################
 ################################################################################
+## Tests for 'safe_coerce_to_tuple'
+
+def test_safe_coerce_to_tuple__str():
+    assert_equal(utils.safe_coerce_to_tuple("foo"), ("foo",))
+
+def test_safe_coerce_to_tuple__unicode():
+    assert_equal(utils.safe_coerce_to_tuple(u"foo"), (u"foo",))
+
+def test_safe_coerce_to_tuple__int():
+    assert_equal(utils.safe_coerce_to_tuple(17), (17,))
+
+def test_safe_coerce_to_tuple__list():
+    assert_equal(utils.safe_coerce_to_tuple([1, 3, 2]), (1, 3, 2))
+
+def test_safe_coerce_to_tuple__tuple():
+    assert_equal(utils.safe_coerce_to_tuple((1, 3, 2)), (1, 3, 2))
+
+def test_safe_coerce_to_tuple__iterable():
+    assert_equal(utils.safe_coerce_to_tuple(xrange(3)), (0, 1, 2))
+
+
+
+
+################################################################################
+################################################################################
+## Tests for 'try_cast'
+
+def test_try_cast__int_to_int():
+    assert_equal(utils.try_cast(17, int), 17)
+
+def test_try_cast__float_to_int():
+    assert_equal(utils.try_cast(17.3, int), 17)
+
+def test_try_cast__good_str_to_int():
+    assert_equal(utils.try_cast("17", int), 17)
+
+def test_try_cast__bad_str_to_int():
+    assert_equal(utils.try_cast("x17", int), "x17")
+
+def test_try_cast__list_to_int():
+    assert_equal(utils.try_cast([1,2,3], int), [1,2,3])
+
+
+
+
+################################################################################
+################################################################################
 ## Tests for 'crc32'
 
 def test_crc32_is_unsigned():

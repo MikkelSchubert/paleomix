@@ -172,21 +172,21 @@ def test_is_outdated__output_but_no_input():
     assert not Node(output_files = _OUT_FILES).is_outdated
 
 def test_is_outdated__not_outdated():
-    my_node = Node(input_files  = "tests/data/timestamp_older",
-                   output_files = "tests/data/timestamp_younger")
+    my_node = Node(input_files  = "tests/data/timestamp_a_older",
+                   output_files = "tests/data/timestamp_a_younger")
     assert not my_node.is_outdated
 
 def test_is_outdated__outdated():
-    my_node = Node(input_files  = "tests/data/timestamp_younger",
-                   output_files = "tests/data/timestamp_older")
+    my_node = Node(input_files  = "tests/data/timestamp_a_younger",
+                   output_files = "tests/data/timestamp_a_older")
     assert my_node.is_outdated
 
 def test_is_outdated__updates():
-    my_node = Node(input_files  = "tests/data/timestamp_older",
-                   output_files = "tests/data/timestamp_younger")
+    my_node = Node(input_files  = "tests/data/timestamp_a_older",
+                   output_files = "tests/data/timestamp_a_younger")
     assert not my_node.is_outdated
-    my_node = Node(input_files  = "tests/data/timestamp_younger",
-                   output_files = "tests/data/timestamp_older")
+    my_node = Node(input_files  = "tests/data/timestamp_a_younger",
+                   output_files = "tests/data/timestamp_a_older")
     assert my_node.is_outdated
 
 

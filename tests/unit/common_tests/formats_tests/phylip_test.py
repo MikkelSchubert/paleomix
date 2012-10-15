@@ -140,7 +140,7 @@ seq2        TGCAGAGTAC  GACGT"""
     assert_equal(interleaved_phy(msa, add_flag = True), expected)  
 
 
-def test_sequentual_phy__medium_names():
+def test_interleaved_phy__medium_names():
     msa = { "A_really_long_sequence" : "ACGTTGATAACCAGG", 
             "Another_real_long_one!" : "TGCAGAGTACGACGT" }
     expected = \
@@ -151,7 +151,7 @@ Another_real_long_one!  TGCAGAGTAC  GACGT"""
     assert_equal(interleaved_phy(msa), expected)  
 
 
-def test_sequentual_phy__long_names():
+def test_interleaved_phy__long_names():
     msa = { "A_really_long_sequence_name_that_is_in_fact_too_long" : "ACGTTGATAACCAGG", 
             "Another_really_long_sequence_name_that_is_too_long" : "TGCAGAGTACGACGT" }
     expected = \

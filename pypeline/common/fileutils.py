@@ -24,6 +24,7 @@ import os
 import uuid
 import shutil
 
+from pypeline.common.utilities import safe_coerce_to_tuple
 
 
 def add_postfix(filename, postfix):
@@ -66,7 +67,7 @@ def missing_files(filenames):
     does not exist. Note that this function does not differentiate
     between files and folders."""
     result = []
-    for filename in filenames:
+    for filename in safe_coerce_to_tuple(filenames):
         if not os.path.exists(filename):
             result.append(filename)
             
@@ -80,7 +81,10 @@ def modified_after(younger, older):
         for filename in filenames:
             yield os.path.getmtime(os.path.realpath(filename))
 
-    return max(get_mtimes(younger)) > min(get_mtimes(older))
+    younger_time = max(get_mtimes(safe_coerce_to_tuple(younger)))
+    older_time   = min(get_mtimes(safe_coerce_to_tuple(older)))
+
+    return younger_time > older_time
 
 
 def is_executable(filename):
@@ -104,7 +108,7 @@ def executable_exists(filename):
 
 def missing_executables(filenames):
     result = []
-    for filename in filenames:
+    for filename in safe_coerce_to_tuple(filenames):
         if not executable_exists(filename):
             result.append(filename)
             
