@@ -336,6 +336,13 @@ class SummaryTableNode(Node):
                     }
 
             else:
+                # FIXME: A better solution is required when adding support pre-trimmed reads ...
+                return {
+                    "lib_type"          : ("*", "# SE, PE, or * (for both)"),
+                    "seq_reads_se"      : (float("nan"),  "# Total number of single-ended reads"),
+                    "seq_trash_se"      : (float("nan"),  "# Total number of reads"),
+                    "seq_nt_total"      : (float("nan"),  "# Total number of NTs in retained reads")
+                    }
                 assert False
 
     
