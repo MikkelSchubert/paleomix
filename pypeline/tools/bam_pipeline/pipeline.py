@@ -28,14 +28,10 @@ import collections
 
 import pypeline
 import pypeline.ui as ui
-import pypeline.common.fileutils as fileutils
 
-from pypeline.node import CommandNode, MetaNode
-from pypeline.atomiccmd import AtomicCmd
-from pypeline.atomicset import ParallelCmds
 from pypeline.nodes.bwa import SE_BWANode, PE_BWANode
 from pypeline.nodes.gatk import IndelRealignerNode
-from pypeline.nodes.picard import ValidateBAMNode, MergeSamFilesNode, MarkDuplicatesNode
+from pypeline.nodes.picard import MergeSamFilesNode, MarkDuplicatesNode
 from pypeline.nodes.coverage import CoverageNode
 from pypeline.nodes.samtools import BAMIndexNode
 from pypeline.nodes.adapterremoval import SE_AdapterRemovalNode, PE_AdapterRemovalNode
@@ -44,162 +40,15 @@ from pypeline.common.text import parse_padded_table
 from pypeline.common.fileutils import swap_ext, add_postfix
 
 import pypeline.tools.bam_pipeline as common
+from pypeline.tools.bam_pipeline.nodes import *
 from pypeline.tools.bam_pipeline.summary import SummaryTableNode
-
-
-# Number of reads to sample when running mapDamage
-_MAPDAMAGE_MAX_READS = 100000
+from pypeline.tools.bam_pipeline.validation import validate_records
 
 
 _ADAPTERRM_SE_CACHE = {}
 _ADAPTERRM_PE_CACHE = {}
 
 
-
-class MapDamageNode(CommandNode):
-    def __init__(self, reference, input_file, output_directory, dependencies):
-        command = AtomicCmd(["mapDamage.pl", "map", "-c",
-                             "-n", _MAPDAMAGE_MAX_READS,
-                             "-i", "%(IN_BAM)s",
-                             "-d", "%(OUT_DIR)s",
-                             "-r", reference],
-                            IN_BAM  = input_file,
-                            OUT_DIR = output_directory,
-                            OUT_STDOUT = output_directory + ".stdout",
-                            OUT_STDERR = output_directory + ".stderr")
-
-        description =  "<mapDamage: '%s' -> '%s'>" % (input_file, output_directory)
-        CommandNode.__init__(self, 
-                             command      = command,
-                             description  = description,
-                             dependencies = dependencies)
-
-
-class FilterUniqueBAMNode(CommandNode):
-    def __init__(self, config, input_files, output_file, dependencies = ()):
-        merge_jar  = os.path.join(config.picard_root, "MergeSamFiles.jar")
-        merge_call = ["java", "-jar", merge_jar, 
-                      "TMP_DIR=%s" % config.temp_root, 
-                      "SO=coordinate",
-                      "OUTPUT=/dev/stdout"]
-        merge_files = {"OUT_STDOUT" : AtomicCmd.PIPE}
-        for (ii, filename) in enumerate(input_files, start = 1):
-            merge_call.append("INPUT=%%(IN_FILE_%i)s" % ii)
-            merge_files["IN_FILE_%i" % ii] = filename
-
-
-        merge = AtomicCmd(merge_call, **merge_files)
-        filteruniq = AtomicCmd(["FilterUniqueBAM", "--PIPE", "--library"],
-                               IN_STDIN   = merge,
-                               OUT_STDOUT = output_file)
-
-        command     = ParallelCmds([merge, filteruniq])
-        description =  "<FilterUniqueBAM: '%s'>" % (input_files,)
-        CommandNode.__init__(self, 
-                             command      = command,
-                             description  = description,
-                             dependencies = dependencies)
-
-
-class ValidateBAMFile(MetaNode):
-    def __init__(self, config, node, log_file = None, dependencies = None):
-        filenames = self._get_input_file(node)
-        assert len(filenames) == 1, (filenames, node)
-        input_file = filenames.pop()
-
-        subnodes = [node]
-        if isinstance(node, MetaNode):
-            subnodes = list(node.subnodes)
-        
-        validation_params = ValidateBAMNode.customize(config       = config,
-                                                      input_bam    = input_file,
-                                                      output_log   = log_file,
-                                                      dependencies = subnodes)
-        validation_params.command.push_parameter("IGNORE", "MATE_NOT_FOUND", sep = "=")
-
-        subnodes.append(validation_params.build_node())
-
-        description = "<w/Validation: " + str(node)[1:]        
-        MetaNode.__init__(self, 
-                          description  = description,
-                          subnodes     = subnodes,
-                          dependencies = dependencies or node.dependencies)
-
-
-    def _get_input_file(cls, node):
-        filenames = set()
-        for filename in node.output_files:
-            if filename.lower().endswith(".bai"):
-                filenames.add(swap_ext(filename, ".bam"))
-            elif filename.lower().endswith(".bam"):
-                filenames.add(filename)
-
-        if not filenames and node.subnodes:
-            for subnode in node.subnodes:
-                filenames.update(cls._get_input_file(subnode))
-
-        return filenames
-
-
-
-def validate_records_unique(records):
-    paths = collections.defaultdict(list)
-    for runs in records.itervalues():
-        for record in runs:
-            paths[common.paths.full_path(record)].append(record)
-
-    errors = False
-    for records in paths.itervalues():
-        if len(records) > 1:
-            errors = True
-            ui.print_err("ERROR: {0} too similar records found (combination of specified fields must be unique):".format(len(records)))
-            ui.print_err("\t- Name:    {Name}\n\t\t- Sample:  {Sample}\n\t\t- Library: {Library}\n\t\t- Barcode: {Barcode}\n".format(**records[0]))
-
-    return not errors
-
-
-def validate_records_libraries(records):
-    """Checks that library names are unique to each sample in a target,
-    under the assumption that multiple libraries may be produced from
-    a sample, but not vice versa."""
-    errors = False
-    for (name, runs) in sorted(records.items()):
-        libraries = collections.defaultdict(set)
-        for record in runs:
-            libraries[record["Library"]].add(record["Sample"])
-
-        for (library, samples) in sorted(libraries.items()):
-            if len(samples) > 1:
-                ui.print_err("ERROR: Multiple samples in one library:")
-                ui.print_err("\t- Target:  {0}\n\t- Library: {1}\n\t- Samples: {2}\n".format(name, library, ", ".join(samples)))
-                errors = True
-
-    return not errors
-
-
-def validate_records_paths(records):
-    errors = False
-    for records, filenames in common.paths.collect_overlapping_files(records):
-        errors = True
-        descriptions = []
-        for (ii, record) in enumerate(records, start = 1):
-            descriptions.append("\t- Record {0}: Name: {Name},  Sample: {Sample},  Library: {Library},  Barcode: {Barcode}\n\t            Path: {Path}".format(ii, **record))
-        for (ii, filename) in enumerate(filenames, start = 1):
-            descriptions.append("\t- Canonical path {0}: {1}".format(ii, filename))
-
-        ui.print_err("ERROR: Path included multiple times by one or more records:\n{0}\n".format("\n".join(descriptions)))
-
-    return not errors
-
-
-def validate_records(records):
-    """Tests for possible errors in the makefile, including
-     - Non-unique entries (Name ... Barcode columns)
-     - Paths entered multiple times
-     - Libraries with multiple samples."""
-    return validate_records_unique(records) \
-        and validate_records_libraries(records) \
-        and validate_records_paths(records)
 
 
 def collect_records(filenames):
