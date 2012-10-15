@@ -57,7 +57,7 @@ class RAxMLReduceNode(CommandNode):
                           
                           TEMP_IN_ALIGNMENT = "RAXML_alignment",
                           TEMP_IN_PARTITION = "RAXML_partitions",
-                          TEMP_OUT_INFO     = "RAxML_info.GTRGAMMA",
+                          TEMP_OUT_INFO     = "RAxML_info.Pypeline",
                           
                           OUT_ALIGNMENT     = output_alignment,
                           OUT_PARTITION     = output_partition)
