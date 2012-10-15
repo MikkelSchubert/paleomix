@@ -28,8 +28,25 @@ import pypeline.tools.bam_pipeline.mkfile as mkfile
 import pypeline.tools.bam_pipeline.pipeline as pipeline
 
 
+# List of modules required to run the pipeline
+_REQUIRED_MODULES = {"pysam" : "http://code.google.com/p/pysam/", 
+                     "yaml"  : "http://www.pyyaml.org/"}
+
 def main(argv):
-    if (len(argv) == 0) or (argv[0] not in ("mkfile", "run", "dry_run", "dryrun")):
+    missing_modules = False
+    for (module, url) in sorted(_REQUIRED_MODULES.items()):
+        try:
+            __import__(module)
+        except Exception, e:
+            ui.print_err("ERROR: Could not import required module '%s':\n       %s\n" % (module,e))
+            ui.print_err("       If module is not installed, please download from '%s'." % (url,))
+            ui.print_err("       A local install may be performed using the following command:")
+            ui.print_err("       $ python setup.py install --user\n")
+            missing_modules = True
+
+    if missing_modules:
+        return 1
+    elif (len(argv) == 0) or (argv[0] not in ("mkfile", "run", "dry_run", "dryrun")):
         basename = os.path.basename(sys.argv[0])
         ui.print_info("Usage:")
         ui.print_info("  -- %s help            -- Display this message" % basename)
@@ -44,6 +61,7 @@ def main(argv):
         return pipeline.main(argv[1:] + ["--dry-run"])
 
     return 1
+
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))
