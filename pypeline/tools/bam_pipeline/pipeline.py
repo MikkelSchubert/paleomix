@@ -46,6 +46,11 @@ from pypeline.common.fileutils import swap_ext, add_postfix
 import pypeline.tools.bam_pipeline as common
 from pypeline.tools.bam_pipeline.summary import SummaryTableNode
 
+
+# Number of reads to sample when running mapDamage
+_MAPDAMAGE_MAX_READS = 100000
+
+
 _ADAPTERRM_SE_CACHE = {}
 _ADAPTERRM_PE_CACHE = {}
 
@@ -54,6 +59,7 @@ _ADAPTERRM_PE_CACHE = {}
 class MapDamageNode(CommandNode):
     def __init__(self, reference, input_file, output_directory, dependencies):
         command = AtomicCmd(["mapDamage.pl", "map", "-c",
+                             "-n", _MAPDAMAGE_MAX_READS,
                              "-i", "%(IN_BAM)s",
                              "-d", "%(OUT_DIR)s",
                              "-r", reference],
