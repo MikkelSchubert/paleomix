@@ -165,11 +165,14 @@ class Node(object):
 
     @classmethod
     def _desc_files(cls, files):
-        paths = set(os.path.dirname(filename) for filename in files)
-        if len(paths) == 1:
-            return "%i file(s) in '%s'" % (len(files), paths.pop())
+        if len(files) == 1:
+            return "'%s'" % tuple(files)
         else:
-            return "%i file(s)" % (len(files),)
+            paths = set(os.path.dirname(filename) for filename in files)
+            if len(paths) == 1:
+                return "%i file(s) in '%s'" % (len(files), paths.pop())
+            else:
+                return "%i file(s)" % (len(files),)
 
 
 
