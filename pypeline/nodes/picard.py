@@ -37,7 +37,7 @@ class ValidateBAMNode(CommandNode):
 
         params.set_parameter("I", "%(IN_BAM)s", sep = "=")
         params.set_paths(IN_BAM     = input_bam,
-                         OUT_STDOUT = output_log or (input_bam + ".validated"))
+                         OUT_STDOUT = output_log or swap_ext(input_bam, ".validated"))
 
         return {"command" : params}
 
@@ -74,7 +74,7 @@ class MarkDuplicatesNode(CommandNode):
 
         params.set_paths(OUT_BAM     = output_bam,
                          OUT_BAI     = swap_ext(output_bam, ".bai"),
-                         OUT_METRICS = output_metrics or (output_bam + ".metrics"))
+                         OUT_METRICS = output_metrics or swap_ext(output_bam, ".metrics"))
 
         return {"command" : params}
         
