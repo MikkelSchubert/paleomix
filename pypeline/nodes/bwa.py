@@ -25,7 +25,6 @@ import os
 from pypeline.node import CommandNode
 from pypeline.atomiccmd import AtomicCmd
 from pypeline.atomicset import ParallelCmds
-from pypeline.commands import sam_to_bam
 
 
 class BWAIndexNode(CommandNode):
@@ -47,7 +46,7 @@ class BWAIndexNode(CommandNode):
 
 
 class SE_BWANode(CommandNode):
-    def __init__(self, input_file, output_file, prefix, read_group, min_quality = 0, threads = 1, dependencies = ()):
+    def __init__(self, input_file, output_file, reference, prefix, read_group, min_quality = 0, threads = 1, dependencies = ()):
         aln   = AtomicCmd(["bwa", "aln", 
                            "-l", 2 ** 20, 
                            "-t", threads,
@@ -61,30 +60,18 @@ class SE_BWANode(CommandNode):
                           IN_FILE  = input_file,
                           OUT_STDOUT = AtomicCmd.PIPE)
 
-        flt = sam_to_bam.build_atomiccmd(AtomicCmd,
-                                         min_quality    = min_quality,
-                                         exclude_flags  = 0x4,
-                                         stdin          = samse,
-                                         output_file    = AtomicCmd.PIPE,
-                                         flag_as_sorted = True)
-
-        sort = AtomicCmd(["samtools", "sort", "-", "%(TEMP_OUT_BAM)s"],
-                         IN_STDIN     = flt,
-                         OUT_BAM      = output_file,
-                         # Prefix used by 'samtools sort', with .bam added to final file
-                         TEMP_OUT_BAM = os.path.splitext(output_file)[0])
-
+        cmds = _process_output(samse, output_file, reference, min_quality)
 
         description =  "<SE_BWA (%i threads): '%s'>" % (threads, input_file)
         CommandNode.__init__(self, 
-                             command      = ParallelCmds([aln, samse, flt, sort]),
+                             command      = ParallelCmds([aln, samse] + cmds),
                              description  = description,
                              threads      = threads,
                              dependencies = dependencies)
 
 
 class PE_BWANode(CommandNode):
-    def __init__(self, input_file_1, input_file_2, output_file, prefix, read_group, min_quality = 0, threads = 1, dependencies = ()):
+    def __init__(self, input_file_1, input_file_2, output_file, reference, prefix, read_group, min_quality = 0, threads = 1, dependencies = ()):
         aln_call = ["bwa", "aln", 
                     "-l", 2 ** 20, 
                     "-t", max(1, threads / 2),
@@ -109,23 +96,11 @@ class PE_BWANode(CommandNode):
                           TEMP_IN_SAI_2 = "pair_2.sai",
                           OUT_STDOUT    = AtomicCmd.PIPE)
 
-        flt = sam_to_bam.build_atomiccmd(AtomicCmd,
-                                         min_quality    = min_quality,
-                                         exclude_flags  = 0x4,
-                                         stdin          = samse,
-                                         output_file    = AtomicCmd.PIPE,
-                                         flag_as_sorted = True)
-
-        sort = AtomicCmd(["samtools", "sort", "-", "%(TEMP_OUT_BAM)s"],
-                         IN_STDIN     = flt,
-                         OUT_BAM      = output_file,
-                         # Prefix used by 'samtools sort', with .bam added to final file
-                         TEMP_OUT_BAM = os.path.splitext(output_file)[0])
-
+        cmds = _process_output(samse, output_file, reference, min_quality)
 
         description =  "<PE_BWA (%i threads): '%s'>" % (threads, input_file_1)
         CommandNode.__init__(self, 
-                             command      = ParallelCmds([aln_1, aln_2, samse, flt, sort]),
+                             command      = ParallelCmds([aln_1, aln_2, samse] + cmds),
                              description  = description,
                              threads      = threads,
                              dependencies = dependencies)
@@ -137,7 +112,7 @@ class PE_BWANode(CommandNode):
 
 
 class BWASWNode(CommandNode):
-    def __init__(self, input_file_1, output_file, prefix, input_file_2 = None, min_quality = 0, threads = 1, parameters = [], dependencies = ()):
+    def __init__(self, input_file_1, output_file, reference, prefix, input_file_2 = None, min_quality = 0, threads = 1, parameters = [], dependencies = ()):
         command = ["bwa", "bwasw", "-t", threads, prefix, "%(IN_FILE_1)s"] + parameters
         files   = {"IN_FILE_1"  : input_file_1,
                    "OUT_STDOUT" : AtomicCmd.PIPE}
@@ -147,12 +122,8 @@ class BWASWNode(CommandNode):
         files.update(_prefix_files(prefix))
 
         aln = AtomicCmd(command, **files)
-        flt = sam_to_bam.build_atomiccmd(AtomicCmd,
-                                         min_quality   = min_quality,
-                                         exclude_flags = 0x4,
-                                         stdin         = aln,
-                                         output_file   = output_file,
-                                         flag_as_sorted = True)
+        cmds = _process_output(samse, output_file, reference, min_quality)
+
 
         if input_file_2:
             description =  "<PE_BWASW (%i threads): '%s', '%s' -> '%s'>" % (threads, input_file_1, input_file_2, output_file)
@@ -160,10 +131,32 @@ class BWASWNode(CommandNode):
             description =  "<BWASW (%i threads): '%s' -> '%s'>" % (threads, input_file_1, output_file)
 
         CommandNode.__init__(self, 
-                             command      = ParallelCmds([aln, flt]),
+                             command      = ParallelCmds([aln] + cmds),
                              description  = description,
                              threads      = threads,
                              dependencies = dependencies)
+
+
+def _process_output(stdin, output_file, reference, min_quality):
+    convert = AtomicCmd(["safeSAM2BAM", "--flag-as-sorted"],
+                        IN_STDIN   = stdin,
+                        OUT_STDOUT = AtomicCmd.PIPE)
+
+    flt = AtomicCmd(["samtools", "view", "-bu" "-F0x4", "-q%i" % min_quality, "-"],
+                    IN_STDIN  = convert,
+                    OUT_STDOUT = AtomicCmd.PIPE)
+
+    sort = AtomicCmd(["samtools", "sort", "-o", "-", "%(TEMP_OUT_BAM)s"],
+                     IN_STDIN     = flt,
+                     OUT_STDOUT   = AtomicCmd.PIPE,
+                     TEMP_OUT_BAM = "sorted")
+
+    calmd = AtomicCmd(["samtools", "calmd", "-b", "-", "%(IN_REF)s"],
+                      IN_REF   = reference,
+                      IN_STDIN = sort,
+                      OUT_STDOUT = output_file)
+
+    return [convert, flt, sort, calmd]
 
 
 
