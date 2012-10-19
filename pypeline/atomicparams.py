@@ -202,8 +202,8 @@ class AtomicParams:
 
         command = list(self._call)
         for parameter in self._params:
-            if parameter["Value"]:
-                if parameter["Sep"]:
+            if parameter["Value"] is not None:
+                if parameter["Sep"] is not None:
                     command.append("%s%s%s" % (parameter["Key"], parameter["Sep"], parameter["Value"]))
                 else:
                     command.append(parameter["Key"])
