@@ -214,7 +214,7 @@ class CommandNode(Node):
 class MetaNode(Node):
     """A MetaNode is a simplified node, which only serves the purpose of aggregating
     a set of subnodes. It does not carry out any task itself (run() does nothing),
-    and is marked as done when all its subnodes are completed."""
+    and is marked as done when all its subnodes / dependencies are completed."""
 
     def __init__(self, description = None, subnodes = (), dependencies = ()):
         Node.__init__(self, 
@@ -224,10 +224,8 @@ class MetaNode(Node):
 
     @property
     def is_done(self):
-        """Is true if all subnodes are marked as 'is_done'."""
-
-        return all(node.is_done for node in self.subnodes)
-
+        """Is true if all subnodes / dependencies are marked as 'is_done'."""
+        return all(node.is_done for node in self.subnodes | self.dependencies)
 
     def run(self, config):
         pass
