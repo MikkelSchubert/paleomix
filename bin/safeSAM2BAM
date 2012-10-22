@@ -21,10 +21,13 @@
 # SOFTWARE.
 #
 """
-An alternative to 'samtools view -Sb -', needed because samtools does not
+An alternative to 'samtools view -Sbu -', needed because samtools does not
 properly handle SAM-files with no records. For example, the following
 command will not work:
-$ samtools view -H INPUT | samtools view -Sb -
+$ samtools view -H INPUT | samtools view -Sbu -
+
+This is mainly a problem when aligning ancient DNA lanes against mt genomes, 
+as there may not be any hits in an entire lane.
 """
 
 import os
@@ -32,30 +35,6 @@ import sys
 import optparse
 
 import pysam
-
-import pypeline.ui
-import pypeline.atomiccmd
-from pypeline.common.utilities import set_in
-
-
-def call(min_quality, exclude_flags, flag_as_sorted):
-    input_file = pysam.Samfile("-", "r")
-    header = input_file.header
-    if flag_as_sorted:
-        set_in(header, ("HD", "SO"), "coordinate")
-        set_in(header, ("HD", "GO"), "none")
-        set_in(header, ("HD", "VN"), "1.0")
-
-    output_file = pysam.Samfile("-", "wb", header = header)
-    for read in input_file:
-        if read.flag & exclude_flags:
-            continue
-        elif read.mapq < min_quality:
-            continue
-               
-        output_file.write(read)
-    output_file.close()
-    input_file.close()
 
 
 def main(argv):
@@ -66,29 +45,22 @@ def main(argv):
 
     config, args = parser.parse_args(argv)
     if args:
-        pypeline.ui.print_err("%s does not take any arguments." % sys.argv[0])
+        sys.stderr.write("%s does not take any arguments.\n" % sys.argv[0])
         sys.exit(1)
-                               
-    return call(min_quality    = config.min_quality,
-                exclude_flags  = config.exclude_flags,
-                flag_as_sorted = config.flag_as_sorted)
 
+    input_file = pysam.Samfile("-", "r")
+    header = input_file.header
+    if config.flag_as_sorted:
+        header["HD"] = {"SO" :  "coordinate",
+                        "GO" : "none",
+                        "VN" : "1.0"}
 
-def build_atomiccmd(cls, min_quality, exclude_flags, stdin, output_file, flag_as_sorted = False):
-    filename = os.path.realpath(__file__)
-    if filename.endswith(".pyc"):
-        filename = filename[:-1]
+    output_file = pysam.Samfile("-", "wbu", header = header)
+    for read in input_file:
+        output_file.write(read)
+    output_file.close()
+    input_file.close()
 
-    call = [filename, 
-            "-q", min_quality,
-            "-F", exclude_flags]
-    if flag_as_sorted:
-        call.append("--flag-as-sorted")
-
-    return cls(call,
-               IN_STDIN   = stdin,
-               OUT_STDOUT = output_file)
-     
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
