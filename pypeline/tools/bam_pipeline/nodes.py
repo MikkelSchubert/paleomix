@@ -25,6 +25,7 @@ import os
 from pypeline.node import CommandNode, MetaNode
 from pypeline.atomiccmd import AtomicCmd
 from pypeline.atomicset import ParallelCmds
+from pypeline.atomicparams import AtomicJavaParams
 
 from pypeline.nodes.picard import ValidateBAMNode
 from pypeline.common.fileutils import swap_ext, add_postfix
@@ -56,14 +57,16 @@ class MapDamageNode(CommandNode):
 
 
 class FilterUniqueBAMNode(CommandNode):
-    def __init__(self, config, input_files, output_file, dependencies = ()):
+    def __init__(self, config, input_bams, output_bam, dependencies = ()):
         merge_jar  = os.path.join(config.picard_root, "MergeSamFiles.jar")
         merge_call = ["java", "-jar", merge_jar, 
                       "TMP_DIR=%s" % config.temp_root, 
                       "SO=coordinate",
+                      "QUIET=true",
+                      "COMPRESSION_LEVEL=0",
                       "OUTPUT=/dev/stdout"]
         merge_files = {"OUT_STDOUT" : AtomicCmd.PIPE}
-        for (ii, filename) in enumerate(input_files, start = 1):
+        for (ii, filename) in enumerate(input_bams, start = 1):
             merge_call.append("INPUT=%%(IN_FILE_%i)s" % ii)
             merge_files["IN_FILE_%i" % ii] = filename
 
@@ -71,10 +74,10 @@ class FilterUniqueBAMNode(CommandNode):
         merge = AtomicCmd(merge_call, **merge_files)
         filteruniq = AtomicCmd(["FilterUniqueBAM", "--PIPE", "--library"],
                                IN_STDIN   = merge,
-                               OUT_STDOUT = output_file)
+                               OUT_STDOUT = output_bam)
 
         command     = ParallelCmds([merge, filteruniq])
-        description =  "<FilterUniqueBAM: '%s'>" % (input_files,)
+        description =  "<FilterUniqueBAM: %s>" % (self._desc_files(input_bams),)
         CommandNode.__init__(self, 
                              command      = command,
                              description  = description,
@@ -119,3 +122,36 @@ class ValidateBAMFile(MetaNode):
                 filenames.update(cls._get_input_file(subnode))
 
         return filenames
+
+
+class CleanupBAMNode(CommandNode):
+    def __init__(self, config, reference, input_bam, output_bam, min_mapq, tags, dependencies = ()):
+        flt = AtomicCmd(["samtools", "view", "-bu", "-F0x4", "-q%i" % min_mapq, "%(IN_BAM)s"],
+                        IN_BAM  = input_bam,
+                        OUT_STDOUT = AtomicCmd.PIPE)
+
+        jar_file = os.path.join(config.picard_root, "AddOrReplaceReadGroups.jar")
+        params = AtomicJavaParams(config, jar_file)
+        params.set_parameter("INPUT", "/dev/stdin", sep = "=")
+        params.set_parameter("OUTPUT", "/dev/stdout", sep = "=")
+        params.set_parameter("QUIET", "true", sep = "=")
+        params.set_parameter("COMPRESSION_LEVEL", "0", sep = "=")
+
+        for (tag, value) in sorted(tags.iteritems()):
+            params.set_parameter(tag, value, sep = "=")
+
+        params.set_paths(IN_STDIN   = flt,
+                         OUT_STDOUT = AtomicCmd.PIPE)
+        annotate = params.create_cmd()
+
+        calmd = AtomicCmd(["samtools", "calmd", "-b", "-", "%(IN_REF)s"],
+                          IN_REF   = reference,
+                          IN_STDIN = annotate,
+                          OUT_STDOUT = output_bam)
+
+        description =  "<Cleanup BAM: %s -> '%s'>" \
+            % (input_bam, output_bam)
+        CommandNode.__init__(self,
+                             command      = ParallelCmds([flt, annotate, calmd]),
+                             description  = description,
+                             dependencies = dependencies)

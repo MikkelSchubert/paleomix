@@ -31,6 +31,8 @@ from pypeline.common.text import padded_table
 _HEADER = \
 """# Timestamp: %s
 # 
+#
+#
 # Columns:
 #     Name:     Name of the target. Final BAM filenames will consist of this
 #               name and the name of the BWA prefix joined by a dot. For
@@ -54,7 +56,34 @@ _HEADER = \
 # sample only for any one target. Finally, any input file may only be specified
 # ONCE. The pipeline will not run if any of these assumptions are violated.
 #
-#"""
+#
+
+
+# Default options
+Options:
+  # Sequencing platform, see SAM/BAM reference for valid values
+  Platform: Illumina
+  
+  # Use seed during sequence alignment
+  BWA_UseSeed: yes
+  # Filter hits with a mappign quality (PHRED) below this value
+  BWA_MinQuality: 0
+
+  # Filter PCR duplicates
+  PCRDuplicates: yes
+
+  # Exclude any type of trimmed reads from alignment/analysis
+  # All reads are processed by default.
+#  ExcludeReads:
+#  - Single    # Single-ended reads, or PE reads where one mate was discarded
+#  - Paired    # Pair-ended reads, where both reads were retained
+#  - Collapsed # Overlapping pair-ended mate reads collapsed into a single read  # ExcludeReads: 
+
+
+# Prefixes:
+#    - NAME_OF_PREFIX: PATH_TO_PREFIX
+#      Label: # mito or nucl
+"""
 
 
 _FILENAME = "SampleSheet.csv"
@@ -82,8 +111,8 @@ def main(argv):
     lines.insert(0, ["Name", "Sample", "Library", "Barcode", "Platform", "Path"])
 
     print _HEADER % datetime.datetime.now().isoformat()
-    for line in padded_table(lines):
-        print line
+#    for line in padded_table(lines):
+#        print line
 
     if not argv:
         ui.print_info("No directories specified, empty table printed:", file = sys.stderr)

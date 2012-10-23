@@ -20,68 +20,106 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
 # SOFTWARE.
 #
+import os
+import itertools
 import collections
 
-import pypeline.tools.bam_pipeline as common
+from pypeline.tools.bam_pipeline.makefile import \
+    DEFAULT_OPTIONS, \
+    READ_TYPES, \
+    MakefileError
 
 
-def validate_records(records):
-    """Tests for possible errors in the makefile, including
-     - Non-unique entries (Name ... Barcode columns)
-     - Paths entered multiple times
-     - Libraries with multiple samples."""
-    return _validate_records_unique(records) \
-        and _validate_records_libraries(records) \
-        and _validate_records_paths(records)
+# Valid PL values according to SAM Format Specification (v1.4-r962)
+_PLATFORMS = ("CAPILLARY", "LS454", "ILLUMINA", "SOLID", "HELICOS", "IONTORRENT", "PACBIO")
 
 
-def _validate_records_unique(records):
-    paths = collections.defaultdict(list)
-    for runs in records.itervalues():
-        for record in runs:
-            paths[common.paths.full_path(record)].append(record)
 
-    errors = False
-    for records in paths.itervalues():
+
+def validate_makefiles(makefiles):
+    for makefile in makefiles:
+        _validate_makefile_libraries(makefile)
+        _validate_makefile_options(makefile)
+    _validate_makefiles_duplicate_targets(makefiles)
+    _validate_makefiles_duplicate_files(makefiles)
+
+    return makefiles
+
+
+def _validate_makefile_libraries(makefile):
+    libraries = collections.defaultdict(set)
+    for (target, sample, library, barcode, record) in _iterate_over_records(makefile):
+        libraries[(target, library)].add(sample)
+
+    for ((target, library), samples) in libraries.iteritems():
+        if len(samples) > 1:
+            raise MakefileError("Library '%s' in target '%s' spans multiple samples: %s" \
+                                    % (library, target, ", ".join(samples)))
+
+
+def _validate_makefile_options(makefile):
+    for (target, sample, library, barcode, record) in _iterate_over_records(makefile):
+        options = record["Options"]
+        for (key, value) in options.iteritems():
+            if key not in DEFAULT_OPTIONS:
+                raise MakefileError("Unknown option: Key = '%s', value = '%s'" % (key, value))
+            elif not isinstance(value, type(DEFAULT_OPTIONS[key])):
+                raise MakefileError("Option value has wrong type:\n\tOption = '%s', value = '%s'\n\tExpected type = %s, found = %s" \
+                                        % (key, value, DEFAULT_OPTIONS[key].__class__.__name__, value.__class__.__name__))
+        
+        if options["Platform"].upper() not in _PLATFORMS:
+            raise MakefileError("Unknown Platform specified: '%s'" % options["Platform"])
+
+        unknown_reads = set(options["ExcludeReads"]) - set(READ_TYPES)
+        if unknown_reads:
+            raise MakefileError("Unknown reads specified in option 'ExcludeReads': '%s'\n\tValid values are '%s'" \
+                                    % ("', '".join(unknown_reads), "', '".join(READ_TYPES)))
+
+
+def _validate_makefiles_duplicate_files(makefiles):
+    filenames = collections.defaultdict(list)
+    for makefile in makefiles:
+        for (target, sample, library, barcode, record) in _iterate_over_records(makefile):
+            for key in ('Raw', 'Trimmed'):
+                for input_files in record["Reads"].get(key, {}).itervalues():
+                    for realpath in map(os.path.realpath, input_files):
+                        filenames[realpath].append((target, sample, library, barcode))
+            
+            for bam in record["Reads"].get("BAM", {}).itervalues():
+                for realpath in map(os.path.realpath, bam.values()):
+                    filenames[realpath].append((target, sample, library, barcode))
+
+                        
+
+    has_overlap = {}
+    for (filename, records) in filenames.iteritems():
         if len(records) > 1:
-            errors = True
-            ui.print_err("ERROR: {0} too similar records found (combination of specified fields must be unique):".format(len(records)))
-            ui.print_err("\t- Name:    {Name}\n\t\t- Sample:  {Sample}\n\t\t- Library: {Library}\n\t\t- Barcode: {Barcode}\n".format(**records[0]))
+            has_overlap[filename] = list(set(records))
 
-    return not errors
-
-
-def _validate_records_libraries(records):
-    """Checks that library names are unique to each sample in a target,
-    under the assumption that multiple libraries may be produced from
-    a sample, but not vice versa."""
-    errors = False
-    for (name, runs) in sorted(records.items()):
-        libraries = collections.defaultdict(set)
-        for record in runs:
-            libraries[record["Library"]].add(record["Sample"])
-
-        for (library, samples) in sorted(libraries.items()):
-            if len(samples) > 1:
-                ui.print_err("ERROR: Multiple samples in one library:")
-                ui.print_err("\t- Target:  {0}\n\t- Library: {1}\n\t- Samples: {2}\n".format(name, library, ", ".join(samples)))
-                errors = True
-
-    return not errors
-
-
-def _validate_records_paths(records):
-    errors = False
-    for records, filenames in common.paths.collect_overlapping_files(records):
-        errors = True
+    by_records = sorted(zip(has_overlap.values(), has_overlap.keys()))
+    for (records, pairs) in itertools.groupby(by_records, lambda x: x[0]):
         descriptions = []
         for (ii, record) in enumerate(records, start = 1):
-            descriptions.append("\t- Record {0}: Name: {Name},  Sample: {Sample},  Library: {Library},  Barcode: {Barcode}\n\t            Path: {Path}".format(ii, **record))
-        for (ii, filename) in enumerate(filenames, start = 1):
+            descriptions.append("\t- Record {0}: Name: {1},  Sample: {2},  Library: {3},  Barcode: {4}".format(ii, *record))
+        for (ii, (_, filename)) in enumerate(sorted(pairs), start = 1):
             descriptions.append("\t- Canonical path {0}: {1}".format(ii, filename))
 
-        ui.print_err("ERROR: Path included multiple times by one or more records:\n{0}\n".format("\n".join(descriptions)))
+        raise MakefileError("Path included multiple times by one or more records:\n{0}\n".format("\n".join(descriptions)))
 
-    return not errors
 
+def _validate_makefiles_duplicate_targets(makefiles):
+    targets = set()
+    for makefile in makefiles:
+        for target in makefile["Targets"]:
+            if target in targets:
+                raise MakefileError("Target '%s' specified multiple times!" % target)
+            targets.add(target)
+
+
+def _iterate_over_records(makefile):
+    for (target, samples) in makefile["Targets"].iteritems():
+        for (sample, libraries) in samples.iteritems():
+            for (library, barcodes) in libraries.iteritems():
+                for (barcode, record) in barcodes.iteritems():
+                    yield target, sample, library, barcode, record
 
