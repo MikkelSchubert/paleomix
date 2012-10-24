@@ -129,6 +129,8 @@ def build_bam_cleanup_nodes(config, target, sample, library, barcode, record):
                                   output_bam = output_filename,
                                   min_mapq   = record["Options"]["BWA_MinQuality"],
                                   tags       = tags)
+            node = ValidateBAMFile(config      = config,
+                                   node        = node)
 
             results[genome][key] = {"Filename" : output_filename, "Node" : node}
 
