@@ -80,16 +80,17 @@ def _validate_makefiles_duplicate_files(makefiles):
     filenames = collections.defaultdict(list)
     for makefile in makefiles:
         for (target, sample, library, barcode, record) in _iterate_over_records(makefile):
-            for key in ('Raw', 'Trimmed'):
-                for input_files in record["Reads"].get(key, {}).itervalues():
-                    for realpath in map(os.path.realpath, input_files):
-                        filenames[realpath].append((target, sample, library, barcode))
-            
-            for bam in record["Reads"].get("BAM", {}).itervalues():
-                for realpath in map(os.path.realpath, bam.values()):
+            for input_files in record["Reads"].get("Raw", {}).itervalues():
+                for realpath in map(os.path.realpath, input_files):
                     filenames[realpath].append((target, sample, library, barcode))
+            
+            for filename in record["Reads"].get("Trimmed", {}).itervalues():
+                realpath = os.path.realpath(filename)
+                filenames[realpath].append((target, sample, library, barcode))
 
-                        
+            for genomes in record["Reads"].get("BAM", {}).itervalues():
+                for realpath in map(os.path.realpath, genomes.itervalues()):
+                    filenames[realpath].append((target, sample, library, barcode))                        
 
     has_overlap = {}
     for (filename, records) in filenames.iteritems():
