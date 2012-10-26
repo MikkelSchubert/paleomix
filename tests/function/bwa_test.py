@@ -35,6 +35,7 @@ def _bwa_index(config):
 def _bwa_aln_se(config, index):
     node_params = {"input_file"   : "tests/data/sim_reads/mate_1.fastq.gz",
                    "prefix"       : os.path.join(config.destination, "rCRS"),
+                   "reference"    : "tests/data/rCRS.fasta",
                    "read_group"   : "@RG\tID:1\tPL:Illumina\tPU:123456\tLB:Library_1\tSM:Sample_1",
                    "dependencies" : (config.dependencies, index)}
     
@@ -51,6 +52,7 @@ def _bwa_aln_pe(config, index):
     node_params = {"input_file_1" : "tests/data/sim_reads/mate_1.fastq.gz",
                    "input_file_2" : "tests/data/sim_reads/mate_2.fastq.gz",
                    "prefix"       : os.path.join(config.destination, "rCRS"),
+                   "reference"    : "tests/data/rCRS.fasta",
                    "read_group"   : "@RG\tID:1\tPL:Illumina\tPU:123456\tLB:Library_1\tSM:Sample_1",
                    "dependencies" : (config.dependencies, index)}
     
@@ -67,6 +69,7 @@ def _bwa_aln_pe(config, index):
 def _bwa_sw_se(config, index):
     node_params = {"input_file_1" : "tests/data/sim_reads/mate_1.fastq.gz",
                    "prefix"       : os.path.join(config.destination, "rCRS"),
+                   "reference"    : "tests/data/rCRS.fasta",
                    "dependencies" : (config.dependencies, index)}
     
     standard = BWASWNode(output_file = os.path.join(config.destination, "sw_se_standard", "output.bam"),
