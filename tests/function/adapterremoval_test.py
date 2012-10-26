@@ -22,7 +22,6 @@
 #
 import os
 
-import framework 
 from pypeline.node import Node
 from pypeline.nodes.adapterremoval import *
 
