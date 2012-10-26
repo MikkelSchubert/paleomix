@@ -142,7 +142,7 @@ class CleanupBAMNode(CommandNode):
 
         params.set_paths(IN_STDIN   = flt,
                          OUT_STDOUT = AtomicCmd.PIPE)
-        annotate = params.create_cmd()
+        annotate = params.finalize()
 
         calmd = AtomicCmd(["samtools", "calmd", "-b", "-", "%(IN_REF)s"],
                           IN_REF   = reference,

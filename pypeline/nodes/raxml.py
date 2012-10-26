@@ -69,7 +69,7 @@ class RAxMLReduceNode(CommandNode):
     def __init__(self, parameters):
         self._kwargs = parameters.command.paths
         CommandNode.__init__(self,
-                             command      = parameters.command.create_cmd(),
+                             command      = parameters.command.finalize(),
                              description  = "<RAxMLReduce: '%s' -> '%s'>" \
                                      % (parameters.input_alignment, parameters.output_alignment),
                              dependencies = parameters.dependencies)
@@ -172,7 +172,7 @@ class RAxMLRapidBSNode(CommandNode):
 
 
         CommandNode.__init__(self,
-                             command      = parameters.command.create_cmd(),
+                             command      = parameters.command.finalize(),
                              description  = "<RAxMLRapidBS: '%s' -> '%s'>" \
                                  % (parameters.input_alignment, parameters.output_template),
                              threads      = parameters.threads,

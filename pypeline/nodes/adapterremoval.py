@@ -67,7 +67,7 @@ class SE_AdapterRemovalNode(CommandNode):
         zcat           = unicat.build_atomiccmd(AtomicCmd, parameters.input_files, "uncompressed_input")
         gzip_truncated = _build_gzip_command(parameters.output_prefix, ".truncated")
         gzip_discarded = _build_gzip_command(parameters.output_prefix, ".discarded")
-        adapterrm      = parameters.command.create_cmd()
+        adapterrm      = parameters.command.finalize()
 
         # Opening of pipes block, so the order of these commands is dependent upon
         # the order of file-opens in atomiccmd and the the programs themselves.
@@ -140,7 +140,7 @@ class PE_AdapterRemovalNode(CommandNode):
         gzip_aligned   = _build_gzip_command(parameters.output_prefix, ".singleton.aln.truncated")
         gzip_unaligned = _build_gzip_command(parameters.output_prefix, ".singleton.unaln.truncated")
         gzip_discarded = _build_gzip_command(parameters.output_prefix, ".discarded")
-        adapterrm      = parameters.command.create_cmd()
+        adapterrm      = parameters.command.finalize()
         
         # Opening of pipes block, so the order of these commands is dependent upon
         # the order of file-opens in atomiccmd and the the programs themselves. 

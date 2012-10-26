@@ -45,7 +45,7 @@ class ValidateBAMNode(CommandNode):
     @use_customizable_cli_parameters
     def __init__(self, parameters):
         CommandNode.__init__(self, 
-                             command      = parameters.command.create_cmd(),
+                             command      = parameters.command.finalize(),
                              description  = "<Validate BAM: '%s'>" % (parameters.input_bam,),
                              dependencies = parameters.dependencies)
 
@@ -83,7 +83,7 @@ class MarkDuplicatesNode(CommandNode):
     def __init__(self, parameters):
         description =  "<MarkDuplicates: %s>" % (self._desc_files(parameters.input_bams),)
         CommandNode.__init__(self, 
-                             command      = parameters.command.create_cmd(),
+                             command      = parameters.command.finalize(),
                              description  = description,
                              dependencies = parameters.dependencies)
 
@@ -115,7 +115,7 @@ class MergeSamFilesNode(CommandNode):
         description =  "<Merge BAMs: %i file(s) -> '%s'>" \
             % (len(parameters.input_bams), parameters.output_bam)
         CommandNode.__init__(self, 
-                             command      = parameters.command.create_cmd(),
+                             command      = parameters.command.finalize(),
                              description  = description,
                              dependencies = parameters.dependencies)
 

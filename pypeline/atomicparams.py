@@ -43,7 +43,7 @@ class ExampleNode(CommandNode):
     @use_customizable_cli_parameters
     def __init__(self, parameters):
         # Create AtomicCmd object using (potentially tweaked) parameters
-        command = parameters.command.create_cmd()
+        command = parameters.command.finalize()
 
         # Do something with a parameter passed to customize
         description = "<ExampleNode: %s>" % parameters.example
@@ -109,6 +109,7 @@ class AtomicParams:
         self._fields  = []
         self._params  = []
         self._paths   = {}
+        self._cmd_object = None
 
 
     def push_parameter(self, key, value = None, sep = None, fixed = True):
@@ -133,8 +134,9 @@ class AtomicParams:
 
         Use keywords (as above) and 'set_paths' to ensure that input/output files are tracked!
         """
-
-        if any(opt["Singleton"] for opt in self._params if (opt["Key"] == key)):
+        if self._cmd_object:
+            raise ParameterError("Parameters have already been finalized")
+        elif any(opt["Singleton"] for opt in self._params if (opt["Key"] == key)):
             raise ParameterError("Attempted to push parameters previously marked as singleton: %s" % key)
 
         self._params.append({"Key"    : key,
@@ -157,8 +159,9 @@ class AtomicParams:
         be joined into a single string before being added to the system-call. If fixed is 
         true, this particular parameter cannot be removed using 'pop_parameter', or 
         overwritten by subsequent calls to 'set_parameter'."""
-        
-        if any(not opt["Singleton"] for opt in self._params if (opt["Key"] == key)):
+        if self._cmd_object:
+            raise ParameterError("Parameters have already been finalized")
+        elif any(not opt["Singleton"] for opt in self._params if (opt["Key"] == key)):
             raise ParameterError("Attempted to overwrite non-singleton parameter: %s" % key)
 
         param = {"Key" : key, "Value"  : value, "Sep" : sep, "Fixed"  : fixed, "Singleton" : True}
@@ -173,6 +176,9 @@ class AtomicParams:
 
 
     def pop_parameter(self, key):
+        if self._cmd_object:
+            raise ParameterError("Parameters have already been finalized")
+
         for parameter in reversed(self._params):
             if parameter["Key"] == key:
                 if parameter["Fixed"]:
@@ -184,7 +190,9 @@ class AtomicParams:
 
 
     def set_paths(self, key = None, value = None, **kwargs):
-        if key and value:
+        if self._cmd_object:
+            raise ParameterError("Parameters have already been finalized")
+        elif key and value:
             kwargs[key] = value
         elif key or value:
             raise ParameterError("Either neither or both 'key' and 'value' parameters must be specified.")
@@ -218,13 +226,20 @@ class AtomicParams:
     def paths(self):
         """Returns a dictionary of paths as set by 'set_paths'."""
 
-        return dict(self._paths)
+        paths = {}
+        for (key, value) in self._paths.iteritems():
+            if isinstance(value, AtomicParams):
+                value = value.finalize()
+            paths[key] = value
+        return paths
 
 
-    def create_cmd(self):
+    def finalize(self):
         """Creates an AtomicCmd object based on the AtomicParam object."""
+        if not self._cmd_object:
+            self._cmd_object = AtomicCmd(self.call, **self.paths)
 
-        return AtomicCmd(self.call, **self.paths)
+        return self._cmd_object
 
 
 
