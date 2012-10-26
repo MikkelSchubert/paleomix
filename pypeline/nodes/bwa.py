@@ -122,7 +122,7 @@ class BWASWNode(CommandNode):
         files.update(_prefix_files(prefix))
 
         aln = AtomicCmd(command, **files)
-        cmds = _process_output(samse, output_file, reference, min_quality)
+        cmds = _process_output(aln, output_file, reference, min_quality)
 
 
         if input_file_2:
