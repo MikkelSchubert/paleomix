@@ -23,30 +23,42 @@
 import os
 import sys
 
-import pypeline.ui as ui
-import pypeline.tools.bam_pipeline.mkfile as mkfile
-import pypeline.tools.bam_pipeline.pipeline as pipeline
-
 
 # List of modules required to run the pipeline
 _REQUIRED_MODULES = {"pysam" : "http://code.google.com/p/pysam/", 
                      "yaml"  : "http://www.pyyaml.org/"}
 
-def main(argv):
+
+def _has_required_modules():
     missing_modules = False
+    try:
+        import pypeline.ui as ui
+    except ImportError, e:
+        sys.stderr.write("ERROR: Could not import required Pypeline module pypeline.ui:\n\t- %s\n" % (e,))
+        sys.stderr.write("       Please make sure that PYTHONPATH points to the location of the 'pypeline' module.\n")
+        sys.stderr.write("       This may be done permanently by adding the following to your ~/.bashrc file:\n")
+        sys.stderr.write("         export PYTHONPATH=${PYTHONPATH}:/path/to/pypeline/checkout/...\n\n")
+        missing_modules = True
+
     for (module, url) in sorted(_REQUIRED_MODULES.items()):
         try:
             __import__(module)
-        except Exception, e:
-            ui.print_err("ERROR: Could not import required module '%s':\n       %s\n" % (module,e))
-            ui.print_err("       If module is not installed, please download from '%s'." % (url,))
-            ui.print_err("       A local install may be performed using the following command:")
-            ui.print_err("       $ python setup.py install --user\n")
+        except ImportError, e:
+            sys.stderr.write("ERROR: Could not import required module '%s':\n\t- %s\n" % (module,e))
+            sys.stderr.write("       If module is not installed, please download from '%s'.\n" % (url,))
+            sys.stderr.write("       A local install may be performed using the following command:\n")
+            sys.stderr.write("       $ python setup.py install --user\n\n")
             missing_modules = True
+    
+    return not missing_modules
 
-    if missing_modules:
+
+def main(argv):
+    if not _has_required_modules():
         return 1
-    elif (len(argv) == 0) or (argv[0] not in ("mkfile", "run", "dry_run", "dryrun")):
+
+    if (len(argv) == 0) or (argv[0] not in ("mkfile", "run", "dry_run", "dryrun")):
+        import pypeline.ui as ui
         basename = os.path.basename(sys.argv[0])
         ui.print_info("Usage:")
         ui.print_info("  -- %s help            -- Display this message" % basename)
@@ -54,11 +66,17 @@ def main(argv):
         ui.print_info("  -- %s dry_run [...]   -- Perform dry run of pipeline on provided makefiles." % basename)
         ui.print_info("  -- %s run [...]       -- Run pipeline on provided makefiles." % basename)
     elif argv[0] == "mkfile":
-        return mkfile.main(argv[1:])
+        import pypeline.tools.bam_pipeline.mkfile
+
+        return pypeline.tools.bam_pipeline.mkfile.main(argv[1:])
     elif argv[0] == "run":
-        return pipeline.main(argv[1:])
+        import pypeline.tools.bam_pipeline.pipeline
+
+        return pypeline.tools.bam_pipeline.pipeline.main(argv[1:])
     elif argv[0] in ("dryrun", "dry_run"):
-        return pipeline.main(argv[1:] + ["--dry-run"])
+        import pypeline.tools.bam_pipeline.pipeline
+
+        return pypeline.tools.bam_pipeline.pipeline.main(argv[1:] + ["--dry-run"])
 
     return 1
 
