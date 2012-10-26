@@ -81,8 +81,9 @@ def build_bwa_nodes(config, target, sample, library, barcode, record, dependenci
         output_dir = os.path.join(config.destination, target, genome, sample, library, barcode)
         for (key, input_filename) in reads["Trimmed"].iteritems():
             # TODO: Make seeding optional
-            options = ["minQ%i" % record["Options"]["BWA_MinQuality"], 
-                       "noSeed"]
+            options = ["minQ%i" % record["Options"]["BWA_MinQuality"]]
+            if not record["Options"]["BWA_UseSeed"]:
+                options.append("noSeed")
 
             output_filename = os.path.join(output_dir, "%s.%s.bam" \
                                                % (key.lower(), ".".join(options)))
@@ -91,21 +92,27 @@ def build_bwa_nodes(config, target, sample, library, barcode, record, dependenci
             parameters = {"output_file"  : output_filename,
                           "prefix"       : prefix["Path"],
                           "reference"    : prefix["Reference"],
-                          "read_group"   : read_group,
-                          "min_quality"  : record["Options"]["BWA_MinQuality"],
                           "threads"      : config.bwa_max_threads,
                           "dependencies" : dependencies}
 
             if paths.is_paired_end(input_filename):
-                node = PE_BWANode(input_file_1 = input_filename.format(Pair = 1),
-                                  input_file_2 = input_filename.format(Pair = 2),
-                                  **parameters)
+                params = PE_BWANode.customize(input_file_1 = input_filename.format(Pair = 1),
+                                              input_file_2 = input_filename.format(Pair = 2),
+                                              **parameters)
+                params.commands["sampe"].set_parameter("-r", read_group)
+                if not record["Options"]["BWA_UseSeed"]:
+                    params.commands["aln_1"].set_parameter("-l", 2**16 - 1)
+                    params.commands["aln_2"].set_parameter("-l", 2**16 - 1)
             else:
-                node = SE_BWANode(input_file   = input_filename,
-                                  **parameters)
+                params = SE_BWANode.customize(input_file   = input_filename,
+                                              **parameters)
+                params.commands["samse"].set_parameter("-r", read_group)
+                if not record["Options"]["BWA_UseSeed"]:
+                    params.commands["aln"].set_parameter("-l", 2**16 - 1)
 
+            params.commands["filter"].set_parameter('-q', record["Options"]["BWA_MinQuality"])
             node = ValidateBAMFile(config      = config,
-                                   node        = node)
+                                   node        = params.build_node())
             reads["BAM"][genome][key] = { "Node" : node, "Filename" : output_filename}
     
     return record

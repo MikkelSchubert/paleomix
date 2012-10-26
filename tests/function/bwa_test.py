@@ -36,15 +36,16 @@ def _bwa_aln_se(config, index):
     node_params = {"input_file"   : "tests/data/sim_reads/mate_1.fastq.gz",
                    "prefix"       : os.path.join(config.destination, "rCRS"),
                    "reference"    : "tests/data/rCRS.fasta",
-                   "read_group"   : "@RG\tID:1\tPL:Illumina\tPU:123456\tLB:Library_1\tSM:Sample_1",
                    "dependencies" : (config.dependencies, index)}
     
     standard = SE_BWANode(output_file = os.path.join(config.destination, "aln_se_standard", "output.bam"),
                           **node_params)
-    custom   = Node(description = "Custom SE_BWANode: TODO")
+    custom = SE_BWANode.customize(output_file = os.path.join(config.destination, "aln_se_custom", "output.bam"),
+                                  **node_params)
+    custom.commands["samse"].set_parameter("-r", "@RG\tID:1\tPL:Illumina\tPU:123456\tLB:Library_1\tSM:Sample_1")
 
     return Node(description  = "BWA aln SE",
-                dependencies = [standard, custom])
+                dependencies = [standard, custom.build_node()])
 
 
 
@@ -53,15 +54,16 @@ def _bwa_aln_pe(config, index):
                    "input_file_2" : "tests/data/sim_reads/mate_2.fastq.gz",
                    "prefix"       : os.path.join(config.destination, "rCRS"),
                    "reference"    : "tests/data/rCRS.fasta",
-                   "read_group"   : "@RG\tID:1\tPL:Illumina\tPU:123456\tLB:Library_1\tSM:Sample_1",
                    "dependencies" : (config.dependencies, index)}
     
     standard = PE_BWANode(output_file = os.path.join(config.destination, "aln_pe_standard", "output.bam"),
                           **node_params)
-    custom   = Node(description = "Custom PE_BWANode: TODO")
+    custom   = PE_BWANode.customize(output_file = os.path.join(config.destination, "aln_pe_custom", "output.bam"),
+                                    **node_params)
+    custom.commands["sampe"].set_parameter("-r", "@RG\tID:1\tPL:Illumina\tPU:123456\tLB:Library_1\tSM:Sample_1")
     
     return Node(description  = "BWA aln PE",
-                dependencies = [standard, custom])
+                dependencies = [standard, custom.build_node()])
 
 
 
@@ -74,10 +76,29 @@ def _bwa_sw_se(config, index):
     
     standard = BWASWNode(output_file = os.path.join(config.destination, "sw_se_standard", "output.bam"),
                          **node_params)
-    custom   = Node(description = "Custom BWASWNode: TODO")
+    custom = BWASWNode.customize(output_file = os.path.join(config.destination, "sw_se_custom", "output.bam"),
+                                 **node_params)
+    custom.commands["aln"].set_parameter("-z", 10)
 
     return Node(description  = "BWA SW SE",
-                dependencies = [standard, custom])
+                dependencies = [standard, custom.build_node()])
+
+
+def _bwa_sw_pe(config, index):
+    node_params = {"input_file_1" : "tests/data/sim_reads/mate_1.fastq.gz",
+                   "input_file_2" : "tests/data/sim_reads/mate_2.fastq.gz",
+                   "prefix"       : os.path.join(config.destination, "rCRS"),
+                   "reference"    : "tests/data/rCRS.fasta",
+                   "dependencies" : (config.dependencies, index)}
+    
+    standard = BWASWNode(output_file = os.path.join(config.destination, "sw_pe_standard", "output.bam"),
+                         **node_params)
+    custom = BWASWNode.customize(output_file = os.path.join(config.destination, "sw_pe_custom", "output.bam"),
+                                 **node_params)
+    custom.commands["aln"].set_parameter("-z", 7 )
+
+    return Node(description  = "BWA SW PE",
+                dependencies = [standard, custom.build_node()])
 
 
 
@@ -86,8 +107,10 @@ def test_bwa(config):
     aln_se = _bwa_aln_se(config, index)
     aln_pe = _bwa_aln_pe(config, index)
     sw_se  = _bwa_sw_se(config, index)
+    sw_pe  = _bwa_sw_pe(config, index)
 
     return Node(description  = "BWA",
                 dependencies = (aln_se,
                                 aln_pe,
-                                sw_se))
+                                sw_se,
+                                sw_pe))
