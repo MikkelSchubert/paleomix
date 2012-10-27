@@ -57,8 +57,11 @@ _HEADER = \
 # ONCE. The pipeline will not run if any of these assumptions are violated.
 #
 #
+"""
 
-
+_HEADER = \
+"""# Timestamp: %s
+#
 # Default options
 Options:
   # Sequencing platform, see SAM/BAM reference for valid values
@@ -83,36 +86,48 @@ Options:
 # Prefixes:
 #    - NAME_OF_PREFIX: PATH_TO_PREFIX
 #      Label: # mito or nucl
+#
+#
 """
 
 
 _FILENAME = "SampleSheet.csv"
                      
-def read_alignment_records(root):
-    with open(os.path.join(root, _FILENAME)) as records:
+def read_alignment_records(filename):
+
+    with open(filename) as records:
         header = records.readline().strip().split(",")
         for line in records:
             yield dict(zip(header, line.strip().split(",")))
 
 
 def main(argv):
-    lines = []
+    records = {}
     for root in argv:
-        for record in read_alignment_records(root):
+        if os.path.isdir(root):
+            filename = os.path.join(root, _FILENAME)
+        else:
+            root, filename = os.path.split(root)[0], root
+
+        for record in read_alignment_records(filename):
+            libraries = records.setdefault(record["SampleID"], {})
+            barcodes  = libraries.setdefault(record["Index"], [])
+
             record["Lane"] = int(record["Lane"])
-            line = [record["SampleID"],
-                    record["SampleID"],
-                    record["Index"],
-                    record["FCID"],
-                    "Illumina",
-                    os.path.join(root, "%(SampleID)s_%(Index)s_L%(Lane)03i_R{Pair}_*.fastq.gz" % record)]
-            lines.append(line)
-    lines.sort(key = lambda v: map(str.lower, v))
-    lines.insert(0, ["Name", "Sample", "Library", "Barcode", "Platform", "Path"])
+            record["Path"] = os.path.join(root, "%(SampleID)s_%(Index)s_L%(Lane)03i_R{Pair}_*.fastq.gz" % record)
+            barcodes.append(record)
+
 
     print _HEADER % datetime.datetime.now().isoformat()
-#    for line in padded_table(lines):
-#        print line
+    for (sample, libraries) in records.iteritems():
+        print "%s:" % sample
+        print "  %s:" % sample
+        for (library, barcodes) in libraries.iteritems():
+            print "    %s:" % library
+            for record in barcodes:
+                print "      {FCID}_{Lane}: {Path}".format(**record)
+            print
+        print
 
     if not argv:
         ui.print_info("No directories specified, empty table printed:", file = sys.stderr)
