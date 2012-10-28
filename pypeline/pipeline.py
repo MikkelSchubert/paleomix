@@ -77,6 +77,7 @@ class Pypeline:
 
                 ui.print_node_tree(nodes, collapse)
 
+            ui.print_node_tree(nodes, collapse)
             pool.close()
             pool.join()
             
