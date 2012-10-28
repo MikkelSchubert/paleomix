@@ -23,6 +23,7 @@
 import os
 import collections
 
+import ui
 from pypeline.common.fileutils import missing_executables
 
 
@@ -96,14 +97,20 @@ class NodeGraph:
         for subnode in (node.subnodes | node.dependencies):
             state = max(state, self._update_states(subnode))
 
-        if state == NodeGraph.DONE:
-            if not node.is_done or node.is_outdated:
-                state = NodeGraph.RUNABLE
-        elif state in (NodeGraph.RUNNING, NodeGraph.RUNABLE, NodeGraph.QUEUED):
-            if node.is_done:
-                state = NodeGraph.OUTDATED
-            else:
-                state = NodeGraph.QUEUED
+        try:
+            if state == NodeGraph.DONE:
+                if not node.is_done or node.is_outdated:
+                    state = NodeGraph.RUNABLE
+            elif state in (NodeGraph.RUNNING, NodeGraph.RUNABLE, NodeGraph.QUEUED):
+                if node.is_done:
+                    state = NodeGraph.OUTDATED
+                else:
+                    state = NodeGraph.QUEUED
+        except OSError, e:
+            # Typically hapens if base input files are removed, causing a node that
+            # 'is_done' to call modified_after on missing files in 'is_outdated'
+            ui.print_err("OSError checking state of Node: %s" % e)
+            state = NodeGraph.ERROR
         self._states[node] = state
  
         # Possibly return a fixed state
