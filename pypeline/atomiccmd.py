@@ -124,6 +124,12 @@ class AtomicCmd:
         return return_codes
 
 
+    def terminate(self):
+        """Sends SIGTERM to process."""
+        self._proc.terminate()
+        self._proc = None
+
+
     @property
     def executables(self):
         """Returns a list of executables required for the AtomicCmd."""
