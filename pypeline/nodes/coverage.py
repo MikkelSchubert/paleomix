@@ -178,7 +178,7 @@ def _read_table(table, filename):
             assert int(subtable["Size"]) == int(record["Size"])
 
             for field in ("Hits", "SE", "PE_1", "PE_2", "M", "I", "D"):
-                subtable[field] = subtable.get(field, 0) + int(record[field                                                              ])
+                subtable[field] = subtable.get(field, 0) + int(record[field])
             set_in(table, key, subtable)
 
 
