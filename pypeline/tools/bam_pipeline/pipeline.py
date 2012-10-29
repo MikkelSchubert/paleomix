@@ -120,7 +120,7 @@ def build_bwa_nodes(config, target, sample, library, barcode, record, dependenci
 
             reads["BAM"][genome][key] = {"Node"     : validate, 
                                          "Filename" : output_filename,
-                                         "Coverage" : coverage}
+                                         "LaneCoverage" : coverage}
     
     return record
 
@@ -151,7 +151,7 @@ def build_bam_cleanup_nodes(config, target, sample, library, barcode, record):
 
             results[genome][key] = {"Node" : node,
                                     "Filename" : output_filename, 
-                                    "Coverage" : coverage}
+                                    "LaneCoverage" : coverage}
 
     record["Reads"]["BAM"] = results
     return record
@@ -201,10 +201,10 @@ def build_rmduplicates_nodes(config, target, sample, library, input_records):
                 node = ValidateBAMFile(config      = config,
                                        node        = node)
                 
-                coverages = [record["Coverage"] for record in collected_records[key]]
+                coverages = [record["LaneCoverage"] for record in collected_records[key]]
                 results[genome][key] = [{"Node"     : node,
                                          "Filename" : output_filename,
-                                         "Coverage" : coverages}]
+                                         "LaneCoverage" : coverages}]
 
     return results
 
@@ -236,17 +236,18 @@ def build_library_nodes(config, target, sample, library, barcodes):
         node = ValidateBAMFile(config      = config,
                                node        = node)
 
-        coverages = sum((record["Coverage"] for record in records), [])
-        coverages.append(CoverageNode(input_file   = output_filename,
-                                      name         = target,
-                                      dependencies = node))
+        lane_coverage = sum((record["LaneCoverage"] for records in input_records[genome].itervalues() for record in records), [])
+        lib_coverage  = CoverageNode(input_file   = output_filename,
+                                     name         = target,
+                                     dependencies = node)
 
         node = MetaNode(description  = "Library: %s" % library,
                         dependencies = node)
 
-        merged[genome] = {"Node"     : node,
-                          "Filename" : output_filename,
-                          "Coverage" : coverages}
+        merged[genome] = {"Node"         : node,
+                          "Filename"     : output_filename,
+                          "LaneCoverage" : lane_coverage,
+                          "LibCoverage"  : [lib_coverage]}
 
     return merged
 
@@ -289,8 +290,13 @@ def build_target_nodes(config, prefixes, target, samples):
                                node        = node)
 
         small_coverage  = MetaNode(description = "Lanes and Libraries",
-                                   subnodes    = sum((record["Coverage"] for record in records), []))
-        large_coverage  = [MergeCoverageNode(input_files  = sum((list(node.output_files) for node in small_coverage.subnodes), []),
+                                   subnodes    = sum((record["LaneCoverage"] + record["LibCoverage"] for record in records), []))
+
+
+
+        
+        library_coverage = sum((record["LibCoverage"] for record in records), [])
+        large_coverage  = [MergeCoverageNode(input_files  = sum((list(node.output_files) for node in library_coverage), []),
                                              output_file  = swap_ext(output_filename, ".coverage"),
                                              dependencies = small_coverage)]
 
@@ -311,6 +317,11 @@ def build_target_nodes(config, prefixes, target, samples):
                             dependencies = (small_coverage,
                                             MetaNode(description = "Final BAMs",
                                                      subnodes    = large_coverage)))
+#        summary  = SummaryTableNode(config       = config,
+#                                    prefixes     = prefixes,
+#                                    target       = target,
+#                                    samples      = samples,
+#                                    dependencies = coverage)
         mapdamage = MetaNode(description = "MapDamage",
                              subnodes    = mapdamage_records[genome])
         statistics =  MetaNode(description  = "Statistics:",
