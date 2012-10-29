@@ -33,7 +33,7 @@ import pypeline.ui as ui
 from pypeline.nodes.bwa import SE_BWANode, PE_BWANode
 from pypeline.nodes.gatk import IndelRealignerNode
 from pypeline.nodes.picard import MergeSamFilesNode, MarkDuplicatesNode
-from pypeline.nodes.coverage import CoverageNode
+from pypeline.nodes.coverage import CoverageNode, MergeCoverageNode
 from pypeline.nodes.samtools import BAMIndexNode
 from pypeline.nodes.adapterremoval import SE_AdapterRemovalNode, PE_AdapterRemovalNode
 
@@ -111,9 +111,16 @@ def build_bwa_nodes(config, target, sample, library, barcode, record, dependenci
                     params.commands["aln"].set_parameter("-l", 2**16 - 1)
 
             params.commands["filter"].set_parameter('-q', record["Options"]["BWA_MinQuality"])
-            node = ValidateBAMFile(config      = config,
-                                   node        = params.build_node())
-            reads["BAM"][genome][key] = { "Node" : node, "Filename" : output_filename}
+
+            validate = ValidateBAMFile(config      = config,
+                                       node        = params.build_node())
+            coverage = CoverageNode(input_file   = output_filename,
+                                    name         = target,
+                                    dependencies = validate)
+
+            reads["BAM"][genome][key] = {"Node"     : validate, 
+                                         "Filename" : output_filename,
+                                         "Coverage" : coverage}
     
     return record
 
@@ -138,8 +145,13 @@ def build_bam_cleanup_nodes(config, target, sample, library, barcode, record):
                                   tags       = tags)
             node = ValidateBAMFile(config      = config,
                                    node        = node)
+            coverage = CoverageNode(input_file   = output_filename,
+                                    name         = target,
+                                    dependencies = node)
 
-            results[genome][key] = {"Filename" : output_filename, "Node" : node}
+            results[genome][key] = {"Node" : node,
+                                    "Filename" : output_filename, 
+                                    "Coverage" : coverage}
 
     record["Reads"]["BAM"] = results
     return record
@@ -188,8 +200,11 @@ def build_rmduplicates_nodes(config, target, sample, library, input_records):
                            dependencies = input_nodes)
                 node = ValidateBAMFile(config      = config,
                                        node        = node)
-
-                results[genome][key] = [{"Filename" : output_filename, "Node" : node}]
+                
+                coverages = [record["Coverage"] for record in collected_records[key]]
+                results[genome][key] = [{"Node"     : node,
+                                         "Filename" : output_filename,
+                                         "Coverage" : coverages}]
 
     return results
 
@@ -221,10 +236,17 @@ def build_library_nodes(config, target, sample, library, barcodes):
         node = ValidateBAMFile(config      = config,
                                node        = node)
 
+        coverages = sum((record["Coverage"] for record in records), [])
+        coverages.append(CoverageNode(input_file   = output_filename,
+                                      name         = target,
+                                      dependencies = node))
+
         node = MetaNode(description  = "Library: %s" % library,
                         dependencies = node)
 
-        merged[genome] = {"Filename" : output_filename, "Node" : node}
+        merged[genome] = {"Node"     : node,
+                          "Filename" : output_filename,
+                          "Coverage" : coverages}
 
     return merged
 
@@ -266,10 +288,11 @@ def build_target_nodes(config, prefixes, target, samples):
         node = ValidateBAMFile(config      = config,
                                node        = node)
 
-        coverage = []
-        coverage.append(CoverageNode(input_file   = output_filename,
-                                     name         = target,
-                                     dependencies = node))
+        small_coverage  = MetaNode(description = "Lanes and Libraries",
+                                   subnodes    = sum((record["Coverage"] for record in records), []))
+        large_coverage  = [MergeCoverageNode(input_files  = sum((list(node.output_files) for node in small_coverage.subnodes), []),
+                                             output_file  = swap_ext(output_filename, ".coverage"),
+                                             dependencies = small_coverage)]
 
         if config.gatk_jar:
             aligned = IndelRealignerNode(config       = config,
@@ -280,12 +303,14 @@ def build_target_nodes(config, prefixes, target, samples):
                                          dependencies = node)
             node = ValidateBAMFile(config      = config,
                                    node        = aligned)
-            coverage.append(CoverageNode(input_file   = add_postfix(output_filename, ".realigned"),
-                                         name         = target,
-                                         dependencies = node))
+            large_coverage += [CoverageNode(input_file   = add_postfix(output_filename, ".realigned"),
+                                            name         = target,
+                                            dependencies = node)]
 
-        coverage  = MetaNode(description = "Coverage",
-                             subnodes    = coverage)
+        coverage = MetaNode(description  = "Coverage",
+                            dependencies = (small_coverage,
+                                            MetaNode(description = "Final BAMs",
+                                                     subnodes    = large_coverage)))
         mapdamage = MetaNode(description = "MapDamage",
                              subnodes    = mapdamage_records[genome])
         statistics =  MetaNode(description  = "Statistics:",
