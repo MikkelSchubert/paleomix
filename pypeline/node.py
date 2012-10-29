@@ -224,8 +224,11 @@ class MetaNode(Node):
 
     @property
     def is_done(self):
-        """Is true if all subnodes / dependencies are marked as 'is_done'."""
-        return all(node.is_done for node in self.subnodes | self.dependencies)
+        raise RuntimeError("Called 'is_done' on MetaNode")
+
+    @property
+    def is_outdated(self):
+        raise RuntimeError("Called 'is_outdated' on MetaNode")
 
     def run(self, config):
-        pass
+        raise RuntimeError("Called 'run' on MetaNode")

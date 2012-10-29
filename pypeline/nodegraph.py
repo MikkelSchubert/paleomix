@@ -24,6 +24,7 @@ import os
 import collections
 
 import ui
+from pypeline.node import MetaNode
 from pypeline.common.fileutils import missing_executables
 
 
@@ -98,7 +99,10 @@ class NodeGraph:
             state = max(state, self._update_states(subnode))
 
         try:
-            if state == NodeGraph.DONE:
+            if isinstance(node, MetaNode):
+                if state in (NodeGraph.RUNNING, NodeGraph.RUNABLE):
+                    state = NodeGraph.QUEUED
+            elif state == NodeGraph.DONE:
                 if not node.is_done or node.is_outdated:
                     state = NodeGraph.RUNABLE
             elif state in (NodeGraph.RUNNING, NodeGraph.RUNABLE, NodeGraph.QUEUED):
