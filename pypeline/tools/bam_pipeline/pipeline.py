@@ -295,7 +295,7 @@ def build_statistics_nodes(config, prefix, target, records, aligned_node):
     coverage  = MetaNode(description  = "Coverage",
                          dependencies = (part_coverage,
                                          MetaNode(description = "Final BAMs",
-                                                  subnodes    = part_coverage)))
+                                                  subnodes    = full_coverage)))
     mapdamage = build_mapdamage_nodes(config, prefix, target, records)                  
 
     return MetaNode(description  = "Statistics:",

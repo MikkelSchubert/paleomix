@@ -114,25 +114,23 @@ class MergeCoverageNode(Node):
 def _calculate_totals(table):
     for (name, samples) in sorted(table.items()):
         set_in(table, (name, "*", "*", "*"), _calculate_totals_in(table))
-
         for (sample, libraries) in sorted(samples.items()):
             set_in(table, (name, sample, "*", "*"), _calculate_totals_in(libraries))
-
             for (library, contigs) in sorted(libraries.items()):
-                set_in(table, (name, sample, library, "*"), _calculate_totals_in(contigs, True))
+                set_in(table, (name, sample, library, "*"), _calculate_totals_in(contigs))
+            set_in(table, (name, sample, "*", "*", "Size"), get_in(table, (name, sample, library, "*", "Size")))
+        set_in(table, (name, "*", "*", "*", "Size"), get_in(table, (name, sample, "*", "*", "Size")))
 
 
-def _calculate_totals_in(tables, sum_sizes = False):
+
+def _calculate_totals_in(tables):
     totals = {"SE" : 0, "PE_1" : 0, "PE_2" : 0, "Size" : 0, "Hits" : 0, "M" : 0, "I" : 0, "D" : 0}
     subtables = tables.values()
     while subtables:
         for subtable in list(subtables):
             if "SE" in subtable:
                 for key in subtable:
-                    if (key != "Size") or sum_sizes:
-                        totals[key] += subtable[key]
-                    else:
-                        totals[key] = subtable[key]
+                    totals[key] += subtable[key]
             else:
                 subtables.extend(subtable.values())
             subtables.remove(subtable)
