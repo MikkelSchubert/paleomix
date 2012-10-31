@@ -23,6 +23,7 @@
 import os
 import re
 import sys
+import math
 import numbers
 import subprocess
 import collections
@@ -30,40 +31,56 @@ import collections
 import pysam
 
 from pypeline.node import Node
-from pypeline.common.utilities import safe_coerce_to_tuple
+from pypeline.common.utilities import safe_coerce_to_tuple, set_in, get_in
 from pypeline.common.fileutils import swap_ext, move_file, reroot_path
-import pypeline.common.text as text
+from pypeline.nodes.coverage import read_table as read_coverage_table
 
+import pypeline.common.text as text
 import pypeline.tools.bam_pipeline as common
 
 
 
-class SummaryTableNode(Node):
-    def __init__(self, config, records, dependencies = ()):
-        self._records     = safe_coerce_to_tuple(records)
-        self._name        = self._records[0]["Name"]
-        self._output_file = os.path.join(config.destination, self._name + ".summary")
-        assert all((self._name == record["Name"]) for record in self._records)
 
-        input_files = set()
-        for libraries in self._collect_input_files(config.bwa_prefix, records).values():
-            for library in libraries.values():
-                input_files.update(library["raw"])
-                input_files.update(library["dedup"])
-       
-        for record in records:
-            input_files.add(os.path.join(common.paths.full_path(record, "reads"), "reads.settings"))
+class SummaryTableNode(Node):
+    def __init__(self, config, makefile, prefixes, target, samples, records, dependencies = ()):
+        self._target        = target
+        self._output_file   = os.path.join(config.destination, self._target + ".summary")
+        self._prefixes      = prefixes
+        self._records       = {target : samples}
+        self._makefile      = makefile
+
+        self._in_raw_read = collections.defaultdict(list)
+        for (sample, libraries) in samples.iteritems():
+            for (library, barcodes) in libraries.iteritems():
+                for (barcode, record) in barcodes.iteritems():
+                    self._in_raw_read[(sample, library, barcode)] = None
+                    if "Raw" in record["Reads"]:
+                        self._in_raw_read[(sample, library, barcode)] = \
+                            os.path.join(config.destination, target, "reads", sample, library, barcode, "reads.settings")
+
+        self._in_raw_bams = collections.defaultdict(list)
+        self._in_lib_bams = collections.defaultdict(list)
+        for genome in prefixes:
+            label = prefixes[genome].get("Label", genome)
+            for record in records[genome]:
+                for (key, dd) in (("LaneCoverage", self._in_raw_bams), ("LibCoverage", self._in_lib_bams)):
+                    for node in record[key]:
+                        dd[(label, target, record["Sample"], record["Library"])].extend(node.output_files)
+
+        
+        input_files = self._in_raw_read.values() \
+            + sum(self._in_raw_bams.values(), []) \
+            + sum(self._in_lib_bams.values(), [])
 
         Node.__init__(self,
                       description  = "<Summary: %s>" % self._output_file,
-                      input_files  = input_files,
+                      input_files  = filter(None, input_files),
                       output_files = [self._output_file],
-                      executables  = ["samtools"],
                       dependencies = dependencies)
-        
 
 
     def _run(self, config, temp):
+        genomes = self._stat_bwa_prefixes(self._prefixes)
         with open(reroot_path(temp, self._output_file), "w") as table:
             table.write("# Command:\n")
             table.write("#     %s\n" % (" ".join(sys.argv)),)
@@ -71,253 +88,214 @@ class SummaryTableNode(Node):
             table.write("# Directory:\n")
             table.write("#     %s\n" % (os.getcwd()),)
             table.write("#\n")
-            self._write_records(table, self._records)
+            table.write("# Makefile:\n")
+            table.write("#     Filename: %s\n" % (self._makefile["Filename"],))
+            table.write("#     SHA1Sum:  %s\n" % (self._makefile["Hash"],))
+            table.write("#     MTime:    %s\n" % (self._makefile["MTime"],))
             table.write("#\n")
-            self._write_genomes(table, config)
+            self._write_genomes(table, genomes)
             table.write("#\n#\n")
-            self._write_table(table, config, self._records)
+            self._write_tables(table, genomes)
 
 
     def _teardown(self, _config, temp):
         move_file(reroot_path(temp, self._output_file), self._output_file)
 
 
-    @classmethod
-    def _write_records(cls, table, records):
-        rows = [["Name", "Sample", "Library", "Barcode", "Platform", "Path"]]
-        for record in records:
-            rows.append([record[field] for field in rows[0]])
-
-        table.write("# Records:\n")
-        for line in text.padded_table(rows):
-            table.write("#     %s\n" % (line,))        
-
-
-    @classmethod
-    def _write_genomes(cls, table, config):
+    def _write_genomes(self, table, genomes):
         table.write("# Genomes:\n")
         rows = [["Name", "Label", "Contigs", "Size", "Prefix"]]
-        for prefix in config.bwa_prefix:
-            label = _prefix_to_label(config, prefix, only_endogenous = True)
-            size, contigs = cls._stat_bwa_prefix(prefix)
-            rows.append((common.paths.prefix_to_filename(prefix), label, contigs, size, prefix))
+        for (_, prefix) in sorted(self._prefixes.items()):
+            stats = genomes[prefix.get("Label", prefix["Name"])]
+            rows.append((prefix["Name"], prefix.get("Label", "-"), stats["NContigs"], stats["Size"], prefix["Path"]))
 
         for line in text.padded_table(rows):
             table.write("#     %s\n" % (line,))
 
 
-    def _write_table(self, table, config, records):
-        annotated_table = self._annotate_summary_table(config, self._build_summary_table(config, records))
+    def _write_tables(self, out, genomes):
+        rows = [["Target", "Sample", "Library", "Measure", "Value", ""]]
+        for (target, samples) in sorted(self._read_tables(self._prefixes, genomes).iteritems()):
+            for (sample, libraries) in sorted(samples.iteritems()):
+                for (library, prefixes) in sorted(libraries.iteritems()):
+                    prefixes["reads"].pop("seq_nt_total")
+                    prefixes["reads"].pop("seq_reads_total")
 
-        table_rows = [["Name", "Sample", "Library", "Measure", "Value", ""]]
-        for ((sample, library), subtable) in sorted(annotated_table.items()):
-            for (measure, (value, comment)) in sorted(subtable["seq"].iteritems(), key = _measure_ordering):
-                table_rows.append([self._name, sample, library, measure, value, comment])
-            table_rows.extend("##")
+                    ordered = [("reads", prefixes.pop("reads"))]
+                    ordered.extend(sorted(prefixes.items()))
+                    
+                    for (prefix, table) in ordered:
+                        table.pop("hits_unique_nts(%s)" % prefix, None)
 
-            for (_, hit_table) in sorted(subtable["hits"].items()):
-                for (measure, (value, comment)) in sorted(hit_table.iteritems(), key = _measure_ordering):
-                    table_rows.append([self._name, sample, library, measure, value, comment])
-                table_rows.append("#")
-            table_rows.extend("##")
-
-        while table_rows[-1] == "#":
-            table_rows.pop()               
-        
-        for line in text.padded_table(table_rows):
-            table.write("%s\n" % (line,))
-
-
-    @classmethod
-    def _annotate_summary_table(cls, config, table):
-        fractions = [("seq_trash_se",   "seq_reads_se",    "seq_trash_se_frac",   "# Fraction of SE reads trashed"),
-                     ("seq_trash_pe_1", "seq_reads_pairs", "seq_trash_pe_1_frac", "# Fraction of PE mate 1 reads trashed"), 
-                     ("seq_trash_pe_2", "seq_reads_pairs", "seq_trash_pe_2_frac", "# Fraction of PE mate 2 reads trashed"), 
-                     ("seq_collapsed",  "seq_reads_pairs", "seq_collapsed_frac",  "# Fraction of PE pairs collapsed into one read")]
-
-        genomes = {}
-        for prefix in config.bwa_prefix:
-            label = _prefix_to_label(config, prefix, only_endogenous = False)
-            genomes[label] = cls._stat_bwa_prefix(prefix)[0]
+                        for (key, (value, comment)) in sorted(table.iteritems(), key = _measure_ordering):
+                            if isinstance(value, numbers.Number) and math.isnan(value):
+                                value = "NA"
+                            rows.append((target, sample, library, key, value, comment))
+                        rows.append([])
+                    rows.append([])
+ 
+        for line in text.padded_table(rows):
+            out.write("%s\n" % line)
 
 
-        for level in table.itervalues():
-            sequences = level["seq"]
-            for (numerator, denominator, measure, comment) in fractions:
-                if (numerator in sequences) and (denominator in sequences):
-                    value = float(sequences[numerator][0]) / sequences[denominator][0]
-                    sequences[measure] = (value, comment)
-                
-            total_reads = 0
-            total_reads += sequences.get("seq_reads_se",    (0,))[0] - sequences.get("seq_trash_se", (0,))[0]
-            total_reads += sequences.get("seq_reads_pairs", (0,))[0] - sequences.get("seq_trash_pe_1", (0,))[0]
-            total_reads += sequences.get("seq_reads_pairs", (0,))[0] - sequences.get("seq_trash_pe_2", (0,))[0]
-            sequences["seq_reads_total"] = (total_reads, )
+    def _read_tables(self, prefixes, genomes):
+        table = {}
+        self._read_reads_settings(table)
+        self._read_raw_bam_stats(table)
+        self._read_lib_bam_stats(table)
 
-            average_nts = sequences.get("seq_nt_total", (0,))[0] / float(total_reads)
-            sequences["seq_nt_average"] = (average_nts, "# Average number of NTs in retained reads")
-
-            
-            hits = level["hits"]
-            for (genome, hit_table) in hits.iteritems():
-                total_hits            = hit_table["hits_raw(%s)" % genome][0]
-                total_hits_unique     = hit_table["hits_unique(%s)" % genome][0]
-                total_hits_unique_nts = hit_table["hits_unique_nts(%s)" % genome][0]
-
-                hit_table["hits_raw_frac(%s)" % genome]       = (float(total_hits) / total_reads,                  "# Fraction of reads succesfully mapped")
-                hit_table["hits_coverage(%s)" % genome]       = (float(total_hits_unique_nts) / genomes[genome],   "# Estimated coverage from unique hits")
-                if total_hits:
-                    hit_table["hits_clonality(%s)"  % genome] = (1 - float(total_hits_unique) / total_hits,        "# Fraction of hits that were PCR duplicates")
-                    hit_table["hits_length(%s)" % genome]     = (float(total_hits_unique_nts) / total_hits_unique, "# Average length of unique hits")
-                else:
-                    hit_table["hits_clonality(%s)"  % genome] = ("NA", "# Fraction of hits that were PCR duplicates")
-                    hit_table["hits_length(%s)" % genome]     = ("NA", "# Average length of unique hits")
-
-
-
-            if ("mito" in level["hits"]) and ("nuclear" in level["hits"]):
-                total_hits            = hits["mito"]["hits_raw(mito)"][0]         + hits["nuclear"]["hits_raw(nuclear)"][0]
-                total_hits_unique     = hits["mito"]["hits_unique(mito)"][0]      + hits["nuclear"]["hits_unique(nuclear)"][0]
-                total_hits_unique_nts = hits["mito"]["hits_unique_nts(mito)"][0]  + hits["nuclear"]["hits_unique_nts(nuclear)"][0]
-                total_reads           = sequences["seq_reads_total"][0]
-
-                clonality = "NA" if not total_hits else (1 - float(total_hits_unique) / total_hits)
-                coverage  = float(total_hits_unique_nts) / (genomes["mito"] + genomes["nuclear"])
-                length    = float(total_hits_unique_nts) / total_hits_unique
-
-                ratio_hits, ratio_genome, ratio_genome_inv = "NA", "NA", "NA"
-                if hits["mito"]["hits_unique(mito)"][0]:
-                    ratio_nts    = float(hits["nuclear"]["hits_unique_nts(nuclear)"][0]) / hits["mito"]["hits_unique_nts(mito)"][0]
-                    ratio_hits   = float(hits["nuclear"]["hits_unique(nuclear)"][0]) / hits["mito"]["hits_unique(mito)"][0]
-                    ratio_genome = ratio_nts / ((float(genomes["nuclear"]) * 2) / float(genomes["mito"]))
-                    ratio_genome_inv = ratio_genome ** -1                   
-
-                hits["endogenous"] = {
-                    "hits_raw(endogenous)"       : (total_hits,                       "# Total number of hits against the nuclear and mitochondrial genome"),
-                    "hits_raw_frac(endogenous)"  : (float(total_hits) / total_reads,  "# Fraction of reads that mapped against the nuclear and mitochondrial genome"),
-                    "hits_unique(endogenous)"    : (total_hits_unique,                "# Total number of unique reads (PRC duplicates removed)"),
-                    "hits_clonality(endogenous)" : (clonality,                        "# Fraction of hits that were PCR duplicates"),
-                    "hits_coverage(endogenous)"  : (coverage,                         "# Estimated coverage from unique hits"),
-                    "hits_length(endogenous)"    : (length,                           "# Average length of unique hits"),
-                    "ratio_reads(nuc,mito)"      : (ratio_hits,                       "# Ratio of unique hits: Hits(nuc) / H(mito)"),
-                    "ratio_genome(nuc,mito)"     : (ratio_genome,                     "# Ratio of NTs of unique hits corrected by genome sizes: (NTs(nuc) / NTs(mito)) / ((2 * Size(nuc)) / Size(mito))"),
-                    "ratio_genome(mito,nuc)"     : (ratio_genome_inv,                 "# Ratio of NTs of unique hits corrected by genome sizes: (NTs(mito) / NTs(nuc)) / (Size(mito) / (2 * Size(nuc)))")
-                    }
-
-            # Cleanup 
-            del sequences["seq_nt_total"]
-            del sequences["seq_reads_total"]
-            for prefix in config.bwa_prefix:
-                label = _prefix_to_label(config, prefix, only_endogenous = False)
-                del hits[label]["hits_unique_nts(%s)" % label]
-                
+        for (target, samples) in table.items():
+            merged_samples = {}
+            for (sample, libraries) in samples.items():
+                merged_libraries = {}
+                for (library, subtables) in libraries.items():
+                    for (tblname, subtable) in subtables.items():
+                        merged_libraries[tblname] = self._merge_tables((merged_libraries.get(tblname, {}), subtable))
+                        merged_samples[tblname] = self._merge_tables((merged_samples.get(tblname, {}), subtable))
+                    libraries[library] = self._annotate_subtables(subtables, genomes)
+                set_in(table, (target, sample, "*"), self._annotate_subtables(merged_libraries, genomes))
+            set_in(table, (target, "*", "*"), self._annotate_subtables(merged_samples, genomes))
 
         return table
+
+
+    @classmethod
+    def _annotate_subtables(cls, subtables, genomes):
+        if "mitochondrial" in subtables and "nuclear" in subtables:
+            subtables["endogenous"] = cls._create_endogenous_subtable(subtables, genomes)
+
+        for (tblname, subtable) in subtables.iteritems():
+            if tblname == "reads":
+                fractions = [("seq_trash_se",   "seq_reads_se",    "seq_trash_se_frac",   "# Fraction of SE reads trashed"),
+                             ("seq_trash_pe_1", "seq_reads_pairs", "seq_trash_pe_1_frac", "# Fraction of PE mate 1 reads trashed"), 
+                             ("seq_trash_pe_2", "seq_reads_pairs", "seq_trash_pe_2_frac", "# Fraction of PE mate 2 reads trashed"), 
+                             ("seq_collapsed",  "seq_reads_pairs", "seq_collapsed_frac",  "# Fraction of PE pairs collapsed into one read"),
+                             ("seq_nt_total",   "seq_reads_total", "seq_nt_average",      "# Average number of NTs in retained reads")]
+
+                for (numerator, denominator, measure, comment) in fractions:
+                    if (numerator in subtable) and (denominator in subtable):
+                        value = float(subtable[numerator][0]) / subtable[denominator][0]
+                        subtable[measure] = (value, comment)
+            else:
+                total_hits  = subtable["hits_raw(%s)" % tblname][0]
+                total_nts   = subtable["hits_unique_nts(%s)" % tblname][0]
+                total_uniq  = subtable["hits_unique(%s)" % tblname][0]
+                total_reads = subtables["reads"]["seq_reads_total"][0]
+                                
+                subtable["hits_raw_frac(%s)" % tblname] = (total_hits / float(total_reads), "# Total number of hits vs. total number of reads")
+                subtable["hits_clonality(%s)" % tblname] = (1 - total_uniq / (float(total_hits) or float("NaN")), "# Fraction of hits that were PCR duplicates")
+                subtable["hits_length(%s)" % tblname] = (total_nts / (float(total_uniq) or float("NaN")), "# Average number of aligned bases per unique hit")
+                subtable["hits_coverage(%s)" % tblname] = (total_nts / float(genomes[tblname]["Size"]), "# Estimated coverage from unique hits")
                 
-
-    @classmethod
-    def _build_summary_table(cls, config, records):
-        sequences = collections.defaultdict(list)
-        for record in records:
-            key = (record["Sample"], record["Library"])
-            sequences[key].append(cls._stat_read_settings(record))
-            
-        by_sample_library = collections.defaultdict(list)
-        for record in records:
-            key = (record["Sample"], record["Library"])
-            by_sample_library[key].append(record)
-
-
-        hits = {}
-        for prefix in config.bwa_prefix:
-            label = _prefix_to_label(config, prefix, only_endogenous = False)
-            dd = hits[label] = {}
-            
-            for key in by_sample_library:
-                dd[key] = [cls._stat_hits(config, prefix, by_sample_library[key])]
-
-        keyfuncs = (lambda (sample, library): (sample, library),
-                    lambda (sample, _): (sample, "*"),
-                    lambda _: ("*", "*"))
+        return subtables
         
-        levels = collections.defaultdict(lambda: {"hits" : {}})
-        for keyfunc in keyfuncs:
-            for (key, value) in cls._merge_tables(sequences, keyfunc).iteritems():
-                levels[key]["seq"] = value
-
-            for prefix in config.bwa_prefix:
-                label = _prefix_to_label(config, prefix, only_endogenous = False)
-                for (key, value) in cls._merge_tables(hits[label], keyfunc).iteritems():
-                    levels[key]["hits"][label] = value
-
-        return levels
-
 
     @classmethod
-    def _stat_hits(cls, config, prefix, records):
-        raw_files, dedup_files = set(), set()        
-        for libraries in cls._collect_input_files([prefix], records).values():
-            for (library, files) in libraries.items():
-                raw_files.update(files["raw"])
-                dedup_files.update(files["dedup"])
+    def _create_endogenous_subtable(self, subtables, genomes):
+        nucl = subtables["nuclear"]
+        mito = subtables["mitochondrial"]
 
-        raw_hits, _           = cls._stat_bam_files(raw_files)
-        dedup_hits, dedup_nts = cls._stat_bam_files(dedup_files)
- 
-        label = _prefix_to_label(config, prefix, only_endogenous = False)
+        total_hits            = mito["hits_raw(mitochondrial)"][0]         + nucl["hits_raw(nuclear)"][0]
+        total_hits_unique     = mito["hits_unique(mitochondrial)"][0]      + nucl["hits_unique(nuclear)"][0]
+        total_hits_unique_nts = mito["hits_unique_nts(mitochondrial)"][0]  + nucl["hits_unique_nts(nuclear)"][0]
+        
+        ratio_hits, ratio_genome, ratio_genome_inv = "NA", "NA", "NA"
+        if mito["hits_unique(mitochondrial)"][0]:
+            ratio_nts    = float(nucl["hits_unique_nts(nuclear)"][0]) / mito["hits_unique_nts(mitochondrial)"][0]
+            ratio_hits   = float(nucl["hits_unique(nuclear)"][0]) / mito["hits_unique(mitochondrial)"][0]
+            ratio_genome = ratio_nts / ((float(genomes["nuclear"]["Size"]) * 2) / float(genomes["mitochondrial"]["Size"]))
+            ratio_genome_inv = ratio_genome ** -1                   
+                
         return {
-            "hits_raw(%s)"        % label : (raw_hits,   "# Total number of hits (including PCR duplicates)"),
-            "hits_unique(%s)"     % label : (dedup_hits, "# Total number of unique hits (excluding PCR duplicates)"),
-            "hits_unique_nts(%s)" % label : (dedup_nts,  ""),
+            "hits_raw(endogenous)"         : (total_hits,                       "# Total number of hits against the nuclear and mitochondrial genome"),
+            "hits_unique(endogenous)"      : (total_hits_unique,                "# Total number of unique reads (PRC duplicates removed)"),
+            "hits_unique_nts(endogenous)"  : (total_hits_unique_nts,            None), 
+            "ratio_reads(nuc,mito)"        : (ratio_hits,                       "# Ratio of unique hits: Hits(nuc) / H(mito)"),
+            "ratio_genome(nuc,mito)"       : (ratio_genome,                     "# Ratio of NTs of unique hits corrected by genome sizes: (NTs(nuc) / NTs(mito)) / ((2 * Size(nuc)) / Size(mito))"),
+            "ratio_genome(mito,nuc)"       : (ratio_genome_inv,                 "# Ratio of NTs of unique hits corrected by genome sizes: (NTs(mito) / NTs(nuc)) / (Size(mito) / (2 * Size(nuc)))")
             }
 
 
+    def _read_reads_settings(self, table):
+        for ((sample, library, barcode), filename) in self._in_raw_read.iteritems():
+            key = (self._target, sample, library, "reads", barcode)
+            set_in(table, key, self._stat_read_settings(filename))
+
+        for (target, samples) in table.iteritems():
+            for (sample, libraries) in samples.iteritems():
+                for (library, prefixes) in libraries.iteritems():
+                    subtable = self._merge_tables(prefixes["reads"].values())
+
+                    total_reads = 0
+                    total_reads += subtable.get("seq_reads_se",    (0,))[0] - subtable.get("seq_trash_se", (0,))[0]
+                    total_reads += subtable.get("seq_reads_pairs", (0,))[0] - subtable.get("seq_trash_pe_1", (0,))[0]
+                    total_reads += subtable.get("seq_reads_pairs", (0,))[0] - subtable.get("seq_trash_pe_2", (0,))[0]
+                    subtable["seq_reads_total"] = (total_reads, None)
+
+                    prefixes["reads"] = subtable
+
+        return table
+
+
+    def _read_raw_bam_stats(self, table):
+        for ((genome, target, sample, library), filenames) in self._in_raw_bams.iteritems():
+            subtable = {}
+            for filename in filenames:
+                read_coverage_table(subtable, filename)
+            key = (target, sample, library)
+
+            hits = 0
+            for contigtable in get_in(subtable, key).itervalues():
+                hits += contigtable["Hits"]
+            
+            value = (hits, "# Total number of hits (prior to PCR duplicate filtering)")
+            set_in(table, (target, sample, library, genome, "hits_raw(%s)" % genome), value)
+
+
+    def _read_lib_bam_stats(self, table):
+        for ((genome, target, sample, library), filenames) in self._in_lib_bams.iteritems():
+            subtable = {}
+            for filename in filenames:
+                read_coverage_table(subtable, filename)
+            key = (target, sample, library)
+
+            hits = nts = 0
+            for contigtable in get_in(subtable, key).itervalues():
+                hits += contigtable["Hits"]
+                nts += contigtable["M"]
+            
+            value = (hits, "# Total number of hits (excluding any PCR duplicates)")
+            set_in(table, (target, sample, library, genome, "hits_unique(%s)" % genome), value)
+            set_in(table, (target, sample, library, genome, "hits_unique_nts(%s)" % genome), (nts, None))
+
+
     @classmethod
-    def _stat_bam_files(cls, filenames):
-        hits, nucleotides = 0, 0
-        for filename in filenames:
-            bamfile = pysam.Samfile(filename)
-            try:
-                OPS = (0, 7, 8) #M, =, and X (aligned, match, mismatch)
-                for read in bamfile:
-                    hits += 1
-                    nucleotides += sum(num for (op, num) in read.cigar if op in OPS)
-            finally:
-                bamfile.close()
+    def _merge_tables(cls, tables):
+        merged = {}
+        for table in tables:
+            for (measure, (value, comment)) in table.iteritems():
+                if not isinstance(value, numbers.Number):
+                    other, _ = merged.get(measure, (value, None))
+                    merged[measure] = (value if (value == other) else "*", comment)
+                else:
+                    other, _ = merged.get(measure, (0, None))
+                    merged[measure] = (value + other, comment)
+        return merged
+
+
+    @classmethod
+    def _stat_read_settings(cls, filename):
+        if filename is None:
+            # FIXME: A better solution is required when adding support pre-trimmed reads ...
+            return {
+                "lib_type"          : ("*", "# SE, PE, or * (for both)"),
+                "seq_reads_se"      : (float("nan"),  "# Total number of single-ended reads"),
+                "seq_trash_se"      : (float("nan"),  "# Total number of trashed reads"),
+                "seq_nt_total"      : (float("nan"),  "# Total number of NTs in retained reads")
+                }
         
-        return hits, nucleotides
-
-
-    @classmethod
-    def _stat_bwa_prefix(cls, prefix):
-        """Returns (size, number of contigs) for a given BWA prefix."""        
-        with open(prefix + ".ann") as table:
-            return map(int, table.readline().strip().split())[:2]
-
-    
-    @classmethod
-    def _merge_tables(cls, stats, keyfunc):
-        merged_tables = collections.defaultdict(dict)
-        for (key, tables) in stats.iteritems():
-            sample, library = keyfunc(key)
-
-            merged = merged_tables[(sample, library)]
-            for table in tables:
-                for (measure, (value, comment)) in table.iteritems():
-                    if not isinstance(value, numbers.Number):
-                        other, _ = merged.get(measure, (value, None))
-                        merged[measure] = (value if (value == other) else "*", comment)
-                    else:
-                        other, _ = merged.get(measure, (0, None))
-                        merged[measure] = (value + other, comment)
-
-        return merged_tables
-         
-        
-    @classmethod
-    def _stat_read_settings(cls, record):
-        with open(os.path.join(common.paths.full_path(record, "reads"), "reads.settings")) as settings:
-            settings = settings.read()
+        with open(filename) as settings_file:
+            settings = settings_file.read()
             if "Paired end mode" in settings:
                 return {
                     "lib_type"        : ("PE", "# SE, PE, or * (for both)"),
@@ -331,57 +309,31 @@ class SummaryTableNode(Node):
                 return {
                     "lib_type"          : ("SE", "# SE, PE, or * (for both)"),
                     "seq_reads_se"      : (int(re.search("read pairs: ([0-9]+)",             settings).groups()[0]),  "# Total number of single-ended reads"),
-                    "seq_trash_se"      : (int(re.search("discarded mate 1 reads: ([0-9]+)", settings).groups()[0]),  "# Total number of reads"),
+                    "seq_trash_se"      : (int(re.search("discarded mate 1 reads: ([0-9]+)", settings).groups()[0]),  "# Total number of trashed reads"),
                     "seq_nt_total"      : (int(re.search("retained nucleotides: ([0-9]+)",   settings).groups()[0]),  "# Total number of NTs in retained reads")
                     }
-
             else:
-                # FIXME: A better solution is required when adding support pre-trimmed reads ...
-                return {
-                    "lib_type"          : ("*", "# SE, PE, or * (for both)"),
-                    "seq_reads_se"      : (float("nan"),  "# Total number of single-ended reads"),
-                    "seq_trash_se"      : (float("nan"),  "# Total number of reads"),
-                    "seq_nt_total"      : (float("nan"),  "# Total number of NTs in retained reads")
-                    }
                 assert False
 
-    
+
     @classmethod
-    def _collect_input_files(cls, prefixes, records):
-        by_prefix = {}
+    def _stat_bwa_prefixes(cls, prefixes):
+        """Returns (size, number of contigs) for a set of BWA prefix."""
+        genomes = {}
         for prefix in prefixes:
-            by_library = by_prefix[prefix] = collections.defaultdict(dict)
+            label = prefixes[prefix].get("Label", prefix)
+            with open(prefixes[prefix]["Path"] + ".ann") as table:
+                genomes[label] = dict(zip(("Size", "NContigs"), map(int, table.readline().strip().split())[:2]))
+        
+        if "mitochondrial" in genomes and "nuclear" in genomes:
+            nucl = genomes["nuclear"]
+            mito = genomes["mitochondrial"]
 
-            for record in records:
-                library = record["Library"]
-                if library not in by_library:
-                    by_library[library] = {"raw" : set(), "dedup" : set()}
-                input_files = by_library[library]
+            genomes["endogenous"] = {"Size" : nucl["Size"] + mito["Size"],
+                                     "NContigs" : nucl["NContigs"] + mito["NContigs"]}
 
-                full_path = common.paths.full_path(record, prefix)
-                if common.paths.is_paired_end(record):
-                    input_files["raw"].add(os.path.join(full_path, "reads.pairs.truncated.bam"))
-                    input_files["raw"].add(os.path.join(full_path, "reads.singleton.aln.truncated.bam"))
-                    input_files["raw"].add(os.path.join(full_path, "reads.singleton.unaln.truncated.bam"))
-                else: 
-                    input_files["raw"].add(os.path.join(full_path, "reads.truncated.bam"))
-                input_files["dedup"].add(common.paths.library_path(record, prefix) + ".unaligned.bam")
+        return genomes
 
-        return by_prefix
-
-
-
-def _prefix_to_label(config, prefix, only_endogenous):
-    if (prefix == config.bwa_prefix_mito):
-        return "mito"
-    elif (prefix == config.bwa_prefix_nuclear):
-        return "nuclear"
-    elif only_endogenous:
-        return "-"
-
-    return common.paths.prefix_to_filename(prefix)
-
-    
 
 
 def _measure_ordering((measure, _)):
