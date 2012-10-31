@@ -24,6 +24,8 @@ import os
 import yaml
 import types
 import string
+import hashlib
+import datetime
 
 import pypeline.tools.bam_pipeline.paths as paths
 
@@ -60,18 +62,21 @@ def read_makefiles(filenames):
 def _read_makefile(filename):
     try:
         with open(filename) as makefile:
-            data = yaml.safe_load(makefile)
+            string = makefile.read()
+            data = yaml.safe_load(string)
     except Exception, e:
         raise MakefileError(e)
 
     options  = _read_options(data, dict(DEFAULT_OPTIONS))
     prefixes = _read_prefixes(data)
     
-    makefile = {"Options"  : options,
-                "Prefixes" : prefixes,
-                "Targets"  : _read_structure(data, options, prefixes, 3)}
-
-    return makefile
+    mtime = os.path.getmtime(os.path.realpath(filename))
+    return {"Options"  : options,
+            "Prefixes" : prefixes,
+            "Targets"  : _read_structure(data, options, prefixes, 3),
+            "Makefile" : {"Filename" : filename,
+                          "Hash"     : hashlib.sha1(string).hexdigest(),
+                          "MTime"    : datetime.datetime.fromtimestamp(mtime).strftime("%F %T.%f %z")}}
 
 
 def _read_options(data, options):
@@ -114,7 +119,8 @@ def _read_prefixes(data, inherit = None):
        Reference sequences MUST have the extensions .fasta or .fa, and
        be located at '${prefix}', '${prefix}.fa' or '${prefix}.fasta'.""" % name)
 
-        prefixes[name] = {"Label"     : label,
+        prefixes[name] = {"Name"      : name,
+                          "Label"     : label,
                           "Path"      : path,
                           "Reference" : reference}
    
