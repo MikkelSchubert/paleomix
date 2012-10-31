@@ -104,7 +104,7 @@ class MergeCoverageNode(Node):
     def _run(self, _config, temp):
         table = {}
         for filename in self._input_files:
-            _read_table(table, filename)
+            read_table(table, filename)
 
         _write_table(table, reroot_path(temp, self._output_file))
         move_file(reroot_path(temp, self._output_file), self._output_file)
@@ -167,7 +167,7 @@ def _build_rows(table):
     return rows              
 
 
-def _read_table(table, filename):
+def read_table(table, filename):
     with open(filename) as table_file:
         for record in parse_padded_table(table_file):
             key = (record["Name"], record["Sample"], record["Library"], record["Contig"])
