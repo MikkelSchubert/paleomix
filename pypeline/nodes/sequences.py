@@ -83,6 +83,11 @@ class FilterSingletonsNode(Node):
         self._input_file      = input_file
         self._output_file     = output_file
         self._filter_by       = dict(filter_by)
+        for (to_filter, groups) in self._filter_by.items():
+            groups = set(groups) | set([to_filter])
+            if len(groups) == 1:
+                raise RuntimeError("Singleton filtering must involve at least one other group")
+            self._filter_by[to_filter] = groups
 
         Node.__init__(self,
                       description  = "<FilterSingleton: '%s' -> '%s'>" \
@@ -94,10 +99,7 @@ class FilterSingletonsNode(Node):
     def _run(self, _config, temp):
         alignment = msa.read_msa(self._input_file)
 
-        for to_filter in self._filter_by:
-            groups = set(self._filter_by[to_filter])
-            groups.add(to_filter)
-
+        for (to_filter, groups) in self._filter_by.iteritems():
             sequences = [alignment[group] for group in groups]
             sequence = list(alignment[to_filter])
             for (index, nts) in enumerate(zip(*sequences)):
