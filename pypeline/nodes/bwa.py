@@ -61,6 +61,8 @@ class BWAIndexNode(CommandNode):
 class SE_BWANode(CommandNode):
     @create_customizable_cli_parameters
     def customize(self, input_file, output_file, reference, prefix, threads = 1, dependencies = ()):
+        threads = _get_max_threads(reference, threads)
+
         aln   = AtomicParams("bwa")
         aln.set_parameter("aln")
         aln.set_parameter(prefix)
@@ -84,7 +86,8 @@ class SE_BWANode(CommandNode):
         commands["aln"]   = aln
 
         return {"commands" : commands,
-                "order"    : ["aln", "samse"] + order}
+                "order"    : ["aln", "samse"] + order,
+                "threads"  : threads}
 
         
     @use_customizable_cli_parameters
@@ -102,6 +105,8 @@ class SE_BWANode(CommandNode):
 class PE_BWANode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, input_file_1, input_file_2, output_file, reference, prefix, threads = 1, dependencies = ()):
+        threads = _get_max_threads(reference, threads)
+
         alns = []
         for (iindex, filename) in enumerate((input_file_1, input_file_2), start = 1):
             aln = AtomicParams("bwa")
@@ -137,7 +142,8 @@ class PE_BWANode(CommandNode):
         commands["aln_2"] = aln_2
 
         return {"commands" : commands,
-                "order"    : ["aln_1", "aln_2", "sampe"] + order}
+                "order"    : ["aln_1", "aln_2", "sampe"] + order,
+                "threads"  : threads}
 
 
     @use_customizable_cli_parameters
@@ -160,6 +166,8 @@ class PE_BWANode(CommandNode):
 class BWASWNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, input_file_1, output_file, reference, prefix, input_file_2 = None, threads = 1, dependencies = ()):
+        threads = _get_max_threads(reference, threads)
+
         aln = AtomicParams("bwa")
         aln.set_parameter("bwasw")
         aln.set_parameter(prefix)
@@ -180,7 +188,8 @@ class BWASWNode(CommandNode):
         commands["aln"] = aln
         
         return {"commands" : commands,
-                "order"    : ["aln"] + order}
+                "order"    : ["aln"] + order,
+                "threads"  : threads}
 
 
     @use_customizable_cli_parameters
@@ -248,3 +257,10 @@ def _prefix_files(prefix, iotype = "IN"):
     for postfix in ("amb", "ann", "bwt", "pac", "rbwt", "rpac", "rsa", "sa"):
         files["%s_PREFIX_%s" % (iotype, postfix.upper())] = prefix + "." + postfix
     return files
+
+
+def _get_max_threads(reference, threads):
+    if os.path.getsize(reference) < 2 ** 20: # 1MB
+        return 1
+
+    return threads
