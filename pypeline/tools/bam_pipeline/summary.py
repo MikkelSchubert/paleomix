@@ -61,7 +61,7 @@ class SummaryTableNode(Node):
         self._in_raw_bams = collections.defaultdict(list)
         self._in_lib_bams = collections.defaultdict(list)
         for genome in prefixes:
-            label = prefixes[genome].get("Label", genome)
+            label = prefixes[genome].get("Label") or genome
             for record in records[genome]:
                 for (key, dd) in (("LaneCoverage", self._in_raw_bams), ("LibCoverage", self._in_lib_bams)):
                     for node in record[key]:
@@ -106,8 +106,8 @@ class SummaryTableNode(Node):
         table.write("# Genomes:\n")
         rows = [["Name", "Label", "Contigs", "Size", "Prefix"]]
         for (_, prefix) in sorted(self._prefixes.items()):
-            stats = genomes[prefix.get("Label", prefix["Name"])]
-            rows.append((prefix["Name"], prefix.get("Label", "-"), stats["NContigs"], stats["Size"], prefix["Path"]))
+            stats = genomes[prefix.get("Label") or prefix["Name"]]
+            rows.append((prefix["Name"], (prefix.get("Label") or "-"), stats["NContigs"], stats["Size"], prefix["Path"]))
 
         for line in text.padded_table(rows):
             table.write("#     %s\n" % (line,))
@@ -321,7 +321,7 @@ class SummaryTableNode(Node):
         """Returns (size, number of contigs) for a set of BWA prefix."""
         genomes = {}
         for prefix in prefixes:
-            label = prefixes[prefix].get("Label", prefix)
+            label = prefixes[prefix].get("Label") or prefix
             with open(prefixes[prefix]["Path"] + ".ann") as table:
                 genomes[label] = dict(zip(("Size", "NContigs"), map(int, table.readline().strip().split())[:2]))
         
