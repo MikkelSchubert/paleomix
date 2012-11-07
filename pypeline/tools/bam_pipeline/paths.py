@@ -44,10 +44,10 @@ def collect_files(template):
 
 
 def reference_sequence(bwa_prefix):
-    for ext in (".fa", ".fasta"):
+    extensions = (".fa", ".fasta")
+    if any(bwa_prefix.endswith(ext) for ext in extensions):
+        return bwa_prefix
+    
+    for ext in extensions:
         if os.path.exists(bwa_prefix + ext):
             return bwa_prefix + ext
-
-    wo_ext = os.path.splitext(bwa_prefix)[0]
-    if bwa_prefix != wo_ext:
-        return reference_sequence(wo_ext)
