@@ -48,55 +48,54 @@ class NodeGraph:
         self._check_file_dependencies(self._reverse_dependencies)
         self._check_required_executables(self._reverse_dependencies)
 
-        self._graph_valid = False
-        self._fixed_states = {}
         self._states = {}
 
 
     def get_node_state(self, node):
-        if self._fixed_states.get(node) is not None:
-            return self._fixed_states[node]
-        return self._states.get(node)
+        if node not in self._states:
+            self._update_node_state(node)
+        return self._states[node]
 
 
     def set_node_state(self, node, state):
-        if state not in (None, NodeGraph.RUNNING, NodeGraph.ERROR):
-            raise ValueError("Cannot set states other than RUNNING and ERROR, or cleared (None).")
-        
-        self._fixed_states[node] = state
-        self._graph_valid = False
+        if state not in (NodeGraph.RUNNING, NodeGraph.ERROR, NodeGraph.DONE):
+            raise ValueError("Cannot set states other than RUNNING and ERROR, or DONE.")
+ 
+        self._clear_node_states([node])
+        self._states[node] = state
 
 
     def __iter__(self):
         """Returns a graph of nodes."""
-        self._update_graph()
         return iter(self._top_nodes)
 
 
     def iterflat(self):
-        self._update_graph()
         return iter(self._reverse_dependencies)
 
 
-    def _update_graph(self):
-        if not self._graph_valid:
-            self._states = {}
-            for node in self._reverse_dependencies:
-                self._update_states(node)
+    def refresh_states(self):
+        states = {}
+        for (node, state) in self._states.iteritems():
+            if state in (self.ERROR, self.RUNNING):
+                states[node] = state
+        self._states = states
 
-            self._graph_valid = True
-        
 
-    def _update_states(self, node):
-        state = self.get_node_state(node)
-        if state is not None:
-            # Possibly return a fixed state
-            return state
- 
+    def _clear_node_states(self, nodes):
+        for node in nodes:
+            self._states.pop(node, None)
+            self._clear_node_states(self._reverse_dependencies[node])
+
+
+    def _update_node_state(self, node):
+        if node in self._states:
+            return self._states[node]
+
         # Update sub-nodes before checking for fixed states
         state = NodeGraph.DONE
         for subnode in (node.subnodes | node.dependencies):
-            state = max(state, self._update_states(subnode))
+            state = max(state, self._update_node_state(subnode))
 
         try:
             if isinstance(node, MetaNode):
@@ -116,9 +115,8 @@ class NodeGraph:
             ui.print_err("OSError checking state of Node: %s" % e)
             state = NodeGraph.ERROR
         self._states[node] = state
- 
-        # Possibly return a fixed state
-        return self.get_node_state(node)
+
+        return state
 
 
     @classmethod
@@ -158,12 +156,14 @@ class NodeGraph:
             raise NodeGraphError("Errors detected during graph construction (max %i shown):\n%s" \
                                 % (_MAX_ERROR_MESSAGES * 2, "\n".join(messages)),)
 
+
     @classmethod
     def _check_output_files(cls, output_files):
         for (filename, nodes) in output_files.iteritems():
             if (len(nodes) > 1):
                 yield "%i nodes clobber a file: %s:\n\t%s" \
                     % (len(nodes), filename, "\n\t".join(str(node) for node in nodes))
+
 
     @classmethod
     def _check_input_dependencies(cls, input_files, output_files, nodes):
