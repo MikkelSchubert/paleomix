@@ -318,6 +318,7 @@ def build_target_nodes(config, makefile, prefixes, target, samples):
         node = ValidateBAMFile(config      = config,
                                node        = node)
 
+        aligned = None
         if config.gatk_jar:
             aligned = IndelRealignerNode(config       = config,
                                          reference    = prefixes[genome]["Reference"],
@@ -325,10 +326,10 @@ def build_target_nodes(config, makefile, prefixes, target, samples):
                                          outfile      = add_postfix(output_filename, ".realigned"),
                                          intervals    = os.path.join(config.destination, target, genome + ".intervals"),
                                          dependencies = node)
-            node = ValidateBAMFile(config      = config,
-                                   node        = aligned)
+            aligned = ValidateBAMFile(config      = config,
+                                      node        = aligned)
             
-        statistics = build_statistics_nodes(config, prefixes[genome], target, records, node)
+        statistics = build_statistics_nodes(config, prefixes[genome], target, records, aligned)
         nodes.append(MetaNode(description  = "Genome: %s" % genome,
                               dependencies = (node, statistics)))
 
