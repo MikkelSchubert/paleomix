@@ -36,33 +36,55 @@ class NodeGraphError(RuntimeError):
     pass
     
 
-
 class NodeGraph:
     DONE, RUNNING, RUNABLE, QUEUED, OUTDATED, ERROR = range(6)
 
     def __init__(self, nodes):
         self._reverse_dependencies = collections.defaultdict(set)
         self._collect_reverse_dependencies(nodes, self._reverse_dependencies)
+        self._intersections = self._calculate_intersections()
         self._top_nodes = [node for (node, rev_deps) in self._reverse_dependencies.iteritems() if not rev_deps]
 
         self._check_file_dependencies(self._reverse_dependencies)
         self._check_required_executables(self._reverse_dependencies)
 
         self._states = {}
+        self.refresh_states()
 
 
     def get_node_state(self, node):
-        if node not in self._states:
-            self._update_node_state(node)
         return self._states[node]
 
 
     def set_node_state(self, node, state):
         if state not in (NodeGraph.RUNNING, NodeGraph.ERROR, NodeGraph.DONE):
             raise ValueError("Cannot set states other than RUNNING and ERROR, or DONE.")
- 
-        self._clear_node_states([node])
         self._states[node] = state
+
+        intersections = dict(self._intersections[node])
+
+        # Not all nodes may need to be updated, but we still need to
+        # traverse the "graph" (using the intersection counts) in order
+        # to ensure that all nodes that need to be updated are updated.
+        requires_update = dict.fromkeys(intersections, False)
+        for dependency in self._reverse_dependencies[node]:
+            requires_update[dependency] = True
+
+        while any(requires_update.itervalues()):
+            for (node, count) in intersections.items():
+                if not count:
+                    has_changed = False
+                    if requires_update[node]:
+                        old_state = self._states.pop(node)
+                        new_state = self._update_node_state(node)
+                        has_changed = (new_state != old_state)
+
+                    for dependency in self._reverse_dependencies[node]:
+                        intersections[dependency] -= 1
+                        requires_update[dependency] |= has_changed
+
+                    intersections.pop(node)
+                    requires_update.pop(node)
 
 
     def __iter__(self):
@@ -80,12 +102,28 @@ class NodeGraph:
             if state in (self.ERROR, self.RUNNING):
                 states[node] = state
         self._states = states
+        for node in self._reverse_dependencies:
+            self._update_node_state(node)
 
 
-    def _clear_node_states(self, nodes):
-        for node in nodes:
-            self._states.pop(node, None)
-            self._clear_node_states(self._reverse_dependencies[node])
+    def _calculate_intersections(self):
+        def count_nodes(node, counts):
+            for node in self._reverse_dependencies[node]:
+                if node in counts:
+                    counts[node] += 1
+                else:
+                    counts[node] = 1
+                    count_nodes(node, counts)
+            return counts
+
+        intersections = {}
+        for node in self._reverse_dependencies:
+            counts = count_nodes(node, {})
+            for dependency in self._reverse_dependencies[node]:
+                counts[dependency] -= 1
+            intersections[node] = counts
+
+        return intersections
 
 
     def _update_node_state(self, node):
@@ -210,6 +248,3 @@ class NodeGraph:
                 rev_dependencies[dependency].add(node)
             cls._collect_reverse_dependencies(node.dependencies, rev_dependencies)
             cls._collect_reverse_dependencies(node.subnodes, rev_dependencies)
-        
-        
-
