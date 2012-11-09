@@ -77,6 +77,7 @@ class Pypeline:
                         # Double-check that everything is in order
                         nodes.refresh_states()
                         has_refreshed = True
+                        continue
                     else:
                         break
                 else:
