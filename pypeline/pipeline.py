@@ -131,7 +131,7 @@ class Pypeline:
         changes = errors = False
         while running and not (errors or changes):
             time.sleep(sleep_time)
-            sleep_time = min(5, sleep_time * 2)
+            sleep_time = min(1, sleep_time * 2)
 
             for (node, proc) in running.items():
                 if not proc.ready():
