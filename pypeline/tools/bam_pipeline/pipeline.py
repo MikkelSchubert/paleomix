@@ -34,10 +34,11 @@ from pypeline.nodes.bwa import SE_BWANode, PE_BWANode
 from pypeline.nodes.gatk import IndelRealignerNode
 from pypeline.nodes.picard import MergeSamFilesNode, MarkDuplicatesNode
 from pypeline.nodes.coverage import CoverageNode, MergeCoverageNode
-from pypeline.nodes.samtools import BAMIndexNode
+from pypeline.nodes.samtools import FastaIndexNode
 from pypeline.nodes.adapterremoval import SE_AdapterRemovalNode, PE_AdapterRemovalNode
 
 from pypeline.common.text import parse_padded_table
+from pypeline.common.utilities import safe_coerce_to_tuple
 from pypeline.common.fileutils import swap_ext, add_postfix
 
 import pypeline.tools.bam_pipeline.paths as paths
@@ -77,6 +78,10 @@ def build_bwa_nodes(config, target, sample, library, barcode, record, dependenci
     reads = record["Reads"]
     reads["BAM"] = {}
     for (genome, prefix) in record["Prefixes"].iteritems():
+        prefix_dependencies = []
+        prefix_dependencies.extend(safe_coerce_to_tuple(dependencies))
+        prefix_dependencies.extend(safe_coerce_to_tuple(prefix["Node"]))
+
         reads["BAM"][genome] = {}
         output_dir = os.path.join(config.destination, target, genome, sample, library, barcode)
         for (key, input_filename) in reads["Trimmed"].iteritems():
@@ -93,7 +98,7 @@ def build_bwa_nodes(config, target, sample, library, barcode, record, dependenci
                           "prefix"       : prefix["Path"],
                           "reference"    : prefix["Reference"],
                           "threads"      : config.bwa_max_threads,
-                          "dependencies" : dependencies}
+                          "dependencies" : prefix_dependencies}
 
             if paths.is_paired_end(input_filename):
                 params = PE_BWANode.customize(input_file_1 = input_filename.format(Pair = 1),
@@ -162,7 +167,6 @@ def build_lane_nodes(config, target, sample, library, barcode, record):
     """
 
     """
-    record = copy.deepcopy(record)
     if "BAM" not in record["Reads"]:
         dependencies = ()
         if "Trimmed" not in record["Reads"]:
@@ -352,6 +356,16 @@ def build_nodes(config, makefile):
     return nodes
 
 
+def index_references(makefiles):
+    references = {}
+    for makefile in makefiles:
+        for dd in makefile["Prefixes"].itervalues():
+            reference = os.path.realpath(dd["Reference"])
+            if reference not in references:
+                references[reference] = FastaIndexNode(dd["Reference"])
+            dd["Node"] = references[reference]
+
+
 def parse_config(argv):
     parser = optparse.OptionParser()
     parser.add_option("--destination", default = "./results",
@@ -412,6 +426,7 @@ def main(argv):
                          "\n\t".join(str(e).split("\n")))
         return 1
 
+    index_references(makefiles)
     pipeline = pypeline.Pypeline(config)
     for makefile in makefiles:
         pipeline.add_nodes(build_nodes(config, makefile))
