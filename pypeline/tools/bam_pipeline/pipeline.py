@@ -90,6 +90,10 @@ def build_bwa_nodes(config, target, sample, library, barcode, record, dependenci
             if not record["Options"]["BWA_UseSeed"]:
                 options.append("noSeed")
 
+            max_edit = record["Options"]["BWA_MaxEdit"]
+            if record["Options"]["BWA_MaxEdit"] != 0.04:
+                options.append("maxEdit%s" % max_edit)
+
             output_filename = os.path.join(output_dir, "%s.%s.bam" \
                                                % (key.lower(), ".".join(options)))
             
@@ -108,12 +112,15 @@ def build_bwa_nodes(config, target, sample, library, barcode, record, dependenci
                 if not record["Options"]["BWA_UseSeed"]:
                     params.commands["aln_1"].set_parameter("-l", 2**16 - 1)
                     params.commands["aln_2"].set_parameter("-l", 2**16 - 1)
+                params.commands["aln_1"].set_parameter("-n", max_edit)
+                params.commands["aln_2"].set_parameter("-n", max_edit)
             else:
                 params = SE_BWANode.customize(input_file   = input_filename,
                                               **parameters)
                 params.commands["samse"].set_parameter("-r", read_group)
                 if not record["Options"]["BWA_UseSeed"]:
                     params.commands["aln"].set_parameter("-l", 2**16 - 1)
+                params.commands["aln"].set_parameter("-n", max_edit)
 
             params.commands["filter"].set_parameter('-q', record["Options"]["BWA_MinQuality"])
 

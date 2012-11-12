@@ -39,6 +39,8 @@ DEFAULT_OPTIONS = {
     "Platform"       : "Illumina",
     # BWA: Use seed during mapping
     "BWA_UseSeed"    : True,
+    # BWA: Max edit-distance (int), or missing prob under 0.02 err. rate (float)
+    "BWA_MaxEdit"    : 0.04,
     # BWA: Minimum quality of reads retained after mapping
     "BWA_MinQuality" : 0,
     # Contains PCR duplicates, filter if true
