@@ -66,14 +66,23 @@ class Pypeline:
     
         try:
             running = {}
-            errors = False
+            errors = has_refreshed = has_started_any = False
             pool = multiprocessing.Pool(max_running, _init_worker)
 
             while not (errors and terminate_on_error):
                 if not self._poll_running_nodes(running, nodes):
                     errors = True
                 elif not self._start_new_tasks(running, nodes, max_running, pool):
-                    break
+                    if not has_refreshed and has_started_any:
+                        # Double-check that everything is in order
+                        nodes.refresh_states()
+                        has_refreshed = True
+                        continue
+                    else:
+                        break
+                else:
+                    has_started_any = True
+                    has_refreshed = False
 
                 ui.print_node_tree(nodes, collapse)
 
@@ -123,22 +132,22 @@ class Pypeline:
         changes = errors = False
         while running and not (errors or changes):
             time.sleep(sleep_time)
-            sleep_time = min(5, sleep_time * 2)
+            sleep_time = min(1, sleep_time * 2)
 
             for (node, proc) in running.items():
                 if not proc.ready():
                     continue
                 changes = True
 
-                running.pop(node)
-                nodes.set_node_state(node, None)
-                   
+                running.pop(node)                   
                 try:
                     proc.get()
                 except Exception, errors:
                     nodes.set_node_state(node, nodes.ERROR)                    
                     ui.print_err("%s: Error occurred running command (terminating gracefully):\n%s\n" \
                                      % (node, "\n".join(("\t" + line) for line in str(errors).strip().split("\n"))))
+                    continue
+                nodes.set_node_state(node, nodes.DONE)
 
         return not errors
  

@@ -61,7 +61,7 @@ class SummaryTableNode(Node):
         self._in_raw_bams = collections.defaultdict(list)
         self._in_lib_bams = collections.defaultdict(list)
         for genome in prefixes:
-            label = prefixes[genome].get("Label", genome)
+            label = prefixes[genome].get("Label") or genome
             for record in records[genome]:
                 for (key, dd) in (("LaneCoverage", self._in_raw_bams), ("LibCoverage", self._in_lib_bams)):
                     for node in record[key]:
@@ -106,8 +106,8 @@ class SummaryTableNode(Node):
         table.write("# Genomes:\n")
         rows = [["Name", "Label", "Contigs", "Size", "Prefix"]]
         for (_, prefix) in sorted(self._prefixes.items()):
-            stats = genomes[prefix.get("Label", prefix["Name"])]
-            rows.append((prefix["Name"], prefix.get("Label", "-"), stats["NContigs"], stats["Size"], prefix["Path"]))
+            stats = genomes[prefix.get("Label") or prefix["Name"]]
+            rows.append((prefix["Name"], (prefix.get("Label") or "-"), stats["NContigs"], stats["Size"], prefix["Path"]))
 
         for line in text.padded_table(rows):
             table.write("#     %s\n" % (line,))
@@ -118,9 +118,6 @@ class SummaryTableNode(Node):
         for (target, samples) in sorted(self._read_tables(self._prefixes, genomes).iteritems()):
             for (sample, libraries) in sorted(samples.iteritems()):
                 for (library, prefixes) in sorted(libraries.iteritems()):
-                    prefixes["reads"].pop("seq_nt_total")
-                    prefixes["reads"].pop("seq_reads_total")
-
                     ordered = [("reads", prefixes.pop("reads"))]
                     ordered.extend(sorted(prefixes.items()))
                     
@@ -166,11 +163,11 @@ class SummaryTableNode(Node):
 
         for (tblname, subtable) in subtables.iteritems():
             if tblname == "reads":
-                fractions = [("seq_trash_se",   "seq_reads_se",    "seq_trash_se_frac",   "# Fraction of SE reads trashed"),
-                             ("seq_trash_pe_1", "seq_reads_pairs", "seq_trash_pe_1_frac", "# Fraction of PE mate 1 reads trashed"), 
-                             ("seq_trash_pe_2", "seq_reads_pairs", "seq_trash_pe_2_frac", "# Fraction of PE mate 2 reads trashed"), 
-                             ("seq_collapsed",  "seq_reads_pairs", "seq_collapsed_frac",  "# Fraction of PE pairs collapsed into one read"),
-                             ("seq_nt_total",   "seq_reads_total", "seq_nt_average",      "# Average number of NTs in retained reads")]
+                fractions = [("seq_trash_se",      "seq_reads_se",       "seq_trash_se_frac",   "# Fraction of SE reads trashed"),
+                             ("seq_trash_pe_1",    "seq_reads_pairs",    "seq_trash_pe_1_frac", "# Fraction of PE mate 1 reads trashed"), 
+                             ("seq_trash_pe_2",    "seq_reads_pairs",    "seq_trash_pe_2_frac", "# Fraction of PE mate 2 reads trashed"), 
+                             ("seq_collapsed",     "seq_reads_pairs",    "seq_collapsed_frac",  "# Fraction of PE pairs collapsed into one read"),
+                             ("seq_retained_nts",  "seq_retained_reads", "seq_retained_length", "# Average number of NTs in retained reads")]
 
                 for (numerator, denominator, measure, comment) in fractions:
                     if (numerator in subtable) and (denominator in subtable):
@@ -180,9 +177,10 @@ class SummaryTableNode(Node):
                 total_hits  = subtable["hits_raw(%s)" % tblname][0]
                 total_nts   = subtable["hits_unique_nts(%s)" % tblname][0]
                 total_uniq  = subtable["hits_unique(%s)" % tblname][0]
-                total_reads = subtables["reads"]["seq_reads_total"][0]
+                total_reads = subtables["reads"]["seq_retained_reads"][0]
                                 
                 subtable["hits_raw_frac(%s)" % tblname] = (total_hits / float(total_reads), "# Total number of hits vs. total number of reads")
+                subtable["hits_unique_frac(%s)" % tblname] = (total_uniq / float(total_reads), "# Total number of unique hits vs. total number of reads")
                 subtable["hits_clonality(%s)" % tblname] = (1 - total_uniq / (float(total_hits) or float("NaN")), "# Fraction of hits that were PCR duplicates")
                 subtable["hits_length(%s)" % tblname] = (total_nts / (float(total_uniq) or float("NaN")), "# Average number of aligned bases per unique hit")
                 subtable["hits_coverage(%s)" % tblname] = (total_nts / float(genomes[tblname]["Size"]), "# Estimated coverage from unique hits")
@@ -208,7 +206,7 @@ class SummaryTableNode(Node):
                 
         return {
             "hits_raw(endogenous)"         : (total_hits,                       "# Total number of hits against the nuclear and mitochondrial genome"),
-            "hits_unique(endogenous)"      : (total_hits_unique,                "# Total number of unique reads (PRC duplicates removed)"),
+            "hits_unique(endogenous)"      : (total_hits_unique,                "# Total number of unique reads (PCR duplicates removed)"),
             "hits_unique_nts(endogenous)"  : (total_hits_unique_nts,            None), 
             "ratio_reads(nuc,mito)"        : (ratio_hits,                       "# Ratio of unique hits: Hits(nuc) / H(mito)"),
             "ratio_genome(nuc,mito)"       : (ratio_genome,                     "# Ratio of NTs of unique hits corrected by genome sizes: (NTs(nuc) / NTs(mito)) / ((2 * Size(nuc)) / Size(mito))"),
@@ -224,15 +222,7 @@ class SummaryTableNode(Node):
         for (target, samples) in table.iteritems():
             for (sample, libraries) in samples.iteritems():
                 for (library, prefixes) in libraries.iteritems():
-                    subtable = self._merge_tables(prefixes["reads"].values())
-
-                    total_reads = 0
-                    total_reads += subtable.get("seq_reads_se",    (0,))[0] - subtable.get("seq_trash_se", (0,))[0]
-                    total_reads += subtable.get("seq_reads_pairs", (0,))[0] - subtable.get("seq_trash_pe_1", (0,))[0]
-                    total_reads += subtable.get("seq_reads_pairs", (0,))[0] - subtable.get("seq_trash_pe_2", (0,))[0]
-                    subtable["seq_reads_total"] = (total_reads, None)
-
-                    prefixes["reads"] = subtable
+                    prefixes["reads"] = self._merge_tables(prefixes["reads"].values())
 
         return table
 
@@ -288,29 +278,32 @@ class SummaryTableNode(Node):
         if filename is None:
             # FIXME: A better solution is required when adding support pre-trimmed reads ...
             return {
-                "lib_type"          : ("*", "# SE, PE, or * (for both)"),
-                "seq_reads_se"      : (float("nan"),  "# Total number of single-ended reads"),
-                "seq_trash_se"      : (float("nan"),  "# Total number of trashed reads"),
-                "seq_nt_total"      : (float("nan"),  "# Total number of NTs in retained reads")
+                "lib_type"           : ("*", "# SE, PE, or * (for both)"),
+                "seq_reads_se"       : (float("nan"),  "# Total number of single-ended reads"),
+                "seq_trash_se"       : (float("nan"),  "# Total number of trashed reads"),
+                "seq_retained_nts"   : (float("nan"),  "# Total number of NTs in retained reads"),
+                "seq_retained_reads" : (float("nan"),  "# Total number of retained reads")
                 }
         
         with open(filename) as settings_file:
             settings = settings_file.read()
             if "Paired end mode" in settings:
                 return {
-                    "lib_type"        : ("PE", "# SE, PE, or * (for both)"),
-                    "seq_reads_pairs"   : (int(re.search("read pairs: ([0-9]+)",             settings).groups()[0]),  "# Total number of reads"),
-                    "seq_trash_pe_1"    : (int(re.search("discarded mate 1 reads: ([0-9]+)", settings).groups()[0]),  "# Total number of reads"),
-                    "seq_trash_pe_2"    : (int(re.search("discarded mate 2 reads: ([0-9]+)", settings).groups()[0]),  "# Total number of reads"),
-                    "seq_nt_total"      : (int(re.search("retained nucleotides: ([0-9]+)",   settings).groups()[0]),  "# Total number of NTs in retained reads"),
-                    "seq_collapsed"     : (int(re.search("well aligned pairs: ([0-9]+)",     settings).groups()[0]),  "# Total number of pairs collapsed into one read"),
+                    "lib_type"            : ("PE", "# SE, PE, or * (for both)"),
+                    "seq_reads_pairs"     : (int(re.search("read pairs: ([0-9]+)",             settings).groups()[0]),  "# Total number of reads"),
+                    "seq_trash_pe_1"      : (int(re.search("discarded mate 1 reads: ([0-9]+)", settings).groups()[0]),  "# Total number of reads"),
+                    "seq_trash_pe_2"      : (int(re.search("discarded mate 2 reads: ([0-9]+)", settings).groups()[0]),  "# Total number of reads"),
+                    "seq_retained_nts"    : (int(re.search("retained nucleotides: ([0-9]+)",   settings).groups()[0]),  "# Total number of NTs in retained reads"),
+                    "seq_retained_reads"  : (int(re.search("retained reads: ([0-9]+)",         settings).groups()[0]),  "# Total number of retained reads"),
+                    "seq_collapsed"       : (int(re.search("well aligned pairs: ([0-9]+)",     settings).groups()[0]),  "# Total number of pairs collapsed into one read"),
                     }
             elif "Single end mode" in settings:
                 return {
-                    "lib_type"          : ("SE", "# SE, PE, or * (for both)"),
-                    "seq_reads_se"      : (int(re.search("read pairs: ([0-9]+)",             settings).groups()[0]),  "# Total number of single-ended reads"),
-                    "seq_trash_se"      : (int(re.search("discarded mate 1 reads: ([0-9]+)", settings).groups()[0]),  "# Total number of trashed reads"),
-                    "seq_nt_total"      : (int(re.search("retained nucleotides: ([0-9]+)",   settings).groups()[0]),  "# Total number of NTs in retained reads")
+                    "lib_type"            : ("SE", "# SE, PE, or * (for both)"),
+                    "seq_reads_se"        : (int(re.search("read pairs: ([0-9]+)",             settings).groups()[0]),  "# Total number of single-ended reads"),
+                    "seq_trash_se"        : (int(re.search("discarded mate 1 reads: ([0-9]+)", settings).groups()[0]),  "# Total number of trashed reads"),
+                    "seq_retained_nts"    : (int(re.search("retained nucleotides: ([0-9]+)",   settings).groups()[0]),  "# Total number of NTs in retained reads"),
+                    "seq_retained_reads"  : (int(re.search("retained reads: ([0-9]+)",         settings).groups()[0]),  "# Total number of retained reads"),
                     }
             else:
                 assert False
@@ -321,7 +314,7 @@ class SummaryTableNode(Node):
         """Returns (size, number of contigs) for a set of BWA prefix."""
         genomes = {}
         for prefix in prefixes:
-            label = prefixes[prefix].get("Label", prefix)
+            label = prefixes[prefix].get("Label") or prefix
             with open(prefixes[prefix]["Path"] + ".ann") as table:
                 genomes[label] = dict(zip(("Size", "NContigs"), map(int, table.readline().strip().split())[:2]))
         
@@ -342,25 +335,29 @@ def _measure_ordering((measure, _)):
 
 
 __ORDERING = {
-    "lib_type"             :  0,
-    "seq_reads_se"         :  1,
-    "seq_trash_se"         :  2,
-    "seq_trash_se_frac"    :  3,
-    "seq_reads_pairs"      :  4,
-    "seq_trash_pe_1"       :  5,
-    "seq_trash_pe_1_frac"  :  6,
-    "seq_trash_pe_2"       :  7,
-    "seq_trash_pe_2_frac"  :  8,
-    "seq_collapsed"        :  9,
-    "seq_collapsed_frac"   : 10,
-    "seq_nt_average"       : 11,
+    "lib_type"             :  00,
+    "seq_reads_se"         :  10,
+    "seq_trash_se"         :  20,
+    "seq_trash_se_frac"    :  30,
+    "seq_reads_pairs"      :  40,
+    "seq_trash_pe_1"       :  50,
+    "seq_trash_pe_1_frac"  :  60,
+    "seq_trash_pe_2"       :  70,
+    "seq_trash_pe_2_frac"  :  80,
+    "seq_collapsed"        :  90,
+    "seq_collapsed_frac"   : 100,
+    "seq_retained_reads"   : 110,
+    "seq_retained_nts"     : 120,
+    "seq_retained_length"  : 130,
 
-    "hits_raw"             : 12,
-    "hits_raw_frac"        : 13,
-    "hits_clonality"       : 14,
-    "hits_unique"          : 15,
-    "hits_coverage"        : 16,
-    "hits_length"          : 17,
-    "ratio_reads"          : 18,
-    "ratio_genome"         : 19,
+
+    "hits_raw"             : 140,
+    "hits_raw_frac"        : 150,
+    "hits_clonality"       : 160,
+    "hits_unique"          : 170,
+    "hits_unique_frac"     : 180,
+    "hits_coverage"        : 190,
+    "hits_length"          : 200,
+    "ratio_reads"          : 210,
+    "ratio_genome"         : 220,
     }
