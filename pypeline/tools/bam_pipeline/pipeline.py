@@ -342,7 +342,7 @@ def build_target_nodes(config, makefile, prefixes, target, samples):
             
         statistics = build_statistics_nodes(config, prefixes[genome], target, records, aligned)
         nodes.append(MetaNode(description  = "Genome: %s" % genome,
-                              dependencies = (node, statistics)))
+                              dependencies = (aligned or node, statistics)))
 
     summary  = SummaryTableNode(config       = config,
                                 prefixes     = prefixes,
