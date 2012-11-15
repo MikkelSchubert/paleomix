@@ -46,20 +46,12 @@ class CoverageNode(Node):
 
 
     def _run(self, _config, temp):
-        import time
-        start = time.time()
         with SamfileReader(self._input_file) as bamfile:
-            print "Initialize tables", time.time() - start
             raw_tables = self.initialize_raw_tables(bamfile)
-            print "Read records", time.time() - start
             self.read_records(bamfile, raw_tables)
-
-            print "Collapse rows", time.time() - start
             table = self.collapse_raw_tables(bamfile, raw_tables, self._name)
 
-        print "Write table", time.time() - start
         _write_table(table, reroot_path(temp, self._output_file))
-        print "Done", time.time() - start
         move_file(reroot_path(temp, self._output_file), self._output_file)
 
 
