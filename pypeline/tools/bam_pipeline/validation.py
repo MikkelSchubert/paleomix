@@ -70,6 +70,10 @@ def _validate_makefile_options(makefile):
         if options["Platform"].upper() not in _PLATFORMS:
             raise MakefileError("Unknown Platform specified: '%s'" % options["Platform"])
 
+        if options["QualityOffset"] not in (33, 64):
+            raise MakefileError("QualityBase must be 33 (Sanger/Illumina 1.8+) or 64 (Illumina 1.3+ / 1.5+), not '%i'." \
+                                  % options["QualityOffset"])
+
         unknown_reads = set(options["ExcludeReads"]) - set(READ_TYPES)
         if unknown_reads:
             raise MakefileError("Unknown reads specified in option 'ExcludeReads': '%s'\n\tValid values are '%s'" \

@@ -37,6 +37,9 @@ class MakefileError(RuntimeError):
 DEFAULT_OPTIONS = {
     # Sequencing platform, used to tag read-groups.
     "Platform"       : "Illumina",
+    # Offset for quality scores in FASTQ files.
+    "QualityOffset" : 33,
+
     # BWA: Use seed during mapping
     "BWA_UseSeed"    : True,
     # BWA: Max edit-distance (int), or missing prob under 0.02 err. rate (float)

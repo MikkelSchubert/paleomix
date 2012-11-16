@@ -55,18 +55,22 @@ def build_trimming_nodes(config, target, sample, library, barcode, record):
 
     reads = record["Reads"]
     if "SE" in reads["Raw"]:
-        node  = SE_AdapterRemovalNode(input_files   = reads["Raw"]["SE"],
-                                      output_prefix = output_prefix)
+        cmd = SE_AdapterRemovalNode.customize(input_files   = reads["Raw"]["SE"],
+                                              output_prefix = output_prefix)
 
         reads["Trimmed"] = {"Single" : output_prefix + ".truncated.gz"}
     else:
-        node  = PE_AdapterRemovalNode(input_files_1 = reads["Raw"]["PE_1"],
-                                      input_files_2 = reads["Raw"]["PE_2"],
-                                      output_prefix = output_prefix)
+        cmd = PE_AdapterRemovalNode.customize(input_files_1 = reads["Raw"]["PE_1"],
+                                              input_files_2 = reads["Raw"]["PE_2"],
+                                              output_prefix = output_prefix)
+
         reads["Trimmed"] = {"Single"    : output_prefix + ".singleton.unaln.truncated.gz",
                             "Paired"    : output_prefix + ".pair{Pair}.truncated.gz",
                             "Collapsed" : output_prefix + ".singleton.aln.truncated.gz" }
-    return node
+
+    cmd.command.set_parameter("--qualitybase", record["Options"]["QualityOffset"])
+    
+    return cmd.build_node()
 
 
 def build_bwa_nodes(config, target, sample, library, barcode, record, dependencies):
@@ -105,24 +109,24 @@ def build_bwa_nodes(config, target, sample, library, barcode, record, dependenci
                           "dependencies" : prefix_dependencies}
 
             if paths.is_paired_end(input_filename):
-                params = PE_BWANode.customize(input_file_1 = input_filename.format(Pair = 1),
-                                              input_file_2 = input_filename.format(Pair = 2),
-                                              **parameters)
-                params.commands["sampe"].set_parameter("-r", read_group)
-                if not record["Options"]["BWA_UseSeed"]:
-                    params.commands["aln_1"].set_parameter("-l", 2**16 - 1)
-                    params.commands["aln_2"].set_parameter("-l", 2**16 - 1)
-                params.commands["aln_1"].set_parameter("-n", max_edit)
-                params.commands["aln_2"].set_parameter("-n", max_edit)
+                params   = PE_BWANode.customize(input_file_1 = input_filename.format(Pair = 1),
+                                                input_file_2 = input_filename.format(Pair = 2),
+                                                **parameters)
+                aln_keys, sam_key = ("aln_1", "aln_2"), "sampe"
             else:
-                params = SE_BWANode.customize(input_file   = input_filename,
+                params   = SE_BWANode.customize(input_file   = input_filename,
                                               **parameters)
-                params.commands["samse"].set_parameter("-r", read_group)
-                if not record["Options"]["BWA_UseSeed"]:
-                    params.commands["aln"].set_parameter("-l", 2**16 - 1)
-                params.commands["aln"].set_parameter("-n", max_edit)
+                aln_keys, sam_key = ("aln",), "samse"
 
+            params.commands[sam_key].set_parameter("-r", read_group)
             params.commands["filter"].set_parameter('-q', record["Options"]["BWA_MinQuality"])
+            
+            for aln_key in aln_keys:
+                params.commands[aln_key].set_parameter("-n", max_edit)
+                if not record["Options"]["BWA_UseSeed"]:
+                    params.commands[aln_key].set_parameter("-l", 2**16 - 1)
+                if record["Options"]["QualityOffset"] == 64:
+                    params.commands[aln_key].set_parameter("-I")
 
             validate = ValidateBAMFile(config      = config,
                                        node        = params.build_node())

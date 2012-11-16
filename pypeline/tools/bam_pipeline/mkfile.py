@@ -66,9 +66,14 @@ _HEADER = \
 Options:
   # Sequencing platform, see SAM/BAM reference for valid values
   Platform: Illumina
+  # Quality offset for PHRED scores, either 33 (Sanger/Illumina 1.8+) or 64 (Illumina 1.3+ / 1.5+)
+  # This is used during adapter-trimming (AdapterRemoval) and sequence alignment (BWA)
+  QualityOffset: 33
   
   # Use seed during sequence alignment
-  BWA_UseSeed: yes
+  BWA_UseSeed:    yes
+  # Max edit-distance (int), or missing prob under 0.02 err. rate (float)
+  BWA_MaxEdit:    0.04
   # Filter hits with a mappign quality (PHRED) below this value
   BWA_MinQuality: 0
 
