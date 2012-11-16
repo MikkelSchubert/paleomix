@@ -74,7 +74,7 @@ Options:
   BWA_UseSeed:    yes
   # Max edit-distance (int), or missing prob under 0.02 err. rate (float)
   BWA_MaxEdit:    0.04
-  # Filter hits with a mappign quality (PHRED) below this value
+  # Filter hits with a mapping quality (PHRED) below this value
   BWA_MinQuality: 0
 
   # Filter PCR duplicates
