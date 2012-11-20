@@ -381,7 +381,7 @@ def parse_config(argv):
     parser = optparse.OptionParser()
     parser.add_option("--destination", default = "./results",
                       help = "The destination folder for result files [%default/]")
-    parser.add_option("--picard-root", default = None,
+    parser.add_option("--picard-root", default = os.path.join(os.path.expanduser('~'), "install", "picard-tools"),
                       help = "Folder containing Picard JARs (http://picard.sf.net)")
     parser.add_option("--temp-root", default = "/tmp",
                       help = "Location for temporary files and folders [%default/]")
@@ -389,7 +389,7 @@ def parse_config(argv):
                       help = "Maximum number of threads to use per BWA instance [%default]")
     parser.add_option("--max-threads", type = int, default = 14,
                       help = "Maximum number of threads to use in total [%default]")
-    parser.add_option("--gatk-jar", default = None,
+    parser.add_option("--gatk-jar", default = os.path.join(os.path.expanduser('~'), "install", "GATK", "GenomeAnalysisTK.jar"),
                       help = "Location of GenomeAnalysisTK.jar (www.broadinstitute.org/gatk)." \
                              "If specified, BAM files are realigned using the IndelRealigner tool.")
     parser.add_option("--dry-run", action = "store_true", default = False,
@@ -397,14 +397,13 @@ def parse_config(argv):
     config, args = parser.parse_args(argv)
 
     errors, warnings = [], []
-    if not config.picard_root:
-        errors.append("ERROR: --picard-root must be set to the location of the Picard JARs: This is required")
-        errors.append("       for ValidateSamFile.jar, MarkDuplicates.jar, and possibly more.")
-    elif not os.path.isdir(config.picard_root):
-        errors.append("ERROR: Path passed to --picard_root is not a directory: %s" % config.picard_root)
+    if not os.path.exists(config.picard_root):
+        errors.append("ERROR: Path passed to --picard_root does not exist: %s" % config.picard_root)
+    elif not os.path.isfile(os.path.join(config.picard_root, "ValidateSamFile.jar")):
+        errors.append("ERROR: Path passed to --picard-root does not appear to contain required JARs: %s" % config.picard_root)
 
-    if not config.gatk_jar:
-        warnings.append("WARNING: --gatk-jar not set, indel realigned bams will not be produced.")
+    if not os.path.exists(config.gatk_jar):
+        warnings.append("WARNING: GATK jar does not exist, indel realigned bams will not be produced.")
     elif not os.path.isfile(config.gatk_jar):
         errors.append("ERROR: Path passed to --gatk-jar is not a file: %s" % config.gatk_jar)
 
