@@ -261,7 +261,9 @@ def _prefix_files(prefix, iotype = "IN"):
 
 
 def _get_max_threads(reference, threads):
-    if os.path.getsize(reference) < 2 ** 20: # 1MB
+    if not os.path.exists(reference):
+        return threads
+    elif os.path.getsize(reference) < 2 ** 20: # 1MB
         return 1
 
     return threads
