@@ -46,45 +46,78 @@ class CoverageNode(Node):
 
 
     def _run(self, _config, temp):
-        table = dict()
         with SamfileReader(self._input_file) as bamfile:
-            rg_to_library = {}
-            rg_to_sample = {}
-            for rg in bamfile.header['RG']:
-                rg_to_library[rg["ID"]] = rg["LB"]
-                rg_to_sample[rg["ID"]] = rg["SM"]
-
-                # Pre-fill table 
-                for (contig, size) in zip(bamfile.references, bamfile.lengths):
-                    subtable = {"SE" : 0, "PE_1" : 0, "PE_2" : 0, "Size" : size, "Hits" : 0, "M" : 0, "I" : 0, "D" : 0}
-                    key      = (self._name, rg["SM"], rg["LB"], contig)
-                    set_in(table, key, dict(subtable))
-            
-            for record in bamfile:
-                if record.is_unmapped:
-                    continue
-
-                readgroup = dict(record.tags)["RG"]
-                library   = rg_to_library[readgroup]
-                sample    = rg_to_sample[readgroup]
-                contig    = bamfile.references[record.tid]
-                subtable  = get_in(table, (self._name, sample, library, contig))
-
-                flag = record.flag
-                if flag & 0x40: # first of pair
-                    subtable["PE_1"] += 1
-                elif flag & 0x80: # second of pair
-                    subtable["PE_2"] += 1
-                else: # Singleton
-                    subtable["SE"] += 1
-
-                for (op, num) in record.cigar:
-                    str_op = "MIDNSHP=X"[op]
-                    if str_op in "MID":
-                        subtable[str_op] += num
+            raw_tables = self.initialize_raw_tables(bamfile)
+            self.read_records(bamfile, raw_tables)
+            table = self.collapse_raw_tables(bamfile, raw_tables, self._name)
 
         _write_table(table, reroot_path(temp, self._output_file))
         move_file(reroot_path(temp, self._output_file), self._output_file)
+
+
+    @classmethod
+    def initialize_raw_tables(cls, bamfile):
+        tables = {}
+        for rg in bamfile.header['RG']:
+            subtables = []
+            for _ in bamfile.lengths:
+                subtables.append({"SE" : 0, "PE_1" : 0, "PE_2" : 0, "Hits" : 0, "M" : 0, "I" : 0, "D" : 0})          
+            tables[rg["ID"]] = subtables
+            
+        return tables
+
+
+    @classmethod
+    def read_records(cls, bamfile, tables):
+        for record in bamfile:
+            if record.is_unmapped:
+                continue
+
+            readgroup = dict(record.tags)["RG"]
+            subtable  = tables[readgroup][record.tid]
+
+            flag = record.flag
+            if flag & 0x40: # first of pair
+                subtable["PE_1"] += 1
+            elif flag & 0x80: # second of pair
+                subtable["PE_2"] += 1
+            else: # Singleton
+                subtable["SE"] += 1
+
+            for (op, num) in record.cigar:
+                if op < 3:
+                    subtable["MID"[op]] += num
+
+    @classmethod
+    def collapse_raw_tables(cls, bamfile, tables, name):
+        rg_to_library = {}
+        rg_to_sample = {}
+        for rg in bamfile.header['RG']:
+            rg_to_library[rg["ID"]] = rg["LB"]
+            rg_to_sample[rg["ID"]] = rg["SM"]
+
+        collapsed = {}
+        for rg in bamfile.header['RG']:
+            subtables = []   
+            for size in bamfile.lengths:
+                subtables.append({"SE" : 0, "PE_1" : 0, "PE_2" : 0, "Size" : size, "Hits" : 0, "M" : 0, "I" : 0, "D" : 0})
+            set_in(collapsed, (name, rg["SM"], rg["LB"]), subtables)
+
+        for (readgroup, contigs) in tables.iteritems():
+            library      = rg_to_library[readgroup]
+            sample       = rg_to_sample[readgroup]
+            subtable     = get_in(collapsed, (name, sample, library))
+            for (contig_id, subtable_src) in enumerate(contigs):
+                subtable_dst = subtable[contig_id]
+                for (key, value) in subtable_src.iteritems():
+                    subtable_dst[key] += value
+
+        for (name, samples) in collapsed.items():
+            for (sample, libraries) in samples.items():
+                for (library, contigs) in libraries.items():
+                    collapsed[name][sample][library] = dict(zip(bamfile.references, contigs))
+
+        return collapsed
 
     
 

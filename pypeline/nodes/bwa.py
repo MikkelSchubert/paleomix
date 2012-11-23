@@ -104,7 +104,7 @@ class SE_BWANode(CommandNode):
 
 class PE_BWANode(CommandNode):
     @create_customizable_cli_parameters
-    def customize(cls, input_file_1, input_file_2, output_file, reference, prefix, threads = 1, dependencies = ()):
+    def customize(cls, input_file_1, input_file_2, output_file, reference, prefix, threads = 2, dependencies = ()):
         threads = _get_max_threads(reference, threads)
 
         alns = []
@@ -143,7 +143,8 @@ class PE_BWANode(CommandNode):
 
         return {"commands" : commands,
                 "order"    : ["aln_1", "aln_2", "sampe"] + order,
-                "threads"  : threads}
+                # At least one thread per 'aln' process
+                "threads"  : max(2, threads)}
 
 
     @use_customizable_cli_parameters
@@ -260,7 +261,9 @@ def _prefix_files(prefix, iotype = "IN"):
 
 
 def _get_max_threads(reference, threads):
-    if os.path.getsize(reference) < 2 ** 20: # 1MB
+    if not os.path.exists(reference):
+        return threads
+    elif os.path.getsize(reference) < 2 ** 20: # 1MB
         return 1
 
     return threads
