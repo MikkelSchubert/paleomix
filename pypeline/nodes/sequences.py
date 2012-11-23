@@ -59,14 +59,16 @@ class CollectSequencesNode(Node):
             fastas[name] = dict(read_fasta(filename))
         fastas = list(sorted(fastas.items()))
 
-        for sequence in self._sequences:
+        for sequence in sorted(self._sequences):
             filename = os.path.join(temp, sequence + ".fasta")
+            lines = []
+            for (name, sequences) in fastas:
+                fastaseq = textwrap.fill(sequences[sequence], 60)
+                assert fastaseq, (name, sequence)
+                lines.append(">%s\n%s\n" % (name, fastaseq))
 
             with open(filename, "w") as fasta:
-                for (name, sequences) in fastas:
-                    fastaseq = textwrap.fill(sequences[sequence], 60)
-                    assert fastaseq, (name, sequence)
-                    fasta.write(">%s\n%s\n" % (name, fastaseq))
+                fasta.write("".join(lines))
 
 
     def _teardown(self, _config, temp):
