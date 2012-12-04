@@ -394,6 +394,8 @@ def parse_config(argv):
                              "If specified, BAM files are realigned using the IndelRealigner tool.")
     parser.add_option("--dry-run", action = "store_true", default = False,
                       help = "If passed, only a dry-run in performed, and no tasks are executed.")
+    parser.add_option("--non-verbose", action = "store_true", default = False,
+                      help = "Only print running nodes while running (useful for large projects).")
     config, args = parser.parse_args(argv)
 
     errors, warnings = [], []
@@ -441,7 +443,9 @@ def main(argv):
     for makefile in makefiles:
         pipeline.add_nodes(build_nodes(config, makefile))
 
-    if not pipeline.run(dry_run = config.dry_run, max_running = config.max_threads):
+    if not pipeline.run(dry_run     = config.dry_run,
+                        max_running = config.max_threads,
+                        verbose     = not config.non_verbose):
         return 1
 
     return 0

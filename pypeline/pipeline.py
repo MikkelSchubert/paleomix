@@ -46,7 +46,7 @@ class Pypeline:
                 self._nodes.append(node)
 
 
-    def run(self, max_running = 1, dry_run = False, terminate_on_error = False, collapse = True):
+    def run(self, max_running = 1, dry_run = False, terminate_on_error = False, collapse = True, verbose = True):
         try:
             nodes = nodegraph.NodeGraph(self._nodes)
         except nodegraph.NodeGraphError, error:
@@ -84,7 +84,7 @@ class Pypeline:
                     has_started_any = True
                     has_refreshed = False
 
-                ui.print_node_tree(nodes, collapse)
+                ui.print_node_tree(nodes, collapse, verbose)
 
             ui.print_node_tree(nodes, collapse)
             pool.close()

@@ -66,11 +66,26 @@ def print_disabled(*vargs, **kwargs):
 
 
 
-def print_node_tree(graph, collapse = True):
+def print_node_tree(graph, collapse = True, verbose = True):
     print_msg(datetime.datetime.now().strftime("%F %T"))
     print_msg("Pipeline%s" % _describe_nodes(graph, graph.iterflat()))
-    _print_sub_nodes(graph, graph, collapse, "   ")
-        
+
+    if verbose:
+        _print_sub_nodes(graph, graph, collapse, "   ")
+    else:
+        _print_running_nodes(graph)
+
+
+def _print_running_nodes(graph):
+    running = []
+    for node in graph.iterflat():
+        if graph.get_node_state(node) is NodeGraph.RUNNING:
+            running.append(node)
+
+    for node in sorted(running):
+        print_info("  - %s" % node)
+    print_info()
+
 
 def _print_sub_nodes(graph, nodes, collapse, prefix = ""):
     viable_nodes, dead_nodes = [], []
