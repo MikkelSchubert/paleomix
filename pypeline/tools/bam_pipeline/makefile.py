@@ -21,6 +21,7 @@
 # SOFTWARE.
 #
 import os
+import glob
 import yaml
 import types
 import string
@@ -109,25 +110,39 @@ def _read_prefixes(data, inherit = None):
         label = prefix.pop("Label", "")
         if len(prefix) > 1:
             raise MakefileError("Each prefix must contain a Label, and a path, found %s" % (prefix,))
-        name, path = prefix.items()[0]
+        name, filename = prefix.items()[0]
 
-        if (name in READ_TYPES) or (name in [(s + "Reads") for s in READ_TYPES]) or (name == "Options"):
-            raise MakefileError("Prefixes cannot be named '%s', please use another name." % name)
-        elif (label == "*") or (set(name) & set(string.whitespace)):
-            raise MakefileError("The label must not contain white-space, and cannot be '*': %s" % name)
-        elif (set(name) & set(string.whitespace)):
-            raise MakefileError("Prefix name must not contain whitespace:\n\t- Prefix: %s" % name)
+        if name != "*":
+            items = [(name, filename)]
+        else:
+            items = []
+            for fname in glob.glob(filename):
+                name = os.path.basename(fname).split(".")[0]
+                items.append((name, fname))
+
+            if not items:
+                raise MakefileError("Did not find any matches for glob '%s'" % filename)                
+
+        for (name, path) in items:
+            if (name in READ_TYPES) or (name in [(s + "Reads") for s in READ_TYPES]) or (name == "Options"):
+                raise MakefileError("Prefixes cannot be named '%s', please use another name." % name)
+            elif (label == "*") or (set(name) & set(string.whitespace)):
+                raise MakefileError("The label must not contain white-space, and cannot be '*': %s" % name)
+            elif (set(name) & set(string.whitespace)):
+                raise MakefileError("Prefix name must not contain whitespace:\n\t- Prefix: %s" % name)
+            elif name in prefixes:
+                raise MakefileError("Duplicate prefix name found: '%s'" % name)
         
-        reference = paths.reference_sequence(path)
-        if not reference:
-            raise MakefileError("""Could not find reference sequence for prefix '%s':
+            reference = paths.reference_sequence(path)
+            if not reference:
+                raise MakefileError("""Could not find reference sequence for prefix '%s':
        Reference sequences MUST have the extensions .fasta or .fa, and
        be located at '${prefix}', '${prefix}.fa' or '${prefix}.fasta'.""" % name)
 
-        prefixes[name] = {"Name"      : name,
-                          "Label"     : label,
-                          "Path"      : path,
-                          "Reference" : reference}
+            prefixes[name] = {"Name"      : name,
+                              "Label"     : label,
+                              "Path"      : path,
+                              "Reference" : reference}
    
     if not prefixes:
         raise MakefileError("At least one BWA prefix must be specified in the makefile!")
