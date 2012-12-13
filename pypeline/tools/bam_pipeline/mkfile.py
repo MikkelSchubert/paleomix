@@ -5,8 +5,8 @@
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
-# copies of the Software, and to permit persons to whom the Software is 
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
 # The above copyright notice and this permission notice shall be included in all
@@ -15,9 +15,9 @@
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
 import os
@@ -30,29 +30,29 @@ from pypeline.common.text import padded_table
 
 _HEADER = \
 """# Timestamp: %s
-# 
+#
 #
 #
 # Columns:
 #     Name:     Name of the target. Final BAM filenames will consist of this
 #               name and the name of the BWA prefix joined by a dot. For
-#               example, given the name 'foobar' and the BWA prefix 
+#               example, given the name 'foobar' and the BWA prefix
 #               'path/to/indices/hg19', the final BAM files will be named
 #               'foobar.hg19.bam' and 'foobar.hg19.unaligned.bam'.
 #     Sample:
-#     Library:  
+#     Library:
 #     Barcode:  The Sample, Library, and Barcode (or other unique ID) of the
-#               lane. This is saved in the 'SM', 'LB' and 'PU'. 
-#     Platform: The sequencing platform used to generate this data. 
+#               lane. This is saved in the 'SM', 'LB' and 'PU'.
+#     Platform: The sequencing platform used to generate this data.
 #     Path:     Path to FASTQ files. This uses the Python 'glob' module to find
 #               files, and may therefore contain wildcards (*, [...]). For PE
-#               reads, replace the mate number with "{Pair}". 
+#               reads, replace the mate number with "{Pair}".
 #               For example
 #                  /path/to/files/reads_R{Pair}_*.fastq.gz
 #
 # Data is organized by Name/Sample/Library/Barcode. Therefore, this combination
-# of columns MUST be unique. To prevent duplicate removal being done on multiple 
-# different samples, it is enforced that all libraries are assosiated with ONE 
+# of columns MUST be unique. To prevent duplicate removal being done on multiple
+# different samples, it is enforced that all libraries are assosiated with ONE
 # sample only for any one target. Finally, any input file may only be specified
 # ONCE. The pipeline will not run if any of these assumptions are violated.
 #
@@ -69,8 +69,10 @@ Options:
   # Quality offset for PHRED scores, either 33 (Sanger/Illumina 1.8+) or 64 (Illumina 1.3+ / 1.5+)
   # This is used during adapter-trimming (AdapterRemoval) and sequence alignment (BWA)
   QualityOffset: 33
-  
-  # Use seed during sequence alignment
+
+  # Use seed region during sequence alignment
+  # Disabling the seed is recommended for aDNA alignments, as post-mortem damage
+  # tends to localize in the seed region, which is expected to be of high fideltiy
   BWA_UseSeed:    yes
   # Max edit-distance (int), or missing prob under 0.02 err. rate (float)
   BWA_MaxEdit:    0.04
@@ -78,14 +80,16 @@ Options:
   BWA_MinQuality: 0
 
   # Filter PCR duplicates
+  # Collapsed reads are filtered using Martin Kirchers FilterUnique,
+  # while other reads are filtered using Picard MarkDuplicates.
   PCRDuplicates: yes
 
   # Exclude any type of trimmed reads from alignment/analysis
   # All reads are processed by default.
 #  ExcludeReads:
-#  - Single    # Single-ended reads, or PE reads where one mate was discarded
-#  - Paired    # Pair-ended reads, where both reads were retained
-#  - Collapsed # Overlapping pair-ended mate reads collapsed into a single read  # ExcludeReads: 
+#    - Single    # Single-ended reads, or PE reads where one mate was discarded
+#    - Paired    # Pair-ended reads, where both reads were retained
+#    - Collapsed # Overlapping pair-ended mate reads collapsed into a single read  # ExcludeReads:
 
 
 # Prefixes:
@@ -97,7 +101,7 @@ Options:
 
 
 _FILENAME = "SampleSheet.csv"
-                     
+
 def read_alignment_records(filename):
 
     with open(filename) as records:
