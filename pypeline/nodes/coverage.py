@@ -5,8 +5,8 @@
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
-# copies of the Software, and to permit persons to whom the Software is 
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
 # The above copyright notice and this permission notice shall be included in all
@@ -15,9 +15,9 @@
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
 import os
@@ -32,12 +32,13 @@ from pypeline.common.utilities import get_in, set_in, safe_coerce_to_tuple
 
 
 class CoverageNode(Node):
-    def __init__(self, input_file, name, dependencies = ()):
+    def __init__(self, input_file, name, collapsed_prefix = "M_", dependencies = ()):
         self._name = name
         self._input_file  = input_file
         self._output_file = swap_ext(input_file, ".coverage")
+        self._collapsed_prefix = collapsed_prefix
 
-        Node.__init__(self, 
+        Node.__init__(self,
                       description  = "<Coverage: '%s' -> '%s'>" \
                           % (input_file, self._output_file),
                       input_files  = self._input_file,
@@ -48,7 +49,7 @@ class CoverageNode(Node):
     def _run(self, _config, temp):
         with SamfileReader(self._input_file) as bamfile:
             raw_tables = self.initialize_raw_tables(bamfile)
-            self.read_records(bamfile, raw_tables)
+            self.read_records(bamfile, raw_tables, self._collapsed_prefix)
             table = self.collapse_raw_tables(bamfile, raw_tables, self._name)
 
         _write_table(table, reroot_path(temp, self._output_file))
@@ -61,14 +62,14 @@ class CoverageNode(Node):
         for rg in bamfile.header['RG']:
             subtables = []
             for _ in bamfile.lengths:
-                subtables.append({"SE" : 0, "PE_1" : 0, "PE_2" : 0, "Hits" : 0, "M" : 0, "I" : 0, "D" : 0})          
+                subtables.append({"SE" : 0, "PE_1" : 0, "PE_2" : 0, "Collapsed" : 0, "Hits" : 0, "M" : 0, "I" : 0, "D" : 0})
             tables[rg["ID"]] = subtables
-            
+
         return tables
 
 
     @classmethod
-    def read_records(cls, bamfile, tables):
+    def read_records(cls, bamfile, tables, collapsed_prefix):
         for record in bamfile:
             if record.is_unmapped:
                 continue
@@ -76,13 +77,16 @@ class CoverageNode(Node):
             readgroup = dict(record.tags)["RG"]
             subtable  = tables[readgroup][record.tid]
 
-            flag = record.flag
-            if flag & 0x40: # first of pair
-                subtable["PE_1"] += 1
-            elif flag & 0x80: # second of pair
-                subtable["PE_2"] += 1
-            else: # Singleton
-                subtable["SE"] += 1
+            if collapsed_prefix and record.qname.startswith(collapsed_prefix):
+                subtable["Collapsed"] += 1
+            else:
+                flag = record.flag
+                if flag & 0x40: # first of pair
+                    subtable["PE_1"] += 1
+                elif flag & 0x80: # second of pair
+                    subtable["PE_2"] += 1
+                else: # Singleton
+                    subtable["SE"] += 1
 
             for (op, num) in record.cigar:
                 if op < 3:
@@ -98,9 +102,9 @@ class CoverageNode(Node):
 
         collapsed = {}
         for rg in bamfile.header['RG']:
-            subtables = []   
+            subtables = []
             for size in bamfile.lengths:
-                subtables.append({"SE" : 0, "PE_1" : 0, "PE_2" : 0, "Size" : size, "Hits" : 0, "M" : 0, "I" : 0, "D" : 0})
+                subtables.append({"SE" : 0, "PE_1" : 0, "PE_2" : 0, "Collapsed" : 0, "Size" : size, "Hits" : 0, "M" : 0, "I" : 0, "D" : 0})
             set_in(collapsed, (name, rg["SM"], rg["LB"]), subtables)
 
         for (readgroup, contigs) in tables.iteritems():
@@ -119,14 +123,14 @@ class CoverageNode(Node):
 
         return collapsed
 
-    
+
 
 class MergeCoverageNode(Node):
     def __init__(self, input_files, output_file, dependencies = ()):
         self._input_files = safe_coerce_to_tuple(input_files)
         self._output_file = output_file
 
-        Node.__init__(self, 
+        Node.__init__(self,
                       description  = "<MergeCoverage: '%s' -> '%s'>" \
                           % (self._desc_files(self._input_files), self._output_file),
                       input_files  = self._input_files,
@@ -141,7 +145,7 @@ class MergeCoverageNode(Node):
 
         _write_table(table, reroot_path(temp, self._output_file))
         move_file(reroot_path(temp, self._output_file), self._output_file)
-        
+
 
 
 def _calculate_totals(table):
@@ -157,7 +161,7 @@ def _calculate_totals(table):
 
 
 def _calculate_totals_in(tables):
-    totals = {"SE" : 0, "PE_1" : 0, "PE_2" : 0, "Size" : 0, "Hits" : 0, "M" : 0, "I" : 0, "D" : 0}
+    totals = {"SE" : 0, "PE_1" : 0, "PE_2" : 0, "Collapsed" : 0, "Size" : 0, "Hits" : 0, "M" : 0, "I" : 0, "D" : 0}
     subtables = tables.values()
     while subtables:
         for subtable in list(subtables):
@@ -171,20 +175,21 @@ def _calculate_totals_in(tables):
 
 
 def _build_rows(table):
-    rows = [("Name", "Sample", "Library", "Contig", "Size", "Hits", "SE", "PE_1", "PE_2", "M", "I", "D", "Coverage")]
+    rows = [("Name", "Sample", "Library", "Contig", "Size", "Hits", "SE", "PE_1", "PE_2", "Collapsed", "M", "I", "D", "Coverage")]
     for (name, samples) in sorted(table.items()):
         for (sample, libraries) in sorted(samples.items()):
             for (library, contigs) in sorted(libraries.items()):
                 for (contig, subtable) in sorted(contigs.items()):
                     row = [name,
                            sample,
-                           library, 
-                           contig, 
+                           library,
+                           contig,
                            subtable["Size"],
-                           subtable["SE"] + subtable["PE_1"] + subtable["PE_2"],
+                           subtable["SE"] + subtable["PE_1"] + subtable["PE_2"] + subtable["Collapsed"],
                            subtable["SE"],
                            subtable["PE_1"],
                            subtable["PE_2"],
+                           subtable["Collapsed"],
                            subtable["M"],
                            subtable["I"],
                            subtable["D"],
@@ -195,7 +200,7 @@ def _build_rows(table):
 
     while rows[-1] == "#":
         rows.pop()
-    return rows              
+    return rows
 
 
 def read_table(table, filename):
@@ -208,8 +213,8 @@ def read_table(table, filename):
             subtable = get_in(table, key, {"Size" : int(record["Size"])})
             assert int(subtable["Size"]) == int(record["Size"])
 
-            for field in ("Hits", "SE", "PE_1", "PE_2", "M", "I", "D"):
-                subtable[field] = subtable.get(field, 0) + int(record[field])
+            for field in ("Hits", "SE", "PE_1", "PE_2", "Collapsed", "M", "I", "D"):
+                subtable[field] = subtable.get(field, 0) + int(record.get(field, 0))
             set_in(table, key, subtable)
 
 
@@ -229,6 +234,7 @@ _HEADER = \
 # Columns:
 #  Hits:           Sum of SE, PE_1, and PE_2 hits
 #  SE, PE_1, PE_2: Number of Single Ended, and Pair Ended (mate 1 and 2) hits
+#  Collapsed:      Number of hits for PE pair collapsed into a single read
 #  M, I, D:        Number of aligned (M), inserted (I) and deleted (D) bases relative to references
 #  Coverage:       Estimated coverage based on aligned (M) bases
 """
