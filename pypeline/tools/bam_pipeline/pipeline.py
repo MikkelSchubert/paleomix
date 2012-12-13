@@ -21,6 +21,7 @@
 # SOFTWARE.
 #
 import os
+import pwd
 import sys
 import copy
 import string
@@ -383,7 +384,7 @@ def parse_config(argv):
                       help = "The destination folder for result files [%default/]")
     parser.add_option("--picard-root", default = os.path.join(os.path.expanduser('~'), "install", "picard-tools"),
                       help = "Folder containing Picard JARs (http://picard.sf.net)")
-    parser.add_option("--temp-root", default = "/tmp",
+    parser.add_option("--temp-root", default = "/tmp/" + pwd.getpwuid(os.getuid()).pw_name,
                       help = "Location for temporary files and folders [%default/]")
     parser.add_option("--bwa-max-threads", type = int, default = 4,
                       help = "Maximum number of threads to use per BWA instance [%default]")
