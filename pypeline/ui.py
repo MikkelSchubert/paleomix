@@ -71,7 +71,7 @@ def print_node_tree(graph, collapse = True, verbose = True):
     print_msg("Pipeline%s" % _describe_nodes(graph, graph.iterflat()))
 
     if verbose:
-        _print_sub_nodes(graph, graph, collapse, "   ")
+        _print_sub_nodes(graph, graph, collapse, "  ")
     else:
         _print_running_nodes(graph)
 
@@ -105,7 +105,7 @@ def _print_sub_nodes(graph, nodes, collapse, prefix = ""):
         print_func(description)
 
         is_last_node = (node == viable_nodes[-1]) and not dead_nodes
-        current_prefix = prefix + ("   " if is_last_node else "|  ")
+        current_prefix = prefix + ("  " if is_last_node else "| ")
 
         if node.dependencies:
             if collapse and _collapse_node(graph, node.dependencies):
@@ -115,7 +115,7 @@ def _print_sub_nodes(graph, nodes, collapse, prefix = ""):
                 print_disabled(current_prefix + description)
                 print_disabled(current_prefix)
             else:
-                _print_sub_nodes(graph, node.dependencies, collapse, current_prefix + "   ")
+                _print_sub_nodes(graph, node.dependencies, collapse, current_prefix + "  ")
         else:
             print_func(current_prefix)
 
