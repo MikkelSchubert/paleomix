@@ -47,8 +47,8 @@ class MAFFTNode(CommandNode):
                             IN_FASTA   = infile,
                             OUT_STDOUT = outfile)
 
-        description = "<MAFFTNode: '%s' -> '%s'>" \
-                % (infile, outfile)
+        description = "<MAFFTNode (%s): '%s' -> '%s'>" \
+                % (preset, infile, outfile)
 
         CommandNode.__init__(self,
                              command      = command,
@@ -71,7 +71,7 @@ class MetaMAFFTNode(MetaNode):
             subnodes.append(node)
 
         MetaNode.__init__(self,
-                          description  = "<MAFFTAlignSequences: In '%s'>" \
-                              % (rootdir,),
+                          description  = "<MAFFTAlignSequences (%s): In '%s'>" \
+                              % (preset, rootdir),
                           subnodes     = subnodes,
                           dependencies = dependencies)
