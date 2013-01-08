@@ -61,22 +61,26 @@ def join_msa(*msas):
     return dict((key, "".join(value)) for (key, value) in results.iteritems())
     
 
-def parse_msa(lines):
-    msa = {}
-    for (name, sequence) in parse_fasta(lines):
+def parse_msa(lines, read_header = False):
+    msa, headers = {}, {}
+    for (header, sequence) in parse_fasta(lines):
+        name = header.split(None, 1)[0]
         if name in msa:
             raise MSAError("Duplicate names found, cannot be represented as MSA")
         msa[name] = sequence
+        headers[name] = header
 
     validate_msa(msa)
+    if read_header:
+        return msa, header
     return msa
 
 
-def read_msa(filename):
+def read_msa(filename, read_header = False):
     func = gzip.open if filename.endswith(".gz") else open
     fasta_file = func(filename, "r")
     try:
-        return parse_msa(iter(fasta_file))
+        return parse_msa(iter(fasta_file), read_header = read_header)
     finally:
         fasta_file.close()
 
