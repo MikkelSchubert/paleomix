@@ -315,7 +315,7 @@ def build_statistics_nodes(config, prefix, target, records, aligned_node):
     mapdamage = build_mapdamage_nodes(config, prefix, target, records)                  
 
     return MetaNode(description  = "Statistics:",
-                    dependencies = (coverage, mapdamage))
+                    dependencies = (coverage, )) #mapdamage))
 
 
 def build_target_nodes(config, makefile, prefixes, target, samples):
