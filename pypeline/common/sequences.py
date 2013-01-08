@@ -44,7 +44,7 @@ _COMPL_TABLE = "".join(_COMPL_TABLE)
 
 
 # Table of nt codes used to encode (ambigious) bases
-_NT_CODES = [
+NT_CODES = [
     ["A", "A"],
     ["C", "C"],
     ["G", "G"],
@@ -63,11 +63,11 @@ _NT_CODES = [
     ["N", "ACGT"]]
 
 _NT_CODES_TABLE = {}
-for (abr, nts) in _NT_CODES:
+for (abr, nts) in NT_CODES:
     _NT_CODES_TABLE[frozenset(nts)] = abr
     _NT_CODES_TABLE[frozenset(nts + ",")] = abr
 
-_NT_CODES = dict(_NT_CODES)
+NT_CODES = dict(NT_CODES)
 
 
 
@@ -101,7 +101,7 @@ def count_nts(sequence):
     handled in a case-insensitive manner."""
     counts = {}
     sequence = sequence.upper()
-    for nucleotide in _NT_CODES:
+    for nucleotide in NT_CODES:
         counts[nucleotide] = sequence.count(nucleotide)
 
     if len(sequence) != sum(counts.itervalues()):
