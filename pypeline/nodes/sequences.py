@@ -23,6 +23,7 @@
 from __future__ import with_statement
 
 import os
+import copy
 import textwrap
 
 import pysam
@@ -36,18 +37,20 @@ from pypeline.common.utilities import safe_coerce_to_tuple
 
 
 class CollectSequencesNode(Node):
-    def __init__(self, infiles, destination, sequences, dependencies):
-        self._infiles     = dict(infiles)
-        self._destination = str(destination)
-        self._sequences   = list(sequences)
-        self._outfiles    = []
+    def __init__(self, fasta_files, sequences, destination, dependencies = ()):
+        """
+        fasta_files -- { taxon_name_1 : filename_1, ... }
+        sequences   -- { interval_name_1 : { taxon_name_1 : interval_name_1.1, ... }, ...
+        """
 
-        for sequence in self._sequences:
-            self._outfiles.append(os.path.join(destination, sequence + ".fasta"))
+        self._infiles     = copy.deepcopy(fasta_files)
+        self._sequences   = copy.deepcopy(sequences)
+        self._destination = copy.copy(destination)
+        self._outfiles    = [os.path.join(destination, name + ".fasta") for name in self._sequences]
 
         Node.__init__(self,
                       description  = "<CollectSequences: %i sequences from %i files -> '%s'>" \
-                            % (len(sequences), len(self._infiles), destination),
+                            % (len(self._sequences), len(self._infiles), self._destination),
                       input_files  = self._infiles.values(),
                       output_files = self._outfiles,
                       dependencies = dependencies)
@@ -55,18 +58,20 @@ class CollectSequencesNode(Node):
 
     def _run(self, _config, temp):
         fastas = {}
-        for (name, filename) in self._infiles.items():
+        for (name, filename) in self._infiles.iteritems():
             fastas[name] = dict(read_fasta(filename))
         fastas = list(sorted(fastas.items()))
 
-        for sequence in sorted(self._sequences):
-            filename = os.path.join(temp, sequence + ".fasta")
+        for (sequence_name, taxa_map) in sorted(self._sequences.iteritems()):
             lines = []
-            for (name, sequences) in fastas:
-                fastaseq = textwrap.fill(sequences[sequence], 60)
-                assert fastaseq, (name, sequence)
-                lines.append(">%s\n%s\n" % (name, fastaseq))
+            for (taxon_name, sequences) in fastas:
+                rawseq   = sequences[sequence_name]
+                fastaseq = "\n".join(rawseq[i : i + 60] for i in range(0, len(rawseq), 60))
+                current_name = taxa_map[taxon_name]
 
+                lines.append(">%s %s\n%s\n" % (taxon_name, current_name, fastaseq))
+
+            filename = os.path.join(temp, sequence_name + ".fasta")
             with open(filename, "w") as fasta:
                 fasta.write("".join(lines))
 
