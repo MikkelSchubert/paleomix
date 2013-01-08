@@ -67,7 +67,7 @@ class MPileupNode(CommandNode):
     pileup_args = "-EA"
 
     def __init__(self, reference, infile, outfile, regions = None, dependencies = ()):
-        call = ["samtools", "mpileup", 
+        call = ["samtools", "mpileup", "-R",
                 MPileupNode.pileup_args,
                 "-f", "%(IN_REFERENCE)s",
                 "%(IN_BAMFILE)s"]
