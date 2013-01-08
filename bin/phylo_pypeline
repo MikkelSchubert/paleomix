@@ -1,0 +1,112 @@
+#!/usr/bin/python
+#
+# Copyright (c) 2012 Mikkel Schubert <MSchubert@snm.ku.dk>
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
+# copies of the Software, and to permit persons to whom the Software is 
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+# SOFTWARE.
+#
+import os
+import sys
+
+
+# List of modules required to run the pipeline
+_REQUIRED_MODULES = {"pysam" : "http://code.google.com/p/pysam/", 
+                     "yaml"  : "http://www.pyyaml.org/"}
+
+
+def _has_required_modules():
+    missing_modules = False
+    try:
+        import pypeline.ui as ui
+    except ImportError, e:
+        sys.stderr.write("ERROR: Could not import required Pypeline module pypeline.ui:\n\t- %s\n" % (e,))
+        sys.stderr.write("       Please make sure that PYTHONPATH points to the location of the 'pypeline' module.\n")
+        sys.stderr.write("       This may be done permanently by adding the following to your ~/.bashrc file:\n")
+        sys.stderr.write("         export PYTHONPATH=${PYTHONPATH}:/path/to/pypeline/checkout/...\n\n")
+        missing_modules = True
+
+    for (module, url) in sorted(_REQUIRED_MODULES.items()):
+        try:
+            __import__(module)
+        except ImportError, e:
+            sys.stderr.write("ERROR: Could not import required module '%s':\n\t- %s\n" % (module,e))
+            sys.stderr.write("       If module is not installed, please download from '%s'.\n" % (url,))
+            sys.stderr.write("       A local install may be performed using the following command:\n")
+            sys.stderr.write("       $ python setup.py install --user\n\n")
+            missing_modules = True
+    
+    return not missing_modules
+
+
+def print_usage():
+    import pypeline.ui as ui
+    basename = os.path.basename(sys.argv[0])
+    ui.print_info("Usage:")
+    ui.print_info("  -- %s help            -- Display this message" % basename)
+    ui.print_info("  -- %s mkfile [...]    -- ." % basename)
+    ui.print_info("  -- %s genotype [...]  -- Carry out genotyping according to makefile." % basename)
+
+    
+def main(argv):
+    if not _has_required_modules():
+        return 1
+
+    import pypeline.tools.phylo_pipeline.steps as steps
+    import pypeline.ui as ui
+    from pypeline import Pypeline
+    
+    commands = {
+        "genotype" : steps.genotype,
+        "msa"      : steps.msa,
+        }
+
+
+    if (len(argv) == 0):
+        print_usage()
+        return 1
+
+    chain = argv.pop(0)    
+    options, makefiles = steps.common.parse_options(argv)
+    if not options:
+        return 1
+
+    nodes = ()
+    pipeline = Pypeline(options)
+    for command in chain.split("+"):
+        command = command.strip().lower()
+        if command not in commands:
+            print_usage()
+            return 1
+
+        nodes = commands[command].chain(pipeline, options, makefiles)
+
+    for makefile in makefiles:
+        if "Nodes" in makefile:
+            pipeline.add_nodes(makefile["Nodes"])
+        
+    if not pipeline.run(max_running = options.max_threads, 
+                        dry_run     = not options.run,
+                        verbose     = not options.non_verbose,
+                        collapse    = True):
+        return 1
+    return 0
+
+    
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
