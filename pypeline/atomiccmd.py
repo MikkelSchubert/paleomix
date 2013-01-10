@@ -247,7 +247,7 @@ class AtomicCmd:
                 ValueError("Invalid input file '%s' for '%s' is not a string: %s" \
                                  % (key, cls.__name__, value))
         elif not any(key.startswith(prefix) for prefix in _PREFIXES):
-            raise CmdError("Command contains invalid argument: '%s' -> '%s'" \
+            raise CmdError("Command contains invalid argument (wrong prefix): '%s' -> '%s'" \
                                % (cls.__name__, key))
         
         # Values are allowed to be none, but such entries are skipped
