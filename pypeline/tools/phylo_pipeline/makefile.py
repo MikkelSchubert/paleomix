@@ -207,7 +207,13 @@ _MKFILE_REFERENCE = {
             "Model": set(("gtrgamma", )), # TODO
             "Outgroup" : is_type_of(str),
         }
-    }
+    },
+    "PAML" : {
+        "codeml" : {
+            "Control File" : is_type_of(str),
+            "Tree File"    : is_type_of(str),
+        },
+    },
 }
 
 

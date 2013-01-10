@@ -71,8 +71,9 @@ def main(argv):
     from pypeline import Pypeline
     
     commands = {
-        "genotype" : steps.genotype,
-        "msa"      : steps.msa,
+        "genotype"    : steps.genotype.chain,
+        "msa"         : steps.msa.chain,
+        "paml:codeml" : steps.paml.chain_codeml,
         }
 
 
@@ -93,7 +94,7 @@ def main(argv):
             print_usage()
             return 1
 
-        nodes = commands[command].chain(pipeline, options, makefiles)
+        nodes = commands[command](pipeline, options, makefiles)
 
     for makefile in makefiles:
         if "Nodes" in makefile:

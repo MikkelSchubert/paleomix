@@ -143,6 +143,9 @@ class Node(object):
 
 
     def _collect_nodes(self, nodes, description):
+        if nodes is None:
+            return frozenset()
+
         nodes = frozenset(safe_coerce_to_tuple(nodes))
         bad_nodes = [node for node in nodes if not isinstance(node, Node)]
 

@@ -24,7 +24,6 @@ from __future__ import with_statement
 
 import os
 import copy
-import textwrap
 
 import pysam
 import pypeline.common.fileutils as fileutils
@@ -32,7 +31,7 @@ import pypeline.common.formats.msa as msa
 
 from pypeline.node import Node, MetaNode
 from pypeline.common.formats.fasta import read_fasta
-from pypeline.common.utilities import safe_coerce_to_tuple
+from pypeline.common.utilities import safe_coerce_to_tuple, fragment
 
 
 
@@ -65,8 +64,7 @@ class CollectSequencesNode(Node):
         for (sequence_name, taxa_map) in sorted(self._sequences.iteritems()):
             lines = []
             for (taxon_name, sequences) in fastas:
-                rawseq   = sequences[sequence_name]
-                fastaseq = "\n".join(rawseq[i : i + 60] for i in range(0, len(rawseq), 60))
+                fastaseq = "\n".join(fragment(60, sequences[sequence_name]))
                 current_name = taxa_map[taxon_name]
 
                 lines.append(">%s %s\n%s\n" % (taxon_name, current_name, fastaseq))

@@ -22,3 +22,4 @@
 #
 import genotype
 import msa
+import paml

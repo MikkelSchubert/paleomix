@@ -131,3 +131,8 @@ def group_by_pred(pred, iterable):
             is_false.append(item)
 
     return is_true, is_false
+
+
+def fragment(size, lstlike):
+    """Faster alternative to grouper for lists/strings."""
+    return (lstlike[i : i + size] for i in range(0, len(lstlike), size))
