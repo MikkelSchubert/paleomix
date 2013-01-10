@@ -33,11 +33,13 @@ from pypeline.nodegraph import NodeGraph
 def _do_print_color(*vargs, **kwargs):
     """Utility function: Prints using shell colors."""
     colorcode = kwargs.pop("colorcode")
-    # No colors if stdout is redirected (e.g. less). 
-    if sys.stdout.isatty():
+    destination = kwargs.pop("file", sys.stdout)
+
+    # No colors if output is redirected (e.g. less).
+    if destination.isatty():
         vargs = ["\033[00;%im%s\033[00m" % (colorcode, arg) for arg in vargs]
 
-    print(*vargs, **kwargs)
+    print(*vargs, file = destination, **kwargs)
 
 
 def print_msg(*vargs, **kwargs):
