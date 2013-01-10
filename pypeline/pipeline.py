@@ -150,6 +150,10 @@ class Pypeline:
                 nodes.set_node_state(node, nodes.DONE)
 
         return not errors
+
+    @property
+    def nodes(self):
+        return set(self._nodes)
  
 
 
