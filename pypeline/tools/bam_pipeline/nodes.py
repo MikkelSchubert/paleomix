@@ -39,15 +39,21 @@ _MAPDAMAGE_MAX_READS = 100000
 
 class MapDamageNode(CommandNode):
     def __init__(self, reference, input_file, output_directory, dependencies):
-        command = AtomicCmd(["mapDamage.pl", "map", "-c",
+        command = AtomicCmd(["mapDamage", "--no-stats",
                              "-n", _MAPDAMAGE_MAX_READS,
                              "-i", "%(IN_BAM)s",
-                             "-d", "%(OUT_DIR)s",
+                             "-d", "%(TEMP_DIR)s",
                              "-r", reference],
-                            IN_BAM  = input_file,
-                            OUT_DIR = output_directory,
-                            OUT_STDOUT = output_directory + ".stdout",
-                            OUT_STDERR = output_directory + ".stderr")
+                            IN_BAM = input_file,
+                            OUT_FREQ_3p = os.path.join(output_directory, "3pGtoA_freq.txt"),
+                            OUT_FREQ_5p = os.path.join(output_directory, "5pCtoT_freq.txt"),
+                            OUT_COMP_GENOME = os.path.join(output_directory, "dnacomp_genome.csv"),
+                            OUT_COMP_USER   = os.path.join(output_directory, "dnacomp.txt"),
+                            OUT_PLOT_FRAG   = os.path.join(output_directory, "Fragmisincorporation_plot.pdf"),
+                            OUT_PLOT_LEN    = os.path.join(output_directory, "Length_plot.pdf"),
+                            OUT_LENGTH      = os.path.join(output_directory, "lgdistribution.txt"),
+                            OUT_MISINCORP   = os.path.join(output_directory, "misincorporation.txt"),
+                            OUT_LOG         = os.path.join(output_directory, "Runtime_log.txt"))
 
         description =  "<mapDamage: '%s' -> '%s'>" % (input_file, output_directory)
         CommandNode.__init__(self, 
