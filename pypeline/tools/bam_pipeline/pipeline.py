@@ -483,10 +483,13 @@ def list_orphan_files(config, makefiles, nodes):
     files = set()
     for mkfile in makefiles:
         for target in mkfile["Targets"]:
-            for root_filename in glob.glob(os.path.join(config.destination, target + "*")):
+            glob_str = os.path.join(config.destination, target + "*")
+            for root_filename in glob.glob(glob_str):
                 if os.path.isdir(root_filename):
                     for (dirpath, _, filenames) in os.walk(root_filename):
                         files.update(os.path.join(dirpath, filename) for filename in filenames)
+                else:
+                    files.add(root_filename)
     return files - list_output_files(nodes)
 
 
