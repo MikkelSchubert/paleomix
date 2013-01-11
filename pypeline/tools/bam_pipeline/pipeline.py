@@ -284,7 +284,7 @@ def build_mapdamage_nodes(config, prefix, target, records):
     for record in records:
         output_directory = os.path.join(config.destination, "%s.%s.mapDamage" % (target, prefix["Name"]), record["Library"])
         nodes.append(MapDamageNode(reference        = prefix["Reference"],
-                                   input_file       = record["Filename"],
+                                   input_files      = record["Filename"],
                                    output_directory = output_directory,
                                    dependencies     = record["Node"]))
 
