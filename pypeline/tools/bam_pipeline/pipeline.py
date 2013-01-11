@@ -414,6 +414,7 @@ def parse_config(argv):
 
     if not os.path.exists(config.gatk_jar):
         warnings.append("WARNING: GATK jar does not exist, indel realigned bams will not be produced.")
+        config.gatk_jar = None
     elif not os.path.isfile(config.gatk_jar):
         errors.append("ERROR: Path passed to --gatk-jar is not a file: %s" % config.gatk_jar)
 
