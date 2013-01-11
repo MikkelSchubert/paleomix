@@ -421,10 +421,13 @@ def parse_config(argv):
     if config.list_output_files and config.list_orphan_files:
         errors.append("ERROR: Both --list-output-files and --list-orphan-files set!")
 
-    map(ui.print_warn, warnings)
+    for warning in warnings:
+        ui.print_warn(warning, file = sys.stderr)
+
     if errors:
-        map(ui.print_err, errors)
-        ui.print_err("See --help for more information")
+        errors.append("See --help for more information")
+        for error in errors:
+            ui.print_err(warning, file = sys.stderr)
         return None
 
     return config, args
@@ -495,15 +498,16 @@ def main(argv):
     config, args = config_args
     paths.ROOT = config.destination
 
-    try:    
-        ui.print_info("Building BAM pipeline ...")
+    try:
+        ui.print_info("Building BAM pipeline ...", file = sys.stderr)
         makefiles = validate_makefiles(read_makefiles(args))
         if not makefiles:
-            ui.print_err("Plase specify at least one makefile!")
+            ui.print_err("Plase specify at least one makefile!", file = sys.stderr)
             return 1
     except MakefileError, e:
         ui.print_err("Error reading makefile:\n\t%s" % \
-                         "\n\t".join(str(e).split("\n")))
+                         "\n\t".join(str(e).split("\n")),
+                         file = sys.stderr)
         return 1
 
     index_references(makefiles)
@@ -516,17 +520,17 @@ def main(argv):
         pipeline.add_nodes(nodes)
 
     if config.list_output_files:
-        ui.print_info("Printing output files ...")
+        ui.print_info("Printing output files ...", file = sys.stderr)
         for filename in sorted(list_output_files(pipeline.nodes)):
             print(filename)
         return 0
     elif config.list_orphan_files:
-        ui.print_info("Printing orphan files ...")
+        ui.print_info("Printing orphan files ...", file = sys.stderr)
         for filename in sorted(list_orphan_files(config, makefiles, pipeline.nodes)):
             print(filename)
         return 0
 
-    ui.print_info("Running BAM pipeline ...")
+    ui.print_info("Running BAM pipeline ...", file = sys.stderr)
     if not pipeline.run(dry_run     = config.dry_run,
                         max_running = config.max_threads,
                         verbose     = not config.non_verbose):
