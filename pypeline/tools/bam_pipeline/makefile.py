@@ -51,10 +51,18 @@ DEFAULT_OPTIONS = {
     "PCRDuplicates"  : True,
     # Exclude READ_TYPES from alignment/analysis
     "ExcludeReads"   : [],
+
+    # Features of pipeline
+    "Features"       : ["Realigned BAM",
+                        "mapDamage",
+                        "Coverage",
+                        "Summary"]
 }
 
 READ_TYPES = ("Paired", "Single", "Collapsed")
-
+FEATURES = set(("Raw BAM", "Realigned BAM",
+                "Coverage", "Summary",
+                "mapDamage"))
 
 
 

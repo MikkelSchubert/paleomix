@@ -27,6 +27,7 @@ import collections
 from pypeline.tools.bam_pipeline.makefile import \
     DEFAULT_OPTIONS, \
     READ_TYPES, \
+    FEATURES, \
     MakefileError
 
 
@@ -78,6 +79,11 @@ def _validate_makefile_options(makefile):
         if unknown_reads:
             raise MakefileError("Unknown reads specified in option 'ExcludeReads': '%s'\n\tValid values are '%s'" \
                                     % ("', '".join(unknown_reads), "', '".join(READ_TYPES)))
+
+        unknown_feats = set(options["Features"]) - set(FEATURES)
+        if unknown_feats:
+            raise MakefileError("Unknown feature(s) specified': '%s'\n\tValid values are '%s'" \
+                                    % ("', '".join(unknown_feats), "', '".join(FEATURES)))
 
 
 def _validate_makefiles_duplicate_files(makefiles):

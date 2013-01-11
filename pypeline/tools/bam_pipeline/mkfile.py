@@ -91,6 +91,19 @@ Options:
 #    - Paired    # Pair-ended reads, where both reads were retained
 #    - Collapsed # Overlapping pair-ended mate reads collapsed into a single read  # ExcludeReads:
 
+  # Optional steps to perform during processing
+  Features:
+#   - Raw BAM        # Generate BAM from the raw libraries (no indel realignment)
+                     #   Location: {Destination}/{Target}.{Genome}.bam
+    - Realigned BAM  # Generate indel-realigned BAM using the GATK Indel realigner
+                     #   Location: {Destination}/{Target}.{Genome}.realigned.bam
+    - mapDamage      # Generate mapDamage plot for each (unrealigned) library
+                     #   Location: {Destination}/{Target}.{Genome}.mapDamage/{Library}/
+    - Coverage       # Generate coverage information for the raw BAM (wo/ indel realignment)
+                     #   Location: {Destination}/{Target}.{Genome}.coverage
+    - Summary        # Generate target summary (uses statistics from raw BAM)
+                     #   Location: {Destination}/{Target}.summary
+
 
 # Prefixes:
 #    - NAME_OF_PREFIX: PATH_TO_PREFIX
