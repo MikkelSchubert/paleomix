@@ -203,7 +203,7 @@ def build_rmduplicates_nodes(config, target, sample, library, input_records):
             key = "kirdup" if (key == "Collapsed") else "markdup"
             collected_records[key].extend(records)
 
-        for (key, cls) in (("kirdup", FilterUniqueBAMNode), ("markdup", MarkDuplicatesNode)):
+        for (key, cls) in (("kirdup", IndexedFilterUniqueBAMNode), ("markdup", MarkDuplicatesNode)):
             if key in collected_records:
                 input_nodes = [record["Node"] for record in collected_records[key]]
                 input_files = [record["Filename"] for record in collected_records[key]]

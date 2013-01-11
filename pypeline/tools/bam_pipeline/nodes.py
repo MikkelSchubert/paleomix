@@ -28,6 +28,7 @@ from pypeline.atomicset import ParallelCmds
 from pypeline.atomicparams import AtomicJavaParams
 
 from pypeline.nodes.picard import ValidateBAMNode
+from pypeline.nodes.samtools import BAMIndexNode
 from pypeline.common.fileutils import swap_ext, add_postfix
 
 
@@ -161,3 +162,11 @@ class CleanupBAMNode(CommandNode):
                              command      = ParallelCmds([flt, annotate, calmd]),
                              description  = description,
                              dependencies = dependencies)
+
+
+def IndexedFilterUniqueBAMNode(output_bam, **kwargs):
+    node = FilterUniqueBAMNode(output_bam = output_bam,
+                               **kwargs)
+
+    return BAMIndexNode(infile       = output_bam,
+                        dependencies = node)
