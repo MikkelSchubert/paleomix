@@ -26,24 +26,24 @@ import pypeline.common.fileutils as fileutils
 from pypeline.node import CommandNode, MetaNode
 from pypeline.atomiccmd import AtomicCmd
 from pypeline.common.fileutils import swap_ext
+from pypeline.common.utilities import safe_coerce_to_tuple
 
 
 class _IndelTrainerNode(CommandNode):
-    def __init__(self, config, reference, infile, outfile, dependencies = ()):
+    def __init__(self, config, reference, infiles, outfile, dependencies = ()):
         call  = ["java", "-jar", config.gatk_jar,
                  "-T", "RealignerTargetCreator", 
                  "-R", "%(IN_REFERENCE)s",
-                 "-I", "%(IN_BAMFILE)s",
                  "-o", "%(OUT_INTERVALS)s"]
+        keys = _update_file_keys_and_call(call, infiles)
 
         command = AtomicCmd(call, 
                             IN_REFERENCE  = reference,
-                            IN_BAMFILE    = infile,
-                            IN_BAIFILE    = swap_ext(infile, ".bai"),
-                            OUT_INTERVALS = outfile)
+                            OUT_INTERVALS = outfile,
+                            **keys)
         
-        description = "<Train Indel Realigner: '%s' -> '%s'>" \
-            % (infile, outfile)
+        description = "<Train Indel Realigner: %i file(s) -> '%s'>" \
+            % (len(infiles), outfile)
 
         CommandNode.__init__(self, 
                              description = description,
@@ -53,24 +53,23 @@ class _IndelTrainerNode(CommandNode):
 
 
 class _IndelRealignerNode(CommandNode):
-    def __init__(self, config, reference, intervals, infile, outfile, dependencies = ()):
+    def __init__(self, config, reference, intervals, infiles, outfile, dependencies = ()):
         call  = ["java", "-jar", config.gatk_jar,
                  "-T", "IndelRealigner", 
                  "-R", "%(IN_REFERENCE)s",
-                 "-I", "%(IN_BAMFILE)s",
                  "-targetIntervals", "%(IN_INTERVALS)s",
                  "-o", "%(OUT_BAMFILE)s"]
+        keys = _update_file_keys_and_call(call, infiles)
         
         command = AtomicCmd(call, 
                             IN_REFERENCE = reference,
-                            IN_BAMFILE   = infile,
-                            IN_BAIFILE   = swap_ext(infile, ".bai"),
                             IN_INTERVALS = intervals,
                             OUT_BAMFILE  = outfile,
-                            OUT_INDEX    = fileutils.swap_ext(outfile, ".bai"))
+                            OUT_INDEX    = fileutils.swap_ext(outfile, ".bai"),
+                            **keys)
 
-        description = "<Indel Realign: '%s' -> '%s'>" \
-            % (infile, outfile)
+        description = "<Indel Realign: %i file(s) -> '%s'>" \
+            % (len(infiles), outfile)
 
         CommandNode.__init__(self, 
                              description = description,
@@ -80,23 +79,35 @@ class _IndelRealignerNode(CommandNode):
 
 
 class IndelRealignerNode(MetaNode):
-    def __init__(self, config, reference, infile, outfile, intervals = None, dependencies = ()):
+    def __init__(self, config, reference, infiles, outfile, intervals = None, dependencies = ()):
         if not intervals:
             intervals = outfile + ".intervals"
 
+        infiles = safe_coerce_to_tuple(infiles)
         trainer = _IndelTrainerNode(config         = config,
                                     reference      = reference, 
-                                    infile         = infile,
+                                    infiles        = infiles,
                                     outfile        = intervals,
                                     dependencies   = dependencies)
         aligner = _IndelRealignerNode(config       = config,
                                       reference    = reference, 
                                       intervals    = intervals,
-                                      infile       = infile, 
+                                      infiles      = infiles,
                                       outfile      = outfile,
                                       dependencies = trainer)
         
         MetaNode.__init__(self, 
-                          description  = "<GATK Indel Realigner: '%s'>" % (infile,),
+                          description  = "<GATK Indel Realigner: %i files -> '%s'>"
+                                             % (len(infiles), outfile),
                           subnodes     = [trainer, aligner],
                           dependencies = dependencies)
+
+
+def _update_file_keys_and_call(call, input_files):
+    keys = {}
+    for (index, filename) in enumerate(input_files):
+        call.extend(("-I", "%%(IN_BAMFILE_%02i)s" % index))
+        keys["IN_BAMFILE_%02i" % index] = filename
+        keys["IN_BAIFILE_%02i" % index] = swap_ext(filename, ".bai")
+
+    return keys

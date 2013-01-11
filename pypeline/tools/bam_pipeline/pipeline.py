@@ -338,7 +338,7 @@ def build_target_nodes(config, makefile, prefixes, target, samples):
         if config.gatk_jar:
             aligned = IndelRealignerNode(config       = config,
                                          reference    = prefixes[genome]["Reference"],
-                                         infile       = output_filename,
+                                         infiles      = output_filename,
                                          outfile      = add_postfix(output_filename, ".realigned"),
                                          intervals    = os.path.join(config.destination, target, genome + ".intervals"),
                                          dependencies = node)
