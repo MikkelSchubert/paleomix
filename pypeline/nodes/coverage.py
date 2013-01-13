@@ -32,26 +32,24 @@ from pypeline.common.utilities import get_in, set_in, safe_coerce_to_tuple
 
 
 class CoverageNode(Node):
-    def __init__(self, input_files, output_file, name, collapsed_prefix = "M_", dependencies = ()):
+    def __init__(self, input_file, name, collapsed_prefix = "M_", dependencies = ()):
         self._name = name
-        self._output_file = output_file
+        self._output_file = swap_ext(input_file, ".coverage")
         self._collapsed_prefix = collapsed_prefix
-        input_files = safe_coerce_to_tuple(input_files)
 
         Node.__init__(self,
-                      description  = "<Coverage: %i file(s) -> '%s'>" \
-                          % (len(input_files), self._output_file),
-                      input_files  = input_files,
+                      description  = "<Coverage: '%s' -> '%s'>" \
+                          % (input_file, self._output_file),
+                      input_files  = input_file,
                       output_files = self._output_file,
                       dependencies = dependencies)
 
 
     def _run(self, _config, temp):
-        for filename in self.input_files:
-            with SamfileReader(filename) as bamfile:
-                raw_tables = self.initialize_raw_tables(bamfile)
-                self.read_records(bamfile, raw_tables, self._collapsed_prefix)
-                table = self.collapse_raw_tables(bamfile, raw_tables, self._name)
+        with SamfileReader(self.input_files[0]) as bamfile:
+            raw_tables = self.initialize_raw_tables(bamfile)
+            self.read_records(bamfile, raw_tables, self._collapsed_prefix)
+            table = self.collapse_raw_tables(bamfile, raw_tables, self._name)
 
         _write_table(table, reroot_path(temp, self._output_file))
         move_file(reroot_path(temp, self._output_file), self._output_file)

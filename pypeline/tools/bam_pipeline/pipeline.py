@@ -131,14 +131,13 @@ def build_bwa_nodes(config, target, sample, library, barcode, record, dependenci
 
             validate = ValidateBAMFile(config      = config,
                                        node        = params.build_node())
-            coverage = CoverageNode(input_files  = output_filename,
-                                    output_file  = swap_ext(output_filename, ".coverage"),
+            coverage = CoverageNode(input_file   = output_filename,
                                     name         = target,
                                     dependencies = validate)
 
             reads["BAM"][genome][key] = {"Node"     : validate,
                                          "Filename" : output_filename,
-                                         "LaneCoverage" : coverage}
+                                         "LaneCoverage" : [coverage]}
 
     return record
 
@@ -163,14 +162,13 @@ def build_bam_cleanup_nodes(config, target, sample, library, barcode, record):
                                   tags       = tags)
             node = ValidateBAMFile(config      = config,
                                    node        = node)
-            coverage = CoverageNode(input_files  = output_filename,
-                                    output_file  = swap_ext(output_filename, ".coverage"),
+            coverage = CoverageNode(input_file   = output_filename,
                                     name         = target,
                                     dependencies = node)
 
             results[genome][key] = {"Node" : node,
                                     "Filename" : output_filename,
-                                    "LaneCoverage" : coverage}
+                                    "LaneCoverage" : [coverage]}
 
     record["Reads"]["BAM"] = results
     return record
@@ -219,10 +217,15 @@ def build_rmduplicates_nodes(config, target, sample, library, input_records):
                 node = ValidateBAMFile(config      = config,
                                        node        = node)
 
-                coverages = [record["LaneCoverage"] for record in collected_records[key]]
+                cov  = CoverageNode(input_file   = output_filename,
+                                    name         = target,
+                                    dependencies = node)
+
+                coverages = sum((record["LaneCoverage"] for record in collected_records[key]), [])
                 results[genome][key] = [{"Node"     : node,
                                          "Filename" : output_filename,
-                                         "LaneCoverage" : coverages}]
+                                         "LaneCoverage" : coverages,
+                                         "LibCoverage"  : [cov]}]
 
     return results
 
@@ -243,23 +246,22 @@ def build_library_nodes(config, target, sample, library, barcodes):
 
     merged = {}
     for genome in input_records:
-        input_nodes = [record["Node"] for records in input_records[genome].itervalues() for record in records]
-        input_files = [record["Filename"] for records in input_records[genome].itervalues() for record in records]
-        output_prefix = os.path.join(config.destination, target, genome, sample, library + ".unaligned")
+        records = [record for records in input_records[genome].itervalues() for record in records]
 
-        lane_coverage = sum((record["LaneCoverage"] for records in input_records[genome].itervalues() for record in records), [])
-        lib_coverage  = CoverageNode(input_files  = input_files,
-                                     output_file  = output_prefix + ".coverage",
-                                     name         = target,
-                                     dependencies = input_nodes)
+        input_nodes = [record["Node"] for record in records]
+        input_files = [record["Filename"] for record in records]
+        input_cov_lane = sum((record["LaneCoverage"] for record in records), [])
+        input_cov_lib  = input_cov_lane
+        if filter_duplicates:
+            input_cov_lib  = sum((record["LibCoverage"]  for record in records), [])
 
         node = MetaNode(description  = "Library: %s" % library,
                         dependencies = input_nodes)
 
         merged[genome] = {"Node"         : node,
                           "Filenames"    : input_files,
-                          "LaneCoverage" : lane_coverage,
-                          "LibCoverage"  : [lib_coverage],
+                          "LaneCoverage" : input_cov_lane,
+                          "LibCoverage"  : input_cov_lib,
                           "Sample"       : sample,
                           "Library"      : library}
 
