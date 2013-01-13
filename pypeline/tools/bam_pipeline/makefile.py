@@ -21,6 +21,7 @@
 # SOFTWARE.
 #
 import os
+import copy
 import glob
 import yaml
 import types
@@ -94,6 +95,7 @@ def _read_makefile(filename):
 
 
 def _read_options(data, options):
+    options = copy.deepcopy(options)
     opt_obj = data.pop("Options", {})
     if not isinstance(opt_obj, dict):
         raise MakefileError("Options must be a dictionary, not a %s" % opt_obj.__class__.__name__)
