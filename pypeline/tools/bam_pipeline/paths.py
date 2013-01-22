@@ -25,8 +25,6 @@ import glob
 import itertools
 import collections
 
-ROOT = "results"
-
 
 def is_paired_end(template):
     return (template.format(Pair = 1) != template)

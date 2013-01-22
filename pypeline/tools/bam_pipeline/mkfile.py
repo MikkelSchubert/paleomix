@@ -27,40 +27,11 @@ import datetime
 import pypeline.ui as ui
 from pypeline.common.text import padded_table
 
+_TRIM_PIPELINE = (os.path.basename(sys.argv[0]) == "trim_pipeline")
 
-_HEADER = \
-"""# Timestamp: %s
-#
-#
-#
-# Columns:
-#     Name:     Name of the target. Final BAM filenames will consist of this
-#               name and the name of the BWA prefix joined by a dot. For
-#               example, given the name 'foobar' and the BWA prefix
-#               'path/to/indices/hg19', the final BAM files will be named
-#               'foobar.hg19.bam' and 'foobar.hg19.unaligned.bam'.
-#     Sample:
-#     Library:
-#     Barcode:  The Sample, Library, and Barcode (or other unique ID) of the
-#               lane. This is saved in the 'SM', 'LB' and 'PU'.
-#     Platform: The sequencing platform used to generate this data.
-#     Path:     Path to FASTQ files. This uses the Python 'glob' module to find
-#               files, and may therefore contain wildcards (*, [...]). For PE
-#               reads, replace the mate number with "{Pair}".
-#               For example
-#                  /path/to/files/reads_R{Pair}_*.fastq.gz
-#
-# Data is organized by Name/Sample/Library/Barcode. Therefore, this combination
-# of columns MUST be unique. To prevent duplicate removal being done on multiple
-# different samples, it is enforced that all libraries are assosiated with ONE
-# sample only for any one target. Finally, any input file may only be specified
-# ONCE. The pipeline will not run if any of these assumptions are violated.
-#
-#
-"""
-
-_HEADER = \
-"""# Timestamp: %s
+def _print_header(timestamp, full_mkfile = True):
+    print """# -*- mode: Yaml; -*-
+# Timestamp: %s
 #
 # Default options
 Options:
@@ -69,8 +40,10 @@ Options:
   # Quality offset for PHRED scores, either 33 (Sanger/Illumina 1.8+) or 64 (Illumina 1.3+ / 1.5+)
   # This is used during adapter-trimming (AdapterRemoval) and sequence alignment (BWA)
   QualityOffset: 33
+  """ % timestamp
 
-  # Use seed region during sequence alignment
+    if full_mkfile:
+        print """  # Use seed region during sequence alignment
   # Disabling the seed is recommended for aDNA alignments, as post-mortem damage
   # tends to localize in the seed region, which is expected to be of high fideltiy
   BWA_UseSeed:    yes
@@ -92,8 +65,9 @@ Options:
 #    - Collapsed # Overlapping pair-ended mate reads collapsed into a single read  # ExcludeReads:
 
   # Optional steps to perform during processing
+  # To disable all features, replace with line "Features: []"
   Features:
-#   - Raw BAM        # Generate BAM from the raw libraries (no indel realignment)
+#    - Raw BAM        # Generate BAM from the raw libraries (no indel realignment)
                      #   Location: {Destination}/{Target}.{Genome}.bam
     - Realigned BAM  # Generate indel-realigned BAM using the GATK Indel realigner
                      #   Location: {Destination}/{Target}.{Genome}.realigned.bam
@@ -105,7 +79,8 @@ Options:
                      #   Location: {Destination}/{Target}.summary
 
 
-# Prefixes:
+
+Prefixes:
 #    - NAME_OF_PREFIX: PATH_TO_PREFIX
 #      Label: # mito or nucl
 #
@@ -140,7 +115,8 @@ def main(argv):
             barcodes.append(record)
 
 
-    print _HEADER % datetime.datetime.now().isoformat()
+    _print_header(timestamp   = datetime.datetime.now().isoformat(),
+                  full_mkfile = (os.path.basename(sys.argv[0]) != "trim_pipeline"))
     for (sample, libraries) in records.iteritems():
         print "%s:" % sample
         print "  %s:" % sample
