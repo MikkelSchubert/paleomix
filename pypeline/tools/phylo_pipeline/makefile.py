@@ -199,12 +199,12 @@ _MKFILE_REFERENCE = {
             "Algorithm" : set(("auto", "g-ins-i")), # TODO
             },
         },
-    "Phylogenetic inference" : {
+    "Phylogenetic Inference" : {
         "Default" : set(("raxml", "raxml-light", "examl")),
-        "RAxML-Family" : {
+        "ExaML" : {
             "Bootstraps" : is_positive_int,
             "Replicates" : is_positive_int,
-            "Model": set(("gtrgamma", )), # TODO
+            "Model": set(("gamma", )), # TODO
             "Outgroup" : is_type_of(str),
         }
     },

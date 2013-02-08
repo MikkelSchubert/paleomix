@@ -49,7 +49,7 @@ def _has_required_modules():
             sys.stderr.write("       A local install may be performed using the following command:\n")
             sys.stderr.write("       $ python setup.py install --user\n\n")
             missing_modules = True
-    
+
     return not missing_modules
 
 
@@ -61,7 +61,7 @@ def print_usage():
     ui.print_info("  -- %s mkfile [...]    -- ." % basename)
     ui.print_info("  -- %s genotype [...]  -- Carry out genotyping according to makefile." % basename)
 
-    
+
 def main(argv):
     if not _has_required_modules():
         return 1
@@ -69,11 +69,12 @@ def main(argv):
     import pypeline.tools.phylo_pipeline.steps as steps
     import pypeline.ui as ui
     from pypeline import Pypeline
-    
+
     commands = {
-        "genotype"    : steps.genotype.chain,
-        "msa"         : steps.msa.chain,
-        "paml:codeml" : steps.paml.chain_codeml,
+        "genotype"        : steps.genotype.chain,
+        "msa"             : steps.msa.chain,
+        "paml:codeml"     : steps.paml.chain_codeml,
+        "phylogeny:examl" : steps.phylo.chain_examl,
         }
 
 
@@ -81,7 +82,7 @@ def main(argv):
         print_usage()
         return 1
 
-    chain = argv.pop(0)    
+    chain = argv.pop(0)
     options, makefiles = steps.common.parse_options(argv)
     if not options:
         return 1
@@ -99,15 +100,14 @@ def main(argv):
     for makefile in makefiles:
         if "Nodes" in makefile:
             pipeline.add_nodes(makefile["Nodes"])
-        
-    if not pipeline.run(max_running = options.max_threads, 
+
+    if not pipeline.run(max_running = options.max_threads,
                         dry_run     = not options.run,
                         verbose     = not options.non_verbose,
                         collapse    = True):
         return 1
     return 0
 
-    
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))
