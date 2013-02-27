@@ -480,7 +480,7 @@ def parse_config(argv):
     if errors:
         errors.append("See --help for more information")
         for error in errors:
-            ui.print_err(warning, file = sys.stderr)
+            ui.print_err(error, file = sys.stderr)
         return None
 
     return config, args
