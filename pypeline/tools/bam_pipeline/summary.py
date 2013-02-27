@@ -315,9 +315,10 @@ class SummaryTableNode(Node):
         genomes = {}
         for prefix in prefixes:
             label = prefixes[prefix].get("Label") or prefix
-            with open(prefixes[prefix]["Path"] + ".ann") as table:
-                genomes[label] = dict(zip(("Size", "NContigs"), map(int, table.readline().strip().split())[:2]))
-        
+            with open(prefixes[prefix]["Reference"] + ".fai") as table:
+                lengths = [int(line.split()[1]) for line in table]
+                genomes[label] = {"Size" : sum(lengths), "NContigs" : len(lengths)}
+
         if "mitochondrial" in genomes and "nuclear" in genomes:
             nucl = genomes["nuclear"]
             mito = genomes["mitochondrial"]
