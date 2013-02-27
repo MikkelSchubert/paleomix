@@ -31,9 +31,8 @@ from pypeline.atomicset import ParallelCmds
 class BWAIndexNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, input_file, prefix = None, dependencies = ()):
-        params = AtomicParams("bwa")
-        params.set_parameter("index")
-        params.set_parameter("%(IN_FILE)s")
+        params = AtomicParams(("bwa", "index"))
+        params.push_positional("%(IN_FILE)s")
 
         # Destination prefix, in temp folder
         params.set_parameter("-p", "%(TEMP_OUT_PREFIX)s")
@@ -63,20 +62,18 @@ class SE_BWANode(CommandNode):
     def customize(self, input_file, output_file, reference, prefix, threads = 1, dependencies = ()):
         threads = _get_max_threads(reference, threads)
 
-        aln   = AtomicParams("bwa")
-        aln.set_parameter("aln")
-        aln.set_parameter(prefix)
-        aln.set_parameter("%(IN_FILE)s")
+        aln   = AtomicParams(("bwa", "aln"))
+        aln.push_positional(prefix)
+        aln.push_positional("%(IN_FILE)s")
         aln.set_parameter("-t", threads)
         aln.set_paths(IN_FILE = input_file,
                       OUT_STDOUT = AtomicCmd.PIPE,
                       **_prefix_files(prefix))
         
-        samse = AtomicParams("bwa")
-        samse.set_parameter("samse")
-        samse.set_parameter(prefix)
-        samse.set_parameter("-")
-        samse.set_parameter("%(IN_FILE)s")
+        samse = AtomicParams(("bwa", "samse"))
+        samse.push_positional(prefix)
+        samse.push_positional("-")
+        samse.push_positional("%(IN_FILE)s")
         samse.set_paths(IN_STDIN = aln,
                         IN_FILE  = input_file,
                         OUT_STDOUT = AtomicCmd.PIPE)
@@ -109,10 +106,9 @@ class PE_BWANode(CommandNode):
 
         alns = []
         for (iindex, filename) in enumerate((input_file_1, input_file_2), start = 1):
-            aln = AtomicParams("bwa")
-            aln.set_parameter("aln")
-            aln.set_parameter(prefix)
-            aln.set_parameter("%(IN_FILE)s")
+            aln = AtomicParams(("bwa", "aln"))
+            aln.push_positional(prefix)
+            aln.push_positional("%(IN_FILE)s")
             aln.set_parameter("-f", "%(TEMP_OUT_SAI)s")
             aln.set_parameter("-t", max(1, threads / 2))
             aln.set_paths(IN_FILE = filename,
@@ -122,13 +118,12 @@ class PE_BWANode(CommandNode):
             alns.append(aln)
         aln_1, aln_2 = alns
         
-        sampe = AtomicParams("bwa")
-        sampe.set_parameter("sampe")
-        sampe.set_parameter(prefix)
-        sampe.set_parameter("%(TEMP_IN_SAI_1)s")
-        sampe.set_parameter("%(TEMP_IN_SAI_2)s")
-        sampe.set_parameter("%(IN_FILE_1)s")
-        sampe.set_parameter("%(IN_FILE_2)s")
+        sampe = AtomicParams(("bwa", "sampe"))
+        sampe.push_positional(prefix)
+        sampe.push_positional("%(TEMP_IN_SAI_1)s")
+        sampe.push_positional("%(TEMP_IN_SAI_2)s")
+        sampe.push_positional("%(IN_FILE_1)s")
+        sampe.push_positional("%(IN_FILE_2)s")
         sampe.set_parameter("-P", fixed = False)
         sampe.set_paths(IN_FILE_1     = input_file_1,
                         IN_FILE_2     = input_file_2,
@@ -216,29 +211,26 @@ def _process_output(stdin, output_file, reference):
     convert.set_paths(IN_STDIN   = stdin,
                       OUT_STDOUT = AtomicCmd.PIPE)
 
-    flt = AtomicParams("samtools")
-    flt.set_parameter("view")
-    flt.set_parameter("-")
+    flt = AtomicParams(["samtools", "view"])
+    flt.push_positional("-")
     flt.set_parameter("-b") # Output BAM
     flt.set_parameter("-u") # Output uncompressed BAM
     flt.set_parameter("-F", "0x4", sep = "", fixed = False) # Remove misses
     flt.set_paths(IN_STDIN  = convert,
                   OUT_STDOUT = AtomicCmd.PIPE)
 
-    sort = AtomicParams("samtools")
-    sort.set_parameter("sort")
+    sort = AtomicParams(("samtools", "sort"))
     sort.set_parameter("-o") # Output to STDOUT on completion
-    sort.set_parameter("-")
-    sort.set_parameter("%(TEMP_OUT_BAM)s")
+    sort.push_positional("-")
+    sort.push_positional("%(TEMP_OUT_BAM)s")
     sort.set_paths(IN_STDIN     = flt,
                    OUT_STDOUT   = AtomicCmd.PIPE,
                    TEMP_OUT_BAM = "sorted")
 
-    calmd = AtomicParams("samtools")
-    calmd.set_parameter("calmd")
+    calmd = AtomicParams(("samtools", "calmd"))
+    calmd.push_positional("-")
+    calmd.push_positional("%(IN_REF)s")
     calmd.set_parameter("-b") # Output BAM
-    calmd.set_parameter("-")
-    calmd.set_parameter("%(IN_REF)s")
     calmd.set_paths(IN_REF   = reference,
                     IN_STDIN = sort,
                     OUT_STDOUT = output_file)

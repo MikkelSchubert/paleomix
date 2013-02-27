@@ -106,7 +106,7 @@ class AtomicParams:
         parameters to the script (see e.g. AtomicJavaParams)."""
         
         self._call    = safe_coerce_to_tuple(call)
-        self._fields  = []
+        self._positionals = []
         self._params  = []
         self._paths   = {}
         self._cmd_object = None
@@ -175,6 +175,10 @@ class AtomicParams:
         self._params.append(param)
 
 
+    def push_positional(self, value):
+        self._positionals.append(value)
+
+
     def pop_parameter(self, key):
         if self._cmd_object:
             raise ParameterError("Parameters have already been finalized")
@@ -218,7 +222,8 @@ class AtomicParams:
                     command.append(parameter["Value"])
             else:
                 command.append(parameter["Key"])
-        
+
+        command.extend(self._positionals)
         return command
 
 
