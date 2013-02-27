@@ -38,12 +38,16 @@ Options:
   # Sequencing platform, see SAM/BAM reference for valid values
   Platform: Illumina
   # Quality offset for PHRED scores, either 33 (Sanger/Illumina 1.8+) or 64 (Illumina 1.3+ / 1.5+)
+  # For Bowtie2 it is also possible to specify 'Solexa', to handle reads on the Solexa scale.
   # This is used during adapter-trimming (AdapterRemoval) and sequence alignment (BWA)
   QualityOffset: 33
   """ % timestamp
 
     if full_mkfile:
-        print """  # Use seed region during sequence alignment
+        print """  # Which aligner to use ('BWA' or 'Bowtie2')
+  Aligner:        BWA
+
+  # Use seed region during sequence alignment
   # Disabling the seed is recommended for aDNA alignments, as post-mortem damage
   # tends to localize in the seed region, which is expected to be of high fideltiy
   BWA_UseSeed:    yes

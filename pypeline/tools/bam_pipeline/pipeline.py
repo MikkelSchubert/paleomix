@@ -32,6 +32,7 @@ import pypeline
 import pypeline.ui as ui
 
 from pypeline.nodes.bwa import SE_BWANode, PE_BWANode
+from pypeline.nodes.bowtie2 import Bowtie2Node
 from pypeline.nodes.gatk import IndelRealignerNode
 from pypeline.nodes.picard import MergeSamFilesNode, MarkDuplicatesNode
 from pypeline.nodes.coverage import CoverageNode, MergeCoverageNode
@@ -69,7 +70,10 @@ def build_trimming_nodes(config, target, sample, library, barcode, record):
                             "Paired"    : output_prefix + ".pair{Pair}.truncated.gz",
                             "Collapsed" : output_prefix + ".singleton.aln.truncated.gz" }
 
-    cmd.command.set_parameter("--qualitybase", record["Options"]["QualityOffset"])
+    if record["Options"]["QualityOffset"] == "Solexa":
+        cmd.command.set_parameter("--qualitybase", 64)
+    else:
+        cmd.command.set_parameter("--qualitybase", record["Options"]["QualityOffset"])
 
     return cmd.build_node()
 
@@ -90,7 +94,6 @@ def build_bwa_nodes(config, target, sample, library, barcode, record, dependenci
         reads["BAM"][genome] = {}
         output_dir = os.path.join(config.destination, target, genome, sample, library, barcode)
         for (key, input_filename) in reads["Trimmed"].iteritems():
-            # TODO: Make seeding optional
             options = ["minQ%i" % record["Options"]["BWA_MinQuality"]]
             if not record["Options"]["BWA_UseSeed"]:
                 options.append("noSeed")
@@ -126,7 +129,7 @@ def build_bwa_nodes(config, target, sample, library, barcode, record, dependenci
                 params.commands[aln_key].set_parameter("-n", max_edit)
                 if not record["Options"]["BWA_UseSeed"]:
                     params.commands[aln_key].set_parameter("-l", 2**16 - 1)
-                if record["Options"]["QualityOffset"] == 64:
+                if record["Options"]["QualityOffset"] in (64, "Solexa"):
                     params.commands[aln_key].set_parameter("-I")
 
             validate = ValidateBAMFile(config      = config,
@@ -140,6 +143,79 @@ def build_bwa_nodes(config, target, sample, library, barcode, record, dependenci
                                          "LaneCoverage" : [coverage]}
 
     return record
+
+
+def build_bowtie2_nodes(config, target, sample, library, barcode, record, dependencies):
+    reads = record["Reads"]
+    reads["BAM"] = {}
+    for (genome, prefix) in record["Prefixes"].iteritems():
+        prefix_dependencies = []
+        prefix_dependencies.extend(safe_coerce_to_tuple(dependencies))
+        prefix_dependencies.extend(safe_coerce_to_tuple(prefix["Node"]))
+
+        reads["BAM"][genome] = {}
+        output_dir = os.path.join(config.destination, target, genome, sample, library, barcode)
+        for (key, input_filename) in reads["Trimmed"].iteritems():
+            options = ["minQ%i" % record["Options"]["BWA_MinQuality"]]
+
+            output_filename = os.path.join(output_dir, "%s.%s.bam" \
+                                               % (key.lower(), ".".join(options)))
+
+            # Common BWA parameters
+            parameters = {"output_file"  : output_filename,
+                          "prefix"       : prefix["Path"],
+                          "reference"    : prefix["Reference"],
+                          "threads"      : config.bwa_max_threads,
+                          "dependencies" : prefix_dependencies}
+
+            if paths.is_paired_end(input_filename):
+                params   = Bowtie2Node.customize(input_file_1 = input_filename.format(Pair = 1),
+                                                 input_file_2 = input_filename.format(Pair = 2),
+                                                 **parameters)
+            else:
+                params   = Bowtie2Node.customize(input_file_1 = input_filename,
+                                                 input_file_2 = None,
+                                                 **parameters)
+
+            params.commands["filter"].set_parameter('-q', record["Options"]["BWA_MinQuality"])
+            if record["Options"]["QualityOffset"] == 64:
+                params.commands["aln"].set_parameter("--phred64")
+            elif record["Options"]["QualityOffset"] == 64:
+                params.commands["aln"].set_parameter("--phred33")
+            else:
+                params.commands["aln"].set_parameter("--solexa-quals")
+
+            # Library is used as ID, to allow at-a-glance identification of
+            # the source library for any given read in a BAM file.
+            params.commands["aln"].set_parameter("--rg-id", library)
+            params.commands["aln"].push_parameter("--rg", "SM:%s" % sample)
+            params.commands["aln"].push_parameter("--rg", "LB:%s" % library)
+            params.commands["aln"].push_parameter("--rg", "PU:%s" % barcode)
+            params.commands["aln"].push_parameter("--rg", "PL:%s" % record["Options"]["Platform"])
+
+
+            validate = ValidateBAMFile(config      = config,
+                                       node        = params.build_node())
+            coverage = CoverageNode(input_file   = output_filename,
+                                    name         = target,
+                                    dependencies = validate)
+
+            reads["BAM"][genome][key] = {"Node"     : validate,
+                                         "Filename" : output_filename,
+                                         "LaneCoverage" : [coverage]}
+
+    return record
+
+
+def build_aln_nodes(config, target, sample, library, barcode, record, dependencies):
+    if record["Options"]["Aligner"] == "BWA":
+        func = build_bwa_nodes
+    elif record["Options"]["Aligner"] == "Bowtie2":
+        func = build_bowtie2_nodes
+    else:
+        assert "Aligner not implemented", record["Options"]["Aligner"]
+
+    return func(config, target, sample, library, barcode, record, dependencies)
 
 
 def build_bam_cleanup_nodes(config, target, sample, library, barcode, record):
@@ -188,7 +264,7 @@ def build_lane_nodes(config, target, sample, library, barcode, record):
             for key in record["Options"]["ExcludeReads"]:
                 record["Reads"]["Trimmed"].pop(key, None)
 
-        return build_bwa_nodes(config, target, sample, library, barcode, record, dependencies)
+        return build_aln_nodes(config, target, sample, library, barcode, record, dependencies)
 
     return build_bam_cleanup_nodes(config, target, sample, library, barcode, record)
 

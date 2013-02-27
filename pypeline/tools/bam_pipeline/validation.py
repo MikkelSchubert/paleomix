@@ -64,15 +64,23 @@ def _validate_makefile_options(makefile):
         for (key, value) in options.iteritems():
             if key not in DEFAULT_OPTIONS:
                 raise MakefileError("Unknown option: Key = '%s', value = '%s'" % (key, value))
+            elif (key == "QualityOffset"):
+                if not isinstance(value, (str, int)):
+                    raise MakefileError("Option value has wrong type:\n\tOption = '%s', value = '%s'\n\tExpected type = int/str, found = %s" \
+                                        % (key, value, value.__class__.__name__))
             elif not isinstance(value, type(DEFAULT_OPTIONS[key])):
                 raise MakefileError("Option value has wrong type:\n\tOption = '%s', value = '%s'\n\tExpected type = %s, found = %s" \
                                         % (key, value, DEFAULT_OPTIONS[key].__class__.__name__, value.__class__.__name__))
-        
+
         if options["Platform"].upper() not in _PLATFORMS:
             raise MakefileError("Unknown Platform specified: '%s'" % options["Platform"])
 
-        if options["QualityOffset"] not in (33, 64):
-            raise MakefileError("QualityBase must be 33 (Sanger/Illumina 1.8+) or 64 (Illumina 1.3+ / 1.5+), not '%i'." \
+        if options["QualityOffset"] not in (33, 64, "Solexa"):
+            raise MakefileError("QualityBase must be 33 (Sanger/Illumina 1.8+), 64 (Illumina 1.3+ / 1.5+), or 'Solexa', not '%i'." \
+                                  % options["QualityOffset"])
+
+        if options["Aligner"] not in ("BWA", "Bowtie2"):
+            raise MakefileError("QualityBase must be 33 (Sanger/Illumina 1.8+), 64 (Illumina 1.3+ / 1.5+), or 'Solexa', not '%i'." \
                                   % options["QualityOffset"])
 
         unknown_reads = set(options["ExcludeReads"]) - set(READ_TYPES)

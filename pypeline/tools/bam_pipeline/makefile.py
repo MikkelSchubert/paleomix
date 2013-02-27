@@ -42,6 +42,9 @@ DEFAULT_OPTIONS = {
     # Offset for quality scores in FASTQ files.
     "QualityOffset" : 33,
 
+    # Which aliger/mapper to use (BWA/Bowtie2)
+    "Aligner"        : "BWA",
+
     # BWA: Use seed during mapping
     "BWA_UseSeed"    : True,
     # BWA: Max edit-distance (int), or missing prob under 0.02 err. rate (float)
