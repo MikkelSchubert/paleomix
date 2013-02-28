@@ -203,6 +203,11 @@ def IsStr(path, value):
         raise MakefileError("Value for '%s' must be a string, not '%s'!" \
                             % (":".join(path), repr(value)))
 
+def IsNone(path, value):
+    if value is not None:
+        raise MakefileError("Value for '%s' must be unspecified/None, not '%s'!" \
+                            % (":".join(path), repr(value)))
+
 
 def _safe_coerce_to_lowercase(value):
     if isinstance(value, types.StringTypes):
