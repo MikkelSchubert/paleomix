@@ -5,8 +5,8 @@
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
-# copies of the Software, and to permit persons to whom the Software is 
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
 # The above copyright notice and this permission notice shall be included in all
@@ -15,9 +15,9 @@
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
 """
@@ -26,7 +26,7 @@ properly handle SAM-files with no records. For example, the following
 command will not work:
 $ samtools view -H INPUT | samtools view -Sbu -
 
-This is mainly a problem when aligning ancient DNA lanes against mt genomes, 
+This is mainly a problem when aligning ancient DNA lanes against mt genomes,
 as there may not be any hits in an entire lane.
 """
 
@@ -42,6 +42,7 @@ def main(argv):
     parser.add_option("-q", "--min-quality", type = int, default = 0)
     parser.add_option("-F", "--exclude-flags", type = int, default = 0)
     parser.add_option("--flag-as-sorted", default = False, action = "store_true")
+    parser.add_option("--update-pg-tag", default = [], action = "append")
 
     config, args = parser.parse_args(argv)
     if args:
@@ -55,6 +56,23 @@ def main(argv):
                         "GO" : "none",
                         "VN" : "1.0"}
 
+    if config.update_pg_tag:
+        if "PG" not in header:
+            header["PG"] = []
+
+        for tags in config.update_pg_tag:
+            #        sys.stderr.write(repr(header))
+            pg_id, tag, value = tags.split(":", 2)
+
+        for dd in header["PG"]:
+            if dd.get("ID") == pg_id:
+                break
+        else:
+            dd = {"ID" : pg_id}
+            header["PG"].append(dd)
+
+        dd[tag] = value
+
     output_file = pysam.Samfile("-", "wbu", header = header)
     for read in input_file:
         output_file.write(read)
@@ -64,4 +82,4 @@ def main(argv):
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
- 
+
