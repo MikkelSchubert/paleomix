@@ -44,17 +44,33 @@ Options:
   """ % timestamp
 
     if full_mkfile:
-        print """  # Which aligner to use ('BWA' or 'Bowtie2')
-  Aligner:        BWA
+        print """  # Settings for aligners supported by the pipeline
+  Aligners:
+    # Choice of aligner software to use, either "BWA" or "Bowtie2"
+    Program: BWA
 
-  # Use seed region during sequence alignment
-  # Disabling the seed is recommended for aDNA alignments, as post-mortem damage
-  # tends to localize in the seed region, which is expected to be of high fideltiy
-  BWA_UseSeed:    yes
-  # Max edit-distance (int), or missing prob under 0.02 err. rate (float)
-  BWA_MaxEdit:    0.04
-  # Filter hits with a mapping quality (PHRED) below this value
-  BWA_MinQuality: 0
+    # Settings for mappings performed using BWA
+    BWA:
+      # Filter hits with a mapping quality (PHRED) below this value
+      MinQuality: 0
+      # Use seed region during sequence alignment
+      # Disabling the seed is recommended for aDNA alignments, as post-mortem damage
+      # tends to localize in the seed region, which is expected to be of high fideltiy
+      UseSeed:    yes
+
+    # Settings for mappings performed using Bowtie2
+    Bowtie2:
+      # Filter hits with a mapping quality (PHRED) below this value
+      MinQuality: 0
+      # Examples of how to add additional command-line options
+      --trim5: 5
+      --trim3: 5
+      # Note that the colon is required, even if no value is specified
+      --very-sensitive-local:
+      # Example of how to specify multiple values for an option
+#     --rg:
+#       - CN:SequencingCenterNameHere
+#       - DS:DescriptionOfReadGroup
 
   # Filter PCR duplicates
   # Collapsed reads are filtered using Martin Kirchers FilterUnique,
