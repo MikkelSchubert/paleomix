@@ -99,12 +99,23 @@ Options:
                      #   Location: {Destination}/{Target}.summary
 
 
-
+# Map of prefixes by name, each having a Path key, which specifies the location
+# of the BWA/Bowtie2 index. This path should also be the filename of the
+# reference FASTA sequence, such as is the case then a index is built using
+# "bwa index PATH", in which case PATH would be PATH_TO_PREFIX below.
+# At least ONE prefix must be specified!
 Prefixes:
-#    - NAME_OF_PREFIX: PATH_TO_PREFIX
-#      Label: # mito or nucl
-#
-#
+  NAME_OF_PREFIX:
+    Path: PATH_TO_PREFIX
+#    Label: # "mito" or "nucl"
+
+# Prefixes can also be specified using wildcards, by adding a wildcard to the
+# end of the prefix name, as shown below. The name itself is ignored, and each
+# prefix is named according to the basename (ie. with no extensions).
+#  NAME_OR_DESCRIPTION*:
+#    Path: PATH_TO_PREFIXES/*.fasta
+#    Label: # "mito" or "nucl"
+
 """
 
 
