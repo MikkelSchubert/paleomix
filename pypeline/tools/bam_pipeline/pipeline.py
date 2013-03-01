@@ -47,7 +47,6 @@ import pypeline.tools.bam_pipeline.paths as paths
 from pypeline.tools.bam_pipeline.nodes import *
 from pypeline.tools.bam_pipeline.summary import SummaryTableNode
 from pypeline.tools.bam_pipeline.makefile import *
-from pypeline.tools.bam_pipeline.validation import validate_makefiles
 
 
 
@@ -613,7 +612,7 @@ def list_output_files(nodes):
 def list_orphan_files(config, makefiles, nodes):
     files, mkfiles = set(), set()
     for mkfile in makefiles:
-        mkfiles.add(os.path.abspath(mkfile["Makefile"]["Filename"]))
+        mkfiles.add(os.path.abspath(mkfile["Statistics"]["Filename"]))
         for target in mkfile["Targets"]:
             glob_str = os.path.join(config.destination, target + "*")
             for root_filename in glob.glob(glob_str):
@@ -655,7 +654,7 @@ def main(argv):
         # If a destination is not specified, save results in same folder as makefile
         old_destination = config.destination
         if old_destination is None:
-            config.destination = os.path.dirname(makefile["Makefile"]["Filename"])
+            config.destination = os.path.dirname(makefile["Statistics"]["Filename"])
 
         nodes = pipeline_func(config, makefile)
         config.destination = old_destination
