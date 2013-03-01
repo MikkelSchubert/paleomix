@@ -194,6 +194,7 @@ def build_bowtie2_nodes(config, target, sample, library, barcode, record, depend
             params.commands["aln"].push_parameter("--rg", "LB:%s" % library)
             params.commands["aln"].push_parameter("--rg", "PU:%s" % barcode)
             params.commands["aln"].push_parameter("--rg", "PL:%s" % record["Options"]["Platform"])
+            params.commands["aln"].push_parameter("--rg", "PG:bowtie2")
 
             validate = ValidateBAMFile(config      = config,
                                        node        = params.build_node())
