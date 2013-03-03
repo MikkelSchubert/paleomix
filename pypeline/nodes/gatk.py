@@ -31,7 +31,7 @@ from pypeline.common.utilities import safe_coerce_to_tuple
 
 class _IndelTrainerNode(CommandNode):
     def __init__(self, config, reference, infiles, outfile, dependencies = ()):
-        call  = ["java", "-jar", config.gatk_jar,
+        call  = ["java", "-jar", os.path.join(config.jar_root, "GenomeAnalysisTK.jar"),
                  "-T", "RealignerTargetCreator", 
                  "-R", "%(IN_REFERENCE)s",
                  "-o", "%(OUT_INTERVALS)s"]
@@ -54,7 +54,7 @@ class _IndelTrainerNode(CommandNode):
 
 class _IndelRealignerNode(CommandNode):
     def __init__(self, config, reference, intervals, infiles, outfile, dependencies = ()):
-        call  = ["java", "-jar", config.gatk_jar,
+        call  = ["java", "-jar", os.path.join(config.jar_root, "GenomeAnalysisTK.jar"),
                  "-T", "IndelRealigner", 
                  "-R", "%(IN_REFERENCE)s",
                  "-targetIntervals", "%(IN_INTERVALS)s",

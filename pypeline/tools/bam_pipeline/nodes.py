@@ -76,7 +76,7 @@ class MapDamageNode(CommandNode):
 
 class FilterUniqueBAMNode(CommandNode):
     def __init__(self, config, input_bams, output_bam, dependencies = ()):
-        merge_jar  = os.path.join(config.picard_root, "MergeSamFiles.jar")
+        merge_jar  = os.path.join(config.jar_root, "MergeSamFiles.jar")
         merge_call = ["java", "-jar", merge_jar, 
                       "TMP_DIR=%s" % config.temp_root, 
                       "SO=coordinate",
@@ -148,7 +148,7 @@ class CleanupBAMNode(CommandNode):
                         IN_BAM  = input_bam,
                         OUT_STDOUT = AtomicCmd.PIPE)
 
-        jar_file = os.path.join(config.picard_root, "AddOrReplaceReadGroups.jar")
+        jar_file = os.path.join(config.jar_root, "AddOrReplaceReadGroups.jar")
         params = AtomicJavaParams(config, jar_file)
         params.set_parameter("INPUT", "/dev/stdin", sep = "=")
         params.set_parameter("OUTPUT", "/dev/stdout", sep = "=")

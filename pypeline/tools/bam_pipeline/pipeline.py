@@ -27,6 +27,7 @@ import copy
 import string
 import optparse
 import collections
+import ConfigParser
 
 import pypeline
 import pypeline.ui as ui
@@ -159,7 +160,7 @@ def build_bowtie2_nodes(config, target, sample, library, barcode, record, depend
             parameters = {"output_file"  : output_filename,
                           "prefix"       : prefix["Path"],
                           "reference"    : prefix["Reference"],
-                          "threads"      : config.bwa_max_threads,
+                          "threads"      : config.bowtie2_max_threads,
                           "dependencies" : prefix_dependencies}
 
             if paths.is_paired_end(input_filename):
@@ -428,7 +429,7 @@ def build_target_nodes(config, makefile, target, samples):
             final_nodes.append(ValidateBAMFile(config      = config,
                                                 node        = node))
 
-        if config.gatk_jar and ("Realigned BAM" in makefile["Options"]["Features"]):
+        if ("Realigned BAM" in makefile["Options"]["Features"]):
             aligned = IndelRealignerNode(config       = config,
                                          reference    = prefixes[genome]["Reference"],
                                          infiles      = library_files,
@@ -499,33 +500,49 @@ def index_references(makefiles):
 
 
 def parse_config(argv):
+    config = ConfigParser.SafeConfigParser()
+    config_paths = (os.path.join(os.path.expanduser('~'), ".pypeline.conf"),
+                    "/etc/pypeline.conf")
+
+    for config_path in config_paths:
+        if os.path.exists(config_path):
+            config.read(config_path)
+            break
+
+    try:
+        defaults = dict(config.items("Defaults"))
+    except ConfigParser.NoSectionError:
+        defaults = {}
+
     parser = optparse.OptionParser()
-    parser.add_option("--non-verbose", action = "store_true", default = False,
+    parser.add_option("--non-verbose", action = "store_true", default = defaults.get("non_verbose", False),
                       help = "Only print running nodes while running (useful for large projects).")
 
     group  = optparse.OptionGroup(parser, "Scheduling")
-    group.add_option("--bwa-max-threads", type = int, default = 4,
+    group.add_option("--bowtie2-max-threads", type = int, default = defaults.get("bowtie2_max_threads", 4),
                      help = "Maximum number of threads to use per BWA instance [%default]")
-    group.add_option("--max-threads", type = int, default = 14,
+    group.add_option("--bwa-max-threads", type = int, default = defaults.get("bwa_max_threads", 4),
+                     help = "Maximum number of threads to use per BWA instance [%default]")
+    group.add_option("--max-threads", type = int, default = defaults.get("max_threads", 14),
                      help = "Maximum number of threads to use in total [%default]")
     group.add_option("--dry-run", action = "store_true", default = False,
                      help = "If passed, only a dry-run in performed, the dependency tree is printed, and no tasks are executed.")
     parser.add_option_group(group)
 
-    group  = optparse.OptionGroup(parser, "Required JARs")
-    group.add_option("--picard-root", default = os.path.join(os.path.expanduser('~'), "install", "picard-tools"),
-                     help = "Folder containing Picard JARs (http://picard.sf.net)")
-    group.add_option("--gatk-jar", default = os.path.join(os.path.expanduser('~'), "install", "GATK", "GenomeAnalysisTK.jar"),
-                     help = "Location of GenomeAnalysisTK.jar (www.broadinstitute.org/gatk). " \
-                            "Must be specified if the 'Realigned BAM' feature is enabled in the makefile.")
-    parser.add_option_group(group)
-
-    group  = optparse.OptionGroup(parser, "Output files and orphan files")
+    group  = optparse.OptionGroup(parser, "Required paths")
+    group.add_option("--jar-root", default = os.path.expanduser(defaults.get("jar_root", os.path.join('~', "install", "jar_root"))),
+                     help = "Folder containing Picard JARs (http://picard.sf.net), " \
+                            "and GATK (www.broadinstitute.org/gatk). " \
+                            "The latter is only required if realigning is enabled. " \
+                            "[%default]")
+    group.add_option("--temp-root", default = os.path.expanduser(defaults.get("temp_root", os.path.join('~', "scratch", "bam_pypeline"))),
+                     help = "Location for temporary files and folders [%default/]")
     group.add_option("--destination", default = None,
                      help = "The destination folder for result files. By default, files will be "
                             "placed in the same folder as the makefile which generated it.")
-    group.add_option("--temp-root", default = "/home/%s/data/temp/bam_pipeline" % (pwd.getpwuid(os.getuid()).pw_name,),
-                     help = "Location for temporary files and folders [%default/]")
+    parser.add_option_group(group)
+
+    group  = optparse.OptionGroup(parser, "Output files and orphan files")
     group.add_option("--target", action = "append", default = [],
                      help = "Only execute nodes required to build specified files.")
     group.add_option("--list-output-files", action = "store_true", default = False,
@@ -537,28 +554,8 @@ def parse_config(argv):
 
     config, args = parser.parse_args(argv)
 
-    errors, warnings = [], []
-    if not os.path.exists(config.picard_root):
-        errors.append("ERROR: Path passed to --picard_root does not exist: %s" % config.picard_root)
-    elif not os.path.isfile(os.path.join(config.picard_root, "ValidateSamFile.jar")):
-        errors.append("ERROR: Path passed to --picard-root does not appear to contain required JARs: %s" % config.picard_root)
-
-    if not os.path.exists(config.gatk_jar):
-        warnings.append("WARNING: GATK jar does not exist, indel realigned bams will not be produced.")
-        config.gatk_jar = None
-    elif not os.path.isfile(config.gatk_jar):
-        errors.append("ERROR: Path passed to --gatk-jar is not a file: %s" % config.gatk_jar)
-
     if config.list_output_files and config.list_orphan_files:
-        errors.append("ERROR: Both --list-output-files and --list-orphan-files set!")
-
-    for warning in warnings:
-        ui.print_warn(warning, file = sys.stderr)
-
-    if errors:
-        errors.append("See --help for more information")
-        for error in errors:
-            ui.print_err(error, file = sys.stderr)
+        parser.error("ERROR: Both --list-output-files and --list-orphan-files set!")
         return None
 
     return config, args

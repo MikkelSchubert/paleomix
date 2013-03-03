@@ -32,7 +32,7 @@ from pypeline.common.utilities import safe_coerce_to_tuple
 class ValidateBAMNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, config, input_bam, output_log = None, dependencies = ()):
-        jar_file = os.path.join(config.picard_root, "ValidateSamFile.jar")
+        jar_file = os.path.join(config.jar_root, "ValidateSamFile.jar")
         params = AtomicJavaParams(config, jar_file)
 
         params.set_parameter("I", "%(IN_BAM)s", sep = "=")
@@ -55,7 +55,7 @@ class ValidateBAMNode(CommandNode):
 class MarkDuplicatesNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, config, input_bams, output_bam, output_metrics = None, dependencies = ()):
-        jar_file = os.path.join(config.picard_root, "MarkDuplicates.jar")
+        jar_file = os.path.join(config.jar_root, "MarkDuplicates.jar")
         params = AtomicJavaParams(config, jar_file)
 
         # Create .bai index, since it is required by a lot of other programs
@@ -93,7 +93,7 @@ class MarkDuplicatesNode(CommandNode):
 class MergeSamFilesNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, config, input_bams, output_bam, dependencies = ()):
-        jar_file = os.path.join(config.picard_root, "MergeSamFiles.jar")
+        jar_file = os.path.join(config.jar_root, "MergeSamFiles.jar")
         params = AtomicJavaParams(config, jar_file)
         
         params.set_parameter("OUTPUT", "%(OUT_BAM)s", sep = "=")

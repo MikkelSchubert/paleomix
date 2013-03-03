@@ -105,7 +105,7 @@ def retag_bams(options, source, destination):
 
             fpath = os.path.join(dst, filename)
             picard_tmpl = "java -jar '%s/AddOrReplaceReadGroups.jar' I=%s O=%s %s" \
-                % (options.picard_root, fpath, fpath + ".retagged.bam",
+                % (options.jar_root, fpath, fpath + ".retagged.bam",
                    " ".join("=".join(item) for item in readgroup.iteritems()))
 
             print picard_tmpl
