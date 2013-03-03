@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
 # SOFTWARE.
 #
+import sys
 import time
 import signal
 import multiprocessing
@@ -61,9 +62,9 @@ class Pypeline:
 
         if dry_run:
             ui.print_node_tree(nodes, collapse)
-            ui.print_msg("Dry run done ...")
+            ui.print_info("Dry run done ...", file = sys.stderr)
             return True
-    
+
         try:
             running = {}
             errors = has_refreshed = has_started_any = False

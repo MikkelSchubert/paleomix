@@ -21,6 +21,7 @@
 # SOFTWARE.
 #
 import os
+import sys
 import collections
 
 import ui
@@ -45,8 +46,11 @@ class NodeGraph:
         self._intersections = self._calculate_intersections()
         self._top_nodes = [node for (node, rev_deps) in self._reverse_dependencies.iteritems() if not rev_deps]
 
+        ui.print_info("  - Checking file dependencies ...", file = sys.stderr)
         self._check_file_dependencies(self._reverse_dependencies)
+        ui.print_info("  - Checking for required executables ...", file = sys.stderr)
         self._check_required_executables(self._reverse_dependencies)
+        ui.print_info("")
 
         self._states = {}
         self.refresh_states()
