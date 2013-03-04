@@ -111,17 +111,22 @@ class ValidateBAMFile(MetaNode):
         subnodes = [node]
         if isinstance(node, MetaNode):
             subnodes = list(node.subnodes)
-        
+
         validation_params = ValidateBAMNode.customize(config       = config,
                                                       input_bam    = input_file,
                                                       output_log   = log_file,
                                                       dependencies = subnodes)
+        # Ignored since we filter out misses and low-quality hits during mapping, which
+        # leads to a large proportion of missing mates for PE reads.
         validation_params.command.push_parameter("IGNORE", "MATE_NOT_FOUND", sep = "=")
+        # Ignored due to high rate of false positives for lanes with few hits, where
+        # high-quality reads may case ValidateSamFile to mis-identify the qualities
+        validation_params.command.push_parameter("IGNORE", "INVALID_QUALITY_FORMAT", sep = "=")
 
         subnodes.append(validation_params.build_node())
 
-        description = "<w/Validation: " + str(node)[1:]        
-        MetaNode.__init__(self, 
+        description = "<w/Validation: " + str(node)[1:]
+        MetaNode.__init__(self,
                           description  = description,
                           subnodes     = subnodes,
                           dependencies = dependencies or node.dependencies)
