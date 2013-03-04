@@ -24,6 +24,7 @@ import yaml
 
 import os
 import copy
+import math
 import types
 import hashlib
 import datetime
@@ -120,8 +121,8 @@ def OneOf(*args, **kwargs):
     if kwargs.get("case_sensitive", True):
         def _OneOf_CaseSensitive(path, value):
             if value not in args:
-                raise MakefileError("Value for '%s' must be one of '%s', not '%s'!" \
-            % (":".join(path), "', '".join(map(repr, args)), repr(value)))
+                raise MakefileError("Value for '%s' must be one of %s, not %s!" \
+            % (":".join(path), ", ".join(map(repr, args)), repr(value)))
         return _OneOf_CaseSensitive
 
     args = map(_safe_coerce_to_lowercase, args)
@@ -177,11 +178,16 @@ def IsInt(path, value):
         raise MakefileError("Value for '%s' must be an integer, not '%s'!" \
                             % (":".join(path), repr(value)))
 
+def IsUnsignedInt(path, value):
+    IsInt(path, value)
+    if value < 0:
+        raise MakefileError("Value for '%s' must be greater than or equal to zero, not '%s'!" \
+                            % (":".join(path), repr(value)))
+
 def IsFloat(path, value):
     if not isinstance(value, float):
         raise MakefileError("Value for '%s' must be an float, not '%s'!" \
                             % (":".join(path), repr(value)))
-
 
 def IsInRange(min, max):
     assert min < max

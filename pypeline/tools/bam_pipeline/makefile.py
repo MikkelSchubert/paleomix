@@ -36,7 +36,7 @@ def read_makefiles(filenames):
     makefiles = []
     for filename in filenames:
         makefile = read_makefile(filename, _DEFAULTS, _VALIDATION)
-        makefile = _mangle_makefile(filename, makefile)
+        makefile = _mangle_makefile(makefile)
 
         makefiles.append(makefile)
 
@@ -152,7 +152,7 @@ _VALIDATION = {
 }
 
 
-def _mangle_makefile(filename, makefile):
+def _mangle_makefile(makefile):
     makefile             = copy.deepcopy(makefile)
     makefile["Options"]  = makefile["Makefile"].pop("Options")
     makefile["Prefixes"] = makefile["Makefile"].pop("Prefixes")

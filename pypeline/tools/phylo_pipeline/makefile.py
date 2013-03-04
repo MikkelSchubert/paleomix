@@ -25,28 +25,33 @@ import types
 
 import yaml
 
+from pypeline.common.makefile import *
+
 class MAKEFileError(RuntimeError):
     pass
 
 
 def read_makefiles(filenames):
-    return [read_makefile(filename) for filename in filenames]
+    makefiles = []
+    for filename in filenames:
+        makefile = read_makefile(filename, {}, _VALIDATION)
+        makefile = makefile["Makefile"] # Not using extra stats
+        makefile = _mangle_makefile(makefile)
+
+        makefiles.append(makefile)
+
+    return makefiles
 
 
-def read_makefile(filename):
-    try:
-        with open(filename) as handle:
-            mkfile = yaml.safe_load(handle)
-    except (OSError, IOError, yaml.scanner.ScannerError), e:
-        raise MAKEFileError("Error reading '%s':\n%s" % (filename, e))
-
-    _validate_against(None, mkfile, _MKFILE_REFERENCE)
+def _mangle_makefile(mkfile):
     _collapse_taxa(mkfile)
     _update_intervals(mkfile)
     _update_filtering(mkfile)
     mkfile["Nodes"] = ()
-    
+
     return mkfile
+
+
 
 
 def _collapse_taxa(mkfile):
@@ -68,7 +73,7 @@ def _collapse_taxa(mkfile):
     mkfile["Project"]["Taxa"] = groups.pop(())
     mkfile["Project"]["Groups"] = groups
 
-    
+
 def _update_intervals(mkfile):
     intervals = mkfile["Project"]["Intervals"]
     for (interval, subdd) in intervals.iteritems():
@@ -78,7 +83,7 @@ def _update_intervals(mkfile):
 def _update_filtering(mkfile):
     taxa   = mkfile["Project"]["Taxa"]
     groups = mkfile["Project"]["Groups"]
-    
+
     filtering = {}
     for (target, filter_by) in mkfile["Project"]["Filter Singletons"].iteritems():
         filtering[target] = set()
@@ -93,136 +98,131 @@ def _update_filtering(mkfile):
             else:
                 raise MAKEFileError("Unknown/Invalid group specifed for filtering '%s': '%s'" % (target, group))
     mkfile["Project"]["Filter Singletons"] = filtering
-        
 
-def _validate_against(key, obs, reference):
-    if callable(reference):
-        reference(key, obs)
-    elif isinstance(reference, set):
-        if isinstance(obs, types.StringTypes):
-            obs = obs.lower()
-        
-        if obs not in reference:
-            raise MAKEFileError("'%s' found, expected one of %s" \
-                                % (obs, ", ".join(map(str, reference))))
-    elif isinstance(obs, types.DictType):
-        default = reference.get("*")
-        for key in obs:
-            if key not in reference and not default:
-                raise MAKEFileError("Unexpected key '%s' found, expected one of '%s'" \
-                                        % (key, "', '".join(reference)))
-            _validate_against(key, obs[key], reference.get(key, default))
-    else:
-        raise MAKEFileError("'%s' found, expected dict" % (obs.__class__.__name__,))
-    
-    
-def _validate_taxa(key, dd, taxa = set()):
+
+def _validate_taxa(path, dd, taxa = set()):
     if not isinstance(dd, types.DictType):
         raise MAKEFileError("Expected dicts in Taxa tree for '%s', found %s: %s" \
                                 % (filename, dd.__class__.__name__, dd))
+
     for (key, subdd) in dd.iteritems():
         if key.startswith("<") and key.endswith(">"):
-            _validate_taxa(key, subdd)
+            _validate_taxa(path + (key,), subdd, taxa)
         elif key.lower() not in taxa:
             taxa.add(key.lower())
-            _validate_against(key, subdd, _TAXA_REFERENCE)
+            validate_makefile(subdd, _TAXA_VALIDATION, path + (key,))
         else:
             raise MAKEFileError("Taxa specified multiple times: %s" % key)
-                                
-                            
-def is_str_list(key, value):
-    if not isinstance(value, types.ListType):
-        raise MAKEFileError("Expected list for key '%s', found %s: %s" \
-                                % (key, value.__class__.__name__, value))
-    elif not all(isinstance(field, types.StringTypes) for field in value):
-        raise MAKEFileError("Expected list of strings for key '%s', found %s" \
-                                % (key, value))
-    
 
-def is_positive_int(key, value):
-    if not isinstance(value, types.IntType):
-        raise MAKEFileError("Expected positive integer for key '%s', found %s." \
-                                % (key, value.__class__.__name__))
-    elif isinstance(value, types.BooleanType):
-        raise MAKEFileError("Expected positive integer for key '%s', found boolean." \
-                                % (key,))
-    elif value < 0:    
-        raise MAKEFileError("Expected positive integer for key '%s', found %i." \
-                                % (key, value))
 
-    
-def is_type_of(cls):
-    def _is_type_of(key, value):
-        if not isinstance(value, cls):
-            raise MAKEFileError("Expected %s for key '%s', found %s: %s" \
-                                    % (cls.__name__, key, value.__class__.__name__, value))
-    return _is_type_of
-
-   
-    
-    
-_MKFILE_REFERENCE = {
+_DEFAULTS = {
     "Project" : {
-        "Title" : is_type_of(str),
-        "Taxa" : _validate_taxa,
+        "Title" : "Untitled",
+        "Taxa"  : {
+            },
         "Intervals" : {
-            "*" : {
-                "Genome" : is_type_of(str),
-                "Protein coding" : is_type_of(bool),
-                "Orthology Map" : is_type_of(str),
-                "Homozygous Contigs" : {
-                    "*" : is_str_list,
-                    },
-                },
             },
         "Filter Singletons" : {
-            "*" : is_str_list,
             },
         },
     "Genotyping" : {
-        "Default" : set(("random", "samtools")),
+        "Default" : "SAMTools",
         "Random" : {
-            "Padding" : is_positive_int,
-            "MinDistanceToIndels" : is_positive_int,
+            "Padding"             : 5,
+            "MinDistanceToIndels" : 3,
             },
         "SAMTools" : {
-            "Padding"    :   is_positive_int,
-            "MinDepth"   :   is_positive_int,
-            "MaxDepth"   :   is_positive_int,
-            "MinQuality" :   is_positive_int,
-            "MinDistanceToIndels" : is_positive_int,
+            "MinDepth"   :   10,
+            "MaxDepth"   :  100,
+            "MinQuality" :   30,
+            "Padding"    :    5,
+            "MinDistanceToIndels" : 3,
             },
         },
     "MSAlignment" : {
-        "Default"   : set(("mafft",)),
+        "Default" : "mafft",
         "MAFFT" : {
-            "Algorithm" : set(("auto", "g-ins-i")), # TODO
+            "Algorithm" : "auto",
             },
         },
     "Phylogenetic Inference" : {
-        "Default" : set(("raxml", "raxml-light", "examl")),
+        "Default" : "ExaML",
         "ExaML" : {
-            "Bootstraps" : is_positive_int,
-            "Replicates" : is_positive_int,
-            "Model": set(("gamma", )), # TODO
-            "Outgroup" : is_type_of(str),
+            "Bootstraps" : 100,
+            "Replicates" : 1,
+            "Model"      : "gamma",
         }
     },
     "PAML" : {
         "codeml" : {
-            "Control File" : is_type_of(str),
-            "Tree File"    : is_type_of(str),
         },
     },
 }
 
 
-_TAXA_REFERENCE = {
-    "Genotyping Method" : set(("reference sequence", "random sampling", "samtools")),
-    "Species Name"      : is_type_of(str),
-    "Common Name"       : is_type_of(types.StringTypes),
-    "Gender"            : is_type_of(str),
+_VALIDATION = {
+    "Project" : {
+        "Title" : IsStr,
+        "Taxa" : _validate_taxa,
+        "Intervals" : {
+            IsStr : {
+                "Genome"         : IsStr,
+                "Protein coding" : IsBoolean,
+                "Orthology map"  : IsStr,
+                "Homozygous contigs" : {
+                    IsStr : IsListOf(IsStr),
+                    },
+                },
+            },
+        "Filter Singletons" : {
+            IsStr : IsListOf(IsStr),
+            },
+        },
+    "Genotyping" : {
+        "Default" : OneOf("random", "samtools", case_sensitive = False),
+        "Random" : {
+            "Padding" : IsUnsignedInt,
+            "MinDistanceToIndels" : IsUnsignedInt,
+            },
+        "SAMTools" : {
+            "Padding"    :   IsUnsignedInt,
+            "MinDepth"   :   IsUnsignedInt,
+            "MaxDepth"   :   IsUnsignedInt,
+            "MinQuality" :   IsUnsignedInt,
+            "MinDistanceToIndels" : IsUnsignedInt,
+            },
+        },
+    "MSAlignment" : {
+        "Default"   : AnyOf("mafft", case_sensitive = False),
+        "MAFFT" : {
+            "Algorithm" : AnyOf("auto", "g-ins-i", case_sensitive = False), # TODO
+            },
+        },
+    "Phylogenetic Inference" : {
+        "Default" : AnyOf("raxml", "raxml-light", "examl", case_sensitive = False),
+        "ExaML" : {
+            "Bootstraps" : IsUnsignedInt,
+            "Replicates" : IsUnsignedInt,
+            "Model"      : AnyOf(("gamma", )), # TODO
+            "Outgroup"   : IsStr,
+        }
+    },
+    "PAML" : {
+        "codeml" : {
+            "Control Files" : IsListOf(IsStr),
+            "Tree File"     : IsStr,
+        },
+    },
+}
+
+
+_TAXA_VALIDATION = {
+    "Genotyping Method" : OneOf("reference sequence", "random sampling", "samtools", case_sensitive = False),
+    "Species Name"      : IsStr,
+    "Common Name"       : IsStr,
+    "Gender"            : IsStr,
     "Genomes"           : {
-        "*"             : is_type_of(str),
+        IsStr             : IsStr,
         }
     }
+

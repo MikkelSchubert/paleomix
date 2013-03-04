@@ -43,7 +43,7 @@ def build_supermatrix(options, settings, destination, intervals, taxa, filtering
             record = {"name" : sequence}
             if interval["Protein coding"]:
                 record["partition_by"] = ("12", "12", "3")
-            
+
             assert filename not in input_files, filename
             input_files[filename] = record
 
@@ -60,7 +60,6 @@ def build_supermatrix(options, settings, destination, intervals, taxa, filtering
                            output_partition = matrixprefix + ".reduced.partitions",
                            dependencies     = supermatrix)
 
-    
 
 def build_examl_nodes(options, settings, intervals, taxa, filtering, dependencies):
     filtering_postfix = ".filtered" if any(filtering.itervalues()) else ""
@@ -74,7 +73,7 @@ def build_examl_nodes(options, settings, intervals, taxa, filtering, dependencie
                                   input_partition = os.path.join(destination, "alignments.reduced.partitions"),
                                   output_file     = input_binary,
                                   dependencies    = supermatrix)
-                                                                 
+
     replicates = []
     for replicate_num in range(settings["ExaML"]["Replicates"]):
         replicate_destination = os.path.join(destination, "replicate_%04i" % replicate_num)
@@ -88,7 +87,7 @@ def build_examl_nodes(options, settings, intervals, taxa, filtering, dependencie
                          initial_tree    = initial_tree,
                          output_template = os.path.join(replicate_destination, "RAxML_%s"),
                          dependencies    = tree)
-        
+
         replicates.append(node)
 
 

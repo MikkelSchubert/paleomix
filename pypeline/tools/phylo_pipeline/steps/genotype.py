@@ -55,7 +55,7 @@ class BuildRegionsNode(CommandNode):
                 "--min-distance-to-indels", settings["MinDistanceToIndels"]]
         if interval["Protein coding"]:
             call.append("--whole-codon-indels-only")
-        for contig in interval["Homozygous Contigs"]:
+        for contig in interval["Homozygous contigs"]:
             call.extend(("--homozygous-chromosome", contig))
 
         prefix = "{Genome}.{Name}".format(**interval)
@@ -64,9 +64,9 @@ class BuildRegionsNode(CommandNode):
                             IN_VCFFILE   = infile,
                             IN_INTERVALS = intervals,
                             OUT_STDOUT   = outfile)
-        
+
         description = "<BuildRegions: '%s' -> '%s'>" % (infile, outfile)
-        CommandNode.__init__(self, 
+        CommandNode.__init__(self,
                              description  = description,
                              command      = command,
                              dependencies = dependencies)
@@ -233,9 +233,8 @@ def build_taxa_nodes(options, genotyping, intervals, taxa, dependencies = ()):
         interval["Genome"] = common.get_genome_for_interval(interval, taxa)
         # Enforce homozygous contigs based on gender tag
         #        interval[
-        interval["Homozygous Contigs"] = interval["Homozygous Contigs"][taxa["Gender"]]
+        interval["Homozygous contigs"] = interval["Homozygous contigs"][taxa["Gender"]]
 
-        
         genotyping_method = taxa.get("Genotyping Method", "samtools").lower()
         if genotyping_method == "reference sequence":
             nodes.extend(build_reference_nodes(options, taxa, interval, dependencies))
