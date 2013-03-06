@@ -173,6 +173,21 @@ def IsListOf(*args):
     return _IsListOf
 
 
+def IsDictOf(key_func, value_func):
+    def _IsDictOf(path, dd):
+        if not isinstance(dd, types.DictType):
+            raise MakefileError("Value for '%s' must be dict, not '%s'!" \
+                            % (":".join(path), repr(dd)))
+
+        try:
+            for (key, value) in dd.iteritems():
+                key_func(path, key)
+                value_func(path, value)
+        except MakefileError, e:
+            raise MakefileError("Error while reading items of dict: %s" % e)
+    return _IsDictOf
+
+
 def IsInt(path, value):
     if isinstance(value, bool) or not isinstance(value, int):
         raise MakefileError("Value for '%s' must be an integer, not '%s'!" \
@@ -213,21 +228,6 @@ def IsNone(path, value):
     if value is not None:
         raise MakefileError("Value for '%s' must be unspecified/None, not '%s'!" \
                             % (":".join(path), repr(value)))
-
-
-def IsDict(key_func, value_func):
-    def _IsDict(path, dd):
-        if not isinstance(dd, types.DictType):
-            raise MakefileError("Value for '%s' must be dict, not '%s'!" \
-                            % (":".join(path), repr(dd)))
-
-        try:
-            for (key, value) in dd.iteritems():
-                key_func(path, key)
-                value_func(path, value)
-        except MakefileError, e:
-            raise MakefileError("Error while reading items of dict: %s" % e)
-    return _IsDict
 
 
 def _safe_coerce_to_lowercase(value):

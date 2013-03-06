@@ -149,7 +149,7 @@ _VALIDATION = {
 	IsStr : { # Target
 	    IsStr : { # Sample
             IsStr : { # Library
-				IsStr     : Or(IsStr, IsDict(IsStr, IsStr)),
+				IsStr     : Or(IsStr, IsDictOf(IsStr, IsStr)),
 				"Options" : _IsValidOptions,
 			},
 		"Options" : _IsValidOptions,
