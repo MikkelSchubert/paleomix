@@ -120,14 +120,18 @@ def build_bwa_nodes(config, target, sample, library, barcode, record, dependenci
                                               **parameters)
                 aln_keys, sam_key = ("aln",), "samse"
 
-            params.commands[sam_key].set_parameter("-r", read_group)
-            params.commands["filter"].set_parameter('-q', record["Options"]["Aligners"]["Bowtie2"]["MinQuality"])
-
             for aln_key in aln_keys:
                 if not record["Options"]["Aligners"]["BWA"]["UseSeed"]:
                     params.commands[aln_key].set_parameter("-l", 2**16 - 1)
                 if record["Options"]["QualityOffset"] in (64, "Solexa"):
                     params.commands[aln_key].set_parameter("-I")
+
+            pg_tags  = "bwa:CL:%s" % " ".join(map(str, params.commands[aln_keys[0]].call)).replace("%", "%%")
+            pg_tags += " | " + " ".join(map(str, params.commands[sam_key].call)).replace("%", "%%")
+            params.commands["convert"].push_parameter("--update-pg-tag", pg_tags)
+
+            params.commands[sam_key].set_parameter("-r", read_group)
+            params.commands["filter"].set_parameter('-q', record["Options"]["Aligners"]["Bowtie2"]["MinQuality"])
 
             validate = ValidateBAMFile(config      = config,
                                        node        = params.build_node())
