@@ -133,22 +133,25 @@ class SequentialCmds(_CommandSet):
 
 
     def run(self, temp):
+        return_codes, count = [], 0
         for command in self._commands:
+            count += 1
             command.run(temp)
 
-            if any(command.join()):
+            return_codes.extend(command.join())
+            if any(return_codes):
                 break
 
+        # Record any missing calls as "None"
+        return_codes += [None] * (len(self._commands) - count)
+        self._return_codes = return_codes
         self._ready = True
 
-    
+
     def ready(self):
         return self._ready
 
 
     def join(self):
-        return_codes = []
-        for command in self._commands:
-            return_codes.extend(command.join())
-        return return_codes
+        return list(self._return_codes)
 
