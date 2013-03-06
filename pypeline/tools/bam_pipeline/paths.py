@@ -30,14 +30,17 @@ def is_paired_end(template):
     return (template.format(Pair = 1) != template)
 
 
-def collect_files(template):
+def collect_files(template, return_missing = False):
     """ """
+    def _glob(tmpl):
+        return list(sorted(glob.glob(tmpl))) or [tmpl]
+
     if not is_paired_end(template):
-        return {"SE" : list(sorted(glob.glob(template)))}
-    
+        return {"SE" : _glob(template)}
+
     files = {}
     for (ii, name) in enumerate(("PE_1", "PE_2"), start = 1):
-        files[name] = list(sorted(glob.glob(template.format(Pair = ii))))
+        files[name] = _glob(template.format(Pair = ii))
     return files
 
 

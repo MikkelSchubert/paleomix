@@ -149,7 +149,7 @@ _VALIDATION = {
 	IsStr : { # Target
 	    IsStr : { # Sample
             IsStr : { # Library
-				IsStr     : IsStr,
+				IsStr     : Or(IsStr, IsDict(IsStr, IsStr)),
 				"Options" : _IsValidOptions,
 			},
 		"Options" : _IsValidOptions,
@@ -252,7 +252,7 @@ def _update_lanes(makefile):
 
 
 def _update_lanes_raw(data, options, prefixes):
-    files = paths.collect_files(data)
+    files = paths.collect_files(data, return_missing = True)
     if not any(files.values()):
         raise MakefileError("Could not find files using search-string '%s'." % data)
     elif ("SE" not in files) and (len(files["PE_1"]) != len(files["PE_2"])):
@@ -266,7 +266,7 @@ def _update_lanes_raw(data, options, prefixes):
              "Prefixes" : prefixes }
 
 
-def _update_barcode_trimmed(data, options, prefixes):
+def _update_lanes_trimmed(data, options, prefixes):
     bams = {}
     for (key, subdata) in data.iteritems():
         if not isinstance(subdata, types.StringTypes):
@@ -280,7 +280,7 @@ def _update_barcode_trimmed(data, options, prefixes):
              "Prefixes" : prefixes }
 
 
-def _update_barcode_aligned(data, options, prefixes):
+def _update_lanes_aligned(data, options, prefixes):
     result = { "Reads"    : { "Trimmed" : {} },
                "Options"  : options,
                "Prefixes" : prefixes }

@@ -44,7 +44,7 @@ from pypeline.nodes.adapterremoval import SE_AdapterRemovalNode, PE_AdapterRemov
 
 from pypeline.common.text import parse_padded_table
 from pypeline.common.utilities import safe_coerce_to_tuple
-from pypeline.common.fileutils import swap_ext, add_postfix
+from pypeline.common.fileutils import swap_ext, add_postfix, missing_files
 
 import pypeline.tools.bam_pipeline.paths as paths
 from pypeline.tools.bam_pipeline.nodes import *
@@ -58,6 +58,7 @@ def build_trimming_nodes(config, target, sample, library, barcode, record):
     output_prefix = os.path.join(config.destination, target, "reads", sample, library, barcode, "reads")
 
     reads = record["Reads"]
+
     if "SE" in reads["Raw"]:
         cmd = SE_AdapterRemovalNode.customize(input_files   = reads["Raw"]["SE"],
                                               output_prefix = output_prefix)
@@ -76,6 +77,10 @@ def build_trimming_nodes(config, target, sample, library, barcode, record):
         cmd.command.set_parameter("--qualitybase", 64)
     else:
         cmd.command.set_parameter("--qualitybase", record["Options"]["QualityOffset"])
+
+    if any(missing_files(input_files) for input_files in reads["Raw"].itervalues()):
+        if config.allow_missing_input_files:
+            return ()
 
     return cmd.build_node()
 
@@ -237,16 +242,20 @@ def build_bam_cleanup_nodes(config, target, sample, library, barcode, record):
         output_dir = os.path.join(config.destination, target, genome, sample, library, barcode)
         for (key, filename) in alignments.iteritems():
             output_filename = os.path.join(output_dir, "processed_%s.minQ%i.bam" \
-                                               % (key.lower(), record["Options"]["BWA_MinQuality"]))
+                                               % (key.lower(), record["Options"]["Aligners"]["BWA"]["MinQuality"]))
 
             node = CleanupBAMNode(config    = config,
                                   reference = record["Prefixes"][genome]["Reference"],
                                   input_bam = filename,
                                   output_bam = output_filename,
-                                  min_mapq   = record["Options"]["BWA_MinQuality"],
+                                  min_mapq   = record["Options"]["Aligners"]["BWA"]["MinQuality"],
                                   tags       = tags)
             node = ValidateBAMFile(config      = config,
                                    node        = node)
+
+            if missing_files((filename,)) and config.allow_missing_input_files:
+                node = ()
+
             coverage = CoverageNode(input_file   = output_filename,
                                     name         = target,
                                     dependencies = node)
@@ -290,7 +299,7 @@ def build_rmduplicates_nodes(config, target, sample, library, input_records):
 
         for (key, cls) in (("kirdup", IndexedFilterUniqueBAMNode), ("markdup", MarkDuplicatesNode)):
             if key in collected_records:
-                input_nodes = [record["Node"] for record in collected_records[key]]
+                input_nodes = [record["Node"] for record in collected_records[key] if record["Node"]]
                 input_files = [record["Filename"] for record in collected_records[key]]
                 output_filename = os.path.join(config.destination, target, genome, sample, \
                                                    library + ".unaligned.%s.bam" % key)
@@ -566,6 +575,10 @@ def parse_config(argv):
     parser = optparse.OptionParser()
     parser.add_option("--non-verbose", action = "store_true", default = defaults.get("non_verbose", False),
                       help = "Only print running nodes while running (useful for large projects).")
+    parser.add_option("--allow-missing-input-files", action = "store_true", default = False,
+                      help = "Allow processing of lanes, even if the original input files are no-longer " \
+                             "accesible, if for example a network drive is down. This option should be " \
+                             "used with care!")
 
     group  = optparse.OptionGroup(parser, "Scheduling")
     group.add_option("--bowtie2-max-threads", type = int, default = defaults.get("bowtie2_max_threads", 4),
