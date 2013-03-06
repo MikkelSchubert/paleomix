@@ -489,13 +489,17 @@ def build_pipeline_full(config, makefile):
     return nodes
 
 
-def index_references(makefiles):
+def index_references(config, makefiles):
     references = {}
     for makefile in makefiles:
         for dd in makefile["Prefixes"].itervalues():
             reference = os.path.realpath(dd["Reference"])
             if reference not in references:
-                references[reference] = FastaIndexNode(dd["Reference"])
+                references[reference] = \
+                  MetaNode(description = "Reference Sequence",
+                           dependencies = (FastaIndexNode(dd["Reference"]),
+                                           BuildSequenceDictNode(config    = config,
+                                                                 reference = dd["Reference"])))
             dd["Node"] = references[reference]
 
 
@@ -645,7 +649,7 @@ def main(argv):
     if os.path.basename(sys.argv[0]) != "trim_pipeline":
         pipeline_func = build_pipeline_full
         # Build .fai files for reference .fasta files
-        index_references(makefiles)
+        index_references(config, makefiles)
 
     pipeline = pypeline.Pypeline(config)
     for makefile in makefiles:
