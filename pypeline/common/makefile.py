@@ -221,8 +221,26 @@ def IsBoolean(path, value):
 
 def IsStr(path, value):
     if not isinstance(value, types.StringTypes):
-        raise MakefileError("Value for '%s' must be a string, not '%s'!" \
+        raise MakefileError("Value for '%s' must be a string, not %s!" \
                             % (":".join(path), repr(value)))
+
+
+def IsStrUppercase(path, value):
+    IsStr(path, value)
+    if not value.isupper():
+        raise MakefileError("Value for '%s' must be an UPPERCASE string, not %s!" \
+                            % (":".join(path), repr(value)))
+
+
+def IsStrWithPrefix(prefix):
+    assert prefix and isinstance(prefix, types.StringTypes)
+    def _IsStrWithPrefix(path, value):
+        IsStr(path, value)
+        if not value.startswith(prefix):
+            raise MakefileError("Value for '%s' must be a string starting with %s, not %s!" \
+                                % (":".join(path), repr(prefix), repr(value)))
+    return _IsStrWithPrefix
+
 
 def IsNone(path, value):
     if value is not None:

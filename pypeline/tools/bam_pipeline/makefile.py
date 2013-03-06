@@ -122,8 +122,8 @@ _VALIDATION = {
                 # Minimum mapping quality (PHREAD) of reads to retain
 				"MinQuality" : And(IsInt, IsInRange(0, float("Inf"))),
 	            # Any number of user specific options
-				IsStr        : Or(IsListOf(IsStr, IsInt, IsFloat),
-                                  Or(IsStr, IsInt, IsFloat, IsNone)),
+				IsStrWithPrefix("-") : Or(IsListOf(IsStr, IsInt, IsFloat),
+                                          Or(IsStr, IsInt, IsFloat, IsNone)),
 			},
 		},
 
