@@ -266,7 +266,7 @@ def _update_lanes_raw(data, options, prefixes):
              "Prefixes" : prefixes }
 
 
-def _read_barcode_trimmed(data, options, prefixes):
+def _update_barcode_trimmed(data, options, prefixes):
     bams = {}
     for (key, subdata) in data.iteritems():
         if not isinstance(subdata, types.StringTypes):
@@ -280,7 +280,7 @@ def _read_barcode_trimmed(data, options, prefixes):
              "Prefixes" : prefixes }
 
 
-def _read_barcode_aligned(data, options, prefixes):
+def _update_barcode_aligned(data, options, prefixes):
     result = { "Reads"    : { "Trimmed" : {} },
                "Options"  : options,
                "Prefixes" : prefixes }
