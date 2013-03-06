@@ -44,11 +44,32 @@ class ValidateBAMNode(CommandNode):
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
-        CommandNode.__init__(self, 
+        CommandNode.__init__(self,
                              command      = parameters.command.finalize(),
                              description  = "<Validate BAM: '%s'>" % (parameters.input_bam,),
                              dependencies = parameters.dependencies)
 
+
+class BuildSequenceDictNode(CommandNode):
+    @create_customizable_cli_parameters
+    def customize(cls, config, reference, dependencies = ()):
+        jar_file = os.path.join(config.jar_root, "CreateSequenceDictionary.jar")
+        params = AtomicJavaParams(config, jar_file)
+
+        params.set_parameter("R", "%(IN_REF)s", sep = "=")
+        params.set_parameter("O", "%(OUT_DICT)s", sep = "=")
+        params.set_paths(IN_REF     = reference,
+                         OUT_DICT   = swap_ext(reference, ".dict"))
+
+        return {"command" : params}
+
+
+    @use_customizable_cli_parameters
+    def __init__(self, parameters):
+        CommandNode.__init__(self,
+                             command      = parameters.command.finalize(),
+                             description  = "<SequenceDictionary: '%s'>" % (parameters.reference,),
+                             dependencies = parameters.dependencies)
 
 
 
