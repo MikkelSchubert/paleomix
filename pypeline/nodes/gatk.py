@@ -5,8 +5,8 @@
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
-# copies of the Software, and to permit persons to whom the Software is 
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
 # The above copyright notice and this permission notice shall be included in all
@@ -15,9 +15,9 @@
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
 import os
@@ -32,20 +32,21 @@ from pypeline.common.utilities import safe_coerce_to_tuple
 class _IndelTrainerNode(CommandNode):
     def __init__(self, config, reference, infiles, outfile, dependencies = ()):
         call  = ["java", "-jar", os.path.join(config.jar_root, "GenomeAnalysisTK.jar"),
-                 "-T", "RealignerTargetCreator", 
+                 "-T", "RealignerTargetCreator",
                  "-R", "%(IN_REFERENCE)s",
                  "-o", "%(OUT_INTERVALS)s"]
         keys = _update_file_keys_and_call(call, infiles)
 
-        command = AtomicCmd(call, 
+        command = AtomicCmd(call,
                             IN_REFERENCE  = reference,
+                            IN_REF_DICT   = fileutils.swap_ext(reference, ".dict"),
                             OUT_INTERVALS = outfile,
                             **keys)
-        
+
         description = "<Train Indel Realigner: %i file(s) -> '%s'>" \
             % (len(infiles), outfile)
 
-        CommandNode.__init__(self, 
+        CommandNode.__init__(self,
                              description = description,
                              command = command,
                              dependencies = dependencies)
@@ -55,14 +56,15 @@ class _IndelTrainerNode(CommandNode):
 class _IndelRealignerNode(CommandNode):
     def __init__(self, config, reference, intervals, infiles, outfile, dependencies = ()):
         call  = ["java", "-jar", os.path.join(config.jar_root, "GenomeAnalysisTK.jar"),
-                 "-T", "IndelRealigner", 
+                 "-T", "IndelRealigner",
                  "-R", "%(IN_REFERENCE)s",
                  "-targetIntervals", "%(IN_INTERVALS)s",
                  "-o", "%(OUT_BAMFILE)s"]
         keys = _update_file_keys_and_call(call, infiles)
-        
-        command = AtomicCmd(call, 
+
+        command = AtomicCmd(call,
                             IN_REFERENCE = reference,
+                            IN_REF_DICT   = fileutils.swap_ext(reference, ".dict"),
                             IN_INTERVALS = intervals,
                             OUT_BAMFILE  = outfile,
                             OUT_INDEX    = fileutils.swap_ext(outfile, ".bai"),
@@ -71,7 +73,7 @@ class _IndelRealignerNode(CommandNode):
         description = "<Indel Realign: %i file(s) -> '%s'>" \
             % (len(infiles), outfile)
 
-        CommandNode.__init__(self, 
+        CommandNode.__init__(self,
                              description = description,
                              command = command,
                              dependencies = dependencies)
@@ -85,18 +87,18 @@ class IndelRealignerNode(MetaNode):
 
         infiles = safe_coerce_to_tuple(infiles)
         trainer = _IndelTrainerNode(config         = config,
-                                    reference      = reference, 
+                                    reference      = reference,
                                     infiles        = infiles,
                                     outfile        = intervals,
                                     dependencies   = dependencies)
         aligner = _IndelRealignerNode(config       = config,
-                                      reference    = reference, 
+                                      reference    = reference,
                                       intervals    = intervals,
                                       infiles      = infiles,
                                       outfile      = outfile,
                                       dependencies = trainer)
-        
-        MetaNode.__init__(self, 
+
+        MetaNode.__init__(self,
                           description  = "<GATK Indel Realigner: %i files -> '%s'>"
                                              % (len(infiles), outfile),
                           subnodes     = [trainer, aligner],
