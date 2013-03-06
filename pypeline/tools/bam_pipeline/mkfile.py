@@ -33,13 +33,17 @@ def _print_header(timestamp, full_mkfile = True):
     print """# -*- mode: Yaml; -*-
 # Timestamp: %s
 #
-# Default options
+# Default options.
+# Can also be specific for a set of samples, libraries, and lanes,
+# by including the "Options" hierarchy at the same level as those
+# samples, libraries, or lanes below. This does not include
+# "Features", which may only be specific globally.
 Options:
   # Sequencing platform, see SAM/BAM reference for valid values
   Platform: Illumina
   # Quality offset for PHRED scores, either 33 (Sanger/Illumina 1.8+) or 64 (Illumina 1.3+ / 1.5+)
   # For Bowtie2 it is also possible to specify 'Solexa', to handle reads on the Solexa scale.
-  # This is used during adapter-trimming (AdapterRemoval) and sequence alignment (BWA)
+  # This is used during adapter-trimming (AdapterRemoval) and sequence alignment (BWA/Bowtie2)
   QualityOffset: 33
   """ % timestamp
 
@@ -76,6 +80,8 @@ Options:
   # Collapsed reads are filtered using Martin Kirchers FilterUnique,
   # while other reads are filtered using Picard MarkDuplicates.
   PCRDuplicates: yes
+  # Carry out quality base re-scaling using mapDamage (*EXPERIMENTAL*)
+  RescaleQualities: no
 
   # Exclude any type of trimmed reads from alignment/analysis
   # All reads are processed by default.

@@ -85,7 +85,10 @@ _DEFAULTS = {
 		},
 
         # Contains PCR duplicates, filter if true
-        "PCRDuplicates"  : True,
+        "PCRDuplicates"    : True,
+        # Qualities should be rescaled using mapDamage
+        "RescaleQualities" : False,
+
         # Exclude READ_TYPES from alignment/analysis
         "ExcludeReads"   : [],
 
@@ -125,7 +128,10 @@ _VALIDATION = {
 		},
 
         # Contains PCR duplicates, filter if true
-        "PCRDuplicates"  : IsBoolean,
+        "PCRDuplicates"     : IsBoolean,
+        # Qualities should be rescaled using mapDamage
+        "RescaleQualities"  : IsBoolean,
+
         # Exclude READ_TYPES from alignment/analysis
         "ExcludeReads"   : AnyOf("Paired", "Single", "Collapsed"),
 

@@ -24,7 +24,7 @@ import os
 
 from pypeline.node import CommandNode, MetaNode
 from pypeline.atomiccmd import AtomicCmd
-from pypeline.atomicset import ParallelCmds
+from pypeline.atomicset import ParallelCmds, SequentialCmds
 from pypeline.atomicparams import AtomicJavaParams
 
 from pypeline.nodes.picard import ValidateBAMNode
@@ -40,16 +40,8 @@ _MAPDAMAGE_MAX_READS = 100000
 
 
 class MapDamageNode(CommandNode):
-    def __init__(self, reference, input_files, output_directory, dependencies):
-        input_files = safe_coerce_to_tuple(input_files)
-
-        # Workaround to simplify handling of 1/2+ files (samtools cat requires 2+!)
-        cat_cmd   = ["cat"] if (len(input_files) == 1) else ["samtools", "cat"]
-        cat_files = {"OUT_STDOUT" : AtomicCmd.PIPE}
-        for (index, filename) in enumerate(safe_coerce_to_tuple(input_files)):
-            cat_cmd.append("%%(IN_FILE_%02i)s" % (index,))
-            cat_files["IN_FILE_%02i" % (index,)] = filename
-        cmd_cat = AtomicCmd(cat_cmd, **cat_files)
+    def __init__(self, config, reference, input_files, output_directory, dependencies):
+        cmd_cat = _concatenate_input_bams(config, input_files)
 
         cmd_map = AtomicCmd(["mapDamage", "--no-stats",
                             "-n", _MAPDAMAGE_MAX_READS,
@@ -68,10 +60,46 @@ class MapDamageNode(CommandNode):
                             OUT_LOG         = os.path.join(output_directory, "Runtime_log.txt"))
 
         description =  "<mapDamage: %i file(s) -> '%s'>" % (len(input_files), output_directory)
-        CommandNode.__init__(self, 
+        CommandNode.__init__(self,
                              command      = ParallelCmds([cmd_cat, cmd_map]),
                              description  = description,
                              dependencies = dependencies)
+
+
+class MapDamageRescaleNode(CommandNode):
+    def __init__(self, config, reference, input_files, output_file, dependencies):
+        cmd_cat = _concatenate_input_bams(config, input_files)
+        cmd_map = AtomicCmd(["mapDamage",
+                            "-n", _MAPDAMAGE_MAX_READS,
+                             "-i", "-",
+                             "-d", "%(TEMP_DIR)s",
+                             "-r", reference],
+                            IN_STDIN        = cmd_cat)
+        train_cmds = ParallelCmds([cmd_cat, cmd_map])
+
+        cmd_cat   = _concatenate_input_bams(config, input_files)
+        cmd_scale = AtomicCmd(["mapDamage", "--rescale-only",
+                               "-n", _MAPDAMAGE_MAX_READS,
+                               "-i", "-",
+                               "-d", "%(TEMP_DIR)s",
+                               "-r", reference,
+                               "--rescale-out", "%(OUT_BAM)s"],
+                               IN_STDIN        = cmd_cat,
+                               OUT_BAM         = output_file)
+        rescale_cmds = ParallelCmds([cmd_cat, cmd_scale])
+
+        description =  "<mapDamageRescale: %i file(s) -> '%s'>" % (len(input_files), output_file)
+        CommandNode.__init__(self,
+                             command      = SequentialCmds([train_cmds, rescale_cmds]),
+                             description  = description,
+                             dependencies = dependencies)
+
+    def _teardown(self, config, temp):
+        for filename in os.listdir(temp):
+            if filename.endswith(".txt") or filename.endswith(".pdf") or filename.endswith(".csv"):
+                if not filename.startswith("pipe_"):
+                    os.remove(os.path.join(temp, filename))
+        CommandNode._teardown(self, config, temp)
 
 
 class FilterUniqueBAMNode(CommandNode):
@@ -186,3 +214,20 @@ def IndexedFilterUniqueBAMNode(output_bam, **kwargs):
 
     return BAMIndexNode(infile       = output_bam,
                         dependencies = node)
+
+
+def _concatenate_input_bams(config, input_bams):
+    jar_file = os.path.join(config.jar_root, "MergeSamFiles.jar")
+    params = AtomicJavaParams(config, jar_file)
+
+    params.set_paths(OUT_STDOUT = AtomicCmd.PIPE)
+    params.set_parameter("OUTPUT", "/dev/stdout", sep = "=")
+    params.set_parameter("CREATE_INDEX", "False", sep = "=")
+
+    for (index, filename) in enumerate(safe_coerce_to_tuple(input_bams), start = 1):
+        params.push_parameter("I", "%%(IN_BAM_%02i)s" % index, sep = "=")
+        params.set_paths("IN_BAM_%02i" % index, filename)
+
+    params.set_parameter("SO", "coordinate", sep = "=", fixed = False)
+
+    return params.finalize()

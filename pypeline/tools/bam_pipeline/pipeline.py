@@ -35,9 +35,11 @@ import pypeline.ui as ui
 from pypeline.nodes.bwa import SE_BWANode, PE_BWANode
 from pypeline.nodes.bowtie2 import Bowtie2Node
 from pypeline.nodes.gatk import IndelRealignerNode
-from pypeline.nodes.picard import MergeSamFilesNode, MarkDuplicatesNode
+from pypeline.nodes.picard import BuildSequenceDictNode, \
+                                  MergeSamFilesNode, \
+                                  MarkDuplicatesNode
 from pypeline.nodes.coverage import CoverageNode, MergeCoverageNode
-from pypeline.nodes.samtools import FastaIndexNode
+from pypeline.nodes.samtools import FastaIndexNode, BAMIndexNode
 from pypeline.nodes.adapterremoval import SE_AdapterRemovalNode, PE_AdapterRemovalNode
 
 from pypeline.common.text import parse_padded_table
@@ -309,19 +311,57 @@ def build_rmduplicates_nodes(config, target, sample, library, input_records):
     return results
 
 
-def build_library_nodes(config, target, sample, library, barcodes):
-    filter_duplicates = False
+def build_rescale_nodes(config, makefile, target, sample, library, input_records):
+    results = {}
+    for (genome, records_by_genome) in input_records.iteritems():
+        results[genome] = {}
+
+        records = []
+        for records_by_key in records_by_genome.itervalues():
+            records.extend(records_by_key)
+
+        nodes       = [record.get("Node", []) for record in records]
+        cov_lane    = sum((record.get("LaneCoverage", []) for record in records), [])
+        cov_lib     = sum((record.get("LibCoverage", []) for record in records), [])
+        input_files = [record.get("Filename", []) for record in records]
+        reference   = makefile["Prefixes"][genome]["Reference"]
+
+        output_filename = os.path.join(config.destination, target, genome, sample, \
+                                       library + ".rescaled.bam")
+
+        node = MapDamageRescaleNode(config       = config,
+                                    reference    = reference,
+                                    input_files  = input_files,
+                                    output_file  = output_filename,
+                                    dependencies = nodes)
+        node = BAMIndexNode(infile         = output_filename,
+                            dependencies   = node)
+        node = ValidateBAMFile(config      = config,
+                               node        = node)
+
+        results[genome]["rescale"] = [{"Node"     : node,
+                                       "Filename" : output_filename,
+                                       "LaneCoverage" : cov_lib,
+                                       "LibCoverage"  : cov_lib}]
+
+    return results
+
+
+def build_library_nodes(config, makefile, target, sample, library, barcodes):
     input_records = collections.defaultdict(lambda: collections.defaultdict(list))
     for (barcode, record) in barcodes.iteritems():
         record = build_lane_nodes(config, target, sample, library, barcode, record)
-        filter_duplicates = record["Options"]["PCRDuplicates"]
 
         for (genome, alignments) in record["Reads"]["BAM"].iteritems():
             for (key, alignment) in alignments.iteritems():
                 input_records[genome][key].append(alignment)
 
+    filter_duplicates = any(record["Options"]["PCRDuplicates"] for record in barcodes.itervalues())
     if filter_duplicates:
-        input_records = build_rmduplicates_nodes(config, target, sample, library, input_records)
+         input_records = build_rmduplicates_nodes(config, target, sample, library, input_records)
+
+    if any(record["Options"]["RescaleQualities"] for record in barcodes.itervalues()):
+        input_records = build_rescale_nodes(config, makefile, target, sample, library, input_records)
 
     merged = {}
     for genome in input_records:
@@ -347,10 +387,10 @@ def build_library_nodes(config, target, sample, library, barcodes):
     return merged
 
 
-def build_sample_nodes(config, target, sample, libraries):
+def build_sample_nodes(config, makefile, target, sample, libraries):
     collected = collections.defaultdict(dict)
     for (library, barcodes) in libraries.iteritems():
-        for (genome, record) in build_library_nodes(config, target, sample, library, barcodes).iteritems():
+        for (genome, record) in build_library_nodes(config, makefile, target, sample, library, barcodes).iteritems():
             collected[genome][library] = record
 
     return collected
@@ -360,7 +400,8 @@ def build_mapdamage_nodes(config, prefix, target, records):
     nodes = []
     for record in records:
         output_directory = os.path.join(config.destination, "%s.%s.mapDamage" % (target, prefix["Name"]), record["Library"])
-        nodes.append(MapDamageNode(reference        = prefix["Reference"],
+        nodes.append(MapDamageNode(config           = config,
+                                   reference        = prefix["Reference"],
                                    input_files      = record["Filenames"],
                                    output_directory = output_directory,
                                    dependencies     = record["Node"]))
@@ -405,7 +446,7 @@ def build_target_nodes(config, makefile, target, samples):
     prefixes = makefile["Prefixes"]
     input_records = collections.defaultdict(list)
     for (sample, libraries) in samples.iteritems():
-        for (genome, libraries) in build_sample_nodes(config, target, sample, libraries).iteritems():
+        for (genome, libraries) in build_sample_nodes(config, makefile, target, sample, libraries).iteritems():
             input_records[genome].extend(libraries.values())
 
     nodes = []
