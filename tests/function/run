@@ -51,7 +51,7 @@ def _collect_tests():
 
 class Config:
     temp_root    = "tests/runs/%i/temp/" % (_EPOCH,)
-    picard_root  = "tests/links/picard"
+    jar_root     = "tests/links/jar_root"
     dependencies = Node(description = "DummyDependency")
 
 
@@ -79,7 +79,7 @@ def main(argv):
 #                raise RuntimeError("Node did not pass dependencies")
 
 
-    if not pipeline.run(dry_run = "--dry-run" in argv, collapse = True):
+    if not pipeline.run(dry_run = "--dry-run" in argv, collapse = True, max_running = 2):
         errors = True
 
     return (1 if errors else 0)

@@ -64,6 +64,9 @@ def join_msa(*msas):
 def parse_msa(lines, read_header = False):
     msa, headers = {}, {}
     for (header, sequence) in parse_fasta(lines):
+        if not header:
+            raise MSAError("MSA record without name found")
+
         name = header.split(None, 1)[0]
         if name in msa:
             raise MSAError("Duplicate names found, cannot be represented as MSA")

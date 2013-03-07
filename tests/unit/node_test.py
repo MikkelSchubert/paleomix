@@ -378,34 +378,3 @@ def test_commandnode_teardown__output_missing():
     cmd_mock.should_receive("commit").once
     node = CommandNode(cmd_mock)
     node._teardown(None, None)
-    
-
-
-
-
-
-################################################################################
-################################################################################
-## MetaNode
-
-def test_metanode__run():
-    cfg_mock  = flexmock(temp_root = "/tmp")
-    node_mock = flexmock(MetaNode())
-    node_mock.should_receive('_setup').never
-    node_mock.should_receive('_run').never
-    node_mock.should_receive('_teardown').never
-
-    node_mock.run(cfg_mock)
-
-def test_metanode_is_done__no_subnodes():
-    assert MetaNode().is_done
-
-def test_metanode_is_done__subnodes_is_not_done():
-    my_subnode = Node(output_files = "tests/data/missing_file")
-    my_node    = MetaNode(subnodes = my_subnode)
-    assert not my_node.is_done
-
-def test_metanode_is_done__subnodes_is_done():
-    my_subnode = Node(output_files = "tests/data/empty_file_1")
-    my_node    = MetaNode(subnodes = my_subnode)
-    assert my_node.is_done

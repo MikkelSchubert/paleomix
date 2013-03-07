@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Ensure that timestamps are as expected
-touch --date "2001-9-11 8:46" tests/data/timestamp_a_older
-touch --date "2001-9-11 8:46" tests/data/timestamp_b_older
-touch --date "2005-7-7 8:50"  tests/data/timestamp_a_younger
-touch --date "2005-7-7 8:50"  tests/data/timestamp_b_younger
+touch -t "200109110846" tests/data/timestamp_a_older | exit 1
+touch -t "200109110846" tests/data/timestamp_b_older | exit 1
+touch -t "200507070850"  tests/data/timestamp_a_younger | exit 1
+touch -t "200507070850"  tests/data/timestamp_b_younger | exit 1
 
 MODULES=$(find tests/unit pypeline/ -name '*.py' | grep -v "__init__" | sed -e 's#\.py##g' -e's#/#.#g' -e 's#tests\.unit#unit#')
 nosetests -d tests/ --with-coverage \

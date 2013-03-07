@@ -117,14 +117,14 @@ def test_parse_msa__empty_name():
 ## Tests for 'read_msa'
 
 def test_read_msa__uncompressed():
-    expected = {"This is FASTA!" : "ACGTN",
-                "This is ALSO FASTA!" : "CGTNA"}
+    expected = {"This_is_FASTA!" : "ACGTN",
+                "This_is_ALSO_FASTA!" : "CGTNA"}
     results  = read_msa("tests/data/fasta_file.fasta")
     assert_equal(results, expected)
 
 def test_read_msa__compressed():
-    expected = {"This is GZipped FASTA!" : "ACGTN",
-                "This is ALSO GZipped FASTA!" : "CGTNA"}
+    expected = {"This_is_GZipped_FASTA!" : "ACGTN",
+                "This_is_ALSO_GZipped_FASTA!" : "CGTNA"}
     results  = read_msa("tests/data/fasta_file.fasta.gz")
     assert_equal(results, expected)
 

@@ -148,7 +148,7 @@ class AtomicCmd:
         and ensures that any opened handles are closed. Must be called before
         calling commit."""
         try:
-            return_codes = [self._proc.wait()]
+            return_codes = [self._proc.wait()] if self._proc else [None]
         finally:
             # Close any implictly opened pipes
             for (mode, handle) in self._handles:

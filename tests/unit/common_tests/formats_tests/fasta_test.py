@@ -160,15 +160,15 @@ def test_parse_fasta__missing_name__with_others():
 ## Tests for 'read_fasta'
 
 def test_read_fasta__uncompressed():
-    expected = [("This is FASTA!", "ACGTN"),
-                ("This is ALSO FASTA!", "CGTNA")]
+    expected = [("This_is_FASTA!", "ACGTN"),
+                ("This_is_ALSO_FASTA!", "CGTNA")]
     results  = list(read_fasta("tests/data/fasta_file.fasta"))
 
     assert results == expected
 
 def test_read_fasta__compressed():
-    expected = [("This is GZipped FASTA!", "ACGTN"),
-                ("This is ALSO GZipped FASTA!", "CGTNA")]
+    expected = [("This_is_GZipped_FASTA!", "ACGTN"),
+                ("This_is_ALSO_GZipped_FASTA!", "CGTNA")]
     results  = list(read_fasta("tests/data/fasta_file.fasta.gz"))
 
     assert results == expected
