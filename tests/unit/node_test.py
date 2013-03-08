@@ -47,6 +47,16 @@ _DESCRIPTION = "My description of a node"
 _IN_FILES    = ("tests/data/empty_file_1", "tests/data/empty_file_2")
 _OUT_FILES   = ("tests/data/missing_out_file_1", "tests/data/missing_out_file_2")
 _EXEC_FILES  = ("ls", "sh")
+_AUX_FILES   = ("tests/data/rCRS.fasta.fai",)
+_REQUIREMENTS = (lambda: None,)
+
+
+def _build_cmd_mock(input_files  = (), output_files = (), executables  = (), auxiliary_files = (), requirements = ()):
+    return flexmock(input_files     = input_files,
+                    output_files    = output_files,
+                    executables     = executables,
+                    auxiliary_files = auxiliary_files,
+                    requirements    = requirements)
 
 ################################################################################
 ################################################################################
@@ -257,7 +267,9 @@ _SIMPLE_DEPS = Node()
 _SIMPLE_SUBS = Node()
 _SIMPLE_CMD_MOCK = flexmock(input_files  = _IN_FILES,
                             output_files = _OUT_FILES,
-                            executables  = _EXEC_FILES)
+                            executables  = _EXEC_FILES,
+                            auxiliary_files = _AUX_FILES,
+                            requirements = _REQUIREMENTS)
 _SIMPLE_CMD_NODE = CommandNode(command      = _SIMPLE_CMD_MOCK,
                                description  = "SimpleCommand",
                                subnodes     = _SIMPLE_SUBS,
@@ -271,7 +283,16 @@ def test_commandnode_constructor__input_files():
 
 def test_commandnode_constructor__output_files():
     assert _SIMPLE_CMD_NODE.output_files == _OUT_FILES
-                               
+
+def test_commandnode_constructor__auxiliary_files():
+    assert _SIMPLE_CMD_NODE.auxiliary_files == _AUX_FILES
+
+def test_commandnode_constructor__executables():
+    assert _SIMPLE_CMD_NODE.executables == _EXEC_FILES
+
+def test_commandnode_constructor__requirements():
+    assert _SIMPLE_CMD_NODE.requirements == _REQUIREMENTS
+
 def test_commandnode_constructor__subnodes():
     assert _SIMPLE_CMD_NODE.subnodes == set([_SIMPLE_SUBS])
 
@@ -285,9 +306,7 @@ def test_commandnode_constructor__dependencies():
 
 def test_command_node__run():
     cfg_mock  = flexmock(temp_root = "/tmp")
-    cmd_mock  = flexmock(input_files  = (),
-                         output_files = (),
-                         executables  = ())
+    cmd_mock  = _build_cmd_mock()
     node_mock = flexmock(CommandNode(cmd_mock))
     node_mock.should_receive("_setup").with_args(cfg_mock, str).ordered.once
     node_mock.should_receive("_run").with_args(cfg_mock, str).ordered.once
@@ -301,32 +320,24 @@ def test_command_node__run():
 ## CommandNode: _setup()
 
 def test_commandnode_setup__executable_missing():
-    cmd_mock = flexmock(input_files  = (),
-                        output_files = (),
-                        executables  = ("ls", "sh"))
+    cmd_mock = _build_cmd_mock(executables  = ("ls", "sh"))
     node = CommandNode(cmd_mock)
     node._setup(None, None)
 
 @nose.tools.raises(NodeError)
 def test_commandnode_setup__executables_exist():
-    cmd_mock = flexmock(input_files  = (),
-                        output_files = (),
-                        executables  = ("ls", "shxxxxxxxxxxxxx"))
+    cmd_mock = _build_cmd_mock(executables  = ("ls", "shxxxxxxxxxxxxx"))
     node = CommandNode(cmd_mock)
     node._setup(None, None)
 
 def test_commandnode_setup__input_exist():
-    cmd_mock = flexmock(input_files  = _IN_FILES,
-                        output_files = (),
-                        executables  = ())
+    cmd_mock = _build_cmd_mock(input_files  = _IN_FILES)
     node = CommandNode(cmd_mock)
     node._setup(None, None)
 
 @nose.tools.raises(NodeError)
 def test_commandnode_setup__input_missing():
-    cmd_mock = flexmock(input_files  = _OUT_FILES,
-                        output_files = (),
-                        executables  = ())
+    cmd_mock = _build_cmd_mock(input_files  = _OUT_FILES)
     node = CommandNode(cmd_mock)
     node._setup(None, None)
 
@@ -338,9 +349,7 @@ def test_commandnode_setup__input_missing():
 ## CommandNode: _run()
 
 def test_commandnode_run__call_order():
-    cmd_mock = flexmock(input_files  = (),
-                        output_files = (),
-                        executables  = ())
+    cmd_mock = _build_cmd_mock()
     cmd_mock.should_receive("run").with_args("xTMPx").ordered.once
     cmd_mock.should_receive("join").with_args().and_return((0,)).ordered.once
     node = CommandNode(cmd_mock)
@@ -348,9 +357,7 @@ def test_commandnode_run__call_order():
 
 @nose.tools.raises(NodeError)
 def test_commandnode_run__exception_on_error():
-    cmd_mock = flexmock(input_files  = (),
-                        output_files = (),
-                        executables  = ())
+    cmd_mock = _build_cmd_mock()
     cmd_mock.should_receive("run").ordered.once
     cmd_mock.should_receive("join").and_return((1,)).ordered.once
     node = CommandNode(cmd_mock)
@@ -363,18 +370,14 @@ def test_commandnode_run__exception_on_error():
 ## CommandNode: _teardown
 
 def test_commandnode_teardown__output_exists():
-    cmd_mock = flexmock(input_files  = (),
-                        output_files = _IN_FILES,
-                        executables  = ())
+    cmd_mock = _build_cmd_mock(output_files = _IN_FILES)
     cmd_mock.should_receive("commit").once
     node = CommandNode(cmd_mock)
     node._teardown(None, None)
-    
+
 @nose.tools.raises(NodeError)
 def test_commandnode_teardown__output_missing():
-    cmd_mock = flexmock(input_files  = (),
-                        output_files = _OUT_FILES,
-                        executables  = ())
+    cmd_mock = _build_cmd_mock(output_files = _OUT_FILES)
     cmd_mock.should_receive("commit").once
     node = CommandNode(cmd_mock)
     node._teardown(None, None)

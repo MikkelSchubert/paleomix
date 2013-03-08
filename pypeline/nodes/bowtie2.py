@@ -29,20 +29,28 @@ from pypeline.atomicset import ParallelCmds
 
 from pypeline.nodes.bwa import _process_output, _get_max_threads
 
+import pypeline.common.versions as versions
+
+
+
+BOWTIE2_VERSION = versions.Requirement(call   = ("bowtie2", "--version"),
+                                       search = r"version (\d+)\.(\d+)\.(\d+)",
+                                       checks = versions.GE(2, 0, 0))
+
+
 
 class Bowtie2IndexNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, input_file, prefix = None, dependencies = ()):
-        params = AtomicParams(("bowtie2-build"))
+        prefix = prefix if prefix else input_file
+        params = _Bowtie2Params(("bowtie2-build"), iotype = "OUT",
+                                IN_FILE = input_file,
+                                TEMP_OUT_PREFIX = os.path.basename(prefix),
+                                CHECK_VERSION = BOWTIE2_VERSION)
         params.push_positional("%(IN_FILE)s")
 
         # Destination prefix, in temp folder
         params.set_parameter("%(TEMP_OUT_PREFIX)s")
-
-        prefix = prefix if prefix else input_file
-        params.set_paths(IN_FILE = input_file,
-                         TEMP_OUT_PREFIX = os.path.basename(prefix),
-                         **_prefix_files(prefix, iotype = "OUT"))
 
         return {"prefix":  prefix,
                 "command": params}
@@ -63,7 +71,11 @@ class Bowtie2IndexNode(CommandNode):
 class Bowtie2Node(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, input_file_1, input_file_2, output_file, reference, prefix, threads = 2, dependencies = ()):
-        aln = AtomicParams(("bowtie2",))
+        aln = _Bowtie2Params(("bowtie2",), prefix,
+                             IN_FILE_1  = input_file_1,
+                             IN_FILE_2  = input_file_2,
+                             OUT_STDOUT = AtomicCmd.PIPE,
+                             CHECK_VERSION = BOWTIE2_VERSION)
         aln.set_parameter("-x", prefix)
 
         if input_file_1 and not input_file_2:
@@ -76,11 +88,6 @@ class Bowtie2Node(CommandNode):
 
         max_threads = _get_max_threads(reference, threads)
         aln.set_parameter("--threads", max_threads)
-
-        aln.set_paths(IN_FILE_1  = input_file_1,
-                      IN_FILE_2  = input_file_2,
-                      OUT_STDOUT = AtomicCmd.PIPE,
-                      **_prefix_files(prefix))
 
         order, commands = _process_output(aln, output_file, reference)
         commands["aln"] = aln
@@ -105,11 +112,10 @@ class Bowtie2Node(CommandNode):
                              dependencies = parameters.dependencies)
 
 
-
-
-
-def _prefix_files(prefix, iotype = "IN"):
-    files = {}
+def _Bowtie2Params(call, prefix, iotype = "IN", **kwargs):
+    params = AtomicParams(call, **kwargs)
     for postfix in ("1.bt2", "2.bt2", "3.bt2", "4.bt2", "rev.1.bt2", "rev.2.bt2"):
-        files["%s_PREFIX_%s" % (iotype, postfix.upper())] = prefix + "." + postfix
-    return files
+        key = "%s_PREFIX_%s" % (iotype, postfix.upper())
+        params.set_paths(key, prefix + "." + postfix)
+
+    return params

@@ -47,13 +47,16 @@ class NodeUnhandledException(NodeError):
 
 class Node(object):
     def __init__(self, description = None, threads = 1,
-                 input_files = (), output_files = (), executables = (),
-                 subnodes = (), dependencies = ()):
+                 input_files = (), output_files = (),
+                 executables = (), auxiliary_files = (),
+                 requirements = (), subnodes = (), dependencies = ()):
 
-        self.__description  = description
-        self.input_files  = safe_coerce_to_tuple(input_files)
-        self.output_files = safe_coerce_to_tuple(output_files)
-        self.executables  = safe_coerce_to_tuple(executables)
+        self.__description   = description
+        self.input_files     = safe_coerce_to_tuple(input_files)
+        self.output_files    = safe_coerce_to_tuple(output_files)
+        self.executables     = safe_coerce_to_tuple(executables)
+        self.auxiliary_files = safe_coerce_to_tuple(auxiliary_files)
+        self.requirements    = safe_coerce_to_tuple(requirements)
 
         self.subnodes       = self._collect_nodes(subnodes, "Subnode")
         self.dependencies   = self._collect_nodes(dependencies, "Dependency")
@@ -65,7 +68,7 @@ class Node(object):
     def is_done(self):
         """Returns true if all subnodes of this node are done, and if all output
         files of this node exists (empty files are considered as valid). If the
-        node doesn't produce output files, it is always considered done by. To 
+        node doesn't produce output files, it is always considered done by. To
         change this behavior, override the 'is_done' property"""
 
         if not all(node.is_done for node in self.subnodes):
@@ -126,6 +129,7 @@ class Node(object):
             raise NodeError("Executable(s) does not exist for command: %s" \
                                 % (self._command,))
         self._check_for_missing_files(self.input_files, "input")
+        self._check_for_missing_files(self.auxiliary_files, "auxiliary")
 
 
     def _run(self, _config, _temp):
@@ -187,13 +191,14 @@ class CommandNode(Node):
                       description  = description,
                       input_files  = command.input_files,
                       output_files = command.output_files,
+                      auxiliary_files = command.auxiliary_files,
                       executables  = command.executables,
+                      requirements = command.requirements,
                       threads      = threads,
                       subnodes     = subnodes,
                       dependencies = dependencies)
 
         self._command = command
-            
 
     def _run(self, _config, temp):
         """Runs the command object provided in the constructor, and waits for it to 

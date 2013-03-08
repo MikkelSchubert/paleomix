@@ -39,26 +39,19 @@ class _CommandSet:
         for command in self._commands:
             command.commit(temp)
 
-    @property
-    def executables(self):
-        files = []
-        for command in self._commands:
-            files.extend(command.executables)
-        return files
+    def _collect_properties(key):
+        def _collector(self):
+            values = []
+            for command in self._commands:
+                values.extend(getattr(command, key))
+            return values
+        return property(_collector)
 
-    @property
-    def input_files(self):
-        files = []
-        for command in self._commands:
-            files.extend(command.input_files)
-        return files
-
-    @property
-    def output_files(self):
-        files = []
-        for command in self._commands:
-            files.extend(command.output_files)
-        return files
+    input_files     = _collect_properties("input_files")
+    output_files    = _collect_properties("output_files")
+    auxiliary_files = _collect_properties("auxiliary_files")
+    executables     = _collect_properties("executables")
+    requirements    = _collect_properties("requirements")
 
     def __str__(self):
         return "[%s]" % ", ".join(str(command) for command in self._commands)

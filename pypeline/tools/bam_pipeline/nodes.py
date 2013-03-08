@@ -32,11 +32,16 @@ from pypeline.nodes.samtools import BAMIndexNode
 from pypeline.common.utilities import safe_coerce_to_tuple
 from pypeline.common.fileutils import swap_ext, add_postfix
 
+import pypeline.common.versions as versions
 
 # Number of reads to sample when running mapDamage
 _MAPDAMAGE_MAX_READS = 100000
 
 
+MAPDAMAGE_VERSION = versions.Requirement(call   = ("mapDamage", "--version"),
+                                         search = r"(\d+)\.(\d+)\.(\d+)",
+                                         pprint = "{0}.{1}.{2}",
+                                         checks = versions.GE(2, 0, 0))
 
 
 class MapDamageNode(CommandNode):
@@ -57,7 +62,8 @@ class MapDamageNode(CommandNode):
                             OUT_PLOT_LEN    = os.path.join(output_directory, "Length_plot.pdf"),
                             OUT_LENGTH      = os.path.join(output_directory, "lgdistribution.txt"),
                             OUT_MISINCORP   = os.path.join(output_directory, "misincorporation.txt"),
-                            OUT_LOG         = os.path.join(output_directory, "Runtime_log.txt"))
+                            OUT_LOG         = os.path.join(output_directory, "Runtime_log.txt"),
+                            CHECK_VERSION   = MAPDAMAGE_VERSION)
 
         description =  "<mapDamage: %i file(s) -> '%s'>" % (len(input_files), output_directory)
         CommandNode.__init__(self,
@@ -74,7 +80,8 @@ class MapDamageRescaleNode(CommandNode):
                              "-i", "-",
                              "-d", "%(TEMP_DIR)s",
                              "-r", reference],
-                            IN_STDIN        = cmd_cat)
+                            IN_STDIN        = cmd_cat,
+                            CHECK_VERSION   = MAPDAMAGE_VERSION)
         train_cmds = ParallelCmds([cmd_cat, cmd_map])
 
         cmd_cat   = _concatenate_input_bams(config, input_files)
@@ -85,7 +92,8 @@ class MapDamageRescaleNode(CommandNode):
                                "-r", reference,
                                "--rescale-out", "%(OUT_BAM)s"],
                                IN_STDIN        = cmd_cat,
-                               OUT_BAM         = output_file)
+                               OUT_BAM         = output_file,
+                               CHECK_VERSION   = MAPDAMAGE_VERSION)
         rescale_cmds = ParallelCmds([cmd_cat, cmd_scale])
 
         description =  "<mapDamageRescale: %i file(s) -> '%s'>" % (len(input_files), output_file)

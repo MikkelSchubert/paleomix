@@ -5,8 +5,8 @@
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
-# copies of the Software, and to permit persons to whom the Software is 
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
 # The above copyright notice and this permission notice shall be included in all
@@ -15,9 +15,9 @@
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
 import os
@@ -26,6 +26,12 @@ from pypeline.node import CommandNode
 from pypeline.atomiccmd import AtomicCmd
 from pypeline.atomicset import ParallelCmds
 from pypeline.common.fileutils import reroot_path, swap_ext
+import pypeline.common.versions as versions
+
+
+SAMTOOLS_VERSION = versions.Requirement(call   = ("samtools",),
+                                        search = b"Version: (\d+)\.(\d+)\.(\d+)",
+                                        checks = versions.GE(0, 1, 18))
 
 
 class GenotypeNode(CommandNode):
@@ -35,7 +41,7 @@ class GenotypeNode(CommandNode):
     def __init__(self, reference, infile, outfile, regions = None, dependencies = ()):
         assert outfile.lower().endswith(".vcf.bgz")
 
-        call_pileup = ["samtools", "mpileup", 
+        call_pileup = ["samtools", "mpileup",
                        GenotypeNode.pileup_args,
                        "-uf", "%(IN_REFERENCE)s",
                        "%(IN_BAMFILE)s"]
@@ -46,8 +52,9 @@ class GenotypeNode(CommandNode):
                              IN_REFERENCE = reference,
                              IN_BAMFILE   = infile,
                              IN_REGIONS   = regions,
-                             OUT_STDOUT   = AtomicCmd.PIPE)
-        
+                             OUT_STDOUT   = AtomicCmd.PIPE,
+                             CHECK_SAM    = SAMTOOLS_VERSION)
+
         genotype = AtomicCmd(["bcftools", "view", GenotypeNode.caller_args, "-"],
                              IN_STDIN     = pileup,
                              OUT_STDOUT   = AtomicCmd.PIPE)
@@ -57,7 +64,7 @@ class GenotypeNode(CommandNode):
                              OUT_STDOUT   = outfile)
 
         description = "<Genotyper: '%s' -> '%s'>" % (infile, outfile)
-        CommandNode.__init__(self, 
+        CommandNode.__init__(self,
                              description  = description,
                              command      = ParallelCmds([pileup, genotype, bgzip]),
                              dependencies = dependencies)
@@ -78,14 +85,15 @@ class MPileupNode(CommandNode):
                              IN_REFERENCE = reference,
                              IN_BAMFILE   = infile,
                              IN_REGIONS   = regions,
-                             OUT_STDOUT   = AtomicCmd.PIPE)
+                             OUT_STDOUT   = AtomicCmd.PIPE,
+                             CHECK_SAM    = SAMTOOLS_VERSION)
 
         bgzip    = AtomicCmd(["bgzip"],
                              IN_STDIN     = pileup,
                              OUT_STDOUT   = outfile)
 
         description = "<MPileup: '%s' -> '%s'>" % (infile, outfile)
-        CommandNode.__init__(self, 
+        CommandNode.__init__(self,
                              description  = description,
                              command      = ParallelCmds([pileup, bgzip]),
                              dependencies = dependencies)
@@ -107,7 +115,7 @@ class TabixIndexNode(CommandNode):
                               IN_VCFFILE      = infile,
                               OUT_TBI         = infile + ".tbi")
 
-        CommandNode.__init__(self, 
+        CommandNode.__init__(self,
                              description  = "<TabixIndex (%s): '%s'>" % (preset, infile,),
                              command      = cmd_tabix,
                              dependencies = dependencies)
@@ -134,13 +142,13 @@ class FastaIndexNode(CommandNode):
         cmd_faidx = AtomicCmd(["samtools", "faidx", "%(TEMP_IN_FASTA)s"],
                               TEMP_IN_FASTA = os.path.basename(infile),
                               IN_FASTA      = infile,
-                              OUT_TBI       = infile + ".fai")
+                              OUT_TBI       = infile + ".fai",
+                              CHECK_SAM     = SAMTOOLS_VERSION)
 
-        CommandNode.__init__(self, 
+        CommandNode.__init__(self,
                              description  = "<FastaIndex: '%s'>" % (infile,),
                              command      = cmd_faidx,
                              dependencies = dependencies)
-
 
     def _setup(self, config, temp):
         infile  = os.path.abspath(self._infile)
@@ -162,9 +170,10 @@ class BAMIndexNode(CommandNode):
     def __init__(self, infile, dependencies = ()):
         cmd_index = AtomicCmd(["samtools", "index", "%(IN_BAM)s", "%(OUT_BAI)s"],
                               IN_BAM      = infile,
-                              OUT_BAI     = swap_ext(infile, ".bai"))
+                              OUT_BAI     = swap_ext(infile, ".bai"),
+                              CHECK_SAM   = SAMTOOLS_VERSION)
 
-        CommandNode.__init__(self, 
+        CommandNode.__init__(self,
                              description  = "<BAMIndex: '%s'>" % (infile,),
                              command      = cmd_index,
                              dependencies = dependencies)

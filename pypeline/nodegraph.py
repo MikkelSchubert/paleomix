@@ -22,9 +22,11 @@
 #
 import os
 import sys
+import types
 import collections
 
 import ui
+import pypeline.common.versions as versions
 from pypeline.node import MetaNode
 from pypeline.common.fileutils import missing_executables
 
@@ -163,31 +165,41 @@ class NodeGraph:
 
     @classmethod
     def _check_required_executables(cls, nodes):
-        missing_exec = set()
+        exec_filenames, exec_requirements = set(), set()
         for node in nodes:
-            missing_exec.update(missing_executables(node.executables))
+            exec_filenames.update(node.executables)
+            exec_requirements.update(node.requirements)
 
+        missing_exec = missing_executables(exec_filenames)
         if missing_exec:
             raise NodeGraphError("Required executables are missing:\n\t%s" \
                                 % ("\n\t".join(sorted(missing_exec))))
-            
+
+        try:
+            for requirement in exec_requirements:
+                requirement()
+        except versions.VersionRequirementError, e:
+            raise NodeGraphError("Version requirements check failed for %s:\n\t%s" \
+                                 % (requirement.name, e))
+        except OSError, e:
+            raise NodeGraphError("Could not check version requirements for %s:\n\t%s" \
+                                 % (requirement.name, e))
 
     @classmethod
     def _check_file_dependencies(cls, nodes):
-        input_files = collections.defaultdict(list)
-        output_files = collections.defaultdict(list)
+        files = ("input_files", "output_files", "auxiliary_files")
+        files = dict((key, collections.defaultdict(list)) for key in files)
 
         for node in nodes:
-            for filename in node.input_files:
-                input_files[filename].append(node)
-            
-            for filename in node.output_files:
-                output_files[filename].append(node)
+            for (key, dd) in files.iteritems():
+                for filename in getattr(node, key):
+                    dd[filename].append(node)
 
         max_messages = range(_MAX_ERROR_MESSAGES)
         error_messages = []
-        error_messages.extend(zip(max_messages, cls._check_output_files(output_files)))
-        error_messages.extend(zip(max_messages, cls._check_input_dependencies(input_files, output_files, nodes)))
+        error_messages.extend(zip(max_messages, cls._check_output_files(files["output_files"])))
+        error_messages.extend(zip(max_messages, cls._check_input_dependencies(files["input_files"], files["output_files"], nodes)))
+        error_messages.extend(zip(max_messages, cls._check_input_dependencies(files["auxiliary_files"], files["output_files"], nodes)))
 
         if error_messages:
             messages = []
