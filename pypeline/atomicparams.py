@@ -97,7 +97,7 @@ class AtomicParams:
     values for parameters), corresponding to their use in AtomicCmd.
     """
 
-    def __init__(self, call, set_cwd = False):
+    def __init__(self, call, set_cwd = False, **kwargs):
         """Initialize AtomicParams object.
 
         The 'call' parameter specifies the basic call, and typically contains
@@ -111,6 +111,7 @@ class AtomicParams:
         self._paths   = {}
         self._cmd_object = None
         self._set_cwd = set_cwd
+        self.set_paths(**kwargs)
 
 
     def push_parameter(self, key, value = None, sep = None, fixed = True):
@@ -260,8 +261,7 @@ class AtomicJavaParams(AtomicParams):
             call.append("-XX:+UseSerialGC")
             
         call.extend(("-jar", jar))
-        AtomicParams.__init__(self, call, set_cwd = set_cwd)
-
+        AtomicParams.__init__(self, call, set_cwd = set_cwd, AUX_JAR = jar)
 
 
 def use_customizable_cli_parameters(init_func):
