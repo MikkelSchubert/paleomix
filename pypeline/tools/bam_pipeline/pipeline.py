@@ -85,75 +85,88 @@ def build_trimming_nodes(config, target, sample, library, barcode, record):
     return cmd.build_node()
 
 
-def build_bwa_nodes(config, target, sample, library, barcode, record, dependencies):
+def _apply_aln_user_parameters(mkfile_params, params, aligners):
+    for (param, value) in mkfile_params.iteritems():
+        if param.startswith("-"):
+            for value in safe_coerce_to_tuple(value):
+                for aligner_key in aligners:
+                    params.commands[aligner_key].push_parameter(param, value)
+
+
+def build_bwa_nodes(config, parameters, input_filename, tags, record, dependencies):
+    read_group = "@RG\tID:{ID}\tSM:{SM}\tLB:{LB}\tPU:{PU}\tPL:{PL}\tPG:{PG}".format(**tags)
+
+    if paths.is_paired_end(input_filename):
+        params   = PE_BWANode.customize(input_file_1 = input_filename.format(Pair = 1),
+                                        input_file_2 = input_filename.format(Pair = 2),
+                                        threads      = config.bwa_max_threads,
+                                        **parameters)
+        aln_keys, sam_key = ("aln_1", "aln_2"), "sampe"
+    else:
+        params   = SE_BWANode.customize(input_file   = input_filename,
+                                        threads      = config.bwa_max_threads,
+                                        **parameters)
+        aln_keys, sam_key = ("aln",), "samse"
+
+    for aln_key in aln_keys:
+        if not record["Options"]["Aligners"]["BWA"]["UseSeed"]:
+            params.commands[aln_key].set_parameter("-l", 2**16 - 1)
+        if record["Options"]["QualityOffset"] in (64, "Solexa"):
+            params.commands[aln_key].set_parameter("-I")
+    _apply_aln_user_parameters(record["Options"]["Aligners"]["BWA"], params, aln_keys)
+
+    pg_tags  = "bwa:CL:%s" % " ".join(map(str, params.commands[aln_keys[0]].call)).replace("%", "%%")
+    pg_tags += " | " + " ".join(map(str, params.commands[sam_key].call)).replace("%", "%%")
+    params.commands["convert"].push_parameter("--update-pg-tag", pg_tags)
+
+    params.commands[sam_key].set_parameter("-r", read_group)
+    params.commands["filter"].set_parameter('-q', record["Options"]["Aligners"]["BWA"]["MinQuality"])
+
+    return params.build_node()
+
+
+def build_bowtie2_nodes(config, parameters, input_filename, tags, record, dependencies):
+    if paths.is_paired_end(input_filename):
+        input_filename_1 = input_filename.format(Pair = 1)
+        input_filename_2 = input_filename.format(Pair = 2)
+    else:
+        input_filename_1 = input_filename
+        input_filename_2 = None
+
+    params   = Bowtie2Node.customize(input_file_1    = input_filename_1,
+                                     input_file_2    = input_filename_2,
+                                     threads         = config.bowtie2_max_threads,
+                                     **parameters)
+
+    params.commands["filter"].set_parameter('-q', record["Options"]["Aligners"]["Bowtie2"]["MinQuality"])
+    if record["Options"]["QualityOffset"] == 64:
+        params.commands["aln"].set_parameter("--phred64")
+    elif record["Options"]["QualityOffset"] == 33:
+        params.commands["aln"].set_parameter("--phred33")
+    else:
+        params.commands["aln"].set_parameter("--solexa-quals")
+    _apply_aln_user_parameters(record["Options"]["Aligners"]["Bowtie2"], params, ("aln",))
+
+    pg_tags = "bowtie2:CL:%s" % " ".join(map(str, params.commands["aln"].call)).replace("%", "%%")
+    params.commands["convert"].push_parameter("--update-pg-tag", pg_tags)
+
+    params.commands["aln"].set_parameter("--rg-id", tags.pop("ID"))
+    for (tag_name, tag_value) in tags.iteritems():
+        params.commands["aln"].push_parameter("--rg", "%s:%s" % (tag_name, tag_value))
+
+    return params.build_node()
+
+
+def build_aln_nodes(config, target, sample, library, barcode, record, dependencies):
+    aln_key  = record["Options"]["Aligners"]["Program"]
+    aln_func = _ALN_FUNCS[aln_key]
+
     # Library is used as ID, to allow at-a-glance identification of
     # the source library for any given read in a BAM file.
-    read_group = "@RG\tID:%s\tSM:%s\tLB:%s\tPU:%s\tPL:%s" \
-        % (library, sample, library, barcode, record["Options"]["Platform"])
+    aln_tags = {"ID" : library, "SM" : sample, "LB" : library, "PU" : barcode,
+                "PG" : aln_key.lower(), "PL" : record["Options"]["Platform"]}
 
-    reads = record["Reads"]
-    reads["BAM"] = {}
-    for (genome, prefix) in record["Prefixes"].iteritems():
-        prefix_dependencies = []
-        prefix_dependencies.extend(safe_coerce_to_tuple(dependencies))
-        prefix_dependencies.extend(safe_coerce_to_tuple(prefix["Node"]))
-
-        reads["BAM"][genome] = {}
-        output_dir = os.path.join(config.destination, target, genome, sample, library, barcode)
-        for (key, input_filename) in reads["Trimmed"].iteritems():
-            options = ["minQ%i" % record["Options"]["Aligners"]["BWA"]["MinQuality"]]
-            if not record["Options"]["Aligners"]["BWA"]["UseSeed"]:
-                options.append("noSeed")
-
-            output_filename = os.path.join(output_dir, "%s.%s.bam" \
-                                               % (key.lower(), ".".join(options)))
-
-            # Common BWA parameters
-            parameters = {"output_file"  : output_filename,
-                          "prefix"       : prefix["Path"],
-                          "reference"    : prefix["Reference"],
-                          "threads"      : config.bwa_max_threads,
-                          "dependencies" : prefix_dependencies}
-
-            if paths.is_paired_end(input_filename):
-                params   = PE_BWANode.customize(input_file_1 = input_filename.format(Pair = 1),
-                                                input_file_2 = input_filename.format(Pair = 2),
-                                                **parameters)
-                aln_keys, sam_key = ("aln_1", "aln_2"), "sampe"
-            else:
-                params   = SE_BWANode.customize(input_file   = input_filename,
-                                              **parameters)
-                aln_keys, sam_key = ("aln",), "samse"
-
-            for aln_key in aln_keys:
-                if not record["Options"]["Aligners"]["BWA"]["UseSeed"]:
-                    params.commands[aln_key].set_parameter("-l", 2**16 - 1)
-                if record["Options"]["QualityOffset"] in (64, "Solexa"):
-                    params.commands[aln_key].set_parameter("-I")
-
-            pg_tags  = "bwa:CL:%s" % " ".join(map(str, params.commands[aln_keys[0]].call)).replace("%", "%%")
-            pg_tags += " | " + " ".join(map(str, params.commands[sam_key].call)).replace("%", "%%")
-            params.commands["convert"].push_parameter("--update-pg-tag", pg_tags)
-
-            params.commands[sam_key].set_parameter("-r", read_group)
-            params.commands["filter"].set_parameter('-q', record["Options"]["Aligners"]["Bowtie2"]["MinQuality"])
-
-            validate = ValidateBAMFile(config      = config,
-                                       node        = params.build_node())
-            coverage = CoverageNode(input_file   = output_filename,
-                                    name         = target,
-                                    dependencies = validate)
-
-            reads["BAM"][genome][key] = {"Node"     : validate,
-                                         "Filename" : output_filename,
-                                         "LaneCoverage" : [coverage]}
-
-    return record
-
-
-def build_bowtie2_nodes(config, target, sample, library, barcode, record, dependencies):
-    reads = record["Reads"]
-    reads["BAM"] = {}
+    reads, reads["BAM"] = record["Reads"], {}
     for (genome, prefix) in record["Prefixes"].iteritems():
         prefix_dependencies = []
         prefix_dependencies.extend(safe_coerce_to_tuple(dependencies))
@@ -163,53 +176,22 @@ def build_bowtie2_nodes(config, target, sample, library, barcode, record, depend
         output_dir = os.path.join(config.destination, target, genome, sample, library, barcode)
         for (key, input_filename) in reads["Trimmed"].iteritems():
             parameters = []
-            options = ["minQ%i" % record["Options"]["Aligners"]["Bowtie2"]["MinQuality"]]
-            output_filename = os.path.join(output_dir, "%s.%s.bam" \
-                                               % (key.lower(), ".".join(options)))
+            options = ["minQ%i" % record["Options"]["Aligners"][aln_key]["MinQuality"]]
+            if not record["Options"]["Aligners"][aln_key].get("UseSeed", True):
+                options.append("noSeed")
 
-            # Common BWA parameters
+            output_dir = os.path.join(config.destination, target, genome, sample, library, barcode)
+            output_filename = os.path.join(output_dir, "%s.%s.bam" \
+                                           % (key.lower(), ".".join(options)))
+
             parameters = {"output_file"  : output_filename,
                           "prefix"       : prefix["Path"],
                           "reference"    : prefix["Reference"],
-                          "threads"      : config.bowtie2_max_threads,
                           "dependencies" : prefix_dependencies}
 
-            if paths.is_paired_end(input_filename):
-                params   = Bowtie2Node.customize(input_file_1 = input_filename.format(Pair = 1),
-                                                 input_file_2 = input_filename.format(Pair = 2),
-                                                 **parameters)
-            else:
-                params   = Bowtie2Node.customize(input_file_1 = input_filename,
-                                                 input_file_2 = None,
-                                                 **parameters)
-
-            params.commands["filter"].set_parameter('-q', record["Options"]["Aligners"]["Bowtie2"]["MinQuality"])
-            if record["Options"]["QualityOffset"] == 64:
-                params.commands["aln"].set_parameter("--phred64")
-            elif record["Options"]["QualityOffset"] == 33:
-                params.commands["aln"].set_parameter("--phred33")
-            else:
-                params.commands["aln"].set_parameter("--solexa-quals")
-
-            for (param, value) in record["Options"]["Aligners"]["Bowtie2"].iteritems():
-                if (param != "MinQuality"):
-                    for value in safe_coerce_to_tuple(value):
-                        params.commands["aln"].push_parameter(param, value)
-
-            pg_tags = "bowtie2:CL:%s" % " ".join(map(str, params.commands["aln"].call)).replace("%", "%%")
-            params.commands["convert"].push_parameter("--update-pg-tag", pg_tags)
-
-            # Library is used as ID, to allow at-a-glance identification of
-            # the source library for any given read in a BAM file.
-            params.commands["aln"].set_parameter("--rg-id", library)
-            params.commands["aln"].push_parameter("--rg", "SM:%s" % sample)
-            params.commands["aln"].push_parameter("--rg", "LB:%s" % library)
-            params.commands["aln"].push_parameter("--rg", "PU:%s" % barcode)
-            params.commands["aln"].push_parameter("--rg", "PL:%s" % record["Options"]["Platform"])
-            params.commands["aln"].push_parameter("--rg", "PG:bowtie2")
-
+            node = aln_func(config, parameters, input_filename, dict(aln_tags), record, dependencies)
             validate = ValidateBAMFile(config      = config,
-                                       node        = params.build_node())
+                                       node        = node)
             coverage = CoverageNode(input_file   = output_filename,
                                     name         = target,
                                     dependencies = validate)
@@ -221,15 +203,9 @@ def build_bowtie2_nodes(config, target, sample, library, barcode, record, depend
     return record
 
 
-def build_aln_nodes(config, target, sample, library, barcode, record, dependencies):
-    if record["Options"]["Aligners"]["Program"] == "BWA":
-        func = build_bwa_nodes
-    elif record["Options"]["Aligners"]["Program"] == "Bowtie2":
-        func = build_bowtie2_nodes
-    else:
-        assert "Aligner not implemented", record["Options"]["Aligners"]["Program"]
-
     return func(config, target, sample, library, barcode, record, dependencies)
+_ALN_FUNCS = {"BWA" : build_bwa_nodes,
+              "Bowtie2" : build_bowtie2_nodes}
 
 
 def build_bam_cleanup_nodes(config, target, sample, library, barcode, record):
