@@ -573,8 +573,8 @@ def parse_config(argv):
         defaults = {}
 
     parser = optparse.OptionParser()
-    parser.add_option("--non-verbose", action = "store_true", default = defaults.get("non_verbose", False),
-                      help = "Only print running nodes while running (useful for large projects).")
+    parser.add_option("--verbose", action = "store_true", default = defaults.get("verbose", False),
+                      help = "Print the full dependency-tree every time a node is updated.")
     parser.add_option("--allow-missing-input-files", action = "store_true", default = False,
                       help = "Allow processing of lanes, even if the original input files are no-longer " \
                              "accesible, if for example a network drive is down. This option should be " \
@@ -737,7 +737,7 @@ def main(argv):
     ui.print_info("Running BAM pipeline ...", file = sys.stderr)
     if not pipeline.run(dry_run     = config.dry_run,
                         max_running = config.max_threads,
-                        verbose     = not config.non_verbose):
+                        verbose     = config.verbose):
         return 1
 
     return 0
