@@ -37,8 +37,11 @@ BWA_VERSION = versions.Requirement(call   = ("bwa",),
                                                          versions.LT(0, 6, 0)))
 
 # Required by safeSam2Bam for 'PG' tagging support / known good version
+# Cannot be a lambda due to need to be able to pickle function
+def _get_pysam_version():
+    return __import__("pysam").__version__
 PYSAM_VERSION = versions.Requirement(name   = "module 'pysam'",
-                                     call   = lambda: __import__("pysam").__version__,
+                                     call   = _get_pysam_version,
                                      search = b"(\d+)\.(\d+)\.(\d+)",
                                      checks = versions.GE(0, 7, 4))
 
