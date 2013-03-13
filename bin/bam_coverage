@@ -27,11 +27,13 @@ import optparse
 import pypeline
 import pypeline.ui as ui
 
+from pypeline.nodes.samtools import BAMIndexNode
 from pypeline.nodes.coverage import CoverageNode
 
 
 def parse_config(argv):                                   
     parser = optparse.OptionParser()
+    parser.add_option("--intervals", default = None)
     parser.add_option("--temp-root", default = "/tmp")
     parser.add_option("--max-threads", type = int, default = 1)
     parser.add_option("--dry-run", action = "store_true", default = False)
@@ -47,8 +49,10 @@ def main(argv):
 
     pipeline = pypeline.Pypeline(config)
     for filename in args:
-        pipeline.add_nodes(CoverageNode(input_file = filename,
-                                        name       = os.path.basename(filename)))
+        pipeline.add_nodes(CoverageNode(input_file     = filename,
+                                        intervals_file = config.intervals,
+                                        target_name    = os.path.basename(filename),
+                                        dependencies   = BAMIndexNode(filename)))
 
     pipeline.run(max_running = config.max_threads, dry_run = config.dry_run)
 

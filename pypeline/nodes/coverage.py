@@ -21,106 +21,161 @@
 # SOFTWARE.
 #
 import os
+import copy
 import datetime
 import collections
+
+import pysam
 
 from pypeline.node import Node
 from pypeline.common.text import padded_table, parse_padded_table
 from pypeline.common.samwrap import SamfileReader
 from pypeline.common.fileutils import reroot_path, move_file, swap_ext
 from pypeline.common.utilities import get_in, set_in, safe_coerce_to_tuple
+from pypeline.common.samwrap import read_tabix_BED
 
 
 class CoverageNode(Node):
-    def __init__(self, input_file, name, collapsed_prefix = "M_", dependencies = ()):
-        self._name = name
+    def __init__(self, input_file, target_name, intervals_file = None, collapsed_prefix = "M_", dependencies = ()):
+        self._target_name = target_name
         self._output_file = swap_ext(input_file, ".coverage")
         self._collapsed_prefix = collapsed_prefix
+        self._intervals_file = intervals_file
 
         Node.__init__(self,
                       description  = "<Coverage: '%s' -> '%s'>" \
                           % (input_file, self._output_file),
-                      input_files  = input_file,
+                      input_files  = (input_file, swap_ext(input_file, ".bai")),
                       output_files = self._output_file,
                       dependencies = dependencies)
 
 
+    def _setup(self, _config, temp):
+        bam_filename  = os.path.abspath(self.input_files[0])
+        temp_filename = reroot_path(temp, bam_filename)
+
+        os.symlink(bam_filename, temp_filename)
+        os.symlink(swap_ext(bam_filename, ".bai"), temp_filename + ".bai")
+
+
     def _run(self, _config, temp):
-        with SamfileReader(self.input_files[0]) as bamfile:
-            raw_tables = self.initialize_raw_tables(bamfile)
-            self.read_records(bamfile, raw_tables, self._collapsed_prefix)
-            table = self.collapse_raw_tables(bamfile, raw_tables, self._name)
+        temp_filename = reroot_path(temp, self.input_files[0])
 
-        _write_table(table, reroot_path(temp, self._output_file))
+        with SamfileReader(temp_filename) as bamfile:
+            intervals = self._get_intervals(bamfile, self._intervals_file)
+            readgroups = self._get_readgroups(bamfile)
+
+            tables, mapping = self._initialize_tables(self._target_name, intervals, readgroups)
+            self.read_records(bamfile, intervals, mapping, self._collapsed_prefix)
+
+        tables = self.filter_readgroups(tables)
+        _write_table(tables, reroot_path(temp, self._output_file))
+
+
+    def _teardown(self, config, temp):
+        temp_filename = reroot_path(temp, self.input_files[0])
+        os.remove(temp_filename)
+        os.remove(temp_filename + ".bai")
+
         move_file(reroot_path(temp, self._output_file), self._output_file)
+        Node._teardown(self, config, temp)
 
 
     @classmethod
-    def initialize_raw_tables(cls, bamfile):
-        tables = {}
-        for rg in bamfile.header['RG']:
-            subtables = []
-            for _ in bamfile.lengths:
-                subtables.append({"SE" : 0, "PE_1" : 0, "PE_2" : 0, "Collapsed" : 0, "Hits" : 0, "M" : 0, "I" : 0, "D" : 0})
-            tables[rg["ID"]] = subtables
+    def _get_intervals(cls, bamfile, intervals_file):
+        intervals = {}
+        if not intervals_file:
+            for (name, length) in zip(bamfile.references, bamfile.lengths):
+                intervals[name] = [(name, 0, length)]
+            return intervals
 
-        return tables
+        with open(intervals_file) as handle:
+            parser = pysam.asBed()
+            for line in handle:
+                bed = parser(line, len(line))
+                name = bed.name if len(bed) >= 4 else (bed.contig + "*")
+                if name not in intervals:
+                    intervals[name] = []
+                intervals[name].append((bed.contig, bed.start, bed.end))
+        return intervals
+
+
+    @classmethod
+    def _get_readgroups(cls, bamfile):
+        readgroups = {None : {"ID" : None, "SM" : "<NA>", "LB" : "<NA>"}}
+        for readgroup in bamfile.header.get('RG', []):
+            readgroups[readgroup["ID"]] = readgroup
+
+        return readgroups
 
 
     @classmethod
-    def read_records(cls, bamfile, tables, collapsed_prefix):
-        for record in bamfile:
-            if record.is_unmapped:
-                continue
+    def _initialize_tables(cls, target_name, intervals, readgroups):
+        subtables = {}
+        for (name, intervals) in intervals.iteritems():
+            size = sum((end - start) for (_, start, end) in intervals)
+            subtables[name] = {"SE" : 0, "PE_1" : 0, "PE_2" : 0, "Collapsed" : 0, "Hits" : 0, "M" : 0, "I" : 0, "D" : 0, "Size" : size}
 
-            readgroup = dict(record.tags)["RG"]
-            subtable  = tables[readgroup][record.tid]
+        tables, mapping = {}, {}
+        for rg in readgroups.itervalues():
+            subtbl_copy = copy.deepcopy(subtables)
+            set_in(tables, (target_name, rg["SM"], rg["LB"]), subtbl_copy)
+            mapping[rg["ID"]] = subtbl_copy
 
-            if collapsed_prefix and record.qname.startswith(collapsed_prefix):
-                subtable["Collapsed"] += 1
-            else:
-                flag = record.flag
-                if flag & 0x40: # first of pair
-                    subtable["PE_1"] += 1
-                elif flag & 0x80: # second of pair
-                    subtable["PE_2"] += 1
-                else: # Singleton
-                    subtable["SE"] += 1
+        return tables, mapping
 
-            for (op, num) in record.cigar:
-                if op < 3:
-                    subtable["MID"[op]] += num
 
     @classmethod
-    def collapse_raw_tables(cls, bamfile, tables, name):
-        rg_to_library = {}
-        rg_to_sample = {}
-        for rg in bamfile.header['RG']:
-            rg_to_library[rg["ID"]] = rg["LB"]
-            rg_to_sample[rg["ID"]] = rg["SM"]
+    def read_records(cls, bamfile, intervals, tables, collapsed_prefix):
+        def _get_readgroup(record):
+            for key, value in record.tags:
+                if key == "RG":
+                    return value
 
-        collapsed = {}
-        for rg in bamfile.header['RG']:
-            subtables = []
-            for size in bamfile.lengths:
-                subtables.append({"SE" : 0, "PE_1" : 0, "PE_2" : 0, "Collapsed" : 0, "Size" : size, "Hits" : 0, "M" : 0, "I" : 0, "D" : 0})
-            set_in(collapsed, (name, rg["SM"], rg["LB"]), subtables)
+        for (name, interval_list) in intervals.iteritems():
+            for (contig, start, end) in interval_list:
+                for record in bamfile.fetch(contig, start, end):
+                    if record.is_unmapped:
+                        continue
 
-        for (readgroup, contigs) in tables.iteritems():
-            library      = rg_to_library[readgroup]
-            sample       = rg_to_sample[readgroup]
-            subtable     = get_in(collapsed, (name, sample, library))
-            for (contig_id, subtable_src) in enumerate(contigs):
-                subtable_dst = subtable[contig_id]
-                for (key, value) in subtable_src.iteritems():
-                    subtable_dst[key] += value
+                    readgroup = _get_readgroup(record)
+                    subtable  = tables[readgroup][name]
 
-        for (name, samples) in collapsed.items():
-            for (sample, libraries) in samples.items():
-                for (library, contigs) in libraries.items():
-                    collapsed[name][sample][library] = dict(zip(bamfile.references, contigs))
+                    if collapsed_prefix and record.qname.startswith(collapsed_prefix):
+                        subtable["Collapsed"] += 1
+                    else:
+                        flag = record.flag
+                        if flag & 0x40: # first of pair
+                            subtable["PE_1"] += 1
+                        elif flag & 0x80: # second of pair
+                            subtable["PE_2"] += 1
+                        else: # Singleton
+                            subtable["SE"] += 1
 
-        return collapsed
+                    position = record.pos
+                    for (op, num) in record.cigar:
+                        if op < 3:
+                            left  = min(max(position, start), end - 1)
+                            right = min(max(position + num, start), end - 1)
+                            subtable["MID"[op]] += right - left
+
+                            if op < 2: # M/D
+                                position += num
+                        elif op == 3: # N
+                            position += num
+
+
+    def filter_readgroups(self, table):
+        for (name, subtable) in table.iteritems():
+            for (library, contigs) in subtable.get("<NA>", {}).iteritems():
+                for (contig, counts) in contigs.iteritems():
+                    if any(value for (key, value) in counts.iteritems() if key != "Size"):
+                        return table
+
+        for (name, subtable) in table.iteritems():
+            subtable.pop("<NA>")
+
+        return table
 
 
 
@@ -232,8 +287,10 @@ _HEADER = \
 #
 # Columns:
 #  Hits:           Sum of SE, PE_1, and PE_2 hits
-#  SE, PE_1, PE_2: Number of Single Ended, and Pair Ended (mate 1 and 2) hits
+#  SE, PE_1, PE_2: Number of Single Ended, and Pair Ended (mate 1 and 2) hits overlapping
+#                  the current contig or intervals. Note that a hit may be counted multiple
+#                  times if it overlaps multiple intervals
 #  Collapsed:      Number of hits for PE pair collapsed into a single read
 #  M, I, D:        Number of aligned (M), inserted (I) and deleted (D) bases relative to references
-#  Coverage:       Estimated coverage based on aligned (M) bases
+#  Coverage:       Average number of bases covering each position in the contig(s)/intervals(s).
 """

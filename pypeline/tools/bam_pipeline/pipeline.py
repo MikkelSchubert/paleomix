@@ -190,10 +190,12 @@ def build_aln_nodes(config, target, sample, library, barcode, record, dependenci
                           "dependencies" : prefix_dependencies}
 
             node = aln_func(config, parameters, input_filename, dict(aln_tags), record, dependencies)
+            index    = BAMIndexNode(infile       = output_filename,
+                                    dependencies = node)
             validate = ValidateBAMFile(config      = config,
-                                       node        = node)
+                                       node        = index)
             coverage = CoverageNode(input_file   = output_filename,
-                                    name         = target,
+                                    target_name  = target,
                                     dependencies = validate)
 
             reads["BAM"][genome][key] = {"Node"     : validate,
@@ -233,7 +235,7 @@ def build_bam_cleanup_nodes(config, target, sample, library, barcode, record):
                 node = ()
 
             coverage = CoverageNode(input_file   = output_filename,
-                                    name         = target,
+                                    target_name  = target,
                                     dependencies = node)
 
             results[genome][key] = {"Node" : node,
@@ -288,7 +290,7 @@ def build_rmduplicates_nodes(config, target, sample, library, input_records):
                                        node        = node)
 
                 cov  = CoverageNode(input_file   = output_filename,
-                                    name         = target,
+                                    target_name  = target,
                                     dependencies = node)
 
                 coverages = sum((record["LaneCoverage"] for record in collected_records[key]), [])
