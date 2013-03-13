@@ -74,6 +74,16 @@ class BWAIndexNode(CommandNode):
                              dependencies = parameters.dependencies)
 
 
+def BWANode(input_file_1, input_file_2, **kwargs):
+    if input_file_1 and input_file_2:
+        return PE_BWANode(input_file_1 = input_file_1,
+                          input_file_2 = input_file_2,
+                          **kwargs)
+    elif input_file_1:
+        return SE_BWANode(input_file = input_file_1,
+                          **kwargs)
+
+
 class SE_BWANode(CommandNode):
     @create_customizable_cli_parameters
     def customize(self, input_file, output_file, reference, prefix, threads = 1, dependencies = ()):

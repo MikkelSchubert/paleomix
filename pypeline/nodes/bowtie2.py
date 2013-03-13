@@ -73,7 +73,8 @@ class Bowtie2Node(CommandNode):
     def customize(cls, input_file_1, input_file_2, output_file, reference, prefix, threads = 2, dependencies = ()):
         aln = _Bowtie2Params(("bowtie2",), prefix,
                              IN_FILE_1  = input_file_1,
-                             IN_FILE_2  = input_file_2,
+        # Setting IN_FILE_2 to None makes AtomicCmd ignore this key
+                             IN_FILE_2  = input_file_2 or None,
                              OUT_STDOUT = AtomicCmd.PIPE,
                              CHECK_VERSION = BOWTIE2_VERSION)
         aln.set_parameter("-x", prefix)

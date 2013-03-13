@@ -32,7 +32,7 @@ import ConfigParser
 import pypeline
 import pypeline.ui as ui
 
-from pypeline.nodes.bwa import SE_BWANode, PE_BWANode
+from pypeline.nodes.bwa import BWANode
 from pypeline.nodes.bowtie2 import Bowtie2Node
 from pypeline.nodes.gatk import IndelRealignerNode
 from pypeline.nodes.picard import BuildSequenceDictNode, \
@@ -94,19 +94,17 @@ def _apply_aln_user_parameters(mkfile_params, params, aligners):
 
 
 def build_bwa_nodes(config, parameters, input_filename, tags, record, dependencies):
-    read_group = "@RG\tID:{ID}\tSM:{SM}\tLB:{LB}\tPU:{PU}\tPL:{PL}\tPG:{PG}".format(**tags)
-
     if paths.is_paired_end(input_filename):
-        params   = PE_BWANode.customize(input_file_1 = input_filename.format(Pair = 1),
-                                        input_file_2 = input_filename.format(Pair = 2),
-                                        threads      = config.bwa_max_threads,
-                                        **parameters)
+        input_file_1 = input_file_2 = input_filename
         aln_keys, sam_key = ("aln_1", "aln_2"), "sampe"
     else:
-        params   = SE_BWANode.customize(input_file   = input_filename,
-                                        threads      = config.bwa_max_threads,
-                                        **parameters)
+        input_file_1, input_file_2 = input_filename, ""
         aln_keys, sam_key = ("aln",), "samse"
+
+    params   = PE_BWANode.customize(input_file_1 = input_file_1.format(Pair = 1),
+                                    input_file_2 = input_file_2.format(Pair = 2),
+                                    threads      = config.bwa_max_threads,
+                                    **parameters)
 
     for aln_key in aln_keys:
         if not record["Options"]["Aligners"]["BWA"]["UseSeed"]:
@@ -119,7 +117,9 @@ def build_bwa_nodes(config, parameters, input_filename, tags, record, dependenci
     pg_tags += " | " + " ".join(map(str, params.commands[sam_key].call)).replace("%", "%%")
     params.commands["convert"].push_parameter("--update-pg-tag", pg_tags)
 
+    read_group = "@RG\tID:{ID}\tSM:{SM}\tLB:{LB}\tPU:{PU}\tPL:{PL}\tPG:{PG}".format(**tags)
     params.commands[sam_key].set_parameter("-r", read_group)
+
     params.commands["filter"].set_parameter('-q', record["Options"]["Aligners"]["BWA"]["MinQuality"])
 
     return params.build_node()
@@ -127,14 +127,12 @@ def build_bwa_nodes(config, parameters, input_filename, tags, record, dependenci
 
 def build_bowtie2_nodes(config, parameters, input_filename, tags, record, dependencies):
     if paths.is_paired_end(input_filename):
-        input_filename_1 = input_filename.format(Pair = 1)
-        input_filename_2 = input_filename.format(Pair = 2)
+        input_filename_1 = input_filename_2 = input_filename
     else:
-        input_filename_1 = input_filename
-        input_filename_2 = None
+        input_filename_1,  input_filename_2 = input_filename, ""
 
-    params   = Bowtie2Node.customize(input_file_1    = input_filename_1,
-                                     input_file_2    = input_filename_2,
+    params   = Bowtie2Node.customize(input_file_1    = input_filename_1.format(Pair = 1),
+                                     input_file_2    = input_filename_2.format(Pair = 2),
                                      threads         = config.bowtie2_max_threads,
                                      **parameters)
 
