@@ -76,12 +76,12 @@ class BWAIndexNode(CommandNode):
 
 def BWANode(input_file_1, input_file_2, **kwargs):
     if input_file_1 and input_file_2:
-        return PE_BWANode(input_file_1 = input_file_1,
-                          input_file_2 = input_file_2,
-                          **kwargs)
+        return PE_BWANode.customize(input_file_1 = input_file_1,
+                                    input_file_2 = input_file_2,
+                                    **kwargs)
     elif input_file_1:
-        return SE_BWANode(input_file = input_file_1,
-                          **kwargs)
+        return SE_BWANode.customize(input_file = input_file_1,
+                                    **kwargs)
 
 
 class SE_BWANode(CommandNode):

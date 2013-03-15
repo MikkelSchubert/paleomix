@@ -101,10 +101,10 @@ def build_bwa_nodes(config, parameters, input_filename, tags, record, dependenci
         input_file_1, input_file_2 = input_filename, ""
         aln_keys, sam_key = ("aln",), "samse"
 
-    params   = PE_BWANode.customize(input_file_1 = input_file_1.format(Pair = 1),
-                                    input_file_2 = input_file_2.format(Pair = 2),
-                                    threads      = config.bwa_max_threads,
-                                    **parameters)
+    params   = BWANode(input_file_1 = input_file_1.format(Pair = 1),
+                       input_file_2 = input_file_2.format(Pair = 2),
+                       threads      = config.bwa_max_threads,
+                       **parameters)
 
     for aln_key in aln_keys:
         if not record["Options"]["Aligners"]["BWA"]["UseSeed"]:
@@ -226,8 +226,10 @@ def build_bam_cleanup_nodes(config, target, sample, library, barcode, record):
                                   output_bam = output_filename,
                                   min_mapq   = record["Options"]["Aligners"]["BWA"]["MinQuality"],
                                   tags       = tags)
+            index    = BAMIndexNode(infile       = output_filename,
+                                    dependencies = node)
             node = ValidateBAMFile(config      = config,
-                                   node        = node)
+                                   node        = index)
 
             if missing_files((filename,)) and config.allow_missing_input_files:
                 node = ()
