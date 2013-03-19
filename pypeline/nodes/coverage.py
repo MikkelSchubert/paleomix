@@ -118,7 +118,10 @@ class CoverageNode(Node):
 
         tables, mapping = {}, {}
         for rg in readgroups.itervalues():
-            subtbl_copy = copy.deepcopy(subtables)
+            subtbl_copy = get_in(tables, (target_name, rg["SM"], rg["LB"]), None)
+            if not subtbl_copy:
+                subtbl_copy = copy.deepcopy(subtables)
+
             set_in(tables, (target_name, rg["SM"], rg["LB"]), subtbl_copy)
             mapping[rg["ID"]] = subtbl_copy
 
