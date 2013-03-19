@@ -132,14 +132,14 @@ class FilterUniqueBAMNode(CommandNode):
 
         command     = ParallelCmds([merge, filteruniq])
         description =  "<FilterUniqueBAM: %s>" % (self._desc_files(input_bams),)
-        CommandNode.__init__(self, 
+        CommandNode.__init__(self,
                              command      = command,
                              description  = description,
                              dependencies = dependencies)
 
 
 class IndexAndValidateBAMNode(MetaNode):
-    def __init__(self, config, node, log_file = None):
+    def __init__(self, config, prefix, node, log_file = None):
         input_file, has_index = self._get_input_file(node)
         subnodes, dependencies = [node], node.dependencies
         if not has_index:
@@ -151,6 +151,9 @@ class IndexAndValidateBAMNode(MetaNode):
                                                       input_bam    = input_file,
                                                       output_log   = log_file,
                                                       dependencies = node)
+        # Check MD tags against reference sequence
+        validation_params.command.set_paths(IN_REFERENCE = prefix["Reference"])
+        validation_params.command.push_parameter("R", "%(IN_REFERENCE)s", sep = "=")
         # Ignored since we filter out misses and low-quality hits during mapping, which
         # leads to a large proportion of missing mates for PE reads.
         validation_params.command.push_parameter("IGNORE", "MATE_NOT_FOUND", sep = "=")

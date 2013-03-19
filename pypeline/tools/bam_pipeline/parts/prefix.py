@@ -68,7 +68,7 @@ class Prefix:
                                  input_bams   = files_and_bams.keys(),
                                  output_bam   = output_filename,
                                  dependencies = files_and_bams.values())
-        validated_node = IndexAndValidateBAMNode(config, node, validated_filename)
+        validated_node = IndexAndValidateBAMNode(config, prefix, node, validated_filename)
 
         return {output_filename : validated_node}
 
@@ -84,6 +84,6 @@ class Prefix:
                                   outfile      = output_filename,
                                   intervals    = intervals_filename,
                                   dependencies = bams.values())
-        validated_node = IndexAndValidateBAMNode(config, node, validated_filename)
+        validated_node = IndexAndValidateBAMNode(config, prefix, node, validated_filename)
 
         return {output_filename : validated_node}

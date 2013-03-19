@@ -69,7 +69,7 @@ class Lane:
                               tags         = self.tags,
                               dependencies = prefix["Node"])
 
-        validated_node = IndexAndValidateBAMNode(config, node)
+        validated_node = IndexAndValidateBAMNode(config, prefix, node)
         self.bams["Processed"] = {output_filename : validated_node}
 
 
@@ -95,7 +95,7 @@ class Lane:
                           "dependencies" : self.reads.nodes + (prefix["Node"],)}
 
             alignment_node = aln_func(config, parameters, input_filename, self.tags, record["Options"])
-            validated_node = IndexAndValidateBAMNode(config, alignment_node)
+            validated_node = IndexAndValidateBAMNode(config, prefix, alignment_node)
 
             self.bams[key] = {output_filename : validated_node}
 

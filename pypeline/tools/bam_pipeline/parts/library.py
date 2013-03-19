@@ -76,7 +76,7 @@ class Library:
                                   input_bams   = files_and_nodes.keys(),
                                   output_bam   = output_filename,
                                   dependencies = files_and_nodes.values())
-            validated_node = IndexAndValidateBAMNode(config, node)
+            validated_node = IndexAndValidateBAMNode(config, prefix, node)
 
             results[key] = {output_filename : validated_node}
         return results
@@ -95,6 +95,6 @@ class Library:
                                     input_files  = files_and_nodes.keys(),
                                     output_file  = output_filename,
                                     dependencies = files_and_nodes.values())
-        validated_node = IndexAndValidateBAMNode(config, node)
+        validated_node = IndexAndValidateBAMNode(config, prefix, node)
 
         return {"Rescaled" : {output_filename : validated_node}}
