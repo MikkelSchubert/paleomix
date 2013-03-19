@@ -36,9 +36,9 @@ from pypeline.common.samwrap import read_tabix_BED
 
 
 class CoverageNode(Node):
-    def __init__(self, input_file, target_name, intervals_file = None, collapsed_prefix = "M_", dependencies = ()):
+    def __init__(self, input_file, target_name, output_file = None, intervals_file = None, collapsed_prefix = "M_", dependencies = ()):
         self._target_name = target_name
-        self._output_file = swap_ext(input_file, ".coverage")
+        self._output_file = output_file or swap_ext(input_file, ".coverage")
         self._collapsed_prefix = collapsed_prefix
         self._intervals_file = intervals_file
 
