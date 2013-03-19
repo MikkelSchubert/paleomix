@@ -25,6 +25,7 @@ import os
 import pypeline.common.fileutils as fileutils
 from pypeline.node import CommandNode, MetaNode
 from pypeline.atomiccmd import AtomicCmd
+from pypeline.atomicset import ParallelCmds
 from pypeline.common.fileutils import swap_ext
 from pypeline.common.utilities import safe_coerce_to_tuple
 
@@ -55,29 +56,48 @@ class _IndelTrainerNode(CommandNode):
 
 class _IndelRealignerNode(CommandNode):
     def __init__(self, config, reference, intervals, infiles, outfile, dependencies = ()):
+        self._basename = os.path.basename(outfile)
+
         call  = ["java", "-jar", os.path.join(config.jar_root, "GenomeAnalysisTK.jar"),
                  "-T", "IndelRealigner",
                  "-R", "%(IN_REFERENCE)s",
                  "-targetIntervals", "%(IN_INTERVALS)s",
-                 "-o", "%(OUT_BAMFILE)s"]
+                 "-o", "%(OUT_BAMFILE)s",
+                 "--bam_compression", 0,
+                 "--disable_bam_indexing"]
         keys = _update_file_keys_and_call(call, infiles)
 
         command = AtomicCmd(call,
                             IN_REFERENCE = reference,
-                            IN_REF_DICT   = fileutils.swap_ext(reference, ".dict"),
+                            IN_REF_DICT  = fileutils.swap_ext(reference, ".dict"),
                             IN_INTERVALS = intervals,
                             OUT_BAMFILE  = outfile,
-                            OUT_INDEX    = fileutils.swap_ext(outfile, ".bai"),
                             **keys)
+
+        calmd   = AtomicCmd(["samtools", "calmd", "-b", "%(TEMP_IN_BAM)s", "%(IN_REF)s"],
+                            TEMP_IN_BAM     = self._basename,
+                            IN_REF          = reference,
+                            TEMP_OUT_STDOUT = self._basename + ".calmd")
 
         description = "<Indel Realign: %i file(s) -> '%s'>" \
             % (len(infiles), outfile)
 
         CommandNode.__init__(self,
-                             description = description,
-                             command = command,
+                             description  = description,
+                             command      = ParallelCmds([command, calmd]),
                              dependencies = dependencies)
 
+
+    def _setup(self, config, temp):
+        CommandNode._setup(self, config, temp)
+        os.mkfifo(os.path.join(temp, self._basename))
+
+
+    def _teardown(self, config, temp):
+        os.rename(os.path.join(temp, self._basename) + ".calmd",
+                  os.path.join(temp, self._basename))
+
+        CommandNode._teardown(self, config, temp)
 
 
 class IndelRealignerNode(MetaNode):
