@@ -137,6 +137,15 @@ class _Check:
         return str(self)
 
 
+class EQ(_Check):
+    def __init__(self, *version):
+        _Check.__init__(self, "EQ", *version)
+
+    def __call__(self, value, pprint):
+        if value != self._version:
+            raise VersionRequirementError("Version must be %s, found %s" \
+                                          % (pprint(self._version), pprint(value)))
+
 class GE(_Check):
     def __init__(self, *version):
         _Check.__init__(self, "GE", *version)
