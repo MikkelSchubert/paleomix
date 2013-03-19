@@ -87,17 +87,24 @@ class RequirementObj:
         self._reqs = checks
         self._rege = re.compile(search)
         self._ppr  = pprint
+        self._version = None
 
-    def __call__(self, force = False):
-        if force or self._done is None:
+
+    @property
+    def version(self):
+        if self._version is None:
             output = _do_call(self._call)
             match = self._rege.search(output)
             if not match:
-                raise VersionRequirementError("Could not determine version of '%s', searching for %s ..." \
-                                              % (self.name, repr(self._rege.pattern)))
+                raise VersionRequirementError("Could not determine version of '%s', searching for %s: %s" \
+                                              % (self.name, repr(self._rege.pattern), repr(output)))
 
-            version = tuple(try_cast(value, int) for value in match.groups())
+            self._version = tuple(try_cast(value, int) for value in match.groups())
+        return self._version
 
+
+    def __call__(self, force = False):
+        if force or self._done is None:
             def _pprint(value):
                 if not self._ppr:
                     return ".".join(map(str, value))
@@ -105,7 +112,7 @@ class RequirementObj:
                     return self._ppr(value)
                 return self._ppr.format(*value)
 
-            self._reqs(version, _pprint)
+            self._reqs(self.version, _pprint)
             self._done = True
 
 
