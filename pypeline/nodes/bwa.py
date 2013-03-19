@@ -74,14 +74,21 @@ class BWAIndexNode(CommandNode):
                              dependencies = parameters.dependencies)
 
 
-def BWANode(input_file_1, input_file_2, **kwargs):
-    if input_file_1 and input_file_2:
-        return PE_BWANode(input_file_1 = input_file_1,
-                          input_file_2 = input_file_2,
-                          **kwargs)
-    elif input_file_1:
-        return SE_BWANode(input_file = input_file_1,
-                          **kwargs)
+class BWANode:
+    @classmethod
+    def customize(cls, input_file_1, input_file_2, **kwargs):
+        if input_file_1 and input_file_2:
+            return PE_BWANode.customize(input_file_1 = input_file_1,
+                                        input_file_2 = input_file_2,
+                                        **kwargs)
+        elif input_file_1 and not input_file_2:
+            return SE_BWANode.customize(input_file = input_file_1,
+                                        **kwargs)
+        else:
+            assert False, ""
+
+    def __new__(cls, **kwargs):
+        return cls.customize(**kwargs).build_node()
 
 
 class SE_BWANode(CommandNode):
