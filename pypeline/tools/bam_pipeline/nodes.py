@@ -138,53 +138,53 @@ class FilterUniqueBAMNode(CommandNode):
                              dependencies = dependencies)
 
 
-class ValidateBAMFile(MetaNode):
-    def __init__(self, config, node, log_file = None, dependencies = None):
-        filenames = self._get_input_file(node)
-        assert len(filenames) == 1, (filenames, node)
-        input_file = filenames.pop()
-
-        subnodes = [node]
-        if isinstance(node, MetaNode):
-            subnodes = list(node.subnodes)
+class IndexAndValidateBAMNode(MetaNode):
+    def __init__(self, config, node, log_file = None):
+        input_file, has_index = self._get_input_file(node)
+        subnodes, dependencies = [node], node.dependencies
+        if not has_index:
+            node = BAMIndexNode(infile       = input_file,
+                                dependencies = node)
+            subnodes.append(node)
 
         validation_params = ValidateBAMNode.customize(config       = config,
                                                       input_bam    = input_file,
                                                       output_log   = log_file,
-                                                      dependencies = subnodes)
+                                                      dependencies = node)
         # Ignored since we filter out misses and low-quality hits during mapping, which
         # leads to a large proportion of missing mates for PE reads.
         validation_params.command.push_parameter("IGNORE", "MATE_NOT_FOUND", sep = "=")
         # Ignored due to high rate of false positives for lanes with few hits, where
         # high-quality reads may case ValidateSamFile to mis-identify the qualities
         validation_params.command.push_parameter("IGNORE", "INVALID_QUALITY_FORMAT", sep = "=")
-
         subnodes.append(validation_params.build_node())
 
-        description = "<w/Validation: " + str(node)[1:]
+        description = "<w/Validation: " + str(subnodes[0])[1:]
         MetaNode.__init__(self,
                           description  = description,
                           subnodes     = subnodes,
-                          dependencies = dependencies or node.dependencies)
+                          dependencies = dependencies)
 
 
     def _get_input_file(cls, node):
-        filenames = set()
+        if isinstance(node, MetaNode):
+            for subnode in node.subnodes:
+                input_filename, has_index = cls._get_input_file(subnode)
+                if input_filename:
+                    return input_filename, has_index
+
+        input_filename, has_index = None, False
         for filename in node.output_files:
             if filename.lower().endswith(".bai"):
-                filenames.add(swap_ext(filename, ".bam"))
+                has_index = True
             elif filename.lower().endswith(".bam"):
-                filenames.add(filename)
+                input_filename = filename
 
-        if not filenames and node.subnodes:
-            for subnode in node.subnodes:
-                filenames.update(cls._get_input_file(subnode))
-
-        return filenames
+        return input_filename, has_index
 
 
 class CleanupBAMNode(CommandNode):
-    def __init__(self, config, reference, input_bam, output_bam, min_mapq, tags, dependencies = ()):
+    def __init__(self, config, reference, input_bam, output_bam, tags, min_mapq = 0, dependencies = ()):
         flt = AtomicCmd(["samtools", "view", "-bu", "-F0x4", "-q%i" % min_mapq, "%(IN_BAM)s"],
                         IN_BAM  = input_bam,
                         OUT_STDOUT = AtomicCmd.PIPE)
@@ -197,7 +197,8 @@ class CleanupBAMNode(CommandNode):
         params.set_parameter("COMPRESSION_LEVEL", "0", sep = "=")
 
         for (tag, value) in sorted(tags.iteritems()):
-            params.set_parameter(tag, value, sep = "=")
+            if tag not in ("PG", "Target"):
+                params.set_parameter(tag, value, sep = "=")
 
         params.set_paths(IN_STDIN   = flt,
                          OUT_STDOUT = AtomicCmd.PIPE)
@@ -214,14 +215,6 @@ class CleanupBAMNode(CommandNode):
                              command      = ParallelCmds([flt, annotate, calmd]),
                              description  = description,
                              dependencies = dependencies)
-
-
-def IndexedFilterUniqueBAMNode(output_bam, **kwargs):
-    node = FilterUniqueBAMNode(output_bam = output_bam,
-                               **kwargs)
-
-    return BAMIndexNode(infile       = output_bam,
-                        dependencies = node)
 
 
 def _concatenate_input_bams(config, input_bams):

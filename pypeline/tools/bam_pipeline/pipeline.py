@@ -32,467 +32,50 @@ import ConfigParser
 import pypeline
 import pypeline.ui as ui
 
-from pypeline.nodes.bwa import BWANode
-from pypeline.nodes.bowtie2 import Bowtie2Node
-from pypeline.nodes.gatk import IndelRealignerNode
-from pypeline.nodes.picard import BuildSequenceDictNode, \
-                                  MergeSamFilesNode, \
-                                  MarkDuplicatesNode
-from pypeline.nodes.coverage import CoverageNode, MergeCoverageNode
+from pypeline.node import MetaNode
+from pypeline.nodes.picard import BuildSequenceDictNode
 from pypeline.nodes.samtools import FastaIndexNode, BAMIndexNode
-from pypeline.nodes.adapterremoval import SE_AdapterRemovalNode, PE_AdapterRemovalNode
 
-from pypeline.common.text import parse_padded_table
-from pypeline.common.utilities import safe_coerce_to_tuple
-from pypeline.common.fileutils import swap_ext, add_postfix, missing_files
+from pypeline.common.fileutils import swap_ext, add_postfix
 
-import pypeline.tools.bam_pipeline.paths as paths
-from pypeline.tools.bam_pipeline.nodes import *
-from pypeline.tools.bam_pipeline.summary import SummaryTableNode
 from pypeline.tools.bam_pipeline.makefile import *
+from pypeline.tools.bam_pipeline.nodes import MapDamageNode
 
+import pypeline.tools.bam_pipeline.parts as parts
 
 
 
-def build_trimming_nodes(config, target, sample, library, barcode, record):
-    output_prefix = os.path.join(config.destination, target, "reads", sample, library, barcode, "reads")
 
-    reads = record["Reads"]
-
-    if "SE" in reads["Raw"]:
-        cmd = SE_AdapterRemovalNode.customize(input_files   = reads["Raw"]["SE"],
-                                              output_prefix = output_prefix)
-
-        reads["Trimmed"] = {"Single" : output_prefix + ".truncated.gz"}
-    else:
-        cmd = PE_AdapterRemovalNode.customize(input_files_1 = reads["Raw"]["PE_1"],
-                                              input_files_2 = reads["Raw"]["PE_2"],
-                                              output_prefix = output_prefix)
-
-        reads["Trimmed"] = {"Single"    : output_prefix + ".singleton.unaln.truncated.gz",
-                            "Paired"    : output_prefix + ".pair{Pair}.truncated.gz",
-                            "Collapsed" : output_prefix + ".singleton.aln.truncated.gz" }
-
-    if record["Options"]["QualityOffset"] == "Solexa":
-        cmd.command.set_parameter("--qualitybase", 64)
-    else:
-        cmd.command.set_parameter("--qualitybase", record["Options"]["QualityOffset"])
-
-    if any(missing_files(input_files) for input_files in reads["Raw"].itervalues()):
-        if config.allow_missing_input_files:
-            return ()
-
-    return cmd.build_node()
-
-
-def _apply_aln_user_parameters(mkfile_params, params, aligners):
-    for (param, value) in mkfile_params.iteritems():
-        if param.startswith("-"):
-            for value in safe_coerce_to_tuple(value):
-                for aligner_key in aligners:
-                    params.commands[aligner_key].push_parameter(param, value)
-
-
-def build_bwa_nodes(config, parameters, input_filename, tags, record, dependencies):
-    if paths.is_paired_end(input_filename):
-        input_file_1 = input_file_2 = input_filename
-        aln_keys, sam_key = ("aln_1", "aln_2"), "sampe"
-    else:
-        input_file_1, input_file_2 = input_filename, ""
-        aln_keys, sam_key = ("aln",), "samse"
-
-    params   = PE_BWANode.customize(input_file_1 = input_file_1.format(Pair = 1),
-                                    input_file_2 = input_file_2.format(Pair = 2),
-                                    threads      = config.bwa_max_threads,
-                                    **parameters)
-
-    for aln_key in aln_keys:
-        if not record["Options"]["Aligners"]["BWA"]["UseSeed"]:
-            params.commands[aln_key].set_parameter("-l", 2**16 - 1)
-        if record["Options"]["QualityOffset"] in (64, "Solexa"):
-            params.commands[aln_key].set_parameter("-I")
-    _apply_aln_user_parameters(record["Options"]["Aligners"]["BWA"], params, aln_keys)
-
-    pg_tags  = "bwa:CL:%s" % " ".join(map(str, params.commands[aln_keys[0]].call)).replace("%", "%%")
-    pg_tags += " | " + " ".join(map(str, params.commands[sam_key].call)).replace("%", "%%")
-    params.commands["convert"].push_parameter("--update-pg-tag", pg_tags)
-
-    read_group = "@RG\tID:{ID}\tSM:{SM}\tLB:{LB}\tPU:{PU}\tPL:{PL}\tPG:{PG}".format(**tags)
-    params.commands[sam_key].set_parameter("-r", read_group)
-
-    params.commands["filter"].set_parameter('-q', record["Options"]["Aligners"]["BWA"]["MinQuality"])
-
-    return params.build_node()
-
-
-def build_bowtie2_nodes(config, parameters, input_filename, tags, record, dependencies):
-    if paths.is_paired_end(input_filename):
-        input_filename_1 = input_filename_2 = input_filename
-    else:
-        input_filename_1,  input_filename_2 = input_filename, ""
-
-    params   = Bowtie2Node.customize(input_file_1    = input_filename_1.format(Pair = 1),
-                                     input_file_2    = input_filename_2.format(Pair = 2),
-                                     threads         = config.bowtie2_max_threads,
-                                     **parameters)
-
-    params.commands["filter"].set_parameter('-q', record["Options"]["Aligners"]["Bowtie2"]["MinQuality"])
-    if record["Options"]["QualityOffset"] == 64:
-        params.commands["aln"].set_parameter("--phred64")
-    elif record["Options"]["QualityOffset"] == 33:
-        params.commands["aln"].set_parameter("--phred33")
-    else:
-        params.commands["aln"].set_parameter("--solexa-quals")
-    _apply_aln_user_parameters(record["Options"]["Aligners"]["Bowtie2"], params, ("aln",))
-
-    pg_tags = "bowtie2:CL:%s" % " ".join(map(str, params.commands["aln"].call)).replace("%", "%%")
-    params.commands["convert"].push_parameter("--update-pg-tag", pg_tags)
-
-    params.commands["aln"].set_parameter("--rg-id", tags.pop("ID"))
-    for (tag_name, tag_value) in tags.iteritems():
-        params.commands["aln"].push_parameter("--rg", "%s:%s" % (tag_name, tag_value))
-
-    return params.build_node()
-
-
-def build_aln_nodes(config, target, sample, library, barcode, record, dependencies):
-    aln_key  = record["Options"]["Aligners"]["Program"]
-    aln_func = _ALN_FUNCS[aln_key]
-
-    # Library is used as ID, to allow at-a-glance identification of
-    # the source library for any given read in a BAM file.
-    aln_tags = {"ID" : library, "SM" : sample, "LB" : library, "PU" : barcode,
-                "PG" : aln_key.lower(), "PL" : record["Options"]["Platform"]}
-
-    reads, reads["BAM"] = record["Reads"], {}
-    for (genome, prefix) in record["Prefixes"].iteritems():
-        prefix_dependencies = []
-        prefix_dependencies.extend(safe_coerce_to_tuple(dependencies))
-        prefix_dependencies.extend(safe_coerce_to_tuple(prefix["Node"]))
-
-        reads["BAM"][genome] = {}
-        output_dir = os.path.join(config.destination, target, genome, sample, library, barcode)
-        for (key, input_filename) in reads["Trimmed"].iteritems():
-            parameters = []
-            options = ["minQ%i" % record["Options"]["Aligners"][aln_key]["MinQuality"]]
-            if not record["Options"]["Aligners"][aln_key].get("UseSeed", True):
-                options.append("noSeed")
-
-            output_dir = os.path.join(config.destination, target, genome, sample, library, barcode)
-            output_filename = os.path.join(output_dir, "%s.%s.bam" \
-                                           % (key.lower(), ".".join(options)))
-
-            parameters = {"output_file"  : output_filename,
-                          "prefix"       : prefix["Path"],
-                          "reference"    : prefix["Reference"],
-                          "dependencies" : prefix_dependencies}
-
-            node = aln_func(config, parameters, input_filename, dict(aln_tags), record, dependencies)
-            index    = BAMIndexNode(infile       = output_filename,
-                                    dependencies = node)
-            validate = ValidateBAMFile(config      = config,
-                                       node        = index)
-            coverage = CoverageNode(input_file   = output_filename,
-                                    target_name  = target,
-                                    dependencies = validate)
-
-            reads["BAM"][genome][key] = {"Node"     : validate,
-                                         "Filename" : output_filename,
-                                         "LaneCoverage" : [coverage]}
-
-    return record
-
-
-    return func(config, target, sample, library, barcode, record, dependencies)
-_ALN_FUNCS = {"BWA" : build_bwa_nodes,
-              "Bowtie2" : build_bowtie2_nodes}
-
-
-def build_bam_cleanup_nodes(config, target, sample, library, barcode, record):
-    tags = {"ID" : library, "SM" : sample, "LB" : library, "PU" : barcode,
-            "PL" : record["Options"]["Platform"]}
-
-    results = {}
-    for (genome, alignments) in record["Reads"]["BAM"].iteritems():
-        results[genome] = {}
-        output_dir = os.path.join(config.destination, target, genome, sample, library, barcode)
-        for (key, filename) in alignments.iteritems():
-            output_filename = os.path.join(output_dir, "processed_%s.minQ%i.bam" \
-                                               % (key.lower(), record["Options"]["Aligners"]["BWA"]["MinQuality"]))
-
-            node = CleanupBAMNode(config    = config,
-                                  reference = record["Prefixes"][genome]["Reference"],
-                                  input_bam = filename,
-                                  output_bam = output_filename,
-                                  min_mapq   = record["Options"]["Aligners"]["BWA"]["MinQuality"],
-                                  tags       = tags)
-            node = ValidateBAMFile(config      = config,
-                                   node        = node)
-
-            if missing_files((filename,)) and config.allow_missing_input_files:
-                node = ()
-
-            coverage = CoverageNode(input_file   = output_filename,
-                                    target_name  = target,
-                                    dependencies = node)
-
-            results[genome][key] = {"Node" : node,
-                                    "Filename" : output_filename,
-                                    "LaneCoverage" : [coverage]}
-
-    record["Reads"]["BAM"] = results
-    return record
-
-
-
-def build_lane_nodes(config, target, sample, library, barcode, record):
-    """
-
-    """
-    if "BAM" not in record["Reads"]:
-        dependencies = ()
-        if "Trimmed" not in record["Reads"]:
-            dependencies = build_trimming_nodes(config, target, sample, library, barcode, record)
-
-            # Allow specific read-types to be excluded from processsing
-            for key in record["Options"]["ExcludeReads"]:
-                record["Reads"]["Trimmed"].pop(key, None)
-
-        return build_aln_nodes(config, target, sample, library, barcode, record, dependencies)
-
-    return build_bam_cleanup_nodes(config, target, sample, library, barcode, record)
-
-
-def build_rmduplicates_nodes(config, target, sample, library, input_records):
-    results = {}
-    for genome in input_records:
-        results[genome] = {}
-
-        collected_records = collections.defaultdict(list)
-        for (key, records) in input_records[genome].iteritems():
-            key = "kirdup" if (key == "Collapsed") else "markdup"
-            collected_records[key].extend(records)
-
-        for (key, cls) in (("kirdup", IndexedFilterUniqueBAMNode), ("markdup", MarkDuplicatesNode)):
-            if key in collected_records:
-                input_nodes = [record["Node"] for record in collected_records[key] if record["Node"]]
-                input_files = [record["Filename"] for record in collected_records[key]]
-                output_filename = os.path.join(config.destination, target, genome, sample, \
-                                                   library + ".unaligned.%s.bam" % key)
-
-                node = cls(config       = config,
-                           input_bams   = input_files,
-                           output_bam   = output_filename,
-                           dependencies = input_nodes)
-                node = ValidateBAMFile(config      = config,
-                                       node        = node)
-
-                cov  = CoverageNode(input_file   = output_filename,
-                                    target_name  = target,
-                                    dependencies = node)
-
-                coverages = sum((record["LaneCoverage"] for record in collected_records[key]), [])
-                results[genome][key] = [{"Node"     : node,
-                                         "Filename" : output_filename,
-                                         "LaneCoverage" : coverages,
-                                         "LibCoverage"  : [cov]}]
-
-    return results
-
-
-def build_rescale_nodes(config, makefile, target, sample, library, input_records):
-    results = {}
-    for (genome, records_by_genome) in input_records.iteritems():
-        results[genome] = {}
-
-        records = []
-        for records_by_key in records_by_genome.itervalues():
-            records.extend(records_by_key)
-
-        nodes       = [record.get("Node", []) for record in records]
-        cov_lane    = sum((record.get("LaneCoverage", []) for record in records), [])
-        cov_lib     = sum((record.get("LibCoverage", []) for record in records), [])
-        input_files = [record.get("Filename", []) for record in records]
-        reference   = makefile["Prefixes"][genome]["Reference"]
-
-        output_filename = os.path.join(config.destination, target, genome, sample, \
-                                       library + ".rescaled.bam")
-
-        node = MapDamageRescaleNode(config       = config,
-                                    reference    = reference,
-                                    input_files  = input_files,
-                                    output_file  = output_filename,
-                                    dependencies = nodes)
-        node = BAMIndexNode(infile         = output_filename,
-                            dependencies   = node)
-        node = ValidateBAMFile(config      = config,
-                               node        = node)
-
-        results[genome]["rescale"] = [{"Node"     : node,
-                                       "Filename" : output_filename,
-                                       "LaneCoverage" : cov_lib,
-                                       "LibCoverage"  : cov_lib}]
-
-    return results
-
-
-def build_library_nodes(config, makefile, target, sample, library, barcodes):
-    input_records = collections.defaultdict(lambda: collections.defaultdict(list))
-    for (barcode, record) in barcodes.iteritems():
-        record = build_lane_nodes(config, target, sample, library, barcode, record)
-
-        for (genome, alignments) in record["Reads"]["BAM"].iteritems():
-            for (key, alignment) in alignments.iteritems():
-                input_records[genome][key].append(alignment)
-
-    filter_duplicates = any(record["Options"]["PCRDuplicates"] for record in barcodes.itervalues())
-    if filter_duplicates:
-         input_records = build_rmduplicates_nodes(config, target, sample, library, input_records)
-
-    if any(record["Options"]["RescaleQualities"] for record in barcodes.itervalues()):
-        input_records = build_rescale_nodes(config, makefile, target, sample, library, input_records)
-
-    merged = {}
-    for genome in input_records:
-        records = [record for records in input_records[genome].itervalues() for record in records]
-
-        input_nodes = [record["Node"] for record in records]
-        input_files = [record["Filename"] for record in records]
-        input_cov_lane = sum((record["LaneCoverage"] for record in records), [])
-        input_cov_lib  = input_cov_lane
-        if filter_duplicates:
-            input_cov_lib  = sum((record["LibCoverage"]  for record in records), [])
-
-        node = MetaNode(description  = "Library: %s" % library,
-                        dependencies = input_nodes)
-
-        merged[genome] = {"Node"         : node,
-                          "Filenames"    : input_files,
-                          "LaneCoverage" : input_cov_lane,
-                          "LibCoverage"  : input_cov_lib,
-                          "Sample"       : sample,
-                          "Library"      : library}
-
-    return merged
-
-
-def build_sample_nodes(config, makefile, target, sample, libraries):
-    collected = collections.defaultdict(dict)
-    for (library, barcodes) in libraries.iteritems():
-        for (genome, record) in build_library_nodes(config, makefile, target, sample, library, barcodes).iteritems():
-            collected[genome][library] = record
-
-    return collected
-
-
-def build_mapdamage_nodes(config, prefix, target, records):
-    nodes = []
-    for record in records:
-        output_directory = os.path.join(config.destination, "%s.%s.mapDamage" % (target, prefix["Name"]), record["Library"])
-        nodes.append(MapDamageNode(config           = config,
-                                   reference        = prefix["Reference"],
-                                   input_files      = record["Filenames"],
-                                   output_directory = output_directory,
-                                   dependencies     = record["Node"]))
-
-    return MetaNode(description = "MapDamage",
-                    subnodes    = nodes)
-
-
-def build_statistics_nodes(config, makefile, prefix, target, records):
-    output_filename = os.path.join(config.destination, "%s.%s.bam" % (target, prefix["Name"]))
-
-    lane_coverage = sum((record["LaneCoverage"] for record in records), [])
-    library_coverage = sum((record["LibCoverage"] for record in records), [])
-    part_coverage = MetaNode(description = "Lanes and Libraries",
-                              subnodes    = lane_coverage + library_coverage)
-    full_coverage = [MergeCoverageNode(input_files  = sum((list(node.output_files) for node in library_coverage), []),
-                                       output_file  = swap_ext(output_filename, ".coverage"),
-                                       dependencies = part_coverage)]
+def _add_mapdamage_nodes(config, makefile, target):
+    if "mapDamage" not in makefile["Options"]["Features"]:
+        return
 
     nodes = []
+    for prefix in target.prefixes:
+        libraries = []
+        for sample in prefix.samples:
+            for library in sample.libraries:
+                folder = os.path.join(config.destination, "%s.%s.mapDamage" % (target.name, prefix.name), library.name)
+                libraries.append(MapDamageNode(config           = config,
+                                               reference        = prefix.reference,
+                                               input_files      = library.bams.keys(),
+                                               output_directory = folder,
+                                               dependencies     = library.bams.values()))
 
-    if "Coverage" in makefile["Options"]["Features"]:
-        nodes.append(MetaNode(description  = "Coverage",
-                              dependencies = (part_coverage,
-                                              MetaNode(description = "Final BAMs",
-                                                       subnodes    = full_coverage))))
-    elif "Summary" in makefile["Options"]["Features"]:
-        nodes.append(MetaNode(description  = "Coverage",
-                              dependencies = (part_coverage)))
+        nodes.append(MetaNode(description = prefix.name,
+                              subnodes    = libraries))
 
-    if "mapDamage" in makefile["Options"]["Features"]:
-        nodes.append(build_mapdamage_nodes(config, prefix, target, records))
-
-    if not nodes:
-        return None
-
-    return MetaNode(description  = "Statistics:",
-                    dependencies = nodes)
+    target.add_extra_nodes("mapDamage", nodes)
 
 
-def build_target_nodes(config, makefile, target, samples):
-    prefixes = makefile["Prefixes"]
-    input_records = collections.defaultdict(list)
-    for (sample, libraries) in samples.iteritems():
-        for (genome, libraries) in build_sample_nodes(config, makefile, target, sample, libraries).iteritems():
-            input_records[genome].extend(libraries.values())
 
-    nodes = []
-    for (genome, records) in input_records.iteritems():
-        library_files = sum((record["Filenames"] for record in records), [])
-        library_nodes = [record["Node"] for record in records]
+def _add_extra_nodes(config, makefile, targets):
+    for target in targets:
+        _add_mapdamage_nodes(config, makefile, target)
+        parts.add_statistics_nodes(config, makefile, target)
 
-        library_meta  = MetaNode(description = "Libraries",
-                                 dependencies = library_nodes)
-        library_summary = MetaNode(description = "Libraries",
-                                   subnodes    = library_nodes)
+    return [target.node for target in targets]
 
-        final_nodes = []
-        output_filename = os.path.join(config.destination, "%s.%s.bam" % (target, genome))
-
-        if "Raw BAM" in makefile["Options"]["Features"]:
-            node = MergeSamFilesNode(config       = config,
-                                     input_bams   = library_files,
-                                     output_bam   = output_filename,
-                                     dependencies = library_summary)
-            final_nodes.append(ValidateBAMFile(config      = config,
-                                                node        = node))
-
-        if ("Realigned BAM" in makefile["Options"]["Features"]):
-            aligned = IndelRealignerNode(config       = config,
-                                         reference    = prefixes[genome]["Reference"],
-                                         infiles      = library_files,
-                                         outfile      = add_postfix(output_filename, ".realigned"),
-                                         intervals    = os.path.join(config.destination, target, genome + ".intervals"),
-                                         dependencies = library_summary)
-            final_nodes.append(ValidateBAMFile(config      = config,
-                                               node        = aligned))
-
-
-        meta_nodes = [library_meta]
-        if final_nodes:
-            meta_nodes.append(MetaNode(description  = "Final Nodes",
-                                       dependencies = final_nodes))
-
-        stats_meta = build_statistics_nodes(config, makefile, prefixes[genome], target, records)
-        if stats_meta:
-            meta_nodes.append(stats_meta)
-
-        nodes.append(MetaNode(description  = "Genome: %s" % genome,
-                              dependencies = meta_nodes))
-
-    if "Summary" in makefile["Options"]["Features"]:
-        nodes = SummaryTableNode(config       = config,
-                                 prefixes     = prefixes,
-                                 makefile     = makefile["Statistics"],
-                                 target       = target,
-                                 samples      = samples,
-                                 records      = input_records,
-                                 dependencies = nodes)
-
-    return MetaNode(description  = "Target: %s" % target,
-                    dependencies = nodes)
 
 
 def build_pipeline_trimming(config, makefile):
@@ -500,23 +83,45 @@ def build_pipeline_trimming(config, makefile):
     This reduces the required complexity of the makefile to a minimum."""
 
     nodes = []
-    for (target, samples) in makefile["Targets"].iteritems():
-        for (sample, libraries) in samples.iteritems():
-            for (library, barcodes) in libraries.iteritems():
-                for (barcode, record) in barcodes.iteritems():
-                    if ("BAM" in record["Reads"]) or ("Trimmed" in record["Reads"]):
-                        continue
-
-                    nodes.append(build_trimming_nodes(config, target, sample, library, barcode, record))
+    for prefix in makefile["Prefixes"].itervalues():
+        for (target, samples) in makefile["Targets"].iteritems():
+            for (sample, libraries) in samples.iteritems():
+                for (library, barcodes) in libraries.iteritems():
+                    for (barcode, record) in barcodes.iteritems():
+                        lane = parts.Lane(config, prefix, record, barcode)
+                        if lane.reads and lane.reads.nodes:
+                            nodes.extend(lane.reads.nodes)
+        break # Only one prefix is required
     return nodes
-
 
 
 def build_pipeline_full(config, makefile):
-    nodes = []
-    for (target, samples) in makefile["Targets"].iteritems():
-        nodes.append(build_target_nodes(config, makefile, target, samples))
-    return nodes
+    targets = []
+    features = makefile["Options"]["Features"]
+    for (target_name, sample_records) in makefile["Targets"].iteritems():
+        prefixes = []
+        for (prefix_name, prefix) in makefile["Prefixes"].iteritems():
+            samples = []
+            for (sample_name, library_records) in sample_records.iteritems():
+                libraries = []
+                for (library_name, barcode_records) in library_records.iteritems():
+                    lanes = []
+                    for (barcode, record) in barcode_records.iteritems():
+                        lanes.append(parts.Lane(config, prefix, record, barcode))
+
+                    if any(lane.bams for lane in lanes):
+                        libraries.append(parts.Library(config, prefix, lanes, library_name))
+
+                if libraries:
+                    samples.append(parts.Sample(config, prefix, libraries, sample_name))
+
+            if samples:
+                prefixes.append(parts.Prefix(config, prefix, samples, features))
+
+        if prefixes:
+            targets.append(parts.Target(config, prefixes, target_name))
+
+    return _add_extra_nodes(config, makefile, targets)
 
 
 def index_references(config, makefiles):
@@ -679,11 +284,12 @@ def main(argv):
                          file = sys.stderr)
         return 1
 
+    # Build .fai files for reference .fasta files
+    index_references(config, makefiles)
+
     pipeline_func = build_pipeline_trimming
     if os.path.basename(sys.argv[0]) != "trim_pipeline":
         pipeline_func = build_pipeline_full
-        # Build .fai files for reference .fasta files
-        index_references(config, makefiles)
 
     pipeline = pypeline.Pypeline(config)
     for makefile in makefiles:

@@ -5,8 +5,8 @@
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
-# copies of the Software, and to permit persons to whom the Software is 
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
 # The above copyright notice and this permission notice shall be included in all
@@ -15,9 +15,9 @@
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
 import os
@@ -32,45 +32,33 @@ import pysam
 
 from pypeline.node import Node
 from pypeline.common.utilities import safe_coerce_to_tuple, set_in, get_in
-from pypeline.common.fileutils import swap_ext, move_file, reroot_path
+from pypeline.common.fileutils import move_file, reroot_path
 from pypeline.nodes.coverage import read_table as read_coverage_table
 
 import pypeline.common.text as text
-import pypeline.tools.bam_pipeline as common
-
 
 
 
 class SummaryTableNode(Node):
-    def __init__(self, config, makefile, prefixes, target, samples, records, dependencies = ()):
-        self._target        = target
+    def __init__(self, config, makefile, target, cov_for_lanes, cov_for_libs, dependencies = ()):
+        self._target        = target.name
         self._output_file   = os.path.join(config.destination, self._target + ".summary")
-        self._prefixes      = prefixes
-        self._records       = {target : samples}
-        self._makefile      = makefile
+        self._prefixes      = makefile["Prefixes"]
+        self._makefile      = makefile["Statistics"]
 
         self._in_raw_read = collections.defaultdict(list)
-        for (sample, libraries) in samples.iteritems():
-            for (library, barcodes) in libraries.iteritems():
-                for (barcode, record) in barcodes.iteritems():
-                    self._in_raw_read[(sample, library, barcode)] = None
-                    if "Raw" in record["Reads"]:
-                        self._in_raw_read[(sample, library, barcode)] = \
-                            os.path.join(config.destination, target, "reads", sample, library, barcode, "reads.settings")
+        for prefix in target.prefixes:
+            for sample in prefix.samples:
+                for library in sample.libraries:
+                    for lane in library.lanes:
+                        if lane.reads and lane.reads.stats:
+                            self._in_raw_read[(sample.name, library.name, lane.name)] = lane.reads.stats
 
-        self._in_raw_bams = collections.defaultdict(list)
-        self._in_lib_bams = collections.defaultdict(list)
-        for genome in prefixes:
-            label = prefixes[genome].get("Label") or genome
-            for record in records[genome]:
-                for (key, dd) in (("LaneCoverage", self._in_raw_bams), ("LibCoverage", self._in_lib_bams)):
-                    for node in record[key]:
-                        dd[(label, target, record["Sample"], record["Library"])].extend(node.output_files)
-
-        
+        self._in_raw_bams = cov_for_lanes
+        self._in_lib_bams = cov_for_libs
         input_files = self._in_raw_read.values() \
-            + sum(self._in_raw_bams.values(), []) \
-            + sum(self._in_lib_bams.values(), [])
+            + sum(map(list, self._in_raw_bams.values()), []) \
+            + sum(map(list, self._in_lib_bams.values()), [])
 
         Node.__init__(self,
                       description  = "<Summary: %s>" % self._output_file,
@@ -80,7 +68,7 @@ class SummaryTableNode(Node):
 
 
     def _run(self, config, temp):
-        genomes = self._stat_bwa_prefixes(self._prefixes)
+        genomes = self._stat_prefixes(self._prefixes)
         with open(reroot_path(temp, self._output_file), "w") as table:
             table.write("# Command:\n")
             table.write("#     %s\n" % (" ".join(sys.argv)),)
@@ -118,7 +106,7 @@ class SummaryTableNode(Node):
         for (target, samples) in sorted(self._read_tables(self._prefixes, genomes).iteritems()):
             for (sample, libraries) in sorted(samples.iteritems()):
                 for (library, prefixes) in sorted(libraries.iteritems()):
-                    ordered = [("reads", prefixes.pop("reads"))]
+                    ordered = [("reads", prefixes.pop("reads"))] if "reads" in prefixes else []
                     ordered.extend(sorted(prefixes.items()))
                     
                     for (prefix, table) in ordered:
@@ -177,8 +165,8 @@ class SummaryTableNode(Node):
                 total_hits  = subtable["hits_raw(%s)" % tblname][0]
                 total_nts   = subtable["hits_unique_nts(%s)" % tblname][0]
                 total_uniq  = subtable["hits_unique(%s)" % tblname][0]
-                total_reads = subtables["reads"]["seq_retained_reads"][0]
-                                
+                total_reads = subtables.get("reads",{}).get("seq_retained_reads", (float("NAN"),))[0]
+
                 subtable["hits_raw_frac(%s)" % tblname] = (total_hits / float(total_reads), "# Total number of hits vs. total number of reads retained")
                 subtable["hits_unique_frac(%s)" % tblname] = (total_uniq / float(total_reads), "# Total number of unique hits vs. total number of reads retained")
                 subtable["hits_clonality(%s)" % tblname] = (1 - total_uniq / (float(total_hits) or float("NaN")), "# Fraction of hits that were PCR duplicates")
@@ -310,7 +298,7 @@ class SummaryTableNode(Node):
 
 
     @classmethod
-    def _stat_bwa_prefixes(cls, prefixes):
+    def _stat_prefixes(cls, prefixes):
         """Returns (size, number of contigs) for a set of BWA prefix."""
         genomes = {}
         for prefix in prefixes:

@@ -167,6 +167,7 @@ def _mangle_makefile(makefile):
     _update_options(makefile)
     _update_prefixes(makefile)
     _update_lanes(makefile)
+    _update_tags(makefile)
 
     return makefile
 
@@ -236,62 +237,37 @@ def _update_lanes(makefile):
                 options = lanes.pop("Options")
 
                 for (lane, data) in lanes.iteritems():
+                    lane_type = None
                     if isinstance(data, types.StringTypes):
-                        lanes[lane] = _update_lanes_raw(data, options, prefixes)
+                        lane_type = "Raw"
                     elif isinstance(data, types.DictType):
-                        if all((key in prefixes) for key in data):
-                            lanes[lane] = _update_lanes_trimmed(data, options, prefixes)
-                        elif all((key in ("Single", "Paired", "Collapsed")) for key in data):
-                            lanes[lane] = _update_lanes_aligned(data, options, prefixes)
+                        if all((key in ("Single", "Paired", "Collapsed")) for key in data):
+                            lane_type = "Trimmed"
+                        elif all((key in prefixes) for key in data):
+                            lane_type = "BAMs"
                         else:
                             raise MakefileError("Error at Barcode level; keys must either be prefix-names, OR 'Paired', 'Single' or 'Collapsed'. Found: %s" \
                                                 % (", ".join(data),))
-                    else:
-                        raise MakefileError("Expected string or dictionary at Barcode level, found %s" \
-                                            % type(data).__name__)
+
+                    lanes[lane] = {"Type"     : lane_type,
+                                   "Data"     : data,
+                                   "Options"  : options}
 
 
-def _update_lanes_raw(data, options, prefixes):
-    files = paths.collect_files(data, return_missing = True)
-    if not any(files.values()):
-        raise MakefileError("Could not find files using search-string '%s'." % data)
-    elif ("SE" not in files) and (len(files["PE_1"]) != len(files["PE_2"])):
-        raise MakefileError("""Number of mate 1/2 files are not the same:"
-    - Search string: %s
-    - Found %i mate 1 files
-    - Found %i mate 2 files""" % (data, len(files["PE_1"]), len(files["PE_2"])))
+def _update_tags(makefile):
+    for (target, samples) in makefile["Targets"].iteritems():
+        for (sample, libraries) in samples.iteritems():
+            for (library, barcodes) in libraries.iteritems():
+                for (barcode, record) in barcodes.iteritems():
+                    tags = {"Target"   : target,
+                            "ID" : library,
+                            "SM" : sample,
+                            "LB" : library,
+                            "PU" : barcode,
+                            "PG" : record["Options"]["Aligners"]["Program"],
+                            "PL" : record["Options"]["Platform"]}
 
-    return { "Reads"    : { "Raw" : files },
-             "Options"  : options,
-             "Prefixes" : prefixes }
-
-
-def _update_lanes_trimmed(data, options, prefixes):
-    bams = {}
-    for (key, subdata) in data.iteritems():
-        if not isinstance(subdata, types.StringTypes):
-            raise MakfileError("Expected string after prefix-name at Barcode level, found %s: %s" \
-                                   % (subdata.__class__.__name__, subdata))
-        # External bams are treated under the assumptin that they may contain paired reads
-        bams[key] = { "Paired" : subdata }
-
-    return { "Reads"    : { "BAM" : bams },
-             "Options"  : options,
-             "Prefixes" : prefixes }
-
-
-def _update_lanes_aligned(data, options, prefixes):
-    result = { "Reads"    : { "Trimmed" : {} },
-               "Options"  : options,
-               "Prefixes" : prefixes }
-
-    for (key, subdata) in data.iteritems():
-        if not isinstance(subdata, types.StringTypes):
-            raise MakfileError("Expected string after read-type at Barcode level, found %s'" \
-                                   % (subdata.__class__.__name__))
-        result["Reads"]["Trimmed"][key] = subdata
-    return result
-
+                    record["Tags"] = tags
 
 
 def _validate_makefiles(makefiles):
@@ -314,21 +290,18 @@ def _validate_makefile_libraries(makefile):
                                     % (library, target, ", ".join(samples)))
 
 
-
 def _validate_makefiles_duplicate_files(makefiles):
     filenames = collections.defaultdict(list)
     for makefile in makefiles:
         for (target, sample, library, barcode, record) in _iterate_over_records(makefile):
-            for input_files in record["Reads"].get("Raw", {}).itervalues():
-                for realpath in map(os.path.realpath, input_files):
-                    filenames[realpath].append((target, sample, library, barcode))
+            current_filenames = []
+            if record["Type"] == "Raw":
+                for raw_filenames in paths.collect_files(record["Data"]).itervalues():
+                    current_filenames.extend(raw_filenames)
+            else:
+                current_filenames.extend(record["Data"].values())
 
-            for filename in record["Reads"].get("Trimmed", {}).itervalues():
-                realpath = os.path.realpath(filename)
-                filenames[realpath].append((target, sample, library, barcode))
-
-            for genomes in record["Reads"].get("BAM", {}).itervalues():
-                for realpath in map(os.path.realpath, genomes.itervalues()):
+            for realpath in map(os.path.realpath, current_filenames):
                     filenames[realpath].append((target, sample, library, barcode))
 
     has_overlap = {}
