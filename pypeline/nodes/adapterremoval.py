@@ -5,8 +5,8 @@
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
-# copies of the Software, and to permit persons to whom the Software is 
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
 # The above copyright notice and this permission notice shall be included in all
@@ -15,9 +15,9 @@
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
 import os
@@ -26,8 +26,6 @@ from pypeline.node import CommandNode
 from pypeline.atomiccmd import AtomicCmd, CmdError
 from pypeline.atomicset import ParallelCmds
 from pypeline.atomicparams import *
-from pypeline.commands import unicat 
-
 
 
 
@@ -50,7 +48,7 @@ class SE_AdapterRemovalNode(CommandNode):
 
                       # Named pipe for uncompressed input (unicat)
                       TEMP_IN_READS       = "uncompressed_input",
-                              
+
                       # Named pipes for output of AdapterRemova
                       TEMP_OUT_LINK_1     = basename + ".truncated",
                       TEMP_OUT_LINK_2     = basename + ".discarded",
@@ -64,7 +62,7 @@ class SE_AdapterRemovalNode(CommandNode):
     def __init__(self, parameters):
         self._basename = parameters.basename
 
-        zcat           = unicat.build_atomiccmd(AtomicCmd, parameters.input_files, "uncompressed_input")
+        zcat           = _build_unicat_command(parameters.input_files, "uncompressed_input")
         gzip_truncated = _build_gzip_command(parameters.output_prefix, ".truncated")
         gzip_discarded = _build_gzip_command(parameters.output_prefix, ".discarded")
         adapterrm      = parameters.command.finalize()
@@ -108,11 +106,11 @@ class PE_AdapterRemovalNode(CommandNode):
         cmd.set_paths(# Only settings file is saved, rest is temporary files
                       OUT_SETTINGS        = output_prefix + ".settings",
                       TEMP_OUT_BASENAME   = basename,
-                      
+
                       # Named pipes for uncompressed input (unicat)
                       TEMP_IN_READS_1     = "uncompressed_input_1",
                       TEMP_IN_READS_2     = "uncompressed_input_2",
-                              
+
                       # Named pipes for output of AdapterRemoval
                       TEMP_OUT_LINK_1     = basename + ".singleton.aln.truncated",
                       TEMP_OUT_LINK_2     = basename + ".singleton.unaln.truncated",
@@ -130,21 +128,21 @@ class PE_AdapterRemovalNode(CommandNode):
         self._basename = parameters.basename
         if len(parameters.input_files_1) != len(parameters.input_files_2):
             raise CmdError("Number of mate 1 files differ from mate 2 files: %i != %i" \
-                               % (len(parameters.input_files_1), 
+                               % (len(parameters.input_files_1),
                                   len(parameters.input_files_2)))
 
-        zcat_pair_1    = unicat.build_atomiccmd(AtomicCmd, parameters.input_files_1, "uncompressed_input_1")
-        zcat_pair_2    = unicat.build_atomiccmd(AtomicCmd, parameters.input_files_2, "uncompressed_input_2")
+        zcat_pair_1    = _build_unicat_command(parameters.input_files_1, "uncompressed_input_1")
+        zcat_pair_2    = _build_unicat_command(parameters.input_files_2, "uncompressed_input_2")
         gzip_pair_1    = _build_gzip_command(parameters.output_prefix, ".pair1.truncated")
         gzip_pair_2    = _build_gzip_command(parameters.output_prefix, ".pair2.truncated")
         gzip_aligned   = _build_gzip_command(parameters.output_prefix, ".singleton.aln.truncated")
         gzip_unaligned = _build_gzip_command(parameters.output_prefix, ".singleton.unaln.truncated")
         gzip_discarded = _build_gzip_command(parameters.output_prefix, ".discarded")
         adapterrm      = parameters.command.finalize()
-        
+
         # Opening of pipes block, so the order of these commands is dependent upon
-        # the order of file-opens in atomiccmd and the the programs themselves. 
-        commands = ParallelCmds([adapterrm, 
+        # the order of file-opens in atomiccmd and the the programs themselves.
+        commands = ParallelCmds([adapterrm,
                                  gzip_discarded,
                                  gzip_pair_1,
                                  gzip_pair_2,
@@ -176,6 +174,17 @@ class PE_AdapterRemovalNode(CommandNode):
 
 
 
+def _build_unicat_command(input_files, output_file):
+    paths = {"TEMP_OUT_CAT" : output_file}
+    call = ["unicat", "--output", "%(TEMP_OUT_CAT)s"]
+    for (index, filename) in enumerate(safe_coerce_to_tuple(input_files)):
+        key = "IN_CAT_%02i" % index
+
+        call.append("%%(%s)s" % key)
+        paths[key] = filename
+
+    return AtomicCmd(call, **paths)
+
 
 def _build_gzip_command(prefix, name):
     basename = os.path.basename(prefix)
@@ -189,7 +198,7 @@ def _get_common_parameters():
 
     # Allow 1/3 mismatches in the aligned region
     cmd.set_parameter("--mm", 3, fixed = False)
-    # Reverse complement of adapter (required for SE?) 
+    # Reverse complement of adapter (required for SE?)
     cmd.set_parameter("--pcr2", "CAAGCAGAAGACGGCATACGAGATNNNNNNGTGACTGGAGTTCAGACGTGTGCTCTTCCGATCT", fixed = False)
     # Minimum length of trimmed reads
     cmd.set_parameter("--minlength", 25, fixed = False)
