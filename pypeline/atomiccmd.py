@@ -218,6 +218,13 @@ class AtomicCmd:
                 elif key.startswith("TEMP_OUT_") and os.path.exists(filename):
                     os.remove(filename)
 
+    @property
+    def stdout(self):
+        """Returns the 'stdout' value for the current process. If no
+        such process has been started, the return value is None."""
+        if self._proc:
+            return self._proc.stdout
+
 
     def __str__(self):
         def describe_pipe(template, pipe):
@@ -311,7 +318,7 @@ class AtomicCmd:
         if filename in (None, self.PIPE):
             return filename
         elif isinstance(filename, AtomicCmd):
-            return filename._proc.stdout
+            return filename.stdout
 
         pipe = open(filename, mode)
         self._handles.append((mode, pipe))
