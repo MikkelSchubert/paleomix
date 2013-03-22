@@ -141,3 +141,36 @@ class MergeSamFilesNode(CommandNode):
                              dependencies = parameters.dependencies)
 
 
+def concatenate_input_bams(config, input_bams, out = AtomicCmd.PIPE):
+    """Transparent concatenation of input BAMs.
+
+    Return a tuple containing a list of nodes (0 or 1), and an
+    object which may be passed to the IN_STDIN of an AtomicCmd
+    (either an AtomicCmd, or a filename). This allows transparent
+    concatenation when multiple files are specified, while
+    avoiding needless overhead when there is only 1 input file."""
+
+    input_bams = safe_coerce_to_tuple(input_bams)
+    if len(input_bams) == 1:
+        [], input_bams[0]
+
+    jar_file = os.path.join(config.jar_root, "MergeSamFiles.jar")
+    params = AtomicJavaParams(config, jar_file)
+
+    if out == AtomicCmd.PIPE:
+        params.set_paths(OUT_STDOUT = out)
+        params.set_parameter("OUTPUT", "/dev/stdout", sep = "=")
+    else:
+        params.set_parameter("OUTPUT", out, sep = "=")
+
+    params.set_parameter("CREATE_INDEX", "False", sep = "=")
+    params.set_parameter("COMPRESSION_LEVEL",  0, sep = "=")
+
+    for (index, filename) in enumerate(safe_coerce_to_tuple(input_bams), start = 1):
+        params.push_parameter("I", "%%(IN_BAM_%02i)s" % index, sep = "=")
+        params.set_paths("IN_BAM_%02i" % index, filename)
+
+    params.set_parameter("SO", "coordinate", sep = "=", fixed = False)
+
+    cmd = params.finalize()
+    return [cmd], cmd

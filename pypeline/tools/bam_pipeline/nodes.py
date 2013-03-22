@@ -27,7 +27,7 @@ from pypeline.atomiccmd import AtomicCmd
 from pypeline.atomicset import ParallelCmds, SequentialCmds
 from pypeline.atomicparams import AtomicJavaParams
 
-from pypeline.nodes.picard import ValidateBAMNode
+from pypeline.nodes.picard import ValidateBAMNode, concatenate_input_bams
 from pypeline.nodes.samtools import BAMIndexNode
 from pypeline.common.utilities import safe_coerce_to_tuple
 from pypeline.common.fileutils import swap_ext, add_postfix
@@ -46,7 +46,7 @@ MAPDAMAGE_VERSION = versions.Requirement(call   = ("mapDamage", "--version"),
 
 class MapDamageNode(CommandNode):
     def __init__(self, config, reference, input_files, output_directory, dependencies):
-        cat_cmds, cat_obj = _concatenate_input_bams(config, input_files)
+        cat_cmds, cat_obj = concatenate_input_bams(config, input_files)
 
         cmd_map = AtomicCmd(["mapDamage", "--no-stats",
                             "-n", _MAPDAMAGE_MAX_READS,
@@ -74,7 +74,7 @@ class MapDamageNode(CommandNode):
 
 class MapDamageRescaleNode(CommandNode):
     def __init__(self, config, reference, input_files, output_file, dependencies):
-        cat_cmds, cat_obj = _concatenate_input_bams(config, input_files)
+        cat_cmds, cat_obj = concatenate_input_bams(config, input_files)
         cmd_map = AtomicCmd(["mapDamage",
                             "-n", _MAPDAMAGE_MAX_READS,
                              "-i", "-",
@@ -84,7 +84,7 @@ class MapDamageRescaleNode(CommandNode):
                             CHECK_VERSION   = MAPDAMAGE_VERSION)
         train_cmds = ParallelCmds(cat_cmds + [cmd_map])
 
-        cmd_nodes, cat_obj = _concatenate_input_bams(config, input_files)
+        cmd_nodes, cat_obj = concatenate_input_bams(config, input_files)
         cmd_scale = AtomicCmd(["mapDamage", "--rescale-only",
                                "-n", _MAPDAMAGE_MAX_READS,
                                "-i", "-",
@@ -112,7 +112,7 @@ class MapDamageRescaleNode(CommandNode):
 
 class FilterUniqueBAMNode(CommandNode):
     def __init__(self, config, input_bams, output_bam, dependencies = ()):
-        cat_cmds, cat_obj = _concatenate_input_bams(config, input_bams)
+        cat_cmds, cat_obj = concatenate_input_bams(config, input_bams)
         filteruniq = AtomicCmd(["FilterUniqueBAM", "--PIPE", "--library"],
                                IN_STDIN   = cat_obj,
                                OUT_STDOUT = output_bam)
@@ -207,24 +207,3 @@ class CleanupBAMNode(CommandNode):
                              dependencies = dependencies)
 
 
-def _concatenate_input_bams(config, input_bams):
-    input_bams = safe_coerce_to_tuple(input_bams)
-    if len(input_bams) == 1:
-        [], input_bams[0]
-
-    jar_file = os.path.join(config.jar_root, "MergeSamFiles.jar")
-    params = AtomicJavaParams(config, jar_file)
-
-    params.set_paths(OUT_STDOUT = AtomicCmd.PIPE)
-    params.set_parameter("OUTPUT", "/dev/stdout", sep = "=")
-    params.set_parameter("CREATE_INDEX", "False", sep = "=")
-    params.set_parameter("COMPRESSION_LEVEL",  0, sep = "=")
-
-    for (index, filename) in enumerate(safe_coerce_to_tuple(input_bams), start = 1):
-        params.push_parameter("I", "%%(IN_BAM_%02i)s" % index, sep = "=")
-        params.set_paths("IN_BAM_%02i" % index, filename)
-
-    params.set_parameter("SO", "coordinate", sep = "=", fixed = False)
-
-    cmd = params.finalize()
-    return [cmd], cmd
