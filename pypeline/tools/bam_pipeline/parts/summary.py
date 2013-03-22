@@ -278,7 +278,7 @@ class SummaryTableNode(Node):
             if "Paired end mode" in settings:
                 return {
                     "lib_type"            : ("PE", "# SE, PE, or * (for both)"),
-                    "seq_reads_pairs"     : (int(re.search("read pairs: ([0-9]+)",             settings).groups()[0]),  "# Total number of reads"),
+                    "seq_reads_pairs"     : (int(re.search("number of read pairs: ([0-9]+)",   settings).groups()[0]),  "# Total number of reads"),
                     "seq_trash_pe_1"      : (int(re.search("discarded mate 1 reads: ([0-9]+)", settings).groups()[0]),  "# Total number of reads"),
                     "seq_trash_pe_2"      : (int(re.search("discarded mate 2 reads: ([0-9]+)", settings).groups()[0]),  "# Total number of reads"),
                     "seq_retained_nts"    : (int(re.search("retained nucleotides: ([0-9]+)",   settings).groups()[0]),  "# Total number of NTs in retained reads"),
@@ -288,7 +288,7 @@ class SummaryTableNode(Node):
             elif "Single end mode" in settings:
                 return {
                     "lib_type"            : ("SE", "# SE, PE, or * (for both)"),
-                    "seq_reads_se"        : (int(re.search("read pairs: ([0-9]+)",             settings).groups()[0]),  "# Total number of single-ended reads"),
+                    "seq_reads_se"        : (int(re.search("number of reads: ([0-9]+)",        settings).groups()[0]),  "# Total number of single-ended reads"),
                     "seq_trash_se"        : (int(re.search("discarded mate 1 reads: ([0-9]+)", settings).groups()[0]),  "# Total number of trashed reads"),
                     "seq_retained_nts"    : (int(re.search("retained nucleotides: ([0-9]+)",   settings).groups()[0]),  "# Total number of NTs in retained reads"),
                     "seq_retained_reads"  : (int(re.search("retained reads: ([0-9]+)",         settings).groups()[0]),  "# Total number of retained reads"),

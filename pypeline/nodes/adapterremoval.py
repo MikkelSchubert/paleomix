@@ -40,7 +40,7 @@ def _adapterrm_patchlevel(value, pprint):
 ADAPTERRM_VERSION = versions.Requirement(call   = ("AdapterRemoval", "--version"),
                                          search = r"ver. (\d+)\.(\d+)(?:-GG(\d+))?",
                                          pprint = "{}.{}-GG{}",
-                                         checks = versions.And(_adapterrm_patchlevel, versions.EQ(1, 3, 1)))
+                                         checks = versions.And(_adapterrm_patchlevel, versions.EQ(1, 3, 2)))
 
 
 class SE_AdapterRemovalNode(CommandNode):
