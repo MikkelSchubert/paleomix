@@ -203,7 +203,7 @@ _VALIDATION = {
         "ExaML" : {
             "Bootstraps" : IsUnsignedInt,
             "Replicates" : IsUnsignedInt,
-            "Model"      : AnyOf(("gamma", )), # TODO
+            "Model"      : AnyOf("gamma", case_sensitive = False), # TODO
             "Outgroup"   : IsStr,
         }
     },
