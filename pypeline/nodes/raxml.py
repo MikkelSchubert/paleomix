@@ -365,7 +365,7 @@ class EXaMLNode(CommandNode):
                             Example output:      '/disk/project/SN013420.RAxML.bestTree'"""
 
         # TODO: Make MPIParams!
-        command = AtomicParams("examl")
+        command = AtomicMPIParams("examl", threads = threads)
 
         # Ensures that output is saved to the temporary directory
         command.set_parameter("-w", "%(TEMP_DIR)s")
@@ -394,8 +394,10 @@ class EXaMLNode(CommandNode):
 
         CommandNode.__init__(self,
                              command      = parameters.command.finalize(),
-                             description  = "<EXaML: '%s' -> '%s'>" \
-                                 % (parameters.input_binary, parameters.output_template),
+                             description  = "<EXaML (%i thread(s)): '%s' -> '%s'>" \
+                                 % (parameters.threads,
+                                    parameters.input_binary,
+                                    parameters.output_template),
                              threads      = parameters.threads,
                              dependencies = parameters.dependencies)
 
