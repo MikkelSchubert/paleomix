@@ -454,7 +454,7 @@ class ParsimonatorNode(CommandNode):
 
         CommandNode.__init__(self,
                              command      = parameters.command.finalize(),
-                             description  = "<EXaMLParser: '%s' -> '%s'>" \
+                             description  = "<Parsimonator: '%s' -> '%s'>" \
                                  % (parameters.input_alignment, parameters.output_tree),
                              dependencies = parameters.dependencies)
 
