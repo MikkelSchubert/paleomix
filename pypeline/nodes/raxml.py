@@ -103,6 +103,76 @@ class RAxMLReduceNode(CommandNode):
         CommandNode._teardown(self, config, temp)
 
 
+class RAxMLBootstrapNode(CommandNode):
+    @create_customizable_cli_parameters
+    def customize(cls, input_alignment, input_partition, output_alignment, dependencies = ()):
+        command = AtomicParams("raxmlHPC")
+
+        # Read and (in the case of empty columns) reduce input
+        command.set_parameter("-f", "j")
+        # Output files are saved with a .Pypeline postfix, and subsequently renamed
+        command.set_parameter("-n", "Pypeline")
+        # Model required, but not used
+        command.set_parameter("-m", "GTRGAMMA")
+        # Ensures that output is saved to the temporary directory
+        command.set_parameter("-w", "%(TEMP_DIR)s")
+        # Set random seed for bootstrap generation. May be set to a fixed value to allow replicability.
+        command.set_parameter("-b", int(random.random() * 2**31 - 1), fixed = False)
+        # Generate a single bootstrap alignment (makes growing the number of bootstraps easier).
+        command.set_parameter("-N", 1, fixed = False)
+
+        # Symlink to sequence and partitions, to prevent the creation of *.reduced files outside temp folder
+        # In addition, it may be nessesary to remove the .reduced files if created
+        command.set_parameter("-s", "input.alignment")
+        command.set_parameter("-q", "input.partition")
+
+        command.set_paths(IN_ALIGNMENT      = input_alignment,
+                          IN_PARTITION      = input_partition,
+
+                          OUT_ALIGNMENT     = output_alignment,
+                          OUT_INFO          = fileutils.swap_ext(output_alignment, ".info"))
+
+        return {"command" : command}
+
+
+    @use_customizable_cli_parameters
+    def __init__(self, parameters):
+        self._input_alignment  = parameters.input_alignment
+        self._input_partition  = parameters.input_partition
+        self._output_alignment = os.path.basename(parameters.output_alignment)
+
+        CommandNode.__init__(self,
+                             command      = parameters.command.finalize(),
+                             description  = "<RAxMLBootstrap: '%s' -> '%s'>" \
+                                     % (parameters.input_alignment, parameters.output_alignment),
+                             dependencies = parameters.dependencies)
+
+    def _setup(self, config, temp):
+        os.symlink(os.path.realpath(self._input_alignment), os.path.join(temp, "input.alignment"))
+        os.symlink(os.path.realpath(self._input_partition), os.path.join(temp, "input.partition"))
+
+    def _run(self, config, temp):
+        temp = os.path.realpath(temp)
+        oldwd = os.getcwd()
+        os.chdir(temp)
+        try:
+            CommandNode._run(self, config, temp)
+        finally:
+            os.chdir(oldwd)
+
+
+    def _teardown(self, config, temp):
+        fileutils.move_file(os.path.join(temp, "RAxML_info.Pypeline"),
+                            os.path.join(temp, fileutils.swap_ext(self._output_alignment, ".info")))
+        fileutils.move_file(os.path.join(temp, "input.alignment.BS0"),
+                            os.path.join(temp, self._output_alignment))
+
+        os.remove(os.path.join(temp, "input.alignment"))
+        os.remove(os.path.join(temp, "input.partition"))
+
+        CommandNode._teardown(self, config, temp)
+
+
 
 
 class RAxMLRapidBSNode(CommandNode):
