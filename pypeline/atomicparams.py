@@ -264,6 +264,17 @@ class AtomicJavaParams(AtomicParams):
         AtomicParams.__init__(self, call, set_cwd = set_cwd, AUX_JAR = jar)
 
 
+class AtomicMPIParams(AtomicParams):
+    def __init__(self, executable, threads = 1):
+        call = [executable]
+        executables = {"EXEC_MAIN" : executable}
+        if threads > 1:
+            call = ["mpirun", "-n", threads] + call
+            executables["EXEC_MPI"] = "mpirun"
+
+        AtomicParams.__init__(self, call, **executables)
+
+
 def use_customizable_cli_parameters(init_func):
     """Decorator implementing the customizable Node interface.
     Allows a node to be implemented either using default behavior:
