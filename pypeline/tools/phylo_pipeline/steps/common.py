@@ -28,7 +28,8 @@ import pypeline.tools.phylo_pipeline.makefile
 def parse_options(argv, parser = None):
     parser = OptionParser()
     parser.add_option("--run",                default = False, action="store_true")
-    parser.add_option("--non-verbose",        default = False, action="store_true")
+    parser.add_option("--verbose",            default = False, action="store_true")
+    parser.add_option("--expand-nodes",       default = False, action="store_true")
     parser.add_option("--max-threads",        default = 12, type = int)
     parser.add_option("--temp-root",          default = "./temp")
     parser.add_option("--samples-root",       default = "./data/samples")
