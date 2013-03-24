@@ -61,16 +61,18 @@ Options:
       # Disabling the seed is recommended for aDNA alignments, as post-mortem damage
       # tends to localize in the seed region, which is expected to be of high fideltiy
       UseSeed:    yes
+      # Additional command-line options may be specified for the "aln" call(s), as
+      # described below for Bowtie2.
 
     # Settings for mappings performed using Bowtie2
     Bowtie2:
       # Filter hits with a mapping quality (PHRED) below this value
       MinQuality: 0
       # Examples of how to add additional command-line options
-      --trim5: 5
-      --trim3: 5
+#      --trim5: 5
+#      --trim3: 5
       # Note that the colon is required, even if no value is specified
-      --very-sensitive-local:
+      --very-sensitive:
       # Example of how to specify multiple values for an option
 #     --rg:
 #       - CN:SequencingCenterNameHere
@@ -101,6 +103,8 @@ Options:
                      #   Location: {Destination}/{Target}.{Genome}.mapDamage/{Library}/
     - Coverage       # Generate coverage information for the raw BAM (wo/ indel realignment)
                      #   Location: {Destination}/{Target}.{Genome}.coverage
+    - Depths         # Generate histogram of number of sites with a given read-depth
+                     #   Location: {Destination}/{Target}.{Genome}.depths
     - Summary        # Generate target summary (uses statistics from raw BAM)
                      #   Location: {Destination}/{Target}.summary
 
