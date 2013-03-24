@@ -23,6 +23,7 @@
 import re
 import types
 import subprocess
+import collections
 
 from pypeline.common.utilities import safe_coerce_to_tuple, try_cast
 
@@ -108,7 +109,7 @@ class RequirementObj:
             def _pprint(value):
                 if not self._ppr:
                     return ".".join(map(str, value))
-                elif callable(self._ppr):
+                elif isinstance(self._ppr, collections.Callable):
                     return self._ppr(value)
                 return self._ppr.format(*value)
 
@@ -187,7 +188,7 @@ def _do_call(call):
     try:
         return _CALL_CACHE[call]
     except KeyError:
-        if callable(call[0]):
+        if isinstance(call[0], collections.Callable):
             result = call[0](*call[1:])
         else:
             result = _run(call)

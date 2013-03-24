@@ -149,7 +149,7 @@ class PE_BWANode(CommandNode):
             aln.push_positional(prefix)
             aln.push_positional("%(IN_FILE)s")
             aln.set_parameter("-f", "%(TEMP_OUT_SAI)s")
-            aln.set_parameter("-t", max(1, threads / 2))
+            aln.set_parameter("-t", max(1, threads // 2))
             alns.append(aln)
         aln_1, aln_2 = alns
 

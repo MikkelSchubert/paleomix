@@ -318,7 +318,8 @@ class SummaryTableNode(Node):
 
 
 
-def _measure_ordering((measure, _)):
+def _measure_ordering(pair):
+    measure = pair[0]
     key = measure.split("(")[0]
     return (__ORDERING[key], measure)
 

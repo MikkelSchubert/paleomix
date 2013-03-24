@@ -52,7 +52,6 @@ def add_statistics_nodes(config, makefile, target):
         elif "Coverage" in features:
             nodes.append(coverage["Node"])
 
-    print nodes
     target.add_extra_nodes("Statistics", nodes)
 
 

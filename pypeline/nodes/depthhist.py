@@ -155,10 +155,11 @@ class DepthHistogramNode(Node):
         if not any(table["<NA>"][None][None][1:]):
             table.pop("<NA>")
 
+        first = lambda pair: (pair[0] or "")
         rows = [["Name", "Sample", "Library", "Contig", "Size"] + ["MD_%03i" % i for i in xrange(1, _MAX_DEPTH + 1)]]
-        for sample, libraries in sorted(table.iteritems()):
-            for library, regions in sorted(libraries.iteritems()):
-                for (region, counts) in sorted(regions.iteritems()):
+        for sample, libraries in sorted(table.iteritems(), key = first):
+            for library, regions in sorted(libraries.iteritems(), key = first):
+                for (region, counts) in sorted(regions.iteritems(), key = first):
                     key = (self._target_name, sample, library, region)
                     row = [("*" if value is None else value) for value in key]
                     row.extend(self._calc_cumfrac(counts))

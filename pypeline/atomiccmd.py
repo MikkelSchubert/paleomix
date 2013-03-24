@@ -309,7 +309,7 @@ class AtomicCmd:
                            % (cls.__name__, key))
         elif (value == cls.PIPE) and key not in ("OUT_STDOUT", "TEMP_OUT_STDOUT"):
             raise ValueError, "PIPE is only allow for *_STDOUT, not " + key
-        elif key.startswith("CHECK_") and not callable(value):
+        elif key.startswith("CHECK_") and not isinstance(value, collections.Callable):
             raise ValueError("Values CHECKS_ must be callables, not %s" % repr(value))
         elif (key == "IN_STDIN") and not isinstance(value, types.StringTypes + (AtomicCmd,)):
             raise ValueError("STDIN for '%s' is not a string or AtomicCmd: %s" \

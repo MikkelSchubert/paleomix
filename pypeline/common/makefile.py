@@ -28,6 +28,7 @@ import math
 import types
 import hashlib
 import datetime
+import collections
 
 from pypeline.common.utilities import safe_coerce_to_tuple
 
@@ -70,13 +71,13 @@ def apply_defaults(current, defaults, path):
 
 
 def validate_makefile(current, reference, path):
-    if callable(reference):
+    if isinstance(reference, collections.Callable):
         reference(path, current)
     elif isinstance(current, dict) and isinstance(reference, dict):
         for cur_key in current:
             if cur_key not in reference:
                 for ref_key in reference:
-                    if callable(ref_key):
+                    if isinstance(ref_key, collections.Callable):
                         ref_key(path, cur_key)
                         validate_makefile(current[cur_key], reference[ref_key], path + (cur_key,))
                         break

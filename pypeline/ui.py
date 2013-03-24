@@ -84,7 +84,7 @@ def _print_running_nodes(graph):
         if graph.get_node_state(node) is NodeGraph.RUNNING:
             running.append(node)
 
-    for node in sorted(running):
+    for node in sorted(running, key = str):
         print_info("  - %s" % node)
     print_info()
 
