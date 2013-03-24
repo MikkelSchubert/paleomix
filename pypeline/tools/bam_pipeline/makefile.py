@@ -118,6 +118,9 @@ _VALIDATION = {
                 # Use seed region during mapping
                 # Verbose name for command-line option "-l 65535"
                 "UseSeed"    : IsBoolean,
+                # Any number of user specific options
+                IsStrWithPrefix("-") : Or(IsListOf(IsStr, IsInt, IsFloat),
+                                          Or(IsStr, IsInt, IsFloat, IsNone)),
             },
             "Bowtie2" : {
                 # Minimum mapping quality (PHREAD) of reads to retain
