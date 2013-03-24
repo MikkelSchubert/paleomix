@@ -26,26 +26,54 @@ import collections
 from pypeline.node import MetaNode
 from pypeline.common.fileutils import swap_ext
 from pypeline.nodes.coverage import CoverageNode, MergeCoverageNode
+from pypeline.nodes.depthhist import DepthHistogramNode
 from summary import SummaryTableNode
 
-def add_statistics_nodes(config, makefile, target):
-    features = makefile["Options"]["Features"]
-    make_summary = "Summary" in features
 
-    if "Coverage" not in features and not make_summary:
+def add_statistics_nodes(config, makefile, target):
+    features = set(makefile["Options"]["Features"])
+    if not features & set(("Coverage", "Depths", "Summary")):
         return
 
-    coverage = _build_coverage(config, makefile, target, make_summary)
-    if make_summary:
-        summary_node = SummaryTableNode(config         = config,
-                                        makefile       = makefile,
-                                        target         = target,
-                                        cov_for_lanes  = coverage["Lanes"],
-                                        cov_for_libs   = coverage["Libraries"],
-                                        dependencies   = coverage["Nodes"])
-        target.add_extra_nodes("Statistics", summary_node)
-    else:
-        target.add_extra_nodes("Coverage", coverage["Nodes"])
+    nodes = []
+    if "Depths" in features:
+        nodes.append(_build_depth(config, makefile, target))
+
+    if "Summary" in features or "Coverage" in features:
+        coverage = _build_coverage(config, makefile, target, ("Summary" in features))
+        if "Summary" in features:
+            summary_node = SummaryTableNode(config         = config,
+                                            makefile       = makefile,
+                                            target         = target,
+                                            cov_for_lanes  = coverage["Lanes"],
+                                            cov_for_libs   = coverage["Libraries"],
+                                            dependencies   = coverage["Node"])
+            nodes.append(summary_node)
+        elif "Coverage" in features:
+            nodes.append(coverage["Node"])
+
+    print nodes
+    target.add_extra_nodes("Statistics", nodes)
+
+
+def _build_depth(config, makefile, target):
+    nodes = []
+    for prefix in target.prefixes:
+        input_files = {}
+        for sample in prefix.samples:
+            input_files.update(sample.bams)
+            output_filename = os.path.join(config.destination,
+                                           "%s.%s.depths" % (target.name, prefix.name))
+
+            node = DepthHistogramNode(config       = config,
+                                      target_name  = target.name,
+                                      input_files  = input_files.keys(),
+                                      output_file  = output_filename,
+                                      dependencies = input_files.values())
+            nodes.append(node)
+
+    return MetaNode(description = "DepthHistograms",
+                    subnodes    = nodes)
 
 
 def _aggregate_for_prefix(cov, prefix, into = None):
@@ -73,10 +101,13 @@ def _build_coverage(config, makefile, target, make_summary):
         description = "Lanes and libraries"
         files_and_nodes = _aggregate_for_prefix(coverage["Lanes"], None, files_and_nodes)
 
-    coverage["Nodes"] = [MetaNode(description = description,
-                                  subnodes    = files_and_nodes.values()),
-                         MetaNode(description = "Final coverage",
-                                  subnodes    = merged_nodes)]
+    partial_nodes = MetaNode(description = description,
+                             subnodes    = files_and_nodes.values())
+    final_nodes   = MetaNode(description = "Final coverage",
+                             subnodes    = merged_nodes)
+
+    coverage["Node"] = MetaNode(description = "Coverage",
+                                subnodes    = (partial_nodes, final_nodes))
 
     return coverage
 

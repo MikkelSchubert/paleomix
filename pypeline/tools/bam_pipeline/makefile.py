@@ -96,7 +96,8 @@ _DEFAULTS = {
         "Features"       : ["Realigned BAM",
 							"mapDamage",
 							"Coverage",
-							"Summary"]
+							"Summary",
+                            "Depths"]
 	},
 }
 
@@ -136,7 +137,7 @@ _VALIDATION = {
         "ExcludeReads"   : AnyOf("Paired", "Single", "Collapsed"),
 
         # Features of pipeline
-        "Features"       : AnyOf("Raw BAM", "Realigned BAM", "Coverage", "Summary", "mapDamage"),
+        "Features"       : AnyOf("Raw BAM", "Realigned BAM", "Coverage", "Summary", "mapDamage", "Depths"),
 	},
 
 	"Prefixes" : {
