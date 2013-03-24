@@ -169,7 +169,7 @@ _VALIDATION = {
                 "Genome"         : IsStr,
                 "Protein coding" : IsBoolean,
                 "Orthology map"  : IsStr,
-                "Homozygous contigs" : {
+                "Homozygous Contigs" : {
                     IsStr : IsListOf(IsStr),
                     },
                 },

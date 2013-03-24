@@ -55,7 +55,7 @@ class BuildRegionsNode(CommandNode):
                 "--min-distance-to-indels", settings["MinDistanceToIndels"]]
         if interval["Protein coding"]:
             call.append("--whole-codon-indels-only")
-        for contig in interval["Homozygous contigs"]:
+        for contig in interval["Homozygous Contigs"]:
             call.extend(("--homozygous-chromosome", contig))
 
         prefix = "{Genome}.{Name}".format(**interval)
@@ -88,8 +88,8 @@ class SampleRegionsNode(CommandNode):
 
         description = "<SampleRegions: '%s' -> '%s'>" \
             % (infile, outfile)
-        
-        CommandNode.__init__(self, 
+
+        CommandNode.__init__(self,
                              description  = description,
                              command      = command,
                              dependencies = dependencies)
@@ -103,7 +103,7 @@ class ExtractReference(Node):
 
         description = "<ExtractReference: '%s' -> '%s'>" \
             % (reference, outfile)
-        Node.__init__(self, 
+        Node.__init__(self,
                       description  = description,
                       input_files  = [intervals],
                       output_files = [outfile],
@@ -124,19 +124,18 @@ class ExtractReference(Node):
                 for (gene, gene_beds) in itertools.groupby(beds, lambda x: x.name):
                     for bed in gene_beds:
                         seqs[(contig, gene)].append(fastafile.fetch(contig, bed.start, bed.end))
-                    
+
                     seq = "".join(seqs[(contig, gene)])
                     if any((bed.strand == "-") for bed in gene_beds):
                         assert all((bed.strand == "-") for bed in gene_beds)
                         seq = sequences.reverse_complement(seq)
                     seqs[(contig, gene)] = seq
-                        
-                
+
         temp_file = os.path.join(temp, "sequences.fasta")
         with open(temp_file, "w") as out_file:
             for ((_, gene), sequence) in sorted(seqs.items()):
                 fasta.print_fasta(gene, sequence, out_file)
-        
+
         move_file(temp_file, self._outfile)
 
 
@@ -233,7 +232,7 @@ def build_taxa_nodes(options, genotyping, intervals, taxa, dependencies = ()):
         interval["Genome"] = common.get_genome_for_interval(interval, taxa)
         # Enforce homozygous contigs based on gender tag
         #        interval[
-        interval["Homozygous contigs"] = interval["Homozygous contigs"][taxa["Gender"]]
+        interval["Homozygous Contigs"] = interval["Homozygous Contigs"][taxa["Gender"]]
 
         genotyping_method = taxa.get("Genotyping Method", "samtools").lower()
         if genotyping_method == "reference sequence":
