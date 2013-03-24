@@ -43,8 +43,8 @@ class FastaToPAMLPhyNode(Node):
     def __init__(self, input_file, output_file, dependencies = ()):
         description  = "<FastaToPAMLPhy: '%s' -> '%s'>" % \
             (input_file, output_file)
-            
-        Node.__init__(self, 
+
+        Node.__init__(self,
                       description  = description,
                       input_files  = [input_file],
                       output_files = [output_file],
@@ -53,7 +53,7 @@ class FastaToPAMLPhyNode(Node):
 
     def _run(self, _config, temp):
         msa = read_msa(self.input_files[0])
-        
+
         lines = []
         lines.append("  %i %i" % (len(msa), len(msa.itervalues().next())))
         for (name, seq) in sorted(msa.iteritems()):
@@ -71,14 +71,14 @@ class FastaToPAMLPhyNode(Node):
         output_file = self.output_files[0]
         fileutils.move_file(fileutils.reroot_path(temp, output_file), output_file)
 
-        
+
 class CodemlNode(CommandNode):
     def __init__(self, control_file, sequence_file, trees_file, output_file, dependencies = ()):
         self._control_file  = control_file
         self._sequence_file = sequence_file
         self._trees_file    = trees_file
         self._output_file   = output_file
-        
+
         command = AtomicCmd(["codeml", "template.ctl"],
                             IN_SEQUENCE_FILE = sequence_file,
                             IN_TREES_FILE    = trees_file,
@@ -115,8 +115,8 @@ class CodemlNode(CommandNode):
                 os.remove(os.path.join(temp, filename))
 
         CommandNode._teardown(self, config, temp)
-            
-    @classmethod 
+
+    @classmethod
     def _update_ctl_file(cls, source, destination, sequence_file, trees_file, output_file):
         with open(source) as handle:
             template = handle.read()
@@ -130,7 +130,6 @@ class CodemlNode(CommandNode):
         with open(destination, "w") as handle:
             handle.write(template)
 
-    
 
 def build_codeml_nodes(options, settings, interval, taxa, filtering, dependencies):
     postfix = ""
@@ -146,14 +145,29 @@ def build_codeml_nodes(options, settings, interval, taxa, filtering, dependencie
     for sequence in sequences:
         input_file  = os.path.join(sequencedir, sequence + ".afa")
         output_file = os.path.join(destination, sequence + ".phy")
-        
+
         phylip_nodes[sequence] = FastaToPAMLPhyNode(input_file, output_file, dependencies)
 
-    return MetaNode(description  = "<FastaToPAMLPhyNodes: '%s/*.afa' -> '%s/*.phy'>" % (sequencedir, destination),
-                    subnodes     = phylip_nodes.values(),
-                    dependencies = dependencies)
-                    
-    
+    phylip_meta = MetaNode(description  = "<FastaToPAMLPhyNodes: '%s/*.afa' -> '%s/*.phy'>" % (sequencedir, destination),
+                           subnodes     = phylip_nodes.values(),
+                           dependencies = dependencies)
+
+    codeml_nodes = []
+    for (sequence, node) in phylip_nodes.iteritems():
+        output_file = os.path.join(destination, sequence + ".codeml")
+
+        codeml = CodemlNode(control_file  = options.destination + ".codeml.ctl",
+                            trees_file    = options.destination + ".codeml.trees",
+                            sequence_file = node.output_files[0],
+                            output_file   = output_file,
+                            dependencies  = node)
+
+        codeml_nodes.append(codeml)
+
+    return MetaNode(description  = "<CodemlNodes>",
+                    subnodes     = codeml_nodes,
+                    dependencies = phylip_meta)
+
 
 
 def chain_codeml(pipeline, options, makefiles):
