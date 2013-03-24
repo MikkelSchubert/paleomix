@@ -41,7 +41,7 @@ class JModelTestNode(CommandNode):
                 "-AICc",      # Calculate the corrected Akaike Information Criterion
                 "-BIC",       # Calculate the Bayesian Information Criterion
                 "-tr", threads,
-		"-d", "%(IN_ALIGNMENT)s"]
+                "-d", "%(IN_ALIGNMENT)s"]
 
         jmodeltest  = AtomicCmd(call,
                                 IN_ALIGNMENT = infile,

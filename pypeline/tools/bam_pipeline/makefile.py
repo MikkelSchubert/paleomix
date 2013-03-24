@@ -44,14 +44,14 @@ def read_makefiles(filenames):
 
 
 def _IsValidPrefixName(key, name):
-	name = name.title()
-	_read_types = ("Single", "Collapsed", "Paired")
-	if (name in _read_types) or (name in [(s + "Reads") for s in _read_types]) or (name == "Options"):
-		raise MakefileError("Prefixes cannot be named '%s', please use another name." % name)
-	elif (set(name) & set(string.whitespace)):
-		raise MakefileError("The label must not contain white-space, and cannot be '*': %s" % name)
-	elif (set(name) & set(string.whitespace)):
-		raise MakefileError("Prefix name must not contain whitespace:\n\t- Prefix: %s" % name)
+    name = name.title()
+    _read_types = ("Single", "Collapsed", "Paired")
+    if (name in _read_types) or (name in [(s + "Reads") for s in _read_types]) or (name == "Options"):
+        raise MakefileError("Prefixes cannot be named '%s', please use another name." % name)
+    elif (set(name) & set(string.whitespace)):
+        raise MakefileError("The label must not contain white-space, and cannot be '*': %s" % name)
+    elif (set(name) & set(string.whitespace)):
+        raise MakefileError("Prefix name must not contain whitespace:\n\t- Prefix: %s" % name)
 
 
 def _IsValidOptions(path, value):
@@ -62,27 +62,27 @@ def _IsValidOptions(path, value):
 
 
 _DEFAULTS = {
-	"Options" : {
-	    # Sequencing platform, used to tag read-groups.
-		"Platform" : "Illumina",
-	    # Offset for quality scores in FASTQ files.
+    "Options" : {
+        # Sequencing platform, used to tag read-groups.
+        "Platform" : "Illumina",
+        # Offset for quality scores in FASTQ files.
         "QualityOffset" : 33,
 
         # Which aliger/mapper to use (BWA/Bowtie2)
-		"Aligners" : {
-			"Program" : "BWA",
-			"BWA" : {
+        "Aligners" : {
+            "Program" : "BWA",
+            "BWA" : {
                 # Minimum mapping quality (PHREAD) of reads to retain
-				"MinQuality" : 0,
+                "MinQuality" : 0,
                 # Use seed region during mapping
                 # Verbose name for command-line option "-l 65535"
-				"UseSeed"    : True,
-			},
-			"Bowtie2" : {
+                "UseSeed"    : True,
+            },
+            "Bowtie2" : {
                 # Minimum mapping quality (PHREAD) of reads to retain
-				"MinQuality"  : 0,
-			},
-		},
+                "MinQuality"  : 0,
+            },
+        },
 
         # Contains PCR duplicates, filter if true
         "PCRDuplicates"    : True,
@@ -94,39 +94,39 @@ _DEFAULTS = {
 
         # Features of pipeline
         "Features"       : ["Realigned BAM",
-							"mapDamage",
-							"Coverage",
-							"Summary",
+                            "mapDamage",
+                            "Coverage",
+                            "Summary",
                             "Depths"]
-	},
+    },
 }
 
 
 _VALIDATION = {
-	"Options" : {
-	    # Sequencing platform, used to tag read-groups.
-		"Platform" : OneOf("CAPILLARY", "LS454", "ILLUMINA", "SOLID", "HELICOS", "IONTORRENT", "PACBIO",  case_sensitive = False),
-	    # Offset for quality scores in FASTQ files.
+    "Options" : {
+        # Sequencing platform, used to tag read-groups.
+        "Platform" : OneOf("CAPILLARY", "LS454", "ILLUMINA", "SOLID", "HELICOS", "IONTORRENT", "PACBIO",  case_sensitive = False),
+        # Offset for quality scores in FASTQ files.
         "QualityOffset" : OneOf(33, 64, "Solexa"),
 
         # Which aliger/mapper to use (BWA/Bowtie2)
-		"Aligners" : {
-			"Program" : OneOf("BWA", "Bowtie2"),
-			"BWA" : {
+        "Aligners" : {
+            "Program" : OneOf("BWA", "Bowtie2"),
+            "BWA" : {
                 # Minimum mapping quality (PHREAD) of reads to retain
-				"MinQuality" : And(IsInt, IsInRange(0, float("Inf"))),
+                "MinQuality" : And(IsInt, IsInRange(0, float("Inf"))),
                 # Use seed region during mapping
                 # Verbose name for command-line option "-l 65535"
-				"UseSeed"    : IsBoolean,
-			},
-			"Bowtie2" : {
+                "UseSeed"    : IsBoolean,
+            },
+            "Bowtie2" : {
                 # Minimum mapping quality (PHREAD) of reads to retain
-				"MinQuality" : And(IsInt, IsInRange(0, float("Inf"))),
-	            # Any number of user specific options
-				IsStrWithPrefix("-") : Or(IsListOf(IsStr, IsInt, IsFloat),
+                "MinQuality" : And(IsInt, IsInRange(0, float("Inf"))),
+                # Any number of user specific options
+                IsStrWithPrefix("-") : Or(IsListOf(IsStr, IsInt, IsFloat),
                                           Or(IsStr, IsInt, IsFloat, IsNone)),
-			},
-		},
+            },
+        },
 
         # Contains PCR duplicates, filter if true
         "PCRDuplicates"     : IsBoolean,
@@ -138,24 +138,24 @@ _VALIDATION = {
 
         # Features of pipeline
         "Features"       : AnyOf("Raw BAM", "Realigned BAM", "Coverage", "Summary", "mapDamage", "Depths"),
-	},
+    },
 
-	"Prefixes" : {
-		_IsValidPrefixName : {
-			"Path"    : IsStr,
-			"Label"   : OneOf("nucl", "nuclear", "mito", "mitochondrial")
-		},
-	},
+    "Prefixes" : {
+        _IsValidPrefixName : {
+            "Path"    : IsStr,
+            "Label"   : OneOf("nucl", "nuclear", "mito", "mitochondrial")
+        },
+    },
 
-	IsStr : { # Target
-	    IsStr : { # Sample
+    IsStr : { # Target
+        IsStr : { # Sample
             IsStr : { # Library
-				IsStr     : Or(IsStr, IsDictOf(IsStr, IsStr)),
-				"Options" : _IsValidOptions,
-			},
-		"Options" : _IsValidOptions,
-		},
-	},
+                IsStr     : Or(IsStr, IsDictOf(IsStr, IsStr)),
+                "Options" : _IsValidOptions,
+            },
+        "Options" : _IsValidOptions,
+        },
+    },
 }
 
 
