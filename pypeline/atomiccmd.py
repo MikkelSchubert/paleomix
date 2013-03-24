@@ -164,6 +164,13 @@ class AtomicCmd:
         return return_codes
 
 
+    def wait(self):
+        """Equivalent to Subproces.wait. This function should only
+        be used in contexts where a AtomicCmd needs to be combined
+        with Subprocesses, as it does not exist for AtomicSets."""
+        return self.join()[0]
+
+
     def terminate(self):
         """Sends SIGTERM to process."""
         self._proc.terminate()
