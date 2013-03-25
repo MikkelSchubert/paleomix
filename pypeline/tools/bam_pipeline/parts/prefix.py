@@ -34,6 +34,8 @@ class Prefix:
         self.name      = prefix["Name"]
         self.label     = prefix.get("Label") or self.name
         self.reference = prefix["Reference"]
+        self.aoi       = prefix.get("AreasOfInterest", {})
+
         self.samples = safe_coerce_to_tuple(samples)
         self.bams    = {}
         self.folder  = config.destination

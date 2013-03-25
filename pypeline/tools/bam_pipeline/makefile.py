@@ -146,7 +146,8 @@ _VALIDATION = {
     "Prefixes" : {
         _IsValidPrefixName : {
             "Path"    : IsStr,
-            "Label"   : OneOf("nucl", "nuclear", "mito", "mitochondrial")
+            "Label"   : OneOf("nucl", "nuclear", "mito", "mitochondrial"),
+            "AreasOfInterest" : IsDictOf(IsStr, IsStr),
         },
     },
 
@@ -205,9 +206,10 @@ def _update_prefixes(makefile):
             for fname in glob.glob(filename):
                 name = os.path.basename(fname).split(".")[0]
                 _IsValidPrefixName(("Prefixes", name), name)
+                dd = copy.copy(values)
+                dd["Path"] = fname
 
-                records.append((name, {"Path" : fname, "Label" : values.get("Label")}))
-
+                records.append((name, dd))
             if not records:
                 raise MakefileError("Did not find any matches for glob %s" % repr(filename))
         else:
