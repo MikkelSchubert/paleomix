@@ -84,7 +84,7 @@ class MapDamageRescaleNode(CommandNode):
                             CHECK_VERSION   = MAPDAMAGE_VERSION)
         train_cmds = ParallelCmds(cat_cmds + [cmd_map])
 
-        cmd_nodes, cat_obj = concatenate_input_bams(config, input_files)
+        cat_cmds, cat_obj = concatenate_input_bams(config, input_files)
         cmd_scale = AtomicCmd(["mapDamage", "--rescale-only",
                                "-n", _MAPDAMAGE_MAX_READS,
                                "-i", "-",
