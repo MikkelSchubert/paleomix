@@ -58,21 +58,29 @@ def add_statistics_nodes(config, makefile, target):
 def _build_depth(config, makefile, target):
     nodes = []
     for prefix in target.prefixes:
+        aoi = [("", None)]
+        for (name, path) in prefix.aoi.iteritems():
+            aoi.append(("." + name, path))
+
         input_files = {}
         for sample in prefix.samples:
             input_files.update(sample.bams)
-            output_filename = os.path.join(config.destination,
-                                           "%s.%s.depths" % (target.name, prefix.name))
 
-            node = DepthHistogramNode(config       = config,
-                                      target_name  = target.name,
-                                      input_files  = input_files.keys(),
-                                      output_file  = output_filename,
-                                      dependencies = input_files.values())
-            nodes.append(node)
+            for (aoi_name, aoi_filename) in aoi:
+                output_filename = os.path.join(config.destination,
+                                               "%s.%s%s.depths" % (target.name, prefix.name, aoi_name))
+
+                node = DepthHistogramNode(config         = config,
+                                          target_name    = target.name,
+                                          input_files    = input_files.keys(),
+                                          intervals_file = aoi_filename,
+                                          output_file    = output_filename,
+                                          dependencies   = input_files.values())
+                nodes.append(node)
 
     return MetaNode(description = "DepthHistograms",
                     subnodes    = nodes)
+
 
 
 def _aggregate_for_prefix(cov, prefix, into = None):
