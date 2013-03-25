@@ -50,10 +50,11 @@ class Prefix:
 
         sample_nodes = [sample.node for sample in self.samples]
         if not self.bams:
-            self.bams = bams
+            for sample in self.samples:
+                self.bams.update(sample.bams)
+
             self.node = MetaNode(description  = "Prefix: %s" % prefix["Name"],
-                                 dependencies = nodes)
-            nodes     = sample_nodes
+                                 dependencies = sample_nodes)
         else:
             self.node = MetaNode(description  = "Final BAMs: %s" % prefix["Name"],
                                  subnodes     = self.bams.values(),
