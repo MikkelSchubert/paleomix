@@ -49,6 +49,9 @@ class Reads:
         else:
             assert False, "Unexpected data type in Reads(): %s" % (repr(lane_type))
 
+        for name in record["Options"]["ExcludeReads"]:
+            self.files.pop(name, None)
+
 
     def _init_raw_reads(self, config, record):
         output_prefix = os.path.join(self.folder, "reads")
