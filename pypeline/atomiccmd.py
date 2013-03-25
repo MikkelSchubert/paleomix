@@ -144,7 +144,7 @@ class AtomicCmd:
     def ready(self):
         """Returns true if the command has been run to completion,
         regardless of wether or not an error occured."""
-        return (self._proc.poll() is not None)
+        return (self._proc and self._proc.poll() is not None)
 
 
     def join(self):
