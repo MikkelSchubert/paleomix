@@ -30,17 +30,10 @@ from pypeline.atomicparams import *
 import pypeline.common.versions as versions
 
 
-# To avoid problems caused by the many (unofficial) verisons of AdapterRemoval,
-# only a single know-to-work version is allowed at present. This version is
-# based on the official v1.3, with a patch applied (see pypeline/patches).
-def _adapterrm_patchlevel(value, pprint):
-    if value[-1] is None:
-        raise versions.VersionRequirementError("Please apply the AdapterRemoval patch in the pypeline/patches folder for version 1.3-GG1.")
-
 ADAPTERRM_VERSION = versions.Requirement(call   = ("AdapterRemoval", "--version"),
-                                         search = r"ver. (\d+)\.(\d+)(?:-GG(\d+))?",
-                                         pprint = "{}.{}-GG{}",
-                                         checks = versions.And(_adapterrm_patchlevel, versions.EQ(1, 3, 2)))
+                                         search = r"ver. (\d+)\.(\d+)",
+                                         pprint = "{}.{}",
+                                         checks = versions.EQ(1, 4))
 
 
 class SE_AdapterRemovalNode(CommandNode):
