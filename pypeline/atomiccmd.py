@@ -135,6 +135,7 @@ class AtomicCmd:
                                       stdout = stdout,
                                       stderr = stderr,
                                       cwd    = cwd,
+                                      preexec_fn = os.setsid,
                                       close_fds = True)
 
         # Allow subprocesses to be killed in case of a SIGTERM
@@ -377,7 +378,7 @@ def _cleanup_children(signum, _frame):
     for proc_ref in _PROCS:
         proc = proc_ref()
         if proc:
-            proc.terminate()
+            os.killpg(proc.pid, signal.SIGTERM)
     sys.exit(-signum)
 
 def _add_to_killlist(proc):
