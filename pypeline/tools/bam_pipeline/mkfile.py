@@ -45,6 +45,11 @@ Options:
   # For Bowtie2 it is also possible to specify 'Solexa', to handle reads on the Solexa scale.
   # This is used during adapter-trimming (AdapterRemoval) and sequence alignment (BWA/Bowtie2)
   QualityOffset: 33
+  # Split a lane into multiple entries, one for each (pair of) file(s) found using the search-
+  # string specified for a given lane. Each lane is named by adding a number to the end of the
+  # given barcode.
+  SplitLanesByFilenames: no
+
   """ % timestamp
 
     if full_mkfile:

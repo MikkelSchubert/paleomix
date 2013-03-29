@@ -67,6 +67,8 @@ _DEFAULTS = {
         "Platform" : "Illumina",
         # Offset for quality scores in FASTQ files.
         "QualityOffset" : 33,
+        # Split a lane into multiple entries, one for each (pair of) file(s)
+        "SplitLanesByFilenames" : False,
 
         # Which aliger/mapper to use (BWA/Bowtie2)
         "Aligners" : {
@@ -108,6 +110,8 @@ _VALIDATION = {
         "Platform" : OneOf("CAPILLARY", "LS454", "ILLUMINA", "SOLID", "HELICOS", "IONTORRENT", "PACBIO",  case_sensitive = False),
         # Offset for quality scores in FASTQ files.
         "QualityOffset" : OneOf(33, 64, "Solexa"),
+        # Split a lane into multiple entries, one for each (pair of) file(s)
+        "SplitLanesByFilenames"  : IsBoolean,
 
         # Which aliger/mapper to use (BWA/Bowtie2)
         "Aligners" : {
@@ -173,6 +177,8 @@ def _mangle_makefile(makefile):
     _update_prefixes(makefile)
     _update_lanes(makefile)
     _update_tags(makefile)
+
+    _split_lanes_by_filenames(makefile)
 
     return makefile
 
@@ -276,6 +282,30 @@ def _update_tags(makefile):
                     record["Tags"] = tags
 
 
+def _split_lanes_by_filenames(makefile):
+    for (target, sample, library, barcode, record) in _iterate_over_records(makefile):
+        if record["Type"] == "Raw":
+            record["Data"] = files = paths.collect_files(record["Data"])
+
+            if record["Options"]["SplitLanesByFilenames"]:
+                if any(len(v) > 1 for v in files.itervalues()):
+                    template = makefile["Targets"][target][sample][library].pop(barcode)
+                    keys = ("SE",) if ("SE" in files) else ("PE_1", "PE_2")
+
+                    input_files = [files[key] for key in keys]
+                    input_files_iter = itertools.izip_longest(*input_files)
+                    for (index, filenames) in enumerate(input_files_iter, start = 1):
+                        assert len(filenames) == len(keys)
+                        assert len(filenames[0]) == len(filenames[-1])
+                        new_barcode = "%s_%02i" % (barcode, index)
+
+                        current = copy.deepcopy(template)
+                        current["Data"] = dict((key, [filename]) for (key, filename) in zip(keys, filenames))
+                        current["Tags"]["PU"] = new_barcode
+
+                        makefile["Targets"][target][sample][library][new_barcode] = current
+
+
 def _validate_makefiles(makefiles):
     for makefile in makefiles:
         _validate_makefile_libraries(makefile)
@@ -302,7 +332,7 @@ def _validate_makefiles_duplicate_files(makefiles):
         for (target, sample, library, barcode, record) in _iterate_over_records(makefile):
             current_filenames = []
             if record["Type"] == "Raw":
-                for raw_filenames in paths.collect_files(record["Data"]).itervalues():
+                for raw_filenames in record["Data"].itervalues():
                     current_filenames.extend(raw_filenames)
             else:
                 current_filenames.extend(record["Data"].values())
@@ -336,9 +366,9 @@ def _validate_makefiles_duplicate_targets(makefiles):
 
 
 def _iterate_over_records(makefile):
-    for (target, samples) in makefile["Targets"].iteritems():
-        for (sample, libraries) in samples.iteritems():
-            for (library, barcodes) in libraries.iteritems():
-                for (barcode, record) in barcodes.iteritems():
+    for (target, samples) in makefile["Targets"].items():
+        for (sample, libraries) in samples.items():
+            for (library, barcodes) in libraries.items():
+                for (barcode, record) in barcodes.items():
                     yield target, sample, library, barcode, record
 

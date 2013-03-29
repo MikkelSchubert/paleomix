@@ -55,7 +55,7 @@ class Reads:
 
     def _init_raw_reads(self, config, record):
         output_prefix = os.path.join(self.folder, "reads")
-        files = paths.collect_files(record["Data"])
+        files = record["Data"]
         if ("SE" in files):
             command = SE_AdapterRemovalNode.customize(input_files   = files["SE"],
                                                       output_prefix = output_prefix)
