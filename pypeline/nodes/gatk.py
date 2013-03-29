@@ -32,7 +32,8 @@ from pypeline.common.utilities import safe_coerce_to_tuple
 
 class _IndelTrainerNode(CommandNode):
     def __init__(self, config, reference, infiles, outfile, dependencies = ()):
-        call  = ["java", "-jar", os.path.join(config.jar_root, "GenomeAnalysisTK.jar"),
+        jar   = os.path.join(config.jar_root, "GenomeAnalysisTK.jar")
+        call  = ["java", "-jar", jar,
                  "-T", "RealignerTargetCreator",
                  "-R", "%(IN_REFERENCE)s",
                  "-o", "%(OUT_INTERVALS)s"]
@@ -42,6 +43,7 @@ class _IndelTrainerNode(CommandNode):
                             IN_REFERENCE  = reference,
                             IN_REF_DICT   = fileutils.swap_ext(reference, ".dict"),
                             OUT_INTERVALS = outfile,
+                            AUX_JAR       = jar,
                             **keys)
 
         description = "<Train Indel Realigner: %i file(s) -> '%s'>" \
@@ -58,7 +60,8 @@ class _IndelRealignerNode(CommandNode):
     def __init__(self, config, reference, intervals, infiles, outfile, dependencies = ()):
         self._basename = os.path.basename(outfile)
 
-        call  = ["java", "-jar", os.path.join(config.jar_root, "GenomeAnalysisTK.jar"),
+        jar   = os.path.join(config.jar_root, "GenomeAnalysisTK.jar")
+        call  = ["java", "-jar", jar,
                  "-T", "IndelRealigner",
                  "-R", "%(IN_REFERENCE)s",
                  "-targetIntervals", "%(IN_INTERVALS)s",
@@ -72,6 +75,7 @@ class _IndelRealignerNode(CommandNode):
                             IN_REF_DICT  = fileutils.swap_ext(reference, ".dict"),
                             IN_INTERVALS = intervals,
                             OUT_BAMFILE  = outfile,
+                            AUX_JAR      = jar,
                             **keys)
 
         calmd   = AtomicCmd(["samtools", "calmd", "-b", "%(TEMP_IN_BAM)s", "%(IN_REF)s"],
