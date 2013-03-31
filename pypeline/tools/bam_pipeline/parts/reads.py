@@ -39,7 +39,7 @@ class Reads:
 
         tags = record["Tags"]
         self.folder = os.path.join(config.destination, tags["Target"], "reads",
-                                   tags["SM"], tags["LB"], tags["PU"])
+                                   tags["SM"], tags["LB"], tags["PU_cur"])
 
         lane_type = record.get("Type")
         if lane_type == "Raw":

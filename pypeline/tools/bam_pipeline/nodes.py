@@ -187,8 +187,10 @@ class CleanupBAMNode(CommandNode):
         params.set_parameter("COMPRESSION_LEVEL", "0", sep = "=")
 
         for (tag, value) in sorted(tags.iteritems()):
-            if tag not in ("PG", "Target"):
+            if tag not in ("PG", "Target", "PU_src", "PU_cur"):
                 params.set_parameter(tag, value, sep = "=")
+            elif tag == "PU_src":
+                params.set_parameter("PU", value, sep = "=")
 
         params.set_paths(IN_STDIN   = flt,
                          OUT_STDOUT = AtomicCmd.PIPE)

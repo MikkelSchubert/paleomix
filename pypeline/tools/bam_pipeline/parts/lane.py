@@ -46,7 +46,7 @@ class Lane:
         self.options = copy.deepcopy(record["Options"])
         self.tags    = tags = copy.deepcopy(record["Tags"])
         self.folder  = os.path.join(config.destination, tags["Target"], prefix["Name"],
-                                    tags["SM"], tags["LB"], tags["PU"])
+                                    tags["SM"], tags["LB"], tags["PU_cur"])
 
         if record["Type"] == "BAMs":
             self._init_pre_aligned_lane(config, prefix, record)
@@ -74,7 +74,7 @@ class Lane:
 
 
     def _init_reads(self, config, record):
-        key = tuple(self.tags[key] for key in ("Target", "SM", "LB", "PU"))
+        key = tuple(self.tags[key] for key in ("Target", "SM", "LB", "PU_cur"))
         if key not in _TRIMMED_READS_CACHE:
             _TRIMMED_READS_CACHE[key] = reads.Reads(config, record, record["Options"]["QualityOffset"])
         self.reads = _TRIMMED_READS_CACHE[key]
@@ -140,7 +140,7 @@ def _build_bwa_nodes(config, parameters, input_filename, tags, options):
     pg_tags += " | " + " ".join(map(str, params.commands[sam_key].call)).replace("%", "%%")
     params.commands["convert"].push_parameter("--update-pg-tag", pg_tags)
 
-    read_group = "@RG\tID:{ID}\tSM:{SM}\tLB:{LB}\tPU:{PU}\tPL:{PL}\tPG:{PG}".format(**tags)
+    read_group = "@RG\tID:{ID}\tSM:{SM}\tLB:{LB}\tPU:{PU_src}\tPL:{PL}\tPG:{PG}".format(**tags)
     params.commands[sam_key].set_parameter("-r", read_group)
 
     params.commands["filter"].set_parameter('-q', options["Aligners"]["BWA"]["MinQuality"])
@@ -172,9 +172,10 @@ def _build_bowtie2_nodes(config, parameters, input_filename, tags, options):
     params.commands["convert"].push_parameter("--update-pg-tag", pg_tags)
 
     params.commands["aln"].set_parameter("--rg-id", tags["ID"])
-    for (tag_name, tag_value) in tags.iteritems():
-        if tag_name not in ("Target", "ID"):
-            params.commands["aln"].push_parameter("--rg", "%s:%s" % (tag_name, tag_value))
+    for tag_name in ("SM", "LB", "PU", "PL"):
+        tag_value = tags[tag_name if (tag_name != "PU") else "PU_src"]
+
+        params.commands["aln"].push_parameter("--rg", "%s:%s" % (tag_name, tag_value))
 
     return params.build_node()
 

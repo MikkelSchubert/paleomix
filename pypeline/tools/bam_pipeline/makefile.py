@@ -275,7 +275,11 @@ def _update_tags(makefile):
                             "ID" : library,
                             "SM" : sample,
                             "LB" : library,
-                            "PU" : barcode,
+                            # Source/Current PU may differ if a lane has been split by
+                            # filenames, in which case PU_src contains the original PU,
+                            # while PU_cur contains a derived PU.
+                            "PU_src" : barcode,
+                            "PU_cur" : barcode,
                             "PG" : record["Options"]["Aligners"]["Program"],
                             "PL" : record["Options"]["Platform"]}
 
@@ -301,7 +305,7 @@ def _split_lanes_by_filenames(makefile):
 
                         current = copy.deepcopy(template)
                         current["Data"] = dict((key, [filename]) for (key, filename) in zip(keys, filenames))
-                        current["Tags"]["PU"] = new_barcode
+                        current["Tags"]["PU_cur"] = new_barcode
 
                         makefile["Targets"][target][sample][library][new_barcode] = current
 
