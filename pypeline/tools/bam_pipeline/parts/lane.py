@@ -178,20 +178,3 @@ def _build_bowtie2_nodes(config, parameters, input_filename, tags, options):
         params.commands["aln"].push_parameter("--rg", "%s:%s" % (tag_name, tag_value))
 
     return params.build_node()
-
-
-def _build_bam_cleanup_nodes(config, target, sample, library, barcode, record):
-    tags = {"ID" : library, "SM" : sample, "LB" : library, "PU" : barcode,
-            "PL" : record["Options"]["Platform"]}
-
-    results = {}
-    for (genome, alignments) in record["Reads"]["BAM"].iteritems():
-        results[genome] = {}
-        output_dir = os.path.join(config.destination, target, genome, sample, library, barcode)
-        for (key, filename) in alignments.iteritems():
-            results[genome][key] = {"Node" : node,
-                                    "Filename" : output_filename,
-                                    "Coverage" : coverages}
-
-    record["Reads"]["BAM"] = results
-    return record
