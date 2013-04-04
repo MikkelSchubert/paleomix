@@ -30,6 +30,7 @@ import collections
 
 import pypeline.tools.bam_pipeline.paths as paths
 from pypeline.common.makefile import *
+from pypeline.common.fileutils import missing_files
 
 
 def read_makefiles(filenames):
@@ -111,7 +112,7 @@ _VALIDATION = {
         # Offset for quality scores in FASTQ files.
         "QualityOffset" : OneOf(33, 64, "Solexa"),
         # Split a lane into multiple entries, one for each (pair of) file(s)
-        "SplitLanesByFilenames"  : IsBoolean,
+        "SplitLanesByFilenames"  : Or(IsBoolean, IsListOf(IsStr)),
 
         # Which aliger/mapper to use (BWA/Bowtie2)
         "Aligners" : {
@@ -285,9 +286,11 @@ def _update_tags(makefile):
 def _split_lanes_by_filenames(makefile):
     for (target, sample, library, barcode, record) in _iterate_over_records(makefile):
         if record["Type"] == "Raw":
-            record["Data"] = files = paths.collect_files(record["Data"])
+            template = record["Data"]
+            record["Data"] = files = paths.collect_files(template)
+            split = record["Options"]["SplitLanesByFilenames"]
 
-            if record["Options"]["SplitLanesByFilenames"]:
+            if (split == True) or (isinstance(split, list) and (barcode in split)):
                 if any(len(v) > 1 for v in files.itervalues()):
                     template = makefile["Targets"][target][sample][library].pop(barcode)
                     keys = ("SE",) if ("SE" in files) else ("PE_1", "PE_2")
