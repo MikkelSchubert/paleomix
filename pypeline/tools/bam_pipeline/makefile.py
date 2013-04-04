@@ -291,7 +291,9 @@ def _split_lanes_by_filenames(makefile):
             split = record["Options"]["SplitLanesByFilenames"]
 
             if (split == True) or (isinstance(split, list) and (barcode in split)):
-                if any(len(v) > 1 for v in files.itervalues()):
+                if any(missing_files(file_set) for file_set in files.itervalues()):
+                    raise MakefileError("Unable to split by filename for search-string '%s', did not find files" % template)
+                elif any(len(v) > 1 for v in files.itervalues()):
                     template = makefile["Targets"][target][sample][library].pop(barcode)
                     keys = ("SE",) if ("SE" in files) else ("PE_1", "PE_2")
 
