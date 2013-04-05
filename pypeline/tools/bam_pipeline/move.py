@@ -133,7 +133,7 @@ def rm_files(record):
 
 def main(argv):
     parser = optparse.OptionParser()
-    parser.add_option("--picard-root", default = os.path.join(os.path.expanduser('~'), "install", "picard-tools"),
+    parser.add_option("--jar-root", default = os.path.join(os.path.expanduser('~'), "install", "picard-tools"),
                       help = "Folder containing Picard JARs (http://picard.sf.net)")
     options, args = parser.parse_args(argv)
 
