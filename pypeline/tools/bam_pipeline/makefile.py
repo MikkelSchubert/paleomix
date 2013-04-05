@@ -302,7 +302,7 @@ def _split_lanes_by_filenames(makefile):
                     for (index, filenames) in enumerate(input_files_iter, start = 1):
                         assert len(filenames) == len(keys)
                         assert len(filenames[0]) == len(filenames[-1])
-                        new_barcode = "%s_%02i" % (barcode, index)
+                        new_barcode = "%s_%03i" % (barcode, index)
 
                         current = copy.deepcopy(template)
                         current["Data"] = dict((key, [filename]) for (key, filename) in zip(keys, filenames))
