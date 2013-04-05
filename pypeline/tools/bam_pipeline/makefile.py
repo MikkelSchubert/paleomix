@@ -151,7 +151,7 @@ _VALIDATION = {
     "Prefixes" : {
         _IsValidPrefixName : {
             "Path"    : IsStr,
-            "Label"   : OneOf("nucl", "nuclear", "mito", "mitochondrial"),
+            "Label"   : OneOf("nuclear", "mitochondrial"),
             "AreasOfInterest" : IsDictOf(IsStr, IsStr),
         },
     },
