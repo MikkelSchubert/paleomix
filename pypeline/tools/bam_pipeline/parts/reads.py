@@ -23,6 +23,7 @@
 import os
 import copy
 
+from pypeline.common.fileutils import missing_files
 from pypeline.common.makefile import MakefileError
 from pypeline.nodes.adapterremoval import SE_AdapterRemovalNode, \
                                           PE_AdapterRemovalNode
@@ -51,6 +52,12 @@ class Reads:
 
         for name in record["Options"]["ExcludeReads"]:
             self.files.pop(name, None)
+
+        if config.allow_missing_input_files and self.nodes:
+            input_missing  = missing_files(self.nodes[0].input_files)
+            output_missing = missing_files(self.nodes[0].output_files)
+            if input_missing and not output_missing:
+                self.nodes = ()
 
 
     def _init_raw_reads(self, config, record):
