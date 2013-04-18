@@ -101,14 +101,14 @@ def get_ml_phenotype(vcf):
     genotype can be determined, the function returns 'N' for both bases."""
     if len(vcf) != 1:
         raise ValueError("Only records with 1 sample are supported!")
-    
+
     genotypes = []
     genotypes.extend(vcf.ref.split(","))
     genotypes.extend(vcf.alt.split(","))
 
     PL = map(int, get_format(vcf)["PL"].split(","))
 
-    expected_length = (len(genotypes) * (len(genotypes) + 1)) / 2
+    expected_length = (len(genotypes) * (len(genotypes) + 1)) // 2
     if len(PL) != expected_length:
         raise ValueError("Unexpected number of PL values, expected %i, found %i!" \
                              % (expected_length, len(PL)))
@@ -119,10 +119,10 @@ def get_ml_phenotype(vcf):
 
     most_likely = min(xrange(len(PL)), key=PL.__getitem__)
     prefix, postfix = _genotype_indices[most_likely]
-    
-    return "%s,%s" % (genotypes[prefix], genotypes[postfix])
 
-    
+    return (genotypes[prefix], genotypes[postfix])
+
+
 def get_format(vcf, sample = 0):
     return dict(zip(vcf.format.split(":"),
                     vcf[0].split(":")))

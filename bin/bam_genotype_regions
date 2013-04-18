@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python -3
 #
 # Copyright (c) 2012 Mikkel Schubert <MSchubert@snm.ku.dk>
 #
@@ -34,158 +34,12 @@ import pypeline.common.vcfwrap as vcfwrap
 import pypeline.common.samwrap as samwrap
 import pypeline.common.sequences as sequences
 import pypeline.common.formats.fasta as fasta
+import pypeline.common.vcffilter as vcffilter
 
 
-def _group_indels_near_position(indels, distance):
-    """Returns a dictionary of positions that are either directly covered by, or
-    adjacent to indels, given some arbitrary distance. For each position, a list
-    of adjacent/overlapping indels are provided."""
-    positions = defaultdict(list)
-    for vcf in indels:
-        # The number of bases covered (excluding the prefix)
-        # For ambigious indels (e.g. in low complexity regions), this ensures
-        # that the entire region is considered. Note that we do not need to 
-        # consider the alternative sequence(s)
-        length = len(vcf.ref) - 1
 
-        # Inclusive start/end positions for bases that should be blacklisted
-        # Note that vcf.pos is the base just before the insertion/deletion
-        start = vcf.pos + 1 - distance
-        end   = vcf.pos + 1 + distance + length
-
-        for position in xrange(start, end + 1):
-            positions[position].append(vcf)
-
-    return positions
-
-
-def _filter_snps_near_indels(options, snps, indels):
-    """Filters a list of (assumed to be) SNPs, such that no SNP is closer to
-    an indel than the value set in options.min_distance_to_indels."""
-    distance  = options.min_distance_to_indels
-    blacklist = _group_indels_near_position(indels, distance)
-
-    filtered = []
-    for vcf in snps:
-        # TODO: How to handle heterozygous SNPs near
-        if (vcf.alt == ".") or (vcf.pos not in blacklist):
-            filtered.append(vcf)
-
-    return filtered
-
-
-def _filter_adjacent_indels(options, indels):
-    """Filters a list of (assumed to be) indels, such that no two indels are 
-    closer than the value set in options.min_distance_between_indels. If two
-    or more indels are within this distance, the indel with the highest QUAL
-    score is retained. When no unique highest QUAL score exists, an arbitrary
-    indel is retained among those indels with the highest QUAL score."""
-    distance  = options.min_distance_between_indels
-    groups = _group_indels_near_position(indels, distance)
-
-    blacklist = set()
-    for group in groups.itervalues():
-        group.sort(key = lambda vcf: vcf.qual)
-        blacklist.update(group[:-1])
-
-    filtered = []
-    for indel in indels:
-        if indel not in blacklist:
-            filtered.append(indel)
-
-    return filtered
-
-
-def _filter_by_properties(options, vcfs):
-    """Filters a list of SNPs/indels based on the various properties recorded in 
-    the info column, and others. This mirrors most of the filtering carried out
-    by vcfutils.pl varFilter."""
-    filtered = []
-    for vcf in vcfs:
-        if vcf.qual < options.min_quality:
-            continue
-
-        properties = {}
-        for field in vcf.info.split(";"):
-            if "=" in field:
-                key, value = field.split("=")
-            else:
-                key, value = field, None
-            properties[key] = value
-
-        read_depth = float(properties["DP"])
-        if not (options.min_read_depth <= read_depth <= options.max_read_depth):
-            continue
-        
-        if "MQ" in properties:
-            if float(properties["MQ"]) < options.min_mapping_quality:
-                continue
-
-        if "PV4" in properties:
-            pv4 = [float(value) for value in properties["PV4"].split(",")]
-            if (pv4[0] < options.min_strand_bias) or (pv4[1] < options.min_baseq_bias) \
-                    or (pv4[2] < options.min_mapq_bias) or (pv4[3] < options.min_end_distance_bias):
-                continue
-
-        if vcf.alt != ".":
-            _, _, alt_fw, alt_rev = properties["DP4"].split(",")
-            if (int(alt_fw) + int(alt_rev)) < options.min_num_alt_bases:
-                continue
-
-        filtered.append(vcf)
-    
-    return filtered
-
-
-def _filter_heterozygous_indels(indels):
-    filtered = []
-    for vcf in indels:
-        ml_genotype = vcfwrap.get_ml_phenotype(vcf)
-        if ml_genotype == "N,N":
-            # No most likely genotype
-            continue
-        
-        strand_a, strand_b = ml_genotype.split(",")
-        if strand_a != strand_b:
-            continue
-
-        # Keep only the most likely genotype
-        vcf.alt = strand_a
-
-        filtered.append(vcf)
-
-    return filtered
-
-
-def filter_vcfs(options, vcfs):
-    snps, indels = [], []
-    for vcf in vcfs:
-        if vcfwrap.is_indel(vcf):
-            # VCFs are created for all indels in pileup, even those not called.
-            if (vcf.alt != "."):
-                indels.append(vcf)
-        else:
-            snps.append(vcf)
-    
-    # Filter by distance from adjacent indels (conservatively SNPs are filtered first!)
-    snps   = _filter_snps_near_indels(options, snps, indels)
-    indels = _filter_adjacent_indels(options, indels)
-    
-    # Filter heterozygous indels (by number of alternative values)
-    # Note that this modifies homozygous indels, such that only the most likely 
-    # genotype is represented, even if the record contained multiple possible indels.
-    indels = _filter_heterozygous_indels(indels)
-
-    # Filter by genotyping scores
-    snps   = _filter_by_properties(options, snps)
-    indels = _filter_by_properties(options, indels)
-
-    return snps, indels
-
-
-        
 def build_region(options, genotype, bed):
-    # Note that bed.end is a past-the-end coordinate 
+    # Note that bed.end is a past-the-end coordinate
     start  = max(0, bed.start - options.padding)
     end    = bed.end + options.padding
 
@@ -194,29 +48,34 @@ def build_region(options, genotype, bed):
         # This raises a ValueError if the VCF does not
         # contain any entries for the specified contig.
         vcfs = genotype.fetch(bed.contig, start, end, parser = pysam.asVCF())
-    
 
-    snps, indels = filter_vcfs(options, vcfs)
-
-    filter_heterozygous = bed.contig in options.homozygous_chromosome
+    filtered_vcfs = []
+    for vcf in vcffilter.filter_vcfs(options, vcfs):
+        if (vcf.filter == "PASS"):
+            filtered_vcfs.append(vcf)
 
     sequence = ["N"] * (end - start)
-    for snp in snps:
-        if snp.alt != ".":
-            genotype = vcfwrap.get_ml_phenotype(snp)
-            if filter_heterozygous and (genotype[0] != genotype[-1]):
-                continue
+    for snp in filtered_vcfs:
+        if not vcfwrap.is_indel(snp):
+            if snp.alt != ".":
+                genotype = "".join(vcfwrap.get_ml_phenotype(snp))
+                encoded  = sequences.encode_genotype(genotype)
+            else:
+                encoded = snp.ref
 
-            encoded  = sequences.encode_genotype(genotype)
-        else:
-            encoded = snp.ref
+            sequence[snp.pos - start] = encoded
 
-        sequence[snp.pos - start] = encoded
+    for indel in filtered_vcfs:
+        if (indel.alt == ".") or not vcfwrap.is_indel(indel):
+            continue
 
-    for indel in indels:
-        # Note that indels have been modified in _filter_heterozygous_indels, 
-        # such that they contain only one 'ALT' value, allow them to be parsed
-        # using pypeline.common.vcfwrap.parse_indel().
+        genotype = vcfwrap.get_ml_phenotype(indel)
+        if (genotype[0] != genotype[1]):
+            # No way to represent heterozygous indels
+            continue
+
+        # FIXME: parse_indel only supports a single 'alt' values
+        indel.alt = genotype[0]
         indel = vcfwrap.parse_indel(indel)
         if indel.in_reference:
             del_start = max(indel.pos + 1, bed.start)
@@ -242,7 +101,6 @@ def build_region(options, genotype, bed):
     return truncated
 
 
-
 def build_genes(options, genotype, regions):
     def keyfunc(bed):
         return (bed.contig, bed.name, bed.start)
@@ -266,37 +124,12 @@ def main(argv, output = sys.stdout):
     parser = OptionParser()
     parser.add_option("--genotype", help="Tabix indexed VCF file.")
     parser.add_option("--intervals", help="BED file.")
-    parser.add_option("--homozygous-chromosome", action="append", default = [],
-                      help = "Filter heterozygous SNPs observed on this chromosome (e.g. chrX) [%default].")
+    parser.add_option("--padding", type = int, default = 10,
+                      help = "Number of bases to expand intervals, when checking for adjacent indels [%default]")
     parser.add_option("--whole-codon-indels-only", action="store_true", default = False,
                       help = "If true, only indels where (length % 3) == 0 are retained [%default]")
-    parser.add_option("--padding", type = int, default = 10, 
-                      help = "Number of bases to expand intervals, when checking for adjacent indels [%default]")
-    parser.add_option("--min-quality", type = int, default = 30,
-                      help = "Minimum Phred score recorded in the QUAL column [%default]")
 
-    # Options adapted from varFilter
-    parser.add_option("-Q", "--min-mapping-quality", type = int, default = 10,
-                      help = "Minimum RMS mapping quality for SNPs [%default]")
-    parser.add_option("-d", "--min-read-depth", type = int, default = 2,
-                      help = "Minimum read depth [%default]")
-    parser.add_option("-D", "--max-read-depth", type = int, default = 10000000,
-                      help = "Maximum read depth [%default]")
-    parser.add_option("-a", "--min-num-alt-bases", type = int, default = 2,
-                      help = "Minimum number of alternative bases observed for variants [%default]")
-    parser.add_option("-w", "--min-distance-to-indels", type = int, default = 3,
-                      help = "SNP within INT bp around a gap to be filtered [%default]")
-    parser.add_option("-W", "--min-distance-between-indels", type = int, default = 10,
-                      help = "Window size for filtering adjacent gaps [%default]")
-    parser.add_option("-1", "--min-strand-bias", type = float, default = 1e-4,
-                      help = "Min P-value for strand bias (given PV4) [%default]")
-    parser.add_option("-2", "--min-baseq-bias", type = float, default = 1e-100,
-                      help = "Min P-value for baseQ bias (given PV4) [%default]")
-    parser.add_option("-3", "--min-mapq-bias", type = float, default = 0,
-                      help = "Min P-value for mapQ bias (given PV4) [%default]")
-    parser.add_option("-4", "--min-end-distance-bias", type = float, default = 1e-4,
-                      help = "Min P-value for end distance bias (given PV4) [%default]")
-
+    vcffilter.add_varfilter_options(parser)
 
     (opts, args) = parser.parse_args(argv)
     if args:
@@ -311,7 +144,7 @@ def main(argv, output = sys.stdout):
     if opts.whole_codon_indels_only:
         print(", assuming sequences represents CDS", end = "", file = sys.stderr)
     print(" ...", file = sys.stderr)
-    
+
     genotype = pysam.Tabixfile(opts.genotype)
     with open(opts.intervals) as bed_file:
         intervals = samwrap.read_tabix_BED(bed_file)
