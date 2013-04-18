@@ -139,8 +139,9 @@ class IndexAndValidateBAMNode(MetaNode):
                                                       output_log   = log_file,
                                                       dependencies = node)
         # Check MD tags against reference sequence
-        validation_params.command.set_paths(IN_REFERENCE = prefix["Reference"])
-        validation_params.command.push_parameter("R", "%(IN_REFERENCE)s", sep = "=")
+        # FIXME: Disabled due to issues with Picard/Samtools disagreeing, backwards compatibility.
+        #        validation_params.command.set_paths(IN_REFERENCE = prefix["Reference"])
+        #        validation_params.command.push_parameter("R", "%(IN_REFERENCE)s", sep = "=")
         # Ignored since we filter out misses and low-quality hits during mapping, which
         # leads to a large proportion of missing mates for PE reads.
         validation_params.command.push_parameter("IGNORE", "MATE_NOT_FOUND", sep = "=")

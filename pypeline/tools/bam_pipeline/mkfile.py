@@ -95,7 +95,7 @@ Options:
 #  ExcludeReads:
 #    - Single    # Single-ended reads, or PE reads where one mate was discarded
 #    - Paired    # Pair-ended reads, where both reads were retained
-#    - Collapsed # Overlapping pair-ended mate reads collapsed into a single read  # ExcludeReads:
+#    - Collapsed # Overlapping pair-ended mate reads collapsed into a single read
 
   # Optional steps to perform during processing
   # To disable all features, replace with line "Features: []"

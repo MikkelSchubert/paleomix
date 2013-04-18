@@ -232,6 +232,10 @@ class NodeGraph:
                             "\n\tDependent node: %s\n\tFilename: %s\n\tCreated by: %s" \
                             % (consumer, filename, producer)
             elif not os.path.exists(filename):
+                nodes = list(sorted(set(map(str, nodes))))
+                if len(nodes) > 4:
+                    nodes = nodes[:5] + ["and %i more nodes ..." % len(nodes)]
+
                 yield "Required file does not exist, and is not created by a node:" + \
                             "\n\tFilename: %s\n\tDependent node(s): %s" \
                             % (filename,    "\n\t                   ".join(map(str, nodes)))

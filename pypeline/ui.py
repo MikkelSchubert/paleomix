@@ -28,6 +28,7 @@ import datetime
 import collections
 
 from pypeline.nodegraph import NodeGraph
+from pypeline.node import MetaNode
 
 
 def _do_print_color(*vargs, **kwargs):
@@ -101,8 +102,8 @@ def _print_sub_nodes(graph, nodes, collapse, prefix = ""):
     for node in viable_nodes:
         description = "%s%s %s" % (prefix, _get_runable_prefix(graph, node), node)
         if node.subnodes:
-            description += _describe_nodes(graph, node.subnodes)
-            
+            description += _describe_nodes(graph, node.subnodes, count_meta = True)
+
         print_func = _get_print_function(graph, node)
         print_func(description)
 
@@ -135,10 +136,11 @@ def _count_dependencies(dependencies):
     return counter
 
 
-def _describe_nodes(graph, nodes):
+def _describe_nodes(graph, nodes, count_meta = False):
     states = collections.defaultdict(int)
     for node in nodes:
-        states[graph.get_node_state(node)] += 1
+        if count_meta or not isinstance(node, MetaNode):
+            states[graph.get_node_state(node)] += 1
 
     fields = [("running",  states[NodeGraph.RUNNING]),
               ("outdated", states[NodeGraph.OUTDATED]),
@@ -149,7 +151,7 @@ def _describe_nodes(graph, nodes):
         if value:
             line.append("%i %s" % (value, name))
 
-    line.append("%i done of %i nodes" \
+    line.append("%i done of %i tasks" \
                     % (states[NodeGraph.DONE], 
                        sum(states.values())))
 

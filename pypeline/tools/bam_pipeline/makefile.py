@@ -30,6 +30,7 @@ import collections
 
 import pypeline.tools.bam_pipeline.paths as paths
 from pypeline.common.makefile import *
+from pypeline.common.fileutils import missing_files
 
 
 def read_makefiles(filenames):
@@ -111,7 +112,7 @@ _VALIDATION = {
         # Offset for quality scores in FASTQ files.
         "QualityOffset" : OneOf(33, 64, "Solexa"),
         # Split a lane into multiple entries, one for each (pair of) file(s)
-        "SplitLanesByFilenames"  : IsBoolean,
+        "SplitLanesByFilenames"  : Or(IsBoolean, IsListOf(IsStr)),
 
         # Which aliger/mapper to use (BWA/Bowtie2)
         "Aligners" : {
@@ -150,7 +151,7 @@ _VALIDATION = {
     "Prefixes" : {
         _IsValidPrefixName : {
             "Path"    : IsStr,
-            "Label"   : OneOf("nucl", "nuclear", "mito", "mitochondrial"),
+            "Label"   : OneOf("nuclear", "mitochondrial"),
             "AreasOfInterest" : IsDictOf(IsStr, IsStr),
         },
     },
@@ -289,10 +290,14 @@ def _update_tags(makefile):
 def _split_lanes_by_filenames(makefile):
     for (target, sample, library, barcode, record) in _iterate_over_records(makefile):
         if record["Type"] == "Raw":
-            record["Data"] = files = paths.collect_files(record["Data"])
+            template = record["Data"]
+            record["Data"] = files = paths.collect_files(template)
+            split = record["Options"]["SplitLanesByFilenames"]
 
-            if record["Options"]["SplitLanesByFilenames"]:
-                if any(len(v) > 1 for v in files.itervalues()):
+            if (split == True) or (isinstance(split, list) and (barcode in split)):
+                if any(missing_files(file_set) for file_set in files.itervalues()):
+                    raise MakefileError("Unable to split by filename for search-string '%s', did not find files" % template)
+                elif any(len(v) > 1 for v in files.itervalues()):
                     template = makefile["Targets"][target][sample][library].pop(barcode)
                     keys = ("SE",) if ("SE" in files) else ("PE_1", "PE_2")
 
@@ -301,7 +306,7 @@ def _split_lanes_by_filenames(makefile):
                     for (index, filenames) in enumerate(input_files_iter, start = 1):
                         assert len(filenames) == len(keys)
                         assert len(filenames[0]) == len(filenames[-1])
-                        new_barcode = "%s_%02i" % (barcode, index)
+                        new_barcode = "%s_%03i" % (barcode, index)
 
                         current = copy.deepcopy(template)
                         current["Data"] = dict((key, [filename]) for (key, filename) in zip(keys, filenames))
