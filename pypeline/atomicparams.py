@@ -320,3 +320,10 @@ def create_customizable_cli_parameters(customize_func):
     return classmethod(do_call)
 
 
+def apply_params(obj, params, pred = lambda s: s.startswith("-")):
+    print obj.call
+    for (key, values) in params.iteritems():
+        if pred(key):
+            for value in safe_coerce_to_tuple(values):
+                obj.set_parameter(key, value)
+                print(key, value)
