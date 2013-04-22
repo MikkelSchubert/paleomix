@@ -257,3 +257,7 @@ def _safe_coerce_to_lowercase(value):
 
 def _this(value):
     return value
+
+
+CLI_PARAMETERS = Or(IsListOf(IsStr, IsInt, IsFloat),
+                    Or(IsStr, IsInt, IsFloat, IsNone))
