@@ -34,7 +34,6 @@ import pypeline.common.vcfwrap as vcfwrap
 import pypeline.common.samwrap as samwrap
 import pypeline.common.sequences as sequences
 import pypeline.common.formats.fasta as fasta
-import pypeline.common.vcffilter as vcffilter
 
 
 
@@ -43,16 +42,13 @@ def build_region(options, genotype, bed):
     start  = max(0, bed.start - options.padding)
     end    = bed.end + options.padding
 
-    vcfs = []
+    filtered_vcfs = []
     if bed.contig in genotype.contigs:
         # This raises a ValueError if the VCF does not
         # contain any entries for the specified contig.
-        vcfs = genotype.fetch(bed.contig, start, end, parser = pysam.asVCF())
-
-    filtered_vcfs = []
-    for vcf in vcffilter.filter_vcfs(options, vcfs):
-        if (vcf.filter == "PASS"):
-            filtered_vcfs.append(vcf)
+        for vcf in genotype.fetch(bed.contig, start, end, parser = pysam.asVCF()):
+            if (vcf.filter == "PASS"):
+                filtered_vcfs.append(vcf)
 
     sequence = ["N"] * (end - start)
     for snp in filtered_vcfs:
@@ -128,8 +124,6 @@ def main(argv, output = sys.stdout):
                       help = "Number of bases to expand intervals, when checking for adjacent indels [%default]")
     parser.add_option("--whole-codon-indels-only", action="store_true", default = False,
                       help = "If true, only indels where (length % 3) == 0 are retained [%default]")
-
-    vcffilter.add_varfilter_options(parser)
 
     (opts, args) = parser.parse_args(argv)
     if args:
