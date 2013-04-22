@@ -25,6 +25,7 @@ import os
 from pypeline.node import CommandNode
 from pypeline.atomiccmd import AtomicCmd
 from pypeline.atomicset import ParallelCmds
+from pypeline.atomicparams import *
 from pypeline.common.fileutils import reroot_path, swap_ext
 import pypeline.common.versions as versions
 
@@ -35,39 +36,46 @@ SAMTOOLS_VERSION = versions.Requirement(call   = ("samtools",),
 
 
 class GenotypeNode(CommandNode):
-    pileup_args = "-EA"
-    caller_args = "-g"
-
-    def __init__(self, reference, infile, outfile, regions = None, dependencies = ()):
+    @create_customizable_cli_parameters
+    def customize(cls, reference, infile, outfile, regions = None, dependencies = ()):
         assert outfile.lower().endswith(".vcf.bgz")
 
-        call_pileup = ["samtools", "mpileup",
-                       GenotypeNode.pileup_args,
-                       "-uf", "%(IN_REFERENCE)s",
-                       "%(IN_BAMFILE)s"]
+        pileup = AtomicParams(["samtools", "mpileup"],
+                              IN_REFERENCE = reference,
+                              IN_BAMFILE   = infile,
+                              IN_REGIONS   = regions,
+                              OUT_STDOUT   = AtomicCmd.PIPE,
+                              CHECK_SAM    = SAMTOOLS_VERSION)
+        pileup.set_parameter("-u") # Uncompressed output
+        pileup.set_parameter("-f", "%(IN_REFERENCE)s")
+        pileup.push_positional("%(IN_BAMFILE)s")
+
         if regions:
-            call_pileup[-1:-1] = ["-l", "%(IN_REGIONS)s"]
+            pileup.set_parameter("-l", "%(IN_REGIONS)s")
 
-        pileup   = AtomicCmd(call_pileup,
-                             IN_REFERENCE = reference,
-                             IN_BAMFILE   = infile,
-                             IN_REGIONS   = regions,
-                             OUT_STDOUT   = AtomicCmd.PIPE,
-                             CHECK_SAM    = SAMTOOLS_VERSION)
+        genotype = AtomicParams(["bcftools", "view"],
+                                IN_STDIN     = pileup,
+                                OUT_STDOUT   = AtomicCmd.PIPE)
+        genotype.push_positional("-")
 
-        genotype = AtomicCmd(["bcftools", "view", GenotypeNode.caller_args, "-"],
-                             IN_STDIN     = pileup,
-                             OUT_STDOUT   = AtomicCmd.PIPE)
+        bgzip    = AtomicParams(["bgzip"],
+                                IN_STDIN     = genotype,
+                                OUT_STDOUT   = outfile)
 
-        bgzip    = AtomicCmd(["bgzip"],
-                             IN_STDIN     = genotype,
-                             OUT_STDOUT   = outfile)
+        return {"commands" : {"pileup"   : pileup,
+                              "genotype" : genotype,
+                              "bgzip"    : bgzip}}
 
-        description = "<Genotyper: '%s' -> '%s'>" % (infile, outfile)
+
+    @use_customizable_cli_parameters
+    def __init__(self, parameters):
+        commands = [parameters.commands[key].finalize() for key in ("pileup", "genotype", "bgzip")]
+        description = "<Genotyper: '%s' -> '%s'>" % (parameters.infile,
+                                                     parameters.outfile)
         CommandNode.__init__(self,
                              description  = description,
-                             command      = ParallelCmds([pileup, genotype, bgzip]),
-                             dependencies = dependencies)
+                             command      = ParallelCmds(commands),
+                             dependencies = parameters.dependencies)
 
 
 class MPileupNode(CommandNode):
