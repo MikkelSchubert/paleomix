@@ -152,7 +152,7 @@ def concatenate_input_bams(config, input_bams, out = AtomicCmd.PIPE):
 
     input_bams = safe_coerce_to_tuple(input_bams)
     if len(input_bams) == 1:
-        [], input_bams[0]
+        return [], input_bams[0]
 
     jar_file = os.path.join(config.jar_root, "MergeSamFiles.jar")
     params = AtomicJavaParams(config, jar_file)
