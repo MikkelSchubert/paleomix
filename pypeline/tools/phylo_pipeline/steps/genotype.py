@@ -163,6 +163,7 @@ class ExtractReference(Node):
                 beds.sort(key = keyfunc)
 
                 for (gene, gene_beds) in itertools.groupby(beds, lambda x: x.name):
+                    gene_beds = tuple(gene_beds)
                     for bed in gene_beds:
                         seqs[(contig, gene)].append(fastafile.fetch(contig, bed.start, bed.end))
 

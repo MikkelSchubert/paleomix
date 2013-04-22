@@ -103,7 +103,7 @@ def build_genes(options, genotype, regions):
     regions.sort(key = keyfunc)
 
     for (gene, beds) in itertools.groupby(regions, lambda x: x.name):
-        sequence = []
+        sequence, beds = [], tuple(beds)
         for bed in beds:
             sequence.extend(build_region(options, genotype, bed))
         sequence = "".join(sequence)
