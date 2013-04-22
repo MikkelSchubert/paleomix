@@ -31,6 +31,8 @@ from copy import deepcopy
 
 from pypeline.node import Node, CommandNode, MetaNode
 from pypeline.atomiccmd import AtomicCmd
+from pypeline.atomicset import ParallelCmds
+from pypeline.atomicparams import *
 from pypeline.nodes.samtools import GenotypeNode, TabixIndexNode, FastaIndexNode, MPileupNode
 from pypeline.nodes.bedtools import SlopBedNode
 
@@ -43,56 +45,95 @@ import pypeline.common.formats.fasta as fasta
 import common
 
 
-class BuildRegionsNode(CommandNode):
-    def __init__(self, options, settings, infile, interval, outfile, dependencies = ()):
-        call = ["bam_genotype_regions",
-                "--genotype", "%(IN_VCFFILE)s",
-                "--intervals", "%(IN_INTERVALS)s",
-                "--padding", settings["Padding"],
-                "--min-quality", settings["MinQuality"],
-                "--min-read-depth", settings["MinDepth"],
-                "--max-read-depth", settings["MaxDepth"],
-                "--min-distance-to-indels", settings["MinDistanceToIndels"]]
-        if interval["Protein coding"]:
-            call.append("--whole-codon-indels-only")
-        for contig in interval["Homozygous Contigs"]:
-            call.extend(("--homozygous-chromosome", contig))
 
+class VCFFilterNode(CommandNode):
+    @create_customizable_cli_parameters
+    def customize(cls, infile, outfile, interval, dependencies = ()):
+        unicat = AtomicParams(["unicat", "%(IN_VCF)s"],
+                              IN_VCF     = infile,
+                              OUT_STDOUT = AtomicCmd.PIPE)
+
+        vcffilter = AtomicParams(["vcf_filter"],
+                              IN_STDIN     = unicat,
+                              OUT_STDOUT   = AtomicCmd.PIPE)
+        for contig in interval.get("Homozygous Contigs", ()):
+            vcffilter.set_parameter("--homozygous-chromosome", contig)
+
+        bgzip = AtomicParams(["bgzip"],
+                             IN_STDIN     = vcffilter,
+                             OUT_STDOUT   = outfile)
+
+        return {"commands" : {"unicat" : unicat,
+                              "filter" : vcffilter,
+                              "bgzip"  : bgzip}}
+
+
+    @use_customizable_cli_parameters
+    def __init__(self, parameters):
+        commands = [parameters.commands[key].finalize() for key in ("unicat", "filter", "bgzip")]
+        description = "<VCFFilter: '%s' -> '%s'>" % (parameters.infile,
+                                                     parameters.outfile)
+        CommandNode.__init__(self,
+                             description  = description,
+                             command      = ParallelCmds(commands),
+                             dependencies = parameters.dependencies)
+
+
+
+class BuildRegionsNode(CommandNode):
+    @create_customizable_cli_parameters
+    def customize(cls, options, infile, interval, outfile, padding, dependencies = ()):
         prefix = "{Genome}.{Name}".format(**interval)
         intervals = os.path.join(options.intervals_root, prefix + ".bed")
-        command = AtomicCmd(call,
-                            IN_VCFFILE   = infile,
-                            IN_INTERVALS = intervals,
-                            OUT_STDOUT   = outfile)
 
-        description = "<BuildRegions: '%s' -> '%s'>" % (infile, outfile)
+        params = AtomicParams(["bam_genotype_regions"],
+                              IN_VCFFILE   = infile,
+                              IN_TABIX     = infile + ".tbi",
+                              IN_INTERVALS = intervals,
+                              OUT_STDOUT   = outfile)
+        params.set_parameter("--genotype", "%(IN_VCFFILE)s")
+        params.set_parameter("--intervals", "%(IN_INTERVALS)s")
+        if interval.get("Protein coding"):
+            params.set_parameter("--whole-codon-indels-only")
+
+        return {"command" : params}
+
+
+    @use_customizable_cli_parameters
+    def __init__(self, parameters):
+        command = parameters.command.finalize()
+        description = "<BuildRegions: '%s' -> '%s'>" % (parameters.infile,
+                                                        parameters.outfile)
         CommandNode.__init__(self,
                              description  = description,
                              command      = command,
-                             dependencies = dependencies)
-
+                             dependencies = parameters.dependencies)
 
 
 class SampleRegionsNode(CommandNode):
-    def __init__(self, settings, infile, intervals, outfile, dependencies = ()):
-        call = ["bam_sample_regions",
-                "--genotype", "%(IN_PILEUP)s",
-                "--intervals", "%(IN_INTERVALS)s",
-                "--padding", settings["Padding"],
-                "--min-distance-to-indels", settings["MinDistanceToIndels"]]
+    @create_customizable_cli_parameters
+    def customize(cls, infile, intervals, outfile, dependencies = ()):
+        params = AtomicParams(["bam_sample_regions"],
+                              IN_PILEUP    = infile,
+                              IN_INTERVALS = intervals,
+                              OUT_STDOUT   = outfile)
+        params.set_parameter("--genotype", "%(IN_PILEUP)s")
+        params.set_parameter("--intervals", "%(IN_INTERVALS)s")
 
-        command = AtomicCmd(call,
-                            IN_PILEUP    = infile,
-                            IN_INTERVALS = intervals,
-                            OUT_STDOUT   = outfile)
+        return {"command" : params}
+
+
+    @use_customizable_cli_parameters
+    def __init__(self, parameters):
+        command = parameters.command.finalize()
 
         description = "<SampleRegions: '%s' -> '%s'>" \
-            % (infile, outfile)
+            % (parameters.infile, parameters.outfile)
 
         CommandNode.__init__(self,
                              description  = description,
                              command      = command,
-                             dependencies = dependencies)
+                             dependencies = parameters.dependencies)
 
 
 class ExtractReference(Node):
@@ -139,9 +180,6 @@ class ExtractReference(Node):
         move_file(temp_file, self._outfile)
 
 
-
-
-
 def build_interval_nodes(options, taxa, interval, padding, dependencies):
     prefix = "{Genome}.{Name}".format(**interval)
     source = os.path.join(options.intervals_root, prefix + ".bed")
@@ -161,25 +199,52 @@ def build_interval_nodes(options, taxa, interval, padding, dependencies):
 def build_genotyping_nodes(options, genotyping, taxa, interval, dependencies):
     prefix = "{0}.{Genome}.{Name}".format(taxa["Name"], **interval)
     reference = os.path.join(options.genomes_root, interval["Genome"] + ".fasta")
-    fasta   = os.path.join(options.destination, "genotypes", prefix + ".fasta")
-    pileup  = os.path.join(options.destination, "genotypes", prefix + ".vcf.bgz")
+    fasta     = os.path.join(options.destination, "genotypes", prefix + ".fasta")
+    calls     = os.path.join(options.destination, "genotypes", prefix + ".vcf.bgz")
+    filtered  = os.path.join(options.destination, "genotypes", prefix + ".filtered.vcf.bgz")
 
-    padding = genotyping["Random"]["Padding"]
+    padding = genotyping["Padding"]
+    infile  = os.path.join(options.samples_root, "%s.%s.bam" % (taxa["Name"], interval["Genome"]))
     slop, node =  build_interval_nodes(options, taxa, interval, padding, dependencies)
-    genotype = GenotypeNode(reference          = reference,
-                            regions            = slop,
-                            infile             = os.path.join(options.samples_root, "%s.%s.bam" % (taxa["Name"], interval["Genome"])),
-                            outfile            = pileup,
-                            dependencies       = node)
-    tabix    = TabixIndexNode(infile          = pileup,
+    genotype = GenotypeNode.customize(reference          = reference,
+                                      regions            = slop,
+                                      infile             = infile,
+                                      outfile            = calls,
+                                      dependencies       = node)
+
+    apply_params(genotype.commands["pileup"], genotyping.get("MPileup", {}))
+    apply_params(genotype.commands["genotype"], genotyping.get("BCFTools", {}))
+    genotype = genotype.build_node()
+
+    vcffilter = VCFFilterNode.customize(infile       = calls,
+                                        outfile      = filtered,
+                                        interval     = interval,
+                                        dependencies = genotype)
+
+    filter_cfg = genotyping.get("VCF_Filter", {})
+    apply_params(vcffilter.commands["filter"], filter_cfg)
+    if "MaxReadDepth" in filter_cfg:
+        max_depth = filter_cfg["MaxReadDepth"]
+        if isinstance(max_depth, dict):
+            max_depth = max_depth[taxa["Name"]]
+        vcffilter.commands["filter"].set_parameter("--max-read-depth", max_depth)
+        print("--max-read-depth", max_depth)
+    if "Mappability" in filter_cfg:
+        vcffilter.commands["filter"].set_parameter("--filter-by-mappability", "%(IN_MAPPABILITY)s")
+        vcffilter.commands["filter"].set_paths(IN_MAPPABILITY = filter_cfg["Mappability"])
+    vcffilter = vcffilter.build_node()
+
+    tabix    = TabixIndexNode(infile          = filtered,
                               preset          = "vcf",
-                              dependencies    = genotype)
+                              dependencies    = vcffilter)
+
     builder  = BuildRegionsNode(options      = options,
-                                settings     = genotyping["SAMTools"],
-                                infile       = pileup,
+                                infile       = filtered,
                                 interval     = interval,
                                 outfile      = fasta,
+                                padding      = padding,
                                 dependencies = tabix)
+
     return (builder,)
 
 
@@ -190,7 +255,7 @@ def build_sampling_nodes(options, genotyping, taxa, interval, dependencies):
     intervals = os.path.join(options.intervals_root, prefix + ".bed")
     pileup = os.path.join(options.destination, "genotypes", "%s.%s.pileup.bgz" % (taxa["Name"], prefix))
 
-    padding = genotyping["Random"]["Padding"]
+    padding = genotyping["Padding"]
     slop, node =  build_interval_nodes(options, taxa, interval, padding, dependencies)
     genotype = MPileupNode(reference          = reference,
                            regions            = slop,

@@ -49,6 +49,9 @@ def _mangle_makefile(mkfile):
     _update_filtering(mkfile)
     mkfile["Nodes"] = ()
 
+    padding = mkfile["Genotyping"]["Padding"]
+    mkfile["Genotyping"]["Random"]["--padding"] = padding
+
     return mkfile
 
 
@@ -128,15 +131,10 @@ _DEFAULTS = {
     "Genotyping" : {
         "Default" : "SAMTools",
         "Random" : {
-            "Padding"             : 5,
-            "MinDistanceToIndels" : 3,
+            "Padding"    : 5,
             },
         "SAMTools" : {
-            "MinDepth"   :   10,
-            "MaxDepth"   :  100,
-            "MinQuality" :   30,
-            "Padding"    :    5,
-            "MinDistanceToIndels" : 3,
+            "Padding"    : 5,
             },
         },
     "MSAlignment" : {
@@ -179,17 +177,15 @@ _VALIDATION = {
             },
         },
     "Genotyping" : {
+        "Padding"    : IsInt,
         "Default" : OneOf("random", "samtools", case_sensitive = False),
-        "Random" : {
-            "Padding" : IsUnsignedInt,
-            "MinDistanceToIndels" : IsUnsignedInt,
+        AnyOf("MPileup", "BCFTools", "Random") : {
+            IsStrWithPrefix("-") : CLI_PARAMETERS,
             },
-        "SAMTools" : {
-            "Padding"    :   IsUnsignedInt,
-            "MinDepth"   :   IsUnsignedInt,
-            "MaxDepth"   :   IsUnsignedInt,
-            "MinQuality" :   IsUnsignedInt,
-            "MinDistanceToIndels" : IsUnsignedInt,
+        "VCF_Filter" : {
+            "Mappability"   : IsStr,
+            "MaxReadDepth"  : Or(IsUnsignedInt, IsDictOf(IsStr, IsInt)),
+            IsStrWithPrefix("-") : CLI_PARAMETERS,
             },
         },
     "MSAlignment" : {
