@@ -85,9 +85,6 @@ def collect_sequences(options, interval, taxa):
     with open(bedfiles.itervalues().next()) as bedhandle:
         for line in bedhandle:
             sequences.add(line.split()[3])
-            if len(sequences) > 10: 
-                print "WARNING: REMOVE THIS! " + __file__
-                break
     seqmap = dict(zip(sequences, sequences))
 
     return dict((name, dict.fromkeys(taxa, name)) for name in seqmap)
