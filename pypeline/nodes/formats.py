@@ -36,7 +36,7 @@ _VALID_KEYS = frozenset(["name", "partition_by"])
 
 
 class FastaToPartitionedInterleavedPhyNode(Node):
-    def __init__(self, infiles, out_prefix, partition_by = "123", add_flag = False, dependencies = ()):
+    def __init__(self, infiles, out_prefix, partition_by = "123", add_flag = False, exclude_groups = (), dependencies = ()):
         if (len(partition_by) != 3):
             raise ValueError("Default 'partition_by' must be 3 entires long!")
         elif not isinstance(infiles, dict):
@@ -54,11 +54,12 @@ class FastaToPartitionedInterleavedPhyNode(Node):
         self._out_prefix = out_prefix
         self._part_by    = partition_by
         self._add_flag   = add_flag
+        self._excluded   = exclude_groups
 
         description  = "<FastaToPartitionedPhy (default: %s): %i file(s) -> '%s.*'>" % \
             (partition_by, len(infiles), out_prefix)
-            
-        Node.__init__(self, 
+
+        Node.__init__(self,
                       description  = description,
                       input_files  = infiles,
                       output_files = [out_prefix + ".phy", out_prefix + ".partitions"],
@@ -70,8 +71,10 @@ class FastaToPartitionedInterleavedPhyNode(Node):
         for filename in sorted(self._infiles):
             split_by = self._infiles[filename].get("partition_by", self._part_by)
             for (key, msa) in sorted(split_msa(read_msa(filename), split_by).items()):
+                for excluded_group in self._excluded:
+                    msa.pop(excluded_group)
                 msas.append(("%s_%s" % (self._infiles[filename]["name"], key), msa))
-        
+
         msa = join_msa(*(msa for (_, msa) in msas))
         with open(reroot_path(temp, self._out_prefix + ".phy"), "w") as output:
             output.write(interleaved_phy(msa, add_flag = self._add_flag))
