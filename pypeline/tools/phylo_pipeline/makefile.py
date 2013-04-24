@@ -52,6 +52,12 @@ def _mangle_makefile(mkfile):
     padding = mkfile["Genotyping"]["Padding"]
     mkfile["Genotyping"]["Random"]["--padding"] = padding
 
+    excluded_groups = set(mkfile["Phylogenetic Inference"]["ExcludeGroups"])
+    unknown_groups  = excluded_groups - set(mkfile["Project"]["Taxa"])
+    if unknown_groups:
+        raise MakefileError("Unknown taxa in 'Phylogenetic Inference:ExcludeGroups': '%s'" \
+                            % ("', '".join(unknown_groups)))
+
     return mkfile
 
 
@@ -195,8 +201,10 @@ _VALIDATION = {
             },
         },
     "Phylogenetic Inference" : {
+        "ExcludeGroups" : IsListOf(IsStr),
         "Default" : AnyOf("raxml", "raxml-light", "examl", case_sensitive = False),
         "ExaML" : {
+            "Threads"    : IsInt,
             "Bootstraps" : IsUnsignedInt,
             "Replicates" : IsUnsignedInt,
             "Model"      : AnyOf("gamma", case_sensitive = False), # TODO
@@ -205,7 +213,8 @@ _VALIDATION = {
     },
     "PAML" : {
         "codeml" : {
-            "Control Files" : IsListOf(IsStr),
+            "ExcludeGroups" : IsListOf(IsStr),
+            "Control Files" : IsDictOf(IsStr, IsStr),
             "Tree File"     : IsStr,
         },
     },

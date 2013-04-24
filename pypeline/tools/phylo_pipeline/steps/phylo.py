@@ -49,10 +49,12 @@ def build_supermatrix(options, settings, destination, intervals, taxa, filtering
             input_files[filename] = record
 
 
+    excluded_groups = settings.get("ExcludeGroups", ())
     matrixprefix = os.path.join(destination, "alignments")
     supermatrix  = FastaToPartitionedInterleavedPhyNode(infiles        = input_files,
                                                         out_prefix     = matrixprefix,
                                                         partition_by   = "111",
+                                                        exclude_groups = excluded_groups,
                                                         dependencies   = dependencies)
 
     return RAxMLReduceNode(input_alignment  = matrixprefix + ".phy",
@@ -62,7 +64,7 @@ def build_supermatrix(options, settings, destination, intervals, taxa, filtering
                            dependencies     = supermatrix)
 
 
-def _examl_nodes(destination, input_alignment, input_binary, dependencies):
+def _examl_nodes(settings, destination, input_alignment, input_binary, dependencies):
     initial_tree = os.path.join(destination, "initial.tree")
 
     tree = ParsimonatorNode(input_alignment = input_alignment,
@@ -72,6 +74,7 @@ def _examl_nodes(destination, input_alignment, input_binary, dependencies):
     return EXaMLNode(input_binary    = input_binary,
                      initial_tree    = initial_tree,
                      output_template = os.path.join(destination, "RAxML_%s"),
+                     threads         = settings["ExaML"].get("Threads", 1),
                      dependencies    = tree)
 
 
@@ -92,7 +95,7 @@ def build_examl_nodes(options, settings, intervals, taxa, filtering, dependencie
     replicates = []
     for replicate_num in range(settings["ExaML"]["Replicates"]):
         replicate_destination = os.path.join(destination, "replicate_%04i" % replicate_num)
-        replicates.append(_examl_nodes(replicate_destination, input_alignment, input_binary, binary))
+        replicates.append(_examl_nodes(settings, replicate_destination, input_alignment, input_binary, binary))
 
     bootstraps = []
     for bootstrap_num in range(settings["ExaML"]["Bootstraps"]):
@@ -110,7 +113,7 @@ def build_examl_nodes(options, settings, intervals, taxa, filtering, dependencie
                                       output_file     = bootstrap_binary,
                                       dependencies    = bootstrap)
 
-        bootstraps.append(_examl_nodes(bootstrap_destination, bootstrap_alignment, bootstrap_binary, bs_binary))
+        bootstraps.append(_examl_nodes(settings, bootstrap_destination, bootstrap_alignment, bootstrap_binary, bs_binary))
 
 
     return MetaNode(description = "EXaML",

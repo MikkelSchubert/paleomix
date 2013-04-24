@@ -25,13 +25,12 @@ import re
 
 from pypeline import Pypeline
 from pypeline.node import Node, MetaNode, CommandNode
-from pypeline.nodes.sequences import CollectSequencesNode, \
-    FilterSingletonsMetaNode
+from pypeline.nodes.sequences import CollectSequencesNode
 from pypeline.nodes.mafft import MetaMAFFTNode
 from pypeline.atomiccmd import AtomicCmd
 from pypeline.atomicset import ParallelCmds
 
-from pypeline.common.utilities import fragment
+from pypeline.common.utilities import fragment, safe_coerce_to_tuple
 from pypeline.common.formats.msa import read_msa
 import pypeline.common.fileutils as fileutils
 
@@ -40,7 +39,8 @@ import common
 
 
 class FastaToPAMLPhyNode(Node):
-    def __init__(self, input_file, output_file, dependencies = ()):
+    def __init__(self, input_file, output_file, exclude_groups, dependencies = ()):
+        self._excluded = safe_coerce_to_tuple(exclude_groups)
         description  = "<FastaToPAMLPhy: '%s' -> '%s'>" % \
             (input_file, output_file)
 
@@ -53,6 +53,8 @@ class FastaToPAMLPhyNode(Node):
 
     def _run(self, _config, temp):
         msa = read_msa(self.input_files[0])
+        for excluded_group in self._excluded:
+            msa.pop(excluded_group)
 
         lines = []
         lines.append("  %i %i" % (len(msa), len(msa.itervalues().next())))
@@ -146,23 +148,26 @@ def build_codeml_nodes(options, settings, interval, taxa, filtering, dependencie
         input_file  = os.path.join(sequencedir, sequence + ".afa")
         output_file = os.path.join(destination, sequence + ".phy")
 
-        phylip_nodes[sequence] = FastaToPAMLPhyNode(input_file, output_file, dependencies)
+        phylip_nodes[sequence] = FastaToPAMLPhyNode(input_file     = input_file,
+                                                    output_file    = output_file,
+                                                    exclude_groups = settings["codeml"]["ExcludeGroups"],
+                                                    dependencies   = dependencies)
 
     phylip_meta = MetaNode(description  = "<FastaToPAMLPhyNodes: '%s/*.afa' -> '%s/*.phy'>" % (sequencedir, destination),
                            subnodes     = phylip_nodes.values(),
                            dependencies = dependencies)
 
     codeml_nodes = []
-    for (sequence, node) in phylip_nodes.iteritems():
-        output_file = os.path.join(destination, sequence + ".codeml")
+    for (ctl_name, ctl_file) in settings["codeml"]["Control Files"].iteritems():
+        for (sequence, node) in phylip_nodes.iteritems():
+            output_file = os.path.join(destination, sequence + ".%s.codeml" % ctl_name)
 
-        codeml = CodemlNode(control_file  = options.destination + ".codeml.ctl",
-                            trees_file    = options.destination + ".codeml.trees",
-                            sequence_file = node.output_files[0],
-                            output_file   = output_file,
-                            dependencies  = node)
-
-        codeml_nodes.append(codeml)
+            codeml = CodemlNode(control_file  = ctl_file,
+                                trees_file    = settings["codeml"]["Tree File"],
+                                sequence_file = node.output_files[0],
+                                output_file   = output_file,
+                                dependencies  = node)
+            codeml_nodes.append(codeml)
 
     return MetaNode(description  = "<CodemlNodes>",
                     subnodes     = codeml_nodes,
@@ -174,7 +179,7 @@ def chain_codeml(pipeline, options, makefiles):
     destination = options.destination # Move to makefile
     for makefile in makefiles:
         nodes     = []
-        settings  = makefile["MSAlignment"]
+        settings  = makefile["PAML"]
         intervals = makefile["Project"]["Intervals"]
         filtering = makefile["Project"]["Filter Singletons"]
         taxa      = makefile["Project"]["Taxa"]
