@@ -29,7 +29,7 @@ from pypeline.common.text import padded_table
 
 
 def main(argv):
-    print """
+    print """# -*- mode: Yaml; -*-
 Project:
   Title: Horses
 
