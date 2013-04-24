@@ -249,13 +249,14 @@ class DepthHistogramNode(Node):
             self._pipes[key]  = input_file
             self._tables[key] = (output_file, open(output_file, "w"))
             if self._intervals:
-                self._procs[key]  = [subprocess.Popen(("coverageBed", "-hist", "-abam", input_file, "-b", intervals),
-                                                      stdout    = self._tables[key][-1],
-                                                      close_fds = True)]
+                call = ("coverageBed", "-hist", "-abam", input_file, "-b", intervals)
             else:
-                self._procs[key]  = [subprocess.Popen(("genomeCoverageBed", "-max", str(_MAX_DEPTH), "-ibam", input_file, "-g", intervals),
-                                                      stdout    = self._tables[key][-1],
-                                                      close_fds = True)]
+                call = ("genomeCoverageBed", "-max", str(_MAX_DEPTH), "-ibam", input_file, "-g", intervals)
+
+            self._procs[key]  = [subprocess.Popen(call,
+                                                  stdout    = self._tables[key][-1],
+                                                  preexec_fn = os.setsid,
+                                                  close_fds = True)]
 
             self._handle[key] = pysam.Samfile(input_file, "wbu", template = samfile)
         return self._handle[key]
