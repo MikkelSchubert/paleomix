@@ -55,6 +55,7 @@ def main(argv):
                                               output_file    = swap_ext(filename, ".depths"),
                                               intervals_file = config.intervals,
                                               target_name    = os.path.basename(filename),
+                                              print_stats    = True,
                                               dependencies   = BAMIndexNode(filename)))
 
     pipeline.run(max_running = config.max_threads, dry_run = config.dry_run)

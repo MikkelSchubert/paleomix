@@ -34,17 +34,18 @@ from pypeline.common.text import padded_table
 from pypeline.common.fileutils import reroot_path, move_file, swap_ext
 from pypeline.common.utilities import get_in, set_in, safe_coerce_to_tuple
 from pypeline.nodes.picard import concatenate_input_bams
-
+import pypeline.common.timer
 
 _MAX_DEPTH = 200
 
 
 class DepthHistogramNode(Node):
-    def __init__(self, config, target_name, input_files, output_file, intervals_file = None, dependencies = ()):
+    def __init__(self, config, target_name, input_files, output_file, intervals_file = None, print_stats = False, dependencies = ()):
         self._target_name = target_name
         self._input_files = safe_coerce_to_tuple(input_files)
         self._output_file = output_file
         self._intervals   = intervals_file
+        self._print_stats = print_stats
 
         input_files = []
         input_files.extend(self._input_files)
@@ -119,9 +120,17 @@ class DepthHistogramNode(Node):
         for proc in self._procs.get("cat", ()):
             proc.commit(temp)
 
+        if not self._print_stats:
+            os.remove(os.path.join(temp, "pipe_coverage_%i.stdout" % id(self)))
+
 
     def _create_tables(self, config, temp):
         # Opening pipe/symlink created in _setup()
+        out = sys.stderr
+        if not self._print_stats:
+            out = open(os.path.join(temp, "pipe_coverage_%i.stdout" % id(self)), "w")
+
+        timer = pypeline.common.timer.Timer(out = out)
         with pysam.Samfile(self._pipes["input_file"]) as samfile:
             intervals = self._get_intervals(temp, samfile)
             mapping   = self._open_handles(temp, samfile, intervals)
@@ -129,6 +138,10 @@ class DepthHistogramNode(Node):
                 rg = dict(read.tags).get("RG")
                 for handle in mapping[rg]:
                     handle.write(read)
+                timer += 1
+        timer.finalize()
+        if not self._print_stats:
+            out.close()
 
         for handle in self._handle.itervalues():
             handle.close()
