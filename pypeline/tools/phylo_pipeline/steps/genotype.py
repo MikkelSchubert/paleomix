@@ -229,7 +229,6 @@ def build_genotyping_nodes(options, genotyping, taxa, interval, dependencies):
         if isinstance(max_depth, dict):
             max_depth = max_depth[taxa["Name"]]
         vcffilter.commands["filter"].set_parameter("--max-read-depth", max_depth)
-        print("--max-read-depth", max_depth)
     if "Mappability" in filter_cfg:
         vcffilter.commands["filter"].set_parameter("--filter-by-mappability", "%(IN_MAPPABILITY)s")
         vcffilter.commands["filter"].set_paths(IN_MAPPABILITY = filter_cfg["Mappability"])
