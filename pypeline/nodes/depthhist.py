@@ -166,6 +166,9 @@ class DepthHistogramNode(Node):
     def _calc_max_depth(self, counts):
         counts = counts[1:]
         running_total = sum(counts)
+        if not running_total:
+            return "NA"
+
         total = float(running_total)
         for (index, count) in enumerate(counts):
             if running_total / total < 0.005:
