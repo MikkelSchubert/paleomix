@@ -224,7 +224,7 @@ def _filter_by_properties(options, vcfs, mappability):
         if options.min_read_depth > read_depth:
             _mark_as_filtered(vcf, "d=%i" % options.min_read_depth)
         elif options.max_read_depth < read_depth:
-            _mark_as_filtered(vcf, "D=%i" % options.min_read_depth)
+            _mark_as_filtered(vcf, "D=%i" % options.max_read_depth)
 
         if "MQ" in properties:
             if float(properties["MQ"]) < options.min_mapping_quality:
