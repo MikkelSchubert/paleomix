@@ -26,10 +26,10 @@ import sys
 import time
 
 
-_DESC = "Processed {Reads} reads in {Time}. Last {ReadsDelta} in {TimeDelta} ..."
+_DESC = "Processed {Reads} reads in {Time}. Last {ReadsDelta} reads in {TimeDelta} ..."
 
 class Timer:
-    def __init__(self, desc = _DESC, final = _DESC, step = 1e7, out = sys.stderr):
+    def __init__(self, desc = _DESC, final = _DESC, step = 1e6, out = sys.stderr):
         self._out   = out
         self._desc  = desc
         self._final = final
@@ -43,7 +43,8 @@ class Timer:
     def __add__(self, other):
         self._count += other
         if (self._count - self._last_count) >= self._step:
-            self._print(self._desc, time.time())
+            current_time = time.time()
+            self._print(self._desc, current_time)
             self._last_time  = current_time
             self._last_count = self._count
         return self
