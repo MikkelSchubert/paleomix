@@ -207,27 +207,33 @@ class MergeCoverageNode(Node):
 
 def _calculate_totals(table):
     for (name, samples) in sorted(table.items()):
-        set_in(table, (name, "*", "*", "*"), _calculate_totals_in(table))
         for (sample, libraries) in sorted(samples.items()):
-            set_in(table, (name, sample, "*", "*"), _calculate_totals_in(libraries))
             for (library, contigs) in sorted(libraries.items()):
-                set_in(table, (name, sample, library, "*"), _calculate_totals_in(contigs))
+                set_in(table, (name, sample, library), _calculate_totals_in(contigs))
+            set_in(table, (name, sample, "*"), _calculate_totals_in(libraries))
             set_in(table, (name, sample, "*", "*", "Size"), get_in(table, (name, sample, library, "*", "Size")))
+        set_in(table, (name, "*", "*"), _calculate_totals_in(table))
         set_in(table, (name, "*", "*", "*", "Size"), get_in(table, (name, sample, "*", "*", "Size")))
 
 
-
 def _calculate_totals_in(tables):
-    totals = {"SE" : 0, "PE_1" : 0, "PE_2" : 0, "Collapsed" : 0, "Size" : 0, "Hits" : 0, "M" : 0, "I" : 0, "D" : 0}
-    subtables = tables.values()
+    def _defaults():
+        return {"SE" : 0, "PE_1" : 0, "PE_2" : 0, "Collapsed" : 0, "Size" : 0, "Hits" : 0, "M" : 0, "I" : 0, "D" : 0}
+    totals = collections.defaultdict(_defaults)
+
+    subtables = tables.items()
     while subtables:
-        for subtable in list(subtables):
-            if "SE" in subtable:
-                for key in subtable:
-                    totals[key] += subtable[key]
-            else:
-                subtables.extend(subtable.values())
-            subtables.remove(subtable)
+        subtable_key, subtable = subtables.pop()
+        if subtable_key == "*":
+            continue
+        elif "SE" in subtable:
+            for key in subtable:
+                if key == "Size":
+                    totals[subtable_key][key] = 0
+                totals[subtable_key][key] += subtable[key]
+                totals["*"][key] += subtable[key]
+        else:
+            subtables.extend(subtable.items())
     return totals
 
 
