@@ -119,14 +119,24 @@ Options:
 # reference FASTA sequence, such as is the case then a index is built using
 # "bwa index PATH", in which case PATH would be PATH_TO_PREFIX below.
 # At least ONE prefix must be specified!
+#
+# One or more areas of interest (for example the exome) may be specified using
+# 'AreasOfInterest': Each area has a name, and points to a bedfile containing
+# the relevant regions of the genome. Depths and coverage are calculated for
+# these, merged by the name of the feature specified in the BED file. If no
+# names are given in the BED file, the intervals are merged by contig, and
+# named after the contig with a wildcard ("*") appended.
 Prefixes:
   NAME_OF_PREFIX:
     Path: PATH_TO_PREFIX
 #    Label: # "mito" or "nucl"
+#    AreasOfInterest:
+#      NAME: PATH_TO_BEDFILE
 
 # Prefixes can also be specified using wildcards, by adding a wildcard to the
 # end of the prefix name, as shown below. The name itself is ignored, and each
-# prefix is named according to the basename (ie. with no extensions).
+# prefix is named according to the basename of the path (ie. the filename with
+# the extensions removed).
 #  NAME_OR_DESCRIPTION*:
 #    Path: PATH_TO_PREFIXES/*.fasta
 #    Label: # "mito" or "nucl"
