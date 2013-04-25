@@ -92,7 +92,7 @@ class DepthHistogramNode(Node):
 
 
     def _run(self, config, temp):
-        self._create_tables(config, temp)
+        region_names = self._create_tables(config, temp)
 
         table = {}
         for (key, (filename, handle)) in self._tables.iteritems():
@@ -100,7 +100,7 @@ class DepthHistogramNode(Node):
             self._read_table(key, table, filename)
 
         temp_filename = reroot_path(temp, self._output_file)
-        self._write_table(table, temp_filename)
+        self._write_table(table, temp_filename, region_names)
 
 
     def _teardown(self, config, temp):
@@ -132,7 +132,7 @@ class DepthHistogramNode(Node):
 
         timer = pypeline.common.timer.Timer(out = out)
         with pysam.Samfile(self._pipes["input_file"]) as samfile:
-            intervals = self._get_intervals(temp, samfile)
+            intervals, region_names = self._get_intervals(temp, samfile)
             mapping   = self._open_handles(temp, samfile, intervals)
             for read in samfile:
                 rg = dict(read.tags).get("RG")
@@ -150,6 +150,8 @@ class DepthHistogramNode(Node):
             for proc in proclst:
                 if proc.wait() != 0:
                     raise RuntimeError("Error while running process: %i" % proc.wait())
+
+        return region_names
 
 
     def _calc_cumfrac(self, counts):
@@ -178,15 +180,20 @@ class DepthHistogramNode(Node):
         return "NA"
 
 
-    def _write_table(self, table, filename):
+    def _write_table(self, table, filename, region_names):
         if not any(table["<NA>"][None][None][1:]):
             table.pop("<NA>")
 
+        zeros = [0] * _MAX_DEPTH
         first = lambda pair: (pair[0] or "")
         rows = [["Name", "Sample", "Library", "Contig", "Size", "MaxDepth"] + ["MD_%03i" % i for i in xrange(1, _MAX_DEPTH + 1)]]
         for sample, libraries in sorted(table.iteritems(), key = first):
             for library, regions in sorted(libraries.iteritems(), key = first):
-                for (region, counts) in sorted(regions.iteritems(), key = first):
+                for region in region_names:
+                    counts = regions.get(region, zeros)
+                    if not any(counts):
+                        counts[0] = sum(regions[None])
+
                     key = (self._target_name, sample, library, region)
                     row = [("*" if value is None else value) for value in key]
                     row.append(sum(counts))
@@ -263,14 +270,24 @@ class DepthHistogramNode(Node):
 
 
     def _get_intervals(self, temp, samfile):
-        if self._intervals:
-            return self._intervals
-
+        region_names = set([None])
         intervals = os.path.join(temp, "intervals.bed")
         with open(intervals, "w") as handle:
-            for seq in samfile.header["SQ"]:
-                handle.write("{SN}\t{LN}\n".format(**seq))
-        return intervals
+            if self._intervals:
+                with open(self._intervals) as source:
+                    for line in source:
+                        fields = line.rstrip("\r\n").split("\t")[:6]
+                        if len(fields) < 4:
+                            assert len(fields) == 3
+                            fields.extend((fields[0] + "*", "0", "+"))
+                        region_names.add(fields[3])
+                        handle.write("\t".join(fields) + "\n")
+            else:
+                for seq in samfile.header["SQ"]:
+                    handle.write("{SN}\t{LN}\n".format(**seq))
+                    region_names.add(seq["SN"])
+
+            return intervals, sorted(region_names, key = lambda x: x or "")
 
 
     @classmethod
@@ -286,7 +303,7 @@ _HEADER = \
 """# Timestamp: %s
 #
 # Columns:
-#   Region:   Contig, chromosome, or feature for which a depth histogram was
+#   Contig:   Contig, chromosome, or feature for which a depth histogram was
 #             created. Unnamed features are named after the chromosome or
 #             contig on which they are located, with a star appended. For
 #             example "chr1*".
