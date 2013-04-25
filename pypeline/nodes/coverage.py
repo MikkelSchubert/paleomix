@@ -295,6 +295,14 @@ _HEADER = \
 """# Timestamp: %s
 #
 # Columns:
+#   Contig:       Contig, chromosome, or feature for which a depth histogram was
+#                 created. Unnamed features are named after the chromosome or
+#             contig on which they are located, with a star appended. For
+#             example "chr1*".
+#   Size:     The total size of the region. Multiple features with the same
+#             name are combined into one row, with the size representing to
+#                  total of these. Note that overlapping bases are counted 2 (or
+#                  more) times.
 #  Hits:           Sum of SE, PE_1, and PE_2 hits
 #  SE, PE_1, PE_2: Number of Single Ended, and Pair Ended (mate 1 and 2) hits overlapping
 #                  the current contig or intervals. Note that a hit may be counted multiple
