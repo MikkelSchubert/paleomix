@@ -68,6 +68,7 @@ class SummaryTableNode(Node):
 
 
     def _run(self, config, temp):
+        aois    = self._stat_areas_of_interest(self._prefixes)
         genomes = self._stat_prefixes(self._prefixes)
         with open(reroot_path(temp, self._output_file), "w") as table:
             table.write("# Command:\n")
@@ -82,7 +83,12 @@ class SummaryTableNode(Node):
             table.write("#     MTime:    %s\n" % (self._makefile["MTime"],))
             table.write("#\n")
             self._write_genomes(table, genomes)
+            table.write("#\n")
+            self._write_areas_of_interest(table, aois)
             table.write("#\n#\n")
+
+            for aoi in aois.itervalues():
+                genomes[aoi["Label"]] = {"Size" : aoi["Size"]}
             self._write_tables(table, genomes)
 
 
@@ -101,6 +107,16 @@ class SummaryTableNode(Node):
             table.write("#     %s\n" % (line,))
 
 
+    def _write_areas_of_interest(self, table, aois):
+        table.write("# Areas Of Interest:\n")
+        rows = [["Genome", "AOI", "Size", "NFeatures", "NIntervals", "Path"]]
+        for (_, aoi) in sorted(aois.items()):
+            rows.append([aoi[key] for key in ("Genome", "Name", "Size", "NFeatures", "NIntervals", "Path")])
+
+        for line in text.padded_table(rows):
+            table.write("#     %s\n" % (line,))
+
+
     def _write_tables(self, out, genomes):
         rows = [["Target", "Sample", "Library", "Measure", "Value", ""]]
         for (target, samples) in sorted(self._read_tables(self._prefixes, genomes).iteritems()):
@@ -108,7 +124,7 @@ class SummaryTableNode(Node):
                 for (library, prefixes) in sorted(libraries.iteritems()):
                     ordered = [("reads", prefixes.pop("reads"))] if "reads" in prefixes else []
                     ordered.extend(sorted(prefixes.items()))
-                    
+
                     for (prefix, table) in ordered:
                         table.pop("hits_unique_nts(%s)" % prefix, None)
 
@@ -118,7 +134,7 @@ class SummaryTableNode(Node):
                             rows.append((target, sample, library, key, value, comment))
                         rows.append([])
                     rows.append([])
- 
+
         for line in text.padded_table(rows):
             out.write("%s\n" % line)
 
@@ -152,8 +168,8 @@ class SummaryTableNode(Node):
         for (tblname, subtable) in subtables.iteritems():
             if tblname == "reads":
                 fractions = [("seq_trash_se",      "seq_reads_se",       "seq_trash_se_frac",   "# Fraction of SE reads trashed"),
-                             ("seq_trash_pe_1",    "seq_reads_pairs",    "seq_trash_pe_1_frac", "# Fraction of PE mate 1 reads trashed"), 
-                             ("seq_trash_pe_2",    "seq_reads_pairs",    "seq_trash_pe_2_frac", "# Fraction of PE mate 2 reads trashed"), 
+                             ("seq_trash_pe_1",    "seq_reads_pairs",    "seq_trash_pe_1_frac", "# Fraction of PE mate 1 reads trashed"),
+                             ("seq_trash_pe_2",    "seq_reads_pairs",    "seq_trash_pe_2_frac", "# Fraction of PE mate 2 reads trashed"),
                              ("seq_collapsed",     "seq_reads_pairs",    "seq_collapsed_frac",  "# Fraction of PE pairs collapsed into one read"),
                              ("seq_retained_nts",  "seq_retained_reads", "seq_retained_length", "# Average number of NTs in retained reads")]
 
@@ -172,9 +188,9 @@ class SummaryTableNode(Node):
                 subtable["hits_clonality(%s)" % tblname] = (1 - total_uniq / (float(total_hits) or float("NaN")), "# Fraction of hits that were PCR duplicates")
                 subtable["hits_length(%s)" % tblname] = (total_nts / (float(total_uniq) or float("NaN")), "# Average number of aligned bases per unique hit")
                 subtable["hits_coverage(%s)" % tblname] = (total_nts / float(genomes[tblname]["Size"]), "# Estimated coverage from unique hits")
-                
+
         return subtables
-        
+
 
     @classmethod
     def _create_endogenous_subtable(self, subtables, genomes):
@@ -184,18 +200,18 @@ class SummaryTableNode(Node):
         total_hits            = mito["hits_raw(mitochondrial)"][0]         + nucl["hits_raw(nuclear)"][0]
         total_hits_unique     = mito["hits_unique(mitochondrial)"][0]      + nucl["hits_unique(nuclear)"][0]
         total_hits_unique_nts = mito["hits_unique_nts(mitochondrial)"][0]  + nucl["hits_unique_nts(nuclear)"][0]
-        
+
         ratio_hits, ratio_genome, ratio_genome_inv = "NA", "NA", "NA"
         if mito["hits_unique(mitochondrial)"][0]:
             ratio_nts    = float(nucl["hits_unique_nts(nuclear)"][0]) / mito["hits_unique_nts(mitochondrial)"][0]
             ratio_hits   = float(nucl["hits_unique(nuclear)"][0]) / mito["hits_unique(mitochondrial)"][0]
             ratio_genome = ratio_nts / ((float(genomes["nuclear"]["Size"]) * 2) / float(genomes["mitochondrial"]["Size"]))
-            ratio_genome_inv = ratio_genome ** -1                   
-                
+            ratio_genome_inv = ratio_genome ** -1
+
         return {
             "hits_raw(endogenous)"         : (total_hits,                       "# Total number of hits against the nuclear and mitochondrial genome"),
             "hits_unique(endogenous)"      : (total_hits_unique,                "# Total number of unique reads (PCR duplicates removed)"),
-            "hits_unique_nts(endogenous)"  : (total_hits_unique_nts,            None), 
+            "hits_unique_nts(endogenous)"  : (total_hits_unique_nts,            None),
             "ratio_reads(nuc,mito)"        : (ratio_hits,                       "# Ratio of unique hits: Hits(nuc) / H(mito)"),
             "ratio_genome(nuc,mito)"       : (ratio_genome,                     "# Ratio of NTs of unique hits corrected by genome sizes: (NTs(nuc) / NTs(mito)) / ((2 * Size(nuc)) / Size(mito))"),
             "ratio_genome(mito,nuc)"       : (ratio_genome_inv,                 "# Ratio of NTs of unique hits corrected by genome sizes: (NTs(mito) / NTs(nuc)) / (Size(mito) / (2 * Size(nuc)))")
@@ -225,7 +241,7 @@ class SummaryTableNode(Node):
             hits = 0
             for contigtable in get_in(subtable, key).itervalues():
                 hits += contigtable["Hits"]
-            
+
             value = (hits, "# Total number of hits (prior to PCR duplicate filtering)")
             set_in(table, (target, sample, library, genome, "hits_raw(%s)" % genome), value)
 
@@ -241,7 +257,7 @@ class SummaryTableNode(Node):
             for contigtable in get_in(subtable, key).itervalues():
                 hits += contigtable["Hits"]
                 nts += contigtable["M"]
-            
+
             value = (hits, "# Total number of hits (excluding any PCR duplicates)")
             set_in(table, (target, sample, library, genome, "hits_unique(%s)" % genome), value)
             set_in(table, (target, sample, library, genome, "hits_unique_nts(%s)" % genome), (nts, None))
@@ -272,7 +288,7 @@ class SummaryTableNode(Node):
                 "seq_retained_nts"   : (float("nan"),  "# Total number of NTs in retained reads"),
                 "seq_retained_reads" : (float("nan"),  "# Total number of retained reads")
                 }
-        
+
         with open(filename) as settings_file:
             settings = settings_file.read()
             if "Paired end mode" in settings:
@@ -295,6 +311,32 @@ class SummaryTableNode(Node):
                     }
             else:
                 assert False
+
+
+    @classmethod
+    def _stat_areas_of_interest(cls, prefixes):
+        """Returns (size, number of named intervals, total number of intervals)
+        for a set of areas of interest."""
+        areas_of_interest = {}
+        for (prefix_name, prefix) in prefixes.iteritems():
+            prefix_label = prefix.get("Label", prefix_name)
+            for (aoi_name, aoi_filename) in prefix.get("AreasOfInterest", {}).iteritems():
+                count, names, size = 0, set(), 0
+                with open(aoi_filename) as handle:
+                    parser = pysam.asBed()
+                    for line in handle:
+                        bed = parser(line, len(line))
+                        names.add(bed.name if len(bed) >= 4 else (bed.contig + "*"))
+                        size += (bed.end - bed.start)
+                        count += 1
+                areas_of_interest[(prefix_name, aoi_name)] = {"Size"       : size,
+                                                              "NFeatures"  : len(names),
+                                                              "NIntervals" : count,
+                                                              "Genome"     : prefix["Name"],
+                                                              "Name"       : aoi_name,
+                                                              "Label"      : "%s:%s" % (prefix_label, aoi_name),
+                                                              "Path"       : aoi_filename}
+        return areas_of_interest
 
 
     @classmethod

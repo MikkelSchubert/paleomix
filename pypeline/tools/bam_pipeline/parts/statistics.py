@@ -58,32 +58,29 @@ def add_statistics_nodes(config, makefile, target):
 def _build_depth(config, makefile, target):
     nodes = []
     for prefix in target.prefixes:
-        aoi = [("", None)]
-        for (name, path) in prefix.aoi.iteritems():
-            aoi.append(("." + name, path))
-
         input_files = {}
         for sample in prefix.samples:
             input_files.update(sample.bams)
 
-            for (aoi_name, aoi_filename) in aoi:
-                output_filename = os.path.join(config.destination,
-                                               "%s.%s%s.depths" % (target.name, prefix.name, aoi_name))
+        for (aoi_name, aoi_filename) in _get_aoi(prefix, name_prefix = "."):
+            output_filename = os.path.join(config.destination,
+                                           "%s.%s%s.depths" % (target.name, prefix.name, aoi_name))
 
-                node = DepthHistogramNode(config         = config,
-                                          target_name    = target.name,
-                                          input_files    = input_files.keys(),
-                                          intervals_file = aoi_filename,
-                                          output_file    = output_filename,
-                                          dependencies   = input_files.values())
-                nodes.append(node)
+            node = DepthHistogramNode(config         = config,
+                                      target_name    = target.name,
+                                      input_files    = input_files.keys(),
+                                      intervals_file = aoi_filename,
+                                      output_file    = output_filename,
+                                      dependencies   = input_files.values())
+            nodes.append(node)
 
     return MetaNode(description = "DepthHistograms",
                     subnodes    = nodes)
 
 
 
-def _aggregate_for_prefix(cov, prefix, into = None):
+def _aggregate_for_prefix(cov, prefix, aoi_name = None, into = None):
+    prefix = _get_prefix_label(prefix, aoi_name)
     results = {} if into is None else {}
     for (key, files_and_nodes) in cov.iteritems():
         if prefix is None or (key[0] == prefix):
@@ -95,18 +92,23 @@ def _build_coverage(config, makefile, target, make_summary):
     merged_nodes = []
     coverage = _build_coverage_nodes(target)
     for prefix in target.prefixes:
-        files_and_nodes = _aggregate_for_prefix(coverage["Libraries"], prefix.label)
-        output_filename = os.path.join(config.destination, "%s.%s.coverage" % (target.name, prefix.name))
-        merged = MergeCoverageNode(input_files  = files_and_nodes.keys(),
-                                   output_file  = output_filename,
-                                   dependencies = files_and_nodes.values())
-        merged_nodes.append(merged)
+        for (aoi_name, aoi_filename) in _get_aoi(prefix):
+            label = _get_prefix_label(prefix.label, aoi_name)
+            postfix = prefix.name if (not aoi_name) else ("%s.%s" % (prefix.name, aoi_name))
+
+            files_and_nodes = _aggregate_for_prefix(coverage["Libraries"], label)
+            output_filename = os.path.join(config.destination, "%s.%s.coverage" % (target.name, postfix))
+            merged = MergeCoverageNode(input_files  = files_and_nodes.keys(),
+                                       output_file  = output_filename,
+                                       dependencies = files_and_nodes.values())
+
+            merged_nodes.append(merged)
 
     description = "Libraries"
     files_and_nodes = _aggregate_for_prefix(coverage["Libraries"], None)
     if make_summary:
         description = "Lanes and libraries"
-        files_and_nodes = _aggregate_for_prefix(coverage["Lanes"], None, files_and_nodes)
+        files_and_nodes = _aggregate_for_prefix(coverage["Lanes"], None, into = files_and_nodes)
 
     partial_nodes = MetaNode(description = description,
                              subnodes    = files_and_nodes.values())
@@ -122,34 +124,55 @@ def _build_coverage(config, makefile, target, make_summary):
 def _build_coverage_nodes(target):
     coverage = {"Lanes"     : collections.defaultdict(dict),
                 "Libraries" : collections.defaultdict(dict)}
+
+    cache = {}
     for prefix in target.prefixes:
-        for sample in prefix.samples:
-            for library in sample.libraries:
-                key = (prefix.label, target.name, sample.name, library.name)
-                for lane in library.lanes:
-                    for bams in lane.bams.values():
-                        coverage["Lanes"][key].update(bams)
-                coverage["Libraries"][key].update(library.bams)
+        for (aoi_name, aoi_filename) in _get_aoi(prefix):
+            prefix_label = prefix.label if (not aoi_name) else ("%s:%s" % (prefix.label, aoi_name))
 
-    cov_by_filename = {}
-    for files_and_nodes in coverage.itervalues():
-        _build_coverage_nodes_cached(target.name, files_and_nodes,  cache = cov_by_filename)
+            for sample in prefix.samples:
+                for library in sample.libraries:
+                    key = (prefix_label, target.name, sample.name, library.name)
 
+                    for lane in library.lanes:
+                        for bams in lane.bams.values():
+                            bams = _build_coverage_nodes_cached(bams, target.name, aoi_name, aoi_filename, cache)
+                            coverage["Lanes"][key].update(bams)
+
+                    bams = _build_coverage_nodes_cached(library.bams, target.name, aoi_name, aoi_filename, cache)
+                    coverage["Libraries"][key].update(bams)
     return coverage
 
 
-def _build_coverage_nodes_cached(target_name, files_and_nodes, cache):
-    for (key, filenames) in files_and_nodes.items():
-        coverages = {}
-        for (input_filename, node) in filenames.iteritems():
-            output_filename = swap_ext(input_filename, ".coverage")
-            if input_filename in cache:
-                coverage = cache[input_filename]
-            else:
-                coverage = CoverageNode(input_file   = input_filename,
-                                        output_file  = output_filename,
-                                        target_name  = target_name,
-                                        dependencies = node)
-            coverages[output_filename] = coverage
-        files_and_nodes[key] = coverages
+def _build_coverage_nodes_cached(files_and_nodes, target_name, aoi_name, aoi_filename, cache):
+    output_ext = ".coverage"
+    if aoi_name:
+        output_ext = ".%s.coverage" % aoi_name
 
+    coverages = {}
+    for (input_filename, node) in files_and_nodes.iteritems():
+        output_filename = swap_ext(input_filename, output_ext)
+
+        cache_key = (aoi_filename, input_filename)
+        if cache_key not in cache:
+            cache[cache_key] = CoverageNode(input_file     = input_filename,
+                                            output_file    = output_filename,
+                                            target_name    = target_name,
+                                            intervals_file = aoi_filename,
+                                            dependencies   = node)
+
+        coverages[output_filename] = cache[cache_key]
+    return coverages
+
+
+def _get_aoi(prefix, name_prefix = ""):
+    aoi = [("", None)]
+    for (name, path) in prefix.aoi.iteritems():
+        aoi.append((name_prefix + name, path))
+    return aoi
+
+
+def _get_prefix_label(label, aoi_name):
+    if not aoi_name:
+        return label
+    return "%s:%s" % (label, aoi_name)
