@@ -22,7 +22,7 @@
 #
 import os
 
-from pypeline.node import CommandNode
+from pypeline.node import CommandNode, NodeError
 from pypeline.atomiccmd import AtomicCmd
 from pypeline.atomicparams import *
 from pypeline.atomicset import ParallelCmds
@@ -33,8 +33,11 @@ import pypeline.common.versions as versions
 
 BWA_VERSION = versions.Requirement(call   = ("bwa",),
                                    search = r"Version: (\d+)\.(\d+)\.(\d+)",
-                                   checks = versions.And(versions.GE(0, 5, 9),
-                                                         versions.LT(0, 6, 0)))
+                                   checks = versions.Or(versions.And(versions.GE(0, 5, 9),
+                                                                     versions.LT(0, 6, 0)),
+                                                        versions.GE(0, 7, 4)))
+
+
 
 # Required by safeSam2Bam for 'PG' tagging support / known good version
 # Cannot be a lambda due to need to be able to pickle function
@@ -124,6 +127,7 @@ class SE_BWANode(CommandNode):
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
+        _check_bwa_prefix(parameters.prefix)
         command = ParallelCmds([parameters.commands[key].finalize() for key in parameters.order])
         description =  "<SE_BWA (%i threads): '%s'>" % (parameters.threads, parameters.input_file)
         CommandNode.__init__(self,
@@ -180,6 +184,7 @@ class PE_BWANode(CommandNode):
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
+        _check_bwa_prefix(parameters.prefix)
         command = ParallelCmds([parameters.commands[key].finalize() for key in parameters.order])
         description =  "<PE_BWA (%i threads): '%s'>" % (parameters.threads, parameters.input_file_1)
         CommandNode.__init__(self,
@@ -281,8 +286,15 @@ def _process_output(stdin, output_file, reference):
 
 
 def _BWAParams(call, prefix, iotype = "IN", **kwargs):
+    extensions = ["amb", "ann", "bwt", "pac", "sa"]
+    try:
+        if BWA_VERSION.version < (0, 6, 0):
+            extensions.extend(("rbwt", "rpac", "rsa"))
+    except versions.VersionRequirementError:
+        pass # Ignored here, handled elsewhere
+
     params = AtomicParams(call, **kwargs)
-    for postfix in ("amb", "ann", "bwt", "pac", "rbwt", "rpac", "rsa", "sa"):
+    for postfix in extensions:
         key = "%s_PREFIX_%s" % (iotype, postfix.upper())
         params.set_paths(key, prefix + "." + postfix)
 
@@ -296,3 +308,17 @@ def _get_max_threads(reference, threads):
         return 1
 
     return threads
+
+
+def _check_bwa_prefix(prefix):
+    try:
+        bwa_version = BWA_VERSION.version
+    except versions.VersionRequirementError:
+        return # Ignored here, reported elsewhere
+
+    if bwa_version >= (0, 6, 0):
+        for extension in (".rbwt", ".rpac", ".rsa"):
+            if os.path.exists(prefix + extension):
+                raise NodeError("BWA version is v%s, but prefix appears to be created using v0.5.x!\n"
+                                "\tPlease remove '%s.*' and rebuild index using 'bwa index %s'" \
+                                % (".".join(map(str, bwa_version)), prefix, prefix))
