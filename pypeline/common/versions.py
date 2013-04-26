@@ -108,12 +108,13 @@ class RequirementObj:
         if force or self._done is None:
             def _pprint(value):
                 if not self._ppr:
-                    return ".".join(map(str, value))
+                    return "v" + ".".join(map(str, value))
                 elif isinstance(self._ppr, collections.Callable):
                     return self._ppr(value)
                 return self._ppr.format(*value)
 
-            self._reqs(self.version, _pprint)
+            self._reqs.set_pprint(_pprint)
+            self._reqs(self.version)
             self._done = True
 
 
@@ -121,6 +122,10 @@ class _Check:
     def __init__(self, name, *version):
         self._version = tuple(version)
         self._desc    = (str(name), self._version)
+        self._pprint  = str
+
+    def set_pprint(self, func):
+        self._pprint = func
 
     def __hash__(self):
         return hash(self._desc)
@@ -142,29 +147,42 @@ class EQ(_Check):
     def __init__(self, *version):
         _Check.__init__(self, "EQ", *version)
 
-    def __call__(self, value, pprint):
+    def __call__(self, value):
         if value != self._version:
-            raise VersionRequirementError("Version must be %s, found %s" \
-                                          % (pprint(self._version), pprint(value)))
+            raise VersionRequirementError("Must be %s, found %s" \
+                                          % (self._pprint(self._version),
+                                             self._pprint(value)))
+
+    def __str__(self):
+        return "(Equals %s)" % self._pprint(self._version)
+
 
 class GE(_Check):
     def __init__(self, *version):
         _Check.__init__(self, "GE", *version)
 
-    def __call__(self, value, pprint):
+    def __call__(self, value):
         if not value >= self._version:
-            raise VersionRequirementError("Version must be at least %s, found %s" \
-                                          % (pprint(self._version), pprint(value)))
+            raise VersionRequirementError("(At least %s, found %s)" \
+                                          % (self._pprint(self._version),
+                                             self._pprint(value)))
+
+    def __str__(self):
+        return "(At least %s)" % self._pprint(self._version)
 
 
 class LT(_Check):
     def __init__(self, *version):
         _Check.__init__(self, "LE", *version)
 
-    def __call__(self, value, pprint):
+    def __call__(self, value):
         if not value < self._version:
-            raise VersionRequirementError("Version must be below %s, found %s" \
-                                          % (pprint(self._version), pprint(value)))
+            raise VersionRequirementError("(Earlier than %s, found %s)" \
+                                          % (self._pprint(self._version),
+                                             self._pprint(value)))
+
+    def __str__(self):
+        return "(Earlier than %s)" % self._pprint(self._version)
 
 
 class And(_Check):
@@ -172,9 +190,46 @@ class And(_Check):
         self._checks = checks
         _Check.__init__(self, "Or", *checks)
 
-    def __call__(self, value, pprint):
+    def set_pprint(self, func):
+        _Check.set_pprint(self, func)
         for check in self._checks:
-            check(value, pprint)
+            check.set_pprint(func)
+
+    def __call__(self, value):
+        failures = map(str, self._checks)
+        for (index, check) in enumerate(self._checks):
+            try:
+                check(value)
+            except VersionRequirementError, error:
+                failures[index] = str(error)
+                raise VersionRequirementError("(%s)" % (" AND ".join(failures)))
+
+    def __str__(self):
+        return "(%s)" % (" AND ".join(self._checks))
+
+
+class Or(_Check):
+    def __init__(self, *checks):
+        self._checks = checks
+        _Check.__init__(self, "Or", *checks)
+
+    def set_pprint(self, func):
+        _Check.set_pprint(self, func)
+        for check in self._checks:
+            check.set_pprint(func)
+
+    def __call__(self, value):
+        failures = []
+        for check in self._checks:
+            try:
+                return check(value)
+            except VersionRequirementError, error:
+                failures.append(error)
+        raise VersionRequirementError("Failed to meet version requirements: (%s)" \
+                                      % " OR ".join(map(str, failures)))
+
+    def __str__(self):
+        return "(%s)" % (" OR ".join(self._checks))
 
 
 def _run(call):
