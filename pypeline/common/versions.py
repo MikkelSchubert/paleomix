@@ -233,10 +233,14 @@ class Or(_Check):
 
 
 def _run(call):
-    proc = subprocess.Popen(call, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
-    stdoutdata, stderrdata = proc.communicate()
+    try:
+        proc = subprocess.Popen(call,
+                                stdout = subprocess.PIPE,
+                                stderr = subprocess.STDOUT)
 
-    return stdoutdata + "\n" + stderrdata
+        return proc.communicate()[0]
+    except (OSError, subprocess.CalledProcessError), error:
+        return str(error)
 
 
 def _do_call(call):
