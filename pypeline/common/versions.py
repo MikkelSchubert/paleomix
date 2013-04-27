@@ -106,14 +106,7 @@ class RequirementObj:
 
     def __call__(self, force = False):
         if force or self._done is None:
-            def _pprint(value):
-                if not self._ppr:
-                    return "v" + ".".join(map(str, value))
-                elif isinstance(self._ppr, collections.Callable):
-                    return self._ppr(value)
-                return self._ppr.format(*value)
-
-            self._reqs.set_pprint(_pprint)
+            self._reqs.set_ppr(self._ppr)
             self._reqs(self.version)
             self._done = True
 
@@ -122,10 +115,10 @@ class _Check:
     def __init__(self, name, *version):
         self._version = tuple(version)
         self._desc    = (str(name), self._version)
-        self._pprint  = str
+        self._ppr     = str
 
-    def set_pprint(self, func):
-        self._pprint = func
+    def set_ppr(self, func):
+        self._ppr = func
 
     def __hash__(self):
         return hash(self._desc)
@@ -150,11 +143,11 @@ class EQ(_Check):
     def __call__(self, value):
         if value != self._version:
             raise VersionRequirementError("Must be %s, found %s" \
-                                          % (self._pprint(self._version),
-                                             self._pprint(value)))
+                                          % (_pprint(self._ppr, self._version),
+                                             _pprint(self._ppr, value)))
 
     def __str__(self):
-        return "(Equals %s)" % self._pprint(self._version)
+        return "(Equals %s)" % _pprint(self._ppr, self._version)
 
 
 class GE(_Check):
@@ -164,11 +157,11 @@ class GE(_Check):
     def __call__(self, value):
         if not value >= self._version:
             raise VersionRequirementError("(At least %s, found %s)" \
-                                          % (self._pprint(self._version),
-                                             self._pprint(value)))
+                                          % (_pprint(self._ppr, self._version),
+                                             _pprint(self._ppr, value)))
 
     def __str__(self):
-        return "(At least %s)" % self._pprint(self._version)
+        return "(At least %s)" % _pprint(self._ppr, self._version)
 
 
 class LT(_Check):
@@ -178,11 +171,11 @@ class LT(_Check):
     def __call__(self, value):
         if not value < self._version:
             raise VersionRequirementError("(Earlier than %s, found %s)" \
-                                          % (self._pprint(self._version),
-                                             self._pprint(value)))
+                                          % (_pprint(self._ppr, self._version),
+                                             _pprint(self._ppr, value)))
 
     def __str__(self):
-        return "(Earlier than %s)" % self._pprint(self._version)
+        return "(Earlier than %s)" % _pprint(self._ppr, self._version)
 
 
 class And(_Check):
@@ -190,10 +183,10 @@ class And(_Check):
         self._checks = checks
         _Check.__init__(self, "Or", *checks)
 
-    def set_pprint(self, func):
-        _Check.set_pprint(self, func)
+    def set_ppr(self, func):
+        _Check.set_ppr(self, func)
         for check in self._checks:
-            check.set_pprint(func)
+            check.set_ppr(func)
 
     def __call__(self, value):
         failures = map(str, self._checks)
@@ -213,10 +206,10 @@ class Or(_Check):
         self._checks = checks
         _Check.__init__(self, "Or", *checks)
 
-    def set_pprint(self, func):
-        _Check.set_pprint(self, func)
+    def set_ppr(self, func):
+        _Check.set_ppr(self, func)
         for check in self._checks:
-            check.set_pprint(func)
+            check.set_ppr(func)
 
     def __call__(self, value):
         failures = []
@@ -253,3 +246,11 @@ def _do_call(call):
             result = _run(call)
         _CALL_CACHE[call] = result
         return result
+
+
+def _pprint(ppr, value):
+    if not ppr:
+        return "v" + ".".join(map(str, value))
+    elif isinstance(ppr, collections.Callable):
+        return ppr(value)
+    return ppr.format(*value)
