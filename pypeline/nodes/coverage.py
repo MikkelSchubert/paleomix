@@ -36,10 +36,9 @@ from pypeline.common.samwrap import read_tabix_BED
 
 
 class CoverageNode(Node):
-    def __init__(self, input_file, target_name, output_file = None, intervals_file = None, collapsed_prefix = "M_", dependencies = ()):
+    def __init__(self, input_file, target_name, output_file = None, intervals_file = None, dependencies = ()):
         self._target_name = target_name
         self._output_file = output_file or swap_ext(input_file, ".coverage")
-        self._collapsed_prefix = collapsed_prefix
         self._intervals_file = intervals_file
 
         Node.__init__(self,
@@ -66,7 +65,7 @@ class CoverageNode(Node):
             readgroups = self._get_readgroups(bamfile)
 
             tables, mapping = self._initialize_tables(self._target_name, intervals, readgroups)
-            self.read_records(bamfile, intervals, mapping, self._collapsed_prefix)
+            self.read_records(bamfile, intervals, mapping)
 
         tables = self.filter_readgroups(tables)
         _write_table(tables, reroot_path(temp, self._output_file))
@@ -129,7 +128,7 @@ class CoverageNode(Node):
 
 
     @classmethod
-    def read_records(cls, bamfile, intervals, tables, collapsed_prefix):
+    def read_records(cls, bamfile, intervals, tables):
         def _get_readgroup(record):
             for key, value in record.tags:
                 if key == "RG":
@@ -144,7 +143,8 @@ class CoverageNode(Node):
                     readgroup = _get_readgroup(record)
                     subtable  = tables[readgroup][name]
 
-                    if collapsed_prefix and record.qname.startswith(collapsed_prefix):
+                    qname = record.qname
+                    if qname.startswith("M_") or qname.startswith("MT_"):
                         subtable["Collapsed"] += 1
                     else:
                         flag = record.flag

@@ -71,9 +71,10 @@ class Reads:
             command = PE_AdapterRemovalNode.customize(input_files_1 = files["PE_1"],
                                                       input_files_2 = files["PE_2"],
                                                       output_prefix = output_prefix)
-            self.files["Single"]    = output_prefix + ".singleton.unaln.truncated.gz"
+            self.files["Single"]    = output_prefix + ".singleton.truncated.gz"
             self.files["Paired"]    = output_prefix + ".pair{Pair}.truncated.gz"
-            self.files["Collapsed"] = output_prefix + ".singleton.aln.truncated.gz"
+            self.files["Collapsed"] = output_prefix + ".collapsed.gz"
+            self.files["CollapsedTruncated"] = output_prefix + ".collapsed.truncated.gz"
         self.stats = output_prefix + ".settings"
 
         quality_offset = self.quality_offset # record["Options"]["QualityOffset"]

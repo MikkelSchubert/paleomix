@@ -33,7 +33,7 @@ import pypeline.common.versions as versions
 ADAPTERRM_VERSION = versions.Requirement(call   = ("AdapterRemoval", "--version"),
                                          search = r"ver. (\d+)\.(\d+)",
                                          pprint = "{}.{}",
-                                         checks = versions.EQ(1, 4))
+                                         checks = versions.EQ(1, 5))
 
 
 class SE_AdapterRemovalNode(CommandNode):
@@ -114,6 +114,7 @@ class PE_AdapterRemovalNode(CommandNode):
         cmd.set_parameter("--output1", "%(TEMP_OUT_LINK_PAIR1)s")
         cmd.set_parameter("--output2", "%(TEMP_OUT_LINK_PAIR2)s")
         cmd.set_parameter("--outputcollapsed", "%(TEMP_OUT_LINK_ALN)s")
+        cmd.set_parameter("--outputcollapsedtruncated", "%(TEMP_OUT_LINK_ALN_TRUNC)s")
         cmd.set_parameter("--singleton", "%(TEMP_OUT_LINK_UNALN)s")
         cmd.set_parameter("--discarded", "%(TEMP_OUT_LINK_DISC)s")
 
@@ -128,6 +129,7 @@ class PE_AdapterRemovalNode(CommandNode):
 
                       # Named pipes for output of AdapterRemoval
                       TEMP_OUT_LINK_ALN   = basename + ".collapsed",
+                      TEMP_OUT_LINK_ALN_TRUNC  = basename + ".collapsed.truncated",
                       TEMP_OUT_LINK_UNALN = basename + ".singleton.truncated",
                       TEMP_OUT_LINK_PAIR1 = basename + ".pair1.truncated",
                       TEMP_OUT_LINK_PAIR2 = basename + ".pair2.truncated",
@@ -150,8 +152,9 @@ class PE_AdapterRemovalNode(CommandNode):
         zcat_pair_2    = _build_unicat_command(parameters.input_files_2, "uncompressed_input_2")
         gzip_pair_1    = _build_gzip_command(parameters.output_prefix, ".pair1.truncated")
         gzip_pair_2    = _build_gzip_command(parameters.output_prefix, ".pair2.truncated")
-        gzip_aligned   = _build_gzip_command(parameters.output_prefix, ".collapsed",           output = ".singleton.aln.truncated")
-        gzip_unaligned = _build_gzip_command(parameters.output_prefix, ".singleton.truncated", output = ".singleton.unaln.truncated")
+        gzip_aln       = _build_gzip_command(parameters.output_prefix, ".collapsed")
+        gzip_aln_trunc = _build_gzip_command(parameters.output_prefix, ".collapsed.truncated")
+        gzip_unaligned = _build_gzip_command(parameters.output_prefix, ".singleton.truncated")
         gzip_discarded = _build_gzip_command(parameters.output_prefix, ".discarded")
         adapterrm      = parameters.command.finalize()
 
@@ -160,7 +163,8 @@ class PE_AdapterRemovalNode(CommandNode):
         commands = ParallelCmds([adapterrm,
                                  gzip_pair_1,
                                  gzip_pair_2,
-                                 gzip_aligned,
+                                 gzip_aln,
+                                 gzip_aln_trunc,
                                  gzip_unaligned,
                                  gzip_discarded,
                                  zcat_pair_1,
@@ -181,6 +185,7 @@ class PE_AdapterRemovalNode(CommandNode):
         os.mkfifo(os.path.join(temp, self._basename + ".pair1.truncated"))
         os.mkfifo(os.path.join(temp, self._basename + ".pair2.truncated"))
         os.mkfifo(os.path.join(temp, self._basename + ".collapsed"))
+        os.mkfifo(os.path.join(temp, self._basename + ".collapsed.truncated"))
         os.mkfifo(os.path.join(temp, self._basename + ".singleton.truncated"))
         os.mkfifo(os.path.join(temp, "uncompressed_input_1"))
         os.mkfifo(os.path.join(temp, "uncompressed_input_2"))
