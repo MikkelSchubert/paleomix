@@ -30,7 +30,7 @@ from pypeline.tools.bam_pipeline.nodes import IndexAndValidateBAMNode
 
 
 class Prefix:
-    def __init__(self, config, prefix, samples, features):
+    def __init__(self, config, prefix, samples, features, target):
         self.name      = prefix["Name"]
         self.label     = prefix.get("Label") or self.name
         self.reference = prefix["Reference"]
@@ -39,7 +39,7 @@ class Prefix:
         self.samples = safe_coerce_to_tuple(samples)
         self.bams    = {}
         self.folder  = config.destination
-        self.target  = os.path.basename(self.samples[0].folder)
+        self.target  = target
 
         files_and_nodes = {}
         for sample in self.samples:

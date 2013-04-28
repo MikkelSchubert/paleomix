@@ -115,7 +115,7 @@ def build_pipeline_full(config, makefile, return_nodes = True):
                     samples.append(parts.Sample(config, prefix, libraries, sample_name))
 
             if samples:
-                prefixes.append(parts.Prefix(config, prefix, samples, features))
+                prefixes.append(parts.Prefix(config, prefix, samples, features, target_name))
 
         if prefixes:
             targets.append(parts.Target(config, prefixes, target_name))
