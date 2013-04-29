@@ -25,7 +25,7 @@ from __future__ import with_statement
 
 import sys
 import itertools
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from optparse import OptionParser
 
 import pysam
@@ -116,6 +116,33 @@ def build_genes(options, genotype, regions):
         yield (gene, sequence)
 
 
+BEDTuple = namedtuple("BEDTuple", ("contig", "start", "end", "name", "score", "strand"))
+def read_intervals(filename):
+    with open(filename) as bed_file:
+        intervals = samwrap.read_tabix_BED(bed_file)
+
+        for (key, beds) in intervals.iteritems():
+            bed_tuples = []
+            for bed in beds:
+                nfields = len(bed)
+                if nfields < 6:
+                    sys.stderr.write("ERROR: Invalid BED record '%s', must have at least 6 fields ...\n" \
+                                     % ("\\t".join(bed),))
+                    return None
+
+                # Transform to a named tuple, as Pysam has a tendency to segfault
+                # (rather than throwing exceptions), if you do anything wrong
+                bed = list(bed)[:6]  # BED6 only
+                bed[1] = int(bed[1]) # start
+                bed[2] = int(bed[2]) # end
+                bed[4] = int(bed[4]) # score
+
+                bed_tuples.append(BEDTuple(*bed))
+            intervals[key] = bed_tuples
+
+    return intervals
+
+
 def main(argv, output = sys.stdout):
     parser = OptionParser()
     parser.add_option("--genotype", help="Tabix indexed VCF file.")
@@ -140,8 +167,9 @@ def main(argv, output = sys.stdout):
     print(" ...", file = sys.stderr)
 
     genotype = pysam.Tabixfile(opts.genotype)
-    with open(opts.intervals) as bed_file:
-        intervals = samwrap.read_tabix_BED(bed_file)
+    intervals = read_intervals(opts.intervals)
+    if intervals is None:
+        return 1
 
     for (_, beds) in sorted(intervals.items()):
         for (name, sequence) in build_genes(opts, genotype, beds):
