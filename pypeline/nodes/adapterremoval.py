@@ -38,7 +38,7 @@ ADAPTERRM_VERSION = versions.Requirement(call   = ("AdapterRemoval", "--version"
 
 class SE_AdapterRemovalNode(CommandNode):
     @create_customizable_cli_parameters
-    def customize(cls, input_files, output_prefix, dependencies = ()):
+    def customize(cls, input_files, output_prefix, output_format = "bz2", dependencies = ()):
         # See below for parameters in common between SE/PE
         cmd = _get_common_parameters()
 
@@ -62,6 +62,7 @@ class SE_AdapterRemovalNode(CommandNode):
                       TEMP_OUT_LINK_3     = "uncompressed_input")
 
         return {"basename"      : basename,
+                "format"        : output_format,
                 "command"       : cmd}
 
 
@@ -70,13 +71,13 @@ class SE_AdapterRemovalNode(CommandNode):
         self._basename = parameters.basename
 
         zcat           = _build_unicat_command(parameters.input_files, "uncompressed_input")
-        gzip_truncated = _build_gzip_command(parameters.output_prefix, ".truncated")
-        gzip_discarded = _build_gzip_command(parameters.output_prefix, ".discarded")
+        zip_truncated  = _build_zip_command(parameters.output_format, parameters.output_prefix, ".truncated")
+        zip_discarded  = _build_zip_command(parameters.output_format, parameters.output_prefix, ".discarded")
         adapterrm      = parameters.command.finalize()
 
         # Opening of pipes block, so the order of these commands is dependent upon
         # the order of file-opens in atomiccmd and the the programs themselves.
-        commands = ParallelCmds([adapterrm, gzip_discarded, gzip_truncated, zcat])
+        commands = ParallelCmds([adapterrm, zip_discarded, zip_truncated, zcat])
         CommandNode.__init__(self,
                              command      = commands,
                              description  = "<SE_AdapterRM: %s -> '%s.*'>" \
@@ -97,7 +98,7 @@ class SE_AdapterRemovalNode(CommandNode):
 
 class PE_AdapterRemovalNode(CommandNode):
     @create_customizable_cli_parameters
-    def customize(self, input_files_1, input_files_2, output_prefix, dependencies = ()):
+    def customize(self, input_files_1, input_files_2, output_prefix, output_format = "bz2", dependencies = ()):
         cmd = _get_common_parameters()
         # Merge pairs where the sequence is overlapping
         cmd.set_parameter("--collapse")
@@ -138,6 +139,7 @@ class PE_AdapterRemovalNode(CommandNode):
                       TEMP_OUT_LINK_7     = "uncompressed_input_2")
 
         return {"basename"       : basename,
+                "format"         : output_format,
                 "command"        : cmd}
 
     @use_customizable_cli_parameters
@@ -150,23 +152,23 @@ class PE_AdapterRemovalNode(CommandNode):
 
         zcat_pair_1    = _build_unicat_command(parameters.input_files_1, "uncompressed_input_1")
         zcat_pair_2    = _build_unicat_command(parameters.input_files_2, "uncompressed_input_2")
-        gzip_pair_1    = _build_gzip_command(parameters.output_prefix, ".pair1.truncated")
-        gzip_pair_2    = _build_gzip_command(parameters.output_prefix, ".pair2.truncated")
-        gzip_aln       = _build_gzip_command(parameters.output_prefix, ".collapsed")
-        gzip_aln_trunc = _build_gzip_command(parameters.output_prefix, ".collapsed.truncated")
-        gzip_unaligned = _build_gzip_command(parameters.output_prefix, ".singleton.truncated")
-        gzip_discarded = _build_gzip_command(parameters.output_prefix, ".discarded")
+        zip_pair_1     = _build_zip_command(parameters.output_format, parameters.output_prefix, ".pair1.truncated")
+        zip_pair_2     = _build_zip_command(parameters.output_format, parameters.output_prefix, ".pair2.truncated")
+        zip_aln        = _build_zip_command(parameters.output_format, parameters.output_prefix, ".collapsed")
+        zip_aln_trunc  = _build_zip_command(parameters.output_format, parameters.output_prefix, ".collapsed.truncated")
+        zip_unaligned  = _build_zip_command(parameters.output_format, parameters.output_prefix, ".singleton.truncated")
+        zip_discarded  = _build_zip_command(parameters.output_format, parameters.output_prefix, ".discarded")
         adapterrm      = parameters.command.finalize()
 
         # Opening of pipes block, so the order of these commands is dependent upon
         # the order of file-opens in atomiccmd and the the programs themselves.
         commands = ParallelCmds([adapterrm,
-                                 gzip_pair_1,
-                                 gzip_pair_2,
-                                 gzip_aln,
-                                 gzip_aln_trunc,
-                                 gzip_unaligned,
-                                 gzip_discarded,
+                                 zip_pair_1,
+                                 zip_pair_2,
+                                 zip_aln,
+                                 zip_aln_trunc,
+                                 zip_unaligned,
+                                 zip_discarded,
                                  zcat_pair_1,
                                  zcat_pair_2])
 
@@ -206,11 +208,19 @@ def _build_unicat_command(input_files, output_file):
     return AtomicCmd(call, **paths)
 
 
-def _build_gzip_command(prefix, name, output = None):
+def _build_zip_command(output_format, prefix, name, output = None):
+    if output_format == "bz2":
+        command, ext = "bzip2", ".bz2"
+    elif output_format == "gz":
+        command, ext = "gzip", ".gz"
+    else:
+        raise CmdError("Invalid output-format (%s), please select 'gz' or 'bz2'" \
+                       % repr(output_format))
+
     basename = os.path.basename(prefix)
-    return AtomicCmd(["gzip", "-c", "-n"],
+    return AtomicCmd([command, "-c"],
                      TEMP_IN_STDIN = basename + name,
-                     OUT_STDOUT    = prefix + (output or name) + ".gz")
+                     OUT_STDOUT    = prefix + (output or name) + ext)
 
 
 def _get_common_parameters():

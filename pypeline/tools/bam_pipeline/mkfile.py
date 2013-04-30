@@ -49,6 +49,8 @@ Options:
   # string specified for a given lane. Each lane is named by adding a number to the end of the
   # given barcode.
   SplitLanesByFilenames: no
+  # Compression format used when storing FASTQ files (either 'gz' for GZip or 'bz2' for BZip2)
+  CompressionFormat: gz
 
   """ % timestamp
 

@@ -70,6 +70,8 @@ _DEFAULTS = {
         "QualityOffset" : 33,
         # Split a lane into multiple entries, one for each (pair of) file(s)
         "SplitLanesByFilenames" : False,
+        # Format to use when compressing FASTQ files ("gz" or "bz2")
+        "CompressionFormat" : "gz",
 
         # Which aliger/mapper to use (BWA/Bowtie2)
         "Aligners" : {
@@ -113,6 +115,8 @@ _VALIDATION = {
         "QualityOffset" : OneOf(33, 64, "Solexa"),
         # Split a lane into multiple entries, one for each (pair of) file(s)
         "SplitLanesByFilenames"  : Or(IsBoolean, IsListOf(IsStr)),
+        # Format to use when compressing FASTQ files ("gz" or "bz2")
+        "CompressionFormat" : OneOf("gz", "bz2"),
 
         # Which aliger/mapper to use (BWA/Bowtie2)
         "Aligners" : {
