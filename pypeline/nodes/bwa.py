@@ -99,29 +99,33 @@ class SE_BWANode(CommandNode):
     def customize(self, input_file, output_file, reference, prefix, threads = 1, dependencies = ()):
         threads = _get_max_threads(reference, threads)
 
+        aln_in = _build_unicat_command(input_file, "uncompressed_input_aln")
         aln = _BWAParams(("bwa", "aln"), prefix,
-                         IN_FILE = input_file,
+                         TEMP_IN_FILE = "uncompressed_input_aln",
                          OUT_STDOUT = AtomicCmd.PIPE,
                          CHECK_BWA = BWA_VERSION)
         aln.push_positional(prefix)
-        aln.push_positional("%(IN_FILE)s")
+        aln.push_positional("%(TEMP_IN_FILE)s")
         aln.set_parameter("-t", threads)
 
+        samse_in = _build_unicat_command(input_file, "uncompressed_input_samse")
         samse = _BWAParams(("bwa", "samse"), prefix,
                            IN_STDIN = aln,
-                           IN_FILE  = input_file,
+                           TEMP_IN_FILE = "uncompressed_input_samse",
                            OUT_STDOUT = AtomicCmd.PIPE,
                            CHECK_BWA = BWA_VERSION)
         samse.push_positional(prefix)
         samse.push_positional("-")
-        samse.push_positional("%(IN_FILE)s")
+        samse.push_positional("%(TEMP_IN_FILE)s")
 
         order, commands = _process_output(samse, output_file, reference)
-        commands["samse"] = samse
-        commands["aln"]   = aln
+        commands["samse_in"] = samse_in
+        commands["samse"]    = samse
+        commands["aln_in"]   = aln_in
+        commands["aln"]      = aln
 
         return {"commands" : commands,
-                "order"    : ["aln", "samse"] + order,
+                "order"    : ["aln_in", "aln", "samse_in", "samse"] + order,
                 "threads"  : threads}
 
 
@@ -137,29 +141,38 @@ class SE_BWANode(CommandNode):
                              dependencies = parameters.dependencies)
 
 
+    def _setup(self, _config, temp):
+        os.mkfifo(os.path.join(temp, "uncompressed_input_aln"))
+        os.mkfifo(os.path.join(temp, "uncompressed_input_samse"))
+
 
 class PE_BWANode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, input_file_1, input_file_2, output_file, reference, prefix, threads = 2, dependencies = ()):
         threads = _get_max_threads(reference, threads)
 
-        alns = []
+        alns, aln_ins = [], []
         for (iindex, filename) in enumerate((input_file_1, input_file_2), start = 1):
+            aln_in = _build_unicat_command(filename, "uncompressed_input_aln_%i" % iindex)
             aln = _BWAParams(("bwa", "aln"), prefix,
-                             IN_FILE = filename,
+                             TEMP_IN_FILE = "uncompressed_input_aln_%i" % iindex,
                              OUT_STDOUT = AtomicCmd.PIPE,
                              TEMP_OUT_SAI = "pair_%i.sai" % iindex,
                              CHECK_BWA = BWA_VERSION)
             aln.push_positional(prefix)
-            aln.push_positional("%(IN_FILE)s")
+            aln.push_positional("%(TEMP_IN_FILE)s")
             aln.set_parameter("-f", "%(TEMP_OUT_SAI)s")
             aln.set_parameter("-t", max(1, threads // 2))
+            aln_ins.append(aln_in)
             alns.append(aln)
+        aln_in_1, aln_in_2 = aln_ins
         aln_1, aln_2 = alns
 
+        sampe_in_1 = _build_unicat_command(input_file_1, "uncompressed_input_sampe_1")
+        sampe_in_2 = _build_unicat_command(input_file_2, "uncompressed_input_sampe_2")
         sampe = _BWAParams(("bwa", "sampe"), prefix,
-                           IN_FILE_1     = input_file_1,
-                           IN_FILE_2     = input_file_2,
+                           TEMP_IN_FILE_1 = "uncompressed_input_sampe_1",
+                           TEMP_IN_FILE_2 = "uncompressed_input_sampe_2",
                            TEMP_IN_SAI_1 = "pair_1.sai",
                            TEMP_IN_SAI_2 = "pair_2.sai",
                            OUT_STDOUT    = AtomicCmd.PIPE,
@@ -167,17 +180,23 @@ class PE_BWANode(CommandNode):
         sampe.push_positional(prefix)
         sampe.push_positional("%(TEMP_IN_SAI_1)s")
         sampe.push_positional("%(TEMP_IN_SAI_2)s")
-        sampe.push_positional("%(IN_FILE_1)s")
-        sampe.push_positional("%(IN_FILE_2)s")
+        sampe.push_positional("%(TEMP_IN_FILE_1)s")
+        sampe.push_positional("%(TEMP_IN_FILE_2)s")
         sampe.set_parameter("-P", fixed = False)
 
         order, commands = _process_output(sampe, output_file, reference)
         commands["sampe"] = sampe
+        commands["sampe_in_1"] = sampe_in_1
+        commands["sampe_in_2"] = sampe_in_2
+        commands["aln_in_1"] = aln_in_1
         commands["aln_1"] = aln_1
+        commands["aln_in_2"] = aln_in_2
         commands["aln_2"] = aln_2
 
         return {"commands" : commands,
-                "order"    : ["aln_1", "aln_2", "sampe"] + order,
+                "order"    : ["aln_in_1", "aln_1",
+                              "aln_in_2", "aln_2",
+                              "sampe_in_1", "sampe_in_2", "sampe"] + order,
                 # At least one thread per 'aln' process
                 "threads"  : max(2, threads)}
 
@@ -195,6 +214,10 @@ class PE_BWANode(CommandNode):
 
 
     def _setup(self, _config, temp):
+        os.mkfifo(os.path.join(temp, "uncompressed_input_aln_1"))
+        os.mkfifo(os.path.join(temp, "uncompressed_input_aln_2"))
+        os.mkfifo(os.path.join(temp, "uncompressed_input_sampe_1"))
+        os.mkfifo(os.path.join(temp, "uncompressed_input_sampe_2"))
         os.mkfifo(os.path.join(temp, "pair_1.sai"))
         os.mkfifo(os.path.join(temp, "pair_2.sai"))
 
@@ -322,3 +345,9 @@ def _check_bwa_prefix(prefix):
                 raise NodeError("BWA version is v%s, but prefix appears to be created using v0.5.x!\n"
                                 "\tPlease remove '%s.*' and rebuild index using 'bwa index %s'" \
                                 % (".".join(map(str, bwa_version)), prefix, prefix))
+
+
+def _build_unicat_command(input_file, output_file):
+    return AtomicParams(["unicat", "--output", "%(TEMP_OUT_CAT)s", "%(IN_ARCHIVE)s"],
+                        TEMP_OUT_CAT = output_file,
+                        IN_ARCHIVE   = input_file)
