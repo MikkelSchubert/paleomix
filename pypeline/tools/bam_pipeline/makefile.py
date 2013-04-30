@@ -73,6 +73,10 @@ _DEFAULTS = {
         # Format to use when compressing FASTQ files ("gz" or "bz2")
         "CompressionFormat" : "gz",
 
+        "AdapterRemoval" : {
+            "Version" : "v1.4",
+        },
+
         # Which aliger/mapper to use (BWA/Bowtie2)
         "Aligners" : {
             "Program" : "BWA",
@@ -117,6 +121,10 @@ _VALIDATION = {
         "SplitLanesByFilenames"  : Or(IsBoolean, IsListOf(IsStr)),
         # Format to use when compressing FASTQ files ("gz" or "bz2")
         "CompressionFormat" : OneOf("gz", "bz2"),
+
+        "AdapterRemoval" : {
+            "Version" : OneOf("v1.4", "v1.5+"),
+        },
 
         # Which aliger/mapper to use (BWA/Bowtie2)
         "Aligners" : {

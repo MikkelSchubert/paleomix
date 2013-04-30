@@ -26,7 +26,9 @@ import copy
 from pypeline.common.fileutils import missing_files
 from pypeline.common.makefile import MakefileError
 from pypeline.nodes.adapterremoval import SE_AdapterRemovalNode, \
-                                          PE_AdapterRemovalNode
+                                          PE_AdapterRemovalNode, \
+                                          VERSION_14, \
+                                          VERSION_15
 
 import pypeline.tools.bam_pipeline.paths as paths
 
@@ -61,23 +63,34 @@ class Reads:
 
 
     def _init_raw_reads(self, config, record):
+        version = VERSION_14
+        if record["Options"]["AdapterRemoval"]["Version"] == "v1.5+":
+            version = VERSION_15
+
         output_format = record["Options"]["CompressionFormat"]
         output_prefix = os.path.join(self.folder, "reads")
         files = record["Data"]
         if ("SE" in files):
             command = SE_AdapterRemovalNode.customize(input_files   = files["SE"],
                                                       output_prefix = output_prefix,
-                                                      output_format = output_format)
+                                                      output_format = output_format,
+                                                      version       = version)
             self.files["Single"] = output_prefix + ".truncated." + output_format
         else:
             command = PE_AdapterRemovalNode.customize(input_files_1 = files["PE_1"],
                                                       input_files_2 = files["PE_2"],
                                                       output_prefix = output_prefix,
-                                                      output_format = output_format)
+                                                      output_format = output_format,
+                                                      version       = version)
             self.files["Paired"]    = output_prefix + ".pair{Pair}.truncated." + output_format
-            self.files["Single"]    = output_prefix + ".singleton.truncated."  + output_format
-            self.files["Collapsed"] = output_prefix + ".collapsed." + output_format
-            self.files["CollapsedTruncated"] = output_prefix + ".collapsed.truncated." + output_format
+            if version is VERSION_14:
+                self.files["Single"]    = output_prefix + ".singleton.unaln.truncated."  + output_format
+                self.files["Collapsed"] = output_prefix + ".singleton.aln.truncated." + output_format
+            else:
+                self.files["Single"]    = output_prefix + ".singleton.truncated."  + output_format
+                self.files["Collapsed"] = output_prefix + ".collapsed." + output_format
+                self.files["CollapsedTruncated"] = output_prefix + ".collapsed.truncated." + output_format
+
         self.stats = output_prefix + ".settings"
 
         quality_offset = self.quality_offset # record["Options"]["QualityOffset"]

@@ -30,17 +30,22 @@ from pypeline.atomicparams import *
 import pypeline.common.versions as versions
 
 
-ADAPTERRM_VERSION = versions.Requirement(call   = ("AdapterRemoval", "--version"),
-                                         search = r"ver. (\d+)\.(\d+)",
-                                         pprint = "{}.{}",
-                                         checks = versions.EQ(1, 5))
+VERSION_14 = versions.Requirement(call   = ("AdapterRemoval", "--version"),
+                                  search = r"ver. (\d+)\.(\d+)",
+                                  pprint = "{}.{}",
+                                  checks = versions.EQ(1, 4))
+
+VERSION_15 = versions.Requirement(call   = ("AdapterRemoval", "--version"),
+                                  search = r"ver. (\d+)\.(\d+)",
+                                  pprint = "{}.{}",
+                                  checks = versions.EQ(1, 5))
 
 
 class SE_AdapterRemovalNode(CommandNode):
     @create_customizable_cli_parameters
-    def customize(cls, input_files, output_prefix, output_format = "bz2", dependencies = ()):
+    def customize(cls, input_files, output_prefix, output_format = "bz2", version = VERSION_15, dependencies = ()):
         # See below for parameters in common between SE/PE
-        cmd = _get_common_parameters()
+        cmd = _get_common_parameters(version)
 
         # Uncompressed reads (piped from unicat)
         cmd.set_parameter("--file1",    "%(TEMP_IN_READS)s")
@@ -63,6 +68,7 @@ class SE_AdapterRemovalNode(CommandNode):
 
         return {"basename"      : basename,
                 "format"        : output_format,
+                "version"       : version,
                 "command"       : cmd}
 
 
@@ -98,8 +104,8 @@ class SE_AdapterRemovalNode(CommandNode):
 
 class PE_AdapterRemovalNode(CommandNode):
     @create_customizable_cli_parameters
-    def customize(self, input_files_1, input_files_2, output_prefix, output_format = "bz2", dependencies = ()):
-        cmd = _get_common_parameters()
+    def customize(self, input_files_1, input_files_2, output_prefix, output_format = "bz2", version = VERSION_15, dependencies = ()):
+        cmd = _get_common_parameters(version)
         # Merge pairs where the sequence is overlapping
         cmd.set_parameter("--collapse")
 
@@ -115,7 +121,6 @@ class PE_AdapterRemovalNode(CommandNode):
         cmd.set_parameter("--output1", "%(TEMP_OUT_LINK_PAIR1)s")
         cmd.set_parameter("--output2", "%(TEMP_OUT_LINK_PAIR2)s")
         cmd.set_parameter("--outputcollapsed", "%(TEMP_OUT_LINK_ALN)s")
-        cmd.set_parameter("--outputcollapsedtruncated", "%(TEMP_OUT_LINK_ALN_TRUNC)s")
         cmd.set_parameter("--singleton", "%(TEMP_OUT_LINK_UNALN)s")
         cmd.set_parameter("--discarded", "%(TEMP_OUT_LINK_DISC)s")
 
@@ -129,21 +134,31 @@ class PE_AdapterRemovalNode(CommandNode):
                       TEMP_IN_READS_2     = "uncompressed_input_2",
 
                       # Named pipes for output of AdapterRemoval
-                      TEMP_OUT_LINK_ALN   = basename + ".collapsed",
-                      TEMP_OUT_LINK_ALN_TRUNC  = basename + ".collapsed.truncated",
-                      TEMP_OUT_LINK_UNALN = basename + ".singleton.truncated",
                       TEMP_OUT_LINK_PAIR1 = basename + ".pair1.truncated",
                       TEMP_OUT_LINK_PAIR2 = basename + ".pair2.truncated",
                       TEMP_OUT_LINK_DISC  = basename + ".discarded",
                       TEMP_OUT_LINK_6     = "uncompressed_input_1",
                       TEMP_OUT_LINK_7     = "uncompressed_input_2")
 
+        if version is VERSION_15:
+            cmd.set_parameter("--outputcollapsedtruncated", "%(TEMP_OUT_LINK_ALN_TRUNC)s")
+            cmd.set_paths(TEMP_OUT_LINK_ALN       = basename + ".collapsed",
+                          TEMP_OUT_LINK_ALN_TRUNC = basename + ".collapsed.truncated",
+                          TEMP_OUT_LINK_UNALN     = basename + ".singleton.truncated")
+        elif version is VERSION_14:
+            cmd.set_paths(TEMP_OUT_LINK_ALN       = basename + ".singleton.aln.truncated",
+                          TEMP_OUT_LINK_UNALN     = basename + ".singleton.unaln.truncated")
+        else:
+            assert False
+
         return {"basename"       : basename,
                 "format"         : output_format,
                 "command"        : cmd}
 
+
     @use_customizable_cli_parameters
     def __init__(self, parameters):
+        self._version  = parameters.version
         self._basename = parameters.basename
         if len(parameters.input_files_1) != len(parameters.input_files_2):
             raise CmdError("Number of mate 1 files differ from mate 2 files: %i != %i" \
@@ -154,23 +169,24 @@ class PE_AdapterRemovalNode(CommandNode):
         zcat_pair_2    = _build_unicat_command(parameters.input_files_2, "uncompressed_input_2")
         zip_pair_1     = _build_zip_command(parameters.output_format, parameters.output_prefix, ".pair1.truncated")
         zip_pair_2     = _build_zip_command(parameters.output_format, parameters.output_prefix, ".pair2.truncated")
-        zip_aln        = _build_zip_command(parameters.output_format, parameters.output_prefix, ".collapsed")
-        zip_aln_trunc  = _build_zip_command(parameters.output_format, parameters.output_prefix, ".collapsed.truncated")
-        zip_unaligned  = _build_zip_command(parameters.output_format, parameters.output_prefix, ".singleton.truncated")
         zip_discarded  = _build_zip_command(parameters.output_format, parameters.output_prefix, ".discarded")
         adapterrm      = parameters.command.finalize()
 
+        commands = [adapterrm, zip_pair_1, zip_pair_2]
+        if parameters.version is VERSION_15:
+            zip_aln        = _build_zip_command(parameters.output_format, parameters.output_prefix, ".collapsed")
+            zip_aln_trunc  = _build_zip_command(parameters.output_format, parameters.output_prefix, ".collapsed.truncated")
+            zip_unaligned  = _build_zip_command(parameters.output_format, parameters.output_prefix, ".singleton.truncated")
+            commands      += [zip_aln, zip_aln_trunc, zip_unaligned]
+        else:
+            zip_aln        = _build_zip_command(parameters.output_format, parameters.output_prefix, ".singleton.aln.truncated")
+            zip_unaligned  = _build_zip_command(parameters.output_format, parameters.output_prefix, ".singleton.unaln.truncated")
+            commands      += [zip_aln, zip_unaligned]
+        commands += [zip_discarded, zcat_pair_1, zcat_pair_2]
+
         # Opening of pipes block, so the order of these commands is dependent upon
         # the order of file-opens in atomiccmd and the the programs themselves.
-        commands = ParallelCmds([adapterrm,
-                                 zip_pair_1,
-                                 zip_pair_2,
-                                 zip_aln,
-                                 zip_aln_trunc,
-                                 zip_unaligned,
-                                 zip_discarded,
-                                 zcat_pair_1,
-                                 zcat_pair_2])
+        commands = ParallelCmds(commands)
 
         description  = "<PE_AdapterRM: %s -> '%s.*'>" \
             % (self._desc_files(parameters.input_files_1).replace("file", "pair"),
@@ -186,11 +202,16 @@ class PE_AdapterRemovalNode(CommandNode):
         os.mkfifo(os.path.join(temp, self._basename + ".discarded"))
         os.mkfifo(os.path.join(temp, self._basename + ".pair1.truncated"))
         os.mkfifo(os.path.join(temp, self._basename + ".pair2.truncated"))
-        os.mkfifo(os.path.join(temp, self._basename + ".collapsed"))
-        os.mkfifo(os.path.join(temp, self._basename + ".collapsed.truncated"))
-        os.mkfifo(os.path.join(temp, self._basename + ".singleton.truncated"))
         os.mkfifo(os.path.join(temp, "uncompressed_input_1"))
         os.mkfifo(os.path.join(temp, "uncompressed_input_2"))
+
+        if self._version is VERSION_15:
+            os.mkfifo(os.path.join(temp, self._basename + ".collapsed"))
+            os.mkfifo(os.path.join(temp, self._basename + ".collapsed.truncated"))
+            os.mkfifo(os.path.join(temp, self._basename + ".singleton.truncated"))
+        else:
+            os.mkfifo(os.path.join(temp, self._basename + ".singleton.aln.truncated"))
+            os.mkfifo(os.path.join(temp, self._basename + ".singleton.unaln.truncated"))
 
         CommandNode._setup(self, config, temp)
 
@@ -223,9 +244,10 @@ def _build_zip_command(output_format, prefix, name, output = None):
                      OUT_STDOUT    = prefix + (output or name) + ext)
 
 
-def _get_common_parameters():
+def _get_common_parameters(version):
+    assert version in (VERSION_14, VERSION_15)
     cmd = AtomicParams("AdapterRemoval",
-                       CHECK_VERSION = ADAPTERRM_VERSION)
+                       CHECK_VERSION = version)
 
     # Allow 1/3 mismatches in the aligned region
     cmd.set_parameter("--mm", 3, fixed = False)

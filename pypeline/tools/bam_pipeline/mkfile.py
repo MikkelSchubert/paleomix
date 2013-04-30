@@ -56,6 +56,10 @@ Options:
 
     if full_mkfile:
         print """  # Settings for aligners supported by the pipeline
+  AdapterRemoval:
+    # Which version of AdapterRemoval to use ('v1.4' or 'v1.5+')
+    Version: 1.4
+
   Aligners:
     # Choice of aligner software to use, either "BWA" or "Bowtie2"
     Program: BWA
@@ -100,6 +104,7 @@ Options:
 #    - Collapsed # Overlapping pair-ended mate reads collapsed into a single read
 #    - CollapsedTruncated # Like 'Collapsed', except that the reads have been
 #                           truncated due to the presence of low quality bases.
+#                           AdapterRemoval 1.5+ only.
 
   # Optional steps to perform during processing
   # To disable all features, replace with line "Features: []"
