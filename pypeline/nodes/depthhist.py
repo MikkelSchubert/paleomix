@@ -34,7 +34,7 @@ from pypeline.common.text import padded_table
 from pypeline.common.fileutils import reroot_path, move_file, swap_ext
 from pypeline.common.utilities import get_in, set_in, safe_coerce_to_tuple
 from pypeline.nodes.picard import concatenate_input_bams
-import pypeline.common.timer
+from pypeline.common.timer import BAMTimer
 
 _MAX_DEPTH = 200
 
@@ -130,16 +130,17 @@ class DepthHistogramNode(Node):
         if not self._print_stats:
             out = open(os.path.join(temp, "pipe_coverage_%i.stdout" % id(self)), "w")
 
-        timer = pypeline.common.timer.Timer(out = out)
         with pysam.Samfile(self._pipes["input_file"]) as samfile:
+            timer = BAMTimer(samfile, out = out)
             intervals, region_names = self._get_intervals(temp, samfile)
             mapping   = self._open_handles(temp, samfile, intervals)
             for read in samfile:
                 rg = dict(read.tags).get("RG")
                 for handle in mapping[rg]:
                     handle.write(read)
-                timer += 1
-        timer.finalize()
+                timer.increment()
+            timer.finalize()
+
         if not self._print_stats:
             out.close()
 

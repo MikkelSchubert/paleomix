@@ -25,11 +25,15 @@ from __future__ import print_function
 import sys
 import time
 
+from pypeline.common.utilities import fragment
 
-_DESC = "Processed {Reads} reads in {Time}. Last {ReadsDelta} reads in {TimeDelta} ..."
 
-class Timer:
-    def __init__(self, desc = _DESC, final = _DESC, step = 1e6, out = sys.stderr):
+_DESC = "Processed {Reads} reads in {Time}. Last {ReadsDelta} reads in {TimeDelta}, last read at {Contig}: {Position} ..."
+_FINAL = "Processed {Reads} reads in {Time}. Last {ReadsDelta} reads in {TimeDelta} ..."
+
+class BAMTimer:
+    def __init__(self, bamfile, desc = _DESC, final = _FINAL, step = 1e6, out = sys.stderr):
+        self._bam   = bamfile
         self._out   = out
         self._desc  = desc
         self._final = final
@@ -40,25 +44,32 @@ class Timer:
         self._start_time = self._last_time
 
 
-    def __add__(self, other):
-        self._count += other
+    def increment(self, count = 1, read = None):
+        self._count += count
         if (self._count - self._last_count) >= self._step:
             current_time = time.time()
-            self._print(self._desc, current_time)
+            self._print(self._desc, current_time, read)
             self._last_time  = current_time
             self._last_count = self._count
         return self
 
 
     def finalize(self):
-        self._print(self._final, time.time())
+        self._print(self._final, time.time(), None)
 
 
-    def _print(self, desc, current_time):
+    def _print(self, desc, current_time, read):
+        contig, position = "NA", "NA"
+        if read and self._bam:
+            contig   = self._bam.references[read.tid]
+            position = (",".join(fragment(3, str(read.pos + 1)[::-1])))[::-1]
+
         print(desc.format(Reads      = self._count,
                           ReadsDelta = self._count - self._last_count,
                           Time       = self._format(current_time - self._start_time),
-                          TimeDelta  = self._format(current_time - self._last_time)),
+                          TimeDelta  = self._format(current_time - self._last_time),
+                          Contig     = contig,
+                          Position   = position),
             file = self._out)
 
 
