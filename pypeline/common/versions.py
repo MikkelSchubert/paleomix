@@ -253,4 +253,8 @@ def _pprint(ppr, value):
         return "v" + ".".join(map(str, value))
     elif isinstance(ppr, collections.Callable):
         return ppr(value)
-    return ppr.format(*value)
+
+    try:
+        return ppr.format(*value)
+    except ValueError, e:
+        raise ValueError("%s: %s.format(*%s)" % (str(e), repr(ppr), repr(value)))
