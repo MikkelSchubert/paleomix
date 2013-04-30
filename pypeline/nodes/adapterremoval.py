@@ -32,7 +32,7 @@ import pypeline.common.versions as versions
 
 VERSION_14 = versions.Requirement(call   = ("AdapterRemoval", "--version"),
                                   search = r"ver. (\d+)\.(\d+)",
-                                  pprint = "{}.{}",
+                                  pprint = "{0}.{1}",
                                   checks = versions.EQ(1, 4))
 
 VERSION_15 = versions.Requirement(call   = ("AdapterRemoval", "--version"),
