@@ -30,15 +30,17 @@ from pypeline.atomicparams import *
 import pypeline.common.versions as versions
 
 
-VERSION_14 = versions.Requirement(call   = ("AdapterRemoval", "--version"),
-                                  search = r"ver. (\d+)\.(\d+)",
-                                  pprint = "{0}.{1}",
-                                  checks = versions.EQ(1, 4))
+VERSION_14 = "1.4"
+_VERSION_14_CHECK = versions.Requirement(call   = ("AdapterRemoval", "--version"),
+                                         search = r"ver. (\d+)\.(\d+)",
+                                         pprint = "{0}.{1}",
+                                         checks = versions.EQ(1, 4))
 
-VERSION_15 = versions.Requirement(call   = ("AdapterRemoval", "--version"),
-                                  search = r"ver. (\d+)\.(\d+)",
-                                  pprint = "{}.{}",
-                                  checks = versions.EQ(1, 5))
+VERSION_15 = "1.5+"
+_VERSION_15_CHECK = versions.Requirement(call   = ("AdapterRemoval", "--version"),
+                                         search = r"ver. (\d+)\.(\d+)",
+                                         pprint = "{}.{}",
+                                         checks = versions.EQ(1, 5))
 
 
 class SE_AdapterRemovalNode(CommandNode):
@@ -121,6 +123,8 @@ class PE_AdapterRemovalNode(CommandNode):
         cmd.set_parameter("--output1", "%(TEMP_OUT_LINK_PAIR1)s")
         cmd.set_parameter("--output2", "%(TEMP_OUT_LINK_PAIR2)s")
         cmd.set_parameter("--outputcollapsed", "%(TEMP_OUT_LINK_ALN)s")
+        if version == VERSION_15:
+            cmd.set_parameter("--outputcollapsedtruncated", "%(TEMP_OUT_LINK_ALN_TRUNC)s")
         cmd.set_parameter("--singleton", "%(TEMP_OUT_LINK_UNALN)s")
         cmd.set_parameter("--discarded", "%(TEMP_OUT_LINK_DISC)s")
 
@@ -140,12 +144,11 @@ class PE_AdapterRemovalNode(CommandNode):
                       TEMP_OUT_LINK_6     = "uncompressed_input_1",
                       TEMP_OUT_LINK_7     = "uncompressed_input_2")
 
-        if version is VERSION_15:
-            cmd.set_parameter("--outputcollapsedtruncated", "%(TEMP_OUT_LINK_ALN_TRUNC)s")
+        if version == VERSION_15:
             cmd.set_paths(TEMP_OUT_LINK_ALN       = basename + ".collapsed",
                           TEMP_OUT_LINK_ALN_TRUNC = basename + ".collapsed.truncated",
                           TEMP_OUT_LINK_UNALN     = basename + ".singleton.truncated")
-        elif version is VERSION_14:
+        elif version == VERSION_14:
             cmd.set_paths(TEMP_OUT_LINK_ALN       = basename + ".singleton.aln.truncated",
                           TEMP_OUT_LINK_UNALN     = basename + ".singleton.unaln.truncated")
         else:
@@ -158,8 +161,8 @@ class PE_AdapterRemovalNode(CommandNode):
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
-        self._version  = parameters.version
-        self._basename = parameters.basename
+        self._version    = parameters.version
+        self._basename   = parameters.basename
         if len(parameters.input_files_1) != len(parameters.input_files_2):
             raise CmdError("Number of mate 1 files differ from mate 2 files: %i != %i" \
                                % (len(parameters.input_files_1),
@@ -173,7 +176,7 @@ class PE_AdapterRemovalNode(CommandNode):
         adapterrm      = parameters.command.finalize()
 
         commands = [adapterrm, zip_pair_1, zip_pair_2]
-        if parameters.version is VERSION_15:
+        if parameters.version == VERSION_15:
             zip_aln        = _build_zip_command(parameters.output_format, parameters.output_prefix, ".collapsed")
             zip_aln_trunc  = _build_zip_command(parameters.output_format, parameters.output_prefix, ".collapsed.truncated")
             zip_unaligned  = _build_zip_command(parameters.output_format, parameters.output_prefix, ".singleton.truncated")
@@ -205,7 +208,7 @@ class PE_AdapterRemovalNode(CommandNode):
         os.mkfifo(os.path.join(temp, "uncompressed_input_1"))
         os.mkfifo(os.path.join(temp, "uncompressed_input_2"))
 
-        if self._version is VERSION_15:
+        if self._version == VERSION_15:
             os.mkfifo(os.path.join(temp, self._basename + ".collapsed"))
             os.mkfifo(os.path.join(temp, self._basename + ".collapsed.truncated"))
             os.mkfifo(os.path.join(temp, self._basename + ".singleton.truncated"))
@@ -245,9 +248,15 @@ def _build_zip_command(output_format, prefix, name, output = None):
 
 
 def _get_common_parameters(version):
-    assert version in (VERSION_14, VERSION_15)
+    if version == VERSION_14:
+        version_check = _VERSION_14_CHECK
+    elif version == VERSION_15:
+        version_check = _VERSION_15_CHECK
+    else:
+        raise CmdError("Unknown version: %s" % version)
+
     cmd = AtomicParams("AdapterRemoval",
-                       CHECK_VERSION = version)
+                       CHECK_VERSION = version_check)
 
     # Allow 1/3 mismatches in the aligned region
     cmd.set_parameter("--mm", 3, fixed = False)
