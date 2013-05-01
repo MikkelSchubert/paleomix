@@ -20,7 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from __future__ import print_function
 from __future__ import with_statement
 
 import optparse
@@ -46,8 +45,12 @@ def add_varfilter_options(parser):
                      help = "Filter heterozygous SNPs observed on this chromosome (e.g. chrX) [%default].")
     group.add_option("-q", "--min-quality", type = int, default = 30,
                      help = "Minimum Phred score recorded in the QUAL column [%default]")
-    group.add_option("-f", "--max-major-allele-frequency", type = float, default = 0.8,
-                     help = "Maximum frequency of the major allele at heterozygous sites [%default]")
+    group.add_option("-f", "--min-allele-frequency", type = float, default = 0.2,
+                     help = "Minimum frequency of the alleles at heterozygous sites [%default]. " \
+                            "WARNING: A pileup must be provided for multi-allelic sites to be filtered!")
+    group.add_option("-b", "--pileup", default = None,
+                     help = "Tabix indexed pileup for multi-allelic sites. This is required for such "\
+                            "sites to be filtered using the --min-allele-frequency filter.")
     group.add_option("-k", "--keep-ambigious-genotypes", default = False, action = "store_true",
                      help = "Keep SNPs without a most likely genotype (based on PL) [%default]")
     group.add_option("-m", "--filter-by-mappability", default = None,
@@ -82,15 +85,18 @@ def add_varfilter_options(parser):
 def filter_vcfs(options, vcfs):
     vcfs  = iter(vcfs)
     chunk = collections.deque()
-    mappability = Mappability(options.filter_by_mappability)
+    with Mappability(options.filter_by_mappability) as mappability:
+        filename = options.pileup
+        min_freq = options.min_allele_frequency
 
-    while _read_chunk(vcfs, chunk):
-        chunk = _filter_chunk(options, chunk, mappability)
-        for vcf in _trim_chunk(options, chunk):
-            if vcf.filter == ".":
-                vcf.filter = "PASS"
+        with AlleleFrequencies(filename, min_freq) as frequencies:
+            while _read_chunk(vcfs, chunk):
+                chunk = _filter_chunk(options, chunk, mappability, frequencies)
+                for vcf in _trim_chunk(options, chunk):
+                    if vcf.filter == ".":
+                        vcf.filter = "PASS"
 
-            yield vcf
+                    yield vcf
 
 
 class Mappability:
@@ -103,14 +109,16 @@ class Mappability:
         if filename is not None:
             self._handle = pysam.Fastafile(filename)
             self.is_mappable = self._is_mappable
+        else:
+            self.is_mappable = self._is_always_mappable
 
 
-    def is_mappable(self, contig, position):
+    def _is_always_mappable(self, contig, position):
         return True
-
 
     def _is_mappable(self, contig, position):
         assert position # 1-based
+        assert self._handle
 
         if (contig == self._contig) and (self._start <= position < self._end):
             return (self._cache[position - self._start] == "1")
@@ -119,10 +127,108 @@ class Mappability:
         self._start  = position
         self._end    = self._start + _MAPPABILITY_CACHE - 1
         self._cache  = self._handle.fetch(contig,
-                                          self._start - 1,
-                                          self._end)
+                                          self._start,
+                                          self._end + 1)
 
-        return self.is_mappable(contig, position)
+        return (self._cache[position - self._start] == "1")
+
+    def close(self):
+        if self._handle:
+            self._handle.close()
+            self._handle = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, _exc_type, _exc_value, _traceback):
+        self.close()
+
+
+class AlleleFrequencies:
+    def __init__(self, filename, min_freq):
+        assert min_freq >= 0
+        self._min_freq = min_freq
+        self._handle   = None
+
+        if filename and min_freq:
+            self._handle = pysam.Tabixfile(filename)
+            self.frequency_is_valid = self._frequency_is_valid
+        else:
+            self.frequency_is_valid = self._frequency_is_always_valid
+
+    def _frequency_is_always_valid(self, _contig, _position, _ref, _first, _second):
+        if self._min_freq:
+            sys.stderr.write("WARNING: Multi-allelic SNP found at %s:%i, but --pileup has not been specified.")
+        return True
+
+    def _frequency_is_valid(self, contig, position, ref, first, second):
+        assert self._handle
+
+        if any((len(nt) > 1) for nt in (ref, first, second)):
+            assert len(first) != len(second)
+            first  = len(first) - len(ref)
+            second = len(second) - len(ref)
+
+        counts   = self._fetch(contig, position)
+        n_first  = counts.get(first,  0)
+        n_second = counts.get(second, 0)
+
+        n_minor = min(n_first, n_second)
+        n_major = max(n_first, n_second)
+
+        return n_minor / float(n_minor + n_major) >= self._min_freq
+
+    def close(self):
+        if self._handle:
+            self._handle.close()
+            self._handle = None
+        self.frequency_is_valid = self._frequency_is_always_valid
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, _exc_type, _exc_value, _traceback):
+        self.close()
+
+    def _fetch(self, contig, position):
+        fetched = False
+        for line in self._handle.fetch(contig, position, position + 1):
+            fields, fetched = line.split("\t"), True
+            assert len(fields) == 6
+            break
+
+        if not fetched:
+            raise RuntimeError("Pileup did not contain position %s:%i, please rebuild." \
+                               % (contig, position + 1))
+        elif (fields[0] != contig) or (int(fields[1]) != position + 1):
+            raise RuntimeError("Got wrong record (%s:%i vs %s:%s), is index corrupt?" \
+                               % (contig, position + 1, fields[0], fields[1]))
+
+        counts = {}
+        bases  = list(fields[4][::-1].upper())
+        ref    = fields[2]
+        while bases:
+            current = bases.pop()
+            if current in "ACGT":
+                counts[current] = counts.get(current, 0) + 1
+            elif current in ",.":
+                counts[ref] = counts.get(ref, 0) + 1
+            elif current in "+-":
+                indel_length = [current]
+                while bases[-1].isdigit():
+                    indel_length.append(bases.pop())
+                indel_length = int("".join(indel_length))
+
+                for _ in xrange(abs(indel_length)):
+                    bases.pop()
+
+                counts[indel_length] = counts.get(indel_length, 0) + 1
+            elif current == "^":
+                bases.pop()
+            elif current != "$":
+                raise RuntimeError("Error parsing pileup (unexpected char '%s'): %s" \
+                                       % (current, repr(line)))
+        return counts
 
 
 def _read_chunk(vcfs, chunk):
@@ -204,7 +310,7 @@ def _filter_by_indels(options, chunk):
             _mark_as_filtered(vcf, "w=%i" % distance_to)
 
 
-def _filter_by_properties(options, vcfs, mappability):
+def _filter_by_properties(options, vcfs, mappability, frequencies):
     """Filters a list of SNPs/indels based on the various properties recorded in
     the info column, and others. This mirrors most of the filtering carried out
     by vcfutils.pl varFilter."""
@@ -246,8 +352,8 @@ def _filter_by_properties(options, vcfs, mappability):
             if not mappability.is_mappable(vcf.contig, vcf.pos):
                 _mark_as_filtered(vcf, "m")
 
-            _, _, alt_fw, alt_rev = properties["DP4"].split(",")
-            if (int(alt_fw) + int(alt_rev)) < options.min_num_alt_bases:
+            ref_fw, ref_rev, alt_fw, alt_rev = map(int, properties["DP4"].split(","))
+            if (alt_fw + alt_rev) < options.min_num_alt_bases:
                 _mark_as_filtered(vcf, "a=%i" % options.min_num_alt_bases)
 
             ml_genotype = vcfwrap.get_ml_phenotype(vcf)
@@ -258,18 +364,26 @@ def _filter_by_properties(options, vcfs, mappability):
             if (ml_genotype[0] != ml_genotype[1]):
                 if vcf.contig in options.homozygous_chromosome:
                     _mark_as_filtered(vcf, "HET")
-                if float(properties["AF1"]) > options.max_major_allele_frequency:
-                    _mark_as_filtered(vcf, "f=%.4f" % options.max_major_allele_frequency)
+
+                # Filter by frequency of minor allele
+                if vcf.ref in ml_genotype:
+                    n_minor = min(ref_fw + ref_rev, alt_fw + alt_rev)
+                    n_major = max(ref_fw + ref_rev, alt_fw + alt_rev)
+
+                    if (n_minor / float(n_minor + n_major)) < options.min_allele_frequency:
+                        _mark_as_filtered(vcf, "f=%.4f" % options.min_allele_frequency)
+                elif not frequencies.frequency_is_valid(vcf.contig, vcf.pos, vcf.ref, *ml_genotype):
+                    _mark_as_filtered(vcf, "f=%.4f" % options.min_allele_frequency)
 
 
-def _filter_chunk(options, chunk, mappability):
+def _filter_chunk(options, chunk, mappability, frequencies):
     at_end = False
     if chunk[-1] is None:
         at_end = True
         chunk.pop()
 
     _filter_by_indels(options, chunk)
-    _filter_by_properties(options, chunk, mappability)
+    _filter_by_properties(options, chunk, mappability, frequencies)
 
     if at_end:
         chunk.append(None)

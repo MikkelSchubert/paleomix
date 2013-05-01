@@ -1,0 +1,73 @@
+#!/usr/bin/python
+#
+# Copyright (c) 2012 Mikkel Schubert <MSchubert@snm.ku.dk>
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+from __future__ import with_statement
+
+import sys
+import subprocess
+
+def _collect_positions(handle):
+    positions = set()
+    for line in handle:
+        if not line.startswith("#"):
+            fields = line.split("\t", 6)
+
+            if "," in fields[4]:
+                positions.add((fields[0], int(fields[1])))
+    positions = list(positions)
+    positions.sort()
+
+    return positions
+
+
+def main(argv):
+    if len(argv) < 2:
+        sys.stderr.write("Usage: %s <output.pileup.bgz> [<mpileup parameters>]\n" \
+                         % sys.argv[0])
+        return 1
+
+    OUT_PREFIX   = argv[0]
+    MPILEUP_ARGS = argv[1:]
+
+    with open(OUT_PREFIX, "w") as handle:
+        bgzip = subprocess.Popen("bgzip",
+                                 stdin  = subprocess.PIPE,
+                                 stdout = handle)
+
+        # While samtools mpileup has an option for specifying a list of positions (-l),
+        # this requires traversing the entire file, and may not calculate the BAQ. Given
+        # the low number of expected sites, individual calls for each position are
+        # significantly faster.
+        for (contig, position) in _collect_positions(sys.stdin):
+            call   = ["samtools", "mpileup", "-r", "{0}:{1}-{1}".format(contig, position)]
+            result = subprocess.check_output(call + MPILEUP_ARGS)
+            bgzip.stdin.write(result)
+
+        bgzip.stdin.close()
+        if bgzip.wait():
+            sys.stderr.write("ERROR: Error running bgzip, return-code %i\n" \
+                             % bgzip.wait())
+
+    subprocess.check_call(["tabix", "-b", "2", "-e", "2", OUT_PREFIX])
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))
