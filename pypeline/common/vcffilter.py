@@ -22,6 +22,7 @@
 #
 from __future__ import with_statement
 
+import sys
 import optparse
 import itertools
 import collections
@@ -156,9 +157,10 @@ class AlleleFrequencies:
         else:
             self.frequency_is_valid = self._frequency_is_always_valid
 
-    def _frequency_is_always_valid(self, _contig, _position, _ref, _first, _second):
+    def _frequency_is_always_valid(self, contig, position, _ref, _first, _second):
         if self._min_freq:
-            sys.stderr.write("WARNING: Multi-allelic SNP found at %s:%i, but --pileup has not been specified.")
+            sys.stderr.write("WARNING: Multi-allelic SNP found at %s:%i, but --pileup has not been specified.\n" \
+                             % (contig, position + 1))
         return True
 
     def _frequency_is_valid(self, contig, position, ref, first, second):
