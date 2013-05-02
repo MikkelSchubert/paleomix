@@ -353,11 +353,17 @@ def main(argv):
     pipeline = pypeline.Pypeline(config)
     for makefile in makefiles:
         # If a destination is not specified, save results in same folder as makefile
+        filename = makefile["Statistics"]["Filename"]
         old_destination = config.destination
         if old_destination is None:
-            config.destination = os.path.dirname(makefile["Statistics"]["Filename"])
+            config.destination = os.path.dirname(filename)
 
-        nodes = pipeline_func(config, makefile)
+        try:
+            nodes = pipeline_func(config, makefile)
+        except pypeline.node.NodeError, e:
+            ui.print_err("Error while building pipeline for '%s':\n%s" % (filename, e))
+            return 1
+
         config.destination = old_destination
 
         pipeline.add_nodes(nodes)

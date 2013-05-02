@@ -21,6 +21,9 @@
 # SOFTWARE.
 #
 import os
+# pickle is used instead of cPickle, because pickle
+# produces more informative errors on failure
+import pickle
 import traceback
 
 import pypeline.common.fileutils as fileutils
@@ -58,10 +61,19 @@ class Node(object):
         self.auxiliary_files = safe_coerce_to_tuple(auxiliary_files)
         self.requirements    = safe_coerce_to_tuple(requirements)
 
-        self.subnodes       = self._collect_nodes(subnodes, "Subnode")
-        self.dependencies   = self._collect_nodes(dependencies, "Dependency")
+        self.threads         = int(threads)
+        self.subnodes        = frozenset()
+        self.dependencies    = frozenset()
 
-        self.threads        = int(threads)
+        try:
+            # Ensure that the node can be used in a multiprocessing context
+            pickle.dumps(self)
+        except pickle.PicklingError, e:
+            raise NodeError("Node could not be pickled, please file a bug-report:\n\tNode: %s\n\tError: %s" % (self, e))
+
+        # Set here to avoid pickle-testing of subnodes / dependencies
+        self.subnodes        = self._collect_nodes(subnodes, "Subnode")
+        self.dependencies    = self._collect_nodes(dependencies, "Dependency")
 
 
     @property
