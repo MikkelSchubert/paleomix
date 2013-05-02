@@ -22,6 +22,7 @@
 #
 from __future__ import with_statement
 
+import os
 import sys
 import subprocess
 
@@ -70,32 +71,36 @@ def main(argv):
         npositions = len(positions)
         sys.stderr.write(" - Read %i candidate positions ...\n" % (npositions,))
 
+        positions_file = OUT_PREFIX + ".positions"
+        with open(positions_file, "w") as handle:
+            for (contig, position) in positions:
+                handle.write("%s\t%s\n" % (contig, position))
+        sys.stderr.write(" - Wrote positions to '%s' ...\n" % (positions_file,))
+
         sys.stderr.write("Collecting pileups:\n")
-        for (index, (contig, position)) in enumerate(positions, start = 1):
-            sys.stderr.write(" - Collecting pileup %i of %i (%02.2f%% done): %s:%i ...\r" \
+        call   = ["samtools", "mpileup", "-R", "-l", positions_file] + MPILEUP_ARGS
+        proc   = subprocess.Popen(call,
+                                  stdout = subprocess.PIPE,
+                                  close_fds = True)
+
+        for (index, line) in enumerate(proc.stdout):
+            contig, position, _ = line.split("\t", 2)
+            sys.stderr.write(" - Collecting pileup %i of %i (%02.2f%% done): %s:%s ...\r" \
                              % (index, npositions, (100.0 * index) / npositions, contig, position))
-
-            call   = ["samtools", "mpileup", "-R", "-r", "{0}:{1}-{1}".format(contig, position)] + MPILEUP_ARGS
-            proc   = subprocess.Popen(call,
-                                      stdin = None,
-                                      stdout = subprocess.PIPE,
-                                      stderr = subprocess.PIPE,
-                                      close_fds = True)
-
-            stdout, stderr = proc.communicate()
-            if proc.wait():
-                sys.stderr.write("\nERROR: Error running samtools, return code is %i:\n" % proc.wait())
-                sys.stderr.write("\t- Command: %s\n" % " ".join(call))
-                sys.stderr.write("\t- STDERR\n" % stderr)
-                return 1
-
-            bgzip.stdin.write(stdout)
+            bgzip.stdin.write(line)
         sys.stderr.write("\n")
+
+        if proc.wait():
+            sys.stderr.write("ERROR: Error running samtools, return code is %i:\n" % proc.wait())
+            sys.stderr.write("\t- Command: %s\n" % " ".join(call))
+            return 1
 
         bgzip.stdin.close()
         if bgzip.wait():
             sys.stderr.write("ERROR: Error running bgzip, return-code %i\n" \
                              % bgzip.wait())
+    sys.stderr.write(" - Cleaning up ...")
+    os.remove(positions_file)
 
     subprocess.check_call(["tabix", "-b", "2", "-e", "2", OUT_PREFIX])
 
