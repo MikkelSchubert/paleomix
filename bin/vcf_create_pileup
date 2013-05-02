@@ -25,6 +25,9 @@ from __future__ import with_statement
 import sys
 import subprocess
 
+from pypeline.common.fileutils import missing_executables
+
+
 def _collect_positions(handle):
     positions = set()
     for line in handle:
@@ -45,6 +48,11 @@ def main(argv):
                          % sys.argv[0])
         return 1
 
+    missing = missing_executables(("samtools", "tabix", "bgzip"))
+    if missing:
+        sys.stderr.write("ERROR: Required executables are missing:\n\t- %s\n" % "\n\t- ".join(missing))
+        return 1
+
     OUT_PREFIX   = argv[0]
     MPILEUP_ARGS = argv[1:]
 
@@ -57,10 +65,32 @@ def main(argv):
         # this requires traversing the entire file, and may not calculate the BAQ. Given
         # the low number of expected sites, individual calls for each position are
         # significantly faster.
-        for (contig, position) in _collect_positions(sys.stdin):
-            call   = ["samtools", "mpileup", "-r", "{0}:{1}-{1}".format(contig, position)]
-            result = subprocess.check_output(call + MPILEUP_ARGS)
-            bgzip.stdin.write(result)
+        sys.stderr.write("Reading VCF from STDIN ...\n")
+        positions  = _collect_positions(sys.stdin)
+        npositions = len(positions)
+        sys.stderr.write(" - Read %i candidate positions ...\n" % (npositions,))
+
+        sys.stderr.write("Collecting pileups:\n")
+        for (index, (contig, position)) in enumerate(positions, start = 1):
+            sys.stderr.write(" - Collecting pileup %i of %i (%02.2f%% done): %s:%i ...\r" \
+                             % (index, npositions, (100.0 * index) / npositions, contig, position))
+
+            call   = ["samtools", "mpileup", "-R", "-r", "{0}:{1}-{1}".format(contig, position)] + MPILEUP_ARGS
+            proc   = subprocess.Popen(call,
+                                      stdin = None,
+                                      stdout = subprocess.PIPE,
+                                      stderr = subprocess.PIPE,
+                                      close_fds = True)
+
+            stdout, stderr = proc.communicate()
+            if proc.wait():
+                sys.stderr.write("\nERROR: Error running samtools, return code is %i:\n" % proc.wait())
+                sys.stderr.write("\t- Command: %s\n" % " ".join(call))
+                sys.stderr.write("\t- STDERR\n" % stderr)
+                return 1
+
+            bgzip.stdin.write(stdout)
+        sys.stderr.write("\n")
 
         bgzip.stdin.close()
         if bgzip.wait():
