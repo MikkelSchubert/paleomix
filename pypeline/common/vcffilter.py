@@ -146,6 +146,8 @@ class Mappability:
 
 
 class AlleleFrequencies:
+    VALID, INVALID, NA = range(3)
+
     def __init__(self, filename, min_freq):
         assert min_freq >= 0
         self._min_freq = min_freq
@@ -177,8 +179,11 @@ class AlleleFrequencies:
 
         n_minor = min(n_first, n_second)
         n_major = max(n_first, n_second)
-
-        return n_minor / float(n_minor + n_major) >= self._min_freq
+        if not n_major:
+            return self.INVALID
+        elif n_minor / float(n_minor + n_major) < self._min_freq:
+            return self.NA
+        return self.VALID
 
     def close(self):
         if self._handle:
@@ -374,8 +379,13 @@ def _filter_by_properties(options, vcfs, mappability, frequencies):
 
                     if (n_minor / float(n_minor + n_major)) < options.min_allele_frequency:
                         _mark_as_filtered(vcf, "f=%.4f" % options.min_allele_frequency)
-                elif not frequencies.frequency_is_valid(vcf.contig, vcf.pos, vcf.ref, *ml_genotype):
-                    _mark_as_filtered(vcf, "f=%.4f" % options.min_allele_frequency)
+                else:
+                    state = frequencies.frequency_is_valid(vcf.contig, vcf.pos, vcf.ref, *ml_genotype)
+                    if state is frequencies.INVALID:
+                        _mark_as_filtered(vcf, "f=%.4f" % options.min_allele_frequency)
+                    elif state is frequencies.NA:
+                        sys.stderr.write("WARNING: Could not determine allele-counts for SNP at %s:%s, filtering ...\n" % (vcf.contig, vcf.pos + 1))
+                        _mark_as_filtered(vcf, "F=%.4f" % options.min_allele_frequency)
 
 
 def _filter_chunk(options, chunk, mappability, frequencies):
