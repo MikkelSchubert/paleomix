@@ -341,7 +341,14 @@ def main(argv):
     if config.list_targets:
         ui.print_info("Listing targets for %s ..." % config.list_targets, file = sys.stderr)
         for makefile in makefiles:
+            # If a destination is not specified, save results in same folder as makefile
+            filename = makefile["Statistics"]["Filename"]
+            old_destination = config.destination
+            if old_destination is None:
+                config.destination = os.path.dirname(filename)
+
             list_targets_for(config, makefile, config.list_targets)
+            config.destination = old_destination
         return 0
 
     pipeline_func = build_pipeline_trimming
