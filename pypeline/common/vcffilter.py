@@ -180,9 +180,9 @@ class AlleleFrequencies:
         n_minor = min(n_first, n_second)
         n_major = max(n_first, n_second)
         if not n_major:
-            return self.INVALID
-        elif n_minor / float(n_minor + n_major) < self._min_freq:
             return self.NA
+        elif n_minor / float(n_minor + n_major) < self._min_freq:
+            return self.INVALID
         return self.VALID
 
     def close(self):
@@ -230,6 +230,8 @@ class AlleleFrequencies:
                     bases.pop()
 
                 counts[indel_length] = counts.get(indel_length, 0) + 1
+            elif current == "*":
+                counts[-1] = counts.get(-1, 0) + 1
             elif current == "^":
                 bases.pop()
             elif current != "$":

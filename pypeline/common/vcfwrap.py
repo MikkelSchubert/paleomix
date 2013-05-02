@@ -115,7 +115,7 @@ def get_ml_phenotype(vcf):
 
     if PL.count(min(PL)) > 1:
         # No single most likely genotype
-        return "N,N"
+        return ("N", "N")
 
     most_likely = min(xrange(len(PL)), key=PL.__getitem__)
     prefix, postfix = _genotype_indices[most_likely]
