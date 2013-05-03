@@ -163,7 +163,7 @@ class AlleleFrequencies:
         if self._min_freq:
             sys.stderr.write("WARNING: Multi-allelic SNP found at %s:%i, but --pileup has not been specified.\n" \
                              % (contig, position + 1))
-        return True
+        return self.VALID
 
     def _frequency_is_valid(self, contig, position, ref, first, second):
         assert self._handle
@@ -216,7 +216,7 @@ class AlleleFrequencies:
         ref    = fields[2]
         while bases:
             current = bases.pop()
-            if current in "ACGT":
+            if current in "ACGTN":
                 counts[current] = counts.get(current, 0) + 1
             elif current in ",.":
                 counts[ref] = counts.get(ref, 0) + 1
