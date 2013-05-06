@@ -83,12 +83,16 @@ def main(argv):
                                   stdout = subprocess.PIPE,
                                   close_fds = True)
 
-        for (index, line) in enumerate(proc.stdout):
-            contig, position, _ = line.split("\t", 2)
-            sys.stderr.write(" - Collecting pileup %i of %i (%02.2f%% done): %s:%s ...\r" \
-                             % (index, npositions, (100.0 * index) / npositions, contig, position))
+        for (index, line) in enumerate(proc.stdout, start = 1):
+            if ((index - 1) % 100 == 0):
+                contig, position, _ = line.split("\t", 2)
+                sys.stderr.write(" - Collected pileup %i of %i (%02.2f%% done): %s:%s ...      \r" \
+                                 % (index, npositions, (100.0 * index) / npositions, contig, position))
             bgzip.stdin.write(line)
-        sys.stderr.write("\n")
+
+        contig, position, _ = line.split("\t", 2)
+        sys.stderr.write(" - Collected pileup %i of %i (%02.2f%% done): %s:%s ...      \r" \
+                         % (index, npositions, (100.0 * index) / npositions, contig, position))
 
         if proc.wait():
             sys.stderr.write("ERROR: Error running samtools, return code is %i:\n" % proc.wait())
