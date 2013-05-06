@@ -386,8 +386,8 @@ def _filter_by_properties(options, vcfs, mappability, frequencies):
                     if state is frequencies.INVALID:
                         _mark_as_filtered(vcf, "f=%.4f" % options.min_allele_frequency)
                     elif state is frequencies.NA:
-                        sys.stderr.write("WARNING: Could not determine allele-counts for SNP at %s:%s, filtering ...\n" % (vcf.contig, vcf.pos + 1))
-                        _mark_as_filtered(vcf, "F=%.4f" % options.min_allele_frequency)
+                        if _mark_as_filtered(vcf, "F=%.4f" % options.min_allele_frequency):
+                            sys.stderr.write("WARNING: Could not determine allele-counts for SNP at %s:%s, filtering ...\n" % (vcf.contig, vcf.pos + 1))
 
 
 def _filter_chunk(options, chunk, mappability, frequencies):
@@ -407,5 +407,7 @@ def _filter_chunk(options, chunk, mappability, frequencies):
 def _mark_as_filtered(vcf, filter_name):
     if vcf.filter in (".", "PASS"):
         vcf.filter = filter_name
+        return True
     elif filter_name not in vcf.filter.split(";"):
         vcf.filter += ";" + filter_name
+        return True
