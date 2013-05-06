@@ -49,7 +49,7 @@ def main(argv):
         return 0
 
     pipeline = pypeline.Pypeline(config)
-    for filename in args:
+    for filename in set(args):
         target_name = config.target_name
         if target_name is None:
             target_name = os.path.basename(filename)

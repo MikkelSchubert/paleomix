@@ -49,7 +49,7 @@ def main(argv):
         return 0
 
     pipeline = pypeline.Pypeline(config)
-    for filename in args:
+    for filename in set(args):
         pipeline.add_nodes(DepthHistogramNode(config         = None,
                                               input_files    = filename,
                                               output_file    = swap_ext(filename, ".depths"),
