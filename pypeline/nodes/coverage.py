@@ -35,11 +35,16 @@ from pypeline.common.utilities import get_in, set_in, safe_coerce_to_tuple
 from pypeline.common.samwrap import read_tabix_BED
 
 
+_MAX_CONTIGS = 100
+
+
 class CoverageNode(Node):
-    def __init__(self, input_file, target_name, output_file = None, intervals_file = None, dependencies = ()):
+    def __init__(self, input_file, target_name, output_file = None, intervals_file = None, max_contigs = _MAX_CONTIGS, dependencies = ()):
         self._target_name = target_name
         self._output_file = output_file or swap_ext(input_file, ".coverage")
         self._intervals_file = intervals_file
+        self._max_contigs = max_contigs
+        self._max_contigs_reached = False
 
         Node.__init__(self,
                       description  = "<Coverage: '%s' -> '%s'>" \
@@ -61,7 +66,7 @@ class CoverageNode(Node):
         temp_filename = reroot_path(temp, self.input_files[0])
 
         with SamfileReader(temp_filename) as bamfile:
-            intervals = self._get_intervals(bamfile, self._intervals_file)
+            intervals = self._get_intervals(bamfile, self._intervals_file, self._max_contigs)
             readgroups = self._get_readgroups(bamfile)
 
             tables, mapping = self._initialize_tables(self._target_name, intervals, readgroups)
@@ -81,11 +86,15 @@ class CoverageNode(Node):
 
 
     @classmethod
-    def _get_intervals(cls, bamfile, intervals_file):
+    def _get_intervals(cls, bamfile, intervals_file, max_contigs):
         intervals = {}
         if not intervals_file:
+            if len(bamfile.references) > max_contigs:
+                return {"<Genome>" : [(None, 0, sum(bamfile.lengths))] }
+
             for (name, length) in zip(bamfile.references, bamfile.lengths):
                 intervals[name] = [(name, 0, length)]
+
             return intervals
 
         with open(intervals_file) as handle:
@@ -136,7 +145,11 @@ class CoverageNode(Node):
 
         for (name, interval_list) in intervals.iteritems():
             for (contig, start, end) in interval_list:
-                for record in bamfile.fetch(contig, start, end):
+                keys = (contig, start, end)
+                if contig is None:
+                    keys = ()
+
+                for record in bamfile.fetch(*keys):
                     if record.is_unmapped:
                         continue
 
