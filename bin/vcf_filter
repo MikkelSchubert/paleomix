@@ -29,11 +29,15 @@ import pysam
 import pypeline.common.vcffilter as vcffilter
 
 def _read_files(filenames):
+    in_header = True
     vcf_parser = pysam.asVCF()
     for line in fileinput.input(args):
         if not line.startswith("#"):
+            in_header = False
             line = line.rstrip("\n\r")
             yield vcf_parser(line, len(line))
+        elif in_header:
+            print line,
 
 
 if __name__ == '__main__':
