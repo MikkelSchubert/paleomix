@@ -75,20 +75,30 @@ class FastaToPAMLPhyNode(Node):
 
 
 class CodemlNode(CommandNode):
-    def __init__(self, control_file, sequence_file, trees_file, output_file, dependencies = ()):
+    def __init__(self, control_file, sequence_file, trees_file, output_prefix, dependencies = ()):
         self._control_file  = control_file
         self._sequence_file = sequence_file
         self._trees_file    = trees_file
-        self._output_file   = output_file
+        self._output_prefix = output_prefix
 
         command = AtomicCmd(["codeml", "template.ctl"],
                             IN_SEQUENCE_FILE = sequence_file,
                             IN_TREES_FILE    = trees_file,
-                            OUT_RESULTS      = output_file,
-                            IN_STDIN         = "/dev/null") # Prevent promts from blocking
+                            TEMP_OUT_CTL     = "template.ctl",
+                            OUT_CODEML       = output_prefix + ".codeml",
+                            OUT_2NG_DN       = output_prefix + ".2NG.dN",
+                            OUT_2NG_DS       = output_prefix + ".2NG.dS",
+                            OUT_2NG_T        = output_prefix + ".2NG.t",
+                            OUT_4FOLD        = output_prefix + ".4fold.nuc",
+                            OUT_LNF          = output_prefix + ".lnf",
+                            OUT_RST          = output_prefix + ".rst",
+                            OUT_RST1         = output_prefix + ".rst1",
+                            OUT_RUB          = output_prefix + ".rub",
+                            IN_STDIN         = "/dev/null", # Prevent promts from blocking
+                            set_cwd          = True)
 
         CommandNode.__init__(self,
-                             description  = "<CodemlNode: '%s' -> '%s'>" % (sequence_file, output_file),
+                             description  = "<CodemlNode: '%s' -> '%s'>" % (sequence_file, output_prefix),
                              command      = command,
                              dependencies = dependencies)
 
@@ -97,29 +107,22 @@ class CodemlNode(CommandNode):
                               destination   = os.path.join(temp, "template.ctl"),
                               sequence_file = self._sequence_file,
                               trees_file    = self._trees_file,
-                              output_file   = self._output_file)
-
-    def _run(self, config, temp):
-        temp = os.path.realpath(temp)
-        oldwd = os.getcwd()
-        os.chdir(temp)
-        try:
-            CommandNode._run(self, config, temp)
-        finally:
-            os.chdir(oldwd)
+                              output_prefix = self._output_prefix)
 
     def _teardown(self, config, temp):
-        # Remove everything but the output file
-        # Given the large number of temporary files, this is a lot easier than specifying them all ...
-        output_file = os.path.basename(self._output_file)
-        for filename in os.listdir(temp):
-            if (filename != output_file) and not filename.startswith("pipe_"):
-                os.remove(os.path.join(temp, filename))
+        prefix = os.path.basename(self._output_prefix)
+        for filename in ("2NG.dN", "2NG.dS", "2NG.t", "4fold.nuc", "lnf", "rst", "rst1", "rub"):
+            src_path = os.path.join(temp, filename)
+            dst_path = os.path.join(temp, "%s.%s" % (prefix, filename))
+
+            if os.path.exists(src_path):
+                os.rename(src_path, dst_path)
 
         CommandNode._teardown(self, config, temp)
 
     @classmethod
-    def _update_ctl_file(cls, source, destination, sequence_file, trees_file, output_file):
+    def _update_ctl_file(cls, source, destination, sequence_file, trees_file, output_prefix):
+        output_file = output_prefix + ".codeml"
         with open(source) as handle:
             template = handle.read()
 
@@ -160,12 +163,12 @@ def build_codeml_nodes(options, settings, interval, taxa, filtering, dependencie
     codeml_nodes = []
     for (ctl_name, ctl_file) in settings["codeml"]["Control Files"].iteritems():
         for (sequence, node) in phylip_nodes.iteritems():
-            output_file = os.path.join(destination, sequence + ".%s.codeml" % ctl_name)
+            output_prefix = os.path.join(destination, sequence + ".%s" % ctl_name)
 
             codeml = CodemlNode(control_file  = ctl_file,
                                 trees_file    = settings["codeml"]["Tree File"],
                                 sequence_file = node.output_files[0],
-                                output_file   = output_file,
+                                output_prefix = output_file,
                                 dependencies  = node)
             codeml_nodes.append(codeml)
 
@@ -198,7 +201,7 @@ if __name__ == '__main__':
         temp_root = "./temp"
     
     node = CodemlNode(control_file  = sys.argv[1],
-                      sequence_file = sys.argv[2], 
+                      sequence_file = sys.argv[2],
                       trees_file    = sys.argv[3],
-                      output_file   = sys.argv[4])
+                      output_prefix = sys.argv[4])
     node.run(config)
