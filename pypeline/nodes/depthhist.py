@@ -179,7 +179,8 @@ class DepthHistogramNode(Node):
         total = float(running_total)
         for (index, count) in enumerate(counts):
             if running_total / total < 0.005:
-                return index - 1
+                # Index corresponds to the previous depth
+                return index
             running_total -= count
 
         return "NA"
