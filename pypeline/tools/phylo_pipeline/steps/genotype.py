@@ -46,16 +46,48 @@ import common
 
 
 
+class VCFPileupNode(CommandNode):
+    @create_customizable_cli_parameters
+    def customize(cls, reference, in_bam, in_vcf, outfile, dependencies = ()):
+        unicat = AtomicParams(["unicat", "%(IN_VCF)s"],
+                              IN_VCF     = in_vcf,
+                              OUT_STDOUT = AtomicCmd.PIPE)
+
+        vcfpileup = AtomicParams(["vcf_create_pileup", "%(OUT_PILEUP)s"],
+                                 IN_REF       = reference,
+                                 IN_BAM       = in_bam,
+                                 IN_STDIN     = unicat,
+                                 OUT_PILEUP   = outfile,
+                                 OUT_TBI      = outfile + ".tbi")
+        vcfpileup.push_positional("%(IN_BAM)s")
+        vcfpileup.set_parameter("-f", "%(IN_REF)s")
+
+        return {"commands" : {"unicat" : unicat,
+                              "pileup" : vcfpileup}}
+
+
+    @use_customizable_cli_parameters
+    def __init__(self, parameters):
+        commands = [parameters.commands[key].finalize() for key in ("unicat", "pileup")]
+        description = "<VCFPileup: '%s' -> '%s'>" % (parameters.in_bam,
+                                                     parameters.outfile)
+        CommandNode.__init__(self,
+                             description  = description,
+                             command      = ParallelCmds(commands),
+                             dependencies = parameters.dependencies)
+
+
 class VCFFilterNode(CommandNode):
     @create_customizable_cli_parameters
-    def customize(cls, infile, outfile, interval, dependencies = ()):
+    def customize(cls, pileup, infile, outfile, interval, dependencies = ()):
         unicat = AtomicParams(["unicat", "%(IN_VCF)s"],
                               IN_VCF     = infile,
                               OUT_STDOUT = AtomicCmd.PIPE)
 
-        vcffilter = AtomicParams(["vcf_filter"],
-                              IN_STDIN     = unicat,
-                              OUT_STDOUT   = AtomicCmd.PIPE)
+        vcffilter = AtomicParams(["vcf_filter", "--pileup", "%(IN_PILEUP)s"],
+                                 IN_PILEUP = pileup,
+                                 IN_STDIN     = unicat,
+                                 OUT_STDOUT   = AtomicCmd.PIPE)
         for contig in interval.get("Homozygous Contigs", ()):
             vcffilter.set_parameter("--homozygous-chromosome", contig)
 
@@ -202,6 +234,7 @@ def build_genotyping_nodes(options, genotyping, taxa, interval, dependencies):
     reference = os.path.join(options.genomes_root, interval["Genome"] + ".fasta")
     fasta     = os.path.join(options.destination, "genotypes", prefix + ".fasta")
     calls     = os.path.join(options.destination, "genotypes", prefix + ".vcf.bgz")
+    pileups   = os.path.join(options.destination, "genotypes", prefix + ".vcf.pileup.bgz")
     filtered  = os.path.join(options.destination, "genotypes", prefix + ".filtered.vcf.bgz")
 
     padding = genotyping["Padding"]
@@ -217,10 +250,19 @@ def build_genotyping_nodes(options, genotyping, taxa, interval, dependencies):
     apply_params(genotype.commands["genotype"], genotyping.get("BCFTools", {}))
     genotype = genotype.build_node()
 
+    vcfpileup = VCFPileupNode.customize(reference    = reference,
+                                        in_bam       = infile,
+                                        in_vcf       = calls,
+                                        outfile      = pileups,
+                                        dependencies = genotype)
+    apply_params(vcfpileup.commands["pileup"], genotyping.get("MPileup", {}))
+    vcfpileup = vcfpileup.build_node()
+
     vcffilter = VCFFilterNode.customize(infile       = calls,
+                                        pileup       = pileups,
                                         outfile      = filtered,
                                         interval     = interval,
-                                        dependencies = genotype)
+                                        dependencies = vcfpileup)
 
     filter_cfg = genotyping.get("VCF_Filter", {})
     apply_params(vcffilter.commands["filter"], filter_cfg)
