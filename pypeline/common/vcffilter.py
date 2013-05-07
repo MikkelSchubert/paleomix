@@ -262,9 +262,18 @@ def _trim_chunk(options, chunk):
         chunk.pop()
     else:
         end_chr = chunk[-1].contig
-        end_pos = chunk[-1].pos - min_distance
+        end_pos = chunk[-1].pos
 
-    while chunk and ((chunk[0].pos < end_pos) or (chunk[0].contig != end_chr)):
+    while chunk:
+        vcf = chunk[0]
+        if  (vcf.contig == end_chr):
+            # 'length' will become a too large value for heterozygous SNPs,
+            # but it is faster than having to parse every position, and has
+            # no effect on the final results.
+            length = max(len(vcf.ref), len(vcf.alt))
+            if (vcf.pos + length + min_distance) >= end_pos:
+                break
+
         yield chunk.popleft()
 
 
@@ -294,6 +303,18 @@ def _group_indels_near_position(indels, distance):
     return positions
 
 
+def _select_best_indel(indels):
+    """Select the highest quality indel, based on the quality,
+    prefering low earlier positions above later positions in
+    case of ties."""
+    def _indel_by_quality_and_position(indel):
+        # The negative position is used to select the first
+        # of equally quality indels
+        return (float(indel.qual), -indel.pos)
+
+    return max(indels, key = _indel_by_quality_and_position)
+
+
 def _filter_by_indels(options, chunk):
     """Filters a list of SNPs and Indels, such that no SNP is closer to
     an indel than the value set in options.min_distance_to_indels, and
@@ -311,8 +332,8 @@ def _filter_by_indels(options, chunk):
 
     for vcf in chunk:
         if vcfwrap.is_indel(vcf):
-            indels = indel_blacklist.get(vcf.pos + 1, [vcf])
-            if vcf != max(indels, key = lambda indel: float(indel.qual)):
+            blacklisted = indel_blacklist.get(vcf.pos + 1, [vcf])
+            if vcf is not _select_best_indel(blacklisted):
                 _mark_as_filtered(vcf, "W=%i" % distance_between)
         elif (vcf.alt != ".") and (vcf.pos in snp_blacklist):
             # TODO: How to handle heterozygous SNPs near
