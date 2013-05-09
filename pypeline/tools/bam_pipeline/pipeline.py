@@ -368,7 +368,7 @@ def main(argv):
         try:
             nodes = pipeline_func(config, makefile)
         except pypeline.node.NodeError, e:
-            ui.print_err("Error while building pipeline for '%s':\n%s" % (filename, e))
+            ui.print_err("Error while building pipeline for '%s':\n%s" % (filename, e), file = sys.stderr)
             return 1
 
         config.destination = old_destination
@@ -376,8 +376,8 @@ def main(argv):
         pipeline.add_nodes(nodes)
 
     if config.targets:
-        ui.print_err("ERROR: Could not find --target(s): '%s'" % "', '".join(config.targets))
-        ui.print_err("       Please use --list-targets to print list of valid target names.")
+        ui.print_err("ERROR: Could not find --target(s): '%s'" % "', '".join(config.targets), file = sys.stderr)
+        ui.print_err("       Please use --list-targets to print list of valid target names.", file = sys.stderr)
         return 1
     elif config.list_output_files:
         ui.print_info("Printing output files ...", file = sys.stderr)

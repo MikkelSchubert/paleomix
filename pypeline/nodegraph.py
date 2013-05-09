@@ -52,7 +52,7 @@ class NodeGraph:
         self._check_file_dependencies(self._reverse_dependencies)
         ui.print_info("  - Checking for required executables ...", file = sys.stderr)
         self._check_required_executables(self._reverse_dependencies)
-        ui.print_info("")
+        ui.print_info("", file = sys.stderr)
 
         self._states = {}
         self.refresh_states()
@@ -156,7 +156,7 @@ class NodeGraph:
         except OSError, e:
             # Typically hapens if base input files are removed, causing a node that
             # 'is_done' to call modified_after on missing files in 'is_outdated'
-            ui.print_err("OSError checking state of Node: %s" % e)
+            ui.print_err("OSError checking state of Node: %s" % e, file = sys.stderr)
             state = NodeGraph.ERROR
         self._states[node] = state
 

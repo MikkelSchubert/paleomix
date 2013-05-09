@@ -51,12 +51,12 @@ class Pypeline:
         try:
             nodes = nodegraph.NodeGraph(self._nodes)
         except nodegraph.NodeGraphError, error:
-            ui.print_err(error)
+            ui.print_err(error, file = sys.stderr)
             return False
 
         for node in nodes.iterflat():
             if node.threads > max_running:
-                ui.print_err("Node requires more threads than the maximum allowed:\n\t%s" % str(node))
+                ui.print_err("Node requires more threads than the maximum allowed:\n\t%s" % str(node), file = sys.stderr)
                 return False
 
 
@@ -92,20 +92,20 @@ class Pypeline:
             pool.join()
             
             if errors or not self._poll_running_nodes(running, nodes):
-                ui.print_err("Errors were detected ...")
+                ui.print_err("Errors were detected ...", file = sys.stderr)
                 return False
         except nodegraph.NodeGraphError, errors:
             errors = "\n".join(("\t" + line) for line in str(errors).strip().split("\n"))
-            ui.print_err("Error in task-graph, terminating gracefully:\n%s" % errors)
+            ui.print_err("Error in task-graph, terminating gracefully:\n%s" % errors, file = sys.stderr)
             pool.terminate()
             pool.join()
 
         except KeyboardInterrupt, errors:
-            ui.print_err("Keyboard interrupt detected, terminating ...")
+            ui.print_err("Keyboard interrupt detected, terminating ...", file = sys.stderr)
             pool.terminate()
             pool.join()
 
-        ui.print_msg("Done ...")
+        ui.print_msg("Done ...", file = sys.stderr)
         return not errors
 
 
@@ -146,7 +146,8 @@ class Pypeline:
                 except Exception, errors:
                     nodes.set_node_state(node, nodes.ERROR)                    
                     ui.print_err("%s: Error occurred running command (terminating gracefully):\n%s\n" \
-                                     % (node, "\n".join(("\t" + line) for line in str(errors).strip().split("\n"))))
+                                     % (node, "\n".join(("\t" + line) for line in str(errors).strip().split("\n"))),
+                                 file = sys.stderr)
                     continue
                 nodes.set_node_state(node, nodes.DONE)
 
