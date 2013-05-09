@@ -195,7 +195,7 @@ class DepthHistogramNode(Node):
         rows = [["Name", "Sample", "Library", "Contig", "Size", "MaxDepth"] + ["MD_%03i" % i for i in xrange(1, _MAX_DEPTH + 1)]]
         for sample, libraries in sorted(table.iteritems(), key = first):
             for library, regions in sorted(libraries.iteritems(), key = first):
-                for (region, size) in sorted(region_names.items(), key = lambda x: x or ""):
+                for (region, size) in sorted(region_names.items(), key = first):
                     key = (self._target_name, sample, library, region)
                     row = [("*" if value is None else value) for value in key]
 
