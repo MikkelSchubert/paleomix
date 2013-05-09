@@ -296,7 +296,7 @@ class DepthHistogramNode(Node):
 
                         name   = fields[3]
                         length = int(fields[2]) - int(fields[1])
-                        region_names[name] = regions_names.get(name, 0) + length
+                        region_names[name] = region_names.get(name, 0) + length
             else:
                 for seq in samfile.header["SQ"]:
                     handle.write("{SN}\t{LN}\n".format(**seq))
