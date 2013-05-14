@@ -85,6 +85,7 @@ class ParallelCmds(_CommandSet):
 
 
     def join(self):
+        sleep_time = 0.05
         commands = list(enumerate(self._commands))
         return_codes = [[None]] * len(commands)
         while commands and self._joinable:
@@ -92,12 +93,15 @@ class ParallelCmds(_CommandSet):
                 if command.ready():
                     return_codes[index] = command.join()
                     commands.remove((index, command))
+                    sleep_time = 0.05
                 elif any(any(codes) for codes in return_codes):
                     command.terminate()
                     return_codes[index] = ["SIGTERM"]
                     commands.remove((index, command))
+                    sleep_time = 0.05
 
-            time.sleep(1)
+            time.sleep(sleep_time)
+            sleep_time = min(1, sleep_time * 2)
         return sum(return_codes, [])
 
 
