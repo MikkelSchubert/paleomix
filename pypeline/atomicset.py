@@ -75,15 +75,19 @@ class ParallelCmds(_CommandSet):
         for command in self._commands:
             if not isinstance(command, (AtomicCmd, ParallelCmds)):
                 raise CmdError("ParallelCmds must only contain AtomicCmds or other ParallelCmds!")
+        self._joinable = False
+
 
     def run(self, temp):
         for command in self._commands:
             command.run(temp)
+        self._joinable = True
+
 
     def join(self):
         commands = list(enumerate(self._commands))
         return_codes = [[None]] * len(commands)
-        while commands:
+        while commands and self._joinable:
             for (index, command) in commands:
                 if command.ready():
                     return_codes[index] = command.join()
@@ -92,10 +96,10 @@ class ParallelCmds(_CommandSet):
                     command.terminate()
                     return_codes[index] = ["SIGTERM"]
                     commands.remove((index, command))
-                
-            time.sleep(1)
 
+            time.sleep(1)
         return sum(return_codes, [])
+
 
     def terminate(self):
         for command in self._commands:
@@ -106,7 +110,7 @@ class ParallelCmds(_CommandSet):
 
 class SequentialCmds(_CommandSet):
     """This class wraps a set of AtomicCmds, running them sequentially.
-    This class therefore corresponds a set of lines in a bash script, 
+    This class therefore corresponds a set of lines in a bash script,
     each of which invokes a forground job. For example:
     $ bcftools view snps.bcf | bgzip > snps.vcf.bgz
     $ tabix snps.vcf.bgz
