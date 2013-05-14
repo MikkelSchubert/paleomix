@@ -174,8 +174,9 @@ class AtomicCmd:
 
     def terminate(self):
         """Sends SIGTERM to process."""
-        self._proc.terminate()
-        self._proc = None
+        if self._proc:
+            self._proc.terminate()
+            self._proc = None
 
 
     @property
