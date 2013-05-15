@@ -56,7 +56,6 @@ class MapDamageNode(CommandNode):
                             IN_STDIN        = cat_obj,
                             OUT_FREQ_3p     = os.path.join(output_directory, "3pGtoA_freq.txt"),
                             OUT_FREQ_5p     = os.path.join(output_directory, "5pCtoT_freq.txt"),
-                            OUT_COMP_GENOME = os.path.join(output_directory, "dnacomp_genome.csv"),
                             OUT_COMP_USER   = os.path.join(output_directory, "dnacomp.txt"),
                             OUT_PLOT_FRAG   = os.path.join(output_directory, "Fragmisincorporation_plot.pdf"),
                             OUT_PLOT_LEN    = os.path.join(output_directory, "Length_plot.pdf"),
