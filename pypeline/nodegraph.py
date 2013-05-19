@@ -215,8 +215,10 @@ class NodeGraph:
     def _check_output_files(cls, output_files):
         for (filename, nodes) in output_files.iteritems():
             if (len(nodes) > 1):
-                yield "%i nodes clobber a file: %s:\n\t%s" \
-                    % (len(nodes), filename, "\n\t".join(str(node) for node in nodes))
+               nodes = _summarize_nodes(nodes)
+               yield "Multiple nodes create the same (clobber) output-file:" + \
+                                "\n\tFilename: %s\n\tNodes: %s" \
+                                % (filename, "\n\t       ".join(nodes))
 
 
     @classmethod
@@ -226,19 +228,21 @@ class NodeGraph:
         for (filename, nodes) in input_files.iteritems():
             if (filename in output_files):
                 producer = output_files[filename][0]
+                bad_nodes  = set()
                 for consumer in nodes:
                     if producer not in dependencies[consumer]:
-                        yield "Node depends on dynamically created file, but not on the node creating it:" + \
-                            "\n\tDependent node: %s\n\tFilename: %s\n\tCreated by: %s" \
-                            % (consumer, filename, producer)
-            elif not os.path.exists(filename):
-                nodes = list(sorted(set(map(str, nodes))))
-                if len(nodes) > 4:
-                    nodes = nodes[:5] + ["and %i more nodes ..." % len(nodes)]
+                        bad_nodes.add(consumer)
 
+                if bad_nodes:
+                    bad_nodes = _summarize_nodes(bad_nodes)
+                    yield "Node depends on dynamically created file, but not on the node creating it:" + \
+                                "\n\tFilename: %s\n\tCreated by: %s\n\tDependent node(s): %s" \
+                                % (filename, producer, "\n\t                   ".join(bad_nodes))
+            elif not os.path.exists(filename):
+                nodes = _summarize_nodes(nodes)
                 yield "Required file does not exist, and is not created by a node:" + \
                             "\n\tFilename: %s\n\tDependent node(s): %s" \
-                            % (filename,    "\n\t                   ".join(map(str, nodes)))
+                            % (filename,    "\n\t                   ".join(nodes))
 
 
     @classmethod
@@ -268,3 +272,11 @@ class NodeGraph:
                 rev_dependencies[dependency].add(node)
             cls._collect_reverse_dependencies(node.dependencies, rev_dependencies)
             cls._collect_reverse_dependencies(node.subnodes, rev_dependencies)
+
+
+
+def _summarize_nodes(nodes):
+    nodes = list(sorted(set(map(str, nodes))))
+    if len(nodes) > 4:
+        nodes = nodes[:5] + ["and %i more nodes ..." % len(nodes)]
+    return nodes
