@@ -28,7 +28,7 @@ from pypeline.atomicset import ParallelCmds, SequentialCmds
 from pypeline.atomicparams import AtomicJavaParams
 
 from pypeline.nodes.picard import ValidateBAMNode, concatenate_input_bams
-from pypeline.nodes.samtools import BAMIndexNode
+from pypeline.nodes.samtools import BAMIndexNode, SAMTOOLS_VERSION
 from pypeline.common.utilities import safe_coerce_to_tuple
 from pypeline.common.fileutils import swap_ext, add_postfix
 
@@ -112,11 +112,17 @@ class MapDamageRescaleNode(CommandNode):
 class FilterUniqueBAMNode(CommandNode):
     def __init__(self, config, input_bams, output_bam, dependencies = ()):
         cat_cmds, cat_obj = concatenate_input_bams(config, input_bams)
-        filteruniq = AtomicCmd(["FilterUniqueBAM", "--PIPE", "--library"],
+        filteruniq = AtomicCmd(["FilterUniqueBAM", "--PIPE", "--library", "--keep"],
                                IN_STDIN   = cat_obj,
-                               OUT_STDOUT = output_bam)
+                               OUT_STDOUT = AtomicCmd.PIPE)
 
-        command     = ParallelCmds(cat_cmds + [filteruniq])
+        sort = AtomicCmd(["samtools", "sort", "-o", "-", "%(TEMP_OUT_BAM)s"],
+                         IN_STDIN     = filteruniq,
+                         OUT_STDOUT   = output_bam,
+                         TEMP_OUT_BAM = "sorted",
+                         CHECK_SAM    = SAMTOOLS_VERSION)
+
+        command     = ParallelCmds(cat_cmds + [filteruniq, sort])
         description =  "<FilterUniqueBAM: %s>" % (self._desc_files(input_bams),)
         CommandNode.__init__(self,
                              command      = command,
