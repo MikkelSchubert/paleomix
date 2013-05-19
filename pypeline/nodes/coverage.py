@@ -150,7 +150,7 @@ class CoverageNode(Node):
                     keys = ()
 
                 for record in bamfile.fetch(*keys):
-                    if record.is_unmapped:
+                    if record.is_unmapped or record.is_duplicate:
                         continue
 
                     readgroup = _get_readgroup(record)

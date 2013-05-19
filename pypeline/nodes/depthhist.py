@@ -139,6 +139,9 @@ class DepthHistogramNode(Node):
             intervals, region_names = self._get_intervals(temp, samfile)
             mapping   = self._open_handles(temp, samfile, intervals)
             for read in samfile:
+                if read.is_unmapped or read.is_duplicate:
+                    continue
+
                 rg = dict(read.tags).get("RG")
                 for handle in mapping[rg]:
                     handle.write(read)
