@@ -82,6 +82,7 @@ class CodemlNode(CommandNode):
         self._output_prefix = output_prefix
 
         command = AtomicCmd(["codeml", "template.ctl"],
+                            IN_CONTROL_FILE  = control_file,
                             IN_SEQUENCE_FILE = sequence_file,
                             IN_TREES_FILE    = trees_file,
                             TEMP_OUT_CTL     = "template.ctl",
@@ -98,7 +99,7 @@ class CodemlNode(CommandNode):
                             set_cwd          = True)
 
         CommandNode.__init__(self,
-                             description  = "<CodemlNode: '%s' -> '%s'>" % (sequence_file, output_prefix),
+                             description  = "<CodemlNode: '%s' -> '%s.*'>" % (sequence_file, output_prefix),
                              command      = command,
                              dependencies = dependencies)
 
@@ -129,8 +130,11 @@ class CodemlNode(CommandNode):
         # TODO: Check that number of replacements == 1
         # TODO: Do check before running everything!
         template, count = re.subn(r'(\s*seqfile\s*=).*',  r'\1 ' + os.path.realpath(sequence_file), template)
+        assert count == 1, count
         template, count = re.subn(r'(\s*treefile\s*=).*', r'\1 ' + os.path.realpath(trees_file),    template)
+        assert count == 1, count
         template, count = re.subn(r'(\s*outfile\s*=).*',  r'\1 ' + os.path.basename(output_file),   template)
+        assert count == 1, count
 
         with open(destination, "w") as handle:
             handle.write(template)
@@ -168,7 +172,7 @@ def build_codeml_nodes(options, settings, interval, taxa, filtering, dependencie
             codeml = CodemlNode(control_file  = ctl_file,
                                 trees_file    = settings["codeml"]["Tree File"],
                                 sequence_file = node.output_files[0],
-                                output_prefix = output_file,
+                                output_prefix = output_prefix,
                                 dependencies  = node)
             codeml_nodes.append(codeml)
 

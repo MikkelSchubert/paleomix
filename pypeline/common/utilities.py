@@ -136,3 +136,9 @@ def group_by_pred(pred, iterable):
 def fragment(size, lstlike):
     """Faster alternative to grouper for lists/strings."""
     return (lstlike[i : i + size] for i in range(0, len(lstlike), size))
+
+
+def cumsum(lst, initial = 0):
+    for item in lst:
+        initial += item
+        yield initial

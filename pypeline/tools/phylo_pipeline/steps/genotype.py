@@ -308,8 +308,7 @@ def build_sampling_nodes(options, genotyping, taxa, interval, dependencies):
                               preset          = "pileup",
                               dependencies    = genotype)
 
-    builder  = SampleRegionsNode(settings     = genotyping["Random"],
-                                 infile       = pileup,
+    builder  = SampleRegionsNode(infile       = pileup,
                                  intervals    = intervals,
                                  outfile      = destination,
                                  dependencies = tabix)
@@ -318,7 +317,7 @@ def build_sampling_nodes(options, genotyping, taxa, interval, dependencies):
 
 def build_reference_nodes(options, taxa, interval, dependencies):
     prefix = "{Genome}.{Name}".format(**interval)
-    reference = os.path.join(options.genomes_root, interval["Genome"] + ".fasta")
+    reference = os.path.join(options.genomes_root, taxa["Name"] + ".fasta")
     destination = os.path.join(options.destination, "genotypes", "%s.%s.fasta" % (taxa["Name"], prefix))
     intervals = os.path.join(options.intervals_root, prefix + ".bed")
 

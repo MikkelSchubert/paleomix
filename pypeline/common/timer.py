@@ -25,56 +25,73 @@ from __future__ import print_function
 import sys
 import time
 
-from pypeline.common.utilities import fragment
+from pypeline.common.utilities import fragment, cumsum
 
 
-_DESC = "Processed {Reads} reads in {Time}. Last {ReadsDelta} reads in {TimeDelta}, last read at {Contig}: {Position} ..."
+_DESC  = "Processed {Reads} reads ({Progress}) in {Time}, est. {Remaining} left. Last {ReadsDelta} reads in {TimeDelta}, now at {Contig}: {Position} ..."
 _FINAL = "Processed {Reads} reads in {Time}. Last {ReadsDelta} reads in {TimeDelta} ..."
 
 class BAMTimer:
-    def __init__(self, bamfile, desc = _DESC, final = _FINAL, step = 1e6, out = sys.stderr):
+    def __init__(self, bamfile, desc = None, step = 1e6, out = sys.stderr):
         self._bam   = bamfile
         self._out   = out
         self._desc  = desc
-        self._final = final
         self._step  = step
         self._count = 0
         self._last_count = 0
         self._last_time  = time.time()
         self._start_time = self._last_time
 
+        self._total  = 0.0
+        self._counts = []
+        if bamfile:
+            self._total  = float(sum(bamfile.lengths)) or 1.0
+            self._counts = list(cumsum(bamfile.lengths))
+
 
     def increment(self, count = 1, read = None):
         self._count += count
         if (self._count - self._last_count) >= self._step:
+            desc = _DESC if self._bam else _FINAL
             current_time = time.time()
-            self._print(self._desc, current_time, read)
+            self._print(desc, current_time, read)
             self._last_time  = current_time
             self._last_count = self._count
         return self
 
 
     def finalize(self):
-        self._print(self._final, time.time(), None)
+        self._print(_FINAL, time.time(), None)
 
 
     def _print(self, desc, current_time, read):
-        contig, position = "NA", "NA"
+        contig, position, progress, remainnig = "NA", "NA", "NA", "NA"
         if read and self._bam:
             contig   = self._bam.references[read.tid]
-            position = (",".join(fragment(3, str(read.pos + 1)[::-1])))[::-1]
+            position = self._format_int(read.pos + 1)
+            fraction = ((read.pos + self._counts[read.tid]) / self._total)
+            progress = "%.2f%%" % fraction
 
-        print(desc.format(Reads      = self._count,
-                          ReadsDelta = self._count - self._last_count,
-                          Time       = self._format(current_time - self._start_time),
-                          TimeDelta  = self._format(current_time - self._last_time),
+            current_running = current_time - self._start_time
+            remaining = self._format_time(current_running / fraction - current_running)
+
+        if self._desc:
+            print("%s: " % self._desc, end = "", file = self._out)
+
+        print(desc.format(Reads      = self._format_int(self._count),
+                          ReadsDelta = self._format_int(self._count - self._last_count),
+                          Time       = self._format_time(current_time - self._start_time),
+                          TimeDelta  = self._format_time(current_time - self._last_time),
                           Contig     = contig,
-                          Position   = position),
+                          Position   = position,
+                          Progress   = progress,
+                          Remaining  = remaining),
             file = self._out)
 
 
-    def _format(self, ftime):
+    def _format_time(self, ftime):
         utc = time.gmtime(ftime)
         return "%02i:%02i:%02is" % (utc.tm_hour, utc.tm_min, utc.tm_sec)
 
-
+    def _format_int(self, value):
+        return (",".join(fragment(3, str(value)[::-1])))[::-1]
