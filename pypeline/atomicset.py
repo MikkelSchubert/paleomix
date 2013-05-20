@@ -22,6 +22,8 @@
 #
 import time
 
+import pypeline.atomicpp as atomicpp
+
 from pypeline.atomiccmd import AtomicCmd, CmdError
 from pypeline.common.utilities import safe_coerce_to_tuple
 
@@ -54,7 +56,7 @@ class _CommandSet:
     requirements    = _collect_properties("requirements")
 
     def __str__(self):
-        return "[%s]" % ", ".join(str(command) for command in self._commands)
+        return atomicpp.pformat(self)
 
 
 

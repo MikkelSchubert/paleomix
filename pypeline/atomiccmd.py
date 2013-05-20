@@ -28,6 +28,7 @@ import weakref
 import subprocess
 import collections
 
+import pypeline.atomicpp as atomicpp
 import pypeline.common.fileutils as fileutils
 
 
@@ -107,7 +108,8 @@ class AtomicCmd:
         self._proc    = None
         self._temp    = None
         self._command = [str(field) for field in command]
-        self._handles = []
+        self._pipes   = {}
+        self._handles = {}
         self._set_cwd = set_cwd
 
         self._files     = self._process_arguments(id(self), command, kwargs)
@@ -158,11 +160,11 @@ class AtomicCmd:
             return_codes = [self._proc.wait()] if self._proc else [None]
         finally:
             # Close any implictly opened pipes
-            for (mode, handle) in self._handles:
+            for (mode, handle) in self._handles.values():
                 if "w" in mode:
                     handle.flush()
                 handle.close()
-            self._handles = []
+            self._handles = {}
 
         return return_codes
 
@@ -241,34 +243,7 @@ class AtomicCmd:
 
 
     def __str__(self):
-        def describe_pipe(template, pipe):
-            if isinstance(pipe, types.StringTypes):
-                return template % pipe
-            elif isinstance(pipe, AtomicCmd):
-                return template % "[AtomicCmd]"
-            elif (pipe == AtomicCmd.PIPE):
-                return template % "[PIPE]"
-            else:
-                return ""
-
-        kwords = self._generate_filenames(self._files, "${TEMP}")
-        command = " ".join([(field % kwords) for field in self._command])
-
-        stdin = self._files.get("IN_STDIN")
-        if stdin:
-            command += describe_pipe(" < %s", stdin)
-
-        stdout = self._files.get("OUT_STDOUT")
-        stderr = self._files.get("OUT_STDERR")
-        if (stdout != stderr):
-            if stdout:
-                command += describe_pipe(" > %s", stdout)
-            if stderr:
-                command += describe_pipe(" 2> %s", stderr)
-        elif stdout:
-            command += describe_pipe(" &> %s", stdout)
-
-        return "<%s>" % command
+        return atomicpp.pformat(self)
 
 
     def _generate_call(self, temp):
@@ -348,10 +323,11 @@ class AtomicCmd:
         elif isinstance(filename, AtomicCmd):
             return filename.stdout
 
-        pipe = open(filename, mode)
-        self._handles.append((mode, pipe))
+        handle = open(filename, mode)
+        self._handles[pipe] = (mode, handle)
+        self._pipes[pipe] = filename
 
-        return pipe
+        return handle
 
 
     @classmethod

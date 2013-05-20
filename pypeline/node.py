@@ -220,8 +220,9 @@ class CommandNode(Node):
 
         return_codes = self._command.join()
         if any(return_codes):
-            raise NodeError("Error(s) running '%s':\n\tReturn-codes: %s\n\tTemporary directory: '%s'" \
-                             % (self._command, return_codes, temp))
+            desc = "\n\t".join(str(self._command).split("\n"))
+            raise NodeError("Error(s) running Node:\n\tReturn-codes: %s\n\tTemporary directory: '%s'\n\n\t%s" \
+                             % (return_codes, temp, desc))
 
 
     def _teardown(self, config, temp):
