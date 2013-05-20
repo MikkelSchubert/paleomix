@@ -105,6 +105,7 @@ class AtomicCmd:
         Each pipe can only be used once (either OUT_ or TEMP_OUT_)."""
 
         self._proc    = None
+        self._temp    = None
         self._command = [str(field) for field in command]
         self._handles = []
         self._set_cwd = set_cwd
@@ -112,11 +113,14 @@ class AtomicCmd:
         self._files     = self._process_arguments(id(self), command, kwargs)
         self._file_sets = self._build_files_map(command, kwargs)
 
+        # Dry-run, to catch errors early
+        self._generate_call(None)
 
     def run(self, temp):
         """Runs the given command, saving files in the specified temp folder. To
         move files to their final destination, call commit(). Note that in contexts
         where the *Cmds classes are used, this function may block."""
+        self._temp = temp
 
         # kwords for pipes are always built relative to the current directory,
         # since these are opened before (possibly) CD'ing to the temp directory.
@@ -125,12 +129,10 @@ class AtomicCmd:
         stdout = self._open_pipe(kwords, "OUT_STDOUT", "wb")
         stderr = self._open_pipe(kwords, "OUT_STDERR", "wb")
 
-        cwd = None
-        if self._set_cwd:
-            cwd, kwords = temp, self._generate_filenames(self._files, root = None)
-
-        command = [(field % kwords) for field in self._command]
-        self._proc = subprocess.Popen(command,
+        cwd  = temp if self._set_cwd else None
+        temp = None if self._set_cwd else temp
+        call = self._generate_call(temp)
+        self._proc = subprocess.Popen(call,
                                       stdin  = stdin,
                                       stdout = stdout,
                                       stderr = stderr,
@@ -207,12 +209,14 @@ class AtomicCmd:
 
 
     def commit(self, temp):
+        assert self._temp == temp
         if not self.ready():
             raise CmdError("Attempting to commit command before it has completed")
         elif self._handles:
             raise CmdError("Called 'commit' before calling 'join'")
 
         self._proc = None
+        self._temp = None
 
         temp_files = self._generate_filenames(self._files, temp)
         for (key, filename) in temp_files.iteritems():
@@ -226,6 +230,7 @@ class AtomicCmd:
                     fileutils.move_file(filename, self._files[key])
                 elif key.startswith("TEMP_OUT_") and os.path.exists(filename):
                     os.remove(filename)
+
 
     @property
     def stdout(self):
@@ -264,6 +269,20 @@ class AtomicCmd:
             command += describe_pipe(" &> %s", stdout)
 
         return "<%s>" % command
+
+
+    def _generate_call(self, temp):
+        kwords = self._generate_filenames(self._files, root = temp)
+
+        try:
+            return [(field % kwords) for field in self._command]
+        except (TypeError, ValueError), e:
+            raise CmdError("Error building Atomic Command:\n  Call = %s\n  Error = %s: %s" \
+                           % (self._command, e.__class__.__name__, e))
+        except KeyError, e:
+            raise CmdError("Error building Atomic Command:\n  Call = %s\n  Value not specified for path = %s" \
+                           % (self._command, e))
+
 
 
     @classmethod
