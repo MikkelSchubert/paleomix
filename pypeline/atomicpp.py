@@ -25,6 +25,7 @@ from __future__ import print_function
 import os
 import sys
 import types
+import subprocess
 
 
 def _is_cls(obj, *cls_names):
@@ -55,6 +56,16 @@ def _collect_stats(atomiccmd, stats):
     return stats
 
 
+def _build_status(atomiccmd, stats, indent, lines):
+    prefix = " " * indent + "Status  = "
+    if atomiccmd._proc:
+        if atomiccmd.ready():
+            lines.append(prefix + "Exited with return-code %i" \
+                         % tuple(atomiccmd.join()))
+        else:
+            lines.append(prefix + "Running ...")
+
+
 def _build_stdin(atomiccmd, stats, indent, lines):
     pipe   = atomiccmd._files.get("IN_STDIN")
     prefix = " " * indent + "STDIN   = "
@@ -73,7 +84,7 @@ def _build_stdout(atomiccmd, stats, indent, lines):
         lines.append("%s<%02i>" % (prefix, stats["id"][pipe],))
     elif atomiccmd._files.get("OUT_STDOUT"):
         filename = atomiccmd._files.get("OUT_STDOUT")
-        if filename is not AtomicCmd.PIPE:
+        if filename is not subprocess.PIPE:
             lines.append("%s'%s'" % (prefix, filename))
         else:
             lines.append("%s<PIPE>" % (prefix,))
@@ -117,6 +128,7 @@ def _pformat(atomiccmd, stats, indent, lines, include_prefix = True):
             lines.append("%s%s" % (c_prefix, line))
             c_prefix = " " * len(c_prefix)
 
+        _build_status(atomiccmd, stats, s_prefix_len, lines)
         _build_stdin(atomiccmd,  stats, s_prefix_len, lines)
         _build_stdout(atomiccmd, stats, s_prefix_len, lines)
         _build_stderr(atomiccmd, stats, s_prefix_len, lines)
