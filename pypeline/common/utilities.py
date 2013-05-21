@@ -38,6 +38,19 @@ def safe_coerce_to_tuple(value):
         return (value,)
 
 
+def safe_coerce_to_frozenset(value):
+    """Takes a value which be a single object, or an an iterable and returns the content wrapped in
+    a frozenset. In the case of strings, the original string object is returned in a tuple, and not
+    as a frozenset of chars."""
+    if isinstance(value, types.StringTypes):
+        return frozenset((value,))
+
+    try:
+        return frozenset(value)
+    except TypeError:
+        return frozenset((value,))
+
+
 def try_cast(value, cast_to):
     try:
         return cast_to(value)
