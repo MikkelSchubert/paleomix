@@ -65,7 +65,7 @@ class BAMTimer:
 
 
     def _print(self, desc, current_time, read):
-        contig, position, progress, remainnig = "NA", "NA", "NA", "NA"
+        contig, position, progress, remaining = "NA", "NA", "NA", "NA"
         if read and self._bam:
             contig   = self._bam.references[read.tid]
             position = self._format_int(read.pos + 1)
