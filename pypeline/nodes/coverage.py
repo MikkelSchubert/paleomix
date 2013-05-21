@@ -41,6 +41,7 @@ _MAX_CONTIGS = 100
 class CoverageNode(Node):
     def __init__(self, input_file, target_name, output_file = None, intervals_file = None, max_contigs = _MAX_CONTIGS, dependencies = ()):
         self._target_name = target_name
+        self._input_file  = input_file
         self._output_file = output_file or swap_ext(input_file, ".coverage")
         self._intervals_file = intervals_file
         self._max_contigs = max_contigs
@@ -55,7 +56,7 @@ class CoverageNode(Node):
 
 
     def _setup(self, _config, temp):
-        bam_filename  = os.path.abspath(self.input_files[0])
+        bam_filename  = os.path.abspath(self._input_file)
         temp_filename = reroot_path(temp, bam_filename)
 
         os.symlink(bam_filename, temp_filename)
@@ -63,7 +64,7 @@ class CoverageNode(Node):
 
 
     def _run(self, _config, temp):
-        temp_filename = reroot_path(temp, self.input_files[0])
+        temp_filename = reroot_path(temp, self._input_file)
 
         with SamfileReader(temp_filename) as bamfile:
             intervals = self._get_intervals(bamfile, self._intervals_file, self._max_contigs)
@@ -77,7 +78,7 @@ class CoverageNode(Node):
 
 
     def _teardown(self, config, temp):
-        temp_filename = reroot_path(temp, self.input_files[0])
+        temp_filename = reroot_path(temp, self._input_file)
         os.remove(temp_filename)
         os.remove(temp_filename + ".bai")
 
@@ -197,20 +198,19 @@ class CoverageNode(Node):
 
 class MergeCoverageNode(Node):
     def __init__(self, input_files, output_file, dependencies = ()):
-        self._input_files = safe_coerce_to_tuple(input_files)
         self._output_file = output_file
 
         Node.__init__(self,
                       description  = "<MergeCoverage: '%s' -> '%s'>" \
-                          % (self._desc_files(self._input_files), self._output_file),
-                      input_files  = self._input_files,
+                          % (self._desc_files(input_files), self._output_file),
+                      input_files  = input_files,
                       output_files = self._output_file,
                       dependencies = dependencies)
 
 
     def _run(self, _config, temp):
         table = {}
-        for filename in self._input_files:
+        for filename in self.input_files:
             read_table(table, filename)
 
         _write_table(table, reroot_path(temp, self._output_file))

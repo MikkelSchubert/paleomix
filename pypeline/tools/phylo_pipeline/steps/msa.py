@@ -55,7 +55,7 @@ def build_msa_nodes(options, settings, interval, taxa, filtering, dependencies):
     if not any(filtering.itervalues()):
         return afafiles
 
-    return FilterSingletonsMetaNode(input_files  = dict((node.output_files[0], node) for node in afafiles.subnodes),
+    return FilterSingletonsMetaNode(input_files  = dict((iter(node.output_files).next(), node) for node in afafiles.subnodes),
                                     destination  = sequencedir + ".filtered",
                                     filter_by    = filtering,
                                     dependencies = afafiles)

@@ -28,7 +28,7 @@ import pickle
 import traceback
 
 import pypeline.common.fileutils as fileutils
-from pypeline.common.utilities import safe_coerce_to_tuple
+from pypeline.common.utilities import safe_coerce_to_frozenset
 
 # Imported from, in order to allow monkeypatching in tests
 # FIXME: Make create_temp_dir a 'with' object
@@ -55,11 +55,11 @@ class Node(object):
                  requirements = (), subnodes = (), dependencies = ()):
 
         self.__description   = description
-        self.input_files     = safe_coerce_to_tuple(input_files)
-        self.output_files    = safe_coerce_to_tuple(output_files)
-        self.executables     = safe_coerce_to_tuple(executables)
-        self.auxiliary_files = safe_coerce_to_tuple(auxiliary_files)
-        self.requirements    = safe_coerce_to_tuple(requirements)
+        self.input_files     = safe_coerce_to_frozenset(input_files)
+        self.output_files    = safe_coerce_to_frozenset(output_files)
+        self.executables     = safe_coerce_to_frozenset(executables)
+        self.auxiliary_files = safe_coerce_to_frozenset(auxiliary_files)
+        self.requirements    = safe_coerce_to_frozenset(requirements)
 
         self.threads         = int(threads)
         self.subnodes        = frozenset()
@@ -182,7 +182,7 @@ class Node(object):
         if nodes is None:
             return frozenset()
 
-        nodes = frozenset(safe_coerce_to_tuple(nodes))
+        nodes = safe_coerce_to_frozenset(nodes)
         bad_nodes = [node for node in nodes if not isinstance(node, Node)]
 
         if bad_nodes:

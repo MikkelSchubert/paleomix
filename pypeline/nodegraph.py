@@ -187,19 +187,20 @@ class NodeGraph:
 
     @classmethod
     def _check_file_dependencies(cls, nodes):
-        files = ("input_files", "output_files", "auxiliary_files")
-        files = dict((key, collections.defaultdict(list)) for key in files)
+        files = ("input_files", "output_files")
+        files = dict((key, collections.defaultdict(set)) for key in files)
+        # Auxiliary files are treated as input files
+        files["auxiliary_files"] = files["input_files"]
 
         for node in nodes:
             for (key, dd) in files.iteritems():
                 for filename in getattr(node, key):
-                    dd[filename].append(node)
+                    dd[filename].add(node)
 
         max_messages = range(_MAX_ERROR_MESSAGES)
         error_messages = []
         error_messages.extend(zip(max_messages, cls._check_output_files(files["output_files"])))
         error_messages.extend(zip(max_messages, cls._check_input_dependencies(files["input_files"], files["output_files"], nodes)))
-        error_messages.extend(zip(max_messages, cls._check_input_dependencies(files["auxiliary_files"], files["output_files"], nodes)))
 
         if error_messages:
             messages = []
@@ -225,12 +226,12 @@ class NodeGraph:
     def _check_input_dependencies(cls, input_files, output_files, nodes):
         dependencies = cls._collect_dependencies(nodes, {})
 
-        for (filename, nodes) in input_files.iteritems():
+        for (filename, nodes) in sorted(input_files.items(), key = lambda v: v[0]):
             if (filename in output_files):
-                producer = output_files[filename][0]
-                bad_nodes  = set()
+                producers = output_files[filename]
+                bad_nodes = set()
                 for consumer in nodes:
-                    if producer not in dependencies[consumer]:
+                    if not (producers & dependencies[consumer]):
                         bad_nodes.add(consumer)
 
                 if bad_nodes:

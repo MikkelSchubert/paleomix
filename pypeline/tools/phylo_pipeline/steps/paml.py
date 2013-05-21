@@ -40,6 +40,8 @@ import common
 
 class FastaToPAMLPhyNode(Node):
     def __init__(self, input_file, output_file, exclude_groups, dependencies = ()):
+        self._input_file  = input_file
+        self._output_file = output_file
         self._excluded = safe_coerce_to_tuple(exclude_groups)
         description  = "<FastaToPAMLPhy: '%s' -> '%s'>" % \
             (input_file, output_file)
@@ -52,7 +54,7 @@ class FastaToPAMLPhyNode(Node):
 
 
     def _run(self, _config, temp):
-        msa = read_msa(self.input_files[0])
+        msa = read_msa(self._input_file)
         for excluded_group in self._excluded:
             msa.pop(excluded_group)
 
@@ -65,13 +67,14 @@ class FastaToPAMLPhyNode(Node):
             for line in fragment(60, seq.upper()):
                 lines.append(" ".join(fragment(3, line)))
 
-        with open(fileutils.reroot_path(temp, self.output_files[0]), "w") as output:
+        with open(fileutils.reroot_path(temp, self._output_file), "w") as output:
             output.write("\n".join(lines))
 
 
     def _teardown(self, _config, temp):
-        output_file = self.output_files[0]
-        fileutils.move_file(fileutils.reroot_path(temp, output_file), output_file)
+        source_file = fileutils.reroot_path(temp, output_file)
+        output_file = self._output_file
+        fileutils.move_file(source_file, output_file)
 
 
 class CodemlNode(CommandNode):
@@ -171,7 +174,7 @@ def build_codeml_nodes(options, settings, interval, taxa, filtering, dependencie
 
             codeml = CodemlNode(control_file  = ctl_file,
                                 trees_file    = settings["codeml"]["Tree File"],
-                                sequence_file = node.output_files[0],
+                                sequence_file = iter(node.output_files).next(),
                                 output_prefix = output_prefix,
                                 dependencies  = node)
             codeml_nodes.append(codeml)

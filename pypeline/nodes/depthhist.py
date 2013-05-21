@@ -86,7 +86,8 @@ class DepthHistogramNode(Node):
         self._handle = {}
 
         if len(self._input_files) == 1:
-            os.symlink(os.path.abspath(self._input_files[0]), pipe)
+            filename = iter(self._input_files).next()
+            os.symlink(os.path.abspath(filename), pipe)
         else:
             os.mkfifo(pipe)
             procs, _ = concatenate_input_bams(config, self._input_files, out = pipe)
