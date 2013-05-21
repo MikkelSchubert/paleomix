@@ -21,6 +21,7 @@
 # SOFTWARE.
 #
 import os
+import sys
 # pickle is used instead of cPickle, because pickle
 # produces more informative errors on failure
 import pickle
@@ -45,7 +46,6 @@ class NodeUnhandledException(NodeError):
     for this exception will include both the original error message and a 
     stacktrace for that error."""
     pass
-
 
 
 class Node(object):
@@ -111,31 +111,34 @@ class Node(object):
         Prior to calling these functions, a temporary dir is created using the
         'temp_root' prefix from the config object. Both the config object and
         the temporary dir are passed to the above functions. The temporary
-        dir is removed after _teardown is called, and all expected files 
+        dir is removed after _teardown is called, and all expected files
         should have been removed/renamed at that point.
 
         Any non-NodeError exception raised in this function is wrapped in a
         NodeUnhandledException, which includes a full backtrace. This is needed
         to allow showing these in the main process."""
-        
+
         try:
             temp = create_temp_dir(config.temp_root)
-            
+
             self._setup(config, temp)
             self._run(config, temp)
             self._teardown(config, temp)
 
             rmdir(temp)
-        except NodeError:
-            raise
-        except Exception:
-            raise NodeUnhandledException(traceback.format_exc())
+        except NodeError, error:
+            self._write_error_log(temp, error)
+            raise error
+        except Exception, error:
+            self._write_error_log(temp, error)
+            error = NodeUnhandledException(traceback.format_exc())
+            raise error
 
 
     def _setup(self, _config, _temp):
-        """Is called prior to '_run()' by 'run()'. Any code used to copy/link files, 
+        """Is called prior to '_run()' by 'run()'. Any code used to copy/link files,
         or other steps needed to ready the node for running may be carried out in this
-        function. Checks that required input files exist, and raises an NodeError if 
+        function. Checks that required input files exist, and raises an NodeError if
         this is not the case."""
         if fileutils.missing_executables(self.executables):
             raise NodeError("Executable(s) does not exist for command: %s" \
@@ -156,6 +159,23 @@ class Node(object):
         if self.__description:
             return self.__description
         return "<%s>" % (self.__class__.__name__,)
+
+
+    def _write_error_log(self, temp, error):
+        if os.path.isdir(temp):
+            with open(os.path.join(temp, "pipe.errors"), "w") as handle:
+                handle.write("Command          = %s\n" % " ".join(sys.argv))
+                handle.write("CWD              = %s\n\n" % os.getcwd())
+                handle.write("Node             = %s\n" % str(self))
+                handle.write("Threads          = %i\n" % self.threads)
+
+                prefix =   "\n                   "
+                handle.write("Input files      = %s\n" % (prefix.join(sorted(self.input_files))))
+                handle.write("Output files     = %s\n" % (prefix.join(sorted(self.output_files))))
+                handle.write("Auxiliary files  = %s\n" % (prefix.join(sorted(self.auxiliary_files))))
+                handle.write("Executables      = %s\n" % (prefix.join(sorted(self.executables))))
+
+                handle.write("\nErrors =\n%s\n" % error)
 
 
     def _collect_nodes(self, nodes, description):
