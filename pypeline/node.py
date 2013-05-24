@@ -119,6 +119,7 @@ class Node(object):
         to allow showing these in the main process."""
 
         try:
+            temp = None
             temp = create_temp_dir(config.temp_root)
 
             self._setup(config, temp)
@@ -162,7 +163,7 @@ class Node(object):
 
 
     def _write_error_log(self, temp, error):
-        if os.path.isdir(temp):
+        if temp and os.path.isdir(temp):
             with open(os.path.join(temp, "pipe.errors"), "w") as handle:
                 handle.write("Command          = %s\n" % " ".join(sys.argv))
                 handle.write("CWD              = %s\n\n" % os.getcwd())
