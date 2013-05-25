@@ -27,14 +27,147 @@ command will not work:
 $ samtools view -H INPUT | samtools view -Sbu -
 
 This is mainly a problem when aligning ancient DNA lanes against mt genomes,
-as there may not be any hits in an entire lane.
+as there may not be any hits in an entire lane. In addition, this command
+filtered out reads with malformed CIGAR strings (a problem with BWA 0.7.4,
+which causes samtools/pysam to crash), as well as non-hits.
 """
 
 import os
+import re
 import sys
 import optparse
+import subprocess
 
 import pysam
+
+
+def _add_or_replace_tag(line, tag, value):
+    """Adds or replaces a tag in a SAM header line."""
+    fields = line.rstrip().split("\t")
+    for (index, field) in enumerate(fields):
+        if field.startswith(tag):
+            fields[index] = "%s:%s" % (tag, value)
+            break
+    else:
+        fields.append("%s:%s" % (tag, value))
+
+    return "\t".join(fields) + "\n"
+
+
+
+def _set_sort_order(header):
+    if not header[0].startswith("@HD"):
+        header.insert(0, "@HD\tSO:coordinate\tGO:none\tVN:1.0\n")
+        return
+
+    header[0] = _add_or_replace_tag(header[0], "SO", "coordinate")
+
+
+def _set_pg_tags(header, tags):
+    for tag in tags:
+        pg_id, pg_field, pg_value = tag.split(":")
+
+        pg_id = "ID:%s" % pg_id
+        for (index, line) in enumerate(header):
+            if line.startswith("@PG") and (pg_id in line.rstrip().split("\t")):
+                header[index] = _add_or_replace_tag(line, pg_field, pg_value)
+                break
+        else:
+            header.append("@PG\t%s\t%s:%s\n" % (pg_id, pg_field, pg_value))
+
+
+def _process_header(config, infile):
+    """Reads and updates (per 'config') a SAM header. The header (a list
+    of lines) and the first non-header line is returned in a tuple."""
+    header, line = [], infile.readline()
+    while line.startswith("@"):
+        header.append(line)
+        line = infile.readline()
+
+    if config.flag_as_sorted:
+        _set_sort_order(header)
+    _set_pg_tags(header, config.update_pg_tag)
+
+    return header, line
+
+
+def _parse_header(header):
+    """Parses the lines of a SAM header and returns lists
+    of names and lengths for the reference sequence."""
+    names, lengths = [], []
+    for line in header:
+        if line.startswith("@SQ"):
+            for field in line.split("\t"):
+                if field.startswith("SN:"):
+                    names.append(field[3:])
+                elif field.startswith("LN:"):
+                    lengths.append(int(field[3:]))
+    return names, lengths
+
+
+def _write_only_header(config, header):
+    """Uses pysam to write an empty BAM file to STDOUT; this file only
+    contains the given header, and has no records. It is nessesary to
+    use pysam for this, as samtools cannot read an empty SAM file."""
+    names, lengths = _parse_header(header)
+    with pysam.Samfile("-", "wbu", text = "".join(header),
+                       referencenames = names,
+                       referencelengths = lengths,
+                       add_sq_text = False) as handle:
+        return 0
+
+
+def _open_samtools_proc(config):
+    """Opens and returns a running 'samtools' process object."""
+    min_quality   = str(config.min_quality)
+    exclude_flags = hex(config.exclude_flags)
+    call = ("samtools", "view", "-Sbu", "-q", min_quality, "-F", exclude_flags,  "-")
+    proc = subprocess.Popen(call,
+                            stdin     = subprocess.PIPE,
+                            close_fds = True)
+
+    return proc, proc.stdin
+
+
+_re = re.compile("(([0-9]+)([A-Z=]))")
+def _is_valid_cigar(cigar, length):
+    """Sanity check for BWA 0.7.4+, which may generate alignments with
+    invalid CIGAR strings in rare cases, where version 0.5.x would
+    not generate an alignment at all."""
+    if cigar == "*":
+        return True
+
+    obs_length = 0
+    for (_, num, opt) in _re.findall(cigar):
+        if opt in "MISX=":
+            obs_length += int(num)
+    return obs_length == length
+
+
+def _to_bam(config, infile):
+    header, line  = _process_header(config, infile)
+    proc, outfile = None, None
+
+    while line and (not proc or not outfile.closed):
+        fields = line.split("\t", 10)
+        if _is_valid_cigar(fields[5], len(fields[9])):
+            if not proc:
+                proc, outfile = _open_samtools_proc(config)
+                outfile.writelines(header)
+
+            outfile.write(line)
+        else:
+            sys.stderr.write("WARNING: Invalid CIGAR for read '%s': '%s'\n" \
+                             % (fields[0], fields[5]))
+
+        line = infile.readline()
+
+    if not proc:
+        # Ie. no valid records found, thus we cannot use samtools to produce the output
+        return _write_only_header(config, header)
+
+    proc.stdin.close()
+    return proc.wait()
 
 
 def main(argv):
@@ -49,35 +182,7 @@ def main(argv):
         sys.stderr.write("%s does not take any arguments.\n" % sys.argv[0])
         sys.exit(1)
 
-    input_file = pysam.Samfile("-", "r")
-    header = input_file.header
-    if config.flag_as_sorted:
-        header["HD"] = {"SO" :  "coordinate",
-                        "GO" : "none",
-                        "VN" : "1.0"}
-
-    if config.update_pg_tag:
-        if "PG" not in header:
-            header["PG"] = []
-
-        for tags in config.update_pg_tag:
-            #        sys.stderr.write(repr(header))
-            pg_id, tag, value = tags.split(":", 2)
-
-        for dd in header["PG"]:
-            if dd.get("ID") == pg_id:
-                break
-        else:
-            dd = {"ID" : pg_id}
-            header["PG"].append(dd)
-
-        dd[tag] = value
-
-    output_file = pysam.Samfile("-", "wbu", header = header)
-    for read in input_file:
-        output_file.write(read)
-    output_file.close()
-    input_file.close()
+    return _to_bam(config, sys.stdin)
 
 
 if __name__ == '__main__':

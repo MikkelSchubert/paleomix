@@ -143,7 +143,7 @@ def _build_bwa_nodes(config, parameters, input_filename, tags, options):
     read_group = "@RG\tID:{ID}\tSM:{SM}\tLB:{LB}\tPU:{PU_src}\tPL:{PL}\tPG:{PG}".format(**tags)
     params.commands[sam_key].set_parameter("-r", read_group)
 
-    params.commands["filter"].set_parameter('-q', options["Aligners"]["BWA"]["MinQuality"])
+    params.commands["convert"].set_parameter('-q', options["Aligners"]["BWA"]["MinQuality"])
 
     return params.build_node()
 
@@ -159,7 +159,7 @@ def _build_bowtie2_nodes(config, parameters, input_filename, tags, options):
                                    threads         = config.bowtie2_max_threads,
                                    **parameters)
 
-    params.commands["filter"].set_parameter('-q', options["Aligners"]["Bowtie2"]["MinQuality"])
+    params.commands["convert"].set_parameter('-q', options["Aligners"]["Bowtie2"]["MinQuality"])
     if options["QualityOffset"] == 64:
         params.commands["aln"].set_parameter("--phred64")
     elif options["QualityOffset"] == 33:
