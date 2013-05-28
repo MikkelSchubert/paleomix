@@ -106,7 +106,7 @@ class RAxMLReduceNode(CommandNode):
 class RAxMLBootstrapNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, input_alignment, input_partition, output_alignment, dependencies = ()):
-        command = AtomicParams("raxmlHPC")
+        command = AtomicParams("raxmlHPC", set_cwd = True)
 
         # Read and (in the case of empty columns) reduce input
         command.set_parameter("-f", "j")
@@ -114,8 +114,6 @@ class RAxMLBootstrapNode(CommandNode):
         command.set_parameter("-n", "Pypeline")
         # Model required, but not used
         command.set_parameter("-m", "GTRGAMMA")
-        # Ensures that output is saved to the temporary directory
-        command.set_parameter("-w", "%(TEMP_DIR)s")
         # Set random seed for bootstrap generation. May be set to a fixed value to allow replicability.
         command.set_parameter("-b", int(random.random() * 2**31 - 1), fixed = False)
         # Generate a single bootstrap alignment (makes growing the number of bootstraps easier).
@@ -150,15 +148,6 @@ class RAxMLBootstrapNode(CommandNode):
     def _setup(self, config, temp):
         os.symlink(os.path.realpath(self._input_alignment), os.path.join(temp, "input.alignment"))
         os.symlink(os.path.realpath(self._input_partition), os.path.join(temp, "input.partition"))
-
-    def _run(self, config, temp):
-        temp = os.path.realpath(temp)
-        oldwd = os.getcwd()
-        os.chdir(temp)
-        try:
-            CommandNode._run(self, config, temp)
-        finally:
-            os.chdir(oldwd)
 
 
     def _teardown(self, config, temp):
@@ -282,7 +271,7 @@ class EXaMLParserNode(CommandNode):
         input_partition  -- A set of partitions in a format readable by RAxML.
         output_filename  -- Filename for the output binary sequence."""
 
-        command = AtomicParams("examlParser")
+        command = AtomicParams("examlParser", set_cwd = True)
 
         command.set_parameter("-s", "%(TEMP_OUT_ALN)s")
         command.set_parameter("-q", "%(TEMP_OUT_PART)s")
@@ -304,7 +293,7 @@ class EXaMLParserNode(CommandNode):
                           # Final output file, are not created directly
                           OUT_BINARY      = output_file)
 
-        return {"command"         : command}
+        return {"command" : command}
 
 
     @use_customizable_cli_parameters
@@ -330,16 +319,6 @@ class EXaMLParserNode(CommandNode):
             destination = os.path.join(temp, os.path.basename(filename))
 
             os.symlink(source, destination)
-
-
-    def _run(self, config, temp):
-        temp = os.path.realpath(temp)
-        oldwd = os.getcwd()
-        os.chdir(temp)
-        try:
-            CommandNode._run(self, config, temp)
-        finally:
-            os.chdir(oldwd)
 
 
     def _teardown(self, config, temp):
@@ -427,7 +406,7 @@ class ParsimonatorNode(CommandNode):
         input_alignment  -- An alignment file in a format readable by RAxML.
         output_tree      -- Filename for the output newick tree."""
 
-        command = AtomicParams("parsimonator")
+        command = AtomicParams("parsimonator", set_cwd = True)
 
         command.set_parameter("-s", "%(TEMP_OUT_ALN)s")
         command.set_parameter("-n", "output")
@@ -468,16 +447,6 @@ class ParsimonatorNode(CommandNode):
             destination = os.path.join(temp, os.path.basename(filename))
 
             os.symlink(source, destination)
-
-
-    def _run(self, config, temp):
-        temp = os.path.realpath(temp)
-        oldwd = os.getcwd()
-        os.chdir(temp)
-        try:
-            CommandNode._run(self, config, temp)
-        finally:
-            os.chdir(oldwd)
 
 
     def _teardown(self, config, temp):
