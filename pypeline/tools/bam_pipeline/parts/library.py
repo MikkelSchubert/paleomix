@@ -26,7 +26,7 @@ import collections
 from pypeline.common.utilities import safe_coerce_to_tuple
 from pypeline.node import MetaNode
 from pypeline.nodes.picard import MarkDuplicatesNode
-from pypeline.tools.bam_pipeline.nodes import FilterUniqueBAMNode, \
+from pypeline.tools.bam_pipeline.nodes import FilterCollapsedBAMNode, \
                                               IndexAndValidateBAMNode, \
                                               MapDamageRescaleNode
 
@@ -66,7 +66,7 @@ class Library:
 
 
     def _remove_pcr_duplicates(self, config, prefix, bams):
-        rmdup_cls = {"collapsed"  : FilterUniqueBAMNode,
+        rmdup_cls = {"collapsed"  : FilterCollapsedBAMNode,
                      "normal"     : MarkDuplicatesNode}
 
         results = {}

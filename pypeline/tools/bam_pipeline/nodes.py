@@ -109,21 +109,15 @@ class MapDamageRescaleNode(CommandNode):
         CommandNode._teardown(self, config, temp)
 
 
-class FilterUniqueBAMNode(CommandNode):
+class FilterCollapsedBAMNode(CommandNode):
     def __init__(self, config, input_bams, output_bam, dependencies = ()):
         cat_cmds, cat_obj = concatenate_input_bams(config, input_bams)
-        filteruniq = AtomicCmd(["FilterUniqueBAM", "--PIPE", "--library", "--keep"],
+        filteruniq = AtomicCmd(["bam_rmdup_collapsed", "--remove-duplicates"],
                                IN_STDIN   = cat_obj,
-                               OUT_STDOUT = AtomicCmd.PIPE)
+                               OUT_STDOUT = output_bam)
 
-        sort = AtomicCmd(["samtools", "sort", "-o", "-", "%(TEMP_OUT_BAM)s"],
-                         IN_STDIN     = filteruniq,
-                         OUT_STDOUT   = output_bam,
-                         TEMP_OUT_BAM = "sorted",
-                         CHECK_SAM    = SAMTOOLS_VERSION)
-
-        command     = ParallelCmds(cat_cmds + [filteruniq, sort])
-        description =  "<FilterUniqueBAM: %s>" % (self._desc_files(input_bams),)
+        command     = ParallelCmds(cat_cmds + [filteruniq])
+        description =  "<FilterCollapsedBAM: %s>" % (self._desc_files(input_bams),)
         CommandNode.__init__(self,
                              command      = command,
                              description  = description,
