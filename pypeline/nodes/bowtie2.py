@@ -90,7 +90,7 @@ class Bowtie2Node(CommandNode):
         max_threads = _get_max_threads(reference, threads)
         aln.set_parameter("--threads", max_threads)
 
-        order, commands = _process_output(aln, output_file, reference)
+        order, commands = _process_output(aln, output_file, reference, run_fixmate = (input_file_1 and input_file_2))
         commands["aln"] = aln
 
         return {"commands" : commands,
