@@ -38,6 +38,10 @@ from pypeline.nodes.coverage import read_table as read_coverage_table
 import pypeline.common.text as text
 
 
+_PE_READS = frozenset(("Paired", "Collapsed", "CollapsedTruncated"))
+_SE_READS = frozenset(("Single",))
+_BAMS     = frozenset(())
+
 
 class SummaryTableNode(Node):
     def __init__(self, config, makefile, target, cov_for_lanes, cov_for_libs, dependencies = ()):
@@ -46,19 +50,30 @@ class SummaryTableNode(Node):
         self._prefixes      = makefile["Prefixes"]
         self._makefile      = makefile["Statistics"]
 
+        self._in_raw_bams = cov_for_lanes
+        self._in_lib_bams = cov_for_libs
+        input_files = set()
+        input_files.update(sum(map(list, self._in_raw_bams.values()), []))
+        input_files.update(sum(map(list, self._in_lib_bams.values()), []))
+
         self._in_raw_read = collections.defaultdict(list)
         for prefix in target.prefixes:
             for sample in prefix.samples:
                 for library in sample.libraries:
                     for lane in library.lanes:
-                        if lane.reads and lane.reads.stats:
-                            self._in_raw_read[(sample.name, library.name, lane.name)] = lane.reads.stats
-
-        self._in_raw_bams = cov_for_lanes
-        self._in_lib_bams = cov_for_libs
-        input_files = self._in_raw_read.values() \
-            + sum(map(list, self._in_raw_bams.values()), []) \
-            + sum(map(list, self._in_lib_bams.values()), [])
+                        if lane.reads:
+                            if lane.reads.stats:
+                                value = lane.reads.stats
+                                input_files.add(value)
+                            elif set(lane.reads.files) & _PE_READS:
+                                value = _PE_READS
+                            elif set(lane.reads.files) & _SE_READS:
+                                value = _SE_READS
+                            else:
+                                assert False
+                        else:
+                            value = _BAMS
+                        self._in_raw_read[(sample.name, library.name, lane.name)] = value
 
         Node.__init__(self,
                       description  = "<Summary: %s>" % self._output_file,
@@ -279,15 +294,37 @@ class SummaryTableNode(Node):
 
     @classmethod
     def _stat_read_settings(cls, filename):
-        if filename is None:
-            # FIXME: A better solution is required when adding support pre-trimmed reads ...
-            return {
-                "lib_type"           : ("*", "# SE, PE, or * (for both)"),
-                "seq_reads_se"       : (float("nan"),  "# Total number of single-ended reads"),
-                "seq_trash_se"       : (float("nan"),  "# Total number of trashed reads"),
-                "seq_retained_nts"   : (float("nan"),  "# Total number of NTs in retained reads"),
-                "seq_retained_reads" : (float("nan"),  "# Total number of retained reads")
-                }
+        if isinstance(filename, frozenset):
+            if (filename == _SE_READS):
+                return {
+                    "lib_type"           : ("SE", "# SE, PE, or * (for both)"),
+                    "seq_reads_se"       : (float("nan"),  "# Total number of single-ended reads"),
+                    "seq_trash_se"       : (float("nan"),  "# Total number of trashed reads"),
+                    "seq_retained_nts"   : (float("nan"),  "# Total number of NTs in retained reads"),
+                    "seq_retained_reads" : (float("nan"),  "# Total number of retained reads"),
+                    }
+            elif (filename == _PE_READS):
+                return {
+                    "lib_type"            : ("PE", "# SE, PE, or * (for both)"),
+                    "seq_reads_pairs"     : (float("nan"), "# Total number of reads"),
+                    "seq_trash_pe_1"      : (float("nan"), "# Total number of reads"),
+                    "seq_trash_pe_2"      : (float("nan"), "# Total number of reads"),
+                    "seq_retained_nts"    : (float("nan"), "# Total number of NTs in retained reads"),
+                    "seq_retained_reads"  : (float("nan"), "# Total number of retained reads"),
+                    "seq_collapsed"       : (float("nan"), "# Total number of pairs collapsed into one read"),
+                    }
+            else:
+                return {
+                    "lib_type"           : ("*", "# SE, PE, or * (for both)"),
+                    "seq_reads_se"       : (float("nan"),  "# Total number of single-ended reads"),
+                    "seq_trash_se"       : (float("nan"),  "# Total number of trashed reads"),
+                    "seq_reads_pairs"    : (float("nan"), "# Total number of reads"),
+                    "seq_trash_pe_1"     : (float("nan"), "# Total number of reads"),
+                    "seq_trash_pe_2"     : (float("nan"), "# Total number of reads"),
+                    "seq_retained_nts"   : (float("nan"),  "# Total number of NTs in retained reads"),
+                    "seq_retained_reads" : (float("nan"),  "# Total number of retained reads"),
+                    "seq_collapsed"      : (float("nan"), "# Total number of pairs collapsed into one read"),
+                    }
 
         with open(filename) as settings_file:
             settings = settings_file.read()
