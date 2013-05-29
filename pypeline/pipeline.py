@@ -50,7 +50,7 @@ class Pypeline:
     def run(self, max_running = 1, dry_run = False, terminate_on_error = False, collapse = True, verbose = True):
         try:
             nodegraph = NodeGraph(self._nodes)
-        except nodegraph.NodeGraphError, error:
+        except NodeGraphError, error:
             ui.print_err(error, file = sys.stderr)
             return False
 
