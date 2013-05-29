@@ -102,7 +102,7 @@ def _print_sub_nodes(graph, nodes, collapse, prefix = ""):
     for node in viable_nodes:
         description = "%s%s %s" % (prefix, _get_runable_prefix(graph, node), node)
         if node.subnodes:
-            description += _describe_nodes(graph, node.subnodes, count_meta = True)
+            description += _describe_nodes(graph, node.subnodes)
 
         print_func = _get_print_function(graph, node)
         print_func(description)
@@ -113,7 +113,7 @@ def _print_sub_nodes(graph, nodes, collapse, prefix = ""):
         if node.dependencies:
             if collapse and _collapse_node(graph, node.dependencies):
                 description = "+ %i dependencies hidden ..." \
-                    % _count_dependencies(node.dependencies)
+                    % _count_dependencies(node.dependencies | node.subnodes)
 
                 print_disabled(current_prefix + description)
                 print_disabled(current_prefix)
@@ -129,17 +129,24 @@ def _print_sub_nodes(graph, nodes, collapse, prefix = ""):
 
 
 def _count_dependencies(dependencies):
-    counter = len(dependencies)
-    for node in dependencies:
-        counter += _count_dependencies(node.dependencies)
+    def _do_count_dependencies(dependencies, observed):
+        novel_nodes = (dependencies - observed)
+        observed.update(dependencies)
+        for node in novel_nodes:
+            _do_count_dependencies(node.dependencies | node.subnodes, observed)
+        return observed
 
-    return counter
+    count = 0
+    for node in _do_count_dependencies(set(dependencies), set()):
+        if not isinstance(node, MetaNode):
+            count += 1
+    return count
 
 
-def _describe_nodes(graph, nodes, count_meta = False):
+def _describe_nodes(graph, nodes):
     states = collections.defaultdict(int)
     for node in nodes:
-        if count_meta or not isinstance(node, MetaNode):
+        if not isinstance(node, MetaNode):
             states[graph.get_node_state(node)] += 1
 
     fields = [("running",  states[NodeGraph.RUNNING]),
@@ -152,11 +159,11 @@ def _describe_nodes(graph, nodes, count_meta = False):
             line.append("%i %s" % (value, name))
 
     line.append("%i done of %i tasks" \
-                    % (states[NodeGraph.DONE], 
+                    % (states[NodeGraph.DONE],
                        sum(states.values())))
 
     return ", ".join(line)
-    
+
 
 def _collapse_node(graph, dependencies):
     """Returns true if a node may be collapsed in the dependency graph."""
