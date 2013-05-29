@@ -261,11 +261,23 @@ def parse_config(argv):
     config.targets = set(config.targets)
     targets_by_name = ("targets", "prefixes", "samples", "libraries", "lanes", "mapping", "trimming")
     if (config.list_targets is not None) and (config.list_targets not in targets_by_name):
-        parser.error("ERROR: Invalid value for --list-targets (%s), valid values are '%s'." \
-                     % (repr(config.list_targets), "', '".join(targets_by_name)))
+        ui.print_err("ERROR: Invalid value for --list-targets (%s), valid values are '%s'." \
+                     % (repr(config.list_targets), "', '".join(targets_by_name)), file = sys.stderr)
+        return None
 
     if config.list_output_files and config.list_orphan_files:
-        parser.error("ERROR: Both --list-output-files and --list-orphan-files set!")
+        ui.print_err("ERROR: Both --list-output-files and --list-orphan-files set!", file = sys.stderr)
+        return None
+
+    if not os.path.exists(config.temp_root):
+        try:
+            os.makedirs(config.temp_root)
+        except OSError, e:
+            ui.print_err("ERROR: Could not create temp root:\n\t%s" % (e,), file = sys.stderr)
+            return None
+
+    if not os.access(config.temp_root, os.R_OK | os.W_OK | os.X_OK):
+        ui.print_err("ERROR: Insufficient permissions for temp root: '%s'" % config.temp_root, file = sys.stderr)
         return None
 
     return config, args
