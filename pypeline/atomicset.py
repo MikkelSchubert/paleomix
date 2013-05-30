@@ -43,9 +43,9 @@ class _CommandSet:
 
     def _collect_properties(key):
         def _collector(self):
-            values = []
+            values = set()
             for command in self._commands:
-                values.extend(getattr(command, key))
+                values.update(getattr(command, key))
             return values
         return property(_collector)
 
