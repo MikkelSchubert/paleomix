@@ -113,10 +113,11 @@ class AtomicCmd:
         self._set_cwd = set_cwd
 
         self._files     = self._process_arguments(id(self), command, kwargs)
-        self._file_sets = self._build_files_map(command, kwargs)
+        self._file_sets = self._build_files_map(command, self._files)
 
         # Dry-run, to catch errors early
         self._generate_call(None)
+
 
     def run(self, temp):
         """Runs the given command, saving files in the specified temp folder. To
