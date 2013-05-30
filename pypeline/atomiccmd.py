@@ -184,31 +184,19 @@ class AtomicCmd:
             self._proc = None
 
 
-    @property
-    def executables(self):
-        """Returns a list of executables required for the AtomicCmd."""
-        return self._file_sets["executable"]
+    # Properties, returning filenames from self._file_sets
+    def _property_file_sets(key):
+        def _get_property_files(self):
+            return self._file_sets[key]
+        return property(_get_property_files)
 
-    @property
-    def requirements(self):
-        """Returns a list of callable requirements that must be met
-        before the AtomicCmd can be expected to be runable."""
-        return self._file_sets["requirements"]
-
-    @property
-    def input_files(self):
-        """Returns a list of input files that are required by the AtomicCmd."""
-        return self._file_sets["input"]
-
-    @property
-    def output_files(self):
-        """Checks that the expected output files have been generated."""
-        return self._file_sets["output"]
-
-    @property
-    def auxiliary_files(self):
-        """Checks that the expected output files have been generated."""
-        return self._file_sets["auxiliary"]
+    executables  = _property_file_sets("executable")
+    requirements = _property_file_sets("requirements")
+    input_files     = _property_file_sets("input")
+    output_files    = _property_file_sets("output")
+    auxiliary_files = _property_file_sets("auxiliary")
+    expected_temp_files = _property_file_sets("output_fname")
+    optional_temp_files = _property_file_sets("temporary_fname")
 
 
     def commit(self, temp):
@@ -349,17 +337,25 @@ class AtomicCmd:
 
     @classmethod
     def _build_files_map(cls, command, files):
-        key_map   = {"IN" : "input",  "OUT": "output",  "EXEC" : "executable",
-                     "AUX" : "auxiliary", "CHECK" : "requirements"}
+        key_map   = {"IN"     : "input",
+                     "OUT"    : "output",
+                     "TEMP"   : "temporary_fname",
+                     "EXEC"   : "executable",
+                     "AUX"    : "auxiliary",
+                     "CHECK"  : "requirements"}
         file_sets = dict((key, set()) for key in key_map.itervalues())
 
         file_sets["executable"].add(command[0])
         for (key, filename) in files.iteritems():
-            if not isinstance(filename, types.StringTypes) and not key.startswith("CHECK_"):
-                continue
-            elif not key.startswith("TEMP_"):
-                key = key_map[key.split("_", 1)[0]]
-                file_sets[key].add(filename)
+            if isinstance(filename, types.StringTypes) or key.startswith("CHECK_"):
+                if key.startswith("TEMP_OUT_"):
+                    file_sets["temporary_fname"].add(filename)
+                elif not key.startswith("TEMP_"):
+                    key = key_map[key.split("_", 1)[0]]
+                    file_sets[key].add(filename)
+
+        file_sets["temporary_fname"] = map(os.path.basename, file_sets["temporary_fname"])
+        file_sets["output_fname"]    = map(os.path.basename, file_sets["output"])
 
         return dict(zip(file_sets.keys(), map(frozenset, file_sets.values())))
 

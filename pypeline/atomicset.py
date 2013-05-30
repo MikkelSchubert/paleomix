@@ -54,6 +54,8 @@ class _CommandSet:
     auxiliary_files = _collect_properties("auxiliary_files")
     executables     = _collect_properties("executables")
     requirements    = _collect_properties("requirements")
+    expected_temp_files = _collect_properties("expected_temp_files")
+    optional_temp_files = _collect_properties("optional_temp_files")
 
     def __str__(self):
         return atomicpp.pformat(self)
