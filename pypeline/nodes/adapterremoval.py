@@ -39,7 +39,7 @@ _VERSION_14_CHECK = versions.Requirement(call   = ("AdapterRemoval", "--version"
 VERSION_15 = "1.5+"
 _VERSION_15_CHECK = versions.Requirement(call   = ("AdapterRemoval", "--version"),
                                          search = r"ver. (\d+)\.(\d+)",
-                                         pprint = "{}.{}",
+                                         pprint = "{0}.{1}",
                                          checks = versions.EQ(1, 5))
 
 
