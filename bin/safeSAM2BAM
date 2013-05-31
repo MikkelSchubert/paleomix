@@ -157,8 +157,12 @@ def _to_bam(config, infile):
 
             outfile.write(line)
         else:
-            sys.stderr.write("WARNING: Invalid CIGAR for read '%s': '%s'\n" \
-                             % (fields[0], fields[5]))
+            sys.stderr.write("ERROR: Invalid CIGAR for read '%s':\n%s" \
+                             % (fields[0], line))
+            if proc:
+                proc.stdin.close()
+                proc.terminate()
+            return 1
 
         line = infile.readline()
 
