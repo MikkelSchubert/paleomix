@@ -208,14 +208,7 @@ class AtomicCmd:
 
         self._proc = None
         self._temp = None
-
-        temp_files = self._generate_filenames(self._files, temp)
-        for (key, filename) in temp_files.iteritems():
-            if isinstance(filename, types.StringTypes):
-                if key.startswith("OUT_") and not os.path.exists(filename):
-                    raise CmdError("Command did not create expected output file: " + filename)
-
-        for (key, filename) in temp_files.iteritems():
+        for (key, filename) in self._generate_filenames(self._files, temp).iteritems():
             if isinstance(filename, types.StringTypes):
                 if key.startswith("OUT_"):
                     fileutils.move_file(filename, self._files[key])

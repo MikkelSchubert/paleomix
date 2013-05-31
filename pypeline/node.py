@@ -242,11 +242,25 @@ class CommandNode(Node):
         return_codes = self._command.join()
         if any(return_codes):
             desc = "\n\t".join(str(self._command).split("\n"))
-            raise NodeError("Error(s) running Node:\n\tReturn-codes: %s\n\tTemporary directory: '%s'\n\n\t%s" \
-                             % (return_codes, temp, desc))
+            raise NodeError("Error(s) running Node:\n\tReturn-codes: %s\n\tTemporary directory: %s\n\n\t%s" \
+                             % (return_codes, repr(temp), desc))
 
 
     def _teardown(self, config, temp):
+        required_files = self._command.expected_temp_files
+        optional_files = self._command.optional_temp_files
+
+        required_files_fpaths = (os.path.join(temp, filename) for filename in required_files)
+        missing_files = fileutils.missing_files(required_files_fpaths)
+        if any(missing_files):
+            raise NodeError("Error running Node, required files not created:\n\tTemporary directory: '%s'\n\tRequired files missing from temporary directory:\n\t    - %s" \
+                            % (temp, "\n\t    - ".join(sorted(map(repr, map(os.path.basename, missing_files))))))
+
+        extra_files = set(os.listdir(temp)) - (required_files | optional_files)
+        if any(extra_files):
+            raise NodeError("Error running Node, unexpected files created:\n\tTemporary directory: '%s'\n\tUnexpected files found in temporary directory:\n\t    - %s" \
+                            % (temp, "\n\t    - ".join(sorted(map(repr, map(os.path.basename, extra_files))))))
+
         self._command.commit(temp)
 
         Node._teardown(self, config, temp)
