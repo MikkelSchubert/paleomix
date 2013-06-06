@@ -21,6 +21,7 @@
 # SOFTWARE.
 #
 import sys
+import errno
 import optparse
 import fileinput
 
@@ -50,5 +51,5 @@ if __name__ == '__main__':
             print(vcf)
     except IOError, e:
         # Check for broken pipe (head, less, etc).
-        if e.errno != 32:
+        if e.errno != errno.EPIPE:
             raise
