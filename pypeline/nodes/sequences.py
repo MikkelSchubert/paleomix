@@ -58,7 +58,10 @@ class CollectSequencesNode(Node):
     def _run(self, _config, temp):
         fastas = {}
         for (name, filename) in self._infiles.iteritems():
-            fastas[name] = dict(read_fasta(filename))
+            current_fastas = {}
+            for ((name, _meta), sequence) in read_fasta(filename):
+                current_fastas[name] = sequence
+            fastas[name] = current_fastas
         fastas = list(sorted(fastas.items()))
 
         for (sequence_name, taxa_map) in sorted(self._sequences.iteritems()):
@@ -79,7 +82,7 @@ class CollectSequencesNode(Node):
             filename = sequence + ".fasta"
             infile   = os.path.join(temp, filename)
             outfile  = os.path.join(self._destination, filename)
-        
+
             fileutils.move_file(infile, outfile)
 
 

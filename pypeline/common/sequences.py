@@ -5,8 +5,8 @@
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
-# copies of the Software, and to permit persons to whom the Software is 
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
 # The above copyright notice and this permission notice shall be included in all
@@ -15,35 +15,36 @@
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
 """Various functions relating to DNA sequence manipulation."""
 
-from __future__ import print_function
-
 import itertools
 
- 
+
 # Pairs of complementary bases and ambigious basees
-_COMPL = [ "AT", "CG", 
-           "NN", "RY", 
-           "KM", "SS", 
-           "WW", "BV", 
+_COMPL = [ "AT", "CG",
+           "NN", "RY",
+           "KM", "SS",
+           "WW", "BV",
            "DH", "XX" ]
 _COMPL_TABLE = ["N"] * 256
-for (a, b) in _COMPL :
+for (_a, _b) in _COMPL :
     # Complement both upper/lower-case bases
-    for func in (str.upper, str.lower):
-        _COMPL_TABLE[ord(func(a))] = func(b)
-        _COMPL_TABLE[ord(func(b))] = func(a)
+    for _func in (str.upper, str.lower):
+        _COMPL_TABLE[ord(_func(_a))] = _func(_b)
+        _COMPL_TABLE[ord(_func(_b))] = _func(_a)
 _COMPL_TABLE = "".join(_COMPL_TABLE)
 
 
 
-# Table of nt codes used to encode (ambigious) bases
+# Table of nt codes (IUPAC codes) used to encode (ambigious) bases:
+#   Nomenclature for incompletely specified bases in nucleic acid sequences.
+#   Recommendations 1984. J Biol Chem. 1986 Jan 5;261(1):13-7.
+#   PubMed PMID: 2416744.
 NT_CODES = [
     ["A", "A"],
     ["C", "C"],
@@ -59,13 +60,13 @@ NT_CODES = [
     ["B", "CGT"],
     ["D", "AGT"],
     ["H", "ACT"],
-    ["V", "ACG"], 
+    ["V", "ACG"],
     ["N", "ACGT"]]
 
 _NT_CODES_TABLE = {}
-for (abr, nts) in NT_CODES:
-    _NT_CODES_TABLE[frozenset(nts)] = abr
-    _NT_CODES_TABLE[frozenset(nts + ",")] = abr
+for (_abr, _nts) in NT_CODES:
+    _NT_CODES_TABLE[frozenset(_nts)] = _abr
+    _NT_CODES_TABLE[frozenset(_nts + ",")] = _abr
 
 NT_CODES = dict(NT_CODES)
 
@@ -82,60 +83,67 @@ def reverse_complement(sequence):
 
 
 def encode_genotype(nucleotides):
-    """Parses a string representing a set of (potentially comma-seperated)
-    nucleotides observed at a loci, and returns the corresponding IUPAC code.
-    Does not handle lower-case nucleotides, due to lack of clear criteria for
-    mixed case input. See e.g. http://www.ebi.ac.uk/2can/tutorials/aa.html"""
+    """Parses a string representing a set of nucleotides observed at a loci,
+    and returns the corresponding IUPAC code. Commas are allowed, but are
+    simply ignored if found in the string. Does not handle lower-case
+    nucleotides, due to lack of clear criteria for mixed case input.
+    See e.g. http://www.ebi.ac.uk/2can/tutorials/aa.html"""
     try:
         return _NT_CODES_TABLE[frozenset(nucleotides)]
     except KeyError:
-        raise ValueError("Invalid input for 'encode_genotype': '%s'" % (nucleotides, ))
+        raise ValueError("Invalid input for 'encode_genotype': %s" % (repr(nucleotides), ))
 
 
 
 def count_nts(sequence):
     """Given a nucleotide sequence (str), this function returns
-    the number of each type of nucleotide representable using 
-    IUPAC codes. The sequence must not contain non-IUPAC 
+    the number of each type of nucleotide representable using
+    IUPAC codes. The sequence must not contain non-IUPAC
     nucleotides, or other annotation. IUPAC nucleotides are
     handled in a case-insensitive manner."""
     counts = {}
     sequence = sequence.upper()
     for nucleotide in NT_CODES:
-        counts[nucleotide] = sequence.count(nucleotide)
+        count = sequence.count(nucleotide)
+        if count:
+            counts[nucleotide] = count
 
     if len(sequence) != sum(counts.itervalues()):
-        raise ValueError("Sequence contains non-(IUPAC-)nucleotides.")
-    
+        raise ValueError("Sequence contains non-(IUPAC-)nucleotides: %s" % \
+                         ", ".join(set(sequence) - set(counts)))
+
     return counts
 
 
 def count_gc_diploid(sequence):
     """Given a sequence, this function returns a tuple containing the
     the total number of bases that were G/C, as well as the total number
-    of bases. The sequence is assumed to represent a diploid genome, with 
-    the total number of bases being twice the sequence length, and 
-    hence IUPAC codes representing on of or both of G/C are treated as
-    reflecting both strands. Thus R counts for 1, while S counts for
-    2.
+    of bases. The sequence is assumed to represent a diploid genome, with
+    the total number of bases being twice the sequence length, and
+    hence IUPAC codes representing one of or both of G/C are treated as
+    reflecting both strands. Thus R counts for 1, while S counts for 2.
 
-    The sequence must only contain valid IUPAC codes, and no other 
-    form of annotation. Both uppercase/lowercase G/Cs are counted."""
+    The sequence must only contain valid IUPAC codes, and no other
+    form of annotation. Both uppercase/lowercase G/Cs are counted.
+    Ambigious site (n/N) are not counted, neither in the number of G/C,
+    nor in the total number of bases."""
     total_nts = total_gc = 0
     counts = count_nts(sequence)
     for (code, count) in counts.iteritems():
-        if not count:
-            continue
-
-        code_represents = _NT_CODES[code]
-        if (len(code_represents) > 2) and (code != 'N'):
-            raise ValueError("calculate_gcp assumes diploid genome, nt code for tri-valued SNP observed: " + code)
-        
         value = 0
-        if 'G' in code_represents: 
-            value += 1
-        if 'C' in code_represents: 
-            value += 1
+        if code == "N":
+            continue
+        elif code in "CGcg":
+            value = 2
+        else:
+            code_represents = NT_CODES[code]
+            if (len(code_represents) > 2) and (code != 'N'):
+                raise ValueError("calculate_gcp assumes diploid genome, nt code for tri-valued SNP observed: " + code)
+
+            if 'G' in code_represents:
+                value += 1
+            if 'C' in code_represents:
+                value += 1
 
         total_nts += count * 2
         total_gc += count * value
@@ -145,10 +153,10 @@ def count_gc_diploid(sequence):
 
 def split(sequence, split_by = "123"):
     """Splits a sequence by position, as specified by the 'split_by' parameter. By
-    default, the function will split by codon position, and return a dictionary 
-    containing the keys '1', '2' and '3'. 
+    default, the function will split by codon position, and return a dictionary
+    containing the keys '1', '2' and '3'.
 
-    The 'split_by' parameter may contain any non-zero number of values, which must 
+    The 'split_by' parameter may contain any non-zero number of values, which must
     however be hashable. If a value is specified multiple times, then those positions
     are interleaved (e.g. split_by = "112" returns the first two positions in a codon
     as one sequence, as well as the last positions as one sequence."""

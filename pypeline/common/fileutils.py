@@ -5,8 +5,8 @@
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
-# copies of the Software, and to permit persons to whom the Software is 
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
 # The above copyright notice and this permission notice shall be included in all
@@ -15,14 +15,17 @@
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
 import os
 import uuid
 import shutil
+import errno
+import bz2
+import gzip
 
 from pypeline.common.utilities import safe_coerce_to_tuple
 
@@ -44,7 +47,7 @@ def swap_ext(filename, ext):
     if not ext.startswith("."):
         ext = "." + ext
 
-    return filename + ext    
+    return filename + ext
 
 
 def reroot_path(root, filename):
@@ -53,13 +56,16 @@ def reroot_path(root, filename):
 
 
 def create_temp_dir(root):
-    while True:
-        uuid4 = str(uuid.uuid4())
-        path = os.path.join(root, uuid4)
-    
-        if not os.path.exists(path):
-            os.makedirs(path, mode = 0700)
-            return path
+    """Creates a temporary directory, accessible only by the owner,
+    at the specified location. The folder name is randomly generated,
+    and only the current user has access"""
+    def _generate_path():
+        return os.path.join(root, str(uuid.uuid4()))
+
+    path = _generate_path()
+    while not make_dirs(path, mode = 0700):
+        path = _generate_path()
+    return path
 
 
 def missing_files(filenames):
@@ -70,7 +76,7 @@ def missing_files(filenames):
     for filename in safe_coerce_to_tuple(filenames):
         if not os.path.exists(filename):
             result.append(filename)
-            
+
     return result
 
 
@@ -111,24 +117,68 @@ def missing_executables(filenames):
     for filename in safe_coerce_to_tuple(filenames):
         if not executable_exists(filename):
             result.append(filename)
-            
     return result
 
 
-def make_dirs(directory):
+def make_dirs(directory, mode = 0777):
+    """Wrapper around os.makedirs to make it suitable for using
+    in a multithreaded/multiprocessing enviroment: Unlike the
+    regular function, this wrapper does not throw an exception if
+    the directory already exists, which may happen if another
+    thread/process created the directory during the function call.
+
+    Returns true if a new directory was created, false if it
+    already existed. Other errors result in exceptions."""
+    if not directory:
+        raise ValueError("Empty directory passed to make_dirs()")
+
     try:
-        if directory and not os.path.exists(directory):
-            os.makedirs(directory)
-    except OSError:
-        if not os.path.isdir(directory):
+        os.makedirs(directory, mode = mode)
+        return True
+    except OSError, error:
+        # make_dirs be called by multiple subprocesses at the same time,
+        # so only raise if the actual creation of the folder failed
+        if error.errno != errno.EEXIST:
             raise
+        return False
 
 
 def move_file(source, destination):
-    make_dirs(os.path.dirname(destination))
+    """Wrapper around shutils which ensures that the
+    destination directory exists before moving the file."""
+    dirname = os.path.dirname(destination)
+    if dirname:
+        make_dirs(dirname)
     shutil.move(source, destination)
 
 
 def copy_file(source, destination):
-    make_dirs(os.path.dirname(destination))
+    """Wrapper around shutils which ensures that the
+    destination directory exists before copying the file."""
+    dirname = os.path.dirname(destination)
+    if dirname:
+        make_dirs(dirname)
     shutil.copy(source, destination)
+
+
+
+def open_ro(filename):
+    """Opens a file for reading, transparently handling
+    GZip and BZip2 compressed files. Returns a file handle."""
+    handle = open(filename)
+    try:
+        header = handle.read(2)
+        handle.seek(0)
+
+        if header == "\x1f\x8b":
+            handle.close()
+            # TODO: Re-use handle (fileobj)
+            handle = gzip.open(filename)
+        elif header == "BZ":
+            handle.close()
+            handle = bz2.BZ2File(filename)
+
+        return handle
+    except:
+        handle.close()
+        raise
