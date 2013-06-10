@@ -5,8 +5,8 @@
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
-# copies of the Software, and to permit persons to whom the Software is 
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
 # The above copyright notice and this permission notice shall be included in all
@@ -15,15 +15,32 @@
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from nose.tools import assert_equals
+import os
+import errno
 
-from pypeline.common.fileutils import *
-
+import nose
+from nose.tools import assert_equals, assert_in # pylint: disable=E0611
+from tests.common.utils import with_temp_folder, monkeypatch, set_cwd, \
+     TEST_ROOT
+from pypeline.common.fileutils import \
+     add_postfix, \
+     swap_ext, \
+     reroot_path, \
+     create_temp_dir, \
+     missing_files, \
+     modified_after, \
+     is_executable, \
+     executable_exists, \
+     missing_executables, \
+     make_dirs, \
+     move_file, \
+     copy_file, \
+     open_ro
 
 
 ################################################################################
@@ -85,7 +102,6 @@ def test_swap_ext__multiple__dot_ext_vs_dot_ext():
 ################################################################################
 ## Tests for 'reroot_path'
 
-
 def test_reroot_path__empty_root():
     assert_equals(reroot_path("", "/etc/apt/sources.list"), "sources.list")
 
@@ -125,13 +141,64 @@ def test_reroot_path__rel_rel__w_final_dash():
 
 ################################################################################
 ################################################################################
+## Tests for 'create_temp_dir'
+
+@with_temp_folder
+def test_create_temp_dir__create(temp_folder):
+    tmp_dir_1 = create_temp_dir(temp_folder)
+    tmp_dir_2 = create_temp_dir(temp_folder)
+    assert os.path.exists(tmp_dir_1)
+    assert os.path.exists(tmp_dir_2)
+
+@with_temp_folder
+def test_create_temp_dir__empty(temp_folder):
+    tmp_dir  = create_temp_dir(temp_folder)
+    contents = os.listdir(tmp_dir)
+    assert not contents
+
+@with_temp_folder
+def test_create_temp_dir__permissions(temp_folder):
+    tmp_dir = create_temp_dir(temp_folder)
+    stats   = os.stat(tmp_dir)
+    assert_equals(stats.st_mode & 0777, 0700)
+
+@with_temp_folder
+def test_create_temp_dir__creation_preemted(temp_folder):
+    unwrapped, preempted_once = os.makedirs, []
+    def _wrap_os_makedirs(*args, **kwargs):
+        # Simulate somebody else creating the directory first
+        if not preempted_once:
+            unwrapped(*args, **kwargs)
+            preempted_once.append(True)
+        unwrapped(*args, **kwargs)
+
+    with monkeypatch("os.makedirs", _wrap_os_makedirs):
+        assert not os.listdir(temp_folder)
+        work_dir = create_temp_dir(temp_folder)
+        assert os.path.exists(temp_folder)
+        dirs = os.listdir(temp_folder)
+        assert_equals(len(dirs), 2)
+        assert_in(os.path.basename(work_dir), dirs)
+        assert bool(preempted_once)
+
+@nose.tools.raises(OSError)
+def test_create_temp_dir__permission_denied():
+    def _wrap_os_makedirs(*_args, **_kwargs):
+        raise OSError((errno.EACCES, "Simulated premission denied"))
+
+    with monkeypatch("os.makedirs", _wrap_os_makedirs):
+        create_temp_dir(TEST_ROOT)
+
+
+################################################################################
+################################################################################
 ## Tests for 'missing_files'
 
 def test_missing_files__file_exists():
     assert_equals(missing_files(["tests/data/empty_file_1"]), [])
 
 def test_missing_files__file_doesnt_exist():
-    assert_equals(missing_files(["tests/data/missing_file_1"]), 
+    assert_equals(missing_files(["tests/data/missing_file_1"]),
                  ["tests/data/missing_file_1"])
 
 def test_missing_files__mixed_files():
@@ -228,14 +295,239 @@ def test_missing_executables__mixed():
 
 ################################################################################
 ################################################################################
+## Tests for 'make_dirs'
+
+@with_temp_folder
+def test_make_dirs__create_dir(temp_folder):
+    assert not os.listdir(temp_folder)
+    assert make_dirs(os.path.join(temp_folder, "test123"))
+    assert_equals(os.listdir(temp_folder), ["test123"])
+
+@with_temp_folder
+def test_make_dirs__return_values(temp_folder):
+    assert make_dirs(os.path.join(temp_folder, "test234"))
+    assert not make_dirs(os.path.join(temp_folder, "test234"))
+
+@with_temp_folder
+def test_make_dirs__subdirs_return_values(temp_folder):
+    assert make_dirs(os.path.join(temp_folder, "test"))
+    assert make_dirs(os.path.join(temp_folder, "test", "234"))
+    assert not make_dirs(os.path.join(temp_folder, "test", "234"))
+
+@with_temp_folder
+def test_make_dirs__sub_directories(temp_folder):
+    assert not os.listdir(temp_folder)
+    assert make_dirs(os.path.join(temp_folder, "test", "123"))
+    assert_equals(os.listdir(temp_folder), ["test"])
+    assert_equals(os.listdir(os.path.join(temp_folder, "test")), ["123"])
+
+@with_temp_folder
+def test_make_dirs__permissions(temp_folder):
+    work_dir = os.path.join(temp_folder, "test_1")
+    assert make_dirs(work_dir, mode = 0511)
+    stats   = os.stat(work_dir)
+    assert_equals(oct(stats.st_mode & 0777), oct(0511))
+
+@with_temp_folder
+def test_make_dirs__creation_preemted(temp_folder):
+    unwrapped, preempted_once = os.makedirs, []
+    def _wrap_os_makedirs(*args, **kwargs):
+        # Simulate somebody else creating the directory first
+        if not preempted_once:
+            unwrapped(*args, **kwargs)
+            preempted_once.append(True)
+        unwrapped(*args, **kwargs)
+
+    with monkeypatch("os.makedirs", _wrap_os_makedirs):
+        work_folder = os.path.join(temp_folder, "test")
+        assert not make_dirs(work_folder)
+        assert os.path.exists(work_folder)
+        assert_equals(os.listdir(temp_folder), ["test"])
+        assert bool(preempted_once)
+
+@nose.tools.raises(ValueError)
+def test_make_dirs__empty_directory():
+    make_dirs("")
+
+
+
+
+################################################################################
+################################################################################
 ## Tests for 'move_file'
 
-# TODO
+@with_temp_folder
+def test_move_file__simple_move(temp_folder):
+    file_1 = os.path.join(temp_folder, "file_1")
+    file_2 = os.path.join(temp_folder, "file_2")
+    assert_equals(os.listdir(temp_folder), [])
+    _set_file(file_1, "1")
+    assert_equals(os.listdir(temp_folder), ["file_1"])
+    move_file(file_1, file_2)
+    assert_equals(os.listdir(temp_folder), ["file_2"])
+    assert_equals(_get_file(file_2), "1")
+
+@with_temp_folder
+def test_move_file__simple_move_in_cwd(temp_folder):
+    with set_cwd(temp_folder):
+        assert_equals(os.listdir("."), [])
+        _set_file("file_1", "1")
+        assert_equals(os.listdir("."), ["file_1"])
+        move_file("file_1", "file_2")
+        assert_equals(os.listdir("."), ["file_2"])
+        assert_equals(_get_file("file_2"), "1")
+
+
+@with_temp_folder
+def test_move_file__move_to_existing_folder(temp_folder):
+    assert make_dirs(os.path.join(temp_folder, "src"))
+    assert make_dirs(os.path.join(temp_folder, "dst"))
+    file_1 = os.path.join(temp_folder, "src", "file_1")
+    file_2 = os.path.join(temp_folder, "dst", "file_2")
+    _set_file(file_1, "2")
+    move_file(file_1, file_2)
+    assert_equals(os.listdir(os.path.dirname(file_1)), [])
+    assert_equals(os.listdir(os.path.dirname(file_2)), ["file_2"])
+    assert_equals(_get_file(file_2), "2")
+
+@with_temp_folder
+def test_move_file__move_to_new_folder(temp_folder):
+    assert make_dirs(os.path.join(temp_folder, "src"))
+    file_1 = os.path.join(temp_folder, "src", "file_1")
+    file_2 = os.path.join(temp_folder, "dst", "file_2")
+    _set_file(file_1, "2")
+    move_file(file_1, file_2)
+    assert_equals(os.listdir(os.path.dirname(file_1)), [])
+    assert_equals(os.listdir(os.path.dirname(file_2)), ["file_2"])
+    assert_equals(_get_file(file_2), "2")
+
+@with_temp_folder
+def test_move_file__move_to_different_folder(temp_folder):
+    with set_cwd(temp_folder):
+        _set_file("file_1", "3")
+        move_file("file_1", "dst/file_1")
+        assert_equals(os.listdir("."), ["dst"])
+        assert_equals(os.listdir("dst"), ["file_1"])
+        assert_equals(_get_file("dst/file_1"), "3")
+
+@with_temp_folder
+def test_move_file__overwrite(temp_folder):
+    with set_cwd(temp_folder):
+        _set_file("file_1", "4")
+        _set_file("file_2", "5")
+        move_file("file_1", "file_2")
+        assert_equals(os.listdir("."), ["file_2"])
+        assert_equals(_get_file("file_2"), "4")
+
+
 
 
 ################################################################################
 ################################################################################
 ## Tests for 'copy_file'
 
+@with_temp_folder
+def test_copy_file__simple_copy(temp_folder):
+    file_1 = os.path.join(temp_folder, "file_1")
+    file_2 = os.path.join(temp_folder, "file_2")
+    assert_equals(os.listdir(temp_folder), [])
+    _set_file(file_1, "1")
+    assert_equals(os.listdir(temp_folder), ["file_1"])
+    copy_file(file_1, file_2)
+    assert_equals(set(os.listdir(temp_folder)), set(["file_1", "file_2"]))
+    assert_equals(_get_file(file_1), "1")
+    assert_equals(_get_file(file_2), "1")
 
-# TODO
+@with_temp_folder
+def test_copy_file__simple_copy_in_cwd(temp_folder):
+    with set_cwd(temp_folder):
+        assert_equals(os.listdir("."), [])
+        _set_file("file_1", "1")
+        assert_equals(os.listdir("."), ["file_1"])
+        copy_file("file_1", "file_2")
+        assert_equals(set(os.listdir(".")), set(["file_1", "file_2"]))
+        assert_equals(_get_file("file_1"), "1")
+        assert_equals(_get_file("file_2"), "1")
+
+@with_temp_folder
+def test_copy_file__copy_to_existing_folder(temp_folder):
+    assert make_dirs(os.path.join(temp_folder, "src"))
+    assert make_dirs(os.path.join(temp_folder, "dst"))
+    file_1 = os.path.join(temp_folder, "src", "file_1")
+    file_2 = os.path.join(temp_folder, "dst", "file_2")
+    _set_file(file_1, "2")
+    copy_file(file_1, file_2)
+    assert_equals(os.listdir(os.path.dirname(file_1)), ["file_1"])
+    assert_equals(os.listdir(os.path.dirname(file_2)), ["file_2"])
+    assert_equals(_get_file(file_1), "2")
+    assert_equals(_get_file(file_2), "2")
+
+@with_temp_folder
+def test_copy_file__copy_to_new_folder(temp_folder):
+    assert make_dirs(os.path.join(temp_folder, "src"))
+    file_1 = os.path.join(temp_folder, "src", "file_1")
+    file_2 = os.path.join(temp_folder, "dst", "file_2")
+    _set_file(file_1, "2")
+    copy_file(file_1, file_2)
+    assert_equals(os.listdir(os.path.dirname(file_1)), ["file_1"])
+    assert_equals(os.listdir(os.path.dirname(file_2)), ["file_2"])
+    assert_equals(_get_file(file_1), "2")
+    assert_equals(_get_file(file_2), "2")
+
+@with_temp_folder
+def test_copy_file__copy_to_different_folder(temp_folder):
+    with set_cwd(temp_folder):
+        _set_file("file_1", "3")
+        copy_file("file_1", "dst/file_1")
+        assert_equals(set(os.listdir(".")), set(["file_1", "dst"]))
+        assert_equals(os.listdir("dst"), ["file_1"])
+        assert_equals(_get_file("file_1"), "3")
+        assert_equals(_get_file("dst/file_1"), "3")
+
+@with_temp_folder
+def test_copy_file__overwrite(temp_folder):
+    with set_cwd(temp_folder):
+        _set_file("file_1", "4")
+        _set_file("file_2", "5")
+        copy_file("file_1", "file_2")
+        assert_equals(set(os.listdir(".")), set(["file_1", "file_2"]))
+        assert_equals(_get_file("file_1"), "4")
+        assert_equals(_get_file("file_2"), "4")
+
+
+################################################################################
+################################################################################
+## Tests for 'open'
+
+def test_open_ro__uncompressed():
+    handle = open_ro('tests/data/fasta_file.fasta')
+    try:
+        assert_equals(handle.read(), b'>This_is_FASTA!\nACGTN\n>This_is_ALSO_FASTA!\nCGTNA\n')
+    except:
+        handle.close()
+
+def test_open_ro__gz():
+    handle = open_ro('tests/data/fasta_file.fasta.gz')
+    try:
+        assert_equals(handle.read(), b'>This_is_GZipped_FASTA!\nACGTN\n>This_is_ALSO_GZipped_FASTA!\nCGTNA\n')
+    except:
+        handle.close()
+
+def test_open_ro__bz2():
+    handle = open_ro('tests/data/fasta_file.fasta.bz2')
+    try:
+        assert_equals(handle.read(), b'>This_is_BZ_FASTA!\nCGTNA\n>This_is_ALSO_BZ_FASTA!\nACGTN\n')
+    except:
+        handle.close()
+
+
+
+################################################################################
+################################################################################
+def _set_file(fname, contents):
+    with open(fname, "w") as handle:
+        handle.write(contents)
+
+def _get_file(fname):
+    with open(fname) as handle:
+        return handle.read()
