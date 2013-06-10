@@ -159,10 +159,10 @@ class PE_BWANode(CommandNode):
                              OUT_STDOUT = AtomicCmd.PIPE,
                              TEMP_OUT_SAI = "pair_%i.sai" % iindex,
                              CHECK_BWA = BWA_VERSION)
-            aln.push_positional(prefix)
-            aln.push_positional("%(TEMP_IN_FILE)s")
             aln.set_parameter("-f", "%(TEMP_OUT_SAI)s")
             aln.set_parameter("-t", max(1, threads // 2))
+            aln.push_positional(prefix)
+            aln.push_positional("%(TEMP_IN_FILE)s")
             aln_ins.append(aln_in)
             alns.append(aln)
         aln_in_1, aln_in_2 = aln_ins
@@ -231,11 +231,11 @@ class BWASWNode(CommandNode):
         aln = _BWAParams(("bwa", "bwasw"), prefix,
                          IN_FILE_1  = input_file_1,
                          OUT_STDOUT = AtomicCmd.PIPE)
-        aln.set_parameter(prefix)
-        aln.set_parameter("%(IN_FILE_1)s")
+        aln.push_positional(prefix)
+        aln.push_positional("%(IN_FILE_1)s")
 
         if input_file_2:
-            aln.set_parameter("%(IN_FILE_2)s")
+            aln.push_positional("%(IN_FILE_2)s")
             aln.set_paths("IN_FILE_2", input_file_2)
 
         aln.set_parameter("-t", threads)
