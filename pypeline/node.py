@@ -142,8 +142,7 @@ class Node(object):
         function. Checks that required input files exist, and raises an NodeError if
         this is not the case."""
         if fileutils.missing_executables(self.executables):
-            raise NodeError("Executable(s) does not exist for command: %s" \
-                                % (self._command,))
+            raise NodeError("Executable(s) does not exist for node: %s" % (self,))
         self._check_for_missing_files(self.input_files, "input")
         self._check_for_missing_files(self.auxiliary_files, "auxiliary")
 
