@@ -25,27 +25,33 @@ import sys
 import time
 import shutil
 
-from nose.tools import with_setup
+import nose
+from nose.tools import with_setup, make_decorator
 
 
 EPOCH = time.time()
 TEST_ROOT = "tests/runs/unit_%i/temp/" % (EPOCH,)
 
-
+_COUNTER = 0
 def with_temp_folder(func):
     """Creates a unique temporary folder before running 'func'. The
-    function is is assumed to take a single parameter, representing
-    the path to the newly created folder"""
-    tmp_root = os.path.join(TEST_ROOT, func.__name__)
+    function is is assumed to take at least one parameter, the first
+    of which is assumed to represent the temporary folder."""
+    global _COUNTER
+    tmp_root = os.path.join(TEST_ROOT, "%03i_%s" % (_COUNTER, func.__name__,))
+    _COUNTER += 1
+
     def _setup():
         os.makedirs(tmp_root)
 
     def _teardown():
         shutil.rmtree(tmp_root)
 
-    def _wrapper():
-        return func(tmp_root)
+    @nose.tools.istest
+    def _wrapper(*args, **kwargs):
+        return func(tmp_root, *args, **kwargs)
     _wrapper.__name__ = func.__name__ + "__wrapped_by_with_temp_folder"
+
     return with_setup(_setup, _teardown)(_wrapper)
 
 
