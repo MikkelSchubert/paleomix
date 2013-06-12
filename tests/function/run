@@ -57,13 +57,13 @@ class Config:
 
 def main(argv):
     ui.print_info("Running functional Node tests:")
-    ui.print_info("  - Destination = 'tests/runs/%i' ..." % _EPOCH)
+    ui.print_info("  - Destination = 'tests/runs/func_%i' ..." % _EPOCH)
     ui.print_info()
 
     errors = False
     pipeline = Pypeline(Config)
     for (module, func) in _collect_tests():
-        Config.destination = "tests/runs/%i/%s" % (_EPOCH, module)
+        Config.destination = "tests/runs/func_%i/%s" % (_EPOCH, module)
 
         try:
             ui.print_info("Adding node '%s' ..." % func.__name__)
