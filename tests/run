@@ -1,5 +1,12 @@
 #!/bin/bash
 
+TMP_FOLDER="/tmp/${USER}/pypeline/tests"
+mkdir -p "${TMP_FOLDER}"
+if [ -e "tests/runs" ];
+then
+    ln -sf "${TMP_FOLDER}" tests/runs
+fi
+
 echo "Running unit-tests ..."
 tests/unit/run;
 RESULT_UNIT=$?
