@@ -25,8 +25,7 @@ import errno
 
 import nose
 from nose.tools import assert_equals, assert_in # pylint: disable=E0611
-from tests.common.utils import with_temp_folder, monkeypatch, set_cwd, \
-     TEST_ROOT
+from tests.common.utils import with_temp_folder, monkeypatch, set_cwd
 from pypeline.common.fileutils import \
      add_postfix, \
      swap_ext, \
@@ -95,6 +94,18 @@ def test_swap_ext__multiple__has_ext_vs_dot_ext():
 def test_swap_ext__multiple__dot_ext_vs_dot_ext():
     assert_equals(swap_ext("name.foo.", "."), "name.foo")
 
+
+def test_swap_ext__has_ext_vs_new_ext():
+    assert_equals(swap_ext("name.foo", "bar"), "name.bar")
+
+def test_swap_ext__has_ext_vs_new_dot_ext():
+    assert_equals(swap_ext("name.foo", ".bar"), "name.bar")
+
+def test_swap_ext__empty_ext_vs_new_ext():
+    assert_equals(swap_ext("name", "bar"), "name.bar")
+
+def test_swap_ext__dot_ext_vs_new_dot_ext():
+    assert_equals(swap_ext("name", ".bar"), "name.bar")
 
 
 
@@ -187,7 +198,7 @@ def test_create_temp_dir__permission_denied():
         raise OSError((errno.EACCES, "Simulated premission denied"))
 
     with monkeypatch("os.makedirs", _wrap_os_makedirs):
-        create_temp_dir(TEST_ROOT)
+        create_temp_dir("/tmp")
 
 
 ################################################################################
@@ -499,25 +510,26 @@ def test_copy_file__overwrite(temp_folder):
 ################################################################################
 ## Tests for 'open'
 
+
 def test_open_ro__uncompressed():
     handle = open_ro('tests/data/fasta_file.fasta')
     try:
         assert_equals(handle.read(), b'>This_is_FASTA!\nACGTN\n>This_is_ALSO_FASTA!\nCGTNA\n')
-    except:
+    finally:
         handle.close()
 
 def test_open_ro__gz():
     handle = open_ro('tests/data/fasta_file.fasta.gz')
     try:
         assert_equals(handle.read(), b'>This_is_GZipped_FASTA!\nACGTN\n>This_is_ALSO_GZipped_FASTA!\nCGTNA\n')
-    except:
+    finally:
         handle.close()
 
 def test_open_ro__bz2():
     handle = open_ro('tests/data/fasta_file.fasta.bz2')
     try:
         assert_equals(handle.read(), b'>This_is_BZ_FASTA!\nCGTNA\n>This_is_ALSO_BZ_FASTA!\nACGTN\n')
-    except:
+    finally:
         handle.close()
 
 
