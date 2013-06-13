@@ -61,31 +61,32 @@ def build_region(options, genotype, bed):
 
             sequence[snp.pos - start] = encoded
 
-    for indel in filtered_vcfs:
-        if (indel.alt == ".") or not vcfwrap.is_indel(indel):
-            continue
+    if not options.ignore_indels:
+        for indel in filtered_vcfs:
+            if (indel.alt == ".") or not vcfwrap.is_indel(indel):
+                continue
 
-        genotype = vcfwrap.get_ml_phenotype(indel)
-        if (genotype[0] != genotype[1]):
-            # No way to represent heterozygous indels
-            continue
+            genotype = vcfwrap.get_ml_phenotype(indel)
+            if (genotype[0] != genotype[1]):
+                # No way to represent heterozygous indels
+                continue
 
-        # FIXME: parse_indel only supports a single 'alt' values
-        indel.alt = genotype[0]
-        indel = vcfwrap.parse_indel(indel)
-        if indel.in_reference:
-            del_start = max(indel.pos + 1, bed.start)
-            del_end   = min(indel.pos + 1 + len(indel.what), bed.end)
+            # FIXME: parse_indel only supports a single 'alt' values
+            indel.alt = genotype[0]
+            indel = vcfwrap.parse_indel(indel)
+            if indel.in_reference:
+                del_start = max(indel.pos + 1, bed.start)
+                del_end   = min(indel.pos + 1 + len(indel.what), bed.end)
 
-            if del_start >= del_end:
-                continue # Deletion does not cover any bases of interest
-            elif options.whole_codon_indels_only and ((del_end - del_start) % 3):
-                continue # Non-codon sized overlap with area of interest
+                if del_start >= del_end:
+                    continue # Deletion does not cover any bases of interest
+                elif options.whole_codon_indels_only and ((del_end - del_start) % 3):
+                    continue # Non-codon sized overlap with area of interest
 
-            for position in range(del_start, del_end):
-                sequence[position - start] = ""
-        elif (len(indel.what) % 3 == 0) or not options.whole_codon_indels_only:
-            sequence[indel.pos - start] += indel.what
+                for position in range(del_start, del_end):
+                    sequence[position - start] = ""
+            elif (len(indel.what) % 3 == 0) or not options.whole_codon_indels_only:
+                sequence[indel.pos - start] += indel.what
 
     offset    = bed.start - start
     length    = bed.end - bed.start
@@ -151,6 +152,8 @@ def main(argv, output = sys.stdout):
                       help = "Number of bases to expand intervals, when checking for adjacent indels [%default]")
     parser.add_option("--whole-codon-indels-only", action="store_true", default = False,
                       help = "If true, only indels where (length % 3) == 0 are retained [%default]")
+    parser.add_option("--ignore-indels", action = "store_true", default = False,
+                      help = "Do not include indels generated FASTA sequence [%default].")
 
     (opts, args) = parser.parse_args(argv)
     if args:
