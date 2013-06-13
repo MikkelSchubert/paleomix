@@ -44,10 +44,10 @@ def parse_fasta(lines):
     lines = (line.rstrip() for line in lines)
     for record in split_before(lines, lambda v: v.startswith(">")):
         name = record[0]
-        if not name.startswith(">"):
+        if (not name.startswith(">")) or (len(name) == 1):
             raise ValueError("Unnamed FASTA record")
         elif len(record) == 1:
-            raise ValueError("FASTA record does not contain sequence.")
+            raise ValueError("FASTA record does not contain sequence: " + name[1:])
 
         # Split out any meta information
         name = name[1:].split(None, 1)

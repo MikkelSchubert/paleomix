@@ -116,7 +116,7 @@ def test_parse_msa__duplicate_names():
 def test_parse_msa__mismatched_lengths():
     parse_msa([">seq1", "ACG", ">seq1", "TGAN"])
 
-@nose.tools.raises(MSAError)
+@nose.tools.raises(ValueError)
 def test_parse_msa__empty_name():
     parse_msa([">", "ACG", ">seq1", "TGAN"])
 

@@ -144,6 +144,16 @@ def test_parse_fasta__missing_name__with_others():
     lines = ["ACGT\n", ">Foo\n", "ACGGTA\n"]
     list(parse_fasta(lines))
 
+@nose.tools.raises(ValueError)
+def test_parse_fasta__empty_name__alone():
+    lines = [">\n", "ACGT\n"]
+    list(parse_fasta(lines))
+
+@nose.tools.raises(ValueError)
+def test_parse_fasta__empty_name__with_others():
+    lines = [">\n", "ACGT\n", ">Foo\n", "ACGGTA\n"]
+    list(parse_fasta(lines))
+
 
 
 
