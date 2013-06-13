@@ -65,8 +65,7 @@ class SE_AdapterRemovalNode(CommandNode):
 
                       # Named pipes for output of AdapterRemova
                       TEMP_OUT_LINK_1     = basename + ".truncated",
-                      TEMP_OUT_LINK_2     = basename + ".discarded",
-                      TEMP_OUT_LINK_3     = "uncompressed_input")
+                      TEMP_OUT_LINK_2     = basename + ".discarded")
 
         return {"basename"      : basename,
                 "format"        : output_format,
@@ -140,9 +139,7 @@ class PE_AdapterRemovalNode(CommandNode):
                       # Named pipes for output of AdapterRemoval
                       TEMP_OUT_LINK_PAIR1 = basename + ".pair1.truncated",
                       TEMP_OUT_LINK_PAIR2 = basename + ".pair2.truncated",
-                      TEMP_OUT_LINK_DISC  = basename + ".discarded",
-                      TEMP_OUT_LINK_6     = "uncompressed_input_1",
-                      TEMP_OUT_LINK_7     = "uncompressed_input_2")
+                      TEMP_OUT_LINK_DISC  = basename + ".discarded")
 
         if version == VERSION_15:
             cmd.set_paths(TEMP_OUT_LINK_ALN       = basename + ".collapsed",
