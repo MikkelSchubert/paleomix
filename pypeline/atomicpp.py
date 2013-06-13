@@ -105,11 +105,12 @@ def _build_stderr(atomiccmd, stats, indent, lines):
 
 def _build_cwd(atomiccmd, stats, indent, lines):
     prefix = " " * indent + "CWD     = "
-    if atomiccmd._set_cwd:
-        cwd = atomiccmd._temp or "<Temporary folder>"
-        lines.append("%s'%s'" % (prefix, cwd,))
-    else:
-        lines.append("%s'%s'" % (prefix, os.getcwd()))
+    if atomiccmd._pipes:
+        if atomiccmd._set_cwd:
+            cwd = atomiccmd._temp or "<Temporary folder>"
+            lines.append("%s'%s'" % (prefix, cwd,))
+        else:
+            lines.append("%s'%s'" % (prefix, os.getcwd()))
 
 
 def _pformat(atomiccmd, stats, indent, lines, include_prefix = True):
