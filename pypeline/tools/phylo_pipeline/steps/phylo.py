@@ -34,13 +34,13 @@ from pypeline.nodes.mafft import MetaMAFFTNode
 import common
 
 
-def build_supermatrix(options, settings, destination, intervals, taxa, filtering_postfix, dependencies):
+def build_supermatrix(options, settings, afa_ext, destination, intervals, taxa, filtering_postfix, dependencies):
     input_files = {}
     for interval in intervals.itervalues():
         sequencedir = os.path.join(options.destination, "alignments", interval["Name"] + filtering_postfix)
 
         for sequence in common.collect_sequences(options, interval, taxa):
-            filename = os.path.join(sequencedir, sequence + ".afa")
+            filename = os.path.join(sequencedir, sequence + afa_ext)
             record = {"name" : sequence}
             if interval["Protein coding"]:
                 record["partition_by"] = ("12", "12", "3")
@@ -81,24 +81,26 @@ def _examl_nodes(settings, destination, input_alignment, input_binary, dependenc
 def build_examl_nodes(options, settings, intervals, taxa, filtering, dependencies):
     filtering_postfix = ".filtered" if any(filtering.itervalues()) else ""
     destination = os.path.join(options.destination, "phylogenies", "examl.supermatrix" + filtering_postfix)
+    phylo = settings["Phylogenetic Inference"]
+    afa_ext = ".afa" if settings["MSAlignment"]["Enabled"] else ".fasta"
 
     input_alignment = os.path.join(destination, "alignments.reduced.phy")
     input_partition = os.path.join(destination, "alignments.reduced.partitions")
     input_binary    = os.path.join(destination, "alignments.reduced.binary")
 
-    supermatrix = build_supermatrix(options, settings, destination, intervals, taxa, filtering_postfix, dependencies)
+    supermatrix = build_supermatrix(options, phylo, afa_ext, destination, intervals, taxa, filtering_postfix, dependencies)
     binary      = EXaMLParserNode(input_alignment = input_alignment,
                                   input_partition = input_partition,
                                   output_file     = input_binary,
                                   dependencies    = supermatrix)
 
     replicates = []
-    for replicate_num in range(settings["ExaML"]["Replicates"]):
+    for replicate_num in range(phylo["ExaML"]["Replicates"]):
         replicate_destination = os.path.join(destination, "replicate_%04i" % replicate_num)
-        replicates.append(_examl_nodes(settings, replicate_destination, input_alignment, input_binary, binary))
+        replicates.append(_examl_nodes(phylo, replicate_destination, input_alignment, input_binary, binary))
 
     bootstraps = []
-    for bootstrap_num in range(settings["ExaML"]["Bootstraps"]):
+    for bootstrap_num in range(phylo["ExaML"]["Bootstraps"]):
         bootstrap_destination = os.path.join(destination, "bootstrap_%04i" % bootstrap_num)
         bootstrap_alignment   = os.path.join(bootstrap_destination, "bootstrap.phy")
         bootstrap_binary      = os.path.join(bootstrap_destination, "bootstrap.binary")
@@ -113,29 +115,29 @@ def build_examl_nodes(options, settings, intervals, taxa, filtering, dependencie
                                       output_file     = bootstrap_binary,
                                       dependencies    = bootstrap)
 
-        bootstraps.append(_examl_nodes(settings, bootstrap_destination, bootstrap_alignment, bootstrap_binary, bs_binary))
+        bootstraps.append(_examl_nodes(phylo, bootstrap_destination, bootstrap_alignment, bootstrap_binary, bs_binary))
 
+    dependencies = []
+    if replicates:
+        dependencies.append(MetaNode(description  = "Replicates",
+                                     subnodes     = replicates,
+                                     dependencies = binary))
+    if bootstraps:
+        dependencies.append(MetaNode(description  = "Bootstraps",
+                                     subnodes     = bootstraps,
+                                     dependencies = supermatrix))
 
     return MetaNode(description = "EXaML",
-                    dependencies = (MetaNode(description  = "Bootstraps",
-                                             subnodes     = bootstraps,
-                                             dependencies = supermatrix),
-                                    MetaNode(description  = "Replicates",
-                                             subnodes     = replicates,
-                                             dependencies = binary)))
-
-
-    return bootstraps
+                    dependencies = dependencies)
 
 
 def chain_examl(pipeline, options, makefiles):
     destination = options.destination # Move to makefile
     for makefile in makefiles:
-        settings  = makefile["Phylogenetic Inference"]
         taxa      = makefile["Project"]["Taxa"]
         intervals = makefile["Project"]["Intervals"]
         filtering = makefile["Project"]["Filter Singletons"]
         options.destination = os.path.join(destination, makefile["Project"]["Title"])
 
-        makefile["Nodes"] = build_examl_nodes(options, settings, intervals, taxa, filtering, makefile["Nodes"])
+        makefile["Nodes"] = build_examl_nodes(options, makefile, intervals, taxa, filtering, makefile["Nodes"])
     options.destination = destination

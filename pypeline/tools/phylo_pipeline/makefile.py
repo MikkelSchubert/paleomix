@@ -136,6 +136,7 @@ _DEFAULTS = {
         },
     "Genotyping" : {
         "Default" : "SAMTools",
+        "Indels"  : True,
         "Random" : {
             "Padding"    : 5,
             },
@@ -144,6 +145,7 @@ _DEFAULTS = {
             },
         },
     "MSAlignment" : {
+        "Enabled" : True,
         "Default" : "mafft",
         "MAFFT" : {
             "Algorithm" : "auto",
@@ -151,6 +153,7 @@ _DEFAULTS = {
         },
     "Phylogenetic Inference" : {
         "Default" : "ExaML",
+        "ExcludeGroups" : [],
         "ExaML" : {
             "Bootstraps" : 100,
             "Replicates" : 1,
@@ -185,6 +188,7 @@ _VALIDATION = {
     "Genotyping" : {
         "Padding"    : IsInt,
         "Default" : OneOf("random", "samtools", case_sensitive = False),
+        "Indels"   : IsBoolean,
         AnyOf("MPileup", "BCFTools", "Random") : {
             IsStrWithPrefix("-") : CLI_PARAMETERS,
             },
@@ -195,6 +199,7 @@ _VALIDATION = {
             },
         },
     "MSAlignment" : {
+        "Enabled"   : IsBoolean,
         "Default"   : AnyOf("mafft", case_sensitive = False),
         "MAFFT" : {
             "Algorithm" : AnyOf("auto", "g-ins-i", case_sensitive = False), # TODO

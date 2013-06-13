@@ -24,6 +24,8 @@ import os
 
 from optparse import OptionParser
 import pypeline.tools.phylo_pipeline.makefile
+import pypeline.ui as ui
+
 
 def parse_options(argv, parser = None):
     parser = OptionParser()

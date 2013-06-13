@@ -47,6 +47,9 @@ def build_msa_nodes(options, settings, interval, taxa, filtering, dependencies):
                                       sequences    = sequences,
                                       dependencies = dependencies)
 
+    if not settings["Enabled"]:
+        return fastafiles
+
     afafiles   = MetaMAFFTNode(rootdir      = sequencedir,
                                sequences    = sequences,
                                preset       = settings["MAFFT"]["Algorithm"],

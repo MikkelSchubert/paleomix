@@ -127,6 +127,8 @@ class BuildRegionsNode(CommandNode):
         params.set_parameter("--intervals", "%(IN_INTERVALS)s")
         if interval.get("Protein coding"):
             params.set_parameter("--whole-codon-indels-only")
+        if not interval.get("Indels"):
+            params.set_parameter("--ignore-indels")
 
         return {"command" : params}
 
@@ -271,7 +273,7 @@ def build_genotyping_nodes(options, genotyping, taxa, interval, dependencies):
         if isinstance(max_depth, dict):
             max_depth = max_depth[taxa["Name"]]
         vcffilter.commands["filter"].set_parameter("--max-read-depth", max_depth)
-    if "Mappability" in filter_cfg:
+    if filter_cfg.get("Mappability"):
         vcffilter.commands["filter"].set_parameter("--filter-by-mappability", "%(IN_MAPPABILITY)s")
         vcffilter.commands["filter"].set_paths(IN_MAPPABILITY = filter_cfg["Mappability"])
     vcffilter = vcffilter.build_node()
@@ -315,18 +317,21 @@ def build_sampling_nodes(options, genotyping, taxa, interval, dependencies):
     return (builder,)
 
 
+_FAI_CACHE = {}
 def build_reference_nodes(options, taxa, interval, dependencies):
     prefix = "{Genome}.{Name}".format(**interval)
     reference = os.path.join(options.genomes_root, taxa["Name"] + ".fasta")
     destination = os.path.join(options.destination, "genotypes", "%s.%s.fasta" % (taxa["Name"], prefix))
     intervals = os.path.join(options.intervals_root, prefix + ".bed")
 
-    faidx = FastaIndexNode(infile               = reference,
-                           dependencies         = dependencies)
+    if reference not in _FAI_CACHE:
+        _FAI_CACHE[reference] = FastaIndexNode(infile       = reference,
+                                               dependencies = dependencies)
+
     node  = ExtractReference(reference          = reference,
                              intervals          = intervals,
                              outfile            = destination,
-                             dependencies       = faidx)
+                             dependencies       = _FAI_CACHE[reference])
     return (node,)
 
 
