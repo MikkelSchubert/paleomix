@@ -5,8 +5,8 @@
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
-# copies of the Software, and to permit persons to whom the Software is 
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
 # The above copyright notice and this permission notice shall be included in all
@@ -15,12 +15,13 @@
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
 import time
+import collections
 
 import pypeline.atomicpp as atomicpp
 
@@ -34,17 +35,16 @@ class _CommandSet:
         if not self._commands:
             raise CmdError("Empty list passed to command set")
 
-    def ready(self):
-        return all(cmd.ready() for cmd in self._commands)
+        self._validate_commands()
 
     def commit(self, temp):
         for command in self._commands:
             command.commit(temp)
 
-    def _collect_properties(key):
+    def _collect_properties(key): # pylint: disable=E0213
         def _collector(self):
             values = set()
-            for command in self._commands:
+            for command in self._commands: # pylint: disable=W0212
                 values.update(getattr(command, key))
             return values
         return property(_collector)
@@ -57,10 +57,33 @@ class _CommandSet:
     expected_temp_files = _collect_properties("expected_temp_files")
     optional_temp_files = _collect_properties("optional_temp_files")
 
+    @property
+    def stdout(self):
+        raise CmdError("%s does not implement property 'stdout'!" \
+                       % (self.__class__.__name__,))
+
+    def terminate(self):
+        for command in self._commands:
+            command.terminate()
+
     def __str__(self):
         return atomicpp.pformat(self)
 
+    def _validate_commands(self):
+        if len(self._commands) != len(set(self._commands)):
+            raise ValueError("Same command included multiple times in %s" \
+                             % (self.__class__.__name__,))
 
+        filenames = collections.defaultdict(int)
+        for command in self._commands:
+            for filename in command.expected_temp_files:
+                filenames[filename] += 1
+            for filename in command.optional_temp_files:
+                filenames[filename] += 1
+
+        clobbered = [filename for (filename, count) in filenames.items() if (count > 1)]
+        if any(clobbered):
+            raise CmdError("Commands clobber each others' files: %s" % (", ".join(clobbered),))
 
 
 class ParallelCmds(_CommandSet):
@@ -69,24 +92,30 @@ class ParallelCmds(_CommandSet):
     when all parts of the pipe have terminated. For example:
     $ dmesg | grep -i segfault | gzip > log.txt.gz
 
-    Note that only AtomicCmds and ParallelCmds are allowed as 
+    In case of any one sub-command failing, the remaining commands are
+    automatically terminated. This is done to ensure that commands waiting
+    on pipes are not left running indefinetly.
+
+    Note that only AtomicCmds and ParallelCmds are allowed as
     sub-commands for this class, since the model requires non-
     blocking commands."""
 
     def __init__(self, commands):
-        _CommandSet.__init__(self, commands)
-
-        for command in self._commands:
-            if not isinstance(command, (AtomicCmd, ParallelCmds)):
-                raise CmdError("ParallelCmds must only contain AtomicCmds or other ParallelCmds!")
         self._joinable = False
 
+        commands = safe_coerce_to_tuple(commands)
+        for command in commands:
+            if not isinstance(command, (AtomicCmd, ParallelCmds)):
+                raise CmdError("ParallelCmds must only contain AtomicCmds or other ParallelCmds!")
+        _CommandSet.__init__(self, commands)
 
     def run(self, temp):
         for command in self._commands:
             command.run(temp)
         self._joinable = True
 
+    def ready(self):
+        return all(cmd.ready() for cmd in self._commands)
 
     def join(self):
         sleep_time = 0.05
@@ -109,11 +138,6 @@ class ParallelCmds(_CommandSet):
         return sum(return_codes, [])
 
 
-    def terminate(self):
-        for command in self._commands:
-            command.terminate()
-
-
 
 
 class SequentialCmds(_CommandSet):
@@ -126,18 +150,20 @@ class SequentialCmds(_CommandSet):
     The list of commands may include any type of command. Note that
     the run function only returns once each sub-command has completed.
     A command is only executed if the previous command in the sequence
-    was succesfully completed."""
+    was succesfully completed, and as a consequence the return codes
+    of a failed SequentialCommand may contain None."""
 
     def __init__(self, commands):
-        _CommandSet.__init__(self, commands)
-
-        for command in self._commands:
-            if not isinstance(command, (AtomicCmd, _CommandSet)):
-                raise CmdError("ParallelCmds must only contain AtomicCmds or other ParallelCmds!")
         self._ready = False
 
+        commands = safe_coerce_to_tuple(commands)
+        for command in commands:
+            if not isinstance(command, (AtomicCmd, _CommandSet)):
+                raise CmdError("ParallelCmds must only contain AtomicCmds or other ParallelCmds!")
+        _CommandSet.__init__(self, commands)
 
     def run(self, temp):
+        self._ready = False
         for command in self._commands:
             command.run(temp)
             if any(command.join()):
@@ -145,10 +171,8 @@ class SequentialCmds(_CommandSet):
 
         self._ready = True
 
-
     def ready(self):
         return self._ready
-
 
     def join(self):
         return_codes = []
