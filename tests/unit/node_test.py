@@ -21,6 +21,7 @@
 # SOFTWARE.
 #
 # pylint: disable=W0212
+# Disable warnings caused by flexmock setups ("X is assigned to nothing")
 # pylint: disable=W0106
 import os
 
@@ -410,7 +411,7 @@ def test_commandnode_teardown__output_exists(temp_folder):
 
 @with_temp_folder
 @nose.tools.raises(NodeError)
-def _test_commandnode_teardown__output_missing(temp_folder):
+def test_commandnode_teardown__output_missing(temp_folder):
     cmd_mock = _build_cmd_mock(output_files = _OUT_FILES)
     cmd_mock.should_receive("commit").once
     node = CommandNode(cmd_mock)
