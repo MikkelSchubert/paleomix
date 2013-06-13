@@ -30,10 +30,6 @@ import traceback
 import pypeline.common.fileutils as fileutils
 from pypeline.common.utilities import safe_coerce_to_frozenset
 
-# Imported from, in order to allow monkeypatching in tests
-# FIXME: Make create_temp_dir a 'with' object
-from os import rmdir
-from pypeline.common.fileutils import create_temp_dir
 
 
 
@@ -120,13 +116,13 @@ class Node(object):
 
         try:
             temp = None
-            temp = create_temp_dir(config.temp_root)
+            temp = fileutils.create_temp_dir(config.temp_root)
 
             self._setup(config, temp)
             self._run(config, temp)
             self._teardown(config, temp)
 
-            rmdir(temp)
+            os.rmdir(temp)
         except NodeError, error:
             self._write_error_log(temp, error)
             raise error

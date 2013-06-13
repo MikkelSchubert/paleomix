@@ -5,8 +5,8 @@
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
-# copies of the Software, and to permit persons to whom the Software is 
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
 # The above copyright notice and this permission notice shall be included in all
@@ -15,98 +15,126 @@
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+# pylint: disable=W0212
+# pylint: disable=W0106
 import os
 
 import nose.tools
+from nose.tools import assert_equal # pylint: disable=E0611
 from flexmock import flexmock
+from tests.common.utils import monkeypatch, with_temp_folder
 
-import pypeline.common.fileutils as fileutils
-import pypeline.node as node_module
 from pypeline.node import Node, MetaNode, CommandNode, NodeError, NodeUnhandledException
 
 
 
-# Monkey-patch create_tmp_dir, to avoid creating a lot of temp folders
-def create_temp_dir(root):
-    assert root == "/tmp"
-    return "/tmp/xTMPx"
-node_module.create_temp_dir = create_temp_dir
+class monkeypatch_tmp_dir:
+    def __init__(self, root = "/tmp", subfolder = "xTMPx", require_rmdir = True):
+        self._mkdir_patch = monkeypatch("pypeline.common.fileutils.create_temp_dir", self._mkdir)
+        self._rmdir_patch = monkeypatch("os.rmdir", self._rmdir)
+        self._root_dir = root
+        self._sub_dir  = subfolder
+        self._mkdir_called = False
+        self._rmdir_called = False
+        self._require_rmdir = require_rmdir
 
-def rmdir(path):
-    assert path == "/tmp/xTMPx"
-node_module.rmdir = rmdir
+    def __enter__(self):
+        self._mkdir_patch.__enter__()
+        self._rmdir_patch.__enter__()
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self._mkdir_patch.__exit__(type, value, traceback)
+        self._rmdir_patch.__exit__(type, value, traceback)
+        assert self._mkdir_called
+        assert self._rmdir_called or not self._require_rmdir
+
+    def _mkdir(self, path):
+        self._mkdir_called = True
+        assert_equal(self._root_dir, path)
+        return os.path.join(self._root_dir, self._sub_dir)
+
+    def _rmdir(self, path):
+        self._rmdir_called = True
+        return assert_equal(os.path.join(self._root_dir, self._sub_dir), path)
 
 
 
 _DESCRIPTION = "My description of a node"
-_IN_FILES    = ("tests/data/empty_file_1", "tests/data/empty_file_2")
-_OUT_FILES   = ("tests/data/missing_out_file_1", "tests/data/missing_out_file_2")
-_EXEC_FILES  = ("ls", "sh")
-_AUX_FILES   = ("tests/data/rCRS.fasta.fai",)
-_REQUIREMENTS = (lambda: None,)
+_IN_FILES    = frozenset(("tests/data/empty_file_1", "tests/data/empty_file_2"))
+_OUT_FILES   = frozenset(("tests/data/missing_out_file_1", "tests/data/missing_out_file_2"))
+_EXEC_FILES  = frozenset(("ls", "sh"))
+_AUX_FILES   = frozenset(("tests/data/rCRS.fasta.fai",))
+_REQUIREMENTS = frozenset((id,))
 
 
-def _build_cmd_mock(input_files  = (), output_files = (), executables  = (), auxiliary_files = (), requirements = ()):
-    return flexmock(input_files     = input_files,
-                    output_files    = output_files,
-                    executables     = executables,
-                    auxiliary_files = auxiliary_files,
-                    requirements    = requirements)
+def _build_cmd_mock(input_files  = (), output_files = (), executables  = (), auxiliary_files = (), requirements = (),
+                    expected_temp_files = (), optional_temp_files = ()):
+    return flexmock(input_files     = frozenset(input_files),
+                    output_files    = frozenset(output_files),
+                    executables     = frozenset(executables),
+                    auxiliary_files = frozenset(auxiliary_files),
+                    requirements    = frozenset(requirements),
+                    expected_temp_files = frozenset(expected_temp_files),
+                    optional_temp_files = frozenset(optional_temp_files))
 
 ################################################################################
 ################################################################################
 ## Node: Constructor tests
 
 def test_constructor__single_input_file():
-    my_node = Node(input_files  = _IN_FILES[0])
-    assert my_node.input_files == _IN_FILES[:1]
+    in_file = iter(_IN_FILES).next()
+    my_node = Node(input_files  = in_file)
+    assert_equal(my_node.input_files, frozenset([in_file]))
 
 def test_constructor__input_files():
     my_node = Node(input_files  = _IN_FILES)
-    assert my_node.input_files == _IN_FILES
+    assert_equal(my_node.input_files, _IN_FILES)
 
 
 
 def test_constructor__single_output_file():
-    my_node = Node(output_files  = _OUT_FILES[0])
-    assert my_node.output_files == _OUT_FILES[:1]
+    out_file = iter(_OUT_FILES).next()
+    my_node = Node(output_files  = out_file)
+    assert_equal(my_node.output_files, frozenset([out_file]))
 
 def test_constructor__output_files():
     my_node = Node(output_files  = _OUT_FILES)
-    assert my_node.output_files == _OUT_FILES
+    assert_equal(my_node.output_files, _OUT_FILES)
 
 
 
 def test_constructor__single_executable():
-    my_node = Node(executables  = _OUT_FILES[0])
-    assert my_node.executables == _OUT_FILES[:1]
+    out_file = iter(_OUT_FILES).next()
+    my_node = Node(executables  = out_file)
+    assert_equal(my_node.executables, frozenset([out_file]))
 
 def test_constructor__executables():
     my_node = Node(executables  = _OUT_FILES)
-    assert my_node.executables == _OUT_FILES
+    assert_equal(my_node.executables, _OUT_FILES)
 
 
 
 def test_constructor__description():
     my_node = Node(description  = _DESCRIPTION)
-    assert str(my_node) == _DESCRIPTION
+    assert_equal(str(my_node), _DESCRIPTION)
 
 
 
 def test_constructor__single_subnode():
     subnode = Node()
     my_node  = Node(subnodes = subnode)
-    assert my_node.subnodes == set([subnode])
+    assert_equal(my_node.subnodes, frozenset([subnode]))
 
 def test_constructor__mult_subnodes():
     subnodes = set([Node(), Node()])
     my_node  = Node(subnodes = subnodes)
-    assert my_node.subnodes == subnodes
+    assert_equal(my_node.subnodes, subnodes)
 
 @nose.tools.raises(TypeError)
 def test_constructor__subnode_not_a_node():
@@ -118,12 +146,12 @@ def test_constructor__subnode_not_a_node():
 def test_constructor__single_dependencies():
     dependencies = Node()
     my_node  = Node(dependencies = dependencies)
-    assert my_node.dependencies == set([dependencies])
+    assert_equal(my_node.dependencies, frozenset([dependencies]))
 
 def test_constructor__mult_dependencies():
     dependencies = set([Node(), Node()])
     my_node  = Node(dependencies = dependencies)
-    assert my_node.dependencies == dependencies
+    assert_equal(my_node.dependencies, dependencies)
 
 @nose.tools.raises(TypeError)
 def test_constructor__dependency_not_a_node():
@@ -208,7 +236,9 @@ def test_run__order():
     node_mock.should_receive("_setup").with_args(cfg_mock, "/tmp/xTMPx").ordered.once
     node_mock.should_receive("_run").with_args(cfg_mock, "/tmp/xTMPx").ordered.once
     node_mock.should_receive("_teardown").with_args(cfg_mock, "/tmp/xTMPx").ordered.once
-    node_mock.run(cfg_mock)
+
+    with monkeypatch_tmp_dir():
+        node_mock.run(cfg_mock) # pylint: disable=E1103
 
 def test_run__temp_dirs():
     paths = []
@@ -220,19 +250,21 @@ def test_run__temp_dirs():
                          _setup    = assert_dir,
                          _run      = assert_dir,
                          _teardown = assert_dir)
-    node_mock.run(cfg_mock)
+
+    with monkeypatch_tmp_dir():
+        node_mock.run(cfg_mock) # pylint: disable=E1103
     assert len(set(paths)) == 1, paths
 
 
 def test_run__exceptions():
     cfg_mock = flexmock(temp_root = "/tmp")
-    
     def build_tests(key, exception, expectation):
         @nose.tools.raises(expectation)
         def test_function():
             node_mock = flexmock(Node())
             node_mock.should_receive(key).and_raise(exception).once
-            node_mock.run(cfg_mock)
+            with monkeypatch_tmp_dir(require_rmdir = False):
+                node_mock.run(cfg_mock) # pylint: disable=E1103
 
         return test_function
 
@@ -261,7 +293,7 @@ def test__setup__output_files_missing():
 
 ################################################################################
 ################################################################################
-## CommandNode: Constructor 
+## CommandNode: Constructor
 
 _SIMPLE_DEPS = Node()
 _SIMPLE_SUBS = Node()
@@ -276,28 +308,28 @@ _SIMPLE_CMD_NODE = CommandNode(command      = _SIMPLE_CMD_MOCK,
                                dependencies = _SIMPLE_DEPS)
 
 def test_commandnode_constructor__description():
-    assert str(_SIMPLE_CMD_NODE) == "SimpleCommand"
+    assert_equal(str(_SIMPLE_CMD_NODE), "SimpleCommand")
 
 def test_commandnode_constructor__input_files():
-    assert _SIMPLE_CMD_NODE.input_files == _IN_FILES
+    assert_equal(_SIMPLE_CMD_NODE.input_files, _IN_FILES)
 
 def test_commandnode_constructor__output_files():
-    assert _SIMPLE_CMD_NODE.output_files == _OUT_FILES
+    assert_equal(_SIMPLE_CMD_NODE.output_files, _OUT_FILES)
 
 def test_commandnode_constructor__auxiliary_files():
-    assert _SIMPLE_CMD_NODE.auxiliary_files == _AUX_FILES
+    assert_equal(_SIMPLE_CMD_NODE.auxiliary_files, _AUX_FILES)
 
 def test_commandnode_constructor__executables():
-    assert _SIMPLE_CMD_NODE.executables == _EXEC_FILES
+    assert_equal(_SIMPLE_CMD_NODE.executables, _EXEC_FILES)
 
 def test_commandnode_constructor__requirements():
-    assert _SIMPLE_CMD_NODE.requirements == _REQUIREMENTS
+    assert_equal(_SIMPLE_CMD_NODE.requirements, _REQUIREMENTS)
 
 def test_commandnode_constructor__subnodes():
-    assert _SIMPLE_CMD_NODE.subnodes == set([_SIMPLE_SUBS])
+    assert_equal(_SIMPLE_CMD_NODE.subnodes, frozenset([_SIMPLE_SUBS]))
 
 def test_commandnode_constructor__dependencies():
-    assert _SIMPLE_CMD_NODE.dependencies == set([_SIMPLE_DEPS])
+    assert_equal(_SIMPLE_CMD_NODE.dependencies, frozenset([_SIMPLE_DEPS]))
 
 
 ################################################################################
@@ -311,8 +343,8 @@ def test_command_node__run():
     node_mock.should_receive("_setup").with_args(cfg_mock, str).ordered.once
     node_mock.should_receive("_run").with_args(cfg_mock, str).ordered.once
     node_mock.should_receive("_teardown").with_args(cfg_mock, str).ordered.once
-    node_mock.run(cfg_mock)
-
+    with monkeypatch_tmp_dir():
+        node_mock.run(cfg_mock) # pylint: disable=E1103
 
 
 ################################################################################
@@ -369,15 +401,17 @@ def test_commandnode_run__exception_on_error():
 ################################################################################
 ## CommandNode: _teardown
 
-def test_commandnode_teardown__output_exists():
+@with_temp_folder
+def test_commandnode_teardown__output_exists(temp_folder):
     cmd_mock = _build_cmd_mock(output_files = _IN_FILES)
     cmd_mock.should_receive("commit").once
     node = CommandNode(cmd_mock)
-    node._teardown(None, None)
+    node._teardown(None, temp_folder)
 
+@with_temp_folder
 @nose.tools.raises(NodeError)
-def test_commandnode_teardown__output_missing():
+def _test_commandnode_teardown__output_missing(temp_folder):
     cmd_mock = _build_cmd_mock(output_files = _OUT_FILES)
     cmd_mock.should_receive("commit").once
     node = CommandNode(cmd_mock)
-    node._teardown(None, None)
+    node._teardown(None, temp_folder)
