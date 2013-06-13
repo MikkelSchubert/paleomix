@@ -33,6 +33,7 @@ from nose.tools import assert_equal, assert_in # pylint: disable=E0611
 from tests.common.utils import with_temp_folder, monkeypatch
 
 import pypeline.atomiccmd
+import pypeline.atomicpp
 from pypeline.common.versions import RequirementObj
 from pypeline.atomiccmd import AtomicCmd, CmdError
 
@@ -619,7 +620,7 @@ def test_atomiccmd__stdout_no_pipe():
 
 def test_atomiccmd__str__():
     cmd = AtomicCmd(("echo", "test"))
-    assert_equal(str(cmd), "<Command = ['echo', 'test']>")
+    assert_equal(pypeline.atomicpp.pformat(cmd), str(cmd))
 
 
 
