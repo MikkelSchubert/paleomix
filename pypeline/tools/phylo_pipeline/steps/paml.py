@@ -72,7 +72,7 @@ class FastaToPAMLPhyNode(Node):
 
 
     def _teardown(self, _config, temp):
-        source_file = fileutils.reroot_path(temp, output_file)
+        source_file = fileutils.reroot_path(temp, self._output_file)
         output_file = self._output_file
         fileutils.move_file(source_file, output_file)
 
@@ -107,6 +107,11 @@ class CodemlNode(CommandNode):
                              dependencies = dependencies)
 
     def _setup(self, _config, temp):
+        def _symlink(filename):
+            os.symlink(os.path.realpath(filename), fileutils.reroot_path(temp, filename))
+        _symlink(self._trees_file)
+        _symlink(self._sequence_file)
+
         self._update_ctl_file(source        = self._control_file,
                               destination   = os.path.join(temp, "template.ctl"),
                               sequence_file = self._sequence_file,
@@ -114,6 +119,11 @@ class CodemlNode(CommandNode):
                               output_prefix = self._output_prefix)
 
     def _teardown(self, config, temp):
+        def _rm_symlink(filename):
+            os.remove(fileutils.reroot_path(temp, filename))
+        _rm_symlink(self._trees_file)
+        _rm_symlink(self._sequence_file)
+
         prefix = os.path.basename(self._output_prefix)
         for filename in ("2NG.dN", "2NG.dS", "2NG.t", "4fold.nuc", "lnf", "rst", "rst1", "rub"):
             src_path = os.path.join(temp, filename)
@@ -132,9 +142,9 @@ class CodemlNode(CommandNode):
 
         # TODO: Check that number of replacements == 1
         # TODO: Do check before running everything!
-        template, count = re.subn(r'(\s*seqfile\s*=).*',  r'\1 ' + os.path.realpath(sequence_file), template)
+        template, count = re.subn(r'(\s*seqfile\s*=).*',  r'\1 ' + os.path.basename(sequence_file), template)
         assert count == 1, count
-        template, count = re.subn(r'(\s*treefile\s*=).*', r'\1 ' + os.path.realpath(trees_file),    template)
+        template, count = re.subn(r'(\s*treefile\s*=).*', r'\1 ' + os.path.basename(trees_file),    template)
         assert count == 1, count
         template, count = re.subn(r'(\s*outfile\s*=).*',  r'\1 ' + os.path.basename(output_file),   template)
         assert count == 1, count
