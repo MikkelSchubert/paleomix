@@ -182,3 +182,17 @@ def open_ro(filename):
     except:
         handle.close()
         raise
+
+
+def try_remove(filename):
+    """Tries to remove a file. Unlike os.remove, the function does not
+    raise an exception if the file does not exist, but does raise
+    exceptions on other errors. The return value reflects whether or
+    not the file was actually removed."""
+    try:
+        os.remove(filename)
+        return True
+    except OSError, error:
+        if error.errno != errno.ENOENT:
+            raise
+        return False

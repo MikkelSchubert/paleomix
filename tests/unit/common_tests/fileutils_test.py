@@ -39,7 +39,8 @@ from pypeline.common.fileutils import \
      make_dirs, \
      move_file, \
      copy_file, \
-     open_ro
+     open_ro, \
+     try_remove
 
 
 ################################################################################
@@ -534,8 +535,34 @@ def test_open_ro__bz2():
 
 
 
+
 ################################################################################
 ################################################################################
+## Tests for 'try_remove'
+
+@with_temp_folder
+def test_try_remove(temp_folder):
+    fpath = os.path.join(temp_folder, "test.txt")
+    _set_file(fpath, "1 2 3")
+    assert try_remove(fpath)
+
+
+@with_temp_folder
+def test_try_remove__missing(temp_folder):
+    fpath = os.path.join(temp_folder, "test.txt")
+    assert not try_remove(fpath)
+
+
+@with_temp_folder
+@nose.tools.raises(OSError)
+def test_try_remove__non_file(temp_folder):
+    try_remove(temp_folder)
+
+
+
+################################################################################
+################################################################################
+# FIXME: Move to utils
 def _set_file(fname, contents):
     with open(fname, "w") as handle:
         handle.write(contents)
