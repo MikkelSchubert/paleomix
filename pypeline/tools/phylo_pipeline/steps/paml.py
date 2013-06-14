@@ -23,19 +23,13 @@
 import os
 import re
 
-from pypeline import Pypeline
 from pypeline.node import Node, MetaNode, CommandNode, NodeError
-from pypeline.nodes.sequences import CollectSequencesNode
-from pypeline.nodes.mafft import MetaMAFFTNode
 from pypeline.atomiccmd import AtomicCmd
-from pypeline.atomicset import ParallelCmds
 
 from pypeline.common.utilities import fragment, safe_coerce_to_tuple
 from pypeline.common.formats.msa import read_msa
 import pypeline.common.fileutils as fileutils
-
-
-import common
+import pypeline.tools.phylo_pipeline.steps.common as common
 
 
 class FastaToPAMLPhyNode(Node):
@@ -94,14 +88,14 @@ class CodemlNode(CommandNode):
                             TEMP_OUT_STDOUT  = "template.stdout",
                             TEMP_OUT_STDERR  = "template.stderr",
                             OUT_CODEML       = output_prefix + ".codeml",
-                            TEMP_OUT_2NG_DN  = output_prefix + ".2NG.dN",
-                            TEMP_OUT_2NG_DS  = output_prefix + ".2NG.dS",
-                            TEMP_OUT_2NG_T   = output_prefix + ".2NG.t",
-                            TEMP_OUT_4FOLD   = output_prefix + ".4fold.nuc",
-                            TEMP_OUT_LNF     = output_prefix + ".lnf",
-                            TEMP_OUT_RST     = output_prefix + ".rst",
-                            TEMP_OUT_RST1    = output_prefix + ".rst1",
-                            TEMP_OUT_RUB     = output_prefix + ".rub",
+                            TEMP_OUT_2NG_DN  = "2NG.dN",
+                            TEMP_OUT_2NG_DS  = "2NG.dS",
+                            TEMP_OUT_2NG_T   = "2NG.t",
+                            TEMP_OUT_4FOLD   = "4fold.nuc",
+                            TEMP_OUT_LNF     = "lnf",
+                            TEMP_OUT_RST     = "rst",
+                            TEMP_OUT_RST1    = "rst1",
+                            TEMP_OUT_RUB     = "rub",
                             IN_STDIN         = "/dev/null", # Prevent promts from blocking
                             set_cwd          = True)
 
@@ -137,18 +131,6 @@ class CodemlNode(CommandNode):
 
             import sys
             sys.stderr.write("WARNING: No resolved nucleotides in " + self._output_prefix + "\n")
-
-
-    def _teardown(self, config, temp):
-        prefix = os.path.basename(self._output_prefix)
-        for filename in ("2NG.dN", "2NG.dS", "2NG.t", "4fold.nuc", "lnf", "rst", "rst1", "rub"):
-            src_path = os.path.join(temp, filename)
-            dst_path = os.path.join(temp, "%s.%s" % (prefix, filename))
-
-            if os.path.exists(src_path):
-                os.rename(src_path, dst_path)
-
-        CommandNode._teardown(self, config, temp)
 
     @classmethod
     def _update_ctl_file(cls, source, destination, sequence_file, trees_file, output_prefix):
@@ -217,7 +199,7 @@ def build_codeml_nodes(options, settings, interval, taxa, filtering, dependencie
 
 
 
-def chain_codeml(pipeline, options, makefiles):
+def chain_codeml(_pipeline, options, makefiles):
     destination = options.destination # Move to makefile
     for makefile in makefiles:
         nodes     = []
@@ -230,16 +212,3 @@ def chain_codeml(pipeline, options, makefiles):
             nodes.append(build_codeml_nodes(options, makefile, interval, taxa, filtering, makefile["Nodes"]))
         makefile["Nodes"] = tuple(nodes)
     options.destination = destination
-
-
-
-if __name__ == '__main__':
-    import sys
-    class config:
-        temp_root = "./temp"
-    
-    node = CodemlNode(control_file  = sys.argv[1],
-                      sequence_file = sys.argv[2],
-                      trees_file    = sys.argv[3],
-                      output_prefix = sys.argv[4])
-    node.run(config)
