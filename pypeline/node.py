@@ -5,8 +5,8 @@
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
-# copies of the Software, and to permit persons to whom the Software is 
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
 # The above copyright notice and this permission notice shall be included in all
@@ -15,9 +15,9 @@
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
 import os
@@ -37,9 +37,9 @@ class NodeError(RuntimeError):
     pass
 
 class NodeUnhandledException(NodeError):
-    """This exception is thrown by Node.run() if a non-NodeError exception 
+    """This exception is thrown by Node.run() if a non-NodeError exception
     is raised in a subfunction (e.g. _setup, _run, or _teardown). The text
-    for this exception will include both the original error message and a 
+    for this exception will include both the original error message and a
     stacktrace for that error."""
     pass
 
@@ -215,7 +215,7 @@ class Node(object):
 class CommandNode(Node):
     def __init__(self, command, description = None, threads = 1,
                  subnodes = (), dependencies = ()):
-        Node.__init__(self, 
+        Node.__init__(self,
                       description  = description,
                       input_files  = command.input_files,
                       output_files = command.output_files,
@@ -229,7 +229,7 @@ class CommandNode(Node):
         self._command = command
 
     def _run(self, _config, temp):
-        """Runs the command object provided in the constructor, and waits for it to 
+        """Runs the command object provided in the constructor, and waits for it to
         terminate. If any errors during the running of the command, this function
         raises a NodeError detailing the returned error-codes."""
         self._command.run(temp)
@@ -244,17 +244,19 @@ class CommandNode(Node):
     def _teardown(self, config, temp):
         required_files = self._command.expected_temp_files
         optional_files = self._command.optional_temp_files
+        current_files  = set(os.listdir(temp))
 
-        required_files_fpaths = (os.path.join(temp, filename) for filename in required_files)
-        missing_files = fileutils.missing_files(required_files_fpaths)
-        if any(missing_files):
-            raise NodeError("Error running Node, required files not created:\n\tTemporary directory: '%s'\n\tRequired files missing from temporary directory:\n\t    - %s" \
-                            % (temp, "\n\t    - ".join(sorted(map(repr, map(os.path.basename, missing_files))))))
+        missing_files = (required_files - current_files)
+        if missing_files:
+            raise NodeError(("Error running Node, required files not created:\n\tTemporary directory: %r\n"
+                             "\tRequired files missing from temporary directory:\n\t    - %s") \
+                             % (temp, "\n\t    - ".join(sorted(map(repr, missing_files)))))
 
-        extra_files = set(os.listdir(temp)) - (required_files | optional_files)
-        if any(extra_files):
-            raise NodeError("Error running Node, unexpected files created:\n\tTemporary directory: '%s'\n\tUnexpected files found in temporary directory:\n\t    - %s" \
-                            % (temp, "\n\t    - ".join(sorted(map(repr, map(os.path.basename, extra_files))))))
+        extra_files = current_files - (required_files | optional_files)
+        if extra_files:
+            raise NodeError("Error running Node, unexpected files created:\n\tTemporary directory: %r"
+                            "\n\tUnexpected files found in temporary directory:\n\t    - %s" \
+                            % (temp, "\n\t    - ".join(sorted(map(repr, extra_files)))))
 
         self._command.commit(temp)
 
@@ -268,7 +270,7 @@ class MetaNode(Node):
     and is marked as done when all its subnodes / dependencies are completed."""
 
     def __init__(self, description = None, subnodes = (), dependencies = ()):
-        Node.__init__(self, 
+        Node.__init__(self,
                       description  = description,
                       subnodes     = subnodes,
                       dependencies = dependencies)

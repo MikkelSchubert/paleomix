@@ -36,9 +36,9 @@ _PIPES = ('IN_STDIN', 'OUT_STDOUT', 'OUT_STDERR')
 _PREFIXES = ('IN_', 'TEMP_IN_', 'OUT_', 'TEMP_OUT_', 'EXEC_', 'AUX_', 'CHECK_')
 
 
-# FIXME:
-#  Only IN_, OUT_ (w/wo TEMP_), and EXEC_ should be used during call construction
-
+# TODL:
+# - Only IN_, OUT_ (w/wo TEMP_), and EXEC_ should be used during call construction
+# - Refactor internals, should be possible to simplify a lot
 
 
 class CmdError(RuntimeError):
@@ -221,16 +221,16 @@ class AtomicCmd:
             raise CmdError("Mismatch between previous and current temp folders: %r != %s" \
                            % (self._temp, temp))
 
-        missing = fileutils.missing_files(os.path.join(temp, fname) for fname in self.expected_temp_files)
-        if any(missing):
-            raise CmdError("Expected files not created: %s" % (", ".join(missing)))
+        missing_files = self.expected_temp_files - set(os.listdir(temp))
+        if missing_files:
+            raise CmdError("Expected files not created: %s" % (", ".join(missing_files)))
 
         for (key, filename) in self._generate_filenames(self._files, temp).iteritems():
             if isinstance(filename, types.StringTypes):
                 if key.startswith("OUT_"):
                     fileutils.move_file(filename, self._files[key])
-                elif key.startswith("TEMP_OUT_") and os.path.exists(filename):
-                    os.remove(filename)
+                elif key.startswith("TEMP_OUT_"):
+                    fileutils.try_remove(filename)
 
         self._proc = None
         self._temp = None

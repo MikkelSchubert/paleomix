@@ -256,6 +256,16 @@ def test_atomiccmd__paths__overlapping_output():
     yield _do_test_atomiccmd__paths__overlapping_output, "OUT_FILE_1", "/foo/bar/outfile", "TEMP_OUT_FILE_1", "outfile"
     yield _do_test_atomiccmd__paths__overlapping_output, "TEMP_OUT_FILE_1", "outfile", "TEMP_OUT_FILE_2", "outfile"
 
+    yield _do_test_atomiccmd__paths__overlapping_output, "OUT_FILE_1", "/foo/bar/outfile", "OUT_STDOUT", "/var/outfile"
+    yield _do_test_atomiccmd__paths__overlapping_output, "TEMP_OUT_FILE_1", "outfile", "OUT_STDOUT", "/var/outfile"
+    yield _do_test_atomiccmd__paths__overlapping_output, "OUT_FILE_1", "/foo/bar/outfile", "TEMP_OUT_STDOUT", "outfile"
+    yield _do_test_atomiccmd__paths__overlapping_output, "TEMP_OUT_FILE_1", "outfile", "TEMP_OUT_STDOUT", "outfile"
+
+    yield _do_test_atomiccmd__paths__overlapping_output, "OUT_FILE_1", "/foo/bar/outfile", "OUT_STDERR", "/var/outfile"
+    yield _do_test_atomiccmd__paths__overlapping_output, "TEMP_OUT_FILE_1", "outfile", "OUT_STDERR", "/var/outfile"
+    yield _do_test_atomiccmd__paths__overlapping_output, "OUT_FILE_1", "/foo/bar/outfile", "TEMP_OUT_STDERR", "outfile"
+    yield _do_test_atomiccmd__paths__overlapping_output, "TEMP_OUT_FILE_1", "outfile", "TEMP_OUT_STDERR", "outfile"
+
 
 # A pipe can be w/wo TEMP_, but not both
 def test_atomiccmd__pipes__duplicates():
@@ -509,7 +519,7 @@ def _setup_for_commit(temp_folder, create_cmd = True):
     if not create_cmd:
         return destination, temp_folder
 
-    cmd = AtomicCmd(("touch", os.path.join(temp_folder, "1234")),
+    cmd = AtomicCmd(("touch", "%(OUT_FOO)s"),
                     OUT_FOO = os.path.join(destination, "1234"))
     cmd.run(temp_folder)
     assert_equal(cmd.join(), [0])
@@ -523,6 +533,29 @@ def test_atomiccmd__commit_simple(temp_folder):
     cmd.commit(temp_folder)
     assert not os.path.exists(os.path.join(temp_folder, "1234"))
     assert os.path.exists(os.path.join(destination, "1234"))
+
+@with_temp_folder
+def test_atomiccmd__commit_temp_out(temp_folder):
+    dest, temp = _setup_for_commit(temp_folder, create_cmd = False)
+    cmd = AtomicCmd(("echo", "foo"),
+                    OUT_STDOUT   = os.path.join(dest, "foo.txt"),
+                    TEMP_OUT_FOO = "bar.txt")
+    cmd.run(temp)
+    assert_equal(cmd.join(), [0])
+    _set_file(os.path.join(temp, "bar.txt"), "1 2 3")
+    cmd.commit(temp)
+    assert_equal(os.listdir(temp), [])
+    assert_equal(os.listdir(dest), ["foo.txt"])
+
+@with_temp_folder
+def test_atomiccmd__commit_temp_only(temp_folder):
+    cmd = AtomicCmd(("echo", "foo"),
+                    TEMP_OUT_STDOUT = "bar.txt")
+    cmd.run(temp_folder)
+    assert_equal(cmd.join(), [0])
+    assert os.path.exists(os.path.join(temp_folder, "bar.txt"))
+    cmd.commit(temp_folder)
+    assert_equal(os.listdir(temp_folder), [])
 
 
 @nose.tools.raises(CmdError)
@@ -570,11 +603,17 @@ def test_atomiccmd__commit_wrong_temp_folder(temp_folder):
 @nose.tools.raises(CmdError)
 def test_atomiccmd__commit_missing_files(temp_folder):
     destination, temp_folder = _setup_for_commit(temp_folder, False)
-    cmd = AtomicCmd("true",
-                    OUT_FOO = os.path.join(destination, "1234"))
+    cmd = AtomicCmd(("touch", "%(OUT_FOO)s"),
+                    OUT_FOO = os.path.join(destination, "1234"),
+                    OUT_BAR = os.path.join(destination, "4567"))
     cmd.run(temp_folder)
     cmd.join()
-    cmd.commit(temp_folder)
+    before = set(os.listdir(temp_folder))
+    try:
+        cmd.commit(temp_folder)
+    except CmdError: # No changes should have been made yet
+        assert before == set(os.listdir(temp_folder))
+        raise
 
 
 
