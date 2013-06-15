@@ -27,10 +27,10 @@ from collections import defaultdict
 
 from pypeline.common.sequences import split
 from pypeline.common.fileutils import open_ro
-from pypeline.common.formats.fasta import parse_fasta, print_fasta
+from pypeline.common.formats.fasta import parse_fasta, print_fasta, FASTAError
 
 
-class MSAError(RuntimeError):
+class MSAError(FASTAError):
     pass
 
 

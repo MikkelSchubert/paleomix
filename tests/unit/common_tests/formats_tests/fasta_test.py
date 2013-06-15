@@ -21,14 +21,14 @@
 # SOFTWARE.
 #
 import StringIO
-import random
 import nose.tools
 from nose.tools import assert_equals # pylint: disable=E0611
 from pypeline.common.formats.fasta import \
      wrap_fasta, \
      print_fasta, \
      parse_fasta, \
-     read_fasta
+     read_fasta, \
+     FASTAError
 
 
 
@@ -116,40 +116,40 @@ def test_parse_fasta__multiple_records():
                 (("Third", None), "CGCTGACCAAAAACGGACAGGGCATTCGGC")]
     assert_list_equals(parse_fasta(lines), expected)
 
-@nose.tools.raises(ValueError)
+@nose.tools.raises(FASTAError)
 def test_parse_fasta__empty_record_name_only__nothing_else():
     list(parse_fasta([">fasta1\n"]))
 
-@nose.tools.raises(ValueError)
+@nose.tools.raises(FASTAError)
 def test_parse_fasta__empty_record_name_only__first():
     list(parse_fasta([">fasta1\n", ">fasta2\n", "AGTC\n"]))
 
-@nose.tools.raises(ValueError)
+@nose.tools.raises(FASTAError)
 def test_parse_fasta__empty_record__middle():
     lines = [">fasta0\n", "ACGT\n", ">fasta1\n", ">fasta2\n", "AGTC\n"]
     list(parse_fasta(lines))
 
-@nose.tools.raises(ValueError)
+@nose.tools.raises(FASTAError)
 def test_parse_empty_record_last():
     lines = [">fasta1\n", "ACGT\n", ">fasta2\n"]
     list(parse_fasta(lines))
 
-@nose.tools.raises(ValueError)
+@nose.tools.raises(FASTAError)
 def test_parse_fasta__missing_name__alone():
     lines = ["ACGT\n"]
     list(parse_fasta(lines))
 
-@nose.tools.raises(ValueError)
+@nose.tools.raises(FASTAError)
 def test_parse_fasta__missing_name__with_others():
     lines = ["ACGT\n", ">Foo\n", "ACGGTA\n"]
     list(parse_fasta(lines))
 
-@nose.tools.raises(ValueError)
+@nose.tools.raises(FASTAError)
 def test_parse_fasta__empty_name__alone():
     lines = [">\n", "ACGT\n"]
     list(parse_fasta(lines))
 
-@nose.tools.raises(ValueError)
+@nose.tools.raises(FASTAError)
 def test_parse_fasta__empty_name__with_others():
     lines = [">\n", "ACGT\n", ">Foo\n", "ACGGTA\n"]
     list(parse_fasta(lines))

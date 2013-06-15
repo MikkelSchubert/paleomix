@@ -24,7 +24,10 @@ import sys
 
 from pypeline.common.utilities import fragment, split_before
 from pypeline.common.fileutils import open_ro
+from pypeline.common.formats._common import FormatError
 
+class FASTAError(FormatError):
+    pass
 
 
 def wrap_fasta(name, sequence):
@@ -45,9 +48,9 @@ def parse_fasta(lines):
     for record in split_before(lines, lambda v: v.startswith(">")):
         name = record[0]
         if (not name.startswith(">")) or (len(name) == 1):
-            raise ValueError("Unnamed FASTA record")
+            raise FASTAError("Unnamed FASTA record")
         elif len(record) == 1:
-            raise ValueError("FASTA record does not contain sequence: " + name[1:])
+            raise FASTAError("FASTA record does not contain sequence: " + name[1:])
 
         # Split out any meta information
         name = name[1:].split(None, 1)

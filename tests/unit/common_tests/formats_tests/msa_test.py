@@ -35,7 +35,8 @@ from pypeline.common.formats.msa import \
      print_msa, \
      write_msa, \
      validate_msa, \
-     MSAError
+     MSAError, \
+     FASTAError
 
 _VALIDATION_PATH = "pypeline.common.formats.msa.validate_msa"
 
@@ -116,7 +117,7 @@ def test_parse_msa__duplicate_names():
 def test_parse_msa__mismatched_lengths():
     parse_msa([">seq1", "ACG", ">seq1", "TGAN"])
 
-@nose.tools.raises(ValueError)
+@nose.tools.raises(FASTAError)
 def test_parse_msa__empty_name():
     parse_msa([">", "ACG", ">seq1", "TGAN"])
 
