@@ -25,30 +25,29 @@ import itertools
 import binascii
 
 
-def safe_coerce_to_tuple(value):
-    """Takes a value which be a single object, or an an iterable and returns the content wrapped in
-    a tuple. In the case of strings, the original string object is returned in a tuple, and not as
-    a tuple of chars."""
-    if isinstance(value, types.StringTypes):
-        return (value,)
+def _safe_coerce(cls):
+    def _do_safe_coerce(value):
+        if isinstance(value, (types.StringTypes, types.DictType)):
+            return cls((value,))
 
-    try:
-        return tuple(value)
-    except TypeError:
-        return (value,)
+        try:
+            return cls(value)
+        except TypeError:
+            return cls((value,))
 
+    _do_safe_coerce.__doc__ = \
+      """Takes a value which be a single object, or an an iterable
+      and returns the content wrapped in a {0}. In the case of strings,
+      and dictionaries the original string object is returned in a {0},
+      and not as a {0} of chars. A TypeError is raised if this is not
+      possible (e.g. dict in frozenset).""".format(cls.__name__)
+    _do_safe_coerce.__name__ = \
+      "safe_coerce_to_{}".format(cls.__name__)
 
-def safe_coerce_to_frozenset(value):
-    """Takes a value which be a single object, or an an iterable and returns the content wrapped in
-    a frozenset. In the case of strings, the original string object is returned in a tuple, and not
-    as a frozenset of chars."""
-    if isinstance(value, types.StringTypes):
-        return frozenset((value,))
+    return _do_safe_coerce
 
-    try:
-        return frozenset(value)
-    except TypeError:
-        return frozenset((value,))
+safe_coerce_to_tuple     = _safe_coerce(tuple)
+safe_coerce_to_frozenset = _safe_coerce(frozenset)
 
 
 def try_cast(value, cast_to):

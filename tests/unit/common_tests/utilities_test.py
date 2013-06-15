@@ -49,6 +49,8 @@ def test_safe_coerce_to_tuple__tuple():
 def test_safe_coerce_to_tuple__iterable():
     assert_equal(utils.safe_coerce_to_tuple(xrange(3)), (0, 1, 2))
 
+def test_safe_coerce_to_tuple__dict():
+    assert_equal(utils.safe_coerce_to_tuple({1 : 2, 3 : 4}), ({1 : 2, 3 : 4},))
 
 
 
@@ -74,6 +76,9 @@ def test_safe_coerce_to_frozenset__tuple():
 def test_safe_coerce_to_frozenset__iterable():
     assert_equal(utils.safe_coerce_to_frozenset(xrange(3)), frozenset((0, 1, 2)))
 
+@nose.tools.raises(TypeError)
+def test_safe_coerce_to_frozenset__dict():
+    utils.safe_coerce_to_frozenset({1 : 2, 3 : 4})
 
 
 
