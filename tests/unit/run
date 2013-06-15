@@ -8,7 +8,8 @@ touch -t "200507070850"  tests/data/timestamp_b_younger | exit 1
 
 MODULES=$(find tests/unit pypeline -name '*.py' | grep -v "__init__" | sed -e 's#\.py##g' -e's#/#.#g')
 nosetests -I ".*_flymake.py" tests/ --with-coverage $@ \
-    --cover-tests \
-    $(for module in $MODULES;do echo --cover-package=$module;done)
+    --cover-tests --cover-branches --cover-inclusive \
+    $(for module in $MODULES;do echo --cover-package=$module;done) \
+#   --cover-html --cover-html-dir=tests/runs/coverage
 
 exit $?
