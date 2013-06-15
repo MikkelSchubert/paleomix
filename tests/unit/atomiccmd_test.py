@@ -27,6 +27,7 @@
 import os
 import types
 import signal
+import weakref
 
 import nose
 from nose.tools import assert_equal, assert_in # pylint: disable=E0611
@@ -595,8 +596,6 @@ def test_atomiccmd__commit_temp_folder(temp_folder):
 def test_atomiccmd__commit_wrong_temp_folder(temp_folder):
     destination, temp_folder, cmd = _setup_for_commit(temp_folder)
     cmd.commit(destination)
-    assert not os.path.exists(os.path.join(temp_folder, "1234"))
-    assert os.path.exists(os.path.join(destination, "1234"))
 
 
 @with_temp_folder
@@ -737,6 +736,21 @@ def test_atomiccmd__cleanup_sigterm(temp_folder):
     assert_equal(sigs_sent.get(cmd_2._proc.pid), signal.SIGTERM)
 
 
+# Ensure that the cleanup function handles weakrefs that have been freed
+def test_atomiccmd__cleanup_sigterm__dead_weakrefs():
+    exit_called = []
+    procs_wrapper = [weakref.ref(lambda: None)]
+    assert_equal(procs_wrapper[0](), None)
+    def _wrap_killpg(_pid, _sig):
+        assert False
+    def _wrap_exit(rc):
+        exit_called.append(rc)
+
+    with monkeypatch("pypeline.atomiccmd._PROCS", procs_wrapper):
+        with monkeypatch("os.killpg", _wrap_killpg):
+            with monkeypatch("sys.exit", _wrap_exit):
+                pypeline.atomiccmd._cleanup_children(signal.SIGTERM, None)
+    assert_equal(exit_called, [-signal.SIGTERM])
 
 
 
