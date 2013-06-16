@@ -118,7 +118,6 @@ def test_atomiccmd__set_cwd__temp_in_out():
 
 # Check that specified paths/etc. are available via getters
 def test_atomiccmd__paths():
-    check_func = lambda: True
     cmd = AtomicCmd("ls",
                     IN_AAA      = "/a/b/c",
                     IN_AAB      = "/x/y/z",
@@ -128,12 +127,12 @@ def test_atomiccmd__paths():
                     TEMP_OUT_A  = "xyb",
                     EXEC_OTHER  = "true",
                     AUX_WAT     = "wat/wat",
-                    CHECK_FUNC  = check_func,
+                    CHECK_FUNC  = bool,
                     OUT_STDERR  = "/var/log/pipe.stderr",
                     TEMP_OUT_STDOUT = "pipe.stdout")
 
     assert_equal(cmd.executables,     frozenset(["ls", "true"]))
-    assert_equal(cmd.requirements,    frozenset([check_func]))
+    assert_equal(cmd.requirements,    frozenset([bool]))
     assert_equal(cmd.input_files,     frozenset(["/a/b/c", "/x/y/z"]))
     assert_equal(cmd.output_files,    frozenset(["/out/foo", "foo/bar", "/var/log/pipe.stderr"]))
     assert_equal(cmd.auxiliary_files, frozenset(["wat/wat"]))
@@ -291,7 +290,7 @@ def test_atomicmcd__exec__reqobj():
     reqobj = RequirementObj(call = ("echo", "version"),
                             search = "version",
                             pprint = "{}",
-                            checks = lambda _value, _pprint: None)
+                            checks = str)
     cmd = AtomicCmd("true",
                     CHECK_VERSION = reqobj)
     assert_equal(cmd.requirements, frozenset([reqobj]))
@@ -308,7 +307,7 @@ def test_atomiccmd__exec__invalid():
     def _test_atomiccmd__exec__invalid(obj):
         AtomicCmd("true", EXEC_FOO = obj)
 
-    yield _test_atomiccmd__exec__invalid, lambda force = False: None
+    yield _test_atomiccmd__exec__invalid, str
     yield _test_atomiccmd__exec__invalid, {}
     yield _test_atomiccmd__exec__invalid, 1
 
@@ -666,25 +665,21 @@ def test_atomiccmd__str__():
 ################################################################################
 ## Cleanup
 
-def _get_proc_ref(proc):
-    for weakref in pypeline.atomiccmd._PROCS:
-        if weakref() == proc:
-            return weakref
-
-
 # Test that the internal list of processes is kept clean of old objects
 def test_atomiccmd__cleanup_proc():
     @with_temp_folder
     def _do_test_atomiccmd__cleanup_proc(temp_folder, func):
+        assert_equal(pypeline.atomiccmd._PROCS, set())
         cmd = AtomicCmd("ls")
         cmd.run(temp_folder)
-        weakref = _get_proc_ref(cmd._proc)
-        assert weakref
+        ref = iter(pypeline.atomiccmd._PROCS).next()
+        assert ref
+        assert_equal(ref(), cmd._proc)
 
         assert_equal(cmd.join(), [0])
         cmd = func(cmd, temp_folder)
 
-        assert weakref not in pypeline.atomiccmd._PROCS
+        assert ref not in pypeline.atomiccmd._PROCS
 
     def _do_commit(cmd, temp_folder):
         # Trigger freeing of proc
@@ -701,14 +696,16 @@ def test_atomiccmd__cleanup_proc():
 @nose.tools.timed(0.1)
 @with_temp_folder
 def test_atomiccmd__cleanup_proc__terminate(temp_folder):
+    assert_equal(pypeline.atomiccmd._PROCS, set())
     cmd = AtomicCmd(("sleep", "10"))
     cmd.run(temp_folder)
-    weakref = _get_proc_ref(cmd._proc)
-    assert weakref
+    ref = iter(pypeline.atomiccmd._PROCS).next()
+    assert ref
+    assert_equal(ref(), cmd._proc)
     cmd.terminate()
     assert not cmd._proc
-    assert not weakref()
-    assert weakref not in pypeline.atomiccmd._PROCS
+    assert not ref()
+    assert ref not in pypeline.atomiccmd._PROCS
 
 
 @with_temp_folder
@@ -739,10 +736,11 @@ def test_atomiccmd__cleanup_sigterm(temp_folder):
 # Ensure that the cleanup function handles weakrefs that have been freed
 def test_atomiccmd__cleanup_sigterm__dead_weakrefs():
     exit_called = []
-    procs_wrapper = [weakref.ref(lambda: None)]
+    procs_wrapper = [weakref.ref(monkeypatch("sys.exit", None))]
+
     assert_equal(procs_wrapper[0](), None)
     def _wrap_killpg(_pid, _sig):
-        assert False
+        assert False # pragma: no coverage
     def _wrap_exit(rc):
         exit_called.append(rc)
 
