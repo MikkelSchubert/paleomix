@@ -29,6 +29,8 @@ import types
 import signal
 import weakref
 
+from flexmock import flexmock
+
 import nose
 from nose.tools import assert_equal, assert_in # pylint: disable=E0611
 from tests.common.utils import with_temp_folder, monkeypatch, \
@@ -718,21 +720,19 @@ def test_atomiccmd__cleanup_sigterm(temp_folder):
         sigs_sent[pid] = sig
     def _wrap_exit(rc):
         exit_called.append(rc)
+    _procs = [flexmock(pid = 7913),
+              # I've got the same combination on my luggage!
+              flexmock(pid = 12345)]
 
     assert not pypeline.atomiccmd._PROCS
-    cmd_1 = AtomicCmd(("sleep", "10"))
-    cmd_2 = AtomicCmd(("sleep", "10"))
-    cmd_1.run(temp_folder)
-    cmd_2.run(temp_folder)
-
-    with monkeypatch("os.killpg", _wrap_killpg):
-        with monkeypatch("sys.exit", _wrap_exit):
-            pypeline.atomiccmd._cleanup_children(signal.SIGTERM, None)
+    with monkeypatch("pypeline.atomiccmd._PROCS", _procs):
+        assert_equal(len(pypeline.atomiccmd._PROCS), 2)
+        with monkeypatch("os.killpg", _wrap_killpg):
+            with monkeypatch("sys.exit", _wrap_exit):
+                pypeline.atomiccmd._cleanup_children(signal.SIGTERM, None)
 
     assert_equal(exit_called, [-signal.SIGTERM])
-    assert_equal(len(pypeline.atomiccmd._PROCS), 2)
-    assert_equal(sigs_sent.get(cmd_1._proc.pid), signal.SIGTERM)
-    assert_equal(sigs_sent.get(cmd_2._proc.pid), signal.SIGTERM)
+    assert_equal(sigs_sent, {7913 : signal.SIGTERM, 12345 : signal.SIGTERM})
 
 
 # Ensure that the cleanup function handles weakrefs that have been freed
