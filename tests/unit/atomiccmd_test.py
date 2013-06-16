@@ -31,7 +31,9 @@ import weakref
 
 import nose
 from nose.tools import assert_equal, assert_in # pylint: disable=E0611
-from tests.common.utils import with_temp_folder, monkeypatch
+from tests.common.utils import with_temp_folder, monkeypatch, \
+     get_file_contents, \
+     set_file_contents
 
 import pypeline.atomiccmd
 import pypeline.atomicpp
@@ -83,7 +85,7 @@ def test_atomiccmd__set_cwd():
         assert_equal(cwd, os.getcwd())
 
         expected = temp_folder if set_cwd else cwd
-        result = _get_file(os.path.join(temp_folder, "result.txt"))
+        result = get_file_contents(os.path.join(temp_folder, "result.txt"))
         assert os.path.samefile(expected, result), "%r != %r" % (expected, result)
 
     yield _do_test_atomiccmd__set_cwd, False
@@ -102,7 +104,7 @@ def test_atomiccmd__set_cwd__temp_in_out():
         assert_equal(cmd.join(), [0])
 
         expected = os.path.join("" if set_cwd else temp_folder, "test_file")
-        result = _get_file(os.path.join(temp_folder, "result.txt"))
+        result = get_file_contents(os.path.join(temp_folder, "result.txt"))
         assert_equal(os.path.abspath(expected), os.path.abspath(result))
 
     yield _do_test_atomiccmd__paths_temp_in, True,  {"TEMP_IN_FOO"  : "test_file"}
@@ -158,7 +160,7 @@ def test_atomiccmd__pipes_stdin(temp_folder):
     assert_equal(cmd.input_files, frozenset([fname]))
     cmd.run(temp_folder)
     assert_equal(cmd.join(), [0])
-    result = _get_file(os.path.join(temp_folder, "result.txt"))
+    result = get_file_contents(os.path.join(temp_folder, "result.txt"))
     assert_equal(result, ">This_is_FASTA!\nACGTN\n>This_is_ALSO_FASTA!\nCGTNA\n")
 
 
@@ -168,10 +170,10 @@ def test_atomiccmd__pipes_stdin__temp_file(temp_folder):
                     TEMP_IN_STDIN  = "infile.fasta",
                     OUT_STDOUT     = "result.txt")
     assert_equal(cmd.input_files, frozenset())
-    _set_file(os.path.join(temp_folder, "infile.fasta"), "a\nbc\nd")
+    set_file_contents(os.path.join(temp_folder, "infile.fasta"), "a\nbc\nd")
     cmd.run(temp_folder)
     assert_equal(cmd.join(), [0])
-    result = _get_file(os.path.join(temp_folder, "infile.fasta"))
+    result = get_file_contents(os.path.join(temp_folder, "infile.fasta"))
     assert_equal(result, "a\nbc\nd")
 
 
@@ -182,8 +184,8 @@ def test_atomiccmd__pipes_out():
         cmd = AtomicCmd(("bash", "-c", "echo -n 'STDERR!' > /dev/stderr; echo -n 'STDOUT!';"), **kwargs)
         cmd.run(temp_folder)
         assert_equal(cmd.join(), [0])
-        result_out = _get_file(os.path.join(temp_folder, stdout.format(id(cmd))))
-        result_err = _get_file(os.path.join(temp_folder, stderr.format(id(cmd))))
+        result_out = get_file_contents(os.path.join(temp_folder, stdout.format(id(cmd))))
+        result_err = get_file_contents(os.path.join(temp_folder, stderr.format(id(cmd))))
         assert_equal(result_out, "STDOUT!")
         assert_equal(result_err, "STDERR!")
 
@@ -364,7 +366,7 @@ def test_atomiccmd__piping(temp_folder):
     cmd_2.run(temp_folder)
     assert_equal(cmd_1.join(), [0])
     assert_equal(cmd_2.join(), [0])
-    result = _get_file(os.path.join(temp_folder, "piped.txt"))
+    result = get_file_contents(os.path.join(temp_folder, "piped.txt"))
     assert_equal(result, "#@!$^")
 
 
@@ -381,7 +383,7 @@ def test_atomiccmd__piping_temp(temp_folder):
     cmd_2.run(temp_folder)
     assert_equal(cmd_1.join(), [0])
     assert_equal(cmd_2.join(), [0])
-    result = _get_file(os.path.join(temp_folder, "piped.txt"))
+    result = get_file_contents(os.path.join(temp_folder, "piped.txt"))
     assert_equal(result, "#@!$^")
 
 # Only STDOUT takes AtomicCmd.PIPE
@@ -542,7 +544,7 @@ def test_atomiccmd__commit_temp_out(temp_folder):
                     TEMP_OUT_FOO = "bar.txt")
     cmd.run(temp)
     assert_equal(cmd.join(), [0])
-    _set_file(os.path.join(temp, "bar.txt"), "1 2 3")
+    set_file_contents(os.path.join(temp, "bar.txt"), "1 2 3")
     cmd.commit(temp)
     assert_equal(os.listdir(temp), [])
     assert_equal(os.listdir(dest), ["foo.txt"])
@@ -750,15 +752,3 @@ def test_atomiccmd__cleanup_sigterm__dead_weakrefs():
                 pypeline.atomiccmd._cleanup_children(signal.SIGTERM, None)
     assert_equal(exit_called, [-signal.SIGTERM])
 
-
-
-################################################################################
-################################################################################
-# FIXME: Move to tests.common.utils
-def _set_file(fname, contents):
-    with open(fname, "w") as handle:
-        handle.write(contents)
-
-def _get_file(fname):
-    with open(fname) as handle:
-        return handle.read()

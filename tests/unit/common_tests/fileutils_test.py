@@ -25,7 +25,12 @@ import errno
 
 import nose
 from nose.tools import assert_equals, assert_in # pylint: disable=E0611
-from tests.common.utils import with_temp_folder, monkeypatch, set_cwd
+
+import pypeline
+from tests.common.utils import with_temp_folder, monkeypatch, set_cwd, \
+     set_file_contents, \
+     get_file_contents
+
 from pypeline.common.fileutils import \
      add_postfix, \
      swap_ext, \
@@ -175,7 +180,7 @@ def test_create_temp_dir__permissions(temp_folder):
     assert_equals(stats.st_mode & 0777, 0700)
 
 @with_temp_folder
-def test_create_temp_dir__creation_preemted(temp_folder):
+def test_create_temp_dir__creation_preempted(temp_folder):
     unwrapped, preempted_once = os.makedirs, []
     def _wrap_os_makedirs(*args, **kwargs):
         # Simulate somebody else creating the directory first
@@ -342,12 +347,11 @@ def test_make_dirs__permissions(temp_folder):
 
 @with_temp_folder
 def test_make_dirs__creation_preemted(temp_folder):
-    unwrapped, preempted_once = os.makedirs, []
+    unwrapped, preempted = os.makedirs, []
     def _wrap_os_makedirs(*args, **kwargs):
         # Simulate somebody else creating the directory first
-        if not preempted_once:
-            unwrapped(*args, **kwargs)
-            preempted_once.append(True)
+        preempted.append(True)
+        unwrapped(*args, **kwargs)
         unwrapped(*args, **kwargs)
 
     with monkeypatch("os.makedirs", _wrap_os_makedirs):
@@ -355,7 +359,7 @@ def test_make_dirs__creation_preemted(temp_folder):
         assert not make_dirs(work_folder)
         assert os.path.exists(work_folder)
         assert_equals(os.listdir(temp_folder), ["test"])
-        assert bool(preempted_once)
+        assert_equals(preempted, [True])
 
 @nose.tools.raises(ValueError)
 def test_make_dirs__empty_directory():
@@ -373,21 +377,21 @@ def test_move_file__simple_move(temp_folder):
     file_1 = os.path.join(temp_folder, "file_1")
     file_2 = os.path.join(temp_folder, "file_2")
     assert_equals(os.listdir(temp_folder), [])
-    _set_file(file_1, "1")
+    set_file_contents(file_1, "1")
     assert_equals(os.listdir(temp_folder), ["file_1"])
     move_file(file_1, file_2)
     assert_equals(os.listdir(temp_folder), ["file_2"])
-    assert_equals(_get_file(file_2), "1")
+    assert_equals(get_file_contents(file_2), "1")
 
 @with_temp_folder
 def test_move_file__simple_move_in_cwd(temp_folder):
     with set_cwd(temp_folder):
         assert_equals(os.listdir("."), [])
-        _set_file("file_1", "1")
+        set_file_contents("file_1", "1")
         assert_equals(os.listdir("."), ["file_1"])
         move_file("file_1", "file_2")
         assert_equals(os.listdir("."), ["file_2"])
-        assert_equals(_get_file("file_2"), "1")
+        assert_equals(get_file_contents("file_2"), "1")
 
 
 @with_temp_folder
@@ -396,40 +400,40 @@ def test_move_file__move_to_existing_folder(temp_folder):
     assert make_dirs(os.path.join(temp_folder, "dst"))
     file_1 = os.path.join(temp_folder, "src", "file_1")
     file_2 = os.path.join(temp_folder, "dst", "file_2")
-    _set_file(file_1, "2")
+    set_file_contents(file_1, "2")
     move_file(file_1, file_2)
     assert_equals(os.listdir(os.path.dirname(file_1)), [])
     assert_equals(os.listdir(os.path.dirname(file_2)), ["file_2"])
-    assert_equals(_get_file(file_2), "2")
+    assert_equals(get_file_contents(file_2), "2")
 
 @with_temp_folder
 def test_move_file__move_to_new_folder(temp_folder):
     assert make_dirs(os.path.join(temp_folder, "src"))
     file_1 = os.path.join(temp_folder, "src", "file_1")
     file_2 = os.path.join(temp_folder, "dst", "file_2")
-    _set_file(file_1, "2")
+    set_file_contents(file_1, "2")
     move_file(file_1, file_2)
     assert_equals(os.listdir(os.path.dirname(file_1)), [])
     assert_equals(os.listdir(os.path.dirname(file_2)), ["file_2"])
-    assert_equals(_get_file(file_2), "2")
+    assert_equals(get_file_contents(file_2), "2")
 
 @with_temp_folder
 def test_move_file__move_to_different_folder(temp_folder):
     with set_cwd(temp_folder):
-        _set_file("file_1", "3")
+        set_file_contents("file_1", "3")
         move_file("file_1", "dst/file_1")
         assert_equals(os.listdir("."), ["dst"])
         assert_equals(os.listdir("dst"), ["file_1"])
-        assert_equals(_get_file("dst/file_1"), "3")
+        assert_equals(get_file_contents("dst/file_1"), "3")
 
 @with_temp_folder
 def test_move_file__overwrite(temp_folder):
     with set_cwd(temp_folder):
-        _set_file("file_1", "4")
-        _set_file("file_2", "5")
+        set_file_contents("file_1", "4")
+        set_file_contents("file_2", "5")
         move_file("file_1", "file_2")
         assert_equals(os.listdir("."), ["file_2"])
-        assert_equals(_get_file("file_2"), "4")
+        assert_equals(get_file_contents("file_2"), "4")
 
 
 
@@ -443,23 +447,23 @@ def test_copy_file__simple_copy(temp_folder):
     file_1 = os.path.join(temp_folder, "file_1")
     file_2 = os.path.join(temp_folder, "file_2")
     assert_equals(os.listdir(temp_folder), [])
-    _set_file(file_1, "1")
+    set_file_contents(file_1, "1")
     assert_equals(os.listdir(temp_folder), ["file_1"])
     copy_file(file_1, file_2)
     assert_equals(set(os.listdir(temp_folder)), set(["file_1", "file_2"]))
-    assert_equals(_get_file(file_1), "1")
-    assert_equals(_get_file(file_2), "1")
+    assert_equals(get_file_contents(file_1), "1")
+    assert_equals(get_file_contents(file_2), "1")
 
 @with_temp_folder
 def test_copy_file__simple_copy_in_cwd(temp_folder):
     with set_cwd(temp_folder):
         assert_equals(os.listdir("."), [])
-        _set_file("file_1", "1")
+        set_file_contents("file_1", "1")
         assert_equals(os.listdir("."), ["file_1"])
         copy_file("file_1", "file_2")
         assert_equals(set(os.listdir(".")), set(["file_1", "file_2"]))
-        assert_equals(_get_file("file_1"), "1")
-        assert_equals(_get_file("file_2"), "1")
+        assert_equals(get_file_contents("file_1"), "1")
+        assert_equals(get_file_contents("file_2"), "1")
 
 @with_temp_folder
 def test_copy_file__copy_to_existing_folder(temp_folder):
@@ -467,44 +471,44 @@ def test_copy_file__copy_to_existing_folder(temp_folder):
     assert make_dirs(os.path.join(temp_folder, "dst"))
     file_1 = os.path.join(temp_folder, "src", "file_1")
     file_2 = os.path.join(temp_folder, "dst", "file_2")
-    _set_file(file_1, "2")
+    set_file_contents(file_1, "2")
     copy_file(file_1, file_2)
     assert_equals(os.listdir(os.path.dirname(file_1)), ["file_1"])
     assert_equals(os.listdir(os.path.dirname(file_2)), ["file_2"])
-    assert_equals(_get_file(file_1), "2")
-    assert_equals(_get_file(file_2), "2")
+    assert_equals(get_file_contents(file_1), "2")
+    assert_equals(get_file_contents(file_2), "2")
 
 @with_temp_folder
 def test_copy_file__copy_to_new_folder(temp_folder):
     assert make_dirs(os.path.join(temp_folder, "src"))
     file_1 = os.path.join(temp_folder, "src", "file_1")
     file_2 = os.path.join(temp_folder, "dst", "file_2")
-    _set_file(file_1, "2")
+    set_file_contents(file_1, "2")
     copy_file(file_1, file_2)
     assert_equals(os.listdir(os.path.dirname(file_1)), ["file_1"])
     assert_equals(os.listdir(os.path.dirname(file_2)), ["file_2"])
-    assert_equals(_get_file(file_1), "2")
-    assert_equals(_get_file(file_2), "2")
+    assert_equals(get_file_contents(file_1), "2")
+    assert_equals(get_file_contents(file_2), "2")
 
 @with_temp_folder
 def test_copy_file__copy_to_different_folder(temp_folder):
     with set_cwd(temp_folder):
-        _set_file("file_1", "3")
+        set_file_contents("file_1", "3")
         copy_file("file_1", "dst/file_1")
         assert_equals(set(os.listdir(".")), set(["file_1", "dst"]))
         assert_equals(os.listdir("dst"), ["file_1"])
-        assert_equals(_get_file("file_1"), "3")
-        assert_equals(_get_file("dst/file_1"), "3")
+        assert_equals(get_file_contents("file_1"), "3")
+        assert_equals(get_file_contents("dst/file_1"), "3")
 
 @with_temp_folder
 def test_copy_file__overwrite(temp_folder):
     with set_cwd(temp_folder):
-        _set_file("file_1", "4")
-        _set_file("file_2", "5")
+        set_file_contents("file_1", "4")
+        set_file_contents("file_2", "5")
         copy_file("file_1", "file_2")
         assert_equals(set(os.listdir(".")), set(["file_1", "file_2"]))
-        assert_equals(_get_file("file_1"), "4")
-        assert_equals(_get_file("file_2"), "4")
+        assert_equals(get_file_contents("file_1"), "4")
+        assert_equals(get_file_contents("file_2"), "4")
 
 
 ################################################################################
@@ -543,7 +547,7 @@ def test_open_ro__bz2():
 @with_temp_folder
 def test_try_remove(temp_folder):
     fpath = os.path.join(temp_folder, "test.txt")
-    _set_file(fpath, "1 2 3")
+    set_file_contents(fpath, "1 2 3")
     assert try_remove(fpath)
 
 
