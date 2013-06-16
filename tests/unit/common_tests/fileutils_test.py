@@ -45,7 +45,8 @@ from pypeline.common.fileutils import \
      move_file, \
      copy_file, \
      open_ro, \
-     try_remove
+     try_remove, \
+     describe_files
 
 
 ################################################################################
@@ -538,6 +539,27 @@ def test_open_ro__bz2():
         handle.close()
 
 
+class OddException(RuntimeError):
+    pass
+
+@nose.tools.raises(OddException)
+def test_open_ro__close_handle_on_error():
+    class _FileMock:
+        def __init__(self, filename):
+            self._close_called = False
+            assert_equals(filename, "/var/abc")
+        def read(self, *_args, **_kwargs):
+            # pylint: disable=R0201
+            raise OddException("ARGH!")
+        def close(self):
+            self._close_called = True
+
+    try:
+        pypeline.common.fileutils.open = _FileMock
+        open_ro("/var/abc")
+    finally:
+        del pypeline.common.fileutils.open
+
 
 
 ################################################################################
@@ -566,11 +588,31 @@ def test_try_remove__non_file(temp_folder):
 
 ################################################################################
 ################################################################################
-# FIXME: Move to utils
-def _set_file(fname, contents):
-    with open(fname, "w") as handle:
-        handle.write(contents)
+## Tests for 'describe_files'
 
-def _get_file(fname):
-    with open(fname) as handle:
-        return handle.read()
+def test_describe_files__no_files():
+    assert_equals(describe_files(()), "No files")
+
+def test_describe_files__single_file():
+    fpath = "/var/foo/bar"
+    assert_equals(describe_files((fpath,)), repr(fpath))
+
+def test_describe_files__same_path_abs():
+    fpaths = ("/var/foo/bar", "/var/foo/foo")
+    assert_equals(describe_files(fpaths), "2 files in '/var/foo'")
+
+def test_describe_files__different_paths_abs():
+    fpaths = ("/var/foo/bar", "/var/bar/foo")
+    assert_equals(describe_files(fpaths), "2 files")
+
+def test_describe_files__same_path_rel():
+    fpaths = ("var/foo/bar", "var/foo/foo")
+    assert_equals(describe_files(fpaths), "2 files in 'var/foo'")
+
+def test_describe_files__different_paths_rel():
+    fpaths = ("var/foo/bar", "var/bar/foo")
+    assert_equals(describe_files(fpaths), "2 files")
+
+def test_describe_files__iterable():
+    fpaths = iter(("/var/foo/bar", "/var/foo/foo"))
+    assert_equals(describe_files(fpaths), "2 files in '/var/foo'")

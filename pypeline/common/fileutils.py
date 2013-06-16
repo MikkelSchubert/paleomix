@@ -196,3 +196,17 @@ def try_remove(filename):
         if error.errno != errno.ENOENT:
             raise
         return False
+
+
+def describe_files(files):
+    """Return a text description of a set of files."""
+    files = safe_coerce_to_tuple(files)
+    if not files:
+        return "No files"
+    elif len(files) == 1:
+        return repr(files[0])
+
+    paths = set(os.path.dirname(filename) for filename in files)
+    if len(paths) == 1:
+        return "%i files in '%s'" % (len(files), paths.pop())
+    return "%i files" % (len(files),)

@@ -25,7 +25,7 @@ import os
 from pypeline.node import CommandNode
 from pypeline.atomiccmd import AtomicCmd
 from pypeline.atomicparams import *
-from pypeline.common.fileutils import swap_ext
+from pypeline.common.fileutils import swap_ext, describe_files
 from pypeline.common.utilities import safe_coerce_to_tuple
 
 
@@ -102,7 +102,7 @@ class MarkDuplicatesNode(CommandNode):
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
-        description =  "<MarkDuplicates: %s>" % (self._desc_files(parameters.input_bams),)
+        description =  "<MarkDuplicates: %s>" % (describe_files(parameters.input_bams),)
         CommandNode.__init__(self, 
                              command      = parameters.command.finalize(),
                              description  = description,

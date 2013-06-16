@@ -27,6 +27,7 @@ from pypeline.atomiccmd import AtomicCmd, CmdError
 from pypeline.atomicset import ParallelCmds
 from pypeline.atomicparams import *
 
+import pypeline.common.fileutils as fileutils
 import pypeline.common.versions as versions
 
 
@@ -88,7 +89,7 @@ class SE_AdapterRemovalNode(CommandNode):
         CommandNode.__init__(self,
                              command      = commands,
                              description  = "<SE_AdapterRM: %s -> '%s.*'>" \
-                                 % (self._desc_files(parameters.input_files),
+                                 % (fileutils.describe_files(parameters.input_files),
                                     parameters.output_prefix),
                              dependencies = parameters.dependencies)
 
@@ -189,7 +190,7 @@ class PE_AdapterRemovalNode(CommandNode):
         commands = ParallelCmds(commands)
 
         description  = "<PE_AdapterRM: %s -> '%s.*'>" \
-            % (self._desc_files(parameters.input_files_1).replace("file", "pair"),
+            % (fileutils.describe_files(parameters.input_files_1).replace("file", "pair"),
                parameters.output_prefix)
 
         CommandNode.__init__(self,

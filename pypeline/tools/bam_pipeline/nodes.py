@@ -30,7 +30,7 @@ from pypeline.atomicparams import AtomicJavaParams
 from pypeline.nodes.picard import ValidateBAMNode, concatenate_input_bams
 from pypeline.nodes.samtools import BAMIndexNode, SAMTOOLS_VERSION
 from pypeline.common.utilities import safe_coerce_to_tuple
-from pypeline.common.fileutils import swap_ext, add_postfix
+from pypeline.common.fileutils import swap_ext, add_postfix, describe_files
 
 import pypeline.common.versions as versions
 
@@ -117,7 +117,7 @@ class FilterCollapsedBAMNode(CommandNode):
                                OUT_STDOUT = output_bam)
 
         command     = ParallelCmds(cat_cmds + [filteruniq])
-        description =  "<FilterCollapsedBAM: %s>" % (self._desc_files(input_bams),)
+        description =  "<FilterCollapsedBAM: %s>" % (describe_files(input_bams),)
         CommandNode.__init__(self,
                              command      = command,
                              description  = description,

@@ -222,17 +222,6 @@ class Node(object):
             raise ValueError("'threads' must be a positive integer, not %i" % (threads,))
         return int(threads)
 
-    @classmethod
-    def _desc_files(cls, files):
-        if len(files) == 1:
-            return "'%s'" % tuple(files)
-        else:
-            paths = set(os.path.dirname(filename) for filename in files)
-            if len(paths) == 1:
-                return "%i file(s) in '%s'" % (len(files), paths.pop())
-            else:
-                return "%i file(s)" % (len(files),)
-
 
 
 

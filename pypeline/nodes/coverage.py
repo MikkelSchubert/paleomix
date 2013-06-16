@@ -30,7 +30,7 @@ import pysam
 from pypeline.node import Node
 from pypeline.common.text import padded_table, parse_padded_table
 from pypeline.common.samwrap import SamfileReader
-from pypeline.common.fileutils import reroot_path, move_file, swap_ext
+from pypeline.common.fileutils import reroot_path, move_file, swap_ext, describe_files
 from pypeline.common.utilities import get_in, set_in, safe_coerce_to_tuple
 from pypeline.common.samwrap import read_tabix_BED
 
@@ -202,7 +202,7 @@ class MergeCoverageNode(Node):
 
         Node.__init__(self,
                       description  = "<MergeCoverage: '%s' -> '%s'>" \
-                          % (self._desc_files(input_files), self._output_file),
+                          % (describe_files(input_files), self._output_file),
                       input_files  = input_files,
                       output_files = self._output_file,
                       dependencies = dependencies)

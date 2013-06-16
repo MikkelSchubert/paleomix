@@ -24,14 +24,13 @@ import os
 import sys
 import datetime
 import subprocess
-import collections
 
 import pysam
 
 from pypeline.node import Node
 from pypeline.atomiccmd import AtomicCmd
 from pypeline.common.text import padded_table
-from pypeline.common.fileutils import reroot_path, move_file, swap_ext
+from pypeline.common.fileutils import reroot_path, move_file, swap_ext, describe_files
 from pypeline.common.utilities import get_in, set_in, safe_coerce_to_tuple
 from pypeline.nodes.picard import concatenate_input_bams
 from pypeline.common.timer import BAMTimer
@@ -65,7 +64,7 @@ class DepthHistogramNode(Node):
 
         Node.__init__(self,
                       description  = "<DepthHistogram: %s -> '%s'>" \
-                        % (self._desc_files(self._input_files),
+                        % (describe_files(self._input_files),
                            self._output_file),
                       input_files  = input_files,
                       output_files = self._output_file,
