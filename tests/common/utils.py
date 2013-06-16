@@ -118,3 +118,13 @@ class set_cwd:
 
     def __exit__(self, _type, _value, _traceback):
         os.chdir(self._old_cwd)
+
+
+
+def set_file_contents(fname, contents):
+    with open(fname, "w") as handle:
+        handle.write(contents)
+
+def get_file_contents(fname):
+    with open(fname) as handle:
+        return handle.read()
