@@ -22,6 +22,7 @@
 #
 import os
 import sys
+import types
 # pickle is used instead of cPickle, because pickle
 # produces more informative errors on failure
 import pickle
@@ -34,6 +35,12 @@ from pypeline.common.utilities import safe_coerce_to_frozenset
 
 
 class NodeError(RuntimeError):
+    pass
+
+class CmdNodeError(NodeError):
+    pass
+
+class MetaNodeError(NodeError):
     pass
 
 class NodeUnhandledException(NodeError):
@@ -55,17 +62,18 @@ class Node(object):
         self.output_files    = safe_coerce_to_frozenset(output_files)
         self.executables     = safe_coerce_to_frozenset(executables)
         self.auxiliary_files = safe_coerce_to_frozenset(auxiliary_files)
-        self.requirements    = safe_coerce_to_frozenset(requirements)
+        self.requirements    = self._validate_requirements(requirements)
 
-        self.threads         = int(threads)
         self.subnodes        = frozenset()
         self.dependencies    = frozenset()
+        self.threads         = self._validate_nthreads(threads)
 
         try:
             # Ensure that the node can be used in a multiprocessing context
             pickle.dumps(self)
-        except pickle.PicklingError, e:
-            raise NodeError("Node could not be pickled, please file a bug-report:\n\tNode: %s\n\tError: %s" % (self, e))
+        except pickle.PicklingError, error:
+            raise NodeError("Node could not be pickled, please file a bug-report:\n"
+                            "\tNode: %s\n\tError: %s" % (self, error))
 
         # Set here to avoid pickle-testing of subnodes / dependencies
         self.subnodes        = self._collect_nodes(subnodes, "Subnode")
@@ -154,7 +162,7 @@ class Node(object):
         description if no description was passed to the constructor."""
         if self.__description:
             return self.__description
-        return "<%s>" % (self.__class__.__name__,)
+        return repr(self)
 
 
     def _write_error_log(self, temp, error):
@@ -197,6 +205,22 @@ class Node(object):
                 % (description, self, "\n\t         ".join(missing_files))
             raise NodeError(message)
 
+    @classmethod
+    def _validate_requirements(cls, requirements):
+        requirements = safe_coerce_to_frozenset(requirements)
+        for requirement in requirements:
+            if not callable(requirement):
+                raise TypeError("'requirements' must be callable, not %r" \
+                    % (type(requirement),))
+        return requirements
+
+    @classmethod
+    def _validate_nthreads(cls, threads):
+        if not isinstance(threads, (types.IntType, types.LongType)):
+            raise TypeError("'threads' must be a positive integer, not %s" % (type(threads),))
+        elif threads < 1:
+            raise ValueError("'threads' must be a positive integer, not %i" % (threads,))
+        return int(threads)
 
     @classmethod
     def _desc_files(cls, files):
@@ -237,8 +261,9 @@ class CommandNode(Node):
         return_codes = self._command.join()
         if any(return_codes):
             desc = "\n\t".join(str(self._command).split("\n"))
-            raise NodeError("Error(s) running Node:\n\tReturn-codes: %s\n\tTemporary directory: %s\n\n\t%s" \
-                             % (return_codes, repr(temp), desc))
+            raise CmdNodeError(("Error(s) running Node:\n\tReturn-codes: %s\n"
+                                "\tTemporary directory: %s\n\n\t%s") \
+                                % (return_codes, repr(temp), desc))
 
 
     def _teardown(self, config, temp):
@@ -248,15 +273,17 @@ class CommandNode(Node):
 
         missing_files = (required_files - current_files)
         if missing_files:
-            raise NodeError(("Error running Node, required files not created:\n\tTemporary directory: %r\n"
-                             "\tRequired files missing from temporary directory:\n\t    - %s") \
-                             % (temp, "\n\t    - ".join(sorted(map(repr, missing_files)))))
+            raise CmdNodeError(("Error running Node, required files not created:\n"
+                               "Temporary directory: %r\n"
+                               "\tRequired files missing from temporary directory:\n\t    - %s") \
+                               % (temp, "\n\t    - ".join(sorted(map(repr, missing_files)))))
 
         extra_files = current_files - (required_files | optional_files)
         if extra_files:
-            raise NodeError("Error running Node, unexpected files created:\n\tTemporary directory: %r"
-                            "\n\tUnexpected files found in temporary directory:\n\t    - %s" \
-                            % (temp, "\n\t    - ".join(sorted(map(repr, extra_files)))))
+            raise CmdNodeError("Error running Node, unexpected files created:\n"
+                               "\tTemporary directory: %r\n"
+                               "\tUnexpected files found in temporary directory:\n\t    - %s" \
+                               % (temp, "\n\t    - ".join(sorted(map(repr, extra_files)))))
 
         self._command.commit(temp)
 
@@ -277,11 +304,11 @@ class MetaNode(Node):
 
     @property
     def is_done(self):
-        raise RuntimeError("Called 'is_done' on MetaNode")
+        raise MetaNodeError("Called 'is_done' on MetaNode")
 
     @property
     def is_outdated(self):
-        raise RuntimeError("Called 'is_outdated' on MetaNode")
+        raise MetaNodeError("Called 'is_outdated' on MetaNode")
 
     def run(self, config):
-        raise RuntimeError("Called 'run' on MetaNode")
+        raise MetaNodeError("Called 'run' on MetaNode")
