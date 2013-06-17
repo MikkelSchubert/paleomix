@@ -112,7 +112,6 @@ class AtomicCmd:
         self._proc    = None
         self._temp    = None
         self._command = map(str, safe_coerce_to_tuple(command))
-        self._pipes   = {}
         self._handles = {}
         self._set_cwd = set_cwd
         if not self._command or not self._command[0]:
@@ -122,7 +121,7 @@ class AtomicCmd:
         self._file_sets = self._build_files_map(self._command, self._files)
 
         # Dry-run, to catch errors early
-        self._generate_call(None)
+        self._generate_call("")
 
 
     def run(self, temp):
@@ -132,7 +131,6 @@ class AtomicCmd:
         if self._handles:
             raise CmdError("Calling 'run' on already running command.")
         self._temp  = temp
-        self._pipes = {}
 
         # kwords for pipes are always built relative to the current directory,
         # since these are opened before (possibly) CD'ing to the temp directory.
@@ -142,7 +140,7 @@ class AtomicCmd:
         stderr = self._open_pipe(kwords, "OUT_STDERR", "wb")
 
         cwd  = temp if self._set_cwd else None
-        temp = None if self._set_cwd else temp
+        temp = ""   if self._set_cwd else os.path.abspath(temp)
         call = self._generate_call(temp)
         self._proc = subprocess.Popen(call,
                                       stdin  = stdin,
@@ -225,6 +223,7 @@ class AtomicCmd:
         if missing_files:
             raise CmdError("Expected files not created: %s" % (", ".join(missing_files)))
 
+        temp = os.path.abspath(temp)
         for (key, filename) in self._generate_filenames(self._files, temp).iteritems():
             if isinstance(filename, types.StringTypes):
                 if key.startswith("OUT_"):
@@ -341,15 +340,12 @@ class AtomicCmd:
 
         handle = open(filename, mode)
         self._handles[pipe] = (mode, handle)
-        self._pipes[pipe] = filename
 
         return handle
 
 
     @classmethod
     def _generate_filenames(cls, files, root):
-        root = os.path.abspath(root) if root else ""
-
         filenames = {"TEMP_DIR" : root}
         for (key, filename) in files.iteritems():
             if isinstance(filename, types.StringTypes):
