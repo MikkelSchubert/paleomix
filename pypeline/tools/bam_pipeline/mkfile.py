@@ -68,9 +68,9 @@ Options:
     BWA:
       # Filter hits with a mapping quality (PHRED) below this value
       MinQuality: 0
-      # Use seed region during sequence alignment
-      # Disabling the seed is recommended for aDNA alignments, as post-mortem damage
-      # tends to localize in the seed region, which is expected to be of high fideltiy
+      # Should be disabled ("no") for aDNA alignments, as post-mortem localizes
+      # to the seed region, which BWA expects to have few errors. Sets "-l".
+      # See Schubert et al. 2012: http://pmid.us/22574660
       UseSeed:    yes
       # Additional command-line options may be specified for the "aln" call(s), as
       # described below for Bowtie2.
