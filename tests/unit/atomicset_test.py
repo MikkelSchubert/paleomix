@@ -205,12 +205,25 @@ def test_parallel_commands__join_after_run(temp_folder):
     cmds.run(temp_folder)
     assert_equal(cmds.join(), [0, 0, 0])
 
+
+
+def _setup_mocks_for_failure(*do_mocks):
+    results = []
+    for do_mock in do_mocks:
+        if do_mock:
+            mock = flexmock(AtomicCmd(("sleep", 10)))
+            mock.should_receive('terminate')
+            mock.should_receive('join')
+        else:
+            mock = AtomicCmd("false")
+        results.append(mock)
+    return results
+
+
 @with_temp_folder
 @nose.tools.timed(0.2)
 def test_parallel_commands__join_failure_1(temp_folder):
-    mocks = [AtomicCmd("false"),
-             AtomicCmd(("sleep", 10)),
-             AtomicCmd(("sleep", 10))]
+    mocks = _setup_mocks_for_failure(False, True, True)
     cmds = ParallelCmds(mocks)
     cmds.run(temp_folder)
     assert_equal(cmds.join(), [1, 'SIGTERM', 'SIGTERM'])
@@ -218,9 +231,7 @@ def test_parallel_commands__join_failure_1(temp_folder):
 @with_temp_folder
 @nose.tools.timed(0.2)
 def test_parallel_commands__join_failure_2(temp_folder):
-    mocks = [AtomicCmd(("sleep", 10)),
-             AtomicCmd("false"),
-             AtomicCmd(("sleep", 10))]
+    mocks = _setup_mocks_for_failure(True, False, True)
     cmds = ParallelCmds(mocks)
     cmds.run(temp_folder)
     assert_equal(cmds.join(), ['SIGTERM', 1, 'SIGTERM'])
@@ -228,9 +239,7 @@ def test_parallel_commands__join_failure_2(temp_folder):
 @with_temp_folder
 @nose.tools.timed(0.2)
 def test_parallel_commands__join_failure_3(temp_folder):
-    mocks = [AtomicCmd(("sleep", 10)),
-             AtomicCmd(("sleep", 10)),
-             AtomicCmd("false")]
+    mocks = _setup_mocks_for_failure(True, True, False)
     cmds = ParallelCmds(mocks)
     cmds.run(temp_folder)
     assert_equal(cmds.join(), ['SIGTERM', 'SIGTERM', 1])
