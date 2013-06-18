@@ -86,7 +86,7 @@ def modified_after(younger, older):
     been modified after any of the files expected to be 'older'."""
     def get_mtimes(filenames):
         for filename in filenames:
-            yield os.path.getmtime(os.path.realpath(filename))
+            yield os.path.getmtime(filename)
 
     younger_time = max(get_mtimes(safe_coerce_to_frozenset(younger)))
     older_time   = min(get_mtimes(safe_coerce_to_frozenset(older)))
