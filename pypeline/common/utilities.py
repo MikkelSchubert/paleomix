@@ -21,6 +21,8 @@
 # SOFTWARE.
 #
 import types
+import pickle
+import cPickle
 import itertools
 import binascii
 
@@ -156,3 +158,16 @@ def cumsum(lst, initial = 0):
     for item in lst:
         initial += item
         yield initial
+
+
+def fast_pickle_test(obj):
+    """Attempts to pickle an object, raising a PicklingError
+    if the object is unpicklable. This function uses cPickle
+    to determine if the object is pickable, but 'pickle' to
+    generate the exception, since the python module produces
+    more informative error messages."""
+    try:
+        cPickle.dumps(obj)
+    except (TypeError, cPickle.PicklingError):
+        pickle.dumps(obj)
+        assert False # pragma: no coverage

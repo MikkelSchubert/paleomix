@@ -164,6 +164,15 @@ def test_constructor__requirements__non_picklable():
     Node(requirements = unpicklable)
 
 
+class _UnpicklableNode(Node):
+    def __init__(self):
+        self.a_property = lambda: None # pragma: no coverage
+        Node.__init__(self)
+
+@nose.tools.raises(NodeError)
+def test_constructor__requirements__non_picklable_property():
+    _UnpicklableNode()
+
 
 
 ################################################################################

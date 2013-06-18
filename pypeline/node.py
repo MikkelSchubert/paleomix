@@ -23,14 +23,13 @@
 import os
 import sys
 import types
-# pickle is used instead of cPickle, because pickle
-# produces more informative errors on failure
 import pickle
 import traceback
 import collections
 
 import pypeline.common.fileutils as fileutils
-from pypeline.common.utilities import safe_coerce_to_frozenset
+from pypeline.common.utilities import safe_coerce_to_frozenset, \
+     fast_pickle_test
 
 
 
@@ -71,7 +70,7 @@ class Node(object):
 
         try:
             # Ensure that the node can be used in a multiprocessing context
-            pickle.dumps(self)
+            fast_pickle_test(self)
         except pickle.PicklingError, error:
             raise NodeError("Node could not be pickled, please file a bug-report:\n"
                             "\tNode: %s\n\tError: %s" % (self, error))

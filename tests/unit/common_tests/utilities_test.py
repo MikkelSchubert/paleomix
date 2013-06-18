@@ -21,6 +21,7 @@
 # SOFTWARE.
 #
 import random
+import pickle
 import nose.tools
 from nose.tools import assert_equal # pylint: disable=E0611
 
@@ -364,4 +365,27 @@ def test_cumsum__float():
 
 def test_cumsum__initial():
     assert_equal(list(utils.cumsum(range(5), -10)), [-10, -9, -7, -4, 0])
+
+
+
+
+################################################################################
+################################################################################
+## Tests for 'fast_pickle_test'
+
+def test_fast_pickle_test__picklable():
+    utils.fast_pickle_test(1)
+    utils.fast_pickle_test({})
+    utils.fast_pickle_test(test_cumsum__empty)
+
+@nose.tools.raises(pickle.PicklingError)
+def test_fast_pickle_test__unpicklable_1():
+    _func = lambda: None # pragma: no coverage
+    utils.fast_pickle_test(_func)
+
+@nose.tools.raises(pickle.PicklingError)
+def test_fast_pickle_test__unpicklable_2():
+    def _func():
+        return None # pragma: no coverage
+    utils.fast_pickle_test(_func)
 
