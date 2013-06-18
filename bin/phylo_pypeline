@@ -67,28 +67,32 @@ def _select_command(commands, command):
     if command in commands:
         return commands[command]
     elif len(command) < 3:
-        return None
+        return None, None
 
     for (key, value) in commands.iteritems():
         if key.startswith(command):
-            return value
+            return (key, value)
 
-    return None
+    return None, None
 
 
 def main(argv):
     if not _has_required_modules():
         return 1
 
-    import pypeline.tools.phylo_pipeline.steps as steps
+    import pypeline.tools.phylo_pipeline.steps.common as common
+    import pypeline.tools.phylo_pipeline.steps.genotype as genotype
+    import pypeline.tools.phylo_pipeline.steps.msa as msa
+    import pypeline.tools.phylo_pipeline.steps.paml as paml
+    import pypeline.tools.phylo_pipeline.steps.phylo as phylo
     import pypeline.ui as ui
     from pypeline import Pypeline
 
     commands = {
-        "genotype"        : steps.genotype.chain,
-        "msa"             : steps.msa.chain,
-        "paml:codeml"     : steps.paml.chain_codeml,
-        "phylogeny:examl" : steps.phylo.chain_examl,
+        "genotype"        : genotype.chain,
+        "msa"             : msa.chain,
+        "paml:codeml"     : paml.chain_codeml,
+        "phylogeny:examl" : phylo.chain_examl,
         }
 
 
@@ -97,18 +101,19 @@ def main(argv):
         return 1
 
     chain = argv.pop(0)
-    options, makefiles = steps.common.parse_options(argv)
+    options, makefiles = common.parse_options(argv)
     if not options:
         return 1
 
     nodes = ()
     pipeline = Pypeline(options)
     for command in chain.split("+"):
-        command_func = _select_command(commands, command)
+        command_key, command_func = _select_command(commands, command)
         if not command_func:
             print_usage()
             return 1
 
+        ui.print_info("Building %s pipeline ..." % (command_key,), file = sys.stderr)
         nodes = command_func(pipeline, options, makefiles)
 
     for makefile in makefiles:
