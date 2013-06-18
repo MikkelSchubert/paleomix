@@ -20,6 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+# pylint: disable=W0212
+
 from __future__ import print_function
 
 import os
@@ -31,32 +33,43 @@ import subprocess
 def _is_cls(obj, *cls_names):
     return obj.__class__.__name__ in cls_names
 
+def _get_pipe_name(files, pipe):
+    if pipe in files:
+        return pipe.split("_")[-1] + " "
+    return pipe.split("_")[-1] + "*"
+
+def _get_pipe_file(files, pipe):
+    pipe_filename = files.get(pipe)
+    if pipe_filename:
+        return pipe_filename
+    return files.get("TEMP_%s" % (pipe,))
 
 def _describe_cls(atomiccmd):
     if _is_cls(atomiccmd, "ParallelCmds"):
-        return "Atomic commands executed in parallel"
+        return "Parallel commands"
     elif _is_cls(atomiccmd, "SequentialCmds"):
-        return "Atomic commands executed sequentially"
-    else:
-        return "Atomic command"
+        return "Sequential commands"
+    assert False # pragma: no coverage
 
 
 def _collect_stats(atomiccmd, stats):
     assert atomiccmd not in stats["id"]
 
     if _is_cls(atomiccmd, "AtomicCmd"):
-        cmd_id = stats["id"][atomiccmd] = len(stats["id"])
-        pipe   = atomiccmd._files.get("IN_STDIN")
+        stats["id"][atomiccmd] = len(stats["id"])
+        pipe   = _get_pipe_file(atomiccmd._files, "IN_STDIN")
         if _is_cls(pipe, "AtomicCmd"):
             stats["pipe"][pipe] = atomiccmd
     elif _is_cls(atomiccmd, "ParallelCmds", "SequentialCmds"):
         for subcmd in atomiccmd._commands:
             _collect_stats(subcmd, stats)
+    else:
+        assert False # pragma: no coverage
 
     return stats
 
 
-def _build_status(atomiccmd, stats, indent, lines):
+def _build_status(atomiccmd, _stats, indent, lines):
     prefix = " " * indent + "Status  = "
     if atomiccmd._proc:
         if atomiccmd.ready():
@@ -66,51 +79,45 @@ def _build_status(atomiccmd, stats, indent, lines):
             lines.append(prefix + "Running ...")
 
 
-def _build_stdin(atomiccmd, stats, indent, lines):
-    pipe   = atomiccmd._files.get("IN_STDIN")
-    prefix = " " * indent + "STDIN   = "
+def _build_stdin(atomiccmd, files, stats, indent, lines):
+    pipe_name = _get_pipe_name(files, "IN_STDIN")
+    pipe   = _get_pipe_file(files, "IN_STDIN")
+    prefix = "%s%s  = " % (" " * indent, pipe_name)
     if pipe and pipe in stats["id"]:
         lines.append("%s<%02i>" % (prefix, stats["id"][pipe],))
     elif isinstance(pipe, types.StringTypes):
+        if atomiccmd._set_cwd and (pipe_name == "STDIN*"):
+            pipe = os.path.basename(pipe)
         lines.append("%s'%s'" % (prefix, pipe))
     elif pipe:
         lines.append("%s<PIPE>" % (prefix,))
 
 
-def _build_stdout(atomiccmd, stats, indent, lines):
-    prefix = " " * indent + "STDOUT  = "
-    if atomiccmd in stats["pipe"]:
+def _build_out_pipe(atomiccmd, files, stats, indent, lines, pipe):
+    pipe_name = _get_pipe_name(files, pipe)
+    prefix = "%s%s = " % (" " * indent, pipe_name)
+
+    if (atomiccmd in stats["pipe"]) and (pipe == "OUT_STDOUT"):
         pipe = stats["pipe"].get(atomiccmd)
         lines.append("%s<%02i>" % (prefix, stats["id"][pipe],))
-    elif atomiccmd._files.get("OUT_STDOUT"):
-        filename = atomiccmd._files.get("OUT_STDOUT")
-        if filename is not subprocess.PIPE:
-            lines.append("%s'%s'" % (prefix, filename))
-        else:
-            lines.append("%s<PIPE>" % (prefix,))
-    elif "OUT_STDOUT" in atomiccmd._pipes:
-        filename = atomiccmd._pipes["OUT_STDOUT"]
+        return
+
+    filename = _get_pipe_file(files, pipe)
+    if filename is not subprocess.PIPE:
         lines.append("%s'%s'" % (prefix, filename))
+    else:
+        lines.append("%s<PIPE>" % (prefix,))
 
 
-def _build_stderr(atomiccmd, stats, indent, lines):
-    prefix = " " * indent + "STDERR  = "
-    if atomiccmd._files.get("OUT_STDERR"):
-        filename = atomiccmd._files.get("OUT_STDERR")
-        lines.append("%s'%s'" % (prefix, filename,))
-    elif "OUT_STDERR" in atomiccmd._pipes:
-        filename = atomiccmd._pipes["OUT_STDERR"]
-        lines.append("%s'%s'" % (prefix, filename))
-
-
-def _build_cwd(atomiccmd, stats, indent, lines):
+def _build_cwd(atomiccmd, indent, lines):
     prefix = " " * indent + "CWD     = "
-    if atomiccmd._pipes:
+    if atomiccmd._handles:
         if atomiccmd._set_cwd:
-            cwd = atomiccmd._temp or "<Temporary folder>"
-            lines.append("%s'%s'" % (prefix, cwd,))
+            lines.append("%s'%s'" % (prefix, atomiccmd._temp,))
         else:
             lines.append("%s'%s'" % (prefix, os.getcwd()))
+    elif atomiccmd._set_cwd:
+        lines.append("%s'%s'" % (prefix, "${TEMP_DIR}"))
 
 
 def _pformat(atomiccmd, stats, indent, lines, include_prefix = True):
@@ -123,23 +130,28 @@ def _pformat(atomiccmd, stats, indent, lines, include_prefix = True):
     s_prefix_len = len(s_prefix)
 
     if _is_cls(atomiccmd, "AtomicCmd"):
-        temp = None if atomiccmd._set_cwd else atomiccmd._temp
+        temp = "" if atomiccmd._set_cwd else (atomiccmd._temp or "${TEMP_DIR}")
+        files = atomiccmd._generate_filenames(atomiccmd._files, temp)
+
         c_prefix = s_prefix + "Command = "
         for line in _pformat_list(atomiccmd._generate_call(temp)).split("\n"):
             lines.append("%s%s" % (c_prefix, line))
             c_prefix = " " * len(c_prefix)
 
-        _build_status(atomiccmd, stats, s_prefix_len, lines)
-        _build_stdin(atomiccmd,  stats, s_prefix_len, lines)
-        _build_stdout(atomiccmd, stats, s_prefix_len, lines)
-        _build_stderr(atomiccmd, stats, s_prefix_len, lines)
-        _build_cwd(atomiccmd,    stats, s_prefix_len, lines)
+        if not s_prefix_len:
+            s_prefix_len += 1
+
+        _build_status(atomiccmd,   stats, s_prefix_len, lines)
+        _build_stdin(atomiccmd,    files, stats, s_prefix_len, lines)
+        _build_out_pipe(atomiccmd, files, stats, s_prefix_len, lines, "OUT_STDOUT")
+        _build_out_pipe(atomiccmd, files, stats, s_prefix_len, lines, "OUT_STDERR")
+        _build_cwd(atomiccmd,                    s_prefix_len, lines)
     elif _is_cls(atomiccmd, "ParallelCmds", "SequentialCmds"):
         lines.append("%s%s:" % (s_prefix, _describe_cls(atomiccmd)))
         for subcmd in atomiccmd._commands:
             _pformat(subcmd, stats, s_prefix_len + 2, lines)
     else:
-        assert False
+        assert False # pragma: no coverage
 
 
 def _pformat_list(lst, width = 80):
@@ -150,9 +162,13 @@ def _pformat_list(lst, width = 80):
     result = [[]]
     current_width = 0
     for item in map(repr, lst):
-        if current_width + len(item) > width:
-            result.append([item])
-            current_width = len(item)
+        if current_width + len(item) + 2 > width:
+            if not result[-1]:
+                result[-1] = [item]
+                current_width = len(item) + 2
+            else:
+                result.append([item])
+                current_width = len(item) + 2
         else:
             result[-1].append(item)
             current_width += len(item) + 2
@@ -163,6 +179,9 @@ def _pformat_list(lst, width = 80):
 def pformat(atomiccmd):
     """Returns a human readable description of an Atomic Cmd or Atomic Set
     of commands. This is currently equivalent to str(cmd_obj)."""
+    if not _is_cls(atomiccmd, "AtomicCmd", "ParallelCmds", "SequentialCmds"):
+        raise TypeError("Invalid type in pformat: %r" % atomiccmd.__class__.__name__)
+
     lines = []
     stats = _collect_stats(atomiccmd, {"id" : {}, "pipe" : {}})
     _pformat(atomiccmd, stats, 0, lines, False)

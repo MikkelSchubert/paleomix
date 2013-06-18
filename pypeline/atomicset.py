@@ -129,6 +129,7 @@ class ParallelCmds(_CommandSet):
                     sleep_time = 0.05
                 elif any(any(codes) for codes in return_codes):
                     command.terminate()
+                    command.join()
                     return_codes[index] = ["SIGTERM"]
                     commands.remove((index, command))
                     sleep_time = 0.05

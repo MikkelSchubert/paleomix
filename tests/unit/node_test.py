@@ -381,7 +381,7 @@ def test_run__error_log__node_error():
             assert os.path.exists(log_file)
             assert_in("Errors =", get_file_contents(log_file))
             return
-        assert False
+        assert False # pragma: no coverage
     yield _do_test_run__error_log__node_error, NodeError("ARGH!")
     yield _do_test_run__error_log__node_error, OSError("ARGH!")
 

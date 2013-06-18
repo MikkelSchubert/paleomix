@@ -712,8 +712,7 @@ def test_atomiccmd__cleanup_proc__terminate(temp_folder):
     assert ref not in pypeline.atomiccmd._PROCS
 
 
-@with_temp_folder
-def test_atomiccmd__cleanup_sigterm(temp_folder):
+def test_atomiccmd__cleanup_sigterm():
     sigs_sent, exit_called = {}, []
     def _wrap_killpg(pid, sig):
         assert pid not in sigs_sent

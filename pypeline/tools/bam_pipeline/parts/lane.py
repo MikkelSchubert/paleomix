@@ -23,13 +23,12 @@
 import os
 import copy
 
-import reads
-from pypeline.node import MetaNode
 from pypeline.nodes.bwa import BWANode
 from pypeline.nodes.bowtie2 import Bowtie2Node
 from pypeline.common.utilities import safe_coerce_to_tuple
 
 import pypeline.tools.bam_pipeline.paths as paths
+from pypeline.tools.bam_pipeline.parts import Reads
 from pypeline.tools.bam_pipeline.nodes import CleanupBAMNode, \
                                               IndexAndValidateBAMNode
 
@@ -76,7 +75,7 @@ class Lane:
     def _init_reads(self, config, record):
         key = tuple(self.tags[key] for key in ("Target", "SM", "LB", "PU_cur"))
         if key not in _TRIMMED_READS_CACHE:
-            _TRIMMED_READS_CACHE[key] = reads.Reads(config, record, record["Options"]["QualityOffset"])
+            _TRIMMED_READS_CACHE[key] = Reads(config, record, record["Options"]["QualityOffset"])
         self.reads = _TRIMMED_READS_CACHE[key]
 
 
@@ -115,6 +114,33 @@ def _apply_aln_user_parameters(mkfile_params, params, aligners):
                 for aligner_key in aligners:
                     params.commands[aligner_key].push_parameter(param, value)
 
+def _append_aln_user_parameters(mkfile_params, lst):
+    for (param, value) in mkfile_params.iteritems():
+        if param.startswith("-"):
+            for value in safe_coerce_to_tuple(value):
+                lst.append(param)
+                if value is not None:
+                    lst.append(value)
+
+
+def _build_bwa_cl_tag(options, sam_key):
+    # Build summary of parameters used by alignment, only including
+    # parameters that affect the output of BWA (as far as possible)
+    cli_tag = ["bwa", "aln"]
+    if not options["Aligners"]["BWA"]["UseSeed"]:
+        cli_tag.extend(("-l", 2**16 - 1))
+    if options["QualityOffset"] in (64, "Solexa"):
+        cli_tag.append("-I")
+    _append_aln_user_parameters(options["Aligners"]["BWA"], cli_tag)
+    cli_tag.append("...")
+
+    cli_tag.extend(("|", "bwa", sam_key, "..."))
+    cli_tag.extend(("|", "samtools", "view", "-F", "0x4", "-q", options["Aligners"]["BWA"]["MinQuality"], "..."))
+    cli_tag.extend(("|", "samtools", "fixmate", "..."))
+    cli_tag.extend(("|", "samtools", "calmd",   "..."))
+
+    return " ".join(map(str, cli_tag))
+
 
 def _build_bwa_nodes(config, parameters, input_filename, tags, options):
     if paths.is_paired_end(input_filename):
@@ -136,16 +162,35 @@ def _build_bwa_nodes(config, parameters, input_filename, tags, options):
             params.commands[aln_key].set_parameter("-I")
     _apply_aln_user_parameters(options["Aligners"]["BWA"], params, aln_keys)
 
-    pg_tags  = "bwa:CL:%s" % " ".join(map(str, params.commands[aln_keys[0]].call)).replace("%", "%%")
-    pg_tags += " | " + " ".join(map(str, params.commands[sam_key].call)).replace("%", "%%")
-    params.commands["convert"].push_parameter("--update-pg-tag", pg_tags)
-
-    read_group = "@RG\tID:{ID}\tSM:{SM}\tLB:{LB}\tPU:{PU_src}\tPL:{PL}\tPG:{PG}".format(**tags)
+    read_group = "@RG\tID:{ID}\tSM:{SM}\tLB:{LB}\tPU:{PU_src}\tPL:{PL}\tPG:{PG_lc}".format(PG_lc = tags["PG"].lower(), **tags)
     params.commands[sam_key].set_parameter("-r", read_group)
-
     params.commands["convert"].set_parameter('-q', options["Aligners"]["BWA"]["MinQuality"])
 
+    cl_tag  = _build_bwa_cl_tag(options, sam_key)
+    pg_tags = ("bwa:CL:%s" % (cl_tag.replace("%", "%%"),))
+    params.commands["convert"].push_parameter("--update-pg-tag", pg_tags)
+
     return params.build_node()
+
+
+def _build_bowtie_cl_tag(options):
+    # Build summary of parameters used by alignment, only including
+    # parameters that affect the output of bowtie2 (as far as possible)
+    cli_tag = ["bowtie2"]
+    if options["QualityOffset"] == 64:
+        cli_tag.append("--phred64")
+    elif options["QualityOffset"] == 33:
+        cli_tag.append("--phred33")
+    else:
+        cli_tag.append("--solexa-quals")
+    _append_aln_user_parameters(options["Aligners"]["Bowtie2"], cli_tag)
+    cli_tag.append("...")
+
+    cli_tag.extend(("|", "samtools", "view", "-F", "0x4", "-q", options["Aligners"]["Bowtie2"]["MinQuality"], "..."))
+    cli_tag.extend(("|", "samtools", "fixmate", "..."))
+    cli_tag.extend(("|", "samtools", "calmd",   "..."))
+
+    return " ".join(map(str, cli_tag))
 
 
 def _build_bowtie2_nodes(config, parameters, input_filename, tags, options):
@@ -168,13 +213,17 @@ def _build_bowtie2_nodes(config, parameters, input_filename, tags, options):
         params.commands["aln"].set_parameter("--solexa-quals")
     _apply_aln_user_parameters(options["Aligners"]["Bowtie2"], params, ("aln",))
 
-    pg_tags = "bowtie2:CL:%s" % " ".join(map(str, params.commands["aln"].call)).replace("%", "%%")
-    params.commands["convert"].push_parameter("--update-pg-tag", pg_tags)
+    pg_tag = "bowtie2:CL:%s" % (_build_bowtie_cl_tag(options).replace("%", "%%"),)
+    params.commands["convert"].push_parameter("--update-pg-tag", pg_tag)
 
     params.commands["aln"].set_parameter("--rg-id", tags["ID"])
-    for tag_name in ("SM", "LB", "PU", "PL"):
-        tag_value = tags[tag_name if (tag_name != "PU") else "PU_src"]
-
+    for tag_name in ("SM", "LB", "PU", "PL", "PG"):
+        if tag_name == "PG":
+            tag_value = tags["PG"].lower()
+        elif tag_name == "PU":
+            tag_value = tags["PU_src"]
+        else:
+            tag_value = tags[tag_name]
         params.commands["aln"].push_parameter("--rg", "%s:%s" % (tag_name, tag_value))
 
     return params.build_node()

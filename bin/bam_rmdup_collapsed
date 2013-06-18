@@ -25,53 +25,56 @@ from optparse import OptionParser
 
 
 def calc_consensus(reads):
-  count = len(reads)
-  outread = None
-  maxsumqual = 0
-  for read in reads:
-    nsum = sum(map(ord,read.qual))
-    if nsum  > maxsumqual:
-      outread = read
-      maxsumqual = nsum
-    for key,value in read.tags: # LOOK FOR PREVIOUS PCR DUPLICATE COUNTS
-      if key == "XP": count += value
+    count = len(reads)
+    outread = None
+    maxsumqual = 0
+    for read in reads:
+        nsum = sum(map(ord, read.qual))
+        if nsum  > maxsumqual:
+            outread = read
+            maxsumqual = nsum
+        for key, value in read.tags: # LOOK FOR PREVIOUS PCR DUPLICATE COUNTS
+            if key == "XP":
+                count += value
 
-  if outread.tags == None: outread.tags = [("XP",count)]
-  else: outread.tags = outread.tags+[("XP",count)]
-
-  return outread
-
-
-def get_consensus_SR(reads):
-  # DETERMINE MOST FREQUENT CIGAR LINE
-  by_cigar = {}
-  cigar_count = {}
-  for read in reads:
-    tcigar = tuple(read.cigar)
-    if tcigar in by_cigar:
-      cigar_count[tcigar]+=1
-      by_cigar[tcigar].append(read)
+    if outread.tags == None:
+        outread.tags = [("XP", count)]
     else:
-      cigar_count[tcigar]=1
-      by_cigar[tcigar]=[read]
-  to_sort = map(lambda (x,y): (y,-len(str(x)),x),cigar_count.iteritems())
-  to_sort.sort()
-  selcigar = to_sort[-1][-1]
-  reads = by_cigar[selcigar]
-  return calc_consensus(reads)
+        outread.tags = outread.tags + [("XP", count)]
+
+    return outread
 
 
-def write_consensus_SR(outfile, reads, remove_duplicates):
-  consensus = get_consensus_SR(reads)
-  for read in reads:
-    read.is_duplicate = (read is not consensus)
-    if not (read.is_duplicate and remove_duplicates):
-      outfile.write(read)
+def get_consensus_se(reads):
+    # DETERMINE MOST FREQUENT CIGAR LINE
+    by_cigar = {}
+    cigar_count = {}
+    for read in reads:
+        tcigar = tuple(read.cigar)
+        if tcigar in by_cigar:
+            cigar_count[tcigar] += 1
+            by_cigar[tcigar].append(read)
+        else:
+            cigar_count[tcigar] = 1
+            by_cigar[tcigar] = [read]
+    to_sort = [(y, -len(str(x)), x) for (x, y) in cigar_count.iteritems()]
+    to_sort.sort()
+    selcigar = to_sort[-1][-1]
+    reads = by_cigar[selcigar]
+    return calc_consensus(reads)
+
+
+def write_consensus_se(outfile, reads, remove_duplicates):
+    consensus = get_consensus_se(reads)
+    for read in reads:
+        read.is_duplicate = (read is not consensus)
+        if not (read.is_duplicate and remove_duplicates):
+            outfile.write(read)
 
 
 def _flush_buffer(outfile, curvariants, remove_duplicates):
-    for (key, value) in curvariants.iteritems():
-        write_consensus_SR(outfile, value[0], remove_duplicates)
+    for value in curvariants.itervalues():
+        write_consensus_se(outfile, value[0], remove_duplicates)
     curvariants.clear()
 
 
@@ -84,38 +87,48 @@ _FILTERED_FLAGS |= 0x800 # Chimeric alignment
 
 
 def main(argv):
-  parser = OptionParser("%prog [options] BAMfile")
-  parser.add_option("--remove-duplicates", help="Remove duplicates from output",default=False,action="store_true")
-  (options, args) = parser.parse_args(argv)
+    parser = OptionParser("%prog [options] < in.bam > out.bam")
+    parser.add_option("--remove-duplicates",
+                      help = "Remove duplicates from output",
+                      default = False, action = "store_true")
+    (options, args) = parser.parse_args(argv)
 
-  with pysam.Samfile("-", "rb") as infile:
-    with pysam.Samfile("-", "wb", template = infile) as outfile:
-      curpos = None
-      curvariants = {}
-      for read in infile:
-        if curpos and ((read.tid, read.pos) != curpos):
-          _flush_buffer(outfile, curvariants, options.remove_duplicates)
-          curpos = None
+    if args:
+        parser.print_usage(sys.stderr)
+        return 1
+    elif sys.stdin.isatty() or sys.stdout.isatty():
+        parser.print_usage(sys.stderr)
+        sys.stderr.write("STDIN or STDOUT is a terminal, terminating!\n")
+        return 1
 
-        if (read.qual is None) or (read.flag & _FILTERED_FLAGS) or not read.qname.startswith("M_"):
-          outfile.write(read)
-          continue
+    with pysam.Samfile("-", "rb") as infile:
+        with pysam.Samfile("-", "wb", template = infile) as outfile:
+            curpos = None
+            curvariants = {}
+            for read in infile:
+                if curpos and ((read.tid, read.pos) != curpos):
+                    _flush_buffer(outfile, curvariants, options.remove_duplicates)
+                    curpos = None
 
-        curpos = (read.tid, read.pos)
-        strand = read.is_reverse
-        outpos = curpos[1]
+                if (read.qual is None) or (read.flag & _FILTERED_FLAGS) or not read.qname.startswith("M_"):
+                    outfile.write(read)
+                    continue
 
-        nkey = (strand, outpos, read.alen)
-        if nkey in curvariants:
-          curvariants[nkey][0].append(read)
-          curvariants[nkey][1] +=1
-        else:
-          curvariants[nkey] = [[read],1]
+                curpos = (read.tid, read.pos)
+                strand = read.is_reverse
+                outpos = curpos[1]
 
-      _flush_buffer(outfile, curvariants, options.remove_duplicates)
+                nkey = (strand, outpos, read.alen)
+                if nkey in curvariants:
+                    curvariants[nkey][0].append(read)
+                    curvariants[nkey][1] += 1
+                else:
+                    curvariants[nkey] = [[read], 1]
 
-  return 0
+            _flush_buffer(outfile, curvariants, options.remove_duplicates)
+
+    return 0
 
 
 if __name__ == '__main__':
-  sys.exit(main(sys.argv[1:]))
+    sys.exit(main(sys.argv[1:]))

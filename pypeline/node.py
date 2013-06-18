@@ -27,6 +27,7 @@ import types
 # produces more informative errors on failure
 import pickle
 import traceback
+import collections
 
 import pypeline.common.fileutils as fileutils
 from pypeline.common.utilities import safe_coerce_to_frozenset
@@ -209,7 +210,7 @@ class Node(object):
     def _validate_requirements(cls, requirements):
         requirements = safe_coerce_to_frozenset(requirements)
         for requirement in requirements:
-            if not callable(requirement):
+            if not isinstance(requirement, collections.Callable):
                 raise TypeError("'requirements' must be callable, not %r" \
                     % (type(requirement),))
         return requirements
