@@ -5,8 +5,8 @@
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
-# copies of the Software, and to permit persons to whom the Software is 
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
 # The above copyright notice and this permission notice shall be included in all
@@ -15,18 +15,33 @@
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
 import os
 
 from pypeline.node import CommandNode
 from pypeline.atomiccmd import AtomicCmd
-from pypeline.atomicparams import *
+from pypeline.atomicparams import AtomicJavaParams, \
+     create_customizable_cli_parameters, \
+     use_customizable_cli_parameters
 from pypeline.common.fileutils import swap_ext, describe_files
 from pypeline.common.utilities import safe_coerce_to_tuple
+import pypeline.common.versions as versions
+
+
+_PICARD_VERSION_CACHE = {}
+def _picard_version(jar_file):
+    if jar_file not in _PICARD_VERSION_CACHE:
+        requirement = versions.Requirement(call   = ("java", "-client", "-jar", jar_file, "--version"),
+                                           search = r"^(\d+)\.(\d+)",
+                                           checks = versions.GE(1, 82))
+        _PICARD_VERSION_CACHE[jar_file] = requirement
+    return _PICARD_VERSION_CACHE[jar_file]
+
+
 
 
 class ValidateBAMNode(CommandNode):
@@ -37,7 +52,8 @@ class ValidateBAMNode(CommandNode):
 
         params.set_parameter("I", "%(IN_BAM)s", sep = "=")
         params.set_paths(IN_BAM     = input_bam,
-                         OUT_STDOUT = output_log or swap_ext(input_bam, ".validated"))
+                         OUT_STDOUT = output_log or swap_ext(input_bam, ".validated"),
+                         CHECK_JAR  = _picard_version(jar_file))
 
         return {"command" : params}
 
@@ -50,6 +66,8 @@ class ValidateBAMNode(CommandNode):
                              dependencies = parameters.dependencies)
 
 
+
+
 class BuildSequenceDictNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, config, reference, dependencies = ()):
@@ -59,7 +77,8 @@ class BuildSequenceDictNode(CommandNode):
         params.set_parameter("R", "%(IN_REF)s", sep = "=")
         params.set_parameter("O", "%(OUT_DICT)s", sep = "=")
         params.set_paths(IN_REF     = reference,
-                         OUT_DICT   = swap_ext(reference, ".dict"))
+                         OUT_DICT   = swap_ext(reference, ".dict"),
+                         CHECK_JAR  = _picard_version(jar_file))
 
         return {"command" : params}
 
@@ -70,6 +89,7 @@ class BuildSequenceDictNode(CommandNode):
                              command      = parameters.command.finalize(),
                              description  = "<SequenceDictionary: '%s'>" % (parameters.reference,),
                              dependencies = parameters.dependencies)
+
 
 
 
@@ -95,15 +115,16 @@ class MarkDuplicatesNode(CommandNode):
 
         params.set_paths(OUT_BAM     = output_bam,
                          OUT_BAI     = swap_ext(output_bam, ".bai"),
-                         OUT_METRICS = output_metrics or swap_ext(output_bam, ".metrics"))
+                         OUT_METRICS = output_metrics or swap_ext(output_bam, ".metrics"),
+                         CHECK_JAR  = _picard_version(jar_file))
 
         return {"command" : params}
-        
+
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
         description =  "<MarkDuplicates: %s>" % (describe_files(parameters.input_bams),)
-        CommandNode.__init__(self, 
+        CommandNode.__init__(self,
                              command      = parameters.command.finalize(),
                              description  = description,
                              dependencies = parameters.dependencies)
@@ -116,16 +137,17 @@ class MergeSamFilesNode(CommandNode):
     def customize(cls, config, input_bams, output_bam, dependencies = ()):
         jar_file = os.path.join(config.jar_root, "MergeSamFiles.jar")
         params = AtomicJavaParams(config, jar_file)
-        
+
         params.set_parameter("OUTPUT", "%(OUT_BAM)s", sep = "=")
         params.set_parameter("CREATE_INDEX", "True", sep = "=")
         params.set_paths(OUT_BAM = output_bam,
-                         OUT_BAI = swap_ext(output_bam, ".bai"))
+                         OUT_BAI = swap_ext(output_bam, ".bai"),
+                         CHECK_JAR  = _picard_version(jar_file))
 
         for (index, filename) in enumerate(input_bams, start = 1):
             params.push_parameter("I", "%%(IN_BAM_%02i)s" % index, sep = "=")
             params.set_paths("IN_BAM_%02i" % index, filename)
-            
+
         params.set_parameter("SO", "coordinate", sep = "=", fixed = False)
 
         return {"command" : params}
@@ -135,10 +157,12 @@ class MergeSamFilesNode(CommandNode):
     def __init__(self, parameters):
         description =  "<Merge BAMs: %i file(s) -> '%s'>" \
             % (len(parameters.input_bams), parameters.output_bam)
-        CommandNode.__init__(self, 
+        CommandNode.__init__(self,
                              command      = parameters.command.finalize(),
                              description  = description,
                              dependencies = parameters.dependencies)
+
+
 
 
 def concatenate_input_bams(config, input_bams, out = AtomicCmd.PIPE):
@@ -156,6 +180,7 @@ def concatenate_input_bams(config, input_bams, out = AtomicCmd.PIPE):
 
     jar_file = os.path.join(config.jar_root, "MergeSamFiles.jar")
     params = AtomicJavaParams(config, jar_file)
+    params.set_paths(CHECK_JAR  = _picard_version(jar_file))
 
     if out == AtomicCmd.PIPE:
         params.set_paths(OUT_STDOUT = out)

@@ -39,7 +39,7 @@ For example
 -----------------------------------
 The BAM pipeline requires [SAMTools](http://samtools.sourceforge.net) v0.1.18+, [AdapterRemoval](http://code.google.com/p/adapterremoval/) v1.4+ (1.5+ recommended for new projects!), and [BWA](http://bio-bwa.sourceforge.net/) v0.5.9+ / v0.7.5+ or [Bowtie2](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml) 2.0.0+.  Only the aligner (BWA/Bowtie2) that is to be used (selected in the individual makefiles) needs to be installed.
 
-In addition, the pipeline requires the [Picard](http://picard.sourceforge.net/) jars. These instructions assume that these jars have been placed in ~/install/jar_root, but any location may be used. This folder is specified using the --jar-root parameter (see below).
+In addition, the pipeline requires the [Picard](http://picard.sourceforge.net/) v1.82+ jars. These instructions assume that these jars have been placed in ~/install/jar_root, but any location may be used. This folder is specified using the --jar-root parameter (see below).
 
 If the user wishes to perform local realignment around indels (recommended), then [GATK](http://www.broadinstitute.org/gatk/) is required. The GATK jar file MUST be placed in the same folder as the Picard jars. Note that if alignments are to be carried out against the human nuclear genome, chromosome MUST be ordered by their number for GATK to work! See the GATK website for more information / files.
 
