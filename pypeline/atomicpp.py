@@ -73,8 +73,11 @@ def _build_status(atomiccmd, _stats, indent, lines):
     prefix = " " * indent + "Status  = "
     if atomiccmd._proc:
         if atomiccmd.ready():
-            lines.append(prefix + "Exited with return-code %i" \
-                         % tuple(atomiccmd.join()))
+            return_code = tuple(atomiccmd.join())
+            if isinstance(return_code[0], types.StringTypes):
+                lines.append(prefix + "Terminated with signal %s" % return_code)
+            else:
+                lines.append(prefix + "Exited with return-code %i" % return_code)
         else:
             lines.append(prefix + "Running ...")
 
@@ -111,7 +114,7 @@ def _build_out_pipe(atomiccmd, files, stats, indent, lines, pipe):
 
 def _build_cwd(atomiccmd, indent, lines):
     prefix = " " * indent + "CWD     = "
-    if atomiccmd._handles:
+    if atomiccmd._temp:
         if atomiccmd._set_cwd:
             lines.append("%s'%s'" % (prefix, atomiccmd._temp,))
         else:

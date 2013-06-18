@@ -96,9 +96,10 @@ def test_pformat__simple__done(temp_folder):
     assert_equal(pformat(cmd), ("<Command = ['true']\n"
                                 " Status  = Exited with return-code 0\n"
                                 " STDOUT* = '{temp_dir}/pipe_true_{id}.stdout'\n"
-                                " STDERR* = '{temp_dir}/pipe_true_{id}.stderr'>").format(id = id(cmd),
-                                                                                         cwd = os.getcwd(),
-                                                                                         temp_dir = temp_folder))
+                                " STDERR* = '{temp_dir}/pipe_true_{id}.stderr'\n"
+                                " CWD     = '{cwd}'>").format(id = id(cmd),
+                                                             cwd = os.getcwd(),
+                                                             temp_dir = temp_folder))
 
 @with_temp_folder
 def test_pformat__simple__done__before_join(temp_folder):
@@ -108,9 +109,10 @@ def test_pformat__simple__done__before_join(temp_folder):
     assert_equal(pformat(cmd), ("<Command = ['true']\n"
                                 " Status  = Exited with return-code 0\n"
                                 " STDOUT* = '{temp_dir}/pipe_true_{id}.stdout'\n"
-                                " STDERR* = '{temp_dir}/pipe_true_{id}.stderr'>").format(id = id(cmd),
-                                                                                         cwd = os.getcwd(),
-                                                                                         temp_dir = temp_folder))
+                                " STDERR* = '{temp_dir}/pipe_true_{id}.stderr'\n"
+                                " CWD     = '{cwd}'>").format(id = id(cmd),
+                                                             cwd = os.getcwd(),
+                                                             temp_dir = temp_folder))
     assert_equal(cmd.join(), [0])
 
 
@@ -123,7 +125,23 @@ def test_pformat__simple__done__set_cwd(temp_folder):
                                 " Status  = Exited with return-code 0\n"
                                 " STDOUT* = 'pipe_true_{id}.stdout'\n"
                                 " STDERR* = 'pipe_true_{id}.stderr'\n"
-                                " CWD     = '${{TEMP_DIR}}'>").format(id = id(cmd)))
+                                " CWD     = '{temp_dir}'>").format(id = id(cmd),
+                                                                   temp_dir = temp_folder))
+
+
+@with_temp_folder
+def test_pformat__simple__killed(temp_folder):
+    cmd = AtomicCmd(("sleep", "10"))
+    cmd.run(temp_folder)
+    cmd.terminate()
+    assert_equal(cmd.join(), [None])
+    assert_equal(pformat(cmd), ("<Command = ['sleep', '10']\n"
+                                " STDOUT* = '{temp_dir}/pipe_sleep_{id}.stdout'\n"
+                                " STDERR* = '{temp_dir}/pipe_sleep_{id}.stderr'\n"
+                                " CWD     = '{cwd}'>").format(id = id(cmd),
+                                                              temp_dir = temp_folder,
+                                                              cwd = os.getcwd()))
+
 
 
 ################################################################################

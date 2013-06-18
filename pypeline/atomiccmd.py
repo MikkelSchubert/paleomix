@@ -30,6 +30,7 @@ import collections
 
 import pypeline.atomicpp as atomicpp
 import pypeline.common.fileutils as fileutils
+import pypeline.common.signals as signals
 from pypeline.common.utilities import safe_coerce_to_tuple
 
 _PIPES = ('IN_STDIN', 'OUT_STDOUT', 'OUT_STDERR')
@@ -165,7 +166,13 @@ class AtomicCmd:
         and ensures that any opened handles are closed. Must be called before
         calling commit."""
         try:
-            return_codes = [self._proc.wait()] if self._proc else [None]
+            if not self._proc:
+                return [None]
+
+            return_code = self._proc.wait()
+            if return_code < 0:
+                return_code = signals.to_str(-return_code)
+            return [return_code]
         finally:
             # Close any implictly opened pipes
             for (mode, handle) in self._handles.values():
@@ -173,8 +180,6 @@ class AtomicCmd:
                     handle.flush()
                 handle.close()
             self._handles = {}
-
-        return return_codes
 
 
     def wait(self):
