@@ -213,7 +213,7 @@ def _setup_mocks_for_failure(*do_mocks):
         if do_mock:
             mock = flexmock(AtomicCmd(("sleep", 10)))
             mock.should_receive('terminate')
-            mock.should_receive('join')
+            mock.should_receive('join').and_return(['SIGTERM'])
         else:
             mock = AtomicCmd("false")
         results.append(mock)

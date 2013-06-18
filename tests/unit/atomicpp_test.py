@@ -134,8 +134,9 @@ def test_pformat__simple__killed(temp_folder):
     cmd = AtomicCmd(("sleep", "10"))
     cmd.run(temp_folder)
     cmd.terminate()
-    assert_equal(cmd.join(), [None])
+    assert_equal(cmd.join(), ["SIGTERM"])
     assert_equal(pformat(cmd), ("<Command = ['sleep', '10']\n"
+                                " Status  = Terminated with signal SIGTERM\n"
                                 " STDOUT* = '{temp_dir}/pipe_sleep_{id}.stdout'\n"
                                 " STDERR* = '{temp_dir}/pipe_sleep_{id}.stderr'\n"
                                 " CWD     = '{cwd}'>").format(id = id(cmd),

@@ -194,8 +194,7 @@ class AtomicCmd:
         Has no effect if the command has already finished."""
         if self._proc and self._proc.poll() is None:
             try:
-                self._proc.terminate()
-                self._proc = None
+                os.killpg(self._proc.pid, signal.SIGTERM)
             except OSError:
                 pass # Already dead / finished process
 

@@ -415,6 +415,7 @@ def test_atomiccmd__run__already_running(temp_files):
         cmd.run(temp_files)
     finally:
         cmd.terminate()
+        cmd.join()
 
 
 
@@ -457,32 +458,25 @@ def test_atomiccmd__join_wait():
 ################################################################################
 ## Terminate
 
-class _TerminateMock(AtomicCmd):
-    class _ProcMock:
-        def __init__(self, outer):
-            self._outer = outer
-        def terminate(self):
-            self._outer.was_terminated = True
-            if self._outer.raise_on_terminate:
-                raise OSError("KABOOM!")
-        def poll(self): # pylint: disable=R0201
-            return None
-
-    def __init__(self, raise_on_terminate):
-        AtomicCmd.__init__(self, ("true"))
-        self._proc = _TerminateMock._ProcMock(self)
-        self.was_terminated = False
-        self.raise_on_terminate = raise_on_terminate
-
-
 def test_atomiccmd__terminate():
-    def _do_test_atomiccmd__terminate(raise_on_terminate):
-        cmdmock = _TerminateMock(raise_on_terminate)
-        assert cmdmock._proc
-        cmdmock.terminate()
-        assert cmdmock.was_terminated
-        # If the proc was finished, terminate does not clear it
-        assert bool(cmdmock._proc) == raise_on_terminate
+    @with_temp_folder
+    def _do_test_atomiccmd__terminate(temp_folder, raise_on_terminate):
+        cmd = AtomicCmd(("sleep", "10"))
+        cmd.run(temp_folder)
+
+        killpg_was_called = []
+        def _wrap_killpg(pid, sig):
+            assert_equal(pid, cmd._proc.pid)
+            assert_equal(sig, signal.SIGTERM)
+            killpg_was_called.append(True)
+            if raise_on_terminate:
+                raise OSError("KABOOM!")
+
+        with monkeypatch("os.killpg", _wrap_killpg):
+            cmd.terminate()
+        cmd.terminate()
+        assert_equal(cmd.join(), ["SIGTERM"])
+        assert killpg_was_called
     yield _do_test_atomiccmd__terminate, False
     yield _do_test_atomiccmd__terminate, True
 
@@ -507,6 +501,20 @@ def test_atomiccmd__terminate_after_join(temp_folder):
     cmd.terminate()
     assert_equal(cmd.join(), [0])
 
+# Signals are translated into strings
+@with_temp_folder
+def test_atomiccmd__terminate_sigterm(temp_folder):
+    cmd = AtomicCmd(("sleep", "10"))
+    cmd.run(temp_folder)
+    cmd.terminate()
+    assert_equal(cmd.join(), ["SIGTERM"])
+
+@with_temp_folder
+def test_atomiccmd__terminate_sigkill(temp_folder):
+    cmd = AtomicCmd(("sleep", "10"))
+    cmd.run(temp_folder)
+    cmd._proc.kill()
+    assert_equal(cmd.join(), ["SIGKILL"])
 
 
 
@@ -575,6 +583,7 @@ def test_atomiccmd__commit_while_running(temp_folder):
         cmd.commit(temp_folder)
     finally:
         cmd.terminate()
+        cmd.join()
 
 @with_temp_folder
 @nose.tools.raises(CmdError)
@@ -695,21 +704,6 @@ def test_atomiccmd__cleanup_proc():
     # The proc object should be released when the cmd object is released
     yield _do_test_atomiccmd__cleanup_proc, lambda _cmd, _temp_folder: None
 
-
-# Cleanup of process object should be done if terminate is run
-@nose.tools.timed(0.1)
-@with_temp_folder
-def test_atomiccmd__cleanup_proc__terminate(temp_folder):
-    assert_equal(pypeline.atomiccmd._PROCS, set())
-    cmd = AtomicCmd(("sleep", "10"))
-    cmd.run(temp_folder)
-    ref = iter(pypeline.atomiccmd._PROCS).next()
-    assert ref
-    assert_equal(ref(), cmd._proc)
-    cmd.terminate()
-    assert not cmd._proc
-    assert not ref()
-    assert ref not in pypeline.atomiccmd._PROCS
 
 
 def test_atomiccmd__cleanup_sigterm():
