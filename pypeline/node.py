@@ -57,11 +57,15 @@ class Node(object):
                  executables = (), auxiliary_files = (),
                  requirements = (), subnodes = (), dependencies = ()):
 
+        if not isinstance(description, _DESC_TYPES):
+            raise TypeError("'description' must be None or a string, not %r" \
+                            % (description.__class__.__name__,))
+
         self.__description   = description
-        self.input_files     = safe_coerce_to_frozenset(input_files)
-        self.output_files    = safe_coerce_to_frozenset(output_files)
-        self.executables     = safe_coerce_to_frozenset(executables)
-        self.auxiliary_files = safe_coerce_to_frozenset(auxiliary_files)
+        self.input_files     = self._validate_files(input_files)
+        self.output_files    = self._validate_files(output_files)
+        self.executables     = self._validate_files(executables)
+        self.auxiliary_files = self._validate_files(auxiliary_files)
         self.requirements    = self._validate_requirements(requirements)
 
         self.subnodes        = frozenset()
@@ -215,6 +219,14 @@ class Node(object):
         return requirements
 
     @classmethod
+    def _validate_files(cls, files):
+        files = safe_coerce_to_frozenset(files)
+        for filename in files:
+            if not isinstance(filename, types.StringTypes):
+                raise TypeError('Files must be strings, not %r' % filename.__class__.__name__)
+        return files
+
+    @classmethod
     def _validate_nthreads(cls, threads):
         if not isinstance(threads, (types.IntType, types.LongType)):
             raise TypeError("'threads' must be a positive integer, not %s" % (type(threads),))
@@ -301,3 +313,8 @@ class MetaNode(Node):
 
     def run(self, config):
         raise MetaNodeError("Called 'run' on MetaNode")
+
+
+
+# Types that are allowed for the 'description' property
+_DESC_TYPES = types.StringTypes + (types.NoneType,)

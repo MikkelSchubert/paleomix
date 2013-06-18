@@ -136,6 +136,16 @@ def test_constructor():
     yield _do_test_constructor__single_value, "auxiliary_files",  _AUX_FILES
 
 
+def test_constructor__invalid_values():
+    @nose.tools.raises(TypeError)
+    def _do_test_constructor__invalid_values(key, value):
+        Node(**{key : value})
+
+    yield _do_test_constructor__invalid_values, "input_files",      [id]
+    yield _do_test_constructor__invalid_values, "output_files",     [-1]
+    yield _do_test_constructor__invalid_values, "executables",      [{}]
+    yield _do_test_constructor__invalid_values, "auxiliary_files",  [1.3]
+
 
 
 ################################################################################
@@ -229,6 +239,14 @@ def test_constructor__description__default():
         assert_equal(str(my_node), repr(my_node))
     for cls in _NODE_TYPES:
         yield _do_test_constructor__description__default, cls
+
+def test_constructor__description__non_string():
+    @nose.tools.raises(TypeError)
+    def _do_test_constructor__description__non_string(cls, value):
+        cls(description = value)
+    for cls in _NODE_TYPES:
+        yield _do_test_constructor__description__non_string, cls, 1
+        yield _do_test_constructor__description__non_string, cls, {}
 
 
 
