@@ -22,7 +22,7 @@
 #
 import os
 
-from pypeline.node import Node
+from pypeline.node import MetaNode
 from pypeline.nodes.adapterremoval import *
 
 
@@ -37,8 +37,8 @@ def _adapterremoval_se(config):
                                                **node_params)
     custom.command.set_parameter("--minlength", 30)
 
-    return Node(description  = "AdapterRemoval_SE", 
-                dependencies = [standard, custom.build_node()])
+    return MetaNode(description  = "AdapterRemoval_SE",
+                    dependencies = [standard, custom.build_node()])
 
 
 
@@ -55,13 +55,13 @@ def _adapterremoval_pe(config):
                                                **node_params)
     custom.command.set_parameter("--minlength", 30)
 
-    return Node(description  = "AdapterRemoval_PE", 
-                dependencies = [standard, custom.build_node()])
+    return MetaNode(description  = "AdapterRemoval_PE",
+                    dependencies = [standard, custom.build_node()])
 
 
 def test_adapterremoval(config):
     rm_se = _adapterremoval_se(config)
     rm_pe = _adapterremoval_pe(config)
 
-    return Node(description = "AdapterRemoval",
-                dependencies = (rm_se, rm_pe))
+    return MetaNode(description = "AdapterRemoval",
+                    dependencies = (rm_se, rm_pe))

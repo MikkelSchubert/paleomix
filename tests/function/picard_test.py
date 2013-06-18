@@ -22,7 +22,7 @@
 #
 import os
 
-from pypeline.node import Node
+from pypeline.node import MetaNode
 from pypeline.nodes.picard import *
 
 
@@ -40,8 +40,8 @@ def _test_validate_bams(config):
     custom.command.set_parameter("IGNORE_WARNINGS", "True", sep = "=")
 
 
-    return Node(description  = "ValidateSamFile", 
-                dependencies = [standard, custom.build_node()])
+    return MetaNode(description  = "ValidateSamFile", 
+                    dependencies = [standard, custom.build_node()])
 
     
 
@@ -64,8 +64,8 @@ def _test_mark_duplicates(config):
     custom.command.set_parameter("VERBOSITY", "DEBUG", sep = "=")
 
 
-    return Node(description  = "ValidateSamFile", 
-                dependencies = [standard, custom.build_node()])
+    return MetaNode(description  = "ValidateSamFile", 
+                    dependencies = [standard, custom.build_node()])
 
 
 
@@ -84,8 +84,8 @@ def _test_merge_sam_files(config):
     custom.command.set_parameter("ASSUME_SORTED", "True", sep = "=")
 
 
-    return Node(description  = "MergeSamFile", 
-                dependencies = [standard, custom.build_node()])
+    return MetaNode(description  = "MergeSamFile", 
+                    dependencies = [standard, custom.build_node()])
     
 
 
@@ -96,5 +96,5 @@ def test_picard(config):
     rmdup    = _test_mark_duplicates(config)
     merge    = _test_merge_sam_files(config)
     
-    return Node(description = "Picard Tools",
-                dependencies = (validate, rmdup, merge))
+    return MetaNode(description = "Picard Tools",
+                    dependencies = (validate, rmdup, merge))

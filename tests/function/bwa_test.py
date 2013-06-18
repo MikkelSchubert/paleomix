@@ -22,7 +22,7 @@
 #
 import os
 
-from pypeline.node import Node
+from pypeline.node import MetaNode
 from pypeline.nodes.bwa import *
 
 
@@ -44,8 +44,8 @@ def _bwa_aln_se(config, index):
                                   **node_params)
     custom.commands["samse"].set_parameter("-r", "@RG\tID:1\tPL:Illumina\tPU:123456\tLB:Library_1\tSM:Sample_1")
 
-    return Node(description  = "BWA aln SE",
-                dependencies = [standard, custom.build_node()])
+    return MetaNode(description  = "BWA aln SE",
+                    dependencies = [standard, custom.build_node()])
 
 
 
@@ -62,8 +62,8 @@ def _bwa_aln_pe(config, index):
                                     **node_params)
     custom.commands["sampe"].set_parameter("-r", "@RG\tID:1\tPL:Illumina\tPU:123456\tLB:Library_1\tSM:Sample_1")
     
-    return Node(description  = "BWA aln PE",
-                dependencies = [standard, custom.build_node()])
+    return MetaNode(description  = "BWA aln PE",
+                    dependencies = [standard, custom.build_node()])
 
 
 
@@ -80,7 +80,7 @@ def _bwa_sw_se(config, index):
                                  **node_params)
     custom.commands["aln"].set_parameter("-z", 10)
 
-    return Node(description  = "BWA SW SE",
+    return MetaNode(description  = "BWA SW SE",
                 dependencies = [standard, custom.build_node()])
 
 
@@ -97,8 +97,8 @@ def _bwa_sw_pe(config, index):
                                  **node_params)
     custom.commands["aln"].set_parameter("-z", 7 )
 
-    return Node(description  = "BWA SW PE",
-                dependencies = [standard, custom.build_node()])
+    return MetaNode(description  = "BWA SW PE",
+                    dependencies = [standard, custom.build_node()])
 
 
 
@@ -109,8 +109,8 @@ def test_bwa(config):
     sw_se  = _bwa_sw_se(config, index)
     sw_pe  = _bwa_sw_pe(config, index)
 
-    return Node(description  = "BWA",
-                dependencies = (aln_se,
-                                aln_pe,
-                                sw_se,
-                                sw_pe))
+    return MetaNode(description  = "BWA",
+                    dependencies = (aln_se,
+                                    aln_pe,
+                                    sw_se,
+                                    sw_pe))
