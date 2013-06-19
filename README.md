@@ -58,3 +58,124 @@ The jar\_root (--jar-root) and temp\_root (--temp-root) parameters default to th
 WARNING: Using /tmp for --temp-root is NOT recommended, since the pipeline generates many large files. If care is not taken, it is very easy to fill up /tmp, causing significant problems for EVERYONE using the server.
 
 It is recommended to use a folder on the same partition as the destination folder, to reduce disk usage, as all generated files will have to be moved from the --temp\_root folder to the --destination folder during the operation of the pipeline. It is furthermore recommended to use a separate subfolder (ie. the "bam_pipeline" folder in the example above), since failed runs may leave many temporary files behind in order to facilitate debugging.
+
+
+Creating a makefile
+===================
+The 'bam_pipeline mkfile' command can be used to create a makefile template. In addition to the various options for the programs run during the pipeline (documented in the template), it is nessesary to specify the name and location of target sequences (termed Prefixes) and each sample to be processed (grouped under one or more targets).
+
+If 'SampleSheet.csv' files are present, these may be specified as arguments to 'bam_pipeline mkfile', at which point the information found in the file is incorported into the makefile template. The quality of the resulting makefile will depend heavily on the quality of the information in the 'SampleSheet.csv' files, so it is recommended that the output be inspected carefully:
+
+    $ bam_pipeline mkfile reads/SampleSheet.csv > Project.makefile
+
+
+1. Prefixes
+-----------
+Prefixes are built using either the BWA command "bwa index /path/to/sequence.fasta" or the Bowtie2 command "bowtie2-build /path/to/sequence.fasta /path/to/sequence.fasta" (the path is intentionally repeated). For example, assuming that we wish to align against a FASTA file located at 'prefixes/genome.fa', we may index the file as follows:
+
+    $ bwa index prefixes/genome.fa
+
+Adding this to the makefile is accomplished by adding the following files:
+
+    Prefixes:
+      my_genome:
+        Path: prefixes/genome.fa
+
+The name of the prefix (here 'my_genome') will be used to name the resulting files and in resulting tables that are generated. Typical names include 'hg19', 'EquCab20', and other standard abbrivations for reference genomes, accession numbers, and the like. Multiple prefixes can be specified, but each name MUST be unique:
+
+    Prefixes:
+      my_genome:
+        Path: prefixes/genome.fa
+      another_genome:
+        Path: prefixes/genome2.fa
+
+
+Additional options for the prefixes are documented below.
+
+
+2. Target information
+---------------------
+Each makefile must contain one or more targets, which are described by 4 properties, and a path:
+
+1. A unique target name, used as a prefix for the resulting output files.
+2. One or more samples for a target, used to set the SM readgroup tag in BAM files. For simple projects with only one sample, this can simply be the same name as the target.
+3. One or more libraries for a sample, used to set the LB readgroup tag in BAM files. It is recommended to use a name that allows for the subsequent identification of the physical library used to generate these reads, for exampel the index used during multiple plexing. Note that duplicates are removed per library!
+4. One or more lanes for a library, used to set the PU readgroup tag in BAM files.
+
+In addition to this information, a path to the FASTQ files are required. This path may contain wild-cards, if multiple files were generated for a given lane.
+
+For example, assuming that we have a sample which we have given the barcode 'ED209', from which we have run one lane (#2) of the library using the index 'ACGTTA', which we located in 'reads/ED209_ACGTTA_L002_R1_*.fastq.gz' we might use the following structure:
+
+    ED209:
+      ED209:
+	    ACGTTA:
+		   Lane01: 'reads/ED209_ACGTTA_L002_R1_*.fastq.gz'
+
+Paired-ended data is expected to be split into two sets of files, one for each mate, and are specified by adding the '{Pair}' value to the path, which is replaced by '1' and by '2' during setup. For example, mates are typically specified using 'R1' and 'R2' for Illumina data, so the example above for PE data would become:
+
+    ED209:
+      ED209:
+	    ACGTTA:
+		   Lane01: 'reads/ED209_ACGTTA_L002_R{Pair}_*.fastq.gz'
+
+As noted above, any number of targets, samples, libraries and lanes may be specified:
+
+    Target_1:
+	  Sample_1:
+	    Library_1:
+		  Lane_1: ...
+		  Lane_2: ...
+	    Library_2:
+		  ...
+	  Sample_2:
+	    ...
+	Target_2:
+	  ...
+
+3. Additional options for prefixes
+----------------------------------
+Each prefix may be assigned a label (either 'mitochondrial' or 'nuclear'), which is useful if these two are aligned sepearately. If both labels are specified, the summary file that is generated will contain information aggregating the information for each of these prefixes under the name 'endogenous'. Each label may be specified any number of times. For example:
+
+    Prefixes:
+      hg19:
+        Path:  prefixes/hg19.fa
+	Label: nuclear
+      chrM:
+        Path:  prefixes/rCRS.fa
+	Label: mitochondrial
+
+In addition, it is possible to specify multiple prefixes at once using wildcards. To enable this option, postfix the name of the prefix with a wildcard ('*') and add wildcards to the Path. This is helpful if sequences are to be aligned against many genomes. For example, if the folder 'indices' contains 'hg19.fa' and 'rCRS.fa', the following settings would be equivalent to the above, except that no Labels are set:
+
+    Prefixes:
+      human*:
+        Path: prefixes/*.fa
+
+If a Label is specified, it is applied to all prefixes that are found.
+
+Finally, areas of interest may be specified for which coverage and depth information is to be calculated. Each area has a name (used in the output files), and points to a bedfile containing the relevant regions of the genome. If no names are given in the BED file, the intervals are merged by contig, and named after the contig with a wildcard ("*") appended. The following example demonstrates how this may be acomplished, using a bedfile located at 'prefixes/hg19.exome.bed':
+
+    Prefixes:
+      hg19:
+        Path:  prefixes/hg19.fa
+        AreasOfInterest:
+          Exome: prefixes/hg19.exome.bed
+
+
+4. Additional options for samples
+----------------------------------
+By default, all files specified for lanes are trimmed using AdapterRemoval. If reads have already been trimmed, these can be specified as follows, using the same read-types as in the 'ExcludeReads' options. For example:
+
+    ED209:
+      ED209:
+	    ACGTTA:
+		   Lane01:
+		    Single: reads/trimmed.fa.gz # Path to SE reads
+			Paired: reads/trimmed.{Pair}.fa.gz # Path to PE reads (must have {Pair} component)
+
+If reads have already been mapped, the BAM can be incorported into the project, in which case the BAM is retagged using the specified properties, and merged into the final BAM file. This is done by specifying the name of the prefix instead of a read-type. These are assumed to contain SE and/or PE reads, and not collapsed reads. For example, assuming that we are using the prefix 'hg19':
+
+    ED209:
+      ED209:
+	    ACGTTA:
+		   Lane01:
+		    hg19: bams/old.bam
