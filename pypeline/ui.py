@@ -5,8 +5,8 @@
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
-# copies of the Software, and to permit persons to whom the Software is 
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
 # The above copyright notice and this permission notice shall be included in all
@@ -15,9 +15,9 @@
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
 """Functions relating to the CLI interface."""
@@ -27,7 +27,6 @@ import sys
 import datetime
 import collections
 
-from pypeline.nodegraph import NodeGraph
 from pypeline.node import MetaNode
 
 
@@ -82,7 +81,7 @@ def print_node_tree(graph, collapse = True, verbose = True):
 def _print_running_nodes(graph):
     running = []
     for node in graph.iterflat():
-        if graph.get_node_state(node) is NodeGraph.RUNNING:
+        if graph.get_node_state(node) is graph.RUNNING:
             running.append(node)
 
     for node in sorted(running, key = str):
@@ -93,7 +92,7 @@ def _print_running_nodes(graph):
 def _print_sub_nodes(graph, nodes, collapse, prefix = ""):
     viable_nodes, dead_nodes = [], []
     for node in nodes:
-        if collapse and (graph.get_node_state(node) == NodeGraph.DONE):
+        if collapse and (graph.get_node_state(node) == graph.DONE):
             dead_nodes.append(node)
         else:
             viable_nodes.append(node)
@@ -149,9 +148,9 @@ def _describe_nodes(graph, nodes):
         if not isinstance(node, MetaNode):
             states[graph.get_node_state(node)] += 1
 
-    fields = [("running",  states[NodeGraph.RUNNING]),
-              ("outdated", states[NodeGraph.OUTDATED]),
-              ("failed",   states[NodeGraph.ERROR])]
+    fields = [("running",  states[graph.RUNNING]),
+              ("outdated", states[graph.OUTDATED]),
+              ("failed",   states[graph.ERROR])]
 
     line = [""]
     for (name, value) in fields:
@@ -159,7 +158,7 @@ def _describe_nodes(graph, nodes):
             line.append("%i %s" % (value, name))
 
     line.append("%i done of %i tasks" \
-                    % (states[NodeGraph.DONE],
+                    % (states[graph.DONE],
                        sum(states.values())))
 
     return ", ".join(line)
@@ -167,7 +166,7 @@ def _describe_nodes(graph, nodes):
 
 def _collapse_node(graph, dependencies):
     """Returns true if a node may be collapsed in the dependency graph."""
-    if all((graph.get_node_state(node) == NodeGraph.DONE) for node in dependencies):
+    if all((graph.get_node_state(node) == graph.DONE) for node in dependencies):
         return (_count_dependencies(dependencies) > 2)
 
     return False
@@ -175,17 +174,17 @@ def _collapse_node(graph, dependencies):
 
 def _get_print_function(graph, node):
     for subnode in node.subnodes:
-        if graph.get_node_state(subnode) == NodeGraph.RUNNING:
+        if graph.get_node_state(subnode) == graph.RUNNING:
             return print_info
 
     state = graph.get_node_state(node)
-    if state is NodeGraph.RUNNING:
+    if state is graph.RUNNING:
         return print_info
-    elif state is NodeGraph.DONE:
+    elif state is graph.DONE:
         return print_disabled
-    elif state is NodeGraph.OUTDATED:
+    elif state is graph.OUTDATED:
         return print_warn
-    elif state is NodeGraph.ERROR:
+    elif state is graph.ERROR:
         return print_err
     else:
         return print_msg
@@ -193,13 +192,13 @@ def _get_print_function(graph, node):
 
 def _get_runable_prefix(graph, node):
     """Returns either 'R' or '+', dependening on the state of the node. If the node, or any
-    of its subnodes, are runable, then 'R' is returned, otherwise '+' is returned. This is 
+    of its subnodes, are runable, then 'R' is returned, otherwise '+' is returned. This is
     used to decorate the dependency graph."""
-    if graph.get_node_state(node) in (NodeGraph.RUNNING, NodeGraph.RUNABLE):
+    if graph.get_node_state(node) in (graph.RUNNING, graph.RUNABLE):
         return "R"
-    
+
     for subnode in node.subnodes:
-        if graph.get_node_state(subnode) in (NodeGraph.RUNNING, NodeGraph.RUNABLE):
+        if graph.get_node_state(subnode) in (graph.RUNNING, graph.RUNABLE):
             return "R"
-    
+
     return "+"
