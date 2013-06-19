@@ -24,7 +24,6 @@ import yaml
 
 import os
 import copy
-import math
 import types
 import hashlib
 import datetime
@@ -42,8 +41,8 @@ def read_makefile(filename, defaults, validation):
         with open(filename) as makefile:
             string = makefile.read()
             data = yaml.safe_load(string)
-    except Exception, e:
-        raise MakefileError(e)
+    except Exception, error:
+        raise MakefileError(error)
 
     final = copy.deepcopy(defaults)
     final = apply_defaults(data, final, ("root",))
@@ -99,16 +98,17 @@ def And(*funcs):
 
 
 def Or(*funcs):
+    if not funcs:
+        raise ValueError("No function given to Or()")
+
     names = [func.__name__ for func in funcs]
     name = "(%s)" % (" or ".join(names))
-
     def _Or(path, value):
-        error = RuntimeError("No function given to Or() at '%s'!" % ":".join(path))
         for func in funcs:
             try:
                 func(path, value)
                 return
-            except MakefileError, error:
+            except MakefileError:
                 pass
 
         raise MakefileError("Value %s at '%s' in makefile does not meet requirements: %s" \
@@ -149,7 +149,7 @@ def AnyOf(*args, **kwargs):
     max_items = int(kwargs.get("max_items", len(args)))
 
     def _AnyOf(path, value):
-        hits, values = 0, safe_coerce_to_tuple(value)
+        values = safe_coerce_to_tuple(value)
         for value in values:
             if key_func(value) not in args:
                 raise MakefileError("Value for '%s' must be among %s, not %s!" \
@@ -169,8 +169,8 @@ def IsListOf(*args):
             raise MakefileError("Value for '%s' must be a list, not '%s'!" \
                                 % (":".join(path), repr(value)))
 
-            for item in value:
-                test_func(item)
+        for item in value:
+            test_func(path, item)
     return _IsListOf
 
 
@@ -184,8 +184,8 @@ def IsDictOf(key_func, value_func):
             for (key, value) in dd.iteritems():
                 key_func(path, key)
                 value_func(path, value)
-        except MakefileError, e:
-            raise MakefileError("Error while reading items of dict: %s" % e)
+        except MakefileError, error:
+            raise MakefileError("Error while reading items of dict: %s" % error)
     return _IsDictOf
 
 
@@ -205,12 +205,12 @@ def IsFloat(path, value):
         raise MakefileError("Value for '%s' must be an float, not '%s'!" \
                             % (":".join(path), repr(value)))
 
-def IsInRange(min, max):
-    assert min < max
+def IsInRange(min_value, max_value):
+    assert min_value < max_value
     def _IsInRange(path, value):
-        if not min <= value < max:
+        if not min_value <= value < max_value:
             raise MakefileError("Value for '%s' must be in range %s <= value < %s, not '%s'!" \
-                                % (":".join(path), min, max, value))
+                                % (":".join(path), min_value, max_value, value))
     return _IsInRange
 
 
