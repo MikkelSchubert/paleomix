@@ -5,8 +5,8 @@
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
-# copies of the Software, and to permit persons to whom the Software is 
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
 # The above copyright notice and this permission notice shall be included in all
@@ -15,20 +15,20 @@
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
 import os
 import sys
-import types
 import collections
 
-import ui
 import pypeline.common.versions as versions
+import pypeline.ui as ui
 from pypeline.node import MetaNode
 from pypeline.common.fileutils import missing_executables
+from pypeline.common.utilities import safe_coerce_to_frozenset
 
 
 # Max number of error messages of each type
@@ -37,12 +37,14 @@ _MAX_ERROR_MESSAGES = 10
 
 class NodeGraphError(RuntimeError):
     pass
-    
+
 
 class NodeGraph:
     DONE, RUNNING, RUNABLE, QUEUED, OUTDATED, ERROR = range(6)
 
     def __init__(self, nodes):
+        nodes = safe_coerce_to_frozenset(nodes)
+
         self._reverse_dependencies = collections.defaultdict(set)
         self._collect_reverse_dependencies(nodes, self._reverse_dependencies)
         self._intersections = self._calculate_intersections()
@@ -153,10 +155,10 @@ class NodeGraph:
                     state = NodeGraph.OUTDATED
                 else:
                     state = NodeGraph.QUEUED
-        except OSError, e:
+        except OSError, error:
             # Typically hapens if base input files are removed, causing a node that
             # 'is_done' to call modified_after on missing files in 'is_outdated'
-            ui.print_err("OSError checking state of Node: %s" % e, file = sys.stderr)
+            ui.print_err("OSError checking state of Node: %s" % error, file = sys.stderr)
             state = NodeGraph.ERROR
         self._states[node] = state
 
@@ -178,12 +180,12 @@ class NodeGraph:
         try:
             for requirement in exec_requirements:
                 requirement()
-        except versions.VersionRequirementError, e:
+        except versions.VersionRequirementError, error:
             raise NodeGraphError("Version requirements check failed for %s:\n\t%s" \
-                                 % (requirement.name, e))
-        except OSError, e:
+                                 % (requirement.name, error))
+        except OSError, error:
             raise NodeGraphError("Could not check version requirements for %s:\n\t%s" \
-                                 % (requirement.name, e))
+                                 % (requirement.name, error))
 
     @classmethod
     def _check_file_dependencies(cls, nodes):
@@ -193,14 +195,15 @@ class NodeGraph:
         files["auxiliary_files"] = files["input_files"]
 
         for node in nodes:
-            for (key, dd) in files.iteritems():
-                for filename in getattr(node, key):
-                    dd[filename].add(node)
+            for (attr, nodes_by_file) in files.iteritems():
+                for filename in getattr(node, attr):
+                    nodes_by_file[filename].add(node)
 
         max_messages = range(_MAX_ERROR_MESSAGES)
         error_messages = []
         error_messages.extend(zip(max_messages, cls._check_output_files(files["output_files"])))
-        error_messages.extend(zip(max_messages, cls._check_input_dependencies(files["input_files"], files["output_files"], nodes)))
+        error_messages.extend(zip(max_messages, cls._check_input_dependencies(files["input_files"],
+                                                                              files["output_files"], nodes)))
 
         if error_messages:
             messages = []
@@ -216,10 +219,10 @@ class NodeGraph:
     def _check_output_files(cls, output_files):
         for (filename, nodes) in output_files.iteritems():
             if (len(nodes) > 1):
-               nodes = _summarize_nodes(nodes)
-               yield "Multiple nodes create the same (clobber) output-file:" + \
-                                "\n\tFilename: %s\n\tNodes: %s" \
-                                % (filename, "\n\t       ".join(nodes))
+                nodes = _summarize_nodes(nodes)
+                yield "Multiple nodes create the same (clobber) output-file:" \
+                      "\n\tFilename: %s\n\tNodes: %s" \
+                      % (filename, "\n\t       ".join(nodes))
 
 
     @classmethod
@@ -235,6 +238,7 @@ class NodeGraph:
                         bad_nodes.add(consumer)
 
                 if bad_nodes:
+                    producer  = iter(producers).next()
                     bad_nodes = _summarize_nodes(bad_nodes)
                     yield "Node depends on dynamically created file, but not on the node creating it:" + \
                                 "\n\tFilename: %s\n\tCreated by: %s\n\tDependent node(s): %s" \
@@ -256,7 +260,7 @@ class NodeGraph:
                     continue
 
                 cls._collect_dependencies(subnodes, dependencies)
-                
+
                 collected = set(subnodes)
                 for subnode in subnodes:
                     collected.update(dependencies[subnode])
@@ -268,7 +272,7 @@ class NodeGraph:
     @classmethod
     def _collect_reverse_dependencies(cls, lst, rev_dependencies):
         for node in lst:
-            rev_dependencies[node] 
+            rev_dependencies[node] # pylint: disable=W0104
             for dependency in (node.dependencies | node.subnodes):
                 rev_dependencies[dependency].add(node)
             cls._collect_reverse_dependencies(node.dependencies, rev_dependencies)
