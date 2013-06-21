@@ -38,7 +38,7 @@ from pypeline.nodes.bedtools import SlopBedNode
 
 
 from pypeline.common.fileutils import move_file
-import pypeline.common.samwrap as samwrap
+import pypeline.common.text as text
 import pypeline.common.sequences as sequences
 import pypeline.common.formats.fasta as fasta
 
@@ -192,7 +192,7 @@ class ExtractReference(Node):
         fastafile = pysam.Fastafile(self._reference)
         seqs = collections.defaultdict(list)
         with open(self._intervals) as bedfile:
-            intervals = samwrap.read_tabix_BED(bedfile).items()
+            intervals = text.read_tabix_BED(bedfile).items()
             for (contig, beds) in sorted(intervals):
                 beds.sort(key = keyfunc)
 

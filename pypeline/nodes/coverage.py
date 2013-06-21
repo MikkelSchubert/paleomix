@@ -29,10 +29,8 @@ import pysam
 
 from pypeline.node import Node
 from pypeline.common.text import padded_table, parse_padded_table
-from pypeline.common.samwrap import SamfileReader
 from pypeline.common.fileutils import reroot_path, move_file, swap_ext, describe_files
-from pypeline.common.utilities import get_in, set_in, safe_coerce_to_tuple
-from pypeline.common.samwrap import read_tabix_BED
+from pypeline.common.utilities import get_in, set_in
 
 
 _MAX_CONTIGS = 100
@@ -66,7 +64,7 @@ class CoverageNode(Node):
     def _run(self, _config, temp):
         temp_filename = reroot_path(temp, self._input_file)
 
-        with SamfileReader(temp_filename) as bamfile:
+        with pysam.Samfile(temp_filename) as bamfile:
             intervals = self._get_intervals(bamfile, self._intervals_file, self._max_contigs)
             readgroups = self._get_readgroups(bamfile)
 

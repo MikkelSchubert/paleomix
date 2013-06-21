@@ -31,7 +31,7 @@ from optparse import OptionParser
 import pysam
 
 import pypeline.common.vcfwrap as vcfwrap
-import pypeline.common.samwrap as samwrap
+import pypeline.common.text as text
 import pypeline.common.sequences as sequences
 import pypeline.common.formats.fasta as fasta
 
@@ -120,7 +120,7 @@ def build_genes(options, genotype, regions):
 BEDTuple = namedtuple("BEDTuple", ("contig", "start", "end", "name", "score", "strand"))
 def read_intervals(filename):
     with open(filename) as bed_file:
-        intervals = samwrap.read_tabix_BED(bed_file)
+        intervals = text.parse_lines_by_contig(bed_file, pysam.asBed())
 
         for (key, beds) in intervals.iteritems():
             bed_tuples = []

@@ -30,7 +30,7 @@ from optparse import OptionParser
 
 import pysam
 
-import pypeline.common.samwrap as samwrap
+import pypeline.common.text as text
 import pypeline.common.sequences as sequences
 from pypeline.common.formats.fasta import print_fasta
 
@@ -157,7 +157,7 @@ def main(argv, output = sys.stdout):
 
     genotype = pysam.Tabixfile(opts.genotype)
     with open(opts.intervals) as bed_file:
-        intervals = samwrap.read_tabix_BED(bed_file)
+        intervals = text.parse_lines_by_contig(bed_file, pysam.asBed())
 
     for (_, beds) in sorted(intervals.items()):
         for (name, sequence) in build_genes(opts, genotype, beds):

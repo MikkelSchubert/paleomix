@@ -32,8 +32,10 @@ import sys
 import string
 import collections
 
+import pysam
+
 from pypeline.common.utilities import set_in, get_in
-from pypeline.common.samwrap import read_tabix_GTF
+import pypeline.common.text as text
 
 
 ################################################################################
@@ -71,7 +73,7 @@ def update_GTF_table(table, gtf, scaffolds):
 
 def read_GTF(lines, scaffolds):
     table = {} # gene_id -> transcript_id -> exon_number -> feature -> [items]
-    for gtf in read_tabix_GTF(lines):
+    for gtf in text.parse_lines(lines, pysam.asGTF()):
         if not filter_GTF_record(gtf):
             update_GTF_table(table, gtf, scaffolds)
 

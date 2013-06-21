@@ -24,13 +24,11 @@ from __future__ import with_statement
 
 import sys
 import optparse
-import itertools
 import collections
 
 import pysam
 
 import pypeline.common.vcfwrap as vcfwrap
-from pypeline.common.samwrap import Tabixfile
 
 
 _INF = float("inf")
