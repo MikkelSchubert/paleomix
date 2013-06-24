@@ -68,7 +68,7 @@ import inspect
 import itertools
 import collections
 
-from pypeline.atomiccmd import AtomicCmd
+from pypeline.atomiccmd.command import AtomicCmd
 from pypeline.common.utilities import safe_coerce_to_tuple
 
 

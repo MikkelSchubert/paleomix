@@ -30,9 +30,9 @@ import pysam
 from copy import deepcopy
 
 from pypeline.node import Node, CommandNode, MetaNode
-from pypeline.atomiccmd import AtomicCmd
-from pypeline.atomicset import ParallelCmds
-from pypeline.atomicparams import *
+from pypeline.atomiccmd.command import AtomicCmd
+from pypeline.atomiccmd.sets import ParallelCmds
+from pypeline.atomiccmd.builder import *
 from pypeline.nodes.samtools import GenotypeNode, TabixIndexNode, FastaIndexNode, MPileupNode
 from pypeline.nodes.bedtools import SlopBedNode
 

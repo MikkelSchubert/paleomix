@@ -37,10 +37,9 @@ from tests.common.utils import with_temp_folder, monkeypatch, \
      get_file_contents, \
      set_file_contents
 
-import pypeline.atomiccmd
-import pypeline.atomicpp
+import pypeline.atomiccmd.command
 from pypeline.common.versions import RequirementObj
-from pypeline.atomiccmd import AtomicCmd, CmdError
+from pypeline.atomiccmd.command import AtomicCmd, CmdError
 
 
 
@@ -670,7 +669,7 @@ def test_atomiccmd__stdout_no_pipe():
 
 def test_atomiccmd__str__():
     cmd = AtomicCmd(("echo", "test"))
-    assert_equal(pypeline.atomicpp.pformat(cmd), str(cmd))
+    assert_equal(pypeline.atomiccmd.pprint.pformat(cmd), str(cmd))
 
 
 
@@ -682,17 +681,17 @@ def test_atomiccmd__str__():
 def test_atomiccmd__cleanup_proc():
     @with_temp_folder
     def _do_test_atomiccmd__cleanup_proc(temp_folder, func):
-        assert_equal(pypeline.atomiccmd._PROCS, set())
+        assert_equal(pypeline.atomiccmd.command._PROCS, set())
         cmd = AtomicCmd("ls")
         cmd.run(temp_folder)
-        ref = iter(pypeline.atomiccmd._PROCS).next()
+        ref = iter(pypeline.atomiccmd.command._PROCS).next()
         assert ref
         assert_equal(ref(), cmd._proc)
 
         assert_equal(cmd.join(), [0])
         cmd = func(cmd, temp_folder)
 
-        assert ref not in pypeline.atomiccmd._PROCS
+        assert ref not in pypeline.atomiccmd.command._PROCS
 
     def _do_commit(cmd, temp_folder):
         # Trigger freeing of proc
@@ -717,12 +716,12 @@ def test_atomiccmd__cleanup_sigterm():
               # I've got the same combination on my luggage!
               flexmock(pid = 12345)]
 
-    assert not pypeline.atomiccmd._PROCS
-    with monkeypatch("pypeline.atomiccmd._PROCS", _procs):
-        assert_equal(len(pypeline.atomiccmd._PROCS), 2)
+    assert not pypeline.atomiccmd.command._PROCS
+    with monkeypatch("pypeline.atomiccmd.command._PROCS", _procs):
+        assert_equal(len(pypeline.atomiccmd.command._PROCS), 2)
         with monkeypatch("os.killpg", _wrap_killpg):
             with monkeypatch("sys.exit", _wrap_exit):
-                pypeline.atomiccmd._cleanup_children(signal.SIGTERM, None)
+                pypeline.atomiccmd.command._cleanup_children(signal.SIGTERM, None)
 
     assert_equal(exit_called, [-signal.SIGTERM])
     assert_equal(sigs_sent, {7913 : signal.SIGTERM, 12345 : signal.SIGTERM})
@@ -739,9 +738,9 @@ def test_atomiccmd__cleanup_sigterm__dead_weakrefs():
     def _wrap_exit(rc):
         exit_called.append(rc)
 
-    with monkeypatch("pypeline.atomiccmd._PROCS", procs_wrapper):
+    with monkeypatch("pypeline.atomiccmd.command._PROCS", procs_wrapper):
         with monkeypatch("os.killpg", _wrap_killpg):
             with monkeypatch("sys.exit", _wrap_exit):
-                pypeline.atomiccmd._cleanup_children(signal.SIGTERM, None)
+                pypeline.atomiccmd.command._cleanup_children(signal.SIGTERM, None)
     assert_equal(exit_called, [-signal.SIGTERM])
 

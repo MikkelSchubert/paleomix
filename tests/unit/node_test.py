@@ -35,7 +35,7 @@ from tests.common.utils import monkeypatch, with_temp_folder, \
      set_file_contents, \
      get_file_contents
 
-from pypeline.atomiccmd import AtomicCmd
+from pypeline.atomiccmd.command import AtomicCmd
 from pypeline.node import Node, MetaNode, CommandNode, NodeError, NodeUnhandledException, \
      MetaNodeError, CmdNodeError
 from pypeline.common.utilities import safe_coerce_to_frozenset

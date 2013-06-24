@@ -32,9 +32,9 @@ from tests.common.utils import with_temp_folder
 
 from flexmock import flexmock
 
-import pypeline.atomicpp
-from pypeline.atomiccmd import AtomicCmd, CmdError
-from pypeline.atomicset import ParallelCmds, SequentialCmds
+import pypeline.atomiccmd.pprint
+from pypeline.atomiccmd.command import AtomicCmd, CmdError
+from pypeline.atomiccmd.sets import ParallelCmds, SequentialCmds
 
 
 
@@ -134,7 +134,7 @@ def test_atomicsets__terminate():
 def test_atomicsets__str__():
     def _do_test_atomicsets__str__(cls):
         cmds = cls([AtomicCmd("ls")])
-        assert_equal(pypeline.atomicpp.pformat(cmds), str(cmds))
+        assert_equal(pypeline.atomiccmd.pprint.pformat(cmds), str(cmds))
 
     yield _do_test_atomicsets__str__, ParallelCmds
     yield _do_test_atomicsets__str__, SequentialCmds

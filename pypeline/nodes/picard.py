@@ -23,8 +23,8 @@
 import os
 
 from pypeline.node import CommandNode
-from pypeline.atomiccmd import AtomicCmd
-from pypeline.atomicparams import AtomicJavaParams, \
+from pypeline.atomiccmd.command import AtomicCmd
+from pypeline.atomiccmd.builder import AtomicJavaParams, \
      create_customizable_cli_parameters, \
      use_customizable_cli_parameters
 from pypeline.common.fileutils import swap_ext, describe_files

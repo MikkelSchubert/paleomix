@@ -27,9 +27,9 @@ import nose
 from nose.tools import assert_equal  # pylint: disable=E0611
 from tests.common.utils import with_temp_folder
 
-from pypeline.atomiccmd import AtomicCmd
-from pypeline.atomicset import ParallelCmds, SequentialCmds
-from pypeline.atomicpp import pprint, pformat, _pformat_list
+from pypeline.atomiccmd.command import AtomicCmd
+from pypeline.atomiccmd.sets import ParallelCmds, SequentialCmds
+from pypeline.atomiccmd.pprint import pprint, pformat, _pformat_list
 
 
 

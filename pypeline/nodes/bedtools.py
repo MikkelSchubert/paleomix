@@ -21,7 +21,7 @@
 # SOFTWARE.
 #
 from pypeline.node import CommandNode
-from pypeline.atomiccmd import AtomicCmd
+from pypeline.atomiccmd.command import AtomicCmd
 
 
 

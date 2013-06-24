@@ -23,7 +23,7 @@
 import os
 
 from pypeline.node import CommandNode, MetaNode
-from pypeline.atomiccmd import AtomicCmd
+from pypeline.atomiccmd.command import AtomicCmd
 
 
 # Presets mainly taken from

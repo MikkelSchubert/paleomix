@@ -28,7 +28,7 @@ import weakref
 import subprocess
 import collections
 
-import pypeline.atomicpp as atomicpp
+import pypeline.atomiccmd.pprint as atomicpp
 import pypeline.common.fileutils as fileutils
 import pypeline.common.signals as signals
 from pypeline.common.utilities import safe_coerce_to_tuple

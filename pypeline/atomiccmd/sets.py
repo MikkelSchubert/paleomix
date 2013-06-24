@@ -23,9 +23,9 @@
 import time
 import collections
 
-import pypeline.atomicpp as atomicpp
+import pypeline.atomiccmd.pprint as atomicpp
 
-from pypeline.atomiccmd import AtomicCmd, CmdError
+from pypeline.atomiccmd.command import AtomicCmd, CmdError
 from pypeline.common.utilities import safe_coerce_to_tuple
 
 

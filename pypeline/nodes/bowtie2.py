@@ -23,9 +23,9 @@
 import os
 
 from pypeline.node import CommandNode
-from pypeline.atomiccmd import AtomicCmd
-from pypeline.atomicparams import *
-from pypeline.atomicset import ParallelCmds
+from pypeline.atomiccmd.command import AtomicCmd
+from pypeline.atomiccmd.builder import *
+from pypeline.atomiccmd.sets import ParallelCmds
 
 from pypeline.nodes.bwa import _process_output, _get_max_threads
 

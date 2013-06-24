@@ -27,8 +27,7 @@ import random
 import pypeline.common.fileutils as fileutils
 
 from pypeline.node import CommandNode
-from pypeline.atomiccmd import AtomicCmd
-from pypeline.atomicparams import *
+from pypeline.atomiccmd.builder import *
 
 
 

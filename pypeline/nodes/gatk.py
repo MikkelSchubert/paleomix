@@ -24,8 +24,8 @@ import os
 
 import pypeline.common.fileutils as fileutils
 from pypeline.node import CommandNode, MetaNode
-from pypeline.atomiccmd import AtomicCmd
-from pypeline.atomicset import ParallelCmds
+from pypeline.atomiccmd.command import AtomicCmd
+from pypeline.atomiccmd.sets import ParallelCmds
 from pypeline.common.fileutils import swap_ext
 from pypeline.common.utilities import safe_coerce_to_tuple
 

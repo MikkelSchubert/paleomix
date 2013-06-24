@@ -24,7 +24,7 @@ import os
 import re
 
 from pypeline.node import Node, MetaNode, CommandNode, NodeError
-from pypeline.atomiccmd import AtomicCmd
+from pypeline.atomiccmd.command import AtomicCmd
 
 from pypeline.common.utilities import fragment, safe_coerce_to_tuple
 from pypeline.common.formats.msa import read_msa

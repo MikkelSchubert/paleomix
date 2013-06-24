@@ -23,12 +23,21 @@
 import os
 
 from pypeline.node import CommandNode
-from pypeline.atomiccmd import AtomicCmd, CmdError
-from pypeline.atomicset import ParallelCmds
-from pypeline.atomicparams import *
+from pypeline.atomiccmd.command import \
+     AtomicCmd,\
+     CmdError
+from pypeline.atomiccmd.sets import \
+     ParallelCmds
+from pypeline.atomiccmd.builder import \
+     AtomicParams, \
+     use_customizable_cli_parameters, \
+     create_customizable_cli_parameters
 
+
+import pypeline.common.utilities as utilities
 import pypeline.common.fileutils as fileutils
 import pypeline.common.versions as versions
+
 
 
 VERSION_14 = "1.4"
@@ -221,7 +230,7 @@ class PE_AdapterRemovalNode(CommandNode):
 def _build_unicat_command(input_files, output_file):
     paths = {"TEMP_OUT_CAT" : output_file}
     call = ["unicat", "--output", "%(TEMP_OUT_CAT)s"]
-    for (index, filename) in enumerate(safe_coerce_to_tuple(input_files)):
+    for (index, filename) in enumerate(utilities.safe_coerce_to_tuple(input_files)):
         key = "IN_CAT_%02i" % index
 
         call.append("%%(%s)s" % key)

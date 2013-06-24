@@ -23,9 +23,9 @@
 import os
 
 from pypeline.node import CommandNode, MetaNode
-from pypeline.atomiccmd import AtomicCmd
-from pypeline.atomicset import ParallelCmds, SequentialCmds
-from pypeline.atomicparams import AtomicJavaParams
+from pypeline.atomiccmd.command import AtomicCmd
+from pypeline.atomiccmd.sets import ParallelCmds, SequentialCmds
+from pypeline.atomiccmd.builder import AtomicJavaParams
 
 from pypeline.nodes.picard import ValidateBAMNode, concatenate_input_bams
 from pypeline.nodes.samtools import BAMIndexNode, SAMTOOLS_VERSION

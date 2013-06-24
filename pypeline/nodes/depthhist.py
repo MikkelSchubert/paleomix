@@ -28,7 +28,7 @@ import subprocess
 import pysam
 
 from pypeline.node import Node
-from pypeline.atomiccmd import AtomicCmd
+from pypeline.atomiccmd.command import AtomicCmd
 from pypeline.common.text import padded_table
 from pypeline.common.fileutils import reroot_path, move_file, swap_ext, describe_files
 from pypeline.common.utilities import get_in, set_in, safe_coerce_to_tuple

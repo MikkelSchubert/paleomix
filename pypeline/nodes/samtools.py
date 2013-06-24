@@ -23,9 +23,9 @@
 import os
 
 from pypeline.node import CommandNode
-from pypeline.atomiccmd import AtomicCmd
-from pypeline.atomicset import ParallelCmds
-from pypeline.atomicparams import *
+from pypeline.atomiccmd.command import AtomicCmd
+from pypeline.atomiccmd.sets import ParallelCmds
+from pypeline.atomiccmd.builder import *
 from pypeline.common.fileutils import reroot_path, swap_ext
 import pypeline.common.versions as versions
 
