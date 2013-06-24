@@ -72,31 +72,16 @@ def test_padded_table__three_lines():
     assert_equal(expected, _padded_table(table))
 
 
-def test_padded_table__padding():
-    table = [(1, 20, 3000),
-             (3000, 20, 1)]
-    expected = ["1         20      3000",
-                "3000      20      1"]
-    assert_equal(expected, _padded_table(table, min_padding = 6))
-
-def test_padded_table__padding__with_text():
-    row_1, line_1  = (1, 20, 3000), "1         20      3000"
-    row_2, line_2  = (3000, 20, 1), "3000      20      1"
+def test_padded_table__with_text():
+    row_1, line_1  = (1, 20, 3000), "1       20    3000"
+    row_2, line_2  = (3000, 20, 1), "3000    20    1"
     comment = "# An insightful comment goes here"
     def _do_test_padded_table__padding__with_text(table, expected):
-        assert_equal(expected, _padded_table(table, min_padding = 6))
+        assert_equal(expected, _padded_table(table))
     yield _do_test_padded_table__padding__with_text, [comment, row_1, row_2], [comment, line_1, line_2]
     yield _do_test_padded_table__padding__with_text, [row_1, comment, row_2], [line_1, comment, line_2]
     yield _do_test_padded_table__padding__with_text, [row_1, row_2, comment], [line_1, line_2, comment]
 
-
-@nose.tools.raises(TypeError)
-def test_padded_table__non_integer_padding():
-    assert_equal([], _padded_table((), min_padding = "foo"))
-
-@nose.tools.raises(ValueError)
-def test_padded_table__non_positive_padding():
-    _padded_table([], min_padding = 0)
 
 
 @nose.tools.raises(TableError)
@@ -111,13 +96,7 @@ def test_padded_table__misshapen_table_2():
                    (3000, 20, 1, 0),
                    (1, 2, 3)])
 
-@nose.tools.raises(TableError)
-def test_padded_table__has_empty_value():
-    _padded_table([(3000, "", 1, 0)])
 
-@nose.tools.raises(TableError)
-def test_padded_table__has_whitespace():
-    _padded_table([(3000, "a b", 1, 0)])
 
 
 ###############################################################################
@@ -135,18 +114,34 @@ def test_parse_padded_table__header_only():
     assert_equal([], _parse_padded_table(["A  B  C  D"]))
 
 def test_parse_padded_table__single_row():
-    table = ["A  B  C  D",
-             "4 3 2 1"]
+    table = ["A    B    C    D",
+             "4    3    2    1"]
     expected = [{"A" : '4',  "B" : '3', "C" : '2', "D" : '1'}]
     assert_equal(expected, _parse_padded_table(table))
 
 def test_parse_padded_table__two_rows():
-    table = ["A  B  C  D",
-             "4 3 2 1",
-             "AB   CD   EF   GH"]
+    table = ["A     B     C     D",
+             "4     3     2     1",
+             "AB    CD    EF    GH"]
     expected = [{"A" : '4',  "B" : '3', "C" : '2', "D" : '1'},
                 {"A" : "AB",  "B" : "CD", "C" : "EF", "D" : "GH"}]
     assert_equal(expected, _parse_padded_table(table))
+
+
+# Up to 3 spaces are allowed
+def test_parse_padded_table__single_row__with_whitespace():
+    table = ["A   B    C       E F",
+             "1        0  1    2   3"]
+    expected = [{"A   B" : '1',  "C" : '0  1', "E F" : '2   3'}]
+    assert_equal(expected, _parse_padded_table(table))
+
+# Other whitespace should be ignored
+def test_parse_padded_table__single_row__with_tabs():
+    table = ["A\t\t\t\tB",
+             "1\t\t\t\t0"]
+    expected = [{"A\t\t\t\tB" : '1\t\t\t\t0'}]
+    assert_equal(expected, _parse_padded_table(table))
+
 
 
 def test_padded_table__comments_and_empty_lines():
@@ -185,14 +180,14 @@ def test_padded_table__padding__comments__whitespace():
 
 @nose.tools.raises(TableError)
 def test_parse_padded_table__malformed_table_0():
-    table = ["A  B  C  D",
-             "4 3 2"]
+    table = ["A    B    C    D",
+             "4    3    2"]
     _parse_padded_table(table)
 
 @nose.tools.raises(TableError)
 def test_parse_padded_table__malformed_table_1():
-    table = ["A  B  C  D",
-             "4 3 2 1 0"]
+    table = ["A    B    C    D",
+             "4    3    2    1    0"]
     _parse_padded_table(table)
 
 
