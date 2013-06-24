@@ -47,7 +47,7 @@ class Pypeline:
                 self._nodes.append(node)
 
 
-    def run(self, max_running = 1, dry_run = False, terminate_on_error = False, collapse = True, verbose = True):
+    def run(self, max_running = 1, dry_run = False, collapse = True, verbose = True):
         try:
             nodegraph = NodeGraph(self._nodes)
         except NodeGraphError, error:
@@ -57,7 +57,8 @@ class Pypeline:
         remaining = set(nodegraph.iterflat())
         for node in remaining:
             if node.threads > max_running:
-                ui.print_err("Node requires more threads than the maximum allowed:\n\t%s" % str(node), file = sys.stderr)
+                ui.print_err("Node requires more threads than the maximum allowed:\n\t%s" \
+                             % str(node), file = sys.stderr)
                 return False
 
         if dry_run:
@@ -92,8 +93,10 @@ class Pypeline:
                     return False
 
                 remaining, interrupted_once = set(), True
-                ui.print_err("\nKeyboard interrupt detected, terminating upon completion of currently running tasks ...", file = sys.stderr)
-                ui.print_err("\t- Press CTRL-C again to force termination.\n", file = sys.stderr)
+                ui.print_err("\nKeyboard interrupt detected, waiting for current tasks to complete ...",
+                             file = sys.stderr)
+                ui.print_err("\t- Press CTRL-C again to force termination.\n",
+                             file = sys.stderr)
 
         ui.print_node_tree(nodegraph, collapse)
         pool.close()
