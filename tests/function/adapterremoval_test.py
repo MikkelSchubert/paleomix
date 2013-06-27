@@ -35,7 +35,7 @@ def _adapterremoval_se(config):
                                      **node_params)
     custom   = SE_AdapterRemovalNode.customize(output_prefix = os.path.join(config.destination, "se_custom"),
                                                **node_params)
-    custom.command.set_parameter("--minlength", 30)
+    custom.command.set_option("--minlength", 30)
 
     return MetaNode(description  = "AdapterRemoval_SE",
                     dependencies = [standard, custom.build_node()])
@@ -53,7 +53,7 @@ def _adapterremoval_pe(config):
                                      **node_params)
     custom   = PE_AdapterRemovalNode.customize(output_prefix = os.path.join(config.destination, "pe_custom"),
                                                **node_params)
-    custom.command.set_parameter("--minlength", 30)
+    custom.command.set_option("--minlength", 30)
 
     return MetaNode(description  = "AdapterRemoval_PE",
                     dependencies = [standard, custom.build_node()])

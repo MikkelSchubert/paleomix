@@ -49,18 +49,18 @@ import common
 class VCFPileupNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, reference, in_bam, in_vcf, outfile, dependencies = ()):
-        unicat = AtomicParams(["unicat", "%(IN_VCF)s"],
-                              IN_VCF     = in_vcf,
-                              OUT_STDOUT = AtomicCmd.PIPE)
+        unicat = AtomicCmdBuilder(["unicat", "%(IN_VCF)s"],
+                                  IN_VCF     = in_vcf,
+                                  OUT_STDOUT = AtomicCmd.PIPE)
 
-        vcfpileup = AtomicParams(["vcf_create_pileup", "%(OUT_PILEUP)s"],
-                                 IN_REF       = reference,
-                                 IN_BAM       = in_bam,
-                                 IN_STDIN     = unicat,
-                                 OUT_PILEUP   = outfile,
-                                 OUT_TBI      = outfile + ".tbi")
-        vcfpileup.push_positional("%(IN_BAM)s")
-        vcfpileup.set_parameter("-f", "%(IN_REF)s")
+        vcfpileup = AtomicCmdBuilder(["vcf_create_pileup", "%(OUT_PILEUP)s"],
+                                     IN_REF       = reference,
+                                     IN_BAM       = in_bam,
+                                     IN_STDIN     = unicat,
+                                     OUT_PILEUP   = outfile,
+                                     OUT_TBI      = outfile + ".tbi")
+        vcfpileup.add_value("%(IN_BAM)s")
+        vcfpileup.set_option("-f", "%(IN_REF)s")
 
         return {"commands" : {"unicat" : unicat,
                               "pileup" : vcfpileup}}
@@ -80,20 +80,20 @@ class VCFPileupNode(CommandNode):
 class VCFFilterNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, pileup, infile, outfile, interval, dependencies = ()):
-        unicat = AtomicParams(["unicat", "%(IN_VCF)s"],
-                              IN_VCF     = infile,
-                              OUT_STDOUT = AtomicCmd.PIPE)
+        unicat = AtomicCmdBuilder(["unicat", "%(IN_VCF)s"],
+                                  IN_VCF     = infile,
+                                  OUT_STDOUT = AtomicCmd.PIPE)
 
-        vcffilter = AtomicParams(["vcf_filter", "--pileup", "%(IN_PILEUP)s"],
-                                 IN_PILEUP = pileup,
-                                 IN_STDIN     = unicat,
-                                 OUT_STDOUT   = AtomicCmd.PIPE)
+        vcffilter = AtomicCmdBuilder(["vcf_filter", "--pileup", "%(IN_PILEUP)s"],
+                                     IN_PILEUP = pileup,
+                                     IN_STDIN     = unicat,
+                                     OUT_STDOUT   = AtomicCmd.PIPE)
         for contig in interval.get("Homozygous Contigs", ()):
-            vcffilter.set_parameter("--homozygous-chromosome", contig)
+            vcffilter.set_option("--homozygous-chromosome", contig)
 
-        bgzip = AtomicParams(["bgzip"],
-                             IN_STDIN     = vcffilter,
-                             OUT_STDOUT   = outfile)
+        bgzip = AtomicCmdBuilder(["bgzip"],
+                                 IN_STDIN     = vcffilter,
+                                 OUT_STDOUT   = outfile)
 
         return {"commands" : {"unicat" : unicat,
                               "filter" : vcffilter,
@@ -118,17 +118,17 @@ class BuildRegionsNode(CommandNode):
         prefix = "{Genome}.{Name}".format(**interval)
         intervals = os.path.join(options.intervals_root, prefix + ".bed")
 
-        params = AtomicParams(["bam_genotype_regions"],
-                              IN_VCFFILE   = infile,
-                              IN_TABIX     = infile + ".tbi",
-                              IN_INTERVALS = intervals,
-                              OUT_STDOUT   = outfile)
-        params.set_parameter("--genotype", "%(IN_VCFFILE)s")
-        params.set_parameter("--intervals", "%(IN_INTERVALS)s")
+        params = AtomicCmdBuilder(["bam_genotype_regions"],
+                                  IN_VCFFILE   = infile,
+                                  IN_TABIX     = infile + ".tbi",
+                                  IN_INTERVALS = intervals,
+                                  OUT_STDOUT   = outfile)
+        params.set_option("--genotype", "%(IN_VCFFILE)s")
+        params.set_option("--intervals", "%(IN_INTERVALS)s")
         if interval.get("Protein coding"):
-            params.set_parameter("--whole-codon-indels-only")
+            params.set_option("--whole-codon-indels-only")
         if not interval.get("Indels"):
-            params.set_parameter("--ignore-indels")
+            params.set_option("--ignore-indels")
 
         return {"command" : params}
 
@@ -147,12 +147,12 @@ class BuildRegionsNode(CommandNode):
 class SampleRegionsNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, infile, intervals, outfile, dependencies = ()):
-        params = AtomicParams(["bam_sample_regions"],
-                              IN_PILEUP    = infile,
-                              IN_INTERVALS = intervals,
-                              OUT_STDOUT   = outfile)
-        params.set_parameter("--genotype", "%(IN_PILEUP)s")
-        params.set_parameter("--intervals", "%(IN_INTERVALS)s")
+        params = AtomicCmdBuilder(["bam_sample_regions"],
+                                  IN_PILEUP    = infile,
+                                  IN_INTERVALS = intervals,
+                                  OUT_STDOUT   = outfile)
+        params.set_option("--genotype", "%(IN_PILEUP)s")
+        params.set_option("--intervals", "%(IN_INTERVALS)s")
 
         return {"command" : params}
 
@@ -272,10 +272,10 @@ def build_genotyping_nodes(options, genotyping, taxa, interval, dependencies):
         max_depth = filter_cfg["MaxReadDepth"]
         if isinstance(max_depth, dict):
             max_depth = max_depth[taxa["Name"]]
-        vcffilter.commands["filter"].set_parameter("--max-read-depth", max_depth)
+        vcffilter.commands["filter"].set_option("--max-read-depth", max_depth)
     if filter_cfg.get("Mappability"):
-        vcffilter.commands["filter"].set_parameter("--filter-by-mappability", "%(IN_MAPPABILITY)s")
-        vcffilter.commands["filter"].set_paths(IN_MAPPABILITY = filter_cfg["Mappability"])
+        vcffilter.commands["filter"].set_option("--filter-by-mappability", "%(IN_MAPPABILITY)s")
+        vcffilter.commands["filter"].set_kwargs(IN_MAPPABILITY = filter_cfg["Mappability"])
     vcffilter = vcffilter.build_node()
 
     tabix    = TabixIndexNode(infile          = filtered,

@@ -5,8 +5,8 @@
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
-# copies of the Software, and to permit persons to whom the Software is 
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
 # The above copyright notice and this permission notice shall be included in all
@@ -15,15 +15,15 @@
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
 """Tools for passing CLI options to AtomicCmds used by Nodes.
 
 The module contains 1 class and 2 decorators, which may be used in conjunction
-to create Node classes for which the call carried out by AtomicCmds may be 
+to create Node classes for which the call carried out by AtomicCmds may be
 modified by the end user, without explicit support added to the init function
 of the class. The basic outline of such a class is as follows:
 
@@ -31,13 +31,13 @@ of the class. The basic outline of such a class is as follows:
 class ExampleNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(self, ...):
-        # Use passed parameters to create AtomicParams obj
-        params = AtomicParams(...)
-        params.set_parameter(...)
-        
-        # Return dictionary of AtomicParams objects and any
-        # additional parameters required to run the Node. 
-        return {"command"   : params,
+        # Use passed parameters to create AtomicCmdBuilder obj
+        builder = AtomicCmdBuilder(...)
+        builder.set_option(...)
+
+        # Return dictionary of AtomicCmdBuilder objects and any
+        # additional parameters required to run the Node.
+        return {"command"   : builder,
                 "example" : ...}
 
     @use_customizable_cli_parameters
@@ -47,7 +47,7 @@ class ExampleNode(CommandNode):
 
         # Do something with a parameter passed to customize
         description = "<ExampleNode: %s>" % parameters.example
-        
+
         CommandNode.__init__(command     = command,
                              description = description,
                              ...)
@@ -56,14 +56,13 @@ This class can then be used in two ways:
 1) Without doing any explicit modifications to the CLI calls:
 >> node = ExampleNode(...)
 
-2) Retrieving and tweaking AtomicParams before creating the Node:
+2) Retrieving and tweaking AtomicCmdBuilder before creating the Node:
 >> params = ExampleNode.customize(...)
 >> params.command.set_option(...)
 >> node = params.build_node()
 
 """
-import os
-import random
+import types
 import inspect
 import itertools
 import collections
@@ -73,149 +72,115 @@ from pypeline.common.utilities import safe_coerce_to_tuple
 
 
 
-class ParameterError(RuntimeError):
+
+class AtomicCmdBuilderError(RuntimeError):
     pass
 
 
 
-class AtomicParams:
-    """AtomicParams is a class used to construct a system call by a Node for use
-    with its AtomicCmd(s). This allows the user of a Node to modify the behavior
-    of the called programs using some CLI parameters, without explicit support 
-    for these in the Node interface. Some limitations are in place, to help 
-    catch cases where overwriting or adding a flag would break the Node.
 
-    Parameters are divided into two classes; singleton and non-singleton.
-     - Singleton parameters are those set exactly once on the command-line, 
-       with subsequent calls overwriting the previous value. The function
-       'set_parameter' is used to set such parameters.
-     - Non-singleton parameters are those which may be set any number of 
-       times, with all values specified being used by the program. Such
-       parameters are added using the 'push_parameter' function.
+class AtomicCmdBuilder:
+    """AtomicCmdBuilder is a class used to allow step-wise construction of an
+    AtomicCmd object. This allows the user of a Node to modify the behavior
+    of the called programs using some CLI parameters, without explicit support
+    for these in the Node API. Some limitations are in place, to help catch
+    cases where overwriting or adding a flag would break the Node.
 
-    In addition to parameters, path may be assigned to keywords (for use as
-    values for parameters), corresponding to their use in AtomicCmd.
-    """
+    The system call is constructed in the following manner:
+       $ <call> <options> <values>
 
-    def __init__(self, call, set_cwd = False, **kwargs):
-        """Initialize AtomicParams object.
+    The components are defined as follows:
+      <call>    - The minimal call needed invoke the current program. Typically
+                  this is just the name of the executable, but may be a more
+                  complex set of values for nested calls (e.g. java/scripts).
+      <option>  - A flag, typically prefixed with one or two dashes, followed
+                  by an optional value. The flag may be joined with the value
+                  by an seperator (e.g. '='), otherwise they are added to the
+                  final call as seperate values.
+      <values>  - One or more values, e.g. paths or similar.
 
-        The 'call' parameter specifies the basic call, and typically contains
-        just the name of the executable. It may also be used to invoke a script
-        or similar using an executable, while allowing the user to pass 
-        parameters to the script (see e.g. AtomicJavaParams)."""
-        
+    Options are divided into two classes; singletons and non-singletons:
+      Singletons     - May be specified exactly one (using 'set_option'), with
+                       subsequent calls to 'set_option' overwriting the previous
+                       value of the option (if any).
+      Non-singletons - May be specified one or more times (using 'push_option'),
+                       with each subsequent call added to list of existing
+                       parameters.
+
+    Furthermore, any parameter may be marked as fixed (typically because the
+    node dependends on that option being set), which prevents any subsequent
+    call from modifying this option. By default, all options are fixed.
+
+    Any number of keywords may be set, which are passed to the AtomicCmd object
+    created by the AtomicCmdBuilder object (using 'set_kwargs'). The rules specified
+    in the AtomicCmd documentation apply to these. If a AtomicCmdBuilder object
+    is passed, this will be finalized as well."""
+
+    def __init__(self, call, **kwargs):
+        """See AtomiCmd.__init__ for parameters / keyword arguments."""
+
         self._call    = safe_coerce_to_tuple(call)
-        self._positionals = []
-        self._params  = []
-        self._paths   = {}
-        self._cmd_object = None
-        self._set_cwd = set_cwd
-        self.set_paths(**kwargs)
+        self._options = []
+        self._values  = []
+        self._kwargs  = {}
+        self._object  = None
+
+        self.set_kwargs(**kwargs)
 
 
-    def push_parameter(self, key, value = None, sep = None, fixed = True):
-        """Appends a parameter that may be specified any number of times.
-
-        This function is meant for parameters that may be specified any number of times,
-        as exemplified by the "I" parameter used by many PicardTools (i.e. a non-singleton
-        parameter), and a ParamterError exception will be raised if the parameter has 
-        previously been set using 'set_parameter' (i.e. a singleton parameter).
-
-        If no value has been specified (is None), only the key will added to the system-
-        call. If a value and a sep(erator) has been specified, the key and the value will
-        be joined into a single string before being added to the system-call. If fixed is 
-        true, this particular parameter cannot be removed using 'pop_parameter'.
-        
-        Example:
-        >> params = ...
-        >> params.push_paramter("I", "%(IN_FILE_1)s", sep = "=")
-        >> params.push_paramter("I", "%(IN_FILE_2)s", sep = "=")
-        >> params.call
-        [..., "I=%(IN_FILE_1)s", "I=%(IN_FILE_2)s"]
-
-        Use keywords (as above) and 'set_paths' to ensure that input/output files are tracked!
-        """
-        if self._cmd_object:
-            raise ParameterError("Parameters have already been finalized")
-        elif any(opt["Singleton"] for opt in self._params if (opt["Key"] == key)):
-            raise ParameterError("Attempted to push parameters previously marked as singleton: %s" % key)
-
-        self._params.append({"Key"    : key,
-                             "Value"  : value,
-                             "Sep"    : sep,
-                             "Fixed"  : fixed,
-                             "Singleton" : False})
+    def set_option(self, key, value = None, sep = None, fixed = True):
+        """Sets or overwrites an option that may be specified at most once. If
+        the option has already been set using 'add_option', or with 'fixed' set
+        to True, a AtomicCmdBuilderError will be raised."""
+        old_option = self._get_option_for_editing(key, singleton = True)
+        new_option = {"Key" : key, "Value"  : value, "Sep" : sep, "Fixed"  : fixed, "Singleton" : True}
+        if old_option:
+            if old_option["Fixed"]:
+                raise AtomicCmdBuilderError("Attemping to overwrite fixed option: %r" % key)
+            old_option.update(new_option)
+        else:
+            self._options.append(new_option)
 
 
-    def set_parameter(self, key, value = None, sep = None, fixed = True):
-        """Sets or overwrites a parameter that may be specified at most once.
+    def add_option(self, key, value = None, sep = None, fixed = True):
+        """Adds an option that may be specified one or more times. If the option
+        has already been set using 'set_option', a AtomicCmdBuilderError will be raised."""
+        # Previous values are not used, but checks are required
+        self._get_option_for_editing(key, singleton = False)
+        self._options.append({"Key" : key, "Value"  : value, "Sep" : sep, "Fixed"  : fixed, "Singleton" : False})
 
 
-        This function is meant for parameters that should only be specified once, as
-        is the typical expectation of CLI swithces (e.g. RAxML '-f'). A ParameterError
-        will be raised if the option has previously been added using 'push_parameter'.
-
-        If no value has been specified (is None), only the key will added to the system-
-        call. If a value and a sep(erator) has been specified, the key and the value will
-        be joined into a single string before being added to the system-call. If fixed is 
-        true, this particular parameter cannot be removed using 'pop_parameter', or 
-        overwritten by subsequent calls to 'set_parameter'."""
-        if self._cmd_object:
-            raise ParameterError("Parameters have already been finalized")
-        elif any(not opt["Singleton"] for opt in self._params if (opt["Key"] == key)):
-            raise ParameterError("Attempted to overwrite non-singleton parameter: %s" % key)
-
-        param = {"Key" : key, "Value"  : value, "Sep" : sep, "Fixed"  : fixed, "Singleton" : True}
-        for o_param in self._params:
-            if o_param["Key"] == key:
-                if o_param["Fixed"]:
-                    raise ParameterError("Attempted to overwrite fixed singleton parameter: %s" % key)
-                o_param.update(param)
-                return
-
-        self._params.append(param)
+    def pop_option(self, key):
+        old_option = self._get_option_for_editing(key, singleton = None)
+        if not old_option:
+            raise KeyError("Option with key %r does not exist" % key)
+        elif old_option["Fixed"]:
+            raise AtomicCmdBuilderError("Attempting to pop fixed key %r" % key)
+        self._options.remove(old_option)
 
 
-    def push_positional(self, value):
-        self._positionals.append(value)
+    def add_value(self, value):
+        """Adds a positional value to the call. Usage should be restricted to
+        paths and similar values, and set/add_option used for actual options."""
+        self._values.append(value)
 
 
-    def pop_parameter(self, key):
-        if self._cmd_object:
-            raise ParameterError("Parameters have already been finalized")
+    def set_kwargs(self, **kwargs):
+        if self._object:
+            raise AtomicCmdBuilderError("Parameters have already been finalized")
 
-        for parameter in reversed(self._params):
-            if parameter["Key"] == key:
-                if parameter["Fixed"]:
-                    raise ParameterError("Attempted to pop fixed parameter: %s" % key)
-                self._params.remove(parameter)
-                return
-
-        raise KeyError("Could not pop parameter: %s" % key)
-
-
-    def set_paths(self, key = None, value = None, **kwargs):
-        if self._cmd_object:
-            raise ParameterError("Parameters have already been finalized")
-        elif key and value:
-            kwargs[key] = value
-        elif key or value:
-            raise ParameterError("Either neither or both 'key' and 'value' parameters must be specified.")
-        
-        for (key, path) in kwargs.iteritems():
-            if key in self._paths:
-                raise ParameterError("Attempted to overwrite existing path: %s" % key)
-        self._paths.update(kwargs)       
+        for key in kwargs:
+            if key in self._kwargs:
+                raise AtomicCmdBuilderError("Attempted to overwrite existing path: %r" % key)
+        self._kwargs.update(kwargs)
 
 
     @property
     def call(self):
         """Returns the system-call, based on the call passed to the constructor, and
-        every parameter set or pushed using 'set_parameter' and 'push_parameter."""
-
+        every parameter set or pushed using 'set_option' and 'add_option."""
         command = list(self._call)
-        for parameter in self._params:
+        for parameter in self._options:
             if parameter["Value"] is not None:
                 if parameter["Sep"] is not None:
                     command.append("%s%s%s" % (parameter["Key"], parameter["Sep"], parameter["Value"]))
@@ -225,71 +190,100 @@ class AtomicParams:
             else:
                 command.append(parameter["Key"])
 
-        command.extend(self._positionals)
+        command.extend(self._values)
         return command
 
 
     @property
-    def paths(self):
-        """Returns a dictionary of paths as set by 'set_paths'."""
-
-        paths = {}
-        for (key, value) in self._paths.iteritems():
-            if isinstance(value, AtomicParams):
+    def kwargs(self):
+        """Returns a dictionary of keyword arguments as set by 'set_kwargs'.
+        If the value of an argument is an AtomicCmdBuilder, then the builder
+        is finalized and the resulting value is used."""
+        kwargs = {}
+        for (key, value) in self._kwargs.iteritems():
+            if isinstance(value, AtomicCmdBuilder):
                 value = value.finalize()
-            paths[key] = value
-        return paths
+            kwargs[key] = value
+        return kwargs
 
 
     def finalize(self):
-        """Creates an AtomicCmd object based on the AtomicParam object."""
-        if not self._cmd_object:
-            self._cmd_object = AtomicCmd(self.call, set_cwd = self._set_cwd, **self.paths)
+        """Creates an AtomicCmd object based on the AtomicParam object. Once
+        finalized, the AtomicCmdBuilder cannot be modified further."""
+        if not self._object:
+            self._object = AtomicCmd(self.call, **self.kwargs)
 
-        return self._cmd_object
+        return self._object
+
+
+    def _get_option_for_editing(self, key, singleton):
+        if self._object:
+            raise AtomicCmdBuilderError("AtomicCmdBuilder has already been finalized")
+        elif not isinstance(key, types.StringTypes):
+            raise TypeError("Key must be a string, not %r" % (key.__class__.__name__,))
+        elif not key:
+            raise KeyError("Key cannot be an empty string")
+
+        for option in reversed(self._options):
+            if (option["Key"] == key):
+                if (singleton is not None) and (option["Singleton"] != singleton):
+                    raise AtomicCmdBuilderError("Mixing of singleton and non-singleton options: %r" % key)
+                return option
 
 
 
-class AtomicJavaParams(AtomicParams):
-    def __init__(self, config, jar, gc_threads = 1, set_cwd = False):
-        call = ["java", "-server", "-Xmx4g", 
+
+class AtomicJavaCmdBuilder(AtomicCmdBuilder):
+    def __init__(self, config, jar, gc_threads = 1, **kwargs):
+        call = ["java", "-server", "-Xmx4g",
                 "-Djava.io.tmpdir=%s" % config.temp_root]
 
-        if gc_threads > 1:
+        if not isinstance(gc_threads, (types.IntType, types.LongType)):
+            raise TypeError("'gc_threads' must be an integer value, not %r" % gc_threads.__class__.__name__)
+        elif gc_threads > 1:
             call.append("-XX:ParallelGCThreads=%i" % gc_threads)
-        else:
+        elif gc_threads == 1:
             call.append("-XX:+UseSerialGC")
-            
-        call.extend(("-jar", jar))
-        AtomicParams.__init__(self, call, set_cwd = set_cwd, AUX_JAR = jar)
+        else:
+            raise ValueError("'gc_threads' must be a 1 or greater, not %r" % gc_threads)
+
+        call.extend(("-jar", "%(AUX_JAR)s"))
+        AtomicCmdBuilder.__init__(self, call, AUX_JAR = jar, **kwargs)
 
 
-class AtomicMPIParams(AtomicParams):
-    def __init__(self, executable, threads = 1):
-        call = [executable]
-        executables = {"EXEC_MAIN" : executable}
-        if threads > 1:
-            call = ["mpirun", "-n", threads] + call
-            executables["EXEC_MPI"] = "mpirun"
-
-        AtomicParams.__init__(self, call, **executables)
 
 
-def use_customizable_cli_parameters(init_func):
+class AtomicMPICmdBuilder(AtomicCmdBuilder):
+    def __init__(self, call, threads = 1, **kwargs):
+        if not isinstance(threads, (types.IntType, types.LongType)):
+            raise TypeError("'threads' must be an integer value, not %r" % threads.__class__.__name__)
+        elif threads < 1:
+            raise ValueError("'threads' must be 1 or greater, not %i" % threads)
+        elif threads == 1:
+            AtomicCmdBuilder.__init__(self, call, **kwargs)
+        else:
+            call = safe_coerce_to_tuple(call)
+            mpi_call = ["mpirun", "-n", threads]
+            mpi_call.extend(call)
+
+            AtomicCmdBuilder.__init__(self, mpi_call, EXEC_MAIN = call[0], **kwargs)
+
+
+
+
+def use_customizable_cli_parameters(init_func): # pylint: disable=C0103
     """Decorator implementing the customizable Node interface.
     Allows a node to be implemented either using default behavior:
       >>> node = SomeNode(value1 = ..., value2 = ...)
-      
+
     Or using tweaked parameters for calls that support it:
       >>> parameters = SomeNode.customize(value1 = ..., value2 = ...)
-      >>> parameters["command"].set_parameter(...)
+      >>> parameters["command"].set_options(...)
       >>> node = SomeNode(parameters)
 
-    To be able to use this interface, the class must implement a 
+    To be able to use this interface, the class must implement a
     function 'customize' that takes the parameters that the constructor
-    would take, while the constructor must take a single 'parameters'
-    key-argument defaulting to None."""
-
+    would take, while the constructor must take a  'parameters' argument."""
     def do_call(self, parameters = None, **kwargs):
         if not parameters:
             parameters = self.customize(**kwargs)
@@ -298,21 +292,23 @@ def use_customizable_cli_parameters(init_func):
     return do_call
 
 
-
-def create_customizable_cli_parameters(customize_func):
+def create_customizable_cli_parameters(customize_func): # pylint: disable=C0103
     def do_call(cls, **kwargs):
         kwargs.update(customize_func(cls, **kwargs))
 
         # Ensure that parameters with default arguments (e.g. 'dependencies')
         # are passed, if not explicity specified
         spec = inspect.getargspec(customize_func)
-        for (key, value) in itertools.izip_longest(reversed(spec.args), reversed(spec.defaults)):
+        args = reversed(spec.args)
+        defaults = reversed(spec.defaults or ())
+
+        for (key, value) in itertools.izip_longest(args, defaults):
             if key not in kwargs:
                 kwargs[key] = value
 
         name = "%s_parameters" % cls.__name__
         clsobj = collections.namedtuple(name, " ".join(kwargs))
-        class _ParametersWrapper(clsobj):
+        class _ParametersWrapper(clsobj): # pylint: disable=W0232
             def build_node(self):
                 return cls(self)
         return _ParametersWrapper(**kwargs)
@@ -320,8 +316,11 @@ def create_customizable_cli_parameters(customize_func):
     return classmethod(do_call)
 
 
+
+
+
 def apply_params(obj, params, pred = lambda s: s.startswith("-")):
     for (key, values) in params.iteritems():
         if pred(key):
             for value in safe_coerce_to_tuple(values):
-                obj.set_parameter(key, value)
+                obj.set_option(key, value)

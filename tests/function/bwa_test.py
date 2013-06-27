@@ -42,7 +42,7 @@ def _bwa_aln_se(config, index):
                           **node_params)
     custom = SE_BWANode.customize(output_file = os.path.join(config.destination, "aln_se_custom", "output.bam"),
                                   **node_params)
-    custom.commands["samse"].set_parameter("-r", "@RG\tID:1\tPL:Illumina\tPU:123456\tLB:Library_1\tSM:Sample_1")
+    custom.commands["samse"].set_option("-r", "@RG\tID:1\tPL:Illumina\tPU:123456\tLB:Library_1\tSM:Sample_1")
 
     return MetaNode(description  = "BWA aln SE",
                     dependencies = [standard, custom.build_node()])
@@ -60,7 +60,7 @@ def _bwa_aln_pe(config, index):
                           **node_params)
     custom   = PE_BWANode.customize(output_file = os.path.join(config.destination, "aln_pe_custom", "output.bam"),
                                     **node_params)
-    custom.commands["sampe"].set_parameter("-r", "@RG\tID:1\tPL:Illumina\tPU:123456\tLB:Library_1\tSM:Sample_1")
+    custom.commands["sampe"].set_option("-r", "@RG\tID:1\tPL:Illumina\tPU:123456\tLB:Library_1\tSM:Sample_1")
     
     return MetaNode(description  = "BWA aln PE",
                     dependencies = [standard, custom.build_node()])
@@ -78,7 +78,7 @@ def _bwa_sw_se(config, index):
                          **node_params)
     custom = BWASWNode.customize(output_file = os.path.join(config.destination, "sw_se_custom", "output.bam"),
                                  **node_params)
-    custom.commands["aln"].set_parameter("-z", 10)
+    custom.commands["aln"].set_option("-z", 10)
 
     return MetaNode(description  = "BWA SW SE",
                 dependencies = [standard, custom.build_node()])
@@ -95,7 +95,7 @@ def _bwa_sw_pe(config, index):
                          **node_params)
     custom = BWASWNode.customize(output_file = os.path.join(config.destination, "sw_pe_custom", "output.bam"),
                                  **node_params)
-    custom.commands["aln"].set_parameter("-z", 7 )
+    custom.commands["aln"].set_option("-z", 7 )
 
     return MetaNode(description  = "BWA SW PE",
                     dependencies = [standard, custom.build_node()])

@@ -229,6 +229,6 @@ def _read_sequences(filenames):
         elif set(msa) != expected_groups:
             difference = expected_groups.symmetric_difference(msa)
             raise NodeError("Unexpected/missing groups for sequence (%s): %s" \
-                                % (name, ", ".join(difference)))
-        
+                                % (filename, ", ".join(difference)))
+
         yield (filename, msa)

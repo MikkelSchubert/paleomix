@@ -96,6 +96,6 @@ class Reads:
         quality_offset = self.quality_offset # record["Options"]["QualityOffset"]
         if quality_offset == "Solexa":
             quality_offset = 64
-        command.command.set_parameter("--qualitybase", quality_offset)
+        command.command.set_option("--qualitybase", quality_offset)
 
         self.nodes = (command.build_node(),)

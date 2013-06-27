@@ -37,7 +37,7 @@ def _test_validate_bams(config):
 
     custom   = ValidateBAMNode.customize(output_log = os.path.join(config.destination, "validate_custom", "log.txt"),
                                          **node_params)
-    custom.command.set_parameter("IGNORE_WARNINGS", "True", sep = "=")
+    custom.command.set_option("IGNORE_WARNINGS", "True", sep = "=")
 
 
     return MetaNode(description  = "ValidateSamFile", 
@@ -61,7 +61,7 @@ def _test_mark_duplicates(config):
     custom   = MarkDuplicatesNode.customize(output_bam     = os.path.join(config.destination, "markdup_custom", "result.bam"),
                                             output_metrics = os.path.join(config.destination, "markdup_custom", "result.metrics"),
                                             **node_params)
-    custom.command.set_parameter("VERBOSITY", "DEBUG", sep = "=")
+    custom.command.set_option("VERBOSITY", "DEBUG", sep = "=")
 
 
     return MetaNode(description  = "ValidateSamFile", 
@@ -81,7 +81,7 @@ def _test_merge_sam_files(config):
 
     custom   = MergeSamFilesNode.customize(output_bam     = os.path.join(config.destination, "merge_custom", "result.bam"),
                                             **node_params)
-    custom.command.set_parameter("ASSUME_SORTED", "True", sep = "=")
+    custom.command.set_option("ASSUME_SORTED", "True", sep = "=")
 
 
     return MetaNode(description  = "MergeSamFile", 

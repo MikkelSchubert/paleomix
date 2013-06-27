@@ -112,7 +112,7 @@ def _apply_aln_user_parameters(mkfile_params, params, aligners):
         if param.startswith("-"):
             for value in safe_coerce_to_tuple(value):
                 for aligner_key in aligners:
-                    params.commands[aligner_key].push_parameter(param, value)
+                    params.commands[aligner_key].add_option(param, value)
 
 def _append_aln_user_parameters(mkfile_params, lst):
     for (param, value) in mkfile_params.iteritems():
@@ -157,18 +157,18 @@ def _build_bwa_nodes(config, parameters, input_filename, tags, options):
 
     for aln_key in aln_keys:
         if not options["Aligners"]["BWA"]["UseSeed"]:
-            params.commands[aln_key].set_parameter("-l", 2**16 - 1)
+            params.commands[aln_key].set_option("-l", 2**16 - 1)
         if options["QualityOffset"] in (64, "Solexa"):
-            params.commands[aln_key].set_parameter("-I")
+            params.commands[aln_key].set_option("-I")
     _apply_aln_user_parameters(options["Aligners"]["BWA"], params, aln_keys)
 
     read_group = "@RG\tID:{ID}\tSM:{SM}\tLB:{LB}\tPU:{PU_src}\tPL:{PL}\tPG:{PG_lc}".format(PG_lc = tags["PG"].lower(), **tags)
-    params.commands[sam_key].set_parameter("-r", read_group)
-    params.commands["convert"].set_parameter('-q', options["Aligners"]["BWA"]["MinQuality"])
+    params.commands[sam_key].set_option("-r", read_group)
+    params.commands["convert"].set_option('-q', options["Aligners"]["BWA"]["MinQuality"])
 
     cl_tag  = _build_bwa_cl_tag(options, sam_key)
     pg_tags = ("bwa:CL:%s" % (cl_tag.replace("%", "%%"),))
-    params.commands["convert"].push_parameter("--update-pg-tag", pg_tags)
+    params.commands["convert"].add_option("--update-pg-tag", pg_tags)
 
     return params.build_node()
 
@@ -204,19 +204,19 @@ def _build_bowtie2_nodes(config, parameters, input_filename, tags, options):
                                    threads         = config.bowtie2_max_threads,
                                    **parameters)
 
-    params.commands["convert"].set_parameter('-q', options["Aligners"]["Bowtie2"]["MinQuality"])
+    params.commands["convert"].set_option('-q', options["Aligners"]["Bowtie2"]["MinQuality"])
     if options["QualityOffset"] == 64:
-        params.commands["aln"].set_parameter("--phred64")
+        params.commands["aln"].set_option("--phred64")
     elif options["QualityOffset"] == 33:
-        params.commands["aln"].set_parameter("--phred33")
+        params.commands["aln"].set_option("--phred33")
     else:
-        params.commands["aln"].set_parameter("--solexa-quals")
+        params.commands["aln"].set_option("--solexa-quals")
     _apply_aln_user_parameters(options["Aligners"]["Bowtie2"], params, ("aln",))
 
     pg_tag = "bowtie2:CL:%s" % (_build_bowtie_cl_tag(options).replace("%", "%%"),)
-    params.commands["convert"].push_parameter("--update-pg-tag", pg_tag)
+    params.commands["convert"].add_option("--update-pg-tag", pg_tag)
 
-    params.commands["aln"].set_parameter("--rg-id", tags["ID"])
+    params.commands["aln"].set_option("--rg-id", tags["ID"])
     for tag_name in ("SM", "LB", "PU", "PL", "PG"):
         if tag_name == "PG":
             tag_value = tags["PG"].lower()
@@ -224,6 +224,6 @@ def _build_bowtie2_nodes(config, parameters, input_filename, tags, options):
             tag_value = tags["PU_src"]
         else:
             tag_value = tags[tag_name]
-        params.commands["aln"].push_parameter("--rg", "%s:%s" % (tag_name, tag_value))
+        params.commands["aln"].add_option("--rg", "%s:%s" % (tag_name, tag_value))
 
     return params.build_node()

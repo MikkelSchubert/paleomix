@@ -27,7 +27,11 @@ import random
 import pypeline.common.fileutils as fileutils
 
 from pypeline.node import CommandNode
-from pypeline.atomiccmd.builder import *
+from pypeline.atomiccmd.builder import \
+     AtomicCmdBuilder, \
+     AtomicMPICmdBuilder, \
+     use_customizable_cli_parameters, \
+     create_customizable_cli_parameters
 
 
 
@@ -35,23 +39,23 @@ from pypeline.atomiccmd.builder import *
 class RAxMLReduceNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, input_alignment, input_partition, output_alignment, output_partition, dependencies = ()):
-        command = AtomicParams("raxmlHPC")
+        command = AtomicCmdBuilder("raxmlHPC")
 
         # Read and (in the case of empty columns) reduce input
-        command.set_parameter("-f", "c")
+        command.set_option("-f", "c")
         # Output files are saved with a .Pypeline postfix, and subsequently renamed
-        command.set_parameter("-n", "Pypeline")
+        command.set_option("-n", "Pypeline")
         # Model required, but not used
-        command.set_parameter("-m", "GTRGAMMA")
+        command.set_option("-m", "GTRGAMMA")
         # Ensures that output is saved to the temporary directory
-        command.set_parameter("-w", "%(TEMP_DIR)s")
+        command.set_option("-w", "%(TEMP_DIR)s")
 
         # Symlink to sequence and partitions, to prevent the creation of *.reduced files outside temp folder
         # In addition, it may be nessesary to remove the .reduced files if created
-        command.set_parameter("-s", "%(TEMP_IN_ALIGNMENT)s")
-        command.set_parameter("-q", "%(TEMP_IN_PARTITION)s")
+        command.set_option("-s", "%(TEMP_IN_ALIGNMENT)s")
+        command.set_option("-q", "%(TEMP_IN_PARTITION)s")
 
-        command.set_paths(IN_ALIGNMENT      = input_alignment,
+        command.set_kwargs(IN_ALIGNMENT      = input_alignment,
                           IN_PARTITION      = input_partition,
 
                           TEMP_IN_ALIGNMENT = "RAXML_alignment",
@@ -105,25 +109,25 @@ class RAxMLReduceNode(CommandNode):
 class RAxMLBootstrapNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, input_alignment, input_partition, output_alignment, dependencies = ()):
-        command = AtomicParams("raxmlHPC", set_cwd = True)
+        command = AtomicCmdBuilder("raxmlHPC", set_cwd = True)
 
         # Read and (in the case of empty columns) reduce input
-        command.set_parameter("-f", "j")
+        command.set_option("-f", "j")
         # Output files are saved with a .Pypeline postfix, and subsequently renamed
-        command.set_parameter("-n", "Pypeline")
+        command.set_option("-n", "Pypeline")
         # Model required, but not used
-        command.set_parameter("-m", "GTRGAMMA")
+        command.set_option("-m", "GTRGAMMA")
         # Set random seed for bootstrap generation. May be set to a fixed value to allow replicability.
-        command.set_parameter("-b", int(random.random() * 2**31 - 1), fixed = False)
+        command.set_option("-b", int(random.random() * 2**31 - 1), fixed = False)
         # Generate a single bootstrap alignment (makes growing the number of bootstraps easier).
-        command.set_parameter("-N", 1, fixed = False)
+        command.set_option("-N", 1, fixed = False)
 
         # Symlink to sequence and partitions, to prevent the creation of *.reduced files outside temp folder
         # In addition, it may be nessesary to remove the .reduced files if created
-        command.set_parameter("-s", "input.alignment")
-        command.set_parameter("-q", "input.partition")
+        command.set_option("-s", "input.alignment")
+        command.set_option("-q", "input.partition")
 
-        command.set_paths(IN_ALIGNMENT      = input_alignment,
+        command.set_kwargs(IN_ALIGNMENT      = input_alignment,
                           IN_PARTITION      = input_partition,
 
                           OUT_ALIGNMENT     = output_alignment,
@@ -177,23 +181,23 @@ class RAxMLRapidBSNode(CommandNode):
                             Example output:      '/disk/project/SN013420.RAxML.bestTree'"""
 
         if threads > 1:
-            command = AtomicParams("raxmlHPC-PTHREADS")
-            command.set_parameter("-T", threads)
+            command = AtomicCmdBuilder("raxmlHPC-PTHREADS")
+            command.set_option("-T", threads)
         else:
-            command = AtomicParams("raxmlHPC")
+            command = AtomicCmdBuilder("raxmlHPC")
 
         # Perform rapid bootstrapping
-        command.set_parameter("-f", "a")
+        command.set_option("-f", "a")
         # Output files are saved with a .Pypeline postfix, and subsequently renamed
-        command.set_parameter("-n", "Pypeline")
+        command.set_option("-n", "Pypeline")
         # Ensures that output is saved to the temporary directory
-        command.set_parameter("-w", "%(TEMP_DIR)s")
+        command.set_option("-w", "%(TEMP_DIR)s")
         # Symlink to sequence and partitions, to prevent the creation of *.reduced files outside temp folder
         # In addition, it may be nessesary to remove the .reduced files if created
-        command.set_parameter("-s", "%(TEMP_OUT_ALN)s")
-        command.set_parameter("-q", "%(TEMP_OUT_PART)s")
+        command.set_option("-s", "%(TEMP_OUT_ALN)s")
+        command.set_option("-q", "%(TEMP_OUT_PART)s")
 
-        command.set_paths(# Auto-delete: Symlinks and .reduced files that RAxML may generate
+        command.set_kwargs(# Auto-delete: Symlinks and .reduced files that RAxML may generate
                           TEMP_OUT_PART   = os.path.basename(input_partition),
                           TEMP_OUT_PART_R = os.path.basename(input_partition) + ".reduced",
                           TEMP_OUT_ALN    = os.path.basename(input_alignment),
@@ -211,13 +215,13 @@ class RAxMLRapidBSNode(CommandNode):
                           OUT_BIPARTLABEL = output_template % "bipartitionsBranchLabels")
 
         # Use the GTRGAMMAI model of NT substitution by default
-        command.set_parameter("-m", "GTRGAMMAI", fixed = False)
+        command.set_option("-m", "GTRGAMMAI", fixed = False)
         # Enable Rapid Boostrapping and set random seed. May be set to a fixed value to allow replicability.
-        command.set_parameter("-x", int(random.random() * 2**31 - 1), fixed = False)
+        command.set_option("-x", int(random.random() * 2**31 - 1), fixed = False)
         # Set random seed for parsimony inference. May be set to a fixed value to allow replicability.
-        command.set_parameter("-p", int(random.random() * 2**31 - 1), fixed = False)
+        command.set_option("-p", int(random.random() * 2**31 - 1), fixed = False)
         # Terminate bootstrapping upon convergence, rather than after a fixed number of repetitions
-        command.set_parameter("-N", "autoMRE", fixed = False)
+        command.set_option("-N", "autoMRE", fixed = False)
 
         return {"command"         : command}
 
@@ -270,18 +274,18 @@ class EXaMLParserNode(CommandNode):
         input_partition  -- A set of partitions in a format readable by RAxML.
         output_filename  -- Filename for the output binary sequence."""
 
-        command = AtomicParams("examlParser", set_cwd = True)
+        command = AtomicCmdBuilder("examlParser", set_cwd = True)
 
-        command.set_parameter("-s", "%(TEMP_OUT_ALN)s")
-        command.set_parameter("-q", "%(TEMP_OUT_PART)s")
+        command.set_option("-s", "%(TEMP_OUT_ALN)s")
+        command.set_option("-q", "%(TEMP_OUT_PART)s")
         # Output file will be named output.binary, and placed in the CWD
-        command.set_parameter("-n", "output")
+        command.set_option("-n", "output")
 
         # Substitution model
-        command.set_parameter("-m", "DNA", fixed = False)
+        command.set_option("-m", "DNA", fixed = False)
 
 
-        command.set_paths(# Auto-delete: Symlinks
+        command.set_kwargs(# Auto-delete: Symlinks
                           TEMP_OUT_PART   = os.path.basename(input_partition),
                           TEMP_OUT_ALN    = os.path.basename(input_alignment),
 
@@ -343,16 +347,16 @@ class EXaMLNode(CommandNode):
                             Example output:      '/disk/project/SN013420.RAxML.bestTree'"""
 
         # TODO: Make MPIParams!
-        command = AtomicMPIParams("examl", threads = threads)
+        command = AtomicMPICmdBuilder("examl", threads = threads)
 
         # Ensures that output is saved to the temporary directory
-        command.set_parameter("-w", "%(TEMP_DIR)s")
+        command.set_option("-w", "%(TEMP_DIR)s")
 
-        command.set_parameter("-s", "%(IN_ALN)s")
-        command.set_parameter("-t", "%(IN_TREE)s")
-        command.set_parameter("-n", "Pypeline")
+        command.set_option("-s", "%(IN_ALN)s")
+        command.set_option("-t", "%(IN_TREE)s")
+        command.set_option("-n", "Pypeline")
 
-        command.set_paths(IN_ALN    = input_binary,
+        command.set_kwargs(IN_ALN    = input_binary,
                           IN_TREE   = initial_tree,
 
                           # Final output files, are not created directly
@@ -361,7 +365,7 @@ class EXaMLNode(CommandNode):
                           OUT_BOOTSTRAP   = output_template % "log")
 
         # Use the GAMMA model of NT substitution by default
-        command.set_parameter("-m", "GAMMA", fixed = False)
+        command.set_option("-m", "GAMMA", fixed = False)
 
         return {"command"         : command}
 
@@ -405,14 +409,14 @@ class ParsimonatorNode(CommandNode):
         input_alignment  -- An alignment file in a format readable by RAxML.
         output_tree      -- Filename for the output newick tree."""
 
-        command = AtomicParams("parsimonator", set_cwd = True)
+        command = AtomicCmdBuilder("parsimonator", set_cwd = True)
 
-        command.set_parameter("-s", "%(TEMP_OUT_ALN)s")
-        command.set_parameter("-n", "output")
+        command.set_option("-s", "%(TEMP_OUT_ALN)s")
+        command.set_option("-n", "output")
         # Random seed for the stepwise addition process
-        command.set_parameter("-p", int(random.random() * 2**31 - 1), fixed = False)
+        command.set_option("-p", int(random.random() * 2**31 - 1), fixed = False)
 
-        command.set_paths(# Auto-delete: Symlinks
+        command.set_kwargs(# Auto-delete: Symlinks
                           TEMP_OUT_ALN   = os.path.basename(input_alignment),
 
                           # Input files, are not used directly (see below)

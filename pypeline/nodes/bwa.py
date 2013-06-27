@@ -24,7 +24,11 @@ import os
 
 from pypeline.node import CommandNode, NodeError
 from pypeline.atomiccmd.command import AtomicCmd
-from pypeline.atomiccmd.builder import *
+from pypeline.atomiccmd.builder import \
+     AtomicCmdBuilder, \
+     use_customizable_cli_parameters, \
+     create_customizable_cli_parameters
+
 from pypeline.atomiccmd.sets import ParallelCmds
 from pypeline.nodes.samtools import SAMTOOLS_VERSION
 
@@ -45,7 +49,7 @@ def _get_pysam_version():
     return __import__("pysam").__version__
 PYSAM_VERSION = versions.Requirement(name   = "module 'pysam'",
                                      call   = _get_pysam_version,
-                                     search = b"(\d+)\.(\d+)\.(\d+)",
+                                     search = r"(\d+)\.(\d+)\.(\d+)",
                                      checks = versions.GE(0, 7, 4))
 
 class BWAIndexNode(CommandNode):
@@ -58,9 +62,9 @@ class BWAIndexNode(CommandNode):
                             CHECK_BWA = BWA_VERSION)
 
         # Input fasta sequence
-        params.push_positional("%(IN_FILE)s")
+        params.add_value("%(IN_FILE)s")
         # Destination prefix, in temp folder
-        params.set_parameter("-p", "%(TEMP_OUT_PREFIX)s")
+        params.set_option("-p", "%(TEMP_OUT_PREFIX)s")
 
         return {"prefix":  prefix,
                 "command": params}
@@ -96,7 +100,7 @@ class BWANode:
 
 class SE_BWANode(CommandNode):
     @create_customizable_cli_parameters
-    def customize(self, input_file, output_file, reference, prefix, threads = 1, dependencies = ()):
+    def customize(cls, input_file, output_file, reference, prefix, threads = 1, dependencies = ()):
         threads = _get_max_threads(reference, threads)
 
         aln_in = _build_unicat_command(input_file, "uncompressed_input_aln")
@@ -104,9 +108,9 @@ class SE_BWANode(CommandNode):
                          TEMP_IN_FILE = "uncompressed_input_aln",
                          OUT_STDOUT = AtomicCmd.PIPE,
                          CHECK_BWA = BWA_VERSION)
-        aln.push_positional(prefix)
-        aln.push_positional("%(TEMP_IN_FILE)s")
-        aln.set_parameter("-t", threads)
+        aln.add_value(prefix)
+        aln.add_value("%(TEMP_IN_FILE)s")
+        aln.set_option("-t", threads)
 
         samse_in = _build_unicat_command(input_file, "uncompressed_input_samse")
         samse = _BWAParams(("bwa", "samse"), prefix,
@@ -114,9 +118,9 @@ class SE_BWANode(CommandNode):
                            TEMP_IN_FILE = "uncompressed_input_samse",
                            OUT_STDOUT = AtomicCmd.PIPE,
                            CHECK_BWA = BWA_VERSION)
-        samse.push_positional(prefix)
-        samse.push_positional("-")
-        samse.push_positional("%(TEMP_IN_FILE)s")
+        samse.add_value(prefix)
+        samse.add_value("-")
+        samse.add_value("%(TEMP_IN_FILE)s")
 
         order, commands = _process_output(samse, output_file, reference)
         commands["samse_in"] = samse_in
@@ -159,10 +163,10 @@ class PE_BWANode(CommandNode):
                              OUT_STDOUT = AtomicCmd.PIPE,
                              TEMP_OUT_SAI = "pair_%i.sai" % iindex,
                              CHECK_BWA = BWA_VERSION)
-            aln.set_parameter("-f", "%(TEMP_OUT_SAI)s")
-            aln.set_parameter("-t", max(1, threads // 2))
-            aln.push_positional(prefix)
-            aln.push_positional("%(TEMP_IN_FILE)s")
+            aln.set_option("-f", "%(TEMP_OUT_SAI)s")
+            aln.set_option("-t", max(1, threads // 2))
+            aln.add_value(prefix)
+            aln.add_value("%(TEMP_IN_FILE)s")
             aln_ins.append(aln_in)
             alns.append(aln)
         aln_in_1, aln_in_2 = aln_ins
@@ -177,12 +181,12 @@ class PE_BWANode(CommandNode):
                            TEMP_IN_SAI_2 = "pair_2.sai",
                            OUT_STDOUT    = AtomicCmd.PIPE,
                            CHECK_BWA = BWA_VERSION)
-        sampe.push_positional(prefix)
-        sampe.push_positional("%(TEMP_IN_SAI_1)s")
-        sampe.push_positional("%(TEMP_IN_SAI_2)s")
-        sampe.push_positional("%(TEMP_IN_FILE_1)s")
-        sampe.push_positional("%(TEMP_IN_FILE_2)s")
-        sampe.set_parameter("-P", fixed = False)
+        sampe.add_value(prefix)
+        sampe.add_value("%(TEMP_IN_SAI_1)s")
+        sampe.add_value("%(TEMP_IN_SAI_2)s")
+        sampe.add_value("%(TEMP_IN_FILE_1)s")
+        sampe.add_value("%(TEMP_IN_FILE_2)s")
+        sampe.set_option("-P", fixed = False)
 
         order, commands = _process_output(sampe, output_file, reference, run_fixmate = True)
         commands["sampe"] = sampe
@@ -231,14 +235,14 @@ class BWASWNode(CommandNode):
         aln = _BWAParams(("bwa", "bwasw"), prefix,
                          IN_FILE_1  = input_file_1,
                          OUT_STDOUT = AtomicCmd.PIPE)
-        aln.push_positional(prefix)
-        aln.push_positional("%(IN_FILE_1)s")
+        aln.add_value(prefix)
+        aln.add_value("%(IN_FILE_1)s")
 
         if input_file_2:
-            aln.push_positional("%(IN_FILE_2)s")
-            aln.set_paths("IN_FILE_2", input_file_2)
+            aln.add_value("%(IN_FILE_2)s")
+            aln.set_kwargs(**{"IN_FILE_2" : input_file_2})
 
-        aln.set_parameter("-t", threads)
+        aln.set_option("-t", threads)
 
         order, commands = _process_output(aln, output_file, reference)
         commands["aln"] = aln
@@ -265,35 +269,35 @@ class BWASWNode(CommandNode):
 
 
 def _process_output(stdin, output_file, reference, run_fixmate = False):
-    convert = AtomicParams("safeSAM2BAM")
-    convert.set_parameter("--flag-as-sorted")
-    convert.set_parameter("-F", "0x4", sep = "", fixed = False) # Remove misses
-    convert.set_paths(IN_STDIN    = stdin,
+    convert = AtomicCmdBuilder("safeSAM2BAM")
+    convert.set_option("--flag-as-sorted")
+    convert.set_option("-F", "0x4", sep = "", fixed = False) # Remove misses
+    convert.set_kwargs(IN_STDIN    = stdin,
                       OUT_STDOUT  = AtomicCmd.PIPE,
                       CHECK_PYSAM = PYSAM_VERSION,
                       CHECK_SAMTOOLS = SAMTOOLS_VERSION)
 
     fixmate = None
     if run_fixmate:
-        fixmate = AtomicParams(("samtools", "fixmate", "-", "-"),
+        fixmate = AtomicCmdBuilder(("samtools", "fixmate", "-", "-"),
                                IN_STDIN   = convert,
                                OUT_STDOUT = AtomicCmd.PIPE,
                                CHECK_SAMTOOLS = SAMTOOLS_VERSION)
 
-    sort = AtomicParams(("samtools", "sort"))
-    sort.set_parameter("-o") # Output to STDOUT on completion
-    sort.push_positional("-")
-    sort.push_positional("%(TEMP_OUT_BAM)s")
-    sort.set_paths(IN_STDIN     = fixmate or convert,
+    sort = AtomicCmdBuilder(("samtools", "sort"))
+    sort.set_option("-o") # Output to STDOUT on completion
+    sort.add_value("-")
+    sort.add_value("%(TEMP_OUT_BAM)s")
+    sort.set_kwargs(IN_STDIN     = fixmate or convert,
                    OUT_STDOUT   = AtomicCmd.PIPE,
                    TEMP_OUT_BAM = "sorted",
                    CHECK_SAM = SAMTOOLS_VERSION)
 
-    calmd = AtomicParams(("samtools", "calmd"))
-    calmd.push_positional("-")
-    calmd.push_positional("%(IN_REF)s")
-    calmd.set_parameter("-b") # Output BAM
-    calmd.set_paths(IN_REF   = reference,
+    calmd = AtomicCmdBuilder(("samtools", "calmd"))
+    calmd.add_value("-")
+    calmd.add_value("%(IN_REF)s")
+    calmd.set_option("-b") # Output BAM
+    calmd.set_kwargs(IN_REF   = reference,
                     IN_STDIN = sort,
                     OUT_STDOUT = output_file,
                     CHECK_SAM = SAMTOOLS_VERSION)
@@ -319,10 +323,10 @@ def _BWAParams(call, prefix, iotype = "IN", **kwargs):
     except versions.VersionRequirementError:
         pass # Ignored here, handled elsewhere
 
-    params = AtomicParams(call, **kwargs)
+    params = AtomicCmdBuilder(call, **kwargs)
     for postfix in extensions:
         key = "%s_PREFIX_%s" % (iotype, postfix.upper())
-        params.set_paths(key, prefix + "." + postfix)
+        params.set_kwargs(**{key : (prefix + "." + postfix)})
 
     return params
 
@@ -351,6 +355,6 @@ def _check_bwa_prefix(prefix):
 
 
 def _build_unicat_command(input_file, output_file):
-    return AtomicParams(["unicat", "--output", "%(TEMP_OUT_CAT)s", "%(IN_ARCHIVE)s"],
+    return AtomicCmdBuilder(["unicat", "--output", "%(TEMP_OUT_CAT)s", "%(IN_ARCHIVE)s"],
                         TEMP_OUT_CAT = output_file,
                         IN_ARCHIVE   = input_file)

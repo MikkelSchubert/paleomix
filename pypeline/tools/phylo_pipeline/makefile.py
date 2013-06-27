@@ -112,7 +112,7 @@ def _update_filtering(mkfile):
 def _validate_taxa(path, dd, taxa = set()):
     if not isinstance(dd, types.DictType):
         raise MAKEFileError("Expected dicts in Taxa tree for '%s', found %s: %s" \
-                                % (filename, dd.__class__.__name__, dd))
+                                % (path, dd.__class__.__name__, dd))
 
     for (key, subdd) in dd.iteritems():
         if key.startswith("<") and key.endswith(">"):

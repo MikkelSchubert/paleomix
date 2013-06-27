@@ -24,7 +24,8 @@ import os
 
 from pypeline.node import CommandNode
 from pypeline.atomiccmd.command import AtomicCmd
-from pypeline.atomiccmd.builder import AtomicJavaParams, \
+from pypeline.atomiccmd.builder import \
+     AtomicJavaCmdBuilder, \
      create_customizable_cli_parameters, \
      use_customizable_cli_parameters
 from pypeline.common.fileutils import swap_ext, describe_files
@@ -48,10 +49,10 @@ class ValidateBAMNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, config, input_bam, output_log = None, dependencies = ()):
         jar_file = os.path.join(config.jar_root, "ValidateSamFile.jar")
-        params = AtomicJavaParams(config, jar_file)
+        params = AtomicJavaCmdBuilder(config, jar_file)
 
-        params.set_parameter("I", "%(IN_BAM)s", sep = "=")
-        params.set_paths(IN_BAM     = input_bam,
+        params.set_option("I", "%(IN_BAM)s", sep = "=")
+        params.set_kwargs(IN_BAM     = input_bam,
                          OUT_STDOUT = output_log or swap_ext(input_bam, ".validated"),
                          CHECK_JAR  = _picard_version(jar_file))
 
@@ -72,11 +73,11 @@ class BuildSequenceDictNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, config, reference, dependencies = ()):
         jar_file = os.path.join(config.jar_root, "CreateSequenceDictionary.jar")
-        params = AtomicJavaParams(config, jar_file)
+        params = AtomicJavaCmdBuilder(config, jar_file)
 
-        params.set_parameter("R", "%(IN_REF)s", sep = "=")
-        params.set_parameter("O", "%(OUT_DICT)s", sep = "=")
-        params.set_paths(IN_REF     = reference,
+        params.set_option("R", "%(IN_REF)s", sep = "=")
+        params.set_option("O", "%(OUT_DICT)s", sep = "=")
+        params.set_kwargs(IN_REF     = reference,
                          OUT_DICT   = swap_ext(reference, ".dict"),
                          CHECK_JAR  = _picard_version(jar_file))
 
@@ -97,23 +98,23 @@ class MarkDuplicatesNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, config, input_bams, output_bam, output_metrics = None, dependencies = ()):
         jar_file = os.path.join(config.jar_root, "MarkDuplicates.jar")
-        params = AtomicJavaParams(config, jar_file)
+        params = AtomicJavaCmdBuilder(config, jar_file)
 
         # Create .bai index, since it is required by a lot of other programs
-        params.set_parameter("CREATE_INDEX", "True", sep = "=")
+        params.set_option("CREATE_INDEX", "True", sep = "=")
 
-        params.set_parameter("OUTPUT", "%(OUT_BAM)s", sep = "=")
-        params.set_parameter("METRICS_FILE", "%(OUT_METRICS)s", sep = "=")
+        params.set_option("OUTPUT", "%(OUT_BAM)s", sep = "=")
+        params.set_option("METRICS_FILE", "%(OUT_METRICS)s", sep = "=")
 
         input_bams = safe_coerce_to_tuple(input_bams)
         for (index, filename) in enumerate(input_bams):
-            params.push_parameter("I", "%%(IN_BAM_%02i)s" % index, sep = "=")
-            params.set_paths("IN_BAM_%02i" % index, filename)
+            params.add_option("I", "%%(IN_BAM_%02i)s" % index, sep = "=")
+            params.set_kwargs(**{("IN_BAM_%02i" % index) : filename})
 
         # Remove duplicates from output by default to save disk-space
-        params.set_parameter("REMOVE_DUPLICATES", "True", sep = "=", fixed = False)
+        params.set_option("REMOVE_DUPLICATES", "True", sep = "=", fixed = False)
 
-        params.set_paths(OUT_BAM     = output_bam,
+        params.set_kwargs(OUT_BAM     = output_bam,
                          OUT_BAI     = swap_ext(output_bam, ".bai"),
                          OUT_METRICS = output_metrics or swap_ext(output_bam, ".metrics"),
                          CHECK_JAR  = _picard_version(jar_file))
@@ -136,19 +137,19 @@ class MergeSamFilesNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, config, input_bams, output_bam, dependencies = ()):
         jar_file = os.path.join(config.jar_root, "MergeSamFiles.jar")
-        params = AtomicJavaParams(config, jar_file)
+        params = AtomicJavaCmdBuilder(config, jar_file)
 
-        params.set_parameter("OUTPUT", "%(OUT_BAM)s", sep = "=")
-        params.set_parameter("CREATE_INDEX", "True", sep = "=")
-        params.set_paths(OUT_BAM = output_bam,
+        params.set_option("OUTPUT", "%(OUT_BAM)s", sep = "=")
+        params.set_option("CREATE_INDEX", "True", sep = "=")
+        params.set_kwargs(OUT_BAM = output_bam,
                          OUT_BAI = swap_ext(output_bam, ".bai"),
                          CHECK_JAR  = _picard_version(jar_file))
 
         for (index, filename) in enumerate(input_bams, start = 1):
-            params.push_parameter("I", "%%(IN_BAM_%02i)s" % index, sep = "=")
-            params.set_paths("IN_BAM_%02i" % index, filename)
+            params.add_option("I", "%%(IN_BAM_%02i)s" % index, sep = "=")
+            params.set_kwargs(**{("IN_BAM_%02i" % index) : filename})
 
-        params.set_parameter("SO", "coordinate", sep = "=", fixed = False)
+        params.set_option("SO", "coordinate", sep = "=", fixed = False)
 
         return {"command" : params}
 
@@ -179,23 +180,23 @@ def concatenate_input_bams(config, input_bams, out = AtomicCmd.PIPE):
         return [], input_bams[0]
 
     jar_file = os.path.join(config.jar_root, "MergeSamFiles.jar")
-    params = AtomicJavaParams(config, jar_file)
-    params.set_paths(CHECK_JAR  = _picard_version(jar_file))
+    params = AtomicJavaCmdBuilder(config, jar_file)
+    params.set_kwargs(CHECK_JAR  = _picard_version(jar_file))
 
     if out == AtomicCmd.PIPE:
-        params.set_paths(OUT_STDOUT = out)
-        params.set_parameter("OUTPUT", "/dev/stdout", sep = "=")
+        params.set_kwargs(OUT_STDOUT = out)
+        params.set_option("OUTPUT", "/dev/stdout", sep = "=")
     else:
-        params.set_parameter("OUTPUT", out, sep = "=")
+        params.set_option("OUTPUT", out, sep = "=")
 
-    params.set_parameter("CREATE_INDEX", "False", sep = "=")
-    params.set_parameter("COMPRESSION_LEVEL",  0, sep = "=")
+    params.set_option("CREATE_INDEX", "False", sep = "=")
+    params.set_option("COMPRESSION_LEVEL",  0, sep = "=")
 
     for (index, filename) in enumerate(safe_coerce_to_tuple(input_bams), start = 1):
-        params.push_parameter("I", "%%(IN_BAM_%02i)s" % index, sep = "=")
-        params.set_paths("IN_BAM_%02i" % index, filename)
+        params.add_option("I", "%%(IN_BAM_%02i)s" % index, sep = "=")
+        params.set_kwargs(**{"IN_BAM_%02i" % index : filename})
 
-    params.set_parameter("SO", "coordinate", sep = "=", fixed = False)
+    params.set_option("SO", "coordinate", sep = "=", fixed = False)
 
     cmd = params.finalize()
     return [cmd], cmd

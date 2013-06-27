@@ -29,7 +29,7 @@ from pypeline.atomiccmd.command import \
 from pypeline.atomiccmd.sets import \
      ParallelCmds
 from pypeline.atomiccmd.builder import \
-     AtomicParams, \
+     AtomicCmdBuilder, \
      use_customizable_cli_parameters, \
      create_customizable_cli_parameters
 
@@ -60,22 +60,22 @@ class SE_AdapterRemovalNode(CommandNode):
         cmd = _get_common_parameters(version)
 
         # Uncompressed reads (piped from unicat)
-        cmd.set_parameter("--file1",    "%(TEMP_IN_READS)s")
+        cmd.set_option("--file1",    "%(TEMP_IN_READS)s")
 
         # Prefix for output files
-        cmd.set_parameter("--basename", "%(TEMP_OUT_BASENAME)s")
+        cmd.set_option("--basename", "%(TEMP_OUT_BASENAME)s")
 
         basename = os.path.basename(output_prefix)
-        cmd.set_paths(# Only settings file is saved, rest is temporary files
-                      OUT_SETTINGS        = output_prefix + ".settings",
-                      TEMP_OUT_BASENAME   = basename,
+        cmd.set_kwargs(# Only settings file is saved, rest is temporary files
+                       OUT_SETTINGS        = output_prefix + ".settings",
+                       TEMP_OUT_BASENAME   = basename,
 
-                      # Named pipe for uncompressed input (unicat)
-                      TEMP_IN_READS       = "uncompressed_input",
+                       # Named pipe for uncompressed input (unicat)
+                       TEMP_IN_READS       = "uncompressed_input",
 
-                      # Named pipes for output of AdapterRemova
-                      TEMP_OUT_LINK_1     = basename + ".truncated",
-                      TEMP_OUT_LINK_2     = basename + ".discarded")
+                       # Named pipes for output of AdapterRemova
+                       TEMP_OUT_LINK_1     = basename + ".truncated",
+                       TEMP_OUT_LINK_2     = basename + ".discarded")
 
         return {"basename"      : basename,
                 "format"        : output_format,
@@ -118,46 +118,46 @@ class PE_AdapterRemovalNode(CommandNode):
     def customize(self, input_files_1, input_files_2, output_prefix, output_format = "bz2", version = VERSION_15, dependencies = ()):
         cmd = _get_common_parameters(version)
         # Merge pairs where the sequence is overlapping
-        cmd.set_parameter("--collapse")
+        cmd.set_option("--collapse")
 
         # Uncompressed mate 1 and 2 reads (piped from unicat)
-        cmd.set_parameter("--file1",    "%(TEMP_IN_READS_1)s")
-        cmd.set_parameter("--file2",    "%(TEMP_IN_READS_2)s")
+        cmd.set_option("--file1",    "%(TEMP_IN_READS_1)s")
+        cmd.set_option("--file2",    "%(TEMP_IN_READS_2)s")
 
         # Prefix for output files, ensure that all end up in temp folder
-        cmd.set_parameter("--basename", "%(TEMP_OUT_BASENAME)s")
+        cmd.set_option("--basename", "%(TEMP_OUT_BASENAME)s")
         # Output files are explicity specified, to ensure that the order is the same here
         # as below. A difference in the order in which files are opened can cause a deadlock,
         # due to the use of named pipes (see __init__).
-        cmd.set_parameter("--output1", "%(TEMP_OUT_LINK_PAIR1)s")
-        cmd.set_parameter("--output2", "%(TEMP_OUT_LINK_PAIR2)s")
-        cmd.set_parameter("--outputcollapsed", "%(TEMP_OUT_LINK_ALN)s")
+        cmd.set_option("--output1", "%(TEMP_OUT_LINK_PAIR1)s")
+        cmd.set_option("--output2", "%(TEMP_OUT_LINK_PAIR2)s")
+        cmd.set_option("--outputcollapsed", "%(TEMP_OUT_LINK_ALN)s")
         if version == VERSION_15:
-            cmd.set_parameter("--outputcollapsedtruncated", "%(TEMP_OUT_LINK_ALN_TRUNC)s")
-        cmd.set_parameter("--singleton", "%(TEMP_OUT_LINK_UNALN)s")
-        cmd.set_parameter("--discarded", "%(TEMP_OUT_LINK_DISC)s")
+            cmd.set_option("--outputcollapsedtruncated", "%(TEMP_OUT_LINK_ALN_TRUNC)s")
+        cmd.set_option("--singleton", "%(TEMP_OUT_LINK_UNALN)s")
+        cmd.set_option("--discarded", "%(TEMP_OUT_LINK_DISC)s")
 
         basename = os.path.basename(output_prefix)
-        cmd.set_paths(# Only settings file is saved, rest is temporary files
-                      OUT_SETTINGS        = output_prefix + ".settings",
-                      TEMP_OUT_BASENAME   = basename,
+        cmd.set_kwargs(# Only settings file is saved, rest is temporary files
+                       OUT_SETTINGS        = output_prefix + ".settings",
+                       TEMP_OUT_BASENAME   = basename,
 
-                      # Named pipes for uncompressed input (unicat)
-                      TEMP_IN_READS_1     = "uncompressed_input_1",
-                      TEMP_IN_READS_2     = "uncompressed_input_2",
+                       # Named pipes for uncompressed input (unicat)
+                       TEMP_IN_READS_1     = "uncompressed_input_1",
+                       TEMP_IN_READS_2     = "uncompressed_input_2",
 
-                      # Named pipes for output of AdapterRemoval
-                      TEMP_OUT_LINK_PAIR1 = basename + ".pair1.truncated",
-                      TEMP_OUT_LINK_PAIR2 = basename + ".pair2.truncated",
-                      TEMP_OUT_LINK_DISC  = basename + ".discarded")
+                       # Named pipes for output of AdapterRemoval
+                       TEMP_OUT_LINK_PAIR1 = basename + ".pair1.truncated",
+                       TEMP_OUT_LINK_PAIR2 = basename + ".pair2.truncated",
+                       TEMP_OUT_LINK_DISC  = basename + ".discarded")
 
         if version == VERSION_15:
-            cmd.set_paths(TEMP_OUT_LINK_ALN       = basename + ".collapsed",
-                          TEMP_OUT_LINK_ALN_TRUNC = basename + ".collapsed.truncated",
-                          TEMP_OUT_LINK_UNALN     = basename + ".singleton.truncated")
+            cmd.set_kwargs(TEMP_OUT_LINK_ALN       = basename + ".collapsed",
+                           TEMP_OUT_LINK_ALN_TRUNC = basename + ".collapsed.truncated",
+                           TEMP_OUT_LINK_UNALN     = basename + ".singleton.truncated")
         elif version == VERSION_14:
-            cmd.set_paths(TEMP_OUT_LINK_ALN       = basename + ".singleton.aln.truncated",
-                          TEMP_OUT_LINK_UNALN     = basename + ".singleton.unaln.truncated")
+            cmd.set_kwargs(TEMP_OUT_LINK_ALN       = basename + ".singleton.aln.truncated",
+                           TEMP_OUT_LINK_UNALN     = basename + ".singleton.unaln.truncated")
         else:
             assert False
 
@@ -262,18 +262,18 @@ def _get_common_parameters(version):
     else:
         raise CmdError("Unknown version: %s" % version)
 
-    cmd = AtomicParams("AdapterRemoval",
-                       CHECK_VERSION = version_check)
+    cmd = AtomicCmdBuilder("AdapterRemoval",
+                           CHECK_VERSION = version_check)
 
     # Allow 1/3 mismatches in the aligned region
-    cmd.set_parameter("--mm", 3, fixed = False)
+    cmd.set_option("--mm", 3, fixed = False)
     # Minimum length of trimmed reads
-    cmd.set_parameter("--minlength", 25, fixed = False)
+    cmd.set_option("--minlength", 25, fixed = False)
     # Trim Ns at read ends
-    cmd.set_parameter("--trimns", fixed = False)
+    cmd.set_option("--trimns", fixed = False)
     # Trim low quality scores
-    cmd.set_parameter("--trimqualities", fixed = False)
+    cmd.set_option("--trimqualities", fixed = False)
     # Offset of quality scores
-    cmd.set_parameter("--qualitybase", 33, fixed = False)
+    cmd.set_option("--qualitybase", 33, fixed = False)
 
     return cmd

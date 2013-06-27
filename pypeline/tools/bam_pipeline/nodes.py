@@ -25,7 +25,7 @@ import os
 from pypeline.node import CommandNode, MetaNode
 from pypeline.atomiccmd.command import AtomicCmd
 from pypeline.atomiccmd.sets import ParallelCmds, SequentialCmds
-from pypeline.atomiccmd.builder import AtomicJavaParams
+from pypeline.atomiccmd.builder import AtomicJavaCmdBuilder
 
 from pypeline.nodes.picard import ValidateBAMNode, concatenate_input_bams
 from pypeline.nodes.samtools import BAMIndexNode, SAMTOOLS_VERSION
@@ -139,14 +139,14 @@ class IndexAndValidateBAMNode(MetaNode):
                                                       dependencies = node)
         # Check MD tags against reference sequence
         # FIXME: Disabled due to issues with Picard/Samtools disagreeing, backwards compatibility.
-        #        validation_params.command.set_paths(IN_REFERENCE = prefix["Reference"])
-        #        validation_params.command.push_parameter("R", "%(IN_REFERENCE)s", sep = "=")
+        #        validation_params.command.set_kwargs(IN_REFERENCE = prefix["Reference"])
+        #        validation_params.command.add_option("R", "%(IN_REFERENCE)s", sep = "=")
         # Ignored since we filter out misses and low-quality hits during mapping, which
         # leads to a large proportion of missing mates for PE reads.
-        validation_params.command.push_parameter("IGNORE", "MATE_NOT_FOUND", sep = "=")
+        validation_params.command.add_option("IGNORE", "MATE_NOT_FOUND", sep = "=")
         # Ignored due to high rate of false positives for lanes with few hits, where
         # high-quality reads may case ValidateSamFile to mis-identify the qualities
-        validation_params.command.push_parameter("IGNORE", "INVALID_QUALITY_FORMAT", sep = "=")
+        validation_params.command.add_option("IGNORE", "INVALID_QUALITY_FORMAT", sep = "=")
         subnodes.append(validation_params.build_node())
 
         description = "<w/Validation: " + str(subnodes[0])[1:]
@@ -180,19 +180,19 @@ class CleanupBAMNode(CommandNode):
                         OUT_STDOUT = AtomicCmd.PIPE)
 
         jar_file = os.path.join(config.jar_root, "AddOrReplaceReadGroups.jar")
-        params = AtomicJavaParams(config, jar_file)
-        params.set_parameter("INPUT", "/dev/stdin", sep = "=")
-        params.set_parameter("OUTPUT", "/dev/stdout", sep = "=")
-        params.set_parameter("QUIET", "true", sep = "=")
-        params.set_parameter("COMPRESSION_LEVEL", "0", sep = "=")
+        params = AtomicJavaCmdBuilder(config, jar_file)
+        params.set_option("INPUT", "/dev/stdin", sep = "=")
+        params.set_option("OUTPUT", "/dev/stdout", sep = "=")
+        params.set_option("QUIET", "true", sep = "=")
+        params.set_option("COMPRESSION_LEVEL", "0", sep = "=")
 
         for (tag, value) in sorted(tags.iteritems()):
             if tag not in ("PG", "Target", "PU_src", "PU_cur"):
-                params.set_parameter(tag, value, sep = "=")
+                params.set_option(tag, value, sep = "=")
             elif tag == "PU_src":
-                params.set_parameter("PU", value, sep = "=")
+                params.set_option("PU", value, sep = "=")
 
-        params.set_paths(IN_STDIN   = flt,
+        params.set_kwargs(IN_STDIN   = flt,
                          OUT_STDOUT = AtomicCmd.PIPE)
         annotate = params.finalize()
 
