@@ -83,6 +83,8 @@ def main(argv):
                                   stdout = subprocess.PIPE,
                                   close_fds = True)
 
+        line = "NA\tNA\t"
+        index = npositions = 1
         for (index, line) in enumerate(proc.stdout, start = 1):
             if ((index - 1) % 100 == 0):
                 contig, position, _ = line.split("\t", 2)
