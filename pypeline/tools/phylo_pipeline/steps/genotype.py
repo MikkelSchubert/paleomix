@@ -192,7 +192,7 @@ class ExtractReference(Node):
         fastafile = pysam.Fastafile(self._reference)
         seqs = collections.defaultdict(list)
         with open(self._intervals) as bedfile:
-            intervals = text.read_tabix_BED(bedfile).items()
+            intervals = text.parse_lines_by_contig(bedfile, pysam.asBed()).items()
             for (contig, beds) in sorted(intervals):
                 beds.sort(key = keyfunc)
 
