@@ -22,7 +22,6 @@
 #
 import re
 import types
-import itertools
 import collections
 
 
