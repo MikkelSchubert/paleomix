@@ -32,10 +32,11 @@ import weakref
 from flexmock import flexmock
 
 import nose
-from nose.tools import assert_equal, assert_in # pylint: disable=E0611
+from nose.tools import assert_equal # pylint: disable=E0611
 from tests.common.utils import with_temp_folder, monkeypatch, \
      get_file_contents, \
-     set_file_contents
+     set_file_contents, \
+     assert_in
 
 import pypeline.atomiccmd.command
 from pypeline.common.versions import RequirementObj
@@ -190,9 +191,9 @@ def test_atomiccmd__pipes_out():
         assert_equal(result_out, "STDOUT!")
         assert_equal(result_err, "STDERR!")
 
-    yield _do_test_atomiccmd__pipes_out, "pipe_bash_{}.stdout", "pipe_bash_{}.stderr", {}
-    yield _do_test_atomiccmd__pipes_out, "pipe_bash_{}.stdout", "stderr.txt", {"OUT_STDERR" : "stderr.txt"}
-    yield _do_test_atomiccmd__pipes_out, "stdout.txt", "pipe_bash_{}.stderr", {"OUT_STDOUT" : "stdout.txt"}
+    yield _do_test_atomiccmd__pipes_out, "pipe_bash_{0}.stdout", "pipe_bash_{0}.stderr", {}
+    yield _do_test_atomiccmd__pipes_out, "pipe_bash_{0}.stdout", "stderr.txt", {"OUT_STDERR" : "stderr.txt"}
+    yield _do_test_atomiccmd__pipes_out, "stdout.txt", "pipe_bash_{0}.stderr", {"OUT_STDOUT" : "stdout.txt"}
     yield _do_test_atomiccmd__pipes_out, "stdout.txt", "stderr.txt", {"OUT_STDOUT" : "stdout.txt",
                                                                       "OUT_STDERR" : "stderr.txt"}
 
@@ -292,7 +293,7 @@ def test_atomiccmd__pipes__duplicates():
 def test_atomicmcd__exec__reqobj():
     reqobj = RequirementObj(call = ("echo", "version"),
                             search = "version",
-                            pprint = "{}",
+                            pprint = "{0}",
                             checks = str)
     cmd = AtomicCmd("true",
                     CHECK_VERSION = reqobj)
