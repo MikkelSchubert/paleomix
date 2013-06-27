@@ -26,7 +26,16 @@ import time
 import shutil
 
 import nose
-from nose.tools import with_setup, make_decorator
+from nose.tools import with_setup
+
+
+# Simple support for assert_in in Python v2.6
+try:
+    from nose.tools import assert_in # pylint: disable=E0611
+except ImportError:
+    def assert_in(item, lst):
+        assert item in lst
+
 
 
 EPOCH = time.time()

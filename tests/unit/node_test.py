@@ -29,11 +29,12 @@
 import os
 
 import nose.tools
-from nose.tools import assert_equal, assert_in # pylint: disable=E0611
+from nose.tools import assert_equal # pylint: disable=E0611
 from flexmock import flexmock
 from tests.common.utils import monkeypatch, with_temp_folder, \
      set_file_contents, \
-     get_file_contents
+     get_file_contents, \
+     assert_in
 
 from pypeline.atomiccmd.command import AtomicCmd
 from pypeline.node import Node, MetaNode, CommandNode, NodeError, NodeUnhandledException, \

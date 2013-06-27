@@ -44,7 +44,7 @@ def _safe_coerce(cls):
       and not as a {0} of chars. A TypeError is raised if this is not
       possible (e.g. dict in frozenset).""".format(cls.__name__)
     _do_safe_coerce.__name__ = \
-      "safe_coerce_to_{}".format(cls.__name__)
+      "safe_coerce_to_{0}".format(cls.__name__)
 
     return _do_safe_coerce
 

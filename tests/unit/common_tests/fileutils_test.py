@@ -24,12 +24,13 @@ import os
 import errno
 
 import nose
-from nose.tools import assert_equals, assert_in # pylint: disable=E0611
+from nose.tools import assert_equals # pylint: disable=E0611
 
 import pypeline
 from tests.common.utils import with_temp_folder, monkeypatch, set_cwd, \
      set_file_contents, \
-     get_file_contents
+     get_file_contents, \
+     assert_in
 
 from pypeline.common.fileutils import \
      add_postfix, \
