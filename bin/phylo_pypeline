@@ -65,7 +65,7 @@ def print_usage():
 def _select_command(commands, command):
     command = command.strip().lower()
     if command in commands:
-        return commands[command]
+        return command, commands[command]
     elif len(command) < 3:
         return None, None
 
