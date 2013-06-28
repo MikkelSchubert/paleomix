@@ -37,7 +37,7 @@ For example
 
 2. Installing required applications
 -----------------------------------
-The BAM pipeline requires [SAMTools](http://samtools.sourceforge.net) v0.1.18+, [AdapterRemoval](http://code.google.com/p/adapterremoval/) v1.4+ (1.5+ recommended for new projects!), and [BWA](http://bio-bwa.sourceforge.net/) v0.5.9+ / v0.7.5+ or [Bowtie2](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml) 2.0.0+.  Only the aligner (BWA/Bowtie2) that is to be used (selected in the individual makefiles) needs to be installed.
+The BAM pipeline requires [SAMTools](http://samtools.sourceforge.net) v0.1.18+, [AdapterRemoval](http://code.google.com/p/adapterremoval/) v1.4+ (1.5+ recommended for new projects, and please cite [Lindgreen 2013](http://www.ncbi.nlm.nih.gov/pubmed/22748135)!), and [BWA](http://bio-bwa.sourceforge.net/) v0.5.9+ / v0.7.5+ or [Bowtie2](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml) 2.0.0+.  Only the aligner (BWA/Bowtie2) that is to be used (selected in the individual makefiles) needs to be installed.
 
 In addition, the pipeline requires the [Picard](http://picard.sourceforge.net/) v1.82+ jars. These instructions assume that these jars have been placed in ~/install/jar_root, but any location may be used. This folder is specified using the --jar-root parameter (see below).
 
@@ -179,3 +179,12 @@ If reads have already been mapped, the BAM can be incorported into the project, 
 	    ACGTTA:
 		   Lane01:
 		    hg19: bams/old.bam
+
+
+
+
+Citations
+========================
+
+ * Li H, Durbin R. "Fast and accurate short read alignment with Burrows-Wheeler transform" Bioinformatics. 2009 Jul 15;25(14):1754-60. doi:10.1093/bioinformatics/btp324.
+ * Lindgreen S. "AdapterRemoval: easy cleaning of next-generation sequencing reads" BMC Res Notes. 2012 Jul 2;5:337. doi: 10.1186/1756-0500-5-337.
