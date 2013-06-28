@@ -32,10 +32,10 @@ from pypeline.pipeline import Pypeline
 from pypeline.common.testing import FUNC_TEST_ROOT
 
 # Test modules, see _collect_tests
-import adapterremoval_test
-import bwa_test
-import bowtie2_test
-import picard_test
+import adapterremoval_test # pylint: disable=W0611
+import bwa_test            # pylint: disable=W0611
+import bowtie2_test        # pylint: disable=W0611
+import picard_test         # pylint: disable=W0611
 
 
 def _collect_tests():
@@ -47,7 +47,7 @@ def _collect_tests():
                     yield module, obj
 
 
-class Config:
+class Config: # pylint: disable=W0232
     temp_root    = FUNC_TEST_ROOT
     jar_root     = "tests/links/jar_root"
     dependencies = Node(description = "DummyDependency")
@@ -67,15 +67,15 @@ def main(argv):
             ui.print_info("Adding node '%s' ..." % func.__name__)
             node = func(Config)
             pipeline.add_nodes(node)
-        except Exception, e:
+        except StandardError:
             ui.print_err(traceback.format_exc())
             errors = True
 
-
-#   TODO: Test all derived nodes
-#            if list(node.dependencies) != [Config.dependencies]:
-#                raise RuntimeError("Node did not pass dependencies")
-
+        for metanodes in node.dependencies:
+            for subnode in metanodes.dependencies:
+                if Config.dependencies not in subnode.dependencies:
+                    raise RuntimeError("Node did not pass dependencies: %s\n%r vs %r" \
+                                       % (subnode, subnode.dependencies, Config.dependencies))
 
     if pipeline.run(dry_run = "--dry-run" in argv, verbose = False, collapse = True, max_running = 2):
         # Everything went fine, so there's currently no need to save the output
