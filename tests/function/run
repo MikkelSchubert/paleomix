@@ -20,24 +20,22 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import os
 import sys
-import time
+import shutil
 import inspect
 import traceback
 
 import pypeline.ui as ui
 from pypeline.node import Node
 from pypeline.pipeline import Pypeline
-
+from pypeline.common.testing import FUNC_TEST_ROOT
 
 # Test modules, see _collect_tests
 import adapterremoval_test
 import bwa_test
 import bowtie2_test
 import picard_test
-
-# Timestamp used to ensure that each run is kept seperate
-_EPOCH = time.time()
 
 
 def _collect_tests():
@@ -50,20 +48,20 @@ def _collect_tests():
 
 
 class Config:
-    temp_root    = "tests/runs/func_%i/temp/" % (_EPOCH,)
+    temp_root    = FUNC_TEST_ROOT
     jar_root     = "tests/links/jar_root"
     dependencies = Node(description = "DummyDependency")
 
 
 def main(argv):
     ui.print_info("Running functional Node tests:")
-    ui.print_info("  - Destination = 'tests/runs/func_%i' ..." % _EPOCH)
+    ui.print_info("  - Destination = %r ..." % FUNC_TEST_ROOT)
     ui.print_info()
 
     errors = False
     pipeline = Pypeline(Config)
     for (module, func) in _collect_tests():
-        Config.destination = "tests/runs/func_%i/%s" % (_EPOCH, module)
+        Config.destination = os.path.join(FUNC_TEST_ROOT, module)
 
         try:
             ui.print_info("Adding node '%s' ..." % func.__name__)
@@ -79,7 +77,10 @@ def main(argv):
 #                raise RuntimeError("Node did not pass dependencies")
 
 
-    if not pipeline.run(dry_run = "--dry-run" in argv, verbose = False, collapse = True, max_running = 2):
+    if pipeline.run(dry_run = "--dry-run" in argv, verbose = False, collapse = True, max_running = 2):
+        # Everything went fine, so there's currently no need to save the output
+        shutil.rmtree(FUNC_TEST_ROOT)
+    else:
         errors = True
 
     return (1 if errors else 0)

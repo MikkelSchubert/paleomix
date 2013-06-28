@@ -33,7 +33,9 @@ from flexmock import flexmock
 
 import nose
 from nose.tools import assert_equal, assert_raises
-from tests.common.utils import with_temp_folder, monkeypatch, \
+from pypeline.common.testing import \
+     with_temp_folder, \
+     Monkeypatch, \
      get_file_contents, \
      set_file_contents, \
      assert_in
@@ -463,7 +465,7 @@ def test_atomiccmd__terminate():
             if raise_on_terminate:
                 raise OSError("KABOOM!")
 
-        with monkeypatch("os.killpg", _wrap_killpg):
+        with Monkeypatch("os.killpg", _wrap_killpg):
             cmd.terminate()
         cmd.terminate()
         assert_equal(cmd.join(), ["SIGTERM"])
@@ -701,10 +703,10 @@ def test_atomiccmd__cleanup_sigterm():
               flexmock(pid = 12345)]
 
     assert not pypeline.atomiccmd.command._PROCS
-    with monkeypatch("pypeline.atomiccmd.command._PROCS", _procs):
+    with Monkeypatch("pypeline.atomiccmd.command._PROCS", _procs):
         assert_equal(len(pypeline.atomiccmd.command._PROCS), 2)
-        with monkeypatch("os.killpg", _wrap_killpg):
-            with monkeypatch("sys.exit", _wrap_exit):
+        with Monkeypatch("os.killpg", _wrap_killpg):
+            with Monkeypatch("sys.exit", _wrap_exit):
                 pypeline.atomiccmd.command._cleanup_children(signal.SIGTERM, None)
 
     assert_equal(exit_called, [-signal.SIGTERM])
@@ -714,7 +716,7 @@ def test_atomiccmd__cleanup_sigterm():
 # Ensure that the cleanup function handles weakrefs that have been freed
 def test_atomiccmd__cleanup_sigterm__dead_weakrefs():
     exit_called = []
-    procs_wrapper = [weakref.ref(monkeypatch("sys.exit", None))]
+    procs_wrapper = [weakref.ref(Monkeypatch("sys.exit", None))]
 
     assert_equal(procs_wrapper[0](), None)
     def _wrap_killpg(_pid, _sig):
@@ -722,9 +724,9 @@ def test_atomiccmd__cleanup_sigterm__dead_weakrefs():
     def _wrap_exit(rc):
         exit_called.append(rc)
 
-    with monkeypatch("pypeline.atomiccmd.command._PROCS", procs_wrapper):
-        with monkeypatch("os.killpg", _wrap_killpg):
-            with monkeypatch("sys.exit", _wrap_exit):
+    with Monkeypatch("pypeline.atomiccmd.command._PROCS", procs_wrapper):
+        with Monkeypatch("os.killpg", _wrap_killpg):
+            with Monkeypatch("sys.exit", _wrap_exit):
                 pypeline.atomiccmd.command._cleanup_children(signal.SIGTERM, None)
     assert_equal(exit_called, [-signal.SIGTERM])
 

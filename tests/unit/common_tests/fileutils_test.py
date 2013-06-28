@@ -27,7 +27,10 @@ import nose
 from nose.tools import assert_equal, assert_raises
 
 import pypeline
-from tests.common.utils import with_temp_folder, monkeypatch, set_cwd, \
+from pypeline.common.testing import \
+     with_temp_folder, \
+     Monkeypatch, \
+     SetWorkingDirectory, \
      set_file_contents, \
      get_file_contents, \
      assert_in
@@ -191,7 +194,7 @@ def test_create_temp_dir__creation_preempted(temp_folder):
             preempted_once.append(True)
         unwrapped(*args, **kwargs)
 
-    with monkeypatch("os.makedirs", _wrap_os_makedirs):
+    with Monkeypatch("os.makedirs", _wrap_os_makedirs):
         assert not os.listdir(temp_folder)
         work_dir = create_temp_dir(temp_folder)
         assert os.path.exists(temp_folder)
@@ -204,7 +207,7 @@ def test_create_temp_dir__permission_denied():
     def _wrap_os_makedirs(*_args, **_kwargs):
         raise OSError((errno.EACCES, "Simulated premission denied"))
 
-    with monkeypatch("os.makedirs", _wrap_os_makedirs):
+    with Monkeypatch("os.makedirs", _wrap_os_makedirs):
         assert_raises(OSError, create_temp_dir, "/tmp")
 
 
@@ -355,7 +358,7 @@ def test_make_dirs__creation_preemted(temp_folder):
         unwrapped(*args, **kwargs)
         unwrapped(*args, **kwargs)
 
-    with monkeypatch("os.makedirs", _wrap_os_makedirs):
+    with Monkeypatch("os.makedirs", _wrap_os_makedirs):
         work_folder = os.path.join(temp_folder, "test")
         assert not make_dirs(work_folder)
         assert os.path.exists(work_folder)
@@ -386,7 +389,7 @@ def test_move_file__simple_move(temp_folder):
 
 @with_temp_folder
 def test_move_file__simple_move_in_cwd(temp_folder):
-    with set_cwd(temp_folder):
+    with SetWorkingDirectory(temp_folder):
         assert_equal(os.listdir("."), [])
         set_file_contents("file_1", "1")
         assert_equal(os.listdir("."), ["file_1"])
@@ -420,7 +423,7 @@ def test_move_file__move_to_new_folder(temp_folder):
 
 @with_temp_folder
 def test_move_file__move_to_different_folder(temp_folder):
-    with set_cwd(temp_folder):
+    with SetWorkingDirectory(temp_folder):
         set_file_contents("file_1", "3")
         move_file("file_1", "dst/file_1")
         assert_equal(os.listdir("."), ["dst"])
@@ -429,7 +432,7 @@ def test_move_file__move_to_different_folder(temp_folder):
 
 @with_temp_folder
 def test_move_file__overwrite(temp_folder):
-    with set_cwd(temp_folder):
+    with SetWorkingDirectory(temp_folder):
         set_file_contents("file_1", "4")
         set_file_contents("file_2", "5")
         move_file("file_1", "file_2")
@@ -457,7 +460,7 @@ def test_copy_file__simple_copy(temp_folder):
 
 @with_temp_folder
 def test_copy_file__simple_copy_in_cwd(temp_folder):
-    with set_cwd(temp_folder):
+    with SetWorkingDirectory(temp_folder):
         assert_equal(os.listdir("."), [])
         set_file_contents("file_1", "1")
         assert_equal(os.listdir("."), ["file_1"])
@@ -493,7 +496,7 @@ def test_copy_file__copy_to_new_folder(temp_folder):
 
 @with_temp_folder
 def test_copy_file__copy_to_different_folder(temp_folder):
-    with set_cwd(temp_folder):
+    with SetWorkingDirectory(temp_folder):
         set_file_contents("file_1", "3")
         copy_file("file_1", "dst/file_1")
         assert_equal(set(os.listdir(".")), set(["file_1", "dst"]))
@@ -503,7 +506,7 @@ def test_copy_file__copy_to_different_folder(temp_folder):
 
 @with_temp_folder
 def test_copy_file__overwrite(temp_folder):
-    with set_cwd(temp_folder):
+    with SetWorkingDirectory(temp_folder):
         set_file_contents("file_1", "4")
         set_file_contents("file_2", "5")
         copy_file("file_1", "file_2")

@@ -25,7 +25,7 @@ import StringIO
 
 import nose
 from nose.tools import assert_equal
-from tests.common.utils import with_temp_folder
+from pypeline.common.testing import with_temp_folder
 
 from pypeline.atomiccmd.command import AtomicCmd
 from pypeline.atomiccmd.sets import ParallelCmds, SequentialCmds

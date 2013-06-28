@@ -26,7 +26,10 @@ import StringIO
 import nose.tools
 from nose.tools import assert_equal, assert_raises
 
-from tests.common.utils import require_call, with_temp_folder
+from pypeline.common.testing import \
+     RequiredCall, \
+     with_temp_folder
+
 from pypeline.common.formats.msa import \
      split_msa, \
      join_msa, \
@@ -50,13 +53,13 @@ _JOIN_MSA_2 = { "nc" : "TGA", "nm" : "CTT", "miRNA" : "GAC" }
 _JOIN_MSA_3 = { "nc" : "AAG", "nm" : "GAG", "miRNA" : "CAU" }
 
 def test_join_msa__single_msa():
-    with require_call(_VALIDATION_PATH, args = [_JOIN_MSA_1]):
+    with RequiredCall(_VALIDATION_PATH, args = [_JOIN_MSA_1]):
         result = join_msa(_JOIN_MSA_1)
         assert_equal(result, _JOIN_MSA_1)
 
 def test_join_msa__two_msa():
     expected = { "nc" : "ACGTGA", "nm" : "TGACTT", "miRNA" : "UCAGAC" }
-    with require_call(_VALIDATION_PATH, args = [_JOIN_MSA_1, _JOIN_MSA_2]):
+    with RequiredCall(_VALIDATION_PATH, args = [_JOIN_MSA_1, _JOIN_MSA_2]):
         result = join_msa(_JOIN_MSA_1, _JOIN_MSA_2)
         assert_equal(result, expected)
 
@@ -64,7 +67,7 @@ def test_join_msa__three_msa():
     expected = { "nc" : "ACGTGAAAG",
                  "nm" : "TGACTTGAG",
                  "miRNA" : "UCAGACCAU" }
-    with require_call(_VALIDATION_PATH, args = [_JOIN_MSA_1, _JOIN_MSA_2, _JOIN_MSA_3]):
+    with RequiredCall(_VALIDATION_PATH, args = [_JOIN_MSA_1, _JOIN_MSA_2, _JOIN_MSA_3]):
         result = join_msa(_JOIN_MSA_1, _JOIN_MSA_2, _JOIN_MSA_3)
         assert_equal(result, expected)
 
@@ -82,14 +85,14 @@ def test_join_msa__missing_arguments():
 def test_parse_msa__single_entry():
     lines  = [">seq1", "ACG"]
     result = {"seq1" : "ACG"}
-    with require_call(_VALIDATION_PATH, args = [result]):
+    with RequiredCall(_VALIDATION_PATH, args = [result]):
         assert_equal(parse_msa(lines), result)
 
 def test_parse_msa__single_entry_with_meta():
     lines  = [">seq1 Meta info", "ACG"]
     result_msa  = {"seq1" : "ACG"}
     result_meta = {"seq1" : "Meta info"}
-    with require_call(_VALIDATION_PATH, args = [result_msa]):
+    with RequiredCall(_VALIDATION_PATH, args = [result_msa]):
         msa, meta = parse_msa(lines, read_meta = True)
         assert_equal(msa, result_msa)
         assert_equal(meta, result_meta)
@@ -97,14 +100,14 @@ def test_parse_msa__single_entry_with_meta():
 def test_parse_msa__two_entries():
     lines  = [">seq1", "ACG", ">seq2", "TGA"]
     result = {"seq1" : "ACG", "seq2" : "TGA"}
-    with require_call(_VALIDATION_PATH, args = [result]):
+    with RequiredCall(_VALIDATION_PATH, args = [result]):
         assert_equal(parse_msa(lines), result)
 
 def test_parse_msa__two_entries_with_meta():
     lines  = [">seq1", "ACG", ">seq2 Second meta", "TGA"]
     result_msa = {"seq1" : "ACG", "seq2" : "TGA"}
     result_meta = {"seq1" : None, "seq2" : "Second meta"}
-    with require_call(_VALIDATION_PATH, args = [result_msa]):
+    with RequiredCall(_VALIDATION_PATH, args = [result_msa]):
         msa, meta = parse_msa(lines, read_meta = True)
         assert_equal(msa, result_msa)
         assert_equal(meta, result_meta)
@@ -131,21 +134,21 @@ def test_parse_msa__empty_name():
 def test_read_msa__uncompressed():
     expected = {"This_is_FASTA!" : "ACGTN",
                 "This_is_ALSO_FASTA!" : "CGTNA"}
-    with require_call(_VALIDATION_PATH, args = [expected]):
+    with RequiredCall(_VALIDATION_PATH, args = [expected]):
         results  = read_msa("tests/data/fasta_file.fasta")
         assert_equal(results, expected)
 
 def test_read_msa__compressed_gz():
     expected = {"This_is_GZipped_FASTA!" : "ACGTN",
                 "This_is_ALSO_GZipped_FASTA!" : "CGTNA"}
-    with require_call(_VALIDATION_PATH, args = [expected]):
+    with RequiredCall(_VALIDATION_PATH, args = [expected]):
         results  = read_msa("tests/data/fasta_file.fasta.gz")
         assert_equal(results, expected)
 
 def test_read_msa__compressed_bz2():
     expected = {"This_is_BZ_FASTA!" : "CGTNA",
                 "This_is_ALSO_BZ_FASTA!" : "ACGTN"}
-    with require_call(_VALIDATION_PATH, args = [expected]):
+    with RequiredCall(_VALIDATION_PATH, args = [expected]):
         results  = read_msa("tests/data/fasta_file.fasta.bz2")
         assert_equal(results, expected)
 
@@ -159,14 +162,14 @@ def test_read_msa__compressed_bz2():
 def test_split_msa__single_group():
     msa = {"seq1" : "ACGCAT", "seq2" : "GAGTGA"}
     expected = {'1' : {"seq1" : "ACGCAT", "seq2" : "GAGTGA"}}
-    with require_call(_VALIDATION_PATH, args = [msa]):
+    with RequiredCall(_VALIDATION_PATH, args = [msa]):
         assert_equal(split_msa(msa, "111"), expected)
 
 def test_split_msa__two_groups():
     msa = {"seq1" : "ACGCAT", "seq2" : "GAGTGA"}
     expected = {"1" : {"seq1" : "ACCA", "seq2" : "GATG"},
                 "2" : {"seq1" : "GT",   "seq2" : "GA"}}
-    with require_call(_VALIDATION_PATH, args = [msa]):
+    with RequiredCall(_VALIDATION_PATH, args = [msa]):
         assert_equal(split_msa(msa, "112"), expected)
 
 def test_split__three_groups():
@@ -174,9 +177,9 @@ def test_split__three_groups():
     expected = {"1" : {"seq1" : "AC", "seq2" : "GT"},
                 "2" : {"seq1" : "CA", "seq2" : "AG"},
                 "3" : {"seq1" : "GT", "seq2" : "GA"}}
-    with require_call(_VALIDATION_PATH, args = [msa]):
+    with RequiredCall(_VALIDATION_PATH, args = [msa]):
         assert_equal(split_msa(msa, "123"), expected)
-    with require_call(_VALIDATION_PATH, args = [msa]):
+    with RequiredCall(_VALIDATION_PATH, args = [msa]):
         assert_equal(split_msa(msa), expected)
 
 def test_split__empty_group():
@@ -184,7 +187,7 @@ def test_split__empty_group():
     expected = {"1" : {"seq1" : "A", "seq2" : "G"},
                 "2" : {"seq1" : "C", "seq2" : "A"},
                 "3" : {"seq1" : "",  "seq2" : ""}}
-    with require_call(_VALIDATION_PATH, args = [msa]):
+    with RequiredCall(_VALIDATION_PATH, args = [msa]):
         assert_equal(split_msa(msa), expected)
 
 def test_split__partial_group():
@@ -192,7 +195,7 @@ def test_split__partial_group():
     expected = {"1" : {"seq1" : "AC", "seq2" : "GT"},
                 "2" : {"seq1" : "CA", "seq2" : "AG"},
                 "3" : {"seq1" : "G", "seq2" : "G"}}
-    with require_call(_VALIDATION_PATH, args = [msa]):
+    with RequiredCall(_VALIDATION_PATH, args = [msa]):
         assert_equal(split_msa(msa), expected)
 
 
@@ -215,9 +218,9 @@ def test_split_msa__no_split_by():
 def test_write_msa(temp_folder):
     msa = {"seq1" : "ACGTA", "seq2" : "CGTAC"}
     fname = os.path.join(temp_folder, "out.afa")
-    with require_call(_VALIDATION_PATH, args = [msa]):
+    with RequiredCall(_VALIDATION_PATH, args = [msa]):
         write_msa(msa, fname)
-    with require_call(_VALIDATION_PATH, args = [msa]):
+    with RequiredCall(_VALIDATION_PATH, args = [msa]):
         assert_equal(read_msa(fname), msa)
 
 
@@ -233,7 +236,7 @@ def test_print_fasta__complete_line_test():
     expected  = ">barfoo\n%s\n%s\n" % ("ACGATA" * 10, "CGATAG" * 5)
     expected += ">foobar\n%s\n%s\n" % ("CGAATG" * 10, "TGTCAT" * 5)
     stringf = StringIO.StringIO()
-    with require_call(_VALIDATION_PATH, args = [msa]):
+    with RequiredCall(_VALIDATION_PATH, args = [msa]):
         print_msa(msa, stringf)
     assert_equal(stringf.getvalue(), expected)
 

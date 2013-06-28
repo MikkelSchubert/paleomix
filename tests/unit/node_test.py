@@ -32,7 +32,9 @@ import nose.tools
 from nose.tools import assert_equal, assert_raises
 from flexmock import flexmock
 
-from tests.common.utils import monkeypatch, with_temp_folder, \
+from pypeline.common.testing import \
+     Monkeypatch, \
+     with_temp_folder, \
      set_file_contents, \
      get_file_contents, \
      assert_in
@@ -50,13 +52,13 @@ def _CommandNodeWrap(**kwargs):
 _NODE_TYPES = (Node, _CommandNodeWrap, MetaNode)
 
 
-class monkeypatch_tmp_dir:
+class MonkeypatchCreateTempDir:
     """Monkeypatches functions used by Node.run to setup the
     temporary folders. This is done to reduce the amount of
     file operations that actually need to be done."""
     def __init__(self, root = "/tmp", subfolder = "xTMPx"):
-        self._mkdir_patch = monkeypatch("pypeline.common.fileutils.create_temp_dir", self._mkdir)
-        self._rmdir_patch = monkeypatch("os.rmdir", self._rmdir)
+        self._mkdir_patch = Monkeypatch("pypeline.common.fileutils.create_temp_dir", self._mkdir)
+        self._rmdir_patch = Monkeypatch("os.rmdir", self._rmdir)
         self._root_dir = root
         self._sub_dir  = subfolder
         self._mkdir_called = False
@@ -351,7 +353,7 @@ def test_run__order():
     node_mock.should_receive("_run").with_args(cfg_mock, "/tmp/xTMPx").ordered.once
     node_mock.should_receive("_teardown").with_args(cfg_mock, "/tmp/xTMPx").ordered.once
 
-    with monkeypatch_tmp_dir():
+    with MonkeypatchCreateTempDir():
         node_mock.run(cfg_mock) # pylint: disable=E1103
 
 # Ensure that the same temp dir is passed to all _ functions
@@ -365,7 +367,7 @@ def test_run__temp_dirs():
                          _run      = assert_dir,
                          _teardown = assert_dir)
 
-    with monkeypatch_tmp_dir():
+    with MonkeypatchCreateTempDir():
         node_mock.run(cfg_mock) # pylint: disable=E1103
 
 
@@ -376,7 +378,7 @@ def test_run__exceptions():
         def test_function():
             node_mock = flexmock(Node())
             node_mock.should_receive(key).and_raise(exception).once
-            with monkeypatch_tmp_dir():
+            with MonkeypatchCreateTempDir():
                 node_mock.run(cfg_mock) # pylint: disable=E1103
 
         return test_function
@@ -395,7 +397,7 @@ def test_run__error_log__node_error():
 
         try:
             os.mkdir(os.path.join(temp_folder, "xTMPx"))
-            with monkeypatch_tmp_dir(root = temp_folder, subfolder = "xTMPx"):
+            with MonkeypatchCreateTempDir(root = temp_folder, subfolder = "xTMPx"):
                 # pylint: disable=E1103
                 node_mock.run(cfg_mock) # pragma: no coverage
         except NodeError:
@@ -495,7 +497,7 @@ def test_command_node__run():
     node_mock.should_receive("_setup").with_args(cfg_mock, str).ordered.once
     node_mock.should_receive("_run").with_args(cfg_mock, str).ordered.once
     node_mock.should_receive("_teardown").with_args(cfg_mock, str).ordered.once
-    with monkeypatch_tmp_dir():
+    with MonkeypatchCreateTempDir():
         node_mock.run(cfg_mock) # pylint: disable=E1103
 
 

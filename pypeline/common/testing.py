@@ -24,6 +24,7 @@ import os
 import sys
 import time
 import shutil
+import atexit
 
 import nose
 from nose.tools import with_setup
@@ -31,7 +32,7 @@ from nose.tools import with_setup
 
 # Simple support for assert_in in Python v2.6
 try:
-    from nose.tools import assert_in # pylint: disable=E0611
+    from nose.tools import assert_in # pylint: disable=W0611
 except ImportError:
     def assert_in(item, lst):
         assert item in lst
@@ -39,15 +40,17 @@ except ImportError:
 
 
 EPOCH = time.time()
-TEST_ROOT = "tests/runs/unit_%i/temp/" % (EPOCH,)
+TEST_ROOT = "/tmp/%s/pypeline/tests_%i" % (os.getlogin(), EPOCH,)
+UNIT_TEST_ROOT = os.path.join(TEST_ROOT, "unit")
+FUNC_TEST_ROOT = os.path.join(TEST_ROOT, "func")
 
 _COUNTER = 0
 def with_temp_folder(func):
     """Creates a unique temporary folder before running 'func'. The
     function is is assumed to take at least one parameter, the first
     of which is assumed to represent the temporary folder."""
-    global _COUNTER
-    tmp_root = os.path.join(TEST_ROOT, "%03i_%s" % (_COUNTER, func.__name__,))
+    global _COUNTER # pylint: disable=W0603
+    tmp_root = os.path.join(UNIT_TEST_ROOT, "%03i_%s" % (_COUNTER, func.__name__,))
     _COUNTER += 1
 
     def _setup():
@@ -65,7 +68,7 @@ def with_temp_folder(func):
 
 
 
-class monkeypatch:
+class Monkeypatch:
     """Replaces a function/object in a module with the specified wrapper
      upon entry, reverting the change upon exit from the with statement.
      A full path to the given function is required, for example
@@ -88,7 +91,7 @@ class monkeypatch:
         setattr(self.module, self.name, self.object)
 
 
-class require_call(monkeypatch):
+class RequiredCall(Monkeypatch):
     """Monkey-patches the specified function, and checks that this function has
     been called upon exiting from a with statement. If 'args' or 'kwargs' are
     specified, the caller must match these in order to be considered a valid
@@ -99,7 +102,7 @@ class require_call(monkeypatch):
         self._args = tuple(args) if args else args
         self._kwargs = dict(kwargs) if kwargs else kwargs
         self._was_called = False
-        monkeypatch.__init__(self, path, self._called)
+        Monkeypatch.__init__(self, path, self._called)
 
     def _called(self, *args, **kwargs):
         if (self._args is None) or (self._args == args):
@@ -107,13 +110,13 @@ class require_call(monkeypatch):
                 self._was_called = True
         return self.object(*args, **kwargs)
 
-    def __exit__(self, type, value, traceback):
-        monkeypatch.__exit__(self, type, value, traceback)
+    def __exit__(self, type_, value, traceback):
+        Monkeypatch.__exit__(self, type_, value, traceback)
         if not value:
             assert self._was_called, "%s was not called with required arguments!" % self._path
 
 
-class set_cwd:
+class SetWorkingDirectory:
     """Sets the current working directory upon entry to that specified,
     in the constructor upon entry, and reverts to the previously used
     directory upon exiting a with statement."""
@@ -137,3 +140,14 @@ def set_file_contents(fname, contents):
 def get_file_contents(fname):
     with open(fname) as handle:
         return handle.read()
+
+
+
+@atexit.register
+def _cleanup_temp_folders():
+    # Avoid (when possible) leaving empty folders behind after each run
+    for root in (FUNC_TEST_ROOT, UNIT_TEST_ROOT, TEST_ROOT):
+        try:
+            os.rmdir(root)
+        except OSError:
+            pass

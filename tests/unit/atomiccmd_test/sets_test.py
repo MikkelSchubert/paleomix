@@ -28,7 +28,7 @@
 import nose
 import nose.tools
 from nose.tools import assert_equal, assert_raises
-from tests.common.utils import with_temp_folder
+from pypeline.common.testing import with_temp_folder
 
 from flexmock import flexmock
 
