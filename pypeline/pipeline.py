@@ -153,8 +153,10 @@ class Pypeline:
                     continue
                 nodegraph.set_node_state(node, nodegraph.DONE)
                 running.pop(node)
-            time.sleep(sleep_time)
-            sleep_time = min(1, sleep_time * 2)
+
+            if not (errors or changes):
+                time.sleep(sleep_time)
+                sleep_time = min(1, sleep_time * 2)
 
         return not errors
 
