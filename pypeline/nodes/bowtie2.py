@@ -47,17 +47,17 @@ class Bowtie2IndexNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, input_file, prefix = None, dependencies = ()):
         prefix = prefix if prefix else input_file
-        params = _Bowtie2Params(("bowtie2-build"), prefix, iotype = "OUT",
-                                IN_FILE = input_file,
-                                TEMP_OUT_PREFIX = os.path.basename(prefix),
-                                CHECK_VERSION = BOWTIE2_VERSION)
+        params = _bowtie2_template(("bowtie2-build"), prefix, iotype = "OUT",
+                                   IN_FILE = input_file,
+                                   TEMP_OUT_PREFIX = os.path.basename(prefix),
+                                   CHECK_VERSION = BOWTIE2_VERSION)
         params.add_value("%(IN_FILE)s")
-
         # Destination prefix, in temp folder
-        params.set_option("%(TEMP_OUT_PREFIX)s")
+        params.add_value("%(TEMP_OUT_PREFIX)s")
 
-        return {"prefix":  prefix,
-                "command": params}
+        return {"prefix"       :  prefix,
+                "command"      : params,
+                "dependencies" : dependencies}
 
 
     @use_customizable_cli_parameters
@@ -75,12 +75,12 @@ class Bowtie2IndexNode(CommandNode):
 class Bowtie2Node(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, input_file_1, input_file_2, output_file, reference, prefix, threads = 2, dependencies = ()):
-        aln = _Bowtie2Params(("bowtie2",), prefix,
-                             IN_FILE_1  = input_file_1,
+        aln = _bowtie2_template(("bowtie2",), prefix,
+                                IN_FILE_1  = input_file_1,
         # Setting IN_FILE_2 to None makes AtomicCmd ignore this key
-                             IN_FILE_2  = input_file_2 or None,
-                             OUT_STDOUT = AtomicCmd.PIPE,
-                             CHECK_VERSION = BOWTIE2_VERSION)
+                                IN_FILE_2  = input_file_2 or None,
+                                OUT_STDOUT = AtomicCmd.PIPE,
+                                CHECK_VERSION = BOWTIE2_VERSION)
         aln.set_option("-x", prefix)
 
         if input_file_1 and not input_file_2:
@@ -97,9 +97,10 @@ class Bowtie2Node(CommandNode):
         order, commands = _process_output(aln, output_file, reference, run_fixmate = (input_file_1 and input_file_2))
         commands["aln"] = aln
 
-        return {"commands" : commands,
-                "order"    : ["aln"] + order,
-                "threads"  : max_threads}
+        return {"commands"     : commands,
+                "order"        : ["aln"] + order,
+                "threads"      : max_threads,
+                "dependencies" : dependencies}
 
 
     @use_customizable_cli_parameters
@@ -117,7 +118,7 @@ class Bowtie2Node(CommandNode):
                              dependencies = parameters.dependencies)
 
 
-def _Bowtie2Params(call, prefix, iotype = "IN", **kwargs):
+def _bowtie2_template(call, prefix, iotype = "IN", **kwargs):
     params = AtomicCmdBuilder(call, **kwargs)
     for postfix in ("1.bt2", "2.bt2", "3.bt2", "4.bt2", "rev.1.bt2", "rev.2.bt2"):
         key = "%s_PREFIX_%s" % (iotype, postfix.upper())

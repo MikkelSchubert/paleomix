@@ -56,7 +56,8 @@ class ValidateBAMNode(CommandNode):
                          OUT_STDOUT = output_log or swap_ext(input_bam, ".validated"),
                          CHECK_JAR  = _picard_version(jar_file))
 
-        return {"command" : params}
+        return {"command"      : params,
+                "dependencies" : dependencies}
 
 
     @use_customizable_cli_parameters
@@ -78,10 +79,11 @@ class BuildSequenceDictNode(CommandNode):
         params.set_option("R", "%(IN_REF)s", sep = "=")
         params.set_option("O", "%(OUT_DICT)s", sep = "=")
         params.set_kwargs(IN_REF     = reference,
-                         OUT_DICT   = swap_ext(reference, ".dict"),
-                         CHECK_JAR  = _picard_version(jar_file))
+                          OUT_DICT   = swap_ext(reference, ".dict"),
+                          CHECK_JAR  = _picard_version(jar_file))
 
-        return {"command" : params}
+        return {"command"      : params,
+                "dependencies" : dependencies}
 
 
     @use_customizable_cli_parameters
@@ -119,7 +121,8 @@ class MarkDuplicatesNode(CommandNode):
                          OUT_METRICS = output_metrics or swap_ext(output_bam, ".metrics"),
                          CHECK_JAR  = _picard_version(jar_file))
 
-        return {"command" : params}
+        return {"command"      : params,
+                "dependencies" : dependencies}
 
 
     @use_customizable_cli_parameters
@@ -151,7 +154,8 @@ class MergeSamFilesNode(CommandNode):
 
         params.set_option("SO", "coordinate", sep = "=", fixed = False)
 
-        return {"command" : params}
+        return {"command"      : params,
+                "dependencies" : dependencies}
 
 
     @use_customizable_cli_parameters

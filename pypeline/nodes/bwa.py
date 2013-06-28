@@ -56,18 +56,19 @@ class BWAIndexNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, input_file, prefix = None, dependencies = ()):
         prefix = prefix if prefix else input_file
-        params = _BWAParams(("bwa", "index"), prefix, iotype = "OUT",
-                            IN_FILE = input_file,
-                            TEMP_OUT_PREFIX = os.path.basename(prefix),
-                            CHECK_BWA = BWA_VERSION)
+        params = _get_bwa_template(("bwa", "index"), prefix, iotype = "OUT",
+                                   IN_FILE = input_file,
+                                   TEMP_OUT_PREFIX = os.path.basename(prefix),
+                                   CHECK_BWA = BWA_VERSION)
 
         # Input fasta sequence
         params.add_value("%(IN_FILE)s")
         # Destination prefix, in temp folder
         params.set_option("-p", "%(TEMP_OUT_PREFIX)s")
 
-        return {"prefix":  prefix,
-                "command": params}
+        return {"prefix"       : prefix,
+                "command"      : params,
+                "dependencies" : dependencies}
 
 
     @use_customizable_cli_parameters
@@ -81,15 +82,15 @@ class BWAIndexNode(CommandNode):
                              dependencies = parameters.dependencies)
 
 
-class BWANode:
+class BWANode: # pylint: disable=W0232
     @classmethod
     def customize(cls, input_file_1, input_file_2, **kwargs):
         if input_file_1 and input_file_2:
-            return PE_BWANode.customize(input_file_1 = input_file_1,
+            return PEBWANode.customize(input_file_1 = input_file_1,
                                         input_file_2 = input_file_2,
                                         **kwargs)
         elif input_file_1 and not input_file_2:
-            return SE_BWANode.customize(input_file = input_file_1,
+            return SEBWANode.customize(input_file = input_file_1,
                                         **kwargs)
         else:
             assert False, ""
@@ -98,26 +99,26 @@ class BWANode:
         return cls.customize(**kwargs).build_node()
 
 
-class SE_BWANode(CommandNode):
+class SEBWANode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, input_file, output_file, reference, prefix, threads = 1, dependencies = ()):
         threads = _get_max_threads(reference, threads)
 
         aln_in = _build_unicat_command(input_file, "uncompressed_input_aln")
-        aln = _BWAParams(("bwa", "aln"), prefix,
-                         TEMP_IN_FILE = "uncompressed_input_aln",
-                         OUT_STDOUT = AtomicCmd.PIPE,
-                         CHECK_BWA = BWA_VERSION)
+        aln = _get_bwa_template(("bwa", "aln"), prefix,
+                                TEMP_IN_FILE = "uncompressed_input_aln",
+                                OUT_STDOUT = AtomicCmd.PIPE,
+                                CHECK_BWA = BWA_VERSION)
         aln.add_value(prefix)
         aln.add_value("%(TEMP_IN_FILE)s")
         aln.set_option("-t", threads)
 
         samse_in = _build_unicat_command(input_file, "uncompressed_input_samse")
-        samse = _BWAParams(("bwa", "samse"), prefix,
-                           IN_STDIN = aln,
-                           TEMP_IN_FILE = "uncompressed_input_samse",
-                           OUT_STDOUT = AtomicCmd.PIPE,
-                           CHECK_BWA = BWA_VERSION)
+        samse = _get_bwa_template(("bwa", "samse"), prefix,
+                                  IN_STDIN = aln,
+                                  TEMP_IN_FILE = "uncompressed_input_samse",
+                                  OUT_STDOUT = AtomicCmd.PIPE,
+                                  CHECK_BWA = BWA_VERSION)
         samse.add_value(prefix)
         samse.add_value("-")
         samse.add_value("%(TEMP_IN_FILE)s")
@@ -128,9 +129,10 @@ class SE_BWANode(CommandNode):
         commands["aln_in"]   = aln_in
         commands["aln"]      = aln
 
-        return {"commands" : commands,
-                "order"    : ["aln_in", "aln", "samse_in", "samse"] + order,
-                "threads"  : threads}
+        return {"commands"     : commands,
+                "order"        : ["aln_in", "aln", "samse_in", "samse"] + order,
+                "threads"      : threads,
+                "dependencies" : dependencies}
 
 
     @use_customizable_cli_parameters
@@ -150,59 +152,32 @@ class SE_BWANode(CommandNode):
         os.mkfifo(os.path.join(temp, "uncompressed_input_samse"))
 
 
-class PE_BWANode(CommandNode):
+class PEBWANode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, input_file_1, input_file_2, output_file, reference, prefix, threads = 2, dependencies = ()):
         threads = _get_max_threads(reference, threads)
 
-        alns, aln_ins = [], []
-        for (iindex, filename) in enumerate((input_file_1, input_file_2), start = 1):
-            aln_in = _build_unicat_command(filename, "uncompressed_input_aln_%i" % iindex)
-            aln = _BWAParams(("bwa", "aln"), prefix,
-                             TEMP_IN_FILE = "uncompressed_input_aln_%i" % iindex,
-                             OUT_STDOUT = AtomicCmd.PIPE,
-                             TEMP_OUT_SAI = "pair_%i.sai" % iindex,
-                             CHECK_BWA = BWA_VERSION)
-            aln.set_option("-f", "%(TEMP_OUT_SAI)s")
-            aln.set_option("-t", max(1, threads // 2))
-            aln.add_value(prefix)
-            aln.add_value("%(TEMP_IN_FILE)s")
-            aln_ins.append(aln_in)
-            alns.append(aln)
-        aln_in_1, aln_in_2 = aln_ins
-        aln_1, aln_2 = alns
+        aln_commands, aln_in_commands = \
+          cls._create_aln_cmds(prefix, input_file_1, input_file_2, threads)
 
         sampe_in_1 = _build_unicat_command(input_file_1, "uncompressed_input_sampe_1")
         sampe_in_2 = _build_unicat_command(input_file_2, "uncompressed_input_sampe_2")
-        sampe = _BWAParams(("bwa", "sampe"), prefix,
-                           TEMP_IN_FILE_1 = "uncompressed_input_sampe_1",
-                           TEMP_IN_FILE_2 = "uncompressed_input_sampe_2",
-                           TEMP_IN_SAI_1 = "pair_1.sai",
-                           TEMP_IN_SAI_2 = "pair_2.sai",
-                           OUT_STDOUT    = AtomicCmd.PIPE,
-                           CHECK_BWA = BWA_VERSION)
-        sampe.add_value(prefix)
-        sampe.add_value("%(TEMP_IN_SAI_1)s")
-        sampe.add_value("%(TEMP_IN_SAI_2)s")
-        sampe.add_value("%(TEMP_IN_FILE_1)s")
-        sampe.add_value("%(TEMP_IN_FILE_2)s")
-        sampe.set_option("-P", fixed = False)
+        sampe      = cls._create_sampe_cmd(prefix)
 
         order, commands = _process_output(sampe, output_file, reference, run_fixmate = True)
         commands["sampe"] = sampe
         commands["sampe_in_1"] = sampe_in_1
         commands["sampe_in_2"] = sampe_in_2
-        commands["aln_in_1"] = aln_in_1
-        commands["aln_1"] = aln_1
-        commands["aln_in_2"] = aln_in_2
-        commands["aln_2"] = aln_2
+        commands["aln_in_1"], commands["aln_in_2"] = aln_in_commands
+        commands["aln_1"],    commands["aln_2"]    = aln_commands
 
-        return {"commands" : commands,
-                "order"    : ["aln_in_1", "aln_1",
-                              "aln_in_2", "aln_2",
-                              "sampe_in_1", "sampe_in_2", "sampe"] + order,
+        return {"commands"     : commands,
+                "order"        : ["aln_in_1", "aln_1",
+                                  "aln_in_2", "aln_2",
+                                  "sampe_in_1", "sampe_in_2", "sampe"] + order,
                 # At least one thread per 'aln' process
-                "threads"  : max(2, threads)}
+                "threads"      : max(2, threads),
+                "dependencies" : dependencies}
 
 
     @use_customizable_cli_parameters
@@ -226,15 +201,54 @@ class PE_BWANode(CommandNode):
         os.mkfifo(os.path.join(temp, "pair_2.sai"))
 
 
+    @classmethod
+    def _create_aln_cmds(cls, prefix, input_file_1, input_file_2, threads):
+        alns, aln_ins = [], []
+        for (iindex, filename) in enumerate((input_file_1, input_file_2), start = 1):
+            aln_in = _build_unicat_command(filename, "uncompressed_input_aln_%i" % iindex)
+            aln = _get_bwa_template(("bwa", "aln"), prefix,
+                                    TEMP_IN_FILE = "uncompressed_input_aln_%i" % iindex,
+                                    OUT_STDOUT = AtomicCmd.PIPE,
+                                    TEMP_OUT_SAI = "pair_%i.sai" % iindex,
+                                    CHECK_BWA = BWA_VERSION)
+            aln.set_option("-f", "%(TEMP_OUT_SAI)s")
+            aln.set_option("-t", max(1, threads // 2))
+            aln.add_value(prefix)
+            aln.add_value("%(TEMP_IN_FILE)s")
+            aln_ins.append(aln_in)
+            alns.append(aln)
+        return alns, aln_ins
+
+
+    @classmethod
+    def _create_sampe_cmd(cls, prefix):
+        sampe = _get_bwa_template(("bwa", "sampe"), prefix,
+                                  TEMP_IN_FILE_1 = "uncompressed_input_sampe_1",
+                                  TEMP_IN_FILE_2 = "uncompressed_input_sampe_2",
+                                  TEMP_IN_SAI_1 = "pair_1.sai",
+                                  TEMP_IN_SAI_2 = "pair_2.sai",
+                                  OUT_STDOUT    = AtomicCmd.PIPE,
+                                  CHECK_BWA = BWA_VERSION)
+        sampe.add_value(prefix)
+        sampe.add_value("%(TEMP_IN_SAI_1)s")
+        sampe.add_value("%(TEMP_IN_SAI_2)s")
+        sampe.add_value("%(TEMP_IN_FILE_1)s")
+        sampe.add_value("%(TEMP_IN_FILE_2)s")
+        sampe.set_option("-P", fixed = False)
+
+        return sampe
+
+
 
 class BWASWNode(CommandNode):
     @create_customizable_cli_parameters
-    def customize(cls, input_file_1, output_file, reference, prefix, input_file_2 = None, threads = 1, dependencies = ()):
+    def customize(cls, input_file_1, output_file, reference, prefix, input_file_2 = None,
+                  threads = 1, dependencies = ()):
         threads = _get_max_threads(reference, threads)
 
-        aln = _BWAParams(("bwa", "bwasw"), prefix,
-                         IN_FILE_1  = input_file_1,
-                         OUT_STDOUT = AtomicCmd.PIPE)
+        aln = _get_bwa_template(("bwa", "bwasw"), prefix,
+                                IN_FILE_1  = input_file_1,
+                                OUT_STDOUT = AtomicCmd.PIPE)
         aln.add_value(prefix)
         aln.add_value("%(IN_FILE_1)s")
 
@@ -246,9 +260,10 @@ class BWASWNode(CommandNode):
 
         order, commands = _process_output(aln, output_file, reference)
         commands["aln"] = aln
-        return {"commands" : commands,
-                "order"    : ["aln"] + order,
-                "threads"  : threads}
+        return {"commands"     : commands,
+                "order"        : ["aln"] + order,
+                "threads"      : threads,
+                "dependencies" : dependencies}
 
 
     @use_customizable_cli_parameters
@@ -303,19 +318,19 @@ def _process_output(stdin, output_file, reference, run_fixmate = False):
                     CHECK_SAM = SAMTOOLS_VERSION)
 
     order = ["convert", "sort", "calmd"]
-    dd = {"convert" : convert,
-          "sort"    : sort,
-          "calmd"   : calmd}
+    commands = {"convert" : convert,
+                "sort"    : sort,
+                "calmd"   : calmd}
 
     if run_fixmate:
         order.insert(1, "fixmate")
-        dd["fixmate"] = fixmate
+        commands["fixmate"] = fixmate
 
-    return order, dd
+    return order, commands
 
 
 
-def _BWAParams(call, prefix, iotype = "IN", **kwargs):
+def _get_bwa_template(call, prefix, iotype = "IN", **kwargs):
     extensions = ["amb", "ann", "bwt", "pac", "sa"]
     try:
         if BWA_VERSION.version < (0, 6, 0):
