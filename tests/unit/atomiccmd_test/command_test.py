@@ -32,7 +32,7 @@ import weakref
 from flexmock import flexmock
 
 import nose
-from nose.tools import assert_equal # pylint: disable=E0611
+from nose.tools import assert_equal, assert_raises # pylint: disable=E0611
 from tests.common.utils import with_temp_folder, monkeypatch, \
      get_file_contents, \
      set_file_contents, \
@@ -198,9 +198,8 @@ def test_atomiccmd__pipes_out():
                                                                       "OUT_STDERR" : "stderr.txt"}
 
 def test_atomiccmd__paths__malformed_keys():
-    @nose.tools.raises(ValueError)
     def _do_test_atomiccmd__paths__malformed(kwargs):
-        AtomicCmd("true", **kwargs)
+        assert_raises(ValueError, AtomicCmd, "true", **kwargs)
 
     yield _do_test_atomiccmd__paths__malformed, {"IN"  : "/var/foo"} # Missing key-name #1
     yield _do_test_atomiccmd__paths__malformed, {"IN_" : "/var/foo"} # Missing key-name #2
@@ -211,9 +210,8 @@ def test_atomiccmd__paths__malformed_keys():
 
 
 def test_atomiccmd__paths__invalid_values():
-    @nose.tools.raises(TypeError)
     def _do_test_atomiccmd__paths__invalid_values(kwargs):
-        AtomicCmd("true", **kwargs)
+        assert_raises(TypeError, AtomicCmd, "true", **kwargs)
 
     yield _do_test_atomiccmd__paths__invalid_values, {"IN_FILE"       : 1}
     yield _do_test_atomiccmd__paths__invalid_values, {"TEMP_IN_FILE"  : set()}
@@ -230,9 +228,8 @@ def test_atomiccmd__paths__invalid_values():
 
 # Subpaths are not allowed for temp IN/OUT files, neither relative nor asbsolute
 def test_atomiccmd__paths__invalid_temp_paths():
-    @nose.tools.raises(ValueError)
     def _do_test_atomiccmd__paths__invalid_temp_paths(kwargs):
-        AtomicCmd("true", **kwargs)
+        assert_raises(ValueError, AtomicCmd, "true", **kwargs)
 
     # No relative paths
     yield _do_test_atomiccmd__paths__invalid_temp_paths, {"TEMP_IN_FOO"     : "sub/infile"}
@@ -251,9 +248,8 @@ def test_atomiccmd__paths__invalid_temp_paths():
 
 # All OUT_ files must be unique, including all TEMP_OUT_
 def test_atomiccmd__paths__overlapping_output():
-    @nose.tools.raises(ValueError)
     def _do_test_atomiccmd__paths__overlapping_output(key_1, file_1, key_2, file_2):
-        AtomicCmd(("ls",), **{key_1 : file_1, key_2 : file_2})
+        assert_raises(ValueError, AtomicCmd, ("ls",), **{key_1 : file_1, key_2 : file_2})
 
     yield _do_test_atomiccmd__paths__overlapping_output, "OUT_FILE_1", "/foo/bar/outfile", "OUT_FILE_2", "/var/outfile"
     yield _do_test_atomiccmd__paths__overlapping_output, "TEMP_OUT_FILE_1", "outfile", "OUT_FILE_1", "/var/outfile"
@@ -273,11 +269,10 @@ def test_atomiccmd__paths__overlapping_output():
 
 # A pipe can be w/wo TEMP_, but not both
 def test_atomiccmd__pipes__duplicates():
-    @nose.tools.raises(CmdError)
     def _do_test_atomiccmd__pipes__duplicates(key):
         kwargs = {"TEMP_" + key : "temp_file",
                   key           : "file"}
-        AtomicCmd(["ls"], **kwargs)
+        assert_raises(CmdError, AtomicCmd, ["ls"], **kwargs)
 
     yield _do_test_atomiccmd__pipes__duplicates, "IN_STDIN"
     yield _do_test_atomiccmd__pipes__duplicates, "OUT_STDOUT"
@@ -390,9 +385,8 @@ def test_atomiccmd__piping_temp(temp_folder):
 
 # Only STDOUT takes AtomicCmd.PIPE
 def test_atomiccmd__piping__wrong_pipe():
-    @nose.tools.raises(TypeError)
     def _test_atomiccmd__piping__wrong_pipe(key):
-        AtomicCmd("ls", **{key : AtomicCmd.PIPE})
+        assert_raises(TypeError, AtomicCmd, "ls", **{key : AtomicCmd.PIPE})
 
     yield _test_atomiccmd__piping__wrong_pipe, "IN_STDIN"
     yield _test_atomiccmd__piping__wrong_pipe, "TEMP_IN_STDIN"
@@ -407,15 +401,12 @@ def test_atomiccmd__piping__wrong_pipe():
 ## run
 
 @with_temp_folder
-@nose.tools.raises(CmdError)
 def test_atomiccmd__run__already_running(temp_files):
     cmd = AtomicCmd(("sleep", "10"))
-    try:
-        cmd.run(temp_files)
-        cmd.run(temp_files)
-    finally:
-        cmd.terminate()
-        cmd.join()
+    cmd.run(temp_files)
+    assert_raises(CmdError, cmd.run, temp_files)
+    cmd.terminate()
+    cmd.join()
 
 
 
@@ -570,29 +561,26 @@ def test_atomiccmd__commit_temp_only(temp_folder):
     assert_equal(os.listdir(temp_folder), [])
 
 
-@nose.tools.raises(CmdError)
 def test_atomiccmd__commit_before_run():
-    AtomicCmd("true").commit("/tmp")
+    cmd = AtomicCmd("true")
+    assert_raises(CmdError, cmd.commit, "/tmp")
 
 @with_temp_folder
-@nose.tools.raises(CmdError)
 def test_atomiccmd__commit_while_running(temp_folder):
     cmd = AtomicCmd(("sleep", "10"))
-    try:
-        cmd.run(temp_folder)
-        cmd.commit(temp_folder)
-    finally:
-        cmd.terminate()
-        cmd.join()
+    cmd.run(temp_folder)
+    assert_raises(CmdError, cmd.commit, temp_folder)
+    cmd.terminate()
+    cmd.join()
 
 @with_temp_folder
-@nose.tools.raises(CmdError)
 def test_atomiccmd__commit_before_join(temp_folder):
     cmd = AtomicCmd(("sleep", "0.1"))
     cmd.run(temp_folder)
     while cmd._proc.poll() is None:
         pass
-    cmd.commit(temp_folder)
+    assert_raises(CmdError, cmd.commit, temp_folder)
+    cmd.join()
 
 # The temp path might differ, as long as the actual path is the same
 @with_temp_folder
@@ -604,14 +592,12 @@ def test_atomiccmd__commit_temp_folder(temp_folder):
 
 
 @with_temp_folder
-@nose.tools.raises(CmdError)
 def test_atomiccmd__commit_wrong_temp_folder(temp_folder):
     destination, temp_folder, cmd = _setup_for_commit(temp_folder)
-    cmd.commit(destination)
+    assert_raises(CmdError, cmd.commit, destination)
 
 
 @with_temp_folder
-@nose.tools.raises(CmdError)
 def test_atomiccmd__commit_missing_files(temp_folder):
     destination, temp_folder = _setup_for_commit(temp_folder, False)
     cmd = AtomicCmd(("touch", "%(OUT_FOO)s"),
@@ -620,11 +606,8 @@ def test_atomiccmd__commit_missing_files(temp_folder):
     cmd.run(temp_folder)
     cmd.join()
     before = set(os.listdir(temp_folder))
-    try:
-        cmd.commit(temp_folder)
-    except CmdError: # No changes should have been made yet
-        assert before == set(os.listdir(temp_folder))
-        raise
+    assert_raises(CmdError, cmd.commit, temp_folder)
+    assert_equal(before, set(os.listdir(temp_folder)))
 
 
 

@@ -27,7 +27,7 @@
 
 import nose
 import nose.tools
-from nose.tools import assert_equal # pylint: disable=E0611
+from nose.tools import assert_equal, assert_raises # pylint: disable=E0611
 from tests.common.utils import with_temp_folder
 
 from flexmock import flexmock
@@ -75,11 +75,10 @@ def test_atomicsets__properties():
 
 # Ensure that commands in a set doesn't clobber eachothers OUT files
 def test_atomicsets__no_clobbering():
-    @nose.tools.raises(CmdError)
     def _do_test_atomicsets__no_clobbering(cls, kwargs_1, kwargs_2):
         cmd_1 = AtomicCmd("true", **kwargs_1)
         cmd_2 = AtomicCmd("true", **kwargs_2)
-        cls([cmd_1, cmd_2])
+        assert_raises(CmdError, cls, [cmd_1, cmd_2])
 
     for cls in (ParallelCmds, SequentialCmds):
         yield _do_test_atomicsets__no_clobbering, cls, {"OUT_A" : "/foo/out.txt"}, {"OUT_B" : "/bar/out.txt"}
@@ -140,11 +139,10 @@ def test_atomicsets__str__():
     yield _do_test_atomicsets__str__, SequentialCmds
 
 def test_atomicsets__duplicate_cmds():
-    @nose.tools.raises(ValueError)
     def _do_test_atomicsets__duplicate_cmds(cls):
         cmd_1 = AtomicCmd("true")
         cmd_2 = AtomicCmd("false")
-        cls([cmd_1, cmd_2, cmd_1])
+        assert_raises(ValueError, cls, [cmd_1, cmd_2, cmd_1])
 
     yield _do_test_atomicsets__duplicate_cmds, ParallelCmds
     yield _do_test_atomicsets__duplicate_cmds, SequentialCmds
@@ -245,11 +243,10 @@ def test_parallel_commands__join_failure_3(temp_folder):
     assert_equal(cmds.join(), ['SIGTERM', 'SIGTERM', 1])
 
 
-@nose.tools.raises(CmdError)
 def test_parallel_commands__reject_sequential():
     command = AtomicCmd(["ls"])
     seqcmd  = SequentialCmds([command])
-    ParallelCmds([seqcmd])
+    assert_raises(CmdError, ParallelCmds, [seqcmd])
 
 def test_parallel_commands__accept_parallel():
     command = AtomicCmd(["ls"])

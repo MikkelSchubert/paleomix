@@ -24,7 +24,7 @@ import os
 import errno
 
 import nose
-from nose.tools import assert_equals # pylint: disable=E0611
+from nose.tools import assert_equals, assert_raises # pylint: disable=E0611
 
 import pypeline
 from tests.common.utils import with_temp_folder, monkeypatch, set_cwd, \
@@ -200,13 +200,12 @@ def test_create_temp_dir__creation_preempted(temp_folder):
         assert_in(os.path.basename(work_dir), dirs)
         assert bool(preempted_once)
 
-@nose.tools.raises(OSError)
 def test_create_temp_dir__permission_denied():
     def _wrap_os_makedirs(*_args, **_kwargs):
         raise OSError((errno.EACCES, "Simulated premission denied"))
 
     with monkeypatch("os.makedirs", _wrap_os_makedirs):
-        create_temp_dir("/tmp")
+        assert_raises(OSError, create_temp_dir, "/tmp")
 
 
 ################################################################################
@@ -543,7 +542,6 @@ def test_open_ro__bz2():
 class OddException(RuntimeError):
     pass
 
-@nose.tools.raises(OddException)
 def test_open_ro__close_handle_on_error():
     class _FileMock:
         def __init__(self, filename):
@@ -557,7 +555,7 @@ def test_open_ro__close_handle_on_error():
 
     try:
         pypeline.common.fileutils.open = _FileMock
-        open_ro("/var/abc")
+        assert_raises(OddException, open_ro, "/var/abc")
     finally:
         del pypeline.common.fileutils.open
 

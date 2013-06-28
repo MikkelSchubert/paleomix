@@ -29,8 +29,9 @@
 import os
 
 import nose.tools
-from nose.tools import assert_equal # pylint: disable=E0611
+from nose.tools import assert_equal, assert_raises # pylint: disable=E0611
 from flexmock import flexmock
+
 from tests.common.utils import monkeypatch, with_temp_folder, \
      set_file_contents, \
      get_file_contents, \
@@ -138,9 +139,8 @@ def test_constructor():
 
 
 def test_constructor__invalid_values():
-    @nose.tools.raises(TypeError)
     def _do_test_constructor__invalid_values(key, value):
-        Node(**{key : value})
+        assert_raises(TypeError, Node, **{key : value})
 
     yield _do_test_constructor__invalid_values, "input_files",      [id]
     yield _do_test_constructor__invalid_values, "output_files",     [-1]
@@ -162,17 +162,15 @@ def test_constructor__requirements():
     assert_equal(node.requirements, frozenset([id, str]))
 
 def test_constructor__requirements__wrong_type():
-    @nose.tools.raises(TypeError)
     def _do_test_constructor__requirements__wrong_type(value):
-        Node(requirements = value)
+        assert_raises(TypeError, Node, requirements = value)
     yield _do_test_constructor__requirements__wrong_type, 17
     yield _do_test_constructor__requirements__wrong_type, {}
     yield _do_test_constructor__requirements__wrong_type, "867-5309"
 
-@nose.tools.raises(NodeError)
 def test_constructor__requirements__non_picklable():
     unpicklable = lambda: None # pragma: no coverage
-    Node(requirements = unpicklable)
+    assert_raises(NodeError, Node, requirements = unpicklable)
 
 
 class _UnpicklableNode(Node):
@@ -214,9 +212,8 @@ def test_constructor__iterable():
     yield _do_test_constructor__iterable, "dependencies"
 
 def test_constructor__not_a_node():
-    @nose.tools.raises(TypeError)
     def _do_test_constructor__not_a_node(key):
-        Node(**{key : (1,)})
+        assert_raises(TypeError, Node, **{key : (1,)})
     yield _do_test_constructor__not_a_node, "subnodes"
     yield _do_test_constructor__not_a_node, "dependencies"
 
@@ -242,9 +239,8 @@ def test_constructor__description__default():
         yield _do_test_constructor__description__default, cls
 
 def test_constructor__description__non_string():
-    @nose.tools.raises(TypeError)
     def _do_test_constructor__description__non_string(cls, value):
-        cls(description = value)
+        assert_raises(TypeError, cls, description = value)
     for cls in _NODE_TYPES:
         yield _do_test_constructor__description__non_string, cls, 1
         yield _do_test_constructor__description__non_string, cls, {}
@@ -265,17 +261,15 @@ def test_constructor__threads():
         yield _do_test_constructor__threads, cls, 3
 
 def test_constructor__threads_invalid_range():
-    @nose.tools.raises(ValueError)
     def _do_test_constructor__threads_invalid_range(cls, nthreads):
-        cls(threads = nthreads)
+        assert_raises(ValueError, cls, threads = nthreads)
     for cls in (Node, _CommandNodeWrap):
         yield _do_test_constructor__threads_invalid_range, cls, -1
         yield _do_test_constructor__threads_invalid_range, cls, 0
 
 def test_constructor__threads_invalid_type():
-    @nose.tools.raises(TypeError)
     def _do_test_constructor__threads_invalid_type(cls, nthreads):
-        cls(threads = nthreads)
+        assert_raises(TypeError, cls, threads = nthreads)
     for cls in (Node, _CommandNodeWrap):
         yield _do_test_constructor__threads_invalid_type, cls, "1"
         yield _do_test_constructor__threads_invalid_type, cls, {}
@@ -428,9 +422,8 @@ def test__setup__input_files():
     yield _do_test__setup__input_files_exist, {"auxiliary_files" : _IN_FILES}
 
 def test__setup__input_files_missing():
-    @nose.tools.raises(NodeError)
     def _do_test__setup__input_files_exist(kwargs):
-        Node(**kwargs)._setup(None, None)
+        assert_raises(NodeError, Node(**kwargs)._setup, None, None)
     yield _do_test__setup__input_files_exist, {"executables"     : ("ls", "shxxxxxxxxxx")}
     yield _do_test__setup__input_files_exist, {"input_files"     : _OUT_FILES}
     yield _do_test__setup__input_files_exist, {"auxiliary_files" : _OUT_FILES}
@@ -438,9 +431,9 @@ def test__setup__input_files_missing():
 def test__teardown__output_files():
     Node(output_files = _IN_FILES)._teardown(None, None)
 
-@nose.tools.raises(NodeError)
 def test__teardown__output_files_missing():
-    Node(output_files = _OUT_FILES)._teardown(None, None)
+    node = Node(output_files = _OUT_FILES)
+    assert_raises(NodeError, node._teardown, None, None)
 
 
 
@@ -523,11 +516,10 @@ def test_commandnode_setup__files_exist():
 
 
 def test_commandnode_setup__files_missing():
-    @nose.tools.raises(NodeError)
     def _do_test_commandnode_setup(kwargs):
         cmd_mock = _build_cmd_mock(**kwargs)
         node = CommandNode(cmd_mock)
-        node._setup(None, None)
+        assert_raises(NodeError, node._setup, None, None)
     yield _do_test_commandnode_setup, {"executables"     : ("ls", "shxxxxxxxxxxxxx")}
     yield _do_test_commandnode_setup, {"input_files"     : _OUT_FILES}
     yield _do_test_commandnode_setup, {"auxiliary_files" : _OUT_FILES}
@@ -546,13 +538,12 @@ def test_commandnode_run__call_order():
     node = CommandNode(cmd_mock)
     node._run(None, "xTMPx")
 
-@nose.tools.raises(CmdNodeError)
 def test_commandnode_run__exception_on_error():
     cmd_mock = _build_cmd_mock()
     cmd_mock.should_receive("run").ordered.once
     cmd_mock.should_receive("join").and_return((1,)).ordered.once
     node = CommandNode(cmd_mock)
-    node._run(None, None)
+    assert_raises(CmdNodeError, node._run, None, None)
 
 
 
@@ -595,7 +586,6 @@ def test_commandnode_teardown(temp_folder):
 
 # Not all required files have been generated (atomic)
 @with_temp_folder
-@nose.tools.raises(CmdNodeError)
 def test_commandnode_teardown__missing_files_in_temp(temp_folder):
     destination, temp_folder = _setup_temp_folders(temp_folder)
 
@@ -608,12 +598,9 @@ def test_commandnode_teardown__missing_files_in_temp(temp_folder):
     temp_files_before = set(os.listdir(temp_folder))
     dest_files_before = set(os.listdir(destination))
 
-    try:
-        node._teardown(None, temp_folder)
-    except CmdNodeError:
-        assert_equal(temp_files_before, set(os.listdir(temp_folder)))
-        assert_equal(dest_files_before, set(os.listdir(destination)))
-        raise
+    assert_raises(CmdNodeError, node._teardown, None, temp_folder)
+    assert_equal(temp_files_before, set(os.listdir(temp_folder)))
+    assert_equal(dest_files_before, set(os.listdir(destination)))
 
 # Not all specified TEMP_ files exist at _teardown (allowed)
 @with_temp_folder
@@ -633,7 +620,6 @@ def test_commandnode_teardown__missing_optional_files(temp_folder):
 
 # Not all required files were in place after commit
 @with_temp_folder
-@nose.tools.raises(NodeError)
 def _test_commandnode_teardown__missing_files_in_dest(temp_folder):
     destination, temp_folder = _setup_temp_folders(temp_folder)
     class _CmdMock(AtomicCmd):
@@ -647,12 +633,11 @@ def _test_commandnode_teardown__missing_files_in_dest(temp_folder):
     cmd.run(temp_folder)
     assert_equal(cmd.join(), [0])
     node = CommandNode(cmd)
-    node._teardown(None, temp_folder)
+    assert_raises(NodeError, node._teardown, None, temp_folder)
 
 
 # Unexpected files were found in the temporary directory
 @with_temp_folder
-@nose.tools.raises(CmdNodeError)
 def test_commandnode_teardown__extra_files_in_temp(temp_folder):
     destination, temp_folder = _setup_temp_folders(temp_folder)
 
@@ -665,12 +650,9 @@ def test_commandnode_teardown__extra_files_in_temp(temp_folder):
     temp_files_before = set(os.listdir(temp_folder))
     dest_files_before = set(os.listdir(destination))
 
-    try:
-        node._teardown(None, temp_folder)
-    except CmdNodeError:
-        assert_equal(temp_files_before, set(os.listdir(temp_folder)))
-        assert_equal(dest_files_before, set(os.listdir(destination)))
-        raise
+    assert_raises(CmdNodeError, node._teardown, None, temp_folder)
+    assert_equal(temp_files_before, set(os.listdir(temp_folder)))
+    assert_equal(dest_files_before, set(os.listdir(destination)))
 
 
 

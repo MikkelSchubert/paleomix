@@ -24,7 +24,7 @@ import os
 import StringIO
 
 import nose.tools
-from nose.tools import assert_equal # pylint: disable=E0611
+from nose.tools import assert_equal, assert_raises # pylint: disable=E0611
 
 from tests.common.utils import require_call, with_temp_folder
 from pypeline.common.formats.msa import \
@@ -244,26 +244,23 @@ def test_print_fasta__complete_line_test():
 ## Tests for 'validate_msa'
 
 
-@nose.tools.raises(MSAError)
 def test_validate_msa__missing_names_first():
     msa_1 = dict(_JOIN_MSA_1)
     msa_2 = dict(_JOIN_MSA_2)
     msa_1.pop(msa_1.keys()[0])
-    validate_msa(msa_1, msa_2)
+    assert_raises(MSAError, validate_msa, msa_1, msa_2)
 
-@nose.tools.raises(MSAError)
 def test_validate_msa__missing_names_second():
     msa_1 = dict(_JOIN_MSA_1)
     msa_2 = dict(_JOIN_MSA_2)
     msa_2.pop(msa_2.keys()[0])
-    validate_msa(msa_1, msa_2)
+    assert_raises(MSAError, validate_msa, msa_1, msa_2)
 
-@nose.tools.raises(MSAError)
 def test_validate_msa__differing_lengths():
     msa_1 = dict(_JOIN_MSA_1)
     msa_2 = dict(_JOIN_MSA_2)
     msa_1["nc"] = "AC"
-    validate_msa(msa_1, msa_2)
+    assert_raises(MSAError, validate_msa, msa_1, msa_2)
 
 @nose.tools.raises(MSAError)
 def test_validate_msa__empty_name():
