@@ -20,12 +20,23 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
 import types
 
-import yaml
-
-from pypeline.common.makefile import *
+from pypeline.common.makefile import \
+     read_makefile, \
+     validate_makefile, \
+     MakefileError, \
+     IsStr, \
+     IsDictOf, \
+     IsListOf, \
+     AnyOf, \
+     OneOf, \
+     IsInt, \
+     IsUnsignedInt, \
+     IsBoolean, \
+     IsStrWithPrefix, \
+     CLI_PARAMETERS, \
+     Or
 
 class MAKEFileError(RuntimeError):
     pass
@@ -34,7 +45,7 @@ class MAKEFileError(RuntimeError):
 def read_makefiles(filenames):
     makefiles = []
     for filename in filenames:
-        makefile = read_makefile(filename, {}, _VALIDATION)
+        makefile = read_makefile(filename, _DEFAULTS, _VALIDATION)
         makefile = makefile["Makefile"] # Not using extra stats
         makefile = _mangle_makefile(makefile)
 
@@ -65,9 +76,9 @@ def _mangle_makefile(mkfile):
 
 def _collapse_taxa(mkfile):
     groups = {}
-    def _collect_taxa(dd, path = ()):
+    def _collect_taxa(taxa_dict, path = ()):
         current_taxa = {}
-        for (key, subdd) in dd.iteritems():
+        for (key, subdd) in taxa_dict.iteritems():
             if key.startswith("<") and key.endswith(">"):
                 key = key.lstrip("<").rstrip(">")
                 current_taxa.update(_collect_taxa(subdd, path + (key,)))
@@ -109,12 +120,15 @@ def _update_filtering(mkfile):
     mkfile["Project"]["Filter Singletons"] = filtering
 
 
-def _validate_taxa(path, dd, taxa = set()):
-    if not isinstance(dd, types.DictType):
-        raise MAKEFileError("Expected dicts in Taxa tree for '%s', found %s: %s" \
-                                % (path, dd.__class__.__name__, dd))
+def _validate_taxa(path, taxa_dict, taxa = None):
+    if taxa is None:
+        taxa = set()
 
-    for (key, subdd) in dd.iteritems():
+    if not isinstance(taxa_dict, types.DictType):
+        raise MAKEFileError("Expected dicts in Taxa tree for '%s', found %s: %r" \
+                                % (path, taxa_dict.__class__.__name__, taxa_dict))
+
+    for (key, subdd) in taxa_dict.iteritems():
         if key.startswith("<") and key.endswith(">"):
             _validate_taxa(path + (key,), subdd, taxa)
         elif key.lower() not in taxa:
@@ -135,13 +149,17 @@ _DEFAULTS = {
             },
         },
     "Genotyping" : {
-        "Default" : "SAMTools",
-        "Indels"  : True,
-        "Random" : {
-            "Padding"    : 5,
-            },
-        "SAMTools" : {
-            "Padding"    : 5,
+        "Default"    : "SAMTools",
+        "Padding"    : 5,
+        "Indels"     : True,
+        "MPileup"    : {
+        },
+        "BCFTools"   : {
+        },
+        "Random"     : {
+        },
+        "VCF_Filter" : {
+            "MaxReadDepth" : 100,
             },
         },
     "MSAlignment" : {
@@ -155,6 +173,7 @@ _DEFAULTS = {
         "Default" : "ExaML",
         "ExcludeGroups" : [],
         "ExaML" : {
+            "Threads"    : 1,
             "Bootstraps" : 100,
             "Replicates" : 1,
             "Model"      : "gamma",
@@ -186,8 +205,8 @@ _VALIDATION = {
             },
         },
     "Genotyping" : {
-        "Padding"    : IsInt,
-        "Default" : OneOf("random", "samtools", case_sensitive = False),
+        "Default"  : OneOf("random", "samtools", case_sensitive = False),
+        "Padding"  : IsInt,
         "Indels"   : IsBoolean,
         AnyOf("MPileup", "BCFTools", "Random") : {
             IsStrWithPrefix("-") : CLI_PARAMETERS,
