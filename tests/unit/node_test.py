@@ -29,7 +29,7 @@
 import os
 
 import nose.tools
-from nose.tools import assert_equal, assert_raises # pylint: disable=E0611
+from nose.tools import assert_equal, assert_raises
 from flexmock import flexmock
 
 from tests.common.utils import monkeypatch, with_temp_folder, \

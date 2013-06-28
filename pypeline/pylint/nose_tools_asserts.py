@@ -20,35 +20,21 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import logilab.astng
-from logilab.astng import MANAGER
+from logilab.astng import MANAGER, scoped_nodes
 
-def _disable_infer(_self, *_args, **_kwargs):
-    raise logilab.astng.InferenceError()
+_ASSERTS = ['equal', 'not_equal',
+            'in', 'not_in',
+            'is', 'is_not',
+            'is_none', 'is_not_none',
+            'is_instance', 'is_not_instance',
+            'true', 'false',
+            'raises']
 
-
-def atomiccmd_builder_transform(module):
-    for cls_obj in module.get_children():
-        if not isinstance(cls_obj, logilab.astng.Class):
-            continue
-
-        for member in cls_obj.get_children():
-            if not isinstance(member, logilab.astng.Function):
-                continue
-
-            try:
-                if 'pypeline.atomiccmd.builder.create_customizable_cli_parameters' in member.decoratornames():
-                    if member.type == 'method':
-                        member.type = 'classmethod'
-
-
-                    # Crude workaround to spurious errors:
-                    # Prevent pylint from attempting to infer the return type
-                    member.infer_call_result = _disable_infer
-
-            except logilab.astng.UnresolvableName:
-                pass
-
+def nose_tools_transform(module):
+    if module.name == 'nose.tools':
+        for assert_func in _ASSERTS:
+            assert_func = "assert_" + assert_func
+            module.locals[assert_func] = [scoped_nodes.Class(assert_func, None)]
 
 def register(*_args, **_kwargs):
-    MANAGER.register_transformer(atomiccmd_builder_transform)
+    MANAGER.register_transformer(nose_tools_transform)

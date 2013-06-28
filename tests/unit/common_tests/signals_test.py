@@ -25,7 +25,7 @@ import signal
 import pypeline.common.signals as signals
 
 import nose
-from nose.tools import assert_equal # pylint: disable=E0611
+from nose.tools import assert_equal
 
 
 def test_signal__sigterm_to_str():

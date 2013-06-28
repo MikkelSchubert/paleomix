@@ -23,7 +23,7 @@
 # pylint: disable=C0103
 
 from flexmock import flexmock
-from nose.tools import assert_equal, assert_raises # pylint: disable=E0611
+from nose.tools import assert_equal, assert_raises
 
 from tests.common.utils import monkeypatch
 

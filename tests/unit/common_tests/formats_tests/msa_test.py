@@ -24,7 +24,7 @@ import os
 import StringIO
 
 import nose.tools
-from nose.tools import assert_equal, assert_raises # pylint: disable=E0611
+from nose.tools import assert_equal, assert_raises
 
 from tests.common.utils import require_call, with_temp_folder
 from pypeline.common.formats.msa import \

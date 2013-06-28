@@ -32,7 +32,7 @@ import weakref
 from flexmock import flexmock
 
 import nose
-from nose.tools import assert_equal, assert_raises # pylint: disable=E0611
+from nose.tools import assert_equal, assert_raises
 from tests.common.utils import with_temp_folder, monkeypatch, \
      get_file_contents, \
      set_file_contents, \

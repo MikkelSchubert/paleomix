@@ -23,7 +23,7 @@
 import random
 import pickle
 import nose.tools
-from nose.tools import assert_equal # pylint: disable=E0611
+from nose.tools import assert_equal
 
 import pypeline.common.utilities as utils
 

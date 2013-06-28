@@ -24,7 +24,7 @@ import os
 import StringIO
 
 import nose
-from nose.tools import assert_equal  # pylint: disable=E0611
+from nose.tools import assert_equal
 from tests.common.utils import with_temp_folder
 
 from pypeline.atomiccmd.command import AtomicCmd

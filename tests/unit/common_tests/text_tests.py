@@ -26,7 +26,7 @@
 import collections
 
 import nose.tools
-from nose.tools import assert_equal # pylint: disable=E0611
+from nose.tools import assert_equal
 
 from pypeline.common.text import \
     TableError, \
