@@ -29,7 +29,7 @@ from pypeline.atomiccmd.command import AtomicCmd
 from pypeline.common.utilities import fragment, safe_coerce_to_tuple
 from pypeline.common.formats.msa import read_msa
 import pypeline.common.fileutils as fileutils
-import pypeline.tools.phylo_pipeline.steps.common as common
+import pypeline.tools.phylo_pipeline.parts.common as common
 
 
 class FastaToPAMLPhyNode(Node):

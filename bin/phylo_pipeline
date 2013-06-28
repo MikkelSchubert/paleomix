@@ -80,11 +80,11 @@ def main(argv):
     if not _has_required_modules():
         return 1
 
-    import pypeline.tools.phylo_pipeline.steps.common as common
-    import pypeline.tools.phylo_pipeline.steps.genotype as genotype
-    import pypeline.tools.phylo_pipeline.steps.msa as msa
-    import pypeline.tools.phylo_pipeline.steps.paml as paml
-    import pypeline.tools.phylo_pipeline.steps.phylo as phylo
+    import pypeline.tools.phylo_pipeline.parts.common as common
+    import pypeline.tools.phylo_pipeline.parts.genotype as genotype
+    import pypeline.tools.phylo_pipeline.parts.msa as msa
+    import pypeline.tools.phylo_pipeline.parts.paml as paml
+    import pypeline.tools.phylo_pipeline.parts.phylo as phylo
     import pypeline.ui as ui
     from pypeline import Pypeline
 
