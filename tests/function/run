@@ -79,7 +79,7 @@ def main(argv):
 #                raise RuntimeError("Node did not pass dependencies")
 
 
-    if not pipeline.run(dry_run = "--dry-run" in argv, collapse = True, max_running = 2):
+    if not pipeline.run(dry_run = "--dry-run" in argv, verbose = False, collapse = True, max_running = 2):
         errors = True
 
     return (1 if errors else 0)
