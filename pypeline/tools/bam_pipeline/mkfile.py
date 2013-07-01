@@ -59,7 +59,7 @@ _TEMPLATE_BAM_OPTIONS = \
 """  # Settings for aligners supported by the pipeline
   AdapterRemoval:
     # Which version of AdapterRemoval to use ('v1.4' or 'v1.5+')
-    Version: 1.4
+    Version: v1.4
 
   Aligners:
     # Choice of aligner software to use, either "BWA" or "Bowtie2"
