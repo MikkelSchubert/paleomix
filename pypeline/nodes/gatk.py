@@ -25,6 +25,7 @@ import os
 import pypeline.common.fileutils as fileutils
 from pypeline.node import CommandNode, MetaNode
 from pypeline.atomiccmd.command import AtomicCmd
+from pypeline.atomiccmd.builder import AtomicJavaCmdBuilder
 from pypeline.atomiccmd.sets import ParallelCmds
 from pypeline.common.fileutils import swap_ext
 from pypeline.common.utilities import safe_coerce_to_tuple
@@ -32,27 +33,25 @@ from pypeline.common.utilities import safe_coerce_to_tuple
 
 class _IndelTrainerNode(CommandNode):
     def __init__(self, config, reference, infiles, outfile, dependencies = ()):
-        jar   = os.path.join(config.jar_root, "GenomeAnalysisTK.jar")
-        call  = ["java", "-jar", jar,
-                 "-T", "RealignerTargetCreator",
-                 "-R", "%(IN_REFERENCE)s",
-                 "-o", "%(OUT_INTERVALS)s"]
-        keys = _update_file_keys_and_call(call, infiles)
+        infiles  = safe_coerce_to_tuple(infiles)
+        jar_file = os.path.join(config.jar_root, "GenomeAnalysisTK.jar")
+        command  = AtomicJavaCmdBuilder(config, jar_file)
+        command.set_option("-T", "RealignerTargetCreator")
+        command.set_option("-R", "%(IN_REFERENCE)s")
+        command.set_option("-o", "%(OUT_INTERVALS)s")
 
-        command = AtomicCmd(call,
-                            IN_REFERENCE  = reference,
-                            IN_REF_DICT   = fileutils.swap_ext(reference, ".dict"),
-                            OUT_INTERVALS = outfile,
-                            AUX_JAR       = jar,
-                            **keys)
+        _set_input_files(command, infiles)
+        command.set_kwargs(IN_REFERENCE  = reference,
+                           IN_REF_DICT   = fileutils.swap_ext(reference, ".dict"),
+                           OUT_INTERVALS = outfile)
 
         description = "<Train Indel Realigner: %i file(s) -> '%s'>" \
             % (len(infiles), outfile)
-
         CommandNode.__init__(self,
-                             description = description,
-                             command = command,
+                             description  = description,
+                             command      = command.finalize(),
                              dependencies = dependencies)
+
 
 
 
@@ -60,23 +59,21 @@ class _IndelRealignerNode(CommandNode):
     def __init__(self, config, reference, intervals, infiles, outfile, dependencies = ()):
         self._basename = os.path.basename(outfile)
 
-        jar   = os.path.join(config.jar_root, "GenomeAnalysisTK.jar")
-        call  = ["java", "-jar", jar,
-                 "-T", "IndelRealigner",
-                 "-R", "%(IN_REFERENCE)s",
-                 "-targetIntervals", "%(IN_INTERVALS)s",
-                 "-o", "%(OUT_BAMFILE)s",
-                 "--bam_compression", 0,
-                 "--disable_bam_indexing"]
-        keys = _update_file_keys_and_call(call, infiles)
+        infiles  = safe_coerce_to_tuple(infiles)
+        jar_file = os.path.join(config.jar_root, "GenomeAnalysisTK.jar")
+        command  = AtomicJavaCmdBuilder(config, jar_file)
+        command.set_option("-T", "IndelRealigner")
+        command.set_option("-R", "%(IN_REFERENCE)s")
+        command.set_option("-targetIntervals", "%(IN_INTERVALS)s")
+        command.set_option("-o", "%(OUT_BAMFILE)s")
+        command.set_option("--bam_compression", 0)
+        command.set_option("--disable_bam_indexing")
+        _set_input_files(command, infiles)
 
-        command = AtomicCmd(call,
-                            IN_REFERENCE = reference,
-                            IN_REF_DICT  = fileutils.swap_ext(reference, ".dict"),
-                            IN_INTERVALS = intervals,
-                            OUT_BAMFILE  = outfile,
-                            AUX_JAR      = jar,
-                            **keys)
+        command.set_kwargs(IN_REFERENCE = reference,
+                           IN_REF_DICT  = fileutils.swap_ext(reference, ".dict"),
+                           IN_INTERVALS = intervals,
+                           OUT_BAMFILE  = outfile)
 
         calmd   = AtomicCmd(["samtools", "calmd", "-b", "%(TEMP_IN_BAM)s", "%(IN_REF)s"],
                             TEMP_IN_BAM     = self._basename,
@@ -88,7 +85,8 @@ class _IndelRealignerNode(CommandNode):
 
         CommandNode.__init__(self,
                              description  = description,
-                             command      = ParallelCmds([command, calmd]),
+                             command      = ParallelCmds([command.finalize(),
+                                                          calmd]),
                              dependencies = dependencies)
 
 
@@ -102,6 +100,8 @@ class _IndelRealignerNode(CommandNode):
                   os.path.join(temp, self._basename))
 
         CommandNode._teardown(self, config, temp)
+
+
 
 
 class IndelRealignerNode(MetaNode):
@@ -129,11 +129,11 @@ class IndelRealignerNode(MetaNode):
                           dependencies = dependencies)
 
 
-def _update_file_keys_and_call(call, input_files):
+def _set_input_files(command, input_files):
     keys = {}
     for (index, filename) in enumerate(input_files):
-        call.extend(("-I", "%%(IN_BAMFILE_%02i)s" % index))
+        command.add_option("-I", "%%(IN_BAMFILE_%02i)s" % index)
         keys["IN_BAMFILE_%02i" % index] = filename
         keys["IN_BAIFILE_%02i" % index] = swap_ext(filename, ".bai")
 
-    return keys
+    command.set_kwargs(**keys)
