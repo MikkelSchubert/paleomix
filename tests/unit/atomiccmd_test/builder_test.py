@@ -338,6 +338,7 @@ def test_java_builder__defaults__call():
     builder = AtomicJavaCmdBuilder(JAVA_CFG, "/path/Foo.jar")
     assert_equal(builder.call, ["java", "-server", "-Xmx4g",
                                 "-Djava.io.tmpdir=/disk/tmp",
+                                "-Djava.awt.headless=true",
                                 "-XX:+UseSerialGC",
                                 "-jar", "%(AUX_JAR)s"])
 
@@ -349,6 +350,7 @@ def test_java_builder__multithreaded_gc():
     builder = AtomicJavaCmdBuilder(JAVA_CFG, "/path/Foo.jar", gc_threads = 3)
     assert_equal(builder.call, ["java", "-server", "-Xmx4g",
                                 "-Djava.io.tmpdir=/disk/tmp",
+                                "-Djava.awt.headless=true",
                                 "-XX:ParallelGCThreads=3",
                                 "-jar", "%(AUX_JAR)s"])
 

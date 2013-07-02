@@ -219,7 +219,6 @@ def _setup_mocks_for_failure(*do_mocks):
 
 
 @with_temp_folder
-@nose.tools.timed(0.2)
 def test_parallel_commands__join_failure_1(temp_folder):
     mocks = _setup_mocks_for_failure(False, True, True)
     cmds = ParallelCmds(mocks)
@@ -227,7 +226,6 @@ def test_parallel_commands__join_failure_1(temp_folder):
     assert_equal(cmds.join(), [1, 'SIGTERM', 'SIGTERM'])
 
 @with_temp_folder
-@nose.tools.timed(0.2)
 def test_parallel_commands__join_failure_2(temp_folder):
     mocks = _setup_mocks_for_failure(True, False, True)
     cmds = ParallelCmds(mocks)
@@ -235,7 +233,6 @@ def test_parallel_commands__join_failure_2(temp_folder):
     assert_equal(cmds.join(), ['SIGTERM', 1, 'SIGTERM'])
 
 @with_temp_folder
-@nose.tools.timed(0.2)
 def test_parallel_commands__join_failure_3(temp_folder):
     mocks = _setup_mocks_for_failure(True, True, False)
     cmds = ParallelCmds(mocks)
@@ -282,7 +279,7 @@ def test_sequential_commands__atomiccmds():
     assert_equal(cmds.join(), [0, 0, 0])
 
 @with_temp_folder
-@nose.tools.timed(0.2)
+@nose.tools.timed(1)
 def test_sequential_commands__abort_on_error_1(temp_folder):
     cmd_1 = AtomicCmd("false")
     cmd_2 = AtomicCmd(("sleep", 10))
@@ -292,7 +289,7 @@ def test_sequential_commands__abort_on_error_1(temp_folder):
     assert_equal(cmds.join(), [1, None, None])
 
 @with_temp_folder
-@nose.tools.timed(0.2)
+@nose.tools.timed(1)
 def test_sequential_commands__abort_on_error_2(temp_folder):
     cmd_1 = AtomicCmd("true")
     cmd_2 = AtomicCmd("false")
@@ -302,7 +299,7 @@ def test_sequential_commands__abort_on_error_2(temp_folder):
     assert_equal(cmds.join(), [0, 1, None])
 
 @with_temp_folder
-@nose.tools.timed(0.2)
+@nose.tools.timed(1)
 def test_sequential_commands__abort_on_error_3(temp_folder):
     cmd_1 = AtomicCmd("true")
     cmd_2 = AtomicCmd("true")
