@@ -124,6 +124,8 @@ _VALIDATION = {
 
         "AdapterRemoval" : {
             "Version" : OneOf("v1.4", "v1.5+"),
+            "--pcr1"  : IsStr,
+            "--pcr2"  : IsStr,
         },
 
         # Which aliger/mapper to use (BWA/Bowtie2)
