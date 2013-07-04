@@ -319,9 +319,34 @@ def create_customizable_cli_parameters(customize_func): # pylint: disable=C0103
 
 
 
+def apply_options(builder, options, pred = lambda s: s.startswith("-")):
+    """Applies a dictionary of options to a builder. By default, only
+    options where the key start with "-" are used (determined by 'pred').
+    The following rules are used when applying options:
+      - If a key is assosiated with a single value, 'set_option' is used.
+      - If a key is assosiated with a list of values, 'add_option' is used.
+      - If the key is assosiated with a boolean value, the option is set
+        if true (without a value) or removed from the call if false. This
+        allows easy setting/unsetting of '--do-something' type options."""
+    for (key, values) in dict(options).iteritems():
+        if not isinstance(key, types.StringTypes):
+            raise TypeError("Keys must be strings, not %r" % (key.__class__.__name__,))
+        elif pred(key):
+            if isinstance(values, (types.ListType, types.TupleType)):
+                for value in values:
+                    if not isinstance(value, _ADDABLE_TYPES) or isinstance(value, _SETABLE_ONLY_TYPES):
+                        raise TypeError("Unexpected type when adding options: %r" % (value.__class__.__name__,))
+                    builder.add_option(key, value)
+            elif not isinstance(values, _SETABLE_TYPES):
+                raise TypeError("Unexpected type when setting option: %r" % (values.__class__.__name__,))
+            elif isinstance(values, (types.BooleanType, types.NoneType)):
+                if values or values is None:
+                    builder.set_option(key)
+                else:
+                    builder.pop_option(key)
+            else:
+                builder.set_option(key, values)
 
-def apply_params(obj, params, pred = lambda s: s.startswith("-")):
-    for (key, values) in params.iteritems():
-        if pred(key):
-            for value in safe_coerce_to_tuple(values):
-                obj.set_option(key, value)
+_ADDABLE_TYPES = (types.FloatType, types.IntType, types.LongType) + types.StringTypes
+_SETABLE_ONLY_TYPES = (types.BooleanType, types.NoneType)
+_SETABLE_TYPES = _ADDABLE_TYPES + _SETABLE_ONLY_TYPES

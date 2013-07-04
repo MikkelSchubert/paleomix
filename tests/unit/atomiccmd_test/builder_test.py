@@ -31,7 +31,8 @@ from pypeline.atomiccmd.builder import \
      AtomicCmdBuilder, \
      AtomicCmdBuilderError, \
      AtomicJavaCmdBuilder, \
-     AtomicMPICmdBuilder
+     AtomicMPICmdBuilder, \
+     apply_options
 
 
 
@@ -401,3 +402,84 @@ def test_mpi_builder__threads__zero_or_negative():
 
 def test_mpi_builder__threads__non_int():
     assert_raises(TypeError, AtomicMPICmdBuilder, "ls",  threads = "3")
+
+
+
+
+################################################################################
+################################################################################
+## apply_options
+
+
+def test_apply_options__single_option__default_pred__set_when_pred_is_true():
+    mock = flexmock()
+    mock.should_receive('set_option').with_args('--foo', 17).once()
+    apply_options(mock, {"--foo" : 17})
+
+def test_apply_options__single_option__default_pred__ignore_when_pred_is_false():
+    mock = flexmock()
+    apply_options(mock, {"Other" : None})
+
+def test_apply_options__single_option__user_pred__set_when_pred_is_true():
+    was_called = []
+    def _user_pred(key):
+        was_called.append(key)
+        return True
+    mock = flexmock()
+    mock.should_receive('set_option').with_args('FOO_BAR', 17).once()
+    apply_options(mock, {"FOO_BAR" : 17}, _user_pred)
+    assert_equal(was_called, ["FOO_BAR"])
+
+def test_apply_options__single_option__user_pred__ignore_when_pred_is_false():
+    def _user_pred(key):
+        return key.startswith("FOO")
+    mock = flexmock()
+    apply_options(mock, {"BAR_FOO" : 17})
+
+def test_apply_options__single_option__boolean__set_when_value_is_true():
+    mock = flexmock()
+    mock.should_receive('set_option').with_args('-v')
+    apply_options(mock, {"-v" : True})
+
+def test_apply_options__single_option__boolean__set_when_value_is_none():
+    mock = flexmock()
+    mock.should_receive('set_option').with_args('-v')
+    apply_options(mock, {"-v" : None})
+
+def test_apply_options__single_option__boolean__pop_when_value_is_false():
+    mock = flexmock()
+    mock.should_receive('pop_option').with_args('-v')
+    apply_options(mock, {"-v" : False})
+
+
+def test_apply_options__multiple_option():
+    mock = flexmock()
+    mock.should_receive('add_option').with_args('--foo', 3).once()
+    mock.should_receive('add_option').with_args('--foo', 17).once()
+    apply_options(mock, {"--foo" : [3, 17]})
+
+
+def test_apply_options__boolean_and_none_is_single_value_only():
+    mock = flexmock()
+    assert_raises(TypeError, apply_options, mock, {"--foo" : [True]})
+    assert_raises(TypeError, apply_options, mock, {"--foo" : [False]})
+    assert_raises(TypeError, apply_options, mock, {"--foo" : [None]})
+
+
+
+def test_apply_options__unexpected_types_in_values():
+    mock = flexmock()
+    assert_raises(TypeError, apply_options, mock, {"--foo" : object()})
+    assert_raises(TypeError, apply_options, mock, {"--foo" : iter([])})
+    assert_raises(TypeError, apply_options, mock, {"--foo" : {}})
+    assert_raises(TypeError, apply_options, mock, {"--foo" : set()})
+
+def test_apply_options__non_string_types_in_keys():
+    mock = flexmock()
+    assert_raises(TypeError, apply_options, mock, {1 : 17})
+    assert_raises(TypeError, apply_options, mock, {("foo",) : 17})
+
+def test_apply_options__not_dict_like():
+    mock = flexmock()
+    assert_raises(TypeError, apply_options, mock, None)
+    assert_raises(TypeError, apply_options, mock, [1, 2, 3])

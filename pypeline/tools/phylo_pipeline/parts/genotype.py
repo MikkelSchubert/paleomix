@@ -21,7 +21,6 @@
 # SOFTWARE.
 #
 import os
-import sys
 import itertools
 import collections
 
@@ -32,7 +31,11 @@ from copy import deepcopy
 from pypeline.node import Node, CommandNode, MetaNode
 from pypeline.atomiccmd.command import AtomicCmd
 from pypeline.atomiccmd.sets import ParallelCmds
-from pypeline.atomiccmd.builder import *
+from pypeline.atomiccmd.builder import \
+     create_customizable_cli_parameters, \
+     use_customizable_cli_parameters, \
+     AtomicCmdBuilder, \
+     apply_options
 from pypeline.nodes.samtools import GenotypeNode, TabixIndexNode, FastaIndexNode, MPileupNode
 from pypeline.nodes.bedtools import SlopBedNode
 
@@ -248,8 +251,8 @@ def build_genotyping_nodes(options, genotyping, taxa, interval, dependencies):
                                       outfile            = calls,
                                       dependencies       = node)
 
-    apply_params(genotype.commands["pileup"], genotyping.get("MPileup", {}))
-    apply_params(genotype.commands["genotype"], genotyping.get("BCFTools", {}))
+    apply_options(genotype.commands["pileup"], genotyping.get("MPileup", {}))
+    apply_options(genotype.commands["genotype"], genotyping.get("BCFTools", {}))
     genotype = genotype.build_node()
 
     vcfpileup = VCFPileupNode.customize(reference    = reference,
@@ -257,7 +260,7 @@ def build_genotyping_nodes(options, genotyping, taxa, interval, dependencies):
                                         in_vcf       = calls,
                                         outfile      = pileups,
                                         dependencies = genotype)
-    apply_params(vcfpileup.commands["pileup"], genotyping.get("MPileup", {}))
+    apply_options(vcfpileup.commands["pileup"], genotyping.get("MPileup", {}))
     vcfpileup = vcfpileup.build_node()
 
     vcffilter = VCFFilterNode.customize(infile       = calls,
@@ -267,7 +270,7 @@ def build_genotyping_nodes(options, genotyping, taxa, interval, dependencies):
                                         dependencies = vcfpileup)
 
     filter_cfg = genotyping.get("VCF_Filter", {})
-    apply_params(vcffilter.commands["filter"], filter_cfg)
+    apply_options(vcffilter.commands["filter"], filter_cfg)
     if "MaxReadDepth" in filter_cfg:
         max_depth = filter_cfg["MaxReadDepth"]
         if isinstance(max_depth, dict):

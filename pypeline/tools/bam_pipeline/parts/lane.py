@@ -31,7 +31,7 @@ import pypeline.tools.bam_pipeline.paths as paths
 from pypeline.tools.bam_pipeline.parts import Reads
 from pypeline.tools.bam_pipeline.nodes import CleanupBAMNode, \
                                               IndexAndValidateBAMNode
-
+from pypeline.atomiccmd.builder import apply_options
 
 #
 _TRIMMED_READS_CACHE = {}
@@ -108,11 +108,8 @@ def _select_aligner(options):
 
 
 def _apply_aln_user_parameters(mkfile_params, params, aligners):
-    for (param, value) in mkfile_params.iteritems():
-        if param.startswith("-"):
-            for value in safe_coerce_to_tuple(value):
-                for aligner_key in aligners:
-                    params.commands[aligner_key].add_option(param, value)
+    for aligner_key in aligners:
+        apply_options(params.commands[aligner_key], mkfile_params)
 
 def _append_aln_user_parameters(mkfile_params, lst):
     for (param, value) in mkfile_params.iteritems():
