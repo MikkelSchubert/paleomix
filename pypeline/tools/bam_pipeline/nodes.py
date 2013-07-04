@@ -5,8 +5,8 @@
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
-# copies of the Software, and to permit persons to whom the Software is 
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
 # The above copyright notice and this permission notice shall be included in all
@@ -15,9 +15,9 @@
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
 import os
@@ -28,9 +28,8 @@ from pypeline.atomiccmd.sets import ParallelCmds, SequentialCmds
 from pypeline.atomiccmd.builder import AtomicJavaCmdBuilder
 
 from pypeline.nodes.picard import ValidateBAMNode, concatenate_input_bams
-from pypeline.nodes.samtools import BAMIndexNode, SAMTOOLS_VERSION
-from pypeline.common.utilities import safe_coerce_to_tuple
-from pypeline.common.fileutils import swap_ext, add_postfix, describe_files
+from pypeline.nodes.samtools import BAMIndexNode
+from pypeline.common.fileutils import describe_files
 
 import pypeline.common.versions as versions
 
@@ -39,9 +38,9 @@ _MAPDAMAGE_MAX_READS = 100000
 
 
 MAPDAMAGE_VERSION = versions.Requirement(call   = ("mapDamage", "--version"),
-                                         search = r"(\d+)\.(\d+)\.(\d+)",
+                                         search = r"(\d+)\.(\d+)[\.-](\d+)",
                                          pprint = "{0}.{1}.{2}",
-                                         checks = versions.GE(2, 0, 0))
+                                         checks = versions.GE(2, 0, 45))
 
 
 class MapDamageNode(CommandNode):
@@ -156,6 +155,7 @@ class IndexAndValidateBAMNode(MetaNode):
                           dependencies = dependencies)
 
 
+    @classmethod
     def _get_input_file(cls, node):
         if isinstance(node, MetaNode):
             for subnode in node.subnodes:
