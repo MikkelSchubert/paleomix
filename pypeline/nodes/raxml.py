@@ -70,7 +70,7 @@ class RAxMLReduceNode(CommandNode):
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
-        self._kwargs = parameters.command.paths
+        self._kwargs = parameters.command.kwargs
         CommandNode.__init__(self,
                              command      = parameters.command.finalize(),
                              description  = "<RAxMLReduce: '%s' -> '%s'>" \

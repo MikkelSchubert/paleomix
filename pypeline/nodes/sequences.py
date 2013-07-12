@@ -59,8 +59,8 @@ class CollectSequencesNode(Node):
         fastas = {}
         for (name, filename) in self._infiles.iteritems():
             current_fastas = {}
-            for ((name, _meta), sequence) in read_fasta(filename):
-                current_fastas[name] = sequence
+            for ((fasta_name, _meta), sequence) in read_fasta(filename):
+                current_fastas[fasta_name] = sequence
             fastas[name] = current_fastas
         fastas = list(sorted(fastas.items()))
 

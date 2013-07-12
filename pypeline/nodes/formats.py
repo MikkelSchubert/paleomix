@@ -58,7 +58,7 @@ class FastaToPartitionedInterleavedPhyNode(Node):
 
         Node.__init__(self,
                       description  = description,
-                      input_files  = infiles,
+                      input_files  = infiles.keys(),
                       output_files = [out_prefix + ".phy", out_prefix + ".partitions"],
                       dependencies = dependencies)
 
@@ -116,7 +116,7 @@ class FastaToPartitionsNode(Node):
             
         Node.__init__(self, 
                       description  = description,
-                      input_files  = infiles,
+                      input_files  = infiles.keys(),
                       output_files = out_partitions,
                       dependencies = dependencies)
 
