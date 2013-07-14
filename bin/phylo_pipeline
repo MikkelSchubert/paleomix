@@ -80,6 +80,7 @@ def main(argv):
     if not _has_required_modules():
         return 1
 
+    import pypeline.tools.phylo_pipeline.mkfile
     import pypeline.tools.phylo_pipeline.parts.common as common
     import pypeline.tools.phylo_pipeline.parts.genotype as genotype
     import pypeline.tools.phylo_pipeline.parts.msa as msa
@@ -90,6 +91,7 @@ def main(argv):
 
     commands = {
         "genotype"        : genotype.chain,
+        "genotyping"      : genotype.chain,
         "msa"             : msa.chain,
         "paml:codeml"     : paml.chain_codeml,
         "phylogeny:examl" : phylo.chain_examl,
@@ -101,6 +103,9 @@ def main(argv):
         return 1
 
     chain = argv.pop(0)
+    if chain == "mkfile":
+        return pypeline.tools.phylo_pipeline.mkfile.main(argv[1:])
+
     options, makefiles = common.parse_options(argv)
     if not options:
         return 1

@@ -21,10 +21,13 @@
 # SOFTWARE.
 #
 import os
+import pysam
 
 from optparse import OptionParser
+
 import pypeline.tools.phylo_pipeline.makefile
 import pypeline.ui as ui
+from pypeline.common.text import parse_lines
 
 
 def parse_options(argv, parser = None):
@@ -38,13 +41,10 @@ def parse_options(argv, parser = None):
     parser.add_option("--intervals-root",     default = "./data/intervals")
     parser.add_option("--genomes-root",       default = "./data/genomes")
     parser.add_option("--destination",        default = "./results")
-    
+
     (options, args) = parser.parse_args(argv)
 
     makefiles = pypeline.tools.phylo_pipeline.makefile.read_makefiles(args)
-    if not makefiles:
-        return None, None
-    
     return options, makefiles
 
 
@@ -85,8 +85,8 @@ def collect_sequences(options, interval, taxa):
     # Same set of sequences for all genomes
     sequences = set()
     with open(bedfiles.itervalues().next()) as bedhandle:
-        for line in bedhandle:
-            sequences.add(line.split()[3])
+        for bed in parse_lines(bedhandle, pysam.asBed()):
+            sequences.add(bed.name)
     seqmap = dict(zip(sequences, sequences))
 
     return dict((name, dict.fromkeys(taxa, name)) for name in seqmap)
