@@ -46,6 +46,9 @@ Project:
      INTERVALS_NAME:
        Genome: GENOME_NAME
        Protein coding: yes
+       # Do not include indels in final sequence
+       # Indels are still called, and used to filter SNPs
+       Include indels: no
        Homozygous Contigs:
          GENDER_X: []
 
@@ -59,8 +62,6 @@ Genotyping:
   Default: SAMTools
   # Padding used for genotyping, to ensure that we call adjacent indels
   Padding: 10
-  # Do not include indels in final sequence
-  Indels: False
 
   Random:
     # Min distance of variants to indels
@@ -102,7 +103,7 @@ Genotyping:
 
 
 MSAlignment:
-  Enabled: False
+  Enabled: no
   Default: MAFFT
 
   MAFFT:

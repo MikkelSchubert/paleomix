@@ -97,7 +97,14 @@ def _collapse_taxa(mkfile):
 def _update_intervals(mkfile):
     intervals = mkfile["Project"]["Intervals"]
     for (interval, subdd) in intervals.iteritems():
+        if "Genome" not in subdd:
+            raise MAKEFileError("No genome specified for interval %r" % (interval,))
+
         subdd["Name"] = interval
+        subdd.setdefault("Protein coding",     False)
+        subdd.setdefault("Include indels",     True)
+        subdd.setdefault("Homozygous Contigs", {})
+        subdd.setdefault("Mappability",        None)
 
 
 def _update_filtering(mkfile):
@@ -151,7 +158,6 @@ _DEFAULTS = {
     "Genotyping" : {
         "Default"    : "SAMTools",
         "Padding"    : 5,
-        "Indels"     : True,
         "MPileup"    : {
         },
         "BCFTools"   : {
@@ -159,7 +165,8 @@ _DEFAULTS = {
         "Random"     : {
         },
         "VCF_Filter" : {
-            "MaxReadDepth" : 100,
+            "MaxReadDepth" : 0,
+            "Mappability"  : "",
             },
         },
     "MSAlignment" : {
@@ -194,6 +201,7 @@ _VALIDATION = {
             IsStr : {
                 "Genome"         : IsStr,
                 "Protein coding" : IsBoolean,
+                "Include indels" : IsBoolean,
                 "Orthology map"  : IsStr,
                 "Homozygous Contigs" : {
                     IsStr : IsListOf(IsStr),

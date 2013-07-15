@@ -49,19 +49,19 @@ def parse_options(argv, parser = None):
 
 
 def get_genome_for_interval(interval, taxon):
-    default = interval.get("Genome")
+    default = interval["Genome"]
     genomes = taxon.get("Genomes", {})
 
     return genomes.get(interval["Name"], default)
 
-    
+
 def collect_bed_files(options, interval, taxa):
     bedfiles = {}
     for taxon in taxa.itervalues():
         name      = taxon["Name"]
         prefix    = get_prefix(interval, taxon)
         bedfile   = os.path.join(options.intervals_root, prefix + ".bed")
-        
+
         bedfiles[name] = bedfile
     return bedfiles
 
@@ -75,7 +75,7 @@ def collect_fasta_files(options, interval, taxa):
 
         fastafiles[name] = fastafile
     return fastafiles
-        
+
 
 def collect_sequences(options, interval, taxa):
     bedfiles  = collect_bed_files(options, interval, taxa)
@@ -92,10 +92,10 @@ def collect_sequences(options, interval, taxa):
     return dict((name, dict.fromkeys(taxa, name)) for name in seqmap)
 
 
-        
+
 def get_prefix(interval, taxon = None):
     if not taxon:
         return "{Genome}.{Name}"
-    
+
     genome  = get_genome_for_interval(interval, taxon)
     return "%s.%s" % (genome, interval["Name"])

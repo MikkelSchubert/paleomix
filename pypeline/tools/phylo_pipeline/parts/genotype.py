@@ -91,7 +91,7 @@ class VCFFilterNode(CommandNode):
                                      IN_PILEUP = pileup,
                                      IN_STDIN     = unicat,
                                      OUT_STDOUT   = AtomicCmd.PIPE)
-        for contig in interval.get("Homozygous Contigs", ()):
+        for contig in interval["Homozygous Contigs"]:
             vcffilter.set_option("--homozygous-chromosome", contig)
 
         bgzip = AtomicCmdBuilder(["bgzip"],
@@ -128,9 +128,9 @@ class BuildRegionsNode(CommandNode):
                                   OUT_STDOUT   = outfile)
         params.set_option("--genotype", "%(IN_VCFFILE)s")
         params.set_option("--intervals", "%(IN_INTERVALS)s")
-        if interval.get("Protein coding"):
+        if interval["Protein coding"]:
             params.set_option("--whole-codon-indels-only")
-        if not interval.get("Indels"):
+        if not interval["Include indels"]:
             params.set_option("--ignore-indels")
 
         return {"command" : params}
@@ -251,8 +251,8 @@ def build_genotyping_nodes(options, genotyping, taxa, interval, dependencies):
                                       outfile            = calls,
                                       dependencies       = node)
 
-    apply_options(genotype.commands["pileup"], genotyping.get("MPileup", {}))
-    apply_options(genotype.commands["genotype"], genotyping.get("BCFTools", {}))
+    apply_options(genotype.commands["pileup"], genotyping["MPileup"])
+    apply_options(genotype.commands["genotype"], genotyping["BCFTools"])
     genotype = genotype.build_node()
 
     vcfpileup = VCFPileupNode.customize(reference    = reference,
@@ -260,7 +260,7 @@ def build_genotyping_nodes(options, genotyping, taxa, interval, dependencies):
                                         in_vcf       = calls,
                                         outfile      = pileups,
                                         dependencies = genotype)
-    apply_options(vcfpileup.commands["pileup"], genotyping.get("MPileup", {}))
+    apply_options(vcfpileup.commands["pileup"], genotyping["MPileup"])
     vcfpileup = vcfpileup.build_node()
 
     vcffilter = VCFFilterNode.customize(infile       = calls,
@@ -269,14 +269,14 @@ def build_genotyping_nodes(options, genotyping, taxa, interval, dependencies):
                                         interval     = interval,
                                         dependencies = vcfpileup)
 
-    filter_cfg = genotyping.get("VCF_Filter", {})
+    filter_cfg = genotyping["VCF_Filter"]
     apply_options(vcffilter.commands["filter"], filter_cfg)
-    if "MaxReadDepth" in filter_cfg:
+    if filter_cfg["MaxReadDepth"]:
         max_depth = filter_cfg["MaxReadDepth"]
         if isinstance(max_depth, dict):
             max_depth = max_depth[taxa["Name"]]
         vcffilter.commands["filter"].set_option("--max-read-depth", max_depth)
-    if filter_cfg.get("Mappability"):
+    if filter_cfg["Mappability"]:
         vcffilter.commands["filter"].set_option("--filter-by-mappability", "%(IN_MAPPABILITY)s")
         vcffilter.commands["filter"].set_kwargs(IN_MAPPABILITY = filter_cfg["Mappability"])
     vcffilter = vcffilter.build_node()
@@ -345,7 +345,6 @@ def build_taxa_nodes(options, genotyping, intervals, taxa, dependencies = ()):
         # Override default genome (BAM file) if specified
         interval["Genome"] = common.get_genome_for_interval(interval, taxa)
         # Enforce homozygous contigs based on gender tag
-        #        interval[
         interval["Homozygous Contigs"] = interval["Homozygous Contigs"][taxa["Gender"]]
 
         genotyping_method = taxa.get("Genotyping Method", "samtools").lower()

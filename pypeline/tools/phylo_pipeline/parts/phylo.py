@@ -49,7 +49,7 @@ def build_supermatrix(options, settings, afa_ext, destination, intervals, taxa, 
             input_files[filename] = record
 
 
-    excluded_groups = settings.get("ExcludeGroups", ())
+    excluded_groups = settings["ExcludeGroups"]
     matrixprefix = os.path.join(destination, "alignments")
     supermatrix  = FastaToPartitionedInterleavedPhyNode(infiles        = input_files,
                                                         out_prefix     = matrixprefix,
@@ -74,7 +74,7 @@ def _examl_nodes(settings, destination, input_alignment, input_binary, dependenc
     return EXaMLNode(input_binary    = input_binary,
                      initial_tree    = initial_tree,
                      output_template = os.path.join(destination, "RAxML_%s"),
-                     threads         = settings["ExaML"].get("Threads", 1),
+                     threads         = settings["ExaML"]["Threads"],
                      dependencies    = tree)
 
 
