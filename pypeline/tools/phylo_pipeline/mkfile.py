@@ -45,10 +45,10 @@ Project:
   Intervals:
      INTERVALS_NAME:
        Genome: GENOME_NAME
-       Protein coding: yes
+       Protein coding: no
        # Do not include indels in final sequence
        # Indels are still called, and used to filter SNPs
-       Include indels: no
+       Include indels: yes
        Homozygous Contigs:
          GENDER_X: []
 
@@ -77,8 +77,9 @@ Genotyping:
   VCF_Filter:
     # Mappability file, filter sites that were are not mappable
 #    Mappability: PATH_TO_FILE
-    # Minimum coverage acceptable for genotyping calls
-    MaxReadDepth: 100
+    # Maximum coverage acceptable for genotyping calls
+    # If zero, the default vcf_filter value is used
+    MaxReadDepth: 0
 
     # Minimum coverage acceptable for genotyping calls
     --min-read-depth: 8
@@ -92,7 +93,7 @@ Genotyping:
     --min-distance-between-indels: 10
     # Min P-value for strand bias (given PV4)
     --min-strand-bias: 1e-4
-    #Min P-value for baseQ bias (given PV4)
+    # Min P-value for baseQ bias (given PV4)
     --min-baseq-bias: 1e-4
     # Min P-value for mapQ bias (given PV4)
     --min-mapq-bias: 1e-4
@@ -103,7 +104,7 @@ Genotyping:
 
 
 MSAlignment:
-  Enabled: no
+  Enabled: yes
   Default: MAFFT
 
   MAFFT:
