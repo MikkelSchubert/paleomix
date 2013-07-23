@@ -26,47 +26,69 @@ from pypeline.common.utilities import fragment, split_before
 from pypeline.common.fileutils import open_ro
 from pypeline.common.formats._common import FormatError
 
+
 class FASTAError(FormatError):
     pass
 
 
-def wrap_fasta(name, sequence):
-    """Process a printable FASTA sequence, wrapping long sequences at 60 chars."""
-    return ">%s\n%s\n" % (name, "\n".join(fragment(60, sequence)))
+class FASTA:
+    def __init__(self, name, meta, sequence):
+        self.name     = name
+        self.meta     = meta
+        self.sequence = sequence
 
 
-def print_fasta(name, sequence, file = sys.stdout):
-    """Prints a FASTA sequence (iterable), wrapping long sequences at 60 chars."""
-    file.write(wrap_fasta(name, sequence))
+    def write(self, fileobj = sys.stdout):
+        """Prints a FASTA sequence (iterable), wrapping long sequences at 60 chars."""
+        fileobj.write(repr(self))
+
+    @classmethod
+    def from_lines(cls, lines):
+        """Parses FASTA sequences found in a sequence of lines, and returns
+        a tuple for each FASTA record: ((name, meta-information), sequence)
+        No assumptions are made about the line-lengths."""
+        lines = (line.rstrip() for line in lines)
+        for record in split_before(lines, lambda v: v.startswith(">")):
+            name = record[0]
+            if (not name.startswith(">")) or (len(name) == 1):
+                raise FASTAError("Unnamed FASTA record")
+            elif len(record) == 1:
+                raise FASTAError("FASTA record does not contain sequence: " + name[1:])
+
+            # Split out any meta information
+            name_and_meta = name[1:].split(None, 1)
+            if len(name_and_meta) < 2:
+                name_and_meta.append(None)
+            name, meta = name_and_meta
+
+            yield FASTA(name     = name,
+                        meta     = meta,
+                        sequence = "".join(record[1:]))
+
+    @classmethod
+    def from_file(cls, filename):
+        """Reads an unindexed FASTA file, returning a sequence of
+        tuples containing the name and sequence of each entry in
+        the file. The FASTA file may be GZIP/BZ2 compressed."""
+        fasta_file = open_ro(filename)
+        try:
+            for record in FASTA.from_lines(fasta_file):
+                yield record
+        finally:
+            fasta_file.close()
+
+    def __repr__(self):
+        """Process a printable FASTA sequence, wrapping long sequences at 60 chars."""
+        name = self.name
+        if self.meta:
+            name = "%s %s" % (name, self.meta)
+        return ">%s\n%s\n" % (name, "\n".join(fragment(60, self.sequence)))
 
 
-def parse_fasta(lines):
-    """Parses FASTA sequences found in a sequence of lines, and returns
-    a tuple for each FASTA record: ((name, meta-information), sequence)
-    No assumptions are made about the line-lengths."""
-    lines = (line.rstrip() for line in lines)
-    for record in split_before(lines, lambda v: v.startswith(">")):
-        name = record[0]
-        if (not name.startswith(">")) or (len(name) == 1):
-            raise FASTAError("Unnamed FASTA record")
-        elif len(record) == 1:
-            raise FASTAError("FASTA record does not contain sequence: " + name[1:])
+    def __eq__(self, other):
+        return (self.name, self.meta, self.sequence) == \
+          (other.name, other.meta, other.sequence)
 
-        # Split out any meta information
-        name = name[1:].split(None, 1)
-        while len(name) < 2:
-            name.append(None)
+    def __ne__(self, other):
+        return not (self == other)
 
-        yield tuple((tuple(name), "".join(record[1:])))
-
-
-def read_fasta(filename):
-    """Reads an unindexed FASTA file, returning a sequence of
-    tuples containing the name and sequence of each entry in
-    the file. The FASTA file may be GZIP/BZ2 compressed."""
-    fasta_file = open_ro(filename)
-    try:
-        for record in parse_fasta(iter(fasta_file)):
-            yield record
-    finally:
-        fasta_file.close()

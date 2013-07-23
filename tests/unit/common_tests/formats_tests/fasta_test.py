@@ -24,10 +24,7 @@ import StringIO
 import nose.tools
 from nose.tools import assert_equal
 from pypeline.common.formats.fasta import \
-     wrap_fasta, \
-     print_fasta, \
-     parse_fasta, \
-     read_fasta, \
+     FASTA, \
      FASTAError
 
 
@@ -47,22 +44,22 @@ _SEQ_FRAG = "AAGTCC" # len() = 6
 
 ################################################################################
 ################################################################################
-## Tests for wrap_fasta
+## Tests for __repr__
 
-def test_wrap_fasta__partial_line_test():
+def test_fasta__repr__partial_line_test():
     expected = ">foobar\n%s\n" % (_SEQ_FRAG, )
-    result = wrap_fasta("foobar", _SEQ_FRAG)
+    result = repr(FASTA("foobar", None, _SEQ_FRAG))
     assert_equal(result, expected)
 
-def test_wrap_fasta__complete_line_test():
+def test_fasta__repr__complete_line_test():
     expected = ">barfoo\n%s\n" % (_SEQ_FRAG * 10, )
-    result = wrap_fasta("barfoo", _SEQ_FRAG * 10)
+    result = repr(FASTA("barfoo", None, _SEQ_FRAG * 10))
     assert_equal(result, expected)
 
-def test_wrap_fasta__multiple_lines():
+def test_fasta__repr__multiple_lines():
     expected = ">foobar\n%s\n%s\n" \
         % (_SEQ_FRAG * 10, _SEQ_FRAG * 5)
-    result = wrap_fasta("foobar", _SEQ_FRAG * 15)
+    result = repr(FASTA("foobar", None, _SEQ_FRAG * 15))
     assert_equal(result, expected)
 
 
@@ -73,23 +70,23 @@ def test_wrap_fasta__multiple_lines():
 ## Tests for print_fasta
 
 
-def test_print_fasta__partial_line():
+def test_fasta__write__partial_line():
     expected = ">foobar\n%s\n" % (_SEQ_FRAG, )
     stringf = StringIO.StringIO()
-    print_fasta("foobar", _SEQ_FRAG, stringf)
+    FASTA("foobar", None,_SEQ_FRAG).write(stringf)
     assert_equal(stringf.getvalue(), expected)
 
-def test_print_fasta__complete_line_test():
+def test_fasta__write__complete_line_test():
     expected = ">barfoo\n%s\n" % (_SEQ_FRAG * 10, )
     stringf = StringIO.StringIO()
-    print_fasta("barfoo", _SEQ_FRAG * 10, stringf)
+    FASTA("barfoo", None, _SEQ_FRAG * 10).write(stringf)
     assert_equal(stringf.getvalue(), expected)
 
-def test_print_fasta__multiple_lines():
+def test_fasta__write__multiple_lines():
     expected = ">foobar\n%s\n%s\n" \
         % (_SEQ_FRAG * 10, _SEQ_FRAG * 5)
     stringf = StringIO.StringIO()
-    print_fasta("foobar", _SEQ_FRAG * 15, stringf)
+    FASTA("foobar", None, _SEQ_FRAG * 15).write(stringf)
     assert_equal(stringf.getvalue(), expected)
 
 
@@ -97,84 +94,84 @@ def test_print_fasta__multiple_lines():
 
 ################################################################################
 ################################################################################
-## Tests for parse_fasta
+## Tests for FASTA.from_lines
 
-def test_parse_fasta__no_records():
-    assert_list_equals(parse_fasta([]), [])
+def test_fasta__from_lines__no_records():
+    assert_list_equals(FASTA.from_lines([]), [])
 
-def test_parse_fasta__single_record():
+def test_fasta__from_lines_single_record():
     lines    = [">single\n", "TGTTCTCCACCGTGCACAAC\n", "CCTTCATCCA\n"]
-    expected = [(("single", None), "TGTTCTCCACCGTGCACAACCCTTCATCCA")]
-    assert_list_equals(parse_fasta(lines), expected)
+    expected = [FASTA("single", None, "TGTTCTCCACCGTGCACAACCCTTCATCCA")]
+    assert_list_equals(FASTA.from_lines(lines), expected)
 
-def test_parse_fasta__multiple_records():
+def test_fasta__from_lines__multiple_records():
     lines    = [">first\n",  "TGTTCTCCACCGTGCACAAC\n", "CCTTCATCCA\n",
                 ">Second XT:1:0\n", "GAGAGCTCAGCTAAC\n",
                 ">Third\n",  "CGCTGACCAAAAACGGACAG\n", "GGCATTCGGC\n"]
-    expected = [(("first", None), "TGTTCTCCACCGTGCACAACCCTTCATCCA"),
-                (("Second", "XT:1:0"), "GAGAGCTCAGCTAAC"),
-                (("Third", None), "CGCTGACCAAAAACGGACAGGGCATTCGGC")]
-    assert_list_equals(parse_fasta(lines), expected)
+    expected = [FASTA("first", None, "TGTTCTCCACCGTGCACAACCCTTCATCCA"),
+                FASTA("Second", "XT:1:0", "GAGAGCTCAGCTAAC"),
+                FASTA("Third", None, "CGCTGACCAAAAACGGACAGGGCATTCGGC")]
+    assert_list_equals(FASTA.from_lines(lines), expected)
 
 @nose.tools.raises(FASTAError)
-def test_parse_fasta__empty_record_name_only__nothing_else():
-    list(parse_fasta([">fasta1\n"]))
+def test_fasta__from_lines__empty_record_name_only__nothing_else():
+    list(FASTA.from_lines([">fasta1\n"]))
 
 @nose.tools.raises(FASTAError)
-def test_parse_fasta__empty_record_name_only__first():
-    list(parse_fasta([">fasta1\n", ">fasta2\n", "AGTC\n"]))
+def test_fasta__from_lines__empty_record_name_only__first():
+    list(FASTA.from_lines([">fasta1\n", ">fasta2\n", "AGTC\n"]))
 
 @nose.tools.raises(FASTAError)
-def test_parse_fasta__empty_record__middle():
+def test_fasta__from_lines__empty_record__middle():
     lines = [">fasta0\n", "ACGT\n", ">fasta1\n", ">fasta2\n", "AGTC\n"]
-    list(parse_fasta(lines))
+    list(FASTA.from_lines(lines))
 
 @nose.tools.raises(FASTAError)
-def test_parse_empty_record_last():
+def test_fasta__from_lines__empty_record_last():
     lines = [">fasta1\n", "ACGT\n", ">fasta2\n"]
-    list(parse_fasta(lines))
+    list(FASTA.from_lines(lines))
 
 @nose.tools.raises(FASTAError)
-def test_parse_fasta__missing_name__alone():
+def test_fasta__from_lines__missing_name__alone():
     lines = ["ACGT\n"]
-    list(parse_fasta(lines))
+    list(FASTA.from_lines(lines))
 
 @nose.tools.raises(FASTAError)
-def test_parse_fasta__missing_name__with_others():
+def test_fasta__from_lines__missing_name__with_others():
     lines = ["ACGT\n", ">Foo\n", "ACGGTA\n"]
-    list(parse_fasta(lines))
+    list(FASTA.from_lines(lines))
 
 @nose.tools.raises(FASTAError)
-def test_parse_fasta__empty_name__alone():
+def test_fasta__from_lines__empty_name__alone():
     lines = [">\n", "ACGT\n"]
-    list(parse_fasta(lines))
+    list(FASTA.from_lines(lines))
 
 @nose.tools.raises(FASTAError)
-def test_parse_fasta__empty_name__with_others():
+def test_fasta__from_lines__empty_name__with_others():
     lines = [">\n", "ACGT\n", ">Foo\n", "ACGGTA\n"]
-    list(parse_fasta(lines))
+    list(FASTA.from_lines(lines))
 
 
 
 
 ################################################################################
 ################################################################################
-## Tests for 'read_fasta'
+## Tests for 'FASTA.from_file'
 
-def test_read_fasta__uncompressed():
-    expected = [(("This_is_FASTA!", None), "ACGTN"),
-                (("This_is_ALSO_FASTA!", None), "CGTNA")]
-    results  = list(read_fasta("tests/data/fasta_file.fasta"))
+def test_fasta__from_file__uncompressed():
+    expected = [FASTA("This_is_FASTA!", None, "ACGTN"),
+                FASTA("This_is_ALSO_FASTA!", None, "CGTNA")]
+    results  = list(FASTA.from_file("tests/data/fasta_file.fasta"))
     assert_equal(results, expected)
 
-def test_read_fasta__compressed_gz():
-    expected = [(("This_is_GZipped_FASTA!", None), "ACGTN"),
-                (("This_is_ALSO_GZipped_FASTA!", None), "CGTNA")]
-    results  = list(read_fasta("tests/data/fasta_file.fasta.gz"))
+def test_fasta__from_file__compressed_gz():
+    expected = [FASTA("This_is_GZipped_FASTA!", None, "ACGTN"),
+                FASTA("This_is_ALSO_GZipped_FASTA!", None, "CGTNA")]
+    results  = list(FASTA.from_file("tests/data/fasta_file.fasta.gz"))
     assert_equal(results, expected)
 
-def test_read_fasta__compressed_bz2():
-    expected = [(("This_is_BZ_FASTA!", None), "CGTNA"),
-                (("This_is_ALSO_BZ_FASTA!", None), "ACGTN")]
-    results  = list(read_fasta("tests/data/fasta_file.fasta.bz2"))
+def test_fasta__from_file__compressed_bz2():
+    expected = [FASTA("This_is_BZ_FASTA!", None, "CGTNA"),
+                FASTA("This_is_ALSO_BZ_FASTA!", None, "ACGTN")]
+    results  = list(FASTA.from_file("tests/data/fasta_file.fasta.bz2"))
     assert_equal(results, expected)

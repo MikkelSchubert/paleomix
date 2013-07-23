@@ -5,8 +5,8 @@
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
-# copies of the Software, and to permit persons to whom the Software is 
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
 # The above copyright notice and this permission notice shall be included in all
@@ -15,9 +15,9 @@
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
 from __future__ import with_statement
@@ -25,13 +25,12 @@ from __future__ import with_statement
 import os
 import copy
 
-import pysam
 import pypeline.common.fileutils as fileutils
 import pypeline.common.formats.msa as msa
 
 from pypeline.node import Node, MetaNode
-from pypeline.common.formats.fasta import read_fasta
-from pypeline.common.utilities import safe_coerce_to_tuple, fragment
+from pypeline.common.formats.fasta import FASTA
+from pypeline.common.utilities import fragment
 
 
 
@@ -59,8 +58,8 @@ class CollectSequencesNode(Node):
         fastas = {}
         for (name, filename) in self._infiles.iteritems():
             current_fastas = {}
-            for ((fasta_name, _meta), sequence) in read_fasta(filename):
-                current_fastas[fasta_name] = sequence
+            for record in FASTA.from_file(filename):
+                current_fastas[record.name] = record.sequence
             fastas[name] = current_fastas
         fastas = list(sorted(fastas.items()))
 
@@ -120,7 +119,7 @@ class FilterSingletonsNode(Node):
         temp_filename = fileutils.reroot_path(temp, self._output_file)
         msa.write_msa(alignment, temp_filename)
         fileutils.move_file(temp_filename, self._output_file)
-       
+
 
 
 

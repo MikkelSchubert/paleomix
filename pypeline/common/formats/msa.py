@@ -27,7 +27,7 @@ from collections import defaultdict
 
 from pypeline.common.sequences import split
 from pypeline.common.fileutils import open_ro
-from pypeline.common.formats.fasta import parse_fasta, print_fasta, FASTAError
+from pypeline.common.formats.fasta import FASTA, FASTAError
 
 
 class MSAError(FASTAError):
@@ -74,11 +74,12 @@ def parse_msa(lines, read_meta = False):
       SEQUENCE
     As suggested above, sequences are expected to be in FASTA format."""
     msa, metas = {}, {}
-    for ((name, meta), sequence) in parse_fasta(lines):
-        if name in msa:
-            raise MSAError("Duplicate names found, cannot be represented as MSA: " + name)
-        msa[name] = sequence
-        metas[name] = meta
+    for record in FASTA.from_lines(lines):
+        if record.name in msa:
+            raise MSAError("Duplicate names found, cannot be represented as MSA: %s" \
+                           % (record.name,))
+        msa[record.name] = record.sequence
+        metas[record.name] = record.meta
 
     validate_msa(msa)
     if read_meta:
@@ -99,7 +100,7 @@ def read_msa(filename, read_meta = False):
 def print_msa(msa, file = sys.stdout):
     validate_msa(msa)
     for group in sorted(msa):
-        print_fasta(group, msa[group], file)
+        FASTA(group, None, msa[group]).write(file)
 
 
 def write_msa(msa, filename):

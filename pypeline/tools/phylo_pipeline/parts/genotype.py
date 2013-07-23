@@ -41,9 +41,9 @@ from pypeline.nodes.bedtools import SlopBedNode
 
 
 from pypeline.common.fileutils import move_file
+from pypeline.common.formats.fasta import FASTA
 import pypeline.common.text as text
 import pypeline.common.sequences as sequences
-import pypeline.common.formats.fasta as fasta
 
 import common
 
@@ -213,7 +213,7 @@ class ExtractReference(Node):
         temp_file = os.path.join(temp, "sequences.fasta")
         with open(temp_file, "w") as out_file:
             for ((_, gene), sequence) in sorted(seqs.items()):
-                fasta.print_fasta(gene, sequence, out_file)
+                FASTA(gene, None, sequence).write(out_file)
 
         move_file(temp_file, self._outfile)
 

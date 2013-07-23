@@ -32,7 +32,7 @@ import pysam
 
 import pypeline.common.text as text
 import pypeline.common.sequences as sequences
-from pypeline.common.formats.fasta import print_fasta
+from pypeline.common.formats.fasta import FASTA
 
 
 class Pileup:
@@ -47,7 +47,7 @@ class Pileup:
 
 
 def _untrusted_positions(pileups, distance):
-    """Returns a set of positions that are either directly covered by, or adjacent to indels, 
+    """Returns a set of positions that are either directly covered by, or adjacent to indels,
     given some arbitrary distance. These positions are considered 'untrusted', and bases that
     fall within those positions are ignored."""
     positions = set()
@@ -89,7 +89,7 @@ def sample_position(pileup):
             pass
         else:
             assert False, current
-    
+
     if not bases:
         return "N"
 
@@ -97,7 +97,7 @@ def sample_position(pileup):
 
 
 def build_region(options, genotype, bed):
-    # Note that bed.end is a past-the-end coordinate 
+    # Note that bed.end is a past-the-end coordinate
     start   = max(0, bed.start - options.padding)
     end     = bed.end + options.padding
 
@@ -141,7 +141,7 @@ def main(argv, output = sys.stdout):
     parser = OptionParser()
     parser.add_option("--genotype", help="Tabix indexed pileup file.")
     parser.add_option("--intervals", help="BED file.")
-    parser.add_option("--padding", type = int, default = 10, 
+    parser.add_option("--padding", type = int, default = 10,
                       help = "Number of bases to expand intervals, when checking for adjacent indels [%default]")
     parser.add_option("--min-distance-to-indels", type = int, default = 5,
                       help = "Variants closer than this distance from indels are filtered [%default].")
@@ -161,7 +161,7 @@ def main(argv, output = sys.stdout):
 
     for (_, beds) in sorted(intervals.items()):
         for (name, sequence) in build_genes(opts, genotype, beds):
-            print_fasta(name, sequence, file = output)
+            FASTA(name, None, sequence).write(output)
 
     return 0
 

@@ -33,7 +33,7 @@ import pysam
 import pypeline.common.vcfwrap as vcfwrap
 import pypeline.common.text as text
 import pypeline.common.sequences as sequences
-import pypeline.common.formats.fasta as fasta
+from pypeline.common.formats.fasta import FASTA
 
 
 
@@ -176,7 +176,7 @@ def main(argv, output = sys.stdout):
 
     for (_, beds) in sorted(intervals.items()):
         for (name, sequence) in build_genes(opts, genotype, beds):
-            fasta.print_fasta(name, sequence, file = output)
+            FASTA(name, None, sequence).write(output)
 
     return 0
 
