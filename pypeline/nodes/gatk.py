@@ -27,7 +27,7 @@ from pypeline.node import CommandNode, MetaNode
 from pypeline.atomiccmd.command import AtomicCmd
 from pypeline.atomiccmd.builder import AtomicJavaCmdBuilder
 from pypeline.atomiccmd.sets import ParallelCmds
-from pypeline.common.fileutils import swap_ext
+from pypeline.common.fileutils import swap_ext, describe_files
 from pypeline.common.utilities import safe_coerce_to_tuple
 
 
@@ -45,8 +45,8 @@ class _IndelTrainerNode(CommandNode):
                            IN_REF_DICT   = fileutils.swap_ext(reference, ".dict"),
                            OUT_INTERVALS = outfile)
 
-        description = "<Train Indel Realigner: %i file(s) -> '%s'>" \
-            % (len(infiles), outfile)
+        description = "<Indel Realigner (training): %s -> %r>" \
+            % (describe_files(infiles), outfile)
         CommandNode.__init__(self,
                              description  = description,
                              command      = command.finalize(),
@@ -80,9 +80,8 @@ class _IndelRealignerNode(CommandNode):
                             IN_REF          = reference,
                             TEMP_OUT_STDOUT = self._basename + ".calmd")
 
-        description = "<Indel Realign: %i file(s) -> '%s'>" \
-            % (len(infiles), outfile)
-
+        description = "<Indel Realigner (aligning): %s -> %r>" \
+            % (describe_files(infiles), outfile)
         CommandNode.__init__(self,
                              description  = description,
                              command      = ParallelCmds([command.finalize(),
