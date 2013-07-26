@@ -23,19 +23,12 @@
 import StringIO
 import nose.tools
 from nose.tools import assert_equal
+
+from pypeline.common.testing import assert_list_equal
 from pypeline.common.formats.fasta import \
      FASTA, \
      FASTAError
 
-
-
-def assert_list_equals(iter_a, iter_b):
-    """Compare two values, after first converting them to lists.
-    This ensures that lazily generated results can be compared."""
-    list_a = list(iter_a)
-    list_b = list(iter_b)
-
-    assert_equal(list_a, list_b)
 
 _SEQ_FRAG = "AAGTCC" # len() = 6
 
@@ -115,12 +108,12 @@ def test_fasta__write__multiple_lines():
 ## Tests for FASTA.from_lines
 
 def test_fasta__from_lines__no_records():
-    assert_list_equals(FASTA.from_lines([]), [])
+    assert_list_equal(FASTA.from_lines([]), [])
 
 def test_fasta__from_lines_single_record():
     lines    = [">single\n", "TGTTCTCCACCGTGCACAAC\n", "CCTTCATCCA\n"]
     expected = [FASTA("single", None, "TGTTCTCCACCGTGCACAACCCTTCATCCA")]
-    assert_list_equals(FASTA.from_lines(lines), expected)
+    assert_list_equal(FASTA.from_lines(lines), expected)
 
 def test_fasta__from_lines__multiple_records():
     lines    = [">first\n",  "TGTTCTCCACCGTGCACAAC\n", "CCTTCATCCA\n",
@@ -129,7 +122,7 @@ def test_fasta__from_lines__multiple_records():
     expected = [FASTA("first", None, "TGTTCTCCACCGTGCACAACCCTTCATCCA"),
                 FASTA("Second", "XT:1:0", "GAGAGCTCAGCTAAC"),
                 FASTA("Third", None, "CGCTGACCAAAAACGGACAGGGCATTCGGC")]
-    assert_list_equals(FASTA.from_lines(lines), expected)
+    assert_list_equal(FASTA.from_lines(lines), expected)
 
 @nose.tools.raises(FASTAError)
 def test_fasta__from_lines__empty_record_name_only__nothing_else():

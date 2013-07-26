@@ -27,7 +27,7 @@ import shutil
 import atexit
 
 import nose
-from nose.tools import with_setup
+from nose.tools import with_setup, assert_equal
 
 
 # Simple support for assert_in in Python v2.6
@@ -36,6 +36,15 @@ try:
 except ImportError:
     def assert_in(item, lst):
         assert item in lst
+
+def assert_list_equal(iter_a, iter_b):
+    """Compare two values, after first converting them to lists.
+    This ensures that lazily generated results can be compared."""
+    list_a = list(iter_a)
+    list_b = list(iter_b)
+
+    assert_equal(list_a, list_b)
+
 
 
 
