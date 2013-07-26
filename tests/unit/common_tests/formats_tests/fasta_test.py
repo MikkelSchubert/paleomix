@@ -31,15 +31,33 @@ from pypeline.common.formats.fasta import \
 
 def assert_list_equals(iter_a, iter_b):
     """Compare two values, after first converting them to lists.
-    This enures that lazily generated results can be compared."""
+    This ensures that lazily generated results can be compared."""
     list_a = list(iter_a)
     list_b = list(iter_b)
 
     assert_equal(list_a, list_b)
 
-
-
 _SEQ_FRAG = "AAGTCC" # len() = 6
+
+
+################################################################################
+################################################################################
+## Tests for FASTA constructor
+
+def _simple_fasta_record():
+    return FASTA("Dummy", "Meta-inf", "ACGT")
+
+def test_fasta__constructor__name():
+    record = _simple_fasta_record()
+    assert_equal(record.name, "Dummy")
+
+def test_fasta__constructor__meta():
+    record = _simple_fasta_record()
+    assert_equal(record.meta, "Meta-inf")
+
+def test_fasta__constructor__sequence():
+    record = _simple_fasta_record()
+    assert_equal(record.sequence, "ACGT")
 
 
 ################################################################################

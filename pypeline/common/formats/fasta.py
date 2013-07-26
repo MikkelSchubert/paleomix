@@ -21,6 +21,7 @@
 # SOFTWARE.
 #
 import sys
+import types
 
 from pypeline.common.utilities import fragment, split_before
 from pypeline.common.fileutils import open_ro
@@ -33,9 +34,28 @@ class FASTAError(FormatError):
 
 class FASTA:
     def __init__(self, name, meta, sequence):
-        self.name     = name
-        self.meta     = meta
-        self.sequence = sequence
+        self._name     = name
+        self._meta     = meta
+        self._sequence = sequence
+
+        if not (name and isinstance(name, types.StringTypes)):
+            raise FASTAError("FASTA name must be a non-empty string")
+        elif not (isinstance(meta, types.StringTypes) or (meta is None)):
+            raise FASTAError("FASTA meta-information must be a string, or None")
+        elif not (sequence or isinstance(name, types.StringTypes)):
+            raise FASTAError("FASTA sequence must be a non-empty string")
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def meta(self):
+        return self._meta
+
+    @property
+    def sequence(self):
+        return self._sequence
 
 
     def write(self, fileobj = sys.stdout):
@@ -92,3 +112,6 @@ class FASTA:
     def __ne__(self, other):
         return not (self == other)
 
+
+    def __hash__(self):
+        return hash((self._name, self._meta, self._sequence))
