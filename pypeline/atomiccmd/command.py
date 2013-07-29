@@ -72,9 +72,11 @@ class AtomicCmd:
         Thus, the command "find /etc -name 'profile*'" might be represented as
         the list ["find", "/etc", "-name", "profile*"].
 
-        If 'set_cwd' is True, the current working directory is set to the
-        temporary directory before the command is executed. Input paths are
-        automatically turned into absolute paths in this case.
+        Commands typically consist of an executable, one or more input files,
+        one or more output files, and one or more pipes. In atomic command,
+        such files are not specified directly, but instead are specified using
+        keywords, which allows easy tracking of requirements and other features.
+        Note that only files, and not directories, are supported as input/output!
 
         Each keyword represents a type of file, as determined by the prefix:
            IN_    -- Path to input file transformed/analysed the executable.
@@ -93,6 +95,14 @@ class AtomicCmd:
                      met before running the command. The function is not called
                      by AtomicCmd itself.
 
+        EXAMPLE 1: Creating a gzipped tar-archive from two files
+        The command "tar cjf output-file input-file-1 input-file-2" could be
+        represented using the following AtomicCmd:
+        cmd = AtomicCmd(["tar", "cjf", "%(OUT_FILE)s", "%(IN_FILE_1)s", "%(IN_FILE_2)s",
+                        OUT_FILE  = "output-file",
+                        IN_FILE_1 = "input-file-1",
+                        IN_FILE_2 = "input-file-2")
+
         Note that files that are not directly invoked may be included above,
         in order to allow the specification of requirements. This could include
         required data files, or executables indirectly executed by a script.
@@ -109,7 +119,17 @@ class AtomicCmd:
                       another AtomicCmd instance to use the output directly.
            STDERR_ -- Takes a filename.
 
-        Each pipe can only be used once, with or without the TEMP_ prefix."""
+        Each pipe can only be used once, with or without the TEMP_ prefix.
+
+        EXAMPLE 2: zcat'ing an archive
+        The command "zcat input-file > output-file" could be represented using
+        the following AtomicCmd:
+        cmd = AtomicCmd(["zcat", "%(IN_FILE)s"],
+                        OUT_STDOUT = "output-file")
+
+        If 'set_cwd' is True, the current working directory is set to the
+        temporary directory before the command is executed. Input paths are
+        automatically turned into absolute paths in this case."""
         self._proc    = None
         self._temp    = None
         self._command = map(str, safe_coerce_to_tuple(command))
