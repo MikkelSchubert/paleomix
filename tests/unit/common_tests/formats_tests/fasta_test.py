@@ -22,7 +22,9 @@
 #
 import StringIO
 import nose.tools
-from nose.tools import assert_equal
+from nose.tools import \
+     assert_equal, \
+     assert_raises
 
 from pypeline.common.testing import assert_list_equal
 from pypeline.common.formats.fasta import \
@@ -53,6 +55,16 @@ def test_fasta__constructor__sequence():
     assert_equal(record.sequence, "ACGT")
 
 
+def test_fasta__constructor__name_must_be_non_empty():
+    assert_raises(FASTAError, FASTA, "", None, "ACGT")
+def test_fasta__constructor__name_must_be_string_type():
+    assert_raises(FASTAError, FASTA, 1, None, "ACGT")
+def test_fasta__constructor__name_must_be_string_type_or_none():
+    assert_raises(FASTAError, FASTA, "Seq1", 1, "ACGT")
+def test_fasta__constructor__sequence_must_be_string_type():
+    assert_raises(FASTAError, FASTA, "Seq1", None, 1)
+
+
 ################################################################################
 ################################################################################
 ## Tests for __repr__
@@ -73,6 +85,10 @@ def test_fasta__repr__multiple_lines():
     result = repr(FASTA("foobar", None, _SEQ_FRAG * 15))
     assert_equal(result, expected)
 
+def test_fasta__repr__partial_line_test_with_meta_information():
+    expected = ">foobar my Meta-Info\n%s\n" % (_SEQ_FRAG, )
+    result = repr(FASTA("foobar", "my Meta-Info", _SEQ_FRAG))
+    assert_equal(result, expected)
 
 
 
@@ -84,7 +100,7 @@ def test_fasta__repr__multiple_lines():
 def test_fasta__write__partial_line():
     expected = ">foobar\n%s\n" % (_SEQ_FRAG, )
     stringf = StringIO.StringIO()
-    FASTA("foobar", None,_SEQ_FRAG).write(stringf)
+    FASTA("foobar", None, _SEQ_FRAG).write(stringf)
     assert_equal(stringf.getvalue(), expected)
 
 def test_fasta__write__complete_line_test():

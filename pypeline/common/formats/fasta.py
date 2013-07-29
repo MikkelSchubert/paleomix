@@ -32,30 +32,27 @@ class FASTAError(FormatError):
     pass
 
 
-class FASTA:
-    def __init__(self, name, meta, sequence):
-        self._name     = name
-        self._meta     = meta
-        self._sequence = sequence
-
+class FASTA(tuple):
+    def __new__(self, name, meta, sequence):
         if not (name and isinstance(name, types.StringTypes)):
             raise FASTAError("FASTA name must be a non-empty string")
         elif not (isinstance(meta, types.StringTypes) or (meta is None)):
             raise FASTAError("FASTA meta-information must be a string, or None")
-        elif not (sequence or isinstance(name, types.StringTypes)):
-            raise FASTAError("FASTA sequence must be a non-empty string")
+        elif not isinstance(sequence, types.StringTypes):
+            raise FASTAError("FASTA sequence must be a string")
+        return tuple.__new__(self, (name, meta, sequence))
 
     @property
     def name(self):
-        return self._name
+        return self[0]
 
     @property
     def meta(self):
-        return self._meta
+        return self[1]
 
     @property
     def sequence(self):
-        return self._sequence
+        return self[2]
 
 
     def write(self, fileobj = sys.stdout):
@@ -103,15 +100,3 @@ class FASTA:
         if self.meta:
             name = "%s %s" % (name, self.meta)
         return ">%s\n%s\n" % (name, "\n".join(fragment(60, self.sequence)))
-
-
-    def __eq__(self, other):
-        return (self.name, self.meta, self.sequence) == \
-          (other.name, other.meta, other.sequence)
-
-    def __ne__(self, other):
-        return not (self == other)
-
-
-    def __hash__(self):
-        return hash((self._name, self._meta, self._sequence))
