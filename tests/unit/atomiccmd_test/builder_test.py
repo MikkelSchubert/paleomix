@@ -420,21 +420,19 @@ def test_apply_options__single_option__default_pred__ignore_when_pred_is_false()
     mock = flexmock()
     apply_options(mock, {"Other" : None})
 
+
+def _user_pred(key):
+    return key.startswith("FOO")
+
 def test_apply_options__single_option__user_pred__set_when_pred_is_true():
-    was_called = []
-    def _user_pred(key):
-        was_called.append(key)
-        return True
     mock = flexmock()
     mock.should_receive('set_option').with_args('FOO_BAR', 17).once()
     apply_options(mock, {"FOO_BAR" : 17}, _user_pred)
-    assert_equal(was_called, ["FOO_BAR"])
 
 def test_apply_options__single_option__user_pred__ignore_when_pred_is_false():
-    def _user_pred(key):
-        return key.startswith("FOO")
     mock = flexmock()
-    apply_options(mock, {"BAR_FOO" : 17})
+    apply_options(mock, {"BAR_FOO" : 17}, _user_pred)
+
 
 def test_apply_options__single_option__boolean__set_when_value_is_true():
     mock = flexmock()
