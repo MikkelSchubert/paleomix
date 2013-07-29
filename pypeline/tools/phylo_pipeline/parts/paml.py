@@ -27,7 +27,7 @@ from pypeline.node import Node, MetaNode, CommandNode, NodeError
 from pypeline.atomiccmd.command import AtomicCmd
 
 from pypeline.common.utilities import fragment, safe_coerce_to_tuple
-from pypeline.common.formats.msa import read_msa
+from pypeline.common.formats.msa import MSA
 import pypeline.common.fileutils as fileutils
 import pypeline.tools.phylo_pipeline.parts.common as common
 
@@ -48,17 +48,16 @@ class FastaToPAMLPhyNode(Node):
 
 
     def _run(self, _config, temp):
-        msa = read_msa(self._input_file)
-        for excluded_group in self._excluded:
-            msa.pop(excluded_group)
+        msa = MSA.from_file(self._input_file)
+        msa = msa.exclude(self._excluded)
 
         lines = []
-        lines.append("  %i %i" % (len(msa), len(msa.itervalues().next())))
-        for (name, seq) in sorted(msa.iteritems()):
+        lines.append("  %i %i" % (len(msa), msa.seqlen()))
+        for record in sorted(msa):
             lines.append("")
-            lines.append(name)
+            lines.append(record.name)
 
-            for line in fragment(60, seq.upper()):
+            for line in fragment(60, record.sequence.upper()):
                 lines.append(" ".join(fragment(3, line)))
 
         with open(fileutils.reroot_path(temp, self._output_file), "w") as output:

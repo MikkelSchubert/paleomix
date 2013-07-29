@@ -26,8 +26,8 @@ import os
 import copy
 
 import pypeline.common.fileutils as fileutils
-import pypeline.common.formats.msa as msa
 
+from pypeline.common.formats.msa import MSA
 from pypeline.node import Node, MetaNode
 from pypeline.common.formats.fasta import FASTA
 from pypeline.common.utilities import fragment
@@ -104,7 +104,7 @@ class FilterSingletonsNode(Node):
                       dependencies = dependencies)
 
     def _run(self, _config, temp):
-        alignment = msa.read_msa(self._input_file)
+        alignment = MSA.from_file(self._input_file)
 
         for (to_filter, groups) in self._filter_by.iteritems():
             sequences = [alignment[group] for group in groups]
@@ -117,7 +117,8 @@ class FilterSingletonsNode(Node):
             alignment[to_filter] = "".join(sequence)
 
         temp_filename = fileutils.reroot_path(temp, self._output_file)
-        msa.write_msa(alignment, temp_filename)
+        with open(temp_filename, "w") as handle:
+            alignment.to_file(handle)
         fileutils.move_file(temp_filename, self._output_file)
 
 

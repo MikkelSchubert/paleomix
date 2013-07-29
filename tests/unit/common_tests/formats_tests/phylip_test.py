@@ -21,10 +21,42 @@
 # SOFTWARE.
 #
 from nose.tools import assert_equal
-import nose.tools
+from pypeline.common.testing import \
+     RequiredCall
 
-from pypeline.common.formats.phylip import *
-from pypeline.common.formats.msa import MSAError
+from pypeline.common.formats.phylip import \
+     sequential_phy, \
+     interleaved_phy
+
+from pypeline.common.formats.msa import \
+     MSA
+
+from pypeline.common.formats.fasta import \
+     FASTA
+
+_VALIDATION_PATH = "pypeline.common.formats.msa.MSA.validate"
+
+
+_MSA_SHORT_SEQUENCES = \
+  MSA([FASTA("seq1", None, "ACGTTGATAACCAGG"),
+       FASTA("seq2", None, "TGCAGAGTACGACGT")])
+_MSA_MEDIUM_SEQUENCES = \
+  MSA([FASTA("seq1", None, "ACGTTGATAACCAGGAGGGATTCGCGATTGGTGGTAACGTAGCC"),
+       FASTA("seq2", None, "TGCAGAGTACGACGTCTCCTAGATCCTGGACAATTTAAACCGAA")])
+_MSA_LONG_SEQUENCES  = \
+  MSA([FASTA("seq1", None, "CGGATCTGCTCCTCCACTGGCCACGTTTACTGTCCCCCAACCGTT" \
+             "CGTCCCGACCTAGTTATACTTCTTAGCAAGGTGTAAAACCAGAGATTGAGGTTATAACG" \
+             "TTCCTAATCAGTTATTAAATTACCGCGCCCCGACAG"),
+       FASTA("seq2", None, "AGTTGAAGAGGCGGAACGTTTGTAAACCGCGCTAACGTAGTTCTA" \
+             "CAACCAGCCACCCGGTTCGAAGGAACAACTGGTCGCCATAATTAGGCGAAACGATAGTG" \
+             "CACTAAGGTCAGGTGCGCCCCTGTAAATAATTAGAT")])
+
+_MSA_MEDIUM_NAMES = \
+  MSA([FASTA("A_really_long_sequence", None, "ACGTTGATAACCAGG"),
+       FASTA("Another_real_long_one!", None, "TGCAGAGTACGACGT")])
+_MSA_LONG_NAMES = \
+  MSA([FASTA("A_really_long_sequence_name_that_is_in_fact_too_long", None, "ACGTTGATAACCAGG"),
+       FASTA("Another_really_long_sequence_name_that_is_too_long", None, "TGCAGAGTACGACGT")])
 
 
 ################################################################################
@@ -32,8 +64,6 @@ from pypeline.common.formats.msa import MSAError
 ## Tests of 'sequential_phy'
 
 def test_sequential_phy__short_sequences():
-    msa = { "seq1" : "ACGTTGATAACCAGGAGGGATTCGCGATTGGTGGTAACGTAGCC",
-            "seq2" : "TGCAGAGTACGACGTCTCCTAGATCCTGGACAATTTAAACCGAA" }
     expected = \
 """2 44
 
@@ -41,12 +71,10 @@ seq1
 ACGTTGATAA  CCAGGAGGGA  TTCGCGATTG  GTGGTAACGT  AGCC
 seq2
 TGCAGAGTAC  GACGTCTCCT  AGATCCTGGA  CAATTTAAAC  CGAA"""
-    assert_equal(sequential_phy(msa), expected)
+    assert_equal(sequential_phy(_MSA_MEDIUM_SEQUENCES), expected)
 
 
 def test_sequential_phy__multi_line_sequences():
-    msa = { "seq1" : "CGGATCTGCTCCTCCACTGGCCACGTTTACTGTCCCCCAACCGTTCGTCCCGACCTAGTTATACTTCTTAGCAAGGTGTAAAACCAGAGATTGAGGTTATAACGTTCCTAATCAGTTATTAAATTACCGCGCCCCGACAG", 
-            "seq2" : "AGTTGAAGAGGCGGAACGTTTGTAAACCGCGCTAACGTAGTTCTACAACCAGCCACCCGGTTCGAAGGAACAACTGGTCGCCATAATTAGGCGAAACGATAGTGCACTAAGGTCAGGTGCGCCCCTGTAAATAATTAGAT" }
     expected = \
 """2 140
 
@@ -58,12 +86,10 @@ seq2
 AGTTGAAGAG  GCGGAACGTT  TGTAAACCGC  GCTAACGTAG  TTCTACAACC  AGCCACCCGG
 TTCGAAGGAA  CAACTGGTCG  CCATAATTAG  GCGAAACGAT  AGTGCACTAA  GGTCAGGTGC
 GCCCCTGTAA  ATAATTAGAT"""
-    assert_equal(sequential_phy(msa), expected)
+    assert_equal(sequential_phy(_MSA_LONG_SEQUENCES), expected)
 
 
 def test_sequential_phy__with_flag():
-    msa = { "seq1" : "ACGTTGATAACCAGG",
-            "seq2" : "TGCAGAGTACGACGT" }
     expected = \
 """2 15 S
 
@@ -71,12 +97,10 @@ seq1
 ACGTTGATAA  CCAGG
 seq2
 TGCAGAGTAC  GACGT"""
-    assert_equal(sequential_phy(msa, add_flag = True), expected)
+    assert_equal(sequential_phy(_MSA_SHORT_SEQUENCES, add_flag = True), expected)
 
 
 def test_sequentual_phy__long_names():
-    msa = { "A_really_long_sequence_name_that_is_in_fact_too_long" : "ACGTTGATAACCAGG",
-            "Another_really_long_sequence_name_that_is_too_long" : "TGCAGAGTACGACGT" }
     expected = \
 """2 15
 
@@ -84,16 +108,12 @@ A_really_long_sequence_name_th
 ACGTTGATAA  CCAGG
 Another_really_long_sequence_n
 TGCAGAGTAC  GACGT"""
-    assert_equal(sequential_phy(msa), expected)
+    assert_equal(sequential_phy(_MSA_LONG_NAMES), expected)
 
 
-@nose.tools.raises(MSAError)
-def test_sequential_phy__empty_msa():
-    sequential_phy({})
-
-@nose.tools.raises(MSAError)
 def test_sequential_phy__different_lengths():
-    sequential_phy({"seq1" : "A", "seq2" : "TC"})
+    with RequiredCall(_VALIDATION_PATH):
+        sequential_phy(_MSA_MEDIUM_NAMES)
 
 
 
@@ -102,19 +122,15 @@ def test_sequential_phy__different_lengths():
 ## Tests of 'interleaved_phy'
 
 def test_interleaved_phy__short_sequences():
-    msa = { "seq1" : "ACGTTGATAACCAGGAGGGATTCGCGATTGGTGGTAACGTAGCC",
-            "seq2" : "TGCAGAGTACGACGTCTCCTAGATCCTGGACAATTTAAACCGAA" }
     expected = \
 """2 44
 
 seq1        ACGTTGATAA  CCAGGAGGGA  TTCGCGATTG  GTGGTAACGT  AGCC
 seq2        TGCAGAGTAC  GACGTCTCCT  AGATCCTGGA  CAATTTAAAC  CGAA"""
-    assert_equal(interleaved_phy(msa), expected)
+    assert_equal(interleaved_phy(_MSA_MEDIUM_SEQUENCES), expected)
 
 
 def test_interleaved_phy__multi_line_sequences():
-    msa = { "seq1" : "CGGATCTGCTCCTCCACTGGCCACGTTTACTGTCCCCCAACCGTTCGTCCCGACCTAGTTATACTTCTTAGCAAGGTGTAAAACCAGAGATTGAGGTTATAACGTTCCTAATCAGTTATTAAATTACCGCGCCCCGACAG", 
-            "seq2" : "AGTTGAAGAGGCGGAACGTTTGTAAACCGCGCTAACGTAGTTCTACAACCAGCCACCCGGTTCGAAGGAACAACTGGTCGCCATAATTAGGCGAAACGATAGTGCACTAAGGTCAGGTGCGCCCCTGTAAATAATTAGAT" }
     expected = \
 """2 140
 
@@ -126,45 +142,39 @@ AGCCACCCGG  TTCGAAGGAA  CAACTGGTCG  CCATAATTAG  GCGAAACGAT  AGTGCACTAA
 
 ATCAGTTATT  AAATTACCGC  GCCCCGACAG
 GGTCAGGTGC  GCCCCTGTAA  ATAATTAGAT"""
-    assert_equal(interleaved_phy(msa), expected)
+    assert_equal(interleaved_phy(_MSA_LONG_SEQUENCES), expected)
 
 
 def test_interleaved_phy__with_flag():
-    msa = { "seq1" : "ACGTTGATAACCAGG",
-            "seq2" : "TGCAGAGTACGACGT" }
     expected = \
 """2 15 I
 
 seq1        ACGTTGATAA  CCAGG
 seq2        TGCAGAGTAC  GACGT"""
-    assert_equal(interleaved_phy(msa, add_flag = True), expected)
+    assert_equal(interleaved_phy(_MSA_SHORT_SEQUENCES, add_flag = True), expected)
 
 
 def test_interleaved_phy__medium_names():
-    msa = { "A_really_long_sequence" : "ACGTTGATAACCAGG",
-            "Another_real_long_one!" : "TGCAGAGTACGACGT" }
     expected = \
 """2 15
 
 A_really_long_sequence  ACGTTGATAA  CCAGG
 Another_real_long_one!  TGCAGAGTAC  GACGT"""
-    assert_equal(interleaved_phy(msa), expected)
+    assert_equal(interleaved_phy(_MSA_MEDIUM_NAMES), expected)
 
 
 def test_interleaved_phy__long_names():
-    msa = { "A_really_long_sequence_name_that_is_in_fact_too_long" : "ACGTTGATAACCAGG",
-            "Another_really_long_sequence_name_that_is_too_long" : "TGCAGAGTACGACGT" }
     expected = \
 """2 15
 
 A_really_long_sequence_name_th      ACGTTGATAA  CCAGG
 Another_really_long_sequence_n      TGCAGAGTAC  GACGT"""
-    assert_equal(interleaved_phy(msa), expected)
+    assert_equal(interleaved_phy(_MSA_LONG_NAMES), expected)
 
 
 def test_sequentual_phy__different_length_names_1():
-    msa = { "A_short_name" : "ACGTTGATAACCAGG",
-            "Another_really_long_sequence_name_that_is_too_long" : "TGCAGAGTACGACGT" }
+    msa = MSA([FASTA("A_short_name", None, "ACGTTGATAACCAGG"),
+               FASTA("Another_really_long_sequence_name_that_is_too_long", None, "TGCAGAGTACGACGT")])
     expected = \
 """2 15
 
@@ -175,8 +185,8 @@ Another_really_long_sequence_n      TGCAGAGTAC  GACGT"""
 
 
 def test_sequentual_phy__different_length_names_2():
-    msa = { "Burchelli_4" : "ACGTTGATAACCAGG",
-            "Donkey" : "TGCAGAGTACGACGT" }
+    msa = MSA([FASTA("Burchelli_4", None, "ACGTTGATAACCAGG"),
+               FASTA("Donkey",      None, "TGCAGAGTACGACGT")])
     expected = \
 """2 15
 
@@ -186,10 +196,6 @@ Donkey                  TGCAGAGTAC  GACGT"""
     assert_equal(interleaved_phy(msa), expected)
 
 
-@nose.tools.raises(MSAError)
-def test_interleaved_phy__empty_msa():
-    interleaved_phy({})
-
-@nose.tools.raises(MSAError)
 def test_interleaved_phy__different_lengths():
-    interleaved_phy({"seq1" : "A", "seq2" : "TC"})
+    with RequiredCall(_VALIDATION_PATH):
+        interleaved_phy(_MSA_MEDIUM_NAMES)

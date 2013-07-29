@@ -20,255 +20,298 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
+import copy
 import StringIO
 
 import nose.tools
-from nose.tools import assert_equal, assert_raises
+from nose.tools import \
+     assert_equal, \
+     assert_raises
 
 from pypeline.common.testing import \
-     RequiredCall, \
-     with_temp_folder
+     RequiredCall
 
+from pypeline.common.formats.fasta import FASTA
 from pypeline.common.formats.msa import \
-     split_msa, \
-     join_msa, \
-     parse_msa, \
-     read_msa, \
-     print_msa, \
-     write_msa, \
-     validate_msa, \
+     MSA, \
      MSAError, \
      FASTAError
 
-_VALIDATION_PATH = "pypeline.common.formats.msa.validate_msa"
+_VALIDATION_PATH = "pypeline.common.formats.msa.MSA.validate"
 
 
 ################################################################################
 ################################################################################
-## Tests for 'join_msa'
+## Tests for constructor
 
-_JOIN_MSA_1 = { "nc" : "ACG", "nm" : "TGA", "miRNA" : "UCA" }
-_JOIN_MSA_2 = { "nc" : "TGA", "nm" : "CTT", "miRNA" : "GAC" }
-_JOIN_MSA_3 = { "nc" : "AAG", "nm" : "GAG", "miRNA" : "CAU" }
+def test_msa_constructor__calls_validate():
+    with RequiredCall(_VALIDATION_PATH):
+        MSA([FASTA("NA", None, "ACGT")])
 
-def test_join_msa__single_msa():
-    with RequiredCall(_VALIDATION_PATH, args = [_JOIN_MSA_1]):
-        result = join_msa(_JOIN_MSA_1)
-        assert_equal(result, _JOIN_MSA_1)
+def test_msa_constructor__duplicate_names():
+    records = [FASTA("Foo", None, "ACGT"),
+               FASTA("Foo", None, "GTCA")]
+    assert_raises(MSAError, MSA, records)
 
-def test_join_msa__two_msa():
-    expected = { "nc" : "ACGTGA", "nm" : "TGACTT", "miRNA" : "UCAGAC" }
-    with RequiredCall(_VALIDATION_PATH, args = [_JOIN_MSA_1, _JOIN_MSA_2]):
-        result = join_msa(_JOIN_MSA_1, _JOIN_MSA_2)
-        assert_equal(result, expected)
+def test_msa_constructor__empty_msa():
+    assert_raises(MSAError, MSA, [])
 
-def test_join_msa__three_msa():
-    expected = { "nc" : "ACGTGAAAG",
-                 "nm" : "TGACTTGAG",
-                 "miRNA" : "UCAGACCAU" }
-    with RequiredCall(_VALIDATION_PATH, args = [_JOIN_MSA_1, _JOIN_MSA_2, _JOIN_MSA_3]):
-        result = join_msa(_JOIN_MSA_1, _JOIN_MSA_2, _JOIN_MSA_3)
-        assert_equal(result, expected)
+
+
+################################################################################
+################################################################################
+## Tests for 'seqlen' / len
+
+def test_msa__len__corresponds_to_sequence_number_of_records():
+    msa = MSA((FASTA("seq1",    None, "ACGCGTATGCATGCCGA"),
+               FASTA("seq2",    None, "TGAACACACAGTAGGAT")))
+    assert_equal(len(msa), 2)
+
+def test_msa__seqlen__corresponds_to_sequence_lengths():
+    msa = MSA((FASTA("seq1",    None, "ACGCGTATGCATGCCGA"),
+               FASTA("seq2",    None, "TGAACACACAGTAGGAT")))
+    assert_equal(msa.seqlen(), 17)
+
+
+
+################################################################################
+################################################################################
+## Tests for 'exclude'
+
+def test_msa_exclude__remove_one():
+    fa_1 = FASTA("A", None, "ACGT")
+    fa_2 = FASTA("B", None, "GCTA")
+    initial  = MSA([fa_1, fa_2])
+    expected = MSA([fa_1])
+    result   = initial.exclude(["B"])
+    assert_equal(result, expected)
+
+def test_msa_exclude__missing_keys():
+    msa = MSA([FASTA("Foo", None, "ACGT")])
+    assert_raises(KeyError, msa.exclude, "Bar")
+
+
+
+################################################################################
+################################################################################
+## Tests for 'MSA.join'
+
+_JOIN_MSA_1 = MSA((FASTA("nc",    None, "ACG"),
+                   FASTA("nm",    None, "TGA"),
+                   FASTA("miRNA", None, "UCA")))
+_JOIN_MSA_2 = MSA((FASTA("nc",    None, "TGA"),
+                   FASTA("nm",    None, "CTT"),
+                   FASTA("miRNA", None, "GAC")))
+_JOIN_MSA_3 = MSA((FASTA("nc",    None, "AAG"),
+                   FASTA("nm",    None, "GAG"),
+                   FASTA("miRNA", None, "CAU")))
+
+def test_msa_join__single_msa():
+    result = MSA.join(_JOIN_MSA_1)
+    assert_equal(result, _JOIN_MSA_1)
+
+def test_msa_join__two_msa():
+    expected = MSA((FASTA("nc",    None, "ACGTGA"),
+                    FASTA("nm",    None, "TGACTT"),
+                    FASTA("miRNA", None, "UCAGAC")))
+    result = MSA.join(_JOIN_MSA_1, _JOIN_MSA_2)
+    assert_equal(result, expected)
+
+def test_msa_join__three_msa():
+    expected = MSA((FASTA("nc",    None, "ACGTGAAAG"),
+                    FASTA("nm",    None, "TGACTTGAG"),
+                    FASTA("miRNA", None, "UCAGACCAU")))
+    result = MSA.join(_JOIN_MSA_1, _JOIN_MSA_2, _JOIN_MSA_3)
+    assert_equal(result, expected)
+
 
 @nose.tools.raises(TypeError)
-def test_join_msa__missing_arguments():
-    join_msa()
-
-
+def test_msa_join__missing_arguments():
+    MSA.join()
 
 
 ################################################################################
 ################################################################################
-## Tests for 'parse_msa'
+## Tests for 'MSA.from_lines'
 
-def test_parse_msa__single_entry():
+def test_msa_from_lines__single_entry():
     lines  = [">seq1", "ACG"]
-    result = {"seq1" : "ACG"}
-    with RequiredCall(_VALIDATION_PATH, args = [result]):
-        assert_equal(parse_msa(lines), result)
+    result = MSA([FASTA("seq1", None, "ACG")])
+    assert_equal(MSA.from_lines(lines), result)
 
-def test_parse_msa__single_entry_with_meta():
-    lines  = [">seq1 Meta info", "ACG"]
-    result_msa  = {"seq1" : "ACG"}
-    result_meta = {"seq1" : "Meta info"}
-    with RequiredCall(_VALIDATION_PATH, args = [result_msa]):
-        msa, meta = parse_msa(lines, read_meta = True)
-        assert_equal(msa, result_msa)
-        assert_equal(meta, result_meta)
+def test_msa_from_lines__single_entry_with_meta():
+    lines    = [">seq1 Meta info", "ACG"]
+    expected = MSA([FASTA("seq1", "Meta info", "ACG")])
+    result   = MSA.from_lines(lines)
+    assert_equal(result, expected)
 
-def test_parse_msa__two_entries():
-    lines  = [">seq1", "ACG", ">seq2", "TGA"]
-    result = {"seq1" : "ACG", "seq2" : "TGA"}
-    with RequiredCall(_VALIDATION_PATH, args = [result]):
-        assert_equal(parse_msa(lines), result)
+def test_msa_from_lines__two_entries():
+    lines    = [">seq1", "ACG", ">seq2", "TGA"]
+    expected = MSA([FASTA("seq1", None, "ACG"),
+                    FASTA("seq2", None, "TGA")])
+    result   = MSA.from_lines(lines)
+    assert_equal(result, expected)
 
-def test_parse_msa__two_entries_with_meta():
-    lines  = [">seq1", "ACG", ">seq2 Second meta", "TGA"]
-    result_msa = {"seq1" : "ACG", "seq2" : "TGA"}
-    result_meta = {"seq1" : None, "seq2" : "Second meta"}
-    with RequiredCall(_VALIDATION_PATH, args = [result_msa]):
-        msa, meta = parse_msa(lines, read_meta = True)
-        assert_equal(msa, result_msa)
-        assert_equal(meta, result_meta)
+def test_msa_from_lines__two_entries_with_meta():
+    lines    = [">seq1", "ACG", ">seq2 Second meta", "TGA"]
+    expected = MSA([FASTA("seq1", None, "ACG"),
+                    FASTA("seq2", "Second meta", "TGA")])
+    result   = MSA.from_lines(lines)
+    assert_equal(result, expected)
 
 @nose.tools.raises(MSAError)
-def test_parse_msa__duplicate_names():
-    parse_msa([">seq1", "ACG", ">seq1", "TGA"])
+def test_msa_from_lines__duplicate_names():
+    MSA.from_lines([">seq1", "ACG", ">seq1", "TGA"])
 
 @nose.tools.raises(MSAError)
-def test_parse_msa__mismatched_lengths():
-    parse_msa([">seq1", "ACG", ">seq1", "TGAN"])
+def test_msa_from_lines__mismatched_lengths():
+    MSA.from_lines([">seq1", "ACG", ">seq2", "TGAN"])
 
 @nose.tools.raises(FASTAError)
-def test_parse_msa__empty_name():
-    parse_msa([">", "ACG", ">seq1", "TGAN"])
+def test_msa_from_lines__empty_name():
+    MSA.from_lines([">", "ACG", ">seq1", "TGAN"])
 
 
 
 
 ################################################################################
 ################################################################################
-## Tests for 'read_msa'
+## Tests for 'MSA.from_file'
 
-def test_read_msa__uncompressed():
-    expected = {"This_is_FASTA!" : "ACGTN",
-                "This_is_ALSO_FASTA!" : "CGTNA"}
-    with RequiredCall(_VALIDATION_PATH, args = [expected]):
-        results  = read_msa("tests/data/fasta_file.fasta")
-        assert_equal(results, expected)
+def test_msa_from_file__uncompressed():
+    expected = MSA([FASTA("This_is_FASTA!", None, "ACGTN"),
+                    FASTA("This_is_ALSO_FASTA!", None, "CGTNA")])
+    results  = MSA.from_file("tests/data/fasta_file.fasta")
+    assert_equal(results, expected)
 
-def test_read_msa__compressed_gz():
-    expected = {"This_is_GZipped_FASTA!" : "ACGTN",
-                "This_is_ALSO_GZipped_FASTA!" : "CGTNA"}
-    with RequiredCall(_VALIDATION_PATH, args = [expected]):
-        results  = read_msa("tests/data/fasta_file.fasta.gz")
-        assert_equal(results, expected)
+def test_msa_from_file__compressed_gz():
+    expected = MSA([FASTA("This_is_GZipped_FASTA!", None, "ACGTN"),
+                    FASTA("This_is_ALSO_GZipped_FASTA!", None, "CGTNA")])
+    results  = MSA.from_file("tests/data/fasta_file.fasta.gz")
+    assert_equal(results, expected)
 
-def test_read_msa__compressed_bz2():
-    expected = {"This_is_BZ_FASTA!" : "CGTNA",
-                "This_is_ALSO_BZ_FASTA!" : "ACGTN"}
-    with RequiredCall(_VALIDATION_PATH, args = [expected]):
-        results  = read_msa("tests/data/fasta_file.fasta.bz2")
-        assert_equal(results, expected)
+def test_msa_from_file__compressed_bz2():
+    expected = MSA([FASTA("This_is_BZ_FASTA!", None, "CGTNA"),
+                    FASTA("This_is_ALSO_BZ_FASTA!", None,  "ACGTN")])
+    results  = MSA.from_file("tests/data/fasta_file.fasta.bz2")
+    assert_equal(results, expected)
 
 
 
 
 ################################################################################
 ################################################################################
-## Tests for 'split_msa'
+## Tests for 'MSA.split'
 
-def test_split_msa__single_group():
-    msa = {"seq1" : "ACGCAT", "seq2" : "GAGTGA"}
-    expected = {'1' : {"seq1" : "ACGCAT", "seq2" : "GAGTGA"}}
-    with RequiredCall(_VALIDATION_PATH, args = [msa]):
-        assert_equal(split_msa(msa, "111"), expected)
+def test_msa_split_msa__single_group():
+    msa = MSA([FASTA("seq1", None, "ACGCAT"),
+               FASTA("seq2", None, "GAGTGA")])
+    expected = {'1' : copy.copy(msa)}
+    assert_equal(msa.split("111"), expected)
 
-def test_split_msa__two_groups():
-    msa = {"seq1" : "ACGCAT", "seq2" : "GAGTGA"}
-    expected = {"1" : {"seq1" : "ACCA", "seq2" : "GATG"},
-                "2" : {"seq1" : "GT",   "seq2" : "GA"}}
-    with RequiredCall(_VALIDATION_PATH, args = [msa]):
-        assert_equal(split_msa(msa, "112"), expected)
+def test_msa_split_msa__two_groups():
+    msa = MSA([FASTA("seq1", None, "ACGCAT"),
+               FASTA("seq2", None, "GAGTGA")])
+    expected = {"1" : MSA([FASTA("seq1", None, "ACCA"),
+                           FASTA("seq2", None, "GATG")]),
+                "2" : MSA([FASTA("seq1", None, "GT"),
+                           FASTA("seq2", None, "GA")])}
+    assert_equal(msa.split("112"), expected)
 
-def test_split__three_groups():
-    msa = {"seq1" : "ACGCAT", "seq2" : "GAGTGA"}
-    expected = {"1" : {"seq1" : "AC", "seq2" : "GT"},
-                "2" : {"seq1" : "CA", "seq2" : "AG"},
-                "3" : {"seq1" : "GT", "seq2" : "GA"}}
-    with RequiredCall(_VALIDATION_PATH, args = [msa]):
-        assert_equal(split_msa(msa, "123"), expected)
-    with RequiredCall(_VALIDATION_PATH, args = [msa]):
-        assert_equal(split_msa(msa), expected)
+def test_msa_split__three_groups():
+    msa = MSA([FASTA("seq1", None, "ACGCAT"),
+               FASTA("seq2", None, "GAGTGA")])
+    expected = {"1" : MSA([FASTA("seq1", None, "AC"),
+                           FASTA("seq2", None, "GT")]),
+                "2" : MSA([FASTA("seq1", None, "CA"),
+                           FASTA("seq2", None, "AG")]),
+                "3" : MSA([FASTA("seq1", None, "GT"),
+                           FASTA("seq2", None, "GA")])}
+    assert_equal(msa.split("123"), expected)
 
-def test_split__empty_group():
-    msa = {"seq1" : "AC", "seq2" : "GA"}
-    expected = {"1" : {"seq1" : "A", "seq2" : "G"},
-                "2" : {"seq1" : "C", "seq2" : "A"},
-                "3" : {"seq1" : "",  "seq2" : ""}}
-    with RequiredCall(_VALIDATION_PATH, args = [msa]):
-        assert_equal(split_msa(msa), expected)
+def test_msa_split__empty_group():
+    msa = MSA([FASTA("seq1", None, "AC"),
+               FASTA("seq2", None, "GA")])
+    expected = {"1" : MSA([FASTA("seq1", None, "A"),
+                           FASTA("seq2", None, "G")]),
+                "2" : MSA([FASTA("seq1", None, "C"),
+                           FASTA("seq2", None, "A")]),
+                "3" : MSA([FASTA("seq1", None, ""),
+                           FASTA("seq2", None, "")])}
+    assert_equal(msa.split("123"), expected)
 
-def test_split__partial_group():
-    msa = {"seq1" : "ACGCA", "seq2" : "GAGTG"}
-    expected = {"1" : {"seq1" : "AC", "seq2" : "GT"},
-                "2" : {"seq1" : "CA", "seq2" : "AG"},
-                "3" : {"seq1" : "G", "seq2" : "G"}}
-    with RequiredCall(_VALIDATION_PATH, args = [msa]):
-        assert_equal(split_msa(msa), expected)
+def test_msa_split__partial_group():
+    msa = MSA([FASTA("seq1", None, "ACGCA"),
+               FASTA("seq2", None, "GAGTG")])
+    expected = {"1" : MSA([FASTA("seq1", None, "AC"),
+                           FASTA("seq2", None, "GT")]),
+                "2" : MSA([FASTA("seq1", None, "CA"),
+                           FASTA("seq2", None, "AG")]),
+                "3" : MSA([FASTA("seq1", None, "G"),
+                           FASTA("seq2", None, "G")])}
+    assert_equal(msa.split("123"), expected)
 
-
-@nose.tools.raises(MSAError)
-def test_split_msa__empty_msa():
-    split_msa({})
 
 @nose.tools.raises(TypeError)
-def test_split_msa__no_split_by():
-    split_msa({"seq1" : "ACG", "seq2" : "GAT"}, split_by = "")
+def test_msa_split_msa__no_split_by():
+    msa = MSA([FASTA("seq1", None, "ACG"),
+               FASTA("seq2", None, "GAT")])
+    msa.split(split_by = "")
 
-
-
-
-################################################################################
-################################################################################
-## Tests for 'write_msa'
-
-@with_temp_folder
-def test_write_msa(temp_folder):
-    msa = {"seq1" : "ACGTA", "seq2" : "CGTAC"}
-    fname = os.path.join(temp_folder, "out.afa")
-    with RequiredCall(_VALIDATION_PATH, args = [msa]):
-        write_msa(msa, fname)
-    with RequiredCall(_VALIDATION_PATH, args = [msa]):
-        assert_equal(read_msa(fname), msa)
 
 
 
 
 ################################################################################
 ################################################################################
-## Tests for 'print_msa'
+## Tests for 'MSA.to_file'
 
-def test_print_fasta__complete_line_test():
-    msa       = {"barfoo" : "ACGATA" * 10 + "CGATAG" * 5,
-                 "foobar" : "CGAATG" * 10 + "TGTCAT" * 5}
+def test_msa_to_file__complete_line_test():
+    msa       = MSA([FASTA("barfoo", None, "ACGATA" * 10 + "CGATAG" * 5),
+                     FASTA("foobar", None, "CGAATG" * 10 + "TGTCAT" * 5)])
     expected  = ">barfoo\n%s\n%s\n" % ("ACGATA" * 10, "CGATAG" * 5)
     expected += ">foobar\n%s\n%s\n" % ("CGAATG" * 10, "TGTCAT" * 5)
     stringf = StringIO.StringIO()
-    with RequiredCall(_VALIDATION_PATH, args = [msa]):
-        print_msa(msa, stringf)
+    MSA.to_file(msa, stringf)
     assert_equal(stringf.getvalue(), expected)
 
 
 
 ################################################################################
 ################################################################################
-## Tests for 'validate_msa'
+## Tests for 'MSA.validate'
+
+def test_msa_validate__missing_names_first():
+    msa_1 = MSA(list(_JOIN_MSA_1)[:-1])
+    msa_2 = copy.copy(_JOIN_MSA_2)
+    assert_raises(MSAError, MSA.validate, msa_1, msa_2)
+
+def test_msa_validate__missing_names_second():
+    msa_1 = copy.copy(_JOIN_MSA_1)
+    msa_2 = MSA(list(_JOIN_MSA_2)[:-1])
+    assert_raises(MSAError, MSA.validate, msa_1, msa_2)
 
 
-def test_validate_msa__missing_names_first():
-    msa_1 = dict(_JOIN_MSA_1)
-    msa_2 = dict(_JOIN_MSA_2)
-    msa_1.pop(msa_1.keys()[0])
-    assert_raises(MSAError, validate_msa, msa_1, msa_2)
 
-def test_validate_msa__missing_names_second():
-    msa_1 = dict(_JOIN_MSA_1)
-    msa_2 = dict(_JOIN_MSA_2)
-    msa_2.pop(msa_2.keys()[0])
-    assert_raises(MSAError, validate_msa, msa_1, msa_2)
+################################################################################
+################################################################################
+## Tests for 'MSA.names'
 
-def test_validate_msa__differing_lengths():
-    msa_1 = dict(_JOIN_MSA_1)
-    msa_2 = dict(_JOIN_MSA_2)
-    msa_1["nc"] = "AC"
-    assert_raises(MSAError, validate_msa, msa_1, msa_2)
+def test_msa_names():
+    assert_equal(_JOIN_MSA_1.names(), set(("nc", "nm", "miRNA")))
 
-@nose.tools.raises(MSAError)
-def test_validate_msa__empty_name():
-    validate_msa({"" : "A"}, {"" : "T"})
 
-@nose.tools.raises(MSAError)
-def test_validate_msa__non_string_name():
-    validate_msa({1 : "A"}, {1 : "T"})
+
+################################################################################
+################################################################################
+## Tests for str/repr
+
+def test_msa_repr():
+    msa = MSA((FASTA("nc",    None, "ACGTA"),
+               FASTA("nm",    "META", "TGAGT"),
+               FASTA("miRNA", None, "UCAGA")))
+    expected = "MSA(FASTA('miRNA', None, 'UCAGA'), FASTA('nc', None, 'ACGTA'), FASTA('nm', 'META', 'TGAGT'))"
+    assert_equal(str(msa), expected)
+
+def test_msa_repr__same_as_str():
+    assert_equal(str(_JOIN_MSA_1), repr(_JOIN_MSA_1))

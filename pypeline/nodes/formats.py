@@ -24,7 +24,7 @@ import collections
 
 from pypeline.node import Node, NodeError
 from pypeline.common.fileutils import move_file, reroot_path
-from pypeline.common.formats.msa import read_msa, join_msa, split_msa
+from pypeline.common.formats.msa import MSA
 from pypeline.common.formats.phylip import interleaved_phy, sequential_phy
 
 
@@ -67,19 +67,18 @@ class FastaToPartitionedInterleavedPhyNode(Node):
         msas = []
         for filename in sorted(self._infiles):
             split_by = self._infiles[filename].get("partition_by", self._part_by)
-            for (key, msa) in sorted(split_msa(read_msa(filename), split_by).items()):
-                for excluded_group in self._excluded:
-                    msa.pop(excluded_group)
+            for (key, msa) in sorted(MSA.from_file(filename).split(split_by).items()):
+                msa = msa.exclude(self._excluded)
                 msas.append(("%s_%s" % (self._infiles[filename]["name"], key), msa))
 
-        msa = join_msa(*(msa for (_, msa) in msas))
+        msa = MSA.join(*(msa for (_, msa) in msas))
         with open(reroot_path(temp, self._out_prefix + ".phy"), "w") as output:
             output.write(interleaved_phy(msa, add_flag = self._add_flag))
 
         with open(reroot_path(temp, self._out_prefix + ".partitions"), "w") as output:
             end = 0
             for (name, msa) in msas:
-                length = len(msa.itervalues().next())
+                length = msa.seqlen()
                 output.write("DNA, %s = %i-%i\n" % (name, end + 1, end + length))
                 end += length
 
@@ -87,7 +86,6 @@ class FastaToPartitionedInterleavedPhyNode(Node):
     def  _teardown(self, _config, temp):
         move_file(reroot_path(temp, self._out_prefix + ".phy"), self._out_prefix + ".phy")
         move_file(reroot_path(temp, self._out_prefix + ".partitions"), self._out_prefix + ".partitions")
-    
 
 
 
@@ -113,8 +111,8 @@ class FastaToPartitionsNode(Node):
 
         description  = "<FastaToPartitions (default: %s): %i file(s) -> '%s'>" % \
             (partition_by, len(infiles), out_partitions)
-            
-        Node.__init__(self, 
+
+        Node.__init__(self,
                       description  = description,
                       input_files  = infiles.keys(),
                       output_files = out_partitions,
@@ -125,7 +123,7 @@ class FastaToPartitionsNode(Node):
         end = 0
         partitions = collections.defaultdict(list)
         for (filename, msa) in _read_sequences(self._infiles):
-            length = len(msa.itervalues().next())
+            length = msa.seqlen()
             start, end = end + 1, end + length
 
             for (group, offsets) in self._get_partition_by(filename):
@@ -164,8 +162,8 @@ class FastaToInterleavedPhyNode(Node):
 
         description  = "<FastaToInterleavedPhy: %i file(s) -> '%s'%s>" % \
             (len(infiles), out_phy, (" (w/ flag)" if add_flag else ""))
-            
-        Node.__init__(self, 
+
+        Node.__init__(self,
                       description  = description,
                       input_files  = infiles,
                       output_files = [out_phy],
@@ -173,7 +171,7 @@ class FastaToInterleavedPhyNode(Node):
 
 
     def _run(self, _config, temp):
-        msa = join_msa(*(read_msa(filename) for filename in sorted(self.input_files)))
+        msa = MSA.join(*(MSA.from_file(filename) for filename in sorted(self.input_files)))
 
         with open(reroot_path(temp, self._out_phy), "w") as output:
             output.write(interleaved_phy(msa, add_flag = self._add_flag))
@@ -191,8 +189,8 @@ class FastaToSequentialPhyNode(Node):
 
         description  = "<FastaToInterleavedPhy: %i file(s) -> '%s'%s>" % \
             (len(infiles), out_phy, (" (w/ flag)" if add_flag else ""))
-            
-        Node.__init__(self, 
+
+        Node.__init__(self,
                       description  = description,
                       input_files  = infiles,
                       output_files = [out_phy],
@@ -201,8 +199,8 @@ class FastaToSequentialPhyNode(Node):
 
     def _run(self, _config, temp):
         # Read and check that MSAs share groups
-        msas = [read_msa(filename) for filename in sorted(self.input_files)]
-        join_msa(*msas)
+        msas = [MSA.from_file(filename) for filename in sorted(self.input_files)]
+        MSA.validate(*msas)
 
         blocks = []
         for msa in msas:
@@ -220,15 +218,9 @@ class FastaToSequentialPhyNode(Node):
 
 
 def _read_sequences(filenames):
-    expected_groups = None
-    for filename in sorted(filenames):
-        msa  = read_msa(filename)
+    results = {}
+    for filename in filenames:
+        results[filename] = MSA.from_file(filename)
+    MSA.validate(*results.values())
 
-        if not expected_groups:
-            expected_groups = set(msa)
-        elif set(msa) != expected_groups:
-            difference = expected_groups.symmetric_difference(msa)
-            raise NodeError("Unexpected/missing groups for sequence (%s): %s" \
-                                % (filename, ", ".join(difference)))
-
-        yield (filename, msa)
+    return results.iteritems()
