@@ -25,6 +25,8 @@ from collections import defaultdict
 from pypeline.common.sequences import split
 from pypeline.common.fileutils import open_ro
 from pypeline.common.formats.fasta import FASTA, FASTAError
+from pypeline.common.sequences import NT_CODES, encode_genotype
+from pypeline.common.utilities import safe_coerce_to_frozenset
 
 
 class MSAError(FASTAError):
@@ -50,17 +52,46 @@ class MSA(frozenset):
         """Retrurns the length of the sequences in the MSA."""
         return len(iter(self).next().sequence)
 
+
     def exclude(self, names):
         """Builds a new MSA that excludes the named set of records."""
-        included, excluded = [], set(names)
-        for record in self:
-            if record.name not in names:
-                included.append(record)
-            else:
-                excluded.remove(record.name)
-        if excluded:
-            raise KeyError("Key(s) not found: %r" % (", ".join(map(str, excluded))))
+        _included, excluded, _to_filter = self._group(names)
+        return MSA(excluded)
+
+    def select(self, names):
+        """Builds a new MSA that includes only the named set of records."""
+        included, _excluded, _to_filter = self._group(names)
         return MSA(included)
+
+
+    def filter_singletons(self, to_filter, filter_using):
+        included, excluded, to_filter \
+          = self._group(filter_using, to_filter)
+
+        sequence = list(to_filter.sequence)
+        sequences = [record.sequence.upper() for record in included]
+        for (index, nts) in enumerate(zip(*sequences)):
+            current_nt = sequence[index].upper()
+            if current_nt in "N-":
+                continue
+
+            allowed_nts = set()
+            for allowed_nt in nts:
+                if allowed_nt not in "N-":
+                    allowed_nts.update(NT_CODES[allowed_nt])
+            filtered_nts = frozenset(NT_CODES[current_nt]) & allowed_nts
+
+            if not filtered_nts:
+                filtered_nts = "N"
+
+            genotype = encode_genotype(filtered_nts)
+            if genotype != current_nt:
+                sequence[index] = genotype.lower()
+        new_record = FASTA(to_filter.name,
+                           to_filter.meta,
+                           "".join(sequence))
+
+        return MSA([new_record] + included + excluded)
 
 
     def split(self, split_by = "123"):
@@ -155,3 +186,26 @@ class MSA(frozenset):
 
     def names(self):
         return set(record.name for record in self)
+
+
+    def _group(self, selection, extra = None):
+        selection = safe_coerce_to_frozenset(selection)
+        if (extra in selection):
+            raise MSAError("Key used for multiple selections: %r" % extra)
+        elif not selection:
+            raise ValueError("No FASTA names given")
+
+        missing_keys = selection - self.names()
+        if missing_keys:
+            raise KeyError("Key(s) not found: %r" % (", ".join(map(str, missing_keys))))
+
+        included, excluded, other = [], [], None
+        for record in self:
+            if record.name in selection:
+                included.append(record)
+            elif record.name != extra:
+                excluded.append(record)
+            else:
+                other = record
+
+        return included, excluded, other

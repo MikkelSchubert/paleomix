@@ -88,7 +88,69 @@ def test_msa_exclude__remove_one():
 
 def test_msa_exclude__missing_keys():
     msa = MSA([FASTA("Foo", None, "ACGT")])
-    assert_raises(KeyError, msa.exclude, "Bar")
+    assert_raises(KeyError, msa.exclude, ["Bar"])
+
+def test_msa_exclude__no_keys():
+    msa = MSA([FASTA("Foo", None, "ACGT")])
+    assert_raises(ValueError, msa.exclude, [])
+
+
+
+################################################################################
+################################################################################
+## Tests for 'select'
+
+def test_msa_select__remove_one():
+    fa_1 = FASTA("A", None, "ACGT")
+    fa_2 = FASTA("B", None, "GCTA")
+    initial  = MSA([fa_1, fa_2])
+    expected = MSA([fa_1])
+    result   = initial.select(["A"])
+    assert_equal(result, expected)
+
+def test_msa_select__missing_keys():
+    msa = MSA([FASTA("Foo", None, "ACGT")])
+    assert_raises(KeyError, msa.select, ["Bar"])
+
+def test_msa_select__no_keys():
+    msa = MSA([FASTA("Foo", None, "ACGT")])
+    assert_raises(ValueError, msa.select, [])
+
+
+
+################################################################################
+################################################################################
+## Tests for 'filter_singletons'
+
+_FILTER_MSA_1 = MSA((FASTA("Seq1", "Meta1", "ACGNTYCSTG"),
+                     FASTA("Seq2", "Meta2", "ACTA-WCCTG"),
+                     FASTA("Seq3", "Meta3", "NCGGTYCGTC")))
+
+
+def test_msa_filter_singletons__filter_by_second():
+    expected = MSA((FASTA("Seq1", "Meta1", "ACnNntCcTG"),
+                    FASTA("Seq2", "Meta2", "ACTA-WCCTG"),
+                    FASTA("Seq3", "Meta3", "NCGGTYCGTC")))
+    result   = _FILTER_MSA_1.filter_singletons("Seq1", ["Seq2"])
+    assert_equal(result, expected)
+
+def test_msa_filter_singletons__filter_by_third():
+    expected = MSA((FASTA("Seq1", "Meta1", "nCGNTYCgTn"),
+                    FASTA("Seq2", "Meta2", "ACTA-WCCTG"),
+                    FASTA("Seq3", "Meta3", "NCGGTYCGTC")))
+    result   = _FILTER_MSA_1.filter_singletons("Seq1", ["Seq3"])
+    assert_equal(result, expected)
+
+def test_msa_filter_singletons__filter_by_both():
+    result   = _FILTER_MSA_1.filter_singletons("Seq1", ["Seq2", "Seq3"])
+    assert_equal(result, _FILTER_MSA_1)
+
+
+def test_msa_filter_singletons__filter_by_itself():
+    assert_raises(MSAError, _FILTER_MSA_1.filter_singletons, "Seq1", ["Seq1", "Seq2"])
+
+def test_msa_filter_singletons__filter_by_nothing():
+    assert_raises(ValueError, _FILTER_MSA_1.filter_singletons, "Seq1", [])
 
 
 

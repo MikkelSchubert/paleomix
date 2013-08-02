@@ -105,16 +105,8 @@ class FilterSingletonsNode(Node):
 
     def _run(self, _config, temp):
         alignment = MSA.from_file(self._input_file)
-
         for (to_filter, groups) in self._filter_by.iteritems():
-            sequences = [alignment[group] for group in groups]
-            sequence = list(alignment[to_filter])
-            for (index, nts) in enumerate(zip(*sequences)):
-                nt = sequence[index]
-                if (nt not in "Nn-") and (nts.count(nt) == 1):
-                    sequence[index] = 'n'
-
-            alignment[to_filter] = "".join(sequence)
+            alignment = alignment.filter_singletons(to_filter, groups)
 
         temp_filename = fileutils.reroot_path(temp, self._output_file)
         with open(temp_filename, "w") as handle:
