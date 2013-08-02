@@ -1,5 +1,4 @@
 import re
-import collections
 
 class NewickError(RuntimeError):
     pass
