@@ -140,8 +140,8 @@ class Node(object):
             raise error
         except Exception, error:
             self._write_error_log(temp, error)
-            error = NodeUnhandledException(traceback.format_exc())
-            raise error
+            raise NodeUnhandledException("Error(s) running Node:\n\tTemporary directory: %s\n\n%s" \
+                                         % (repr(temp), traceback.format_exc()))
 
 
     def _setup(self, _config, _temp):
