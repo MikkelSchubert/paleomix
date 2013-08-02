@@ -215,7 +215,6 @@ _VALIDATION = {
     "Genotyping" : {
         "Default"  : OneOf("random", "samtools", case_sensitive = False),
         "Padding"  : IsInt,
-        "Indels"   : IsBoolean,
         AnyOf("MPileup", "BCFTools", "Random") : {
             IsStrWithPrefix("-") : CLI_PARAMETERS,
             },
