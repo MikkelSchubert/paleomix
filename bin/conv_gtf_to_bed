@@ -5,8 +5,8 @@
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
-# copies of the Software, and to permit persons to whom the Software is 
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
 # The above copyright notice and this permission notice shall be included in all
@@ -15,9 +15,9 @@
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
 #
@@ -29,8 +29,7 @@ from __future__ import with_statement
 from __future__ import print_function
 
 import sys
-import string
-import collections
+from optparse import OptionParser
 
 import pysam
 
@@ -158,25 +157,50 @@ def split_exons(exons, func):
             func([utr])
 
 
-def select_transcript(transcripts):
-    """Returns the transcript with the greatest number of exons."""
+def select_transcripts(options, transcripts, protein_coding):
+    """Returns the largest transcript, preferring well formed
+    transcripts (len(CDS) % 3 == 0) if the gene is protein coding."""
+    if options.keep_all_transcripts or (len(transcripts) == 1):
+        return transcripts.itervalues()
+
     def transcript_len(transcript):
-        total_len = 0
-        for exon in transcript.itervalues():
-            exon = exon["exon"]
-            total_len += exon["end"] - exon["start"] + 1
-        return total_len
-    if len(transcripts) == 1:
-        return transcripts.values()[0]
+        exon_len = cds_len = well_formed = 0
+        for records in transcript.itervalues():
+            exon_record = records["exon"]
+            exon_len   += exon_record["end"] - exon_record["start"] + 1
 
-    return max(transcripts.values(), key = transcript_len)
+            if protein_coding and ("CDS" in records):
+                cds_record = records["CDS"]
+                cds_len   += cds_record["end"] - cds_record["start"] + 1
+
+        if protein_coding and cds_len and (cds_len % 3 == 0):
+            well_formed = 1
+
+        return (well_formed, exon_len)
+    return [max(transcripts.values(), key = transcript_len)]
 
 
-def build_feature_table_for_coding_seqs(table):
+def _do_build_feature_table(options, table, features, protein_coding):
+    def add_records(records):
+        for record in records:
+            features[record["feature"]].append(record)
+
+    retained = read = 0
+    for transcripts in table.itervalues():
+        read += len(transcripts)
+        for exons in select_transcripts(options, transcripts, protein_coding):
+            retained += 1
+            add_records(get_introns(exons))
+            yield (exons, add_records)
+
+    print("\t- Processed %i transcripts, filtered %i (%.1f%%) ..." \
+              % (read, read - retained, (100.0 * (read - retained)) / read))
+
+
+def build_feature_table_for_coding_seqs(options, table):
     """Takes a table generated from a GTF file, and constructs a table for each
        feature, inferring introns and UTRs from the exons and CDSs of the input
        table."""
-
     print("Building table of features for coding sequences ...")
     features = {
         "UTR5" : [],
@@ -184,56 +208,21 @@ def build_feature_table_for_coding_seqs(table):
         "CDS" : [],
         "intron" : [] }
 
-    filtered = read = 0
-    for (gene, transcripts) in table.iteritems():
-        # Select a single transcript ...
-        exons = select_transcript(transcripts)
-
-        read += len(transcripts)
-        filtered += len(transcripts) - 1
-
-        # TODO: Validate exons (1 ... N), no jumps ...
-        #       CDS must == exon in exons 2 ... N - 1
-        # validate_exons(exons)
-
-        def add_records(records):
-            for record in records:
-                features[record["feature"]].append(record)
-
+    for (exons, add_records) in _do_build_feature_table(options, table, features, True):
         split_exons(exons, add_records)
-        add_records(get_introns(exons))
-
-    print("\t- Processed %i transcripts, filtered %i (%.1f%%) ..." \
-              % (read, filtered, 100.0 * filtered / read))
     return features
 
 
-def build_feature_table_for_noncoding_seqs(table):
+def build_feature_table_for_noncoding_seqs(options, table):
     print("Building table of features for non-coding sequences ...")
-    features = { "exon" : [], "intron" : [] }
+    features = {
+        "exon" : [],
+        "intron" : [] }
 
-    filtered = read = 0
-    for (gene, transcripts) in table.iteritems():
-        # Select a single transcript ...
-        exons = select_transcript(transcripts)
-
-        read += len(transcripts)
-        filtered += len(transcripts) - 1
-
-        # TODO: Validate exons (1 ... N), no jumps ...
-        #       CDS must == exon in exons 2 ... N - 1
-        # validate_exons(exons)
-
-        def add_records(records):
-            for record in records:
-                features[record["feature"]].append(record)
-
+    for (exons, add_records) in _do_build_feature_table(options, table, features, False):
         add_records(record["exon"] for record in exons.itervalues())
-        add_records(get_introns(exons))
-
-    print("\t- Processed %i transcripts, filtered %i (%.1f%%) ..." \
-              % (read, filtered, 100.0 * filtered / read))
     return features
+
 
 
 def write_bed(table, target):
@@ -259,25 +248,31 @@ def write_bed(table, target):
 ## Main function
 
 def main(argv):
-    if not (2 <= len(argv) <= 3):
-        print("Usage: %s <input.gtf> <output-prefix> [scaffolds.txt]" % sys.argv[0])
+    parser = OptionParser()
+    parser.add_option("--keep-all-transcripts", action = "store_true", default = False)
+    (options, args) = parser.parse_args(argv)
+
+    if not (2 <= len(args) <= 3):
+        print("Usage: %s [options] <input.gtf> <output-prefix> [scaffolds.txt]" % sys.argv[0])
         return 1
 
     scaffolds = {}
-    if len(argv) == 3:
-        scaffolds = read_scaffolds(argv[2])
+    if len(args) == 3:
+        print("Reading scaffolds information from %r" % (args[2],))
+        scaffolds = read_scaffolds(args[2])
 
-    INPUT, PREFIX = argv[:2]
+    INPUT, PREFIX = args[:2]
     with open(INPUT, "r") as gtf_file:
+        print("Reading GTF from %r" % (INPUT,))
         src_table = read_GTF(gtf_file, scaffolds)
 
     for (source, table) in src_table.iteritems():
         print("Writing tables for '%s' ..." % source)
 
         if source.startswith("protein"):
-            features = build_feature_table_for_coding_seqs(table)
+            features = build_feature_table_for_coding_seqs(options, table)
         else:
-            features = build_feature_table_for_noncoding_seqs(table)
+            features = build_feature_table_for_noncoding_seqs(options, table)
 
         for feature in features:
             fpath = "%s.%s.%s.bed" % (PREFIX, source, feature)
