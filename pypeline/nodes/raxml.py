@@ -108,7 +108,7 @@ class RAxMLReduceNode(CommandNode):
 
 class RAxMLBootstrapNode(CommandNode):
     @create_customizable_cli_parameters
-    def customize(cls, input_alignment, input_partition, output_alignment, dependencies = ()):
+    def customize(cls, input_alignment, input_partition, template, start = 0, bootstraps = 50, dependencies = ()):
         command = AtomicCmdBuilder("raxmlHPC", set_cwd = True)
 
         # Read and (in the case of empty columns) reduce input
@@ -120,32 +120,39 @@ class RAxMLBootstrapNode(CommandNode):
         # Set random seed for bootstrap generation. May be set to a fixed value to allow replicability.
         command.set_option("-b", int(random.random() * 2**31 - 1), fixed = False)
         # Generate a single bootstrap alignment (makes growing the number of bootstraps easier).
-        command.set_option("-N", 1, fixed = False)
+        command.set_option("-N", int(bootstraps), fixed = False)
 
         # Symlink to sequence and partitions, to prevent the creation of *.reduced files outside temp folder
         # In addition, it may be nessesary to remove the .reduced files if created
         command.set_option("-s", "input.alignment")
         command.set_option("-q", "input.partition")
 
-        command.set_kwargs(IN_ALIGNMENT      = input_alignment,
-                          IN_PARTITION      = input_partition,
+        bootstrap_files = {"IN_ALIGNMENT" : input_alignment,
+                           "IN_PARTITION" : input_partition,
+                           "TEMP_OUT_INF" : "RAxML_info.Pypeline",
+                           "TEMP_OUT_ALN" : "input.alignment",
+                           "TEMP_OUT_PAR" : "input.partition"}
 
-                          OUT_ALIGNMENT     = output_alignment,
-                          OUT_INFO          = fileutils.swap_ext(output_alignment, ".info"))
+        for (index, (_, filename)) in enumerate(cls._bootstraps(template, bootstraps, start)):
+            bootstrap_files["OUT_BS_%03i" % index] = filename
+        command.set_kwargs(**bootstrap_files)
 
         return {"command" : command}
 
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
-        self._input_alignment  = parameters.input_alignment
-        self._input_partition  = parameters.input_partition
-        self._output_alignment = os.path.basename(parameters.output_alignment)
+        self._input_alignment = parameters.input_alignment
+        self._input_partition = parameters.input_partition
+        self._output_template = parameters.template
+        self._bootstrap_num   = parameters.bootstraps
+        self._bootstrap_start = parameters.start
 
         CommandNode.__init__(self,
                              command      = parameters.command.finalize(),
-                             description  = "<RAxMLBootstrap: '%s' -> '%s'>" \
-                                     % (parameters.input_alignment, parameters.output_alignment),
+                             description  = "<RAxMLBootstrap: '%s' -> '%s' (%i .. %i>" \
+                                     % (parameters.input_alignment, parameters.template,
+                                        parameters.start, parameters.start + parameters.bootstraps - 1),
                              dependencies = parameters.dependencies)
 
     def _setup(self, config, temp):
@@ -154,17 +161,21 @@ class RAxMLBootstrapNode(CommandNode):
 
 
     def _teardown(self, config, temp):
-        fileutils.move_file(os.path.join(temp, "RAxML_info.Pypeline"),
-                            os.path.join(temp, fileutils.swap_ext(self._output_alignment, ".info")))
-        fileutils.move_file(os.path.join(temp, "input.alignment.BS0"),
-                            os.path.join(temp, self._output_alignment))
-
-        os.remove(os.path.join(temp, "input.alignment"))
-        os.remove(os.path.join(temp, "input.partition"))
-
+        template   = self._output_template
+        bootstraps = self._bootstrap_num
+        start      = self._bootstrap_start
+        for (src_file, dst_file) in self._bootstraps(template, bootstraps, start):
+            src_file = os.path.join(temp, src_file)
+            dst_file = fileutils.reroot_path(temp, dst_file)
+            fileutils.move_file(src_file, dst_file)
         CommandNode._teardown(self, config, temp)
 
-
+    @classmethod
+    def _bootstraps(cls, template, number, start):
+        for bootstrap in range(number):
+            src_file = "input.alignment.BS%i" % (bootstrap,)
+            dst_file = template % (bootstrap + start,)
+            yield (src_file, dst_file)
 
 
 class RAxMLRapidBSNode(CommandNode):

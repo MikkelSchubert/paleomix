@@ -30,6 +30,7 @@ from pypeline.node import MetaNode
 from pypeline.nodes.formats import FastaToPartitionedInterleavedPhyNode
 from pypeline.nodes.raxml import *
 from pypeline.nodes.mafft import MetaMAFFTNode
+from pypeline.common.fileutils import swap_ext
 
 import common
 
@@ -64,16 +65,15 @@ def build_supermatrix(options, settings, afa_ext, destination, intervals, taxa, 
                            dependencies     = supermatrix)
 
 
-def _examl_nodes(settings, destination, input_alignment, input_binary, dependencies):
-    initial_tree = os.path.join(destination, "initial.tree")
-
+def _examl_nodes(settings, input_alignment, input_binary, output_template, dependencies):
+    initial_tree = output_template % ("parsimony_tree",)
     tree = ParsimonatorNode(input_alignment = input_alignment,
                             output_tree     = initial_tree,
                             dependencies    = dependencies)
 
     return EXaMLNode(input_binary    = input_binary,
                      initial_tree    = initial_tree,
-                     output_template = os.path.join(destination, "RAxML_%s"),
+                     output_template = output_template,
                      threads         = settings["ExaML"]["Threads"],
                      dependencies    = tree)
 
@@ -97,25 +97,35 @@ def build_examl_nodes(options, settings, intervals, taxa, filtering, dependencie
     replicates = []
     for replicate_num in range(phylo["ExaML"]["Replicates"]):
         replicate_destination = os.path.join(destination, "replicate_%04i" % replicate_num)
-        replicates.append(_examl_nodes(phylo, replicate_destination, input_alignment, input_binary, binary))
+        replicate_template    = os.path.join(replicate_destination, "RAxML_%s")
+        replicates.append(_examl_nodes(phylo, input_alignment, input_binary, replicate_template, binary))
 
     bootstraps = []
-    for bootstrap_num in range(phylo["ExaML"]["Bootstraps"]):
-        bootstrap_destination = os.path.join(destination, "bootstrap_%04i" % bootstrap_num)
-        bootstrap_alignment   = os.path.join(bootstrap_destination, "bootstrap.phy")
-        bootstrap_binary      = os.path.join(bootstrap_destination, "bootstrap.binary")
+    for bootstrap_start in range(0, phylo["ExaML"]["Bootstraps"], 50):
+        bootstrap_destination = os.path.join(destination, "bootstraps")
+        bootstrap_template    = os.path.join(bootstrap_destination, "bootstrap.%04i.phy")
 
         bootstrap   = RAxMLBootstrapNode(input_alignment  = input_alignment,
                                          input_partition  = input_partition,
-                                         output_alignment = bootstrap_alignment,
+                                         template         = bootstrap_template,
+                                         bootstraps       = 50,
+                                         start            = bootstrap_start,
                                          dependencies     = supermatrix)
 
-        bs_binary   = EXaMLParserNode(input_alignment = bootstrap_alignment,
-                                      input_partition = input_partition,
-                                      output_file     = bootstrap_binary,
-                                      dependencies    = bootstrap)
+        for bootstrap_num in range(bootstrap_start, bootstrap_start + 50):
+            bootstrap_alignment   = bootstrap_template % (bootstrap_num,)
+            bootstrap_binary      = swap_ext(bootstrap_alignment, ".binary")
+            bootstrap_final       = swap_ext(bootstrap_alignment, ".%s")
+            bs_binary   = EXaMLParserNode(input_alignment = bootstrap_alignment,
+                                          input_partition = input_partition,
+                                          output_file     = bootstrap_binary,
+                                          dependencies    = bootstrap)
 
-        bootstraps.append(_examl_nodes(phylo, bootstrap_destination, bootstrap_alignment, bootstrap_binary, bs_binary))
+            bootstraps.append(_examl_nodes(settings        = phylo,
+                                           input_alignment = bootstrap_alignment,
+                                           input_binary    = bootstrap_binary,
+                                           output_template = bootstrap_final,
+                                           dependencies    = bs_binary))
 
     dependencies = []
     if replicates:
