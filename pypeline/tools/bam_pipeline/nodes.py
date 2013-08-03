@@ -185,6 +185,7 @@ class CleanupBAMNode(CommandNode):
         params.set_option("OUTPUT", "/dev/stdout", sep = "=")
         params.set_option("QUIET", "true", sep = "=")
         params.set_option("COMPRESSION_LEVEL", "0", sep = "=")
+        params.set_option("SORT_ORDER", "coordinate", sep = "=")
 
         for (tag, value) in sorted(tags.iteritems()):
             if tag not in ("PG", "Target", "PU_src", "PU_cur"):
