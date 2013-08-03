@@ -33,6 +33,9 @@ from pypeline.common.makefile import *
 from pypeline.common.fileutils import missing_files
 
 
+_READ_TYPES = set(("Single", "Collapsed", "CollapsedTruncated", "Paired"))
+
+
 def read_makefiles(filenames):
     makefiles = []
     for filename in filenames:
@@ -44,10 +47,9 @@ def read_makefiles(filenames):
     return _validate_makefiles(makefiles)
 
 
-def _IsValidPrefixName(key, name):
+def _IsValidPrefixName(_key, name):
     name = name.title()
-    _read_types = ("Single", "Collapsed", "Paired")
-    if (name in _read_types) or (name in [(s + "Reads") for s in _read_types]) or (name == "Options"):
+    if (name in _READ_TYPES) or (name in [(s + "Reads") for s in _READ_TYPES]) or (name == "Options"):
         raise MakefileError("Prefixes cannot be named '%s', please use another name." % name)
     elif (set(name) & set(string.whitespace)):
         raise MakefileError("The label must not contain white-space, and cannot be '*': %s" % name)
@@ -156,7 +158,7 @@ _VALIDATION = {
         "RescaleQualities"  : IsBoolean,
 
         # Exclude READ_TYPES from alignment/analysis
-        "ExcludeReads"   : AnyOf("Paired", "Single", "Collapsed"),
+        "ExcludeReads"   : AnyOf(*_READ_TYPES),
 
         # Features of pipeline
         "Features"       : AnyOf("Raw BAM", "Realigned BAM", "Coverage", "Summary", "mapDamage", "Depths"),
@@ -211,7 +213,7 @@ def _update_options(makefile):
         else:
             data["Options"] = options
 
-    for (target, data) in makefile["Targets"].iteritems():
+    for data in makefile["Targets"].itervalues():
         _do_update_options(makefile["Options"], data, ())
 
 
@@ -258,9 +260,9 @@ def _update_prefixes(makefile):
 
 def _update_lanes(makefile):
     prefixes = makefile["Prefixes"]
-    for (target, samples) in makefile["Targets"].iteritems():
-        for (sample, libraries) in samples.iteritems():
-            for (library, lanes) in libraries.iteritems():
+    for samples in makefile["Targets"].itervalues():
+        for libraries in samples.itervalues():
+            for lanes in libraries.itervalues():
                 options = lanes.pop("Options")
 
                 for (lane, data) in lanes.iteritems():
@@ -268,7 +270,7 @@ def _update_lanes(makefile):
                     if isinstance(data, types.StringTypes):
                         lane_type = "Raw"
                     elif isinstance(data, types.DictType):
-                        if all((key in ("Single", "Paired", "Collapsed")) for key in data):
+                        if all((key in _READ_TYPES) for key in data):
                             lane_type = "Trimmed"
                         elif all((key in prefixes) for key in data):
                             lane_type = "BAMs"
@@ -340,7 +342,7 @@ def _validate_makefiles(makefiles):
 
 def _validate_makefile_libraries(makefile):
     libraries = collections.defaultdict(set)
-    for (target, sample, library, barcode, record) in _iterate_over_records(makefile):
+    for (target, sample, library, _barcode, record) in _iterate_over_records(makefile):
         libraries[(target, library)].add(sample)
 
     for ((target, library), samples) in libraries.iteritems():
@@ -361,7 +363,7 @@ def _validate_makefiles_duplicate_files(makefiles):
                 current_filenames.extend(record["Data"].values())
 
             for realpath in map(os.path.realpath, current_filenames):
-                    filenames[realpath].append((target, sample, library, barcode))
+                filenames[realpath].append((target, sample, library, barcode))
 
     has_overlap = {}
     for (filename, records) in filenames.iteritems():
