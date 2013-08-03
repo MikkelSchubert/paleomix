@@ -49,7 +49,8 @@ class FastaToPAMLPhyNode(Node):
 
     def _run(self, _config, temp):
         msa = MSA.from_file(self._input_file)
-        msa = msa.exclude(self._excluded)
+        if self._excluded:
+            msa = msa.exclude(self._excluded)
 
         lines = []
         lines.append("  %i %i" % (len(msa), msa.seqlen()))

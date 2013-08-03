@@ -68,7 +68,8 @@ class FastaToPartitionedInterleavedPhyNode(Node):
         for filename in sorted(self._infiles):
             split_by = self._infiles[filename].get("partition_by", self._part_by)
             for (key, msa) in sorted(MSA.from_file(filename).split(split_by).items()):
-                msa = msa.exclude(self._excluded)
+                if self._excluded:
+                    msa = msa.exclude(self._excluded)
                 msas.append(("%s_%s" % (self._infiles[filename]["name"], key), msa))
 
         msa = MSA.join(*(msa for (_, msa) in msas))
