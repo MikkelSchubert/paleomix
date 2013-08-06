@@ -160,11 +160,13 @@ def split_exons(exons, func):
 def select_transcripts(options, transcripts, protein_coding):
     """Returns the largest transcript, preferring well formed
     transcripts (len(CDS) % 3 == 0) if the gene is protein coding."""
-    if options.keep_all_transcripts or (len(transcripts) == 1):
+    if options.keep_all_transcripts and options.keep_malformed_proteins:
         return transcripts.itervalues()
 
-    def transcript_len(transcript):
-        exon_len = cds_len = well_formed = 0
+    selection = []
+    for transcript in transcripts.itervalues():
+        well_formed = True
+        exon_len = cds_len = 0
         for records in transcript.itervalues():
             exon_record = records["exon"]
             exon_len   += exon_record["end"] - exon_record["start"] + 1
@@ -173,11 +175,16 @@ def select_transcripts(options, transcripts, protein_coding):
                 cds_record = records["CDS"]
                 cds_len   += cds_record["end"] - cds_record["start"] + 1
 
-        if protein_coding and cds_len and (cds_len % 3 == 0):
-            well_formed = 1
+        if protein_coding:
+            well_formed = (cds_len and (cds_len % 3 == 0))
 
-        return (well_formed, exon_len)
-    return [max(transcripts.values(), key = transcript_len)]
+        if well_formed or options.keep_malformed_proteins:
+            selection.append(((well_formed, exon_len), transcript))
+
+    if options.keep_all_transcripts or not selection:
+        return [item[-1] for item in selection]
+
+    return [max(selection, key = lambda item: item[0])[-1]]
 
 
 def _do_build_feature_table(options, table, features, protein_coding):
@@ -250,6 +257,7 @@ def write_bed(table, target):
 def main(argv):
     parser = OptionParser()
     parser.add_option("--keep-all-transcripts", action = "store_true", default = False)
+    parser.add_option("--keep-malformed-proteins", action = "store_true", default = False)
     (options, args) = parser.parse_args(argv)
 
     if not (2 <= len(args) <= 3):
