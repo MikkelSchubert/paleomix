@@ -28,7 +28,7 @@ _ASSERTS = ['equal', 'not_equal',
             'is_none', 'is_not_none',
             'is_instance', 'is_not_instance',
             'true', 'false',
-            'raises']
+            'raises', 'raises_regexp']
 
 def nose_tools_transform(module):
     if module.name == 'nose.tools':
