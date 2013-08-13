@@ -125,4 +125,4 @@ def get_ml_phenotype(vcf):
 
 def get_format(vcf, sample = 0):
     return dict(zip(vcf.format.split(":"),
-                    vcf[0].split(":")))
+                    vcf[sample].split(":")))
