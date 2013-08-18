@@ -36,6 +36,7 @@ import pypeline.common.versions as versions
 _PICARD_VERSION_CACHE = {}
 def _picard_version(jar_file):
     if jar_file not in _PICARD_VERSION_CACHE:
+        # FIXME: Use AtomicJavaCmdBuilder ... remove need for config param
         requirement = versions.Requirement(call   = ("java", "-client", "-jar", jar_file, "--version"),
                                            search = r"^(\d+)\.(\d+)",
                                            checks = versions.GE(1, 82))
