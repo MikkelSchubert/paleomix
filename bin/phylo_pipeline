@@ -88,6 +88,8 @@ def main(argv):
     import pypeline.tools.phylo_pipeline.parts.phylo as phylo
     import pypeline.ui as ui
     from pypeline import Pypeline
+    from pypeline.common.makefile import MakefileError
+
 
     commands = {
         "genotype"        : genotype.chain,
@@ -106,7 +108,13 @@ def main(argv):
     if chain == "mkfile":
         return pypeline.tools.phylo_pipeline.mkfile.main(argv[1:])
 
-    options, makefiles = common.parse_options(argv)
+    try:
+        options, makefiles = common.parse_options(argv)
+    except MakefileError, error:
+        ui.print_err("Error reading makefiles:\n%s" % (error))
+        return 1
+
+
     if not options:
         return 1
 
