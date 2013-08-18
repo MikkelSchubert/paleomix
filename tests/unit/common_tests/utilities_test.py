@@ -23,7 +23,10 @@
 import random
 import pickle
 import nose.tools
-from nose.tools import assert_equal
+from nose.tools import \
+     assert_equal, \
+     assert_raises
+
 
 import pypeline.common.utilities as utils
 
@@ -389,3 +392,45 @@ def test_fast_pickle_test__unpicklable_2():
         return None # pragma: no coverage
     utils.fast_pickle_test(_func)
 
+
+
+
+################################################################################
+################################################################################
+## fill_dict
+
+def test_fill_dict__empty_dicts():
+    result = utils.fill_dict({}, {})
+    assert_equal(result, {})
+
+def test_fill_dict__filling_empty_dict():
+    source   = {"a" : 1, "b" : {"c" : 2, "d" : 3}}
+    expected = {"a" : 1, "b" : {"c" : 2, "d" : 3}}
+    result = utils.fill_dict({}, source)
+    assert_equal(result, expected)
+
+def test_fill_dict__filling_full_dict():
+    source       = {"a" : 1, "b" : {"c" : 2, "d" : 3}}
+    destination  = {"a" : 2, "b" : {"c" : 3, "d" : 4}}
+    expected     = {"a" : 2, "b" : {"c" : 3, "d" : 4}}
+    result       = utils.fill_dict(destination, source)
+    assert_equal(result, expected)
+
+def test_fill_dict__destination_not_modified():
+    source      = {"a" : 1, "b" : {"c" : 2, "d" : 3}}
+    destination = {"b" : {"d" : 0}}
+    _result     = utils.fill_dict(destination, source)
+    assert_equal(destination, {"b" : {"d" : 0}})
+
+def test_fill_dict__source_not_modified():
+    expected    = {"a" : 1, "b" : {"c" : 2, "d" : 3}}
+    source      = {"a" : 1, "b" : {"c" : 2, "d" : 3}}
+    destination = {"b" : {"d" : 0}}
+    _result     = utils.fill_dict(destination, source)
+    assert_equal(source, expected)
+
+def test_fill_dict__destination_must_be_dict():
+    assert_raises(TypeError, utils.fill_dict, [], {})
+
+def test_fill_dict__source_must_be_dict():
+    assert_raises(TypeError, utils.fill_dict, {}, [])

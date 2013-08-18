@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import copy
 import types
 import pickle
 import cPickle
@@ -171,3 +172,20 @@ def fast_pickle_test(obj):
     except (TypeError, cPickle.PicklingError):
         pickle.dumps(obj)
         assert False # pragma: no coverage
+
+
+def fill_dict(destination, source):
+    """Returns a copy of 'destination' after setting missing key-
+    pairs with copies of those of 'source' recursively."""
+    if not isinstance(destination, dict) or not isinstance(source, dict):
+        raise TypeError("Non-dictionary parameters in 'fill_dict'")
+
+    def _fill_dict(cur_dest, cur_src):
+        for key in cur_src:
+            if isinstance(cur_src[key], dict) and isinstance(cur_dest.get(key), dict):
+                _fill_dict(cur_dest[key], cur_src[key])
+            elif key not in cur_dest:
+                cur_dest[key] = cur_src[key]
+        return cur_dest
+
+    return _fill_dict(copy.deepcopy(destination), copy.deepcopy(source))
