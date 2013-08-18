@@ -21,12 +21,10 @@
 # SOFTWARE.
 #
 import os
-import pwd
 import sys
-import copy
+import glob
 import string
 import optparse
-import collections
 import ConfigParser
 
 import pypeline
@@ -34,11 +32,11 @@ import pypeline.ui as ui
 
 from pypeline.node import MetaNode
 from pypeline.nodes.picard import BuildSequenceDictNode
-from pypeline.nodes.samtools import FastaIndexNode, BAMIndexNode
+from pypeline.nodes.samtools import FastaIndexNode
 
-from pypeline.common.fileutils import swap_ext, add_postfix
-
-from pypeline.tools.bam_pipeline.makefile import *
+from pypeline.tools.bam_pipeline.makefile import \
+     read_makefiles, \
+     MakefileError
 from pypeline.tools.bam_pipeline.nodes import MapDamageNode
 
 import pypeline.tools.bam_pipeline.parts as parts
