@@ -27,7 +27,7 @@ from pypeline.node import MetaNode
 from pypeline.common.fileutils import swap_ext
 from pypeline.nodes.coverage import CoverageNode, MergeCoverageNode
 from pypeline.nodes.depthhist import DepthHistogramNode
-from summary import SummaryTableNode
+from pypeline.tools.bam_pipeline.parts.summary import SummaryTableNode
 
 
 def add_statistics_nodes(config, makefile, target):
@@ -37,16 +37,17 @@ def add_statistics_nodes(config, makefile, target):
 
     nodes = []
     if "Depths" in features:
-        nodes.append(_build_depth(config, makefile, target))
+        nodes.append(_build_depth(config, target))
 
     if "Summary" in features or "Coverage" in features:
-        coverage = _build_coverage(config, makefile, target, ("Summary" in features))
+        coverage = _build_coverage(config, target, ("Summary" in features))
         if "Summary" in features:
+            coverage_by_label = _build_coverage_nodes(target, use_label = True)
             summary_node = SummaryTableNode(config         = config,
                                             makefile       = makefile,
                                             target         = target,
-                                            cov_for_lanes  = coverage["Lanes"],
-                                            cov_for_libs   = coverage["Libraries"],
+                                            cov_for_lanes  = coverage_by_label["Lanes"],
+                                            cov_for_libs   = coverage_by_label["Libraries"],
                                             dependencies   = coverage["Node"])
             nodes.append(summary_node)
         elif "Coverage" in features:
@@ -55,7 +56,7 @@ def add_statistics_nodes(config, makefile, target):
     target.add_extra_nodes("Statistics", nodes)
 
 
-def _build_depth(config, makefile, target):
+def _build_depth(config, target):
     nodes = []
     for prefix in target.prefixes:
         input_files = {}
@@ -81,19 +82,19 @@ def _build_depth(config, makefile, target):
 
 def _aggregate_for_prefix(cov, prefix, aoi_name = None, into = None):
     prefix = _get_prefix_label(prefix, aoi_name)
-    results = {} if into is None else {}
+    results = {} if into is None else into
     for (key, files_and_nodes) in cov.iteritems():
         if prefix is None or (key[0] == prefix):
             results.update(files_and_nodes)
     return results
 
 
-def _build_coverage(config, makefile, target, make_summary):
+def _build_coverage(config, target, make_summary):
     merged_nodes = []
     coverage = _build_coverage_nodes(target)
     for prefix in target.prefixes:
-        for (aoi_name, aoi_filename) in _get_aoi(prefix):
-            label = _get_prefix_label(prefix.label, aoi_name)
+        for (aoi_name, _) in _get_aoi(prefix):
+            label = _get_prefix_label(prefix.name, aoi_name)
             postfix = prefix.name if (not aoi_name) else ("%s.%s" % (prefix.name, aoi_name))
 
             files_and_nodes = _aggregate_for_prefix(coverage["Libraries"], label)
@@ -121,14 +122,15 @@ def _build_coverage(config, makefile, target, make_summary):
     return coverage
 
 
-def _build_coverage_nodes(target):
+def _build_coverage_nodes(target, use_label = False):
     coverage = {"Lanes"     : collections.defaultdict(dict),
                 "Libraries" : collections.defaultdict(dict)}
 
     cache = {}
     for prefix in target.prefixes:
         for (aoi_name, aoi_filename) in _get_aoi(prefix):
-            prefix_label = prefix.label if (not aoi_name) else ("%s:%s" % (prefix.label, aoi_name))
+            prefix_label = prefix.label if use_label else prefix.name
+            prefix_label = _get_prefix_label(prefix_label, aoi_name)
 
             for sample in prefix.samples:
                 for library in sample.libraries:
