@@ -1,0 +1,12 @@
+Defaults:
+  --min-mapq-bias:         0.001
+  --min-end-distance-bias: 0.001
+
+VCF_Files:
+  "path/to/file1.vcf":
+    Output_File: "path/to/output1.vcf"
+    Options:
+      --min-strand-bias: 0.005
+      --min-baseq-bias:  0.005
+  "path/to/file2.vcf":
+    Output_File: "path/to/output1.vcf"

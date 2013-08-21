@@ -29,8 +29,28 @@ import itertools
 import collections
 
 import pypeline.tools.bam_pipeline.paths as paths
-from pypeline.common.makefile import *
+from pypeline.common.utilities import fill_dict
 from pypeline.common.fileutils import missing_files
+from pypeline.common.makefile import \
+     MakefileError, \
+     WithoutDefaults, \
+     read_makefile, \
+     IsInt, \
+     IsUnsignedInt, \
+     IsFloat, \
+     IsStr, \
+     IsNone, \
+     IsBoolean, \
+     And, \
+     Or, \
+     Not, \
+     ValueIn, \
+     ValuesIntersect, \
+     ValuesSubsetOf, \
+     StringIn, \
+     StringStartsWith, \
+     IsListOf, \
+     IsDictOf
 
 
 _READ_TYPES = set(("Single", "Collapsed", "CollapsedTruncated", "Paired"))
@@ -39,7 +59,7 @@ _READ_TYPES = set(("Single", "Collapsed", "CollapsedTruncated", "Paired"))
 def read_makefiles(filenames):
     makefiles = []
     for filename in filenames:
-        makefile = read_makefile(filename, _DEFAULTS, _VALIDATION)
+        makefile = read_makefile(filename, _VALIDATION)
         makefile = _mangle_makefile(makefile)
 
         makefiles.append(makefile)
@@ -47,127 +67,78 @@ def read_makefiles(filenames):
     return _validate_makefiles(makefiles)
 
 
-def _IsValidPrefixName(_key, name):
-    name = name.title()
-    if (name in _READ_TYPES) or (name in [(s + "Reads") for s in _READ_TYPES]) or (name == "Options"):
-        raise MakefileError("Prefixes cannot be named '%s', please use another name." % name)
-    elif (set(name) & set(string.whitespace)):
-        raise MakefileError("The label must not contain white-space, and cannot be '*': %s" % name)
-    elif (set(name) & set(string.whitespace)):
-        raise MakefileError("Prefix name must not contain whitespace:\n\t- Prefix: %s" % name)
+_VALID_PREFIX_NAME = \
+  And(IsStr(),
+      Not(Or(StringIn(["*", "Options"] + [(s + "Reads") for s in _READ_TYPES]),
+             ValuesIntersect(string.whitespace, description = "contains whitespace"))))
 
 
-def _IsValidOptions(path, value):
-    validate_makefile(value, _VALIDATION["Options"], path)
+_VALIDATION_OPTIONS = {
+    # Sequencing platform, used to tag read-groups.
+    "Platform" : StringIn(("CAPILLARY", "LS454", "ILLUMINA", "SOLID", "HELICOS", "IONTORRENT", "PACBIO"),
+                          default = "ILLUMINA"),
+    # Offset for quality scores in FASTQ files.
+    "QualityOffset" : ValueIn((33, 64, "Solexa"),
+                              default = 33),
+    # Split a lane into multiple entries, one for each (pair of) file(s)
+    "SplitLanesByFilenames"  : Or(IsBoolean, IsListOf(IsStr),
+                                  default = False),
+    # Format to use when compressing FASTQ files ("gz" or "bz2")
+    "CompressionFormat" : ValueIn(("gz", "bz2"),
+                                  default = "gz"),
 
-    if "Features" in value:
-        raise MakefileError("Features can only be specified at the top level, not at %s!" % ":".join(path))
-
-
-_DEFAULTS = {
-    "Options" : {
-        # Sequencing platform, used to tag read-groups.
-        "Platform" : "Illumina",
-        # Offset for quality scores in FASTQ files.
-        "QualityOffset" : 33,
-        # Split a lane into multiple entries, one for each (pair of) file(s)
-        "SplitLanesByFilenames" : False,
-        # Format to use when compressing FASTQ files ("gz" or "bz2")
-        "CompressionFormat" : "gz",
-
-        "AdapterRemoval" : {
-            "Version" : "v1.4",
+    "AdapterRemoval" : {
+        "Version" : ValueIn(("v1.4", "v1.5+"),
+                            default = "v1.4"),
+        "--pcr1"  : IsStr,
+        "--pcr2"  : IsStr,
         },
 
-        # Which aliger/mapper to use (BWA/Bowtie2)
-        "Aligners" : {
-            "Program" : "BWA",
-            "BWA" : {
-                # Minimum mapping quality (PHREAD) of reads to retain
-                "MinQuality" : 0,
-                # Use seed region during mapping
-                # Verbose name for command-line option "-l 65535"
-                "UseSeed"    : True,
-            },
-            "Bowtie2" : {
-                # Minimum mapping quality (PHREAD) of reads to retain
-                "MinQuality"  : 0,
-            },
+    # Which aliger/mapper to use (BWA/Bowtie2)
+    "Aligners" : {
+        "Program" : ValueIn(("BWA", "Bowtie2"),
+                            default = "BWA"),
+        "BWA" : {
+            # Minimum mapping quality (PHREAD) of reads to retain
+            "MinQuality" : IsUnsignedInt(default = 0),
+            # Use seed region during mapping
+            # Verbose name for command-line option "-l 65535"
+            "UseSeed"    : IsBoolean(default = True),
+            # Any number of user specific options
+            StringStartsWith("-") : Or(IsListOf(IsStr, IsInt, IsFloat),
+                                       Or(IsStr, IsInt, IsFloat, IsNone)),
         },
-
-        # Contains PCR duplicates, filter if true
-        "PCRDuplicates"    : True,
-        # Qualities should be rescaled using mapDamage
-        "RescaleQualities" : False,
-
-        # Exclude READ_TYPES from alignment/analysis
-        "ExcludeReads"   : [],
-
-        # Features of pipeline
-        "Features"       : ["Realigned BAM",
-                            "mapDamage",
-                            "Coverage",
-                            "Summary",
-                            "Depths"]
+        "Bowtie2" : {
+            # Minimum mapping quality (PHREAD) of reads to retain
+            "MinQuality" : IsUnsignedInt(default = 0),
+            # Any number of user specific options
+            StringStartsWith("-") : Or(IsListOf(IsStr, IsInt, IsFloat),
+                                       Or(IsStr, IsInt, IsFloat, IsNone)),
+        },
     },
+
+    # Contains PCR duplicates, filter if true
+    "PCRDuplicates"     : IsBoolean(default = True),
+    # Qualities should be rescaled using mapDamage
+    "RescaleQualities"  : IsBoolean(default = False),
+
+    # Exclude READ_TYPES from alignment/analysis
+    "ExcludeReads"   : ValuesSubsetOf(_READ_TYPES,
+                                      default = []),
+
+    # Features of pipeline
+    "Features"       : ValuesSubsetOf(("Raw BAM", "Realigned BAM", "Coverage", "Summary", "mapDamage", "Depths"),
+                                      default = ["Realigned BAM", "Coverage", "Summary", "mapDamage", "Depths"]),
 }
 
 
 _VALIDATION = {
-    "Options" : {
-        # Sequencing platform, used to tag read-groups.
-        "Platform" : OneOf("CAPILLARY", "LS454", "ILLUMINA", "SOLID", "HELICOS", "IONTORRENT", "PACBIO",  case_sensitive = False),
-        # Offset for quality scores in FASTQ files.
-        "QualityOffset" : OneOf(33, 64, "Solexa"),
-        # Split a lane into multiple entries, one for each (pair of) file(s)
-        "SplitLanesByFilenames"  : Or(IsBoolean, IsListOf(IsStr)),
-        # Format to use when compressing FASTQ files ("gz" or "bz2")
-        "CompressionFormat" : OneOf("gz", "bz2"),
-
-        "AdapterRemoval" : {
-            "Version" : OneOf("v1.4", "v1.5+"),
-            "--pcr1"  : IsStr,
-            "--pcr2"  : IsStr,
-        },
-
-        # Which aliger/mapper to use (BWA/Bowtie2)
-        "Aligners" : {
-            "Program" : OneOf("BWA", "Bowtie2"),
-            "BWA" : {
-                # Minimum mapping quality (PHREAD) of reads to retain
-                "MinQuality" : And(IsInt, IsInRange(0, float("Inf"))),
-                # Use seed region during mapping
-                # Verbose name for command-line option "-l 65535"
-                "UseSeed"    : IsBoolean,
-                # Any number of user specific options
-                IsStrWithPrefix("-") : Or(IsListOf(IsStr, IsInt, IsFloat),
-                                          Or(IsStr, IsInt, IsFloat, IsNone)),
-            },
-            "Bowtie2" : {
-                # Minimum mapping quality (PHREAD) of reads to retain
-                "MinQuality" : And(IsInt, IsInRange(0, float("Inf"))),
-                # Any number of user specific options
-                IsStrWithPrefix("-") : Or(IsListOf(IsStr, IsInt, IsFloat),
-                                          Or(IsStr, IsInt, IsFloat, IsNone)),
-            },
-        },
-
-        # Contains PCR duplicates, filter if true
-        "PCRDuplicates"     : IsBoolean,
-        # Qualities should be rescaled using mapDamage
-        "RescaleQualities"  : IsBoolean,
-
-        # Exclude READ_TYPES from alignment/analysis
-        "ExcludeReads"   : AnyOf(*_READ_TYPES),
-
-        # Features of pipeline
-        "Features"       : AnyOf("Raw BAM", "Realigned BAM", "Coverage", "Summary", "mapDamage", "Depths"),
-    },
+    "Options"  : _VALIDATION_OPTIONS,
 
     "Prefixes" : {
-        _IsValidPrefixName : {
+        _VALID_PREFIX_NAME : {
             "Path"    : IsStr,
-            "Label"   : OneOf("nuclear", "mitochondrial"),
+            "Label"   : ValueIn(("nuclear", "mitochondrial")),
             "AreasOfInterest" : IsDictOf(IsStr, IsStr),
         },
     },
@@ -176,9 +147,9 @@ _VALIDATION = {
         IsStr : { # Sample
             IsStr : { # Library
                 IsStr     : Or(IsStr, IsDictOf(IsStr, IsStr)),
-                "Options" : _IsValidOptions,
+                "Options" : WithoutDefaults(_VALIDATION_OPTIONS),
             },
-        "Options" : _IsValidOptions,
+        "Options" : WithoutDefaults(_VALIDATION_OPTIONS),
         },
     },
 }
@@ -204,7 +175,13 @@ def _update_options(makefile):
     def _do_update_options(options, data, path):
         options = copy.deepcopy(options)
         if "Options" in data:
-            options = apply_defaults(data.pop("Options"), options, ())
+            if "Features" in data["Options"]:
+                raise MakefileError("Features may only be specified at root level, not at %r" \
+                                    % (":".join(path),))
+
+            # Fill out missing values using those of prior levels
+            options = fill_dict(destination = data.pop("Options"),
+                                source      = options)
 
         if len(path) < 2:
             for key in data:
@@ -228,7 +205,7 @@ def _update_prefixes(makefile):
             records = []
             for fname in glob.glob(filename):
                 name = os.path.basename(fname).split(".")[0]
-                _IsValidPrefixName(("Prefixes", name), name)
+                _VALID_PREFIX_NAME(("Prefixes", name), name)
                 dd = copy.copy(values)
                 dd["Path"] = fname
 
@@ -342,7 +319,7 @@ def _validate_makefiles(makefiles):
 
 def _validate_makefile_libraries(makefile):
     libraries = collections.defaultdict(set)
-    for (target, sample, library, _barcode, record) in _iterate_over_records(makefile):
+    for (target, sample, library, _barcode, _) in _iterate_over_records(makefile):
         libraries[(target, library)].add(sample)
 
     for ((target, library), samples) in libraries.iteritems():

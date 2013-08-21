@@ -20,23 +20,23 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import types
-
 from pypeline.common.makefile import \
      read_makefile, \
-     validate_makefile, \
      MakefileError, \
      IsStr, \
      IsDictOf, \
      IsListOf, \
-     AnyOf, \
-     OneOf, \
+     StringIn, \
      IsInt, \
+     IsNone, \
      IsUnsignedInt, \
      IsBoolean, \
-     IsStrWithPrefix, \
+     StringStartsWith, \
+     StringEndsWith, \
      CLI_PARAMETERS, \
-     Or
+     And, \
+     Or, \
+     Not
 
 class MAKEFileError(RuntimeError):
     pass
@@ -45,7 +45,7 @@ class MAKEFileError(RuntimeError):
 def read_makefiles(filenames):
     makefiles = []
     for filename in filenames:
-        makefile = read_makefile(filename, _DEFAULTS, _VALIDATION)
+        makefile = read_makefile(filename, _VALIDATION)
         makefile = makefile["Makefile"] # Not using extra stats
         makefile = _mangle_makefile(makefile)
 
@@ -72,19 +72,20 @@ def _mangle_makefile(mkfile):
     return mkfile
 
 
-
-
 def _collapse_taxa(mkfile):
-    groups = {}
+    groups, taxa = {}, set()
     def _collect_taxa(taxa_dict, path = ()):
         current_taxa = {}
         for (key, subdd) in taxa_dict.iteritems():
             if key.startswith("<") and key.endswith(">"):
                 key = key.lstrip("<").rstrip(">")
                 current_taxa.update(_collect_taxa(subdd, path + (key,)))
-            else:
+            elif key not in taxa:
+                taxa.add(key)
                 subdd["Name"] = key
                 current_taxa[key] = subdd
+            else:
+                raise MakefileError("Duplicate taxa-name: %r" % (key,))
 
         groups[path] = current_taxa
         return current_taxa
@@ -127,76 +128,28 @@ def _update_filtering(mkfile):
     mkfile["Project"]["Filter Singletons"] = filtering
 
 
-def _validate_taxa(path, taxa_dict, taxa = None):
-    if taxa is None:
-        taxa = set()
-
-    if not isinstance(taxa_dict, types.DictType):
-        raise MAKEFileError("Expected dicts in Taxa tree for '%s', found %s: %r" \
-                                % (path, taxa_dict.__class__.__name__, taxa_dict))
-
-    for (key, subdd) in taxa_dict.iteritems():
-        if key.startswith("<") and key.endswith(">"):
-            _validate_taxa(path + (key,), subdd, taxa)
-        elif key.lower() not in taxa:
-            taxa.add(key.lower())
-            validate_makefile(subdd, _TAXA_VALIDATION, path + (key,))
-        else:
-            raise MAKEFileError("Taxa specified multiple times: %s" % key)
-
-
-_DEFAULTS = {
-    "Project" : {
-        "Title" : "Untitled",
-        "Taxa"  : {
-            },
-        "Intervals" : {
-            },
-        "Filter Singletons" : {
-            },
-        },
-    "Genotyping" : {
-        "Default"    : "SAMTools",
-        "Padding"    : 5,
-        "MPileup"    : {
-        },
-        "BCFTools"   : {
-        },
-        "Random"     : {
-        },
-        "VCF_Filter" : {
-            "MaxReadDepth" : 0,
-            "Mappability"  : "",
-            },
-        },
-    "MSAlignment" : {
-        "Enabled" : True,
-        "Default" : "mafft",
-        "MAFFT" : {
-            "Algorithm" : "auto",
-            },
-        },
-    "Phylogenetic Inference" : {
-        "Default" : "ExaML",
-        "ExcludeGroups" : [],
-        "ExaML" : {
-            "Threads"    : 1,
-            "Bootstraps" : 100,
-            "Replicates" : 1,
-            "Model"      : "gamma",
+# Recursive definition of taxa tree
+_VALIDATION_SUBTAXA_KEY = And(StringStartsWith("<"),
+                              StringEndsWith(">"))
+_VALIDATION_TAXA_KEY    = And(IsStr, Not(_VALIDATION_SUBTAXA_KEY))
+_VALIDATION_TAXA = {
+    _VALIDATION_TAXA_KEY : {
+        "Genotyping Method" : StringIn(("reference sequence", "random sampling", "samtools")),
+        "Species Name"      : IsStr,
+        "Common Name"       : IsStr,
+        "Gender"            : IsStr,
+        "Genomes"           : {
+            IsStr             : IsStr,
         }
-    },
-    "PAML" : {
-        "codeml" : {
-        },
-    },
+    }
 }
+_VALIDATION_TAXA[_VALIDATION_SUBTAXA_KEY] = _VALIDATION_TAXA
 
 
 _VALIDATION = {
     "Project" : {
-        "Title" : IsStr,
-        "Taxa" : _validate_taxa,
+        "Title" : IsStr(default = "Untitled"),
+        "Taxa" : _VALIDATION_TAXA,
         "Intervals" : {
             IsStr : {
                 "Genome"         : IsStr,
@@ -213,32 +166,45 @@ _VALIDATION = {
             },
         },
     "Genotyping" : {
-        "Default"  : OneOf("random", "samtools", case_sensitive = False),
-        "Padding"  : IsInt,
-        AnyOf("MPileup", "BCFTools", "Random") : {
-            IsStrWithPrefix("-") : CLI_PARAMETERS,
+        "Default"  : StringIn(("random", "samtools"),
+                              default = "samtools"),
+        "Padding"  : IsInt(default = 5),
+        "MPileup"  : {
+            StringStartsWith("-") : CLI_PARAMETERS,
+            },
+        "BCFTools" : {
+            StringStartsWith("-") : CLI_PARAMETERS,
+            },
+        "Random"   : {
+            StringStartsWith("-") : CLI_PARAMETERS,
             },
         "VCF_Filter" : {
-            "Mappability"   : IsStr,
-            "MaxReadDepth"  : Or(IsUnsignedInt, IsDictOf(IsStr, IsInt)),
-            IsStrWithPrefix("-") : CLI_PARAMETERS,
+            "Mappability"   : Or(IsStr, IsNone,
+                                 default = None),
+            "MaxReadDepth"  : Or(IsUnsignedInt, IsDictOf(IsStr, IsInt),
+                                 default = 0),
+            StringStartsWith("-") : CLI_PARAMETERS,
             },
         },
     "MSAlignment" : {
-        "Enabled"   : IsBoolean,
-        "Default"   : AnyOf("mafft", case_sensitive = False),
+        "Enabled"   : IsBoolean(default = True),
+        "Default"   : StringIn(("mafft",),
+                               default = "mafft"),
         "MAFFT" : {
-            "Algorithm" : AnyOf("auto", "g-ins-i", case_sensitive = False), # TODO
+            "Algorithm" : StringIn(("auto", "g-ins-i"), # TODO
+                                   default = "auto")
             },
         },
     "Phylogenetic Inference" : {
-        "ExcludeGroups" : IsListOf(IsStr),
-        "Default" : AnyOf("raxml", "raxml-light", "examl", case_sensitive = False),
+        "ExcludeGroups" : IsListOf(IsStr, default = []),
+        "Default" : StringIn(("raxml", "raxml-light", "examl"),
+                             default = "examl"),
         "ExaML" : {
-            "Threads"    : IsInt,
-            "Bootstraps" : IsUnsignedInt,
-            "Replicates" : IsUnsignedInt,
-            "Model"      : AnyOf("gamma", case_sensitive = False), # TODO
+            "Threads"    : IsInt(default = 1),
+            "Bootstraps" : IsUnsignedInt(default = 100),
+            "Replicates" : IsUnsignedInt(default = 1),
+            "Model"      : StringIn(("gamma",), # TODO
+                                    default = "gamma"),
             "Outgroup"   : IsStr,
         }
     },
@@ -250,15 +216,3 @@ _VALIDATION = {
         },
     },
 }
-
-
-_TAXA_VALIDATION = {
-    "Genotyping Method" : OneOf("reference sequence", "random sampling", "samtools", case_sensitive = False),
-    "Species Name"      : IsStr,
-    "Common Name"       : IsStr,
-    "Gender"            : IsStr,
-    "Genomes"           : {
-        IsStr             : IsStr,
-        }
-    }
-
