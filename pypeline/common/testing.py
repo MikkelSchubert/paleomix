@@ -21,6 +21,7 @@
 # SOFTWARE.
 #
 import os
+import re
 import sys
 import time
 import shutil
@@ -36,6 +37,26 @@ try:
 except ImportError:
     def assert_in(item, lst):
         assert item in lst
+
+# Simple support for assert_is in Python v2.6
+try:
+    from nose.tools import assert_is # pylint: disable=W0611
+except ImportError:
+    def assert_is(item, lst):
+        assert item is lst
+
+# Simple support for assert_raises_regexp in Python v2.6
+try:
+    from nose.tools import assert_raises_regexp # pylint: disable=W0611
+except ImportError:
+    def assert_raises_regexp(error_type, regexp, func, *args, **kwargs):
+        try:
+            func(*args, **kwargs)
+            assert False, "%s not raised" % (error_type.__name__,)
+        except error_type, error:
+            assert re.search(regexp, str(error)), "%r not found in error-message %r" % \
+              (regexp, str(error))
+
 
 def assert_list_equal(iter_a, iter_b):
     """Compare two values, after first converting them to lists.
