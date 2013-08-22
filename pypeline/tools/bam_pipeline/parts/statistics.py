@@ -116,8 +116,8 @@ def _build_coverage(config, target, make_summary):
     final_nodes   = MetaNode(description = "Final coverage",
                              subnodes    = merged_nodes)
 
-    coverage["Node"] = MetaNode(description = "Coverage",
-                                subnodes    = (partial_nodes, final_nodes))
+    coverage["Node"] = MetaNode(description  = "Coverage",
+                                dependencies = (partial_nodes, final_nodes))
 
     return coverage
 
