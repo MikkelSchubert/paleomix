@@ -147,10 +147,14 @@ _VALIDATION = {
         IsStr : { # Sample
             IsStr : { # Library
                 IsStr     : Or(IsStr, IsDictOf(IsStr, IsStr)),
+
                 "Options" : WithoutDefaults(_VALIDATION_OPTIONS),
             },
-        "Options" : WithoutDefaults(_VALIDATION_OPTIONS),
+
+            "Options" : WithoutDefaults(_VALIDATION_OPTIONS),
         },
+
+        "Options" : WithoutDefaults(_VALIDATION_OPTIONS),
     },
 }
 
