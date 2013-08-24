@@ -36,11 +36,17 @@ from pypeline.atomiccmd.builder import \
      use_customizable_cli_parameters, \
      AtomicCmdBuilder, \
      apply_options
-from pypeline.nodes.samtools import GenotypeNode, TabixIndexNode, FastaIndexNode, MPileupNode
+from pypeline.nodes.samtools import \
+     GenotypeNode, \
+     TabixIndexNode, \
+     FastaIndexNode, \
+     MPileupNode
 from pypeline.nodes.bedtools import SlopBedNode
 
 
-from pypeline.common.fileutils import move_file
+from pypeline.common.fileutils import \
+     move_file, \
+     add_postfix
 from pypeline.common.formats.fasta import FASTA
 import pypeline.common.text as text
 import pypeline.common.sequences as sequences
@@ -216,20 +222,36 @@ class ExtractReference(Node):
         move_file(temp_file, self._outfile)
 
 
-def build_interval_nodes(options, taxa, interval, padding, dependencies):
+_FAI_CACHE = {}
+def build_fasta_index_node(reference, dependencies):
+    if reference not in _FAI_CACHE:
+        _FAI_CACHE[reference] = \
+          FastaIndexNode(infile       = reference,
+                         dependencies = dependencies)
+    return _FAI_CACHE[reference]
+
+
+_BED_CACHE = {}
+def build_interval_nodes(options, interval, padding, dependencies):
     prefix = "{Genome}.{Name}".format(**interval)
     source = os.path.join(options.intervals_root, prefix + ".bed")
-    genome = os.path.join(options.genomes_root, interval["Genome"] + ".genome")
-    destination = os.path.join(options.destination, "genotypes", "%s.%s.bed" % (taxa["Name"], prefix))
+    reference   = os.path.join(options.genomes_root, interval["Genome"] + ".fasta")
+    destination = add_postfix(source, ".padded_%ibp" % (padding,))
 
-    node = SlopBedNode(genome        = genome,
-                       infile        = source,
-                       outfile       = destination,
-                       from_start    = padding,
-                       from_end      = padding,
-                       dependencies  = dependencies)
+    if not padding:
+        return source, dependencies
 
-    return destination, node
+    if destination not in _BED_CACHE:
+        faidx_node = build_fasta_index_node(reference, dependencies)
+        _BED_CACHE[destination] \
+          = SlopBedNode(genome        = reference + ".fai",
+                        infile        = source,
+                        outfile       = destination,
+                        from_start    = padding,
+                        from_end      = padding,
+                        dependencies  = faidx_node)
+
+    return destination, _BED_CACHE[destination]
 
 
 def build_genotyping_nodes(options, genotyping, taxa, interval, dependencies):
@@ -242,7 +264,7 @@ def build_genotyping_nodes(options, genotyping, taxa, interval, dependencies):
 
     padding = genotyping["Padding"]
     infile  = os.path.join(options.samples_root, "%s.%s.bam" % (taxa["Name"], interval["Genome"]))
-    slop, node =  build_interval_nodes(options, taxa, interval, padding, dependencies)
+    slop, node =  build_interval_nodes(options, interval, padding, dependencies)
     genotype = GenotypeNode.customize(reference          = reference,
                                       regions            = slop,
                                       infile             = infile,
@@ -298,7 +320,7 @@ def build_sampling_nodes(options, genotyping, taxa, interval, dependencies):
     pileup = os.path.join(options.destination, "genotypes", "%s.%s.pileup.bgz" % (taxa["Name"], prefix))
 
     padding = genotyping["Padding"]
-    slop, node =  build_interval_nodes(options, taxa, interval, padding, dependencies)
+    slop, node =  build_interval_nodes(options, interval, padding, dependencies)
     genotype = MPileupNode(reference          = reference,
                            regions            = slop,
                            infile             = os.path.join(options.samples_root, "%s.%s.bam" % (taxa["Name"], interval["Genome"])),
@@ -315,21 +337,17 @@ def build_sampling_nodes(options, genotyping, taxa, interval, dependencies):
     return (builder,)
 
 
-_FAI_CACHE = {}
 def build_reference_nodes(options, taxa, interval, dependencies):
     prefix = "{Genome}.{Name}".format(**interval)
     reference = os.path.join(options.genomes_root, taxa["Name"] + ".fasta")
     destination = os.path.join(options.destination, "genotypes", "%s.%s.fasta" % (taxa["Name"], prefix))
     intervals = os.path.join(options.intervals_root, prefix + ".bed")
-
-    if reference not in _FAI_CACHE:
-        _FAI_CACHE[reference] = FastaIndexNode(infile       = reference,
-                                               dependencies = dependencies)
+    faidx_node = build_fasta_index_node(reference, dependencies)
 
     node  = ExtractReference(reference          = reference,
                              intervals          = intervals,
                              outfile            = destination,
-                             dependencies       = _FAI_CACHE[reference])
+                             dependencies       = faidx_node)
     return (node,)
 
 
