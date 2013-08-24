@@ -28,7 +28,6 @@ from pypeline.common.makefile import \
      IsListOf, \
      StringIn, \
      IsInt, \
-     IsNone, \
      IsUnsignedInt, \
      IsBoolean, \
      StringStartsWith, \
@@ -37,6 +36,7 @@ from pypeline.common.makefile import \
      And, \
      Or, \
      Not
+
 
 class MAKEFileError(RuntimeError):
     pass
@@ -100,12 +100,7 @@ def _update_intervals(mkfile):
     for (interval, subdd) in intervals.iteritems():
         if "Genome" not in subdd:
             raise MAKEFileError("No genome specified for interval %r" % (interval,))
-
         subdd["Name"] = interval
-        subdd.setdefault("Protein coding",     False)
-        subdd.setdefault("Include indels",     True)
-        subdd.setdefault("Homozygous Contigs", {})
-        subdd.setdefault("Mappability",        None)
 
 
 def _update_filtering(mkfile):
@@ -138,9 +133,6 @@ _VALIDATION_TAXA = {
         "Species Name"      : IsStr,
         "Common Name"       : IsStr,
         "Gender"            : IsStr,
-        "Genomes"           : {
-            IsStr             : IsStr,
-        }
     }
 }
 _VALIDATION_TAXA[_VALIDATION_SUBTAXA_KEY] = _VALIDATION_TAXA
@@ -153,9 +145,8 @@ _VALIDATION = {
         "Intervals" : {
             IsStr : {
                 "Genome"         : IsStr,
-                "Protein coding" : IsBoolean,
-                "Include indels" : IsBoolean,
-                "Orthology map"  : IsStr,
+                "Protein coding" : IsBoolean(default = False),
+                "Include indels" : IsBoolean(default = True),
                 "Homozygous Contigs" : {
                     IsStr : IsListOf(IsStr),
                     },
@@ -179,8 +170,6 @@ _VALIDATION = {
             StringStartsWith("-") : CLI_PARAMETERS,
             },
         "VCF_Filter" : {
-            "Mappability"   : Or(IsStr, IsNone,
-                                 default = None),
             "MaxReadDepth"  : Or(IsUnsignedInt, IsDictOf(IsStr, IsInt),
                                  default = 0),
             StringStartsWith("-") : CLI_PARAMETERS,
@@ -191,7 +180,7 @@ _VALIDATION = {
         "Default"   : StringIn(("mafft",),
                                default = "mafft"),
         "MAFFT" : {
-            "Algorithm" : StringIn(("auto", "g-ins-i"), # TODO
+            "Algorithm" : StringIn(("auto", "FFT-NS-1", "FFT-NS-2", "FFT-NS-i", "NW-INS-i", "L-INS-i", "E-INS-i", "G-INS-i"),
                                    default = "auto")
             },
         },
@@ -203,7 +192,7 @@ _VALIDATION = {
             "Threads"    : IsInt(default = 1),
             "Bootstraps" : IsUnsignedInt(default = 100),
             "Replicates" : IsUnsignedInt(default = 1),
-            "Model"      : StringIn(("gamma",), # TODO
+            "Model"      : StringIn(("GAMMA", "PSR"),
                                     default = "gamma"),
             "Outgroup"   : IsStr,
         }
