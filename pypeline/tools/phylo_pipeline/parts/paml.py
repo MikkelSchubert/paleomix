@@ -153,7 +153,7 @@ class CodemlNode(CommandNode):
         return results
 
 
-def build_codeml_nodes(options, settings, interval, taxa, filtering, dependencies):
+def build_codeml_nodes(options, settings, interval, filtering, dependencies):
     in_postfix, out_postfix, afa_ext = "", "", ".afa"
     if any(filtering.itervalues()):
         in_postfix = out_postfix = ".filtered"
@@ -162,10 +162,9 @@ def build_codeml_nodes(options, settings, interval, taxa, filtering, dependencie
         afa_ext = ".fasta"
 
     paml        = settings["PAML"]
-    sequences   = common.collect_sequences(options, interval, taxa)
+    sequences   = common.get_sequences(options, interval)
     sequencedir = os.path.join(options.destination, "alignments", interval["Name"] + in_postfix)
     destination = os.path.join(options.destination, "paml", "codeml", interval["Name"] + out_postfix)
-
 
     # Build meta-node for sequence conversion to PHYLIP format accepted by codeml
     phylip_nodes = {}
@@ -210,10 +209,9 @@ def chain_codeml(_pipeline, options, makefiles):
         nodes     = []
         intervals = makefile["Project"]["Intervals"]
         filtering = makefile["Project"]["Filter Singletons"]
-        taxa      = makefile["Project"]["Taxa"]
         options.destination = os.path.join(destination, makefile["Project"]["Title"])
 
         for interval in intervals.itervalues():
-            nodes.append(build_codeml_nodes(options, makefile, interval, taxa, filtering, makefile["Nodes"]))
+            nodes.append(build_codeml_nodes(options, makefile, interval, filtering, makefile["Nodes"]))
         makefile["Nodes"] = tuple(nodes)
     options.destination = destination

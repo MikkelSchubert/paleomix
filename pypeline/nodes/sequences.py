@@ -38,7 +38,7 @@ class CollectSequencesNode(Node):
     def __init__(self, fasta_files, sequences, destination, dependencies = ()):
         """
         fasta_files -- { taxon_name_1 : filename_1, ... }
-        sequences   -- { interval_name_1 : { taxon_name_1 : interval_name_1.1, ... }, ...
+        sequences   -- { interval_name_1, ... }
         """
 
         self._infiles     = copy.deepcopy(fasta_files)
@@ -63,13 +63,11 @@ class CollectSequencesNode(Node):
             fastas[name] = current_fastas
         fastas = list(sorted(fastas.items()))
 
-        for (sequence_name, taxa_map) in sorted(self._sequences.iteritems()):
+        for sequence_name in sorted(self._sequences):
             lines = []
             for (taxon_name, sequences) in fastas:
                 fastaseq = "\n".join(fragment(60, sequences[sequence_name]))
-                current_name = taxa_map[taxon_name]
-
-                lines.append(">%s %s\n%s\n" % (taxon_name, current_name, fastaseq))
+                lines.append(">%s\n%s\n" % (taxon_name, fastaseq))
 
             filename = os.path.join(temp, sequence_name + ".fasta")
             with open(filename, "w") as fasta:

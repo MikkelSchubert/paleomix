@@ -23,24 +23,27 @@
 #!/usr/bin/python
 
 import os
-import sys
 
-from pypeline import Pypeline
 from pypeline.node import MetaNode
-from pypeline.nodes.formats import FastaToPartitionedInterleavedPhyNode
-from pypeline.nodes.raxml import *
-from pypeline.nodes.mafft import MetaMAFFTNode
+from pypeline.nodes.formats import \
+     FastaToPartitionedInterleavedPhyNode
+from pypeline.nodes.raxml import \
+     RAxMLReduceNode, \
+     RAxMLBootstrapNode, \
+     EXaMLNode, \
+     EXaMLParserNode, \
+     ParsimonatorNode
 from pypeline.common.fileutils import swap_ext
 
-import common
+import pypeline.tools.phylo_pipeline.parts.common as common
 
 
-def build_supermatrix(options, settings, afa_ext, destination, intervals, taxa, filtering_postfix, dependencies):
+def build_supermatrix(options, settings, afa_ext, destination, intervals, filtering_postfix, dependencies):
     input_files = {}
     for interval in intervals.itervalues():
         sequencedir = os.path.join(options.destination, "alignments", interval["Name"] + filtering_postfix)
 
-        for sequence in common.collect_sequences(options, interval, taxa):
+        for sequence in common.get_sequences(options, interval):
             filename = os.path.join(sequencedir, sequence + afa_ext)
             record = {"name" : sequence}
             if interval["Protein coding"]:
@@ -78,7 +81,7 @@ def _examl_nodes(settings, input_alignment, input_binary, output_template, depen
                      dependencies    = tree)
 
 
-def build_examl_nodes(options, settings, intervals, taxa, filtering, dependencies):
+def build_examl_nodes(options, settings, intervals, filtering, dependencies):
     filtering_postfix = ".filtered" if any(filtering.itervalues()) else ""
     destination = os.path.join(options.destination, "phylogenies", "examl.supermatrix" + filtering_postfix)
     phylo = settings["Phylogenetic Inference"]
@@ -88,7 +91,7 @@ def build_examl_nodes(options, settings, intervals, taxa, filtering, dependencie
     input_partition = os.path.join(destination, "alignments.reduced.partitions")
     input_binary    = os.path.join(destination, "alignments.reduced.binary")
 
-    supermatrix = build_supermatrix(options, phylo, afa_ext, destination, intervals, taxa, filtering_postfix, dependencies)
+    supermatrix = build_supermatrix(options, phylo, afa_ext, destination, intervals, filtering_postfix, dependencies)
     binary      = EXaMLParserNode(input_alignment = input_alignment,
                                   input_partition = input_partition,
                                   output_file     = input_binary,
@@ -144,10 +147,9 @@ def build_examl_nodes(options, settings, intervals, taxa, filtering, dependencie
 def chain_examl(pipeline, options, makefiles):
     destination = options.destination # Move to makefile
     for makefile in makefiles:
-        taxa      = makefile["Project"]["Taxa"]
         intervals = makefile["Project"]["Intervals"]
         filtering = makefile["Project"]["Filter Singletons"]
         options.destination = os.path.join(destination, makefile["Project"]["Title"])
 
-        makefile["Nodes"] = build_examl_nodes(options, makefile, intervals, taxa, filtering, makefile["Nodes"])
+        makefile["Nodes"] = build_examl_nodes(options, makefile, intervals, filtering, makefile["Nodes"])
     options.destination = destination

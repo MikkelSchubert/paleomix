@@ -45,8 +45,6 @@ from pypeline.common.formats.fasta import FASTA
 import pypeline.common.text as text
 import pypeline.common.sequences as sequences
 
-import common
-
 
 
 class VCFPileupNode(CommandNode):
@@ -339,8 +337,6 @@ def build_taxa_nodes(options, genotyping, intervals, taxa, dependencies = ()):
     nodes = []
     for interval in intervals.itervalues():
         interval = deepcopy(interval)
-        # Override default genome (BAM file) if specified
-        interval["Genome"] = common.get_genome_for_interval(interval, taxa)
         # Enforce homozygous contigs based on gender tag
         interval["Homozygous Contigs"] = interval["Homozygous Contigs"][taxa["Gender"]]
 

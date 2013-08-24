@@ -26,54 +26,29 @@ import pysam
 from pypeline.common.text import parse_lines
 
 
-def get_genome_for_interval(interval, taxon):
-    default = interval["Genome"]
-    genomes = taxon.get("Genomes", {})
-
-    return genomes.get(interval["Name"], default)
+def get_bed_file(options, interval):
+    prefix  = get_prefix(interval)
+    return os.path.join(options.intervals_root, prefix + ".bed")
 
 
-def collect_bed_files(options, interval, taxa):
-    bedfiles = {}
-    for taxon in taxa.itervalues():
-        name      = taxon["Name"]
-        prefix    = get_prefix(interval, taxon)
-        bedfile   = os.path.join(options.intervals_root, prefix + ".bed")
-
-        bedfiles[name] = bedfile
-    return bedfiles
-
-
-def collect_fasta_files(options, interval, taxa):
+def get_fasta_files(options, interval, taxa):
     fastafiles = {}
     for taxon in taxa.itervalues():
         name      = taxon["Name"]
-        prefix    = get_prefix(interval, taxon)
+        prefix    = get_prefix(interval)
         fastafile = os.path.join(options.destination, "genotypes", "%s.%s.fasta" % (name, prefix))
 
         fastafiles[name] = fastafile
     return fastafiles
 
 
-def collect_sequences(options, interval, taxa):
-    bedfiles  = collect_bed_files(options, interval, taxa)
-    if len(set(bedfiles.itervalues())) > 1:
-        raise RuntimeError("Support for combining different intervals files not implemented!")
-
-    # Same set of sequences for all genomes
+def get_sequences(options, interval):
     sequences = set()
-    with open(bedfiles.itervalues().next()) as bedhandle:
+    with open(get_bed_file(options, interval)) as bedhandle:
         for bed in parse_lines(bedhandle, pysam.asBed()):
             sequences.add(bed.name)
-    seqmap = dict(zip(sequences, sequences))
-
-    return dict((name, dict.fromkeys(taxa, name)) for name in seqmap)
+    return frozenset(sequences)
 
 
-
-def get_prefix(interval, taxon = None):
-    if not taxon:
-        return "{Genome}.{Name}"
-
-    genome  = get_genome_for_interval(interval, taxon)
-    return "%s.%s" % (genome, interval["Name"])
+def get_prefix(interval):
+    return "%s.%s" % (interval["Genome"], interval["Name"])
