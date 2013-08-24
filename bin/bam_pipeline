@@ -24,33 +24,23 @@ import os
 import sys
 
 
-# List of modules required to run the pipeline
-_REQUIRED_MODULES = {"pysam" : "http://code.google.com/p/pysam/",
-                     "yaml"  : "http://www.pyyaml.org/"}
-
-
 def _has_required_modules():
-    missing_modules = False
+    if (sys.version_info.major != 2) or (sys.version_info.minor not in (6, 7)):
+        sys.stderr.write("ERROR: Python version 2.6.x or 2.7.x required!\n")
+        sys.stderr.write("       Current version is v%s\n\n" % (sys.version.replace("\n", " "),))
+        return False
+
     try:
-        __import__("pypeline.ui")
-    except ImportError, error:
-        sys.stderr.write("ERROR: Could not import required Pypeline module pypeline.ui:\n\t- %s\n" % (error,))
+        from pypeline.requirements import check_pypeline_requirements
+    except ImportError:
+        error = sys.exc_info()[1]
+        sys.stderr.write("ERROR: Could not import required Pypeline module pypeline.requirements:\n\t- %s\n\n" % (error,))
         sys.stderr.write("       Please make sure that PYTHONPATH points to the location of the 'pypeline' module.\n")
         sys.stderr.write("       This may be done permanently by adding the following to your ~/.bashrc file:\n")
         sys.stderr.write("         export PYTHONPATH=${PYTHONPATH}:/path/to/pypeline/checkout/...\n\n")
-        missing_modules = True
+        return False
 
-    for (module, url) in sorted(_REQUIRED_MODULES.items()):
-        try:
-            __import__(module)
-        except ImportError, error:
-            sys.stderr.write("ERROR: Could not import required module '%s':\n\t- %s\n" % (module, error))
-            sys.stderr.write("       If module is not installed, please download from '%s'.\n" % (url,))
-            sys.stderr.write("       A local install may be performed using the following command:\n")
-            sys.stderr.write("       $ python setup.py install --user\n\n")
-            missing_modules = True
-
-    return not missing_modules
+    return check_pypeline_requirements()
 
 
 def main(argv):

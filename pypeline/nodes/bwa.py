@@ -43,15 +43,6 @@ BWA_VERSION = versions.Requirement(call   = ("bwa",),
 
 
 
-# Required by safeSam2Bam for 'PG' tagging support / known good version
-# Cannot be a lambda due to need to be able to pickle function
-def _get_pysam_version():
-    return __import__("pysam").__version__
-PYSAM_VERSION = versions.Requirement(name   = "module 'pysam'",
-                                     call   = _get_pysam_version,
-                                     search = r"(\d+)\.(\d+)\.(\d+)",
-                                     checks = versions.GE(0, 7, 4))
-
 class BWAIndexNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, input_file, prefix = None, dependencies = ()):
@@ -289,7 +280,6 @@ def _process_output(stdin, output_file, reference, run_fixmate = False):
     convert.set_option("-F", "0x4", sep = "", fixed = False) # Remove misses
     convert.set_kwargs(IN_STDIN    = stdin,
                       OUT_STDOUT  = AtomicCmd.PIPE,
-                      CHECK_PYSAM = PYSAM_VERSION,
                       CHECK_SAMTOOLS = SAMTOOLS_VERSION)
 
     fixmate = None
