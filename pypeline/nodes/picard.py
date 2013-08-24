@@ -39,7 +39,7 @@ def _picard_version(config, jar_file):
         params = AtomicJavaCmdBuilder(config, jar_file)
         params.add_value("--version")
         requirement = versions.Requirement(call   = params.finalized_call,
-                                           name   = "Picard " + (os.path.basename(jar_file),),
+                                           name   = "Picard " + os.path.basename(jar_file),
                                            search = r"^(\d+)\.(\d+)",
                                            checks = versions.GE(1, 82))
         _PICARD_VERSION_CACHE[jar_file] = requirement
