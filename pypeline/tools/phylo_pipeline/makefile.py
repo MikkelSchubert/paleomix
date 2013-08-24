@@ -27,7 +27,6 @@ from pypeline.common.makefile import \
      IsDictOf, \
      IsListOf, \
      StringIn, \
-     IsInt, \
      IsUnsignedInt, \
      IsBoolean, \
      StringStartsWith, \
@@ -158,7 +157,7 @@ _VALIDATION = {
     "Genotyping" : {
         "Default"  : StringIn(("random", "samtools"),
                               default = "samtools"),
-        "Padding"  : IsInt(default = 5),
+        "Padding"  : IsUnsignedInt(default = 5),
         "MPileup"  : {
             StringStartsWith("-") : CLI_PARAMETERS,
             },
@@ -169,7 +168,7 @@ _VALIDATION = {
             StringStartsWith("-") : CLI_PARAMETERS,
             },
         "VCF_Filter" : {
-            "MaxReadDepth"  : Or(IsUnsignedInt, IsDictOf(IsStr, IsInt),
+            "MaxReadDepth"  : Or(IsUnsignedInt, IsDictOf(IsStr, IsUnsignedInt),
                                  default = 0),
             StringStartsWith("-") : CLI_PARAMETERS,
             },
@@ -188,7 +187,7 @@ _VALIDATION = {
         "Default" : StringIn(("raxml", "raxml-light", "examl"),
                              default = "examl"),
         "ExaML" : {
-            "Threads"    : IsInt(default = 1),
+            "Threads"    : IsUnsignedInt(default = 1),
             "Bootstraps" : IsUnsignedInt(default = 100),
             "Replicates" : IsUnsignedInt(default = 1),
             "Model"      : StringIn(("GAMMA", "PSR"),
