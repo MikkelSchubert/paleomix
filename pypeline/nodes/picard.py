@@ -34,10 +34,12 @@ import pypeline.common.versions as versions
 
 
 _PICARD_VERSION_CACHE = {}
-def _picard_version(jar_file):
+def _picard_version(config, jar_file):
     if jar_file not in _PICARD_VERSION_CACHE:
-        # FIXME: Use AtomicJavaCmdBuilder ... remove need for config param
-        requirement = versions.Requirement(call   = ("java", "-client", "-jar", jar_file, "--version"),
+        params = AtomicJavaCmdBuilder(config, jar_file)
+        params.add_value("--version")
+        requirement = versions.Requirement(call   = params.finalized_call,
+                                           name   = "Picard " + (os.path.basename(jar_file),),
                                            search = r"^(\d+)\.(\d+)",
                                            checks = versions.GE(1, 82))
         _PICARD_VERSION_CACHE[jar_file] = requirement
@@ -55,7 +57,7 @@ class ValidateBAMNode(CommandNode):
         params.set_option("I", "%(IN_BAM)s", sep = "=")
         params.set_kwargs(IN_BAM     = input_bam,
                          OUT_STDOUT = output_log or swap_ext(input_bam, ".validated"),
-                         CHECK_JAR  = _picard_version(jar_file))
+                         CHECK_JAR  = _picard_version(config, jar_file))
 
         return {"command"      : params,
                 "dependencies" : dependencies}
@@ -81,7 +83,7 @@ class BuildSequenceDictNode(CommandNode):
         params.set_option("O", "%(OUT_DICT)s", sep = "=")
         params.set_kwargs(IN_REF     = reference,
                           OUT_DICT   = swap_ext(reference, ".dict"),
-                          CHECK_JAR  = _picard_version(jar_file))
+                          CHECK_JAR  = _picard_version(config, jar_file))
 
         return {"command"      : params,
                 "dependencies" : dependencies}
@@ -120,7 +122,7 @@ class MarkDuplicatesNode(CommandNode):
         params.set_kwargs(OUT_BAM     = output_bam,
                          OUT_BAI     = swap_ext(output_bam, ".bai"),
                          OUT_METRICS = output_metrics or swap_ext(output_bam, ".metrics"),
-                         CHECK_JAR  = _picard_version(jar_file))
+                         CHECK_JAR  = _picard_version(config, jar_file))
 
         return {"command"      : params,
                 "dependencies" : dependencies}
@@ -147,7 +149,7 @@ class MergeSamFilesNode(CommandNode):
         params.set_option("CREATE_INDEX", "True", sep = "=")
         params.set_kwargs(OUT_BAM = output_bam,
                          OUT_BAI = swap_ext(output_bam, ".bai"),
-                         CHECK_JAR  = _picard_version(jar_file))
+                         CHECK_JAR  = _picard_version(config, jar_file))
 
         for (index, filename) in enumerate(input_bams, start = 1):
             params.add_option("I", "%%(IN_BAM_%02i)s" % index, sep = "=")
@@ -186,7 +188,7 @@ def concatenate_input_bams(config, input_bams, out = AtomicCmd.PIPE):
 
     jar_file = os.path.join(config.jar_root, "MergeSamFiles.jar")
     params = AtomicJavaCmdBuilder(config, jar_file)
-    params.set_kwargs(CHECK_JAR  = _picard_version(jar_file))
+    params.set_kwargs(CHECK_JAR  = _picard_version(config, jar_file))
 
     if out == AtomicCmd.PIPE:
         params.set_kwargs(OUT_STDOUT = out)
