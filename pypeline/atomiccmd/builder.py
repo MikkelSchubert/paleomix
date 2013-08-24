@@ -195,6 +195,15 @@ class AtomicCmdBuilder:
 
 
     @property
+    def finalized_call(self):
+        """Returns the system-call, as 'call', but with all key-values instantiated
+        to the values passed to the AtomicCmdBuilder. This is intended for use with
+        direct Popen calls."""
+        kwargs = self.kwargs
+        return [(field % kwargs) for field in self.call]
+
+
+    @property
     def kwargs(self):
         """Returns a dictionary of keyword arguments as set by 'set_kwargs'.
         If the value of an argument is an AtomicCmdBuilder, then the builder
