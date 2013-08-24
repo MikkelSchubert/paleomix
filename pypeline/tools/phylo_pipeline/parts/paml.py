@@ -25,6 +25,8 @@ import re
 
 from pypeline.node import Node, MetaNode, CommandNode, NodeError
 from pypeline.atomiccmd.command import AtomicCmd
+from pypeline.atomiccmd.sets import SequentialCmds
+
 
 from pypeline.common.utilities import fragment, safe_coerce_to_tuple
 from pypeline.common.formats.msa import MSA
@@ -72,37 +74,36 @@ class FastaToPAMLPhyNode(Node):
 
 
 class CodemlNode(CommandNode):
-    def __init__(self, control_file, sequence_file, trees_file, output_prefix, dependencies = ()):
+    def __init__(self, control_file, sequence_file, trees_file, output_tar, dependencies = ()):
         self._control_file  = control_file
         self._sequence_file = sequence_file
         self._trees_file    = trees_file
-        self._output_prefix = output_prefix
 
-        command = AtomicCmd(["codeml", "template.ctl"],
-                            IN_CONTROL_FILE  = control_file,
-                            IN_SEQUENCE_FILE = sequence_file,
-                            IN_TREES_FILE    = trees_file,
-                            TEMP_OUT_CTL     = "template.ctl",
-                            TEMP_OUT_SEQS    = "template.seqs",
-                            TEMP_OUT_TREES   = "template.trees",
-                            TEMP_OUT_STDOUT  = "template.stdout",
-                            TEMP_OUT_STDERR  = "template.stderr",
-                            OUT_CODEML       = output_prefix + ".codeml",
-                            TEMP_OUT_2NG_DN  = "2NG.dN",
-                            TEMP_OUT_2NG_DS  = "2NG.dS",
-                            TEMP_OUT_2NG_T   = "2NG.t",
-                            TEMP_OUT_4FOLD   = "4fold.nuc",
-                            TEMP_OUT_LNF     = "lnf",
-                            TEMP_OUT_RST     = "rst",
-                            TEMP_OUT_RST1    = "rst1",
-                            TEMP_OUT_RUB     = "rub",
-                            IN_STDIN         = "/dev/null", # Prevent promts from blocking
-                            set_cwd          = True)
+        paml_cmd = AtomicCmd(["codeml", "template.ctl"],
+                             IN_CONTROL_FILE  = control_file,
+                             IN_SEQUENCE_FILE = sequence_file,
+                             IN_TREES_FILE    = trees_file,
+                             TEMP_OUT_CTL     = "template.ctl",
+                             TEMP_OUT_SEQS    = "template.seqs",
+                             TEMP_OUT_TREES   = "template.trees",
+                             TEMP_OUT_STDOUT  = "template.stdout",
+                             TEMP_OUT_STDERR  = "template.stderr",
+                             IN_STDIN         = "/dev/null", # Prevent promts from blocking
+                             set_cwd          = True,
+                             **CodemlNode._get_codeml_files("TEMP_OUT_CODEML"))
+
+        tar_pairs = CodemlNode._get_codeml_files("TEMP_IN_CODEML")
+        tar_files = ["%%(%s)s" % (key,) for key in tar_pairs]
+        tar_cmd  = AtomicCmd(["tar", "cvzf", "%(OUT_FILE)s"] + tar_files,
+                             OUT_FILE = output_tar,
+                             set_cwd  = True,
+                             **tar_pairs)
 
         CommandNode.__init__(self,
-                             description  = "<CodemlNode: '%s' -> '%s.*'>" % (sequence_file, output_prefix),
-                             command      = command,
+                             description  = "<CodemlNode: %r -> %r>" % (sequence_file, output_tar),
+                             command      = SequentialCmds([paml_cmd, tar_cmd]),
                              dependencies = dependencies)
+
 
     def _setup(self, _config, temp):
         def _symlink(filename, dst):
@@ -110,45 +111,46 @@ class CodemlNode(CommandNode):
         _symlink(self._sequence_file, "template.seqs")
         _symlink(self._trees_file,    "template.trees")
 
-        self._update_ctl_file(source        = self._control_file,
-                              destination   = os.path.join(temp, "template.ctl"),
-                              sequence_file = os.path.join(temp, "template.seqs"),
-                              trees_file    = os.path.join(temp, "template.trees"),
-                              output_prefix = self._output_prefix)
+        self._update_ctl_file(source      = self._control_file,
+                              destination = os.path.join(temp, "template.ctl"))
+
 
     def _run(self, config, temp):
         try:
             CommandNode._run(self, config, temp)
         except NodeError, error:
-            # Allow failures due to low coverage
-            with open(fileutils.reroot_path(temp, "template.stdout")) as handle:
-                codeml = handle.read()
-                if "sequences do not have any resolved nucleotides. Giving up." not in codeml:
-                    raise error
+            if self._command.join() == [1, None]:
+                with open(fileutils.reroot_path(temp, "template.stdout")) as handle:
+                    lines = handle.readlines()
+                if lines and ("Giving up." in lines[-1]):
+                    error = NodeError("%s\n\n%s" % (error, lines[-1]))
+            raise error
 
-            with open(fileutils.reroot_path(temp, self._output_prefix + ".codeml"), "a") as handle:
-                handle.write("\nWARNING: No resolved nucleotides found, could not process gene.\n")
-
-            import sys
-            sys.stderr.write("WARNING: No resolved nucleotides in " + self._output_prefix + "\n")
 
     @classmethod
-    def _update_ctl_file(cls, source, destination, sequence_file, trees_file, output_prefix):
-        output_file = output_prefix + ".codeml"
+    def _update_ctl_file(cls, source, destination):
         with open(source) as handle:
             template = handle.read()
 
-        # TODO: Check that number of replacements == 1
         # TODO: Do check before running everything!
-        template, count = re.subn(r'(\s*seqfile\s*=).*',  r'\1 ' + os.path.basename(sequence_file), template)
+        template, count = re.subn(r'(\bseqfile\s*=).*',  r'\1 template.seqs', template)
         assert count == 1, count
-        template, count = re.subn(r'(\s*treefile\s*=).*', r'\1 ' + os.path.basename(trees_file),    template)
+        template, count = re.subn(r'(\btreefile\s*=).*', r'\1 template.trees', template)
         assert count == 1, count
-        template, count = re.subn(r'(\s*outfile\s*=).*',  r'\1 ' + os.path.basename(output_file),   template)
+        template, count = re.subn(r'(\boutfile\s*=).*',  r'\1 mlc',       template)
         assert count == 1, count
 
         with open(destination, "w") as handle:
             handle.write(template)
+
+    @classmethod
+    def _get_codeml_files(cls, key_type):
+        results      = {}
+        codeml_files = ["mlc", "2NG.dN", "2NG.dS", "2NG.t", "4fold.nuc", "lnf", "rst", "rst1", "rub"]
+        for filename in codeml_files:
+            key = "%s_%s" % (key_type, filename.upper().replace(".", "_"))
+            results[key] = filename
+        return results
 
 
 def build_codeml_nodes(options, settings, interval, taxa, filtering, dependencies):
@@ -182,14 +184,17 @@ def build_codeml_nodes(options, settings, interval, taxa, filtering, dependencie
                            dependencies = dependencies)
 
     codeml_nodes = []
-    for (ctl_name, ctl_file) in paml["codeml"]["Control Files"].iteritems():
-        for (sequence, node) in phylip_nodes.iteritems():
-            output_prefix = os.path.join(destination, sequence + ".%s" % (ctl_name,))
+    for (ctl_name, ctl_files) in paml["codeml"].iteritems():
+        if ctl_name in ("ExcludeGroups",):
+            continue
 
-            codeml = CodemlNode(control_file  = ctl_file,
-                                trees_file    = paml["codeml"]["Tree File"],
+        for (sequence, node) in phylip_nodes.iteritems():
+            output_tar = os.path.join(destination, "%s.%s.tar.gz" % (sequence, ctl_name))
+
+            codeml = CodemlNode(control_file  = ctl_files["Control File"],
+                                trees_file    = ctl_files["Tree File"],
                                 sequence_file = iter(node.output_files).next(),
-                                output_prefix = output_prefix,
+                                output_tar    = output_tar,
                                 dependencies  = node)
             codeml_nodes.append(codeml)
 

@@ -69,6 +69,12 @@ def _mangle_makefile(mkfile):
         raise MakefileError("Unknown taxa in 'Phylogenetic Inference:ExcludeGroups': '%s'" \
                             % ("', '".join(unknown_groups)))
 
+    for (ctl_name, ctl_files) in mkfile["PAML"]["codeml"].iteritems():
+        if ctl_name not in ("ExcludeGroups",):
+            if not (ctl_files.get("Control File") and ctl_files.get("Tree File")):
+                raise MakefileError("Both tree and control file must be specified for PAML:codeml:%s" \
+                                    % (ctl_name,))
+
     return mkfile
 
 
@@ -200,8 +206,10 @@ _VALIDATION = {
     "PAML" : {
         "codeml" : {
             "ExcludeGroups" : IsListOf(IsStr),
-            "Control Files" : IsDictOf(IsStr, IsStr),
-            "Tree File"     : IsStr,
+            IsStr : {
+                "Control File" : IsStr,
+                "Tree File"    : IsStr,
+            },
         },
     },
 }
