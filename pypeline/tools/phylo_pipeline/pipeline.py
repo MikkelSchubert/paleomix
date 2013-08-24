@@ -123,11 +123,14 @@ def main(argv):
         options_parser.print_help()
         return 1
 
-    try:
-        makefiles = pypeline.tools.phylo_pipeline.makefile.read_makefiles(args)
-    except MakefileError, error:
-        ui.print_err("Error reading makefiles:\n%s" % (error))
-        return 1
+    makefiles = []
+    for filename in args:
+        try:
+            makefiles.append(pypeline.tools.phylo_pipeline.makefile.read_makefile(filename))
+        except MakefileError, error:
+            ui.print_err("Error reading makefile %r:" % (filename,))
+            ui.print_err("    %s" % (("\n    ").join(str(error).split("\n"),)))
+            return 1
 
     pipeline = Pypeline(options)
     for (command_key, command_func) in commands:

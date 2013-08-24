@@ -20,8 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import pypeline.common.makefile
 from pypeline.common.makefile import \
-     read_makefile, \
      MakefileError, \
      IsStr, \
      IsDictOf, \
@@ -42,16 +42,9 @@ class MAKEFileError(RuntimeError):
     pass
 
 
-def read_makefiles(filenames):
-    makefiles = []
-    for filename in filenames:
-        makefile = read_makefile(filename, _VALIDATION)
-        makefile = makefile["Makefile"] # Not using extra stats
-        makefile = _mangle_makefile(makefile)
-
-        makefiles.append(makefile)
-
-    return makefiles
+def read_makefile(filename):
+    makefile = pypeline.common.makefile.read_makefile(filename, _VALIDATION)
+    return _mangle_makefile(makefile["Makefile"])
 
 
 def _mangle_makefile(mkfile):
