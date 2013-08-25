@@ -80,7 +80,7 @@ Options:
                      #   Location: {Destination}/{Target}.{Genome}.bam
     - Realigned BAM  # Generate indel-realigned BAM using the GATK Indel realigner
                      #   Location: {Destination}/{Target}.{Genome}.realigned.bam
-    - mapDamage      # Generate mapDamage plot for each (unrealigned) library
+#    - mapDamage      # Generate mapDamage plot for each (unrealigned) library
                      #   Location: {Destination}/{Target}.{Genome}.mapDamage/{Library}/
     - Coverage       # Generate coverage information for the raw BAM (wo/ indel realignment)
                      #   Location: {Destination}/{Target}.{Genome}.coverage
