@@ -47,7 +47,7 @@ def main(argv):
     if not _has_required_modules():
         return 1
 
-    if (len(argv) == 0) or (argv[0] not in ("mkfile", "run", "dry_run", "dryrun", "move")):
+    if (len(argv) == 0) or (argv[0] not in ("mkfile", "run", "dry_run", "dryrun")):
         import pypeline.ui as ui
         basename = os.path.basename(sys.argv[0])
         ui.print_info("Usage:")
@@ -55,7 +55,6 @@ def main(argv):
         ui.print_info("  -- %s mkfile [...]    -- Generate makefile from 'SampleSheet.csv' files." % basename)
         ui.print_info("  -- %s dry_run [...]   -- Perform dry run of pipeline on provided makefiles." % basename)
         ui.print_info("  -- %s run [...]       -- Run pipeline on provided makefiles." % basename)
-        ui.print_info("  -- %s move [...]      -- Modify project structure in place (EXPERIMENTAL)." % basename)
     elif argv[0] == "mkfile":
         import pypeline.tools.bam_pipeline.mkfile
 
@@ -68,9 +67,6 @@ def main(argv):
         import pypeline.tools.bam_pipeline.pipeline
 
         return pypeline.tools.bam_pipeline.pipeline.main(argv[1:] + ["--dry-run"])
-    elif argv[0] == "move":
-        import pypeline.tools.bam_pipeline.move
-        return pypeline.tools.bam_pipeline.move.main(argv[1:])
 
     return 1
 
