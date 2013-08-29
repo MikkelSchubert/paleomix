@@ -27,7 +27,7 @@ import multiprocessing
 
 import pypeline.ui as ui
 
-from pypeline.node import Node
+from pypeline.node import Node, MetaNode
 from pypeline.nodegraph import NodeGraph, NodeGraphError
 from pypeline.common.utilities import safe_coerce_to_tuple
 
@@ -58,7 +58,7 @@ class Pypeline:
 
         remaining = set(nodegraph.iterflat())
         for node in remaining:
-            if node.threads > max_running:
+            if (node.threads > max_running) and not isinstance(node, MetaNode):
                 self._logger.error("Node requires more threads than the maximum allowed:\n"
                                    "    Maximum threads  = %i\n"
                                    "    Required threads = %i\n"
