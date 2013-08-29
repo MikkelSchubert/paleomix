@@ -13,12 +13,22 @@ To install a copy of the pipeline, create a git clone as follows:
     $ git clone https://github.com/MikkelSchubert/pypeline.git
     <login using your GitHub account information>
 
-The pypeline and pypeline/bin folders need to be added to your PYTHONPATH and PATH variables respectively. This may be accomplished as follows (for bash users):
+The pypeline can be installed in a couple of ways:
+
+The least invasive installation is accomplished by updating your PYTHONPATH and PATH variables as follows (for bash users):
 
     $ echo "export PYTHONPATH=\$PYTHONPATH:~/install/pypeline" >> ~/.bashrc
     $ echo "export PATH=\$PATH:~/install/pypeline/bin" >> ~/.bashrc
 
-You may need to re-login for these changes to take effect.
+Alternatively, you can make a local install using the included 'setup.py' script:
+
+    $ python setup.py install --user
+
+Finally, the pipeline can be installed for all users using the same script:
+
+    $ sudo python setup.py install
+
+Regardless of installation method, you may need to re-login for these changes to take effect.
 
 
 2. Installing required modules

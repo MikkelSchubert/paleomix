@@ -1,0 +1,15 @@
+include README.md
+
+# Examples
+include examples/bam_pipeline/000_makefile
+recursive-include examples/bam_pipeline/000_data *.bam *.gz
+recursive-include examples/bam_pipeline/000_prefixes *.fasta
+recursive-include examples/pypeline/makefile *.py *.yaml
+
+# Tests
+include tests/run
+recursive-include tests/data *
+include tests/unit/run
+recursive-include tests/unit *.py
+include tests/function/run
+recursive-include tests/function *.py
