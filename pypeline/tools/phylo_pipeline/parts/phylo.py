@@ -118,7 +118,7 @@ def build_examl_nodes(options, settings, intervals, filtering, dependencies):
         for bootstrap_num in range(bootstrap_start, bootstrap_start + 50):
             bootstrap_alignment   = bootstrap_template % (bootstrap_num,)
             bootstrap_binary      = swap_ext(bootstrap_alignment, ".binary")
-            bootstrap_final       = swap_ext(bootstrap_alignment, ".EXaML.%s")
+            bootstrap_final       = swap_ext(bootstrap_alignment, ".EXaML_%s")
             bs_binary   = EXaMLParserNode(input_alignment = bootstrap_alignment,
                                           input_partition = input_partition,
                                           output_file     = bootstrap_binary,
