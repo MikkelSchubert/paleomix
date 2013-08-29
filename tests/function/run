@@ -26,6 +26,7 @@ import shutil
 import inspect
 import traceback
 
+import pypeline.logger
 import pypeline.ui as ui
 from pypeline.node import Node
 from pypeline.pipeline import Pypeline
@@ -51,12 +52,16 @@ class Config: # pylint: disable=W0232
     temp_root    = FUNC_TEST_ROOT
     jar_root     = "tests/links/jar_root"
     dependencies = Node(description = "DummyDependency")
+    log_file     = None
+    log_level    = "info"
 
 
 def main(argv):
     ui.print_info("Running functional Node tests:")
     ui.print_info("  - Destination = %r ..." % FUNC_TEST_ROOT)
     ui.print_info()
+
+    pypeline.logger.initialize(Config, "logfile_%i.txt")
 
     errors = False
     pipeline = Pypeline(Config)
