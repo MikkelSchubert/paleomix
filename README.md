@@ -186,5 +186,8 @@ If reads have already been mapped, the BAM can be incorported into the project, 
 Citations
 ========================
 
+ * Langmead B, Salzberg SL. "Fast gapped-read alignment with Bowtie 2" Nat Methods. 2012 Mar 4;9(4):357-9. doi: 10.1038/nmeth.1923.
  * Li H, Durbin R. "Fast and accurate short read alignment with Burrows-Wheeler transform" Bioinformatics. 2009 Jul 15;25(14):1754-60. doi:10.1093/bioinformatics/btp324.
+ * Li H, *et al*. "The Sequence Alignment/Map format and SAMtools" Bioinformatics. 2009 Aug 15;25(16):2078-9. doi: 10.1093/bioinformatics/btp352.
  * Lindgreen S. "AdapterRemoval: easy cleaning of next-generation sequencing reads" BMC Res Notes. 2012 Jul 2;5:337. doi: 10.1186/1756-0500-5-337.
+ * McKenna A, *et al*. "The Genome Analysis Toolkit: a MapReduce framework for analyzing next-generation DNA sequencing data" Genome Res. 2010 Sep;20(9):1297-303. doi: 10.1101/gr.107524.110.
