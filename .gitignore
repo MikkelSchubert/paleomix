@@ -1,8 +1,16 @@
-.coverage
 *.swp
-*.pyc
-.\#*
-\#*
+.\#*\#
+\#*\#
 *~
-runs/
-tests/runs/
+*.py[cod]
+
+.coverage
+MANIFEST
+
+# Packages
+dist
+build
+sdist
+
+tests/runs
+tests/links/
