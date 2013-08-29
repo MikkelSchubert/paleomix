@@ -62,7 +62,7 @@ It is recommended to use a folder on the same partition as the destination folde
 
 Creating a makefile
 ===================
-The 'bam_pipeline mkfile' command can be used to create a makefile template. In addition to the various options for the programs run during the pipeline (documented in the template), it is nessesary to specify the name and location of target sequences (termed Prefixes) and each sample to be processed (grouped under one or more targets).
+The 'bam_pipeline mkfile' command can be used to create a makefile template. In addition to the various options for the programs run during the pipeline (documented in the template), it is nessesary to specify the name and location of target sequences (termed Prefixes) and each sample to be processed (grouped under one or more targets). An example project, based on synthetic reads genereted from the rCRS, is included in the distribution under examples/bam_pipeline.
 
 If 'SampleSheet.csv' files are present, these may be specified as arguments to 'bam_pipeline mkfile', at which point the information found in the file is incorported into the makefile template. The quality of the resulting makefile will depend heavily on the quality of the information in the 'SampleSheet.csv' files, so it is recommended that the output be inspected carefully:
 
