@@ -42,26 +42,27 @@ def build_msa_nodes(options, settings, interval, taxa, filtering, dependencies):
     filenames   = common.get_fasta_files(options, interval, taxa)
     sequences   = common.get_sequences(options, interval)
 
-    fastafiles = CollectSequencesNode(fasta_files  = filenames,
-                                      destination  = sequencedir,
-                                      sequences    = sequences,
-                                      dependencies = dependencies)
+    node = CollectSequencesNode(fasta_files  = filenames,
+                                destination  = sequencedir,
+                                sequences    = sequences,
+                                dependencies = dependencies)
+    fasta_files = dict((filename, node) for filename in node.output_files)
 
-    if not settings["Enabled"]:
-        return fastafiles
+    if settings["Enabled"]:
+        node = MetaMAFFTNode(rootdir      = sequencedir,
+                             sequences    = sequences,
+                             preset       = settings["MAFFT"]["Algorithm"],
+                             dependencies = node)
+        fasta_files = node.files_to_nodes_map
 
-    afafiles   = MetaMAFFTNode(rootdir      = sequencedir,
-                               sequences    = sequences,
-                               preset       = settings["MAFFT"]["Algorithm"],
-                               dependencies = fastafiles)
 
-    if not any(filtering.itervalues()):
-        return afafiles
+    if any(filtering.itervalues()):
+        node = FilterSingletonsMetaNode(input_files  = fasta_files,
+                                        destination  = sequencedir + ".filtered",
+                                        filter_by    = filtering,
+                                        dependencies = node)
 
-    return FilterSingletonsMetaNode(input_files  = dict((iter(node.output_files).next(), node) for node in afafiles.subnodes),
-                                    destination  = sequencedir + ".filtered",
-                                    filter_by    = filtering,
-                                    dependencies = afafiles)
+    return node
 
 
 def chain(pipeline, options, makefiles):
