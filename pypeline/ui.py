@@ -27,6 +27,7 @@ import sys
 import datetime
 import collections
 
+import pypeline.logger
 from pypeline.node import MetaNode
 
 
@@ -45,6 +46,11 @@ def _do_print_color(*vargs, **kwargs):
 def print_msg(*vargs, **kwargs):
     """Equivalent to print. Currently does not apply a color to the text"""
     print(*vargs, **kwargs)
+
+
+def print_debug(*vargs, **kwargs):
+    """Equivalent to print, but prints using shell colorcodes (blue)."""
+    _do_print_color(*vargs, colorcode = 36, **kwargs)
 
 
 def print_info(*vargs, **kwargs):
@@ -71,6 +77,10 @@ def print_disabled(*vargs, **kwargs):
 def print_node_tree(graph, collapse = True, verbose = True):
     print_msg(datetime.datetime.now().strftime("%F %T"))
     print_msg("Pipeline%s" % _describe_nodes(graph, graph.iterflat()))
+
+    logfile = pypeline.logger.get_logfile()
+    if logfile:
+        print_debug("  Log-file located at %r" % (logfile,))
 
     if verbose:
         _print_sub_nodes(graph, graph, collapse, "  ")

@@ -20,16 +20,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import sys
+import time
+import logging
 import optparse
 
+import pypeline.logger
 import pypeline.tools.phylo_pipeline.mkfile
 import pypeline.tools.phylo_pipeline.makefile
 import pypeline.tools.phylo_pipeline.parts.genotype as genotype
 import pypeline.tools.phylo_pipeline.parts.msa as msa
 import pypeline.tools.phylo_pipeline.parts.paml as paml
 import pypeline.tools.phylo_pipeline.parts.phylo as phylo
-import pypeline.ui as ui
 
 from pypeline import Pypeline
 from pypeline.common.makefile import MakefileError
@@ -63,6 +64,8 @@ def build_options_parser():
 
     parser.add_option("--verbose",            default = False, action="store_true",
                       help = "Print the full dependency-tree every time a node is updated.")
+
+    pypeline.logger.add_optiongroup(parser)
 
     group  = optparse.OptionGroup(parser, "Scheduling")
     group.add_option("--max-threads",        default = 12, type = int,
@@ -114,12 +117,16 @@ def main(argv):
         options_parser.print_help()
         return 1
 
+    logfile_template = time.strftime("phylo_pipeline.%Y%m%d_%H%M%S_%%02i.log")
+    pypeline.logger.initialize(options, logfile_template)
+    logger = logging.getLogger(__name__)
+
     commands = _select_commands(args.pop(0))
     if any((cmd == "mkfile") for (cmd, _) in commands):
         return pypeline.tools.phylo_pipeline.mkfile.main(args[1:])
     elif any((func is None) for (_, func) in commands):
         unknown_commands = ", ".join(repr(key) for (key, func) in commands if func is None)
-        ui.print_err("Unknown step(s): %s\n" % (unknown_commands,))
+        logger.error("Unknown step(s): %s\n", unknown_commands)
         options_parser.print_help()
         return 1
 
@@ -128,13 +135,13 @@ def main(argv):
         try:
             makefiles.append(pypeline.tools.phylo_pipeline.makefile.read_makefile(filename))
         except MakefileError, error:
-            ui.print_err("Error reading makefile %r:" % (filename,))
-            ui.print_err("    %s" % (("\n    ").join(str(error).split("\n"),)))
+            logger.error("Error reading makefile %r:\n    %s",
+                         filename, ("\n    ").join(str(error).split("\n")))
             return 1
 
     pipeline = Pypeline(options)
     for (command_key, command_func) in commands:
-        ui.print_info("Building %s pipeline ..." % (command_key,), file = sys.stderr)
+        logger.info("Building %s pipeline ...", command_key)
         command_func(pipeline, options, makefiles)
 
     for makefile in makefiles:

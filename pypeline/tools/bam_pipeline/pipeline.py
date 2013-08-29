@@ -23,12 +23,15 @@
 import os
 import sys
 import glob
+import time
 import string
+import logging
 import optparse
 import ConfigParser
 
 import pypeline
 import pypeline.ui as ui
+import pypeline.logger
 
 from pypeline.node import MetaNode
 from pypeline.nodes.picard import BuildSequenceDictNode
@@ -215,6 +218,8 @@ def parse_config(argv):
                              "accesible, if for example a network drive is down. This option should be " \
                              "used with care!")
 
+    pypeline.logger.add_optiongroup(parser)
+
     group  = optparse.OptionGroup(parser, "Scheduling")
     group.add_option("--bowtie2-max-threads", type = int, default = defaults.get("bowtie2_max_threads", 4),
                      help = "Maximum number of threads to use per BWA instance [%default]")
@@ -333,23 +338,26 @@ def main(argv):
 
     config, args = config_args
 
+    logfile_template = time.strftime("bam_pipeline.%Y%m%d_%H%M%S_%%02i.log")
+    pypeline.logger.initialize(config, logfile_template)
+    logger = logging.getLogger(__name__)
+
     try:
-        ui.print_info("Building BAM pipeline ...", file = sys.stderr)
+        logger.info("Building BAM pipeline ...")
         makefiles = read_makefiles(args)
         if not makefiles:
-            ui.print_err("Plase specify at least one makefile!", file = sys.stderr)
+            logger.error("Plase specify at least one makefile!")
             return 1
     except MakefileError, e:
-        ui.print_err("Error reading makefile:\n\t%s" % \
-                         "\n\t".join(str(e).split("\n")),
-                         file = sys.stderr)
+        logger.error("Error reading makefile:\n\t%s",
+                     "\n\t".join(str(e).split("\n")))
         return 1
 
     # Build .fai files for reference .fasta files
     index_references(config, makefiles)
 
     if config.list_targets:
-        ui.print_info("Listing targets for %s ..." % config.list_targets, file = sys.stderr)
+        logger.info("Listing targets for %s ...", config.list_targets)
         for makefile in makefiles:
             # If a destination is not specified, save results in same folder as makefile
             filename = makefile["Statistics"]["Filename"]
@@ -378,7 +386,7 @@ def main(argv):
         try:
             nodes = pipeline_func(config, makefile)
         except pypeline.node.NodeError, e:
-            ui.print_err("Error while building pipeline for '%s':\n%s" % (filename, e), file = sys.stderr)
+            logger.error("Error while building pipeline for '%s':\n%s", filename, e)
             return 1
 
         config.destination = old_destination
@@ -386,21 +394,21 @@ def main(argv):
         pipeline.add_nodes(nodes)
 
     if config.targets:
-        ui.print_err("ERROR: Could not find --target(s): '%s'" % "', '".join(config.targets), file = sys.stderr)
-        ui.print_err("       Please use --list-targets to print list of valid target names.", file = sys.stderr)
+        logger.error("ERROR: Could not find --target(s): '%s'", "', '".join(config.targets))
+        logger.error("       Please use --list-targets to print list of valid target names.")
         return 1
     elif config.list_output_files:
-        ui.print_info("Printing output files ...", file = sys.stderr)
+        logger.info("Printing output files ...")
         for filename in sorted(list_output_files(pipeline.nodes)):
             print(filename)
         return 0
     elif config.list_orphan_files:
-        ui.print_info("Printing orphan files ...", file = sys.stderr)
+        logger.info("Printing orphan files ...")
         for filename in sorted(list_orphan_files(config, makefiles, pipeline.nodes)):
             print(filename)
         return 0
 
-    ui.print_info("Running BAM pipeline ...", file = sys.stderr)
+    logger.info("Running BAM pipeline ...")
     if not pipeline.run(dry_run     = config.dry_run,
                         max_running = config.max_threads,
                         verbose     = config.verbose):

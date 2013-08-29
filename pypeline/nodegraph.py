@@ -21,11 +21,11 @@
 # SOFTWARE.
 #
 import os
-import sys
+import logging
 import collections
 
 import pypeline.common.versions as versions
-import pypeline.ui as ui
+
 from pypeline.node import MetaNode
 from pypeline.common.fileutils import missing_executables
 from pypeline.common.utilities import safe_coerce_to_frozenset
@@ -45,16 +45,17 @@ class NodeGraph:
     def __init__(self, nodes):
         nodes = safe_coerce_to_frozenset(nodes)
 
+        self._logger = logging.getLogger(__name__)
         self._reverse_dependencies = collections.defaultdict(set)
         self._collect_reverse_dependencies(nodes, self._reverse_dependencies)
         self._intersections = self._calculate_intersections()
         self._top_nodes = [node for (node, rev_deps) in self._reverse_dependencies.iteritems() if not rev_deps]
 
-        ui.print_info("  - Checking file dependencies ...", file = sys.stderr)
+        self._logger.info("  - Checking file dependencies ...")
         self._check_file_dependencies(self._reverse_dependencies)
-        ui.print_info("  - Checking for required executables ...", file = sys.stderr)
+        self._logger.info("  - Checking for required executables ...")
         self._check_required_executables(self._reverse_dependencies)
-        ui.print_info("", file = sys.stderr)
+        self._logger.info("")
 
         self._states = {}
         self.refresh_states()
@@ -158,7 +159,7 @@ class NodeGraph:
         except OSError, error:
             # Typically hapens if base input files are removed, causing a node that
             # 'is_done' to call modified_after on missing files in 'is_outdated'
-            ui.print_err("OSError checking state of Node: %s" % error, file = sys.stderr)
+            self._logger.error("OSError checking state of Node: %s", error)
             state = NodeGraph.ERROR
         self._states[node] = state
 

@@ -20,12 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import sys
 import time
 import signal
+import logging
 import multiprocessing
 
 import pypeline.ui as ui
+
 from pypeline.node import Node
 from pypeline.nodegraph import NodeGraph, NodeGraphError
 from pypeline.common.utilities import safe_coerce_to_tuple
@@ -35,8 +36,9 @@ from pypeline.common.utilities import safe_coerce_to_tuple
 
 class Pypeline:
     def __init__(self, config):
-        self._nodes = []
+        self._nodes  = []
         self._config = config
+        self._logger = logging.getLogger(__name__)
 
 
     def add_nodes(self, *nodes):
@@ -51,19 +53,23 @@ class Pypeline:
         try:
             nodegraph = NodeGraph(self._nodes)
         except NodeGraphError, error:
-            ui.print_err(error, file = sys.stderr)
+            self._logger.error(error)
             return False
 
         remaining = set(nodegraph.iterflat())
         for node in remaining:
             if node.threads > max_running:
-                ui.print_err("Node requires more threads than the maximum allowed:\n\t%s" \
-                             % str(node), file = sys.stderr)
+                self._logger.error("Node requires more threads than the maximum allowed:\n"
+                                   "    Maximum threads  = %i\n"
+                                   "    Required threads = %i\n"
+                                   "    Node             =\n"
+                                   "        %s",
+                                   max_running, node.threads, str(node))
                 return False
 
         if dry_run:
             ui.print_node_tree(nodegraph, collapse)
-            ui.print_info("Dry run done ...", file = sys.stderr)
+            self._logger.info("Dry run done ...")
             return True
 
         running = {}
@@ -87,24 +93,23 @@ class Pypeline:
                     ui.print_node_tree(nodegraph, collapse, verbose)
             except KeyboardInterrupt:
                 if interrupted_once:
-                    ui.print_err("\nTerminating now!\n", file = sys.stderr)
+                    self._logger.error("\nTerminating now!\n")
                     pool.terminate()
                     pool.join()
                     return False
 
                 remaining, interrupted_once = set(), True
-                ui.print_err("\nKeyboard interrupt detected, waiting for current tasks to complete ...",
-                             file = sys.stderr)
-                ui.print_err("\t- Press CTRL-C again to force termination.\n",
-                             file = sys.stderr)
+                self._logger.error("\nKeyboard interrupt detected, waiting for current tasks to complete ...\n"
+                                   "\t- Press CTRL-C again to force termination.\n")
 
         ui.print_node_tree(nodegraph, collapse)
         pool.close()
         pool.join()
 
         if errors:
-            ui.print_err("Errors were detected ...", file = sys.stderr)
-        ui.print_msg("Done ...", file = sys.stderr)
+            self._logger.error("Errors were detected ...")
+        self._logger.info("Done ...")
+
         return not errors
 
 
@@ -130,8 +135,7 @@ class Pypeline:
         return bool(remaining)
 
 
-    @classmethod
-    def _poll_running_nodes(cls, running, nodegraph):
+    def _poll_running_nodes(self, running, nodegraph):
         sleep_time = 0.05
         changes = errors = False
         while running and not (errors or changes):
@@ -147,9 +151,8 @@ class Pypeline:
                 except Exception, errors:
                     nodegraph.set_node_state(node, nodegraph.ERROR)
                     running.pop(node)
-                    ui.print_err("%s: Error occurred running command:\n%s\n" \
-                                     % (node, "\n".join(("\t" + line) for line in str(errors).strip().split("\n"))),
-                                 file = sys.stderr)
+                    self._logger.error("%s: Error occurred running command:\n%s\n",
+                                       node, "\n".join(("\t" + line) for line in str(errors).strip().split("\n")))
                     continue
                 nodegraph.set_node_state(node, nodegraph.DONE)
                 running.pop(node)
