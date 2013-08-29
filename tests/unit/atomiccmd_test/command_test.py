@@ -290,7 +290,6 @@ def test_atomiccmd__pipes__duplicates():
 def test_atomicmcd__exec__reqobj():
     reqobj = RequirementObj(call = ("echo", "version"),
                             search = "version",
-                            pprint = "{0}",
                             checks = str)
     cmd = AtomicCmd("true",
                     CHECK_VERSION = reqobj)

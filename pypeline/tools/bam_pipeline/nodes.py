@@ -39,7 +39,6 @@ _MAPDAMAGE_MAX_READS = 100000
 
 MAPDAMAGE_VERSION = versions.Requirement(call   = ("mapDamage", "--version"),
                                          search = r"(\d+)\.(\d+)[\.-](\d+)",
-                                         pprint = "{0}.{1}.{2}",
                                          checks = versions.GE(2, 0, 45))
 
 

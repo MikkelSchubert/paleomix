@@ -182,8 +182,7 @@ class NodeGraph:
             for requirement in exec_requirements:
                 requirement()
         except versions.VersionRequirementError, error:
-            raise NodeGraphError("Version requirements check failed for %s:\n\t%s" \
-                                 % (requirement.name, error))
+            raise NodeGraphError(error)
         except OSError, error:
             raise NodeGraphError("Could not check version requirements for %s:\n\t%s" \
                                  % (requirement.name, error))

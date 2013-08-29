@@ -21,7 +21,6 @@
 # SOFTWARE.
 #
 import re
-import types
 import subprocess
 import collections
 
@@ -38,7 +37,7 @@ class VersionRequirementError(RuntimeError):
     pass
 
 
-def Requirement(call, search, checks, pprint = None, name = None):
+def Requirement(call, search, checks, name = None):
     """Returns a singleton Requirement object, based on the parameters,
     which may be used to check that version requirements are met for a
     given program/utility/module, etc.
@@ -53,14 +52,8 @@ def Requirement(call, search, checks, pprint = None, name = None):
       search -- A regular expression (string or re object), used to search
                 the output of the "call". Groups are assumed to represent
                 version numbers.
-      pprint -- A function that takes a tuple of version fields and returns
-                a string, or a format string that may be used to convert such
-                a tuple. If not specified, the version fields will be converted
-                to strings and joined by '.'s.
-      checks -- A callable that carries out any required version-checks. Is
-                called as "checks(value, pprint). Should raise an exception
-                (e.g. VersionRequirementError) in the case of requirements
-                not being met.
+      checks -- A callable that implements the interface described in the
+                Check class.
 
     Implementation detail: To reduce the need for performing calls or system-
     calls multiple times, caches are implemented using the call object as keys.
@@ -68,7 +61,7 @@ def Requirement(call, search, checks, pprint = None, name = None):
     the same calls to be established.
     """
     call = safe_coerce_to_tuple(call)
-    key = (call, search, pprint, checks, name)
+    key = (call, search, checks, name)
 
     try:
         requirement = _REQUIREMENT_CACHE[key]
@@ -81,13 +74,12 @@ def Requirement(call, search, checks, pprint = None, name = None):
 
 
 class RequirementObj:
-    def __init__(self, call, search, pprint, checks, name = None):
+    def __init__(self, call, search, checks, name = None):
         self._done = None
         self.name  = name or call[0]
         self._call = call
         self._reqs = checks
         self._rege = re.compile(search)
-        self._ppr  = pprint
         self._version = None
 
 
@@ -106,123 +98,87 @@ class RequirementObj:
 
     def __call__(self, force = False):
         if force or self._done is None:
-            self._reqs.set_ppr(self._ppr)
-            self._reqs(self.version)
+            self._reqs(self.name, self.version)
             self._done = True
 
 
-class _Check:
-    def __init__(self, name, *version):
-        self._version = tuple(version)
-        self._desc    = (str(name), self._version)
-        self._ppr     = str
+class Check:
+    def __init__(self, name, description, *version):
+        self._version    = tuple(version)
+        self._objs       = (str(name), self._version)
+        self.description = description.format(_pprint(self._version))
 
-    def set_ppr(self, func):
-        self._ppr = func
 
     def __hash__(self):
-        return hash(self._desc)
+        return hash(self._objs)
+
 
     def __cmp__(self, other):
-        if isinstance(other, _Check):
-            return cmp(self._desc, other._desc)
-
+        if isinstance(other, Check):
+            return cmp(self._objs, other._objs) # pylint: disable=W0212
         return cmp(self.__class__, other.__class__)
 
-    def __str__(self):
-        return "%s%s" % self._desc
 
-    def __repr__(self):
-        return str(self)
+    def __call__(self, name, value):
+        if not self.check_version(value):
+            version     = _pprint(value)
+
+            raise VersionRequirementError(("Version requirement not met for %r:\n"
+                                           "    Required:  %s\n"
+                                           "    Installed: %s")
+                                           % (name, self.description, version))
+
+    def check_version(self, value):
+        raise NotImplementedError("'check_version' not implemented")
 
 
-class EQ(_Check):
+class EQ(Check):
     def __init__(self, *version):
-        _Check.__init__(self, "EQ", *version)
-
-    def __call__(self, value):
-        if value != self._version:
-            raise VersionRequirementError("Must be %s, found %s" \
-                                          % (_pprint(self._ppr, self._version),
-                                             _pprint(self._ppr, value)))
-
-    def __str__(self):
-        return "(Equals %s)" % _pprint(self._ppr, self._version)
+        Check.__init__(self, "EQ", "equals {0}", *version)
 
 
-class GE(_Check):
+    def check_version(self, value):
+        return (value == self._version)
+
+
+class GE(Check):
     def __init__(self, *version):
-        _Check.__init__(self, "GE", *version)
-
-    def __call__(self, value):
-        if not value >= self._version:
-            raise VersionRequirementError("(At least %s, found %s)" \
-                                          % (_pprint(self._ppr, self._version),
-                                             _pprint(self._ppr, value)))
-
-    def __str__(self):
-        return "(At least %s)" % _pprint(self._ppr, self._version)
+        Check.__init__(self, "GE", "at least {0}", *version)
 
 
-class LT(_Check):
+    def check_version(self, value):
+        return value >= self._version
+
+
+class LT(Check):
     def __init__(self, *version):
-        _Check.__init__(self, "LE", *version)
-
-    def __call__(self, value):
-        if not value < self._version:
-            raise VersionRequirementError("(Earlier than %s, found %s)" \
-                                          % (_pprint(self._ppr, self._version),
-                                             _pprint(self._ppr, value)))
-
-    def __str__(self):
-        return "(Earlier than %s)" % _pprint(self._ppr, self._version)
+        Check.__init__(self, "LE", "prior to {0}", *version)
 
 
-class And(_Check):
+    def check_version(self, value):
+        return value < self._version
+
+
+class And(Check):
     def __init__(self, *checks):
         self._checks = checks
-        _Check.__init__(self, "Or", *checks)
-
-    def set_ppr(self, func):
-        _Check.set_ppr(self, func)
-        for check in self._checks:
-            check.set_ppr(func)
-
-    def __call__(self, value):
-        failures = map(str, self._checks)
-        for (index, check) in enumerate(self._checks):
-            try:
-                check(value)
-            except VersionRequirementError, error:
-                failures[index] = str(error)
-                raise VersionRequirementError("(%s)" % (" AND ".join(failures)))
-
-    def __str__(self):
-        return "(%s)" % (" AND ".join(self._checks))
+        description = " and ".join("(%s)" % (check.description,) for check in checks)
+        Check.__init__(self, "And", description, *checks)
 
 
-class Or(_Check):
+    def check_version(self, value):
+        return all(check.check_version(value) for check in self._checks)
+
+
+class Or(Check):
     def __init__(self, *checks):
         self._checks = checks
-        _Check.__init__(self, "Or", *checks)
+        description = " or ".join("(%s)" % (check.description,) for check in checks)
+        Check.__init__(self, "Or", description, *checks)
 
-    def set_ppr(self, func):
-        _Check.set_ppr(self, func)
-        for check in self._checks:
-            check.set_ppr(func)
 
-    def __call__(self, value):
-        failures = []
-        for check in self._checks:
-            try:
-                return check(value)
-            except VersionRequirementError, error:
-                failures.append(error)
-        raise VersionRequirementError("Failed to meet version requirements: (%s)" \
-                                      % " OR ".join(map(str, failures)))
-
-    def __str__(self):
-        return "(%s)" % (" OR ".join(self._checks))
+    def check_version(self, value):
+        return any(check.check_version(value) for check in self._checks)
 
 
 def _run(call):
@@ -248,13 +204,5 @@ def _do_call(call):
         return result
 
 
-def _pprint(ppr, value):
-    if not ppr:
-        return "v" + ".".join(map(str, value))
-    elif isinstance(ppr, collections.Callable):
-        return ppr(value)
-
-    try:
-        return ppr.format(*value)
-    except ValueError, e:
-        raise ValueError("%s: %s.format(*%s)" % (str(e), repr(ppr), repr(value)))
+def _pprint(value):
+    return "v" + ".".join(map(str, value))
