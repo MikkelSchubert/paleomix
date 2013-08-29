@@ -89,9 +89,8 @@ class FilterSingletonsNode(Node):
         self._output_file     = output_file
         self._filter_by       = dict(filter_by)
         for (to_filter, groups) in self._filter_by.items():
-            groups = set(groups) | set([to_filter])
-            if len(groups) == 1:
-                raise RuntimeError("Singleton filtering must involve at least one other group")
+            if not groups:
+                raise RuntimeError("Singleton filtering must involve at least one taxa")
             self._filter_by[to_filter] = groups
 
         Node.__init__(self,
