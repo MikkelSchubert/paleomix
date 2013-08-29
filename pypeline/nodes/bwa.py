@@ -37,8 +37,8 @@ import pypeline.common.versions as versions
 
 BWA_VERSION = versions.Requirement(call   = ("bwa",),
                                    search = r"Version: (\d+)\.(\d+)\.(\d+)",
-                                   checks = versions.Or(versions.And(versions.GE(0, 5, 9),
-                                                                     versions.LT(0, 6, 0)),
+                                   checks = versions.Or(versions.And(versions.GE(0, 5, 9), versions.LT(0, 6, 0)),
+                                                        versions.And(versions.GE(0, 6, 2), versions.LT(0, 7, 0)),
                                                         versions.GE(0, 7, 5)))
 
 
