@@ -137,6 +137,7 @@ class IndexAndValidateBAMNode(MetaNode):
                                                       dependencies = node)
         # Check MD tags against reference sequence
         # FIXME: Disabled due to issues with Picard/Samtools disagreeing, backwards compatibility.
+        #        See: http://sourceforge.net/mailarchive/message.php?msg_id=31348639
         #        validation_params.command.set_kwargs(IN_REFERENCE = prefix["Reference"])
         #        validation_params.command.add_option("R", "%(IN_REFERENCE)s", sep = "=")
         # Ignored since we filter out misses and low-quality hits during mapping, which
