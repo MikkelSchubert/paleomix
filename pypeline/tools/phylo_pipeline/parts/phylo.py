@@ -71,11 +71,15 @@ def _examl_nodes(settings, input_alignment, input_binary, output_template, depen
                             output_tree     = initial_tree,
                             dependencies    = dependencies)
 
-    return EXaMLNode(input_binary    = input_binary,
-                     initial_tree    = initial_tree,
-                     output_template = output_template,
-                     threads         = settings["ExaML"]["Threads"],
-                     dependencies    = tree)
+    params = EXaMLNode.customize(input_binary    = input_binary,
+                                 initial_tree    = initial_tree,
+                                 output_template = output_template,
+                                 threads         = settings["ExaML"]["Threads"],
+                                 dependencies    = tree)
+
+    params.command.set_option("-m", settings["ExaML"]["Model"].upper())
+
+    return params.build_node()
 
 
 def build_examl_replicates(phylo, destination, input_alignment, input_partition, dependencies):
