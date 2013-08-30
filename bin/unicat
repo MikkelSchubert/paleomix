@@ -21,46 +21,51 @@
 # SOFTWARE.
 #
 """
-An alternative to 'samtools view -Sb -', needed because samtools does not
-properly handle SAM-files with no records. For example, the following
-command will not work:
-$ samtools view -H INPUT | samtools view -Sb -
+Wrapper around cat / zcat / bzcat, which selects the appropriate commmand based
+on the files specified on the command-line. Input files may be a mix of different
+types of compressed / uncompressed files.
 """
 
 import sys
 import optparse
+import itertools
 import subprocess
 
 
-def select_cat(filename):
+def _select_output(filename):
+    if not filename or (filename == '-'):
+        return sys.stdout
+    return open(filename, 'wb')
+
+
+def _select_cat(filename):
     with open(filename) as source:
         header = source.read(2)
         if header == "\x1f\x8b":
             return "zcat"
         elif header == "BZ":
             return "bzcat"
-
         return "cat"
 
 
-def call(input_files, output_file):
-    executable = select_cat(input_files[0])
-    command = [executable] + input_files
+def _call(input_files, output_file):
+    with _select_output(output_file) as out_handle:
+        for (executable, filenames) in itertools.groupby(input_files, _select_cat):
+            command = [executable]
+            command.extend(filenames)
 
-    if not output_file:
-        return subprocess.Popen(command, close_fds = True).wait()
-
-
-    with open(output_file, "w") as output:
-        proc = subprocess.Popen(command,
-                                stdout    = output,
-                                close_fds = True)
-        return proc.wait()
+            proc = subprocess.Popen(command,
+                                    stdout    = out_handle,
+                                    close_fds = True)
+            if proc.wait():
+                return proc.returncode
+    return 0
 
 
 def main(argv):
     parser = optparse.OptionParser("%prog [OPTION] <FILE_1> [<FILE_2> ...]")
-    parser.add_option("--output")
+    parser.add_option("--output", default = None,
+                      help = "Write output to this file. Defaults to STDOUT.")
 
     config, args = parser.parse_args(argv)
     if not args:
@@ -68,8 +73,8 @@ def main(argv):
         sys.stderr.write("ERROR: At least one input file must be specified\n")
         return 1
 
-    return call(input_files   = args,
-                output_file   = config.output)
+    return _call(input_files = args,
+                output_file  = config.output)
 
 
 if __name__ == '__main__':
