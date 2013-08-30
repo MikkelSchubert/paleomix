@@ -345,7 +345,12 @@ def _get_max_threads(reference, threads):
     return threads
 
 
+_PREFIXES_CHECKED = set()
 def _check_bwa_prefix(prefix):
+    if prefix in _PREFIXES_CHECKED:
+        return
+    _PREFIXES_CHECKED.add(prefix)
+
     try:
         bwa_version = BWA_VERSION.version
     except versions.VersionRequirementError:
