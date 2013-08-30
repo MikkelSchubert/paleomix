@@ -31,6 +31,7 @@ from pypeline.common.testing import \
 
 from pypeline.common.makefile import \
     DEFAULT_NOT_SET, \
+    REQUIRED_VALUE, \
     MakefileError, \
     MakefileSpec, \
     process_makefile, \
@@ -1330,6 +1331,29 @@ def test_process_makefile__shared_subtrees_with_defaults__defaults_disabled():
     result  = process_makefile(current, specs)
     assert_equal(result, expected)
 
+def test_process_makefile__accept_when_required_value_is_set():
+    current  = {"A" : 1, "B" : {"C" : 3}}
+    expected = {"A" : 1, "B" : {"C" : 3}}
+    specs    = {"A" : IsInt, "B" : {"C" : IsInt(default = REQUIRED_VALUE)}}
+    result   = process_makefile(current, specs)
+    assert_equal(result, expected)
+
+def test_process_makefile__fails_when_required_value_not_set():
+    current  = {"A" : 1}
+    specs    = {"A" : IsInt, "B" : {"C" : IsInt(default = REQUIRED_VALUE)}}
+    assert_raises(MakefileError, process_makefile, current, specs)
+
+def test_process_makefile__fails_when_required_value_not_set_in_dynamic_subtree():
+    current  = {"A" : 1, "B" : {}}
+    specs    = {"A" : IsInt, IsStr : {"C" : IsInt(default = REQUIRED_VALUE)}}
+    assert_raises(MakefileError, process_makefile, current, specs)
+
+def test_process_makefile__accept_when_required_value_not_set_in_missing_dynamic_subtree():
+    current  = {"A" : 1}
+    expected = {"A" : 1}
+    specs    = {"A" : IsInt, IsStr : {"C" : IsInt(default = REQUIRED_VALUE)}}
+    result   = process_makefile(current, specs)
+    assert_equal(result, expected)
 
 def test_process_makefile__path_shown_in_exception():
     assert_raises_regexp(TypeError, _DUMMY_PATH_STR,

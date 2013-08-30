@@ -23,6 +23,7 @@
 import pypeline.common.makefile
 from pypeline.common.makefile import \
      MakefileError, \
+     REQUIRED_VALUE, \
      IsStr, \
      IsDictOf, \
      IsListOf, \
@@ -142,7 +143,7 @@ _VALIDATION = {
         "Taxa" : _VALIDATION_TAXA,
         "Intervals" : {
             IsStr : {
-                "Genome"         : IsStr,
+                "Genome"         : IsStr(default = REQUIRED_VALUE),
                 "Protein coding" : IsBoolean(default = False),
                 "Include indels" : IsBoolean(default = True),
                 "Homozygous Contigs" : {
@@ -199,8 +200,8 @@ _VALIDATION = {
         "codeml" : {
             "ExcludeGroups" : IsListOf(IsStr),
             IsStr : {
-                "Control File" : IsStr,
-                "Tree File"    : IsStr,
+                "Control File" : IsStr(default = REQUIRED_VALUE),
+                "Tree File"    : IsStr(default = REQUIRED_VALUE),
             },
         },
     },

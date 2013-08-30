@@ -223,8 +223,7 @@ def process_makefile(data, specification, path = ("root",), apply_defaults = Tru
     elif _is_spec(specification):
         _instantiate_spec(specification)(path, data)
     elif isinstance(data, dict) and isinstance(specification, dict):
-        if apply_defaults:
-            _set_default_values(data, specification)
+        _process_default_values(data, specification, path, apply_defaults)
 
         for cur_key in data:
             ref_key = _get_matching_spec_or_value(cur_key, specification, path + (cur_key,))
@@ -246,6 +245,8 @@ def process_makefile(data, specification, path = ("root",), apply_defaults = Tru
 ################################################################################
 # Unique 'value' used to specify that a MakefileSpec does not have a default value.
 DEFAULT_NOT_SET = object()
+# Unique 'value' used to specify that the user MUST supply a value
+REQUIRED_VALUE = object()
 
 
 class WithoutDefaults:
@@ -269,7 +270,7 @@ class MakefileSpec:
 
         self.description = description
         self.default     = default
-        if (default is not DEFAULT_NOT_SET) and not self.meets_spec(default):
+        if (default not in (DEFAULT_NOT_SET, REQUIRED_VALUE)) and not self.meets_spec(default):
             raise ValueError(("Default value does not meet requirements:\n"
                               "  Expected value(s): %s\n"
                               "  Observed value(s): %r\n")
@@ -751,7 +752,7 @@ def _get_matching_spec_or_value(value, specs, path):
     assert False # pragma: no coverage
 
 
-def _set_default_values(data, specification):
+def _process_default_values(data, specification, path, apply_defaults):
     for cur_key in specification:
         if (not _is_spec(cur_key)) and (cur_key not in data):
             default_value = specification[cur_key]
@@ -759,9 +760,12 @@ def _set_default_values(data, specification):
                 default_value = _instantiate_spec(default_value)
                 if (default_value.default is DEFAULT_NOT_SET):
                     continue
+                elif (default_value.default is REQUIRED_VALUE):
+                    raise MakefileError("A value MUST be supplified for %r" \
+                                        % (_path_to_str(path + (cur_key,))))
                 default_value = default_value.default
 
-            if not isinstance(default_value, WithoutDefaults):
+            if apply_defaults and not isinstance(default_value, WithoutDefaults):
                 # Setting of values in the dict will be accomplished
                 # in subsequent calls to _set_default_values
                 if isinstance(default_value, dict):

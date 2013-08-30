@@ -33,6 +33,7 @@ from pypeline.common.utilities import fill_dict
 from pypeline.common.fileutils import missing_files
 from pypeline.common.makefile import \
      MakefileError, \
+     REQUIRED_VALUE, \
      WithoutDefaults, \
      read_makefile, \
      IsInt, \
@@ -137,7 +138,7 @@ _VALIDATION = {
 
     "Prefixes" : {
         _VALID_PREFIX_NAME : {
-            "Path"    : IsStr,
+            "Path"    : IsStr(default = REQUIRED_VALUE),
             "Label"   : ValueIn(("nuclear", "mitochondrial")),
             "AreasOfInterest" : IsDictOf(IsStr, IsStr),
         },
@@ -201,10 +202,7 @@ def _update_options(makefile):
 def _update_prefixes(makefile):
     prefixes = {}
     for (name, values) in makefile.get("Prefixes", {}).iteritems():
-        filename = values.get("Path")
-        if not filename:
-            raise MakefileError("Path not specified for prefix '%s'." % name)
-
+        filename = values["Path"]
         if name.endswith("*"):
             records = []
             for fname in glob.glob(filename):
