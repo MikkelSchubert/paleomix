@@ -26,6 +26,8 @@ import errno
 import optparse
 import logging
 
+import pypeline.common.console as _cli
+
 
 def initialize(config, template):
     """Takes an OptionParser object for which 'add_optiongroup' has
@@ -92,15 +94,13 @@ class _PrintToConsole(logging.Handler):
 
     @classmethod
     def get_ui_function(cls, level):
-        import pypeline.ui as ui
-
         if level in (logging.ERROR, logging.CRITICAL):
-            return ui.print_err, sys.stderr
+            return _cli.print_err, sys.stderr
         elif level == logging.WARNING:
-            return ui.print_warn, sys.stderr
+            return _cli.print_warn, sys.stderr
         elif level == logging.DEBUG:
-            return ui.print_debug, sys.stderr
-        return ui.print_info, sys.stdout
+            return _cli.print_debug, sys.stderr
+        return _cli.print_info, sys.stdout
 
 
 class _LazyLogfile(logging.Handler):

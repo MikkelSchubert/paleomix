@@ -26,7 +26,9 @@ import glob
 import datetime
 from optparse import OptionParser
 
-import pypeline.ui as ui
+from pypeline.common.console import \
+     print_info, \
+     print_err
 
 
 _TRIM_PIPELINE = (os.path.basename(sys.argv[0]) == "trim_pipeline")
@@ -201,7 +203,7 @@ def main(argv):
             root, filename = os.path.split(root)[0], root
 
         if not os.path.exists(filename):
-            ui.print_err("ERROR: Could not find SampleSheet file: %r" % filename)
+            print_err("ERROR: Could not find SampleSheet file: %r" % filename)
             return 1
 
         for record in read_alignment_records(filename):
@@ -228,11 +230,11 @@ def main(argv):
         print
 
     if not argv:
-        ui.print_info("No directories specified, empty table printed:", file = sys.stderr)
-        ui.print_info("\tUsage: %s [directory ...]" % sys.argv[0], file = sys.stderr)
-        ui.print_info("Each directory must contain a '%s' file." % _FILENAME, file = sys.stderr)
+        print_info("No directories specified, empty table printed:", file = sys.stderr)
+        print_info("\tUsage: %s [directory ...]" % sys.argv[0], file = sys.stderr)
+        print_info("Each directory must contain a '%s' file." % _FILENAME, file = sys.stderr)
     else:
-        ui.print_info("Makefile printed. Please check for correctness before running pipeline.", file = sys.stderr)
+        print_info("Makefile printed. Please check for correctness before running pipeline.", file = sys.stderr)
     return 0
 
 

@@ -48,13 +48,14 @@ def main(argv):
         return 1
 
     if (len(argv) == 0) or (argv[0] not in ("mkfile", "run", "dry_run", "dryrun")):
-        import pypeline.ui as ui
+        from pypeline.common.console import print_info
+
         basename = os.path.basename(sys.argv[0])
-        ui.print_info("Usage:")
-        ui.print_info("  -- %s help            -- Display this message" % basename)
-        ui.print_info("  -- %s mkfile [...]    -- Generate makefile from 'SampleSheet.csv' files." % basename)
-        ui.print_info("  -- %s dry_run [...]   -- Perform dry run of pipeline on provided makefiles." % basename)
-        ui.print_info("  -- %s run [...]       -- Run pipeline on provided makefiles." % basename)
+        print_info("Usage:")
+        print_info("  -- %s help            -- Display this message" % basename)
+        print_info("  -- %s mkfile [...]    -- Generate makefile from 'SampleSheet.csv' files." % basename)
+        print_info("  -- %s dry_run [...]   -- Perform dry run of pipeline on provided makefiles." % basename)
+        print_info("  -- %s run [...]       -- Run pipeline on provided makefiles." % basename)
     elif argv[0] == "mkfile":
         import pypeline.tools.bam_pipeline.mkfile
 

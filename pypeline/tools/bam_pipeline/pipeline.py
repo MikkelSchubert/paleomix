@@ -30,8 +30,11 @@ import optparse
 import ConfigParser
 
 import pypeline
-import pypeline.ui as ui
 import pypeline.logger
+
+from pypeline.common.console import \
+     print_info, \
+     print_err
 
 from pypeline.node import MetaNode
 from pypeline.nodes.picard import BuildSequenceDictNode
@@ -40,7 +43,8 @@ from pypeline.nodes.samtools import FastaIndexNode
 from pypeline.tools.bam_pipeline.makefile import \
      read_makefiles, \
      MakefileError
-from pypeline.tools.bam_pipeline.nodes import MapDamageNode
+from pypeline.tools.bam_pipeline.nodes import \
+     MapDamageNode
 
 import pypeline.tools.bam_pipeline.parts as parts
 
@@ -264,23 +268,23 @@ def parse_config(argv):
     config.targets = set(config.targets)
     targets_by_name = ("targets", "prefixes", "samples", "libraries", "lanes", "mapping", "trimming")
     if (config.list_targets is not None) and (config.list_targets not in targets_by_name):
-        ui.print_err("ERROR: Invalid value for --list-targets (%s), valid values are '%s'." \
-                     % (repr(config.list_targets), "', '".join(targets_by_name)), file = sys.stderr)
+        print_err("ERROR: Invalid value for --list-targets (%s), valid values are '%s'." \
+                  % (repr(config.list_targets), "', '".join(targets_by_name)), file = sys.stderr)
         return None
 
     if config.list_output_files and config.list_orphan_files:
-        ui.print_err("ERROR: Both --list-output-files and --list-orphan-files set!", file = sys.stderr)
+        print_err("ERROR: Both --list-output-files and --list-orphan-files set!", file = sys.stderr)
         return None
 
     if not os.path.exists(config.temp_root):
         try:
             os.makedirs(config.temp_root)
         except OSError, e:
-            ui.print_err("ERROR: Could not create temp root:\n\t%s" % (e,), file = sys.stderr)
+            print_err("ERROR: Could not create temp root:\n\t%s" % (e,), file = sys.stderr)
             return None
 
     if not os.access(config.temp_root, os.R_OK | os.W_OK | os.X_OK):
-        ui.print_err("ERROR: Insufficient permissions for temp root: '%s'" % config.temp_root, file = sys.stderr)
+        print_err("ERROR: Insufficient permissions for temp root: '%s'" % config.temp_root, file = sys.stderr)
         return None
 
     return config, args
