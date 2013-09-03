@@ -91,8 +91,8 @@ def build_examl_replicates(phylo, destination, input_alignment, input_partition,
 
     replicates = []
     for replicate_num in range(phylo["ExaML"]["Replicates"]):
-        replicate_destination = os.path.join(destination, "replicate_%04i" % replicate_num)
-        replicate_template    = os.path.join(replicate_destination, "EXaML_%s")
+        replicate_destination = os.path.join(destination, "replicates")
+        replicate_template    = os.path.join(replicate_destination, "replicate.%04i.%%s" % (replicate_num,))
         replicates.append(_examl_nodes(phylo, input_alignment, input_binary, replicate_template, binary))
 
     if replicates:
@@ -119,7 +119,7 @@ def build_examl_bootstraps(phylo, destination, input_alignment, input_partition,
         for bootstrap_num in range(bootstrap_start, bootstrap_start + 50):
             bootstrap_alignment   = bootstrap_template % (bootstrap_num,)
             bootstrap_binary      = swap_ext(bootstrap_alignment, ".binary")
-            bootstrap_final       = swap_ext(bootstrap_alignment, ".EXaML_%s")
+            bootstrap_final       = swap_ext(bootstrap_alignment, ".%s")
             bs_binary   = EXaMLParserNode(input_alignment = bootstrap_alignment,
                                           input_partition = input_partition,
                                           output_file     = bootstrap_binary,
