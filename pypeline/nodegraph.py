@@ -27,8 +27,11 @@ import collections
 import pypeline.common.versions as versions
 
 from pypeline.node import MetaNode
-from pypeline.common.fileutils import missing_executables
-from pypeline.common.utilities import safe_coerce_to_frozenset
+from pypeline.common.fileutils import \
+     reroot_path, \
+     missing_executables
+from pypeline.common.utilities import \
+     safe_coerce_to_frozenset
 
 
 # Max number of error messages of each type
@@ -217,7 +220,25 @@ class NodeGraph:
 
     @classmethod
     def _check_output_files(cls, output_files):
+        """Checks dict of output files to nodes for cases where
+        multiple nodes create the same output file.
+
+        The directory component of paths are realized in order to
+        detect cases where nodes create the same file, but via
+        different paths (e.g. due to relative/absolute paths, or
+        due to use of symbolic links). Since output files are
+        replaced, not modified in place, it is not nessesary to
+        compare files themselves."""
+        dirpath_cache, real_output_files = {}, {}
         for (filename, nodes) in output_files.iteritems():
+            dirpath = os.path.dirname(filename)
+            if dirpath not in dirpath_cache:
+                dirpath_cache[dirpath] = os.path.realpath(dirpath)
+
+            real_output_file = reroot_path(dirpath_cache[dirpath], filename)
+            real_output_files.setdefault(real_output_file, []).extend(nodes)
+
+        for (filename, nodes) in real_output_files.iteritems():
             if (len(nodes) > 1):
                 nodes = _summarize_nodes(nodes)
                 yield "Multiple nodes create the same (clobber) output-file:" \
