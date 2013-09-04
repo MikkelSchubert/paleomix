@@ -28,9 +28,11 @@ class Target:
         self.name     = name
         self.prefixes = safe_coerce_to_tuple(prefixes)
 
+        self._nodes_extras    = {}
         self._nodes_alignment = MetaNode(description  = "Alignments:",
                                           dependencies = [prefix.node for prefix in self.prefixes])
-        self._nodes_extras    = {}
+
+        self._setup_mapdamage_nodes()
 
 
     def add_extra_nodes(self, name, nodes):
@@ -40,6 +42,7 @@ class Target:
         self._nodes_extras[name] = MetaNode(description  = name + ":",
                                             dependencies = nodes)
 
+
     @property
     def node(self):
         extras = MetaNode(description  = "Additional tasks:",
@@ -47,3 +50,21 @@ class Target:
 
         return MetaNode(description    = "Target: %s" % self.name,
                         dependencies   = (self._nodes_alignment, extras))
+
+
+    def _setup_mapdamage_nodes(self):
+        mapdamage_nodes = []
+        for prefix in self.prefixes:
+            prefix_nodes = []
+            for sample in prefix.samples:
+                for library in sample.libraries:
+                    if library.mapdamage:
+                        prefix_nodes.append(library.mapdamage)
+
+            if any(prefix_nodes):
+                node = MetaNode(description = prefix.name,
+                                subnodes    = prefix_nodes)
+                mapdamage_nodes.append(node)
+
+        if mapdamage_nodes:
+            self.add_extra_nodes("mapDamage", mapdamage_nodes)

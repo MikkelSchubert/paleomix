@@ -24,7 +24,6 @@ import os
 import sys
 import glob
 import time
-import string
 import logging
 import optparse
 import ConfigParser
@@ -33,7 +32,6 @@ import pypeline
 import pypeline.logger
 
 from pypeline.common.console import \
-     print_info, \
      print_err
 
 from pypeline.node import MetaNode
@@ -43,40 +41,14 @@ from pypeline.nodes.samtools import FastaIndexNode
 from pypeline.tools.bam_pipeline.makefile import \
      read_makefiles, \
      MakefileError
-from pypeline.tools.bam_pipeline.nodes import \
-     MapDamageNode
 
 import pypeline.tools.bam_pipeline.parts as parts
 
 
 
 
-def _add_mapdamage_nodes(config, makefile, target):
-    if "mapDamage" not in makefile["Options"]["Features"]:
-        return
-
-    nodes = []
-    for prefix in target.prefixes:
-        libraries = []
-        for sample in prefix.samples:
-            for library in sample.libraries:
-                folder = os.path.join(config.destination, "%s.%s.mapDamage" % (target.name, prefix.name), library.name)
-                libraries.append(MapDamageNode(config           = config,
-                                               reference        = prefix.reference,
-                                               input_files      = library.bams.keys(),
-                                               output_directory = folder,
-                                               dependencies     = library.bams.values()))
-
-        nodes.append(MetaNode(description = prefix.name,
-                              subnodes    = libraries))
-
-    target.add_extra_nodes("mapDamage", nodes)
-
-
-
 def _add_extra_nodes(config, makefile, targets):
     for target in targets:
-        _add_mapdamage_nodes(config, makefile, target)
         parts.add_statistics_nodes(config, makefile, target)
 
     return targets
@@ -88,9 +60,9 @@ def build_pipeline_trimming(config, makefile):
 
     nodes = []
     for prefix in makefile["Prefixes"].itervalues():
-        for (target, samples) in makefile["Targets"].iteritems():
-            for (sample, libraries) in samples.iteritems():
-                for (library, barcodes) in libraries.iteritems():
+        for (_, samples) in makefile["Targets"].iteritems():
+            for (_, libraries) in samples.iteritems():
+                for (_, barcodes) in libraries.iteritems():
                     for (barcode, record) in barcodes.iteritems():
                         lane = parts.Lane(config, prefix, record, barcode)
                         if lane.reads and lane.reads.nodes:
@@ -104,7 +76,7 @@ def build_pipeline_full(config, makefile, return_nodes = True):
     features = makefile["Options"]["Features"]
     for (target_name, sample_records) in makefile["Targets"].iteritems():
         prefixes = []
-        for (prefix_name, prefix) in makefile["Prefixes"].iteritems():
+        for (_, prefix) in makefile["Prefixes"].iteritems():
             samples = []
             for (sample_name, library_records) in sample_records.iteritems():
                 libraries = []
@@ -114,7 +86,7 @@ def build_pipeline_full(config, makefile, return_nodes = True):
                         lanes.append(parts.Lane(config, prefix, record, barcode))
 
                     if any(lane.bams for lane in lanes):
-                        libraries.append(parts.Library(config, prefix, lanes, library_name))
+                        libraries.append(parts.Library(config, target_name, prefix, lanes, library_name))
 
                 if libraries:
                     samples.append(parts.Sample(config, prefix, libraries, sample_name))

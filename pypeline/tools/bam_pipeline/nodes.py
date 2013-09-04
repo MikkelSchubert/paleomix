@@ -24,87 +24,14 @@ import os
 
 from pypeline.node import CommandNode, MetaNode
 from pypeline.atomiccmd.command import AtomicCmd
-from pypeline.atomiccmd.sets import ParallelCmds, SequentialCmds
+from pypeline.atomiccmd.sets import ParallelCmds
 from pypeline.atomiccmd.builder import AtomicJavaCmdBuilder
 
 from pypeline.nodes.picard import ValidateBAMNode, concatenate_input_bams
 from pypeline.nodes.samtools import BAMIndexNode
 from pypeline.common.fileutils import describe_files
 
-import pypeline.common.versions as versions
 
-# Number of reads to sample when running mapDamage
-_MAPDAMAGE_MAX_READS = 100000
-
-
-MAPDAMAGE_VERSION = versions.Requirement(call   = ("mapDamage", "--version"),
-                                         search = r"(\d+)\.(\d+)[\.-](\d+)",
-                                         checks = versions.GE(2, 0, 45))
-
-
-class MapDamageNode(CommandNode):
-    def __init__(self, config, reference, input_files, output_directory, dependencies):
-        cat_cmds, cat_obj = concatenate_input_bams(config, input_files)
-
-        cmd_map = AtomicCmd(["mapDamage", "--no-stats",
-                            "-n", _MAPDAMAGE_MAX_READS,
-                             "-i", "-",
-                             "-d", "%(TEMP_DIR)s",
-                             "-r", reference],
-                            IN_STDIN        = cat_obj,
-                            OUT_FREQ_3p     = os.path.join(output_directory, "3pGtoA_freq.txt"),
-                            OUT_FREQ_5p     = os.path.join(output_directory, "5pCtoT_freq.txt"),
-                            OUT_COMP_USER   = os.path.join(output_directory, "dnacomp.txt"),
-                            OUT_PLOT_FRAG   = os.path.join(output_directory, "Fragmisincorporation_plot.pdf"),
-                            OUT_PLOT_LEN    = os.path.join(output_directory, "Length_plot.pdf"),
-                            OUT_LENGTH      = os.path.join(output_directory, "lgdistribution.txt"),
-                            OUT_MISINCORP   = os.path.join(output_directory, "misincorporation.txt"),
-                            OUT_LOG         = os.path.join(output_directory, "Runtime_log.txt"),
-                            CHECK_VERSION   = MAPDAMAGE_VERSION)
-
-        description =  "<mapDamage: %i file(s) -> '%s'>" % (len(input_files), output_directory)
-        CommandNode.__init__(self,
-                             command      = ParallelCmds(cat_cmds + [cmd_map]),
-                             description  = description,
-                             dependencies = dependencies)
-
-
-class MapDamageRescaleNode(CommandNode):
-    def __init__(self, config, reference, input_files, output_file, dependencies):
-        cat_cmds, cat_obj = concatenate_input_bams(config, input_files)
-        cmd_map = AtomicCmd(["mapDamage",
-                            "-n", _MAPDAMAGE_MAX_READS,
-                             "-i", "-",
-                             "-d", "%(TEMP_DIR)s",
-                             "-r", reference],
-                            IN_STDIN        = cat_obj,
-                            CHECK_VERSION   = MAPDAMAGE_VERSION)
-        train_cmds = ParallelCmds(cat_cmds + [cmd_map])
-
-        cat_cmds, cat_obj = concatenate_input_bams(config, input_files)
-        cmd_scale = AtomicCmd(["mapDamage", "--rescale-only",
-                               "-n", _MAPDAMAGE_MAX_READS,
-                               "-i", "-",
-                               "-d", "%(TEMP_DIR)s",
-                               "-r", reference,
-                               "--rescale-out", "%(OUT_BAM)s"],
-                               IN_STDIN        = cat_obj,
-                               OUT_BAM         = output_file,
-                               CHECK_VERSION   = MAPDAMAGE_VERSION)
-        rescale_cmds = ParallelCmds(cat_cmds + [cmd_scale])
-
-        description =  "<mapDamageRescale: %i file(s) -> '%s'>" % (len(input_files), output_file)
-        CommandNode.__init__(self,
-                             command      = SequentialCmds([train_cmds, rescale_cmds]),
-                             description  = description,
-                             dependencies = dependencies)
-
-    def _teardown(self, config, temp):
-        for filename in os.listdir(temp):
-            if filename.endswith(".txt") or filename.endswith(".pdf") or filename.endswith(".csv"):
-                if not filename.startswith("pipe_"):
-                    os.remove(os.path.join(temp, filename))
-        CommandNode._teardown(self, config, temp)
 
 
 class FilterCollapsedBAMNode(CommandNode):
