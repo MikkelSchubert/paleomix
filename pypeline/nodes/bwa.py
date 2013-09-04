@@ -31,6 +31,7 @@ from pypeline.atomiccmd.builder import \
 
 from pypeline.atomiccmd.sets import ParallelCmds
 from pypeline.nodes.samtools import SAMTOOLS_VERSION
+from pypeline.common.fileutils import missing_files
 
 import pypeline.common.versions as versions
 
@@ -345,8 +346,21 @@ def _get_max_threads(reference, threads):
     return threads
 
 
-_PREFIXES_CHECKED = set()
 def _check_bwa_prefix(prefix):
+    """Checks that a given prefix is compatible with the currently
+    installed version of BWA. This is required in order to allow
+    auto-indexing of prefixes, as indexes produced by v0.5.x and
+    by 0.6+ are not only incompatible, but differs in the files
+    produced, with 0.5.x producing a handful of additional files.
+
+    As a consequence, simply using normal input-file dependencies
+    would result in prefixes being re-indexed if the version of
+    BWA was changed from 0.6+ to 0.5.x, and in failures during
+    runtime if the version was changed from 0.5.x to 0.6+.
+
+    This function treats that a difference in the version of BWA
+    installed and the version implied by the prefix files is an
+    error, and therefore requires user intervention."""
     if prefix in _PREFIXES_CHECKED:
         return
     _PREFIXES_CHECKED.add(prefix)
@@ -356,12 +370,30 @@ def _check_bwa_prefix(prefix):
     except versions.VersionRequirementError:
         return # Ignored here, reported elsewhere
 
-    if bwa_version >= (0, 6, 0):
-        for extension in (".rbwt", ".rpac", ".rsa"):
-            if os.path.exists(prefix + extension):
-                raise NodeError("BWA version is v%s, but prefix appears to be created using v0.5.x!\n"
-                                "\tPlease remove '%s.*' and rebuild index using 'bwa index %s'" \
-                                % (".".join(map(str, bwa_version)), prefix, prefix))
+    # Files unique to v0.5.x
+    v05x_files    = set((prefix + ext) for ext in (".rbwt", ".rpac", ".rsa"))
+    # Files common to v0.5.x, v0.6.x, and v0.7.x
+    common_files  = set((prefix + ext) for ext in (".amb", ".ann", ".bwt", ".pac", ".sa"))
+    all_files     = v05x_files | common_files
+    current_files = all_files - set(missing_files(all_files))
+
+    expected_version = None
+    if (current_files & common_files):
+        if bwa_version >= (0, 6, 0):
+            if (current_files & v05x_files):
+                expected_version = "v0.5.x"
+        elif bwa_version < (0, 6, 0):
+            if not (current_files & v05x_files):
+                expected_version = "v0.6.x or later"
+
+    if expected_version:
+        raise NodeError("BWA version is v%s, but prefix appears to be created using %s!\n"
+                        "  Your copy of BWA may have changed, or you may be using the wrong\n"
+                        "  prefix. To resolve this issue, either change your prefix, re-install\n"
+                        "  BWA %s, or remove the prefix files at\n"
+                        "    $ ls %s.*" \
+                        % (".".join(map(str, bwa_version)), expected_version, expected_version, prefix))
+_PREFIXES_CHECKED = set()
 
 
 def _build_unicat_command(input_file, output_file):
