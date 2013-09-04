@@ -81,6 +81,7 @@ class Lane:
 
     def _init_unaligned_lane(self, config, prefix, record):
         aln_key, aln_func = _select_aligner(record["Options"])
+        prefix_key = "Node:%s" % (aln_key,)
 
         postfix = ["minQ%i" % record["Options"]["Aligners"][aln_key]["MinQuality"]]
         if not record["Options"]["Aligners"][aln_key].get("UseSeed", True):
@@ -91,7 +92,7 @@ class Lane:
             parameters = {"output_file"  : output_filename,
                           "prefix"       : prefix["Path"],
                           "reference"    : prefix["Reference"],
-                          "dependencies" : self.reads.nodes + (prefix["Node"],)}
+                          "dependencies" : self.reads.nodes + (prefix[prefix_key],)}
 
             alignment_node = aln_func(config, parameters, input_filename, self.tags, record["Options"])
             validated_node = IndexAndValidateBAMNode(config, prefix, alignment_node)

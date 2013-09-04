@@ -35,8 +35,15 @@ from pypeline.common.console import \
      print_err
 
 from pypeline.node import MetaNode
-from pypeline.nodes.picard import BuildSequenceDictNode
-from pypeline.nodes.samtools import FastaIndexNode
+from pypeline.nodes.picard import \
+     BuildSequenceDictNode
+from pypeline.nodes.samtools import \
+     FastaIndexNode
+from pypeline.nodes.bwa import \
+     BWAIndexNode
+from pypeline.nodes.bowtie2 import \
+     Bowtie2IndexNode
+
 
 from pypeline.tools.bam_pipeline.makefile import \
      read_makefiles, \
@@ -158,17 +165,32 @@ def build_pipeline_targets(config, makefile):
 
 
 def index_references(config, makefiles):
-    references = {}
+    references         = {}
+    references_bwa     = {}
+    references_bowtie2 = {}
     for makefile in makefiles:
         for dd in makefile["Prefixes"].itervalues():
-            reference = os.path.realpath(dd["Reference"])
+            reference  = dd["Reference"]
             if reference not in references:
+                faidx_node   = FastaIndexNode(dd["Reference"])
+                dict_node    = BuildSequenceDictNode(config    = config,
+                                                     reference = reference)
+                bwa_node     = BWAIndexNode(input_file = reference)
+                bowtie2_node = Bowtie2IndexNode(input_file = reference)
+
                 references[reference] = \
                   MetaNode(description = "Reference Sequence",
-                           dependencies = (FastaIndexNode(dd["Reference"]),
-                                           BuildSequenceDictNode(config    = config,
-                                                                 reference = dd["Reference"])))
-            dd["Node"] = references[reference]
+                           dependencies = (faidx_node, dict_node))
+                references_bwa[reference] = \
+                  MetaNode(description = "Reference Sequence",
+                           dependencies = (faidx_node, dict_node, bwa_node))
+                references_bowtie2[reference] = \
+                  MetaNode(description = "Reference Sequence",
+                           dependencies = (faidx_node, dict_node, bowtie2_node))
+
+            dd["Node"]         = references[reference]
+            dd["Node:BWA"]     = references_bwa[reference]
+            dd["Node:Bowtie2"] = references_bowtie2[reference]
 
 
 def parse_config(argv):
