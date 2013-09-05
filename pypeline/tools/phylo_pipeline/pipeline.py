@@ -20,12 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import os
+import sys
 import time
 import logging
 import optparse
 
 import pypeline.logger
-import pypeline.tools.phylo_pipeline.mkfile
 import pypeline.tools.phylo_pipeline.makefile
 import pypeline.tools.phylo_pipeline.parts.genotype as genotype
 import pypeline.tools.phylo_pipeline.parts.msa as msa
@@ -33,7 +34,9 @@ import pypeline.tools.phylo_pipeline.parts.paml as paml
 import pypeline.tools.phylo_pipeline.parts.phylo as phylo
 
 from pypeline import Pypeline
-from pypeline.common.makefile import MakefileError
+from pypeline.common.console import print_err
+from pypeline.tools.phylo_pipeline.makefile import \
+     read_makefiles
 
 
 _COMMANDS = {
@@ -90,6 +93,36 @@ def build_options_parser():
     return parser
 
 
+def parse_args(argv):
+    options_parser = build_options_parser()
+    options, args  = options_parser.parse_args(argv)
+
+    if len(args) < 2:
+        print_err("Please specify at least one analysis step and one makefile!", file = sys.stderr)
+        return None, None
+
+    commands = _select_commands(args[0])
+    if any((func is None) for (_, func) in commands):
+        unknown_commands = ", ".join(repr(key) for (key, func) in commands if func is None)
+        print_err("Unknown analysis step(s): %s" % (unknown_commands,), file = sys.stderr)
+        return None, None
+
+    if not os.path.exists(options.temp_root):
+        try:
+            os.makedirs(options.temp_root)
+        except OSError, e:
+            print_err("ERROR: Could not create temp root:\n\t%s" % (e,), file = sys.stderr)
+            return None, None
+
+    if not os.access(options.temp_root, os.R_OK | os.W_OK | os.X_OK):
+        print_err("ERROR: Insufficient permissions for temp root: '%s'" \
+                  % (options.temp_root,), file = sys.stderr)
+        return None, None
+
+    return options, args
+
+
+
 def _select_commands(chain):
     commands = []
     for command in chain.split("+"):
@@ -111,33 +144,25 @@ def _select_commands(chain):
 
 
 def main(argv):
-    options_parser = build_options_parser()
-    options, args = options_parser.parse_args(argv)
+    options, args = parse_args(argv)
     if not (args and options) or (args and (args[0] == "help")):
-        options_parser.print_help()
+        return 1
+
+    commands = _select_commands(args.pop(0))
+    if any((cmd == "mkfile") for (cmd, _) in commands):
+        return pypeline.tools.phylo_pipeline.mkfile.main(args[1:])
+
+    try:
+        makefiles = read_makefiles(args)
+    except StandardError, error:
+        print_err("Error reading makefiles:\n    ",
+                  "\n    ".join(str(error).split("\n")),
+                  file = sys.stderr)
         return 1
 
     logfile_template = time.strftime("phylo_pipeline.%Y%m%d_%H%M%S_%%02i.log")
     pypeline.logger.initialize(options, logfile_template)
     logger = logging.getLogger(__name__)
-
-    commands = _select_commands(args.pop(0))
-    if any((cmd == "mkfile") for (cmd, _) in commands):
-        return pypeline.tools.phylo_pipeline.mkfile.main(args[1:])
-    elif any((func is None) for (_, func) in commands):
-        unknown_commands = ", ".join(repr(key) for (key, func) in commands if func is None)
-        logger.error("Unknown step(s): %s\n", unknown_commands)
-        options_parser.print_help()
-        return 1
-
-    makefiles = []
-    for filename in args:
-        try:
-            makefiles.append(pypeline.tools.phylo_pipeline.makefile.read_makefile(filename))
-        except MakefileError, error:
-            logger.error("Error reading makefile %r:\n    %s",
-                         filename, ("\n    ").join(str(error).split("\n")))
-            return 1
 
     pipeline = Pypeline(options)
     for (command_key, command_func) in commands:

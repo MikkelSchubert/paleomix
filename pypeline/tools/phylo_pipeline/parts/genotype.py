@@ -206,6 +206,7 @@ class ExtractReference(Node):
                 for (gene, gene_beds) in itertools.groupby(beds, lambda x: x.name):
                     gene_beds = tuple(gene_beds)
                     for bed in gene_beds:
+                        # TODO: Check that region was fetched!
                         seqs[(contig, gene)].append(fastafile.fetch(contig, bed.start, bed.end))
 
                     seq = "".join(seqs[(contig, gene)])

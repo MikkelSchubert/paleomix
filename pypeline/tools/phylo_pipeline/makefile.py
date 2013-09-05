@@ -40,9 +40,13 @@ from pypeline.common.makefile import \
      Not
 
 
-def read_makefile(filename):
-    makefile = pypeline.common.makefile.read_makefile(filename, _VALIDATION)
-    return _mangle_makefile(makefile["Makefile"])
+def read_makefiles(filenames):
+    makefiles = []
+    for filename in filenames:
+        makefile = pypeline.common.makefile.read_makefile(filename, _VALIDATION)
+        makefile = _mangle_makefile(makefile["Makefile"])
+        makefiles.append(makefile)
+    return makefiles
 
 
 def _mangle_makefile(mkfile):

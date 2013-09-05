@@ -32,7 +32,8 @@ import pypeline
 import pypeline.logger
 
 from pypeline.common.console import \
-     print_err
+     print_err, \
+     print_info
 
 from pypeline.node import MetaNode
 from pypeline.nodes.picard import \
@@ -281,6 +282,10 @@ def parse_config(argv):
         print_err("ERROR: Insufficient permissions for temp root: '%s'" % config.temp_root, file = sys.stderr)
         return None
 
+    if not args:
+        print_err("Please specify at least one makefile!", file = sys.stderr)
+        return None
+
     return config, args
 
 
@@ -335,21 +340,18 @@ def main(argv):
         return 1
 
     config, args = config_args
+    try:
+        print_info("Building BAM pipeline ...")
+        makefiles = read_makefiles(args)
+    except StandardError, error:
+        print_err("Error reading makefiles:\n    ",
+                  "\n    ".join(str(error).split("\n")),
+            file = sys.stderr)
+        return 1
 
     logfile_template = time.strftime("bam_pipeline.%Y%m%d_%H%M%S_%%02i.log")
     pypeline.logger.initialize(config, logfile_template)
     logger = logging.getLogger(__name__)
-
-    try:
-        logger.info("Building BAM pipeline ...")
-        makefiles = read_makefiles(args)
-        if not makefiles:
-            logger.error("Plase specify at least one makefile!")
-            return 1
-    except MakefileError, e:
-        logger.error("Error reading makefile:\n\t%s",
-                     "\n\t".join(str(e).split("\n")))
-        return 1
 
     # Build .fai files for reference .fasta files
     index_references(config, makefiles)
