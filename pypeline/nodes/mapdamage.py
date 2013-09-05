@@ -28,6 +28,7 @@ from pypeline.common.fileutils import \
     describe_files
 
 from pypeline.node import \
+     NodeError, \
      CommandNode
 from pypeline.atomiccmd.command import \
      AtomicCmd
@@ -64,6 +65,8 @@ class MapDamagePlotNode(CommandNode):
                              OUT_LENGTH      = os.path.join(output_directory, "lgdistribution.txt"),
                              OUT_MISINCORP   = os.path.join(output_directory, "misincorporation.txt"),
                              OUT_LOG         = os.path.join(output_directory, "Runtime_log.txt"),
+                             TEMP_OUT_STDOUT = "pipe_mapDamage.stdout",
+                             TEMP_OUT_STDERR = "pipe_mapDamage.stderr",
                              CHECK_VERSION   = MAPDAMAGE_VERSION)
 
         description =  "<mapDamage (plots): %s -> '%s'>" \
@@ -72,6 +75,17 @@ class MapDamagePlotNode(CommandNode):
                              command      = ParallelCmds(cat_cmds + [cmd_map]),
                              description  = description,
                              dependencies = dependencies)
+
+    def _teardown(self, config, temp):
+        # No Length_plot.pdf file is written if there are no SE reads in the input_file
+        # In that case, we write a dummy PDF to ensure that all expected files exist!
+        err_message = "No length distributions are available"
+        with open(os.path.join(temp, "pipe_mapDamage.stderr")) as in_handle:
+            if any(line.startswith(err_message) for line in in_handle):
+                with open(os.path.join(temp, "Length_plot.pdf"), "w") as out_handle:
+                    out_handle.write(_DUMMY_LENGTH_PLOT_PDF)
+
+        CommandNode._teardown(self, config, temp)
 
 
 class MapDamageModelNode(CommandNode):
@@ -87,6 +101,8 @@ class MapDamageModelNode(CommandNode):
                              TEMP_OUT_COMP_USER   = "dnacomp.txt",
                              TEMP_OUT_MISINCORP   = "misincorporation.txt",
                              TEMP_OUT_LOG         = "Runtime_log.txt",
+                             TEMP_OUT_STDOUT      = "pipe_mapDamage.stdout",
+                             TEMP_OUT_STDERR      = "pipe_mapDamage.stderr",
                              OUT_COMP_GENOME      = os.path.join(directory, "dnacomp_genome.csv"),
                              OUT_MCMC_PROBS       = os.path.join(directory, "Stats_out_MCMC_correct_prob.csv"),
                              OUT_MCMC_HIST        = os.path.join(directory, "Stats_out_MCMC_hist.pdf"),
@@ -109,6 +125,21 @@ class MapDamageModelNode(CommandNode):
             relpath = os.path.join(self._directory, fname)
             abspath = os.path.abspath(relpath)
             os.symlink(abspath, os.path.join(temp, fname))
+
+
+    def _run(self, config, temp):
+        try:
+            CommandNode._run(self, config, temp)
+        except NodeError, error:
+            err_message = "DNA damage levels are too low"
+            if self._command.join() == [1]:
+                with open(os.path.join(temp, "pipe_mapDamage.stdout")) as handle:
+                    for line in handle:
+                        if (err_message in line):
+                            line  = line.strip().replace("Warning:", "ERROR:")
+                            error = NodeError("%s\n\n%s" % (error, line))
+                            break
+            raise error
 
 
 
@@ -142,3 +173,59 @@ class MapDamageRescaleNode(CommandNode):
             relpath = os.path.join(self._directory, fname)
             abspath = os.path.abspath(relpath)
             os.symlink(abspath, os.path.join(temp, fname))
+
+
+
+# Minimal PDF written if Length_plot.pdf wasn't generated
+_DUMMY_LENGTH_PLOT_PDF = \
+"""%PDF-1.4
+
+1 0 obj
+ <</Type /Font /Subtype /Type1 /Encoding /WinAnsiEncoding /BaseFont /Courier >>
+endobj
+
+2 0 obj
+ <</Parent 4 0 R /MediaBox[0 0 450 50] /Type /Page /Contents[3 0 R ] /Resources 5 0 R >>
+endobj
+
+3 0 obj
+ <</Length 138 >>
+stream
+  BT
+    /F0 18 Tf
+    20 10 Td
+    (Input file(s) did not contain SE reads.) Tj
+    0 20 Td
+    (Length_plot.pdf not generated:) Tj
+  ET
+endstream
+endobj
+
+4 0 obj
+ <</Type /Pages /Count 1 /Kids[2 0 R ]>>
+endobj
+
+5 0 obj
+ <</ProcSet[/PDF /Text] /Font <</F0 1 0 R >>
+>>
+endobj
+
+6 0 obj
+ <</Type /Catalog /Pages 4 0 R >>
+endobj
+
+xref
+0 7
+0000000000 65535 f
+0000000010 00000 n
+0000000106 00000 n
+0000000211 00000 n
+0000000400 00000 n
+0000000457 00000 n
+0000000521 00000 n
+trailer
+ <</Size 7 /Root 6 0 R >>
+
+startxref
+571
+%%EOF"""
