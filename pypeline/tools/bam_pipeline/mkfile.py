@@ -203,7 +203,7 @@ def main(argv):
             root, filename = os.path.split(root)[0], root
 
         if not os.path.exists(filename):
-            print_err("ERROR: Could not find SampleSheet file: %r" % filename)
+            print_err("ERROR: Could not find SampleSheet file: %r" % filename, file = sys.stderr)
             return 1
 
         for record in read_alignment_records(filename):

@@ -21,6 +21,8 @@
 # SOFTWARE.
 #
 """Common version requirements for pypeline/pipelines."""
+import sys
+
 import pypeline.common.versions as versions
 from pypeline.common.console import print_err
 
@@ -30,10 +32,10 @@ def check_pypeline_requirements():
         try:
             __import__(module)
         except ImportError, error:
-            print_err("ERROR: Could not import required module '%s':\n\t- %s\n" % (module, error))
-            print_err("       If module is not installed, please download from '%s'.\n" % (url,))
-            print_err("       A local install may be performed using the following command:\n")
-            print_err("       $ python setup.py install --user\n\n")
+            print_err("ERROR: Could not import required module '%s':\n\t- %s\n" % (module, error), file = sys.stderr)
+            print_err("       If module is not installed, please download from '%s'.\n" % (url,), file = sys.stderr)
+            print_err("       A local install may be performed using the following command:\n", file = sys.stderr)
+            print_err("       $ python setup.py install --user\n\n", file = sys.stderr)
             return False
 
     for version in (_PYSAM_VERSION, _PYYAML_VERSION):
@@ -41,7 +43,7 @@ def check_pypeline_requirements():
             version()
         except versions.VersionRequirementError, error:
             print_err("Version requirements check failed for %s:\n   %s\n" \
-                      % (version.name, error))
+                      % (version.name, error), file = sys.stderr)
             return False
     return True
 

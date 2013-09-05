@@ -342,7 +342,7 @@ def main(argv):
 
     config, args = config_args
     try:
-        print_info("Building BAM pipeline ...")
+        print_info("Building BAM pipeline ...", file = sys.stderr)
         makefiles = read_makefiles(args)
     except (StandardError, yaml.YAMLError), error:
         print_err("Error reading makefiles:\n    ",

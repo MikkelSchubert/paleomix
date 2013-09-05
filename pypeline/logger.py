@@ -89,18 +89,18 @@ class _PrintToConsole(logging.Handler):
         logging.Handler.__init__(self, level)
 
     def emit(self, record):
-        func, stream = self.get_ui_function(record.levelno)
-        func(record.getMessage(), file = stream)
+        func = self.get_ui_function(record.levelno)
+        func(record.getMessage(), file = sys.stderr)
 
     @classmethod
     def get_ui_function(cls, level):
         if level in (logging.ERROR, logging.CRITICAL):
-            return _cli.print_err, sys.stderr
+            return _cli.print_err
         elif level == logging.WARNING:
-            return _cli.print_warn, sys.stderr
+            return _cli.print_warn
         elif level == logging.DEBUG:
-            return _cli.print_debug, sys.stderr
-        return _cli.print_info, sys.stdout
+            return _cli.print_debug
+        return _cli.print_info
 
 
 class _LazyLogfile(logging.Handler):
