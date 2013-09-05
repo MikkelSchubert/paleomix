@@ -26,6 +26,8 @@ import time
 import logging
 import optparse
 
+import yaml
+
 import pypeline.logger
 import pypeline.tools.phylo_pipeline.makefile
 import pypeline.tools.phylo_pipeline.parts.genotype as genotype
@@ -154,7 +156,7 @@ def main(argv):
 
     try:
         makefiles = read_makefiles(args)
-    except StandardError, error:
+    except (StandardError, yaml.YAMLError), error:
         print_err("Error reading makefiles:\n    ",
                   "\n    ".join(str(error).split("\n")),
                   file = sys.stderr)

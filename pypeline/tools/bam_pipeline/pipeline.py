@@ -28,6 +28,8 @@ import logging
 import optparse
 import ConfigParser
 
+import yaml
+
 import pypeline
 import pypeline.logger
 
@@ -47,8 +49,7 @@ from pypeline.nodes.bowtie2 import \
 
 
 from pypeline.tools.bam_pipeline.makefile import \
-     read_makefiles, \
-     MakefileError
+     read_makefiles
 
 import pypeline.tools.bam_pipeline.parts as parts
 
@@ -343,7 +344,7 @@ def main(argv):
     try:
         print_info("Building BAM pipeline ...")
         makefiles = read_makefiles(args)
-    except StandardError, error:
+    except (StandardError, yaml.YAMLError), error:
         print_err("Error reading makefiles:\n    ",
                   "\n    ".join(str(error).split("\n")),
             file = sys.stderr)
