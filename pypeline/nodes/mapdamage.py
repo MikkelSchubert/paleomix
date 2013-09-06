@@ -51,7 +51,10 @@ class MapDamagePlotNode(CommandNode):
     def __init__(self, config, reference, input_files, output_directory, dependencies):
         cat_cmds, cat_obj = concatenate_input_bams(config, input_files)
         cmd_map = AtomicCmd(["mapDamage", "--no-stats",
-                            "-n", _MAPDAMAGE_MAX_READS,
+                             # Prevent references with many contigs from using excessive
+                             # amounts of memory, at the cost of per-contig statistics:
+                             "--merge-reference-sequences",
+                             "-n", _MAPDAMAGE_MAX_READS,
                              "-i", "-",
                              "-d", "%(TEMP_DIR)s",
                              "-r", "%(IN_REFERENCE)s"],
