@@ -115,9 +115,13 @@ def _count_dependencies(dependencies):
 
 def _describe_nodes(graph, nodes):
     states = collections.defaultdict(int)
-    for node in nodes:
-        if not isinstance(node, MetaNode):
-            states[graph.get_node_state(node)] += 1
+    def count_states(node_lst, recurse = True):
+        for node in node_lst:
+            if not isinstance(node, MetaNode):
+                states[graph.get_node_state(node)] += 1
+            elif recurse:
+                count_states(node.subnodes, recurse = False)
+    count_states(nodes)
 
     fields = [("running",  states[graph.RUNNING]),
               ("outdated", states[graph.OUTDATED]),
