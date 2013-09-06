@@ -113,7 +113,6 @@ def build_pipeline_full(config, makefile, return_nodes = True):
     return [target.node for target in targets]
 
 
-
 def _make_target_list(config, makefiles):
     target_list = {}
     for target in build_pipeline_full(config, makefiles, return_nodes = False):
@@ -151,8 +150,9 @@ def list_targets_for(config, makefiles, show):
               "trimming"  : 5}[show]
 
     for target in sorted(target for target in target_list if len(target) == length):
-        if (show == "trimming") == (target[1] == "reads"):
-            print ":".join(target)
+        if (show == "trimming") and (target[1] != "reads"):
+            continue
+        print ":".join(target)
 
 
 def build_pipeline_targets(config, makefile):
