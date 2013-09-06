@@ -20,6 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import types
+
 import pypeline.common.makefile
 from pypeline.common.makefile import \
      MakefileError, \
@@ -55,6 +57,7 @@ def _mangle_makefile(mkfile):
     _update_filtering(mkfile)
     _update_exclusions(mkfile)
     _check_genders(mkfile)
+    _check_max_read_depth(mkfile)
     mkfile["Nodes"] = ()
 
     padding = mkfile["Genotyping"]["Padding"]
@@ -139,6 +142,21 @@ def _check_genders(mkfile):
             raise MakefileError("Taxon %r has unknown gender %r; known genders are %s" \
                                 % (taxon["Name"], taxon["Gender"],
                                    ", ".join(map(repr, interval_genders))))
+
+
+def _check_max_read_depth(mkfile):
+    max_depths = mkfile["Genotyping"]["VCF_Filter"]["MaxReadDepth"]
+    if isinstance(max_depths, types.DictType):
+        required_keys = set()
+        for taxon in mkfile["Project"]["Taxa"].itervalues():
+            if taxon["Genotyping Method"].lower() == "samtools":
+                required_keys.add(taxon["Name"])
+
+        # Extra keys are allowed, to make it easier to temporarily disable a taxon
+        missing_keys = required_keys - set(max_depths)
+        if missing_keys:
+            raise MakefileError("MaxReadDepth not specified for the following taxa:\n    - %s" \
+                                % ("\n    - ".join(sorted(missing_keys)),))
 
 
 def _update_exclusions(mkfile):
