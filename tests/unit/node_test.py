@@ -33,7 +33,6 @@ from nose.tools import assert_equal, assert_raises
 from flexmock import flexmock
 
 from pypeline.common.testing import \
-     Monkeypatch, \
      with_temp_folder, \
      set_file_contents, \
      get_file_contents, \
@@ -52,38 +51,6 @@ def _CommandNodeWrap(**kwargs):
 _NODE_TYPES = (Node, _CommandNodeWrap, MetaNode)
 
 
-class MonkeypatchCreateTempDir:
-    """Monkeypatches functions used by Node.run to setup the
-    temporary folders. This is done to reduce the amount of
-    file operations that actually need to be done."""
-    def __init__(self, root = "/tmp", subfolder = "xTMPx"):
-        self._mkdir_patch = Monkeypatch("pypeline.common.fileutils.create_temp_dir", self._mkdir)
-        self._rmdir_patch = Monkeypatch("os.rmdir", self._rmdir)
-        self._root_dir = root
-        self._sub_dir  = subfolder
-        self._mkdir_called = False
-        self._rmdir_called = False
-
-    def __enter__(self):
-        self._mkdir_patch.__enter__()
-        self._rmdir_patch.__enter__()
-        return self
-
-    def __exit__(self, type, value, traceback): # pylint: disable=W0622
-        self._mkdir_patch.__exit__(type, value, traceback)
-        self._rmdir_patch.__exit__(type, value, traceback)
-        if not value:
-            assert self._mkdir_called
-            assert self._rmdir_called
-
-    def _mkdir(self, path):
-        self._mkdir_called = True
-        assert_equal(self._root_dir, path)
-        return os.path.join(self._root_dir, self._sub_dir)
-
-    def _rmdir(self, path):
-        self._rmdir_called = True
-        return assert_equal(os.path.join(self._root_dir, self._sub_dir), path)
 
 
 
@@ -346,66 +313,76 @@ def test_is_outdated__updates():
 ################################################################################
 ## Node: Run
 
+_DUMMY_TEMP_ROOT = "/xyz/tmp"
+_DUMMY_TEMP = os.path.join(_DUMMY_TEMP_ROOT, "xTMPx")
+
 def test_run__order():
-    cfg_mock  = flexmock(temp_root = "/tmp")
+    cfg_mock  = flexmock(temp_root = _DUMMY_TEMP_ROOT)
     node_mock = flexmock(Node())
-    node_mock.should_receive("_setup").with_args(cfg_mock, "/tmp/xTMPx").ordered.once
-    node_mock.should_receive("_run").with_args(cfg_mock, "/tmp/xTMPx").ordered.once
-    node_mock.should_receive("_teardown").with_args(cfg_mock, "/tmp/xTMPx").ordered.once
-
-    with MonkeypatchCreateTempDir():
-        node_mock.run(cfg_mock) # pylint: disable=E1103
-
-# Ensure that the same temp dir is passed to all _ functions
-def test_run__temp_dirs():
-    def assert_dir(_, path):
-        assert_equal(path, "/tmp/xTMPx")
-
-    cfg_mock  = flexmock(temp_root = "/tmp")
-    node_mock = flexmock(Node(),
-                         _setup    = assert_dir,
-                         _run      = assert_dir,
-                         _teardown = assert_dir)
-
-    with MonkeypatchCreateTempDir():
-        node_mock.run(cfg_mock) # pylint: disable=E1103
+    node_mock.should_receive("_create_temp_dir").with_args(cfg_mock).and_return(_DUMMY_TEMP).ordered.once
+    node_mock.should_receive("_setup").with_args(cfg_mock, _DUMMY_TEMP).ordered.once
+    node_mock.should_receive("_run").with_args(cfg_mock, _DUMMY_TEMP).ordered.once
+    node_mock.should_receive("_teardown").with_args(cfg_mock, _DUMMY_TEMP).ordered.once
+    node_mock.should_receive("_remove_temp_dir").with_args(_DUMMY_TEMP).ordered.once
+    node_mock.run(cfg_mock) # pylint: disable=E1103
 
 
 def test_run__exceptions():
-    cfg_mock = flexmock(temp_root = "/tmp")
+    cfg_mock = flexmock(temp_root = _DUMMY_TEMP_ROOT)
     def build_tests(key, exception, expectation):
-        @nose.tools.raises(expectation)
         def test_function():
             node_mock = flexmock(Node())
-            node_mock.should_receive(key).and_raise(exception).once
-            with MonkeypatchCreateTempDir():
-                node_mock.run(cfg_mock) # pylint: disable=E1103
+            node_mock.should_receive('_create_temp_dir').with_args(cfg_mock) \
+              .and_return(_DUMMY_TEMP).ordered.once
+            node_mock.should_receive(key).and_raise(exception).ordered.once
+            node_mock.should_receive('_remove_temp_dir').never
+
+            assert_raises(expectation, node_mock.run, cfg_mock) # pylint: disable=E1103
 
         return test_function
 
+    print "foo"
     for key in ('_setup', '_run', '_teardown'):
         yield build_tests(key, TypeError("The castle AAARGH!"), NodeUnhandledException)
         yield build_tests(key, NodeError("He's a very naughty boy!"), NodeError)
 
 
+def test_run__exception__create_temp_dir():
+    cfg_mock = flexmock(temp_root = _DUMMY_TEMP_ROOT)
+    node_mock = flexmock(Node())
+    node_mock.should_receive('_create_temp_dir').with_args(cfg_mock) \
+      .and_raise(OSError()).ordered.once
+
+    assert_raises(NodeUnhandledException, node_mock.run, cfg_mock) # pylint: disable=E1103
+
+
+def test_run__exception__remove_temp_dir():
+    cfg_mock = flexmock(temp_root = _DUMMY_TEMP_ROOT)
+    node_mock = flexmock(Node())
+    node_mock.should_receive('_create_temp_dir').with_args(cfg_mock) \
+      .and_return(_DUMMY_TEMP).ordered.once
+    node_mock.should_receive('_remove_temp_dir').with_args(_DUMMY_TEMP) \
+      .and_raise(OSError()).ordered.once
+
+    assert_raises(NodeUnhandledException, node_mock.run, cfg_mock) # pylint: disable=E1103
+
+
 def test_run__error_log__node_error():
     @with_temp_folder
     def _do_test_run__error_log__node_error(temp_folder, exception):
-        cfg_mock = flexmock(temp_root = temp_folder)
+        temp      = os.path.join(temp_folder, "xTMPx")
+        cfg_mock  = flexmock(temp_root = temp_folder)
         node_mock = flexmock(Node())
-        node_mock.should_receive("_run").and_raise(exception).once
+        node_mock.should_receive("_create_temp_dir").with_args(cfg_mock) \
+          .and_return(temp).ordered.once
+        node_mock.should_receive("_run").and_raise(exception).ordered.once
 
-        try:
-            os.mkdir(os.path.join(temp_folder, "xTMPx"))
-            with MonkeypatchCreateTempDir(root = temp_folder, subfolder = "xTMPx"):
-                # pylint: disable=E1103
-                node_mock.run(cfg_mock) # pragma: no coverage
-        except NodeError:
-            log_file = os.path.join(temp_folder, "xTMPx", "pipe.errors")
-            assert os.path.exists(log_file)
-            assert_in("Errors =", get_file_contents(log_file))
-            return
-        assert False # pragma: no coverage
+        os.mkdir(temp)
+        assert_raises(NodeError, node_mock.run, cfg_mock) # pylint: disable=E1103
+        log_file = os.path.join(temp_folder, "xTMPx", "pipe.errors")
+        assert os.path.exists(log_file)
+        assert_in("Errors =", get_file_contents(log_file))
+
     yield _do_test_run__error_log__node_error, NodeError("ARGH!")
     yield _do_test_run__error_log__node_error, OSError("ARGH!")
 
@@ -491,15 +468,17 @@ def test_commandnode_constructor__dependencies__default():
 ## CommandNode: run
 
 def test_command_node__run():
-    cfg_mock  = flexmock(temp_root = "/tmp")
+    cfg_mock  = flexmock(temp_root = _DUMMY_TEMP_ROOT)
     cmd_mock  = _build_cmd_mock()
     node_mock = flexmock(CommandNode(cmd_mock))
-    node_mock.should_receive("_setup").with_args(cfg_mock, str).ordered.once
-    node_mock.should_receive("_run").with_args(cfg_mock, str).ordered.once
-    node_mock.should_receive("_teardown").with_args(cfg_mock, str).ordered.once
-    with MonkeypatchCreateTempDir():
-        node_mock.run(cfg_mock) # pylint: disable=E1103
-
+    node_mock.should_receive("_create_temp_dir").with_args(cfg_mock) \
+      .and_return(_DUMMY_TEMP).ordered.once
+    node_mock.should_receive("_setup").with_args(cfg_mock, _DUMMY_TEMP).ordered.once
+    cmd_mock.should_receive("run").with_args(_DUMMY_TEMP).ordered.once
+    cmd_mock.should_receive("join").and_return([0]).ordered.once
+    node_mock.should_receive("_teardown").with_args(cfg_mock, _DUMMY_TEMP).ordered.once
+    node_mock.should_receive("_remove_temp_dir").with_args(_DUMMY_TEMP).ordered.once
+    node_mock.run(cfg_mock) # pylint: disable=E1103
 
 
 

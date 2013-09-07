@@ -128,13 +128,12 @@ class Node(object):
 
         try:
             temp = None
-            temp = fileutils.create_temp_dir(config.temp_root)
+            temp = self._create_temp_dir(config)
 
             self._setup(config, temp)
             self._run(config, temp)
             self._teardown(config, temp)
-
-            os.rmdir(temp)
+            self._remove_temp_dir(temp)
         except NodeError, error:
             self._write_error_log(temp, error)
             raise error
@@ -142,6 +141,19 @@ class Node(object):
             self._write_error_log(temp, error)
             raise NodeUnhandledException("Error(s) running Node:\n\tTemporary directory: %s\n\n%s" \
                                          % (repr(temp), traceback.format_exc()))
+
+
+    def _create_temp_dir(self, config):
+        """Called by 'run' in order to create a temporary folder.
+
+        'config' is expected to have a property .temp_root under
+        which the temporary folder is created."""
+        return fileutils.create_temp_dir(config.temp_root)
+
+
+    def _remove_temp_dir(self, temp):
+        """Called by 'run' in order to remove an (now) empty temporary folder."""
+        os.rmdir(temp)
 
 
     def _setup(self, _config, _temp):
