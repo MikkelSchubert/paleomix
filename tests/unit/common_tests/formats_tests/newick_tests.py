@@ -22,6 +22,7 @@
 #
 from nose.tools import \
      assert_equal, \
+     assert_not_equal, \
      assert_raises
 
 from pypeline.common.formats.newick import \
@@ -31,6 +32,7 @@ from pypeline.common.formats.newick import \
 
 from pypeline.common.testing import \
      assert_list_equal
+
 
 
 ############################################################################
@@ -44,13 +46,13 @@ def test_newick__constructor__name():
 def test_newick__constructor__children_set_in_internal_nodes():
     node = Newick(name = "Leaf")
     top_node = Newick(children = [node])
-    assert_equal(top_node.children, [node])
+    assert_equal(top_node.children, (node,))
 
-def test_newick__constructor__children_not_set_in_leafs():
+def test_newick__constructor__children_not_set_in_leaf_nodes():
     node = Newick(name = "Leaf")
-    assert_equal(node.children, None)
+    assert_equal(node.children, ())
 
-def test_newick__constructor__is_leaf_true_for_leafs():
+def test_newick__constructor__is_leaf_true_for_leaf_nodes():
     node = Newick(name = "Another Leaf")
     assert node.is_leaf
 
@@ -59,34 +61,77 @@ def test_newick__constructor__is_leaf_false_for_internal_nodes():
     top_node = Newick(children = [node])
     assert not top_node.is_leaf
 
-def test_newick__constuctor__leafs_must_have_name_or_length():
+def test_newick__constuctor__leaf_nodes_must_have_name_or_length():
     assert_raises(NewickError, Newick, children = None)
 
 def test_newick__constructor__internal_nodes_must_have_children():
     assert_raises(NewickError, Newick, children = [])
 
+def test_newick__constructor__children_must_be_newick():
+    assert_raises(TypeError, Newick, children = ["A", "B"])
+
+
 
 ############################################################################
 ############################################################################
-## get_leafs
+## get_leaf_nodes
 
-def test_newick__from_leafs__leaf_returns_self():
+def test_newick__get_leaf_nodes__leaf_returns_self():
     node = Newick(name = "Leaf")
-    assert_list_equal(node.get_leafs(), [node])
+    assert_list_equal(node.get_leaf_nodes(), [node])
 
-def test_newick__from_leafs__internal_node_returns_leafs():
+def test_newick__get_leaf_nodes__internal_node_returns_leaf_nodes():
     node_a = Newick(name = "Leaf A")
     node_b = Newick(name = "Leaf B")
     top_node = Newick(children = [node_a, node_b])
-    assert_list_equal(top_node.get_leafs(), [node_a, node_b])
+    assert_list_equal(top_node.get_leaf_nodes(), [node_a, node_b])
 
-def test_newick__from_leafs__complex_case():
+def test_newick__get_leaf_nodes__complex_case():
     node_a = Newick(name = "Leaf A")
     node_b = Newick(name = "Leaf B")
     node_c = Newick(name = "Leaf C")
     sub_a  = Newick(children = [node_b, node_c])
     top_node = Newick(children = [node_a, sub_a])
-    assert_list_equal(top_node.get_leafs(), [node_a, node_b, node_c])
+    assert_list_equal(top_node.get_leaf_nodes(), [node_a, node_b, node_c])
+
+
+
+############################################################################
+############################################################################
+## reroot_on_midpoint
+
+def test_newick__reroot_on_midpoint__two_nodes():
+    source   = Newick.from_string("(A:3.0,B:8.0);")
+    rerooted = source.reroot_on_midpoint()
+    expected = Newick.from_string("(A:5.5,B:5.5);")
+    assert_equal(expected, rerooted)
+
+def test_newick__reroot_on_midpoint__two_clades():
+    source   = Newick.from_string("((A:7,B:2):1,(C:1,D:0.5):2);")
+    rerooted = source.reroot_on_midpoint()
+    expected = Newick.from_string("(((C:1.0,D:0.5):3.0,B:2.0):1.5,A:5.5);")
+    assert_equal(expected, rerooted)
+
+def test_newick__reroot_on_midpoint__nested_clades():
+    source   = Newick.from_string("((A:2,(B:2,C:3):4):1,(D:1,E:0.5):2);")
+    rerooted = source.reroot_on_midpoint()
+    expected = Newick.from_string("(((D:1.0,E:0.5):3.0,A:2.0):1.5,(B:2.0,C:3.0):2.5);")
+    assert_equal(expected, rerooted)
+
+def test_newick__reroot_on_midpoint__reroot_on_internal_node():
+    source   = Newick.from_string("((A:5.0,B:1.0)C:2.0,D:3.0);")
+    rerooted = source.reroot_on_midpoint()
+    expected = Newick.from_string("(A:5.0,B:1.0,D:5.0)C;")
+    assert_equal(expected, rerooted)
+
+def test_newick__reroot_on_midpoint__missing_branch_length():
+    source   = Newick.from_string("(A:7,(B:3));")
+    assert_raises(ValueError, source.reroot_on_midpoint)
+
+def test_newick__reroot_on_midpoint__missing_node_length():
+    source   = Newick.from_string("(A:7,B);")
+    assert_raises(ValueError, source.reroot_on_midpoint)
+
 
 
 ############################################################################
@@ -141,6 +186,51 @@ def test_newick__parse__subnode__two_taxa():
 
 ############################################################################
 ############################################################################
+## cmp - white-box, just make sure all properties are compared
+
+def test_newick__cmp__identical():
+    node_a = Newick(name = "A", length = 13, children = [Newick(name = "B")])
+    node_b = Newick(name = "A", length = 13, children = [Newick(name = "B")])
+    assert_equal(node_a, node_b)
+
+def test_newick__cmp__not_identical():
+    def _not_identical(node_b):
+        node_a = Newick(name = "A", length = 13, children = [Newick(name = "B")])
+        assert_not_equal(node_a, node_b)
+    yield _not_identical, Newick(name = "B", length = 13, children = [Newick(name = "B")])
+    yield _not_identical, Newick(name = "A", length = 14, children = [Newick(name = "B")])
+    yield _not_identical, Newick(name = "A", length = 13, children = [])
+    yield _not_identical, Newick(name = "A", length = 13, children = [Newick(name = "C")])
+    yield _not_identical, Newick(name = "B", length = 14, children = [Newick(name = "C")])
+
+
+############################################################################
+############################################################################
+## hash - white-box, just make sure all properties are used
+
+def test_newick__hash__identical():
+    node_a = Newick(name = "A", length = 13, children = [Newick(name = "B")])
+    node_b = Newick(name = "A", length = 13, children = [Newick(name = "B")])
+    assert_equal(hash(node_a), hash(node_b))
+
+def test_newick__hash__not_identical():
+    def _not_identical(node_b):
+        node_a = Newick(name = "A", length = 13, children = [Newick(name = "B")])
+        assert_not_equal(hash(node_a), hash(node_b))
+    yield _not_identical, Newick(name = "B", length = 13, children = [Newick(name = "B")])
+    yield _not_identical, Newick(name = "A", length = 14, children = [Newick(name = "B")])
+    yield _not_identical, Newick(name = "A", length = 13, children = [])
+    yield _not_identical, Newick(name = "A", length = 13, children = [Newick(name = "C")])
+    yield _not_identical, Newick(name = "B", length = 14, children = [Newick(name = "C")])
+
+def test_newick__hash__hashable():
+    key_a = Newick(name = "A", length = 13.7, children = [Newick(name = "F")])
+    key_b = Newick(name = "A", length = 13.7, children = [Newick(name = "F")])
+    assert key_b in { key_a : True }
+
+
+###########################################################################
+############################################################################
 ## Malformed newick strings
 
 def test_newick__malformed__unbalanced_parantheses():
@@ -163,6 +253,7 @@ def test_newick__malformed__multiple_lengths():
     assert_raises(NewickParseError, Newick.from_string, "(A:1:2);")
 
 
+
 ############################################################################
 ############################################################################
 ## Implicit leafs are not supported (due to problems with ambiguiety)
@@ -180,6 +271,7 @@ def test_newick__parse__three_taxa_unnamed():
     assert_raises(NewickError, Newick.from_string, "(,,);")
 
 
+
 ############################################################################
 ############################################################################
 ## Empty non-leaf nodes are not allowed, as their interpretation is unclear
@@ -189,6 +281,7 @@ def test_newick__parse__minimal_newick__implicit_nodes():
 
 def test_newick__parse__subnode__empty():
     assert_raises(NewickParseError, Newick.from_string, "(A,());")
+
 
 
 ############################################################################
@@ -276,6 +369,14 @@ def test_newick__wikipedia_example_8():
 ############################################################################
 ## str / repr
 
+def test_newick__str__non_string_name():
+    node = Newick(children = [Newick(name = 17, length = "1.3")])
+    assert_equal(str(node), "(17:1.3);")
+
+def test_newick__str__non_string_length():
+    node = Newick(children = [Newick(name = "Foo", length = 1.3)])
+    assert_equal(str(node), "(Foo:1.3);")
+
 def test_newick__str__repr_equal_to_str():
     node_a = Newick(name = "A", length = "123")
     node_b = Newick(name = "B", length = "4567")
@@ -305,3 +406,27 @@ def test_newick__wikipedia_examples__str_equality():
     yield _newick_str_input_equals_output, "(A:0.1,B:0.2,(C:0.3,D:0.4):0.5);"
     # 7. distances and all names
     yield _newick_str_input_equals_output, "(A:0.1,B:0.2,(C:0.3,D:0.4)E:0.5)F;"
+
+
+
+############################################################################
+############################################################################
+## Immutability
+
+def test_newick__properties_are_immutable():
+    def _test_newick__properties_are_immutable(name, value):
+        node = Newick(name = "A", length = 3, children = [Newick(name = "B")])
+        assert_raises(NotImplementedError, setattr, node, name, value)
+    yield _test_newick__properties_are_immutable, "name", "foo"
+    yield _test_newick__properties_are_immutable, "length", "13"
+    yield _test_newick__properties_are_immutable, "children", []
+    yield _test_newick__properties_are_immutable, "foobar", True
+
+def test_newick__properties_cannot_be_deleted():
+    def _test_newick__properties_cannot_be_deleted(name):
+        node = Newick(name = "A", length = 3, children = [Newick(name = "B")])
+        assert_raises(NotImplementedError, delattr, node, name)
+    yield _test_newick__properties_cannot_be_deleted, "name"
+    yield _test_newick__properties_cannot_be_deleted, "length"
+    yield _test_newick__properties_cannot_be_deleted, "children"
+    yield _test_newick__properties_cannot_be_deleted, "foobar"
