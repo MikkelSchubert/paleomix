@@ -27,9 +27,8 @@ import nose.tools
 from nose.tools import \
      assert_equal, \
      assert_raises
-
-from pypeline.common.testing import \
-     RequiredCall
+from flexmock import \
+     flexmock
 
 from pypeline.common.formats.fasta import FASTA
 from pypeline.common.formats.msa import \
@@ -37,7 +36,6 @@ from pypeline.common.formats.msa import \
      MSAError, \
      FASTAError
 
-_VALIDATION_PATH = "pypeline.common.formats.msa.MSA.validate"
 
 
 ################################################################################
@@ -45,8 +43,8 @@ _VALIDATION_PATH = "pypeline.common.formats.msa.MSA.validate"
 ## Tests for constructor
 
 def test_msa_constructor__calls_validate():
-    with RequiredCall(_VALIDATION_PATH):
-        MSA([FASTA("NA", None, "ACGT")])
+    _mock = flexmock(MSA).should_receive('validate').at_least.once
+    MSA([FASTA("NA", None, "ACGT")])
 
 def test_msa_constructor__duplicate_names():
     records = [FASTA("Foo", None, "ACGT"),

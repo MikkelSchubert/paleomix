@@ -121,31 +121,6 @@ class Monkeypatch:
         setattr(self.module, self.name, self.object)
 
 
-class RequiredCall(Monkeypatch):
-    """Monkey-patches the specified function, and checks that this function has
-    been called upon exiting from a with statement. If 'args' or 'kwargs' are
-    specified, the caller must match these in order to be considered a valid
-    call to the original function. A full path to the given function is
-    required, for example: 'os.path.join'."""
-    def __init__(self, path, args = None, kwargs = None):
-        self._path = path
-        self._args = tuple(args) if args else args
-        self._kwargs = dict(kwargs) if kwargs else kwargs
-        self._was_called = False
-        Monkeypatch.__init__(self, path, self._called)
-
-    def _called(self, *args, **kwargs):
-        if (self._args is None) or (self._args == args):
-            if (self._kwargs is None) or (self._kwargs == kwargs):
-                self._was_called = True
-        return self.object(*args, **kwargs)
-
-    def __exit__(self, type_, value, traceback):
-        Monkeypatch.__exit__(self, type_, value, traceback)
-        if not value:
-            assert self._was_called, "%s was not called with required arguments!" % self._path
-
-
 class SetWorkingDirectory:
     """Sets the current working directory upon entry to that specified,
     in the constructor upon entry, and reverts to the previously used
@@ -170,7 +145,6 @@ def set_file_contents(fname, contents):
 def get_file_contents(fname):
     with open(fname) as handle:
         return handle.read()
-
 
 
 @atexit.register

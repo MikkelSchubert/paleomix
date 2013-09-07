@@ -20,9 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+from flexmock import flexmock
 from nose.tools import assert_equal
-from pypeline.common.testing import \
-     RequiredCall
 
 from pypeline.common.formats.phylip import \
      sequential_phy, \
@@ -34,7 +33,6 @@ from pypeline.common.formats.msa import \
 from pypeline.common.formats.fasta import \
      FASTA
 
-_VALIDATION_PATH = "pypeline.common.formats.msa.MSA.validate"
 
 
 _MSA_SHORT_SEQUENCES = \
@@ -112,8 +110,8 @@ TGCAGAGTAC  GACGT"""
 
 
 def test_sequential_phy__different_lengths():
-    with RequiredCall(_VALIDATION_PATH):
-        sequential_phy(_MSA_MEDIUM_NAMES)
+    _mock = flexmock(MSA).should_receive('validate').at_least.once
+    sequential_phy(_MSA_MEDIUM_NAMES)
 
 
 
@@ -197,5 +195,5 @@ Donkey                  TGCAGAGTAC  GACGT"""
 
 
 def test_interleaved_phy__different_lengths():
-    with RequiredCall(_VALIDATION_PATH):
-        interleaved_phy(_MSA_MEDIUM_NAMES)
+    _mock = flexmock(MSA).should_receive('validate').at_least.once
+    interleaved_phy(_MSA_MEDIUM_NAMES)
