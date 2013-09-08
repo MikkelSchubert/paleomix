@@ -53,15 +53,16 @@ Options:
   # given barcode.
   SplitLanesByFilenames: no
   # Compression format used when storing FASTQ files (either 'gz' for GZip or 'bz2' for BZip2)
-  CompressionFormat: gz
-
+  CompressionFormat: bz2
 """
 
 _TEMPLATE_BAM_OPTIONS = \
 """  # Settings for aligners supported by the pipeline
-  AdapterRemoval:
-    # Which version of AdapterRemoval to use ('v1.4' or 'v1.5+')
-    Version: v1.4
+#  AdapterRemoval:
+     # Commandline options; see AdapterRemoval documentation.
+     # See Bowtie2 below for example usage.
+#    --pcr1: ...
+#    --pcr2: ...
 
   Aligners:
     # Choice of aligner software to use, either "BWA" or "Bowtie2"

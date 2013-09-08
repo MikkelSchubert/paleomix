@@ -205,8 +205,6 @@ _VALIDATION = {
             },
         },
     "Genotyping" : {
-        "Default"  : StringIn(("random", "samtools"),
-                              default = "samtools"),
         "Padding"  : IsUnsignedInt(default = 5),
         "MPileup"  : {
             StringStartsWith("-") : CLI_PARAMETERS,
@@ -225,7 +223,7 @@ _VALIDATION = {
         },
     "MSAlignment" : {
         "Enabled"   : IsBoolean(default = True),
-        "Default"   : StringIn(("mafft",),
+        "Default"   : StringIn(("mafft",), # TODO: Add support for other programs
                                default = "mafft"),
         "MAFFT" : {
             "Algorithm" : StringIn(("auto", "FFT-NS-1", "FFT-NS-2", "FFT-NS-i", "NW-INS-i", "L-INS-i", "E-INS-i", "G-INS-i"),
@@ -234,7 +232,7 @@ _VALIDATION = {
         },
     "Phylogenetic Inference" : {
         "ExcludeGroups" : IsListOf(IsStr, default = []),
-        "Default" : StringIn(("raxml", "raxml-light", "examl"),
+        "Default" : StringIn(("examl",), # TODO: Add support for other programs
                              default = "examl"),
         "ExaML" : {
             "Threads"    : And(IsInt, ValueGE(1), default = 1),

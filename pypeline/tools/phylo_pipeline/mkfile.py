@@ -20,16 +20,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
 import sys
-import datetime
-
-import pypeline.ui as ui
-from pypeline.common.text import padded_table
 
 
-def main(argv):
-    print """# -*- mode: Yaml; -*-
+_TEMPLATE = """# -*- mode: Yaml; -*-
 Project:
   Title: PROJECT_NAME
 
@@ -53,13 +47,13 @@ Project:
          GENDER_X: []
 
 
-  Filter Singletons: {}
-
+#  Filter sites in a taxa, excluding any nucleotide not
+#  observed in the specified list of taxa or groups.
+#  Filter Singletons: {}
+#    <TAXA> : [<TAXA_1>, ...]
 
 
 Genotyping:
-  # Default genotyping method
-  Default: SAMTools
   # Padding used for genotyping, to ensure that we call adjacent indels
   Padding: 10
 
@@ -75,8 +69,6 @@ Genotyping:
     -g: # Call genotypes at variant sites
 
   VCF_Filter:
-    # Mappability file, filter sites that were are not mappable
-#    Mappability: PATH_TO_FILE
     # Maximum coverage acceptable for genotyping calls
     # If zero, the default vcf_filter value is used
     MaxReadDepth: 0
@@ -105,7 +97,6 @@ Genotyping:
 
 MSAlignment:
   Enabled: yes
-  Default: MAFFT
 
   MAFFT:
     Algorithm: G-INS-i
@@ -113,7 +104,6 @@ MSAlignment:
 
 
 Phylogenetic Inference:
-  Default: ExaML
   ExcludeGroups: []
 
   ExaML:
@@ -135,6 +125,10 @@ PAML:
        "Test": "makefiles/Common.codeml.test.ctl"
     Tree File: "makefiles/3Cabs.codeml.trees"
 """
+
+
+def main(_argv):
+    print _TEMPLATE
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))

@@ -30,6 +30,7 @@ import yaml
 
 import pypeline.logger
 import pypeline.tools.phylo_pipeline.makefile
+import pypeline.tools.phylo_pipeline.mkfile as mkfile
 import pypeline.tools.phylo_pipeline.parts.genotype as genotype
 import pypeline.tools.phylo_pipeline.parts.msa as msa
 import pypeline.tools.phylo_pipeline.parts.paml as paml
@@ -99,7 +100,7 @@ def parse_args(argv):
     options_parser = build_options_parser()
     options, args  = options_parser.parse_args(argv)
 
-    if len(args) < 2:
+    if (len(args) < 2) and (args != ["mkfile"]):
         print_err("Please specify at least one analysis step and one makefile!", file = sys.stderr)
         return None, None
 
@@ -152,7 +153,7 @@ def main(argv):
 
     commands = _select_commands(args.pop(0))
     if any((cmd == "mkfile") for (cmd, _) in commands):
-        return pypeline.tools.phylo_pipeline.mkfile.main(args[1:])
+        return mkfile.main(args[1:])
 
     try:
         makefiles = read_makefiles(args)

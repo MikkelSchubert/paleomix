@@ -359,13 +359,15 @@ def build_taxa_nodes(options, genotyping, intervals, taxa, dependencies = ()):
         # Enforce homozygous contigs based on gender tag
         interval["Homozygous Contigs"] = interval["Homozygous Contigs"][taxa["Gender"]]
 
-        genotyping_method = taxa["Genotyping Method"]
+        genotyping_method = taxa["Genotyping Method"].lower()
         if genotyping_method == "reference sequence":
             nodes.extend(build_reference_nodes(options, taxa, interval, dependencies))
         elif genotyping_method == "random sampling":
             nodes.extend(build_sampling_nodes(options, genotyping, taxa, interval, dependencies))
         elif genotyping_method == "samtools":
             nodes.extend(build_genotyping_nodes(options, genotyping, taxa, interval, dependencies))
+        else:
+            assert False, "Unexpected genotyping method %r for taxa %r" % (genotyping_method, taxa["Name"])
 
     return MetaNode(description  = taxa["Name"],
                     dependencies = nodes)

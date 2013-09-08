@@ -86,11 +86,11 @@ _VALIDATION_OPTIONS = {
                                   default = False),
     # Format to use when compressing FASTQ files ("gz" or "bz2")
     "CompressionFormat" : ValueIn(("gz", "bz2"),
-                                  default = "gz"),
+                                  default = "bz2"),
 
     "AdapterRemoval" : {
         "Version" : ValueIn(("v1.4", "v1.5+"),
-                            default = "v1.4"),
+                            default = "v1.5+"),
         "--pcr1"  : IsStr,
         "--pcr2"  : IsStr,
         },
@@ -277,7 +277,7 @@ def _update_tags(makefile):
                             "PU_src" : barcode,
                             "PU_cur" : barcode,
                             "PG" : record["Options"]["Aligners"]["Program"],
-                            "PL" : record["Options"]["Platform"]}
+                            "PL" : record["Options"]["Platform"].upper()}
 
                     record["Tags"] = tags
 
