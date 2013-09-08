@@ -23,9 +23,8 @@
 import os
 import re
 import sys
-import time
 import shutil
-import atexit
+import tempfile
 
 import nose
 from nose.tools import with_setup, assert_equal
@@ -67,35 +66,25 @@ def assert_list_equal(iter_a, iter_b):
     assert_equal(list_a, list_b)
 
 
-
-
-EPOCH = time.time()
-TEST_ROOT = "/tmp/%s/pypeline/tests_%i" % (os.getlogin(), EPOCH,)
-UNIT_TEST_ROOT = os.path.join(TEST_ROOT, "unit")
-FUNC_TEST_ROOT = os.path.join(TEST_ROOT, "func")
-
-_COUNTER = 0
 def with_temp_folder(func):
-    """Creates a unique temporary folder before running 'func'. The
+    """Decorator for unit-tests:
+    Creates a unique temporary folder before running 'func'. The
     function is is assumed to take at least one parameter, the first
     of which is assumed to represent the temporary folder."""
-    global _COUNTER # pylint: disable=W0603
-    tmp_root = os.path.join(UNIT_TEST_ROOT, "%03i_%s" % (_COUNTER, func.__name__,))
-    _COUNTER += 1
-
-    def _setup():
-        os.makedirs(tmp_root)
-
-    def _teardown():
-        shutil.rmtree(tmp_root)
+    temp_root = os.path.join(tempfile.gettempdir(), os.getlogin())
 
     @nose.tools.istest
     def _wrapper(*args, **kwargs):
-        return func(tmp_root, *args, **kwargs)
+        try:
+            temp_folder = None
+            temp_folder = tempfile.mkdtemp(dir    = temp_root,
+                                           prefix = "pypeline_unit")
+            func(temp_folder, *args, **kwargs)
+        finally:
+            if temp_folder:
+                shutil.rmtree(temp_folder)
     _wrapper.__name__ = func.__name__ + "__wrapped_by_with_temp_folder"
-
-    return with_setup(_setup, _teardown)(_wrapper)
-
+    return _wrapper
 
 
 class Monkeypatch:
@@ -137,21 +126,11 @@ class SetWorkingDirectory:
         os.chdir(self._old_cwd)
 
 
-
 def set_file_contents(fname, contents):
     with open(fname, "w") as handle:
         handle.write(contents)
 
+
 def get_file_contents(fname):
     with open(fname) as handle:
         return handle.read()
-
-
-@atexit.register
-def _cleanup_temp_folders():
-    # Avoid (when possible) leaving empty folders behind after each run
-    for root in (FUNC_TEST_ROOT, UNIT_TEST_ROOT, TEST_ROOT):
-        try:
-            os.rmdir(root)
-        except OSError:
-            pass

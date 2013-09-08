@@ -20,23 +20,28 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+from __future__ import absolute_import
+
 import os
 import sys
 import shutil
 import inspect
+import tempfile
 import traceback
 
 import pypeline.logger
 import pypeline.ui as ui
 from pypeline.node import Node
 from pypeline.pipeline import Pypeline
-from pypeline.common.testing import FUNC_TEST_ROOT
 
 # Test modules, see _collect_tests
 import adapterremoval_test # pylint: disable=W0611
 import bwa_test            # pylint: disable=W0611
 import bowtie2_test        # pylint: disable=W0611
 import picard_test         # pylint: disable=W0611
+
+
+tempfile.tempdir = os.path.join(tempfile.gettempdir(), os.getlogin())
 
 
 def _collect_tests():
@@ -49,7 +54,7 @@ def _collect_tests():
 
 
 class Config: # pylint: disable=W0232
-    temp_root    = FUNC_TEST_ROOT
+    temp_root    = tempfile.mkdtemp(prefix = "pypeline_func")
     jar_root     = "tests/links/jar_root"
     dependencies = Node(description = "DummyDependency")
     log_file     = None
@@ -58,7 +63,7 @@ class Config: # pylint: disable=W0232
 
 def main(argv):
     ui.print_info("Running functional Node tests:")
-    ui.print_info("  - Destination = %r ..." % FUNC_TEST_ROOT)
+    ui.print_info("  - Destination = %r ..." % Config.temp_root)
     ui.print_info()
 
     pypeline.logger.initialize(Config, "logfile_%i.txt")
@@ -66,7 +71,7 @@ def main(argv):
     errors = False
     pipeline = Pypeline(Config)
     for (module, func) in _collect_tests():
-        Config.destination = os.path.join(FUNC_TEST_ROOT, module)
+        Config.destination = os.path.join(Config.temp_root, module)
 
         try:
             ui.print_info("Adding node '%s' ..." % func.__name__)
@@ -84,8 +89,10 @@ def main(argv):
 
     if pipeline.run(dry_run = "--dry-run" in argv, verbose = False, collapse = True, max_running = 2):
         # Everything went fine, so there's currently no need to save the output
-        shutil.rmtree(FUNC_TEST_ROOT)
+        ui.print_info("No errors; cleaning up temporary files.")
+        shutil.rmtree(Config.temp_root)
     else:
+        ui.print_info("There were errors; temporary files not removed!")
         errors = True
 
     return (1 if errors else 0)
