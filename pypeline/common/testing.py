@@ -27,7 +27,7 @@ import shutil
 import tempfile
 
 import nose
-from nose.tools import with_setup, assert_equal
+from nose.tools import assert_equal
 
 
 # Simple support for assert_in in Python v2.6
