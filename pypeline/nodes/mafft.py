@@ -30,19 +30,19 @@ from pypeline.atomiccmd.command import AtomicCmd
 # http://mafft.cbrc.jp/alignment/software/algorithms/algorithms.html
 _PRESETS = {
     "auto"     : ["mafft", "--auto"],
-    "FFT-NS-1" : ["fftns", "--retree", 1],
-    "FFT-NS-2" : ["fftns"],
-    "FFT-NS-i" : ["fftnsi", "--maxiterate", 1000],
-    "NW-NS-i"  : ["nwnsi",  "--maxiterate", 1000],
-    "L-INS-i"  : ["linsi",  "--maxiterate", 1000],
-    "E-INS-i"  : ["einsi",  "--maxiterate", 1000],
-    "G-INS-i"  : ["ginsi",  "--maxiterate", 1000]}
+    "fft-ns-1" : ["fftns", "--retree", 1],
+    "fft-ns-2" : ["fftns"],
+    "fft-ns-i" : ["fftnsi", "--maxiterate", 1000],
+    "nw-ns-i"  : ["nwnsi",  "--maxiterate", 1000],
+    "l-ins-i"  : ["linsi",  "--maxiterate", 1000],
+    "e-ins-i"  : ["einsi",  "--maxiterate", 1000],
+    "g-ins-i"  : ["ginsi",  "--maxiterate", 1000]}
 
 
 
 class MAFFTNode(CommandNode):
     def __init__(self, infile, outfile, preset = "auto", dependencies = ()):
-        call = _PRESETS[preset] + ["--quiet", "%(IN_FASTA)s"]
+        call = _PRESETS[preset.lower()] + ["--quiet", "%(IN_FASTA)s"]
         command = AtomicCmd(call,
                             IN_FASTA   = infile,
                             OUT_STDOUT = outfile)
