@@ -22,6 +22,7 @@
 #
 import os
 import re
+import glob
 import random
 
 import pypeline.common.fileutils as fileutils
@@ -383,6 +384,7 @@ class EXaMLNode(CommandNode):
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
+        self._dirname  = os.path.dirname(parameters.output_template)
         self._template = os.path.basename(parameters.output_template)
 
         CommandNode.__init__(self,
@@ -393,6 +395,34 @@ class EXaMLNode(CommandNode):
                                     parameters.output_template),
                              threads      = parameters.threads,
                              dependencies = parameters.dependencies)
+
+
+    def _create_temp_dir(self, config):
+        """Called by 'run' in order to create a temporary folder.
+        To allow restarting from checkpoints, we use a fixed folder
+        determined by the output_template."""
+        temp = os.path.join(self._dirname, self._template % ("temp",))
+        fileutils.make_dirs(temp)
+        return temp
+
+
+    def _setup(self, config, temp):
+        CommandNode._setup(self, config, temp)
+
+        # The temp folder may contain old files:
+        # Remove old pipes to prevent failure at _teardown
+        for pipe_fname in glob.glob(os.path.join(temp, "pipe*")):
+            fileutils.try_remove(pipe_fname)
+        # ExaML refuses to overwrite old info files
+        fileutils.try_remove(os.path.join(temp, "ExaML_info.Pypeline"))
+
+        # Resume from last checkpoint, if one such was generated
+        checkpoints = glob.glob(os.path.join(temp, "ExaML_binaryCheckpoint.Pypeline_*"))
+        checkpoints.sort(key = lambda fname: int(fname.rsplit("_", 1)[-1]))
+        if checkpoints:
+            # FIXME: Less hacky solution to modifying AtomicCmds needed
+            self._command._command.append("-R")
+            self._command._command.append(checkpoints[-1])
 
 
     def _teardown(self, config, temp):
