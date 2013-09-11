@@ -244,8 +244,12 @@ class AtomicCmdBuilder:
 
 class AtomicJavaCmdBuilder(AtomicCmdBuilder):
     def __init__(self, config, jar, gc_threads = 1, **kwargs):
+        temp_root = "%(TEMP_DIR)s"
+        if config:
+            temp_root = config.temp_root
+
         call = ["java", "-server", "-Xmx4g",
-                "-Djava.io.tmpdir=%s" % config.temp_root,
+                "-Djava.io.tmpdir=%s" % temp_root,
                 "-Djava.awt.headless=true"]
 
         if not isinstance(gc_threads, (types.IntType, types.LongType)):
