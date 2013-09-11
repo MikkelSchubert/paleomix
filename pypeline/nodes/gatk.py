@@ -35,7 +35,7 @@ class _IndelTrainerNode(CommandNode):
     def __init__(self, config, reference, infiles, outfile, dependencies = ()):
         infiles  = safe_coerce_to_tuple(infiles)
         jar_file = os.path.join(config.jar_root, "GenomeAnalysisTK.jar")
-        command  = AtomicJavaCmdBuilder(config, jar_file)
+        command  = AtomicJavaCmdBuilder(None, jar_file)
         command.set_option("-T", "RealignerTargetCreator")
         command.set_option("-R", "%(IN_REFERENCE)s")
         command.set_option("-o", "%(OUT_INTERVALS)s")
@@ -61,7 +61,7 @@ class _IndelRealignerNode(CommandNode):
 
         infiles  = safe_coerce_to_tuple(infiles)
         jar_file = os.path.join(config.jar_root, "GenomeAnalysisTK.jar")
-        command  = AtomicJavaCmdBuilder(config, jar_file)
+        command  = AtomicJavaCmdBuilder(None, jar_file)
         command.set_option("-T", "IndelRealigner")
         command.set_option("-R", "%(IN_REFERENCE)s")
         command.set_option("-targetIntervals", "%(IN_INTERVALS)s")
