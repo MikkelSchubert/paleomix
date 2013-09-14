@@ -25,6 +25,7 @@ import sys
 import optparse
 
 import pypeline
+import pypeline.logger
 
 from pypeline.common.console import print_info
 from pypeline.common.fileutils import swap_ext
@@ -39,6 +40,8 @@ def parse_config(argv):
     parser.add_option("--max-threads", type = int, default = 1)
     parser.add_option("--dry-run", action = "store_true", default = False)
 
+    pypeline.logger.add_optiongroup(parser)
+
     return parser.parse_args(argv)
 
 
@@ -47,6 +50,8 @@ def main(argv):
     if not len(args):
         print_info("Usage: %s [<bamfile> ...]" % sys.argv[0])
         return 0
+
+    pypeline.logger.initialize(config, None)
 
     pipeline = pypeline.Pypeline(config)
     for filename in set(args):
