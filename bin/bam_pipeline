@@ -55,6 +55,7 @@ def main(argv):
         print_info("  -- %s help            -- Display this message" % basename)
         print_info("  -- %s mkfile [...]    -- Generate makefile from 'SampleSheet.csv' files." % basename)
         print_info("  -- %s dry_run [...]   -- Perform dry run of pipeline on provided makefiles." % basename)
+        print_info("     %s                    Equivalent to 'bam_pipeline run --dry-run [...]'." % (" " * len(basename),))
         print_info("  -- %s run [...]       -- Run pipeline on provided makefiles." % basename)
     elif argv[0] == "mkfile":
         import pypeline.tools.bam_pipeline.mkfile
