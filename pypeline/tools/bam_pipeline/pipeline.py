@@ -290,6 +290,7 @@ def parse_config(argv):
     return config, args
 
 
+# TODO: Move to NodeGraph?
 def walk_nodes(nodes, func, skip_nodes = None):
     if skip_nodes is None:
         skip_nodes = set()
@@ -309,6 +310,7 @@ def walk_nodes(nodes, func, skip_nodes = None):
     return True
 
 
+# TODO: Move to NodeGraph?
 def list_output_files(nodes):
     output_files = set()
     def collect_output_files(node):
@@ -320,6 +322,7 @@ def list_output_files(nodes):
     return output_files
 
 
+# TODO: Move to NodeGraph?
 def list_orphan_files(config, makefiles, nodes):
     files, mkfiles = set(), set()
     for mkfile in makefiles:
