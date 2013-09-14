@@ -26,6 +26,7 @@ import optparse
 
 import pypeline
 import pypeline.logger
+import pypeline.common.system
 
 from pypeline.common.console import print_info
 from pypeline.nodes.samtools import BAMIndexNode
@@ -51,6 +52,7 @@ def main(argv):
         print_info("Usage: coverage.py [<bamfile> ...]")
         return 0
 
+    pypeline.common.system.set_procname()
     pypeline.logger.initialize(config, None)
 
     pipeline = pypeline.Pypeline(config)

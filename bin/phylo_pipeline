@@ -46,6 +46,9 @@ def main(argv):
     if not _has_required_modules():
         return 1
 
+    import pypeline.common.system
+    pypeline.common.system.set_procname()
+
     import pypeline.tools.phylo_pipeline.pipeline
     return pypeline.tools.phylo_pipeline.pipeline.main(argv)
 

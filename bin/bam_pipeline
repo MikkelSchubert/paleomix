@@ -47,6 +47,9 @@ def main(argv):
     if not _has_required_modules():
         return 1
 
+    import pypeline.common.system
+    pypeline.common.system.set_procname()
+
     if (len(argv) == 0) or (argv[0] not in ("mkfile", "run", "dry_run", "dryrun")):
         from pypeline.common.console import print_info
 

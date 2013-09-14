@@ -26,6 +26,7 @@ import optparse
 
 import pypeline
 import pypeline.logger
+import pypeline.common.system
 
 from pypeline.common.console import print_info
 from pypeline.common.fileutils import swap_ext
@@ -52,6 +53,7 @@ def main(argv):
         print_info("Usage: %s [<bamfile> ...]" % sys.argv[0])
         return 0
 
+    pypeline.common.system.set_procname()
     pypeline.logger.initialize(config, None)
 
     pipeline = pypeline.Pypeline(config)
