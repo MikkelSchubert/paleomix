@@ -29,7 +29,7 @@ import logging
 import pypeline.common.console as _cli
 
 
-def initialize(config, template):
+def initialize(config, template = None):
     """Takes an OptionParser object for which 'add_optiongroup' has
     been called, as well as a filename template (containing one '%i'
     field), and initializes logging for a pypeline.
@@ -37,26 +37,31 @@ def initialize(config, template):
     If --log-file has not been specified, the template is used to
     create a new logfile in --temp-root, skipping existing logfiles
     by incrementing the counter value. If a --log-file has been
-    specified, this file is always created / opened."""
+    specified, this file is always created / opened.
+
+    If neither --log-file nor 'template' has been specified, then
+    logging is only carried out by printing messages to STDERR."""
     global _INITIALIZED # pylint: disable=W0603
     if _INITIALIZED:
         raise RuntimeError("Attempting to initialize logging more than once")
-    # Verify that the template is functional up front
-    template % (1,) # pylint: disable=W0104
 
     root  = logging.getLogger()
     root.setLevel(logging.INFO)
     root.addHandler(_PrintToConsole(logging.INFO))
 
-    level = _LOGLEVELS[config.log_level]
-    if config.log_file:
-        handler = logging.FileHandler(config.log_file)
-    else:
-        handler = _LazyLogfile(config.temp_root, template)
-    formatter = logging.Formatter("%s\n%%(asctime)s -- %%(levelname)s:\n%%(message)s" % ("-" * 60,))
-    handler.setFormatter(formatter)
-    handler.setLevel(level)
-    root.addHandler(handler)
+    if config.log_file or template:
+        # Verify that the template is functional up front
+        template % (1,) # pylint: disable=W0104
+
+        level = _LOGLEVELS[config.log_level]
+        if config.log_file:
+            handler = logging.FileHandler(config.log_file)
+        else:
+            handler = _LazyLogfile(config.temp_root, template)
+        formatter = logging.Formatter("%s\n%%(asctime)s -- %%(levelname)s:\n%%(message)s" % ("-" * 60,))
+        handler.setFormatter(formatter)
+        handler.setLevel(level)
+        root.addHandler(handler)
 
     _INITIALIZED = True
 
