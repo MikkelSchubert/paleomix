@@ -34,7 +34,10 @@ from pypeline.nodes.examl import \
      EXaMLNode, \
      EXaMLParserNode, \
      ParsimonatorNode
-from pypeline.common.fileutils import swap_ext
+from pypeline.nodes.newick import \
+     NewickSupportNode
+from pypeline.common.fileutils import \
+     swap_ext
 
 import pypeline.tools.phylo_pipeline.parts.common as common
 
@@ -139,6 +142,38 @@ def build_examl_bootstraps(phylo, destination, input_alignment, input_partition,
     return []
 
 
+def add_bootstrap_support(replicates, bootstraps):
+    if not (replicates and bootstraps):
+        return replicates + bootstraps
+
+    def _get_results_files(node):
+        filenames = []
+        for filename in node.output_files:
+            if filename.endswith(".result"):
+                filenames.append(filename)
+        return filenames
+
+    bootstrap_files = []
+    for bootstrap_meta in bootstraps:
+        for bootstrap in bootstrap_meta.subnodes:
+            bootstrap_files.extend(_get_results_files(bootstrap))
+
+    nodes = []
+    for replicate_meta in replicates:
+        for replicate in replicate_meta.subnodes:
+            input_file, = _get_results_files(replicate)
+            output_file = "%s.bootstraps" % (input_file,)
+
+            node = NewickSupportNode(main_tree_files    = input_file,
+                                     support_tree_files = bootstrap_files,
+                                     output_file        = output_file,
+                                     dependencies       = replicates + bootstraps)
+            nodes.append(node)
+
+    return nodes
+
+
+
 def build_examl_nodes(options, settings, intervals, filtering, dependencies):
     examl_nodes = []
     phylo = settings["Phylogenetic Inference"]
@@ -153,9 +188,9 @@ def build_examl_nodes(options, settings, intervals, filtering, dependencies):
         supermatrix = build_supermatrix(options, phylo, afa_ext, destination, interval, filtering_postfix, dependencies)
         examl_args  = (phylo, destination, input_alignment, input_partition, supermatrix)
 
-        examl_dependencies = []
-        examl_dependencies.extend(build_examl_replicates(*examl_args))
-        examl_dependencies.extend(build_examl_bootstraps(*examl_args))
+        examl_replicates = build_examl_replicates(*examl_args)
+        examl_bootstraps = build_examl_bootstraps(*examl_args)
+        examl_dependencies = add_bootstrap_support(examl_replicates, examl_bootstraps)
 
         if examl_dependencies:
             examl_nodes.append(MetaNode(description  = interval["Name"],
