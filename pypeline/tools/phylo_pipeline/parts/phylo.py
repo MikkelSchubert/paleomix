@@ -29,7 +29,8 @@ from pypeline.nodes.formats import \
      FastaToPartitionedInterleavedPhyNode
 from pypeline.nodes.raxml import \
      RAxMLReduceNode, \
-     RAxMLBootstrapNode, \
+     RAxMLBootstrapNode
+from pypeline.nodes.examl import \
      EXaMLNode, \
      EXaMLParserNode, \
      ParsimonatorNode
