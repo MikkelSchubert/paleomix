@@ -28,6 +28,7 @@ import optparse
 
 import yaml
 
+import pypeline.ui
 import pypeline.logger
 import pypeline.tools.phylo_pipeline.makefile
 import pypeline.tools.phylo_pipeline.mkfile as mkfile
@@ -68,9 +69,7 @@ def build_options_parser():
       "  -- %prog msa [...]       -- Carry out multiple sequence alignment.\n" \
       "  -- %prog phylogeny [...] -- Carry out phylogenetic inference.\n"
 
-    parser.add_option("--verbose",            default = False, action="store_true",
-                      help = "Print the full dependency-tree every time a node is updated.")
-
+    pypeline.ui.add_optiongroup(parser)
     pypeline.logger.add_optiongroup(parser)
 
     group  = optparse.OptionGroup(parser, "Scheduling")
@@ -178,6 +177,6 @@ def main(argv):
 
     if not pipeline.run(max_running = options.max_threads,
                         dry_run     = options.dry_run,
-                        verbose     = options.verbose):
+                        progress_ui = options.progress_ui):
         return 1
     return 0

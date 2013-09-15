@@ -211,13 +211,12 @@ def parse_config(argv):
         defaults = {}
 
     parser = optparse.OptionParser()
-    parser.add_option("--verbose", action = "store_true", default = defaults.get("verbose", False),
-                      help = "Print the full dependency-tree every time a node is updated.")
     parser.add_option("--allow-missing-input-files", action = "store_true", default = False,
                       help = "Allow processing of lanes, even if the original input files are no-longer " \
                              "accesible, if for example a network drive is down. This option should be " \
                              "used with care!")
 
+    pypeline.ui.add_optiongroup(parser, default = defaults.get("progress_ui", "quiet"))
     pypeline.logger.add_optiongroup(parser)
 
     group  = optparse.OptionGroup(parser, "Scheduling")
@@ -415,7 +414,7 @@ def main(argv):
     logger.info("Running BAM pipeline ...")
     if not pipeline.run(dry_run     = config.dry_run,
                         max_running = config.max_threads,
-                        verbose     = config.verbose):
+                        progress_ui = config.progress_ui):
         return 1
 
     return 0

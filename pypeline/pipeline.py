@@ -25,7 +25,7 @@ import signal
 import logging
 import multiprocessing
 
-import pypeline.ui as ui
+import pypeline.ui
 
 from pypeline.node import Node, MetaNode
 from pypeline.nodegraph import NodeGraph, NodeGraphError
@@ -49,7 +49,7 @@ class Pypeline:
                 self._nodes.append(node)
 
 
-    def run(self, max_running = 1, dry_run = False, collapse = True, verbose = True):
+    def run(self, max_running = 1, dry_run = False, progress_ui = "verbose"):
         try:
             nodegraph = NodeGraph(self._nodes)
         except NodeGraphError, error:
@@ -68,7 +68,9 @@ class Pypeline:
                 return False
 
         if dry_run:
-            ui.print_node_tree(nodegraph, collapse)
+            ui = pypeline.ui.VerboseUI()
+            nodegraph.add_state_observer(ui)
+            ui.flush()
             self._logger.info("Dry run done ...")
             return True
 
@@ -76,6 +78,8 @@ class Pypeline:
         interrupted_once = errors = has_refreshed = has_started_any = False
         pool = multiprocessing.Pool(max_running, _init_worker)
 
+        ui = pypeline.ui.get_ui(progress_ui)
+        nodegraph.add_state_observer(ui)
         while running or remaining:
             try:
                 errors |= not self._poll_running_nodes(running, nodegraph)
@@ -90,7 +94,7 @@ class Pypeline:
                         has_refreshed = True
 
                 if running:
-                    ui.print_node_tree(nodegraph, collapse, verbose)
+                    ui.flush()
             except KeyboardInterrupt:
                 if interrupted_once:
                     self._logger.error("\nTerminating now!\n")
@@ -102,7 +106,7 @@ class Pypeline:
                 self._logger.error("\nKeyboard interrupt detected, waiting for current tasks to complete ...\n"
                                    "\t- Press CTRL-C again to force termination.\n")
 
-        ui.print_node_tree(nodegraph, collapse)
+        ui.flush()
         pool.close()
         pool.join()
 

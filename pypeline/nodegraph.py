@@ -43,7 +43,9 @@ class NodeGraphError(RuntimeError):
 
 
 class NodeGraph:
-    DONE, RUNNING, RUNABLE, QUEUED, OUTDATED, ERROR = range(6)
+    NUMBER_OF_STATES = 6
+    DONE, RUNNING, RUNABLE, QUEUED, OUTDATED, ERROR \
+      = range(NUMBER_OF_STATES)
 
     def __init__(self, nodes):
         nodes = safe_coerce_to_frozenset(nodes)
@@ -61,6 +63,7 @@ class NodeGraph:
         self._logger.info("")
 
         self._states = {}
+        self._state_observers = []
         self.refresh_states()
 
 
@@ -71,7 +74,12 @@ class NodeGraph:
     def set_node_state(self, node, state):
         if state not in (NodeGraph.RUNNING, NodeGraph.ERROR, NodeGraph.DONE):
             raise ValueError("Cannot set states other than RUNNING and ERROR, or DONE.")
+        old_state = self._states[node]
+        if state == old_state:
+            return
+
         self._states[node] = state
+        self._notify_state_observers(node, old_state, state, True)
 
         intersections = dict(self._intersections[node])
 
@@ -89,7 +97,9 @@ class NodeGraph:
                     if requires_update[node]:
                         old_state = self._states.pop(node)
                         new_state = self._update_node_state(node)
-                        has_changed = (new_state != old_state)
+                        if (new_state != old_state):
+                            self._notify_state_observers(node, old_state, new_state, False)
+                            has_changed = True
 
                     for dependency in self._reverse_dependencies[node]:
                         intersections[dependency] -= 1
@@ -116,6 +126,37 @@ class NodeGraph:
         self._states = states
         for node in self._reverse_dependencies:
             self._update_node_state(node)
+        self._refresh_state_observers()
+
+
+    def add_state_observer(self, observer):
+        """Add an observer of changes to the node-graph. The observer
+        is expected to have the following functions:
+
+        refresh(nodegraph):
+          Called when an observer has been added, or when 'refresh_states'
+          has been called on the nodegraph. The observer should rebuild any
+          internal state at this point.
+
+        state_changed(node, old_state, new_state, is_primary):
+          Called when the state of an node has changed. 'is_primary' is
+          True only if the node for which 'set_node_state' was called,
+          and false for nodes the state of which changed as a consequence
+          of the change to the node marked 'is_primary'. This includes
+          ERROR propegating, MetaNodes being DONE when all their subnodes
+          are DONE and more."""
+        self._state_observers.append(observer)
+        observer.refresh(self)
+
+
+    def _notify_state_observers(self, node, old_state, new_state, is_primary):
+        for observer in self._state_observers:
+            observer.state_changed(node, old_state, new_state, is_primary)
+
+
+    def _refresh_state_observers(self):
+        for observer in self._state_observers:
+            observer.refresh(self)
 
 
     def _calculate_intersections(self):
