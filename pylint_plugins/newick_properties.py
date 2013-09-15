@@ -29,6 +29,7 @@ def newick_properties_transform(module):
                 obj.locals["name"]     = [str]
                 obj.locals["length"]   = [str]
                 obj.locals["children"] = [tuple]
+                obj.locals["_weight"]  = [int]
 
 def register(*_args, **_kwargs):
     MANAGER.register_transformer(newick_properties_transform)

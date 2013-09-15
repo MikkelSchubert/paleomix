@@ -24,14 +24,20 @@
 # pylint: disable=R0921
 import re
 
-from pypeline.common.utilities import set_in
+from pypeline.common.utilities import \
+     safe_coerce_to_tuple
+from pypeline.common.formats._graph import \
+     GraphError, \
+     _Graph
 
 
-class NewickError(RuntimeError):
+class NewickError(GraphError):
     pass
 
 
 class NewickParseError(NewickError):
+    """Exception raised if errors occur during parsing
+    of Newick strings."""
     pass
 
 
@@ -45,26 +51,30 @@ class Newick(object):
     using the Newick format.
 
     No assumptions are made about the type of the 'name' and the 'length'
-    properties, and these are simply converted into strings when the
-    Newick string is generated.
-    """
+    properties when simply parsing the tree, and these are simply converted
+    into strings when the Newick string is generated. However, additional
+    contraints apply when unrooting/rerooting trees (see below). """
 
     def __init__(self, name = None, length = None, children = None):
+        """See class documentation for constraints."""
         object.__init__(self)
         object.__setattr__(self, "name",     name)
         object.__setattr__(self, "length",   length)
         object.__setattr__(self, "children", tuple(children or ()))
 
+        if not (self.children or self.name or self.length):
+            raise NewickError("Leaf nodes MUST have either a name or a length")
+
         # Ensure that these values are hashable
         hash(self.name)
         hash(self.length)
 
+        weight = 0
         for child in self.children:
             if not isinstance(child, Newick):
                 raise TypeError("Child nodes must be Newick nodes")
-
-        if not (self.children or self.name or self.length):
-            raise NewickError("Leaf nodes MUST have either a name or a length")
+            weight += 1
+        object.__setattr__(self, "_weight", weight)
 
 
     @property
@@ -83,6 +93,20 @@ class Newick(object):
             yield self
 
 
+    def get_leaf_names(self):
+        for node in self.get_leaf_nodes():
+            yield node.name
+
+
+    def reroot_on_taxa(self, taxa):
+        """Returns the Newick tree from this node, but rooted on the midpoint
+        of the branch leading to one or more taxa. Note that the taxa are not
+        required to form a clade. If the taxa do not form a monophyletic clade,
+        then the outgroup will include more taxa than those passed to the
+        function."""
+        return _NewickGraph(self).reroot_on_taxa(taxa)
+
+
     def reroot_on_midpoint(self):
         """Returns the newick tree from this node, but rooted on the midpoint
         of the tree. That is to say that a root node is added at the exact
@@ -91,8 +115,47 @@ class Newick(object):
 
         Note that the sorting of nodes is not preserved, and that any
         uninformative nodes (lacking name/length, while connecting two
-        other nodes, e.g. the old root) are spliced out."""
-        return _reroot_on_midpoint(self)
+        other nodes, e.g. the old root) are spliced out.
+
+        All nodes must have a length of zero or greater (no missing values
+        are allowed), but note that rerooting behavior around nodes with
+        length zero may yield unexpected results."""
+        if len(list(self.get_leaf_nodes())) < 2:
+            return self # No meaningful way to reroot such trees
+
+        return _NewickGraph(self).reroot_on_midpoint()
+
+
+    def add_support(self, bootstraps, fmt = "{Support}"):
+        """Adds support values to the current tree, based on a set of trees containing
+        the same taxa. It is assumed that the support trees represent unrooted or
+        arbitarily rooted trees, and no weight is given to the rooted topology of these
+        trees.
+
+        The main tree should itself be rooted, and the the toplogy and ordering of this
+        tree is preserved, with node-names updated using the formatting string 'fmt'.
+
+        Formatting is carried out using str.format, with these fields:
+          {Support}    -- The total number of trees in which a clade is supported.
+          {Percentage} -- The percentage of trees in which a clade is supported (float).
+          {Fraction}   -- The fraction of trees in which a clade is supported (float).
+
+        For example, typical percentage support-values can be realized by setting 'fmt'
+        to the value "{Percentage:.0f}" to produce integer values.
+        """
+        clade_counts = {}
+        leaf_names   = frozenset(self.get_leaf_names())
+        bootstraps   = safe_coerce_to_tuple(bootstraps)
+        for support_tree in bootstraps:
+            support_tree_names = frozenset(support_tree.get_leaf_names())
+            if leaf_names != support_tree_names:
+                raise NewickError("Support tree does not contain same set of leaf nodes")
+
+            support_graph      = _NewickGraph(support_tree)
+            for clade in support_graph.get_clade_names():
+                clade_counts[clade] = clade_counts.get(clade, 0) + 1
+
+        return self._add_support(self, len(bootstraps), clade_counts, fmt)
 
 
     @classmethod
@@ -116,21 +179,27 @@ class Newick(object):
 
 
     def __cmp__(self, other):
-        return cmp((self.name,
+        """Comparison operator, see 'cmp'."""
+        return cmp((-self._weight,
+                    self.name,
                     self.length,
                     self.children),
-                   (other.name,
+                    (-other._weight, # pylint: disable = W0212
+                    other.name,
                     other.length,
                     other.children))
 
 
     def __hash__(self):
+        """Hashing function, see 'hash'."""
         return hash((self.name,
                     self.length,
                     self.children))
 
 
     def __repr__(self):
+        """Representation corresponds to the Newick string for the (sub)tree,
+        which can be parsed by 'from_string'."""
         return "%s;" % (self._to_str(),)
 
 
@@ -159,170 +228,27 @@ class Newick(object):
         raise NotImplementedError("Newick nodes are immutable")
 
 
+    def _add_support(self, node, total, clade_counts, fmt):
+        """Recursively annotates a subtree with support values,
+        excepting leaf nodes (where the name is preserved) and
+        the root node (where the name is cleared)."""
+        if node.is_leaf:
+            return node
 
-################################################################################
-################################################################################
-## Functions relating to NEWICK rooting
+        clade   = frozenset(leaf.name for leaf in node.get_leaf_nodes())
+        support = clade_counts.get(clade, 0)
+        name = fmt.format(Support    = support,
+                          Percentage = (support * 100.0) / (total or 1),
+                          Fraction   = (support * 1.0) / (total or 1))
 
-def _reroot_on_midpoint(node):
-    """See Newick.reroot_at_midpoint."""
-    # Dictionary of object IDs of nodes to node names
-    names   = _collect_node_names(node, {})
-    # Dictionary of object IDs to object IDs to branch lengths
-    blengths = _collect_branch_lengths(node,{})
-    blengths = _prune_uninformative_nodes(blengths, names)
-    longest_path, length = _find_longest_path(blengths)
-    root = _create_root_at(blengths, longest_path, length / 2.0)
+        children = []
+        for child in node.children:
+            children.append(self._add_support(child, total, clade_counts, fmt))
 
-    return _rebuild_nodes(blengths, names, root, root)
+        return Newick(name     = (None if (node is self) else name),
+                      length   = node.length,
+                      children = children)
 
-
-def _collect_node_names(node, table):
-    """Returns a dictionary of id(node) -> node.name."""
-    table[id(node)] = node.name
-    for child in node.children:
-        _collect_node_names(child, table)
-    return table
-
-
-def _collect_branch_lengths(node, table):
-    """Returns a dictionary
-      { id(node_a) : { id(node_b) : branch length } }
-    containing the branch lengths for all pairs of nodes where
-      node_a is not node_b
-    and one node is a child node of the other node."""
-    node_id = id(node)
-    for child in node.children:
-        if child.length is None:
-            raise ValueError("Branch-lengths must be specified for ALL nodes")
-
-        child_id = id(child)
-        length = float(child.length)
-
-        set_in(table, (node_id, child_id), length)
-        set_in(table, (child_id, node_id), length)
-
-        _collect_branch_lengths(child, table)
-
-    return table
-
-
-def _prune_uninformative_nodes(blengths, names):
-    """Removes nodes without names, and which are connected
-    to two other nodes, extending the branch lengths of the
-    two connected nodes. This process is repreated, until no
-    further nodes are pruned. A rooted tree will typically
-    contain just 1 such node, namely the old root node.
-
-    For example, the tree "(A:5,(B:6):3);" would be reduced to
-    the tree "(A:5,B:9);", whereas the trees "(A:5,(B:6)C:3);"
-    and "(A:5,(B:6,C:2):3);" would not be pruned."""
-    while True:
-        for (cur_node, connections) in blengths.iteritems():
-            if not names[cur_node] and (len(connections) == 2):
-                other_node_a, other_node_b = connections
-
-                length \
-                  = blengths[other_node_a].pop(cur_node) \
-                  + blengths[other_node_b].pop(cur_node)
-
-                set_in(blengths, (other_node_a, other_node_b), length)
-                set_in(blengths, (other_node_b, other_node_a), length)
-
-                del blengths[cur_node]
-                break
-        else:
-            # Nothing was pruned this round, terminate
-            break
-
-    return blengths
-
-
-def _find_longest_path(blengths):
-    """Given a dictionary of branch-lengths (see _collect_branch_lengths)
-    this function determines the longest non-overlapping path possible,
-    and returns a list of the sequence of nodes in this path, as well as
-    the total length of this path."""
-    path_blengths = {}
-    path_guides   = {}
-    def _collect_paths(guide, length, p_node, c_node):
-        guide.append(c_node)
-        key = frozenset(guide)
-
-        length += blengths[p_node][c_node]
-        path_blengths[key] = length
-        path_guides[key]  = guide
-
-        for other in blengths[c_node]:
-            if other not in key:
-                _collect_paths(list(guide), length, c_node, other)
-
-    for (p_node, branches) in blengths.iteritems():
-        for c_node in branches:
-            _collect_paths([p_node], 0, p_node, c_node)
-
-    key, length = max(path_blengths.iteritems(), key = lambda item: item[1])
-    return path_guides[key], length
-
-
-def _create_root_at(lengths, path, root_at):
-    """Finds the midpoint of a path through a tree, and
-    either creates a new node at that point, or selects
-    the node already present at that point (if any). The
-    mid-point is assumed to be at distance of 'root_at'
-    from the starting node.
-
-    E.g. if the path is the longest path, and 'root_at' is
-    half the length of this path, then this corresponds to
-    rooting at the midpoint.
-
-    The id of the new / selected node is returned. New
-    nodes (if created) are always given the id None."""
-    for (c_node, n_node) in zip(path, path[1:]):
-        branch_length = lengths[c_node][n_node]
-
-        if branch_length > root_at:
-            del lengths[c_node][n_node]
-            del lengths[n_node][c_node]
-
-            left_len  = root_at
-            right_len = branch_length - root_at
-
-            set_in(lengths, (None, c_node), left_len)
-            set_in(lengths, (c_node, None), left_len)
-            set_in(lengths, (None, n_node), right_len)
-            set_in(lengths, (n_node, None), right_len)
-
-            return None
-        elif branch_length == root_at:
-            return n_node
-        root_at -= branch_length
-
-    assert False # pragma: no coverage
-
-
-def _rebuild_nodes(blengths, names, parent_id, node_id):
-    """Rebuilds a newick tree starting at a node with id
-    'node_id' and a parent with id 'parent_id' (or the
-    same value as 'node_id' if a root node).
-
-    Takes a dict of branch-lengths as returned by the
-    function _collect_branch_lengths, and a dict of node
-    names as returned by _collect_node_names."""
-
-    children = []
-    for child_id in blengths[node_id]:
-        if child_id != parent_id:
-            children.append(_rebuild_nodes(blengths, names, node_id, child_id))
-    children.sort()
-
-    blength = blengths.get(parent_id).get(node_id)
-    if blength is not None:
-        blength = repr(blength)
-
-    return Newick(name     = names.get(node_id),
-                  length   = blength,
-                  children = children)
 
 
 
@@ -387,3 +313,45 @@ def _parse_child(tokens, children = None):
     return Newick(name     = name,
                   length   = length,
                   children = children)
+
+
+
+################################################################################
+################################################################################
+## Class related to tree manipulations
+
+class _NewickGraph(_Graph):
+    def __init__(self, node):
+        _Graph.__init__(self)
+        self._collect_names_and_blengths(node)
+        self.prune_uninformative_nodes()
+
+
+    def _collect_names_and_blengths(self, c_node):
+        c_node_id = id(c_node)
+
+        self.set_name(c_node_id,  c_node.name)
+        for child in c_node.children:
+            child_id = id(child)
+            self.add_connection(c_node_id, child_id, child.length)
+            self._collect_names_and_blengths(child)
+
+
+    def rebuild_tree(self, parent_id, node_id):
+        """Rebuilds a newick tree starting at a node with id
+        'node_id' and a parent with id 'parent_id' (or the
+        same value as 'node_id' if a root node)."""
+
+        children = []
+        for child_id in self.connections[node_id]:
+            if child_id != parent_id:
+                children.append(self.rebuild_tree(node_id, child_id))
+        children.sort()
+
+        blength = self.connections.get(parent_id).get(node_id)
+        if isinstance(blength, float):
+            blength = repr(blength)
+
+        return Newick(name     = self.names.get(node_id),
+                      length   = blength,
+                      children = children)

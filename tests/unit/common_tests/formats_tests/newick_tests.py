@@ -27,6 +27,7 @@ from nose.tools import \
 
 from pypeline.common.formats.newick import \
      Newick, \
+     GraphError, \
      NewickError, \
      NewickParseError
 
@@ -98,7 +99,50 @@ def test_newick__get_leaf_nodes__complex_case():
 
 ############################################################################
 ############################################################################
+## reroot_on_taxa
+
+def test_newick__reroot_on_taxa__single_taxa():
+    source   = Newick.from_string("((A,B),C);")
+    expected = Newick.from_string("((B,C),A);")
+    assert_equal(expected, source.reroot_on_taxa("A"))
+
+def test_newick__reroot_on_taxa__single_taxa_with_branch_lengths():
+    source   = Newick.from_string("((A:4,B:3):2,C:1);")
+    expected = Newick.from_string("((B:3,C:3.0):2.0,A:2.0);")
+    assert_equal(expected, source.reroot_on_taxa("A"))
+
+def test_newick__reroot_on_taxa__multiple_taxa__clade():
+    source   = Newick.from_string("((A,(B,C)),(D,E));")
+    expected = Newick.from_string("(((D,E),A),(B,C));")
+    assert_equal(expected, source.reroot_on_taxa(("B", "C")))
+
+def test_newick__reroot_on_taxa__multiple_taxa__paraphylogeny():
+    source   = Newick.from_string("((B,C),((D,E),A));")
+    expected = Newick.from_string("(((B,C),A),(D,E));")
+    assert_equal(expected, source.reroot_on_taxa(("A", "C")))
+
+def test_newick__reroot_on_taxa__no_taxa():
+    source = Newick.from_string("((B,C),((D,E),A));")
+    assert_raises(ValueError, source.reroot_on_taxa, ())
+
+def test_newick__reroot_on_taxa__unknown_taxa():
+    source = Newick.from_string("((B,C),((D,E),A));")
+    assert_raises(ValueError, source.reroot_on_taxa, ("A", "Z"))
+
+def test_newick__reroot_on_taxa__no_non_root_taxa():
+    source = Newick.from_string("((B,C),((D,E),A));")
+    assert_raises(ValueError, source.reroot_on_taxa, ("A", "B", "C", "D", "E"))
+
+
+
+############################################################################
+############################################################################
 ## reroot_on_midpoint
+
+def test_newick__reroot_on_midpoint__single_node():
+    source   = Newick.from_string("(A:3.0);")
+    expected = Newick.from_string("(A:3.0);")
+    assert_equal(expected, source.reroot_on_midpoint())
 
 def test_newick__reroot_on_midpoint__two_nodes():
     source   = Newick.from_string("(A:3.0,B:8.0);")
@@ -109,13 +153,13 @@ def test_newick__reroot_on_midpoint__two_nodes():
 def test_newick__reroot_on_midpoint__two_clades():
     source   = Newick.from_string("((A:7,B:2):1,(C:1,D:0.5):2);")
     rerooted = source.reroot_on_midpoint()
-    expected = Newick.from_string("(((C:1.0,D:0.5):3.0,B:2.0):1.5,A:5.5);")
+    expected = Newick.from_string("(((C:1,D:0.5):3.0,B:2):1.5,A:5.5);")
     assert_equal(expected, rerooted)
 
 def test_newick__reroot_on_midpoint__nested_clades():
     source   = Newick.from_string("((A:2,(B:2,C:3):4):1,(D:1,E:0.5):2);")
     rerooted = source.reroot_on_midpoint()
-    expected = Newick.from_string("(((D:1.0,E:0.5):3.0,A:2.0):1.5,(B:2.0,C:3.0):2.5);")
+    expected = Newick.from_string("(((D:1,E:0.5):3.0,A:2):1.5,(B:2,C:3):2.5);")
     assert_equal(expected, rerooted)
 
 def test_newick__reroot_on_midpoint__reroot_on_internal_node():
@@ -124,13 +168,86 @@ def test_newick__reroot_on_midpoint__reroot_on_internal_node():
     expected = Newick.from_string("(A:5.0,B:1.0,D:5.0)C;")
     assert_equal(expected, rerooted)
 
-def test_newick__reroot_on_midpoint__missing_branch_length():
-    source   = Newick.from_string("(A:7,(B:3));")
-    assert_raises(ValueError, source.reroot_on_midpoint)
+def test_newick__reroot_on_midpoint__invalid_branch_lengths():
+    def _test_invalid_branch_lengths(newick):
+        source   = Newick.from_string(newick)
+        assert_raises(GraphError, source.reroot_on_midpoint)
 
-def test_newick__reroot_on_midpoint__missing_node_length():
-    source   = Newick.from_string("(A:7,B);")
-    assert_raises(ValueError, source.reroot_on_midpoint)
+    yield _test_invalid_branch_lengths, "(A,B);" # No branch lengths
+    yield _test_invalid_branch_lengths, "(A:7,B);" # Length missing for leaf node
+    yield _test_invalid_branch_lengths, "(A:7,(B:3));" # Length missing for internal node
+    yield _test_invalid_branch_lengths, "(A:7,(B:3):-1);" # Negative branch length
+    yield _test_invalid_branch_lengths, "(A:7,B:-1);" # Negative leaf length
+
+
+
+############################################################################
+############################################################################
+## add_support
+
+def test_newick__add_support__no_trees():
+    main_tree  =  Newick.from_string("(((A,B),C),D);")
+    expected   =  Newick.from_string("(((A,B)0,C)0,D);")
+    result     = main_tree.add_support([])
+    assert_equal(expected, result)
+
+def test_newick__add_support__single_identical_tree():
+    main_tree  =  Newick.from_string("(((A,B),C),D);")
+    bootstraps = [Newick.from_string("(((A,B),C),D);")]
+    expected   =  Newick.from_string("(((A,B)1,C)1,D);")
+    result     = main_tree.add_support(bootstraps)
+    assert_equal(expected, result)
+
+def test_newick__add_support__single_identical_tree__different_rooting():
+    main_tree  =  Newick.from_string("(((A,B),C),D);")
+    bootstraps = [Newick.from_string("(((C,D),B),A);")]
+    expected   =  Newick.from_string("(((A,B)1,C)1,D);")
+    result     = main_tree.add_support(bootstraps)
+    assert_equal(expected, result)
+
+def test_newick__add_support__multiple_trees__different_topologies():
+    main_tree  =  Newick.from_string("(((A,B),C),D);")
+    bootstraps = [Newick.from_string("(((C,B),D),A);"),
+                  Newick.from_string("(((A,D),B),C);")]
+    expected   =  Newick.from_string("(((A,B)0,C)2,D);")
+    result     = main_tree.add_support(bootstraps)
+    assert_equal(expected, result)
+
+def test_newick__add_support__multiple_trees__partially_different_topologies():
+    main_tree  =  Newick.from_string("(((A,B),C),D);")
+    bootstraps = [Newick.from_string("(((C,D),A),B);"),
+                  Newick.from_string("(((A,D),B),C);")]
+    expected   =  Newick.from_string("(((A,B)1,C)2,D);")
+    result     = main_tree.add_support(bootstraps)
+    assert_equal(expected, result)
+
+def test_newick__add_support__multiple_trees__two_cladees():
+    main_tree  =  Newick.from_string("((A,B),(C,(D,E)));")
+    bootstraps = [Newick.from_string("((((C,E),D),A),B);"),
+                  Newick.from_string("(((A,(C,D)),B),E);")]
+    expected   =  Newick.from_string("((A,B)1,(C,(D,E)0)1);")
+    result     = main_tree.add_support(bootstraps)
+    assert_equal(expected, result)
+
+def test_newick__add_support__differing_leaf_names():
+    main_tree  =  Newick.from_string("(((A,B),C),D);")
+    bootstraps = [Newick.from_string("(((C,E),B),A);")]
+    assert_raises(NewickError, main_tree.add_support, bootstraps)
+
+def test_newick__add_support__formatting():
+    def _do_test_formatting(fmt, expected):
+        main_tree  =  Newick.from_string("(((A,B),C),D);")
+        bootstraps = [Newick.from_string("(((C,D),A),B);"),
+                      Newick.from_string("(((C,B),A),D);"),
+                      Newick.from_string("(((A,D),B),C);")]
+        expected   =  Newick.from_string(expected)
+        result     = main_tree.add_support(bootstraps, fmt)
+        assert_equal(expected, result)
+
+    yield _do_test_formatting, "{Support}",        "(((A,B)1,C)3,D);"
+    yield _do_test_formatting, "{Percentage:.0f}", "(((A,B)33,C)100,D);"
+    yield _do_test_formatting, "{Fraction:.2f}",   "(((A,B)0.33,C)1.00,D);"
+
 
 
 
