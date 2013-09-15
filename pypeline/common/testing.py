@@ -29,6 +29,9 @@ import tempfile
 import nose
 from nose.tools import assert_equal
 
+from pypeline.common.fileutils import \
+     make_dirs
+
 
 # Simple support for assert_in in Python v2.6
 try:
@@ -72,6 +75,7 @@ def with_temp_folder(func):
     function is is assumed to take at least one parameter, the first
     of which is assumed to represent the temporary folder."""
     temp_root = os.path.join(tempfile.gettempdir(), os.getlogin())
+    make_dirs(temp_root) # Ensure that this subdirectory exists
 
     @nose.tools.istest
     def _wrapper(*args, **kwargs):
