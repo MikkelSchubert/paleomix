@@ -61,6 +61,7 @@ class CustomHelpFormatter(optparse.IndentedHelpFormatter):
 def build_options_parser():
     parser = optparse.OptionParser("%prog <command> [options] [makefiles]")
     parser.formatter = CustomHelpFormatter()
+    parser.formatter.set_parser(parser)
     parser.description = \
       "Commands:\n" \
       "  -- %prog help            -- Display this message.\n" \
