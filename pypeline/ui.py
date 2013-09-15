@@ -403,8 +403,8 @@ class ProgressUI(BaseUI):
         else:
             fmt = "{secs}s"
 
-        return fmt.format(hours = runtime / 3600,
-                          mins  = (runtime / 60) % 60,
+        return fmt.format(hours = runtime // 3600,
+                          mins  = (runtime // 60) % 60,
                           secs  = (runtime % 60))
 
 
