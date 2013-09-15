@@ -58,7 +58,7 @@ class Config: # pylint: disable=W0232
     jar_root     = "tests/links/jar_root"
     dependencies = Node(description = "DummyDependency")
     log_file     = None
-    log_level    = "info"
+    log_level    = "error"
 
 
 def main(argv):
@@ -87,7 +87,11 @@ def main(argv):
                     raise RuntimeError("Node did not pass dependencies: %s\n%r vs %r" \
                                        % (subnode, subnode.dependencies, Config.dependencies))
 
-    if pipeline.run(dry_run = "--dry-run" in argv, verbose = False, collapse = True, max_running = 2):
+    dry_run = "--dry-run" in argv
+    if not dry_run:
+        pipeline.run(dry_run = True, max_running = 2)
+
+    if pipeline.run(dry_run = dry_run, max_running = 2, progress_ui = "progress"):
         # Everything went fine, so there's currently no need to save the output
         ui.print_info("No errors; cleaning up temporary files.")
         shutil.rmtree(Config.temp_root)
