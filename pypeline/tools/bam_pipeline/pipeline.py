@@ -325,9 +325,14 @@ def list_output_files(nodes):
 def list_orphan_files(config, makefiles, nodes):
     files, mkfiles = set(), set()
     for mkfile in makefiles:
-        mkfiles.add(os.path.abspath(mkfile["Statistics"]["Filename"]))
+        mkfile_path = mkfile["Statistics"]["Filename"]
+        mkfiles.add(os.path.abspath(mkfile_path))
         for target in mkfile["Targets"]:
-            glob_str = os.path.join(config.destination, target + "*")
+            destination = config.destination
+            if not destination:
+                destination = os.path.dirname(mkfile_path)
+
+            glob_str = os.path.join(destination, target + "*")
             for root_filename in glob.glob(glob_str):
                 if os.path.isdir(root_filename):
                     for (dirpath, _, filenames) in os.walk(root_filename):
