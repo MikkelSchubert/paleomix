@@ -212,7 +212,7 @@ class VerboseUI(BaseUI):
             description = "%s%s %s" % (prefix, runable, node)
             if node.subnodes:
                 states = cls._count_states(nodegraph, node.subnodes, True)
-                description += cls._describe_states(states)
+                description = "%s (%s)" % (description, cls._describe_states(states))
 
             print_func = cls._get_print_function(nodegraph, node)
             print_func(description)
