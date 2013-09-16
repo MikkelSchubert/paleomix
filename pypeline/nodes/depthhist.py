@@ -107,7 +107,7 @@ class DepthHistogramNode(Node):
         self._write_table(table, temp_filename, region_names)
 
 
-    def _teardown(self, config, temp):
+    def _teardown(self, _config, temp):
         temp_filename = reroot_path(temp, self._output_file)
         move_file(temp_filename, self._output_file)
 
@@ -128,7 +128,7 @@ class DepthHistogramNode(Node):
             os.remove(os.path.join(temp, "pipe_coverage_%i.stdout" % id(self)))
 
 
-    def _create_tables(self, config, temp):
+    def _create_tables(self, _config, temp):
         # Opening pipe/symlink created in _setup()
         out = sys.stderr
         if not self._print_stats:
@@ -138,12 +138,26 @@ class DepthHistogramNode(Node):
             timer = BAMTimer(samfile, out = out)
             intervals, region_names = self._get_intervals(temp, samfile)
             mapping   = self._open_handles(temp, samfile, intervals)
-            for read in samfile:
-                if read.is_unmapped or read.is_duplicate:
+            for (counter, read) in enumerate(samfile):
+                if counter % 100000 == 0:
+                    if self._processes_terminated():
+                        break
+
+                # 0xf04 = 0x800 | 0x400 | 0x200 | 0x100 | 0x004
+                #         0x800 = Secondary alignment
+                #         0x400 = PCR Duplicate
+                #         0x200 = Failed QC
+                #         0x100 = Alternative alignment
+                #         0x004 = Unmapped read
+                if read.flag & 0xf04:
                     continue
 
-                rg = dict(read.tags).get("RG")
-                for handle in mapping[rg]:
+                try:
+                    readgroup = read.opt("RG")
+                except KeyError:
+                    readgroup = None
+
+                for handle in mapping[readgroup]:
                     handle.write(read)
                 timer.increment(read = read)
             timer.finalize()
@@ -157,7 +171,7 @@ class DepthHistogramNode(Node):
         for proclst in self._procs.itervalues():
             for proc in proclst:
                 if proc.wait() != 0:
-                    raise RuntimeError("Error while running process: %i" % proc.wait())
+                    raise RuntimeError("Error while running process: Return-code = %i" % proc.wait())
 
         return region_names
 
@@ -250,6 +264,17 @@ class DepthHistogramNode(Node):
                 get_in(table, ckey)[depth] += int(fields[-3])
 
 
+    def _processes_terminated(self):
+        for proclist in self._procs.itervalues():
+            for proc in proclist:
+                if isinstance(proc, AtomicCmd):
+                    if proc.ready():
+                        return True
+                elif proc.poll():
+                    return True
+        return False
+
+
     def _open_handles(self, temp, samfile, intervals):
         mapping    = {}
         readgroups = self._get_readgroups(samfile)
@@ -320,6 +345,7 @@ class DepthHistogramNode(Node):
             readgroups[readgroup["ID"]] = readgroup
 
         return readgroups
+
 
 
 _HEADER = \
