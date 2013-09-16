@@ -248,7 +248,10 @@ def test_newick__add_support__formatting():
     yield _do_test_formatting, "{Percentage:.0f}", "(((A,B)33,C)100,D);"
     yield _do_test_formatting, "{Fraction:.2f}",   "(((A,B)0.33,C)1.00,D);"
 
-
+def test_newick__add_support__unique_names_required():
+    main_tree  =  Newick.from_string("(((A,B),C),A);")
+    bootstraps = [Newick.from_string("(((A,B),C),A);")]
+    assert_raises(NewickError, main_tree.add_support, bootstraps)
 
 
 ############################################################################

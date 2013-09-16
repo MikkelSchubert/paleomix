@@ -144,7 +144,11 @@ class Newick(object):
         to the value "{Percentage:.0f}" to produce integer values.
         """
         clade_counts = {}
-        leaf_names   = frozenset(self.get_leaf_names())
+        leaf_names_lst = list(self.get_leaf_names())
+        leaf_names = frozenset(leaf_names_lst)
+        if len(leaf_names) != len(leaf_names_lst):
+            raise NewickError("Cannot add support values to trees with duplicate leaf names")
+
         bootstraps   = safe_coerce_to_tuple(bootstraps)
         for support_tree in bootstraps:
             support_tree_names = frozenset(support_tree.get_leaf_names())
