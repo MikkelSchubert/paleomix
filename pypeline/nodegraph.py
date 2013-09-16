@@ -52,7 +52,7 @@ class NodeGraph:
 
         self._logger = logging.getLogger(__name__)
         self._reverse_dependencies = collections.defaultdict(set)
-        self._collect_reverse_dependencies(nodes, self._reverse_dependencies)
+        self._collect_reverse_dependencies(nodes, self._reverse_dependencies, set())
         self._intersections = self._calculate_intersections()
         self._top_nodes = [node for (node, rev_deps) in self._reverse_dependencies.iteritems() if not rev_deps]
 
@@ -332,13 +332,18 @@ class NodeGraph:
 
 
     @classmethod
-    def _collect_reverse_dependencies(cls, lst, rev_dependencies):
+    def _collect_reverse_dependencies(cls, lst, rev_dependencies, processed):
         for node in lst:
-            rev_dependencies[node] # pylint: disable=W0104
-            for dependency in (node.dependencies | node.subnodes):
-                rev_dependencies[dependency].add(node)
-            cls._collect_reverse_dependencies(node.dependencies, rev_dependencies)
-            cls._collect_reverse_dependencies(node.subnodes, rev_dependencies)
+            if node not in processed:
+                processed.add(node)
+
+                # Initialize default-dict
+                rev_dependencies[node] # pylint: disable=W0104
+
+                subnodes = node.dependencies | node.subnodes
+                for dependency in subnodes:
+                    rev_dependencies[dependency].add(node)
+                cls._collect_reverse_dependencies(subnodes, rev_dependencies, processed)
 
 
 
