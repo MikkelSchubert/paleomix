@@ -31,7 +31,11 @@ from pypeline.atomiccmd.builder import \
 
 from pypeline.atomiccmd.sets import ParallelCmds
 
-from pypeline.nodes.bwa import _process_output, _get_max_threads
+from pypeline.nodes.bwa import \
+     _get_node_description, \
+     _get_pe_file_desc, \
+     _process_output, \
+     _get_max_threads
 
 import pypeline.common.versions as versions
 
@@ -107,9 +111,13 @@ class Bowtie2Node(CommandNode):
     def __init__(self, parameters):
         command = ParallelCmds([parameters.commands[key].finalize() for key in parameters.order])
 
-        aln_type    = "PE" if parameters.input_file_2 else "SE"
-        description = "<Bowtie2 (%s, %i threads): '%s'>" \
-          % (aln_type, parameters.threads, parameters.input_file_1)
+        algorithm    = "PE" if parameters.input_file_2 else "SE"
+        pe_file_desc = _get_pe_file_desc(parameters.input_file_1, parameters.input_file_2)
+        description  = _get_node_description(name        = "Bowtie2",
+                                             algorithm   = algorithm,
+                                             input_files = pe_file_desc,
+                                             prefix      = parameters.prefix,
+                                             threads     = parameters.threads)
 
         CommandNode.__init__(self,
                              command      = command,

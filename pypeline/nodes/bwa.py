@@ -21,6 +21,7 @@
 # SOFTWARE.
 #
 import os
+import types
 
 from pypeline.node import CommandNode, NodeError
 from pypeline.atomiccmd.command import AtomicCmd
@@ -31,7 +32,9 @@ from pypeline.atomiccmd.builder import \
 
 from pypeline.atomiccmd.sets import ParallelCmds
 from pypeline.nodes.samtools import SAMTOOLS_VERSION
-from pypeline.common.fileutils import missing_files
+from pypeline.common.fileutils import \
+     describe_files, \
+     missing_files
 
 import pypeline.common.versions as versions
 
@@ -72,6 +75,8 @@ class BWAIndexNode(CommandNode):
                              command      = command,
                              description  = description,
                              dependencies = parameters.dependencies)
+
+
 
 
 class BWANode: # pylint: disable=W0232
@@ -131,7 +136,12 @@ class SEBWANode(CommandNode):
     def __init__(self, parameters):
         _check_bwa_prefix(parameters.prefix)
         command = ParallelCmds([parameters.commands[key].finalize() for key in parameters.order])
-        description =  "<SE_BWA (%i threads): '%s'>" % (parameters.threads, parameters.input_file)
+        description =  _get_node_description(name        = "BWA",
+                                             algorithm   = "SE",
+                                             input_files = repr(parameters.input_file),
+                                             prefix      = parameters.prefix,
+                                             threads     = parameters.threads)
+
         CommandNode.__init__(self,
                              command      = command,
                              description  = description,
@@ -176,7 +186,14 @@ class PEBWANode(CommandNode):
     def __init__(self, parameters):
         _check_bwa_prefix(parameters.prefix)
         command = ParallelCmds([parameters.commands[key].finalize() for key in parameters.order])
-        description =  "<PE_BWA (%i threads): '%s'>" % (parameters.threads, parameters.input_file_1)
+
+        pe_file_desc = _get_pe_file_desc(parameters.input_file_1, parameters.input_file_2)
+        description  = _get_node_description(name        = "BWA",
+                                             algorithm   = "PE",
+                                             input_files = pe_file_desc,
+                                             prefix      = parameters.prefix,
+                                             threads     = parameters.threads)
+
         CommandNode.__init__(self,
                              command      = command,
                              description  = description,
@@ -232,6 +249,7 @@ class PEBWANode(CommandNode):
 
 
 
+
 class BWASWNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, input_file_1, output_file, reference, prefix, input_file_2 = None,
@@ -260,12 +278,12 @@ class BWASWNode(CommandNode):
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
-        if parameters.input_file_2:
-            description =  "<PE_BWASW (%i threads): '%s', '%s' -> '%s'>" \
-                % (parameters.threads, parameters.input_file_1, parameters.input_file_2, parameters.output_file)
-        else:
-            description =  "<BWASW (%i threads): '%s' -> '%s'>" \
-                % (parameters.threads, parameters.input_file_1, parameters.output_file)
+        algorithm    = "SW_PE" if parameters.input_file_2 else "SW_SE"
+        pe_file_desc = _get_pe_file_desc(parameters.input_file_1, parameters.input_file_2)
+        description  = _get_node_description(name        = "BWA",
+                                             algorithm   = algorithm,
+                                             input_files = pe_file_desc,
+                                             prefix      = parameters.prefix)
 
         command = ParallelCmds([parameters.commands[key].finalize() for key in parameters.order])
         CommandNode.__init__(self,
@@ -400,3 +418,29 @@ def _build_unicat_command(input_file, output_file):
     return AtomicCmdBuilder(["unicat", "--output", "%(TEMP_OUT_CAT)s", "%(IN_ARCHIVE)s"],
                         TEMP_OUT_CAT = output_file,
                         IN_ARCHIVE   = input_file)
+
+
+def _get_node_description(name, algorithm, input_files, prefix = None, threads = 1):
+    threads_str     = (", %i threads" % (threads,)) if (threads > 1) else ""
+    prefix_str      = (", %s" % (os.path.basename(prefix),) if prefix else "")
+    if prefix_str.endswith(".fasta") or prefix_str.endswith(".fa"):
+        prefix_str = prefix_str.rsplit(".", 1)[0]
+
+    return "<%s (%s%s%s): %s>" % (name, algorithm, prefix_str, threads_str, input_files)
+
+
+def _get_pe_file_desc(fname_1, fname_2):
+    if not (fname_1 and fname_2) or (len(fname_1) != len(fname_2)):
+        return repr(fname_1)
+
+    glob_fname, differences = [], 0
+    for (char_1, char_2) in zip(fname_1, fname_2):
+        if char_1 != char_2:
+            char_1 = "[%s%s]" % (char_1, char_2)
+            differences += 1
+        glob_fname.append(char_1)
+
+    if differences > 0:
+        return describe_files((fname_1, fname_2))
+
+    return "".join(glob_fname)
