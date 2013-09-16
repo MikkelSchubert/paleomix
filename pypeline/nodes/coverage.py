@@ -137,57 +137,61 @@ class CoverageNode(Node):
 
     @classmethod
     def read_records(cls, bamfile, intervals, tables):
-        def _get_readgroup(record):
-            for key, value in record.tags:
-                if key == "RG":
-                    return value
-
         for (name, interval_list) in intervals.iteritems():
             for (contig, start, end) in interval_list:
-                keys = (contig, start, end)
-                if contig is None:
-                    keys = ()
+                records = bamfile
+                if contig is not None:
+                    records = bamfile.fetch(contig, start, end)
 
-                for record in bamfile.fetch(*keys):
-                    if record.is_unmapped or record.is_duplicate:
+                for record in records:
+                    # 0xf04 = 0x800 | 0x400 | 0x200 | 0x100 | 0x004
+                    #         0x800 = Secondary alignment
+                    #         0x400 = PCR Duplicate
+                    #         0x200 = Failed QC
+                    #         0x100 = Alternative alignment
+                    #         0x004 = Unmapped read
+                    flags = record.flag
+                    if flags & 0xf04:
                         continue
 
-                    readgroup = _get_readgroup(record)
-                    subtable  = tables[readgroup][name]
+                    try:
+                        readgroup = record.opt("RG")
+                    except KeyError:
+                        readgroup = None
+                    subtable = tables[readgroup][name]
 
                     qname = record.qname
                     if qname.startswith("M_") or qname.startswith("MT_"):
                         subtable["Collapsed"] += 1
-                    else:
-                        flag = record.flag
-                        if flag & 0x40: # first of pair
-                            subtable["PE_1"] += 1
-                        elif flag & 0x80: # second of pair
-                            subtable["PE_2"] += 1
-                        else: # Singleton
-                            subtable["SE"] += 1
+                    elif flags & 0x40: # first of pair
+                        subtable["PE_1"] += 1
+                    elif flags & 0x80: # second of pair
+                        subtable["PE_2"] += 1
+                    else: # Singleton
+                        subtable["SE"] += 1
 
                     position = record.pos
                     for (op, num) in record.cigar:
-                        if op < 3:
-                            left  = min(max(position, start), end - 1)
-                            right = min(max(position + num, start), end - 1)
-                            subtable["MID"[op]] += right - left
+                        left  = min(max(position, start), end - 1)
+                        right = min(max(position + num, start), end - 1)
 
-                            if op < 2: # M/D
+                        # 0 = 'M', 1 = 'I', 2 = 'D', 7 = '=', 8 = 'X'
+                        if op in (0, 1, 2, 7, 8):
+                            subtable["MID    MM"[op]] += right - left
+                            if op != 1: # Everything but insertions
                                 position += num
                         elif op == 3: # N
                             position += num
 
 
     def filter_readgroups(self, table):
-        for (name, subtable) in table.iteritems():
-            for (library, contigs) in subtable.get("<NA>", {}).iteritems():
-                for (contig, counts) in contigs.iteritems():
+        for subtable in table.itervalues():
+            for contigs in subtable.get("<NA>", {}).itervalues():
+                for counts in contigs.itervalues():
                     if any(value for (key, value) in counts.iteritems() if key != "Size"):
                         return table
 
-        for (name, subtable) in table.iteritems():
+        for subtable in table.itervalues():
             subtable.pop("<NA>")
 
         return table
