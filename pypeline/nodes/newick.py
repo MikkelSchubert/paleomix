@@ -33,6 +33,46 @@ from pypeline.node import \
     Node
 
 
+
+class NewickRerootNode(Node):
+    def __init__(self, tree_files, output_file, taxa = (), dependencies = ()):
+        self._output_file    = output_file
+        self._tree_files     = safe_coerce_to_tuple(tree_files)
+        self._reroot_on_taxa = safe_coerce_to_tuple(taxa)
+
+        reroot_on = "midpoint"
+        if self._reroot_on_taxa:
+            reroot_on = ", ".join(sorted(self._reroot_on_taxa))
+
+        description  = "<NewickReroot (on %s): %s>" % \
+          (reroot_on, describe_files(tree_files),)
+
+        Node.__init__(self,
+                      description  = description,
+                      input_files  = self._tree_files,
+                      output_files = self._output_file,
+                      dependencies = dependencies)
+
+
+    def _run(self, _config, temp):
+        lines = []
+        for tree in _read_tree_files(self._tree_files):
+            if self._reroot_on_taxa:
+                rooted_tree = tree.reroot_on_taxa(self._reroot_on_taxa)
+            else:
+                rooted_tree = tree.reroot_on_midpoint()
+            lines.append(str(rooted_tree))
+        lines = "\n".join(lines) + "\n"
+
+        temp_output_file = os.path.join(temp, os.path.basename(self._output_file))
+        with open(temp_output_file, "w") as handle:
+            handle.write(lines)
+
+        move_file(temp_output_file, self._output_file)
+
+
+
+
 class NewickSupportNode(Node):
     def __init__(self, main_tree_files, support_tree_files, output_file, dependencies = ()):
         self._output_file        = output_file
@@ -50,13 +90,12 @@ class NewickSupportNode(Node):
                       dependencies = dependencies)
 
     def _run(self, _config, temp):
-        main_trees    = self._read_trees(self._main_tree_files)
-        support_trees = self._read_trees(self._support_tree_files)
+        main_trees    = _read_tree_files(self._main_tree_files)
+        support_trees = _read_tree_files(self._support_tree_files)
 
         lines = []
         for main_tree in main_trees:
-            rooted_tree    = main_tree.reroot_on_midpoint()
-            supported_tree = rooted_tree.add_support(support_trees)
+            supported_tree = main_tree.add_support(support_trees)
             lines.append(str(supported_tree))
         lines = "\n".join(lines) + "\n"
 
@@ -67,11 +106,11 @@ class NewickSupportNode(Node):
         move_file(temp_output_file, self._output_file)
 
 
-    @classmethod
-    def _read_trees(cls, filenames):
-        trees = []
-        for filename in filenames:
-            with open(filename) as handle:
-                for line in handle:
-                    trees.append(Newick.from_string(line))
-        return trees
+
+def _read_tree_files(filenames):
+    trees = []
+    for filename in filenames:
+        with open(filename) as handle:
+            for line in handle:
+                trees.append(Newick.from_string(line))
+    return trees

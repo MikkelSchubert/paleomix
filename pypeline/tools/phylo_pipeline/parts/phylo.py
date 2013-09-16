@@ -35,11 +35,15 @@ from pypeline.nodes.examl import \
      EXaMLParserNode, \
      ParsimonatorNode
 from pypeline.nodes.newick import \
+     NewickRerootNode, \
      NewickSupportNode
 from pypeline.common.fileutils import \
-     swap_ext
+     swap_ext, \
+     add_postfix
 
 import pypeline.tools.phylo_pipeline.parts.common as common
+
+
 
 
 def build_supermatrix(options, settings, afa_ext, destination, interval, filtering_postfix, dependencies):
@@ -146,31 +150,30 @@ def add_bootstrap_support(replicates, bootstraps):
     if not (replicates and bootstraps):
         return replicates + bootstraps
 
-    def _get_results_files(node):
+    def _build_rerooted_tree(meta_nodes):
         filenames = []
-        for filename in node.output_files:
-            if filename.endswith(".result"):
-                filenames.append(filename)
-        return filenames
+        for meta_node in meta_nodes:
+            for node in meta_node.subnodes:
+                for filename in node.output_files:
+                    if filename.endswith(".result"):
+                        filenames.append(filename)
 
-    bootstrap_files = []
-    for bootstrap_meta in bootstraps:
-        for bootstrap in bootstrap_meta.subnodes:
-            bootstrap_files.extend(_get_results_files(bootstrap))
+        output_file = os.path.dirname(filenames[0]) + ".newick"
+        output_node = NewickRerootNode(tree_files   = filenames,
+                                       output_file  = output_file,
+                                       dependencies = meta_nodes)
+        return output_file, output_node
 
-    nodes = []
-    for replicate_meta in replicates:
-        for replicate in replicate_meta.subnodes:
-            input_file, = _get_results_files(replicate)
-            output_file = "%s.bootstraps" % (input_file,)
+    bootstrap_file, bootstrap_node = _build_rerooted_tree(bootstraps)
+    replicate_file, replicate_node = _build_rerooted_tree(replicates)
 
-            node = NewickSupportNode(main_tree_files    = input_file,
-                                     support_tree_files = bootstrap_files,
-                                     output_file        = output_file,
-                                     dependencies       = replicates + bootstraps)
-            nodes.append(node)
+    output_file = add_postfix(replicate_file, ".support")
+    node = NewickSupportNode(main_tree_files    = replicate_file,
+                             support_tree_files = bootstrap_file,
+                             output_file        = output_file,
+                             dependencies       = (bootstrap_node, replicate_node))
 
-    return nodes
+    return node
 
 
 
