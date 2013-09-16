@@ -395,7 +395,8 @@ class ProgressUI(BaseUI):
 
 
     def _get_runtime(self, node):
-        runtime = int(time.time() - self._runtimes.pop(node))
+        current_time = time.time()
+        runtime = int(current_time - self._runtimes.pop(node, current_time))
         if runtime >= 3600:
             fmt = "{hours}:{mins:02}:{secs:02}s"
         elif runtime >= 60:

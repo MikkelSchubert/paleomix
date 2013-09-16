@@ -137,19 +137,6 @@ def test_constructor__requirements__wrong_type():
     yield _do_test_constructor__requirements__wrong_type, {}
     yield _do_test_constructor__requirements__wrong_type, "867-5309"
 
-def test_constructor__requirements__non_picklable():
-    unpicklable = lambda: None # pragma: no coverage
-    assert_raises(NodeError, Node, requirements = unpicklable)
-
-
-class _UnpicklableNode(Node):
-    def __init__(self):
-        self.a_property = lambda: None # pragma: no coverage
-        Node.__init__(self)
-
-@nose.tools.raises(NodeError)
-def test_constructor__requirements__non_picklable_property():
-    _UnpicklableNode()
 
 
 

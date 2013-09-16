@@ -23,13 +23,12 @@
 import os
 import sys
 import types
-import pickle
 import traceback
 import collections
 
 import pypeline.common.fileutils as fileutils
-from pypeline.common.utilities import safe_coerce_to_frozenset, \
-     fast_pickle_test
+from pypeline.common.utilities import \
+     safe_coerce_to_frozenset
 
 
 
@@ -71,13 +70,6 @@ class Node(object):
         self.subnodes        = frozenset()
         self.dependencies    = frozenset()
         self.threads         = self._validate_nthreads(threads)
-
-        try:
-            # Ensure that the node can be used in a multiprocessing context
-            fast_pickle_test(self)
-        except pickle.PicklingError, error:
-            raise NodeError("Node could not be pickled, please file a bug-report:\n"
-                            "\tNode: %s\n\tError: %s" % (self, error))
 
         # Set here to avoid pickle-testing of subnodes / dependencies
         self.subnodes        = self._collect_nodes(subnodes, "Subnode")

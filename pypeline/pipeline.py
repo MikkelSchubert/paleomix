@@ -21,6 +21,7 @@
 # SOFTWARE.
 #
 import time
+import pickle
 import signal
 import logging
 import multiprocessing
@@ -29,7 +30,9 @@ import pypeline.ui
 
 from pypeline.node import Node, MetaNode
 from pypeline.nodegraph import NodeGraph, NodeGraphError
-from pypeline.common.utilities import safe_coerce_to_tuple
+from pypeline.common.utilities import \
+     safe_coerce_to_tuple, \
+     fast_pickle_test
 
 
 
@@ -124,6 +127,16 @@ class Pypeline:
             if (idle_processes >= node.threads):
                 state = nodegraph.get_node_state(node)
                 if (state == nodegraph.RUNABLE):
+                    try:
+                        # Ensure that the node can be used in a multiprocessing context
+                        fast_pickle_test(node)
+                    except pickle.PicklingError, error:
+                        self._logger.error("Node cannot be pickled, please file a bug-report:\n"
+                                           "\tNode: %s\n\tError: %s" % (self, error))
+                        nodegraph.set_node_state(node, nodegraph.ERROR)
+                        started_nodes.append(node)
+                        continue
+
                     started_nodes.append(node)
                     running[node] = pool.apply_async(_call_run, args = (node, self._config))
                     nodegraph.set_node_state(node, nodegraph.RUNNING)
