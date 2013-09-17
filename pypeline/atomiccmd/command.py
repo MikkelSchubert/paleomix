@@ -142,7 +142,7 @@ class AtomicCmd:
         self._file_sets = self._build_files_map(self._command, self._files)
 
         # Dry-run, to catch errors early
-        self._generate_call("")
+        self._generate_call("/tmp")
 
 
     def run(self, temp):
