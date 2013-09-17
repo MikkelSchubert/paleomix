@@ -440,7 +440,7 @@ def _get_pe_file_desc(fname_1, fname_2):
             differences += 1
         glob_fname.append(char_1)
 
-    if differences > 0:
+    if differences > 2:
         return describe_files((fname_1, fname_2))
 
     return "".join(glob_fname)
