@@ -307,28 +307,24 @@ def use_customizable_cli_parameters(init_func): # pylint: disable=C0103
 
 
 def create_customizable_cli_parameters(customize_func): # pylint: disable=C0103
-    def do_call(cls, **kwargs):
-        kwargs.update(customize_func(cls, **kwargs))
+    # Ensure that parameters with default arguments (e.g. 'dependencies')
+    # are passed, if not explicity specified by the caller
+    spec     = inspect.getargspec(customize_func)
+    args     = list(reversed(spec.args))
+    defaults = list(reversed(spec.defaults or ()))
 
-        # Ensure that parameters with default arguments (e.g. 'dependencies')
-        # are passed, if not explicity specified
-        spec = inspect.getargspec(customize_func)
-        args = reversed(spec.args)
-        defaults = reversed(spec.defaults or ())
+    def do_call(cls, **kwargs):
+        # Allow parameters to be updated in the 'customize' function
+        kwargs.update(customize_func(cls, **kwargs))
 
         for (key, value) in itertools.izip_longest(args, defaults):
             if key not in kwargs:
                 kwargs[key] = value
 
-        name = "%s_parameters" % cls.__name__
-        clsobj = collections.namedtuple(name, " ".join(kwargs))
-        class _ParametersWrapper(clsobj): # pylint: disable=W0232
-            def build_node(self):
-                return cls(self)
-        return _ParametersWrapper(**kwargs)
+        clsobj = _create_cli_parameters_cls(cls, kwargs)
+        return clsobj(**kwargs)
 
     return classmethod(do_call)
-
 
 
 
@@ -359,6 +355,23 @@ def apply_options(builder, options, pred = lambda s: s.startswith("-")):
                     builder.pop_option(key)
             else:
                 builder.set_option(key, values)
+
+
+_create_cli_parameters_cls_cache = {}
+def _create_cli_parameters_cls(cls, kwargs):
+    key    = (cls, frozenset(kwargs))
+    clsobj = _create_cli_parameters_cls_cache.get(key)
+    if not clsobj:
+        _create_cli_parameters_cls_cache[key] = clsobj = \
+          collections.namedtuple("CustomCLIParams", " ".join(kwargs))
+
+    class _ParametersWrapper(clsobj): # pylint: disable=W0232
+        def build_node(self):
+            return cls(self)
+
+    return _ParametersWrapper
+
+
 
 _ADDABLE_TYPES = (types.FloatType, types.IntType, types.LongType) + types.StringTypes
 _SETABLE_ONLY_TYPES = (types.BooleanType, types.NoneType)
