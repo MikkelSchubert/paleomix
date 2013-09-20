@@ -48,6 +48,9 @@ class NodeGraph:
       = range(NUMBER_OF_STATES)
 
     def __init__(self, nodes):
+        self._state_observers = []
+        self._states = {}
+
         nodes = safe_coerce_to_frozenset(nodes)
 
         self._logger = logging.getLogger(__name__)
@@ -60,11 +63,11 @@ class NodeGraph:
         self._check_file_dependencies(self._reverse_dependencies)
         self._logger.info("  - Checking for required executables ...")
         self._check_required_executables(self._reverse_dependencies)
-        self._logger.info("")
-
-        self._states = {}
-        self._state_observers = []
+        self._logger.info("  - Checking version requirements ...")
+        self._check_version_requirements(self._reverse_dependencies)
+        self._logger.info("  - Determining states ...")
         self.refresh_states()
+        self._logger.info("  - Ready ...\n")
 
 
     def get_node_state(self, node):
@@ -212,15 +215,21 @@ class NodeGraph:
 
     @classmethod
     def _check_required_executables(cls, nodes):
-        exec_filenames, exec_requirements = set(), set()
+        exec_filenames = set()
         for node in nodes:
             exec_filenames.update(node.executables)
-            exec_requirements.update(node.requirements)
 
-        missing_exec = missing_executables(exec_filenames)
+        missing_exec   = missing_executables(exec_filenames)
         if missing_exec:
             raise NodeGraphError("Required executables are missing:\n\t%s" \
                                 % ("\n\t".join(sorted(missing_exec))))
+
+
+    @classmethod
+    def _check_version_requirements(cls, nodes):
+        exec_requirements = set()
+        for node in nodes:
+            exec_requirements.update(node.requirements)
 
         try:
             for requirement in exec_requirements:
