@@ -52,7 +52,7 @@ def update_GTF_table(table, gtf, scaffolds):
             int(gtf.exon_number),
             gtf.feature)
 
-    record = {"contig"  : "chr" + gtf.contig,
+    record = {"contig"  : gtf.contig,
               "start"   : gtf.start,
               # In pysam, 'end' equals the past-the-end position
               "end"     : gtf.end - 1,
