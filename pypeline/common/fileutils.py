@@ -147,20 +147,13 @@ def make_dirs(directory, mode = 0777):
 def move_file(source, destination):
     """Wrapper around shutils which ensures that the
     destination directory exists before moving the file."""
-    dirname = os.path.dirname(destination)
-    if dirname:
-        make_dirs(dirname)
-    shutil.move(source, destination)
+    _sh_wrapper(shutil.move, source, destination)
 
 
 def copy_file(source, destination):
     """Wrapper around shutils which ensures that the
     destination directory exists before copying the file."""
-    dirname = os.path.dirname(destination)
-    if dirname:
-        make_dirs(dirname)
-    shutil.copy(source, destination)
-
+    _sh_wrapper(shutil.copy, source, destination)
 
 
 def open_ro(filename):
@@ -211,3 +204,16 @@ def describe_files(files):
     if len(paths) == 1:
         return "%i files in '%s'" % (len(files), paths.pop())
     return "%i files" % (len(files),)
+
+
+def _sh_wrapper(func, source, destination):
+    try:
+        func(source, destination)
+    except IOError, error:
+        if (error.errno == errno.ENOENT) and os.path.exists(source):
+            dirname = os.path.dirname(destination)
+            if not os.path.exists(dirname):
+                make_dirs(dirname)
+                func(source, destination)
+                return
+        raise
