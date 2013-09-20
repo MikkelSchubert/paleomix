@@ -73,7 +73,7 @@ def build_supermatrix(options, settings, afa_ext, destination, interval, filteri
                            dependencies     = supermatrix)
 
 
-def _examl_nodes(settings, input_alignment, input_binary, output_template, dependencies):
+def _examl_nodes(options, settings, input_alignment, input_binary, output_template, dependencies):
     initial_tree = output_template % ("parsimony_tree",)
     tree = ParsimonatorNode(input_alignment = input_alignment,
                             output_tree     = initial_tree,
@@ -82,7 +82,7 @@ def _examl_nodes(settings, input_alignment, input_binary, output_template, depen
     params = EXaMLNode.customize(input_binary    = input_binary,
                                  initial_tree    = initial_tree,
                                  output_template = output_template,
-                                 threads         = settings["ExaML"]["Threads"],
+                                 threads         = options.max_examl_threads,
                                  dependencies    = tree)
 
     params.command.set_option("-m", settings["ExaML"]["Model"].upper())
@@ -90,7 +90,7 @@ def _examl_nodes(settings, input_alignment, input_binary, output_template, depen
     return params.build_node()
 
 
-def build_examl_replicates(phylo, destination, input_alignment, input_partition, dependencies):
+def build_examl_replicates(options, phylo, destination, input_alignment, input_partition, dependencies):
     input_binary = os.path.join(destination, "alignments.reduced.binary")
     binary       = EXaMLParserNode(input_alignment = input_alignment,
                                    input_partition = input_partition,
@@ -101,7 +101,7 @@ def build_examl_replicates(phylo, destination, input_alignment, input_partition,
     for replicate_num in range(phylo["ExaML"]["Replicates"]):
         replicate_destination = os.path.join(destination, "replicates")
         replicate_template    = os.path.join(replicate_destination, "replicate.%04i.%%s" % (replicate_num,))
-        replicates.append(_examl_nodes(phylo, input_alignment, input_binary, replicate_template, binary))
+        replicates.append(_examl_nodes(options, phylo, input_alignment, input_binary, replicate_template, binary))
 
     if replicates:
         return [MetaNode(description  = "Replicates",
@@ -111,7 +111,7 @@ def build_examl_replicates(phylo, destination, input_alignment, input_partition,
     return []
 
 
-def build_examl_bootstraps(phylo, destination, input_alignment, input_partition, dependencies):
+def build_examl_bootstraps(options, phylo, destination, input_alignment, input_partition, dependencies):
     bootstraps = []
     for bootstrap_start in range(0, phylo["ExaML"]["Bootstraps"], 50):
         bootstrap_destination = os.path.join(destination, "bootstraps")
@@ -133,7 +133,8 @@ def build_examl_bootstraps(phylo, destination, input_alignment, input_partition,
                                           output_file     = bootstrap_binary,
                                           dependencies    = bootstrap)
 
-            bootstraps.append(_examl_nodes(settings        = phylo,
+            bootstraps.append(_examl_nodes(options         = options,
+                                           settings        = phylo,
                                            input_alignment = bootstrap_alignment,
                                            input_binary    = bootstrap_binary,
                                            output_template = bootstrap_final,
@@ -189,7 +190,7 @@ def build_examl_nodes(options, settings, intervals, filtering, dependencies):
         input_partition = os.path.join(destination, "alignments.reduced.partitions")
 
         supermatrix = build_supermatrix(options, phylo, afa_ext, destination, interval, filtering_postfix, dependencies)
-        examl_args  = (phylo, destination, input_alignment, input_partition, supermatrix)
+        examl_args  = (options, phylo, destination, input_alignment, input_partition, supermatrix)
 
         examl_replicates = build_examl_replicates(*examl_args)
         examl_bootstraps = build_examl_bootstraps(*examl_args)

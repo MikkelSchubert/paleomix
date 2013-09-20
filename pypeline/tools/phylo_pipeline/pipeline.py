@@ -76,6 +76,8 @@ def build_options_parser():
     group  = optparse.OptionGroup(parser, "Scheduling")
     group.add_option("--max-threads",        default = 12, type = int,
                      help = "Maximum number of threads to use in total [%default]")
+    group.add_option("--max-examl-threads",  default = 4, type = int,
+                     help = "Maximum number of threads to use for each instance of ExaML [%default]")
     group.add_option("--dry-run",            default = False, action="store_true",
                      help = "If passed, only a dry-run in performed, the dependency tree is printed, and no tasks are executed.")
     parser.add_option_group(group)

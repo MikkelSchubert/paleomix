@@ -235,7 +235,6 @@ _VALIDATION = {
         "Default" : StringIn(("examl",), # TODO: Add support for other programs
                              default = "examl"),
         "ExaML" : {
-            "Threads"    : And(IsInt, ValueGE(1), default = 1),
             "Bootstraps" : IsUnsignedInt(default = 100),
             "Replicates" : IsUnsignedInt(default = 1),
             "Model"      : StringIn(("GAMMA", "PSR"),
