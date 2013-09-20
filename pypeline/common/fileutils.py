@@ -207,6 +207,12 @@ def describe_files(files):
 
 
 def _sh_wrapper(func, source, destination):
+    """Runs an 'shutil' function ('func') which takes an 'source' and
+    a 'destination' argument (e.g. copy/move/etc.), but silently
+    handles the case where the destination directory does not exist.
+
+    If this is the case, the function will first create the destination
+    directory, and then retry the function."""
     try:
         func(source, destination)
     except IOError, error:
