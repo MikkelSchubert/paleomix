@@ -257,12 +257,10 @@ def test_is_done__output_changes(temp_folder):
     assert my_node.is_done
 
 @with_temp_folder
-def test_is_done__subnode_output_changes(temp_folder):
+def test_is_done__subnode_not_considered(temp_folder):
     temp_file = os.path.join(temp_folder, "file.txt")
     subnode   = Node(output_files = temp_file)
     my_node   = Node(subnodes = subnode)
-    assert not my_node.is_done
-    set_file_contents(temp_file, "foo")
     assert my_node.is_done
 
 
