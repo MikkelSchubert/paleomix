@@ -78,10 +78,10 @@ class RAxMLReduceNode(CommandNode):
 
     def _setup(self, config, temp):
         for key in ("IN_ALIGNMENT", "IN_PARTITION"):
-            source      = self._kwargs[key]
+            source      = os.path.abspath(self._kwargs[key])
             destination = os.path.join(temp, self._kwargs["TEMP_" + key])
 
-            fileutils.copy_file(source, destination)
+            os.symlink(source, destination)
 
         CommandNode._setup(self, config, temp)
 
@@ -97,9 +97,8 @@ class RAxMLReduceNode(CommandNode):
                 destination = fileutils.reroot_path(temp, destination)
 
                 if not os.path.exists(destination):
-                    fileutils.move_file(source, destination)
-                elif source != destination:
-                    os.remove(source)
+                    fileutils.copy_file(source, destination)
+                os.remove(source)
 
         CommandNode._teardown(self, config, temp)
 
