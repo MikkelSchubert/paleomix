@@ -187,14 +187,29 @@ class NodeGraph:
             return self._states[node]
 
         # Update sub-nodes before checking for fixed states
-        state = NodeGraph.DONE
-        for subnode in (node.subnodes | node.dependencies):
-            state = max(state, self._update_node_state(subnode))
+        dependency_states = set((NodeGraph.DONE,))
+        for dependency in node.dependencies:
+            dependency_states.add(self._update_node_state(dependency))
+
+        subnode_states = set()
+        for subnode in node.subnodes:
+            subnode_states.add(self._update_node_state(subnode))
 
         try:
+            state = max(subnode_states | dependency_states)
             if isinstance(node, MetaNode):
-                if state in (NodeGraph.RUNNING, NodeGraph.RUNABLE):
-                    state = NodeGraph.QUEUED
+                if (state < NodeGraph.ERROR):
+                    # Mark a meta-node as running if a subnode is running
+                    running_states = (NodeGraph.RUNNING in subnode_states)
+                    if (state == NodeGraph.RUNABLE):
+                        # MetaNodes cannot actually be run!
+                        state = NodeGraph.QUEUED
+                    if (state == NodeGraph.RUNNING) and not running_states:
+                        # A dependency is running, don't inherit state
+                        state = NodeGraph.QUEUED
+                    elif running_states:
+                        # Prevent RUNABLE/QUEUED/OUTDATED from taking precedence
+                        state = NodeGraph.RUNNING
             elif state == NodeGraph.DONE:
                 if not node.is_done or node.is_outdated:
                     state = NodeGraph.RUNABLE
