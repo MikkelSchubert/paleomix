@@ -42,6 +42,8 @@ class Pypeline:
         self._nodes  = []
         self._config = config
         self._logger = logging.getLogger(__name__)
+        # Set if a keyboard-interrupt (SIGINT) has been caught
+        self._interrupted = False
 
 
     def add_nodes(self, *nodes):
@@ -59,8 +61,7 @@ class Pypeline:
             self._logger.error(error)
             return False
 
-        remaining = set(nodegraph.iterflat())
-        for node in remaining:
+        for node in nodegraph.iterflat():
             if (node.threads > max_running) and not isinstance(node, MetaNode):
                 self._logger.error("Node requires more threads than the maximum allowed:\n"
                                    "    Maximum threads  = %i\n"
@@ -77,37 +78,37 @@ class Pypeline:
             self._logger.info("Dry run done ...")
             return True
 
+        old_handler = signal.signal(signal.SIGINT, self._sigint_handler)
+        try:
+            return self._run(nodegraph, max_running, progress_ui)
+        finally:
+            signal.signal(signal.SIGINT, old_handler)
+
+        return False
+
+
+    def _run(self, nodegraph, max_running, progress_ui):
         running = {}
-        interrupted_once = errors = has_refreshed = has_started_any = False
+        remaining = set(nodegraph.iterflat())
+        errors = has_refreshed = has_started_any = False
         pool = multiprocessing.Pool(max_running, _init_worker)
 
         ui = pypeline.ui.get_ui(progress_ui)
         nodegraph.add_state_observer(ui)
-        while running or remaining:
-            try:
-                errors |= not self._poll_running_nodes(running, nodegraph)
-                if not interrupted_once: # Prevent starting of new nodes
-                    if self._start_new_tasks(remaining, running, nodegraph, max_running, pool):
-                        has_started_any = True
-                        has_refreshed = False
-                    elif has_started_any and not has_refreshed:
-                        # Double-check that everything is in order
-                        remaining = set(nodegraph.iterflat())
-                        nodegraph.refresh_states()
-                        has_refreshed = True
+        while running or (remaining and not self._interrupted):
+            errors |= not self._poll_running_nodes(running, nodegraph)
+            if not self._interrupted: # Prevent starting of new nodes
+                if self._start_new_tasks(remaining, running, nodegraph, max_running, pool):
+                    has_started_any = True
+                    has_refreshed = False
+                elif has_started_any and not has_refreshed:
+                    # Double-check that everything is in order
+                    remaining = set(nodegraph.iterflat())
+                    nodegraph.refresh_states()
+                    has_refreshed = True
 
-                if running:
-                    ui.flush()
-            except KeyboardInterrupt:
-                if interrupted_once:
-                    self._logger.error("\nTerminating now!\n")
-                    pool.terminate()
-                    pool.join()
-                    return False
-
-                remaining, interrupted_once = set(), True
-                self._logger.error("\nKeyboard interrupt detected, waiting for current tasks to complete ...\n"
-                                   "\t- Press CTRL-C again to force termination.\n")
+            if running:
+                ui.flush()
 
         ui.flush()
         pool.close()
@@ -180,10 +181,19 @@ class Pypeline:
 
         return not errors
 
+
     @property
     def nodes(self):
         return set(self._nodes)
 
+
+    def _sigint_handler(self, signum, frame):
+        if not self._interrupted:
+            self._interrupted = True
+            self._logger.error("\nKeyboard interrupt detected, waiting for current tasks to complete ...\n"
+                               "\t- Press CTRL-C again to force termination.\n")
+        else:
+            raise signal.default_int_handler(signum, frame)
 
 
 def _init_worker():
