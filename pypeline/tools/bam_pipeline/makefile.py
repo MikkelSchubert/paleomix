@@ -91,8 +91,19 @@ _VALIDATION_OPTIONS = {
     "AdapterRemoval" : {
         "Version" : ValueIn(("v1.4", "v1.5+"),
                             default = "v1.5+"),
-        "--pcr1"  : IsStr,
-        "--pcr2"  : IsStr,
+        "--pcr1"               : IsStr,
+        "--pcr2"               : IsStr,
+        "--maxns"              : IsUnsignedInt,
+        "--minquality"         : IsUnsignedInt,
+        "--trimns"             : Or(IsNone, IsBoolean),
+        "--trimqualities"      : Or(IsNone, IsBoolean),
+        "--collapse"           : Or(IsNone, IsBoolean),
+        "--mm"                 : Or(IsFloat, IsUnsignedInt,
+                                    default = 3),
+        "--minlength"          : IsUnsignedInt(default = 25),
+        "--minalignmentlength" : IsUnsignedInt,
+        "--shift"              : IsUnsignedInt,
+        "--5prime"             : IsStr,
         },
 
     # Which aliger/mapper to use (BWA/Bowtie2)

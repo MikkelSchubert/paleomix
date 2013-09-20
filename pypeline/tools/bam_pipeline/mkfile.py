@@ -58,11 +58,19 @@ Options:
 
 _TEMPLATE_BAM_OPTIONS = \
 """  # Settings for aligners supported by the pipeline
+#  Settings for trimming of reads, see AdapterRemoval man-page for more options
 #  AdapterRemoval:
-     # Commandline options; see AdapterRemoval documentation.
-     # See Bowtie2 below for example usage.
-#    --pcr1: ...
-#    --pcr2: ...
+     # Adapter sequences, set and uncomment to override defaults
+#     --pcr1: ...
+#     --pcr2: ...
+     # Pipeline defaults that differ from AR defaults;
+     # To override, change the value(s) and uncomment the line(s):
+#     --mm: 3
+#     --minlength: 25
+     # Features enabled by default; uncomment to disable:
+#     --collapse: no
+#     --trimns: no
+#     --trimqualities: no
 
   Aligners:
     # Choice of aligner software to use, either "BWA" or "Bowtie2"

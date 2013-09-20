@@ -115,8 +115,6 @@ class PE_AdapterRemovalNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(self, input_files_1, input_files_2, output_prefix, output_format = "bz2", version = VERSION_15, dependencies = ()):
         cmd = _get_common_parameters(version)
-        # Merge pairs where the sequence is overlapping
-        cmd.set_option("--collapse")
 
         # Uncompressed mate 1 and 2 reads (piped from unicat)
         cmd.set_option("--file1",    "%(TEMP_IN_READS_1)s")
@@ -263,15 +261,13 @@ def _get_common_parameters(version):
     cmd = AtomicCmdBuilder("AdapterRemoval",
                            CHECK_VERSION = version_check)
 
-    # Allow 1/3 mismatches in the aligned region
-    cmd.set_option("--mm", 3, fixed = False)
-    # Minimum length of trimmed reads
-    cmd.set_option("--minlength", 25, fixed = False)
     # Trim Ns at read ends
     cmd.set_option("--trimns", fixed = False)
     # Trim low quality scores
     cmd.set_option("--trimqualities", fixed = False)
     # Offset of quality scores
     cmd.set_option("--qualitybase", 33, fixed = False)
+    # Merge pairs where the sequence is overlapping
+    cmd.set_option("--collapse", fixed = False)
 
     return cmd
