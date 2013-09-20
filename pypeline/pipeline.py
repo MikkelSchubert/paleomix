@@ -20,7 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import time
+import errno
+import Queue
 import pickle
 import signal
 import logging
@@ -88,15 +89,25 @@ class Pypeline:
 
 
     def _run(self, nodegraph, max_running, progress_ui):
-        running = {}
+        # Dictionary of nodes -> async-results
+        running   = {}
+        # Set of remaining nodes to be run
         remaining = set(nodegraph.iterflat())
-        errors = has_refreshed = has_started_any = False
-        pool = multiprocessing.Pool(max_running, _init_worker)
+        queue     = multiprocessing.Queue()
+        pool      = multiprocessing.Pool(max_running, _init_worker, (queue,))
+
+        errors_occured  = False
+        # Signifies whether or not node-states have been refreshed following
+        # the completion of the last node, in order to catch changes to the
+        # states of nodes that were previously marked as DONE
+        has_refreshed   = False
+        # Set to true if any new nodes were started in a cycle
+        has_started_any = False
 
         ui = pypeline.ui.get_ui(progress_ui)
         nodegraph.add_state_observer(ui)
         while running or (remaining and not self._interrupted):
-            errors |= not self._poll_running_nodes(running, nodegraph)
+            errors_occured |= not self._poll_running_nodes(running, nodegraph, queue)
             if not self._interrupted: # Prevent starting of new nodes
                 if self._start_new_tasks(remaining, running, nodegraph, max_running, pool):
                     has_started_any = True
@@ -114,16 +125,16 @@ class Pypeline:
         pool.close()
         pool.join()
 
-        if errors:
+        if errors_occured:
             self._logger.error("Errors were detected ...")
         self._logger.info("Done ...")
 
-        return not errors
+        return not errors_occured
 
 
     def _start_new_tasks(self, remaining, running, nodegraph, max_threads, pool):
         started_nodes  = []
-        idle_processes = max_threads - sum(node.threads for node in running)
+        idle_processes = max_threads - sum(node.threads for (node, _) in running.itervalues())
         for node in remaining:
             if (idle_processes >= node.threads):
                 state = nodegraph.get_node_state(node)
@@ -138,8 +149,11 @@ class Pypeline:
                         started_nodes.append(node)
                         continue
 
+                    key          = id(node)
+                    proc_args    = (key, node, self._config)
+                    running[key] = (node, pool.apply_async(_call_run, args = proc_args))
                     started_nodes.append(node)
-                    running[node] = pool.apply_async(_call_run, args = (node, self._config))
+
                     nodegraph.set_node_state(node, nodegraph.RUNNING)
                     idle_processes -= node.threads
                 elif (state in (nodegraph.DONE, nodegraph.ERROR)):
@@ -153,31 +167,25 @@ class Pypeline:
         return bool(remaining)
 
 
-    def _poll_running_nodes(self, running, nodegraph):
-        sleep_time = 0.05
-        changes = errors = False
-        while running and not (errors or changes):
-            for (node, proc) in running.items():
-                if not proc.ready():
-                    continue
-                changes = True
+    def _poll_running_nodes(self, running, nodegraph, queue):
+        errors, blocking = None, True
+        while running:
+            node, proc = self._get_finished_node(queue, running, blocking)
+            if not node:
+                break
 
-                try:
-                    proc.get()
-                except (KeyboardInterrupt, SystemExit):
-                    raise
-                except Exception, errors:
-                    nodegraph.set_node_state(node, nodegraph.ERROR)
-                    running.pop(node)
-                    self._logger.error("%s: Error occurred running command:\n%s\n",
-                                       node, "\n".join(("\t" + line) for line in str(errors).strip().split("\n")))
-                    continue
-                nodegraph.set_node_state(node, nodegraph.DONE)
-                running.pop(node)
-
-            if not (errors or changes):
-                time.sleep(sleep_time)
-                sleep_time = min(1, sleep_time * 2)
+            try:
+                # Re-raise exceptions from the node-process
+                proc.get()
+            except (KeyboardInterrupt, SystemExit):
+                raise
+            except Exception, errors:
+                nodegraph.set_node_state(node, nodegraph.ERROR)
+                self._logger.error("%s: Error occurred running command:\n%s\n",
+                                   node, "\n".join(("\t" + line) for line in str(errors).strip().split("\n")))
+                continue
+            nodegraph.set_node_state(node, nodegraph.DONE)
+            blocking = False # only block first cycle
 
         return not errors
 
@@ -188,6 +196,7 @@ class Pypeline:
 
 
     def _sigint_handler(self, signum, frame):
+        """Signal handler; see signal.signal."""
         if not self._interrupted:
             self._interrupted = True
             self._logger.error("\nKeyboard interrupt detected, waiting for current tasks to complete ...\n"
@@ -196,14 +205,45 @@ class Pypeline:
             raise signal.default_int_handler(signum, frame)
 
 
-def _init_worker():
+    @classmethod
+    def _get_finished_node(self, queue, running, blocking = True):
+        """Returns a tuple containing a node that has finished running
+        and it's async-result, or None for both if no such node could
+        be found (and blocking is False), or if an interrupt occured
+        while waiting for a node to finish.
+
+        If blocking is True, the function will only return once a
+        result becomes available, or if an interrupt occurs."""
+        try:
+            key = queue.get(blocking)
+            return running.pop(key)
+        except IOError, error:
+            # User pressed ctrl-c (SIGINT), or similar event ...
+            if error.errno != errno.EINTR:
+                raise
+        except Queue.Empty:
+            pass
+        return None, None
+
+
+
+def _init_worker(queue):
     """Init function for subprocesses created by multiprocessing.Pool: Ensures that KeyboardInterrupts
     only occur in the main process, allowing us to do proper cleanup."""
     signal.signal(signal.SIGINT, signal.SIG_IGN)
+    # This is a workaround needed to avoid having to use multiprocessing.Manager
+    # to create the Queue objects; this is needed because the Manager class
+    # creates it own process, which inherits the signal-handlers of the main
+    # process, causing some rather odd behavior when the user causes a SIGINT.
+    _call_run.queue = queue
 
 
-def _call_run(node, config):
+def _call_run(key, node, config):
     """Wrapper function, required in order to call Node.run()
     in subprocesses, since it is not possible to pickle
     bound functions (e.g. self.run)"""
-    return node.run(config)
+    try:
+        return node.run(config)
+    finally:
+        # See comment in _init_worker
+        _call_run.queue.put(key)
