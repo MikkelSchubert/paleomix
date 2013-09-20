@@ -174,20 +174,27 @@ class Node(object):
 
 
     def _write_error_log(self, temp, error):
-        if temp and os.path.isdir(temp):
+        if not (temp and os.path.isdir(temp)):
+            return
+
+        prefix  = "\n                   "
+        message = ["Command          = %s" % (" ".join(sys.argv),),
+                   "CWD              = %s" % (os.getcwd(),),
+                   "Node             = %s" % (str(self),),
+                   "Threads          = %i" % (self.threads,),
+                   "Input files      = %s" % (prefix.join(sorted(self.input_files)),),
+                   "Output files     = %s" % (prefix.join(sorted(self.output_files)),),
+                   "Auxiliary files  = %s" % (prefix.join(sorted(self.auxiliary_files)),),
+                   "Executables      = %s" % (prefix.join(sorted(self.executables)),),
+                   "",
+                   "Errors =\n%s\n" % (error,)]
+        message = "\n".join(message)
+
+        try:
             with open(os.path.join(temp, "pipe.errors"), "w") as handle:
-                handle.write("Command          = %s\n" % " ".join(sys.argv))
-                handle.write("CWD              = %s\n\n" % os.getcwd())
-                handle.write("Node             = %s\n" % str(self))
-                handle.write("Threads          = %i\n" % self.threads)
-
-                prefix =   "\n                   "
-                handle.write("Input files      = %s\n" % (prefix.join(sorted(self.input_files))))
-                handle.write("Output files     = %s\n" % (prefix.join(sorted(self.output_files))))
-                handle.write("Auxiliary files  = %s\n" % (prefix.join(sorted(self.auxiliary_files))))
-                handle.write("Executables      = %s\n" % (prefix.join(sorted(self.executables))))
-
-                handle.write("\nErrors =\n%s\n" % error)
+                handle.write(message)
+        except OSError, oserror:
+            sys.stderr.write("ERROR: Could not write failure log: %s\n" % (oserror,))
 
 
     def _collect_nodes(self, nodes, description):
