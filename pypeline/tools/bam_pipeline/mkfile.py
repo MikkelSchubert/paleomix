@@ -87,11 +87,11 @@ _TEMPLATE_BAM_OPTIONS = \
 #      --trim5: 5
 #      --trim3: 5
       # Note that the colon is required, even if no value is specified
-      --very-sensitive:
+       --very-sensitive:
       # Example of how to specify multiple values for an option
-#     --rg:
-#       - CN:SequencingCenterNameHere
-#       - DS:DescriptionOfReadGroup
+#      --rg:
+#        - CN:SequencingCenterNameHere
+#        - DS:DescriptionOfReadGroup
 
   # Filter PCR duplicates
   # Collapsed reads are filtered using Martin Kirchers FilterUnique,
@@ -107,8 +107,8 @@ _TEMPLATE_BAM_OPTIONS = \
 #    - Paired    # Pair-ended reads, where both reads were retained
 #    - Collapsed # Overlapping pair-ended mate reads collapsed into a single read
 #    - CollapsedTruncated # Like 'Collapsed', except that the reads have been
-#                           truncated due to the presence of low quality bases.
-#                           AdapterRemoval 1.5+ only.
+                          # truncated due to the presence of low quality bases.
+                          # AdapterRemoval 1.5+ only.
 
   # Optional steps to perform during processing
   # To disable all features, replace with line "Features: []"
@@ -129,7 +129,7 @@ _TEMPLATE_BAM_OPTIONS = \
 
 # Map of prefixes by name, each having a Path key, which specifies the location
 # of the BWA/Bowtie2 index. See the 'README.md' file for more information,
-# Prefixes:
+#Prefixes:
 #  NAME_OF_PREFIX:
 #    Path: PATH_TO_PREFIX
 #    Label: # "mitochondrial" or "nuclear"
@@ -140,10 +140,10 @@ _TEMPLATE_BAM_OPTIONS = \
 
 _TEMPLATE_SAMPLES = \
 """# Targets are specified using the following structure:
-# NAME_OF_TARGET:
-#   NAME_OF_SAMPLE:
-#     NAME_OF_LIBRARY:
-#       NAME_OF_LANE: PATH_WITH_WILDCARDS
+#NAME_OF_TARGET:
+#  NAME_OF_SAMPLE:
+#    NAME_OF_LIBRARY:
+#      NAME_OF_LANE: PATH_WITH_WILDCARDS
 """
 
 _FILENAME = "SampleSheet.csv"
