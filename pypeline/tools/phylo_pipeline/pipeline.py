@@ -44,7 +44,7 @@ from pypeline.tools.phylo_pipeline.makefile import \
 
 
 _COMMANDS = {
-    "mkfile"          : None,
+    "mkfile"          : True,
     "genotype"        : genotype.chain,
     "genotyping"      : genotype.chain,
     "msa"             : msa.chain,
