@@ -90,6 +90,20 @@ def _examl_nodes(options, settings, input_alignment, input_binary, output_templa
     return params.build_node()
 
 
+def _build_rerooted_trees(meta_node):
+    filenames = []
+    for node in meta_node.subnodes:
+        for filename in node.output_files:
+            if filename.endswith(".result"):
+                filenames.append(filename)
+
+    output_file = os.path.dirname(filenames[0]) + ".newick"
+    output_node = NewickRerootNode(tree_files   = filenames,
+                                   output_file  = output_file,
+                                   dependencies = meta_node)
+    return output_node
+
+
 def build_examl_replicates(options, phylo, destination, input_alignment, input_partition, dependencies):
     input_binary = os.path.join(destination, "alignments.reduced.binary")
     binary       = EXaMLParserNode(input_alignment = input_alignment,
@@ -104,11 +118,12 @@ def build_examl_replicates(options, phylo, destination, input_alignment, input_p
         replicates.append(_examl_nodes(options, phylo, input_alignment, input_binary, replicate_template, binary))
 
     if replicates:
-        return [MetaNode(description  = "Replicates",
-                         subnodes     = replicates,
-                         dependencies = binary)]
+        meta = MetaNode(description  = "Replicates",
+                        subnodes     = replicates,
+                        dependencies = binary)
 
-    return []
+        return _build_rerooted_trees(meta)
+    return None
 
 
 def build_examl_bootstraps(options, phylo, destination, input_alignment, input_partition, dependencies):
@@ -141,41 +156,25 @@ def build_examl_bootstraps(options, phylo, destination, input_alignment, input_p
                                            dependencies    = bs_binary))
 
     if bootstraps:
-        return [MetaNode(description  = "Bootstraps",
-                         subnodes     = bootstraps,
-                         dependencies = dependencies)]
-    return []
+        meta = MetaNode(description  = "Bootstraps",
+                        subnodes     = bootstraps,
+                        dependencies = dependencies)
+        return _build_rerooted_trees(meta)
+    return None
 
 
-def add_bootstrap_support(replicates, bootstraps):
-    if not (replicates and bootstraps):
-        return replicates + bootstraps
+def add_bootstrap_support(destination, replicate, bootstrap):
+    if not (replicate and bootstrap):
+        return filter(None, (replicate, bootstrap))
 
-    def _build_rerooted_tree(meta_nodes):
-        filenames = []
-        for meta_node in meta_nodes:
-            for node in meta_node.subnodes:
-                for filename in node.output_files:
-                    if filename.endswith(".result"):
-                        filenames.append(filename)
+    replicate_file = os.path.join(destination, "replicates.newick")
+    bootstrap_file = os.path.join(destination, "bootstraps.newick")
+    output_file    = add_postfix(replicate_file, ".support")
 
-        output_file = os.path.dirname(filenames[0]) + ".newick"
-        output_node = NewickRerootNode(tree_files   = filenames,
-                                       output_file  = output_file,
-                                       dependencies = meta_nodes)
-        return output_file, output_node
-
-    bootstrap_file, bootstrap_node = _build_rerooted_tree(bootstraps)
-    replicate_file, replicate_node = _build_rerooted_tree(replicates)
-
-    output_file = add_postfix(replicate_file, ".support")
-    node = NewickSupportNode(main_tree_files    = replicate_file,
+    return NewickSupportNode(main_tree_files    = replicate_file,
                              support_tree_files = bootstrap_file,
                              output_file        = output_file,
-                             dependencies       = (bootstrap_node, replicate_node))
-
-    return node
-
+                             dependencies       = (bootstrap, replicate))
 
 
 def build_examl_nodes(options, settings, intervals, filtering, dependencies):
@@ -194,7 +193,7 @@ def build_examl_nodes(options, settings, intervals, filtering, dependencies):
 
         examl_replicates = build_examl_replicates(*examl_args)
         examl_bootstraps = build_examl_bootstraps(*examl_args)
-        examl_dependencies = add_bootstrap_support(examl_replicates, examl_bootstraps)
+        examl_dependencies = add_bootstrap_support(destination, examl_replicates, examl_bootstraps)
 
         if examl_dependencies:
             examl_nodes.append(MetaNode(description  = interval["Name"],
