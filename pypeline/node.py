@@ -67,11 +67,7 @@ class Node(object):
         self.auxiliary_files = self._validate_files(auxiliary_files)
         self.requirements    = self._validate_requirements(requirements)
 
-        self.subnodes        = frozenset()
-        self.dependencies    = frozenset()
         self.threads         = self._validate_nthreads(threads)
-
-        # Set here to avoid pickle-testing of subnodes / dependencies
         self.subnodes        = self._collect_nodes(subnodes, "Subnode")
         self.dependencies    = self._collect_nodes(dependencies, "Dependency")
 
@@ -155,8 +151,10 @@ class Node(object):
     def _run(self, _config, _temp):
         pass
 
+
     def _teardown(self, _config, _temp):
         self._check_for_missing_files(self.output_files, "output")
+
 
     def __str__(self):
         """Returns the description passed to the constructor, or a default
@@ -164,6 +162,18 @@ class Node(object):
         if self.__description:
             return self.__description
         return repr(self)
+
+
+    def __getstate__(self):
+        """Called by pickle/cPickle to determine what to pickle; this is
+        overridden to avoid pickling of requirements, dependencies and
+        subnodes, which would otherwise greatly inflate the amount of
+        information that needs to be pickled."""
+        obj_dict = self.__dict__.copy()
+        obj_dict["requiremennts"] = None
+        obj_dict["dependencies"]  = None
+        obj_dict["subnodes"]      = None
+        return obj_dict
 
 
     def _write_error_log(self, temp, error):
