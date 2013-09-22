@@ -170,9 +170,9 @@ class Node(object):
         subnodes, which would otherwise greatly inflate the amount of
         information that needs to be pickled."""
         obj_dict = self.__dict__.copy()
-        obj_dict["requiremennts"] = None
-        obj_dict["dependencies"]  = None
-        obj_dict["subnodes"]      = None
+        obj_dict["requirements"] = None
+        obj_dict["dependencies"] = None
+        obj_dict["subnodes"]     = None
         return obj_dict
 
 
