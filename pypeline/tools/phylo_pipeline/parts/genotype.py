@@ -265,6 +265,9 @@ def build_genotyping_nodes(options, genotyping, taxa, interval, dependencies):
 
     padding = genotyping["Padding"]
     infile  = os.path.join(options.samples_root, "%s.%s.bam" % (taxa["Name"], interval["Genome"]))
+    if interval["Realigned"]:
+        infile = add_postfix(infile, ".realigned")
+
     slop, node =  build_interval_nodes(options, interval, padding, dependencies)
     genotype = GenotypeNode.customize(reference          = reference,
                                       regions            = slop,

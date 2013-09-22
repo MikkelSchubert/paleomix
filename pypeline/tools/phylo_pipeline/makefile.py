@@ -26,7 +26,6 @@ import pypeline.common.makefile
 from pypeline.common.makefile import \
      MakefileError, \
      REQUIRED_VALUE, \
-     IsInt, \
      IsStr, \
      IsDictOf, \
      IsListOf, \
@@ -193,6 +192,7 @@ _VALIDATION = {
         "Intervals" : {
             IsStr : {
                 "Genome"         : IsStr(default = REQUIRED_VALUE),
+                "Realigned"      : IsBoolean(default = False),
                 "Protein coding" : IsBoolean(default = False),
                 "Include indels" : IsBoolean(default = True),
                 "Homozygous Contigs" : {
