@@ -346,7 +346,7 @@ class SummaryTableNode(Node):
                     "seq_trash_pe_2"      : (_re_search("discarded mate 2 reads: ([0-9]+)"),  "# Total number of reads"),
                     "seq_retained_nts"    : (_re_search("retained nucleotides: ([0-9]+)"),    "# Total number of NTs in retained reads"),
                     "seq_retained_reads"  : (_re_search("retained reads: ([0-9]+)"),          "# Total number of retained reads"),
-                    "seq_collapsed"       : (_re_search("of (?:full-length )?collapsed pairs: ([0-9]+)") + \
+                    "seq_collapsed"       : (_re_search("of (?:full-length )?collapsed pairs: ([0-9]+)", 0) + \
                                              _re_search("of truncated collapsed pairs: ([0-9]+)", 0),
                                             "# Total number of pairs collapsed into one read"),
                     }
