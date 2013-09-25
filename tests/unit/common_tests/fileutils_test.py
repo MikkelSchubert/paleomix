@@ -466,7 +466,8 @@ def test_move_file__overwrite(temp_folder):
         assert_equal(os.listdir("."), ["file_2"])
         assert_equal(get_file_contents("file_2"), "4")
 
-
+def test_move_file__enoent_reraised_if_not_due_to_missing_folder():
+    assert_raises(IOError, move_file, "", "./dst")
 
 
 ################################################################################
@@ -540,6 +541,9 @@ def test_copy_file__overwrite(temp_folder):
         assert_equal(set(os.listdir(".")), set(["file_1", "file_2"]))
         assert_equal(get_file_contents("file_1"), "4")
         assert_equal(get_file_contents("file_2"), "4")
+
+def test_copy_file__enoent_reraised_if_not_due_to_missing_folder():
+    assert_raises(IOError, copy_file, "", "./dst")
 
 
 ################################################################################
@@ -685,6 +689,14 @@ def test_describe_paired_files__same_path__similar_files__different_prefixes():
     expected = "'foo/[12]_???'"
     result   = describe_paired_files(files_1, files_2)
     assert_equal(result, expected)
+
+def test_describe_paired_files__same_path__similar_files__too_different_prefixes():
+    files_1  = ("foo/1a_abc", "foo/1a_def")
+    files_2  = ("foo/2b_ghi", "foo/2b_jkl")
+    expected = "2 pair(s) of files in 'foo'"
+    result   = describe_paired_files(files_1, files_2)
+    assert_equal(result, expected)
+
 
 def test_describe_paired_files__same_path__different_files():
     files_1  = ("foo/1_abc", "foo/2_def")
