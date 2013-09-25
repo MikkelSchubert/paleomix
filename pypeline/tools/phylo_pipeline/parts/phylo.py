@@ -44,6 +44,9 @@ from pypeline.common.fileutils import \
 import pypeline.tools.phylo_pipeline.parts.common as common
 
 
+# Number of files to run per bootstrap generation;
+# chunking is used to reduce the overhead
+_BOOTSTRAP_CHUNK = 25
 
 
 def build_supermatrix(options, settings, afa_ext, destination, interval, filtering_postfix, dependencies):
@@ -128,18 +131,20 @@ def build_examl_replicates(options, phylo, destination, input_alignment, input_p
 
 def build_examl_bootstraps(options, phylo, destination, input_alignment, input_partition, dependencies):
     bootstraps = []
-    for bootstrap_start in range(0, phylo["ExaML"]["Bootstraps"], 50):
+    num_bootstraps = phylo["ExaML"]["Bootstraps"]
+    for bootstrap_start in range(0, num_bootstraps, _BOOTSTRAP_CHUNK):
         bootstrap_destination = os.path.join(destination, "bootstraps")
         bootstrap_template    = os.path.join(bootstrap_destination, "bootstrap.%04i.phy")
 
         bootstrap   = RAxMLBootstrapNode(input_alignment  = input_alignment,
                                          input_partition  = input_partition,
                                          template         = bootstrap_template,
-                                         bootstraps       = 50,
+                                         bootstraps       = _BOOTSTRAP_CHUNK,
                                          start            = bootstrap_start,
                                          dependencies     = dependencies)
 
-        for bootstrap_num in range(bootstrap_start, bootstrap_start + 50):
+        bootstrap_end = max(num_bootstraps, bootstrap_start + _BOOTSTRAP_CHUNK)
+        for bootstrap_num in range(bootstrap_start, bootstrap_end):
             bootstrap_alignment   = bootstrap_template % (bootstrap_num,)
             bootstrap_binary      = swap_ext(bootstrap_alignment, ".binary")
             bootstrap_final       = swap_ext(bootstrap_alignment, ".%s")
