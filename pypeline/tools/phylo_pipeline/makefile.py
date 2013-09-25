@@ -32,7 +32,6 @@ from pypeline.common.makefile import \
      StringIn, \
      IsUnsignedInt, \
      IsBoolean, \
-     ValueGE, \
      StringStartsWith, \
      StringEndsWith, \
      CLI_PARAMETERS, \
@@ -57,6 +56,7 @@ def _mangle_makefile(mkfile):
     _update_exclusions(mkfile)
     _check_genders(mkfile)
     _check_max_read_depth(mkfile)
+    _check_indels_and_msa(mkfile)
     mkfile["Nodes"] = ()
 
     padding = mkfile["Genotyping"]["Padding"]
@@ -156,6 +156,16 @@ def _check_max_read_depth(mkfile):
         if missing_keys:
             raise MakefileError("MaxReadDepth not specified for the following taxa:\n    - %s" \
                                 % ("\n    - ".join(sorted(missing_keys)),))
+
+
+def _check_indels_and_msa(mkfile):
+    if mkfile["MSAlignment"]["Enabled"]:
+        return
+
+    intervals = mkfile["Project"]["Intervals"]
+    for (interval, subdd) in intervals.iteritems():
+        if subdd["Include indels"]:
+            raise MakefileError("Intervals '%s' includes indels, but MSA is disabled!" % (interval,))
 
 
 def _update_exclusions(mkfile):

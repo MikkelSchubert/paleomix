@@ -49,6 +49,7 @@ from pypeline.nodes.bowtie2 import \
 
 
 from pypeline.tools.bam_pipeline.makefile import \
+     MakefileError, \
      read_makefiles
 
 import pypeline.tools.bam_pipeline.parts as parts
@@ -351,10 +352,11 @@ def main(argv):
     try:
         print_info("Building BAM pipeline ...", file = sys.stderr)
         makefiles = read_makefiles(args)
-    except (StandardError, yaml.YAMLError), error:
-        print_err("Error reading makefiles:\n    ",
+    except (MakefileError, yaml.YAMLError), error:
+        print_err("Error reading makefiles:",
+                  "\n  %s:\n   " % (error.__class__.__name__,),
                   "\n    ".join(str(error).split("\n")),
-            file = sys.stderr)
+                  file = sys.stderr)
         return 1
 
     logfile_template = time.strftime("bam_pipeline.%Y%m%d_%H%M%S_%%02i.log")

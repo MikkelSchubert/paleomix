@@ -40,6 +40,7 @@ import pypeline.tools.phylo_pipeline.parts.phylo as phylo
 from pypeline import Pypeline
 from pypeline.common.console import print_err
 from pypeline.tools.phylo_pipeline.makefile import \
+     MakefileError, \
      read_makefiles
 
 
@@ -159,8 +160,9 @@ def main(argv):
 
     try:
         makefiles = read_makefiles(args)
-    except (StandardError, yaml.YAMLError), error:
-        print_err("Error reading makefiles:\n    ",
+    except (MakefileError, yaml.YAMLError), error:
+        print_err("Error reading makefiles:",
+                  "\n  %s:\n   " % (error.__class__.__name__,),
                   "\n    ".join(str(error).split("\n")),
                   file = sys.stderr)
         return 1
