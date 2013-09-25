@@ -23,61 +23,24 @@
 import os
 import re
 
-from pypeline.node import Node, MetaNode, CommandNode, NodeError
+from pypeline.node import MetaNode, CommandNode, NodeError
 from pypeline.atomiccmd.command import AtomicCmd
 from pypeline.atomiccmd.sets import SequentialCmds
+from pypeline.common.formats.fasta import FASTA
+from pypeline.common.utilities import safe_coerce_to_frozenset
 
-
-from pypeline.common.utilities import fragment, safe_coerce_to_tuple
-from pypeline.common.formats.msa import MSA
 import pypeline.common.fileutils as fileutils
 import pypeline.tools.phylo_pipeline.parts.common as common
 
 
-class FastaToPAMLPhyNode(Node):
-    def __init__(self, input_file, output_file, exclude_groups, dependencies = ()):
-        self._input_file  = input_file
-        self._output_file = output_file
-        self._excluded = safe_coerce_to_tuple(exclude_groups)
-        description  = "<FastaToPAMLPhy: '%s' -> '%s'>" % \
-            (input_file, output_file)
-
-        Node.__init__(self,
-                      description  = description,
-                      input_files  = [input_file],
-                      output_files = [output_file],
-                      dependencies = dependencies)
-
-
-    def _run(self, _config, temp):
-        msa = MSA.from_file(self._input_file)
-        if self._excluded:
-            msa = msa.exclude(self._excluded)
-
-        lines = []
-        lines.append("  %i %i" % (len(msa), msa.seqlen()))
-        for record in sorted(msa):
-            lines.append("")
-            lines.append(record.name)
-
-            for line in fragment(60, record.sequence.upper()):
-                lines.append(" ".join(fragment(3, line)))
-
-        with open(fileutils.reroot_path(temp, self._output_file), "w") as output:
-            output.write("\n".join(lines))
-
-
-    def _teardown(self, _config, temp):
-        source_file = fileutils.reroot_path(temp, self._output_file)
-        output_file = self._output_file
-        fileutils.move_file(source_file, output_file)
 
 
 class CodemlNode(CommandNode):
-    def __init__(self, control_file, sequence_file, trees_file, output_tar, dependencies = ()):
-        self._control_file  = control_file
-        self._sequence_file = sequence_file
-        self._trees_file    = trees_file
+    def __init__(self, control_file, sequence_file, trees_file, output_tar, exclude_groups = (), dependencies = ()):
+        self._exclude_groups = safe_coerce_to_frozenset(exclude_groups)
+        self._control_file   = control_file
+        self._sequence_file  = sequence_file
+        self._trees_file     = trees_file
 
         paml_cmd = AtomicCmd(["codeml", "template.ctl"],
                              IN_CONTROL_FILE  = control_file,
@@ -106,13 +69,16 @@ class CodemlNode(CommandNode):
 
 
     def _setup(self, _config, temp):
-        def _symlink(filename, dst):
-            os.symlink(os.path.realpath(filename), os.path.join(temp, dst))
-        _symlink(self._sequence_file, "template.seqs")
-        _symlink(self._trees_file,    "template.trees")
-
         self._update_ctl_file(source      = self._control_file,
                               destination = os.path.join(temp, "template.ctl"))
+
+        os.symlink(os.path.abspath(self._trees_file), os.path.join(temp, "template.trees"))
+        with open(os.path.join(temp, "template.seqs"), "w") as handle:
+            for record in FASTA.from_file(self._sequence_file):
+                if record.name not in self._exclude_groups:
+                    name     = record.name
+                    sequence = record.sequence.upper()
+                    handle.write("%s\n" % (FASTA(name, None, sequence),))
 
 
     def _run(self, config, temp):
@@ -166,40 +132,30 @@ def build_codeml_nodes(options, settings, interval, filtering, dependencies):
     sequencedir = os.path.join(options.destination, "alignments", interval["Name"] + in_postfix)
     destination = os.path.join(options.destination, "paml", "codeml", interval["Name"] + out_postfix)
 
-    # Build meta-node for sequence conversion to PHYLIP format accepted by codeml
-    phylip_nodes = {}
+    fasta_files = {}
     for sequence in sequences:
-        input_file  = os.path.join(sequencedir, sequence + afa_ext)
-        output_file = os.path.join(destination, sequence + ".phy")
-
-        phylip_nodes[sequence] = FastaToPAMLPhyNode(input_file     = input_file,
-                                                    output_file    = output_file,
-                                                    exclude_groups = paml["codeml"]["ExcludeGroups"],
-                                                    dependencies   = dependencies)
-
-    phylip_meta = MetaNode(description  = "<FastaToPAMLPhyNodes: '%s/*.%s' -> '%s/*.phy'>" \
-                           % (sequencedir, afa_ext, destination),
-                           subnodes     = phylip_nodes.values(),
-                           dependencies = dependencies)
+        fasta_files[sequence] = os.path.join(sequencedir, sequence + afa_ext)
 
     codeml_nodes = []
     for (ctl_name, ctl_files) in paml["codeml"].iteritems():
+        # Skip the "ExcludeGroups" option
         if ctl_name in ("ExcludeGroups",):
             continue
 
-        for (sequence, node) in phylip_nodes.iteritems():
+        for (sequence, filename) in fasta_files.iteritems():
             output_tar = os.path.join(destination, "%s.%s.tar.gz" % (sequence, ctl_name))
 
-            codeml = CodemlNode(control_file  = ctl_files["Control File"],
-                                trees_file    = ctl_files["Tree File"],
-                                sequence_file = iter(node.output_files).next(),
-                                output_tar    = output_tar,
-                                dependencies  = node)
+            codeml = CodemlNode(control_file   = ctl_files["Control File"],
+                                trees_file     = ctl_files["Tree File"],
+                                sequence_file  = filename,
+                                output_tar     = output_tar,
+                                exclude_groups = paml["codeml"]["ExcludeGroups"],
+                                dependencies   = dependencies)
             codeml_nodes.append(codeml)
 
     return MetaNode(description  = "<CodemlNodes>",
                     subnodes     = codeml_nodes,
-                    dependencies = phylip_meta)
+                    dependencies = dependencies)
 
 
 
