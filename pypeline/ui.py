@@ -111,10 +111,11 @@ class BaseUI:
         self._states = self._count_states(nodegraph, nodegraph.iterflat())
 
 
-    def state_changed(self, _node, old_state, new_state, _is_primary):
-        """Observer """
-        self._states[old_state] -= 1
-        self._states[new_state] += 1
+    def state_changed(self, node, old_state, new_state, _is_primary):
+        """Observer function for NodeGraph; counts states for non-meta nodes."""
+        if not isinstance(node, MetaNode):
+            self._states[old_state] -= 1
+            self._states[new_state] += 1
 
 
     @classmethod
@@ -126,8 +127,9 @@ class BaseUI:
         encountered."""
         states = [0] * nodegraph.NUMBER_OF_STATES
         def inc_state(node):
-            state = nodegraph.get_node_state(node)
-            states[state] += 1
+            if meta or not isinstance(node, MetaNode):
+                state = nodegraph.get_node_state(node)
+                states[state] += 1
 
         def inc_states(c_nodes, depth):
             for node in c_nodes:
