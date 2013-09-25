@@ -195,7 +195,8 @@ class PE_AdapterRemovalNode(CommandNode):
         commands = ParallelCmds(commands)
 
         description  = "<PE_AdapterRM: %s -> '%s.*'>" \
-            % (fileutils.describe_files(parameters.input_files_1).replace("file", "pair"),
+            % (fileutils.describe_paired_files(parameters.input_files_1,
+                                               parameters.input_files_2),
                parameters.output_prefix)
 
         CommandNode.__init__(self,

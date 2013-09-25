@@ -21,14 +21,17 @@
 # SOFTWARE.
 #
 import os
-import uuid
-import shutil
-import errno
 import bz2
 import gzip
+import uuid
+import errno
+import types
+import shutil
 
 from pypeline.common.utilities import safe_coerce_to_tuple, \
      safe_coerce_to_frozenset
+
+
 
 
 def add_postfix(filename, postfix):
@@ -194,16 +197,89 @@ def try_remove(filename):
 
 def describe_files(files):
     """Return a text description of a set of files."""
-    files = safe_coerce_to_tuple(files)
+    files = _validate_filenames(files)
+
     if not files:
         return "No files"
     elif len(files) == 1:
         return repr(files[0])
 
+    glob_files = _get_files_glob(files, max_differences = 2)
+    if glob_files:
+        return repr(glob_files)
+
     paths = set(os.path.dirname(filename) for filename in files)
     if len(paths) == 1:
         return "%i files in '%s'" % (len(files), paths.pop())
     return "%i files" % (len(files),)
+
+
+def describe_paired_files(files_1, files_2):
+    """Return a text description of a set of paired filenames; the
+    sets must be of the same length, a the description will depend
+    on the overall similarity of the filenames / paths. If 'files_2'
+    is empty, this function is the equivalent of calling
+    'describe_files' with 'files_1' as the argument. In all other
+    cases the length of the two sets must be the same."""
+    files_1 = _validate_filenames(files_1)
+    files_2 = _validate_filenames(files_2)
+
+    if files_1 and not files_2:
+        return describe_files(files_1)
+    elif len(files_1) != len(files_2):
+        raise ValueError("Unequal number of files for mate 1 vs mate 2 reads: %i vs %i" \
+                         % (len(files_1), len(files_2)))
+
+    glob_files_1 = _get_files_glob(files_1, 3)
+    glob_files_2 = _get_files_glob(files_2, 3)
+    if glob_files_1 and glob_files_2:
+        final_glob = _get_files_glob((glob_files_1, glob_files_2), 1, show_differences = True)
+        if final_glob:
+            return repr(final_glob)
+
+    fnames = files_1 + files_2
+    paths = set(os.path.dirname(fname) for fname in fnames)
+    if len(paths) == 1:
+        return "%i pair(s) of files in '%s'" % (len(files_1), paths.pop())
+    return "%i pair(s) of files" % (len(files_1),)
+
+
+def _get_files_glob(filenames, max_differences = 1, show_differences = False):
+    """Tries to generate a glob-string for a set of filenames, containing
+    at most 'max_differences' different columns. If more differences are
+    found, or if the length of filenames vary, None is returned."""
+    # File lengths must be the same, otherwise we'd have to do MSA
+    if len(set(map(len, filenames))) > 1:
+        return None
+
+    glob_fname, differences = [], 0
+    for chars in zip(*filenames):
+        if "?" in chars:
+            chars = ('?',)
+
+        if len(frozenset(chars)) > 1:
+            if show_differences:
+                chars = ("[%s]" % ("".join(sorted(chars))),)
+            else:
+                chars = ("?",)
+            differences += 1
+        glob_fname.append(chars[0])
+
+    if differences > max_differences:
+        return None
+
+    return "".join(glob_fname)
+
+
+def _validate_filenames(filenames):
+    """Sanity checks for filenames handled by
+    'describe_files' and 'describe_paired_files."""
+    filenames = safe_coerce_to_tuple(filenames)
+    for filename in filenames:
+        if not isinstance(filename, types.StringTypes):
+            raise ValueError("Only string types are allowed for filenames, not %s" \
+                             % (filename.__class__.__name__,))
+    return filenames
 
 
 def _sh_wrapper(func, source, destination):

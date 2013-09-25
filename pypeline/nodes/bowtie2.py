@@ -28,12 +28,10 @@ from pypeline.atomiccmd.builder import \
      AtomicCmdBuilder, \
      use_customizable_cli_parameters, \
      create_customizable_cli_parameters
-
-from pypeline.atomiccmd.sets import ParallelCmds
-
+from pypeline.atomiccmd.sets import \
+     ParallelCmds
 from pypeline.nodes.bwa import \
      _get_node_description, \
-     _get_pe_file_desc, \
      _process_output, \
      _get_max_threads
 
@@ -112,12 +110,12 @@ class Bowtie2Node(CommandNode):
         command = ParallelCmds([parameters.commands[key].finalize() for key in parameters.order])
 
         algorithm    = "PE" if parameters.input_file_2 else "SE"
-        pe_file_desc = _get_pe_file_desc(parameters.input_file_1, parameters.input_file_2)
-        description  = _get_node_description(name        = "Bowtie2",
-                                             algorithm   = algorithm,
-                                             input_files = pe_file_desc,
-                                             prefix      = parameters.prefix,
-                                             threads     = parameters.threads)
+        description  = _get_node_description(name          = "Bowtie2",
+                                             algorithm     = algorithm,
+                                             input_files_1 = parameters.input_file_1,
+                                             input_files_2 = parameters.input_file_2,
+                                             prefix        = parameters.prefix,
+                                             threads       = parameters.threads)
 
         CommandNode.__init__(self,
                              command      = command,

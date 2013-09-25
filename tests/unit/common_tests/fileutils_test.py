@@ -21,6 +21,7 @@
 # SOFTWARE.
 #
 import os
+import stat
 import errno
 
 import nose
@@ -50,7 +51,8 @@ from pypeline.common.fileutils import \
      copy_file, \
      open_ro, \
      try_remove, \
-     describe_files
+     describe_files, \
+     describe_paired_files
 
 
 ################################################################################
@@ -365,6 +367,16 @@ def test_make_dirs__creation_preemted(temp_folder):
         assert_equal(os.listdir(temp_folder), ["test"])
         assert_equal(preempted, [True])
 
+@with_temp_folder
+def test_make_dirs__permission_denied(temp_folder):
+    # Make temporary folder read-only
+    mode = os.stat(temp_folder).st_mode
+    ro_mode = mode & ~(stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH)
+    os.chmod(temp_folder, ro_mode)
+    # Non OEXIST errors should be re-raised:
+    assert_raises(OSError, make_dirs, os.path.join(temp_folder, "foo"))
+
+
 @nose.tools.raises(ValueError)
 def test_make_dirs__empty_directory():
     make_dirs("")
@@ -397,6 +409,21 @@ def test_move_file__simple_move_in_cwd(temp_folder):
         assert_equal(os.listdir("."), ["file_2"])
         assert_equal(get_file_contents("file_2"), "1")
 
+@with_temp_folder
+def test_move_dirs__permission_denied(temp_folder):
+    dst_folder = os.path.join(temp_folder, "dst")
+    file_1 = os.path.join(temp_folder, "file")
+    file_2 = os.path.join(dst_folder, "file")
+    set_file_contents(file_1, "1")
+
+    # Make destination folder read-only
+    assert make_dirs(os.path.join(temp_folder, "dst"))
+    mode = os.stat(dst_folder).st_mode
+    ro_mode = mode & ~(stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH)
+    os.chmod(dst_folder, ro_mode)
+
+    # Non ENOENT errors should be re-raised:
+    assert_raises(IOError, move_file, file_1, file_2)
 
 @with_temp_folder
 def test_move_file__move_to_existing_folder(temp_folder):
@@ -599,9 +626,17 @@ def test_describe_files__single_file():
     fpath = "/var/foo/bar"
     assert_equal(describe_files((fpath,)), repr(fpath))
 
-def test_describe_files__same_path_abs():
+def test_describe_files__same_path_abs__3_differences():
     fpaths = ("/var/foo/bar", "/var/foo/foo")
     assert_equal(describe_files(fpaths), "2 files in '/var/foo'")
+
+def test_describe_files__same_path_abs__2_differences():
+    fpaths = ("/var/foo/faz", "/var/foo/foo")
+    assert_equal(describe_files(fpaths), "'/var/foo/f??'")
+
+def test_describe_files__same_path_abs__1_differences():
+    fpaths = ("/var/foo/faz", "/var/foo/fao")
+    assert_equal(describe_files(fpaths), "'/var/foo/fa?'")
 
 def test_describe_files__different_paths_abs():
     fpaths = ("/var/foo/bar", "/var/bar/foo")
@@ -618,3 +653,72 @@ def test_describe_files__different_paths_rel():
 def test_describe_files__iterable():
     fpaths = iter(("/var/foo/bar", "/var/foo/foo"))
     assert_equal(describe_files(fpaths), "2 files in '/var/foo'")
+
+def test_describe_files__none_files():
+    assert_raises(ValueError, describe_files, None)
+
+
+
+################################################################################
+################################################################################
+## Tests for 'describe_paired_files'
+
+def test_describe_paired_files__single_file():
+    fpath = "/var/foo/bar"
+    assert_equal(describe_paired_files((fpath,), ()), repr(fpath))
+
+def test_describe_paired_files__identical_files():
+    fpath = "/var/foo/bar"
+    ftuple = (fpath,)
+    assert_equal(describe_paired_files(ftuple, ftuple), repr(fpath))
+
+def test_describe_paired_files__same_path__similar_files():
+    files_1  = ("foo/1_abc", "foo/1_def")
+    files_2  = ("foo/1_ghi", "foo/1_jkl")
+    expected = "'foo/1_???'"
+    result   = describe_paired_files(files_1, files_2)
+    assert_equal(result, expected)
+
+def test_describe_paired_files__same_path__similar_files__different_prefixes():
+    files_1  = ("foo/1_abc", "foo/1_def")
+    files_2  = ("foo/2_ghi", "foo/2_jkl")
+    expected = "'foo/[12]_???'"
+    result   = describe_paired_files(files_1, files_2)
+    assert_equal(result, expected)
+
+def test_describe_paired_files__same_path__different_files():
+    files_1  = ("foo/1_abc", "foo/2_def")
+    files_2  = ("foo/3_ghi", "foo/4_jkl")
+    expected = "2 pair(s) of files in 'foo'"
+    result   = describe_paired_files(files_1, files_2)
+    assert_equal(result, expected)
+
+def test_describe_paired_files__same_path__different_file_lens():
+    files_1  = ("foo/1_a", "foo/2_de")
+    files_2  = ("foo/3_g", "foo/4_jk")
+    expected = "2 pair(s) of files in 'foo'"
+    result   = describe_paired_files(files_1, files_2)
+    assert_equal(result, expected)
+
+def test_describe_paired_files__different_path_and_files():
+    files_1  = ("foo/1_abc", "bar/2_def")
+    files_2  = ("zed/3_ghi", "not/4_jkl")
+    expected = "2 pair(s) of files"
+    result   = describe_paired_files(files_1, files_2)
+    assert_equal(result, expected)
+
+
+def test_describe_paired_files__files_1_longer():
+    assert_raises(ValueError, describe_paired_files, ("a", "b"), ("c",))
+
+def test_describe_paired_files__files_2_longer():
+    assert_raises(ValueError, describe_paired_files, ("a",), ("b", "c"))
+
+def test_describe_paired_files__none_files():
+    assert_raises(ValueError, describe_paired_files, None, None)
+
+def test_describe_paired_files__none_files_1():
+    assert_raises(ValueError, describe_paired_files, None, ())
+
+def test_describe_paired_files__none_files_2():
+    assert_raises(ValueError, describe_paired_files, (), None)
