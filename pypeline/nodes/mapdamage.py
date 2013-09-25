@@ -48,12 +48,13 @@ MAPDAMAGE_VERSION = versions.Requirement(call   = ("mapDamage", "--version"),
 
 
 class MapDamagePlotNode(CommandNode):
-    def __init__(self, config, reference, input_files, output_directory, dependencies):
+    def __init__(self, config, reference, input_files, output_directory, title = "mapDamage", dependencies = ()):
         cat_cmds, cat_obj = concatenate_input_bams(config, input_files)
         cmd_map = AtomicCmd(["mapDamage", "--no-stats",
                              # Prevent references with many contigs from using excessive
                              # amounts of memory, at the cost of per-contig statistics:
                              "--merge-reference-sequences",
+                             "-t", title,
                              "-n", _MAPDAMAGE_MAX_READS,
                              "-i", "-",
                              "-d", "%(TEMP_DIR)s",
@@ -92,7 +93,7 @@ class MapDamagePlotNode(CommandNode):
 
 
 class MapDamageModelNode(CommandNode):
-    def __init__(self, reference, directory, dependencies):
+    def __init__(self, reference, directory, dependencies = ()):
         self._directory = directory
 
         command = AtomicCmd(["mapDamage", "--stats-only",
@@ -147,7 +148,7 @@ class MapDamageModelNode(CommandNode):
 
 
 class MapDamageRescaleNode(CommandNode):
-    def __init__(self, config, reference, input_files, output_file, directory, dependencies):
+    def __init__(self, config, reference, input_files, output_file, directory, dependencies = ()):
         self._directory = directory
 
         cat_cmds, cat_obj = concatenate_input_bams(config, input_files)
