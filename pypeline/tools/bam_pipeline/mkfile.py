@@ -95,7 +95,7 @@ _TEMPLATE_BAM_OPTIONS = \
 #      --trim5: 5
 #      --trim3: 5
       # Note that the colon is required, even if no value is specified
-       --very-sensitive:
+      --very-sensitive:
       # Example of how to specify multiple values for an option
 #      --rg:
 #        - CN:SequencingCenterNameHere
