@@ -292,9 +292,9 @@ def _sh_wrapper(func, source, destination):
     try:
         func(source, destination)
     except IOError, error:
-        if (error.errno == errno.ENOENT) and os.path.exists(source):
-            dirname = os.path.dirname(destination)
-            if not os.path.exists(dirname):
+        if (error.errno == errno.ENOENT):
+            if source and destination and os.path.exists(source):
+                dirname = os.path.dirname(destination)
                 make_dirs(dirname)
                 func(source, destination)
                 return
