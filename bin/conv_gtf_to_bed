@@ -233,6 +233,9 @@ def build_feature_table_for_noncoding_seqs(options, table):
 
 
 def write_bed(table, target):
+    if not table:
+        return
+
     def sort_key(record):
         return (record["contig"], record["start"], record["end"])
 
