@@ -29,8 +29,6 @@ from pypeline.nodes.sequences import \
      FilterSingletonsMetaNode
 from pypeline.nodes.mafft import MetaMAFFTNode
 
-import pypeline.tools.phylo_pipeline.parts.common \
-  as common
 
 
 
@@ -39,10 +37,9 @@ def build_msa_nodes(options, settings, interval, taxa, filtering, dependencies):
         raise RuntimeError("Only MAFFT support has been implemented!")
 
     sequencedir = os.path.join(options.destination, "alignments", interval["Name"])
-    filenames   = common.get_fasta_files(options, interval, taxa)
-    sequences   = common.get_sequences(options, interval)
+    sequences   = interval["Sequences"]
 
-    node = CollectSequencesNode(fasta_files  = filenames,
+    node = CollectSequencesNode(fasta_files  = interval["Genotypes"],
                                 destination  = sequencedir,
                                 sequences    = sequences,
                                 dependencies = dependencies)

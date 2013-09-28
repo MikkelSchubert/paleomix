@@ -30,7 +30,6 @@ from pypeline.common.formats.fasta import FASTA
 from pypeline.common.utilities import safe_coerce_to_frozenset
 
 import pypeline.common.fileutils as fileutils
-import pypeline.tools.phylo_pipeline.parts.common as common
 
 
 
@@ -128,7 +127,7 @@ def build_codeml_nodes(options, settings, interval, filtering, dependencies):
         afa_ext = ".fasta"
 
     paml        = settings["PAML"]
-    sequences   = common.get_sequences(options, interval)
+    sequences   = interval["Sequences"]
     sequencedir = os.path.join(options.destination, "alignments", interval["Name"] + in_postfix)
     destination = os.path.join(options.destination, "paml", "codeml", interval["Name"] + out_postfix)
 

@@ -45,6 +45,7 @@ from pypeline.nodes.bedtools import SlopBedNode
 
 
 from pypeline.common.fileutils import \
+     swap_ext, \
      move_file, \
      add_postfix
 from pypeline.common.formats.fasta import FASTA
@@ -122,13 +123,10 @@ class VCFFilterNode(CommandNode):
 class BuildRegionsNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, options, infile, interval, outfile, padding, dependencies = ()):
-        prefix = "{Genome}.{Name}".format(**interval)
-        intervals = os.path.join(options.intervals_root, prefix + ".bed")
-
-        params = AtomicCmdBuilder(["bam_genotype_regions"],
+        params = AtomicCmdBuilder(["bam_genotype_regions", "--padding", padding],
                                   IN_VCFFILE   = infile,
                                   IN_TABIX     = infile + ".tbi",
-                                  IN_INTERVALS = intervals,
+                                  IN_INTERVALS = interval["BED"],
                                   OUT_STDOUT   = outfile)
         params.set_option("--genotype", "%(IN_VCFFILE)s")
         params.set_option("--intervals", "%(IN_INTERVALS)s")
@@ -234,19 +232,16 @@ def build_fasta_index_node(reference, dependencies):
 
 _BED_CACHE = {}
 def build_interval_nodes(options, interval, padding, dependencies):
-    prefix = "{Genome}.{Name}".format(**interval)
-    source = os.path.join(options.intervals_root, prefix + ".bed")
-    reference   = os.path.join(options.genomes_root, interval["Genome"] + ".fasta")
-    destination = add_postfix(source, ".padded_%ibp" % (padding,))
+    destination = add_postfix(interval["BED"], ".padded_%ibp" % (padding,))
 
     if not padding:
-        return source, dependencies
+        return interval["BED"], dependencies
 
     if destination not in _BED_CACHE:
-        faidx_node = build_fasta_index_node(reference, dependencies)
+        faidx_node = build_fasta_index_node(interval["FASTA"], dependencies)
         _BED_CACHE[destination] \
-          = SlopBedNode(genome        = reference + ".fai",
-                        infile        = source,
+          = SlopBedNode(genome        = interval["FASTA"] + ".fai",
+                        infile        = interval["BED"],
                         outfile       = destination,
                         from_start    = padding,
                         from_end      = padding,
@@ -256,12 +251,10 @@ def build_interval_nodes(options, interval, padding, dependencies):
 
 
 def build_genotyping_nodes(options, genotyping, taxa, interval, dependencies):
-    prefix = "{0}.{Genome}.{Name}".format(taxa["Name"], **interval)
-    reference = os.path.join(options.genomes_root, interval["Genome"] + ".fasta")
-    fasta     = os.path.join(options.destination, "genotypes", prefix + ".fasta")
-    calls     = os.path.join(options.destination, "genotypes", prefix + ".vcf.bgz")
-    pileups   = os.path.join(options.destination, "genotypes", prefix + ".vcf.pileup.bgz")
-    filtered  = os.path.join(options.destination, "genotypes", prefix + ".filtered.vcf.bgz")
+    fasta     = interval["Genotypes"][taxa["Name"]]
+    calls     = swap_ext(fasta, ".vcf.bgz")
+    pileups   = swap_ext(fasta, ".vcf.pileup.bgz")
+    filtered  = swap_ext(fasta, ".filtered.vcf.bgz")
 
     padding = genotyping["Padding"]
     infile  = os.path.join(options.samples_root, "%s.%s.bam" % (taxa["Name"], interval["Genome"]))
@@ -269,7 +262,7 @@ def build_genotyping_nodes(options, genotyping, taxa, interval, dependencies):
         infile = add_postfix(infile, ".realigned")
 
     slop, node =  build_interval_nodes(options, interval, padding, dependencies)
-    genotype = GenotypeNode.customize(reference          = reference,
+    genotype = GenotypeNode.customize(reference          = interval["FASTA"],
                                       regions            = slop,
                                       infile             = infile,
                                       outfile            = calls,
@@ -279,7 +272,7 @@ def build_genotyping_nodes(options, genotyping, taxa, interval, dependencies):
     apply_options(genotype.commands["genotype"], genotyping["BCFTools"])
     genotype = genotype.build_node()
 
-    vcfpileup = VCFPileupNode.customize(reference    = reference,
+    vcfpileup = VCFPileupNode.customize(reference    = interval["FASTA"],
                                         in_bam       = infile,
                                         in_vcf       = calls,
                                         outfile      = pileups,
@@ -317,39 +310,34 @@ def build_genotyping_nodes(options, genotyping, taxa, interval, dependencies):
 
 
 def build_sampling_nodes(options, genotyping, taxa, interval, dependencies):
-    prefix = "{Genome}.{Name}".format(**interval)
-    reference = os.path.join(options.genomes_root, interval["Genome"] + ".fasta")
-    destination = os.path.join(options.destination, "genotypes", "%s.%s.fasta" % (taxa["Name"], prefix))
-    intervals = os.path.join(options.intervals_root, prefix + ".bed")
-    pileup = os.path.join(options.destination, "genotypes", "%s.%s.pileup.bgz" % (taxa["Name"], prefix))
+    fasta_file  = interval["Genotypes"][taxa["Name"]]
+    pileup_file = swap_ext(fasta_file, ".bgz")
 
     padding = genotyping["Padding"]
     slop, node =  build_interval_nodes(options, interval, padding, dependencies)
-    genotype = MPileupNode(reference          = reference,
+    genotype = MPileupNode(reference          = interval["FASTA"],
                            regions            = slop,
                            infile             = os.path.join(options.samples_root, "%s.%s.bam" % (taxa["Name"], interval["Genome"])),
-                           outfile            = pileup,
+                           outfile            = pileup_file,
                            dependencies       = node)
-    tabix    = TabixIndexNode(infile          = pileup,
+    tabix    = TabixIndexNode(infile          = pileup_file,
                               preset          = "pileup",
                               dependencies    = genotype)
 
-    builder  = SampleRegionsNode(infile       = pileup,
-                                 intervals    = intervals,
-                                 outfile      = destination,
+    builder  = SampleRegionsNode(infile       = pileup_file,
+                                 intervals    = interval["BED"],
+                                 outfile      = fasta_file,
                                  dependencies = tabix)
     return (builder,)
 
 
 def build_reference_nodes(options, taxa, interval, dependencies):
-    prefix = "{Genome}.{Name}".format(**interval)
-    reference = os.path.join(options.genomes_root, taxa["Name"] + ".fasta")
-    destination = os.path.join(options.destination, "genotypes", "%s.%s.fasta" % (taxa["Name"], prefix))
-    intervals = os.path.join(options.intervals_root, prefix + ".bed")
-    faidx_node = build_fasta_index_node(reference, dependencies)
+    fasta_file  = "%s.%s.fasta" % (taxa["Name"], interval["Prefix"])
+    destination = os.path.join(options.destination, "genotypes", fasta_file)
+    faidx_node  = build_fasta_index_node(interval["FASTA"], dependencies)
 
-    node  = ExtractReference(reference          = reference,
-                             intervals          = intervals,
+    node  = ExtractReference(reference          = interval["FASTA"],
+                             intervals          = interval["BED"],
                              outfile            = destination,
                              dependencies       = faidx_node)
     return (node,)

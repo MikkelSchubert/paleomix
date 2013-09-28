@@ -20,9 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import os
 import types
+import pysam
 
 import pypeline.common.makefile
+from pypeline.common.text import \
+     parse_lines
 from pypeline.common.makefile import \
      MakefileError, \
      REQUIRED_VALUE, \
@@ -40,18 +44,18 @@ from pypeline.common.makefile import \
      Not
 
 
-def read_makefiles(filenames):
+def read_makefiles(options, filenames):
     makefiles = []
     for filename in filenames:
         makefile = pypeline.common.makefile.read_makefile(filename, _VALIDATION)
-        makefile = _mangle_makefile(makefile["Makefile"])
+        makefile = _mangle_makefile(options, makefile["Makefile"])
         makefiles.append(makefile)
     return makefiles
 
 
-def _mangle_makefile(mkfile):
+def _mangle_makefile(options, mkfile):
     _collapse_taxa(mkfile)
-    _update_intervals(mkfile)
+    _update_intervals(options, mkfile)
     _update_filtering(mkfile)
     _update_exclusions(mkfile)
     _check_genders(mkfile)
@@ -103,12 +107,99 @@ def _select_taxa(select, groups, taxa, path):
     return selection
 
 
-def _update_intervals(mkfile):
+def _update_intervals(options, mkfile):
     intervals = mkfile["Project"]["Intervals"]
     for (interval, subdd) in intervals.iteritems():
         if "Genome" not in subdd:
             raise MakefileError("No genome specified for interval %r" % (interval,))
-        subdd["Name"] = interval
+
+        subdd["Name"]   = interval
+        subdd["Prefix"] = "{Genome}.{Name}".format(**subdd)
+        subdd["BED"]    = os.path.join(options.intervals_root, subdd["Prefix"] + ".bed")
+        subdd["FASTA"]  = os.path.join(options.genomes_root, subdd["Genome"] + ".fasta")
+
+        required_files = (
+            ("Intervals file", subdd["BED"], None),
+            ("Reference sequence", subdd["FASTA"], None),
+            ("Reference sequence index", subdd["FASTA"] + ".fai",
+             "Please index using 'samtools faidx %s'" % (subdd["FASTA"],)))
+
+        for (name, path, instructions) in required_files:
+            if not os.path.isfile(path):
+                message = "%s does not exist for %r:\n  Path = %r" \
+                                % (name, interval, path)
+                if instructions:
+                    message = "%s\n%s" % (message, instructions)
+                raise MakefileError(message)
+
+        # Collects seq. names / validate intervals
+        subdd["Sequences"] = _collect_and_validate_interval_sequences(subdd)
+
+        taxadd = subdd["Genotypes"] = {}
+        for taxon_name in mkfile["Project"]["Taxa"]:
+            fasta_file = ".".join((taxon_name, subdd["Prefix"], "fasta"))
+            taxadd[taxon_name] = os.path.join(options.destination,
+                                              mkfile["Project"]["Title"],
+                                              "genotypes",
+                                              fasta_file)
+
+
+def _collect_and_validate_interval_sequences(interval):
+    contigs = {}
+    with open(interval["FASTA"] + ".fai") as faihandle:
+        for line in faihandle:
+            name, length, _ = line.split(None, 2)
+            if name in contigs:
+                raise MakefileError(("Reference contains multiple identically named sequences:\n"
+                                     "  Path = %s\n  Name = %s\n"
+                                     "Please ensure that all sequences have a unique name!")
+                                     % (interval["FASTA"], name))
+            contigs[name] = int(length)
+
+    parser = pysam.asBed()
+    sequences = set()
+    with open(interval["BED"]) as bedhandle:
+        for (line_num, line) in enumerate(bedhandle):
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+
+            try:
+                bed = parser(line, len(line))
+                # Force evaluation of (lazily parsed) properties
+                bed_start = bed.start
+                bed_end   = bed.end
+            except ValueError, error:
+                raise MakefileError(("Error parsing line in intervals file:\n"
+                                     "  File = %r\n  Line = %i\n %s")
+                                     % (interval["BED"], line_num, error))
+
+            if len(bed) < 6:
+                raise MakefileError(("Interval at line #%i (%s) does not contain enough fields;\n"
+                                     "at least the first 6 fields are required. C.f. defination at\n"
+                                     "  http://genome.ucsc.edu/FAQ/FAQformat.html#format1")
+                                     % (line_num, repr(bed.name) if len(bed) > 3 else "unnamed record"))
+
+            contig_len = contigs.get(bed.contig)
+            if contig_len is None:
+                raise MakefileError(("Intervals file contains contigs not found in reference:\n"
+                                     "  Path = %s\n  Name = %s\n"
+                                     "Please ensure that all contig names match the reference names!")
+                                     % (interval["BED"], bed.contig))
+            elif not (0 <= int(bed_start) < int(bed_end) <= contig_len):
+                raise MakefileError(("Intervals file contains invalid interval:\n"
+                                     "  Path   = %s\n  Contig = %s\n"
+                                     "  Start  = %s\n  End    = %s\n"
+                                     "Start must be >= 0 and < End, and End must be <= %i!")
+                                     % (interval["BED"], bed.contig, bed.start, bed.end, contig_len))
+            elif bed.strand not in "+-":
+                raise MakefileError(("Interval file contains invalid interval: "
+                                     "  Path   = %s\n  Line = %i\n  Name = %s\n"
+                                     "Strand is %r, expected either '+' or '-'")
+                                     % (interval["BED"], line_num, bed.name, bed.strand))
+
+            sequences.add(bed.name)
+    return frozenset(sequences)
 
 
 def _update_filtering(mkfile):

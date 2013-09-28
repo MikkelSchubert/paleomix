@@ -159,7 +159,7 @@ def main(argv):
         return mkfile.main(args[1:])
 
     try:
-        makefiles = read_makefiles(args)
+        makefiles = read_makefiles(options, args)
     except (MakefileError, yaml.YAMLError), error:
         print_err("Error reading makefiles:",
                   "\n  %s:\n   " % (error.__class__.__name__,),
