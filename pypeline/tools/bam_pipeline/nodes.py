@@ -35,9 +35,13 @@ from pypeline.common.fileutils import describe_files
 
 
 class FilterCollapsedBAMNode(CommandNode):
-    def __init__(self, config, input_bams, output_bam, dependencies = ()):
+    def __init__(self, config, input_bams, output_bam, keep_dupes, dependencies = ()):
         cat_cmds, cat_obj = concatenate_input_bams(config, input_bams)
-        filteruniq = AtomicCmd(["bam_rmdup_collapsed", "--remove-duplicates"],
+        rmdup_call = ["bam_rmdup_collapsed"]
+        if not keep_dupes:
+            rmdup_call.append("--remove-duplicates")
+
+        filteruniq = AtomicCmd(rmdup_call,
                                IN_STDIN   = cat_obj,
                                OUT_STDOUT = output_bam)
 
@@ -114,11 +118,8 @@ class CleanupBAMNode(CommandNode):
         params.set_option("COMPRESSION_LEVEL", "0", sep = "=")
         params.set_option("SORT_ORDER", "coordinate", sep = "=")
 
-        for (tag, value) in sorted(tags.iteritems()):
-            if tag not in ("PG", "Target", "PU_src", "PU_cur"):
-                params.set_option(tag, value, sep = "=")
-            elif tag == "PU_src":
-                params.set_option("PU", value, sep = "=")
+        for tag in ("SM", "LB", "PU", "PL", "PG"):
+            params.set_option(tag, tags[tag], sep = "=")
 
         params.set_kwargs(IN_STDIN   = flt,
                          OUT_STDOUT = AtomicCmd.PIPE)

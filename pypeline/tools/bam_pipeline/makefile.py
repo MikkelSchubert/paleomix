@@ -113,6 +113,8 @@ _VALIDATION_OPTIONS = {
         "BWA" : {
             # Minimum mapping quality (PHREAD) of reads to retain
             "MinQuality" : IsUnsignedInt(default = 0),
+            # Remove unmapped reads or not
+            "FilterUnmappedReads" : IsBoolean(default = True),
             # Use seed region during mapping
             # Verbose name for command-line option "-l 65535"
             "UseSeed"    : IsBoolean(default = True),
@@ -123,14 +125,18 @@ _VALIDATION_OPTIONS = {
         "Bowtie2" : {
             # Minimum mapping quality (PHREAD) of reads to retain
             "MinQuality" : IsUnsignedInt(default = 0),
+            # Remove unmapped reads or not
+            "FilterUnmappedReads" : IsBoolean(default = True),
             # Any number of user specific options
             StringStartsWith("-") : Or(IsListOf(IsStr, IsInt, IsFloat),
                                        Or(IsStr, IsInt, IsFloat, IsNone)),
         },
     },
 
-    # Contains PCR duplicates, filter if true
-    "PCRDuplicates"     : IsBoolean(default = True),
+    # Does sample contain PCR duplicates / what to do about it.
+    # True is equivalent of 'remove'.
+    "PCRDuplicates"     : StringIn((True, False, 'mark', 'filter'),
+                                   default = 'filter'),
     # Qualities should be rescaled using mapDamage
     "RescaleQualities"  : IsBoolean(default = False),
 

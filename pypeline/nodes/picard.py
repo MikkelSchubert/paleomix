@@ -101,7 +101,7 @@ class BuildSequenceDictNode(CommandNode):
 
 class MarkDuplicatesNode(CommandNode):
     @create_customizable_cli_parameters
-    def customize(cls, config, input_bams, output_bam, output_metrics = None, dependencies = ()):
+    def customize(cls, config, input_bams, output_bam, output_metrics = None, keep_dupes = False, dependencies = ()):
         jar_file = os.path.join(config.jar_root, "MarkDuplicates.jar")
         params = AtomicJavaCmdBuilder(config, jar_file)
 
@@ -116,8 +116,9 @@ class MarkDuplicatesNode(CommandNode):
             params.add_option("I", "%%(IN_BAM_%02i)s" % index, sep = "=")
             params.set_kwargs(**{("IN_BAM_%02i" % index) : filename})
 
-        # Remove duplicates from output by default to save disk-space
-        params.set_option("REMOVE_DUPLICATES", "True", sep = "=", fixed = False)
+        if not keep_dupes:
+            # Remove duplicates from output by default to save disk-space
+            params.set_option("REMOVE_DUPLICATES", "True", sep = "=", fixed = False)
 
         params.set_kwargs(OUT_BAM     = output_bam,
                          OUT_BAI     = swap_ext(output_bam, ".bai"),

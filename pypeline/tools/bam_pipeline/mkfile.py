@@ -80,6 +80,8 @@ _TEMPLATE_BAM_OPTIONS = \
     BWA:
       # Filter hits with a mapping quality (PHRED) below this value
       MinQuality: 0
+      # Filter reads that did not map to the reference sequence
+      FilterUnmappedReads: yes
       # Should be disabled ("no") for aDNA alignments, as post-mortem localizes
       # to the seed region, which BWA expects to have few errors. Sets "-l".
       # See Schubert et al. 2012: http://pmid.us/22574660
@@ -91,6 +93,8 @@ _TEMPLATE_BAM_OPTIONS = \
     Bowtie2:
       # Filter hits with a mapping quality (PHRED) below this value
       MinQuality: 0
+      # Filter reads that did not map to the reference sequence
+      FilterUnmappedReads: yes
       # Examples of how to add additional command-line options
 #      --trim5: 5
 #      --trim3: 5
@@ -101,10 +105,13 @@ _TEMPLATE_BAM_OPTIONS = \
 #        - CN:SequencingCenterNameHere
 #        - DS:DescriptionOfReadGroup
 
-  # Filter PCR duplicates
-  # Collapsed reads are filtered using Martin Kirchers FilterUnique,
-  # while other reads are filtered using Picard MarkDuplicates.
-  PCRDuplicates: yes
+  # Mark / filter PCR duplicates. If set to 'filter', PCR duplicates
+  # are removed from the output files; if set to 'mark', these are
+  # flagged with bit 0x400; if set to 'no', the reads are assumed to
+  # not have been amplified. Collapsed reads are filtered using the
+  # command 'bam_rmdup_duplicates', while "normal" reads are filtered
+  # using Picard MarkDuplicates.
+  PCRDuplicates: filter
   # Carry out quality base re-scaling using mapDamage (*EXPERIMENTAL*)
   RescaleQualities: no
 

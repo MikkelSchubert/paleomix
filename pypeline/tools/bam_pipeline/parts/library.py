@@ -21,6 +21,7 @@
 # SOFTWARE.
 #
 import os
+import types
 
 from pypeline.common.utilities import safe_coerce_to_tuple
 from pypeline.node import MetaNode
@@ -70,8 +71,10 @@ class Library:
         assert all((self.options == lane.options) for lane in self.lanes)
 
         lane_bams = self._collect_bams_by_type(self.lanes)
-        if self.options["PCRDuplicates"]:
-            lane_bams = self._remove_pcr_duplicates(config, prefix, lane_bams)
+
+        pcr_duplicates = self.options["PCRDuplicates"]
+        if pcr_duplicates:
+            lane_bams = self._remove_pcr_duplicates(config, prefix, lane_bams, pcr_duplicates)
 
         # At this point we no longer need to differentiate between types of reads
         files_and_nodes = self._collect_files_and_nodes(lane_bams)
@@ -101,9 +104,13 @@ class Library:
         return files_and_nodes
 
 
-    def _remove_pcr_duplicates(self, config, prefix, bams):
+    def _remove_pcr_duplicates(self, config, prefix, bams, strategy):
         rmdup_cls = {"collapsed"  : FilterCollapsedBAMNode,
                      "normal"     : MarkDuplicatesNode}
+
+        keep_duplicates = False
+        if isinstance(strategy, types.StringTypes) and (strategy.lower() == "mark"):
+            keep_duplicates = True
 
         results = {}
         for (key, files_and_nodes) in bams.items():
@@ -111,6 +118,7 @@ class Library:
             node = rmdup_cls[key](config       = config,
                                   input_bams   = files_and_nodes.keys(),
                                   output_bam   = output_filename,
+                                  keep_dupes   = keep_duplicates,
                                   dependencies = files_and_nodes.values())
             validated_node = IndexAndValidateBAMNode(config, prefix, node)
 

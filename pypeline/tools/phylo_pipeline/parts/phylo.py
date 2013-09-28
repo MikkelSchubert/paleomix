@@ -143,7 +143,7 @@ def build_examl_bootstraps(options, phylo, destination, input_alignment, input_p
                                          start            = bootstrap_start,
                                          dependencies     = dependencies)
 
-        bootstrap_end = min(num_bootstraps, bootstrap_start + _BOOTSTRAP_CHUNK)
+        bootstrap_end = max(num_bootstraps, bootstrap_start + _BOOTSTRAP_CHUNK)
         for bootstrap_num in range(bootstrap_start, bootstrap_end):
             bootstrap_alignment   = bootstrap_template % (bootstrap_num,)
             bootstrap_binary      = swap_ext(bootstrap_alignment, ".binary")

@@ -46,7 +46,7 @@ def _bwa_aln_se(config, index):
                          **node_params)
     custom   = SEBWANode.customize(output_file = os.path.join(config.destination, "aln_se_custom", "output.bam"),
                                    **node_params)
-    custom.commands["samse"].set_option("-r", "@RG\tID:1\tPL:Illumina\tPU:123456\tLB:Library_1\tSM:Sample_1")
+    custom.commands["sam"].set_option("-r", "@RG\tID:1\tPL:Illumina\tPU:123456\tLB:Library_1\tSM:Sample_1")
 
     return MetaNode(description  = "BWA aln SE",
                     dependencies = [standard, custom.build_node()])
@@ -64,7 +64,7 @@ def _bwa_aln_pe(config, index):
                          **node_params)
     custom   = PEBWANode.customize(output_file = os.path.join(config.destination, "aln_pe_custom", "output.bam"),
                                    **node_params)
-    custom.commands["sampe"].set_option("-r", "@RG\tID:1\tPL:Illumina\tPU:123456\tLB:Library_1\tSM:Sample_1")
+    custom.commands["sam"].set_option("-r", "@RG\tID:1\tPL:Illumina\tPU:123456\tLB:Library_1\tSM:Sample_1")
 
     return MetaNode(description  = "BWA aln PE",
                     dependencies = [standard, custom.build_node()])

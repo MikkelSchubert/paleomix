@@ -121,13 +121,13 @@ class SEBWANode(CommandNode):
         samse.add_value("%(TEMP_IN_FILE)s")
 
         order, commands = _process_output(samse, output_file, reference)
-        commands["samse_in"] = samse_in
-        commands["samse"]    = samse
+        commands["sam_in"] = samse_in
+        commands["sam"]    = samse
         commands["aln_in"]   = aln_in
         commands["aln"]      = aln
 
         return {"commands"     : commands,
-                "order"        : ["aln_in", "aln", "samse_in", "samse"] + order,
+                "order"        : ["aln_in", "aln", "sam_in", "sam"] + order,
                 "threads"      : threads,
                 "dependencies" : dependencies}
 
@@ -168,16 +168,16 @@ class PEBWANode(CommandNode):
         sampe      = cls._create_sampe_cmd(prefix)
 
         order, commands = _process_output(sampe, output_file, reference, run_fixmate = True)
-        commands["sampe"] = sampe
-        commands["sampe_in_1"] = sampe_in_1
-        commands["sampe_in_2"] = sampe_in_2
+        commands["sam"] = sampe
+        commands["sam_in_1"] = sampe_in_1
+        commands["sam_in_2"] = sampe_in_2
         commands["aln_in_1"], commands["aln_in_2"] = aln_in_commands
         commands["aln_1"],    commands["aln_2"]    = aln_commands
 
         return {"commands"     : commands,
                 "order"        : ["aln_in_1", "aln_1",
                                   "aln_in_2", "aln_2",
-                                  "sampe_in_1", "sampe_in_2", "sampe"] + order,
+                                  "sam_in_1", "sam_in_2", "sam"] + order,
                 # At least one thread per 'aln' process
                 "threads"      : max(2, threads),
                 "dependencies" : dependencies}
@@ -297,7 +297,6 @@ class BWASWNode(CommandNode):
 def _process_output(stdin, output_file, reference, run_fixmate = False):
     convert = AtomicCmdBuilder("safeSAM2BAM")
     convert.set_option("--flag-as-sorted")
-    convert.set_option("-F", "0x4", sep = "", fixed = False) # Remove misses
     convert.set_kwargs(IN_STDIN    = stdin,
                       OUT_STDOUT  = AtomicCmd.PIPE,
                       CHECK_SAMTOOLS = SAMTOOLS_VERSION)
