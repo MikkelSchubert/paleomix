@@ -133,6 +133,12 @@ PhylogeneticInference:
 #    - <NAME_OF_GROUP>
 #    - NAME_OF_SAMPLE
 
+  # Limit analysis to a subset of a RegionOfInterest; subsets are expected to be
+  # located at <genome root>/<prefix>.<areas name>.<subset name>.names, and
+  # contain single name (corresponding to column 4 in the BED file) per line.
+#  SubsetRegions:
+#    REGIONS_NAME: SUBSET_NAME
+
   ExaML:
     # Number of times to perform full phylogenetic inference
     Replicates: 1
@@ -148,6 +154,12 @@ PhylogeneticInference:
 #    ExcludeSamples:
 #      - <NAME_OF_GROUP>
 #      - NAME_OF_SAMPLE
+
+    # Limit analysis to a subset of a RegionOfInterest; subsets are expected to be
+    # located at <genome root>/<prefix>.<areas name>.<subset name>.names, and
+    # contain single name (corresponding to column 4 in the BED file) per line.
+#    SubsetRegions:
+#      REGIONS_NAME: SUBSET_NAME
 
     # One or more 'codeml' runs; name is used as a postfix for results.
 #    NAME:

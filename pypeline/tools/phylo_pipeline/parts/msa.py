@@ -37,7 +37,8 @@ def build_msa_nodes(options, settings, regions, filtering, dependencies):
         raise RuntimeError("Only MAFFT support has been implemented!")
 
     sequencedir = os.path.join(options.destination, "alignments", regions["Name"])
-    sequences   = regions["Sequences"]
+    # Run on full set of sequences
+    sequences   = regions["Sequences"][None]
 
     node = CollectSequencesNode(fasta_files  = regions["Genotypes"],
                                 destination  = sequencedir,

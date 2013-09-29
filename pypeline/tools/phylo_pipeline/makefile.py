@@ -40,6 +40,9 @@ from pypeline.common.makefile import \
      And, \
      Or, \
      Not
+from pypeline.common.fileutils import \
+     swap_ext
+
 
 
 def read_makefiles(options, filenames):
@@ -54,6 +57,7 @@ def read_makefiles(options, filenames):
 def _mangle_makefile(options, mkfile):
     _collapse_samples(mkfile)
     _update_regions(options, mkfile)
+    _update_subsets(options, mkfile)
     _update_filtering(mkfile)
     _update_exclusions(mkfile)
     _check_genders(mkfile)
@@ -132,7 +136,7 @@ def _update_regions(options, mkfile):
                 raise MakefileError(message)
 
         # Collects seq. names / validate regions
-        subdd["Sequences"] = _collect_and_validate_regions_sequences(subdd)
+        subdd["Sequences"] = {None : _collect_and_validate_sequences_and_subsets(subdd)}
 
         sampledd = subdd["Genotypes"] = {}
         for sample_name in mkfile["Project"]["Samples"]:
@@ -143,14 +147,14 @@ def _update_regions(options, mkfile):
                                               fasta_file)
 
 
-def _collect_and_validate_regions_sequences(regions):
+def _collect_and_validate_sequences_and_subsets(regions):
     contigs = {}
     with open(regions["FASTA"] + ".fai") as faihandle:
         for line in faihandle:
             name, length, _ = line.split(None, 2)
             if name in contigs:
                 raise MakefileError(("Reference contains multiple identically named sequences:\n"
-                                     "  Path = %s\n  Name = %s\n"
+                                     "  Path = %r\n  Name = %r\n"
                                      "Please ensure that all sequences have a unique name!")
                                      % (regions["FASTA"], name))
             contigs[name] = int(length)
@@ -182,23 +186,62 @@ def _collect_and_validate_regions_sequences(regions):
             contig_len = contigs.get(bed.contig)
             if contig_len is None:
                 raise MakefileError(("Regions file contains contigs not found in reference:\n"
-                                     "  Path = %s\n  Name = %s\n"
+                                     "  Path = %r\n  Name = %r\n"
                                      "Please ensure that all contig names match the reference names!")
                                      % (regions["BED"], bed.contig))
             elif not (0 <= int(bed_start) < int(bed_end) <= contig_len):
                 raise MakefileError(("Regions file contains invalid region:\n"
-                                     "  Path   = %s\n  Contig = %s\n"
+                                     "  Path   = %r\n  Contig = %r\n"
                                      "  Start  = %s\n  End    = %s\n"
                                      "Start must be >= 0 and < End, and End must be <= %i!")
                                      % (regions["BED"], bed.contig, bed.start, bed.end, contig_len))
             elif bed.strand not in "+-":
                 raise MakefileError(("Regions file contains invalid region: "
-                                     "  Path   = %s\n  Line = %i\n  Name = %s\n"
+                                     "  Path   = %r\n  Line = %i\n  Name = %r\n"
                                      "Strand is %r, expected either '+' or '-'")
                                      % (regions["BED"], line_num, bed.name, bed.strand))
 
             sequences.add(bed.name)
     return frozenset(sequences)
+
+
+def _update_subsets(_options, mkfile):
+    subsets_by_regions = mkfile["Project"]["Regions"]
+    def _collect_subsets(tree, path):
+        for (roi, subset) in tree.get("SubsetRegions", {}).iteritems():
+            if roi not in subsets_by_regions:
+                raise MakefileError("Subset of unknown region (%r) requested at %r" % (roi, path))
+
+            roi_fname = swap_ext(subsets_by_regions[roi]["BED"], subset + ".names")
+            if not os.path.isfile(roi_fname):
+                raise MakefileError(("Subset file does not exist Regions Of Interest:\n"
+                                     "  Region = %r\n  Subset = %r\n  Path   = %r")
+                                     % (roi, subset, roi_fname))
+
+            sequences = set()
+            with open(roi_fname) as handle:
+                for line in handle:
+                    line = line.strip()
+                    if line and not line.startswith("#"):
+                        sequences.add(line)
+
+            known_seqs   = subsets_by_regions[roi]["Sequences"][None]
+            unknown_seqs = sequences - known_seqs
+            if unknown_seqs:
+                message = ("Unknown sequences in subset file:\n"
+                           "  File   = %r\n  Areas  = %r\n  Subset = %r\n"
+                           "  Unknown sequence names =") \
+                           % (roi_fname, roi, subset)
+                unknown_seqs = list(sorted(unknown_seqs))
+                if len(unknown_seqs) > 5:
+                    unknown_seqs = unknown_seqs[:5] + ["..."]
+                message = "\n    - ".join([message] + unknown_seqs)
+                raise MakefileError(message)
+
+            subsets_by_regions[roi]["Sequences"][subset] = frozenset(sequences)
+
+    _collect_subsets(mkfile["PhylogeneticInference"], "PhylogeneticInference")
+    _collect_subsets(mkfile["PAML"]["codeml"], "PAML:codeml")
 
 
 def _update_filtering(mkfile):
@@ -332,6 +375,7 @@ _VALIDATION = {
         },
     "PhylogeneticInference" : {
         "ExcludeSamples" : IsListOf(IsStr, default = []),
+        "SubsetRegions"  : IsDictOf(IsStr, IsStr, default = {}),
         "Default" : StringIn(("examl",), # TODO: Add support for other programs
                              default = "examl"),
         "ExaML" : {
@@ -344,6 +388,7 @@ _VALIDATION = {
     "PAML" : {
         "codeml" : {
             "ExcludeSamples" : IsListOf(IsStr, default = []),
+            "SubsetRegions"  : IsDictOf(IsStr, IsStr, default = {}),
             IsStr : {
                 "ControlFile" : IsStr(default = REQUIRED_VALUE),
                 "TreeFile"    : IsStr(default = REQUIRED_VALUE),

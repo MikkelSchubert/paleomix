@@ -126,8 +126,9 @@ def build_codeml_nodes(options, settings, regions, filtering, dependencies):
         out_postfix = ".unaligned" + out_postfix
         afa_ext = ".fasta"
 
-    paml        = settings["PAML"]
-    sequences   = regions["Sequences"]
+    codeml      = settings["PAML"]["codeml"]
+    subset_key  = codeml["SubsetRegions"].get(regions["Name"])
+    sequences   = regions["Sequences"][subset_key]
     sequencedir = os.path.join(options.destination, "alignments", regions["Name"] + in_postfix)
     destination = os.path.join(options.destination, "paml", "codeml", regions["Name"] + out_postfix)
 
@@ -136,9 +137,9 @@ def build_codeml_nodes(options, settings, regions, filtering, dependencies):
         fasta_files[sequence] = os.path.join(sequencedir, sequence + afa_ext)
 
     codeml_nodes = []
-    for (ctl_name, ctl_files) in paml["codeml"].iteritems():
+    for (ctl_name, ctl_files) in codeml.iteritems():
         # This dictionary also contains the "ExcludeSamples" option
-        if ctl_name == "ExcludeSamples":
+        if ctl_name in ("ExcludeSamples", "SubsetRegions"):
             continue
 
         for (sequence, filename) in fasta_files.iteritems():
@@ -148,7 +149,7 @@ def build_codeml_nodes(options, settings, regions, filtering, dependencies):
                                 trees_file     = ctl_files["TreeFile"],
                                 sequence_file  = filename,
                                 output_tar     = output_tar,
-                                exclude_groups = paml["codeml"]["ExcludeSamples"],
+                                exclude_groups = codeml["ExcludeSamples"],
                                 dependencies   = dependencies)
             codeml_nodes.append(codeml)
 

@@ -52,7 +52,8 @@ _BOOTSTRAP_CHUNK = 25
 def build_supermatrix(options, settings, afa_ext, destination, regions, filtering_postfix, dependencies):
     input_files = {}
     sequencedir = os.path.join(options.destination, "alignments", regions["Name"] + filtering_postfix)
-    for sequence in regions["Sequences"]:
+    subset_key  = settings["SubsetRegions"].get(regions["Name"])
+    for sequence in regions["Sequences"][subset_key]:
         filename = os.path.join(sequencedir, sequence + afa_ext)
         record = {"name" : sequence}
         if regions["ProteinCoding"]:
