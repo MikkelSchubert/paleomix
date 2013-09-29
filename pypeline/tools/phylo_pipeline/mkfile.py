@@ -128,23 +128,37 @@ MSAlignment:
 
 
 PhylogeneticInference:
-  # Exclude (groups of) samples from this analytical step
-#  ExcludeSamples:
-#    - <NAME_OF_GROUP>
-#    - NAME_OF_SAMPLE
+  PHYLOGENY_NAME:
+    # Exclude (groups of) samples from this analytical step
+    ExcludeSamples:
+      - <NAME_OF_GROUP>
+      - NAME_OF_SAMPLE
 
-  # Limit analysis to a subset of a RegionOfInterest; subsets are expected to be
-  # located at <genome root>/<prefix>.<region name>.<subset name>.names, and
-  # contain single name (corresponding to column 4 in the BED file) per line.
-#  SubsetRegions:
-#    REGIONS_NAME: SUBSET_NAME
+    # If 'yes', a tree is generated per named sequence in the areas of
+    # interest; otherwise a super-matrix is created from the combined set
+    # of regions specfied below.
+    PerGeneTrees: no
 
-  ExaML:
-    # Number of times to perform full phylogenetic inference
-    Replicates: 1
-    # Number of bootstraps to compute
-    Bootstraps: 100
-    Model: GAMMA
+    # Which Regions Of Interest to build the phylogeny from.
+    RegionsOfInterest:
+       REGIONS_NAME:
+         # Partitioning scheme for sequences: Numbers specify which group a
+         # position belongs to, while 'X' excludes the position from the final
+         # partioned sequence; thus "123" splits sequences by codon-positions,
+         # while "111" produces a single partition per gene. If set to 'no',
+         # a single partition is used for the entire set of regions.
+         Partitions: "111"
+         # Limit analysis to a subset of a RegionOfInterest; subsets are expected to be
+         # located at <genome root>/<prefix>.<region name>.<subset name>.names, and
+         # contain single name (corresponding to column 4 in the BED file) per line.
+         SubsetRegions: SUBSET_NAME
+
+    ExaML:
+      # Number of times to perform full phylogenetic inference
+      Replicates: 1
+      # Number of bootstraps to compute
+      Bootstraps: 100
+      Model: GAMMA
 
 
 #PAML:
@@ -162,7 +176,7 @@ PhylogeneticInference:
 #      REGIONS_NAME: SUBSET_NAME
 
     # One or more 'codeml' runs; name is used as a postfix for results.
-#    NAME:
+#    RUN_NAME:
 #      # Control file template; the values 'seqfile', 'treefile'
 #      # automatically set to the approriate values.
 #      ControlFile: PATH_TO_CODEML_CONTROL_FILE

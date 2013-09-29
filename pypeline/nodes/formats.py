@@ -5,8 +5,8 @@
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
-# copies of the Software, and to permit persons to whom the Software is 
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
 # The above copyright notice and this permission notice shall be included in all
@@ -15,73 +15,84 @@
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import copy
 import collections
 
-from pypeline.node import Node, NodeError
+from pypeline.node import Node
 from pypeline.common.fileutils import move_file, reroot_path
 from pypeline.common.formats.msa import MSA
 from pypeline.common.formats.phylip import interleaved_phy, sequential_phy
 
+from pypeline.common.utilities import \
+     safe_coerce_to_frozenset
 
 
-_VALID_KEYS = frozenset(["name", "partition_by"])
+
+_VALID_KEYS = frozenset(["partitions", "filenames"])
 
 
 class FastaToPartitionedInterleavedPhyNode(Node):
-    def __init__(self, infiles, out_prefix, partition_by = "123", add_flag = False, exclude_groups = (), dependencies = ()):
-        if (len(partition_by) != 3):
-            raise ValueError("Default 'partition_by' must be 3 entires long!")
-        elif not isinstance(infiles, dict):
-            raise TypeError("'infiles' must be a dictionary")
-        elif any(len(dd.get("partition_by", "123")) != 3 for dd in infiles.itervalues()):
-            raise ValueError("'partition_by' must be 3 entires long!")
-        elif not all(isinstance(dd, dict) for dd in infiles.values()):
+    def __init__(self, infiles, out_prefix, exclude_groups = (), dependencies = ()):
+        """
+        infiles = {names : {"partitions" : ..., "filenames" : [...]}}
+        """
+        if not (isinstance(infiles, dict) and all(isinstance(dd, dict) for dd in infiles.values())):
             raise TypeError("'infiles' must be a dictionary of dictionaries")
-        elif not any(("name" in dd) for dd in infiles.values()):
-            raise ValueError("'name' must be specified for all input files")
-        elif any((set(dd) - _VALID_KEYS) for dd in infiles.values()):
-            raise ValueError("Invalid keys found: %s" % ", ".join(set(dd) - _VALID_KEYS))
 
-        self._infiles    = infiles
+        input_filenames = []
+        for (name, subdd) in infiles.iteritems():
+            if set(subdd) - _VALID_KEYS:
+                raise ValueError("Invalid keys found for %r: %s" % (name, ", ".join(set(subdd) - _VALID_KEYS)))
+            elif not isinstance(subdd["filenames"], list):
+                raise ValueError("filenames must be a list of strings")
+            input_filenames.extend(subdd["filenames"])
+
+        self._infiles    = copy.deepcopy(infiles)
         self._out_prefix = out_prefix
-        self._part_by    = partition_by
-        self._add_flag   = add_flag
-        self._excluded   = exclude_groups
+        self._excluded   = safe_coerce_to_frozenset(exclude_groups)
 
-        description  = "<FastaToPartitionedPhy (default: %s): %i file(s) -> '%s.*'>" % \
-            (partition_by, len(infiles), out_prefix)
+        description  = "<FastaToPartitionedPhy: %i file(s) -> '%s.*'>" % \
+            (len(infiles), out_prefix)
+
 
         Node.__init__(self,
                       description  = description,
-                      input_files  = infiles.keys(),
+                      input_files  = input_filenames,
                       output_files = [out_prefix + ".phy", out_prefix + ".partitions"],
                       dependencies = dependencies)
 
 
     def _run(self, _config, temp):
-        msas = []
-        for filename in sorted(self._infiles):
-            split_by = self._infiles[filename].get("partition_by", self._part_by)
-            for (key, msa) in sorted(MSA.from_file(filename).split(split_by).items()):
+        merged_msas = []
+        for (name, files_dd) in sorted(self._infiles.iteritems()):
+            partitions = files_dd["partitions"]
+            msas = dict((key, []) for key in partitions)
+            for filename in files_dd["filenames"]:
+                msa = MSA.from_file(filename)
                 if self._excluded:
                     msa = msa.exclude(self._excluded)
-                msas.append(("%s_%s" % (self._infiles[filename]["name"], key), msa))
 
-        msa = MSA.join(*(msa for (_, msa) in msas))
-        with open(reroot_path(temp, self._out_prefix + ".phy"), "w") as output:
-            output.write(interleaved_phy(msa, add_flag = self._add_flag))
+                for (key, msa_part) in msa.split(partitions).iteritems():
+                    msas[key].append(msa_part)
 
-        with open(reroot_path(temp, self._out_prefix + ".partitions"), "w") as output:
-            end = 0
-            for (name, msa) in msas:
+            msas.pop("X", None)
+            for (key, msa_parts) in sorted(msas.iteritems()):
+                merged_msas.append(("%s_%s" % (name, key), MSA.join(*msa_parts)))
+
+        with open(reroot_path(temp, self._out_prefix + ".phy"), "w") as output_phy:
+            output_phy.write(interleaved_phy(MSA.join(*(msa for (_, msa) in merged_msas))))
+
+        partition_end = 0
+        with open(reroot_path(temp, self._out_prefix + ".partitions"), "w") as output_part:
+            for (name, msa) in merged_msas:
                 length = msa.seqlen()
-                output.write("DNA, %s = %i-%i\n" % (name, end + 1, end + length))
-                end += length
+                output_part.write("DNA, %s = %i-%i\n" % (name, partition_end + 1, partition_end + length))
+                partition_end += length
 
 
     def  _teardown(self, _config, temp):

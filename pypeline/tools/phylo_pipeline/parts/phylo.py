@@ -20,9 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-#!/usr/bin/python
-
 import os
+import collections
 
 from pypeline.node import MetaNode
 from pypeline.nodes.formats import \
@@ -49,26 +48,13 @@ from pypeline.common.fileutils import \
 _BOOTSTRAP_CHUNK = 25
 
 
-def build_supermatrix(options, settings, afa_ext, destination, regions, filtering_postfix, dependencies):
-    input_files = {}
-    sequencedir = os.path.join(options.destination, "alignments", regions["Name"] + filtering_postfix)
-    subset_key  = settings["SubsetRegions"].get(regions["Name"])
-    for sequence in regions["Sequences"][subset_key]:
-        filename = os.path.join(sequencedir, sequence + afa_ext)
-        record = {"name" : sequence}
-        if regions["ProteinCoding"]:
-            record["partition_by"] = ("12", "12", "3")
 
-        assert filename not in input_files, filename
-        input_files[filename] = record
-
-    excluded_groups = settings["ExcludeSamples"]
-    matrixprefix = os.path.join(destination, "alignments")
-    supermatrix  = FastaToPartitionedInterleavedPhyNode(infiles        = input_files,
-                                                        out_prefix     = matrixprefix,
-                                                        partition_by   = "111",
-                                                        exclude_groups = excluded_groups,
-                                                        dependencies   = dependencies)
+def _build_supermatrix(destination, input_files, exclude_samples, dependencies):
+    matrixprefix    = os.path.join(destination, "alignments")
+    supermatrix     = FastaToPartitionedInterleavedPhyNode(infiles        = input_files,
+                                                           out_prefix     = matrixprefix,
+                                                           exclude_groups = exclude_samples,
+                                                           dependencies   = dependencies)
 
     return RAxMLReduceNode(input_alignment  = matrixprefix + ".phy",
                            output_alignment = matrixprefix + ".reduced.phy",
@@ -108,7 +94,7 @@ def _build_rerooted_trees(meta_node):
     return output_node
 
 
-def build_examl_replicates(options, phylo, destination, input_alignment, input_partition, dependencies):
+def _build_examl_replicates(options, phylo, destination, input_alignment, input_partition, dependencies):
     input_binary = os.path.join(destination, "alignments.reduced.binary")
     binary       = EXaMLParserNode(input_alignment = input_alignment,
                                    input_partition = input_partition,
@@ -130,7 +116,7 @@ def build_examl_replicates(options, phylo, destination, input_alignment, input_p
     return None
 
 
-def build_examl_bootstraps(options, phylo, destination, input_alignment, input_partition, dependencies):
+def _build_examl_bootstraps(options, phylo, destination, input_alignment, input_partition, dependencies):
     bootstraps = []
     num_bootstraps = phylo["ExaML"]["Bootstraps"]
     for bootstrap_start in range(0, num_bootstraps, _BOOTSTRAP_CHUNK):
@@ -180,41 +166,91 @@ def add_bootstrap_support(destination, replicate, bootstrap):
     return NewickSupportNode(main_tree_files    = replicate_file,
                              support_tree_files = bootstrap_file,
                              output_file        = output_file,
-                             dependencies       = (bootstrap, replicate))
+                             dependencies       = (bootstrap, replicate)),
 
 
-def build_examl_nodes(options, settings, regions_sets, filtering, dependencies):
-    examl_nodes = []
-    phylo = settings["PhylogeneticInference"]
-    filtering_postfix = ".filtered" if any(filtering.itervalues()) else ""
-    for regions in regions_sets.itervalues():
-        destination = os.path.join(options.destination, "phylogenies", "examl", regions["Name"] + filtering_postfix)
-        afa_ext = ".afa" if settings["MSAlignment"]["Enabled"] else ".fasta"
+def _build_examl_nodes(options, settings, destination, input_files, dependencies):
+    input_alignment = os.path.join(destination, "alignments.reduced.phy")
+    input_partition = os.path.join(destination, "alignments.reduced.partitions")
 
-        input_alignment = os.path.join(destination, "alignments.reduced.phy")
-        input_partition = os.path.join(destination, "alignments.reduced.partitions")
+    excluded    = settings["ExcludeSamples"]
+    supermatrix = _build_supermatrix(destination, input_files, excluded, dependencies)
+    examl_args  = (options, settings, destination, input_alignment, input_partition, supermatrix)
 
-        supermatrix = build_supermatrix(options, phylo, afa_ext, destination, regions, filtering_postfix, dependencies)
-        examl_args  = (options, phylo, destination, input_alignment, input_partition, supermatrix)
+    examl_replicates = _build_examl_replicates(*examl_args)
+    examl_bootstraps = _build_examl_bootstraps(*examl_args)
+    examl_dependencies = add_bootstrap_support(destination, examl_replicates, examl_bootstraps)
 
-        examl_replicates = build_examl_replicates(*examl_args)
-        examl_bootstraps = build_examl_bootstraps(*examl_args)
-        examl_dependencies = add_bootstrap_support(destination, examl_replicates, examl_bootstraps)
-
-        if examl_dependencies:
-            examl_nodes.append(MetaNode(description  = regions["Name"],
-                                        dependencies = examl_dependencies))
-
-    return MetaNode(description = "EXaML",
-                    dependencies = examl_nodes)
+    return examl_dependencies
 
 
-def chain_examl(pipeline, options, makefiles):
+def _build_examl_per_gene_nodes(options, settings, run_dd, roi, destination, filtering, dependencies):
+    regions            = settings["Project"]["Regions"][roi["Name"]]
+    sequences          = regions["Sequences"][roi["SubsetRegions"]]
+    filtering_postfix  = ".filtered" if any(filtering.itervalues()) else ""
+    sequence_dir       = os.path.join(options.destination, "alignments", roi["Name"] + filtering_postfix)
+    fasta_extension    = ".afa" if settings["MSAlignment"]["Enabled"] else ".fasta"
+
+    partitions         = roi["Partitions"] or "111"
+
+    nodes              = []
+    for sequence in sequences:
+        seq_source      = os.path.join(sequence_dir, sequence + fasta_extension)
+        seq_destination = os.path.join(destination, sequence)
+        input_files     = {sequence : {"partitions" : partitions, "filenames" : [seq_source]}}
+        nodes.extend(_build_examl_nodes(options, run_dd, seq_destination, input_files, dependencies))
+
+    return nodes
+
+
+def _build_examl_regions_nodes(options, settings, run_dd, destination, filtering, dependencies):
+    input_files = collections.defaultdict(dict)
+    for (roi_name, roi_dd) in run_dd["RegionsOfInterest"].iteritems():
+        regions     = settings["Project"]["Regions"][roi_name]
+        sequences   = regions["Sequences"][roi_dd.get("SubsetRegions")]
+        partitions  = roi_dd["Partitions"]
+        filtering_postfix  = ".filtered" if any(filtering.itervalues()) else ""
+        sequence_dir       = os.path.join(options.destination, "alignments", roi_name + filtering_postfix)
+        fasta_extension    = ".afa" if settings["MSAlignment"]["Enabled"] else ".fasta"
+
+        if partitions:
+            for sequence in sequences:
+                seq_source = os.path.join(sequence_dir, sequence + fasta_extension)
+                input_files[sequence] = {"partitions" : partitions, "filenames" : [seq_source]}
+        else:
+            filenames = []
+            for sequence in sequences:
+                filenames.append(os.path.join(sequence_dir, sequence + fasta_extension))
+            input_files[roi_name] = {"partitions" : "1", "filenames" : filenames}
+
+    return _build_examl_nodes(options, run_dd, destination, dict(input_files), dependencies)
+
+
+def build_phylogeny_nodes(options, settings, filtering, dependencies):
+    nodes = []
+    for (run_name, run_dd) in settings["PhylogeneticInference"].iteritems():
+        destination = os.path.join(options.destination, "phylogenies", run_name)
+
+        if run_dd["PerGeneTrees"]:
+            run_nodes = []
+            for roi in run_dd["RegionsOfInterest"].itervalues():
+                roi_destination = os.path.join(destination, roi["Name"])
+                run_nodes.extend(_build_examl_per_gene_nodes(options, settings, run_dd, roi, roi_destination, filtering, dependencies))
+            nodes.append(MetaNode(description  = run_name,
+                                  subnodes     = run_nodes,
+                                  dependencies = dependencies))
+        else:
+            nodes.extend(_build_examl_regions_nodes(options, settings, run_dd, destination, filtering, dependencies))
+
+    return MetaNode("Phylogenetic Inference",
+                    dependencies = nodes)
+
+
+def chain_examl(_pipeline, options, makefiles):
     destination = options.destination # Move to makefile
     for makefile in makefiles:
-        regions_sets = makefile["Project"]["Regions"]
         filtering    = makefile["Project"]["FilterSingletons"]
         options.destination = os.path.join(destination, makefile["Project"]["Title"])
 
-        makefile["Nodes"] = build_examl_nodes(options, makefile, regions_sets, filtering, makefile["Nodes"])
+        makefile["Nodes"] = build_phylogeny_nodes(options, makefile, filtering, makefile["Nodes"])
     options.destination = destination

@@ -36,6 +36,8 @@ from pypeline.common.makefile import \
      IsUnsignedInt, \
      IsBoolean, \
      IsNone, \
+     ValueIn, \
+     ValuesSubsetOf, \
      StringStartsWith, \
      StringEndsWith, \
      CLI_PARAMETERS, \
@@ -209,41 +211,48 @@ def _collect_and_validate_sequences_and_subsets(regions):
 
 def _update_subsets(_options, mkfile):
     subsets_by_regions = mkfile["Project"]["Regions"]
-    def _collect_subsets(tree, path):
-        for (roi, subset) in tree.get("SubsetRegions", {}).iteritems():
-            if roi not in subsets_by_regions:
-                raise MakefileError("Subset of unknown region (%r) requested at %r" % (roi, path))
+    def _collect_subsets(roi, subset, path):
+        if roi not in subsets_by_regions:
+            raise MakefileError("Subset of unknown region (%r) requested at %r" % (roi, path))
 
-            roi_fname = swap_ext(subsets_by_regions[roi]["BED"], subset + ".names")
-            if not os.path.isfile(roi_fname):
-                raise MakefileError(("Subset file does not exist Regions Of Interest:\n"
-                                     "  Region = %r\n  Subset = %r\n  Path   = %r")
-                                     % (roi, subset, roi_fname))
+        roi_fname = swap_ext(subsets_by_regions[roi]["BED"], subset + ".names")
+        if not os.path.isfile(roi_fname):
+            raise MakefileError(("Subset file does not exist Regions Of Interest:\n"
+                                 "  Region = %r\n  Subset = %r\n  Path   = %r")
+                                 % (roi, subset, roi_fname))
 
-            sequences = set()
-            with open(roi_fname) as handle:
-                for line in handle:
-                    line = line.strip()
-                    if line and not line.startswith("#"):
-                        sequences.add(line)
+        sequences = set()
+        with open(roi_fname) as handle:
+            for line in handle:
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    sequences.add(line)
 
-            known_seqs   = subsets_by_regions[roi]["Sequences"][None]
-            unknown_seqs = sequences - known_seqs
-            if unknown_seqs:
-                message = ("Unknown sequences in subset file:\n"
-                           "  File   = %r\n  Region = %r\n  Subset = %r\n"
-                           "  Unknown sequence names =") \
-                           % (roi_fname, roi, subset)
-                unknown_seqs = list(sorted(unknown_seqs))
-                if len(unknown_seqs) > 5:
-                    unknown_seqs = unknown_seqs[:5] + ["..."]
-                message = "\n    - ".join([message] + unknown_seqs)
-                raise MakefileError(message)
+        known_seqs   = subsets_by_regions[roi]["Sequences"][None]
+        unknown_seqs = sequences - known_seqs
+        if unknown_seqs:
+            message = ("Unknown sequences in subset file:\n"
+                       "  File   = %r\n  Region = %r\n  Subset = %r\n"
+                       "  Unknown sequence names =") \
+                       % (roi_fname, roi, subset)
+            unknown_seqs = list(sorted(unknown_seqs))
+            if len(unknown_seqs) > 5:
+                unknown_seqs = unknown_seqs[:5] + ["..."]
+            message = "\n    - ".join([message] + unknown_seqs)
+            raise MakefileError(message)
 
-            subsets_by_regions[roi]["Sequences"][subset] = frozenset(sequences)
+        subsets_by_regions[roi]["Sequences"][subset] = frozenset(sequences)
 
-    _collect_subsets(mkfile["PhylogeneticInference"], "PhylogeneticInference")
-    _collect_subsets(mkfile["PAML"]["codeml"], "PAML:codeml")
+    for (key, subdd) in mkfile["PhylogeneticInference"].iteritems():
+        for (subkey, roidd) in subdd["RegionsOfInterest"].iteritems():
+            roidd["Name"] = subkey
+
+            if roidd.get("SubsetRegions") is not None:
+                path = "PhylogeneticInference:%s:RegionsOfInterest:%s" % (key, subkey)
+                _collect_subsets(subkey, roidd["SubsetRegions"], path)
+
+    for (roi, subset) in mkfile["PAML"]["codeml"]["SubsetRegions"].iteritems():
+        _collect_subsets(roi, subset, "PAML:codeml:SubsetRegions")
 
 
 def _update_filtering(mkfile):
@@ -307,8 +316,9 @@ def _update_exclusions(mkfile):
     samples = mkfile["Project"]["Samples"]
     groups  = mkfile["Project"]["Groups"]
 
-    mkfile["PhylogeneticInference"]["ExcludeSamples"] = \
-      _select_samples(mkfile["PhylogeneticInference"]["ExcludeSamples"], groups, samples, "PhylogeneticInference:ExcludeSamples")
+    for (key, subdd) in mkfile["PhylogeneticInference"].iteritems():
+        subdd["ExcludeSamples"] = \
+          _select_samples(subdd["ExcludeSamples"], groups, samples, "PhylogeneticInference:%s:ExcludeSamples" % (key,))
 
     mkfile["PAML"]["codeml"]["ExcludeSamples"] = \
       _select_samples(mkfile["PAML"]["codeml"]["ExcludeSamples"], groups, samples, "PAML:codeml:ExcludeSamples")
@@ -384,20 +394,34 @@ _VALIDATION = {
         "Default"   : StringIn(("mafft",), # TODO: Add support for other programs
                                default = "mafft"),
         "MAFFT" : {
-            "Algorithm" : StringIn(("auto", "FFT-NS-1", "FFT-NS-2", "FFT-NS-i", "NW-INS-i", "L-INS-i", "E-INS-i", "G-INS-i"),
+            "Algorithm" : StringIn(("auto","FFT-NS-1", "FFT-NS-2", "FFT-NS-i", "NW-INS-i", "L-INS-i", "E-INS-i", "G-INS-i"),
                                    default = "auto")
             },
         },
     "PhylogeneticInference" : {
-        "ExcludeSamples" : IsListOf(IsStr, default = []),
-        "SubsetRegions"  : IsDictOf(IsStr, IsStr, default = {}),
-        "Default" : StringIn(("examl",), # TODO: Add support for other programs
-                             default = "examl"),
-        "ExaML" : {
-            "Bootstraps" : IsUnsignedInt(default = 100),
-            "Replicates" : IsUnsignedInt(default = 1),
-            "Model"      : StringIn(("GAMMA", "PSR"),
-                                    default = "gamma"),
+        IsStr : {
+            # Which program to use; TODO: Add support for other programs
+            "Program" : StringIn(("examl",), default = "examl"),
+            # Exclude one or more samples from the phylogeny
+            "ExcludeSamples" : IsListOf(IsStr, default = []),
+            # Create a tree per gene, for each region of interest,
+            # or create a supermatrix tree from all regions specified.
+            "PerGeneTrees" : IsBoolean(default = False),
+            # Selection of regions of interest / settings per region
+            "RegionsOfInterest" : {
+                IsStr : {
+                    "Partitions"    : Or(And(IsStr, ValuesSubsetOf("123456789X")), ValueIn([False]),
+                                         default = REQUIRED_VALUE),
+                    "SubsetRegions" : Or(IsStr, IsNone, default = None),
+                },
+            },
+            "SubsetRegions"  : IsDictOf(IsStr, IsStr, default = {}),
+            "ExaML" : {
+                "Bootstraps" : IsUnsignedInt(default = 100),
+                "Replicates" : IsUnsignedInt(default = 1),
+                "Model"      : StringIn(("GAMMA", "PSR"),
+                                        default = "gamma"),
+            }
         }
     },
     "PAML" : {
