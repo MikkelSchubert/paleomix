@@ -169,6 +169,12 @@ PhylogeneticInference:
 #      - <NAME_OF_GROUP>
 #      - NAME_OF_SAMPLE
 
+    # Root the final tree(s) on one or more samples; if no samples
+    # are specified, the tree(s) will be rooted on the midpoint(s)
+#    RootTreesOn:
+#      - <NAME_OF_GROUP>
+#      - NAME_OF_SAMPLE
+
     # Limit analysis to a subset of a RegionOfInterest; subsets are expected to be
     # located at <genome root>/<prefix>.<region name>.<subset name>.names, and
     # contain single name (corresponding to column 4 in the BED file) per line.

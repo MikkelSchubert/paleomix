@@ -42,7 +42,7 @@ class NewickRerootNode(Node):
 
         reroot_on = "midpoint"
         if self._reroot_on_taxa:
-            reroot_on = ", ".join(sorted(self._reroot_on_taxa))
+            reroot_on = repr("', '".join(sorted(self._reroot_on_taxa)))
 
         description  = "<NewickReroot (on %s): %s>" % \
           (reroot_on, describe_files(tree_files),)

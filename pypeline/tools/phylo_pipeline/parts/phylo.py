@@ -80,7 +80,7 @@ def _examl_nodes(options, settings, input_alignment, input_binary, output_templa
     return params.build_node()
 
 
-def _build_rerooted_trees(meta_node):
+def _build_rerooted_trees(meta_node, reroot_on):
     filenames = []
     for node in meta_node.subnodes:
         for filename in node.output_files:
@@ -90,6 +90,7 @@ def _build_rerooted_trees(meta_node):
     output_file = os.path.dirname(filenames[0]) + ".newick"
     output_node = NewickRerootNode(tree_files   = filenames,
                                    output_file  = output_file,
+                                   taxa         = reroot_on,
                                    dependencies = meta_node)
     return output_node
 
@@ -112,7 +113,7 @@ def _build_examl_replicates(options, phylo, destination, input_alignment, input_
                         subnodes     = replicates,
                         dependencies = binary)
 
-        return _build_rerooted_trees(meta)
+        return _build_rerooted_trees(meta, phylo["RootTreesOn"])
     return None
 
 
@@ -151,7 +152,7 @@ def _build_examl_bootstraps(options, phylo, destination, input_alignment, input_
         meta = MetaNode(description  = "Bootstraps",
                         subnodes     = bootstraps,
                         dependencies = dependencies)
-        return _build_rerooted_trees(meta)
+        return _build_rerooted_trees(meta, phylo["RootTreesOn"])
     return None
 
 

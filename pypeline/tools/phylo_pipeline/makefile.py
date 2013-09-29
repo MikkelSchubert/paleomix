@@ -63,7 +63,7 @@ def _mangle_makefile(options, mkfile):
     _update_regions(options, mkfile)
     _update_subsets(options, mkfile)
     _update_filtering(mkfile)
-    _update_exclusions(mkfile)
+    _update_sample_sets(mkfile)
     _check_genders(mkfile)
     _check_max_read_depth(mkfile)
     _check_indels_and_msa(mkfile)
@@ -312,16 +312,20 @@ def _check_indels_and_msa(mkfile):
             raise MakefileError("Regions %r includes indels, but MSA is disabled!" % (name,))
 
 
-def _update_exclusions(mkfile):
+def _update_sample_sets(mkfile):
     samples = mkfile["Project"]["Samples"]
     groups  = mkfile["Project"]["Groups"]
 
     for (key, subdd) in mkfile["PhylogeneticInference"].iteritems():
         subdd["ExcludeSamples"] = \
           _select_samples(subdd["ExcludeSamples"], groups, samples, "PhylogeneticInference:%s:ExcludeSamples" % (key,))
+        subdd["RootTreesOn"] = \
+          _select_samples(subdd["RootTreesOn"], groups, samples, "PhylogeneticInference:%s:RootTreesOn" % (key,))
 
     mkfile["PAML"]["codeml"]["ExcludeSamples"] = \
       _select_samples(mkfile["PAML"]["codeml"]["ExcludeSamples"], groups, samples, "PAML:codeml:ExcludeSamples")
+
+
 
 
 # Recursive definition of sample tree
@@ -401,12 +405,14 @@ _VALIDATION = {
     "PhylogeneticInference" : {
         IsStr : {
             # Which program to use; TODO: Add support for other programs
-            "Program" : StringIn(("examl",), default = "examl"),
+            "Program"        : StringIn(("examl",), default = "examl"),
             # Exclude one or more samples from the phylogeny
             "ExcludeSamples" : IsListOf(IsStr, default = []),
+            # Which samples to root the final trees on / or midpoint rooting
+            "RootTreesOn"    : IsListOf(IsStr, default = []),
             # Create a tree per gene, for each region of interest,
             # or create a supermatrix tree from all regions specified.
-            "PerGeneTrees" : IsBoolean(default = False),
+            "PerGeneTrees"   : IsBoolean(default = False),
             # Selection of regions of interest / settings per region
             "RegionsOfInterest" : {
                 IsStr : {
