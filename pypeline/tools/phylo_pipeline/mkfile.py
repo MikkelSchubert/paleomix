@@ -134,7 +134,7 @@ PhylogeneticInference:
 #    - NAME_OF_SAMPLE
 
   # Limit analysis to a subset of a RegionOfInterest; subsets are expected to be
-  # located at <genome root>/<prefix>.<areas name>.<subset name>.names, and
+  # located at <genome root>/<prefix>.<region name>.<subset name>.names, and
   # contain single name (corresponding to column 4 in the BED file) per line.
 #  SubsetRegions:
 #    REGIONS_NAME: SUBSET_NAME
@@ -156,7 +156,7 @@ PhylogeneticInference:
 #      - NAME_OF_SAMPLE
 
     # Limit analysis to a subset of a RegionOfInterest; subsets are expected to be
-    # located at <genome root>/<prefix>.<areas name>.<subset name>.names, and
+    # located at <genome root>/<prefix>.<region name>.<subset name>.names, and
     # contain single name (corresponding to column 4 in the BED file) per line.
 #    SubsetRegions:
 #      REGIONS_NAME: SUBSET_NAME

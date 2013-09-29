@@ -229,7 +229,7 @@ def _update_subsets(_options, mkfile):
             unknown_seqs = sequences - known_seqs
             if unknown_seqs:
                 message = ("Unknown sequences in subset file:\n"
-                           "  File   = %r\n  Areas  = %r\n  Subset = %r\n"
+                           "  File   = %r\n  Region = %r\n  Subset = %r\n"
                            "  Unknown sequence names =") \
                            % (roi_fname, roi, subset)
                 unknown_seqs = list(sorted(unknown_seqs))
