@@ -49,19 +49,19 @@ from pypeline.common.fileutils import \
 _BOOTSTRAP_CHUNK = 25
 
 
-def build_supermatrix(options, settings, afa_ext, destination, interval, filtering_postfix, dependencies):
+def build_supermatrix(options, settings, afa_ext, destination, regions, filtering_postfix, dependencies):
     input_files = {}
-    sequencedir = os.path.join(options.destination, "alignments", interval["Name"] + filtering_postfix)
-    for sequence in interval["Sequences"]:
+    sequencedir = os.path.join(options.destination, "alignments", regions["Name"] + filtering_postfix)
+    for sequence in regions["Sequences"]:
         filename = os.path.join(sequencedir, sequence + afa_ext)
         record = {"name" : sequence}
-        if interval["Protein coding"]:
+        if regions["ProteinCoding"]:
             record["partition_by"] = ("12", "12", "3")
 
         assert filename not in input_files, filename
         input_files[filename] = record
 
-    excluded_groups = settings["ExcludeGroups"]
+    excluded_groups = settings["ExcludeSamples"]
     matrixprefix = os.path.join(destination, "alignments")
     supermatrix  = FastaToPartitionedInterleavedPhyNode(infiles        = input_files,
                                                         out_prefix     = matrixprefix,
@@ -182,18 +182,18 @@ def add_bootstrap_support(destination, replicate, bootstrap):
                              dependencies       = (bootstrap, replicate))
 
 
-def build_examl_nodes(options, settings, intervals, filtering, dependencies):
+def build_examl_nodes(options, settings, regions_sets, filtering, dependencies):
     examl_nodes = []
-    phylo = settings["Phylogenetic Inference"]
+    phylo = settings["PhylogeneticInference"]
     filtering_postfix = ".filtered" if any(filtering.itervalues()) else ""
-    for interval in intervals.itervalues():
-        destination = os.path.join(options.destination, "phylogenies", "examl", interval["Name"] + filtering_postfix)
+    for regions in regions_sets.itervalues():
+        destination = os.path.join(options.destination, "phylogenies", "examl", regions["Name"] + filtering_postfix)
         afa_ext = ".afa" if settings["MSAlignment"]["Enabled"] else ".fasta"
 
         input_alignment = os.path.join(destination, "alignments.reduced.phy")
         input_partition = os.path.join(destination, "alignments.reduced.partitions")
 
-        supermatrix = build_supermatrix(options, phylo, afa_ext, destination, interval, filtering_postfix, dependencies)
+        supermatrix = build_supermatrix(options, phylo, afa_ext, destination, regions, filtering_postfix, dependencies)
         examl_args  = (options, phylo, destination, input_alignment, input_partition, supermatrix)
 
         examl_replicates = build_examl_replicates(*examl_args)
@@ -201,7 +201,7 @@ def build_examl_nodes(options, settings, intervals, filtering, dependencies):
         examl_dependencies = add_bootstrap_support(destination, examl_replicates, examl_bootstraps)
 
         if examl_dependencies:
-            examl_nodes.append(MetaNode(description  = interval["Name"],
+            examl_nodes.append(MetaNode(description  = regions["Name"],
                                         dependencies = examl_dependencies))
 
     return MetaNode(description = "EXaML",
@@ -211,9 +211,9 @@ def build_examl_nodes(options, settings, intervals, filtering, dependencies):
 def chain_examl(pipeline, options, makefiles):
     destination = options.destination # Move to makefile
     for makefile in makefiles:
-        intervals = makefile["Project"]["Intervals"]
-        filtering = makefile["Project"]["Filter Singletons"]
+        regions_sets = makefile["Project"]["Regions"]
+        filtering    = makefile["Project"]["FilterSingletons"]
         options.destination = os.path.join(destination, makefile["Project"]["Title"])
 
-        makefile["Nodes"] = build_examl_nodes(options, makefile, intervals, filtering, makefile["Nodes"])
+        makefile["Nodes"] = build_examl_nodes(options, makefile, regions_sets, filtering, makefile["Nodes"])
     options.destination = destination

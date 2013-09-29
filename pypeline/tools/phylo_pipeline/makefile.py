@@ -25,8 +25,6 @@ import types
 import pysam
 
 import pypeline.common.makefile
-from pypeline.common.text import \
-     parse_lines
 from pypeline.common.makefile import \
      MakefileError, \
      REQUIRED_VALUE, \
@@ -54,8 +52,8 @@ def read_makefiles(options, filenames):
 
 
 def _mangle_makefile(options, mkfile):
-    _collapse_taxa(mkfile)
-    _update_intervals(options, mkfile)
+    _collapse_samples(mkfile)
+    _update_regions(options, mkfile)
     _update_filtering(mkfile)
     _update_exclusions(mkfile)
     _check_genders(mkfile)
@@ -69,30 +67,30 @@ def _mangle_makefile(options, mkfile):
     return mkfile
 
 
-def _collapse_taxa(mkfile):
-    groups, taxa = {}, set()
-    def _collect_taxa(taxa_dict, path = ()):
-        current_taxa = {}
-        for (key, subdd) in taxa_dict.iteritems():
+def _collapse_samples(mkfile):
+    groups, samples = {}, set()
+    def _collect_samples(samples_dict, path = ()):
+        current_samples = {}
+        for (key, subdd) in samples_dict.iteritems():
             if key.startswith("<") and key.endswith(">"):
                 key = key.lstrip("<").rstrip(">")
-                current_taxa.update(_collect_taxa(subdd, path + (key,)))
-            elif key not in taxa:
-                taxa.add(key)
+                current_samples.update(_collect_samples(subdd, path + (key,)))
+            elif key not in samples:
+                samples.add(key)
                 subdd["Name"] = key
-                current_taxa[key] = subdd
+                current_samples[key] = subdd
             else:
-                raise MakefileError("Duplicate taxa-name: %r" % (key,))
+                raise MakefileError("Duplicate sample-name: %r" % (key,))
 
-        groups[path] = current_taxa
-        return current_taxa
+        groups[path] = current_samples
+        return current_samples
 
-    _collect_taxa(mkfile["Project"]["Taxa"])
-    mkfile["Project"]["Taxa"] = groups.pop(())
+    _collect_samples(mkfile["Project"]["Samples"])
+    mkfile["Project"]["Samples"] = groups.pop(())
     mkfile["Project"]["Groups"] = groups
 
 
-def _select_taxa(select, groups, taxa, path):
+def _select_samples(select, groups, samples, path):
     selection = set()
     for group in select:
         if group.startswith("<") and group.endswith(">"):
@@ -100,65 +98,66 @@ def _select_taxa(select, groups, taxa, path):
             if key not in groups:
                 raise MakefileError("Unknown group specifed for filtering %r: %r" % (path, key))
             selection.update(groups[key])
-        elif group in taxa:
+        elif group in samples:
             selection.add(group)
         else:
             raise MakefileError("Unknown/Invalid group specifed for filtering %r: %r" % (path, group))
     return selection
 
 
-def _update_intervals(options, mkfile):
-    intervals = mkfile["Project"]["Intervals"]
-    for (interval, subdd) in intervals.iteritems():
-        if "Genome" not in subdd:
-            raise MakefileError("No genome specified for interval %r" % (interval,))
+def _update_regions(options, mkfile):
+    mkfile["Project"]["Regions"] = mkfile["Project"].pop("RegionsOfInterest")
 
-        subdd["Name"]   = interval
-        subdd["Prefix"] = "{Genome}.{Name}".format(**subdd)
-        subdd["BED"]    = os.path.join(options.intervals_root, subdd["Prefix"] + ".bed")
-        subdd["FASTA"]  = os.path.join(options.genomes_root, subdd["Genome"] + ".fasta")
+    for (name, subdd) in mkfile["Project"]["Regions"].iteritems():
+        if "Prefix" not in subdd:
+            raise MakefileError("No genome specified for regions %r" % (name,))
+
+        subdd["Name"]   = name
+        subdd["Desc"]   = "{Prefix}.{Name}".format(**subdd)
+        subdd["BED"]    = os.path.join(options.regions_root, subdd["Desc"] + ".bed")
+        subdd["FASTA"]  = os.path.join(options.genomes_root, subdd["Prefix"] + ".fasta")
 
         required_files = (
-            ("Intervals file", subdd["BED"], None),
+            ("Regions file", subdd["BED"], None),
             ("Reference sequence", subdd["FASTA"], None),
             ("Reference sequence index", subdd["FASTA"] + ".fai",
              "Please index using 'samtools faidx %s'" % (subdd["FASTA"],)))
 
-        for (name, path, instructions) in required_files:
+        for (desc, path, instructions) in required_files:
             if not os.path.isfile(path):
                 message = "%s does not exist for %r:\n  Path = %r" \
-                                % (name, interval, path)
+                                % (desc, name, path)
                 if instructions:
                     message = "%s\n%s" % (message, instructions)
                 raise MakefileError(message)
 
-        # Collects seq. names / validate intervals
-        subdd["Sequences"] = _collect_and_validate_interval_sequences(subdd)
+        # Collects seq. names / validate regions
+        subdd["Sequences"] = _collect_and_validate_regions_sequences(subdd)
 
-        taxadd = subdd["Genotypes"] = {}
-        for taxon_name in mkfile["Project"]["Taxa"]:
-            fasta_file = ".".join((taxon_name, subdd["Prefix"], "fasta"))
-            taxadd[taxon_name] = os.path.join(options.destination,
+        sampledd = subdd["Genotypes"] = {}
+        for sample_name in mkfile["Project"]["Samples"]:
+            fasta_file = ".".join((sample_name, subdd["Desc"], "fasta"))
+            sampledd[sample_name] = os.path.join(options.destination,
                                               mkfile["Project"]["Title"],
                                               "genotypes",
                                               fasta_file)
 
 
-def _collect_and_validate_interval_sequences(interval):
+def _collect_and_validate_regions_sequences(regions):
     contigs = {}
-    with open(interval["FASTA"] + ".fai") as faihandle:
+    with open(regions["FASTA"] + ".fai") as faihandle:
         for line in faihandle:
             name, length, _ = line.split(None, 2)
             if name in contigs:
                 raise MakefileError(("Reference contains multiple identically named sequences:\n"
                                      "  Path = %s\n  Name = %s\n"
                                      "Please ensure that all sequences have a unique name!")
-                                     % (interval["FASTA"], name))
+                                     % (regions["FASTA"], name))
             contigs[name] = int(length)
 
     parser = pysam.asBed()
     sequences = set()
-    with open(interval["BED"]) as bedhandle:
+    with open(regions["BED"]) as bedhandle:
         for (line_num, line) in enumerate(bedhandle):
             line = line.strip()
             if not line or line.startswith("#"):
@@ -170,82 +169,82 @@ def _collect_and_validate_interval_sequences(interval):
                 bed_start = bed.start
                 bed_end   = bed.end
             except ValueError, error:
-                raise MakefileError(("Error parsing line in intervals file:\n"
+                raise MakefileError(("Error parsing line in regions file:\n"
                                      "  File = %r\n  Line = %i\n %s")
-                                     % (interval["BED"], line_num, error))
+                                     % (regions["BED"], line_num, error))
 
             if len(bed) < 6:
-                raise MakefileError(("Interval at line #%i (%s) does not contain enough fields;\n"
+                raise MakefileError(("Region at line #%i (%s) does not contain enough fields;\n"
                                      "at least the first 6 fields are required. C.f. defination at\n"
                                      "  http://genome.ucsc.edu/FAQ/FAQformat.html#format1")
                                      % (line_num, repr(bed.name) if len(bed) > 3 else "unnamed record"))
 
             contig_len = contigs.get(bed.contig)
             if contig_len is None:
-                raise MakefileError(("Intervals file contains contigs not found in reference:\n"
+                raise MakefileError(("Regions file contains contigs not found in reference:\n"
                                      "  Path = %s\n  Name = %s\n"
                                      "Please ensure that all contig names match the reference names!")
-                                     % (interval["BED"], bed.contig))
+                                     % (regions["BED"], bed.contig))
             elif not (0 <= int(bed_start) < int(bed_end) <= contig_len):
-                raise MakefileError(("Intervals file contains invalid interval:\n"
+                raise MakefileError(("Regions file contains invalid region:\n"
                                      "  Path   = %s\n  Contig = %s\n"
                                      "  Start  = %s\n  End    = %s\n"
                                      "Start must be >= 0 and < End, and End must be <= %i!")
-                                     % (interval["BED"], bed.contig, bed.start, bed.end, contig_len))
+                                     % (regions["BED"], bed.contig, bed.start, bed.end, contig_len))
             elif bed.strand not in "+-":
-                raise MakefileError(("Interval file contains invalid interval: "
+                raise MakefileError(("Regions file contains invalid region: "
                                      "  Path   = %s\n  Line = %i\n  Name = %s\n"
                                      "Strand is %r, expected either '+' or '-'")
-                                     % (interval["BED"], line_num, bed.name, bed.strand))
+                                     % (regions["BED"], line_num, bed.name, bed.strand))
 
             sequences.add(bed.name)
     return frozenset(sequences)
 
 
 def _update_filtering(mkfile):
-    taxa   = mkfile["Project"]["Taxa"]
-    groups = mkfile["Project"]["Groups"]
+    samples = mkfile["Project"]["Samples"]
+    groups  = mkfile["Project"]["Groups"]
 
     filtering = {}
-    for (target, filter_by) in mkfile["Project"]["Filter Singletons"].iteritems():
-        if target not in taxa:
+    for (target, filter_by) in mkfile["Project"]["FilterSingletons"].iteritems():
+        if target not in samples:
             raise MakefileError("Unknown/Invalid group specifed for singleton filtering: %r" % (target,))
 
-        path = "Project:Filter Singletons:%s" % (target,)
-        filtering[target] = _select_taxa(filter_by, groups, taxa, path)
+        path = "Project:FilterSingletons:%s" % (target,)
+        filtering[target] = _select_samples(filter_by, groups, samples, path)
 
-    mkfile["Project"]["Filter Singletons"] = filtering
+    mkfile["Project"]["FilterSingletons"] = filtering
 
 
 def _check_genders(mkfile):
-    interval_genders = set()
-    for interval in mkfile["Project"]["Intervals"].itervalues():
-        current_genders = set(interval["Homozygous Contigs"])
-        if not interval_genders:
-            interval_genders = current_genders
-        elif interval_genders != current_genders:
-            raise MakefileError("List of genders for interval %r does not match other intervals" \
-                                % (interval["Name"],))
+    regions_genders = set()
+    for regions in mkfile["Project"]["Regions"].itervalues():
+        current_genders = set(regions["HomozygousContigs"])
+        if not regions_genders:
+            regions_genders = current_genders
+        elif regions_genders != current_genders:
+            raise MakefileError("List of genders for regions %r does not match other regions" \
+                                % (regions["Name"],))
 
-    for taxon in mkfile["Project"]["Taxa"].itervalues():
-        if taxon["Gender"] not in interval_genders:
-            raise MakefileError("Taxon %r has unknown gender %r; known genders are %s" \
-                                % (taxon["Name"], taxon["Gender"],
-                                   ", ".join(map(repr, interval_genders))))
+    for sample in mkfile["Project"]["Samples"].itervalues():
+        if sample["Gender"] not in regions_genders:
+            raise MakefileError("Sample %r has unknown gender %r; known genders are %s" \
+                                % (sample["Name"], sample["Gender"],
+                                   ", ".join(map(repr, regions_genders))))
 
 
 def _check_max_read_depth(mkfile):
     max_depths = mkfile["Genotyping"]["VCF_Filter"]["MaxReadDepth"]
     if isinstance(max_depths, types.DictType):
         required_keys = set()
-        for taxon in mkfile["Project"]["Taxa"].itervalues():
-            if taxon["Genotyping Method"].lower() == "samtools":
-                required_keys.add(taxon["Name"])
+        for sample in mkfile["Project"]["Samples"].itervalues():
+            if sample["GenotypingMethod"].lower() == "samtools":
+                required_keys.add(sample["Name"])
 
-        # Extra keys are allowed, to make it easier to temporarily disable a taxon
+        # Extra keys are allowed, to make it easier to temporarily disable a sample
         missing_keys = required_keys - set(max_depths)
         if missing_keys:
-            raise MakefileError("MaxReadDepth not specified for the following taxa:\n    - %s" \
+            raise MakefileError("MaxReadDepth not specified for the following samples:\n    - %s" \
                                 % ("\n    - ".join(sorted(missing_keys)),))
 
 
@@ -253,55 +252,55 @@ def _check_indels_and_msa(mkfile):
     if mkfile["MSAlignment"]["Enabled"]:
         return
 
-    intervals = mkfile["Project"]["Intervals"]
-    for (interval, subdd) in intervals.iteritems():
-        if subdd["Include indels"]:
-            raise MakefileError("Intervals '%s' includes indels, but MSA is disabled!" % (interval,))
+    regions = mkfile["Project"]["Regions"]
+    for (name, subdd) in regions.iteritems():
+        if subdd["IncludeIndels"]:
+            raise MakefileError("Regions %r includes indels, but MSA is disabled!" % (name,))
 
 
 def _update_exclusions(mkfile):
-    taxa   = mkfile["Project"]["Taxa"]
-    groups = mkfile["Project"]["Groups"]
+    samples = mkfile["Project"]["Samples"]
+    groups  = mkfile["Project"]["Groups"]
 
-    mkfile["Phylogenetic Inference"]["ExcludeGroups"] = \
-      _select_taxa(mkfile["Phylogenetic Inference"]["ExcludeGroups"], groups, taxa, "Phylogenetic Inference:ExcludeGroups")
+    mkfile["PhylogeneticInference"]["ExcludeSamples"] = \
+      _select_samples(mkfile["PhylogeneticInference"]["ExcludeSamples"], groups, samples, "PhylogeneticInference:ExcludeSamples")
 
-    mkfile["PAML"]["codeml"]["ExcludeGroups"] = \
-      _select_taxa(mkfile["PAML"]["codeml"]["ExcludeGroups"], groups, taxa, "PAML:codeml:ExcludeGroups")
+    mkfile["PAML"]["codeml"]["ExcludeSamples"] = \
+      _select_samples(mkfile["PAML"]["codeml"]["ExcludeSamples"], groups, samples, "PAML:codeml:ExcludeSamples")
 
 
-# Recursive definition of taxa tree
-_VALIDATION_SUBTAXA_KEY = And(StringStartsWith("<"),
-                              StringEndsWith(">"))
-_VALIDATION_TAXA_KEY    = And(IsStr, Not(_VALIDATION_SUBTAXA_KEY))
-_VALIDATION_TAXA = {
-    _VALIDATION_TAXA_KEY : {
-        "Genotyping Method" : StringIn(("reference sequence", "random sampling", "samtools"),
+# Recursive definition of sample tree
+_VALIDATION_SUBSAMPLE_KEY = And(StringStartsWith("<"),
+                                StringEndsWith(">"))
+_VALIDATION_SAMPLES_KEY    = And(IsStr, Not(_VALIDATION_SUBSAMPLE_KEY))
+_VALIDATION_SAMPLES = {
+    _VALIDATION_SAMPLES_KEY : {
+        "GenotypingMethod" : StringIn(("reference sequence", "random sampling", "samtools"),
                                        default = "samtools"),
-        "Species Name"      : IsStr,
-        "Common Name"       : IsStr,
-        "Gender"            : IsStr(default = REQUIRED_VALUE),
+        "SpeciesName"      : IsStr,
+        "CommonName"       : IsStr,
+        "Gender"           : IsStr(default = REQUIRED_VALUE),
     }
 }
-_VALIDATION_TAXA[_VALIDATION_SUBTAXA_KEY] = _VALIDATION_TAXA
+_VALIDATION_SAMPLES[_VALIDATION_SUBSAMPLE_KEY] = _VALIDATION_SAMPLES
 
 
 _VALIDATION = {
     "Project" : {
         "Title" : IsStr(default = "Untitled"),
-        "Taxa" : _VALIDATION_TAXA,
-        "Intervals" : {
+        "Samples" : _VALIDATION_SAMPLES,
+        "RegionsOfInterest" : {
             IsStr : {
-                "Genome"         : IsStr(default = REQUIRED_VALUE),
-                "Realigned"      : IsBoolean(default = False),
-                "Protein coding" : IsBoolean(default = False),
-                "Include indels" : IsBoolean(default = True),
-                "Homozygous Contigs" : {
+                "Prefix"        : IsStr(default = REQUIRED_VALUE),
+                "Realigned"     : IsBoolean(default = False),
+                "ProteinCoding" : IsBoolean(default = False),
+                "IncludeIndels" : IsBoolean(default = True),
+                "HomozygousContigs" : {
                     IsStr : IsListOf(IsStr),
                     },
                 },
             },
-        "Filter Singletons" : {
+        "FilterSingletons" : {
             IsStr : IsListOf(IsStr),
             },
         },
@@ -314,7 +313,7 @@ _VALIDATION = {
             StringStartsWith("-") : CLI_PARAMETERS,
             },
         "Random"   : {
-            StringStartsWith("-") : CLI_PARAMETERS,
+            "--min-distance-to-indels" : IsUnsignedInt,
             },
         "VCF_Filter" : {
             "MaxReadDepth"  : Or(IsUnsignedInt, IsDictOf(IsStr, IsUnsignedInt),
@@ -331,8 +330,8 @@ _VALIDATION = {
                                    default = "auto")
             },
         },
-    "Phylogenetic Inference" : {
-        "ExcludeGroups" : IsListOf(IsStr, default = []),
+    "PhylogeneticInference" : {
+        "ExcludeSamples" : IsListOf(IsStr, default = []),
         "Default" : StringIn(("examl",), # TODO: Add support for other programs
                              default = "examl"),
         "ExaML" : {
@@ -344,10 +343,10 @@ _VALIDATION = {
     },
     "PAML" : {
         "codeml" : {
-            "ExcludeGroups" : IsListOf(IsStr, default = []),
+            "ExcludeSamples" : IsListOf(IsStr, default = []),
             IsStr : {
-                "Control File" : IsStr(default = REQUIRED_VALUE),
-                "Tree File"    : IsStr(default = REQUIRED_VALUE),
+                "ControlFile" : IsStr(default = REQUIRED_VALUE),
+                "TreeFile"    : IsStr(default = REQUIRED_VALUE),
             },
         },
     },

@@ -88,8 +88,8 @@ def build_options_parser():
                      help = "Location for temporary files and folders [%default]")
     group.add_option("--samples-root",       default = "./data/samples",
                      help = "Location of BAM files for each sample.")
-    group.add_option("--intervals-root",     default = "./data/intervals",
-                     help = "Location of BED files containing intervals of interest [%default]")
+    group.add_option("--regions-root",       default = "./data/regions",
+                     help = "Location of BED files containing regions of interest [%default]")
     group.add_option("--genomes-root",       default = "./data/genomes",
                      help = "Location of reference genomes (FASTAs) [%default]")
     group.add_option("--destination",        default = "./results",

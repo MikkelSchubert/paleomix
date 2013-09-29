@@ -87,7 +87,7 @@ class VCFPileupNode(CommandNode):
 
 class VCFFilterNode(CommandNode):
     @create_customizable_cli_parameters
-    def customize(cls, pileup, infile, outfile, interval, dependencies = ()):
+    def customize(cls, pileup, infile, outfile, regions, dependencies = ()):
         unicat = AtomicCmdBuilder(["unicat", "%(IN_VCF)s"],
                                   IN_VCF     = infile,
                                   OUT_STDOUT = AtomicCmd.PIPE)
@@ -96,7 +96,7 @@ class VCFFilterNode(CommandNode):
                                      IN_PILEUP = pileup,
                                      IN_STDIN     = unicat,
                                      OUT_STDOUT   = AtomicCmd.PIPE)
-        for contig in interval["Homozygous Contigs"]:
+        for contig in regions["HomozygousContigs"]:
             vcffilter.set_option("--homozygous-chromosome", contig)
 
         bgzip = AtomicCmdBuilder(["bgzip"],
@@ -122,17 +122,17 @@ class VCFFilterNode(CommandNode):
 
 class BuildRegionsNode(CommandNode):
     @create_customizable_cli_parameters
-    def customize(cls, options, infile, interval, outfile, padding, dependencies = ()):
+    def customize(cls, options, infile, regions, outfile, padding, dependencies = ()):
         params = AtomicCmdBuilder(["bam_genotype_regions", "--padding", padding],
                                   IN_VCFFILE   = infile,
                                   IN_TABIX     = infile + ".tbi",
-                                  IN_INTERVALS = interval["BED"],
+                                  IN_INTERVALS = regions["BED"],
                                   OUT_STDOUT   = outfile)
         params.set_option("--genotype", "%(IN_VCFFILE)s")
         params.set_option("--intervals", "%(IN_INTERVALS)s")
-        if interval["Protein coding"]:
+        if regions["ProteinCoding"]:
             params.set_option("--whole-codon-indels-only")
-        if not interval["Include indels"]:
+        if not regions["IncludeIndels"]:
             params.set_option("--ignore-indels")
 
         return {"command" : params}
@@ -151,10 +151,10 @@ class BuildRegionsNode(CommandNode):
 
 class SampleRegionsNode(CommandNode):
     @create_customizable_cli_parameters
-    def customize(cls, infile, intervals, outfile, dependencies = ()):
+    def customize(cls, infile, bedfile, outfile, dependencies = ()):
         params = AtomicCmdBuilder(["bam_sample_regions"],
                                   IN_PILEUP    = infile,
-                                  IN_INTERVALS = intervals,
+                                  IN_INTERVALS = bedfile,
                                   OUT_STDOUT   = outfile)
         params.set_option("--genotype", "%(IN_PILEUP)s")
         params.set_option("--intervals", "%(IN_INTERVALS)s")
@@ -176,16 +176,16 @@ class SampleRegionsNode(CommandNode):
 
 
 class ExtractReference(Node):
-    def __init__(self, reference, intervals, outfile, dependencies = ()):
+    def __init__(self, reference, bedfile, outfile, dependencies = ()):
         self._reference = reference
-        self._intervals = intervals
+        self._bedfile   = bedfile
         self._outfile   = outfile
 
         description = "<ExtractReference: '%s' -> '%s'>" \
             % (reference, outfile)
         Node.__init__(self,
                       description  = description,
-                      input_files  = [intervals],
+                      input_files  = [bedfile],
                       output_files = [outfile],
                       dependencies = dependencies)
 
@@ -196,9 +196,9 @@ class ExtractReference(Node):
 
         fastafile = pysam.Fastafile(self._reference)
         seqs = collections.defaultdict(list)
-        with open(self._intervals) as bedfile:
-            intervals = text.parse_lines_by_contig(bedfile, pysam.asBed()).items()
-            for (contig, beds) in sorted(intervals):
+        with open(self._bedfile) as bedfile:
+            bedrecords = text.parse_lines_by_contig(bedfile, pysam.asBed()).items()
+            for (contig, beds) in sorted(bedrecords):
                 beds.sort(key = keyfunc)
 
                 for (gene, gene_beds) in itertools.groupby(beds, lambda x: x.name):
@@ -231,17 +231,17 @@ def build_fasta_index_node(reference, dependencies):
 
 
 _BED_CACHE = {}
-def build_interval_nodes(options, interval, padding, dependencies):
-    destination = add_postfix(interval["BED"], ".padded_%ibp" % (padding,))
+def build_regions_nodes(options, regions, padding, dependencies):
+    destination = add_postfix(regions["BED"], ".padded_%ibp" % (padding,))
 
     if not padding:
-        return interval["BED"], dependencies
+        return regions["BED"], dependencies
 
     if destination not in _BED_CACHE:
-        faidx_node = build_fasta_index_node(interval["FASTA"], dependencies)
+        faidx_node = build_fasta_index_node(regions["FASTA"], dependencies)
         _BED_CACHE[destination] \
-          = SlopBedNode(genome        = interval["FASTA"] + ".fai",
-                        infile        = interval["BED"],
+          = SlopBedNode(genome        = regions["FASTA"] + ".fai",
+                        infile        = regions["BED"],
                         outfile       = destination,
                         from_start    = padding,
                         from_end      = padding,
@@ -250,19 +250,19 @@ def build_interval_nodes(options, interval, padding, dependencies):
     return destination, _BED_CACHE[destination]
 
 
-def build_genotyping_nodes(options, genotyping, taxa, interval, dependencies):
-    fasta     = interval["Genotypes"][taxa["Name"]]
+def build_genotyping_nodes(options, genotyping, sample, regions, dependencies):
+    fasta     = regions["Genotypes"][sample["Name"]]
     calls     = swap_ext(fasta, ".vcf.bgz")
     pileups   = swap_ext(fasta, ".vcf.pileup.bgz")
     filtered  = swap_ext(fasta, ".filtered.vcf.bgz")
 
     padding = genotyping["Padding"]
-    infile  = os.path.join(options.samples_root, "%s.%s.bam" % (taxa["Name"], interval["Genome"]))
-    if interval["Realigned"]:
+    infile  = os.path.join(options.samples_root, "%s.%s.bam" % (sample["Name"], regions["Prefix"]))
+    if regions["Realigned"]:
         infile = add_postfix(infile, ".realigned")
 
-    slop, node =  build_interval_nodes(options, interval, padding, dependencies)
-    genotype = GenotypeNode.customize(reference          = interval["FASTA"],
+    slop, node =  build_regions_nodes(options, regions, padding, dependencies)
+    genotype = GenotypeNode.customize(reference          = regions["FASTA"],
                                       regions            = slop,
                                       infile             = infile,
                                       outfile            = calls,
@@ -272,7 +272,7 @@ def build_genotyping_nodes(options, genotyping, taxa, interval, dependencies):
     apply_options(genotype.commands["genotype"], genotyping["BCFTools"])
     genotype = genotype.build_node()
 
-    vcfpileup = VCFPileupNode.customize(reference    = interval["FASTA"],
+    vcfpileup = VCFPileupNode.customize(reference    = regions["FASTA"],
                                         in_bam       = infile,
                                         in_vcf       = calls,
                                         outfile      = pileups,
@@ -283,7 +283,7 @@ def build_genotyping_nodes(options, genotyping, taxa, interval, dependencies):
     vcffilter = VCFFilterNode.customize(infile       = calls,
                                         pileup       = pileups,
                                         outfile      = filtered,
-                                        interval     = interval,
+                                        regions      = regions,
                                         dependencies = vcfpileup)
 
     filter_cfg = genotyping["VCF_Filter"]
@@ -291,7 +291,7 @@ def build_genotyping_nodes(options, genotyping, taxa, interval, dependencies):
     if filter_cfg["MaxReadDepth"]:
         max_depth = filter_cfg["MaxReadDepth"]
         if isinstance(max_depth, dict):
-            max_depth = max_depth[taxa["Name"]]
+            max_depth = max_depth[sample["Name"]]
         vcffilter.commands["filter"].set_option("--max-read-depth", max_depth)
     vcffilter = vcffilter.build_node()
 
@@ -301,7 +301,7 @@ def build_genotyping_nodes(options, genotyping, taxa, interval, dependencies):
 
     builder  = BuildRegionsNode(options      = options,
                                 infile       = filtered,
-                                interval     = interval,
+                                regions      = regions,
                                 outfile      = fasta,
                                 padding      = padding,
                                 dependencies = tabix)
@@ -309,15 +309,20 @@ def build_genotyping_nodes(options, genotyping, taxa, interval, dependencies):
     return (builder,)
 
 
-def build_sampling_nodes(options, genotyping, taxa, interval, dependencies):
-    fasta_file  = interval["Genotypes"][taxa["Name"]]
+def build_sampling_nodes(options, genotyping, sample, regions, dependencies):
+    fasta_file  = regions["Genotypes"][sample["Name"]]
     pileup_file = swap_ext(fasta_file, ".bgz")
 
     padding = genotyping["Padding"]
-    slop, node =  build_interval_nodes(options, interval, padding, dependencies)
-    genotype = MPileupNode(reference          = interval["FASTA"],
+    slop, node =  build_regions_nodes(options, regions, padding, dependencies)
+
+    bam_file = os.path.join(options.samples_root, "%s.%s.bam" % (sample["Name"], regions["Prefix"]))
+    if regions["Realigned"]:
+        bam_file = add_postfix(bam_file, ".realigned")
+
+    genotype = MPileupNode(reference          = regions["FASTA"],
                            regions            = slop,
-                           infile             = os.path.join(options.samples_root, "%s.%s.bam" % (taxa["Name"], interval["Genome"])),
+                           infile             = bam_file,
                            outfile            = pileup_file,
                            dependencies       = node)
     tabix    = TabixIndexNode(infile          = pileup_file,
@@ -325,55 +330,55 @@ def build_sampling_nodes(options, genotyping, taxa, interval, dependencies):
                               dependencies    = genotype)
 
     builder  = SampleRegionsNode(infile       = pileup_file,
-                                 intervals    = interval["BED"],
+                                 bedfile      = regions["BED"],
                                  outfile      = fasta_file,
                                  dependencies = tabix)
     return (builder,)
 
 
-def build_reference_nodes(options, taxa, interval, dependencies):
-    fasta_file  = "%s.%s.fasta" % (taxa["Name"], interval["Prefix"])
+def build_reference_nodes(options, sample, regions, dependencies):
+    fasta_file  = "%s.%s.fasta" % (sample["Name"], regions["Desc"])
     destination = os.path.join(options.destination, "genotypes", fasta_file)
-    faidx_node  = build_fasta_index_node(interval["FASTA"], dependencies)
+    faidx_node  = build_fasta_index_node(regions["FASTA"], dependencies)
 
-    node  = ExtractReference(reference          = interval["FASTA"],
-                             intervals          = interval["BED"],
+    node  = ExtractReference(reference          = regions["FASTA"],
+                             bedfile            = regions["BED"],
                              outfile            = destination,
                              dependencies       = faidx_node)
     return (node,)
 
 
-def build_taxa_nodes(options, genotyping, intervals, taxa, dependencies = ()):
+def build_sample_nodes(options, genotyping, regions_sets, sample, dependencies = ()):
     nodes = []
-    for interval in intervals.itervalues():
-        interval = deepcopy(interval)
+    for regions in regions_sets.itervalues():
+        regions = deepcopy(regions)
         # Enforce homozygous contigs based on gender tag
-        interval["Homozygous Contigs"] = interval["Homozygous Contigs"][taxa["Gender"]]
+        regions["HomozygousContigs"] = regions["HomozygousContigs"][sample["Gender"]]
 
-        genotyping_method = taxa["Genotyping Method"].lower()
+        genotyping_method = sample["GenotypingMethod"].lower()
         if genotyping_method == "reference sequence":
-            nodes.extend(build_reference_nodes(options, taxa, interval, dependencies))
+            nodes.extend(build_reference_nodes(options, sample, regions, dependencies))
         elif genotyping_method == "random sampling":
-            nodes.extend(build_sampling_nodes(options, genotyping, taxa, interval, dependencies))
+            nodes.extend(build_sampling_nodes(options, genotyping, sample, regions, dependencies))
         elif genotyping_method == "samtools":
-            nodes.extend(build_genotyping_nodes(options, genotyping, taxa, interval, dependencies))
+            nodes.extend(build_genotyping_nodes(options, genotyping, sample, regions, dependencies))
         else:
-            assert False, "Unexpected genotyping method %r for taxa %r" % (genotyping_method, taxa["Name"])
+            assert False, "Unexpected genotyping method %r for sample %r" % (genotyping_method, sample["Name"])
 
-    return MetaNode(description  = taxa["Name"],
+    return MetaNode(description  = sample["Name"],
                     dependencies = nodes)
 
 
 def chain(pipeline, options, makefiles):
     destination = options.destination
     for makefile in makefiles:
-        intervals  = makefile["Project"]["Intervals"]
-        genotyping = makefile["Genotyping"]
+        regions_sets = makefile["Project"]["Regions"]
+        genotyping   = makefile["Genotyping"]
         options.destination = os.path.join(destination, makefile["Project"]["Title"])
 
         nodes = []
-        for taxa in makefile["Project"]["Taxa"].itervalues():
-            nodes.append(build_taxa_nodes(options, genotyping, intervals, taxa, makefile["Nodes"]))
+        for sample in makefile["Project"]["Samples"].itervalues():
+            nodes.append(build_sample_nodes(options, genotyping, regions_sets, sample, makefile["Nodes"]))
 
         makefile["Nodes"] = tuple(nodes)
     options.destination = destination

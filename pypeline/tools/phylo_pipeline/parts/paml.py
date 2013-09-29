@@ -118,7 +118,7 @@ class CodemlNode(CommandNode):
         return results
 
 
-def build_codeml_nodes(options, settings, interval, filtering, dependencies):
+def build_codeml_nodes(options, settings, regions, filtering, dependencies):
     in_postfix, out_postfix, afa_ext = "", "", ".afa"
     if any(filtering.itervalues()):
         in_postfix = out_postfix = ".filtered"
@@ -127,9 +127,9 @@ def build_codeml_nodes(options, settings, interval, filtering, dependencies):
         afa_ext = ".fasta"
 
     paml        = settings["PAML"]
-    sequences   = interval["Sequences"]
-    sequencedir = os.path.join(options.destination, "alignments", interval["Name"] + in_postfix)
-    destination = os.path.join(options.destination, "paml", "codeml", interval["Name"] + out_postfix)
+    sequences   = regions["Sequences"]
+    sequencedir = os.path.join(options.destination, "alignments", regions["Name"] + in_postfix)
+    destination = os.path.join(options.destination, "paml", "codeml", regions["Name"] + out_postfix)
 
     fasta_files = {}
     for sequence in sequences:
@@ -137,18 +137,18 @@ def build_codeml_nodes(options, settings, interval, filtering, dependencies):
 
     codeml_nodes = []
     for (ctl_name, ctl_files) in paml["codeml"].iteritems():
-        # Skip the "ExcludeGroups" option
-        if ctl_name in ("ExcludeGroups",):
+        # This dictionary also contains the "ExcludeSamples" option
+        if ctl_name == "ExcludeSamples":
             continue
 
         for (sequence, filename) in fasta_files.iteritems():
             output_tar = os.path.join(destination, "%s.%s.tar.gz" % (sequence, ctl_name))
 
-            codeml = CodemlNode(control_file   = ctl_files["Control File"],
-                                trees_file     = ctl_files["Tree File"],
+            codeml = CodemlNode(control_file   = ctl_files["ControlFile"],
+                                trees_file     = ctl_files["TreeFile"],
                                 sequence_file  = filename,
                                 output_tar     = output_tar,
-                                exclude_groups = paml["codeml"]["ExcludeGroups"],
+                                exclude_groups = paml["codeml"]["ExcludeSamples"],
                                 dependencies   = dependencies)
             codeml_nodes.append(codeml)
 
@@ -162,11 +162,10 @@ def chain_codeml(_pipeline, options, makefiles):
     destination = options.destination # Move to makefile
     for makefile in makefiles:
         nodes     = []
-        intervals = makefile["Project"]["Intervals"]
-        filtering = makefile["Project"]["Filter Singletons"]
+        filtering = makefile["Project"]["FilterSingletons"]
         options.destination = os.path.join(destination, makefile["Project"]["Title"])
 
-        for interval in intervals.itervalues():
-            nodes.append(build_codeml_nodes(options, makefile, interval, filtering, makefile["Nodes"]))
+        for regions in makefile["Project"]["Regions"].itervalues():
+            nodes.append(build_codeml_nodes(options, makefile, regions, filtering, makefile["Nodes"]))
         makefile["Nodes"] = tuple(nodes)
     options.destination = destination

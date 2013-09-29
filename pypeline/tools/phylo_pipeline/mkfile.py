@@ -27,36 +27,63 @@ _TEMPLATE = """# -*- mode: Yaml; -*-
 Project:
   Title: PROJECT_NAME
 
-  Taxa:
+  # List of samples to be included in the analytical steps, which may be
+  # grouped using any arbitrary number of (levels of) groups. (Sub)groups
+  # are not required, but may be used instead of listing individual samples
+  # in 'ExcludeSamples' and 'FilterSingletons'.
+  Samples:
     <GROUP>:
       <SUBGROUP>:
-        TAXA_NAME:
-          Species Name: ...
-          Common Name:  ...
+        SAMPLE_NAME:
+          # The species name of a sample (not required)
+          SpeciesName: ...
+          # The common name of a sample (not required)
+          CommonName:  ...
+          # Gender of the sample; used to filter SNPs on homozygous
+          # contigs (see below). Any name may be used for the genders.
           Gender:       ...
+          # Method to use when genotyping samples (see 'Genotyping');
+          # defaults to 'SAMTools' if not explicitly specified.
+          Genotyping Method: ...
 
+  # Specifies a set of regions of interest, each representing one or more
+  # named regions in a reference sequence (e.g. genes) in BED format.
+  RegionsOfInterest:
+     NAME:
+       # Name of the prefix; is expected to correspond to the filename
+       # of the FASTA file without the extension / the name of the
+       # prefix used in the BAM pipeline.
+       Prefix: PREFIX_NAME
+       # If true, BAM files are expected to have the postfix ".realigned";
+       # allows easier interopterability with the BAM pipeline.
+       Realigned: no
+       # Specifies whether or not the sequences are protein coding; if true
+       # indels are only included in the final sequence if the length is
+       # divisible by 3.
+       ProteinCoding: no
+       # Do not include indels in final sequence; note that indels are still
+       # called, and used to filter SNPs. Requires that 'MSAlignment' is enabled
+       IncludeIndels: yes
+       # List of contigs for which heterozygous SNPs should be filtered
+       # (site set to 'N'); e.g. chrX for 'Male' humans, or chrM, etc.
+#       HomozygousContigs:
+#         GENDER_NAME:
+#          - CONTIG_NAME_1
 
-  Intervals:
-     INTERVALS_NAME:
-       Genome: GENOME_NAME
-       Protein coding: no
-       # Do not include indels in final sequence
-       # Indels are still called, and used to filter SNPs
-       Include indels: yes
-       Homozygous Contigs:
-         GENDER_X: []
-
-
-#  Filter sites in a taxa, excluding any nucleotide not
-#  observed in the specified list of taxa or groups.
-#  Filter Singletons: {}
-#    <TAXA> : [<TAXA_1>, ...]
+  # Filter sites in a sample, replacing any nucleotide not observed
+  # in the specified list of samples or groups with 'N'.
+#  FilterSingletons:
+#    <SAMPLE> : [<SAMPLE_1>, ...]
 
 
 Genotyping:
-  # Padding used for genotyping, to ensure that we call adjacent indels
+  # Regions of interest are expanded by this number of bases when calling
+  # SNPs, in order to ensure that adjacent indels can be used during filtering
+  # (VCF_filter --min-distance-to-indels and --min-distance-between-indels).
+  # The final sequences does not include the padding.
   Padding: 10
 
+  # Settings for genotyping by random sampling of nucletoides at each site
   Random:
     # Min distance of variants to indels
     --min-distance-to-indels: 2
@@ -96,18 +123,17 @@ Genotyping:
 
 
 MSAlignment:
-  Enabled: yes
-
   MAFFT:
     Algorithm: G-INS-i
 
 
-
-Phylogenetic Inference:
-  ExcludeGroups: []
+PhylogeneticInference:
+  # Exclude (groups of) samples from this analytical step
+#  ExcludeSamples:
+#    - <NAME_OF_GROUP>
+#    - NAME_OF_SAMPLE
 
   ExaML:
-    Threads: 8
     # Number of times to perform full phylogenetic inference
     Replicates: 1
     # Number of bootstraps to compute
@@ -115,15 +141,21 @@ Phylogenetic Inference:
     Model: GAMMA
 
 
-PAML:
-  codeml:
-    ExcludeGroups: []
+#PAML:
+   # Run codeml on each named sequence in the regions of interest
+#  codeml:
+#   Exclude (groups of) samples from this analytical step
+#    ExcludeSamples:
+#      - <NAME_OF_GROUP>
+#      - NAME_OF_SAMPLE
 
-    # Allow auto-generation of path from options.destination, Project/Title
-    Control Files:
-       "Null": "makefiles/Common.codeml.null.ctl"
-       "Test": "makefiles/Common.codeml.test.ctl"
-    Tree File: "makefiles/3Cabs.codeml.trees"
+    # One or more 'codeml' runs; name is used as a postfix for results.
+#    NAME:
+#      # Control file template; the values 'seqfile', 'treefile'
+#      # automatically set to the approriate values.
+#      ControlFile: PATH_TO_CODEML_CONTROL_FILE
+#      # 'treefile' in the control-file is set to this value
+#      TreeFile:    PATH_TO_CODEML_TREEFILE
 """
 
 

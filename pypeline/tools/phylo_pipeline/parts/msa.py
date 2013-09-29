@@ -32,14 +32,14 @@ from pypeline.nodes.mafft import MetaMAFFTNode
 
 
 
-def build_msa_nodes(options, settings, interval, taxa, filtering, dependencies):
+def build_msa_nodes(options, settings, regions, filtering, dependencies):
     if settings["Default"].lower() != "mafft":
         raise RuntimeError("Only MAFFT support has been implemented!")
 
-    sequencedir = os.path.join(options.destination, "alignments", interval["Name"])
-    sequences   = interval["Sequences"]
+    sequencedir = os.path.join(options.destination, "alignments", regions["Name"])
+    sequences   = regions["Sequences"]
 
-    node = CollectSequencesNode(fasta_files  = interval["Genotypes"],
+    node = CollectSequencesNode(fasta_files  = regions["Genotypes"],
                                 destination  = sequencedir,
                                 sequences    = sequences,
                                 dependencies = dependencies)
@@ -62,17 +62,15 @@ def build_msa_nodes(options, settings, interval, taxa, filtering, dependencies):
     return node
 
 
-def chain(pipeline, options, makefiles):
+def chain(_pipeline, options, makefiles):
     destination = options.destination # Move to makefile
     for makefile in makefiles:
         nodes     = []
         settings  = makefile["MSAlignment"]
-        intervals = makefile["Project"]["Intervals"]
-        filtering = makefile["Project"]["Filter Singletons"]
-        taxa      = makefile["Project"]["Taxa"]
+        filtering = makefile["Project"]["FilterSingletons"]
         options.destination = os.path.join(destination, makefile["Project"]["Title"])
 
-        for interval in intervals.itervalues():
-            nodes.append(build_msa_nodes(options, settings, interval, taxa, filtering, makefile["Nodes"]))
+        for regions in makefile["Project"]["Regions"].itervalues():
+            nodes.append(build_msa_nodes(options, settings, regions, filtering, makefile["Nodes"]))
         makefile["Nodes"] = tuple(nodes)
     options.destination = destination
