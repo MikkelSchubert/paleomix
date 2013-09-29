@@ -83,7 +83,7 @@ class SummaryTableNode(Node):
 
 
     def _run(self, config, temp):
-        aois    = self._stat_areas_of_interest(self._prefixes)
+        rois    = self._stat_areas_of_interest(self._prefixes)
         genomes = self._stat_prefixes(self._prefixes)
         with open(reroot_path(temp, self._output_file), "w") as table:
             table.write("# Command:\n")
@@ -99,11 +99,11 @@ class SummaryTableNode(Node):
             table.write("#\n")
             self._write_genomes(table, genomes)
             table.write("#\n")
-            self._write_areas_of_interest(table, aois)
+            self._write_areas_of_interest(table, rois)
             table.write("#\n#\n")
 
-            for aoi in aois.itervalues():
-                genomes[aoi["Label"]] = {"Size" : aoi["Size"]}
+            for roi in rois.itervalues():
+                genomes[roi["Label"]] = {"Size" : roi["Size"]}
             self._write_tables(table, genomes)
 
 
@@ -122,11 +122,11 @@ class SummaryTableNode(Node):
             table.write("#     %s\n" % (line,))
 
 
-    def _write_areas_of_interest(self, table, aois):
-        table.write("# Areas Of Interest:\n")
-        rows = [["Genome", "AOI", "Size", "NFeatures", "NIntervals", "Path"]]
-        for (_, aoi) in sorted(aois.items()):
-            rows.append([aoi[key] for key in ("Genome", "Name", "Size", "NFeatures", "NIntervals", "Path")])
+    def _write_areas_of_interest(self, table, rois):
+        table.write("# Regions Of Interest:\n")
+        rows = [["Genome", "ROI", "Size", "NFeatures", "NIntervals", "Path"]]
+        for (_, roi) in sorted(rois.items()):
+            rows.append([roi[key] for key in ("Genome", "Name", "Size", "NFeatures", "NIntervals", "Path")])
 
         for line in text.padded_table(rows):
             table.write("#     %s\n" % (line,))
@@ -369,22 +369,22 @@ class SummaryTableNode(Node):
         areas_of_interest = {}
         for (prefix_name, prefix) in prefixes.iteritems():
             prefix_label = prefix.get("Label", prefix_name)
-            for (aoi_name, aoi_filename) in prefix.get("AreasOfInterest", {}).iteritems():
+            for (roi_name, roi_filename) in prefix.get("RegionsOfInterest", {}).iteritems():
                 count, names, size = 0, set(), 0
-                with open(aoi_filename) as handle:
+                with open(roi_filename) as handle:
                     parser = pysam.asBed()
                     for line in handle:
                         bed = parser(line, len(line))
                         names.add(bed.name if len(bed) >= 4 else (bed.contig + "*"))
                         size += (bed.end - bed.start)
                         count += 1
-                areas_of_interest[(prefix_name, aoi_name)] = {"Size"       : size,
+                areas_of_interest[(prefix_name, roi_name)] = {"Size"       : size,
                                                               "NFeatures"  : len(names),
                                                               "NIntervals" : count,
                                                               "Genome"     : prefix["Name"],
-                                                              "Name"       : aoi_name,
-                                                              "Label"      : "%s:%s" % (prefix_label, aoi_name),
-                                                              "Path"       : aoi_filename}
+                                                              "Name"       : roi_name,
+                                                              "Label"      : "%s:%s" % (prefix_label, roi_name),
+                                                              "Path"       : roi_filename}
         return areas_of_interest
 
 

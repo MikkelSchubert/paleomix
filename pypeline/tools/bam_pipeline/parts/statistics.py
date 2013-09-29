@@ -63,14 +63,14 @@ def _build_depth(config, target):
         for sample in prefix.samples:
             input_files.update(sample.bams)
 
-        for (aoi_name, aoi_filename) in _get_aoi(prefix, name_prefix = "."):
+        for (roi_name, roi_filename) in _get_roi(prefix, name_prefix = "."):
             output_filename = os.path.join(config.destination,
-                                           "%s.%s%s.depths" % (target.name, prefix.name, aoi_name))
+                                           "%s.%s%s.depths" % (target.name, prefix.name, roi_name))
 
             node = DepthHistogramNode(config         = config,
                                       target_name    = target.name,
                                       input_files    = input_files.keys(),
-                                      intervals_file = aoi_filename,
+                                      intervals_file = roi_filename,
                                       output_file    = output_filename,
                                       dependencies   = input_files.values())
             nodes.append(node)
@@ -80,8 +80,8 @@ def _build_depth(config, target):
 
 
 
-def _aggregate_for_prefix(cov, prefix, aoi_name = None, into = None):
-    prefix = _get_prefix_label(prefix, aoi_name)
+def _aggregate_for_prefix(cov, prefix, roi_name = None, into = None):
+    prefix = _get_prefix_label(prefix, roi_name)
     results = {} if into is None else into
     for (key, files_and_nodes) in cov.iteritems():
         if prefix is None or (key[0] == prefix):
@@ -93,9 +93,9 @@ def _build_coverage(config, target, make_summary):
     merged_nodes = []
     coverage = _build_coverage_nodes(target)
     for prefix in target.prefixes:
-        for (aoi_name, _) in _get_aoi(prefix):
-            label = _get_prefix_label(prefix.name, aoi_name)
-            postfix = prefix.name if (not aoi_name) else ("%s.%s" % (prefix.name, aoi_name))
+        for (roi_name, _) in _get_roi(prefix):
+            label = _get_prefix_label(prefix.name, roi_name)
+            postfix = prefix.name if (not roi_name) else ("%s.%s" % (prefix.name, roi_name))
 
             files_and_nodes = _aggregate_for_prefix(coverage["Libraries"], label)
             output_filename = os.path.join(config.destination, "%s.%s.coverage" % (target.name, postfix))
@@ -128,9 +128,9 @@ def _build_coverage_nodes(target, use_label = False):
 
     cache = {}
     for prefix in target.prefixes:
-        for (aoi_name, aoi_filename) in _get_aoi(prefix):
+        for (roi_name, roi_filename) in _get_roi(prefix):
             prefix_label = prefix.label if use_label else prefix.name
-            prefix_label = _get_prefix_label(prefix_label, aoi_name)
+            prefix_label = _get_prefix_label(prefix_label, roi_name)
 
             for sample in prefix.samples:
                 for library in sample.libraries:
@@ -138,43 +138,43 @@ def _build_coverage_nodes(target, use_label = False):
 
                     for lane in library.lanes:
                         for bams in lane.bams.values():
-                            bams = _build_coverage_nodes_cached(bams, target.name, aoi_name, aoi_filename, cache)
+                            bams = _build_coverage_nodes_cached(bams, target.name, roi_name, roi_filename, cache)
                             coverage["Lanes"][key].update(bams)
 
-                    bams = _build_coverage_nodes_cached(library.bams, target.name, aoi_name, aoi_filename, cache)
+                    bams = _build_coverage_nodes_cached(library.bams, target.name, roi_name, roi_filename, cache)
                     coverage["Libraries"][key].update(bams)
     return coverage
 
 
-def _build_coverage_nodes_cached(files_and_nodes, target_name, aoi_name, aoi_filename, cache):
+def _build_coverage_nodes_cached(files_and_nodes, target_name, roi_name, roi_filename, cache):
     output_ext = ".coverage"
-    if aoi_name:
-        output_ext = ".%s.coverage" % aoi_name
+    if roi_name:
+        output_ext = ".%s.coverage" % roi_name
 
     coverages = {}
     for (input_filename, node) in files_and_nodes.iteritems():
         output_filename = swap_ext(input_filename, output_ext)
 
-        cache_key = (aoi_filename, input_filename)
+        cache_key = (roi_filename, input_filename)
         if cache_key not in cache:
             cache[cache_key] = CoverageNode(input_file     = input_filename,
                                             output_file    = output_filename,
                                             target_name    = target_name,
-                                            intervals_file = aoi_filename,
+                                            intervals_file = roi_filename,
                                             dependencies   = node)
 
         coverages[output_filename] = cache[cache_key]
     return coverages
 
 
-def _get_aoi(prefix, name_prefix = ""):
-    aoi = [("", None)]
-    for (name, path) in prefix.aoi.iteritems():
-        aoi.append((name_prefix + name, path))
-    return aoi
+def _get_roi(prefix, name_prefix = ""):
+    roi = [("", None)]
+    for (name, path) in prefix.roi.iteritems():
+        roi.append((name_prefix + name, path))
+    return roi
 
 
-def _get_prefix_label(label, aoi_name):
-    if not aoi_name:
+def _get_prefix_label(label, roi_name):
+    if not roi_name:
         return label
-    return "%s:%s" % (label, aoi_name)
+    return "%s:%s" % (label, roi_name)

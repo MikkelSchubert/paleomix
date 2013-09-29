@@ -157,7 +157,7 @@ _VALIDATION = {
         _VALID_PREFIX_NAME : {
             "Path"    : IsStr(default = REQUIRED_VALUE),
             "Label"   : ValueIn(("nuclear", "mitochondrial")),
-            "AreasOfInterest" : IsDictOf(IsStr, IsStr),
+            "RegionsOfInterest" : IsDictOf(IsStr, IsStr),
         },
     },
 

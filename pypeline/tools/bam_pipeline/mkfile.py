@@ -148,7 +148,7 @@ _TEMPLATE_BAM_OPTIONS = \
 #  NAME_OF_PREFIX:
 #    Path: PATH_TO_PREFIX
 #    Label: # "mitochondrial" or "nuclear"
-#    AreasOfInterest:
+#    RegionsOfInterest:
 #      NAME: PATH_TO_BEDFILE
 
 """
