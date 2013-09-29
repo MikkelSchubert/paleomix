@@ -111,13 +111,13 @@ Genotyping:
     # Min distance between indels
     --min-distance-between-indels: 10
     # Min P-value for strand bias (given PV4)
-    --min-strand-bias: 1e-4
+    --min-strand-bias: 1.0e-4
     # Min P-value for baseQ bias (given PV4)
-    --min-baseq-bias: 1e-4
+    --min-baseq-bias: 1.0e-4
     # Min P-value for mapQ bias (given PV4)
-    --min-mapq-bias: 1e-4
+    --min-mapq-bias: 1.0e-4
     # Min P-value for end distance bias (given PV4)
-    --min-end-distance-bias: 1e-4
+    --min-end-distance-bias: 1.0e-4
     # Max frequency of the major allele at heterozygous sites
     --min-allele-frequency: 0.2
 

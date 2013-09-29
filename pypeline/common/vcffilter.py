@@ -34,8 +34,6 @@ import pypeline.common.vcfwrap as vcfwrap
 _INF = float("inf")
 # Rough number of records to keep in memory at once
 _CHUNK_SIZE = 10000
-# Number of bases to cache when checking mappability
-_MAPPABILITY_CACHE  = 500
 
 
 def add_varfilter_options(parser):
@@ -52,8 +50,6 @@ def add_varfilter_options(parser):
                             "sites to be filtered using the --min-allele-frequency filter.")
     group.add_option("-k", "--keep-ambigious-genotypes", default = False, action = "store_true",
                      help = "Keep SNPs without a most likely genotype (based on PL) [%default]")
-    group.add_option("-m", "--filter-by-mappability", default = None,
-                     help = "Filter poorly mappable sites using a .bmap (see 'bam_mappability')")
     parser.add_option_group(group)
 
     group = optparse.OptionGroup(parser, "varFilter: Derived options")
@@ -84,63 +80,17 @@ def add_varfilter_options(parser):
 def filter_vcfs(options, vcfs):
     vcfs  = iter(vcfs)
     chunk = collections.deque()
-    with Mappability(options.filter_by_mappability) as mappability:
-        filename = options.pileup
-        min_freq = options.min_allele_frequency
+    filename = options.pileup
+    min_freq = options.min_allele_frequency
 
-        with AlleleFrequencies(filename, min_freq) as frequencies:
-            while _read_chunk(vcfs, chunk):
-                chunk = _filter_chunk(options, chunk, mappability, frequencies)
-                for vcf in _trim_chunk(options, chunk):
-                    if vcf.filter == ".":
-                        vcf.filter = "PASS"
+    with AlleleFrequencies(filename, min_freq) as frequencies:
+        while _read_chunk(vcfs, chunk):
+            chunk = _filter_chunk(options, chunk, frequencies)
+            for vcf in _trim_chunk(options, chunk):
+                if vcf.filter == ".":
+                    vcf.filter = "PASS"
 
-                    yield vcf
-
-
-class Mappability:
-    def __init__(self, filename):
-        self._handle = None
-        self._contig = ""
-        self._start  = -1
-        self._end    = -1
-
-        if filename is not None:
-            self._handle = pysam.Fastafile(filename)
-            self.is_mappable = self._is_mappable
-        else:
-            self.is_mappable = self._is_always_mappable
-
-
-    def _is_always_mappable(self, contig, position):
-        return True
-
-    def _is_mappable(self, contig, position):
-        assert position # 1-based
-        assert self._handle
-
-        if (contig == self._contig) and (self._start <= position < self._end):
-            return (self._cache[position - self._start] == "1")
-
-        self._contig = contig
-        self._start  = position
-        self._end    = self._start + _MAPPABILITY_CACHE - 1
-        self._cache  = self._handle.fetch(contig,
-                                          self._start,
-                                          self._end + 1)
-
-        return (self._cache[position - self._start] == "1")
-
-    def close(self):
-        if self._handle:
-            self._handle.close()
-            self._handle = None
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, _exc_type, _exc_value, _traceback):
-        self.close()
+                yield vcf
 
 
 class AlleleFrequencies:
@@ -338,7 +288,7 @@ def _filter_by_indels(options, chunk):
             _mark_as_filtered(vcf, "w=%i" % distance_to)
 
 
-def _filter_by_properties(options, vcfs, mappability, frequencies):
+def _filter_by_properties(options, vcfs, frequencies):
     """Filters a list of SNPs/indels based on the various properties recorded in
     the info column, and others. This mirrors most of the filtering carried out
     by vcfutils.pl varFilter."""
@@ -376,10 +326,6 @@ def _filter_by_properties(options, vcfs, mappability, frequencies):
                 _mark_as_filtered(vcf, "4=%e" % options.min_end_distance_bias)
 
         if vcf.alt != ".":
-            # Only filter SNPs?
-            if not mappability.is_mappable(vcf.contig, vcf.pos):
-                _mark_as_filtered(vcf, "m")
-
             ref_fw, ref_rev, alt_fw, alt_rev = map(int, properties["DP4"].split(","))
             if (alt_fw + alt_rev) < options.min_num_alt_bases:
                 _mark_as_filtered(vcf, "a=%i" % options.min_num_alt_bases)
@@ -409,14 +355,14 @@ def _filter_by_properties(options, vcfs, mappability, frequencies):
                             sys.stderr.write("WARNING: Could not determine allele-counts for SNP at %s:%s, filtering ...\n" % (vcf.contig, vcf.pos + 1))
 
 
-def _filter_chunk(options, chunk, mappability, frequencies):
+def _filter_chunk(options, chunk, frequencies):
     at_end = False
     if chunk[-1] is None:
         at_end = True
         chunk.pop()
 
     _filter_by_indels(options, chunk)
-    _filter_by_properties(options, chunk, mappability, frequencies)
+    _filter_by_properties(options, chunk, frequencies)
 
     if at_end:
         chunk.append(None)

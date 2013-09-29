@@ -32,8 +32,10 @@ from pypeline.common.makefile import \
      IsDictOf, \
      IsListOf, \
      StringIn, \
+     IsFloat, \
      IsUnsignedInt, \
      IsBoolean, \
+     IsNone, \
      StringStartsWith, \
      StringEndsWith, \
      CLI_PARAMETERS, \
@@ -361,7 +363,20 @@ _VALIDATION = {
         "VCF_Filter" : {
             "MaxReadDepth"  : Or(IsUnsignedInt, IsDictOf(IsStr, IsUnsignedInt),
                                  default = 0),
-            StringStartsWith("-") : CLI_PARAMETERS,
+
+            "-k" : IsNone,        "--keep-ambigious-genotypes"    : IsNone,
+            "-q" : IsUnsignedInt, "--min-quality"                 : IsUnsignedInt,
+            "-f" : IsFloat,       "--min-allele-frequency"        : IsFloat,
+            "-Q" : IsUnsignedInt, "--min-mapping-quality"         : IsUnsignedInt,
+            "-d" : IsUnsignedInt, "--min-read-depth"              : IsUnsignedInt,
+            "-D" : IsUnsignedInt, "--max-read-depth"              : IsUnsignedInt,
+            "-a" : IsUnsignedInt, "--min-num-alt-bases"           : IsUnsignedInt,
+            "-w" : IsUnsignedInt, "--min-distance-to-indels"      : IsUnsignedInt,
+            "-W" : IsUnsignedInt, "--min-distance-between-indels" : IsUnsignedInt,
+            "-1" : IsFloat,       "--min-strand-bias"             : IsFloat,
+            "-2" : IsFloat,       "--min-baseq-bias"              : IsFloat,
+            "-3" : IsFloat,       "--min-mapq-bias"               : IsFloat,
+            "-4" : IsFloat,       "--min-end-distance-bias"       : IsFloat,
             },
         },
     "MSAlignment" : {
