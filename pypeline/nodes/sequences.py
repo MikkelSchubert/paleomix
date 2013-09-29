@@ -24,13 +24,20 @@ from __future__ import with_statement
 
 import os
 import copy
+import itertools
+import collections
 
 import pypeline.common.fileutils as fileutils
+import pypeline.common.utilities as utilities
 
-from pypeline.common.formats.msa import MSA
-from pypeline.node import Node, MetaNode
-from pypeline.common.formats.fasta import FASTA
-from pypeline.common.utilities import fragment
+from pypeline.common.formats.fasta import \
+     FASTA
+from pypeline.common.formats.msa import \
+     MSA
+from pypeline.node import \
+     NodeError, \
+     Node, \
+     MetaNode
 
 
 
@@ -42,7 +49,7 @@ class CollectSequencesNode(Node):
         """
 
         self._infiles     = copy.deepcopy(fasta_files)
-        self._sequences   = copy.deepcopy(sequences)
+        self._sequences   = utilities.safe_coerce_to_frozenset(sequences)
         self._destination = copy.copy(destination)
         self._outfiles    = [os.path.join(destination, name + ".fasta") for name in self._sequences]
 
@@ -55,23 +62,46 @@ class CollectSequencesNode(Node):
 
 
     def _run(self, _config, temp):
-        fastas = {}
+        fasta_names = []
+        fasta_files = []
         for (name, filename) in self._infiles.iteritems():
-            current_fastas = {}
-            for record in FASTA.from_file(filename):
-                current_fastas[record.name] = record.sequence
-            fastas[name] = current_fastas
-        fastas = list(sorted(fastas.items()))
+            fasta_names.append(name)
+            fasta_files.append(FASTA.from_file(filename))
 
-        for sequence_name in sorted(self._sequences):
-            lines = []
-            for (taxon_name, sequences) in fastas:
-                fastaseq = "\n".join(fragment(60, sequences[sequence_name]))
-                lines.append(">%s\n%s\n" % (taxon_name, fastaseq))
+        # Names of sequences that have been processed / are left to processes
+        seq_names_done  = set()
+        seq_names_left  = set(self._sequences)
+        expected_num_records = len(self._infiles)
+        def _process_records(sequence_name, records):
+            if len(records) != expected_num_records:
+                raise NodeError("Did not find expected number of records for %r; Expected %i, found %i" \
+                                % (sequence_name, expected_num_records, len(records)))
+            elif sequence_name in seq_names_done:
+                raise NodeError("Multiple sequences with the same name: %r"\
+                                % (sequence_name,))
+            elif sequence_name in seq_names_left:
+                seq_names_done.add(sequence_name)
+                seq_names_left.remove(sequence_name)
+                self._write_fasta(temp, fasta_names, sequence_name, records)
 
-            filename = os.path.join(temp, sequence_name + ".fasta")
-            with open(filename, "w") as fasta:
-                fasta.write("".join(lines))
+        fasta_partial = collections.defaultdict(dict)
+        for records in itertools.izip(*fasta_files):
+            sequence_name = records[0].name
+            # Handle unsorted sets of files
+            if not all((record.name == sequence_name) for record in records):
+                for (name, record) in zip(fasta_names, records):
+                    if (record.name in seq_names_done) or (name in fasta_partial.get(record.name, ())):
+                        raise NodeError("Multiple sequences with the same name: %r"\
+                                        % (record.name,))
+                    elif record.name in seq_names_left:
+                        fasta_partial[record.name][name] = record
+                continue
+
+            _process_records(sequence_name, records)
+
+        for (sequence_name, records) in fasta_partial.iteritems():
+            records = [records[name] for name in fasta_names]
+            _process_records(sequence_name, records)
 
 
     def _teardown(self, _config, temp):
@@ -81,6 +111,17 @@ class CollectSequencesNode(Node):
             outfile  = os.path.join(self._destination, filename)
 
             fileutils.move_file(infile, outfile)
+
+
+    @classmethod
+    def _write_fasta(cls, temp, fasta_names, sequence_name, records):
+        filename = os.path.join(temp, sequence_name + ".fasta")
+        with open(filename, "w") as out_handle:
+            for (name, record) in zip(fasta_names, records):
+                fasta = FASTA(name, record.name, record.sequence)
+                out_handle.write("%s\n" % (fasta,))
+
+
 
 
 class FilterSingletonsNode(Node):
