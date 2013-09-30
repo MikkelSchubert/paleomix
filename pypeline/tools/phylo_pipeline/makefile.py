@@ -123,7 +123,7 @@ def _update_regions(options, mkfile):
         subdd["Name"]   = name
         subdd["Desc"]   = "{Prefix}.{Name}".format(**subdd)
         subdd["BED"]    = os.path.join(options.regions_root, subdd["Desc"] + ".bed")
-        subdd["FASTA"]  = os.path.join(options.genomes_root, subdd["Prefix"] + ".fasta")
+        subdd["FASTA"]  = os.path.join(options.prefix_root, subdd["Prefix"] + ".fasta")
 
         required_files = (
             ("Regions file", subdd["BED"], None),

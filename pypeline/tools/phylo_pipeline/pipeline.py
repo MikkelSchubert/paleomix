@@ -90,8 +90,8 @@ def build_options_parser():
                      help = "Location of BAM files for each sample.")
     group.add_option("--regions-root",       default = "./data/regions",
                      help = "Location of BED files containing regions of interest [%default]")
-    group.add_option("--genomes-root",       default = "./data/genomes",
-                     help = "Location of reference genomes (FASTAs) [%default]")
+    group.add_option("--prefix-root",        default = "./data/prefixes",
+                     help = "Location of prefixes (FASTAs) [%default]")
     group.add_option("--destination",        default = "./results",
                      help = "The destination folder for result files [%default]")
     parser.add_option_group(group)
