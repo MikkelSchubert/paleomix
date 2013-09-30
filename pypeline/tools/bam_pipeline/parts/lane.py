@@ -23,13 +23,23 @@
 import os
 import copy
 
-from pypeline.nodes.bwa import BWANode
-from pypeline.nodes.bowtie2 import Bowtie2Node
 
 import pypeline.tools.bam_pipeline.paths as paths
-from pypeline.tools.bam_pipeline.parts import Reads
-from pypeline.tools.bam_pipeline.nodes import CleanupBAMNode, \
-                                              IndexAndValidateBAMNode
+
+from pypeline.common.utilities import \
+     safe_coerce_to_tuple
+from pypeline.atomiccmd.builder import \
+     apply_options
+from pypeline.nodes.bwa import \
+     BWANode
+from pypeline.nodes.bowtie2 import \
+     Bowtie2Node
+from pypeline.tools.bam_pipeline.parts import \
+     Reads
+from pypeline.tools.bam_pipeline.nodes import \
+     CleanupBAMNode, \
+     IndexAndValidateBAMNode
+
 
 #
 _TRIMMED_READS_CACHE = {}
@@ -137,6 +147,31 @@ def _build_mapper_cl_tag(options, cli_tag):
     cli_tag.extend(("|", "samtools", "calmd",   "..."))
 
 
+class ParamCollector:
+    def __init__(self, prefix = (), postfix = ()):
+        self._prefix  = safe_coerce_to_tuple(prefix)
+        self._postfix = safe_coerce_to_tuple(postfix)
+        self._added = []
+        self._set   = {}
+
+    def add_option(self, key, value):
+        self._added.extend((key, value))
+
+    def set_option(self, key, value = None):
+        self._set[key] = value
+
+    def pop_option(self, _key):
+        pass
+
+    def get_result(self):
+        result = list(self._prefix)
+        result.extend(self._added)
+        for (key, value) in sorted(self._set.items()):
+            result.append(key)
+            if value is not None:
+                result.append(value)
+        result.extend(self._postfix)
+        return result
 
 
 ################################################################################
@@ -148,20 +183,18 @@ def _bwa_aln_parameters(options):
         yield ("-l", 2**16 - 1)
 
     if options["QualityOffset"] in (64, "Solexa"):
-        yield ("-I",)
+        yield ("-I", None)
 
     for (key, value) in options["Aligners"]["BWA"].iteritems():
-        if key.startswith("-"):
-            yield (key, value)
+        yield (key, value)
 
 
 def _bwa_build_cl_tag(options):
     # Build summary of parameters used by alignment, only including
     # parameters that affect the output of BWA (as far as possible)
-    cli_tag = ["bwa", "aln"]
-    for args in _bwa_aln_parameters(options):
-        cli_tag.extend(args)
-    cli_tag.append("...")
+    cli_tag = ParamCollector(("bwa", "aln"), "...")
+    apply_options(cli_tag, _bwa_aln_parameters(options))
+    cli_tag = cli_tag.get_result()
 
     cli_tag.extend(("|", "bwa", "sam*", "..."))
     _build_mapper_cl_tag(options["Aligners"]["BWA"], cli_tag)
@@ -173,10 +206,10 @@ def _bwa_build_nodes(config, parameters, tags, options):
     params = BWANode.customize(threads      = config.bwa_max_threads,
                                **parameters)
 
-    for args in _bwa_aln_parameters(options):
-        for aln_key in ("aln", "aln_1", "aln_2"):
-            if aln_key in params.commands:
-                params.commands[aln_key].set_option(*args)
+    parameters = dict(_bwa_aln_parameters(options))
+    for aln_key in ("aln", "aln_1", "aln_2"):
+        if aln_key in params.commands:
+            apply_options(params.commands[aln_key], parameters)
 
     read_group = "@RG\tID:{ID}\tSM:{SM}\tLB:{LB}\tPU:{PU}\tPL:{PL}\tPG:{PG}".format(**tags)
     params.commands["sam"].set_option("-r", read_group)
@@ -195,11 +228,11 @@ def _bwa_build_nodes(config, parameters, tags, options):
 
 def _bowtie2_aln_parameters(options):
     if options["QualityOffset"] == 64:
-        yield ("--phred64",)
+        yield ("--phred64", None)
     elif options["QualityOffset"] == 33:
-        yield ("--phred33",)
+        yield ("--phred33", None)
     else:
-        yield ("--solexa-quals",)
+        yield ("--solexa-quals", None)
 
     for (key, value) in options["Aligners"]["Bowtie2"].iteritems():
         if key.startswith("-"):
@@ -209,10 +242,9 @@ def _bowtie2_aln_parameters(options):
 def _bowtie2_build_cl_tag(options):
     # Build summary of parameters used by alignment, only including
     # parameters that affect the output of bowtie2 (as far as possible)
-    cli_tag = ["bowtie2"]
-    for args in _bowtie2_aln_parameters(options):
-        cli_tag.extend(args)
-    cli_tag.append("...")
+    cli_tag = ParamCollector("bowtie2", "...")
+    apply_options(cli_tag, _bowtie2_aln_parameters(options))
+    cli_tag = cli_tag.get_result()
 
     _build_mapper_cl_tag(options["Aligners"]["Bowtie2"], cli_tag)
 
@@ -223,8 +255,7 @@ def _bowtie2_build_nodes(config, parameters, tags, options):
     params = Bowtie2Node.customize(threads         = config.bowtie2_max_threads,
                                    **parameters)
 
-    for args in _bowtie2_aln_parameters(options):
-        params.commands["aln"].set_option(*args)
+    apply_options(params.commands["aln"], _bowtie2_aln_parameters(options))
 
     pg_tag = "bowtie2:CL:%s" % (_bowtie2_build_cl_tag(options),)
     params.commands["convert"].add_option("--update-pg-tag", pg_tag)
