@@ -125,8 +125,14 @@ Genotyping:
 
 
 MultipleSequenceAlignment:
+  # Multiple sequence alignment using MAFFT
   MAFFT:
+    # Select alignment algorithm; valid values are 'mafft', 'auto', 'fft-ns-1',
+    # 'fft-ns-2', 'fft-ns-i', 'nw-ns-i', 'l-ins-i', 'e-ins-i', and 'g-ins-i'.
     Algorithm: G-INS-i
+
+    # Parameters for mafft algorithm; see above for example of how to specify
+    --maxiterate: 1000
 
 
 PhylogeneticInference:

@@ -398,8 +398,11 @@ _VALIDATION = {
         "Default"   : StringIn(("mafft",), # TODO: Add support for other programs
                                default = "mafft"),
         "MAFFT" : {
-            "Algorithm" : StringIn(("auto","FFT-NS-1", "FFT-NS-2", "FFT-NS-i", "NW-INS-i", "L-INS-i", "E-INS-i", "G-INS-i"),
-                                   default = "auto")
+            "Algorithm" : StringIn(("mafft", "auto",
+                                    "FFT-NS-1", "FFT-NS-2", "FFT-NS-i",
+                                    "NW-INS-i", "L-INS-i", "E-INS-i", "G-INS-i"),
+                                   default = "auto"),
+            StringStartsWith("-") : CLI_PARAMETERS,
             },
         },
     "PhylogeneticInference" : {

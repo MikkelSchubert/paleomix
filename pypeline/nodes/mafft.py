@@ -22,60 +22,54 @@
 #
 import os
 
-from pypeline.node import CommandNode, MetaNode
-from pypeline.atomiccmd.command import AtomicCmd
+from pypeline.node import \
+     CommandNode, \
+     MetaNode
+from pypeline.atomiccmd.command import \
+     AtomicCmd
+from pypeline.atomiccmd.builder import \
+     AtomicCmdBuilder, \
+     use_customizable_cli_parameters, \
+     create_customizable_cli_parameters
 
 
 # Presets mainly taken from
 # http://mafft.cbrc.jp/alignment/software/algorithms/algorithms.html
 _PRESETS = {
+    "mafft"    : ["mafft"],
     "auto"     : ["mafft", "--auto"],
     "fft-ns-1" : ["fftns", "--retree", 1],
     "fft-ns-2" : ["fftns"],
-    "fft-ns-i" : ["fftnsi", "--maxiterate", 1000],
-    "nw-ns-i"  : ["nwnsi",  "--maxiterate", 1000],
-    "l-ins-i"  : ["linsi",  "--maxiterate", 1000],
-    "e-ins-i"  : ["einsi",  "--maxiterate", 1000],
-    "g-ins-i"  : ["ginsi",  "--maxiterate", 1000]}
+    "fft-ns-i" : ["fftnsi"],
+    "nw-ns-i"  : ["nwnsi"],
+    "l-ins-i"  : ["linsi"],
+    "e-ins-i"  : ["einsi"],
+    "g-ins-i"  : ["ginsi"],
+    }
 
 
 
 class MAFFTNode(CommandNode):
-    def __init__(self, infile, outfile, preset = "auto", dependencies = ()):
-        call = _PRESETS[preset.lower()] + ["--quiet", "%(IN_FASTA)s"]
-        command = AtomicCmd(call,
-                            IN_FASTA   = infile,
-                            OUT_STDOUT = outfile)
+    @create_customizable_cli_parameters
+    def customize(cls, input_file, output_file, algorithm = "auto", dependencies = ()):
+        command = AtomicCmdBuilder(_PRESETS[algorithm.lower()])
+        command.add_value("--quiet")
+        command.add_value("%(IN_FASTA)s")
+        command.set_kwargs(IN_FASTA   = input_file,
+                           OUT_STDOUT = output_file)
 
+        return {"command"      : command,
+                "dependencies" : dependencies}
+
+
+    @use_customizable_cli_parameters
+    def __init__(self, parameters):
         description = "<MAFFTNode (%s): '%s' -> '%s'>" \
-                % (preset, infile, outfile)
+                % (parameters.algorithm,
+                   parameters.input_file,
+                   parameters.output_file)
 
         CommandNode.__init__(self,
-                             command      = command,
+                             command      = parameters.command.finalize(),
                              description  = description,
-                             dependencies = dependencies)
-
-
-class MetaMAFFTNode(MetaNode):
-    def __init__(self, rootdir, sequences, preset = "auto", subnodes = (), dependencies = ()):
-        self._nodemap = {}
-        for sequence in sequences:
-            prefix      = os.path.join(rootdir, sequence)
-            input_file  = prefix + ".fasta"
-            output_file = prefix + ".afa"
-
-            self._nodemap[output_file] \
-              = MAFFTNode(infile       = input_file,
-                          outfile      = output_file,
-                          preset       = preset,
-                          dependencies = dependencies)
-
-        MetaNode.__init__(self,
-                          description  = "<MAFFTAlignSequences (%s): In '%s'>" \
-                              % (preset, rootdir),
-                          subnodes     = self._nodemap.values(),
-                          dependencies = dependencies)
-
-    @property
-    def files_to_nodes_map(self):
-        return dict(self._nodemap)
+                             dependencies = parameters.dependencies)

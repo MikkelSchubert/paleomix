@@ -24,12 +24,15 @@
 
 import os
 
+from pypeline.node import \
+     MetaNode
+from pypeline.atomiccmd.builder import \
+     apply_options
 from pypeline.nodes.sequences import \
      CollectSequencesNode, \
      FilterSingletonsMetaNode
-from pypeline.nodes.mafft import MetaMAFFTNode
-
-
+from pypeline.nodes.mafft import \
+     MAFFTNode
 
 
 def build_msa_nodes(options, settings, regions, filtering, dependencies):
@@ -47,11 +50,22 @@ def build_msa_nodes(options, settings, regions, filtering, dependencies):
     fasta_files = dict((filename, node) for filename in node.output_files)
 
     if settings["Enabled"]:
-        node = MetaMAFFTNode(rootdir      = sequencedir,
-                             sequences    = sequences,
-                             preset       = settings["MAFFT"]["Algorithm"],
-                             dependencies = node)
-        fasta_files = node.files_to_nodes_map
+        fasta_files = {}
+        algorithm = settings["MAFFT"]["Algorithm"]
+        for sequence in sequences:
+            input_file  = os.path.join(sequencedir, sequence + ".fasta")
+            output_file = os.path.join(sequencedir, sequence + ".afa")
+
+            mafft = MAFFTNode.customize(input_file  = input_file,
+                                        output_file = output_file,
+                                        algorithm   = algorithm,
+                                        dependencies = node)
+            apply_options(mafft.command, settings["MAFFT"])
+            fasta_files[sequence] = mafft.build_node()
+
+        node = MetaNode(description  = "MAFFT",
+                        subnodes     = fasta_files.values(),
+                        dependencies = node)
 
 
     if any(filtering.itervalues()):
