@@ -436,7 +436,7 @@ def test_mpi_builder__threads__non_int():
 ################################################################################
 ## create_customizable_cli_parameters
 
-def test_custom_cli__single_named_arg():
+def _test_custom_cli__single_named_arg():
     class SingleNamedArg:
         @create_customizable_cli_parameters
         def customize(cls, argument):
@@ -446,7 +446,7 @@ def test_custom_cli__single_named_arg():
     obj   = SingleNamedArg.customize(value)
     assert_equal(obj.argument, value)
 
-def test_custom_cli__adding_new_values():
+def _test_custom_cli__adding_new_values():
     class SingleNamedArg:
         @create_customizable_cli_parameters
         def customize(cls):
@@ -456,7 +456,7 @@ def test_custom_cli__adding_new_values():
     assert_equal(obj.dynamic, 12345)
 
 
-def test_custom_cli__multiple_named_args():
+def _test_custom_cli__multiple_named_args():
     class SingleNamedArg:
         @create_customizable_cli_parameters
         def customize(cls, first, second):
