@@ -303,7 +303,7 @@ def _check_max_read_depth(mkfile):
 
 
 def _check_indels_and_msa(mkfile):
-    if mkfile["MSAlignment"]["Enabled"]:
+    if mkfile["MultipleSequenceAlignment"]["Enabled"]:
         return
 
     regions = mkfile["Project"]["Regions"]
@@ -393,7 +393,7 @@ _VALIDATION = {
             "-4" : IsFloat,       "--min-end-distance-bias"       : IsFloat,
             },
         },
-    "MSAlignment" : {
+    "MultipleSequenceAlignment" : {
         "Enabled"   : IsBoolean(default = True),
         "Default"   : StringIn(("mafft",), # TODO: Add support for other programs
                                default = "mafft"),

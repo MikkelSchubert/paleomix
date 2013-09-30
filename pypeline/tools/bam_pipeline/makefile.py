@@ -83,7 +83,7 @@ _VALIDATION_OPTIONS = {
                               default = 33),
     # Split a lane into multiple entries, one for each (pair of) file(s)
     "SplitLanesByFilenames"  : Or(IsBoolean, IsListOf(IsStr),
-                                  default = False),
+                                  default = True),
     # Format to use when compressing FASTQ files ("gz" or "bz2")
     "CompressionFormat" : ValueIn(("gz", "bz2"),
                                   default = "bz2"),

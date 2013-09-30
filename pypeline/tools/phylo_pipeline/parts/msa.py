@@ -67,7 +67,7 @@ def chain(_pipeline, options, makefiles):
     destination = options.destination # Move to makefile
     for makefile in makefiles:
         nodes     = []
-        settings  = makefile["MSAlignment"]
+        settings  = makefile["MultipleSequenceAlignment"]
         filtering = makefile["Project"]["FilterSingletons"]
         options.destination = os.path.join(destination, makefile["Project"]["Title"])
 

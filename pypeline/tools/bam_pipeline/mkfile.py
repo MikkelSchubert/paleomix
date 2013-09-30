@@ -51,7 +51,7 @@ Options:
   # Split a lane into multiple entries, one for each (pair of) file(s) found using the search-
   # string specified for a given lane. Each lane is named by adding a number to the end of the
   # given barcode.
-  SplitLanesByFilenames: no
+  SplitLanesByFilenames: yes
   # Compression format used when storing FASTQ files (either 'gz' for GZip or 'bz2' for BZip2)
   CompressionFormat: bz2
 """
@@ -112,7 +112,7 @@ _TEMPLATE_BAM_OPTIONS = \
   # command 'bam_rmdup_duplicates', while "normal" reads are filtered
   # using Picard MarkDuplicates.
   PCRDuplicates: filter
-  # Carry out quality base re-scaling using mapDamage (*EXPERIMENTAL*)
+  # Carry out quality base re-scaling of libraries using mapDamage
   RescaleQualities: no
 
   # Exclude any type of trimmed reads from alignment/analysis
@@ -123,7 +123,6 @@ _TEMPLATE_BAM_OPTIONS = \
 #    - Collapsed # Overlapping pair-ended mate reads collapsed into a single read
 #    - CollapsedTruncated # Like 'Collapsed', except that the reads have been
                           # truncated due to the presence of low quality bases.
-                          # AdapterRemoval 1.5+ only.
 
   # Optional steps to perform during processing
   # To disable all features, replace with line "Features: []"

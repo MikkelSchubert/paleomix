@@ -122,7 +122,7 @@ def build_codeml_nodes(options, settings, regions, filtering, dependencies):
     in_postfix, out_postfix, afa_ext = "", "", ".afa"
     if any(filtering.itervalues()):
         in_postfix = out_postfix = ".filtered"
-    if not settings["MSAlignment"]["Enabled"]:
+    if not settings["MultipleSequenceAlignment"]["Enabled"]:
         out_postfix = ".unaligned" + out_postfix
         afa_ext = ".fasta"
 

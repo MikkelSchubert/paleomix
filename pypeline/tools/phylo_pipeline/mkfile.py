@@ -62,7 +62,7 @@ Project:
        # divisible by 3.
        ProteinCoding: no
        # Do not include indels in final sequence; note that indels are still
-       # called, and used to filter SNPs. Requires that 'MSAlignment' is enabled
+       # called, and used to filter SNPs. Requires that 'MultipleSequenceAlignment' is enabled
        IncludeIndels: yes
        # List of contigs for which heterozygous SNPs should be filtered
        # (site set to 'N'); e.g. chrX for 'Male' humans, or chrM, etc.
@@ -73,7 +73,9 @@ Project:
   # Filter sites in a sample, replacing any nucleotide not observed
   # in the specified list of samples or groups with 'N'.
 #  FilterSingletons:
-#    <SAMPLE> : [<SAMPLE_1>, ...]
+#    NAME_OF_SAMPLE:
+#      - <NAME_OF_GROUP>
+#      - NAME_OF_SAMPLE
 
 
 Genotyping:
@@ -122,7 +124,7 @@ Genotyping:
     --min-allele-frequency: 0.2
 
 
-MSAlignment:
+MultipleSequenceAlignment:
   MAFFT:
     Algorithm: G-INS-i
 
@@ -130,9 +132,9 @@ MSAlignment:
 PhylogeneticInference:
   PHYLOGENY_NAME:
     # Exclude (groups of) samples from this analytical step
-    ExcludeSamples:
-      - <NAME_OF_GROUP>
-      - NAME_OF_SAMPLE
+#    ExcludeSamples:
+#      - <NAME_OF_GROUP>
+#      - NAME_OF_SAMPLE
 
     # If 'yes', a tree is generated per named sequence in the areas of
     # interest; otherwise a super-matrix is created from the combined set
@@ -161,9 +163,9 @@ PhylogeneticInference:
       Model: GAMMA
 
 
-#PAML:
+PAML:
    # Run codeml on each named sequence in the regions of interest
-#  codeml:
+  codeml:
 #   Exclude (groups of) samples from this analytical step
 #    ExcludeSamples:
 #      - <NAME_OF_GROUP>
@@ -182,12 +184,12 @@ PhylogeneticInference:
 #      REGIONS_NAME: SUBSET_NAME
 
     # One or more 'codeml' runs; name is used as a postfix for results.
-#    RUN_NAME:
-#      # Control file template; the values 'seqfile', 'treefile'
-#      # automatically set to the approriate values.
-#      ControlFile: PATH_TO_CODEML_CONTROL_FILE
-#      # 'treefile' in the control-file is set to this value
-#      TreeFile:    PATH_TO_CODEML_TREEFILE
+    RUN_NAME:
+      # Control file template; the values 'seqfile', 'treefile'
+      # automatically set to the approriate values.
+      ControlFile: PATH_TO_CODEML_CONTROL_FILE
+      # 'treefile' in the control-file is set to this value
+      TreeFile:    PATH_TO_CODEML_TREEFILE
 """
 
 

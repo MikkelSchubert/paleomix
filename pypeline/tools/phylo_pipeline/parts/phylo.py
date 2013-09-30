@@ -192,7 +192,7 @@ def _build_examl_per_gene_nodes(options, settings, run_dd, roi, destination, fil
     sequences          = regions["Sequences"][roi["SubsetRegions"]]
     filtering_postfix  = ".filtered" if any(filtering.itervalues()) else ""
     sequence_dir       = os.path.join(options.destination, "alignments", roi["Name"] + filtering_postfix)
-    fasta_extension    = ".afa" if settings["MSAlignment"]["Enabled"] else ".fasta"
+    fasta_extension    = ".afa" if settings["MultipleSequenceAlignment"]["Enabled"] else ".fasta"
 
     partitions         = roi["Partitions"] or "111"
 
@@ -214,7 +214,7 @@ def _build_examl_regions_nodes(options, settings, run_dd, destination, filtering
         partitions  = roi_dd["Partitions"]
         filtering_postfix  = ".filtered" if any(filtering.itervalues()) else ""
         sequence_dir       = os.path.join(options.destination, "alignments", roi_name + filtering_postfix)
-        fasta_extension    = ".afa" if settings["MSAlignment"]["Enabled"] else ".fasta"
+        fasta_extension    = ".afa" if settings["MultipleSequenceAlignment"]["Enabled"] else ".fasta"
 
         if partitions:
             for sequence in sequences:
