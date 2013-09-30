@@ -311,7 +311,7 @@ def build_genotyping_nodes(options, genotyping, sample, regions, dependencies):
 
 def build_sampling_nodes(options, genotyping, sample, regions, dependencies):
     fasta_file  = regions["Genotypes"][sample["Name"]]
-    pileup_file = swap_ext(fasta_file, ".bgz")
+    pileup_file = swap_ext(fasta_file, ".pileup.bgz")
 
     padding = genotyping["Padding"]
     slop, node =  build_regions_nodes(options, regions, padding, dependencies)

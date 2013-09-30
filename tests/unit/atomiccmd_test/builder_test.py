@@ -32,7 +32,9 @@ from pypeline.atomiccmd.builder import \
      AtomicCmdBuilderError, \
      AtomicJavaCmdBuilder, \
      AtomicMPICmdBuilder, \
-     apply_options
+     apply_options, \
+     use_customizable_cli_parameters, \
+     create_customizable_cli_parameters
 
 
 
@@ -305,6 +307,23 @@ def test_builder__set__kwargs__overwriting():
 ################################################################################
 ## AtomicCmdBuilder: finalize
 
+def test_builder__finalized_call__simple_command():
+    builder = AtomicCmdBuilder("echo")
+    assert_equal(builder.finalized_call, ["echo"])
+
+def test_builder__finalized_call__kwargs_are_instantiated():
+    builder = AtomicCmdBuilder(("echo", "%(ARG1)s", "X=%(ARG2)s"),
+                               ARG1 = "/foo/bar",
+                               ARG2 = "zod")
+    assert_equal(builder.finalized_call, ["echo", "/foo/bar", "X=zod"])
+
+
+
+
+################################################################################
+################################################################################
+## AtomicCmdBuilder: finalize
+
 def test_builder__finalize__returns_singleton():
     builder = AtomicCmdBuilder("echo")
     assert builder.finalize() is builder.finalize()
@@ -334,6 +353,14 @@ def test_builder__finalize__calls_atomiccmd():
 ## AtomicJavaCmdBuilder
 
 JAVA_CFG = flexmock(temp_root = "/disk/tmp")
+
+def test_java_builder__default__no_config():
+    builder = AtomicJavaCmdBuilder(None, "/path/Foo.jar")
+    assert_equal(builder.call, ["java", "-server", "-Xmx4g",
+                                "-Djava.io.tmpdir=%(TEMP_DIR)s",
+                                "-Djava.awt.headless=true",
+                                "-XX:+UseSerialGC",
+                                "-jar", "%(AUX_JAR)s"])
 
 def test_java_builder__defaults__call():
     builder = AtomicJavaCmdBuilder(JAVA_CFG, "/path/Foo.jar")
@@ -402,6 +429,49 @@ def test_mpi_builder__threads__zero_or_negative():
 
 def test_mpi_builder__threads__non_int():
     assert_raises(TypeError, AtomicMPICmdBuilder, "ls",  threads = "3")
+
+
+
+################################################################################
+################################################################################
+## create_customizable_cli_parameters
+
+def test_custom_cli__single_named_arg():
+    class SingleNamedArg:
+        @create_customizable_cli_parameters
+        def customize(cls, argument):
+            return {}
+
+    value = "A value"
+    obj   = SingleNamedArg.customize(value)
+    assert_equal(obj.argument, value)
+
+def test_custom_cli__adding_new_values():
+    class SingleNamedArg:
+        @create_customizable_cli_parameters
+        def customize(cls):
+            return {"dynamic" : 12345}
+
+    obj   = SingleNamedArg.customize()
+    assert_equal(obj.dynamic, 12345)
+
+
+def test_custom_cli__multiple_named_args():
+    class SingleNamedArg:
+        @create_customizable_cli_parameters
+        def customize(cls, first, second):
+            return {}
+
+    obj   = SingleNamedArg.customize(123, 456)
+    assert_equal(obj.first,  123)
+    assert_equal(obj.second, 456)
+
+
+
+################################################################################
+################################################################################
+## use_customizable_cli_parameters
+
 
 
 
