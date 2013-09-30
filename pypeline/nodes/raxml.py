@@ -56,8 +56,8 @@ class RAxMLReduceNode(CommandNode):
         command.set_kwargs(IN_ALIGNMENT      = input_alignment,
                           IN_PARTITION      = input_partition,
 
-                          TEMP_IN_ALIGNMENT = "RAXML_alignment",
-                          TEMP_IN_PARTITION = "RAXML_partitions",
+                          TEMP_IN_ALIGNMENT = "RAxML_alignment",
+                          TEMP_IN_PARTITION = "RAxML_partitions",
                           TEMP_OUT_INFO     = "RAxML_info.Pypeline",
 
                           OUT_ALIGNMENT     = output_alignment,
@@ -268,5 +268,65 @@ class RAxMLRapidBSNode(CommandNode):
                 destination = os.path.join(temp, self._template % match.groups())
 
                 fileutils.move_file(source, destination)
+
+        CommandNode._teardown(self, config, temp)
+
+
+class RAxMLParsimonyTreeNode(CommandNode):
+    @create_customizable_cli_parameters
+    def customize(cls, input_alignment, input_partitions, output_tree, dependencies = ()):
+        command = AtomicCmdBuilder("raxmlHPC")
+
+        # Compute a randomized parsimony starting tree
+        command.set_option("-y")
+        # Output files are saved with a .Pypeline postfix, and subsequently renamed
+        command.set_option("-n", "Pypeline")
+        # Model required, but not used
+        command.set_option("-m", "GTRGAMMA")
+        # Ensures that output is saved to the temporary directory
+        command.set_option("-w", "%(TEMP_DIR)s")
+        # Set random seed for bootstrap generation. May be set to a fixed value to allow replicability.
+        command.set_option("-p", int(random.random() * 2**31 - 1), fixed = False)
+
+        # Symlink to sequence and partitions, to prevent the creation of *.reduced files outside temp folder
+        command.set_option("-s", "%(TEMP_OUT_ALIGNMENT)s")
+        command.set_option("-q", "%(TEMP_OUT_PARTITION)s")
+
+        command.set_kwargs(IN_ALIGNMENT       = input_alignment,
+                           IN_PARTITION       = input_partitions,
+
+                           # TEMP_OUT_ is used to automatically remove these files
+                           TEMP_OUT_ALIGNMENT = "RAxML_alignment",
+                           TEMP_OUT_PARTITION = "RAxML_partitions",
+                           TEMP_OUT_INFO      = "RAxML_info.Pypeline",
+
+                           OUT_TREE           = output_tree)
+
+        return {"command" : command}
+
+
+    @use_customizable_cli_parameters
+    def __init__(self, parameters):
+        self._input_alignment  = parameters.input_alignment
+        self._input_partitions = parameters.input_partitions
+        self._output_tree      = parameters.output_tree
+
+        CommandNode.__init__(self,
+                             command      = parameters.command.finalize(),
+                             description  = "<RAxMLParsimonyTree: '%s' -> '%s'>" \
+                                     % (parameters.input_alignment, parameters.output_tree),
+                             dependencies = parameters.dependencies)
+
+
+    def _setup(self, config, temp):
+        os.symlink(os.path.abspath(self._input_alignment),  os.path.join(temp, "RAxML_alignment"))
+        os.symlink(os.path.abspath(self._input_partitions), os.path.join(temp, "RAxML_partitions"))
+        CommandNode._setup(self, config, temp)
+
+
+    def _teardown(self, config, temp):
+        basename = os.path.basename(self._output_tree)
+        os.rename(os.path.join(temp, "RAxML_parsimonyTree.Pypeline"),
+                  os.path.join(temp, basename))
 
         CommandNode._teardown(self, config, temp)

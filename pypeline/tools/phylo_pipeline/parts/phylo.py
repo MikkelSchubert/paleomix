@@ -28,11 +28,11 @@ from pypeline.nodes.formats import \
      FastaToPartitionedInterleavedPhyNode
 from pypeline.nodes.raxml import \
      RAxMLReduceNode, \
-     RAxMLBootstrapNode
+     RAxMLBootstrapNode, \
+     RAxMLParsimonyTreeNode
 from pypeline.nodes.examl import \
-     EXaMLNode, \
-     EXaMLParserNode, \
-     ParsimonatorNode
+     ExaMLNode, \
+     ExaMLParserNode
 from pypeline.nodes.newick import \
      NewickRerootNode, \
      NewickSupportNode
@@ -63,17 +63,18 @@ def _build_supermatrix(destination, input_files, exclude_samples, dependencies):
                            dependencies     = supermatrix)
 
 
-def _examl_nodes(options, settings, input_alignment, input_binary, output_template, dependencies):
-    initial_tree = output_template % ("parsimony_tree",)
-    tree = ParsimonatorNode(input_alignment = input_alignment,
-                            output_tree     = initial_tree,
-                            dependencies    = dependencies)
+def _examl_nodes(options, settings, input_alignment, input_partitions, input_binary, output_template, dependencies):
+    parsimony_tree = output_template % ("parsimony_tree",)
+    tree = RAxMLParsimonyTreeNode(input_alignment  = input_alignment,
+                                  input_partitions = input_partitions,
+                                  output_tree      = parsimony_tree,
+                                  dependencies     = dependencies)
 
-    params = EXaMLNode.customize(input_binary    = input_binary,
-                                 initial_tree    = initial_tree,
-                                 output_template = output_template,
-                                 threads         = options.max_examl_threads,
-                                 dependencies    = tree)
+    params = ExaMLNode.customize(input_binary     = input_binary,
+                                 initial_tree     = parsimony_tree,
+                                 output_template  = output_template,
+                                 threads          = options.max_examl_threads,
+                                 dependencies     = tree)
 
     params.command.set_option("-m", settings["ExaML"]["Model"].upper())
 
@@ -97,7 +98,7 @@ def _build_rerooted_trees(meta_node, reroot_on):
 
 def _build_examl_replicates(options, phylo, destination, input_alignment, input_partition, dependencies):
     input_binary = os.path.join(destination, "alignments.reduced.binary")
-    binary       = EXaMLParserNode(input_alignment = input_alignment,
+    binary       = ExaMLParserNode(input_alignment = input_alignment,
                                    input_partition = input_partition,
                                    output_file     = input_binary,
                                    dependencies    = dependencies)
@@ -106,7 +107,7 @@ def _build_examl_replicates(options, phylo, destination, input_alignment, input_
     for replicate_num in range(phylo["ExaML"]["Replicates"]):
         replicate_destination = os.path.join(destination, "replicates")
         replicate_template    = os.path.join(replicate_destination, "replicate.%04i.%%s" % (replicate_num,))
-        replicates.append(_examl_nodes(options, phylo, input_alignment, input_binary, replicate_template, binary))
+        replicates.append(_examl_nodes(options, phylo, input_alignment, input_partition, input_binary, replicate_template, binary))
 
     if replicates:
         meta = MetaNode(description  = "Replicates",
@@ -136,17 +137,18 @@ def _build_examl_bootstraps(options, phylo, destination, input_alignment, input_
             bootstrap_alignment   = bootstrap_template % (bootstrap_num,)
             bootstrap_binary      = swap_ext(bootstrap_alignment, ".binary")
             bootstrap_final       = swap_ext(bootstrap_alignment, ".%s")
-            bs_binary   = EXaMLParserNode(input_alignment = bootstrap_alignment,
+            bs_binary   = ExaMLParserNode(input_alignment = bootstrap_alignment,
                                           input_partition = input_partition,
                                           output_file     = bootstrap_binary,
                                           dependencies    = bootstrap)
 
-            bootstraps.append(_examl_nodes(options         = options,
-                                           settings        = phylo,
-                                           input_alignment = bootstrap_alignment,
-                                           input_binary    = bootstrap_binary,
-                                           output_template = bootstrap_final,
-                                           dependencies    = bs_binary))
+            bootstraps.append(_examl_nodes(options          = options,
+                                           settings         = phylo,
+                                           input_alignment  = bootstrap_alignment,
+                                           input_partitions = input_partition,
+                                           input_binary     = bootstrap_binary,
+                                           output_template  = bootstrap_final,
+                                           dependencies     = bs_binary))
 
     if bootstraps:
         meta = MetaNode(description  = "Bootstraps",

@@ -35,7 +35,7 @@ from pypeline.atomiccmd.builder import \
      create_customizable_cli_parameters
 
 
-class EXaMLParserNode(CommandNode):
+class ExaMLParserNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, input_alignment, input_partition, output_file, dependencies = ()):
         """
@@ -78,7 +78,7 @@ class EXaMLParserNode(CommandNode):
 
         CommandNode.__init__(self,
                              command      = parameters.command.finalize(),
-                             description  = "<EXaMLParser: '%s' -> '%s'>" \
+                             description  = "<ExaMLParser: '%s' -> '%s'>" \
                                  % (parameters.input_alignment, parameters.output_file),
                              dependencies = parameters.dependencies)
 
@@ -104,12 +104,12 @@ class EXaMLParserNode(CommandNode):
         CommandNode._teardown(self, config, temp)
 
 
-class EXaMLNode(CommandNode):
+class ExaMLNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, input_binary, initial_tree, output_template, threads = 1, dependencies = ()):
         """
         Arguments:
-        input_binary  -- A binary alignment file in a format readable by EXaML.
+        input_binary  -- A binary alignment file in a format readable by ExaML.
         output_template  -- A template string used to construct final filenames. Should consist
                             of a full path, including a single '%s', which is replaced with the
                             variable part of RAxML output files (e.g. 'info', 'bestTree', ...).
@@ -147,7 +147,7 @@ class EXaMLNode(CommandNode):
 
         CommandNode.__init__(self,
                              command      = parameters.command.finalize(),
-                             description  = "<EXaML (%i thread(s)): '%s' -> '%s'>" \
+                             description  = "<ExaML (%i thread(s)): '%s' -> '%s'>" \
                                  % (parameters.threads,
                                     parameters.input_binary,
                                     parameters.output_template),
