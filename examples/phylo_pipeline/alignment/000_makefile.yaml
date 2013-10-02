@@ -1,5 +1,5 @@
 # -*- mode: Yaml; -*-
-# Timestamp: 2013-10-01T23:11:15.951651
+# Timestamp: 2013-09-24T10:53:40.257580
 #
 # Default options.
 # Can also be specific for a set of samples, libraries, and lanes,
@@ -16,7 +16,7 @@ Options:
   # Split a lane into multiple entries, one for each (pair of) file(s) found using the search-
   # string specified for a given lane. Each lane is named by adding a number to the end of the
   # given barcode.
-  SplitLanesByFilenames: yes
+  SplitLanesByFilenames: no
   # Compression format used when storing FASTQ files (either 'gz' for GZip or 'bz2' for BZip2)
   CompressionFormat: bz2
 
@@ -42,9 +42,7 @@ Options:
     # Settings for mappings performed using BWA
     BWA:
       # Filter hits with a mapping quality (PHRED) below this value
-      MinQuality: 30
-      # Filter reads that did not map to the reference sequence
-      FilterUnmappedReads: yes
+      MinQuality: 25
       # Should be disabled ("no") for aDNA alignments, as post-mortem localizes
       # to the seed region, which BWA expects to have few errors. Sets "-l".
       # See Schubert et al. 2012: http://pmid.us/22574660
@@ -56,36 +54,32 @@ Options:
     Bowtie2:
       # Filter hits with a mapping quality (PHRED) below this value
       MinQuality: 0
-      # Filter reads that did not map to the reference sequence
-      FilterUnmappedReads: yes
       # Examples of how to add additional command-line options
 #      --trim5: 5
 #      --trim3: 5
       # Note that the colon is required, even if no value is specified
       --very-sensitive:
       # Example of how to specify multiple values for an option
-#     --rg:
-#       - CN:SequencingCenterNameHere
-#       - DS:DescriptionOfReadGroup
+#      --rg:
+#        - CN:SequencingCenterNameHere
+#        - DS:DescriptionOfReadGroup
 
-  # Mark / filter PCR duplicates. If set to 'filter', PCR duplicates
-  # are removed from the output files; if set to 'mark', these are
-  # flagged with bit 0x400; if set to 'no', the reads are assumed to
-  # not have been amplified. Collapsed reads are filtered using the
-  # command 'bam_rmdup_duplicates', while "normal" reads are filtered
-  # using Picard MarkDuplicates.
-  PCRDuplicates: filter
-  # Carry out quality base re-scaling of libraries using mapDamage
+  # Filter PCR duplicates
+  # Collapsed reads are filtered using Martin Kirchers FilterUnique,
+  # while other reads are filtered using Picard MarkDuplicates.
+  PCRDuplicates: yes
+  # Carry out quality base re-scaling using mapDamage (*EXPERIMENTAL*)
   RescaleQualities: no
 
   # Exclude any type of trimmed reads from alignment/analysis
   # All reads are processed by default.
-  ExcludeReads:
+#  ExcludeReads:
 #    - Single    # Single-ended reads, or PE reads where one mate was discarded
-    - Paired    # Pair-ended reads, where both reads were retained
+#    - Paired    # Pair-ended reads, where both reads were retained
 #    - Collapsed # Overlapping pair-ended mate reads collapsed into a single read
 #    - CollapsedTruncated # Like 'Collapsed', except that the reads have been
-#                           truncated due to the presence of low quality bases.
+                          # truncated due to the presence of low quality bases.
+                          # AdapterRemoval 1.5+ only.
 
   # Optional steps to perform during processing
   # To disable all features, replace with line "Features: []"
@@ -107,51 +101,39 @@ Options:
 # Map of prefixes by name, each having a Path key, which specifies the location
 # of the BWA/Bowtie2 index. See the 'README.md' file for more information,
 Prefixes:
- rCRS:
-   Path: 000_prefixes/rCRS.fasta
-   Label: "mitochondrial"
+  rCRS:
+    Path: 000_prefixes/rCRS.fasta
+    Label: "mitochondrial" # or "nuclear"
 #    AreasOfInterest:
 #      NAME: PATH_TO_BEDFILE
 
 
-# Targets are specified using the following structure:
-# The output-files will be prefixed with 'ExampleProject.'
-ExampleProject:
-  # The Sample tag will be set to 'Synthetic_Sample_1'
-  Synthetic_Sample_1:
-    # In this example, libraries are named using their DNA barcode:
+bonobo:
+  synth_bonobo_sample:
+    synth_bonobo_library:
+      synth_bonobo_lane: "000_reads/bonobo/*_R{Pair}_*.fastq.gz"
 
-    ACGATA:
-      # Library contains a PE lane
-      Lane_1: 000_data/ACGATA_L1_R{Pair}_*.fastq.gz
+chimpanzee:
+  synth_chimpanzee_sample:
+    synth_chimpanzee_library:
+      synth_chimpanzee_lane: "000_reads/chimpanzee/*_R{Pair}_*.fastq.gz"
 
-      # Library also contains a pre-trimmed PE lane
-      # As noted above, we only care about the collapsed reads
-      Lane_2:
-        Single:             000_data/ACGATA_L2/reads.singleton.truncated.gz
-        Collapsed:          000_data/ACGATA_L2/reads.collapsed.gz
-        CollapsedTruncated: 000_data/ACGATA_L2/reads.collapsed.truncated.gz
+common_squirrel_monkey:
+  synth_common_squirrel_monkey_sample:
+    synth_common_squirrel_monkey_library:
+      synth_common_squirrel_monkey_lane: "000_reads/common_squirrel_monkey/*_R{Pair}_*.fastq.gz"
 
-    GCTCTG:
-      # Library contains a SE lane
-      Lane_1: 000_data/GCTCTG_L1_R1_*.fastq.gz
+gorilla:
+  synth_gorilla_sample:
+    synth_gorilla_library:
+      synth_gorilla_lane: "000_reads/gorilla/*_R{Pair}_*.fastq.gz"
 
-      # Library also contains a BAM-file produced using a
-      # different lane from this library. It will be cleaned
-      # up / tagged, and joined with the other reads. It is
-      # assumed to contain PE reads (a limitation of the
-      # pipeline).
-      Lane_2:
-        rCRS: 000_data/GCTCTG_L2.bam
+sumatran_orangutan:
+  synth_sumatran_orangutan_sample:
+    synth_sumatran_orangutan_library:
+      synth_sumatran_orangutan_lane: "000_reads/sumatran_orangutan/*_R{Pair}_*.fastq.gz"
 
-    # Libray containing both a PE and a SE lane
-    TGCTCA:
-      # Options can be overridden at any level up to this level
-      # Any option not specified here is inherited from the
-      # previous levels.
-      Options:
-        SplitLanesByFilenames: yes
-
-      Lane_1: 000_data/TGCTCA_L1_R1_*.fastq.gz
-      Lane_2: 000_data/TGCTCA_L2_R{Pair}_*.fastq.gz
-
+white_handed_gibbon:
+  synth_white_handed_gibbon_sample:
+    synth_white_handed_gibbon_library:
+      synth_white_handed_gibbon_lane: "000_reads/white_handed_gibbon/*_R{Pair}_*.fastq.gz"
