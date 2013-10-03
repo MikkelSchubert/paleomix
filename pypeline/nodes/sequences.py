@@ -119,7 +119,7 @@ class CollectSequencesNode(Node):
         with open(filename, "w") as out_handle:
             for (name, record) in zip(fasta_names, records):
                 fasta = FASTA(name, record.name, record.sequence)
-                out_handle.write("%s\n" % (fasta,))
+                out_handle.write(str(fasta))
 
 
 
