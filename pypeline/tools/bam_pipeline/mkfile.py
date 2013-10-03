@@ -57,8 +57,7 @@ Options:
 """
 
 _TEMPLATE_BAM_OPTIONS = \
-"""  # Settings for aligners supported by the pipeline
-#  Settings for trimming of reads, see AdapterRemoval man-page for more options
+"""  # Settings for trimming of reads, see AdapterRemoval man-page for more options
 #  AdapterRemoval:
      # Adapter sequences, set and uncomment to override defaults
 #     --pcr1: ...
@@ -72,6 +71,7 @@ _TEMPLATE_BAM_OPTIONS = \
 #     --trimns: no
 #     --trimqualities: no
 
+  # Settings for aligners supported by the pipeline
   Aligners:
     # Choice of aligner software to use, either "BWA" or "Bowtie2"
     Program: BWA

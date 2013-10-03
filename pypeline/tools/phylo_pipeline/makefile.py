@@ -46,6 +46,8 @@ from pypeline.common.makefile import \
      Not
 from pypeline.common.fileutils import \
      swap_ext
+from pypeline.common.utilities import \
+     fill_dict
 
 
 
@@ -64,13 +66,12 @@ def _mangle_makefile(options, mkfile):
     _update_subsets(options, mkfile)
     _update_filtering(mkfile)
     _update_sample_sets(mkfile)
+    _update_genotyping(mkfile)
+    _update_msa(mkfile)
     _check_genders(mkfile)
     _check_max_read_depth(mkfile)
     _check_indels_and_msa(mkfile)
     mkfile["Nodes"] = ()
-
-    padding = mkfile["Genotyping"]["Padding"]
-    mkfile["Genotyping"]["Random"]["--padding"] = padding
 
     return mkfile
 
@@ -217,7 +218,7 @@ def _update_subsets(_options, mkfile):
 
         roi_fname = swap_ext(subsets_by_regions[roi]["BED"], subset + ".names")
         if not os.path.isfile(roi_fname):
-            raise MakefileError(("Subset file does not exist Regions Of Interest:\n"
+            raise MakefileError(("Subset file does not exist for Regions Of Interest:\n"
                                  "  Region = %r\n  Subset = %r\n  Path   = %r")
                                  % (roi, subset, roi_fname))
 
@@ -288,27 +289,28 @@ def _check_genders(mkfile):
 
 
 def _check_max_read_depth(mkfile):
-    max_depths = mkfile["Genotyping"]["VCF_Filter"]["MaxReadDepth"]
-    if isinstance(max_depths, types.DictType):
-        required_keys = set()
-        for sample in mkfile["Project"]["Samples"].itervalues():
-            if sample["GenotypingMethod"].lower() == "samtools":
-                required_keys.add(sample["Name"])
+    for (key, settings) in mkfile["Genotyping"].iteritems():
+        max_depths = settings["VCF_Filter"]["MaxReadDepth"]
+        if isinstance(max_depths, types.DictType):
+            required_keys = set()
+            for sample in mkfile["Project"]["Samples"].itervalues():
+                if sample["GenotypingMethod"].lower() == "samtools":
+                    required_keys.add(sample["Name"])
 
-        # Extra keys are allowed, to make it easier to temporarily disable a sample
-        missing_keys = required_keys - set(max_depths)
-        if missing_keys:
-            raise MakefileError("MaxReadDepth not specified for the following samples:\n    - %s" \
-                                % ("\n    - ".join(sorted(missing_keys)),))
+            # Extra keys are allowed, to make it easier to temporarily disable a sample
+            missing_keys = required_keys - set(max_depths)
+            if missing_keys:
+                raise MakefileError("MaxReadDepth not specified for the following samples for %r:\n    - %s" \
+                                    % (key, "\n    - ".join(sorted(missing_keys))))
 
 
 def _check_indels_and_msa(mkfile):
-    if mkfile["MultipleSequenceAlignment"]["Enabled"]:
-        return
-
+    msa     = mkfile["MultipleSequenceAlignment"]
     regions = mkfile["Project"]["Regions"]
     for (name, subdd) in regions.iteritems():
-        if subdd["IncludeIndels"]:
+        msa_enabled = msa[name]["Enabled"]
+
+        if subdd["IncludeIndels"] and not msa_enabled:
             raise MakefileError("Regions %r includes indels, but MSA is disabled!" % (name,))
 
 
@@ -319,13 +321,47 @@ def _update_sample_sets(mkfile):
     for (key, subdd) in mkfile["PhylogeneticInference"].iteritems():
         subdd["ExcludeSamples"] = \
           _select_samples(subdd["ExcludeSamples"], groups, samples, "PhylogeneticInference:%s:ExcludeSamples" % (key,))
+
+        # Replace None with an empty list, to simplify code using this value
+        root_trees_on = subdd["RootTreesOn"] or ()
         subdd["RootTreesOn"] = \
-          _select_samples(subdd["RootTreesOn"], groups, samples, "PhylogeneticInference:%s:RootTreesOn" % (key,))
+          _select_samples(root_trees_on, groups, samples, "PhylogeneticInference:%s:RootTreesOn" % (key,))
 
     mkfile["PAML"]["codeml"]["ExcludeSamples"] = \
       _select_samples(mkfile["PAML"]["codeml"]["ExcludeSamples"], groups, samples, "PAML:codeml:ExcludeSamples")
 
 
+def _update_genotyping(mkfile):
+    genotyping = mkfile["Genotyping"]
+    defaults   = genotyping.pop("Defaults")
+    defaults.setdefault("Padding", 5)
+    defaults["VCF_Filter"].setdefault("MaxReadDepth", 0)
+
+    for key in mkfile["Project"]["Regions"]:
+        subdd = fill_dict(genotyping.get(key, {}), defaults)
+        subdd["Random"]["--padding"] = subdd["Padding"]
+        genotyping[key] = subdd
+
+    regions = set(genotyping)
+    unknown_regions = regions - set(mkfile["Project"]["Regions"])
+    if unknown_regions:
+        raise MakefileError("Unknown Regions of Interest in Genotyping: %s" \
+                            % (", ".join(unknown_regions),))
+
+
+def _update_msa(mkfile):
+    msa      = mkfile["MultipleSequenceAlignment"]
+    defaults = msa.pop("Defaults")
+    defaults.setdefault("Program", "MAFFT")
+    defaults["MAFFT"].setdefault("Algorithm", "MAFFT")
+
+    for key in mkfile["Project"]["Regions"]:
+        msa[key] = fill_dict(msa.get(key, {}), defaults)
+
+    unknown_regions = set(msa) - set(mkfile["Project"]["Regions"])
+    if unknown_regions:
+        raise MakefileError("Unknown Regions of Interest in Genotyping: %s" \
+                            % (", ".join(unknown_regions),))
 
 
 # Recursive definition of sample tree
@@ -342,6 +378,48 @@ _VALIDATION_SAMPLES = {
     }
 }
 _VALIDATION_SAMPLES[_VALIDATION_SUBSAMPLE_KEY] = _VALIDATION_SAMPLES
+
+_VALIDATION_GENOTYPES = {
+    "Padding"  : IsUnsignedInt,
+    "MPileup"  : {
+        StringStartsWith("-") : CLI_PARAMETERS,
+    },
+    "BCFTools" : {
+        StringStartsWith("-") : CLI_PARAMETERS,
+    },
+    "Random"   : {
+        "--min-distance-to-indels" : IsUnsignedInt,
+    },
+    "VCF_Filter" : {
+        "MaxReadDepth"  : Or(IsUnsignedInt, IsDictOf(IsStr, IsUnsignedInt)),
+
+        "-k" : IsNone,        "--keep-ambigious-genotypes"    : IsNone,
+        "-q" : IsUnsignedInt, "--min-quality"                 : IsUnsignedInt,
+        "-f" : IsFloat,       "--min-allele-frequency"        : IsFloat,
+        "-Q" : IsUnsignedInt, "--min-mapping-quality"         : IsUnsignedInt,
+        "-d" : IsUnsignedInt, "--min-read-depth"              : IsUnsignedInt,
+        "-D" : IsUnsignedInt, "--max-read-depth"              : IsUnsignedInt,
+        "-a" : IsUnsignedInt, "--min-num-alt-bases"           : IsUnsignedInt,
+        "-w" : IsUnsignedInt, "--min-distance-to-indels"      : IsUnsignedInt,
+        "-W" : IsUnsignedInt, "--min-distance-between-indels" : IsUnsignedInt,
+        "-1" : IsFloat,       "--min-strand-bias"             : IsFloat,
+        "-2" : IsFloat,       "--min-baseq-bias"              : IsFloat,
+        "-3" : IsFloat,       "--min-mapq-bias"               : IsFloat,
+        "-4" : IsFloat,       "--min-end-distance-bias"       : IsFloat,
+    },
+}
+
+_VALIDATION_MSA = {
+    "Enabled"   : IsBoolean(default = True),
+    "Program"   : StringIn(("mafft",)), # TODO: Add support for other programs
+
+    "MAFFT" : {
+        "Algorithm" : StringIn(("mafft", "auto",
+                                "FFT-NS-1", "FFT-NS-2", "FFT-NS-i",
+                                "NW-INS-i", "L-INS-i", "E-INS-i", "G-INS-i")),
+        StringStartsWith("-") : CLI_PARAMETERS,
+    },
+}
 
 
 _VALIDATION = {
@@ -364,46 +442,12 @@ _VALIDATION = {
             },
         },
     "Genotyping" : {
-        "Padding"  : IsUnsignedInt(default = 5),
-        "MPileup"  : {
-            StringStartsWith("-") : CLI_PARAMETERS,
-            },
-        "BCFTools" : {
-            StringStartsWith("-") : CLI_PARAMETERS,
-            },
-        "Random"   : {
-            "--min-distance-to-indels" : IsUnsignedInt,
-            },
-        "VCF_Filter" : {
-            "MaxReadDepth"  : Or(IsUnsignedInt, IsDictOf(IsStr, IsUnsignedInt),
-                                 default = 0),
-
-            "-k" : IsNone,        "--keep-ambigious-genotypes"    : IsNone,
-            "-q" : IsUnsignedInt, "--min-quality"                 : IsUnsignedInt,
-            "-f" : IsFloat,       "--min-allele-frequency"        : IsFloat,
-            "-Q" : IsUnsignedInt, "--min-mapping-quality"         : IsUnsignedInt,
-            "-d" : IsUnsignedInt, "--min-read-depth"              : IsUnsignedInt,
-            "-D" : IsUnsignedInt, "--max-read-depth"              : IsUnsignedInt,
-            "-a" : IsUnsignedInt, "--min-num-alt-bases"           : IsUnsignedInt,
-            "-w" : IsUnsignedInt, "--min-distance-to-indels"      : IsUnsignedInt,
-            "-W" : IsUnsignedInt, "--min-distance-between-indels" : IsUnsignedInt,
-            "-1" : IsFloat,       "--min-strand-bias"             : IsFloat,
-            "-2" : IsFloat,       "--min-baseq-bias"              : IsFloat,
-            "-3" : IsFloat,       "--min-mapq-bias"               : IsFloat,
-            "-4" : IsFloat,       "--min-end-distance-bias"       : IsFloat,
-            },
-        },
+        "Defaults" : _VALIDATION_GENOTYPES,
+        IsStr :      _VALIDATION_GENOTYPES,
+    },
     "MultipleSequenceAlignment" : {
-        "Enabled"   : IsBoolean(default = True),
-        "Default"   : StringIn(("mafft",), # TODO: Add support for other programs
-                               default = "mafft"),
-        "MAFFT" : {
-            "Algorithm" : StringIn(("mafft", "auto",
-                                    "FFT-NS-1", "FFT-NS-2", "FFT-NS-i",
-                                    "NW-INS-i", "L-INS-i", "E-INS-i", "G-INS-i"),
-                                   default = "auto"),
-            StringStartsWith("-") : CLI_PARAMETERS,
-            },
+        "Defaults" : _VALIDATION_MSA,
+        IsStr :      _VALIDATION_MSA,
         },
     "PhylogeneticInference" : {
         IsStr : {
@@ -412,7 +456,7 @@ _VALIDATION = {
             # Exclude one or more samples from the phylogeny
             "ExcludeSamples" : IsListOf(IsStr, default = []),
             # Which samples to root the final trees on / or midpoint rooting
-            "RootTreesOn"    : IsListOf(IsStr, default = []),
+            "RootTreesOn"    : Or(IsListOf(IsStr), IsNone, default = []),
             # Create a tree per gene, for each region of interest,
             # or create a supermatrix tree from all regions specified.
             "PerGeneTrees"   : IsBoolean(default = False),

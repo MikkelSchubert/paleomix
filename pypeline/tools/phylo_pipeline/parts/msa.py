@@ -36,7 +36,7 @@ from pypeline.nodes.mafft import \
 
 
 def build_msa_nodes(options, settings, regions, filtering, dependencies):
-    if settings["Default"].lower() != "mafft":
+    if settings["Program"].lower() != "mafft":
         raise RuntimeError("Only MAFFT support has been implemented!")
 
     sequencedir = os.path.join(options.destination, "alignments", regions["Name"])
@@ -86,6 +86,7 @@ def chain(_pipeline, options, makefiles):
         options.destination = os.path.join(destination, makefile["Project"]["Title"])
 
         for regions in makefile["Project"]["Regions"].itervalues():
-            nodes.append(build_msa_nodes(options, settings, regions, filtering, makefile["Nodes"]))
+            regions_settings = settings[regions["Name"]]
+            nodes.append(build_msa_nodes(options, regions_settings, regions, filtering, makefile["Nodes"]))
         makefile["Nodes"] = tuple(nodes)
     options.destination = destination

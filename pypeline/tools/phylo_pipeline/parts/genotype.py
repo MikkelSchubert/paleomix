@@ -251,6 +251,8 @@ def build_regions_nodes(options, regions, padding, dependencies):
 
 
 def build_genotyping_nodes(options, genotyping, sample, regions, dependencies):
+    genotyping = genotyping[regions["Name"]]
+
     fasta     = regions["Genotypes"][sample["Name"]]
     calls     = swap_ext(fasta, ".vcf.bgz")
     pileups   = swap_ext(fasta, ".vcf.pileup.bgz")
@@ -310,6 +312,8 @@ def build_genotyping_nodes(options, genotyping, sample, regions, dependencies):
 
 
 def build_sampling_nodes(options, genotyping, sample, regions, dependencies):
+    genotyping = genotyping[regions["Name"]]
+
     fasta_file  = regions["Genotypes"][sample["Name"]]
     pileup_file = swap_ext(fasta_file, ".pileup.bgz")
 

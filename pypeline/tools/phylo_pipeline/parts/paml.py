@@ -122,7 +122,7 @@ def build_codeml_nodes(options, settings, regions, filtering, dependencies):
     in_postfix, out_postfix, afa_ext = "", "", ".afa"
     if any(filtering.itervalues()):
         in_postfix = out_postfix = ".filtered"
-    if not settings["MultipleSequenceAlignment"]["Enabled"]:
+    if not settings["MultipleSequenceAlignment"][regions["Name"]]["Enabled"]:
         out_postfix = ".unaligned" + out_postfix
         afa_ext = ".fasta"
 
@@ -145,13 +145,13 @@ def build_codeml_nodes(options, settings, regions, filtering, dependencies):
         for (sequence, filename) in fasta_files.iteritems():
             output_tar = os.path.join(destination, "%s.%s.tar.gz" % (sequence, ctl_name))
 
-            codeml = CodemlNode(control_file   = ctl_files["ControlFile"],
-                                trees_file     = ctl_files["TreeFile"],
-                                sequence_file  = filename,
-                                output_tar     = output_tar,
-                                exclude_groups = codeml["ExcludeSamples"],
-                                dependencies   = dependencies)
-            codeml_nodes.append(codeml)
+            node = CodemlNode(control_file   = ctl_files["ControlFile"],
+                              trees_file     = ctl_files["TreeFile"],
+                              sequence_file  = filename,
+                              output_tar     = output_tar,
+                              exclude_groups = codeml["ExcludeSamples"],
+                              dependencies   = dependencies)
+            codeml_nodes.append(node)
 
     return MetaNode(description  = "<CodemlNodes>",
                     subnodes     = codeml_nodes,

@@ -62,7 +62,8 @@ Project:
        # divisible by 3.
        ProteinCoding: no
        # Do not include indels in final sequence; note that indels are still
-       # called, and used to filter SNPs. Requires that 'MultipleSequenceAlignment' is enabled
+       # called, and used to filter SNPs. Requires that
+       # 'MultipleSequenceAlignment' is enabled
        IncludeIndels: yes
        # List of contigs for which heterozygous SNPs should be filtered
        # (site set to 'N'); e.g. chrX for 'Male' humans, or chrM, etc.
@@ -79,66 +80,88 @@ Project:
 
 
 Genotyping:
-  # Regions of interest are expanded by this number of bases when calling
-  # SNPs, in order to ensure that adjacent indels can be used during filtering
-  # (VCF_filter --min-distance-to-indels and --min-distance-between-indels).
-  # The final sequences does not include the padding.
-  Padding: 10
+  # Default settings for all regions of interest
+  Defaults:
+    # Regions of interest are expanded by this number of bases when calling
+    # SNPs, in order to ensure that adjacent indels can be used during filtering
+    # (VCF_filter --min-distance-to-indels and --min-distance-between-indels).
+    # The final sequences does not include the padding.
+    Padding: 10
 
-  # Settings for genotyping by random sampling of nucletoides at each site
-  Random:
-    # Min distance of variants to indels
-    --min-distance-to-indels: 2
+    # Settings for genotyping by random sampling of nucletoides at each site
+    Random:
+      # Min distance of variants to indels
+      --min-distance-to-indels: 2
 
-  MPileup:
-    -E: # extended BAQ for higher sensitivity but lower specificity
-    -A: # count anomalous read pairs
+    MPileup:
+      -E: # extended BAQ for higher sensitivity but lower specificity
+      -A: # count anomalous read pairs
 
-  BCFTools:
-    -g: # Call genotypes at variant sites
+    BCFTools:
+      -g: # Call genotypes at variant sites
 
-  VCF_Filter:
-    # Maximum coverage acceptable for genotyping calls
-    # If zero, the default vcf_filter value is used
-    MaxReadDepth: 0
+    VCF_Filter:
+      # Maximum coverage acceptable for genotyping calls
+      # If zero, the default vcf_filter value is used
+      MaxReadDepth: 0
 
-    # Minimum coverage acceptable for genotyping calls
-    --min-read-depth: 8
-    # Min RMS mapping quality
-    --min-mapping-quality: 10
-    # Min QUAL score (Phred) for genotyping calls
-    --min-quality: 30
-    # Min distance of variants to indels
-    --min-distance-to-indels: 2
-    # Min distance between indels
-    --min-distance-between-indels: 10
-    # Min P-value for strand bias (given PV4)
-    --min-strand-bias: 1.0e-4
-    # Min P-value for baseQ bias (given PV4)
-    --min-baseq-bias: 1.0e-4
-    # Min P-value for mapQ bias (given PV4)
-    --min-mapq-bias: 1.0e-4
-    # Min P-value for end distance bias (given PV4)
-    --min-end-distance-bias: 1.0e-4
-    # Max frequency of the major allele at heterozygous sites
-    --min-allele-frequency: 0.2
+      # Minimum coverage acceptable for genotyping calls
+      --min-read-depth: 8
+      # Min RMS mapping quality
+      --min-mapping-quality: 10
+      # Min QUAL score (Phred) for genotyping calls
+      --min-quality: 30
+      # Min distance of variants to indels
+      --min-distance-to-indels: 2
+      # Min distance between indels
+      --min-distance-between-indels: 10
+      # Min P-value for strand bias (given PV4)
+      --min-strand-bias: 1.0e-4
+      # Min P-value for baseQ bias (given PV4)
+      --min-baseq-bias: 1.0e-4
+      # Min P-value for mapQ bias (given PV4)
+      --min-mapq-bias: 1.0e-4
+      # Min P-value for end distance bias (given PV4)
+      --min-end-distance-bias: 1.0e-4
+      # Max frequency of the major allele at heterozygous sites
+      --min-allele-frequency: 0.2
+      # Minimum number of alternative bases observed for variants
+      --min-num-alt-bases: 2
+
+# Add / overwrite default settings for a set of regions
+#  NAME_OF_REGIONS:
+#    ...
 
 
 MultipleSequenceAlignment:
-  # Multiple sequence alignment using MAFFT
-  MAFFT:
-    # Select alignment algorithm; valid values are 'mafft', 'auto', 'fft-ns-1',
-    # 'fft-ns-2', 'fft-ns-i', 'nw-ns-i', 'l-ins-i', 'e-ins-i', and 'g-ins-i'.
-    Algorithm: G-INS-i
+  # Default settings for all regions of interest
+  Defaults:
+    Enabled: yes
 
-    # Parameters for mafft algorithm; see above for example of how to specify
-    --maxiterate: 1000
+    # Multiple sequence alignment using MAFFT
+    MAFFT:
+      # Select alignment algorithm; valid values are 'mafft', 'auto', 'fft-ns-1',
+      # 'fft-ns-2', 'fft-ns-i', 'nw-ns-i', 'l-ins-i', 'e-ins-i', and 'g-ins-i'.
+      Algorithm: G-INS-i
+
+      # Parameters for mafft algorithm; see above for example of how to specify
+      --maxiterate: 1000
+
+# Add / overwrite default settings for a set of regions
+#  NAME_OF_REGIONS:
+#    ...
 
 
 PhylogeneticInference:
   PHYLOGENY_NAME:
     # Exclude (groups of) samples from this analytical step
 #    ExcludeSamples:
+#      - <NAME_OF_GROUP>
+#      - NAME_OF_SAMPLE
+
+    # Root the final tree(s) on one or more samples; if no samples
+    # are specified, the tree(s) will be rooted on the midpoint(s)
+#    RootTreesOn:
 #      - <NAME_OF_GROUP>
 #      - NAME_OF_SAMPLE
 
@@ -159,27 +182,23 @@ PhylogeneticInference:
          # Limit analysis to a subset of a RegionOfInterest; subsets are expected to be
          # located at <genome root>/<prefix>.<region name>.<subset name>.names, and
          # contain single name (corresponding to column 4 in the BED file) per line.
-         SubsetRegions: SUBSET_NAME
+#         SubsetRegions: SUBSET_NAME
 
     ExaML:
       # Number of times to perform full phylogenetic inference
       Replicates: 1
       # Number of bootstraps to compute
       Bootstraps: 100
+      # Model of rate heterogeneity (GAMMA or PSR)
       Model: GAMMA
+"""
 
-
+_NOT_ENABLED = """
 PAML:
    # Run codeml on each named sequence in the regions of interest
   codeml:
 #   Exclude (groups of) samples from this analytical step
 #    ExcludeSamples:
-#      - <NAME_OF_GROUP>
-#      - NAME_OF_SAMPLE
-
-    # Root the final tree(s) on one or more samples; if no samples
-    # are specified, the tree(s) will be rooted on the midpoint(s)
-#    RootTreesOn:
 #      - <NAME_OF_GROUP>
 #      - NAME_OF_SAMPLE
 
