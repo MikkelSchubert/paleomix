@@ -1,0 +1,35 @@
+# -*- mode: Yaml; -*-
+Options:
+  Platform: Illumina
+  QualityOffset: 33
+  SplitLanesByFilenames: no
+  CompressionFormat: gz
+
+  Aligners:
+    Program: Bowtie2
+
+    Bowtie2:
+      MinQuality: 0
+      --very-sensitive:
+
+  PCRDuplicates:    no
+  RescaleQualities: no
+
+  ExcludeReads:
+    - Paired
+
+  Features: []
+
+
+Prefixes:
+ rCRS:
+   Path: 000_prefixes/rCRS.fasta
+
+
+ExampleProject:
+  Synthetic_Sample_1:
+    ACGATA:
+      Lane_2: 000_data/ACGATA_L2_R{Pair}_*.fastq.gz
+
+    GCTCTG:
+      Lane_2: 000_data/GCTCTG_L2_R1_*.fastq.gz
