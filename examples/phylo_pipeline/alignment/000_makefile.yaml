@@ -118,11 +118,6 @@ chimpanzee:
     synth_chimpanzee_library:
       synth_chimpanzee_lane: "000_reads/chimpanzee/*_R{Pair}_*.fastq.gz"
 
-common_squirrel_monkey:
-  synth_common_squirrel_monkey_sample:
-    synth_common_squirrel_monkey_library:
-      synth_common_squirrel_monkey_lane: "000_reads/common_squirrel_monkey/*_R{Pair}_*.fastq.gz"
-
 gorilla:
   synth_gorilla_sample:
     synth_gorilla_library:
