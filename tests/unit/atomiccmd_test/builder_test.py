@@ -402,7 +402,7 @@ def test_java_builder__kwargs():
 def test_mpi_builder__defaults__str():
     builder = AtomicMPICmdBuilder("ls")
     assert_equal(builder.call, ["ls"])
-    assert_equal(builder.kwargs, {})
+    assert_equal(builder.kwargs, {"EXEC_MPI" : "mpirun"})
 
 def test_mpi_builder__multithreaded__str():
     builder = AtomicMPICmdBuilder("ls", threads = 3)
@@ -412,7 +412,7 @@ def test_mpi_builder__multithreaded__str():
 def test_mpi_builder__defaults__complex_cmd():
     builder = AtomicMPICmdBuilder(["python", "/foo/run.py"])
     assert_equal(builder.call, ["python", "/foo/run.py"])
-    assert_equal(builder.kwargs, {})
+    assert_equal(builder.kwargs, {"EXEC_MPI" : "mpirun"})
 
 def test_mpi_builder__multithreaded__complex_cmd():
     builder = AtomicMPICmdBuilder(["python", "/foo/run.py"], threads = 3)
@@ -421,7 +421,7 @@ def test_mpi_builder__multithreaded__complex_cmd():
 
 def test_mpi_builder__kwargs():
     builder = AtomicMPICmdBuilder("ls", set_cwd = True)
-    assert_equal(builder.kwargs, {"set_cwd" : True})
+    assert_equal(builder.kwargs, {"set_cwd" : True, "EXEC_MPI" : "mpirun"})
 
 def test_mpi_builder__threads__zero_or_negative():
     assert_raises(ValueError, AtomicMPICmdBuilder, "ls", threads =  0)
