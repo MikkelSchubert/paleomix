@@ -25,7 +25,9 @@
 import re
 
 from pypeline.common.utilities import \
-     safe_coerce_to_tuple
+     safe_coerce_to_tuple, \
+     Immutable, \
+     TotallyOrdered
 from pypeline.common.formats._graph import \
      GraphError, \
      _Graph
@@ -41,7 +43,7 @@ class NewickParseError(NewickError):
     pass
 
 
-class Newick(object):
+class Newick(TotallyOrdered, Immutable):
     """Immutable object representing a Newick node.
 
     Nodes are classified as either internal nodes (have children),
@@ -57,10 +59,10 @@ class Newick(object):
 
     def __init__(self, name = None, length = None, children = None):
         """See class documentation for constraints."""
-        object.__init__(self)
-        object.__setattr__(self, "name",     name)
-        object.__setattr__(self, "length",   length)
-        object.__setattr__(self, "children", tuple(children or ()))
+        Immutable.__init__(self,
+                           name     = name,
+                           length   = length,
+                           children = tuple(children or ()))
 
         if not (self.children or self.name or self.length):
             raise NewickError("Leaf nodes MUST have either a name or a length")
@@ -182,16 +184,14 @@ class Newick(object):
         return top_node
 
 
-    def __cmp__(self, other):
-        """Comparison operator, see 'cmp'."""
-        return cmp((-self._weight,
-                    self.name,
-                    self.length,
-                    self.children),
-                    (-other._weight, # pylint: disable = W0212
-                    other.name,
-                    other.length,
-                    other.children))
+    def __lt__(self, other):
+        """See TotallyOrdered"""
+        if not isinstance(other, Newick):
+            return NotImplemented
+
+        # pylint: disable=W0212
+        return (-self._weight, self.name, self.length, self.children) \
+          < (-other._weight, other.name, other.length, other.children)
 
 
     def __hash__(self):
@@ -222,14 +222,6 @@ class Newick(object):
             fields.append(":")
             fields.append(str(self.length))
         return "".join(fields)
-
-
-    def __setattr__(self, _name, _value):
-        raise NotImplementedError("Newick nodes are immutable")
-
-
-    def __delattr__(self, _name):
-        raise NotImplementedError("Newick nodes are immutable")
 
 
     def _add_support(self, node, total, clade_counts, fmt):

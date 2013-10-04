@@ -23,7 +23,11 @@
 import sys
 import types
 
-from pypeline.common.utilities import fragment, split_before
+from pypeline.common.utilities import \
+     fragment, \
+     split_before, \
+     Immutable, \
+     TotallyOrdered
 from pypeline.common.fileutils import open_ro
 from pypeline.common.formats._common import FormatError
 
@@ -32,32 +36,25 @@ class FASTAError(FormatError):
     pass
 
 
-class FASTA(tuple):
-    def __new__(self, name, meta, sequence):
+class FASTA(TotallyOrdered, Immutable):
+    def __init__(self, name, meta, sequence):
         if not (name and isinstance(name, types.StringTypes)):
             raise FASTAError("FASTA name must be a non-empty string")
         elif not (isinstance(meta, types.StringTypes) or (meta is None)):
             raise FASTAError("FASTA meta-information must be a string, or None")
         elif not isinstance(sequence, types.StringTypes):
             raise FASTAError("FASTA sequence must be a string")
-        return tuple.__new__(self, (name, meta, sequence))
 
-    @property
-    def name(self):
-        return self[0]
-
-    @property
-    def meta(self):
-        return self[1]
-
-    @property
-    def sequence(self):
-        return self[2]
+        Immutable.__init__(self,
+                           name     = name,
+                           meta     = meta,
+                           sequence = sequence)
 
 
     def write(self, fileobj = sys.stdout):
         """Prints a FASTA sequence (iterable), wrapping long sequences at 60 chars."""
         fileobj.write(repr(self))
+
 
     @classmethod
     def from_lines(cls, lines):
@@ -82,6 +79,7 @@ class FASTA(tuple):
                         meta     = meta,
                         sequence = "".join(record[1:]))
 
+
     @classmethod
     def from_file(cls, filename):
         """Reads an unindexed FASTA file, returning a sequence of
@@ -93,6 +91,19 @@ class FASTA(tuple):
                 yield record
         finally:
             fasta_file.close()
+
+
+    def __lt__(self, other):
+        if not isinstance(other, FASTA):
+            return NotImplemented
+
+        return (self.name, self.meta, self.sequence) \
+          < (other.name, other.meta, other.sequence)
+
+
+    def __hash__(self):
+        return hash((self.name, self.meta, self.sequence))
+
 
     def __repr__(self):
         """Process a printable FASTA sequence, wrapping long sequences at 60 chars."""

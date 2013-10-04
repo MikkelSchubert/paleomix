@@ -189,3 +189,64 @@ def fill_dict(destination, source):
         return cur_dest
 
     return _fill_dict(copy.deepcopy(destination), copy.deepcopy(source))
+
+
+
+class Immutable(object):
+    """Mixin implementing a immutable class; member variables are specified in
+    the init function, cannot be changed afterwards; note that this does not
+    prevent changes to the member variables themselves (if not immutable)."""
+
+    def __init__(self, **kwargs):
+        object.__init__(self)
+        for (key, value) in kwargs.iteritems():
+            object.__setattr__(self, key, value)
+
+    def __setattr__(self, _name, _value):
+        raise NotImplementedError("Object is immutable")
+
+    def __delattr__(self, _name):
+        raise NotImplementedError("Object is immutable")
+
+
+class TotallyOrdered(object):
+    """Mixin implementing a rich-comparison interface, provided
+    that the subclass implements the less-than operator (__lt__).
+    The __lt__ function should return NotImplemented if the other
+    object is not the same type.
+
+    The implementation assumes total order:
+    http://en.wikipedia.org/wiki/Total_order
+    """
+
+    def __lt__(self, other):
+        raise NotImplementedError("__lt__ must be implemented!")
+
+    def __eq__(self, other):
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        return not ((self < other) or (other < self))
+
+    def __ne__(self, other):
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        return not (self == other)
+
+    def __le__(self, other):
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        return not (other < self)
+
+    def __ge__(self, other):
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        return not (self < other)
+
+    def __gt__(self, other):
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        return (other < self)
+
+    # Shut up warning; if hashable, then the subclass will have
+    # to implement the __hash__ member function.
+    __hash__ = None

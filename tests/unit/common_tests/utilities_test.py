@@ -434,3 +434,109 @@ def test_fill_dict__destination_must_be_dict():
 
 def test_fill_dict__source_must_be_dict():
     assert_raises(TypeError, utils.fill_dict, {}, [])
+
+
+
+
+################################################################################
+################################################################################
+## Immutable
+
+def test_immutable__properties_set():
+    class ImmutableCls(utils.Immutable):
+        def __init__(self, value):
+            utils.Immutable.__init__(self, value = value)
+
+    obj = ImmutableCls(17)
+    assert_equal(obj.value, 17)
+
+
+def test_immutable__properties_immutable():
+    def _test_immutable_property(key, value):
+        class ImmutableCls(utils.Immutable):
+            def __init__(self, value):
+                utils.Immutable.__init__(self, value = value)
+
+        obj = ImmutableCls(17)
+        assert_raises(NotImplementedError, setattr, obj, key, value)
+
+    yield _test_immutable_property, "value", 13
+    yield _test_immutable_property, "new_value", "foo"
+
+
+
+
+################################################################################
+################################################################################
+## TotallyOrdered
+
+class SomethingOrdered(utils.TotallyOrdered):
+    def __init__(self, value):
+        self.value = value
+
+    def __lt__(self, other):
+        if not isinstance(other, SomethingOrdered):
+            return NotImplemented
+
+        return self.value < other.value
+
+
+# Less than
+def test_totally_ordered__lt_vs_lt():
+    assert SomethingOrdered(1) < SomethingOrdered(2)
+
+def test_totally_ordered__lt_vs_gt():
+    assert not (SomethingOrdered(1) < SomethingOrdered(0))
+
+def test_totally_ordered__lt_vs_wrong_type():
+    assert_equal(SomethingOrdered(1).__lt__("Foo"), NotImplemented)
+
+# Less than or equal
+def test_totally_ordered__le_vs_le():
+    assert SomethingOrdered(1) <= SomethingOrdered(1)
+
+def test_totally_ordered__le_vs_gt():
+    assert not (SomethingOrdered(1) <= SomethingOrdered(0))
+
+def test_totally_ordered__le_vs_wrong_type():
+    assert_equal(SomethingOrdered(1).__le__("Foo"), NotImplemented)
+
+# Greater than or equal
+def test_totally_ordered__ge_vs_ge():
+    assert SomethingOrdered(1) >= SomethingOrdered(1)
+
+def test_totally_ordered__ge_vs_lt():
+    assert not (SomethingOrdered(0) >= SomethingOrdered(1))
+
+def test_totally_ordered__ge_vs_wrong_type():
+    assert_equal(SomethingOrdered(1).__ge__("Foo"), NotImplemented)
+
+# Greater than
+def test_totally_ordered__gt_vs_gt():
+    assert SomethingOrdered(1) > SomethingOrdered(0)
+
+def test_totally_ordered__gt_vs_eq():
+    assert not (SomethingOrdered(0) > SomethingOrdered(0))
+
+def test_totally_ordered__gt_vs_wrong_type():
+    assert_equal(SomethingOrdered(1).__gt__("Foo"), NotImplemented)
+
+# Equal to
+def test_totally_ordered__eq_vs_eq():
+    assert SomethingOrdered(1) == SomethingOrdered(1)
+
+def test_totally_ordered__eq_vs_ne():
+    assert not (SomethingOrdered(1) == SomethingOrdered(2))
+
+def test_totally_ordered__eq_vs_wrong_type():
+    assert_equal(SomethingOrdered(1).__eq__("Foo"), NotImplemented)
+
+# Not equal to
+def test_totally_ordered__ne_vs_ne():
+    assert SomethingOrdered(1) != SomethingOrdered(2)
+
+def test_totally_ordered__ne_vs_eq():
+    assert not (SomethingOrdered(1) != SomethingOrdered(1))
+
+def test_totally_ordered__ne_vs_wrong_type():
+    assert_equal(SomethingOrdered(1).__ne__("Foo"), NotImplemented)
