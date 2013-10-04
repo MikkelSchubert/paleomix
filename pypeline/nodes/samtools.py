@@ -35,7 +35,7 @@ import pypeline.common.versions as versions
 
 
 SAMTOOLS_VERSION = versions.Requirement(call   = ("samtools",),
-                                        search = b"Version: (\d+)\.(\d+)\.(\d+)",
+                                        search = r"Version: (\d+)\.(\d+)\.(\d+)",
                                         checks = versions.GE(0, 1, 18))
 
 

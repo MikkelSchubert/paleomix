@@ -26,6 +26,7 @@ import glob
 import random
 
 import pypeline.common.fileutils as fileutils
+import pypeline.common.versions as versions
 
 from pypeline.node import CommandNode
 from pypeline.atomiccmd.builder import \
@@ -33,6 +34,15 @@ from pypeline.atomiccmd.builder import \
      AtomicMPICmdBuilder, \
      use_customizable_cli_parameters, \
      create_customizable_cli_parameters
+
+
+EXAML_VERSION = versions.Requirement(call   = ("examl", "-version"),
+                                     search = r"version (\d+)\.(\d+)\.(\d+)",
+                                     checks = versions.GE(1, 0, 5))
+
+PARSER_VERSION = versions.Requirement(call   = ("examlParser", "-h"),
+                                      search = r"version (\d+)\.(\d+)\.(\d+)",
+                                      checks = versions.GE(1, 0, 2))
 
 
 class ExaMLParserNode(CommandNode):
@@ -64,7 +74,9 @@ class ExaMLParserNode(CommandNode):
                           IN_PARTITION    = input_partition,
 
                           # Final output file, are not created directly
-                          OUT_BINARY      = output_file)
+                          OUT_BINARY      = output_file,
+
+                          CHECK_EXAML     = PARSER_VERSION)
 
         return {"command" : command}
 
@@ -132,7 +144,9 @@ class ExaMLNode(CommandNode):
                           # Final output files, are not created directly
                           OUT_INFO        = output_template % "info",
                           OUT_BESTTREE    = output_template % "result",
-                          OUT_BOOTSTRAP   = output_template % "log")
+                          OUT_BOOTSTRAP   = output_template % "log",
+
+                          CHECK_EXAML     = EXAML_VERSION)
 
         # Use the GAMMA model of NT substitution by default
         command.set_option("-m", "GAMMA", fixed = False)
