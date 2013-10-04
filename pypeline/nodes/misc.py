@@ -25,14 +25,20 @@ from pypeline.node import \
 from pypeline.common.fileutils import \
      copy_file, \
      reroot_path
-
+from pypeline.common.utilities import \
+     safe_coerce_to_tuple
 
 
 class CopyOutputFilesNode(Node):
-    """Copies the output-files of one node to a specified folder."""
+    """Copies the output-files of one or more nodes to a specified folder."""
 
-    def __init__(self, description, destination, source_node):
-        input_files  = source_node.output_files
+    def __init__(self, description, destination, source_nodes):
+        source_nodes = safe_coerce_to_tuple(source_nodes)
+
+        input_files  = []
+        for source_node in source_nodes:
+            input_files.extend(source_node.output_files)
+
         output_files = [reroot_path(destination, fpath) for fpath in input_files]
         self._files  = zip(input_files, output_files)
 
@@ -40,7 +46,7 @@ class CopyOutputFilesNode(Node):
                       description  = "<Copy %s output to %r>" % (description, destination),
                       input_files  = input_files,
                       output_files = output_files,
-                      dependencies = source_node)
+                      dependencies = source_nodes)
 
 
     def _run(self, _config, _temp):

@@ -127,10 +127,10 @@ class Library:
 
 
     def _build_mapdamage_nodes(self, config, target, prefix, files_and_nodes):
-        mapdamage_node = None
+        plot_node = model_node = None
         if self.options["RescaleQualities"]:
             # Basic run of mapDamage, only generates plots / tables, but no modeling
-            files_and_nodes, mapdamage_node = \
+            files_and_nodes, plot_node, model_node = \
               self._rescale_quality_scores(config, self.folder, prefix, self.name, files_and_nodes)
 
         if not ("mapDamage" in self.options["Features"]):
@@ -140,17 +140,17 @@ class Library:
         # Messing with these does not cause the pipeline to re-do other stuff
         destination = os.path.join(config.destination, "%s.%s.mapDamage" % (target, prefix["Name"]), self.name)
 
-        if mapdamage_node:
+        if plot_node:
             # Simply copy existing results to external folder
-            mapdamage_node = CopyOutputFilesNode(description = "mapDamage",
-                                                 destination = destination,
-                                                 source_node = mapdamage_node)
+            plot_node = CopyOutputFilesNode(description  = "mapDamage",
+                                            destination  = destination,
+                                            source_nodes = (plot_node, model_node))
         else:
             # Results of mapDamage are placed directly in the external folder
-            mapdamage_node = \
+            plot_node = \
               self._build_mapdamage_plot_node(config, destination, prefix, self.name, files_and_nodes)
 
-        return files_and_nodes, mapdamage_node
+        return files_and_nodes, plot_node
 
 
     @classmethod
@@ -193,4 +193,4 @@ class Library:
                         subnodes    = (plot, model, scale) + tuple(validate),
                         dependencies = files_and_nodes.values())
 
-        return {output_filename : node}, plot
+        return {output_filename : node}, plot, model
