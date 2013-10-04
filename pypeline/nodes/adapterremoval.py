@@ -76,7 +76,6 @@ class SE_AdapterRemovalNode(CommandNode):
                        TEMP_OUT_LINK_2     = basename + ".discarded")
 
         return {"basename"      : basename,
-                "format"        : output_format,
                 "version"       : version,
                 "command"       : cmd}
 
@@ -158,7 +157,6 @@ class PE_AdapterRemovalNode(CommandNode):
             assert False
 
         return {"basename"       : basename,
-                "format"         : output_format,
                 "command"        : cmd}
 
 
