@@ -118,7 +118,6 @@ def _run_config_parser(argv):
 
 def parse_config(argv):
     options, args  = _run_config_parser(argv)
-    print options.max_threads
 
     if (len(args) < 2) and (args != ["mkfile"]):
         raise ConfigError("Please specify at least one analysis step and one makefile!")
