@@ -73,7 +73,7 @@ def _examl_nodes(options, settings, input_alignment, input_partitions, input_bin
     params = ExaMLNode.customize(input_binary     = input_binary,
                                  initial_tree     = parsimony_tree,
                                  output_template  = output_template,
-                                 threads          = options.max_examl_threads,
+                                 threads          = options.examl_max_threads,
                                  dependencies     = tree)
 
     params.command.set_option("-m", settings["ExaML"]["Model"].upper())

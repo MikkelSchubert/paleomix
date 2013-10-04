@@ -1,0 +1,154 @@
+#!/usr/bin/python
+#
+# Copyright (c) 2013 Mikkel Schubert <MSchubert@snm.ku.dk>
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+import os
+import socket
+import getpass
+import optparse
+import ConfigParser
+import multiprocessing
+
+from pypeline.common.fileutils import \
+     make_dirs
+
+
+class ConfigError(RuntimeError):
+    pass
+
+
+class PerHostValue:
+    def __init__(self, value, is_path = False):
+        """Represents a config value that should be settable on a
+        per-host basis. If 'is_path' is set, the value is assumed
+        to represent a path, and ~ is expanded to the user's home
+        folder."""
+
+        self.value   = value
+        self.is_path = is_path
+
+
+class PerHostConfig:
+    """Helper class for optparse.OptionParser use by pypelines; standardizes the
+    process of reading / writing overridable CLI options, while allowing per-host
+    options to be set in the .ini files. Values for options with a default value
+    that is an instance of PerHostValue will automatically be read-from /
+    written-to the per-user config file.
+
+    Given a pypeline with name "NAME", the class will read options from the
+    following configuration files:
+      - /etc/pypeline/NAME.ini
+      - ~/.pypeline/NAME.ini
+
+    These files are expected to contain a "Defaults" section (applies to all hosts),
+    and an optional section using the hostname of a server. A file containing the
+    current settings (as passed on the CLI) may be written using --write-config-file.
+
+    Example usage:
+      per_host_cfg = PerHostConfig("my_pypeline")
+      parser       = OptionParser(...)
+      parser.add_option(..., default = PerHostValue(...))
+      config, args = per_host_cfg.parse_args(parser, sys.argv[1:])
+    """
+
+    def __init__(self, pipeline_name):
+        """Creates a PerHostConfig for a pypeline with the specified name."""
+        # Various common options
+        self.temp_root   = PerHostValue(os.path.join("/tmp", getpass.getuser(), pipeline_name), True)
+        self.max_threads = PerHostValue(multiprocessing.cpu_count())
+
+        self._filenames = self._get_filenames(pipeline_name)
+        self._handle    = ConfigParser.SafeConfigParser()
+        self._handle.read(self._filenames)
+        self._sections  = []
+
+        hostname = socket.gethostname()
+        if self._handle.has_section(hostname):
+            self._sections.append(hostname)
+        self._sections.append("Defaults")
+
+
+    def parse_args(self, parser, argv):
+        """Calls 'parse_args' on the parser object after updating default values
+        using the settings-files. If --write-config-file is set, a config file
+        containing the resulting settings is written."""
+        self._add_per_host_options(parser)
+        default_cfg = self._update_defaults(parser)
+        config, args = parser.parse_args(argv)
+
+        if config.write_config_file:
+            filename = self._filenames[-1]
+            make_dirs(os.path.dirname(filename))
+            with open(filename, "w") as handle:
+                default_cfg.write(handle)
+
+        return config, args
+
+
+    def _add_per_host_options(self, parser):
+        """Adds options to a parser relating to the PerHostConfig."""
+        group  = optparse.OptionGroup(parser, "Config files")
+        group.add_option("--write-config-file", default = False, action="store_true",
+                         help = "Write config using current settings to %s" % (self._filenames[-1],))
+        parser.add_option_group(group)
+
+
+    def _update_defaults(self, parser):
+        """Updates default values in a OptionParser, and returns a new
+        ConfigParser object containing a new default-values object derived
+        from current config-files / CLI options."""
+        defaults = {}
+        for opt in parser._get_all_options(): # pylint: disable=W0212
+            if isinstance(opt.default, PerHostValue):
+                defaults[opt.dest] = self._get_default(opt)
+        parser.set_defaults(**defaults)
+
+        config = ConfigParser.SafeConfigParser()
+        config.add_section("Defaults")
+        for (key, value) in defaults.iteritems():
+            config.set("Defaults", key, str(value))
+        return config
+
+
+    def _get_default(self, option):
+        value = option.default.value
+        value_type = type(value)
+        for section in self._sections:
+            if self._handle.has_option(section, option.dest):
+                value = value_type(self._handle.get(section, option.dest))
+                break
+
+        if option.default.is_path:
+            value = os.path.expanduser(value)
+
+        return value
+
+
+    @classmethod
+    def _get_filenames(cls, name):
+        """Return standard list of config files for pypeline pipelines:
+           - /etc/pypeline/{name}.ini
+           - ~/.pypeline/{name}.ini
+        """
+        filename   = "%s.ini" % (name,)
+        homefolder = os.path.expanduser('~')
+        return ["/etc/pypeline/%s" % (filename,),
+                os.path.join(homefolder, ".pypeline", filename)]
