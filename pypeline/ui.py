@@ -51,7 +51,7 @@ def add_optiongroup(parser, default = "quiet"):
                             "'verbose' = Full dependency tree at every change; "
                             "'quiet' = Display only currently running nodes; "
                             "'progress' = Display changes in state. "
-                            "[Default is %r]" % (default,))
+                            "[Default is '%default']")
     parser.add_option_group(group)
 
 
