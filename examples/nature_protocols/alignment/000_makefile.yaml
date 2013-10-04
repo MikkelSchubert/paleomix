@@ -1,0 +1,290 @@
+# -*- mode: Yaml; -*-
+# Timestamp: 2013-09-04T16:33:47.778270
+#
+# Default options.
+# Can also be specific for a set of samples, libraries, and lanes,
+# by including the "Options" hierarchy at the same level as those
+# samples, libraries, or lanes below. This does not include
+# "Features", which may only be specific globally.
+Options:
+  # Sequencing platform, see SAM/BAM reference for valid values
+  Platform: Illumina
+  # Quality offset for PHRED scores, either 33 (Sanger/Illumina 1.8+) or 64 (Illumina 1.3+ / 1.5+)
+  # For Bowtie2 it is also possible to specify 'Solexa', to handle reads on the Solexa scale.
+  # This is used during adapter-trimming (AdapterRemoval) and sequence alignment (BWA/Bowtie2)
+  QualityOffset: 33
+  # Split a lane into multiple entries, one for each (pair of) file(s) found using the search-
+  # string specified for a given lane. Each lane is named by adding a number to the end of the
+  # given barcode.
+  SplitLanesByFilenames: yes
+  # Compression format used when storing FASTQ files (either 'gz' for GZip or 'bz2' for BZip2)
+  CompressionFormat: bz2
+
+  # Settings for trimming of reads, see AdapterRemoval man-page for more options
+#  AdapterRemoval:
+     # Adapter sequences, set and uncomment to override defaults
+#     --pcr1: ...
+#     --pcr2: ...
+     # Pipeline defaults that differ from AR defaults;
+     # To override, change the value(s) and uncomment the line(s):
+#     --mm: 3
+#     --minlength: 25
+     # Features enabled by default; uncomment to disable:
+#     --collapse: no
+#     --trimns: no
+#     --trimqualities: no
+
+  # Settings for aligners supported by the pipeline
+  Aligners:
+    # Choice of aligner software to use, either "BWA" or "Bowtie2"
+    Program: BWA
+
+    # Settings for mappings performed using BWA
+    BWA:
+      # Filter hits with a mapping quality (PHRED) below this value
+      MinQuality: 25
+      # Filter reads that did not map to the reference sequence
+      FilterUnmappedReads: yes
+      # Should be disabled ("no") for aDNA alignments, as post-mortem localizes
+      # to the seed region, which BWA expects to have few errors. Sets "-l".
+      # See Schubert et al. 2012: http://pmid.us/22574660
+      UseSeed:    yes
+      # Additional command-line options may be specified for the "aln" call(s), as
+      # described below for Bowtie2.
+
+    # Settings for mappings performed using Bowtie2
+    Bowtie2:
+      # Filter hits with a mapping quality (PHRED) below this value
+      MinQuality: 0
+      # Filter reads that did not map to the reference sequence
+      FilterUnmappedReads: yes
+       # Examples of how to add additional command-line options
+#      --trim5: 5
+#      --trim3: 5
+      # Note that the colon is required, even if no value is specified
+      --very-sensitive:
+      # Example of how to specify multiple values for an option
+#     --rg:
+#       - CN:SequencingCenterNameHere
+#       - DS:DescriptionOfReadGroup
+
+  # Mark / filter PCR duplicates. If set to 'filter', PCR duplicates
+  # are removed from the output files; if set to 'mark', these are
+  # flagged with bit 0x400; if set to 'no', the reads are assumed to
+  # not have been amplified. Collapsed reads are filtered using the
+  # command 'bam_rmdup_duplicates', while "normal" reads are filtered
+  # using Picard MarkDuplicates.
+  PCRDuplicates: filter
+  # Carry out quality base re-scaling of libraries using mapDamage
+  RescaleQualities: no
+
+  # Exclude any type of trimmed reads from alignment/analysis
+  # All reads are processed by default.
+#  ExcludeReads:
+#    - Single    # Single-ended reads, or PE reads where one mate was discarded
+#    - Paired    # Pair-ended reads, where both reads were retained
+#    - Collapsed # Overlapping pair-ended mate reads collapsed into a single read
+#    - CollapsedTruncated # Like 'Collapsed', except that the reads have been
+#                           truncated due to the presence of low quality bases.
+
+  # Optional steps to perform during processing
+  # To disable all features, replace with line "Features: []"
+  Features:
+#    - Raw BAM        # Generate BAM from the raw libraries (no indel realignment)
+                     #   Location: {Destination}/{Target}.{Genome}.bam
+    - Realigned BAM  # Generate indel-realigned BAM using the GATK Indel realigner
+                     #   Location: {Destination}/{Target}.{Genome}.realigned.bam
+    - mapDamage      # Generate mapDamage plot for each (unrealigned) library
+                     #   Location: {Destination}/{Target}.{Genome}.mapDamage/{Library}/
+    - Coverage       # Generate coverage information for the raw BAM (wo/ indel realignment)
+                     #   Location: {Destination}/{Target}.{Genome}.coverage
+    - Depths         # Generate histogram of number of sites with a given read-depth
+                     #   Location: {Destination}/{Target}.{Genome}.depths
+    - Summary        # Generate target summary (uses statistics from raw BAM)
+                     #   Location: {Destination}/{Target}.summary
+
+
+# Map of prefixes by name, each having a Path key, which specifies the location
+# of the BWA/Bowtie2 index. See the 'README.md' file for more information,
+Prefixes:
+  Pi_nucl:
+    Path:  000_prefixes/Pi_nucl.fasta
+    Label: nuclear
+  Pi_mito:
+    Path:  000_prefixes/Pi_mito.fasta
+    Label: mitochondrial
+
+  # Solanum tuberosum nucl / mito / chloroplast genome
+#  St_genomes*:
+#    Path: 000_prefixes/St_*.fasta
+
+
+################################################################################
+################################################################################
+## Yoshido et al. 2013
+
+# http://www.ebi.ac.uk/ena/data/view/ERS241538
+M-0182896:
+  Options:
+    AdapterRemoval:
+      --pcr1: "AGATCGGAAGAGCACACGTCTGAACTCCAGTCACNNNNNNNATCTCGTATGCCGTCTTCTGCTTG"
+      --pcr2: "AATGATACGGCGACCACCGAGATCTACNNNNNNNNNNNACTCTTTCCCTACACGACGCTCTTCCGATCT"
+
+    Aligners:
+      BWA:
+        UseSeed: no
+
+  M-0182896:
+    M-0182906_NO_UDG:
+      Options:
+        RescaleQualities: no
+      ERR267888: "000_rawreads/M-0182896/ERR267888_{Pair}_*.fastq.gz"
+
+    M-0182906_UDG:
+      ERR267889: "000_rawreads/M-0182896/ERR267889_{Pair}_*.fastq.gz"
+
+    M-0182906_UDGa:
+      ERR267946: "000_rawreads/M-0182896/ERR267946_{Pair}_*.fastq.gz"
+
+    M-0182906_UDGb:
+      ERR267947: "000_rawreads/M-0182896/ERR267947_{Pair}_*.fastq.gz"
+
+    M-0182906_UDGc:
+      ERR267948: "000_rawreads/M-0182896/ERR267948_{Pair}_*.fastq.gz"
+
+
+# http://www.ebi.ac.uk/ena/data/view/ERS226850
+06_3928A:
+  Options:
+    AdapterRemoval:
+      --pcr1: AGATCGGAAGAGCGGTTCAGCAGGAATGCCGAGACCGATCTCGTATGCCGTCTTCTGCTTG
+
+  06_3928A:
+    06_3928A:
+      ERR248815: "000_rawreads/06_3928A/ERR248815_{Pair}_*.fastq.gz"
+      ERR248816: "000_rawreads/06_3928A/ERR248816_{Pair}_*.fastq.gz"
+      ERR248817: "000_rawreads/06_3928A/ERR248817_{Pair}_*.fastq.gz"
+      ERR248818: "000_rawreads/06_3928A/ERR248818_{Pair}_*.fastq.gz"
+      ERR248819: "000_rawreads/06_3928A/ERR248819_{Pair}_*.fastq.gz"
+      ERR248820: "000_rawreads/06_3928A/ERR248820_{Pair}_*.fastq.gz"
+
+# http://www.ebi.ac.uk/ena/data/view/ERS226848
+DDR7602:
+  DDR7602:
+    DDR7602:
+      ERR248813: "000_rawreads/DDR7602/ERR248813_{Pair}_*.fastq.gz"
+
+# http://www.ebi.ac.uk/ena/data/view/ERS226849
+LBUS5:
+  LBUS5:
+    LBUS5:
+      ERR248814: "000_rawreads/LBUS5/ERR248814_{Pair}_*.fastq.gz"
+
+# http://www.ebi.ac.uk/ena/data/view/ERS226846
+NL07434:
+  Options:
+    AdapterRemoval:
+      --pcr1: AGATCGGAAGAGCGGTTCAGCAGGAATGCCGAGACCGATCTCGTATGCCGTCTTCTGCTTG
+
+  NL07434:
+    NL07434:
+      ERR248806: "000_rawreads/NL07434/ERR248806_{Pair}_*.fastq.gz"
+      ERR248807: "000_rawreads/NL07434/ERR248807_{Pair}_*.fastq.gz"
+      ERR248808: "000_rawreads/NL07434/ERR248808_{Pair}_*.fastq.gz"
+      ERR248809: "000_rawreads/NL07434/ERR248809_{Pair}_*.fastq.gz"
+      ERR248810: "000_rawreads/NL07434/ERR248810_{Pair}_*.fastq.gz"
+      ERR248811: "000_rawreads/NL07434/ERR248811_{Pair}_*.fastq.gz"
+      ERR248812: "000_rawreads/NL07434/ERR248812_{Pair}_*.fastq.gz"
+
+# http://www.ebi.ac.uk/ena/data/view/ERS226844
+P13527:
+  P13527:
+    P13527:
+      ERR248791: "000_rawreads/P13527/ERR248791_{Pair}_*.fastq.gz"
+      ERR248792: "000_rawreads/P13527/ERR248792_{Pair}_*.fastq.gz"
+      ERR248793: "000_rawreads/P13527/ERR248793_{Pair}_*.fastq.gz"
+      ERR248794: "000_rawreads/P13527/ERR248794_{Pair}_*.fastq.gz"
+
+# http://www.ebi.ac.uk/ena/data/view/ERS226845
+P13626:
+  P13626:
+    P13626:
+      ERR248795: "000_rawreads/P13626/ERR248795_{Pair}_*.fastq.gz"
+      ERR248796: "000_rawreads/P13626/ERR248796_{Pair}_*.fastq.gz"
+      ERR248797: "000_rawreads/P13626/ERR248797_{Pair}_*.fastq.gz"
+      ERR248798: "000_rawreads/P13626/ERR248798_{Pair}_*.fastq.gz"
+
+# http://www.ebi.ac.uk/ena/data/view/ERS226847
+P17777:
+  Options:
+    AdapterRemoval:
+      --pcr1: AGATCGGAAGAGCGGTTCAGCAGGAATGCCGAGACCGATCTCGTATGCCGTCTTCTGCTTG
+
+  P17777:
+    P17777:
+      ERR248799: "000_rawreads/P17777/ERR248799_{Pair}_*.fastq.gz"
+      ERR248800: "000_rawreads/P17777/ERR248800_{Pair}_*.fastq.gz"
+      ERR248801: "000_rawreads/P17777/ERR248801_{Pair}_*.fastq.gz"
+      ERR248802: "000_rawreads/P17777/ERR248802_{Pair}_*.fastq.gz"
+      ERR248803: "000_rawreads/P17777/ERR248803_{Pair}_*.fastq.gz"
+      ERR248804: "000_rawreads/P17777/ERR248804_{Pair}_*.fastq.gz"
+      ERR248805: "000_rawreads/P17777/ERR248805_{Pair}_*.fastq.gz"
+
+
+################################################################################
+################################################################################
+## Martin et al. 2013
+
+# http://www.ebi.ac.uk/ena/data/view/ERS258003
+Pi1845A:
+  Options:
+    RescaleQualities: no
+    Aligners:
+      BWA:
+        UseSeed: no
+
+  Pi1845A:
+    Pi1845A_id_CGCTAT:
+      ERR299534: "000_rawreads/Pi1845A/ERR299534_*.fastq.gz"
+      ERR299565: "000_rawreads/Pi1845A/ERR299565_{Pair}_*.fastq.gz"
+      ERR299566: "000_rawreads/Pi1845A/ERR299566_{Pair}_*.fastq.gz"
+      ERR299567: "000_rawreads/Pi1845A/ERR299567_{Pair}_*.fastq.gz"
+      ERR299568: "000_rawreads/Pi1845A/ERR299568_{Pair}_*.fastq.gz"
+
+    Pi1845A_id_CATAGA:
+      ERR299535: "000_rawreads/Pi1845A/ERR299535_*.fastq.gz"
+      ERR299536: "000_rawreads/Pi1845A/ERR299536_*.fastq.gz"
+      ERR299537: "000_rawreads/Pi1845A/ERR299537_*.fastq.gz"
+      ERR299538: "000_rawreads/Pi1845A/ERR299538_*.fastq.gz"
+
+
+# http://www.ebi.ac.uk/ena/data/view/ERS258007
+Pi1889:
+  Options:
+    RescaleQualities: no
+    Aligners:
+      BWA:
+        UseSeed: no
+
+  Pi1889:
+    Pi1889_id_TAGCTT:
+      ERR299525: "000_rawreads/Pi1889/ERR299525_*.fastq.gz"
+      ERR299528: "000_rawreads/Pi1889/ERR299528_*.fastq.gz"
+      ERR299531: "000_rawreads/Pi1889/ERR299531_*.fastq.gz"
+      ERR299559: "000_rawreads/Pi1889/ERR299559_{Pair}_*.fastq.gz"
+      ERR299562: "000_rawreads/Pi1889/ERR299562_{Pair}_*.fastq.gz"
+
+    Pi1889_id_GGCTAC:
+      ERR299526: "000_rawreads/Pi1889/ERR299526_*.fastq.gz"
+      ERR299529: "000_rawreads/Pi1889/ERR299529_*.fastq.gz"
+      ERR299532: "000_rawreads/Pi1889/ERR299532_*.fastq.gz"
+      ERR299560: "000_rawreads/Pi1889/ERR299560_{Pair}_*.fastq.gz"
+      ERR299563: "000_rawreads/Pi1889/ERR299563_{Pair}_*.fastq.gz"
+
+    Pi1889_id_CTTGTA:
+      ERR299527: "000_rawreads/Pi1889/ERR299527_*.fastq.gz"
+      ERR299530: "000_rawreads/Pi1889/ERR299530_*.fastq.gz"
+      ERR299533: "000_rawreads/Pi1889/ERR299533_*.fastq.gz"
+      ERR299561: "000_rawreads/Pi1889/ERR299561_{Pair}_*.fastq.gz"
+      ERR299564: "000_rawreads/Pi1889/ERR299564_{Pair}_*.fastq.gz"
+
