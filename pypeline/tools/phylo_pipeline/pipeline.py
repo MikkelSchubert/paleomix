@@ -60,7 +60,7 @@ def main(argv):
 
     try:
         makefiles = read_makefiles(config, args)
-    except (MakefileError, yaml.YAMLError), error:
+    except (MakefileError, yaml.YAMLError, IOError), error:
         print_err("Error reading makefiles:",
                   "\n  %s:\n   " % (error.__class__.__name__,),
                   "\n    ".join(str(error).split("\n")),

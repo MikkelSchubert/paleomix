@@ -261,7 +261,7 @@ def main(argv):
     try:
         print_info("Building BAM pipeline ...", file = sys.stderr)
         makefiles = read_makefiles(args)
-    except (MakefileError, yaml.YAMLError), error:
+    except (MakefileError, yaml.YAMLError, IOError), error:
         print_err("Error reading makefiles:",
                   "\n  %s:\n   " % (error.__class__.__name__,),
                   "\n    ".join(str(error).split("\n")),
