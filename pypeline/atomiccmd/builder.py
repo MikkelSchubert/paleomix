@@ -297,7 +297,7 @@ def use_customizable_cli_parameters(init_func): # pylint: disable=C0103
 
     To be able to use this interface, the class must implement a
     function 'customize' that takes the parameters that the constructor
-    would take, while the constructor must take a  'parameters' argument."""
+    would take, while the constructor must take a 'parameters' argument."""
     def do_call(self, parameters = None, **kwargs):
         if not parameters:
             parameters = self.customize(**kwargs)
@@ -307,25 +307,15 @@ def use_customizable_cli_parameters(init_func): # pylint: disable=C0103
 
 
 def create_customizable_cli_parameters(customize_func): # pylint: disable=C0103
-    # Ensure that parameters with default arguments (e.g. 'dependencies')
-    # are passed, if not explicity specified by the caller
-    spec     = inspect.getargspec(customize_func)
-    args     = list(reversed(spec.args))
-    defaults = list(reversed(spec.defaults or ()))
-
-    def do_call(cls, **kwargs):
+    def do_call(cls, *args, **kwargs):
+        # Build dictionary containing all arguments
+        kwargs = inspect.getcallargs(customize_func, cls, *args, **kwargs)
         # Allow parameters to be updated in the 'customize' function
-        kwargs.update(customize_func(cls, **kwargs))
+        kwargs.update(customize_func(**kwargs))
 
-        for (key, value) in itertools.izip_longest(args, defaults):
-            if key not in kwargs:
-                kwargs[key] = value
-
-        clsobj = _create_cli_parameters_cls(cls, kwargs)
-        return clsobj(**kwargs)
+        return _create_cli_parameters_cls(cls, kwargs)
 
     return classmethod(do_call)
-
 
 
 def apply_options(builder, options, pred = lambda s: s.startswith("-")):
@@ -369,7 +359,7 @@ def _create_cli_parameters_cls(cls, kwargs):
         def build_node(self):
             return cls(self)
 
-    return _ParametersWrapper
+    return _ParametersWrapper(**kwargs)
 
 
 
