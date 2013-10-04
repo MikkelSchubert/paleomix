@@ -32,13 +32,16 @@ import weakref
 from flexmock import flexmock
 
 import nose
-from nose.tools import assert_equal, assert_raises
+from nose.tools import \
+     assert_in, \
+     assert_equal, \
+     assert_raises
+
 from pypeline.common.testing import \
      with_temp_folder, \
      Monkeypatch, \
      get_file_contents, \
-     set_file_contents, \
-     assert_in
+     set_file_contents
 
 import pypeline.atomiccmd.command
 from pypeline.common.versions import RequirementObj

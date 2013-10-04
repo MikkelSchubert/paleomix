@@ -24,8 +24,8 @@ import sys
 
 
 def _has_required_modules():
-    if (sys.version_info.major != 2) or (sys.version_info.minor not in (6, 7)):
-        sys.stderr.write("ERROR: Python version 2.6.x or 2.7.x required!\n")
+    if (sys.version_info.major != 2) or (sys.version_info.minor != 7):
+        sys.stderr.write("ERROR: Python version 2.7.x required!\n")
         sys.stderr.write("       Current version is v%s\n\n" % (sys.version.replace("\n", " "),))
         return False
 

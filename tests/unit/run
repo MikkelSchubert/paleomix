@@ -6,35 +6,9 @@ touch -t "200109110846" tests/data/timestamp_b_older | exit 1
 touch -t "200507070850"  tests/data/timestamp_a_younger | exit 1
 touch -t "200507070850"  tests/data/timestamp_b_younger | exit 1
 
-if which python2.6 &> /dev/null;
-then
-    echo -e "\033[00;32mTESTING PYTHON v2.6\033[00m"
-    python2.6 $(which nosetests) -I ".*_flymake.py" tests/
-    RESULT26=$?
-    echo
-    echo
-else
-    echo -e "\033[00;33mPYTHON v2.6 NOT FOUND, SKIPPING ...\033[00m"
-    RESULT26=0
-fi
-
-
-if which python2.7 &> /dev/null;
-then
-    echo -e "\033[00;32mTESTING PYTHON v2.7\033[00m"
-    MODULES=$(find tests/unit pypeline -name '*.py' | grep -v "__init__" | sed -e 's#\.py##g' -e's#/#.#g' -e's#^tests\.##')
-    python2.7 $(which nosetests) -I ".*_flymake.py" tests/ --with-coverage $@ \
-        --cover-tests --cover-branches --cover-inclusive --cover-erase \
-	$(for module in $MODULES;do echo --cover-package=$module;done) \
-	2>&1 | grep -v "[0-9]\+ \+0 \+[0-9]\+ \+0 \+100%"
+MODULES=$(find tests/unit pypeline -name '*.py' | grep -v "__init__" | sed -e 's#\.py##g' -e's#/#.#g' -e's#^tests\.##')
+nosetests -I ".*_flymake.py" tests/ --with-coverage $@ \
+    --cover-tests --cover-branches --cover-inclusive --cover-erase \
+    $(for module in $MODULES;do echo --cover-package=$module;done) \
+    2>&1 | grep -v "[0-9]\+ \+0 \+[0-9]\+ \+0 \+100%"
 #   --cover-html --cover-html-dir=tests/runs/coverage
-    RESULT27=$?
-else
-    echo -e "\033[00;33mPYTHON v2.7 NOT FOUND, SKIPPING ...\033[00m"
-    RESULT27=0
-fi
-
-if ! [ ${RESULT26} = 0 -a ${RESULT27} = 0 ];
-then
-    exit 1
-fi

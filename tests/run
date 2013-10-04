@@ -10,7 +10,7 @@ env PYTHONPATH=. tests/function/run
 RESULT_FUNC=$?
 
 
-echo 
+echo
 if [ ${RESULT_UNIT} -ne 0 ];
 then
     echo "THERE WERE ERRORS DURING UNIT TESTING."

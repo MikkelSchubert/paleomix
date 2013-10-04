@@ -21,13 +21,10 @@
 # SOFTWARE.
 #
 from nose.tools import \
-     assert_equal, \
-     assert_raises
-
-from pypeline.common.testing import \
      assert_is, \
+     assert_equal, \
+     assert_raises, \
      assert_raises_regexp
-
 
 from pypeline.common.makefile import \
     DEFAULT_NOT_SET, \

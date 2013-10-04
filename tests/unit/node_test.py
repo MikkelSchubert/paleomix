@@ -29,14 +29,16 @@
 import os
 
 import nose.tools
-from nose.tools import assert_equal, assert_raises
+from nose.tools import \
+     assert_in, \
+     assert_equal, \
+     assert_raises
 from flexmock import flexmock
 
 from pypeline.common.testing import \
      with_temp_folder, \
      set_file_contents, \
-     get_file_contents, \
-     assert_in
+     get_file_contents
 
 from pypeline.atomiccmd.command import AtomicCmd
 from pypeline.node import Node, MetaNode, CommandNode, NodeError, NodeUnhandledException, \

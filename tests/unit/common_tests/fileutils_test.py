@@ -25,7 +25,10 @@ import stat
 import errno
 
 import nose
-from nose.tools import assert_equal, assert_raises
+from nose.tools import \
+     assert_in, \
+     assert_equal, \
+     assert_raises
 
 import pypeline
 from pypeline.common.testing import \
@@ -33,8 +36,7 @@ from pypeline.common.testing import \
      Monkeypatch, \
      SetWorkingDirectory, \
      set_file_contents, \
-     get_file_contents, \
-     assert_in
+     get_file_contents
 
 from pypeline.common.fileutils import \
      add_postfix, \
