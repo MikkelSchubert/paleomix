@@ -274,7 +274,7 @@ class AtomicMPICmdBuilder(AtomicCmdBuilder):
         elif threads < 1:
             raise ValueError("'threads' must be 1 or greater, not %i" % threads)
         elif threads == 1:
-            AtomicCmdBuilder.__init__(self, call, **kwargs)
+            AtomicCmdBuilder.__init__(self, call, EXEC_MPI = "mpirun", **kwargs)
         else:
             call = safe_coerce_to_tuple(call)
             mpi_call = ["mpirun", "-n", threads]
