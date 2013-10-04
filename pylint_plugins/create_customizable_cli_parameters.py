@@ -23,31 +23,27 @@
 import logilab.astng
 from logilab.astng import MANAGER
 
+
+_DECORATOR = 'pypeline.atomiccmd.builder.create_customizable_cli_parameters'
+
+
 def _disable_infer(_self, *_args, **_kwargs):
     raise logilab.astng.InferenceError()
 
 
 def atomiccmd_builder_transform(module):
-    for cls_obj in module.get_children():
-        if not isinstance(cls_obj, logilab.astng.Class):
-            continue
+    if isinstance(module, logilab.astng.Function):
+        if _DECORATOR in module.decoratornames():
+            if module.type == 'method':
+                module.type = 'classmethod'
 
-        for member in cls_obj.get_children():
-            if not isinstance(member, logilab.astng.Function):
-                continue
+            # Crude workaround to spurious errors:
+            # Prevent pylint from attempting to infer the return type
+            module.infer_call_result = _disable_infer
+            return
 
-            try:
-                if 'pypeline.atomiccmd.builder.create_customizable_cli_parameters' in member.decoratornames():
-                    if member.type == 'method':
-                        member.type = 'classmethod'
-
-
-                    # Crude workaround to spurious errors:
-                    # Prevent pylint from attempting to infer the return type
-                    member.infer_call_result = _disable_infer
-
-            except logilab.astng.UnresolvableName:
-                pass
+    for child in module.get_children():
+        atomiccmd_builder_transform(child)
 
 
 def register(*_args, **_kwargs):
