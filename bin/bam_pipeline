@@ -54,6 +54,7 @@ def main(argv):
         from pypeline.common.console import print_info
 
         basename = os.path.basename(sys.argv[0])
+        print_info("BAM Pipeline %s\n" % (pypeline.__version__,))
         print_info("Usage:")
         print_info("  -- %s help            -- Display this message" % basename)
         print_info("  -- %s mkfile [...]    -- Generate makefile from 'SampleSheet.csv' files." % basename)

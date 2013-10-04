@@ -20,7 +20,31 @@
 #!/usr/bin/python
 import os
 import re
+import sys
+import subprocess
+
 from distutils.core import setup
+from distutils.command.build_py import build_py
+
+
+if (sys.version_info.major != 2) or (sys.version_info.minor != 7):
+    sys.stderr.write("ERROR: Python version 2.7.x required!\n")
+    sys.stderr.write("       Current version is v%s\n" % (sys.version.replace("\n", " "),))
+    sys.exit(1)
+
+
+_VERSION = None
+def get_version():
+    global _VERSION
+    if _VERSION is None:
+        command = ("git", "describe", "--always", "--tags", "--dirty")
+        try:
+            _VERSION = subprocess.check_output(command).strip()
+        except (subprocess.CalledProcessError, OSError), error:
+            raise SystemExit(("Could not determine pypeline version:\n"
+                              "  Command = %s\n"
+                              "  Error   = %s") % (" ".join(command), error))
+    return _VERSION
 
 
 def locate_packages():
@@ -42,8 +66,17 @@ def locate_scripts():
     return scripts
 
 
+class setup_version(build_py):
+    def run(self):
+        version = get_version()
+        with open(os.path.join("pypeline", "version.py"), "w") as handle:
+            handle.write("#!/usr/bin/env python\n")
+            handle.write("__version__ = %r\n" % (version.strip(),))
+        build_py.run(self)
+
+
 setup(name         = 'Pypeline',
-      version      = '0.1-dev',
+      version      = get_version(),
       description  = '(Framework for) Bioinformatics pipelines',
       author       = 'Mikkel Schubert',
       author_email = 'MSchubert@snm.ku.dk',
@@ -52,4 +85,5 @@ setup(name         = 'Pypeline',
                       'yaml (>=3.1.0)'],
       packages     = locate_packages(),
       scripts      = locate_scripts(),
+      cmdclass     = {"build_py" : setup_version},
     )

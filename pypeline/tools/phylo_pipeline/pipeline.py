@@ -51,7 +51,10 @@ def main(argv):
         print_err(error)
         return 1
 
-    if (args[0] == "help"):
+    if ("help" in args):
+        return 0
+    elif len(args) < 2:
+        print_err("\nPlease specify at least one analysis step and one makefile!")
         return 1
 
     commands = select_commands(args.pop(0))

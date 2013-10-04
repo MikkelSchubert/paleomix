@@ -35,7 +35,10 @@ from pypeline.config import \
 
 def _run_config_parser(argv):
     per_host_cfg = PerHostConfig("bam_pipeline")
-    parser = optparse.OptionParser("%prog <command> [options] [makefiles]")
+
+    usage_str    = "%prog <command> [options] [makefiles]"
+    version_str  = "%%prog %s" % (pypeline.__version__,)
+    parser       = optparse.OptionParser(usage = usage_str, version = version_str)
     parser.add_option("--allow-missing-input-files", action = "store_true", default = False,
                       help = "Allow processing of lanes, even if the original input files are no-longer " \
                              "accesible, if for example a network drive is down. This option should be " \

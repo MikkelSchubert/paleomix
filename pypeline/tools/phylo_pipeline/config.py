@@ -29,6 +29,7 @@ import pypeline.tools.phylo_pipeline.parts.genotype as genotype
 import pypeline.tools.phylo_pipeline.parts.msa as msa
 import pypeline.tools.phylo_pipeline.parts.paml as paml
 import pypeline.tools.phylo_pipeline.parts.phylo as phylo
+import pypeline.common.console as console
 
 from pypeline.config import \
      ConfigError, \
@@ -36,6 +37,13 @@ from pypeline.config import \
      PerHostConfig
 
 
+_DESCRIPTION = \
+  "Commands:\n" \
+  "  -- %prog help            -- Display this message.\n" \
+  "  -- %prog mkfile          -- Print makefile template.\n" \
+  "  -- %prog genotype [...]  -- Carry out genotyping according to makefile.\n" \
+  "  -- %prog msa [...]       -- Carry out multiple sequence alignment.\n" \
+  "  -- %prog phylogeny [...] -- Carry out phylogenetic inference.\n"
 
 
 _COMMANDS = {
@@ -75,16 +83,12 @@ def select_commands(chain):
 
 def _run_config_parser(argv):
     per_host_cfg = PerHostConfig("phylo_pipeline")
-    parser = optparse.OptionParser("%prog <command> [options] [makefiles]")
+    usage_str    = "%prog <command> [options] [makefiles]"
+    version_str  = "%%prog %s" % (pypeline.__version__,)
+    parser       = optparse.OptionParser(usage = usage_str, version = version_str)
     parser.formatter = CustomHelpFormatter()
     parser.formatter.set_parser(parser)
-    parser.description = \
-      "Commands:\n" \
-      "  -- %prog help            -- Display this message.\n" \
-      "  -- %prog mkfile [...]    -- Print makefile template.\n" \
-      "  -- %prog genotype [...]  -- Carry out genotyping according to makefile.\n" \
-      "  -- %prog msa [...]       -- Carry out multiple sequence alignment.\n" \
-      "  -- %prog phylogeny [...] -- Carry out phylogenetic inference.\n"
+    parser.description = _DESCRIPTION
 
     pypeline.ui.add_optiongroup(parser)
     pypeline.logger.add_optiongroup(parser)
@@ -118,11 +122,13 @@ def _run_config_parser(argv):
 
 def parse_config(argv):
     options, args  = _run_config_parser(argv)
-
     if (len(args) < 2) and (args != ["mkfile"]):
-        raise ConfigError("Please specify at least one analysis step and one makefile!")
+        description = _DESCRIPTION.replace("%prog", "phylo_pipeline").strip()
+        console.print_info("Phylogeny Pipeline %s\n" % (pypeline.__version__,))
+        console.print_info(description)
+        return options, args
 
-    commands = select_commands(args[0])
+    commands = select_commands(args[0] if args else ())
     if any((func is None) for (_, func) in commands):
         unknown_commands = ", ".join(repr(key) for (key, func) in commands if func is None)
         raise ConfigError("Unknown analysis step(s): %s" % (unknown_commands,))
