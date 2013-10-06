@@ -112,7 +112,7 @@ class SE_AdapterRemovalNode(CommandNode):
 
 class PE_AdapterRemovalNode(CommandNode):
     @create_customizable_cli_parameters
-    def customize(self, input_files_1, input_files_2, output_prefix, output_format = "bz2", version = VERSION_15, dependencies = ()):
+    def customize(cls, input_files_1, input_files_2, output_prefix, output_format = "bz2", version = VERSION_15, dependencies = ()):
         cmd = _get_common_parameters(version)
 
         # Uncompressed mate 1 and 2 reads (piped from unicat)
