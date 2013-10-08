@@ -66,7 +66,7 @@ def initialize(config, template = None):
     _INITIALIZED = True
 
 
-def add_optiongroup(parser):
+def add_optiongroup(parser, default = "warning"):
     """Adds an option-group to an OptionParser object, with options
     pertaining to logging. Note that 'initialize' expects the config
     object to have these options."""
@@ -75,7 +75,7 @@ def add_optiongroup(parser):
                      help = "Write messages to this file. By default, a filename will be generated"
                             "using the template ${TEMP}/bam_pipeline_*.log, iff messages are logged"
                             "at or above the --log-level")
-    group.add_option("--log-level", default = "warning", type = "choice",
+    group.add_option("--log-level", default = default, type = "choice",
                      choices = ("info", "warning", "error", "debug"),
                      help = "Log messages to log-file at and above the specified level [%default]")
     parser.add_option_group(group)

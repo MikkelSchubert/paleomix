@@ -90,8 +90,8 @@ def _run_config_parser(argv):
     parser.formatter.set_parser(parser)
     parser.description = _DESCRIPTION
 
-    pypeline.ui.add_optiongroup(parser)
-    pypeline.logger.add_optiongroup(parser)
+    pypeline.ui.add_optiongroup(parser, default = PerHostValue("quiet"))
+    pypeline.logger.add_optiongroup(parser, default = PerHostValue("warning"))
 
     group  = optparse.OptionGroup(parser, "Scheduling")
     group.add_option("--examl-max-threads",  default = PerHostValue(4), type = int,

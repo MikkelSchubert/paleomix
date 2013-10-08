@@ -45,7 +45,7 @@ def _run_config_parser(argv):
                              "used with care!")
 
     pypeline.ui.add_optiongroup(parser, default = PerHostValue("quiet"))
-    pypeline.logger.add_optiongroup(parser)
+    pypeline.logger.add_optiongroup(parser, default = PerHostValue("warning"))
 
     group  = optparse.OptionGroup(parser, "Scheduling")
     group.add_option("--bowtie2-max-threads", type = int, default = PerHostValue(4),
