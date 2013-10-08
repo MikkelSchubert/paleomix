@@ -21,6 +21,7 @@
 # SOFTWARE.
 #
 import os
+import types
 import socket
 import getpass
 import optparse
@@ -130,10 +131,17 @@ class PerHostConfig:
 
     def _get_default(self, option):
         value = option.default.value
-        value_type = type(value)
         for section in self._sections:
             if self._handle.has_option(section, option.dest):
-                value = value_type(self._handle.get(section, option.dest))
+                getter = self._handle.get
+                if isinstance(value, types.BooleanType):
+                    getter = self._handle.getboolean
+                elif isinstance(value, (types.IntType, types.LongType)):
+                    getter = self._handle.getint
+                elif isinstance(value, (types.FloatType)):
+                    getter = self._handle.getfloat
+
+                value = getter(section, option.dest)
                 break
 
         if option.default.is_path:
