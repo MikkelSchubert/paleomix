@@ -92,16 +92,31 @@ class PerHostConfig:
         using the settings-files. If --write-config-file is set, a config file
         containing the resulting settings is written."""
         self._add_per_host_options(parser)
-        default_cfg = self._update_defaults(parser)
+        defaults     = self._update_defaults(parser)
         config, args = parser.parse_args(argv)
 
         if config.write_config_file:
-            filename = self._filenames[-1]
-            make_dirs(os.path.dirname(filename))
-            with open(filename, "w") as handle:
-                default_cfg.write(handle)
+            self._write_config_file(config, defaults)
 
         return config, args
+
+
+    def _write_config_file(self, config, defaults):
+        """Writes a basic config files, using the values previously found in the
+        config files, and specified on the command-line."""
+        defaults_cfg = ConfigParser.SafeConfigParser()
+        defaults_cfg.add_section("Defaults")
+        for key in defaults:
+            value = getattr(config, key)
+            if isinstance(value, (types.ListType, types.TupleType)):
+                value = ";".join(value)
+
+            defaults_cfg.set("Defaults", key, str(value))
+
+        filename = self._filenames[-1]
+        make_dirs(os.path.dirname(filename))
+        with open(filename, "w") as handle:
+            defaults_cfg.write(handle)
 
 
     def _add_per_host_options(self, parser):
@@ -121,26 +136,24 @@ class PerHostConfig:
             if isinstance(opt.default, PerHostValue):
                 defaults[opt.dest] = self._get_default(opt)
         parser.set_defaults(**defaults)
-
-        config = ConfigParser.SafeConfigParser()
-        config.add_section("Defaults")
-        for (key, value) in defaults.iteritems():
-            config.set("Defaults", key, str(value))
-        return config
+        return defaults
 
 
     def _get_default(self, option):
         value = option.default.value
+        getter = self._handle.get
+        if isinstance(value, types.BooleanType):
+            getter = self._handle.getboolean
+        elif isinstance(value, (types.IntType, types.LongType)):
+            getter = self._handle.getint
+        elif isinstance(value, (types.FloatType)):
+            getter = self._handle.getfloat
+        elif isinstance(value, (types.ListType, types.TupleType)):
+            def getter(section, key): # pylint: disable=E0102
+                return filter(None, self._handle.get(section, key).split(";"))
+
         for section in self._sections:
             if self._handle.has_option(section, option.dest):
-                getter = self._handle.get
-                if isinstance(value, types.BooleanType):
-                    getter = self._handle.getboolean
-                elif isinstance(value, (types.IntType, types.LongType)):
-                    getter = self._handle.getint
-                elif isinstance(value, (types.FloatType)):
-                    getter = self._handle.getfloat
-
                 value = getter(section, option.dest)
                 break
 
