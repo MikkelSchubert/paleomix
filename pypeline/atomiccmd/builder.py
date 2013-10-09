@@ -243,14 +243,11 @@ class AtomicCmdBuilder:
 
 
 class AtomicJavaCmdBuilder(AtomicCmdBuilder):
-    def __init__(self, config, jar, gc_threads = 1, **kwargs):
-        temp_root = "%(TEMP_DIR)s"
-        if config:
-            temp_root = config.temp_root
-
+    def __init__(self, jar, jre_options = (), temp_root = "%(TEMP_DIR)s", gc_threads = 1, **kwargs):
         call = ["java", "-server", "-Xmx4g",
                 "-Djava.io.tmpdir=%s" % temp_root,
                 "-Djava.awt.headless=true"]
+        call.extend(jre_options)
 
         if not isinstance(gc_threads, (types.IntType, types.LongType)):
             raise TypeError("'gc_threads' must be an integer value, not %r" % gc_threads.__class__.__name__)

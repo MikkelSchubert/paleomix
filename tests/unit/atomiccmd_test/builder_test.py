@@ -352,10 +352,8 @@ def test_builder__finalize__calls_atomiccmd():
 ################################################################################
 ## AtomicJavaCmdBuilder
 
-JAVA_CFG = flexmock(temp_root = "/disk/tmp")
-
 def test_java_builder__default__no_config():
-    builder = AtomicJavaCmdBuilder(None, "/path/Foo.jar")
+    builder = AtomicJavaCmdBuilder("/path/Foo.jar")
     assert_equal(builder.call, ["java", "-server", "-Xmx4g",
                                 "-Djava.io.tmpdir=%(TEMP_DIR)s",
                                 "-Djava.awt.headless=true",
@@ -363,7 +361,7 @@ def test_java_builder__default__no_config():
                                 "-jar", "%(AUX_JAR)s"])
 
 def test_java_builder__defaults__call():
-    builder = AtomicJavaCmdBuilder(JAVA_CFG, "/path/Foo.jar")
+    builder = AtomicJavaCmdBuilder("/path/Foo.jar", temp_root = "/disk/tmp")
     assert_equal(builder.call, ["java", "-server", "-Xmx4g",
                                 "-Djava.io.tmpdir=/disk/tmp",
                                 "-Djava.awt.headless=true",
@@ -371,11 +369,11 @@ def test_java_builder__defaults__call():
                                 "-jar", "%(AUX_JAR)s"])
 
 def test_java_builder__defaults__kwargs():
-    builder = AtomicJavaCmdBuilder(JAVA_CFG, "/path/Foo.jar")
+    builder = AtomicJavaCmdBuilder("/path/Foo.jar")
     assert_equal(builder.kwargs, {"AUX_JAR" : "/path/Foo.jar"})
 
 def test_java_builder__multithreaded_gc():
-    builder = AtomicJavaCmdBuilder(JAVA_CFG, "/path/Foo.jar", gc_threads = 3)
+    builder = AtomicJavaCmdBuilder("/path/Foo.jar", temp_root = "/disk/tmp", gc_threads = 3)
     assert_equal(builder.call, ["java", "-server", "-Xmx4g",
                                 "-Djava.io.tmpdir=/disk/tmp",
                                 "-Djava.awt.headless=true",
@@ -383,14 +381,14 @@ def test_java_builder__multithreaded_gc():
                                 "-jar", "%(AUX_JAR)s"])
 
 def test_java_builder__multithreaded_gc__zero_or_negative_threads():
-    assert_raises(ValueError, AtomicJavaCmdBuilder, JAVA_CFG, "/path/Foo.jar", gc_threads = 0)
-    assert_raises(ValueError, AtomicJavaCmdBuilder, JAVA_CFG, "/path/Foo.jar", gc_threads = -1)
+    assert_raises(ValueError, AtomicJavaCmdBuilder, "/path/Foo.jar", gc_threads = 0)
+    assert_raises(ValueError, AtomicJavaCmdBuilder, "/path/Foo.jar", gc_threads = -1)
 
 def test_java_builder__multithreaded_gc__non_int_threads():
-    assert_raises(TypeError, AtomicJavaCmdBuilder, JAVA_CFG, "/path/Foo.jar", gc_threads = "3")
+    assert_raises(TypeError, AtomicJavaCmdBuilder, "/path/Foo.jar", gc_threads = "3")
 
 def test_java_builder__kwargs():
-    builder = AtomicJavaCmdBuilder(JAVA_CFG, "/path/Foo.jar", set_cwd = True)
+    builder = AtomicJavaCmdBuilder("/path/Foo.jar", set_cwd = True)
     assert_equal(builder.kwargs, {"AUX_JAR" : "/path/Foo.jar", "set_cwd" : True})
 
 

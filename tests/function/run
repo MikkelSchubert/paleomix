@@ -59,6 +59,7 @@ class Config: # pylint: disable=W0232
     dependencies = Node(description = "DummyDependency")
     log_file     = None
     log_level    = "error"
+    jre_options  = ()
 
 
 def main(argv):

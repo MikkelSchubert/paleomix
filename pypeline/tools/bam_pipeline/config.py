@@ -87,6 +87,13 @@ def _run_config_parser(argv):
                      help = "List all targets at a given resolution (target, sample, library, lane, reads)")
     parser.add_option_group(group)
 
+    group  = optparse.OptionGroup(parser, "Misc")
+    group.add_option("--jre-option", dest = "jre_options", action = "append", default = PerHostValue([]),
+                     help = "May be specified one or more times with options to be passed "
+                            "tot the JRE (Jave Runtime Environment); e.g. to change the "
+                            "maximum amount of memory (default is -Xmx4g)")
+    parser.add_option_group(group)
+
     return per_host_cfg.parse_args(parser, argv)
 
 

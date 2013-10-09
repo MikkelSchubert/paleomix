@@ -27,7 +27,10 @@ from pypeline.atomiccmd.command import AtomicCmd
 from pypeline.atomiccmd.sets import ParallelCmds
 from pypeline.atomiccmd.builder import AtomicJavaCmdBuilder
 
-from pypeline.nodes.picard import ValidateBAMNode, concatenate_input_bams
+from pypeline.nodes.picard import \
+     PicardNode, \
+     ValidateBAMNode, \
+     concatenate_input_bams
 from pypeline.nodes.samtools import BAMIndexNode
 from pypeline.common.fileutils import describe_files
 
@@ -104,14 +107,15 @@ class IndexAndValidateBAMNode(MetaNode):
         return input_filename, has_index
 
 
-class CleanupBAMNode(CommandNode):
+class CleanupBAMNode(PicardNode):
     def __init__(self, config, reference, input_bam, output_bam, tags, min_mapq = 0, dependencies = ()):
         flt = AtomicCmd(["samtools", "view", "-bu", "-F0x4", "-q%i" % min_mapq, "%(IN_BAM)s"],
                         IN_BAM  = input_bam,
                         OUT_STDOUT = AtomicCmd.PIPE)
 
         jar_file = os.path.join(config.jar_root, "AddOrReplaceReadGroups.jar")
-        params = AtomicJavaCmdBuilder(config, jar_file)
+        params = AtomicJavaCmdBuilder(jar         = jar_file,
+                                      jre_options = config.jre_options)
         params.set_option("INPUT", "/dev/stdin", sep = "=")
         params.set_option("OUTPUT", "/dev/stdout", sep = "=")
         params.set_option("QUIET", "true", sep = "=")
@@ -132,9 +136,9 @@ class CleanupBAMNode(CommandNode):
 
         description =  "<Cleanup BAM: %s -> '%s'>" \
             % (input_bam, output_bam)
-        CommandNode.__init__(self,
-                             command      = ParallelCmds([flt, annotate, calmd]),
-                             description  = description,
-                             dependencies = dependencies)
+        PicardNode.__init__(self,
+                            command      = ParallelCmds([flt, annotate, calmd]),
+                            description  = description,
+                            dependencies = dependencies)
 
 
