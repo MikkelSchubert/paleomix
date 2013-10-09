@@ -186,13 +186,15 @@ def try_remove(filename):
     raise an exception if the file does not exist, but does raise
     exceptions on other errors. The return value reflects whether or
     not the file was actually removed."""
-    try:
-        os.remove(filename)
-        return True
-    except OSError, error:
-        if error.errno != errno.ENOENT:
-            raise
-        return False
+    return _try_rm_wrapper(os.remove, filename)
+
+
+def try_rmdir(filename):
+    """Tries to remove a directory. Unlike os.rmdir, the function does not raise
+    an exception if the file does not exist, but does raise exceptions on other
+    errors. The return value reflects whether or not the file was actually
+    removed."""
+    return _try_rm_wrapper(os.rmdir, filename)
 
 
 def describe_files(files):
@@ -299,3 +301,16 @@ def _sh_wrapper(func, source, destination):
                 func(source, destination)
                 return
         raise
+
+
+def _try_rm_wrapper(func, fpath):
+    """Takes a function (e.g. os.remove / os.rmdir), and attempts to remove a
+    path; returns true if that path was succesfully remove, and false if it did
+    not exist."""
+    try:
+        func(fpath)
+        return True
+    except OSError, error:
+        if error.errno != errno.ENOENT:
+            raise
+        return False

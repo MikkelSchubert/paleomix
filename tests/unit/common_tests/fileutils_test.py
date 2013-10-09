@@ -52,6 +52,7 @@ from pypeline.common.fileutils import \
      move_file, \
      copy_file, \
      open_ro, \
+     try_rmdir, \
      try_remove, \
      describe_files, \
      describe_paired_files
@@ -606,19 +607,45 @@ def test_try_remove(temp_folder):
     fpath = os.path.join(temp_folder, "test.txt")
     set_file_contents(fpath, "1 2 3")
     assert try_remove(fpath)
+    assert not os.path.exists(fpath)
 
 
 @with_temp_folder
 def test_try_remove__missing(temp_folder):
     fpath = os.path.join(temp_folder, "test.txt")
     assert not try_remove(fpath)
+    assert not os.path.exists(fpath)
 
 
 @with_temp_folder
-@nose.tools.raises(OSError)
 def test_try_remove__non_file(temp_folder):
-    try_remove(temp_folder)
+    assert_raises(OSError, try_remove, temp_folder)
 
+
+################################################################################
+################################################################################
+## Tests for 'try_rmdir'
+
+@with_temp_folder
+def test_try_rmdir(temp_folder):
+    fpath = os.path.join(temp_folder, "testdir")
+    os.mkdir(fpath)
+    assert try_rmdir(fpath)
+    assert not os.path.exists(fpath)
+
+
+@with_temp_folder
+def test_try_rmdir__missing(temp_folder):
+    fpath = os.path.join(temp_folder, "testdir")
+    assert not try_rmdir(fpath)
+    assert not os.path.exists(fpath)
+
+
+@with_temp_folder
+def test_try_rmdir__non_file(temp_folder):
+    fpath = os.path.join(temp_folder, "test.txt")
+    set_file_contents(fpath, "1 2 3")
+    assert_raises(OSError, try_rmdir, fpath)
 
 
 ################################################################################
