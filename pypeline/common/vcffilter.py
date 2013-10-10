@@ -330,7 +330,7 @@ def _filter_by_properties(options, vcfs, frequencies):
             if (alt_fw + alt_rev) < options.min_num_alt_bases:
                 _mark_as_filtered(vcf, "a=%i" % options.min_num_alt_bases)
 
-            ml_genotype = vcfwrap.get_ml_phenotype(vcf)
+            ml_genotype = vcfwrap.get_ml_genotype(vcf)
             if (ml_genotype == ("N", "N")) and not options.keep_ambigious_genotypes:
                 # No most likely genotype
                 _mark_as_filtered(vcf, "k")

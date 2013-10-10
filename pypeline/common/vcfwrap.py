@@ -95,9 +95,9 @@ def is_indel(vcf):
 # The corresponding nucleotides for each value in the VCF PL field
 _genotype_indices = [(jj, ii) for ii in range(0, 10) for jj in range(0, ii + 1)]
 
-def get_ml_phenotype(vcf):
-    """Returns the most likely genotype of a sample in a vcf record. Note that 
-    only records with exactly one sample are supported. If no single most likely 
+def get_ml_genotype(vcf):
+    """Returns the most likely genotype of a sample in a vcf record. Note that
+    only records with exactly one sample are supported. If no single most likely
     genotype can be determined, the function returns 'N' for both bases."""
     if len(vcf) != 1:
         raise ValueError("Only records with 1 sample are supported!")

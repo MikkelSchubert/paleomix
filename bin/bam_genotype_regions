@@ -54,7 +54,7 @@ def build_region(options, genotype, bed):
     for snp in filtered_vcfs:
         if not vcfwrap.is_indel(snp):
             if snp.alt != ".":
-                genotype = "".join(vcfwrap.get_ml_phenotype(snp))
+                genotype = "".join(vcfwrap.get_ml_genotype(snp))
                 encoded  = sequences.encode_genotype(genotype)
             else:
                 encoded = snp.ref
@@ -66,7 +66,7 @@ def build_region(options, genotype, bed):
             if (indel.alt == ".") or not vcfwrap.is_indel(indel):
                 continue
 
-            genotype = vcfwrap.get_ml_phenotype(indel)
+            genotype = vcfwrap.get_ml_genotype(indel)
             if (genotype[0] != genotype[1]):
                 # No way to represent heterozygous indels
                 continue
