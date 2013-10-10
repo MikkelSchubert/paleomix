@@ -245,8 +245,10 @@ def main(argv):
         print
 
     if not argv:
-        print_info("No directories specified, empty table printed:", file = sys.stderr)
-        print_info("\tUsage: %s [directory ...]" % sys.argv[0], file = sys.stderr)
+        print_info("No directories/files specified, standard makefile printed.", file = sys.stderr)
+        print_info("If the reads have assosiated %s files, these" % (_FILENAME,), file = sys.stderr)
+        print_info("may be used to generate a preliminary makefile:", file = sys.stderr)
+        print_info("  Usage: bam_pipeline mkfile [filename/directory] [...]", file = sys.stderr)
         print_info("Each directory must contain a '%s' file." % _FILENAME, file = sys.stderr)
     else:
         print_info("Makefile printed. Please check for correctness before running pipeline.", file = sys.stderr)
