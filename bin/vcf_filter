@@ -32,7 +32,7 @@ import pypeline.common.vcffilter as vcffilter
 def _read_files(filenames):
     in_header = True
     vcf_parser = pysam.asVCF()
-    for line in fileinput.input(args):
+    for line in fileinput.input(filenames):
         if not line.startswith("#"):
             in_header = False
             line = line.rstrip("\n\r")
