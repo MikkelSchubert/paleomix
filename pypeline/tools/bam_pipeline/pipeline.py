@@ -251,11 +251,17 @@ def list_orphan_files(config, makefiles, nodes):
     return (files - mkfiles) - list_output_files(nodes)
 
 
-def main(argv):
-    try:
-        config, args = parse_config(argv)
-    except ConfigError, error:
-        print_err(error)
+def main(config, args):
+    if not os.path.exists(config.temp_root):
+        try:
+            os.makedirs(config.temp_root)
+        except OSError, e:
+            print_err("ERROR: Could not create temp root:\n\t%s" % (e,))
+            return 1
+
+    if not os.access(config.temp_root, os.R_OK | os.W_OK | os.X_OK):
+        print_err("ERROR: Insufficient permissions for temp root: '%s'" \
+                          % (config.temp_root,))
         return 1
 
     try:
@@ -334,7 +340,3 @@ def main(argv):
         return 1
 
     return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))

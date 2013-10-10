@@ -43,6 +43,20 @@ def _has_required_modules():
     return check_pypeline_requirements()
 
 
+def _print_usage():
+    import pypeline
+    from pypeline.common.console import print_info
+
+    basename = os.path.basename(sys.argv[0])
+    print_info("BAM Pipeline %s\n" % (pypeline.__version__,))
+    print_info("Usage:")
+    print_info("  -- %s help            -- Display this message" % basename)
+    print_info("  -- %s mkfile [...]    -- Generate makefile from 'SampleSheet.csv' files." % basename)
+    print_info("  -- %s dry_run [...]   -- Perform dry run of pipeline on provided makefiles." % basename)
+    print_info("     %s                    Equivalent to 'bam_pipeline run --dry-run [...]'." % (" " * len(basename),))
+    print_info("  -- %s run [...]       -- Run pipeline on provided makefiles." % basename)
+
+
 def main(argv):
     if not _has_required_modules():
         return 1
@@ -50,29 +64,30 @@ def main(argv):
     import pypeline.common.system
     pypeline.common.system.set_procname()
 
-    if (len(argv) == 0) or (argv[0] not in ("mkfile", "run", "dry_run", "dryrun")):
-        from pypeline.common.console import print_info
+    import pypeline.tools.bam_pipeline.config as bam_config
+    from pypeline.common.console import print_err
 
-        basename = os.path.basename(sys.argv[0])
-        print_info("BAM Pipeline %s\n" % (pypeline.__version__,))
-        print_info("Usage:")
-        print_info("  -- %s help            -- Display this message" % basename)
-        print_info("  -- %s mkfile [...]    -- Generate makefile from 'SampleSheet.csv' files." % basename)
-        print_info("  -- %s dry_run [...]   -- Perform dry run of pipeline on provided makefiles." % basename)
-        print_info("     %s                    Equivalent to 'bam_pipeline run --dry-run [...]'." % (" " * len(basename),))
-        print_info("  -- %s run [...]       -- Run pipeline on provided makefiles." % basename)
-    elif argv[0] == "mkfile":
+    try:
+        config, args = bam_config.parse_config(argv)
+        if args and args[0].startswith("dry"):
+            config.dry_run = True
+    except bam_config.ConfigError, error:
+        print_err(error)
+        return 1
+
+    if (len(args) == 0) or (args[0] not in ("mkfile", "run", "dry_run", "dryrun")):
+        _print_usage()
+    elif args[0] == "mkfile":
         import pypeline.tools.bam_pipeline.mkfile
 
-        return pypeline.tools.bam_pipeline.mkfile.main(argv[1:])
-    elif argv[0] == "run":
-        import pypeline.tools.bam_pipeline.pipeline
+        return pypeline.tools.bam_pipeline.mkfile.main(args[1:])
+    elif not args[1:]:
+        _print_usage()
+        print_err("\nPlease specify at least one makefile!")
+    else:
+        import pypeline.tools.bam_pipeline.pipeline as bam_pipeline
 
-        return pypeline.tools.bam_pipeline.pipeline.main(argv[1:])
-    elif argv[0] in ("dryrun", "dry_run"):
-        import pypeline.tools.bam_pipeline.pipeline
-
-        return pypeline.tools.bam_pipeline.pipeline.main(argv[1:] + ["--dry-run"])
+        return bam_pipeline.main(config, args)
 
     return 1
 

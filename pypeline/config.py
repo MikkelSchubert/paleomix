@@ -21,6 +21,7 @@
 # SOFTWARE.
 #
 import os
+import sys
 import types
 import socket
 import getpass
@@ -30,6 +31,8 @@ import multiprocessing
 
 from pypeline.common.fileutils import \
      make_dirs
+from pypeline.common.console import \
+     print_info
 
 
 class ConfigError(RuntimeError):
@@ -117,6 +120,9 @@ class PerHostConfig:
         make_dirs(os.path.dirname(filename))
         with open(filename, "w") as handle:
             defaults_cfg.write(handle)
+
+        print_info("Wrote config file %r" % (filename,))
+        sys.exit(0)
 
 
     def _add_per_host_options(self, parser):

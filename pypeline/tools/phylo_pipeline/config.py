@@ -20,7 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
 import optparse
 
 import pypeline
@@ -132,15 +131,5 @@ def parse_config(argv):
     if any((func is None) for (_, func) in commands):
         unknown_commands = ", ".join(repr(key) for (key, func) in commands if func is None)
         raise ConfigError("Unknown analysis step(s): %s" % (unknown_commands,))
-
-    if not os.path.exists(options.temp_root):
-        try:
-            os.makedirs(options.temp_root)
-        except OSError, e:
-            raise ConfigError("ERROR: Could not create temp root:\n\t%s" % (e,))
-
-    if not os.access(options.temp_root, os.R_OK | os.W_OK | os.X_OK):
-        raise ConfigError("ERROR: Insufficient permissions for temp root: '%s'" \
-                          % (options.temp_root,))
 
     return options, args

@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import os
 import sys
 import time
 import logging
@@ -51,15 +52,26 @@ def main(argv):
         print_err(error)
         return 1
 
-    if ("help" in args):
+    if not args or ("help" in args):
         return 0
     elif len(args) < 2:
-        print_err("\nPlease specify at least one analysis step and one makefile!")
+        print_err("\nPlease specify at least one makefile!")
         return 1
 
     commands = select_commands(args.pop(0))
     if any((cmd == "mkfile") for (cmd, _) in commands):
         return mkfile.main(args[1:])
+
+    if not os.path.exists(config.temp_root):
+        try:
+            os.makedirs(config.temp_root)
+        except OSError, e:
+            print_err("ERROR: Could not create temp root:\n\t%s" % (e,))
+            return 1
+
+    if not os.access(config.temp_root, os.R_OK | os.W_OK | os.X_OK):
+        print_err("ERROR: Insufficient permissions for temp root: '%s'" % (config.temp_root,))
+        return 1
 
     try:
         makefiles = read_makefiles(config, args)

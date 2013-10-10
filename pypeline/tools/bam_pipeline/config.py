@@ -20,7 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
 import optparse
 
 import pypeline
@@ -108,18 +107,6 @@ def parse_config(argv):
 
     if config.list_output_files and config.list_orphan_files:
         raise ConfigError("ERROR: Both --list-output-files and --list-orphan-files set!")
-
-    if not os.path.exists(config.temp_root):
-        try:
-            os.makedirs(config.temp_root)
-        except OSError, e:
-            raise ConfigError("ERROR: Could not create temp root:\n\t%s" % (e,))
-
-    if not os.access(config.temp_root, os.R_OK | os.W_OK | os.X_OK):
-        raise ConfigError("ERROR: Insufficient permissions for temp root: '%s'" % (config.temp_root,))
-
-    if not args:
-        raise ConfigError("Please specify at least one makefile!")
 
     return config, args
 
