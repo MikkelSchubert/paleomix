@@ -87,7 +87,7 @@ def main(argv):
     else:
         import pypeline.tools.bam_pipeline.pipeline as bam_pipeline
 
-        return bam_pipeline.main(config, args)
+        return bam_pipeline.main(config, args[1:])
 
     return 1
 
