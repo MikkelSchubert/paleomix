@@ -28,8 +28,8 @@ import time
 from pypeline.common.utilities import fragment, cumsum
 
 
-_DESC  = "Processed {Reads} reads ({Progress}) in {Time}, est. {Remaining} left. Last {ReadsDelta} reads in {TimeDelta}, now at {Contig}: {Position} ..."
-_FINAL = "Processed {Reads} reads in {Time}. Last {ReadsDelta} reads in {TimeDelta} ..."
+_DESC  = "Processed {Records} records ({Progress}) in {Time}, est. {Remaining} left. Last {RecordsDelta} records in {TimeDelta}, now at {Contig}: {Position} ..."
+_FINAL = "Processed {Records} records in {Time}. Last {RecordsDelta} records in {TimeDelta} ..."
 
 class BAMTimer:
     def __init__(self, bamfile, desc = None, step = 1e6, out = sys.stderr):
@@ -87,8 +87,8 @@ class BAMTimer:
         if self._desc:
             print("%s: " % self._desc, end = "", file = self._out)
 
-        print(desc.format(Reads      = self._format_int(self._count),
-                          ReadsDelta = self._format_int(self._count - self._last_count),
+        print(desc.format(Records    = self._format_int(self._count),
+                          RecordsDelta = self._format_int(self._count - self._last_count),
                           Time       = self._format_time(current_time - self._start_time),
                           TimeDelta  = self._format_time(current_time - self._last_time),
                           Contig     = contig,
