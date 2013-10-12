@@ -49,12 +49,13 @@ _BOOTSTRAP_CHUNK = 25
 
 
 
-def _build_supermatrix(destination, input_files, exclude_samples, dependencies):
+def _build_supermatrix(destination, input_files, exclude_samples, subset_files, dependencies):
     matrixprefix    = os.path.join(destination, "alignments")
     supermatrix     = FastaToPartitionedInterleavedPhyNode(infiles        = input_files,
                                                            out_prefix     = matrixprefix,
                                                            exclude_groups = exclude_samples,
-                                                           dependencies   = dependencies)
+                                                           dependencies   = dependencies,
+                                                           file_dependencies = subset_files)
 
     return RAxMLReduceNode(input_alignment  = matrixprefix + ".phy",
                            output_alignment = matrixprefix + ".reduced.phy",
@@ -172,12 +173,12 @@ def add_bootstrap_support(destination, replicate, bootstrap):
                              dependencies       = (bootstrap, replicate)),
 
 
-def _build_examl_nodes(options, settings, destination, input_files, dependencies):
+def _build_examl_nodes(options, settings, destination, input_files, subset_files, dependencies):
     input_alignment = os.path.join(destination, "alignments.reduced.phy")
     input_partition = os.path.join(destination, "alignments.reduced.partitions")
 
     excluded    = settings["ExcludeSamples"]
-    supermatrix = _build_supermatrix(destination, input_files, excluded, dependencies)
+    supermatrix = _build_supermatrix(destination, input_files, excluded, subset_files, dependencies)
     examl_args  = (options, settings, destination, input_alignment, input_partition, supermatrix)
 
     examl_replicates = _build_examl_replicates(*examl_args)
@@ -190,6 +191,7 @@ def _build_examl_nodes(options, settings, destination, input_files, dependencies
 def _build_examl_per_gene_nodes(options, settings, run_dd, roi, destination, filtering, dependencies):
     regions            = settings["Project"]["Regions"][roi["Name"]]
     sequences          = regions["Sequences"][roi["SubsetRegions"]]
+    subset_files       = regions["SubsetFiles"][roi["SubsetRegions"]]
     filtering_postfix  = ".filtered" if any(filtering.itervalues()) else ""
     sequence_dir       = os.path.join(options.destination, "alignments", roi["Name"] + filtering_postfix)
     msa_enabled        = settings["MultipleSequenceAlignment"][regions["Name"]]["Enabled"]
@@ -202,16 +204,20 @@ def _build_examl_per_gene_nodes(options, settings, run_dd, roi, destination, fil
         seq_source      = os.path.join(sequence_dir, sequence + fasta_extension)
         seq_destination = os.path.join(destination, sequence)
         input_files     = {sequence : {"partitions" : partitions, "filenames" : [seq_source]}}
-        nodes.extend(_build_examl_nodes(options, run_dd, seq_destination, input_files, dependencies))
+        nodes.extend(_build_examl_nodes(options, run_dd, seq_destination, input_files, subset_files, dependencies))
 
     return nodes
 
 
 def _build_examl_regions_nodes(options, settings, run_dd, destination, filtering, dependencies):
-    input_files = collections.defaultdict(dict)
+    input_files  = collections.defaultdict(dict)
+    subset_files = []
     for (roi_name, roi_dd) in run_dd["RegionsOfInterest"].iteritems():
         regions     = settings["Project"]["Regions"][roi_name]
-        sequences   = regions["Sequences"][roi_dd.get("SubsetRegions")]
+        subset_key  = roi_dd.get("SubsetRegions")
+        sequences   = regions["Sequences"][subset_key]
+        subset_files.extend(regions["SubsetFiles"][subset_key])
+
         partitions  = roi_dd["Partitions"]
         filtering_postfix  = ".filtered" if any(filtering.itervalues()) else ""
         sequence_dir       = os.path.join(options.destination, "alignments", roi_name + filtering_postfix)
@@ -228,7 +234,7 @@ def _build_examl_regions_nodes(options, settings, run_dd, destination, filtering
                 filenames.append(os.path.join(sequence_dir, sequence + fasta_extension))
             input_files[roi_name] = {"partitions" : "1", "filenames" : filenames}
 
-    return _build_examl_nodes(options, run_dd, destination, dict(input_files), dependencies)
+    return _build_examl_nodes(options, run_dd, destination, dict(input_files), subset_files, dependencies)
 
 
 def build_phylogeny_nodes(options, settings, filtering, dependencies):

@@ -142,6 +142,7 @@ def _update_regions(options, mkfile):
 
         # Collects seq. names / validate regions
         subdd["Sequences"] = {None : _collect_and_validate_sequences_and_subsets(subdd)}
+        subdd["SubsetFiles"] = {None : ()}
 
         sampledd = subdd["Genotypes"] = {}
         for sample_name in mkfile["Project"]["Samples"]:
@@ -242,7 +243,9 @@ def _update_subsets(_options, mkfile):
             message = "\n    - ".join([message] + unknown_seqs)
             raise MakefileError(message)
 
+        subsets_by_regions[roi]["SubsetFiles"][subset] = (roi_fname,)
         subsets_by_regions[roi]["Sequences"][subset] = frozenset(sequences)
+
 
     for (key, subdd) in mkfile["PhylogeneticInference"].iteritems():
         for (subkey, roidd) in subdd["RegionsOfInterest"].iteritems():

@@ -29,7 +29,8 @@ from pypeline.common.formats.msa import MSA
 from pypeline.common.formats.phylip import interleaved_phy, sequential_phy
 
 from pypeline.common.utilities import \
-     safe_coerce_to_frozenset
+     safe_coerce_to_frozenset, \
+     safe_coerce_to_tuple
 
 
 
@@ -37,7 +38,7 @@ _VALID_KEYS = frozenset(["partitions", "filenames"])
 
 
 class FastaToPartitionedInterleavedPhyNode(Node):
-    def __init__(self, infiles, out_prefix, exclude_groups = (), dependencies = ()):
+    def __init__(self, infiles, out_prefix, exclude_groups = (), dependencies = (), file_dependencies = ()):
         """
         infiles = {names : {"partitions" : ..., "filenames" : [...]}}
         """
@@ -51,6 +52,8 @@ class FastaToPartitionedInterleavedPhyNode(Node):
             elif not isinstance(subdd["filenames"], list):
                 raise ValueError("filenames must be a list of strings")
             input_filenames.extend(subdd["filenames"])
+        # Optional file dependencies; may be used to depend on the list of sequcences
+        input_filenames.extend(safe_coerce_to_tuple(file_dependencies))
 
         self._infiles    = copy.deepcopy(infiles)
         self._out_prefix = out_prefix
