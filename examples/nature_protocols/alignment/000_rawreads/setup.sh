@@ -2,7 +2,7 @@
 
 set -o nounset # Fail on unset variables
 set -o errexit # Fail on uncaught non-zero returncodes
-#set -o pipefail # Fail is a command in a chain of pipes fails
+set -o pipefail # Fail is a command in a chain of pipes fails
 
 cd $(dirname $0)
 
