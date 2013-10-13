@@ -42,13 +42,3 @@ def collect_files(template, return_missing = False):
     for (ii, name) in enumerate(("PE_1", "PE_2"), start = 1):
         files[name] = _glob(template.format(Pair = ii))
     return files
-
-
-def reference_sequence(bwa_prefix):
-    extensions = (".fa", ".fasta")
-    if any(bwa_prefix.endswith(ext) for ext in extensions):
-        return bwa_prefix
-    
-    for ext in extensions:
-        if os.path.exists(bwa_prefix + ext):
-            return bwa_prefix + ext

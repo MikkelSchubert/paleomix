@@ -239,14 +239,12 @@ def _update_prefixes(makefile):
             if name in prefixes:
                 raise MakefileError("Multiple prefixes with the same name: %s" % name)
 
-            reference = paths.reference_sequence(record["Path"])
-            if not reference:
-                raise MakefileError("""Could not find reference sequence for prefix '%s':
-       Reference sequences MUST have the extensions .fasta or .fa, and
-       be located at '${prefix}', '${prefix}.fa' or '${prefix}.fasta'.""" % name)
+            if not record["Path"].endswith(".fasta"):
+                raise MakefileError("Path for prefix %r does not end with .fasta:\n   %r" \
+                                    % (name, record["Path"]))
 
             record["Name"]      = name
-            record["Reference"] = reference
+            record["Reference"] = record["Path"]
             prefixes[name]      = record
 
     if not prefixes:
