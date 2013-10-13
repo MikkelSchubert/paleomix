@@ -94,7 +94,7 @@ class SE_AdapterRemovalNode(CommandNode):
         commands = ParallelCmds([adapterrm, zip_discarded, zip_truncated, zcat])
         CommandNode.__init__(self,
                              command      = commands,
-                             description  = "<SE_AdapterRM: %s -> '%s.*'>" \
+                             description  = "<AdapterRM (SE): %s -> '%s.*'>" \
                                  % (fileutils.describe_files(parameters.input_files),
                                     parameters.output_prefix),
                              dependencies = parameters.dependencies)
@@ -192,7 +192,7 @@ class PE_AdapterRemovalNode(CommandNode):
         # the order of file-opens in atomiccmd and the the programs themselves.
         commands = ParallelCmds(commands)
 
-        description  = "<PE_AdapterRM: %s -> '%s.*'>" \
+        description  = "<AdapterRM (PE): %s -> '%s.*'>" \
             % (fileutils.describe_paired_files(parameters.input_files_1,
                                                parameters.input_files_2),
                parameters.output_prefix)
