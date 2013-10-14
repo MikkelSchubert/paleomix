@@ -73,11 +73,12 @@ def add_optiongroup(parser, default = "warning"):
     group  = optparse.OptionGroup(parser, "Logging")
     group.add_option("--log-file", default = None,
                      help = "Write messages to this file. By default, a filename will be generated"
-                            "using the template ${TEMP}/bam_pipeline_*.log, iff messages are logged"
+                            "using the template ${TEMP}/bam_pipeline_*.log, iff messages are logged "
                             "at or above the --log-level")
     group.add_option("--log-level", default = default, type = "choice",
                      choices = ("info", "warning", "error", "debug"),
-                     help = "Log messages to log-file at and above the specified level [%default]")
+                     help = "Log messages to log-file at and above the specified level; "
+                            "one of 'info', 'warning', 'error', or 'debug' [%default]")
     parser.add_option_group(group)
 
 
