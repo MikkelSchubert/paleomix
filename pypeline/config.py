@@ -77,7 +77,8 @@ class PerHostConfig:
         """Creates a PerHostConfig for a pypeline with the specified name."""
         # Various common options
         self.temp_root   = PerHostValue(os.path.join("/tmp", getpass.getuser(), pipeline_name), True)
-        self.max_threads = PerHostValue(multiprocessing.cpu_count())
+        # At least 2 threads are required for e.g. PE BWA nodes, and generally recommended anyway
+        self.max_threads = PerHostValue(max(2, multiprocessing.cpu_count()))
 
         self._filenames = self._get_filenames(pipeline_name)
         self._handle    = ConfigParser.SafeConfigParser()

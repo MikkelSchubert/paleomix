@@ -47,9 +47,9 @@ def _run_config_parser(argv):
     pypeline.logger.add_optiongroup(parser, default = PerHostValue("warning"))
 
     group  = optparse.OptionGroup(parser, "Scheduling")
-    group.add_option("--bowtie2-max-threads", type = int, default = PerHostValue(4),
+    group.add_option("--bowtie2-max-threads", type = int, default = PerHostValue(1),
                      help = "Maximum number of threads to use per BWA instance [%default]")
-    group.add_option("--bwa-max-threads", type = int, default = PerHostValue(4),
+    group.add_option("--bwa-max-threads", type = int, default = PerHostValue(1),
                      help = "Maximum number of threads to use per BWA instance [%default]")
     group.add_option("--max-threads", type = int, default = per_host_cfg.max_threads,
                      help = "Maximum number of threads to use in total [%default]")

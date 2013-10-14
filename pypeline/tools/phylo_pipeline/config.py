@@ -93,7 +93,7 @@ def _run_config_parser(argv):
     pypeline.logger.add_optiongroup(parser, default = PerHostValue("warning"))
 
     group  = optparse.OptionGroup(parser, "Scheduling")
-    group.add_option("--examl-max-threads",  default = PerHostValue(4), type = int,
+    group.add_option("--examl-max-threads",  default = PerHostValue(1), type = int,
                      help = "Maximum number of threads to use for each instance of ExaML [%default]")
     group.add_option("--max-threads",        default = per_host_cfg.max_threads, type = int,
                      help = "Maximum number of threads to use in total [%default]")
