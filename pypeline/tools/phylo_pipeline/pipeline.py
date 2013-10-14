@@ -54,7 +54,7 @@ def main(argv):
 
     if not args or ("help" in args):
         return 0
-    elif len(args) < 2:
+    elif (len(args) < 2) and ("mkfile" not in args):
         print_err("\nPlease specify at least one makefile!")
         return 1
 
