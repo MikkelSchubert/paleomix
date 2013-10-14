@@ -130,7 +130,7 @@ class Specimen:
         genome = list(FASTA.from_file(filename))
         assert len(genome) == 1, len(genome)
 
-        self._genome      = genome[0][-1].upper()
+        self._genome      = genome[0].sequence.upper()
         self._sequence    = None
         self._positions   = None
         self._annotations = None
