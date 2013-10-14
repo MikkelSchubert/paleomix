@@ -44,7 +44,7 @@ _TEMPLATE_TOP = \
 Options:
   # Sequencing platform, see SAM/BAM reference for valid values
   Platform: Illumina
-  # Quality offset for PHRED scores, either 33 (Sanger/Illumina 1.8+) or 64 (Illumina 1.3+ / 1.5+)
+  # Quality offset for Phred scores, either 33 (Sanger/Illumina 1.8+) or 64 (Illumina 1.3+ / 1.5+)
   # For Bowtie2 it is also possible to specify 'Solexa', to handle reads on the Solexa scale.
   # This is used during adapter-trimming (AdapterRemoval) and sequence alignment (BWA/Bowtie2)
   QualityOffset: 33
@@ -78,7 +78,7 @@ _TEMPLATE_BAM_OPTIONS = \
 
     # Settings for mappings performed using BWA
     BWA:
-      # Filter hits with a mapping quality (PHRED) below this value
+      # Filter hits with a mapping quality (Phred) below this value
       MinQuality: 0
       # Filter reads that did not map to the reference sequence
       FilterUnmappedReads: yes
@@ -91,7 +91,7 @@ _TEMPLATE_BAM_OPTIONS = \
 
     # Settings for mappings performed using Bowtie2
     Bowtie2:
-      # Filter hits with a mapping quality (PHRED) below this value
+      # Filter hits with a mapping quality (Phred) below this value
       MinQuality: 0
       # Filter reads that did not map to the reference sequence
       FilterUnmappedReads: yes
