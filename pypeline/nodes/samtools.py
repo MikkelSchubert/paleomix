@@ -112,6 +112,11 @@ class MPileupNode(CommandNode):
 
 
 
+TABIX_VERSION = versions.Requirement(call   = ("tabix",),
+                                     search = r"Version: (\d+)\.(\d+)\.(\d+)",
+                                     checks = versions.GE(0, 2, 5))
+
+
 class TabixIndexNode(CommandNode):
     def __init__(self, infile, preset = "vcf", dependencies = ()):
         assert infile.lower().endswith(".bgz")
@@ -125,7 +130,8 @@ class TabixIndexNode(CommandNode):
         cmd_tabix = AtomicCmd(call + ["%(TEMP_IN_VCFFILE)s"],
                               TEMP_IN_VCFFILE = os.path.basename(infile),
                               IN_VCFFILE      = infile,
-                              OUT_TBI         = infile + ".tbi")
+                              OUT_TBI         = infile + ".tbi",
+                              CHECK_TABIX     = TABIX_VERSION)
 
         CommandNode.__init__(self,
                              description  = "<TabixIndex (%s): '%s'>" % (preset, infile,),
