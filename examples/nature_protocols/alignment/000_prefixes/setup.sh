@@ -37,6 +37,7 @@ then
     curl "http://solanaceae.plantbiology.msu.edu/data/PGSC_DM_v3_superscaffolds.fasta.zip" \
 	-C - -o "St_nucl.fasta.zip"
     unzip "St_nucl.fasta.zip"
+    rm "St_nucl.fasta.zip"
     mv -v PGSC_DM_v3_superscaffolds.fasta St_nucl.fasta
 else
     echo "St_nucl.fasta already fetched; skipping ..."
@@ -50,6 +51,7 @@ then
     curl "http://solanaceae.plantbiology.msu.edu/data/S_tuberosum_Group_Phureja_mitochondrion_DM1-3-516-R44.fasta.zip" \
 	-o "St_mito.fasta.zip"
     unzip "St_mito.fasta.zip"
+    rm "St_mito.fasta.zip"
     mv -v S_tuberosum_Group_Phureja_mitochondrion_DM1-3-516-R44.fasta St_mito.fasta
 else
     echo "St_mito.fasta already fetched; skipping ..."
@@ -63,6 +65,7 @@ then
     curl "http://solanaceae.plantbiology.msu.edu/data/S_tuberosum_Group_Phureja_mitochondrion_DM1-3-516-R44.fasta.zip" \
 	-o "St_chlor.fasta.zip"
     unzip "St_chlor.fasta.zip"
+    rm "St_chlor.fasta.zip"
     mv -v S_tuberosum_Group_Phureja_mitochondrion_DM1-3-516-R44.fasta St_chlor.fasta
 else
     echo "St_chlor.fasta already fetched; skipping ..."
