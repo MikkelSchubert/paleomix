@@ -41,7 +41,7 @@ import pypeline.common.versions as versions
 
 BOWTIE2_VERSION = versions.Requirement(call   = ("bowtie2", "--version"),
                                        search = r"version (\d+)\.(\d+)\.(\d+)",
-                                       checks = versions.GE(2, 0, 0))
+                                       checks = versions.GE(2, 1, 0))
 
 
 
