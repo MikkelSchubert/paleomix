@@ -21,6 +21,7 @@
 # SOFTWARE.
 #
 import os
+import random
 import collections
 
 from pypeline.node import MetaNode
@@ -28,8 +29,9 @@ from pypeline.nodes.formats import \
      FastaToPartitionedInterleavedPhyNode
 from pypeline.nodes.raxml import \
      RAxMLReduceNode, \
-     RAxMLBootstrapNode, \
      RAxMLParsimonyTreeNode
+from pypeline.nodes.phylip import \
+     PHYLIPBootstrapNode
 from pypeline.nodes.examl import \
      ExaMLNode, \
      ExaMLParserNode
@@ -43,9 +45,6 @@ from pypeline.common.fileutils import \
 
 
 
-# Number of files to run per bootstrap generation;
-# chunking is used to reduce the overhead
-_BOOTSTRAP_CHUNK = 25
 
 
 
@@ -122,34 +121,31 @@ def _build_examl_replicates(options, phylo, destination, input_alignment, input_
 def _build_examl_bootstraps(options, phylo, destination, input_alignment, input_partition, dependencies):
     bootstraps = []
     num_bootstraps = phylo["ExaML"]["Bootstraps"]
-    for bootstrap_start in range(0, num_bootstraps, _BOOTSTRAP_CHUNK):
-        bootstrap_destination = os.path.join(destination, "bootstraps")
-        bootstrap_template    = os.path.join(bootstrap_destination, "bootstrap.%04i.phy")
+    bootstrap_destination = os.path.join(destination, "bootstraps")
+    bootstrap_template    = os.path.join(bootstrap_destination, "bootstrap.%04i.phy")
 
-        bootstrap   = RAxMLBootstrapNode(input_alignment  = input_alignment,
-                                         input_partition  = input_partition,
-                                         template         = bootstrap_template,
-                                         bootstraps       = _BOOTSTRAP_CHUNK,
-                                         start            = bootstrap_start,
-                                         dependencies     = dependencies)
+    for bootstrap_num in xrange(num_bootstraps):
+        bootstrap_alignment = bootstrap_template % (bootstrap_num,)
+        bootstrap = PHYLIPBootstrapNode(input_alignment  = input_alignment,
+                                        input_partition  = input_partition,
+                                        output_alignment = bootstrap_alignment,
+                                        seed             = random.randint(1, 2**32 - 1),
+                                        dependencies     = dependencies)
 
-        bootstrap_end = min(num_bootstraps, bootstrap_start + _BOOTSTRAP_CHUNK)
-        for bootstrap_num in range(bootstrap_start, bootstrap_end):
-            bootstrap_alignment   = bootstrap_template % (bootstrap_num,)
-            bootstrap_binary      = swap_ext(bootstrap_alignment, ".binary")
-            bootstrap_final       = swap_ext(bootstrap_alignment, ".%s")
-            bs_binary   = ExaMLParserNode(input_alignment = bootstrap_alignment,
-                                          input_partition = input_partition,
-                                          output_file     = bootstrap_binary,
-                                          dependencies    = bootstrap)
+        bootstrap_binary      = swap_ext(bootstrap_alignment, ".binary")
+        bootstrap_final       = swap_ext(bootstrap_alignment, ".%s")
+        bs_binary   = ExaMLParserNode(input_alignment = bootstrap_alignment,
+                                      input_partition = input_partition,
+                                      output_file     = bootstrap_binary,
+                                      dependencies    = bootstrap)
 
-            bootstraps.append(_examl_nodes(options          = options,
-                                           settings         = phylo,
-                                           input_alignment  = bootstrap_alignment,
-                                           input_partitions = input_partition,
-                                           input_binary     = bootstrap_binary,
-                                           output_template  = bootstrap_final,
-                                           dependencies     = bs_binary))
+        bootstraps.append(_examl_nodes(options          = options,
+                                       settings         = phylo,
+                                       input_alignment  = bootstrap_alignment,
+                                       input_partitions = input_partition,
+                                       input_binary     = bootstrap_binary,
+                                       output_template  = bootstrap_final,
+                                       dependencies     = bs_binary))
 
     if bootstraps:
         meta = MetaNode(description  = "Bootstraps",
