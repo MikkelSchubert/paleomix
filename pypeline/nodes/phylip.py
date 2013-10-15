@@ -72,10 +72,11 @@ class PHYLIPBootstrapNode(Node):
         with open(temp_fpath, "w") as output_phy:
             output_phy.write(header)
 
-            for (name, sequence) in zip(names, bootstraps):
+            for (name, fragments) in zip(names, bootstraps):
                 output_phy.write(name)
                 output_phy.write(" ")
-                output_phy.write(sequence)
+                for sequence in fragments:
+                    output_phy.write(sequence)
                 output_phy.write("\n")
 
         move_file(temp_fpath, self._output_phy)
@@ -83,17 +84,17 @@ class PHYLIPBootstrapNode(Node):
 
     @classmethod
     def _bootstrap_sequences(cls, sequences, partitions, rng):
-        bootstrap_columns = []
+        final_partitions = [[] for _ in sequences]
         for (start, end) in partitions:
+            # Convert alignment to columns, and randomly select among those
             columns = zip(*(sequence[start:end] for sequence in sequences))
-            bootstrap_partition = (rng.choice(columns) for _ in xrange(end - start))
-            bootstrap_columns.extend(bootstrap_partition)
+            bootstrap_partition = (rng.choice(columns) for _ in columns)
 
-        bootstrap_seqs = []
-        for sequence in zip(*bootstrap_columns):
-            bootstrap_seqs.append("".join(sequence))
-        return bootstrap_seqs
+            # Convert randomly selected columns back into sequences
+            for (dest, partition) in zip(final_partitions, zip(*bootstrap_partition)):
+                dest.append("".join(partition))
 
+        return final_partitions
 
 
 
