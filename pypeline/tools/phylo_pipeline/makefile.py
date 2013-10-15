@@ -51,19 +51,21 @@ from pypeline.common.utilities import \
 
 
 
-def read_makefiles(options, filenames):
+def read_makefiles(options, filenames, commands):
+    steps = frozenset(key for (key, _) in commands)
+
     makefiles = []
     for filename in filenames:
         makefile = pypeline.common.makefile.read_makefile(filename, _VALIDATION)
-        makefile = _mangle_makefile(options, makefile["Makefile"])
+        makefile = _mangle_makefile(options, makefile["Makefile"], steps)
         makefiles.append(makefile)
     return makefiles
 
 
-def _mangle_makefile(options, mkfile):
+def _mangle_makefile(options, mkfile, steps):
     _collapse_samples(mkfile)
     _update_regions(options, mkfile)
-    _update_subsets(options, mkfile)
+    _update_subsets(mkfile, steps)
     _update_filtering(mkfile)
     _update_sample_sets(mkfile)
     _update_genotyping(mkfile)
@@ -211,7 +213,7 @@ def _collect_and_validate_sequences_and_subsets(regions):
     return frozenset(sequences)
 
 
-def _update_subsets(_options, mkfile):
+def _update_subsets(mkfile, steps):
     subsets_by_regions = mkfile["Project"]["Regions"]
     def _collect_subsets(roi, subset, path):
         if roi not in subsets_by_regions:
@@ -247,16 +249,18 @@ def _update_subsets(_options, mkfile):
         subsets_by_regions[roi]["Sequences"][subset] = frozenset(sequences)
 
 
-    for (key, subdd) in mkfile["PhylogeneticInference"].iteritems():
-        for (subkey, roidd) in subdd["RegionsOfInterest"].iteritems():
-            roidd["Name"] = subkey
+    if "phylogeny:examl" in steps:
+        for (key, subdd) in mkfile["PhylogeneticInference"].iteritems():
+            for (subkey, roidd) in subdd["RegionsOfInterest"].iteritems():
+                roidd["Name"] = subkey
 
-            if roidd.get("SubsetRegions") is not None:
-                path = "PhylogeneticInference:%s:RegionsOfInterest:%s" % (key, subkey)
-                _collect_subsets(subkey, roidd["SubsetRegions"], path)
+                if roidd.get("SubsetRegions") is not None:
+                    path = "PhylogeneticInference:%s:RegionsOfInterest:%s" % (key, subkey)
+                    _collect_subsets(subkey, roidd["SubsetRegions"], path)
 
-    for (roi, subset) in mkfile["PAML"]["codeml"]["SubsetRegions"].iteritems():
-        _collect_subsets(roi, subset, "PAML:codeml:SubsetRegions")
+    if "paml:codeml" in steps:
+        for (roi, subset) in mkfile["PAML"]["codeml"]["SubsetRegions"].iteritems():
+            _collect_subsets(roi, subset, "PAML:codeml:SubsetRegions")
 
 
 def _update_filtering(mkfile):

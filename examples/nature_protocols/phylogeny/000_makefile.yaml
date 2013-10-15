@@ -178,7 +178,7 @@ PhylogeneticInference:
          # Limit analysis to a subset of a RegionOfInterest; subsets are expected to be
          # located at <genome root>/<prefix>.<region name>.<subset name>.names, and
          # contain single name (corresponding to column 4 in the BED file) per line.
-#        SubsetRegions: HighlyCovered
+         SubsetRegions: HighlyCovered
 
     ExaML:
       # Number of times to perform full phylogenetic inference

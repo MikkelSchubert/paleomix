@@ -74,7 +74,7 @@ def main(argv):
         return 1
 
     try:
-        makefiles = read_makefiles(config, args)
+        makefiles = read_makefiles(config, args, commands)
     except (MakefileError, yaml.YAMLError, IOError), error:
         print_err("Error reading makefiles:",
                   "\n  %s:\n   " % (error.__class__.__name__,),
