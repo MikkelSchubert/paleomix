@@ -98,6 +98,7 @@ class PHYLIPBootstrapNode(Node):
 
 
 _RE_PARTITION = re.compile(r"^[A-Z]+, \w+ = (\d+)-(\d+)$")
+_RE_PARTITION_SINGLE = re.compile(r"^[A-Z]+, \w+ = (\d+)$")
 
 def _read_partitions(filename):
     """Read a partition file, as produced by the pipeline itself, and
@@ -111,12 +112,18 @@ def _read_partitions(filename):
     with open(filename) as handle:
         for (line_num, line) in enumerate(handle):
             result = _RE_PARTITION.match(line.rstrip())
-            if not result:
-                raise NodeError(("Line %i in partitions file does not follow expected format:\n"
-                                 "  Expected = 'DNA, Name = Start-End'\n"
-                                 "  Found    = %r") % (line_num, line))
+            if result:
+                start, end = result.groups()
+            else:
+                result = _RE_PARTITION_SINGLE.match(line.rstrip())
+                if not result:
+                    raise NodeError(("Line %i in partitions file does not follow expected format:\n"
+                                     "  Expected, either = 'DNA, Name = Start-End'\n"
+                                     "                or = 'DNA, Name = Start'\n"
+                                     "  Found    = %r") % (line_num, line.rstrip()))
+                start = result.groups()
+                end   = start
 
-            start, end = result.groups()
             partitions.append((int(start) - 1, int(end)))
     return partitions
 
