@@ -121,7 +121,7 @@ def _read_partitions(filename):
                                      "  Expected, either = 'DNA, Name = Start-End'\n"
                                      "                or = 'DNA, Name = Start'\n"
                                      "  Found    = %r") % (line_num, line.rstrip()))
-                start = result.groups()
+                start, = result.groups()
                 end   = start
 
             partitions.append((int(start) - 1, int(end)))
