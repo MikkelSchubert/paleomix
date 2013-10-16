@@ -122,7 +122,7 @@ Options:
 # set of regions for which additional statistics are produced.
 Prefixes:
   # Name of the prefix; is used as part of the output filenames
-  NAME_OF_PREFIX:
+  rCRS:
 
     # Path to .fasta file containg a set of reference sequences.
     Path: 000_prefixes/rCRS.fasta
