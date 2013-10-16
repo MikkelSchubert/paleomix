@@ -156,7 +156,8 @@ _VALIDATION = {
     "Prefixes" : {
         _VALID_PREFIX_NAME : {
             "Path"    : IsStr(default = REQUIRED_VALUE),
-            "Label"   : ValueIn(("nuclear", "mitochondrial")),
+            "Label"   : ValueIn(("nuclear", "mitochondrial", "chloroplast",
+                                 "plasmid", "bacterial", "viral")),
             "RegionsOfInterest" : IsDictOf(IsStr, IsStr),
         },
     },

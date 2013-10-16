@@ -142,13 +142,23 @@ _TEMPLATE_BAM_OPTIONS = \
 
 
 # Map of prefixes by name, each having a Path key, which specifies the location
-# of the BWA/Bowtie2 index. See the 'README.md' file for more information,
-#Prefixes:
-#  NAME_OF_PREFIX:
-#    Path: PATH_TO_PREFIX
-#    Label: # "mitochondrial" or "nuclear"
-#    RegionsOfInterest:
-#      NAME: PATH_TO_BEDFILE
+# of the BWA/Bowtie2 index, and optional label, and an option set of regions of
+# interest, for which additional statistics are produced.
+Prefixes:
+  # Name of the prefix; is used as part of the output filenames
+  NAME_OF_PREFIX:
+    # Path to .fasta file containg a set of reference sequences.
+    Path: PATH_TO_PREFIX
+
+    # Label for prefix: One of nuclear, mitochondrial, chloroplast, plasmid,
+    # bacterial, or viral. Used instead of the prefix name in the .summary file.
+    Label: ...
+
+    # Produce additional coverage / depth statistics for a set of
+    # regions defined in a BED file; if no names are specified for
+    # the BED records, results are named after the chromosome / contig.
+    RegionsOfInterest:
+      NAME: PATH_TO_BEDFILE
 
 """
 
