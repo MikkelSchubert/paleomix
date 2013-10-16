@@ -25,6 +25,7 @@ import re
 import random
 
 import pypeline.common.fileutils as fileutils
+import pypeline.common.versions as versions
 
 from pypeline.node import CommandNode
 from pypeline.atomiccmd.builder import \
@@ -32,6 +33,13 @@ from pypeline.atomiccmd.builder import \
      use_customizable_cli_parameters, \
      create_customizable_cli_parameters
 
+
+RAXML_VERSION = versions.Requirement(call   = ("raxmlHPC", "-version"),
+                                     search = r"version (\d+)\.(\d+)\.(\d+)",
+                                     checks = versions.GE(7, 3, 2))
+RAXML_PTHREADS_VERSION = versions.Requirement(call   = ("raxmlHPC-PTHREADS", "-version"),
+                                              search = r"version (\d+)\.(\d+)\.(\d+)",
+                                              checks = versions.GE(7, 3, 2))
 
 
 class RAxMLReduceNode(CommandNode):
@@ -61,7 +69,8 @@ class RAxMLReduceNode(CommandNode):
                           TEMP_OUT_INFO     = "RAxML_info.Pypeline",
 
                           OUT_ALIGNMENT     = output_alignment,
-                          OUT_PARTITION     = output_partition)
+                          OUT_PARTITION     = output_partition,
+                          CHECK_VERSION     = RAXML_VERSION)
 
         return {"command" : command}
 
@@ -128,7 +137,8 @@ class RAxMLBootstrapNode(CommandNode):
                            "IN_PARTITION" : input_partition,
                            "TEMP_OUT_INF" : "RAxML_info.Pypeline",
                            "TEMP_OUT_ALN" : "input.alignment",
-                           "TEMP_OUT_PAR" : "input.partition"}
+                           "TEMP_OUT_PAR" : "input.partition",
+                           "CHECK_VERSION": RAXML_VERSION}
 
         for (index, (_, filename)) in enumerate(cls._bootstraps(template, bootstraps, start)):
             bootstrap_files["OUT_BS_%03i" % index] = filename
@@ -191,8 +201,10 @@ class RAxMLRapidBSNode(CommandNode):
         if threads > 1:
             command = AtomicCmdBuilder("raxmlHPC-PTHREADS")
             command.set_option("-T", threads)
+            version = RAXML_PTHREADS_VERSION
         else:
             command = AtomicCmdBuilder("raxmlHPC")
+            version = RAXML_VERSION
 
         # Perform rapid bootstrapping
         command.set_option("-f", "a")
@@ -220,7 +232,9 @@ class RAxMLRapidBSNode(CommandNode):
                           OUT_BESTTREE    = output_template % "bestTree",
                           OUT_BOOTSTRAP   = output_template % "bootstrap",
                           OUT_BIPART      = output_template % "bipartitions",
-                          OUT_BIPARTLABEL = output_template % "bipartitionsBranchLabels")
+                          OUT_BIPARTLABEL = output_template % "bipartitionsBranchLabels",
+
+                          CHECK_VERSION   = version)
 
         # Use the GTRGAMMAI model of NT substitution by default
         command.set_option("-m", "GTRGAMMAI", fixed = False)
@@ -300,7 +314,9 @@ class RAxMLParsimonyTreeNode(CommandNode):
                            TEMP_OUT_PARTITION = "RAxML_partitions",
                            TEMP_OUT_INFO      = "RAxML_info.Pypeline",
 
-                           OUT_TREE           = output_tree)
+                           OUT_TREE           = output_tree,
+
+                           CHECK_VERSION      = RAXML_VERSION)
 
         return {"command" : command}
 
