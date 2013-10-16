@@ -2,7 +2,7 @@ Installation instructions for BAM pipeline
 ==========================================
 The following instructions will use ~/install as the installation directory for the pipeline and required tools, but any directory may be used.
 
-The pipeline currently requires Python v2.6 or 2.7, in addition to a few modules, as well as [git](http://git-scm.com/) and a few other tools (see below).
+The pipeline currently requires Python 2.7, in addition to a few modules, as well as [git](http://git-scm.com/) and a few other tools (see below).
 
 1. Installing pipeline
 ----------------------
@@ -47,7 +47,7 @@ For example
 
 2. Installing required applications
 -----------------------------------
-The BAM pipeline requires [SAMTools](http://samtools.sourceforge.net) v0.1.18+, [AdapterRemoval](http://code.google.com/p/adapterremoval/) v1.4+ (1.5+ recommended for new projects, and please cite [Lindgreen 2013](http://www.ncbi.nlm.nih.gov/pubmed/22748135)!), and [BWA](http://bio-bwa.sourceforge.net/) v0.5.9+ / v0.7.5+ or [Bowtie2](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml) 2.0.0+.  Only the aligner (BWA/Bowtie2) that is to be used (selected in the individual makefiles) needs to be installed.
+The BAM pipeline requires [SAMTools](http://samtools.sourceforge.net) v0.1.18+, [AdapterRemoval](http://code.google.com/p/adapterremoval/) v1.5+ (please cite [Lindgreen 2013](http://www.ncbi.nlm.nih.gov/pubmed/22748135)!), and [BWA](http://bio-bwa.sourceforge.net/) v0.5.9+ / v0.7.5+ or [Bowtie2](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml) 2.1.0+.  Only the aligner (BWA/Bowtie2) that is to be used (selected in the individual makefiles) needs to be installed.
 
 In addition, the pipeline requires the [Picard](http://picard.sourceforge.net/) v1.82+ jars. These instructions assume that these jars have been placed in ~/install/jar_root, but any location may be used. This folder is specified using the --jar-root parameter (see below).
 
