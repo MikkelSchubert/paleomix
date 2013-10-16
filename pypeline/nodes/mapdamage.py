@@ -36,11 +36,11 @@ from pypeline.atomiccmd.sets import \
      ParallelCmds
 from pypeline.nodes.picard import \
      concatenate_input_bams
+from pypeline.atomiccmd.builder import \
+     AtomicCmdBuilder, \
+     use_customizable_cli_parameters, \
+     create_customizable_cli_parameters
 
-
-# Number of reads to sample when running mapDamage
-# FIXME: Remove and make node customizable instead
-_MAPDAMAGE_MAX_READS = 100000
 
 MAPDAMAGE_VERSION = versions.Requirement(call   = ("mapDamage", "--version"),
                                          search = r"(\d+)\.(\d+).(\d+)",
@@ -48,37 +48,49 @@ MAPDAMAGE_VERSION = versions.Requirement(call   = ("mapDamage", "--version"),
 
 
 class MapDamagePlotNode(CommandNode):
-    def __init__(self, config, reference, input_files, output_directory, title = "mapDamage", dependencies = ()):
-        cat_cmds, cat_obj = concatenate_input_bams(config, input_files)
-        cmd_map = AtomicCmd(["mapDamage", "--no-stats",
-                             # Prevent references with many contigs from using excessive
-                             # amounts of memory, at the cost of per-contig statistics:
-                             "--merge-reference-sequences",
-                             "-t", title,
-                             "-n", _MAPDAMAGE_MAX_READS,
-                             "-i", "-",
-                             "-d", "%(TEMP_DIR)s",
-                             "-r", "%(IN_REFERENCE)s"],
-                             IN_STDIN        = cat_obj,
-                             IN_REFERENCE    = reference,
-                             OUT_FREQ_3p     = os.path.join(output_directory, "3pGtoA_freq.txt"),
-                             OUT_FREQ_5p     = os.path.join(output_directory, "5pCtoT_freq.txt"),
-                             OUT_COMP_USER   = os.path.join(output_directory, "dnacomp.txt"),
-                             OUT_PLOT_FRAG   = os.path.join(output_directory, "Fragmisincorporation_plot.pdf"),
-                             OUT_PLOT_LEN    = os.path.join(output_directory, "Length_plot.pdf"),
-                             OUT_LENGTH      = os.path.join(output_directory, "lgdistribution.txt"),
-                             OUT_MISINCORP   = os.path.join(output_directory, "misincorporation.txt"),
-                             OUT_LOG         = os.path.join(output_directory, "Runtime_log.txt"),
-                             TEMP_OUT_STDOUT = "pipe_mapDamage.stdout",
-                             TEMP_OUT_STDERR = "pipe_mapDamage.stderr",
-                             CHECK_VERSION   = MAPDAMAGE_VERSION)
+    @create_customizable_cli_parameters
+    def customize(self, config, reference, input_files, output_directory, title = "mapDamage", dependencies = ()):
+        command = AtomicCmdBuilder(["mapDamage", "--no-stats",
+                                    # Prevent references with many contigs from using excessive
+                                    # amounts of memory, at the cost of per-contig statistics:
+                                    "--merge-reference-sequences",
+                                    "-t", title,
+                                    "-i", "-",
+                                    "-d", "%(TEMP_DIR)s",
+                                    "-r", "%(IN_REFERENCE)s"],
+                                    IN_REFERENCE    = reference,
+                                    OUT_FREQ_3p     = os.path.join(output_directory, "3pGtoA_freq.txt"),
+                                    OUT_FREQ_5p     = os.path.join(output_directory, "5pCtoT_freq.txt"),
+                                    OUT_COMP_USER   = os.path.join(output_directory, "dnacomp.txt"),
+                                    OUT_PLOT_FRAG   = os.path.join(output_directory, "Fragmisincorporation_plot.pdf"),
+                                    OUT_PLOT_LEN    = os.path.join(output_directory, "Length_plot.pdf"),
+                                    OUT_LENGTH      = os.path.join(output_directory, "lgdistribution.txt"),
+                                    OUT_MISINCORP   = os.path.join(output_directory, "misincorporation.txt"),
+                                    OUT_LOG         = os.path.join(output_directory, "Runtime_log.txt"),
+                                    TEMP_OUT_STDOUT = "pipe_mapDamage.stdout",
+                                    TEMP_OUT_STDERR = "pipe_mapDamage.stderr",
+                                    CHECK_VERSION   = MAPDAMAGE_VERSION)
+
+        return {"command"      : command,
+                "config"       : config,
+                "input_files"  : input_files,
+                "dependencies" : dependencies}
+
+
+    @use_customizable_cli_parameters
+    def __init__(self, parameters):
+        cat_cmds, cat_obj = concatenate_input_bams(parameters.config,
+                                                   parameters.input_files)
+        parameters.command.set_kwargs(IN_STDIN = cat_obj)
+        cmd_map = parameters.command.finalize()
 
         description =  "<mapDamage (plots): %s -> '%s'>" \
-          % (describe_files(input_files), output_directory)
+          % (describe_files(parameters.input_files),
+             parameters.output_directory)
         CommandNode.__init__(self,
                              command      = ParallelCmds(cat_cmds + [cmd_map]),
                              description  = description,
-                             dependencies = dependencies)
+                             dependencies = parameters.dependencies)
 
     def _teardown(self, config, temp):
         # No Length_plot.pdf file is written if there are no SE reads in the input_file
@@ -93,34 +105,41 @@ class MapDamagePlotNode(CommandNode):
 
 
 class MapDamageModelNode(CommandNode):
-    def __init__(self, reference, directory, dependencies = ()):
-        self._directory = directory
+    @create_customizable_cli_parameters
+    def customize(self, reference, directory, dependencies = ()):
+        command = AtomicCmdBuilder(["mapDamage", "--stats-only",
+                                    "-r", "%(IN_REFERENCE)s",
+                                    "-d", "%(TEMP_DIR)s"],
+                                    IN_REFERENCE         = reference,
+                                    TEMP_OUT_FREQ_3p     = "3pGtoA_freq.txt",
+                                    TEMP_OUT_FREQ_5p     = "5pCtoT_freq.txt",
+                                    TEMP_OUT_COMP_USER   = "dnacomp.txt",
+                                    TEMP_OUT_MISINCORP   = "misincorporation.txt",
+                                    TEMP_OUT_LOG         = "Runtime_log.txt",
+                                    TEMP_OUT_STDOUT      = "pipe_mapDamage.stdout",
+                                    TEMP_OUT_STDERR      = "pipe_mapDamage.stderr",
+                                    OUT_COMP_GENOME      = os.path.join(directory, "dnacomp_genome.csv"),
+                                    OUT_MCMC_PROBS       = os.path.join(directory, "Stats_out_MCMC_correct_prob.csv"),
+                                    OUT_MCMC_HIST        = os.path.join(directory, "Stats_out_MCMC_hist.pdf"),
+                                    OUT_MCMC_ITER        = os.path.join(directory, "Stats_out_MCMC_iter.csv"),
+                                    OUT_MCMC_ITER_SUM    = os.path.join(directory, "Stats_out_MCMC_iter_summ_stat.csv"),
+                                    OUT_MCMC_POST_PRED   = os.path.join(directory, "Stats_out_MCMC_post_pred.pdf"),
+                                    OUT_MCMC_TRACE       = os.path.join(directory, "Stats_out_MCMC_trace.pdf"),
+                                    CHECK_VERSION        = MAPDAMAGE_VERSION)
 
-        command = AtomicCmd(["mapDamage", "--stats-only",
-                             "-r", "%(IN_REFERENCE)s",
-                             "-d", "%(TEMP_DIR)s"],
-                             IN_REFERENCE         = reference,
-                             TEMP_OUT_FREQ_3p     = "3pGtoA_freq.txt",
-                             TEMP_OUT_FREQ_5p     = "5pCtoT_freq.txt",
-                             TEMP_OUT_COMP_USER   = "dnacomp.txt",
-                             TEMP_OUT_MISINCORP   = "misincorporation.txt",
-                             TEMP_OUT_LOG         = "Runtime_log.txt",
-                             TEMP_OUT_STDOUT      = "pipe_mapDamage.stdout",
-                             TEMP_OUT_STDERR      = "pipe_mapDamage.stderr",
-                             OUT_COMP_GENOME      = os.path.join(directory, "dnacomp_genome.csv"),
-                             OUT_MCMC_PROBS       = os.path.join(directory, "Stats_out_MCMC_correct_prob.csv"),
-                             OUT_MCMC_HIST        = os.path.join(directory, "Stats_out_MCMC_hist.pdf"),
-                             OUT_MCMC_ITER        = os.path.join(directory, "Stats_out_MCMC_iter.csv"),
-                             OUT_MCMC_ITER_SUM    = os.path.join(directory, "Stats_out_MCMC_iter_summ_stat.csv"),
-                             OUT_MCMC_POST_PRED   = os.path.join(directory, "Stats_out_MCMC_post_pred.pdf"),
-                             OUT_MCMC_TRACE       = os.path.join(directory, "Stats_out_MCMC_trace.pdf"),
-                             CHECK_VERSION        = MAPDAMAGE_VERSION)
+        return {"command"      : command,
+                "dependencies" : dependencies}
 
-        description =  "<mapDamage (model): %r>" % (directory,)
+
+    @use_customizable_cli_parameters
+    def __init__(self, parameters):
+        self._directory = parameters.directory
+
+        description =  "<mapDamage (model): %r>" % (parameters.directory,)
         CommandNode.__init__(self,
-                             command      = command,
+                             command      = parameters.command.finalize(),
                              description  = description,
-                             dependencies = dependencies)
+                             dependencies = parameters.dependencies)
 
 
     def _setup(self, config, temp):
@@ -148,28 +167,41 @@ class MapDamageModelNode(CommandNode):
 
 
 class MapDamageRescaleNode(CommandNode):
-    def __init__(self, config, reference, input_files, output_file, directory, dependencies = ()):
-        self._directory = directory
+    @create_customizable_cli_parameters
+    def customize(self, config, reference, input_files, output_file, directory, dependencies = ()):
+        command = AtomicCmdBuilder(["mapDamage", "--rescale-only",
+                                    "-i", "-",
+                                    "-d", "%(TEMP_DIR)s",
+                                    "-r", "%(IN_REFERENCE)s",
+                                    "--rescale-out", "%(OUT_BAM)s"],
+                                    IN_REFERENCE    = reference,
+                                    TEMP_OUT_LOG    = "Runtime_log.txt",
+                                    TEMP_OUT_CSV    = "Stats_out_MCMC_correct_prob.csv",
+                                    OUT_BAM         = output_file,
+                                    CHECK_VERSION   = MAPDAMAGE_VERSION)
 
-        cat_cmds, cat_obj = concatenate_input_bams(config, input_files)
-        cmd_map = AtomicCmd(["mapDamage", "--rescale-only",
-                             "-i", "-",
-                             "-d", "%(TEMP_DIR)s",
-                             "-r", "%(IN_REFERENCE)s",
-                             "--rescale-out", "%(OUT_BAM)s"],
-                             IN_STDIN        = cat_obj,
-                             IN_REFERENCE    = reference,
-                             TEMP_OUT_LOG    = "Runtime_log.txt",
-                             TEMP_OUT_CSV    = "Stats_out_MCMC_correct_prob.csv",
-                             OUT_BAM         = output_file,
-                             CHECK_VERSION   = MAPDAMAGE_VERSION)
+        return {"command"      : command,
+                "config"       : config,
+                "input_files"  : input_files,
+                "directory"    : directory,
+                "dependencies" : dependencies}
+
+
+    @use_customizable_cli_parameters
+    def __init__(self, parameters):
+        self._directory = parameters.directory
+        cat_cmds, cat_obj = concatenate_input_bams(parameters.config,
+                                                   parameters.input_files)
+        parameters.command.set_kwargs(IN_STDIN = cat_obj)
+        command = parameters.command.finalize()
 
         description =  "<mapDamage (rescale): %s -> %r>" \
-          % (describe_files(input_files), output_file)
+          % (describe_files(parameters.input_files),
+             parameters.output_file)
         CommandNode.__init__(self,
-                             command      = ParallelCmds(cat_cmds + [cmd_map]),
+                             command      = ParallelCmds(cat_cmds + [command]),
                              description  = description,
-                             dependencies = dependencies)
+                             dependencies = parameters.dependencies)
 
     def _setup(self, config, temp):
         CommandNode._setup(self, config, temp)

@@ -140,6 +140,34 @@ _VALIDATION_OPTIONS = {
     # Qualities should be rescaled using mapDamage
     "RescaleQualities"  : IsBoolean(default = False),
 
+    "mapDamage" : {
+        # Tabulation options
+        "--downsample"         : Or(IsUnsignedInt, IsFloat),
+        "--length"             : IsUnsignedInt,
+        "--around"             : IsUnsignedInt,
+        "--min-basequal"       : IsUnsignedInt,
+
+        # Plotting options
+        "--ymax"               : IsFloat,
+        "--readplot"           : IsUnsignedInt,
+        "--refplot"            : IsUnsignedInt,
+
+        # Model options
+        "--rand"               : IsUnsignedInt,
+        "--burn"               : IsUnsignedInt,
+        "--adjust"             : IsUnsignedInt,
+        "--iter"               : IsUnsignedInt,
+        "--forward"            : IsNone,
+        "--reverse"            : IsNone,
+        "--fix-disp"           : IsNone,
+        "--jukes-cantor"       : IsNone,
+        "--diff-hangs"         : IsNone,
+        "--fix-nicks"          : IsNone,
+        "--use-raw-nick-freq"  : IsNone,
+        "--single-stranded"    : IsNone,
+        "--seq-length"         : IsUnsignedInt,
+    },
+
     # Exclude READ_TYPES from alignment/analysis
     "ExcludeReads"   : ValuesSubsetOf(_READ_TYPES,
                                       default = []),

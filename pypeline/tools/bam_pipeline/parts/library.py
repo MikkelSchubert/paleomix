@@ -23,9 +23,15 @@
 import os
 import types
 
-from pypeline.common.utilities import safe_coerce_to_tuple
-from pypeline.node import MetaNode
-from pypeline.nodes.picard import MarkDuplicatesNode
+from pypeline.common.utilities import \
+     safe_coerce_to_tuple
+
+from pypeline.node import \
+     MetaNode
+from pypeline.nodes.picard import \
+     MarkDuplicatesNode
+from pypeline.atomiccmd.builder import \
+     apply_options
 from pypeline.nodes.misc import \
      CopyOutputFilesNode
 from pypeline.nodes.mapdamage import \
@@ -131,7 +137,7 @@ class Library:
         if self.options["RescaleQualities"]:
             # Basic run of mapDamage, only generates plots / tables, but no modeling
             files_and_nodes, plot_node, model_node = \
-              self._rescale_quality_scores(config, self.folder, prefix, self.name, files_and_nodes)
+              self._rescale_quality_scores(config, self.folder, prefix, files_and_nodes)
 
         if not ("mapDamage" in self.options["Features"]):
             return files_and_nodes, None
@@ -148,43 +154,48 @@ class Library:
         else:
             # Results of mapDamage are placed directly in the external folder
             plot_node = \
-              self._build_mapdamage_plot_node(config, destination, prefix, self.name, files_and_nodes)
+              self._build_mapdamage_plot_node(config, destination, prefix, files_and_nodes)
 
         return files_and_nodes, plot_node
 
 
-    @classmethod
-    def _build_mapdamage_plot_node(cls, config, destination, prefix, title, files_and_nodes):
-        return MapDamagePlotNode(config           = config,
-                                 reference        = prefix["Path"],
-                                 input_files      = files_and_nodes.keys(),
-                                 output_directory = destination,
-                                 title            = "mapDamage plot for library %r" % (title,),
-                                 dependencies     = files_and_nodes.values())
+    def _build_mapdamage_plot_node(self, config, destination, prefix, files_and_nodes):
+        plot = MapDamagePlotNode.customize(config           = config,
+                                           reference        = prefix["Path"],
+                                           input_files      = files_and_nodes.keys(),
+                                           output_directory = destination,
+                                           title            = "mapDamage plot for library %r" % (self.name,),
+                                           dependencies     = files_and_nodes.values())
+        apply_options(plot.command, self.options["mapDamage"])
+
+        return plot.build_node()
 
 
-    @classmethod
-    def _rescale_quality_scores(cls, config, destination, prefix, plot_title, files_and_nodes):
+    def _rescale_quality_scores(self, config, destination, prefix, files_and_nodes):
         # Generate plot / table files in internal tree in order to prevent the
         # user from accidentially messing with them / causing re=runs
         md_directory  = "%s.mapDamage" % (destination,)
         output_filename = destination + ".rescaled.bam"
 
         # Generates basic plots / table files
-        plot  = cls._build_mapdamage_plot_node(config, md_directory, prefix, plot_title, files_and_nodes)
+        plot  = self._build_mapdamage_plot_node(config, md_directory, prefix, files_and_nodes)
 
         # Builds model of post-mortem DNA damage
-        model = MapDamageModelNode(reference     = prefix["Reference"],
-                                   directory     = md_directory,
-                                   dependencies  = plot)
+        model = MapDamageModelNode.customize(reference     = prefix["Reference"],
+                                             directory     = md_directory,
+                                             dependencies  = plot)
+        apply_options(model.command, self.options["mapDamage"])
+        model = model.build_node()
 
         # Rescales BAM quality scores using model built above
-        scale = MapDamageRescaleNode(config       = config,
-                                     reference    = prefix["Reference"],
-                                     input_files  = files_and_nodes.keys(),
-                                     output_file  = output_filename,
-                                     directory    = md_directory,
-                                     dependencies = model)
+        scale = MapDamageRescaleNode.customize(config       = config,
+                                               reference    = prefix["Reference"],
+                                               input_files  = files_and_nodes.keys(),
+                                               output_file  = output_filename,
+                                               directory    = md_directory,
+                                               dependencies = model)
+        apply_options(scale.command, self.options["mapDamage"])
+        scale = scale.build_node()
 
         # Grab indexing and validation nodes
         validate = IndexAndValidateBAMNode(config, prefix, scale).subnodes

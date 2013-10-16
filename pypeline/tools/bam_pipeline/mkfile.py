@@ -44,20 +44,21 @@ _TEMPLATE_TOP = \
 Options:
   # Sequencing platform, see SAM/BAM reference for valid values
   Platform: Illumina
-  # Quality offset for Phred scores, either 33 (Sanger/Illumina 1.8+) or 64 (Illumina 1.3+ / 1.5+)
-  # For Bowtie2 it is also possible to specify 'Solexa', to handle reads on the Solexa scale.
-  # This is used during adapter-trimming (AdapterRemoval) and sequence alignment (BWA/Bowtie2)
+  # Quality offset for Phred scores, either 33 (Sanger/Illumina 1.8+)
+  # or 64 (Illumina 1.3+ / 1.5+). For Bowtie2 it is also possible to
+  # specify 'Solexa', to handle reads on the Solexa scale. This is
+  # used during adapter-trimming and sequence alignment
   QualityOffset: 33
-  # Split a lane into multiple entries, one for each (pair of) file(s) found using the search-
-  # string specified for a given lane. Each lane is named by adding a number to the end of the
-  # given barcode.
+  # Split a lane into multiple entries, one for each (pair of) file(s)
+  # found using the search-string specified for a given lane. Each
+  # lane is named by adding a number to the end of the given barcode.
   SplitLanesByFilenames: yes
-  # Compression format used when storing FASTQ files (either 'gz' for GZip or 'bz2' for BZip2)
+  # Compression format for FASTQ reads; 'gz' for GZip, 'bz2' for BZip2
   CompressionFormat: bz2
 """
 
 _TEMPLATE_BAM_OPTIONS = \
-"""  # Settings for trimming of reads, see AdapterRemoval man-page for more options
+"""  # Settings for trimming of reads, see AdapterRemoval man-page
 #  AdapterRemoval:
      # Adapter sequences, set and uncomment to override defaults
 #     --pcr1: ...
@@ -82,12 +83,12 @@ _TEMPLATE_BAM_OPTIONS = \
       MinQuality: 0
       # Filter reads that did not map to the reference sequence
       FilterUnmappedReads: yes
-      # Should be disabled ("no") for aDNA alignments, as post-mortem localizes
-      # to the seed region, which BWA expects to have few errors. Sets "-l".
-      # See Schubert et al. 2012: http://pmid.us/22574660
+      # Should be disabled ("no") for aDNA alignments, as post-mortem
+      # localizes to the seed region, which BWA expects to have few
+      # errors (sets "-l"). See http://pmid.us/22574660
       UseSeed:    yes
-      # Additional command-line options may be specified for the "aln" call(s), as
-      # described below for Bowtie2.
+      # Additional command-line options may be specified for the "aln"
+      # call(s), as described below for Bowtie2 below.
 
     # Settings for mappings performed using Bowtie2
     Bowtie2:
@@ -112,17 +113,29 @@ _TEMPLATE_BAM_OPTIONS = \
   # command 'bam_rmdup_duplicates', while "normal" reads are filtered
   # using Picard MarkDuplicates.
   PCRDuplicates: filter
+
   # Carry out quality base re-scaling of libraries using mapDamage
+  # This will be done using the options set for mapDamage below
   RescaleQualities: no
 
-  # Exclude any type of trimmed reads from alignment/analysis
-  # All reads are processed by default.
+  # Command-line options for mapDamage; note that the long-form
+  # options are expected; --length, not -l, etc. Uncomment the
+  # "mapDamage" line adding command-line options below.
+  mapDamage:
+    # By default, the pipeline will downsample the input to 100k hits
+    # when running mapDamage; remove to use all hits
+    --downsample: 100000
+
+  # Exclude a type of trimmed reads from alignment/analysis; possible
+  # types reflect the output of AdapterRemoval
 #  ExcludeReads:
-#    - Single    # Single-ended reads, or PE reads where one mate was discarded
-#    - Paired    # Pair-ended reads, where both reads were retained
-#    - Collapsed # Overlapping pair-ended mate reads collapsed into a single read
-#    - CollapsedTruncated # Like 'Collapsed', except that the reads have been
-                          # truncated due to the presence of low quality bases.
+#    - Single    # Single-ended reads / Orphaned paired-ended reads
+#    - Paired    # Paired ended reads
+#    - Collapsed # Overlapping paired-ended reads collapsed into a
+                 # single sequence by AdapterRemoval
+#    - CollapsedTruncated # Like 'Collapsed', except that the reads
+                          # truncated due to the presence ambigious
+                          # bases or low quality bases at termini.
 
   # Optional steps to perform during processing
   # To disable all features, replace with line "Features: []"
@@ -141,22 +154,22 @@ _TEMPLATE_BAM_OPTIONS = \
                      #   Location: {Destination}/{Target}.summary
 
 
-# Map of prefixes by name, each having a Path key, which specifies the location
-# of the BWA/Bowtie2 index, and optional label, and an option set of regions of
-# interest, for which additional statistics are produced.
+# Map of prefixes by name, each having a Path key, which specifies the
+# location of the BWA/Bowtie2 index, and optional label, and an option
+# set of regions for which additional statistics are produced.
 Prefixes:
   # Name of the prefix; is used as part of the output filenames
   NAME_OF_PREFIX:
     # Path to .fasta file containg a set of reference sequences.
     Path: PATH_TO_PREFIX
 
-    # Label for prefix: One of nuclear, mitochondrial, chloroplast, plasmid,
-    # bacterial, or viral. Used instead of the prefix name in the .summary file.
+    # Label for prefix: One of nuclear, mitochondrial, chloroplast,
+    # plasmid, bacterial, or viral. Is used in the .summary files.
     Label: ...
 
     # Produce additional coverage / depth statistics for a set of
-    # regions defined in a BED file; if no names are specified for
-    # the BED records, results are named after the chromosome / contig.
+    # regions defined in a BED file; if no names are specified for the
+    # BED records, results are named after the chromosome / contig.
     RegionsOfInterest:
       NAME: PATH_TO_BEDFILE
 

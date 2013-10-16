@@ -1,5 +1,5 @@
 # -*- mode: Yaml; -*-
-# Timestamp: 2013-09-04T16:33:47.778270
+# Timestamp: 2013-10-16T20:55:09.754672
 #
 # Default options.
 # Can also be specific for a set of samples, libraries, and lanes,
@@ -9,18 +9,19 @@
 Options:
   # Sequencing platform, see SAM/BAM reference for valid values
   Platform: Illumina
-  # Quality offset for PHRED scores, either 33 (Sanger/Illumina 1.8+) or 64 (Illumina 1.3+ / 1.5+)
-  # For Bowtie2 it is also possible to specify 'Solexa', to handle reads on the Solexa scale.
-  # This is used during adapter-trimming (AdapterRemoval) and sequence alignment (BWA/Bowtie2)
+  # Quality offset for Phred scores, either 33 (Sanger/Illumina 1.8+)
+  # or 64 (Illumina 1.3+ / 1.5+). For Bowtie2 it is also possible to
+  # specify 'Solexa', to handle reads on the Solexa scale. This is
+  # used during adapter-trimming and sequence alignment
   QualityOffset: 33
-  # Split a lane into multiple entries, one for each (pair of) file(s) found using the search-
-  # string specified for a given lane. Each lane is named by adding a number to the end of the
-  # given barcode.
+  # Split a lane into multiple entries, one for each (pair of) file(s)
+  # found using the search-string specified for a given lane. Each
+  # lane is named by adding a number to the end of the given barcode.
   SplitLanesByFilenames: yes
-  # Compression format used when storing FASTQ files (either 'gz' for GZip or 'bz2' for BZip2)
+  # Compression format for FASTQ reads; 'gz' for GZip, 'bz2' for BZip2
   CompressionFormat: bz2
 
-  # Settings for trimming of reads, see AdapterRemoval man-page for more options
+  # Settings for trimming of reads, see AdapterRemoval man-page
 #  AdapterRemoval:
      # Adapter sequences, set and uncomment to override defaults
 #     --pcr1: ...
@@ -41,32 +42,32 @@ Options:
 
     # Settings for mappings performed using BWA
     BWA:
-      # Filter hits with a mapping quality (PHRED) below this value
+      # Filter hits with a mapping quality (Phred) below this value
       MinQuality: 25
       # Filter reads that did not map to the reference sequence
       FilterUnmappedReads: yes
-      # Should be disabled ("no") for aDNA alignments, as post-mortem localizes
-      # to the seed region, which BWA expects to have few errors. Sets "-l".
-      # See Schubert et al. 2012: http://pmid.us/22574660
+      # Should be disabled ("no") for aDNA alignments, as post-mortem
+      # localizes to the seed region, which BWA expects to have few
+      # errors (sets "-l"). See http://pmid.us/22574660
       UseSeed:    yes
-      # Additional command-line options may be specified for the "aln" call(s), as
-      # described below for Bowtie2.
+      # Additional command-line options may be specified for the "aln"
+      # call(s), as described below for Bowtie2 below.
 
     # Settings for mappings performed using Bowtie2
     Bowtie2:
-      # Filter hits with a mapping quality (PHRED) below this value
+      # Filter hits with a mapping quality (Phred) below this value
       MinQuality: 0
       # Filter reads that did not map to the reference sequence
       FilterUnmappedReads: yes
-       # Examples of how to add additional command-line options
+      # Examples of how to add additional command-line options
 #      --trim5: 5
 #      --trim3: 5
       # Note that the colon is required, even if no value is specified
       --very-sensitive:
       # Example of how to specify multiple values for an option
-#     --rg:
-#       - CN:SequencingCenterNameHere
-#       - DS:DescriptionOfReadGroup
+#      --rg:
+#        - CN:SequencingCenterNameHere
+#        - DS:DescriptionOfReadGroup
 
   # Mark / filter PCR duplicates. If set to 'filter', PCR duplicates
   # are removed from the output files; if set to 'mark', these are
@@ -75,17 +76,29 @@ Options:
   # command 'bam_rmdup_duplicates', while "normal" reads are filtered
   # using Picard MarkDuplicates.
   PCRDuplicates: filter
+
   # Carry out quality base re-scaling of libraries using mapDamage
+  # This will be done using the options set for mapDamage below
   RescaleQualities: no
 
-  # Exclude any type of trimmed reads from alignment/analysis
-  # All reads are processed by default.
+  # Command-line options for mapDamage; note that the long-form
+  # options are expected; --length, not -l, etc. Uncomment the
+  # "mapDamage" line adding command-line options below.
+  mapDamage:
+    # By default, the pipeline will downsample the input to 100k hits
+    # when running mapDamage; remove to use all hits
+    --downsample: 100000
+
+  # Exclude a type of trimmed reads from alignment/analysis; possible
+  # types reflect the output of AdapterRemoval
 #  ExcludeReads:
-#    - Single    # Single-ended reads, or PE reads where one mate was discarded
-#    - Paired    # Pair-ended reads, where both reads were retained
-#    - Collapsed # Overlapping pair-ended mate reads collapsed into a single read
-#    - CollapsedTruncated # Like 'Collapsed', except that the reads have been
-#                           truncated due to the presence of low quality bases.
+#    - Single    # Single-ended reads / Orphaned paired-ended reads
+#    - Paired    # Paired ended reads
+#    - Collapsed # Overlapping paired-ended reads collapsed into a
+                 # single sequence by AdapterRemoval
+#    - CollapsedTruncated # Like 'Collapsed', except that the reads
+                          # truncated due to the presence ambigious
+                          # bases or low quality bases at termini.
 
   # Optional steps to perform during processing
   # To disable all features, replace with line "Features: []"
@@ -104,14 +117,26 @@ Options:
                      #   Location: {Destination}/{Target}.summary
 
 
-# Map of prefixes by name, each having a Path key, which specifies the location
-# of the BWA/Bowtie2 index. See the 'README.md' file for more information,
+# Map of prefixes by name, each having a Path key, which specifies the
+# location of the BWA/Bowtie2 index, and optional label, and an option
+# set of regions for which additional statistics are produced.
 Prefixes:
+  # Name of the prefix; is used as part of the output filenames
   Pi_nucl:
+    # Path to .fasta file containg a set of reference sequences.
     Path:  000_prefixes/Pi_nucl.fasta
+
+    # Label for prefix: One of nuclear, mitochondrial, chloroplast,
+    # plasmid, bacterial, or viral. Is used in the .summary files.
     Label: nuclear
+
+  # Name of the prefix; is used as part of the output filenames
   Pi_mito:
+    # Path to .fasta file containg a set of reference sequences.
     Path:  000_prefixes/Pi_mito.fasta
+
+    # Label for prefix: One of nuclear, mitochondrial, chloroplast,
+    # plasmid, bacterial, or viral. Is used in the .summary files.
     Label: mitochondrial
 
   # Solanum tuberosum nucl / mito / chloroplast genome
