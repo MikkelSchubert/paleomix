@@ -162,7 +162,7 @@ M-0182896:
   M-0182896:
     M-0182896_NO_UDG:
       Options:
-        RescaleQualities: no
+        RescaleQualities: yes
       ERR267888: "000_rawreads/M-0182896/ERR267888_{Pair}_*.fastq.gz"
 
     M-0182896_UDG:
@@ -263,7 +263,7 @@ P17777:
 # http://www.ebi.ac.uk/ena/data/view/ERS258003
 Pi1845A:
   Options:
-    RescaleQualities: no
+    RescaleQualities: yes
     Aligners:
       BWA:
         UseSeed: no
@@ -286,7 +286,7 @@ Pi1845A:
 # http://www.ebi.ac.uk/ena/data/view/ERS258007
 Pi1889:
   Options:
-    RescaleQualities: no
+    RescaleQualities: yes
     Aligners:
       BWA:
         UseSeed: no
