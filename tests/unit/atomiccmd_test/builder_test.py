@@ -317,7 +317,15 @@ def test_builder__finalized_call__kwargs_are_instantiated():
                                ARG2 = "zod")
     assert_equal(builder.finalized_call, ["echo", "/foo/bar", "X=zod"])
 
+def test_builder__finalized_call__kwargs_are_instantiated__with_temp_dir():
+    builder = AtomicCmdBuilder(("echo", "%(ARG)s", "%(TEMP_DIR)s"),
+                               ARG = "/foo/bar")
+    assert_equal(builder.finalized_call, ["echo", "/foo/bar", "%(TEMP_DIR)"])
 
+def test_builder__finalized_call__kwargs_are_instantiated__with_non_str_arg():
+    builder = AtomicCmdBuilder(("echo", "%(ARG)s", 17),
+                               ARG = "/foo/bar")
+    assert_equal(builder.finalized_call, ["echo", "/foo/bar", "17"])
 
 
 ################################################################################

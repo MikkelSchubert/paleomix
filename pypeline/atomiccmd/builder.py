@@ -200,7 +200,8 @@ class AtomicCmdBuilder:
         to the values passed to the AtomicCmdBuilder. This is intended for use with
         direct Popen calls."""
         kwargs = self.kwargs
-        return [(field % kwargs) for field in self.call]
+        kwargs["TEMP_DIR"] = "%(TEMP_DIR)"
+        return [(str(field) % kwargs) for field in self.call]
 
 
     @property
