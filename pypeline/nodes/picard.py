@@ -21,6 +21,7 @@
 # SOFTWARE.
 #
 import os
+import shutil
 import getpass
 
 from pypeline.node import CommandNode
@@ -31,7 +32,7 @@ from pypeline.atomiccmd.builder import \
      use_customizable_cli_parameters
 from pypeline.common.fileutils import \
      swap_ext, \
-     try_rmdir, \
+     try_rmtree, \
      describe_files
 from pypeline.common.utilities import safe_coerce_to_tuple
 import pypeline.common.versions as versions
@@ -59,7 +60,7 @@ class PicardNode(CommandNode):
 
     def _teardown(self, config, temp):
         # Picard creates a folder named after the user in the temp-root
-        try_rmdir(os.path.join(temp, getpass.getuser()))
+        try_rmtree(os.path.join(temp, getpass.getuser()))
 
         CommandNode._teardown(self, config, temp)
 
@@ -68,9 +69,7 @@ class ValidateBAMNode(PicardNode):
     @create_customizable_cli_parameters
     def customize(cls, config, input_bam, output_log = None, dependencies = ()):
         jar_file = os.path.join(config.jar_root, "ValidateSamFile.jar")
-        params = AtomicJavaCmdBuilder(jar_file,
-                                      temp_root   = config.temp_root,
-                                      jre_options = config.jre_options)
+        params = AtomicJavaCmdBuilder(jar_file, jre_options = config.jre_options)
 
         params.set_option("I", "%(IN_BAM)s", sep = "=")
         params.set_kwargs(IN_BAM     = input_bam,
@@ -95,9 +94,7 @@ class BuildSequenceDictNode(PicardNode):
     @create_customizable_cli_parameters
     def customize(cls, config, reference, dependencies = ()):
         jar_file = os.path.join(config.jar_root, "CreateSequenceDictionary.jar")
-        params = AtomicJavaCmdBuilder(jar_file,
-                                      temp_root   = config.temp_root,
-                                      jre_options = config.jre_options)
+        params = AtomicJavaCmdBuilder(jar_file, jre_options = config.jre_options)
 
         params.set_option("R", "%(IN_REF)s", sep = "=")
         params.set_option("O", "%(OUT_DICT)s", sep = "=")
@@ -123,9 +120,7 @@ class MarkDuplicatesNode(PicardNode):
     @create_customizable_cli_parameters
     def customize(cls, config, input_bams, output_bam, output_metrics = None, keep_dupes = False, dependencies = ()):
         jar_file = os.path.join(config.jar_root, "MarkDuplicates.jar")
-        params = AtomicJavaCmdBuilder(jar_file,
-                                      temp_root   = config.temp_root,
-                                      jre_options = config.jre_options)
+        params = AtomicJavaCmdBuilder(jar_file, jre_options = config.jre_options)
 
         # Create .bai index, since it is required by a lot of other programs
         params.set_option("CREATE_INDEX", "True", sep = "=")
@@ -166,9 +161,7 @@ class MergeSamFilesNode(PicardNode):
     @create_customizable_cli_parameters
     def customize(cls, config, input_bams, output_bam, dependencies = ()):
         jar_file = os.path.join(config.jar_root, "MergeSamFiles.jar")
-        params = AtomicJavaCmdBuilder(jar_file,
-                                      temp_root   = config.temp_root,
-                                      jre_options = config.jre_options)
+        params = AtomicJavaCmdBuilder(jar_file, jre_options = config.jre_options)
 
         params.set_option("OUTPUT", "%(OUT_BAM)s", sep = "=")
         params.set_option("CREATE_INDEX", "True", sep = "=")

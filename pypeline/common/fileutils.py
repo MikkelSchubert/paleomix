@@ -197,6 +197,14 @@ def try_rmdir(filename):
     return _try_rm_wrapper(os.rmdir, filename)
 
 
+def try_rmtree(filename):
+    """Tries to remove a dir-tree. Unlike shutil.rmtree, the function does not raise
+    an exception if the file does not exist, but does raise exceptions on other
+    errors. The return value reflects whether or not the file was actually
+    removed."""
+    return _try_rm_wrapper(shutil.rmtree, filename)
+
+
 def describe_files(files):
     """Return a text description of a set of files."""
     files = _validate_filenames(files)
