@@ -68,7 +68,9 @@ class ValidateBAMNode(PicardNode):
     @create_customizable_cli_parameters
     def customize(cls, config, input_bam, output_log = None, dependencies = ()):
         jar_file = os.path.join(config.jar_root, "ValidateSamFile.jar")
-        params = AtomicJavaCmdBuilder(jar_file, jre_options = config.jre_options)
+        params = AtomicJavaCmdBuilder(jar_file,
+                                      temp_root   = config.temp_root,
+                                      jre_options = config.jre_options)
 
         params.set_option("I", "%(IN_BAM)s", sep = "=")
         params.set_kwargs(IN_BAM     = input_bam,
@@ -93,7 +95,9 @@ class BuildSequenceDictNode(PicardNode):
     @create_customizable_cli_parameters
     def customize(cls, config, reference, dependencies = ()):
         jar_file = os.path.join(config.jar_root, "CreateSequenceDictionary.jar")
-        params = AtomicJavaCmdBuilder(jar_file, jre_options = config.jre_options)
+        params = AtomicJavaCmdBuilder(jar_file,
+                                      temp_root   = config.temp_root,
+                                      jre_options = config.jre_options)
 
         params.set_option("R", "%(IN_REF)s", sep = "=")
         params.set_option("O", "%(OUT_DICT)s", sep = "=")
@@ -119,7 +123,9 @@ class MarkDuplicatesNode(PicardNode):
     @create_customizable_cli_parameters
     def customize(cls, config, input_bams, output_bam, output_metrics = None, keep_dupes = False, dependencies = ()):
         jar_file = os.path.join(config.jar_root, "MarkDuplicates.jar")
-        params = AtomicJavaCmdBuilder(jar_file, jre_options = config.jre_options)
+        params = AtomicJavaCmdBuilder(jar_file,
+                                      temp_root   = config.temp_root,
+                                      jre_options = config.jre_options)
 
         # Create .bai index, since it is required by a lot of other programs
         params.set_option("CREATE_INDEX", "True", sep = "=")
@@ -160,7 +166,9 @@ class MergeSamFilesNode(PicardNode):
     @create_customizable_cli_parameters
     def customize(cls, config, input_bams, output_bam, dependencies = ()):
         jar_file = os.path.join(config.jar_root, "MergeSamFiles.jar")
-        params = AtomicJavaCmdBuilder(jar_file, jre_options = config.jre_options)
+        params = AtomicJavaCmdBuilder(jar_file,
+                                      temp_root   = config.temp_root,
+                                      jre_options = config.jre_options)
 
         params.set_option("OUTPUT", "%(OUT_BAM)s", sep = "=")
         params.set_option("CREATE_INDEX", "True", sep = "=")
