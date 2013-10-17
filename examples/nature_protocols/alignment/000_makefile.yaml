@@ -140,8 +140,9 @@ Prefixes:
     Label: mitochondrial
 
   # Solanum tuberosum nucl / mito / chloroplast genome
-  St_genomes*:
-    Path: 000_prefixes/St_*.fasta
+  # Uncomment the following two lines to enable:
+#  St_genomes*:
+#    Path: 000_prefixes/St_*.fasta
 
 
 ################################################################################
