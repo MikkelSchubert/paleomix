@@ -159,7 +159,7 @@ _VALIDATION_OPTIONS = {
         "--iter"               : IsUnsignedInt,
         "--forward"            : IsNone,
         "--reverse"            : IsNone,
-        "--fix-disp"           : IsNone,
+        "--var-disp"           : IsNone,
         "--jukes-cantor"       : IsNone,
         "--diff-hangs"         : IsNone,
         "--fix-nicks"          : IsNone,
