@@ -42,16 +42,16 @@ def _select_cat(filename):
     with open(filename) as source:
         header = source.read(2)
         if header == "\x1f\x8b":
-            return "zcat"
+            return ("gzip", "-cd")
         elif header == "BZ":
-            return "bzcat"
-        return "cat"
+            return ("bzip2", "-cd")
+        return ("cat",)
 
 
 def _call(input_files, output_file):
     with _select_output(output_file) as out_handle:
-        for (executable, filenames) in itertools.groupby(input_files, _select_cat):
-            command = [executable]
+        for (command, filenames) in itertools.groupby(input_files, _select_cat):
+            command = list(command)
             command.extend(filenames)
 
             proc = subprocess.Popen(command,
