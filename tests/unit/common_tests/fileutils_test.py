@@ -54,6 +54,7 @@ from pypeline.common.fileutils import \
      open_ro, \
      try_rmdir, \
      try_remove, \
+     try_rmtree, \
      describe_files, \
      describe_paired_files
 
@@ -268,6 +269,9 @@ def test_is_executable__full_path__is_executable():
 
 def test_is_executable__full_path__is_non_executable():
     assert not is_executable("/etc/fstab")
+
+def test_is_executable__full_path__folder_is_non_executable():
+    assert not is_executable("/etc")
 
 def test_is_executable__rel_path__is_executable():
     assert is_executable("tests/unit/run")
@@ -646,6 +650,28 @@ def test_try_rmdir__non_file(temp_folder):
     fpath = os.path.join(temp_folder, "test.txt")
     set_file_contents(fpath, "1 2 3")
     assert_raises(OSError, try_rmdir, fpath)
+
+
+
+################################################################################
+################################################################################
+## Tests for 'try_rmdir'
+
+@with_temp_folder
+def test_try_rmtree(temp_folder):
+    fpath = os.path.join(temp_folder, "testdir")
+    os.mkdir(fpath)
+    set_file_contents(os.path.join(fpath, "file"), "1 2 3")
+    assert try_rmtree(fpath)
+    assert not os.path.exists(fpath)
+
+
+@with_temp_folder
+def test_try_treedir__missing(temp_folder):
+    fpath = os.path.join(temp_folder, "testdir")
+    assert not try_rmtree(fpath)
+    assert not os.path.exists(fpath)
+
 
 
 ################################################################################

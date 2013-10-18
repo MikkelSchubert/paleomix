@@ -22,6 +22,7 @@
 #
 import random
 import pickle
+import operator
 import nose.tools
 from nose.tools import \
      assert_equal, \
@@ -540,3 +541,15 @@ def test_totally_ordered__ne_vs_eq():
 
 def test_totally_ordered__ne_vs_wrong_type():
     assert_equal(SomethingOrdered(1).__ne__("Foo"), NotImplemented)
+
+
+
+class SomethingBadlyOrdered(utils.TotallyOrdered):
+    def __init__(self, value):
+        self.value = value
+
+
+def test_totally_ordered__missing_implementation():
+    obj_a = SomethingBadlyOrdered(1)
+    obj_b = SomethingBadlyOrdered(2)
+    assert_raises(NotImplementedError, operator.gt, obj_a, obj_b)

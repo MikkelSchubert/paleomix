@@ -99,6 +99,31 @@ def test_newick__get_leaf_nodes__complex_case():
 
 ############################################################################
 ############################################################################
+## get_leaf_nodes
+
+def test_newick__get_leaf_names__leaf_returns_self():
+    node = Newick(name = "Leaf")
+    assert_list_equal(node.get_leaf_names(), ["Leaf"])
+
+def test_newick__get_leaf_names__internal_node_returns_leaf_nodes():
+    node_a = Newick(name = "Leaf A")
+    node_b = Newick(name = "Leaf B")
+    top_node = Newick(children = [node_a, node_b])
+    assert_list_equal(top_node.get_leaf_names(), ["Leaf A", "Leaf B"])
+
+def test_newick__get_leaf_names__complex_case():
+    node_a = Newick(name = "Leaf A")
+    node_b = Newick(name = "Leaf B")
+    node_c = Newick(name = "Leaf C")
+    sub_a  = Newick(children = [node_b, node_c])
+    top_node = Newick(children = [node_a, sub_a])
+    assert_list_equal(top_node.get_leaf_names(), ["Leaf A", "Leaf B", "Leaf C"])
+
+
+
+
+############################################################################
+############################################################################
 ## reroot_on_taxa
 
 def test_newick__reroot_on_taxa__single_taxa():
