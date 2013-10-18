@@ -72,17 +72,20 @@ class BaseUI:
     Can be initialized, but does nothing but collect stats about
     the pipeline. Subclasses should override at least one of
     (but still call the BaseUI function) the functions 'flush',
-    'finalize', and/or 'state_changed'."""
+    'finalize', and/or 'state_changed'.
+
+    In addition, the class contains the following properties:
+      - states  -- List containing the observed number of states
+                   for a state-value corresponding to the index
+      - threads -- Est. number of threads used by running nodes.
+
+    These properties should be treated as read-only.
+    """
 
     def __init__(self):
         """Basic initializer; must be called in subclasses."""
-        self._states = []
-
-
-    @property
-    def states(self):
-        """Returns a tuple with counts of each node-state."""
-        return tuple(self._states)
+        self.states  = []
+        self.threads = 0
 
 
     def flush(self):
@@ -99,7 +102,7 @@ class BaseUI:
         if logfile:
             print_debug("Log-file located at %r" % (logfile,))
 
-        if self._states[self.ERROR]:
+        if self.states[self.ERROR]:
             print_err("Done; but errors were detected ...")
         else:
             print_info("Done ...")
@@ -108,48 +111,63 @@ class BaseUI:
     def refresh(self, nodegraph):
         """Called when the nodegraph has refreshed, causing state-counts
         to be recalculated."""
-        self._states = self._count_states(nodegraph, nodegraph.iterflat())
+        self.states, self.threads \
+          = self._count_states(nodegraph, nodegraph.iterflat())
 
 
     def state_changed(self, node, old_state, new_state, _is_primary):
         """Observer function for NodeGraph; counts states for non-meta nodes."""
         if not isinstance(node, MetaNode):
-            self._states[old_state] -= 1
-            self._states[new_state] += 1
+            self.states[old_state] -= 1
+            self.states[new_state] += 1
+            if old_state == self.RUNNING:
+                self.threads -= node.threads
+            elif new_state == self.RUNNING:
+                self.threads += node.threads
 
 
     @classmethod
     def _count_states(self, nodegraph, nodes, meta = False):
         """Counts the number of each state observed for a set of nodes, and
-        returns these as a list. If 'meta' is true, these are considered to
-        be the subnodes of a MetaNode; in that case, MetaNode(s) themselves
-        are not counted, but their subnodes are counted for the first level
-        encountered."""
-        states = [0] * nodegraph.NUMBER_OF_STATES
-        def inc_state(node):
-            if meta or not isinstance(node, MetaNode):
-                state = nodegraph.get_node_state(node)
-                states[state] += 1
+        returns these as a list, as well as the estimated number of threads
+        being used by running nodes.
+
+        If 'meta' is true, these are considered to be the subnodes of a
+        MetaNode; in that case, MetaNode(s) themselves are not counted, but
+        their subnodes are counted for the first level encountered."""
+        states  = [0] * nodegraph.NUMBER_OF_STATES
+        threads = []
 
         def inc_states(c_nodes, depth):
             for node in c_nodes:
-                if depth and isinstance(node, MetaNode):
+                is_meta = isinstance(node, MetaNode)
+
+                if depth and is_meta:
                     inc_states(node.subnodes, depth - 1)
-                else:
-                    inc_state(node)
+                elif meta or not is_meta:
+                    state = nodegraph.get_node_state(node)
+                    states[state] += 1
+                    if state == nodegraph.RUNNING:
+                        threads.append(node.threads)
 
             return states
 
-        return inc_states(nodes, (1 if meta else 0))
+        return inc_states(nodes, (1 if meta else 0)), sum(threads)
 
 
     @classmethod
-    def _describe_states(cls, states):
+    def _describe_states(cls, states, threads = 0):
         """Returns a human readable summary of the states
         given to the function. 'states' is expected to be
         a list/tuple such as that produced by the
         '_count_states' function."""
-        fields = [("running",  states[cls.RUNNING]),
+        run_tmpl = "running"
+        if threads > 1:
+            run_tmpl = "%s using ~%i threads" % (run_tmpl, threads)
+        elif threads == 1:
+            run_tmpl = "%s using ~1 thread" % (run_tmpl,)
+
+        fields = [(run_tmpl,   states[cls.RUNNING]),
                   ("outdated", states[cls.OUTDATED]),
                   ("failed",   states[cls.ERROR])]
 
@@ -184,7 +202,7 @@ class VerboseUI(BaseUI):
     def flush(self):
         """See BaseUI.flush."""
         BaseUI.flush(self)
-        self._print_header(self.states)
+        self._print_header(self.states, self.threads)
         self._print_sub_nodes(self._graph, self._graph)
 
 
@@ -195,9 +213,9 @@ class VerboseUI(BaseUI):
 
 
     @classmethod
-    def _print_header(cls, states):
+    def _print_header(cls, states, threads):
         print_msg(datetime.datetime.now().strftime("%F %T"))
-        print_msg("Pipeline (%s):" % cls._describe_states(states))
+        print_msg("Pipeline; %s:" % cls._describe_states(states, threads))
         logfile = pypeline.logger.get_logfile()
         if logfile:
             print_debug("  Log-file located at %r" % (logfile,))
@@ -213,8 +231,8 @@ class VerboseUI(BaseUI):
             runable     = cls._get_runable_prefix(nodegraph, node)
             description = "%s%s %s" % (prefix, runable, node)
             if node.subnodes:
-                states = cls._count_states(nodegraph, node.subnodes, True)
-                description = "%s (%s)" % (description, cls._describe_states(states))
+                states, threads = cls._count_states(nodegraph, node.subnodes, True)
+                description = "%s (%s)" % (description, cls._describe_states(states, threads))
 
             print_func = cls._get_print_function(nodegraph, node)
             print_func(description)
@@ -320,7 +338,7 @@ class QuietUI(VerboseUI):
             return
 
         BaseUI.flush(self)
-        self._print_header(self.states)
+        self._print_header(self.states, self.threads)
         for node in sorted(self._running_nodes, key = str):
             print_info("  - %s" % node)
         print_info()
@@ -378,8 +396,9 @@ class ProgressUI(BaseUI):
 
     def _print_summary(self):
         """Prints a summary of the pipeline progress."""
-        time_label = datetime.datetime.now().strftime("%T")
-        print_msg("\n%s Pipeline: %s" % (time_label, self._describe_states(self.states)))
+        time_label  = datetime.datetime.now().strftime("%T")
+        description = self._describe_states(self.states, self.threads)
+        print_msg("\n%s Pipeline: %s" % (time_label, description))
         logfile = pypeline.logger.get_logfile()
         if logfile:
             print_debug("Log-file located at %r" % (logfile,))
