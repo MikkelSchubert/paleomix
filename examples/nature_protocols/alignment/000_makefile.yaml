@@ -156,14 +156,15 @@ M-0182896:
       --pcr1: "AGATCGGAAGAGCACACGTCTGAACTCCAGTCACNNNNNNNATCTCGTATGCCGTCTTCTGCTTG"
       --pcr2: "AATGATACGGCGACCACCGAGATCTACACNNNNNNNACACTCTTTCCCTACACGACGCTCTTCCGATCT"
 
-    Aligners:
-      BWA:
-        UseSeed: no
-
   M-0182896:
     M-0182896_NO_UDG:
       Options:
         RescaleQualities: yes
+
+        Aligners:
+          BWA:
+            UseSeed: no
+
       ERR267888: "000_rawreads/M-0182896/ERR267888_{Pair}_*.fastq.gz"
 
     M-0182896_UDG:
