@@ -41,6 +41,8 @@ def _select_output(filename):
 def _select_cat(filename):
     with open(filename) as source:
         header = source.read(2)
+        # The command "gzip -cd" is used instead of "zcat" because
+        # OSX ships a broken zcat command (only accepts *.Z files).
         if header == "\x1f\x8b":
             return ("gzip", "-cd")
         elif header == "BZ":
