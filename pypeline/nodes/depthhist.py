@@ -34,6 +34,7 @@ from pypeline.common.fileutils import reroot_path, move_file, swap_ext, describe
 from pypeline.common.utilities import get_in, set_in, safe_coerce_to_tuple
 from pypeline.nodes.picard import concatenate_input_bams
 from pypeline.common.timer import BAMTimer
+from pypeline.nodes.bedtools import BEDTOOLS_VERSION
 
 
 _MAX_DEPTH = 200
@@ -70,6 +71,7 @@ class DepthHistogramNode(Node):
                       output_files = self._output_file,
                       dependencies = dependencies,
                       executables  = executables,
+                      requirements = BEDTOOLS_VERSION,
                       auxiliary_files = auxiliary_files)
 
 
