@@ -102,18 +102,35 @@ def is_executable(filename):
     return os.path.isfile(filename) and os.access(filename, os.X_OK)
 
 
+def which_executable(filename):
+    """Returns the path of the first executable in the PATH which
+    matches the filename, or None if no match was found. If the
+    filename contains a directory component, only that path is
+    tested, and None is returned if that file is not an executable."""
+    if os.path.dirname(filename):
+        if is_executable(filename):
+            return filename
+        return None
+
+    path_variable = os.environ.get("PATH")
+    if not path_variable:
+        return None
+
+    for path in path_variable.split(os.pathsep):
+        fpath = os.path.join(path, filename)
+        if is_executable(fpath):
+            return fpath
+
+    return None
+
+
 def executable_exists(filename):
     """Returns true if the filename refers to an executable file,
     either by relative or full path, or if the executable is found
     on the current PATH."""
-    if os.path.dirname(filename):
-        return is_executable(filename)
+    exec_path = which_executable(filename)
 
-    for path in os.environ["PATH"].split(os.pathsep):
-        if is_executable(os.path.join(path, filename)):
-            return True
-
-    return False
+    return exec_path and is_executable(exec_path)
 
 
 def missing_executables(filenames):

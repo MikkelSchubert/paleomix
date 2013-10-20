@@ -24,7 +24,11 @@ import re
 import subprocess
 import collections
 
-from pypeline.common.utilities import safe_coerce_to_tuple, try_cast
+from pypeline.common.utilities import \
+    safe_coerce_to_tuple, \
+    try_cast
+from pypeline.common.fileutils import \
+    which_executable
 
 
 # Cache used to store the output of cmd-line / function calls
@@ -98,7 +102,11 @@ class RequirementObj:
 
     def __call__(self, force = False):
         if force or self._done is None:
-            self._reqs(self.name, self.version)
+            executable = None
+            if not isinstance(self._call[0], collections.Callable):
+                executable = self._call[0]
+
+            self._reqs(self.name, self.version, executable)
             self._done = True
 
 
@@ -119,14 +127,19 @@ class Check:
         return cmp(self.__class__, other.__class__)
 
 
-    def __call__(self, name, value):
+    def __call__(self, name, value, executable = None):
         if not self.check_version(value):
-            version     = _pprint(value)
+            version = _pprint(value)
 
-            raise VersionRequirementError(("Version requirement not met for %r:\n"
-                                           "    Required:  %s\n"
-                                           "    Installed: %s")
-                                           % (name, self.description, version))
+            lines = ["Version requirement not met for %r:" % (name,)]
+            if executable:
+                exec_path = which_executable(executable)
+                lines.append("    Path:     %s" % (exec_path,))
+
+            lines.append("    Version:  %s" % (version,))
+            lines.append("    Required: %s" % (self.description,))
+
+            raise VersionRequirementError("\n".join(lines))
 
     def check_version(self, value):
         raise NotImplementedError("'check_version' not implemented")
