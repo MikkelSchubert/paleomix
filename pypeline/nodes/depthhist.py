@@ -53,7 +53,6 @@ class DepthHistogramNode(Node):
 
         input_files = []
         input_files.extend(self._input_files)
-        input_files.extend(swap_ext(input_file, ".bai") for input_file in self._input_files)
         if intervals_file:
             input_files.append(intervals_file)
 

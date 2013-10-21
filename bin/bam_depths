@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -20,57 +20,117 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+"""Wrapper around DepthHistogramNode for command-line usage:
+
+Provides a simple method for calculating the depth-histograms produced by the
+BAM pipeline for arbitary BAM files. The histograms are calculated per input-
+file, and generates a '.depths' file for each input-file, named by substituting
+the current extension of the input-file with '.depths'.
+
+"""
+
 import os
 import sys
+import getpass
 import optparse
 
 import pypeline
+import pypeline.ui
 import pypeline.logger
 import pypeline.common.system
 
-from pypeline.common.console import print_info
-from pypeline.common.fileutils import swap_ext
-from pypeline.nodes.samtools import BAMIndexNode
-from pypeline.nodes.depthhist import DepthHistogramNode
+from pypeline.common.fileutils import \
+    swap_ext
+from pypeline.common.console import \
+    print_info
+from pypeline.nodes.depthhist import \
+    DepthHistogramNode
 
 
-def parse_config(argv):
-    parser = optparse.OptionParser()
-    parser.add_option("--target-name", default = None)
-    parser.add_option("--intervals", default = None)
-    parser.add_option("--temp-root", default = "/tmp")
-    parser.add_option("--max-threads", type = int, default = 1)
-    parser.add_option("--dry-run", action = "store_true", default = False)
+def _build_option_parser():
+    usage = "%prog [options] <file_1.bam> [<file_2.bam>, ...]"
+    parser = optparse.OptionParser(usage=usage)
 
+    # Adds --progress-ui; used by the pipeline to select CLI UI
+    pypeline.ui.add_optiongroup(parser)
+    # Adds --log-level and --log-file; these options are expected by the
+    # 'pypeline.logger.initialize' function called in 'main'
     pypeline.logger.add_optiongroup(parser)
 
-    return parser.parse_args(argv)
+    parser.add_option("--target-name", default=None,
+                      help="Name used for 'Target' column; defaults to the "
+                           "filename of the BAM file.")
+    parser.add_option("--regions-file", default=None, dest="regions_fpath",
+                      help="BED file containing regions of interest; depth is "
+                           "calculated only for these grouping by the name "
+                           "used in the BED file, or the contig name if no "
+                           "name has been specified for a record.")
+
+    group = optparse.OptionGroup(parser, "Required paths")
+    temp_root = os.path.join("/tmp", getpass.getuser(), "bam_depths")
+    group.add_option("--temp-root", default=temp_root,
+                     help="Root folder for temp files/folders [%default].")
+    parser.add_option_group(group)
+
+    group = optparse.OptionGroup(parser, "Scheduling")
+    group.add_option("--max-threads", type=int, default=1,
+                     help="Max files to process concurrently [%default]")
+    group.add_option("--dry-run", action="store_true", default=False,
+                     help="Only show tasks to perform, do not run.")
+    parser.add_option_group(group)
+
+    return parser
+
+
+def _build_depth_histogram_node(input_fpath, regions_fpath=None,
+                               target_name=None):
+    output_fpath = swap_ext(input_fpath, ".depths")
+
+    # Name used for the first column in the table output table
+    if target_name is None:
+        target_name = os.path.basename(input_fpath)
+
+    # 'config' can be None since only a single file is used as input; were
+    # multiple files to be specified, the node would attempt to call
+    # MergeSamFiles.jar using the JRE options enumeated by 'config'.
+    return DepthHistogramNode(config=None,
+                              input_files=input_fpath,
+                              output_file=output_fpath,
+                              intervals_file=regions_fpath,
+                              target_name=target_name,
+                              print_stats=True)
 
 
 def main(argv):
-    config, args = parse_config(argv)
-    if not len(args):
-        print_info("Usage: %s [<bamfile> ...]" % sys.argv[0])
-        return 0
+    parser = _build_option_parser()
+    config, input_fpaths = parser.parse_args(argv)
+    if not input_fpaths:
+        parser.print_usage()
+        return 1
 
+    # Set process name on supported platforms
     pypeline.common.system.set_procname()
+    # Log to console only, except if --log-file is specified
     pypeline.logger.initialize(config, None)
-
+    # Config object is passed to nodes during execution
     pipeline = pypeline.Pypeline(config)
-    for filename in set(args):
-        target_name = config.target_name
-        if target_name is None:
-            target_name = os.path.basename(filename)
 
-        pipeline.add_nodes(DepthHistogramNode(config         = None,
-                                              input_files    = filename,
-                                              output_file    = swap_ext(filename, ".depths"),
-                                              intervals_file = config.intervals,
-                                              target_name    = target_name,
-                                              print_stats    = True,
-                                              dependencies   = BAMIndexNode(filename)))
+    # Duplicate file-names are elimated to prevent the pipeline from
+    # complaining about / aborting due to clobbering of files; it is
+    # assumed to be a trivial mistake.
+    print_info("Building BAM depth histogram pipeline ...")
+    for input_fpath in set(input_fpaths):
+        node = _build_depth_histogram_node(input_fpath=input_fpath,
+                                           regions_fpath=config.regions_fpath,
+                                           target_name=config.target_name)
+        pipeline.add_nodes(node)
 
-    pipeline.run(max_running = config.max_threads, dry_run = config.dry_run)
+    print_info("Running BAM depth histogram pipeline ...")
+    if pipeline.run(max_running=config.max_threads,
+                    dry_run=config.dry_run,
+                    progress_ui=config.progress_ui):
+        return 0
+    return 1
 
 
 if __name__ == '__main__':
