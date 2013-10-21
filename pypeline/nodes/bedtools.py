@@ -27,8 +27,8 @@ import pypeline.common.versions as versions
 
 
 BEDTOOLS_VERSION = versions.Requirement(call   = ("bedtools", "--version"),
-                                        search = r"bedtools v(\d+)\.(\d+)\.(\d+)",
-                                        checks = versions.GE(2, 16, 0))
+                                        search = r"bedtools v?(\d+)\.(\d+)\.(\d+)",
+                                        checks = versions.GE(2, 15, 0))
 
 
 
