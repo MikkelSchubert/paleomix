@@ -64,7 +64,6 @@ This class can then be used in two ways:
 """
 import types
 import inspect
-import itertools
 import collections
 
 from pypeline.atomiccmd.command import AtomicCmd
@@ -114,7 +113,9 @@ class AtomicCmdBuilder:
     Any number of keywords may be set, which are passed to the AtomicCmd object
     created by the AtomicCmdBuilder object (using 'set_kwargs'). The rules specified
     in the AtomicCmd documentation apply to these. If a AtomicCmdBuilder object
-    is passed, this will be finalized as well."""
+    is passed, this will be finalized as well.
+
+    """
 
     def __init__(self, call, **kwargs):
         """See AtomiCmd.__init__ for parameters / keyword arguments."""
@@ -244,7 +245,25 @@ class AtomicCmdBuilder:
 
 
 class AtomicJavaCmdBuilder(AtomicCmdBuilder):
+    """AtomicCmdBuilder for running java JARs.
+
+    The resulting command will run the JAR in head-less mode, in order to ensure
+    that the JARs can be run on head-less servers (and to avoid popups on OSX),
+    using the process-specific temp-folder, and using at most a single thread
+    for garbage collection (to ensure that thread-limits are obeyed).
+
+    """
+
     def __init__(self, jar, jre_options = (), temp_root = "%(TEMP_DIR)s", gc_threads = 1, **kwargs):
+        """Parameters:
+            jar         -- Path to a JAR file to be executed; is included as an
+                           auxiliary file dependency in the final command.
+            jre_options -- List of CLI options to be passed to 'java' command.
+            temp_root   -- Temp folder to use for java process; if not set, the
+                           process specific temp folder is used.
+            gc_threads  -- Number of threads to use during garbage collections.
+            ...         -- Key-word args are passed to AtomicCmdBuilder."""
+
         call = ["java", "-server", "-Xmx4g",
                 "-Djava.io.tmpdir=%s" % temp_root,
                 "-Djava.awt.headless=true"]
@@ -266,6 +285,15 @@ class AtomicJavaCmdBuilder(AtomicCmdBuilder):
 
 
 class AtomicMPICmdBuilder(AtomicCmdBuilder):
+    """AtomicCmdBuilder for MPI enabled programs;
+
+    Simplifies specification of number of threads to use, only invoking the
+    'mpi' command if more than one thread is used; furthermore, the 'mpi'
+    binary is used as a dependency, since MPI enabled programs tend to fail
+    catastrophically if the 'mpi' binary and assosiated libraries are missing.
+
+    """
+
     def __init__(self, call, threads = 1, **kwargs):
         if not isinstance(threads, (types.IntType, types.LongType)):
             raise TypeError("'threads' must be an integer value, not %r" % threads.__class__.__name__)
@@ -282,10 +310,9 @@ class AtomicMPICmdBuilder(AtomicCmdBuilder):
 
 
 
-
 def use_customizable_cli_parameters(init_func): # pylint: disable=C0103
-    """Decorator implementing the customizable Node interface.
-    Allows a node to be implemented either using default behavior:
+    """Decorator for __init__ functions, implementing the customizable Node
+    interface: Allows a node to be implemented either using default behavior:
       >>> node = SomeNode(value1 = ..., value2 = ...)
 
     Or using tweaked parameters for calls that support it:
@@ -295,16 +322,57 @@ def use_customizable_cli_parameters(init_func): # pylint: disable=C0103
 
     To be able to use this interface, the class must implement a
     function 'customize' that takes the parameters that the constructor
-    would take, while the constructor must take a 'parameters' argument."""
+    would take, while the constructor must take a 'parameters' argument.
+
+    """
+    if init_func.func_name != '__init__':
+        raise ValueError("Function name must be '__init__', not %r"
+                         % (init_func.func_name,))
+
     def do_call(self, parameters = None, **kwargs):
         if not parameters:
             parameters = self.customize(**kwargs)
 
         return init_func(self, parameters)
+
     return do_call
 
 
 def create_customizable_cli_parameters(customize_func): # pylint: disable=C0103
+    """Decorator complementing the 'use_customizable_cli_parameters' decorator
+    defined above, which should be used on a function named 'customize'; this
+    function is made a classmethod.
+
+    The modified function returns a object with a member for each keyword
+    parameter, and a 'build_node' function which calls the init function using
+    these parameter values. The initializer function is expected to take a
+    single argument, corresponding to ehe wrapper object.
+
+    Typically, the returned wrapper will include an AtomicCmdBuilder, which can
+    be modified by the user to directly modify the call carried out by the
+    resulting node.
+
+    class Example:
+        @create_customizable_cli_parameters
+        def customize(cls, first, second, third):
+           # (Typicall) builds initial command
+           command = AtomicCmdBuilder(...)
+           return {"command" : command}
+
+    parameters = Example.customize(first = ..., second = ...)
+    print obj.first
+    print obj.second
+    # Modify command-builder object
+    obj.command.set_option(...)
+
+    # Calls __init__ with the parameter object
+    node = wrapper.build_node()
+
+    """
+    if customize_func.func_name != 'customize':
+        raise ValueError("Function name must be 'customize', not %r"
+                         % (customize_func.func_name,))
+
     def do_call(cls, *args, **kwargs):
         # Build dictionary containing all arguments
         kwargs = inspect.getcallargs(customize_func, cls, *args, **kwargs)
@@ -324,7 +392,9 @@ def apply_options(builder, options, pred = lambda s: s.startswith("-")):
       - If a key is assosiated with a list of values, 'add_option' is used.
       - If the key is assosiated with a boolean value, the option is set
         if true (without a value) or removed from the call if false. This
-        allows easy setting/unsetting of '--do-something' type options."""
+        allows easy setting/unsetting of '--do-something' type options.
+
+    """
     for (key, values) in dict(options).iteritems():
         if not isinstance(key, types.StringTypes):
             raise TypeError("Keys must be strings, not %r" % (key.__class__.__name__,))
