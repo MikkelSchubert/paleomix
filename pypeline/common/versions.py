@@ -93,8 +93,15 @@ class RequirementObj:
             output = _do_call(self._call)
             match = self._rege.search(output)
             if not match:
-                raise VersionRequirementError("Could not determine version of '%s', searching for %s: %s" \
-                                              % (self.name, repr(self._rege.pattern), repr(output)))
+                lines = ["Version could not be determined for %r:" % (self.name,)]
+                if self.executable:
+                    exec_path = which_executable(self.executable)
+                    lines.append("    Path:     %s" % (exec_path,))
+                lines.append("    Required: %s" % (self._reqs.description,))
+                lines.append("    Regexp:   %r" % (self._rege.pattern))
+                lines.append("    Command output:\n %r" % (output))
+
+                raise VersionRequirementError("\n".join(lines))
 
             self._version = tuple(try_cast(value, int) for value in match.groups())
         return self._version
@@ -102,12 +109,14 @@ class RequirementObj:
 
     def __call__(self, force = False):
         if force or self._done is None:
-            executable = None
-            if not isinstance(self._call[0], collections.Callable):
-                executable = self._call[0]
-
-            self._reqs(self.name, self.version, executable)
+            self._reqs(self.name, self.version, self.executable)
             self._done = True
+
+    @property
+    def executable(self):
+        if not isinstance(self._call[0], collections.Callable):
+            return self._call[0]
+
 
 
 class Check:
