@@ -38,20 +38,51 @@ JAR_ROOT=~/install/jar_root
 METAPHLAN_ROOT=~/install/metaphlan
 BOWTIE_PREFIX=${METAPHLAN_ROOT}/bowtie2db/mpa
 
-echo "Generateing profile from $# files, saving to ${OUTPUT_PREFIX}:"
-echo "  - Mapping $# files against MetaPhlan database at ${BOWTIE_PREFIX} ..."
-bzcat $@ | bowtie2 -x "${BOWTIE_PREFIX}" -U - -S ${OUTPUT_PREFIX}.bowtie2.out.sam --no-unal
+OUTPUT_SAM=${OUTPUT_PREFIX}.bowtie2.out.sam
+OUTPUT_SORTED_BAM=${OUTPUT_PREFIX}.sorted.bam
+OUTPUT_RMDUP_BAM=${OUTPUT_PREFIX}.noduplicates.bam
+OUTPUT_METAPHLAN_INPUT=${OUTPUT_PREFIX}.noduplicates
+OUTPUT_METAPHLAN=${OUTPUT_PREFIX}.txt
 
-echo "  - Sorting reads ..."
-java -Xmx4g -jar ${JAR_ROOT}/SortSam.jar I=${OUTPUT_PREFIX}.bowtie2.out.sam O=${OUTPUT_PREFIX}.sorted.bam SO=coordinate
+echo
+echo "Generateing profile from $# files, saving to ${OUTPUT_METAPHLAN}"
 
-echo "  - Removing PCR duplicates ..."
-bam_rmdup_collapsed --remove-duplicates < ${OUTPUT_PREFIX}.sorted.bam > ${OUTPUT_PREFIX}.noduplicates.bam
+if [ ! -e "${OUTPUT_METAPHLAN}" ];
+then
+    if [ ! -e "${OUTPUT_RMDUP_BAM}" ];
+    then
+	if [ ! -e "${OUTPUT_SORTED_BAM}" ];
+	then
+	    if [ ! -e "${OUTPUT_SAM}" ];
+	    then
+		if ! bzcat $@ | bowtie2 -x "${BOWTIE_PREFIX}" -U - -S ${OUTPUT_SAM} --no-unal;
+		then
+		    rm -f ${OUTPUT_SAM}
+		    exit 1
+		fi
+	    fi
 
-echo "  - Collecting names of reads / markers ..."
-samtools view ${OUTPUT_PREFIX}.noduplicates.bam | awk '{print $1 "\t" $3}' > ${OUTPUT_PREFIX}.noduplicates
+	    if ! java -Xmx4g -jar ${JAR_ROOT}/SortSam.jar I=${OUTPUT_SAM} O=${OUTPUT_SORTED_BAM} SO=coordinate;
+	    then
+		rm -f ${OUTPUT_SORTED_BAM}
+		exit 1
+	    fi
+	fi
 
-echo "  - Building MetaPhlAn profile ..."
-${METAPHLAN_ROOT}/metaphlan.py ${OUTPUT_PREFIX}.noduplicates > ${OUTPUT_PREFIX}.txt
+	if ! bam_rmdup_collapsed --remove-duplicates < ${OUTPUT_SORTED_BAM} > ${OUTPUT_RMDUP_BAM};
+	then
+	    rm -f ${OUTPUT_RMDUP_BAM}
+	    exit 1
+	fi
+    fi
 
-echo "Done: Wrote profile to ${OUTPUT_PREFIX}.txt"
+    samtools view ${OUTPUT_RMDUP_BAM} | awk '{print $1 "\t" $3}' > ${OUTPUT_METAPHLAN_INPUT};
+
+    if ! ${METAPHLAN_ROOT}/metaphlan.py ${OUTPUT_METAPHLAN_INPUT} > ${OUTPUT_METAPHLAN};
+    then
+	rm -v ${OUTPUT_METAPHLAN}
+	exit 1
+    fi
+fi
+
+echo "Done: Profile written to ${OUTPUT_METAPHLAN}"
