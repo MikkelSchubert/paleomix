@@ -38,13 +38,13 @@ from pypeline.atomiccmd.builder import \
 _PRESETS = {
     "mafft"    : ["mafft"],
     "auto"     : ["mafft", "--auto"],
-    "fft-ns-1" : ["fftns", "--retree", 1],
-    "fft-ns-2" : ["fftns"],
-    "fft-ns-i" : ["fftnsi"],
-    "nw-ns-i"  : ["nwnsi"],
-    "l-ins-i"  : ["linsi"],
-    "e-ins-i"  : ["einsi"],
-    "g-ins-i"  : ["ginsi"],
+    "fft-ns-1" : ["mafft-fftns", "--retree", 1],
+    "fft-ns-2" : ["mafft-fftns"],
+    "fft-ns-i" : ["mafft-fftnsi"],
+    "nw-ns-i"  : ["mafft-nwnsi"],
+    "l-ins-i"  : ["mafft-linsi"],
+    "e-ins-i"  : ["mafft-einsi"],
+    "g-ins-i"  : ["mafft-ginsi"],
     }
 
 
