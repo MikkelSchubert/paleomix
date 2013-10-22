@@ -30,14 +30,16 @@ def calc_consensus(reads):
     maxsumqual = 0
     for read in reads:
         nsum = sum(map(ord, read.qual))
-        if nsum  > maxsumqual:
+        if nsum > maxsumqual:
             outread = read
             maxsumqual = nsum
-        for key, value in read.tags: # LOOK FOR PREVIOUS PCR DUPLICATE COUNTS
+
+        # LOOK FOR PREVIOUS PCR DUPLICATE COUNTS
+        for key, value in read.tags:
             if key == "XP":
                 count += value
 
-    if outread.tags == None:
+    if not outread.tags:
         outread.tags = [("XP", count)]
     else:
         outread.tags = outread.tags + [("XP", count)]
@@ -57,10 +59,12 @@ def get_consensus_se(reads):
         else:
             cigar_count[tcigar] = 1
             by_cigar[tcigar] = [read]
+
     to_sort = [(y, -len(str(x)), x) for (x, y) in cigar_count.iteritems()]
     to_sort.sort()
     selcigar = to_sort[-1][-1]
     reads = by_cigar[selcigar]
+
     return calc_consensus(reads)
 
 
@@ -78,20 +82,19 @@ def _flush_buffer(outfile, curvariants, remove_duplicates):
     curvariants.clear()
 
 
-
-_FILTERED_FLAGS  = 0x1   # PE reads
-_FILTERED_FLAGS |= 0x4   # Unmapped
-_FILTERED_FLAGS |= 0x100 # Secondary alignment
-_FILTERED_FLAGS |= 0x200 # Failed QC
-_FILTERED_FLAGS |= 0x800 # Chimeric alignment
+_FILTERED_FLAGS = 0x1     # PE reads
+_FILTERED_FLAGS |= 0x4    # Unmapped
+_FILTERED_FLAGS |= 0x100  # Secondary alignment
+_FILTERED_FLAGS |= 0x200  # Failed QC
+_FILTERED_FLAGS |= 0x800  # Chimeric alignment
 
 
 def main(argv):
     parser = OptionParser("%prog [options] < in.bam > out.bam")
     parser.add_option("--remove-duplicates",
-                      help = "Remove duplicates from output",
-                      default = False, action = "store_true")
-    (options, args) = parser.parse_args(argv)
+                      help="Remove duplicates from output",
+                      default=False, action="store_true")
+    options, args = parser.parse_args(argv)
 
     if args:
         parser.print_usage(sys.stderr)
@@ -102,23 +105,31 @@ def main(argv):
         return 1
 
     with pysam.Samfile("-", "rb") as infile:
-        with pysam.Samfile("-", "wb", template = infile) as outfile:
+        with pysam.Samfile("-", "wb", template=infile) as outfile:
             curpos = None
             curvariants = {}
-            for read in infile:
+            for (read_num, read) in enumerate(infile):
                 if curpos and ((read.tid, read.pos) != curpos):
-                    _flush_buffer(outfile, curvariants, options.remove_duplicates)
+                    # Sort order is defined as ascending 'tid's and positions
+                    if curpos > (read.tid, read.pos):
+                        sys.stderr.write("ERROR: Input file does not appear "
+                                         "to be sorted by coordinates at "
+                                         "record %i, aborting ...\n"
+                                         % (read_num,))
+                        return 1
+
+                    _flush_buffer(outfile, curvariants,
+                                  options.remove_duplicates)
                     curpos = None
 
-                if (read.qual is None) or (read.flag & _FILTERED_FLAGS) or not read.qname.startswith("M_"):
+                is_filtered = read.flag & _FILTERED_FLAGS
+                is_collapsed = read.qname.startswith("M_")
+                if is_filtered or not (read.qual and is_collapsed):
                     outfile.write(read)
                     continue
 
                 curpos = (read.tid, read.pos)
-                strand = read.is_reverse
-                outpos = curpos[1]
-
-                nkey = (strand, outpos, read.alen)
+                nkey = (read.is_reverse, read.pos, read.alen)
                 if nkey in curvariants:
                     curvariants[nkey][0].append(read)
                     curvariants[nkey][1] += 1
