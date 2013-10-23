@@ -27,8 +27,9 @@ do
 	    while read FNAME;
 	    do
 		mv ${FNAME} ${FNAME}.fastq
-		gzip ${FNAME}.fastq
 	    done
+
+	    ls ${SAMPLE}/${PREFIX}_*.fastq | xargs -n 1 -P 8 gzip --verbose
 
 	    touch "${SAMPLE}/${FNAME}.DONE";
 	fi
