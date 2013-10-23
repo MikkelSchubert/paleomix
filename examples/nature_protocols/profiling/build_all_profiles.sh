@@ -26,17 +26,17 @@ set -o pipefail # Fail is a command in a chain of pipes fails
 
 {
 ## Pi1845A
-echo Pi1845A_id_CGCTAT ../alignment/Pi1845A/reads/Pi1845A/Pi1845A_id_CGCTAT/*/reads.collapsed.bz2
+echo Pi1845A.id.CGCTAT ../alignment/Pi1845A/reads/Pi1845A/Pi1845A_id_CGCTAT/*/reads.collapsed.bz2
 
 ## Pi1889
-echo Pi1889_id_CTTGTA ../alignment/Pi1889/reads/Pi1889/Pi1889_id_CTTGTA/*/reads.collapsed.bz2
-echo Pi1889_id_TAGCTT ../alignment/Pi1889/reads/Pi1889/Pi1889_id_TAGCTT/*/reads.collapsed.bz2
-echo Pi1889_id_GGCTAC ../alignment/Pi1889/reads/Pi1889/Pi1889_id_GGCTAC/*/reads.collapsed.bz2
+echo Pi1889.id.CTTGTA ../alignment/Pi1889/reads/Pi1889/Pi1889_id_CTTGTA/*/reads.collapsed.bz2
+echo Pi1889.id.TAGCTT ../alignment/Pi1889/reads/Pi1889/Pi1889_id_TAGCTT/*/reads.collapsed.bz2
+echo Pi1889.id.GGCTAC ../alignment/Pi1889/reads/Pi1889/Pi1889_id_GGCTAC/*/reads.collapsed.bz2
 
 ## M-0182896
-echo M-0182896_UDG    ../alignment/M-0182896/reads/M-0182896/M-0182896_UDG/*/reads.collapsed.bz2
-echo M-0182896_UDGa   ../alignment/M-0182896/reads/M-0182896/M-0182896_UDGa/*/reads.collapsed.bz2
-echo M-0182896_UDGb   ../alignment/M-0182896/reads/M-0182896/M-0182896_UDGb/*/reads.collapsed.bz2
-echo M-0182896_UDGc   ../alignment/M-0182896/reads/M-0182896/M-0182896_UDGc/*/reads.collapsed.bz2
-echo M-0182896_NO_UDG ../alignment/M-0182896/reads/M-0182896/M-0182896_NO_UDG/*/reads.collapsed.bz2
+echo M.0182896_UDG    ../alignment/M-0182896/reads/M-0182896/M-0182896_UDG/*/reads.collapsed.bz2
+echo M.0182896_UDGa   ../alignment/M-0182896/reads/M-0182896/M-0182896_UDGa/*/reads.collapsed.bz2
+echo M.0182896_UDGb   ../alignment/M-0182896/reads/M-0182896/M-0182896_UDGb/*/reads.collapsed.bz2
+echo M.0182896_UDGc   ../alignment/M-0182896/reads/M-0182896/M-0182896_UDGc/*/reads.collapsed.bz2
+echo M.0182896_NO_UDG ../alignment/M-0182896/reads/M-0182896/M-0182896_NO_UDG/*/reads.collapsed.bz2
 } | xargs -P 16 -L1 ./build_profile.sh
