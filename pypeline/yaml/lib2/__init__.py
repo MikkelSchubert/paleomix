@@ -8,13 +8,8 @@ from nodes import *
 from loader import *
 from dumper import *
 
-__version__ = '3.10'
-
-try:
-    from cyaml import *
-    __with_libyaml__ = True
-except ImportError:
-    __with_libyaml__ = False
+__version__ = '3.10-pypeline'
+__with_libyaml__ = False
 
 def scan(stream, Loader=Loader):
     """
