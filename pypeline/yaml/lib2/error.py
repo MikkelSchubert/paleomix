@@ -18,7 +18,7 @@ class Mark(object):
         start = self.pointer
         while start > 0 and self.buffer[start-1] not in u'\0\r\n\x85\u2028\u2029':
             start -= 1
-            if self.pointer-start > max_length/2-1:
+            if self.pointer-start > max_length//2-1:
                 head = ' ... '
                 start += 5
                 break
@@ -26,7 +26,7 @@ class Mark(object):
         end = self.pointer
         while end < len(self.buffer) and self.buffer[end] not in u'\0\r\n\x85\u2028\u2029':
             end += 1
-            if end-self.pointer > max_length/2-1:
+            if end-self.pointer > max_length//2-1:
                 tail = ' ... '
                 end -= 5
                 break
