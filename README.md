@@ -33,15 +33,11 @@ Regardless of installation method, you may need to re-login for these changes to
 
 2. Installing required modules
 ------------------------------
-The pipeline requires [Cython 0.18+](http://www.cython.org/), [Pysam v0.7.4+](https://code.google.com/p/pysam/), and [PyYAML v3.1+](http://www.pyyaml.org/). Please note that Cython MUST be installed before Pysam. Each package can be installed using the following command, in the root of the source folders:
+The pipeline requires [Pysam v0.7.4+](https://code.google.com/p/pysam/):
 
-    $ python setup.py install --user
-
-For example
-
-    $ wget http://pyyaml.org/download/pyyaml/PyYAML-3.10.tar.gz
-    $ tar xvzf PyYAML-3.10.tar.gz
-    $ cd PyYAML-3.10
+    $ curl -O https://pysam.googlecode.com/files/pysam-0.7.5.tar.gz
+    $ tar xvzf pysam-0.7.5.tar.gz
+    $ cd pysam-0.7.5
     $ python setup.py install --user
 
 

@@ -25,9 +25,8 @@ import sys
 import time
 import logging
 
-import yaml
-
 import pypeline.ui
+import pypeline.yaml
 import pypeline.logger
 import pypeline.tools.phylo_pipeline.makefile
 import pypeline.tools.phylo_pipeline.mkfile as mkfile
@@ -75,7 +74,7 @@ def main(argv):
 
     try:
         makefiles = read_makefiles(config, args, commands)
-    except (MakefileError, yaml.YAMLError, IOError), error:
+    except (MakefileError, pypeline.yaml.YAMLError, IOError), error:
         print_err("Error reading makefiles:",
                   "\n  %s:\n   " % (error.__class__.__name__,),
                   "\n    ".join(str(error).split("\n")),

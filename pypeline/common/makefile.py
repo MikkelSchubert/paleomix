@@ -181,8 +181,6 @@ value has accidentically been left blank ('IsStr' requires a NON-EMPTY string):
 |    Observed value(s): ''
 --------------------------------------------------------------------------------
 """
-import yaml
-
 import os
 import copy
 import types
@@ -190,8 +188,8 @@ import hashlib
 import datetime
 import operator
 
+import pypeline.yaml
 from pypeline.common.utilities import group_by_pred
-
 
 
 class MakefileError(RuntimeError):
@@ -202,7 +200,7 @@ def read_makefile(filename, specification):
     try:
         with open(filename) as makefile:
             string = makefile.read()
-            data = yaml.safe_load(string)
+            data = pypeline.yaml.safe_load(string)
     except RuntimeError, error:
         raise MakefileError(error)
 

@@ -38,7 +38,7 @@ def check_pypeline_requirements():
             print_err("       $ python setup.py install --user\n\n", file = sys.stderr)
             return False
 
-    for version in (_PYSAM_VERSION, _PYYAML_VERSION):
+    for version in (_PYSAM_VERSION,):
         try:
             version()
         except versions.VersionRequirementError, error:
@@ -49,8 +49,7 @@ def check_pypeline_requirements():
 
 
 # List of modules required to run the pipelines
-_REQUIRED_MODULES = {"pysam" : "http://code.google.com/p/pysam/",
-                     "yaml"  : "http://www.pyyaml.org/"}
+_REQUIRED_MODULES = {"pysam" : "http://code.google.com/p/pysam/"}
 
 
 # Cannot be a lambda due to need to be able to pickle function
@@ -60,12 +59,3 @@ _PYSAM_VERSION = versions.Requirement(name   = "module 'pysam'",
                                      call   = _get_pysam_version,
                                      search = r"(\d+)\.(\d+)\.(\d+)",
                                      checks = versions.GE(0, 7, 4))
-
-def _get_pyyaml_version():
-    return __import__("yaml").__version__
-_PYYAML_VERSION = versions.Requirement(name   = "module 'yaml'",
-                                      call   = _get_pyyaml_version,
-                                      search = r"(\d+)\.(\d+)",
-                                      checks = versions.GE(3, 10))
-
-
