@@ -130,6 +130,9 @@ class BaseConstructor(object):
             except TypeError, exc:
                 raise ConstructorError("while constructing a mapping", node.start_mark,
                         "found unacceptable key (%s)" % exc, key_node.start_mark)
+            if key in mapping:
+                raise ConstructorError("while constructing a mapping", node.start_mark,
+                        "found duplicate key (%s)" % key, key_node.start_mark)
             value = self.construct_object(value_node, deep=deep)
             mapping[key] = value
         return mapping
