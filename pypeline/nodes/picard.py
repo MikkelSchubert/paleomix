@@ -33,6 +33,7 @@ from pypeline.atomiccmd.builder import \
 from pypeline.common.fileutils import \
      swap_ext, \
      try_rmtree, \
+     reroot_path, \
      describe_files
 from pypeline.common.utilities import safe_coerce_to_tuple
 import pypeline.common.versions as versions
@@ -96,11 +97,12 @@ class BuildSequenceDictNode(PicardNode):
         jar_file = os.path.join(config.jar_root, "CreateSequenceDictionary.jar")
         params = AtomicJavaCmdBuilder(jar_file, jre_options = config.jre_options)
 
-        params.set_option("R", "%(IN_REF)s", sep = "=")
+        params.set_option("R", "%(TEMP_OUT_REF)s", sep = "=")
         params.set_option("O", "%(OUT_DICT)s", sep = "=")
-        params.set_kwargs(IN_REF     = reference,
-                          OUT_DICT   = swap_ext(reference, ".dict"),
-                          CHECK_JAR  = _picard_version(config, jar_file))
+        params.set_kwargs(IN_REF       = reference,
+                          TEMP_OUT_REF = os.path.basename(reference),
+                          OUT_DICT     = swap_ext(reference, ".dict"),
+                          CHECK_JAR    = _picard_version(config, jar_file))
 
         return {"command"      : params,
                 "dependencies" : dependencies}
@@ -108,11 +110,15 @@ class BuildSequenceDictNode(PicardNode):
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
+        self._in_reference = os.path.abspath(parameters.reference)
+
         PicardNode.__init__(self,
                             command      = parameters.command.finalize(),
                             description  = "<SequenceDictionary: '%s'>" % (parameters.reference,),
                             dependencies = parameters.dependencies)
 
+    def _setup(self, _config, temp):
+        os.symlink(self._in_reference, reroot_path(temp, self._in_reference))
 
 
 
