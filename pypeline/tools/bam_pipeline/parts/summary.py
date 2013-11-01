@@ -115,8 +115,8 @@ class SummaryTableNode(Node):
         table.write("# Genomes:\n")
         rows = [["Name", "Label", "Contigs", "Size", "Prefix"]]
         for (_, prefix) in sorted(self._prefixes.items()):
-            stats = genomes[prefix.get("Label") or prefix["Name"]]
-            rows.append((prefix["Name"], (prefix.get("Label") or "-"), stats["NContigs"], stats["Size"], prefix["Path"]))
+            stats = genomes[prefix["Name"]]
+            rows.append((prefix["Name"], prefix.get("Label", "-"), stats["NContigs"], stats["Size"], prefix["Path"]))
 
         for line in text.padded_table(rows):
             table.write("#     %s\n" % (line,))
@@ -393,10 +393,20 @@ class SummaryTableNode(Node):
         """Returns (size, number of contigs) for a set of BWA prefix."""
         genomes = {}
         for prefix in prefixes:
-            label = prefixes[prefix].get("Label") or prefix
             with open(prefixes[prefix]["Reference"] + ".fai") as table:
                 lengths = [int(line.split()[1]) for line in table]
-                genomes[label] = {"Size" : sum(lengths), "NContigs" : len(lengths)}
+
+            labels = [prefix]
+            if "Label" in prefixes[prefix]:
+                labels.append(prefixes[prefix].get("Label"))
+
+            for label in labels:
+                if label not in genomes:
+                    genomes[label] = {"Size" : 0, "NContigs" : 0}
+
+                statistics = genomes[label]
+                statistics["Size"] += sum(lengths)
+                statistics["NContigs"] += len(lengths)
 
         if "mitochondrial" in genomes and "nuclear" in genomes:
             nucl = genomes["nuclear"]
