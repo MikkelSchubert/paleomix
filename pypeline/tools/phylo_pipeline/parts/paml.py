@@ -50,6 +50,7 @@ class CodemlNode(CommandNode):
                              TEMP_OUT_TREES   = "template.trees",
                              TEMP_OUT_STDOUT  = "template.stdout",
                              TEMP_OUT_STDERR  = "template.stderr",
+                             TEMP_OUT_4FOLD   = "4fold.nuc",
                              IN_STDIN         = "/dev/null", # Prevent promts from blocking
                              set_cwd          = True,
                              **CodemlNode._get_codeml_files("TEMP_OUT_CODEML"))
@@ -111,7 +112,7 @@ class CodemlNode(CommandNode):
     @classmethod
     def _get_codeml_files(cls, key_type):
         results      = {}
-        codeml_files = ["mlc", "2NG.dN", "2NG.dS", "2NG.t", "4fold.nuc", "lnf", "rst", "rst1", "rub"]
+        codeml_files = ["mlc", "2NG.dN", "2NG.dS", "2NG.t", "lnf", "rst", "rst1", "rub"]
         for filename in codeml_files:
             key = "%s_%s" % (key_type, filename.upper().replace(".", "_"))
             results[key] = filename
@@ -144,9 +145,11 @@ def build_codeml_nodes(options, settings, regions, filtering, dependencies):
 
         for (sequence, filename) in fasta_files.iteritems():
             output_tar = os.path.join(destination, "%s.%s.tar.gz" % (sequence, ctl_name))
+            ctl_file = ctl_files["ControlFile"].format(Name = sequence)
+            tree_file = ctl_files["TreeFile"].format(Name = sequence)
 
-            node = CodemlNode(control_file   = ctl_files["ControlFile"],
-                              trees_file     = ctl_files["TreeFile"],
+            node = CodemlNode(control_file   = ctl_file,
+                              trees_file     = tree_file,
                               sequence_file  = filename,
                               output_tar     = output_tar,
                               exclude_groups = codeml["ExcludeSamples"],
