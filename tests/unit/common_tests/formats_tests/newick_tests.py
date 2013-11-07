@@ -338,6 +338,16 @@ def test_newick__cmp__identical():
     node_b = Newick(name = "A", length = 13, children = [Newick(name = "B")])
     assert_equal(node_a, node_b)
 
+def test_newick__cmp__identical_for_empty_string_length():
+    node_a = Newick(name = "A", length = "", children = [Newick(name = "B")])
+    node_b = Newick(name = "A", length = None, children = [Newick(name = "B")])
+    assert_equal(node_a, node_b)
+
+def test_newick__cmp__identical_for_empty_string_name():
+    node_a = Newick(name = "", length = 13, children = [Newick(name = "B")])
+    node_b = Newick(name = None, length = 13, children = [Newick(name = "B")])
+    assert_equal(node_a, node_b)
+
 def test_newick__cmp__not_identical():
     def _not_identical(node_b):
         node_a = Newick(name = "A", length = 13, children = [Newick(name = "B")])
