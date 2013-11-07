@@ -27,9 +27,6 @@ Project:
       Gender: NA
     Pi1889:
       Gender: NA
-    Pi_nucl:
-      GenotypingMethod: Reference Sequence
-      Gender: NA
 
   # Specifies a set of regions of interest, each representing one or more
   # named regions in a reference sequence (e.g. genes) in BED format.
@@ -93,15 +90,11 @@ Genotyping:
         LBUS5:     85
         M-0182896: 93
         NL07434:  133
-        P10127:    37
         P13527:    87
         P13626:   117
         P17777:   114
-        PIC99114:  36
-        PIC99167:  13
         Pi1845A:   17
         Pi1889:    41
-        T30-4:     21
 
       # Minimum coverage acceptable for genotyping calls
       --min-read-depth: 6
