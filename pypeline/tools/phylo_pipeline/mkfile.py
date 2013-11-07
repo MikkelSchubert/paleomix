@@ -35,10 +35,6 @@ Project:
     <GROUP>:
       <SUBGROUP>:
         SAMPLE_NAME:
-          # The species name of a sample (not required)
-          SpeciesName: ...
-          # The common name of a sample (not required)
-          CommonName:  ...
           # Gender of the sample; used to filter SNPs on homozygous
           # contigs (see below). Any name may be used for the genders.
           Gender:       ...
