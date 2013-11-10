@@ -136,7 +136,16 @@ def add_indel(options, bed, indel, sequence):
         for position in range(del_start, del_end):
             sequence[position - start] = ""
     elif (len(indel.what) % 3 == 0) or not options.whole_codon_indels_only:
-        sequence[indel.pos - start] += indel.what
+        # parse_indel assumes that the insertion is always the first possible
+        # base when multiple positions are possible. As a consequence, the
+        # position may be before start, with the rest of the bases overlapping
+        # the current sequence. For example:
+        #  ref = ATTT
+        #  alt = ATTTT
+        # It is assumed that the insertion (_) happened thus:
+        #  interpretation = A_TTT
+        if indel.pos >= start:
+            sequence[indel.pos - start] += indel.what
 
 
 def filter_vcfs(genotype, contig, start, end):
