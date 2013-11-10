@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -45,6 +45,7 @@ from pypeline.common.makefile import \
      And, \
      Or, \
      Not, \
+     ValueGE, \
      ValueIn, \
      ValuesIntersect, \
      ValuesSubsetOf, \
@@ -68,15 +69,34 @@ def read_makefiles(filenames):
     return _validate_makefiles(makefiles)
 
 
+def _alphanum_check(whitelist):
+    description = "only alphanumerical or %r characters allowed" % (whitelist,)
+    whitelist += string.ascii_letters + string.digits
+
+    return And(IsStr(),
+               ValuesSubsetOf(whitelist, description=description))
+
+
+# Valid names for prefixes
 _VALID_PREFIX_NAME = \
-  And(IsStr(),
-      Not(Or(StringIn(["*", "Options"] + [(s + "Reads") for s in _READ_TYPES]),
-             ValuesIntersect(string.whitespace, description = "contains whitespace"))))
+  And(_alphanum_check(whitelist="._-*"),
+      Not(StringIn(["*", "Options"] + [(s + "Reads") for s in _READ_TYPES])))
+
+# Valid paths for prefixes; avoids some problems with e.g. BowTie2
+_VALID_PREFIX_PATH = \
+  And(IsStr(), Not(ValuesIntersect("\\:?\"<>|")),
+      default = REQUIRED_VALUE)
+
+# Valid strings for targets / samples / libraries / lanes
+_VALID_TARGET_NAME = \
+  And(_alphanum_check(whitelist="._-"),
+      ValueGE(2, key=len, description="at least two characters long"))
 
 
 _VALIDATION_OPTIONS = {
     # Sequencing platform, used to tag read-groups.
-    "Platform" : StringIn(("CAPILLARY", "LS454", "ILLUMINA", "SOLID", "HELICOS", "IONTORRENT", "PACBIO"),
+    "Platform" : StringIn(("CAPILLARY", "LS454", "ILLUMINA", "SOLID",
+                           "HELICOS", "IONTORRENT", "PACBIO"),
                           default = "ILLUMINA"),
     # Offset for quality scores in FASTQ files.
     "QualityOffset" : ValueIn((33, 64, "Solexa"),
@@ -173,8 +193,11 @@ _VALIDATION_OPTIONS = {
                                       default = []),
 
     # Features of pipeline
-    "Features"       : ValuesSubsetOf(("Raw BAM", "Realigned BAM", "Coverage", "Summary", "mapDamage", "Depths"),
-                                      default = ["Realigned BAM", "Coverage", "Summary", "mapDamage", "Depths"]),
+    "Features"       : ValuesSubsetOf(("Raw BAM", "Realigned BAM", "Coverage",
+                                       "Summary", "mapDamage", "Depths"),
+                                      default = ["Realigned BAM", "Coverage",
+                                                 "Summary", "mapDamage",
+                                                 "Depths"]),
 }
 
 
@@ -183,17 +206,17 @@ _VALIDATION = {
 
     "Prefixes" : {
         _VALID_PREFIX_NAME : {
-            "Path"    : IsStr(default = REQUIRED_VALUE),
+            "Path"    : _VALID_PREFIX_PATH,
             "Label"   : ValueIn(("nuclear", "mitochondrial", "chloroplast",
                                  "plasmid", "bacterial", "viral")),
             "RegionsOfInterest" : IsDictOf(IsStr, IsStr),
         },
     },
 
-    IsStr : { # Target
-        IsStr : { # Sample
-            IsStr : { # Library
-                IsStr     : Or(IsStr, IsDictOf(IsStr, IsStr)),
+    _VALID_TARGET_NAME : { # Target
+        _VALID_TARGET_NAME : { # Sample
+            _VALID_TARGET_NAME : { # Library
+                _VALID_TARGET_NAME : Or(IsStr, IsDictOf(IsStr, IsStr)),
 
                 "Options" : WithoutDefaults(_VALIDATION_OPTIONS),
             },
@@ -419,4 +442,3 @@ def _iterate_over_records(makefile):
             for (library, barcodes) in libraries.items():
                 for (barcode, record) in barcodes.items():
                     yield target, sample, library, barcode, record
-
