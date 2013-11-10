@@ -1,4 +1,4 @@
-#!/usr/bin/python -3
+#!/usr/bin/python
 #
 # Copyright (c) 2012 Mikkel Schubert <MSchubert@snm.ku.dk>
 #
@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -20,6 +20,21 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+"""Creats consensus sequence from a VCF and BED file:
+bam_genotype_regions --intervals PATH_TO.bed --genotype PATH_TO.vcf
+
+The VCF file is expected to have been created using SAMTools, and makes use
+of SAMTools specific fields. For each region in the BED file, the script will
+create a consensus sequence containing all basepairs which are filtered as
+'PASS' or '.' in the VCF file; at each site, the most likely phenotype is
+selected using the PL fields, and heterozygous sites encoded using UIPAC codes.
+
+BED features with the same name are merged into single sequences. To ensure
+that indels are called near sequence termini, the script expects the VCF file
+to contain a certain amount of padding around the regions of interest.
+
+"""
+
 from __future__ import print_function
 from __future__ import with_statement
 
@@ -33,91 +48,177 @@ import pysam
 import pypeline.common.vcfwrap as vcfwrap
 import pypeline.common.text as text
 import pypeline.common.sequences as sequences
-from pypeline.common.formats.fasta import FASTA
+import pypeline.common.utilities as utilities
 
+
+# Max number of positions to keep in memory / genotype at once
+_SEQUENCE_CHUNK = 1024 * 1024  # 1kbp
+# Number of columns per line in FASTA sequences
+_FASTA_COLUMNS = 60
+
+
+# Replacement class for PySam's BED class; see below.
+BEDTuple = namedtuple("BEDTuple", ("contig", "start", "end",
+                                   "name", "score", "strand"))
+
+
+###############################################################################
+###############################################################################
+## Utility functions
+
+def flush_fasta(sequence):
+    """Takes a FASTA sequence as a string, fragments it into lines of exactly
+    _FASTA_COLUMNS chars (e.g. 60), and prints all complete lines. The final
+    incomplete line (if any) is returned.
+
+    """
+    for seq_frag in utilities.fragment(_FASTA_COLUMNS, sequence):
+        if len(seq_frag) < _FASTA_COLUMNS:
+            return seq_frag
+        print(seq_frag)
+    return ""
+
+
+def split_beds(beds, size=_SEQUENCE_CHUNK):
+    """Takes a list of beds, and splits each bed into chunks that are at most
+    'size' bp long. The resulting (smaller) beds are returned as a new list.
+
+    """
+    results = []
+    for bed in beds:
+        for start in xrange(bed.start, bed.end, size):
+            end = min(start + size, bed.end)
+            split_bed = bed._replace(start=start, end=end)
+            results.append(split_bed)
+    return results
+
+
+###############################################################################
+###############################################################################
+## Genotyping functions
+
+def add_snp(snp, position, sequence):
+    if snp.alt != ".":
+        genotype = "".join(vcfwrap.get_ml_genotype(snp))
+        encoded = sequences.encode_genotype(genotype)
+    else:
+        encoded = snp.ref
+    sequence[position] = encoded
+
+
+def add_indel(options, bed, indel, sequence):
+    if (indel.alt == "."):
+        return
+
+    genotype = vcfwrap.get_ml_genotype(indel)
+    if (genotype[0] != genotype[1]):
+        # No way to represent heterozygous indels
+        return
+
+    # Note that bed.end is a past-the-end coordinate
+    start = max(0, bed.start - options.padding)
+
+    # FIXME: parse_indel only supports a single 'alt' values
+    indel.alt = genotype[0]
+    indel = vcfwrap.parse_indel(indel)
+    if indel.in_reference:
+        del_start = max(indel.pos + 1, bed.start)
+        del_end = min(indel.pos + 1 + len(indel.what), bed.end)
+
+        if del_start >= del_end:
+            # Deletion does not cover any bases of interest
+            return
+        elif options.whole_codon_indels_only:
+            if (del_end - del_start) % 3:
+                # Non-codon sized overlap with area of interest
+                return
+
+        for position in range(del_start, del_end):
+            sequence[position - start] = ""
+    elif (len(indel.what) % 3 == 0) or not options.whole_codon_indels_only:
+        sequence[indel.pos - start] += indel.what
+
+
+def filter_vcfs(genotype, contig, start, end):
+    if contig in genotype.contigs:
+        parser = pysam.asVCF()
+        # This raises a ValueError if the VCF does not
+        # contain any entries for the specified contig.
+        for vcf in genotype.fetch(contig, start, end, parser=parser):
+            if (vcf.filter in ("PASS", ".")):
+                yield vcf
 
 
 def build_region(options, genotype, bed):
     # Note that bed.end is a past-the-end coordinate
-    start  = max(0, bed.start - options.padding)
-    end    = bed.end + options.padding
+    start = max(0, bed.start - options.padding)
 
-    filtered_vcfs = []
-    if bed.contig in genotype.contigs:
-        # This raises a ValueError if the VCF does not
-        # contain any entries for the specified contig.
-        for vcf in genotype.fetch(bed.contig, start, end, parser = pysam.asVCF()):
-            if (vcf.filter == "PASS"):
-                filtered_vcfs.append(vcf)
-
-    sequence = ["N"] * (end - start)
-    for snp in filtered_vcfs:
-        if not vcfwrap.is_indel(snp):
-            if snp.alt != ".":
-                genotype = "".join(vcfwrap.get_ml_genotype(snp))
-                encoded  = sequences.encode_genotype(genotype)
-            else:
-                encoded = snp.ref
-
-            sequence[snp.pos - start] = encoded
+    indels = []
+    sequence = ["N"] * (bed.end - start)
+    for vcf in filter_vcfs(genotype, bed.contig, start, bed.end):
+        if vcfwrap.is_indel(vcf):
+            indels.append(vcf)
+        else:
+            add_snp(vcf, vcf.pos - start, sequence)
 
     if not options.ignore_indels:
-        for indel in filtered_vcfs:
-            if (indel.alt == ".") or not vcfwrap.is_indel(indel):
-                continue
+        for vcf in indels:
+            add_indel(options, bed, vcf, sequence)
 
-            genotype = vcfwrap.get_ml_genotype(indel)
-            if (genotype[0] != genotype[1]):
-                # No way to represent heterozygous indels
-                continue
-
-            # FIXME: parse_indel only supports a single 'alt' values
-            indel.alt = genotype[0]
-            indel = vcfwrap.parse_indel(indel)
-            if indel.in_reference:
-                del_start = max(indel.pos + 1, bed.start)
-                del_end   = min(indel.pos + 1 + len(indel.what), bed.end)
-
-                if del_start >= del_end:
-                    continue # Deletion does not cover any bases of interest
-                elif options.whole_codon_indels_only and ((del_end - del_start) % 3):
-                    continue # Non-codon sized overlap with area of interest
-
-                for position in range(del_start, del_end):
-                    sequence[position - start] = ""
-            elif (len(indel.what) % 3 == 0) or not options.whole_codon_indels_only:
-                sequence[indel.pos - start] += indel.what
-
-    offset    = bed.start - start
-    length    = bed.end - bed.start
-    truncated = sequence[offset : offset + length]
+    offset = bed.start - start
+    length = bed.end - bed.start
+    truncated = sequence[offset:offset + length]
 
     # Discard insertions after the last position
     truncated[-1] = truncated[-1][:1]
 
-    return truncated
+    return "".join(truncated)
+
+
+def build_regions(options, genotype, beds, reverse_compl):
+    for bed in beds:
+        sequence = build_region(options, genotype, bed)
+        if reverse_compl:
+            sequence = sequences.reverse_complement(sequence)
+        yield sequence
 
 
 def build_genes(options, genotype, regions):
     def keyfunc(bed):
         return (bed.contig, bed.name, bed.start)
-    regions.sort(key = keyfunc)
+    regions.sort(key=keyfunc)
 
     for (gene, beds) in itertools.groupby(regions, lambda x: x.name):
-        sequence, beds = [], tuple(beds)
-        for bed in beds:
-            sequence.extend(build_region(options, genotype, bed))
-        sequence = "".join(sequence)
-
+        beds = split_beds(beds)
+        reverse_compl = False
         if any((bed.strand == "-") for bed in beds):
             assert all((bed.strand == "-") for bed in beds)
 
-            sequence = sequences.reverse_complement(sequence)
+            beds.reverse()
+            reverse_compl = True
 
-        yield (gene, sequence)
+        fragments = build_regions(options, genotype, beds, reverse_compl)
+        yield (gene, fragments)
 
 
-BEDTuple = namedtuple("BEDTuple", ("contig", "start", "end", "name", "score", "strand"))
+def genotype_genes(options, intervals, genotype):
+    for (_, beds) in sorted(intervals.items()):
+        for (name, fragments) in build_genes(options, genotype, beds):
+            print(">%s" % (name,))
+
+            sequence = ""
+            for fragment in fragments:
+                sequence = flush_fasta(sequence + fragment)
+
+            if sequence:
+                print(sequence)
+
+    return 0
+
+
+###############################################################################
+###############################################################################
+
 def read_intervals(filename):
     with open(filename) as bed_file:
         intervals = text.parse_lines_by_contig(bed_file, pysam.asBed())
@@ -125,18 +226,18 @@ def read_intervals(filename):
         for (key, beds) in intervals.iteritems():
             bed_tuples = []
             for bed in beds:
-                nfields = len(bed)
-                if nfields < 6:
-                    sys.stderr.write("ERROR: Invalid BED record '%s', must have at least 6 fields ...\n" \
-                                     % ("\\t".join(bed),))
+                if len(bed) < 6:
+                    sys.stderr.write(("ERROR: Invalid BED record '%s', must "
+                                      "have at least 6 fields ...\n") %
+                                     ("\\t".join(bed),))
                     return None
 
-                # Transform to a named tuple, as Pysam has a tendency to segfault
-                # (rather than throwing exceptions), if you do anything wrong
-                bed = list(bed)[:6]  # BED6 only
-                bed[1] = int(bed[1]) # start
-                bed[2] = int(bed[2]) # end
-                bed[4] = int(bed[4]) # score
+                # Transform to a named tuple, as Pysam has a tendency to
+                # segfault if you do anything wrong
+                bed = list(bed)[:6]   # BED6 only
+                bed[1] = int(bed[1])  # start
+                bed[2] = int(bed[2])  # end
+                bed[4] = int(bed[4])  # score
 
                 bed_tuples.append(BEDTuple(*bed))
             intervals[key] = bed_tuples
@@ -144,16 +245,21 @@ def read_intervals(filename):
     return intervals
 
 
-def main(argv, output = sys.stdout):
+def main(argv):
     parser = OptionParser()
     parser.add_option("--genotype", help="Tabix indexed VCF file.")
     parser.add_option("--intervals", help="BED file.")
-    parser.add_option("--padding", type = int, default = 10,
-                      help = "Number of bases to expand intervals, when checking for adjacent indels [%default]")
-    parser.add_option("--whole-codon-indels-only", action="store_true", default = False,
-                      help = "If true, only indels where (length % 3) == 0 are retained [%default]")
-    parser.add_option("--ignore-indels", action = "store_true", default = False,
-                      help = "Do not include indels generated FASTA sequence [%default].")
+    parser.add_option("--padding", type=int, default=10,
+                      help="Number of bases to expand intervals, when "
+                           "checking for adjacent indels [%default]")
+    parser.add_option("--whole-codon-indels-only",
+                      action="store_true", default=False,
+                      help="If true, only indels where (length % 3) == 0 "
+                           "are retained [%default]")
+    parser.add_option("--ignore-indels",
+                      action="store_true", default=False,
+                      help="Do not include indels generated FASTA "
+                           "sequence [%default].")
 
     (opts, args) = parser.parse_args(argv)
     if args:
@@ -164,21 +270,17 @@ def main(argv, output = sys.stdout):
         parser.print_help()
         return 1
 
-    print("Running buildRegions.py", end = "", file = sys.stderr)
+    print("Running buildRegions.py", end="", file=sys.stderr)
     if opts.whole_codon_indels_only:
-        print(", assuming sequences represents CDS", end = "", file = sys.stderr)
-    print(" ...", file = sys.stderr)
+        print(", assuming sequences represents CDS", end="", file=sys.stderr)
+    print(" ...", file=sys.stderr)
 
     genotype = pysam.Tabixfile(opts.genotype)
     intervals = read_intervals(opts.intervals)
     if intervals is None:
         return 1
 
-    for (_, beds) in sorted(intervals.items()):
-        for (name, sequence) in build_genes(opts, genotype, beds):
-            FASTA(name, None, sequence).write(output)
-
-    return 0
+    return genotype_genes(opts, intervals, genotype)
 
 
 if __name__ == "__main__":
