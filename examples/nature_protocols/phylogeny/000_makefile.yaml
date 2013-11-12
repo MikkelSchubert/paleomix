@@ -145,10 +145,6 @@ MultipleSequenceAlignment:
 
 PhylogeneticInference:
   HighlyCoveredGenes:
-    # Exclude (groups of) samples from this analytical step
-    ExcludeSamples:
-      - Pi_nucl
-
     # Root the final tree(s) on one or more samples; if no samples
     # are specified, the tree(s) will be rooted on the midpoint(s)
     RootTreesOn:
