@@ -315,8 +315,22 @@ def test_atomiccmd__exec__invalid():
     yield _test_atomiccmd__exec__invalid, 1
 
 
-################################################################################
-################################################################################
+###############################################################################
+###############################################################################
+## AUX
+
+def test_atomiccmd__aux__invalid():
+    @nose.tools.raises(TypeError)
+    def _test_atomiccmd__exec__invalid(obj):
+        AtomicCmd("true", AUX_FOO = obj)
+
+    yield _test_atomiccmd__exec__invalid, str
+    yield _test_atomiccmd__exec__invalid, {}
+    yield _test_atomiccmd__exec__invalid, 1
+
+
+###############################################################################
+###############################################################################
 ## Path components
 
 @with_temp_folder

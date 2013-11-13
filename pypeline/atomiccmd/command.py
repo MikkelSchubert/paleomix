@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -21,6 +21,7 @@
 # SOFTWARE.
 #
 import os
+import re
 import sys
 import signal
 import types
@@ -33,19 +34,20 @@ import pypeline.common.fileutils as fileutils
 import pypeline.common.signals as signals
 from pypeline.common.utilities import safe_coerce_to_tuple
 
-_PIPES = ('IN_STDIN', 'OUT_STDOUT', 'OUT_STDERR')
-_PREFIXES = ('IN_', 'TEMP_IN_', 'OUT_', 'TEMP_OUT_', 'EXEC_', 'AUX_', 'CHECK_')
-
-
-# TODL:
-# - Only IN_, OUT_ (w/wo TEMP_), and EXEC_ should be used during call construction
-# - Refactor internals, should be possible to simplify a lot
+_PIPES = (("IN", "IN_STDIN"), ("OUT", "OUT_STDOUT"), ("OUT", "OUT_STDERR"))
+_KEY_RE = re.compile("^(IN|OUT|EXEC|AUX|CHECK|TEMP_IN|TEMP_OUT)_[A-Z0-9_]+")
+_FILE_MAP = {"IN" : "input",
+             "OUT" : "output",
+             "TEMP_IN"  : None,
+             "TEMP_OUT" : "temporary_fname",
+             "EXEC" : "executable",
+             "AUX" : "auxiliary",
+             "CHECK" : "requirements"}
 
 
 class CmdError(RuntimeError):
     def __init__(self, msg):
         RuntimeError.__init__(self, msg)
-
 
 
 class AtomicCmd:
@@ -75,8 +77,9 @@ class AtomicCmd:
         Commands typically consist of an executable, one or more input files,
         one or more output files, and one or more pipes. In atomic command,
         such files are not specified directly, but instead are specified using
-        keywords, which allows easy tracking of requirements and other features.
-        Note that only files, and not directories, are supported as input/output!
+        keywords, which allows easy tracking of requirements and other
+        features. Note that only files, and not directories, are supported as
+        input/output!
 
         Each keyword represents a type of file, as determined by the prefix:
            IN_    -- Path to input file transformed/analysed the executable.
@@ -89,16 +92,17 @@ class AtomicCmd:
            AUX_   -- Auxillery files required by the executable(s), which are
                      themselves not executable. Examples include scripts,
                      config files, data-bases, and the like.
-           CHECK_ -- A callable, which upon calling carries out version checking,
+           CHECK_ -- A callable, which upon calling does version checking,
                      raising an exception in the case of requirements not being
-                     met. This may be used to help ensure that prerequisites are
-                     met before running the command. The function is not called
-                     by AtomicCmd itself.
+                     met. This may be used to ensure that prerequisites are met
+                     before running the command. The function is not called by
+                     AtomicCmd itself.
 
         EXAMPLE 1: Creating a gzipped tar-archive from two files
         The command "tar cjf output-file input-file-1 input-file-2" could be
         represented using the following AtomicCmd:
-        cmd = AtomicCmd(["tar", "cjf", "%(OUT_FILE)s", "%(IN_FILE_1)s", "%(IN_FILE_2)s",
+        cmd = AtomicCmd(["tar", "cjf", "%(OUT_FILE)s",
+                         "%(IN_FILE_1)s", "%(IN_FILE_2)s"],
                         OUT_FILE  = "output-file",
                         IN_FILE_1 = "input-file-1",
                         IN_FILE_2 = "input-file-2")
@@ -107,13 +111,13 @@ class AtomicCmd:
         in order to allow the specification of requirements. This could include
         required data files, or executables indirectly executed by a script.
 
-        If the above is prefixed with "TEMP_", the files are read from / written
+        If the above is prefixed with "TEMP_", files are read from / written
         to the temporary folder in which the command is executed. Note that all
         TEMP_OUT_ files are deleted when commit is called (if they exist), and
         only filenames (not dirname component) are allowed for TEMP_ values.
 
         In addition, the follow special names may be used with the above:
-           STDIN_  -- Takes a filename, or an AtomicCmd, in which case the stdout
+           STDIN_  -- Takes a filename, or an AtomicCmd, in which case stdout
                       of that command is piped to the stdin of this instance.
            STDOUT_ -- Takes a filename, or the special value PIPE to allow
                       another AtomicCmd instance to use the output directly.
@@ -138,23 +142,27 @@ class AtomicCmd:
         if not self._command or not self._command[0]:
             raise ValueError("Empty command in AtomicCmd constructor")
 
-        self._files     = self._process_arguments(id(self), self._command, kwargs)
-        self._file_sets = self._build_files_map(self._command, self._files)
+        arguments = self._process_arguments(id(self), self._command, kwargs)
+        self._files = self._build_files_dict(arguments)
+        self._file_sets = self._build_files_map(self._command, arguments)
 
         # Dry-run, to catch errors early
         self._generate_call("/tmp")
 
 
     def run(self, temp):
-        """Runs the given command, saving files in the specified temp folder. To
-        move files to their final destination, call commit(). Note that in contexts
-        where the *Cmds classes are used, this function may block."""
+        """Runs the given command, saving files in the specified temp folder.
+        To move files to their final destination, call commit(). Note that in
+        contexts where the *Cmds classes are used, this function may block.
+
+        """
         if self._handles:
             raise CmdError("Calling 'run' on already running command.")
         self._temp  = temp
 
         # kwords for pipes are always built relative to the current directory,
-        # since these are opened before (possibly) CD'ing to the temp directory.
+        # since these are opened before (possibly) CD'ing to the temp
+        # directory.
         kwords = self._generate_filenames(self._files, root = temp)
         stdin  = self._open_pipe(kwords, "IN_STDIN" , "rb")
         stdout = self._open_pipe(kwords, "OUT_STDOUT", "wb")
@@ -279,80 +287,110 @@ class AtomicCmd:
         try:
             return [(field % kwords) for field in self._command]
         except (TypeError, ValueError), error:
-            raise CmdError("Error building Atomic Command:\n  Call = %s\n  Error = %s: %s" \
+            raise CmdError("Error building Atomic Command:\n"
+                           "  Call = %s\n  Error = %s: %s" \
                            % (self._command, error.__class__.__name__, error))
         except KeyError, error:
-            raise CmdError("Error building Atomic Command:\n  Call = %s\n  Value not specified for path = %s" \
+            raise CmdError("Error building Atomic Command:\n"
+                           "  Call = %s\n  Value not specified for path = %s" \
                            % (self._command, error))
 
 
     @classmethod
     def _process_arguments(cls, proc_id, command, kwargs):
-        cls._validate_pipes(kwargs)
-
-        files = {}
+        arguments = collections.defaultdict(dict)
         for (key, value) in kwargs.iteritems():
-            if cls._validate_argument(key, value):
-                files[key] = value
+            match = _KEY_RE.match(key)
+            if not match:
+                raise ValueError("Invalid keyword argument %r" % (key,))
 
+            # None is ignored, to make use of default arguments easier
+            if value is not None:
+                group, = match.groups()
+                arguments[group][key] = value
+
+        # Pipe stdout/err to files by default
         executable = os.path.basename(command[0])
         for pipe in ("STDOUT", "STDERR"):
-            if not (kwargs.get("OUT_" + pipe) or kwargs.get("TEMP_OUT_" + pipe)):
-                filename = "pipe_%s_%i.%s" % (executable, proc_id, pipe.lower())
-                files["TEMP_OUT_" + pipe] = filename
+            has_out_pipe = ("OUT_" + pipe) in arguments["OUT"]
+            has_temp_out_pipe = ("TEMP_OUT_" + pipe) in arguments["TEMP_OUT"]
+            if not (has_out_pipe or has_temp_out_pipe):
+                filename = "pipe_%s_%i.%s" % (executable, proc_id,
+                                              pipe.lower())
+                arguments["TEMP_OUT"]["TEMP_OUT_" + pipe] = filename
 
+        cls._validate_arguments(arguments)
+        cls._validate_output_files(arguments)
+        cls._validate_pipes(arguments)
+
+        return arguments
+
+
+    @classmethod
+    def _validate_arguments(cls, arguments):
+        # Output files
+        for group in ("OUT", "TEMP_OUT"):
+            for (key, value) in arguments.get(group, {}).iteritems():
+                if isinstance(value, types.StringTypes):
+                    continue
+
+                if key in ("OUT_STDOUT", "TEMP_OUT_STDOUT"):
+                    if value != cls.PIPE:
+                        raise TypeError("STDOUT must be a string or "
+                                        "AtomicCmd.PIPE, not %r" % (value,))
+                else:
+                    raise TypeError("%s must be string, not %r" % (key, value))
+
+        # Input files, including executables and auxiliary files
+        for group in ("IN", "TEMP_IN", "EXEC", "AUX"):
+            for (key, value) in arguments.get(group, {}).iteritems():
+                if isinstance(value, types.StringTypes):
+                    continue
+
+                if key in ("IN_STDIN", "TEMP_IN_STDIN"):
+                    if not isinstance(value, AtomicCmd):
+                        raise TypeError("STDIN must be string or AtomicCmd, "
+                                        "not %r" % (value,))
+                else:
+                    raise TypeError("%s must be string, not %r" % (key, value))
+
+        for (key, value) in arguments.get("CHECK", {}).iteritems():
+            if not isinstance(value, collections.Callable):
+                raise TypeError("%s must be callable, not %r" % (key, value))
+
+        for group in ("TEMP_IN", "TEMP_OUT"):
+            for (key, value) in arguments.get(group, {}).iteritems():
+                is_string = isinstance(value, types.StringTypes)
+                if is_string and os.path.dirname(value):
+                    raise ValueError("%s cannot contain dir component: %r" \
+                                     % (key, value))
+
+        return True
+
+
+    @classmethod
+    def _validate_output_files(cls, arguments):
         output_files = collections.defaultdict(list)
-        for (key, filename) in kwargs.iteritems():
-            if key.startswith("TEMP_OUT_") or key.startswith("OUT_"):
-                if isinstance(filename, types.StringTypes):
-                    output_files[os.path.basename(filename)].append(key)
+        for group in ("OUT", "TEMP_OUT"):
+            for (key, value) in arguments.get(group, {}).iteritems():
+                if isinstance(value, types.StringTypes):
+                    filename = os.path.basename(value)
+                    output_files[filename].append(key)
 
         for (filename, keys) in output_files.iteritems():
             if len(keys) > 1:
-                raise ValueError("Same output filename (%s) is specified for multiple keys: %s" \
-                                   % (filename, ", ".join(keys)))
-
-        return files
-
-
-    @classmethod
-    def _validate_pipes(cls, kwargs):
-        """Checks that no single pipe is specified multiple times, e.i. being specified
-        both for a temporary and a final (outside the temp dir) file. For example,
-        either IN_STDIN or TEMP_IN_STDIN must be specified, but not both."""
-        if any((kwargs.get(pipe) and kwargs.get("TEMP_" + pipe)) for pipe in _PIPES):
-            raise CmdError, "Pipes must be specified at most once (w/wo TEMP_)."
+                raise ValueError("Same output filename (%s) is specified for "
+                                 "multiple keys: %s" \
+                                   % (filename, ", ".join(sorted(keys))))
 
 
     @classmethod
-    def _validate_argument(cls, key, value):
-        if (key.rstrip("_") + "_") in _PREFIXES:
-            raise ValueError("Argument key lacks name: %r" % key)
-        elif not any(key.startswith(prefix) for prefix in _PREFIXES):
-            raise ValueError("Command contains invalid argument (wrong prefix): '%s' -> '%s'" \
-                           % (cls.__name__, key))
-        elif value is None:
-            # Values are allowed to be None, but such entries are skipped
-            # This simplifies the use of keyword parameters with no default values.
-            return False
-
-        if key in ("OUT_STDOUT", "TEMP_OUT_STDOUT"):
-            if not (isinstance(value, types.StringTypes) or (value == cls.PIPE)):
-                raise TypeError("STDOUT must be a string or AtomicCmd.PIPE, not %r" % (value,))
-        elif key in ("IN_STDIN", "TEMP_IN_STDIN"):
-            if not isinstance(value, types.StringTypes + (AtomicCmd,)):
-                raise TypeError("STDIN must be string or AtomicCmd, not %r" % (value,))
-        elif key.startswith("CHECK_"):
-            if not isinstance(value, collections.Callable):
-                raise TypeError("CHECK must be callable, not %r" % (value,))
-        elif not isinstance(value, types.StringTypes):
-            raise TypeError("%s must be string, not %r" % (key, value))
-
-        # Applies to TEMP_IN_* and TEMP_OUT_*
-        if key.startswith("TEMP_") and isinstance(value, types.StringTypes) and os.path.dirname(value):
-            raise ValueError("%s cannot contain directory component: %r" % (key, value))
-
-        return True
+    def _validate_pipes(cls, arguments):
+        for (group, pipe) in _PIPES:
+            has_pipe = pipe in arguments[group]
+            has_temp_pipe = ("TEMP_" + pipe) in arguments["TEMP_" + group]
+            if has_pipe and has_temp_pipe:
+                raise CmdError("Pipes may only be specified once")
 
 
     def _open_pipe(self, kwords, pipe, mode):
@@ -383,28 +421,32 @@ class AtomicCmd:
 
 
     @classmethod
-    def _build_files_map(cls, command, files):
-        key_map   = {"IN"     : "input",
-                     "OUT"    : "output",
-                     "TEMP"   : "temporary_fname",
-                     "EXEC"   : "executable",
-                     "AUX"    : "auxiliary",
-                     "CHECK"  : "requirements"}
-        file_sets = dict((key, set()) for key in key_map.itervalues())
+    def _build_files_dict(cls, arguments):
+        files = {}
+        for groups in arguments.itervalues():
+            for (key, value) in groups.iteritems():
+                files[key] = value
+
+        return files
+
+
+    @classmethod
+    def _build_files_map(cls, command, arguments):
+        file_sets = dict((key, set()) for key in _FILE_MAP.itervalues())
 
         file_sets["executable"].add(command[0])
-        for (key, filename) in files.iteritems():
-            if isinstance(filename, types.StringTypes) or key.startswith("CHECK_"):
-                if key.startswith("TEMP_OUT_"):
-                    file_sets["temporary_fname"].add(filename)
-                elif not key.startswith("TEMP_"):
-                    key = key_map[key.split("_", 1)[0]]
-                    file_sets[key].add(filename)
+        for (group, files) in arguments.iteritems():
+            group_set = file_sets[_FILE_MAP[group]]
 
-        file_sets["temporary_fname"] = map(os.path.basename, file_sets["temporary_fname"])
-        file_sets["output_fname"]    = map(os.path.basename, file_sets["output"])
+            for (key, filename) in files.iteritems():
+                is_string = isinstance(filename, types.StringTypes)
+                if is_string or key.startswith("CHECK_"):
+                    group_set.add(filename)
 
-        return dict(zip(file_sets.keys(), map(frozenset, file_sets.values())))
+        file_sets["output_fname"]    = map(os.path.basename,
+                                           file_sets["output"])
+
+        return dict(zip(file_sets.iterkeys(), map(frozenset, file_sets.itervalues())))
 
 
 
