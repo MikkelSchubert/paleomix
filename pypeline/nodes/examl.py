@@ -83,8 +83,8 @@ class ExaMLParserNode(CommandNode):
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
-        self._symlinks = [os.path.realpath(parameters.input_alignment),
-                          os.path.realpath(parameters.input_partition)]
+        self._symlinks = [os.path.abspath(parameters.input_alignment),
+                          os.path.abspath(parameters.input_partition)]
         self._output_file = os.path.basename(parameters.output_file)
 
 
@@ -243,7 +243,7 @@ class ParsimonatorNode(CommandNode):
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
-        self._symlinks = [os.path.realpath(parameters.input_alignment)]
+        self._symlinks = [os.path.abspath(parameters.input_alignment)]
         self._output_tree = os.path.basename(parameters.output_tree)
 
 
