@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -45,7 +45,8 @@ from pypeline.common.makefile import \
      Or, \
      Not
 from pypeline.common.fileutils import \
-     swap_ext
+     swap_ext, \
+     add_postfix
 from pypeline.common.utilities import \
      fill_dict
 
@@ -70,6 +71,7 @@ def _mangle_makefile(options, mkfile, steps):
     _update_sample_sets(mkfile)
     _update_genotyping(mkfile)
     _update_msa(mkfile)
+    _check_bam_sequences(options, mkfile, steps)
     _check_genders(mkfile)
     _check_max_read_depth(mkfile)
     _check_indels_and_msa(mkfile)
@@ -155,18 +157,31 @@ def _update_regions(options, mkfile):
                                               fasta_file)
 
 
-def _collect_and_validate_sequences_and_subsets(regions):
+_CONTIGS_CACHE = {}
+def _collect_fasta_contigs(regions):
+    filename = regions["FASTA"] + ".fai"
+    if filename in _CONTIGS_CACHE:
+        return _CONTIGS_CACHE[filename]
+
     contigs = {}
-    with open(regions["FASTA"] + ".fai") as faihandle:
+    with open(filename) as faihandle:
         for line in faihandle:
             name, length, _ = line.split(None, 2)
             if name in contigs:
-                raise MakefileError(("Reference contains multiple identically named sequences:\n"
-                                     "  Path = %r\n  Name = %r\n"
-                                     "Please ensure that all sequences have a unique name!")
-                                     % (regions["FASTA"], name))
+                message = ("Reference contains multiple identically named "
+                           "sequences:\n  Path = %r\n  Name = %r\n"
+                           "Please ensure that sequences have unique names") \
+                           % (regions["FASTA"], name)
+                raise MakefileError(message)
+
             contigs[name] = int(length)
 
+    _CONTIGS_CACHE[filename] = contigs
+    return contigs
+
+
+def _collect_and_validate_sequences_and_subsets(regions):
+    contigs = _collect_fasta_contigs(regions)
     parser = pysam.asBed()
     sequences = set()
     with open(regions["BED"]) as bedhandle:
@@ -210,6 +225,7 @@ def _collect_and_validate_sequences_and_subsets(regions):
                                      % (regions["BED"], line_num, bed.name, bed.strand))
 
             sequences.add(bed.name)
+
     return frozenset(sequences)
 
 
@@ -276,6 +292,51 @@ def _update_filtering(mkfile):
         filtering[target] = _select_samples(filter_by, groups, samples, path)
 
     mkfile["Project"]["FilterSingletons"] = filtering
+
+
+def _check_bam_sequences(options, mkfile, steps):
+    """Check that the BAM files contains the reference sequences found in the
+    FASTA file, matched by name and length; extra sequences are permitted. This
+    check is only done if genotyping is to be carried out, to reduce the
+    overhead of reading the BAM file headers.
+
+    """
+    if ("genotype" not in steps) and ("genotyping" not in steps):
+        return
+
+    bam_files = {}
+    for regions in mkfile["Project"]["Regions"].itervalues():
+        for sample in mkfile["Project"]["Samples"].itervalues():
+            filename = os.path.join(options.samples_root, "%s.%s.bam"
+                                    % (sample["Name"], regions["Prefix"]))
+            if regions["Realigned"]:
+                filename = add_postfix(filename, ".realigned")
+
+            if os.path.exists(filename):
+                bam_files[filename] = _collect_fasta_contigs(regions)
+
+    for (filename, contigs) in bam_files.iteritems():
+        with pysam.Samfile(filename) as handle:
+            bam_contigs = dict(zip(handle.references, handle.lengths))
+
+            for (contig, length) in contigs.iteritems():
+                bam_length = bam_contigs.get(contig)
+
+                if bam_length is None:
+                    message = ("Reference sequence missing from BAM file; "
+                               "BAM file aligned against different prefix?\n"
+                               "    BAM file = %s\n    Sequence name = %s") \
+                               % (filename, contig)
+                    raise MakefileError(message)
+                elif bam_length != length:
+                    message = ("Length of reference sequence in FASTA differs "
+                               "from length of sequence in BAM file; BAM file "
+                               "aligned against different prefix?\n"
+                               "    BAM file = %s\n"
+                               "    Length in FASTA = %s\n"
+                               "    Length in BAM = %s") \
+                               % (filename, length, bam_length)
+                    raise MakefileError(message)
 
 
 def _check_genders(mkfile):
