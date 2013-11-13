@@ -31,6 +31,12 @@ from pypeline.atomiccmd.builder import \
      AtomicCmdBuilder, \
      use_customizable_cli_parameters, \
      create_customizable_cli_parameters
+import pypeline.common.versions as versions
+
+
+MAFFT_VERSION = versions.Requirement(call   = ("mafft", "--version"),
+                                     search = r"v(\d+)\.(\d+)",
+                                     checks = versions.GE(7, 0))
 
 
 # Presets mainly taken from
@@ -49,6 +55,7 @@ _PRESETS = {
 
 
 
+
 class MAFFTNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, input_file, output_file, algorithm = "auto", dependencies = ()):
@@ -56,7 +63,8 @@ class MAFFTNode(CommandNode):
         command.add_value("--quiet")
         command.add_value("%(IN_FASTA)s")
         command.set_kwargs(IN_FASTA   = input_file,
-                           OUT_STDOUT = output_file)
+                           OUT_STDOUT = output_file,
+                           CHECK_VERSION = MAFFT_VERSION)
 
         return {"command"      : command,
                 "dependencies" : dependencies}
