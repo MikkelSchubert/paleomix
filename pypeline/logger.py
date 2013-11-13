@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -58,7 +58,8 @@ def initialize(config, template = None):
             handler = logging.FileHandler(config.log_file)
         else:
             handler = _LazyLogfile(config.temp_root, template)
-        formatter = logging.Formatter("%s\n%%(asctime)s -- %%(levelname)s:\n%%(message)s" % ("-" * 60,))
+        fmt = "%s\n%%(asctime)s -- %%(levelname)s:\n%%(message)s"
+        formatter = logging.Formatter(fmt % ("-" * 60,))
         handler.setFormatter(formatter)
         handler.setLevel(level)
         root.addHandler(handler)
@@ -72,13 +73,15 @@ def add_optiongroup(parser, default = "warning"):
     object to have these options."""
     group  = optparse.OptionGroup(parser, "Logging")
     group.add_option("--log-file", default = None,
-                     help = "Write messages to this file. By default, a filename will be generated"
-                            "using the template ${TEMP}/bam_pipeline_*.log, iff messages are logged "
-                            "at or above the --log-level")
+                     help = "Create the specified log-file and write any "
+                            "messages to this file. By default, a log-file "
+                            "will be generated in the folder specified using "
+                            "--temp-root, but only when messages are logged")
     group.add_option("--log-level", default = default, type = "choice",
                      choices = ("info", "warning", "error", "debug"),
-                     help = "Log messages to log-file at and above the specified level; "
-                            "one of 'info', 'warning', 'error', or 'debug' [%default]")
+                     help = "Log messages to log-file at and above the "
+                            "specified level; one of 'info', 'warning', "
+                            "'error', or 'debug' [%default]")
     parser.add_option_group(group)
 
 
