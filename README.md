@@ -667,3 +667,9 @@ the same time, use the following command:
 # 4. Troubleshooting
 
 TODO
+
+
+---------------------
+# 5. Contact
+
+For questions, bug reports, and suggestions, please contact Mikkel Schubert at [MSchubert@snm.ku.dk](mailto:MSchubert@snm.ku.dk)
