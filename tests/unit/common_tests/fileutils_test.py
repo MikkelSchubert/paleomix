@@ -188,7 +188,7 @@ def test_create_temp_dir__empty(temp_folder):
 def test_create_temp_dir__permissions(temp_folder):
     tmp_dir = create_temp_dir(temp_folder)
     stats   = os.stat(tmp_dir)
-    assert_equal(stats.st_mode & 0777, 0700)
+    assert_equal(stats.st_mode & 0777, 0750)
 
 @with_temp_folder
 def test_create_temp_dir__creation_preempted(temp_folder):

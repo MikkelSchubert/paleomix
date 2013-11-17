@@ -67,7 +67,7 @@ def create_temp_dir(root):
         return os.path.join(root, str(uuid.uuid4()))
 
     path = _generate_path()
-    while not make_dirs(path, mode = 0700):
+    while not make_dirs(path, mode = 0750):
         path = _generate_path()
     return path
 
