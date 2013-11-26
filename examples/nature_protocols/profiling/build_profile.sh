@@ -44,6 +44,28 @@ OUTPUT_RMDUP_BAM=${OUTPUT_PREFIX}.noduplicates.bam
 OUTPUT_METAPHLAN_INPUT=${OUTPUT_PREFIX}.noduplicates
 OUTPUT_METAPHLAN=${OUTPUT_PREFIX}.txt
 
+if [ ! -e "${JAR_ROOT}/SortSam.jar" ];
+then
+    echo "Required JAR file is missing; please install:"
+    echo "  - ${JAR_ROOT}/SortSam.jar"
+    exit 1
+elif [ ! -e "${METAPHLAN_ROOT}/metaphlan.py" ];
+then
+    echo "MetaPhlAn does not appear to be installed; please install at:"
+    echo "  - ${METAPHLAN_ROOT}/metaphlan.py"
+    exit 1
+fi
+
+for executable in bzcat bowtie2 java bam_rmdup_collapsed samtools;
+do
+    if ! which ${executable} > /dev/null;
+    then
+	echo "Required executable is missing ('${executable}'); please install."
+	exit 1
+    fi
+done
+
+
 echo
 echo "Generateing profile from $# files, saving to ${OUTPUT_METAPHLAN}"
 
@@ -62,7 +84,7 @@ then
 		fi
 	    fi
 
-	    if ! java -Xmx4g -jar ${JAR_ROOT}/SortSam.jar I=${OUTPUT_SAM} O=${OUTPUT_SORTED_BAM} SO=coordinate;
+	    if ! java -Xmx4g -jar ${JAR_ROOT}/SortSam.jar I=${OUTPUT_SAM} O=${OUTPUT_SORTED_BAM} SO=coordinate VERBOSITY=WARNING;
 	    then
 		rm -f ${OUTPUT_SORTED_BAM}
 		exit 1
