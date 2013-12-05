@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -30,6 +30,8 @@ from pypeline.config import \
      PerHostConfig
 
 
+_TARGETS_BY_NAME = ("targets", "prefixes", "samples", "libraries",
+                    "lanes", "mapping", "trimming")
 
 
 def _run_config_parser(argv):
@@ -82,8 +84,9 @@ def _run_config_parser(argv):
     group  = optparse.OptionGroup(parser, "Targets")
     group.add_option("--target", dest = "targets", action = "append", default = [],
                      help = "Only execute nodes required to build specified target.")
-    group.add_option("--list-targets", default = None,
-                     help = "List all targets at a given resolution (target, sample, library, lane, reads)")
+    group.add_option("--list-targets", default = None, choices = _TARGETS_BY_NAME,
+                     help = "List all targets at a given resolution (%s)" \
+                        % (", ".join(_TARGETS_BY_NAME),))
     parser.add_option_group(group)
 
     group  = optparse.OptionGroup(parser, "Misc")
@@ -100,10 +103,6 @@ def parse_config(argv):
     config, args = _run_config_parser(argv)
 
     config.targets = set(config.targets)
-    targets_by_name = ("targets", "prefixes", "samples", "libraries", "lanes", "mapping", "trimming")
-    if (config.list_targets is not None) and (config.list_targets not in targets_by_name):
-        raise ConfigError("ERROR: Invalid value for --list-targets (%s), valid values are '%s'." \
-                          % (repr(config.list_targets), "', '".join(targets_by_name)))
 
     if config.list_output_files and config.list_orphan_files:
         raise ConfigError("ERROR: Both --list-output-files and --list-orphan-files set!")
