@@ -34,7 +34,7 @@ def get_info(vcf, field, default = None, type = str):
     """Returns the value of the specified field from the info column
     of a VCF record. The type is determined by 'type' parameter, which
     may be any function. If no matching key is found, or if the key is
-    not assosiated with a value, the function returns None by default."""
+    not associated with a value, the function returns None by default."""
     try:
         regexp = _re_cache[field]
     except KeyError:

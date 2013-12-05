@@ -57,7 +57,7 @@ def _picard_version(config, jar_file):
 class PicardNode(CommandNode):
     """Base class for nodes using Picard Tools; adds an additional cleanup step,
     in order to allow the jars to be run using the same temporary folder as any
-    other commands assosiated with the node."""
+    other commands associated with the node."""
 
     def _teardown(self, config, temp):
         # Picard creates a folder named after the user in the temp-root

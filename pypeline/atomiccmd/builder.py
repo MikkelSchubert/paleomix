@@ -290,7 +290,7 @@ class AtomicMPICmdBuilder(AtomicCmdBuilder):
     Simplifies specification of number of threads to use, only invoking the
     'mpi' command if more than one thread is used; furthermore, the 'mpi'
     binary is used as a dependency, since MPI enabled programs tend to fail
-    catastrophically if the 'mpi' binary and assosiated libraries are missing.
+    catastrophically if the 'mpi' binary and associated libraries are missing.
 
     """
 
@@ -388,9 +388,9 @@ def apply_options(builder, options, pred = lambda s: s.startswith("-")):
     """Applies a dictionary of options to a builder. By default, only
     options where the key start with "-" are used (determined by 'pred').
     The following rules are used when applying options:
-      - If a key is assosiated with a single value, 'set_option' is used.
-      - If a key is assosiated with a list of values, 'add_option' is used.
-      - If the key is assosiated with a boolean value, the option is set
+      - If a key is associated with a single value, 'set_option' is used.
+      - If a key is associated with a list of values, 'add_option' is used.
+      - If the key is associated with a boolean value, the option is set
         if true (without a value) or removed from the call if false. This
         allows easy setting/unsetting of '--do-something' type options.
 

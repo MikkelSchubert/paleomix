@@ -269,7 +269,7 @@ def main(argv):
 
     if not argv:
         print_info("No directories/files specified, standard makefile printed.", file = sys.stderr)
-        print_info("If the reads have assosiated %s files, these" % (_FILENAME,), file = sys.stderr)
+        print_info("If the reads have associated %s files, these" % (_FILENAME,), file = sys.stderr)
         print_info("may be used to generate a preliminary makefile:", file = sys.stderr)
         print_info("  Usage: bam_pipeline mkfile [filename/directory] [...]", file = sys.stderr)
         print_info("Each directory must contain a '%s' file." % _FILENAME, file = sys.stderr)
