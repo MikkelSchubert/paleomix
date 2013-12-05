@@ -71,40 +71,33 @@ echo "Generateing profile from $# files, saving to ${OUTPUT_METAPHLAN}"
 
 if [ ! -e "${OUTPUT_METAPHLAN}" ];
 then
-    if [ ! -e "${OUTPUT_RMDUP_BAM}" ];
+    if [ ! -e "${OUTPUT_METAPHLAN_INPUT}" ];
     then
-	if [ ! -e "${OUTPUT_SORTED_BAM}" ];
+	if [ ! -e "${OUTPUT_RMDUP_BAM}" ];
 	then
-	    if [ ! -e "${OUTPUT_SAM}" ];
+	    if [ ! -e "${OUTPUT_SORTED_BAM}" ];
 	    then
-		if ! bzcat $@ | bowtie2 -x "${BOWTIE_PREFIX}" -U - -S ${OUTPUT_SAM} --no-unal;
+		if [ ! -e "${OUTPUT_SAM}" ];
 		then
-		    rm -f ${OUTPUT_SAM}
-		    exit 1
+		    bzcat $@ | bowtie2 -x "${BOWTIE_PREFIX}" -U - -S "${OUTPUT_SAM}.tmp" --no-unal --quiet
+		    mv "${OUTPUT_SAM}.tmp" "${OUTPUT_SAM}"
 		fi
+
+		java -Xmx4g -jar ${JAR_ROOT}/SortSam.jar SO=coordinate VERBOSITY=WARNING QUIET=TRUE \
+		    "I=${OUTPUT_SAM}" "O=${OUTPUT_SORTED_BAM}.tmp"
+		mv "${OUTPUT_SORTED_BAM}.tmp" "${OUTPUT_SORTED_BAM}"
 	    fi
 
-	    if ! java -Xmx4g -jar ${JAR_ROOT}/SortSam.jar I=${OUTPUT_SAM} O=${OUTPUT_SORTED_BAM} SO=coordinate VERBOSITY=WARNING;
-	    then
-		rm -f ${OUTPUT_SORTED_BAM}
-		exit 1
-	    fi
+	    bam_rmdup_collapsed --remove-duplicates < "${OUTPUT_SORTED_BAM}" > "${OUTPUT_RMDUP_BAM}.tmp"
+	    mv "${OUTPUT_RMDUP_BAM}.tmp" "${OUTPUT_RMDUP_BAM}"
 	fi
 
-	if ! bam_rmdup_collapsed --remove-duplicates < ${OUTPUT_SORTED_BAM} > ${OUTPUT_RMDUP_BAM};
-	then
-	    rm -f ${OUTPUT_RMDUP_BAM}
-	    exit 1
-	fi
+	samtools view ${OUTPUT_RMDUP_BAM} | awk '{print $1 "\t" $3}' > "${OUTPUT_METAPHLAN_INPUT}.tmp";
+	mv "${OUTPUT_METAPHLAN_INPUT}.tmp" "${OUTPUT_METAPHLAN_INPUT}"
     fi
 
-    samtools view ${OUTPUT_RMDUP_BAM} | awk '{print $1 "\t" $3}' > ${OUTPUT_METAPHLAN_INPUT};
-
-    if ! ${METAPHLAN_ROOT}/metaphlan.py ${OUTPUT_METAPHLAN_INPUT} > ${OUTPUT_METAPHLAN};
-    then
-	rm -v ${OUTPUT_METAPHLAN}
-	exit 1
-    fi
+    ${METAPHLAN_ROOT}/metaphlan.py "${OUTPUT_METAPHLAN_INPUT}" > "${OUTPUT_METAPHLAN}.tmp"
+    mv "${OUTPUT_METAPHLAN}.tmp" "${OUTPUT_METAPHLAN}"
 fi
 
 echo "Done: Profile written to ${OUTPUT_METAPHLAN}"
