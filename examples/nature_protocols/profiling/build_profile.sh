@@ -67,7 +67,7 @@ done
 
 
 echo
-echo "Generateing profile from $# files, saving to ${OUTPUT_METAPHLAN}"
+echo "Generating profile from $# files, saving to ${OUTPUT_METAPHLAN}"
 
 if [ ! -e "${OUTPUT_METAPHLAN}" ];
 then
