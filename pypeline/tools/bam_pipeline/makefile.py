@@ -194,7 +194,8 @@ _VALIDATION_OPTIONS = {
 
     # Features of pipeline
     "Features"       : ValuesSubsetOf(("Raw BAM", "Realigned BAM", "Coverage",
-                                       "Summary", "mapDamage", "Depths"),
+                                       "Summary", "mapDamage", "Depths",
+                                       "DuplicateHist"),
                                       default = ["Realigned BAM", "Coverage",
                                                  "Summary", "mapDamage",
                                                  "Depths"]),

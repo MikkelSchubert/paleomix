@@ -32,7 +32,8 @@ class Target:
         self._nodes_alignment = MetaNode(description  = "Alignments:",
                                           dependencies = [prefix.node for prefix in self.prefixes])
 
-        self._setup_mapdamage_nodes()
+        self._setup_extra_nodes("mapDamage", "mapdamage")
+        self._setup_extra_nodes("Duplicate Histogram", "duphist")
 
 
     def add_extra_nodes(self, name, nodes):
@@ -51,20 +52,20 @@ class Target:
         return MetaNode(description    = "Target: %s" % self.name,
                         dependencies   = (self._nodes_alignment, extras))
 
-
-    def _setup_mapdamage_nodes(self):
-        mapdamage_nodes = []
+    def _setup_extra_nodes(self, name, key):
+        nodes = []
         for prefix in self.prefixes:
             prefix_nodes = []
             for sample in prefix.samples:
                 for library in sample.libraries:
-                    if library.mapdamage:
-                        prefix_nodes.append(library.mapdamage)
+                    value = getattr(library, key)
+                    if value:
+                        prefix_nodes.append(value)
 
             if any(prefix_nodes):
-                node = MetaNode(description = prefix.name,
-                                subnodes    = prefix_nodes)
-                mapdamage_nodes.append(node)
+                node = MetaNode(description=prefix.name,
+                                subnodes=prefix_nodes)
+                nodes.append(node)
 
-        if mapdamage_nodes:
-            self.add_extra_nodes("mapDamage", mapdamage_nodes)
+        if nodes:
+            self.add_extra_nodes(name, nodes)

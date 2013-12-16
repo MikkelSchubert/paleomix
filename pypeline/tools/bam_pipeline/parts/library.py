@@ -39,8 +39,10 @@ from pypeline.nodes.mapdamage import \
      MapDamageModelNode, \
      MapDamageRescaleNode
 from pypeline.tools.bam_pipeline.nodes import \
-     FilterCollapsedBAMNode, \
-     IndexAndValidateBAMNode
+    FilterCollapsedBAMNode, \
+    IndexAndValidateBAMNode
+from pypeline.nodes.duphist import \
+    DuplicateHistogramNode
 
 
 
@@ -77,7 +79,8 @@ class Library:
         assert all((self.options == lane.options) for lane in self.lanes)
 
         lane_bams = self._collect_bams_by_type(self.lanes)
-
+        self.duphist = \
+            self._build_duphist_nodes(config, target, prefix, lane_bams)
         pcr_duplicates = self.options["PCRDuplicates"]
         if pcr_duplicates:
             lane_bams = self._remove_pcr_duplicates(config, prefix, lane_bams, pcr_duplicates)
@@ -205,3 +208,23 @@ class Library:
                         dependencies = files_and_nodes.values())
 
         return {output_filename : node}, plot, model
+
+    def _build_duphist_nodes(self, config, target, prefix, files_and_nodes):
+        if not ("DuplicateHist" in self.options["Features"]):
+            return None
+
+        input_files = []
+        dependencies = []
+        for values in files_and_nodes.itervalues():
+            for (filename, node) in values.iteritems():
+                input_files.append(filename)
+                dependencies.append(node)
+
+        folder = "%s.%s.duphist" % (target, prefix["Name"])
+        destination = os.path.join(config.destination, folder,
+                                   self.name + ".txt")
+
+        return DuplicateHistogramNode(config=config,
+                                      input_files=input_files,
+                                      output_file=destination,
+                                      dependencies=dependencies)

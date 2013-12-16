@@ -152,6 +152,8 @@ _TEMPLATE_BAM_OPTIONS = \
                      #   Location: {Destination}/{Target}.{Genome}.depths
     - Summary        # Generate target summary (uses statistics from raw BAM)
                      #   Location: {Destination}/{Target}.summary
+#    - DuplicateHist  # Generate histogram of PCR duplicates, for use with PreSeq
+                     #   Location: {Destination}/{Target}.{Genome}.duphist/{Library}/
 
 
 # Map of prefixes by name, each having a Path key, which specifies the

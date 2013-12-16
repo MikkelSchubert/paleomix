@@ -1,0 +1,91 @@
+#!/usr/bin/python
+#
+# Copyright (c) 2012 Mikkel Schubert <MSchubert@snm.ku.dk>
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+import sys
+import random
+import collections
+
+import pysam
+
+
+def filter_record(record):
+    # 0xf04 = 0x800 | 0x100 | 0x004
+    #         0x800 = Secondary alignment
+    #         0x100 = Alternative alignment
+    #         0x004 = Unmapped read
+    if (record.flag & 0x904):
+        return True
+    elif record.is_paired:
+        return (not record.is_proper_pair) or record.is_read2
+    return False
+
+
+def get_alignment(record):
+    if record.is_paired:
+        return record.tlen
+    elif record.qname.startswith("M_"):
+        return record.alen
+    return None
+
+
+def flush_records(records, counts):
+    alignments = collections.defaultdict(int)
+    for record in records:
+        alignment = get_alignment(record)
+        alignments[alignment] += 1
+
+    if (None in alignments) and len(alignments) > 1:
+        ambigious_count = alignments.pop(None)
+
+        keys = tuple(alignments)
+        for _ in xrange(ambigious_count):
+            key = random.choice(keys)
+            alignments[key] += 1
+
+    for count in alignments.itervalues():
+        counts[count] += 1
+
+
+def main(argv):
+    counts = collections.defaultdict(int)
+    for filename in argv:
+        with pysam.Samfile(filename) as handle:
+            cache = []
+            last_pos = None
+            for record in handle:
+                if filter_record(record):
+                    continue
+
+                current_pos = (record.tid, record.pos)
+                if current_pos != last_pos:
+                    flush_records(cache, counts)
+                    last_pos = current_pos
+                    cache = []
+                cache.append(record)
+            flush_records(cache, counts)
+
+    for (key, count) in sorted(counts.iteritems()):
+        print("%i\t%i" % (key, count))
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))
