@@ -58,4 +58,4 @@ def _get_pysam_version():
 _PYSAM_VERSION = versions.Requirement(name   = "module 'pysam'",
                                      call   = _get_pysam_version,
                                      search = r"(\d+)\.(\d+)\.(\d+)",
-                                     checks = versions.GE(0, 7, 4))
+                                     checks = versions.GE(0, 7, 5))

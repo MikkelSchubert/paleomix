@@ -65,7 +65,7 @@ session for these changes to take effect.
 
 
 ### 1.1.3. Installing required modules The pipeline requires
-[Pysam](https://code.google.com/p/pysam/)  v0.7.4+:
+[Pysam](https://code.google.com/p/pysam/)  v0.7.5+:
 
     $ curl -O https://pysam.googlecode.com/files/pysam-0.7.5.tar.gz
 	$ tar xvzf pysam-0.7.5.tar.gz
