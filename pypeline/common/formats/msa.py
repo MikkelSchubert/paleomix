@@ -148,6 +148,8 @@ class MSA(frozenset):
         fasta_file = open_ro(filename)
         try:
             return MSA.from_lines(fasta_file)
+        except MSAError, error:
+            raise MSAError("%s in file %r" % (error, filename))
         finally:
             fasta_file.close()
 
