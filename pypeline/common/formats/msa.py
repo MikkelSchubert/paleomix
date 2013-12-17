@@ -44,6 +44,9 @@ class MSA(frozenset):
             records.append(record)
             names.add(record.name)
 
+        if not records:
+            raise MSAError("MSA does not contain any sequences")
+
         instance = frozenset.__new__(cls, records)
         MSA.validate(instance)
         return instance
