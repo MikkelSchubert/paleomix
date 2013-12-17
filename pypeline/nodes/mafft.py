@@ -61,7 +61,6 @@ class MAFFTNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, input_file, output_file, algorithm = "auto", dependencies = ()):
         command = AtomicCmdBuilder(_PRESETS[algorithm.lower()])
-        command.add_value("--quiet")
         command.add_value("%(IN_FASTA)s")
         command.set_kwargs(IN_FASTA   = input_file,
                            OUT_STDOUT = output_file,
