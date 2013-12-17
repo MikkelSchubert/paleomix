@@ -20,17 +20,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
-
 from pypeline.node import \
-     CommandNode, \
-     MetaNode
-from pypeline.atomiccmd.command import \
-     AtomicCmd
+    CommandNode, \
+    NodeError
 from pypeline.atomiccmd.builder import \
-     AtomicCmdBuilder, \
-     use_customizable_cli_parameters, \
-     create_customizable_cli_parameters
+    AtomicCmdBuilder, \
+    use_customizable_cli_parameters, \
+    create_customizable_cli_parameters
+from pypeline.common.fileutils import \
+    reroot_path
+from pypeline.common.formats.msa import \
+    MSA, \
+    MSAError
 import pypeline.common.versions as versions
 
 
@@ -72,6 +73,7 @@ class MAFFTNode(CommandNode):
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
+        self._output_file = parameters.output_file
         description = "<MAFFTNode (%s): '%s' -> '%s'>" \
                 % (parameters.algorithm,
                    parameters.input_file,
@@ -81,3 +83,12 @@ class MAFFTNode(CommandNode):
                              command      = parameters.command.finalize(),
                              description  = description,
                              dependencies = parameters.dependencies)
+
+    def _teardown(self, config, temp):
+        # Validate output from MAFFT
+        output_file = reroot_path(temp, self._output_file)
+        try:
+            MSA.from_file(output_file)
+        except MSAError, error:
+            raise NodeError("Invalid MSA produced by MAFFT:\n%s" % (error,))
+        CommandNode._teardown(self, config, temp)
