@@ -1,0 +1,4 @@
+2013-10-24 15:39:23,333	INFO	main: Started with the command: /home/mischu/bin/mapDamage/bin/mapDamage --no-stats --merge-reference-sequences -t mapDamage plot for library 'Pi1845A_id_CATAGA' -i - -d /home/mischu/scratch/bam_pipeline/f608c1e6-17da-4932-b988-df347ec518b0 -r 000_prefixes/Pi_nucl.fasta --downsample 100000
+2013-10-24 15:40:08,973	DEBUG	main: BAM read in 48.459430 seconds
+2013-10-24 15:40:09,853	INFO	main: Successful run
+2013-10-24 15:40:09,854	DEBUG	main: Run completed in 49.340715 seconds

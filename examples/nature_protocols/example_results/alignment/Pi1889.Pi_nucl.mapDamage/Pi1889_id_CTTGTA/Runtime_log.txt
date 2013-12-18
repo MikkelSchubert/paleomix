@@ -1,0 +1,4 @@
+2013-10-24 15:07:37,742	INFO	main: Started with the command: /home/mischu/bin/mapDamage/bin/mapDamage --no-stats --merge-reference-sequences -t mapDamage plot for library 'Pi1889_id_CTTGTA' -i - -d /home/mischu/scratch/bam_pipeline/89ca5df2-c86d-4a50-a3aa-3b5a1d1b5ba4 -r 000_prefixes/Pi_nucl.fasta --downsample 100000
+2013-10-24 15:09:25,013	DEBUG	main: BAM read in 109.754742 seconds
+2013-10-24 15:09:25,826	INFO	main: Successful run
+2013-10-24 15:09:25,826	DEBUG	main: Run completed in 110.568290 seconds

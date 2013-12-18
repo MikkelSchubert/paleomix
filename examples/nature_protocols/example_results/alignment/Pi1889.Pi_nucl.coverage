@@ -1,0 +1,34 @@
+# Timestamp: 2013-10-24T16:27:57.159306
+#
+# Columns:
+#   Contig:       Contig, chromosome, or feature for which a depth histogram was
+#                 created. Unnamed features are named after the chromosome or
+#             contig on which they are located, with a star appended. For
+#             example "chr1*".
+#   Size:     The total size of the region. Multiple features with the same
+#             name are combined into one row, with the size representing to
+#                  total of these. Note that overlapping bases are counted 2 (or
+#                  more) times.
+#  Hits:           Sum of SE, PE_1, and PE_2 hits
+#  SE, PE_1, PE_2: Number of Single Ended, and Pair Ended (mate 1 and 2) hits overlapping
+#                  the current contig or intervals. Note that a hit may be counted multiple
+#                  times if it overlaps multiple intervals
+#  Collapsed:      Number of hits for PE pair collapsed into a single read
+#  M, I, D:        Number of aligned (M), inserted (I) and deleted (D) bases relative to references
+#  Coverage:       Average number of bases covering each position in the contig(s)/intervals(s).
+Name      Sample    Library             Contig      Size         Hits        SE         PE_1     PE_2      Collapsed    M             I         D         Coverage
+Pi1889    *         *                   *           228543505    15696369    7491334    95385    102601    8007049      1244426137    172821    244560    5.44502954481
+Pi1889    *         *                   <Genome>    228543505    15696369    7491334    95385    102601    8007049      1244426137    172821    244560    5.44502954481
+#
+#
+Pi1889    Pi1889    *                   *           228543505    15696369    7491334    95385    102601    8007049      1244426137    172821    244560    5.44502954481
+Pi1889    Pi1889    *                   <Genome>    228543505    15696369    7491334    95385    102601    8007049      1244426137    172821    244560    5.44502954481
+#
+Pi1889    Pi1889    Pi1889_id_CTTGTA    *           228543505    5215431     2523580    17517    20407     2653927      403753830     53394     78380     1.76663882879
+Pi1889    Pi1889    Pi1889_id_CTTGTA    <Genome>    228543505    5215431     2523580    17517    20407     2653927      403753830     53394     78380     1.76663882879
+#
+Pi1889    Pi1889    Pi1889_id_GGCTAC    *           228543505    5597401     2683429    24929    26356     2862687      447916759     62254     86200     1.95987525001
+Pi1889    Pi1889    Pi1889_id_GGCTAC    <Genome>    228543505    5597401     2683429    24929    26356     2862687      447916759     62254     86200     1.95987525001
+#
+Pi1889    Pi1889    Pi1889_id_TAGCTT    *           228543505    4883537     2284325    52939    55838     2490435      392755548     57173     79980     1.71851546602
+Pi1889    Pi1889    Pi1889_id_TAGCTT    <Genome>    228543505    4883537     2284325    52939    55838     2490435      392755548     57173     79980     1.71851546602

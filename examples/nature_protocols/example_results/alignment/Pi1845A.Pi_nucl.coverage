@@ -1,0 +1,31 @@
+# Timestamp: 2013-10-24T16:43:17.626555
+#
+# Columns:
+#   Contig:       Contig, chromosome, or feature for which a depth histogram was
+#                 created. Unnamed features are named after the chromosome or
+#             contig on which they are located, with a star appended. For
+#             example "chr1*".
+#   Size:     The total size of the region. Multiple features with the same
+#             name are combined into one row, with the size representing to
+#                  total of these. Note that overlapping bases are counted 2 (or
+#                  more) times.
+#  Hits:           Sum of SE, PE_1, and PE_2 hits
+#  SE, PE_1, PE_2: Number of Single Ended, and Pair Ended (mate 1 and 2) hits overlapping
+#                  the current contig or intervals. Note that a hit may be counted multiple
+#                  times if it overlaps multiple intervals
+#  Collapsed:      Number of hits for PE pair collapsed into a single read
+#  M, I, D:        Number of aligned (M), inserted (I) and deleted (D) bases relative to references
+#  Coverage:       Average number of bases covering each position in the contig(s)/intervals(s).
+Name       Sample     Library              Contig      Size         Hits       SE         PE_1     PE_2     Collapsed    M            I        D        Coverage
+Pi1845A    *          *                    *           228543505    5459297    4986626    14113    48583    409975       349517526    72729    76816    1.52932600732
+Pi1845A    *          *                    <Genome>    228543505    5459297    4986626    14113    48583    409975       349517526    72729    76816    1.52932600732
+#
+#
+Pi1845A    Pi1845A    *                    *           228543505    5459297    4986626    14113    48583    409975       349517526    72729    76816    1.52932600732
+Pi1845A    Pi1845A    *                    <Genome>    228543505    5459297    4986626    14113    48583    409975       349517526    72729    76816    1.52932600732
+#
+Pi1845A    Pi1845A    Pi1845A_id_CATAGA    *           228543505    4688387    4688387    0        0        0            304259452    47708    55909    1.33129774132
+Pi1845A    Pi1845A    Pi1845A_id_CATAGA    <Genome>    228543505    4688387    4688387    0        0        0            304259452    47708    55909    1.33129774132
+#
+Pi1845A    Pi1845A    Pi1845A_id_CGCTAT    *           228543505    770910     298239     14113    48583    409975       45258074     25021    20907    0.198028265997
+Pi1845A    Pi1845A    Pi1845A_id_CGCTAT    <Genome>    228543505    770910     298239     14113    48583    409975       45258074     25021    20907    0.198028265997

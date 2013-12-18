@@ -1,0 +1,34 @@
+# Timestamp: 2013-10-22T17:38:04.143987
+#
+# Columns:
+#   Contig:       Contig, chromosome, or feature for which a depth histogram was
+#                 created. Unnamed features are named after the chromosome or
+#             contig on which they are located, with a star appended. For
+#             example "chr1*".
+#   Size:     The total size of the region. Multiple features with the same
+#             name are combined into one row, with the size representing to
+#                  total of these. Note that overlapping bases are counted 2 (or
+#                  more) times.
+#  Hits:           Sum of SE, PE_1, and PE_2 hits
+#  SE, PE_1, PE_2: Number of Single Ended, and Pair Ended (mate 1 and 2) hits overlapping
+#                  the current contig or intervals. Note that a hit may be counted multiple
+#                  times if it overlaps multiple intervals
+#  Collapsed:      Number of hits for PE pair collapsed into a single read
+#  M, I, D:        Number of aligned (M), inserted (I) and deleted (D) bases relative to references
+#  Coverage:       Average number of bases covering each position in the contig(s)/intervals(s).
+Name      Sample    Library             Contig                        Size     Hits     SE       PE_1    PE_2    Collapsed    M          I       D      Coverage
+Pi1889    *         *                   *                             37922    49824    18509    452     602     30261        4246529    1015    621    111.980618111
+Pi1889    *         *                   gi|58012130|gb|AY894835.1|    37922    49824    18509    452     602     30261        4246529    1015    621    111.980618111
+#
+#
+Pi1889    Pi1889    *                   *                             37922    49824    18509    452     602     30261        4246529    1015    621    111.980618111
+Pi1889    Pi1889    *                   gi|58012130|gb|AY894835.1|    37922    49824    18509    452     602     30261        4246529    1015    621    111.980618111
+#
+Pi1889    Pi1889    Pi1889_id_CTTGTA    *                             37922    14793    5499     53      98      9143         1221519    226     177    32.2113548863
+Pi1889    Pi1889    Pi1889_id_CTTGTA    gi|58012130|gb|AY894835.1|    37922    14793    5499     53      98      9143         1221519    226     177    32.2113548863
+#
+Pi1889    Pi1889    Pi1889_id_GGCTAC    *                             37922    17835    6559     95      133     11048        1538959    341     212    40.5822214018
+Pi1889    Pi1889    Pi1889_id_GGCTAC    gi|58012130|gb|AY894835.1|    37922    17835    6559     95      133     11048        1538959    341     212    40.5822214018
+#
+Pi1889    Pi1889    Pi1889_id_TAGCTT    *                             37922    17196    6451     304     371     10070        1486051    448     232    39.1870418227
+Pi1889    Pi1889    Pi1889_id_TAGCTT    gi|58012130|gb|AY894835.1|    37922    17196    6451     304     371     10070        1486051    448     232    39.1870418227

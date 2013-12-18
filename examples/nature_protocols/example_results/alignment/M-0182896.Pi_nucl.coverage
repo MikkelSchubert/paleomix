@@ -1,0 +1,40 @@
+# Timestamp: 2013-10-24T15:04:28.208831
+#
+# Columns:
+#   Contig:       Contig, chromosome, or feature for which a depth histogram was
+#                 created. Unnamed features are named after the chromosome or
+#             contig on which they are located, with a star appended. For
+#             example "chr1*".
+#   Size:     The total size of the region. Multiple features with the same
+#             name are combined into one row, with the size representing to
+#                  total of these. Note that overlapping bases are counted 2 (or
+#                  more) times.
+#  Hits:           Sum of SE, PE_1, and PE_2 hits
+#  SE, PE_1, PE_2: Number of Single Ended, and Pair Ended (mate 1 and 2) hits overlapping
+#                  the current contig or intervals. Note that a hit may be counted multiple
+#                  times if it overlaps multiple intervals
+#  Collapsed:      Number of hits for PE pair collapsed into a single read
+#  M, I, D:        Number of aligned (M), inserted (I) and deleted (D) bases relative to references
+#  Coverage:       Average number of bases covering each position in the contig(s)/intervals(s).
+Name         Sample       Library             Contig      Size         Hits        SE        PE_1       PE_2       Collapsed    M             I         D         Coverage
+M-0182896    *            *                   *           228543505    35730015    242414    2329344    2316559    30841698     3513022562    862978    923586    15.3713515595
+M-0182896    *            *                   <Genome>    228543505    35730015    242414    2329344    2316559    30841698     3513022562    862978    923586    15.3713515595
+#
+#
+M-0182896    M-0182896    *                   *           228543505    35730015    242414    2329344    2316559    30841698     3513022562    862978    923586    15.3713515595
+M-0182896    M-0182896    *                   <Genome>    228543505    35730015    242414    2329344    2316559    30841698     3513022562    862978    923586    15.3713515595
+#
+M-0182896    M-0182896    M-0182896_NO_UDG    *           228543505    172069      3332      3713       3741       161283       15345286      2752      3146      0.0671438289178
+M-0182896    M-0182896    M-0182896_NO_UDG    <Genome>    228543505    172069      3332      3713       3741       161283       15345286      2752      3146      0.0671438289178
+#
+M-0182896    M-0182896    M-0182896_UDG       *           228543505    1411559     7194      74595      74473      1255297      128517262     28244     30720     0.562331718856
+M-0182896    M-0182896    M-0182896_UDG       <Genome>    228543505    1411559     7194      74595      74473      1255297      128517262     28244     30720     0.562331718856
+#
+M-0182896    M-0182896    M-0182896_UDGa      *           228543505    11562603    81905     749543     745279     9985876      1135262865    280835    301328    4.96738187769
+M-0182896    M-0182896    M-0182896_UDGa      <Genome>    228543505    11562603    81905     749543     745279     9985876      1135262865    280835    301328    4.96738187769
+#
+M-0182896    M-0182896    M-0182896_UDGb      *           228543505    11383290    78055     751807     746484     9806944      1123721041    277276    298173    4.91688022812
+M-0182896    M-0182896    M-0182896_UDGb      <Genome>    228543505    11383290    78055     751807     746484     9806944      1123721041    277276    298173    4.91688022812
+#
+M-0182896    M-0182896    M-0182896_UDGc      *           228543505    11200494    71928     749686     746582     9632298      1110176108    273871    290219    4.85761390594
+M-0182896    M-0182896    M-0182896_UDGc      <Genome>    228543505    11200494    71928     749686     746582     9632298      1110176108    273871    290219    4.85761390594

@@ -1,0 +1,301 @@
+# Command:
+#     /home/mischu/bin/pypeline/bin/bam_pipeline run 000_makefile.yaml --max-threads 16 --bwa-max-threads 4
+#
+# Directory:
+#     /net/franklin/disk/franklin/data/mischu/projects/2013_09_nature_protocols/FINAL/alignment
+#
+# Makefile:
+#     Filename: 000_makefile.yaml
+#     SHA1Sum:  ee7644dd0ecfee606a2873441020247def0e2355
+#     MTime:    2013-10-21 17:37:32.317334 
+#
+# Genomes:
+#     Name       Label            Contigs    Size         Prefix
+#     Pi_mito    mitochondrial    1          37922        000_prefixes/Pi_mito.fasta
+#     Pi_nucl    nuclear          4921       228543505    000_prefixes/Pi_nucl.fasta
+#
+# Regions Of Interest:
+#     Genome    ROI    Size    NFeatures    NIntervals    Path
+#
+#
+Target       Sample       Library             Measure                            Value               # Description
+M-0182896    *            *                   lib_type                           PE                  # SE, PE, or * (for both)
+M-0182896    *            *                   seq_reads_pairs                    577011167           # Total number of reads
+M-0182896    *            *                   seq_trash_pe_1                     5749672             # Total number of reads
+M-0182896    *            *                   seq_trash_pe_1_frac                0.00996457664744    # Fraction of PE mate 1 reads trashed
+M-0182896    *            *                   seq_trash_pe_2                     8627683             # Total number of reads
+M-0182896    *            *                   seq_trash_pe_2_frac                0.0149523674643     # Fraction of PE mate 2 reads trashed
+M-0182896    *            *                   seq_collapsed                      538271175           # Total number of pairs collapsed into one read
+M-0182896    *            *                   seq_collapsed_frac                 0.932860931962      # Fraction of PE pairs collapsed into one read
+M-0182896    *            *                   seq_retained_reads                 601373804           # Total number of retained reads
+M-0182896    *            *                   seq_retained_nts                   57554989302         # Total number of NTs in retained reads
+M-0182896    *            *                   seq_retained_length                95.7058470442       # Average number of NTs in retained reads
+
+M-0182896    *            *                   hits_raw(endogenous)               38165072            # Total number of hits against the nuclear and mitochondrial genome
+M-0182896    *            *                   hits_raw_frac(endogenous)          0.0634631434661     # Total number of hits vs. total number of reads retained
+M-0182896    *            *                   hits_clonality(endogenous)         0.0148511969269     # Fraction of hits that were PCR duplicates
+M-0182896    *            *                   hits_unique(endogenous)            37598275            # Total number of unique reads (PCR duplicates removed)
+M-0182896    *            *                   hits_unique_frac(endogenous)       0.0625206398249     # Total number of unique hits vs. total number of reads retained
+M-0182896    *            *                   hits_coverage(endogenous)          16.0585121599       # Estimated coverage from unique hits
+M-0182896    *            *                   hits_length(endogenous)            97.6288839049       # Average number of aligned bases per unique hit
+M-0182896    *            *                   ratio_reads(nuc,mito)              19.1247551197       # Ratio of unique hits: Hits(nuc) / H(mito)
+M-0182896    *            *                   ratio_genome(mito,nuc)             540.921979584       # Ratio of NTs of unique hits corrected by genome sizes: (NTs(mito) / NTs(nuc)) / (Size(mito) / (2 * Size(nuc)))
+M-0182896    *            *                   ratio_genome(nuc,mito)             0.00184869544545    # Ratio of NTs of unique hits corrected by genome sizes: (NTs(nuc) / NTs(mito)) / ((2 * Size(nuc)) / Size(mito))
+
+M-0182896    *            *                   hits_raw(mitochondrial)            2155421             # Total number of hits (prior to PCR duplicate filtering)
+M-0182896    *            *                   hits_raw_frac(mitochondrial)       0.0035841617737     # Total number of hits vs. total number of reads retained
+M-0182896    *            *                   hits_clonality(mitochondrial)      0.133227337026      # Fraction of hits that were PCR duplicates
+M-0182896    *            *                   hits_unique(mitochondrial)         1868260             # Total number of hits (excluding any PCR duplicates)
+M-0182896    *            *                   hits_unique_frac(mitochondrial)    0.00310665344512    # Total number of unique hits vs. total number of reads retained
+M-0182896    *            *                   hits_coverage(mitochondrial)       4157.35095723       # Estimated coverage from unique hits
+M-0182896    *            *                   hits_length(mitochondrial)         84.3860399516       # Average number of aligned bases per unique hit
+
+M-0182896    *            *                   hits_raw(nuclear)                  36009651            # Total number of hits (prior to PCR duplicate filtering)
+M-0182896    *            *                   hits_raw_frac(nuclear)             0.0598789816924     # Total number of hits vs. total number of reads retained
+M-0182896    *            *                   hits_clonality(nuclear)            0.0077655848428     # Fraction of hits that were PCR duplicates
+M-0182896    *            *                   hits_unique(nuclear)               35730015            # Total number of hits (excluding any PCR duplicates)
+M-0182896    *            *                   hits_unique_frac(nuclear)          0.0594139863798     # Total number of unique hits vs. total number of reads retained
+M-0182896    *            *                   hits_coverage(nuclear)             15.3713515595       # Estimated coverage from unique hits
+M-0182896    *            *                   hits_length(nuclear)               98.3213290563       # Average number of aligned bases per unique hit
+
+
+M-0182896    M-0182896    *                   lib_type                           PE                  # SE, PE, or * (for both)
+M-0182896    M-0182896    *                   seq_reads_pairs                    577011167           # Total number of reads
+M-0182896    M-0182896    *                   seq_trash_pe_1                     5749672             # Total number of reads
+M-0182896    M-0182896    *                   seq_trash_pe_1_frac                0.00996457664744    # Fraction of PE mate 1 reads trashed
+M-0182896    M-0182896    *                   seq_trash_pe_2                     8627683             # Total number of reads
+M-0182896    M-0182896    *                   seq_trash_pe_2_frac                0.0149523674643     # Fraction of PE mate 2 reads trashed
+M-0182896    M-0182896    *                   seq_collapsed                      538271175           # Total number of pairs collapsed into one read
+M-0182896    M-0182896    *                   seq_collapsed_frac                 0.932860931962      # Fraction of PE pairs collapsed into one read
+M-0182896    M-0182896    *                   seq_retained_reads                 601373804           # Total number of retained reads
+M-0182896    M-0182896    *                   seq_retained_nts                   57554989302         # Total number of NTs in retained reads
+M-0182896    M-0182896    *                   seq_retained_length                95.7058470442       # Average number of NTs in retained reads
+
+M-0182896    M-0182896    *                   hits_raw(endogenous)               38165072            # Total number of hits against the nuclear and mitochondrial genome
+M-0182896    M-0182896    *                   hits_raw_frac(endogenous)          0.0634631434661     # Total number of hits vs. total number of reads retained
+M-0182896    M-0182896    *                   hits_clonality(endogenous)         0.0148511969269     # Fraction of hits that were PCR duplicates
+M-0182896    M-0182896    *                   hits_unique(endogenous)            37598275            # Total number of unique reads (PCR duplicates removed)
+M-0182896    M-0182896    *                   hits_unique_frac(endogenous)       0.0625206398249     # Total number of unique hits vs. total number of reads retained
+M-0182896    M-0182896    *                   hits_coverage(endogenous)          16.0585121599       # Estimated coverage from unique hits
+M-0182896    M-0182896    *                   hits_length(endogenous)            97.6288839049       # Average number of aligned bases per unique hit
+M-0182896    M-0182896    *                   ratio_reads(nuc,mito)              19.1247551197       # Ratio of unique hits: Hits(nuc) / H(mito)
+M-0182896    M-0182896    *                   ratio_genome(mito,nuc)             540.921979584       # Ratio of NTs of unique hits corrected by genome sizes: (NTs(mito) / NTs(nuc)) / (Size(mito) / (2 * Size(nuc)))
+M-0182896    M-0182896    *                   ratio_genome(nuc,mito)             0.00184869544545    # Ratio of NTs of unique hits corrected by genome sizes: (NTs(nuc) / NTs(mito)) / ((2 * Size(nuc)) / Size(mito))
+
+M-0182896    M-0182896    *                   hits_raw(mitochondrial)            2155421             # Total number of hits (prior to PCR duplicate filtering)
+M-0182896    M-0182896    *                   hits_raw_frac(mitochondrial)       0.0035841617737     # Total number of hits vs. total number of reads retained
+M-0182896    M-0182896    *                   hits_clonality(mitochondrial)      0.133227337026      # Fraction of hits that were PCR duplicates
+M-0182896    M-0182896    *                   hits_unique(mitochondrial)         1868260             # Total number of hits (excluding any PCR duplicates)
+M-0182896    M-0182896    *                   hits_unique_frac(mitochondrial)    0.00310665344512    # Total number of unique hits vs. total number of reads retained
+M-0182896    M-0182896    *                   hits_coverage(mitochondrial)       4157.35095723       # Estimated coverage from unique hits
+M-0182896    M-0182896    *                   hits_length(mitochondrial)         84.3860399516       # Average number of aligned bases per unique hit
+
+M-0182896    M-0182896    *                   hits_raw(nuclear)                  36009651            # Total number of hits (prior to PCR duplicate filtering)
+M-0182896    M-0182896    *                   hits_raw_frac(nuclear)             0.0598789816924     # Total number of hits vs. total number of reads retained
+M-0182896    M-0182896    *                   hits_clonality(nuclear)            0.0077655848428     # Fraction of hits that were PCR duplicates
+M-0182896    M-0182896    *                   hits_unique(nuclear)               35730015            # Total number of hits (excluding any PCR duplicates)
+M-0182896    M-0182896    *                   hits_unique_frac(nuclear)          0.0594139863798     # Total number of unique hits vs. total number of reads retained
+M-0182896    M-0182896    *                   hits_coverage(nuclear)             15.3713515595       # Estimated coverage from unique hits
+M-0182896    M-0182896    *                   hits_length(nuclear)               98.3213290563       # Average number of aligned bases per unique hit
+
+
+M-0182896    M-0182896    M-0182896_NO_UDG    lib_type                           PE                  # SE, PE, or * (for both)
+M-0182896    M-0182896    M-0182896_NO_UDG    seq_reads_pairs                    2735619             # Total number of reads
+M-0182896    M-0182896    M-0182896_NO_UDG    seq_trash_pe_1                     46091               # Total number of reads
+M-0182896    M-0182896    M-0182896_NO_UDG    seq_trash_pe_1_frac                0.0168484719546     # Fraction of PE mate 1 reads trashed
+M-0182896    M-0182896    M-0182896_NO_UDG    seq_trash_pe_2                     122300              # Total number of reads
+M-0182896    M-0182896    M-0182896_NO_UDG    seq_trash_pe_2_frac                0.0447065179764     # Fraction of PE mate 2 reads trashed
+M-0182896    M-0182896    M-0182896_NO_UDG    seq_collapsed                      2540128             # Total number of pairs collapsed into one read
+M-0182896    M-0182896    M-0182896_NO_UDG    seq_collapsed_frac                 0.928538659806      # Fraction of PE pairs collapsed into one read
+M-0182896    M-0182896    M-0182896_NO_UDG    seq_retained_reads                 2762719             # Total number of retained reads
+M-0182896    M-0182896    M-0182896_NO_UDG    seq_retained_nts                   236889647           # Total number of NTs in retained reads
+M-0182896    M-0182896    M-0182896_NO_UDG    seq_retained_length                85.7451108853       # Average number of NTs in retained reads
+
+M-0182896    M-0182896    M-0182896_NO_UDG    hits_raw(endogenous)               179893              # Total number of hits against the nuclear and mitochondrial genome
+M-0182896    M-0182896    M-0182896_NO_UDG    hits_raw_frac(endogenous)          0.0651144759927     # Total number of hits vs. total number of reads retained
+M-0182896    M-0182896    M-0182896_NO_UDG    hits_clonality(endogenous)         0.0057589789486     # Fraction of hits that were PCR duplicates
+M-0182896    M-0182896    M-0182896_NO_UDG    hits_unique(endogenous)            178857              # Total number of unique reads (PCR duplicates removed)
+M-0182896    M-0182896    M-0182896_NO_UDG    hits_unique_frac(endogenous)       0.0647394830962     # Total number of unique hits vs. total number of reads retained
+M-0182896    M-0182896    M-0182896_NO_UDG    hits_coverage(endogenous)          0.069533851497      # Estimated coverage from unique hits
+M-0182896    M-0182896    M-0182896_NO_UDG    hits_length(endogenous)            88.8651101159       # Average number of aligned bases per unique hit
+M-0182896    M-0182896    M-0182896_NO_UDG    ratio_reads(nuc,mito)              25.3489982322       # Ratio of unique hits: Hits(nuc) / H(mito)
+M-0182896    M-0182896    M-0182896_NO_UDG    ratio_genome(mito,nuc)             431.116883167       # Ratio of NTs of unique hits corrected by genome sizes: (NTs(mito) / NTs(nuc)) / (Size(mito) / (2 * Size(nuc)))
+M-0182896    M-0182896    M-0182896_NO_UDG    ratio_genome(nuc,mito)             0.00231955657281    # Ratio of NTs of unique hits corrected by genome sizes: (NTs(nuc) / NTs(mito)) / ((2 * Size(nuc)) / Size(mito))
+
+M-0182896    M-0182896    M-0182896_NO_UDG    hits_raw(mitochondrial)            6848                # Total number of hits (prior to PCR duplicate filtering)
+M-0182896    M-0182896    M-0182896_NO_UDG    hits_raw_frac(mitochondrial)       0.00247871752429    # Total number of hits vs. total number of reads retained
+M-0182896    M-0182896    M-0182896_NO_UDG    hits_clonality(mitochondrial)      0.00876168224299    # Fraction of hits that were PCR duplicates
+M-0182896    M-0182896    M-0182896_NO_UDG    hits_unique(mitochondrial)         6788                # Total number of hits (excluding any PCR duplicates)
+M-0182896    M-0182896    M-0182896_NO_UDG    hits_unique_frac(mitochondrial)    0.00245699978898    # Total number of unique hits vs. total number of reads retained
+M-0182896    M-0182896    M-0182896_NO_UDG    hits_coverage(mitochondrial)       14.4734191235       # Estimated coverage from unique hits
+M-0182896    M-0182896    M-0182896_NO_UDG    hits_length(mitochondrial)         80.8575427225       # Average number of aligned bases per unique hit
+
+M-0182896    M-0182896    M-0182896_NO_UDG    hits_raw(nuclear)                  173045              # Total number of hits (prior to PCR duplicate filtering)
+M-0182896    M-0182896    M-0182896_NO_UDG    hits_raw_frac(nuclear)             0.0626357584684     # Total number of hits vs. total number of reads retained
+M-0182896    M-0182896    M-0182896_NO_UDG    hits_clonality(nuclear)            0.0056401514057     # Fraction of hits that were PCR duplicates
+M-0182896    M-0182896    M-0182896_NO_UDG    hits_unique(nuclear)               172069              # Total number of hits (excluding any PCR duplicates)
+M-0182896    M-0182896    M-0182896_NO_UDG    hits_unique_frac(nuclear)          0.0622824833072     # Total number of unique hits vs. total number of reads retained
+M-0182896    M-0182896    M-0182896_NO_UDG    hits_coverage(nuclear)             0.0671438289178     # Estimated coverage from unique hits
+M-0182896    M-0182896    M-0182896_NO_UDG    hits_length(nuclear)               89.1810029697       # Average number of aligned bases per unique hit
+
+
+M-0182896    M-0182896    M-0182896_UDG       lib_type                           PE                  # SE, PE, or * (for both)
+M-0182896    M-0182896    M-0182896_UDG       seq_reads_pairs                    21079271            # Total number of reads
+M-0182896    M-0182896    M-0182896_UDG       seq_trash_pe_1                     164780              # Total number of reads
+M-0182896    M-0182896    M-0182896_UDG       seq_trash_pe_1_frac                0.00781715838275    # Fraction of PE mate 1 reads trashed
+M-0182896    M-0182896    M-0182896_UDG       seq_trash_pe_2                     251004              # Total number of reads
+M-0182896    M-0182896    M-0182896_UDG       seq_trash_pe_2_frac                0.011907622422      # Fraction of PE mate 2 reads trashed
+M-0182896    M-0182896    M-0182896_UDG       seq_collapsed                      19833336            # Total number of pairs collapsed into one read
+M-0182896    M-0182896    M-0182896_UDG       seq_collapsed_frac                 0.940892880024      # Fraction of PE pairs collapsed into one read
+M-0182896    M-0182896    M-0182896_UDG       seq_retained_reads                 21909422            # Total number of retained reads
+M-0182896    M-0182896    M-0182896_UDG       seq_retained_nts                   2000628209          # Total number of NTs in retained reads
+M-0182896    M-0182896    M-0182896_UDG       seq_retained_length                91.3136005596       # Average number of NTs in retained reads
+
+M-0182896    M-0182896    M-0182896_UDG       hits_raw(endogenous)               1487329             # Total number of hits against the nuclear and mitochondrial genome
+M-0182896    M-0182896    M-0182896_UDG       hits_raw_frac(endogenous)          0.0678853600063     # Total number of hits vs. total number of reads retained
+M-0182896    M-0182896    M-0182896_UDG       hits_clonality(endogenous)         0.0056167801475     # Fraction of hits that were PCR duplicates
+M-0182896    M-0182896    M-0182896_UDG       hits_unique(endogenous)            1478975             # Total number of unique reads (PCR duplicates removed)
+M-0182896    M-0182896    M-0182896_UDG       hits_unique_frac(endogenous)       0.0675040628639     # Total number of unique hits vs. total number of reads retained
+M-0182896    M-0182896    M-0182896_UDG       hits_coverage(endogenous)          0.586783575378      # Estimated coverage from unique hits
+M-0182896    M-0182896    M-0182896_UDG       hits_length(endogenous)            90.6897188932       # Average number of aligned bases per unique hit
+M-0182896    M-0182896    M-0182896_UDG       ratio_reads(nuc,mito)              20.9380414145       # Ratio of unique hits: Hits(nuc) / H(mito)
+M-0182896    M-0182896    M-0182896_UDG       ratio_genome(mito,nuc)             526.202344721       # Ratio of NTs of unique hits corrected by genome sizes: (NTs(mito) / NTs(nuc)) / (Size(mito) / (2 * Size(nuc)))
+M-0182896    M-0182896    M-0182896_UDG       ratio_genome(nuc,mito)             0.00190040962385    # Ratio of NTs of unique hits corrected by genome sizes: (NTs(nuc) / NTs(mito)) / ((2 * Size(nuc)) / Size(mito))
+
+M-0182896    M-0182896    M-0182896_UDG       hits_raw(mitochondrial)            68828               # Total number of hits (prior to PCR duplicate filtering)
+M-0182896    M-0182896    M-0182896_UDG       hits_raw_frac(mitochondrial)       0.00314147949681    # Total number of hits vs. total number of reads retained
+M-0182896    M-0182896    M-0182896_UDG       hits_clonality(mitochondrial)      0.020514906724      # Fraction of hits that were PCR duplicates
+M-0182896    M-0182896    M-0182896_UDG       hits_unique(mitochondrial)         67416               # Total number of hits (excluding any PCR duplicates)
+M-0182896    M-0182896    M-0182896_UDG       hits_unique_frac(mitochondrial)    0.00307703233796    # Total number of unique hits vs. total number of reads retained
+M-0182896    M-0182896    M-0182896_UDG       hits_coverage(mitochondrial)       147.950134487       # Estimated coverage from unique hits
+M-0182896    M-0182896    M-0182896_UDG       hits_length(mitochondrial)         83.2230479411       # Average number of aligned bases per unique hit
+
+M-0182896    M-0182896    M-0182896_UDG       hits_raw(nuclear)                  1418501             # Total number of hits (prior to PCR duplicate filtering)
+M-0182896    M-0182896    M-0182896_UDG       hits_raw_frac(nuclear)             0.0647438805095     # Total number of hits vs. total number of reads retained
+M-0182896    M-0182896    M-0182896_UDG       hits_clonality(nuclear)            0.00489389855911    # Fraction of hits that were PCR duplicates
+M-0182896    M-0182896    M-0182896_UDG       hits_unique(nuclear)               1411559             # Total number of hits (excluding any PCR duplicates)
+M-0182896    M-0182896    M-0182896_UDG       hits_unique_frac(nuclear)          0.064427030526      # Total number of unique hits vs. total number of reads retained
+M-0182896    M-0182896    M-0182896_UDG       hits_coverage(nuclear)             0.562331718856      # Estimated coverage from unique hits
+M-0182896    M-0182896    M-0182896_UDG       hits_length(nuclear)               91.0463267919       # Average number of aligned bases per unique hit
+
+
+M-0182896    M-0182896    M-0182896_UDGa      lib_type                           PE                  # SE, PE, or * (for both)
+M-0182896    M-0182896    M-0182896_UDGa      seq_reads_pairs                    185927902           # Total number of reads
+M-0182896    M-0182896    M-0182896_UDGa      seq_trash_pe_1                     1730901             # Total number of reads
+M-0182896    M-0182896    M-0182896_UDGa      seq_trash_pe_1_frac                0.0093095279481     # Fraction of PE mate 1 reads trashed
+M-0182896    M-0182896    M-0182896_UDGa      seq_trash_pe_2                     2697738             # Total number of reads
+M-0182896    M-0182896    M-0182896_UDGa      seq_trash_pe_2_frac                0.014509592003      # Fraction of PE mate 2 reads trashed
+M-0182896    M-0182896    M-0182896_UDGa      seq_collapsed                      173571472           # Total number of pairs collapsed into one read
+M-0182896    M-0182896    M-0182896_UDGa      seq_collapsed_frac                 0.933541819882      # Fraction of PE pairs collapsed into one read
+M-0182896    M-0182896    M-0182896_UDGa      seq_retained_reads                 193855693           # Total number of retained reads
+M-0182896    M-0182896    M-0182896_UDGa      seq_retained_nts                   18533873382         # Total number of NTs in retained reads
+M-0182896    M-0182896    M-0182896_UDGa      seq_retained_length                95.6065467832       # Average number of NTs in retained reads
+
+M-0182896    M-0182896    M-0182896_UDGa      hits_raw(endogenous)               12348320            # Total number of hits against the nuclear and mitochondrial genome
+M-0182896    M-0182896    M-0182896_UDGa      hits_raw_frac(endogenous)          0.0636985161947     # Total number of hits vs. total number of reads retained
+M-0182896    M-0182896    M-0182896_UDGa      hits_clonality(endogenous)         0.0151583373285     # Fraction of hits that were PCR duplicates
+M-0182896    M-0182896    M-0182896_UDGa      hits_unique(endogenous)            12161140            # Total number of unique reads (PCR duplicates removed)
+M-0182896    M-0182896    M-0182896_UDGa      hits_unique_frac(endogenous)       0.0627329525989     # Total number of unique hits vs. total number of reads retained
+M-0182896    M-0182896    M-0182896_UDGa      hits_coverage(endogenous)          5.18727040758       # Estimated coverage from unique hits
+M-0182896    M-0182896    M-0182896_UDGa      hits_length(endogenous)            97.5002073819       # Average number of aligned bases per unique hit
+M-0182896    M-0182896    M-0182896_UDGa      ratio_reads(nuc,mito)              19.3181089891       # Ratio of unique hits: Hits(nuc) / H(mito)
+M-0182896    M-0182896    M-0182896_UDGa      ratio_genome(mito,nuc)             535.647806407       # Ratio of NTs of unique hits corrected by genome sizes: (NTs(mito) / NTs(nuc)) / (Size(mito) / (2 * Size(nuc)))
+M-0182896    M-0182896    M-0182896_UDGa      ratio_genome(nuc,mito)             0.00186689833887    # Ratio of NTs of unique hits corrected by genome sizes: (NTs(nuc) / NTs(mito)) / ((2 * Size(nuc)) / Size(mito))
+
+M-0182896    M-0182896    M-0182896_UDGa      hits_raw(mitochondrial)            694267              # Total number of hits (prior to PCR duplicate filtering)
+M-0182896    M-0182896    M-0182896_UDGa      hits_raw_frac(mitochondrial)       0.00358135987268    # Total number of hits vs. total number of reads retained
+M-0182896    M-0182896    M-0182896_UDGa      hits_clonality(mitochondrial)      0.137886432741      # Fraction of hits that were PCR duplicates
+M-0182896    M-0182896    M-0182896_UDGa      hits_unique(mitochondrial)         598537              # Total number of hits (excluding any PCR duplicates)
+M-0182896    M-0182896    M-0182896_UDGa      hits_unique_frac(mitochondrial)    0.00308753893547    # Total number of unique hits vs. total number of reads retained
+M-0182896    M-0182896    M-0182896_UDGa      hits_coverage(mitochondrial)       1330.38360319       # Estimated coverage from unique hits
+M-0182896    M-0182896    M-0182896_UDGa      hits_length(mitochondrial)         84.2902059522       # Average number of aligned bases per unique hit
+
+M-0182896    M-0182896    M-0182896_UDGa      hits_raw(nuclear)                  11654053            # Total number of hits (prior to PCR duplicate filtering)
+M-0182896    M-0182896    M-0182896_UDGa      hits_raw_frac(nuclear)             0.060117156322      # Total number of hits vs. total number of reads retained
+M-0182896    M-0182896    M-0182896_UDGa      hits_clonality(nuclear)            0.00784705544071    # Fraction of hits that were PCR duplicates
+M-0182896    M-0182896    M-0182896_UDGa      hits_unique(nuclear)               11562603            # Total number of hits (excluding any PCR duplicates)
+M-0182896    M-0182896    M-0182896_UDGa      hits_unique_frac(nuclear)          0.0596454136635     # Total number of unique hits vs. total number of reads retained
+M-0182896    M-0182896    M-0182896_UDGa      hits_coverage(nuclear)             4.96738187769       # Estimated coverage from unique hits
+M-0182896    M-0182896    M-0182896_UDGa      hits_length(nuclear)               98.1840217986       # Average number of aligned bases per unique hit
+
+
+M-0182896    M-0182896    M-0182896_UDGb      lib_type                           PE                  # SE, PE, or * (for both)
+M-0182896    M-0182896    M-0182896_UDGb      seq_reads_pairs                    184471049           # Total number of reads
+M-0182896    M-0182896    M-0182896_UDGb      seq_trash_pe_1                     1910477             # Total number of reads
+M-0182896    M-0182896    M-0182896_UDGb      seq_trash_pe_1_frac                0.0103565139915     # Fraction of PE mate 1 reads trashed
+M-0182896    M-0182896    M-0182896_UDGb      seq_trash_pe_2                     2831698             # Total number of reads
+M-0182896    M-0182896    M-0182896_UDGb      seq_trash_pe_2_frac                0.0153503653573     # Fraction of PE mate 2 reads trashed
+M-0182896    M-0182896    M-0182896_UDGb      seq_collapsed                      171961917           # Total number of pairs collapsed into one read
+M-0182896    M-0182896    M-0182896_UDGb      seq_collapsed_frac                 0.932189185957      # Fraction of PE pairs collapsed into one read
+M-0182896    M-0182896    M-0182896_UDGb      seq_retained_reads                 192238006           # Total number of retained reads
+M-0182896    M-0182896    M-0182896_UDGb      seq_retained_nts                   18440675007         # Total number of NTs in retained reads
+M-0182896    M-0182896    M-0182896_UDGb      seq_retained_length                95.926270724        # Average number of NTs in retained reads
+
+M-0182896    M-0182896    M-0182896_UDGb      hits_raw(endogenous)               12166201            # Total number of hits against the nuclear and mitochondrial genome
+M-0182896    M-0182896    M-0182896_UDGb      hits_raw_frac(endogenous)          0.0632871784989     # Total number of hits vs. total number of reads retained
+M-0182896    M-0182896    M-0182896_UDGb      hits_clonality(endogenous)         0.0151827180892     # Fraction of hits that were PCR duplicates
+M-0182896    M-0182896    M-0182896_UDGb      hits_unique(endogenous)            11981485            # Total number of unique reads (PCR duplicates removed)
+M-0182896    M-0182896    M-0182896_UDGb      hits_unique_frac(endogenous)       0.0623263071091     # Total number of unique hits vs. total number of reads retained
+M-0182896    M-0182896    M-0182896_UDGb      hits_coverage(endogenous)          5.13707507828       # Estimated coverage from unique hits
+M-0182896    M-0182896    M-0182896_UDGb      hits_length(endogenous)            98.0045421749       # Average number of aligned bases per unique hit
+M-0182896    M-0182896    M-0182896_UDGb      ratio_reads(nuc,mito)              19.0293967686       # Ratio of unique hits: Hits(nuc) / H(mito)
+M-0182896    M-0182896    M-0182896_UDGb      ratio_genome(mito,nuc)             541.879988212       # Ratio of NTs of unique hits corrected by genome sizes: (NTs(mito) / NTs(nuc)) / (Size(mito) / (2 * Size(nuc)))
+M-0182896    M-0182896    M-0182896_UDGb      ratio_genome(nuc,mito)             0.00184542707196    # Ratio of NTs of unique hits corrected by genome sizes: (NTs(nuc) / NTs(mito)) / ((2 * Size(nuc)) / Size(mito))
+
+M-0182896    M-0182896    M-0182896_UDGb      hits_raw(mitochondrial)            693559              # Total number of hits (prior to PCR duplicate filtering)
+M-0182896    M-0182896    M-0182896_UDGb      hits_raw_frac(mitochondrial)       0.00360781415929    # Total number of hits vs. total number of reads retained
+M-0182896    M-0182896    M-0182896_UDGb      hits_clonality(mitochondrial)      0.137499477334      # Fraction of hits that were PCR duplicates
+M-0182896    M-0182896    M-0182896_UDGb      hits_unique(mitochondrial)         598195              # Total number of hits (excluding any PCR duplicates)
+M-0182896    M-0182896    M-0182896_UDGb      hits_unique_frac(mitochondrial)    0.00311174159807    # Total number of unique hits vs. total number of reads retained
+M-0182896    M-0182896    M-0182896_UDGb      hits_coverage(mitochondrial)       1332.17950003       # Estimated coverage from unique hits
+M-0182896    M-0182896    M-0182896_UDGb      hits_length(mitochondrial)         84.4522455052       # Average number of aligned bases per unique hit
+
+M-0182896    M-0182896    M-0182896_UDGb      hits_raw(nuclear)                  11472642            # Total number of hits (prior to PCR duplicate filtering)
+M-0182896    M-0182896    M-0182896_UDGb      hits_raw_frac(nuclear)             0.0596793643396     # Total number of hits vs. total number of reads retained
+M-0182896    M-0182896    M-0182896_UDGb      hits_clonality(nuclear)            0.0077882670792     # Fraction of hits that were PCR duplicates
+M-0182896    M-0182896    M-0182896_UDGb      hits_unique(nuclear)               11383290            # Total number of hits (excluding any PCR duplicates)
+M-0182896    M-0182896    M-0182896_UDGb      hits_unique_frac(nuclear)          0.059214565511      # Total number of unique hits vs. total number of reads retained
+M-0182896    M-0182896    M-0182896_UDGb      hits_coverage(nuclear)             4.91688022812       # Estimated coverage from unique hits
+M-0182896    M-0182896    M-0182896_UDGb      hits_length(nuclear)               98.716719068        # Average number of aligned bases per unique hit
+
+
+M-0182896    M-0182896    M-0182896_UDGc      lib_type                           PE                  # SE, PE, or * (for both)
+M-0182896    M-0182896    M-0182896_UDGc      seq_reads_pairs                    182797326           # Total number of reads
+M-0182896    M-0182896    M-0182896_UDGc      seq_trash_pe_1                     1897423             # Total number of reads
+M-0182896    M-0182896    M-0182896_UDGc      seq_trash_pe_1_frac                0.0103799275488     # Fraction of PE mate 1 reads trashed
+M-0182896    M-0182896    M-0182896_UDGc      seq_trash_pe_2                     2724943             # Total number of reads
+M-0182896    M-0182896    M-0182896_UDGc      seq_trash_pe_2_frac                0.0149069084304     # Fraction of PE mate 2 reads trashed
+M-0182896    M-0182896    M-0182896_UDGc      seq_collapsed                      170364322           # Total number of pairs collapsed into one read
+M-0182896    M-0182896    M-0182896_UDGc      seq_collapsed_frac                 0.931984759996      # Fraction of PE pairs collapsed into one read
+M-0182896    M-0182896    M-0182896_UDGc      seq_retained_reads                 190607964           # Total number of retained reads
+M-0182896    M-0182896    M-0182896_UDGc      seq_retained_nts                   18342923057         # Total number of NTs in retained reads
+M-0182896    M-0182896    M-0182896_UDGc      seq_retained_length                96.2337704683       # Average number of NTs in retained reads
+
+M-0182896    M-0182896    M-0182896_UDGc      hits_raw(endogenous)               11983329            # Total number of hits against the nuclear and mitochondrial genome
+M-0182896    M-0182896    M-0182896_UDGc      hits_raw_frac(endogenous)          0.0628689837955     # Total number of hits vs. total number of reads retained
+M-0182896    M-0182896    M-0182896_UDGc      hits_clonality(endogenous)         0.0154807566412     # Fraction of hits that were PCR duplicates
+M-0182896    M-0182896    M-0182896_UDGc      hits_unique(endogenous)            11797818            # Total number of unique reads (PCR duplicates removed)
+M-0182896    M-0182896    M-0182896_UDGc      hits_unique_frac(endogenous)       0.061895724357      # Total number of unique hits vs. total number of reads retained
+M-0182896    M-0182896    M-0182896_UDGc      hits_coverage(endogenous)          5.07784924713       # Estimated coverage from unique hits
+M-0182896    M-0182896    M-0182896_UDGc      hits_length(endogenous)            98.3827710344       # Average number of aligned bases per unique hit
+M-0182896    M-0182896    M-0182896_UDGc      ratio_reads(nuc,mito)              18.7511199952       # Ratio of unique hits: Hits(nuc) / H(mito)
+M-0182896    M-0182896    M-0182896_UDGc      ratio_genome(mito,nuc)             548.567393871       # Ratio of NTs of unique hits corrected by genome sizes: (NTs(mito) / NTs(nuc)) / (Size(mito) / (2 * Size(nuc)))
+M-0182896    M-0182896    M-0182896_UDGc      ratio_genome(nuc,mito)             0.00182293007418    # Ratio of NTs of unique hits corrected by genome sizes: (NTs(nuc) / NTs(mito)) / ((2 * Size(nuc)) / Size(mito))
+
+M-0182896    M-0182896    M-0182896_UDGc      hits_raw(mitochondrial)            691919              # Total number of hits (prior to PCR duplicate filtering)
+M-0182896    M-0182896    M-0182896_UDGc      hits_raw_frac(mitochondrial)       0.00363006343219    # Total number of hits vs. total number of reads retained
+M-0182896    M-0182896    M-0182896_UDGc      hits_clonality(mitochondrial)      0.136713979527      # Fraction of hits that were PCR duplicates
+M-0182896    M-0182896    M-0182896_UDGc      hits_unique(mitochondrial)         597324              # Total number of hits (excluding any PCR duplicates)
+M-0182896    M-0182896    M-0182896_UDGc      hits_unique_frac(mitochondrial)    0.00313378301444    # Total number of unique hits vs. total number of reads retained
+M-0182896    M-0182896    M-0182896_UDGc      hits_coverage(mitochondrial)       1332.36430041       # Estimated coverage from unique hits
+M-0182896    M-0182896    M-0182896_UDGc      hits_length(mitochondrial)         84.5871235711       # Average number of aligned bases per unique hit
+
+M-0182896    M-0182896    M-0182896_UDGc      hits_raw(nuclear)                  11291410            # Total number of hits (prior to PCR duplicate filtering)
+M-0182896    M-0182896    M-0182896_UDGc      hits_raw_frac(nuclear)             0.0592389203633     # Total number of hits vs. total number of reads retained
+M-0182896    M-0182896    M-0182896_UDGc      hits_clonality(nuclear)            0.00805178449813    # Fraction of hits that were PCR duplicates
+M-0182896    M-0182896    M-0182896_UDGc      hits_unique(nuclear)               11200494            # Total number of hits (excluding any PCR duplicates)
+M-0182896    M-0182896    M-0182896_UDGc      hits_unique_frac(nuclear)          0.0587619413426     # Total number of unique hits vs. total number of reads retained
+M-0182896    M-0182896    M-0182896_UDGc      hits_coverage(nuclear)             4.85761390594       # Estimated coverage from unique hits
+M-0182896    M-0182896    M-0182896_UDGc      hits_length(nuclear)               99.1184949521       # Average number of aligned bases per unique hit
+
+

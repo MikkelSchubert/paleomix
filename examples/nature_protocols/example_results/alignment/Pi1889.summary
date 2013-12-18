@@ -1,0 +1,236 @@
+# Command:
+#     /home/mischu/bin/pypeline/bin/bam_pipeline run 000_makefile.yaml --max-threads 16 --bwa-max-threads 4
+#
+# Directory:
+#     /net/franklin/disk/franklin/data/mischu/projects/2013_09_nature_protocols/FINAL/alignment
+#
+# Makefile:
+#     Filename: 000_makefile.yaml
+#     SHA1Sum:  ee7644dd0ecfee606a2873441020247def0e2355
+#     MTime:    2013-10-21 17:37:32.317334 
+#
+# Genomes:
+#     Name       Label            Contigs    Size         Prefix
+#     Pi_mito    mitochondrial    1          37922        000_prefixes/Pi_mito.fasta
+#     Pi_nucl    nuclear          4921       228543505    000_prefixes/Pi_nucl.fasta
+#
+# Regions Of Interest:
+#     Genome    ROI    Size    NFeatures    NIntervals    Path
+#
+#
+Target    Sample    Library             Measure                            Value                # Description
+Pi1889    *         *                   lib_type                           *                    # SE, PE, or * (for both)
+Pi1889    *         *                   seq_reads_se                       373965151            # Total number of single-ended reads
+Pi1889    *         *                   seq_trash_se                       33208573             # Total number of trashed reads
+Pi1889    *         *                   seq_trash_se_frac                  0.0888012503604      # Fraction of SE reads trashed
+Pi1889    *         *                   seq_reads_pairs                    403930795            # Total number of reads
+Pi1889    *         *                   seq_trash_pe_1                     121544               # Total number of reads
+Pi1889    *         *                   seq_trash_pe_1_frac                0.000300903029689    # Fraction of PE mate 1 reads trashed
+Pi1889    *         *                   seq_trash_pe_2                     27737549             # Total number of reads
+Pi1889    *         *                   seq_trash_pe_2_frac                0.0686690624814      # Fraction of PE mate 2 reads trashed
+Pi1889    *         *                   seq_collapsed                      364857043            # Total number of pairs collapsed into one read
+Pi1889    *         *                   seq_collapsed_frac                 0.903266221631       # Fraction of PE pairs collapsed into one read
+Pi1889    *         *                   seq_retained_reads                 755902032            # Total number of retained reads
+Pi1889    *         *                   seq_retained_nts                   59693699645          # Total number of NTs in retained reads
+Pi1889    *         *                   seq_retained_length                78.9701536945        # Average number of NTs in retained reads
+
+Pi1889    *         *                   hits_raw(endogenous)               43409647             # Total number of hits against the nuclear and mitochondrial genome
+Pi1889    *         *                   hits_raw_frac(endogenous)          0.0574276098784      # Total number of hits vs. total number of reads retained
+Pi1889    *         *                   hits_clonality(endogenous)         0.637265122197       # Fraction of hits that were PCR duplicates
+Pi1889    *         *                   hits_unique(endogenous)            15746193             # Total number of unique reads (PCR duplicates removed)
+Pi1889    *         *                   hits_unique_frac(endogenous)       0.0208309970517      # Total number of unique hits vs. total number of reads retained
+Pi1889    *         *                   hits_coverage(endogenous)          5.46270395801        # Estimated coverage from unique hits
+Pi1889    *         *                   hits_length(endogenous)            79.2999721266        # Average number of aligned bases per unique hit
+Pi1889    *         *                   ratio_reads(nuc,mito)              315.036307803        # Ratio of unique hits: Hits(nuc) / H(mito)
+Pi1889    *         *                   ratio_genome(mito,nuc)             41.1313169889        # Ratio of NTs of unique hits corrected by genome sizes: (NTs(mito) / NTs(nuc)) / (Size(mito) / (2 * Size(nuc)))
+Pi1889    *         *                   ratio_genome(nuc,mito)             0.02431237493        # Ratio of NTs of unique hits corrected by genome sizes: (NTs(nuc) / NTs(mito)) / ((2 * Size(nuc)) / Size(mito))
+
+Pi1889    *         *                   hits_raw(mitochondrial)            163719               # Total number of hits (prior to PCR duplicate filtering)
+Pi1889    *         *                   hits_raw_frac(mitochondrial)       0.000216587590811    # Total number of hits vs. total number of reads retained
+Pi1889    *         *                   hits_clonality(mitochondrial)      0.695673684789       # Fraction of hits that were PCR duplicates
+Pi1889    *         *                   hits_unique(mitochondrial)         49824                # Total number of hits (excluding any PCR duplicates)
+Pi1889    *         *                   hits_unique_frac(mitochondrial)    6.59133034319e-05    # Total number of unique hits vs. total number of reads retained
+Pi1889    *         *                   hits_coverage(mitochondrial)       111.980618111        # Estimated coverage from unique hits
+Pi1889    *         *                   hits_length(mitochondrial)         85.2305916827        # Average number of aligned bases per unique hit
+
+Pi1889    *         *                   hits_raw(nuclear)                  43245928             # Total number of hits (prior to PCR duplicate filtering)
+Pi1889    *         *                   hits_raw_frac(nuclear)             0.0572110222876      # Total number of hits vs. total number of reads retained
+Pi1889    *         *                   hits_clonality(nuclear)            0.637044000998       # Fraction of hits that were PCR duplicates
+Pi1889    *         *                   hits_unique(nuclear)               15696369             # Total number of hits (excluding any PCR duplicates)
+Pi1889    *         *                   hits_unique_frac(nuclear)          0.0207650837483      # Total number of unique hits vs. total number of reads retained
+Pi1889    *         *                   hits_coverage(nuclear)             5.44502954481        # Estimated coverage from unique hits
+Pi1889    *         *                   hits_length(nuclear)               79.2811469328        # Average number of aligned bases per unique hit
+
+
+Pi1889    Pi1889    *                   lib_type                           *                    # SE, PE, or * (for both)
+Pi1889    Pi1889    *                   seq_reads_se                       373965151            # Total number of single-ended reads
+Pi1889    Pi1889    *                   seq_trash_se                       33208573             # Total number of trashed reads
+Pi1889    Pi1889    *                   seq_trash_se_frac                  0.0888012503604      # Fraction of SE reads trashed
+Pi1889    Pi1889    *                   seq_reads_pairs                    403930795            # Total number of reads
+Pi1889    Pi1889    *                   seq_trash_pe_1                     121544               # Total number of reads
+Pi1889    Pi1889    *                   seq_trash_pe_1_frac                0.000300903029689    # Fraction of PE mate 1 reads trashed
+Pi1889    Pi1889    *                   seq_trash_pe_2                     27737549             # Total number of reads
+Pi1889    Pi1889    *                   seq_trash_pe_2_frac                0.0686690624814      # Fraction of PE mate 2 reads trashed
+Pi1889    Pi1889    *                   seq_collapsed                      364857043            # Total number of pairs collapsed into one read
+Pi1889    Pi1889    *                   seq_collapsed_frac                 0.903266221631       # Fraction of PE pairs collapsed into one read
+Pi1889    Pi1889    *                   seq_retained_reads                 755902032            # Total number of retained reads
+Pi1889    Pi1889    *                   seq_retained_nts                   59693699645          # Total number of NTs in retained reads
+Pi1889    Pi1889    *                   seq_retained_length                78.9701536945        # Average number of NTs in retained reads
+
+Pi1889    Pi1889    *                   hits_raw(endogenous)               43409647             # Total number of hits against the nuclear and mitochondrial genome
+Pi1889    Pi1889    *                   hits_raw_frac(endogenous)          0.0574276098784      # Total number of hits vs. total number of reads retained
+Pi1889    Pi1889    *                   hits_clonality(endogenous)         0.637265122197       # Fraction of hits that were PCR duplicates
+Pi1889    Pi1889    *                   hits_unique(endogenous)            15746193             # Total number of unique reads (PCR duplicates removed)
+Pi1889    Pi1889    *                   hits_unique_frac(endogenous)       0.0208309970517      # Total number of unique hits vs. total number of reads retained
+Pi1889    Pi1889    *                   hits_coverage(endogenous)          5.46270395801        # Estimated coverage from unique hits
+Pi1889    Pi1889    *                   hits_length(endogenous)            79.2999721266        # Average number of aligned bases per unique hit
+Pi1889    Pi1889    *                   ratio_reads(nuc,mito)              315.036307803        # Ratio of unique hits: Hits(nuc) / H(mito)
+Pi1889    Pi1889    *                   ratio_genome(mito,nuc)             41.1313169889        # Ratio of NTs of unique hits corrected by genome sizes: (NTs(mito) / NTs(nuc)) / (Size(mito) / (2 * Size(nuc)))
+Pi1889    Pi1889    *                   ratio_genome(nuc,mito)             0.02431237493        # Ratio of NTs of unique hits corrected by genome sizes: (NTs(nuc) / NTs(mito)) / ((2 * Size(nuc)) / Size(mito))
+
+Pi1889    Pi1889    *                   hits_raw(mitochondrial)            163719               # Total number of hits (prior to PCR duplicate filtering)
+Pi1889    Pi1889    *                   hits_raw_frac(mitochondrial)       0.000216587590811    # Total number of hits vs. total number of reads retained
+Pi1889    Pi1889    *                   hits_clonality(mitochondrial)      0.695673684789       # Fraction of hits that were PCR duplicates
+Pi1889    Pi1889    *                   hits_unique(mitochondrial)         49824                # Total number of hits (excluding any PCR duplicates)
+Pi1889    Pi1889    *                   hits_unique_frac(mitochondrial)    6.59133034319e-05    # Total number of unique hits vs. total number of reads retained
+Pi1889    Pi1889    *                   hits_coverage(mitochondrial)       111.980618111        # Estimated coverage from unique hits
+Pi1889    Pi1889    *                   hits_length(mitochondrial)         85.2305916827        # Average number of aligned bases per unique hit
+
+Pi1889    Pi1889    *                   hits_raw(nuclear)                  43245928             # Total number of hits (prior to PCR duplicate filtering)
+Pi1889    Pi1889    *                   hits_raw_frac(nuclear)             0.0572110222876      # Total number of hits vs. total number of reads retained
+Pi1889    Pi1889    *                   hits_clonality(nuclear)            0.637044000998       # Fraction of hits that were PCR duplicates
+Pi1889    Pi1889    *                   hits_unique(nuclear)               15696369             # Total number of hits (excluding any PCR duplicates)
+Pi1889    Pi1889    *                   hits_unique_frac(nuclear)          0.0207650837483      # Total number of unique hits vs. total number of reads retained
+Pi1889    Pi1889    *                   hits_coverage(nuclear)             5.44502954481        # Estimated coverage from unique hits
+Pi1889    Pi1889    *                   hits_length(nuclear)               79.2811469328        # Average number of aligned bases per unique hit
+
+
+Pi1889    Pi1889    Pi1889_id_CTTGTA    lib_type                           *                    # SE, PE, or * (for both)
+Pi1889    Pi1889    Pi1889_id_CTTGTA    seq_reads_se                       107630753            # Total number of single-ended reads
+Pi1889    Pi1889    Pi1889_id_CTTGTA    seq_trash_se                       12221068             # Total number of trashed reads
+Pi1889    Pi1889    Pi1889_id_CTTGTA    seq_trash_se_frac                  0.113546246397       # Fraction of SE reads trashed
+Pi1889    Pi1889    Pi1889_id_CTTGTA    seq_reads_pairs                    111164719            # Total number of reads
+Pi1889    Pi1889    Pi1889_id_CTTGTA    seq_trash_pe_1                     38064                # Total number of reads
+Pi1889    Pi1889    Pi1889_id_CTTGTA    seq_trash_pe_1_frac                0.00034241079672     # Fraction of PE mate 1 reads trashed
+Pi1889    Pi1889    Pi1889_id_CTTGTA    seq_trash_pe_2                     9470730              # Total number of reads
+Pi1889    Pi1889    Pi1889_id_CTTGTA    seq_trash_pe_2_frac                0.0851954656585      # Fraction of PE mate 2 reads trashed
+Pi1889    Pi1889    Pi1889_id_CTTGTA    seq_collapsed                      98243284             # Total number of pairs collapsed into one read
+Pi1889    Pi1889    Pi1889_id_CTTGTA    seq_collapsed_frac                 0.883763165902       # Fraction of PE pairs collapsed into one read
+Pi1889    Pi1889    Pi1889_id_CTTGTA    seq_retained_reads                 209987045            # Total number of retained reads
+Pi1889    Pi1889    Pi1889_id_CTTGTA    seq_retained_nts                   15689307033          # Total number of NTs in retained reads
+Pi1889    Pi1889    Pi1889_id_CTTGTA    seq_retained_length                74.7155951121        # Average number of NTs in retained reads
+
+Pi1889    Pi1889    Pi1889_id_CTTGTA    hits_raw(endogenous)               12103744             # Total number of hits against the nuclear and mitochondrial genome
+Pi1889    Pi1889    Pi1889_id_CTTGTA    hits_raw_frac(endogenous)          0.0576404320562      # Total number of hits vs. total number of reads retained
+Pi1889    Pi1889    Pi1889_id_CTTGTA    hits_clonality(endogenous)         0.567883788686       # Fraction of hits that were PCR duplicates
+Pi1889    Pi1889    Pi1889_id_CTTGTA    hits_unique(endogenous)            5230224              # Total number of unique reads (PCR duplicates removed)
+Pi1889    Pi1889    Pi1889_id_CTTGTA    hits_unique_frac(endogenous)       0.0249073651186      # Total number of unique hits vs. total number of reads retained
+Pi1889    Pi1889    Pi1889_id_CTTGTA    hits_coverage(endogenous)          1.77168965263        # Estimated coverage from unique hits
+Pi1889    Pi1889    Pi1889_id_CTTGTA    hits_length(endogenous)            77.429828818         # Average number of aligned bases per unique hit
+Pi1889    Pi1889    Pi1889_id_CTTGTA    ratio_reads(nuc,mito)              352.560738187        # Ratio of unique hits: Hits(nuc) / H(mito)
+Pi1889    Pi1889    Pi1889_id_CTTGTA    ratio_genome(mito,nuc)             36.4662593864        # Ratio of NTs of unique hits corrected by genome sizes: (NTs(mito) / NTs(nuc)) / (Size(mito) / (2 * Size(nuc)))
+Pi1889    Pi1889    Pi1889_id_CTTGTA    ratio_genome(nuc,mito)             0.0274226097446      # Ratio of NTs of unique hits corrected by genome sizes: (NTs(nuc) / NTs(mito)) / ((2 * Size(nuc)) / Size(mito))
+
+Pi1889    Pi1889    Pi1889_id_CTTGTA    hits_raw(mitochondrial)            38485                # Total number of hits (prior to PCR duplicate filtering)
+Pi1889    Pi1889    Pi1889_id_CTTGTA    hits_raw_frac(mitochondrial)       0.000183273210974    # Total number of hits vs. total number of reads retained
+Pi1889    Pi1889    Pi1889_id_CTTGTA    hits_clonality(mitochondrial)      0.615616473951       # Fraction of hits that were PCR duplicates
+Pi1889    Pi1889    Pi1889_id_CTTGTA    hits_unique(mitochondrial)         14793                # Total number of hits (excluding any PCR duplicates)
+Pi1889    Pi1889    Pi1889_id_CTTGTA    hits_unique_frac(mitochondrial)    7.04472030644e-05    # Total number of unique hits vs. total number of reads retained
+Pi1889    Pi1889    Pi1889_id_CTTGTA    hits_coverage(mitochondrial)       32.2113548863        # Estimated coverage from unique hits
+Pi1889    Pi1889    Pi1889_id_CTTGTA    hits_length(mitochondrial)         82.574122896         # Average number of aligned bases per unique hit
+
+Pi1889    Pi1889    Pi1889_id_CTTGTA    hits_raw(nuclear)                  12065259             # Total number of hits (prior to PCR duplicate filtering)
+Pi1889    Pi1889    Pi1889_id_CTTGTA    hits_raw_frac(nuclear)             0.0574571588452      # Total number of hits vs. total number of reads retained
+Pi1889    Pi1889    Pi1889_id_CTTGTA    hits_clonality(nuclear)            0.567731533985       # Fraction of hits that were PCR duplicates
+Pi1889    Pi1889    Pi1889_id_CTTGTA    hits_unique(nuclear)               5215431              # Total number of hits (excluding any PCR duplicates)
+Pi1889    Pi1889    Pi1889_id_CTTGTA    hits_unique_frac(nuclear)          0.0248369179156      # Total number of unique hits vs. total number of reads retained
+Pi1889    Pi1889    Pi1889_id_CTTGTA    hits_coverage(nuclear)             1.76663882879        # Estimated coverage from unique hits
+Pi1889    Pi1889    Pi1889_id_CTTGTA    hits_length(nuclear)               77.4152375901        # Average number of aligned bases per unique hit
+
+
+Pi1889    Pi1889    Pi1889_id_GGCTAC    lib_type                           *                    # SE, PE, or * (for both)
+Pi1889    Pi1889    Pi1889_id_GGCTAC    seq_reads_se                       119254408            # Total number of single-ended reads
+Pi1889    Pi1889    Pi1889_id_GGCTAC    seq_trash_se                       9113800              # Total number of trashed reads
+Pi1889    Pi1889    Pi1889_id_GGCTAC    seq_trash_se_frac                  0.0764231708735      # Fraction of SE reads trashed
+Pi1889    Pi1889    Pi1889_id_GGCTAC    seq_reads_pairs                    126617217            # Total number of reads
+Pi1889    Pi1889    Pi1889_id_GGCTAC    seq_trash_pe_1                     33752                # Total number of reads
+Pi1889    Pi1889    Pi1889_id_GGCTAC    seq_trash_pe_1_frac                0.000266567223634    # Fraction of PE mate 1 reads trashed
+Pi1889    Pi1889    Pi1889_id_GGCTAC    seq_trash_pe_2                     7448312              # Total number of reads
+Pi1889    Pi1889    Pi1889_id_GGCTAC    seq_trash_pe_2_frac                0.0588254281406      # Fraction of PE mate 2 reads trashed
+Pi1889    Pi1889    Pi1889_id_GGCTAC    seq_collapsed                      116109710            # Total number of pairs collapsed into one read
+Pi1889    Pi1889    Pi1889_id_GGCTAC    seq_collapsed_frac                 0.917013600133       # Fraction of PE pairs collapsed into one read
+Pi1889    Pi1889    Pi1889_id_GGCTAC    seq_retained_reads                 239783268            # Total number of retained reads
+Pi1889    Pi1889    Pi1889_id_GGCTAC    seq_retained_nts                   18989407027          # Total number of NTs in retained reads
+Pi1889    Pi1889    Pi1889_id_GGCTAC    seq_retained_length                79.1940454619        # Average number of NTs in retained reads
+
+Pi1889    Pi1889    Pi1889_id_GGCTAC    hits_raw(endogenous)               13970375             # Total number of hits against the nuclear and mitochondrial genome
+Pi1889    Pi1889    Pi1889_id_GGCTAC    hits_raw_frac(endogenous)          0.0582625097928      # Total number of hits vs. total number of reads retained
+Pi1889    Pi1889    Pi1889_id_GGCTAC    hits_clonality(endogenous)         0.598061183039       # Fraction of hits that were PCR duplicates
+Pi1889    Pi1889    Pi1889_id_GGCTAC    hits_unique(endogenous)            5615236              # Total number of unique reads (PCR duplicates removed)
+Pi1889    Pi1889    Pi1889_id_GGCTAC    hits_unique_frac(endogenous)       0.0234179642593      # Total number of unique hits vs. total number of reads retained
+Pi1889    Pi1889    Pi1889_id_GGCTAC    hits_coverage(endogenous)          1.9662827549         # Estimated coverage from unique hits
+Pi1889    Pi1889    Pi1889_id_GGCTAC    hits_length(endogenous)            80.0421777464        # Average number of aligned bases per unique hit
+Pi1889    Pi1889    Pi1889_id_GGCTAC    ratio_reads(nuc,mito)              313.843622091        # Ratio of unique hits: Hits(nuc) / H(mito)
+Pi1889    Pi1889    Pi1889_id_GGCTAC    ratio_genome(mito,nuc)             41.4130658588        # Ratio of NTs of unique hits corrected by genome sizes: (NTs(mito) / NTs(nuc)) / (Size(mito) / (2 * Size(nuc)))
+Pi1889    Pi1889    Pi1889_id_GGCTAC    ratio_genome(nuc,mito)             0.0241469685777      # Ratio of NTs of unique hits corrected by genome sizes: (NTs(nuc) / NTs(mito)) / ((2 * Size(nuc)) / Size(mito))
+
+Pi1889    Pi1889    Pi1889_id_GGCTAC    hits_raw(mitochondrial)            51414                # Total number of hits (prior to PCR duplicate filtering)
+Pi1889    Pi1889    Pi1889_id_GGCTAC    hits_raw_frac(mitochondrial)       0.000214418630744    # Total number of hits vs. total number of reads retained
+Pi1889    Pi1889    Pi1889_id_GGCTAC    hits_clonality(mitochondrial)      0.653110047847       # Fraction of hits that were PCR duplicates
+Pi1889    Pi1889    Pi1889_id_GGCTAC    hits_unique(mitochondrial)         17835                # Total number of hits (excluding any PCR duplicates)
+Pi1889    Pi1889    Pi1889_id_GGCTAC    hits_unique_frac(mitochondrial)    7.43796685597e-05    # Total number of unique hits vs. total number of reads retained
+Pi1889    Pi1889    Pi1889_id_GGCTAC    hits_coverage(mitochondrial)       40.5822214018        # Estimated coverage from unique hits
+Pi1889    Pi1889    Pi1889_id_GGCTAC    hits_length(mitochondrial)         86.2887019905        # Average number of aligned bases per unique hit
+
+Pi1889    Pi1889    Pi1889_id_GGCTAC    hits_raw(nuclear)                  13918961             # Total number of hits (prior to PCR duplicate filtering)
+Pi1889    Pi1889    Pi1889_id_GGCTAC    hits_raw_frac(nuclear)             0.0580480911621      # Total number of hits vs. total number of reads retained
+Pi1889    Pi1889    Pi1889_id_GGCTAC    hits_clonality(nuclear)            0.597857842981       # Fraction of hits that were PCR duplicates
+Pi1889    Pi1889    Pi1889_id_GGCTAC    hits_unique(nuclear)               5597401              # Total number of hits (excluding any PCR duplicates)
+Pi1889    Pi1889    Pi1889_id_GGCTAC    hits_unique_frac(nuclear)          0.0233435845907      # Total number of unique hits vs. total number of reads retained
+Pi1889    Pi1889    Pi1889_id_GGCTAC    hits_coverage(nuclear)             1.95987525001        # Estimated coverage from unique hits
+Pi1889    Pi1889    Pi1889_id_GGCTAC    hits_length(nuclear)               80.0222744449        # Average number of aligned bases per unique hit
+
+
+Pi1889    Pi1889    Pi1889_id_TAGCTT    lib_type                           *                    # SE, PE, or * (for both)
+Pi1889    Pi1889    Pi1889_id_TAGCTT    seq_reads_se                       147079990            # Total number of single-ended reads
+Pi1889    Pi1889    Pi1889_id_TAGCTT    seq_trash_se                       11873705             # Total number of trashed reads
+Pi1889    Pi1889    Pi1889_id_TAGCTT    seq_trash_se_frac                  0.0807295744309      # Fraction of SE reads trashed
+Pi1889    Pi1889    Pi1889_id_TAGCTT    seq_reads_pairs                    166148859            # Total number of reads
+Pi1889    Pi1889    Pi1889_id_TAGCTT    seq_trash_pe_1                     49728                # Total number of reads
+Pi1889    Pi1889    Pi1889_id_TAGCTT    seq_trash_pe_1_frac                0.000299297872398    # Fraction of PE mate 1 reads trashed
+Pi1889    Pi1889    Pi1889_id_TAGCTT    seq_trash_pe_2                     10818507             # Total number of reads
+Pi1889    Pi1889    Pi1889_id_TAGCTT    seq_trash_pe_2_frac                0.0651133391172      # Fraction of PE mate 2 reads trashed
+Pi1889    Pi1889    Pi1889_id_TAGCTT    seq_collapsed                      150504049            # Total number of pairs collapsed into one read
+Pi1889    Pi1889    Pi1889_id_TAGCTT    seq_collapsed_frac                 0.905838595016       # Fraction of PE pairs collapsed into one read
+Pi1889    Pi1889    Pi1889_id_TAGCTT    seq_retained_reads                 306131719            # Total number of retained reads
+Pi1889    Pi1889    Pi1889_id_TAGCTT    seq_retained_nts                   25014985585          # Total number of NTs in retained reads
+Pi1889    Pi1889    Pi1889_id_TAGCTT    seq_retained_length                81.7131451348        # Average number of NTs in retained reads
+
+Pi1889    Pi1889    Pi1889_id_TAGCTT    hits_raw(endogenous)               17335528             # Total number of hits against the nuclear and mitochondrial genome
+Pi1889    Pi1889    Pi1889_id_TAGCTT    hits_raw_frac(endogenous)          0.0566276766636      # Total number of hits vs. total number of reads retained
+Pi1889    Pi1889    Pi1889_id_TAGCTT    hits_clonality(endogenous)         0.717301197864       # Fraction of hits that were PCR duplicates
+Pi1889    Pi1889    Pi1889_id_TAGCTT    hits_unique(endogenous)            4900733              # Total number of unique reads (PCR duplicates removed)
+Pi1889    Pi1889    Pi1889_id_TAGCTT    hits_unique_frac(endogenous)       0.0160085763606      # Total number of unique hits vs. total number of reads retained
+Pi1889    Pi1889    Pi1889_id_TAGCTT    hits_coverage(endogenous)          1.72473155048        # Estimated coverage from unique hits
+Pi1889    Pi1889    Pi1889_id_TAGCTT    hits_length(endogenous)            80.4454352033        # Average number of aligned bases per unique hit
+Pi1889    Pi1889    Pi1889_id_TAGCTT    ratio_reads(nuc,mito)              283.992614562        # Ratio of unique hits: Hits(nuc) / H(mito)
+Pi1889    Pi1889    Pi1889_id_TAGCTT    ratio_genome(mito,nuc)             45.6056900245        # Ratio of NTs of unique hits corrected by genome sizes: (NTs(mito) / NTs(nuc)) / (Size(mito) / (2 * Size(nuc)))
+Pi1889    Pi1889    Pi1889_id_TAGCTT    ratio_genome(nuc,mito)             0.0219270884722      # Ratio of NTs of unique hits corrected by genome sizes: (NTs(nuc) / NTs(mito)) / ((2 * Size(nuc)) / Size(mito))
+
+Pi1889    Pi1889    Pi1889_id_TAGCTT    hits_raw(mitochondrial)            73820                # Total number of hits (prior to PCR duplicate filtering)
+Pi1889    Pi1889    Pi1889_id_TAGCTT    hits_raw_frac(mitochondrial)       0.000241138031175    # Total number of hits vs. total number of reads retained
+Pi1889    Pi1889    Pi1889_id_TAGCTT    hits_clonality(mitochondrial)      0.767054998645       # Fraction of hits that were PCR duplicates
+Pi1889    Pi1889    Pi1889_id_TAGCTT    hits_unique(mitochondrial)         17196                # Total number of hits (excluding any PCR duplicates)
+Pi1889    Pi1889    Pi1889_id_TAGCTT    hits_unique_frac(mitochondrial)    5.61718989988e-05    # Total number of unique hits vs. total number of reads retained
+Pi1889    Pi1889    Pi1889_id_TAGCTT    hits_coverage(mitochondrial)       39.1870418227        # Estimated coverage from unique hits
+Pi1889    Pi1889    Pi1889_id_TAGCTT    hits_length(mitochondrial)         86.4184112584        # Average number of aligned bases per unique hit
+
+Pi1889    Pi1889    Pi1889_id_TAGCTT    hits_raw(nuclear)                  17261708             # Total number of hits (prior to PCR duplicate filtering)
+Pi1889    Pi1889    Pi1889_id_TAGCTT    hits_raw_frac(nuclear)             0.0563865386324      # Total number of hits vs. total number of reads retained
+Pi1889    Pi1889    Pi1889_id_TAGCTT    hits_clonality(nuclear)            0.717088424853       # Fraction of hits that were PCR duplicates
+Pi1889    Pi1889    Pi1889_id_TAGCTT    hits_unique(nuclear)               4883537              # Total number of hits (excluding any PCR duplicates)
+Pi1889    Pi1889    Pi1889_id_TAGCTT    hits_unique_frac(nuclear)          0.0159524044616      # Total number of unique hits vs. total number of reads retained
+Pi1889    Pi1889    Pi1889_id_TAGCTT    hits_coverage(nuclear)             1.71851546602        # Estimated coverage from unique hits
+Pi1889    Pi1889    Pi1889_id_TAGCTT    hits_length(nuclear)               80.4244030505        # Average number of aligned bases per unique hit
+
+
