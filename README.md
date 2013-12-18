@@ -44,9 +44,8 @@ or download a ZIP archive containing the repository:
 The least invasive installation is accomplished by updating your
 PYTHONPATH and PATH variables as follows (for Bash users):
 
-    $ echo "export PYTHONPATH=\$PYTHONPATH:~/install/pypeline" >>
-    ~/.bashrc $ echo "export PATH=\$PATH:~/install/pypeline/bin" >>
-    ~/.bashrc
+    $ echo "export PYTHONPATH=\$PYTHONPATH:~/install/pypeline" >> ~/.bashrc
+    $ echo "export PATH=\$PATH:~/install/pypeline/bin" >> ~/.bashrc
 
 Alternatively, you can make a local install using the included
 'setup.py' script:
@@ -155,7 +154,7 @@ created by the 'make install' command.
 
 * [RAxML v7.3.2+](https://github.com/stamatak/standard-RAxML)
   [[Stamatakis 2006](http://www.ncbi.nlm.nih.gov/pubmed/16928733)]
-* [ExaML v1.0.5+, parser v1.0.2+] (https://github.com/stamatak/ExaML)
+* [ExaML v1.0.5+, parser v1.0.2+](https://github.com/stamatak/ExaML)
 
 The pipeline expects a single-threaded binary named 'raxmlHPC' for
 RAxML. The pipeline expects the ExaML binary to be named 'examl', and
@@ -188,7 +187,9 @@ passing them together with --write-config-file. The configuration
 files contain a single “[Defaults]” section, which is applied to all
 hosts on which the pipeline is run:
 
-    [Defaults] max_threads = 4 ...
+    [Defaults]
+    max_threads = 4
+    ...
 
 It is furthermore possible to over-ride settings on a per-host basis
 (e.g. to set the number of threads or the temporary directory), by
@@ -423,7 +424,8 @@ example, assuming that we are using the prefix 'hg19':
 ---------------------
 # 3. Phylogenetic pipeline usage
 
-## 3.1 Creating a makefile The 'phylo\_pipeline mkfile' command can be
+## 3.1 Creating a makefile
+The 'phylo\_pipeline mkfile' command can be
 used to create a makefile template, as with the 'bam\_pipeline mkfile'
 command (see 3.1). This makefile is used to specify the samples,
 regions of interest (to be analysed), and options for the various
@@ -446,7 +448,8 @@ invoked is used (see below):
     $ phylo_pipeline <STEP> [OPTIONS] <MAKEFILE>
 
 
-## 3.2 Samples The phylogenetic pipeline expects a number of samples
+## 3.2 Samples
+The phylogenetic pipeline expects a number of samples
 to be specified. Each sample has a name, a gender, and a genotyping
 method:
 
@@ -478,7 +481,8 @@ will expect files to be located at ./data/samples/S.P.bam, or at
 (see below).
 
 
-## 3.3 Regions of interest Analysis is carred out for a set of
+## 3.3 Regions of interest
+Analysis is carred out for a set of
 "Regions of Interest", which is defined a set of named regions
 specified using BED files:
 
