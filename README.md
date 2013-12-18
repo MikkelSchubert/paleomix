@@ -6,11 +6,11 @@ TODO
 
 
 ---------------------
-# 1. Installation instructions The following
-instructions will use ~/install as the installation directory for the
-pipelines and required tools, but any directory may be used. The two
-pipelines (BAM and phylogenetic) have their own set of requirements,
-as well as a common set of requirements.
+# 1. Installation instructions
+The following instructions will use ~/install as the installation
+directory for the pipelines and required tools, but any directory may
+be used. The two pipelines (BAM and phylogenetic) have their own set
+of requirements, as well as a common set of requirements.
 
 Note that while it is possible to install and run the pipelines on
 MacOSX (e.g. Mountain Lion), this is not recommended. Users who wish
@@ -195,7 +195,12 @@ It is furthermore possible to over-ride settings on a per-host basis
 adding a section named using the host-name of the server in question,
 (as determined by the “hostname” command):
 
-    [Defaults] max_threads = 4 ...  [MyHostName] max_threads = 16 ...
+    [Defaults]
+    max_threads = 4
+    ...
+    [MyHostName]
+    max_threads = 16
+    ...
 
 **WARNING**: By default, the pipeline will use
 /tmp/**username**/**pipeline_name** for temporary files and
@@ -206,10 +211,10 @@ free space, as filling up /tmp will cause failure for all users of the
 server.
 
 
-## 1.5 Testing the pipelines Example projects are included for both
-the BAM and the phylogenetic pipeline. Running these projects is
-recommended, in order to verify that the pipeline and required
-applications have been correctly installed:
+## 1.5 Testing the pipelines
+Example projects are included for both the BAM and the phylogenetic
+pipeline. Running these projects is recommended, in order to verify that
+the pipeline and required applications have been correctly installed:
 
 *BAM pipeline:*
 
@@ -268,7 +273,9 @@ containing symbolic links to the original FASTA files.
 Specifying which FASTA file to align sequences is accomplished as
 follows:
 
-    Prefixes: my_genome: Path: prefixes/genome.fa
+    Prefixes:
+      my_genome:
+        Path: prefixes/genome.fa
 
 The name of the prefix (here 'my_genome') will be used to name the
 resulting files and in resulting tables that are generated. Typical
@@ -276,8 +283,11 @@ names include 'hg19', 'EquCab20', and other standard abbrivations for
 reference genomes, accession numbers, and the like. Multiple prefixes
 can be specified, but each name MUST be unique:
 
-    Prefixes: my_genome: Path: prefixes/genome.fa another_genome:
-      Path: prefixes/genome2.fa
+    Prefixes:
+      my_genome:
+        Path: prefixes/genome.fa
+      another_genome:
+        Path: prefixes/genome2.fa
 
 
 Additional options for the prefixes are documented below.
@@ -310,8 +320,10 @@ using the index 'ACGTTA', which we located in
 'reads/ED209_ACGTTA_L002_R1_*.fastq.gz' we might use the following
 structure:
 
-    ED209: ED209: ACGTTA: Lane01:
-      'reads/ED209_ACGTTA_L002_R1_*.fastq.gz'
+    ED209:
+      ED209:
+        ACGTTA:
+          Lane01: 'reads/ED209_ACGTTA_L002_R1_*.fastq.gz'
 
 Paired-ended data is expected to be split into two sets of files, one
 for each mate, and are specified by adding the '{Pair}' value to the
@@ -319,26 +331,39 @@ path, which is replaced by '1' and by '2' during setup. For example,
 mates are typically specified using 'R1' and 'R2' for Illumina data,
 so the example above for PE data would become:
 
-    ED209: ED209: ACGTTA: Lane01:
-      'reads/ED209_ACGTTA_L002_R{Pair}_*.fastq.gz'
+    ED209:
+      ED209:
+        ACGTTA:
+          Lane01: 'reads/ED209_ACGTTA_L002_R{Pair}_*.fastq.gz'
 
 As noted above, any number of targets, samples, libraries and lanes
 may be specified:
 
-    Target_1: Sample_1: Library_1: Lane_1: ...  Lane_2: ...
-      Library_2: ...  Sample_2: ...  Target_2: ...
+    Target_1:
+      Sample_1:
+        Library_1:
+          Lane_1: ...
+          Lane_2: ...
+        Library_2: ...
+      Sample_2: ...
+    Target_2: ...
 
-### 2.1.3. Additional options for prefixes Each prefix may be assigned
-a label (see the template for a list of possible values), which is
-useful if these two are aligned separately. If both the
-'mitochondrial' and the 'nuclear' labels are specified, the summary
-file that is generated will contain information aggregating the
+### 2.1.3. Additional options for prefixes
+Each prefix may be assigned a label (see the template for a list of
+possible values), which is useful if these two are aligned separately.
+If both the 'mitochondrial' and the 'nuclear' labels are specified, the
+summary file that is generated will contain information aggregating the
 information for each of these prefixes under the name
 'endogenous'. Each label may be specified any number of times. For
 example:
 
-    Prefixes: hg19: Path: prefixes/hg19.fa Label: nuclear chrM: Path:
-      prefixes/rCRS.fa Label: mitochondrial
+    Prefixes:
+      hg19:
+        Path: prefixes/hg19.fa
+        Label: nuclear
+      chrM:
+        Path: prefixes/rCRS.fa
+        Label: mitochondrial
 
 In addition, it is possible to specify multiple prefixes at once using
 wildcards. To enable this option, postfix the name of the prefix with
@@ -348,7 +373,9 @@ folder 'indices' contains 'hg19.fa' and 'rCRS.fa', the following
 settings would be equivalent to the above, except that no Labels are
 set:
 
-    Prefixes: human*: Path: prefixes/*.fa
+    Prefixes:
+      human*:
+        Path: prefixes/*.fa
 
 If a Label is specified, it is applied to all prefixes that are found.
 
@@ -361,17 +388,23 @@ wildcard ("*") appended. The following example demonstrates how this
 may be accomplished, using a BED file located at
 'prefixes/hg19.exome.bed':
 
-    Prefixes: hg19: Path: prefixes/hg19.fa AreasOfInterest: Exome:
-      prefixes/hg19.exome.bed
+    Prefixes:
+      hg19:
+        Path: prefixes/hg19.fa
+        AreasOfInterest:
+          Exome: prefixes/hg19.exome.bed
 
-### 2.1.4. Alternative input files By default, all files specified for
+### 2.1.4. Alternative input files
+By default, all files specified for
 lanes are trimmed using AdapterRemoval. If reads have already been
 trimmed, these can be specified as follows, using the same read-types
 as in the 'ExcludeReads' options. For example:
 
-    ED209: ED209: ACGTTA: Lane01: Single: reads/trimmed.fa.gz # Path
-      to SE reads Paired: reads/trimmed.{Pair}.fa.gz # Path to PE
-      reads (must have {Pair} component)
+    ED209:
+      ED209:
+        ACGTTA:
+          Lane01: Single: reads/trimmed.fa.gz # Path to SE reads
+          Paired: reads/trimmed.{Pair}.fa.gz # Path to PE reads (must have {Pair} component)
 
 If reads have already been mapped, the BAM can be incorporated into
 the project, in which case the BAM is retagged using the specified
@@ -380,7 +413,11 @@ specifying the name of the prefix instead of a read-type. These are
 assumed to contain SE and/or PE reads, and not collapsed reads. For
 example, assuming that we are using the prefix 'hg19':
 
-    ED209: ED209: ACGTTA: Lane01: hg19: bams/old.bam
+    ED209:
+      ED209:
+        ACGTTA:
+          Lane01:
+            hg19: bams/old.bam
 
 
 ---------------------
@@ -413,7 +450,11 @@ invoked is used (see below):
 to be specified. Each sample has a name, a gender, and a genotyping
 method:
 
-    Samples: <GROUP>: SAMPLE_NAME: Gender: ...  Genotyping Method: ...
+    Samples:
+      <GROUP>:
+        SAMPLE_NAME:
+          Gender: ...
+          Genotyping Method: ...
 
 Gender is required, and is used to filter SNPs at homozygous sex
 chromsomes (e.g. chrX and chrY for male humans). Any names may be
@@ -441,8 +482,12 @@ will expect files to be located at ./data/samples/S.P.bam, or at
 "Regions of Interest", which is defined a set of named regions
 specified using BED files:
 
-    RegionsOfInterest: NAME: Prefix: NAME_OF_PREFIX Realigned: yes/no
-	  ProteinCoding: yes/no IncludeIndels: yes/no
+    RegionsOfInterest:
+      NAME:
+        Prefix: NAME_OF_PREFIX
+        Realigned: yes/no
+	    ProteinCoding: yes/no
+        IncludeIndels: yes/no
 
 The options 'ProteinCoding' and 'IncludeIndels' takes values 'yes' and
 'no' (without quotation marks), and determines the behavior when
@@ -475,7 +520,8 @@ the "bcftools view" command is set using the **Genotyping** section of
 the makefile, and may be set for all regions of interest (default
 behavior) or for each set of regions of interest:
 
-    Genotyping: Defaults: ...
+    Genotyping:
+      Defaults: ...
 
 The 'Defaults' key specifies that the options given here apply to all
 regions of interest; in addition to this key, the name of each set of
@@ -483,14 +529,21 @@ regions of interest may be used, to set specific values for one set of
 regions vs. another set. Thus, assuming regions of interest 'ROI\_a'
 and 'ROI\_b', options may be set as follows:
 
-    Genotyping: Defaults: ...  ROI_a: ...  ROI_b: ...
+    Genotyping:
+      Defaults: ...
+      ROI_a: ...
+      ROI_b: ...
 
 For each set of regions of interest named ROI, the final settings are
 derived by first taking the Defaults, and then overwriting values
 using the value taken from the ROI section (if one such exists). The
 following shows how to change values in Defaults for a single ROI:
 
-    Genotyping: Defaults: --switch: value_a ROI_N: --switch: value_b
+    Genotyping:
+      Defaults:
+        --switch: value_a
+      ROI_N:
+        --switch: value_b
 
 In the above, all ROI except "ROI\_N" will use the switch with
 'value\_a', while "ROI\_N" will use 'value\_b'. Executing the
