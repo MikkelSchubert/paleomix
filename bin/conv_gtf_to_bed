@@ -259,8 +259,12 @@ def write_bed(table, target):
 
 def main(argv):
     parser = OptionParser()
-    parser.add_option("--keep-all-transcripts", action = "store_true", default = False)
-    parser.add_option("--keep-malformed-proteins", action = "store_true", default = False)
+    parser.add_option("--keep-all-transcripts", action = "store_true", default = False,
+        help="Include all transcripts in the output BED files, not just the longest "
+             "transcript of each gene [default: off]")
+    parser.add_option("--keep-malformed-proteins", action = "store_true", default = False,
+        help="Include transcripts of protein-coding in the output, even if the the "
+             "length of the CDS is not divisible by 3 [default: off]")
     (options, args) = parser.parse_args(argv)
 
     if not (2 <= len(args) <= 3):
