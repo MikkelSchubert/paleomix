@@ -115,12 +115,15 @@ Options:
                      #   Location: {Destination}/{Target}.{Genome}.depths
     - Summary        # Generate target summary (uses statistics from raw BAM)
                      #   Location: {Destination}/{Target}.summary
+    - DuplicateHist  # Generate histogram of PCR duplicates, for use with PreSeq
+                     #   Location: {Destination}/{Target}.{Genome}.duphist/{Library}/
 
 
 # Map of prefixes by name, each having a Path key, which specifies the
 # location of the BWA/Bowtie2 index, and optional label, and an option
 # set of regions for which additional statistics are produced.
 Prefixes:
+  # Phytophthora infestans nuclear genome:
   # Name of the prefix; is used as part of the output filenames
   Pi_nucl:
     # Path to .fasta file containg a set of reference sequences.
@@ -130,6 +133,7 @@ Prefixes:
     # plasmid, bacterial, or viral. Is used in the .summary files.
     Label: nuclear
 
+  # Phytophthora infestans mitochondrial genome:
   # Name of the prefix; is used as part of the output filenames
   Pi_mito:
     # Path to .fasta file containg a set of reference sequences.
@@ -139,11 +143,6 @@ Prefixes:
     # plasmid, bacterial, or viral. Is used in the .summary files.
     Label: mitochondrial
 
-  # Solanum tuberosum nucl / mito / chloroplast genome
-  # Uncomment the following two lines to enable:
-#  St_genomes*:
-#    Path: 000_prefixes/St_*.fasta
-
 
 ################################################################################
 ################################################################################
@@ -151,18 +150,25 @@ Prefixes:
 
 # http://www.ebi.ac.uk/ena/data/view/ERS241538
 M-0182896:
+  # Options that apply to all data in this target
   Options:
     AdapterRemoval:
+      # Adapters that differ from AdapterRemoval defaults
       --pcr1: "AGATCGGAAGAGCACACGTCTGAACTCCAGTCACNNNNNNNATCTCGTATGCCGTCTTCTGCTTG"
       --pcr2: "AATGATACGGCGACCACCGAGATCTACACNNNNNNNACACTCTTTCCCTACACGACGCTCTTCCGATCT"
 
   M-0182896:
     M-0182896_NO_UDG:
+      # Options that apply only to library “M-0182896_NO_UDG”
+      # The remaining libraries have been treated with UDG, which removes the
+      # signature of post-mortem DNA damage.
       Options:
+        # Rescale base qualities to account for post-mortem damage
         RescaleQualities: yes
 
         Aligners:
           BWA:
+            # Disable seed for ancient DNA
             UseSeed: no
 
       ERR267888: "000_rawreads/M-0182896/ERR267888_{Pair}_*.fastq.gz"
@@ -182,8 +188,10 @@ M-0182896:
 
 # http://www.ebi.ac.uk/ena/data/view/ERS226850
 06_3928A:
+  # Options that apply to all data in this target
   Options:
     AdapterRemoval:
+      # Adapters that differ from AdapterRemoval defaults
       --pcr1: "AGATCGGAAGAGCGGTTCAGCAGGAATGCCGAGACCGATCTCGTATGCCGTCTTCTGCTTG"
 
   06_3928A:
@@ -209,8 +217,10 @@ LBUS5:
 
 # http://www.ebi.ac.uk/ena/data/view/ERS226846
 NL07434:
+  # Options that apply to all data in this target
   Options:
     AdapterRemoval:
+      # Adapters that differ from AdapterRemoval defaults
       --pcr1: "AGATCGGAAGAGCGGTTCAGCAGGAATGCCGAGACCGATCTCGTATGCCGTCTTCTGCTTG"
 
   NL07434:
@@ -243,8 +253,10 @@ P13626:
 
 # http://www.ebi.ac.uk/ena/data/view/ERS226847
 P17777:
+  # Options that apply to all data in this target
   Options:
     AdapterRemoval:
+      # Adapters that differ from AdapterRemoval defaults
       --pcr1: "AGATCGGAAGAGCGGTTCAGCAGGAATGCCGAGACCGATCTCGTATGCCGTCTTCTGCTTG"
 
   P17777:
@@ -264,10 +276,14 @@ P17777:
 
 # http://www.ebi.ac.uk/ena/data/view/ERS258003
 Pi1845A:
+  # Options that apply to all data in this target
   Options:
+    # Rescale base qualities to account for post-mortem damage
     RescaleQualities: yes
+
     Aligners:
       BWA:
+        # Disable seed for ancient DNA
         UseSeed: no
 
   Pi1845A:
@@ -287,10 +303,14 @@ Pi1845A:
 
 # http://www.ebi.ac.uk/ena/data/view/ERS258007
 Pi1889:
+  # Options that apply to all data in this target
   Options:
+    # Rescale base qualities to account for post-mortem damage
     RescaleQualities: yes
+
     Aligners:
       BWA:
+        # Disable seed for ancient DNA
         UseSeed: no
 
   Pi1889:
