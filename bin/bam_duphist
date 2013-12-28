@@ -28,7 +28,7 @@ import pysam
 
 
 def filter_record(record):
-    # 0xf04 = 0x800 | 0x100 | 0x004
+    # 0x904 = 0x800 | 0x100 | 0x004
     #         0x800 = Secondary alignment
     #         0x100 = Alternative alignment
     #         0x004 = Unmapped read
