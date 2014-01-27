@@ -182,7 +182,6 @@ def open_ro(filename):
     handle = open(filename)
     try:
         header = handle.read(2)
-        handle.seek(0)
 
         if header == "\x1f\x8b":
             handle.close()
@@ -191,6 +190,8 @@ def open_ro(filename):
         elif header == "BZ":
             handle.close()
             handle = bz2.BZ2File(filename)
+        else:
+            handle.seek(0)
 
         return handle
     except:
@@ -339,3 +340,4 @@ def _try_rm_wrapper(func, fpath):
         if error.errno != errno.ENOENT:
             raise
         return False
+
