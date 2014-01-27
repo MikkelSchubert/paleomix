@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -21,9 +21,9 @@
 # SOFTWARE.
 #
 """
-Wrapper around cat / zcat / bzcat, which selects the appropriate commmand based
-on the files specified on the command-line. Input files may be a mix of different
-types of compressed / uncompressed files.
+Wrapper around cat / zcat / bzcat, which selects the appropriate commmand
+based on the files specified on the command-line. Input files may be a mix
+of different types of compressed / uncompressed files.
 """
 
 import sys
@@ -52,13 +52,14 @@ def _select_cat(filename):
 
 def _call(input_files, output_file):
     with _select_output(output_file) as out_handle:
-        for (command, filenames) in itertools.groupby(input_files, _select_cat):
+        for (command, filenames) in itertools.groupby(input_files,
+                                                      _select_cat):
             command = list(command)
             command.extend(filenames)
 
             proc = subprocess.Popen(command,
-                                    stdout    = out_handle,
-                                    close_fds = True)
+                                    stdout=out_handle,
+                                    close_fds=True)
             if proc.wait():
                 return proc.returncode
     return 0
@@ -66,8 +67,8 @@ def _call(input_files, output_file):
 
 def main(argv):
     parser = optparse.OptionParser("%prog [OPTION] <FILE_1> [<FILE_2> ...]")
-    parser.add_option("--output", default = None,
-                      help = "Write output to this file. Defaults to STDOUT.")
+    parser.add_option("--output", default=None,
+                      help="Write output to this file. Defaults to STDOUT.")
 
     config, args = parser.parse_args(argv)
     if not args:
@@ -75,8 +76,16 @@ def main(argv):
         sys.stderr.write("ERROR: At least one input file must be specified\n")
         return 1
 
-    return _call(input_files = args,
-                output_file  = config.output)
+    try:
+        return _call(input_files=args,
+                     output_file=config.output)
+    except StandardError, error:
+        sys.stderr.write("Error running unicat:\n    %s\n\n" % (error,))
+        sys.stderr.write("Output file = %s\n" % (config.output or "STDOUT"))
+        sys.stderr.write("Input file(s) =\n")
+        for filename in args:
+            sys.stderr.write("    - %s\n" % (filename,))
+        return 1
 
 
 if __name__ == '__main__':
