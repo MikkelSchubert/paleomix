@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -21,8 +21,12 @@
 # SOFTWARE.
 #
 import os
+import itertools
+import subprocess
 
-from pypeline.node import CommandNode
+from pypeline.node import \
+     CommandNode, \
+     NodeError
 from pypeline.atomiccmd.command import \
      AtomicCmd,\
      CmdError
@@ -37,6 +41,8 @@ from pypeline.atomiccmd.builder import \
 import pypeline.common.utilities as utilities
 import pypeline.common.fileutils as fileutils
 import pypeline.common.versions as versions
+import pypeline.common.formats.fastq as fastq
+import pypeline.common.sampling as sampling
 
 
 
@@ -53,7 +59,8 @@ _VERSION_15_CHECK = versions.Requirement(call   = ("AdapterRemoval", "--version"
 
 class SE_AdapterRemovalNode(CommandNode):
     @create_customizable_cli_parameters
-    def customize(cls, input_files, output_prefix, output_format = "bz2", version = VERSION_15, dependencies = ()):
+    def customize(cls, input_files, output_prefix, output_format = "bz2",
+                  quality_offset = 33, version = VERSION_15, dependencies = ()):
         # See below for parameters in common between SE/PE
         cmd = _get_common_parameters(version)
 
@@ -62,6 +69,10 @@ class SE_AdapterRemovalNode(CommandNode):
 
         # Prefix for output files
         cmd.set_option("--basename", "%(TEMP_OUT_BASENAME)s")
+
+        # Quality offset for Phred (or similar) scores
+        assert quality_offset in (33, 64)
+        cmd.set_option("--qualitybase", quality_offset)
 
         basename = os.path.basename(output_prefix)
         cmd.set_kwargs(# Only settings file is saved, rest is temporary files
@@ -82,6 +93,7 @@ class SE_AdapterRemovalNode(CommandNode):
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
+        self._quality_offset = parameters.quality_offset
         self._basename = parameters.basename
 
         zcat           = _build_unicat_command(parameters.input_files, "uncompressed_input")
@@ -101,6 +113,8 @@ class SE_AdapterRemovalNode(CommandNode):
 
 
     def _setup(self, config, temp):
+        _check_qualities(self.input_files, self._quality_offset)
+
         os.mkfifo(os.path.join(temp, self._basename + ".truncated"))
         os.mkfifo(os.path.join(temp, self._basename + ".discarded"))
         os.mkfifo(os.path.join(temp, "uncompressed_input"))
@@ -112,7 +126,9 @@ class SE_AdapterRemovalNode(CommandNode):
 
 class PE_AdapterRemovalNode(CommandNode):
     @create_customizable_cli_parameters
-    def customize(cls, input_files_1, input_files_2, output_prefix, output_format = "bz2", version = VERSION_15, dependencies = ()):
+    def customize(cls, input_files_1, input_files_2, output_prefix,
+                  quality_offset = 33, output_format = "bz2",
+                  version = VERSION_15, dependencies = ()):
         cmd = _get_common_parameters(version)
 
         # Uncompressed mate 1 and 2 reads (piped from unicat)
@@ -121,6 +137,11 @@ class PE_AdapterRemovalNode(CommandNode):
 
         # Prefix for output files, ensure that all end up in temp folder
         cmd.set_option("--basename", "%(TEMP_OUT_BASENAME)s")
+
+        # Quality offset for Phred (or similar) scores
+        assert quality_offset in (33, 64)
+        cmd.set_option("--qualitybase", quality_offset)
+
         # Output files are explicity specified, to ensure that the order is the same here
         # as below. A difference in the order in which files are opened can cause a deadlock,
         # due to the use of named pipes (see __init__).
@@ -162,6 +183,7 @@ class PE_AdapterRemovalNode(CommandNode):
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
+        self._quality_offset = parameters.quality_offset
         self._version    = parameters.version
         self._basename   = parameters.basename
         if len(parameters.input_files_1) != len(parameters.input_files_2):
@@ -204,6 +226,8 @@ class PE_AdapterRemovalNode(CommandNode):
 
 
     def _setup(self, config, temp):
+        _check_qualities(self.input_files, self._quality_offset)
+
         os.mkfifo(os.path.join(temp, self._basename + ".discarded"))
         os.mkfifo(os.path.join(temp, self._basename + ".pair1.truncated"))
         os.mkfifo(os.path.join(temp, self._basename + ".pair2.truncated"))
@@ -270,3 +294,41 @@ def _get_common_parameters(version):
     cmd.set_option("--collapse", fixed = False)
 
     return cmd
+
+
+def _check_qualities(filenames, required_offset):
+    for filename in filenames:
+        qualities = _read_sequences(filename)
+        offsets = fastq.classify_quality_strings(qualities)
+        if offsets == fastq.OFFSET_BOTH:
+            raise NodeError("FASTQ file contains quality scores with both "
+                            "quality offsets (33 and 64); file may be "
+                            "unexpected format or corrupt: %r" % (filename,))
+        elif offsets == fastq.OFFSET_MISSING:
+            raise NodeError("FASTQ file did not contain quality scores; file "
+                            "may be unexpected format or corrupt: %r"
+                            % (filename,))
+        elif offsets not in (fastq.OFFSET_AMBIGIOUS, required_offset):
+            raise NodeError("FASTQ file contains quality scores with wrong "
+                            "quality score offset (%i); expected reads with "
+                            "quality score offset %i: %s"
+                            % (offsets, required_offset, filename))
+
+
+def _read_sequences(filename):
+    try:
+        unicat = None
+        unicat = subprocess.Popen(['unicat', filename],
+                                  stderr=subprocess.PIPE,
+                                  stdout=subprocess.PIPE)
+        qualities = itertools.islice(unicat.stdout, 3, None, 4)
+
+        return sampling.reservoir_sample(qualities, 100000)
+    finally:
+        # Check return-codes
+        rc_unicat = unicat.wait() if unicat else False
+        if rc_unicat:
+            message = "Error running unicat:\n" \
+                      "  Unicat return-code = %i\n\n%s" \
+                      % (rc_unicat, unicat.stderr.read())
+            raise NodeError(message)

@@ -64,6 +64,10 @@ class Reads:
         if record["Options"]["AdapterRemoval"]["Version"] == "v1.5+":
             version = VERSION_15
 
+        quality_offset = self.quality_offset
+        if quality_offset == "Solexa":
+            quality_offset = 64
+
         output_format = record["Options"]["CompressionFormat"]
         output_prefix = os.path.join(self.folder, "reads")
         files = record["Data"]
@@ -71,6 +75,7 @@ class Reads:
             command = SE_AdapterRemovalNode.customize(input_files   = files["SE"],
                                                       output_prefix = output_prefix,
                                                       output_format = output_format,
+                                                      quality_offset = quality_offset,
                                                       version       = version)
             self.files["Single"] = output_prefix + ".truncated." + output_format
         else:
@@ -78,6 +83,7 @@ class Reads:
                                                       input_files_2 = files["PE_2"],
                                                       output_prefix = output_prefix,
                                                       output_format = output_format,
+                                                      quality_offset = quality_offset,
                                                       version       = version)
             self.files["Paired"]    = output_prefix + ".pair{Pair}.truncated." + output_format
             if version is VERSION_14:
@@ -87,13 +93,7 @@ class Reads:
                 self.files["Single"]    = output_prefix + ".singleton.truncated."  + output_format
                 self.files["Collapsed"] = output_prefix + ".collapsed." + output_format
                 self.files["CollapsedTruncated"] = output_prefix + ".collapsed.truncated." + output_format
-
-        self.stats = output_prefix + ".settings"
-
-        quality_offset = self.quality_offset # record["Options"]["QualityOffset"]
-        if quality_offset == "Solexa":
-            quality_offset = 64
-        command.command.set_option("--qualitybase", quality_offset)
         apply_options(command.command, record["Options"]["AdapterRemoval"])
 
+        self.stats = output_prefix + ".settings"
         self.nodes = (command.build_node(),)
