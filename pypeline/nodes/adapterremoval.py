@@ -323,10 +323,16 @@ def _read_sequences(filename):
                                   stdout=subprocess.PIPE)
         qualities = itertools.islice(unicat.stdout, 3, None, 4)
 
-        return sampling.reservoir_sample(qualities, 100000)
+        return sampling.reservoir_sampling(qualities, 100000)
+    except StandardError, error:
+        if unicat:
+            unicat.kill()
+            unicat.wait()
+            unicat = None
+        raise
     finally:
         # Check return-codes
-        rc_unicat = unicat.wait() if unicat else False
+        rc_unicat = unicat.wait() if unicat else 0
         if rc_unicat:
             message = "Error running unicat:\n" \
                       "  Unicat return-code = %i\n\n%s" \
