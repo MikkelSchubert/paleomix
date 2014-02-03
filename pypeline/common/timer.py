@@ -36,7 +36,7 @@ class BAMTimer:
         self._bam   = None
         self._out   = out
         self._desc  = desc
-        self._step  = step
+        self._step  = int(step)
         self._count = 0
         self._last_count = 0
         self._last_time  = time.time()
