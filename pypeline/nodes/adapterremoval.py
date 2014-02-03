@@ -303,35 +303,39 @@ def _check_qualities(filenames, required_offset):
         if offsets == fastq.OFFSET_BOTH:
             raise NodeError("FASTQ file contains quality scores with both "
                             "quality offsets (33 and 64); file may be "
-                            "unexpected format or corrupt: %r" % (filename,))
+                            "unexpected format or corrupt. Please ensure "
+                            "that this file contains valid FASTQ reads from a"
+                            "single source.\n    Filename = %r" % (filename,))
         elif offsets == fastq.OFFSET_MISSING:
             raise NodeError("FASTQ file did not contain quality scores; file "
-                            "may be unexpected format or corrupt: %r"
+                            "may be unexpected format or corrupt. Ensure that "
+                            "the file is a FASTQ file.\n    Filename = %r"
                             % (filename,))
         elif offsets not in (fastq.OFFSET_AMBIGIOUS, required_offset):
             raise NodeError("FASTQ file contains quality scores with wrong "
                             "quality score offset (%i); expected reads with "
-                            "quality score offset %i: %s"
+                            "quality score offset %i. Ensure that the "
+                            "'QualityOffset' specified in the makefile "
+                            "corresponds to the input.\n    Filename = %s"
                             % (offsets, required_offset, filename))
 
 
 def _read_sequences(filename):
+    unicat = None
     try:
-        unicat = None
         unicat = subprocess.Popen(['unicat', filename],
                                   stderr=subprocess.PIPE,
                                   stdout=subprocess.PIPE)
         qualities = itertools.islice(unicat.stdout, 3, None, 4)
 
         return sampling.reservoir_sampling(qualities, 100000)
-    except StandardError, error:
+    except:
         if unicat:
             unicat.kill()
             unicat.wait()
             unicat = None
         raise
     finally:
-        # Check return-codes
         rc_unicat = unicat.wait() if unicat else 0
         if rc_unicat:
             message = "Error running unicat:\n" \
