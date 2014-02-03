@@ -23,8 +23,15 @@
 import StringIO
 import nose.tools
 from nose.tools import \
-     assert_equal, \
-     assert_raises
+    assert_is, \
+    assert_equal, \
+    assert_raises, \
+    assert_not_equal, \
+    assert_less, \
+    assert_less_equal, \
+    assert_greater, \
+    assert_greater_equal
+
 
 from pypeline.common.testing import assert_list_equal
 from pypeline.common.formats.fasta import \
@@ -202,3 +209,49 @@ def test_fasta__from_file__compressed_bz2():
                 FASTA("This_is_ALSO_BZ_FASTA!", None, "ACGTN")]
     results  = list(FASTA.from_file("tests/data/fasta_file.fasta.bz2"))
     assert_equal(results, expected)
+
+
+###############################################################################
+###############################################################################
+
+def test_fasta__equality():
+    assert_equal(FASTA("A", "B", "C"), FASTA("A", "B", "C"))
+
+def test_fasta__inequality():
+    assert_not_equal(FASTA("A", "B", "C"), FASTA("A", "B", "D"))
+    assert_not_equal(FASTA("A", "B", "C"), FASTA("A", None, "C"))
+    assert_not_equal(FASTA("A", "B", "C"), FASTA("D", "B", "C"))
+
+def test_fasta__sorting_less_equal():
+    assert not FASTA("A", "B", "C") < FASTA("A", "B", "C")
+    assert_less(FASTA("A", "B", "C"), FASTA("B", "B", "C"))
+    assert_less(FASTA("A", "B", "C"), FASTA("A", "C", "C"))
+    assert_less(FASTA("A", "B", "C"), FASTA("A", "B", "D"))
+    assert_less_equal(FASTA("A", "B", "C"), FASTA("A", "B", "C"))
+    assert_less_equal(FASTA("A", "B", "C"), FASTA("B", "B", "C"))
+    assert_less_equal(FASTA("A", "B", "C"), FASTA("A", "C", "C"))
+    assert_less_equal(FASTA("A", "B", "C"), FASTA("A", "B", "D"))
+
+def test_fasta__sorting_greater_equal():
+    assert not FASTA("A", "B", "C") > FASTA("A", "B", "C")
+    assert_greater(FASTA("B", "B", "C"), FASTA("A", "B", "C"))
+    assert_greater(FASTA("A", "C", "C"), FASTA("A", "B", "C"))
+    assert_greater(FASTA("A", "B", "D"), FASTA("A", "B", "C"))
+    assert_greater_equal(FASTA("A", "B", "C"), FASTA("A", "B", "C"))
+    assert_greater_equal(FASTA("B", "B", "C"), FASTA("A", "B", "C"))
+    assert_greater_equal(FASTA("A", "C", "C"), FASTA("A", "B", "C"))
+    assert_greater_equal(FASTA("A", "B", "D"), FASTA("A", "B", "C"))
+
+def test_fasta__hash():
+    assert_equal(hash(FASTA("A", "B", "C")), hash(FASTA("A", "B", "C")))
+    assert_not_equal(hash(FASTA("A", "B", "C")), hash(FASTA("B", "B", "C")))
+    assert_not_equal(hash(FASTA("A", "B", "C")), hash(FASTA("A", "C", "C")))
+    assert_not_equal(hash(FASTA("A", "B", "C")), hash(FASTA("A", "B", "D")))
+
+def test_fasta__unimplemented_comparison():
+    assert_is(NotImplemented, FASTA("A", None, "C").__eq__(10))
+    assert_is(NotImplemented, FASTA("A", None, "C").__lt__(10))
+    assert_is(NotImplemented, FASTA("A", None, "C").__le__(10))
+    assert_is(NotImplemented, FASTA("A", None, "C").__ge__(10))
+    assert_is(NotImplemented, FASTA("A", None, "C").__gt__(10))
+
