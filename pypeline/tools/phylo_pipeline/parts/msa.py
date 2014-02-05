@@ -61,7 +61,7 @@ def build_msa_nodes(options, settings, regions, filtering, dependencies):
                                         algorithm   = algorithm,
                                         dependencies = node)
             apply_options(mafft.command, settings["MAFFT"])
-            fasta_files[sequence] = mafft.build_node()
+            fasta_files[output_file] = mafft.build_node()
 
         node = MetaNode(description  = "MAFFT",
                         subnodes     = fasta_files.values(),
