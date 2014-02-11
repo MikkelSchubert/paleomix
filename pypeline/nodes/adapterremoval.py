@@ -20,8 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import io
 import os
-import itertools
 import subprocess
 
 from pypeline.node import \
@@ -324,9 +324,10 @@ def _read_sequences(filename):
     unicat = None
     try:
         unicat = subprocess.Popen(['unicat', filename],
+                                  bufsize=io.DEFAULT_BUFFER_SIZE,
                                   stderr=subprocess.PIPE,
                                   stdout=subprocess.PIPE)
-        qualities = itertools.islice(unicat.stdout, 3, None, 4)
+        qualities = _collect_qualities(unicat.stdout, filename)
 
         return sampling.reservoir_sampling(qualities, 100000)
     except:
@@ -342,3 +343,34 @@ def _read_sequences(filename):
                       "  Unicat return-code = %i\n\n%s" \
                       % (rc_unicat, unicat.stderr.read())
             raise NodeError(message)
+
+
+def _collect_qualities(handle, filename):
+    header = handle.readline()
+    while header:
+        sequence = handle.readline()
+        seperator = handle.readline()
+        qualities = handle.readline()
+
+        if not header.startswith("@"):
+            if header.startswith(">"):
+                raise NodeError("Input file appears to be in FASTA format "
+                                "(header starts with '>', expected '@'), "
+                                "but only FASTQ files are supported\n"
+                                "Filename = %r" % (filename,))
+
+            raise NodeError("Input file lacks FASTQ header (expected '@', "
+                            "found %r), but only FASTQ files are supported\n"
+                            "    Filename = %r" % (header[:1], filename))
+        elif not seperator.startswith("+"):
+            raise NodeError("Input file lacks FASTQ seperator (expected '+', "
+                            "found %r), but only FASTQ files are supported\n"
+                            "    Filename = %r" % (header[:1], filename))
+        elif len(sequence) != len(qualities):
+            raise NodeError("Input file contains malformed FASTQ records; "
+                            "length of sequence / qualities are not the "
+                            "same.\n    Filename = %r\n    Record = '%s'"
+                            % (filename, header.rstrip()))
+
+        yield qualities
+        header = handle.readline()
