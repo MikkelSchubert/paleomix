@@ -401,7 +401,7 @@ def main(argv):
                     for (name, seq_1, seq_2) in reads:
                         out_1.write("@%s\\1\n%s\n" % (name, seq_1))
                         out_1.write("+\n%s\n" % ("I" * len(seq_1),))
-                        out_2.write(">%s\\2\n%s\n" % (name, seq_2))
+                        out_2.write("@%s\\2\n%s\n" % (name, seq_2))
                         out_2.write("+\n%s\n" % ("I" * len(seq_2),))
 
 
