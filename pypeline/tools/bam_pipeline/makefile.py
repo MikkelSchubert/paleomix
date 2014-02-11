@@ -399,6 +399,7 @@ def _validate_makefile_libraries(makefile):
 
 
 def _validate_makefiles_duplicate_files(makefiles):
+    # TODO: Allow same files in different targets, but issue warning
     filenames = collections.defaultdict(list)
     for makefile in makefiles:
         for (target, sample, library, barcode, record) in _iterate_over_records(makefile):
@@ -429,11 +430,13 @@ def _validate_makefiles_duplicate_files(makefiles):
 
 
 def _validate_makefiles_duplicate_targets(makefiles):
+    # TODO: Allow same target if destination differs
     targets = set()
     for makefile in makefiles:
         for target in makefile["Targets"]:
             if target in targets:
-                raise MakefileError("Target '%s' specified multiple times!" % target)
+                raise MakefileError("Target name '%s' used multiple times; "
+                                    "output files would be clobbered!" % target)
             targets.add(target)
 
 
