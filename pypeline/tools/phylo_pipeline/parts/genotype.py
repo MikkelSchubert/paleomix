@@ -97,7 +97,7 @@ class VCFFilterNode(CommandNode):
                                      IN_STDIN     = unicat,
                                      OUT_STDOUT   = AtomicCmd.PIPE)
         for contig in regions["HomozygousContigs"]:
-            vcffilter.set_option("--homozygous-chromosome", contig)
+            vcffilter.add_option("--homozygous-chromosome", contig)
 
         bgzip = AtomicCmdBuilder(["bgzip"],
                                  IN_STDIN     = vcffilter,
