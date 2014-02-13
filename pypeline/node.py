@@ -117,7 +117,8 @@ class Node(object):
             self._remove_temp_dir(temp)
         except NodeError, error:
             self._write_error_log(temp, error)
-            raise error
+            raise NodeError("Error(s) running Node:\n\tTemporary directory: %s\n\n%s" \
+                            % (repr(temp), error))
         except Exception, error:
             self._write_error_log(temp, error)
             raise NodeUnhandledException("Error(s) running Node:\n\tTemporary directory: %s\n\n%s" \
