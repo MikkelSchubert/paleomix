@@ -304,7 +304,7 @@ def _check_qualities(filenames, required_offset):
             raise NodeError("FASTQ file contains quality scores with both "
                             "quality offsets (33 and 64); file may be "
                             "unexpected format or corrupt. Please ensure "
-                            "that this file contains valid FASTQ reads from a"
+                            "that this file contains valid FASTQ reads from a "
                             "single source.\n    Filename = %r" % (filename,))
         elif offsets == fastq.OFFSET_MISSING:
             raise NodeError("FASTQ file did not contain quality scores; file "
