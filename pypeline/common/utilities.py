@@ -191,6 +191,57 @@ def fill_dict(destination, source):
     return _fill_dict(copy.deepcopy(destination), copy.deepcopy(source))
 
 
+def chain_sorted(*sequences, **kwargs):
+    """Chains together sorted sequences, and yields the contents
+    in the same order, such that the result is also a sorted sequence.
+    The function accepts a 'key'-function keyword, and a 'reverse'
+    keyword, in which case the values assumed to be decreasing rather
+    than increasing.
+
+    chain_sorted is intended for a few long sequences, and not many short
+    sequences. Behavior is undefined if the sequences are not sorted.
+
+    Example:
+      >>> tuple(chain_sorted((1, 3, 5), (0, 2, 4)))
+      (0, 1, 2, 3, 4, 5)
+    """
+
+    key = kwargs.pop('key', None)
+    select_func = max if kwargs.pop('reverse', None) else min
+    if kwargs:
+        raise TypeError("chain_sorted expected keyword 'key', got %r"
+                        % (', '.join(kwargs)))
+
+    iterators = []
+    for sequence in sequences:
+        try:
+            sequence_iter = iter(sequence)
+            current_value = sequence_iter.next()
+            key_value = current_value
+            if key is not None:
+                key_value = key(key_value)
+
+            iterators.append([key_value, current_value, sequence_iter])
+        except StopIteration:
+            pass
+
+    while iterators:
+        current = select_func(iterators)
+        yield current[1]
+
+        try:
+            current_value = current[2].next()
+            key_value = current_value
+            if key is not None:
+                key_value = key(current_value)
+            current[0] = key_value
+            current[1] = current_value
+        except StopIteration:
+            iterators.remove(current)
+
+
+
+
 
 class Immutable(object):
     """Mixin implementing a immutable class; member variables are specified in

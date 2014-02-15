@@ -438,6 +438,74 @@ def test_fill_dict__source_must_be_dict():
 
 
 
+################################################################################
+################################################################################
+## chain_sorted
+
+def test_chain_sorted__no_sequences():
+    expected = ()
+    result = tuple(utils.chain_sorted())
+    assert_equal(expected, result)
+
+def test_chain_sorted__single_sequence():
+    sequence = (1, 2, 3)
+    result = tuple(utils.chain_sorted(sequence))
+    assert_equal(sequence, result)
+
+def test_chain_sorted__sequential_contents():
+    def _sequential_contents(seq_a, seq_b):
+        expected = (1, 2, 3, 4, 5, 6)
+        result = tuple(utils.chain_sorted(seq_a, seq_b))
+        assert_equal(expected, result)
+
+    sequence_a = (1, 2, 3)
+    sequence_b = (4, 5, 6)
+    yield _sequential_contents, sequence_a, sequence_b
+    yield _sequential_contents, sequence_b, sequence_a
+
+def test_chain_sorted__mixed_contents():
+    sequence_a = (3, 4, 8)
+    sequence_c = (0, 1, 6)
+    sequence_b = (2, 5, 7)
+    expected = (0, 1, 2, 3, 4, 5, 6, 7, 8)
+    result = tuple(utils.chain_sorted(sequence_a, sequence_b, sequence_c))
+    assert_equal(expected, result)
+
+def test_chain_sorted__mixed_length_contents():
+    sequence_a = (1,)
+    sequence_c = (0, 2)
+    sequence_b = ()
+    expected = (0, 1, 2)
+    result = tuple(utils.chain_sorted(sequence_a, sequence_b, sequence_c))
+    assert_equal(expected, result)
+
+def test_chain_sorted__mixed_contents__key():
+    sequence_a = (-2, -3, -5)
+    sequence_b = (0, -1, -4)
+    expected = (0, -1, -2, -3, -4, -5)
+    result = tuple(utils.chain_sorted(sequence_a, sequence_b, key=abs))
+    assert_equal(expected, result)
+
+def test_chain_sorted__mixed_contents__reverse():
+    sequence_a = (-2, -3, -5)
+    sequence_b = (0, -1, -4)
+    expected = (0, -1, -2, -3, -4, -5)
+    result = tuple(utils.chain_sorted(sequence_a, sequence_b, reverse=True))
+    assert_equal(expected, result)
+
+def test_chain_sorted__identical_objects_are_preserved():
+    object_a = [1]
+    object_b = [1]
+    assert object_a is not object_b
+    expected = (object_a, object_b)
+    result = tuple(utils.chain_sorted([object_a], [object_b]))
+    assert_equal(expected, result)
+    assert(object_a is result[0] or object_a is result[1])
+    assert(object_b is result[0] or object_b is result[1])
+
+
+def test_chain_sorted__invalid_keywords():
+    assert_raises(TypeError, tuple, utils.chain_sorted((1, 2, 3), foobar=lambda: value))
 
 ################################################################################
 ################################################################################
