@@ -59,17 +59,30 @@ def add_statistics_nodes(config, makefile, target):
 def _build_depth(config, target):
     nodes = []
     for prefix in target.prefixes:
-        input_file, dependency = tuple(sorted(prefix.bams.items()))[-1]
-
         for (roi_name, roi_filename) in _get_roi(prefix, name_prefix = "."):
-            output_filename = os.path.join(config.destination,
-                                           "%s.%s%s.depths" % (target.name, prefix.name, roi_name))
+            if roi_filename is not None:
+                # ROIs require indexed access, and hence that the final BAM
+                # (either raw or realigned) has been built. By default, the
+                # the realigned BAM is used (based on lexical order).
+                bam_files = tuple(sorted(prefix.bams.items()))
+                input_files, dependencies = bam_files[-1]
+            else:
+                input_files = {}
+                for sample in prefix.samples:
+                    input_files.update(sample.bams)
+                dependencies = input_files.values()
+                input_files = input_files.keys()
 
-            node = DepthHistogramNode(target_name  = target.name,
-                                      input_file   = input_file,
+            output_filename = "%s.%s%s.depths" % (target.name, prefix.name,
+                                                  roi_name)
+            output_fpath = os.path.join(config.destination, output_filename)
+
+            node = DepthHistogramNode(config       = config,
+                                      target_name  = target.name,
+                                      input_files  = input_files,
                                       regions_file = roi_filename,
-                                      output_file  = output_filename,
-                                      dependencies = dependency)
+                                      output_file  = output_fpath,
+                                      dependencies = dependencies)
             nodes.append(node)
 
     return MetaNode(description = "DepthHistograms",

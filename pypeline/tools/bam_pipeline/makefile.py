@@ -444,11 +444,17 @@ def _validate_makefiles_duplicate_targets(makefiles):
 def _validate_makefiles_features(makefiles):
     for makefile in makefiles:
         features = makefile["Options"]["Features"]
-        if "Depths" in features:
+        roi_enabled = False
+
+        for prefix in makefile["Prefixes"].itervalues():
+            roi_enabled |= bool(prefix.get("RegionsOfInterest"))
+
+        if "Depths" in features and roi_enabled:
             if not (("Raw BAM" in features) or ("Realigned BAM") in features):
                 raise MakefileError("The feature 'Depths' (depth histograms) "
-                                    "require that either the feature 'Raw BAM' "
-                                    "or the feature 'Raligned BAM' is enabled.")
+                                    "with RegionsOfInterest enabled, requires "
+                                    "that either the feature 'Raw BAM' or the "
+                                    "feature 'Raligned BAM' is enabled.")
 
 
 def _iterate_over_records(makefile):

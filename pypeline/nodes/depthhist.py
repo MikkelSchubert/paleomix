@@ -22,27 +22,48 @@
 #
 from pypeline.node import \
     CommandNode
+from pypeline.atomiccmd.sets import \
+    ParallelCmds
 from pypeline.atomiccmd.builder import \
     AtomicCmdBuilder
+from pypeline.nodes.picard import \
+    concatenate_input_bams
+
+from pypeline.common.fileutils import \
+    describe_files
+from pypeline.common.utilities import \
+    safe_coerce_to_tuple
 
 
 class DepthHistogramNode(CommandNode):
-    def __init__(self, target_name, input_file, output_file,
+    def __init__(self, config, target_name, input_files, output_file,
                  regions_file=None, dependencies=()):
-        call = ['bam_depths', '%(IN_FILE)s', '%(OUT_FILE)s',
-                '--target-name', target_name]
-        builder = AtomicCmdBuilder(call,
-                                   IN_FILE=input_file,
-                                   OUT_FILE=output_file)
+        kwargs = {"OUT_FILE": output_file}
+        input_files = safe_coerce_to_tuple(input_files)
 
+        if len(input_files) > 1:
+            if regions_file:
+                raise ValueError("DepthHistogram for regions require single, "
+                                 "indexed input BAM file.")
+            cat_cmds, cat_obj = concatenate_input_bams(config, input_files)
+            kwargs["IN_STDIN"] = cat_obj
+            input_argument = "-"  # Read from STDIN
+        else:
+            cat_cmds = []
+            kwargs["IN_FILE"] = input_files[0]
+            input_argument = "%(IN_FILE)s"
+
+        call = ['bam_depths', input_argument, '%(OUT_FILE)s',
+                '--target-name', target_name]
+        builder = AtomicCmdBuilder(call, **kwargs)
         if regions_file:
             builder.set_option('--regions-file', '%(IN_REGIONS)s')
             builder.set_kwargs(IN_REGIONS=regions_file)
 
-        command = builder.finalize()
-
+        command = ParallelCmds(cat_cmds + [builder.finalize()])
         CommandNode.__init__(self,
                              command=command,
                              description="<DepthHistogram: %s -> '%s'>"
-                                         % (input_file, output_file),
+                                         % (describe_files(input_files),
+                                            output_file),
                              dependencies=dependencies)
