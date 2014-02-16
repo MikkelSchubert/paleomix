@@ -41,7 +41,10 @@ from pypeline.nodes.samtools import \
      TabixIndexNode, \
      FastaIndexNode, \
      MPileupNode
-from pypeline.nodes.bedtools import SlopBedNode
+from pypeline.nodes.bedtools import \
+    SlopBedNode
+from pypeline.nodes.sequences import \
+    ExtractReferenceNode
 
 
 from pypeline.common.fileutils import \
@@ -49,7 +52,6 @@ from pypeline.common.fileutils import \
      move_file, \
      add_postfix
 from pypeline.common.formats.fasta import FASTA
-import pypeline.common.text as text
 import pypeline.common.sequences as sequences
 
 
@@ -175,52 +177,6 @@ class SampleRegionsNode(CommandNode):
                              dependencies = parameters.dependencies)
 
 
-class ExtractReference(Node):
-    def __init__(self, reference, bedfile, outfile, dependencies = ()):
-        self._reference = reference
-        self._bedfile   = bedfile
-        self._outfile   = outfile
-
-        description = "<ExtractReference: '%s' -> '%s'>" \
-            % (reference, outfile)
-        Node.__init__(self,
-                      description  = description,
-                      input_files  = [bedfile],
-                      output_files = [outfile],
-                      dependencies = dependencies)
-
-
-    def _run(self, _config, temp):
-        def keyfunc(bed):
-            return (bed.contig, bed.name, bed.start)
-
-        fastafile = pysam.Fastafile(self._reference)
-        seqs = collections.defaultdict(list)
-        with open(self._bedfile) as bedfile:
-            bedrecords = text.parse_lines_by_contig(bedfile, pysam.asBed()).items()
-            for (contig, beds) in sorted(bedrecords):
-                beds.sort(key = keyfunc)
-
-                for (gene, gene_beds) in itertools.groupby(beds, lambda x: x.name):
-                    gene_beds = tuple(gene_beds)
-                    for bed in gene_beds:
-                        # TODO: Check that region was fetched!
-                        seqs[(contig, gene)].append(fastafile.fetch(contig, bed.start, bed.end))
-
-                    seq = "".join(seqs[(contig, gene)])
-                    if any((bed.strand == "-") for bed in gene_beds):
-                        assert all((bed.strand == "-") for bed in gene_beds)
-                        seq = sequences.reverse_complement(seq)
-                    seqs[(contig, gene)] = seq
-
-        temp_file = os.path.join(temp, "sequences.fasta")
-        with open(temp_file, "w") as out_file:
-            for ((_, gene), sequence) in sorted(seqs.items()):
-                FASTA(gene, None, sequence).write(out_file)
-
-        move_file(temp_file, self._outfile)
-
-
 _FAI_CACHE = {}
 def build_fasta_index_node(reference, dependencies):
     if reference not in _FAI_CACHE:
@@ -341,14 +297,14 @@ def build_sampling_nodes(options, genotyping, sample, regions, dependencies):
 
 
 def build_reference_nodes(options, sample, regions, dependencies):
-    fasta_file  = "%s.%s.fasta" % (sample["Name"], regions["Desc"])
-    destination = os.path.join(options.destination, "genotypes", fasta_file)
+    output_file = "%s.%s.fasta" % (sample["Name"], regions["Desc"])
+    destination = os.path.join(options.destination, "genotypes", output_file)
     faidx_node  = build_fasta_index_node(regions["FASTA"], dependencies)
 
-    node  = ExtractReference(reference          = regions["FASTA"],
-                             bedfile            = regions["BED"],
-                             outfile            = destination,
-                             dependencies       = faidx_node)
+    node  = ExtractReferenceNode(reference          = regions["FASTA"],
+                                 bedfile            = regions["BED"],
+                                 outfile            = destination,
+                                 dependencies       = faidx_node)
     return (node,)
 
 
