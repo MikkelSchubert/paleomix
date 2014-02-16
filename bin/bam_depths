@@ -20,117 +20,511 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-"""Wrapper around DepthHistogramNode for command-line usage:
-
-Provides a simple method for calculating the depth-histograms produced by the
-BAM pipeline for arbitary BAM files. The histograms are calculated per input-
-file, and generates a '.depths' file for each input-file, named by substituting
-the current extension of the input-file with '.depths'.
-
-"""
-
 import os
 import sys
-import getpass
-import optparse
+import argparse
+import datetime
+import itertools
+import collections
 
-import pypeline
-import pypeline.ui
-import pypeline.logger
-import pypeline.common.system
+import pysam
 
+from pypeline.common.timer import \
+    BAMTimer
+from pypeline.common.text import \
+    padded_table
 from pypeline.common.fileutils import \
     swap_ext
-from pypeline.common.console import \
-    print_info
-from pypeline.nodes.depthhist import \
-    DepthHistogramNode
 
 
-def _build_option_parser():
-    usage = "%prog [options] <file_1.bam> [<file_2.bam>, ...]"
-    parser = optparse.OptionParser(usage=usage)
+##############################################################################
+##############################################################################
+##
 
-    # Adds --progress-ui; used by the pipeline to select CLI UI
-    pypeline.ui.add_optiongroup(parser)
-    # Adds --log-level and --log-file; these options are expected by the
-    # 'pypeline.logger.initialize' function called in 'main'
-    pypeline.logger.add_optiongroup(parser)
-
-    parser.add_option("--target-name", default=None,
-                      help="Name used for 'Target' column; defaults to the "
-                           "filename of the BAM file.")
-    parser.add_option("--regions-file", default=None, dest="regions_fpath",
-                      help="BED file containing regions of interest; depth is "
-                           "calculated only for these grouping by the name "
-                           "used in the BED file, or the contig name if no "
-                           "name has been specified for a record.")
-
-    group = optparse.OptionGroup(parser, "Required paths")
-    temp_root = os.path.join("/tmp", getpass.getuser(), "bam_depths")
-    group.add_option("--temp-root", default=temp_root,
-                     help="Root folder for temp files/folders [%default].")
-    parser.add_option_group(group)
-
-    group = optparse.OptionGroup(parser, "Scheduling")
-    group.add_option("--max-threads", type=int, default=1,
-                     help="Max files to process concurrently [%default]")
-    group.add_option("--dry-run", action="store_true", default=False,
-                     help="Only show tasks to perform, do not run.")
-    parser.add_option_group(group)
-
-    return parser
+# Maximum depth to record, and hence the number of columns in output table
+_MAX_DEPTH = 200
+# Maximum number of contigs in table; if this number is exceeded, the entire
+# genome is collapsed into one meta-contig named "<Genome>"
+_MAX_CONTIGS = 100
+# Maximum number of count patterns (numbers of bases per library for a given
+# site) to cache for bulk processing; see MappingsToTotals for implementation
+_MAX_CACHE_SIZE = 10000
 
 
-def _build_depth_histogram_node(input_fpath, regions_fpath=None,
-                               target_name=None):
-    output_fpath = swap_ext(input_fpath, ".depths")
+# Header prepended to output tables
+_HEADER = """# Timestamp: %s
+#
+# Columns:
+#   Contig:   Contig, chromosome, or feature for which a depth histogram was
+#             created. Unnamed features are named after the chromosome or
+#             contig on which they are located, with a star appended. For
+#             example "chr1*". If the maximum number of contigs was exceeded,
+#             these are collapsed into one meta-contig named "<Genome>".
+#   Size:     The total size of the region. Multiple features with the same
+#             name are combined into one row, with the size representing the
+#             total for these. Note that overlapping bases are counted 2 (or
+#             more) times.
+#   MaxDepth: Maximum depth to use when calling SNPs, in order to exclude
+#             (at least) the 0.5%% most extreme sites based on read depth,
+#             not including sites with depth 0.
+#   MD_*:     Fraction of sites with a minimum depth of 1-200.
+#"""
 
-    # Name used for the first column in the table output table
-    if target_name is None:
-        target_name = os.path.basename(input_fpath)
 
-    # 'config' can be None since only a single file is used as input; were
-    # multiple files to be specified, the node would attempt to call
-    # MergeSamFiles.jar using the JRE options enumeated by 'config'.
-    return DepthHistogramNode(config=None,
-                              input_files=input_fpath,
-                              output_file=output_fpath,
-                              intervals_file=regions_fpath,
-                              target_name=target_name,
-                              print_stats=True)
+##############################################################################
+##############################################################################
+## Parsing BED files for regions of interest
+
+def collect_bed_regions(filename):
+    regions = []
+    with open(filename) as handle:
+        for line in handle:
+            line = line.rstrip()
+            if not line or line.startswith("#"):
+                continue
+
+            fields = line.split('\t')
+            contig, start, end = fields[:3]
+
+            if len(fields) >= 4:
+                name = fields[3]
+            else:
+                name = "%s*" % (contig,)
+
+            regions.append((name, (contig, int(start), int(end))))
+
+    return regions
+
+
+def sort_bed_regions(bamfile, regions):
+    """Orders a set of BED regions, such that processing matches
+    (as far as possible) the layout of the bamfile."""
+    if regions:
+        indices = dict(zip(bamfile.references,
+                       xrange(len(bamfile.references))))
+
+        def _by_bam_layout((_, (contig, start, end))):
+            return (indices[contig], start, end)
+        regions.sort(key=_by_bam_layout)
+
+
+##############################################################################
+##############################################################################
+## Classes for iterating over a BAM, with an optional set of BED regions
+
+class BAMRegionIter(object):
+    def __init__(self, tid, name, start, end, records):
+        self._records = records
+        self.tid = tid
+        self.name = name
+        self.start = start
+        self.end = end
+
+    def __iter__(self):
+        def _by_pos(record):
+            return record.pos
+
+        for group in itertools.groupby(self._records, _by_pos):
+            yield group
+
+
+class BAMRegionsIter(object):
+    def __init__(self, handle, regions=None):
+        self._handle = handle
+        self._regions = regions
+
+    def __iter__(self):
+        if self._regions:
+            for (name, (contig, start, end)) in self._regions:
+                records = self._handle.fetch(contig, start, end)
+                tid = self._handle.gettid(contig)
+                yield BAMRegionIter(tid, name, start, end, records)
+        else:
+            def _by_tid(record):
+                return record.tid
+
+            for (tid, items) in itertools.groupby(self._handle, key=_by_tid):
+                name = '<Genome>'
+                if len(self._handle.references) <= _MAX_CONTIGS:
+                    name = self._handle.references[tid]
+                length = self._handle.lengths[tid]
+
+                yield BAMRegionIter(tid, name, 0, length, items)
+
+
+##############################################################################
+##############################################################################
+
+class MappingToTotals(object):
+    def __init__(self, totals, region, smlbid_to_smlb):
+        self._region = region
+        self._totals = totals
+        self._map_by_smlbid, self._totals_src_and_dst \
+            = self._build_mappings(totals, region.name, smlbid_to_smlb)
+        self._cache = collections.defaultdict(int)
+
+
+    def process_counts(self, counts, last_pos, cur_pos):
+        start = self._region.start
+        end = self._region.end
+
+        # Pileups tends to contain identical stretches, so
+        # try to avoid repeated lookups by aggregating these
+        repeats = 1
+        last_count = None
+        while counts and (last_pos < cur_pos):
+            count = counts.popleft()
+            if start <= last_pos < end:
+                if count == last_count:
+                    repeats += 1
+                else:
+                    if last_count is not None:
+                        self._cache[tuple(last_count)] += repeats
+                    last_count = count
+                    repeats = 1
+            last_pos += 1
+
+        if last_count is not None:
+            self._cache[tuple(last_count)] += repeats
+
+        if len(self._cache) > _MAX_CACHE_SIZE:
+            self.finalize()
+
+    def finalize(self):
+        """Process cached counts."""
+        for (count, multiplier) in self._cache.iteritems():
+            self._update_totals(count, multiplier)
+        self._cache.clear()
+
+    def _update_totals(self, count, multiplier=1, max_depth=_MAX_DEPTH):
+        for (smlbid, count) in enumerate(count):
+            if count:
+                for lst in self._map_by_smlbid[smlbid]:
+                    lst[0] += count
+
+        for (dst_counts, src_count) in self._totals_src_and_dst:
+            if src_count[0]:
+                limited_count = min(max_depth, src_count[0])
+                dst_counts[limited_count] += multiplier
+                src_count[0] = 0
+
+    @classmethod
+    def _build_mappings(cls, totals, name, smlbid_to_smlb):
+        # Accumulators mapped by sample+library IDs
+        totals_by_smlbid = [None] * len(smlbid_to_smlb)
+        # Accumulators mapped by the corresponding table keys
+        totals_by_table_key = {}
+
+        for (smlbid, (sm_key, lb_key)) in enumerate(smlbid_to_smlb):
+            keys = [('*', '*', '*'),
+                    (sm_key, '*', '*'),
+                    (sm_key, '*', name),
+                    (sm_key, lb_key, '*'),
+                    (sm_key, lb_key, name)]
+
+            mappings = cls._nonoverlapping_mappings(keys, totals,
+                                                    totals_by_table_key)
+            totals_by_smlbid[smlbid] = mappings
+
+        totals_src_and_dst = []
+        for (key, dst) in totals_by_table_key.iteritems():
+            totals_src_and_dst.append((totals[key], dst))
+
+        return totals_by_smlbid, totals_src_and_dst
+
+    @classmethod
+    def _nonoverlapping_mappings(cls, keys, totals, totals_by_table_key):
+        """Returns a tuple of accumulators for a given set of table keys. As
+        multiple table keys may share the same accumulator (e.g. if there is
+        only one sample, then sample "*" and that sample will be identical),
+        the tuple of accumulators may contain fewer items than keys."""
+
+        mapping = []
+        totals_used = set()
+        for key in keys:
+            # Check that accumulator is not already included
+            totals_id = id(totals[key])
+            if totals_id not in totals_used:
+                totals_used.add(totals_id)
+                accumulator = totals_by_table_key.setdefault(key, [0])
+                mapping.append(accumulator)
+        return tuple(mapping)
+
+
+##############################################################################
+##############################################################################
+
+def calc_max_depth(counts):
+    counts = counts[1:]
+    running_total = sum(counts)
+    if not running_total:
+        return "NA"
+
+    total = float(running_total)
+    for (index, count) in enumerate(counts):
+        # Stop when less than the 0.5% most extreme values are included
+        if running_total / total < 0.005:
+            # Return zero-based index corresponding to the previous depth,
+            # for which the >= 0.5% most extreme values are excluded
+            return index
+        running_total -= count
+
+    return "NA"
+
+
+def print_table(args, handle, totals, lengths):
+    if args.outfile == "-":
+        handle = sys.stdout
+    else:
+        handle = open(args.outfile, "w")
+
+    with handle:
+        rows = build_table(args.target_name, totals, lengths)
+        handle.write(_HEADER % datetime.datetime.now().isoformat())
+        handle.write("\n")
+        for line in padded_table(rows):
+            handle.write(line)
+            handle.write("\n")
+
+
+def build_table(name, totals, lengths):
+    header = ["Name", "Sample", "Library", "Contig", "Size", "MaxDepth"]
+    for index in xrange(1, _MAX_DEPTH + 1):
+        header.append("MD_%03i" % (index,))
+
+    rows = [header]
+    last_sm = last_lb = None
+    for ((sm_key, lb_key, ct_key), counts) in sorted(totals.items()):
+        if (sm_key != last_sm) and (last_sm is not None):
+            rows.extend("##")
+        elif (lb_key != last_lb) and (last_lb is not None):
+            rows.append("#")
+        last_sm, last_lb = sm_key, lb_key
+
+        row = [name, sm_key, lb_key, ct_key,
+               str(lengths[ct_key]),
+               str(calc_max_depth(counts))]
+
+        running_total = sum(counts)
+        total = float(lengths[ct_key])
+        for count in counts[1:]:
+            row.append("%.4f" % (running_total / total,))
+            running_total -= count
+        rows.append(row)
+
+    return rows
+
+
+##############################################################################
+##############################################################################
+
+def collect_lengths(handle, regions=None):
+    if regions:
+        lengths = collections.defaultdict(int)
+        for (name, (_, start, end)) in regions:
+            lengths[name] += end - start
+
+        lengths = dict(lengths)
+    elif len(handle.references) <= _MAX_CONTIGS:
+        lengths = dict(zip(handle.references, handle.lengths))
+    else:
+        lengths = {"<Genome>" : sum(handle.lengths)}
+    lengths["*"] = sum(lengths.itervalues())
+    return lengths
+
+
+def collect_references(handle, regions=None):
+    if regions:
+        return tuple(set(name for (name, _) in regions))
+    elif len(handle.references) <= _MAX_CONTIGS:
+        return handle.references
+    return ("<Genome>",)
+
+
+def build_key_struct(handle):
+    structure = collections.defaultdict(set)
+    for readgroup in handle.header["RG"]:
+        lb_key = readgroup["LB"]
+        sm_key = readgroup["SM"]
+        structure[sm_key].add(lb_key)
+
+    return structure
+
+
+def build_new_dicts(totals, dst_sm, dst_lb, references):
+    totals[(dst_sm, dst_lb, '*')] = [0] * (_MAX_DEPTH + 1)
+    for contig in references:
+        totals[(dst_sm, dst_lb, contig)] = [0] * (_MAX_DEPTH + 1)
+
+
+def reuse_dicts(totals, dst_sm, dst_lb, src_sm, src_lb, references):
+    totals[(dst_sm, dst_lb, '*')] = totals[(src_sm, src_lb, '*')]
+    for contig in references:
+        totals[(dst_sm, dst_lb, contig)] = totals[(src_sm, src_lb, contig)]
+
+
+def build_totals_dict(handle, regions=None):
+    references = collect_references(handle, regions)
+    structure = build_key_struct(handle)
+
+    totals = {}
+    for (sm_key, libraries) in structure.iteritems():
+        for lb_key in libraries:
+            if len(references) == 1:
+                key = references[0]
+                counts = [0] * (_MAX_DEPTH + 1)
+                totals[(sm_key, lb_key, key)] = counts
+                totals[(sm_key, lb_key, '*')] = counts
+            else:
+                build_new_dicts(totals, sm_key, lb_key, references)
+
+        if len(libraries) == 1:
+            key = list(libraries)[0]
+            reuse_dicts(totals, sm_key, '*', sm_key, key, references)
+        else:
+            build_new_dicts(totals, sm_key, '*', references)
+
+    if len(structure) == 1:
+        key = list(structure)[0]
+        reuse_dicts(totals, '*', '*', key, '*', references)
+    else:
+        build_new_dicts(totals, '*', '*', references)
+
+    return totals
+
+
+def count_bases(counts, record, rg_to_smlbid, template):
+    for _ in xrange(record.alen - len(counts)):
+        counts.append(list(template))
+
+    key = rg_to_smlbid[record.opt("RG")]
+    index = 0
+    for (cigar, count) in record.cigar:
+        if cigar in (0, 7, 8):
+            for counter in itertools.islice(counts, index, index + count):
+                counter[key] += 1
+            index += count
+        elif cigar in (2, 3, 6):
+            index += count
+
+
+def build_rg_to_smlbid_keys(handle):
+    """Returns a dictionary which maps a readgroup ID to an index value,
+    as well as a list containing a tuple (samples, library) corresponding
+    to each index. Typically, this list will be shorter than the map of read-
+    groups, as multiple read-groups will map to the same sample / library.
+    """
+
+    rg_to_lbsmid = {}
+    lbsm_to_lbsmid = {}
+    lbsmid_to_smlb = []
+    for readgroup in handle.header["RG"]:
+        key_rg = readgroup["ID"]
+        key_sm = readgroup["SM"]
+        key_lb = readgroup["LB"]
+
+        key_lbsm = (key_sm, key_lb)
+        if key_lbsm not in lbsm_to_lbsmid:
+            lbsm_to_lbsmid[key_lbsm] = len(lbsm_to_lbsmid)
+            lbsmid_to_smlb.append(key_lbsm)
+
+        rg_to_lbsmid[key_rg] = lbsm_to_lbsmid[key_lbsm]
+    return rg_to_lbsmid, lbsmid_to_smlb
+
+
+def process_file(args):
+    sys.stderr.write("Opening %r\n" % (args.infile,))
+    with pysam.Samfile(args.infile) as handle:
+        sort_bed_regions(handle, args.regions)
+        timer = BAMTimer(handle, step=1000000)
+
+        last_tid = 0
+        totals = build_totals_dict(handle, args.regions)
+        rg_to_smlbid, smlbid_to_smlb = build_rg_to_smlbid_keys(handle)
+        template = [0] * len(smlbid_to_smlb)
+
+        for region in BAMRegionsIter(handle, args.regions):
+            counts = collections.deque()
+            mapping = MappingToTotals(totals, region, smlbid_to_smlb)
+
+            last_pos = 0
+            for (position, records) in region:
+                mapping.process_counts(counts, last_pos, position)
+
+                for record in records:
+                    timer.increment(read=record)
+                    # 0xf04 = 0x800 | 0x400 | 0x200 | 0x100 | 0x004
+                    #         0x800 = Secondary alignment
+                    #         0x400 = PCR Duplicate
+                    #         0x200 = Failed QC
+                    #         0x100 = Alternative alignment
+                    #         0x004 = Unmapped read
+                    if record.flag & 0xf04:
+                        continue
+
+                    count_bases(counts, record, rg_to_smlbid, template)
+
+                if (region.tid, position) < (last_tid, last_pos):
+                    sys.stderr.write("ERROR: Input BAM file is unsorted\n")
+                    return 1
+
+                last_pos = position
+                last_tid = region.tid
+
+            # Process columns in region after last read
+            mapping.process_counts(counts, last_pos, float("inf"))
+            mapping.finalize()
+        timer.finalize()
+
+        lengths = collect_lengths(handle, args.regions)
+        print_table(args, handle, totals, lengths)
+
+    return 0
+
+
+##############################################################################
+##############################################################################
+
+def parse_arguments(argv):
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("infile", metavar="BAM",
+                        help="Filename of a sorted BAM file. If set to '-' "
+                             "the file is read from STDIN.")
+    parser.add_argument("outfile", metavar="OUTPUT", nargs='?',
+                        help="Filename of output table; defaults to name of "
+                             "the input BAM with a '.depths' extension. If "
+                             "set to '-' the table is printed to STDOUT.")
+    parser.add_argument("--target-name", default=None,
+                        help="Name used for 'Target' column; defaults to the "
+                             "filename of the BAM file.")
+    parser.add_argument("--regions-file", default=None, dest="regions_fpath",
+                        help="BED file containing regions of interest; depth "
+                             "is calculated only for these grouping by the "
+                             "name used in the BED file, or the contig name "
+                             "if no name has been specified for a record.")
+
+    args = parser.parse_args(argv)
+    if not args.outfile:
+        args.outfile = swap_ext(args.infile, ".depths")
+
+    if not args.target_name:
+        if args.infile == "-":
+            args.target_name = "<STDIN>"
+        else:
+            args.target_name = os.path.basename(args.infile)
+
+    return args
 
 
 def main(argv):
-    parser = _build_option_parser()
-    config, input_fpaths = parser.parse_args(argv)
-    if not input_fpaths:
-        parser.print_usage()
-        return 1
+    args = parse_arguments(argv)
 
-    # Set process name on supported platforms
-    pypeline.common.system.set_procname()
-    # Log to console only, except if --log-file is specified
-    pypeline.logger.initialize(config, None)
-    # Config object is passed to nodes during execution
-    pipeline = pypeline.Pypeline(config)
+    args.regions = None
+    if args.regions_fpath:
+        args.regions = collect_bed_regions(args.regions_fpath)
 
-    # Duplicate file-names are elimated to prevent the pipeline from
-    # complaining about / aborting due to clobbering of files; it is
-    # assumed to be a trivial mistake.
-    print_info("Building BAM depth histogram pipeline ...")
-    for input_fpath in set(input_fpaths):
-        node = _build_depth_histogram_node(input_fpath=input_fpath,
-                                           regions_fpath=config.regions_fpath,
-                                           target_name=config.target_name)
-        pipeline.add_nodes(node)
-
-    print_info("Running BAM depth histogram pipeline ...")
-    if pipeline.run(max_running=config.max_threads,
-                    dry_run=config.dry_run,
-                    progress_ui=config.progress_ui):
-        return 0
-    return 1
+    return process_file(args)
 
 
 if __name__ == '__main__':

@@ -59,20 +59,17 @@ def add_statistics_nodes(config, makefile, target):
 def _build_depth(config, target):
     nodes = []
     for prefix in target.prefixes:
-        input_files = {}
-        for sample in prefix.samples:
-            input_files.update(sample.bams)
+        input_file, dependency = tuple(sorted(prefix.bams.items()))[-1]
 
         for (roi_name, roi_filename) in _get_roi(prefix, name_prefix = "."):
             output_filename = os.path.join(config.destination,
                                            "%s.%s%s.depths" % (target.name, prefix.name, roi_name))
 
-            node = DepthHistogramNode(config         = config,
-                                      target_name    = target.name,
-                                      input_files    = input_files.keys(),
-                                      intervals_file = roi_filename,
-                                      output_file    = output_filename,
-                                      dependencies   = input_files.values())
+            node = DepthHistogramNode(target_name  = target.name,
+                                      input_file   = input_file,
+                                      regions_file = roi_filename,
+                                      output_file  = output_filename,
+                                      dependencies = dependency)
             nodes.append(node)
 
     return MetaNode(description = "DepthHistograms",

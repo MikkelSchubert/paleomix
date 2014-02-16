@@ -383,6 +383,7 @@ def _validate_makefiles(makefiles):
         _validate_makefile_libraries(makefile)
     _validate_makefiles_duplicate_targets(makefiles)
     _validate_makefiles_duplicate_files(makefiles)
+    _validate_makefiles_features(makefiles)
 
     return makefiles
 
@@ -438,6 +439,16 @@ def _validate_makefiles_duplicate_targets(makefiles):
                 raise MakefileError("Target name '%s' used multiple times; "
                                     "output files would be clobbered!" % target)
             targets.add(target)
+
+
+def _validate_makefiles_features(makefiles):
+    for makefile in makefiles:
+        features = makefile["Options"]["Features"]
+        if "Depths" in features:
+            if not (("Raw BAM" in features) or ("Realigned BAM") in features):
+                raise MakefileError("The feature 'Depths' (depth histograms) "
+                                    "require that either the feature 'Raw BAM' "
+                                    "or the feature 'Raligned BAM' is enabled.")
 
 
 def _iterate_over_records(makefile):
