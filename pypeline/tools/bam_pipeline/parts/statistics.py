@@ -76,7 +76,6 @@ def _build_depth(config, target):
                     subnodes    = nodes)
 
 
-
 def _aggregate_for_prefix(cov, prefix, roi_name = None, into = None):
     prefix = _get_prefix_label(prefix, roi_name)
     results = {} if into is None else into

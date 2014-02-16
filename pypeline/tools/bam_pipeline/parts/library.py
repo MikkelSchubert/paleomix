@@ -43,7 +43,8 @@ from pypeline.tools.bam_pipeline.nodes import \
     IndexAndValidateBAMNode
 from pypeline.nodes.duphist import \
     DuplicateHistogramNode
-
+from pypeline.nodes.validation import \
+    DetectInputDuplicationNode
 
 
 class Library:
@@ -79,6 +80,7 @@ class Library:
         assert all((self.options == lane.options) for lane in self.lanes)
 
         lane_bams = self._collect_bams_by_type(self.lanes)
+        self.datadup_check = self._build_dataduplication_node(lane_bams)
         self.duphist = \
             self._build_duphist_nodes(config, target, prefix, lane_bams)
         pcr_duplicates = self.options["PCRDuplicates"]
@@ -92,7 +94,7 @@ class Library:
           self._build_mapdamage_nodes(config, target, prefix, files_and_nodes)
 
         self.node = MetaNode(description  = "Library: %s" % os.path.basename(self.folder),
-                             dependencies = self.bams.values())
+                             dependencies = self.bams.values() + [self.datadup_check])
 
 
     @classmethod
@@ -102,6 +104,7 @@ class Library:
             for key, files in lane.bams.iteritems():
                 key = "collapsed" if (key == "Collapsed") else "normal"
                 bams.setdefault(key, {}).update(files)
+
         return bams
 
 
@@ -228,3 +231,10 @@ class Library:
                                       input_files=input_files,
                                       output_file=destination,
                                       dependencies=dependencies)
+
+    def _build_dataduplication_node(self, bams):
+        files_and_nodes = self._collect_files_and_nodes(bams)
+
+        return DetectInputDuplicationNode(input_files = files_and_nodes.keys(),
+                                          output_file = self.folder + ".duplications_checked",
+                                          dependencies = files_and_nodes.values())

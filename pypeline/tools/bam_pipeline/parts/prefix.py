@@ -27,6 +27,8 @@ from pypeline.node import MetaNode
 from pypeline.nodes.gatk import IndelRealignerNode
 from pypeline.nodes.picard import MergeSamFilesNode
 from pypeline.tools.bam_pipeline.nodes import IndexAndValidateBAMNode
+from pypeline.nodes.validation import \
+    DetectInputDuplicationNode
 
 
 class Prefix:
@@ -44,6 +46,8 @@ class Prefix:
         files_and_nodes = {}
         for sample in self.samples:
             files_and_nodes.update(sample.bams.iteritems())
+
+        self.datadup_check = self._build_dataduplication_node(prefix, files_and_nodes)
 
         if "Raw BAM" in features:
             self.bams.update(self._build_raw_bam(config, prefix, files_and_nodes))
@@ -70,7 +74,7 @@ class Prefix:
         node = MergeSamFilesNode(config       = config,
                                  input_bams   = files_and_bams.keys(),
                                  output_bam   = output_filename,
-                                 dependencies = files_and_bams.values())
+                                 dependencies = self.datadup_check)
         validated_node = IndexAndValidateBAMNode(config, prefix, node, validated_filename)
 
         return {output_filename : validated_node}
@@ -86,7 +90,13 @@ class Prefix:
                                   infiles      = bams.keys(),
                                   outfile      = output_filename,
                                   intervals    = intervals_filename,
-                                  dependencies = bams.values())
+                                  dependencies = self.datadup_check)
         validated_node = IndexAndValidateBAMNode(config, prefix, node, validated_filename)
 
         return {output_filename : validated_node}
+
+    def _build_dataduplication_node(self, prefix, files_and_nodes):
+        destination = os.path.join(self.target, prefix["Name"] + ".duplications_checked")
+        return DetectInputDuplicationNode(input_files = files_and_nodes.keys(),
+                                          output_file = destination,
+                                          dependencies = files_and_nodes.values())
