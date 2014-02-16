@@ -297,11 +297,12 @@ def build_sampling_nodes(options, genotyping, sample, regions, dependencies):
 
 
 def build_reference_nodes(options, sample, regions, dependencies):
+    input_file = os.path.join(options.prefix_root, sample["Name"] + ".fasta")
     output_file = "%s.%s.fasta" % (sample["Name"], regions["Desc"])
     destination = os.path.join(options.destination, "genotypes", output_file)
     faidx_node  = build_fasta_index_node(regions["FASTA"], dependencies)
 
-    node  = ExtractReferenceNode(reference          = regions["FASTA"],
+    node  = ExtractReferenceNode(reference          = input_file,
                                  bedfile            = regions["BED"],
                                  outfile            = destination,
                                  dependencies       = faidx_node)
