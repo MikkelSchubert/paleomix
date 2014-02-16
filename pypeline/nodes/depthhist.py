@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -20,21 +20,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
-import sys
-import datetime
-import subprocess
-
-import pysam
-
-from pypeline.node import CommandNode
-from pypeline.atomiccmd.builder import AtomicCmdBuilder
+from pypeline.node import \
+    CommandNode
+from pypeline.atomiccmd.builder import \
+    AtomicCmdBuilder
 
 
 class DepthHistogramNode(CommandNode):
-    def __init__(self, target_name, input_file, output_file, regions_file=None, dependencies=()):
-        builder = AtomicCmdBuilder(['bam_depths', '%(IN_FILE)s', '%(OUT_FILE)s',
-                                    '--target-name', target_name],
+    def __init__(self, target_name, input_file, output_file,
+                 regions_file=None, dependencies=()):
+        call = ['bam_depths', '%(IN_FILE)s', '%(OUT_FILE)s',
+                '--target-name', target_name]
+        builder = AtomicCmdBuilder(call,
                                    IN_FILE=input_file,
                                    OUT_FILE=output_file)
 
@@ -45,7 +42,7 @@ class DepthHistogramNode(CommandNode):
         command = builder.finalize()
 
         CommandNode.__init__(self,
-                             command = command,
-                             description = "<DepthHistogram: %s -> '%s'>" \
-                                           % (input_file, output_file),
-                             dependencies = dependencies)
+                             command=command,
+                             description="<DepthHistogram: %s -> '%s'>"
+                                         % (input_file, output_file),
+                             dependencies=dependencies)

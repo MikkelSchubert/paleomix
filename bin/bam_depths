@@ -163,7 +163,6 @@ class MappingToTotals(object):
             = self._build_mappings(totals, region.name, smlbid_to_smlb)
         self._cache = collections.defaultdict(int)
 
-
     def process_counts(self, counts, last_pos, cur_pos):
         start = self._region.start
         end = self._region.end
@@ -272,19 +271,29 @@ def calc_max_depth(counts):
     return "NA"
 
 
-def print_table(args, handle, totals, lengths):
-    if args.outfile == "-":
-        handle = sys.stdout
-    else:
-        handle = open(args.outfile, "w")
+def print_table(args, handle, totals):
+    lengths = collect_lengths(handle, args.regions)
 
-    with handle:
+    if args.outfile == "-":
+        output_handle = sys.stdout
+    else:
+        output_handle = open(args.outfile, "w")
+
+    with output_handle:
         rows = build_table(args.target_name, totals, lengths)
-        handle.write(_HEADER % datetime.datetime.now().isoformat())
-        handle.write("\n")
+        output_handle.write(_HEADER % datetime.datetime.now().isoformat())
+        output_handle.write("\n")
         for line in padded_table(rows):
-            handle.write(line)
-            handle.write("\n")
+            output_handle.write(line)
+            output_handle.write("\n")
+
+
+def calculate_depth_pc(counts, length):
+    running_total = sum(counts)
+    total = float(length)
+    for count in counts[1:]:
+        yield "%.4f" % (running_total / total,)
+        running_total -= count
 
 
 def build_table(name, totals, lengths):
@@ -301,15 +310,11 @@ def build_table(name, totals, lengths):
             rows.append("#")
         last_sm, last_lb = sm_key, lb_key
 
-        row = [name, sm_key, lb_key, ct_key,
-               str(lengths[ct_key]),
+        length = lengths[ct_key]
+        row = [name, sm_key, lb_key, ct_key, str(length),
                str(calc_max_depth(counts))]
+        row.extend(calculate_depth_pc(counts, length))
 
-        running_total = sum(counts)
-        total = float(lengths[ct_key])
-        for count in counts[1:]:
-            row.append("%.4f" % (running_total / total,))
-            running_total -= count
         rows.append(row)
 
     return rows
@@ -328,7 +333,7 @@ def collect_lengths(handle, regions=None):
     elif len(handle.references) <= _MAX_CONTIGS:
         lengths = dict(zip(handle.references, handle.lengths))
     else:
-        lengths = {"<Genome>" : sum(handle.lengths)}
+        lengths = {"<Genome>": sum(handle.lengths)}
     lengths["*"] = sum(lengths.itervalues())
     return lengths
 
@@ -476,8 +481,7 @@ def process_file(args):
             mapping.finalize()
         timer.finalize()
 
-        lengths = collect_lengths(handle, args.regions)
-        print_table(args, handle, totals, lengths)
+        print_table(args, handle, totals)
 
     return 0
 
