@@ -40,17 +40,23 @@ from pypeline.common.utilities import \
 
 
 
-def add_optiongroup(parser, default = "quiet"):
+def add_optiongroup(parser, ui_default="quiet", color_default="on"):
     """Adds an option-group to an OptionParser object, with options
     pertaining to logging. Note that 'initialize' expects the config
     object to have these options."""
     group = optparse.OptionGroup(parser, "Progress reporting")
-    group.add_option("--progress-ui", default = default, type = "choice",
+    group.add_option("--progress-ui", default=ui_default, type="choice",
                      choices = ("verbose", "quiet", "progress"),
                      help = "Select method for displaying the progress of the pipeline: "
                             "'verbose' = Full dependency tree at every change; "
                             "'quiet' = Display only currently running nodes; "
                             "'progress' = Display changes in state. "
+                            "[Default is '%default']")
+    group.add_option("--ui-colors", default=color_default,
+                     choices = ("on", "off", "force"),
+                     help = "Enable, disable, or force the use of color codes "
+                            "when printing the command-line UI. Unless forced, "
+                            "colors will only be printed if STDOUT is a TTY "
                             "[Default is '%default']")
     parser.add_option_group(group)
 
@@ -64,6 +70,17 @@ def get_ui(ui_name):
     return UI_TYPES[ui_name]()
 
 
+def set_ui_colors(choice):
+    import pypeline.common.console as console
+    choice = choice.lower()
+    if choice == "on":
+        console.set_color_output(console.COLORS_ON)
+    elif choice == "off":
+        console.set_color_output(console.COLORS_OFF)
+    elif choice == "force":
+        console.set_color_output(console.COLORS_FORCED)
+    else:
+        raise ValueError("Unknown color setting %r" % (choice,))
 
 
 class BaseUI:

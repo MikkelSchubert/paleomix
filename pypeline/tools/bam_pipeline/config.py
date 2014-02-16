@@ -45,7 +45,9 @@ def _run_config_parser(argv):
                              "accesible, if for example a network drive is down. This option should be " \
                              "used with care!")
 
-    pypeline.ui.add_optiongroup(parser, default = PerHostValue("quiet"))
+    pypeline.ui.add_optiongroup(parser,
+                                ui_default=PerHostValue("quiet"),
+                                color_default=PerHostValue("on"))
     pypeline.logger.add_optiongroup(parser, default = PerHostValue("warning"))
 
     group  = optparse.OptionGroup(parser, "Scheduling")
@@ -101,6 +103,7 @@ def _run_config_parser(argv):
 
 def parse_config(argv):
     config, args = _run_config_parser(argv)
+    pypeline.ui.set_ui_colors(config.ui_colors)
 
     config.targets = set(config.targets)
 

@@ -25,6 +25,16 @@ from __future__ import print_function
 import sys
 
 
+# Global setting to enable, disable, or force the use console codes when the
+# print_* functions are used. By default (ON), color codes will only be used if
+# the destination is a TTY.
+COLORS_OFF, COLORS_ON, COLORS_FORCED = range(3)
+def set_color_output(clr):
+    assert clr in (COLORS_OFF, COLORS_ON, COLORS_FORCED)
+    global _COLORS
+    _COLORS = clr
+
+
 def print_msg(*vargs, **kwargs):
     """Equivalent to print. Currently does not apply a color to the text"""
     print(*vargs, **kwargs)
@@ -61,7 +71,17 @@ def _do_print_color(*vargs, **kwargs):
     destination = kwargs.pop("file", sys.stdout)
 
     # No colors if output is redirected (e.g. less, file, etc.)
-    if destination.isatty():
-        vargs = ["\033[00;%im%s\033[00m" % (colorcode, arg) for arg in vargs]
+    colors_on = _COLORS != COLORS_OFF
+    colors_forced = _COLORS == COLORS_FORCED
+    if colors_on and (destination.isatty() or colors_forced):
+        vargs = list(vargs)
+        for (index, varg) in enumerate(vargs):
+            varg_lines = []
+            # Newlines terminate the color-code for e.g. 'less', so ensure that 
+            # each line is color-coded, while preserving the list of arguments
+            for line in varg.split("\n"):
+              varg_lines.append("\033[00;%im%s\033[00m" % (colorcode, line))
+            vargs[index] = "\n".join(varg_lines)
 
     print(*vargs, file = destination, **kwargs)
+_COLORS = COLORS_ON

@@ -89,7 +89,9 @@ def _run_config_parser(argv):
     parser.formatter.set_parser(parser)
     parser.description = _DESCRIPTION
 
-    pypeline.ui.add_optiongroup(parser, default = PerHostValue("quiet"))
+    pypeline.ui.add_optiongroup(parser,
+                                ui_default=PerHostValue("quiet"),
+                                color_default=PerHostValue("on"))
     pypeline.logger.add_optiongroup(parser, default = PerHostValue("warning"))
 
     group  = optparse.OptionGroup(parser, "Scheduling")
@@ -121,6 +123,8 @@ def _run_config_parser(argv):
 
 def parse_config(argv):
     options, args  = _run_config_parser(argv)
+    pypeline.ui.set_ui_colors(options.ui_colors)
+
     if (len(args) < 2) and (args != ["mkfile"]):
         description = _DESCRIPTION.replace("%prog", "phylo_pipeline").strip()
         console.print_info("Phylogeny Pipeline %s\n" % (pypeline.__version__,))
