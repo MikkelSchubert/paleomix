@@ -45,14 +45,14 @@ def filter_gtf_record(gtf):
     return gtf.feature not in ("exon", "CDS")
 
 
-def update_gtf_table(table, gtf, scaffolds):
+def update_gtf_table(table, gtf, scaffolds, contig_prefix):
     keys = (gtf.source,
             gtf.gene_id,
             gtf.transcript_id,
             int(gtf.exon_number),
             gtf.feature)
 
-    record = {"contig": gtf.contig,
+    record = {"contig": contig_prefix + gtf.contig,
               "start": gtf.start,
               # In pysam, 'end' equals the past-the-end position
               "end": gtf.end - 1,
@@ -70,11 +70,11 @@ def update_gtf_table(table, gtf, scaffolds):
     set_in(table, keys, record)
 
 
-def read_gtf(lines, scaffolds):
+def read_gtf(lines, scaffolds, contig_prefix):
     table = {}  # gene_id -> transcript_id -> exon_number -> feature -> [items]
     for gtf in text.parse_lines(lines, pysam.asGTF()):
         if not filter_gtf_record(gtf):
-            update_gtf_table(table, gtf, scaffolds)
+            update_gtf_table(table, gtf, scaffolds, contig_prefix)
 
     return table
 
@@ -271,6 +271,9 @@ def parse_arguments(argv):
                         help="Include transcripts of protein-coding in the "
                              "output, even if the the length of the CDS is "
                              "not divisible by 3 [default: off]")
+    parser.add_argument('--contig-prefix', default="",
+                        help="Add prefix to contig names (e.g. 'chr') "
+                             "[default: no prefix].")
 
     return parser.parse_args(argv)
 
@@ -285,7 +288,7 @@ def main(argv):
 
     with open(args.infile, "r") as gtf_file:
         print("Reading GTF from %r" % (args.infile,))
-        src_table = read_gtf(gtf_file, scaffolds)
+        src_table = read_gtf(gtf_file, scaffolds, args.contig_prefix)
 
     for (source, table) in src_table.iteritems():
         print("Writing tables for '%s' ..." % source)
