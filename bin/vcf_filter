@@ -1,4 +1,4 @@
-#!/usr/bin/python -3
+#!/usr/bin/python
 #
 # Copyright (c) 2012 Mikkel Schubert <MSchubert@snm.ku.dk>
 #
@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -20,6 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+from __future__ import print_function
+
 import sys
 import errno
 import optparse
@@ -28,6 +30,7 @@ import fileinput
 import pysam
 
 import pypeline.common.vcffilter as vcffilter
+
 
 def _read_files(filenames):
     in_header = True
@@ -38,18 +41,22 @@ def _read_files(filenames):
             line = line.rstrip("\n\r")
             yield vcf_parser(line, len(line))
         elif in_header:
-            print line,
+            print(line, end="")
 
 
-if __name__ == '__main__':
+def main(argv):
     parser = optparse.OptionParser("vcf_filter [options] [in1.vcf, ...]")
     vcffilter.add_varfilter_options(parser)
-    (opts, args) = parser.parse_args(sys.argv[1:])
+    (opts, args) = parser.parse_args(argv)
 
     try:
         for vcf in vcffilter.filter_vcfs(opts, _read_files(args)):
             print(vcf)
-    except IOError, e:
+    except IOError, error:
         # Check for broken pipe (head, less, etc).
-        if e.errno != errno.EPIPE:
+        if error.errno != errno.EPIPE:
             raise
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))
