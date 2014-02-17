@@ -145,7 +145,7 @@ def _update_regions(options, mkfile):
                 raise MakefileError(message)
 
         # Collects seq. names / validate regions
-        subdd["Sequences"] = {None : _collect_and_validate_sequences_and_subsets(subdd)}
+        subdd["Sequences"] = {None : _collect_and_validate_regions(subdd)}
         subdd["SubsetFiles"] = {None : ()}
 
         sampledd = subdd["Genotypes"] = {}
@@ -180,7 +180,7 @@ def _collect_fasta_contigs(regions):
     return contigs
 
 
-def _collect_and_validate_sequences_and_subsets(regions):
+def _collect_and_validate_regions(regions):
     contigs = _collect_fasta_contigs(regions)
     parser = pysam.asBed()
     sequences = set()
@@ -194,35 +194,42 @@ def _collect_and_validate_sequences_and_subsets(regions):
                 bed = parser(line, len(line))
                 # Force evaluation of (lazily parsed) properties
                 bed_start = bed.start
-                bed_end   = bed.end
+                bed_end = bed.end
             except ValueError, error:
-                raise MakefileError(("Error parsing line in regions file:\n"
-                                     "  File = %r\n  Line = %i\n %s")
-                                     % (regions["BED"], line_num, error))
+                raise MakefileError(("Error parsing line %i in regions file:\n"
+                                     "  Path = %r\n  Line = %r\n\n%s")
+                                    % (line_num + 1, regions["BED"],
+                                       line, error))
 
             if len(bed) < 6:
-                raise MakefileError(("Region at line #%i (%s) does not contain enough fields;\n"
-                                     "at least the first 6 fields are required. C.f. defination at\n"
-                                     "  http://genome.ucsc.edu/FAQ/FAQformat.html#format1")
-                                     % (line_num, repr(bed.name) if len(bed) > 3 else "unnamed record"))
+                url = "http://genome.ucsc.edu/FAQ/FAQformat.html#format1"
+                name = repr(bed.name) if len(bed) > 3 else "unnamed record"
+                raise MakefileError(("Region at line #%i (%s) does not "
+                                     "contain the expected number of fields; "
+                                     "the first 6 fields are required. C.f. "
+                                     "defination at\n   %s\n\nPath = %r")
+                                    % (line_num, name, url, regions["BED"]))
 
             contig_len = contigs.get(bed.contig)
             if contig_len is None:
-                raise MakefileError(("Regions file contains contigs not found in reference:\n"
-                                     "  Path = %r\n  Name = %r\n"
-                                     "Please ensure that all contig names match the reference names!")
-                                     % (regions["BED"], bed.contig))
+                raise MakefileError(("Regions file contains contig not found "
+                                     "in reference:\n  Path = %r\n  Contig = "
+                                     "%r\n\nPlease ensure that all contig "
+                                     "names match the reference names!")
+                                    % (regions["BED"], bed.contig))
             elif not (0 <= int(bed_start) < int(bed_end) <= contig_len):
                 raise MakefileError(("Regions file contains invalid region:\n"
                                      "  Path   = %r\n  Contig = %r\n"
-                                     "  Start  = %s\n  End    = %s\n"
-                                     "Start must be >= 0 and < End, and End must be <= %i!")
-                                     % (regions["BED"], bed.contig, bed.start, bed.end, contig_len))
+                                     "  Start  = %s\n  End    = %s\n\n"
+                                     "Expected 0 <= Start < End <= %i!")
+                                    % (regions["BED"], bed.contig, bed.start,
+                                       bed.end, contig_len))
             elif bed.strand not in "+-":
                 raise MakefileError(("Regions file contains invalid region: "
-                                     "  Path   = %r\n  Line = %i\n  Name = %r\n"
-                                     "Strand is %r, expected either '+' or '-'")
-                                     % (regions["BED"], line_num, bed.name, bed.strand))
+                                     "  Path   = %r\n  Line = %i\n  Name = %r"
+                                     "\nStrand is %r, expected '+' or '-'.")
+                                    % (regions["BED"], line_num, bed.name,
+                                       bed.strand))
 
             sequences.add(bed.name)
 
