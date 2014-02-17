@@ -263,8 +263,9 @@ def build_genotyping_nodes(options, genotyping, sample, regions, dependencies):
                                 outfile      = fasta,
                                 padding      = padding,
                                 dependencies = tabix)
-
-    return (builder,)
+    faidx = FastaIndexNode(infile       = fasta,
+                           dependencies = builder)
+    return (faidx,)
 
 
 def build_sampling_nodes(options, genotyping, sample, regions, dependencies):
@@ -293,20 +294,26 @@ def build_sampling_nodes(options, genotyping, sample, regions, dependencies):
                                  bedfile      = regions["BED"],
                                  outfile      = fasta_file,
                                  dependencies = tabix)
-    return (builder,)
+    faidx = FastaIndexNode(infile       = fasta_file,
+                           dependencies = builder)
+    return (faidx,)
 
 
 def build_reference_nodes(options, sample, regions, dependencies):
-    input_file = os.path.join(options.prefix_root, sample["Name"] + ".fasta")
-    output_file = "%s.%s.fasta" % (sample["Name"], regions["Desc"])
-    destination = os.path.join(options.destination, "genotypes", output_file)
-    faidx_node  = build_fasta_index_node(regions["FASTA"], dependencies)
+    input_file = "%s.%s.fasta" % (regions["Prefix"], sample["Name"])
+    input_fpath = os.path.join(options.refseq_root, input_file)
 
-    node  = ExtractReferenceNode(reference          = input_file,
+    output_file = "%s.%s.fasta" % (sample["Name"], regions["Desc"])
+    output_fpath = os.path.join(options.destination, "genotypes", output_file)
+    faidx_node = build_fasta_index_node(regions["FASTA"], dependencies)
+
+    node  = ExtractReferenceNode(reference          = input_fpath,
                                  bedfile            = regions["BED"],
-                                 outfile            = destination,
+                                 outfile            = output_fpath,
                                  dependencies       = faidx_node)
-    return (node,)
+    faidx = FastaIndexNode(infile       = output_fpath,
+                           dependencies = node)
+    return (faidx,)
 
 
 def build_sample_nodes(options, genotyping, regions_sets, sample, dependencies = ()):
