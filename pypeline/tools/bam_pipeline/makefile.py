@@ -307,27 +307,45 @@ def _update_prefixes(makefile):
 
 def _update_lanes(makefile):
     prefixes = makefile["Prefixes"]
-    for samples in makefile["Targets"].itervalues():
-        for libraries in samples.itervalues():
-            for lanes in libraries.itervalues():
+    for (target_name, samples) in makefile["Targets"].iteritems():
+        for (sample_name, libraries) in samples.iteritems():
+            for (library_name, lanes) in libraries.iteritems():
                 options = lanes.pop("Options")
 
                 for (lane, data) in lanes.iteritems():
-                    lane_type = None
-                    if isinstance(data, types.StringTypes):
-                        lane_type = "Raw"
-                    elif isinstance(data, types.DictType):
-                        if all((key in _READ_TYPES) for key in data):
-                            lane_type = "Trimmed"
-                        elif all((key in prefixes) for key in data):
-                            lane_type = "BAMs"
-                        else:
-                            raise MakefileError("Error at Barcode level; keys must either be prefix-names, OR 'Paired', 'Single' or 'Collapsed'. Found: %s" \
-                                                % (", ".join(data),))
+                    path = (target_name, sample_name, library_name, lane)
+                    lane_type = _determine_lane_type(prefixes, data, path)
+                    lanes[lane] = {"Type": lane_type,
+                                   "Data": data,
+                                   "Options": options}
 
-                    lanes[lane] = {"Type"     : lane_type,
-                                   "Data"     : data,
-                                   "Options"  : options}
+
+def _determine_lane_type(prefixes, data, path):
+    if isinstance(data, types.StringTypes):
+        return "Raw"
+    elif isinstance(data, types.DictType):
+        if all((key in _READ_TYPES) for key in data):
+            for (key, files) in data.iteritems():
+                is_paired = paths.is_paired_end(files)
+
+                if is_paired and (key != "Paired"):
+                    raise MakefileError("Error at Barcode level; Path "
+                                        "includes {Pair} key, but read-type "
+                                        "is not Paired:\n    "
+                                        "%s:%s" % (":".join(path), key))
+                elif not is_paired and (key == "Paired"):
+                    raise MakefileError("Error at Barcode level; Paired pre-"
+                                        "trimmed reads specified, but path "
+                                        "does not contain {Pair} key:\n    "
+                                        "%s:%s" % (":".join(path), key))
+
+            return "Trimmed"
+        elif all((key in prefixes) for key in data):
+            return "BAMs"
+
+    raise MakefileError("Error at Barcode level; keys must either be "
+                        "prefix-names, OR 'Paired', 'Single' or 'Collapsed'. "
+                        "Found: %s" % (", ".join(data),))
 
 
 def _update_tags(makefile):
