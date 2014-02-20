@@ -73,7 +73,7 @@ class DetectInputDuplicationNode(Node):
                     observed_reads.clear()
                     position = record.pos
 
-                key = (record.qname, record.seq)
+                key = (record.qname, record.seq, record.qual)
                 observed_reads[key].append(fpath)
             self._process_reads(observed_reads)
 
@@ -87,7 +87,7 @@ class DetectInputDuplicationNode(Node):
 
     @classmethod
     def _process_reads(cls, observed_reads):
-        for ((name, _), fpaths) in observed_reads.iteritems():
+        for ((name, _, _), fpaths) in observed_reads.iteritems():
             if len(fpaths) > 1:
                 message = ["Read %r found in multiple files:" % (name,)]
                 for fpath in fpaths:
