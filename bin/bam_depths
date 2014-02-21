@@ -20,21 +20,22 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
 import sys
-import argparse
 import datetime
 import itertools
 import collections
-
-import pysam
 
 from pypeline.common.timer import \
     BAMTimer
 from pypeline.common.text import \
     padded_table
-from pypeline.common.fileutils import \
-    swap_ext
+from pypeline.common.bamfiles import \
+    BAMRegionsIter
+
+from pypeline.tools.bam_stats.common import \
+    collect_references, \
+    collect_readgroups, \
+    main
 
 
 ##############################################################################
@@ -43,9 +44,6 @@ from pypeline.common.fileutils import \
 
 # Maximum depth to record, and hence the number of columns in output table
 _MAX_DEPTH = 200
-# Maximum number of contigs in table; if this number is exceeded, the entire
-# genome is collapsed into one meta-contig named "<Genome>"
-_MAX_CONTIGS = 100
 # Maximum number of count patterns (numbers of bases per library for a given
 # site) to cache for bulk processing; see MappingsToTotals for implementation
 _MAX_CACHE_SIZE = 10000
@@ -69,87 +67,6 @@ _HEADER = """# Timestamp: %s
 #             not including sites with depth 0.
 #   MD_*:     Fraction of sites with a minimum depth of 1-200.
 #"""
-
-
-##############################################################################
-##############################################################################
-## Parsing BED files for regions of interest
-
-def collect_bed_regions(filename):
-    regions = []
-    with open(filename) as handle:
-        for line in handle:
-            line = line.rstrip()
-            if not line or line.startswith("#"):
-                continue
-
-            fields = line.split('\t')
-            contig, start, end = fields[:3]
-
-            if len(fields) >= 4:
-                name = fields[3]
-            else:
-                name = "%s*" % (contig,)
-
-            regions.append((name, (contig, int(start), int(end))))
-
-    return regions
-
-
-def sort_bed_regions(bamfile, regions):
-    """Orders a set of BED regions, such that processing matches
-    (as far as possible) the layout of the bamfile."""
-    if regions:
-        indices = dict(zip(bamfile.references,
-                       xrange(len(bamfile.references))))
-
-        def _by_bam_layout((_, (contig, start, end))):
-            return (indices[contig], start, end)
-        regions.sort(key=_by_bam_layout)
-
-
-##############################################################################
-##############################################################################
-## Classes for iterating over a BAM, with an optional set of BED regions
-
-class BAMRegionIter(object):
-    def __init__(self, tid, name, start, end, records):
-        self._records = records
-        self.tid = tid
-        self.name = name
-        self.start = start
-        self.end = end
-
-    def __iter__(self):
-        def _by_pos(record):
-            return record.pos
-
-        for group in itertools.groupby(self._records, _by_pos):
-            yield group
-
-
-class BAMRegionsIter(object):
-    def __init__(self, handle, regions=None):
-        self._handle = handle
-        self._regions = regions
-
-    def __iter__(self):
-        if self._regions:
-            for (name, (contig, start, end)) in self._regions:
-                records = self._handle.fetch(contig, start, end)
-                tid = self._handle.gettid(contig)
-                yield BAMRegionIter(tid, name, start, end, records)
-        else:
-            def _by_tid(record):
-                return record.tid
-
-            for (tid, items) in itertools.groupby(self._handle, key=_by_tid):
-                name = '<Genome>'
-                if len(self._handle.references) <= _MAX_CONTIGS:
-                    name = self._handle.references[tid]
-                length = self._handle.lengths[tid]
-
-                yield BAMRegionIter(tid, name, 0, length, items)
 
 
 ##############################################################################
@@ -271,8 +188,8 @@ def calc_max_depth(counts):
     return "NA"
 
 
-def print_table(args, handle, totals):
-    lengths = collect_lengths(handle, args.regions)
+def print_table(handle, args, totals):
+    lengths = collect_references(args, handle)
 
     if args.outfile == "-":
         output_handle = sys.stdout
@@ -310,7 +227,11 @@ def build_table(name, totals, lengths):
             rows.append("#")
         last_sm, last_lb = sm_key, lb_key
 
-        length = lengths[ct_key]
+        if ct_key == "*":
+            length = sum(lengths.itervalues())
+        else:
+            length = lengths[ct_key]
+
         row = [name, sm_key, lb_key, ct_key, str(length),
                str(calc_max_depth(counts))]
         row.extend(calculate_depth_pc(counts, length))
@@ -323,32 +244,9 @@ def build_table(name, totals, lengths):
 ##############################################################################
 ##############################################################################
 
-def collect_lengths(handle, regions=None):
-    if regions:
-        lengths = collections.defaultdict(int)
-        for (name, (_, start, end)) in regions:
-            lengths[name] += end - start
-
-        lengths = dict(lengths)
-    elif len(handle.references) <= _MAX_CONTIGS:
-        lengths = dict(zip(handle.references, handle.lengths))
-    else:
-        lengths = {"<Genome>": sum(handle.lengths)}
-    lengths["*"] = sum(lengths.itervalues())
-    return lengths
-
-
-def collect_references(handle, regions=None):
-    if regions:
-        return tuple(set(name for (name, _) in regions))
-    elif len(handle.references) <= _MAX_CONTIGS:
-        return handle.references
-    return ("<Genome>",)
-
-
-def build_key_struct(handle):
+def build_key_struct(args, handle):
     structure = collections.defaultdict(set)
-    for readgroup in handle.header["RG"]:
+    for readgroup in collect_readgroups(args, handle).itervalues():
         lb_key = readgroup["LB"]
         sm_key = readgroup["SM"]
         structure[sm_key].add(lb_key)
@@ -368,9 +266,9 @@ def reuse_dicts(totals, dst_sm, dst_lb, src_sm, src_lb, references):
         totals[(dst_sm, dst_lb, contig)] = totals[(src_sm, src_lb, contig)]
 
 
-def build_totals_dict(handle, regions=None):
-    references = collect_references(handle, regions)
-    structure = build_key_struct(handle)
+def build_totals_dict(args, handle):
+    references = tuple(collect_references(args, handle))
+    structure = build_key_struct(args, handle)
 
     totals = {}
     for (sm_key, libraries) in structure.iteritems():
@@ -398,11 +296,11 @@ def build_totals_dict(handle, regions=None):
     return totals
 
 
-def count_bases(counts, record, rg_to_smlbid, template):
+def count_bases(args, counts, record, rg_to_smlbid, template):
     for _ in xrange(record.alen - len(counts)):
         counts.append(list(template))
 
-    key = rg_to_smlbid[record.opt("RG")]
+    key = rg_to_smlbid[args.get_readgroup_func(record)]
     index = 0
     for (cigar, count) in record.cigar:
         if cigar in (0, 7, 8):
@@ -413,7 +311,7 @@ def count_bases(counts, record, rg_to_smlbid, template):
             index += count
 
 
-def build_rg_to_smlbid_keys(handle):
+def build_rg_to_smlbid_keys(args, handle):
     """Returns a dictionary which maps a readgroup ID to an index value,
     as well as a list containing a tuple (samples, library) corresponding
     to each index. Typically, this list will be shorter than the map of read-
@@ -423,8 +321,7 @@ def build_rg_to_smlbid_keys(handle):
     rg_to_lbsmid = {}
     lbsm_to_lbsmid = {}
     lbsmid_to_smlb = []
-    for readgroup in handle.header["RG"]:
-        key_rg = readgroup["ID"]
+    for (key_rg, readgroup) in collect_readgroups(args, handle).iteritems():
         key_sm = readgroup["SM"]
         key_lb = readgroup["LB"]
 
@@ -437,51 +334,50 @@ def build_rg_to_smlbid_keys(handle):
     return rg_to_lbsmid, lbsmid_to_smlb
 
 
-def process_file(args):
-    sys.stderr.write("Opening %r\n" % (args.infile,))
-    with pysam.Samfile(args.infile) as handle:
-        sort_bed_regions(handle, args.regions)
-        timer = BAMTimer(handle, step=1000000)
+def process_file(handle, args):
+    timer = BAMTimer(handle, step=1000000)
 
-        last_tid = 0
-        totals = build_totals_dict(handle, args.regions)
-        rg_to_smlbid, smlbid_to_smlb = build_rg_to_smlbid_keys(handle)
-        template = [0] * len(smlbid_to_smlb)
+    last_tid = 0
+    totals = build_totals_dict(args, handle)
+    rg_to_smlbid, smlbid_to_smlb = build_rg_to_smlbid_keys(args, handle)
+    template = [0] * len(smlbid_to_smlb)
 
-        for region in BAMRegionsIter(handle, args.regions):
-            counts = collections.deque()
-            mapping = MappingToTotals(totals, region, smlbid_to_smlb)
+    for region in BAMRegionsIter(handle, args.regions):
+        counts = collections.deque()
+        mapping = MappingToTotals(totals, region, smlbid_to_smlb)
+        if not args.regions and (len(handle.references) > args.max_contigs):
+            region.name = '<Genome>'
 
-            last_pos = 0
-            for (position, records) in region:
-                mapping.process_counts(counts, last_pos, position)
+        last_pos = 0
+        for (position, records) in region:
+            mapping.process_counts(counts, last_pos, position)
 
-                for record in records:
-                    timer.increment(read=record)
-                    # 0xf04 = 0x800 | 0x400 | 0x200 | 0x100 | 0x004
-                    #         0x800 = Secondary alignment
-                    #         0x400 = PCR Duplicate
-                    #         0x200 = Failed QC
-                    #         0x100 = Alternative alignment
-                    #         0x004 = Unmapped read
-                    if record.flag & 0xf04:
-                        continue
+            for record in records:
+                timer.increment(read=record)
+                # 0xf04 = 0x800 | 0x400 | 0x200 | 0x100 | 0x004
+                #         0x800 = Secondary alignment
+                #         0x400 = PCR Duplicate
+                #         0x200 = Failed QC
+                #         0x100 = Alternative alignment
+                #         0x004 = Unmapped read
+                if record.flag & 0xf04:
+                    continue
 
-                    count_bases(counts, record, rg_to_smlbid, template)
+                count_bases(args, counts, record, rg_to_smlbid, template)
 
-                if (region.tid, position) < (last_tid, last_pos):
-                    sys.stderr.write("ERROR: Input BAM file is unsorted\n")
-                    return 1
+            if (region.tid, position) < (last_tid, last_pos):
+                sys.stderr.write("ERROR: Input BAM file is unsorted\n")
+                return 1
 
-                last_pos = position
-                last_tid = region.tid
+            last_pos = position
+            last_tid = region.tid
 
-            # Process columns in region after last read
-            mapping.process_counts(counts, last_pos, float("inf"))
-            mapping.finalize()
-        timer.finalize()
+        # Process columns in region after last read
+        mapping.process_counts(counts, last_pos, float("inf"))
+        mapping.finalize()
+    timer.finalize()
 
-        print_table(args, handle, totals)
+    print_table(handle, args, totals)
 
     return 0
 
@@ -489,47 +385,5 @@ def process_file(args):
 ##############################################################################
 ##############################################################################
 
-def parse_arguments(argv):
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument("infile", metavar="BAM",
-                        help="Filename of a sorted BAM file. If set to '-' "
-                             "the file is read from STDIN.")
-    parser.add_argument("outfile", metavar="OUTPUT", nargs='?',
-                        help="Filename of output table; defaults to name of "
-                             "the input BAM with a '.depths' extension. If "
-                             "set to '-' the table is printed to STDOUT.")
-    parser.add_argument("--target-name", default=None,
-                        help="Name used for 'Target' column; defaults to the "
-                             "filename of the BAM file.")
-    parser.add_argument("--regions-file", default=None, dest="regions_fpath",
-                        help="BED file containing regions of interest; depth "
-                             "is calculated only for these grouping by the "
-                             "name used in the BED file, or the contig name "
-                             "if no name has been specified for a record.")
-
-    args = parser.parse_args(argv)
-    if not args.outfile:
-        args.outfile = swap_ext(args.infile, ".depths")
-
-    if not args.target_name:
-        if args.infile == "-":
-            args.target_name = "<STDIN>"
-        else:
-            args.target_name = os.path.basename(args.infile)
-
-    return args
-
-
-def main(argv):
-    args = parse_arguments(argv)
-
-    args.regions = None
-    if args.regions_fpath:
-        args.regions = collect_bed_regions(args.regions_fpath)
-
-    return process_file(args)
-
-
 if __name__ == '__main__':
-    sys.exit(main(sys.argv[1:]))
+    sys.exit(main(process_file, sys.argv[1:], ".depths"))

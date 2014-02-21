@@ -33,7 +33,8 @@ import pysam
 from pypeline.node import Node
 from pypeline.common.utilities import safe_coerce_to_tuple, set_in, get_in
 from pypeline.common.fileutils import move_file, reroot_path
-from pypeline.nodes.coverage import read_table as read_coverage_table
+from pypeline.tools.bam_stats.coverage import \
+    read_table as read_coverage_table
 
 import pypeline.common.text as text
 

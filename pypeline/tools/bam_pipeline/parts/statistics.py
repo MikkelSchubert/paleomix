@@ -42,7 +42,7 @@ def add_statistics_nodes(config, makefile, target):
     if "Summary" in features or "Coverage" in features:
         coverage = _build_coverage(config, target, ("Summary" in features))
         if "Summary" in features:
-            coverage_by_label = _build_coverage_nodes(target, use_label = True)
+            coverage_by_label = _build_coverage_nodes(config, target, use_label = True)
             summary_node = SummaryTableNode(config         = config,
                                             makefile       = makefile,
                                             target         = target,
@@ -100,7 +100,7 @@ def _aggregate_for_prefix(cov, prefix, roi_name = None, into = None):
 
 def _build_coverage(config, target, make_summary):
     merged_nodes = []
-    coverage = _build_coverage_nodes(target)
+    coverage = _build_coverage_nodes(config, target)
     for prefix in target.prefixes:
         for (roi_name, _) in _get_roi(prefix):
             label = _get_prefix_label(prefix.name, roi_name)
@@ -131,7 +131,7 @@ def _build_coverage(config, target, make_summary):
     return coverage
 
 
-def _build_coverage_nodes(target, use_label = False):
+def _build_coverage_nodes(config, target, use_label = False):
     coverage = {"Lanes"     : collections.defaultdict(dict),
                 "Libraries" : collections.defaultdict(dict)}
 
@@ -147,15 +147,15 @@ def _build_coverage_nodes(target, use_label = False):
 
                     for lane in library.lanes:
                         for bams in lane.bams.values():
-                            bams = _build_coverage_nodes_cached(bams, target.name, roi_name, roi_filename, cache)
+                            bams = _build_coverage_nodes_cached(config, bams, target.name, roi_name, roi_filename, cache)
                             coverage["Lanes"][key].update(bams)
 
-                    bams = _build_coverage_nodes_cached(library.bams, target.name, roi_name, roi_filename, cache)
+                    bams = _build_coverage_nodes_cached(config, library.bams, target.name, roi_name, roi_filename, cache)
                     coverage["Libraries"][key].update(bams)
     return coverage
 
 
-def _build_coverage_nodes_cached(files_and_nodes, target_name, roi_name, roi_filename, cache):
+def _build_coverage_nodes_cached(config, files_and_nodes, target_name, roi_name, roi_filename, cache):
     output_ext = ".coverage"
     if roi_name:
         output_ext = ".%s.coverage" % roi_name
@@ -166,10 +166,11 @@ def _build_coverage_nodes_cached(files_and_nodes, target_name, roi_name, roi_fil
 
         cache_key = (roi_filename, input_filename)
         if cache_key not in cache:
-            cache[cache_key] = CoverageNode(input_file     = input_filename,
+            cache[cache_key] = CoverageNode(config         = config,
+                                            input_files    = input_filename,
                                             output_file    = output_filename,
                                             target_name    = target_name,
-                                            intervals_file = roi_filename,
+                                            regions_file   = roi_filename,
                                             dependencies   = node)
 
         coverages[output_filename] = cache[cache_key]

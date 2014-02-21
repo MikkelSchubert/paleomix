@@ -20,107 +20,151 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
 import sys
-import getpass
-import optparse
+import copy
 
-import pypeline
-import pypeline.ui
-import pypeline.logger
-import pypeline.common.system
+from pypeline.common.utilities import \
+    get_in, \
+    set_in
+from pypeline.common.timer import \
+    BAMTimer
+from pypeline.common.bamfiles import \
+    BAMRegionsIter
 
-from pypeline.common.console import \
-    print_info
-from pypeline.nodes.samtools import \
-    BAMIndexNode
-from pypeline.nodes.coverage import \
-    CoverageNode
-
-
-def _build_option_parser():
-    usage = "%prog [options] <file_1.bam> [<file_2.bam>, ...]"
-    parser = optparse.OptionParser(usage=usage)
-
-    # Adds --progress-ui; used by the pipeline to select CLI UI
-    pypeline.ui.add_optiongroup(parser)
-    # Adds --log-level and --log-file; these options are expected by the
-    # 'pypeline.logger.initialize' function called in 'main'
-    pypeline.logger.add_optiongroup(parser)
-
-    parser.add_option("--target-name", default=None,
-                      help="Name used for 'Target' column; defaults to the "
-                           "filename of the BAM file.")
-    parser.add_option("--regions-file", default=None, dest="regions_fpath",
-                      help="BED file containing regions of interest; coverage "
-                           "is calculated only for these grouping by the name "
-                           "used in the BED file, or the contig name if no "
-                           "name has been specified for a record.")
-
-    group = optparse.OptionGroup(parser, "Required paths")
-    temp_root = os.path.join("/tmp", getpass.getuser(), "bam_coverage")
-    group.add_option("--temp-root", default=temp_root,
-                     help="Root folder for temp files/folders [%default].")
-    parser.add_option_group(group)
-
-    group = optparse.OptionGroup(parser, "Scheduling")
-    group.add_option("--max-threads", type=int, default=1,
-                     help="Max files to process concurrently [%default]")
-    group.add_option("--dry-run", action="store_true", default=False,
-                     help="Only show tasks to perform, do not run.")
-    parser.add_option_group(group)
-
-    return parser
+from pypeline.tools.bam_stats.common import \
+    collect_readgroups, \
+    collect_references, \
+    main
+from pypeline.tools.bam_stats.coverage import \
+    READGROUP_TEMPLATE, \
+    write_table
 
 
-def _build_coverage_node(input_fpath, regions_fpath=None,
-                         target_name=None):
-    if target_name is None:
-        target_name = os.path.basename(input_fpath)
+##############################################################################
+##############################################################################
 
-    # Coverage for specific regions relies on the use of the Samfile.fetch
-    # function, which in turn requires sorted / indexed BAM files; the indexing
-    # step will fail if the file is not sorted.
-    # FIXME: Only require index when 'regions_fpath' is set.
-    dependencies = (BAMIndexNode(input_fpath),)
-
-    return CoverageNode(input_file=input_fpath,
-                        intervals_file=regions_fpath,
-                        target_name=target_name,
-                        dependencies=dependencies)
+def build_region_template(args, handle):
+    template = {}
+    for key in collect_readgroups(args, handle):
+        template[key] = dict(READGROUP_TEMPLATE)
+    return template
 
 
-def main(argv):
-    parser = _build_option_parser()
-    config, input_fpaths = parser.parse_args(argv)
-    if not input_fpaths:
-        parser.print_usage()
-        return 1
+def get_region_table(counts, region, template):
+    subtable = counts.get(region)
+    if subtable is not None:
+        return subtable
 
-    # Set process name on supported platforms
-    pypeline.common.system.set_procname()
-    # Log to console only, except if --log-file is specified
-    pypeline.logger.initialize(config, None)
-    # Config object is passed to nodes during execution
-    pipeline = pypeline.Pypeline(config)
+    subtable = copy.deepcopy(template)
+    counts[region] = subtable
 
-    # Duplicate file-names are elimated to prevent the pipeline from
-    # complaining about / aborting due to clobbering of files; it is
-    # assumed to be a trivial mistake.
-    print_info("Building BAM coverage pipeline ...")
-    for input_fpath in set(input_fpaths):
-        node = _build_coverage_node(input_fpath=input_fpath,
-                                    regions_fpath=config.regions_fpath,
-                                    target_name=config.target_name)
-        pipeline.add_nodes(node)
+    return subtable
 
-    print_info("Running BAM coverage pipeline ...")
-    if pipeline.run(max_running=config.max_threads,
-                    dry_run=config.dry_run,
-                    progress_ui=config.progress_ui):
-        return 0
-    return 1
 
+##############################################################################
+##############################################################################
+
+def create_or_get_subtable(table, subtable_key, size):
+    subtable = get_in(table, subtable_key)
+    if subtable is None:
+        subtable = dict(READGROUP_TEMPLATE)
+        subtable["Size"] = size
+        set_in(table, subtable_key, subtable)
+    return subtable
+
+
+def build_table(args, handle, counts):
+    table = {}
+    for (key, readgroup) in collect_readgroups(args, handle).iteritems():
+        sample = readgroup["SM"]
+        library = readgroup["LB"]
+
+        for (reference, size) in collect_references(args, handle).iteritems():
+            subtable_key = (args.target_name, sample, library, reference)
+            subtable = create_or_get_subtable(table, subtable_key, size)
+
+            statistics = counts.get(reference, {}).get(key, {})
+            for (stat, value) in statistics.iteritems():
+                subtable[stat] += value
+
+    return table
+
+
+def print_table(args, handle, counts):
+    table = build_table(args, handle, counts)
+    write_table(table, args.outfile)
+
+
+##############################################################################
+##############################################################################
+
+def process_record(subtable, record, flags, region):
+    qname = record.qname
+    if qname.startswith("M_") or qname.startswith("MT_"):
+        subtable["Collapsed"] += 1
+    elif flags & 0x40:  # first of pair
+        subtable["PE_1"] += 1
+    elif flags & 0x80:  # second of pair
+        subtable["PE_2"] += 1
+    else:  # Singleton
+        subtable["SE"] += 1
+
+    position = record.pos
+    start = region.start
+    end = region.end
+
+    for (cigar, num) in record.cigar:
+        left = min(max(position, start), end - 1)
+        right = min(max(position + num, start), end - 1)
+        bases_in_region = right - left
+
+        # 0 = 'M', 1 = 'I', 2 = 'D', 7 = '=', 8 = 'X'
+        if cigar in (0, 1, 2, 7, 8):
+            if bases_in_region:
+                subtable["MID    MM"[cigar]] += bases_in_region
+
+            if cigar != 1:  # Everything but insertions
+                position += num
+        elif cigar == 3:  # N
+            position += num
+
+
+def process_file(handle, args):
+    timer = BAMTimer(handle, step=1000000)
+
+    counts = {}
+    region_template = build_region_template(args, handle)
+    for region in BAMRegionsIter(handle, args.regions):
+        name = region.name
+        if not args.regions and (len(handle.references) > args.max_contigs):
+            name = '<Genome>'
+
+        region_table = get_region_table(counts, name, region_template)
+        for (_, records) in region:
+            for record in records:
+                # 0xf04 = 0x800 | 0x400 | 0x200 | 0x100 | 0x004
+                #         0x800 = Secondary alignment
+                #         0x400 = PCR Duplicate
+                #         0x200 = Failed QC
+                #         0x100 = Alternative alignment
+                #         0x004 = Unmapped read
+                flags = record.flag
+                if flags & 0xf04:
+                    continue
+
+                readgroup = args.get_readgroup_func(record)
+                readgroup_table = region_table[readgroup]
+                process_record(readgroup_table, record, flags, region)
+                timer.increment(read=record)
+    timer.finalize()
+
+    print_table(args, handle, counts)
+
+    return 0
+
+
+##############################################################################
+##############################################################################
 
 if __name__ == '__main__':
-    sys.exit(main(sys.argv[1:]))
+    sys.exit(main(process_file, sys.argv[1:], ".coverage"))
