@@ -20,6 +20,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import io
+import os
+import subprocess
 import collections
 from itertools import \
     izip_longest
@@ -30,9 +33,13 @@ from pypeline.node import \
     Node, \
     NodeError
 from pypeline.common.fileutils import \
-    describe_files
+    describe_files, \
+    make_dirs
 from pypeline.common.utilities import \
     chain_sorted
+
+import pypeline.common.formats.fastq as fastq
+import pypeline.common.sampling as sampling
 
 
 class DetectInputDuplicationNode(Node):
@@ -79,6 +86,7 @@ class DetectInputDuplicationNode(Node):
 
             # Everything is ok, touch the output files
             for fpath in self.output_files:
+                make_dirs(os.path.dirname(fpath))
                 with open(fpath, "w"):
                     pass
         finally:
@@ -103,3 +111,104 @@ class DetectInputDuplicationNode(Node):
     @classmethod
     def _key_by_tid_pos(cls, record):
         return (record[0].tid, record[0].pos)
+
+
+class ValidateFASTQFilesNode(Node):
+    def __init__(self, input_files, output_file, offset, dependencies=()):
+        self._offset = offset
+        Node.__init__(self,
+                      description="<ValidateFASTQFilesNode: %s>"
+                      % (describe_files(input_files)),
+                      input_files=input_files,
+                      output_files=output_file,
+                      dependencies=dependencies)
+
+    def _run(self, _config, _temp):
+        check_fastq_files(self.input_files, self._offset, True)
+        output_file = tuple(self.output_files)[0]
+        make_dirs(os.path.dirname(output_file))
+        with open(output_file, "w"):
+            pass
+
+
+def check_fastq_files(filenames, required_offset, allow_empty=False):
+    for filename in filenames:
+        qualities = _read_sequences(filename)
+        offsets = fastq.classify_quality_strings(qualities)
+        if offsets == fastq.OFFSET_BOTH:
+            raise NodeError("FASTQ file contains quality scores with both "
+                            "quality offsets (33 and 64); file may be "
+                            "unexpected format or corrupt. Please ensure "
+                            "that this file contains valid FASTQ reads from a "
+                            "single source.\n    Filename = %r" % (filename,))
+        elif offsets == fastq.OFFSET_MISSING:
+            if allow_empty and not qualities:
+                return
+
+            raise NodeError("FASTQ file did not contain quality scores; file "
+                            "may be unexpected format or corrupt. Ensure that "
+                            "the file is a FASTQ file.\n    Filename = %r"
+                            % (filename,))
+        elif offsets not in (fastq.OFFSET_AMBIGIOUS, required_offset):
+            raise NodeError("FASTQ file contains quality scores with wrong "
+                            "quality score offset (%i); expected reads with "
+                            "quality score offset %i. Ensure that the "
+                            "'QualityOffset' specified in the makefile "
+                            "corresponds to the input.\n    Filename = %s"
+                            % (offsets, required_offset, filename))
+
+
+def _read_sequences(filename):
+    unicat = None
+    try:
+        unicat = subprocess.Popen(['unicat', filename],
+                                  bufsize=io.DEFAULT_BUFFER_SIZE,
+                                  stderr=subprocess.PIPE,
+                                  stdout=subprocess.PIPE)
+        qualities = _collect_qualities(unicat.stdout, filename)
+
+        return sampling.reservoir_sampling(qualities, 100000)
+    except:
+        if unicat:
+            unicat.kill()
+            unicat.wait()
+            unicat = None
+        raise
+    finally:
+        rc_unicat = unicat.wait() if unicat else 0
+        if rc_unicat:
+            message = "Error running unicat:\n" \
+                      "  Unicat return-code = %i\n\n%s" \
+                      % (rc_unicat, unicat.stderr.read())
+            raise NodeError(message)
+
+
+def _collect_qualities(handle, filename):
+    header = handle.readline()
+    while header:
+        sequence = handle.readline()
+        seperator = handle.readline()
+        qualities = handle.readline()
+
+        if not header.startswith("@"):
+            if header.startswith(">"):
+                raise NodeError("Input file appears to be in FASTA format "
+                                "(header starts with '>', expected '@'), "
+                                "but only FASTQ files are supported\n"
+                                "Filename = %r" % (filename,))
+
+            raise NodeError("Input file lacks FASTQ header (expected '@', "
+                            "found %r), but only FASTQ files are supported\n"
+                            "    Filename = %r" % (header[:1], filename))
+        elif not seperator.startswith("+"):
+            raise NodeError("Input file lacks FASTQ seperator (expected '+', "
+                            "found %r), but only FASTQ files are supported\n"
+                            "    Filename = %r" % (header[:1], filename))
+        elif len(sequence) != len(qualities):
+            raise NodeError("Input file contains malformed FASTQ records; "
+                            "length of sequence / qualities are not the "
+                            "same.\n    Filename = %r\n    Record = '%s'"
+                            % (filename, header.rstrip()))
+
+        yield qualities
+        header = handle.readline()

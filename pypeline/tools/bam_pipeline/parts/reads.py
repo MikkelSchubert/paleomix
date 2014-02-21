@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -24,13 +24,16 @@ import os
 
 from pypeline.common.fileutils import missing_files
 from pypeline.atomiccmd.builder import apply_options
-from pypeline.nodes.adapterremoval import SE_AdapterRemovalNode, \
-                                          PE_AdapterRemovalNode, \
-                                          VERSION_14, \
-                                          VERSION_15
+from pypeline.nodes.adapterremoval import \
+    SE_AdapterRemovalNode, \
+    PE_AdapterRemovalNode, \
+    VERSION_14, \
+    VERSION_15
+from pypeline.nodes.validation import \
+    ValidateFASTQFilesNode
 
 
-class Reads:
+class Reads(object):
     def __init__(self, config, record, quality_offset):
         self.quality_offset = quality_offset
         self.files = {}
@@ -43,23 +46,32 @@ class Reads:
 
         lane_type = record.get("Type")
         if lane_type == "Raw":
-            self._init_raw_reads(config, record)
+            self._init_raw_reads(record)
         elif lane_type == "Trimmed":
-            self.files.update(record["Data"])
+            self._init_pretrimmed_reads(record)
         else:
-            assert False, "Unexpected data type in Reads(): %s" % (repr(lane_type))
+            assert False, "Unexpected data type in Reads(): %s" \
+                % (repr(lane_type))
 
         for name in record["Options"]["ExcludeReads"]:
             self.files.pop(name, None)
 
         if config.allow_missing_input_files and self.nodes:
-            input_missing  = missing_files(self.nodes[0].input_files)
+            input_missing = missing_files(self.nodes[0].input_files)
             output_missing = missing_files(self.nodes[0].output_files)
             if input_missing and not output_missing:
                 self.nodes = ()
 
+    def _init_pretrimmed_reads(self, record):
+        self.files.update(record["Data"])
+        output_file = os.path.join(self.folder, "reads.pretrimmed.validated")
+        node = ValidateFASTQFilesNode(input_files=self.files.values(),
+                                      output_file=output_file,
+                                      offset=self.quality_offset)
+        self.nodes = (node,)
 
-    def _init_raw_reads(self, config, record):
+    def _init_raw_reads(self, record):
+        # Support for older versions of the pipeline, which used ARv1.0 - 1.4
         version = VERSION_14
         if record["Options"]["AdapterRemoval"]["Version"] == "v1.5+":
             version = VERSION_15
@@ -68,32 +80,39 @@ class Reads:
         if quality_offset == "Solexa":
             quality_offset = 64
 
-        output_format = record["Options"]["CompressionFormat"]
-        output_prefix = os.path.join(self.folder, "reads")
-        files = record["Data"]
-        if ("SE" in files):
-            command = SE_AdapterRemovalNode.customize(input_files   = files["SE"],
-                                                      output_prefix = output_prefix,
-                                                      output_format = output_format,
-                                                      quality_offset = quality_offset,
-                                                      version       = version)
-            self.files["Single"] = output_prefix + ".truncated." + output_format
-        else:
-            command = PE_AdapterRemovalNode.customize(input_files_1 = files["PE_1"],
-                                                      input_files_2 = files["PE_2"],
-                                                      output_prefix = output_prefix,
-                                                      output_format = output_format,
-                                                      quality_offset = quality_offset,
-                                                      version       = version)
-            self.files["Paired"]    = output_prefix + ".pair{Pair}.truncated." + output_format
-            if version is VERSION_14:
-                self.files["Single"]    = output_prefix + ".singleton.unaln.truncated."  + output_format
-                self.files["Collapsed"] = output_prefix + ".singleton.aln.truncated." + output_format
-            else:
-                self.files["Single"]    = output_prefix + ".singleton.truncated."  + output_format
-                self.files["Collapsed"] = output_prefix + ".collapsed." + output_format
-                self.files["CollapsedTruncated"] = output_prefix + ".collapsed.truncated." + output_format
-        apply_options(command.command, record["Options"]["AdapterRemoval"])
+        init_args = {"output_prefix": os.path.join(self.folder, "reads"),
+                     "output_format": record["Options"]["CompressionFormat"],
+                     "quality_offset": quality_offset,
+                     "version": version}
+        output_tmpl = "{output_prefix}.%s.{output_format}".format(**init_args)
 
-        self.stats = output_prefix + ".settings"
+        if ("SE" in record["Data"]):
+            self.files["Single"] = output_tmpl % ("truncated",)
+            init_args["input_files"] = record["Data"]["SE"]
+            command = SE_AdapterRemovalNode.customize(**init_args)
+        else:
+            if version is VERSION_14:
+                self._set_adapterrm_v14_files(self.files, output_tmpl)
+            else:
+                self._set_adapterrm_v15_files(self.files, output_tmpl)
+
+            init_args["input_files_1"] = record["Data"]["PE_1"]
+            init_args["input_files_2"] = record["Data"]["PE_2"]
+            command = PE_AdapterRemovalNode.customize(**init_args)
+
+        apply_options(command.command, record["Options"]["AdapterRemoval"])
+        self.stats = os.path.join(self.folder, "reads.settings")
         self.nodes = (command.build_node(),)
+
+    @classmethod
+    def _set_adapterrm_v14_files(cls, files, output_tmpl):
+        files["Single"] = output_tmpl % ("singleton.unaln.truncated",)
+        files["Collapsed"] = output_tmpl % ("singleton.aln.truncated",)
+        files["Paired"] = output_tmpl % ("pair{Pair}.truncated",)
+
+    @classmethod
+    def _set_adapterrm_v15_files(cls, files, output_tmpl):
+        files["Single"] = output_tmpl % ("singleton.truncated",)
+        files["Collapsed"] = output_tmpl % ("collapsed",)
+        files["CollapsedTruncated"] = output_tmpl % ("collapsed.truncated",)
+        files["Paired"] = output_tmpl % ("pair{Pair}.truncated",)
