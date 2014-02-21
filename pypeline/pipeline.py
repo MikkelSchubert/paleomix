@@ -28,6 +28,7 @@ import logging
 import multiprocessing
 
 import pypeline.ui
+import pypeline.logger
 
 from pypeline.node import Node, MetaNode
 from pypeline.nodegraph import NodeGraph, NodeGraphError
@@ -126,8 +127,11 @@ class Pypeline:
         pool.join()
 
         if errors_occured:
-            self._logger.error("Errors were detected ...")
-        self._logger.info("Done ...")
+            self._logger.error("Done ...")
+            self._logger.error("Errors were detected, please review log-file:")
+            self._logger.error("  - %s" % (pypeline.logger.get_logfile(),))
+        else:
+            self._logger.info("Done ...")
 
         return not errors_occured
 
