@@ -184,6 +184,7 @@ def _read_sequences(filename):
 
 
 def _collect_qualities(handle, filename):
+    lines_offset = 0
     header = handle.readline()
     while header:
         sequence = handle.readline()
@@ -200,10 +201,14 @@ def _collect_qualities(handle, filename):
             raise NodeError("Input file lacks FASTQ header (expected '@', "
                             "found %r), but only FASTQ files are supported\n"
                             "    Filename = %r" % (header[:1], filename))
+        elif not qualities:
+            raise NodeError("Partial record found; is not 4 lines long:\n"
+                            "Filename = %r\n    Record = '%s'"
+                            % (filename, header.rstrip()))
         elif not seperator.startswith("+"):
             raise NodeError("Input file lacks FASTQ seperator (expected '+', "
                             "found %r), but only FASTQ files are supported\n"
-                            "    Filename = %r" % (header[:1], filename))
+                            "    Filename = %r" % (seperator[:1], filename))
         elif len(sequence) != len(qualities):
             raise NodeError("Input file contains malformed FASTQ records; "
                             "length of sequence / qualities are not the "
