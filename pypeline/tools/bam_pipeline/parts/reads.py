@@ -65,7 +65,15 @@ class Reads(object):
     def _init_pretrimmed_reads(self, record):
         self.files.update(record["Data"])
         output_file = os.path.join(self.folder, "reads.pretrimmed.validated")
-        node = ValidateFASTQFilesNode(input_files=self.files.values(),
+        input_files = set()
+        for (read_type, filename) in self.files.iteritems():
+            if read_type == "Paired":
+                input_files.add(filename.format(Pair=1))
+                input_files.add(filename.format(Pair=2))
+            else:
+                input_files.add(filename)
+
+        node = ValidateFASTQFilesNode(input_files=input_files,
                                       output_file=output_file,
                                       offset=self.quality_offset)
         self.nodes = (node,)
