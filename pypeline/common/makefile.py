@@ -278,8 +278,10 @@ class MakefileSpec:
         if not self.meets_spec(value):
             raise MakefileError(("Makefile requirement not met at %r:\n"
                                  "  Expected value(s): %s\n"
-                                 "  Observed value(s): %r\n")
-                                 % (_path_to_str(path), self.description, value))
+                                 "  Observed value(s): %r\n"
+                                 "  Observed type:     %s")
+                                % (_path_to_str(path), self.description,
+                                   value, type(value).__name__))
 
     def meets_spec(self, _value):
         """Return True if value meets the specification, False otherwise."""
