@@ -96,7 +96,7 @@ class Prefix:
         return {output_filename : validated_node}
 
     def _build_dataduplication_node(self, prefix, files_and_nodes):
-        destination = os.path.join(self.target, prefix["Name"] + ".duplications_checked")
+        destination = os.path.join(self.folder, self.target, prefix["Name"] + ".duplications_checked")
         return DetectInputDuplicationNode(input_files = files_and_nodes.keys(),
                                           output_file = destination,
                                           dependencies = files_and_nodes.values())
