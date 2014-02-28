@@ -264,8 +264,8 @@ def main(config, args):
         return 1
 
     try:
-        print_info("Building BAM pipeline ...", file = sys.stderr)
-        makefiles = read_makefiles(args)
+        print_info("Building BAM pipeline ...", file=sys.stderr)
+        makefiles = read_makefiles(config, args)
     except (MakefileError, pypeline.yaml.YAMLError, IOError), error:
         print_err("Error reading makefiles:",
                   "\n  %s:\n   " % (error.__class__.__name__,),

@@ -32,33 +32,35 @@ import pypeline.tools.bam_pipeline.paths as paths
 from pypeline.common.utilities import fill_dict
 from pypeline.common.fileutils import missing_files
 from pypeline.common.makefile import \
-     MakefileError, \
-     REQUIRED_VALUE, \
-     WithoutDefaults, \
-     read_makefile, \
-     IsInt, \
-     IsUnsignedInt, \
-     IsFloat, \
-     IsStr, \
-     IsNone, \
-     IsBoolean, \
-     And, \
-     Or, \
-     Not, \
-     ValueGE, \
-     ValueIn, \
-     ValuesIntersect, \
-     ValuesSubsetOf, \
-     StringIn, \
-     StringStartsWith, \
-     IsListOf, \
-     IsDictOf
+    MakefileError, \
+    REQUIRED_VALUE, \
+    WithoutDefaults, \
+    read_makefile, \
+    IsInt, \
+    IsUnsignedInt, \
+    IsFloat, \
+    IsStr, \
+    IsNone, \
+    IsBoolean, \
+    And, \
+    Or, \
+    Not, \
+    ValueGE, \
+    ValueIn, \
+    ValuesIntersect, \
+    ValuesSubsetOf, \
+    StringIn, \
+    StringStartsWith, \
+    IsListOf, \
+    IsDictOf
+from pypeline.common.console import \
+    print_warn
 
 
 _READ_TYPES = set(("Single", "Collapsed", "CollapsedTruncated", "Paired"))
 
 
-def read_makefiles(filenames):
+def read_makefiles(config, filenames):
     makefiles = []
     for filename in filenames:
         makefile = read_makefile(filename, _VALIDATION)
@@ -66,11 +68,13 @@ def read_makefiles(filenames):
 
         makefiles.append(makefile)
 
-    return _validate_makefiles(makefiles)
+    return _validate_makefiles(config, makefiles)
 
 
 def _alphanum_check(whitelist):
-    description = "only alphanumerical or %r characters allowed" % (whitelist,)
+    description = "characters a-z, A-Z, 0-9%s allowed"
+    description %= (", and %r" % whitelist,) if whitelist else ""
+
     whitelist += string.ascii_letters + string.digits
 
     return And(IsStr(),
@@ -79,162 +83,161 @@ def _alphanum_check(whitelist):
 
 # Valid names for prefixes
 _VALID_PREFIX_NAME = \
-  And(_alphanum_check(whitelist="._-*"),
-      Not(StringIn(["*", "Options"] + [(s + "Reads") for s in _READ_TYPES])))
+    And(_alphanum_check(whitelist="._-*"),
+        Not(StringIn(["*", "Options"] + [(s + "Reads") for s in _READ_TYPES])))
 
 # Valid paths for prefixes; avoids some problems with e.g. BowTie2
 _VALID_PREFIX_PATH = \
-  And(IsStr(), Not(ValuesIntersect("\\:?\"<>|")),
-      default = REQUIRED_VALUE)
+    And(IsStr(), Not(ValuesIntersect("\\:?\"<>|")),
+        default=REQUIRED_VALUE)
 
 # Valid strings for targets / samples / libraries / lanes
 _VALID_TARGET_NAME = \
-  And(_alphanum_check(whitelist="._-"),
-      ValueGE(2, key=len, description="at least two characters long"))
+    And(_alphanum_check(whitelist="._-"),
+        ValueGE(2, key=len, description="at least two characters long"))
 
 
 _VALIDATION_OPTIONS = {
     # Sequencing platform, used to tag read-groups.
-    "Platform" : StringIn(("CAPILLARY", "LS454", "ILLUMINA", "SOLID",
-                           "HELICOS", "IONTORRENT", "PACBIO"),
-                          default = "ILLUMINA"),
+    "Platform": StringIn(("CAPILLARY", "LS454", "ILLUMINA", "SOLID",
+                          "HELICOS", "IONTORRENT", "PACBIO"),
+                         default="ILLUMINA"),
     # Offset for quality scores in FASTQ files.
-    "QualityOffset" : ValueIn((33, 64, "Solexa"),
-                              default = 33),
+    "QualityOffset": ValueIn((33, 64, "Solexa"),
+                             default=33),
     # Split a lane into multiple entries, one for each (pair of) file(s)
-    "SplitLanesByFilenames"  : Or(IsBoolean, IsListOf(IsStr),
-                                  default = True),
+    "SplitLanesByFilenames": Or(IsBoolean, IsListOf(IsStr),
+                                default=True),
     # Format to use when compressing FASTQ files ("gz" or "bz2")
-    "CompressionFormat" : ValueIn(("gz", "bz2"),
-                                  default = "bz2"),
+    "CompressionFormat": ValueIn(("gz", "bz2"),
+                                 default="bz2"),
 
-    "AdapterRemoval" : {
-        "Version" : ValueIn(("v1.4", "v1.5+"),
-                            default = "v1.5+"),
-        "--pcr1"               : IsStr,
-        "--pcr2"               : IsStr,
-        "--maxns"              : IsUnsignedInt,
-        "--minquality"         : IsUnsignedInt,
-        "--trimns"             : Or(IsNone, IsBoolean),
-        "--trimqualities"      : Or(IsNone, IsBoolean),
-        "--collapse"           : Or(IsNone, IsBoolean),
-        "--mm"                 : Or(IsFloat, IsUnsignedInt,
-                                    default = 3),
-        "--minlength"          : IsUnsignedInt(default = 25),
-        "--minalignmentlength" : IsUnsignedInt,
-        "--shift"              : IsUnsignedInt,
-        "--5prime"             : IsStr,
+    "AdapterRemoval": {
+        "Version": ValueIn(("v1.4", "v1.5+"),
+                           default="v1.5+"),
+        "--pcr1": IsStr,
+        "--pcr2": IsStr,
+        "--maxns": IsUnsignedInt,
+        "--minquality": IsUnsignedInt,
+        "--trimns": Or(IsNone, IsBoolean),
+        "--trimqualities": Or(IsNone, IsBoolean),
+        "--collapse": Or(IsNone, IsBoolean),
+        "--mm": Or(IsFloat, IsUnsignedInt,
+                   default=3),
+        "--minlength": IsUnsignedInt(default=25),
+        "--minalignmentlength": IsUnsignedInt,
+        "--shift": IsUnsignedInt,
+        "--5prime": IsStr,
         },
 
     # Which aliger/mapper to use (BWA/Bowtie2)
-    "Aligners" : {
-        "Program" : ValueIn(("BWA", "Bowtie2"),
-                            default = "BWA"),
-        "BWA" : {
+    "Aligners": {
+        "Program": ValueIn(("BWA", "Bowtie2"),
+                           default="BWA"),
+        "BWA": {
             # Minimum mapping quality (PHREAD) of reads to retain
-            "MinQuality" : IsUnsignedInt(default = 0),
+            "MinQuality": IsUnsignedInt(default=0),
             # Remove unmapped reads or not
-            "FilterUnmappedReads" : IsBoolean(default = True),
+            "FilterUnmappedReads": IsBoolean(default=True),
             # Use seed region during mapping
             # Verbose name for command-line option "-l 65535"
-            "UseSeed"    : IsBoolean(default = True),
+            "UseSeed": IsBoolean(default=True),
             # Any number of user specific options
-            StringStartsWith("-") : Or(IsListOf(IsStr, IsInt, IsFloat),
-                                       Or(IsStr, IsInt, IsFloat, IsNone)),
+            StringStartsWith("-"): Or(IsListOf(IsStr, IsInt, IsFloat),
+                                      Or(IsStr, IsInt, IsFloat, IsNone)),
         },
-        "Bowtie2" : {
+        "Bowtie2": {
             # Minimum mapping quality (PHREAD) of reads to retain
-            "MinQuality" : IsUnsignedInt(default = 0),
+            "MinQuality": IsUnsignedInt(default=0),
             # Remove unmapped reads or not
-            "FilterUnmappedReads" : IsBoolean(default = True),
+            "FilterUnmappedReads": IsBoolean(default=True),
             # Any number of user specific options
-            StringStartsWith("-") : Or(IsListOf(IsStr, IsInt, IsFloat),
-                                       Or(IsStr, IsInt, IsFloat, IsNone)),
+            StringStartsWith("-"): Or(IsListOf(IsStr, IsInt, IsFloat),
+                                      Or(IsStr, IsInt, IsFloat, IsNone)),
         },
     },
 
     # Does sample contain PCR duplicates / what to do about it.
     # True is equivalent of 'remove'.
-    "PCRDuplicates"     : StringIn((True, False, 'mark', 'filter'),
-                                   default = 'filter'),
+    "PCRDuplicates": StringIn((True, False, 'mark', 'filter'),
+                              default='filter'),
     # Qualities should be rescaled using mapDamage
-    "RescaleQualities"  : IsBoolean(default = False),
+    "RescaleQualities": IsBoolean(default=False),
 
-    "mapDamage" : {
+    "mapDamage": {
         # Tabulation options
-        "--downsample"         : Or(IsUnsignedInt, IsFloat),
-        "--length"             : IsUnsignedInt,
-        "--around"             : IsUnsignedInt,
-        "--min-basequal"       : IsUnsignedInt,
+        "--downsample": Or(IsUnsignedInt, IsFloat),
+        "--length": IsUnsignedInt,
+        "--around": IsUnsignedInt,
+        "--min-basequal": IsUnsignedInt,
 
         # Plotting options
-        "--ymax"               : IsFloat,
-        "--readplot"           : IsUnsignedInt,
-        "--refplot"            : IsUnsignedInt,
+        "--ymax": IsFloat,
+        "--readplot": IsUnsignedInt,
+        "--refplot": IsUnsignedInt,
 
         # Model options
-        "--rand"               : IsUnsignedInt,
-        "--burn"               : IsUnsignedInt,
-        "--adjust"             : IsUnsignedInt,
-        "--iter"               : IsUnsignedInt,
-        "--forward"            : IsNone,
-        "--reverse"            : IsNone,
-        "--var-disp"           : IsNone,
-        "--jukes-cantor"       : IsNone,
-        "--diff-hangs"         : IsNone,
-        "--fix-nicks"          : IsNone,
-        "--use-raw-nick-freq"  : IsNone,
-        "--single-stranded"    : IsNone,
-        "--seq-length"         : IsUnsignedInt,
+        "--rand": IsUnsignedInt,
+        "--burn": IsUnsignedInt,
+        "--adjust": IsUnsignedInt,
+        "--iter": IsUnsignedInt,
+        "--forward": IsNone,
+        "--reverse": IsNone,
+        "--var-disp": IsNone,
+        "--jukes-cantor": IsNone,
+        "--diff-hangs": IsNone,
+        "--fix-nicks": IsNone,
+        "--use-raw-nick-freq": IsNone,
+        "--single-stranded": IsNone,
+        "--seq-length": IsUnsignedInt,
     },
 
     # Exclude READ_TYPES from alignment/analysis
-    "ExcludeReads"   : ValuesSubsetOf(_READ_TYPES,
-                                      default = []),
+    "ExcludeReads": ValuesSubsetOf(_READ_TYPES,
+                                   default=[]),
 
     # Features of pipeline
-    "Features"       : ValuesSubsetOf(("Raw BAM", "Realigned BAM", "Coverage",
-                                       "Summary", "mapDamage", "Depths",
-                                       "DuplicateHist"),
-                                      default = ["Realigned BAM", "Coverage",
-                                                 "Summary", "mapDamage",
-                                                 "Depths"]),
+    "Features": ValuesSubsetOf(("Raw BAM", "Realigned BAM", "Coverage",
+                                "Summary", "mapDamage", "Depths",
+                                "DuplicateHist"),
+                               default=["Realigned BAM", "Coverage",
+                                        "Summary", "mapDamage", "Depths"]),
 }
 
 
 _VALIDATION = {
-    "Options"  : _VALIDATION_OPTIONS,
+    "Options": _VALIDATION_OPTIONS,
 
-    "Prefixes" : {
-        _VALID_PREFIX_NAME : {
-            "Path"    : _VALID_PREFIX_PATH,
-            "Label"   : ValueIn(("nuclear", "mitochondrial", "chloroplast",
-                                 "plasmid", "bacterial", "viral")),
-            "RegionsOfInterest" : IsDictOf(IsStr, IsStr),
+    "Prefixes": {
+        _VALID_PREFIX_NAME: {
+            "Path": _VALID_PREFIX_PATH,
+            "Label": ValueIn(("nuclear", "mitochondrial", "chloroplast",
+                              "plasmid", "bacterial", "viral")),
+            "RegionsOfInterest": IsDictOf(IsStr, IsStr),
         },
     },
 
-    _VALID_TARGET_NAME : { # Target
-        _VALID_TARGET_NAME : { # Sample
-            _VALID_TARGET_NAME : { # Library
-                _VALID_TARGET_NAME : Or(IsStr, IsDictOf(IsStr, IsStr)),
+    _VALID_TARGET_NAME: {  # Target
+        _VALID_TARGET_NAME: {  # Sample
+            _VALID_TARGET_NAME: {  # Library
+                _VALID_TARGET_NAME: Or(IsStr, IsDictOf(IsStr, IsStr)),
 
-                "Options" : WithoutDefaults(_VALIDATION_OPTIONS),
+                "Options": WithoutDefaults(_VALIDATION_OPTIONS),
             },
 
-            "Options" : WithoutDefaults(_VALIDATION_OPTIONS),
+            "Options": WithoutDefaults(_VALIDATION_OPTIONS),
         },
 
-        "Options" : WithoutDefaults(_VALIDATION_OPTIONS),
+        "Options": WithoutDefaults(_VALIDATION_OPTIONS),
     },
 }
 
 
 def _mangle_makefile(makefile):
-    makefile             = copy.deepcopy(makefile)
-    makefile["Options"]  = makefile["Makefile"].pop("Options")
+    makefile = copy.deepcopy(makefile)
+    makefile["Options"] = makefile["Makefile"].pop("Options")
     makefile["Prefixes"] = makefile["Makefile"].pop("Prefixes")
-    makefile["Targets"]  = makefile.pop("Makefile")
+    makefile["Targets"] = makefile.pop("Makefile")
 
     _update_options(makefile)
     _update_prefixes(makefile)
@@ -251,12 +254,12 @@ def _update_options(makefile):
         options = copy.deepcopy(options)
         if "Options" in data:
             if "Features" in data["Options"]:
-                raise MakefileError("Features may only be specified at root level, not at %r" \
-                                    % (":".join(path),))
+                raise MakefileError("Features may only be specified at root "
+                                    "level, not at %r" % (":".join(path),))
 
             # Fill out missing values using those of prior levels
-            options = fill_dict(destination = data.pop("Options"),
-                                source      = options)
+            options = fill_dict(destination=data.pop("Options"),
+                                source=options)
 
         if len(path) < 2:
             for key in data:
@@ -278,30 +281,31 @@ def _update_prefixes(makefile):
             for fname in glob.glob(filename):
                 name = os.path.basename(fname).split(".")[0]
                 _VALID_PREFIX_NAME(("Prefixes", name), name)
-                dd = copy.copy(values)
-                dd["Path"] = fname
+                new_prefix = copy.copy(values)
+                new_prefix["Path"] = fname
 
-                records.append((name, dd))
+                records.append((name, new_prefix))
             if not records:
-                raise MakefileError("Did not find any matches for glob %s" % repr(filename))
+                raise MakefileError("Did not find any matches for glob %s"
+                                    % repr(filename))
         else:
             records = [(name, values)]
 
-
         for (name, record) in records:
             if name in prefixes:
-                raise MakefileError("Multiple prefixes with the same name: %s" % name)
+                raise MakefileError("Multiple prefixes with the same name: %s"
+                                    % name)
 
             if not record["Path"].endswith(".fasta"):
-                raise MakefileError("Path for prefix %r does not end with .fasta:\n   %r" \
-                                    % (name, record["Path"]))
+                raise MakefileError("Path for prefix %r does not end with "
+                                    ".fasta:\n   %r" % (name, record["Path"]))
 
-            record["Name"]      = name
+            record["Name"] = name
             record["Reference"] = record["Path"]
-            prefixes[name]      = record
+            prefixes[name] = record
 
     if not prefixes:
-        raise MakefileError("At least one prefix must be specified in the makefile!")
+        raise MakefileError("At least one prefix must be specified")
     makefile["Prefixes"] = prefixes
 
 
@@ -353,23 +357,24 @@ def _update_tags(makefile):
         for (sample, libraries) in samples.iteritems():
             for (library, barcodes) in libraries.iteritems():
                 for (barcode, record) in barcodes.iteritems():
-                    tags = {"Target"   : target,
-                            "ID" : library,
-                            "SM" : sample,
-                            "LB" : library,
-                            # Source/Current PU may differ if a lane has been split by
-                            # filenames, in which case PU_src contains the original PU,
-                            # while PU_cur contains a derived PU.
-                            "PU_src" : barcode,
-                            "PU_cur" : barcode,
-                            "PG" : record["Options"]["Aligners"]["Program"],
-                            "PL" : record["Options"]["Platform"].upper()}
+                    tags = {"Target": target,
+                            "ID": library,
+                            "SM": sample,
+                            "LB": library,
+                            # Source/Current PU may differ if a lane has been
+                            # split by filenames, in which case PU_src contains
+                            # the original PU, and PU_cur is a derived PU.
+                            "PU_src": barcode,
+                            "PU_cur": barcode,
+                            "PG": record["Options"]["Aligners"]["Program"],
+                            "PL": record["Options"]["Platform"].upper()}
 
                     record["Tags"] = tags
 
 
 def _split_lanes_by_filenames(makefile):
-    for (target, sample, library, barcode, record) in _iterate_over_records(makefile):
+    iterator = _iterate_over_records(makefile)
+    for (target, sample, library, barcode, record) in iterator:
         if record["Type"] == "Raw":
             template = record["Data"]
             record["Data"] = files = paths.collect_files(template)
@@ -384,7 +389,7 @@ def _split_lanes_by_filenames(makefile):
 
                     input_files = [files[key] for key in keys]
                     input_files_iter = itertools.izip_longest(*input_files)
-                    for (index, filenames) in enumerate(input_files_iter, start = 1):
+                    for (index, filenames) in enumerate(input_files_iter, start=1):
                         assert len(filenames) == len(keys)
                         assert len(filenames[0]) == len(filenames[-1])
                         new_barcode = "%s_%03i" % (barcode, index)
@@ -396,10 +401,10 @@ def _split_lanes_by_filenames(makefile):
                         makefile["Targets"][target][sample][library][new_barcode] = current
 
 
-def _validate_makefiles(makefiles):
+def _validate_makefiles(config, makefiles):
     for makefile in makefiles:
         _validate_makefile_libraries(makefile)
-    _validate_makefiles_duplicate_targets(makefiles)
+    _validate_makefiles_duplicate_targets(config, makefiles)
     _validate_makefiles_duplicate_files(makefiles)
     _validate_makefiles_features(makefiles)
 
@@ -408,20 +413,22 @@ def _validate_makefiles(makefiles):
 
 def _validate_makefile_libraries(makefile):
     libraries = collections.defaultdict(set)
-    for (target, sample, library, _barcode, _) in _iterate_over_records(makefile):
+    iterator = _iterate_over_records(makefile)
+    for (target, sample, library, _, _) in iterator:
         libraries[(target, library)].add(sample)
 
     for ((target, library), samples) in libraries.iteritems():
         if len(samples) > 1:
-            raise MakefileError("Library '%s' in target '%s' spans multiple samples: %s" \
-                                    % (library, target, ", ".join(samples)))
+            raise MakefileError("Library '%s' in target '%s' spans multiple "
+                                " samples: %s" % (library, target,
+                                                  ", ".join(samples)))
 
 
 def _validate_makefiles_duplicate_files(makefiles):
-    # TODO: Allow same files in different targets, but issue warning
     filenames = collections.defaultdict(list)
     for makefile in makefiles:
-        for (target, sample, library, barcode, record) in _iterate_over_records(makefile):
+        iterator = _iterate_over_records(makefile)
+        for (target, sample, library, barcode, record) in iterator:
             current_filenames = []
             if record["Type"] == "Raw":
                 for raw_filenames in record["Data"].itervalues():
@@ -439,24 +446,47 @@ def _validate_makefiles_duplicate_files(makefiles):
 
     by_records = sorted(zip(has_overlap.values(), has_overlap.keys()))
     for (records, pairs) in itertools.groupby(by_records, lambda x: x[0]):
-        descriptions = []
-        for (ii, record) in enumerate(records, start = 1):
-            descriptions.append("\t- Record {0}: Name: {1},  Sample: {2},  Library: {3},  Barcode: {4}".format(ii, *record))
-        for (ii, (_, filename)) in enumerate(sorted(pairs), start = 1):
-            descriptions.append("\t- Canonical path {0}: {1}".format(ii, filename))
+        pairs = list(pairs)
+        description = _describe_files_in_multiple_records(records, pairs)
 
-        raise MakefileError("Path included multiple times by one or more records:\n{0}\n".format("\n".join(descriptions)))
+        if len(set(record[0] for record in records)) != len(records):
+            message = "Path included multiple times in target:\n"
+            raise MakefileError(message + description)
+        else:
+            print_warn("WARNING: Path included in multiple targets:")
+            print_warn(description)
+            print_warn()
 
 
-def _validate_makefiles_duplicate_targets(makefiles):
-    # TODO: Allow same target if destination differs
+def _describe_files_in_multiple_records(records, pairs):
+    descriptions = []
+    for (index, record) in enumerate(records, start=1):
+        descriptions.append("\t- Record {0}: Name: {1},  Sample: {2},  "
+                            "Library: {3},  Barcode: {4}".format(index,
+                                                                 *record))
+
+    for (index, (_, filename)) in enumerate(sorted(pairs), start=1):
+        message = "\t- Canonical path {0}: {1}"
+        descriptions.append(message.format(index, filename))
+
+    return "\n".join(descriptions)
+
+
+def _validate_makefiles_duplicate_targets(config, makefiles):
     targets = set()
     for makefile in makefiles:
+        destination = config.destination
+        if destination is None:
+            filename = makefile["Statistics"]["Filename"]
+            destination = os.path.dirname(filename)
+
         for target in makefile["Targets"]:
-            if target in targets:
+            key = (destination, target)
+            if key in targets:
                 raise MakefileError("Target name '%s' used multiple times; "
-                                    "output files would be clobbered!" % target)
-            targets.add(target)
+                                    "output files would be clobbered!"
+                                    % target)
+            targets.add(key)
 
 
 def _validate_makefiles_features(makefiles):
