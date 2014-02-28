@@ -32,8 +32,7 @@ do
     NAME=$(echo ${PREFIX} | sed -e's#000_prefixes/##' -e's#\..*##')
     mkdir -p 000_reads/${NAME/*\//}/
 
-    DIRNAME=$(dirname $(readlink -f "$0" || echo "."))
-    python ${DIRNAME}/synthesize_reads.py ${PREFIX} 000_reads/${NAME}/ \
+    python ./synthesize_reads.py ${PREFIX} 000_reads/${NAME}/ \
 	--specimen-seed=${SP_SEED} \
 	--lanes-reads-mu=50000 \
 	--lanes-reads-sigma=500 \
