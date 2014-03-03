@@ -37,10 +37,11 @@ from pypeline.atomiccmd.builder import \
      AtomicCmdBuilder, \
      apply_options
 from pypeline.nodes.samtools import \
-     GenotypeNode, \
-     TabixIndexNode, \
-     FastaIndexNode, \
-     MPileupNode
+    GenotypeNode, \
+    TabixIndexNode, \
+    FastaIndexNode, \
+    BAMIndexNode, \
+    MPileupNode
 from pypeline.nodes.bedtools import \
     SlopBedNode
 from pypeline.nodes.sequences import \
@@ -177,16 +178,28 @@ class SampleRegionsNode(CommandNode):
                              dependencies = parameters.dependencies)
 
 
+# Caches for nodes shared between multiple tasks
+_BAI_CACHE = {}
 _FAI_CACHE = {}
+_BED_CACHE = {}
+
+
+def build_bam_index_node(bamfile, dependencies=()):
+    if bamfile not in _BAI_CACHE:
+        _BAI_CACHE[bamfile] = \
+            BAMIndexNode(infile=bamfile,
+                         dependencies=dependencies)
+    return _BAI_CACHE[bamfile]
+
+
 def build_fasta_index_node(reference, dependencies):
     if reference not in _FAI_CACHE:
         _FAI_CACHE[reference] = \
-          FastaIndexNode(infile       = reference,
-                         dependencies = dependencies)
+            FastaIndexNode(infile=reference,
+                           dependencies=dependencies)
     return _FAI_CACHE[reference]
 
 
-_BED_CACHE = {}
 def build_regions_nodes(options, regions, padding, dependencies):
     destination = add_postfix(regions["BED"], ".padded_%ibp" % (padding,))
 
@@ -219,12 +232,13 @@ def build_genotyping_nodes(options, genotyping, sample, regions, dependencies):
     if regions["Realigned"]:
         infile = add_postfix(infile, ".realigned")
 
-    slop, node =  build_regions_nodes(options, regions, padding, dependencies)
+    slop, node = build_regions_nodes(options, regions, padding, dependencies)
+    bai_node = build_bam_index_node(infile)
     genotype = GenotypeNode.customize(reference          = regions["FASTA"],
                                       regions            = slop,
                                       infile             = infile,
                                       outfile            = calls,
-                                      dependencies       = node)
+                                      dependencies       = (node, bai_node))
 
     apply_options(genotype.commands["pileup"], genotyping["MPileup"])
     apply_options(genotype.commands["genotype"], genotyping["BCFTools"])
@@ -280,12 +294,13 @@ def build_sampling_nodes(options, genotyping, sample, regions, dependencies):
     bam_file = os.path.join(options.samples_root, "%s.%s.bam" % (sample["Name"], regions["Prefix"]))
     if regions["Realigned"]:
         bam_file = add_postfix(bam_file, ".realigned")
+    bai_node = build_bam_index_node(bam_file)
 
     genotype = MPileupNode(reference          = regions["FASTA"],
                            regions            = slop,
                            infile             = bam_file,
                            outfile            = pileup_file,
-                           dependencies       = node)
+                           dependencies       = (node, bai_node))
     tabix    = TabixIndexNode(infile          = pileup_file,
                               preset          = "pileup",
                               dependencies    = genotype)
