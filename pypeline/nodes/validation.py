@@ -54,7 +54,7 @@ class DetectInputDuplicationNode(Node):
 
     def __init__(self, input_files, output_file, dependencies=()):
         Node.__init__(self,
-                      description="<DetectInputDuplication: %s>"
+                      description="<Detect Input Duplication: %s>"
                       % (describe_files(input_files)),
                       input_files=input_files,
                       output_files=output_file,
@@ -117,7 +117,7 @@ class ValidateFASTQFilesNode(Node):
     def __init__(self, input_files, output_file, offset, dependencies=()):
         self._offset = offset
         Node.__init__(self,
-                      description="<ValidateFASTQFilesNode: %s>"
+                      description="<Validate FASTQ Files: %s>"
                       % (describe_files(input_files)),
                       input_files=input_files,
                       output_files=output_file,
