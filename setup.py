@@ -75,12 +75,12 @@ class setup_version(build_py):
         build_py.run(self)
 
 
-setup(name         = 'Pypeline',
+setup(name         = 'PALEOMIX Pipeline',
       version      = get_version(),
       description  = '(Framework for) Bioinformatics pipelines',
       author       = 'Mikkel Schubert',
       author_email = 'MSchubert@snm.ku.dk',
-      url          = 'https://github.com/MikkelSchubert/pypeline',
+      url          = 'https://github.com/MikkelSchubert/paleomix',
       requires     = ['pysam (>=0.7.4)'],
       packages     = locate_packages(),
       scripts      = locate_scripts(),
