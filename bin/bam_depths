@@ -343,12 +343,12 @@ def process_file(handle, args):
     template = [0] * len(smlbid_to_smlb)
 
     for region in BAMRegionsIter(handle, args.regions):
-        counts = collections.deque()
-        mapping = MappingToTotals(totals, region, smlbid_to_smlb)
         if not args.regions and (len(handle.references) > args.max_contigs):
             region.name = '<Genome>'
 
         last_pos = 0
+        counts = collections.deque()
+        mapping = MappingToTotals(totals, region, smlbid_to_smlb)
         for (position, records) in region:
             mapping.process_counts(counts, last_pos, position)
 
