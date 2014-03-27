@@ -43,13 +43,18 @@ class BAMTimer:
         self._start_time = self._last_time
         self._last_fract = -1.0
 
+        self._bam_references = None
+
         self._total  = 0.0
         self._counts = []
         if bamfile and bamfile.header.get("HD", {}).get("SO", "NA") == "coordinate":
             self._bam   = bamfile
-            self._total = float(sum(bamfile.lengths)) or 1.0
+            self._bam_references = self._bam.references
+
+            lengths = bamfile.lengths
+            self._total = float(sum(lengths)) or 1.0
             self._counts.append(0)
-            self._counts.extend(cumsum(bamfile.lengths))
+            self._counts.extend(cumsum(lengths))
 
 
     def increment(self, count = 1, read = None):
@@ -73,7 +78,7 @@ class BAMTimer:
             fraction = ((read.pos + self._counts[read.tid]) / self._total)
             if fraction >= self._last_fract:
                 self._last_fract = fraction
-                contig   = self._bam.references[read.tid]
+                contig   = self._bam_references[read.tid]
                 position = self._format_int(read.pos + 1)
                 progress = "%.2f%%" % (fraction * 100,)
 

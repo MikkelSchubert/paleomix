@@ -343,7 +343,7 @@ def process_file(handle, args):
     template = [0] * len(smlbid_to_smlb)
 
     for region in BAMRegionsIter(handle, args.regions):
-        if not args.regions and (len(handle.references) > args.max_contigs):
+        if not args.regions and (handle.nreferences > args.max_contigs):
             region.name = '<Genome>'
 
         last_pos = 0

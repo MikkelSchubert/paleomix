@@ -61,7 +61,7 @@ def collect_references(args, handle):
             lengths[region.name] += region.end - region.start
 
         lengths = dict(lengths)
-    elif len(handle.references) <= args.max_contigs:
+    elif handle.nreferences <= args.max_contigs:
         lengths = dict(zip(handle.references, handle.lengths))
     else:
         lengths = {"<Genome>": sum(handle.lengths)}

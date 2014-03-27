@@ -136,7 +136,7 @@ def process_file(handle, args):
     region_template = build_region_template(args, handle)
     for region in BAMRegionsIter(handle, args.regions):
         name = region.name
-        if not args.regions and (len(handle.references) > args.max_contigs):
+        if not args.regions and (handle.nreferences > args.max_contigs):
             name = '<Genome>'
 
         region_table = get_region_table(counts, name, region_template)
