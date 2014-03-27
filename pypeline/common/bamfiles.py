@@ -69,9 +69,12 @@ class BAMRegionsIter(object):
             def _by_tid(record):
                 return record.tid
 
+            # Save a copy, as these are properties generated upon every access!
+            names = self._handle.references
+            lengths = self._handle.lengths
             for (tid, items) in itertools.groupby(self._handle, key=_by_tid):
-                name = self._handle.references[tid]
-                length = self._handle.lengths[tid]
+                name = names[tid]
+                length = lengths[tid]
 
                 yield _BAMRegion(tid, items, name, 0, length)
 
