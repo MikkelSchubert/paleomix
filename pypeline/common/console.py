@@ -79,7 +79,7 @@ def _do_print_color(*vargs, **kwargs):
             varg_lines = []
             # Newlines terminate the color-code for e.g. 'less', so ensure that 
             # each line is color-coded, while preserving the list of arguments
-            for line in varg.split("\n"):
+            for line in str(varg).split("\n"):
               varg_lines.append("\033[00;%im%s\033[00m" % (colorcode, line))
             vargs[index] = "\n".join(varg_lines)
 
