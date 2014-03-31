@@ -21,7 +21,7 @@
 # SOFTWARE.
 #
 """Creats consensus sequence from a VCF and BED file:
-bam_genotype_regions --intervals PATH_TO.bed --genotype PATH_TO.vcf
+vcf_to_fasta --intervals PATH_TO.bed --genotype PATH_TO.vcf
 
 The VCF file is expected to have been created using SAMTools, and makes use
 of SAMTools specific fields. For each region in the BED file, the script will

@@ -129,7 +129,7 @@ class BuildRegionsNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, options, infile, regions, outfile, padding,
                   dependencies=()):
-        params = AtomicCmdBuilder(["bam_genotype_regions"],
+        params = AtomicCmdBuilder(["vcf_to_fasta"],
                                   IN_VCFFILE=infile,
                                   IN_TABIX=infile + ".tbi",
                                   IN_INTERVALS=regions["BED"],
