@@ -73,7 +73,7 @@ def _mangle_makefile(options, mkfile, steps):
     _update_msa(mkfile)
     _check_bam_sequences(options, mkfile, steps)
     _check_genders(mkfile)
-    _check_max_read_depth(mkfile)
+    _update_and_check_max_read_depth(mkfile)
     _check_indels_and_msa(mkfile)
     mkfile["Nodes"] = ()
 
@@ -264,7 +264,7 @@ def _update_subsets(mkfile, steps):
                        % (roi_fname, roi, subset)
             unknown_seqs = list(sorted(unknown_seqs))
             if len(unknown_seqs) > 5:
-                unknown_seqs = unknown_seqs[:5] + ["..."]
+                unknown_seqs = unknown_seqs[:5]  + ["..."]
             message = "\n    - ".join([message] + unknown_seqs)
             raise MakefileError(message)
 
@@ -363,20 +363,26 @@ def _check_genders(mkfile):
                                    ", ".join(map(repr, regions_genders))))
 
 
-def _check_max_read_depth(mkfile):
+def _update_and_check_max_read_depth(mkfile):
     for (key, settings) in mkfile["Genotyping"].iteritems():
+        required_keys = set()
+        for sample in mkfile["Project"]["Samples"].itervalues():
+            if sample["GenotypingMethod"].lower() == "samtools":
+                required_keys.add(sample["Name"])
+
         max_depths = settings["VCF_Filter"]["MaxReadDepth"]
         if isinstance(max_depths, types.DictType):
-            required_keys = set()
-            for sample in mkfile["Project"]["Samples"].itervalues():
-                if sample["GenotypingMethod"].lower() == "samtools":
-                    required_keys.add(sample["Name"])
-
-            # Extra keys are allowed, to make it easier to temporarily disable a sample
+            # Extra keys are allowed, to make it easier
+            # to temporarily disable a sample
             missing_keys = required_keys - set(max_depths)
             if missing_keys:
-                raise MakefileError("MaxReadDepth not specified for the following samples for %r:\n    - %s" \
-                                    % (key, "\n    - ".join(sorted(missing_keys))))
+                missing_keys = "\n    - ".join(sorted(missing_keys))
+                message = "MaxReadDepth not specified for the following " \
+                          "samples for %r:\n    - %s" % (key, missing_keys)
+                raise MakefileError(message)
+        else:
+            max_depths = dict.fromkeys(required_keys, max_depths)
+            settings["VCF_Filter"]["MaxReadDepth"] = max_depths
 
 
 def _check_indels_and_msa(mkfile):
@@ -411,6 +417,12 @@ def _update_genotyping(mkfile):
     defaults   = genotyping.pop("Defaults")
     defaults.setdefault("Padding", 5)
     defaults["VCF_Filter"].setdefault("MaxReadDepth", 0)
+
+    for (key, subdd) in genotyping.iteritems():
+        if subdd.get("GenotypeEntirePrefix"):
+            message = "GenotypeEntirePrefix is only allowed for prefixes " \
+                      "using default parameters, but is set for %r" % (key,)
+            raise MakefileError(message)
 
     for key in mkfile["Project"]["Regions"]:
         subdd = fill_dict(genotyping.get(key, {}), defaults)
@@ -456,6 +468,7 @@ _VALIDATION_SAMPLES[_VALIDATION_SUBSAMPLE_KEY] = _VALIDATION_SAMPLES
 
 _VALIDATION_GENOTYPES = {
     "Padding"  : IsUnsignedInt,
+    "GenotypeEntirePrefix" : IsBoolean(default = False),
     "MPileup"  : {
         StringStartsWith("-") : CLI_PARAMETERS,
     },
