@@ -56,6 +56,9 @@ from pypeline.common.makefile import \
 from pypeline.common.console import \
     print_warn
 
+import pypeline.nodes.bwa as bwa
+import pypeline.common.versions as versions
+
 
 _READ_TYPES = set(("Single", "Collapsed", "CollapsedTruncated", "Paired"))
 
@@ -407,6 +410,7 @@ def _validate_makefiles(config, makefiles):
     _validate_makefiles_duplicate_targets(config, makefiles)
     _validate_makefiles_duplicate_files(makefiles)
     _validate_makefiles_features(makefiles)
+    _validate_bwa_version(makefiles)
 
     return makefiles
 
@@ -503,6 +507,23 @@ def _validate_makefiles_features(makefiles):
                                     "with RegionsOfInterest enabled, requires "
                                     "that either the feature 'Raw BAM' or the "
                                     "feature 'Raligned BAM' is enabled.")
+
+
+def _validate_bwa_version(_makefiles):
+    # TODO: Add support for different BWA algorithms; don't warn for SW / mem
+    try:
+        bwa_version = bwa.BWA_VERSION.version
+    except versions.VersionRequirementError:
+        pass  # Ignored here, reported elsewhere
+
+    if bwa_version >= (0, 7, 0):
+        url = "https://github.com/MikkelSchubert/paleomix/wiki/" \
+              "BAM-pipeline-specific-troubleshooting#BWA_version"
+        msg = "WARNING: Using BWA v0.7.x is NOT recommended, due to " \
+              "bugs in the BWA-backtrace algorithm, but the current " \
+              "version is v{1}.{2}.{3}.\n         Please refer to the " \
+              "PALEOMIX wiki for more information:\n           {0}\n"
+        print_warn(msg.format(url, *bwa_version))
 
 
 def _iterate_over_records(makefile):
