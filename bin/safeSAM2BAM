@@ -27,13 +27,11 @@ command will not work:
 $ samtools view -H INPUT | samtools view -Sbu -
 
 This is mainly a problem when aligning ancient DNA lanes against mt genomes,
-as there may not be any hits in an entire lane. In addition, this command
-filtered out reads with malformed CIGAR strings (a problem with BWA 0.7.4,
-which causes samtools/pysam to crash), as well as non-hits.
-"""
+as there may not be any hits in an entire lane. Additionally, the RNAME, POS,
+MAPQ, and CIGAR of unmapped reads are set to '*' or 0 as appropriate, since
+some versions of BWA may include garbage in these fields.
 
-import os
-import re
+"""
 import sys
 import optparse
 import subprocess
@@ -52,7 +50,6 @@ def _add_or_replace_tag(line, tag, value):
         fields.append("%s:%s" % (tag, value))
 
     return "\t".join(fields) + "\n"
-
 
 
 def _set_sort_order(header):
@@ -110,85 +107,94 @@ def _write_only_header(config, header):
     contains the given header, and has no records. It is nessesary to
     use pysam for this, as samtools cannot read an empty SAM file."""
     names, lengths = _parse_header(header)
-    with pysam.Samfile("-", "wbu", text = "".join(header),
-                       referencenames = names,
-                       referencelengths = lengths,
-                       add_sq_text = False) as handle:
+    with pysam.Samfile("-", "wbu",
+                       text="".join(header),
+                       referencenames=names,
+                       referencelengths=lengths,
+                       add_sq_text=False):
         return 0
 
 
 def _open_samtools_proc(config):
     """Opens and returns a running 'samtools' process object."""
-    min_quality   = str(config.min_quality)
-    exclude_flags = hex(config.exclude_flags)
-    call = ("samtools", "view", "-Sbu", "-q", min_quality, "-F", exclude_flags,  "-")
-    proc = subprocess.Popen(call,
-                            stdin     = subprocess.PIPE,
-                            close_fds = True)
+    call = ("samtools", "view", "-Sbu",
+            "-q", str(config.min_quality),
+            "-F", hex(config.exclude_flags),
+            "-")
+    proc = subprocess.Popen(call, stdin=subprocess.PIPE, close_fds=True)
 
     return proc, proc.stdin
 
 
-_re = re.compile("(([0-9]+)([A-Z=]))")
-def _is_valid_cigar(cigar, length):
-    """Sanity check for BWA 0.7.4+, which may generate alignments with
-    invalid CIGAR strings in rare cases, where version 0.5.x would
-    not generate an alignment at all."""
-    if cigar == "*":
-        return True
-
-    obs_length = 0
-    for (_, num, opt) in _re.findall(cigar):
-        if opt in "MISX=":
-            obs_length += int(num)
-    return obs_length == length
-
-
 def _to_bam(config, infile):
-    header, line  = _process_header(config, infile)
+    header, line = _process_header(config, infile)
     proc, outfile = None, None
 
     while line and (not proc or not outfile.closed):
-        fields = line.split("\t", 10)
-        if _is_valid_cigar(fields[5], len(fields[9])):
-            if not proc:
-                proc, outfile = _open_samtools_proc(config)
-                outfile.writelines(header)
+        fields = line.split("\t", 9)
 
-            outfile.write(line)
-        else:
-            sys.stderr.write("ERROR: Invalid CIGAR for read '%s':\n%s" \
-                             % (fields[0], line))
-            if proc:
-                proc.stdin.close()
-                proc.terminate()
-            return 1
+        flags = int(fields[1])
+        if flags & 0x4:  # Unmapped read
+            if config.filter_unmapped:
+                line = infile.readline()
+                continue
 
+            if flags & 0x8:  # Unmapped mate
+                fields[6] = "*"  # Mate rname
+                fields[7] = "0"  # Mate pos
+
+            # Set position to that of mate, but clear MAPQ / CIGAR
+            if fields[6] != "=":
+                fields[2] = fields[6]
+            fields[3] = fields[7]  # Read / mate pos
+            fields[4] = "0"  # Read mapq
+            fields[5] = "*"  # Read cigar
+        elif flags & 0x8:  # Unmapped mate
+            fields[6] = "="
+            fields[7] = fields[3]
+
+        if not proc:
+            proc, outfile = _open_samtools_proc(config)
+            outfile.writelines(header)
+
+        outfile.write("\t".join(fields))
         line = infile.readline()
 
     if not proc:
-        # Ie. no valid records found, thus we cannot use samtools to produce the output
+        # No valid records found; samtools cannot be used to produce the output
         return _write_only_header(config, header)
 
-    proc.stdin.close()
+    outfile.close()
     return proc.wait()
 
 
 def main(argv):
     parser = optparse.OptionParser()
-    parser.add_option("-q", "--min-quality", type = int, default = 0)
-    parser.add_option("-F", "--exclude-flags", type = int, default = 0)
-    parser.add_option("--flag-as-sorted", default = False, action = "store_true")
-    parser.add_option("--update-pg-tag", default = [], action = "append")
+    parser.add_option("-q", "--min-quality", type=int, default=0,
+                      help="Equivalent to \"samtools view -q MIN_QUALITY\"  "
+                           "\n[Default: %default]")
+    parser.add_option("-F", "--exclude-flags", type=int, default=0,
+                      help="Equivalent to \"samtools view -F EXCLUDE_FLAGS\" "
+                           "[Default: %default]")
+    parser.add_option("--flag-as-sorted", default=False, action="store_true",
+                      help="Flags the output BAM as sorted; usedful when used "
+                      "conjunction with \"samtools sort\" which does not set "
+                      "this flag [Default: off]")
+    parser.add_option("--update-pg-tag", default=[], action="append",
+                      help="Updates one or more PG tags with the given value, "
+                           "creating the tag if it does not already exist. "
+                           "Takes arguments in the form \"PGID:TAG:VALUE\".")
 
     config, args = parser.parse_args(argv)
     if args:
         sys.stderr.write("%s does not take any arguments.\n" % sys.argv[0])
         sys.exit(1)
 
+    config.filter_unmapped = bool(config.min_quality > 0 or
+                                  config.exclude_flags & 0x4)
+
     return _to_bam(config, sys.stdin)
 
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
-
