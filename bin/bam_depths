@@ -343,7 +343,10 @@ def process_file(handle, args):
     template = [0] * len(smlbid_to_smlb)
 
     for region in BAMRegionsIter(handle, args.regions):
-        if not args.regions and (handle.nreferences > args.max_contigs):
+        if region.name is None:
+            # Trailing unmapped reads
+            continue
+        elif not args.regions and (handle.nreferences > args.max_contigs):
             region.name = '<Genome>'
 
         last_pos = 0

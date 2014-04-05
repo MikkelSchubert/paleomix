@@ -73,8 +73,11 @@ class BAMRegionsIter(object):
             names = self._handle.references
             lengths = self._handle.lengths
             for (tid, items) in itertools.groupby(self._handle, key=_by_tid):
-                name = names[tid]
-                length = lengths[tid]
+                if tid != -1:
+                    name = names[tid]
+                    length = lengths[tid]
+                else:
+                    name = length = None
 
                 yield _BAMRegion(tid, items, name, 0, length)
 

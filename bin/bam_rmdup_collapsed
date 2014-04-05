@@ -111,7 +111,7 @@ def main(argv):
             for (read_num, read) in enumerate(infile):
                 if curpos and ((read.tid, read.pos) != curpos):
                     # Sort order is defined as ascending 'tid's and positions
-                    if curpos > (read.tid, read.pos):
+                    if curpos > (read.tid, read.pos) and not read.is_unmapped:
                         sys.stderr.write("ERROR: Input file does not appear "
                                          "to be sorted by coordinates at "
                                          "record %i, aborting ...\n"
