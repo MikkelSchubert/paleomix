@@ -211,7 +211,7 @@ def _bwa_build_nodes(config, parameters, tags, options):
         if aln_key in params.commands:
             apply_options(params.commands[aln_key], parameters)
 
-    read_group = "@RG\tID:{ID}\tSM:{SM}\tLB:{LB}\tPU:{PU}\tPL:{PL}\tPG:{PG}".format(**tags)
+    read_group = "@RG\\tID:{ID}\\tSM:{SM}\\tLB:{LB}\\tPU:{PU}\\tPL:{PL}\\tPG:{PG}".format(**tags)
     params.commands["sam"].set_option("-r", read_group)
 
     pg_tags = ("bwa:CL:%s" % (_bwa_build_cl_tag(options),))
