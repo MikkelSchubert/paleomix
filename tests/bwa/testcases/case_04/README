@@ -1,0 +1,1 @@
+CIGAR strings longer than the sequence / reference, causing samtools view to fail

@@ -1,0 +1,4 @@
+Collection of test-cases for bugs in BWA.
+To run, simply execute the "run.sh" script in the tests/bwa/.
+
+Brief explanations are provided for each test-case in the corresponding README located in each folder.
