@@ -294,48 +294,20 @@ class BWASWNode(CommandNode):
                              dependencies = parameters.dependencies)
 
 
-def _process_output(stdin, output_file, reference, run_fixmate = False):
-    convert = AtomicCmdBuilder("safeSAM2BAM")
-    convert.set_option("--flag-as-sorted")
-    convert.set_kwargs(IN_STDIN    = stdin,
-                      OUT_STDOUT  = AtomicCmd.PIPE,
-                      CHECK_SAMTOOLS = SAMTOOLS_VERSION)
-
-    fixmate = None
-    if run_fixmate:
-        fixmate = AtomicCmdBuilder(("samtools", "fixmate", "-", "-"),
-                               IN_STDIN   = convert,
-                               OUT_STDOUT = AtomicCmd.PIPE,
-                               CHECK_SAMTOOLS = SAMTOOLS_VERSION)
-
-    sort = AtomicCmdBuilder(("samtools", "sort"))
-    sort.set_option("-o") # Output to STDOUT on completion
-    sort.add_value("-")
-    sort.add_value("%(TEMP_OUT_BAM)s")
-    sort.set_kwargs(IN_STDIN     = fixmate or convert,
-                   OUT_STDOUT   = AtomicCmd.PIPE,
-                   TEMP_OUT_BAM = "sorted",
-                   CHECK_SAM = SAMTOOLS_VERSION)
-
-    calmd = AtomicCmdBuilder(("samtools", "calmd"))
-    calmd.add_value("-")
-    calmd.add_value("%(IN_REF)s")
-    calmd.set_option("-b") # Output BAM
-    calmd.set_kwargs(IN_REF   = reference,
-                    IN_STDIN = sort,
-                    OUT_STDOUT = output_file,
-                    CHECK_SAM = SAMTOOLS_VERSION)
-
-    order = ["convert", "sort", "calmd"]
-    commands = {"convert" : convert,
-                "sort"    : sort,
-                "calmd"   : calmd}
+def _process_output(stdin, output_file, reference, run_fixmate=False):
+    convert = AtomicCmdBuilder("bam_cleanup")
+    convert.set_option("--fasta", "%(IN_FASTA_REF)s")
+    convert.set_option("--prefix", "%(TEMP_OUT_PREFIX)s")
+    convert.set_kwargs(IN_STDIN=stdin,
+                       IN_FASTA_REF=reference,
+                       OUT_STDOUT=output_file,
+                       TEMP_OUT_PREFIX="bam_cleanup",
+                       CHECK_SAMTOOLS=SAMTOOLS_VERSION)
 
     if run_fixmate:
-        order.insert(1, "fixmate")
-        commands["fixmate"] = fixmate
+        convert.set_option('--paired-ended')
 
-    return order, commands
+    return ["convert"], {"convert": convert}
 
 
 
