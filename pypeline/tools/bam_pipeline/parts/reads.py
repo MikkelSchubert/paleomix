@@ -88,6 +88,11 @@ class Reads(object):
         if quality_offset == "Solexa":
             quality_offset = 64
 
+        ar_options = dict(record["Options"]["AdapterRemoval"])
+        # Setup of "--collapsed" is handled by the node itself
+        collapse_reads = ar_options.pop("--collapse")
+        collapse_reads = collapse_reads or collapse_reads is None
+
         init_args = {"output_prefix": os.path.join(self.folder, "reads"),
                      "output_format": record["Options"]["CompressionFormat"],
                      "quality_offset": quality_offset,
@@ -102,13 +107,15 @@ class Reads(object):
             if version is VERSION_14:
                 self._set_adapterrm_v14_files(self.files, output_tmpl)
             else:
-                self._set_adapterrm_v15_files(self.files, output_tmpl)
+                self._set_adapterrm_v15_files(self.files, output_tmpl,
+                                              collapse_reads)
 
+            init_args["collapse"] = collapse_reads
             init_args["input_files_1"] = record["Data"]["PE_1"]
             init_args["input_files_2"] = record["Data"]["PE_2"]
             command = PE_AdapterRemovalNode.customize(**init_args)
 
-        apply_options(command.command, record["Options"]["AdapterRemoval"])
+        apply_options(command.command, ar_options)
         self.stats = os.path.join(self.folder, "reads.settings")
         self.nodes = (command.build_node(),)
 
@@ -119,8 +126,9 @@ class Reads(object):
         files["Paired"] = output_tmpl % ("pair{Pair}.truncated",)
 
     @classmethod
-    def _set_adapterrm_v15_files(cls, files, output_tmpl):
+    def _set_adapterrm_v15_files(cls, files, output_tmpl, collapse_reads):
         files["Single"] = output_tmpl % ("singleton.truncated",)
-        files["Collapsed"] = output_tmpl % ("collapsed",)
-        files["CollapsedTruncated"] = output_tmpl % ("collapsed.truncated",)
         files["Paired"] = output_tmpl % ("pair{Pair}.truncated",)
+        if collapse_reads:
+            files["Collapsed"] = output_tmpl % ("collapsed",)
+            files["CollapsedTruncated"] = output_tmpl % ("collapsed.truncated",)

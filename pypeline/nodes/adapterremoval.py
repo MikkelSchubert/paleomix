@@ -119,7 +119,7 @@ class SE_AdapterRemovalNode(CommandNode):
 class PE_AdapterRemovalNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, input_files_1, input_files_2, output_prefix,
-                  quality_offset=33, output_format="bz2",
+                  quality_offset=33, output_format="bz2", collapse=True,
                   version=VERSION_15, dependencies=()):
         cmd = _get_common_parameters(version)
 
@@ -134,16 +134,21 @@ class PE_AdapterRemovalNode(CommandNode):
         assert quality_offset in (33, 64)
         cmd.set_option("--qualitybase", quality_offset)
 
+
         # Output files are explicity specified, to ensure that the order is
         # the same here as below. A difference in the order in which files are
         # opened can cause a deadlock, due to the use of named pipes
         # (see __init__).
         cmd.set_option("--output1", "%(TEMP_OUT_LINK_PAIR1)s")
         cmd.set_option("--output2", "%(TEMP_OUT_LINK_PAIR2)s")
-        cmd.set_option("--outputcollapsed", "%(TEMP_OUT_LINK_ALN)s")
-        if version == VERSION_15:
-            cmd.set_option("--outputcollapsedtruncated",
-                           "%(TEMP_OUT_LINK_ALN_TRUNC)s")
+
+        if collapse:
+          cmd.set_option("--collapse")
+          cmd.set_option("--outputcollapsed", "%(TEMP_OUT_LINK_ALN)s")
+          if version == VERSION_15:
+              cmd.set_option("--outputcollapsedtruncated",
+                             "%(TEMP_OUT_LINK_ALN_TRUNC)s")
+
         cmd.set_option("--singleton", "%(TEMP_OUT_LINK_UNALN)s")
         cmd.set_option("--discarded", "%(TEMP_OUT_LINK_DISC)s")
 
@@ -179,6 +184,7 @@ class PE_AdapterRemovalNode(CommandNode):
         self._quality_offset = parameters.quality_offset
         self._version = parameters.version
         self._basename = parameters.basename
+        self._collapse = parameters.collapse
         if len(parameters.input_files_1) != len(parameters.input_files_2):
             raise CmdError("Number of mate 1 files differ from mate 2 files: "
                            "%i != %i" % (len(parameters.input_files_1),
@@ -193,10 +199,13 @@ class PE_AdapterRemovalNode(CommandNode):
 
         commands = [adapterrm, zip_pair_1, zip_pair_2]
         if parameters.version == VERSION_15:
-            zip_aln        = _build_zip_command(parameters.output_format, parameters.output_prefix, ".collapsed")
-            zip_aln_trunc  = _build_zip_command(parameters.output_format, parameters.output_prefix, ".collapsed.truncated")
             zip_unaligned  = _build_zip_command(parameters.output_format, parameters.output_prefix, ".singleton.truncated")
-            commands      += [zip_aln, zip_aln_trunc, zip_unaligned]
+            if parameters.collapse:
+                zip_aln = _build_zip_command(parameters.output_format, parameters.output_prefix, ".collapsed")
+                zip_aln_trunc = _build_zip_command(parameters.output_format, parameters.output_prefix, ".collapsed.truncated")
+                commands += [zip_aln, zip_aln_trunc, zip_unaligned]
+            else:
+                commands += [zip_unaligned]
         else:
             zip_aln        = _build_zip_command(parameters.output_format, parameters.output_prefix, ".singleton.aln.truncated")
             zip_unaligned  = _build_zip_command(parameters.output_format, parameters.output_prefix, ".singleton.unaln.truncated")
@@ -227,8 +236,9 @@ class PE_AdapterRemovalNode(CommandNode):
         os.mkfifo(os.path.join(temp, "uncompressed_input_2"))
 
         if self._version == VERSION_15:
-            os.mkfifo(os.path.join(temp, self._basename + ".collapsed"))
-            os.mkfifo(os.path.join(temp, self._basename + ".collapsed.truncated"))
+            if self._collapse:
+               os.mkfifo(os.path.join(temp, self._basename + ".collapsed"))
+               os.mkfifo(os.path.join(temp, self._basename + ".collapsed.truncated"))
             os.mkfifo(os.path.join(temp, self._basename + ".singleton.truncated"))
         else:
             os.mkfifo(os.path.join(temp, self._basename + ".singleton.aln.truncated"))
@@ -280,9 +290,5 @@ def _get_common_parameters(version):
     cmd.set_option("--trimns", fixed=False)
     # Trim low quality scores
     cmd.set_option("--trimqualities", fixed=False)
-    # Offset of quality scores
-    cmd.set_option("--qualitybase", 33, fixed=False)
-    # Merge pairs where the sequence is overlapping
-    cmd.set_option("--collapse", fixed=False)
 
     return cmd

@@ -124,7 +124,7 @@ _VALIDATION_OPTIONS = {
         "--minquality": IsUnsignedInt,
         "--trimns": Or(IsNone, IsBoolean),
         "--trimqualities": Or(IsNone, IsBoolean),
-        "--collapse": Or(IsNone, IsBoolean),
+        "--collapse": Or(IsNone, IsBoolean, default=True),
         "--mm": Or(IsFloat, IsUnsignedInt,
                    default=3),
         "--minlength": IsUnsignedInt(default=25),
