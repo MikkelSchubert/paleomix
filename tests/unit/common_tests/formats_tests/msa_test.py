@@ -118,6 +118,42 @@ def test_msa_select__no_keys():
 
 ################################################################################
 ################################################################################
+## Tests for 'reduce'
+
+def test_msa_reduce__no_empty_columns__no_columns_are_removed():
+    fa_1 = FASTA("Name_A", "Meta_A", "ACnT")
+    fa_2 = FASTA("Name_B", "Meta_B", "C-TN")
+    initial = MSA([fa_1, fa_2])
+    expected = MSA([fa_1, fa_2])
+    assert_equal(initial.reduce(), expected)
+
+def test_msa_reduce__one_empty_column__column_are_removed():
+    fa_1 = FASTA("Name_A", "Meta_A", "AnT")
+    fa_2 = FASTA("Name_B", "Meta_B", "C-N")
+    initial = MSA([fa_1, fa_2])
+    fa_reduced_1 = FASTA("Name_A", "Meta_A", "AT")
+    fa_reduced_2 = FASTA("Name_B", "Meta_B", "CN")
+    expected = MSA([fa_reduced_1, fa_reduced_2])
+    assert_equal(initial.reduce(), expected)
+
+def test_msa_reduce__multiple_empty_column__all_empty_column_are_removed():
+    fa_1 = FASTA("Name_A", "Meta_A", "-AnTN")
+    fa_2 = FASTA("Name_B", "Meta_B", "NC-NN")
+    initial = MSA([fa_1, fa_2])
+    fa_reduced_1 = FASTA("Name_A", "Meta_A", "AT")
+    fa_reduced_2 = FASTA("Name_B", "Meta_B", "CN")
+    expected = MSA([fa_reduced_1, fa_reduced_2])
+    assert_equal(initial.reduce(), expected)
+
+def test_msa_reduce__only_empty_column__none_is_returned():
+    fa_1 = FASTA("Name_A", "Meta_A", "---Nn")
+    fa_2 = FASTA("Name_B", "Meta_B", "Nn--N")
+    initial = MSA([fa_1, fa_2])
+    assert_equal(initial.reduce(), None)
+
+
+################################################################################
+################################################################################
 ## Tests for 'filter_singletons'
 
 _FILTER_MSA_1 = MSA((FASTA("Seq1", "Meta1", "ACGNTYCSTG"),

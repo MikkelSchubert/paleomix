@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+from itertools import izip
 from collections import defaultdict
 
 from pypeline.common.sequences import split
@@ -55,21 +56,35 @@ class MSA(frozenset):
         """Retrurns the length of the sequences in the MSA."""
         return len(iter(self).next().sequence)
 
-
     def exclude(self, names):
         """Builds a new MSA that excludes the named set of records."""
-        _included, excluded, _to_filter = self._group(names)
+        _, excluded, _ = self._group(names)
         return MSA(excluded)
 
     def select(self, names):
         """Builds a new MSA that includes only the named set of records."""
-        included, _excluded, _to_filter = self._group(names)
+        included, _, _ = self._group(names)
         return MSA(included)
 
+    def reduce(self):
+        columns = []
+        uncalled = frozenset("Nn-")
+        for column in izip(*(record.sequence for record in self)):
+            if (frozenset(column) - uncalled):
+                columns.append(column)
+
+        if not columns:
+            return None
+
+        records = []
+        for (record, sequence) in izip(self, izip(*columns)):
+            records.append(FASTA(record.name, record.meta, "".join(sequence)))
+
+        return MSA(records)
 
     def filter_singletons(self, to_filter, filter_using):
         included, excluded, to_filter \
-          = self._group(filter_using, to_filter)
+            = self._group(filter_using, to_filter)
 
         sequence = list(to_filter.sequence)
         sequences = [record.sequence.upper() for record in included]
@@ -132,7 +147,6 @@ class MSA(frozenset):
         for (name, sequence) in merged.iteritems():
             sequences.append(FASTA(name, None, "".join(sequence)))
         return MSA(sequences)
-
 
     @classmethod
     def from_lines(cls, lines):
