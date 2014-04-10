@@ -236,8 +236,8 @@ def _run_cleanup_pipeline(args):
         else:
             last_proc = _setup_single_ended_pipeline(args, procs, bam_cleanup)
 
-        # Sort, output uncompressed (-l0) to stdout (-o)
-        call_sort = ['samtools', 'sort', "-o", "-l", "0", "-", args.prefix]
+        # Sort, output to stdout (-o)
+        call_sort = ['samtools', 'sort', "-o", "-", args.prefix]
         procs["sort"] = subprocess.Popen(call_sort,
                                          stdin=last_proc.stdout,
                                          stdout=subprocess.PIPE,
