@@ -122,16 +122,11 @@ class Pypeline:
             if running:
                 ui.flush()
 
-        ui.flush()
         pool.close()
         pool.join()
 
-        if errors_occured:
-            self._logger.error("Done ...")
-            self._logger.error("Errors were detected, please review log-file:")
-            self._logger.error("  - %s" % (pypeline.logger.get_logfile(),))
-        else:
-            self._logger.info("Done ...")
+        ui.flush()
+        ui.finalize()
 
         return not errors_occured
 
