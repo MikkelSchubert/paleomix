@@ -385,7 +385,11 @@ def _split_lanes_by_filenames(makefile):
 
             if (split == True) or (isinstance(split, list) and (barcode in split)):
                 if any(missing_files(file_set) for file_set in files.itervalues()):
-                    raise MakefileError("Unable to split by filename for search-string '%s', did not find files" % template)
+                    raise MakefileError("Unable to split by filename for "
+                                        "search-string '%s', did not find any "
+                                        "files; please verify that the path"
+                                        "is correct and update the makefile."
+                                        % template)
                 elif any(len(v) > 1 for v in files.itervalues()):
                     template = makefile["Targets"][target][sample][library].pop(barcode)
                     keys = ("SE",) if ("SE" in files) else ("PE_1", "PE_2")
@@ -514,7 +518,7 @@ def _validate_bwa_version(_makefiles):
     try:
         bwa_version = bwa.BWA_VERSION.version
     except versions.VersionRequirementError:
-        pass  # Ignored here, reported elsewhere
+        return  # Ignored here, reported elsewhere
 
     if bwa_version >= (0, 7, 0):
         url = "https://github.com/MikkelSchubert/paleomix/wiki/" \
