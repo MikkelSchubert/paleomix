@@ -76,16 +76,14 @@ def Requirement(call, search, checks, name = None):
     return requirement
 
 
-
 class RequirementObj:
-    def __init__(self, call, search, checks, name = None):
+    def __init__(self, call, search, checks, name=None):
         self._done = None
-        self.name  = name or call[0]
+        self.name = name or call[0]
         self._call = call
         self._reqs = checks
         self._rege = re.compile(search)
         self._version = None
-
 
     @property
     def version(self):
@@ -93,21 +91,14 @@ class RequirementObj:
             output = _do_call(self._call)
             match = self._rege.search(output)
             if not match:
-                lines = ["Version could not be determined for %r:" % (self.name,)]
-                if self.executable:
-                    exec_path = which_executable(self.executable)
-                    lines.append("    Path:     %s" % (exec_path,))
-                lines.append("    Required: %s" % (self._reqs.description,))
-                lines.append("    Regexp:   %r" % (self._rege.pattern))
-                lines.append("    Command output:\n %r" % (output))
+                self._raise_failure(output)
 
-                raise VersionRequirementError("\n".join(lines))
+            self._version = tuple(try_cast(value, int)
+                                  for value in match.groups())
 
-            self._version = tuple(try_cast(value, int) for value in match.groups())
         return self._version
 
-
-    def __call__(self, force = False):
+    def __call__(self, force=False):
         if force or self._done is None:
             self._reqs(self.name, self.version, self.executable)
             self._done = True
@@ -117,6 +108,32 @@ class RequirementObj:
         if not isinstance(self._call[0], collections.Callable):
             return self._call[0]
 
+    def _raise_failure(self, output):
+        lines = ["Version could not be determined for %r:"
+                 % (self.name,)]
+
+        if self.executable:
+            exec_path = which_executable(self.executable)
+            lines.append("    Executable:     %s" % (exec_path,))
+
+        # Raised if the JRE is too old compared to the JAR
+        if "java.lang.UnsupportedClassVersionError" in output:
+            lines.extend([
+                "",
+                "The version of the Java Runtime Environment on this",
+                "system is too old; please check the the requirement",
+                "for the program and upgrade your version of Java.",
+                "",
+                "See the WIKI for more information:",
+                "https://github.com/MikkelSchubert/paleomix/wiki/"
+                "Troubleshooting#JRE_outdated"
+            ])
+        else:
+            lines.append("    Required: %s" % (self._reqs.description,))
+            lines.append("    Regexp:   %r" % (self._rege.pattern))
+            lines.append("    Command output:\n %r" % (output))
+
+        raise VersionRequirementError("\n".join(lines))
 
 
 class Check:
