@@ -21,7 +21,7 @@ position may be re-arranged).
 
 import sys
 import pysam
-from optparse import OptionParser
+from argparse import ArgumentParser
 
 
 def calc_consensus(reads):
@@ -89,22 +89,27 @@ _FILTERED_FLAGS |= 0x200  # Failed QC
 _FILTERED_FLAGS |= 0x800  # Chimeric alignment
 
 
+def parse_args(argv):
+    parser = ArgumentParser(usage="%(prog)s [options] < in.bam > out.bam")
+    parser.add_argument("input", default="-", help="BAM file.", nargs="?")
+    parser.add_argument("--remove-duplicates",
+                        help="Remove duplicates from output; by default "
+                             "duplicates are only flagged (flag = 0x400).",
+                        default=False, action="store_true")
+
+    return parser.parse_args(argv)
+
+
 def main(argv):
-    parser = OptionParser("%prog [options] < in.bam > out.bam")
-    parser.add_option("--remove-duplicates",
-                      help="Remove duplicates from output",
-                      default=False, action="store_true")
-    options, args = parser.parse_args(argv)
+    args = parse_args(argv)
 
-    if args:
-        parser.print_usage(sys.stderr)
-        return 1
-    elif sys.stdin.isatty() or sys.stdout.isatty():
-        parser.print_usage(sys.stderr)
-        sys.stderr.write("STDIN or STDOUT is a terminal, terminating!\n")
+    if args.input == "-" and sys.stdin.isatty():
+        sys.stderr.write("STDIN is a terminal, terminating!\n")
+    elif sys.stdout.isatty():
+        sys.stderr.write("STDOUT is a terminal, terminating!\n")
         return 1
 
-    with pysam.Samfile("-", "rb") as infile:
+    with pysam.Samfile(args.input, "rb") as infile:
         with pysam.Samfile("-", "wb", template=infile) as outfile:
             curpos = None
             curvariants = {}
@@ -119,7 +124,7 @@ def main(argv):
                         return 1
 
                     _flush_buffer(outfile, curvariants,
-                                  options.remove_duplicates)
+                                  args.remove_duplicates)
                     curpos = None
 
                 is_filtered = read.flag & _FILTERED_FLAGS
@@ -136,7 +141,7 @@ def main(argv):
                 else:
                     curvariants[nkey] = [[read], 1]
 
-            _flush_buffer(outfile, curvariants, options.remove_duplicates)
+            _flush_buffer(outfile, curvariants, args.remove_duplicates)
 
     return 0
 
