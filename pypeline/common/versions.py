@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -41,7 +41,7 @@ class VersionRequirementError(RuntimeError):
     pass
 
 
-def Requirement(call, search, checks, name = None):
+def Requirement(call, search, checks, name=None):
     """Returns a singleton Requirement object, based on the parameters,
     which may be used to check that version requirements are met for a
     given program/utility/module, etc.
@@ -61,8 +61,8 @@ def Requirement(call, search, checks, name = None):
 
     Implementation detail: To reduce the need for performing calls or system-
     calls multiple times, caches are implemented using the call object as keys.
-    Thus the same calls should be passed in a manner which allow equality between
-    the same calls to be established.
+    Thus the same calls should be passed in a manner which allow equality
+    between the same calls to be established.
     """
     call = safe_coerce_to_tuple(call)
     key = (call, search, checks, name)
@@ -76,7 +76,7 @@ def Requirement(call, search, checks, name = None):
     return requirement
 
 
-class RequirementObj:
+class RequirementObj(object):
     def __init__(self, call, search, checks, name=None):
         self._done = None
         self.name = name or call[0]
@@ -136,24 +136,21 @@ class RequirementObj:
         raise VersionRequirementError("\n".join(lines))
 
 
-class Check:
+class Check(object):
     def __init__(self, name, description, *version):
-        self._version    = tuple(version)
-        self._objs       = (str(name), self._version)
+        self._version = tuple(version)
+        self._objs = (str(name), self._version)
         self.description = description.format(_pprint(self._version))
-
 
     def __hash__(self):
         return hash(self._objs)
 
-
     def __cmp__(self, other):
         if isinstance(other, Check):
-            return cmp(self._objs, other._objs) # pylint: disable=W0212
+            return cmp(self._objs, other._objs)  # pylint: disable=W0212
         return cmp(self.__class__, other.__class__)
 
-
-    def __call__(self, name, value, executable = None):
+    def __call__(self, name, value, executable=None):
         if not self.check_version(value):
             version = _pprint(value)
 
@@ -175,15 +172,13 @@ class EQ(Check):
     def __init__(self, *version):
         Check.__init__(self, "EQ", "equals {0}", *version)
 
-
     def check_version(self, value):
-        return (value == self._version)
+        return value == self._version
 
 
 class GE(Check):
     def __init__(self, *version):
         Check.__init__(self, "GE", "at least {0}", *version)
-
 
     def check_version(self, value):
         return value >= self._version
@@ -193,7 +188,6 @@ class LT(Check):
     def __init__(self, *version):
         Check.__init__(self, "LE", "prior to {0}", *version)
 
-
     def check_version(self, value):
         return value < self._version
 
@@ -201,9 +195,9 @@ class LT(Check):
 class And(Check):
     def __init__(self, *checks):
         self._checks = checks
-        description = " and ".join("(%s)" % (check.description,) for check in checks)
+        description = " and ".join("(%s)" % (check.description,)
+                                   for check in checks)
         Check.__init__(self, "And", description, *checks)
-
 
     def check_version(self, value):
         return all(check.check_version(value) for check in self._checks)
@@ -212,19 +206,28 @@ class And(Check):
 class Or(Check):
     def __init__(self, *checks):
         self._checks = checks
-        description = " or ".join("(%s)" % (check.description,) for check in checks)
+        description = " or ".join("(%s)" % (check.description,)
+                                  for check in checks)
         Check.__init__(self, "Or", description, *checks)
-
 
     def check_version(self, value):
         return any(check.check_version(value) for check in self._checks)
 
 
+class Any(Check):
+    def __init__(self):
+        Check.__init__(self, "Any", "Any version")
+
+    def check_version(self, _value):
+        return True
+
+
 def _run(call):
     try:
         proc = subprocess.Popen(call,
-                                stdout = subprocess.PIPE,
-                                stderr = subprocess.STDOUT)
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT,
+                                close_fds=True)
 
         return proc.communicate()[0]
     except (OSError, subprocess.CalledProcessError), error:
