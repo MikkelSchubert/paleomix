@@ -355,6 +355,52 @@ def test_builder__finalize__calls_atomiccmd():
         assert was_called
 
 
+################################################################################
+################################################################################
+## AtomicCmdBuilder: add_multiple_options
+
+def test_builder__add_multiple_options():
+    values = ("file_a", "file_b")
+
+    builder = AtomicCmdBuilder("ls")
+    kwargs = builder.add_multiple_options("-i", values)
+    assert_equal(kwargs, {"IN_FILE_01": "file_a", "IN_FILE_02": "file_b"})
+    assert_equal(builder.call, ["ls",
+                                "-i", "%(IN_FILE_01)s",
+                                "-i", "%(IN_FILE_02)s"])
+
+
+def test_builder__add_multiple_options_with_sep():
+    values = ("file_a", "file_b")
+
+    builder = AtomicCmdBuilder("ls")
+    kwargs = builder.add_multiple_options("-i", values, sep="=")
+    assert_equal(kwargs, {"IN_FILE_01": "file_a", "IN_FILE_02": "file_b"})
+    assert_equal(builder.call, ["ls",
+                                "-i=%(IN_FILE_01)s",
+                                "-i=%(IN_FILE_02)s"])
+
+
+def test_builder__add_multiple_options_with_template():
+    values = ("file_a", "file_b")
+
+    builder = AtomicCmdBuilder("ls")
+    kwargs = builder.add_multiple_options("-i", values, template="OUT_BAM_%i")
+    assert_equal(kwargs, {"OUT_BAM_1": "file_a", "OUT_BAM_2": "file_b"})
+    assert_equal(builder.call, ["ls",
+                                "-i", "%(OUT_BAM_1)s",
+                                "-i", "%(OUT_BAM_2)s"])
+
+
+def test_builder__add_multiple_options_with_template_fixed():
+    values = ("file_a", "file_b")
+
+    builder = AtomicCmdBuilder("ls")
+    kwargs = builder.add_multiple_options("-i", values)
+    assert_equal(kwargs, {"IN_FILE_01": "file_a", "IN_FILE_02": "file_b"})
+    assert_raises(AtomicCmdBuilderError,
+                  builder.add_multiple_options, "-i", values)
+
 
 ################################################################################
 ################################################################################
@@ -442,36 +488,48 @@ def test_mpi_builder__threads__non_int():
 ################################################################################
 ## create_customizable_cli_parameters
 
-def _test_custom_cli__single_named_arg():
+def test_custom_cli__single_named_arg():
     class SingleNamedArg:
         @create_customizable_cli_parameters
         def customize(cls, argument):
             return {}
 
     value = "A value"
-    obj   = SingleNamedArg.customize(value)
+    obj = SingleNamedArg.customize(value)
     assert_equal(obj.argument, value)
 
-def _test_custom_cli__adding_new_values():
+
+def test_custom_cli__adding_new_values():
     class SingleNamedArg:
         @create_customizable_cli_parameters
         def customize(cls):
-            return {"dynamic" : 12345}
+            return {"dynamic": 12345}
 
-    obj   = SingleNamedArg.customize()
+    obj = SingleNamedArg.customize()
     assert_equal(obj.dynamic, 12345)
 
 
-def _test_custom_cli__multiple_named_args():
+def test_custom_cli__multiple_named_args():
     class SingleNamedArg:
         @create_customizable_cli_parameters
         def customize(cls, first, second):
             return {}
 
-    obj   = SingleNamedArg.customize(123, 456)
+    obj = SingleNamedArg.customize(123, 456)
     assert_equal(obj.first,  123)
     assert_equal(obj.second, 456)
 
+
+def test_custom_cli__only_customize_is_valid_function_name():
+    try:
+        class ClassWithMisnamedFunction:
+            @create_customizable_cli_parameters
+            def not_called_customize(cls, first, second):
+                return {}  # pragma: no coverage
+
+        assert False, "ValueError not raised"  # pragma: no coverage
+    except ValueError:
+        pass
 
 
 ################################################################################

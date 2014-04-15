@@ -135,12 +135,7 @@ class MarkDuplicatesNode(PicardNode):
 
         params.set_option("OUTPUT", "%(OUT_BAM)s", sep="=")
         params.set_option("METRICS_FILE", "%(OUT_METRICS)s", sep="=")
-
-        input_bams = safe_coerce_to_tuple(input_bams)
-        for (index, filename) in enumerate(input_bams):
-            key = "IN_BAM_%02i" % index
-            params.add_option("I", "%%(%s)s" % (key,), sep="=")
-            params.set_kwargs(**{key: filename})
+        params.add_multiple_options("I", input_bams, sep="=")
 
         if not keep_dupes:
             # Remove duplicates from output by default to save disk-space
@@ -174,16 +169,12 @@ class MergeSamFilesNode(PicardNode):
 
         params.set_option("OUTPUT", "%(OUT_BAM)s", sep="=")
         params.set_option("CREATE_INDEX", "True", sep="=")
+        params.set_option("SO", "coordinate", sep="=", fixed=False)
+        params.add_multiple_options("I", input_bams, sep="=")
+
         params.set_kwargs(OUT_BAM=output_bam,
                           OUT_BAI=swap_ext(output_bam, ".bai"),
                           CHECK_JAR=_picard_version(config, jar_file))
-
-        for (index, filename) in enumerate(input_bams, start=1):
-            key = "IN_BAM_%02i" % (index,)
-            params.add_option("I", "%%(%s)s" % (key,), sep="=")
-            params.set_kwargs(**{key: filename})
-
-        params.set_option("SO", "coordinate", sep="=", fixed=False)
 
         return {"command": params,
                 "dependencies": dependencies}
@@ -218,13 +209,10 @@ class MultiBAMInput(object):
             params.set_option("CREATE_INDEX", "False", sep="=")
             params.set_option("COMPRESSION_LEVEL", 0, sep="=")
             params.set_option("OUTPUT", "%(TEMP_OUT_BAM)s", sep="=")
+            params.add_multiple_options("I", input_bams, sep="=")
+
             params.set_kwargs(CHECK_JAR=_picard_version(config, jar_file),
                               TEMP_OUT_BAM=self.pipe)
-
-            for (index, filename) in enumerate(self.files, start=1):
-                key = "IN_BAM_%02i" % (index,)
-                params.add_option("I", "%%(%s)s" % (key,), sep="=")
-                params.set_kwargs(**{key: filename})
 
             self.commands = [params.finalize()]
 

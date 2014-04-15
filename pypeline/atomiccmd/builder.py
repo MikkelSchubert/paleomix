@@ -70,12 +70,8 @@ from pypeline.atomiccmd.command import AtomicCmd
 from pypeline.common.utilities import safe_coerce_to_tuple
 
 
-
-
 class AtomicCmdBuilderError(RuntimeError):
     pass
-
-
 
 
 class AtomicCmdBuilder:
@@ -100,9 +96,9 @@ class AtomicCmdBuilder:
 
     Options are divided into two classes; singletons and non-singletons:
       Singletons     - May be specified exactly one (using 'set_option'), with
-                       subsequent calls to 'set_option' overwriting the previous
-                       value of the option (if any).
-      Non-singletons - May be specified one or more times (using 'push_option'),
+                       subsequent calls to 'set_option' overwriting the
+                       previous value of the option (if any).
+      Non-singletons - May be specified one or more times (with 'push_option'),
                        with each subsequent call added to list of existing
                        parameters.
 
@@ -111,80 +107,108 @@ class AtomicCmdBuilder:
     call from modifying this option. By default, all options are fixed.
 
     Any number of keywords may be set, which are passed to the AtomicCmd object
-    created by the AtomicCmdBuilder object (using 'set_kwargs'). The rules specified
-    in the AtomicCmd documentation apply to these. If a AtomicCmdBuilder object
-    is passed, this will be finalized as well.
-
+    created by the AtomicCmdBuilder object (using 'set_kwargs'). The rules
+    specified in the AtomicCmd documentation apply to these. If a
+    AtomicCmdBuilder object is passed, this will be finalized as well.
     """
 
     def __init__(self, call, **kwargs):
-        """See AtomiCmd.__init__ for parameters / keyword arguments."""
-
-        self._call    = safe_coerce_to_tuple(call)
+        """See AtomiCmd.__init__ for parameters / keyword arguments.
+        """
+        self._call = safe_coerce_to_tuple(call)
         self._options = []
-        self._values  = []
-        self._kwargs  = {}
-        self._object  = None
+        self._values = []
+        self._kwargs = {}
+        self._object = None
 
         self.set_kwargs(**kwargs)
 
-
-    def set_option(self, key, value = None, sep = None, fixed = True):
+    def set_option(self, key, value=None, sep=None, fixed=True):
         """Sets or overwrites an option that may be specified at most once. If
         the option has already been set using 'add_option', or with 'fixed' set
         to True, a AtomicCmdBuilderError will be raised."""
-        old_option = self._get_option_for_editing(key, singleton = True)
-        new_option = {"Key" : key, "Value"  : value, "Sep" : sep, "Fixed"  : fixed, "Singleton" : True}
+        old_option = self._get_option_for_editing(key, singleton=True)
+        new_option = {"Key": key,
+                      "Value": value,
+                      "Sep": sep,
+                      "Fixed": fixed,
+                      "Singleton": True}
+
         if old_option:
             if old_option["Fixed"]:
-                raise AtomicCmdBuilderError("Attemping to overwrite fixed option: %r" % key)
+                message = "Attemping to overwrite fixed option: %r" % key
+                raise AtomicCmdBuilderError(message)
             old_option.update(new_option)
         else:
             self._options.append(new_option)
 
-
-    def add_option(self, key, value = None, sep = None, fixed = True):
-        """Adds an option that may be specified one or more times. If the option
-        has already been set using 'set_option', a AtomicCmdBuilderError will be raised."""
+    def add_option(self, key, value=None, sep=None, fixed=True):
+        """Adds an option that may be specified one or more times. If the
+        option has already been set using 'set_option', a AtomicCmdBuilderError
+        will be raised.
+        """
         # Previous values are not used, but checks are required
-        self._get_option_for_editing(key, singleton = False)
-        self._options.append({"Key" : key, "Value"  : value, "Sep" : sep, "Fixed"  : fixed, "Singleton" : False})
-
+        self._get_option_for_editing(key, singleton=False)
+        self._options.append({"Key": key,
+                              "Value": value,
+                              "Sep": sep,
+                              "Fixed": fixed,
+                              "Singleton": False})
 
     def pop_option(self, key):
-        old_option = self._get_option_for_editing(key, singleton = None)
+        old_option = self._get_option_for_editing(key, singleton=None)
         if not old_option:
             raise KeyError("Option with key %r does not exist" % key)
         elif old_option["Fixed"]:
             raise AtomicCmdBuilderError("Attempting to pop fixed key %r" % key)
         self._options.remove(old_option)
 
-
     def add_value(self, value):
         """Adds a positional value to the call. Usage should be restricted to
-        paths and similar values, and set/add_option used for actual options."""
+        paths and similar values, and set/add_option used for actual options.
+        """
         self._values.append(value)
-
 
     def set_kwargs(self, **kwargs):
         if self._object:
-            raise AtomicCmdBuilderError("Parameters have already been finalized")
+            message = "Parameters have already been finalized"
+            raise AtomicCmdBuilderError(message)
 
         for key in kwargs:
             if key in self._kwargs:
-                raise AtomicCmdBuilderError("Attempted to overwrite existing path: %r" % key)
+                message = "Attempted to overwrite existing path: %r"
+                raise AtomicCmdBuilderError(message % key)
         self._kwargs.update(kwargs)
 
+    def add_multiple_options(self, key, values, sep=None,
+                             template="IN_FILE_%02i"):
+        """Add multiple options as once, with corresponding kwargs.
+
+        The template determines the key-names used for the arguments,
+        using numbers starting from 1 to differentiate between multiple
+        values.
+        """
+        kwargs = {}
+        for (index, value) in enumerate(values, start=1):
+            file_key = template % (index,)
+            self.add_option(key, "%%(%s)s" % (file_key,),
+                            sep=sep, fixed=True)
+            kwargs[file_key] = value
+        self.set_kwargs(**kwargs)
+        return kwargs
 
     @property
     def call(self):
-        """Returns the system-call, based on the call passed to the constructor, and
-        every parameter set or pushed using 'set_option' and 'add_option."""
+        """Returns the system-call based on the call passed to the constructor,
+        and every parameter set or pushed using 'set_option' and 'add_option'.
+        """
         command = list(self._call)
         for parameter in self._options:
             if parameter["Value"] is not None:
                 if parameter["Sep"] is not None:
-                    command.append("%s%s%s" % (parameter["Key"], parameter["Sep"], parameter["Value"]))
+                    command.append("%s%s%s" % (parameter["Key"],
+                                               parameter["Sep"],
+                                               parameter["Value"]))
                 else:
                     command.append(parameter["Key"])
                     command.append(parameter["Value"])
@@ -194,16 +218,15 @@ class AtomicCmdBuilder:
         command.extend(self._values)
         return command
 
-
     @property
     def finalized_call(self):
-        """Returns the system-call, as 'call', but with all key-values instantiated
-        to the values passed to the AtomicCmdBuilder. This is intended for use with
-        direct Popen calls."""
+        """Returns the system-call, as 'call', but with all key-values
+        instantiated to the values passed to the AtomicCmdBuilder. This is
+        intended for use with direct Popen calls.
+        """
         kwargs = self.kwargs
         kwargs["TEMP_DIR"] = "%(TEMP_DIR)"
         return [(str(field) % kwargs) for field in self.call]
-
 
     @property
     def kwargs(self):
@@ -217,7 +240,6 @@ class AtomicCmdBuilder:
             kwargs[key] = value
         return kwargs
 
-
     def finalize(self):
         """Creates an AtomicCmd object based on the AtomicParam object. Once
         finalized, the AtomicCmdBuilder cannot be modified further."""
@@ -226,19 +248,23 @@ class AtomicCmdBuilder:
 
         return self._object
 
-
     def _get_option_for_editing(self, key, singleton):
         if self._object:
-            raise AtomicCmdBuilderError("AtomicCmdBuilder has already been finalized")
+            message = "AtomicCmdBuilder has already been finalized"
+            raise AtomicCmdBuilderError(message)
         elif not isinstance(key, types.StringTypes):
-            raise TypeError("Key must be a string, not %r" % (key.__class__.__name__,))
+            message = "Key must be a string, not %r" \
+                % (key.__class__.__name__,)
+            raise TypeError(message)
         elif not key:
             raise KeyError("Key cannot be an empty string")
 
         for option in reversed(self._options):
             if (option["Key"] == key):
-                if (singleton is not None) and (option["Singleton"] != singleton):
-                    raise AtomicCmdBuilderError("Mixing of singleton and non-singleton options: %r" % key)
+                if (singleton is not None) \
+                        and (option["Singleton"] != singleton):
+                    message = "Mixing singleton and non-singleton options: %r"
+                    raise AtomicCmdBuilderError(message % key)
                 return option
 
 
@@ -307,7 +333,6 @@ class AtomicMPICmdBuilder(AtomicCmdBuilder):
             mpi_call.extend(call)
 
             AtomicCmdBuilder.__init__(self, mpi_call, EXEC_MAIN = call[0], **kwargs)
-
 
 
 def use_customizable_cli_parameters(init_func): # pylint: disable=C0103
