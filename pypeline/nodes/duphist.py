@@ -20,33 +20,29 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
-import random
-import collections
-
-import pysam
-
-from pypeline.node import CommandNode
-from pypeline.atomiccmd.command import AtomicCmd
-from pypeline.atomiccmd.sets import ParallelCmds
+from pypeline.atomiccmd.command import \
+    AtomicCmd
+from pypeline.atomiccmd.sets import \
+    ParallelCmds
 from pypeline.common.fileutils import \
-    describe_files, \
-    move_file
+    describe_files
 from pypeline.nodes.picard import \
-    concatenate_input_bams
+    MultiBAMInput, \
+    MultiBAMInputNode
 
 
-class DuplicateHistogramNode(CommandNode):
+class DuplicateHistogramNode(MultiBAMInputNode):
     def __init__(self, config, input_files, output_file, dependencies=()):
-        cat_cmds, cat_obj = concatenate_input_bams(config, input_files)
-        duphist_command = AtomicCmd(['bam_duphist', '-'],
-                                    IN_STDIN=cat_obj,
+        bam_input = MultiBAMInput(config, input_files)
+        duphist_command = AtomicCmd(['bam_duphist', '%(TEMP_IN_BAM)s'],
+                                    TEMP_IN_BAM=bam_input.pipe,
                                     OUT_STDOUT=output_file)
-        commands = ParallelCmds(cat_cmds + [duphist_command])
+        commands = ParallelCmds(bam_input.commands + [duphist_command])
 
         description = "<DuplicateHistogram: %s -> %r>" \
             % (describe_files(input_files), output_file)
-        CommandNode.__init__(self,
-                             command=commands,
-                             description=description,
-                             dependencies=dependencies)
+        MultiBAMInputNode.__init__(self,
+                                   bam_input=bam_input,
+                                   command=commands,
+                                   description=description,
+                                   dependencies=dependencies)

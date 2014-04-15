@@ -21,56 +21,48 @@
 # SOFTWARE.
 #
 from pypeline.node import \
-    CommandNode, \
     Node
 from pypeline.atomiccmd.sets import \
     ParallelCmds
 from pypeline.atomiccmd.builder import \
     AtomicCmdBuilder
 from pypeline.nodes.picard import \
-    concatenate_input_bams
+    MultiBAMInput, \
+    MultiBAMInputNode
 from pypeline.common.fileutils import \
     reroot_path, \
     move_file, \
     describe_files
-from pypeline.common.utilities import \
-    safe_coerce_to_tuple
 
 import pypeline.tools.bam_stats.coverage as coverage
 
 
-class CoverageNode(CommandNode):
+class CoverageNode(MultiBAMInputNode):
     def __init__(self, config, target_name, input_files, output_file,
                  regions_file=None, dependencies=()):
-        kwargs = {"OUT_FILE": output_file}
-        input_files = safe_coerce_to_tuple(input_files)
+        bam_input = MultiBAMInput(config, input_files)
+        if len(bam_input.files) > 1 and regions_file:
+            raise ValueError("Coverage for regions require single, "
+                             "indexed input BAM file.")
 
-        if len(input_files) > 1:
-            if regions_file:
-                raise ValueError("Coverage for regions require single, "
-                                 "indexed input BAM file.")
-            cat_cmds, cat_obj = concatenate_input_bams(config, input_files)
-            kwargs["IN_STDIN"] = cat_obj
-            input_argument = "-"  # Read from STDIN
-        else:
-            cat_cmds = []
-            kwargs["IN_FILE"] = input_files[0]
-            input_argument = "%(IN_FILE)s"
-
-        call = ['bam_coverage', input_argument, '%(OUT_FILE)s',
+        call = ['bam_coverage', "%(TEMP_IN_BAM)s", '%(OUT_FILE)s',
                 '--target-name', target_name]
-        builder = AtomicCmdBuilder(call, **kwargs)
+        builder = AtomicCmdBuilder(call,
+                                   TEMP_IN_BAM=bam_input.pipe,
+                                   OUT_FILE=output_file)
+
         if regions_file:
             builder.set_option('--regions-file', '%(IN_REGIONS)s')
             builder.set_kwargs(IN_REGIONS=regions_file)
 
-        command = ParallelCmds(cat_cmds + [builder.finalize()])
-        CommandNode.__init__(self,
-                             command=command,
-                             description="<Coverage: %s -> '%s'>"
-                                         % (describe_files(input_files),
-                                            output_file),
-                             dependencies=dependencies)
+        command = ParallelCmds(bam_input.commands + [builder.finalize()])
+        description = "<Coverage: %s -> '%s'>" \
+            % (describe_files(bam_input.files), output_file)
+        MultiBAMInputNode.__init__(self,
+                                   bam_input=bam_input,
+                                   command=command,
+                                   description=description,
+                                   dependencies=dependencies)
 
 
 class MergeCoverageNode(Node):
@@ -93,35 +85,29 @@ class MergeCoverageNode(Node):
         move_file(reroot_path(temp, self._output_file), self._output_file)
 
 
-class DepthHistogramNode(CommandNode):
+class DepthHistogramNode(MultiBAMInputNode):
     def __init__(self, config, target_name, input_files, output_file,
                  regions_file=None, dependencies=()):
-        kwargs = {"OUT_FILE": output_file}
-        input_files = safe_coerce_to_tuple(input_files)
+        bam_input = MultiBAMInput(config, input_files)
+        if len(bam_input.files) > 1 and regions_file:
+            raise ValueError("DepthHistogram for regions require single, "
+                             "indexed input BAM file.")
 
-        if len(input_files) > 1:
-            if regions_file:
-                raise ValueError("DepthHistogram for regions require single, "
-                                 "indexed input BAM file.")
-            cat_cmds, cat_obj = concatenate_input_bams(config, input_files)
-            kwargs["IN_STDIN"] = cat_obj
-            input_argument = "-"  # Read from STDIN
-        else:
-            cat_cmds = []
-            kwargs["IN_FILE"] = input_files[0]
-            input_argument = "%(IN_FILE)s"
-
-        call = ['bam_depths', input_argument, '%(OUT_FILE)s',
+        call = ['bam_depths', "%(TEMP_IN_BAM)s", '%(OUT_FILE)s',
                 '--target-name', target_name]
-        builder = AtomicCmdBuilder(call, **kwargs)
+        builder = AtomicCmdBuilder(call,
+                                   TEMP_IN_BAM=bam_input.pipe,
+                                   OUT_FILE=output_file)
+
         if regions_file:
             builder.set_option('--regions-file', '%(IN_REGIONS)s')
             builder.set_kwargs(IN_REGIONS=regions_file)
 
-        command = ParallelCmds(cat_cmds + [builder.finalize()])
-        CommandNode.__init__(self,
-                             command=command,
-                             description="<DepthHistogram: %s -> '%s'>"
-                                         % (describe_files(input_files),
-                                            output_file),
-                             dependencies=dependencies)
+        command = ParallelCmds(bam_input.commands + [builder.finalize()])
+        description = "<DepthHistogram: %s -> '%s'>" \
+            % (describe_files(bam_input.files), output_file)
+        MultiBAMInputNode.__init__(self,
+                                   bam_input=bam_input,
+                                   command=command,
+                                   description=description,
+                                   dependencies=dependencies)
