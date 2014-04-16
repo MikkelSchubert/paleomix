@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -34,14 +34,24 @@ import pypeline.tools.phylo_pipeline.mkfile as mkfile
 from pypeline import Pypeline
 from pypeline.common.console import print_err
 from pypeline.tools.phylo_pipeline.makefile import \
-     MakefileError, \
-     read_makefiles
+    MakefileError, \
+    read_makefiles
 from pypeline.tools.phylo_pipeline.config import \
-     ConfigError, \
-     parse_config, \
-     select_commands
+    ConfigError, \
+    parse_config, \
+    select_commands
 
 
+def list_orphan_files(config, makefiles, pipeline):
+    files = set()
+    for makefile in makefiles:
+        title = makefile["Project"]["Title"]
+        folder = os.path.join(config.destination, title)
+        for (dirpath, _, filenames) in os.walk(folder):
+            for filename in filenames:
+                fpath = os.path.join(dirpath, filename)
+                files.add(os.path.abspath(fpath))
+    return files - pipeline.list_output_files()
 
 
 def main(argv):
@@ -64,12 +74,13 @@ def main(argv):
     if not os.path.exists(config.temp_root):
         try:
             os.makedirs(config.temp_root)
-        except OSError, e:
-            print_err("ERROR: Could not create temp root:\n\t%s" % (e,))
+        except OSError, error:
+            print_err("ERROR: Could not create temp root:\n\t%s" % (error,))
             return 1
 
     if not os.access(config.temp_root, os.R_OK | os.W_OK | os.X_OK):
-        print_err("ERROR: Insufficient permissions for temp root: '%s'" % (config.temp_root,))
+        print_err("ERROR: Insufficient permissions for temp root: '%s'"
+                  % (config.temp_root,))
         return 1
 
     try:
@@ -78,7 +89,7 @@ def main(argv):
         print_err("Error reading makefiles:",
                   "\n  %s:\n   " % (error.__class__.__name__,),
                   "\n    ".join(str(error).split("\n")),
-                  file = sys.stderr)
+                  file=sys.stderr)
         return 1
 
     logfile_template = time.strftime("phylo_pipeline.%Y%m%d_%H%M%S_%%02i.log")
@@ -94,8 +105,22 @@ def main(argv):
         if "Nodes" in makefile:
             pipeline.add_nodes(makefile["Nodes"])
 
-    if not pipeline.run(max_running = config.max_threads,
-                        dry_run     = config.dry_run,
-                        progress_ui = config.progress_ui):
+    if config.list_output_files:
+        logger.info("Printing output files ...")
+        pipeline.print_output_files()
+        return 0
+    elif config.list_orphan_files:
+        logger.info("Printing orphan files ...")
+        for filename in sorted(list_orphan_files(config, makefiles, pipeline)):
+            print(filename)
+        return 0
+    elif config.list_executables:
+        logger.info("Printint required executables ...")
+        pipeline.print_required_executables()
+        return 0
+
+    if not pipeline.run(max_running=config.max_threads,
+                        dry_run=config.dry_run,
+                        progress_ui=config.progress_ui):
         return 1
     return 0

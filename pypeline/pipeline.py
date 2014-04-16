@@ -20,11 +20,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+from __future__ import print_function
+
+import os
 import errno
 import Queue
 import pickle
 import signal
 import logging
+import collections
 import multiprocessing
 
 import pypeline.ui
@@ -188,11 +192,75 @@ class Pypeline:
 
         return not errors
 
-
     @property
     def nodes(self):
         return set(self._nodes)
 
+    def walk_nodes(self, func):
+        skip_nodes = set()
+
+        def _walk_nodes(nodes):
+            for node in nodes:
+                if node in skip_nodes:
+                    continue
+                elif not func(node):
+                    return False
+
+                skip_nodes.add(node)
+                if not _walk_nodes(node.subnodes):
+                    return False
+                elif not _walk_nodes(node.dependencies):
+                    return False
+            return True
+
+        _walk_nodes(self._nodes)
+
+    def list_output_files(self):
+        output_files = set()
+
+        def collect_output_files(node):
+            output_files.update(node.output_files)
+            return True
+
+        self.walk_nodes(collect_output_files)
+
+        return frozenset(map(os.path.abspath, output_files))
+
+    def list_required_executables(self):
+        requirements = collections.defaultdict(set)
+
+        def collect_requirements(node):
+            for executable in node.executables:
+                _ = requirements[executable]
+
+            for requirement in node.requirements:
+                requirements[requirement.name].add(requirement)
+            return True
+
+        self.walk_nodes(collect_requirements)
+        return requirements
+
+    def print_output_files(self, print_func=print):
+        for filename in sorted(self.list_output_files()):
+            print_func(filename)
+
+    def print_required_executables(self, print_func=print):
+        rows = []
+        pipeline_executables = self.list_required_executables()
+        print_func("{: <40s} {: <10s} {}".format("Executable",
+                                                 "Version",
+                                                 "Required version"))
+
+        for (name, requirements) in sorted(pipeline_executables.items()):
+            if not requirements:
+                print_func(name)
+
+            for requirement in requirements:
+                version = ".".join(map(str, requirement.version))
+                required = requirement._reqs.description
+                print_func("{: <40s} {: <10s} {}".format(name,
+                                                         version,
+                                                         required))
 
     def _sigint_handler(self, signum, frame):
         """Signal handler; see signal.signal."""
@@ -202,7 +270,6 @@ class Pypeline:
                                "\t- Press CTRL-C again to force termination.\n")
         else:
             raise signal.default_int_handler(signum, frame)
-
 
     @classmethod
     def _get_finished_node(self, queue, running, blocking = True):

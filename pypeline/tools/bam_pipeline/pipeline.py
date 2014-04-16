@@ -48,9 +48,6 @@ from pypeline.nodes.bowtie2 import \
 from pypeline.tools.bam_pipeline.makefile import \
      MakefileError, \
      read_makefiles
-from pypeline.tools.bam_pipeline.config import \
-     ConfigError, \
-     parse_config
 
 import pypeline.tools.bam_pipeline.parts as parts
 
@@ -196,41 +193,7 @@ def index_references(config, makefiles):
             dd["Node:Bowtie2"] = references_bowtie2[reference]
 
 
-
-# TODO: Move to NodeGraph?
-def walk_nodes(nodes, func, skip_nodes = None):
-    if skip_nodes is None:
-        skip_nodes = set()
-
-    for node in nodes:
-        if node in skip_nodes:
-            continue
-        elif not func(node):
-            return False
-
-        skip_nodes.add(node)
-        if not walk_nodes(node.subnodes, func, skip_nodes):
-            return False
-        elif not walk_nodes(node.dependencies, func, skip_nodes):
-            return False
-
-    return True
-
-
-# TODO: Move to NodeGraph?
-def list_output_files(nodes):
-    output_files = set()
-    def collect_output_files(node):
-        output_files.update(map(os.path.abspath, node.output_files))
-        return True
-
-    walk_nodes(nodes, collect_output_files)
-
-    return output_files
-
-
-# TODO: Move to NodeGraph?
-def list_orphan_files(config, makefiles, nodes):
+def list_orphan_files(config, makefiles, pipeline):
     files, mkfiles = set(), set()
     for mkfile in makefiles:
         mkfile_path = mkfile["Statistics"]["Filename"]
@@ -244,23 +207,25 @@ def list_orphan_files(config, makefiles, nodes):
             for root_filename in glob.glob(glob_str):
                 if os.path.isdir(root_filename):
                     for (dirpath, _, filenames) in os.walk(root_filename):
-                        files.update(os.path.abspath(os.path.join(dirpath, filename)) for filename in filenames)
+                        for filename in filenames:
+                            fpath = os.path.join(dirpath, filename)
+                            files.add(os.path.abspath(fpath))
                 else:
                     files.add(os.path.abspath(root_filename))
-    return (files - mkfiles) - list_output_files(nodes)
+    return (files - mkfiles) - pipeline.list_output_files()
 
 
 def main(config, args):
     if not os.path.exists(config.temp_root):
         try:
             os.makedirs(config.temp_root)
-        except OSError, e:
-            print_err("ERROR: Could not create temp root:\n\t%s" % (e,))
+        except OSError, error:
+            print_err("ERROR: Could not create temp root:\n\t%s" % (error,))
             return 1
 
     if not os.access(config.temp_root, os.R_OK | os.W_OK | os.X_OK):
-        print_err("ERROR: Insufficient permissions for temp root: '%s'" \
-                          % (config.temp_root,))
+        print_err("ERROR: Insufficient permissions for temp root: '%s'"
+                  % (config.temp_root,))
         return 1
 
     try:
@@ -270,7 +235,7 @@ def main(config, args):
         print_err("Error reading makefiles:",
                   "\n  %s:\n   " % (error.__class__.__name__,),
                   "\n    ".join(str(error).split("\n")),
-                  file = sys.stderr)
+                  file=sys.stderr)
         return 1
 
     logfile_template = time.strftime("bam_pipeline.%Y%m%d_%H%M%S_%%02i.log")
@@ -283,7 +248,8 @@ def main(config, args):
     if config.list_targets:
         logger.info("Listing targets for %s ...", config.list_targets)
         for makefile in makefiles:
-            # If a destination is not specified, save results in same folder as makefile
+            # If a destination is not specified, save results in same folder as
+            # the makefile
             filename = makefile["Statistics"]["Filename"]
             old_destination = config.destination
             if old_destination is None:
@@ -301,7 +267,8 @@ def main(config, args):
 
     pipeline = pypeline.Pypeline(config)
     for makefile in makefiles:
-        # If a destination is not specified, save results in same folder as makefile
+        # If a destination is not specified, save results in same folder as the
+        # makefile
         filename = makefile["Statistics"]["Filename"]
         old_destination = config.destination
         if old_destination is None:
@@ -309,8 +276,9 @@ def main(config, args):
 
         try:
             nodes = pipeline_func(config, makefile)
-        except pypeline.node.NodeError, e:
-            logger.error("Error while building pipeline for '%s':\n%s", filename, e)
+        except pypeline.node.NodeError, error:
+            logger.error("Error while building pipeline for '%s':\n%s",
+                         filename, error)
             return 1
 
         config.destination = old_destination
@@ -323,19 +291,22 @@ def main(config, args):
         return 1
     elif config.list_output_files:
         logger.info("Printing output files ...")
-        for filename in sorted(list_output_files(pipeline.nodes)):
-            print(filename)
+        pipeline.print_output_files()
         return 0
     elif config.list_orphan_files:
         logger.info("Printing orphan files ...")
-        for filename in sorted(list_orphan_files(config, makefiles, pipeline.nodes)):
+        for filename in sorted(list_orphan_files(config, makefiles, pipeline)):
             print(filename)
+        return 0
+    elif config.list_executables:
+        logger.info("Printint required executables ...")
+        pipeline.print_required_executables()
         return 0
 
     logger.info("Running BAM pipeline ...")
-    if not pipeline.run(dry_run     = config.dry_run,
-                        max_running = config.max_threads,
-                        progress_ui = config.progress_ui):
+    if not pipeline.run(dry_run=config.dry_run,
+                        max_running=config.max_threads,
+                        progress_ui=config.progress_ui):
         return 1
 
     return 0
