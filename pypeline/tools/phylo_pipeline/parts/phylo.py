@@ -26,7 +26,7 @@ import collections
 
 from pypeline.node import MetaNode
 from pypeline.nodes.formats import \
-     FastaToPartitionedInterleavedPhyNode
+    FastaToPartitionedInterleavedPhyNode as ToPhylipNode
 from pypeline.nodes.raxml import \
      RAxMLReduceNode, \
      RAxMLParsimonyTreeNode
@@ -43,24 +43,27 @@ from pypeline.common.fileutils import \
      add_postfix
 
 
+def _build_supermatrix(destination, input_files, exclude_samples, subset_files,
+                       dependencies):
+    matrixprefix = os.path.join(destination, "alignments")
 
+    # This supermatrix (and partitions) is not used by the pipeline, but is
+    # built for reference purposes; may be made optional in the future.
+    supermatrix = ToPhylipNode(infiles=input_files,
+                               out_prefix=matrixprefix,
+                               exclude_groups=exclude_samples,
+                               dependencies=dependencies,
+                               file_dependencies=subset_files)
 
+    # Supermatrix with empty columns (all N, n, or -) stripped
+    reduced = ToPhylipNode(reduce=True,
+                           infiles=input_files,
+                           out_prefix=matrixprefix + ".reduced",
+                           exclude_groups=exclude_samples,
+                           dependencies=dependencies,
+                           file_dependencies=subset_files)
 
-
-
-def _build_supermatrix(destination, input_files, exclude_samples, subset_files, dependencies):
-    matrixprefix    = os.path.join(destination, "alignments")
-    supermatrix     = FastaToPartitionedInterleavedPhyNode(infiles        = input_files,
-                                                           out_prefix     = matrixprefix,
-                                                           exclude_groups = exclude_samples,
-                                                           dependencies   = dependencies,
-                                                           file_dependencies = subset_files)
-
-    return RAxMLReduceNode(input_alignment  = matrixprefix + ".phy",
-                           output_alignment = matrixprefix + ".reduced.phy",
-                           input_partition  = matrixprefix + ".partitions",
-                           output_partition = matrixprefix + ".reduced.partitions",
-                           dependencies     = supermatrix)
+    return (supermatrix, reduced)
 
 
 def _examl_nodes(options, settings, input_alignment, input_partitions, input_binary, output_template, dependencies):
