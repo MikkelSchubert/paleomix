@@ -39,6 +39,8 @@ from pypeline.nodegraph import NodeGraph, NodeGraphError
 from pypeline.common.utilities import \
      safe_coerce_to_tuple, \
      fast_pickle_test
+from pypeline.common.versions import \
+    VersionRequirementError
 
 
 
@@ -256,7 +258,11 @@ class Pypeline:
                 print_func(name)
 
             for requirement in requirements:
-                version = ".".join(map(str, requirement.version))
+                try:
+                    version = ".".join(map(str, requirement.version))
+                except VersionRequirementError:
+                    version = "UNKNOWN"
+
                 required = requirement._reqs.description
                 print_func("{: <40s} {: <10s} {}".format(name,
                                                          version,
