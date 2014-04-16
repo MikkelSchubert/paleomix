@@ -150,7 +150,7 @@ class AtomicCmd:
         self._generate_call("/tmp")
 
 
-    def run(self, temp):
+    def run(self, temp, wrap_errors=True):
         """Runs the given command, saving files in the specified temp folder.
         To move files to their final destination, call commit(). Note that in
         contexts where the *Cmds classes are used, this function may block.
@@ -171,13 +171,24 @@ class AtomicCmd:
         cwd  = temp if self._set_cwd else None
         temp = ""   if self._set_cwd else os.path.abspath(temp)
         call = self._generate_call(temp)
-        self._proc = subprocess.Popen(call,
-                                      stdin  = stdin,
-                                      stdout = stdout,
-                                      stderr = stderr,
-                                      cwd    = cwd,
-                                      preexec_fn = os.setsid,
-                                      close_fds = True)
+
+        try:
+            self._proc = subprocess.Popen(call,
+                                          stdin  = stdin,
+                                          stdout = stdout,
+                                          stderr = stderr,
+                                          cwd    = cwd,
+                                          preexec_fn = os.setsid,
+                                          close_fds = True)
+        except StandardError, error:
+            if not wrap_errors:
+                raise
+
+            message = \
+                "Error running commands:\n" \
+                "  Call = %r\n" \
+                "  Error = %r"
+            raise CmdError(message % (call, error))
 
         # Allow subprocesses to be killed in case of a SIGTERM
         _add_to_killlist(self._proc)

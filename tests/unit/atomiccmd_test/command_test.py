@@ -427,6 +427,23 @@ def test_atomiccmd__run__already_running(temp_files):
     cmd.join()
 
 
+@with_temp_folder
+def test_atomiccmd__run__exception_on_missing_command(temp_files):
+    cmd = AtomicCmd(("xyzabcefgh", "10"))
+    assert_raises(CmdError, cmd.run, temp_files)
+    cmd.terminate()
+    cmd.join()
+
+
+@with_temp_folder
+def test_atomiccmd__run__exception_on_missing_command__no_wrap(temp_files):
+    cmd = AtomicCmd(("xyzabcefgh", "10"))
+    assert_raises(OSError, cmd.run, temp_files, wrap_errors=False)
+    cmd.terminate()
+    cmd.join()
+
+
+
 
 ################################################################################
 ################################################################################

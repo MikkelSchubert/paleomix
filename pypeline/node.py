@@ -30,7 +30,8 @@ import pypeline.common.fileutils as fileutils
 from pypeline.common.utilities import \
      safe_coerce_to_frozenset
 
-
+from pypeline.atomiccmd.command import \
+    CmdError
 
 
 class NodeError(RuntimeError):
@@ -272,14 +273,16 @@ class CommandNode(Node):
         """Runs the command object provided in the constructor, and waits for it to
         terminate. If any errors during the running of the command, this function
         raises a NodeError detailing the returned error-codes."""
-        self._command.run(temp)
+        try:
+            self._command.run(temp)
+        except CmdError, error:
+            desc = "\n\t".join(str(self._command).split("\n"))
+            raise CmdNodeError("%s\n\n%s" % (desc, error))
 
         return_codes = self._command.join()
         if any(return_codes):
             desc = "\n\t".join(str(self._command).split("\n"))
-            raise CmdNodeError(("Error(s) running Node:\n\tReturn-codes: %s\n"
-                                "\tTemporary directory: %s\n\n\t%s") \
-                                % (return_codes, repr(temp), desc))
+            raise CmdNodeError(desc)
 
 
     def _teardown(self, config, temp):
