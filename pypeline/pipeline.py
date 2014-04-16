@@ -71,13 +71,11 @@ class Pypeline:
 
         for node in nodegraph.iterflat():
             if (node.threads > max_running) and not isinstance(node, MetaNode):
-                self._logger.error("Node requires more threads than the maximum allowed:\n"
-                                   "    Maximum threads  = %i\n"
-                                   "    Required threads = %i\n"
-                                   "    Node             =\n"
-                                   "        %s",
-                                   max_running, node.threads, str(node))
-                return False
+                message = "Node(s) use more threads than the max allowed; " \
+                          "the pipeline may therefore use more than the " \
+                          "expected number of threads."
+                self._logger.warning(message)
+                break
 
         if dry_run:
             ui = pypeline.ui.VerboseUI()
@@ -141,7 +139,7 @@ class Pypeline:
         started_nodes  = []
         idle_processes = max_threads - sum(node.threads for (node, _) in running.itervalues())
         for node in remaining:
-            if (idle_processes >= node.threads):
+            if not running or (idle_processes >= node.threads):
                 state = nodegraph.get_node_state(node)
                 if (state == nodegraph.RUNABLE):
                     try:
