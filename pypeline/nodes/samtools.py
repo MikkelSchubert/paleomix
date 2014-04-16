@@ -38,6 +38,11 @@ SAMTOOLS_VERSION = versions.Requirement(call   = ("samtools",),
                                         search = r"Version: (\d+)\.(\d+)\.(\d+)",
                                         checks = versions.GE(0, 1, 18))
 
+BCFTOOLS_VERSION = versions.Requirement(call   = ("bcftools",),
+                                        search = r"Version: (\d+)\.(\d+)\.(\d+)",
+                                        checks = versions.GE(0, 1, 18))
+
+
 
 class GenotypeNode(CommandNode):
     @create_customizable_cli_parameters
@@ -59,7 +64,8 @@ class GenotypeNode(CommandNode):
 
         genotype = AtomicCmdBuilder(["bcftools", "view"],
                                 IN_STDIN     = pileup,
-                                OUT_STDOUT   = AtomicCmd.PIPE)
+                                OUT_STDOUT   = AtomicCmd.PIPE,
+                                CHECK_VERSION= BCFTOOLS_VERSION)
         genotype.add_value("-")
 
         bgzip    = AtomicCmdBuilder(["bgzip"],
