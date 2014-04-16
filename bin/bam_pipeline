@@ -71,8 +71,8 @@ def main(argv):
         config, args = bam_config.parse_config(argv)
         if args and args[0].startswith("dry"):
             config.dry_run = True
-    except bam_config.ConfigError, error:
-        print_err(error)
+    except bam_config.ConfigError:
+        print_err(sys.exc_info()[1])
         return 1
 
     if (len(args) == 0) or (args[0] not in ("mkfile", "run", "dry_run", "dryrun")):
