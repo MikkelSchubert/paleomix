@@ -21,12 +21,15 @@
 # SOFTWARE.
 #
 import os
+import sys
 import copy
 import glob
 import types
 import string
 import itertools
 import collections
+
+import pysam
 
 import pypeline.tools.bam_pipeline.paths as paths
 from pypeline.common.utilities import fill_dict
@@ -54,6 +57,7 @@ from pypeline.common.makefile import \
     IsListOf, \
     IsDictOf
 from pypeline.common.console import \
+    print_info, \
     print_warn
 
 import pypeline.nodes.bwa as bwa
@@ -415,6 +419,7 @@ def _validate_makefiles(config, makefiles):
     _validate_makefiles_duplicate_files(makefiles)
     _validate_makefiles_features(makefiles)
     _validate_bwa_version(makefiles)
+    _validate_hg_prefixes(makefiles)
 
     return makefiles
 
@@ -461,9 +466,10 @@ def _validate_makefiles_duplicate_files(makefiles):
             message = "Path included multiple times in target:\n"
             raise MakefileError(message + description)
         else:
-            print_warn("WARNING: Path included in multiple targets:")
-            print_warn(description)
-            print_warn()
+            print_warn("WARNING: Path included in multiple targets:",
+                       file=sys.stderr)
+            print_warn(description, file=sys.stderr)
+            print_warn(file=sys.stderr)
 
 
 def _describe_files_in_multiple_records(records, pairs):
@@ -527,7 +533,97 @@ def _validate_bwa_version(_makefiles):
               "bugs in the BWA-backtrace algorithm, but the current " \
               "version is v{1}.{2}.{3}.\n         Please refer to the " \
               "PALEOMIX wiki for more information:\n           {0}\n"
-        print_warn(msg.format(url, *bwa_version))
+        print_warn(msg.format(url, *bwa_version), file=sys.stderr)
+
+
+def _validate_hg_prefixes(makefiles):
+    """Implementation of the checks included in GATK, which require that the
+    FASTA for the human genome is ordered 1 .. 23, .
+    """
+    already_validated = set()
+    print_info("  - Validating prefixes ...", file=sys.stderr)
+    for makefile in makefiles:
+        uses_gatk = "Realigned BAM" in makefile["Options"]["Features"]
+        for prefix in makefile["Prefixes"].itervalues():
+            path = prefix["Path"]
+            if path in already_validated:
+                continue
+
+            if not os.path.exists(path + ".fai"):
+                print_info("    - Index does not exist for %r; this may "
+                           "take a while ..." % (path,), file=sys.stderr)
+
+                if not os.access(os.path.dirname(path), os.W_OK):
+                    message = \
+                        "FASTA index for prefix is missing, but folder is\n" \
+                        "not writable, so it cannot be created:\n" \
+                        "  Prefix = %s\n\n" \
+                        "Either change permissions on the folder, or move\n" \
+                        "the prefix to different location." % (path,)
+                    raise MakefileError(message)
+
+                # Use pysam to index the file
+                pysam.Fastafile(path).close()
+
+            contigs = []
+            with open(path + ".fai") as handle:
+                for line in handle:
+                    name, size, _ = line.split('\t', 2)
+                    contigs.append((name, int(size)))
+
+            _do_validate_hg_prefix(makefile, prefix, contigs, fatal=uses_gatk)
+            already_validated.add(path)
+
+
+def _do_validate_hg_prefix(makefile, prefix, contigs, fatal):
+    if not _is_invalid_hg_prefix(contigs):
+        return
+
+    message = \
+        "Prefix appears to be a human genome, but chromosomes are ordered\n" \
+        "lexically (chr1, chr10, chr11, ...), rather than numerically\n" \
+        "(chr1, chr2, chr3, ...):\n\n" \
+        "  Makefile = %s\n" \
+        "  Prefix   = %s\n\n" \
+        "GATK requires that human chromosomes are ordered numerically;\n%s\n" \
+        "See the documentation at the GATK website for more information:\n  " \
+        "http://www.broadinstitute.org/gatk/guide/article?id=1204\n"
+
+    prefix_path = prefix["Path"]
+    mkfile_path = makefile["Statistics"]["Filename"]
+    if fatal:
+        details = "Either disable GATK in the makefile, or fix the prefix."
+        message %= (mkfile_path, prefix_path, details)
+
+        raise MakefileError(message)
+    else:
+        details = \
+            "You will not be able to use the resulting BAM file with GATK."
+        message %= (mkfile_path, prefix_path, details)
+        print_warn("\nWARNING:\n", message, file=sys.stderr, sep="")
+
+
+def _is_invalid_hg_prefix(contigs):
+    hg_contigs = {
+        # Contig sizes based on hg18 and hg19 and hg38
+        "chr1": [247249719, 249250621, 248956422],
+        "chr2": [242951149, 243199373, 242193529],
+        "chr10": [135374737, 135534747, 133797422],
+    }
+
+    size_to_idx = dict((size, idx) for (idx, (_, size)) in enumerate(contigs))
+
+    # Equivalent to the GATK 'nonCanonicalHumanContigOrder' function
+    for (key, values) in hg_contigs.iteritems():
+        for value in values:
+            if value in size_to_idx:
+                hg_contigs[key] = size_to_idx[value]
+                break
+        else:
+            # Contig not found; probably not hg18, hg19, or hg38
+            return False
+
+    return not (hg_contigs["chr1"] < hg_contigs["chr2"] < hg_contigs["chr10"])
 
 
 def _iterate_over_records(makefile):
