@@ -42,8 +42,7 @@ def check_pypeline_requirements():
         try:
             version()
         except versions.VersionRequirementError, error:
-            print_err("Version requirements check failed for %s:\n   %s\n" \
-                      % (version.name, error), file = sys.stderr)
+            print_err(error, file=sys.stderr)
             return False
     return True
 
@@ -55,7 +54,7 @@ _REQUIRED_MODULES = {"pysam" : "http://code.google.com/p/pysam/"}
 # Cannot be a lambda due to need to be able to pickle function
 def _get_pysam_version():
     return __import__("pysam").__version__
-_PYSAM_VERSION = versions.Requirement(name   = "module 'pysam'",
-                                     call   = _get_pysam_version,
-                                     search = r"(\d+)\.(\d+)\.(\d+)",
-                                     checks = versions.GE(0, 7, 5))
+_PYSAM_VERSION = versions.Requirement(name="module 'pysam'",
+                                      call=_get_pysam_version,
+                                      search=r"(\d+)\.(\d+)\.(\d+)",
+                                      checks=versions.GE(0, 7, 5))
