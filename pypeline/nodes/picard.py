@@ -56,13 +56,18 @@ _PICARD_VERSION_CACHE = {}
 
 
 class PicardNode(CommandNode):
-    """Base class for nodes using Picard Tools; adds an additional cleanup step,
-    in order to allow the jars to be run using the same temporary folder as any
-    other commands associated with the node."""
+    """Base class for nodes using Picard Tools; adds an additional cleanup
+    step, in order to allow the jars to be run using the same temporary folder
+    as any other commands associated with the node. This is nessesary as some
+    Picard tools create a large number of temporary files, leading to potential
+    performance issues if these are located in the same folder.
+    """
 
     def _teardown(self, config, temp):
         # Picard creates a folder named after the user in the temp-root
         try_rmtree(os.path.join(temp, getpass.getuser()))
+        # Some JREs may create a folder for temporary performance counters
+        try_rmtree(os.path.join(temp, "hsperfdata_" + getpass.getuser()))
 
         CommandNode._teardown(self, config, temp)
 
