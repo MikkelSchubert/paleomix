@@ -505,7 +505,7 @@ def test_chain_sorted__identical_objects_are_preserved():
 
 
 def test_chain_sorted__invalid_keywords():
-    assert_raises(TypeError, tuple, utils.chain_sorted((1, 2, 3), foobar=lambda: value))
+    assert_raises(TypeError, tuple, utils.chain_sorted((1, 2, 3), foobar=None))
 
 ################################################################################
 ################################################################################

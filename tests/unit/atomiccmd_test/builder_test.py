@@ -28,13 +28,14 @@ from nose.tools import assert_equal, assert_raises
 from pypeline.common.testing import Monkeypatch
 
 from pypeline.atomiccmd.builder import \
-     AtomicCmdBuilder, \
-     AtomicCmdBuilderError, \
-     AtomicJavaCmdBuilder, \
-     AtomicMPICmdBuilder, \
-     apply_options, \
-     use_customizable_cli_parameters, \
-     create_customizable_cli_parameters
+    AtomicCmdBuilder, \
+    AtomicCmdBuilderError, \
+    AtomicJavaCmdBuilder, \
+    AtomicMPICmdBuilder, \
+    apply_options, \
+    use_customizable_cli_parameters, \
+    create_customizable_cli_parameters, \
+    JAVA_VERSIONS
 
 
 
@@ -424,7 +425,8 @@ def test_java_builder__defaults__call():
 
 def test_java_builder__defaults__kwargs():
     builder = AtomicJavaCmdBuilder("/path/Foo.jar")
-    assert_equal(builder.kwargs, {"AUX_JAR" : "/path/Foo.jar"})
+    assert_equal(builder.kwargs, {"AUX_JAR": "/path/Foo.jar",
+                                  "CHECK_JRE": JAVA_VERSIONS[(1, 6)]})
 
 def test_java_builder__multithreaded_gc():
     builder = AtomicJavaCmdBuilder("/path/Foo.jar", temp_root = "/disk/tmp", gc_threads = 3)
@@ -441,9 +443,12 @@ def test_java_builder__multithreaded_gc__zero_or_negative_threads():
 def test_java_builder__multithreaded_gc__non_int_threads():
     assert_raises(TypeError, AtomicJavaCmdBuilder, "/path/Foo.jar", gc_threads = "3")
 
+
 def test_java_builder__kwargs():
-    builder = AtomicJavaCmdBuilder("/path/Foo.jar", set_cwd = True)
-    assert_equal(builder.kwargs, {"AUX_JAR" : "/path/Foo.jar", "set_cwd" : True})
+    builder = AtomicJavaCmdBuilder("/path/Foo.jar", set_cwd=True)
+    assert_equal(builder.kwargs, {"AUX_JAR": "/path/Foo.jar",
+                                  "set_cwd": True,
+                                  "CHECK_JRE": JAVA_VERSIONS[(1, 6)]})
 
 
 

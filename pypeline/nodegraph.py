@@ -234,11 +234,10 @@ class NodeGraph:
         for node in nodes:
             exec_filenames.update(node.executables)
 
-        missing_exec   = missing_executables(exec_filenames)
+        missing_exec = missing_executables(exec_filenames)
         if missing_exec:
-            raise NodeGraphError("Required executables are missing:\n\t%s" \
-                                % ("\n\t".join(sorted(missing_exec))))
-
+            raise NodeGraphError("Required executables are missing:\n\t%s"
+                                 % ("\n\t".join(sorted(missing_exec))))
 
     @classmethod
     def _check_version_requirements(cls, nodes):
@@ -246,13 +245,18 @@ class NodeGraph:
         for node in nodes:
             exec_requirements.update(node.requirements)
 
+        def _key_func(reqobj):
+            # Sort priority in decreasing order, name in increasing order
+            return (-reqobj.priority, reqobj.name)
+        exec_requirements = list(sorted(exec_requirements, key=_key_func))
+
         try:
             for requirement in exec_requirements:
                 requirement()
         except versions.VersionRequirementError, error:
             raise NodeGraphError(error)
         except OSError, error:
-            raise NodeGraphError("Could not check version requirements for %s:\n\t%s" \
+            raise NodeGraphError("Could not check version for %s:\n\t%s"
                                  % (requirement.name, error))
 
     @classmethod

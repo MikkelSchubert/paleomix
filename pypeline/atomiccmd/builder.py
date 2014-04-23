@@ -66,8 +66,12 @@ import types
 import inspect
 import collections
 
-from pypeline.atomiccmd.command import AtomicCmd
-from pypeline.common.utilities import safe_coerce_to_tuple
+from pypeline.atomiccmd.command import \
+    AtomicCmd
+from pypeline.common.utilities import \
+    safe_coerce_to_tuple
+
+import pypeline.common.versions as versions
 
 
 class AtomicCmdBuilderError(RuntimeError):
@@ -268,8 +272,6 @@ class AtomicCmdBuilder:
                 return option
 
 
-
-
 class AtomicJavaCmdBuilder(AtomicCmdBuilder):
     """AtomicCmdBuilder for running java JARs.
 
@@ -280,7 +282,8 @@ class AtomicJavaCmdBuilder(AtomicCmdBuilder):
 
     """
 
-    def __init__(self, jar, jre_options = (), temp_root = "%(TEMP_DIR)s", gc_threads = 1, **kwargs):
+    def __init__(self, jar, jre_options=(), temp_root="%(TEMP_DIR)s",
+                 gc_threads=1, java_version=(1, 6), **kwargs):
         """Parameters:
             jar         -- Path to a JAR file to be executed; is included as an
                            auxiliary file dependency in the final command.
@@ -288,26 +291,47 @@ class AtomicJavaCmdBuilder(AtomicCmdBuilder):
             temp_root   -- Temp folder to use for java process; if not set, the
                            process specific temp folder is used.
             gc_threads  -- Number of threads to use during garbage collections.
-            ...         -- Key-word args are passed to AtomicCmdBuilder."""
-
+            ...         -- Key-word args are passed to AtomicCmdBuilder.
+        """
         call = ["java", "-server", "-Xmx4g",
                 "-Djava.io.tmpdir=%s" % temp_root,
                 "-Djava.awt.headless=true"]
         call.extend(jre_options)
 
         if not isinstance(gc_threads, (types.IntType, types.LongType)):
-            raise TypeError("'gc_threads' must be an integer value, not %r" % gc_threads.__class__.__name__)
+            raise TypeError("'gc_threads' must be an integer value, not %r"
+                            % gc_threads.__class__.__name__)
         elif gc_threads > 1:
             call.append("-XX:ParallelGCThreads=%i" % gc_threads)
         elif gc_threads == 1:
             call.append("-XX:+UseSerialGC")
         else:
-            raise ValueError("'gc_threads' must be a 1 or greater, not %r" % gc_threads)
+            raise ValueError("'gc_threads' must be a 1 or greater, not %r"
+                             % gc_threads)
 
+        version = self._get_java_version(java_version)
         call.extend(("-jar", "%(AUX_JAR)s"))
-        AtomicCmdBuilder.__init__(self, call, AUX_JAR = jar, **kwargs)
+        AtomicCmdBuilder.__init__(self, call,
+                                  AUX_JAR=jar,
+                                  CHECK_JRE=version,
+                                  **kwargs)
 
+    @classmethod
+    def _get_java_version(cls, version):
+        version = tuple(map(int, version))
+        if version not in JAVA_VERSIONS:
+            regexp = r"[\._]".join(r"(\d+)" for _ in version)
+            regexp = r'java version "%s' % (regexp,)
+            jre_call = ["java", "-Djava.awt.headless=true", "-version"]
 
+            JAVA_VERSIONS[version] \
+                = versions.Requirement(call=jre_call,
+                                       name="JAVA Runtime Environment",
+                                       search=regexp,
+                                       checks=versions.GE(*version),
+                                       priority=10)
+        return JAVA_VERSIONS[version]
+JAVA_VERSIONS = {}
 
 
 class AtomicMPICmdBuilder(AtomicCmdBuilder):
