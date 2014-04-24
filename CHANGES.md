@@ -11,6 +11,8 @@ Current
     (to check that the JRE can run it), and improved error messages for
     unidentified and / or outdated versions, and reporting of version numbers
     and requirements.
+  * Ensure that file-handles are closed in the main process before subprocess
+    execution, to ensure that these recieve SIGPIPE upon broken pipes.
 
 
 Version 1.0.0

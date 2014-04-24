@@ -190,6 +190,8 @@ def _setup_single_ended_pipeline(args, procs, bam_cleanup):
                                      stdin=sys.stdin,
                                      stdout=subprocess.PIPE,
                                      close_fds=True)
+    sys.stdin.close()
+
     return procs["pipe"]
 
 
@@ -203,6 +205,7 @@ def _setup_paired_ended_pipeline(args, procs, bam_cleanup):
                                      stdin=sys.stdin,
                                      stdout=subprocess.PIPE,
                                      close_fds=True)
+    sys.stdin.close()
 
     # Fix mate information for PE reads
     call_fixmate = ['samtools', 'fixmate', '-', '-']
@@ -210,6 +213,7 @@ def _setup_paired_ended_pipeline(args, procs, bam_cleanup):
                                         stdin=procs["pipe"].stdout,
                                         stdout=subprocess.PIPE,
                                         close_fds=True)
+    procs["pipe"].stdout.close()
 
     # Cleanup / filter reads. Must be done after 'fixmate', as BWA may produce
     # hits where the mate-unmapped flag is incorrect, which 'fixmate' fixes.
@@ -217,6 +221,8 @@ def _setup_paired_ended_pipeline(args, procs, bam_cleanup):
                                         stdin=procs["fixmate"].stdout,
                                         stdout=subprocess.PIPE,
                                         close_fds=True)
+    procs["fixmate"].stdout.close()
+
     return procs["cleanup"]
 
 
@@ -242,11 +248,13 @@ def _run_cleanup_pipeline(args):
                                          stdin=last_proc.stdout,
                                          stdout=subprocess.PIPE,
                                          close_fds=True)
+        last_proc.stdout.close()
 
         # Update NM and MD tags; output BAM (-b) to stdout
         call_calmd = ['samtools', 'calmd', '-b', '-', args.fasta]
         procs["calmd"] = subprocess.Popen(call_calmd,
                                           stdin=procs["sort"].stdout)
+        procs["sort"].stdout.close()
 
         return _join_procs(procs.values())
     except:

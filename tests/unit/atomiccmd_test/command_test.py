@@ -356,12 +356,11 @@ def test_atomiccmd__paths_invalid():
 @with_temp_folder
 def test_atomiccmd__paths__key(temp_folder):
     cmd = AtomicCmd(("echo", "-n", "%(TEMP_DIR)s"),
-                    OUT_STDOUT = AtomicCmd.PIPE)
+                    OUT_STDOUT=AtomicCmd.PIPE)
     cmd.run(temp_folder)
-    path = cmd.stdout.read()
+    path = cmd._proc.stdout.read()
     assert os.path.samefile(temp_folder, path), (temp_folder, path)
     assert_equal(cmd.join(), [0])
-
 
 
 ################################################################################
@@ -371,11 +370,11 @@ def test_atomiccmd__paths__key(temp_folder):
 @with_temp_folder
 def test_atomiccmd__piping(temp_folder):
     cmd_1 = AtomicCmd(["echo", "-n", "#@!$^"],
-                        OUT_STDOUT = AtomicCmd.PIPE)
+                      OUT_STDOUT=AtomicCmd.PIPE)
     assert_equal(cmd_1.output_files, frozenset())
     cmd_2 = AtomicCmd(["cat"],
-                        IN_STDIN = cmd_1,
-                        OUT_STDOUT = "piped.txt")
+                      IN_STDIN=cmd_1,
+                      OUT_STDOUT="piped.txt")
     assert_equal(cmd_2.input_files, frozenset())
     cmd_1.run(temp_folder)
     cmd_2.run(temp_folder)
@@ -410,6 +409,22 @@ def test_atomiccmd__piping__wrong_pipe():
     yield _test_atomiccmd__piping__wrong_pipe, "TEMP_IN_STDIN"
     yield _test_atomiccmd__piping__wrong_pipe, "OUT_STDERR"
     yield _test_atomiccmd__piping__wrong_pipe, "TEMP_OUT_STDERR"
+
+
+@with_temp_folder
+def test_atomiccmd__piping_is_only_allowed_once(temp_folder):
+    cmd_1 = AtomicCmd(["echo", "-n", "foo\nbar"],
+                      OUT_STDOUT=AtomicCmd.PIPE)
+    cmd_2a = AtomicCmd(["grep", "foo"],
+                       IN_STDIN=cmd_1)
+    cmd_2b = AtomicCmd(["grep", "bar"],
+                       IN_STDIN=cmd_1)
+    cmd_1.run(temp_folder)
+    cmd_2a.run(temp_folder)
+    assert_raises(CmdError, cmd_2b.run, temp_folder)
+    assert_equal(cmd_1.join(), [0])
+    assert_equal(cmd_2a.join(), [0])
+    assert_equal(cmd_2b.join(), [None])
 
 
 
@@ -645,42 +660,6 @@ def test_atomiccmd__commit_missing_files(temp_folder):
     assert_equal(before, set(os.listdir(temp_folder)))
 
 
-
-
-################################################################################
-################################################################################
-## stdout
-
-def test_atomiccmd__stdout():
-    @with_temp_folder
-    def _do_test_atomiccmd__stdout(temp_folder, kwargs):
-        cmd = AtomicCmd(("echo", "-n", "foo"), **kwargs)
-        assert cmd.stdout is None
-        cmd.run(temp_folder)
-        assert isinstance(cmd.stdout, types.FileType), cmd.stdout
-        assert_equal(cmd.stdout.read(), "foo")
-        cmd.join()
-        cmd.commit(temp_folder)
-        assert cmd.stdout is None
-
-    yield _do_test_atomiccmd__stdout, {"OUT_STDOUT" : AtomicCmd.PIPE}
-    yield _do_test_atomiccmd__stdout, {"TEMP_OUT_STDOUT" : AtomicCmd.PIPE}
-
-def test_atomiccmd__stdout_no_pipe():
-    @with_temp_folder
-    def _do_test_atomiccmd__stdout_no_pipe(temp_folder, kwargs):
-        cmd = AtomicCmd(("echo", "foo"), **kwargs)
-        assert cmd.stdout is None
-        cmd.run(temp_folder)
-        assert cmd.stdout is None
-        cmd.join()
-
-    yield _do_test_atomiccmd__stdout_no_pipe, {"OUT_STDOUT" : "foo.txt"}
-    yield _do_test_atomiccmd__stdout_no_pipe, {"TEMP_OUT_STDOUT" : "foo.txt"}
-
-
-
-
 ################################################################################
 ################################################################################
 ## __str__
@@ -689,7 +668,6 @@ def test_atomiccmd__stdout_no_pipe():
 def test_atomiccmd__str__():
     cmd = AtomicCmd(("echo", "test"))
     assert_equal(pypeline.atomiccmd.pprint.pformat(cmd), str(cmd))
-
 
 
 ################################################################################

@@ -34,15 +34,17 @@ import pypeline.common.fileutils as fileutils
 import pypeline.common.signals as signals
 from pypeline.common.utilities import safe_coerce_to_tuple
 
-_PIPES = (("IN", "IN_STDIN"), ("OUT", "OUT_STDOUT"), ("OUT", "OUT_STDERR"))
+_PIPES = (("IN", "IN_STDIN"),
+          ("OUT", "OUT_STDOUT"),
+          ("OUT", "OUT_STDERR"))
 _KEY_RE = re.compile("^(IN|OUT|EXEC|AUX|CHECK|TEMP_IN|TEMP_OUT)_[A-Z0-9_]+")
-_FILE_MAP = {"IN" : "input",
-             "OUT" : "output",
-             "TEMP_IN"  : None,
-             "TEMP_OUT" : "temporary_fname",
-             "EXEC" : "executable",
-             "AUX" : "auxiliary",
-             "CHECK" : "requirements"}
+_FILE_MAP = {"IN": "input",
+             "OUT": "output",
+             "TEMP_IN": None,
+             "TEMP_OUT": "temporary_fname",
+             "EXEC": "executable",
+             "AUX": "auxiliary",
+             "CHECK": "requirements"}
 
 
 class CmdError(RuntimeError):
@@ -50,7 +52,7 @@ class CmdError(RuntimeError):
         RuntimeError.__init__(self, msg)
 
 
-class AtomicCmd:
+class AtomicCmd(object):
     """Executes a command, only moving resulting files to the destination
     directory if the command was succesful. This helps prevent the
     accidential use of partial files in downstream analysis, and eases
@@ -66,7 +68,7 @@ class AtomicCmd:
     running children after the termination of the parents."""
     PIPE = subprocess.PIPE
 
-    def __init__(self, command, set_cwd = False, **kwargs):
+    def __init__(self, command, set_cwd=False, **kwargs):
         """Takes a command and a set of files.
 
         The command is expected to be an iterable starting with the name of an
@@ -134,10 +136,10 @@ class AtomicCmd:
         If 'set_cwd' is True, the current working directory is set to the
         temporary directory before the command is executed. Input paths are
         automatically turned into absolute paths in this case."""
-        self._proc    = None
-        self._temp    = None
+        self._proc = None
+        self._temp = None
+        self._running = False
         self._command = map(str, safe_coerce_to_tuple(command))
-        self._handles = {}
         self._set_cwd = set_cwd
         if not self._command or not self._command[0]:
             raise ValueError("Empty command in AtomicCmd constructor")
@@ -149,37 +151,37 @@ class AtomicCmd:
         # Dry-run, to catch errors early
         self._generate_call("/tmp")
 
-
     def run(self, temp, wrap_errors=True):
         """Runs the given command, saving files in the specified temp folder.
         To move files to their final destination, call commit(). Note that in
         contexts where the *Cmds classes are used, this function may block.
 
         """
-        if self._handles:
+        if self._running:
             raise CmdError("Calling 'run' on already running command.")
-        self._temp  = temp
+        self._temp = temp
+        self._running = True
 
         # kwords for pipes are always built relative to the current directory,
         # since these are opened before (possibly) CD'ing to the temp
         # directory.
-        kwords = self._generate_filenames(self._files, root = temp)
-        stdin  = self._open_pipe(kwords, "IN_STDIN" , "rb")
-        stdout = self._open_pipe(kwords, "OUT_STDOUT", "wb")
-        stderr = self._open_pipe(kwords, "OUT_STDERR", "wb")
-
-        cwd  = temp if self._set_cwd else None
-        temp = ""   if self._set_cwd else os.path.abspath(temp)
-        call = self._generate_call(temp)
-
         try:
+            kwords = self._generate_filenames(self._files, root=temp)
+            stdin = self._open_pipe(kwords, "IN_STDIN", "rb")
+            stdout = self._open_pipe(kwords, "OUT_STDOUT", "wb")
+            stderr = self._open_pipe(kwords, "OUT_STDERR", "wb")
+
+            cwd = temp if self._set_cwd else None
+            temp = "" if self._set_cwd else os.path.abspath(temp)
+            call = self._generate_call(temp)
+
             self._proc = subprocess.Popen(call,
-                                          stdin  = stdin,
-                                          stdout = stdout,
-                                          stderr = stderr,
-                                          cwd    = cwd,
-                                          preexec_fn = os.setsid,
-                                          close_fds = True)
+                                          stdin=stdin,
+                                          stdout=stdout,
+                                          stderr=stderr,
+                                          cwd=cwd,
+                                          preexec_fn=os.setsid,
+                                          close_fds=True)
         except StandardError, error:
             if not wrap_errors:
                 raise
@@ -189,44 +191,38 @@ class AtomicCmd:
                 "  Call = %r\n" \
                 "  Error = %r"
             raise CmdError(message % (call, error))
+        finally:
+            # Close pipes to allow the command to recieve SIGPIPE
+            for handle in (stdin, stdout, stderr):
+                if handle not in (None, self.PIPE):
+                    handle.close()
 
         # Allow subprocesses to be killed in case of a SIGTERM
         _add_to_killlist(self._proc)
 
-
     def ready(self):
         """Returns true if the command has been run to completion,
         regardless of wether or not an error occured."""
-        return (self._proc and self._proc.poll() is not None)
-
+        return self._proc and self._proc.poll() is not None
 
     def join(self):
         """Similar to Popen.wait(), but returns the value wrapped in a list,
         and ensures that any opened handles are closed. Must be called before
         calling commit."""
-        try:
-            if not self._proc:
-                return [None]
+        if not self._proc:
+            return [None]
 
-            return_code = self._proc.wait()
-            if return_code < 0:
-                return_code = signals.to_str(-return_code)
-            return [return_code]
-        finally:
-            # Close any implictly opened pipes
-            for (mode, handle) in self._handles.values():
-                if "w" in mode:
-                    handle.flush()
-                handle.close()
-            self._handles = {}
-
+        self._running = False
+        return_code = self._proc.wait()
+        if return_code < 0:
+            return_code = signals.to_str(-return_code)
+        return [return_code]
 
     def wait(self):
         """Equivalent to Subproces.wait. This function should only
         be used in contexts where a AtomicCmd needs to be combined
         with Subprocesses, as it does not exist for AtomicSets."""
         return self.join()[0]
-
 
     def terminate(self):
         """Sends SIGTERM to process if it is still running.
@@ -235,39 +231,39 @@ class AtomicCmd:
             try:
                 os.killpg(self._proc.pid, signal.SIGTERM)
             except OSError:
-                pass # Already dead / finished process
-
+                pass  # Already dead / finished process
 
     # Properties, returning filenames from self._file_sets
-    def _property_file_sets(key): # pylint: disable=E0213
+    def _property_file_sets(key):  # pylint: disable=E0213
         def _get_property_files(self):
-            return self._file_sets[key] # pylint: disable=W0212
+            return self._file_sets[key]  # pylint: disable=W0212
         return property(_get_property_files)
 
-    executables  = _property_file_sets("executable")
+    executables = _property_file_sets("executable")
     requirements = _property_file_sets("requirements")
-    input_files     = _property_file_sets("input")
-    output_files    = _property_file_sets("output")
+    input_files = _property_file_sets("input")
+    output_files = _property_file_sets("output")
     auxiliary_files = _property_file_sets("auxiliary")
     expected_temp_files = _property_file_sets("output_fname")
     optional_temp_files = _property_file_sets("temporary_fname")
 
-
     def commit(self, temp):
         if not self.ready():
-            raise CmdError("Attempting to commit command before it has completed")
-        elif self._handles:
+            raise CmdError("Attempting to commit before command has completed")
+        elif self._running:
             raise CmdError("Called 'commit' before calling 'join'")
         elif not os.path.samefile(self._temp, temp):
-            raise CmdError("Mismatch between previous and current temp folders: %r != %s" \
-                           % (self._temp, temp))
+            raise CmdError("Mismatch between previous and current temp folders"
+                           ": %r != %s" % (self._temp, temp))
 
         missing_files = self.expected_temp_files - set(os.listdir(temp))
         if missing_files:
-            raise CmdError("Expected files not created: %s" % (", ".join(missing_files)))
+            raise CmdError("Expected files not created: %s"
+                           % (", ".join(missing_files)))
 
         temp = os.path.abspath(temp)
-        for (key, filename) in self._generate_filenames(self._files, temp).iteritems():
+        filenames = self._generate_filenames(self._files, temp)
+        for (key, filename) in filenames.iteritems():
             if isinstance(filename, types.StringTypes):
                 if key.startswith("OUT_"):
                     fileutils.move_file(filename, self._files[key])
@@ -277,35 +273,22 @@ class AtomicCmd:
         self._proc = None
         self._temp = None
 
-
-    @property
-    def stdout(self):
-        """Returns the 'stdout' value for the currently running process.
-        If no such process has been started, or the process has finished,
-        then the return value is None."""
-        stdout = self._files.get("OUT_STDOUT", self._files.get("TEMP_OUT_STDOUT"))
-        if self._proc and (stdout == AtomicCmd.PIPE):
-            return self._proc.stdout
-
-
     def __str__(self):
         return atomicpp.pformat(self)
 
-
     def _generate_call(self, temp):
-        kwords = self._generate_filenames(self._files, root = temp)
+        kwords = self._generate_filenames(self._files, root=temp)
 
         try:
             return [(field % kwords) for field in self._command]
         except (TypeError, ValueError), error:
             raise CmdError("Error building Atomic Command:\n"
-                           "  Call = %s\n  Error = %s: %s" \
+                           "  Call = %s\n  Error = %s: %s"
                            % (self._command, error.__class__.__name__, error))
         except KeyError, error:
             raise CmdError("Error building Atomic Command:\n"
-                           "  Call = %s\n  Value not specified for path = %s" \
+                           "  Call = %s\n  Value not specified for path = %s"
                            % (self._command, error))
-
 
     @classmethod
     def _process_arguments(cls, proc_id, command, kwargs):
@@ -335,7 +318,6 @@ class AtomicCmd:
         cls._validate_pipes(arguments)
 
         return arguments
-
 
     @classmethod
     def _validate_arguments(cls, arguments):
@@ -373,11 +355,10 @@ class AtomicCmd:
             for (key, value) in arguments.get(group, {}).iteritems():
                 is_string = isinstance(value, types.StringTypes)
                 if is_string and os.path.dirname(value):
-                    raise ValueError("%s cannot contain dir component: %r" \
+                    raise ValueError("%s cannot contain dir component: %r"
                                      % (key, value))
 
         return True
-
 
     @classmethod
     def _validate_output_files(cls, arguments):
@@ -391,9 +372,8 @@ class AtomicCmd:
         for (filename, keys) in output_files.iteritems():
             if len(keys) > 1:
                 raise ValueError("Same output filename (%s) is specified for "
-                                 "multiple keys: %s" \
-                                   % (filename, ", ".join(sorted(keys))))
-
+                                 "multiple keys: %s"
+                                 % (filename, ", ".join(sorted(keys))))
 
     @classmethod
     def _validate_pipes(cls, arguments):
@@ -403,23 +383,20 @@ class AtomicCmd:
             if has_pipe and has_temp_pipe:
                 raise CmdError("Pipes may only be specified once")
 
-
-    def _open_pipe(self, kwords, pipe, mode):
+    @classmethod
+    def _open_pipe(cls, kwords, pipe, mode):
         filename = kwords.get(pipe, kwords.get("TEMP_" + pipe))
-        if filename in (None, self.PIPE):
+        if filename in (None, cls.PIPE):
             return filename
         elif isinstance(filename, AtomicCmd):
-            return filename.stdout
+            # pylint: disable=W0212
+            return filename._proc and filename._proc.stdout
 
-        handle = open(filename, mode)
-        self._handles[pipe] = (mode, handle)
-
-        return handle
-
+        return open(filename, mode)
 
     @classmethod
     def _generate_filenames(cls, files, root):
-        filenames = {"TEMP_DIR" : root}
+        filenames = {"TEMP_DIR": root}
         for (key, filename) in files.iteritems():
             if isinstance(filename, types.StringTypes):
                 if key.startswith("TEMP_") or key.startswith("OUT_"):
@@ -430,7 +407,6 @@ class AtomicCmd:
 
         return filenames
 
-
     @classmethod
     def _build_files_dict(cls, arguments):
         files = {}
@@ -439,7 +415,6 @@ class AtomicCmd:
                 files[key] = value
 
         return files
-
 
     @classmethod
     def _build_files_map(cls, command, arguments):
@@ -454,16 +429,16 @@ class AtomicCmd:
                 if is_string or key.startswith("CHECK_"):
                     group_set.add(filename)
 
-        file_sets["output_fname"]    = map(os.path.basename,
-                                           file_sets["output"])
+        file_sets["output_fname"] = map(os.path.basename, file_sets["output"])
 
-        return dict(zip(file_sets.iterkeys(), map(frozenset, file_sets.itervalues())))
+        return dict(zip(file_sets.iterkeys(),
+                        map(frozenset, file_sets.itervalues())))
 
 
-
-## The following ensures proper cleanup of child processes, for example in the case
-## where multiprocessing.Pool.terminate() is called.
+# The following ensures proper cleanup of child processes, for example in the
+# case where multiprocessing.Pool.terminate() is called.
 _PROCS = set()
+
 
 def _cleanup_children(signum, _frame):
     for proc_ref in list(_PROCS):
@@ -471,6 +446,7 @@ def _cleanup_children(signum, _frame):
         if proc:
             os.killpg(proc.pid, signal.SIGTERM)
     sys.exit(-signum)
+
 
 def _add_to_killlist(proc):
     if not _PROCS:
