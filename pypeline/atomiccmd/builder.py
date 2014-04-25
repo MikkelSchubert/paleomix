@@ -201,6 +201,21 @@ class AtomicCmdBuilder:
         self.set_kwargs(**kwargs)
         return kwargs
 
+    def add_multiple_values(self, values, template="IN_FILE_%02i"):
+        """Add multiple values as once, with corresponding kwargs.
+
+        The template determines the key-names used for the arguments,
+        using numbers starting from 1 to differentiate between multiple
+        values.
+        """
+        kwargs = {}
+        for (index, value) in enumerate(values, start=1):
+            file_key = template % (index,)
+            self.add_value("%%(%s)s" % (file_key,))
+            kwargs[file_key] = value
+        self.set_kwargs(**kwargs)
+        return kwargs
+
     @property
     def call(self):
         """Returns the system-call based on the call passed to the constructor,

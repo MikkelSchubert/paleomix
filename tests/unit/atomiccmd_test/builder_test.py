@@ -362,10 +362,13 @@ def test_builder__finalize__calls_atomiccmd():
 
 def test_builder__add_multiple_options():
     values = ("file_a", "file_b")
+    expected = {"IN_FILE_01": "file_a", "IN_FILE_02": "file_b"}
 
     builder = AtomicCmdBuilder("ls")
     kwargs = builder.add_multiple_options("-i", values)
-    assert_equal(kwargs, {"IN_FILE_01": "file_a", "IN_FILE_02": "file_b"})
+
+    assert_equal(kwargs, expected)
+    assert_equal(builder.kwargs, expected)
     assert_equal(builder.call, ["ls",
                                 "-i", "%(IN_FILE_01)s",
                                 "-i", "%(IN_FILE_02)s"])
@@ -373,10 +376,13 @@ def test_builder__add_multiple_options():
 
 def test_builder__add_multiple_options_with_sep():
     values = ("file_a", "file_b")
+    expected = {"IN_FILE_01": "file_a", "IN_FILE_02": "file_b"}
 
     builder = AtomicCmdBuilder("ls")
     kwargs = builder.add_multiple_options("-i", values, sep="=")
-    assert_equal(kwargs, {"IN_FILE_01": "file_a", "IN_FILE_02": "file_b"})
+
+    assert_equal(kwargs, expected)
+    assert_equal(builder.kwargs, expected)
     assert_equal(builder.call, ["ls",
                                 "-i=%(IN_FILE_01)s",
                                 "-i=%(IN_FILE_02)s"])
@@ -384,10 +390,13 @@ def test_builder__add_multiple_options_with_sep():
 
 def test_builder__add_multiple_options_with_template():
     values = ("file_a", "file_b")
+    expected = {"OUT_BAM_1": "file_a", "OUT_BAM_2": "file_b"}
 
     builder = AtomicCmdBuilder("ls")
     kwargs = builder.add_multiple_options("-i", values, template="OUT_BAM_%i")
-    assert_equal(kwargs, {"OUT_BAM_1": "file_a", "OUT_BAM_2": "file_b"})
+
+    assert_equal(kwargs, expected)
+    assert_equal(builder.kwargs, expected)
     assert_equal(builder.call, ["ls",
                                 "-i", "%(OUT_BAM_1)s",
                                 "-i", "%(OUT_BAM_2)s"])
@@ -395,12 +404,43 @@ def test_builder__add_multiple_options_with_template():
 
 def test_builder__add_multiple_options_with_template_fixed():
     values = ("file_a", "file_b")
+    expected = {"IN_FILE_01": "file_a", "IN_FILE_02": "file_b"}
 
     builder = AtomicCmdBuilder("ls")
     kwargs = builder.add_multiple_options("-i", values)
-    assert_equal(kwargs, {"IN_FILE_01": "file_a", "IN_FILE_02": "file_b"})
+
+    assert_equal(kwargs, expected)
+    assert_equal(builder.kwargs, expected)
     assert_raises(AtomicCmdBuilderError,
                   builder.add_multiple_options, "-i", values)
+
+
+###############################################################################
+###############################################################################
+## AtomicCmdBuilder: add_multiple_options
+
+def test_builder__add_multiple_values():
+    values = ("file_a", "file_b")
+    expected = {"IN_FILE_01": "file_a", "IN_FILE_02": "file_b"}
+
+    builder = AtomicCmdBuilder("ls")
+    kwargs = builder.add_multiple_values(values)
+
+    assert_equal(kwargs, expected)
+    assert_equal(builder.kwargs, expected)
+    assert_equal(builder.call, ["ls", "%(IN_FILE_01)s", "%(IN_FILE_02)s"])
+
+
+def test_builder__add_multiple_values_with_template():
+    values = ("file_a", "file_b")
+    expected = {"OUT_BAM_1": "file_a", "OUT_BAM_2": "file_b"}
+
+    builder = AtomicCmdBuilder("ls")
+    kwargs = builder.add_multiple_values(values, template="OUT_BAM_%i")
+
+    assert_equal(kwargs, expected)
+    assert_equal(builder.kwargs, expected)
+    assert_equal(builder.call, ["ls", "%(OUT_BAM_1)s", "%(OUT_BAM_2)s"])
 
 
 ################################################################################
