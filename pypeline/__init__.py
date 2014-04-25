@@ -20,9 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-try:
-    from pypeline.version import __version__
-except ImportError:
-    __version__ = "(unknown version)"
-
 from pypeline.pipeline import Pypeline
+
+__version_info__ = (1, 0, 0)
+__version__ = 'v%i.%i.%i' % __version_info__
