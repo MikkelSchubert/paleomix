@@ -31,23 +31,25 @@ import pypeline.yaml
 import pypeline.logger
 
 from pypeline.common.console import \
-     print_err, \
-     print_info
+    print_err, \
+    print_info
 
-from pypeline.node import MetaNode
+from pypeline.pipeline import \
+    Pypeline
+from pypeline.node import \
+    MetaNode
 from pypeline.nodes.picard import \
-     BuildSequenceDictNode
+    BuildSequenceDictNode
 from pypeline.nodes.samtools import \
-     FastaIndexNode
+    FastaIndexNode
 from pypeline.nodes.bwa import \
-     BWAIndexNode
+    BWAIndexNode
 from pypeline.nodes.bowtie2 import \
-     Bowtie2IndexNode
-
+    Bowtie2IndexNode
 
 from pypeline.tools.bam_pipeline.makefile import \
-     MakefileError, \
-     read_makefiles
+    MakefileError, \
+    read_makefiles
 
 import pypeline.tools.bam_pipeline.parts as parts
 
@@ -265,7 +267,7 @@ def main(config, args):
     elif os.path.basename(sys.argv[0]) != "trim_pipeline":
         pipeline_func = build_pipeline_full
 
-    pipeline = pypeline.Pypeline(config)
+    pipeline = Pypeline(config)
     for makefile in makefiles:
         # If a destination is not specified, save results in same folder as the
         # makefile
@@ -299,7 +301,7 @@ def main(config, args):
             print(filename)
         return 0
     elif config.list_executables:
-        logger.info("Printint required executables ...")
+        logger.info("Printing required executables ...")
         pipeline.print_required_executables()
         return 0
 

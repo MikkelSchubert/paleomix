@@ -20,7 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from pypeline.pipeline import Pypeline
 
 __version_info__ = (1, 0, 0)
 __version__ = 'v%i.%i.%i' % __version_info__

@@ -23,6 +23,7 @@
 import optparse
 
 import pypeline
+import pypeline.ui
 
 from pypeline.config import \
      ConfigError, \

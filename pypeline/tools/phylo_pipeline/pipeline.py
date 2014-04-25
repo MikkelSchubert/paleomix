@@ -31,7 +31,7 @@ import pypeline.logger
 import pypeline.tools.phylo_pipeline.makefile
 import pypeline.tools.phylo_pipeline.mkfile as mkfile
 
-from pypeline import Pypeline
+from pypeline.pipeline import Pypeline
 from pypeline.common.console import print_err
 from pypeline.tools.phylo_pipeline.makefile import \
     MakefileError, \
