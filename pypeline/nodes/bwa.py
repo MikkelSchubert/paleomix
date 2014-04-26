@@ -37,6 +37,7 @@ from pypeline.common.fileutils import \
      missing_files
 
 import pypeline.common.versions as versions
+import pypeline.tools.factory as factory
 
 
 BWA_VERSION = versions.Requirement(call   = ("bwa",),
@@ -101,7 +102,7 @@ class SEBWANode(CommandNode):
     def customize(cls, input_file, output_file, reference, prefix, threads = 1, dependencies = ()):
         threads = _get_max_threads(reference, threads)
 
-        aln_in = _build_unicat_command(input_file, "uncompressed_input_aln")
+        aln_in = _build_cat_command(input_file, "uncompressed_input_aln")
         aln = _get_bwa_template(("bwa", "aln"), prefix,
                                 TEMP_IN_FILE = "uncompressed_input_aln",
                                 OUT_STDOUT = AtomicCmd.PIPE,
@@ -110,7 +111,7 @@ class SEBWANode(CommandNode):
         aln.add_value("%(TEMP_IN_FILE)s")
         aln.set_option("-t", threads)
 
-        samse_in = _build_unicat_command(input_file, "uncompressed_input_samse")
+        samse_in = _build_cat_command(input_file, "uncompressed_input_samse")
         samse = _get_bwa_template(("bwa", "samse"), prefix,
                                   IN_STDIN = aln,
                                   TEMP_IN_FILE = "uncompressed_input_samse",
@@ -163,8 +164,8 @@ class PEBWANode(CommandNode):
         aln_commands, aln_in_commands = \
           cls._create_aln_cmds(prefix, input_file_1, input_file_2, threads)
 
-        sampe_in_1 = _build_unicat_command(input_file_1, "uncompressed_input_sampe_1")
-        sampe_in_2 = _build_unicat_command(input_file_2, "uncompressed_input_sampe_2")
+        sampe_in_1 = _build_cat_command(input_file_1, "uncompressed_input_sampe_1")
+        sampe_in_2 = _build_cat_command(input_file_2, "uncompressed_input_sampe_2")
         sampe      = cls._create_sampe_cmd(prefix)
 
         order, commands = _process_output(sampe, output_file, reference, run_fixmate = True)
@@ -215,7 +216,7 @@ class PEBWANode(CommandNode):
     def _create_aln_cmds(cls, prefix, input_file_1, input_file_2, threads):
         alns, aln_ins = [], []
         for (iindex, filename) in enumerate((input_file_1, input_file_2), start = 1):
-            aln_in = _build_unicat_command(filename, "uncompressed_input_aln_%i" % iindex)
+            aln_in = _build_cat_command(filename, "uncompressed_input_aln_%i" % iindex)
             aln = _get_bwa_template(("bwa", "aln"), prefix,
                                     TEMP_IN_FILE = "uncompressed_input_aln_%i" % iindex,
                                     OUT_STDOUT = AtomicCmd.PIPE,
@@ -386,10 +387,13 @@ def _check_bwa_prefix(prefix):
 _PREFIXES_CHECKED = set()
 
 
-def _build_unicat_command(input_file, output_file):
-    return AtomicCmdBuilder(["unicat", "--output", "%(TEMP_OUT_CAT)s", "%(IN_ARCHIVE)s"],
-                        TEMP_OUT_CAT = output_file,
-                        IN_ARCHIVE   = input_file)
+def _build_cat_command(input_file, output_file):
+    cat = factory.new("cat")
+    cat.set_option("--output", "%(TEMP_OUT_CAT)s")
+    cat.add_value("%(IN_ARCHIVE)s")
+    cat.set_kwargs(TEMP_OUT_CAT=output_file,
+                   IN_ARCHIVE=input_file)
+    return cat
 
 
 def _get_node_description(name, algorithm, input_files_1, input_files_2 = (), prefix = None, threads = 1):

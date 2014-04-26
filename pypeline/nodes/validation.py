@@ -40,6 +40,7 @@ from pypeline.common.utilities import \
 
 import pypeline.common.formats.fastq as fastq
 import pypeline.common.sampling as sampling
+import pypeline.tools.factory as factory
 
 
 class DetectInputDuplicationNode(Node):
@@ -159,32 +160,35 @@ def check_fastq_files(filenames, required_offset, allow_empty=False):
 
 
 def _read_sequences(filename):
-    unicat = None
+    cat_call = factory.new("cat")
+    cat_call.add_multiple_values((filename,))
+    cat_call = cat_call.finalized_call
+
+    cat = None
     try:
-        unicat = subprocess.Popen(['unicat', filename],
-                                  bufsize=io.DEFAULT_BUFFER_SIZE,
-                                  stderr=subprocess.PIPE,
-                                  stdout=subprocess.PIPE)
-        qualities = _collect_qualities(unicat.stdout, filename)
+        cat = subprocess.Popen(cat_call,
+                               bufsize=io.DEFAULT_BUFFER_SIZE,
+                               stderr=subprocess.PIPE,
+                               stdout=subprocess.PIPE)
+        qualities = _collect_qualities(cat.stdout, filename)
 
         return sampling.reservoir_sampling(qualities, 100000)
     except:
-        if unicat:
-            unicat.kill()
-            unicat.wait()
-            unicat = None
+        if cat:
+            cat.kill()
+            cat.wait()
+            cat = None
         raise
     finally:
-        rc_unicat = unicat.wait() if unicat else 0
-        if rc_unicat:
-            message = "Error running unicat:\n" \
+        rc_cat = cat.wait() if cat else 0
+        if rc_cat:
+            message = "Error running 'paleomix cat':\n" \
                       "  Unicat return-code = %i\n\n%s" \
-                      % (rc_unicat, unicat.stderr.read())
+                      % (rc_cat, cat.stderr.read())
             raise NodeError(message)
 
 
 def _collect_qualities(handle, filename):
-    lines_offset = 0
     header = handle.readline()
     while header:
         sequence = handle.readline()

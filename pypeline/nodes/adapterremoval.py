@@ -36,10 +36,10 @@ from pypeline.atomiccmd.builder import \
 from pypeline.nodes.validation import \
     check_fastq_files
 
-
 import pypeline.common.utilities as utilities
 import pypeline.common.fileutils as fileutils
 import pypeline.common.versions as versions
+import pypeline.tools.factory as factory
 
 
 VERSION_14 = "1.4"
@@ -60,7 +60,7 @@ class SE_AdapterRemovalNode(CommandNode):
         # See below for parameters in common between SE/PE
         cmd = _get_common_parameters(version)
 
-        # Uncompressed reads (piped from unicat)
+        # Uncompressed reads (piped from 'paleomix cat')
         cmd.set_option("--file1",    "%(TEMP_IN_READS)s")
 
         # Prefix for output files
@@ -75,7 +75,7 @@ class SE_AdapterRemovalNode(CommandNode):
                        OUT_SETTINGS        = output_prefix + ".settings",
                        TEMP_OUT_BASENAME   = basename,
 
-                       # Named pipe for uncompressed input (unicat)
+                       # Named pipe for uncompressed input (paleomix cat)
                        TEMP_IN_READS       = "uncompressed_input",
 
                        # Named pipes for output of AdapterRemova
@@ -91,7 +91,7 @@ class SE_AdapterRemovalNode(CommandNode):
         self._quality_offset = parameters.quality_offset
         self._basename = parameters.basename
 
-        zcat           = _build_unicat_command(parameters.input_files, "uncompressed_input")
+        zcat           = _build_cat_command(parameters.input_files, "uncompressed_input")
         zip_truncated  = _build_zip_command(parameters.output_format, parameters.output_prefix, ".truncated")
         zip_discarded  = _build_zip_command(parameters.output_format, parameters.output_prefix, ".discarded")
         adapterrm      = parameters.command.finalize()
@@ -123,7 +123,7 @@ class PE_AdapterRemovalNode(CommandNode):
                   version=VERSION_15, dependencies=()):
         cmd = _get_common_parameters(version)
 
-        # Uncompressed mate 1 and 2 reads (piped from unicat)
+        # Uncompressed mate 1 and 2 reads (piped from 'paleomix cat')
         cmd.set_option("--file1",    "%(TEMP_IN_READS_1)s")
         cmd.set_option("--file2",    "%(TEMP_IN_READS_2)s")
 
@@ -157,7 +157,7 @@ class PE_AdapterRemovalNode(CommandNode):
                        OUT_SETTINGS=output_prefix + ".settings",
                        TEMP_OUT_BASENAME=basename,
 
-                       # Named pipes for uncompressed input (unicat)
+                       # Named pipes for uncompressed input (paleomix cat)
                        TEMP_IN_READS_1="uncompressed_input_1",
                        TEMP_IN_READS_2="uncompressed_input_2",
 
@@ -190,8 +190,8 @@ class PE_AdapterRemovalNode(CommandNode):
                            "%i != %i" % (len(parameters.input_files_1),
                                          len(parameters.input_files_2)))
 
-        zcat_pair_1    = _build_unicat_command(parameters.input_files_1, "uncompressed_input_1")
-        zcat_pair_2    = _build_unicat_command(parameters.input_files_2, "uncompressed_input_2")
+        zcat_pair_1    = _build_cat_command(parameters.input_files_1, "uncompressed_input_1")
+        zcat_pair_2    = _build_cat_command(parameters.input_files_2, "uncompressed_input_2")
         zip_pair_1     = _build_zip_command(parameters.output_format, parameters.output_prefix, ".pair1.truncated")
         zip_pair_2     = _build_zip_command(parameters.output_format, parameters.output_prefix, ".pair2.truncated")
         zip_discarded  = _build_zip_command(parameters.output_format, parameters.output_prefix, ".discarded")
@@ -247,17 +247,13 @@ class PE_AdapterRemovalNode(CommandNode):
         CommandNode._setup(self, config, temp)
 
 
-def _build_unicat_command(input_files, output_file):
-    paths = {"TEMP_OUT_CAT": output_file}
-    call = ["unicat", "--output", "%(TEMP_OUT_CAT)s"]
-    input_files = utilities.safe_coerce_to_tuple(input_files)
-    for (index, filename) in enumerate(input_files):
-        key = "IN_CAT_%02i" % index
+def _build_cat_command(input_files, output_file):
+    cat = factory.new("cat")
+    cat.set_option("--output", "%(TEMP_OUT_CAT)s")
+    cat.set_kwargs(TEMP_OUT_CAT=output_file)
+    cat.add_multiple_values(input_files)
 
-        call.append("%%(%s)s" % key)
-        paths[key] = filename
-
-    return AtomicCmd(call, **paths)
+    return cat.finalize()
 
 
 def _build_zip_command(output_format, prefix, name, output=None):

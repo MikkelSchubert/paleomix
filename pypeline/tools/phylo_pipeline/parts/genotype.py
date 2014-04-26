@@ -46,10 +46,11 @@ from pypeline.nodes.bedtools import \
     SlopBedNode
 from pypeline.nodes.sequences import \
     ExtractReferenceNode
-
 from pypeline.common.fileutils import \
     swap_ext, \
     add_postfix
+
+import pypeline.tools.factory as factory
 
 
 ################################################################################
@@ -60,26 +61,27 @@ from pypeline.common.fileutils import \
 class VCFPileupNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, reference, in_bam, in_vcf, outfile, dependencies=()):
-        unicat = AtomicCmdBuilder(["unicat", "%(IN_VCF)s"],
-                                  IN_VCF=in_vcf,
-                                  OUT_STDOUT=AtomicCmd.PIPE)
+        cat = factory.new("cat")
+        cat.add_value("%(IN_VCF)s")
+        cat.set_kwargs(IN_VCF=in_vcf,
+                       OUT_STDOUT=AtomicCmd.PIPE)
 
         vcfpileup = AtomicCmdBuilder(["vcf_create_pileup", "%(OUT_PILEUP)s"],
                                      IN_REF=reference,
                                      IN_BAM=in_bam,
-                                     IN_STDIN=unicat,
+                                     IN_STDIN=cat,
                                      OUT_PILEUP=outfile,
                                      OUT_TBI=outfile + ".tbi")
         vcfpileup.add_value("%(IN_BAM)s")
         vcfpileup.set_option("-f", "%(IN_REF)s")
 
-        return {"commands": {"unicat": unicat,
+        return {"commands": {"cat": cat,
                              "pileup": vcfpileup}}
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
         commands = parameters.commands
-        commands = [commands[key].finalize() for key in ("unicat", "pileup")]
+        commands = [commands[key].finalize() for key in ("cat", "pileup")]
         description = "<VCFPileup: '%s' -> '%s'>" % (parameters.in_bam,
                                                      parameters.outfile)
         CommandNode.__init__(self,
@@ -91,13 +93,14 @@ class VCFPileupNode(CommandNode):
 class VCFFilterNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, pileup, infile, outfile, regions, dependencies=()):
-        unicat = AtomicCmdBuilder(["unicat", "%(IN_VCF)s"],
-                                  IN_VCF=infile,
-                                  OUT_STDOUT=AtomicCmd.PIPE)
+        cat = factory.new("cat")
+        cat.add_value("%(IN_VCF)s")
+        cat.set_kwargs(IN_VCF=infile,
+                       OUT_STDOUT=AtomicCmd.PIPE)
 
         vcffilter = AtomicCmdBuilder(["vcf_filter"],
                                      IN_PILEUP=pileup,
-                                     IN_STDIN=unicat,
+                                     IN_STDIN=cat,
                                      OUT_STDOUT=AtomicCmd.PIPE)
 
         vcffilter.add_option("--pileup", "%(IN_PILEUP)s")
@@ -108,14 +111,14 @@ class VCFFilterNode(CommandNode):
                                  IN_STDIN=vcffilter,
                                  OUT_STDOUT=outfile)
 
-        return {"commands": {"unicat": unicat,
+        return {"commands": {"cat": cat,
                              "filter": vcffilter,
                              "bgzip": bgzip}}
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
         commands = [parameters.commands[key].finalize()
-                    for key in ("unicat", "filter", "bgzip")]
+                    for key in ("cat", "filter", "bgzip")]
 
         description = "<VCFFilter: '%s' -> '%s'>" % (parameters.infile,
                                                      parameters.outfile)

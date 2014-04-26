@@ -25,20 +25,24 @@ Wrapper around cat / zcat / bzcat, which selects the appropriate commmand
 based on the files specified on the command-line. Input files may be a mix
 of different types of compressed / uncompressed files.
 """
-
+import os
 import sys
-import optparse
+import argparse
 import itertools
 import subprocess
 
 
 def _select_output(filename):
+    """Returns a file-handle for 'filename'; if filename is '-' is stdout."""
     if not filename or (filename == '-'):
         return sys.stdout
     return open(filename, 'wb')
 
 
 def _select_cat(filename):
+    """Identifies the compression scheme of a given file (if any) and return a
+    tuple with the appropriate cat command to decompress it.
+    """
     with open(filename) as source:
         header = source.read(2)
         # The command "gzip -cd" is used instead of "zcat" because
@@ -51,41 +55,40 @@ def _select_cat(filename):
 
 
 def _call(input_files, output_file):
+    """Call an appropriate cat on each input file, writing the contents to the
+    file specified by 'output_file'; if the latter is '-', STDOUT is used.
+    """
     with _select_output(output_file) as out_handle:
         for (command, filenames) in itertools.groupby(input_files,
                                                       _select_cat):
             command = list(command)
             command.extend(filenames)
 
-            proc = subprocess.Popen(command,
-                                    stdout=out_handle,
-                                    close_fds=True)
-            if proc.wait():
-                return proc.returncode
+            subprocess.check_call(command,
+                                  stdout=out_handle,
+                                  preexec_fn=os.setsid,
+                                  close_fds=True)
     return 0
 
 
 def main(argv):
-    parser = optparse.OptionParser("%prog [OPTION] <FILE_1> [<FILE_2> ...]")
-    parser.add_option("--output", default=None,
-                      help="Write output to this file. Defaults to STDOUT.")
+    """Main function; takes a list of arguments but excluding sys.argv[0]."""
+    parser = argparse.ArgumentParser(prog="paleomix cat")
+    parser.add_argument("files", nargs="+", help="Inputt files.")
+    parser.add_argument("--output", default=None,
+                        help="Write output to this file; defaults to STDOUT.")
 
-    config, args = parser.parse_args(argv)
-    if not args:
-        parser.print_usage(sys.stderr)
-        sys.stderr.write("ERROR: At least one input file must be specified\n")
-        return 1
+    args = parser.parse_args(argv)
 
     try:
-        return _call(input_files=args,
-                     output_file=config.output)
-    except StandardError, error:
-        sys.stderr.write("Error running unicat:\n    %s\n\n" % (error,))
-        sys.stderr.write("Output file = %s\n" % (config.output or "STDOUT"))
-        sys.stderr.write("Input file(s) =\n")
-        for filename in args:
-            sys.stderr.write("    - %s\n" % (filename,))
+        return _call(input_files=args.files,
+                     output_file=args.output)
+    except Exception, error:  # pylint: disable=W0703
+        sys.stderr.write("Error running 'paleomix cat':\n    %s\n\n" % error)
+        sys.stderr.write("Command = %s\n" % (" ".join(sys.argv),))
         return 1
+
+    return 0
 
 
 if __name__ == '__main__':
