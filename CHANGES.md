@@ -13,6 +13,7 @@ Current
     and requirements.
   * Ensure that file-handles are closed in the main process before subprocess
     execution, to ensure that these recieve SIGPIPE upon broken pipes.
+  * Fix manifest, ensuring that all files are included in source distribution.
 
 
 Version 1.0.0

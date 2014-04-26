@@ -1,15 +1,22 @@
 include README.md
+include CHANGES.md
+include LICENSE.txt
+include MANIFEST.in
+include pylint.conf
+include pypeline/yaml/CHANGES
+include pypeline/yaml/LICENSE
+include pypeline/yaml/PKG-INFO
+include pypeline/yaml/README
 
 # Examples
-include examples/bam_pipeline/000_makefile
-recursive-include examples/bam_pipeline/000_data *.bam *.gz
-recursive-include examples/bam_pipeline/000_prefixes *.fasta
-recursive-include examples/pypeline/makefile *.py *.yaml
+recursive-include examples *
+
+# Misc tools
+recursive-include misc *.py *.sh *.yaml
 
 # Tests
 include tests/run
+recursive-include tests/bwa *
 recursive-include tests/data *
-include tests/unit/run
-recursive-include tests/unit *.py
-include tests/function/run
-recursive-include tests/function *.py
+recursive-include tests/function *
+recursive-include tests/unit *
