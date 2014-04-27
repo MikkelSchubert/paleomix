@@ -36,6 +36,12 @@ import textwrap
 _COMMANDS = (
     ("help", None, "Displays this message."),
 
+    ("Pipelines", None, None),
+    ("bam_pipeline", "pypeline.tools.bam_pipeline.pipeline",
+     "Pipeline for trimming and mapping of NGS reads."),
+    ("phylo_pipeline", "pypeline.tools.bam_pipeline.pipeline",
+     "Pipeline for genotyping and phylogenetic inference from BAMs."),
+
     ("BAM/SAM tools", None, None),
     ("cleanup", "pypeline.tools.cleanup",
      "Reads SAM file from STDIN, and outputs sorted, tagged, and filter BAM, "
@@ -65,6 +71,8 @@ _ALIASES = {
     "bam_depths": "depths",
     "bam_duphist": "duphist",
     "bam_rmdup_collapsed": "rmdup_collapsed",
+    # Special alias, which invokes only the adapter-removal steps
+    "trim_pipeline": "bam_pipeline",
 }
 
 # Error message shown if the Pysam moduel ('pysam') cannot be imported

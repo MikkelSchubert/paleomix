@@ -52,7 +52,8 @@ from pypeline.tools.bam_pipeline.makefile import \
     read_makefiles
 
 import pypeline.tools.bam_pipeline.parts as parts
-
+import pypeline.tools.bam_pipeline.config as bam_config
+import pypeline.tools.bam_pipeline.mkfile as bam_mkfile
 
 
 
@@ -217,7 +218,7 @@ def list_orphan_files(config, makefiles, pipeline):
     return (files - mkfiles) - pipeline.list_output_files()
 
 
-def main(config, args):
+def run(config, args):
     if not os.path.exists(config.temp_root):
         try:
             os.makedirs(config.temp_root)
@@ -312,3 +313,40 @@ def main(config, args):
         return 1
 
     return 0
+
+
+def _print_usage():
+    basename = os.path.basename(sys.argv[0])
+    if basename == "paleomix":
+        basename = "bam_pipeline"
+
+    print_info("BAM Pipeline %s\n" % (pypeline.__version__,))
+    print_info("Usage:")
+    print_info("  -- %s help          -- Display this message" % basename)
+    print_info("  -- %s mkfile [...]  -- Generate makefile from 'SampleSheet.csv' files." % basename)
+    print_info("  -- %s dryrun [...]  -- Perform dry run of pipeline on provided makefiles." % basename)
+    print_info("     %s                  Equivalent to 'bam_pipeline run --dry-run [...]'." % (" " * len(basename),))
+    print_info("  -- %s run [...]     -- Run pipeline on provided makefiles." % basename)
+
+
+def main(argv):
+    try:
+        config, args = bam_config.parse_config(argv)
+        if args and args[0].startswith("dry"):
+            config.dry_run = True
+    except bam_config.ConfigError, error:
+        print_err(error)
+        return 1
+
+    commands = ("mkfile", "run", "dry_run", "dry-run", "dryrun")
+    if (len(args) == 0) or (args[0] not in commands):
+        _print_usage()
+        return 1
+    elif args[0] == "mkfile":
+        return bam_mkfile.main(args[1:])
+    elif not args[1:]:
+        _print_usage()
+        print_err("\nPlease specify at least one makefile!")
+        return 1
+
+    return run(config, args[1:])
