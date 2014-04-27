@@ -42,29 +42,6 @@ from pypeline.common.fileutils import \
     describe_files
 
 
-class FilterCollapsedBAMNode(MultiBAMInputNode):
-    def __init__(self, config, input_bams, output_bam, keep_dupes,
-                 dependencies=()):
-        bam_input = MultiBAMInput(config, input_bams)
-        rmdup_call = ["bam_rmdup_collapsed"]
-        if not keep_dupes:
-            rmdup_call.append("--remove-duplicates")
-        rmdup_call.append("%(TEMP_IN_BAM)s")
-
-        filteruniq = AtomicCmd(rmdup_call,
-                               TEMP_IN_BAM=bam_input.pipe,
-                               OUT_STDOUT=output_bam)
-
-        command = ParallelCmds(bam_input.commands + [filteruniq])
-        description = "<FilterCollapsedBAM: %s>" \
-            % (describe_files(bam_input.files),)
-        MultiBAMInputNode.__init__(self,
-                                   bam_input=bam_input,
-                                   command=command,
-                                   description=description,
-                                   dependencies=dependencies)
-
-
 class IndexAndValidateBAMNode(MetaNode):
     def __init__(self, config, prefix, node, log_file=None):
         input_file, has_index = self._get_input_file(node)

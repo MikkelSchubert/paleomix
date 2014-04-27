@@ -34,7 +34,7 @@ from pypeline.common.bamfiles import \
 from pypeline.tools.bam_stats.common import \
     collect_readgroups, \
     collect_references, \
-    main
+    main_wrapper
 from pypeline.tools.bam_stats.coverage import \
     READGROUP_TEMPLATE, \
     write_table
@@ -146,19 +146,9 @@ def process_file(handle, args):
         region_table = get_region_table(counts, name, region_template)
         for (_, records) in region:
             for record in records:
-                # 0xf04 = 0x800 | 0x400 | 0x200 | 0x100 | 0x004
-                #         0x800 = Secondary alignment
-                #         0x400 = PCR Duplicate
-                #         0x200 = Failed QC
-                #         0x100 = Alternative alignment
-                #         0x004 = Unmapped read
-                flags = record.flag
-                if flags & 0xf04:
-                    continue
-
                 readgroup = args.get_readgroup_func(record)
                 readgroup_table = region_table[readgroup]
-                process_record(readgroup_table, record, flags, region)
+                process_record(readgroup_table, record, record.flag, region)
                 timer.increment(read=record)
     timer.finalize()
 
@@ -167,8 +157,12 @@ def process_file(handle, args):
     return 0
 
 
+def main(argv):
+    return main_wrapper(process_file, argv, ".coverage")
+
+
 ##############################################################################
 ##############################################################################
 
 if __name__ == '__main__':
-    sys.exit(main(process_file, sys.argv[1:], ".coverage"))
+    sys.exit(main(sys.argv[1:]))

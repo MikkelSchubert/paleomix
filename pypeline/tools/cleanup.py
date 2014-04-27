@@ -35,6 +35,7 @@ command will not work:
 $ samtools view -H INPUT.BAM | samtools view -Sbu -
 
 """
+import os
 import sys
 import copy
 import time
@@ -228,11 +229,14 @@ def _setup_paired_ended_pipeline(args, procs, bam_cleanup):
 
 def _run_cleanup_pipeline(args):
     # Ensure that the same script is used, even if it is not in the PATH
-    bam_cleanup = [sys.argv[0],
-                   '--fasta', args.fasta,
-                   '--prefix', args.prefix,
-                   '--min-quality', str(args.min_quality),
-                   '--exclude-flags', hex(args.exclude_flags)]
+    bam_cleanup = [sys.argv[0]]
+    if os.path.basename(bam_cleanup[0]) == "paleomix":
+        bam_cleanup.append("cleanup")
+
+    bam_cleanup.extend(('--fasta', args.fasta,
+                        '--temp-prefix', args.temp_prefix,
+                        '--min-quality', str(args.min_quality),
+                        '--exclude-flags', hex(args.exclude_flags)))
 
     procs = {}
     try:
@@ -243,7 +247,7 @@ def _run_cleanup_pipeline(args):
             last_proc = _setup_single_ended_pipeline(args, procs, bam_cleanup)
 
         # Sort, output to stdout (-o)
-        call_sort = ['samtools', 'sort', "-o", "-", args.prefix]
+        call_sort = ['samtools', 'sort', "-o", "-", args.temp_prefix]
         procs["sort"] = subprocess.Popen(call_sort,
                                          stdin=last_proc.stdout,
                                          stdout=subprocess.PIPE,
@@ -274,8 +278,8 @@ def parse_args(argv):
 
     parser.add_argument('--fasta', help="REQUIRED: Reference FASTA sequence",
                         required=True)
-    parser.add_argument('--prefix', help="REQUIRED: Prefix for temp files",
-                        required=True)
+    parser.add_argument('--temp-prefix', required=True,
+                        help="REQUIRED: Prefix for temp files")
     parser.add_argument("-q", "--min-quality", type=int, default=0,
                         help="Equivalent to \"samtools view -q\"  "
                              "\n[Default: %(default)s]")

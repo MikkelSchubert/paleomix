@@ -31,14 +31,27 @@ from pypeline.atomiccmd.builder import \
 
 
 def new(command, *args, **kwargs):
-    return _COMMANDS[command](*args, **kwargs)
+    """Returns AtomicCmdBuilder setup to call the tools accessible through the
+    'paleomix' command-line tool. This builder adds executable / version checks
+    for the specified command, but does not add any arguments. Thus, calling
+    new with the argument "cat" produces the equivalent of ["paleomix", "cat"].
+    """
+    if command in _SPECIAL_COMMANDS:
+        return _SPECIAL_COMMANDS[command](*args, **kwargs)
+    return _build_generic_command(command)
 
 
-_version_eq = versions.EQ(*pypeline.__version_info__)
+_VERSION_EQ = versions.EQ(*pypeline.__version_info__)
 VERSION_PALEOMIX = versions.Requirement(call=["paleomix", "help"],
                                         search=r"v(\d+)\.(\d+)\.(\d+)",
-                                        checks=_version_eq,
+                                        checks=_VERSION_EQ,
                                         priority=100)
+
+
+def _build_generic_command(argument):
+    """Returns a AtomicCmdBuilder for a regular 'paleomix ...' command."""
+    return AtomicCmdBuilder(["paleomix", argument],
+                            CHECK_PALEOMIX=VERSION_PALEOMIX)
 
 
 def _build_cat_command():
@@ -50,13 +63,6 @@ def _build_cat_command():
                             CHECK_PALEOMIX=VERSION_PALEOMIX)
 
 
-def _build_duphist_command():
-    """Returns a AtomicCmdBuilder for the 'paleomix duphist' command."""
-    return AtomicCmdBuilder(["paleomix", "duphist"],
-                            CHECK_PALEOMIX=VERSION_PALEOMIX)
-
-
-_COMMANDS = {
+_SPECIAL_COMMANDS = {
     "cat": _build_cat_command,
-    "duphist": _build_duphist_command,
 }

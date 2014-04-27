@@ -35,7 +35,7 @@ from pypeline.common.bamfiles import \
 from pypeline.tools.bam_stats.common import \
     collect_references, \
     collect_readgroups, \
-    main
+    main_wrapper
 
 
 ##############################################################################
@@ -357,15 +357,6 @@ def process_file(handle, args):
 
             for record in records:
                 timer.increment(read=record)
-                # 0xf04 = 0x800 | 0x400 | 0x200 | 0x100 | 0x004
-                #         0x800 = Secondary alignment
-                #         0x400 = PCR Duplicate
-                #         0x200 = Failed QC
-                #         0x100 = Alternative alignment
-                #         0x004 = Unmapped read
-                if record.flag & 0xf04:
-                    continue
-
                 count_bases(args, counts, record, rg_to_smlbid, template)
 
             if (region.tid, position) < (last_tid, last_pos):
@@ -385,8 +376,11 @@ def process_file(handle, args):
     return 0
 
 
+def main(argv):
+    return main_wrapper(process_file, argv, ".depths")
+
 ##############################################################################
 ##############################################################################
 
 if __name__ == '__main__':
-    sys.exit(main(process_file, sys.argv[1:], ".depths"))
+    sys.exit(main(sys.argv[1:]))

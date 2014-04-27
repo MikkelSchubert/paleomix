@@ -296,9 +296,9 @@ class BWASWNode(CommandNode):
 
 
 def _process_output(stdin, output_file, reference, run_fixmate=False):
-    convert = AtomicCmdBuilder("bam_cleanup")
+    convert = factory.new("cleanup")
     convert.set_option("--fasta", "%(IN_FASTA_REF)s")
-    convert.set_option("--prefix", "%(TEMP_OUT_PREFIX)s")
+    convert.set_option("--temp-prefix", "%(TEMP_OUT_PREFIX)s")
     convert.set_kwargs(IN_STDIN=stdin,
                        IN_FASTA_REF=reference,
                        OUT_STDOUT=output_file,

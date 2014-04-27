@@ -81,7 +81,7 @@ def collect_bed_regions(filename):
 
 
 def parse_arguments(argv, ext):
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(prog="paleomix %s" % (ext.strip("."),))
 
     parser.add_argument("infile", metavar="BAM",
                         help="Filename of a sorted BAM file. If set to '-' "
@@ -110,6 +110,11 @@ def parse_arguments(argv, ext):
                              "provide aggreaged statistics; this is required "
                              "if readgroup information is missing or partial "
                              "[default: %(default)s]")
+    parser.add_argument('--overwrite-output',
+                        default=False, action="store_true",
+                        help="Overwrite output file if it it exists; by "
+                             "default, the script will terminate if the file "
+                             "already exists.")
 
     args = parser.parse_args(argv)
     if not args.outfile:
@@ -126,13 +131,15 @@ def parse_arguments(argv, ext):
         else:
             args.target_name = os.path.basename(args.infile)
 
+    if os.path.exists(args.outfile) and not args.overwrite_output:
+        parser.error("Destination filename already exists (%r); use option "
+                     "--overwrite-output to allow overwriting of this file."
+                     % (args.outfile,))
+
     return args
 
 
-def main(process_func, argv, ext):
-    # Set process name on supported platforms
-    pypeline.common.system.set_procname()
-
+def main_wrapper(process_func, argv, ext):
     args = parse_arguments(argv, ext)
     args.regions = None
     if args.regions_fpath:

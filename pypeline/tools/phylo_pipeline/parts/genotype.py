@@ -130,8 +130,7 @@ class VCFFilterNode(CommandNode):
 
 class BuildRegionsNode(CommandNode):
     @create_customizable_cli_parameters
-    def customize(cls, options, infile, regions, outfile, padding,
-                  dependencies=()):
+    def customize(cls, infile, regions, outfile, padding, dependencies=()):
         params = AtomicCmdBuilder(["vcf_to_fasta"],
                                   IN_VCFFILE=infile,
                                   IN_TABIX=infile + ".tbi",
@@ -161,12 +160,12 @@ class BuildRegionsNode(CommandNode):
 class SampleRegionsNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, infile, bedfile, outfile, dependencies=()):
-        params = AtomicCmdBuilder(["bam_sample_regions"],
-                                  IN_PILEUP=infile,
-                                  IN_INTERVALS=bedfile,
-                                  OUT_STDOUT=outfile)
+        params = factory.new("sample_pileup")
         params.set_option("--genotype", "%(IN_PILEUP)s")
         params.set_option("--intervals", "%(IN_INTERVALS)s")
+        params.set_kwargs(IN_PILEUP=infile,
+                          IN_INTERVALS=bedfile,
+                          OUT_STDOUT=outfile)
 
         return {"command": params}
 
@@ -183,8 +182,8 @@ class SampleRegionsNode(CommandNode):
                              dependencies=parameters.dependencies)
 
 
-################################################################################
-################################################################################
+###############################################################################
+###############################################################################
 
 # Caches for nodes shared between multiple tasks
 _BAI_CACHE = {}
@@ -288,7 +287,7 @@ def build_genotyping_nodes_cached(options, genotyping, sample, regions,
         SAMPLE.PREFIX.vcf.bgz: Unfiltered calls for variant/non-variant sites.
         SAMPLE.PREFIX.vcf.pileup.bgz: Pileup of sites containing SNPs.
         SAMPLE.PREFIX.vcf.pileup.bgz.tbi: Tabix index of the pileup.
-        SAMPLE.PREFIX.filtered.vcf.bgz: Variant calls filtered using vcf_filter.
+        SAMPLE.PREFIX.filtered.vcf.bgz: Variant calls filtered with vcf_filter.
         SAMPLE.PREFIX.filtered.vcf.bgz.tbi: Tabix index for the filtered VCF.
 
     If 'GenotypeEntirePrefix' is not enabled for a given ROI, the following
@@ -379,8 +378,7 @@ def build_genotyping_nodes(options, genotyping, sample, regions, dependencies):
 
     # 2. Generate consensus sequence from filtered VCF
     output_fasta = regions["Genotypes"][sample]
-    builder = BuildRegionsNode(options=options,
-                               infile=filtered,
+    builder = BuildRegionsNode(infile=filtered,
                                regions=regions,
                                outfile=output_fasta,
                                padding=genotyping["Padding"],

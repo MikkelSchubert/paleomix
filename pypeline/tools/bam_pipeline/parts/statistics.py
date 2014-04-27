@@ -28,7 +28,7 @@ from pypeline.common.fileutils import \
 
 from pypeline.node import \
     MetaNode
-from pypeline.nodes.statistics import \
+from pypeline.nodes.paleomix import \
     CoverageNode, \
     MergeCoverageNode, \
     DepthHistogramNode

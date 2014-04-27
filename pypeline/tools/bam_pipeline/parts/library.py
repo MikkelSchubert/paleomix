@@ -39,10 +39,10 @@ from pypeline.nodes.mapdamage import \
     MapDamageModelNode, \
     MapDamageRescaleNode
 from pypeline.tools.bam_pipeline.nodes import \
-    FilterCollapsedBAMNode, \
     IndexAndValidateBAMNode
 from pypeline.nodes.paleomix import \
-    DuplicateHistogramNode
+    DuplicateHistogramNode, \
+    FilterCollapsedBAMNode
 from pypeline.nodes.validation import \
     DetectInputDuplicationNode
 

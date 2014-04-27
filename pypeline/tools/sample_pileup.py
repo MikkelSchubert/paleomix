@@ -26,7 +26,7 @@ from __future__ import with_statement
 import sys
 import random
 import itertools
-from optparse import OptionParser
+import argparse
 
 import pysam
 
@@ -37,37 +37,38 @@ from pypeline.common.formats.fasta import FASTA
 
 class Pileup:
     def __init__(self, line):
-        fields         = line.split("\t")
+        fields = line.split("\t")
 
-        self.position  = int(fields[1]) - 1
+        self.position = int(fields[1]) - 1
         self.reference = fields[2]
-        self.depth     = int(fields[3])
-        self.observed  = fields[4]
+        self.depth = int(fields[3])
+        self.observed = fields[4]
         self.qualities = fields[5]
 
 
 def _untrusted_positions(pileups, distance):
-    """Returns a set of positions that are either directly covered by, or adjacent to indels,
-    given some arbitrary distance. These positions are considered 'untrusted', and bases that
-    fall within those positions are ignored."""
+    """Returns a set of positions that are either directly covered by, or
+    adjacent to indels, given some arbitrary distance. These positions are
+    considered 'untrusted', and bases that fall within those positions are
+    ignored.
+    """
     positions = set()
     for pileup in pileups:
-        for (ii, current) in enumerate(pileup.observed):
+        for (index, current) in enumerate(pileup.observed):
             if current == "+":
                 length = 0
             elif current == "-":
-                length = int(pileup.observed[ii + 1])
+                length = int(pileup.observed[index + 1])
             else:
                 continue
 
-            # Inclusive start/end positions for bases that should be blacklisted
+            # Inclusive start/end positions for blacklisted bases
             start = pileup.position - distance
-            end   = pileup.position + distance + length
+            end = pileup.position + distance + length
 
             positions.update(xrange(start, end + 1))
 
     return positions
-
 
 
 def sample_position(pileup):
@@ -85,9 +86,7 @@ def sample_position(pileup):
             bases.append(current)
         elif current == "^":
             skip = 1
-        elif current in "$*N":
-            pass
-        else:
+        elif current not in "$*N":
             assert False, current
 
     if not bases:
@@ -98,30 +97,31 @@ def sample_position(pileup):
 
 def build_region(options, genotype, bed):
     # Note that bed.end is a past-the-end coordinate
-    start   = max(0, bed.start - options.padding)
-    end     = bed.end + options.padding
+    start = max(0, bed.start - options.padding)
+    end = bed.end + options.padding
 
     pileups = []
     if bed.contig in genotype.contigs:
-        # Raises a ValueError if the VCF does not contain any entries for the specified contig.
-        pileups = [Pileup(pileup) for pileup in genotype.fetch(bed.contig, start, end)]
+        # fetch raises a ValueError if the VCF does not contain any entries for
+        # the specified contig, which occur due to low coverage.
+        pileups = [Pileup(pileup)
+                   for pileup in genotype.fetch(bed.contig, start, end)]
     untrusted = _untrusted_positions(pileups, options.min_distance_to_indels)
 
-    sequence  = ["N"] * (end - start)
+    sequence = ["N"] * (end - start)
     for pileup in pileups:
         if pileup.position not in untrusted:
             sequence[pileup.position - start] = sample_position(pileup)
 
     offset = bed.start - start
     length = bed.end - bed.start
-    return sequence[offset : offset + length]
-
+    return sequence[offset: offset + length]
 
 
 def build_genes(options, genotype, regions):
     def keyfunc(bed):
         return (bed.contig, bed.name, bed.start)
-    regions.sort(key = keyfunc)
+    regions.sort(key=keyfunc)
 
     for (gene, beds) in itertools.groupby(regions, lambda x: x.name):
         sequence, beds = [], tuple(beds)
@@ -137,31 +137,26 @@ def build_genes(options, genotype, regions):
         yield (gene, sequence)
 
 
-def main(argv, output = sys.stdout):
-    parser = OptionParser()
-    parser.add_option("--genotype", help="Tabix indexed pileup file.")
-    parser.add_option("--intervals", help="BED file.")
-    parser.add_option("--padding", type = int, default = 10,
-                      help = "Number of bases to expand intervals, when checking for adjacent indels [%default]")
-    parser.add_option("--min-distance-to-indels", type = int, default = 5,
-                      help = "Variants closer than this distance from indels are filtered [%default].")
+def main(argv):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--genotype", help="Tabix indexed pileup file.",
+                        required=True)
+    parser.add_argument("--intervals", help="BED file.", required=True)
+    parser.add_argument("--padding", type=int, default=10,
+                        help="Number of bases to expand intervals, when "
+                             "filtering based on adjacent indels [%default]")
+    parser.add_argument("--min-distance-to-indels", type=int, default=5,
+                        help="Variants closer than this distance from indels "
+                             "are filtered [%default].")
+    args = parser.parse_args(argv)
 
-    (opts, args) = parser.parse_args(argv)
-    if args:
-        parser.print_help()
-        return 1
-    elif not (opts.genotype and opts.intervals):
-        sys.stderr.write("ERROR: Genotype and intervals must be set.\n")
-        parser.print_help()
-        return 1
-
-    genotype = pysam.Tabixfile(opts.genotype)
-    with open(opts.intervals) as bed_file:
+    genotype = pysam.Tabixfile(args.genotype)
+    with open(args.intervals) as bed_file:
         intervals = text.parse_lines_by_contig(bed_file, pysam.asBed())
 
     for (_, beds) in sorted(intervals.items()):
-        for (name, sequence) in build_genes(opts, genotype, beds):
-            FASTA(name, None, sequence).write(output)
+        for (name, sequence) in build_genes(args, genotype, beds):
+            FASTA(name, None, sequence).write(sys.stdout)
 
     return 0
 
