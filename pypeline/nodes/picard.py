@@ -31,6 +31,7 @@ from pypeline.atomiccmd.builder import \
 from pypeline.common.fileutils import \
     swap_ext, \
     try_rmtree, \
+    try_remove, \
     reroot_path, \
     describe_files
 from pypeline.common.utilities import \
@@ -253,6 +254,11 @@ class MultiBAMInputNode(CommandNode):
             src_fname, = self._bam_input.files
             os.symlink(os.path.join(os.getcwd(), src_fname), dst_fname)
 
+            src_fname = os.path.join(os.getcwd(), swap_ext(src_fname, ".bai"))
+            os.symlink(src_fname, dst_fname + ".bai")
+
     def _teardown(self, config, temp_root):
-        os.remove(os.path.join(temp_root, self._bam_input.pipe))
+        pipe_fname = os.path.join(temp_root, self._bam_input.pipe)
+        os.remove(pipe_fname)
+        try_remove(pipe_fname + ".bai")
         CommandNode._teardown(self, config, temp_root)
