@@ -20,8 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from pypeline.atomiccmd.command import \
-    AtomicCmd
+"""Implements nodes for calling PALEOMIX commands.
+
+Each node is equivalent to a particular command:
+    $ palemix [...]
+"""
 from pypeline.atomiccmd.sets import \
     ParallelCmds
 from pypeline.common.fileutils import \
@@ -30,13 +33,25 @@ from pypeline.nodes.picard import \
     MultiBAMInput, \
     MultiBAMInputNode
 
+import pypeline.tools.factory as factory
+
 
 class DuplicateHistogramNode(MultiBAMInputNode):
+    """Node for calling the 'paleomix duphist' command.
+
+    Takes 1 or more BAMs as imput, requiring a config object in order to run
+    MergeSamFiles.jar to merge these files. The output is a histogram of PCR
+    duplicate counts, usable as input for the 'preseq' tool.
+    """
+
     def __init__(self, config, input_files, output_file, dependencies=()):
         bam_input = MultiBAMInput(config, input_files)
-        duphist_command = AtomicCmd(['bam_duphist', '%(TEMP_IN_BAM)s'],
-                                    TEMP_IN_BAM=bam_input.pipe,
-                                    OUT_STDOUT=output_file)
+        duphist_command = factory.new("duphist")
+        duphist_command.add_value('%(TEMP_IN_BAM)s')
+        duphist_command.set_kwargs(TEMP_IN_BAM=bam_input.pipe,
+                                   OUT_STDOUT=output_file)
+        duphist_command = duphist_command.finalize()
+
         commands = ParallelCmds(bam_input.commands + [duphist_command])
 
         description = "<DuplicateHistogram: %s -> %r>" \

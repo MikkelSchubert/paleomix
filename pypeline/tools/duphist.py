@@ -20,26 +20,27 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+"""Tool for building histogram of PCR duplicates to be used with 'preseq'.
+
+This allows estimation of the library complexity, and potential further gains
+from sequencing the library. Unlike the tools included in 'preseq', this tool
+handles collapsed reads.
+
+Preseq is located at http://smithlabresearch.org/software/preseq/
+"""
 import sys
 import random
+import argparse
 import collections
 
 import pysam
 
-
-def filter_record(record):
-    # 0x904 = 0x800 | 0x100 | 0x004
-    #         0x800 = Secondary alignment
-    #         0x100 = Alternative alignment
-    #         0x004 = Unmapped read
-    if (record.flag & 0x904):
-        return True
-    elif record.is_paired:
-        return (not record.is_proper_pair) or record.is_read2
-    return False
+import pypeline.common.bamfiles as bamfiles
 
 
-def get_alignment(record):
+def get_template_length(record):
+    """Returns the template length of the given record for paired or collapsed
+    reads; for single-ended reads, None is returned."""
     if record.is_paired:
         return record.tlen
     elif record.qname.startswith("M_"):
@@ -47,15 +48,27 @@ def get_alignment(record):
     return None
 
 
-def flush_records(records, counts):
+def process_records(records, counts):
+    """Processes a set of records aligned to the same positon; dulpicates are
+    inferred based on the template lengths of the records, using the sequence
+    length for collapsed reads (where qname.startswith("M_")). Single-ended
+    reads are assumed to represent a random sampling of reads for which the
+    insert size is known.
+    """
     alignments = collections.defaultdict(int)
     for record in records:
-        alignment = get_alignment(record)
+        if record.is_paired:
+            if (not record.is_proper_pair) or record.is_read2:
+                continue
+
+        alignment = get_template_length(record)
         alignments[alignment] += 1
 
     if (None in alignments) and len(alignments) > 1:
         ambigious_count = alignments.pop(None)
 
+        # PE reads are assummed to represent a random sample of PE / collapsed
+        # reads, and distributed randomly across these to approximate this
         keys = tuple(alignments)
         for _ in xrange(ambigious_count):
             key = random.choice(keys)
@@ -66,25 +79,21 @@ def flush_records(records, counts):
 
 
 def main(argv):
-    counts = collections.defaultdict(int)
-    for filename in argv:
-        with pysam.Samfile(filename) as handle:
-            cache = []
-            last_pos = None
-            for record in handle:
-                if filter_record(record):
-                    continue
+    """Main function; takes a list of arguments equivalent to sys.argv[1:]."""
+    parser = argparse.ArgumentParser(prog="paleomix duphist")
+    parser.add_argument("bamfile", help="Sorted BAM file.")
+    args = parser.parse_args(argv)
 
-                current_pos = (record.tid, record.pos)
-                if current_pos != last_pos:
-                    flush_records(cache, counts)
-                    last_pos = current_pos
-                    cache = []
-                cache.append(record)
-            flush_records(cache, counts)
+    # Default filters, excepting that PCR duplicates are not filtered
+    mask = bamfiles.EXCLUDED_FLAGS & ~bamfiles.BAM_PCR_DUPLICATE
+    counts = collections.defaultdict(int)
+    with pysam.Samfile(args.bamfile) as handle:
+        for region in bamfiles.BAMRegionsIter(handle, exclude_flags=mask):
+            for (_, records) in region:
+                process_records(records, counts)
 
     for (key, count) in sorted(counts.iteritems()):
-        print("%i\t%i" % (key, count))
+        print "%i\t%i" % (key, count)
 
 
 if __name__ == '__main__':

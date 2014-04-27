@@ -35,6 +35,10 @@ import sys
 _COMMANDS = (
     ("help", None, "Displays this message."),
 
+    ("BAM/SAM tools", None, None),
+    ("duphist", "pypeline.tools.duphist",
+     "Generates PCR duplicate histogram; for use with 'Preseq'."),
+
     ("Misc tools", None, None),
     ("cat", "pypeline.tools.cat",
      "Generalized cat command for gz, bz2 and uncompressed files."),

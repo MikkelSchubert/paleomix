@@ -24,24 +24,24 @@ import os
 import types
 
 from pypeline.common.utilities import \
-     safe_coerce_to_tuple
+    safe_coerce_to_tuple
 
 from pypeline.node import \
-     MetaNode
+    MetaNode
 from pypeline.nodes.picard import \
-     MarkDuplicatesNode
+    MarkDuplicatesNode
 from pypeline.atomiccmd.builder import \
-     apply_options
+    apply_options
 from pypeline.nodes.misc import \
-     CopyOutputFilesNode
+    CopyOutputFilesNode
 from pypeline.nodes.mapdamage import \
-     MapDamagePlotNode, \
-     MapDamageModelNode, \
-     MapDamageRescaleNode
+    MapDamagePlotNode, \
+    MapDamageModelNode, \
+    MapDamageRescaleNode
 from pypeline.tools.bam_pipeline.nodes import \
     FilterCollapsedBAMNode, \
     IndexAndValidateBAMNode
-from pypeline.nodes.duphist import \
+from pypeline.nodes.paleomix import \
     DuplicateHistogramNode
 from pypeline.nodes.validation import \
     DetectInputDuplicationNode

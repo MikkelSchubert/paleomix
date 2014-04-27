@@ -49,4 +49,14 @@ def _build_cat_command():
                             EXEC_CAT="cat",
                             CHECK_PALEOMIX=VERSION_PALEOMIX)
 
-_COMMANDS = {"cat": _build_cat_command}
+
+def _build_duphist_command():
+    """Returns a AtomicCmdBuilder for the 'paleomix duphist' command."""
+    return AtomicCmdBuilder(["paleomix", "duphist"],
+                            CHECK_PALEOMIX=VERSION_PALEOMIX)
+
+
+_COMMANDS = {
+    "cat": _build_cat_command,
+    "duphist": _build_duphist_command,
+}
