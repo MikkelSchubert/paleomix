@@ -63,6 +63,13 @@ def _build_cat_command():
                             CHECK_PALEOMIX=VERSION_PALEOMIX)
 
 
+def _build_create_pileup_command(outfile):
+    """Returns a AtomicCmdBuilder for a regular 'paleomix ...' command."""
+    return AtomicCmdBuilder(["paleomix", "create_pileup", outfile],
+                            CHECK_PALEOMIX=VERSION_PALEOMIX)
+
+
 _SPECIAL_COMMANDS = {
     "cat": _build_cat_command,
+    "create_pileup": _build_create_pileup_command,
 }

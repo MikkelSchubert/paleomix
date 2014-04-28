@@ -25,16 +25,8 @@ import os
 from copy import deepcopy
 
 from pypeline.node import \
-    CommandNode, \
     MetaNode
-from pypeline.atomiccmd.command import \
-    AtomicCmd
-from pypeline.atomiccmd.sets import \
-    ParallelCmds
 from pypeline.atomiccmd.builder import \
-    create_customizable_cli_parameters, \
-    use_customizable_cli_parameters, \
-    AtomicCmdBuilder, \
     apply_options
 from pypeline.nodes.samtools import \
     GenotypeNode, \
@@ -49,137 +41,11 @@ from pypeline.nodes.sequences import \
 from pypeline.common.fileutils import \
     swap_ext, \
     add_postfix
-
-import pypeline.tools.factory as factory
-
-
-################################################################################
-################################################################################
-## Genotyping specific nodes
-## TODO: Move to pypeline.nodes
-
-class VCFPileupNode(CommandNode):
-    @create_customizable_cli_parameters
-    def customize(cls, reference, in_bam, in_vcf, outfile, dependencies=()):
-        cat = factory.new("cat")
-        cat.add_value("%(IN_VCF)s")
-        cat.set_kwargs(IN_VCF=in_vcf,
-                       OUT_STDOUT=AtomicCmd.PIPE)
-
-        vcfpileup = AtomicCmdBuilder(["vcf_create_pileup", "%(OUT_PILEUP)s"],
-                                     IN_REF=reference,
-                                     IN_BAM=in_bam,
-                                     IN_STDIN=cat,
-                                     OUT_PILEUP=outfile,
-                                     OUT_TBI=outfile + ".tbi")
-        vcfpileup.add_value("%(IN_BAM)s")
-        vcfpileup.set_option("-f", "%(IN_REF)s")
-
-        return {"commands": {"cat": cat,
-                             "pileup": vcfpileup}}
-
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
-        commands = parameters.commands
-        commands = [commands[key].finalize() for key in ("cat", "pileup")]
-        description = "<VCFPileup: '%s' -> '%s'>" % (parameters.in_bam,
-                                                     parameters.outfile)
-        CommandNode.__init__(self,
-                             description=description,
-                             command=ParallelCmds(commands),
-                             dependencies=parameters.dependencies)
-
-
-class VCFFilterNode(CommandNode):
-    @create_customizable_cli_parameters
-    def customize(cls, pileup, infile, outfile, regions, dependencies=()):
-        cat = factory.new("cat")
-        cat.add_value("%(IN_VCF)s")
-        cat.set_kwargs(IN_VCF=infile,
-                       OUT_STDOUT=AtomicCmd.PIPE)
-
-        vcffilter = AtomicCmdBuilder(["vcf_filter"],
-                                     IN_PILEUP=pileup,
-                                     IN_STDIN=cat,
-                                     OUT_STDOUT=AtomicCmd.PIPE)
-
-        vcffilter.add_option("--pileup", "%(IN_PILEUP)s")
-        for contig in regions["HomozygousContigs"]:
-            vcffilter.add_option("--homozygous-chromosome", contig)
-
-        bgzip = AtomicCmdBuilder(["bgzip"],
-                                 IN_STDIN=vcffilter,
-                                 OUT_STDOUT=outfile)
-
-        return {"commands": {"cat": cat,
-                             "filter": vcffilter,
-                             "bgzip": bgzip}}
-
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
-        commands = [parameters.commands[key].finalize()
-                    for key in ("cat", "filter", "bgzip")]
-
-        description = "<VCFFilter: '%s' -> '%s'>" % (parameters.infile,
-                                                     parameters.outfile)
-        CommandNode.__init__(self,
-                             description=description,
-                             command=ParallelCmds(commands),
-                             dependencies=parameters.dependencies)
-
-
-class BuildRegionsNode(CommandNode):
-    @create_customizable_cli_parameters
-    def customize(cls, infile, regions, outfile, padding, dependencies=()):
-        params = AtomicCmdBuilder(["vcf_to_fasta"],
-                                  IN_VCFFILE=infile,
-                                  IN_TABIX=infile + ".tbi",
-                                  IN_INTERVALS=regions["BED"],
-                                  OUT_STDOUT=outfile)
-        params.set_option("--padding", padding)
-        params.set_option("--genotype", "%(IN_VCFFILE)s")
-        params.set_option("--intervals", "%(IN_INTERVALS)s")
-        if regions["ProteinCoding"]:
-            params.set_option("--whole-codon-indels-only")
-        if not regions["IncludeIndels"]:
-            params.set_option("--ignore-indels")
-
-        return {"command": params}
-
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
-        command = parameters.command.finalize()
-        description = "<BuildRegions: '%s' -> '%s'>" % (parameters.infile,
-                                                        parameters.outfile)
-        CommandNode.__init__(self,
-                             description=description,
-                             command=command,
-                             dependencies=parameters.dependencies)
-
-
-class SampleRegionsNode(CommandNode):
-    @create_customizable_cli_parameters
-    def customize(cls, infile, bedfile, outfile, dependencies=()):
-        params = factory.new("sample_pileup")
-        params.set_option("--genotype", "%(IN_PILEUP)s")
-        params.set_option("--intervals", "%(IN_INTERVALS)s")
-        params.set_kwargs(IN_PILEUP=infile,
-                          IN_INTERVALS=bedfile,
-                          OUT_STDOUT=outfile)
-
-        return {"command": params}
-
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
-        command = parameters.command.finalize()
-
-        description = "<SampleRegions: '%s' -> '%s'>" \
-            % (parameters.infile, parameters.outfile)
-
-        CommandNode.__init__(self,
-                             description=description,
-                             command=command,
-                             dependencies=parameters.dependencies)
+from pypeline.nodes.paleomix import \
+    VCFPileupNode, \
+    VCFFilterNode, \
+    BuildRegionsNode, \
+    SampleRegionsNode
 
 
 ###############################################################################
@@ -378,11 +244,16 @@ def build_genotyping_nodes(options, genotyping, sample, regions, dependencies):
 
     # 2. Generate consensus sequence from filtered VCF
     output_fasta = regions["Genotypes"][sample]
-    builder = BuildRegionsNode(infile=filtered,
-                               regions=regions,
-                               outfile=output_fasta,
-                               padding=genotyping["Padding"],
-                               dependencies=node)
+    builder = BuildRegionsNode.customize(infile=filtered,
+                                         bedfile=regions["BED"],
+                                         outfile=output_fasta,
+                                         padding=genotyping["Padding"],
+                                         dependencies=node)
+    if regions["ProteinCoding"]:
+        builder.command.set_option("--whole-codon-indels-only")
+    if not regions["IncludeIndels"]:
+        builder.command.set_option("--ignore-indels")
+    builder = builder.build_node()
 
     # 3. Index sequences to make retrival easier for MSA
     faidx = FastaIndexNode(infile=output_fasta,

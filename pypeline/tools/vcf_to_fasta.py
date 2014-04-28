@@ -34,14 +34,12 @@ that indels are called near sequence termini, the script expects the VCF file
 to contain a certain amount of padding around the regions of interest.
 
 """
-
 from __future__ import print_function
-from __future__ import with_statement
 
 import sys
 import itertools
+import argparse
 from collections import namedtuple
-from optparse import OptionParser
 
 import pysam
 
@@ -64,7 +62,7 @@ BEDTuple = namedtuple("BEDTuple", ("contig", "start", "end",
 
 ###############################################################################
 ###############################################################################
-## Utility functions
+# Utility functions
 
 def flush_fasta(sequence):
     """Takes a FASTA sequence as a string, fragments it into lines of exactly
@@ -95,7 +93,7 @@ def split_beds(beds, size=_SEQUENCE_CHUNK):
 
 ###############################################################################
 ###############################################################################
-## Genotyping functions
+# Genotyping functions
 
 def add_snp(snp, position, sequence):
     if snp.alt != ".":
@@ -107,11 +105,11 @@ def add_snp(snp, position, sequence):
 
 
 def add_indel(options, bed, indel, sequence):
-    if (indel.alt == "."):
+    if indel.alt == ".":
         return
 
     genotype = vcfwrap.get_ml_genotype(indel)
-    if (genotype[0] != genotype[1]):
+    if genotype[0] != genotype[1]:
         # No way to represent heterozygous indels
         return
 
@@ -154,7 +152,7 @@ def filter_vcfs(genotype, contig, start, end):
         # This raises a ValueError if the VCF does not
         # contain any entries for the specified contig.
         for vcf in genotype.fetch(contig, start, end, parser=parser):
-            if (vcf.filter in ("PASS", ".")):
+            if vcf.filter in ("PASS", "."):
                 yield vcf
 
 
@@ -255,29 +253,22 @@ def read_intervals(filename):
 
 
 def main(argv):
-    parser = OptionParser()
-    parser.add_option("--genotype", help="Tabix indexed VCF file.")
-    parser.add_option("--intervals", help="BED file.")
-    parser.add_option("--padding", type=int, default=10,
-                      help="Number of bases to expand intervals, when "
-                           "checking for adjacent indels [%default]")
-    parser.add_option("--whole-codon-indels-only",
-                      action="store_true", default=False,
-                      help="If true, only indels where (length % 3) == 0 "
-                           "are retained [%default]")
-    parser.add_option("--ignore-indels",
-                      action="store_true", default=False,
-                      help="Do not include indels generated FASTA "
-                           "sequence [%default].")
-
-    (opts, args) = parser.parse_args(argv)
-    if args:
-        parser.print_help()
-        return 1
-    elif not (opts.genotype and opts.intervals):
-        sys.stderr.write("ERROR: Genotype and intervals must be set.\n")
-        parser.print_help()
-        return 1
+    parser = argparse.ArgumentParser(prog="paleomix vcf_to_fasta")
+    parser.add_argument("--genotype", help="Tabix indexed VCF file.",
+                        required=True)
+    parser.add_argument("--intervals", help="BED file.", required=True)
+    parser.add_argument("--padding", type=int, default=10,
+                        help="Number of bases to expand intervals, when "
+                             "checking for adjacent indels [%default]")
+    parser.add_argument("--whole-codon-indels-only",
+                        action="store_true", default=False,
+                        help="If true, only indels where (length % 3) == 0 "
+                             "are retained [%default]")
+    parser.add_argument("--ignore-indels",
+                        action="store_true", default=False,
+                        help="Do not include indels generated FASTA "
+                             "sequence [%default].")
+    opts = parser.parse_args(argv)
 
     print("Running buildRegions.py", end="", file=sys.stderr)
     if opts.whole_codon_indels_only:

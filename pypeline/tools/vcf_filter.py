@@ -49,6 +49,9 @@ def main(argv):
     vcffilter.add_varfilter_options(parser)
     (opts, args) = parser.parse_args(argv)
 
+    if (not args or "-" in args) and sys.stdin.isatty():
+        parser.error("STDIN is a terminal, terminating!")
+
     try:
         for vcf in vcffilter.filter_vcfs(opts, _read_files(args)):
             print(vcf)

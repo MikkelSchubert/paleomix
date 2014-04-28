@@ -26,7 +26,10 @@ Each node is equivalent to a particular command:
     $ palemix [...]
 """
 from pypeline.node import \
+    CommandNode, \
     Node
+from pypeline.atomiccmd.command import \
+    AtomicCmd
 from pypeline.atomiccmd.sets import \
     ParallelCmds
 from pypeline.common.fileutils import \
@@ -34,10 +37,10 @@ from pypeline.common.fileutils import \
 from pypeline.nodes.picard import \
     MultiBAMInput, \
     MultiBAMInputNode
-
 from pypeline.atomiccmd.builder import \
-    AtomicCmdBuilder
-
+    AtomicCmdBuilder, \
+    create_customizable_cli_parameters, \
+    use_customizable_cli_parameters
 from pypeline.common.fileutils import \
     reroot_path, \
     move_file
@@ -172,3 +175,123 @@ class FilterCollapsedBAMNode(MultiBAMInputNode):
                                    command=command,
                                    description=description,
                                    dependencies=dependencies)
+
+
+class VCFPileupNode(CommandNode):
+    @create_customizable_cli_parameters
+    def customize(cls, reference, in_bam, in_vcf, outfile, dependencies=()):
+        cat = factory.new("cat")
+        cat.add_value("%(IN_VCF)s")
+        cat.set_kwargs(IN_VCF=in_vcf,
+                       OUT_STDOUT=AtomicCmd.PIPE)
+
+        pileup = factory.new("create_pileup", outfile="%(OUT_PILEUP)s")
+        pileup.add_value("%(IN_BAM)s")
+        pileup.set_option("-f", "%(IN_REF)s")
+        pileup.set_kwargs(IN_REF=reference,
+                          IN_BAM=in_bam,
+                          IN_STDIN=cat,
+                          OUT_PILEUP=outfile,
+                          OUT_TBI=outfile + ".tbi")
+
+        return {"commands": {"cat": cat,
+                             "pileup": pileup}}
+
+    @use_customizable_cli_parameters
+    def __init__(self, parameters):
+        commands = parameters.commands
+        commands = [commands[key].finalize() for key in ("cat", "pileup")]
+        description = "<VCFPileup: '%s' -> '%s'>" % (parameters.in_bam,
+                                                     parameters.outfile)
+        CommandNode.__init__(self,
+                             description=description,
+                             command=ParallelCmds(commands),
+                             dependencies=parameters.dependencies)
+
+
+class VCFFilterNode(CommandNode):
+    @create_customizable_cli_parameters
+    def customize(cls, pileup, infile, outfile, regions, dependencies=()):
+        cat = factory.new("cat")
+        cat.add_value("%(IN_VCF)s")
+        cat.set_kwargs(IN_VCF=infile,
+                       OUT_STDOUT=AtomicCmd.PIPE)
+
+        vcffilter = factory.new("vcf_filter")
+        vcffilter.add_option("--pileup", "%(IN_PILEUP)s")
+        for contig in regions["HomozygousContigs"]:
+            vcffilter.add_option("--homozygous-chromosome", contig)
+        vcffilter.set_kwargs(IN_PILEUP=pileup,
+                             IN_STDIN=cat,
+                             OUT_STDOUT=AtomicCmd.PIPE)
+
+        bgzip = AtomicCmdBuilder(["bgzip"],
+                                 IN_STDIN=vcffilter,
+                                 OUT_STDOUT=outfile)
+
+        return {"commands": {"cat": cat,
+                             "filter": vcffilter,
+                             "bgzip": bgzip}}
+
+    @use_customizable_cli_parameters
+    def __init__(self, parameters):
+        commands = [parameters.commands[key].finalize()
+                    for key in ("cat", "filter", "bgzip")]
+
+        description = "<VCFFilter: '%s' -> '%s'>" % (parameters.infile,
+                                                     parameters.outfile)
+        CommandNode.__init__(self,
+                             description=description,
+                             command=ParallelCmds(commands),
+                             dependencies=parameters.dependencies)
+
+
+class BuildRegionsNode(CommandNode):
+    @create_customizable_cli_parameters
+    def customize(cls, infile, bedfile, outfile, padding, dependencies=()):
+        params = factory.new("vcf_to_fasta")
+        params.set_option("--padding", padding)
+        params.set_option("--genotype", "%(IN_VCFFILE)s")
+        params.set_option("--intervals", "%(IN_INTERVALS)s")
+
+        params.set_kwargs(IN_VCFFILE=infile,
+                          IN_TABIX=infile + ".tbi",
+                          IN_INTERVALS=bedfile,
+                          OUT_STDOUT=outfile)
+
+        return {"command": params}
+
+    @use_customizable_cli_parameters
+    def __init__(self, parameters):
+        command = parameters.command.finalize()
+        description = "<BuildRegions: '%s' -> '%s'>" % (parameters.infile,
+                                                        parameters.outfile)
+        CommandNode.__init__(self,
+                             description=description,
+                             command=command,
+                             dependencies=parameters.dependencies)
+
+
+class SampleRegionsNode(CommandNode):
+    @create_customizable_cli_parameters
+    def customize(cls, infile, bedfile, outfile, dependencies=()):
+        params = factory.new("sample_pileup")
+        params.set_option("--genotype", "%(IN_PILEUP)s")
+        params.set_option("--intervals", "%(IN_INTERVALS)s")
+        params.set_kwargs(IN_PILEUP=infile,
+                          IN_INTERVALS=bedfile,
+                          OUT_STDOUT=outfile)
+
+        return {"command": params}
+
+    @use_customizable_cli_parameters
+    def __init__(self, parameters):
+        command = parameters.command.finalize()
+
+        description = "<SampleRegions: '%s' -> '%s'>" \
+            % (parameters.infile, parameters.outfile)
+
+        CommandNode.__init__(self,
+                             description=description,
+                             command=command,
+                             dependencies=parameters.dependencies)
