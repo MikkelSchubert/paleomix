@@ -20,8 +20,9 @@ Current
   * Fix manifest, ensuring that all files are included in source distribution.
   * Fix regression in coverage / depths, which would fail if invoked for
     specific regions of interest.
+  * Fix bug preventing Padding from being set to zero when genotyping.
 
 
-Version 1.0.0
-=============
+Version 1.0.0 - 2014-04-16
+==========================
   * Switching to more traditional version-number tracking.

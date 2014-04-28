@@ -94,7 +94,7 @@ def build_regions_nodes(regions, padding, dependencies=()):
                           from_end=padding,
                           dependencies=dependencies)
 
-    return destination, _BED_CACHE[destination]
+    return destination, (_BED_CACHE[destination],)
 
 
 def _apply_vcf_filter_options(vcffilter, genotyping, sample):
@@ -116,10 +116,10 @@ def build_genotyping_bedfile_nodes(options, genotyping, sample, regions,
     prefix = regions["Genotypes"][sample]
     padding, bedfile, node = genotyping["Padding"], None, dependencies
     if not genotyping["GenotypeEntirePrefix"]:
-        bedfile, node = \
+        bedfile, nodes = \
             build_regions_nodes(regions, padding, dependencies)
         bai_node = build_bam_index_node(bamfile)
-        dependencies = (node, bai_node)
+        dependencies = nodes + (bai_node,)
     else:
         prefix = os.path.join(os.path.dirname(prefix),
                               "%s.%s.TEMP" % (sample, regions["Prefix"]))
