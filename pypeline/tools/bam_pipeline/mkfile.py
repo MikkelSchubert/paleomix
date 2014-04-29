@@ -167,13 +167,13 @@ Prefixes:
 
     # Label for prefix: One of nuclear, mitochondrial, chloroplast,
     # plasmid, bacterial, or viral. Is used in the .summary files.
-    Label: ...
+#    Label: ...
 
     # Produce additional coverage / depth statistics for a set of
     # regions defined in a BED file; if no names are specified for the
     # BED records, results are named after the chromosome / contig.
-    RegionsOfInterest:
-      NAME: PATH_TO_BEDFILE
+#    RegionsOfInterest:
+#      NAME: PATH_TO_BEDFILE
 
 """
 

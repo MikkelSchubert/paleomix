@@ -21,6 +21,16 @@ Current
   * Fix regression in coverage / depths, which would fail if invoked for
     specific regions of interest.
   * Fix bug preventing Padding from being set to zero when genotyping.
+  * Improvements to handling of implicit empty lists in makefiles; it is now
+    no longer required to explicitly specify an empty list. Thus, the following
+    is equivalent assuming that the pipeline expects a list:
+      ExplicitEmptyList: []
+      ImplicitEmptyList:
+  * Added warning if HomozygousContigs contains contigs not included in any of
+    the prefixes specified in the makefile.
+  * Tweak makefile templates; the phylo makefile now specifies Male/Female
+    genders with chrM and chrX; for the BAM pipeline the ROIs sub-tree and
+    Label is commented out by default, as these are optional.
 
 
 Version 1.0.0 - 2014-04-16

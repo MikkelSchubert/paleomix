@@ -36,7 +36,8 @@ Project:
       <SUBGROUP>:
         SAMPLE_NAME:
           # Gender of the sample; used to filter SNPs on homozygous
-          # contigs (see below). Any name may be used for the genders.
+          # contigs (see below). Any name may be used for the genders. By
+          # default the makefile specifies the genders 'Male' and 'Female'.
           Gender:       ...
           # Method to use when genotyping samples (see 'Genotyping');
           # defaults to 'SAMTools' if not explicitly specified.
@@ -62,10 +63,14 @@ Project:
        # 'MultipleSequenceAlignment' is enabled
        IncludeIndels: yes
        # List of contigs for which heterozygous SNPs should be filtered
-       # (site set to 'N'); e.g. chrX for 'Male' humans, or chrM, etc.
-#       HomozygousContigs:
-#         GENDER_NAME:
-#          - CONTIG_NAME_1
+       # (site set to 'N') based on gender; All genders used in the 'Samples'
+       # section must be listed:
+       HomozygousContigs:
+         Female:
+           - chrM
+         Male:
+           - chrX
+           - chrM
 
   # Filter sites in a sample, replacing any nucleotide not observed
   # in the specified list of samples or groups with 'N'.

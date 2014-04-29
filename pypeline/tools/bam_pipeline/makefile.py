@@ -200,15 +200,17 @@ _VALIDATION_OPTIONS = {
     },
 
     # Exclude READ_TYPES from alignment/analysis
-    "ExcludeReads": ValuesSubsetOf(_READ_TYPES,
-                                   default=[]),
+    "ExcludeReads": Or(IsNone,
+                       ValuesSubsetOf(_READ_TYPES),
+                       default=[]),
 
     # Features of pipeline
-    "Features": ValuesSubsetOf(("Raw BAM", "Realigned BAM", "Coverage",
-                                "Summary", "mapDamage", "Depths",
-                                "DuplicateHist"),
-                               default=["Realigned BAM", "Coverage",
-                                        "Summary", "mapDamage", "Depths"]),
+    "Features": Or(IsNone,
+                   ValuesSubsetOf(("Raw BAM", "Realigned BAM", "Coverage",
+                                   "Summary", "mapDamage", "Depths",
+                                   "DuplicateHist")),
+                   default=["Realigned BAM", "Coverage",
+                            "Summary", "mapDamage", "Depths"]),
 }
 
 
@@ -257,6 +259,11 @@ def _mangle_makefile(makefile):
 
 
 def _update_options(makefile):
+    def _update_possibly_empty_lists(options):
+        for key in ("Features", "ExcludeReads"):
+            if options[key] is None:
+                options[key] = []
+
     def _do_update_options(options, data, path):
         options = copy.deepcopy(options)
         if "Options" in data:
@@ -267,6 +274,7 @@ def _update_options(makefile):
             # Fill out missing values using those of prior levels
             options = fill_dict(destination=data.pop("Options"),
                                 source=options)
+            _update_possibly_empty_lists(options)
 
         if len(path) < 2:
             for key in data:
@@ -276,6 +284,7 @@ def _update_options(makefile):
             data["Options"] = options
 
     for data in makefile["Targets"].itervalues():
+        _update_possibly_empty_lists(makefile["Options"])
         _do_update_options(makefile["Options"], data, ())
 
 

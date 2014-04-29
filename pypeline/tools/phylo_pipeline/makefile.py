@@ -26,30 +26,30 @@ import pysam
 
 import pypeline.common.makefile
 from pypeline.common.makefile import \
-     MakefileError, \
-     REQUIRED_VALUE, \
-     IsStr, \
-     IsDictOf, \
-     IsListOf, \
-     StringIn, \
-     IsFloat, \
-     IsUnsignedInt, \
-     IsBoolean, \
-     IsNone, \
-     ValueIn, \
-     ValuesSubsetOf, \
-     StringStartsWith, \
-     StringEndsWith, \
-     CLI_PARAMETERS, \
-     And, \
-     Or, \
-     Not
+    MakefileError, \
+    REQUIRED_VALUE, \
+    IsDictOf, \
+    IsStr, \
+    StringIn, \
+    IsFloat, \
+    IsUnsignedInt, \
+    IsBoolean, \
+    IsNone, \
+    ValueIn, \
+    ValuesSubsetOf, \
+    StringStartsWith, \
+    StringEndsWith, \
+    CLI_PARAMETERS, \
+    And, \
+    Or, \
+    Not
 from pypeline.common.fileutils import \
-     swap_ext, \
-     add_postfix
+    swap_ext, \
+    add_postfix
 from pypeline.common.utilities import \
-     fill_dict
-
+    fill_dict
+from pypeline.common.console import \
+    print_warn
 
 
 def read_makefiles(options, filenames, commands):
@@ -347,20 +347,38 @@ def _check_bam_sequences(options, mkfile, steps):
 
 
 def _check_genders(mkfile):
+    all_contigs = set()
+    contigs_genders = set()
     regions_genders = set()
     for regions in mkfile["Project"]["Regions"].itervalues():
+        all_contigs.update(_collect_fasta_contigs(regions))
+        for contigs in regions["HomozygousContigs"].itervalues():
+            contigs_genders.update(contigs)
+
         current_genders = set(regions["HomozygousContigs"])
         if not regions_genders:
             regions_genders = current_genders
         elif regions_genders != current_genders:
-            raise MakefileError("List of genders for regions %r does not match other regions" \
-                                % (regions["Name"],))
+            raise MakefileError("List of genders for regions %r does not "
+                                "match other regions" % (regions["Name"],))
+
+    if not regions_genders:
+        raise MakefileError("No genders have been specified in makefile; "
+                            "please list all sample genders and assosiated "
+                            "homozygous contigs (if any).")
 
     for sample in mkfile["Project"]["Samples"].itervalues():
         if sample["Gender"] not in regions_genders:
-            raise MakefileError("Sample %r has unknown gender %r; known genders are %s" \
-                                % (sample["Name"], sample["Gender"],
-                                   ", ".join(map(repr, regions_genders))))
+            genders = ", ".join(map(repr, regions_genders))
+            message = "Sample %r has unknown gender %r; known genders are %s" \
+                % (sample["Name"], sample["Gender"], genders)
+            raise MakefileError(message)
+
+    unknown_contigs = contigs_genders - all_contigs
+    if unknown_contigs:
+        print_warn("WARNING: Unknown contig(s) in 'HomozygousContigs':\n    - "
+                   + "\n    - ".join(unknown_contigs))
+        print_warn("Please verify that the list(s) of contigs is correct!")
 
 
 def _update_and_check_max_read_depth(mkfile):
@@ -454,124 +472,134 @@ def _update_msa(mkfile):
 # Recursive definition of sample tree
 _VALIDATION_SUBSAMPLE_KEY = And(StringStartsWith("<"),
                                 StringEndsWith(">"))
-_VALIDATION_SAMPLES_KEY    = And(IsStr, Not(_VALIDATION_SUBSAMPLE_KEY))
+_VALIDATION_SAMPLES_KEY = And(IsStr, Not(_VALIDATION_SUBSAMPLE_KEY))
 _VALIDATION_SAMPLES = {
-    _VALIDATION_SAMPLES_KEY : {
-        "GenotypingMethod" : StringIn(("reference sequence", "random sampling", "samtools"),
-                                       default = "samtools"),
-        "SpeciesName"      : IsStr,
-        "CommonName"       : IsStr,
-        "Gender"           : IsStr(default = REQUIRED_VALUE),
+    _VALIDATION_SAMPLES_KEY: {
+        "GenotypingMethod": StringIn(("reference sequence",
+                                      "random sampling",
+                                      "samtools"),
+                                     default="samtools"),
+        "SpeciesName": IsStr,  # Not used; left for backwards compatibility
+        "CommonName": IsStr,   # Not used; left for backwards compatibility
+        "Gender": IsStr(default=REQUIRED_VALUE),
     }
 }
 _VALIDATION_SAMPLES[_VALIDATION_SUBSAMPLE_KEY] = _VALIDATION_SAMPLES
 
+# Genotyping settings; note that explicit lists must not be used here, to allow
+# proper inheritance of default values. Use IsListOf instead.
 _VALIDATION_GENOTYPES = {
-    "Padding"  : IsUnsignedInt,
-    "GenotypeEntirePrefix" : IsBoolean(default = False),
-    "MPileup"  : {
-        StringStartsWith("-") : CLI_PARAMETERS,
+    "Padding": IsUnsignedInt,
+    "GenotypeEntirePrefix": IsBoolean(default=False),
+    "MPileup": {
+        StringStartsWith("-"): CLI_PARAMETERS,
     },
-    "BCFTools" : {
-        StringStartsWith("-") : CLI_PARAMETERS,
+    "BCFTools": {
+        StringStartsWith("-"): CLI_PARAMETERS,
     },
-    "Random"   : {
-        "--min-distance-to-indels" : IsUnsignedInt,
+    "Random": {
+        "--min-distance-to-indels": IsUnsignedInt,
     },
-    "VCF_Filter" : {
-        "MaxReadDepth"  : Or(IsUnsignedInt, IsDictOf(IsStr, IsUnsignedInt)),
+    "VCF_Filter": {
+        "MaxReadDepth": Or(IsUnsignedInt, IsDictOf(IsStr, IsUnsignedInt)),
 
-        "--keep-ambigious-genotypes"    : IsNone,
-        "--min-quality"                 : IsUnsignedInt,
-        "--min-allele-frequency"        : IsFloat,
-        "--min-mapping-quality"         : IsUnsignedInt,
-        "--min-read-depth"              : IsUnsignedInt,
-        "--max-read-depth"              : IsUnsignedInt,
-        "--min-num-alt-bases"           : IsUnsignedInt,
-        "--min-distance-to-indels"      : IsUnsignedInt,
-        "--min-distance-between-indels" : IsUnsignedInt,
-        "--min-strand-bias"             : IsFloat,
-        "--min-baseq-bias"              : IsFloat,
-        "--min-mapq-bias"               : IsFloat,
-        "--min-end-distance-bias"       : IsFloat,
+        "--keep-ambigious-genotypes": IsNone,
+        "--min-quality": IsUnsignedInt,
+        "--min-allele-frequency": IsFloat,
+        "--min-mapping-quality": IsUnsignedInt,
+        "--min-read-depth": IsUnsignedInt,
+        "--max-read-depth": IsUnsignedInt,
+        "--min-num-alt-bases": IsUnsignedInt,
+        "--min-distance-to-indels": IsUnsignedInt,
+        "--min-distance-between-indels": IsUnsignedInt,
+        "--min-strand-bias": IsFloat,
+        "--min-baseq-bias": IsFloat,
+        "--min-mapq-bias": IsFloat,
+        "--min-end-distance-bias": IsFloat,
     },
 }
 
 _VALIDATION_MSA = {
-    "Enabled"   : IsBoolean(default = True),
-    "Program"   : StringIn(("mafft",)), # TODO: Add support for other programs
+    "Enabled": IsBoolean(default=True),
+    "Program": StringIn(("mafft",)),  # TODO: Add support for other programs
 
-    "MAFFT" : {
-        "Algorithm" : StringIn(("mafft", "auto",
-                                "FFT-NS-1", "FFT-NS-2", "FFT-NS-i",
-                                "NW-INS-i", "L-INS-i", "E-INS-i", "G-INS-i")),
-        StringStartsWith("-") : CLI_PARAMETERS,
+    "MAFFT": {
+        "Algorithm": StringIn(("mafft", "auto",
+                               "FFT-NS-1", "FFT-NS-2", "FFT-NS-i",
+                               "NW-INS-i", "L-INS-i", "E-INS-i", "G-INS-i")),
+        StringStartsWith("-"): CLI_PARAMETERS,
     },
 }
 
 
 _VALIDATION = {
-    "Project" : {
-        "Title" : IsStr(default = "Untitled"),
-        "Samples" : _VALIDATION_SAMPLES,
-        "RegionsOfInterest" : {
-            IsStr : {
-                "Prefix"        : IsStr(default = REQUIRED_VALUE),
-                "Realigned"     : IsBoolean(default = False),
-                "ProteinCoding" : IsBoolean(default = False),
-                "IncludeIndels" : IsBoolean(default = True),
-                "HomozygousContigs" : {
-                    IsStr : IsListOf(IsStr),
+    "Project": {
+        "Title": IsStr(default="Untitled"),
+        "Samples": _VALIDATION_SAMPLES,
+        "RegionsOfInterest": {
+            IsStr: {
+                "Prefix": IsStr(default=REQUIRED_VALUE),
+                "Realigned": IsBoolean(default=False),
+                "ProteinCoding": IsBoolean(default=False),
+                "IncludeIndels": IsBoolean(default=True),
+                "HomozygousContigs": {
+                    IsStr: [IsStr],
                     },
                 },
             },
-        "FilterSingletons" : {
-            IsStr : IsListOf(IsStr),
+        "FilterSingletons": {
+            IsStr: [IsStr],
             },
         },
-    "Genotyping" : {
-        "Defaults" : _VALIDATION_GENOTYPES,
-        IsStr :      _VALIDATION_GENOTYPES,
+    "Genotyping": {
+        "Defaults": _VALIDATION_GENOTYPES,
+        IsStr: _VALIDATION_GENOTYPES,
     },
-    "MultipleSequenceAlignment" : {
-        "Defaults" : _VALIDATION_MSA,
-        IsStr :      _VALIDATION_MSA,
+    "MultipleSequenceAlignment": {
+        "Defaults": _VALIDATION_MSA,
+        IsStr: _VALIDATION_MSA,
         },
-    "PhylogeneticInference" : {
-        IsStr : {
+    "PhylogeneticInference": {
+        IsStr: {
             # Which program to use; TODO: Add support for other programs
-            "Program"        : StringIn(("examl",), default = "examl"),
+            "Program": StringIn(("examl",), default="examl"),
             # Exclude one or more samples from the phylogeny
-            "ExcludeSamples" : IsListOf(IsStr, default = []),
+            "ExcludeSamples": [IsStr],
             # Which samples to root the final trees on / or midpoint rooting
-            "RootTreesOn"    : Or(IsListOf(IsStr), IsNone, default = []),
+            "RootTreesOn": [IsStr],
             # Create a tree per gene, for each region of interest,
             # or create a supermatrix tree from all regions specified.
-            "PerGeneTrees"   : IsBoolean(default = False),
+            "PerGeneTrees": IsBoolean(default=False),
             # Selection of regions of interest / settings per region
-            "RegionsOfInterest" : {
-                IsStr : {
-                    "Partitions"    : Or(And(IsStr, ValuesSubsetOf("123456789X")), ValueIn([False]),
-                                         default = REQUIRED_VALUE),
-                    "SubsetRegions" : Or(IsStr, IsNone, default = None),
+            "RegionsOfInterest": {
+                IsStr: {
+                    "Partitions": Or(And(IsStr,
+                                         ValuesSubsetOf("123456789X")),
+                                     ValueIn([False]),
+                                     default=REQUIRED_VALUE),
+                    "SubsetRegions": Or(IsStr, IsNone, default=None),
                 },
             },
-            "SubsetRegions"  : IsDictOf(IsStr, IsStr, default = {}),
-            "ExaML" : {
-                "Bootstraps" : IsUnsignedInt(default = 100),
-                "Replicates" : IsUnsignedInt(default = 1),
-                "Model"      : StringIn(("GAMMA", "PSR"),
-                                        default = "gamma"),
+            "SubsetRegions": {
+                IsStr: IsStr,
+            },
+            "ExaML": {
+                "Bootstraps": IsUnsignedInt(default=100),
+                "Replicates": IsUnsignedInt(default=1),
+                "Model": StringIn(("GAMMA", "PSR"),
+                                  default="gamma"),
             }
         }
     },
-    "PAML" : {
-        "codeml" : {
-            "ExcludeSamples" : IsListOf(IsStr, default = []),
-            "SubsetRegions"  : IsDictOf(IsStr, IsStr, default = {}),
-            IsStr : {
-                "ControlFile" : IsStr(default = REQUIRED_VALUE),
-                "TreeFile"    : IsStr(default = REQUIRED_VALUE),
+    "PAML": {
+        "codeml": {
+            "ExcludeSamples": [IsStr],
+            "SubsetRegions": {
+                IsStr: IsStr,
+            },
+            IsStr: {
+                "ControlFile": IsStr(default=REQUIRED_VALUE),
+                "TreeFile": IsStr(default=REQUIRED_VALUE),
             },
         },
     },
