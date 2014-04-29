@@ -61,7 +61,7 @@ _COMMANDS = (
     ("create_pileup", "pypeline.tools.create_pileup",
      "Creates tabixed indexed pileup for a (sparse) set of BED coordinates."),
     ("gtf_to_bed", "pypeline.tools.gtf_to_bed",
-     "TODO"),
+     "Convert GTF file to BED files grouped by feature (coding, RNA, etc)."),
     ("sample_pileup", "pypeline.tools.sample_pileup",
      "Randomly sample sites in a pileup to generate a FASTA sequence."),
     ("vcf_filter", "pypeline.tools.vcf_filter",
