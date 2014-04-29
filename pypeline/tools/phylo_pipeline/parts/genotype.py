@@ -279,7 +279,7 @@ def build_sampling_nodes(options, genotyping, sample, regions, dependencies):
                            regions=slop,
                            infile=bam_file,
                            outfile=pileup_file,
-                           dependencies=(node, bai_node))
+                           dependencies=node + (bai_node,))
     tabix = TabixIndexNode(infile=pileup_file,
                            preset="pileup",
                            dependencies=genotype)
