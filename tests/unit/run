@@ -7,9 +7,9 @@ touch -t "200507070850"  tests/data/timestamp_a_younger | exit 1
 touch -t "200507070850"  tests/data/timestamp_b_younger | exit 1
 touch -t "200507070850"  tests/data/simple.yaml | exit 1
 
-MODULES=$(find tests/unit pypeline -name '*.py' | sed -e 's#\.py##g' -e's#/#.#g' -e's#^tests\.##' |grep -v "pypeline.yaml")
+MODULES=$(find pypeline -mindepth 1 -maxdepth 1 -name '*.py' -or -type d | sed -e 's#\.py##g' -e's#/#.#g' | grep -v "pypeline.yaml" | grep -v __init__)
 nosetests -I ".*_flymake.py" tests/ --with-coverage $@ \
     --cover-tests --cover-branches --cover-inclusive --cover-erase \
-    $(for module in $MODULES;do echo --cover-package=$module;done) \
+    $(for module in unit $MODULES;do echo --cover-package=$module;done) \
     2>&1 | grep -v "[0-9]\+ \+0 \+[0-9]\+ \+0 \+100%"
 #   --cover-html --cover-html-dir=tests/runs/coverage
