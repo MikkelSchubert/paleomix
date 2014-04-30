@@ -271,10 +271,16 @@ def _update_subsets(mkfile, steps):
         subsets_by_regions[roi]["SubsetFiles"][subset] = (roi_fname,)
         subsets_by_regions[roi]["Sequences"][subset] = frozenset(sequences)
 
-
     if "phylogeny:examl" in steps:
         for (key, subdd) in mkfile["PhylogeneticInference"].iteritems():
             for (subkey, roidd) in subdd["RegionsOfInterest"].iteritems():
+                if subkey not in subsets_by_regions:
+                    message = \
+                        "Unknown regions name in phylogenetic inference:\n" \
+                        "\tPath = PhylogeneticInference:%s:RegionsOfInterest" \
+                        "\n\tName = %s"
+                    raise MakefileError(message % (key, subkey))
+
                 roidd["Name"] = subkey
 
                 if roidd.get("SubsetRegions") is not None:

@@ -4,6 +4,8 @@ Changelog
 
 Current
 =============
+  * Check that regions of interest specified in PhylogeneticInference section
+    corresponds to those specified earlier in the makefile.
 
 
 Version 1.0.1 - 2014-04-30
