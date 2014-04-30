@@ -97,7 +97,7 @@ class NodeGraph:
         self._logger = logging.getLogger(__name__)
         self._reverse_dependencies = collections.defaultdict(set)
         self._collect_reverse_dependencies(nodes, self._reverse_dependencies, set())
-        self._intersections = self._calculate_intersections()
+        self._intersections = {}
         self._top_nodes = [node for (node, rev_deps) in self._reverse_dependencies.iteritems() if not rev_deps]
 
         self._logger.info("  - Checking file dependencies ...")
@@ -123,7 +123,7 @@ class NodeGraph:
         self._states[node] = state
         self._notify_state_observers(node, old_state, state, True)
 
-        intersections = dict(self._intersections[node])
+        intersections = self._calculate_intersections(node)
 
         # Not all nodes may need to be updated, but we still need to
         # traverse the "graph" (using the intersection counts) in order
@@ -198,7 +198,7 @@ class NodeGraph:
         for observer in self._state_observers:
             observer.refresh(self)
 
-    def _calculate_intersections(self):
+    def _calculate_intersections(self, for_node):
         def count_nodes(node, counts):
             for node in self._reverse_dependencies[node]:
                 if node in counts:
@@ -208,14 +208,13 @@ class NodeGraph:
                     count_nodes(node, counts)
             return counts
 
-        intersections = {}
-        for node in self._reverse_dependencies:
-            counts = count_nodes(node, {})
-            for dependency in self._reverse_dependencies[node]:
+        if for_node not in self._intersections:
+            counts = count_nodes(for_node, {})
+            for dependency in self._reverse_dependencies[for_node]:
                 counts[dependency] -= 1
-            intersections[node] = counts
+            self._intersections[for_node] = counts
 
-        return intersections
+        return dict(self._intersections[for_node])
 
     def _update_node_state(self, node, cache):
         if node in self._states:
