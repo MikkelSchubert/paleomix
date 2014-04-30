@@ -329,12 +329,23 @@ def _get_bwa_template(call, prefix, iotype = "IN", **kwargs):
 
 
 def _get_max_threads(reference, threads):
-    if not os.path.exists(reference):
-        return threads
-    elif os.path.getsize(reference) < 2 ** 20: # 1MB
-        return 1
+    """Returns the maximum number of threads to use when mapping against a
+    given reference sequence. This is done since very little gain is obtained
+    when using multiple threads for a small genome (e.g. < 1MB). If the
+    reference falls below this size, only 1 thread is used (returned),
+    otherwise the requested number of threads is returned.
+    """
+    if reference not in _PREFIX_SIZE_CACHE:
+        if not os.path.exists(reference):
+            _PREFIX_SIZE_CACHE[reference] = None
+        else:
+            _PREFIX_SIZE_CACHE[reference] = os.path.getsize(reference)
 
-    return threads
+    prefix_size = _PREFIX_SIZE_CACHE[reference]
+    if prefix_size is None or prefix_size >= 2 ** 20:  # > 1 MB
+        return threads
+    return 1
+_PREFIX_SIZE_CACHE = {}
 
 
 def _check_bwa_prefix(prefix):
@@ -359,10 +370,10 @@ def _check_bwa_prefix(prefix):
     try:
         bwa_version = BWA_VERSION.version
     except versions.VersionRequirementError:
-        return # Ignored here, reported elsewhere
+        return  # Ignored here, reported elsewhere
 
     # Files unique to v0.5.x
-    v05x_files    = set((prefix + ext) for ext in (".rbwt", ".rpac", ".rsa"))
+    v05x_files = set((prefix + ext) for ext in (".rbwt", ".rpac", ".rsa"))
     # Files common to v0.5.x, v0.6.x, and v0.7.x
     common_files  = set((prefix + ext) for ext in (".amb", ".ann", ".bwt", ".pac", ".sa"))
     all_files     = v05x_files | common_files

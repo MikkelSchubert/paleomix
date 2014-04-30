@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -20,6 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+# Disable warning for missign docstrings
+# pylint: disable=C0111
 # Disable warning caused by "invalid" function names
 # pylint: disable=C0103
 # Disable warning caused by touching private member variables/functions
@@ -30,30 +32,33 @@ import os
 
 import nose.tools
 from nose.tools import \
-     assert_in, \
-     assert_equal, \
-     assert_raises
+    assert_in, \
+    assert_equal, \
+    assert_raises
 from flexmock import flexmock
 
 from pypeline.common.testing import \
-     with_temp_folder, \
-     set_file_contents, \
-     get_file_contents
+    with_temp_folder, \
+    set_file_contents, \
+    get_file_contents
 
-from pypeline.atomiccmd.command import AtomicCmd
-from pypeline.node import Node, MetaNode, CommandNode, NodeError, NodeUnhandledException, \
-     MetaNodeError, CmdNodeError
-from pypeline.common.utilities import safe_coerce_to_frozenset
-
-
+from pypeline.atomiccmd.command import \
+    AtomicCmd
+from pypeline.node import \
+    Node, \
+    MetaNode, \
+    CommandNode, \
+    NodeError, \
+    NodeUnhandledException, \
+    MetaNodeError, \
+    CmdNodeError
+from pypeline.common.utilities import \
+    safe_coerce_to_frozenset
 
 
 def _CommandNodeWrap(**kwargs):
-    return CommandNode(command = AtomicCmd("true"), **kwargs)
+    return CommandNode(command=AtomicCmd("true"), **kwargs)
 _NODE_TYPES = (Node, _CommandNodeWrap, MetaNode)
-
-
-
 
 
 _DESCRIPTION = "My description of a node"
@@ -236,62 +241,6 @@ def test_constructor__threads_invalid_type():
 def test_constuctor__threads_meta():
     node = MetaNode()
     assert_equal(node.threads, 1)
-
-
-
-
-################################################################################
-################################################################################
-## Node: States
-
-def test_is_done__no_output():
-    assert Node().is_done
-
-@with_temp_folder
-def test_is_done__output_changes(temp_folder):
-    temp_file_1 = os.path.join(temp_folder, "file_1.txt")
-    temp_file_2 = os.path.join(temp_folder, "file_2.txt")
-    my_node   = Node(output_files = (temp_file_1, temp_file_2))
-    assert not my_node.is_done
-    set_file_contents(temp_file_1, "foo")
-    assert not my_node.is_done
-    set_file_contents(temp_file_2, "bar")
-    assert my_node.is_done
-
-@with_temp_folder
-def test_is_done__subnode_not_considered(temp_folder):
-    temp_file = os.path.join(temp_folder, "file.txt")
-    subnode   = Node(output_files = temp_file)
-    my_node   = Node(subnodes = subnode)
-    assert my_node.is_done
-
-
-def test_is_outdated__no_output():
-    assert not Node().is_outdated
-
-def test_is_outdated__input_but_no_output():
-    assert not Node(input_files = _IN_FILES).is_outdated
-
-def test_is_outdated__output_but_no_input():
-    assert not Node(output_files = _OUT_FILES).is_outdated
-
-def test_is_outdated__not_outdated():
-    my_node = Node(input_files  = "tests/data/timestamp_a_older",
-                   output_files = "tests/data/timestamp_a_younger")
-    assert not my_node.is_outdated
-
-def test_is_outdated__outdated():
-    my_node = Node(input_files  = "tests/data/timestamp_a_younger",
-                   output_files = "tests/data/timestamp_a_older")
-    assert my_node.is_outdated
-
-def test_is_outdated__updates():
-    my_node = Node(input_files  = "tests/data/timestamp_a_older",
-                   output_files = "tests/data/timestamp_a_younger")
-    assert not my_node.is_outdated
-    my_node = Node(input_files  = "tests/data/timestamp_a_younger",
-                   output_files = "tests/data/timestamp_a_older")
-    assert my_node.is_outdated
 
 
 
@@ -638,11 +587,9 @@ def test_metanode__nodes():
     assert_equal(node.dependencies, frozenset(dependencies))
 
 
-
-
-################################################################################
-################################################################################
-## MetaNode: Not implemented
+###############################################################################
+###############################################################################
+# MetaNode: Not implemented
 
 def test_metanode__properties():
     node = MetaNode()
@@ -652,13 +599,6 @@ def test_metanode__properties():
     assert_equal(node.auxiliary_files, frozenset())
     assert_equal(node.requirements, frozenset())
 
-@nose.tools.raises(MetaNodeError)
-def test_metanode__is_done():
-    MetaNode().is_done
-
-@nose.tools.raises(MetaNodeError)
-def test_metanode__is_outdated():
-    MetaNode().is_outdated
 
 @nose.tools.raises(MetaNodeError)
 def test_metanode__run():
