@@ -4,6 +4,10 @@ Changelog
 
 Current
 =============
+
+
+Version 1.0.1 - 2014-04-30
+==========================
   * Add 'paleomix' command, which provides interface for the various tools
     included in the PALEOMIX pipeline; this reduces the number of executables
     exposed by the pipeline, and allows for prerequisite checks to be done in
@@ -31,6 +35,7 @@ Current
   * Tweak makefile templates; the phylo makefile now specifies Male/Female
     genders with chrM and chrX; for the BAM pipeline the ROIs sub-tree and
     Label is commented out by default, as these are optional.
+  * Reduced start-up time for bigger pipelines.
 
 
 Version 1.0.0 - 2014-04-16
