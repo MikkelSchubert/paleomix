@@ -177,6 +177,7 @@ class Pypeline(object):
         errors, blocking = None, True
         while running:
             node, proc = self._get_finished_node(queue, running, blocking)
+            blocking = False  # only block first cycle
             if not node:
                 break
 
@@ -194,7 +195,6 @@ class Pypeline(object):
                                    node, errors)
                 continue
             nodegraph.set_node_state(node, nodegraph.DONE)
-            blocking = False  # only block first cycle
 
         return not errors
 

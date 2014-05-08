@@ -6,6 +6,9 @@ Current
 =============
   * Check that regions of interest specified in PhylogeneticInference section
     corresponds to those specified earlier in the makefile.
+  * Fixed a bug preventing new tasks from being started immediately after a
+    task had failed; new tasks would only be started once a task had finished,
+    or no running tasks were left.
 
 
 Version 1.0.1 - 2014-04-30
