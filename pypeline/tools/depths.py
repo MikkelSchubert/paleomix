@@ -112,7 +112,7 @@ class MappingToTotals(object):
             self._update_totals(count, multiplier)
         self._cache.clear()
 
-    def _update_totals(self, count, multiplier=1, max_depth=_MAX_DEPTH):
+    def _update_totals(self, count, multiplier=1):
         for (smlbid, count) in enumerate(count):
             if count:
                 for lst in self._map_by_smlbid[smlbid]:
@@ -120,8 +120,7 @@ class MappingToTotals(object):
 
         for (dst_counts, src_count) in self._totals_src_and_dst:
             if src_count[0]:
-                limited_count = min(max_depth, src_count[0])
-                dst_counts[limited_count] += multiplier
+                dst_counts[src_count[0]] += multiplier
                 src_count[0] = 0
 
     @classmethod
@@ -171,18 +170,19 @@ class MappingToTotals(object):
 ##############################################################################
 
 def calc_max_depth(counts):
-    counts = counts[1:]
-    running_total = sum(counts)
+    counts = dict(counts)
+    counts.pop(0, None)
+
+    running_total = sum(counts.values())
     if not running_total:
         return "NA"
 
     total = float(running_total)
-    for (index, count) in enumerate(counts):
+    for (index, count) in sorted(counts.items()):
         # Stop when less than the 0.5% most extreme values are included
         if running_total / total < 0.005:
-            # Return zero-based index corresponding to the previous depth,
-            # for which the >= 0.5% most extreme values are excluded
-            return index
+            # The max is inclusive, so return the depth just before this one
+            return index - 1
         running_total -= count
 
     return "NA"
@@ -206,9 +206,13 @@ def print_table(handle, args, totals):
 
 
 def calculate_depth_pc(counts, length):
-    running_total = sum(counts)
+    final_counts = [0] * (_MAX_DEPTH + 1)
+    for (depth, count) in counts.iteritems():
+        final_counts[min(_MAX_DEPTH, depth)] += count
+
+    running_total = sum(final_counts)
     total = float(length)
-    for count in counts[1:]:
+    for count in final_counts[1:]:
         yield "%.4f" % (running_total / total,)
         running_total -= count
 
@@ -255,9 +259,9 @@ def build_key_struct(args, handle):
 
 
 def build_new_dicts(totals, dst_sm, dst_lb, references):
-    totals[(dst_sm, dst_lb, '*')] = [0] * (_MAX_DEPTH + 1)
+    totals[(dst_sm, dst_lb, '*')] = collections.defaultdict(int)
     for contig in references:
-        totals[(dst_sm, dst_lb, contig)] = [0] * (_MAX_DEPTH + 1)
+        totals[(dst_sm, dst_lb, contig)] = collections.defaultdict(int)
 
 
 def reuse_dicts(totals, dst_sm, dst_lb, src_sm, src_lb, references):
@@ -275,7 +279,7 @@ def build_totals_dict(args, handle):
         for lb_key in libraries:
             if len(references) == 1:
                 key = references[0]
-                counts = [0] * (_MAX_DEPTH + 1)
+                counts = collections.defaultdict(int)
                 totals[(sm_key, lb_key, key)] = counts
                 totals[(sm_key, lb_key, '*')] = counts
             else:

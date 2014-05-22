@@ -9,6 +9,7 @@ Current
   * Fixed a bug preventing new tasks from being started immediately after a
     task had failed; new tasks would only be started once a task had finished,
     or no running tasks were left.
+  * Fixed MaxDepth calculation being limited to depths in the range 0 .. 200.
 
 
 Version 1.0.1 - 2014-04-30
