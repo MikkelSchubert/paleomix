@@ -49,10 +49,14 @@ from pypeline.common.fileutils import \
 from pypeline.common.utilities import \
     fill_dict
 from pypeline.common.console import \
+    print_info, \
     print_warn
+from pypeline.common.text import \
+    parse_padded_table
 
 
 def read_makefiles(options, filenames, commands):
+    print_info("Reading makefile(s):")
     steps = frozenset(key for (key, _) in commands)
 
     makefiles = []
@@ -73,7 +77,7 @@ def _mangle_makefile(options, mkfile, steps):
     _update_msa(mkfile)
     _check_bam_sequences(options, mkfile, steps)
     _check_genders(mkfile)
-    _update_and_check_max_read_depth(mkfile)
+    _update_and_check_max_read_depth(options, mkfile)
     _check_indels_and_msa(mkfile)
     mkfile["Nodes"] = ()
 
@@ -119,6 +123,7 @@ def _select_samples(select, groups, samples, path):
 
 
 def _update_regions(options, mkfile):
+    print_info("    - Validating regions of interest ...")
     mkfile["Project"]["Regions"] = mkfile["Project"].pop("RegionsOfInterest")
 
     for (name, subdd) in mkfile["Project"]["Regions"].iteritems():
@@ -317,6 +322,7 @@ def _check_bam_sequences(options, mkfile, steps):
     if ("genotype" not in steps) and ("genotyping" not in steps):
         return
 
+    print_info("    - Validating BAM files ...")
     bam_files = {}
     for regions in mkfile["Project"]["Regions"].itervalues():
         for sample in mkfile["Project"]["Samples"].itervalues():
@@ -387,7 +393,11 @@ def _check_genders(mkfile):
         print_warn("Please verify that the list(s) of contigs is correct!")
 
 
-def _update_and_check_max_read_depth(mkfile):
+def _update_and_check_max_read_depth(options, mkfile):
+    if any(subdd["VCF_Filter"]["MaxReadDepth"] == "auto"
+           for subdd in mkfile["Genotyping"].itervalues()):
+        print_info("    - Determinining max-depth from depth-histograms ...")
+
     for (key, settings) in mkfile["Genotyping"].iteritems():
         required_keys = set()
         for sample in mkfile["Project"]["Samples"].itervalues():
@@ -404,9 +414,57 @@ def _update_and_check_max_read_depth(mkfile):
                 message = "MaxReadDepth not specified for the following " \
                           "samples for %r:\n    - %s" % (key, missing_keys)
                 raise MakefileError(message)
+
+        elif isinstance(max_depths, types.StringTypes):
+            assert max_depths.lower() == "auto", max_depths
+            prefix = mkfile["Project"]["Regions"][key]["Prefix"]
+            max_depths = {}
+
+            for sample in required_keys:
+                fname = "%s.%s.depths" % (sample, prefix)
+                fpath = os.path.join(options.samples_root, fname)
+                max_depths[sample] = _read_max_depths(fpath, sample)
+
+            settings["VCF_Filter"]["MaxReadDepth"] = max_depths
         else:
             max_depths = dict.fromkeys(required_keys, max_depths)
             settings["VCF_Filter"]["MaxReadDepth"] = max_depths
+
+
+def _read_max_depths(filename, sample):
+    if filename in _DEPTHS_CACHE:
+        return _DEPTHS_CACHE[filename]
+
+    max_depth = None
+    try:
+        with open(filename) as handle:
+            for row in parse_padded_table(handle):
+                if row["Name"] == sample and \
+                        row["Sample"] == "*" and \
+                        row["Library"] == "*" and \
+                        row["Contig"] == "*":
+                    max_depth = row["MaxDepth"]
+                    break
+            else:
+                raise MakefileError("Could not find MaxDepth in "
+                                    "depth-histogram: %r" % (filename,))
+
+    except (OSError, IOError), error:
+        raise MakefileError("Error reading depth-histogram (%s): %s"
+                            % (filename, error))
+
+    if max_depth == "NA":
+        raise MakefileError("MaxDepth is not calculated for sample (%s);\n"
+                            "cannot determine MaxDepth values automatically."
+                            % (filename,))
+    max_depth = int(max_depth)
+
+    print_info("        - %s = %i" % (sample, max_depth))
+    _DEPTHS_CACHE[filename] = max_depth
+    return max_depth
+
+
+_DEPTHS_CACHE = {}
 
 
 def _check_indels_and_msa(mkfile):
@@ -507,7 +565,8 @@ _VALIDATION_GENOTYPES = {
         "--min-distance-to-indels": IsUnsignedInt,
     },
     "VCF_Filter": {
-        "MaxReadDepth": Or(IsUnsignedInt, IsDictOf(IsStr, IsUnsignedInt)),
+        "MaxReadDepth": Or(IsUnsignedInt, IsDictOf(IsStr, IsUnsignedInt),
+                           StringIn(("auto",))),
 
         "--keep-ambigious-genotypes": IsNone,
         "--min-quality": IsUnsignedInt,
