@@ -423,7 +423,7 @@ def _update_and_check_max_read_depth(options, mkfile):
             for sample in required_keys:
                 fname = "%s.%s.depths" % (sample, prefix)
                 fpath = os.path.join(options.samples_root, fname)
-                max_depths[sample] = _read_max_depths(fpath, sample)
+                max_depths[sample] = _read_max_depths(fpath, prefix, sample)
 
             settings["VCF_Filter"]["MaxReadDepth"] = max_depths
         else:
@@ -431,7 +431,7 @@ def _update_and_check_max_read_depth(options, mkfile):
             settings["VCF_Filter"]["MaxReadDepth"] = max_depths
 
 
-def _read_max_depths(filename, sample):
+def _read_max_depths(filename, prefix, sample):
     if filename in _DEPTHS_CACHE:
         return _DEPTHS_CACHE[filename]
 
@@ -459,7 +459,7 @@ def _read_max_depths(filename, sample):
                             % (filename,))
     max_depth = int(max_depth)
 
-    print_info("        - %s = %i" % (sample, max_depth))
+    print_info("        - %s.%s = %i" % (sample, prefix, max_depth))
     _DEPTHS_CACHE[filename] = max_depth
     return max_depth
 
