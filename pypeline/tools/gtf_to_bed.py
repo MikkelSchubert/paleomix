@@ -46,10 +46,15 @@ def filter_gtf_record(gtf):
 
 
 def update_gtf_table(table, gtf, scaffolds, contig_prefix):
+    # Workaround for bug in Pysam, which mis-parses individual properties
+    # (e.g. exon_number) if these are not quoted. This does not apply to
+    # asDict, which uses a different parsing implementation (v0.7.8).
+    properties = gtf.asDict()
+
     keys = (gtf.source,
-            gtf.gene_id,
-            gtf.transcript_id,
-            int(gtf.exon_number),
+            properties["gene_id"],
+            properties["transcript_id"],
+            int(properties["exon_number"]),
             gtf.feature)
 
     record = {"contig": contig_prefix + gtf.contig,
@@ -58,7 +63,7 @@ def update_gtf_table(table, gtf, scaffolds, contig_prefix):
               "end": gtf.end - 1,
               "strand": gtf.strand,
               "feature": gtf.feature,
-              "transcript": gtf.transcript_id}
+              "transcript": properties["transcript_id"]}
 
     if record["contig"] in scaffolds:
         contig = scaffolds[record["contig"]]
