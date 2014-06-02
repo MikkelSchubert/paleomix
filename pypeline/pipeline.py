@@ -97,12 +97,6 @@ class Pypeline(object):
         pool = multiprocessing.Pool(max_running, _init_worker, (queue,))
 
         errors_occured = False
-        # Signifies whether or not node-states have been refreshed following
-        # the completion of the last node, in order to catch changes to the
-        # states of nodes that were previously marked as DONE
-        has_refreshed = False
-        # Set to true if any new nodes were started in a cycle
-        has_started_any = False
 
         progress_printer = pypeline.ui.get_ui(progress_ui)
         nodegraph.add_state_observer(progress_printer)
@@ -112,15 +106,8 @@ class Pypeline(object):
                                                            queue)
 
             if not self._interrupted:  # Prevent starting of new nodes
-                if self._start_new_tasks(remaining, running, nodegraph,
-                                         max_running, pool):
-                    has_started_any = True
-                    has_refreshed = False
-                elif has_started_any and not has_refreshed:
-                    # Double-check that everything is in order
-                    remaining = set(nodegraph.iterflat())
-                    nodegraph.refresh_states()
-                    has_refreshed = True
+                self._start_new_tasks(remaining, running, nodegraph,
+                                      max_running, pool)
 
             if running:
                 progress_printer.flush()
@@ -165,13 +152,11 @@ class Pypeline(object):
                     idle_processes -= node.threads
                 elif state in (nodegraph.DONE, nodegraph.ERROR):
                     started_nodes.append(node)
-            elif not idle_processes:
+            elif idle_processes <= 0:
                 break
 
         for node in started_nodes:
             remaining.remove(node)
-
-        return bool(remaining)
 
     def _poll_running_nodes(self, running, nodegraph, queue):
         errors, blocking = None, True
