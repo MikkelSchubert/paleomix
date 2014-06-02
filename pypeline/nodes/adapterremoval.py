@@ -96,8 +96,6 @@ class SE_AdapterRemovalNode(CommandNode):
         zip_discarded  = _build_zip_command(parameters.output_format, parameters.output_prefix, ".discarded")
         adapterrm      = parameters.command.finalize()
 
-        # Opening of pipes block, so the order of these commands is dependent upon
-        # the order of file-opens in atomiccmd and the the programs themselves.
         commands = ParallelCmds([adapterrm, zip_discarded, zip_truncated, zcat])
         CommandNode.__init__(self,
                              command      = commands,
@@ -211,9 +209,6 @@ class PE_AdapterRemovalNode(CommandNode):
             zip_unaligned  = _build_zip_command(parameters.output_format, parameters.output_prefix, ".singleton.unaln.truncated")
             commands      += [zip_aln, zip_unaligned]
         commands += [zip_discarded, zcat_pair_1, zcat_pair_2]
-
-        # Opening of pipes block, so the order of these commands is dependent upon
-        # the order of file-opens in atomiccmd and the the programs themselves.
         commands = ParallelCmds(commands)
 
         description  = "<AdapterRM (PE): %s -> '%s.*'>" \
@@ -266,8 +261,8 @@ def _build_zip_command(output_format, prefix, name, output=None):
         raise CmdError(message % repr(output_format))
 
     basename = os.path.basename(prefix)
-    return AtomicCmd([command, "-c"],
-                     TEMP_IN_STDIN=basename + name,
+    return AtomicCmd([command, "-ck", "%(TEMP_IN_PIPE)s"],
+                     TEMP_IN_PIPE=basename + name,
                      OUT_STDOUT=prefix + (output or name) + ext)
 
 
