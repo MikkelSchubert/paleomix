@@ -1532,9 +1532,13 @@ def test_process_makefile__accept_missing_value_if_in_implicit_subtree():
     assert_equal(result, expected)
 
 
-def test_process_makefile__path_shown_in_exception():
-    assert_raises_regexp(TypeError, _DUMMY_PATH_STR,
+def test_process_makefile__path_shown_in_exception_for_list():
+    assert_raises_regexp(MakefileError, _DUMMY_PATH_STR,
                          process_makefile, {}, [], _DUMMY_PATH)
+
+def test_process_makefile__path_shown_in_exception_for_dict():
+    assert_raises_regexp(MakefileError, _DUMMY_PATH_STR,
+                         process_makefile, [], {}, _DUMMY_PATH)
 
 
 def test_process_makefile__implicit_subdict_is_allowed():

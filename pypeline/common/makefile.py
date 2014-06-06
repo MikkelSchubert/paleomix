@@ -267,13 +267,16 @@ def process_makefile(data, specification, path=("root",), apply_defaults=True):
 
         specification = IsListOf(*specification)
         _instantiate_spec(specification)(path, data)
-    elif not isinstance(specification, dict):
+    elif not isinstance(specification, (dict, list)):
         raise TypeError("Unexpected type in makefile specification at %r: %r!"
                         % (_path_to_str(path), specification))
     else:
         raise MakefileError("Inconsistency between makefile specification and "
-                            "current makefile at %s:\n    Expected dict, "
-                            "found %r!" % (_path_to_str(path), data))
+                            "current makefile at %s:\n    Expected %s, "
+                            "found %s %r!" % (_path_to_str(path),
+                                           type(specification).__name__,
+                                           type(data).__name__,
+                                           data))
 
     return data
 
