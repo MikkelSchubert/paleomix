@@ -93,9 +93,9 @@ _VALID_PREFIX_NAME = \
     And(_alphanum_check(whitelist="._-*"),
         Not(StringIn(["*", "Options"] + [(s + "Reads") for s in _READ_TYPES])))
 
-# Valid paths for prefixes; avoids some problems with e.g. BowTie2
+# Valid paths for prefixes; avoids some problems with e.g. Bowtie2
 _VALID_PREFIX_PATH = \
-    And(IsStr(), Not(ValuesIntersect("\\:?\"<>|")),
+    And(IsStr(), Not(ValuesIntersect("\\:?\"<>|() \t\n\v\f\r")),
         default=REQUIRED_VALUE)
 
 # Valid strings for targets / samples / libraries / lanes
