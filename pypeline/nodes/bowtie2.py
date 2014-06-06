@@ -83,7 +83,7 @@ class Bowtie2Node(CommandNode):
                                 IN_FILE_2  = input_file_2 or None,
                                 OUT_STDOUT = AtomicCmd.PIPE,
                                 CHECK_VERSION = BOWTIE2_VERSION)
-        aln.set_option("-x", prefix)
+        aln.set_option("-x", '"%s"' % (prefix,))
 
         if input_file_1 and not input_file_2:
             aln.set_option("-U", "%(IN_FILE_1)s")
