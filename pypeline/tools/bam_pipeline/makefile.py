@@ -91,7 +91,7 @@ def _alphanum_check(whitelist):
 # Valid names for prefixes
 _VALID_PREFIX_NAME = \
     And(_alphanum_check(whitelist="._-*"),
-        Not(StringIn(["*", "Options"] + [(s + "Reads") for s in _READ_TYPES])))
+        Not(StringIn(["Options"] + [(s + "Reads") for s in _READ_TYPES])))
 
 # Valid paths for prefixes; avoids some problems with e.g. Bowtie2
 _VALID_PREFIX_PATH = \

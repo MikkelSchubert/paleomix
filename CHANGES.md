@@ -16,6 +16,7 @@ Current
     to fail if these contained unquoted values (e.g. "exon_number 2;").
   * Prohibit whitespace and parentheses in prefix paths; these cause problems
     with Bowtie2, due to the wrapper script used by this program.
+  * Allow "*" as the name for prefixes, when selecting prefixes by wildcards.
 
 
 Version 1.0.1 - 2014-04-30
