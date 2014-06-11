@@ -70,6 +70,7 @@ Project:
            - chrM
          Male:
            - chrX
+           - chrY
            - chrM
 
   # Filter sites in a sample, replacing any nucleotide not observed
