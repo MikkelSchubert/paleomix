@@ -25,6 +25,9 @@
 Each node is equivalent to a particular command:
     $ palemix [...]
 """
+import os
+import gzip
+
 from pypeline.node import \
     CommandNode, \
     Node
@@ -44,6 +47,10 @@ from pypeline.atomiccmd.builder import \
 from pypeline.common.fileutils import \
     reroot_path, \
     move_file
+
+from pypeline.nodes.samtools import \
+    SAMTOOLS_VERSION, \
+    BCFTOOLS_VERSION
 
 import pypeline.tools.bam_stats.coverage as coverage
 import pypeline.tools.factory as factory
@@ -178,35 +185,63 @@ class FilterCollapsedBAMNode(MultiBAMInputNode):
 
 
 class VCFPileupNode(CommandNode):
+    """Collects heterozygous SNPs from a VCF file, and generates a bgzipped
+    pileup for those sites containing the SNPs.
+
+    The resulting pileup is read by 'paleomix vcf_filter'; this allows
+    filtering based on the frequency of the minority SNP, since this is not
+    reported in the VCF.
+    """
+
     @create_customizable_cli_parameters
-    def customize(cls, reference, in_bam, in_vcf, outfile, dependencies=()):
-        cat = factory.new("cat")
-        cat.add_value("%(IN_VCF)s")
-        cat.set_kwargs(IN_VCF=in_vcf,
-                       OUT_STDOUT=AtomicCmd.PIPE)
+    def customize(cls, reference, infile_bam, infile_vcf, outfile,
+                  dependencies=()):
+        params = factory.new("genotype")
+        params.add_value("%(IN_BAMFILE)s")
+        params.add_value("%(OUT_PILEUP)s")
+        params.set_option("--bedfile", "%(TEMP_IN_INTERVALS)s")
+        params.set_option("--pileup-only")
+        # Ignore read-groups for pileup
+        params.add_option("--mpileup-argument", "-R", sep="=")
+        # Reference sequence (FASTA)
+        params.add_option("--mpileup-argument",
+                          "-f=%s" % (reference,), sep="=")
 
-        pileup = factory.new("create_pileup", outfile="%(OUT_PILEUP)s")
-        pileup.add_value("%(IN_BAM)s")
-        pileup.set_option("-f", "%(IN_REF)s")
-        pileup.set_kwargs(IN_REF=reference,
-                          IN_BAM=in_bam,
-                          IN_STDIN=cat,
+        params.set_kwargs(IN_BAMFILE=infile_bam,
+                          TEMP_IN_INTERVALS="heterozygous_snps.bed",
+                          # Automatically remove this file
+                          TEMP_OUT_INTERVALS="heterozygous_snps.bed",
                           OUT_PILEUP=outfile,
-                          OUT_TBI=outfile + ".tbi")
+                          CHECK_SAMTOOLS=SAMTOOLS_VERSION)
 
-        return {"commands": {"cat": cat,
-                             "pileup": pileup}}
+        return {"command": params}
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
-        commands = parameters.commands
-        commands = [commands[key].finalize() for key in ("cat", "pileup")]
-        description = "<VCFPileup: '%s' -> '%s'>" % (parameters.in_bam,
-                                                     parameters.outfile)
+        self._in_vcf = parameters.infile_vcf
+        command = parameters.command.finalize()
+        description = "<VCFPileup: '%s' -> '%s'>" \
+            % (parameters.infile_vcf,
+               parameters.outfile)
+
         CommandNode.__init__(self,
                              description=description,
-                             command=ParallelCmds(commands),
+                             command=command,
                              dependencies=parameters.dependencies)
+
+    def _run(self, config, temp):
+        with gzip.open(self._in_vcf) as handle:
+            with open(os.path.join(temp, "heterozygous_snps.bed"), "w") as bed:
+                for line in handle:
+                    if line.startswith("#"):
+                        continue
+
+                    fields = line.split("\t", 5)
+                    if "," in fields[4]:
+                        pos = int(fields[1])
+                        bed.write("%s\t%i\t%i\n" % (fields[0], pos - 1, pos))
+
+        CommandNode._run(self, config, temp)
 
 
 class VCFFilterNode(CommandNode):
@@ -243,6 +278,53 @@ class VCFFilterNode(CommandNode):
         CommandNode.__init__(self,
                              description=description,
                              command=ParallelCmds(commands),
+                             dependencies=parameters.dependencies)
+
+
+class GenotypeRegionsNode(CommandNode):
+    @create_customizable_cli_parameters
+    def customize(cls, reference, infile, bedfile, outfile,
+                  pileup_only=False, nbatches=1, dependencies=()):
+        params = factory.new("genotype")
+        params.add_value("%(IN_BAMFILE)s")
+        params.add_value("%(OUT_VCFFILE)s")
+        params.set_option("--nbatches", nbatches)
+
+        if bedfile:
+            params.set_option("--bedfile", "%(IN_INTERVALS)s")
+
+        if pileup_only:
+            params.set_option("--pileup-only")
+            # Ignore read-groups for pileup
+            params.add_option("--mpileup-argument", "-R", sep="=")
+
+        # Reference sequence (FASTA)
+        params.add_option("--mpileup-argument",
+                          "-f=%s" % (reference,), sep="=")
+
+        params.set_kwargs(IN_BAMFILE=infile,
+                          IN_INTERVALS=bedfile,
+                          OUT_VCFFILE=outfile,
+                          CHECK_SAMTOOLS=SAMTOOLS_VERSION,
+                          CHECK_BCFTOOLS=BCFTOOLS_VERSION)
+
+        return {"command": params}
+
+    @use_customizable_cli_parameters
+    def __init__(self, parameters):
+        command = parameters.command.finalize()
+        invokation = " (%s%i thread(s))" \
+            % ("pileup; " if parameters.pileup_only else "",
+               parameters.nbatches)
+        description = "<GenotypeRegions%s: '%s' -> '%s'>" \
+            % (invokation,
+               parameters.infile,
+               parameters.outfile)
+
+        CommandNode.__init__(self,
+                             description=description,
+                             command=command,
+                             threads=parameters.nbatches,
                              dependencies=parameters.dependencies)
 
 

@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -24,180 +24,115 @@ import os
 
 from pypeline.node import CommandNode
 from pypeline.atomiccmd.command import AtomicCmd
-from pypeline.atomiccmd.sets import ParallelCmds
 from pypeline.atomiccmd.builder import \
-     AtomicCmdBuilder, \
-     use_customizable_cli_parameters, \
-     create_customizable_cli_parameters
+    AtomicCmdBuilder, \
+    use_customizable_cli_parameters, \
+    create_customizable_cli_parameters
 
 from pypeline.common.fileutils import reroot_path, swap_ext
 import pypeline.common.versions as versions
 
 
-SAMTOOLS_VERSION = versions.Requirement(call   = ("samtools",),
-                                        search = r"Version: (\d+)\.(\d+)\.(\d+)",
-                                        checks = versions.GE(0, 1, 18))
+SAMTOOLS_VERSION = versions.Requirement(call=("samtools",),
+                                        search=r"Version: (\d+)\.(\d+)\.(\d+)",
+                                        checks=versions.GE(0, 1, 18))
 
-BCFTOOLS_VERSION = versions.Requirement(call   = ("bcftools",),
-                                        search = r"Version: (\d+)\.(\d+)\.(\d+)",
-                                        checks = versions.GE(0, 1, 18))
+BCFTOOLS_VERSION = versions.Requirement(call=("bcftools",),
+                                        search=r"Version: (\d+)\.(\d+)\.(\d+)",
+                                        checks=versions.GE(0, 1, 18))
 
-
-
-class GenotypeNode(CommandNode):
-    @create_customizable_cli_parameters
-    def customize(cls, reference, infile, outfile, regions = None, dependencies = ()):
-        assert outfile.lower().endswith(".vcf.bgz")
-
-        pileup = AtomicCmdBuilder(["samtools", "mpileup"],
-                              IN_REFERENCE = reference,
-                              IN_BAMFILE   = infile,
-                              IN_REGIONS   = regions,
-                              OUT_STDOUT   = AtomicCmd.PIPE,
-                              CHECK_SAM    = SAMTOOLS_VERSION)
-        pileup.set_option("-u") # Uncompressed output
-        pileup.set_option("-f", "%(IN_REFERENCE)s")
-        pileup.add_value("%(IN_BAMFILE)s")
-
-        if regions:
-            pileup.set_option("-l", "%(IN_REGIONS)s")
-
-        genotype = AtomicCmdBuilder(["bcftools", "view"],
-                                IN_STDIN     = pileup,
-                                OUT_STDOUT   = AtomicCmd.PIPE,
-                                CHECK_VERSION= BCFTOOLS_VERSION)
-        genotype.add_value("-")
-
-        bgzip    = AtomicCmdBuilder(["bgzip"],
-                                IN_STDIN     = genotype,
-                                OUT_STDOUT   = outfile)
-
-        return {"commands" : {"pileup"   : pileup,
-                              "genotype" : genotype,
-                              "bgzip"    : bgzip}}
-
-
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
-        commands = [parameters.commands[key].finalize() for key in ("pileup", "genotype", "bgzip")]
-        description = "<Genotyper: '%s' -> '%s'>" % (parameters.infile,
-                                                     parameters.outfile)
-        CommandNode.__init__(self,
-                             description  = description,
-                             command      = ParallelCmds(commands),
-                             dependencies = parameters.dependencies)
-
-
-class MPileupNode(CommandNode):
-    pileup_args = "-EA"
-
-    def __init__(self, reference, infile, outfile, regions = None, dependencies = ()):
-        call = ["samtools", "mpileup", "-R",
-                MPileupNode.pileup_args,
-                "-f", "%(IN_REFERENCE)s",
-                "%(IN_BAMFILE)s"]
-        if regions:
-            call[-1:-1] = ["-l", "%(IN_REGIONS)s"]
-
-        pileup   = AtomicCmd(call,
-                             IN_REFERENCE = reference,
-                             IN_BAMFILE   = infile,
-                             IN_REGIONS   = regions,
-                             OUT_STDOUT   = AtomicCmd.PIPE,
-                             CHECK_SAM    = SAMTOOLS_VERSION)
-
-        bgzip    = AtomicCmd(["bgzip"],
-                             IN_STDIN     = pileup,
-                             OUT_STDOUT   = outfile)
-
-        description = "<MPileup: '%s' -> '%s'>" % (infile, outfile)
-        CommandNode.__init__(self,
-                             description  = description,
-                             command      = ParallelCmds([pileup, bgzip]),
-                             dependencies = dependencies)
-
-
-
-TABIX_VERSION = versions.Requirement(call   = ("tabix",),
-                                     search = r"Version: (\d+)\.(\d+)\.(\d+)",
-                                     checks = versions.GE(0, 2, 5))
+TABIX_VERSION = versions.Requirement(call=("tabix",),
+                                     search=r"Version: (\d+)\.(\d+)\.(\d+)",
+                                     checks=versions.GE(0, 2, 5))
 
 
 class TabixIndexNode(CommandNode):
-    def __init__(self, infile, preset = "vcf", dependencies = ()):
+    """Tabix indexes a BGZip compressed VCF or pileup file.
+
+    The class currently supports the following presets:
+        - vcf -- BGZipped VCF file.
+        - pileup -- BGZipped pileup (non-binary) as produced by 'mpileup'.
+    """
+
+    def __init__(self, infile, preset="vcf", dependencies=()):
         assert infile.lower().endswith(".bgz")
         if preset == "pileup":
             call = ["tabix", "-s", 1, "-b", 2, "-e", 2]
-        else:
+        elif preset == "vcf":
             call = ["tabix", "-p", preset]
-
+        else:
+            assert False, "Unxpected preset: %r" % preset
 
         self._infile = infile
         cmd_tabix = AtomicCmd(call + ["%(TEMP_IN_VCFFILE)s"],
-                              TEMP_IN_VCFFILE = os.path.basename(infile),
-                              IN_VCFFILE      = infile,
-                              OUT_TBI         = infile + ".tbi",
-                              CHECK_TABIX     = TABIX_VERSION)
+                              TEMP_IN_VCFFILE=os.path.basename(infile),
+                              IN_VCFFILE=infile,
+                              OUT_TBI=infile + ".tbi",
+                              CHECK_TABIX=TABIX_VERSION)
 
         CommandNode.__init__(self,
-                             description  = "<TabixIndex (%s): '%s'>" % (preset, infile,),
-                             command      = cmd_tabix,
-                             dependencies = dependencies)
+                             description="<TabixIndex (%s): '%s'>" % (preset,
+                                                                      infile,),
+                             command=cmd_tabix,
+                             dependencies=dependencies)
 
     def _setup(self, config, temp):
-        infile  = os.path.abspath(self._infile)
+        """See CommandNode._setup."""
+        infile = os.path.abspath(self._infile)
         outfile = reroot_path(temp, self._infile)
         os.symlink(infile, outfile)
 
         CommandNode._setup(self, config, temp)
 
-
     def _teardown(self, config, temp):
+        """See CommandNode._teardown."""
         os.remove(reroot_path(temp, self._infile))
 
         CommandNode._teardown(self, config, temp)
-
-
 
 
 class FastaIndexNode(CommandNode):
-    def __init__(self, infile, dependencies = ()):
+    """Indexed a FASTA file using 'samtools faidx'."""
+
+    def __init__(self, infile, dependencies=()):
         self._infile = infile
         cmd_faidx = AtomicCmd(["samtools", "faidx", "%(TEMP_IN_FASTA)s"],
-                              TEMP_IN_FASTA = os.path.basename(infile),
-                              IN_FASTA      = infile,
-                              OUT_TBI       = infile + ".fai",
-                              CHECK_SAM     = SAMTOOLS_VERSION)
+                              TEMP_IN_FASTA=os.path.basename(infile),
+                              IN_FASTA=infile,
+                              OUT_TBI=infile + ".fai",
+                              CHECK_SAM=SAMTOOLS_VERSION)
 
         CommandNode.__init__(self,
-                             description  = "<FastaIndex: '%s'>" % (infile,),
-                             command      = cmd_faidx,
-                             dependencies = dependencies)
+                             description="<FastaIndex: '%s'>" % (infile,),
+                             command=cmd_faidx,
+                             dependencies=dependencies)
 
     def _setup(self, config, temp):
-        infile  = os.path.abspath(self._infile)
+        """See CommandNode._setup."""
+        infile = os.path.abspath(self._infile)
         outfile = reroot_path(temp, self._infile)
         os.symlink(infile, outfile)
 
         CommandNode._setup(self, config, temp)
 
-
     def _teardown(self, config, temp):
+        """See CommandNode._teardown."""
         os.remove(reroot_path(temp, self._infile))
 
         CommandNode._teardown(self, config, temp)
 
 
-
-
 class BAMIndexNode(CommandNode):
-    def __init__(self, infile, dependencies = ()):
-        cmd_index = AtomicCmd(["samtools", "index", "%(IN_BAM)s", "%(OUT_BAI)s"],
-                              IN_BAM      = infile,
-                              OUT_BAI     = swap_ext(infile, ".bai"),
-                              CHECK_SAM   = SAMTOOLS_VERSION)
+    """Indexed a BAM file using 'samtools index'."""
+
+    def __init__(self, infile, dependencies=()):
+        cmd_index = AtomicCmd(["samtools", "index", "%(IN_BAM)s",
+                               "%(OUT_BAI)s"],
+                              IN_BAM=infile,
+                              OUT_BAI=swap_ext(infile, ".bai"),
+                              CHECK_SAM=SAMTOOLS_VERSION)
 
         CommandNode.__init__(self,
-                             description  = "<BAMIndex: '%s'>" % (infile,),
-                             command      = cmd_index,
-                             dependencies = dependencies)
+                             description="<BAMIndex: '%s'>" % (infile,),
+                             command=cmd_index,
+                             dependencies=dependencies)

@@ -58,8 +58,9 @@ _COMMANDS = (
      "the AdapterRemoval tool."),
 
     ("VCF/GTF/BED/Pileup tools", None, None),
-    ("create_pileup", "pypeline.tools.create_pileup",
-     "Creates tabixed indexed pileup for a (sparse) set of BED coordinates."),
+    ("genotype", "pypeline.tools.genotype",
+     "Creates bgzipped VCF for a set of (sparse) BED regions, or for "
+     "entire chromosomes / contigs using SAMTools / BCFTools."),
     ("gtf_to_bed", "pypeline.tools.gtf_to_bed",
      "Convert GTF file to BED files grouped by feature (coding, RNA, etc)."),
     ("sample_pileup", "pypeline.tools.sample_pileup",

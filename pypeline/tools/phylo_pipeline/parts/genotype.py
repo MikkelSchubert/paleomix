@@ -29,11 +29,9 @@ from pypeline.node import \
 from pypeline.atomiccmd.builder import \
     apply_options
 from pypeline.nodes.samtools import \
-    GenotypeNode, \
     TabixIndexNode, \
     FastaIndexNode, \
-    BAMIndexNode, \
-    MPileupNode
+    BAMIndexNode
 from pypeline.nodes.bedtools import \
     SlopBedNode
 from pypeline.nodes.sequences import \
@@ -45,7 +43,17 @@ from pypeline.nodes.paleomix import \
     VCFPileupNode, \
     VCFFilterNode, \
     BuildRegionsNode, \
-    SampleRegionsNode
+    SampleRegionsNode, \
+    GenotypeRegionsNode
+
+
+def apply_samtools_options(builder, options, argument):
+    for (key, value) in dict(options).iteritems():
+        sam_argument = key
+        if value is not None:
+            sam_argument = "%s=%s" % (key, value)
+
+        builder.add_option(argument, sam_argument, sep="=")
 
 
 ###############################################################################
@@ -182,32 +190,43 @@ def build_genotyping_nodes_cached(options, genotyping, sample, regions,
     filtered = swap_ext(output_prefix, ".filtered.vcf.bgz")
 
     # 1. Call samtools mpilup | bcftools view on the bam
-    genotype = GenotypeNode.customize(reference=regions["FASTA"],
-                                      regions=bedfile,
-                                      infile=bamfile,
-                                      outfile=calls,
-                                      dependencies=dependencies)
-    apply_options(genotype.commands["pileup"], genotyping["MPileup"])
-    apply_options(genotype.commands["genotype"], genotyping["BCFTools"])
+    genotype = GenotypeRegionsNode.customize(reference=regions["FASTA"],
+                                             bedfile=bedfile,
+                                             infile=bamfile,
+                                             outfile=calls,
+                                             nbatches=options.samtools_max_threads,
+                                             dependencies=dependencies)
+
+    genotype.command.add_option("--mpileup-argument",
+                                "-f=%s" % (regions["FASTA"],), sep="=")
+    apply_samtools_options(genotype.command, genotyping["MPileup"],
+                           "--mpileup-argument")
+    apply_samtools_options(genotype.command, genotyping["BCFTools"],
+                           "--bcftools-argument")
     genotype = genotype.build_node()
 
     # 2. Collect pileups of sites with SNPs, to allow proper filtering by
     #    frequency of the minor allele, as only the major non-ref allele is
     #    counted in the VCF (c.f. field DP4).
     vcfpileup = VCFPileupNode.customize(reference=regions["FASTA"],
-                                        in_bam=bamfile,
-                                        in_vcf=calls,
+                                        infile_bam=bamfile,
+                                        infile_vcf=calls,
                                         outfile=pileups,
                                         dependencies=genotype)
-    apply_options(vcfpileup.commands["pileup"], genotyping["MPileup"])
+    apply_samtools_options(vcfpileup.command, genotyping["MPileup"],
+                           "--mpileup-argument")
     vcfpileup = vcfpileup.build_node()
+
+    vcf_tabix = TabixIndexNode(infile=pileups,
+                               preset="pileup",
+                               dependencies=vcfpileup)
 
     # 3. Filter all sites using the 'vcf_filter' command
     vcffilter = VCFFilterNode.customize(infile=calls,
                                         pileup=pileups,
                                         outfile=filtered,
                                         regions=regions,
-                                        dependencies=vcfpileup)
+                                        dependencies=vcf_tabix)
     vcffilter = _apply_vcf_filter_options(vcffilter, genotyping, sample)
 
     # 4. Tabix index. This allows random-access to the VCF file when building
@@ -275,11 +294,17 @@ def build_sampling_nodes(options, genotyping, sample, regions, dependencies):
         bam_file = add_postfix(bam_file, ".realigned")
     bai_node = build_bam_index_node(bam_file)
 
-    genotype = MPileupNode(reference=regions["FASTA"],
-                           regions=slop,
-                           infile=bam_file,
-                           outfile=pileup_file,
-                           dependencies=node + (bai_node,))
+    genotype = GenotypeRegionsNode.customize(pileup_only=True,
+                                             reference=regions["FASTA"],
+                                             bedfile=slop,
+                                             infile=bam_file,
+                                             outfile=pileup_file,
+                                             nbatches=options.samtools_max_threads,
+                                             dependencies=node + (bai_node,))
+    apply_samtools_options(genotype.command, genotyping["MPileup"],
+                           "--mpileup-argument")
+    genotype = genotype.build_node()
+
     tabix = TabixIndexNode(infile=pileup_file,
                            preset="pileup",
                            dependencies=genotype)

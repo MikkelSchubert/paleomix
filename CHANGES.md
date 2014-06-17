@@ -17,6 +17,8 @@ Current
   * Prohibit whitespace and parentheses in prefix paths; these cause problems
     with Bowtie2, due to the wrapper script used by this program.
   * Allow "*" as the name for prefixes, when selecting prefixes by wildcards.
+  * Rework genotyping step to improve performance when genotyping sparse
+    regions (e.g. genes), and to allow transparent parallelization.
 
 
 Version 1.0.1 - 2014-04-30

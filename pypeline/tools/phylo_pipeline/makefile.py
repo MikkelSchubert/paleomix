@@ -29,6 +29,7 @@ from pypeline.common.makefile import \
     MakefileError, \
     REQUIRED_VALUE, \
     IsDictOf, \
+    IsInt, \
     IsStr, \
     StringIn, \
     IsFloat, \
@@ -556,10 +557,10 @@ _VALIDATION_GENOTYPES = {
     "Padding": IsUnsignedInt,
     "GenotypeEntirePrefix": IsBoolean(default=False),
     "MPileup": {
-        StringStartsWith("-"): CLI_PARAMETERS,
+        StringStartsWith("-"): Or(IsInt, IsStr, IsNone),
     },
     "BCFTools": {
-        StringStartsWith("-"): CLI_PARAMETERS,
+        StringStartsWith("-"): Or(IsInt, IsStr, IsNone),
     },
     "Random": {
         "--min-distance-to-indels": IsUnsignedInt,
