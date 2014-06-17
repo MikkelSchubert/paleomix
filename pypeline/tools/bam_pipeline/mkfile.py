@@ -59,18 +59,18 @@ Options:
 
 _TEMPLATE_BAM_OPTIONS = \
 """  # Settings for trimming of reads, see AdapterRemoval man-page
-#  AdapterRemoval:
+  AdapterRemoval:
      # Adapter sequences, set and uncomment to override defaults
 #     --pcr1: ...
 #     --pcr2: ...
-     # Pipeline defaults that differ from AR defaults;
-     # To override, change the value(s) and uncomment the line(s):
-#     --mm: 3
-#     --minlength: 25
-     # Features enabled by default; uncomment to disable:
-#     --collapse: no
-#     --trimns: no
-#     --trimqualities: no
+     # Some BAM pipeline defaults differ from AR defaults;
+     # To override, change these value(s):
+     --mm: 3
+     --minlength: 25
+     # Extra features enabled by default; change 'yes' to 'no' to disable
+     --collapse: yes
+     --trimns: yes
+     --trimqualities: yes
 
   # Settings for aligners supported by the pipeline
   Aligners:
