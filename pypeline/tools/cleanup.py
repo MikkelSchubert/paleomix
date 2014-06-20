@@ -52,7 +52,7 @@ def _set_sort_order(header):
 
 
 def _set_pg_tags(header, tags):
-    """Updates PG tags in BAM header, taking a sequence of "ID:TAG:VALUE"s."""
+    """Updates PG tags in a BAM header, taking a sequence of ID:TAG:VALUEs."""
     for tag in tags:
         pg_id, pg_field, pg_value = tag.split(":")
 
@@ -62,6 +62,16 @@ def _set_pg_tags(header, tags):
                 break
         else:
             header["PG"].append({"ID": pg_id, pg_field: pg_value})
+
+
+def _set_rg_tags(header, rg_id, rg_tags):
+    """Updates RG tags in a BAM header, taking a sequence of TAG:VALUEs."""
+    readgroup = {"ID": rg_id}
+    for tag in rg_tags:
+        rg_field, rg_value = tag.split(":")
+        readgroup[rg_field] = rg_value
+    header["RG"] = [readgroup]
+
 
 
 def _pipe_to_bam():
@@ -133,6 +143,8 @@ def _cleanup_unmapped(args, cleanup_sam):
         header = copy.deepcopy(input_handle.header)
         _set_sort_order(header)
         _set_pg_tags(header, args.update_pg_tag)
+        if args.rg_id is not None:
+            _set_rg_tags(header, args.rg_id, args.rg)
 
         with pysam.Samfile("-", "wbu", header=header) as output_handle:
             for record in input_handle:
@@ -148,6 +160,13 @@ def _cleanup_unmapped(args, cleanup_sam):
                     record.rnext = record.tid
                     record.pnext = record.pos
                     record.tlen = 0
+
+                if args.rg_id is not None:
+                    # Ensure that only one RG tag is set
+                    tags = [(key, value) for (key, value) in record.tags
+                            if key != "RG"]
+                    tags.append(("RG", args.rg_id))
+                    record.tags = tags
 
                 output_handle.write(record)
 
@@ -180,11 +199,9 @@ def _join_procs(procs):
     return 1 if any(return_codes) else 0
 
 
-def _setup_single_ended_pipeline(args, procs, bam_cleanup):
+def _setup_single_ended_pipeline(procs, bam_cleanup):
     # Convert input to BAM and cleanup / filter reads
     call_pipe = bam_cleanup + ['cleanup-sam']
-    for value in args.update_pg_tag:
-        call_pipe.extend(('--update-pg-tag', value))
 
     # Convert input to (uncompressed) BAM
     procs["pipe"] = subprocess.Popen(call_pipe,
@@ -196,10 +213,8 @@ def _setup_single_ended_pipeline(args, procs, bam_cleanup):
     return procs["pipe"]
 
 
-def _setup_paired_ended_pipeline(args, procs, bam_cleanup):
+def _setup_paired_ended_pipeline(procs, bam_cleanup):
     call_pipe = bam_cleanup + ['pipe']
-    for value in args.update_pg_tag:
-        call_pipe.extend(('--update-pg-tag', value))
 
     # Convert input to (uncompressed) BAM
     procs["pipe"] = subprocess.Popen(call_pipe,
@@ -238,13 +253,21 @@ def _run_cleanup_pipeline(args):
                         '--min-quality', str(args.min_quality),
                         '--exclude-flags', hex(args.exclude_flags)))
 
+    for value in args.update_pg_tag:
+        bam_cleanup.extend(('--update-pg-tag', value))
+
+    if args.rg_id is not None:
+        bam_cleanup.extend(('--rg-id', args.rg_id))
+        for value in args.rg:
+            bam_cleanup.extend(('--rg', value))
+
     procs = {}
     try:
         # Update 'procs' and get the last process in the pipeline
         if args.paired_ended:
-            last_proc = _setup_paired_ended_pipeline(args, procs, bam_cleanup)
+            last_proc = _setup_paired_ended_pipeline(procs, bam_cleanup)
         else:
-            last_proc = _setup_single_ended_pipeline(args, procs, bam_cleanup)
+            last_proc = _setup_single_ended_pipeline(procs, bam_cleanup)
 
         # Sort, output to stdout (-o)
         call_sort = ['samtools', 'sort', "-o", "-", args.temp_prefix]
@@ -287,14 +310,21 @@ def parse_args(argv):
                         type=lambda value: int(value, 0),  # Handle hex, etc.
                         help="Equivalent to \"samtools view -F\" "
                              "[Default: %(default)s]")
-    parser.add_argument("--update-pg-tag", default=[], action="append",
-                        help="Update one PG tags with the given values, "
-                             "creating the tag if it does not already exist. "
-                             "Takes arguments in the form \"PGID:TAG:VALUE\".")
     parser.add_argument('--paired-ended', default=False, action="store_true",
                         help='If enabled, additional processing of PE reads'
                              'is carried out, including updating of mate '
                              'information [Default: off]')
+
+    parser.add_argument("--update-pg-tag", default=[], action="append",
+                        help="Update one PG tags with the given values, "
+                             "creating the tag if it does not already exist. "
+                             "Takes arguments in the form \"PGID:TAG:VALUE\".")
+    parser.add_argument('--rg-id', default=None,
+                        help="If set, the read-group is overwritten based "
+                             "on tags set using the --rg option, using the "
+                             "id specified using --rg-id.")
+    parser.add_argument('--rg', default=[], action="append",
+                        help="Create readgroup with ") # TODO
 
     return parser.parse_args(argv)
 
