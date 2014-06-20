@@ -80,9 +80,13 @@ class DetectInputDuplicationNode(Node):
                     self._process_reads(observed_reads)
                     observed_reads.clear()
                     position = record.pos
+                elif record.is_unmapped:
+                    break
 
-                key = (record.qname, record.seq, record.qual)
-                observed_reads[key].append(fpath)
+                # Ignore supplementary / secondary alignments
+                if not record.flag & 0x900:
+                    key = (record.qname, record.seq, record.qual)
+                    observed_reads[key].append(fpath)
             self._process_reads(observed_reads)
 
             # Everything is ok, touch the output files
