@@ -42,9 +42,14 @@ import pypeline.tools.factory as factory
 
 BWA_VERSION = versions.Requirement(call   = ("bwa",),
                                    search = r"Version: (\d+)\.(\d+)\.(\d+)",
-                                   checks = versions.Or(versions.And(versions.GE(0, 5, 9), versions.LT(0, 6, 0)),
-                                                        versions.And(versions.GE(0, 6, 2), versions.LT(0, 7, 0)),
-                                                        versions.GE(0, 7, 5)))
+                                   checks = versions.Or(versions.EQ(0, 5, 9),
+                                                        versions.EQ(0, 5, 10),
+                                                        versions.EQ(0, 6, 2),
+                                                        versions.GE(0, 7, 9)))
+
+BWA_VERSION_07x = versions.Requirement(call   = ("bwa",),
+                                       search = r"Version: (\d+)\.(\d+)\.(\d+)",
+                                       checks = versions.GE(0, 7, 9))
 
 
 
@@ -78,23 +83,22 @@ class BWAIndexNode(CommandNode):
                              dependencies = parameters.dependencies)
 
 
-
-
-class BWANode: # pylint: disable=W0232
-    @classmethod
-    def customize(cls, input_file_1, input_file_2, **kwargs):
+def BWANode(input_file_1, input_file_2=None, algorithm="backtrack", **kwargs):
+    if algorithm == "backtrack":
         if input_file_1 and input_file_2:
             return PEBWANode.customize(input_file_1 = input_file_1,
-                                        input_file_2 = input_file_2,
-                                        **kwargs)
+                                       input_file_2 = input_file_2,
+                                       **kwargs)
         elif input_file_1 and not input_file_2:
             return SEBWANode.customize(input_file = input_file_1,
-                                        **kwargs)
+                                       **kwargs)
         else:
-            assert False, ""
-
-    def __new__(cls, **kwargs):
-        return cls.customize(**kwargs).build_node()
+            assert False, "Neither input_file_1 nor input_file_2 set"
+    else:
+        return BWAAlgorithmNode.customize(input_file_1=input_file_1,
+                                          input_file_2=input_file_2,
+                                          algorithm=algorithm,
+                                          **kwargs)
 
 
 class SEBWANode(CommandNode):
@@ -250,49 +254,66 @@ class PEBWANode(CommandNode):
         return sampe
 
 
-
-
-class BWASWNode(CommandNode):
+class BWAAlgorithmNode(CommandNode):
     @create_customizable_cli_parameters
-    def customize(cls, input_file_1, output_file, reference, prefix, input_file_2 = None,
-                  threads = 1, dependencies = ()):
+    def customize(cls, input_file_1, output_file, reference, prefix,
+                  input_file_2=None, threads=1, algorithm="mem",
+                  dependencies=()):
+        assert algorithm in ("mem", "bwasw"), algorithm
         threads = _get_max_threads(reference, threads)
 
-        aln = _get_bwa_template(("bwa", "bwasw"), prefix,
-                                IN_FILE_1  = input_file_1,
-                                OUT_STDOUT = AtomicCmd.PIPE)
+        zcat_1 = _build_cat_command(input_file_1, "uncompressed_input_1")
+        aln = _get_bwa_template(("bwa", algorithm), prefix,
+                                TEMP_IN_FILE_1="uncompressed_input_1",
+                                OUT_STDOUT=AtomicCmd.PIPE,
+                                CHECK_BWA=BWA_VERSION_07x)
         aln.add_value(prefix)
-        aln.add_value("%(IN_FILE_1)s")
+        aln.add_value("%(TEMP_IN_FILE_1)s")
 
+        _, commands = _process_output(aln, output_file, reference)
+        commands["aln"] = aln
+        commands["zcat_1"] = zcat_1
         if input_file_2:
-            aln.add_value("%(IN_FILE_2)s")
-            aln.set_kwargs(**{"IN_FILE_2" : input_file_2})
+            aln.add_value("%(TEMP_IN_FILE_2)s")
+            aln.set_kwargs(**{"TEMP_IN_FILE_2": "uncompressed_input_2"})
+            zcat_2 = _build_cat_command(input_file_2, "uncompressed_input_2")
+            commands["zcat_2"] = zcat_2
+        else:
+            # Ensure that the pipe is automatically removed
+            aln.set_kwargs(**{"TEMP_OUT_FILE_2": "uncompressed_input_2"})
 
         aln.set_option("-t", threads)
+        # Mark alternative hits as secondary; required by e.g. Picard
+        aln.set_option("-M")
 
-        order, commands = _process_output(aln, output_file, reference)
         commands["aln"] = aln
-        return {"commands"     : commands,
-                "order"        : ["aln"] + order,
-                "threads"      : threads,
-                "dependencies" : dependencies}
-
+        return {"commands": commands,
+                "threads": threads,
+                "dependencies": dependencies}
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
-        algorithm    = "SW_PE" if parameters.input_file_2 else "SW_SE"
-        description  = _get_node_description(name          = "BWA",
-                                             algorithm     = algorithm,
-                                             input_files_1 = parameters.input_file_1,
-                                             input_files_2 = parameters.input_file_2,
-                                             prefix        = parameters.prefix)
+        _check_bwa_prefix(parameters.prefix)
+        algorithm = parameters.algorithm.upper()
+        algorithm += "_PE" if parameters.input_file_2 else "_SE"
+        description = _get_node_description(name="BWA",
+                                            algorithm=algorithm,
+                                            input_files_1=parameters.input_file_1,
+                                            input_files_2=parameters.input_file_2,
+                                            prefix=parameters.prefix)
 
-        command = ParallelCmds([parameters.commands[key].finalize() for key in parameters.order])
+        command = ParallelCmds([cmd.finalize()
+                                for cmd in parameters.commands.itervalues()])
         CommandNode.__init__(self,
-                             command      = command,
-                             description  = description,
-                             threads      = parameters.threads,
-                             dependencies = parameters.dependencies)
+                             command=command,
+                             description=description,
+                             threads=parameters.threads,
+                             dependencies=parameters.dependencies)
+
+    def _setup(self, _config, temp):
+        os.mkfifo(os.path.join(temp, "uncompressed_input_1"))
+        os.mkfifo(os.path.join(temp, "uncompressed_input_2"))
+
 
 
 def _process_output(stdin, output_file, reference, run_fixmate=False):

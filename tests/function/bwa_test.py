@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -22,99 +22,68 @@
 #
 import os
 
-from pypeline.node import MetaNode
+from pypeline.node import \
+    MetaNode
 from pypeline.nodes.bwa import \
-     BWAIndexNode, \
-     SEBWANode, \
-     PEBWANode, \
-     BWASWNode
+    BWAIndexNode, \
+    BWANode
 
 
 def _bwa_index(config):
-    return BWAIndexNode(input_file   = "tests/data/rCRS.fasta",
-                        prefix       = os.path.join(config.destination, "rCRS"),
-                        dependencies = config.dependencies)
+    return BWAIndexNode(input_file="tests/data/rCRS.fasta",
+                        prefix=os.path.join(config.destination, "rCRS"),
+                        dependencies=config.dependencies)
 
 
-def _bwa_aln_se(config, index):
-    node_params = {"input_file"   : "tests/data/sim_reads/mate_1.fastq.gz",
-                   "prefix"       : os.path.join(config.destination, "rCRS"),
-                   "reference"    : "tests/data/rCRS.fasta",
-                   "dependencies" : (config.dependencies, index)}
+def _bwa_se(config, index, algorithm):
+    node_params = {"input_file_1": "tests/data/sim_reads/mate_1.fastq.gz",
+                   "prefix": os.path.join(config.destination, "rCRS"),
+                   "reference": "tests/data/rCRS.fasta",
+                   "algorithm": algorithm,
+                   "dependencies": (config.dependencies, index)}
+    template = os.path.join(config.destination, "%s_se_%s", "output.bam")
 
-    standard = SEBWANode(output_file = os.path.join(config.destination, "aln_se_standard", "output.bam"),
-                         **node_params)
-    custom   = SEBWANode.customize(output_file = os.path.join(config.destination, "aln_se_custom", "output.bam"),
-                                   **node_params)
-    custom.commands["sam"].set_option("-r", "@RG\tID:1\tPL:Illumina\tPU:123456\tLB:Library_1\tSM:Sample_1")
+    std_bam = template % (algorithm, "standard")
+    standard = BWANode(output_file=std_bam, **node_params).build_node()
 
-    return MetaNode(description  = "BWA aln SE",
-                    dependencies = [standard, custom.build_node()])
+    cus_bam = template % (algorithm, "custom")
+    custom = BWANode(output_file=cus_bam, **node_params)
+    custom.commands["convert"].add_option("--rg-id", "myRG")
+    custom.commands["convert"].add_option("--rg", "PL:Illumina")
+    custom = custom.build_node()
 
-
-
-def _bwa_aln_pe(config, index):
-    node_params = {"input_file_1" : "tests/data/sim_reads/mate_1.fastq.gz",
-                   "input_file_2" : "tests/data/sim_reads/mate_2.fastq.gz",
-                   "prefix"       : os.path.join(config.destination, "rCRS"),
-                   "reference"    : "tests/data/rCRS.fasta",
-                   "dependencies" : (config.dependencies, index)}
-
-    standard = PEBWANode(output_file = os.path.join(config.destination, "aln_pe_standard", "output.bam"),
-                         **node_params)
-    custom   = PEBWANode.customize(output_file = os.path.join(config.destination, "aln_pe_custom", "output.bam"),
-                                   **node_params)
-    custom.commands["sam"].set_option("-r", "@RG\tID:1\tPL:Illumina\tPU:123456\tLB:Library_1\tSM:Sample_1")
-
-    return MetaNode(description  = "BWA aln PE",
-                    dependencies = [standard, custom.build_node()])
+    return MetaNode(description="BWA %s SE" % algorithm,
+                    dependencies=[standard, custom])
 
 
+def _bwa_pe(config, index, algorithm):
+    node_params = {"input_file_1": "tests/data/sim_reads/mate_1.fastq.gz",
+                   "input_file_2": "tests/data/sim_reads/mate_2.fastq.gz",
+                   "prefix": os.path.join(config.destination, "rCRS"),
+                   "reference": "tests/data/rCRS.fasta",
+                   "algorithm": algorithm,
+                   "dependencies": (config.dependencies, index)}
+    template = os.path.join(config.destination, "%s_pe_%s", "output.bam")
 
+    std_bam = template % (algorithm, "standard")
+    standard = BWANode(output_file=std_bam, **node_params).build_node()
 
-def _bwa_sw_se(config, index):
-    node_params = {"input_file_1" : "tests/data/sim_reads/mate_1.fastq.gz",
-                   "prefix"       : os.path.join(config.destination, "rCRS"),
-                   "reference"    : "tests/data/rCRS.fasta",
-                   "dependencies" : (config.dependencies, index)}
+    cus_bam = template % (algorithm, "custom")
+    custom = BWANode(output_file=cus_bam, **node_params)
+    custom.commands["convert"].add_option("--rg-id", "myRG")
+    custom.commands["convert"].add_option("--rg", "PL:Illumina")
+    custom = custom.build_node()
 
-    standard = BWASWNode(output_file = os.path.join(config.destination, "sw_se_standard", "output.bam"),
-                         **node_params)
-    custom = BWASWNode.customize(output_file = os.path.join(config.destination, "sw_se_custom", "output.bam"),
-                                 **node_params)
-    custom.commands["aln"].set_option("-z", 10)
-
-    return MetaNode(description  = "BWA SW SE",
-                dependencies = [standard, custom.build_node()])
-
-
-def _bwa_sw_pe(config, index):
-    node_params = {"input_file_1" : "tests/data/sim_reads/mate_1.fastq.gz",
-                   "input_file_2" : "tests/data/sim_reads/mate_2.fastq.gz",
-                   "prefix"       : os.path.join(config.destination, "rCRS"),
-                   "reference"    : "tests/data/rCRS.fasta",
-                   "dependencies" : (config.dependencies, index)}
-
-    standard = BWASWNode(output_file = os.path.join(config.destination, "sw_pe_standard", "output.bam"),
-                         **node_params)
-    custom = BWASWNode.customize(output_file = os.path.join(config.destination, "sw_pe_custom", "output.bam"),
-                                 **node_params)
-    custom.commands["aln"].set_option("-z", 7 )
-
-    return MetaNode(description  = "BWA SW PE",
-                    dependencies = [standard, custom.build_node()])
-
+    return MetaNode(description="BWA %s PE" % algorithm,
+                    dependencies=[standard, custom])
 
 
 def test_bwa(config):
-    index  = _bwa_index(config)
-    aln_se = _bwa_aln_se(config, index)
-    aln_pe = _bwa_aln_pe(config, index)
-    sw_se  = _bwa_sw_se(config, index)
-    sw_pe  = _bwa_sw_pe(config, index)
+    index = _bwa_index(config)
+    dependencies = []
+    for algorithm in ("backtrack", "bwasw", "mem"):
+        dependencies.append(_bwa_se(config, index, algorithm))
+        dependencies.append(_bwa_pe(config, index, algorithm))
 
-    return MetaNode(description  = "BWA",
-                    dependencies = (aln_se,
-                                    aln_pe,
-                                    sw_se,
-                                    sw_pe))
+    return MetaNode(description="BWA",
+                    dependencies=dependencies)

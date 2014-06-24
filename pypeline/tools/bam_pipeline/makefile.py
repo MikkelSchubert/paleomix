@@ -142,6 +142,10 @@ _VALIDATION_OPTIONS = {
         "Program": ValueIn(("BWA", "Bowtie2"),
                            default="BWA"),
         "BWA": {
+            # Mapping algorithm; availability depends on BWA version
+            "Algorithm": StringIn(("backtrack", "mem", "bwasw"),
+                                  default="backtrack"),
+
             # Minimum mapping quality (PHREAD) of reads to retain
             "MinQuality": IsUnsignedInt(default=0),
             # Remove unmapped reads or not
@@ -427,7 +431,6 @@ def _validate_makefiles(config, makefiles):
     _validate_makefiles_duplicate_targets(config, makefiles)
     _validate_makefiles_duplicate_files(makefiles)
     _validate_makefiles_features(makefiles)
-    _validate_bwa_version(makefiles)
     _validate_hg_prefixes(makefiles)
 
     return makefiles
@@ -526,23 +529,6 @@ def _validate_makefiles_features(makefiles):
                                     "with RegionsOfInterest enabled, requires "
                                     "that either the feature 'Raw BAM' or the "
                                     "feature 'Raligned BAM' is enabled.")
-
-
-def _validate_bwa_version(_makefiles):
-    # TODO: Add support for different BWA algorithms; don't warn for SW / mem
-    try:
-        bwa_version = bwa.BWA_VERSION.version
-    except versions.VersionRequirementError:
-        return  # Ignored here, reported elsewhere
-
-    if bwa_version >= (0, 7, 0):
-        url = "https://github.com/MikkelSchubert/paleomix/wiki/" \
-              "BAM-pipeline-specific-troubleshooting#BWA_version"
-        msg = "WARNING: Using BWA v0.7.x is NOT recommended, due to " \
-              "bugs in the BWA-backtrace algorithm, but the current " \
-              "version is v{1}.{2}.{3}.\n         Please refer to the " \
-              "PALEOMIX wiki for more information:\n           {0}\n"
-        print_warn(msg.format(url, *bwa_version), file=sys.stderr)
 
 
 def _validate_hg_prefixes(makefiles):

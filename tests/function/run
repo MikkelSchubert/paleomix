@@ -26,6 +26,7 @@ import os
 import sys
 import shutil
 import inspect
+import argparse
 import tempfile
 import traceback
 
@@ -85,14 +86,22 @@ def main(argv):
         for metanodes in node.dependencies:
             for subnode in metanodes.dependencies:
                 if Config.dependencies not in subnode.dependencies:
-                    raise RuntimeError("Node did not pass dependencies: %s\n%r vs %r" \
-                                       % (subnode, subnode.dependencies, Config.dependencies))
+                    message = "Node did not pass dependencies: %s\n%r vs %r" \
+                        % (subnode, subnode.dependencies, Config.dependencies)
+                    raise RuntimeError(message)
 
-    dry_run = "--dry-run" in argv
-    if not dry_run:
-        pipeline.run(dry_run = True, max_running = 2)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--max-threads", default=2, type=int,
+                        help="Max number of threads [%(default)s]",)
+    parser.add_argument("--dry-run", help="Perform dry run; lists nodes.",
+                        default=False, action="store_true")
+    args = parser.parse_args(argv)
 
-    if pipeline.run(dry_run = dry_run, max_running = 2, progress_ui = "progress"):
+    if not args.dry_run:
+        pipeline.run(dry_run=True, max_running=2)
+
+    if pipeline.run(dry_run=args.dry_run, max_running=args.max_threads,
+                    progress_ui="progress"):
         # Everything went fine, so there's currently no need to save the output
         ui.print_info("No errors; cleaning up temporary files.")
         shutil.rmtree(Config.temp_root)
@@ -101,7 +110,6 @@ def main(argv):
         errors = True
 
     return (1 if errors else 0)
-
 
 
 if __name__ == '__main__':

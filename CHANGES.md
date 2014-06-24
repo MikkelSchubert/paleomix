@@ -19,6 +19,11 @@ Current
   * Allow "*" as the name for prefixes, when selecting prefixes by wildcards.
   * Rework genotyping step to improve performance when genotyping sparse
     regions (e.g. genes), and to allow transparent parallelization.
+  * Add support for BWA algorithms "bwasw" and "mem", which are recommended for
+    longer sequencing reads. The default remains the "backtrack" algorithm.
+  * Require BWA 0.5.9, 0.5.10, 0.6.2, or 0.7.9+ for BWA backtrack; other
+    versions have never been tested, or are known to contain bugs that result
+    in invalid BAM files.
 
 
 Version 1.0.1 - 2014-04-30

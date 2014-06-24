@@ -27,18 +27,18 @@ import copy
 import pypeline.tools.bam_pipeline.paths as paths
 
 from pypeline.common.utilities import \
-     safe_coerce_to_tuple
+    safe_coerce_to_tuple
 from pypeline.atomiccmd.builder import \
-     apply_options
+    apply_options
 from pypeline.nodes.bwa import \
-     BWANode
+    BWANode
 from pypeline.nodes.bowtie2 import \
-     Bowtie2Node
+    Bowtie2Node
 from pypeline.tools.bam_pipeline.parts import \
-     Reads
+    Reads
 from pypeline.tools.bam_pipeline.nodes import \
-     CleanupBAMNode, \
-     IndexAndValidateBAMNode
+    CleanupBAMNode, \
+    IndexAndValidateBAMNode
 
 
 #
@@ -147,6 +147,14 @@ def _build_mapper_cl_tag(options, cli_tag):
     cli_tag.extend(("|", "samtools", "calmd",   "..."))
 
 
+def _set_rg_tags(command, rg_tags, pg_tags):
+    command.add_option("--update-pg-tag", pg_tags)
+    command.set_option("--rg-id", rg_tags["ID"])
+    for tag_name in ("SM", "LB", "PU", "PL", "PG"):
+        tag_value = "%s:%s" % (tag_name, rg_tags[tag_name])
+        command.add_option("--rg", tag_value)
+
+
 class ParamCollector:
     def __init__(self, prefix = (), postfix = ()):
         self._prefix  = safe_coerce_to_tuple(prefix)
@@ -192,38 +200,39 @@ def _bwa_aln_parameters(options):
 def _bwa_build_cl_tag(options):
     # Build summary of parameters used by alignment, only including
     # parameters that affect the output of BWA (as far as possible)
-    cli_tag = ParamCollector(("bwa", "aln"), "...")
+    algorithm = options["Aligners"]["BWA"]["Algorithm"].lower()
+    algorithm = "aln" if algorithm == "backtrack" else algorithm
+
+    cli_tag = ParamCollector(("bwa", algorithm), "...")
     apply_options(cli_tag, _bwa_aln_parameters(options))
     cli_tag = cli_tag.get_result()
 
-    cli_tag.extend(("|", "bwa", "sam*", "..."))
     _build_mapper_cl_tag(options["Aligners"]["BWA"], cli_tag)
 
     return " ".join(map(str, cli_tag)).replace("%", "%%")
 
 
 def _bwa_build_nodes(config, parameters, tags, options):
-    params = BWANode.customize(threads      = config.bwa_max_threads,
-                               **parameters)
+    algorithm = options["Aligners"]["BWA"]["Algorithm"].lower()
+
+    params = BWANode(threads=config.bwa_max_threads,
+                     algorithm=algorithm,
+                     **parameters)
 
     parameters = dict(_bwa_aln_parameters(options))
+    # "aln" is used by SE backtrack, mem, and sw; _1 and _2 by PE backtrack
     for aln_key in ("aln", "aln_1", "aln_2"):
         if aln_key in params.commands:
             apply_options(params.commands[aln_key], parameters)
 
-    read_group = "@RG\\tID:{ID}\\tSM:{SM}\\tLB:{LB}\\tPU:{PU}\\tPL:{PL}\\tPG:{PG}".format(**tags)
-    params.commands["sam"].set_option("-r", read_group)
-
-    pg_tags = ("bwa:CL:%s" % (_bwa_build_cl_tag(options),))
-    params.commands["convert"].add_option("--update-pg-tag", pg_tags)
+    pg_tags = "bwa:CL:%s" % (_bwa_build_cl_tag(options),)
+    _set_rg_tags(params.commands["convert"], tags, pg_tags)
 
     return params
 
 
-
-
-################################################################################
-################################################################################
+###############################################################################
+###############################################################################
 ## Bowtie2:
 
 def _bowtie2_aln_parameters(options):
@@ -257,11 +266,7 @@ def _bowtie2_build_nodes(config, parameters, tags, options):
 
     apply_options(params.commands["aln"], _bowtie2_aln_parameters(options))
 
-    pg_tag = "bowtie2:CL:%s" % (_bowtie2_build_cl_tag(options),)
-    params.commands["convert"].add_option("--update-pg-tag", pg_tag)
-
-    params.commands["aln"].set_option("--rg-id", tags["ID"])
-    for tag_name in ("SM", "LB", "PU", "PL", "PG"):
-        params.commands["aln"].add_option("--rg", "%s:%s" % (tag_name, tags[tag_name]))
+    pg_tags = "bowtie2:CL:%s" % (_bowtie2_build_cl_tag(options),)
+    _set_rg_tags(params.commands["convert"], tags, pg_tags)
 
     return params
