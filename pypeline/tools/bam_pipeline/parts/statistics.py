@@ -196,7 +196,7 @@ def _build_coverage_nodes_cached(config, files_and_nodes, target_name,
         cache_key = (roi_filename, input_filename)
         if cache_key not in cache:
             cache[cache_key] = CoverageNode(config=config,
-                                            input_files=input_filename,
+                                            input_file=input_filename,
                                             output_file=output_filename,
                                             target_name=target_name,
                                             regions_file=roi_filename,

@@ -72,6 +72,12 @@ class Node(object):
         self.subnodes        = self._collect_nodes(subnodes, "Subnode")
         self.dependencies    = self._collect_nodes(dependencies, "Dependency")
 
+        # If there are no input files, the node cannot be re-run based on
+        # changes to the input, and nodes with output but no input are not
+        # expected based on current usage.
+        if not self.input_files and self.output_files:
+            raise NodeError("Node not dependant upon input files: %s" % self)
+
 
     def run(self, config):
         """Runs the node, by calling _setup, _run, and _teardown in that order.

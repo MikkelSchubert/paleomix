@@ -67,9 +67,14 @@ _OUT_FILES   = frozenset(("tests/data/missing_out_file_1", "tests/data/missing_o
 _EXEC_FILES  = frozenset(("ls", "sh"))
 _AUX_FILES   = frozenset(("tests/data/rCRS.fasta", "tests/data/rCRS.fasta.fai"))
 _REQUIREMENTS = frozenset((id, str))
+_EMPTY_FILE = "tests/data/empty_file_1"
 
 
-def _build_cmd_mock(input_files  = (), output_files = (), executables  = (), auxiliary_files = (), requirements = (),
+def _build_cmd_mock(input_files  = _IN_FILES,
+                    output_files = (),
+                    executables  = (),
+                    auxiliary_files = (),
+                    requirements = (),
                     optional_temp_files = ()):
     return flexmock(input_files     = frozenset(input_files),
                     output_files    = frozenset(output_files),
@@ -91,7 +96,9 @@ def test_constructor():
         return random.choice(tuple(values))
 
     def _do_test_constructor__single_value(key, value):
-        node   = Node(**{key : value})
+        defaults = {"input_files": _EMPTY_FILE}
+        defaults[key] = value
+        node = Node(**defaults  )
         expected = safe_coerce_to_frozenset(value)
         assert_equal(getattr(node, key), expected)
 
@@ -344,10 +351,12 @@ def test__setup__input_files_missing():
     yield _do_test__setup__input_files_exist, {"auxiliary_files" : _OUT_FILES}
 
 def test__teardown__output_files():
-    Node(output_files = _IN_FILES)._teardown(None, None)
+    Node(input_files=_EMPTY_FILE,
+         output_files=_IN_FILES)._teardown(None, None)
 
 def test__teardown__output_files_missing():
-    node = Node(output_files = _OUT_FILES)
+    node = Node(input_files=_EMPTY_FILE,
+                output_files=_OUT_FILES)
     assert_raises(NodeError, node._teardown, None, None)
 
 
@@ -490,7 +499,8 @@ def test_commandnode_teardown(temp_folder):
     destination, temp_folder = _setup_temp_folders(temp_folder)
 
     cmd = AtomicCmd(("echo", "-n", "1 2 3"),
-                    OUT_STDOUT = os.path.join(destination, "foo.txt"))
+                    IN_DUMMY=_EMPTY_FILE,
+                    OUT_STDOUT=os.path.join(destination, "foo.txt"))
     cmd.run(temp_folder)
     assert_equal(cmd.join(), [0])
     node = CommandNode(cmd)
@@ -507,8 +517,9 @@ def test_commandnode_teardown__missing_files_in_temp(temp_folder):
     destination, temp_folder = _setup_temp_folders(temp_folder)
 
     cmd = AtomicCmd(("echo", "-n", "1 2 3"),
-                    OUT_BAR = os.path.join(destination, "bar.txt"),
-                    OUT_STDOUT = os.path.join(destination, "foo.txt"))
+                    IN_DUMMY=_EMPTY_FILE,
+                    OUT_BAR=os.path.join(destination, "bar.txt"),
+                    OUT_STDOUT=os.path.join(destination, "foo.txt"))
     cmd.run(temp_folder)
     assert_equal(cmd.join(), [0])
     node = CommandNode(cmd)
@@ -519,14 +530,16 @@ def test_commandnode_teardown__missing_files_in_temp(temp_folder):
     assert_equal(temp_files_before, set(os.listdir(temp_folder)))
     assert_equal(dest_files_before, set(os.listdir(destination)))
 
+
 # Not all specified TEMP_ files exist at _teardown (allowed)
 @with_temp_folder
 def test_commandnode_teardown__missing_optional_files(temp_folder):
     destination, temp_folder = _setup_temp_folders(temp_folder)
 
     cmd = AtomicCmd(("echo", "-n", "1 2 3"),
-                    TEMP_OUT_BAR = "bar.txt",
-                    OUT_STDOUT = os.path.join(destination, "foo.txt"))
+                    IN_DUMMY=_EMPTY_FILE,
+                    TEMP_OUT_BAR="bar.txt",
+                    OUT_STDOUT=os.path.join(destination, "foo.txt"))
     cmd.run(temp_folder)
     assert_equal(cmd.join(), [0])
     node = CommandNode(cmd)
@@ -545,8 +558,9 @@ def _test_commandnode_teardown__missing_files_in_dest(temp_folder):
             os.remove(os.path.join(destination, "foo.txt"))
 
     cmd = _CmdMock(("touch", "%(OUT_FOO)s", "%(OUT_BAR)s"),
-                   OUT_FOO = os.path.join(destination, "foo.txt"),
-                   OUT_BAR = os.path.join(destination, "bar.txt"))
+                   IN_DUMMY=_EMPTY_FILE,
+                   OUT_FOO=os.path.join(destination, "foo.txt"),
+                   OUT_BAR=os.path.join(destination, "bar.txt"))
     cmd.run(temp_folder)
     assert_equal(cmd.join(), [0])
     node = CommandNode(cmd)
@@ -559,7 +573,8 @@ def test_commandnode_teardown__extra_files_in_temp(temp_folder):
     destination, temp_folder = _setup_temp_folders(temp_folder)
 
     cmd = AtomicCmd(("echo", "-n", "1 2 3"),
-                    OUT_STDOUT = os.path.join(destination, "foo.txt"))
+                    IN_DUMMY=_EMPTY_FILE,
+                    OUT_STDOUT=os.path.join(destination, "foo.txt"))
     cmd.run(temp_folder)
     assert_equal(cmd.join(), [0])
     node = CommandNode(cmd)
@@ -572,17 +587,15 @@ def test_commandnode_teardown__extra_files_in_temp(temp_folder):
     assert_equal(dest_files_before, set(os.listdir(destination)))
 
 
-
-
-################################################################################
-################################################################################
+###############################################################################
+###############################################################################
 ## MetaNode: Dependencies / Subnodes
 
 def test_metanode__nodes():
     subnodes = [Node(), Node()]
     dependencies = [Node(), Node()]
-    node = MetaNode(subnodes = iter(subnodes),
-                    dependencies = iter(dependencies))
+    node = MetaNode(subnodes=iter(subnodes),
+                    dependencies=iter(dependencies))
     assert_equal(node.subnodes, frozenset(subnodes))
     assert_equal(node.dependencies, frozenset(dependencies))
 

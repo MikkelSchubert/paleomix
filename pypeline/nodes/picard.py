@@ -205,6 +205,7 @@ class MultiBAMInput(object):
         self.files = safe_coerce_to_tuple(input_bams)
 
         self.commands = []
+        self.kwargs = {"TEMP_IN_BAM": self.pipe}
         if len(self.files) > 1:
             jar_file = os.path.join(config.jar_root, "MergeSamFiles.jar")
             params = AtomicJavaCmdBuilder(jar=jar_file,
@@ -221,6 +222,13 @@ class MultiBAMInput(object):
                               TEMP_OUT_BAM=self.pipe)
 
             self.commands = [params.finalize()]
+        else:
+            # Ensure that the actual command depends on the input
+            self.kwargs["IN_FILE_00"] = self.files[0]
+            self.kwargs["IN_FILE_01"] = swap_ext(self.files[0], ".bai")
+
+    def setup(self, command):
+        command.set_kwargs(**self.kwargs)
 
 
 class MultiBAMInputNode(CommandNode):

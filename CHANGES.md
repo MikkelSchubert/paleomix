@@ -24,6 +24,7 @@ Current
   * Require BWA 0.5.9, 0.5.10, 0.6.2, or 0.7.9+ for BWA backtrack; other
     versions have never been tested, or are known to contain bugs that result
     in invalid BAM files.
+  * Fixed bug causing some tasks to not be re-run if the input file changed.
 
 
 Version 1.0.1 - 2014-04-30

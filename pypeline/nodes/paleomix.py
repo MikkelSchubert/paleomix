@@ -68,8 +68,8 @@ class DuplicateHistogramNode(MultiBAMInputNode):
         bam_input = MultiBAMInput(config, input_files)
         duphist_command = factory.new("duphist")
         duphist_command.add_value('%(TEMP_IN_BAM)s')
-        duphist_command.set_kwargs(TEMP_IN_BAM=bam_input.pipe,
-                                   OUT_STDOUT=output_file)
+        duphist_command.set_kwargs(OUT_STDOUT=output_file)
+        bam_input.setup(duphist_command)
         duphist_command = duphist_command.finalize()
 
         commands = ParallelCmds(bam_input.commands + [duphist_command])
@@ -83,33 +83,25 @@ class DuplicateHistogramNode(MultiBAMInputNode):
                                    dependencies=dependencies)
 
 
-class CoverageNode(MultiBAMInputNode):
-    def __init__(self, config, target_name, input_files, output_file,
+class CoverageNode(CommandNode):
+    def __init__(self, config, target_name, input_file, output_file,
                  regions_file=None, dependencies=()):
-        bam_input = MultiBAMInput(config, input_files)
-        if len(bam_input.files) > 1 and regions_file:
-            raise ValueError("Coverage for regions require single, "
-                             "indexed input BAM file.")
-
         builder = factory.new("coverage")
-        builder.add_value("%(TEMP_IN_BAM)s")
+        builder.add_value("%(IN_BAM)s")
         builder.add_value("%(OUT_FILE)s")
         builder.set_option("--target-name", target_name)
-        builder.set_kwargs(TEMP_IN_BAM=bam_input.pipe,
+        builder.set_kwargs(IN_BAM=input_file,
                            OUT_FILE=output_file)
 
         if regions_file:
             builder.set_option('--regions-file', '%(IN_REGIONS)s')
             builder.set_kwargs(IN_REGIONS=regions_file)
 
-        command = ParallelCmds(bam_input.commands + [builder.finalize()])
-        description = "<Coverage: %s -> '%s'>" \
-            % (describe_files(bam_input.files), output_file)
-        MultiBAMInputNode.__init__(self,
-                                   bam_input=bam_input,
-                                   command=command,
-                                   description=description,
-                                   dependencies=dependencies)
+        description = "<Coverage: %s -> '%s'>" % (input_file, output_file)
+        CommandNode.__init__(self,
+                             command=builder.finalize(),
+                             description=description,
+                             dependencies=dependencies)
 
 
 class MergeCoverageNode(Node):
@@ -144,8 +136,8 @@ class DepthHistogramNode(MultiBAMInputNode):
         builder.add_value("%(TEMP_IN_BAM)s")
         builder.add_value("%(OUT_FILE)s")
         builder.set_option("--target-name", target_name)
-        builder.set_kwargs(TEMP_IN_BAM=bam_input.pipe,
-                           OUT_FILE=output_file)
+        builder.set_kwargs(OUT_FILE=output_file)
+        bam_input.setup(builder)
 
         if regions_file:
             builder.set_option('--regions-file', '%(IN_REGIONS)s')
@@ -168,8 +160,9 @@ class FilterCollapsedBAMNode(MultiBAMInputNode):
 
         builder = factory.new("rmdup_collapsed")
         builder.add_value("%(TEMP_IN_BAM)s")
-        builder.set_kwargs(TEMP_IN_BAM=bam_input.pipe,
-                           OUT_STDOUT=output_bam)
+        builder.set_kwargs(OUT_STDOUT=output_bam)
+        bam_input.setup(builder)
+
         if not keep_dupes:
             builder.set_option("--remove-duplicates")
 

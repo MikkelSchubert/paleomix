@@ -82,7 +82,7 @@ class MapDamagePlotNode(MultiBAMInputNode):
     @use_customizable_cli_parameters
     def __init__(self, parameters):
         bam_input = MultiBAMInput(parameters.config, parameters.input_files)
-        parameters.command.set_kwargs(TEMP_IN_BAM=bam_input.pipe)
+        bam_input.setup(parameters.command)
         cmd_map = parameters.command.finalize()
 
         description = "<mapDamage (plots): %s -> '%s'>" \
@@ -200,7 +200,7 @@ class MapDamageRescaleNode(MultiBAMInputNode):
     def __init__(self, parameters):
         self._directory = parameters.directory
         bam_input = MultiBAMInput(parameters.config, parameters.input_files)
-        parameters.command.set_kwargs(TEMP_IN_BAM=bam_input.pipe)
+        bam_input.setup(parameters.command)
         command = parameters.command.finalize()
 
         description = "<mapDamage (rescale): %s -> %r>" \
