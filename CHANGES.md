@@ -25,6 +25,8 @@ Current
     versions have never been tested, or are known to contain bugs that result
     in invalid BAM files.
   * Fixed bug causing some tasks to not be re-run if the input file changed.
+  * Include list of filters in 'vcf_filter' output and renamed these to be
+    compatible with GATK (using ':' instead of '=').
 
 
 Version 1.0.1 - 2014-04-30

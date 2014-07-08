@@ -77,6 +77,25 @@ def add_varfilter_options(parser):
     parser.add_option_group(group)
 
 
+def describe_filters(options):
+    return {
+        "HET": "Heterozygous SNPs observed on homozygous chromosome (e.g. chrX)",
+        "q:%i" % options.min_quality: "Minimum Phred score recorded in the QUAL column",
+        "f:%.4f" % options.min_allele_frequency:  "Minimum frequency of the alleles at heterozygous sites",
+        "k": "SNPs without a most likely genotype (based on PL)",
+        "Q:%i" % options.min_mapping_quality: "Minimum RMS mapping quality",
+        "d:%i" % options.min_read_depth: "Minimum read depth",
+        "D:%i" % options.max_read_depth: "Maximum read depth",
+        "a:%i" % options.min_num_alt_bases: "Minimum number of alternative bases observed for variants",
+        "w:%i" % options.min_distance_to_indels: "SNP within INT bp around a gap",
+        "W:%i" % options.min_distance_between_indels: "Indel within INT bp of another indel",
+        "1:%e" % options.min_strand_bias: "Min P-value for strand bias (given PV4)",
+        "2:%e" % options.min_baseq_bias: "Min P-value for baseQ bias (given PV4)",
+        "3:%e" % options.min_mapq_bias: "Min P-value for mapQ bias (given PV4)",
+        "4:%e" % options.min_end_distance_bias: "Min P-value for end distance bias (given PV4)",
+    }
+
+
 def filter_vcfs(options, vcfs):
     vcfs  = iter(vcfs)
     chunk = collections.deque()
@@ -282,10 +301,10 @@ def _filter_by_indels(options, chunk):
         if vcfwrap.is_indel(vcf):
             blacklisted = indel_blacklist.get(vcf.pos + 1, [vcf])
             if vcf is not _select_best_indel(blacklisted):
-                _mark_as_filtered(vcf, "W=%i" % distance_between)
+                _mark_as_filtered(vcf, "W:%i" % distance_between)
         elif (vcf.alt != ".") and (vcf.pos in snp_blacklist):
             # TODO: How to handle heterozygous SNPs near
-            _mark_as_filtered(vcf, "w=%i" % distance_to)
+            _mark_as_filtered(vcf, "w:%i" % distance_to)
 
 
 def _filter_by_properties(options, vcfs, frequencies):
@@ -294,7 +313,7 @@ def _filter_by_properties(options, vcfs, frequencies):
     by vcfutils.pl varFilter."""
     for vcf in vcfs:
         if float(vcf.qual) < options.min_quality:
-            _mark_as_filtered(vcf, "q=%i" % options.min_quality)
+            _mark_as_filtered(vcf, "q:%i" % options.min_quality)
 
         properties = {}
         for field in vcf.info.split(";"):
@@ -306,29 +325,29 @@ def _filter_by_properties(options, vcfs, frequencies):
 
         read_depth = float(properties["DP"])
         if options.min_read_depth > read_depth:
-            _mark_as_filtered(vcf, "d=%i" % options.min_read_depth)
+            _mark_as_filtered(vcf, "d:%i" % options.min_read_depth)
         elif options.max_read_depth < read_depth:
-            _mark_as_filtered(vcf, "D=%i" % options.max_read_depth)
+            _mark_as_filtered(vcf, "D:%i" % options.max_read_depth)
 
         if "MQ" in properties:
             if float(properties["MQ"]) < options.min_mapping_quality:
-                _mark_as_filtered(vcf, "Q=%i" % options.min_mapping_quality)
+                _mark_as_filtered(vcf, "Q:%i" % options.min_mapping_quality)
 
         if "PV4" in properties:
             pv4 = [float(value) for value in properties["PV4"].split(",")]
             if (pv4[0] < options.min_strand_bias):
-                _mark_as_filtered(vcf, "1=%e" % options.min_strand_bias)
+                _mark_as_filtered(vcf, "1:%e" % options.min_strand_bias)
             if (pv4[1] < options.min_baseq_bias):
-                _mark_as_filtered(vcf, "2=%e" % options.min_baseq_bias)
+                _mark_as_filtered(vcf, "2:%e" % options.min_baseq_bias)
             if  (pv4[2] < options.min_mapq_bias):
-                _mark_as_filtered(vcf, "3=%e" % options.min_mapq_bias)
+                _mark_as_filtered(vcf, "3:%e" % options.min_mapq_bias)
             if (pv4[3] < options.min_end_distance_bias):
-                _mark_as_filtered(vcf, "4=%e" % options.min_end_distance_bias)
+                _mark_as_filtered(vcf, "4:%e" % options.min_end_distance_bias)
 
         if vcf.alt != ".":
             ref_fw, ref_rev, alt_fw, alt_rev = map(int, properties["DP4"].split(","))
             if (alt_fw + alt_rev) < options.min_num_alt_bases:
-                _mark_as_filtered(vcf, "a=%i" % options.min_num_alt_bases)
+                _mark_as_filtered(vcf, "a:%i" % options.min_num_alt_bases)
 
             ml_genotype = vcfwrap.get_ml_genotype(vcf)
             if (ml_genotype == ("N", "N")) and not options.keep_ambigious_genotypes:
@@ -345,13 +364,13 @@ def _filter_by_properties(options, vcfs, frequencies):
                     n_major = max(ref_fw + ref_rev, alt_fw + alt_rev)
 
                     if (n_minor / float(n_minor + n_major)) < options.min_allele_frequency:
-                        _mark_as_filtered(vcf, "f=%.4f" % options.min_allele_frequency)
+                        _mark_as_filtered(vcf, "f:%.4f" % options.min_allele_frequency)
                 else:
                     state = frequencies.frequency_is_valid(vcf.contig, vcf.pos, vcf.ref, *ml_genotype)
                     if state is frequencies.INVALID:
-                        _mark_as_filtered(vcf, "f=%.4f" % options.min_allele_frequency)
+                        _mark_as_filtered(vcf, "f:%.4f" % options.min_allele_frequency)
                     elif state is frequencies.NA:
-                        if _mark_as_filtered(vcf, "F=%.4f" % options.min_allele_frequency):
+                        if _mark_as_filtered(vcf, "F:%.4f" % options.min_allele_frequency):
                             sys.stderr.write("WARNING: Could not determine allele-counts for SNP at %s:%s, filtering ...\n" % (vcf.contig, vcf.pos + 1))
 
 

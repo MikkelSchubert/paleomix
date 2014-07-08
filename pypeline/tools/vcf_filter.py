@@ -32,8 +32,9 @@ import pysam
 import pypeline.common.vcffilter as vcffilter
 
 
-def _read_files(filenames):
+def _read_files(filenames, args):
     in_header = True
+    has_filters = False
     vcf_parser = pysam.asVCF()
     for line in fileinput.input(filenames):
         if not line.startswith("#"):
@@ -41,6 +42,11 @@ def _read_files(filenames):
             line = line.rstrip("\n\r")
             yield vcf_parser(line, len(line))
         elif in_header:
+            if not (line.startswith("##") or has_filters):
+                has_filters = True
+                for item in sorted(vcffilter.describe_filters(args).items()):
+                    print('##FILTER=<ID=%s,Description="%s">' % item)
+
             print(line, end="")
 
 
@@ -53,7 +59,7 @@ def main(argv):
         parser.error("STDIN is a terminal, terminating!")
 
     try:
-        for vcf in vcffilter.filter_vcfs(opts, _read_files(args)):
+        for vcf in vcffilter.filter_vcfs(opts, _read_files(args, opts)):
             print(vcf)
     except IOError, error:
         # Check for broken pipe (head, less, etc).
