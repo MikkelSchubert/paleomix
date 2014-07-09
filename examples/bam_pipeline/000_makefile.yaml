@@ -22,10 +22,11 @@ Options:
   CompressionFormat: bz2
 
   # Settings for trimming of reads, see AdapterRemoval man-page
-#  AdapterRemoval:
+  AdapterRemoval:
      # Adapter sequences, set and uncomment to override defaults
-#     --pcr1: ...
-#     --pcr2: ...
+     # The following adapters were used to generating the data for this example
+     --pcr1: "AGATCGGAAGAGCACACGTCTGAACTCCAGTCACNNNNNNATCTCGTATGCCGTCTTCTGCTTG"
+     --pcr2: "AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT"
      # Pipeline defaults that differ from AR defaults;
      # To override, change the value(s) and uncomment the line(s):
 #     --mm: 3
