@@ -449,17 +449,21 @@ def test_builder__add_multiple_values_with_template():
 
 def test_java_builder__default__no_config():
     builder = AtomicJavaCmdBuilder("/path/Foo.jar")
-    assert_equal(builder.call, ["java", "-server", "-Xmx4g",
+    assert_equal(builder.call, ["java",
+                                "-server",
                                 "-Djava.io.tmpdir=%(TEMP_DIR)s",
                                 "-Djava.awt.headless=true",
+                                "-Xmx4g",
                                 "-XX:+UseSerialGC",
                                 "-jar", "%(AUX_JAR)s"])
 
 def test_java_builder__defaults__call():
     builder = AtomicJavaCmdBuilder("/path/Foo.jar", temp_root = "/disk/tmp")
-    assert_equal(builder.call, ["java", "-server", "-Xmx4g",
+    assert_equal(builder.call, ["java",
+                                "-server",
                                 "-Djava.io.tmpdir=/disk/tmp",
                                 "-Djava.awt.headless=true",
+                                "-Xmx4g",
                                 "-XX:+UseSerialGC",
                                 "-jar", "%(AUX_JAR)s"])
 
@@ -470,9 +474,11 @@ def test_java_builder__defaults__kwargs():
 
 def test_java_builder__multithreaded_gc():
     builder = AtomicJavaCmdBuilder("/path/Foo.jar", temp_root = "/disk/tmp", gc_threads = 3)
-    assert_equal(builder.call, ["java", "-server", "-Xmx4g",
+    assert_equal(builder.call, ["java",
+                                "-server",
                                 "-Djava.io.tmpdir=/disk/tmp",
                                 "-Djava.awt.headless=true",
+                                "-Xmx4g",
                                 "-XX:ParallelGCThreads=3",
                                 "-jar", "%(AUX_JAR)s"])
 
