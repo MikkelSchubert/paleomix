@@ -27,6 +27,8 @@ Current
   * Fixed bug causing some tasks to not be re-run if the input file changed.
   * Include list of filters in 'vcf_filter' output and renamed these to be
     compatible with GATK (using ':' instead of '=').
+  * The memory limit it no longer increased for 32-bit JREs by default, as the
+    value used by the pipeline exceeded the maxmimum for this architecture.
 
 
 Version 1.0.1 - 2014-04-30

@@ -62,8 +62,10 @@ This class can then be used in two ways:
 >> node = params.build_node()
 
 """
+import os
 import types
 import inspect
+import subprocess
 import collections
 
 from pypeline.atomiccmd.command import \
@@ -308,10 +310,34 @@ class AtomicJavaCmdBuilder(AtomicCmdBuilder):
             gc_threads  -- Number of threads to use during garbage collections.
             ...         -- Key-word args are passed to AtomicCmdBuilder.
         """
-        call = ["java", "-server", "-Xmx4g",
+        call = ["java", "-server",
                 "-Djava.io.tmpdir=%s" % temp_root,
                 "-Djava.awt.headless=true"]
-        call.extend(jre_options)
+
+        # Our experience is that the default -Xmx value tends to cause
+        # OutOfMemory exceptions with typical datasets, so require at least
+        # 4gb. However, this is not possible on 32bit systems, which cannot
+        # handle such datasets in any case (due to e.g. BWA memory usage).
+        if AtomicJavaCmdBuilder._IS_JAVA_64_BIT is None:
+            with open("/dev/null", "w") as dev_null:
+                version_call = call + ["-d64", "-version"]
+                try:
+                    result = subprocess.call(version_call,
+                                             stdout=dev_null,
+                                             stderr=dev_null,
+                                             preexec_fn=os.setsid,
+                                             close_fds=True)
+
+                    AtomicJavaCmdBuilder._IS_JAVA_64_BIT = (result == 0)
+                except OSError:
+                    # We don't care if this fails here, the exec / version
+                    # checks will report any problems downstream
+                    AtomicJavaCmdBuilder._IS_JAVA_64_BIT = False
+
+        # The default memory-limit tends to be insufficent for whole-genome
+        # datasets, so this is increased on 64-bit architectures.
+        if AtomicJavaCmdBuilder._IS_JAVA_64_BIT:
+            call.append("-Xmx4g")
 
         if not isinstance(gc_threads, (types.IntType, types.LongType)):
             raise TypeError("'gc_threads' must be an integer value, not %r"
@@ -324,12 +350,16 @@ class AtomicJavaCmdBuilder(AtomicCmdBuilder):
             raise ValueError("'gc_threads' must be a 1 or greater, not %r"
                              % gc_threads)
 
+        call.extend(jre_options)
+
         version = self._get_java_version(java_version)
         call.extend(("-jar", "%(AUX_JAR)s"))
         AtomicCmdBuilder.__init__(self, call,
                                   AUX_JAR=jar,
                                   CHECK_JRE=version,
                                   **kwargs)
+
+    _IS_JAVA_64_BIT = None
 
     @classmethod
     def _get_java_version(cls, version):
