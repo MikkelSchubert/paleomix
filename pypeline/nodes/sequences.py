@@ -94,23 +94,17 @@ class CollectSequencesNode(Node):
             fasta_files.append((name, pysam.Fastafile(filename)))
 
         for sequence_name in sorted(self._sequences):
-            sequences = {}
-            for (sample, fasta_file) in fasta_files:
-                sequences[sample] = fasta_file.fetch(sequence_name)
-            self._write_fasta(temp, sequence_name, sequences)
+            filename = os.path.join(temp, sequence_name + ".fasta")
+            with open(filename, "w") as out_handle:
+                for (sample, fasta_file) in fasta_files:
+                    sequence = fasta_file.fetch(sequence_name)
+                    fasta = FASTA(sample, sequence_name, sequence)
+                    out_handle.write(str(fasta))
 
     def _teardown(self, _config, temp):
         for destination in sorted(self._outfiles):
             source = fileutils.reroot_path(temp, destination)
             fileutils.move_file(source, destination)
-
-    @classmethod
-    def _write_fasta(cls, temp, sequence_name, sequences):
-        filename = os.path.join(temp, sequence_name + ".fasta")
-        with open(filename, "w") as out_handle:
-            for (name, sequence) in sorted(sequences.iteritems()):
-                fasta = FASTA(name, sequence_name, sequence)
-                out_handle.write(str(fasta))
 
 
 class FilterSingletonsNode(Node):
