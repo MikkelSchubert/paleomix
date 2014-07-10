@@ -192,25 +192,23 @@ class RequirementObj(object):
         output indicates that the JRE is outdated (i.e. the output contains
         "UnsupportedClassVersionError") a special message is givenself.
         """
-        lines = ["Version could not be determined for %s;"
-                 % (self.name,)]
-        lines.append("Program may be broken or a version not supported by the")
-        lines.append("pipeline; please refer to the PALEOMIX documentation.\n")
+        lines = ["Version could not be determined for %s:" % (self.name,)]
+        lines.append("")
         lines.extend(self._describe_call())
+        lines.append("")
 
         # Raised if the JRE is too old compared to the JAR
         if "UnsupportedClassVersionError" in output:
             lines.extend([
-                "",
                 "The version of the Java Runtime Environment on this",
                 "system is too old; please check the the requirement",
                 "for the program and upgrade your version of Java.",
                 "",
-                "See the WIKI for more information:",
-                "https://github.com/MikkelSchubert/paleomix/wiki/"
-                "Troubleshooting#JRE_outdated"
+                "See the documentation for more information.",
             ])
         else:
+            lines.append("Program may be broken or a version not supported by the")
+            lines.append("pipeline; please refer to the PALEOMIX documentation.\n")
             lines.append("    Required:       %s" % (self.checks,))
             lines.append("    Search string:  %r\n" % (self._rege.pattern))
             lines.append("%s Command output %s" % ("-" * 22, "-" * 22))

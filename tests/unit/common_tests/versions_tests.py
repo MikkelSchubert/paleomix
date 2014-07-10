@@ -520,8 +520,7 @@ def test_requirementobj__version__func_call_with_arguments():
 
 
 def test_requirementobj__version__outdated_jre__with_or_without_version_str():
-    url = "https://github.com/MikkelSchubert/paleomix/wiki/" \
-        "Troubleshooting#JRE_outdated"
+    error_msg = "upgrade your version of Java"
 
     def _do_test_outdated_jre(message):
         obj = versions.RequirementObj(call=lambda: message,
@@ -532,7 +531,7 @@ def test_requirementobj__version__outdated_jre__with_or_without_version_str():
             obj.version
             assert False  # pragma: no coverage
         except versions.VersionRequirementError, error:
-            assert_in(url, str(error))
+            assert_in(error_msg, str(error))
 
     messages = [
         "UnsupportedClassVersionError",
@@ -625,9 +624,7 @@ def test_requirementobj__call__check_fails():
 
 def test_requirementobj__call__check_fails__jre_outdated():
     expected = \
-        "Version could not be determined for test#1;\n" \
-        "Program may be broken or a version not supported by the\n" \
-        "pipeline; please refer to the PALEOMIX documentation.\n" \
+        "Version could not be determined for test#1:\n" \
         "\n" \
         "    Executable:    /usr/bin/python\n" \
         "    Call:          /usr/bin/python -c import sys; " \
@@ -637,9 +634,7 @@ def test_requirementobj__call__check_fails__jre_outdated():
         "system is too old; please check the the requirement\n" \
         "for the program and upgrade your version of Java.\n" \
         "\n" \
-        "See the WIKI for more information:\n" \
-        "https://github.com/MikkelSchubert/paleomix/wiki/" \
-        "Troubleshooting#JRE_outdated"
+        "See the documentation for more information."
 
     value = "UnsupportedClassVersionError"
     obj = versions.RequirementObj(call=_echo_version(value),
