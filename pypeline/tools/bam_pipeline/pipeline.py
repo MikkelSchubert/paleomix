@@ -322,11 +322,11 @@ def _print_usage():
 
     print_info("BAM Pipeline %s\n" % (pypeline.__version__,))
     print_info("Usage:")
-    print_info("  -- %s help          -- Display this message" % basename)
-    print_info("  -- %s mkfile [...]  -- Generate makefile from 'SampleSheet.csv' files." % basename)
-    print_info("  -- %s dryrun [...]  -- Perform dry run of pipeline on provided makefiles." % basename)
-    print_info("     %s                  Equivalent to 'bam_pipeline run --dry-run [...]'." % (" " * len(basename),))
-    print_info("  -- %s run [...]     -- Run pipeline on provided makefiles." % basename)
+    print_info("  -- %s help           -- Display this message" % basename)
+    print_info("  -- %s makefile [...] -- Generate makefile from 'SampleSheet.csv' files." % basename)
+    print_info("  -- %s dryrun [...]   -- Perform dry run of pipeline on provided makefiles." % basename)
+    print_info("     %s                   Equivalent to 'bam_pipeline run --dry-run [...]'." % (" " * len(basename),))
+    print_info("  -- %s run [...]      -- Run pipeline on provided makefiles." % basename)
 
 
 def main(argv):
@@ -338,11 +338,11 @@ def main(argv):
         print_err(error)
         return 1
 
-    commands = ("mkfile", "run", "dry_run", "dry-run", "dryrun")
+    commands = ("makefile", "mkfile", "run", "dry_run", "dry-run", "dryrun")
     if (len(args) == 0) or (args[0] not in commands):
         _print_usage()
         return 1
-    elif args[0] == "mkfile":
+    elif args[0] in ("mkfile", "makefile"):
         return bam_mkfile.main(args[1:])
     elif not args[1:]:
         _print_usage()

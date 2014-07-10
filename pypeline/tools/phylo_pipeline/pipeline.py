@@ -63,12 +63,12 @@ def main(argv):
 
     if not args or ("help" in args):
         return 0
-    elif (len(args) < 2) and ("mkfile" not in args):
+    elif (len(args) < 2) and ("mkfile" not in args and "makefile" not in args):
         print_err("\nPlease specify at least one makefile!")
         return 1
 
     commands = select_commands(args.pop(0))
-    if any((cmd == "mkfile") for (cmd, _) in commands):
+    if any((cmd in ("makefile", "mkfile")) for (cmd, _) in commands):
         return mkfile.main(args[1:])
 
     if not os.path.exists(config.temp_root):

@@ -39,7 +39,7 @@ from pypeline.config import \
 _DESCRIPTION = \
   "Commands:\n" \
   "  -- %prog help            -- Display this message.\n" \
-  "  -- %prog mkfile          -- Print makefile template.\n" \
+  "  -- %prog makefile        -- Print makefile template.\n" \
   "  -- %prog genotype [...]  -- Carry out genotyping according to makefile.\n" \
   "  -- %prog msa [...]       -- Carry out multiple sequence alignment.\n" \
   "  -- %prog phylogeny [...] -- Carry out phylogenetic inference.\n"

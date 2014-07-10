@@ -29,6 +29,8 @@ Current
     compatible with GATK (using ':' instead of '=').
   * The memory limit it no longer increased for 32-bit JREs by default, as the
     value used by the pipeline exceeded the maxmimum for this architecture.
+  * The 'mkfile' command has been renamed to 'makefile' for both pipelines; the
+    old command is still supported, but considered deprecated.
 
 
 Version 1.0.1 - 2014-04-30
