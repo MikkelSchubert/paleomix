@@ -31,6 +31,7 @@ Current
     value used by the pipeline exceeded the maxmimum for this architecture.
   * The 'mkfile' command has been renamed to 'makefile' for both pipelines; the
     old command is still supported, but considered deprecated.
+  * Fixed off-by-one error for coverages near the end of regions / contigs.
 
 
 Version 1.0.1 - 2014-04-30

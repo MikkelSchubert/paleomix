@@ -114,9 +114,10 @@ def process_record(subtable, record, flags, region):
     end = region.end
 
     for (cigar, num) in record.cigar:
-        left = min(max(position, start), end - 1)
-        right = min(max(position + num, start), end - 1)
+        left = min(max(position, start), end)
+        right = min(max(position + num, start), end)
         bases_in_region = right - left
+        assert 0 <= bases_in_region <= num
 
         # 0 = 'M', 1 = 'I', 2 = 'D', 7 = '=', 8 = 'X'
         if cigar in (0, 1, 2, 7, 8):
