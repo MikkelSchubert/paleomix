@@ -132,6 +132,8 @@ def build_genotyping_bedfile_nodes(options, genotyping, sample, regions,
         prefix = os.path.join(os.path.dirname(prefix),
                               "%s.%s.TEMP" % (sample, regions["Prefix"]))
 
+        dependencies += (build_bam_index_node(bamfile),)
+
     return prefix, bamfile, bedfile, dependencies
 
 
