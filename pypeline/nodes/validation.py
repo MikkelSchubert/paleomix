@@ -77,7 +77,7 @@ class DetectInputDuplicationNode(Node):
             observed_reads = collections.defaultdict(list)
             for (record, fpath) in records:
                 if record.pos != position:
-                    self._process_reads(observed_reads)
+                    self._process_reads(observed_reads, self.output_files)
                     observed_reads.clear()
                     position = record.pos
                 elif record.is_unmapped:
@@ -87,7 +87,7 @@ class DetectInputDuplicationNode(Node):
                 if not record.flag & 0x900:
                     key = (record.qname, record.seq, record.qual)
                     observed_reads[key].append(fpath)
-            self._process_reads(observed_reads)
+            self._process_reads(observed_reads, self.output_files)
 
             # Everything is ok, touch the output files
             for fpath in self.output_files:
@@ -99,7 +99,7 @@ class DetectInputDuplicationNode(Node):
                 handle.close()
 
     @classmethod
-    def _process_reads(cls, observed_reads):
+    def _process_reads(cls, observed_reads, output_files):
         for ((name, _, _), fpaths) in observed_reads.iteritems():
             if len(fpaths) > 1:
                 message = ["Read %r found in multiple files:" % (name,)]
@@ -110,7 +110,15 @@ class DetectInputDuplicationNode(Node):
                                "been included multiple times in the project. "
                                "Please review the input files used in this "
                                "project, to ensure that each set of data is "
-                               "included only once.")
+                               "included only once.\n\n"
+
+                               "If this is not the case, then execute the "
+                               "following command(s) to mark this test as having "
+                               "succeeded:")
+
+                for fpath in output_files:
+                    message.append("$ touch '%s'" % (fpath,))
+
                 raise NodeError("\n".join(message))
 
     @classmethod
