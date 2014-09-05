@@ -304,11 +304,29 @@ def _update_filtering(mkfile):
 
     filtering = {}
     for (target, filter_by) in mkfile["Project"]["FilterSingletons"].iteritems():
-        if target not in samples:
-            raise MakefileError("Unknown/Invalid group specifed for singleton filtering: %r" % (target,))
+        if target.startswith("<") and target.endswith(">"):
+            raise MakefileError("Singleton-filtering must be specified per "
+                                "sample, not by groups: %r" % (target,))
+        elif target not in samples:
+            raise MakefileError("Unknown/Invalid sample specifed for singleton filtering: %r" % (target,))
+        elif target in filter_by:
+            raise MakefileError("Attempting to filter singleton in sample using itself as comparison: %r" % (target,))
 
         path = "Project:FilterSingletons:%s" % (target,)
         filtering[target] = _select_samples(filter_by, groups, samples, path)
+
+        # Implicit inclusion is allowed, since that is useful in some cases,
+        # where we want to filter a sample based on the group it is a member of
+        if target in filtering[target]:
+            # The target itself must be excluded, as including it is invalid
+            filtering[target] = filtering[target] - set((target,))
+            print_warn("Warning: Sample %r is singleton-filtered using a"
+                       "group it is also a member of; this may be by mistake."
+                       % (target,))
+
+        if not filtering[target]:
+            raise MakefileError("No samples specified by which to "
+                                "singleton-filter by for %r" % (target,))
 
     mkfile["Project"]["FilterSingletons"] = filtering
 
