@@ -53,7 +53,7 @@ Project:
        Prefix: PREFIX_NAME
        # If true, BAM files are expected to have the postfix ".realigned";
        # allows easier interopterability with the BAM pipeline.
-       Realigned: no
+       Realigned: yes
        # Specifies whether or not the sequences are protein coding; if true
        # indels are only included in the final sequence if the length is
        # divisible by 3.
@@ -89,6 +89,12 @@ Genotyping:
     # (VCF_filter --min-distance-to-indels and --min-distance-between-indels).
     # The final sequences does not include the padding.
     Padding: 10
+
+    # By default, each set of regions of interest are genotyped seperately,
+    # even if these overlap. By setting this option to true, the entire prefix
+    # is genotyped once, and all regions of interest are extracted from this.
+    # This can only be done for prefixes that only use genotyping defaults.
+    GenotypeEntirePrefix: no
 
     # Settings for genotyping by random sampling of nucletoides at each site
     Random:
