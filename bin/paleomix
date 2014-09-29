@@ -34,11 +34,11 @@ import textwrap
 # If module is None, the command cannot be invoked directly (e.g. help), and
 # if help string is none, the command is considered a help header.
 _COMMANDS = (
-    ("help", None, "Displays this message."),
-
     ("Pipelines", None, None),
     ("bam_pipeline", "pypeline.tools.bam_pipeline.pipeline",
      "Pipeline for trimming and mapping of NGS reads."),
+#    ("trim_pipeline", "pypeline.tools.bam_pipeline.pipeline",
+#     "Equivalent to 'bam_pipeline', but only runs the trimming steps."),
     ("phylo_pipeline", "pypeline.tools.phylo_pipeline.pipeline",
      "Pipeline for genotyping and phylogenetic inference from BAMs."),
 
@@ -73,6 +73,8 @@ _COMMANDS = (
     ("Misc tools", None, None),
     ("cat", "pypeline.tools.cat",
      "Generalized cat command for gz, bz2 and uncompressed files."),
+    ("zip", "pypeline.tools.zip",
+     "Wrapper around bzip2 / gzip."),
 )
 
 # Commands equivalent to the above; these are not printed on the command-line,
@@ -172,8 +174,7 @@ def _print_help():
 
     sys.stderr.write("PALEOMIX - pipelines and tools for NGS data analyses.\n")
     sys.stderr.write("Version: %s\n\n" % (pypeline.__version__,))
-    sys.stderr.write("Usage: paleomix <commad> [options]\n\n")
-    sys.stderr.write("Commands:\n")
+    sys.stderr.write("Usage: paleomix <command> [options]\n")
     for (key, _, help_str) in _COMMANDS:
         if help_str is None:
             sys.stderr.write("\n%s:\n" % (key,))

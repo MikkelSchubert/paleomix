@@ -252,18 +252,18 @@ def _build_cat_command(input_files, output_file):
 
 
 def _build_zip_command(output_format, prefix, name, output=None):
-    if output_format == "bz2":
-        command, ext = "bzip2", ".bz2"
-    elif output_format == "gz":
-        command, ext = "gzip", ".gz"
-    else:
+    if output_format not in ("gz", "bz2"):
         message = "Invalid output-format (%r), please select 'gz' or 'bz2'"
         raise CmdError(message % (output_format,))
 
     basename = os.path.basename(prefix)
-    return AtomicCmd([command, "-c", "%(TEMP_IN_PIPE)s"],
-                     TEMP_IN_PIPE=basename + name,
-                     OUT_STDOUT=prefix + (output or name) + ext)
+    compress = factory.new("zip")
+    compress.set_option("--format", output_format)
+    compress.add_value("%(TEMP_IN_PIPE)s")
+    compress.set_kwargs(TEMP_IN_PIPE=basename + name,
+                        OUT_STDOUT=prefix + (output or name) + "." + output_format)
+
+    return compress.finalize()
 
 
 def _get_common_parameters(version):
