@@ -257,11 +257,11 @@ def _build_zip_command(output_format, prefix, name, output=None):
     elif output_format == "gz":
         command, ext = "gzip", ".gz"
     else:
-        message = "Invalid output-format (%s), please select 'gz' or 'bz2'"
-        raise CmdError(message % repr(output_format))
+        message = "Invalid output-format (%r), please select 'gz' or 'bz2'"
+        raise CmdError(message % (output_format,))
 
     basename = os.path.basename(prefix)
-    return AtomicCmd([command, "-ck", "%(TEMP_IN_PIPE)s"],
+    return AtomicCmd([command, "-c", "%(TEMP_IN_PIPE)s"],
                      TEMP_IN_PIPE=basename + name,
                      OUT_STDOUT=prefix + (output or name) + ext)
 
