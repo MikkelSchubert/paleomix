@@ -154,9 +154,9 @@ def setup_basic_batch(args, regions, prefix, func):
 
         setup["procs"]["gzip"] = zip_proc
 
+        write_mode = samtools_compatible_wbu_mode()
         setup["handles"]["bam_in"] = pysam.Samfile(args.bamfile)
         setup["handles"]["bam_out"] = \
-            write_mode = samtools_compatible_wbu_mode()
             pysam.Samfile(setup["files"]["pipe"], write_mode,
                           template=setup["handles"]["bam_in"])
 
