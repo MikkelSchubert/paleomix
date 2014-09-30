@@ -46,6 +46,21 @@ TABIX_VERSION = versions.Requirement(call=("tabix",),
                                      checks=versions.GE(0, 2, 5))
 
 
+def samtools_compatible_wbu_mode():
+    """Returns a writing mode for Pysam compatible with the current version of
+    samtools; uncompressed output from Pysam 0.8.x cannot be read by older
+    versions of samtools:
+
+    https://github.com/pysam-developers/pysam/issues/43
+    """
+    import pysam
+
+    if map(int, pysam.__version__.split(".")) < [0, 8, 0]:
+        return "wbu"
+    else:
+        return "wb"
+
+
 class TabixIndexNode(CommandNode):
     """Tabix indexes a BGZip compressed VCF or pileup file.
 

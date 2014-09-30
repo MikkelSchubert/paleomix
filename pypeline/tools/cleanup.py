@@ -44,6 +44,18 @@ import subprocess
 
 import pysam
 
+from pypeline.nodes.samtools import \
+    samtools_compatible_wbu_mode
+
+
+def popen(call, *args, **kwargs):
+    """Equivalent to subprocess.Popen, but records the system call as a tuple
+    assigned to the .call property of the Popen object.
+    """
+    proc = subprocess.Popen(call, *args, **kwargs)
+    proc.call = tuple(call)
+    return proc
+
 
 def _set_sort_order(header):
     """Updates a BAM header to indicate coordinate sorting."""
@@ -80,7 +92,8 @@ def _pipe_to_bam():
     properly handled by "samtools view -S -", resulting in a parse failure.
     """
     with pysam.Samfile("-", "r") as input_handle:
-        with pysam.Samfile("-", "wbu", template=input_handle) as output_handle:
+        write_mode = samtools_compatible_wbu_mode()
+        with pysam.Samfile("-", write_mode, template=input_handle) as output_handle:
             for record in input_handle:
                 output_handle.write(record)
 
@@ -146,7 +159,8 @@ def _cleanup_unmapped(args, cleanup_sam):
         if args.rg_id is not None:
             _set_rg_tags(header, args.rg_id, args.rg)
 
-        with pysam.Samfile("-", "wbu", header=header) as output_handle:
+        write_mode = samtools_compatible_wbu_mode()
+        with pysam.Samfile("-", write_mode, header=header) as output_handle:
             for record in input_handle:
                 if (record.mapq < args.min_quality) \
                         or (record.flag & args.exclude_flags):
@@ -179,24 +193,43 @@ def _join_procs(procs):
     0 otherwise.
     """
     sleep_time = 0.05
-    commands = list(enumerate(procs))
+    names = procs.keys()
+    commands = list(enumerate(procs.values()))
     return_codes = [None] * len(commands)
+    sys.stderr.write("Joinining subprocesses:\n")
     while commands:
         for (index, command) in list(commands):
             if command.poll() is not None:
                 return_codes[index] = command.wait()
                 commands.remove((index, command))
+                procs.pop(names[index])
                 sleep_time = 0.05
+
+                sys.stderr.write("  - Command finished: %s\n"
+                                 "    - Return-code:    %s\n"
+                                 % (" ".join(command.call),
+                                    return_codes[index]))
+                sys.stderr.flush()
             elif any(return_codes):
+                sys.stderr.write("  - Terminating command: %s\n"
+                                 % (" ".join(command.call),))
+                sys.stderr.flush()
+
                 command.terminate()
                 return_codes[index] = command.wait()
                 commands.remove((index, command))
+                procs.pop(names[index])
                 sleep_time = 0.05
 
         time.sleep(sleep_time)
         sleep_time = min(1, sleep_time * 2)
 
-    return 1 if any(return_codes) else 0
+    if any(return_codes):
+        sys.stderr.write("Errors occured during processing!\n")
+        sys.stderr.flush()
+        return 1
+
+    return 0
 
 
 def _setup_single_ended_pipeline(procs, bam_cleanup):
@@ -204,10 +237,10 @@ def _setup_single_ended_pipeline(procs, bam_cleanup):
     call_pipe = bam_cleanup + ['cleanup-sam']
 
     # Convert input to (uncompressed) BAM
-    procs["pipe"] = subprocess.Popen(call_pipe,
-                                     stdin=sys.stdin,
-                                     stdout=subprocess.PIPE,
-                                     close_fds=True)
+    procs["pipe"] = popen(call_pipe,
+                          stdin=sys.stdin,
+                          stdout=subprocess.PIPE,
+                          close_fds=True)
     sys.stdin.close()
 
     return procs["pipe"]
@@ -217,26 +250,26 @@ def _setup_paired_ended_pipeline(procs, bam_cleanup):
     call_pipe = bam_cleanup + ['pipe']
 
     # Convert input to (uncompressed) BAM
-    procs["pipe"] = subprocess.Popen(call_pipe,
-                                     stdin=sys.stdin,
-                                     stdout=subprocess.PIPE,
-                                     close_fds=True)
+    procs["pipe"] = popen(call_pipe,
+                          stdin=sys.stdin,
+                          stdout=subprocess.PIPE,
+                          close_fds=True)
     sys.stdin.close()
 
     # Fix mate information for PE reads
     call_fixmate = ['samtools', 'fixmate', '-', '-']
-    procs["fixmate"] = subprocess.Popen(call_fixmate,
-                                        stdin=procs["pipe"].stdout,
-                                        stdout=subprocess.PIPE,
-                                        close_fds=True)
+    procs["fixmate"] = popen(call_fixmate,
+                             stdin=procs["pipe"].stdout,
+                             stdout=subprocess.PIPE,
+                             close_fds=True)
     procs["pipe"].stdout.close()
 
     # Cleanup / filter reads. Must be done after 'fixmate', as BWA may produce
     # hits where the mate-unmapped flag is incorrect, which 'fixmate' fixes.
-    procs["cleanup"] = subprocess.Popen(bam_cleanup + ['cleanup'],
-                                        stdin=procs["fixmate"].stdout,
-                                        stdout=subprocess.PIPE,
-                                        close_fds=True)
+    procs["cleanup"] = popen(bam_cleanup + ['cleanup'],
+                             stdin=procs["fixmate"].stdout,
+                             stdout=subprocess.PIPE,
+                             close_fds=True)
     procs["fixmate"].stdout.close()
 
     return procs["cleanup"]
@@ -271,19 +304,18 @@ def _run_cleanup_pipeline(args):
 
         # Sort, output to stdout (-o)
         call_sort = ['samtools', 'sort', "-o", "-", args.temp_prefix]
-        procs["sort"] = subprocess.Popen(call_sort,
-                                         stdin=last_proc.stdout,
-                                         stdout=subprocess.PIPE,
-                                         close_fds=True)
+        procs["sort"] = popen(call_sort,
+                              stdin=last_proc.stdout,
+                              stdout=subprocess.PIPE,
+                              close_fds=True)
         last_proc.stdout.close()
 
         # Update NM and MD tags; output BAM (-b) to stdout
         call_calmd = ['samtools', 'calmd', '-b', '-', args.fasta]
-        procs["calmd"] = subprocess.Popen(call_calmd,
-                                          stdin=procs["sort"].stdout)
+        procs["calmd"] = popen(call_calmd, stdin=procs["sort"].stdout)
         procs["sort"].stdout.close()
 
-        return _join_procs(procs.values())
+        return _join_procs(procs)
     except:
         for proc in procs.itervalues():
             proc.terminate()

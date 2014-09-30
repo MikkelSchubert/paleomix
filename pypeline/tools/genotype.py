@@ -49,6 +49,9 @@ from pypeline.common.bedtools import \
     read_bed_file, \
     sort_bed_by_bamfile
 
+from pypeline.nodes.samtools import \
+    samtools_compatible_wbu_mode
+
 
 class BatchError(RuntimeError):
     pass
@@ -153,7 +156,8 @@ def setup_basic_batch(args, regions, prefix, func):
 
         setup["handles"]["bam_in"] = pysam.Samfile(args.bamfile)
         setup["handles"]["bam_out"] = \
-            pysam.Samfile(setup["files"]["pipe"], "wbu",
+            write_mode = samtools_compatible_wbu_mode()
+            pysam.Samfile(setup["files"]["pipe"], write_mode,
                           template=setup["handles"]["bam_in"])
 
         return setup
