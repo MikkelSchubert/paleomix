@@ -63,7 +63,8 @@ class PHYLIPBootstrapNode(Node):
 
 
     def _run(self, _config, temp):
-        rng = random.Random(self._seed)
+        if self._seed is not None:
+            rng = random.Random(self._seed)
         partitions = _read_partitions(self._input_part)
         header, names, sequences = _read_sequences(self._input_phy)
         bootstraps = self._bootstrap_sequences(sequences, partitions, rng)
