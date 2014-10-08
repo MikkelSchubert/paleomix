@@ -22,6 +22,7 @@
 #
 import io
 import os
+import re
 import subprocess
 import collections
 from itertools import \
@@ -144,6 +145,26 @@ class ValidateFASTQFilesNode(Node):
             pass
 
 
+class ValidateFASTAFilesNode(Node):
+    def __init__(self, input_files, output_file, dependencies=()):
+        Node.__init__(self,
+                      description="<Validate FASTA Files: %s>"
+                      % (describe_files(input_files)),
+                      input_files=input_files,
+                      output_files=output_file,
+                      dependencies=dependencies)
+
+        assert len(self.output_files) == 1, self.output_files
+
+    def _run(self, _config, _temp):
+        for filename in self.input_files:
+            check_fasta_file(filename)
+        output_file, = self.output_files
+        make_dirs(os.path.dirname(output_file))
+        with open(output_file, "w"):
+            pass
+
+
 def check_fastq_files(filenames, required_offset, allow_empty=False):
     for filename in filenames:
         qualities = _read_sequences(filename)
@@ -233,3 +254,96 @@ def _collect_qualities(handle, filename):
 
         yield qualities
         header = handle.readline()
+
+
+def check_fasta_file(filename):
+    with open(filename) as handle:
+        namecache = {}
+        state, linelength, linelengthchanged = _NA, None, False
+        for linenum, line in enumerate(handle, start=1):
+            line = line.rstrip('\n\r')
+
+            if not line:
+                if state in (_NA, _IN_WHITESPACE):
+                    continue
+                elif state == _IN_HEADER:
+                    raise NodeError("Expected FASTA sequence, found empty line"
+                                    "\n    Filename = %r\n    Line = %r"
+                                    % (filename, linenum))
+                elif state == _IN_SEQUENCE:
+                    state = _IN_WHITESPACE
+                else:
+                    assert False
+            elif line.startswith(">"):
+                if state in (_NA, _IN_SEQUENCE, _IN_WHITESPACE):
+                    _validate_fasta_header(filename, linenum, line, namecache)
+                    state = _IN_HEADER
+                    linelength = None
+                    linelengthchanged = False
+                elif state == _IN_HEADER:
+                    raise NodeError("Empty sequences not allowed\n"
+                                    "    Filename = %r\n    Line = %r"
+                                    % (filename, linenum - 1))
+                else:
+                    assert False
+            else:
+                if state == _NA:
+                    raise NodeError("Expected FASTA header, found %r\n"
+                                    "    Filename = %r\n    Line = %r"
+                                    % (line, filename, linenum))
+                elif state == _IN_HEADER:
+                    _validate_fasta_line(filename, linenum, line)
+                    linelength = len(line)
+                    state = _IN_SEQUENCE
+                elif state == _IN_SEQUENCE:
+                    _validate_fasta_line(filename, linenum, line)
+                    # If the length has changed, then that line must be the
+                    # last line in the record, which may be shorter due to the
+                    # sequence length. This is because the FAI index format
+                    # expects that each line has the same length.
+                    if linelengthchanged or (linelength < len(line)):
+                        raise NodeError("Lines in FASTQ files must be of same "
+                                        "length\n    Filename = %r\n"
+                                        "    Line = %r" % (filename, linenum))
+                    elif linelength != len(line):
+                        linelengthchanged = True
+                elif state == _IN_WHITESPACE:
+                    raise NodeError("Empty lines not allowed in sequences\n"
+                                    "    Filename = %r\n    Line = %r"
+                                    % (filename, linenum))
+                else:
+                    assert False
+
+        if state in (_NA, _IN_HEADER):
+            raise NodeError("File does not contain any sequences"
+                            "    Filename = %r" % (filename, ))
+_VALID_CHARS = frozenset("acgtnACGTN")
+_NA, _IN_HEADER, _IN_SEQUENCE, _IN_WHITESPACE = range(4)
+
+
+def _validate_fasta_header(filename, linenum, line, cache):
+    name = line.split(" ", 1)[0][1:]
+    if not name:
+        raise NodeError("FASTA sequence must have non-empty name\n"
+                        "    Filename = %r\n    Line = %r\n"
+                        % (filename, linenum))
+    elif not _RE_REF_NAME.match(name):
+        raise NodeError("Invalid name for FASTA sequence: %r\n"
+                        "    Filename = %r\n    Line = %r\n"
+                        % (name, filename, linenum))
+    elif name in cache:
+        raise NodeError("FASTA sequences have identical name\n"
+                        "    Filename = %r\n    Name = %r\n"
+                        "    Line 1 = %r\n    Line 2 = %r\n"
+                        % (filename, name, linenum, cache[name]))
+    cache[name] = linenum
+_RE_REF_NAME = re.compile("[!-()+-<>-~][!-~]*")
+
+
+def _validate_fasta_line(filename, linenum, line):
+    invalid_chars = frozenset(line) - _VALID_CHARS
+    if invalid_chars:
+        raise NodeError("FASTA sequence contains invalid characters\n"
+                        "    Filename = %r\n    Line = %r\n"
+                        "    Invalid characters = %r"
+                        % (filename, linenum, "".join(invalid_chars)))

@@ -46,6 +46,8 @@ from pypeline.nodes.bwa import \
     BWAIndexNode
 from pypeline.nodes.bowtie2 import \
     Bowtie2IndexNode
+from pypeline.nodes.validation import \
+    ValidateFASTAFilesNode
 
 from pypeline.tools.bam_pipeline.makefile import \
     MakefileError, \
@@ -168,32 +170,40 @@ def build_pipeline_targets(config, makefile):
 
 
 def index_references(config, makefiles):
-    references         = {}
-    references_bwa     = {}
+    references = {}
+    references_bwa = {}
     references_bowtie2 = {}
     for makefile in makefiles:
-        for dd in makefile["Prefixes"].itervalues():
-            reference  = dd["Reference"]
+        for subdd in makefile["Prefixes"].itervalues():
+            reference = subdd["Reference"]
             if reference not in references:
-                faidx_node   = FastaIndexNode(dd["Reference"])
-                dict_node    = BuildSequenceDictNode(config    = config,
-                                                     reference = reference)
-                bwa_node     = BWAIndexNode(input_file = reference)
-                bowtie2_node = Bowtie2IndexNode(input_file = reference)
+                valid_node = ValidateFASTAFilesNode(input_files=reference,
+                                                    output_file=reference
+                                                    + ".validated")
+                faidx_node = FastaIndexNode(reference,
+                                            dependencies=(valid_node,))
+                dict_node = BuildSequenceDictNode(config=config,
+                                                  reference=reference,
+                                                  dependencies=(valid_node,))
+                bwa_node = BWAIndexNode(input_file=reference,
+                                        dependencies=(valid_node,))
+                bowtie2_node = Bowtie2IndexNode(input_file=reference,
+                                                dependencies=(valid_node,))
 
                 references[reference] = \
-                  MetaNode(description = "Reference Sequence",
-                           dependencies = (faidx_node, dict_node))
+                    MetaNode(description="Reference Sequence",
+                             dependencies=(faidx_node, dict_node))
                 references_bwa[reference] = \
-                  MetaNode(description = "Reference Sequence",
-                           dependencies = (faidx_node, dict_node, bwa_node))
+                    MetaNode(description="Reference Sequence",
+                             dependencies=(faidx_node, dict_node, bwa_node))
                 references_bowtie2[reference] = \
-                  MetaNode(description = "Reference Sequence",
-                           dependencies = (faidx_node, dict_node, bowtie2_node))
+                    MetaNode(description="Reference Sequence",
+                             dependencies=(faidx_node, dict_node,
+                                           bowtie2_node))
 
-            dd["Node"]         = references[reference]
-            dd["Node:BWA"]     = references_bwa[reference]
-            dd["Node:Bowtie2"] = references_bowtie2[reference]
+            subdd["Node"] = references[reference]
+            subdd["Node:BWA"] = references_bwa[reference]
+            subdd["Node:Bowtie2"] = references_bowtie2[reference]
 
 
 def list_orphan_files(config, makefiles, pipeline):
