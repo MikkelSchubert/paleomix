@@ -21,9 +21,12 @@
 import os
 import re
 import sys
+import shutil
 
 from distutils.core import \
     setup
+from distutils.command.install_scripts import \
+    install_scripts as DistutilsInstallScripts
 
 
 if (sys.version_info.major != 2) or (sys.version_info.minor != 7):
@@ -47,14 +50,36 @@ def locate_packages():
     return packages
 
 
-def locate_scripts():
+def locate_scripts(is_link=False):
     scripts = []
     for filename in os.listdir("bin"):
         if re.match(r"^[0-9a-z_]+", filename):
             script = os.path.join("bin", filename)
-            if os.path.isfile(script) or os.path.islink(script):
+            if os.path.islink(script) == is_link:
                 scripts.append(script)
     return scripts
+
+
+class InstallLinks(DistutilsInstallScripts):
+    def run(self):
+        DistutilsInstallScripts.run(self)
+
+        # Ensure that symbolic links are preserved as symbolic links
+        links = [os.path.basename(fpath)
+                 for fpath in locate_scripts(is_link=True)]
+
+        for bin_fpath in self.get_outputs():
+            if os.path.basename(bin_fpath) == 'paleomix':
+                fpath = os.path.dirname(bin_fpath)
+
+                for link in links:
+                    link_fpath = os.path.join(fpath, link)
+                    print "linking", link_fpath, "-> 'paleomix'"
+                    if os.path.exists(link_fpath):
+                        os.remove(link_fpath)
+
+                    os.symlink('paleomix', link_fpath)
+                    shutil.copymode(bin_fpath, link_fpath)
 
 
 setup(name='PALEOMIX Pipeline',
@@ -65,4 +90,5 @@ setup(name='PALEOMIX Pipeline',
       url='https://github.com/MikkelSchubert/paleomix',
       requires=['pysam (>=0.7.5)'],
       packages=locate_packages(),
-      scripts=locate_scripts())
+      scripts=locate_scripts(),
+      cmdclass={'install_scripts': InstallLinks})
