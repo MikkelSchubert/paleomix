@@ -458,6 +458,12 @@ def test_atomiccmd__run__exception_on_missing_command__no_wrap(temp_files):
     cmd.join()
 
 
+@with_temp_folder
+def test_atomiccmd__run__invalid_temp(temp_files):
+    cmd = AtomicCmd(("sleep", "10"))
+    assert_raises(CmdError, cmd.run, os.path.join(temp_files, "foo"))
+    cmd.terminate()
+    cmd.join()
 
 
 ################################################################################

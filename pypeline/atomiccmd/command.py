@@ -165,6 +165,7 @@ class AtomicCmd(object):
         # kwords for pipes are always built relative to the current directory,
         # since these are opened before (possibly) CD'ing to the temp
         # directory.
+        stdin = stdout = stderr = None
         try:
             kwords = self._generate_filenames(self._files, root=temp)
             stdin = self._open_pipe(kwords, "IN_STDIN", "rb")
@@ -190,7 +191,7 @@ class AtomicCmd(object):
                 "Error running commands:\n" \
                 "  Call = %r\n" \
                 "  Error = %r"
-            raise CmdError(message % (call, error))
+            raise CmdError(message % (self._command, error))
         finally:
             # Close pipes to allow the command to recieve SIGPIPE
             for handle in (stdin, stdout, stderr):
