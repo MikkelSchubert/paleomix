@@ -113,9 +113,14 @@ class FilterSingletonsNode(Node):
         self._output_file = output_file
         self._filter_by = dict(filter_by)
         for (to_filter, groups) in self._filter_by.items():
+            # The taxa to be filtered is implied to be part of the group,
+            # but is not needed when actually carrying out the filtering
+            groups = utilities.safe_coerce_to_frozenset(groups) \
+                - utilities.safe_coerce_to_frozenset(to_filter)
+
             if not groups:
                 raise RuntimeError("Singleton filtering must involve at least "
-                                   "one taxa")
+                                   "one other taxa")
             self._filter_by[to_filter] = groups
 
         Node.__init__(self,
