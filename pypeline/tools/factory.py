@@ -23,11 +23,18 @@
 
 Ensures
 """
+import sys
+import os.path
 import pypeline
 import pypeline.common.versions as versions
 
 from pypeline.atomiccmd.builder import \
     AtomicCmdBuilder
+
+
+# Get actual path of the 'paleomix' script used to invoke the current session;
+# this is done to avoid conflict with local installs vs global installs.
+_PALEOMIX_PATH = os.path.realpath(sys.argv[0])
 
 
 def new(command, *args, **kwargs):
@@ -42,7 +49,7 @@ def new(command, *args, **kwargs):
 
 
 _VERSION_EQ = versions.EQ(*pypeline.__version_info__)
-VERSION_PALEOMIX = versions.Requirement(call=["paleomix", "help"],
+VERSION_PALEOMIX = versions.Requirement(call=[_PALEOMIX_PATH, "help"],
                                         search=r"v(\d+)\.(\d+)\.(\d+)",
                                         checks=_VERSION_EQ,
                                         priority=100)
@@ -50,13 +57,13 @@ VERSION_PALEOMIX = versions.Requirement(call=["paleomix", "help"],
 
 def _build_generic_command(argument):
     """Returns a AtomicCmdBuilder for a regular 'paleomix ...' command."""
-    return AtomicCmdBuilder(["paleomix", argument],
+    return AtomicCmdBuilder([_PALEOMIX_PATH, argument],
                             CHECK_PALEOMIX=VERSION_PALEOMIX)
 
 
 def _build_cat_command():
     """Returns a AtomicCmdBuilder for the 'paleomix cat' command."""
-    return AtomicCmdBuilder(["paleomix", "cat"],
+    return AtomicCmdBuilder([_PALEOMIX_PATH, "cat"],
                             EXEC_GZIP="gzip",
                             EXEC_BZIP="bzip2",
                             EXEC_CAT="cat",
@@ -65,7 +72,7 @@ def _build_cat_command():
 
 def _build_create_pileup_command(outfile):
     """Returns a AtomicCmdBuilder for a regular 'paleomix ...' command."""
-    return AtomicCmdBuilder(["paleomix", "create_pileup", outfile],
+    return AtomicCmdBuilder([_PALEOMIX_PATH, "create_pileup", outfile],
                             CHECK_PALEOMIX=VERSION_PALEOMIX)
 
 
