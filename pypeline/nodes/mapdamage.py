@@ -45,6 +45,10 @@ MAPDAMAGE_VERSION = versions.Requirement(call=("mapDamage", "--version"),
                                          search=r"(\d+)\.(\d+).(\d+)",
                                          checks=versions.GE(2, 0, 1))
 
+RSCRIPT_VERSION = versions.Requirement(call=("Rscript", "--version"),
+                                       search=r"(\d+)\.(\d+).(\d+)",
+                                       checks=versions.GE(2, 15, 1))
+
 
 class MapDamagePlotNode(MultiBAMInputNode):
     @create_customizable_cli_parameters
@@ -72,7 +76,9 @@ class MapDamagePlotNode(MultiBAMInputNode):
             OUT_LOG=os.path.join(output_directory, "Runtime_log.txt"),
             TEMP_OUT_STDOUT="pipe_mapDamage.stdout",
             TEMP_OUT_STDERR="pipe_mapDamage.stderr",
-            CHECK_VERSION=MAPDAMAGE_VERSION)
+
+            CHECK_RSCRIPT=RSCRIPT_VERSION,
+            CHECK_MAPDAMAGE=MAPDAMAGE_VERSION)
 
         return {"command": command,
                 "config": config,
@@ -135,7 +141,9 @@ class MapDamageModelNode(CommandNode):
             OUT_MCMC_POSTPRED=os.path.join(directory,
                                            "Stats_out_MCMC_post_pred.pdf"),
             OUT_MCMC_TRACE=os.path.join(directory, "Stats_out_MCMC_trace.pdf"),
-            CHECK_VERSION=MAPDAMAGE_VERSION)
+
+            CHECK_RSCRIPT=RSCRIPT_VERSION,
+            CHECK_MAPDAMAGE=MAPDAMAGE_VERSION)
 
         return {"command": command,
                 "dependencies": dependencies}
