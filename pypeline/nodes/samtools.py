@@ -24,25 +24,28 @@ import os
 
 from pypeline.node import CommandNode
 from pypeline.atomiccmd.command import AtomicCmd
-from pypeline.atomiccmd.builder import \
-    AtomicCmdBuilder, \
-    use_customizable_cli_parameters, \
-    create_customizable_cli_parameters
 
 from pypeline.common.fileutils import reroot_path, swap_ext
 import pypeline.common.versions as versions
 
 
-SAMTOOLS_VERSION = versions.Requirement(call=("samtools",),
-                                        search=r"Version: (\d+)\.(\d+)\.(\d+)",
-                                        checks=versions.GE(0, 1, 18))
+_VERSION_REGEX = r"Version: (\d+)\.(\d+)(?:\.(\d+))?"
 
-BCFTOOLS_VERSION = versions.Requirement(call=("bcftools",),
-                                        search=r"Version: (\d+)\.(\d+)\.(\d+)",
-                                        checks=versions.GE(0, 1, 18))
+# v0.2.0 was the pre-release version of v1.0, and lacks required features
+_COMMON_CHECK = versions.And(versions.GE(0, 1, 18),
+                             versions.LT(0, 2, 0))
+
+SAMTOOLS_VERSION = versions.Requirement(call=("samtools",),
+                                        search=_VERSION_REGEX,
+                                        checks=_COMMON_CHECK)
+
+BCFTOOLS_VERSION \
+    = versions.Requirement(call=("bcftools",),
+                           search=_VERSION_REGEX,
+                           checks=_COMMON_CHECK)
 
 TABIX_VERSION = versions.Requirement(call=("tabix",),
-                                     search=r"Version: (\d+)\.(\d+)\.(\d+)",
+                                     search=_VERSION_REGEX,
                                      checks=versions.GE(0, 2, 5))
 
 
