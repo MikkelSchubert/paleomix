@@ -255,6 +255,7 @@ def run_batch((args, regions, filename)):
     try:
         bam_handle_in = setup["handles"]["bam_in"]
         bam_handle_out = setup["handles"]["bam_out"]
+        poll_processes(setup["procs"])
 
         nrecords = 0
         regions.reverse()
