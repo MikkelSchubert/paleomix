@@ -149,7 +149,7 @@ class RequirementObj(object):
             if not match:
                 self._raise_failure(output)
 
-            self._version = tuple(try_cast(value, int)
+            self._version = tuple(0 if value is None else try_cast(value, int)
                                   for value in match.groups())
 
         return self._version
