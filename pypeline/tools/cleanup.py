@@ -35,7 +35,6 @@ command will not work:
 $ samtools view -H INPUT.BAM | samtools view -Sbu -
 
 """
-import os
 import sys
 import copy
 import time
@@ -46,6 +45,8 @@ import pysam
 
 from pypeline.nodes.samtools import \
     samtools_compatible_wbu_mode
+
+import pypeline.tools.factory
 
 
 def popen(call, *args, **kwargs):
@@ -83,7 +84,6 @@ def _set_rg_tags(header, rg_id, rg_tags):
         rg_field, rg_value = tag.split(":")
         readgroup[rg_field] = rg_value
     header["RG"] = [readgroup]
-
 
 
 def _pipe_to_bam():
@@ -234,10 +234,7 @@ def _join_procs(procs):
 
 def _setup_single_ended_pipeline(procs, bam_cleanup):
     # Convert input to BAM and cleanup / filter reads
-    call_pipe = bam_cleanup + ['cleanup-sam']
-
-    # Convert input to (uncompressed) BAM
-    procs["pipe"] = popen(call_pipe,
+    procs["pipe"] = popen(bam_cleanup + ['cleanup-sam'],
                           stdin=sys.stdin,
                           stdout=subprocess.PIPE,
                           close_fds=True)
@@ -247,10 +244,8 @@ def _setup_single_ended_pipeline(procs, bam_cleanup):
 
 
 def _setup_paired_ended_pipeline(procs, bam_cleanup):
-    call_pipe = bam_cleanup + ['pipe']
-
     # Convert input to (uncompressed) BAM
-    procs["pipe"] = popen(call_pipe,
+    procs["pipe"] = popen(bam_cleanup + ["pipe"],
                           stdin=sys.stdin,
                           stdout=subprocess.PIPE,
                           close_fds=True)
@@ -275,25 +270,26 @@ def _setup_paired_ended_pipeline(procs, bam_cleanup):
     return procs["cleanup"]
 
 
-def _run_cleanup_pipeline(args):
-    # Ensure that the same script is used, even if it is not in the PATH
-    bam_cleanup = [sys.argv[0]]
-    if os.path.basename(bam_cleanup[0]) == "paleomix":
-        bam_cleanup.append("cleanup")
-
-    bam_cleanup.extend(('--fasta', args.fasta,
-                        '--temp-prefix', args.temp_prefix,
-                        '--min-quality', str(args.min_quality),
-                        '--exclude-flags', hex(args.exclude_flags)))
+def _build_wrapper_command(args):
+    bam_cleanup = pypeline.tools.factory.new("cleanup")
+    bam_cleanup.set_option('--fasta', args.fasta)
+    bam_cleanup.set_option('--temp-prefix', args.temp_prefix)
+    bam_cleanup.set_option('--min-quality', str(args.min_quality))
+    bam_cleanup.set_option('--exclude-flags', hex(args.exclude_flags))
 
     for value in args.update_pg_tag:
-        bam_cleanup.extend(('--update-pg-tag', value))
+        bam_cleanup.add_option('--update-pg-tag', value)
 
     if args.rg_id is not None:
-        bam_cleanup.extend(('--rg-id', args.rg_id))
+        bam_cleanup.set_option('--rg-id', args.rg_id)
         for value in args.rg:
-            bam_cleanup.extend(('--rg', value))
+            bam_cleanup.add_option('--rg', value)
 
+    return bam_cleanup.finalized_call
+
+
+def _run_cleanup_pipeline(args):
+    bam_cleanup = _build_wrapper_command(args)
     procs = {}
     try:
         # Update 'procs' and get the last process in the pipeline
@@ -356,7 +352,8 @@ def parse_args(argv):
                              "on tags set using the --rg option, using the "
                              "id specified using --rg-id.")
     parser.add_argument('--rg', default=[], action="append",
-                        help="Create readgroup with ") # TODO
+                        help="Create readgroup values 'ID:TAG:VALUE' "
+                             "represented using a string as shown.")
 
     return parser.parse_args(argv)
 
@@ -372,7 +369,3 @@ def main(argv):
 
     sys.stderr.write("Reading SAM file from STDIN ...\n")
     return _run_cleanup_pipeline(args)
-
-
-if __name__ == '__main__':
-    sys.exit(main(sys.argv[1:]))
