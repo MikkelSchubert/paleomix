@@ -189,10 +189,37 @@ def _print_help():
     sys.stderr.write(_PALEOMIX_CITATION)
 
 
+def _setup_wrapper_script():
+    """Sets up and checks the path used to call the wrapper script; this is
+    done to ensure that commands invoking other 'paleomix' tools can
+    successfully call the wrapper."""
+    command_names = set(name for (name, module, _) in _COMMANDS if module)
+    wrapper_script = os.path.realpath(sys.argv[0])
+    wrapper_name = os.path.basename(wrapper_script)
+    if wrapper_name in command_names or wrapper_name in _ALIASES:
+        sys.stderr.write("The PALEOMIX script has been renamed to %r at %r; "
+                         "this will prevent invokation of bundled tools. "
+                         "Please call paleomix using (symbolic links to) "
+                         "the original 'paleomix' script!\n"
+                         % (wrapper_name, wrapper_script))
+        return False
+
+    import pypeline.tools.factory
+    pypeline.tools.factory.set_paleomix_path(wrapper_script)
+
+    return True
+
+
 def main(argv):
     """Main function; takes a list of arguments excluding argv[0]."""
     if not _are_requirements_met():
         return 1
+    elif not _setup_wrapper_script():
+        return 1
+
+    # Process name defaults to the name of the python executable
+    import pypeline.common.system
+    pypeline.common.system.set_procname("paleomix")
 
     command = os.path.basename(sys.argv[0])
     if (command == 'paleomix') and argv:
@@ -214,9 +241,6 @@ def main(argv):
     elif command in ("paleomix", "help"):
         _print_help()
         return 0
-
-    import pypeline.common.system
-    pypeline.common.system.set_procname("paleomix")
 
     module = __import__(module, globals(), locals(), ["main"], 0)
     return module.main(argv)
