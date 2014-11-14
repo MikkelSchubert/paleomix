@@ -199,8 +199,6 @@ def build_genotyping_nodes_cached(options, genotyping, sample, regions,
                                              nbatches=options.samtools_max_threads,
                                              dependencies=dependencies)
 
-    genotype.command.add_option("--mpileup-argument",
-                                "-f=%s" % (regions["FASTA"],), sep="=")
     apply_samtools_options(genotype.command, genotyping["MPileup"],
                            "--mpileup-argument")
     apply_samtools_options(genotype.command, genotyping["BCFTools"],
