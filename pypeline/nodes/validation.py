@@ -317,7 +317,10 @@ def check_fasta_file(filename):
         if state in (_NA, _IN_HEADER):
             raise NodeError("File does not contain any sequences"
                             "    Filename = %r" % (filename, ))
-_VALID_CHARS = frozenset("acgtnACGTN")
+
+# Standard nucleotides + UIPAC codes
+_VALID_CHARS_STR = "ACGTN" "RYSWKMBDHV"
+_VALID_CHARS = frozenset(_VALID_CHARS_STR.upper() + _VALID_CHARS_STR.lower())
 _NA, _IN_HEADER, _IN_SEQUENCE, _IN_WHITESPACE = range(4)
 
 
