@@ -98,7 +98,7 @@ def parse_arguments(argv, ext):
                              "is calculated only for these grouping by the "
                              "name used in the BED file, or the contig name "
                              "if no name has been specified for a record.")
-    parser.add_argument('--max_contigs', default=100, type=int,
+    parser.add_argument('--max-contigs', default=100, type=int,
                         help="The maximum number of contigs allowed in a BAM "
                              "file. If this number is exceeded, the entire "
                              "set of contigs is aggregated into one pseudo-"
