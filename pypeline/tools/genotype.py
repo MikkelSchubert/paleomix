@@ -40,7 +40,6 @@ import shutil
 import signal
 import argparse
 import traceback
-import subprocess
 import multiprocessing
 
 import pysam
@@ -52,6 +51,9 @@ from pypeline.common.bedtools import \
 from pypeline.nodes.samtools import \
     samtools_compatible_wbu_mode
 
+import pypeline.tools.factory as factory
+import pypeline.common.procs as processes
+
 
 class BatchError(RuntimeError):
     pass
@@ -59,18 +61,6 @@ class BatchError(RuntimeError):
 
 # Size of smallest block in (linear) BAM index (= 2 << 14)
 _BAM_BLOCK_SIZE = 16384
-
-
-###############################################################################
-###############################################################################
-
-def popen(call, *args, **kwargs):
-    """Equivalent to subprocess.Popen, but records the system call as a tuple
-    assigned to the .call property of the Popen object.
-    """
-    proc = subprocess.Popen(call, *args, **kwargs)
-    proc.call = tuple(call)
-    return proc
 
 
 ###############################################################################
@@ -99,10 +89,47 @@ def build_call(call, args, positional, new_args):
 
 ###############################################################################
 ###############################################################################
+# BAM filtering mode
+import time
+def filter_bam(bamfile, bedfile):
+    with pysam.Samfile(bamfile) as bam_handle_in:
+        regions = collect_regions(bedfile, bam_handle_in)
+        regions.reverse()
+
+        write_mode = samtools_compatible_wbu_mode()
+        with pysam.Samfile("-", write_mode,
+                           template=bam_handle_in) as bam_handle_out:
+            while regions:
+                region_aend = 0
+                contig, start, end = regions[-1]
+                for record in bam_handle_in.fetch(contig, start):
+                    current_aend = record.aend
+                    region_aend = max(region_aend, current_aend)
+                    if record.pos > end:
+                        last_contig, _, _ = regions.pop()
+                        if not regions:
+                            break
+
+                        contig, start, end = regions[-1]
+                        if (region_aend + _BAM_BLOCK_SIZE < start) \
+                                or (contig != last_contig):
+                            break
+
+                    if current_aend >= start:
+                        bam_handle_out.write(record)
+                else:  # Reached the end of this contig
+                    while regions and (regions[-1][0] == contig):
+                        regions.pop()
+
+    return 0
+
+
+###############################################################################
+###############################################################################
 # Common functions
 
 def cleanup_batch(setup):
-    print "Cleaning up batch ..."
+    sys.stderr.write("Cleaning up batch ...\n")
     for handle in setup["handles"].itervalues():
         handle.close()
 
@@ -112,7 +139,7 @@ def cleanup_batch(setup):
             proc.wait()
 
     for filename in setup["temp_files"].itervalues():
-        print "Removing temporary file %r" % (filename,)
+        sys.stderr.write("Removing temporary file %r\n" % (filename,))
         os.remove(filename)
 
 
@@ -125,14 +152,6 @@ def write_bed_file(prefix, regions):
     return fpath
 
 
-def make_bam_pipe(prefix):
-    fpath_pipe = prefix + ".pipe"
-    if os.path.exists(fpath_pipe):
-        os.remove(fpath_pipe)
-    os.mkfifo(fpath_pipe)
-    return fpath_pipe
-
-
 def setup_basic_batch(args, regions, prefix, func):
     setup = {"files": {},
              "temp_files": {},
@@ -143,26 +162,28 @@ def setup_basic_batch(args, regions, prefix, func):
         setup["files"]["bed"] = write_bed_file(prefix, regions)
         setup["temp_files"]["bed"] = setup["files"]["bed"]
 
-        setup["files"]["pipe"] = make_bam_pipe(prefix)
-        setup["temp_files"]["pipe"] = setup["files"]["pipe"]
+        filter_builder = factory.new("genotype")
+        filter_builder.set_option("--filter-only")
+        filter_builder.set_option("--bedfile", setup["files"]["bed"])
+        filter_builder.add_option(args.bamfile)
+        filter_builder.add_option(args.destination)
+
+        setup["procs"]["filter"] \
+            = processes.open_proc(filter_builder.call,
+                                  stdout=processes.PIPE,
+                                  close_fds=True)
 
         setup["handles"]["outfile"] = open(prefix, "w")
-        zip_proc = popen(["bgzip"],
-                         stdin=func(setup),
-                         stdout=setup["handles"]["outfile"],
-                         close_fds=True)
+        zip_proc = processes.open_proc(["bgzip"],
+                                       stdin=func(setup),
+                                       stdout=setup["handles"]["outfile"],
+                                       close_fds=True)
 
         setup["procs"]["gzip"] = zip_proc
 
-        write_mode = samtools_compatible_wbu_mode()
-        setup["handles"]["bam_in"] = pysam.Samfile(args.bamfile)
-        setup["handles"]["bam_out"] = \
-            pysam.Samfile(setup["files"]["pipe"], write_mode,
-                          template=setup["handles"]["bam_in"])
-
         return setup
     except:
-        traceback.print_exc()
+        sys.stderr.write(traceback.format_exc() + "\n")
         cleanup_batch(setup)
         raise
 
@@ -177,13 +198,15 @@ def setup_mpileup_batch(args, regions, prefix):
         call = build_call(call=("samtools", "mpileup"),
                           args=mpileup_args,
                           new_args=args.mpileup_argument,
-                          positional=(setup["files"]["pipe"],))
+                          positional=("-",))
 
-        print "Running 'samtools mpileup': %s" % (" ".join(call))
+        sys.stderr.write("Running 'samtools mpileup': %s\n" % (" ".join(call)))
         procs = setup["procs"]
-        procs["mpileup"] = popen(call,
-                                 stdout=subprocess.PIPE,
-                                 close_fds=True)
+        procs["mpileup"] \
+            = processes.open_proc(call,
+                                  stdin=procs["filter"].stdout,
+                                  stdout=processes.PIPE,
+                                  close_fds=True)
 
         return procs["mpileup"].stdout
 
@@ -201,23 +224,30 @@ def setup_genotyping_batch(args, regions, prefix):
         mpileup_call = build_call(call=("samtools", "mpileup"),
                                   args=mpileup_args,
                                   new_args=args.mpileup_argument,
-                                  positional=(setup["files"]["pipe"],))
+                                  positional=("-",))
 
-        print "Running 'samtools mpileup': %s" % (" ".join(mpileup_call))
+        sys.stderr.write("Running 'samtools mpileup': %s\n"
+                         % (" ".join(mpileup_call)))
+
         procs = setup["procs"]
-        procs["mpileup"] = popen(mpileup_call,
-                                 stdout=subprocess.PIPE,
-                                 close_fds=True)
+        procs["mpileup"] \
+            = processes.open_proc(mpileup_call,
+                                  stdin=procs["filter"].stdout,
+                                  stdout=processes.PIPE,
+                                  close_fds=True)
 
         bcftools_call = build_call(call=("bcftools", "view"),
                                    args={},
                                    new_args=args.bcftools_argument,
                                    positional=("-",))
 
-        print "Running 'bcftools call': %s" % (" ".join(bcftools_call))
-        procs["bcftools"] = popen(bcftools_call,
+        sys.stderr.write("Running 'bcftools call': %s\n"
+                         % (" ".join(bcftools_call)))
+
+        procs["bcftools"] \
+            = processes.open_proc(bcftools_call,
                                   stdin=procs["mpileup"].stdout,
-                                  stdout=subprocess.PIPE,
+                                  stdout=processes.PIPE,
                                   close_fds=True)
 
         return procs["bcftools"].stdout
@@ -237,61 +267,17 @@ def setup_batch(args, regions, filename):
     return setup_genotyping_batch(args, regions, filename)
 
 
-def poll_processes(procs, finalize=False):
-    """Polls a set of processes, raising an exception if any have failed; if
-    'finalize' is true, the function waits for each process to terminate.
-    """
-    for (key, proc) in procs.iteritems():
-        returncode = (proc.wait() if finalize else proc.poll())
-        if (finalize and returncode) or not (finalize or returncode is None):
-            # Note that the proc.call property is set in function 'popen' above
-            message = "Error with command %r, return-code = %s\n" \
-                      "    Call = %r" % (key, returncode, proc.call)
-            raise BatchError(message)
-
-
 def run_batch((args, regions, filename)):
     setup = setup_batch(args, regions, filename)
     try:
-        bam_handle_in = setup["handles"]["bam_in"]
-        bam_handle_out = setup["handles"]["bam_out"]
-        poll_processes(setup["procs"])
+        if any(processes.join_procs(setup["procs"].values())):
+            return None
 
-        nrecords = 0
-        regions.reverse()
-        while regions:
-            region_aend = 0
-            contig, start, end = regions[-1]
-            for record in bam_handle_in.fetch(contig, start):
-                current_aend = record.aend
-                region_aend = max(region_aend, current_aend)
-                if record.pos > end:
-                    last_contig, _, _ = regions.pop()
-                    if not regions:
-                        break
-
-                    contig, start, end = regions[-1]
-                    if (region_aend + _BAM_BLOCK_SIZE < start) \
-                            or (contig != last_contig):
-                        break
-
-                if current_aend >= start:
-                    bam_handle_out.write(record)
-                    if nrecords >= 100000:
-                        poll_processes(setup["procs"])
-                        nrecords = 0
-                    nrecords += 1
-            else:  # Reached the end of this contig
-                while regions and (regions[-1][0] == contig):
-                    regions.pop()
-
-        setup["handles"]["bam_out"].close()
-
-        poll_processes(setup["procs"], finalize=True)
         return filename
     except:
-        traceback.print_exc()
-        raise
+        # Re-wrap exception with full-traceback; otherwise this information
+        # is lost when the exception is retrieved in the main process.
+        raise BatchError(traceback.format_exc())
     finally:
         cleanup_batch(setup)
 
@@ -379,7 +365,11 @@ def merge_batch_results(filenames_iter):
             # A timeout allows iteruption by the user, which is not the
             # case otherwise. The value is arbitrary.
             target_filename = filenames_iter.next(60)
-            print "Merging into file: %r" % (target_filename,)
+            # None signals error in subprocess; see 'run_batch'
+            if target_filename is None:
+                return False
+
+            sys.stderr.write("Merging into file: %r\n" % (target_filename,))
             break
         except multiprocessing.TimeoutError:
             pass
@@ -390,7 +380,7 @@ def merge_batch_results(filenames_iter):
         while True:
             try:
                 filename = filenames_iter.next(60)
-                print "   - Processing batch: %r" % (filename,)
+                sys.stderr.write("   - Processing batch: %r" % (filename,))
 
                 # BGZip is terminated by 28b empty block (cf. ref)
                 # While the standard implies that these should be ignored
@@ -405,14 +395,16 @@ def merge_batch_results(filenames_iter):
             except StopIteration:
                 break
 
+    return True
 
-def collect_regions(args, bam_input_handle):
+
+def collect_regions(bedfile, bam_input_handle):
     """Returns the regions to be genotyped / pileup'd, as a list of bed-regions
     in the form (contig, start, end), where start is zero-based, and end is
     open based.
     """
-    if args.bedfile is not None:
-        regions = list(read_bed_file(args.bedfile))
+    if bedfile is not None:
+        regions = list(read_bed_file(bedfile))
         sort_bed_by_bamfile(bam_input_handle, regions)
         regions = merge_bed_regions(regions)
     else:
@@ -432,7 +424,14 @@ def process_batches(args, batches):
 
     try:
         batches = pool.imap(run_batch, batches, 1)
-        merge_batch_results(batches)
+        if not merge_batch_results(batches):
+            pool.terminate()
+            pool.join()
+            return 1
+
+        pool.close()
+        pool.join()
+        return 0
     except:
         pool.terminate()
         pool.join()
@@ -479,18 +478,30 @@ def parse_args(argv):
                         help="Overwrite output if it already exists "
                              "[Default: no].")
 
+    # When set, the --bedfile argument is read and used to filter the BAM
+    # specified for the 'bamfile' parameter; all other parameters are ignored.
+    parser.add_argument('--filter-only', default=False, action="store_true",
+                        help=argparse.SUPPRESS)
+
     return parser.parse_args(argv)
 
 
 def main(argv):
     args = parse_args(argv)
+    if args.filter_only:
+        if not args.bedfile:
+            sys.stderr.write("--filter-only requires --bedfile; terminating\n")
+            return 1
+
+        return filter_bam(args.bamfile, args.bedfile)
+
     if os.path.exists(args.destination) and not args.overwrite:
         sys.stderr.write("Output already exists; use --overwrite to allow "
                          "overwriting of this file.\n")
         return 1
 
     with pysam.Samfile(args.bamfile) as bam_input_handle:
-        regions = collect_regions(args, bam_input_handle)
+        regions = collect_regions(args.bedfile, bam_input_handle)
     batches = list(create_batches(args, regions))
     if not batches:
         create_empty_bgz(args.destination)
@@ -500,11 +511,8 @@ def main(argv):
         return process_batches(args, batches)
     except BatchError, error:
         sys.stderr.write("ERROR while processing BAM:\n")
-        sys.stderr.write("    %s\n" % (error,))
+        sys.stderr.write("    %s\n"
+                         % ("\n    ".join(str(error).split("\n"),)))
         return 1
 
     return 0
-
-
-if __name__ == '__main__':
-    sys.exit(main(sys.argv[1:]))
