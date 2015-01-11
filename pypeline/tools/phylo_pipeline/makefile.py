@@ -320,7 +320,7 @@ def _update_filtering(mkfile):
         if target in filtering[target]:
             # The target itself must be excluded, as including it is invalid
             filtering[target] = filtering[target] - set((target,))
-            print_warn("Warning: Sample %r is singleton-filtered using a"
+            print_warn("Warning: Sample %r is singleton-filtered using a "
                        "group it is also a member of; this may be by mistake."
                        % (target,))
 
