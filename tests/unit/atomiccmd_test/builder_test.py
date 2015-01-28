@@ -402,22 +402,25 @@ def test_builder__add_multiple_options_with_template():
                                 "-i", "%(OUT_BAM_2)s"])
 
 
-def test_builder__add_multiple_options_with_template_fixed():
-    values = ("file_a", "file_b")
-    expected = {"IN_FILE_01": "file_a", "IN_FILE_02": "file_b"}
+def test_builder__add_multiple_options_multiple_times():
+    expected = {"IN_FILE_01": "file_a",
+                "IN_FILE_02": "file_b"}
 
     builder = AtomicCmdBuilder("ls")
-    kwargs = builder.add_multiple_options("-i", values)
+    kwargs = builder.add_multiple_options("-i", ("file_a",))
+    assert_equal(kwargs, {"IN_FILE_01": "file_a"})
+    kwargs = builder.add_multiple_options("-i", ("file_b",))
+    assert_equal(kwargs, {"IN_FILE_02": "file_b"})
 
-    assert_equal(kwargs, expected)
     assert_equal(builder.kwargs, expected)
-    assert_raises(AtomicCmdBuilderError,
-                  builder.add_multiple_options, "-i", values)
+    assert_equal(builder.call, ["ls",
+                                "-i", "%(IN_FILE_01)s",
+                                "-i", "%(IN_FILE_02)s"])
 
 
 ###############################################################################
 ###############################################################################
-## AtomicCmdBuilder: add_multiple_options
+## AtomicCmdBuilder: add_multiple_values
 
 def test_builder__add_multiple_values():
     values = ("file_a", "file_b")
@@ -443,8 +446,21 @@ def test_builder__add_multiple_values_with_template():
     assert_equal(builder.call, ["ls", "%(OUT_BAM_1)s", "%(OUT_BAM_2)s"])
 
 
-################################################################################
-################################################################################
+def test_builder__add_multiple_values_multiple_times():
+    expected = {"IN_FILE_01": "file_a", "IN_FILE_02": "file_b"}
+
+    builder = AtomicCmdBuilder("ls")
+    kwargs = builder.add_multiple_values(("file_a",))
+    assert_equal(kwargs, {"IN_FILE_01": "file_a"})
+    kwargs = builder.add_multiple_values(("file_b",))
+    assert_equal(kwargs, {"IN_FILE_02": "file_b"})
+
+    assert_equal(builder.kwargs, expected)
+    assert_equal(builder.call, ["ls", "%(IN_FILE_01)s", "%(IN_FILE_02)s"])
+
+
+###############################################################################
+###############################################################################
 ## AtomicJavaCmdBuilder
 
 def test_java_builder__default__no_config():

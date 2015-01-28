@@ -195,8 +195,7 @@ class AtomicCmdBuilder:
         values.
         """
         kwargs = {}
-        for (index, value) in enumerate(values, start=1):
-            file_key = template % (index,)
+        for file_key, value in self._get_new_kwarg_keys(values, template):
             self.add_option(key, "%%(%s)s" % (file_key,),
                             sep=sep, fixed=True)
             kwargs[file_key] = value
@@ -211,8 +210,7 @@ class AtomicCmdBuilder:
         values.
         """
         kwargs = {}
-        for (index, value) in enumerate(values, start=1):
-            file_key = template % (index,)
+        for file_key, value in self._get_new_kwarg_keys(values, template):
             self.add_value("%%(%s)s" % (file_key,))
             kwargs[file_key] = value
         self.set_kwargs(**kwargs)
@@ -287,6 +285,16 @@ class AtomicCmdBuilder:
                     message = "Mixing singleton and non-singleton options: %r"
                     raise AtomicCmdBuilderError(message % key)
                 return option
+
+    def _get_new_kwarg_keys(self, values, template):
+        start = 0
+        for value in values:
+            start += 1
+            key = template % (start,)
+            while key in self._kwargs:
+                start += 1
+                key = template % (start,)
+            yield key, value
 
 
 class AtomicJavaCmdBuilder(AtomicCmdBuilder):
