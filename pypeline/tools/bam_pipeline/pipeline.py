@@ -177,29 +177,37 @@ def index_references(config, makefiles):
         for subdd in makefile["Prefixes"].itervalues():
             reference = subdd["Reference"]
             if reference not in references:
+                # Validation of the FASTA file; not blocking for the other
+                # steps, as it is only expected to fail very rarely, but will
+                # block subsequent analyses depending on the FASTA.
                 valid_node = ValidateFASTAFilesNode(input_files=reference,
                                                     output_file=reference
                                                     + ".validated")
-                faidx_node = FastaIndexNode(reference,
-                                            dependencies=(valid_node,))
+                # Indexing of FASTA file using 'samtools faidx'
+                faidx_node = FastaIndexNode(reference)
+                # Indexing of FASTA file using 'BuildSequenceDictionary.jar'
                 dict_node = BuildSequenceDictNode(config=config,
                                                   reference=reference,
                                                   dependencies=(valid_node,))
+
+                # Indexing of FASTA file using 'bwa index'
                 bwa_node = BWAIndexNode(input_file=reference,
                                         dependencies=(valid_node,))
+                # Indexing of FASTA file using ''
                 bowtie2_node = Bowtie2IndexNode(input_file=reference,
                                                 dependencies=(valid_node,))
 
                 references[reference] = \
                     MetaNode(description="Reference Sequence",
-                             dependencies=(faidx_node, dict_node))
+                             dependencies=(valid_node, faidx_node, dict_node))
                 references_bwa[reference] = \
                     MetaNode(description="Reference Sequence",
-                             dependencies=(faidx_node, dict_node, bwa_node))
+                             dependencies=(valid_node, faidx_node,
+                                           dict_node, bwa_node))
                 references_bowtie2[reference] = \
                     MetaNode(description="Reference Sequence",
-                             dependencies=(faidx_node, dict_node,
-                                           bowtie2_node))
+                             dependencies=(valid_node, faidx_node,
+                                           dict_node, bowtie2_node))
 
             subdd["Node"] = references[reference]
             subdd["Node:BWA"] = references_bwa[reference]
