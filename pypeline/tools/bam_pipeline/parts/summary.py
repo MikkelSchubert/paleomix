@@ -249,14 +249,8 @@ class SummaryTableNode(Node):
 
     def _read_raw_bam_stats(self, table):
         for ((genome, target, sample, library), filenames) in self._in_raw_bams.iteritems():
-            subtable = {}
-            for filename in filenames:
-                read_coverage_table(subtable, filename)
             key = (target, sample, library)
-
-            hits = 0
-            for contigtable in get_in(subtable, key).itervalues():
-                hits += contigtable["Hits"]
+            hits, _ = self._read_coverage_tables(key, filenames)
 
             value = (hits, "# Total number of hits (prior to PCR duplicate filtering)")
             set_in(table, (target, sample, library, genome, "hits_raw(%s)" % genome), value)
@@ -264,19 +258,24 @@ class SummaryTableNode(Node):
 
     def _read_lib_bam_stats(self, table):
         for ((genome, target, sample, library), filenames) in self._in_lib_bams.iteritems():
-            subtable = {}
-            for filename in filenames:
-                read_coverage_table(subtable, filename)
             key = (target, sample, library)
-
-            hits = nts = 0
-            for contigtable in get_in(subtable, key).itervalues():
-                hits += contigtable["Hits"]
-                nts += contigtable["M"]
+            hits, nts = self._read_coverage_tables(key, filenames)
 
             value = (hits, "# Total number of hits (excluding any PCR duplicates)")
             set_in(table, (target, sample, library, genome, "hits_unique(%s)" % genome), value)
             set_in(table, (target, sample, library, genome, "hits_unique_nts(%s)" % genome), (nts, None))
+
+
+    @classmethod
+    def _read_coverage_tables(cls, key, filenames):
+        hits = nts = 0
+        for filename in filenames:
+            subtable = {}
+            read_coverage_table(subtable, filename)
+            for contigtable in get_in(subtable, key).itervalues():
+                hits += contigtable["Hits"]
+                nts += contigtable["M"]
+        return hits, nts
 
 
     @classmethod
