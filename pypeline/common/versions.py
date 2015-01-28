@@ -220,7 +220,7 @@ class RequirementObj(object):
         """Yields string describing the current system call, if any.
         """
         if self.executable:
-            exec_path = which_executable(self.executable)
+            exec_path = which_executable(self.executable) or self.executable
             yield "    Executable:    %s" % (exec_path,)
 
         if not isinstance(self._call[0], collections.Callable):
