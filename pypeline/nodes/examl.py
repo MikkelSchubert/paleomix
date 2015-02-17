@@ -30,10 +30,14 @@ import pypeline.common.versions as versions
 
 from pypeline.node import CommandNode
 from pypeline.atomiccmd.builder import \
-     AtomicCmdBuilder, \
-     AtomicMPICmdBuilder, \
-     use_customizable_cli_parameters, \
-     create_customizable_cli_parameters
+    AtomicCmdBuilder, \
+    AtomicMPICmdBuilder, \
+    use_customizable_cli_parameters, \
+    create_customizable_cli_parameters
+
+
+from pypeline.nodegraph import \
+    FileStatusCache
 
 
 EXAML_VERSION = versions.Requirement(call   = ("examl", "-version"),
@@ -168,15 +172,13 @@ class ExaMLNode(CommandNode):
                              threads      = parameters.threads,
                              dependencies = parameters.dependencies)
 
-
-    def _create_temp_dir(self, config):
+    def _create_temp_dir(self, _config):
         """Called by 'run' in order to create a temporary folder.
         To allow restarting from checkpoints, we use a fixed folder
         determined by the output_template."""
         temp = os.path.join(self._dirname, self._template % ("temp",))
         fileutils.make_dirs(temp)
         return temp
-
 
     def _setup(self, config, temp):
         CommandNode._setup(self, config, temp)
@@ -189,13 +191,21 @@ class ExaMLNode(CommandNode):
         fileutils.try_remove(os.path.join(temp, "ExaML_info.Pypeline"))
 
         # Resume from last checkpoint, if one such was generated
-        checkpoints = glob.glob(os.path.join(temp, "ExaML_binaryCheckpoint.Pypeline_*"))
-        checkpoints.sort(key = lambda fname: int(fname.rsplit("_", 1)[-1]))
-        if checkpoints:
+        checkpoints = glob.glob(os.path.join(temp,
+                                "ExaML_binaryCheckpoint.Pypeline_*"))
+        if not checkpoints:
+            return
+
+        cache = FileStatusCache()
+        if cache.files_up_to_date(checkpoints, self.input_files):
+            checkpoints.sort(key=lambda fname: int(fname.rsplit("_", 1)[-1]))
+
             # FIXME: Less hacky solution to modifying AtomicCmds needed
             self._command._command.append("-R")
             self._command._command.append(checkpoints[-1])
-
+        else:
+            for fpath in checkpoints:
+                fileutils.try_remove(fpath)
 
     def _teardown(self, config, temp):
         for filename in os.listdir(temp):
