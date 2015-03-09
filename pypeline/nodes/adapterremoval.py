@@ -50,7 +50,8 @@ _VERSION_14_CHECK = versions.Requirement(call=("AdapterRemoval", "--version"),
 VERSION_15 = "1.5+"
 _VERSION_15_CHECK = versions.Requirement(call=("AdapterRemoval", "--version"),
                                          search=r"ver. (\d+)\.(\d+)",
-                                         checks=versions.EQ(1, 5))
+                                         checks=versions.Or(versions.EQ(1, 5),
+                                                            versions.EQ(2, 0)))
 
 
 class SE_AdapterRemovalNode(CommandNode):
@@ -90,6 +91,7 @@ class SE_AdapterRemovalNode(CommandNode):
     def __init__(self, parameters):
         self._quality_offset = parameters.quality_offset
         self._basename = parameters.basename
+        self._check_fastqs = _are_fastq_checks_required(parameters.version)
 
         zcat           = _build_cat_command(parameters.input_files, "uncompressed_input")
         zip_truncated  = _build_zip_command(parameters.output_format, parameters.output_prefix, ".truncated")
@@ -105,7 +107,8 @@ class SE_AdapterRemovalNode(CommandNode):
                              dependencies = parameters.dependencies)
 
     def _setup(self, config, temp):
-        check_fastq_files(self.input_files, self._quality_offset)
+        if self._check_fastqs:
+            check_fastq_files(self.input_files, self._quality_offset)
 
         os.mkfifo(os.path.join(temp, self._basename + ".truncated"))
         os.mkfifo(os.path.join(temp, self._basename + ".discarded"))
@@ -183,6 +186,7 @@ class PE_AdapterRemovalNode(CommandNode):
         self._version = parameters.version
         self._basename = parameters.basename
         self._collapse = parameters.collapse
+        self._check_fastqs = _are_fastq_checks_required(parameters.version)
         if len(parameters.input_files_1) != len(parameters.input_files_2):
             raise CmdError("Number of mate 1 files differ from mate 2 files: "
                            "%i != %i" % (len(parameters.input_files_1),
@@ -222,7 +226,8 @@ class PE_AdapterRemovalNode(CommandNode):
                              dependencies=parameters.dependencies)
 
     def _setup(self, config, temp):
-        check_fastq_files(self.input_files, self._quality_offset)
+        if self._check_fastqs:
+            check_fastq_files(self.input_files, self._quality_offset)
 
         os.mkfifo(os.path.join(temp, self._basename + ".discarded"))
         os.mkfifo(os.path.join(temp, self._basename + ".pair1.truncated"))
@@ -283,3 +288,15 @@ def _get_common_parameters(version):
     cmd.set_option("--trimqualities", fixed=False)
 
     return cmd
+
+
+def _are_fastq_checks_required(version):
+    if version == VERSION_14:
+        return True
+    elif version == VERSION_15:
+        try:
+            return _VERSION_15_CHECK.version < (2, 0)
+        except versions.VersionRequirementError:
+            return True
+    else:
+        raise CmdError("Unknown version: %s" % version)
