@@ -36,6 +36,7 @@ to contain a certain amount of padding around the regions of interest.
 """
 from __future__ import print_function
 
+import os
 import sys
 import itertools
 import argparse
@@ -111,6 +112,9 @@ def add_indel(options, bed, indel, sequence):
     genotype = vcfwrap.get_ml_genotype(indel)
     if genotype[0] != genotype[1]:
         # No way to represent heterozygous indels
+        return
+    elif genotype[0] == "N":
+        # No most likely genotype
         return
 
     # Note that bed.end is a past-the-end coordinate
@@ -274,6 +278,14 @@ def main(argv):
     if opts.whole_codon_indels_only:
         print(", assuming sequences represents CDS", end="", file=sys.stderr)
     print(" ...", file=sys.stderr)
+
+    if not os.path.exists(opts.genotype):
+        sys.stderr.write("ERROR: VCF file does not exist.\n")
+        return 1
+    elif not os.path.exists(opts.genotype + ".tbi"):
+        sys.stderr.write("ERROR: VCF file not tabix indexed.\n")
+        sys.stderr.write("       To index, run \"tabix -p vcf <filename>\".\n")
+        return 1
 
     genotype = pysam.Tabixfile(opts.genotype)
     intervals = read_intervals(opts.intervals)
