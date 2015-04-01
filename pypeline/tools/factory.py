@@ -56,7 +56,7 @@ def new(command, *args, **kwargs):
 def set_paleomix_path(fpath):
     global _PALEOMIX_PATH
     assert not _PALEOMIX_PATH
-    assert os.path.exists(fpath)
+    assert os.path.exists(fpath), fpath
     _PALEOMIX_PATH = fpath
 
 
