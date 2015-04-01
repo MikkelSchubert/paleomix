@@ -124,6 +124,8 @@ _VALIDATION_OPTIONS = {
                            default="v1.5+"),
         "--pcr1": IsStr,
         "--pcr2": IsStr,
+        "--adapter1": IsStr,
+        "--adapter2": IsStr,
         "--maxns": IsUnsignedInt,
         "--minquality": IsUnsignedInt,
         "--trimns": Or(IsNone, IsBoolean),
@@ -544,7 +546,11 @@ def _validate_hg_prefixes(makefiles):
             if path in already_validated:
                 continue
 
-            if not os.path.exists(path + ".fai"):
+            if not os.path.exists(path):
+                print_info("    - Reference FASTA file does not exist:\n"
+                           "      %r" % (path,), file=sys.stderr)
+                continue
+            elif not os.path.exists(path + ".fai"):
                 print_info("    - Index does not exist for %r; this may "
                            "take a while ..." % (path,), file=sys.stderr)
 
