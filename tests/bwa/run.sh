@@ -42,6 +42,10 @@ function build_bwa ()
 
 mkdir -p builds
 
+build_bwa 0.7.12
+build_bwa 0.7.11
+build_bwa 0.7.10
+build_bwa 0.7.9a
 build_bwa 0.7.8
 build_bwa 0.7.7
 build_bwa 0.7.6a # This version is broken (no aln command!)
@@ -51,12 +55,12 @@ build_bwa 0.7.3a
 build_bwa 0.7.2
 build_bwa 0.7.1
 # build_bwa 0.7.0 # Broken, does not compile
-build_bwa 0.6.2
-build_bwa 0.6.1
-build_bwa 0.5.9
-build_bwa 0.6.0
-build_bwa 0.5.10
-build_bwa 0.5.9rc1 # Oldest acceptable version
+#build_bwa 0.6.2
+#build_bwa 0.6.1
+#build_bwa 0.5.9
+#build_bwa 0.6.0
+#build_bwa 0.5.10
+#build_bwa 0.5.9rc1 # Oldest acceptable version
 
 
 cd builds
@@ -84,15 +88,18 @@ do
 		echo -n "  $BWA "
 
 		rm -rf temp
-		mkdir temp
+        folder="runs/$testcase/$(dirname $BWA | xargs basename)"
+        rm -rf $folder
+        mkdir -p $folder
+        ln -s $folder temp
 
 		msg=""
 		returncode=-1
 
-		cp -l ${testcase}/* temp
+		cp ${testcase}/* temp/
 		if [ -e "temp/run.sh" ];
 		then
-			bash "temp/run.sh" "../$BWA" && returncode=$? || returncode=$?
+			bash "temp/run.sh" "$(pwd)/$BWA" && returncode=$? || returncode=$?
 
 			if [ -e "temp/run.log" ];
 			then
@@ -105,14 +112,18 @@ do
 			READS2=temp/reads2.fasta
 			RESULTS=temp/results
 
+            command="index"
 			if $BWA index ${PREFIX} 2> ${PREFIX}.log;
 			then
+                command="aln #1"
 				if $BWA aln ${PREFIX} ${READS1} > ${READS1}.fai 2> ${READS1}.log;
 				then
+                    command="aln #2"
 					if $BWA aln ${PREFIX} ${READS2} > ${READS2}.fai 2> ${READS2}.log;
 					then
+                        command="sampe"
 						if $BWA sampe ${PREFIX} ${READS1}.fai ${READS2}.fai ${READS1} ${READS2} 2> ${RESULTS}.log | \
-							bam_cleanup --paired --fasta ${PREFIX} --prefix temp/cleanup 2> /dev/null >  ${RESULTS}.bam;
+							paleomix cleanup --paired --fasta ${PREFIX} --temp-prefix temp/cleanup 2> ${RESULTS}.cleanup.log >  ${RESULTS}.bam;
 						then
 							java -jar "ValidateSamFile.jar" ${IGNORE} I=${RESULTS}.bam &> ${RESULTS}.bam.validated \
 								&& returncode=$? || returncode=$?
@@ -132,7 +143,7 @@ do
 			echo -e "\033[32m[OK]\033[0m"
 		elif test $returncode -eq -1;
 		then
-			echo -e "\033[31m[TEST ERROR]\033[0m"
+			echo -e "\033[31m[TEST ERROR]: $command\033[0m"
 		else
 			echo -e "\033[33m[FAILED]\033[0m: $msg"
 		fi

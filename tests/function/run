@@ -30,6 +30,7 @@ import argparse
 import tempfile
 import traceback
 
+import pypeline.tools.factory
 import pypeline.logger
 import pypeline.ui as ui
 from pypeline.node import Node
@@ -64,6 +65,12 @@ class Config: # pylint: disable=W0232
 
 
 def main(argv):
+    # Locate 'paleomix' sym-link relative to 'run' script
+    wrapper_script = os.path.dirname(os.path.abspath(sys.argv[0]))
+    wrapper_script = os.path.dirname(os.path.dirname(wrapper_script))
+    wrapper_script = os.path.join(wrapper_script, "bin", "paleomix")
+    pypeline.tools.factory.set_paleomix_path(wrapper_script)
+
     ui.print_info("Running functional Node tests:")
     ui.print_info("  - Destination = %r ..." % Config.temp_root)
     ui.print_info()

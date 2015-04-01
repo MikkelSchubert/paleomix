@@ -14,4 +14,4 @@ $BWA index ${PREFIX} 2> run.log
 $BWA aln ${PREFIX} reads.fasta > reads.fasta.fai 2> run.log
 
 set +o pipefail # Fail is a command in a chain of pipes fails
-$BWA samse ${PREFIX} reads.fasta.fai reads.fasta 2>&1 | grep NM | sed -e's#.*NM:i:##' -e's#\t.*##' | xargs test 4 -lt && exit 13 || exit 0
+$BWA samse ${PREFIX} reads.fasta.fai reads.fasta 2>&1 | grep NM | sed -e's#.*NM:i:##' | cut -f1 | xargs test 4 -lt && exit 13 || exit 0
