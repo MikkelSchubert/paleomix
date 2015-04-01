@@ -63,7 +63,8 @@ def parse_indel(vcf):
     elif "," in vcf.alt:
         raise ValueError("VCF records with multiple indels not supported!")
     elif vcf.ref[0] != vcf.alt[0]:
-        raise ValueError("Sequences do not match VCF spec, first base differs!")
+        raise ValueError("Sequences do not match VCF spec, first base differs: "
+                         "%s:%s -- %s > %s" % (vcf.contig, vcf.pos + 1, vcf.ref, vcf.alt))
 
     ref_len, alt_len = len(vcf.ref), len(vcf.alt)
     # The length of the insertion / deletion
