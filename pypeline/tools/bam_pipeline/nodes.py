@@ -118,7 +118,7 @@ class CleanupBAMNode(PicardNode):
         params.set_option("COMPRESSION_LEVEL", "0", sep="=")
         params.set_option("SORT_ORDER", "coordinate", sep="=")
 
-        for tag in ("SM", "LB", "PU", "PL"):
+        for tag in ("ID", "SM", "LB", "PU", "PL"):
             params.set_option(tag, tags[tag], sep="=")
 
         params.set_kwargs(IN_STDIN=flt,
