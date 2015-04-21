@@ -58,7 +58,6 @@ import pypeline.tools.bam_pipeline.config as bam_config
 import pypeline.tools.bam_pipeline.mkfile as bam_mkfile
 
 
-
 def _add_extra_nodes(config, makefile, targets):
     for target in targets:
         parts.add_statistics_nodes(config, makefile, target)
@@ -356,12 +355,19 @@ def main(argv):
         print_err(error)
         return 1
 
-    commands = ("makefile", "mkfile", "run", "dry_run", "dry-run", "dryrun")
+    commands = ("makefile", "mkfile", "run",
+                "dry_run", "dry-run", "dryrun",
+                "remap")
     if (len(args) == 0) or (args[0] not in commands):
         _print_usage()
         return 1
     elif args[0] in ("mkfile", "makefile"):
         return bam_mkfile.main(args[1:])
+    elif args[0] in ("remap", "remap_prefix"):
+        # Import here to avoid circular dependency issues
+        import pypeline.tools.bam_pipeline.remap as bam_remap
+
+        return bam_remap.main(args[1:])
     elif not args[1:]:
         _print_usage()
         print_err("\nPlease specify at least one makefile!")

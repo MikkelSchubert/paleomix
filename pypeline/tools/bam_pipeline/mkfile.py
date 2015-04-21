@@ -20,6 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+from __future__ import print_function
+
 import os
 import sys
 import glob
@@ -27,13 +29,13 @@ import datetime
 from optparse import OptionParser
 
 from pypeline.common.console import \
-     print_info, \
-     print_err
+    print_info, \
+    print_err
 
 
 _TRIM_PIPELINE = (os.path.basename(sys.argv[0]) == "trim_pipeline")
 _TEMPLATE_TOP = \
-"""# -*- mode: Yaml; -*-
+    """# -*- mode: Yaml; -*-
 # Timestamp: %s
 #
 # Default options.
@@ -58,7 +60,7 @@ Options:
 """
 
 _TEMPLATE_BAM_OPTIONS = \
-"""  # Settings for trimming of reads, see AdapterRemoval man-page
+    """  # Settings for trimming of reads, see AdapterRemoval man-page
   AdapterRemoval:
      # Adapter sequences, set and uncomment to override defaults
 #     --pcr1: ...
@@ -181,7 +183,7 @@ Prefixes:
 """
 
 _TEMPLATE_SAMPLES = \
-"""# Targets are specified using the following structure:
+    """# Targets are specified using the following structure:
 #NAME_OF_TARGET:
 #  NAME_OF_SAMPLE:
 #    NAME_OF_LIBRARY:
@@ -191,7 +193,10 @@ _TEMPLATE_SAMPLES = \
 _FILENAME = "SampleSheet.csv"
 
 
-def _print_header(timestamp, full_mkfile = True, sample_tmpl = True, minimal = False):
+def print_header(full_mkfile=True,
+                 sample_tmpl=True, minimal=False,
+                 dst=sys.stdout):
+    timestamp = datetime.datetime.now().isoformat()
     template_parts = [_TEMPLATE_TOP % (timestamp,)]
     if full_mkfile:
         template_parts.append(_TEMPLATE_BAM_OPTIONS)
@@ -200,7 +205,7 @@ def _print_header(timestamp, full_mkfile = True, sample_tmpl = True, minimal = F
     template = "\n".join(template_parts)
 
     if not minimal:
-        print(template)
+        print(template, file=dst)
         return
 
     lines = template.split("\n")
@@ -210,7 +215,7 @@ def _print_header(timestamp, full_mkfile = True, sample_tmpl = True, minimal = F
             # Avoid too many empty lines
             if line.strip() or minimal_template[-1].strip():
                 minimal_template.append(line)
-    print("\n".join(minimal_template))
+    print("\n".join(minimal_template), file=dst)
 
 
 def read_alignment_records(filename):
@@ -219,20 +224,22 @@ def read_alignment_records(filename):
         for line in records:
             yield dict(zip(header, line.strip().split(",")))
 
+
 def parse_args(argv):
     parser = OptionParser("Usage: %prog [/path/to/SampleSheet.csv]")
-    parser.add_option("--minimal", default = False, action = "store_true",
+    parser.add_option("--minimal", default=False, action="store_true",
                       help = "Strip comments from makefile template.")
 
     return parser.parse_args(argv)
 
+
 def select_path(path):
-    has_r1 = bool(glob.glob(path.format(Pair = 1)))
-    has_r2 = bool(glob.glob(path.format(Pair = 2)))
+    has_r1 = bool(glob.glob(path.format(Pair=1)))
+    has_r2 = bool(glob.glob(path.format(Pair=2)))
 
     if has_r1 and not has_r2:
         # Single-ended reads
-        return path.format(Pair = 1)
+        return path.format(Pair=1)
     return path
 
 
@@ -246,31 +253,35 @@ def main(argv):
             root, filename = os.path.split(root)[0], root
 
         if not os.path.exists(filename):
-            print_err("ERROR: Could not find SampleSheet file: %r" % filename, file = sys.stderr)
+            print_err("ERROR: Could not find SampleSheet file: %r" % filename,
+                      file=sys.stderr)
             return 1
 
         for record in read_alignment_records(filename):
             libraries = records.setdefault(record["SampleID"], {})
-            barcodes  = libraries.setdefault(record["Index"], [])
+            barcodes = libraries.setdefault(record["Index"], [])
 
             record["Lane"] = int(record["Lane"])
-            path = "%(SampleID)s_%(Index)s_L%(Lane)03i_R{Pair}_*.fastq.gz" % record
+            path = "%(SampleID)s_%(Index)s_L%(Lane)03i_R{Pair}_*.fastq.gz" \
+                % (record,)
             record["Path"] = select_path(os.path.join(root, path))
             barcodes.append(record)
 
-    _print_header(timestamp   = datetime.datetime.now().isoformat(),
-                  full_mkfile = (os.path.basename(sys.argv[0]) != "trim_pipeline"),
-                  sample_tmpl = not bool(records),
-                  minimal     = options.minimal)
+    is_trim_pipeline = os.path.basename(sys.argv[0]) == "trim_pipeline"
+
+    print_header(full_mkfile=not is_trim_pipeline,
+                 sample_tmpl=not bool(records),
+                 minimal=options.minimal)
+
     for (sample, libraries) in records.iteritems():
-        print "%s:" % sample
-        print "  %s:" % sample
+        print("%s:" % sample)
+        print("  %s:" % sample)
         for (library, barcodes) in libraries.iteritems():
-            print "    %s:" % library
+            print("    %s:" % library)
             for record in barcodes:
-                print "      {FCID}_{Lane}: {Path}".format(**record)
-            print
-        print
+                print("      {FCID}_{Lane}: {Path}".format(**record))
+            print()
+        print()
 
     if not argv:
         print_info("No directories/files specified, standard makefile printed.", file = sys.stderr)
