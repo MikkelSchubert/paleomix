@@ -118,6 +118,11 @@ def main(argv):
         logger.info("Printint required executables ...")
         pipeline.print_required_executables()
         return 0
+    elif config.dot_file:
+        logger.info("Writing dependency graph to %r ...", config.dot_file)
+        if not pipeline.to_dot(config.dot_file):
+            return 1
+        return 0
 
     if not pipeline.run(max_running=config.max_threads,
                         dry_run=config.dry_run,

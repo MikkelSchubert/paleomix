@@ -93,6 +93,8 @@ def _run_config_parser(argv):
     group.add_option("--list-targets", default = None, choices = _TARGETS_BY_NAME,
                      help = "List all targets at a given resolution (%s)" \
                         % (", ".join(_TARGETS_BY_NAME),))
+    group.add_option("--to-dot-file", dest="dot_file",
+                     help="Write dependency tree to the specified dot-file.")
     parser.add_option_group(group)
 
     group  = optparse.OptionGroup(parser, "Misc")

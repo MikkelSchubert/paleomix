@@ -274,6 +274,77 @@ class Pypeline(object):
         else:
             raise signal.default_int_handler(signum, frame)
 
+    def to_dot(self, destination):
+        """Writes a simlpe dot file to the specified destination, representing
+        the full dependency tree, after MetaNodes have been removed. Nodes are
+        named by their class.
+        """
+        try:
+            nodegraph = NodeGraph(self._nodes)
+        except NodeGraphError, error:
+            self._logger.error(error)
+            return False
+
+        # Dict recording all dependencies / subnodes of non-MetaNodes
+        # MetaNode dependencies / subnodes are collapsed
+        meta_dependencies = {}
+        # Dict recording if anything depends on a speific node
+        meta_rev_dependencies = {}
+        for node in nodegraph.iterflat():
+            if not isinstance(node, MetaNode):
+                selection = set()
+                candidates = list(node.subnodes | node.dependencies)
+                while candidates:
+                    candidate = candidates.pop()
+                    if isinstance(candidate, MetaNode):
+                        candidates.extend(candidate.subnodes)
+                        candidates.extend(candidate.dependencies)
+                    else:
+                        selection.add(candidate)
+
+                meta_dependencies[node] = selection
+                for dep in selection:
+                    meta_rev_dependencies[dep] = True
+
+        return self._write_dot(destination,
+                               meta_dependencies,
+                               meta_rev_dependencies)
+
+    @classmethod
+    def _write_dot(cls, destination, meta_dependencies, meta_rev_dependencies):
+        """Writes simple dot file, in which each node is connected to their
+        dependencies, using the object IDs as the node names. Labels are
+        derived from the class names, excluding any "Node" postfix.
+        """
+        with open(destination, "w") as out:
+            out.write("digraph G {\n")
+            out.write("  graph [ dpi = 75 ];\n")
+            out.write("  node [shape=record,width=.1,height=.1];\n")
+            out.write("  splines=ortho;\n\n")
+
+            for node, dependencies in meta_dependencies.iteritems():
+                node_id = "Node_%i" % (id(node),)
+                node_type = node.__class__.__name__
+                if node_type.endswith("Node"):
+                    node_type = node_type[:-4]
+
+                color = "white"
+                if not meta_dependencies.get(node):
+                    color = "red"
+                elif not meta_rev_dependencies.get(node):
+                    color = "green"
+
+                out.write('  %s [label="%s"; fillcolor=%s; style=filled]\n'
+                          % (node_id, node_type, color))
+                for dependency in dependencies:
+                    dep_id = "Node_%i" % (id(dependency),)
+                    out.write("  %s -> %s\n" % (dep_id, node_id))
+                out.write("\n")
+
+            out.write("}\n")
+
+        return True
+
     @classmethod
     def _get_finished_node(cls, queue, running, blocking=True):
         """Returns a tuple containing a node that has finished running

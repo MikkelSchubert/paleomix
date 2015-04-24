@@ -132,6 +132,9 @@ def _run_config_parser(argv):
                           "with version requirements (if any).")
     parser.add_option_group(group)
 
+    parser.add_option("--to-dot-file", dest="dot_file",
+                      help="Write dependency tree to the specified dot-file.")
+
     return per_host_cfg.parse_args(parser, argv)
 
 
