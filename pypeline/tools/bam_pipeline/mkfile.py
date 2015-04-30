@@ -263,7 +263,7 @@ def main(argv):
 
             record["Lane"] = int(record["Lane"])
             path = "%(SampleID)s_%(Index)s_L%(Lane)03i_R{Pair}_*.fastq.gz" \
-                % (record,)
+                % record
             record["Path"] = select_path(os.path.join(root, path))
             barcodes.append(record)
 
