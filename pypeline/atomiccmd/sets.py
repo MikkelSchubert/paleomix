@@ -27,6 +27,7 @@ import pypeline.atomiccmd.pprint as atomicpp
 
 from pypeline.atomiccmd.command import AtomicCmd, CmdError
 from pypeline.common.utilities import safe_coerce_to_tuple
+from pypeline.common.fileutils import try_remove
 
 
 class _CommandSet:
@@ -38,13 +39,21 @@ class _CommandSet:
         self._validate_commands()
 
     def commit(self, temp):
-        for command in self._commands:
-            command.commit(temp)
+        committed_files = set()
+        try:
+            for command in self._commands:
+                command.commit(temp)
+                committed_files.update(command.output_files)
+        except:
+            # Cleanup after failed commit
+            for fpath in committed_files:
+                try_remove(fpath)
+            raise
 
-    def _collect_properties(key): # pylint: disable=E0213
+    def _collect_properties(key):  # pylint: disable=E0213
         def _collector(self):
             values = set()
-            for command in self._commands: # pylint: disable=W0212
+            for command in self._commands:  # pylint: disable=W0212
                 values.update(getattr(command, key))
             return values
         return property(_collector)

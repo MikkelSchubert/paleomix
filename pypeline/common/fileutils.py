@@ -326,6 +326,9 @@ def _sh_wrapper(func, source, destination):
                 make_dirs(dirname)
                 func(source, destination)
                 return
+        elif (error.errno == errno.ENOSPC):
+            # Not enough space; remove partial file
+            os.unlink(destination)
         raise
 
 

@@ -264,12 +264,20 @@ class AtomicCmd(object):
 
         temp = os.path.abspath(temp)
         filenames = self._generate_filenames(self._files, temp)
-        for (key, filename) in filenames.iteritems():
-            if isinstance(filename, types.StringTypes):
-                if key.startswith("OUT_"):
-                    fileutils.move_file(filename, self._files[key])
-                elif key.startswith("TEMP_OUT_"):
-                    fileutils.try_remove(filename)
+        committed_files = set()
+        try:
+            for (key, filename) in filenames.iteritems():
+                if isinstance(filename, types.StringTypes):
+                    if key.startswith("OUT_"):
+                        fileutils.move_file(filename, self._files[key])
+                        committed_files.add(self._files[key])
+                    elif key.startswith("TEMP_OUT_"):
+                        fileutils.try_remove(filename)
+        except:
+            # Cleanup after failed commit
+            for fpath in committed_files:
+                fileutils.try_remove(fpath)
+            raise
 
         self._proc = None
         self._temp = None
