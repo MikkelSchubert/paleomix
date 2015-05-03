@@ -86,7 +86,8 @@ class DetectInputDuplicationNode(Node):
 
                 # Ignore supplementary / secondary alignments
                 if not record.flag & 0x900:
-                    key = (record.qname, record.seq, record.qual)
+                    key = (record.is_reverse, record.qname,
+                           record.seq, record.qual)
                     observed_reads[key].append(fpath)
             self._process_reads(observed_reads, self.output_files)
 
@@ -101,7 +102,7 @@ class DetectInputDuplicationNode(Node):
 
     @classmethod
     def _process_reads(cls, observed_reads, output_files):
-        for ((name, _, _), fpaths) in observed_reads.iteritems():
+        for ((_, name, _, _), fpaths) in observed_reads.iteritems():
             if len(fpaths) > 1:
                 message = ["Read %r found in multiple files:" % (name,)]
                 for fpath in fpaths:
