@@ -328,14 +328,24 @@ class Pypeline(object):
                 if node_type.endswith("Node"):
                     node_type = node_type[:-4]
 
+                rank = None
                 color = "white"
                 if not meta_dependencies.get(node):
                     color = "red"
                 elif not meta_rev_dependencies.get(node):
                     color = "green"
+                    rank = "sink"
+
+                if rank is not None:
+                    out.write("  {")
+                    out.write("    rank = %s;\n  " % (rank,))
 
                 out.write('  %s [label="%s"; fillcolor=%s; style=filled]\n'
                           % (node_id, node_type, color))
+
+                if rank is not None:
+                    out.write("  }")
+
                 for dependency in dependencies:
                     dep_id = "Node_%i" % (id(dependency),)
                     out.write("  %s -> %s\n" % (dep_id, node_id))
