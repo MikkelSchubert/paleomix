@@ -24,9 +24,8 @@ Options:
 #  Settings for trimming of reads, see AdapterRemoval man-page for more options
   AdapterRemoval:
      # Adapter sequences, set and uncomment to override defaults
-     # The following adapters were used to generating the data for this example
-     --pcr1: "AGATCGGAAGAGCACACGTCTGAACTCCAGTCACNNNNNNATCTCGTATGCCGTCTTCTGCTTG"
-     --pcr2: "AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT"
+#     --pcr1: ...
+#     --pcr2: ...
      # Pipeline defaults that differ from AR defaults;
      # To override, change the value(s) and uncomment the line(s):
 #     --mm: 3

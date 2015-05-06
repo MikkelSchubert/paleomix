@@ -259,7 +259,7 @@ class Library(object):
         while len(reads) < minimum:
             name, sequence = sample.get_fragment()
             cur_forward = sequence + pcr1
-            cur_reverse = reverse_complement(PCR2 + sequence)
+            cur_reverse = reverse_complement(sequence) + PCR2
             # Number of PCR copies -- minimum 1
             num_dupes = toint(_rexp(options.library_pcr_lambda, rng)) + 1
             for dupe_id in xrange(num_dupes):
