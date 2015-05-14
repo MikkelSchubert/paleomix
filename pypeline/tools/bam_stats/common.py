@@ -88,8 +88,9 @@ def parse_arguments(argv, ext):
                              "the file is read from STDIN.")
     parser.add_argument("outfile", metavar="OUTPUT", nargs='?',
                         help="Filename of output table; defaults to name of "
-                             "the input BAM with a '.depths' extension. If "
-                             "set to '-' the table is printed to STDOUT.")
+                             "the input BAM with a '%s' extension. If "
+                             "set to '-' the table is printed to STDOUT."
+                             % (ext,))
     parser.add_argument("--target-name", default=None,
                         help="Name used for 'Target' column; defaults to the "
                              "filename of the BAM file.")
