@@ -71,6 +71,29 @@ for (_abr, _nts) in NT_CODES:
 NT_CODES = dict(NT_CODES)
 
 
+CODONS = {
+    "+": {
+        "TTT": "Phe",  "TCT": "Ser",  "TAT": "Tyr",  "TGT": "Cys",
+        "TTC": "Phe",  "TCC": "Ser",  "TAC": "Tyr",  "TGC": "Cys",
+        "TTA": "Leu",  "TCA": "Ser",  "TAA": "Stop", "TGA": "Stop",
+        "TTG": "Leu",  "TCG": "Ser",  "TAG": "Stop", "TGG": "Trp",
+
+        "CTT": "Leu",  "CCT": "Pro",  "CAT": "His",  "CGT": "Arg",
+        "CTC": "Leu",  "CCC": "Pro",  "CAC": "His",  "CGC": "Arg",
+        "CTA": "Leu",  "CCA": "Pro",  "CAA": "Gln",  "CGA": "Arg",
+        "CTG": "Leu",  "CCG": "Pro",  "CAG": "Gln",  "CGG": "Arg",
+
+        "ATT": "Ile",  "ACT": "Thr",  "AAT": "Asn",  "AGT": "Ser",
+        "ATC": "Ile",  "ACC": "Thr",  "AAC": "Asn",  "AGC": "Ser",
+        "ATA": "Ile",  "ACA": "Thr",  "AAA": "Lys",  "AGA": "Arg",
+        "ATG": "Met",  "ACG": "Thr",  "AAG": "Lys",  "AGG": "Arg",
+
+        "GTT": "Val",  "GCT": "Ala",  "GAT": "Asp",  "GGT": "Gly",
+        "GTC": "Val",  "GCC": "Ala",  "GAC": "Asp",  "GGC": "Gly",
+        "GTA": "Val",  "GCA": "Ala",  "GAA": "Glu",  "GGA": "Gly",
+        "GTG": "Val",  "GCG": "Ala",  "GAG": "Glu",  "GGG": "Gly"},
+    "-": {}}
+
 
 def complement(sequence):
     """Returns the complement of a DNA sequence (string)."""
@@ -80,6 +103,14 @@ def complement(sequence):
 def reverse_complement(sequence):
     """Returns the reverse complement of a DNA sequence."""
     return complement(sequence)[::-1]
+
+
+for _codon, _aa in CODONS["+"].iteritems():
+    assert not set(_codon) - set("ACGT")
+    CODONS["-"][reverse_complement(_codon)] = _aa
+
+assert len(CODONS["+"]) == 64
+assert len(CODONS["-"]) == 64
 
 
 def encode_genotype(nucleotides):
