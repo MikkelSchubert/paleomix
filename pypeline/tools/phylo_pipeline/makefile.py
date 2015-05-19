@@ -29,6 +29,7 @@ from pypeline.common.makefile import \
     MakefileError, \
     REQUIRED_VALUE, \
     IsDictOf, \
+    IsListOf, \
     IsInt, \
     IsStr, \
     StringIn, \
@@ -44,6 +45,7 @@ from pypeline.common.makefile import \
     And, \
     Or, \
     Not
+
 from pypeline.common.fileutils import \
     swap_ext, \
     add_postfix
@@ -76,6 +78,7 @@ def _mangle_makefile(options, mkfile, steps):
     _update_sample_sets(mkfile)
     _update_genotyping(mkfile)
     _update_msa(mkfile)
+    _update_homozygous_contigs(mkfile)
     _check_bam_sequences(options, mkfile, steps)
     _check_genders(mkfile)
     _update_and_check_max_read_depth(options, mkfile)
@@ -331,6 +334,17 @@ def _update_filtering(mkfile):
     mkfile["Project"]["FilterSingletons"] = filtering
 
 
+def _update_homozygous_contigs(mkfile):
+    """Treat unspecified values for HomozygousContigs as an empty list, in
+    order that the user does not need to specify "[]" for empty lists.
+    """
+    for regions in mkfile["Project"]["Regions"].itervalues():
+        hcontigs = regions["HomozygousContigs"]
+        for key, contigs in hcontigs.items():
+            if contigs is None:
+                hcontigs[key] = []
+
+
 def _check_bam_sequences(options, mkfile, steps):
     """Check that the BAM files contains the reference sequences found in the
     FASTA file, matched by name and length; extra sequences are permitted. This
@@ -383,6 +397,7 @@ def _check_genders(mkfile):
     regions_genders = set()
     for regions in mkfile["Project"]["Regions"].itervalues():
         all_contigs.update(_collect_fasta_contigs(regions))
+
         for contigs in regions["HomozygousContigs"].itervalues():
             contigs_genders.update(contigs)
 
@@ -627,7 +642,7 @@ _VALIDATION = {
                 "ProteinCoding": IsBoolean(default=False),
                 "IncludeIndels": IsBoolean(default=True),
                 "HomozygousContigs": {
-                    IsStr: [IsStr],
+                    IsStr: Or(IsNone, IsListOf(IsStr))
                     },
                 },
             },
