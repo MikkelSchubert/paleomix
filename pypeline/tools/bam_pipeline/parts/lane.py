@@ -38,7 +38,7 @@ from pypeline.tools.bam_pipeline.parts import \
     Reads
 from pypeline.tools.bam_pipeline.nodes import \
     CleanupBAMNode, \
-    IndexAndValidateBAMNode
+    index_and_validate_bam
 
 
 #
@@ -78,7 +78,7 @@ class Lane:
                               tags         = self.tags,
                               dependencies = prefix["Node"])
 
-        validated_node = IndexAndValidateBAMNode(config, prefix, node)
+        validated_node = index_and_validate_bam(config, prefix, node)
         self.bams["Processed"] = {output_filename : validated_node}
 
 
@@ -122,7 +122,7 @@ class Lane:
                 alignment_obj.commands["convert"].set_option('-F', "0x4")
 
             alignment_node = alignment_obj.build_node()
-            validated_node = IndexAndValidateBAMNode(config, prefix, alignment_node)
+            validated_node = index_and_validate_bam(config, prefix, alignment_node)
 
             self.bams[key] = {output_filename : validated_node}
 

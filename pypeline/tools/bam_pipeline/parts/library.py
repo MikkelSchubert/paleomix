@@ -39,7 +39,7 @@ from pypeline.nodes.mapdamage import \
     MapDamageModelNode, \
     MapDamageRescaleNode
 from pypeline.tools.bam_pipeline.nodes import \
-    IndexAndValidateBAMNode
+    index_and_validate_bam
 from pypeline.nodes.paleomix import \
     DuplicateHistogramNode, \
     FilterCollapsedBAMNode
@@ -132,7 +132,7 @@ class Library:
                                   output_bam   = output_filename,
                                   keep_dupes   = keep_duplicates,
                                   dependencies = files_and_nodes.values())
-            validated_node = IndexAndValidateBAMNode(config, prefix, node)
+            validated_node = index_and_validate_bam(config, prefix, node)
 
             results[key] = {output_filename : validated_node}
         return results
@@ -204,13 +204,9 @@ class Library:
         scale = scale.build_node()
 
         # Grab indexing and validation nodes
-        validate = IndexAndValidateBAMNode(config, prefix, scale).subnodes
+        validate = index_and_validate_bam(config, prefix, scale)
 
-        node = MetaNode(description = "Rescale Qualities",
-                        subnodes    = (plot, model, scale) + tuple(validate),
-                        dependencies = files_and_nodes.values())
-
-        return {output_filename : node}, plot, model
+        return {output_filename: validate}, plot, model
 
     def _build_duphist_nodes(self, config, target, prefix, files_and_nodes):
         if not ("DuplicateHist" in self.options["Features"]):

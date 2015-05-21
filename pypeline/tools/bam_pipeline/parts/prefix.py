@@ -26,7 +26,8 @@ from pypeline.common.utilities import safe_coerce_to_tuple
 from pypeline.node import MetaNode
 from pypeline.nodes.gatk import IndelRealignerNode
 from pypeline.nodes.picard import MergeSamFilesNode
-from pypeline.tools.bam_pipeline.nodes import IndexAndValidateBAMNode
+from pypeline.tools.bam_pipeline.nodes import \
+    index_and_validate_bam
 from pypeline.nodes.validation import \
     DetectInputDuplicationNode
 
@@ -75,7 +76,7 @@ class Prefix:
                                  input_bams   = files_and_bams.keys(),
                                  output_bam   = output_filename,
                                  dependencies = self.datadup_check)
-        validated_node = IndexAndValidateBAMNode(config, prefix, node, validated_filename)
+        validated_node = index_and_validate_bam(config, prefix, node, validated_filename)
 
         return {output_filename : validated_node}
 
@@ -91,7 +92,7 @@ class Prefix:
                                   outfile      = output_filename,
                                   intervals    = intervals_filename,
                                   dependencies = self.datadup_check)
-        validated_node = IndexAndValidateBAMNode(config, prefix, node, validated_filename)
+        validated_node = index_and_validate_bam(config, prefix, node, validated_filename)
 
         return {output_filename : validated_node}
 

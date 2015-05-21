@@ -42,58 +42,51 @@ from pypeline.common.fileutils import \
     describe_files
 
 
-class IndexAndValidateBAMNode(MetaNode):
-    def __init__(self, config, prefix, node, log_file=None):
-        input_file, has_index = self._get_input_file(node)
-        subnodes, dependencies = [node], node.dependencies
-        if not has_index:
-            node = BAMIndexNode(infile=input_file,
-                                dependencies=node)
-            subnodes.append(node)
+def index_and_validate_bam(config, prefix, node, log_file=None):
+    input_file, has_index = _get_input_file(node)
+    if not has_index:
+        node = BAMIndexNode(infile=input_file,
+                            dependencies=node)
 
-        validation_params = ValidateBAMNode.customize(config=config,
-                                                      input_bam=input_file,
-                                                      output_log=log_file,
-                                                      dependencies=node)
-        # Check MD tags against reference sequence
-        # FIXME: Disabled due to issues with Picard/Samtools disagreeing,
-        #   backwards compatibility. See the discussion at
-        #     http://sourceforge.net/mailarchive/message.php?msg_id=31348639
-        # validation_params.command.set_kwargs(IN_REF=prefix["Reference"])
-        # validation_params.command.add_option("R", "%(IN_REF)s", sep="=")
+    validation_params = ValidateBAMNode.customize(config=config,
+                                                  input_bam=input_file,
+                                                  output_log=log_file,
+                                                  dependencies=node)
+    # Check MD tags against reference sequence
+    # FIXME: Disabled due to issues with Picard/Samtools disagreeing,
+    #   backwards compatibility. See the discussion at
+    #     http://sourceforge.net/mailarchive/message.php?msg_id=31348639
+    # validation_params.command.set_kwargs(IN_REF=prefix["Reference"])
+    # validation_params.command.add_option("R", "%(IN_REF)s", sep="=")
 
-        # Ignored since we may filter out misses and low-quality hits during
-        # mapping, which leads to a large proportion of missing PE mates.
-        validation_params.command.add_option("IGNORE", "MATE_NOT_FOUND",
-                                             sep="=")
-        # Ignored due to high rate of false positives for lanes with few hits,
-        # where high-quality reads may cause mis-identification of qualities
-        validation_params.command.add_option("IGNORE",
-                                             "INVALID_QUALITY_FORMAT", sep="=")
-        subnodes.append(validation_params.build_node())
+    # Ignored since we may filter out misses and low-quality hits during
+    # mapping, which leads to a large proportion of missing PE mates.
+    validation_params.command.add_option("IGNORE", "MATE_NOT_FOUND",
+                                         sep="=")
+    # Ignored due to high rate of false positives for lanes with few hits,
+    # where high-quality reads may cause mis-identification of qualities
+    validation_params.command.add_option("IGNORE",
+                                         "INVALID_QUALITY_FORMAT", sep="=")
 
-        description = "<w/Validation: " + str(subnodes[0])[1:]
-        MetaNode.__init__(self,
-                          description=description,
-                          subnodes=subnodes,
-                          dependencies=dependencies)
+    node = validation_params.build_node()
+    return node
 
-    @classmethod
-    def _get_input_file(cls, node):
-        if isinstance(node, MetaNode):
-            for subnode in node.subnodes:
-                input_filename, has_index = cls._get_input_file(subnode)
-                if input_filename:
-                    return input_filename, has_index
 
-        input_filename, has_index = None, False
-        for filename in node.output_files:
-            if filename.lower().endswith(".bai"):
-                has_index = True
-            elif filename.lower().endswith(".bam"):
-                input_filename = filename
+def _get_input_file(node):
+    if isinstance(node, MetaNode):
+        for subnode in node.subnodes:
+            input_filename, has_index = _get_input_file(subnode)
+            if input_filename:
+                return input_filename, has_index
 
-        return input_filename, has_index
+    input_filename, has_index = None, False
+    for filename in node.output_files:
+        if filename.lower().endswith(".bai"):
+            has_index = True
+        elif filename.lower().endswith(".bam"):
+            input_filename = filename
+
+    return input_filename, has_index
 
 
 class CleanupBAMNode(PicardNode):
