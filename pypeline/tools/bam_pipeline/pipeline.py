@@ -248,6 +248,9 @@ def run(config, args):
                   % (config.temp_root,))
         return 1
 
+    # Init worker-threads before reading in any more data
+    pipeline = Pypeline(config)
+
     try:
         print_info("Building BAM pipeline ...", file=sys.stderr)
         makefiles = read_makefiles(config, args)
@@ -285,7 +288,6 @@ def run(config, args):
     elif os.path.basename(sys.argv[0]) != "trim_pipeline":
         pipeline_func = build_pipeline_full
 
-    pipeline = Pypeline(config)
     for makefile in makefiles:
         # If a destination is not specified, save results in same folder as the
         # makefile

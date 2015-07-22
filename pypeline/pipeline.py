@@ -49,6 +49,12 @@ class Pypeline(object):
         self._logger = logging.getLogger(__name__)
         # Set if a keyboard-interrupt (SIGINT) has been caught
         self._interrupted = False
+        self._queue = multiprocessing.Queue()
+        # Maximum number of processes allowed is the cpu_count; init up front
+        # so that the active number of processes can be increased at runtime.
+        self._pool = multiprocessing.Pool(multiprocessing.cpu_count(),
+                                          _init_worker,
+                                          (self._queue,))
 
     def add_nodes(self, *nodes):
         for subnodes in safe_coerce_to_tuple(nodes):
@@ -65,12 +71,19 @@ class Pypeline(object):
             self._logger.error(error)
             return False
 
+        if max_running > multiprocessing.cpu_count():
+            max_running = multiprocessing.cpu_count()
+            message = "Maximum number of threads set to value greater than " \
+                      "the number of CPUs.\nLimiting pipeline to a maximum " \
+                      "of %i threads.\n"
+            pypeline.ui.print_warn(message % (multiprocessing.cpu_count(),))
+
         for node in nodegraph.iterflat():
             if (node.threads > max_running) and not isinstance(node, MetaNode):
                 message = "Node(s) use more threads than the max allowed; " \
                           "the pipeline may therefore use more than the " \
-                          "expected number of threads."
-                self._logger.warning(message)
+                          "expected number of threads.\n"
+                pypeline.ui.print_warn(message)
                 break
 
         if dry_run:
@@ -93,8 +106,6 @@ class Pypeline(object):
         running = {}
         # Set of remaining nodes to be run
         remaining = set(nodegraph.iterflat())
-        queue = multiprocessing.Queue()
-        pool = multiprocessing.Pool(max_running, _init_worker, (queue,))
 
         errors_occured = False
 
@@ -112,8 +123,8 @@ class Pypeline(object):
             if running:
                 progress_printer.flush()
 
-        pool.close()
-        pool.join()
+        self._pool.close()
+        self._pool.join()
 
         progress_printer.flush()
         progress_printer.finalize()

@@ -83,6 +83,9 @@ def main(argv):
                   % (config.temp_root,))
         return 1
 
+    # Init worker-threads before reading in any more data
+    pipeline = Pypeline(config)
+
     try:
         makefiles = read_makefiles(config, args, commands)
     except (MakefileError, pypeline.yaml.YAMLError, IOError), error:
@@ -96,7 +99,6 @@ def main(argv):
     pypeline.logger.initialize(config, logfile_template)
     logger = logging.getLogger(__name__)
 
-    pipeline = Pypeline(config)
     for (command_key, command_func) in commands:
         logger.info("Building %s pipeline ...", command_key)
         command_func(pipeline, config, makefiles)
