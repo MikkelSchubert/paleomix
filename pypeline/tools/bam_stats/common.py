@@ -88,16 +88,16 @@ def parse_arguments(argv, ext):
                              "the file is read from STDIN.")
     parser.add_argument("outfile", metavar="OUTPUT", nargs='?',
                         help="Filename of output table; defaults to name of "
-                             "the input BAM with a '.depths' extension. If "
-                             "set to '-' the table is printed to STDOUT.")
+                             "the input BAM with a %r extension. If "
+                             "set to '-' the table is printed to STDOUT." % ext)
     parser.add_argument("--target-name", default=None,
                         help="Name used for 'Target' column; defaults to the "
                              "filename of the BAM file.")
     parser.add_argument("--regions-file", default=None, dest="regions_fpath",
-                        help="BED file containing regions of interest; depth "
+                        help="BED file containing regions of interest; %s "
                              "is calculated only for these grouping by the "
                              "name used in the BED file, or the contig name "
-                             "if no name has been specified for a record.")
+                             "if no name has been specified for a record." % (ext.strip("."),))
     parser.add_argument('--max-contigs', default=100, type=int,
                         help="The maximum number of contigs allowed in a BAM "
                              "file. If this number is exceeded, the entire "
@@ -107,7 +107,7 @@ def parse_arguments(argv, ext):
     parser.add_argument('--ignore-readgroups',
                         default=False, action="store_true",
                         help="Ignore readgroup information in reads, and only "
-                             "provide aggreaged statistics; this is required "
+                             "provide aggregated statistics; this is required "
                              "if readgroup information is missing or partial "
                              "[default: %(default)s]")
     parser.add_argument('--overwrite-output',
