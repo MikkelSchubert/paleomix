@@ -55,7 +55,9 @@ TABLE_HEADER = """# Timestamp: %s
 #             name are combined into one row, with the size representing to
 #             total of these. Note that overlapping bases are counted 2 (or
 #             more) times.
-#  Hits:      Sum of SE, PE_1, and PE_2 hits
+#  Hits:      Sum of SE, PE_1, and PE_2 hits. Note that supplementary alignments,
+#             duplicates, reads that failed QC, secondary alignments, 
+#             and unmapped reads are ignored.
 #  SE, PE_*:  Number of Single Ended, and Pair Ended (mate 1 and 2) hits
 #             overlapping the current contig or intervals. Note that a hit may
 #             be counted multiple times if it overlaps multiple intervals
