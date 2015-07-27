@@ -274,7 +274,7 @@ def main(argv):
                              "sequence [%default].")
     opts = parser.parse_args(argv)
 
-    print("Running buildRegions.py", end="", file=sys.stderr)
+    print("Running vcf_to_fasta", end="", file=sys.stderr)
     if opts.whole_codon_indels_only:
         print(", assuming sequences represents CDS", end="", file=sys.stderr)
     print(" ...", file=sys.stderr)
