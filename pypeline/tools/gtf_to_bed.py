@@ -51,7 +51,7 @@ def update_gtf_table(table, gtf, scaffolds, contig_prefix):
     # asDict, which uses a different parsing implementation (v0.7.8).
     properties = gtf.asDict()
 
-    keys = (gtf.source,
+    keys = (properties["gene_biotype"],
             properties["gene_id"],
             properties["transcript_id"],
             int(properties["exon_number"]),
