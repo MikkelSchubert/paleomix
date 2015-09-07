@@ -299,7 +299,14 @@ def _update_prefixes(makefile):
     prefixes = {}
     for (name, values) in makefile.get("Prefixes", {}).iteritems():
         filename = values["Path"]
-        if name.endswith("*"):
+        if "*" in name[:-1]:
+            raise MakefileError("The character '*' is not allowed in Prefix "
+                                "names; if you use to select .fasta files "
+                                "using a search-string, then use the prefix "
+                                "name '%s*' instead and specify the wildcards "
+                                "in the 'Path' instead."
+                                % (name.replace("*", "",)))
+        elif name.endswith("*"):
             records = []
             for fname in glob.glob(filename):
                 name = os.path.basename(fname).split(".")[0]
