@@ -469,8 +469,8 @@ def test_java_builder__default__no_config():
                                 "-server",
                                 "-Djava.io.tmpdir=%(TEMP_DIR)s",
                                 "-Djava.awt.headless=true",
-                                "-Xmx4g",
                                 "-XX:+UseSerialGC",
+                                "-Xmx4g",
                                 "-jar", "%(AUX_JAR)s"])
 
 def test_java_builder__defaults__call():
@@ -479,8 +479,8 @@ def test_java_builder__defaults__call():
                                 "-server",
                                 "-Djava.io.tmpdir=/disk/tmp",
                                 "-Djava.awt.headless=true",
-                                "-Xmx4g",
                                 "-XX:+UseSerialGC",
+                                "-Xmx4g",
                                 "-jar", "%(AUX_JAR)s"])
 
 def test_java_builder__defaults__kwargs():
@@ -494,8 +494,8 @@ def test_java_builder__multithreaded_gc():
                                 "-server",
                                 "-Djava.io.tmpdir=/disk/tmp",
                                 "-Djava.awt.headless=true",
-                                "-Xmx4g",
                                 "-XX:ParallelGCThreads=3",
+                                "-Xmx4g",
                                 "-jar", "%(AUX_JAR)s"])
 
 def test_java_builder__multithreaded_gc__zero_or_negative_threads():
