@@ -47,7 +47,7 @@ def _run_config_parser(argv):
                              "used with care!")
 
     pypeline.ui.add_optiongroup(parser,
-                                ui_default=PerHostValue("quiet"),
+                                ui_default=PerHostValue("running"),
                                 color_default=PerHostValue("on"))
     pypeline.logger.add_optiongroup(parser, default = PerHostValue("warning"))
 

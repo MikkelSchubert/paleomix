@@ -44,15 +44,16 @@ from pypeline.common.console import \
     print_warn
 
 
-def add_optiongroup(parser, ui_default="quiet", color_default="on"):
+def add_optiongroup(parser, ui_default="running", color_default="on"):
     """Adds an option-group to an OptionParser object, with options
     pertaining to logging. Note that 'initialize' expects the config
     object to have these options."""
     group = optparse.OptionGroup(parser, "Progress reporting")
     group.add_option("--progress-ui", default=ui_default, type="choice",
-                     choices=("verbose", "quiet", "progress", "summary"),
+                     choices=("running", "progress", "summary",
+                              "verbose", "quiet"),
                      help="Select method for displaying the progress of the "
-                          "pipeline: 'quiet' = Display only currently "
+                          "pipeline: 'running' = Display only currently "
                           "running nodes; 'progress' = Display changes in "
                           "state; 'summary'; oneline summary only. "
                           "[Default is '%default']")
@@ -126,7 +127,7 @@ class CommandLine(object):
                 max_running = max(1, max_running - 1)
             elif character in "lL":
                 pypeline.ui.print_info()
-                progress_printer = pypeline.ui.QuietUI()
+                progress_printer = pypeline.ui.RunningUI()
                 progress_printer.refresh(nodegraph)
                 progress_printer.flush()
             elif character in "hH":
@@ -305,9 +306,8 @@ class BaseUI(object):
     ERROR = pypeline.nodegraph.NodeGraph.ERROR
 
 
-class QuietUI(BaseUI):
-    """A more quiet progress UI, relative to the Verbose UI:
-    Prints a summary, and the list of running nodes every
+class RunningUI(BaseUI):
+    """Prints a summary, and the list of running nodes every
     time 'flush' is called."""
 
     def __init__(self):
@@ -459,12 +459,14 @@ def _fmt_runtime(runtime):
 
 
 # No longer provided
-VerboseUI = QuietUI
+VerboseUI = RunningUI
+QuietUI = RunningUI
 
 # Different types of UIs
 UI_TYPES = {
     "Verbose": VerboseUI,
-    "Quiet": QuietUI,
+    "Quiet": RunningUI,
+    "Running": RunningUI,
     "Progress": ProgressUI,
     "Summary": SummaryUI,
 }
