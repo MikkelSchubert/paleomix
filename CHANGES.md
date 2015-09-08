@@ -2,8 +2,8 @@
 Changelog
 =========
 
-Current
-=============
+Version 1.1.0 - 2015-09-08
+==========================
   * Check that regions of interest specified in PhylogeneticInference section
     corresponds to those specified earlier in the makefile.
   * Fixed a bug preventing new tasks from being started immediately after a
@@ -31,7 +31,44 @@ Current
     value used by the pipeline exceeded the maxmimum for this architecture.
   * The 'mkfile' command has been renamed to 'makefile' for both pipelines; the
     old command is still supported, but considered deprecated.
+  * Support for genotyping entire BAM (once, and only once), even if only a set
+    of regions are to be called; this is useful in the context of larger
+    projects, and when multiple overlapping regions are to be genotyped.
   * Fixed off-by-one error for coverages near the end of regions / contigs.
+  * Improved verification of singleton-filtering settings in makefiles.
+  * Ensure that the correct 'paleomix' wrapper script is called when invoking
+    the various other tools, even if this is not located in the current PATH.
+  * Added validation of FASTA files for the BAM pipeline, in order to catch
+    serveral types of errors that may lead to failure during mapping.
+  * Parse newer SAMTools / BCFTools version strings, so that a meaningful
+    version check failure can be reported, as these versions are not supported
+    yet due to missing functionality.
+  * Fix potential deadlock in the genotyping tool, which could occur if either
+    of the invoked commands failed to start or crashed / were killed during
+    execution.
+  * Fixed error in which summary files could not be generated if two (or more)
+    prefixes using the same label contained contigs with overlapping names but
+    different sizes.
+  * Added options to BAM / Phylo pipelines for writing Dot-file of the full
+    dependency tree of a pipeline.
+  * Allow the -Xmx option for Java to be overridden by the user.
+  * Support for AdapterRemoval v2.
+  * Added the ability to change the number of threads, and more, while the
+    pipeline is running. Currently, already running tasks are not terminated if
+    the maximum number of threads is decreased. Press 'h' during runtime to
+    list commands.
+  * Changed 'gtf_to_bed' to group by the gene biotype, instead of the source.
+  * Improved termination of child-processes, when the pipeline is interrupted.
+  * Dropped support for the "verbose" terminal output due to excessive
+    verbosity (yes, really). The new default is "running" (previously called
+    "quiet"), which shows a list of currently running nodes at every update.
+  * Reworked the 'sample_pileup' command, to reduce the memory usage for larger
+    regions (e.g. entire chromosomes) by an order of magnitude. Also fixed some
+    inconsistency in the calculation of distance to indels, resulting in some
+    changes in results.
+  * Fixed problems calculating coverage, depths, and others, when when using a
+    user-provided BED without a name column.
+
 
 
 Version 1.0.1 - 2014-04-30
