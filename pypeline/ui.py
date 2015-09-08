@@ -292,7 +292,7 @@ class BaseUI(object):
             if value:
                 line.append("%i %s" % (value, name))
 
-        line.append("%i done of %i tasks (press 'h' for help):"
+        line.append("%i done of %i tasks"
                     % (states[cls.DONE],
                        sum(states)))
 
@@ -384,7 +384,8 @@ class ProgressUI(BaseUI):
         """Prints a summary of the pipeline progress."""
         time_label = datetime.datetime.now().strftime("%T")
         description = self._describe_states(self.states, self.threads)
-        print_msg("\n%s Pipeline: %s" % (time_label, description))
+        print_msg("\n%s Pipeline: %s (press 'h' for help):"
+                  % (time_label, description))
         logfile = pypeline.logger.get_logfile()
         if logfile:
             print_debug("Log-file located at %r" % (logfile,))
@@ -427,9 +428,8 @@ class SummaryUI(BaseUI):
             time_label = datetime.datetime.now().strftime("%T")
             runtime = _fmt_runtime(int(time.time() - self._starting_time))
             description = self._describe_states(self.states, self.threads)
-            message = "%s Pipeline: %s in %s " % (time_label,
-                                                  description,
-                                                  runtime)
+            message = "%s Pipeline: %s in %s (press 'h' for help)." \
+                % (time_label, description, runtime)
 
             self._max_len = max(len(message), self._max_len)
             print_msg("\r%s" % (message.ljust(self._max_len),), end="")
