@@ -20,14 +20,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import collections
 import os
 import re
-import sys
 import signal
+import subprocess
+import sys
 import types
 import weakref
-import subprocess
-import collections
 
 import pypeline.atomiccmd.pprint as atomicpp
 import pypeline.common.fileutils as fileutils
@@ -446,7 +446,7 @@ class AtomicCmd(object):
 
 # The following ensures proper cleanup of child processes, for example in the
 # case where multiprocessing.Pool.terminate() is called.
-_PROCS = set()
+_PROCS = None
 
 
 def _cleanup_children(signum, _frame):
@@ -458,7 +458,10 @@ def _cleanup_children(signum, _frame):
 
 
 def _add_to_killlist(proc):
-    if not _PROCS:
+    global _PROCS
+
+    if _PROCS is None:
         signal.signal(signal.SIGTERM, _cleanup_children)
+        _PROCS = set()
 
     _PROCS.add(weakref.ref(proc, _PROCS.remove))
