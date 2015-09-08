@@ -20,9 +20,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
-import logging
 import collections
+import errno
+import logging
+import os
 
 import pypeline.common.versions as versions
 
@@ -71,7 +72,7 @@ class FileStatusCache(object):
             try:
                 mtime = os.path.getmtime(fpath)
             except OSError, error:
-                if error.errno != 2:
+                if error.errno != errno.ENOENT:
                     raise
                 mtime = None
             self._stat_cache[fpath] = mtime
