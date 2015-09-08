@@ -50,7 +50,7 @@ class Pypeline(object):
         # Set if a keyboard-interrupt (SIGINT) has been caught
         self._interrupted = False
         self._queue = multiprocessing.Queue()
-        self._pool = None
+        self._pool = multiprocessing.Pool(1, _init_worker, (self._queue,))
 
     def add_nodes(self, *nodes):
         for subnodes in safe_coerce_to_tuple(nodes):
@@ -62,9 +62,7 @@ class Pypeline(object):
 
     def run(self, max_running=1, dry_run=False, progress_ui="verbose"):
         assert max_running >= 1, max_runnings
-        assert self._pool is None
-        self._pool = multiprocessing.Pool(max_running,
-                                          _init_worker, (self._queue,))
+        _update_nprocesses(self._pool, max_running)
 
         try:
             nodegraph = NodeGraph(self._nodes)
