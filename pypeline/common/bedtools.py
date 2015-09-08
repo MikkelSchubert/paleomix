@@ -22,8 +22,6 @@
 #
 import copy
 
-import pysam
-
 import pypeline.common.fileutils as fileutils
 import pypeline.common.text as text
 
@@ -152,15 +150,8 @@ def read_bed_file(filename):
     handle = None
     try:
         handle = fileutils.open_ro(filename)
-        parser = pysam.asBed()
-
-        for record in text.parse_lines(handle, parser):
-            # Force evaluation of (lazily parsed) properties
-            _ = record.start
-            _ = record.end
-
+        for record in text.parse_lines(handle, BEDRecord):
             yield record
-
     finally:
         if handle:
             handle.close()
