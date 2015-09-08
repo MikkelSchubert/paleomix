@@ -56,6 +56,8 @@ from pypeline.common.console import \
     print_warn
 from pypeline.common.text import \
     parse_padded_table
+from pypeline.common.bedtools import \
+    BEDRecord
 
 
 def read_makefiles(options, filenames, commands):
@@ -191,7 +193,6 @@ def _collect_fasta_contigs(regions):
 
 def _collect_and_validate_regions(regions):
     contigs = _collect_fasta_contigs(regions)
-    parser = pysam.asBed()
     sequences = set()
     with open(regions["BED"]) as bedhandle:
         for (line_num, line) in enumerate(bedhandle):
@@ -200,10 +201,7 @@ def _collect_and_validate_regions(regions):
                 continue
 
             try:
-                bed = parser(line, len(line))
-                # Force evaluation of (lazily parsed) properties
-                bed_start = bed.start
-                bed_end = bed.end
+                bed = BEDRecord(line)
             except ValueError, error:
                 raise MakefileError(("Error parsing line %i in regions file:\n"
                                      "  Path = %r\n  Line = %r\n\n%s")
@@ -226,19 +224,13 @@ def _collect_and_validate_regions(regions):
                                      "%r\n\nPlease ensure that all contig "
                                      "names match the reference names!")
                                     % (regions["BED"], bed.contig))
-            elif not (0 <= int(bed_start) < int(bed_end) <= contig_len):
+            elif not (0 <= bed.start < bed.end <= contig_len):
                 raise MakefileError(("Regions file contains invalid region:\n"
                                      "  Path   = %r\n  Contig = %r\n"
                                      "  Start  = %s\n  End    = %s\n\n"
                                      "Expected 0 <= Start < End <= %i!")
                                     % (regions["BED"], bed.contig, bed.start,
                                        bed.end, contig_len))
-            elif bed.strand not in "+-":
-                raise MakefileError(("Regions file contains invalid region: "
-                                     "  Path   = %r\n  Line = %i\n  Name = %r"
-                                     "\nStrand is %r, expected '+' or '-'.")
-                                    % (regions["BED"], line_num, bed.name,
-                                       bed.strand))
 
             sequences.add(bed.name)
 

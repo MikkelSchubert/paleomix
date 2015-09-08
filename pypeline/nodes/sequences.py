@@ -42,6 +42,8 @@ from pypeline.node import \
     NodeError, \
     Node, \
     MetaNode
+from pypeline.common.bedtools import \
+    BEDRecord
 
 
 class CollectSequencesNode(Node):
@@ -180,7 +182,7 @@ class ExtractReferenceNode(Node):
         fastafile = pysam.Fastafile(self._reference)
         seqs = collections.defaultdict(list)
         with open(self._bedfile) as bedfile:
-            bedrecords = text.parse_lines_by_contig(bedfile, pysam.asBed())
+            bedrecords = text.parse_lines_by_contig(bedfile, BEDRecord)
             for (contig, beds) in sorted(bedrecords.iteritems()):
                 beds.sort(key=lambda bed: (bed.contig, bed.name, bed.start))
 

@@ -35,6 +35,7 @@ from pypeline.common.utilities import safe_coerce_to_tuple, set_in, get_in
 from pypeline.common.fileutils import move_file, reroot_path
 from pypeline.tools.bam_stats.coverage import \
     read_table as read_coverage_table
+from pypeline.common.bedtools import BEDRecord
 
 import pypeline.common.text as text
 
@@ -383,9 +384,8 @@ class SummaryTableNode(Node):
             for (roi_name, roi_filename) in prefix.get("RegionsOfInterest", {}).iteritems():
                 count, names, size = 0, set(), 0
                 with open(roi_filename) as handle:
-                    parser = pysam.asBed()
                     for line in handle:
-                        bed = parser(line, len(line))
+                        bed = BEDRecord(line)
                         names.add(bed.name if len(bed) >= 4 else (bed.contig + "*"))
                         size += (bed.end - bed.start)
                         count += 1

@@ -35,6 +35,7 @@ import pysam
 import pypeline.common.sequences as sequences
 import pypeline.common.text as text
 
+from pypeline.common.bedtools import BEDRecord
 from pypeline.common.formats.fasta import FASTA
 
 
@@ -223,7 +224,7 @@ def main(argv):
 
     genotype = pysam.Tabixfile(args.genotype)
     with open(args.intervals) as bed_file:
-        intervals = text.parse_lines_by_contig(bed_file, pysam.asBed())
+        intervals = text.parse_lines_by_contig(bed_file, BEDRecord)
 
     for (_, beds) in sorted(intervals.items()):
         for (name, sequence) in build_genes(args, genotype, beds):
