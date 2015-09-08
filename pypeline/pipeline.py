@@ -303,6 +303,7 @@ class Pypeline(object):
                                "current tasks to complete ... Press CTRL-C "
                                "again to force termination.\n")
         else:
+            self._pool.terminate()
             raise signal.default_int_handler(signum, frame)
 
     def to_dot(self, destination):
