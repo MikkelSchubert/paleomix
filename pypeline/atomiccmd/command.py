@@ -453,7 +453,11 @@ def _cleanup_children(signum, _frame):
     for proc_ref in list(_PROCS):
         proc = proc_ref()
         if proc:
-            os.killpg(proc.pid, signal.SIGTERM)
+            try:
+                os.killpg(proc.pid, signal.SIGTERM)
+            except OSError, error:
+                sys.stderr.write("Warning: Failed to cleanup process %i: %s\n"
+                                 % (proc.pid, error))
     sys.exit(-signum)
 
 
