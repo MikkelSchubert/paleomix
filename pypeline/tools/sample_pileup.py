@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -23,19 +23,28 @@
 from __future__ import print_function
 from __future__ import with_statement
 
-import sys
-import random
-import itertools
 import argparse
+import collections
+import heapq
+import itertools
+import random
+import sys
 
 import pysam
 
-import pypeline.common.text as text
 import pypeline.common.sequences as sequences
+import pypeline.common.text as text
+
 from pypeline.common.formats.fasta import FASTA
 
 
-class Pileup:
+# Regions are genotyped in chunks of 1 MB strings; this is done to reduce
+# overhead, as storing 1 MB of chars individually in a list adds about 45 MB of
+# overhead. A 100MB chromosome would therefore require ~4.5GB.
+_CHUNK_SIZE = 2 ** 20
+
+
+class Pileup(object):
     def __init__(self, line):
         fields = line.split("\t")
 
@@ -43,79 +52,139 @@ class Pileup:
         self.reference = fields[2]
         self.depth = int(fields[3])
         self.observed = fields[4]
-        self.qualities = fields[5]
 
 
-def _untrusted_positions(pileups, distance):
-    """Returns a set of positions that are either directly covered by, or
-    adjacent to indels, given some arbitrary distance. These positions are
-    considered 'untrusted', and bases that fall within those positions are
-    ignored.
-    """
-    positions = set()
-    for pileup in pileups:
+class PileupRegion(object):
+    def __init__(self, tabix, chrom, start, end, padding=0,
+                 dist_to_indels=0):
+        assert padding >= 0, "Padding must be >= 0, not %i" % (padding,)
+        self._tabix = tabix
+        self._chrom = chrom
+        self._start = start
+        self._end = end
+        self._padding = padding
+        self._distance_to_indels = dist_to_indels
+
+    def __iter__(self):
+        if self._distance_to_indels <= 0:
+            for pileup in self._tabix.fetch(reference=self._chrom,
+                                            start=self._start,
+                                            end=self._end):
+                yield (pileup.position, self._sample_position(pileup))
+
+        # Note that bed.end is a past-the-end coordinate
+        start = max(0, self._start - self._padding)
+        end = self._end + self._padding
+
+        region = self._tabix.fetch(reference=self._chrom,
+                                   start=start,
+                                   end=end)
+        pileup_buffer = collections.deque()
+        blacklist = []
+
+        # Fill buffer, and detect blacklisted sites due to indels
+        for _ in xrange(max(self._padding, self._distance_to_indels) * 2):
+            self._add_to_buffer(region, pileup_buffer, blacklist)
+
+        while pileup_buffer:
+            position, nucleotide = pileup_buffer.popleft()
+            while blacklist and blacklist[0] < position:
+                heapq.heappop(blacklist)
+
+            if not blacklist or blacklist[0] != position:
+                if self._start <= position < self._end:
+                    yield (position, nucleotide)
+
+            self._add_to_buffer(region, pileup_buffer, blacklist)
+
+    def _add_to_buffer(self, region, pileup_buffer, blacklist):
+        try:
+            pileup = Pileup(region.next())
+            self._collect_indels(pileup, blacklist)
+            pileup_buffer.append((pileup.position,
+                                  self._sample_position(pileup)))
+        except StopIteration:
+            pass
+
+    def _collect_indels(self, pileup, blacklist):
         for (index, current) in enumerate(pileup.observed):
             if current == "+":
+                # Insertions do not themselves cover any bases
                 length = 0
             elif current == "-":
-                length = int(pileup.observed[index + 1])
+                len_slice = itertools.islice(pileup.observed, index + 1, None)
+                digits = "".join(itertools.takewhile(str.isdigit, len_slice))
+                length = int(digits)
             else:
                 continue
 
-            # Inclusive start/end positions for blacklisted bases
-            start = pileup.position - distance
-            end = pileup.position + distance + length
+            # Distance is defined as sites overlapping INDELs having distance
+            # 0, sites adjacent to INDELS have distance 1, etc. Note that the
+            # INDEL starts on the next position of the current row.
+            start = pileup.position - self._distance_to_indels + 2
+            end = pileup.position + self._distance_to_indels + length
+            for position in xrange(start, end):
+                heapq.heappush(blacklist, position)
 
-            positions.update(xrange(start, end + 1))
+    @classmethod
+    def _sample_position(cls, pileup):
+        skip = 0
+        bases = []
+        observed = pileup.observed.upper()
+        for current in observed:
+            if skip:
+                skip -= 1
+            elif current in ".,":
+                bases.append(pileup.reference)
+            elif current in "ACGT":
+                bases.append(current)
+            elif current == "^":
+                skip = 1
+            elif current not in "$*N+-1234567890":
+                assert False, current
 
-    return positions
+        if not bases:
+            return "N"
 
-
-def sample_position(pileup):
-    skip = 0
-    bases = []
-    observed = pileup.observed.upper()
-    for (current, lookahead) in zip(observed, observed[1:] + "N"):
-        if skip:
-            skip -= 1
-        elif current in "+-":
-            skip = int(lookahead) + 1
-        elif current in ".,":
-            bases.append(pileup.reference)
-        elif current in "ACGT":
-            bases.append(current)
-        elif current == "^":
-            skip = 1
-        elif current not in "$*N":
-            assert False, current
-
-    if not bases:
-        return "N"
-
-    return random.choice(bases)
+        return random.choice(bases)
 
 
 def build_region(options, genotype, bed):
-    # Note that bed.end is a past-the-end coordinate
-    start = max(0, bed.start - options.padding)
-    end = bed.end + options.padding
-
-    pileups = []
+    # 'fetch' raises a ValueError if the VCF does not contain any entries for
+    # the specified contig, which can occur due to low coverage.
     if bed.contig in genotype.contigs:
-        # fetch raises a ValueError if the VCF does not contain any entries for
-        # the specified contig, which occur due to low coverage.
-        pileups = [Pileup(pileup)
-                   for pileup in genotype.fetch(bed.contig, start, end)]
-    untrusted = _untrusted_positions(pileups, options.min_distance_to_indels)
+        region = PileupRegion(genotype,
+                              chrom=bed.contig,
+                              start=bed.start,
+                              end=bed.end,
+                              padding=options.padding,
+                              dist_to_indels=options.min_distance_to_indels)
 
-    sequence = ["N"] * (end - start)
-    for pileup in pileups:
-        if pileup.position not in untrusted:
-            sequence[pileup.position - start] = sample_position(pileup)
+        remaining_length = (bed.end - bed.start)
+        offset = bed.start
 
-    offset = bed.start - start
-    length = bed.end - bed.start
-    return sequence[offset: offset + length]
+        # Genotyping is done in chunks, so that these can be reduced to strings
+        # and thereby reduce the memory requirements for larger regions.
+        chunk = ["N"] * min(_CHUNK_SIZE, remaining_length)
+
+        for position, nucleotide in region:
+            while position >= offset + len(chunk):
+                yield "".join(chunk)
+                remaining_length -= len(chunk)
+                offset += len(chunk)
+                chunk = ["N"] * min(_CHUNK_SIZE, remaining_length)
+
+            chunk[position - offset] = nucleotide
+
+        while offset < bed.end:
+            yield "".join(chunk)
+            remaining_length -= len(chunk)
+            offset += len(chunk)
+            chunk = ["N"] * min(_CHUNK_SIZE, remaining_length)
+
+        yield "".join(chunk)
+    else:
+        yield "N" * (bed.end - bed.start)
 
 
 def build_genes(options, genotype, regions):
@@ -144,10 +213,12 @@ def main(argv):
     parser.add_argument("--intervals", help="BED file.", required=True)
     parser.add_argument("--padding", type=int, default=10,
                         help="Number of bases to expand intervals, when "
-                             "filtering based on adjacent indels [%default]")
+                             "filtering based on adjacent indels "
+                             "[%(default)s]")
     parser.add_argument("--min-distance-to-indels", type=int, default=5,
                         help="Variants closer than this distance from indels "
-                             "are filtered [%default].")
+                             "are filtered; set to a negative value to "
+                             "disable [%(default)s].")
     args = parser.parse_args(argv)
 
     genotype = pysam.Tabixfile(args.genotype)
