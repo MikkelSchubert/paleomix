@@ -24,9 +24,10 @@
 # pylint: disable=C0103
 # No need for docstrings
 # pylint: disable=C0111
+import copy
+import errno
 import os
 import stat
-import errno
 
 import nose
 from nose.tools import \
@@ -226,3 +227,26 @@ def test_bedrecord__cmp():
         assert_not_equal(record_1, record_tmp)
         record_tmp[idx] = record_1[idx]
         assert_equal(record_1, record_tmp)
+
+
+###############################################################################
+
+def test_bedrecord__copy():
+    record_1_txt = "my_contig\t12\t345\tmy_name\t-3\t-"
+    record_1 = BEDRecord(record_1_txt)
+    record_2 = copy.copy(record_1)
+    record_2.name = "my_clone"
+
+    assert_equal(str(record_1), record_1_txt)
+    assert_equal(str(record_2), "my_contig\t12\t345\tmy_clone\t-3\t-")
+
+
+def test_bedrecord__deepcopy():
+    record_1_txt = "my_contig\t12\t345\tmy_name\t-3\t-"
+    record_1 = BEDRecord(record_1_txt)
+    record_1[6] = ["foo"]
+    record_2 = copy.deepcopy(record_1)
+    record_2[6][0] = "bar"
+
+    assert_equal(str(record_1), record_1_txt + "\t['foo']")
+    assert_equal(str(record_2), record_1_txt + "\t['bar']")

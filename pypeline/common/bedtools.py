@@ -20,6 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import copy
+
 import pysam
 
 import pypeline.common.fileutils as fileutils
@@ -71,6 +73,12 @@ class BEDRecord(object):
 
             if len(line) > len(self._fields):
                 self._fields.extend(line[len(self._fields):])
+
+    def __copy__(self):
+        """Needed for copy.copy to work correctly as expected."""
+        record = BEDRecord()
+        record._fields = copy.copy(self._fields)
+        return record
 
     def __len__(self):
         """Returns the number of fields in the record; 0 .. N."""
