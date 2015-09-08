@@ -60,18 +60,17 @@ def padded_table(table):
         yield row
 
 
-_SPLIT_BY_WHITESPACE = re.compile((" " * _MIN_PADDING) + "+")
 def parse_padded_table(lines, header = None):
     for line in lines:
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
             continue
         elif header is None:
-            header  = _SPLIT_BY_WHITESPACE.split(stripped)
+            header  = stripped.split()
             nheader = len(header)
             continue
 
-        fields = _SPLIT_BY_WHITESPACE.split(stripped)
+        fields = stripped.split()
         if len(fields) != nheader:
             raise TableError("Malformed table; #columns does not match header: %r vs %r" % (header, fields))
 
