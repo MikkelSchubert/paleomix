@@ -50,11 +50,7 @@ class Pypeline(object):
         # Set if a keyboard-interrupt (SIGINT) has been caught
         self._interrupted = False
         self._queue = multiprocessing.Queue()
-        # Maximum number of processes allowed is the cpu_count; init up front
-        # so that the active number of processes can be increased at runtime.
-        self._pool = multiprocessing.Pool(multiprocessing.cpu_count(),
-                                          _init_worker,
-                                          (self._queue,))
+        self._pool = None
 
     def add_nodes(self, *nodes):
         for subnodes in safe_coerce_to_tuple(nodes):
@@ -65,18 +61,16 @@ class Pypeline(object):
                 self._nodes.append(node)
 
     def run(self, max_running=1, dry_run=False, progress_ui="verbose"):
+        assert max_running >= 1, max_runnings
+        assert self._pool is None
+        self._pool = multiprocessing.Pool(max_running,
+                                          _init_worker, (self._queue,))
+
         try:
             nodegraph = NodeGraph(self._nodes)
         except NodeGraphError, error:
             self._logger.error(error)
             return False
-
-        if max_running > multiprocessing.cpu_count():
-            max_running = multiprocessing.cpu_count()
-            message = "Maximum number of threads set to value greater than " \
-                      "the number of CPUs.\nLimiting pipeline to a maximum " \
-                      "of %i threads.\n"
-            pypeline.ui.print_warn(message % (multiprocessing.cpu_count(),))
 
         for node in nodegraph.iterflat():
             if (node.threads > max_running) and not isinstance(node, MetaNode):
@@ -87,9 +81,10 @@ class Pypeline(object):
                 break
 
         if dry_run:
-            progress_printer = pypeline.ui.VerboseUI()
+            progress_printer = pypeline.ui.QuietUI()
             nodegraph.add_state_observer(progress_printer)
             progress_printer.flush()
+            progress_printer.finalize()
             self._logger.info("Dry run done ...")
             return True
 
@@ -107,21 +102,25 @@ class Pypeline(object):
         # Set of remaining nodes to be run
         remaining = set(nodegraph.iterflat())
 
-        errors_occured = False
-
+        is_ok = True
         progress_printer = pypeline.ui.get_ui(progress_ui)
         nodegraph.add_state_observer(progress_printer)
-        while running or (remaining and not self._interrupted):
-            errors_occured |= not self._poll_running_nodes(running,
-                                                           nodegraph,
-                                                           queue)
 
-            if not self._interrupted:  # Prevent starting of new nodes
-                self._start_new_tasks(remaining, running, nodegraph,
-                                      max_running, pool)
+        with pypeline.ui.CommandLine() as cli:
+            while running or (remaining and not self._interrupted):
+                is_ok &= self._poll_running_nodes(running,
+                                                  nodegraph,
+                                                  self._queue)
 
-            if running:
-                progress_printer.flush()
+                if not self._interrupted:  # Prevent starting of new nodes
+                    self._start_new_tasks(remaining, running, nodegraph,
+                                          max_running, self._pool)
+
+                if running:
+                    progress_printer.flush()
+
+                max_running = cli.process_key_presses(nodegraph, max_running)
+                _update_nprocesses(self._pool, max_running)
 
         self._pool.close()
         self._pool.join()
@@ -129,13 +128,16 @@ class Pypeline(object):
         progress_printer.flush()
         progress_printer.finalize()
 
-        return not errors_occured
+        return is_ok
 
     def _start_new_tasks(self, remaining, running, nodegraph, max_threads,
                          pool):
         started_nodes = []
         idle_processes = max_threads \
             - sum(node.threads for (node, _) in running.itervalues())
+
+        if not idle_processes:
+            return False
 
         for node in remaining:
             if not running or (idle_processes >= node.threads):
@@ -170,12 +172,17 @@ class Pypeline(object):
             remaining.remove(node)
 
     def _poll_running_nodes(self, running, nodegraph, queue):
-        errors, blocking = None, True
-        while running:
+        errors = None
+        blocking = False
+
+        while running and not errors:
             node, proc = self._get_finished_node(queue, running, blocking)
-            blocking = False  # only block first cycle
             if not node:
-                break
+                if blocking:
+                    break
+
+                blocking = True
+                continue
 
             try:
                 # Re-raise exceptions from the node-process
@@ -189,8 +196,9 @@ class Pypeline(object):
                                    for line in str(errors).strip().split("\n"))
                 self._logger.error("%s: Error occurred running command:\n%s\n",
                                    node, errors)
-                continue
-            nodegraph.set_node_state(node, nodegraph.DONE)
+
+            if not errors:
+                nodegraph.set_node_state(node, nodegraph.DONE)
 
         return not errors
 
@@ -218,15 +226,18 @@ class Pypeline(object):
         _walk_nodes(self._nodes)
 
     def list_output_files(self):
-        output_files = set()
+        output_files = {}
+        nodegraph = NodeGraph(self._nodes)
 
         def collect_output_files(node):
-            output_files.update(node.output_files)
+            state = nodegraph.get_node_state(node)
+            for filename in node.output_files:
+                output_files[os.path.abspath(filename)] = state
             return True
 
         self.walk_nodes(collect_output_files)
 
-        return frozenset(map(os.path.abspath, output_files))
+        return output_files
 
     def list_required_executables(self):
         requirements = {}
@@ -252,8 +263,17 @@ class Pypeline(object):
         return requirements
 
     def print_output_files(self, print_func=print):
-        for filename in sorted(self.list_output_files()):
-            print_func(filename)
+        output_files = self.list_output_files()
+
+        for filename, state in sorted(output_files.iteritems()):
+            if state == NodeGraph.DONE:
+                state = "Ready      "
+            elif state == NodeGraph.OUTDATED:
+                state = "Outdated   "
+            else:
+                state = "Missing    "
+
+            print_func("%s\t%s" % (state, filename))
 
     def print_required_executables(self, print_func=print):
         pipeline_executables = self.list_required_executables()
@@ -367,16 +387,16 @@ class Pypeline(object):
         return True
 
     @classmethod
-    def _get_finished_node(cls, queue, running, blocking=True):
+    def _get_finished_node(cls, queue, running, blocking):
         """Returns a tuple containing a node that has finished running
         and it's async-result, or None for both if no such node could
         be found (and blocking is False), or if an interrupt occured
         while waiting for a node to finish.
 
-        If blocking is True, the function will only return once a
-        result becomes available, or if an interrupt occurs."""
+        If blocking is True, the function will timeout after 0.1s.
+        """
         try:
-            key = queue.get(blocking)
+            key = queue.get(blocking, 0.1)
             return running.pop(key)
         except IOError, error:
             # User pressed ctrl-c (SIGINT), or similar event ...
@@ -409,3 +429,15 @@ def _call_run(key, node, config):
     finally:
         # See comment in _init_worker
         _call_run.queue.put(key)
+
+
+def _update_nprocesses(pool, processes):
+    """multiprocessing.Pool does not expose calls to change number of active
+    processes, but does in fact support this for the 'maxtasksperchild' option.
+    This function calls the related private functions to increase the number
+    of available processes."""
+    # FIXME: Catch ERRNO 11:
+    # OSError: [Errno 11] Resource temporarily unavailable
+    if pool._processes < processes:
+        pool._processes = processes
+        pool._repopulate_pool()

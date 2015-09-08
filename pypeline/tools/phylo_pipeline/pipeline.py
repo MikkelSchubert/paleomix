@@ -51,7 +51,7 @@ def list_orphan_files(config, makefiles, pipeline):
             for filename in filenames:
                 fpath = os.path.join(dirpath, filename)
                 files.add(os.path.abspath(fpath))
-    return files - pipeline.list_output_files()
+    return files - frozenset(pipeline.list_output_files())
 
 
 def main(argv):

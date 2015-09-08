@@ -232,7 +232,7 @@ def list_orphan_files(config, makefiles, pipeline):
                             files.add(os.path.abspath(fpath))
                 else:
                     files.add(os.path.abspath(root_filename))
-    return (files - mkfiles) - pipeline.list_output_files()
+    return (files - mkfiles) - frozenset(pipeline.list_output_files())
 
 
 def run(config, args):
