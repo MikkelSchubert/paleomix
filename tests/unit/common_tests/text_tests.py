@@ -134,11 +134,11 @@ def test_parse_padded_table__two_rows():
     assert_equal(expected, _parse_padded_table(table))
 
 
-# Up to 3 spaces are allowed
+# Any amount of whitespace is allowed
 def test_parse_padded_table__single_row__with_whitespace():
     table = ["A   B    C       E F",
              "1        0  1    2   3"]
-    expected = [{"A   B": '1', "C": '0  1', "E F": '2   3'}]
+    expected = [{"A": '1', "B": '0', "C": '1', "E": '2', "F": '3'}]
     assert_equal(expected, _parse_padded_table(table))
 
 
@@ -146,7 +146,7 @@ def test_parse_padded_table__single_row__with_whitespace():
 def test_parse_padded_table__single_row__with_tabs():
     table = ["A\t\t\t\tB",
              "1\t\t\t\t0"]
-    expected = [{"A\t\t\t\tB": '1\t\t\t\t0'}]
+    expected = [{"A": '1', "B": '0'}]
     assert_equal(expected, _parse_padded_table(table))
 
 
