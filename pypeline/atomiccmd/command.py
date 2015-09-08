@@ -21,6 +21,7 @@
 # SOFTWARE.
 #
 import collections
+import errno
 import os
 import re
 import signal
@@ -456,8 +457,10 @@ def _cleanup_children(signum, _frame):
             try:
                 os.killpg(proc.pid, signal.SIGTERM)
             except OSError, error:
-                sys.stderr.write("Warning: Failed to cleanup process %i: %s\n"
-                                 % (proc.pid, error))
+                # Ignore already closed processes
+                if error.errno != errno.ESRCH:
+                    sys.stderr.write("Warning: Failed to cleanup process %i: %s\n"
+                                     % (proc.pid, error))
     sys.exit(-signum)
 
 
