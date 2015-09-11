@@ -49,9 +49,9 @@ _VERSION_14_CHECK = versions.Requirement(call=("AdapterRemoval", "--version"),
 
 VERSION_15 = "1.5+"
 _VERSION_15_CHECK = versions.Requirement(call=("AdapterRemoval", "--version"),
-                                         search=r"ver. (\d+)\.(\d+)",
-                                         checks=versions.Or(versions.EQ(1, 5),
-                                                            versions.GE(2, 0)))
+                                         search=r"ver. (\d+)\.(\d+)\.(\d+)",
+                                         checks=versions.And(versions.GE(1, 5, 0),
+                                                             versions.LT(2, 1, 1)))
 
 
 class SE_AdapterRemovalNode(CommandNode):
