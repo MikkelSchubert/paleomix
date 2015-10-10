@@ -22,10 +22,14 @@
 #
 import os
 
+import pypeline.nodes.picard as picard
+
 from pypeline.node import \
     MetaNode
 from pypeline.atomiccmd.command import \
     AtomicCmd
+from pypeline.atomiccmd.builder import \
+    AtomicCmdBuilder
 from pypeline.atomiccmd.sets import \
     ParallelCmds
 from pypeline.atomiccmd.builder import \
@@ -92,42 +96,47 @@ def _get_input_file(node):
 class CleanupBAMNode(PicardNode):
     def __init__(self, config, reference, input_bam, output_bam, tags,
                  min_mapq=0, filter_unmapped=False, dependencies=()):
-        call = ["samtools", "view", "-bu"]
-        if min_mapq > 0:
-            call.append("-q%i" % min_mapq)
+        flt_params = AtomicCmdBuilder(("samtools", "view", "-bu"),
+                                      IN_BAM=input_bam,
+                                      OUT_STDOUT=AtomicCmd.PIPE)
+
+        if min_mapq:
+            flt_params.set_option("-q", min_mapq, sep="")
         if filter_unmapped:
-            call.append("-F0x4")
-        call.append("%(IN_BAM)s")
+            flt_params.set_option("-F", "0x4", sep="")
 
-        flt = AtomicCmd(call,
-                        IN_BAM=input_bam,
-                        OUT_STDOUT=AtomicCmd.PIPE)
+        flt_params.add_value("%(IN_BAM)s")
 
-        jar_file = os.path.join(config.jar_root, "AddOrReplaceReadGroups.jar")
-        params = AtomicJavaCmdBuilder(jar=jar_file,
-                                      jre_options=config.jre_options)
-        params.set_option("INPUT", "/dev/stdin", sep="=")
-        params.set_option("OUTPUT", "%(TEMP_OUT_BAM)s", sep="=")
-        params.set_option("COMPRESSION_LEVEL", "0", sep="=")
-        params.set_option("SORT_ORDER", "coordinate", sep="=")
+        jar_params = picard.picard_command(config, "AddOrReplaceReadGroups")
+        jar_params.set_option("INPUT", "/dev/stdin", sep="=")
+        # Output is written to a named pipe, since the JVM may, in some cases,
+        # emit warning messages to stdout, resulting in a malformed BAM.
+        jar_params.set_option("OUTPUT", "%(TEMP_OUT_BAM)s", sep="=")
+        jar_params.set_option("COMPRESSION_LEVEL", "0", sep="=")
+        # Ensure that the BAM is sorted; this is required by the pipeline, and
+        # needs to be done before calling calmd (avoiding pathologic runtimes).
+        jar_params.set_option("SORT_ORDER", "coordinate", sep="=")
 
+        # All tags are overwritten; ID is set since the default (e.g. '1')
+        # causes problems with pysam due to type inference (is read as a length
+        # 1 string, but written as a character).
         for tag in ("ID", "SM", "LB", "PU", "PL"):
-            params.set_option(tag, tags[tag], sep="=")
+            jar_params.set_option(tag, tags[tag], sep="=")
 
-        params.set_kwargs(IN_STDIN=flt,
-                          TEMP_OUT_BAM="bam.pipe")
-        annotate = params.finalize()
+        jar_params.set_kwargs(IN_STDIN=flt_params,
+                              TEMP_OUT_BAM="bam.pipe")
 
-        calmd = AtomicCmd(["samtools", "calmd", "-b",
-                           "%(TEMP_IN_BAM)s", "%(IN_REF)s"],
-                          IN_REF=reference,
-                          TEMP_IN_BAM="bam.pipe",
-                          OUT_STDOUT=output_bam)
+        calmd = AtomicCmdBuilder(["samtools", "calmd", "-b",
+                                 "%(TEMP_IN_BAM)s", "%(IN_REF)s"],
+                                 IN_REF=reference,
+                                 TEMP_IN_BAM="bam.pipe",
+                                 OUT_STDOUT=output_bam)
 
+        commands = [cmd.finalize() for cmd in (flt_params, jar_params, calmd)]
         description = "<Cleanup BAM: %s -> '%s'>" \
             % (input_bam, output_bam)
         PicardNode.__init__(self,
-                            command=ParallelCmds([flt, annotate, calmd]),
+                            command=ParallelCmds(commands),
                             description=description,
                             dependencies=dependencies)
 
