@@ -61,7 +61,7 @@ class Pypeline(object):
                 self._nodes.append(node)
 
     def run(self, max_running=1, dry_run=False, progress_ui="verbose"):
-        assert max_running >= 1, max_runnings
+        assert max_running >= 1, max_running
         _update_nprocesses(self._pool, max_running)
 
         try:
