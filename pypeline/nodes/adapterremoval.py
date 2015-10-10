@@ -274,6 +274,8 @@ _DEPRECATION_WARNING_PRINTED = False
 
 
 def _get_common_parameters(version):
+    global _DEPRECATION_WARNING_PRINTED
+
     if version == VERSION_14:
         version_check = _VERSION_14_CHECK
     elif version == VERSION_15:
@@ -297,7 +299,6 @@ def _get_common_parameters(version):
             ui.print_warn("         Download the newest version of AdapterRemoval at ")
             ui.print_warn("         https://github.com/MikkelSchubert/adapterremoval\n")
 
-            global _DEPRECATION_WARNING_PRINTED
             _DEPRECATION_WARNING_PRINTED = True
     except versions.VersionRequirementError:
         return True
