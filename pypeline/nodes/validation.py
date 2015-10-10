@@ -262,7 +262,8 @@ def check_fasta_file(filename):
         namecache = {}
         state, linelength, linelengthchanged = _NA, None, False
         for linenum, line in enumerate(handle, start=1):
-            line = line.rstrip('\n\r')
+            # Only \n is allowed as not all tools (e.g. GATK) handle \r
+            line = line.rstrip('\n')
 
             if not line:
                 if state in (_NA, _IN_WHITESPACE):
@@ -347,6 +348,11 @@ _RE_REF_NAME = re.compile("[!-()+-<>-~][!-~]*")
 def _validate_fasta_line(filename, linenum, line):
     invalid_chars = frozenset(line) - _VALID_CHARS
     if invalid_chars:
+        if invalid_chars == frozenset('\r'):
+            raise NodeError("FASTA file contains carriage-returns ('\\r')!\n"
+                            "Please convert file to unix format, using e.g. "
+                            "dos2unix.\n    Filename = %r\n" % (filename,))
+
         raise NodeError("FASTA sequence contains invalid characters\n"
                         "    Filename = %r\n    Line = %r\n"
                         "    Invalid characters = %r"
