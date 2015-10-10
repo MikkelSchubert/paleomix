@@ -2,6 +2,21 @@
 Changelog
 =========
 
+Version 1.1.1 - 2015-10-10
+==========================
+  2015-10-10: AdapterRemoval v1.x is now considered deprecated, and support
+              will be dropped shortly. Please upgrade to v2.1 or later, which
+              can be found at https://github.com/MikkelSchubert/adapterremoval
+  2015-10-10: Detect the presence of carriage-returns ('\r') in FASTA files
+              used as prefixes; these cause issues with some tools, and files
+              should be converted using e.g. 'dos2unix' first.
+  2015-10-09: Dropped support for Picard tools versions prior to 1.124; this
+              was nessesitated Picard tools merging into a single jar for all
+              commands. This jar (picard.jar) is expected to be located in the
+              --jar-root folder.
+  2015-10-08: Minor fix to help-text displayed as part of running information.
+
+
 Version 1.1.0 - 2015-09-08
 ==========================
   * Check that regions of interest specified in PhylogeneticInference section

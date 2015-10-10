@@ -290,7 +290,7 @@ def _get_common_parameters(version):
     cmd.set_option("--trimqualities", fixed=False)
 
     try:
-        if not _DEPRECATION_WARNING_PRINTED and version_check.version < (3, 0):
+        if not _DEPRECATION_WARNING_PRINTED and version_check.version < (2, 0):
             import pypeline.ui as ui
             ui.print_warn("\nWARNING: AdapterRemoval v1.5.x is deprecated;")
             ui.print_warn("         Upgrading to 2.1.x is strongly adviced!\n")
