@@ -270,6 +270,9 @@ def _build_zip_command(output_format, prefix, name, output=None):
     return compress.finalize()
 
 
+_DEPRECATION_WARNING_PRINTED = False
+
+
 def _get_common_parameters(version):
     if version == VERSION_14:
         version_check = _VERSION_14_CHECK
@@ -285,6 +288,20 @@ def _get_common_parameters(version):
     cmd.set_option("--trimns", fixed=False)
     # Trim low quality scores
     cmd.set_option("--trimqualities", fixed=False)
+
+    try:
+        if not _DEPRECATION_WARNING_PRINTED and version_check.version < (3, 0):
+            import pypeline.ui as ui
+            ui.print_warn("\nWARNING: AdapterRemoval v1.5.x is deprecated;")
+            ui.print_warn("         Upgrading to 2.1.x is strongly adviced!\n")
+            ui.print_warn("         Download the newest version of AdapterRemoval at ")
+            ui.print_warn("         https://github.com/MikkelSchubert/adapterremoval\n")
+
+            global _DEPRECATION_WARNING_PRINTED
+            _DEPRECATION_WARNING_PRINTED = True
+    except versions.VersionRequirementError:
+        return True
+
 
     return cmd
 
