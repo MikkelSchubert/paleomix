@@ -301,8 +301,7 @@ def _get_common_parameters(version):
 
             _DEPRECATION_WARNING_PRINTED = True
     except versions.VersionRequirementError:
-        return True
-
+        pass
 
     return cmd
 
