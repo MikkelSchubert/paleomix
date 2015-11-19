@@ -145,7 +145,12 @@ def main_wrapper(process_func, argv, ext):
     args = parse_arguments(argv, ext)
     args.regions = None
     if args.regions_fpath:
-        args.regions = collect_bed_regions(args.regions_fpath)
+        try:
+            args.regions = collect_bed_regions(args.regions_fpath)
+        except ValueError, error:
+            sys.stderr.write("Failed to parse BED file %r:\n%s\n"
+                             % (args.regions_fpath, error))
+            return 1
 
     sys.stderr.write("Opening %r\n" % (args.infile,))
     with pysam.Samfile(args.infile) as handle:

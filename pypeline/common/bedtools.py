@@ -66,8 +66,14 @@ class BEDRecord(object):
 
         if line:
             line = line.rstrip("\r\n").split('\t')
-            for value, func in zip(line, _BED_TYPES):
-                self._fields.append(func(value))
+            for column, (value, func) in enumerate(zip(line, _BED_TYPES)):
+                try:
+                    self._fields.append(func(value))
+                except ValueError:
+                    raise ValueError("Error parsing column %i in BED record "
+                                     "(%r); expected type %s, but found %r."
+                                     % (column, "\t".join(line),
+                                        func.__name__, value,))
 
             if len(line) > len(self._fields):
                 self._fields.extend(line[len(self._fields):])
