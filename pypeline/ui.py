@@ -55,7 +55,7 @@ def add_optiongroup(parser, ui_default="running", color_default="on"):
                      help="Select method for displaying the progress of the "
                           "pipeline: 'running' = Display only currently "
                           "running nodes; 'progress' = Display changes in "
-                          "state; 'summary'; oneline summary only. "
+                          "state; 'summary'; one-line summary only. "
                           "[Default is '%default']")
     group.add_option("--ui-colors", default=color_default,
                      choices=("on", "off", "force"),
