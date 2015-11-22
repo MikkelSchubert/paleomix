@@ -2,6 +2,12 @@
 Changelog
 =========
 
+
+  2015-11-22: Increased the speed of the checks for duplicate input data
+              (i.e. the same FASTQ record(s) included multiple times in
+              one or more files) by roughly 4x.
+
+
 Version 1.1.1 - 2015-10-10
 ==========================
   2015-10-10: AdapterRemoval v1.x is now considered deprecated, and support

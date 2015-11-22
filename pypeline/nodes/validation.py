@@ -20,13 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import collections
 import io
 import os
 import re
 import subprocess
-import collections
-from itertools import \
-    izip_longest
 
 import pysam
 
@@ -38,6 +36,8 @@ from pypeline.common.fileutils import \
     make_dirs
 from pypeline.common.utilities import \
     chain_sorted
+from pypeline.common.sequences import \
+    reverse_complement
 
 import pypeline.common.formats.fastq as fastq
 import pypeline.common.sampling as sampling
@@ -65,30 +65,16 @@ class DetectInputDuplicationNode(Node):
     def run(self, _):
         handles = []
         try:
-            sequences = []
-            for fpath in self.input_files:
-                handle = pysam.Samfile(fpath)
-                handles.append(handle)
-
-                sequence = izip_longest(handle, (), fillvalue=fpath)
-                sequences.append(sequence)
-
-            position = 0
-            records = chain_sorted(*sequences, key=self._key_by_tid_pos)
+            last_pos = None
             observed_reads = collections.defaultdict(list)
-            for (record, fpath) in records:
-                if record.pos != position:
+            for (record, filename) in self._open_samfiles(handles, self.input_files):
+                curr_pos = (record.pos, record.tid)
+                if curr_pos != last_pos:
                     self._process_reads(observed_reads, self.output_files)
                     observed_reads.clear()
-                    position = record.pos
-                elif record.is_unmapped:
-                    break
+                    last_pos = curr_pos
 
-                # Ignore supplementary / secondary alignments
-                if not record.flag & 0x900:
-                    key = (record.is_reverse, record.qname,
-                           record.seq, record.qual)
-                    observed_reads[key].append(fpath)
+                observed_reads[record.qname].append((record, filename))
             self._process_reads(observed_reads, self.output_files)
 
             # Everything is ok, touch the output files
@@ -101,22 +87,74 @@ class DetectInputDuplicationNode(Node):
                 handle.close()
 
     @classmethod
+    def _open_samfiles(cls, handles, filenames):
+        sequences = []
+        for filename in filenames:
+            handle = pysam.Samfile(filename)
+            handles.append(handle)
+
+            sequences.append(cls._read_samfile(handle, filename))
+
+        return chain_sorted(*sequences, key=cls._key_by_tid_pos)
+
+    @classmethod
+    def _read_samfile(cls, handle, filename):
+        for record in handle:
+            if record.is_unmapped and (not record.pos or record.is_mate_unmapped):
+                # Ignore unmapped reads except when these are sorted
+                # according to the mate position (if mapped)
+                continue
+            elif record.flag & 0x900:
+                # Ignore supplementary / secondary alignments
+                continue
+
+            yield (record, filename)
+
+    @classmethod
     def _process_reads(cls, observed_reads, output_files):
-        for ((_, name, _, _), fpaths) in observed_reads.iteritems():
-            if len(fpaths) > 1:
-                message = ["Read %r found in multiple files:" % (name,)]
-                for fpath in fpaths:
-                    message.append("  - %r" % (fpath,))
+        for records_and_filenames in observed_reads.itervalues():
+            if len(records_and_filenames) == 1:
+                # Most read-names should be obseved at most once at a position
+                continue
+
+            result = collections.defaultdict(list)
+            for record, filename in records_and_filenames:
+                key = (record.is_reverse, record.qname, record.seq, record.qual)
+                result[key].append(filename)
+
+            for (is_reverse, name, seq, qual), filenames in result.iteritems():
+                if len(filenames) == 1:
+                    # Two reads had same name, but different characterstics
+                    continue
+
+                filename_counts = collections.defaultdict(int)
+                for filename in filenames:
+                    filename_counts[filename] += 1
+
+                if is_reverse:
+                    seq = reverse_complement(seq)
+                    qual = qual[::-1]
+
+                message = ["The same read was found multiple times!",
+                           "    Name:      %r" % (name,),
+                           "    Sequence:  %r" % (seq,),
+                           "    Qualities: %r" % (qual,),
+                           ""]
+
+                message.append("Read was found")
+                for filename, count in sorted(filename_counts.iteritems()):
+                    message.append("   % 2ix in %r" % (count, filename))
+
                 message.append("")
                 message.append("This indicates that the same data files have "
                                "been included multiple times in the project. "
                                "Please review the input files used in this "
                                "project, to ensure that each set of data is "
-                               "included only once.\n\n"
+                               "included only once!\n\n"
 
                                "If this is not the case, then execute the "
-                               "following command(s) to mark this test as having "
-                               "succeeded:")
+                               "following command(s) to mark this test as "
+                               "having succeeded:")
 
                 for fpath in output_files:
                     message.append("$ touch '%s'" % (fpath,))
