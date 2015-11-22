@@ -486,13 +486,6 @@ def test_chain_sorted__mixed_contents__key():
     result = tuple(utils.chain_sorted(sequence_a, sequence_b, key=abs))
     assert_equal(expected, result)
 
-def test_chain_sorted__mixed_contents__reverse():
-    sequence_a = (-2, -3, -5)
-    sequence_b = (0, -1, -4)
-    expected = (0, -1, -2, -3, -4, -5)
-    result = tuple(utils.chain_sorted(sequence_a, sequence_b, reverse=True))
-    assert_equal(expected, result)
-
 def test_chain_sorted__identical_objects_are_preserved():
     object_a = [1]
     object_b = [1]
@@ -503,18 +496,50 @@ def test_chain_sorted__identical_objects_are_preserved():
     assert(object_a is result[0] or object_a is result[1])
     assert(object_b is result[0] or object_b is result[1])
 
+def test_chain_sorted__stable_sort():
+    object_a = [1]
+    object_b = [1]
+    object_c = [2]
+    object_d = [2]
+    seq_a = [object_a, object_c]
+    seq_b = [object_b, object_d]
+
+    expected = (object_a, object_b, object_c, object_d)
+    result = tuple(utils.chain_sorted(seq_a, seq_b))
+    assert_equal(expected, result)
+    assert(all(a is b for (a, b) in zip(expected, result)))
+
+    expected = (object_b, object_a, object_d, object_c)
+    result = tuple(utils.chain_sorted(seq_b, seq_a))
+    assert_equal(expected, result)
+    assert(all(a is b for (a, b) in zip(expected, result)))
+
+def test_chain_sorted__runs_of_values():
+    object_a = [1]
+    object_b = [1]
+    object_c = [2]
+    object_d = [2]
+    seq_a = [object_a, object_b]
+    seq_b = [object_c, object_d]
+
+    expected = (object_a, object_b, object_c, object_d)
+    result = tuple(utils.chain_sorted(seq_a, seq_b))
+    assert_equal(expected, result)
+    assert(all(a is b for (a, b) in zip(expected, result)))
+
 
 def test_chain_sorted__invalid_keywords():
     assert_raises(TypeError, tuple, utils.chain_sorted((1, 2, 3), foobar=None))
 
-################################################################################
-################################################################################
-## Immutable
+
+###############################################################################
+###############################################################################
+# Immutable
 
 def test_immutable__properties_set():
     class ImmutableCls(utils.Immutable):
         def __init__(self, value):
-            utils.Immutable.__init__(self, value = value)
+            utils.Immutable.__init__(self, value=value)
 
     obj = ImmutableCls(17)
     assert_equal(obj.value, 17)
@@ -524,7 +549,7 @@ def test_immutable__properties_immutable():
     def _test_immutable_property(key, value):
         class ImmutableCls(utils.Immutable):
             def __init__(self, value):
-                utils.Immutable.__init__(self, value = value)
+                utils.Immutable.__init__(self, value=value)
 
         obj = ImmutableCls(17)
         assert_raises(NotImplementedError, setattr, obj, key, value)
@@ -533,11 +558,21 @@ def test_immutable__properties_immutable():
     yield _test_immutable_property, "new_value", "foo"
 
 
+def test_immutable__properties_del():
+    class ImmutableCls(utils.Immutable):
+        def __init__(self, value):
+            utils.Immutable.__init__(self, value=value)
+
+    def _del_property(obj):
+        del obj.value
+
+    obj = ImmutableCls(17)
+    assert_raises(NotImplementedError, _del_property, obj)
 
 
-################################################################################
-################################################################################
-## TotallyOrdered
+###############################################################################
+###############################################################################
+# TotallyOrdered
 
 class SomethingOrdered(utils.TotallyOrdered):
     def __init__(self, value):

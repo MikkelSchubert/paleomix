@@ -20,12 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import copy
-import types
-import pickle
-import cPickle
-import itertools
 import binascii
+import copy
+import cPickle
+import heapq
+import itertools
+import pickle
+import types
 
 
 def _safe_coerce(cls):
@@ -39,17 +40,17 @@ def _safe_coerce(cls):
             return cls((value,))
 
     _do_safe_coerce.__doc__ = \
-      """Takes a value which be a single object, or an an iterable
-      and returns the content wrapped in a {0}. In the case of strings,
-      and dictionaries the original string object is returned in a {0},
-      and not as a {0} of chars. A TypeError is raised if this is not
-      possible (e.g. dict in frozenset).""".format(cls.__name__)
+        """Takes a value which be a single object, or an an iterable
+        and returns the content wrapped in a {0}. In the case of strings,
+        and dictionaries the original string object is returned in a {0},
+        and not as a {0} of chars. A TypeError is raised if this is not
+        possible (e.g. dict in frozenset).""".format(cls.__name__)
     _do_safe_coerce.__name__ = \
-      "safe_coerce_to_{0}".format(cls.__name__)
+        "safe_coerce_to_{0}".format(cls.__name__)
 
     return _do_safe_coerce
 
-safe_coerce_to_tuple     = _safe_coerce(tuple)
+safe_coerce_to_tuple = _safe_coerce(tuple)
 safe_coerce_to_frozenset = _safe_coerce(frozenset)
 
 
@@ -88,7 +89,7 @@ def set_in(dictionary, keys, value):
     dictionary[keys[-1]] = value
 
 
-def get_in(dictionary, keys, default = None):
+def get_in(dictionary, keys, default=None):
     """Traverses a set of nested dictionaries using the keys in
        kws, and returns the value assigned to the final keyword
        in the innermost dictionary. Calling get_in(d, [X, Y])
@@ -124,14 +125,16 @@ def split_before(iterable, pred):
 
 def is_strictly_increasing(lst):
     """Returns true if the contents of the list is strictly increasing."""
-    return all(x < y for (x, y) in itertools.izip(lst, itertools.islice(lst, 1, None)))
+    pairs = itertools.izip(lst, itertools.islice(lst, 1, None))
+
+    return all(x < y for (x, y) in pairs)
 
 
 # Copied from the Python 'itertools' module documentation
 def grouper(size, iterable, fillvalue=None):
     "grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"
     args = [iter(iterable)] * size
-    return itertools.izip_longest(fillvalue = fillvalue, *args)
+    return itertools.izip_longest(fillvalue=fillvalue, *args)
 
 
 def group_by_pred(pred, iterable):
@@ -150,10 +153,10 @@ def group_by_pred(pred, iterable):
 
 def fragment(size, lstlike):
     """Faster alternative to grouper for lists/strings."""
-    return (lstlike[i : i + size] for i in range(0, len(lstlike), size))
+    return (lstlike[i:i + size] for i in range(0, len(lstlike), size))
 
 
-def cumsum(lst, initial = 0):
+def cumsum(lst, initial=0):
     """Yields the cummulative sums of the values in a
     iterable, starting with the specified initial value."""
     for item in lst:
@@ -171,7 +174,7 @@ def fast_pickle_test(obj):
         cPickle.dumps(obj)
     except (TypeError, cPickle.PicklingError):
         pickle.dumps(obj)
-        assert False # pragma: no coverage
+        assert False  # pragma: no coverage
 
 
 def fill_dict(destination, source):
@@ -182,7 +185,8 @@ def fill_dict(destination, source):
 
     def _fill_dict(cur_dest, cur_src):
         for key in cur_src:
-            if isinstance(cur_src[key], dict) and isinstance(cur_dest.get(key), dict):
+            if isinstance(cur_src[key], dict) \
+                    and isinstance(cur_dest.get(key), dict):
                 _fill_dict(cur_dest[key], cur_src[key])
             elif key not in cur_dest:
                 cur_dest[key] = cur_src[key]
@@ -194,9 +198,7 @@ def fill_dict(destination, source):
 def chain_sorted(*sequences, **kwargs):
     """Chains together sorted sequences, and yields the contents
     in the same order, such that the result is also a sorted sequence.
-    The function accepts a 'key'-function keyword, and a 'reverse'
-    keyword, in which case the values assumed to be decreasing rather
-    than increasing.
+    The function accepts a 'key'-function keyword, following sort().
 
     chain_sorted is intended for a few long sequences, and not many short
     sequences. Behavior is undefined if the sequences are not sorted.
@@ -205,42 +207,49 @@ def chain_sorted(*sequences, **kwargs):
       >>> tuple(chain_sorted((1, 3, 5), (0, 2, 4)))
       (0, 1, 2, 3, 4, 5)
     """
-
     key = kwargs.pop('key', None)
-    select_func = max if kwargs.pop('reverse', None) else min
     if kwargs:
         raise TypeError("chain_sorted expected keyword 'key', got %r"
                         % (', '.join(kwargs)))
 
     iterators = []
-    for sequence in sequences:
+    for index, sequence_iter in enumerate(map(iter, sequences)):
         try:
-            sequence_iter = iter(sequence)
-            current_value = sequence_iter.next()
-            key_value = current_value
-            if key is not None:
-                key_value = key(key_value)
+            current = sequence_iter.next()
+            key_value = current if key is None else key(current)
 
-            iterators.append([key_value, current_value, sequence_iter])
+            iterators.append((key_value, index, current, sequence_iter))
         except StopIteration:
             pass
 
-    while iterators:
-        current = select_func(iterators)
-        yield current[1]
+    heapq.heapify(iterators)
 
-        try:
-            current_value = current[2].next()
-            key_value = current_value
-            if key is not None:
-                key_value = key(current_value)
-            current[0] = key_value
-            current[1] = current_value
-        except StopIteration:
-            iterators.remove(current)
+    _len, _heappop, _heapreplace = len, heapq.heappop, heapq.heapreplace
 
+    while _len(iterators) > 1:
+        last_key_value, index, current, sequence_iter = iterators[0]
+        yield current
 
+        for current in sequence_iter:
+            key_value = current if key is None else key(current)
 
+            # Optimization for runs of repeated values
+            if key_value != last_key_value:
+                _heapreplace(iterators,
+                             (key_value, index, current, sequence_iter))
+                break
+            else:
+                yield current
+        else:
+            # No items remaining in top iterator
+            _heappop(iterators)
+
+    if _len(iterators) == 1:
+        _, _, current, sequence_iter = iterators[0]
+
+        yield current
+        for current in sequence_iter:
+            yield current
 
 
 class Immutable(object):
