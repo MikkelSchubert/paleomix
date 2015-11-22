@@ -290,7 +290,7 @@ def _filter_by_indels(options, chunk):
     no unique highest QUAL score exists, an arbitrary indel is retained
     among those indels with the highest QUAL score. SNPs are filtered
     based on prefiltered Indels."""
-    indels = set([vcf for vcf in chunk if vcfwrap.is_indel(vcf)])
+    indels = [vcf for vcf in chunk if vcfwrap.is_indel(vcf)]
 
     distance_between = options.min_distance_between_indels
     indel_blacklist  = _group_indels_near_position(indels, distance_between)

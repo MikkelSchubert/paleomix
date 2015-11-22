@@ -2,7 +2,8 @@
 Changelog
 =========
 
-
+  2015-11-22: Fix 'vcf_filter' when using pysam v0.8.4; would raise exception
+              due to changes to the VCF record class.
   2015-11-22: Increased the speed of the checks for duplicate input data
               (i.e. the same FASTQ record(s) included multiple times in
               one or more files) by roughly 4x.
