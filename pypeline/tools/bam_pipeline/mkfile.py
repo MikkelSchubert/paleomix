@@ -33,7 +33,6 @@ from pypeline.common.console import \
     print_err
 
 
-_TRIM_PIPELINE = (os.path.basename(sys.argv[0]) == "trim_pipeline")
 _TEMPLATE_TOP = \
     """# -*- mode: Yaml; -*-
 # Timestamp: %s
@@ -57,10 +56,8 @@ Options:
   SplitLanesByFilenames: yes
   # Compression format for FASTQ reads; 'gz' for GZip, 'bz2' for BZip2
   CompressionFormat: bz2
-"""
 
-_TEMPLATE_BAM_OPTIONS = \
-    """  # Settings for trimming of reads, see AdapterRemoval man-page
+  # Settings for trimming of reads, see AdapterRemoval man-page
   AdapterRemoval:
      # Adapter sequences, set and uncomment to override defaults
 #     --pcr1: ...
@@ -73,8 +70,10 @@ _TEMPLATE_BAM_OPTIONS = \
      --collapse: yes
      --trimns: yes
      --trimqualities: yes
+"""
 
-  # Settings for aligners supported by the pipeline
+_TEMPLATE_BAM_OPTIONS = \
+    """  # Settings for aligners supported by the pipeline
   Aligners:
     # Choice of aligner software to use, either "BWA" or "Bowtie2"
     Program: BWA
@@ -198,10 +197,13 @@ def print_header(full_mkfile=True,
                  dst=sys.stdout):
     timestamp = datetime.datetime.now().isoformat()
     template_parts = [_TEMPLATE_TOP % (timestamp,)]
+
     if full_mkfile:
         template_parts.append(_TEMPLATE_BAM_OPTIONS)
-        if sample_tmpl:
-            template_parts.append(_TEMPLATE_SAMPLES)
+
+    if sample_tmpl:
+        template_parts.append(_TEMPLATE_SAMPLES)
+
     template = "\n".join(template_parts)
 
     if not minimal:
@@ -215,6 +217,7 @@ def print_header(full_mkfile=True,
             # Avoid too many empty lines
             if line.strip() or minimal_template[-1].strip():
                 minimal_template.append(line)
+
     print("\n".join(minimal_template), file=dst)
 
 
@@ -243,7 +246,9 @@ def select_path(path):
     return path
 
 
-def main(argv):
+def main(argv, pipeline="bam"):
+    assert pipeline in ("bam", "trim"), pipeline
+
     options, paths = parse_args(argv)
     records = {}
     for root in paths:
@@ -267,9 +272,7 @@ def main(argv):
             record["Path"] = select_path(os.path.join(root, path))
             barcodes.append(record)
 
-    is_trim_pipeline = os.path.basename(sys.argv[0]) == "trim_pipeline"
-
-    print_header(full_mkfile=not is_trim_pipeline,
+    print_header(full_mkfile=(pipeline == "bam"),
                  sample_tmpl=not bool(records),
                  minimal=options.minimal)
 

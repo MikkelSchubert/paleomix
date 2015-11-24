@@ -21,21 +21,16 @@
 # SOFTWARE.
 """Factory for AtomicCmdBuilders for the various PALEOMIX commands.
 
-Ensures
+Ensures that the version called corresponds to the running version, in case
+multiple versions are present in the users' PATH, or that the current version
+is not available from the users' PATH.
 """
-import os.path
-import pypeline
-import pypeline.common.versions as versions
+import sys
+
+import pypeline.main
 
 from pypeline.atomiccmd.builder import \
     AtomicCmdBuilder
-
-
-# The actual path of the 'paleomix' script used to invoke the current session;
-# this is done to avoid conflict with local installs vs global installs. This
-# value is set in the set by the 'paleomix' wrapper script, to ensure that
-# factory-built commands will invoke the wrapper and not a tool script.
-_PALEOMIX_PATH = None
 
 
 def new(command, *args, **kwargs):
@@ -44,53 +39,29 @@ def new(command, *args, **kwargs):
     for the specified command, but does not add any arguments. Thus, calling
     new with the argument "cat" produces the equivalent of ["paleomix", "cat"].
     """
-    if not _PALEOMIX_PATH:
-        raise RuntimeError("Attempting to build command invoking the "
-                           "'paleomix' script, but the path has not been set!")
-
     if command in _SPECIAL_COMMANDS:
         return _SPECIAL_COMMANDS[command](*args, **kwargs)
-    return _build_generic_command(command)
-
-
-def set_paleomix_path(fpath):
-    global _PALEOMIX_PATH
-    assert not _PALEOMIX_PATH
-    assert os.path.exists(fpath), fpath
-    _PALEOMIX_PATH = fpath
-
-
-def _check_paleomix_version():
-    assert _PALEOMIX_PATH is not None
-    version = versions.EQ(*pypeline.__version_info__)
-    return versions.Requirement(call=[_PALEOMIX_PATH, "help"],
-                                search=r"v(\d+)\.(\d+)\.(\d+)",
-                                checks=version,
-                                priority=100)
-
-
-def _build_generic_command(argument):
-    """Returns a AtomicCmdBuilder for a regular 'paleomix ...' command."""
-    return AtomicCmdBuilder([_PALEOMIX_PATH, argument],
-                            CHECK_PALEOMIX=_check_paleomix_version())
+    return _build_paleomix_command(command, *args, **kwargs)
 
 
 def _build_cat_command():
-    """Returns a AtomicCmdBuilder for the 'paleomix cat' command."""
-    return AtomicCmdBuilder([_PALEOMIX_PATH, "cat"],
-                            EXEC_GZIP="gzip",
-                            EXEC_BZIP="bzip2",
-                            EXEC_CAT="cat",
-                            CHECK_PALEOMIX=_check_paleomix_version())
+    """Returns an AtomicCmdBuilder for the 'paleomix cat'."""
+    return _build_paleomix_command("cat",
+                                   EXEC_GZIP="gzip",
+                                   EXEC_BZIP="bzip2",
+                                   EXEC_CAT="cat")
 
 
-def _build_create_pileup_command(outfile):
-    """Returns a AtomicCmdBuilder for a regular 'paleomix ...' command."""
-    return AtomicCmdBuilder([_PALEOMIX_PATH, "create_pileup", outfile],
-                            CHECK_PALEOMIX=_check_paleomix_version())
+def _build_paleomix_command(*args, **kwargs):
+    """Returns an AtomicCmdBuilder for a regular 'paleomix ...' command."""
+    interpreter = sys.executable
+    script = pypeline.main.__file__
+
+    return AtomicCmdBuilder((interpreter, script) + args,
+                            AUX_PALEOMIX=script,
+                            **kwargs)
 
 
 _SPECIAL_COMMANDS = {
     "cat": _build_cat_command,
-    "create_pileup": _build_create_pileup_command,
 }

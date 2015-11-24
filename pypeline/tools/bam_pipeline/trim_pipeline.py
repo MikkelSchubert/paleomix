@@ -1,6 +1,6 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# Copyright (c) 2014 Mikkel Schubert <MSchubert@snm.ku.dk>
+#!/usr/bin/python
+#
+# Copyright (c) 2012 Mikkel Schubert <MSchubert@snm.ku.dk>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -19,25 +19,10 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""
-Legacy script for invoking PALEOMIX; main scripts are otherwise created by
-setuptools during the installation.
-"""
-import sys
+#
+import pypeline.tools.bam_pipeline.pipeline as pipeline
 
-try:
-    import pypeline
-except ImportError:
-    error = sys.exc_info()[1]  # Python 2/3 compatible exception syntax
-    sys.stderr.write("""Error importing required PALEOMIX module 'pypeline':
-    - %s
 
-Please make sure that PYTHONPATH points to the location of the 'pypeline'
-module. This may be done permanently by appendign the following to your
-~/.bashrc file (if using Bash):
-    export PYTHONPATH=${PYTHONPATH}:/path/to/pypeline/checkout/...
-""" % (error,))
-    sys.exit(1)
-
-if __name__ == '__main__':
-    sys.exit(pypeline.run_bam_pipeline())
+def main(argv):
+    """Wrapper to invoke the trimming pipeline; used by pypeline.main."""
+    return pipeline.main(argv, pipeline="trim")

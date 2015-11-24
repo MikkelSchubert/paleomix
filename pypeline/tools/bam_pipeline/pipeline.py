@@ -149,7 +149,9 @@ def index_references(config, makefiles):
             subdd["Nodes:Bowtie2"] = references_bowtie2[reference]
 
 
-def run(config, args):
+def run(config, args, pipeline_variant):
+    assert pipeline_variant in ("bam", "trim"), pipeline_pipeline
+
     if not os.path.exists(config.temp_root):
         try:
             os.makedirs(config.temp_root)
@@ -183,7 +185,7 @@ def run(config, args):
     index_references(config, makefiles)
 
     pipeline_func = build_pipeline_trimming
-    if os.path.basename(sys.argv[0]) != "trim_pipeline":
+    if pipeline_variant == "bam":
         pipeline_func = build_pipeline_full
 
     for makefile in makefiles:
@@ -228,10 +230,8 @@ def run(config, args):
     return 0
 
 
-def _print_usage():
-    basename = os.path.basename(sys.argv[0])
-    if basename == "paleomix":
-        basename = "bam_pipeline"
+def _print_usage(pipeline):
+    basename = "%s_pipeline" % (pipeline,)
 
     print_info("BAM Pipeline %s\n" % (pypeline.__version__,))
     print_info("Usage:")
@@ -242,7 +242,9 @@ def _print_usage():
     print_info("  -- %s run [...]      -- Run pipeline on provided makefiles." % basename)
 
 
-def main(argv):
+def main(argv, pipeline="bam"):
+    assert pipeline in ("bam", "trim"), pipeline
+
     try:
         config, args = bam_config.parse_config(argv)
         if args and args[0].startswith("dry"):
@@ -255,18 +257,18 @@ def main(argv):
                 "dry_run", "dry-run", "dryrun",
                 "remap")
     if (len(args) == 0) or (args[0] not in commands):
-        _print_usage()
+        _print_usage(pipeline)
         return 1
     elif args[0] in ("mkfile", "makefile"):
-        return bam_mkfile.main(args[1:])
+        return bam_mkfile.main(args[1:], pipeline=pipeline)
     elif args[0] in ("remap", "remap_prefix"):
         # Import here to avoid circular dependency issues
         import pypeline.tools.bam_pipeline.remap as bam_remap
 
         return bam_remap.main(args[1:])
     elif not args[1:]:
-        _print_usage()
+        _print_usage(pipeline)
         print_err("\nPlease specify at least one makefile!")
         return 1
 
-    return run(config, args[1:])
+    return run(config, args[1:], pipeline_variant=pipeline)

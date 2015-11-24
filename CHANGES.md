@@ -2,6 +2,10 @@
 Changelog
 =========
 
+  2015-11-25: Reworked sub-command handling to enable migration to setup-
+              tools, and improved the safety of invoking these from the pipeline itself.
+  2015-11-25: The output of "trim_pipeline mkfile" now includes the section
+              for AdapterRemoval, which was previously mistakenly omitted.
   2015-11-24: Removed commandline options --allow-missing-input-files,
               --list-orphan-files, --target, and --list-targets.
   2015-11-24: Added ability to specify the maximum number of threads used by
