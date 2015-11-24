@@ -39,6 +39,9 @@ from pypeline.common.utilities import \
     safe_coerce_to_tuple
 from pypeline.nodes.samtools import \
     SAMTOOLS_VERSION
+from pypeline.nodes.bwa import \
+    _get_max_threads
+
 
 import pypeline.common.versions as versions
 
@@ -68,6 +71,7 @@ _GATK_VERSION = {}
 class GATKIndelTrainerNode(CommandNode):
     def __init__(self, config, reference, infiles, outfile,
                  threads=1, dependencies=()):
+        threads = _get_max_threads(reference, threads)
         infiles = safe_coerce_to_tuple(infiles)
         jar_file = os.path.join(config.jar_root, "GenomeAnalysisTK.jar")
         command = AtomicJavaCmdBuilder(jar_file,
