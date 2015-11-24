@@ -24,12 +24,13 @@ import os
 
 from pypeline.common.utilities import safe_coerce_to_tuple
 from pypeline.node import MetaNode
-from pypeline.nodes.gatk import IndelRealignerNode
 from pypeline.nodes.picard import MergeSamFilesNode
 from pypeline.tools.bam_pipeline.nodes import \
     index_and_validate_bam
 from pypeline.nodes.validation import \
     DetectInputDuplicationNode
+
+import pypeline.nodes.gatk as gatk
 
 
 class Prefix:
@@ -80,21 +81,27 @@ class Prefix:
 
         return {output_filename : validated_node}
 
-
     def _build_realigned_bam(self, config, prefix, bams):
-        output_filename    = os.path.join(self.folder, "%s.%s.realigned.bam" % (self.target, prefix["Name"]))
+        output_filename = os.path.join(self.folder, "%s.%s.realigned.bam" % (self.target, prefix["Name"]))
         intervals_filename = os.path.join(self.folder, self.target, prefix["Name"] + ".intervals")
         validated_filename = os.path.join(self.folder, self.target, prefix["Name"] + ".realigned.validated")
 
-        node = IndelRealignerNode(config       = config,
-                                  reference    = prefix["Reference"],
-                                  infiles      = bams.keys(),
-                                  outfile      = output_filename,
-                                  intervals    = intervals_filename,
-                                  dependencies = self.datadup_check)
-        validated_node = index_and_validate_bam(config, prefix, node, validated_filename)
+        trainer = gatk.GATKIndelTrainerNode(config=config,
+                                            reference=prefix["Reference"],
+                                            infiles=bams.keys(),
+                                            outfile=intervals_filename,
+                                            dependencies=self.datadup_check)
 
-        return {output_filename : validated_node}
+        aligner = gatk.GATKIndelRealignerNode(config=config,
+                                              reference=prefix["Reference"],
+                                              infiles=bams.keys(),
+                                              intervals=intervals_filename,
+                                              outfile=output_filename,
+                                              dependencies=trainer)
+
+        validated_node = index_and_validate_bam(config, prefix, aligner, validated_filename)
+
+        return {output_filename: validated_node}
 
     def _build_dataduplication_node(self, prefix, files_and_nodes):
         destination = os.path.join(self.folder, self.target, prefix["Name"] + ".duplications_checked")

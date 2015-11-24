@@ -66,7 +66,7 @@ def _get_gatk_version_check(config):
 _GATK_VERSION = {}
 
 
-class _IndelTrainerNode(CommandNode):
+class GATKIndelTrainerNode(CommandNode):
     def __init__(self, config, reference, infiles, outfile, dependencies=()):
         infiles = safe_coerce_to_tuple(infiles)
         jar_file = os.path.join(config.jar_root, "GenomeAnalysisTK.jar")
@@ -82,15 +82,16 @@ class _IndelTrainerNode(CommandNode):
                            OUT_INTERVALS=outfile,
                            CHECK_GATK=_get_gatk_version_check(config))
 
-        description = "<Indel Realigner (training): %s -> %r>" \
+        description = "<GATK Indel Realigner (training): %s -> %r>" \
             % (describe_files(infiles), outfile)
         CommandNode.__init__(self,
+                             threads=threads,
                              description=description,
                              command=command.finalize(),
                              dependencies=dependencies)
 
 
-class _IndelRealignerNode(CommandNode):
+class GATKIndelRealignerNode(CommandNode):
     def __init__(self, config, reference, intervals, infiles, outfile,
                  dependencies=()):
         self._basename = os.path.basename(outfile)
@@ -120,7 +121,7 @@ class _IndelRealignerNode(CommandNode):
                           TEMP_OUT_STDOUT=self._basename + ".calmd",
                           CHECK_VERSION=SAMTOOLS_VERSION)
 
-        description = "<Indel Realigner (aligning): %s -> %r>" \
+        description = "<GATK Indel Realigner (aligning): %s -> %r>" \
             % (describe_files(infiles), outfile)
         CommandNode.__init__(self,
                              description=description,
@@ -136,34 +137,6 @@ class _IndelRealignerNode(CommandNode):
                   os.path.join(temp, self._basename))
 
         CommandNode._teardown(self, config, temp)
-
-
-class IndelRealignerNode(MetaNode):
-    def __init__(self, config, reference, infiles, outfile, intervals=None,
-                 dependencies=()):
-        if not intervals:
-            intervals = outfile + ".intervals"
-
-        infiles = safe_coerce_to_tuple(infiles)
-        trainer = _IndelTrainerNode(config=config,
-                                    reference=reference,
-                                    infiles=infiles,
-                                    outfile=intervals,
-                                    dependencies=dependencies)
-        aligner = _IndelRealignerNode(config=config,
-                                      reference=reference,
-                                      intervals=intervals,
-                                      infiles=infiles,
-                                      outfile=outfile,
-                                      dependencies=trainer)
-
-        description = "<GATK Indel Realigner: %i files -> '%s'>" \
-            % (len(infiles), outfile)
-
-        MetaNode.__init__(self,
-                          description=description,
-                          subnodes=[trainer, aligner],
-                          dependencies=dependencies)
 
 
 def _set_input_files(command, input_files):
