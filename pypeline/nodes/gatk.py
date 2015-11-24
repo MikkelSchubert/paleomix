@@ -25,7 +25,6 @@ import os
 import pypeline.common.fileutils as \
     fileutils
 from pypeline.node import \
-    MetaNode, \
     CommandNode
 from pypeline.atomiccmd.command import \
     AtomicCmd
