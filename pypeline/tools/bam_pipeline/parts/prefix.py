@@ -23,7 +23,6 @@
 import os
 
 from pypeline.common.utilities import safe_coerce_to_tuple
-from pypeline.node import MetaNode
 from pypeline.nodes.picard import MergeSamFilesNode
 from pypeline.tools.bam_pipeline.nodes import \
     index_and_validate_bam
@@ -41,7 +40,6 @@ class Prefix:
         self.roi       = prefix.get("RegionsOfInterest", {})
 
         self.samples = safe_coerce_to_tuple(samples)
-        self.bams    = {}
         self.folder  = config.destination
         self.target  = target
 
@@ -51,23 +49,20 @@ class Prefix:
 
         self.datadup_check = self._build_dataduplication_node(prefix, files_and_nodes)
 
+        self.bams = {}
         if "Raw BAM" in features:
             self.bams.update(self._build_raw_bam(config, prefix, files_and_nodes))
         if "Realigned BAM" in features:
             self.bams.update(self._build_realigned_bam(config, prefix, files_and_nodes))
 
-        sample_nodes = [sample.node for sample in self.samples]
         if not self.bams:
             for sample in self.samples:
                 self.bams.update(sample.bams)
 
-            self.node = MetaNode(description  = "Prefix: %s" % prefix["Name"],
-                                 dependencies = sample_nodes)
-        else:
-            self.node = MetaNode(description  = "Final BAMs: %s" % prefix["Name"],
-                                 subnodes     = self.bams.values(),
-                                 dependencies = sample_nodes)
-
+        nodes = []
+        for sample in self.samples:
+            nodes.extend(sample.nodes)
+        self.nodes = tuple(nodes)
 
     def _build_raw_bam(self, config, prefix, files_and_bams):
         output_filename = os.path.join(self.folder, "%s.%s.bam" % (self.target, prefix["Name"]))

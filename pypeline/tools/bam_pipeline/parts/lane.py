@@ -76,7 +76,7 @@ class Lane:
                               input_bam    = input_filename,
                               output_bam   = output_filename,
                               tags         = self.tags,
-                              dependencies = prefix["Node"])
+                              dependencies = prefix["Nodes"])
 
         validated_node = index_and_validate_bam(config, prefix, node)
         self.bams["Processed"] = {output_filename : validated_node}
@@ -91,7 +91,7 @@ class Lane:
 
     def _init_unaligned_lane(self, config, prefix, record):
         aln_key, aln_func = _select_aligner(record["Options"])
-        prefix_key = "Node:%s" % (aln_key,)
+        prefix_key = "Nodes:%s" % (aln_key,)
 
         postfix = ["minQ%i" % record["Options"]["Aligners"][aln_key]["MinQuality"]]
         if not record["Options"]["Aligners"][aln_key].get("UseSeed", True):
@@ -105,7 +105,7 @@ class Lane:
                           "reference"    : prefix["Reference"],
                           "input_file_1" : input_filename,
                           "input_file_2" : None,
-                          "dependencies" : self.reads.nodes + (prefix[prefix_key],)}
+                          "dependencies" : self.reads.nodes + prefix[prefix_key]}
 
             if paths.is_paired_end(input_filename):
                 parameters["input_file_1"] = input_filename.format(Pair = 1)

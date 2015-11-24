@@ -22,19 +22,20 @@
 #
 import os
 
-from pypeline.node import MetaNode
 from pypeline.common.utilities import safe_coerce_to_tuple
 
 
 class Sample:
     def __init__(self, config, prefix, libraries, name):
-        self.name      = name
-        self.bams      = {}
+        self.name = name
         self.libraries = safe_coerce_to_tuple(libraries)
-
-        for library in self.libraries:
-            self.bams.update(library.bams.iteritems())
         self.folder = os.path.dirname(self.libraries[0].folder)
 
-        self.node = MetaNode(description  = "Sample: %s" % os.path.basename(self.folder),
-                             dependencies = [library.node for library in self.libraries])
+        self.bams = {}
+        for library in self.libraries:
+            self.bams.update(library.bams.iteritems())
+
+        nodes = []
+        for library in self.libraries:
+            nodes.extend(library.nodes)
+        self.nodes = tuple(nodes)

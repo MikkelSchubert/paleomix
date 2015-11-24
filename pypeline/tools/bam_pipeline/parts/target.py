@@ -21,51 +21,15 @@
 # SOFTWARE.
 #
 from pypeline.common.utilities import safe_coerce_to_tuple
-from pypeline.node import MetaNode
+
 
 class Target:
     def __init__(self, config, prefixes, name):
-        self.name     = name
+        self.name = name
         self.prefixes = safe_coerce_to_tuple(prefixes)
 
-        self._nodes_extras    = {}
-        self._nodes_alignment = MetaNode(description  = "Alignments:",
-                                          dependencies = [prefix.node for prefix in self.prefixes])
-
-        self._setup_extra_nodes("mapDamage", "mapdamage")
-        self._setup_extra_nodes("Duplicate Histogram", "duphist")
-
-
-    def add_extra_nodes(self, name, nodes):
-        if name in self._nodes_extras:
-            raise RuntimeError("Cannot add extra nodes '%s', task with that name exists!" % name)
-
-        self._nodes_extras[name] = MetaNode(description  = name + ":",
-                                            dependencies = nodes)
-
-
-    @property
-    def node(self):
-        extras = MetaNode(description  = "Additional tasks:",
-                          dependencies = self._nodes_extras.values())
-
-        return MetaNode(description    = "Target: %s" % self.name,
-                        dependencies   = (self._nodes_alignment, extras))
-
-    def _setup_extra_nodes(self, name, key):
-        nodes = []
+        self.bams = {}
+        self.nodes = []
         for prefix in self.prefixes:
-            prefix_nodes = []
-            for sample in prefix.samples:
-                for library in sample.libraries:
-                    value = getattr(library, key)
-                    if value:
-                        prefix_nodes.append(value)
-
-            if any(prefix_nodes):
-                node = MetaNode(description=prefix.name,
-                                subnodes=prefix_nodes)
-                nodes.append(node)
-
-        if nodes:
-            self.add_extra_nodes(name, nodes)
+            self.nodes.extend(prefix.nodes)
+            self.bams.update(prefix.bams.iteritems())

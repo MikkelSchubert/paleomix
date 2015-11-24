@@ -26,8 +26,6 @@ import collections
 from pypeline.common.fileutils import \
     swap_ext
 
-from pypeline.node import \
-    MetaNode
 from pypeline.nodes.paleomix import \
     CoverageNode, \
     MergeCoverageNode, \
@@ -43,7 +41,7 @@ def add_statistics_nodes(config, makefile, target):
 
     nodes = []
     if "Depths" in features:
-        nodes.append(_build_depth(config, target))
+        nodes.extend(_build_depth(config, target))
 
     if "Summary" in features or "Coverage" in features:
         make_summary = ("Summary" in features)
@@ -53,9 +51,9 @@ def add_statistics_nodes(config, makefile, target):
                                                target, coverage)
             nodes.append(summary_node)
         elif "Coverage" in features:
-            nodes.append(coverage["Node"])
+            nodes.extend(coverage["Nodes"])
 
-    target.add_extra_nodes("Statistics", nodes)
+    target.nodes.extend(nodes)
 
 
 def _build_summary_node(config, makefile, target, coverage):
@@ -66,7 +64,7 @@ def _build_summary_node(config, makefile, target, coverage):
                             target=target,
                             cov_for_lanes=coverage_by_label["Lanes"],
                             cov_for_libs=coverage_by_label["Libraries"],
-                            dependencies=coverage["Node"])
+                            dependencies=coverage["Nodes"])
 
 
 def _build_depth(config, target):
@@ -98,8 +96,7 @@ def _build_depth(config, target):
                                       dependencies=dependencies)
             nodes.append(node)
 
-    return MetaNode(description="DepthHistograms",
-                    subnodes=nodes)
+    return nodes
 
 
 def _aggregate_for_prefix(cov, prefix, roi_name=None, into=None):
@@ -133,20 +130,16 @@ def _build_coverage(config, target, make_summary):
 
             merged_nodes.append(merged)
 
-    description = "Libraries"
     files_and_nodes = _aggregate_for_prefix(coverage["Libraries"], None)
     if make_summary:
-        description = "Lanes and libraries"
         files_and_nodes = _aggregate_for_prefix(coverage["Lanes"], None,
                                                 into=files_and_nodes)
 
-    partial_nodes = MetaNode(description=description,
-                             subnodes=files_and_nodes.values())
-    final_nodes = MetaNode(description="Final coverage",
-                           subnodes=merged_nodes)
+    all_nodes = []
+    all_nodes.extend(files_and_nodes.itervalues())
+    all_nodes.extend(merged_nodes)
 
-    coverage["Node"] = MetaNode(description="Coverage",
-                                dependencies=(partial_nodes, final_nodes))
+    coverage["Nodes"] = tuple(all_nodes)
 
     return coverage
 

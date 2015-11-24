@@ -36,8 +36,6 @@ from pypeline.common.console import \
 
 from pypeline.pipeline import \
     Pypeline
-from pypeline.node import \
-    MetaNode
 from pypeline.nodes.picard import \
     BuildSequenceDictNode
 from pypeline.nodes.samtools import \
@@ -78,11 +76,12 @@ def build_pipeline_trimming(config, makefile):
                         lane = parts.Lane(config, prefix, record, barcode)
                         if lane.reads and lane.reads.nodes:
                             nodes.extend(lane.reads.nodes)
-        break # Only one prefix is required
+        break  # Only one prefix is required
+
     return nodes
 
 
-def build_pipeline_full(config, makefile, return_nodes = True):
+def build_pipeline_full(config, makefile, return_nodes=True):
     targets = []
     features = makefile["Options"]["Features"]
     for (target_name, sample_records) in makefile["Targets"].iteritems():
@@ -112,13 +111,20 @@ def build_pipeline_full(config, makefile, return_nodes = True):
     if not return_nodes:
         return targets
 
-    return [target.node for target in targets]
+    nodes = []
+    for target in targets:
+        # Extra tasks (e.g. coverage, depth-histograms, etc.)
+        nodes.extend(target.nodes)
+        # Output BAM files (raw, realigned)
+        nodes.extend(target.bams.itervalues())
+
+    return nodes
 
 
 def _make_target_list(config, makefiles):
     target_list = {}
-    for target in build_pipeline_full(config, makefiles, return_nodes = False):
-        target_list[(target.name,)] = [target.node]
+    for target in build_pipeline_full(config, makefiles, return_nodes=False):
+        target_list[(target.name,)] = list(target.nodes)
 
         for prefix in target.prefixes:
             target_list[(target.name, prefix.name)] = prefix.bams.values()
@@ -196,21 +202,15 @@ def index_references(config, makefiles):
                 bowtie2_node = Bowtie2IndexNode(input_file=reference,
                                                 dependencies=(valid_node,))
 
-                references[reference] = \
-                    MetaNode(description="Reference Sequence",
-                             dependencies=(valid_node, faidx_node, dict_node))
-                references_bwa[reference] = \
-                    MetaNode(description="Reference Sequence",
-                             dependencies=(valid_node, faidx_node,
-                                           dict_node, bwa_node))
-                references_bowtie2[reference] = \
-                    MetaNode(description="Reference Sequence",
-                             dependencies=(valid_node, faidx_node,
-                                           dict_node, bowtie2_node))
+                references[reference] = (valid_node, faidx_node, dict_node)
+                references_bwa[reference] = (valid_node, faidx_node,
+                                             dict_node, bwa_node)
+                references_bowtie2[reference] = (valid_node, faidx_node,
+                                                 dict_node, bowtie2_node)
 
-            subdd["Node"] = references[reference]
-            subdd["Node:BWA"] = references_bwa[reference]
-            subdd["Node:Bowtie2"] = references_bowtie2[reference]
+            subdd["Nodes"] = references[reference]
+            subdd["Nodes:BWA"] = references_bwa[reference]
+            subdd["Nodes:Bowtie2"] = references_bowtie2[reference]
 
 
 def list_orphan_files(config, makefiles, pipeline):
@@ -305,7 +305,7 @@ def run(config, args):
 
         config.destination = old_destination
 
-        pipeline.add_nodes(nodes)
+        pipeline.add_nodes(*nodes)
 
     if config.targets:
         logger.error("ERROR: Could not find --target(s): '%s'", "', '".join(config.targets))

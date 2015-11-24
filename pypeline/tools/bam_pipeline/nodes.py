@@ -24,26 +24,18 @@ import os
 
 import pypeline.nodes.picard as picard
 
-from pypeline.node import \
-    MetaNode
 from pypeline.atomiccmd.command import \
     AtomicCmd
 from pypeline.atomiccmd.builder import \
     AtomicCmdBuilder
 from pypeline.atomiccmd.sets import \
     ParallelCmds
-from pypeline.atomiccmd.builder import \
-    AtomicJavaCmdBuilder
 
 from pypeline.nodes.picard import \
     PicardNode, \
-    ValidateBAMNode, \
-    MultiBAMInput, \
-    MultiBAMInputNode
+    ValidateBAMNode
 from pypeline.nodes.samtools import \
     BAMIndexNode
-from pypeline.common.fileutils import \
-    describe_files
 
 
 def index_and_validate_bam(config, prefix, node, log_file=None):
@@ -56,6 +48,7 @@ def index_and_validate_bam(config, prefix, node, log_file=None):
                                                   input_bam=input_file,
                                                   output_log=log_file,
                                                   dependencies=node)
+
     # Check MD tags against reference sequence
     # FIXME: Disabled due to issues with Picard/Samtools disagreeing,
     #   backwards compatibility. See the discussion at
@@ -72,17 +65,10 @@ def index_and_validate_bam(config, prefix, node, log_file=None):
     validation_params.command.add_option("IGNORE",
                                          "INVALID_QUALITY_FORMAT", sep="=")
 
-    node = validation_params.build_node()
-    return node
+    return validation_params.build_node()
 
 
 def _get_input_file(node):
-    if isinstance(node, MetaNode):
-        for subnode in node.subnodes:
-            input_filename, has_index = _get_input_file(subnode)
-            if input_filename:
-                return input_filename, has_index
-
     input_filename, has_index = None, False
     for filename in node.output_files:
         if filename.lower().endswith(".bai"):
