@@ -56,12 +56,6 @@ class Reads(object):
         for name in record["Options"]["ExcludeReads"]:
             self.files.pop(name, None)
 
-        if config.allow_missing_input_files and self.nodes:
-            input_missing = missing_files(self.nodes[0].input_files)
-            output_missing = missing_files(self.nodes[0].output_files)
-            if input_missing and not output_missing:
-                self.nodes = ()
-
     def _init_pretrimmed_reads(self, record):
         self.files.update(record["Data"])
         output_file = os.path.join(self.folder, "reads.pretrimmed.validated")

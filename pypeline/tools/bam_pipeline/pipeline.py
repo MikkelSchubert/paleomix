@@ -22,7 +22,6 @@
 #
 import os
 import sys
-import glob
 import time
 import logging
 
@@ -56,13 +55,6 @@ import pypeline.tools.bam_pipeline.config as bam_config
 import pypeline.tools.bam_pipeline.mkfile as bam_mkfile
 
 
-def _add_extra_nodes(config, makefile, targets):
-    for target in targets:
-        parts.add_statistics_nodes(config, makefile, target)
-
-    return targets
-
-
 def build_pipeline_trimming(config, makefile):
     """Builds only the nodes required to produce trimmed reads.
     This reduces the required complexity of the makefile to a minimum."""
@@ -81,8 +73,8 @@ def build_pipeline_trimming(config, makefile):
     return nodes
 
 
-def build_pipeline_full(config, makefile, return_nodes=True):
-    targets = []
+def build_pipeline_full(config, makefile):
+    nodes = []
     features = makefile["Options"]["Features"]
     for (target_name, sample_records) in makefile["Targets"].iteritems():
         prefixes = []
@@ -105,73 +97,17 @@ def build_pipeline_full(config, makefile, return_nodes=True):
                 prefixes.append(parts.Prefix(config, prefix, samples, features, target_name))
 
         if prefixes:
-            targets.append(parts.Target(config, prefixes, target_name))
+            target = parts.Target(config, prefixes, target_name)
 
-    targets = _add_extra_nodes(config, makefile, targets)
-    if not return_nodes:
-        return targets
+            # Construct coverage, depth-histogram, and summary nodes, etc.
+            parts.add_statistics_nodes(config, makefile, target)
 
-    nodes = []
-    for target in targets:
-        # Extra tasks (e.g. coverage, depth-histograms, etc.)
-        nodes.extend(target.nodes)
-        # Output BAM files (raw, realigned)
-        nodes.extend(target.bams.itervalues())
+            # Extra tasks (e.g. coverage, depth-histograms, etc.)
+            nodes.extend(target.nodes)
+            # Output BAM files (raw, realigned)
+            nodes.extend(target.bams.itervalues())
 
     return nodes
-
-
-def _make_target_list(config, makefiles):
-    target_list = {}
-    for target in build_pipeline_full(config, makefiles, return_nodes=False):
-        target_list[(target.name,)] = list(target.nodes)
-
-        for prefix in target.prefixes:
-            target_list[(target.name, prefix.name)] = prefix.bams.values()
-
-            for sample in prefix.samples:
-                target_list[(target.name, prefix.name, sample.name)] = sample.bams.values()
-
-                for library in sample.libraries:
-                    target_list[(target.name, prefix.name, sample.name, library.name)] = library.bams.values()
-
-                    for lane in library.lanes:
-                        lane_bams = []
-                        for files_and_nodes in lane.bams.itervalues():
-                            lane_bams.extend(files_and_nodes.itervalues())
-
-                        target_list[(target.name, prefix.name, sample.name, library.name, lane.name)] = lane_bams
-
-                        for (reads_type, bams) in lane.bams.iteritems():
-                            target_list[(target.name, prefix.name, sample.name, library.name, lane.name, reads_type)] = bams.values()
-
-                        if lane.reads and lane.reads.nodes:
-                            target_list[(target.name, "reads", sample.name, library.name, lane.name)] = lane.reads.nodes
-
-    return target_list
-
-
-def list_targets_for(config, makefiles, show):
-    target_list = _make_target_list(config, makefiles)
-    length = {"targets"   : 1, "prefixes" : 2, "samples" : 3,
-              "libraries" : 4, "lanes"    : 5, "mapping" : 6,
-              "trimming"  : 5}[show]
-
-    for target in sorted(target for target in target_list if len(target) == length):
-        if (show == "trimming") and (target[1] != "reads"):
-            continue
-        print ":".join(target)
-
-
-def build_pipeline_targets(config, makefile):
-    final_nodes = set()
-    target_list = _make_target_list(config, makefile)
-    for target in list(config.targets):
-        key = tuple(target.split(":"))
-        if key in target_list:
-            final_nodes.update(target_list.get(key, ()))
-            config.targets.remove(target)
-    return final_nodes
 
 
 def index_references(config, makefiles):
@@ -186,8 +122,8 @@ def index_references(config, makefiles):
                 # steps, as it is only expected to fail very rarely, but will
                 # block subsequent analyses depending on the FASTA.
                 valid_node = ValidateFASTAFilesNode(input_files=reference,
-                                                    output_file=reference
-                                                    + ".validated")
+                                                    output_file=reference +
+                                                    ".validated")
                 # Indexing of FASTA file using 'samtools faidx'
                 faidx_node = FastaIndexNode(reference)
                 # Indexing of FASTA file using 'BuildSequenceDictionary.jar'
@@ -211,28 +147,6 @@ def index_references(config, makefiles):
             subdd["Nodes"] = references[reference]
             subdd["Nodes:BWA"] = references_bwa[reference]
             subdd["Nodes:Bowtie2"] = references_bowtie2[reference]
-
-
-def list_orphan_files(config, makefiles, pipeline):
-    files, mkfiles = set(), set()
-    for mkfile in makefiles:
-        mkfile_path = mkfile["Statistics"]["Filename"]
-        mkfiles.add(os.path.abspath(mkfile_path))
-        for target in mkfile["Targets"]:
-            destination = config.destination
-            if not destination:
-                destination = os.path.dirname(mkfile_path)
-
-            glob_str = os.path.join(destination, target + "*")
-            for root_filename in glob.glob(glob_str):
-                if os.path.isdir(root_filename):
-                    for (dirpath, _, filenames) in os.walk(root_filename):
-                        for filename in filenames:
-                            fpath = os.path.join(dirpath, filename)
-                            files.add(os.path.abspath(fpath))
-                else:
-                    files.add(os.path.abspath(root_filename))
-    return (files - mkfiles) - frozenset(pipeline.list_output_files())
 
 
 def run(config, args):
@@ -268,24 +182,8 @@ def run(config, args):
     # Build .fai files for reference .fasta files
     index_references(config, makefiles)
 
-    if config.list_targets:
-        logger.info("Listing targets for %s ...", config.list_targets)
-        for makefile in makefiles:
-            # If a destination is not specified, save results in same folder as
-            # the makefile
-            filename = makefile["Statistics"]["Filename"]
-            old_destination = config.destination
-            if old_destination is None:
-                config.destination = os.path.dirname(filename)
-
-            list_targets_for(config, makefile, config.list_targets)
-            config.destination = old_destination
-        return 0
-
     pipeline_func = build_pipeline_trimming
-    if config.targets:
-        pipeline_func = build_pipeline_targets
-    elif os.path.basename(sys.argv[0]) != "trim_pipeline":
+    if os.path.basename(sys.argv[0]) != "trim_pipeline":
         pipeline_func = build_pipeline_full
 
     for makefile in makefiles:
@@ -307,18 +205,9 @@ def run(config, args):
 
         pipeline.add_nodes(*nodes)
 
-    if config.targets:
-        logger.error("ERROR: Could not find --target(s): '%s'", "', '".join(config.targets))
-        logger.error("       Please use --list-targets to print list of valid target names.")
-        return 1
-    elif config.list_output_files:
+    if config.list_output_files:
         logger.info("Printing output files ...")
         pipeline.print_output_files()
-        return 0
-    elif config.list_orphan_files:
-        logger.info("Printing orphan files ...")
-        for filename in sorted(list_orphan_files(config, makefiles, pipeline)):
-            print(filename)
         return 0
     elif config.list_executables:
         logger.info("Printing required executables ...")

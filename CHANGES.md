@@ -2,6 +2,8 @@
 Changelog
 =========
 
+  2015-11-24: Removed commandline options --allow-missing-input-files,
+              --list-orphan-files, --target, and --list-targets.
   2015-11-24: Added ability to specify the maximum number of threads used by
               GATK; currently only applicable for training of indel realigner.
   2015-11-22: Fix 'vcf_filter' when using pysam v0.8.4; would raise exception

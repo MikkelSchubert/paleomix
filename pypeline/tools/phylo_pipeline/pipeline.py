@@ -42,18 +42,6 @@ from pypeline.tools.phylo_pipeline.config import \
     select_commands
 
 
-def list_orphan_files(config, makefiles, pipeline):
-    files = set()
-    for makefile in makefiles:
-        title = makefile["Project"]["Title"]
-        folder = os.path.join(config.destination, title)
-        for (dirpath, _, filenames) in os.walk(folder):
-            for filename in filenames:
-                fpath = os.path.join(dirpath, filename)
-                files.add(os.path.abspath(fpath))
-    return files - frozenset(pipeline.list_output_files())
-
-
 def main(argv):
     try:
         config, args = parse_config(argv)
@@ -110,11 +98,6 @@ def main(argv):
     if config.list_output_files:
         logger.info("Printing output files ...")
         pipeline.print_output_files()
-        return 0
-    elif config.list_orphan_files:
-        logger.info("Printing orphan files ...")
-        for filename in sorted(list_orphan_files(config, makefiles, pipeline)):
-            print(filename)
         return 0
     elif config.list_executables:
         logger.info("Printint required executables ...")
