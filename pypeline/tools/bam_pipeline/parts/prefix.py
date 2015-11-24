@@ -90,6 +90,7 @@ class Prefix:
                                             reference=prefix["Reference"],
                                             infiles=bams.keys(),
                                             outfile=intervals_filename,
+                                            threads=config.gatk_max_threads,
                                             dependencies=self.datadup_check)
 
         aligner = gatk.GATKIndelRealignerNode(config=config,

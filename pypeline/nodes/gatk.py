@@ -67,7 +67,8 @@ _GATK_VERSION = {}
 
 
 class GATKIndelTrainerNode(CommandNode):
-    def __init__(self, config, reference, infiles, outfile, dependencies=()):
+    def __init__(self, config, reference, infiles, outfile,
+                 threads=1, dependencies=()):
         infiles = safe_coerce_to_tuple(infiles)
         jar_file = os.path.join(config.jar_root, "GenomeAnalysisTK.jar")
         command = AtomicJavaCmdBuilder(jar_file,
@@ -75,6 +76,7 @@ class GATKIndelTrainerNode(CommandNode):
         command.set_option("-T", "RealignerTargetCreator")
         command.set_option("-R", "%(IN_REFERENCE)s")
         command.set_option("-o", "%(OUT_INTERVALS)s")
+        command.set_option("-nt", threads)
 
         _set_input_files(command, infiles)
         command.set_kwargs(IN_REFERENCE=reference,
