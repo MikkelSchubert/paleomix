@@ -33,7 +33,7 @@ import multiprocessing
 import pypeline.ui
 import pypeline.logger
 
-from pypeline.node import Node, MetaNode
+from pypeline.node import Node
 from pypeline.nodegraph import NodeGraph, NodeGraphError
 from pypeline.common.utilities import \
     safe_coerce_to_tuple, \
@@ -71,7 +71,7 @@ class Pypeline(object):
             return False
 
         for node in nodegraph.iterflat():
-            if (node.threads > max_running) and not isinstance(node, MetaNode):
+            if (node.threads > max_running):
                 message = "Node(s) use more threads than the max allowed; " \
                           "the pipeline may therefore use more than the " \
                           "expected number of threads.\n"
@@ -215,9 +215,7 @@ class Pypeline(object):
                     return False
 
                 skip_nodes.add(node)
-                if not _walk_nodes(node.subnodes):
-                    return False
-                elif not _walk_nodes(node.dependencies):
+                if not _walk_nodes(node.dependencies):
                     return False
             return True
 
@@ -306,8 +304,7 @@ class Pypeline(object):
 
     def to_dot(self, destination):
         """Writes a simlpe dot file to the specified destination, representing
-        the full dependency tree, after MetaNodes have been removed. Nodes are
-        named by their class.
+        the full dependency tree. Nodes are named by their class.
         """
         try:
             nodegraph = NodeGraph(self._nodes)
@@ -315,26 +312,15 @@ class Pypeline(object):
             self._logger.error(error)
             return False
 
-        # Dict recording all dependencies / subnodes of non-MetaNodes
-        # MetaNode dependencies / subnodes are collapsed
+        # Dict recording all dependencies of nodes
         meta_dependencies = {}
         # Dict recording if anything depends on a speific node
         meta_rev_dependencies = {}
         for node in nodegraph.iterflat():
-            if not isinstance(node, MetaNode):
-                selection = set()
-                candidates = list(node.subnodes | node.dependencies)
-                while candidates:
-                    candidate = candidates.pop()
-                    if isinstance(candidate, MetaNode):
-                        candidates.extend(candidate.subnodes)
-                        candidates.extend(candidate.dependencies)
-                    else:
-                        selection.add(candidate)
-
-                meta_dependencies[node] = selection
-                for dep in selection:
-                    meta_rev_dependencies[dep] = True
+            selection = node.dependencies
+            meta_dependencies[node] = selection
+            for dep in selection:
+                meta_rev_dependencies[dep] = True
 
         return self._write_dot(destination,
                                meta_dependencies,

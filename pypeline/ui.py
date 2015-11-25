@@ -34,7 +34,7 @@ import tty
 import pypeline.nodegraph
 import pypeline.logger
 import pypeline.common.text as text
-from pypeline.node import MetaNode
+
 from pypeline.common.console import \
     print_msg, \
     print_debug, \
@@ -236,15 +236,15 @@ class BaseUI(object):
             = self._count_states(nodegraph, nodegraph.iterflat())
 
     def state_changed(self, node, old_state, new_state, _is_primary):
-        """Observer function for NodeGraph; counts states of non-meta nodes."""
+        """Observer function for NodeGraph; counts states of nodes."""
         self._updated = True
-        if not isinstance(node, MetaNode):
-            self.states[old_state] -= 1
-            self.states[new_state] += 1
-            if old_state == self.RUNNING:
-                self.threads -= node.threads
-            elif new_state == self.RUNNING:
-                self.threads += node.threads
+
+        self.states[old_state] -= 1
+        self.states[new_state] += 1
+        if old_state == self.RUNNING:
+            self.threads -= node.threads
+        elif new_state == self.RUNNING:
+            self.threads += node.threads
 
         if self._start_time is None:
             self._start_time = time.time()
@@ -254,20 +254,16 @@ class BaseUI(object):
     def _count_states(cls, nodegraph, nodes):
         """Counts the number of each state observed for a set of nodes, and
         returns these as a list, as well as the estimated number of threads
-        being used by running nodes.
-
-        If 'meta' is true, these are considered to be the subnodes of a
-        MetaNode; in that case, MetaNode(s) themselves are not counted, but
-        their subnodes are counted for the first level encountered."""
+        being used by running nodes."""
         states = [0] * nodegraph.NUMBER_OF_STATES
         threads = 0
 
         for node in nodes:
-            if not isinstance(node, MetaNode):
-                state = nodegraph.get_node_state(node)
-                states[state] += 1
-                if state == nodegraph.RUNNING:
-                    threads += node.threads
+            state = nodegraph.get_node_state(node)
+
+            states[state] += 1
+            if state == nodegraph.RUNNING:
+                threads += node.threads
 
         return states, threads
 
@@ -327,18 +323,17 @@ class RunningUI(BaseUI):
         BaseUI.refresh(self, nodegraph)
         self._running_nodes = []
         for node in nodegraph.iterflat():
-            if nodegraph.get_node_state(node) == self.RUNNING \
-                    and not isinstance(node, MetaNode):
+            if nodegraph.get_node_state(node) == self.RUNNING:
                 self._running_nodes.append(node)
 
     def state_changed(self, node, old_state, new_state, is_primary):
         """See BaseUI.state_changed."""
         BaseUI.state_changed(self, node, old_state, new_state, is_primary)
-        if not isinstance(node, MetaNode):
-            if old_state == self.RUNNING:
-                self._running_nodes.remove(node)
-            elif new_state == self.RUNNING:
-                self._running_nodes.append(node)
+
+        if old_state == self.RUNNING:
+            self._running_nodes.remove(node)
+        elif new_state == self.RUNNING:
+            self._running_nodes.append(node)
 
     @classmethod
     def _print_header(cls, states, threads):

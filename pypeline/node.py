@@ -37,11 +37,10 @@ from pypeline.atomiccmd.command import \
 class NodeError(RuntimeError):
     pass
 
+
 class CmdNodeError(NodeError):
     pass
 
-class MetaNodeError(NodeError):
-    pass
 
 class NodeUnhandledException(NodeError):
     """This exception is thrown by Node.run() if a non-NodeError exception
@@ -55,7 +54,7 @@ class Node(object):
     def __init__(self, description = None, threads = 1,
                  input_files = (), output_files = (),
                  executables = (), auxiliary_files = (),
-                 requirements = (), subnodes = (), dependencies = ()):
+                 requirements = (), dependencies = ()):
 
         if not isinstance(description, _DESC_TYPES):
             raise TypeError("'description' must be None or a string, not %r" \
@@ -69,15 +68,13 @@ class Node(object):
         self.requirements    = self._validate_requirements(requirements)
 
         self.threads         = self._validate_nthreads(threads)
-        self.subnodes        = self._collect_nodes(subnodes, "Subnode")
-        self.dependencies    = self._collect_nodes(dependencies, "Dependency")
+        self.dependencies    = self._collect_nodes(dependencies)
 
         # If there are no input files, the node cannot be re-run based on
         # changes to the input, and nodes with output but no input are not
         # expected based on current usage.
         if not self.input_files and self.output_files:
             raise NodeError("Node not dependant upon input files: %s" % self)
-
 
     def run(self, config):
         """Runs the node, by calling _setup, _run, and _teardown in that order.
@@ -108,7 +105,6 @@ class Node(object):
             raise NodeUnhandledException("Error(s) running Node:\n\tTemporary directory: %s\n\n%s" \
                                          % (repr(temp), traceback.format_exc()))
 
-
     def _create_temp_dir(self, config):
         """Called by 'run' in order to create a temporary folder.
 
@@ -116,11 +112,9 @@ class Node(object):
         which the temporary folder is created."""
         return fileutils.create_temp_dir(config.temp_root)
 
-
     def _remove_temp_dir(self, temp):
         """Called by 'run' in order to remove an (now) empty temporary folder."""
         os.rmdir(temp)
-
 
     def _setup(self, _config, _temp):
         """Is called prior to '_run()' by 'run()'. Any code used to copy/link files,
@@ -132,14 +126,11 @@ class Node(object):
         self._check_for_missing_files(self.input_files, "input")
         self._check_for_missing_files(self.auxiliary_files, "auxiliary")
 
-
     def _run(self, _config, _temp):
         pass
 
-
     def _teardown(self, _config, _temp):
         self._check_for_missing_files(self.output_files, "output")
-
 
     def __str__(self):
         """Returns the description passed to the constructor, or a default
@@ -148,24 +139,21 @@ class Node(object):
             return self.__description
         return repr(self)
 
-
     def __getstate__(self):
         """Called by pickle/cPickle to determine what to pickle; this is
-        overridden to avoid pickling of requirements, dependencies and
-        subnodes, which would otherwise greatly inflate the amount of
-        information that needs to be pickled."""
+        overridden to avoid pickling of requirements, dependencies, which would
+        otherwise greatly inflate the amount of information that needs to be
+        pickled."""
         obj_dict = self.__dict__.copy()
         obj_dict["requirements"] = None
         obj_dict["dependencies"] = None
-        obj_dict["subnodes"]     = None
         return obj_dict
-
 
     def _write_error_log(self, temp, error):
         if not (temp and os.path.isdir(temp)):
             return
 
-        prefix  = "\n                   "
+        prefix = "\n                   "
         message = ["Command          = %s" % (" ".join(sys.argv),),
                    "CWD              = %s" % (os.getcwd(),),
                    "Node             = %s" % (str(self),),
@@ -184,8 +172,7 @@ class Node(object):
         except OSError, oserror:
             sys.stderr.write("ERROR: Could not write failure log: %s\n" % (oserror,))
 
-
-    def _collect_nodes(self, nodes, description):
+    def _collect_nodes(self, nodes):
         if nodes is None:
             return frozenset()
 
@@ -194,12 +181,12 @@ class Node(object):
 
         if bad_nodes:
             bad_nodes = [repr(node) for node in bad_nodes]
-            message = "%s-list contain non-Node objects:\n\t- Command: %s\n\t- Objects: %s" \
-                % (description, self, "\n\t           ".join(bad_nodes))
+            message = "Dependency-list contain non-Node objects:\n" \
+                "\t- Command: %s\n\t- Objects: %s" \
+                % (self, "\n\t           ".join(bad_nodes))
             raise TypeError(message)
 
         return nodes
-
 
     def _check_for_missing_files(self, filenames, description):
         missing_files = fileutils.missing_files(filenames)
@@ -213,8 +200,8 @@ class Node(object):
         requirements = safe_coerce_to_frozenset(requirements)
         for requirement in requirements:
             if not isinstance(requirement, collections.Callable):
-                raise TypeError("'requirements' must be callable, not %r" \
-                    % (type(requirement),))
+                raise TypeError("'requirements' must be callable, not %r"
+                                % (type(requirement),))
         return requirements
 
     @classmethod
@@ -234,11 +221,9 @@ class Node(object):
         return int(threads)
 
 
-
-
 class CommandNode(Node):
-    def __init__(self, command, description = None, threads = 1,
-                 subnodes = (), dependencies = ()):
+    def __init__(self, command, description=None, threads=1,
+                 dependencies=()):
         Node.__init__(self,
                       description  = description,
                       input_files  = command.input_files,
@@ -247,7 +232,6 @@ class CommandNode(Node):
                       executables  = command.executables,
                       requirements = command.requirements,
                       threads      = threads,
-                      subnodes     = subnodes,
                       dependencies = dependencies)
 
         self._command = command
@@ -290,23 +274,6 @@ class CommandNode(Node):
         self._command.commit(temp)
 
         Node._teardown(self, config, temp)
-
-
-
-class MetaNode(Node):
-    """A MetaNode is a simplified node, which only serves the purpose of aggregating
-    a set of subnodes. It does not carry out any task itself (run() does nothing),
-    and is marked as done when all its subnodes / dependencies are completed."""
-
-    def __init__(self, description = None, subnodes = (), dependencies = ()):
-        Node.__init__(self,
-                      description  = description,
-                      subnodes     = subnodes,
-                      dependencies = dependencies)
-
-    def run(self, config):
-        raise MetaNodeError("Called 'run' on MetaNode")
-
 
 
 # Types that are allowed for the 'description' property
