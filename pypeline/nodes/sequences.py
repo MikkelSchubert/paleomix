@@ -40,8 +40,7 @@ from pypeline.common.formats.msa import \
     MSA
 from pypeline.node import \
     NodeError, \
-    Node, \
-    MetaNode
+    Node
 from pypeline.common.bedtools import \
     BEDRecord
 
@@ -141,24 +140,6 @@ class FilterSingletonsNode(Node):
         with open(temp_filename, "w") as handle:
             alignment.to_file(handle)
         fileutils.move_file(temp_filename, self._output_file)
-
-
-class FilterSingletonsMetaNode(MetaNode):
-    def __init__(self, input_files, destination, filter_by, dependencies=()):
-        subnodes = []
-        filter_by = dict(filter_by)
-        for (filename, node) in input_files.iteritems():
-            output_filename = fileutils.reroot_path(destination, filename)
-            subnodes.append(FilterSingletonsNode(input_file=filename,
-                                                 output_file=output_filename,
-                                                 filter_by=filter_by,
-                                                 dependencies=node))
-
-        MetaNode.__init__(self,
-                          description="<FilterSingleton: %i files -> '%s'>"
-                          % (len(subnodes), destination),
-                          subnodes=subnodes,
-                          dependencies=dependencies)
 
 
 class ExtractReferenceNode(Node):

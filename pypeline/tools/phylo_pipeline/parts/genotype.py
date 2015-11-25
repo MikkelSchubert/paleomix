@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -24,8 +24,6 @@ import os
 
 from copy import deepcopy
 
-from pypeline.node import \
-    MetaNode
 from pypeline.atomiccmd.builder import \
     apply_options
 from pypeline.nodes.samtools import \
@@ -122,7 +120,7 @@ def build_genotyping_bedfile_nodes(options, genotyping, sample, regions,
         bamfile = add_postfix(bamfile, ".realigned")
 
     prefix = regions["Genotypes"][sample]
-    padding, bedfile, node = genotyping["Padding"], None, dependencies
+    padding, bedfile = genotyping["Padding"], None
     if not genotyping["GenotypeEntirePrefix"]:
         bedfile, nodes = \
             build_regions_nodes(regions, padding, dependencies)
@@ -371,8 +369,7 @@ def build_sample_nodes(options, genotyping, regions_sets, sample,
                                    dependencies=dependencies)
         nodes.extend(node)
 
-    return MetaNode(description=sample["Name"],
-                    dependencies=nodes)
+    return nodes
 
 
 def chain(pipeline, options, makefiles):
@@ -385,7 +382,7 @@ def chain(pipeline, options, makefiles):
 
         nodes = []
         for sample in makefile["Project"]["Samples"].itervalues():
-            nodes.append(build_sample_nodes(options, genotyping, regions_sets,
+            nodes.extend(build_sample_nodes(options, genotyping, regions_sets,
                                             sample, makefile["Nodes"]))
 
         makefile["Nodes"] = tuple(nodes)

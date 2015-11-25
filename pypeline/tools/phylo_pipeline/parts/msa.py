@@ -20,19 +20,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-#!/usr/bin/python
-
 import os
 
-from pypeline.node import \
-     MetaNode
 from pypeline.atomiccmd.builder import \
      apply_options
 from pypeline.nodes.sequences import \
      CollectSequencesNode, \
-     FilterSingletonsMetaNode
+     FilterSingletonsNode
 from pypeline.nodes.mafft import \
      MAFFTNode
+
+import pypeline.common.fileutils as fileutils
 
 
 def build_msa_nodes(options, settings, regions, filtering, dependencies):
@@ -41,52 +39,60 @@ def build_msa_nodes(options, settings, regions, filtering, dependencies):
 
     sequencedir = os.path.join(options.destination, "alignments", regions["Name"])
     # Run on full set of sequences
-    sequences   = regions["Sequences"][None]
+    sequences = regions["Sequences"][None]
 
-    node = CollectSequencesNode(fasta_files  = regions["Genotypes"],
-                                destination  = sequencedir,
-                                sequences    = sequences,
-                                dependencies = dependencies)
-    fasta_files = dict((filename, node) for filename in node.output_files)
+    node = CollectSequencesNode(fasta_files=regions["Genotypes"],
+                                destination=sequencedir,
+                                sequences=sequences,
+                                dependencies=dependencies)
 
     if settings["Enabled"]:
         fasta_files = {}
         algorithm = settings["MAFFT"]["Algorithm"]
         for sequence in sequences:
-            input_file  = os.path.join(sequencedir, sequence + ".fasta")
+            input_file = os.path.join(sequencedir, sequence + ".fasta")
             output_file = os.path.join(sequencedir, sequence + ".afa")
 
-            mafft = MAFFTNode.customize(input_file  = input_file,
-                                        output_file = output_file,
-                                        algorithm   = algorithm,
-                                        dependencies = node)
+            mafft = MAFFTNode.customize(input_file=input_file,
+                                        output_file=output_file,
+                                        algorithm=algorithm,
+                                        dependencies=node)
             apply_options(mafft.command, settings["MAFFT"])
             fasta_files[output_file] = mafft.build_node()
+    else:
+        fasta_files = dict((filename, node) for filename in node.output_files)
 
-        node = MetaNode(description  = "MAFFT",
-                        subnodes     = fasta_files.values(),
-                        dependencies = node)
+    if not any(filtering.itervalues()):
+        return fasta_files.values()
 
+    destination = sequencedir + ".filtered"
+    filtering = dict(filtering)
+    filtered_nodes = []
 
-    if any(filtering.itervalues()):
-        node = FilterSingletonsMetaNode(input_files  = fasta_files,
-                                        destination  = sequencedir + ".filtered",
-                                        filter_by    = filtering,
-                                        dependencies = node)
+    for (filename, node) in fasta_files.iteritems():
+        output_filename = fileutils.reroot_path(destination, filename)
+        filtered_node = FilterSingletonsNode(input_file=filename,
+                                             output_file=output_filename,
+                                             filter_by=filtering,
+                                             dependencies=node)
 
-    return node
+        filtered_nodes.append(filtered_node)
+
+    return filtered_nodes
 
 
 def chain(_pipeline, options, makefiles):
-    destination = options.destination # Move to makefile
+    destination = options.destination  # Move to makefile
     for makefile in makefiles:
-        nodes     = []
-        settings  = makefile["MultipleSequenceAlignment"]
+        nodes = []
+        settings = makefile["MultipleSequenceAlignment"]
         filtering = makefile["Project"]["FilterSingletons"]
         options.destination = os.path.join(destination, makefile["Project"]["Title"])
 
         for regions in makefile["Project"]["Regions"].itervalues():
             regions_settings = settings[regions["Name"]]
-            nodes.append(build_msa_nodes(options, regions_settings, regions, filtering, makefile["Nodes"]))
+            nodes.extend(build_msa_nodes(options, regions_settings, regions,
+                                         filtering, makefile["Nodes"]))
+
         makefile["Nodes"] = tuple(nodes)
     options.destination = destination

@@ -23,7 +23,7 @@
 import os
 import re
 
-from pypeline.node import MetaNode, CommandNode, NodeError
+from pypeline.node import CommandNode, NodeError
 from pypeline.atomiccmd.command import AtomicCmd
 from pypeline.atomiccmd.sets import SequentialCmds
 from pypeline.common.formats.fasta import FASTA
@@ -32,14 +32,13 @@ from pypeline.common.utilities import safe_coerce_to_frozenset
 import pypeline.common.fileutils as fileutils
 
 
-
-
 class CodemlNode(CommandNode):
-    def __init__(self, control_file, sequence_file, trees_file, output_tar, exclude_groups = (), dependencies = ()):
+    def __init__(self, control_file, sequence_file, trees_file, output_tar,
+                 exclude_groups=(), dependencies=()):
         self._exclude_groups = safe_coerce_to_frozenset(exclude_groups)
-        self._control_file   = control_file
-        self._sequence_file  = sequence_file
-        self._trees_file     = trees_file
+        self._control_file = control_file
+        self._sequence_file = sequence_file
+        self._trees_file = trees_file
 
         paml_cmd = AtomicCmd(["codeml", "template.ctl"],
                              IN_CONTROL_FILE  = control_file,
@@ -67,7 +66,6 @@ class CodemlNode(CommandNode):
                              command      = SequentialCmds([paml_cmd, tar_cmd]),
                              dependencies = dependencies)
 
-
     def _setup(self, _config, temp):
         self._update_ctl_file(source      = self._control_file,
                               destination = os.path.join(temp, "template.ctl"))
@@ -76,10 +74,9 @@ class CodemlNode(CommandNode):
         with open(os.path.join(temp, "template.seqs"), "w") as handle:
             for record in FASTA.from_file(self._sequence_file):
                 if record.name not in self._exclude_groups:
-                    name     = record.name
+                    name = record.name
                     sequence = record.sequence.upper()
                     handle.write("%s\n" % (FASTA(name, None, sequence),))
-
 
     def _run(self, config, temp):
         try:
@@ -91,7 +88,6 @@ class CodemlNode(CommandNode):
                 if lines and ("Giving up." in lines[-1]):
                     error = NodeError("%s\n\n%s" % (error, lines[-1]))
             raise error
-
 
     @classmethod
     def _update_ctl_file(cls, source, destination):
@@ -111,8 +107,10 @@ class CodemlNode(CommandNode):
 
     @classmethod
     def _get_codeml_files(cls, key_type):
-        results      = {}
-        codeml_files = ["mlc", "2NG.dN", "2NG.dS", "2NG.t", "lnf", "rst", "rst1", "rub"]
+        results = {}
+        codeml_files = ["mlc", "2NG.dN", "2NG.dS", "2NG.t",
+                        "lnf", "rst", "rst1", "rub"]
+
         for filename in codeml_files:
             key = "%s_%s" % (key_type, filename.upper().replace(".", "_"))
             results[key] = filename
@@ -127,9 +125,9 @@ def build_codeml_nodes(options, settings, regions, filtering, dependencies):
         out_postfix = ".unaligned" + out_postfix
         afa_ext = ".fasta"
 
-    codeml      = settings["PAML"]["codeml"]
-    subset_key  = codeml["SubsetRegions"].get(regions["Name"])
-    sequences   = regions["Sequences"][subset_key]
+    codeml = settings["PAML"]["codeml"]
+    subset_key = codeml["SubsetRegions"].get(regions["Name"])
+    sequences = regions["Sequences"][subset_key]
     sequencedir = os.path.join(options.destination, "alignments", regions["Name"] + in_postfix)
     destination = os.path.join(options.destination, "paml", "codeml", regions["Name"] + out_postfix)
 
@@ -145,31 +143,28 @@ def build_codeml_nodes(options, settings, regions, filtering, dependencies):
 
         for (sequence, filename) in fasta_files.iteritems():
             output_tar = os.path.join(destination, "%s.%s.tar.gz" % (sequence, ctl_name))
-            ctl_file = ctl_files["ControlFile"].format(Name = sequence)
-            tree_file = ctl_files["TreeFile"].format(Name = sequence)
+            ctl_file = ctl_files["ControlFile"].format(Name=sequence)
+            tree_file = ctl_files["TreeFile"].format(Name=sequence)
 
-            node = CodemlNode(control_file   = ctl_file,
-                              trees_file     = tree_file,
-                              sequence_file  = filename,
-                              output_tar     = output_tar,
-                              exclude_groups = codeml["ExcludeSamples"],
-                              dependencies   = dependencies)
+            node = CodemlNode(control_file=ctl_file,
+                              trees_file=tree_file,
+                              sequence_file=filename,
+                              output_tar=output_tar,
+                              exclude_groups=codeml["ExcludeSamples"],
+                              dependencies=dependencies)
             codeml_nodes.append(node)
 
-    return MetaNode(description  = "<CodemlNodes>",
-                    subnodes     = codeml_nodes,
-                    dependencies = dependencies)
-
+    return codeml_nodes
 
 
 def chain_codeml(_pipeline, options, makefiles):
-    destination = options.destination # Move to makefile
+    destination = options.destination  # Move to makefile
     for makefile in makefiles:
-        nodes     = []
+        nodes = []
         filtering = makefile["Project"]["FilterSingletons"]
         options.destination = os.path.join(destination, makefile["Project"]["Title"])
 
         for regions in makefile["Project"]["Regions"].itervalues():
-            nodes.append(build_codeml_nodes(options, makefile, regions, filtering, makefile["Nodes"]))
+            nodes.extend(build_codeml_nodes(options, makefile, regions, filtering, makefile["Nodes"]))
         makefile["Nodes"] = tuple(nodes)
     options.destination = destination

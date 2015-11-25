@@ -24,11 +24,9 @@ import os
 import random
 import collections
 
-from pypeline.node import MetaNode
 from pypeline.nodes.formats import \
     FastaToPartitionedInterleavedPhyNode as ToPhylipNode
 from pypeline.nodes.raxml import \
-     RAxMLReduceNode, \
      RAxMLParsimonyTreeNode
 from pypeline.nodes.phylip import \
      PHYLIPBootstrapNode
@@ -84,19 +82,19 @@ def _examl_nodes(options, settings, input_alignment, input_partitions, input_bin
     return params.build_node()
 
 
-def _build_rerooted_trees(meta_node, reroot_on):
+def _build_rerooted_trees(nodes, reroot_on):
     filenames = []
-    for node in meta_node.subnodes:
+    for node in nodes:
         for filename in node.output_files:
             if filename.endswith(".result"):
                 filenames.append(filename)
 
     output_file = os.path.dirname(filenames[0]) + ".newick"
-    output_node = NewickRerootNode(tree_files   = filenames,
-                                   output_file  = output_file,
-                                   taxa         = reroot_on,
-                                   dependencies = meta_node)
-    return output_node
+
+    return NewickRerootNode(tree_files=filenames,
+                            output_file=output_file,
+                            taxa=reroot_on,
+                            dependencies=nodes)
 
 
 def _build_examl_replicates(options, phylo, destination, input_alignment, input_partition, dependencies):
@@ -113,11 +111,8 @@ def _build_examl_replicates(options, phylo, destination, input_alignment, input_
         replicates.append(_examl_nodes(options, phylo, input_alignment, input_partition, input_binary, replicate_template, binary))
 
     if replicates:
-        meta = MetaNode(description  = "Replicates",
-                        subnodes     = replicates,
-                        dependencies = binary)
+        return _build_rerooted_trees(replicates, phylo["RootTreesOn"])
 
-        return _build_rerooted_trees(meta, phylo["RootTreesOn"])
     return None
 
 
@@ -151,10 +146,8 @@ def _build_examl_bootstraps(options, phylo, destination, input_alignment, input_
                                        dependencies     = bs_binary))
 
     if bootstraps:
-        meta = MetaNode(description  = "Bootstraps",
-                        subnodes     = bootstraps,
-                        dependencies = dependencies)
-        return _build_rerooted_trees(meta, phylo["RootTreesOn"])
+        return _build_rerooted_trees(bootstraps, phylo["RootTreesOn"])
+
     return None
 
 
@@ -226,12 +219,16 @@ def _build_examl_regions_nodes(options, settings, run_dd, destination, filtering
         if partitions:
             for sequence in sequences:
                 seq_source = os.path.join(sequence_dir, sequence + fasta_extension)
-                input_files[sequence] = {"partitions" : partitions, "filenames" : [seq_source]}
+
+                input_files[sequence] = {"partitions": partitions,
+                                         "filenames": [seq_source]}
         else:
             filenames = []
             for sequence in sequences:
                 filenames.append(os.path.join(sequence_dir, sequence + fasta_extension))
-            input_files[roi_name] = {"partitions" : "1", "filenames" : filenames}
+
+            input_files[roi_name] = {"partitions": "1",
+                                     "filenames": filenames}
 
     return _build_examl_nodes(options, run_dd, destination, dict(input_files), subset_files, dependencies)
 
@@ -246,20 +243,17 @@ def build_phylogeny_nodes(options, settings, filtering, dependencies):
             for roi in run_dd["RegionsOfInterest"].itervalues():
                 roi_destination = os.path.join(destination, roi["Name"])
                 run_nodes.extend(_build_examl_per_gene_nodes(options, settings, run_dd, roi, roi_destination, filtering, dependencies))
-            nodes.append(MetaNode(description  = run_name,
-                                  subnodes     = run_nodes,
-                                  dependencies = dependencies))
+            nodes.extend(run_nodes)
         else:
             nodes.extend(_build_examl_regions_nodes(options, settings, run_dd, destination, filtering, dependencies))
 
-    return MetaNode("Phylogenetic Inference",
-                    dependencies = nodes)
+    return nodes
 
 
 def chain_examl(_pipeline, options, makefiles):
-    destination = options.destination # Move to makefile
+    destination = options.destination  # Move to makefile
     for makefile in makefiles:
-        filtering    = makefile["Project"]["FilterSingletons"]
+        filtering = makefile["Project"]["FilterSingletons"]
         options.destination = os.path.join(destination, makefile["Project"]["Title"])
 
         makefile["Nodes"] = build_phylogeny_nodes(options, makefile, filtering, makefile["Nodes"])
