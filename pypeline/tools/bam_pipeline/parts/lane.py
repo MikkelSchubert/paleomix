@@ -78,7 +78,10 @@ class Lane:
                               tags         = self.tags,
                               dependencies = prefix["Nodes"])
 
-        validated_node = index_and_validate_bam(config, prefix, node)
+
+        index_required = self._is_indexing_required(prefix)
+        validated_node = index_and_validate_bam(config, prefix, node,
+                                                create_index=index_required)
         self.bams["Processed"] = {output_filename : validated_node}
 
 
@@ -121,10 +124,23 @@ class Lane:
             if alignment_opts["FilterUnmappedReads"]:
                 alignment_obj.commands["convert"].set_option('-F', "0x4")
 
+            index_required = self._is_indexing_required(prefix)
             alignment_node = alignment_obj.build_node()
-            validated_node = index_and_validate_bam(config, prefix, alignment_node)
+            validated_node = index_and_validate_bam(config, prefix, alignment_node,
+                                                    create_index=index_required)
 
-            self.bams[key] = {output_filename : validated_node}
+            self.bams[key] = {output_filename: validated_node}
+
+    def _is_indexing_required(self, prefix):
+        """Returns true if indexing lane BAMs is nessesary.
+        """
+        # Indexes are required for all files when calculating region statistics
+        return bool(prefix.get("RegionsOfInterest")) or \
+            (("Realigned BAM" in self.options["Features"]) and not
+             # and for BAMs fed to GATK, but in this case we only use these
+             # indexes if we don't generate PCR filtered or recaled BAMs
+             (self.options["RescaleQualities"] or
+              self.options["PCRDuplicates"]))
 
 
 def _select_aligner(options):

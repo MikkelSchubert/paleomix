@@ -24,6 +24,8 @@ import os
 
 import pypeline.nodes.picard as picard
 
+from pypeline.common.fileutils import \
+    swap_ext
 from pypeline.atomiccmd.command import \
     AtomicCmd
 from pypeline.atomiccmd.builder import \
@@ -38,9 +40,10 @@ from pypeline.nodes.samtools import \
     BAMIndexNode
 
 
-def index_and_validate_bam(config, prefix, node, log_file=None):
+def index_and_validate_bam(config, prefix, node, log_file=None,
+                           create_index=True):
     input_file, has_index = _get_input_file(node)
-    if not has_index:
+    if not has_index and create_index:
         node = BAMIndexNode(infile=input_file,
                             dependencies=node)
 
@@ -48,6 +51,11 @@ def index_and_validate_bam(config, prefix, node, log_file=None):
                                                   input_bam=input_file,
                                                   output_log=log_file,
                                                   dependencies=node)
+
+    # Ensure that the validation node is re-run if the index changes
+    if has_index or create_index:
+        bai_filename = swap_ext(input_file, ".bai")
+        validation_params.command.set_kwargs(IN_BAI=bai_filename)
 
     # Check MD tags against reference sequence
     # FIXME: Disabled due to issues with Picard/Samtools disagreeing,
