@@ -20,10 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-# Ignore "invalid" function names
-# pylint: disable=C0103
-# No need for docstrings
-# pylint: disable=C0111
+import os
+
 from nose.tools import \
     assert_is, \
     assert_equal, \
@@ -69,6 +67,18 @@ from pypeline.common.makefile import \
 # Dummy value for the path parameters
 _DUMMY_PATH = ("a", "random", "path")
 _DUMMY_PATH_STR = ":".join(_DUMMY_PATH)
+
+
+###############################################################################
+###############################################################################
+# Setup timestamps for test files
+
+def setup_module():
+    timestamps = {"tests/data/simple.yaml": 1120719000}
+
+    for filename, timestamp in timestamps.iteritems():
+        # Set atime and mtime
+        os.utime(filename, (timestamp, timestamp))
 
 
 ###############################################################################

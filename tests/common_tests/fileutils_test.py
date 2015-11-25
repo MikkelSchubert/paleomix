@@ -67,6 +67,21 @@ from pypeline.common.fileutils import \
 
 ###############################################################################
 ###############################################################################
+# Setup timestamps for test files
+
+def setup_module():
+    timestamps = {"tests/data/timestamp_a_older": 1000190760,
+                  "tests/data/timestamp_b_older": 1000190760,
+                  "tests/data/timestamp_a_younger": 1120719000,
+                  "tests/data/timestamp_b_younger": 1120719000}
+
+    for filename, timestamp in timestamps.iteritems():
+        # Set atime and mtime
+        os.utime(filename, (timestamp, timestamp))
+
+
+###############################################################################
+###############################################################################
 # Tests for 'add_postfix'
 
 def test_add_postfix__no_postfix():

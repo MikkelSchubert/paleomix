@@ -29,18 +29,12 @@
 # pylint: disable=W0212
 import os
 
-import nose.tools
-from nose.tools import \
-    assert_in, \
-    assert_equal, \
-    assert_raises
 from flexmock import \
     flexmock
 
 from pypeline.common.testing import \
     with_temp_folder, \
-    set_file_contents, \
-    get_file_contents
+    set_file_contents
 
 from pypeline.nodegraph import \
     NodeGraph, \
@@ -56,6 +50,21 @@ _EXEC_FILES = frozenset(("ls", "sh"))
 _AUX_FILES = frozenset(("tests/data/rCRS.fasta",
                         "tests/data/rCRS.fasta.fai"))
 _REQUIREMENTS = frozenset((id, str))
+
+
+###############################################################################
+###############################################################################
+# Setup timestamps for test files
+
+def setup_module():
+    timestamps = {"tests/data/timestamp_a_older": 1000190760,
+                  "tests/data/timestamp_b_older": 1000190760,
+                  "tests/data/timestamp_a_younger": 1120719000,
+                  "tests/data/timestamp_b_younger": 1120719000}
+
+    for filename, timestamp in timestamps.iteritems():
+        # Set atime and mtime
+        os.utime(filename, (timestamp, timestamp))
 
 
 ###############################################################################

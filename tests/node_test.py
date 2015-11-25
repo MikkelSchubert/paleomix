@@ -29,8 +29,8 @@
 # Disable warnings caused by flexmock setups ("X is assigned to nothing")
 # pylint: disable=W0106
 import os
+import random
 
-import nose.tools
 from nose.tools import \
     assert_in, \
     assert_equal, \
@@ -46,11 +46,9 @@ from pypeline.atomiccmd.command import \
     AtomicCmd
 from pypeline.node import \
     Node, \
-    MetaNode, \
     CommandNode, \
     NodeError, \
     NodeUnhandledException, \
-    MetaNodeError, \
     CmdNodeError
 from pypeline.common.utilities import \
     safe_coerce_to_frozenset
@@ -58,14 +56,17 @@ from pypeline.common.utilities import \
 
 def _CommandNodeWrap(**kwargs):
     return CommandNode(command=AtomicCmd("true"), **kwargs)
-_NODE_TYPES = (Node, _CommandNodeWrap, MetaNode)
+_NODE_TYPES = (Node, _CommandNodeWrap)
 
 
 _DESCRIPTION = "My description of a node"
-_IN_FILES    = frozenset(("tests/data/empty_file_1", "tests/data/empty_file_2"))
-_OUT_FILES   = frozenset(("tests/data/missing_out_file_1", "tests/data/missing_out_file_2"))
-_EXEC_FILES  = frozenset(("ls", "sh"))
-_AUX_FILES   = frozenset(("tests/data/rCRS.fasta", "tests/data/rCRS.fasta.fai"))
+_IN_FILES = frozenset(("tests/data/empty_file_1",
+                       "tests/data/empty_file_2"))
+_OUT_FILES = frozenset(("tests/data/missing_out_file_1",
+                        "tests/data/missing_out_file_2"))
+_EXEC_FILES = frozenset(("ls", "sh"))
+_AUX_FILES = frozenset(("tests/data/rCRS.fasta",
+                        "tests/data/rCRS.fasta.fai"))
 _REQUIREMENTS = frozenset((id, str))
 _EMPTY_FILE = "tests/data/empty_file_1"
 
@@ -85,20 +86,18 @@ def _build_cmd_mock(input_files  = _IN_FILES,
                     optional_temp_files = frozenset(optional_temp_files))
 
 
-
-################################################################################
-################################################################################
-## Node: Constructor: File sets
+###############################################################################
+###############################################################################
+# Node: Constructor: File sets
 
 def test_constructor():
-    import random
     def first(values):
         return random.choice(tuple(values))
 
     def _do_test_constructor__single_value(key, value):
         defaults = {"input_files": _EMPTY_FILE}
         defaults[key] = value
-        node = Node(**defaults  )
+        node = Node(**defaults)
         expected = safe_coerce_to_frozenset(value)
         assert_equal(getattr(node, key), expected)
 
@@ -123,7 +122,7 @@ def test_constructor():
 
 def test_constructor__invalid_values():
     def _do_test_constructor__invalid_values(key, value):
-        assert_raises(TypeError, Node, **{key : value})
+        assert_raises(TypeError, Node, **{key: value})
 
     yield _do_test_constructor__invalid_values, "input_files",      [id]
     yield _do_test_constructor__invalid_values, "output_files",     [-1]
@@ -131,75 +130,64 @@ def test_constructor__invalid_values():
     yield _do_test_constructor__invalid_values, "auxiliary_files",  [1.3]
 
 
-
-################################################################################
-################################################################################
-## Node: Constructor: Requirements
+###############################################################################
+###############################################################################
+# Node: Constructor: Requirements
 
 def test_constructor__requirements():
-    node = Node(requirements = id)
+    node = Node(requirements=id)
     assert_equal(node.requirements, frozenset([id]))
-    node = Node(requirements = [id])
+    node = Node(requirements=[id])
     assert_equal(node.requirements, frozenset([id]))
-    node = Node(requirements = [id, str])
+    node = Node(requirements=[id, str])
     assert_equal(node.requirements, frozenset([id, str]))
+
 
 def test_constructor__requirements__wrong_type():
     def _do_test_constructor__requirements__wrong_type(value):
-        assert_raises(TypeError, Node, requirements = value)
+        assert_raises(TypeError, Node, requirements=value)
+
     yield _do_test_constructor__requirements__wrong_type, 17
     yield _do_test_constructor__requirements__wrong_type, {}
     yield _do_test_constructor__requirements__wrong_type, "867-5309"
 
 
-
-
-################################################################################
-################################################################################
-## Node: Constructor: Dependencies / Subnodes
+###############################################################################
+###############################################################################
+# Node: Constructor: Dependencies
 
 def test_constructor__nodes_is_none():
-    def _do_test_constructor__none_nodes(key):
-        my_node = Node(**{key : None})
-        assert_equal(getattr(my_node, key), frozenset())
-    yield _do_test_constructor__none_nodes, "subnodes"
-    yield _do_test_constructor__none_nodes, "dependencies"
+    my_node = Node(dependencies=None)
+    assert_equal(my_node.dependencies, frozenset())
+
 
 def test_constructor__single_node():
-    def _do_test_constructor__single_node(key):
-        sub_node = Node()
-        my_node  = Node(**{key : sub_node})
-        assert_equal(getattr(my_node, key), frozenset([sub_node]))
-    yield _do_test_constructor__single_node, "subnodes"
-    yield _do_test_constructor__single_node, "dependencies"
+    sub_node = Node()
+    my_node = Node(dependencies=sub_node)
+    assert_equal(my_node.dependencies, frozenset([sub_node]))
+
 
 def test_constructor__iterable():
-    def _do_test_constructor__iterable(key):
-        sub_nodes = [Node(), Node()]
-        my_node  = Node(**{key : iter(sub_nodes)})
-        assert_equal(getattr(my_node, key), frozenset(sub_nodes))
-    yield _do_test_constructor__iterable, "subnodes"
-    yield _do_test_constructor__iterable, "dependencies"
+    sub_nodes = [Node(), Node()]
+    my_node = Node(dependencies=iter(sub_nodes))
+    assert_equal(my_node.dependencies, frozenset(sub_nodes))
+
 
 def test_constructor__not_a_node():
-    def _do_test_constructor__not_a_node(key):
-        assert_raises(TypeError, Node, **{key : (1,)})
-    yield _do_test_constructor__not_a_node, "subnodes"
-    yield _do_test_constructor__not_a_node, "dependencies"
+    assert_raises(TypeError, Node, dependencies=(1,))
 
 
-
-################################################################################
-################################################################################
-## *Node: Description
-
+###############################################################################
+###############################################################################
+# *Node: Description
 
 def test_constructor__description():
     def _do_test_constructor__description(cls):
-        my_node = cls(description  = _DESCRIPTION)
+        my_node = cls(description=_DESCRIPTION)
         assert_equal(str(my_node), _DESCRIPTION)
     for cls in _NODE_TYPES:
         yield _do_test_constructor__description, cls
+
 
 def test_constructor__description__default():
     def _do_test_constructor__description__default(cls):
@@ -208,79 +196,76 @@ def test_constructor__description__default():
     for cls in _NODE_TYPES:
         yield _do_test_constructor__description__default, cls
 
+
 def test_constructor__description__non_string():
     def _do_test_constructor__description__non_string(cls, value):
-        assert_raises(TypeError, cls, description = value)
+        assert_raises(TypeError, cls, description=value)
     for cls in _NODE_TYPES:
         yield _do_test_constructor__description__non_string, cls, 1
         yield _do_test_constructor__description__non_string, cls, {}
 
 
-
-
-################################################################################
-################################################################################
-## *Node: Constructor tests: #threads
+###############################################################################
+###############################################################################
+# *Node: Constructor tests: #threads
 
 def test_constructor__threads():
     def _do_test_constructor__threads(cls, nthreads):
-        node = cls(threads = nthreads)
+        node = cls(threads=nthreads)
         assert_equal(node.threads, nthreads)
     for cls in (Node, _CommandNodeWrap):
         yield _do_test_constructor__threads, cls, 1L
         yield _do_test_constructor__threads, cls, 3
 
+
 def test_constructor__threads_invalid_range():
     def _do_test_constructor__threads_invalid_range(cls, nthreads):
-        assert_raises(ValueError, cls, threads = nthreads)
+        assert_raises(ValueError, cls, threads=nthreads)
     for cls in (Node, _CommandNodeWrap):
         yield _do_test_constructor__threads_invalid_range, cls, -1
         yield _do_test_constructor__threads_invalid_range, cls, 0
 
+
 def test_constructor__threads_invalid_type():
     def _do_test_constructor__threads_invalid_type(cls, nthreads):
-        assert_raises(TypeError, cls, threads = nthreads)
+        assert_raises(TypeError, cls, threads=nthreads)
     for cls in (Node, _CommandNodeWrap):
         yield _do_test_constructor__threads_invalid_type, cls, "1"
         yield _do_test_constructor__threads_invalid_type, cls, {}
         yield _do_test_constructor__threads_invalid_type, cls, 2.7
 
-def test_constuctor__threads_meta():
-    node = MetaNode()
-    assert_equal(node.threads, 1)
 
-
-
-
-################################################################################
-################################################################################
-## Node: Run
+###############################################################################
+###############################################################################
+# Node: Run
 
 _DUMMY_TEMP_ROOT = "/xyz/tmp"
 _DUMMY_TEMP = os.path.join(_DUMMY_TEMP_ROOT, "xTMPx")
 
+
 def test_run__order():
-    cfg_mock  = flexmock(temp_root = _DUMMY_TEMP_ROOT)
+    cfg_mock = flexmock(temp_root=_DUMMY_TEMP_ROOT)
     node_mock = flexmock(Node())
     node_mock.should_receive("_create_temp_dir").with_args(cfg_mock).and_return(_DUMMY_TEMP).ordered.once
     node_mock.should_receive("_setup").with_args(cfg_mock, _DUMMY_TEMP).ordered.once
     node_mock.should_receive("_run").with_args(cfg_mock, _DUMMY_TEMP).ordered.once
     node_mock.should_receive("_teardown").with_args(cfg_mock, _DUMMY_TEMP).ordered.once
     node_mock.should_receive("_remove_temp_dir").with_args(_DUMMY_TEMP).ordered.once
-    node_mock.run(cfg_mock) # pylint: disable=E1103
+    node_mock.run(cfg_mock)
 
 
 def test_run__exceptions():
-    cfg_mock = flexmock(temp_root = _DUMMY_TEMP_ROOT)
+    cfg_mock = flexmock(temp_root=_DUMMY_TEMP_ROOT)
+
     def build_tests(key, exception, expectation):
         def test_function():
             node_mock = flexmock(Node())
             node_mock.should_receive('_create_temp_dir').with_args(cfg_mock) \
-              .and_return(_DUMMY_TEMP).ordered.once
+                .and_return(_DUMMY_TEMP).ordered.once
             node_mock.should_receive(key).and_raise(exception).ordered.once
             node_mock.should_receive('_remove_temp_dir').never
 
-            assert_raises(expectation, node_mock.run, cfg_mock) # pylint: disable=E1103
+            assert_raises(expectation, node_mock.run, cfg_mock)
 
         return test_function
 
@@ -291,37 +276,37 @@ def test_run__exceptions():
 
 
 def test_run__exception__create_temp_dir():
-    cfg_mock = flexmock(temp_root = _DUMMY_TEMP_ROOT)
+    cfg_mock = flexmock(temp_root=_DUMMY_TEMP_ROOT)
     node_mock = flexmock(Node())
     node_mock.should_receive('_create_temp_dir').with_args(cfg_mock) \
-      .and_raise(OSError()).ordered.once
+        .and_raise(OSError()).ordered.once
 
-    assert_raises(NodeUnhandledException, node_mock.run, cfg_mock) # pylint: disable=E1103
+    assert_raises(NodeUnhandledException, node_mock.run, cfg_mock)
 
 
 def test_run__exception__remove_temp_dir():
-    cfg_mock = flexmock(temp_root = _DUMMY_TEMP_ROOT)
+    cfg_mock = flexmock(temp_root=_DUMMY_TEMP_ROOT)
     node_mock = flexmock(Node())
     node_mock.should_receive('_create_temp_dir').with_args(cfg_mock) \
-      .and_return(_DUMMY_TEMP).ordered.once
+        .and_return(_DUMMY_TEMP).ordered.once
     node_mock.should_receive('_remove_temp_dir').with_args(_DUMMY_TEMP) \
-      .and_raise(OSError()).ordered.once
+        .and_raise(OSError()).ordered.once
 
-    assert_raises(NodeUnhandledException, node_mock.run, cfg_mock) # pylint: disable=E1103
+    assert_raises(NodeUnhandledException, node_mock.run, cfg_mock)
 
 
 def test_run__error_log__node_error():
     @with_temp_folder
     def _do_test_run__error_log__node_error(temp_folder, exception):
-        temp      = os.path.join(temp_folder, "xTMPx")
-        cfg_mock  = flexmock(temp_root = temp_folder)
+        temp = os.path.join(temp_folder, "xTMPx")
+        cfg_mock = flexmock(temp_root=temp_folder)
         node_mock = flexmock(Node())
         node_mock.should_receive("_create_temp_dir").with_args(cfg_mock) \
-          .and_return(temp).ordered.once
+            .and_return(temp).ordered.once
         node_mock.should_receive("_run").and_raise(exception).ordered.once
 
         os.mkdir(temp)
-        assert_raises(NodeError, node_mock.run, cfg_mock) # pylint: disable=E1103
+        assert_raises(NodeError, node_mock.run, cfg_mock)
         log_file = os.path.join(temp_folder, "xTMPx", "pipe.errors")
         assert os.path.exists(log_file)
         assert_in("Errors =", get_file_contents(log_file))
@@ -330,29 +315,32 @@ def test_run__error_log__node_error():
     yield _do_test_run__error_log__node_error, OSError("ARGH!")
 
 
-
-
-################################################################################
-################################################################################
-## Node: _setup / _teardown
+###############################################################################
+###############################################################################
+# Node: _setup / _teardown
 
 def test__setup__input_files():
     def _do_test__setup__input_files_exist(kwargs):
         Node(**kwargs)._setup(None, None)
-    yield _do_test__setup__input_files_exist, {"executables"     : ("ls", "sh")}
-    yield _do_test__setup__input_files_exist, {"input_files"     : _IN_FILES}
-    yield _do_test__setup__input_files_exist, {"auxiliary_files" : _IN_FILES}
+
+    yield _do_test__setup__input_files_exist, {"executables": ("ls", "sh")}
+    yield _do_test__setup__input_files_exist, {"input_files": _IN_FILES}
+    yield _do_test__setup__input_files_exist, {"auxiliary_files": _IN_FILES}
+
 
 def test__setup__input_files_missing():
     def _do_test__setup__input_files_exist(kwargs):
         assert_raises(NodeError, Node(**kwargs)._setup, None, None)
-    yield _do_test__setup__input_files_exist, {"executables"     : ("ls", "shxxxxxxxxxx")}
-    yield _do_test__setup__input_files_exist, {"input_files"     : _OUT_FILES}
-    yield _do_test__setup__input_files_exist, {"auxiliary_files" : _OUT_FILES}
+
+    yield _do_test__setup__input_files_exist, {"executables": ("ls", "shxxxx")}
+    yield _do_test__setup__input_files_exist, {"input_files": _OUT_FILES}
+    yield _do_test__setup__input_files_exist, {"auxiliary_files": _OUT_FILES}
+
 
 def test__teardown__output_files():
     Node(input_files=_EMPTY_FILE,
          output_files=_IN_FILES)._teardown(None, None)
+
 
 def test__teardown__output_files_missing():
     node = Node(input_files=_EMPTY_FILE,
@@ -360,85 +348,80 @@ def test__teardown__output_files_missing():
     assert_raises(NodeError, node._teardown, None, None)
 
 
-
-
-################################################################################
-################################################################################
-## CommandNode: Constructor
+###############################################################################
+###############################################################################
+# CommandNode: Constructor
 
 _SIMPLE_DEPS = Node()
 _SIMPLE_SUBS = Node()
-_SIMPLE_CMD_MOCK = flexmock(input_files  = _IN_FILES,
-                            output_files = _OUT_FILES,
-                            executables  = _EXEC_FILES,
-                            auxiliary_files = _AUX_FILES,
-                            requirements = _REQUIREMENTS)
-_SIMPLE_CMD_NODE = CommandNode(command      = _SIMPLE_CMD_MOCK,
-                               subnodes     = _SIMPLE_SUBS,
-                               dependencies = _SIMPLE_DEPS)
+_SIMPLE_CMD_MOCK = flexmock(input_files=_IN_FILES,
+                            output_files=_OUT_FILES,
+                            executables=_EXEC_FILES,
+                            auxiliary_files=_AUX_FILES,
+                            requirements=_REQUIREMENTS)
+_SIMPLE_CMD_NODE = CommandNode(command=_SIMPLE_CMD_MOCK,
+                               dependencies=_SIMPLE_DEPS)
+
 
 def test_commandnode_constructor__input_files():
     assert_equal(_SIMPLE_CMD_NODE.input_files, _IN_FILES)
 
+
 def test_commandnode_constructor__output_files():
     assert_equal(_SIMPLE_CMD_NODE.output_files, _OUT_FILES)
+
 
 def test_commandnode_constructor__auxiliary_files():
     assert_equal(_SIMPLE_CMD_NODE.auxiliary_files, _AUX_FILES)
 
+
 def test_commandnode_constructor__executables():
     assert_equal(_SIMPLE_CMD_NODE.executables, _EXEC_FILES)
+
 
 def test_commandnode_constructor__requirements():
     assert_equal(_SIMPLE_CMD_NODE.requirements, _REQUIREMENTS)
 
-def test_commandnode_constructor__subnodes():
-    assert_equal(_SIMPLE_CMD_NODE.subnodes, frozenset([_SIMPLE_SUBS]))
-
-def test_commandnode_constructor__subnodes__default():
-    cmd_mock = CommandNode(command = _SIMPLE_CMD_MOCK, dependencies = _SIMPLE_DEPS)
-    assert_equal(cmd_mock.subnodes, frozenset())
 
 def test_commandnode_constructor__dependencies():
     assert_equal(_SIMPLE_CMD_NODE.dependencies, frozenset([_SIMPLE_DEPS]))
 
+
 def test_commandnode_constructor__dependencies__default():
-    cmd_mock = CommandNode(command = _SIMPLE_CMD_MOCK, subnodes = _SIMPLE_SUBS)
+    cmd_mock = CommandNode(command=_SIMPLE_CMD_MOCK)
     assert_equal(cmd_mock.dependencies, frozenset())
 
 
-
-################################################################################
-################################################################################
-## CommandNode: run
+###############################################################################
+###############################################################################
+# CommandNode: run
 
 def test_command_node__run():
-    cfg_mock  = flexmock(temp_root = _DUMMY_TEMP_ROOT)
-    cmd_mock  = _build_cmd_mock()
+    cfg_mock = flexmock(temp_root=_DUMMY_TEMP_ROOT)
+    cmd_mock = _build_cmd_mock()
     node_mock = flexmock(CommandNode(cmd_mock))
     node_mock.should_receive("_create_temp_dir").with_args(cfg_mock) \
-      .and_return(_DUMMY_TEMP).ordered.once
+        .and_return(_DUMMY_TEMP).ordered.once
     node_mock.should_receive("_setup").with_args(cfg_mock, _DUMMY_TEMP).ordered.once
     cmd_mock.should_receive("run").with_args(_DUMMY_TEMP).ordered.once
     cmd_mock.should_receive("join").and_return([0]).ordered.once
     node_mock.should_receive("_teardown").with_args(cfg_mock, _DUMMY_TEMP).ordered.once
     node_mock.should_receive("_remove_temp_dir").with_args(_DUMMY_TEMP).ordered.once
-    node_mock.run(cfg_mock) # pylint: disable=E1103
+    node_mock.run(cfg_mock)
 
 
-
-################################################################################
-################################################################################
-## CommandNode: _setup()
+###############################################################################
+###############################################################################
+# CommandNode: _setup()
 
 def test_commandnode_setup__files_exist():
     def _do_test_commandnode_setup(kwargs):
         cmd_mock = _build_cmd_mock(**kwargs)
         node = CommandNode(cmd_mock)
         node._setup(None, None)
-    yield _do_test_commandnode_setup, {"executables"     : ("ls", "sh")}
-    yield _do_test_commandnode_setup, {"input_files"     : _IN_FILES}
-    yield _do_test_commandnode_setup, {"auxiliary_files" : _IN_FILES}
+    yield _do_test_commandnode_setup, {"executables": ("ls", "sh")}
+    yield _do_test_commandnode_setup, {"input_files": _IN_FILES}
+    yield _do_test_commandnode_setup, {"auxiliary_files": _IN_FILES}
 
 
 def test_commandnode_setup__files_missing():
@@ -446,16 +429,15 @@ def test_commandnode_setup__files_missing():
         cmd_mock = _build_cmd_mock(**kwargs)
         node = CommandNode(cmd_mock)
         assert_raises(NodeError, node._setup, None, None)
-    yield _do_test_commandnode_setup, {"executables"     : ("ls", "shxxxxxxxxxxxxx")}
-    yield _do_test_commandnode_setup, {"input_files"     : _OUT_FILES}
-    yield _do_test_commandnode_setup, {"auxiliary_files" : _OUT_FILES}
+
+    yield _do_test_commandnode_setup, {"executables": ("ls", "shxxxxxxxxxxx")}
+    yield _do_test_commandnode_setup, {"input_files": _OUT_FILES}
+    yield _do_test_commandnode_setup, {"auxiliary_files": _OUT_FILES}
 
 
-
-
-################################################################################
-################################################################################
-## CommandNode: _run()
+###############################################################################
+###############################################################################
+# CommandNode: _run()
 
 def test_commandnode_run__call_order():
     cmd_mock = _build_cmd_mock()
@@ -463,6 +445,7 @@ def test_commandnode_run__call_order():
     cmd_mock.should_receive("join").with_args().and_return((0,)).ordered.once
     node = CommandNode(cmd_mock)
     node._run(None, "xTMPx")
+
 
 def test_commandnode_run__exception_on_error():
     cmd_mock = _build_cmd_mock()
@@ -472,10 +455,9 @@ def test_commandnode_run__exception_on_error():
     assert_raises(CmdNodeError, node._run, None, None)
 
 
-
-################################################################################
-################################################################################
-## CommandNode: _teardown
+###############################################################################
+###############################################################################
+# CommandNode: _teardown
 
 def _setup_temp_folders(temp_folder):
     destination = os.path.join(temp_folder, "dst")
@@ -492,6 +474,7 @@ def test_commandnode_teardown__commit(temp_folder):
     cmd_mock.should_receive("commit").with_args(temp_folder).once
     node = CommandNode(cmd_mock)
     node._teardown(None, temp_folder)
+
 
 # Files exist in temp folder, and in destination after commit
 @with_temp_folder
@@ -552,6 +535,7 @@ def test_commandnode_teardown__missing_optional_files(temp_folder):
 @with_temp_folder
 def _test_commandnode_teardown__missing_files_in_dest(temp_folder):
     destination, temp_folder = _setup_temp_folders(temp_folder)
+
     class _CmdMock(AtomicCmd):
         def commit(self, temp):
             AtomicCmd.commit(self, temp)
@@ -585,34 +569,3 @@ def test_commandnode_teardown__extra_files_in_temp(temp_folder):
     assert_raises(CmdNodeError, node._teardown, None, temp_folder)
     assert_equal(temp_files_before, set(os.listdir(temp_folder)))
     assert_equal(dest_files_before, set(os.listdir(destination)))
-
-
-###############################################################################
-###############################################################################
-## MetaNode: Dependencies / Subnodes
-
-def test_metanode__nodes():
-    subnodes = [Node(), Node()]
-    dependencies = [Node(), Node()]
-    node = MetaNode(subnodes=iter(subnodes),
-                    dependencies=iter(dependencies))
-    assert_equal(node.subnodes, frozenset(subnodes))
-    assert_equal(node.dependencies, frozenset(dependencies))
-
-
-###############################################################################
-###############################################################################
-# MetaNode: Not implemented
-
-def test_metanode__properties():
-    node = MetaNode()
-    assert_equal(node.input_files, frozenset())
-    assert_equal(node.output_files, frozenset())
-    assert_equal(node.executables, frozenset())
-    assert_equal(node.auxiliary_files, frozenset())
-    assert_equal(node.requirements, frozenset())
-
-
-@nose.tools.raises(MetaNodeError)
-def test_metanode__run():
-    MetaNode().run(None)

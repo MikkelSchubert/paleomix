@@ -19,13 +19,6 @@ do
     fi
 done
 
-# Ensure that timestamps are as expected
-touch -t "200109110846" tests/data/timestamp_a_older | exit 1
-touch -t "200109110846" tests/data/timestamp_b_older | exit 1
-touch -t "200507070850"  tests/data/timestamp_a_younger | exit 1
-touch -t "200507070850"  tests/data/timestamp_b_younger | exit 1
-touch -t "200507070850"  tests/data/simple.yaml | exit 1
-
 MODULES=$(find pypeline -mindepth 1 -maxdepth 1 -name '*.py' -or -type d | sed -e 's#\.py##g' -e's#/#.#g' | grep -v "pypeline.yaml" | grep -v __init__)
 nosetests -I ".*_flymake.py" tests/ --with-coverage $@ \
     --cover-tests --cover-branches --cover-inclusive --cover-erase \
