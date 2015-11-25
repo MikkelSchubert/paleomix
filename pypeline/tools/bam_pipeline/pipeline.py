@@ -150,7 +150,9 @@ def index_references(config, makefiles):
 
 
 def run(config, args, pipeline_variant):
-    assert pipeline_variant in ("bam", "trim"), pipeline_pipeline
+    if pipeline_variant not in ("bam", "trim"):
+        raise ValueError("Unexpected BAM pipeline variant (%r)"
+                         % (pipeline_variant,))
 
     if not os.path.exists(config.temp_root):
         try:
