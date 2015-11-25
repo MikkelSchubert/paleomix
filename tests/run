@@ -1,22 +1,34 @@
 #!/bin/bash
 
-echo "Running unit-tests ..."
-tests/unit/run;
-RESULT_UNIT=$?
-
-echo
-echo "Running functional tests ..."
-env PYTHONPATH=. tests/function/run
-RESULT_FUNC=$?
-
-
-echo
-if [ ${RESULT_UNIT} -ne 0 ];
+if ! nosetests --version &> /dev/null;
 then
-    echo "THERE WERE ERRORS DURING UNIT TESTING."
+    echo "Could not run 'nosetests'; please ensure that nose is installed:" > /dev/stderr
+    echo "    $ pip install nose" > /dev/stderr
+    exit 1
 fi
 
-if [ ${RESULT_FUNC} -ne 0 ];
-then
-    echo "THERE WERE ERRORS DURING FUNCTIONAL TESTING."
-fi
+py_cmd=$(head -n1 $(which nosetests) | sed -e's/^#!//')
+
+for module in flexmock coverage;
+do
+    if ! ${py_cmd} -c "import ${module}" &> /dev/null;
+    then
+        echo "Could import Python module '${module}'; please ensure that this module is installed:" > /dev/stderr
+        echo "    $ pip install ${module}" > /dev/stderr
+        exit 1
+    fi
+done
+
+# Ensure that timestamps are as expected
+touch -t "200109110846" tests/data/timestamp_a_older | exit 1
+touch -t "200109110846" tests/data/timestamp_b_older | exit 1
+touch -t "200507070850"  tests/data/timestamp_a_younger | exit 1
+touch -t "200507070850"  tests/data/timestamp_b_younger | exit 1
+touch -t "200507070850"  tests/data/simple.yaml | exit 1
+
+MODULES=$(find pypeline -mindepth 1 -maxdepth 1 -name '*.py' -or -type d | sed -e 's#\.py##g' -e's#/#.#g' | grep -v "pypeline.yaml" | grep -v __init__)
+nosetests -I ".*_flymake.py" tests/ --with-coverage $@ \
+    --cover-tests --cover-branches --cover-inclusive --cover-erase \
+    $(for module in unit $MODULES;do echo --cover-package=$module;done) \
+    2>&1 | grep -v "[0-9]\+ \+0 \+[0-9]\+ \+0 \+100%"
+#   --cover-html --cover-html-dir=tests/runs/coverage

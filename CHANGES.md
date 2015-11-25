@@ -2,6 +2,7 @@
 Changelog
 =========
 
+  2015-11-25: Restructure tests, removing (mostly unused) node tests.
   2015-11-25: Reworked sub-command handling to enable migration to setup-
               tools, and improved the safety of invoking these from the pipeline itself.
   2015-11-25: The output of "trim_pipeline mkfile" now includes the section

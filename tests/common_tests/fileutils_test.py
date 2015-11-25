@@ -317,7 +317,7 @@ def test_is_executable__full_path__folder_is_non_executable():
 
 
 def test_is_executable__rel_path__is_executable():
-    assert is_executable("tests/unit/run")
+    assert is_executable("tests/run")
 
 
 def test_is_executable__rel_path__is_non_executable():
@@ -356,8 +356,11 @@ def test_which_executable__executable__but_empty_path():
 def test_which_executable__executable__by_path_order_1():
     path = os.environ.pop('PATH')
     try:
-        os.environ['PATH'] = "tests/unit:tests/function"
-        assert_equal("tests/unit/run", which_executable("run"))
+        path_1 = "tests/"
+        path_2 = os.path.join(os.getcwd(), path_1)
+
+        os.environ['PATH'] = ":".join((path_1, path_2))
+        assert_equal(os.path.join(path_1, "run"), which_executable("run"))
     finally:
         os.environ['PATH'] = path
 
@@ -365,8 +368,11 @@ def test_which_executable__executable__by_path_order_1():
 def test_which_executable__executable__by_path_order_2():
     path = os.environ.pop('PATH')
     try:
-        os.environ['PATH'] = "tests/function:tests/unit"
-        assert_equal("tests/function/run", which_executable("run"))
+        path_1 = "tests/"
+        path_2 = os.path.join(os.getcwd(), path_1)
+
+        os.environ['PATH'] = ":".join((path_2, path_1))
+        assert_equal(os.path.join(path_2, "run"), which_executable("run"))
     finally:
         os.environ['PATH'] = path
 
@@ -392,7 +398,7 @@ def test_executable_exists__full_path__is_non_executable():
 
 
 def test_executable_exists__rel_path__is_executable():
-    assert executable_exists("tests/unit/run")
+    assert executable_exists("tests/run")
 
 
 def test_executable_exists__rel_path__is_non_executable():
