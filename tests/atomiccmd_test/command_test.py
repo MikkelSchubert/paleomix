@@ -24,8 +24,8 @@
 # pylint: disable=C0103
 # pylint: disable=W0212
 
+import errno
 import os
-import types
 import signal
 import weakref
 
@@ -44,6 +44,8 @@ from pypeline.common.testing import \
      set_file_contents
 
 import pypeline.atomiccmd.command
+import pypeline.common.fileutils as fileutils
+
 from pypeline.common.versions import RequirementObj
 from pypeline.atomiccmd.command import AtomicCmd, CmdError
 
@@ -180,12 +182,65 @@ def test_atomiccmd__pipes_stdin__temp_file(temp_folder):
     set_file_contents(os.path.join(temp_folder, "infile.fasta"), "a\nbc\nd")
     cmd.run(temp_folder)
     assert_equal(cmd.join(), [0])
-    result = get_file_contents(os.path.join(temp_folder, "infile.fasta"))
+    result = get_file_contents(os.path.join(temp_folder, "result.txt"))
     assert_equal(result, "a\nbc\nd")
+
+
+@with_temp_folder
+def test_atomiccmd__pipes_stdin__dev_null_implicit_1(temp_folder):
+    # STDIN should be implicitly set to /dev/null; deadlocks if not
+    cmd = AtomicCmd("cat")
+    cmd.run(temp_folder)
+    assert_equal(cmd.join(), [0])
+
+
+@with_temp_folder
+def test_atomiccmd__pipes_stdin__dev_null_implicit_2(temp_folder):
+    # STDIN should be implicitly set to /dev/null; deadlocks if not
+    cmd = AtomicCmd("cat", IN_STDIN=None)
+    cmd.run(temp_folder)
+    assert_equal(cmd.join(), [0])
+
+
+@with_temp_folder
+def test_atomiccmd__pipes_stdin__dev_null_explicit(temp_folder):
+    # STDIN should be set to /dev/null; deadlocks if not
+    cmd = AtomicCmd("cat", IN_STDIN=AtomicCmd.DEVNULL)
+    cmd.run(temp_folder, wrap_errors=False)
+    assert_equal(cmd.join(), [0])
 
 
 # Test possible combinations of explicit / implicit saving of stdout/err
 def test_atomiccmd__pipes_out():
+    @with_temp_folder
+    def _do_test_atomiccmd__pipes_out(temp_folder, stdout, stderr, kwargs):
+        cmd = AtomicCmd(("bash", "-c", "echo -n 'STDERR!' > /dev/stderr; echo -n 'STDOUT!';"), **kwargs)
+        cmd.run(temp_folder)
+        assert_equal(cmd.join(), [0])
+
+        expected_files = []
+        for (tmpl, text) in ((stdout, "STDOUT!"), (stderr, "STDERR!")):
+            if tmpl is not None:
+                fname = tmpl.format(id(cmd))
+                result = get_file_contents(os.path.join(temp_folder, fname))
+                assert_equal(result, text)
+                expected_files.append(fname)
+
+        assert_equal(set(os.listdir(temp_folder)), set(expected_files))
+
+    yield _do_test_atomiccmd__pipes_out, "pipe_bash_{0}.stdout", "pipe_bash_{0}.stderr", {}
+    yield _do_test_atomiccmd__pipes_out, "pipe_bash_{0}.stdout", "stderr.txt", {"OUT_STDERR": "stderr.txt"}
+    yield _do_test_atomiccmd__pipes_out, "stdout.txt", "pipe_bash_{0}.stderr", {"OUT_STDOUT": "stdout.txt"}
+    yield _do_test_atomiccmd__pipes_out, "stdout.txt", "stderr.txt", {"OUT_STDOUT": "stdout.txt",
+                                                                      "OUT_STDERR": "stderr.txt"}
+
+    yield _do_test_atomiccmd__pipes_out, None, None, {"OUT_STDOUT": AtomicCmd.DEVNULL,
+                                                      "OUT_STDERR": AtomicCmd.DEVNULL}
+    yield _do_test_atomiccmd__pipes_out, None, "pipe_bash_{0}.stderr", {"OUT_STDOUT": AtomicCmd.DEVNULL}
+    yield _do_test_atomiccmd__pipes_out, "pipe_bash_{0}.stdout", None, {"OUT_STDERR": AtomicCmd.DEVNULL}
+
+
+def test_atomiccmd__pipes_out_dev_null():
     @with_temp_folder
     def _do_test_atomiccmd__pipes_out(temp_folder, stdout, stderr, kwargs):
         cmd = AtomicCmd(("bash", "-c", "echo -n 'STDERR!' > /dev/stderr; echo -n 'STDOUT!';"), **kwargs)
@@ -196,11 +251,6 @@ def test_atomiccmd__pipes_out():
         assert_equal(result_out, "STDOUT!")
         assert_equal(result_err, "STDERR!")
 
-    yield _do_test_atomiccmd__pipes_out, "pipe_bash_{0}.stdout", "pipe_bash_{0}.stderr", {}
-    yield _do_test_atomiccmd__pipes_out, "pipe_bash_{0}.stdout", "stderr.txt", {"OUT_STDERR" : "stderr.txt"}
-    yield _do_test_atomiccmd__pipes_out, "stdout.txt", "pipe_bash_{0}.stderr", {"OUT_STDOUT" : "stdout.txt"}
-    yield _do_test_atomiccmd__pipes_out, "stdout.txt", "stderr.txt", {"OUT_STDOUT" : "stdout.txt",
-                                                                      "OUT_STDERR" : "stderr.txt"}
 
 def test_atomiccmd__paths__malformed_keys():
     def _do_test_atomiccmd__paths__malformed(kwargs):
@@ -593,6 +643,7 @@ def test_atomiccmd__commit_simple(temp_folder):
     assert not os.path.exists(os.path.join(temp_folder, "1234"))
     assert os.path.exists(os.path.join(destination, "1234"))
 
+
 @with_temp_folder
 def test_atomiccmd__commit_temp_out(temp_folder):
     dest, temp = _setup_for_commit(temp_folder, create_cmd = False)
@@ -605,6 +656,7 @@ def test_atomiccmd__commit_temp_out(temp_folder):
     cmd.commit(temp)
     assert_equal(os.listdir(temp), [])
     assert_equal(os.listdir(dest), ["foo.txt"])
+
 
 @with_temp_folder
 def test_atomiccmd__commit_temp_only(temp_folder):
@@ -621,6 +673,7 @@ def test_atomiccmd__commit_before_run():
     cmd = AtomicCmd("true")
     assert_raises(CmdError, cmd.commit, "/tmp")
 
+
 @with_temp_folder
 def test_atomiccmd__commit_while_running(temp_folder):
     cmd = AtomicCmd(("sleep", "10"))
@@ -628,6 +681,7 @@ def test_atomiccmd__commit_while_running(temp_folder):
     assert_raises(CmdError, cmd.commit, temp_folder)
     cmd.terminate()
     cmd.join()
+
 
 @with_temp_folder
 def test_atomiccmd__commit_before_join(temp_folder):
@@ -637,6 +691,7 @@ def test_atomiccmd__commit_before_join(temp_folder):
         pass
     assert_raises(CmdError, cmd.commit, temp_folder)
     cmd.join()
+
 
 # The temp path might differ, as long as the actual path is the same
 @with_temp_folder
@@ -664,6 +719,58 @@ def test_atomiccmd__commit_missing_files(temp_folder):
     before = set(os.listdir(temp_folder))
     assert_raises(CmdError, cmd.commit, temp_folder)
     assert_equal(before, set(os.listdir(temp_folder)))
+
+
+@with_temp_folder
+def test_atomiccmd__commit_failure_cleanup(temp_folder):
+    counter = []
+    move_file = fileutils.move_file
+
+    def _monkey_move_file(source, destination):
+        if counter:
+            raise OSError("ARRRGHHH!")
+        counter.append(destination)
+
+        return move_file(source, destination)
+
+    destination, temp_folder = _setup_for_commit(temp_folder, False)
+    command = AtomicCmd(("touch", "%(OUT_FILE_1)s", "%(OUT_FILE_2)s",
+                         "%(OUT_FILE_3)s"),
+                        OUT_FILE_1=os.path.join(destination, "file_1"),
+                        OUT_FILE_2=os.path.join(destination, "file_2"),
+                        OUT_FILE_3=os.path.join(destination, "file_3"))
+
+    try:
+        fileutils.move_file = _monkey_move_file
+        command.run(temp_folder)
+        assert_equal(command.join(), [0])
+        assert_raises(OSError, command.commit, temp_folder)
+
+        assert_equal(tuple(os.listdir(destination)), ())
+    finally:
+        fileutils.move_file = move_file
+
+
+@with_temp_folder
+def test_atomiccmd__commit_with_pipes(temp_folder):
+    destination, temp_folder = _setup_for_commit(temp_folder, False)
+    command_1 = AtomicCmd(("echo", "Hello, World!"),
+                          OUT_STDOUT=AtomicCmd.PIPE)
+    command_2 = AtomicCmd(("gzip",),
+                          IN_STDIN=command_1,
+                          OUT_STDOUT=os.path.join(destination, "foo.gz"))
+
+    command_1.run(temp_folder)
+    command_2.run(temp_folder)
+
+    assert_equal(command_1.join(), [0])
+    assert_equal(command_2.join(), [0])
+
+    command_1.commit(temp_folder)
+    command_2.commit(temp_folder)
+
+    assert_equal(set(os.listdir(destination)), set(("foo.gz",)))
+    assert_equal(set(os.listdir(temp_folder)), set())
 
 
 ################################################################################
@@ -747,3 +854,49 @@ def test_atomiccmd__cleanup_sigterm__dead_weakrefs():
                 pypeline.atomiccmd.command._cleanup_children(signal.SIGTERM, None)
     assert_equal(exit_called, [-signal.SIGTERM])
 
+
+###############################################################################
+###############################################################################
+# Testing cleanup in case of program TERMination
+
+@with_temp_folder
+def test_atomiccmd__cleanup_on_sigterm(temp_folder):
+    killpgs = []
+    os_killpg = os.killpg
+
+    def _killpg(pgid, sig):
+        killpgs.append((pgid, sig))
+
+        if len(killpgs) == 1:
+            # Errors must be ignored to handle races
+            error = OSError("Dummy")
+            error.errno = errno.ESRCH
+
+            raise error
+
+    try:
+        commands = []
+        for _ in xrange(3):
+            command = AtomicCmd(("true",))
+            command.run(temp_folder)
+            commands.append(command)
+
+        os.killpg = _killpg
+
+        # Fake SIGTERM
+        assert_raises(SystemExit, signal.getsignal(signal.SIGTERM), signal.SIGTERM, None)
+        # Each command should have killpg called on its PID
+        assert_equal(list(sorted(killpgs)),
+                     list(sorted((command._proc.pid, signal.SIGTERM)
+                                 for command in commands)))
+
+        os.killpg = os_killpg
+        for command in commands:
+            assert_equal(command.join(), [0])
+
+        # Cleaned up commands should not be killed
+        killpgs[:] = []
+        assert_raises(SystemExit, signal.getsignal(signal.SIGTERM), signal.SIGTERM, None)
+        assert_equal(killpgs, [])
+    finally:
+        os.killpg = os_killpg

@@ -182,8 +182,7 @@ def _setup_single_ended_pipeline(procs, bam_cleanup):
     # Convert input to BAM and cleanup / filter reads
     procs["pipe"] = processes.open_proc(bam_cleanup + ['cleanup-sam'],
                                         stdin=sys.stdin,
-                                        stdout=processes.PIPE,
-                                        close_fds=True)
+                                        stdout=processes.PIPE)
     sys.stdin.close()
 
     return procs["pipe"]
@@ -193,24 +192,21 @@ def _setup_paired_ended_pipeline(procs, bam_cleanup):
     # Convert input to (uncompressed) BAM
     procs["pipe"] = processes.open_proc(bam_cleanup + ["pipe"],
                                         stdin=sys.stdin,
-                                        stdout=processes.PIPE,
-                                        close_fds=True)
+                                        stdout=processes.PIPE)
     sys.stdin.close()
 
     # Fix mate information for PE reads
     call_fixmate = ['samtools', 'fixmate', '-', '-']
     procs["fixmate"] = processes.open_proc(call_fixmate,
                                            stdin=procs["pipe"].stdout,
-                                           stdout=processes.PIPE,
-                                           close_fds=True)
+                                           stdout=processes.PIPE)
     procs["pipe"].stdout.close()
 
     # Cleanup / filter reads. Must be done after 'fixmate', as BWA may produce
     # hits where the mate-unmapped flag is incorrect, which 'fixmate' fixes.
     procs["cleanup"] = processes.open_proc(bam_cleanup + ['cleanup'],
                                            stdin=procs["fixmate"].stdout,
-                                           stdout=processes.PIPE,
-                                           close_fds=True)
+                                           stdout=processes.PIPE)
     procs["fixmate"].stdout.close()
 
     return procs["cleanup"]
@@ -248,8 +244,7 @@ def _run_cleanup_pipeline(args):
         call_sort = ['samtools', 'sort', "-o", "-", args.temp_prefix]
         procs["sort"] = processes.open_proc(call_sort,
                                             stdin=last_proc.stdout,
-                                            stdout=processes.PIPE,
-                                            close_fds=True)
+                                            stdout=processes.PIPE)
         last_proc.stdout.close()
 
         # Update NM and MD tags; output BAM (-b) to stdout

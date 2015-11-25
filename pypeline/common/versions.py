@@ -47,7 +47,6 @@ For example, to check that the Java version is v1.7 or later:
 """
 import re
 import operator
-import subprocess
 import collections
 
 from pypeline.common.utilities import \
@@ -57,6 +56,8 @@ from pypeline.common.utilities import \
     try_cast
 from pypeline.common.fileutils import \
     which_executable
+
+import pypeline.common.procs as procs
 
 
 # Cache used to store the output of cmd-line / function calls
@@ -399,14 +400,13 @@ def _run(call):
     resulting message is returned as a string.
     """
     try:
-        proc = subprocess.Popen(call,
-                                stdout=subprocess.PIPE,
-                                # Merge STDERR with STDOUT output
-                                stderr=subprocess.STDOUT,
-                                close_fds=True)
+        proc = procs.open_proc(call,
+                               stdout=procs.PIPE,
+                               # Merge STDERR with STDOUT output
+                               stderr=procs.STDOUT)
 
         return proc.communicate()[0]
-    except (OSError, subprocess.CalledProcessError), error:
+    except (OSError, procs.CalledProcessError), error:
         return str(error)
 
 

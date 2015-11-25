@@ -24,7 +24,6 @@ import collections
 import io
 import os
 import re
-import subprocess
 
 import pysam
 
@@ -40,6 +39,7 @@ from pypeline.common.sequences import \
     reverse_complement
 
 import pypeline.common.formats.fastq as fastq
+import pypeline.common.procs as procs
 import pypeline.common.sampling as sampling
 import pypeline.tools.factory as factory
 
@@ -238,10 +238,10 @@ def _read_sequences(filename):
 
     cat = None
     try:
-        cat = subprocess.Popen(cat_call,
-                               bufsize=io.DEFAULT_BUFFER_SIZE,
-                               stderr=subprocess.PIPE,
-                               stdout=subprocess.PIPE)
+        cat = procs.open_proc(cat_call,
+                              bufsize=io.DEFAULT_BUFFER_SIZE,
+                              stderr=procs.PIPE,
+                              stdout=procs.PIPE)
         qualities = _collect_qualities(cat.stdout, filename)
 
         return sampling.reservoir_sampling(qualities, 100000)

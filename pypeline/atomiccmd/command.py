@@ -25,14 +25,15 @@ import errno
 import os
 import re
 import signal
-import subprocess
 import sys
 import types
 import weakref
 
 import pypeline.atomiccmd.pprint as atomicpp
 import pypeline.common.fileutils as fileutils
+import pypeline.common.procs as procs
 import pypeline.common.signals as signals
+
 from pypeline.common.utilities import safe_coerce_to_tuple
 
 _PIPES = (("IN", "IN_STDIN"),
@@ -67,7 +68,8 @@ class AtomicCmd(object):
     which ensures that any running processes are terminated. In the absence
     of this, AtomicCmds run in terminated subprocesses can result in still
     running children after the termination of the parents."""
-    PIPE = subprocess.PIPE
+    PIPE = procs.PIPE
+    DEVNULL = procs.DEVNULL
 
     def __init__(self, command, set_cwd=False, **kwargs):
         """Takes a command and a set of files.
@@ -177,13 +179,16 @@ class AtomicCmd(object):
             temp = "" if self._set_cwd else os.path.abspath(temp)
             call = self._generate_call(temp)
 
-            self._proc = subprocess.Popen(call,
-                                          stdin=stdin,
-                                          stdout=stdout,
-                                          stderr=stderr,
-                                          cwd=cwd,
-                                          preexec_fn=os.setsid,
-                                          close_fds=True)
+            # Explicitly set to DEVNULL to ensure that STDIN is not left open.
+            if stdin is None:
+                stdin = self.DEVNULL
+
+            self._proc = procs.open_proc(call,
+                                         stdin=stdin,
+                                         stdout=stdout,
+                                         stderr=stderr,
+                                         cwd=cwd,
+                                         preexec_fn=os.setsid)
         except StandardError, error:
             if not wrap_errors:
                 raise
@@ -196,7 +201,7 @@ class AtomicCmd(object):
         finally:
             # Close pipes to allow the command to recieve SIGPIPE
             for handle in (stdin, stdout, stderr):
-                if handle not in (None, self.PIPE):
+                if handle not in (None, self.PIPE, self.DEVNULL):
                     handle.close()
 
         # Allow subprocesses to be killed in case of a SIGTERM
@@ -338,9 +343,13 @@ class AtomicCmd(object):
                     continue
 
                 if key in ("OUT_STDOUT", "TEMP_OUT_STDOUT"):
-                    if value != cls.PIPE:
-                        raise TypeError("STDOUT must be a string or "
-                                        "AtomicCmd.PIPE, not %r" % (value,))
+                    if value not in (cls.PIPE, cls.DEVNULL):
+                        raise TypeError("STDOUT must be a string, PIPE "
+                                        "or DEVNULL, not %r" % (value,))
+                elif key in ("OUT_STDERR", "TEMP_OUT_STDERR"):
+                    if value is not cls.DEVNULL:
+                        raise TypeError("STDERR must be a string, "
+                                        "or DEVNULL, not %r" % (value,))
                 else:
                     raise TypeError("%s must be string, not %r" % (key, value))
 
@@ -351,9 +360,10 @@ class AtomicCmd(object):
                     continue
 
                 if key in ("IN_STDIN", "TEMP_IN_STDIN"):
-                    if not isinstance(value, AtomicCmd):
-                        raise TypeError("STDIN must be string or AtomicCmd, "
-                                        "not %r" % (value,))
+                    if not isinstance(value, AtomicCmd) \
+                            and value is not cls.DEVNULL:
+                        raise TypeError("STDIN must be string, AtomicCmd, "
+                                        "or DEVNULL, not %r" % (value,))
                 else:
                     raise TypeError("%s must be string, not %r" % (key, value))
 
@@ -396,7 +406,7 @@ class AtomicCmd(object):
     @classmethod
     def _open_pipe(cls, kwords, pipe, mode):
         filename = kwords.get(pipe, kwords.get("TEMP_" + pipe))
-        if filename in (None, cls.PIPE):
+        if filename in (None, cls.PIPE, cls.DEVNULL):
             return filename
         elif isinstance(filename, AtomicCmd):
             # pylint: disable=W0212
@@ -456,11 +466,9 @@ def _cleanup_children(signum, _frame):
         if proc:
             try:
                 os.killpg(proc.pid, signal.SIGTERM)
-            except OSError, error:
-                # Ignore already closed processes
-                if error.errno != errno.ESRCH:
-                    sys.stderr.write("Warning: Failed to cleanup process %i: %s\n"
-                                     % (proc.pid, error))
+            except OSError:
+                # Ignore already closed processes, etc.
+                pass
     sys.exit(-signum)
 
 

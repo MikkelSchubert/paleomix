@@ -21,24 +21,47 @@
 # SOFTWARE.
 #
 """
-Tools used for running raw (not Atomic) processes.
+Tools used for working with subprocesses.
 """
-
+import os
 import sys
 import time
-import subprocess
+
+from subprocess import *
 
 
-PIPE = subprocess.PIPE
+DEVNULL = object()
 
 
 def open_proc(call, *args, **kwargs):
-    """Equivalent to subprocess.Popen, but records the system call as a tuple
-    assigned to the .call property of the Popen object.
+    """Wrapper around subprocess.Popen, which records the system call as a
+    tuple assigned to the .call property of the Popen object. In addition, the
+    'close_fds' option defaults to True, similar to Python 3+, and the DEVNULL
+    value may be passed for 'stdin', 'stdout', and 'stderr' to pipe to / from
+    /dev/null, with stdin defaulting to DEVNULL (set to None or another value
+    to override).
     """
-    proc = subprocess.Popen(call, *args, **kwargs)
-    proc.call = tuple(call)
-    return proc
+    # Reduce the chance of unexpected behavior
+    kwargs.setdefault("close_fds", True)
+    # Unless specifically requested
+    kwargs.setdefault("stdin", DEVNULL)
+
+    devnull = None
+
+    try:
+        for key in ("stdin", "stderr", "stdout"):
+            if kwargs.get(key) is DEVNULL:
+                if devnull is None:
+                    devnull = os.open(os.devnull, os.O_RDWR)
+                kwargs[key] = devnull
+
+        proc = Popen(call, *args, **kwargs)
+        proc.call = tuple(call)
+
+        return proc
+    finally:
+        if devnull is not None:
+            os.close(devnull)
 
 
 def join_procs(procs, out=sys.stderr):

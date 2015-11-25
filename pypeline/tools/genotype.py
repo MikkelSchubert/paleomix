@@ -170,14 +170,12 @@ def setup_basic_batch(args, regions, prefix, func):
 
         setup["procs"]["filter"] \
             = processes.open_proc(filter_builder.call,
-                                  stdout=processes.PIPE,
-                                  close_fds=True)
+                                  stdout=processes.PIPE)
 
         setup["handles"]["outfile"] = open(prefix, "w")
         zip_proc = processes.open_proc(["bgzip"],
                                        stdin=func(setup),
-                                       stdout=setup["handles"]["outfile"],
-                                       close_fds=True)
+                                       stdout=setup["handles"]["outfile"])
 
         setup["procs"]["gzip"] = zip_proc
 
@@ -205,8 +203,7 @@ def setup_mpileup_batch(args, regions, prefix):
         procs["mpileup"] \
             = processes.open_proc(call,
                                   stdin=procs["filter"].stdout,
-                                  stdout=processes.PIPE,
-                                  close_fds=True)
+                                  stdout=processes.PIPE)
 
         return procs["mpileup"].stdout
 
@@ -233,8 +230,7 @@ def setup_genotyping_batch(args, regions, prefix):
         procs["mpileup"] \
             = processes.open_proc(mpileup_call,
                                   stdin=procs["filter"].stdout,
-                                  stdout=processes.PIPE,
-                                  close_fds=True)
+                                  stdout=processes.PIPE)
 
         bcftools_call = build_call(call=("bcftools", "view"),
                                    args={},
@@ -247,8 +243,7 @@ def setup_genotyping_batch(args, regions, prefix):
         procs["bcftools"] \
             = processes.open_proc(bcftools_call,
                                   stdin=procs["mpileup"].stdout,
-                                  stdout=processes.PIPE,
-                                  close_fds=True)
+                                  stdout=processes.PIPE)
 
         return procs["bcftools"].stdout
 
