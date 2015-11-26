@@ -33,7 +33,6 @@ import pysam
 
 import pypeline.tools.bam_pipeline.paths as paths
 from pypeline.common.utilities import fill_dict
-from pypeline.common.fileutils import missing_files
 from pypeline.common.makefile import \
     MakefileError, \
     REQUIRED_VALUE, \
@@ -274,7 +273,7 @@ def _update_options(makefile):
         if "Options" in data:
             if "Features" in data["Options"]:
                 raise MakefileError("Features may only be specified at root "
-                                    "level, not at %r" % (":".join(path),))
+                                    "level, not at %r" % (" :: ".join(path),))
 
             # Fill out missing values using those of prior levels
             options = fill_dict(destination=data.pop("Options"),
@@ -363,13 +362,13 @@ def _determine_lane_type(prefixes, data, path):
                 if is_paired and (key != "Paired"):
                     raise MakefileError("Error at Barcode level; Path "
                                         "includes {Pair} key, but read-type "
-                                        "is not Paired:\n    "
-                                        "%s:%s" % (":".join(path), key))
+                                        "is not Paired:\n    %r"
+                                        % (" :: ".join(path + (key,)),))
                 elif not is_paired and (key == "Paired"):
                     raise MakefileError("Error at Barcode level; Paired pre-"
                                         "trimmed reads specified, but path "
-                                        "does not contain {Pair} key:\n    "
-                                        "%s:%s" % (":".join(path), key))
+                                        "does not contain {Pair} key:\n    %r"
+                                        % (" :: ".join(path + (key,)),))
 
             return "Trimmed"
         elif all((key in prefixes) for key in data):
@@ -405,25 +404,21 @@ def _split_lanes_by_filenames(makefile):
     for (target, sample, library, barcode, record) in iterator:
         if record["Type"] == "Raw":
             template = record["Data"]
-            record["Data"] = files = paths.collect_files(template)
+            path = (target, sample, library, barcode)
+            record["Data"] = files = paths.collect_files(path, template)
             split = record["Options"]["SplitLanesByFilenames"]
 
             if (split is True) or (isinstance(split, list) and (barcode in split)):
-                if any(missing_files(file_set) for file_set in files.itervalues()):
-                    raise MakefileError("Unable to split by filename for "
-                                        "search-string '%s', did not find any "
-                                        "files; please verify that the path"
-                                        "is correct and update the makefile."
-                                        % template)
-                elif any(len(v) > 1 for v in files.itervalues()):
+                if any(len(v) > 1 for v in files.itervalues()):
                     template = makefile["Targets"][target][sample][library].pop(barcode)
                     keys = ("SE",) if ("SE" in files) else ("PE_1", "PE_2")
 
                     input_files = [files[key] for key in keys]
+                    assert len(input_files[0]) == len(input_files[-1]), input_files
+
                     input_files_iter = itertools.izip_longest(*input_files)
                     for (index, filenames) in enumerate(input_files_iter, start=1):
                         assert len(filenames) == len(keys)
-                        assert len(filenames[0]) == len(filenames[-1])
                         new_barcode = "%s_%03i" % (barcode, index)
 
                         current = copy.deepcopy(template)

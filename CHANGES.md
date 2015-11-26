@@ -2,6 +2,9 @@
 Changelog
 =========
 
+  2015-11-26: Improved handling FASTQ paths containing wildcards in the BAM
+              pipeline, including additional checks to catch unequal numbers
+              of files for paired-end reads.
   2015-11-26: Switch to setuptools in preperation for PyPI registration.
   2015-11-26: Avoid seperate indexing of intermediate BAMs when possible,
               reducing the total number of steps required for typical runs.
