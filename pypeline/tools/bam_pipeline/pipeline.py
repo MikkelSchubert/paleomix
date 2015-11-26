@@ -225,7 +225,7 @@ def run(config, args, pipeline_variant):
 
     logger.info("Running BAM pipeline ...")
     if not pipeline.run(dry_run=config.dry_run,
-                        max_running=config.max_threads,
+                        max_threads=config.max_threads,
                         progress_ui=config.progress_ui):
         return 1
 

@@ -109,7 +109,7 @@ def main(argv):
             return 1
         return 0
 
-    if not pipeline.run(max_running=config.max_threads,
+    if not pipeline.run(max_threads=config.max_threads,
                         dry_run=config.dry_run,
                         progress_ui=config.progress_ui):
         return 1

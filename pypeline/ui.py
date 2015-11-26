@@ -113,18 +113,18 @@ class CommandLine(object):
             # Restore settings (re-enable echo)
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self._tty_settings)
 
-    def process_key_presses(self, nodegraph, max_running):
+    def process_key_presses(self, nodegraph, max_threads):
         if not self._tty_settings:
-            return max_running
+            return max_threads
 
         help_printed = False
-        old_max_running = max_running
+        old_max_threads = max_threads
         while self.poll_stdin():
             character = sys.stdin.read(1)
             if character == "+":
-                max_running = min(multiprocessing.cpu_count(), max_running + 1)
+                max_threads = min(multiprocessing.cpu_count(), max_threads + 1)
             elif character == "-":
-                max_running = max(1, max_running - 1)
+                max_threads = max(1, max_threads - 1)
             elif character in "lL":
                 pypeline.ui.print_info()
                 progress_printer = pypeline.ui.RunningUI()
@@ -148,12 +148,12 @@ Commands:
             else:
                 continue
 
-        if max_running != old_max_running:
+        if max_threads != old_max_threads:
             pypeline.ui.print_debug("Maximum number of threads changed "
                                     "from %i to %i."
-                                    % (old_max_running, max_running))
+                                    % (old_max_threads, max_threads))
 
-        return max_running
+        return max_threads
 
     @classmethod
     def poll_stdin(cls):

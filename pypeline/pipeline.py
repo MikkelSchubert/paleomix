@@ -60,9 +60,10 @@ class Pypeline(object):
                                     % repr(node))
                 self._nodes.append(node)
 
-    def run(self, max_running=1, dry_run=False, progress_ui="verbose"):
-        assert max_running >= 1, max_running
-        _update_nprocesses(self._pool, max_running)
+    def run(self, max_threads=1, dry_run=False, progress_ui="verbose"):
+        if max_threads < 1:
+            raise ValueError("Max threads must be >= 1")
+        _update_nprocesses(self._pool, max_threads)
 
         try:
             nodegraph = NodeGraph(self._nodes)
@@ -71,7 +72,7 @@ class Pypeline(object):
             return False
 
         for node in nodegraph.iterflat():
-            if (node.threads > max_running):
+            if (node.threads > max_threads):
                 message = "Node(s) use more threads than the max allowed; " \
                           "the pipeline may therefore use more than the " \
                           "expected number of threads.\n"
@@ -88,13 +89,13 @@ class Pypeline(object):
 
         old_handler = signal.signal(signal.SIGINT, self._sigint_handler)
         try:
-            return self._run(nodegraph, max_running, progress_ui)
+            return self._run(nodegraph, max_threads, progress_ui)
         finally:
             signal.signal(signal.SIGINT, old_handler)
 
         return False
 
-    def _run(self, nodegraph, max_running, progress_ui):
+    def _run(self, nodegraph, max_threads, progress_ui):
         # Dictionary of nodes -> async-results
         running = {}
         # Set of remaining nodes to be run
@@ -112,13 +113,13 @@ class Pypeline(object):
 
                 if not self._interrupted:  # Prevent starting of new nodes
                     self._start_new_tasks(remaining, running, nodegraph,
-                                          max_running, self._pool)
+                                          max_threads, self._pool)
 
                 if running:
                     progress_printer.flush()
 
-                max_running = cli.process_key_presses(nodegraph, max_running)
-                _update_nprocesses(self._pool, max_running)
+                max_threads = cli.process_key_presses(nodegraph, max_threads)
+                _update_nprocesses(self._pool, max_threads)
 
         self._pool.close()
         self._pool.join()
