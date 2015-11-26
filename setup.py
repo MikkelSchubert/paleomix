@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+#
 # Copyright (c) 2013 Mikkel Schubert <MSchubert@snm.ku.dk>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -7,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -17,16 +19,11 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-#!/usr/bin/python
+import codecs
 import os
-import re
 import sys
-import shutil
 
-from distutils.core import \
-    setup
-from distutils.command.install_scripts import \
-    install_scripts as DistutilsInstallScripts
+from setuptools import setup, find_packages
 
 
 if (sys.version_info.major != 2) or (sys.version_info.minor != 7):
@@ -36,59 +33,72 @@ if (sys.version_info.major != 2) or (sys.version_info.minor != 7):
     sys.exit(1)
 
 
-def get_version():
-    import pypeline
-    return pypeline.__version__
+def _get_version():
+    """Retrieve version from current install directory."""
+    env = {}
+    with open(os.path.join("pypeline", "__init__.py")) as handle:
+        exec(handle.read(), env)
+
+    return env["__version__"]
 
 
-def locate_packages():
-    packages = ['pypeline']
-    for (dirpath, dirnames, _) in os.walk(packages[0]):
-        for dirname in dirnames:
-            package = os.path.join(dirpath, dirname).replace(os.sep, ".")
-            packages.append(package)
-    return packages
+def _get_readme():
+    """Retrieves contents of README.rst, forcing UTF-8 encoding."""
+    with codecs.open("README.rst", encoding="utf-8") as handle:
+        return handle.read()
 
 
-def locate_scripts(is_link=False):
-    scripts = []
-    for filename in os.listdir("bin"):
-        if re.match(r"^[0-9a-z_]+", filename):
-            script = os.path.join("bin", filename)
-            if os.path.islink(script) == is_link:
-                scripts.append(script)
-    return scripts
+setup(
+    name='paleomix',
+    version=_get_version(),
 
+    description='Bioinformatics pipelines for HTS data',
+    long_description=_get_readme(),
 
-class InstallLinks(DistutilsInstallScripts):
-    def run(self):
-        DistutilsInstallScripts.run(self)
+    url='https://github.com/MikkelSchubert/paleomix',
 
-        # Ensure that symbolic links are preserved as symbolic links
-        links = [os.path.basename(fpath)
-                 for fpath in locate_scripts(is_link=True)]
+    author='Mikkel Schubert',
+    author_email='MSchubert@snm.ku.dk',
 
-        for bin_fpath in self.get_outputs():
-            if os.path.basename(bin_fpath) == 'paleomix':
-                fpath = os.path.dirname(bin_fpath)
+    license='MIT',
 
-                for link in links:
-                    link_fpath = os.path.join(fpath, link)
-                    print "linking", link_fpath, "-> 'paleomix'"
-                    if os.path.exists(link_fpath):
-                        os.remove(link_fpath)
+    classifiers=[
+        'Development Status :: 5 - Production/Stable',
 
-                    os.symlink('paleomix', link_fpath)
-                    shutil.copymode(bin_fpath, link_fpath)
+        'Intended Audience :: Science/Research',
+        'Topic :: Scientific/Engineering :: Bio-Informatics',
 
+        'License :: OSI Approved :: MIT License',
 
-setup(name='PALEOMIX Pipeline',
-      version=get_version(),
-      description='(Framework for) Bioinformatics pipelines',
-      author='Mikkel Schubert',
-      author_email='MSchubert@snm.ku.dk',
-      url='https://github.com/MikkelSchubert/paleomix',
-      requires=['pysam (>=0.7.5)'],
-      packages=locate_packages(),
-      scripts=locate_scripts(),
-      cmdclass={'install_scripts': InstallLinks})
+        'Programming Language :: Python :: 2 :: Only',
+        'Programming Language :: Python :: 2.7',
+    ],
+
+    keywords='pipeline bioinformatics hts phylogeny bam',
+
+    packages=find_packages(exclude=['misc', 'tests']),
+
+    install_requires=['pysam>=0.8.3'],
+
+    # Dependencies set in setup_requires to allow use of 'setup.py nosetests'
+    setup_requires=['nose>=1.3.0',
+                    'flexmock>=0.9.7',
+                    'coverage>=4.0.0'],
+
+    test_suite='nose.collector',
+
+    entry_points={
+        'console_scripts': [
+            'paleomix=pypeline:run',
+
+            # Aliases used in previous publications
+            'bam_pipeline=pypeline:run_bam_pipeline',
+            'bam_rmdup_collapsed=pypeline:run_rmdup_collapsed',
+            'conv_gtf_to_bed=pypeline:run_gtf_to_bed',
+            'phylo_pipeline=pypeline:run_phylo_pipeline',
+            'trim_pipeline=pypeline:run_trim_pipeline',
+        ],
+    },
+
+    zip_safe=False,
+)

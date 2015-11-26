@@ -2,6 +2,7 @@
 Changelog
 =========
 
+  2015-11-26: Switch to setuptools in preperation for PyPI registration.
   2015-11-26: Avoid seperate indexing of intermediate BAMs when possible,
               reducing the total number of steps required for typical runs.
   2015-11-25: Restructure tests, removing (mostly unused) node tests.
