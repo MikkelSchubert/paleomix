@@ -60,8 +60,6 @@ from pypeline.common.console import \
     print_info, \
     print_warn
 
-import pypeline.nodes.bwa as bwa
-import pypeline.common.versions as versions
 import pypeline.common.sequences as sequences
 
 
@@ -410,7 +408,7 @@ def _split_lanes_by_filenames(makefile):
             record["Data"] = files = paths.collect_files(template)
             split = record["Options"]["SplitLanesByFilenames"]
 
-            if (split == True) or (isinstance(split, list) and (barcode in split)):
+            if (split is True) or (isinstance(split, list) and (barcode in split)):
                 if any(missing_files(file_set) for file_set in files.itervalues()):
                     raise MakefileError("Unable to split by filename for "
                                         "search-string '%s', did not find any "
