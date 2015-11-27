@@ -37,35 +37,34 @@ from paleomix.atomiccmd.command import AtomicCmd, CmdError
 from paleomix.atomiccmd.sets import ParallelCmds, SequentialCmds
 
 
-
-################################################################################
-################################################################################
-## Properties with same expected behavior for both Parallel/SequentialCmds
+###############################################################################
+###############################################################################
+# Properties with same expected behavior for both Parallel/SequentialCmds
 
 def test_atomicsets__properties():
     def _do_test(cls):
         cmd_mock_1 = AtomicCmd(("true",),
-                             CHECK_A    = id,
-                             EXEC_1     = "false",
-                             IN_1       = "/foo/bar/in_1.file",
-                             IN_2       = "/foo/bar/in_2.file",
-                             OUT_1      = "/bar/foo/out",
-                             TEMP_OUT_1 = "out.log",
-                             AUX_A      = "/aux/fA",
-                             AUX_B      = "/aux/fB")
+                               CHECK_A=id,
+                               EXEC_1="false",
+                               IN_1="/foo/bar/in_1.file",
+                               IN_2="/foo/bar/in_2.file",
+                               OUT_1="/bar/foo/out",
+                               TEMP_OUT_1="out.log",
+                               AUX_A="/aux/fA",
+                               AUX_B="/aux/fB")
         cmd_mock_2 = AtomicCmd(("false",),
-                             CHECK_A    = list,
-                             EXEC_1     = "echo",
-                             EXEC_2     = "java",
-                             IN_1       = "/foo/bar/in.file",
-                             OUT_1      = "out.txt")
+                               CHECK_A=list,
+                               EXEC_1="echo",
+                               EXEC_2="java",
+                               IN_1="/foo/bar/in.file",
+                               OUT_1="out.txt")
 
         obj = cls([cmd_mock_1, cmd_mock_2])
-        assert_equal(obj.executables,      cmd_mock_1.executables  | cmd_mock_2.executables)
-        assert_equal(obj.requirements,     cmd_mock_1.requirements | cmd_mock_2.requirements)
-        assert_equal(obj.input_files,      cmd_mock_1.input_files  | cmd_mock_2.input_files)
-        assert_equal(obj.output_files,     cmd_mock_1.output_files | cmd_mock_2.output_files)
-        assert_equal(obj.auxiliary_files,  cmd_mock_1.auxiliary_files | cmd_mock_2.auxiliary_files)
+        assert_equal(obj.executables, cmd_mock_1.executables | cmd_mock_2.executables)
+        assert_equal(obj.requirements, cmd_mock_1.requirements | cmd_mock_2.requirements)
+        assert_equal(obj.input_files, cmd_mock_1.input_files | cmd_mock_2.input_files)
+        assert_equal(obj.output_files, cmd_mock_1.output_files | cmd_mock_2.output_files)
+        assert_equal(obj.auxiliary_files, cmd_mock_1.auxiliary_files | cmd_mock_2.auxiliary_files)
         assert_equal(obj.expected_temp_files, frozenset(["out", "out.txt"]))
         assert_equal(obj.optional_temp_files, cmd_mock_1.optional_temp_files | cmd_mock_2.optional_temp_files)
 
@@ -81,19 +80,17 @@ def test_atomicsets__no_clobbering():
         assert_raises(CmdError, cls, [cmd_1, cmd_2])
 
     for cls in (ParallelCmds, SequentialCmds):
-        yield _do_test_atomicsets__no_clobbering, cls, {"OUT_A" : "/foo/out.txt"}, {"OUT_B" : "/bar/out.txt"}
-        yield _do_test_atomicsets__no_clobbering, cls, {"OUT_A" : "/foo/out.txt"}, {"TEMP_OUT_B" : "out.txt"}
-        yield _do_test_atomicsets__no_clobbering, cls, {"OUT_A" : "/foo/out.txt"}, {"OUT_STDOUT" : "/bar/out.txt"}
-        yield _do_test_atomicsets__no_clobbering, cls, {"OUT_A" : "/foo/out.txt"}, {"TEMP_OUT_STDOUT" : "out.txt"}
-        yield _do_test_atomicsets__no_clobbering, cls, {"OUT_A" : "/foo/out.txt"}, {"OUT_STDERR" : "/bar/out.txt"}
-        yield _do_test_atomicsets__no_clobbering, cls, {"OUT_A" : "/foo/out.txt"}, {"TEMP_OUT_STDERR" : "out.txt"}
+        yield _do_test_atomicsets__no_clobbering, cls, {"OUT_A": "/foo/out.txt"}, {"OUT_B": "/bar/out.txt"}
+        yield _do_test_atomicsets__no_clobbering, cls, {"OUT_A": "/foo/out.txt"}, {"TEMP_OUT_B": "out.txt"}
+        yield _do_test_atomicsets__no_clobbering, cls, {"OUT_A": "/foo/out.txt"}, {"OUT_STDOUT": "/bar/out.txt"}
+        yield _do_test_atomicsets__no_clobbering, cls, {"OUT_A": "/foo/out.txt"}, {"TEMP_OUT_STDOUT": "out.txt"}
+        yield _do_test_atomicsets__no_clobbering, cls, {"OUT_A": "/foo/out.txt"}, {"OUT_STDERR": "/bar/out.txt"}
+        yield _do_test_atomicsets__no_clobbering, cls, {"OUT_A": "/foo/out.txt"}, {"TEMP_OUT_STDERR": "out.txt"}
 
 
-
-
-################################################################################
-################################################################################
-## Functions with same expected behavior for both Parallel/SequentialCmds
+###############################################################################
+###############################################################################
+# Functions with same expected behavior for both Parallel/SequentialCmds
 
 def test_atomicsets__commit():
     def _do_test_atomicsets__commit(cls):
@@ -108,14 +105,16 @@ def test_atomicsets__commit():
     yield _do_test_atomicsets__commit, ParallelCmds
     yield _do_test_atomicsets__commit, SequentialCmds
 
+
 def test_atomicsets__stdout():
     @nose.tools.raises(CmdError)
     def _do_test_atomicsets__stdout(cls):
         cmds = cls([AtomicCmd("ls")])
-        cmds.stdout # pylint: disable=W0104
+        cmds.stdout
 
     yield _do_test_atomicsets__stdout, ParallelCmds
     yield _do_test_atomicsets__stdout, SequentialCmds
+
 
 def test_atomicsets__terminate():
     def _do_test_atomicsets__terminate(cls):
@@ -130,6 +129,7 @@ def test_atomicsets__terminate():
     yield _do_test_atomicsets__terminate, ParallelCmds
     yield _do_test_atomicsets__terminate, SequentialCmds
 
+
 def test_atomicsets__str__():
     def _do_test_atomicsets__str__(cls):
         cmds = cls([AtomicCmd("ls")])
@@ -137,6 +137,7 @@ def test_atomicsets__str__():
 
     yield _do_test_atomicsets__str__, ParallelCmds
     yield _do_test_atomicsets__str__, SequentialCmds
+
 
 def test_atomicsets__duplicate_cmds():
     def _do_test_atomicsets__duplicate_cmds(cls):
@@ -148,10 +149,9 @@ def test_atomicsets__duplicate_cmds():
     yield _do_test_atomicsets__duplicate_cmds, SequentialCmds
 
 
-
-################################################################################
-################################################################################
-## Parallel commands
+###############################################################################
+###############################################################################
+# Parallel commands
 
 def test_parallel_commands__run():
     mocks = []
@@ -163,6 +163,7 @@ def test_parallel_commands__run():
     cmds = ParallelCmds(mocks)
     cmds.run("xTMPx")
 
+
 def test_parallel_commands__ready_single():
     def _do_test_parallel_commands__ready_single(value):
         cmd_mock = flexmock(AtomicCmd(["ls"]))
@@ -172,6 +173,7 @@ def test_parallel_commands__ready_single():
 
     yield _do_test_parallel_commands__ready_single, True
     yield _do_test_parallel_commands__ready_single, False
+
 
 def test_parallel_commands__ready_two():
     def _do_test_parallel_commands__ready_two(first, second, result):
@@ -197,12 +199,12 @@ def test_parallel_commands__join_before_run():
     cmds = ParallelCmds(mocks)
     assert_equal(cmds.join(), [None, None, None])
 
+
 @with_temp_folder
 def test_parallel_commands__join_after_run(temp_folder):
     cmds = ParallelCmds([AtomicCmd("true") for _ in range(3)])
     cmds.run(temp_folder)
     assert_equal(cmds.join(), [0, 0, 0])
-
 
 
 def _setup_mocks_for_failure(*do_mocks):
@@ -225,12 +227,14 @@ def test_parallel_commands__join_failure_1(temp_folder):
     cmds.run(temp_folder)
     assert_equal(cmds.join(), [1, 'SIGTERM', 'SIGTERM'])
 
+
 @with_temp_folder
 def test_parallel_commands__join_failure_2(temp_folder):
     mocks = _setup_mocks_for_failure(True, False, True)
     cmds = ParallelCmds(mocks)
     cmds.run(temp_folder)
     assert_equal(cmds.join(), ['SIGTERM', 1, 'SIGTERM'])
+
 
 @with_temp_folder
 def test_parallel_commands__join_failure_3(temp_folder):
@@ -242,27 +246,29 @@ def test_parallel_commands__join_failure_3(temp_folder):
 
 def test_parallel_commands__reject_sequential():
     command = AtomicCmd(["ls"])
-    seqcmd  = SequentialCmds([command])
+    seqcmd = SequentialCmds([command])
     assert_raises(CmdError, ParallelCmds, [seqcmd])
+
 
 def test_parallel_commands__accept_parallel():
     command = AtomicCmd(["ls"])
-    parcmd  = ParallelCmds([command])
+    parcmd = ParallelCmds([command])
     ParallelCmds([parcmd])
+
 
 @nose.tools.raises(CmdError)
 def test_parallel_commands__reject_noncommand():
     ParallelCmds([object()])
+
 
 @nose.tools.raises(CmdError)
 def test_parallel_commands__reject_empty_commandset():
     ParallelCmds([])
 
 
-
-################################################################################
-################################################################################
-## Sequential commands
+###############################################################################
+###############################################################################
+# Sequential commands
 
 def test_sequential_commands__atomiccmds():
     mocks = []
@@ -278,6 +284,7 @@ def test_sequential_commands__atomiccmds():
     assert cmds.ready()
     assert_equal(cmds.join(), [0, 0, 0])
 
+
 @with_temp_folder
 @nose.tools.timed(1)
 def test_sequential_commands__abort_on_error_1(temp_folder):
@@ -288,6 +295,7 @@ def test_sequential_commands__abort_on_error_1(temp_folder):
     cmds.run(temp_folder)
     assert_equal(cmds.join(), [1, None, None])
 
+
 @with_temp_folder
 @nose.tools.timed(1)
 def test_sequential_commands__abort_on_error_2(temp_folder):
@@ -297,6 +305,7 @@ def test_sequential_commands__abort_on_error_2(temp_folder):
     cmds = SequentialCmds([cmd_1, cmd_2, cmd_3])
     cmds.run(temp_folder)
     assert_equal(cmds.join(), [0, 1, None])
+
 
 @with_temp_folder
 @nose.tools.timed(1)
@@ -311,17 +320,20 @@ def test_sequential_commands__abort_on_error_3(temp_folder):
 
 def test_sequential_commands__accept_parallel():
     command = AtomicCmd(["ls"])
-    parcmd  = ParallelCmds([command])
+    parcmd = ParallelCmds([command])
     SequentialCmds([parcmd])
+
 
 def test_sequential_commands__accept_sequential():
     command = AtomicCmd(["ls"])
-    seqcmd  = SequentialCmds([command])
+    seqcmd = SequentialCmds([command])
     SequentialCmds([seqcmd])
+
 
 @nose.tools.raises(CmdError)
 def test_sequential_commands__reject_noncommand():
     SequentialCmds([object()])
+
 
 @nose.tools.raises(CmdError)
 def test_sequential_commands__reject_empty_commandset():

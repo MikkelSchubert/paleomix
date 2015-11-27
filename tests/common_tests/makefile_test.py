@@ -73,8 +73,16 @@ _DUMMY_PATH_STR = ":".join(_DUMMY_PATH)
 ###############################################################################
 # Setup timestamps for test files
 
+def test_dir():
+    return os.path.dirname(os.path.dirname(__file__))
+
+
+def test_file(*args):
+    return os.path.join(test_dir(), "data", *args)
+
+
 def setup_module():
-    timestamps = {"tests/data/simple.yaml": 1120719000}
+    timestamps = {test_file("simple.yaml"): 1120719000}
 
     for filename, timestamp in timestamps.iteritems():
         # Set atime and mtime
@@ -1546,6 +1554,7 @@ def test_process_makefile__path_shown_in_exception_for_list():
     assert_raises_regexp(MakefileError, _DUMMY_PATH_STR,
                          process_makefile, {}, [], _DUMMY_PATH)
 
+
 def test_process_makefile__path_shown_in_exception_for_dict():
     assert_raises_regexp(MakefileError, _DUMMY_PATH_STR,
                          process_makefile, [], {}, _DUMMY_PATH)
@@ -1620,7 +1629,7 @@ def test_read_makefile__missing_file():
 
 
 def test_read_makefile__not_a_yaml_file():
-    fpath = "tests/data/fasta_file.fasta"
+    fpath = test_file("fasta_file.fasta")
     assert_raises(MakefileError, read_makefile, fpath, {})
 
 
@@ -1630,10 +1639,10 @@ def test_read_makefile__missing_simple_file():
         "Makefile": {"Defaults": {"First": 1e-4,
                                   "Second": "a string"}},
         "Statistics": {
-            "Filename": "tests/data/simple.yaml",
+            "Filename": test_file("simple.yaml"),
             "Hash": "563a2052b67dcde9f193fbe8d51fa2b6f0806505",
             "MTime": "2005-07-07 08:50:00",
         }
     }
-    result = read_makefile("tests/data/simple.yaml", specs)
+    result = read_makefile(test_file("simple.yaml"), specs)
     assert_equal(expected, result)

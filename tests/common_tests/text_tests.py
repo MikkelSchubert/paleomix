@@ -39,7 +39,7 @@ from paleomix.common.text import \
 
 ###############################################################################
 ###############################################################################
-## Tests for 'padded_table'
+# Tests for 'padded_table'
 
 def _padded_table(*args, **kwargs):
     return list(padded_table(*args, **kwargs))
@@ -104,7 +104,7 @@ def test_padded_table__misshapen_table_2():
 
 ###############################################################################
 ###############################################################################
-## Tests for 'parse_padded_table'
+# Tests for 'parse_padded_table'
 
 def _parse_padded_table(*args, **kwargs):
     return list(parse_padded_table(*args, **kwargs))
@@ -203,7 +203,7 @@ def test_parse_padded_table__malformed_table_1():
 
 ###############################################################################
 ###############################################################################
-## Tests for 'parse_linse'
+# Tests for 'parse_linse'
 def _this(*args):
     return args
 
@@ -261,7 +261,7 @@ def test_parse_lines__uncallable():
 
 ###############################################################################
 ###############################################################################
-## Tests for 'parse_lines_by_contig'
+# Tests for 'parse_lines_by_contig'
 _RecordMock = collections.namedtuple("_RecordMock", "contig value")
 
 

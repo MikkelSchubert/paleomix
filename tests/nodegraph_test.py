@@ -41,14 +41,22 @@ from paleomix.nodegraph import \
     FileStatusCache
 
 
+def test_dir():
+    return os.path.dirname(__file__)
+
+
+def test_file(*args):
+    return os.path.join(test_dir(), "data", *args)
+
+
 _DESCRIPTION = "My description of a node"
-_IN_FILES = frozenset(("tests/data/empty_file_1",
-                       "tests/data/empty_file_2"))
-_OUT_FILES = frozenset(("tests/data/missing_out_file_1",
-                        "tests/data/missing_out_file_2"))
+_IN_FILES = frozenset((test_file("empty_file_1"),
+                       test_file("empty_file_2")))
+_OUT_FILES = frozenset((test_file("missing_out_file_1"),
+                        test_file("missing_out_file_2")))
 _EXEC_FILES = frozenset(("ls", "sh"))
-_AUX_FILES = frozenset(("tests/data/rCRS.fasta",
-                        "tests/data/rCRS.fasta.fai"))
+_AUX_FILES = frozenset((test_file("rCRS.fasta"),
+                        test_file("rCRS.fasta.fai")))
 _REQUIREMENTS = frozenset((id, str))
 
 
@@ -57,10 +65,10 @@ _REQUIREMENTS = frozenset((id, str))
 # Setup timestamps for test files
 
 def setup_module():
-    timestamps = {"tests/data/timestamp_a_older": 1000190760,
-                  "tests/data/timestamp_b_older": 1000190760,
-                  "tests/data/timestamp_a_younger": 1120719000,
-                  "tests/data/timestamp_b_younger": 1120719000}
+    timestamps = {test_file("timestamp_a_older"): 1000190760,
+                  test_file("timestamp_b_older"): 1000190760,
+                  test_file("timestamp_a_younger"): 1120719000,
+                  test_file("timestamp_b_younger"): 1120719000}
 
     for filename, timestamp in timestamps.iteritems():
         # Set atime and mtime
@@ -118,21 +126,21 @@ def test_nodegraph_is_outdated__output_but_no_input():
 
 
 def test_nodegraph_is_outdated__not_outdated():
-    my_node = flexmock(input_files=("tests/data/timestamp_a_older",),
-                       output_files=("tests/data/timestamp_a_younger",))
+    my_node = flexmock(input_files=(test_file("timestamp_a_older"),),
+                       output_files=(test_file("timestamp_a_younger"),))
     assert not NodeGraph._is_outdated(my_node, FileStatusCache())
 
 
 def test_nodegraph_is_outdated__outdated():
-    my_node = flexmock(input_files=("tests/data/timestamp_a_younger",),
-                       output_files=("tests/data/timestamp_a_older",))
+    my_node = flexmock(input_files=(test_file("timestamp_a_younger"),),
+                       output_files=(test_file("timestamp_a_older"),))
     assert NodeGraph._is_outdated(my_node, FileStatusCache())
 
 
 def test_nodegraph_is_outdated__updates():
-    my_node = flexmock(input_files=("tests/data/timestamp_a_older",),
-                       output_files=("tests/data/timestamp_a_younger",))
+    my_node = flexmock(input_files=(test_file("timestamp_a_older"),),
+                       output_files=(test_file("timestamp_a_younger"),))
     assert not NodeGraph._is_outdated(my_node, FileStatusCache())
-    my_node = flexmock(input_files=("tests/data/timestamp_a_younger",),
-                       output_files=("tests/data/timestamp_a_older",))
+    my_node = flexmock(input_files=(test_file("timestamp_a_younger"),),
+                       output_files=(test_file("timestamp_a_older"),))
     assert NodeGraph._is_outdated(my_node, FileStatusCache())

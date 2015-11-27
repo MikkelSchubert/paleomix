@@ -38,7 +38,7 @@ import paleomix.common.versions as versions
 
 ###############################################################################
 ###############################################################################
-## Check class
+# Check class
 
 def test_check__func_must_be_callable():
     assert_raises(TypeError, versions.Check, "FooBar", 3, 7, 5)

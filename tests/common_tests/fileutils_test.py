@@ -20,10 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-# Ignore "invalid" function names
-# pylint: disable=C0103
-# No need for docstrings
-# pylint: disable=C0111
 import os
 import stat
 import errno
@@ -69,11 +65,19 @@ from paleomix.common.fileutils import \
 ###############################################################################
 # Setup timestamps for test files
 
+def test_dir():
+    return os.path.dirname(os.path.dirname(__file__))
+
+
+def test_file(*args):
+    return os.path.join(test_dir(), "data", *args)
+
+
 def setup_module():
-    timestamps = {"tests/data/timestamp_a_older": 1000190760,
-                  "tests/data/timestamp_b_older": 1000190760,
-                  "tests/data/timestamp_a_younger": 1120719000,
-                  "tests/data/timestamp_b_younger": 1120719000}
+    timestamps = {test_file("timestamp_a_older"): 1000190760,
+                  test_file("timestamp_b_older"): 1000190760,
+                  test_file("timestamp_a_younger"): 1120719000,
+                  test_file("timestamp_b_younger"): 1120719000}
 
     for filename, timestamp in timestamps.iteritems():
         # Set atime and mtime
@@ -268,18 +272,18 @@ def test_create_temp_dir__permission_denied():
 # Tests for 'missing_files'
 
 def test_missing_files__file_exists():
-    assert_equal(missing_files(["tests/data/empty_file_1"]), [])
+    assert_equal(missing_files([test_file("empty_file_1")]), [])
 
 
 def test_missing_files__file_doesnt_exist():
-    assert_equal(missing_files(["tests/data/missing_file_1"]),
-                 ["tests/data/missing_file_1"])
+    assert_equal(missing_files([test_file("missing_file_1")]),
+                 [test_file("missing_file_1")])
 
 
 def test_missing_files__mixed_files():
-    files = ["tests/data/missing_file_1",
-             "tests/data/empty_file_1"]
-    result = ["tests/data/missing_file_1"]
+    files = [test_file("missing_file_1"),
+             test_file("empty_file_1")]
+    result = [test_file("missing_file_1")]
 
     assert_equal(missing_files(files), result)
 
@@ -289,30 +293,30 @@ def test_missing_files__mixed_files():
 # Tests for 'modified_after'
 
 def test_modified_after__modified_after():
-    assert modified_after("tests/data/timestamp_a_younger",
-                          "tests/data/timestamp_a_older")
-    assert modified_after("tests/data/timestamp_a_younger",
-                          "tests/data/timestamp_b_older")
-    assert modified_after("tests/data/timestamp_b_younger",
-                          "tests/data/timestamp_a_older")
+    assert modified_after(test_file("timestamp_a_younger"),
+                          test_file("timestamp_a_older"))
+    assert modified_after(test_file("timestamp_a_younger"),
+                          test_file("timestamp_b_older"))
+    assert modified_after(test_file("timestamp_b_younger"),
+                          test_file("timestamp_a_older"))
 
 
 def test_modified_after__not_modified_after():
-    assert not modified_after("tests/data/timestamp_a_older",
-                              "tests/data/timestamp_a_younger")
-    assert not modified_after("tests/data/timestamp_a_older",
-                              "tests/data/timestamp_b_younger")
-    assert not modified_after("tests/data/timestamp_b_older",
-                              "tests/data/timestamp_a_younger")
+    assert not modified_after(test_file("timestamp_a_older"),
+                              test_file("timestamp_a_younger"))
+    assert not modified_after(test_file("timestamp_a_older"),
+                              test_file("timestamp_b_younger"))
+    assert not modified_after(test_file("timestamp_b_older"),
+                              test_file("timestamp_a_younger"))
 
 
 def test_modified_after__same_file():
-    assert not modified_after("tests/data/timestamp_a_older",
-                              "tests/data/timestamp_a_older")
-    assert not modified_after("tests/data/timestamp_a_older",
-                              "tests/data/timestamp_b_older")
-    assert not modified_after("tests/data/timestamp_b_older",
-                              "tests/data/timestamp_a_older")
+    assert not modified_after(test_file("timestamp_a_older"),
+                              test_file("timestamp_a_older"))
+    assert not modified_after(test_file("timestamp_a_older"),
+                              test_file("timestamp_b_older"))
+    assert not modified_after(test_file("timestamp_b_older"),
+                              test_file("timestamp_a_older"))
 
 
 ###############################################################################
@@ -332,11 +336,11 @@ def test_is_executable__full_path__folder_is_non_executable():
 
 
 def test_is_executable__rel_path__is_executable():
-    assert is_executable("tests/run")
+    assert is_executable(os.path.join(test_dir(), "run"))
 
 
 def test_is_executable__rel_path__is_non_executable():
-    assert not is_executable("tests/data/empty_file_1")
+    assert not is_executable(test_file("empty_file_1"))
 
 
 ###############################################################################
@@ -371,7 +375,7 @@ def test_which_executable__executable__but_empty_path():
 def test_which_executable__executable__by_path_order_1():
     path = os.environ.pop('PATH')
     try:
-        path_1 = "tests/"
+        path_1 = test_dir()
         path_2 = os.path.join(os.getcwd(), path_1)
 
         os.environ['PATH'] = ":".join((path_1, path_2))
@@ -383,7 +387,7 @@ def test_which_executable__executable__by_path_order_1():
 def test_which_executable__executable__by_path_order_2():
     path = os.environ.pop('PATH')
     try:
-        path_1 = "tests/"
+        path_1 = test_dir()
         path_2 = os.path.join(os.getcwd(), path_1)
 
         os.environ['PATH'] = ":".join((path_2, path_1))
@@ -413,11 +417,11 @@ def test_executable_exists__full_path__is_non_executable():
 
 
 def test_executable_exists__rel_path__is_executable():
-    assert executable_exists("tests/run")
+    assert executable_exists(os.path.join(test_dir(), "run"))
 
 
 def test_executable_exists__rel_path__is_non_executable():
-    assert not executable_exists("tests/data/empty_file_1")
+    assert not executable_exists(test_file("empty_file_1"))
 
 
 ###############################################################################
@@ -690,7 +694,7 @@ def test_copy_file__enoent_reraised_if_not_due_to_missing_folder():
 
 
 def test_open_ro__uncompressed():
-    handle = open_ro('tests/data/fasta_file.fasta')
+    handle = open_ro(test_file('fasta_file.fasta'))
     try:
         assert_equal(handle.read(),
                      b'>This_is_FASTA!\nACGTN\n'
@@ -700,7 +704,7 @@ def test_open_ro__uncompressed():
 
 
 def test_open_ro__gz():
-    handle = open_ro('tests/data/fasta_file.fasta.gz')
+    handle = open_ro(test_file('fasta_file.fasta.gz'))
     try:
         assert_equal(handle.read(),
                      b'>This_is_GZipped_FASTA!\nACGTN\n'
@@ -710,7 +714,7 @@ def test_open_ro__gz():
 
 
 def test_open_ro__bz2():
-    handle = open_ro('tests/data/fasta_file.fasta.bz2')
+    handle = open_ro(test_file('fasta_file.fasta.bz2'))
     try:
         assert_equal(handle.read(),
                      b'>This_is_BZ_FASTA!\nCGTNA\n'

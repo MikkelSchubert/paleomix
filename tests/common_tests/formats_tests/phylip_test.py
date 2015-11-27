@@ -34,19 +34,18 @@ from paleomix.common.formats.fasta import \
      FASTA
 
 
-
 _MSA_SHORT_SEQUENCES = \
   MSA([FASTA("seq1", None, "ACGTTGATAACCAGG"),
        FASTA("seq2", None, "TGCAGAGTACGACGT")])
 _MSA_MEDIUM_SEQUENCES = \
   MSA([FASTA("seq1", None, "ACGTTGATAACCAGGAGGGATTCGCGATTGGTGGTAACGTAGCC"),
        FASTA("seq2", None, "TGCAGAGTACGACGTCTCCTAGATCCTGGACAATTTAAACCGAA")])
-_MSA_LONG_SEQUENCES  = \
-  MSA([FASTA("seq1", None, "CGGATCTGCTCCTCCACTGGCCACGTTTACTGTCCCCCAACCGTT" \
-             "CGTCCCGACCTAGTTATACTTCTTAGCAAGGTGTAAAACCAGAGATTGAGGTTATAACG" \
+_MSA_LONG_SEQUENCES = \
+  MSA([FASTA("seq1", None, "CGGATCTGCTCCTCCACTGGCCACGTTTACTGTCCCCCAACCGTT"
+             "CGTCCCGACCTAGTTATACTTCTTAGCAAGGTGTAAAACCAGAGATTGAGGTTATAACG"
              "TTCCTAATCAGTTATTAAATTACCGCGCCCCGACAG"),
-       FASTA("seq2", None, "AGTTGAAGAGGCGGAACGTTTGTAAACCGCGCTAACGTAGTTCTA" \
-             "CAACCAGCCACCCGGTTCGAAGGAACAACTGGTCGCCATAATTAGGCGAAACGATAGTG" \
+       FASTA("seq2", None, "AGTTGAAGAGGCGGAACGTTTGTAAACCGCGCTAACGTAGTTCTA"
+             "CAACCAGCCACCCGGTTCGAAGGAACAACTGGTCGCCATAATTAGGCGAAACGATAGTG"
              "CACTAAGGTCAGGTGCGCCCCTGTAAATAATTAGAT")])
 
 _MSA_MEDIUM_NAMES = \
@@ -57,13 +56,12 @@ _MSA_LONG_NAMES = \
        FASTA("Another_really_long_sequence_name_that_is_too_long", None, "TGCAGAGTACGACGT")])
 
 
-################################################################################
-################################################################################
-## Tests of 'sequential_phy'
+###############################################################################
+###############################################################################
+# Tests of 'sequential_phy'
 
 def test_sequential_phy__short_sequences():
-    expected = \
-"""2 44
+    expected = """2 44
 
 seq1
 ACGTTGATAA  CCAGGAGGGA  TTCGCGATTG  GTGGTAACGT  AGCC
@@ -73,8 +71,7 @@ TGCAGAGTAC  GACGTCTCCT  AGATCCTGGA  CAATTTAAAC  CGAA"""
 
 
 def test_sequential_phy__multi_line_sequences():
-    expected = \
-"""2 140
+    expected = """2 140
 
 seq1
 CGGATCTGCT  CCTCCACTGG  CCACGTTTAC  TGTCCCCCAA  CCGTTCGTCC  CGACCTAGTT
@@ -88,19 +85,17 @@ GCCCCTGTAA  ATAATTAGAT"""
 
 
 def test_sequential_phy__with_flag():
-    expected = \
-"""2 15 S
+    expected = """2 15 S
 
 seq1
 ACGTTGATAA  CCAGG
 seq2
 TGCAGAGTAC  GACGT"""
-    assert_equal(sequential_phy(_MSA_SHORT_SEQUENCES, add_flag = True), expected)
+    assert_equal(sequential_phy(_MSA_SHORT_SEQUENCES, add_flag=True), expected)
 
 
 def test_sequentual_phy__long_names():
-    expected = \
-"""2 15
+    expected = """2 15
 
 A_really_long_sequence_name_th
 ACGTTGATAA  CCAGG
@@ -114,14 +109,12 @@ def test_sequential_phy__different_lengths():
     sequential_phy(_MSA_MEDIUM_NAMES)
 
 
-
-################################################################################
-################################################################################
-## Tests of 'interleaved_phy'
+###############################################################################
+###############################################################################
+# Tests of 'interleaved_phy'
 
 def test_interleaved_phy__short_sequences():
-    expected = \
-"""2 44
+    expected = """2 44
 
 seq1        ACGTTGATAA  CCAGGAGGGA  TTCGCGATTG  GTGGTAACGT  AGCC
 seq2        TGCAGAGTAC  GACGTCTCCT  AGATCCTGGA  CAATTTAAAC  CGAA"""
@@ -129,8 +122,7 @@ seq2        TGCAGAGTAC  GACGTCTCCT  AGATCCTGGA  CAATTTAAAC  CGAA"""
 
 
 def test_interleaved_phy__multi_line_sequences():
-    expected = \
-"""2 140
+    expected = """2 140
 
 seq1        CGGATCTGCT  CCTCCACTGG  CCACGTTTAC  TGTCCCCCAA  CCGTTCGTCC
 seq2        AGTTGAAGAG  GCGGAACGTT  TGTAAACCGC  GCTAACGTAG  TTCTACAACC
@@ -144,17 +136,15 @@ GGTCAGGTGC  GCCCCTGTAA  ATAATTAGAT"""
 
 
 def test_interleaved_phy__with_flag():
-    expected = \
-"""2 15 I
+    expected = """2 15 I
 
 seq1        ACGTTGATAA  CCAGG
 seq2        TGCAGAGTAC  GACGT"""
-    assert_equal(interleaved_phy(_MSA_SHORT_SEQUENCES, add_flag = True), expected)
+    assert_equal(interleaved_phy(_MSA_SHORT_SEQUENCES, add_flag=True), expected)
 
 
 def test_interleaved_phy__medium_names():
-    expected = \
-"""2 15
+    expected = """2 15
 
 A_really_long_sequence  ACGTTGATAA  CCAGG
 Another_real_long_one!  TGCAGAGTAC  GACGT"""
@@ -162,8 +152,7 @@ Another_real_long_one!  TGCAGAGTAC  GACGT"""
 
 
 def test_interleaved_phy__long_names():
-    expected = \
-"""2 15
+    expected = """2 15
 
 A_really_long_sequence_name_th      ACGTTGATAA  CCAGG
 Another_really_long_sequence_n      TGCAGAGTAC  GACGT"""
@@ -173,8 +162,7 @@ Another_really_long_sequence_n      TGCAGAGTAC  GACGT"""
 def test_sequentual_phy__different_length_names_1():
     msa = MSA([FASTA("A_short_name", None, "ACGTTGATAACCAGG"),
                FASTA("Another_really_long_sequence_name_that_is_too_long", None, "TGCAGAGTACGACGT")])
-    expected = \
-"""2 15
+    expected = """2 15
 
 A_short_name                        ACGTTGATAA  CCAGG
 Another_really_long_sequence_n      TGCAGAGTAC  GACGT"""
@@ -185,8 +173,7 @@ Another_really_long_sequence_n      TGCAGAGTAC  GACGT"""
 def test_sequentual_phy__different_length_names_2():
     msa = MSA([FASTA("Burchelli_4", None, "ACGTTGATAACCAGG"),
                FASTA("Donkey",      None, "TGCAGAGTACGACGT")])
-    expected = \
-"""2 15
+    expected = """2 15
 
 Burchelli_4             ACGTTGATAA  CCAGG
 Donkey                  TGCAGAGTAC  GACGT"""

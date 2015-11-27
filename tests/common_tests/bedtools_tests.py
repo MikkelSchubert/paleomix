@@ -25,30 +25,19 @@
 # No need for docstrings
 # pylint: disable=C0111
 import copy
-import errno
-import os
-import stat
 
-import nose
 from nose.tools import \
     assert_equal, \
     assert_not_equal, \
     assert_raises
-
-import paleomix
-from paleomix.common.testing import \
-    with_temp_folder, \
-    Monkeypatch, \
-    SetWorkingDirectory, \
-    set_file_contents, \
-    get_file_contents
 
 from paleomix.common.bedtools import \
     BEDRecord
 
 
 ###############################################################################
-## BEDRecord constructor
+###############################################################################
+# BEDRecord constructor
 
 def test_bedrecord__constructor__defaults():
     record = BEDRecord()
@@ -98,8 +87,8 @@ def test_bedrecord__constructor__extra_fields():
 
 
 ###############################################################################
-## BEDRecord accessors
-
+###############################################################################
+# BEDRecord accessors
 
 def test_bedrecord__accessors__3_fields():
     record = BEDRecord("my_contig\t12\t345")
@@ -159,7 +148,7 @@ def test_bedrecord__setters__3_fields():
 def test_bedrecord__setters__type_errors():
     record = BEDRecord("my_contig\t12\t345\tname\t0\t+")
 
-#    assert_raises(ValueError, lambda: setattr(record, "contig", 17))
+    assert_raises(ValueError, lambda: setattr(record, "contig", 17))
     assert_raises(ValueError, lambda: setattr(record, "start", "foo"))
     assert_raises(ValueError, lambda: setattr(record, "end", "foo"))
     assert_raises(ValueError, lambda: setattr(record, "name", 17.3))
@@ -229,6 +218,7 @@ def test_bedrecord__cmp():
         assert_equal(record_1, record_tmp)
 
 
+###############################################################################
 ###############################################################################
 
 def test_bedrecord__copy():
