@@ -29,7 +29,7 @@ from nose.tools import \
      assert_raises
 
 
-import pypeline.common.utilities as utils
+import paleomix.common.utilities as utils
 
 
 ################################################################################

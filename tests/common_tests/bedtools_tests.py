@@ -35,15 +35,15 @@ from nose.tools import \
     assert_not_equal, \
     assert_raises
 
-import pypeline
-from pypeline.common.testing import \
+import paleomix
+from paleomix.common.testing import \
     with_temp_folder, \
     Monkeypatch, \
     SetWorkingDirectory, \
     set_file_contents, \
     get_file_contents
 
-from pypeline.common.bedtools import \
+from paleomix.common.bedtools import \
     BEDRecord
 
 

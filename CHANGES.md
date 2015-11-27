@@ -2,6 +2,7 @@
 Changelog
 =========
 
+  2015-11-27: Renamed module from 'pypeline' to 'paleomix' to aviod conflicts.
   2015-11-26: Improved handling FASTQ paths containing wildcards in the BAM
               pipeline, including additional checks to catch unequal numbers
               of files for paired-end reads.
@@ -10,7 +11,8 @@ Changelog
               reducing the total number of steps required for typical runs.
   2015-11-25: Restructure tests, removing (mostly unused) node tests.
   2015-11-25: Reworked sub-command handling to enable migration to setup-
-              tools, and improved the safety of invoking these from the pipeline itself.
+              tools, and improved the safety of invoking these from the
+              pipeline itself.
   2015-11-25: The output of "trim_pipeline mkfile" now includes the section
               for AdapterRemoval, which was previously mistakenly omitted.
   2015-11-24: Removed commandline options --allow-missing-input-files,

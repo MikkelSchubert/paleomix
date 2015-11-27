@@ -25,13 +25,13 @@ from nose.tools import \
      assert_not_equal, \
      assert_raises
 
-from pypeline.common.formats.newick import \
+from paleomix.common.formats.newick import \
      Newick, \
      GraphError, \
      NewickError, \
      NewickParseError
 
-from pypeline.common.testing import \
+from paleomix.common.testing import \
      assert_list_equal
 
 

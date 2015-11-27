@@ -37,17 +37,17 @@ from nose.tools import \
      assert_equal, \
      assert_raises
 
-from pypeline.common.testing import \
+from paleomix.common.testing import \
      with_temp_folder, \
      Monkeypatch, \
      get_file_contents, \
      set_file_contents
 
-import pypeline.atomiccmd.command
-import pypeline.common.fileutils as fileutils
+import paleomix.atomiccmd.command
+import paleomix.common.fileutils as fileutils
 
-from pypeline.common.versions import RequirementObj
-from pypeline.atomiccmd.command import AtomicCmd, CmdError
+from paleomix.common.versions import RequirementObj
+from paleomix.atomiccmd.command import AtomicCmd, CmdError
 
 
 
@@ -780,7 +780,7 @@ def test_atomiccmd__commit_with_pipes(temp_folder):
 
 def test_atomiccmd__str__():
     cmd = AtomicCmd(("echo", "test"))
-    assert_equal(pypeline.atomiccmd.pprint.pformat(cmd), str(cmd))
+    assert_equal(paleomix.atomiccmd.pprint.pformat(cmd), str(cmd))
 
 
 ################################################################################
@@ -791,17 +791,17 @@ def test_atomiccmd__str__():
 def test_atomiccmd__cleanup_proc():
     @with_temp_folder
     def _do_test_atomiccmd__cleanup_proc(temp_folder, func):
-        assert_equal(pypeline.atomiccmd.command._PROCS, set())
+        assert_equal(paleomix.atomiccmd.command._PROCS, set())
         cmd = AtomicCmd("ls")
         cmd.run(temp_folder)
-        ref = iter(pypeline.atomiccmd.command._PROCS).next()
+        ref = iter(paleomix.atomiccmd.command._PROCS).next()
         assert ref
         assert_equal(ref(), cmd._proc)
 
         assert_equal(cmd.join(), [0])
         cmd = func(cmd, temp_folder)
 
-        assert ref not in pypeline.atomiccmd.command._PROCS
+        assert ref not in paleomix.atomiccmd.command._PROCS
 
     def _do_commit(cmd, temp_folder):
         # Trigger freeing of proc
@@ -826,12 +826,12 @@ def test_atomiccmd__cleanup_sigterm():
               # I've got the same combination on my luggage!
               flexmock(pid = 12345)]
 
-    assert not pypeline.atomiccmd.command._PROCS
-    with Monkeypatch("pypeline.atomiccmd.command._PROCS", _procs):
-        assert_equal(len(pypeline.atomiccmd.command._PROCS), 2)
+    assert not paleomix.atomiccmd.command._PROCS
+    with Monkeypatch("paleomix.atomiccmd.command._PROCS", _procs):
+        assert_equal(len(paleomix.atomiccmd.command._PROCS), 2)
         with Monkeypatch("os.killpg", _wrap_killpg):
             with Monkeypatch("sys.exit", _wrap_exit):
-                pypeline.atomiccmd.command._cleanup_children(signal.SIGTERM, None)
+                paleomix.atomiccmd.command._cleanup_children(signal.SIGTERM, None)
 
     assert_equal(exit_called, [-signal.SIGTERM])
     assert_equal(sigs_sent, {7913 : signal.SIGTERM, 12345 : signal.SIGTERM})
@@ -848,10 +848,10 @@ def test_atomiccmd__cleanup_sigterm__dead_weakrefs():
     def _wrap_exit(rc):
         exit_called.append(rc)
 
-    with Monkeypatch("pypeline.atomiccmd.command._PROCS", procs_wrapper):
+    with Monkeypatch("paleomix.atomiccmd.command._PROCS", procs_wrapper):
         with Monkeypatch("os.killpg", _wrap_killpg):
             with Monkeypatch("sys.exit", _wrap_exit):
-                pypeline.atomiccmd.command._cleanup_children(signal.SIGTERM, None)
+                paleomix.atomiccmd.command._cleanup_children(signal.SIGTERM, None)
     assert_equal(exit_called, [-signal.SIGTERM])
 
 

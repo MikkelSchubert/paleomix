@@ -25,11 +25,11 @@ import StringIO
 
 import nose
 from nose.tools import assert_equal
-from pypeline.common.testing import with_temp_folder
+from paleomix.common.testing import with_temp_folder
 
-from pypeline.atomiccmd.command import AtomicCmd
-from pypeline.atomiccmd.sets import ParallelCmds, SequentialCmds
-from pypeline.atomiccmd.pprint import pprint, pformat, _pformat_list
+from paleomix.atomiccmd.command import AtomicCmd
+from paleomix.atomiccmd.sets import ParallelCmds, SequentialCmds
+from paleomix.atomiccmd.pprint import pprint, pformat, _pformat_list
 
 
 

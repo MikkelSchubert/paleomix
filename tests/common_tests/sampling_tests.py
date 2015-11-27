@@ -30,7 +30,7 @@ from flexmock import \
      flexmock
 
 
-import pypeline.common.sampling as sampling
+import paleomix.common.sampling as sampling
 
 
 ###############################################################################

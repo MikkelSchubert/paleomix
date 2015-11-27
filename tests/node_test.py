@@ -37,20 +37,20 @@ from nose.tools import \
     assert_raises
 from flexmock import flexmock
 
-from pypeline.common.testing import \
+from paleomix.common.testing import \
     with_temp_folder, \
     set_file_contents, \
     get_file_contents
 
-from pypeline.atomiccmd.command import \
+from paleomix.atomiccmd.command import \
     AtomicCmd
-from pypeline.node import \
+from paleomix.node import \
     Node, \
     CommandNode, \
     NodeError, \
     NodeUnhandledException, \
     CmdNodeError
-from pypeline.common.utilities import \
+from paleomix.common.utilities import \
     safe_coerce_to_frozenset
 
 

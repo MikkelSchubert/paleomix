@@ -28,13 +28,13 @@
 import nose
 import nose.tools
 from nose.tools import assert_equal, assert_raises
-from pypeline.common.testing import with_temp_folder
+from paleomix.common.testing import with_temp_folder
 
 from flexmock import flexmock
 
-import pypeline.atomiccmd.pprint
-from pypeline.atomiccmd.command import AtomicCmd, CmdError
-from pypeline.atomiccmd.sets import ParallelCmds, SequentialCmds
+import paleomix.atomiccmd.pprint
+from paleomix.atomiccmd.command import AtomicCmd, CmdError
+from paleomix.atomiccmd.sets import ParallelCmds, SequentialCmds
 
 
 
@@ -133,7 +133,7 @@ def test_atomicsets__terminate():
 def test_atomicsets__str__():
     def _do_test_atomicsets__str__(cls):
         cmds = cls([AtomicCmd("ls")])
-        assert_equal(pypeline.atomiccmd.pprint.pformat(cmds), str(cmds))
+        assert_equal(paleomix.atomiccmd.pprint.pformat(cmds), str(cmds))
 
     yield _do_test_atomicsets__str__, ParallelCmds
     yield _do_test_atomicsets__str__, SequentialCmds

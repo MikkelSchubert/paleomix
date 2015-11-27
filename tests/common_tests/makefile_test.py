@@ -28,7 +28,7 @@ from nose.tools import \
     assert_raises, \
     assert_raises_regexp
 
-from pypeline.common.makefile import \
+from paleomix.common.makefile import \
     DEFAULT_NOT_SET, \
     REQUIRED_VALUE, \
     MakefileError, \

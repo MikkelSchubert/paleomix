@@ -29,7 +29,7 @@ import collections
 import nose.tools
 from nose.tools import assert_equal
 
-from pypeline.common.text import \
+from paleomix.common.text import \
     TableError, \
     padded_table, \
     parse_padded_table, \

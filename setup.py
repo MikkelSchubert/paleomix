@@ -36,7 +36,7 @@ if (sys.version_info.major != 2) or (sys.version_info.minor != 7):
 def _get_version():
     """Retrieve version from current install directory."""
     env = {}
-    with open(os.path.join("pypeline", "__init__.py")) as handle:
+    with open(os.path.join("paleomix", "__init__.py")) as handle:
         exec(handle.read(), env)
 
     return env["__version__"]
@@ -89,14 +89,14 @@ setup(
 
     entry_points={
         'console_scripts': [
-            'paleomix=pypeline:run',
+            'paleomix=paleomix:run',
 
             # Aliases used in previous publications
-            'bam_pipeline=pypeline:run_bam_pipeline',
-            'bam_rmdup_collapsed=pypeline:run_rmdup_collapsed',
-            'conv_gtf_to_bed=pypeline:run_gtf_to_bed',
-            'phylo_pipeline=pypeline:run_phylo_pipeline',
-            'trim_pipeline=pypeline:run_trim_pipeline',
+            'bam_pipeline=paleomix:run_bam_pipeline',
+            'bam_rmdup_collapsed=paleomix:run_rmdup_collapsed',
+            'conv_gtf_to_bed=paleomix:run_gtf_to_bed',
+            'phylo_pipeline=paleomix:run_phylo_pipeline',
+            'trim_pipeline=paleomix:run_trim_pipeline',
         ],
     },
 

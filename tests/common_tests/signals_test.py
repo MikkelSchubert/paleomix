@@ -22,7 +22,7 @@
 #
 
 import signal
-import pypeline.common.signals as signals
+import paleomix.common.signals as signals
 
 import nose
 from nose.tools import assert_equal

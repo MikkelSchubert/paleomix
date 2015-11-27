@@ -32,11 +32,11 @@ import os
 from flexmock import \
     flexmock
 
-from pypeline.common.testing import \
+from paleomix.common.testing import \
     with_temp_folder, \
     set_file_contents
 
-from pypeline.nodegraph import \
+from paleomix.nodegraph import \
     NodeGraph, \
     FileStatusCache
 

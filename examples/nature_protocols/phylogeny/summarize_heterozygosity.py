@@ -23,10 +23,10 @@
 import sys
 import pysam
 
-from pypeline.common.vcfwrap import \
+from paleomix.common.vcfwrap import \
      get_ml_genotype
 
-import pypeline.common.timer as timer
+import paleomix.common.timer as timer
 
 
 def read_bed_records(filename):

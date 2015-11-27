@@ -26,18 +26,18 @@ are otherwise created by setuptools during the installation.
 import sys
 
 try:
-    import pypeline
+    import paleomix
 except ImportError:
     error = sys.exc_info()[1]  # Python 2/3 compatible exception syntax
-    sys.stderr.write("""Error importing required PALEOMIX module 'pypeline':
+    sys.stderr.write("""Error importing required PALEOMIX module 'paleomix':
     - %s
 
-Please make sure that PYTHONPATH points to the location of the 'pypeline'
+Please make sure that PYTHONPATH points to the location of the 'paleomix'
 module. This may be done permanently by appendign the following to your
 ~/.bashrc file (if using Bash):
-    export PYTHONPATH=${PYTHONPATH}:/path/to/pypeline/checkout/...
+    export PYTHONPATH=${PYTHONPATH}:/path/to/paleomix/checkout/...
 """ % (error,))
     sys.exit(1)
 
 if __name__ == '__main__':
-    sys.exit(pypeline.run_gtf_to_bed())
+    sys.exit(paleomix.run_gtf_to_bed())

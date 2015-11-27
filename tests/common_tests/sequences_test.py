@@ -24,7 +24,7 @@ import itertools
 import nose.tools
 from nose.tools import assert_equal
 
-from pypeline.common.sequences import \
+from paleomix.common.sequences import \
      complement, \
      reverse_complement, \
      encode_genotype, \

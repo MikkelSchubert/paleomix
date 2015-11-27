@@ -23,14 +23,14 @@
 from flexmock import flexmock
 from nose.tools import assert_equal
 
-from pypeline.common.formats.phylip import \
+from paleomix.common.formats.phylip import \
      sequential_phy, \
      interleaved_phy
 
-from pypeline.common.formats.msa import \
+from paleomix.common.formats.msa import \
      MSA
 
-from pypeline.common.formats.fasta import \
+from paleomix.common.formats.fasta import \
      FASTA
 
 

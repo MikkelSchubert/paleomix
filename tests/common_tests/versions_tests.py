@@ -33,7 +33,7 @@ from nose.tools import \
     assert_not_equal, \
     assert_raises
 
-import pypeline.common.versions as versions
+import paleomix.common.versions as versions
 
 
 ###############################################################################

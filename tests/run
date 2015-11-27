@@ -19,7 +19,7 @@ do
     fi
 done
 
-MODULES=$(find pypeline -mindepth 1 -maxdepth 1 -name '*.py' -or -type d | sed -e 's#\.py##g' -e's#/#.#g' | grep -v "pypeline.yaml" | grep -v __init__)
+MODULES=$(find paleomix -mindepth 1 -maxdepth 1 -name '*.py' -or -type d | sed -e 's#\.py##g' -e's#/#.#g' | grep -v "paleomix.yaml" | grep -v __init__)
 nosetests -I ".*_flymake.py" tests/ --with-coverage $@ \
     --cover-tests --cover-branches --cover-inclusive --cover-erase \
     $(for module in unit $MODULES;do echo --cover-package=$module;done) \

@@ -30,8 +30,8 @@ from nose.tools import \
 from flexmock import \
      flexmock
 
-from pypeline.common.formats.fasta import FASTA
-from pypeline.common.formats.msa import \
+from paleomix.common.formats.fasta import FASTA
+from paleomix.common.formats.msa import \
      MSA, \
      MSAError, \
      FASTAError

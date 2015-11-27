@@ -24,8 +24,9 @@ import os
 import sys
 import optparse
 
-from pypeline.common.formats.msa import \
+from paleomix.common.formats.msa import \
      MSA
+
 
 def _is_sufficently_covered(filepath, min_coverage):
     msa = MSA.from_file(filepath)

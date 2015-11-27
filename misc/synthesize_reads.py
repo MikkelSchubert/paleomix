@@ -31,13 +31,13 @@ from optparse import \
     OptionParser, \
     OptionGroup
 
-from pypeline.common.sequences import \
+from paleomix.common.sequences import \
     reverse_complement
-from pypeline.common.formats.fasta import \
+from paleomix.common.formats.fasta import \
     FASTA
-from pypeline.common.utilities import \
+from paleomix.common.utilities import \
     fragment
-from pypeline.common.sampling import \
+from paleomix.common.sampling import \
     weighted_sampling
 
 

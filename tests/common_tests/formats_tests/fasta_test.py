@@ -33,8 +33,8 @@ from nose.tools import \
     assert_greater_equal
 
 
-from pypeline.common.testing import assert_list_equal
-from pypeline.common.formats.fasta import \
+from paleomix.common.testing import assert_list_equal
+from paleomix.common.formats.fasta import \
      FASTA, \
      FASTAError
 

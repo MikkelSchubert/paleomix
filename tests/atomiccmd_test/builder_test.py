@@ -25,9 +25,9 @@
 from flexmock import flexmock
 from nose.tools import assert_equal, assert_raises
 
-from pypeline.common.testing import Monkeypatch
+from paleomix.common.testing import Monkeypatch
 
-from pypeline.atomiccmd.builder import \
+from paleomix.atomiccmd.builder import \
     AtomicCmdBuilder, \
     AtomicCmdBuilderError, \
     AtomicJavaCmdBuilder, \
@@ -345,7 +345,7 @@ def test_builder__finalize__calls_atomiccmd():
             assert_equal(kwargs, {"IN_FILE" : "/in/file", "OUT_FILE" : "/out/file", "set_cwd" : True})
             was_called.append(True)
 
-    with Monkeypatch("pypeline.atomiccmd.builder.AtomicCmd", _AtomicCmdMock):
+    with Monkeypatch("paleomix.atomiccmd.builder.AtomicCmd", _AtomicCmdMock):
         builder = AtomicCmdBuilder("echo", set_cwd = True)
         builder.add_option("-out", "%(OUT_FILE)s")
         builder.add_value("%(IN_FILE)s")

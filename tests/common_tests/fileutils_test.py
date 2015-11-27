@@ -35,15 +35,15 @@ from nose.tools import \
     assert_equal, \
     assert_raises
 
-import pypeline
-from pypeline.common.testing import \
+import paleomix
+from paleomix.common.testing import \
     with_temp_folder, \
     Monkeypatch, \
     SetWorkingDirectory, \
     set_file_contents, \
     get_file_contents
 
-from pypeline.common.fileutils import \
+from paleomix.common.fileutils import \
     add_postfix, \
     swap_ext, \
     reroot_path, \
@@ -737,10 +737,10 @@ def test_open_ro__close_handle_on_error():
             self._close_called = True
 
     try:
-        pypeline.common.fileutils.open = _FileMock
+        paleomix.common.fileutils.open = _FileMock
         assert_raises(OddException, open_ro, "/var/abc")
     finally:
-        del pypeline.common.fileutils.open
+        del paleomix.common.fileutils.open
 
 
 ###############################################################################
