@@ -124,6 +124,7 @@ _VALIDATION_OPTIONS = {
         "--pcr2": IsStr,
         "--adapter1": IsStr,
         "--adapter2": IsStr,
+        "--adapter-list": IsStr,
         "--maxns": IsUnsignedInt,
         "--minquality": IsUnsignedInt,
         "--trimns": Or(IsNone, IsBoolean),
@@ -132,9 +133,10 @@ _VALIDATION_OPTIONS = {
         "--mm": Or(IsFloat, IsUnsignedInt,
                    default=3),
         "--minlength": IsUnsignedInt(default=25),
+        "--maxlength": IsUnsignedInt,
         "--minalignmentlength": IsUnsignedInt,
         "--shift": IsUnsignedInt,
-        "--5prime": IsStr,
+        "--qualitymax": IsUnsignedInt,
         },
 
     # Which aliger/mapper to use (BWA/Bowtie2)

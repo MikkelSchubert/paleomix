@@ -2,6 +2,10 @@
 Changelog
 =========
 
+  2015-11-27: AdapterRemoval v2.1+ is now required; it is now possible to
+              provide a list of adapter sequences using --adapter-list,
+              and to specify the number of threads uses by AdapterRemoval
+              via the --adapterremoval-max-threads command-line option.
   2015-11-27: Renamed module from 'pypeline' to 'paleomix' to aviod conflicts.
   2015-11-26: Improved handling FASTQ paths containing wildcards in the BAM
               pipeline, including additional checks to catch unequal numbers

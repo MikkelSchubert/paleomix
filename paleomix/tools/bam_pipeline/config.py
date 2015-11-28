@@ -45,17 +45,20 @@ def _run_config_parser(argv, pipeline_variant):
     paleomix.logger.add_optiongroup(parser, default = PerHostValue("warning"))
 
     group = optparse.OptionGroup(parser, "Scheduling")
-    group.add_option("--gatk-max-threads", type = int, default = PerHostValue(1),
-                     help = "Maximum number of threads to use per GATK instance [%default]")
-    group.add_option("--bowtie2-max-threads", type = int, default = PerHostValue(1),
-                     help = "Maximum number of threads to use per Bowtie2 instance [%default]")
-    group.add_option("--bwa-max-threads", type = int, default = PerHostValue(1),
-                     help = "Maximum number of threads to use per BWA instance [%default]")
-    group.add_option("--max-threads", type = int, default = per_host_cfg.max_threads,
-                     help = "Maximum number of threads to use in total [%default]")
-    group.add_option("--dry-run", action = "store_true", default = False,
-                     help = "If passed, only a dry-run in performed, the dependency "
-                            "tree is printed, and no tasks are executed.")
+    group.add_option("--dry-run", action="store_true", default=False,
+                     help="If passed, only a dry-run in performed, the "
+                          "dependency tree is printed, and no tasks are "
+                          "executed.")
+    group.add_option("--max-threads", type=int, default=per_host_cfg.max_threads,
+                     help="Maximum number of threads to use in total [%default]")
+    group.add_option("--adapterremoval-max-threads", type=int, default=PerHostValue(1),
+                     help="Maximum number of threads to use per AdapterRemoval instance [%default]")
+    group.add_option("--bowtie2-max-threads", type=int, default=PerHostValue(1),
+                     help="Maximum number of threads to use per Bowtie2 instance [%default]")
+    group.add_option("--bwa-max-threads", type=int, default=PerHostValue(1),
+                     help="Maximum number of threads to use per BWA instance [%default]")
+    group.add_option("--gatk-max-threads", type=int, default=PerHostValue(1),
+                     help="Maximum number of threads to use per GATK instance [%default]")
     parser.add_option_group(group)
 
     group = optparse.OptionGroup(parser, "Required paths")

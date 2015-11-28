@@ -60,8 +60,8 @@ Options:
   # Settings for trimming of reads, see AdapterRemoval man-page
   AdapterRemoval:
      # Adapter sequences, set and uncomment to override defaults
-#     --pcr1: ...
-#     --pcr2: ...
+#     --adapter1: AGATCGGAAGAGCACACGTCTGAACTCCAGTCACNNNNNNATCTCGTATGCCGTCTTCTGCTTG
+#     --adapter2: AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT
      # Some BAM pipeline defaults differ from AR defaults;
      # To override, change these value(s):
      --mm: 3

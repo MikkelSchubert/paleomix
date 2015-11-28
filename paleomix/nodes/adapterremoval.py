@@ -24,94 +24,72 @@ import os
 
 from paleomix.node import \
     CommandNode
-from paleomix.atomiccmd.command import \
-    AtomicCmd,\
-    CmdError
 from paleomix.atomiccmd.sets import \
     ParallelCmds
 from paleomix.atomiccmd.builder import \
     AtomicCmdBuilder, \
     use_customizable_cli_parameters, \
     create_customizable_cli_parameters
-from paleomix.nodes.validation import \
-    check_fastq_files
 
-import paleomix.common.utilities as utilities
 import paleomix.common.fileutils as fileutils
 import paleomix.common.versions as versions
 import paleomix.tools.factory as factory
 
 
-VERSION_14 = "1.4"
-_VERSION_14_CHECK = versions.Requirement(call=("AdapterRemoval", "--version"),
-                                         search=r"ver. (\d+)\.(\d+)",
-                                         checks=versions.EQ(1, 4))
-
-VERSION_15 = "1.5+"
-_VERSION_15_CHECK = versions.Requirement(call=("AdapterRemoval", "--version"),
-                                         search=r"ver. (\d+)\.(\d+)\.(\d+)",
-                                         checks=versions.GE(1, 5, 0))
+_VERSION_CHECK = versions.Requirement(call=("AdapterRemoval", "--version"),
+                                      search=r"ver. (\d+)\.(\d+)",
+                                      checks=versions.GE(2, 1))
 
 
 class SE_AdapterRemovalNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, input_files, output_prefix, output_format="bz2",
-                  quality_offset=33, version=VERSION_15, dependencies=()):
+                  threads=1, dependencies=()):
         # See below for parameters in common between SE/PE
-        cmd = _get_common_parameters(version)
+        cmd = _get_common_parameters(output_format, threads=threads)
 
-        # Uncompressed reads (piped from 'paleomix cat')
-        cmd.set_option("--file1",    "%(TEMP_IN_READS)s")
-
-        # Prefix for output files
+        # Prefix for output files, ensure that all end up in temp folder
         cmd.set_option("--basename", "%(TEMP_OUT_BASENAME)s")
 
-        # Quality offset for Phred (or similar) scores
-        assert quality_offset in (33, 64)
-        cmd.set_option("--qualitybase", quality_offset)
+        output_tmpl = output_prefix + ".%s." + output_format
+        cmd.set_kwargs(TEMP_OUT_BASENAME=os.path.basename(output_prefix),
 
-        basename = os.path.basename(output_prefix)
-        cmd.set_kwargs(# Only settings file is saved, rest is temporary files
-                       OUT_SETTINGS        = output_prefix + ".settings",
-                       TEMP_OUT_BASENAME   = basename,
+                       OUT_SETTINGS=output_prefix + ".settings",
+                       OUT_MATE_1=output_tmpl % ("truncated",),
+                       OUT_DISCARDED=output_tmpl % ("discarded",))
 
-                       # Named pipe for uncompressed input (paleomix cat)
-                       TEMP_IN_READS       = "uncompressed_input",
+        if len(input_files) > 1:
+            # Uncompressed reads (piped from 'paleomix cat')
+            cmd.set_option("--file1", "%(TEMP_IN_READS_1)s")
+            cmd.set_kwargs(TEMP_IN_READS_1="uncompressed_input")
+        else:
+            cmd.set_option("--file1", "%(IN_READS_1)s")
+            cmd.set_kwargs(IN_READS_1=input_files[0])
 
-                       # Named pipes for output of AdapterRemova
-                       TEMP_OUT_LINK_1     = basename + ".truncated",
-                       TEMP_OUT_LINK_2     = basename + ".discarded")
-
-        return {"basename"      : basename,
-                "version"       : version,
-                "command"       : cmd}
+        return {"command": cmd,
+                "threads": threads,
+                "dependencies": dependencies}
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
-        self._quality_offset = parameters.quality_offset
-        self._basename = parameters.basename
-        self._check_fastqs = _are_fastq_checks_required(parameters.version)
+        command = parameters.command.finalize()
 
-        zcat           = _build_cat_command(parameters.input_files, "uncompressed_input")
-        zip_truncated  = _build_zip_command(parameters.output_format, parameters.output_prefix, ".truncated")
-        zip_discarded  = _build_zip_command(parameters.output_format, parameters.output_prefix, ".discarded")
-        adapterrm      = parameters.command.finalize()
+        self._multi_file_input = len(parameters.input_files) > 1
+        if self._multi_file_input:
+            cat = _build_cat_command(parameters.input_files, "uncompressed_input")
+            command = ParallelCmds((command, cat))
 
-        commands = ParallelCmds([adapterrm, zip_discarded, zip_truncated, zcat])
         CommandNode.__init__(self,
-                             command      = commands,
-                             description  = "<AdapterRM (SE): %s -> '%s.*'>" \
-                                 % (fileutils.describe_files(parameters.input_files),
-                                    parameters.output_prefix),
-                             dependencies = parameters.dependencies)
+                             command=command,
+                             threads=parameters.threads,
+                             description="<AdapterRM (SE): %r -> '%s.*'>"
+                             % (fileutils.describe_files(parameters.input_files),
+                                parameters.output_prefix),
+                             dependencies=parameters.dependencies)
 
     def _setup(self, config, temp):
-        if self._check_fastqs:
-            check_fastq_files(self.input_files, self._quality_offset)
-
-        os.mkfifo(os.path.join(temp, self._basename + ".truncated"))
-        os.mkfifo(os.path.join(temp, self._basename + ".discarded"))
-        os.mkfifo(os.path.join(temp, "uncompressed_input"))
+        if self._multi_file_input:
+            os.mkfifo(os.path.join(os.path.join(temp, "uncompressed_input")))
 
         CommandNode._setup(self, config, temp)
 
@@ -119,129 +97,70 @@ class SE_AdapterRemovalNode(CommandNode):
 class PE_AdapterRemovalNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(cls, input_files_1, input_files_2, output_prefix,
-                  quality_offset=33, output_format="bz2", collapse=True,
-                  version=VERSION_15, dependencies=()):
-        cmd = _get_common_parameters(version)
+                  output_format="bz2", collapse=True, threads=1,
+                  dependencies=()):
+        if len(input_files_1) != len(input_files_2):
+            raise ValueError("Unequal number of mate 1 and mate 2 files")
 
-        # Uncompressed mate 1 and 2 reads (piped from 'paleomix cat')
-        cmd.set_option("--file1",    "%(TEMP_IN_READS_1)s")
-        cmd.set_option("--file2",    "%(TEMP_IN_READS_2)s")
+        cmd = _get_common_parameters(output_format, threads=threads)
 
-        # Prefix for output files, ensure that all end up in temp folder
+        # Prefix for output files, to ensure that all end up in temp folder
         cmd.set_option("--basename", "%(TEMP_OUT_BASENAME)s")
 
-        # Quality offset for Phred (or similar) scores
-        assert quality_offset in (33, 64)
-        cmd.set_option("--qualitybase", quality_offset)
+        output_tmpl = output_prefix + ".%s." + output_format
+        cmd.set_kwargs(TEMP_OUT_BASENAME=os.path.basename(output_prefix),
 
-
-        # Output files are explicity specified, to ensure that the order is
-        # the same here as below. A difference in the order in which files are
-        # opened can cause a deadlock, due to the use of named pipes
-        # (see __init__).
-        cmd.set_option("--output1", "%(TEMP_OUT_LINK_PAIR1)s")
-        cmd.set_option("--output2", "%(TEMP_OUT_LINK_PAIR2)s")
+                       OUT_SETTINGS=output_prefix + ".settings",
+                       OUT_READS_1=output_tmpl % ("pair1.truncated",),
+                       OUT_READS_2=output_tmpl % ("pair2.truncated",),
+                       OUT_SINGLETON=output_tmpl % ("singleton.truncated",),
+                       OUT_DISCARDED=output_tmpl % ("discarded",))
 
         if collapse:
-          cmd.set_option("--collapse")
-          cmd.set_option("--outputcollapsed", "%(TEMP_OUT_LINK_ALN)s")
-          if version == VERSION_15:
-              cmd.set_option("--outputcollapsedtruncated",
-                             "%(TEMP_OUT_LINK_ALN_TRUNC)s")
+            cmd.set_option("--collapse")
 
-        cmd.set_option("--singleton", "%(TEMP_OUT_LINK_UNALN)s")
-        cmd.set_option("--discarded", "%(TEMP_OUT_LINK_DISC)s")
+            cmd.set_kwargs(OUT_COLLAPSED=output_tmpl % ("collapsed",),
+                           OUT_COLLAPSED_TRUNC=output_tmpl
+                           % ("collapsed.truncated",))
 
-        basename = os.path.basename(output_prefix)
-        cmd.set_kwargs(# Only settings file is saved, rest is temporary files
-                       OUT_SETTINGS=output_prefix + ".settings",
-                       TEMP_OUT_BASENAME=basename,
-
-                       # Named pipes for uncompressed input (paleomix cat)
-                       TEMP_IN_READS_1="uncompressed_input_1",
-                       TEMP_IN_READS_2="uncompressed_input_2",
-
-                       # Named pipes for output of AdapterRemoval
-                       TEMP_OUT_LINK_PAIR1=basename + ".pair1.truncated",
-                       TEMP_OUT_LINK_PAIR2=basename + ".pair2.truncated",
-                       TEMP_OUT_LINK_DISC=basename + ".discarded")
-
-        if version == VERSION_15:
-            cmd.set_kwargs(TEMP_OUT_LINK_ALN=basename + ".collapsed",
-                           TEMP_OUT_LINK_ALN_TRUNC=basename + ".collapsed.truncated",
-                           TEMP_OUT_LINK_UNALN=basename + ".singleton.truncated")
-        elif version == VERSION_14:
-            cmd.set_kwargs(TEMP_OUT_LINK_ALN=basename + ".singleton.aln.truncated",
-                           TEMP_OUT_LINK_UNALN=basename + ".singleton.unaln.truncated")
+        if len(input_files_1) > 1:
+            # Uncompressed reads (piped from 'paleomix cat')
+            cmd.set_option("--file1", "%(TEMP_IN_READS_1)s")
+            cmd.set_option("--file2", "%(TEMP_IN_READS_2)s")
+            cmd.set_kwargs(TEMP_IN_READS_1="uncompressed_input_1",
+                           TEMP_IN_READS_2="uncompressed_input_2")
         else:
-            assert False
+            cmd.set_option("--file1", "%(IN_READS_1)s")
+            cmd.set_option("--file2", "%(IN_READS_2)s")
+            cmd.set_kwargs(IN_READS_1=input_files_1[0],
+                           IN_READS_2=input_files_2[0])
 
-        return {"basename": basename,
-                "command": cmd}
+        return {"command": cmd,
+                "threads": threads,
+                "dependencies": dependencies}
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
-        self._quality_offset = parameters.quality_offset
-        self._version = parameters.version
-        self._basename = parameters.basename
-        self._collapse = parameters.collapse
-        self._check_fastqs = _are_fastq_checks_required(parameters.version)
-        if len(parameters.input_files_1) != len(parameters.input_files_2):
-            raise CmdError("Number of mate 1 files differ from mate 2 files: "
-                           "%i != %i" % (len(parameters.input_files_1),
-                                         len(parameters.input_files_2)))
-
-        zcat_pair_1    = _build_cat_command(parameters.input_files_1, "uncompressed_input_1")
-        zcat_pair_2    = _build_cat_command(parameters.input_files_2, "uncompressed_input_2")
-        zip_pair_1     = _build_zip_command(parameters.output_format, parameters.output_prefix, ".pair1.truncated")
-        zip_pair_2     = _build_zip_command(parameters.output_format, parameters.output_prefix, ".pair2.truncated")
-        zip_discarded  = _build_zip_command(parameters.output_format, parameters.output_prefix, ".discarded")
-        adapterrm      = parameters.command.finalize()
-
-        commands = [adapterrm, zip_pair_1, zip_pair_2]
-        if parameters.version == VERSION_15:
-            zip_unaligned  = _build_zip_command(parameters.output_format, parameters.output_prefix, ".singleton.truncated")
-            if parameters.collapse:
-                zip_aln = _build_zip_command(parameters.output_format, parameters.output_prefix, ".collapsed")
-                zip_aln_trunc = _build_zip_command(parameters.output_format, parameters.output_prefix, ".collapsed.truncated")
-                commands += [zip_aln, zip_aln_trunc, zip_unaligned]
-            else:
-                commands += [zip_unaligned]
-        else:
-            zip_aln        = _build_zip_command(parameters.output_format, parameters.output_prefix, ".singleton.aln.truncated")
-            zip_unaligned  = _build_zip_command(parameters.output_format, parameters.output_prefix, ".singleton.unaln.truncated")
-            commands      += [zip_aln, zip_unaligned]
-        commands += [zip_discarded, zcat_pair_1, zcat_pair_2]
-        commands = ParallelCmds(commands)
-
-        description  = "<AdapterRM (PE): %s -> '%s.*'>" \
-            % (fileutils.describe_paired_files(parameters.input_files_1,
-                                               parameters.input_files_2),
-               parameters.output_prefix)
+        command = parameters.command.finalize()
+        self._multi_file_input = len(parameters.input_files_1) > 1
+        if self._multi_file_input:
+            cat_1 = _build_cat_command(parameters.input_files_1, "uncompressed_input_1")
+            cat_2 = _build_cat_command(parameters.input_files_2, "uncompressed_input_2")
+            command = ParallelCmds((command, cat_1, cat_2))
 
         CommandNode.__init__(self,
-                             command=commands,
-                             description=description,
+                             command=command,
+                             threads=parameters.threads,
+                             description="<AdapterRM (PE): %s -> '%s.*'>"
+                             % (fileutils.describe_paired_files(parameters.input_files_1,
+                                                                parameters.input_files_2),
+                                parameters.output_prefix),
                              dependencies=parameters.dependencies)
 
     def _setup(self, config, temp):
-        if self._check_fastqs:
-            check_fastq_files(self.input_files, self._quality_offset)
-
-        os.mkfifo(os.path.join(temp, self._basename + ".discarded"))
-        os.mkfifo(os.path.join(temp, self._basename + ".pair1.truncated"))
-        os.mkfifo(os.path.join(temp, self._basename + ".pair2.truncated"))
-        os.mkfifo(os.path.join(temp, "uncompressed_input_1"))
-        os.mkfifo(os.path.join(temp, "uncompressed_input_2"))
-
-        if self._version == VERSION_15:
-            if self._collapse:
-               os.mkfifo(os.path.join(temp, self._basename + ".collapsed"))
-               os.mkfifo(os.path.join(temp, self._basename + ".collapsed.truncated"))
-            os.mkfifo(os.path.join(temp, self._basename + ".singleton.truncated"))
-        else:
-            os.mkfifo(os.path.join(temp, self._basename + ".singleton.aln.truncated"))
-            os.mkfifo(os.path.join(temp, self._basename + ".singleton.unaln.truncated"))
+        if self._multi_file_input:
+            os.mkfifo(os.path.join(os.path.join(temp, "uncompressed_input_1")))
+            os.mkfifo(os.path.join(os.path.join(temp, "uncompressed_input_2")))
 
         CommandNode._setup(self, config, temp)
 
@@ -255,64 +174,23 @@ def _build_cat_command(input_files, output_file):
     return cat.finalize()
 
 
-def _build_zip_command(output_format, prefix, name, output=None):
-    if output_format not in ("gz", "bz2"):
-        message = "Invalid output-format (%r), please select 'gz' or 'bz2'"
-        raise CmdError(message % (output_format,))
-
-    basename = os.path.basename(prefix)
-    compress = factory.new("zip")
-    compress.set_option("--format", output_format)
-    compress.add_value("%(TEMP_IN_PIPE)s")
-    compress.set_kwargs(TEMP_IN_PIPE=basename + name,
-                        OUT_STDOUT=prefix + (output or name) + "." + output_format)
-
-    return compress.finalize()
-
-
-_DEPRECATION_WARNING_PRINTED = False
-
-
-def _get_common_parameters(version):
-    global _DEPRECATION_WARNING_PRINTED
-
-    if version == VERSION_14:
-        version_check = _VERSION_14_CHECK
-    elif version == VERSION_15:
-        version_check = _VERSION_15_CHECK
-    else:
-        raise CmdError("Unknown version: %s" % version)
-
+def _get_common_parameters(output_format, threads=1):
     cmd = AtomicCmdBuilder("AdapterRemoval",
-                           CHECK_VERSION=version_check)
+                           CHECK_VERSION=_VERSION_CHECK)
+
+    if output_format == "bz2":
+        cmd.set_option("--bzip2")
+    elif output_format == "gz":
+        cmd.set_option("--gzip")
+    else:
+        raise ValueError("Invalid output compression %r" % (output_format,))
 
     # Trim Ns at read ends
     cmd.set_option("--trimns", fixed=False)
     # Trim low quality scores
     cmd.set_option("--trimqualities", fixed=False)
 
-    try:
-        if not _DEPRECATION_WARNING_PRINTED and version_check.version < (2, 0):
-            import paleomix.ui as ui
-            ui.print_warn("\nWARNING: AdapterRemoval v1.5.x is deprecated;")
-            ui.print_warn("         Upgrading to 2.1.x is strongly adviced!\n")
-            ui.print_warn("         Download the newest version of AdapterRemoval at ")
-            ui.print_warn("         https://github.com/MikkelSchubert/adapterremoval\n")
-
-            _DEPRECATION_WARNING_PRINTED = True
-    except versions.VersionRequirementError:
-        pass
+    # Fix number of threads to ensure consistency when scheduling node
+    cmd.set_option("--threads", threads)
 
     return cmd
-
-
-def _are_fastq_checks_required(version):
-    if version == VERSION_14:
-        return True
-    elif version == VERSION_15:
-        try:
-            return _VERSION_15_CHECK.version < (2, 0)
-        except versions.VersionRequirementError:
-            return True
-    else:
-        raise CmdError("Unknown version: %s" % version)

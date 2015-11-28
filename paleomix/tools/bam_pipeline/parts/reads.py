@@ -25,9 +25,7 @@ import os
 from paleomix.atomiccmd.builder import apply_options
 from paleomix.nodes.adapterremoval import \
     SE_AdapterRemovalNode, \
-    PE_AdapterRemovalNode, \
-    VERSION_14, \
-    VERSION_15
+    PE_AdapterRemovalNode
 from paleomix.nodes.validation import \
     ValidateFASTQFilesNode
 
@@ -45,7 +43,7 @@ class Reads(object):
 
         lane_type = record.get("Type")
         if lane_type == "Raw":
-            self._init_raw_reads(record)
+            self._init_raw_reads(config, record)
         elif lane_type == "Trimmed":
             self._init_pretrimmed_reads(record)
         else:
@@ -71,16 +69,7 @@ class Reads(object):
                                       offset=self.quality_offset)
         self.nodes = (node,)
 
-    def _init_raw_reads(self, record):
-        # Support for older versions of the pipeline, which used ARv1.0 - 1.4
-        version = VERSION_14
-        if record["Options"]["AdapterRemoval"]["Version"] == "v1.5+":
-            version = VERSION_15
-
-        quality_offset = self.quality_offset
-        if quality_offset == "Solexa":
-            quality_offset = 64
-
+    def _init_raw_reads(self, config, record):
         ar_options = dict(record["Options"]["AdapterRemoval"])
         # Setup of "--collapsed" is handled by the node itself
         collapse_reads = ar_options.pop("--collapse")
@@ -88,8 +77,7 @@ class Reads(object):
 
         init_args = {"output_prefix": os.path.join(self.folder, "reads"),
                      "output_format": record["Options"]["CompressionFormat"],
-                     "quality_offset": quality_offset,
-                     "version": version}
+                     "threads": config.adapterremoval_max_threads}
         output_tmpl = "{output_prefix}.%s.{output_format}".format(**init_args)
 
         if ("SE" in record["Data"]):
@@ -97,31 +85,32 @@ class Reads(object):
             init_args["input_files"] = record["Data"]["SE"]
             command = SE_AdapterRemovalNode.customize(**init_args)
         else:
-            if version is VERSION_14:
-                self._set_adapterrm_v14_files(self.files, output_tmpl)
-            else:
-                self._set_adapterrm_v15_files(self.files, output_tmpl,
-                                              collapse_reads)
+            self.files["Single"] = output_tmpl % ("singleton.truncated",)
+            self.files["Paired"] = output_tmpl % ("pair{Pair}.truncated",)
+
+            if collapse_reads:
+                self.files["Collapsed"] = output_tmpl % ("collapsed",)
+                self.files["CollapsedTruncated"] = output_tmpl % ("collapsed.truncated",)
 
             init_args["collapse"] = collapse_reads
             init_args["input_files_1"] = record["Data"]["PE_1"]
             init_args["input_files_2"] = record["Data"]["PE_2"]
             command = PE_AdapterRemovalNode.customize(**init_args)
 
+        # Ensure that any user-specified list of adapters is tracked
+        if "--adapter-list" in ar_options:
+            adapter_list = ar_options.pop("--adapter-list")
+            command.command.set_option("--adapter-list", "%(IN_ADAPTER_LIST)s")
+            command.command.set_kwargs(IN_ADAPTER_LIST=adapter_list)
+
         apply_options(command.command, ar_options)
+
+        output_quality = self.quality_offset
+        if output_quality == "Solexa":
+            output_quality = "64"
+
+        command.command.set_option("--qualitybase", self.quality_offset)
+        command.command.set_option("--qualitybase-output", output_quality)
+
         self.stats = os.path.join(self.folder, "reads.settings")
         self.nodes = (command.build_node(),)
-
-    @classmethod
-    def _set_adapterrm_v14_files(cls, files, output_tmpl):
-        files["Single"] = output_tmpl % ("singleton.unaln.truncated",)
-        files["Collapsed"] = output_tmpl % ("singleton.aln.truncated",)
-        files["Paired"] = output_tmpl % ("pair{Pair}.truncated",)
-
-    @classmethod
-    def _set_adapterrm_v15_files(cls, files, output_tmpl, collapse_reads):
-        files["Single"] = output_tmpl % ("singleton.truncated",)
-        files["Paired"] = output_tmpl % ("pair{Pair}.truncated",)
-        if collapse_reads:
-            files["Collapsed"] = output_tmpl % ("collapsed",)
-            files["CollapsedTruncated"] = output_tmpl % ("collapsed.truncated",)
