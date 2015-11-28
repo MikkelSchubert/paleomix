@@ -69,7 +69,11 @@ def test_paleomix_command():
 def test_factory__commands():
     def _do_test_factory__commands(command, expected):
         cmd = factory.new(command)
-        stdout, stderr = check_run(cmd.finalized_call + ["--help"])
+        call = cmd.finalized_call
+        if command in ("bam_pipeline", "trim_pipeline"):
+            call.append("run")
+
+        stdout, stderr = check_run(call + ["--help"])
 
         assert_equal(expected, stdout.split("\n")[0])
         assert_equal("", stderr)
@@ -97,8 +101,13 @@ def test_factory__commands():
 # Simple test of aliased commands
 def test_factory__command_alias():
     def _do_test_factory__command_alias(alias, command):
-        stdout_1, stderr_1 = check_run([alias] + ["--help"])
-        stdout_2, stderr_2 = check_run(["paleomix"] + [command] + ["--help"])
+        alias, command = [alias], [command]
+        if alias == ["bam_pipeline"] or alias == ["trim_pipeline"]:
+            alias.append("run")
+            command.append("run")
+
+        stdout_1, stderr_1 = check_run(alias + ["--help"])
+        stdout_2, stderr_2 = check_run(["paleomix"] + command + ["--help"])
 
         assert_equal(stderr_1, stderr_1)
         assert_equal(stderr_2, stderr_2)
