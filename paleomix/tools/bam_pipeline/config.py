@@ -48,7 +48,7 @@ def _run_config_parser(argv, pipeline_variant):
     group.add_option("--gatk-max-threads", type = int, default = PerHostValue(1),
                      help = "Maximum number of threads to use per GATK instance [%default]")
     group.add_option("--bowtie2-max-threads", type = int, default = PerHostValue(1),
-                     help = "Maximum number of threads to use per BWA instance [%default]")
+                     help = "Maximum number of threads to use per Bowtie2 instance [%default]")
     group.add_option("--bwa-max-threads", type = int, default = PerHostValue(1),
                      help = "Maximum number of threads to use per BWA instance [%default]")
     group.add_option("--max-threads", type = int, default = per_host_cfg.max_threads,
