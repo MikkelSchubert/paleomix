@@ -247,30 +247,35 @@ def _print_usage(pipeline):
 def main(argv, pipeline="bam"):
     assert pipeline in ("bam", "trim"), pipeline
 
-    try:
-        config, args = bam_config.parse_config(argv, pipeline)
-        if args and args[0].startswith("dry"):
-            config.dry_run = True
-    except bam_config.ConfigError, error:
-        print_err(error)
-        return 1
-
     commands = ("makefile", "mkfile", "run",
                 "dry_run", "dry-run", "dryrun",
                 "remap")
-    if (len(args) == 0) or (args[0] not in commands):
+
+    if not argv or (argv[0] == "help"):
+        _print_usage(pipeline)
+        return 0
+    elif argv[0] not in commands:
         _print_usage(pipeline)
         return 1
-    elif args[0] in ("mkfile", "makefile"):
-        return bam_mkfile.main(args[1:], pipeline=pipeline)
-    elif args[0] in ("remap", "remap_prefix"):
+    elif argv[0] in ("mkfile", "makefile"):
+        return bam_mkfile.main(argv[1:], pipeline=pipeline)
+    elif argv[0] in ("remap", "remap_prefix"):
         # Import here to avoid circular dependency issues
         import paleomix.tools.bam_pipeline.remap as bam_remap
 
-        return bam_remap.main(args[1:])
-    elif not args[1:]:
-        _print_usage(pipeline)
-        print_err("\nPlease specify at least one makefile!")
+        return bam_remap.main(argv[1:])
+
+    try:
+        config, args = bam_config.parse_config(argv, pipeline)
+
+        if not args[1:]:
+            print_err("Please specify at least one makefile!")
+            print_err("Use --help for more information.")
+            return 1
+        elif args and args[0].startswith("dry"):
+            config.dry_run = True
+    except bam_config.ConfigError, error:
+        print_err(error)
         return 1
 
     return run(config, args[1:], pipeline_variant=pipeline)
