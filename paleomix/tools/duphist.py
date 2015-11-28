@@ -78,11 +78,18 @@ def process_records(records, counts):
         counts[count] += 1
 
 
+def parse_args(argv):
+    prog = "paleomix duphist"
+    usage = "%s sorted.bam > out.histogram" % (prog,)
+    parser = argparse.ArgumentParser(prog=prog, usage=usage)
+    parser.add_argument("bamfile", help="Sorted BAM file.")
+
+    return parser.parse_args(argv)
+
+
 def main(argv):
     """Main function; takes a list of arguments equivalent to sys.argv[1:]."""
-    parser = argparse.ArgumentParser(prog="paleomix duphist")
-    parser.add_argument("bamfile", help="Sorted BAM file.")
-    args = parser.parse_args(argv)
+    args = parse_args(argv)
 
     # Default filters, excepting that PCR duplicates are not filtered
     mask = bamfiles.EXCLUDED_FLAGS & ~bamfiles.BAM_PCR_DUPLICATE

@@ -263,7 +263,11 @@ def _run_cleanup_pipeline(args):
 
 
 def parse_args(argv):
-    parser = argparse.ArgumentParser()
+    prog = "paleomix cleanup"
+    usage = "%s --temp-prefix prefix --fasta reference.fasta < in.sam" \
+        % (prog,)
+
+    parser = argparse.ArgumentParser(prog=prog, usage=usage)
     # "Hidden" commands, invoking the various sub-parts of this script
     parser.add_argument('command', choices=('pipe', 'cleanup', 'cleanup-sam'),
                         nargs="?", help=argparse.SUPPRESS)

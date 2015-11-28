@@ -248,7 +248,7 @@ def main(argv, pipeline="bam"):
     assert pipeline in ("bam", "trim"), pipeline
 
     try:
-        config, args = bam_config.parse_config(argv)
+        config, args = bam_config.parse_config(argv, pipeline)
         if args and args[0].startswith("dry"):
             config.dry_run = True
     except bam_config.ConfigError, error:

@@ -90,7 +90,7 @@ def build_call(call, args, positional, new_args):
 ###############################################################################
 ###############################################################################
 # BAM filtering mode
-import time
+
 def filter_bam(bamfile, bedfile):
     with pysam.Samfile(bamfile) as bam_handle_in:
         regions = collect_regions(bedfile, bam_handle_in)
@@ -445,13 +445,16 @@ def create_empty_bgz(destination):
 
 
 def parse_args(argv):
-    parser = argparse.ArgumentParser()
+    prog = "paleomix genotype"
+    usage = "%s [options] sorted.bam out.vcf.bgz" % (prog,)
+
+    parser = argparse.ArgumentParser(prog=prog, usage=usage)
     parser.add_argument("bamfile", metavar='INPUT',
                         help="Sorted and indexed BAM file.")
     parser.add_argument("destination", metavar='OUTPUT',
                         help="BGZip compressed VCF or pileup. Also used as "
                              "prefix for temporary files.")
-    parser.add_argument('--bedfile', default=None,
+    parser.add_argument('--bedfile', default=None, metavar="BED",
                         help="Optional bedfile, specifying regions to pileup "
                              "or genotype [Default: %(default)s].")
     parser.add_argument('--mpileup-argument', default=[], action="append",

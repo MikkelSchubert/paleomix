@@ -208,11 +208,16 @@ def build_genes(options, genotype, regions):
 
 
 def main(argv):
-    parser = argparse.ArgumentParser()
+    prog = "paleomix sample_pileup"
+    usage = "%s [options] --genotype in.vcf --intervals in.bed > out.fasta" \
+        % (prog,)
+
+    parser = argparse.ArgumentParser(prog=prog, usage=usage)
     parser.add_argument("--genotype", help="Tabix indexed pileup file.",
-                        required=True)
-    parser.add_argument("--intervals", help="BED file.", required=True)
-    parser.add_argument("--padding", type=int, default=10,
+                        required=True, metavar="VCF")
+    parser.add_argument("--intervals", help="BED file.", required=True,
+                        metavar="BED")
+    parser.add_argument("--padding", type=int, default=10, metavar="BED",
                         help="Number of bases to expand intervals, when "
                              "filtering based on adjacent indels "
                              "[%(default)s]")

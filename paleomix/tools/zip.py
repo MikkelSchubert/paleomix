@@ -35,7 +35,10 @@ import subprocess
 
 def main(argv):
     """Main function; takes a list of arguments but excluding sys.argv[0]."""
-    parser = argparse.ArgumentParser(prog="paleomix cat")
+    prog = "paleomix zip"
+    usage = "%s [options] in > out" % (prog,)
+
+    parser = argparse.ArgumentParser(prog=prog, usage=usage)
     parser.add_argument("file", help="Input file.")
     parser.add_argument("--format", default="gz", choices=("bz2", "gz"),
                         help="Output format (gz / bz2).")

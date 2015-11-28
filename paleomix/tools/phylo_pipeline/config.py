@@ -82,9 +82,11 @@ def select_commands(chain):
 
 def _run_config_parser(argv):
     per_host_cfg = PerHostConfig("phylo_pipeline")
-    usage_str    = "%prog <command> [options] [makefiles]"
-    version_str  = "%%prog %s" % (paleomix.__version__,)
-    parser       = optparse.OptionParser(usage = usage_str, version = version_str)
+    usage_str = "paleomix phylo_pipeline <command> [options] [makefiles]"
+    version_str = "paleomix phylo_pipeline %s" % (paleomix.__version__,)
+    parser = optparse.OptionParser(usage=usage_str,
+                                   version=version_str)
+
     parser.formatter = CustomHelpFormatter()
     parser.formatter.set_parser(parser)
     parser.description = _DESCRIPTION

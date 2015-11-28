@@ -27,8 +27,6 @@ import collections
 
 import pysam
 
-import paleomix.common.system
-
 from paleomix.common.fileutils import \
     swap_ext
 from paleomix.common.bedtools import \
@@ -81,7 +79,9 @@ def collect_bed_regions(filename):
 
 
 def parse_arguments(argv, ext):
-    parser = argparse.ArgumentParser(prog="paleomix %s" % (ext.strip("."),))
+    prog = "paleomix %s" % (ext.strip("."),)
+    usage = "%s [options] sorted.bam [out%s]" % (prog, ext)
+    parser = argparse.ArgumentParser(prog=prog, usage=usage)
 
     parser.add_argument("infile", metavar="BAM",
                         help="Filename of a sorted BAM file. If set to '-' "
@@ -91,7 +91,7 @@ def parse_arguments(argv, ext):
                              "the input BAM with a '%s' extension. If "
                              "set to '-' the table is printed to STDOUT."
                              % (ext,))
-    parser.add_argument("--target-name", default=None,
+    parser.add_argument("--target-name", default=None, metavar="NAME",
                         help="Name used for 'Target' column; defaults to the "
                              "filename of the BAM file.")
     parser.add_argument("--regions-file", default=None, dest="regions_fpath",

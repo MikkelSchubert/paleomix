@@ -248,21 +248,25 @@ def read_intervals(filename):
 
 
 def main(argv):
-    parser = argparse.ArgumentParser(prog="paleomix vcf_to_fasta")
+    prog = "paleomix vcf_to_fasta"
+    usage = "%s [options] --genotype in.vcf --intervals in.bed" % (prog,)
+
+    parser = argparse.ArgumentParser(prog=prog, usage=usage)
     parser.add_argument("--genotype", help="Tabix indexed VCF file.",
-                        required=True)
-    parser.add_argument("--intervals", help="BED file.", required=True)
+                        required=True, metavar="VCF")
+    parser.add_argument("--intervals", help="BED file.", required=True,
+                        metavar="BED")
     parser.add_argument("--padding", type=int, default=10,
                         help="Number of bases to expand intervals, when "
-                             "checking for adjacent indels [%default]")
+                             "checking for adjacent indels [%(default)s]")
     parser.add_argument("--whole-codon-indels-only",
                         action="store_true", default=False,
-                        help="If true, only indels where (length % 3) == 0 "
-                             "are retained [%default]")
+                        help="If true, only indels where (length %% 3) == 0 "
+                             "are retained [%(default)s]")
     parser.add_argument("--ignore-indels",
                         action="store_true", default=False,
                         help="Do not include indels generated FASTA "
-                             "sequence [%default].")
+                             "sequence [%(default)s].")
     opts = parser.parse_args(argv)
 
     print("Running vcf_to_fasta", end="", file=sys.stderr)

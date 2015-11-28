@@ -90,7 +90,8 @@ _FILTERED_FLAGS |= 0x800  # Chimeric alignment
 
 
 def parse_args(argv):
-    parser = ArgumentParser(usage="%(prog)s [options] < in.bam > out.bam")
+    usage = "paleomix rmdup_collapsed [options] < sorted.bam > out.bam"
+    parser = ArgumentParser(usage=usage)
     parser.add_argument("input", default="-", help="BAM file.", nargs="?")
     parser.add_argument("--remove-duplicates",
                         help="Remove duplicates from output; by default "

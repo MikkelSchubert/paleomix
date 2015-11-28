@@ -258,7 +258,10 @@ def write_bed(table, target):
 ###############################################################################
 
 def parse_arguments(argv):
-    parser = ArgumentParser()
+    prog = "paleomix gtf_to_bed"
+    usage = "%s [options] in.gtf out_prefix [in.scaffolds]" % (prog,)
+
+    parser = ArgumentParser(prog=prog, usage=usage)
     parser.add_argument('infile', metavar="INPUT.gtf",
                         help="Input file in GTF format.")
     parser.add_argument('output_prefix', metavar="OUTPUT_PREFIX",

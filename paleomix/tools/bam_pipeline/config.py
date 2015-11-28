@@ -31,12 +31,13 @@ from paleomix.config import \
      PerHostConfig
 
 
-def _run_config_parser(argv):
+def _run_config_parser(argv, pipeline_variant):
     per_host_cfg = PerHostConfig("bam_pipeline")
+    pipeline_variant = "%s_pipeline" % (pipeline_variant,)
 
-    usage_str    = "%prog <command> [options] [makefiles]"
-    version_str  = "%%prog %s" % (paleomix.__version__,)
-    parser       = optparse.OptionParser(usage = usage_str, version = version_str)
+    usage_str = "paleomix %s <command> [options] [makefiles]" % (pipeline_variant,)
+    version_str = "paleomix %s %s" % (pipeline_variant, paleomix.__version__)
+    parser = optparse.OptionParser(usage=usage_str, version=version_str)
 
     paleomix.ui.add_optiongroup(parser,
                                 ui_default=PerHostValue("running"),
@@ -90,8 +91,8 @@ def _run_config_parser(argv):
     return per_host_cfg.parse_args(parser, argv)
 
 
-def parse_config(argv):
-    config, args = _run_config_parser(argv)
+def parse_config(argv, pipeline_variant):
+    config, args = _run_config_parser(argv, pipeline_variant)
     paleomix.ui.set_ui_colors(config.ui_colors)
 
     return config, args

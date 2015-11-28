@@ -51,7 +51,7 @@ def _read_files(filenames, args):
 
 
 def main(argv):
-    parser = optparse.OptionParser("vcf_filter [options] [in1.vcf, ...]")
+    parser = optparse.OptionParser("paleomix vcf_filter [options] [in1.vcf, ...]")
     vcffilter.add_varfilter_options(parser)
     (opts, args) = parser.parse_args(argv)
 

@@ -73,7 +73,10 @@ def _call(input_files, output_file):
 
 def main(argv):
     """Main function; takes a list of arguments but excluding sys.argv[0]."""
-    parser = argparse.ArgumentParser(prog="paleomix cat")
+    prog = "paleomix cat"
+    usage = "%s [options] [in|in.gz|in.bz2, ...]" % (prog,)
+
+    parser = argparse.ArgumentParser(prog=prog, usage=usage)
     parser.add_argument("files", nargs="+", help="Input files.")
     parser.add_argument("--output", default=None,
                         help="Write output to this file; defaults to STDOUT.")
