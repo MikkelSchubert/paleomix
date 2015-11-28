@@ -110,12 +110,12 @@ _TEMPLATE_BAM_OPTIONS = \
 #        - CN:SequencingCenterNameHere
 #        - DS:DescriptionOfReadGroup
 
-  # Mark / filter PCR duplicates. If set to 'filter', PCR duplicates
-  # are removed from the output files; if set to 'mark', these are
-  # flagged with bit 0x400; if set to 'no', the reads are assumed to
-  # not have been amplified. Collapsed reads are filtered using the
-  # command 'bam_rmdup_duplicates', while "normal" reads are filtered
-  # using Picard MarkDuplicates.
+  # Mark / filter PCR duplicates. If set to 'filter', PCR duplicates are
+  # removed from the output files; if set to 'mark', PCR duplicates are
+  # flagged with bit 0x400, and not removed from the output files; if set to
+  # 'no', the reads are assumed to not have been amplified. Collapsed reads
+  # are filtered using the command 'paleomix rmdup_duplicates', while "normal"
+  # reads are filtered using Picard MarkDuplicates.
   PCRDuplicates: filter
 
   # Carry out quality base re-scaling of libraries using mapDamage
@@ -214,6 +214,8 @@ def print_header(full_mkfile=True,
     minimal_template = lines[:3]
     for line in lines[3:]:
         if not line.lstrip().startswith("#"):
+            line = line.split("#", 1)[0]
+
             # Avoid too many empty lines
             if line.strip() or minimal_template[-1].strip():
                 minimal_template.append(line)
@@ -229,9 +231,9 @@ def read_alignment_records(filename):
 
 
 def parse_args(argv):
-    parser = OptionParser("Usage: %prog [/path/to/SampleSheet.csv]")
+    parser = OptionParser("Usage: %prog [/path/to/SampleSheet.csv, ...]")
     parser.add_option("--minimal", default=False, action="store_true",
-                      help = "Strip comments from makefile template.")
+                      help="Strip comments from makefile template.")
 
     return parser.parse_args(argv)
 
@@ -286,14 +288,10 @@ def main(argv, pipeline="bam"):
             print()
         print()
 
-    if not argv:
-        print_info("No directories/files specified, standard makefile printed.", file = sys.stderr)
-        print_info("If the reads have associated %s files, these" % (_FILENAME,), file = sys.stderr)
-        print_info("may be used to generate a preliminary makefile:", file = sys.stderr)
-        print_info("  Usage: bam_pipeline mkfile [filename/directory] [...]", file = sys.stderr)
-        print_info("Each directory must contain a '%s' file." % _FILENAME, file = sys.stderr)
-    else:
-        print_info("Makefile printed. Please check for correctness before running pipeline.", file = sys.stderr)
+    if argv:
+        print_info("Automatically generated makefile printed.\n"
+                   "Please check for correctness before running pipeline.",
+                   file=sys.stderr)
     return 0
 
 
