@@ -41,11 +41,11 @@ from paleomix.nodegraph import \
 
 EXAML_VERSION = versions.Requirement(call   = ("examl", "-version"),
                                      search = r"version (\d+)\.(\d+)\.(\d+)",
-                                     checks = versions.GE(1, 0, 5))
+                                     checks = versions.GE(3, 0, 0))
 
-PARSER_VERSION = versions.Requirement(call   = ("examlParser", "-h"),
+PARSER_VERSION = versions.Requirement(call   = ("parse-examl", "-h"),
                                       search = r"version (\d+)\.(\d+)\.(\d+)",
-                                      checks = versions.GE(1, 0, 2))
+                                      checks = versions.GE(3, 0, 0))
 
 
 class ExaMLParserNode(CommandNode):
@@ -57,7 +57,7 @@ class ExaMLParserNode(CommandNode):
         input_partition  -- A set of partitions in a format readable by RAxML.
         output_filename  -- Filename for the output binary sequence."""
 
-        command = AtomicCmdBuilder("examlParser", set_cwd = True)
+        command = AtomicCmdBuilder("parse-examl", set_cwd = True)
 
         command.set_option("-s", "%(TEMP_OUT_ALN)s")
         command.set_option("-q", "%(TEMP_OUT_PART)s")

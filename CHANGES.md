@@ -2,6 +2,9 @@
 Changelog
 =========
 
+  2015-11-30: EXaML v3.0+ is now required; the name of the examl parser
+              executable is required to be 'parse-examl' (previously expected
+              to be 'examlParser'), following the name used by EXaML v3.0+.
   2015-11-30: Pysam v0.8.3+ is now required.
   2015-11-27: AdapterRemoval v2.1+ is now required; it is now possible to
               provide a list of adapter sequences using --adapter-list,
