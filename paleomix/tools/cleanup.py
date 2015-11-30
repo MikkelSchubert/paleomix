@@ -113,13 +113,9 @@ def _cleanup_record(record):
         else:
             unmapped_read.rnext = -1
             unmapped_read.pnext = -1
-        unmapped_read.tid = unmapped_read.rnext
 
-        # Set .pos TWICE; this is a workaround for a bug in current versions
-        # of pysam, in which the bin in the record is re-calculated BEFORE
-        # the new position value is set, using the old pos value.
-        unmapped_read.pos = unmapped_read.pnext  # Update 1 of 2
-        unmapped_read.pos = unmapped_read.pnext  # Update 2 of 2
+        unmapped_read.tid = unmapped_read.rnext
+        unmapped_read.pos = unmapped_read.pnext
 
         return unmapped_read
     else:

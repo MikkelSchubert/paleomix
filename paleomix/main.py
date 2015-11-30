@@ -159,8 +159,8 @@ def _are_requirements_met():
 
     import pysam
     version = [int(field) for field in pysam.__version__.split(".")]
-    if version[:3] < [0, 7, 5]:
-        error = "Pysam is outdated (v%s), version must be at least v0.7.5!"
+    if version[:3] < [0, 8, 3]:
+        error = "Pysam is outdated (v%s), version must be at least v0.8.3!"
         error %= (pysam.__version__,)
         sys.stderr.write(_IMPORT_ERROR_PYSAM % (error,))
         return False

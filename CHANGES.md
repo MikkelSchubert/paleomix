@@ -2,6 +2,7 @@
 Changelog
 =========
 
+  2015-11-30: Pysam v0.8.3+ is now required.
   2015-11-27: AdapterRemoval v2.1+ is now required; it is now possible to
               provide a list of adapter sequences using --adapter-list,
               and to specify the number of threads uses by AdapterRemoval
