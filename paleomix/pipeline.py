@@ -273,24 +273,27 @@ class Pypeline(object):
             print_func("%s\t%s" % (state, filename))
 
     def print_required_executables(self, print_func=print):
+        template = "{: <40s} {: <11s} {}"
         pipeline_executables = self.list_required_executables()
-        print_func("{: <40s} {: <10s} {}".format("Executable",
-                                                 "Version",
-                                                 "Required version"))
+        print_func(template.format("Executable",
+                                   "Version",
+                                   "Required version"))
 
         for (name, requirements) in sorted(pipeline_executables.items()):
             if not requirements:
-                print_func(name)
+                print_func(template.format(name, "-", "any version"))
+                continue
 
             for requirement in requirements:
                 try:
-                    version = ".".join(map(str, requirement.version))
+                    if requirement.version:
+                        version = "v" + ".".join(map(str, requirement.version))
+                    else:
+                        version = "NA"
                 except VersionRequirementError:
                     version = "UNKNOWN"
 
-                print_func("{: <40s} v{: <10s} {}".format(name,
-                                                          version,
-                                                          requirement.checks))
+                print_func(template.format(name, version, requirement.checks))
 
     def _sigint_handler(self, signum, frame):
         """Signal handler; see signal.signal."""
