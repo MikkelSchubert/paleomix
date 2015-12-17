@@ -136,8 +136,10 @@ _VALIDATION_OPTIONS = {
                    default=3),
         "--minlength": IsUnsignedInt(default=25),
         "--minalignmentlength": IsUnsignedInt,
+        "--minadapteroverlap": IsUnsignedInt,
         "--shift": IsUnsignedInt,
         "--5prime": IsStr,
+        "--qualitymax": IsUnsignedInt,
         },
 
     # Which aliger/mapper to use (BWA/Bowtie2)
