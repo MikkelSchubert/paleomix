@@ -135,6 +135,7 @@ _VALIDATION_OPTIONS = {
         "--minlength": IsUnsignedInt(default=25),
         "--maxlength": IsUnsignedInt,
         "--minalignmentlength": IsUnsignedInt,
+        "--minadapteroverlap": IsUnsignedInt,
         "--shift": IsUnsignedInt,
         "--qualitymax": IsUnsignedInt,
         },
