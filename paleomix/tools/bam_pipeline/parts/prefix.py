@@ -50,9 +50,9 @@ class Prefix:
         self.datadup_check = self._build_dataduplication_node(prefix, files_and_nodes)
 
         self.bams = {}
-        if "Raw BAM" in features:
+        if features["RawBAM"]:
             self.bams.update(self._build_raw_bam(config, prefix, files_and_nodes))
-        if "Realigned BAM" in features:
+        if features["RealignedBAM"]:
             self.bams.update(self._build_realigned_bam(config, prefix, files_and_nodes))
 
         if not self.bams:

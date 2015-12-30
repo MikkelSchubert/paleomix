@@ -35,22 +35,20 @@ from paleomix.tools.bam_pipeline.parts.summary import \
 
 
 def add_statistics_nodes(config, makefile, target):
-    features = set(makefile["Options"]["Features"])
-    if not features & set(("Coverage", "Depths", "Summary")):
-        return
+    features = makefile["Options"]["Features"]
 
     nodes = []
-    if "Depths" in features:
+    if features["Depths"]:
         nodes.extend(_build_depth(config, target))
 
-    if "Summary" in features or "Coverage" in features:
-        make_summary = ("Summary" in features)
+    if features["Summary"] or features["Coverage"]:
+        make_summary = features["Summary"]
         coverage = _build_coverage(config, target, make_summary)
         if make_summary:
             summary_node = _build_summary_node(config, makefile,
                                                target, coverage)
             nodes.append(summary_node)
-        elif "Coverage" in features:
+        elif features["Coverage"]:
             nodes.extend(coverage["Nodes"])
 
     target.nodes.extend(nodes)

@@ -101,20 +101,21 @@ Options:
                           # bases or low quality bases at termini.
 
   # Optional steps to perform during processing
-  # To disable all features, replace with line "Features: []"
   Features:
-#    - Raw BAM        # Generate BAM from the raw libraries (no indel realignment)
-                     #   Location: {Destination}/{Target}.{Genome}.bam
-    - Realigned BAM  # Generate indel-realigned BAM using the GATK Indel realigner
-                     #   Location: {Destination}/{Target}.{Genome}.realigned.bam
-    - mapDamage      # Generate mapDamage plot for each (unrealigned) library
-                     #   Location: {Destination}/{Target}.{Genome}.mapDamage/{Library}/
-    - Coverage       # Generate coverage information for the raw BAM (wo/ indel realignment)
-                     #   Location: {Destination}/{Target}.{Genome}.coverage
-    - Depths         # Generate histogram of number of sites with a given read-depth
-                     #   Location: {Destination}/{Target}.{Genome}.depths
-    - Summary        # Generate target summary (uses statistics from raw BAM)
-                     #   Location: {Destination}/{Target}.summary
+    RawBAM: no          # Generate BAM from the raw libraries (no indel realignment)
+                        #   Location: {Destination}/{Target}.{Genome}.bam
+    RealignedBAM: yes   # Generate indel-realigned BAM using the GATK Indel realigner
+                        #   Location: {Destination}/{Target}.{Genome}.realigned.bam
+    mapDamage: yes      # Generate mapDamage plot for each (unrealigned) library
+                        #   Location: {Destination}/{Target}.{Genome}.mapDamage/{Library}/
+    Coverage: yes       # Generate coverage information for the raw BAM (wo/ indel realignment)
+                        #   Location: {Destination}/{Target}.{Genome}.coverage
+    Depths: yes         # Generate histogram of number of sites with a given read-depth
+                        #   Location: {Destination}/{Target}.{Genome}.depths
+    Summary: yes        # Generate summary table for each target
+                        #   Location: {Destination}/{Target}.summary
+    DuplicateHist: no   # Generate histogram of PCR duplicates, for use with PreSeq
+                        #   Location: {Destination}/{Target}.{Genome}.duphist/{Library}/
 
 
 # Map of prefixes by name, each having a Path key, which specifies the

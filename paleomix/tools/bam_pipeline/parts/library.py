@@ -124,7 +124,7 @@ class Library:
         index_required = (bool(prefix.get("RegionsOfInterest")) or
                           # or if we wish to run GATK, but only if we don't
                           # use a downstream rescaled BAM as input for GATK
-                          (("Realigned BAM" in self.options["Features"]) and not
+                          (self.options["Features"]["RealignedBAM"] and not
                            self.options["RescaleQualities"]))
 
         results = {}
@@ -148,7 +148,7 @@ class Library:
             files_and_nodes, plot_node, model_node = \
               self._rescale_quality_scores(config, self.folder, prefix, files_and_nodes)
 
-        if not ("mapDamage" in self.options["Features"]):
+        if not self.options["Features"]["mapDamage"]:
             return files_and_nodes, ()
 
         # External destination for mapDamage plots / tables
@@ -206,14 +206,14 @@ class Library:
 
         # Grab indexing and validation nodes, required by ROIs and GATK
         index_required = bool(prefix.get("RegionsOfInterest")) \
-            or ("Realigned BAM" in self.options["Features"])
+            or self.options["Features"]["RealignedBAM"]
         validate = index_and_validate_bam(config, prefix, scale,
                                           create_index=index_required)
 
         return {output_filename: validate}, plot, model
 
     def _build_duphist_nodes(self, config, target, prefix, files_and_nodes):
-        if not ("DuplicateHist" in self.options["Features"]):
+        if not self.options["Features"]["DuplicateHist"]:
             return None
 
         input_files = []

@@ -2,6 +2,10 @@
 Changelog
 =========
 
+  2015-12-30: The "Features" section of the BAM Pipeline makefile is now a
+              dictionary rather than a list of strings, and spaces have been
+              removed from feature names. This does not break backwards
+              compatibility.
   2015-11-30: EXaML v3.0+ is now required; the name of the examl parser
               executable is required to be 'parse-examl' (previously expected
               to be 'examlParser'), following the name used by EXaML v3.0+.

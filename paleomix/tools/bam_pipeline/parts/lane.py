@@ -136,7 +136,7 @@ class Lane:
         """
         # Indexes are required for all files when calculating region statistics
         return bool(prefix.get("RegionsOfInterest")) or \
-            (("Realigned BAM" in self.options["Features"]) and not
+            (self.options["Features"]["RealignedBAM"] and not
              # and for BAMs fed to GATK, but in this case we only use these
              # indexes if we don't generate PCR filtered or recaled BAMs
              (self.options["RescaleQualities"] or

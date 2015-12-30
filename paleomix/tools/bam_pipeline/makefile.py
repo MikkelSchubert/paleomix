@@ -54,7 +54,8 @@ from paleomix.common.makefile import \
     StringIn, \
     StringStartsWith, \
     IsListOf, \
-    IsDictOf
+    IsDictOf, \
+    PreProcessMakefile
 from paleomix.common.console import \
     print_info, \
     print_warn
@@ -100,6 +101,40 @@ _VALID_PREFIX_PATH = \
 _VALID_TARGET_NAME = \
     And(_alphanum_check(whitelist="._-"),
         ValueGE(2, key=len, description="at least two characters long"))
+
+_VALID_FEATURES_DICT = {
+    "Coverage": IsBoolean(default=True),
+    "Depths": IsBoolean(default=True),
+    "DuplicateHist": IsBoolean(default=False),
+    "RawBAM": IsBoolean(default=False),
+    "RealignedBAM": IsBoolean(default=True),
+    "Summary": IsBoolean(default=True),
+    "mapDamage": IsBoolean(default=True),
+}
+
+_VALID_FEATURES_LIST = ValuesSubsetOf(("Coverage",
+                                       "Depths",
+                                       "DuplicateHist",
+                                       "mapDamage",
+                                       "Raw BAM",
+                                       "RawBAM",
+                                       "Realigned BAM",
+                                       "RealignedBAM",
+                                       "Summary"))
+
+
+class BAMFeatures(PreProcessMakefile):
+    def __call__(self, path, value):
+        if not isinstance(value, list):
+            return value, _VALID_FEATURES_DICT
+
+        _VALID_FEATURES_LIST(path, value)
+
+        result = {}
+        for key in value:
+            result[key.replace(" ", "")] = True
+
+        return result, _VALID_FEATURES_DICT
 
 
 _VALIDATION_OPTIONS = {
@@ -212,12 +247,7 @@ _VALIDATION_OPTIONS = {
                        default=[]),
 
     # Features of pipeline
-    "Features": Or(IsNone,
-                   ValuesSubsetOf(("Raw BAM", "Realigned BAM", "Coverage",
-                                   "Summary", "mapDamage", "Depths",
-                                   "DuplicateHist")),
-                   default=["Realigned BAM", "Coverage",
-                            "Summary", "mapDamage", "Depths"]),
+    "Features": BAMFeatures(),
 }
 
 
@@ -267,9 +297,11 @@ def _mangle_makefile(makefile):
 
 def _update_options(makefile):
     def _update_possibly_empty_lists(options):
-        for key in ("Features", "ExcludeReads"):
-            if options[key] is None:
-                options[key] = []
+        if options["Features"] is None:
+            options["Features"] = {}
+
+        if options["ExcludeReads"] is None:
+            options["ExcludeReads"] = []
 
     def _do_update_options(options, data, path):
         options = copy.deepcopy(options)
@@ -574,12 +606,12 @@ def _validate_makefiles_features(makefiles):
         for prefix in makefile["Prefixes"].itervalues():
             roi_enabled |= bool(prefix.get("RegionsOfInterest"))
 
-        if "Depths" in features and roi_enabled:
-            if not (("Raw BAM" in features) or ("Realigned BAM") in features):
+        if features["Depths"] and roi_enabled:
+            if not features["RawBAM"] or features["RealignedBAM"]:
                 raise MakefileError("The feature 'Depths' (depth histograms) "
                                     "with RegionsOfInterest enabled, requires "
-                                    "that either the feature 'Raw BAM' or the "
-                                    "feature 'Raligned BAM' is enabled.")
+                                    "that either the feature 'RawBAM' or the "
+                                    "feature 'RalignedBAM' is enabled.")
 
 
 def _validate_hg_prefixes(makefiles):
@@ -589,7 +621,7 @@ def _validate_hg_prefixes(makefiles):
     already_validated = set()
     print_info("  - Validating prefixes ...", file=sys.stderr)
     for makefile in makefiles:
-        uses_gatk = "Realigned BAM" in makefile["Options"]["Features"]
+        uses_gatk = makefile["Options"]["Features"]["RealignedBAM"]
         for prefix in makefile["Prefixes"].itervalues():
             path = prefix["Path"]
             if path in already_validated:
