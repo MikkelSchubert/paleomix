@@ -59,11 +59,18 @@ class FileStatusCache(object):
 
     def files_up_to_date(self, younger, older):
         """Returns true if all files listed in 'younger' have a time-stamp
-        post-dating the time-stamp of the youngest file listed in 'older'.
+        post-dating the time-stamp of the youngest file listed in 'older', or
+        if any files are missing which nessesitates rebuilding.
         """
-        younger_time = max(self._get_state(fpath) for fpath in younger)
-        older_time = min(self._get_state(fpath) for fpath in older)
-        return younger_time > older_time
+        younger_files = [self._get_state(fpath) for fpath in younger]
+        if any(state is None for state in younger_files):
+            return True
+
+        older_files = [self._get_state(fpath) for fpath in older]
+        if any(state is None for state in older_files):
+            return True
+
+        return max(younger_files) > min(older_files)
 
     def _get_state(self, fpath):
         """Returns the mtime of a path, or None if the path does not exist."""
