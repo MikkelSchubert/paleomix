@@ -24,6 +24,7 @@ import os
 
 from paleomix.node import CommandNode
 from paleomix.atomiccmd.command import AtomicCmd
+from paleomix.atomiccmd.sets import SequentialCmds
 
 from paleomix.common.fileutils import reroot_path, swap_ext
 import paleomix.common.versions as versions
@@ -144,13 +145,24 @@ class BAMIndexNode(CommandNode):
     """Indexed a BAM file using 'samtools index'."""
 
     def __init__(self, infile, dependencies=()):
-        cmd_index = AtomicCmd(["samtools", "index", "%(IN_BAM)s",
-                               "%(OUT_BAI)s"],
-                              IN_BAM=infile,
-                              OUT_BAI=swap_ext(infile, ".bai"),
+        basename = os.path.basename(infile)
+
+        cmd_link = AtomicCmd(["ln", "-s", "%(IN_BAM)s", "%(TEMP_OUT_BAM)s"],
+                             IN_BAM=infile,
+                             TEMP_OUT_BAM=basename,
+                             set_cwd=True)
+
+        cmd_index = AtomicCmd(["samtools", "index", "%(TEMP_IN_BAM)s"],
+                              TEMP_IN_BAM=basename,
                               CHECK_SAM=SAMTOOLS_VERSION)
+
+        cmd_rename = AtomicCmd(["mv", "%(TEMP_IN_BAM)s", "%(OUT_BAM)s"],
+                               TEMP_IN_BAM=basename + ".bai",
+                               OUT_BAM=swap_ext(infile, ".bai"))
+
+        commands = SequentialCmds((cmd_link, cmd_index, cmd_rename))
 
         CommandNode.__init__(self,
                              description="<BAMIndex: '%s'>" % (infile,),
-                             command=cmd_index,
+                             command=commands,
                              dependencies=dependencies)
