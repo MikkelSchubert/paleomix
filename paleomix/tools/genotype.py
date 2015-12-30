@@ -48,9 +48,6 @@ from paleomix.common.bedtools import \
     read_bed_file, \
     sort_bed_by_bamfile
 
-from paleomix.nodes.samtools import \
-    samtools_compatible_wbu_mode
-
 import paleomix.tools.factory as factory
 import paleomix.common.procs as processes
 
@@ -96,8 +93,7 @@ def filter_bam(bamfile, bedfile):
         regions = collect_regions(bedfile, bam_handle_in)
         regions.reverse()
 
-        write_mode = samtools_compatible_wbu_mode()
-        with pysam.Samfile("-", write_mode,
+        with pysam.Samfile("-", "wbu",
                            template=bam_handle_in) as bam_handle_out:
             while regions:
                 region_aend = 0

@@ -41,9 +41,6 @@ import argparse
 
 import pysam
 
-from paleomix.nodes.samtools import \
-    samtools_compatible_wbu_mode
-
 import paleomix.tools.factory
 
 import paleomix.common.procs as processes
@@ -83,8 +80,7 @@ def _pipe_to_bam():
     properly handled by "samtools view -S -", resulting in a parse failure.
     """
     with pysam.Samfile("-", "r") as input_handle:
-        write_mode = samtools_compatible_wbu_mode()
-        with pysam.Samfile("-", write_mode, template=input_handle) as output_handle:
+        with pysam.Samfile("-", "wbu", template=input_handle) as output_handle:
             for record in input_handle:
                 output_handle.write(record)
 
@@ -146,8 +142,7 @@ def _cleanup_unmapped(args, cleanup_sam):
         if args.rg_id is not None:
             _set_rg_tags(header, args.rg_id, args.rg)
 
-        write_mode = samtools_compatible_wbu_mode()
-        with pysam.Samfile("-", write_mode, header=header) as output_handle:
+        with pysam.Samfile("-", "wbu", header=header) as output_handle:
             for record in input_handle:
                 if (record.mapq < args.min_quality) \
                         or (record.flag & args.exclude_flags):
