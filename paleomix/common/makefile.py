@@ -236,6 +236,9 @@ def process_makefile(data, specification, path=("root",), apply_defaults=True):
         specification = specification.specification
         data = process_makefile(data, specification, path,
                                 apply_defaults=False)
+    elif isinstance(specification, PreProcessMakefile):
+        data, specification = specification(path, data)
+        data = process_makefile(data, specification, path, apply_defaults)
     elif _is_spec(specification):
         _instantiate_spec(specification)(path, data)
     elif isinstance(data, (dict, types.NoneType)) \
@@ -295,6 +298,19 @@ class WithoutDefaults(object):
 
     def __init__(self, specification):
         self.specification = specification
+
+
+class PreProcessMakefile(object):
+    """Allows pre-processing of a part of a makefile prior to validation; when
+    encountered, the object is called with the current value, and is expected
+    to return a tuple containing (value, specification), which are then used
+    subsequently. This allows transformation of fields for backwards
+    compatibility.
+    """
+
+    def __call__(self, path, value):
+        """Must return (value, specification) tuple."""
+        raise NotImplementedError
 
 
 class MakefileSpec(object):
@@ -857,7 +873,8 @@ def _process_default_values(data, specification, path, apply_defaults):
                 default_value_from_spec = True
 
             if apply_defaults \
-                    and not isinstance(default_value, WithoutDefaults):
+                    and not isinstance(default_value, (PreProcessMakefile,
+                                                       WithoutDefaults)):
                 if isinstance(default_value, dict):
                     # Setting of values in the dict will be accomplished
                     # in subsequent calls to _process_default_values

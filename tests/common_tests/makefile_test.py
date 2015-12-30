@@ -21,6 +21,7 @@
 # SOFTWARE.
 #
 import os
+import types
 
 from nose.tools import \
     assert_is, \
@@ -61,7 +62,8 @@ from paleomix.common.makefile import \
     StringStartsWith, \
     StringEndsWith, \
     IsListOf, \
-    IsDictOf
+    IsDictOf, \
+    PreProcessMakefile
 
 
 # Dummy value for the path parameters
@@ -1646,3 +1648,41 @@ def test_read_makefile__missing_simple_file():
     }
     result = read_makefile(test_file("simple.yaml"), specs)
     assert_equal(expected, result)
+
+
+###############################################################################
+###############################################################################
+# PreProcessMakefile
+
+class _PreProcess(PreProcessMakefile):
+    def __call__(self, path, value):
+        if isinstance(value, types.StringTypes):
+            return int(value), IsInt
+
+        return value, IsInt
+
+
+def test__preprocess_makefile__missing_value():
+    spec = {"Key": _PreProcess()}
+    assert_equal({}, process_makefile({}, spec))
+
+
+def test__preprocess_makefile__expected_value():
+    spec = {"Key": _PreProcess()}
+    assert_equal({"Key": 13}, process_makefile({"Key": 13}, spec))
+
+
+def test__preprocess_makefile__processed_value():
+    spec = {"Key": _PreProcess()}
+    assert_equal({"Key": 14}, process_makefile({"Key": "14"}, spec))
+
+
+def test__preprocess_makefile__invalid_value():
+    spec = {"Key": _PreProcess()}
+    assert_raises(MakefileError, process_makefile, {"Key": False}, spec)
+
+
+def test__preprocess_makefile__invalid_string():
+    spec = {"Key": _PreProcess()}
+    # Failures in processing should propagate out
+    assert_raises(ValueError, process_makefile, {"Key": "x14"}, spec)
