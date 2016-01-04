@@ -73,8 +73,8 @@ def build_pipeline_trimming(config, makefile):
     return nodes
 
 
-def build_pipeline_full(config, makefile):
-    nodes = []
+def build_pipeline_full(config, makefile, return_nodes=True):
+    result = []
     features = makefile["Options"]["Features"]
     for (target_name, sample_records) in makefile["Targets"].iteritems():
         prefixes = []
@@ -102,12 +102,15 @@ def build_pipeline_full(config, makefile):
             # Construct coverage, depth-histogram, and summary nodes, etc.
             parts.add_statistics_nodes(config, makefile, target)
 
-            # Extra tasks (e.g. coverage, depth-histograms, etc.)
-            nodes.extend(target.nodes)
-            # Output BAM files (raw, realigned)
-            nodes.extend(target.bams.itervalues())
+            if return_nodes:
+                # Extra tasks (e.g. coverage, depth-histograms, etc.)
+                result.extend(target.nodes)
+                # Output BAM files (raw, realigned)
+                result.extend(target.bams.itervalues())
+            else:
+                result.append(target)
 
-    return nodes
+    return result
 
 
 def index_references(config, makefiles):
