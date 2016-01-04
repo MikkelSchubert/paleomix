@@ -9,40 +9,46 @@
 Options:
   # Sequencing platform, see SAM/BAM reference for valid values
   Platform: Illumina
-  # Quality offset for PHRED scores, either 33 (Sanger/Illumina 1.8+) or 64 (Illumina 1.3+ / 1.5+)
-  # For Bowtie2 it is also possible to specify 'Solexa', to handle reads on the Solexa scale.
-  # This is used during adapter-trimming (AdapterRemoval) and sequence alignment (BWA/Bowtie2)
+  # Quality offset for Phred scores, either 33 (Sanger/Illumina 1.8+)
+  # or 64 (Illumina 1.3+ / 1.5+). For Bowtie2 it is also possible to
+  # specify 'Solexa', to handle reads on the Solexa scale. This is
+  # used during adapter-trimming and sequence alignment
   QualityOffset: 33
-  # Split a lane into multiple entries, one for each (pair of) file(s) found using the search-
-  # string specified for a given lane. Each lane is named by adding a number to the end of the
-  # given barcode.
+  # Split a lane into multiple entries, one for each (pair of) file(s)
+  # found using the search-string specified for a given lane. Each
+  # lane is named by adding a number to the end of the given barcode.
   SplitLanesByFilenames: no
-  # Compression format used when storing FASTQ files (either 'gz' for GZip or 'bz2' for BZip2)
+  # Compression format for FASTQ reads; 'gz' for GZip, 'bz2' for BZip2
   CompressionFormat: bz2
 
-  # Settings for aligners supported by the pipeline
-#  Settings for trimming of reads, see AdapterRemoval man-page for more options
+  # Settings for trimming of reads, see AdapterRemoval man-page
   AdapterRemoval:
      # Adapter sequences, set and uncomment to override defaults
-#     --pcr1: ...
-#     --pcr2: ...
-     # Pipeline defaults that differ from AR defaults;
-     # To override, change the value(s) and uncomment the line(s):
-#     --mm: 3
-#     --minlength: 25
-     # Features enabled by default; uncomment to disable:
-#     --collapse: no
-#     --trimns: no
-#     --trimqualities: no
+#     --adapter1: AGATCGGAAGAGCACACGTCTGAACTCCAGTCACNNNNNNATCTCGTATGCCGTCTTCTGCTTG
+#     --adapter2: AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT
+     # Some BAM pipeline defaults differ from AR defaults;
+     # To override, change these value(s):
+     --mm: 3
+     --minlength: 25
+     # Extra features enabled by default; change 'yes' to 'no' to disable
+     --collapse: yes
+     --trimns: yes
+     --trimqualities: yes
 
+  # Settings for aligners supported by the pipeline
   Aligners:
     # Choice of aligner software to use, either "BWA" or "Bowtie2"
     Program: BWA
 
     # Settings for mappings performed using BWA
     BWA:
+      # One of "backtrack", "bwasw", or "mem"; see the BWA documentation
+      # for a description of each algorithm (defaults to 'backtrack')
+      Algorithm: backtrack
       # Filter hits with a mapping quality (PHRED) below this value
       MinQuality: 25
+      # Filter reads that did not map to the reference sequence
+      FilterUnmappedReads: yes
       # Should be disabled ("no") for aDNA alignments, as post-mortem localizes
       # to the seed region, which BWA expects to have few errors. Sets "-l".
       # See Schubert et al. 2012: http://pmid.us/22574660
