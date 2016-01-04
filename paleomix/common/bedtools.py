@@ -41,7 +41,7 @@ class BEDRecord(object):
     """Class for parsing and representing a BED records.
 
     The class has the following properties:
-       .name -> str
+       .contig -> str
        .start -> int (0-based)
        .end -> int (1-based)
        .name -> str
