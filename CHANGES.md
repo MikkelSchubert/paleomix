@@ -2,6 +2,10 @@
 Changelog
 =========
 
+  2016-01-04: Added command-line option --nth-sample to the 'vcf_to_fasta'
+              command, allowing FASTA construction from multi-sample VCFs;
+              furthermore, if no BED file is specified, the entire genotype
+              is constructed assuming that the VCF header is present.
   2015-12-30: The "Features" section of the BAM Pipeline makefile is now a
               dictionary rather than a list of strings, and spaces have been
               removed from feature names. This does not break backwards

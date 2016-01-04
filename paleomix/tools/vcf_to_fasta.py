@@ -41,6 +41,7 @@ import copy
 import itertools
 import os
 import sys
+import re
 
 import pysam
 
@@ -56,6 +57,8 @@ from paleomix.common.bedtools import BEDRecord
 _SEQUENCE_CHUNK = 1024 * 1024  # 1kbp
 # Number of columns per line in FASTA sequences
 _FASTA_COLUMNS = 60
+
+_VCF_DICT = re.compile("##(.*)=<(.*)>")
 
 
 ###############################################################################
@@ -247,17 +250,64 @@ def read_intervals(filename):
     return intervals
 
 
+def parse_intervals(genotype):
+    records = {}
+    for line in genotype.header:
+        match = _VCF_DICT.match(line)
+        if not match:
+            continue
+
+        key, values = match.groups()
+        if key == "contig":
+            values = dict(pair.split("=", 1) for pair in values.split(","))
+            record = BEDRecord()
+            record.contig = values["ID"]
+            record.start = 0
+            record.end = int(values["length"])
+            record.name = record.contig
+            record.strand = "+"
+
+            records[record.contig] = [record]
+
+    if not records:
+        sys.stderr.write("ERROR: List of contigs not found in VCF header; "
+                         "specifying --intervals is required!\n")
+        return None
+
+    return records
+
+
+def check_nth_sample(options, genotype):
+    parser = pysam.asVCF()
+
+    for contig in genotype.contigs:
+        for record in text.parse_lines(genotype.fetch(contig), parser):
+            if len(record) <= options.nth_sample:
+                sys.stderr.write("ERROR: Sample %i selected with --nth-sample,"
+                                 " but file only contains %i sample(s)!\n"
+                                 % (options.nth_sample + 1, len(record)))
+                return False
+            return True
+    return True
+
+
 def main(argv):
     prog = "paleomix vcf_to_fasta"
     usage = "%s [options] --genotype in.vcf --intervals in.bed" % (prog,)
 
     parser = argparse.ArgumentParser(prog=prog, usage=usage)
-    parser.add_argument("--nth-sample", help="Use Nth sample from VCF [%(default)s].",
-                        default=0, type=int, metavar="NTH")
-    parser.add_argument("--genotype", help="Tabix indexed VCF file.",
-                        required=True, metavar="VCF")
-    parser.add_argument("--intervals", help="BED file.", required=True,
-                        metavar="BED")
+    parser.add_argument("--genotype", required=True, metavar="VCF",
+                        help="Tabix indexed VCF file; by default the first "
+                             "sample is used in multi-sample VCFs. Use "
+                             "--nth-sample option to select another sample.")
+    parser.add_argument("--nth-sample", default=1, type=int, metavar="NTH",
+                        help="Use Nth sample from the VCF, with the first "
+                             "sample numbered '1' [default: %(default)s].")
+    parser.add_argument("--intervals", metavar="BED",
+                        help="Six column BED file; sequences on the same "
+                             "contig with the same name are assumed to "
+                             "represent the same gene, and are merged into a "
+                             "single contiguous FASTA sequence.")
     parser.add_argument("--padding", type=int, default=10,
                         help="Number of bases to expand intervals, when "
                              "checking for adjacent indels [%(default)s]")
@@ -269,7 +319,10 @@ def main(argv):
                         action="store_true", default=False,
                         help="Do not include indels generated FASTA "
                              "sequence [%(default)s].")
+
     opts = parser.parse_args(argv)
+    # Relevant VCF functions uses zero-based offsets
+    opts.nth_sample -= 1
 
     print("Running vcf_to_fasta", end="", file=sys.stderr)
     if opts.whole_codon_indels_only:
@@ -283,10 +336,22 @@ def main(argv):
         sys.stderr.write("ERROR: VCF file not tabix indexed.\n")
         sys.stderr.write("       To index, run \"tabix -p vcf <filename>\".\n")
         return 1
+    elif opts.nth_sample < 1:
+        sys.stderr.write("ERROR: --nth-sample uses 1-based offsets, zero and\n")
+        sys.stderr.write("       negative values are not allowed!\n")
+        return 1
 
     genotype = pysam.Tabixfile(opts.genotype)
-    intervals = read_intervals(opts.intervals)
+
+    if opts.intervals is None:
+        intervals = parse_intervals(genotype)
+    else:
+        intervals = read_intervals(opts.intervals)
+
     if intervals is None:
+        return 1
+
+    if not check_nth_sample(opts, genotype):
         return 1
 
     return genotype_genes(opts, intervals, genotype)
