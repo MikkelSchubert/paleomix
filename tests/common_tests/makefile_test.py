@@ -1686,3 +1686,24 @@ def test__preprocess_makefile__invalid_string():
     spec = {"Key": _PreProcess()}
     # Failures in processing should propagate out
     assert_raises(ValueError, process_makefile, {"Key": "x14"}, spec)
+
+
+class _PreProcessWithDefault(PreProcessMakefile):
+    def __init__(self, default):
+        self._default = default
+
+    def __call__(self, path, value):
+        if isinstance(value, types.StringTypes):
+            return int(value), IsInt
+
+        return value, IsInt(default=self._default)
+
+
+def test__preprocess_makefile__with_default__missing_value():
+    spec = {"Key": _PreProcessWithDefault(314)}
+    assert_equal({"Key": 314}, process_makefile({}, spec))
+
+
+def test__preprocess_makefile__with_default__expected_value():
+    spec = {"Key": _PreProcessWithDefault(314)}
+    assert_equal({"Key": 14}, process_makefile({"Key": 14}, spec))

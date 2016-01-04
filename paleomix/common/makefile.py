@@ -862,6 +862,10 @@ def _process_default_values(data, specification, path, apply_defaults):
         if (not _is_spec(cur_key)) and (cur_key not in data):
             default_value = specification[cur_key]
             default_value_from_spec = False
+
+            while isinstance(default_value, PreProcessMakefile):
+                data, default_value = default_value(path, data)
+
             if _is_spec(default_value):
                 default_value = _instantiate_spec(default_value)
                 if default_value.default is DEFAULT_NOT_SET:
