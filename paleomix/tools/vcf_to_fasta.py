@@ -95,9 +95,9 @@ def split_beds(beds, size=_SEQUENCE_CHUNK):
 ###############################################################################
 # Genotyping functions
 
-def add_snp(snp, position, sequence):
+def add_snp(options, snp, position, sequence):
     if snp.alt != ".":
-        genotype = "".join(vcfwrap.get_ml_genotype(snp))
+        genotype = "".join(vcfwrap.get_ml_genotype(snp, options.nth_sample))
         encoded = sequences.encode_genotype(genotype)
     else:
         encoded = snp.ref
@@ -108,7 +108,7 @@ def add_indel(options, bed, indel, sequence):
     if indel.alt == ".":
         return
 
-    genotype = vcfwrap.get_ml_genotype(indel)
+    genotype = vcfwrap.get_ml_genotype(indel, options.nth_sample)
     if genotype[0] != genotype[1]:
         # No way to represent heterozygous indels
         return
@@ -169,7 +169,7 @@ def build_region(options, genotype, bed):
         if vcfwrap.is_indel(vcf):
             indels.append(vcf)
         else:
-            add_snp(vcf, vcf.pos - start, sequence)
+            add_snp(options, vcf, vcf.pos - start, sequence)
 
     if not options.ignore_indels:
         for vcf in indels:
@@ -252,6 +252,8 @@ def main(argv):
     usage = "%s [options] --genotype in.vcf --intervals in.bed" % (prog,)
 
     parser = argparse.ArgumentParser(prog=prog, usage=usage)
+    parser.add_argument("--nth-sample", help="Use Nth sample from VCF [%(default)s].",
+                        default=0, type=int, metavar="NTH")
     parser.add_argument("--genotype", help="Tabix indexed VCF file.",
                         required=True, metavar="VCF")
     parser.add_argument("--intervals", help="BED file.", required=True,

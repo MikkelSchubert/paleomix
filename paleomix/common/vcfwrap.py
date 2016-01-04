@@ -69,8 +69,6 @@ def parse_indel(vcf):
     ref_len, alt_len = len(vcf.ref), len(vcf.alt)
     # The length of the insertion / deletion
     len_diff = abs(alt_len - ref_len)
-    if not len_diff:
-        raise ValueError("VCF record does not appear to be an indel:" + str(vcf))
 
     # Wheter or not the sequence 'what' is found in the reference
     in_reference = (ref_len >= alt_len)
@@ -96,18 +94,16 @@ def is_indel(vcf):
 # The corresponding nucleotides for each value in the VCF PL field
 _genotype_indices = [(jj, ii) for ii in range(0, 10) for jj in range(0, ii + 1)]
 
-def get_ml_genotype(vcf):
+
+def get_ml_genotype(vcf, sample=0):
     """Returns the most likely genotype of a sample in a vcf record. Note that
     only records with exactly one sample are supported. If no single most likely
     genotype can be determined, the function returns 'N' for both bases."""
-    if len(vcf) != 1:
-        raise ValueError("Only records with 1 sample are supported!")
-
     genotypes = []
     genotypes.extend(vcf.ref.split(","))
     genotypes.extend(vcf.alt.split(","))
 
-    PL = map(int, get_format(vcf)["PL"].split(","))
+    PL = map(int, get_format(vcf, sample)["PL"].split(","))
 
     expected_length = (len(genotypes) * (len(genotypes) + 1)) // 2
     if len(PL) != expected_length:
@@ -124,6 +120,6 @@ def get_ml_genotype(vcf):
     return (genotypes[prefix], genotypes[postfix])
 
 
-def get_format(vcf, sample = 0):
+def get_format(vcf, sample=0):
     return dict(zip(vcf.format.split(":"),
                     vcf[sample].split(":")))
