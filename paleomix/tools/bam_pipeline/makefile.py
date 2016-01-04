@@ -63,7 +63,9 @@ from paleomix.common.console import \
 import paleomix.common.sequences as sequences
 
 
-_READ_TYPES = set(("Single", "Collapsed", "CollapsedTruncated", "Paired"))
+_READ_TYPES = set(("Single", "Singleton",
+                   "Collapsed", "CollapsedTruncated",
+                   "Paired"))
 
 
 def read_makefiles(config, filenames):
@@ -123,6 +125,18 @@ _VALID_FEATURES_LIST = ValuesSubsetOf(("Coverage",
                                        "Summary"))
 
 
+_VALID_EXCLUDE_DICT = {
+    "Single": IsBoolean(default=False),
+    "Collapsed": IsBoolean(default=False),
+    "CollapsedTruncated": IsBoolean(default=False),
+    "Paired": IsBoolean(default=False),
+    "Singleton": IsBoolean(default=False),
+}
+
+_VALID_EXCLUDE_LIST = ValuesSubsetOf(_READ_TYPES)
+
+
+# Convert old-style 'Features' list to dictionary of bools (listed = on)
 class BAMFeatures(PreProcessMakefile):
     def __call__(self, path, value):
         if not isinstance(value, list):
@@ -135,6 +149,26 @@ class BAMFeatures(PreProcessMakefile):
             result[key.replace(" ", "")] = True
 
         return result, _VALID_FEATURES_DICT
+
+
+# Convert old-style 'ExcludeReads' list to dictionary of bools (listed = off)
+class ExcludeReads(PreProcessMakefile):
+    def __call__(self, path, value):
+        if not isinstance(value, list):
+            return value, _VALID_EXCLUDE_DICT
+
+        _VALID_EXCLUDE_LIST(path, value)
+
+        result = dict.fromkeys(value, True)
+        # 'Singleton' was treated as 'Single' prior to to v1.2
+        result.setdefault("Singleton", result.get("Single", False))
+
+        # All values must be set to prevent inheritance, which would otherwise
+        # change the behavior of old makefiles.
+        for key in _READ_TYPES:
+            result.setdefault(key, False)
+
+        return result, _VALID_EXCLUDE_DICT
 
 
 _VALIDATION_OPTIONS = {
@@ -242,9 +276,7 @@ _VALIDATION_OPTIONS = {
     },
 
     # Exclude READ_TYPES from alignment/analysis
-    "ExcludeReads": Or(IsNone,
-                       ValuesSubsetOf(_READ_TYPES),
-                       default=[]),
+    "ExcludeReads": ExcludeReads(),
 
     # Features of pipeline
     "Features": BAMFeatures(),
@@ -296,13 +328,6 @@ def _mangle_makefile(makefile):
 
 
 def _update_options(makefile):
-    def _update_possibly_empty_lists(options):
-        if options["Features"] is None:
-            options["Features"] = {}
-
-        if options["ExcludeReads"] is None:
-            options["ExcludeReads"] = []
-
     def _do_update_options(options, data, path):
         options = copy.deepcopy(options)
         if "Options" in data:
@@ -313,7 +338,6 @@ def _update_options(makefile):
             # Fill out missing values using those of prior levels
             options = fill_dict(destination=data.pop("Options"),
                                 source=options)
-            _update_possibly_empty_lists(options)
 
         if len(path) < 2:
             for key in data:
@@ -323,7 +347,6 @@ def _update_options(makefile):
             data["Options"] = options
 
     for data in makefile["Targets"].itervalues():
-        _update_possibly_empty_lists(makefile["Options"])
         _do_update_options(makefile["Options"], data, ())
 
 
@@ -410,7 +433,8 @@ def _determine_lane_type(prefixes, data, path):
             return "BAMs"
 
     raise MakefileError("Error at Barcode level; keys must either be "
-                        "prefix-names, OR 'Paired', 'Single' or 'Collapsed'. "
+                        "prefix-names, OR 'Paired', 'Single', 'Collapsed', "
+                        "'CollapsedTruncated', or 'Singleton'"
                         "Found: %s" % (", ".join(data),))
 
 

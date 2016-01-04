@@ -37,7 +37,8 @@ from paleomix.common.bedtools import BEDRecord
 import paleomix.common.text as text
 
 
-_PE_READS = frozenset(("Paired", "Collapsed", "CollapsedTruncated"))
+_PE_READS = frozenset(("Paired", "Singleton",
+                       "Collapsed", "CollapsedTruncated"))
 _SE_READS = frozenset(("Single",))
 _BAMS     = frozenset(())
 

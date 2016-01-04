@@ -50,8 +50,9 @@ class Reads(object):
             assert False, "Unexpected data type in Reads(): %s" \
                 % (repr(lane_type))
 
-        for name in record["Options"]["ExcludeReads"]:
-            self.files.pop(name, None)
+        for name, value in record["Options"]["ExcludeReads"].iteritems():
+            if value:
+                self.files.pop(name, None)
 
     def _init_pretrimmed_reads(self, record):
         self.files.update(record["Data"])
@@ -85,7 +86,7 @@ class Reads(object):
             init_args["input_files"] = record["Data"]["SE"]
             command = SE_AdapterRemovalNode.customize(**init_args)
         else:
-            self.files["Single"] = output_tmpl % ("singleton.truncated",)
+            self.files["Singleton"] = output_tmpl % ("singleton.truncated",)
             self.files["Paired"] = output_tmpl % ("pair{Pair}.truncated",)
 
             if collapse_reads:

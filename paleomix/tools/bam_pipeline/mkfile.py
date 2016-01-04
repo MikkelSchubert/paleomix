@@ -130,16 +130,17 @@ _TEMPLATE_BAM_OPTIONS = \
     # when running mapDamage; remove to use all hits
     --downsample: 100000
 
-  # Exclude a type of trimmed reads from alignment/analysis; possible
-  # types reflect the output of AdapterRemoval
-#  ExcludeReads:
-#    - Single    # Single-ended reads / Orphaned paired-ended reads
-#    - Paired    # Paired ended reads
-#    - Collapsed # Overlapping paired-ended reads collapsed into a
-                 # single sequence by AdapterRemoval
-#    - CollapsedTruncated # Like 'Collapsed', except that the reads
-                          # truncated due to the presence ambigious
-                          # bases or low quality bases at termini.
+  # Set to 'yes' exclude a type of trimmed reads from alignment / analysis;
+  # possible read-types reflect the output of AdapterRemoval
+  ExcludeReads:
+    Single: no              # Single-ended reads / Orphaned paired-ended reads
+    Paired: no              # Paired ended reads
+    Singleton: no           # Paired reads for which the mate was discarded
+    Collapsed: no           # Overlapping paired-ended reads collapsed into a
+                            # single sequence by AdapterRemoval
+    CollapsedTruncated: no  # Like 'Collapsed', except that the reads
+                            # truncated due to the presence ambigious
+                            # bases or low quality bases at read termini.
 
   # Optional steps to perform during processing
   Features:

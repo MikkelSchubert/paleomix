@@ -96,7 +96,7 @@ class ReadSink(object):
 class PEReadSink(ReadSink):
     def __init__(self, prefix, destination):
         ReadSink.__init__(self, self.get_filename(destination, "paired.{Pair}"), None)
-        self._sink_se = ReadSink.open(prefix, self.get_filename(destination, "single"))
+        self._sink_se = ReadSink.open(prefix, self.get_filename(destination, "singleton"))
         self._sink_pe_1 = ReadSink.open(prefix, self.get_filename(destination, "paired.1"))
         self._sink_pe_2 = ReadSink.open(prefix, self.get_filename(destination, "paired.2"))
 
@@ -142,7 +142,7 @@ def convert_reads(config, destination, record, sink_cache):
         # Processed reads are pre-aligned BAMs which have been cleaned up
         if reads_type in ("Paired", "Processed"):
             # Record "Single" reads; these may result from orphan SE reads
-            _open_se_sink("Single")
+            _open_se_sink("Singleton")
 
             key = (name, "Paired")
             if not get_in(sink_cache, key):
@@ -197,7 +197,7 @@ def main(argv):
         return 1
 
     # Get default options for bam_pipeline
-    bam_config, _ = bam_cfg.parse_config(args)
+    bam_config, _ = bam_cfg.parse_config(args, "bam")
     makefiles = bam_pipeline.read_makefiles(bam_config, args)
     # Build .fai files for reference .fasta files
     bam_pipeline.index_references(bam_config, makefiles)
