@@ -174,8 +174,9 @@ class MultiBAMInput(object):
     conjunctin with MultiBAMInputNode.
     """
 
-    def __init__(self, config, input_bams, pipename="input.bam"):
+    def __init__(self, config, input_bams, pipename="input.bam", indexed=True):
         self.pipe = pipename
+        self.indexed = indexed
         self.files = safe_coerce_to_tuple(input_bams)
 
         self.commands = []
@@ -195,7 +196,9 @@ class MultiBAMInput(object):
         else:
             # Ensure that the actual command depends on the input
             self.kwargs["IN_FILE_00"] = self.files[0]
-            self.kwargs["IN_FILE_01"] = swap_ext(self.files[0], ".bai")
+
+            if indexed:
+                self.kwargs["IN_FILE_01"] = swap_ext(self.files[0], ".bai")
 
     def setup(self, command):
         command.set_kwargs(**self.kwargs)
@@ -232,8 +235,9 @@ class MultiBAMInputNode(CommandNode):
             src_fname, = self._bam_input.files
             os.symlink(os.path.join(os.getcwd(), src_fname), dst_fname)
 
-            src_fname = os.path.join(os.getcwd(), swap_ext(src_fname, ".bai"))
-            os.symlink(src_fname, dst_fname + ".bai")
+            if self._bam_input.indexed:
+                src_fname = os.path.join(os.getcwd(), swap_ext(src_fname, ".bai"))
+                os.symlink(src_fname, dst_fname + ".bai")
 
     def _teardown(self, config, temp_root):
         pipe_fname = os.path.join(temp_root, self._bam_input.pipe)

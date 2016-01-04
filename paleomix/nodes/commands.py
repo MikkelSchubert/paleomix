@@ -156,7 +156,7 @@ class DepthHistogramNode(MultiBAMInputNode):
 class FilterCollapsedBAMNode(MultiBAMInputNode):
     def __init__(self, config, input_bams, output_bam, keep_dupes=True,
                  dependencies=()):
-        bam_input = MultiBAMInput(config, input_bams)
+        bam_input = MultiBAMInput(config, input_bams, indexed=False)
 
         builder = factory.new("rmdup_collapsed")
         builder.add_value("%(TEMP_IN_BAM)s")
