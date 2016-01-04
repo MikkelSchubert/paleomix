@@ -2,6 +2,12 @@
 Changelog
 =========
 
+  2016-01-04: The "ExcludeReads" section of the BAM Pipeline makefile is now
+              a dictionary rather a list of strings. Furthermore, 'Singleton'
+              reads are now considered seperately from 'Single'-end reads,
+              and may be excluded independently of those. This does not break
+              backwards compatibility, but as a consequence 'Single' includes
+              both single-end and singleton reads when using old makefiles.
   2016-01-04: Added command-line option --nth-sample to the 'vcf_to_fasta'
               command, allowing FASTA construction from multi-sample VCFs;
               furthermore, if no BED file is specified, the entire genotype
