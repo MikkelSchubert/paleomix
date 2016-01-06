@@ -33,7 +33,9 @@ from argparse import ArgumentParser
 
 import pysam
 
+from paleomix.common.fileutils import open_ro
 from paleomix.common.utilities import set_in, get_in
+
 import paleomix.common.text as text
 
 
@@ -51,7 +53,11 @@ def update_gtf_table(table, gtf, scaffolds, contig_prefix):
     # asDict, which uses a different parsing implementation (v0.7.8).
     properties = gtf.asDict()
 
-    keys = (properties["gene_biotype"],
+    gene_type = properties.get("gene_biotype")
+    if gene_type is None:
+        gene_type = properties.get("gene_type", "unknown_genetype")
+
+    keys = (gene_type,
             properties["gene_id"],
             properties["transcript_id"],
             int(properties["exon_number"]),
@@ -294,7 +300,7 @@ def main(argv):
         print("Reading scaffolds information from %r" % (args.scaffolds,))
         scaffolds = read_scaffolds(args.scaffolds)
 
-    with open(args.infile, "r") as gtf_file:
+    with open_ro(args.infile) as gtf_file:
         print("Reading GTF from %r" % (args.infile,))
         src_table = read_gtf(gtf_file, scaffolds, args.contig_prefix)
 
