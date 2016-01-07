@@ -332,6 +332,7 @@ def _update_homozygous_contigs(mkfile):
     """
     for regions in mkfile["Project"]["Regions"].itervalues():
         hcontigs = regions["HomozygousContigs"]
+
         for key, contigs in hcontigs.items():
             if contigs is None:
                 hcontigs[key] = []
@@ -654,14 +655,18 @@ _VALIDATION = {
                 "ProteinCoding": IsBoolean(default=False),
                 "IncludeIndels": IsBoolean(default=True),
                 "HomozygousContigs": {
-                    IsStr: Or(IsNone, IsListOf(IsStr))
-                    },
+                    IsStr: Or(IsNone, IsListOf(IsStr)),
+
+                    # The sex 'NA' defaults to no homozygous chromosomes
+                    "NA": Or(IsNone, IsListOf(IsStr),
+                             default=[]),
                 },
             },
+        },
         "FilterSingletons": {
             IsStr: [IsStr],
-            },
         },
+    },
     "Genotyping": {
         "Defaults": _VALIDATION_GENOTYPES,
         IsStr: _VALIDATION_GENOTYPES,
@@ -669,7 +674,7 @@ _VALIDATION = {
     "MultipleSequenceAlignment": {
         "Defaults": _VALIDATION_MSA,
         IsStr: _VALIDATION_MSA,
-        },
+    },
     "PhylogeneticInference": {
         IsStr: {
             # Which program to use; TODO: Add support for other programs

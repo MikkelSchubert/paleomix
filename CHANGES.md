@@ -2,6 +2,9 @@
 Changelog
 =========
 
+  2016-01-07: The gender 'NA' may now be used for samples for which no
+              filtering of sex chromosomes is to be carried out, and defaults
+              to an empty set of chromsomes unless explicitly overridden.
   2016-01-07: Pipeline examples are now available following installation via
               the commands "bam_pipeline example" and "phylo_pipeline example",
               which copy the example files to a folder specified by the user.
