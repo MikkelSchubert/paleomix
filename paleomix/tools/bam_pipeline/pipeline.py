@@ -26,8 +26,9 @@ import time
 import logging
 
 import paleomix
-import paleomix.yaml
 import paleomix.logger
+import paleomix.resources
+import paleomix.yaml
 
 from paleomix.common.console import \
     print_err, \
@@ -269,7 +270,6 @@ def main(argv, pipeline="bam"):
 
         return bam_remap.main(argv[1:])
     elif argv[0] in ("example", "examples"):
-        import paleomix.resources
         return paleomix.resources.copy_example("bam_pipeline", argv[1:])
 
     try:

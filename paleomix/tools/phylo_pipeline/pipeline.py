@@ -25,10 +25,11 @@ import sys
 import time
 import logging
 
+import paleomix.logger
+import paleomix.resources
+import paleomix.tools.phylo_pipeline.mkfile as mkfile
 import paleomix.ui
 import paleomix.yaml
-import paleomix.logger
-import paleomix.tools.phylo_pipeline.mkfile as mkfile
 
 from paleomix.pipeline import Pypeline
 from paleomix.common.console import print_err
@@ -51,7 +52,6 @@ def main(argv):
     if not args or ("help" in args):
         return 0
     elif args[0] in ("example", "examples"):
-        import paleomix.resources
         return paleomix.resources.copy_example("phylo_pipeline", argv[1:])
     elif (len(args) < 2) and ("mkfile" not in args and "makefile" not in args):
         print_err("\nPlease specify at least one makefile!")

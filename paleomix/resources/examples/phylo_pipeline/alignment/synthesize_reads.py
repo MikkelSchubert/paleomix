@@ -1,1 +1,0 @@
-../../../../../misc/synthesize_reads.py

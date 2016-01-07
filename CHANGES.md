@@ -2,6 +2,9 @@
 Changelog
 =========
 
+  2016-01-07: Pipeline examples are now available following installation via
+              the commands "bam_pipeline example" and "phylo_pipeline example",
+              which copy the example files to a folder specified by the user.
   2016-01-06: When parsing GTF files with 'gtf_to_bed', use either the
               attribute 'gene_type' or 'gene_biotype', defaulting to the value
               'unknown_genetype' if neither attribute can be found.
