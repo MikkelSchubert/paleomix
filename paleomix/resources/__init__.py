@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import argparse
 import os
 import shutil
 import sys
@@ -44,14 +45,12 @@ def copy_example(tool, argv):
     'bam_pipeline'), and any command-line options specified by the user;
     returns 0 on success, or 1 on errors.
     """
-    if len(argv) != 1:
-        sys.stderr.write("Copy example project folder to folder <destination>:\n\n")
-        sys.stderr.write("Usage: %s example <destination>\n" % (tool,))
-        sys.stderr.write("Example: %s example .\n" % (tool,))
+    parser = argparse.ArgumentParser()
+    parser.add_argument('root', help="Destination folder for example data.")
 
-        return 1
+    args = parser.parse_args(argv)
 
-    destination = os.path.join(argv[0], tool)
+    destination = os.path.join(args.root, tool)
     if os.path.exists(destination):
         sys.stderr.write("Example folder already exists at destination, "
                          "cannot proceed:\n")
