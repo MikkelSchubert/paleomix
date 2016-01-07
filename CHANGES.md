@@ -2,6 +2,12 @@
 Changelog
 =========
 
+  2016-01-07: Configuration files are now expected to be located in ~/.paleomix
+              or /etc/paleomix rather than ~/.pypeline and /etc/pypeline. To
+              ensure backwards compatibility, ~/.pypeline will be migrated when
+              a pipeline is first run, and replaced with a symbolic link to the
+              new location. Furthermore, files in /etc/pypeline are still read,
+              but settings in /etc/paleomix take precedence.
   2016-01-07: The gender 'NA' may now be used for samples for which no
               filtering of sex chromosomes is to be carried out, and defaults
               to an empty set of chromsomes unless explicitly overridden.
