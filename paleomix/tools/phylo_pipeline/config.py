@@ -39,6 +39,7 @@ from paleomix.config import \
 _DESCRIPTION = \
   "Commands:\n" \
   "  -- %prog help            -- Display this message.\n" \
+  "  -- %prog example [...]   -- Copy example project to folder.\n" \
   "  -- %prog makefile        -- Print makefile template.\n" \
   "  -- %prog genotype [...]  -- Carry out genotyping according to makefile.\n" \
   "  -- %prog msa [...]       -- Carry out multiple sequence alignment.\n" \
@@ -142,7 +143,9 @@ def parse_config(argv):
     options, args  = _run_config_parser(argv)
     paleomix.ui.set_ui_colors(options.ui_colors)
 
-    if (len(args) < 2) and (args != ["mkfile"]):
+    if args[0] in ("example", "examples"):
+        return options, args
+    elif (len(args) < 2) and (args != ["mkfile"]):
         description = _DESCRIPTION.replace("%prog", "phylo_pipeline").strip()
         console.print_info("Phylogeny Pipeline %s\n" % (paleomix.__version__,))
         console.print_info(description)

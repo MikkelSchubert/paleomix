@@ -241,7 +241,8 @@ def _print_usage(pipeline):
     print_info("BAM Pipeline %s\n" % (paleomix.__version__,))
     print_info("Usage:")
     print_info("  -- %s help           -- Display this message" % basename)
-    print_info("  -- %s makefile [...] -- Generate makefile from 'SampleSheet.csv' files." % basename)
+    print_info("  -- %s example [...]  -- Create example project in folder." % basename)
+    print_info("  -- %s makefile [...] -- Print makefile template." % basename)
     print_info("  -- %s dryrun [...]   -- Perform dry run of pipeline on provided makefiles." % basename)
     print_info("     %s                   Equivalent to 'bam_pipeline run --dry-run [...]'." % (" " * len(basename),))
     print_info("  -- %s run [...]      -- Run pipeline on provided makefiles." % basename)
@@ -252,7 +253,7 @@ def main(argv, pipeline="bam"):
 
     commands = ("makefile", "mkfile", "run",
                 "dry_run", "dry-run", "dryrun",
-                "remap")
+                "remap", "example", "examples")
 
     if not argv or (argv[0] == "help"):
         _print_usage(pipeline)
@@ -267,6 +268,9 @@ def main(argv, pipeline="bam"):
         import paleomix.tools.bam_pipeline.remap as bam_remap
 
         return bam_remap.main(argv[1:])
+    elif argv[0] in ("example", "examples"):
+        import paleomix.resources
+        return paleomix.resources.copy_example("bam_pipeline", argv[1:])
 
     try:
         config, args = bam_config.parse_config(argv, pipeline)

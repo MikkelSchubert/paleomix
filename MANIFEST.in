@@ -1,22 +1,18 @@
-include README.md
+include README.rst
 include CHANGES.md
 include LICENSE.txt
 include MANIFEST.in
 include pylint.conf
-include pypeline/yaml/CHANGES
-include pypeline/yaml/LICENSE
-include pypeline/yaml/PKG-INFO
-include pypeline/yaml/README
+include paleomix/yaml/CHANGES
+include paleomix/yaml/LICENSE
+include paleomix/yaml/PKG-INFO
+include paleomix/yaml/README
 
 # Examples
-recursive-include examples *
+recursive-include paleomix/resources *
 
 # Misc tools
 recursive-include misc *.py *.sh *.yaml
 
 # Tests
-include tests/run
-recursive-include tests/bwa *
-recursive-include tests/data *
-recursive-include tests/function *
-recursive-include tests/unit *
+recursive-include tests *

@@ -28,7 +28,6 @@ import logging
 import paleomix.ui
 import paleomix.yaml
 import paleomix.logger
-import paleomix.tools.phylo_pipeline.makefile
 import paleomix.tools.phylo_pipeline.mkfile as mkfile
 
 from paleomix.pipeline import Pypeline
@@ -51,6 +50,9 @@ def main(argv):
 
     if not args or ("help" in args):
         return 0
+    elif args[0] in ("example", "examples"):
+        import paleomix.resources
+        return paleomix.resources.copy_example("phylo_pipeline", argv[1:])
     elif (len(args) < 2) and ("mkfile" not in args and "makefile" not in args):
         print_err("\nPlease specify at least one makefile!")
         return 1
@@ -100,7 +102,7 @@ def main(argv):
         pipeline.print_output_files()
         return 0
     elif config.list_executables:
-        logger.info("Printint required executables ...")
+        logger.info("Printing required executables ...")
         pipeline.print_required_executables()
         return 0
     elif config.dot_file:
