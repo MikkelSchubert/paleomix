@@ -321,8 +321,6 @@ def main(argv):
                              "sequence [%(default)s].")
 
     opts = parser.parse_args(argv)
-    # Relevant VCF functions uses zero-based offsets
-    opts.nth_sample -= 1
 
     print("Running vcf_to_fasta", end="", file=sys.stderr)
     if opts.whole_codon_indels_only:
@@ -340,6 +338,9 @@ def main(argv):
         sys.stderr.write("ERROR: --nth-sample uses 1-based offsets, zero and\n")
         sys.stderr.write("       negative values are not allowed!\n")
         return 1
+
+    # Relevant VCF functions uses zero-based offsets
+    opts.nth_sample -= 1
 
     genotype = pysam.Tabixfile(opts.genotype)
 
