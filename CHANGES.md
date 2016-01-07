@@ -7,7 +7,8 @@ Changelog
               which copy the example files to a folder specified by the user.
   2016-01-06: When parsing GTF files with 'gtf_to_bed', use either the
               attribute 'gene_type' or 'gene_biotype', defaulting to the value
-              'unknown_genetype' if neither attribute can be found.
+              'unknown_genetype' if neither attribute can be found; also
+              support reading of gz / bz2 files.
   2016-01-04: The "ExcludeReads" section of the BAM Pipeline makefile is now
               a dictionary rather a list of strings. Furthermore, 'Singleton'
               reads are now considered seperately from 'Single'-end reads,
