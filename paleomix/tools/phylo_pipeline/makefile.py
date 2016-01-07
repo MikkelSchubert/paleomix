@@ -444,20 +444,40 @@ def _update_and_check_max_read_depth(options, mkfile):
         elif isinstance(max_depths, types.StringTypes):
             assert max_depths.lower() == "auto", max_depths
             prefix = mkfile["Project"]["Regions"][key]["Prefix"]
-            max_depths = {}
 
-            for sample in required_keys:
-                fname = "%s.%s.depths" % (sample, prefix)
-                fpath = os.path.join(options.samples_root, fname)
-                max_depths[sample] = _read_max_depths(fpath, prefix, sample)
-
-            settings["VCF_Filter"]["MaxReadDepth"] = max_depths
+            settings["VCF_Filter"]["MaxReadDepth"] \
+                = _read_max_depths(options, prefix, required_keys)
         else:
             max_depths = dict.fromkeys(required_keys, max_depths)
             settings["VCF_Filter"]["MaxReadDepth"] = max_depths
 
 
-def _read_max_depths(filename, prefix, sample):
+def _read_max_depths(options, prefix, required_keys):
+    missing = []
+    max_depths = {}
+    for sample in required_keys:
+        fname = "%s.%s.depths" % (sample, prefix)
+        fpath = os.path.join(options.samples_root, fname)
+        max_depths[sample] = fpath
+
+        if not os.path.exists(fpath):
+            missing.append((sample, fpath))
+
+    if missing:
+        raise MakefileError("Could not determine 'MaxReadDepth' values "
+                            "automatically; .depth files are missing for one "
+                            "or more samples: \n  - " +
+                            "\n  - ".join("%s: %s" % item for item in missing) +
+                            "\n\nEnsure that the .depth files are available, "
+                            "or specify a value for 'MaxReadDepth' manually.")
+
+    for sample, fpath in max_depths.iteritems():
+        max_depths[sample] = _read_max_depth(fpath, prefix, sample)
+
+    return max_depths
+
+
+def _read_max_depth(filename, prefix, sample):
     if filename in _DEPTHS_CACHE:
         return _DEPTHS_CACHE[filename]
 
