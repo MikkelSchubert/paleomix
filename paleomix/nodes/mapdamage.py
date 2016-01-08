@@ -22,6 +22,7 @@
 #
 import os
 
+import paleomix.common.rtools as rtools
 import paleomix.common.versions as versions
 
 from paleomix.common.fileutils import \
@@ -47,7 +48,8 @@ MAPDAMAGE_VERSION = versions.Requirement(call=("mapDamage", "--version"),
 
 RSCRIPT_VERSION = versions.Requirement(call=("Rscript", "--version"),
                                        search=r"(\d+)\.(\d+).(\d+)",
-                                       checks=versions.GE(2, 15, 1))
+                                       checks=versions.GE(2, 15, 1),
+                                       priority=10)
 
 
 class MapDamagePlotNode(MultiBAMInputNode):
@@ -143,7 +145,12 @@ class MapDamageModelNode(CommandNode):
             OUT_MCMC_TRACE=os.path.join(directory, "Stats_out_MCMC_trace.pdf"),
 
             CHECK_RSCRIPT=RSCRIPT_VERSION,
-            CHECK_MAPDAMAGE=MAPDAMAGE_VERSION)
+            CHECK_MAPDAMAGE=MAPDAMAGE_VERSION,
+            CHECK_R_INLINE=rtools.requirement("inline"),
+            CHECK_R_GGPLOT2=rtools.requirement("ggplot2"),
+            CHECK_R_RCPP=rtools.requirement("Rcpp"),
+            CHECK_R_GAM=rtools.requirement("gam"),
+            CHECK_R_RCPPGSL=rtools.requirement("RcppGSL"))
 
         return {"command": command,
                 "dependencies": dependencies}
