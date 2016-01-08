@@ -34,7 +34,7 @@ _REQUIREMENT = Requirement.parse("PALEOMIX")
 def rscript(tool, script):
     """Returns the path to an Rscript for a given tool."""
 
-    path = os.path.join("resources", "rscript", tool, script)
+    path = os.path.join("paleomix", "resources", "rscripts", tool, script)
 
     return resource_filename(_REQUIREMENT, path)
 
