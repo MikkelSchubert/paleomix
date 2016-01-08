@@ -289,8 +289,7 @@ class NodeGraph:
             raise NodeGraphError("Required executables are missing:\n\t%s"
                                  % ("\n\t".join(sorted(missing_exec))))
 
-    @classmethod
-    def _check_version_requirements(cls, nodes):
+    def _check_version_requirements(self, nodes):
         exec_requirements = set()
         for node in nodes:
             exec_requirements.update(node.requirements)
@@ -302,6 +301,9 @@ class NodeGraph:
 
         try:
             for requirement in exec_requirements:
+                self._logger.info("    - Checking version of %r ..."
+                                  % (requirement.name,))
+
                 requirement()
         except versions.VersionRequirementError, error:
             raise NodeGraphError(error)
