@@ -136,23 +136,36 @@ _VALID_EXCLUDE_DICT = {
 _VALID_EXCLUDE_LIST = ValuesSubsetOf(_READ_TYPES)
 
 
-# Convert old-style 'Features' list to dictionary of bools (listed = on)
 class BAMFeatures(PreProcessMakefile):
+    """Makefile pre-processor that converts convert an old-style 'Features'
+    list to a dictionary of bools, in order to allow backwards compatibility
+    with older makefiles. All listed values are set to True, and any omitted
+    value is set to False, in order to match the old behavior where inheritance
+    was not possible.
+    """
+
     def __call__(self, path, value):
         if not isinstance(value, list):
             return value, _VALID_FEATURES_DICT
 
         _VALID_FEATURES_LIST(path, value)
 
-        result = {}
+        # All values must be set to prevent inheritance
+        result = dict.fromkeys(_VALID_FEATURES_DICT, False)
         for key in value:
             result[key.replace(" ", "")] = True
 
         return result, _VALID_FEATURES_DICT
 
 
-# Convert old-style 'ExcludeReads' list to dictionary of bools (listed = off)
 class ExcludeReads(PreProcessMakefile):
+    """Makefile pre-processor that converts convert an old-style 'ExcludeReads'
+    list to a dictionary of bools, in order to allow backwards compatibility
+    with older makefiles. All listed values are set to False (excluded), and
+    any omitted value is set to True, in order to match the old behavior where
+    inheritance was not possible.
+    """
+
     def __call__(self, path, value):
         if not isinstance(value, list):
             return value, _VALID_EXCLUDE_DICT
@@ -631,7 +644,7 @@ def _validate_makefiles_features(makefiles):
             roi_enabled |= bool(prefix.get("RegionsOfInterest"))
 
         if features["Depths"] and roi_enabled:
-            if not features["RawBAM"] or features["RealignedBAM"]:
+            if not (features["RawBAM"] or features["RealignedBAM"]):
                 raise MakefileError("The feature 'Depths' (depth histograms) "
                                     "with RegionsOfInterest enabled, requires "
                                     "that either the feature 'RawBAM' or the "
