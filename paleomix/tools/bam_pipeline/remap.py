@@ -234,7 +234,8 @@ def main(argv):
             return 1
 
         with open(makefile_path, "w") as makefile_handle:
-            bam_mkfile.print_header(dst=makefile_handle)
+            template = bam_mkfile.build_makefile(add_sample_tmpl=False)
+            makefile_handle.write(template)
             makefile_handle.write("\n" * 3)
 
             for target in tasks:

@@ -158,8 +158,9 @@ _TEMPLATE_BAM_OPTIONS = \
                         #   Location: {Destination}/{Target}.summary
     DuplicateHist: no   # Generate histogram of PCR duplicates, for use with PreSeq
                         #   Location: {Destination}/{Target}.{Genome}.duphist/{Library}/
+"""
 
-
+_TEMPLATE_PREFIXES = """
 # Map of prefixes by name, each having a Path key, which specifies the
 # location of the BWA/Bowtie2 index, and optional label, and an option
 # set of regions for which additional statistics are produced.
@@ -178,11 +179,10 @@ Prefixes:
     # BED records, results are named after the chromosome / contig.
 #    RegionsOfInterest:
 #      NAME: PATH_TO_BEDFILE
-
 """
 
-_TEMPLATE_SAMPLES = \
-    """# Targets are specified using the following structure:
+_TEMPLATE_SAMPLES = """
+# Targets are specified using the following structure:
 #NAME_OF_TARGET:
 #  NAME_OF_SAMPLE:
 #    NAME_OF_LIBRARY:
@@ -192,35 +192,38 @@ _TEMPLATE_SAMPLES = \
 _FILENAME = "SampleSheet.csv"
 
 
-def print_header(full_mkfile=True,
-                 sample_tmpl=True, minimal=False,
-                 dst=sys.stdout):
+def build_makefile(add_full_options=True,
+                   add_prefix_tmpl=True,
+                   add_sample_tmpl=True):
     timestamp = datetime.datetime.now().isoformat()
     template_parts = [_TEMPLATE_TOP % (timestamp,)]
 
-    if full_mkfile:
+    if add_full_options:
         template_parts.append(_TEMPLATE_BAM_OPTIONS)
 
-    if sample_tmpl:
+    if add_prefix_tmpl:
+        template_parts.append(_TEMPLATE_PREFIXES)
+
+    if add_sample_tmpl:
         template_parts.append(_TEMPLATE_SAMPLES)
 
-    template = "\n".join(template_parts)
+    return "\n".join(template_parts)
 
-    if not minimal:
-        print(template, file=dst)
-        return
 
-    lines = template.split("\n")
+def strip_comments(text):
+    lines = text.split("\n")
+
+    # Always include minimal header
     minimal_template = lines[:3]
     for line in lines[3:]:
         if not line.lstrip().startswith("#"):
-            line = line.split("#", 1)[0]
+            line = line.split("#", 1)[0].rstrip()
 
             # Avoid too many empty lines
             if line.strip() or minimal_template[-1].strip():
                 minimal_template.append(line)
 
-    print("\n".join(minimal_template), file=dst)
+    return "\n".join(minimal_template)
 
 
 def read_alignment_records(filename):
@@ -274,9 +277,11 @@ def main(argv, pipeline="bam"):
             record["Path"] = select_path(os.path.join(root, path))
             barcodes.append(record)
 
-    print_header(full_mkfile=(pipeline == "bam"),
-                 sample_tmpl=not bool(records),
-                 minimal=options.minimal)
+    template = build_makefile(add_full_options=(pipeline == "bam"))
+    if options.minimal:
+        template = strip_comments(template)
+
+    print(template)
 
     for (sample, libraries) in records.iteritems():
         print("%s:" % sample)
