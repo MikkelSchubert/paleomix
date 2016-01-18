@@ -44,6 +44,9 @@ import pysam
 import paleomix.tools.factory
 
 import paleomix.common.procs as processes
+import paleomix.common.versions as versions
+
+from paleomix.nodes.samtools import SAMTOOLS_VERSION
 
 
 def _set_sort_order(header):
@@ -179,7 +182,7 @@ def _setup_single_ended_pipeline(procs, bam_cleanup):
     return procs["pipe"]
 
 
-def _setup_paired_ended_pipeline(procs, bam_cleanup):
+def _setup_paired_ended_pipeline(args, procs, bam_cleanup):
     # Convert input to (uncompressed) BAM
     procs["pipe"] = processes.open_proc(bam_cleanup + ["pipe"],
                                         stdin=sys.stdin,
@@ -187,8 +190,11 @@ def _setup_paired_ended_pipeline(procs, bam_cleanup):
     sys.stdin.close()
 
     # Fix mate information for PE reads
-    call_fixmate = ['samtools', 'fixmate', '-', '-']
-    procs["fixmate"] = processes.open_proc(call_fixmate,
+    call_fixmate = ['samtools', 'fixmate']
+    if args.samtools1x == "yes":
+        call_fixmate.extend(("-O", "bam"))
+
+    procs["fixmate"] = processes.open_proc(call_fixmate + ['-', '-'],
                                            stdin=procs["pipe"].stdout,
                                            stdout=processes.PIPE)
     procs["pipe"].stdout.close()
@@ -209,6 +215,7 @@ def _build_wrapper_command(args):
     bam_cleanup.set_option('--temp-prefix', args.temp_prefix)
     bam_cleanup.set_option('--min-quality', str(args.min_quality))
     bam_cleanup.set_option('--exclude-flags', hex(args.exclude_flags))
+    bam_cleanup.set_option('--samtools1x', args.samtools1x)
 
     for value in args.update_pg_tag:
         bam_cleanup.add_option('--update-pg-tag', value)
@@ -227,12 +234,17 @@ def _run_cleanup_pipeline(args):
     try:
         # Update 'procs' and get the last process in the pipeline
         if args.paired_ended:
-            last_proc = _setup_paired_ended_pipeline(procs, bam_cleanup)
+            last_proc = _setup_paired_ended_pipeline(args, procs, bam_cleanup)
         else:
             last_proc = _setup_single_ended_pipeline(procs, bam_cleanup)
 
-        # Sort, output to stdout (-o)
-        call_sort = ['samtools', 'sort', "-o", "-", args.temp_prefix]
+        call_sort = ['samtools', 'sort', '-l', '0']
+        if args.samtools1x == "yes":
+            call_sort.extend(('-O', 'bam', '-T', 'args.temp_prefix'))
+        else:
+            # Sort, output to stdout (-o)
+            call_sort.extend(('-o', '-', args.temp_prefix))
+
         procs["sort"] = processes.open_proc(call_sort,
                                             stdin=last_proc.stdout,
                                             stdout=processes.PIPE)
@@ -294,11 +306,38 @@ def parse_args(argv):
                         help="Create readgroup values 'ID:TAG:VALUE' "
                              "represented using a string as shown.")
 
+    # Option to select between incompatible parameters for SAMTools v0.1.x and
+    # for samtools v1.x; this is needed for samtools 'sort' and 'fixmate'.
+    parser.add_argument('--samtools1x', choices=('yes', 'no'),
+                        help=argparse.SUPPRESS)
+
     return parser.parse_args(argv)
 
 
 def main(argv):
     args = parse_args(argv)
+
+    if args.samtools1x is None:
+        sys.stderr.write("Determining SAMTools version ... ")
+        sys.stderr.flush()
+
+        try:
+            sys.stderr.write("v%i.%i.%i found\n" % SAMTOOLS_VERSION.version)
+
+            if SAMTOOLS_VERSION.version >= (1, 0):
+                args.samtools1x = "yes"
+            elif SAMTOOLS_VERSION.version == (0, 1, 19):
+                args.samtools1x = "no"
+            else:
+                sys.stderr.write("ERROR: Only SAMTools versions v0.1.19 and "
+                                 "v1.0+ are supported; please upgrade / "
+                                 "replace the installed copy of SAMTools!\n")
+                return 1
+        except versions.VersionRequirementError, error:
+            sys.stderr.write("ERROR: Could not determine SAMTools version: "
+                             "%s\n" % (error,))
+            return 1
+
     if args.command == "pipe":
         return _pipe_to_bam()
     elif args.command == "cleanup":
