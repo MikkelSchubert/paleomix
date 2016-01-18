@@ -45,7 +45,7 @@ def new(command, *args, **kwargs):
 
 
 def _build_cat_command():
-    """Returns an AtomicCmdBuilder for the 'paleomix cat'."""
+    """Returns an AtomicCmdBuilder for the 'paleomix cat' command."""
     return _build_paleomix_command("cat",
                                    EXEC_GZIP="gzip",
                                    EXEC_BZIP="bzip2",
