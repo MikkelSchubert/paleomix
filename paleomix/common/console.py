@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -29,9 +29,17 @@ import sys
 # print_* functions are used. By default (ON), color codes will only be used if
 # the destination is a TTY.
 COLORS_OFF, COLORS_ON, COLORS_FORCED = range(3)
+
+
 def set_color_output(clr):
-    assert clr in (COLORS_OFF, COLORS_ON, COLORS_FORCED)
+    """Set use of colors in print functions; possible values are COLORS_OFF,
+    COLORS_ON, and COLORS_FORCED.
+    """
     global _COLORS
+    if clr not in (COLORS_OFF, COLORS_ON, COLORS_FORCED):
+        raise ValueError("Invalid value in set_color_output; must be one of "
+                         "COLORS_OFF, COLORS_ON, or COLORS_FORCED.")
+
     _COLORS = clr
 
 
@@ -42,27 +50,27 @@ def print_msg(*vargs, **kwargs):
 
 def print_debug(*vargs, **kwargs):
     """Equivalent to print, but prints using shell colorcodes (blue)."""
-    _do_print_color(*vargs, colorcode = 36, **kwargs)
+    _do_print_color(*vargs, colorcode=36, **kwargs)
 
 
 def print_info(*vargs, **kwargs):
     """Equivalent to print, but prints using shell colorcodes (green)."""
-    _do_print_color(*vargs, colorcode = 32, **kwargs)
+    _do_print_color(*vargs, colorcode=32, **kwargs)
 
 
 def print_err(*vargs, **kwargs):
     """Equivalent to print, but prints using shell colorcodes (red)."""
-    _do_print_color(*vargs, colorcode = 31, **kwargs)
+    _do_print_color(*vargs, colorcode=31, **kwargs)
 
 
 def print_warn(*vargs, **kwargs):
     """Equivalent to print, but prints using shell colorcodes (yellow)."""
-    _do_print_color(*vargs, colorcode = 33, **kwargs)
+    _do_print_color(*vargs, colorcode=33, **kwargs)
 
 
 def print_disabled(*vargs, **kwargs):
     """Equivalent to print, but prints using shell colorcodes (gray)."""
-    _do_print_color(*vargs, colorcode = 30, **kwargs)
+    _do_print_color(*vargs, colorcode=30, **kwargs)
 
 
 def _do_print_color(*vargs, **kwargs):
@@ -77,11 +85,12 @@ def _do_print_color(*vargs, **kwargs):
         vargs = list(vargs)
         for (index, varg) in enumerate(vargs):
             varg_lines = []
-            # Newlines terminate the color-code for e.g. 'less', so ensure that 
+            # Newlines terminate the color-code for e.g. 'less', so ensure that
             # each line is color-coded, while preserving the list of arguments
             for line in str(varg).split("\n"):
-              varg_lines.append("\033[00;%im%s\033[00m" % (colorcode, line))
+                varg_lines.append("\033[00;%im%s\033[00m" % (colorcode, line))
             vargs[index] = "\n".join(varg_lines)
 
-    print(*vargs, file = destination, **kwargs)
+    print(*vargs, file=destination, **kwargs)
+
 _COLORS = COLORS_ON
