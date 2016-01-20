@@ -21,8 +21,9 @@
 # SOFTWARE.
 #
 import os
-import types
 import pysam
+import sys
+import types
 
 import paleomix.common.makefile
 from paleomix.common.makefile import \
@@ -57,7 +58,10 @@ from paleomix.common.console import \
 from paleomix.common.text import \
     parse_padded_table
 from paleomix.common.bedtools import \
-    BEDRecord
+    read_bed_file, \
+    BEDError
+from paleomix.common.formats.fasta import \
+    FASTA
 
 
 def read_makefiles(options, filenames, commands):
@@ -142,112 +146,91 @@ def _update_regions(options, mkfile):
         subdd["FASTA"]  = os.path.join(options.prefix_root, subdd["Prefix"] + ".fasta")
 
         required_files = (
-            ("Regions file", subdd["BED"], None),
-            ("Reference sequence", subdd["FASTA"], None),
-            ("Reference sequence index", subdd["FASTA"] + ".fai",
-             "Please index using 'samtools faidx %s'" % (subdd["FASTA"],)))
+            ("Regions file", subdd["BED"]),
+            ("Reference sequence", subdd["FASTA"]),
+        )
 
-        for (desc, path, instructions) in required_files:
+        for (desc, path) in required_files:
             if not os.path.isfile(path):
-                message = "%s does not exist for %r:\n  Path = %r" \
-                                % (desc, name, path)
-                if instructions:
-                    message = "%s\n%s" % (message, instructions)
-                raise MakefileError(message)
+                raise MakefileError("%s does not exist for %r:\n  Path = %r"
+                                    % (desc, name, path))
 
         # Collects seq. names / validate regions
-        subdd["Sequences"] = {None : _collect_and_validate_regions(subdd)}
-        subdd["SubsetFiles"] = {None : ()}
+        try:
+            sequences = _collect_sequence_names(bed_file=subdd["BED"],
+                                                fasta_file=subdd["FASTA"])
+        except (IOError, BEDError), error:
+            raise MakefileError("Error reading regions-of-interest %r:\n%s"
+                                % (name, error))
 
+        subdd["Sequences"] = {None: sequences}
+        subdd["SubsetFiles"] = {None: ()}
         sampledd = subdd["Genotypes"] = {}
         for sample_name in mkfile["Project"]["Samples"]:
             fasta_file = ".".join((sample_name, subdd["Desc"], "fasta"))
             sampledd[sample_name] = os.path.join(options.destination,
-                                              mkfile["Project"]["Title"],
-                                              "genotypes",
-                                              fasta_file)
+                                                 mkfile["Project"]["Title"],
+                                                 "genotypes",
+                                                 fasta_file)
 
 
-_CONTIGS_CACHE = {}
-def _collect_fasta_contigs(regions):
-    filename = regions["FASTA"] + ".fai"
-    if filename in _CONTIGS_CACHE:
-        return _CONTIGS_CACHE[filename]
+def _collect_fasta_contigs(filename, cache={}):
+    if filename in cache:
+        return cache[filename]
 
-    contigs = {}
-    with open(filename) as faihandle:
-        for line in faihandle:
-            name, length, _ = line.split(None, 2)
-            if name in contigs:
-                message = ("Reference contains multiple identically named "
-                           "sequences:\n  Path = %r\n  Name = %r\n"
-                           "Please ensure that sequences have unique names") \
-                           % (regions["FASTA"], name)
-                raise MakefileError(message)
+    if not os.path.exists(filename + ".fai"):
+        print_info("      - Index does not exist for %r; this may "
+                   "take a while ..." % (filename,), file=sys.stderr)
 
-            contigs[name] = int(length)
-
-    _CONTIGS_CACHE[filename] = contigs
+    cache[filename] = contigs = dict(FASTA.index_and_collect_contigs(filename))
     return contigs
 
 
-def _collect_and_validate_regions(regions):
-    contigs = _collect_fasta_contigs(regions)
-    sequences = set()
-    with open(regions["BED"]) as bedhandle:
-        for (line_num, line) in enumerate(bedhandle):
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
+def _collect_sequence_names(bed_file, fasta_file, min_columns=6):
+    contigs = _collect_fasta_contigs(fasta_file)
+    sequences = {}
 
-            try:
-                bed = BEDRecord(line)
-            except ValueError, error:
-                raise MakefileError(("Error parsing line %i in regions file:\n"
-                                     "  Path = %r\n  Line = %r\n\n%s")
-                                    % (line_num + 1, regions["BED"],
-                                       line, error))
+    for record in read_bed_file(bed_file, min_columns=6, contigs=contigs):
+        current = (record.contig, record.strand)
+        reference = sequences.setdefault(record.name, current)
 
-            if len(bed) < 6:
-                url = "http://genome.ucsc.edu/FAQ/FAQformat.html#format1"
-                name = repr(bed.name) if len(bed) > 3 else "unnamed record"
-                raise MakefileError(("Region at line #%i (%s) does not "
-                                     "contain the expected number of fields; "
-                                     "the first 6 fields are required. C.f. "
-                                     "defination at\n   %s\n\nPath = %r")
-                                    % (line_num, name, url, regions["BED"]))
-
-            contig_len = contigs.get(bed.contig)
-            if contig_len is None:
-                raise MakefileError(("Regions file contains contig not found "
-                                     "in reference:\n  Path = %r\n  Contig = "
-                                     "%r\n\nPlease ensure that all contig "
-                                     "names match the reference names!")
-                                    % (regions["BED"], bed.contig))
-            elif not (0 <= bed.start < bed.end <= contig_len):
-                raise MakefileError(("Regions file contains invalid region:\n"
-                                     "  Path   = %r\n  Contig = %r\n"
-                                     "  Start  = %s\n  End    = %s\n\n"
-                                     "Expected 0 <= Start < End <= %i!")
-                                    % (regions["BED"], bed.contig, bed.start,
-                                       bed.end, contig_len))
-
-            sequences.add(bed.name)
+        if current[0] != reference[0]:
+            raise MakefileError("Regions in %r with the same name (%r) "
+                                "are located on different contigs (%r and "
+                                "%r); note that PALEOMIX assumes that "
+                                "regions with the same name constitute "
+                                "parts of a single consecutive sequence, "
+                                "which must therefore be located on one "
+                                "strand of a single sequence. Please "
+                                "rename one or more of these regions to"
+                                "continue." % (bed_file, record.name,
+                                               current[0], reference[0]))
+        elif current[1] != reference[1]:
+            raise MakefileError("Regions in %r with the same name (%r) "
+                                "are located on different strands; note "
+                                "that PALEOMIX assumes that regions with "
+                                "the same name constitute parts of a "
+                                "single consecutive sequence, and that "
+                                "these must therefore be located on the "
+                                "same strand." % (bed_file, record.name,))
 
     return frozenset(sequences)
 
 
 def _update_subsets(mkfile, steps):
     subsets_by_regions = mkfile["Project"]["Regions"]
+
     def _collect_subsets(roi, subset, path):
         if roi not in subsets_by_regions:
-            raise MakefileError("Subset of unknown region (%r) requested at %r" % (roi, path))
+            raise MakefileError("Subset of unknown region (%r) requested at %r"
+                                % (roi, path))
 
         roi_fname = swap_ext(subsets_by_regions[roi]["BED"], subset + ".names")
         if not os.path.isfile(roi_fname):
-            raise MakefileError(("Subset file does not exist for Regions Of Interest:\n"
-                                 "  Region = %r\n  Subset = %r\n  Path   = %r")
-                                 % (roi, subset, roi_fname))
+            raise MakefileError("Subset file does not exist for Regions Of "
+                                "Interest:\n  Region = %r\n  Subset = %r\n"
+                                "  Path   = %r"
+                                % (roi, subset, roi_fname))
 
         sequences = set()
         with open(roi_fname) as handle:
@@ -256,7 +239,7 @@ def _update_subsets(mkfile, steps):
                 if line and not line.startswith("#"):
                     sequences.add(line)
 
-        known_seqs   = subsets_by_regions[roi]["Sequences"][None]
+        known_seqs = subsets_by_regions[roi]["Sequences"][None]
         unknown_seqs = sequences - known_seqs
         if unknown_seqs:
             message = ("Unknown sequences in subset file:\n"
@@ -265,7 +248,7 @@ def _update_subsets(mkfile, steps):
                        % (roi_fname, roi, subset)
             unknown_seqs = list(sorted(unknown_seqs))
             if len(unknown_seqs) > 5:
-                unknown_seqs = unknown_seqs[:5]  + ["..."]
+                unknown_seqs = unknown_seqs[:5] + ["..."]
             message = "\n    - ".join([message] + unknown_seqs)
             raise MakefileError(message)
 
@@ -358,7 +341,7 @@ def _check_bam_sequences(options, mkfile, steps):
                 filename = add_postfix(filename, ".realigned")
 
             if os.path.exists(filename):
-                bam_files[filename] = _collect_fasta_contigs(regions)
+                bam_files[filename] = _collect_fasta_contigs(regions["FASTA"])
 
     for (filename, contigs) in bam_files.iteritems():
         with pysam.Samfile(filename) as handle:
@@ -389,7 +372,7 @@ def _check_genders(mkfile):
     contigs_genders = set()
     regions_genders = set()
     for regions in mkfile["Project"]["Regions"].itervalues():
-        all_contigs.update(_collect_fasta_contigs(regions))
+        all_contigs.update(_collect_fasta_contigs(regions["FASTA"]))
 
         for contigs in regions["HomozygousContigs"].itervalues():
             contigs_genders.update(contigs)
