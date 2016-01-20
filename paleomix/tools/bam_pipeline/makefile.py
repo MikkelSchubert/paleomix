@@ -29,8 +29,6 @@ import string
 import itertools
 import collections
 
-import pysam
-
 import paleomix.tools.bam_pipeline.paths as paths
 from paleomix.common.utilities import fill_dict
 from paleomix.common.makefile import \
@@ -59,7 +57,11 @@ from paleomix.common.makefile import \
 from paleomix.common.console import \
     print_info, \
     print_warn
+from paleomix.common.formats.fasta import \
+    FASTA, \
+    FASTAError
 
+import paleomix.common.bedtools as bedtools
 import paleomix.common.sequences as sequences
 
 
@@ -507,7 +509,7 @@ def _validate_makefiles(config, makefiles):
     _validate_makefiles_duplicate_targets(config, makefiles)
     _validate_makefiles_duplicate_files(makefiles)
     _validate_makefiles_features(makefiles)
-    _validate_hg_prefixes(makefiles)
+    _validate_prefixes(makefiles)
 
     return makefiles
 
@@ -651,9 +653,11 @@ def _validate_makefiles_features(makefiles):
                                     "feature 'RalignedBAM' is enabled.")
 
 
-def _validate_hg_prefixes(makefiles):
-    """Implementation of the checks included in GATK, which require that the
-    FASTA for the human genome is ordered 1 .. 23, .
+def _validate_prefixes(makefiles):
+    """Validates prefixes and regions-of-interest, including an implementation
+    of the checks included in GATK, which require that the FASTA for the human
+    genome is ordered 1 .. 23. This is required since GATK will not run with
+    human genomes in a different order.
     """
     already_validated = set()
     print_info("  - Validating prefixes ...", file=sys.stderr)
@@ -672,25 +676,26 @@ def _validate_hg_prefixes(makefiles):
                 print_info("    - Index does not exist for %r; this may "
                            "take a while ..." % (path,), file=sys.stderr)
 
-                if not os.access(os.path.dirname(path), os.W_OK):
-                    message = \
-                        "FASTA index for prefix is missing, but folder is\n" \
-                        "not writable, so it cannot be created:\n" \
-                        "  Prefix = %s\n\n" \
-                        "Either change permissions on the folder, or move\n" \
-                        "the prefix to different location." % (path,)
-                    raise MakefileError(message)
+            try:
+                contigs = FASTA.index_and_collect_contigs(path)
+            except FASTAError, error:
+                raise MakefileError("Error indexing FASTA:\n %s" % (error,))
 
-                # Use pysam to index the file
-                pysam.Fastafile(path).close()
-
-            contigs = []
-            with open(path + ".fai") as handle:
-                for line in handle:
-                    name, size, _ = line.split('\t', 2)
-                    contigs.append((name, int(size)))
-
+            # Implementation of GATK checks for the human genome
             _do_validate_hg_prefix(makefile, prefix, contigs, fatal=uses_gatk)
+
+            contigs = dict(contigs)
+            regions_of_interest = prefix.get("RegionsOfInterest", {})
+            for (name, fpath) in regions_of_interest.iteritems():
+                try:
+                    # read_bed_file returns iterator
+                    for _ in bedtools.read_bed_file(fpath, contigs=contigs):
+                        pass
+                except (bedtools.BEDError, IOError), error:
+                    raise MakefileError("Error reading regions-of-"
+                                        "interest %r for prefix %r:\n%s"
+                                        % (name, prefix["Name"], error))
+
             already_validated.add(path)
 
 

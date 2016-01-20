@@ -2,6 +2,7 @@
 Changelog
 =========
 
+  2016-01-20: Added validation of BED files supplied to the BAM pipeline.
   2016-01-18: Support SAMTools v1.x in the BAM pipeline; note, however, that
               the phylogenetic pipeline still requires SAMTools v0.1.19, due to
               major changes to BCFTools 1.x, which is not yet supported.
