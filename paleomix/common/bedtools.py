@@ -21,6 +21,7 @@
 # SOFTWARE.
 #
 import copy
+import types
 
 import paleomix.common.fileutils as fileutils
 import paleomix.common.text as text
@@ -35,6 +36,10 @@ def _strand_type(value):
 _BED_DEFAULTS = ("", 0, 0, "", 0, "+")
 _BED_KEYS = ("contig", "start", "end", "name", "score", "strand")
 _BED_TYPES = (str, int, int, str, int, _strand_type)
+
+
+class BEDError(RuntimeError):
+    pass
 
 
 class BEDRecord(object):
@@ -56,7 +61,7 @@ class BEDRecord(object):
     def __init__(self, line=None, _len=None):
         """Constructs a BED record from a line of text. The length of the
         object matches the number of columns in the input line; in the case
-        incompatible values, the ValueError exception is raised.
+        incompatible values, a BEDError exception is raised.
 
         The len parameter is unused, and included only for compatibility with
         pysam parser objects, such as 'asBED'. No minimum number of columns are
@@ -70,10 +75,10 @@ class BEDRecord(object):
                 try:
                     self._fields.append(func(value))
                 except ValueError:
-                    raise ValueError("Error parsing column %i in BED record "
-                                     "(%r); expected type %s, but found %r."
-                                     % (column, "\t".join(line),
-                                        func.__name__, value,))
+                    raise BEDError("Error parsing column %i in BED record "
+                                   "(%r); expected type %s, but found %r."
+                                   % (column, "\t".join(line),
+                                      func.__name__, value,))
 
             if len(line) > len(self._fields):
                 self._fields.extend(line[len(self._fields):])
@@ -150,14 +155,65 @@ class BEDRecord(object):
 BEDRecord._set_properties()
 
 
-def read_bed_file(filename):
-    """Parses a (gzip/bzip2 compressed) BED file, and yields
-    a sequence of records. Comments and empty lines are skipped."""
+def read_bed_file(filename, min_columns=3, contigs=None):
+    """Parses a (gzip/bzip2 compressed) BED file, and yields a sequence of
+    records. Comments and empty lines are skipped. If the number of columns in
+    the bed record is less than the specified ('min_columns'), a BEDError is
+    raised. If a dictionary of {contig: length} is supplied, and min_columns
+    is at least 6, then the coordinates are validated against the known contig
+    lengths.
+    """
+    if min_columns < 3:
+        raise ValueError("'min_columns' must be >= 3 in 'read_bed_file'")
+
+    infinite = float("inf")
     handle = None
     try:
         handle = fileutils.open_ro(filename)
-        for record in text.parse_lines(handle, BEDRecord):
-            yield record
+
+        for (line_num, line) in enumerate(handle):
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+
+            try:
+                bed = BEDRecord(line)
+            except ValueError, error:
+                raise BEDError("Error parsing line %i in regions file:\n"
+                               "  Path = %r\n  Line = %r\n\n%s"
+                               % (line_num + 1, filename, line, error))
+
+            if len(bed) < min_columns:
+                url = "http://genome.ucsc.edu/FAQ/FAQformat.html#format1"
+                name = repr(bed.name) if len(bed) > 3 else "unnamed record"
+                raise BEDError("Region at line #%i (%s) does not "
+                               "contain the expected number of fields; "
+                               "the first %i fields are required. C.f. "
+                               "defination at\n   %s\n\nPath = %r"
+                               % (line_num, name, min_columns,
+                                  url, filename))
+
+            if min_columns >= 6:
+                if contigs is None:
+                    contig_len = infinite
+                else:
+                    contig_len = contigs.get(bed.contig)
+
+                if contig_len is None:
+                    raise BEDError("Regions file contains contig not found "
+                                   "in reference:\n  Path = %r\n  Contig = "
+                                   "%r\n\nPlease ensure that all contig "
+                                   "names match the reference names!"
+                                   % (filename, bed.contig))
+                elif not (0 <= bed.start < bed.end <= contig_len):
+                    raise BEDError("Regions file contains invalid region:\n"
+                                   "  Path   = %r\n  Contig = %r\n"
+                                   "  Start  = %s\n  End    = %s\n\n"
+                                   "Expected 0 <= Start < End <= %i!"
+                                   % (filename, bed.contig, bed.start,
+                                      bed.end, contig_len))
+
+            yield bed
     finally:
         if handle:
             handle.close()
