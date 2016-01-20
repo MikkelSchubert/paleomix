@@ -193,25 +193,24 @@ def read_bed_file(filename, min_columns=3, contigs=None):
                                % (line_num, name, min_columns,
                                   url, filename))
 
-            if min_columns >= 6:
-                if contigs is None:
-                    contig_len = infinite
-                else:
-                    contig_len = contigs.get(bed.contig)
+            if contigs is None:
+                contig_len = infinite
+            else:
+                contig_len = contigs.get(bed.contig)
 
-                if contig_len is None:
-                    raise BEDError("Regions file contains contig not found "
-                                   "in reference:\n  Path = %r\n  Contig = "
-                                   "%r\n\nPlease ensure that all contig "
-                                   "names match the reference names!"
-                                   % (filename, bed.contig))
-                elif not (0 <= bed.start < bed.end <= contig_len):
-                    raise BEDError("Regions file contains invalid region:\n"
-                                   "  Path   = %r\n  Contig = %r\n"
-                                   "  Start  = %s\n  End    = %s\n\n"
-                                   "Expected 0 <= Start < End <= %i!"
-                                   % (filename, bed.contig, bed.start,
-                                      bed.end, contig_len))
+            if contig_len is None:
+                raise BEDError("Regions file contains contig not found "
+                               "in reference:\n  Path = %r\n  Contig = "
+                               "%r\n\nPlease ensure that all contig "
+                               "names match the reference names!"
+                               % (filename, bed.contig))
+            elif not (0 <= bed.start < bed.end <= contig_len):
+                raise BEDError("Regions file contains invalid region:\n"
+                               "  Path   = %r\n  Contig = %r\n"
+                               "  Start  = %s\n  End    = %s\n\n"
+                               "Expected 0 <= Start < End <= %i!"
+                               % (filename, bed.contig, bed.start,
+                                  bed.end, contig_len))
 
             yield bed
     finally:
