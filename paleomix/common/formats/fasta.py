@@ -115,17 +115,18 @@ class FASTA(TotallyOrdered, Immutable):
             # Use pysam to index the file
             pysam.Fastafile(filename).close()
 
-        contigs = {}
+        names = set()
+        contigs = []
         with open(fai_filename) as faihandle:
             for line in faihandle:
                 name, length, _ = line.split(None, 2)
-                if name in contigs:
+                if name in names:
                     raise FASTAError("Reference contains multiple identically "
                                      "named sequences:\n  Path = %r\n  Name = "
                                      "%r\nPlease ensure that sequences have "
                                      "unique names" % (filename, name))
-
-                contigs[name] = int(length)
+                names.add(name)
+                contigs.append((name, int(length)))
 
         return contigs
 
