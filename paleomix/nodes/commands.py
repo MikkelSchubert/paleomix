@@ -50,7 +50,8 @@ from paleomix.common.fileutils import \
 
 from paleomix.nodes.samtools import \
     SAMTOOLS_VERSION, \
-    BCFTOOLS_VERSION
+    SAMTOOLS_VERSION_0119, \
+    BCFTOOLS_VERSION_0119
 
 import paleomix.tools.bam_stats.coverage as coverage
 import paleomix.tools.factory as factory
@@ -298,8 +299,8 @@ class GenotypeRegionsNode(CommandNode):
         params.set_kwargs(IN_BAMFILE=infile,
                           IN_INTERVALS=bedfile,
                           OUT_VCFFILE=outfile,
-                          CHECK_SAMTOOLS=SAMTOOLS_VERSION,
-                          CHECK_BCFTOOLS=BCFTOOLS_VERSION)
+                          CHECK_SAMTOOLS=SAMTOOLS_VERSION_0119,
+                          CHECK_BCFTOOLS=BCFTOOLS_VERSION_0119)
 
         return {"command": params}
 

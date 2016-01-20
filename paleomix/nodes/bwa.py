@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -21,7 +21,6 @@
 # SOFTWARE.
 #
 import os
-import types
 
 from paleomix.node import CommandNode, NodeError
 from paleomix.atomiccmd.command import AtomicCmd
@@ -315,7 +314,6 @@ class BWAAlgorithmNode(CommandNode):
         os.mkfifo(os.path.join(temp, "uncompressed_input_2"))
 
 
-
 def _process_output(stdin, output_file, reference, run_fixmate=False):
     convert = factory.new("cleanup")
     convert.set_option("--fasta", "%(IN_FASTA_REF)s")
@@ -329,22 +327,29 @@ def _process_output(stdin, output_file, reference, run_fixmate=False):
     if run_fixmate:
         convert.set_option('--paired-ended')
 
+    try:
+        if SAMTOOLS_VERSION.version >= (1,):
+            convert.set_option('--samtools1x', 'yes')
+        else:
+            convert.set_option('--samtools1x', 'no')
+    except versions.VersionRequirementError:
+        pass
+
     return ["convert"], {"convert": convert}
 
 
-
-def _get_bwa_template(call, prefix, iotype = "IN", **kwargs):
+def _get_bwa_template(call, prefix, iotype="IN", **kwargs):
     extensions = ["amb", "ann", "bwt", "pac", "sa"]
     try:
         if BWA_VERSION.version < (0, 6, 0):
             extensions.extend(("rbwt", "rpac", "rsa"))
     except versions.VersionRequirementError:
-        pass # Ignored here, handled elsewhere
+        pass  # Ignored here, handled elsewhere
 
     params = AtomicCmdBuilder(call, **kwargs)
     for postfix in extensions:
         key = "%s_PREFIX_%s" % (iotype, postfix.upper())
-        params.set_kwargs(**{key : (prefix + "." + postfix)})
+        params.set_kwargs(**{key: (prefix + "." + postfix)})
 
     return params
 

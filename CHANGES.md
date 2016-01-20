@@ -2,6 +2,11 @@
 Changelog
 =========
 
+  2016-01-18: Support SAMTools v1.x in the BAM pipeline; note, however, that
+              the phylogenetic pipeline still requires SAMTools v0.1.19, due to
+              major changes to BCFTools 1.x, which is not yet supported.
+  2016-01-18: Modify 'bam_cleanup' to support SAMTools 1.x; SAMTools v0.1.19 or
+              v1.x+ is henceforth required by this tool.
   2016-01-07: Configuration files are now expected to be located in ~/.paleomix
               or /etc/paleomix rather than ~/.pypeline and /etc/pypeline. To
               ensure backwards compatibility, ~/.pypeline will be migrated when
@@ -28,6 +33,8 @@ Changelog
               command, allowing FASTA construction from multi-sample VCFs;
               furthermore, if no BED file is specified, the entire genotype
               is constructed assuming that the VCF header is present.
+  2015-12-30: Modify the FASTA indexing node so that SAMTools v0.1.x and v1.x
+              can be used (added workaround for missing feature in v1.x).
   2015-12-30: The "Features" section of the BAM Pipeline makefile is now a
               dictionary rather than a list of strings, and spaces have been
               removed from feature names. This does not break backwards
