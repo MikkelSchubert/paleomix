@@ -2,6 +2,7 @@
 Changelog
 =========
 
+  2016-01-22: Fixed default values not being shown for 'vcf_filter --help'.
   2016-01-20: Added validation of BED files supplied to the BAM pipeline, and
               expand validation of BED files supplied to the Phylogenetic
               pipeline, to catch some cases that may cause unexpected behavior
