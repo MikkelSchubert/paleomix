@@ -83,7 +83,7 @@ _TEMPLATE_BAM_OPTIONS = \
       # One of "backtrack", "bwasw", or "mem"; see the BWA documentation
       # for a description of each algorithm (defaults to 'backtrack')
       Algorithm: backtrack
-      # Filter hits with a mapping quality (Phred) below this value
+      # Filter aligned reads with a mapping quality (Phred) below this value
       MinQuality: 0
       # Filter reads that did not map to the reference sequence
       FilterUnmappedReads: yes
@@ -96,7 +96,7 @@ _TEMPLATE_BAM_OPTIONS = \
 
     # Settings for mappings performed using Bowtie2
     Bowtie2:
-      # Filter hits with a mapping quality (Phred) below this value
+      # Filter aligned reads with a mapping quality (Phred) below this value
       MinQuality: 0
       # Filter reads that did not map to the reference sequence
       FilterUnmappedReads: yes

@@ -2,6 +2,13 @@
 Changelog
 =========
 
+  2016-01-22: The mapping-quality filter in the BAM pipeline / 'cleanup'
+              command now only applies to mapped reads; consequently, setting
+              a non-zero mapq value, and setting 'FilterUnmappedReads' to 'no'
+              will not result in unmapped reads being filtered.
+  2016-01-22: Improved the cleanup of BAM records following mapping, to better
+              ensure that the resulting records follow the recommendations in
+              the SAM spec. with regards to what fields / flags are set.
   2016-01-22: Fixed default values not being shown for 'vcf_filter --help'.
   2016-01-20: Added validation of BED files supplied to the BAM pipeline, and
               expand validation of BED files supplied to the Phylogenetic

@@ -49,6 +49,11 @@ import paleomix.common.versions as versions
 from paleomix.nodes.samtools import SAMTOOLS_VERSION
 
 
+# Mask to select flags that are relevant to SE reads; this excludes flags where
+# no assumptions can if 0x1 is not set, per the SAM specification (see below).
+_SE_FLAGS_MASK = ~(0x2 | 0x8 | 0x20 | 0x40 | 0x80)
+
+
 def _set_sort_order(header):
     """Updates a BAM header to indicate coordinate sorting."""
     hd_dict = header.setdefault("HD", {"GO": "none", "VN": "1.0"})
@@ -91,42 +96,56 @@ def _pipe_to_bam():
 
 
 def _cleanup_record(record):
-    """Marks a BAM record as unmapped, clearing relevant fields and/or setting
-    fields to match those of the mate (if mapped). An updated (possibly new)
-    record is returned.
+    """Cleans up the properties of a BAM record, ensuring that only appropriate
+    flags and values are set, such that the record follows section 1.4 of the
+    SAM specification (https://samtools.github.io/hts-specs/SAMv1.pdf). The
+    record itself (or a new record) is returned.
     """
-    if record.cigar:
-        # Build a new read; this is nessesary, as it is not possible
-        # to clean the CIGAR string on an existing record in current
-        # versions of Pysam.
-        unmapped_read = pysam.AlignedRead()
-        unmapped_read.qname = record.qname
-        unmapped_read.flag = record.flag
-        unmapped_read.seq = record.seq
-        unmapped_read.qual = record.qual
-        unmapped_read.tags = record.tags
+    if not record.is_paired:
+        # Unset 0x2 (properly aligned), 0x8 (next mate unmapped),
+        # 0x20 (next mate reversed), 0x40 (first mate), and 0x80 (last mate).
+        record.flag = record.flag & (~0xEA)
 
-        if not record.mate_is_unmapped:
-            unmapped_read.rnext = record.rnext
-            unmapped_read.pnext = record.pnext
-        else:
-            unmapped_read.rnext = -1
-            unmapped_read.pnext = -1
-
-        unmapped_read.tid = unmapped_read.rnext
-        unmapped_read.pos = unmapped_read.pnext
-
-        return unmapped_read
-    else:
+    if record.is_unmapped:
         record.mapq = 0
+        record.cigar = None
+        # Unset 0x2 (properly aligned), 0x100 (secondary), and 0x800 (chimeric)
+        record.flag = record.flag & (~0x902)
+
         if record.mate_is_unmapped:
             record.rnext = -1
             record.pnext = -1
+
+        # Per the spec, unmapped reads should be placed with their mate
         record.tid = record.rnext
         record.pos = record.pnext
         record.tlen = 0
+    elif record.mate_is_unmapped:
+        record.rnext = record.tid
+        record.pnext = record.pos
+        record.tlen = 0
 
-        return record
+    return record
+
+
+def _filter_record(args, record):
+    """Returns True if the record should be filtered (excluded), based on the
+    --exclude-flags and --require-flags options. Certain flags are ignored when
+    filtering SE reads, namely those not included in _SE_FLAGS_MASK (above).
+    """
+    if record.is_paired:
+        exclude_flags = args.exclude_flags
+        require_flags = args.require_flags
+    else:
+        exclude_flags = args.exclude_flags & _SE_FLAGS_MASK
+        require_flags = args.require_flags & _SE_FLAGS_MASK
+
+    if (record.flag & exclude_flags):
+        return True
+    elif ~(record.flag & require_flags) & require_flags:
+        return True
+
+    return False
 
 
 def _cleanup_unmapped(args, cleanup_sam):
@@ -137,6 +156,8 @@ def _cleanup_unmapped(args, cleanup_sam):
     assumption that 'samtools sort' is to be run on the output) and PG tags are
     updated if specified in the args.
     """
+
+    filter_by_flag = bool(args.exclude_flags or args.require_flags)
     spec = "r" if cleanup_sam else "rb"
     with pysam.Samfile("-", spec) as input_handle:
         header = copy.deepcopy(input_handle.header)
@@ -147,18 +168,13 @@ def _cleanup_unmapped(args, cleanup_sam):
 
         with pysam.Samfile("-", "wbu", header=header) as output_handle:
             for record in input_handle:
-                if (record.mapq < args.min_quality) \
-                        or (record.flag & args.exclude_flags):
-                    continue
+                # Ensure that the properties make sense before filtering
+                record = _cleanup_record(record)
 
-                if record.is_unmapped:
-                    # Unmapped read; clear all non-required fields
-                    record = _cleanup_record(record)
-                elif record.mate_is_unmapped:
-                    # Unmapped mate
-                    record.rnext = record.tid
-                    record.pnext = record.pos
-                    record.tlen = 0
+                if not record.is_unmapped and (record.mapq < args.min_quality):
+                    continue
+                elif filter_by_flag and _filter_record(args, record):
+                    continue
 
                 if args.rg_id is not None:
                     # Ensure that only one RG tag is set
@@ -283,14 +299,21 @@ def parse_args(argv):
     parser.add_argument('--temp-prefix', required=True,
                         help="REQUIRED: Prefix for temp files")
     parser.add_argument("-q", "--min-quality", type=int, default=0,
-                        help="Equivalent to \"samtools view -q\"  "
-                             "\n[Default: %(default)s]")
+                        help="Exclude aligned reads with a mapping quality "
+                             "below this value; note that this filter ONLY "
+                             "applies to aligned reads [Default: %(default)s]")
+    parser.add_argument("-f", "--require-flags", default=0,
+                        type=lambda value: int(value, 0),  # Handle hex, etc.
+                        help="Only include reads with all of these flags set. "
+                             "Equivalent to 'samtools view -f' "
+                             "[Default: %(default)s]")
     parser.add_argument("-F", "--exclude-flags", default=0,
                         type=lambda value: int(value, 0),  # Handle hex, etc.
-                        help="Equivalent to \"samtools view -F\" "
+                        help="Exclude reads with any of these flags set. "
+                             "Equivalent to 'samtools view -F' "
                              "[Default: %(default)s]")
     parser.add_argument('--paired-ended', default=False, action="store_true",
-                        help='If enabled, additional processing of PE reads'
+                        help='If enabled, additional processing of PE reads '
                              'is carried out, including updating of mate '
                              'information [Default: off]')
 
