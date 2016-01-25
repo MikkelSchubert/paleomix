@@ -410,6 +410,7 @@ def _update_prefixes(makefile):
 
 
 def _update_lanes(makefile):
+    formatter = string.Formatter()
     prefixes = makefile["Prefixes"]
     for (target_name, samples) in makefile["Targets"].iteritems():
         for (sample_name, libraries) in samples.iteritems():
@@ -418,13 +419,43 @@ def _update_lanes(makefile):
 
                 for (lane, data) in lanes.iteritems():
                     path = (target_name, sample_name, library_name, lane)
+
+                    _validate_lane_paths(data, path, formatter)
+
                     lane_type = _determine_lane_type(prefixes, data, path)
                     lanes[lane] = {"Type": lane_type,
                                    "Data": data,
                                    "Options": options}
 
 
+def _validate_lane_paths(data, path, fmt):
+    filenames = []
+    if isinstance(data, types.StringTypes):
+        filenames.append(data)
+    elif isinstance(data, types.DictType):
+        filenames.extend(data.itervalues())
+
+    for filename in filenames:
+        try:
+            fields = tuple(fmt.parse(filename))
+        except ValueError, error:
+            raise MakefileError("Error parsing path specified at %r; %s; note "
+                                "that the characters '}' and '{' should only "
+                                "be used as part of the key '{Pair}', in "
+                                "order to specify the mate identifier: %r"
+                                % (" :: ".join(path), error, filename))
+
+        for _, key, _, _ in fields:
+            if key not in (None, "Pair"):
+                raise MakefileError("Invalid path specified at %r; only the "
+                                    "key '{Pair}' is allowed, to specify the "
+                                    "mate 1 / 2 identifier, but the key "
+                                    "'{%s}' was found in the path: %r"
+                                    % (" :: ".join(path), key, filename))
+
+
 def _determine_lane_type(prefixes, data, path):
+
     if isinstance(data, types.StringTypes):
         return "Raw"
     elif isinstance(data, types.DictType):

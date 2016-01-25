@@ -2,6 +2,8 @@
 Changelog
 =========
 
+  2016-01-25: Validate paths in BAM makfiles, to ensure that these can be
+              parsed, and that these do not contain keys other than '{Pair}'.
   2016-01-25: Fixed bug which could cause the data duplication detection to
               fail when unmapped reads were included.
   2016-01-22: The mapping-quality filter in the BAM pipeline / 'cleanup'
