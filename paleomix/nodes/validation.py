@@ -100,7 +100,7 @@ class DetectInputDuplicationNode(Node):
     @classmethod
     def _read_samfile(cls, handle, filename):
         for record in handle:
-            if record.is_unmapped and (not record.pos or record.is_mate_unmapped):
+            if record.is_unmapped and (not record.pos or record.mate_is_unmapped):
                 # Ignore unmapped reads except when these are sorted
                 # according to the mate position (if mapped)
                 continue

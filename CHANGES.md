@@ -2,6 +2,8 @@
 Changelog
 =========
 
+  2016-01-25: Fixed bug which could cause the data duplication detection to
+              fail when unmapped reads were included.
   2016-01-22: The mapping-quality filter in the BAM pipeline / 'cleanup'
               command now only applies to mapped reads; consequently, setting
               a non-zero mapq value, and setting 'FilterUnmappedReads' to 'no'
