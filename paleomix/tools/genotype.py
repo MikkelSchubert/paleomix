@@ -148,7 +148,7 @@ def write_bed_file(prefix, regions):
     return fpath
 
 
-def setup_basic_batch(args, regions, prefix, func):
+def setup_basic_batch(args, regions, prefix, func, first_batch=True):
     setup = {"files": {},
              "temp_files": {},
              "procs": {},
@@ -168,9 +168,16 @@ def setup_basic_batch(args, regions, prefix, func):
             = processes.open_proc(filter_builder.call,
                                   stdout=processes.PIPE)
 
+        call_stdout = func(setup)
+        if not first_batch:
+            setup["procs"]["grep"] = processes.open_proc(('grep', '-v', '^#'),
+                                                         stdin=call_stdout,
+                                                         stdout=processes.PIPE)
+            call_stdout = setup["procs"]["grep"].stdout
+
         setup["handles"]["outfile"] = open(prefix, "w")
         zip_proc = processes.open_proc(["bgzip"],
-                                       stdin=func(setup),
+                                       stdin=call_stdout,
                                        stdout=setup["handles"]["outfile"])
 
         setup["procs"]["gzip"] = zip_proc
@@ -186,7 +193,7 @@ def setup_basic_batch(args, regions, prefix, func):
 ###############################################################################
 # Pileup batch generation
 
-def setup_mpileup_batch(args, regions, prefix):
+def setup_mpileup_batch(args, regions, prefix, first_batch=True):
     def _create_mpileup_proc(setup):
         mpileup_args = {"-l": setup["files"]["bed"]}
         call = build_call(call=("samtools", "mpileup"),
@@ -203,14 +210,15 @@ def setup_mpileup_batch(args, regions, prefix):
 
         return procs["mpileup"].stdout
 
-    return setup_basic_batch(args, regions, prefix, _create_mpileup_proc)
+    return setup_basic_batch(args, regions, prefix, _create_mpileup_proc,
+                             first_batch=first_batch)
 
 
 ###############################################################################
 ###############################################################################
 # Genotyping batch generation
 
-def setup_genotyping_batch(args, regions, prefix):
+def setup_genotyping_batch(args, regions, prefix, first_batch=True):
     def _create_genotyping_proc(setup):
         mpileup_args = {"-u": None,
                         "-l": setup["files"]["bed"]}
@@ -243,23 +251,24 @@ def setup_genotyping_batch(args, regions, prefix):
 
         return procs["bcftools"].stdout
 
-    return setup_basic_batch(args, regions, prefix, _create_genotyping_proc)
+    return setup_basic_batch(args, regions, prefix, _create_genotyping_proc,
+                             first_batch=first_batch)
 
 
 ###############################################################################
 ###############################################################################
 
-def setup_batch(args, regions, filename):
+def setup_batch(args, regions, filename, first_batch):
     """Setup a batch; either a full genotyping, or just a pileup depending on
     'args.pileup_only'; the results are written to 'filename'.
     """
     if args.pileup_only:
-        return setup_mpileup_batch(args, regions, filename)
-    return setup_genotyping_batch(args, regions, filename)
+        return setup_mpileup_batch(args, regions, filename, first_batch)
+    return setup_genotyping_batch(args, regions, filename, first_batch)
 
 
-def run_batch((args, regions, filename)):
-    setup = setup_batch(args, regions, filename)
+def run_batch((args, regions, filename, first_batch)):
+    setup = setup_batch(args, regions, filename, first_batch)
     try:
         if any(processes.join_procs(setup["procs"].values())):
             return None
@@ -318,6 +327,7 @@ def create_batches(args, regions):
     the total set of regions into args.nbatches portions.
     """
     tmpl = "{0}.batch_%03i".format(args.destination)
+
     def _get_batch_fname(count):
         """Returns a filename for batch number 'count'."""
         if count:
@@ -335,7 +345,8 @@ def create_batches(args, regions):
             new_end = start + batch_size - current_total
             current_batch.append((contig, start, new_end))
             start = new_end
-            yield args, current_batch, _get_batch_fname(batch_count)
+            yield args, current_batch, _get_batch_fname(batch_count), \
+                not batch_count
             current_batch = []
             current_total = 0
             batch_count += 1
@@ -343,7 +354,8 @@ def create_batches(args, regions):
         current_total += end - start
 
     if current_batch:
-        yield args, current_batch, _get_batch_fname(batch_count)
+        yield args, current_batch, _get_batch_fname(batch_count), \
+            not batch_count
 
 
 def merge_batch_results(filenames_iter):

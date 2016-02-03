@@ -2,6 +2,9 @@
 Changelog
 =========
 
+  2016-02-03: Ensured that only a single header is generated when using
+              multiple threads during genotyping, in order to avoid issues
+              with programs unable to handle multiple headers.
   2016-02-03: Rework BWA backtrack mapping to be carried out in two steps; this
               requires saving the .sai files (and hence more disk-space used
               by intermediate files), but allows better control over thread and
