@@ -76,7 +76,7 @@ def print_disabled(*vargs, **kwargs):
 def _do_print_color(*vargs, **kwargs):
     """Utility function: Prints using shell colors."""
     colorcode = kwargs.pop("colorcode")
-    destination = kwargs.pop("file", sys.stdout)
+    destination = kwargs.pop("file", sys.stderr)
 
     # No colors if output is redirected (e.g. less, file, etc.)
     colors_on = _COLORS != COLORS_OFF
@@ -92,5 +92,8 @@ def _do_print_color(*vargs, **kwargs):
             vargs[index] = "\n".join(varg_lines)
 
     print(*vargs, file=destination, **kwargs)
+
+    if '\n' in kwargs.get('end', '\n'):
+        destination.flush()
 
 _COLORS = COLORS_ON

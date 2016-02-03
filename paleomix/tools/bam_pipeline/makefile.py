@@ -631,10 +631,8 @@ def _validate_makefiles_duplicate_files(makefiles):
             message = "Path included multiple times in target:\n"
             raise MakefileError(message + description)
         else:
-            print_warn("WARNING: Path included in multiple targets:",
-                       file=sys.stderr)
-            print_warn(description, file=sys.stderr)
-            print_warn(file=sys.stderr)
+            print_warn("WARNING: Path included in multiple targets:\n%s\n"
+                       % (description,))
 
 
 def _describe_files_in_multiple_records(records, pairs):
@@ -691,7 +689,7 @@ def _validate_prefixes(makefiles):
     human genomes in a different order.
     """
     already_validated = set()
-    print_info("  - Validating prefixes ...", file=sys.stderr)
+    print_info("  - Validating prefixes ...")
     for makefile in makefiles:
         uses_gatk = makefile["Options"]["Features"]["RealignedBAM"]
         for prefix in makefile["Prefixes"].itervalues():
@@ -701,11 +699,11 @@ def _validate_prefixes(makefiles):
 
             if not os.path.exists(path):
                 print_info("    - Reference FASTA file does not exist:\n"
-                           "      %r" % (path,), file=sys.stderr)
+                           "      %r" % (path,))
                 continue
             elif not os.path.exists(path + ".fai"):
                 print_info("    - Index does not exist for %r; this may "
-                           "take a while ..." % (path,), file=sys.stderr)
+                           "take a while ..." % (path,))
 
             try:
                 contigs = FASTA.index_and_collect_contigs(path)
@@ -755,7 +753,7 @@ def _do_validate_hg_prefix(makefile, prefix, contigs, fatal):
         details = \
             "You will not be able to use the resulting BAM file with GATK."
         message %= (mkfile_path, prefix_path, details)
-        print_warn("\nWARNING:\n", message, file=sys.stderr, sep="")
+        print_warn("\nWARNING:\n", message, sep="")
 
 
 def _is_invalid_hg_prefix(contigs):

@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -21,7 +21,6 @@
 # SOFTWARE.
 #
 import os
-import sys
 import time
 import logging
 
@@ -174,13 +173,12 @@ def run(config, args, pipeline_variant):
     pipeline = Pypeline(config)
 
     try:
-        print_info("Building BAM pipeline ...", file=sys.stderr)
+        print_info("Building BAM pipeline ...")
         makefiles = read_makefiles(config, args)
     except (MakefileError, paleomix.yaml.YAMLError, IOError), error:
         print_err("Error reading makefiles:",
                   "\n  %s:\n   " % (error.__class__.__name__,),
-                  "\n    ".join(str(error).split("\n")),
-                  file=sys.stderr)
+                  "\n    ".join(str(error).split("\n")))
         return 1
 
     logfile_template = time.strftime("bam_pipeline.%Y%m%d_%H%M%S_%%02i.log")

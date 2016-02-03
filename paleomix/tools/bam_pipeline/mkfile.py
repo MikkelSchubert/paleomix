@@ -263,8 +263,7 @@ def main(argv, pipeline="bam"):
             root, filename = os.path.split(root)[0], root
 
         if not os.path.exists(filename):
-            print_err("ERROR: Could not find SampleSheet file: %r" % filename,
-                      file=sys.stderr)
+            print_err("ERROR: Could not find SampleSheet file: %r" % filename)
             return 1
 
         for record in read_alignment_records(filename):
@@ -295,8 +294,7 @@ def main(argv, pipeline="bam"):
 
     if argv:
         print_info("Automatically generated makefile printed.\n"
-                   "Please check for correctness before running pipeline.",
-                   file=sys.stderr)
+                   "Please check for correctness before running pipeline.")
     return 0
 
 

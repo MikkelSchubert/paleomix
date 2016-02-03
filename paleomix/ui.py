@@ -126,7 +126,7 @@ class CommandLine(object):
             elif character == "-":
                 max_threads = max(1, max_threads - 1)
             elif character in "lL":
-                paleomix.ui.print_info()
+                print_info(file=sys.stdout)
                 progress_printer = paleomix.ui.RunningUI()
                 progress_printer.refresh(nodegraph)
                 progress_printer.flush()
@@ -135,7 +135,7 @@ class CommandLine(object):
                     continue
 
                 help_printed = True
-                paleomix.ui.print_info("""
+                print_info("""
 Commands:
   Key   Function
   h     Prints this message.
@@ -144,14 +144,13 @@ Commands:
   -     Decreases the maximum number of threads by one; already running tasks
         are NOT terminated if the current number of threads used exceeds the
         resulting maximum.
-""")
+""", file=sys.stdout)
             else:
                 continue
 
         if max_threads != old_max_threads:
-            paleomix.ui.print_debug("Maximum number of threads changed "
-                                    "from %i to %i."
-                                    % (old_max_threads, max_threads))
+            print_debug("Maximum number of threads changed from %i to %i."
+                        % (old_max_threads, max_threads), file=sys.stdout)
 
         return max_threads
 
@@ -219,8 +218,7 @@ class BaseUI(object):
         for line in text.padded_table(rows):
             print_info(line)
 
-        print_info()
-        print_info("Use --list-output-files to view status of output files.")
+        print_info("\nUse --list-output-files to view status of output files.")
 
         logfile = paleomix.logger.get_logfile()
         if logfile:
@@ -315,8 +313,8 @@ class RunningUI(BaseUI):
         if BaseUI.flush(self) and self._running_nodes:
             self._print_header(self.states, self.threads)
             for node in sorted(map(str, self._running_nodes)):
-                print_info("  - %s" % (node,))
-            print_info()
+                print_info("  - %s" % (node,), file=sys.stdout)
+            print_info(file=sys.stdout)
 
     def refresh(self, nodegraph):
         """See BaseUI.refresh."""
@@ -337,12 +335,14 @@ class RunningUI(BaseUI):
 
     @classmethod
     def _print_header(cls, states, threads):
-        print_msg(datetime.datetime.now().strftime("%F %T"))
+        print_msg(datetime.datetime.now().strftime("%F %T"), file=sys.stdout)
         print_msg("Pipeline; %s (press 'h' for help):"
-                  % cls._describe_states(states, threads))
+                  % cls._describe_states(states, threads), file=sys.stdout)
+
         logfile = paleomix.logger.get_logfile()
         if logfile:
-            print_debug("  Log-file located at %r" % (logfile,))
+            print_debug("  Log-file located at %r" % (logfile,),
+                        file=sys.stdout)
 
 
 class ProgressUI(BaseUI):
@@ -380,10 +380,11 @@ class ProgressUI(BaseUI):
         time_label = datetime.datetime.now().strftime("%T")
         description = self._describe_states(self.states, self.threads)
         print_msg("\n%s Pipeline: %s (press 'h' for help):"
-                  % (time_label, description))
+                  % (time_label, description), file=sys.stdout)
+
         logfile = paleomix.logger.get_logfile()
         if logfile:
-            print_debug("Log-file located at %r" % (logfile,))
+            print_debug("Log-file located at %r" % (logfile,), file=sys.stdout)
 
     def _print_state(self, node, new_state):
         state_label, print_func = self._DESCRIPTIONS[new_state]
@@ -393,7 +394,8 @@ class ProgressUI(BaseUI):
             state_label = "%s (%s)" % (state_label, self._get_runtime(node))
 
         time_label = datetime.datetime.now().strftime("%T")
-        print_func("%s %s: %s" % (time_label, state_label, node))
+        print_func("%s %s: %s" % (time_label, state_label, node),
+                   file=sys.stdout)
 
     def _get_runtime(self, node):
         current_time = time.time()
@@ -427,16 +429,18 @@ class SummaryUI(BaseUI):
                 % (time_label, description, runtime)
 
             self._max_len = max(len(message), self._max_len)
-            print_msg("\r%s" % (message.ljust(self._max_len),), end="")
+            print_msg("\r%s" % (message.ljust(self._max_len),), end="",
+                      file=sys.stdout)
 
             logfile = paleomix.logger.get_logfile()
             if logfile and self._new_error:
-                print_debug("\nLog-file located at %r" % (logfile,))
+                print_debug("\nLog-file located at %r" % (logfile,),
+                            file=sys.stdout)
                 self._new_error = False
             sys.stdout.flush()
 
     def finalize(self):
-        print_msg()
+        print_msg(file=sys.stdout)
         BaseUI.finalize(self)
 
 

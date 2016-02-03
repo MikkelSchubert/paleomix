@@ -21,7 +21,6 @@
 # SOFTWARE.
 #
 import os
-import sys
 import time
 import logging
 
@@ -81,8 +80,7 @@ def main(argv):
     except (MakefileError, paleomix.yaml.YAMLError, IOError), error:
         print_err("Error reading makefiles:",
                   "\n  %s:\n   " % (error.__class__.__name__,),
-                  "\n    ".join(str(error).split("\n")),
-                  file=sys.stderr)
+                  "\n    ".join(str(error).split("\n")))
         return 1
 
     logfile_template = time.strftime("phylo_pipeline.%Y%m%d_%H%M%S_%%02i.log")

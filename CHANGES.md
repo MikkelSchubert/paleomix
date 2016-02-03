@@ -2,6 +2,9 @@
 Changelog
 =========
 
+  2016-01-25: Information / error messages are now more consistently logged to
+              stderr, to better ensure that results printed to stdout are not
+              mixed with such messages.
   2016-01-25: Validate paths in BAM makfiles, to ensure that these can be
               parsed, and that these do not contain keys other than '{Pair}'.
   2016-01-25: Fixed bug which could cause the data duplication detection to
