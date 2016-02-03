@@ -39,218 +39,192 @@ import paleomix.common.versions as versions
 import paleomix.tools.factory as factory
 
 
-BWA_VERSION = versions.Requirement(call   = ("bwa",),
-                                   search = r"Version: (\d+)\.(\d+)\.(\d+)",
-                                   checks = versions.Or(versions.EQ(0, 5, 9),
-                                                        versions.EQ(0, 5, 10),
-                                                        versions.EQ(0, 6, 2),
-                                                        versions.GE(0, 7, 9)))
+BWA_VERSION = versions.Requirement(call=("bwa",),
+                                   search=r"Version: (\d+)\.(\d+)\.(\d+)",
+                                   checks=versions.Or(versions.EQ(0, 5, 9),
+                                                      versions.EQ(0, 5, 10),
+                                                      versions.EQ(0, 6, 2),
+                                                      versions.GE(0, 7, 9)))
 
-BWA_VERSION_07x = versions.Requirement(call   = ("bwa",),
-                                       search = r"Version: (\d+)\.(\d+)\.(\d+)",
-                                       checks = versions.GE(0, 7, 9))
-
+BWA_VERSION_07x = versions.Requirement(call=("bwa",),
+                                       search=r"Version: (\d+)\.(\d+)\.(\d+)",
+                                       checks=versions.GE(0, 7, 9))
 
 
 class BWAIndexNode(CommandNode):
     @create_customizable_cli_parameters
-    def customize(cls, input_file, prefix = None, dependencies = ()):
+    def customize(cls, input_file, prefix=None, dependencies=()):
         prefix = prefix if prefix else input_file
-        params = _get_bwa_template(("bwa", "index"), prefix, iotype = "OUT",
-                                   IN_FILE = input_file,
-                                   TEMP_OUT_PREFIX = os.path.basename(prefix),
-                                   CHECK_BWA = BWA_VERSION)
+        params = _get_bwa_template(("bwa", "index"), prefix, iotype="OUT",
+                                   IN_FILE=input_file,
+                                   TEMP_OUT_PREFIX=os.path.basename(prefix),
+                                   CHECK_BWA=BWA_VERSION)
 
         # Input fasta sequence
         params.add_value("%(IN_FILE)s")
         # Destination prefix, in temp folder
         params.set_option("-p", "%(TEMP_OUT_PREFIX)s")
 
-        return {"prefix"       : prefix,
-                "command"      : params,
-                "dependencies" : dependencies}
-
+        return {"prefix": prefix,
+                "command": params,
+                "dependencies": dependencies}
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
         command = parameters.command.finalize()
-        description =  "<BWA Index '%s' -> '%s.*'>" % (parameters.input_file,
-                                                       parameters.prefix)
+        description = "<BWA Index '%s' -> '%s.*'>" % (parameters.input_file,
+                                                      parameters.prefix)
         CommandNode.__init__(self,
-                             command      = command,
-                             description  = description,
-                             dependencies = parameters.dependencies)
+                             command=command,
+                             description=description,
+                             dependencies=parameters.dependencies)
 
 
-def BWANode(input_file_1, input_file_2=None, algorithm="backtrack", **kwargs):
-    if algorithm == "backtrack":
-        if input_file_1 and input_file_2:
-            return PEBWANode.customize(input_file_1 = input_file_1,
-                                       input_file_2 = input_file_2,
-                                       **kwargs)
-        elif input_file_1 and not input_file_2:
-            return SEBWANode.customize(input_file = input_file_1,
-                                       **kwargs)
-        else:
-            assert False, "Neither input_file_1 nor input_file_2 set"
-    else:
-        return BWAAlgorithmNode.customize(input_file_1=input_file_1,
-                                          input_file_2=input_file_2,
-                                          algorithm=algorithm,
-                                          **kwargs)
-
-
-class SEBWANode(CommandNode):
+class BWABacktrack(CommandNode):
     @create_customizable_cli_parameters
-    def customize(cls, input_file, output_file, reference, prefix, threads = 1, dependencies = ()):
+    def customize(cls, input_file, output_file, reference, prefix, threads=1,
+                  dependencies=()):
+        _check_bwa_prefix(reference)
         threads = _get_max_threads(reference, threads)
 
-        aln_in = _build_cat_command(input_file, "uncompressed_input_aln")
+        aln_in = _build_cat_command(input_file, "uncompressed_input")
         aln = _get_bwa_template(("bwa", "aln"), prefix,
-                                TEMP_IN_FILE = "uncompressed_input_aln",
-                                OUT_STDOUT = AtomicCmd.PIPE,
-                                CHECK_BWA = BWA_VERSION)
+                                TEMP_IN_FILE="uncompressed_input",
+                                OUT_STDOUT=output_file,
+                                CHECK_BWA=BWA_VERSION)
         aln.add_value(prefix)
         aln.add_value("%(TEMP_IN_FILE)s")
         aln.set_option("-t", threads)
 
-        samse_in = _build_cat_command(input_file, "uncompressed_input_samse")
+        return {"commands": {"aln_in": aln_in, "aln": aln},
+                "order": ["aln_in", "aln"],
+                "threads": threads,
+                "dependencies": dependencies}
+
+    @use_customizable_cli_parameters
+    def __init__(self, parameters):
+        command = ParallelCmds([parameters.commands[key].finalize()
+                               for key in parameters.order])
+
+        description \
+            = _get_node_description(name="BWA Backtrack",
+                                    algorithm="SE",
+                                    input_files_1=(parameters.input_file,),
+                                    input_files_2=(),
+                                    prefix=parameters.prefix,
+                                    threads=parameters.threads)
+
+        CommandNode.__init__(self,
+                             command=command,
+                             description=description,
+                             threads=parameters.threads,
+                             dependencies=parameters.dependencies)
+
+    def _setup(self, _config, temp):
+        os.mkfifo(os.path.join(temp, "uncompressed_input"))
+
+
+class BWASamse(CommandNode):
+    @create_customizable_cli_parameters
+    def customize(cls, input_file_fq, input_file_sai, output_file,
+                  reference, prefix, dependencies=()):
+        _check_bwa_prefix(reference)
+
+        samse_in = _build_cat_command(input_file_fq, "uncompressed_input")
         samse = _get_bwa_template(("bwa", "samse"), prefix,
-                                  IN_STDIN = aln,
-                                  TEMP_IN_FILE = "uncompressed_input_samse",
-                                  OUT_STDOUT = AtomicCmd.PIPE,
-                                  CHECK_BWA = BWA_VERSION)
+                                  IN_FILE_SAI=input_file_sai,
+                                  TEMP_IN_FQ="uncompressed_input",
+                                  OUT_STDOUT=AtomicCmd.PIPE,
+                                  CHECK_BWA=BWA_VERSION)
         samse.add_value(prefix)
-        samse.add_value("-")
-        samse.add_value("%(TEMP_IN_FILE)s")
+        samse.add_value("%(IN_FILE_SAI)s")
+        samse.add_value("%(TEMP_IN_FQ)s")
 
         order, commands = _process_output(samse, output_file, reference)
         commands["sam_in"] = samse_in
-        commands["sam"]    = samse
-        commands["aln_in"]   = aln_in
-        commands["aln"]      = aln
+        commands["sam"] = samse
 
-        return {"commands"     : commands,
-                "order"        : ["aln_in", "aln", "sam_in", "sam"] + order,
-                "threads"      : threads,
-                "dependencies" : dependencies}
-
+        return {"commands": commands,
+                "order": ["sam_in", "sam"] + order,
+                "dependencies": dependencies}
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
-        _check_bwa_prefix(parameters.prefix)
-        command = ParallelCmds([parameters.commands[key].finalize() for key in parameters.order])
-        description =  _get_node_description(name          = "BWA",
-                                             algorithm     = "SE",
-                                             input_files_1 = (parameters.input_file,),
-                                             input_files_2 = (),
-                                             prefix        = parameters.prefix,
-                                             threads       = parameters.threads)
+        command = ParallelCmds([parameters.commands[key].finalize()
+                               for key in parameters.order])
+
+        input_file = parameters.input_file_fq
+        description = _get_node_description(name="BWA Samse",
+                                            algorithm="SE",
+                                            input_files_1=(input_file,),
+                                            input_files_2=(),
+                                            prefix=parameters.prefix)
 
         CommandNode.__init__(self,
-                             command      = command,
-                             description  = description,
-                             threads      = parameters.threads,
-                             dependencies = parameters.dependencies)
-
+                             command=command,
+                             description=description,
+                             dependencies=parameters.dependencies)
 
     def _setup(self, _config, temp):
-        os.mkfifo(os.path.join(temp, "uncompressed_input_aln"))
-        os.mkfifo(os.path.join(temp, "uncompressed_input_samse"))
+        os.mkfifo(os.path.join(temp, "uncompressed_input"))
 
 
-class PEBWANode(CommandNode):
+class BWASampe(CommandNode):
     @create_customizable_cli_parameters
-    def customize(cls, input_file_1, input_file_2, output_file, reference, prefix, threads = 2, dependencies = ()):
-        threads = _get_max_threads(reference, threads)
+    def customize(cls,
+                  input_file_fq_1, input_file_fq_2,
+                  input_file_sai_1, input_file_sai_2,
+                  output_file, reference, prefix, dependencies=()):
+        _check_bwa_prefix(reference)
 
-        aln_commands, aln_in_commands = \
-          cls._create_aln_cmds(prefix, input_file_1, input_file_2, threads)
+        sampe_in_1 = _build_cat_command(input_file_fq_1,
+                                        "uncompressed_input_1")
+        sampe_in_2 = _build_cat_command(input_file_fq_2,
+                                        "uncompressed_input_2")
 
-        sampe_in_1 = _build_cat_command(input_file_1, "uncompressed_input_sampe_1")
-        sampe_in_2 = _build_cat_command(input_file_2, "uncompressed_input_sampe_2")
-        sampe      = cls._create_sampe_cmd(prefix)
+        sampe = _get_bwa_template(("bwa", "sampe"), prefix,
+                                  IN_FILE_SAI_1=input_file_sai_1,
+                                  IN_FILE_SAI_2=input_file_sai_2,
+                                  TEMP_IN_FQ_1="uncompressed_input_1",
+                                  TEMP_IN_FQ_2="uncompressed_input_2",
+                                  OUT_STDOUT=AtomicCmd.PIPE,
+                                  CHECK_BWA=BWA_VERSION)
+        sampe.add_value(prefix)
+        sampe.add_value("%(IN_FILE_SAI_1)s")
+        sampe.add_value("%(IN_FILE_SAI_2)s")
+        sampe.add_value("%(TEMP_IN_FQ_1)s")
+        sampe.add_value("%(TEMP_IN_FQ_2)s")
 
-        order, commands = _process_output(sampe, output_file, reference, run_fixmate = True)
-        commands["sam"] = sampe
+        order, commands = _process_output(sampe, output_file, reference)
         commands["sam_in_1"] = sampe_in_1
         commands["sam_in_2"] = sampe_in_2
-        commands["aln_in_1"], commands["aln_in_2"] = aln_in_commands
-        commands["aln_1"],    commands["aln_2"]    = aln_commands
+        commands["sam"] = sampe
 
-        return {"commands"     : commands,
-                "order"        : ["aln_in_1", "aln_1",
-                                  "aln_in_2", "aln_2",
-                                  "sam_in_1", "sam_in_2", "sam"] + order,
-                # At least one thread per 'aln' process
-                "threads"      : max(2, threads),
-                "dependencies" : dependencies}
-
+        return {"commands": commands,
+                "order": ["sam_in_1", "sam_in_2", "sam"] + order,
+                "dependencies": dependencies}
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
-        _check_bwa_prefix(parameters.prefix)
-        command = ParallelCmds([parameters.commands[key].finalize() for key in parameters.order])
+        command = ParallelCmds([parameters.commands[key].finalize()
+                               for key in parameters.order])
 
-        description  = _get_node_description(name          = "BWA",
-                                             algorithm     = "PE",
-                                             input_files_1 = parameters.input_file_1,
-                                             input_files_2 = parameters.input_file_2,
-                                             prefix        = parameters.prefix,
-                                             threads       = parameters.threads)
+        input_file_1 = parameters.input_file_fq_1
+        input_file_2 = parameters.input_file_fq_2
+        description = _get_node_description(name="BWA Samse",
+                                            algorithm="SE",
+                                            input_files_1=(input_file_1,),
+                                            input_files_2=(input_file_2,),
+                                            prefix=parameters.prefix)
 
         CommandNode.__init__(self,
-                             command      = command,
-                             description  = description,
-                             threads      = parameters.threads,
-                             dependencies = parameters.dependencies)
-
+                             command=command,
+                             description=description,
+                             dependencies=parameters.dependencies)
 
     def _setup(self, _config, temp):
-        os.mkfifo(os.path.join(temp, "uncompressed_input_aln_1"))
-        os.mkfifo(os.path.join(temp, "uncompressed_input_aln_2"))
-        os.mkfifo(os.path.join(temp, "uncompressed_input_sampe_1"))
-        os.mkfifo(os.path.join(temp, "uncompressed_input_sampe_2"))
-        os.mkfifo(os.path.join(temp, "pair_1.sai"))
-        os.mkfifo(os.path.join(temp, "pair_2.sai"))
-
-
-    @classmethod
-    def _create_aln_cmds(cls, prefix, input_file_1, input_file_2, threads):
-        alns, aln_ins = [], []
-        for (iindex, filename) in enumerate((input_file_1, input_file_2), start = 1):
-            aln_in = _build_cat_command(filename, "uncompressed_input_aln_%i" % iindex)
-            aln = _get_bwa_template(("bwa", "aln"), prefix,
-                                    TEMP_IN_FILE = "uncompressed_input_aln_%i" % iindex,
-                                    OUT_STDOUT = AtomicCmd.PIPE,
-                                    TEMP_OUT_SAI = "pair_%i.sai" % iindex,
-                                    CHECK_BWA = BWA_VERSION)
-            aln.set_option("-f", "%(TEMP_OUT_SAI)s")
-            aln.set_option("-t", max(1, threads // 2))
-            aln.add_value(prefix)
-            aln.add_value("%(TEMP_IN_FILE)s")
-            aln_ins.append(aln_in)
-            alns.append(aln)
-        return alns, aln_ins
-
-
-    @classmethod
-    def _create_sampe_cmd(cls, prefix):
-        sampe = _get_bwa_template(("bwa", "sampe"), prefix,
-                                  TEMP_IN_FILE_1 = "uncompressed_input_sampe_1",
-                                  TEMP_IN_FILE_2 = "uncompressed_input_sampe_2",
-                                  TEMP_IN_SAI_1 = "pair_1.sai",
-                                  TEMP_IN_SAI_2 = "pair_2.sai",
-                                  OUT_STDOUT    = AtomicCmd.PIPE,
-                                  CHECK_BWA = BWA_VERSION)
-        sampe.add_value(prefix)
-        sampe.add_value("%(TEMP_IN_SAI_1)s")
-        sampe.add_value("%(TEMP_IN_SAI_2)s")
-        sampe.add_value("%(TEMP_IN_FILE_1)s")
-        sampe.add_value("%(TEMP_IN_FILE_2)s")
-        sampe.set_option("-P", fixed = False)
-
-        return sampe
+        os.mkfifo(os.path.join(temp, "uncompressed_input_1"))
+        os.mkfifo(os.path.join(temp, "uncompressed_input_2"))
 
 
 class BWAAlgorithmNode(CommandNode):
@@ -258,7 +232,10 @@ class BWAAlgorithmNode(CommandNode):
     def customize(cls, input_file_1, output_file, reference, prefix,
                   input_file_2=None, threads=1, algorithm="mem",
                   dependencies=()):
-        assert algorithm in ("mem", "bwasw"), algorithm
+        if algorithm not in ("mem", "bwasw"):
+            raise NotImplementedError("BWA algorithm %r not implemented"
+                                      % (algorithm,))
+
         threads = _get_max_threads(reference, threads)
 
         zcat_1 = _build_cat_command(input_file_1, "uncompressed_input_1")
@@ -401,8 +378,9 @@ def _check_bwa_prefix(prefix):
     # Files unique to v0.5.x
     v05x_files = set((prefix + ext) for ext in (".rbwt", ".rpac", ".rsa"))
     # Files common to v0.5.x, v0.6.x, and v0.7.x
-    common_files  = set((prefix + ext) for ext in (".amb", ".ann", ".bwt", ".pac", ".sa"))
-    all_files     = v05x_files | common_files
+    common_files = set((prefix + ext)
+                       for ext in (".amb", ".ann", ".bwt", ".pac", ".sa"))
+    all_files = v05x_files | common_files
     current_files = all_files - set(missing_files(all_files))
 
     expected_version = None

@@ -21,7 +21,6 @@
 # SOFTWARE.
 #
 import os
-import sys
 import copy
 import glob
 import types
@@ -423,6 +422,18 @@ def _update_lanes(makefile):
                     _validate_lane_paths(data, path, formatter)
 
                     lane_type = _determine_lane_type(prefixes, data, path)
+
+                    if lane_type == "Trimmed" and \
+                            options["QualityOffset"] == "Solexa":
+                        path = " :: ".join((target_name, sample_name,
+                                            library_name, lane))
+
+                        raise MakefileError("Pre-trimmed Solexa data is not "
+                                            "supported; please convert the "
+                                            "quality scores to Phred (offset "
+                                            "33 or 64) to continue:\n"
+                                            "    Path = %s" % (path,))
+
                     lanes[lane] = {"Type": lane_type,
                                    "Data": data,
                                    "Options": options}
@@ -455,7 +466,6 @@ def _validate_lane_paths(data, path, fmt):
 
 
 def _determine_lane_type(prefixes, data, path):
-
     if isinstance(data, types.StringTypes):
         return "Raw"
     elif isinstance(data, types.DictType):

@@ -2,6 +2,10 @@
 Changelog
 =========
 
+  2016-02-03: Rework BWA backtrack mapping to be carried out in two steps; this
+              requires saving the .sai files (and hence more disk-space used
+              by intermediate files), but allows better control over thread and
+              memory usage.
   2016-01-25: Information / error messages are now more consistently logged to
               stderr, to better ensure that results printed to stdout are not
               mixed with such messages.
