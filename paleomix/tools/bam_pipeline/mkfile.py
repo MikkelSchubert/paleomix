@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -87,10 +87,10 @@ _TEMPLATE_BAM_OPTIONS = \
       MinQuality: 0
       # Filter reads that did not map to the reference sequence
       FilterUnmappedReads: yes
-      # Should be disabled ("no") for aDNA alignments, as post-mortem
+      # May be disabled ("no") for aDNA alignments, as post-mortem damage
       # localizes to the seed region, which BWA expects to have few
       # errors (sets "-l"). See http://pmid.us/22574660
-      UseSeed:    yes
+      UseSeed: yes
       # Additional command-line options may be specified for the "aln"
       # call(s), as described below for Bowtie2 below.
 
