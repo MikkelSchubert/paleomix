@@ -2,6 +2,10 @@
 Changelog
 =========
 
+  2016-02-11: mapDamage files and models are now only kept in the
+              {Target}.{Prefix}.mapDamage folder to simplify the file-
+              structure; consequently, re-scaling can be re-done with different
+              parameters by re-running the model step in these folders.
   2016-02-03: Ensured that only a single header is generated when using
               multiple threads during genotyping, in order to avoid issues
               with programs unable to handle multiple headers.
