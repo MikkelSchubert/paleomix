@@ -245,6 +245,7 @@ def _print_usage(pipeline):
     print_info("  -- %s dryrun [...]   -- Perform dry run of pipeline on provided makefiles." % basename)
     print_info("     %s                   Equivalent to 'bam_pipeline run --dry-run [...]'." % (" " * len(basename),))
     print_info("  -- %s run [...]      -- Run pipeline on provided makefiles." % basename)
+    print_info("  -- %s remap [...]    -- Re-map hits from previous alignment." % basename)
 
 
 def main(argv, pipeline="bam"):
