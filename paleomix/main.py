@@ -97,6 +97,10 @@ def _commands():
     yield ("cat", "paleomix.tools.cat",
            "Generalized cat command for gz, bz2 and uncompressed files.")
 
+    if _dev_mode():
+        yield ("ena", "paleomix.tools.ena",
+               "Prepares FASTQ reads recorded in BAM pipeline makefiles "
+               "for submission to the European Nucleotide Archive.")
 
 # Error message shown if the Pysam module ('pysam') cannot be imported
 _IMPORT_ERROR_PYSAM = """
