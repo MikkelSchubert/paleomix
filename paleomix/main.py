@@ -96,8 +96,6 @@ def _commands():
     yield ("Misc tools", None, None)
     yield ("cat", "paleomix.tools.cat",
            "Generalized cat command for gz, bz2 and uncompressed files.")
-    yield ("zip", "paleomix.tools.zip",
-           "Wrapper around bzip2 / gzip.")
 
 
 # Error message shown if the Pysam module ('pysam') cannot be imported
