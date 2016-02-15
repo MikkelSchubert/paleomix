@@ -1,0 +1,514 @@
+.. highlight:: YAML
+.. _bam_makefile:
+
+Makefile description
+====================
+
+.. contents::
+
+The following sections reviews the options available in the BAM pipeline makefiles. As described in the ref:`bam_usage` section, a default makefile may be generated using the 'paleomix bam\_pipeline mkfile' command. For clariety, the location of options in subsections are specified by concatenating the names using '\:\:' as a seperator. Thus, in the following (simplified example), the 'UseSeed' option (line 13) would be referred to as 'Options \:\: Aligners \:\: BWA \:\: UseSeed':
+
+.. code-block:: yaml
+    :emphasize-lines: 13
+    :linenos:
+
+    Options:
+
+      # Settings for aligners supported by the pipeline
+      Aligners:
+        # Choice of aligner software to use, either "BWA" or "Bowtie2"
+        Program: BWA
+
+        # Settings for mappings performed using BWA
+        BWA:
+          # May be disabled ("no") for aDNA alignments, as post-mortem damage
+          # localizes to the seed region, which BWA expects to have few
+          # errors (sets "-l"). See http://pmid.us/22574660
+          UseSeed: yes
+
+
+Specifying command-line options
+-------------------------------
+
+For several programs it is possible to directly specify command-line options; this is accomplished in one of 3 ways; firstly, for command-line options that take a single value, this is accomplished simply by specifying the option and value as any other option. For example, if we wish to supply the option --mm 5 to AdapterRemoval, then we would list it as "--mm: 5" (all other options omitted for brevity)::
+
+    AdapterRemoval:
+      --mm: 5
+
+For options that do not take any values, such as the AdapterRemoval '--trimns' (enabling the trimming of Ns in the reads), these are specified either as "--trimmns: ", with the value left blank, or as "--trimns: yes". The following are therefore equivalent::
+
+    AdapterRemoval:
+      --trimns:      # Method 1
+      --trimns: yes  # Method 2
+
+In some cases the BAM pipeline will enable features by default, but still allow these to be overridden. In those cases, the feature can be disabled by setting the value to 'no' (without quotes), as shown here::
+
+    AdapterRemoval:
+      --trimns: no
+
+If you need to provide the text "yes" or "no" as the value for an option, it is nessesary to put these in quotes::
+
+    --my-option: "yes"
+    --my-option: "no"
+
+In some cases it is possible or even nessesary to specify an option multiple times. Due to the way YAML works, this is not possible to do so directly. Instead, the pipeline allows multiple instances of the same option by providing these as a list::
+
+    --my-option:
+        - "yes"
+        - "no"
+        - "maybe"
+
+The above will be translated into calling the program in question with the options "--my-option yes --my-option no --my-option maybe".
+
+
+Options section
+---------------
+
+By default, the 'Options' section of the makefile contains the following:
+
+.. literalinclude:: makefile.yaml
+    :language: yaml
+    :linenos:
+
+
+Options: General
+^^^^^^^^^^^^^^^^
+
+**Options \:\: Platform**
+    .. literalinclude:: makefile.yaml
+        :language: yaml
+        :linenos:
+        :lineno-start: 7
+        :lines: 7-8
+
+    The sequencing platform used to generate the sequencing data; this information is recorded in the resulting BAM file, and may be used by downstream tools. The `SAM/BAM specification`_ the valid platforms, which currently include 'CAPILLARY', 'HELICOS', 'ILLUMINA', 'IONTORRENT', 'LS454', 'ONT', 'PACBIO', and 'SOLID'.
+
+**Options \:\: QualityOffset**
+    .. literalinclude:: makefile.yaml
+        :language: yaml
+        :linenos:
+        :lineno-start: 9
+        :lines: 9-14
+
+    The QualityOffset option refers to the starting ASCII value used to encode `Phred quality-scores`_ in user-provided FASTQ files, with the possible values of 33, 64, and 'Solexa'. For most modern data, this will be 33, corresponding to ASCII characters in the range '!' to 'J'. Older data is often encoded using the offset 64, corresponding to ASCII characters in the range '@' to 'h', and more rarely using Solexa quality-scores, which represent a different scheme than Phred scores, and which occupy the range of ASCII values from ';' to 'h'. For a visual representation of this, refer to the Wikipedia article linked above.
+
+**Options \:\: SplitLanesByFilenames**
+    .. literalinclude:: makefile.yaml
+        :language: yaml
+        :linenos:
+        :lineno-start: 14
+        :lines: 14-17
+
+    This option influences how the BAM pipeline handles lanes that include multiple files. By default (corresponding to a value of 'yes'), the pipeline will process individual files in parallel, potentially allowing for greater throughput. If set to 'no', all files in a lane are merged during processing, resulting in a single set of trimmed reads per lane. The only effect of this option on the final result is a greater number of read-groups specified in the final BAM files. See the ref:`bam_filestructure` section for more details on how this is handled.
+
+    .. warning::
+        This option is deprecated, and will be removed in future versions of PALEOMIX. Planned behavior will be processing individual files one by one, corresponding to a value of 'yes'.
+
+
+**Options \:\: CompressionFormat**
+    .. literalinclude:: makefile.yaml
+        :language: yaml
+        :linenos:
+        :lineno-start: 18
+        :lines: 18-19
+
+
+    This option determines which type of compression is carried out on trimmed FASTQ reads; if set to 'gz', reads are gzip compressed, and if set to 'bz2', reads are compressed using bzip2. This option has no effect on the final results, but may be used to trade off space (gz) for some additional runtime (bz2).
+
+    .. warning::
+        This option is deprecated, and may be removed in future versions of PALEOMIX.
+
+
+**Options \:\: PCRDuplicates**
+    .. literalinclude:: makefile.yaml
+        :language: yaml
+        :linenos:
+        :lineno-start: 72
+        :lines: 72-79
+
+    This option determines how the BAM pipeline handles PCR duplicates following the mapping of trimmed reads. At present, 3 possible options are available. The first option is 'filter', which corresponds to running Picard MarkDuplicates and 'paleomix rmdup_collapsed' on the input files, and removing any read determined to be a PCR duplicate; the second option 'mark' functions like the 'filter' option, except that reads are not removed from the output, but instead the read flag is marked using the 0x400 bit (see the `SAM/BAM specification`_ for more information), in order to allow down-stream tools to identify these as duplicates. The final option is 'no' (without quotes), in which case no PCR duplicate detection / filtering is carried out on the aligned reads, useful for data generated using amplification free sequencing.
+
+
+Options: Adapter Trimming
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The "AdapterRemoval" subsection allows for options that are applied when AdapterRemoval is applied to the FASTQ reads supplied by the user. For a more detailed description of command-line options, please refer to the `AdapterRemoval documentation`_. A few important particularly options are described here:
+
+**Options \:\: AdapterRemoval \:\: --adapter1** and **Options \:\: AdapterRemoval \:\: --adapter2**
+    .. literalinclude:: makefile.yaml
+        :language: yaml
+        :linenos:
+        :lineno-start: 23
+        :lines: 23-25
+
+
+    These two options are used to specify the adapter sequences used to identify and trim reads that contain adapter contamination. Thus, the sequence provided for --adapter1 is expected to be found in the mate 1 reads, and the sequence specified for --adapter2 is expected to be found in the mate 2 reads. In both cases, these should be specified as in the orientation that appear in these files (i.e. it should be possible to grep the files for these, assuming that the reads were long enough, and treating Ns as wildcards). It is very important that these be specified correctly. Please refer to the `AdapterRemoval documentation`_ for more information.
+
+
+    .. note::
+        As of version AdapterRemoval 2.1, it is possible to use multiple threads to speed up trimming of adapter sequences. This is accomplished not by setting the --threads command-line option in the makefile, but by supplying the --adapterremoval-max-threads option to the BAM pipeline itself:
+
+        .. code-block:: bash
+
+            $ paleomix bam_pipeline run makefile.yaml --adapterremoval-max-threads 2
+
+    .. warning::
+        Older versions of PALEOMIX may use the --pcr1 and --pcr2 options instead of --adapter1 and --adapter2; for new projects, using --adapter1 and --adapter2 is strongly recommended, due to the simpler schematics (described above). If your project uses the --pcr1 and --pcr2 options, then refer to the `AdapterRemoval documentation`_ information for how to proceed!
+
+
+**Options \:\: AdapterRemoval \:\: --mm**
+    .. literalinclude:: makefile.yaml
+        :language: yaml
+        :linenos:
+        :lineno-start: 28
+        :lines: 28
+
+    Sets the fraction of mismatches allowed when aligning reads / adapter sequences. If the specified value (MM) is greater than 1, this is calculated as 1 / MM, otherwise the value is used directly. To set, replace the default value as desired::
+
+        --mm: 3    # Maximum mismatch rate of 1 / 3
+        --mm: 5    # Maximum mismatch rate of 1 / 5
+        --mm: 0.2  # Maximum mismatch rate of 1 / 5
+
+
+**Options \:\: AdapterRemoval \:\: --minlength**
+
+    The minimum length required after read merging, adapter trimming, and base-quality quality trimming; resulting reads shorter than this length are discarded, and thereby excluded from further analyses by the pipeline. A value of at least 25 bp is recommended to cut down on the rate of spurious alignments; if possible, a value of 30 bp may be used to greatly reduce the fraction of spurious alignments, with smaller gains for greater minimums [Schubert2012]_.
+
+    .. warning::
+        The default value used by PALEOMIX for '--minlength' (25 bp) differs from the default value for AdapterRemoval (15 bp). Thus, if a minimum length of 15 bp is desired, it is nessesarily to explicitly state so in the makefile, simply commenting out this command-line argument is not sufficient.
+
+
+**Options \:\: AdapterRemoval \:\: --collapse**
+    .. literalinclude:: makefile.yaml
+        :language: yaml
+        :linenos:
+        :lineno-start: 31
+        :lines: 31
+
+    If enabled, AdapterRemoval will attempt to combine overlapping paired-end reads into a single (potentially longer) sequence. This has at least two advantages, namely that longer reads allow for less ambigious alignments against the target reference genome, and that the fidelity of the overlapping region (potentially the entire read) is improved by selecting the highest quality base when discrepancies are observed. The names of reads thus merged are prefixed with either 'M\_' or 'MT\_', with the latter marking reads that have been trimmed from the 5' or 3' termini following collapse, and which therefore do not represent the full insert. To disable this behavior, set the option to 'no' (without quotes)::
+
+        --trimns: yes  # Option enabled
+        --trimns: no   # Option disabled
+
+    .. note::
+        This option may be combined with the 'ExcludeReads' option (see below), to either elimate or select for short inserts, depending on the exceptations from the experiement. I.e. for ancient samples, where the most inserts should be short enough to allow collapsing (< 2x read read - 11, by default), excluding paired (uncollapsed) and singleton reads may help reduce the fraction of exogenous DNA mapped.
+
+
+**Options \:\: AdapterRemoval \:\: --trimns**
+    .. literalinclude:: makefile.yaml
+        :language: yaml
+        :linenos:
+        :lineno-start: 32
+        :lines: 32
+
+    If set to 'yes' (without quotes), AdapterRemoval will trim uncalled bases ('N') from the 5' and 3' end of the reads. Trimming will stop at the first called base ('A', 'C', 'G', or 'T'). If both --trimns and --trimqualities are enabled, then consequtive stretches of Ns and / or low-quality bases are trimmed from the 5' and 3' end of the reads. To disable, set the option to 'no' (without quotes)::
+
+        --trimns: yes  # Option enabled
+        --trimns: no   # Option disabled
+
+
+**Options \:\: AdapterRemoval \:\: --trimqualities**
+    .. literalinclude:: makefile.yaml
+        :language: yaml
+        :linenos:
+        :lineno-start: 33
+        :lines: 33
+
+    If set to 'yes' (without quotes), AdapterRemoval will trim low-quality bases from the 5' and 3' end of the reads. Trimming will stop at the first base which is greater than the (Phred encoded) minimum quality score specified using the command-line option --minquality. This value defaults to 2. If both --trimns and --trimqualities are enabled, then consequtive stretches of Ns and / or low-quality bases are trimmed from the 5' and 3' end of the reads. To disable, set the option to 'no' (without quotes)::
+
+        --trimqualities: yes  # Option enabled
+        --trimqualities: no   # Option disabled
+
+
+Options: Short read aligners
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This section allow selection between supported short read aligners (currently BWA [Li2009a]_ and Bowtie2 [Langmead2012]_), as well as setting options for these, individually:
+
+.. literalinclude:: makefile.yaml
+    :language: yaml
+    :linenos:
+    :lineno-start: 35
+    :lines: 35-39
+
+
+To select a mapping program, set the 'Program' option appropriately::
+
+    Program: BWA      # Using BWA to map reads
+    Program: Bowtie2  # Using Bowtie2 to map reads
+
+
+Options: Short read aligners - BWA
+""""""""""""""""""""""""""""""""""
+
+    The following options are applied only when running the BWA short read aligner; see the section "Options: Short read aligners" above for how to select this aligner.
+
+    .. literalinclude:: makefile.yaml
+        :language: yaml
+        :linenos:
+        :lineno-start: 40
+        :lines: 40-54
+
+    **Options \:\: Aligners \:\: BWA \:\: Algorithm**
+        .. literalinclude:: makefile.yaml
+            :language: yaml
+            :linenos:
+            :lineno-start: 42
+            :lines: 42-44
+
+        The mapping algorithm to use; options are 'backtrack' (corresponding to 'bwa aln'), 'bwasw', and 'mem'. Additional command-line options may be specified for these. Algorithms are selected as follows::
+
+            Algorithm: backtrack  # 'Backtrack' algorithm, using the command 'bwa aln'
+            Algorithm: bwasw      # 'SW' algorithm for long queries, using the command 'bwa bwasw'
+            Algorithm: mem        # 'mem' algorithm, using the command 'bwa mem'
+
+        .. warning::
+
+            Alignment algorithms 'bwasw' and 'mem' currently cannot be used with input data that is encoded using QualityOffset 64 or 'Solexa'. This is a limitation of PALEOMIX, and will be resolved in future versions. In the mean time, this can be circumvented by converting FASTQ reads to the standard quality-offset 33, using for example `seqtk`_.
+
+
+    **Options \:\: Aligners \:\: BWA \:\: MinQuality**
+        .. literalinclude:: makefile.yaml
+            :language: yaml
+            :linenos:
+            :lineno-start: 45
+            :lines: 45-46
+
+        Specifies the minimum mapping quality of alignments produced by BWA. Any aligned read with a quality score below this value are removed during the mapping process. Note that while unmapped read have a quality of zero, these are not excluded by a non-zero 'MinQuality' value. To filter unmapped reads, use the option 'FilterUnmappedReads' (see below). To set this option, replace the default value with a desired minimum::
+
+            MinQuality: 0   # Keep all hits
+            MinQuality: 25  # Keep only hits where mapping-quality >= 25
+
+    **Options \:\: Aligners \:\: BWA \:\: FilterUnmappedReads**
+        .. literalinclude:: makefile.yaml
+            :language: yaml
+            :linenos:
+            :lineno-start: 47
+            :lines: 47-48
+
+        Specifies wether or not unmapped reads (reads not aligned to a target sequence) are to be retained in the resulting BAM files. If set to 'yes' (without quotes), all unmapped reads are discarded during the mapping process, while setting the option to 'no' (without quotes) retains these reads in the BAM. By convention, paired reads in which one mate is unmapped are assigned the same chromosome and position, while no chromosome / position are assigned to unmapped single-end reads. To change this setting, replace the value with either 'yes' or 'no' (without quotes)::
+
+            FilterUnmappedReads: yes  # Remove unmapped reads during alignment
+            FilterUnmappedReads: no   # Keep unmapped reads
+
+    **Options \:\: Aligners \:\: BWA \:\: \***
+
+        Additional command-line options may be specified for the selected alignment algorithm, as described in the "Specifying command-line options" section above. See also the examples listed for Bowtie2 below. Note that for the 'backtrack' algorithm, it is only possible to specify options for the 'bwa aln' call.
+
+
+
+Options: Short read aligners - Bowtie2
+""""""""""""""""""""""""""""""""""""""
+    The following options are applied only when running the Bowtie2 short read aligner; see the section "Options: Short read aligners" above for how to select this aligner.
+
+    .. literalinclude:: makefile.yaml
+        :language: yaml
+        :linenos:
+        :lineno-start: 56
+        :lines: 56-70
+
+    **Options \:\: Aligners \:\: Bowtie2 \:\: MinQuality**
+        .. literalinclude:: makefile.yaml
+            :language: yaml
+            :linenos:
+            :lineno-start: 58
+            :lines: 58-59
+
+        See 'Options \:\: Aligners \:\: BWA \:\: MinQuality' above.
+
+    **Options \:\: Aligners \:\: Bowtie2 \:\: FilterUnmappedReads**
+        .. literalinclude:: makefile.yaml
+            :language: yaml
+            :linenos:
+            :lineno-start: 60
+            :lines: 60-61
+
+        See 'Options \:\: Aligners \:\: BWA \:\: FilterUnmappedReads' above.
+
+    **Options \:\: Aligners \:\: BWA \:\: \***
+
+        Additional command-line options may be specified for Bowtie2, as described in the "Specifying command-line options" section above. Please refer to the `Bowtie2 documentation`_ for more information about available command-line options.
+
+
+Options: mapDamage plots and rescaling
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    .. literalinclude:: makefile.yaml
+        :language: yaml
+        :linenos:
+        :lineno-start: 80
+        :lines: 80-90
+
+
+**Options \:\: RescaleQualities**
+    .. literalinclude:: makefile.yaml
+        :language: yaml
+        :linenos:
+        :lineno-start: 80
+        :lines: 80-82
+
+    If enabled, mapDamage will be used to build a model of *post-mortem* DNA damage per library, which is then applied to the per-library BAMs in order to recalibrate quality scores according to the probability that a C>T or G>A substitution is caused by *post-mortem* DNA damage [Jonsson2013]_. To enable, change the value to 'yes' (without quotes)::
+
+        RescaleQualities: no   # Rescaling disabled
+        RescaleQualities: yes  # Rescaling enabled
+
+    .. note::
+        It may be worthwhile to tweak mapDamage parameters before building a model of *post-mortem* DNA damage; this may be accomplished by running the pipeline without rescaling, running with the 'mapDamage'
+        feature set to 'yes' (without quotes), inspecting the plots generated per-library, and then tweaking parameters as appropriate, before setting 'RescaleQualities' to yes.
+
+        Disabling the construction of the final BAMs may be accomplished by setting the features 'RawBam' and 'RealignedBAM' to 'no' (without quotes) in the 'Features' section (see below), and then setting the desired option to yes again after enabling rescaling and adding the desired options to the mapDamage section.
+
+        Should you wish to change the modeling and rescaling parameters, after having already run the pipeline with RescaleQualities enabled, simply remove the mapDamage files generated for the relevant libraries (see the ref:`bam_filestructure` section).
+
+    .. warning::
+        Rescaling requires a certain minimum number of C>T and G>A substituions, before it is possible to construct a model of *post-mortem* DNA damage. If mapDamage fails with an error indicating that "DNA damage levels are too low", then it is nessesary to disable rescaling for that library to continue.
+
+
+**Options \:\: mapDamage :: --downsample**
+    .. literalinclude:: makefile.yaml
+        :language: yaml
+        :linenos:
+        :lineno-start: 88
+        :lines: 88-90
+
+    By default the BAM pipeline only samples 100k reads for use in constructing mapDamage plots; in our experience, this is sufficent for accurate plots and models. If no downsampling is to be done, this value can set to 0 to disable this features::
+
+        --downsample: 100000   # Sample 100 thousand reads
+        --downsample: 1000000  # Sample 1 million reads
+        --downsample: 0        # No downsampling
+
+
+**Options \:\: mapDamage :: \***
+    .. literalinclude:: makefile.yaml
+        :language: yaml
+        :linenos:
+        :lineno-start: 80
+        :lines: 80-82
+
+    Additional command-line options may be supplied to mapDamage, just like the '--downsample' parameter, as described in the "Specifying command-line options" section above. These are used during plotting and rescaling (if enabled).
+
+
+Options: Excluding read-types
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    .. literalinclude:: makefile.yaml
+        :language: yaml
+        :linenos:
+        :lineno-start: 92
+        :lines: 92-102
+
+    During the adapter-trimming and read-merging step, AdapterRemoval will generate a selection of different read types. This option allows certain read-types to be excluded from further analyses. In particular, it may be useful to exclude non-collapsed (paired and singleton) reads when processing (ancient) DNA for which only short inserts is expected, since this may help exclude exogeneous DNA. The following read types are currently recognized:
+
+    *Single*
+        Single-end reads; these are the (trimmed) reads generated from supplying single-end FASTQ files to the pipeline.
+
+    *Paired*
+        Paired-end reads; these are the (trimmed) reads generated from supplying paired-end FASTQ files to the pipeline, but covering only the subset of paired reads for which *both* mates were retained, and which were not merged into a single read (if --collapse is set for AdapterRemoval).
+
+    *Singleton*
+        Paired-end reads; these are (trimmed) reads generated from supplying paired-end FASTQ files to the pipeline, but covering only those reads in which one of the two mates were discarded due to either the '--maxns', the '--minlength', or the '--maxlength' options supplied to AdapterRemoval. Consequently, these reads are mapped and PCR-duplicate filtered in single-end mode.
+
+    *Collapsed*
+        Paired-end reads, for which the sequences overlapped, and which were consequently merged by AdapterRemoval into a single sequence (enabled by the --collapse command-line option). These sequences are expected to represent the complete insert, and while they are mapped in single-end mode, PCR duplicate filtering is carried out in a manner that treats these as paired reads. Note that all collapsed reads are tagged by prefixing the read name with 'M\_'.
+
+    *CollapsedTruncated*
+        Paired-end reads (like *Collapsed*), which were trimmed due to the '--trimqualities' or the '--trimns' command-line options supplied to AdapterRemoval. Consequently, and as these sequences represent the entire insert, these reads are mapped and PCR-duplicate filtered in single-end mode. Note that all collapsed, truncated reads are tagged by prefixing the read name with 'MT\_'.
+
+    To enable / disable exclusion of a read type, set the value for the appropriate type to 'yes' or 'no' (without quotes)::
+
+        Singleton: no   # Singleton reads are NOT excluded
+        Singleton: yes  # Singleton reads are excluded
+
+
+Options: Optional features
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+    .. literalinclude:: makefile.yaml
+        :language: yaml
+        :linenos:
+        :lineno-start: 104
+        :lines: 104-118
+
+    This section lists several optional features, in particular determining which BAM files and which summary statistics are generated when running the pipeline. Currently, the following options are available:
+
+    *RawBAM*
+        If enabled, the pipeline will generate a final BAM, which is NOT processed using the GATK Indel Realigner (see below), following all other processing steps.
+
+    *RealignedBAM*
+        If enabled, the pipeline will generate a final BAM, which is processed using the GATK Indel Realigner [McKenna2010]_, in order to improve the alignment near indels, by performing a multiple sequence alignment in regions containing putative indels.
+
+    *mapDamage*
+        If enabled, the pipeline will generate mapDamage plots for each reference genome and for each library. Note that these will be generated even if the option is set to 'no', if the 'RescaleQualities' option is enabled (see above).
+
+    *Coverage*
+        If enabled, a table summarizing the number of hits, the number of aligned bases, bases inserted, and bases deleted, as well as the mean coverage, is generated for each reference sequence, stratified by sample, library, and contig.
+
+    *Depths*
+        If enabled, a table containing a histogram of the depth of coverage, ranging from 0 to 200, is generated for each reference sequence, stratified by sample, library, and contig. These files may further be used by the Phylogenetic pipeline, in order to automatically select a maximum read depth during SNP calling (see the ref:`phylo_usage` section for more information).
+
+    *Summary*
+        If enabled, a single summary table will be generated per target, containing information about the number of reads processed, hits and fraction of PCR duplicates (per prefix and per library), and much more.
+
+    *DuplicateHist*
+        If enabled, a histogram of the estimated number of PCR duplicates observed per DNA fragment is generated per library. This may be used with the 'preseq' program in order to estimate the (remaining) complexity of a given library, and thereby direct future sequencing efforts [Daley2013]_.
+
+    For a description of where files are placed, refer to the ref:`bam_filestructure` section. It is possible to run the BAM pipeline without any of these options enabled, and this may be useful in certain cases (if only the statistics or per-library BAMs are needed). To enable / disable a features, set the value for that feature to 'yes' or 'no' (without quotes)::
+
+        Summary: no   # Do NOT generate a per-target summary table
+        Summary: yes  # Generate a per-target summary table
+
+
+Prefixes section
+----------------
+
+TODO
+
+
+.. warning::
+    FASTA files used in the BAM pipeline *must* be named with a .fasta file extension. Furthermore, if alignments are to be carried out against the human nuclear genome, chromosomes MUST be ordered by their number for GATK to work! See the `GATK FAQ`_ for more information.
+
+
+Regions of interest
+^^^^^^^^^^^^^^^^^^^
+
+It is possible to specify one or more "regions of interest" for a particular reference genome. Doing so results in the production of coverage and depth tables being generated for those regions (if these features are enabled, see above), as well as additional information in the summary table (if enabled, see above).
+
+Such regions are specified using a BED file containing one or more regions; in particular, the first three columns (name, 0-based start coordinate, and 1-based end coordinate) are required, with the 4th column (the name) being optional. Strand information (the 6th column) is not used, but must still be valid according to the BED format.
+
+If these regions are named, statistics are merged by these names (esstentially treating them as pseudo contigs), while regions are merged by contig. Thus, it is important to insure that names are unique if statistics are desired for very single region, individually.
+
+Specifying regions of interest is accomplished by providing a name and a path for each set of regions of interst under the 'RegionOfInterest' section for a given prefix::
+
+    # Produce additional coverage / depth statistics for a set of
+    # regions defined in a BED file; if no names are specified for the
+    # BED records, results are named after the chromosome / contig.
+    RegionsOfInterest:
+      MyRegions: /path/to/my_regions.bed
+      MyOtherRegions: /path/to/my_other_regions.bed
+
+The following is a simple example of such a BED file, for an alignment against the rCRS (`NC_012920.1`_):
+
+    NC_012920_1 3306    4262    region_a
+    NC_012920_1 4469    5510    region_b
+    NC_012920_1 5903    7442    region_a
+
+In this case, the resulting tables will contain information about two different regions, namely region\_a (2495 bp, resulting from merging the two individual regions specified), and region\_b (1041 bp). The order of lines in this file does not matter.
+
+
+Targets section
+---------------
+
+
+TODO
+
+
+
+Overriding global settings
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+TODO
+
+.. _AdapterRemoval documentation: https://github.com/MikkelSchubert/adapterremoval
+.. _Bowtie2 documentation: http://bowtie-bio.sourceforge.net/bowtie2/manual.shtml
+.. _GATK FAQ: http://www.broadinstitute.org/gatk/guide/article?id=1204
+.. _NC_012920.1: http://www.ncbi.nlm.nih.gov/nuccore/251831106
+.. _Phred quality-scores: https://en.wikipedia.org/wiki/FASTQ_format#Quality
+.. _SAM/BAM specification: http://samtools.sourceforge.net/SAM1.pdf
+.. _seqtk: https://github.com/lh3/seqtk
