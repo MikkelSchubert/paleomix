@@ -148,41 +148,43 @@ class Library:
                                    % (target, prefix["Name"]), self.name)
 
         if self.options["RescaleQualities"]:
-            files_and_nodes, node = \
-              self._rescale_quality_scores(config=config,
+            return self._mapdamage_rescale(config=config,
                                            destination=destination,
                                            prefix=prefix,
                                            files_and_nodes=files_and_nodes)
         elif self.options["Features"]["mapDamage"]:
             # Basic run of mapDamage, only generates plots / tables
-            node = self._build_mapdamage_plot_node(config=config,
-                                                   destination=destination,
-                                                   prefix=prefix,
-                                                   files_and_nodes=files_and_nodes)
+            node = self._mapdamage_plot(config=config,
+                                        destination=destination,
+                                        prefix=prefix,
+                                        files_and_nodes=files_and_nodes)
 
-        return files_and_nodes, (node,)
+            return files_and_nodes, (node,)
+        else:
+            return files_and_nodes, ()
 
-    def _build_mapdamage_plot_node(self, config, destination, prefix, files_and_nodes):
+    def _mapdamage_plot(self, config, destination, prefix, files_and_nodes):
         title = "mapDamage plot for library %r" % (self.name,)
 
+        dependencies = files_and_nodes.values()
         plot = MapDamagePlotNode.customize(config=config,
                                            reference=prefix["Path"],
                                            input_files=files_and_nodes.keys(),
                                            output_directory=destination,
                                            title=title,
-                                           dependencies=files_and_nodes.values())
+                                           dependencies=dependencies)
         apply_options(plot.command, self.options["mapDamage"])
 
         return plot.build_node()
 
-    def _rescale_quality_scores(self, config, destination, prefix, files_and_nodes):
+    def _mapdamage_rescale(self, config, destination, prefix, files_and_nodes):
         output_filename = self.folder + ".rescaled.bam"
 
         # Generates basic plots / table files
-        plot = self._build_mapdamage_plot_node(config=config,
-                                               destination=destination,
-                                               prefix=prefix,
-                                               files_and_nodes=files_and_nodes)
+        plot = self._mapdamage_plot(config=config,
+                                    destination=destination,
+                                    prefix=prefix,
+                                    files_and_nodes=files_and_nodes)
 
         # Builds model of post-mortem DNA damage
         model = MapDamageModelNode.customize(reference=prefix["Reference"],
@@ -192,9 +194,10 @@ class Library:
         model = model.build_node()
 
         # Rescales BAM quality scores using model built above
+        input_files = files_and_nodes.keys()
         scale = MapDamageRescaleNode.customize(config=config,
                                                reference=prefix["Reference"],
-                                               input_files=files_and_nodes.keys(),
+                                               input_files=input_files,
                                                output_file=output_filename,
                                                directory=destination,
                                                dependencies=model)
@@ -207,7 +210,7 @@ class Library:
         validate = index_and_validate_bam(config, prefix, scale,
                                           create_index=index_required)
 
-        return {output_filename: validate}, model
+        return {output_filename: validate}, (model,)
 
     def _build_duphist_nodes(self, config, target, prefix, files_and_nodes):
         if not self.options["Features"]["DuplicateHist"]:
