@@ -39,7 +39,7 @@ def _get_version():
     with open(os.path.join("paleomix", "__init__.py")) as handle:
         exec(handle.read(), env)
 
-    return env["__version__"]
+    return env["__version__"].lstrip('v')
 
 
 def _get_readme():
