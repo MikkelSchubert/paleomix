@@ -221,6 +221,7 @@ _VALIDATION_OPTIONS = {
         "--minadapteroverlap": IsUnsignedInt,
         "--shift": IsUnsignedInt,
         "--qualitymax": IsUnsignedInt,
+        "--mate-separator": IsStr,
         },
 
     # Which aliger/mapper to use (BWA/Bowtie2)
