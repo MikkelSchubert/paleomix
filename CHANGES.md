@@ -2,6 +2,32 @@
 Changelog
 =========
 
+
+Version 1.2.0 - 2015-02-24
+==========================
+
+  This is a major revision of PALEOMIX, mainly focused on reworking the
+  internals of the PALEOMIX framework, as well as cleaning up several warts in
+  the BAM pipeline. As a result, the default makefile has changed in a number
+  of ways, but backwards compatibility is still retained with older makefiles, with one
+  exception. Where previously the 'FilterUnmappedReads' would only be in effect
+  when 'MinQuality' was set to 0, this option is now independent of the
+  'MinQuality' option.
+
+  In addition, it is now possible to install PALEOMIX via Pypi, as described in
+  the (partially) updated documentation now hosted on ReadTheDocs.
+
+  2016-02-25: Initial version of updated documentation hosted on ReadTheDocs,
+              to replace documentation currently hosted on the repository wiki.
+  2016-02-24: Paleomix v1.2.0 is now available via Pypi (pip install paleomix).
+  2016-02-15: Added command 'paleomix ena', which is designed to ease the
+              preparation of FASTQ reads previously recorded in a BAM pipeline
+              makefile for submission to the European Nucleotide Archive; this
+              command is current unstable, and not available by default.
+  2016-02-15: Exposed 'bam_pipeline remap' command, which eases re-mapping the
+              hits identified against one prefix against other prefixes.
+  2016-02-15: Removed the 'paleomix zip' command, as this is no longer needed
+              thanks to built-in gzip / bzip2 support in AdapterRemoval v2.
   2016-02-11: mapDamage files and models are now only kept in the
               {Target}.{Prefix}.mapDamage folder to simplify the file-
               structure; consequently, re-scaling can be re-done with different
@@ -16,7 +42,7 @@ Changelog
   2016-01-25: Information / error messages are now more consistently logged to
               stderr, to better ensure that results printed to stdout are not
               mixed with such messages.
-  2016-01-25: Validate paths in BAM makfiles, to ensure that these can be
+  2016-01-25: Validate paths in BAM makefiles, to ensure that these can be
               parsed, and that these do not contain keys other than '{Pair}'.
   2016-01-25: Fixed bug which could cause the data duplication detection to
               fail when unmapped reads were included.
@@ -73,7 +99,7 @@ Changelog
               executable is required to be 'parse-examl' (previously expected
               to be 'examlParser'), following the name used by EXaML v3.0+.
   2015-11-30: Pysam v0.8.3+ is now required.
-  2015-11-27: AdapterRemoval v2.1+ is now required; it is now possible to
+  2015-11-27: AdapterRemoval v2.1.5+ is now required; it is now possible to
               provide a list of adapter sequences using --adapter-list,
               and to specify the number of threads uses by AdapterRemoval
               via the --adapterremoval-max-threads command-line option.
