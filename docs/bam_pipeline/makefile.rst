@@ -6,7 +6,7 @@ Makefile description
 
 .. contents::
 
-The following sections reviews the options available in the BAM pipeline makefiles. As described in the ref:`bam_usage` section, a default makefile may be generated using the 'paleomix bam\_pipeline mkfile' command. For clariety, the location of options in subsections are specified by concatenating the names using '\:\:' as a seperator. Thus, in the following (simplified example), the 'UseSeed' option (line 13) would be referred to as 'Options \:\: Aligners \:\: BWA \:\: UseSeed':
+The following sections reviews the options available in the BAM pipeline makefiles. As described in the :ref:`bam_usage` section, a default makefile may be generated using the 'paleomix bam\_pipeline mkfile' command. For clariety, the location of options in subsections are specified by concatenating the names using '\:\:' as a seperator. Thus, in the following (simplified example), the 'UseSeed' option (line 13) would be referred to as 'Options \:\: Aligners \:\: BWA \:\: UseSeed':
 
 .. code-block:: yaml
     :emphasize-lines: 13
@@ -99,10 +99,10 @@ Options: General
         :lineno-start: 14
         :lines: 14-17
 
-    This option influences how the BAM pipeline handles lanes that include multiple files. By default (corresponding to a value of 'yes'), the pipeline will process individual files in parallel, potentially allowing for greater throughput. If set to 'no', all files in a lane are merged during processing, resulting in a single set of trimmed reads per lane. The only effect of this option on the final result is a greater number of read-groups specified in the final BAM files. See the ref:`bam_filestructure` section for more details on how this is handled.
+    This option influences how the BAM pipeline handles lanes that include multiple files. By default (corresponding to a value of 'yes'), the pipeline will process individual files in parallel, potentially allowing for greater throughput. If set to 'no', all files in a lane are merged during processing, resulting in a single set of trimmed reads per lane. The only effect of this option on the final result is a greater number of read-groups specified in the final BAM files. See the :ref:`bam_filestructure` section for more details on how this is handled.
 
     .. warning::
-        This option is deprecated, and will be removed in future versions of PALEOMIX. Planned behavior will be processing individual files one by one, corresponding to a value of 'yes'.
+        This option is deprecated, and will be removed in future versions of PALEOMIX.
 
 
 **Options \:\: CompressionFormat**
@@ -357,7 +357,7 @@ Options: mapDamage plots and rescaling
 
         Disabling the construction of the final BAMs may be accomplished by setting the features 'RawBam' and 'RealignedBAM' to 'no' (without quotes) in the 'Features' section (see below), and then setting the desired option to yes again after enabling rescaling and adding the desired options to the mapDamage section.
 
-        Should you wish to change the modeling and rescaling parameters, after having already run the pipeline with RescaleQualities enabled, simply remove the mapDamage files generated for the relevant libraries (see the ref:`bam_filestructure` section).
+        Should you wish to change the modeling and rescaling parameters, after having already run the pipeline with RescaleQualities enabled, simply remove the mapDamage files generated for the relevant libraries (see the :ref:`bam_filestructure` section).
 
     .. warning::
         Rescaling requires a certain minimum number of C>T and G>A substituions, before it is possible to construct a model of *post-mortem* DNA damage. If mapDamage fails with an error indicating that "DNA damage levels are too low", then it is nessesary to disable rescaling for that library to continue.
@@ -441,7 +441,7 @@ Options: Optional features
         If enabled, a table summarizing the number of hits, the number of aligned bases, bases inserted, and bases deleted, as well as the mean coverage, is generated for each reference sequence, stratified by sample, library, and contig.
 
     *Depths*
-        If enabled, a table containing a histogram of the depth of coverage, ranging from 0 to 200, is generated for each reference sequence, stratified by sample, library, and contig. These files may further be used by the Phylogenetic pipeline, in order to automatically select a maximum read depth during SNP calling (see the ref:`phylo_usage` section for more information).
+        If enabled, a table containing a histogram of the depth of coverage, ranging from 0 to 200, is generated for each reference sequence, stratified by sample, library, and contig. These files may further be used by the Phylogenetic pipeline, in order to automatically select a maximum read depth during SNP calling (see the :ref:`phylo_usage` section for more information).
 
     *Summary*
         If enabled, a single summary table will be generated per target, containing information about the number of reads processed, hits and fraction of PCR duplicates (per prefix and per library), and much more.
@@ -449,7 +449,7 @@ Options: Optional features
     *DuplicateHist*
         If enabled, a histogram of the estimated number of PCR duplicates observed per DNA fragment is generated per library. This may be used with the 'preseq' program in order to estimate the (remaining) complexity of a given library, and thereby direct future sequencing efforts [Daley2013]_.
 
-    For a description of where files are placed, refer to the ref:`bam_filestructure` section. It is possible to run the BAM pipeline without any of these options enabled, and this may be useful in certain cases (if only the statistics or per-library BAMs are needed). To enable / disable a features, set the value for that feature to 'yes' or 'no' (without quotes)::
+    For a description of where files are placed, refer to the :ref:`bam_filestructure` section. It is possible to run the BAM pipeline without any of these options enabled, and this may be useful in certain cases (if only the statistics or per-library BAMs are needed). To enable / disable a features, set the value for that feature to 'yes' or 'no' (without quotes)::
 
         Summary: no   # Do NOT generate a per-target summary table
         Summary: yes  # Generate a per-target summary table
@@ -458,11 +458,41 @@ Options: Optional features
 Prefixes section
 ----------------
 
-TODO
+.. literalinclude:: makefile.yaml
+    :language: yaml
+    :linenos:
+    :lineno-start: 104
+    :lines: 122-139
 
+
+Reference genomes used for mapping are specified by listing these (one or more) in the 'Prefixes' section. Each reference genome is assosiated with a name (used in summary statistics and as part of the resulting filenames), and the path to a FASTA file which contains the reference genome. Several other options are also available, but only the name and the 'Path' value are required, as shown here for several examples::
+
+    #  Map of prefixes by name, each having a Path key, which specifies the
+    # location of the BWA/Bowtie2 index, and optional label, and an option
+    # set of regions for which additional statistics are produced.
+    Prefixes:
+      # Name of the prefix; is used as part of the output filenames
+      MyPrefix1:
+        # Path to FASTA file containing reference genome; must end with '.fasta'
+        Path: /path/to/genomes/file_1.fasta
+      MyPrefix2:
+        Path: /path/to/genomes/file_2.fasta
+      MyPrefix3:
+        Path: /path/to/genomes/AE008922_1.fasta
+
+Each sample in the makefile is mapped against each prefix, and BAM files are generated according to the enabled 'Features' (see above). In addition to the path, two other options are available per prefix, namely the 'Label' and 'RegionsOfInterest', which are described below.
 
 .. warning::
     FASTA files used in the BAM pipeline *must* be named with a .fasta file extension. Furthermore, if alignments are to be carried out against the human nuclear genome, chromosomes MUST be ordered by their number for GATK to work! See the `GATK FAQ`_ for more information.
+
+
+Prefix labels
+^^^^^^^^^^^^^
+
+The label option for prefixes allow a prefix to be classified according to one of several categories, currently including 'nuclear', 'mitochondrial', 'chloroplast', 'plasmid', 'bacterial', and 'viral'. This is only used when generating the .summary files (if the 'Summary' feature is enabled), in which the label is used instead of the prefix name, and the results for prefixes with the same label are combined.
+
+.. warning::
+    Labels are currently considered deprecated, and may be removed in future versions of PALEOMIX.
 
 
 Regions of interest
@@ -483,7 +513,7 @@ Specifying regions of interest is accomplished by providing a name and a path fo
       MyRegions: /path/to/my_regions.bed
       MyOtherRegions: /path/to/my_other_regions.bed
 
-The following is a simple example of such a BED file, for an alignment against the rCRS (`NC_012920.1`_):
+The following is a simple example of such a BED file, for an alignment against the rCRS (`NC_012920.1`_)::
 
     NC_012920_1 3306    4262    region_a
     NC_012920_1 4469    5510    region_b
@@ -492,18 +522,191 @@ The following is a simple example of such a BED file, for an alignment against t
 In this case, the resulting tables will contain information about two different regions, namely region\_a (2495 bp, resulting from merging the two individual regions specified), and region\_b (1041 bp). The order of lines in this file does not matter.
 
 
+Adding multiple prefixes
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+In cases where it is nessesary to map samples against a large number of reference genomes, it may become impractical to add these to the makefile by hand. To allow such use-cases, it is possible to specify the location of the reference genomes via a path containing wild-cards, and letting the BAM pipeline collect these automatically. For the following example, we assume that we have a folder '/path/to/genomes', which contains our reference genomes:
+
+.. code-block:: bash
+
+    $ ls /path/to/genomes
+    AE000516_2.fasta
+    AE004091_2.fasta
+    AE008922_1.fasta
+    AE008923_1.fasta
+
+To automatically add these (4) reference genomes to the makefile, we would add a prefix as follows::
+
+    #  Map of prefixes by name, each having a Path key, which specifies the
+    # location of the BWA/Bowtie2 index, and optional label, and an option
+    # set of regions for which additional statistics are produced.
+    Prefixes:
+      # Name of the prefix; is used as part of the output filenames
+      MyGenomes*:
+        # Path to .fasta file containg a set of reference sequences.
+        Path: /path/to/genomes/*.fasta
+
+There are two components to this, namely the name of the pseudo-prefix which *must* end with a star (\*), and the path which may contain one or more wild-cards. If the prefix name does not end with a star, the BAM pipeline will simply treat the path as a regular path. In this particular case, the BAM pipeline will perform the equivalent of 'ls /path/to/genomes/\*.fasta', and then add each file it has located using the filename without extensions as the name of the prefix. In other words, the above is equivalent to the following::
+
+    #  Map of prefixes by name, each having a Path key, which specifies the
+    # location of the BWA/Bowtie2 index, and optional label, and an option
+    # set of regions for which additional statistics are produced.
+    Prefixes:
+      # Name of the prefix; is used as part of the output filenames
+      AE000516_2:
+        Path: /path/to/genomes/AE000516_2.fasta
+      AE004091_2:
+        Path: /path/to/genomes/AE004091_2.fasta
+      AE008922_1:
+        Path: /path/to/genomes/AE008922_1.fasta
+      AE008923_1:
+        Path: /path/to/genomes/AE008923_1.fasta
+
+A makefile including such prefixes is executed as any other makefile.
+
+.. note::
+    The name provided for the pseudo-prefix (here 'MyGenomes') is not used by the pipeline, and can instead be used to document the nature of the files being included.
+
+.. warning::
+    Just like regular prefixes, it is required that the filename of the reference genome ends with '.fasta'. However, the pipeline will attempt to add *any* file found using the provided path with wildcards, and care should therefore be taken to avoid including non-FASTA files. For example, if the path '/path/to/genomes/\*' was used instead of '/path/to/genomes/\*.fasta', this would cause the pipeline to abort due to the inclusion of (for example) non-FASTA index files generated at this location by the pipeline itself.
+
+
 Targets section
 ---------------
 
+In the BAM pipeline, the term 'Target' is used to refer not to a particular sample (though in typical usage a target includes just one sample), but rather one or more samples to processed together to generate a BAM file per prefix (see above). A sample included in a target may likewise contain one or more libraries, for each of which one or more sets of FASTQ reads are specified.
 
-TODO
+The following simplified example, derived from the makefile constructed as part of :ref:`bam_usage` section exemplifies this:
+
+.. code-block:: yaml
+    :linenos:
+
+    # Target name; all output files uses this name as a prefix
+    MyFilename:
+      # Sample name; used to tag data for segregation in downstream analyses
+      MySample:
+        # Library name; used to tag data for segregation in downstream analyses
+        TGCTCA:
+          # Lane / run names and paths to FASTQ files
+          Lane_1: 000_data/TGCTCA_L1_*.fastq.gz
+          Lane_2: 000_data/TGCTCA_L2_R{Pair}_*.fastq.gz
 
 
+*Target name*
+    The first top section of this target (line 1, 'MyFilename') constitute the target name. This name is used as part of summary statistics and, more importantly, determined the first part of name of files generated as part of the processing of data specified for this target. Thus, in this example all files and folders generated during the processing of this target will start with 'MyFilename'; for example, the summary table normally generated from running the pipeline will be placed in a file named 'MyFilename.summary'.
+
+*Sample name*
+    The subsections listed in the 'Target' section (line 2, 'MySample') consitute the (biological) samples included in this target; in the vast majority of analyses, you will have only a single sample per target, and in that case it is considered good practice to use the same name for both the target and the sample. A single target can, however, contain any number of samples, the data for which are tagged according to the names given in the makefile, using the SAM/BAM readgroup ('RG') tags.
+
+*Library name*
+    The subsections listed in the 'Sample' section (line 3, 'TGCTCA') constitute the sequencing libraries constructed during the extraction and library building for the current sample. For modern samples, there is typically only a single library per sample, but more complex sequencing projects (modern and ancient) may involve any number of libraries constructed from one or more extracts. It is very important that libraries be listed correctly (see below).
+
+    .. warning::
+        Note that the BAM pipeline imposes the restriction that each library name specified for a target must be unique, even if these are located in to different samples. This restriction may be removed in future versions of PALEOMIX.
+
+*Lane name*
+    The subsections of each library are used to specify the names of invidual
+
+In addition to these target (sub)sections, it is possibel to specify 'Options' for individual targets, samples, and libraries, similarly to how this is done globally at the top of the makefile. This is described below.
+
+.. warning::
+    It is very important that lanes are assigned to their corresponding libraries in the makefile; while it is possible to simply record every sequencing run / lane under a single library and run the pipeline like that, this will result in several unintended side effects: Firstly, the BAM pipeline uses the library information to ensure that PCR duplicates are filtered correctly. Wrongly grouping together lanes will result either in the loss of sequences which are not, in fact, PCR duplicates, while wrongly splitting a library into multiple entries will result in PCR duplicates not being correctly identified across these. Furthermore, GATK and mapDamage analyses make use of this information to carry out various analyses on a per-library basis, which may similarly be negatively impacted by incorrect specification of libraries.
+
+
+
+Including already trimmed reads
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In some cases it is useful to include FASTQ reads that has already been trimmed for adapter sequences. While this is not recommended in general, as it may introduce systematic bias if some data has been processed differently than the remaining FASTQ reads, the BAM pipeline makes it simple to incorporate both 'raw' and trimmed FASTQ reads, and to ensure that these integrate in the pipeline.
+
+To include already trimmed reads, these are specified as values belonging to a lane, using the same names for read-types as in the 'ExcludeReads' option (see above). The following minimal example demonstrates this:
+
+.. code-block:: yaml
+    :linenos:
+
+    MyFilename:
+      MySample:
+        ACGATA:
+          # Regular lane, containing reads that are not already trimmed
+          Lane_1: 000_data/ACGATA_L1_R{Pair}_*.fastq.gz
+
+          # Lane containing pre-trimmed reads of each type
+          Lane_2:
+            # Single-end reads
+            Single: /path/to/single_end_reads.fastq.gz
+
+            # Paired-end reads where one mate has been discarded
+            Singleton: /path/to/singleton_reads.fastq.gz
+
+            # Paired end reads; note that the {Pair} key is required,
+            # just like with raw, paired-end reads
+            Paired: /path/to/paired_end_{Pair}.fastq.gz
+
+            # Paired-end reads merged into a single sequence
+            Collapsed: /path/to/collapsed.fastq.gz
+
+            # Paired-end reads merged into a single sequence, and then truncated
+            CollapsedTruncated: /path/to/collapsed_truncated.fastq.gz
+
+The above examples show how each type of reads are to be listed, but it is not nessesary to specify more than a single type of pre-trimmed reads in the makefile.
+
+.. note::
+    Including already trimmed reads currently result in the absence of some summary statistics in the .summary file, namely the number of raw reads, as well as trimming statistics, since the BAM pipeline currently relies on AdapterRemoval to collect these statistics.
 
 Overriding global settings
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-TODO
+In addition to the 'Options' section included, by default, at the beginning of every makefile, it is possible to specify / override options at a Target, Sample, and Library level. This allows, for example, that different adapter sequences be specified for each library generated for a sample, or options that should only be applied to a particular sample among several included in a makefile. The following demonstration uses the makefile constructed as part of :ref:`bam_usage` section as the base:
+
+.. code-block:: yaml
+    :linenos:
+    :emphasize-lines: 2-7, 10-14, 20-23
+
+    MyFilename:
+      # These options apply to all samples with this filename
+      Options:
+        # In this example, we override the default adapter sequences
+        AdapterRemoval:
+          --adapter1: AGATCGGAAGAGC
+          --adapter2: AGATCGGAAGAGC
+
+      MySample:
+        # These options apply to libraries 'ACGATA', 'GCTCTG', and 'TGCTCA'
+        Options:
+           # In this example, we assume that FASTQ files for our libraries
+           # include Phred quality scores encoded with offset 64.
+           QualityOffset: 64
+
+        ACGATA:
+          Lane_1: 000_data/ACGATA_L1_R{Pair}_*.fastq.gz
+
+        GCTCTG:
+          # These options apply to 'Lane_1' in the 'GCTCTG' library
+          Options:
+            # It is possible to override options we have previously overriden
+            QualityOffset: 33
+
+          Lane_1: 000_data/GCTCTG_L1_*.fastq.gz
+
+        TGCTCA:
+          Lane_1: 000_data/TGCTCA_L1_*.fastq.gz
+          Lane_2: 000_data/TGCTCA_L2_R{Pair}_*.fastq.gz
+
+
+In this example, we have overwritten options at 3 places:
+
+* The first place (lines 2 - 7) will be applied to *all* samples, libraries, and lanes in this target, unless subsequently overridden. In this example, we have set a new pair of adapter sequences, which we wish to use for these data.
+
+* The second place (lines 10 - 14) are applied to the sample 'MySample' that we have included in this target, and consequently applies to all libraries specified for this sample ('ACGATA', 'GCTCTG', and 'TGCTCA'). In most cases you will only have a single sample, and so it will not make a difference whether or not you override options for the entire target (e.g. lines 3 - 8), or just for that sample (e.g. lines 11-15).
+
+* Finally, the third place (lines 20 - 23) demonstrate how options can be overridden for a particular library. In this example, we have chosen to override an option (for this library only!) we previously overrode for that sample (the 'QualityOffset' option).
+
+.. note:: It currently not possible to override options for a single lane, it is only possible to override options for all lanes in a library.
+
+.. warning::
+    It is currently not possible to set the 'Features' except in the global 'Options' section at the top of the Makefile; this limitation will be removed in future versions of PALEOMIX.
+
+
 
 .. _AdapterRemoval documentation: https://github.com/MikkelSchubert/adapterremoval
 .. _Bowtie2 documentation: http://bowtie-bio.sourceforge.net/bowtie2/manual.shtml
