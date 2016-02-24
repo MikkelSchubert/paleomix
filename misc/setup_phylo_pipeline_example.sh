@@ -32,7 +32,7 @@ do
     NAME=$(echo ${PREFIX} | sed -e's#alignment/000_prefixes/##' -e's#\..*##')
     mkdir -p alignment/000_reads/${NAME/*\//}/
 
-    python ./synthesize_reads.py ${PREFIX} alignment/000_reads/${NAME}/ \
+    ./synthesize_reads.py ${PREFIX} alignment/000_reads/${NAME}/ \
 	--specimen-seed=${SP_SEED} \
 	--lanes-reads-mu=50000 \
 	--lanes-reads-sigma=500 \

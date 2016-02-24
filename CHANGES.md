@@ -2,6 +2,9 @@
 Changelog
 =========
 
+  2016-02-24: Allow simulation of reads for phylogenetic pipeline example to be
+              executed when PALEOMIX is run from a virtual environment.
+
 
 Version 1.2.0 - 2015-02-24
 ==========================
@@ -17,7 +20,7 @@ Version 1.2.0 - 2015-02-24
   In addition, it is now possible to install PALEOMIX via Pypi, as described in
   the (partially) updated documentation now hosted on ReadTheDocs.
 
-  2016-02-25: Initial version of updated documentation hosted on ReadTheDocs,
+  2016-02-24: Initial version of updated documentation hosted on ReadTheDocs,
               to replace documentation currently hosted on the repository wiki.
   2016-02-24: Paleomix v1.2.0 is now available via Pypi (pip install paleomix).
   2016-02-15: Added command 'paleomix ena', which is designed to ease the

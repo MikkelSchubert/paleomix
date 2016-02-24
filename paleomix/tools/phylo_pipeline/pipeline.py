@@ -20,9 +20,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
-import time
 import logging
+import os
+import sys
+import time
 
 import paleomix.logger
 import paleomix.resources
@@ -51,7 +52,23 @@ def main(argv):
     if not args or ("help" in args):
         return 0
     elif args[0] in ("example", "examples"):
-        return paleomix.resources.copy_example("phylo_pipeline", argv[1:])
+        if paleomix.resources.copy_example("phylo_pipeline", argv[1:]):
+            return 1
+
+        # Update interpreter to match the one currently in use;
+        # this is required since we may be running from a virtual env
+        filename = os.path.join(argv[1],
+                                'phylo_pipeline',
+                                'synthesize_reads.py')
+
+        with open(filename) as handle:
+            header, lines = handle.read().split('\n', 1)
+
+        with open(filename, 'w') as handle:
+            handle.write('#!%s\n' % (os.path.abspath(sys.executable, )))
+            handle.write(lines)
+
+        return 0
     elif (len(args) < 2) and ("mkfile" not in args and "makefile" not in args):
         print_err("\nPlease specify at least one makefile!")
         return 1
