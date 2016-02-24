@@ -38,7 +38,7 @@ import paleomix.tools.factory as factory
 
 _VERSION_CHECK = versions.Requirement(call=("AdapterRemoval", "--version"),
                                       search=r"ver. (\d+)\.(\d+)\.(\d+)",
-                                      checks=versions.GE(2, 1, 4))
+                                      checks=versions.GE(2, 1, 5))
 
 
 class SE_AdapterRemovalNode(CommandNode):
@@ -82,7 +82,7 @@ class SE_AdapterRemovalNode(CommandNode):
         CommandNode.__init__(self,
                              command=command,
                              threads=parameters.threads,
-                             description="<AdapterRM (SE): %r -> '%s.*'>"
+                             description="<AdapterRM (SE): %s -> '%s.*'>"
                              % (fileutils.describe_files(parameters.input_files),
                                 parameters.output_prefix),
                              dependencies=parameters.dependencies)
