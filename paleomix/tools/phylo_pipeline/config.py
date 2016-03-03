@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -145,7 +145,7 @@ def parse_config(argv):
     options, args = _run_config_parser(argv)
     paleomix.ui.set_ui_colors(options.ui_colors)
 
-    if args[0] in ("example", "examples"):
+    if args and args[0] in ("example", "examples"):
         return options, args
     elif (len(args) < 2) and (args != ["mkfile"]):
         description = _DESCRIPTION.replace("%prog", "phylo_pipeline").strip()
