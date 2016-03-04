@@ -37,7 +37,7 @@ def _run_config_parser(argv, pipeline_variant):
     pipeline_variant = "%s_pipeline" % (pipeline_variant,)
 
     usage_str = "paleomix %s <command> [options] [makefiles]" % (pipeline_variant,)
-    version_str = "paleomix %s %s" % (pipeline_variant, paleomix.__version__)
+    version_str = "paleomix %s v%s" % (pipeline_variant, paleomix.__version__)
     parser = optparse.OptionParser(usage=usage_str, version=version_str)
 
     paleomix.ui.add_optiongroup(parser,

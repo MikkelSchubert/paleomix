@@ -283,7 +283,7 @@ def _parse_arguments(argv):
     per_host_cfg = PerHostConfig("hybrid_pipeline")
 
     usage_str = "%prog <command> [options] <SampleDB> <bam/sam> [destination]"
-    version_str = "%%prog %s" % (paleomix.__version__,)
+    version_str = "%%prog v%s" % (paleomix.__version__,)
     parser = optparse.OptionParser(usage=usage_str,
                                    version=version_str)
 

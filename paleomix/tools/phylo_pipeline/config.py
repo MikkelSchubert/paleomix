@@ -85,7 +85,7 @@ def select_commands(chain):
 def _run_config_parser(argv):
     per_host_cfg = PerHostConfig("phylo_pipeline")
     usage_str = "paleomix phylo_pipeline <command> [options] [makefiles]"
-    version_str = "paleomix phylo_pipeline %s" % (paleomix.__version__,)
+    version_str = "paleomix phylo_pipeline v%s" % (paleomix.__version__,)
     parser = optparse.OptionParser(usage=usage_str,
                                    version=version_str)
 
@@ -149,7 +149,7 @@ def parse_config(argv):
         return options, args
     elif (len(args) < 2) and (args != ["mkfile"]):
         description = _DESCRIPTION.replace("%prog", "phylo_pipeline").strip()
-        console.print_info("Phylogeny Pipeline %s\n" % (paleomix.__version__,))
+        console.print_info("Phylogeny Pipeline v%s\n" % (paleomix.__version__,))
         console.print_info(description)
         return options, args
 

@@ -22,7 +22,7 @@
 #
 
 __version_info__ = (1, 2, 0)
-__version__ = 'v%i.%i.%i' % __version_info__
+__version__ = '%i.%i.%i' % __version_info__
 
 
 def run(command=None):

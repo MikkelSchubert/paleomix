@@ -454,7 +454,7 @@ _TS_LABELS = {
 _HTML_HEADER = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<title>PALEOMIX Zonkey {Version}</title>
+<title>PALEOMIX Zonkey v{Version}</title>
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
 <link href="report.css" rel="stylesheet" type="text/css" />
 </head>
@@ -462,7 +462,7 @@ _HTML_HEADER = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
 <a name="top" id="top"></a>
 <center>
   <div id="header">
-    <h1>PALEOMIX Zonkey {Version}</h1>
+    <h1>PALEOMIX Zonkey v{Version}</h1>
     <h2>A pipeline for detection of F1 hybrids in equids.</h2>
   </div>
   <div id="content">

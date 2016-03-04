@@ -2,6 +2,7 @@
 Changelog
 =========
 
+  2016-03-04: Change paleomix.__version__ to follow PEP 0396.
   2016-03-03: Fixed bug causing the phylo_pipeline to throw exception if no
               additional command-line arguments were given.
   2016-02-24: Allow simulation of reads for phylogenetic pipeline example to be

@@ -237,7 +237,7 @@ def run(config, args, pipeline_variant):
 def _print_usage(pipeline):
     basename = "%s_pipeline" % (pipeline,)
 
-    print_info("BAM Pipeline %s\n" % (paleomix.__version__,))
+    print_info("BAM Pipeline v%s\n" % (paleomix.__version__,))
     print_info("Usage:")
     print_info("  -- %s help           -- Display this message" % basename)
     print_info("  -- %s example [...]  -- Create example project in folder." % basename)
