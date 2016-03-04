@@ -432,14 +432,7 @@ tinytree.draw <- function(tt, default.scales=TRUE, xaxis="scales", padding=0.3)
                      panel.grid.major  = element_line(colour = "grey90", size = 0.4),
                      panel.grid.minor  = element_line(colour = "grey90", size = 0.2))
 
-    if (xaxis == "age") {
-        age_range <- tt$width() - tt$len
-        breaks <- unique(c(seq(0, age_range, 100), round(age_range)))
-        minor_breaks <- seq(50, age_range, 100)
-        pp <- pp + scale_x_continuous(breaks=age_range - breaks,
-                                      minor_breaks=age_range - minor_breaks,
-                                      labels=breaks)
-    } else if (xaxis != "axis") {
+    if (xaxis != "axis") {
         stopifnot(xaxis %in% c("scales", "none"))
         pp <- pp + theme(axis.ticks.x=element_blank(),
                          axis.text.x=element_blank(),
