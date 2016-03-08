@@ -2,6 +2,9 @@
 Changelog
 =========
 
+Version 1.2.1 - 2015-03-08
+==========================
+
   2016-03-08: Remove dependency on BEDTools from the Phylogenetic pipeline.
   2016-03-08: Stop 'phylo_pipeline makefile' from always printing help text.
   2016-03-04: Change paleomix.__version__ to follow PEP 0396.
@@ -17,10 +20,10 @@ Version 1.2.0 - 2015-02-24
   This is a major revision of PALEOMIX, mainly focused on reworking the
   internals of the PALEOMIX framework, as well as cleaning up several warts in
   the BAM pipeline. As a result, the default makefile has changed in a number
-  of ways, but backwards compatibility is still retained with older makefiles, with one
-  exception. Where previously the 'FilterUnmappedReads' would only be in effect
-  when 'MinQuality' was set to 0, this option is now independent of the
-  'MinQuality' option.
+  of ways, but backwards compatibility is still retained with older makefiles,
+  with one exception. Where previously the 'FilterUnmappedReads' would only be
+  in effect when 'MinQuality' was set to 0, this option is now independent of
+  the 'MinQuality' option.
 
   In addition, it is now possible to install PALEOMIX via Pypi, as described in
   the (partially) updated documentation now hosted on ReadTheDocs.
