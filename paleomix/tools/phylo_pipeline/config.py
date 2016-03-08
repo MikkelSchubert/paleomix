@@ -49,6 +49,7 @@ _DESCRIPTION = \
 
 _COMMANDS = {
     "mkfile"          : True,
+    "makefile"        : True,
     "genotype"        : genotype.chain,
     "genotyping"      : genotype.chain,
     "msa"             : msa.chain,
@@ -147,7 +148,7 @@ def parse_config(argv):
 
     if args and args[0] in ("example", "examples"):
         return options, args
-    elif (len(args) < 2) and (args != ["mkfile"]):
+    elif (len(args) < 2) and (args != ["mkfile"] and args != ["makefile"]):
         description = _DESCRIPTION.replace("%prog", "phylo_pipeline").strip()
         console.print_info("Phylogeny Pipeline v%s\n" % (paleomix.__version__,))
         console.print_info(description)
