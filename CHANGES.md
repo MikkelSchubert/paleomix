@@ -2,6 +2,7 @@
 Changelog
 =========
 
+  2016-03-08: Remove dependency on BEDTools from the Phylogenetic pipeline.
   2016-03-08: Stop 'phylo_pipeline makefile' from always printing help text.
   2016-03-04: Change paleomix.__version__ to follow PEP 0396.
   2016-03-03: Fixed bug causing the phylo_pipeline to throw exception if no

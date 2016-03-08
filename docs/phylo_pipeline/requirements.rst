@@ -11,7 +11,6 @@ Depending on the parts of the Phylogenetic pipeline used, different programs are
 Genotyping
 ----------
 
-* `BEDTools`_ v2.16.0+ [Quinlan2010]_
 * [SAMTools](http://samtools.sourceforge.net) v0.1.18+ [Li2009b]_
 * `Tabix`_ v0.2.5
 

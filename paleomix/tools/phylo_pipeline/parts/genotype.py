@@ -31,7 +31,7 @@ from paleomix.nodes.samtools import \
     FastaIndexNode, \
     BAMIndexNode
 from paleomix.nodes.bedtools import \
-    SlopBedNode
+    PaddedBedNode
 from paleomix.nodes.sequences import \
     ExtractReferenceNode
 from paleomix.common.fileutils import \
@@ -93,12 +93,11 @@ def build_regions_nodes(regions, padding, dependencies=()):
         dependencies = list(dependencies)
         dependencies.append(build_fasta_index_node(regions["FASTA"]))
         _BED_CACHE[destination] \
-            = SlopBedNode(genome=regions["FASTA"] + ".fai",
-                          infile=regions["BED"],
-                          outfile=destination,
-                          from_start=padding,
-                          from_end=padding,
-                          dependencies=dependencies)
+            = PaddedBedNode(fai_file=regions["FASTA"] + ".fai",
+                            infile=regions["BED"],
+                            outfile=destination,
+                            amount=padding,
+                            dependencies=dependencies)
 
     return destination, (_BED_CACHE[destination],)
 
