@@ -466,27 +466,62 @@ def _read_max_depth(filename, prefix, sample):
         return _DEPTHS_CACHE[filename]
 
     max_depth = None
+    max_depths = {}
     try:
         with open(filename) as handle:
             for row in parse_padded_table(handle):
-                if row["Name"] == sample and \
+                if row["Name"] != "*" and \
                         row["Sample"] == "*" and \
                         row["Library"] == "*" and \
                         row["Contig"] == "*":
-                    max_depth = row["MaxDepth"]
-                    break
-            else:
-                raise MakefileError("Could not find MaxDepth in "
-                                    "depth-histogram: %r" % (filename,))
 
+                    if row["Name"] in max_depths:
+                        raise MakefileError("Depth histogram %r contains "
+                                            "multiple 'MaxDepth' records for "
+                                            "sample %r; please rebuild!"
+                                            % (filename, row["Name"]))
+
+                    max_depths[row["Name"]] = row["MaxDepth"]
     except (OSError, IOError), error:
         raise MakefileError("Error reading depth-histogram (%s): %s"
                             % (filename, error))
 
-    if max_depth == "NA":
-        raise MakefileError("MaxDepth is not calculated for sample (%s);\n"
+    if sample in max_depths:
+        max_depth = max_depths[sample]
+    else:
+        name_counts = {}
+        name_mapping = {}
+        for cand_sample, cand_max in max_depths.iteritems():
+            name = cand_sample.split('.', 1)[0]
+            name_mapping[name] = cand_sample
+            name_counts[name] = name_counts.get(name, 0) + 1
+
+        if name_mapping.get(sample) == 1:
+            # Sample name (with some extensions) found
+            # This is typical if 'paleomix depths' has been run manually.
+            max_depth = max_depths[name_mapping[sample]]
+        elif len(max_depths) == 1:
+            # Just one sampel in the depth histogram; even though it does not
+            # match, we assuem that this is the correct table. This is because
+            # manually generating files / renaming files would otherwise cause
+            # failure when using 'MaxDepth: auto'.
+            (cand_sample, max_depth), = max_depths.items()
+            print_warn("        - Name in depths file not as expected; "
+                       "found %r, not %r:"
+                       % (cand_sample, sample))
+
+    if max_depth is None:
+        raise MakefileError("MaxDepth for %r not found in depth-histogram: %r"
+                            % (sample, filename))
+    elif max_depth == "NA":
+        raise MakefileError("MaxDepth is not calculated for sample %r; "
                             "cannot determine MaxDepth values automatically."
                             % (filename,))
+    elif not max_depth.isdigit():
+        raise MakefileError("MaxDepth is not a valid for sample %r in %r; "
+                            "expected integer, found %r."
+                            % (sample, filename, max_depth))
+
     max_depth = int(max_depth)
 
     print_info("        - %s.%s = %i" % (sample, prefix, max_depth))

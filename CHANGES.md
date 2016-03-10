@@ -3,6 +3,12 @@ Changelog
 =========
 
   2016-03-10: Fixed failure during mapping when using SAMTools v1.x.
+  2016-03-10: Improved parsing of 'depths' histograms when running the
+              phylogenetic pipeline genotyping step with 'MaxDepth: auto';
+              mismatches between the sample name in the table and in the
+              makefile now only cause a warning, allowing for the common case
+              where files depths were manually recalculated (and --target was
+              not set), or where files were renamed.
   2016-03-10: Documented work-arounds for problem caused when upgrading an old
               version of PALEOMIX (< 1.2.0) by using 'pip' to install a newer
               version, in which all command-line aliases invoke the same tool.
