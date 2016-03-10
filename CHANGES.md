@@ -3,6 +3,9 @@ Changelog
 =========
 
   2016-03-10: Fixed failure during mapping when using SAMTools v1.x.
+  2016-03-10: Documented work-arounds for problem caused when upgrading an old
+              version of PALEOMIX (< 1.2.0) by using 'pip' to install a newer
+              version, in which all command-line aliases invoke the same tool.
   2016-03-10: The tool 'paleomix rmdup_collapsed' now assumes that ALL
               single-end reads (flag 0x1 not set) are collapsed. Furthermore,
               reads without quality scores will be filtered, but only selected
