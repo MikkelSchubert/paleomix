@@ -45,9 +45,9 @@ Throubleshooting the installation
 
     Alternatively, this may be resolved by downloading and manually installing PALEOMIX::
 
-        $ wget https://github.com/MikkelSchubert/paleomix/archive/v1.2.1.tar.gz
-        $ tar xvzf v1.2.1.tar.gz
-        $ paleomix-1.2.1/
+        $ wget https://github.com/MikkelSchubert/paleomix/archive/v1.2.2.tar.gz
+        $ tar xvzf v1.2.2.tar.gz
+        $ paleomix-1.2.2/
         # Either for the current user:
         $ python setup.py install --user
         # Or, for all users:

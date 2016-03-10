@@ -2,6 +2,9 @@
 Changelog
 =========
 
+Version 1.2.2 - 2015-03-10
+==========================
+
   2016-03-10: Fixed failure during mapping when using SAMTools v1.x.
   2016-03-10: Improved parsing of 'depths' histograms when running the
               phylogenetic pipeline genotyping step with 'MaxDepth: auto';
