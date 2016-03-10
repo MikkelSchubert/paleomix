@@ -2,6 +2,13 @@
 Changelog
 =========
 
+  2016-03-10: The tool 'paleomix rmdup_collapsed' now assumes that ALL
+              single-end reads (flag 0x1 not set) are collapsed. Furthermore,
+              reads without quality scores will be filtered, but only selected
+              as the unique representative for a set of potential duplicates if
+              no reads have quality scores. In that case, a random read is
+              selected among the candidates. This ensures that pre-collapsed
+              reads used in the pipeline are correctly filtered.
   2016-03-10: The tool 'paleomix vcf_filter' can now clear any existing
               value in the FILTER column, and only record the result of
               running the filters implemented by this tool. This behavior
