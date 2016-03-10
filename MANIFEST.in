@@ -1,8 +1,9 @@
 include README.rst
 include CHANGES.md
-include LICENSE.txt
 include MANIFEST.in
 include pylint.conf
+licenses/gpl.txt
+licenses/mit.txt
 include paleomix/yaml/CHANGES
 include paleomix/yaml/LICENSE
 include paleomix/yaml/PKG-INFO
