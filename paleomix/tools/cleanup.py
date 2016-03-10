@@ -256,7 +256,7 @@ def _run_cleanup_pipeline(args):
 
         call_sort = ['samtools', 'sort', '-l', '0']
         if args.samtools1x == "yes":
-            call_sort.extend(('-O', 'bam', '-T', 'args.temp_prefix'))
+            call_sort.extend(('-O', 'bam', '-T', args.temp_prefix))
         else:
             # Sort, output to stdout (-o)
             call_sort.extend(('-o', '-', args.temp_prefix))
