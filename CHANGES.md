@@ -2,6 +2,13 @@
 Changelog
 =========
 
+  2016-03-10: The tool 'paleomix vcf_filter' can now clear any existing
+              value in the FILTER column, and only record the result of
+              running the filters implemented by this tool. This behavior
+              may be enabled by running vcf_filter with the command-line
+              option '--reset-filter yes'.
+
+
 Version 1.2.1 - 2015-03-08
 ==========================
 

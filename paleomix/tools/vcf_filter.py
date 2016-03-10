@@ -35,12 +35,17 @@ import paleomix.common.vcffilter as vcffilter
 def _read_files(filenames, args):
     in_header = True
     has_filters = False
+    reset_filter = (args.reset_filter == 'yes')
     vcf_parser = pysam.asVCF()
     for line in fileinput.input(filenames):
         if not line.startswith("#"):
             in_header = False
             line = line.rstrip("\n\r")
-            yield vcf_parser(line, len(line))
+            vcf = vcf_parser(line, len(line))
+            if reset_filter:
+                vcf.filter = '.'
+
+            yield vcf
         elif in_header:
             if not (line.startswith("##") or has_filters):
                 has_filters = True
@@ -51,15 +56,24 @@ def _read_files(filenames, args):
 
 
 def main(argv):
-    parser = optparse.OptionParser("paleomix vcf_filter [options] [in1.vcf, ...]")
-    vcffilter.add_varfilter_options(parser)
-    (opts, args) = parser.parse_args(argv)
+    desc = "paleomix vcf_filter [options] [in1.vcf, ...]"
+    parser = optparse.OptionParser(desc)
+    parser.add_option('--reset-filter', default='no', choices=('yes', 'no'),
+                      help="If set to 'yes', values in the 'FILTER' column "
+                           "are cleared, and set according to the results "
+                           "from running the filters implemented by this "
+                           "tool. If set to 'no', any existing values are "
+                           "retained, and any (new) failed filters are added "
+                           "to these [default: %default].")
 
-    if (not args or "-" in args) and sys.stdin.isatty():
+    vcffilter.add_varfilter_options(parser)
+    (args, filenames) = parser.parse_args(argv)
+
+    if (not filenames or "-" in filenames) and sys.stdin.isatty():
         parser.error("STDIN is a terminal, terminating!")
 
     try:
-        for vcf in vcffilter.filter_vcfs(opts, _read_files(args, opts)):
+        for vcf in vcffilter.filter_vcfs(args, _read_files(filenames, args)):
             print(vcf)
     except IOError, error:
         # Check for broken pipe (head, less, etc).
