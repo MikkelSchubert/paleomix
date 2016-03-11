@@ -69,11 +69,15 @@ _READ_TYPES = set(("Single", "Singleton",
                    "Paired"))
 
 
-def read_makefiles(config, filenames):
+def read_makefiles(config, filenames, pipeline_variant="bam"):
+    if pipeline_variant not in ("bam", "trim"):
+        raise ValueError("'pipeline_variant' must be 'bam' or 'trim', not %r"
+                         % (pipeline_variant,))
+
     makefiles = []
     for filename in filenames:
         makefile = read_makefile(filename, _VALIDATION)
-        makefile = _mangle_makefile(makefile)
+        makefile = _mangle_makefile(makefile, pipeline_variant)
 
         makefiles.append(makefile)
 
@@ -326,14 +330,14 @@ _VALIDATION = {
 }
 
 
-def _mangle_makefile(makefile):
+def _mangle_makefile(makefile, pipeline_variant):
     makefile = copy.deepcopy(makefile)
     makefile["Options"] = makefile["Makefile"].pop("Options")
     makefile["Prefixes"] = makefile["Makefile"].pop("Prefixes")
     makefile["Targets"] = makefile.pop("Makefile")
 
     _update_options(makefile)
-    _update_prefixes(makefile)
+    _update_prefixes(makefile, pipeline_variant)
     _update_lanes(makefile)
     _update_tags(makefile)
 
@@ -365,7 +369,7 @@ def _update_options(makefile):
         _do_update_options(makefile["Options"], data, ())
 
 
-def _update_prefixes(makefile):
+def _update_prefixes(makefile, pipeline_variant):
     prefixes = {}
     for (name, values) in makefile.get("Prefixes", {}).iteritems():
         filename = values["Path"]
@@ -404,7 +408,7 @@ def _update_prefixes(makefile):
             record["Reference"] = record["Path"]
             prefixes[name] = record
 
-    if not prefixes:
+    if not (prefixes or pipeline_variant == "trim"):
         raise MakefileError("At least one prefix must be specified")
     makefile["Prefixes"] = prefixes
 
@@ -491,7 +495,7 @@ def _determine_lane_type(prefixes, data, path):
 
     raise MakefileError("Error at Barcode level; keys must either be "
                         "prefix-names, OR 'Paired', 'Single', 'Collapsed', "
-                        "'CollapsedTruncated', or 'Singleton'"
+                        "'CollapsedTruncated', or 'Singleton'. "
                         "Found: %s" % (", ".join(data),))
 
 

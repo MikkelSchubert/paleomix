@@ -2,6 +2,9 @@
 Changelog
 =========
 
+  2016-03-11: Allow the 'trim_pipeline' to be run on a makefile without any
+              prefixes; this eases use of this pipeline in the case where a
+              latter mapping is not wanted.
   2016-03-11: Improved handling of unmapped reads in 'paleomix cleanup';
               additional flags (in particular 0x2; proper alignment) are now
               cleared if the mate is unmapped, and unmapped reads are always

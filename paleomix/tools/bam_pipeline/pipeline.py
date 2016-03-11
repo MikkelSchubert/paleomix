@@ -50,6 +50,9 @@ from paleomix.tools.bam_pipeline.makefile import \
     MakefileError, \
     read_makefiles
 
+from paleomix.tools.bam_pipeline.parts import \
+    Reads
+
 import paleomix.tools.bam_pipeline.parts as parts
 import paleomix.tools.bam_pipeline.config as bam_config
 import paleomix.tools.bam_pipeline.mkfile as bam_mkfile
@@ -60,15 +63,15 @@ def build_pipeline_trimming(config, makefile):
     This reduces the required complexity of the makefile to a minimum."""
 
     nodes = []
-    for prefix in makefile["Prefixes"].itervalues():
-        for (_, samples) in makefile["Targets"].iteritems():
-            for (_, libraries) in samples.iteritems():
-                for (_, barcodes) in libraries.iteritems():
-                    for (barcode, record) in barcodes.iteritems():
-                        lane = parts.Lane(config, prefix, record, barcode)
-                        if lane.reads and lane.reads.nodes:
-                            nodes.extend(lane.reads.nodes)
-        break  # Only one prefix is required
+    for (_, samples) in makefile["Targets"].iteritems():
+        for (_, libraries) in samples.iteritems():
+            for (_, barcodes) in libraries.iteritems():
+                for (barcode, record) in barcodes.iteritems():
+                    if record["Type"] in ("Raw", "Trimmed"):
+                        offset = record["Options"]["QualityOffset"]
+                        reads = Reads(config, record, offset)
+
+                        nodes.extend(reads.nodes)
 
     return nodes
 
@@ -174,7 +177,7 @@ def run(config, args, pipeline_variant):
 
     try:
         print_info("Building BAM pipeline ...")
-        makefiles = read_makefiles(config, args)
+        makefiles = read_makefiles(config, args, pipeline_variant)
     except (MakefileError, paleomix.yaml.YAMLError, IOError), error:
         print_err("Error reading makefiles:",
                   "\n  %s:\n   " % (error.__class__.__name__,),
