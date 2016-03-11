@@ -123,17 +123,30 @@ Options:
 # location of the BWA/Bowtie2 index, and optional label, and an option
 # set of regions for which additional statistics are produced.
 Prefixes:
-  # Name of the prefix; is used as part of the output filenames
-  NAME_OF_PREFIX:
-    # Path to .fasta file containg a set of reference sequences.
-    Path: PATH_TO_PREFIX
+  # Uncomment and replace 'NAME_OF_PREFIX' with name of the prefix; this name
+  # is used in summary statistics and as part of output filenames.
+#  NAME_OF_PREFIX:
+    # Uncomment and replace 'PATH_TO_PREFIX' with the path to .fasta file
+    # containing the references against which reads are to be mapped.
+#    Path: PATH_TO_PREFIX
 
-    # Label for prefix: One of nuclear, mitochondrial, chloroplast,
-    # plasmid, bacterial, or viral. Is used in the .summary files.
-#    Label: ...
-
-    # Produce additional coverage / depth statistics for a set of
-    # regions defined in a BED file; if no names are specified for the
-    # BED records, results are named after the chromosome / contig.
+    # (Optional) Uncomment and replace 'PATH_TO_BEDFILE' with the path to a
+    # .bed file listing extra regions for which coverage / depth statistics
+    # should be calculated; if no names are specified for the BED records,
+    # results are named after the chromosome / contig. Change 'NAME' to the
+    # name to be used in summary statistics and output filenames.
 #    RegionsOfInterest:
 #      NAME: PATH_TO_BEDFILE
+
+
+# Mapping targets are specified using the following structure. Uncomment and
+# replace 'NAME_OF_TARGET' with the desired prefix for filenames.
+#NAME_OF_TARGET:
+   #  Uncomment and replace 'NAME_OF_SAMPLE' with the name of this sample.
+#  NAME_OF_SAMPLE:
+     #  Uncomment and replace 'NAME_OF_LIBRARY' with the name of this sample.
+#    NAME_OF_LIBRARY:
+       # Uncomment and replace 'NAME_OF_LANE' with the name of this lane,
+       # and replace 'PATH_WITH_WILDCARDS' with the path to the FASTQ files
+       # to be trimmed and mapped for this lane (may include wildcards).
+#      NAME_OF_LANE: PATH_WITH_WILDCARDS

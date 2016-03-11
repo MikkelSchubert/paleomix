@@ -486,15 +486,6 @@ Each sample in the makefile is mapped against each prefix, and BAM files are gen
     FASTA files used in the BAM pipeline *must* be named with a .fasta file extension. Furthermore, if alignments are to be carried out against the human nuclear genome, chromosomes MUST be ordered by their number for GATK to work! See the `GATK FAQ`_ for more information.
 
 
-Prefix labels
-^^^^^^^^^^^^^
-
-The label option for prefixes allow a prefix to be classified according to one of several categories, currently including 'nuclear', 'mitochondrial', 'chloroplast', 'plasmid', 'bacterial', and 'viral'. This is only used when generating the .summary files (if the 'Summary' feature is enabled), in which the label is used instead of the prefix name, and the results for prefixes with the same label are combined.
-
-.. warning::
-    Labels are currently considered deprecated, and may be removed in future versions of PALEOMIX.
-
-
 Regions of interest
 ^^^^^^^^^^^^^^^^^^^
 
@@ -571,8 +562,33 @@ A makefile including such prefixes is executed as any other makefile.
     Just like regular prefixes, it is required that the filename of the reference genome ends with '.fasta'. However, the pipeline will attempt to add *any* file found using the provided path with wildcards, and care should therefore be taken to avoid including non-FASTA files. For example, if the path '/path/to/genomes/\*' was used instead of '/path/to/genomes/\*.fasta', this would cause the pipeline to abort due to the inclusion of (for example) non-FASTA index files generated at this location by the pipeline itself.
 
 
+Prefix labels
+^^^^^^^^^^^^^
+.. code-block:: yaml
+
+    Prefixes:
+      # Uncomment and replace 'NAME_OF_PREFIX' with name of the prefix; this name
+      # is used in summary statistics and as part of output filenames.
+    #  NAME_OF_PREFIX:
+        # ...
+
+        # (Optional) Uncomment and replace 'LABEL' with one of 'nuclear',
+        # 'mitochondrial', 'chloroplast', 'plasmid', 'bacterial', or 'viral'.
+    #    Label: LABEL
+
+The label option for prefixes allow a prefix to be classified according to one of several categories, currently including 'nuclear', 'mitochondrial', 'chloroplast', 'plasmid', 'bacterial', and 'viral'. This is only used when generating the .summary files (if the 'Summary' feature is enabled), in which the label is used instead of the prefix name, and the results for prefixes with the same label are combined.
+
+.. warning::
+    Labels are deprecated, and will either be removed in future versions of PALEOMIX, or significantly changed.
+
+
 Targets section
 ---------------
+.. literalinclude:: makefile.yaml
+    :language: yaml
+    :linenos:
+    :lineno-start: 104
+    :lines: 142-
 
 In the BAM pipeline, the term 'Target' is used to refer not to a particular sample (though in typical usage a target includes just one sample), but rather one or more samples to processed together to generate a BAM file per prefix (see above). A sample included in a target may likewise contain one or more libraries, for each of which one or more sets of FASTQ reads are specified.
 
