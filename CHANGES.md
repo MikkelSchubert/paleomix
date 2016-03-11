@@ -2,6 +2,10 @@
 Changelog
 =========
 
+  2016-03-11: Updated 'bam_pipeline' makefile template; prefixes and targets
+              are described more explicitly, and values for the prefix are
+              commented out by default. The 'Label' option is no included in
+              the template, as it is considered deprecated.
   2016-03-11: Allow the 'trim_pipeline' to be run on a makefile without any
               prefixes; this eases use of this pipeline in the case where a
               latter mapping is not wanted.
