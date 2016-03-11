@@ -112,7 +112,11 @@ def main(argv):
         if "Nodes" in makefile:
             pipeline.add_nodes(makefile["Nodes"])
 
-    if config.list_output_files:
+    if config.list_input_files:
+        logger.info("Printing output files ...")
+        pipeline.print_input_files()
+        return 0
+    elif config.list_output_files:
         logger.info("Printing output files ...")
         pipeline.print_output_files()
         return 0

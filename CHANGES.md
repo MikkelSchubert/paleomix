@@ -2,6 +2,10 @@
 Changelog
 =========
 
+  2016-03-11: Added the ability to the pipelines to output the list of input
+              files required for a given makefile, excluding any file built
+              by the pipeline itself. Use the --list-output-files command-
+              line option to view these.
   2016-03-11: Updated 'bam_pipeline' makefile template; prefixes and targets
               are described more explicitly, and values for the prefix are
               commented out by default. The 'Label' option is no included in

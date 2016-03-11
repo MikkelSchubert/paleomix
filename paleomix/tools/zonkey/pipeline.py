@@ -69,6 +69,9 @@ def run_pipeline(config, nodes, msg):
     elif config.list_output_files:
         pipeline.print_output_files()
         return True
+    elif config.list_input_files:
+        pipeline.print_input_files()
+        return True
     elif config.dot_file:
         logger.info("Writing dependency graph to %r ...", config.dot_file)
         return pipeline.to_dot(config.dot_file)
