@@ -96,9 +96,9 @@ To upgrade an installation a self-contained installation, simply activate the en
 .. warning::
     When upgrading to v1.2.x or later from version 1.1.x or an before, it is nessesary to perform a manual installation the first time. This is accomplished by downloading and unpacking the desired version of PALEOMIX from the list of releases, and then invoking setup.py. For example::
 
-        $ wget https://github.com/MikkelSchubert/paleomix/archive/v1.2.2.tar.gz
-        $ tar xvzf v1.2.2.tar.gz
-        $ paleomix-1.2.2/
+        $ wget https://github.com/MikkelSchubert/paleomix/archive/v1.2.3.tar.gz
+        $ tar xvzf v1.2.3.tar.gz
+        $ paleomix-1.2.3/
         # Either for the current user:
         $ python setup.py install --user
         # Or, for all users:

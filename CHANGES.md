@@ -2,6 +2,9 @@
 Changelog
 =========
 
+Version 1.2.3 - 2015-03-11
+==========================
+
   2016-03-11: Added the ability to the pipelines to output the list of input
               files required for a given makefile, excluding any file built
               by the pipeline itself. Use the --list-output-files command-
