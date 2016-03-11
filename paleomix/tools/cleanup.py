@@ -45,6 +45,7 @@ import paleomix.tools.factory
 
 import paleomix.common.procs as processes
 import paleomix.common.versions as versions
+import paleomix.common.sequences as sequences
 
 from paleomix.nodes.samtools import SAMTOOLS_VERSION
 
@@ -103,8 +104,11 @@ def _cleanup_record(record):
     """
     if not record.is_paired:
         # Unset 0x2 (properly aligned), 0x8 (next mate unmapped),
-        # 0x20 (next mate reversed), 0x40 (first mate), and 0x80 (last mate).
+        # 0x20 (next mate reverse), 0x40 (first mate), and 0x80 (last mate).
         record.flag = record.flag & (~0xEA)
+        record.rnext = -1
+        record.pnext = -1
+        record.tlen = 0
 
     if record.is_unmapped:
         record.mapq = 0
@@ -113,6 +117,8 @@ def _cleanup_record(record):
         record.flag = record.flag & (~0x902)
 
         if record.mate_is_unmapped:
+            # Unset 0x20 (next mate reverse); is normalized below
+            record.flag = record.flag & (~0x20)
             record.rnext = -1
             record.pnext = -1
 
@@ -121,6 +127,9 @@ def _cleanup_record(record):
         record.pos = record.pnext
         record.tlen = 0
     elif record.mate_is_unmapped:
+        # Unset 0x2 (properly aligned), 0x20 (next mate reverse)
+        # The orientation of the mate is normalized below.
+        record.flag = record.flag & (~0x22)
         record.rnext = record.tid
         record.pnext = record.pos
         record.tlen = 0
@@ -175,6 +184,19 @@ def _cleanup_unmapped(args, cleanup_sam):
                     continue
                 elif filter_by_flag and _filter_record(args, record):
                     continue
+
+                # Normalize unmapped reads; always store on + strand
+                if record.is_unmapped and record.is_reverse:
+                    # Unset 0x10 (read reverse)
+                    record.flag = record.flag & (~0x10)
+
+                    # Setting .seq resets .qual, so cache value
+                    qual, seq = record.qual, record.seq
+                    if seq is not None:
+                        record.seq = sequences.reverse_complement(seq)
+
+                    if qual is not None:
+                        record.qual = qual[::-1]
 
                 if args.rg_id is not None:
                     # Ensure that only one RG tag is set
@@ -249,7 +271,7 @@ def _run_cleanup_pipeline(args):
     procs = {}
     try:
         # Update 'procs' and get the last process in the pipeline
-        if args.paired_ended:
+        if args.paired_end:
             last_proc = _setup_paired_ended_pipeline(args, procs, bam_cleanup)
         else:
             last_proc = _setup_single_ended_pipeline(procs, bam_cleanup)
@@ -304,18 +326,25 @@ def parse_args(argv):
                              "applies to aligned reads [Default: %(default)s]")
     parser.add_argument("-f", "--require-flags", default=0,
                         type=lambda value: int(value, 0),  # Handle hex, etc.
-                        help="Only include reads with all of these flags set. "
-                             "Equivalent to 'samtools view -f' "
-                             "[Default: %(default)s]")
+                        help="Only include reads with all of these flags set; "
+                             "note that flags only valid for paired-end reads "
+                             "(0x2, 0x8, 0x20, 0x40, 0x80) are ignored when "
+                             "processing single-end reads "
+                             "[Default: %(default)s].")
     parser.add_argument("-F", "--exclude-flags", default=0,
                         type=lambda value: int(value, 0),  # Handle hex, etc.
-                        help="Exclude reads with any of these flags set. "
-                             "Equivalent to 'samtools view -F' "
-                             "[Default: %(default)s]")
-    parser.add_argument('--paired-ended', default=False, action="store_true",
+                        help="Exclude reads with any of these flags set; "
+                             "note that flags only valid for paired-end reads "
+                             "(0x2, 0x8, 0x20, 0x40, 0x80) are ignored when "
+                             "processing single-end reads "
+                             "[Default: %(default)s].")
+    parser.add_argument('--paired-end', default=False, action="store_true",
                         help='If enabled, additional processing of PE reads '
                              'is carried out, including updating of mate '
                              'information [Default: off]')
+    # TODO: Remove alias added for backwards compatibility:
+    parser.add_argument('--paired-ended', dest='paired_end',
+                        action="store_true", help=argparse.SUPPRESS)
 
     parser.add_argument("--update-pg-tag", default=[], action="append",
                         help="Update one PG tags with the given values, "

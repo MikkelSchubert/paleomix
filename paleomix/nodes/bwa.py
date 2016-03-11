@@ -302,7 +302,7 @@ def _process_output(stdin, output_file, reference, run_fixmate=False):
                        CHECK_SAMTOOLS=SAMTOOLS_VERSION)
 
     if run_fixmate:
-        convert.set_option('--paired-ended')
+        convert.set_option('--paired-end')
 
     try:
         if SAMTOOLS_VERSION.version >= (1,):

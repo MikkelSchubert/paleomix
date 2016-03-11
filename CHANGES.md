@@ -2,6 +2,12 @@
 Changelog
 =========
 
+  2016-03-11: Improved handling of unmapped reads in 'paleomix cleanup';
+              additional flags (in particular 0x2; proper alignment) are now
+              cleared if the mate is unmapped, and unmapped reads are always
+              represented on the positive strand (clearing 0x4 and / or 0x20).
+
+
 Version 1.2.2 - 2015-03-10
 ==========================
 
