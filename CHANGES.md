@@ -2,6 +2,16 @@
 Changelog
 =========
 
+Version 1.2.4 - 2015-03-14
+==========================
+
+  2016-03-14: Fix regression causing 'fixmate' not to be run on paired-end
+              reads. This would occasionally cause paired-end mapping to
+              fail during validation.
+  2016-03-14: Include PATH in 'pipe.errors' file, to assist debugging of
+              failed nodes.
+
+
 Version 1.2.3 - 2015-03-11
 ==========================
 
