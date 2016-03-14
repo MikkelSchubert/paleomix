@@ -45,7 +45,6 @@ import paleomix.tools.factory
 
 import paleomix.common.procs as processes
 import paleomix.common.versions as versions
-import paleomix.common.sequences as sequences
 
 from paleomix.nodes.samtools import SAMTOOLS_VERSION
 
@@ -117,8 +116,6 @@ def _cleanup_record(record):
         record.flag = record.flag & (~0x902)
 
         if record.mate_is_unmapped:
-            # Unset 0x20 (next mate reverse); is normalized below
-            record.flag = record.flag & (~0x20)
             record.rnext = -1
             record.pnext = -1
 
@@ -127,9 +124,6 @@ def _cleanup_record(record):
         record.pos = record.pnext
         record.tlen = 0
     elif record.mate_is_unmapped:
-        # Unset 0x2 (properly aligned), 0x20 (next mate reverse)
-        # The orientation of the mate is normalized below.
-        record.flag = record.flag & (~0x22)
         record.rnext = record.tid
         record.pnext = record.pos
         record.tlen = 0
@@ -184,19 +178,6 @@ def _cleanup_unmapped(args, cleanup_sam):
                     continue
                 elif filter_by_flag and _filter_record(args, record):
                     continue
-
-                # Normalize unmapped reads; always store on + strand
-                if record.is_unmapped and record.is_reverse:
-                    # Unset 0x10 (read reverse)
-                    record.flag = record.flag & (~0x10)
-
-                    # Setting .seq resets .qual, so cache value
-                    qual, seq = record.qual, record.seq
-                    if seq is not None:
-                        record.seq = sequences.reverse_complement(seq)
-
-                    if qual is not None:
-                        record.qual = qual[::-1]
 
                 if args.rg_id is not None:
                     # Ensure that only one RG tag is set

@@ -2,6 +2,9 @@
 Changelog
 =========
 
+  * Reverted commit normalizing the strand of unmapped reads.
+
+
 Version 1.2.4 - 2015-03-14
 ==========================
 
