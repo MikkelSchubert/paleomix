@@ -3,6 +3,9 @@ Changelog
 =========
 
   * Reverted commit normalizing the strand of unmapped reads.
+  * Terminate read duplication checks when reaching the trailing, unmapped
+    reads; this fixes uncontrolled memory growth when an alignment produces a
+    large number of unmapped reads.
 
 
 Version 1.2.4 - 2015-03-14

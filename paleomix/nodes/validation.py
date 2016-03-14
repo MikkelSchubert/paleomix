@@ -74,6 +74,10 @@ class DetectInputDuplicationNode(Node):
                     observed_reads.clear()
                     last_pos = curr_pos
 
+                    # Stop once the trailing, unmapped reads are reached
+                    if record.tid == -1:
+                        break
+
                 observed_reads[record.qname].append((record, filename))
             self._process_reads(observed_reads, self.output_files)
 
