@@ -8,6 +8,9 @@ Changelog
   * Terminate read duplication checks when reaching the trailing, unmapped
     reads; this fixes uncontrolled memory growth when an alignment produces a
     large number of unmapped reads.
+  * Removed BAM file from the bam_pipeline example, and added deprecation
+    warning; support for including pre-existing BAMs will be removed in a
+    future version of PALEOMIX.
 
 
 Version 1.2.4 - 2015-03-14
