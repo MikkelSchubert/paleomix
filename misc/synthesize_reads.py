@@ -378,7 +378,7 @@ def main(argv):
         return 1
 
     print("Generating %i lane(s) of synthetic reads ...\nDISCLAIMER: For "
-          "demonstration of PALEOMIX only; the synsthetic data is not "
+          "demonstration of PALEOMIX only; the synthetic data is not "
           "biologically meaningful!" % (options.lanes_num,))
 
     specimen = Specimen(options, args[0])
