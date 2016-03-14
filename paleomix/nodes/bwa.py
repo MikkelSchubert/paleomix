@@ -195,7 +195,8 @@ class BWASampe(CommandNode):
         sampe.add_value("%(TEMP_IN_FQ_1)s")
         sampe.add_value("%(TEMP_IN_FQ_2)s")
 
-        order, commands = _process_output(sampe, output_file, reference)
+        order, commands = _process_output(sampe, output_file, reference,
+                                          run_fixmate=True)
         commands["sam_in_1"] = sampe_in_1
         commands["sam_in_2"] = sampe_in_2
         commands["sam"] = sampe
