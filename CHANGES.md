@@ -2,6 +2,8 @@
 Changelog
 =========
 
+  * Improve information capture when a node raises an unexpected exception,
+    mainly for nodes implementing their own 'run' function (not CommandNodes).
   * Reverted commit normalizing the strand of unmapped reads.
   * Terminate read duplication checks when reaching the trailing, unmapped
     reads; this fixes uncontrolled memory growth when an alignment produces a

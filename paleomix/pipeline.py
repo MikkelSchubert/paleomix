@@ -22,18 +22,22 @@
 #
 from __future__ import print_function
 
-import os
 import errno
-import Queue
-import pickle
-import signal
 import logging
 import multiprocessing
+import os
+import pickle
+import Queue
+import signal
+import traceback
 
 import paleomix.ui
 import paleomix.logger
 
-from paleomix.node import Node
+from paleomix.node import \
+    Node, \
+    NodeError, \
+    NodeUnhandledException
 from paleomix.nodegraph import NodeGraph, NodeGraphError
 from paleomix.common.utilities import \
     safe_coerce_to_tuple, \
@@ -191,10 +195,15 @@ class Pypeline(object):
             except Exception, errors:
                 nodegraph.set_node_state(node, nodegraph.ERROR)
 
-                errors = "\n".join(("\t" + line)
-                                   for line in str(errors).strip().split("\n"))
-                self._logger.error("%s: Error occurred running command:\n%s\n",
-                                   node, errors)
+                message = [str(node),
+                           "  Error (%r) occurred running command:"
+                           % (type(errors).__name__)]
+
+                for line in str(errors).strip().split("\n"):
+                    message.append("    %s" % (line,))
+                message.append("")
+
+                self._logger.error("\n".join(message))
 
             if not errors:
                 nodegraph.set_node_state(node, nodegraph.DONE)
@@ -445,6 +454,13 @@ def _call_run(key, node, config):
     bound functions (e.g. self.run)"""
     try:
         return node.run(config)
+    except NodeError:
+        raise
+    except Exception:
+        message = "Unhandled error running Node:\n\n%s" \
+            % (traceback.format_exc(),)
+
+        raise NodeUnhandledException(message)
     finally:
         # See comment in _init_worker
         _call_run.queue.put(key)
