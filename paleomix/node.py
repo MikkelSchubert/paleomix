@@ -154,8 +154,9 @@ class Node(object):
             return
 
         prefix = "\n                   "
-        message = ["Command          = %s" % (" ".join(sys.argv),),
-                   "CWD              = %s" % (os.getcwd(),),
+        message = ["Command          = %r" % (" ".join(sys.argv),),
+                   "CWD              = %r" % (os.getcwd(),),
+                   "PATH             = %r" % (os.environ.get('PATH', '')),
                    "Node             = %s" % (str(self),),
                    "Threads          = %i" % (self.threads,),
                    "Input files      = %s" % (prefix.join(sorted(self.input_files)),),
