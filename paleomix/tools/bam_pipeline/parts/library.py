@@ -30,8 +30,6 @@ from paleomix.nodes.picard import \
     MarkDuplicatesNode
 from paleomix.atomiccmd.builder import \
     apply_options
-from paleomix.nodes.misc import \
-    CopyOutputFilesNode
 from paleomix.nodes.mapdamage import \
     MapDamagePlotNode, \
     MapDamageModelNode, \
