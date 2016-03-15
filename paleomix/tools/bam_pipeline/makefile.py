@@ -337,7 +337,10 @@ def _mangle_makefile(makefile, pipeline_variant):
     makefile["Targets"] = makefile.pop("Makefile")
 
     _update_options(makefile)
-    _update_prefixes(makefile, pipeline_variant)
+
+    if pipeline_variant != 'trim':
+        _update_prefixes(makefile)
+
     _update_lanes(makefile)
     _update_tags(makefile)
 
@@ -369,7 +372,7 @@ def _update_options(makefile):
         _do_update_options(makefile["Options"], data, ())
 
 
-def _update_prefixes(makefile, pipeline_variant):
+def _update_prefixes(makefile):
     prefixes = {}
     for (name, values) in makefile.get("Prefixes", {}).iteritems():
         filename = values["Path"]
@@ -408,8 +411,9 @@ def _update_prefixes(makefile, pipeline_variant):
             record["Reference"] = record["Path"]
             prefixes[name] = record
 
-    if not (prefixes or pipeline_variant == "trim"):
+    if not prefixes:
         raise MakefileError("At least one prefix must be specified")
+
     makefile["Prefixes"] = prefixes
 
 

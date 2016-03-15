@@ -2,6 +2,8 @@
 Changelog
 =========
 
+  * Don't attempt to validate prefixes when running 'trim_pipeline'; note that
+    the structure the makefile still has to be valid.
   * Improve information capture when a node raises an unexpected exception,
     mainly for nodes implementing their own 'run' function (not CommandNodes).
   * Reverted commit normalizing the strand of unmapped reads.

@@ -188,11 +188,11 @@ def run(config, args, pipeline_variant):
     paleomix.logger.initialize(config, logfile_template)
     logger = logging.getLogger(__name__)
 
-    # Build .fai files for reference .fasta files
-    index_references(config, makefiles)
-
     pipeline_func = build_pipeline_trimming
     if pipeline_variant == "bam":
+        # Build .fai files for reference .fasta files
+        index_references(config, makefiles)
+
         pipeline_func = build_pipeline_full
 
     for makefile in makefiles:
