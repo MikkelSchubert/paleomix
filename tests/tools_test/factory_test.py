@@ -91,7 +91,7 @@ def test_factory__commands():
                 ("sample_pileup",   "usage: paleomix sample_pileup [options] --genotype in.vcf --intervals in.bed > out.fasta"),
                 ("vcf_filter",      "Usage: paleomix vcf_filter [options] [in1.vcf, ...]"),
                 ("vcf_to_fasta",    "usage: paleomix vcf_to_fasta [options] --genotype in.vcf --intervals in.bed"),
-                ("cat",             "usage: paleomix cat [options] [in|in.gz|in.bz2, ...]"))
+                ("cat",             "usage: paleomix cat [-h] [--output OUTPUT] file [file ...]"))
 
     for command, expected in commands:
         yield _do_test_factory__commands, command, expected
