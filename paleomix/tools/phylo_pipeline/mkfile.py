@@ -57,9 +57,9 @@ Project:
        # indels are only included in the final sequence if the length is
        # divisible by 3.
        ProteinCoding: no
-       # Do not include indels in final sequence; note that indels are still
-       # called, and used to filter SNPs. Requires that the option
-       # 'MultipleSequenceAlignment' is enabled
+       # Include indels in final sequence; note that indels are always called,
+       # and used to filter SNPs, even if not included in the resulting FASTA
+       # sequences. Requires that 'MultipleSequenceAlignment' is enabled
        IncludeIndels: yes
        # List of contigs for which heterozygous SNPs should be filtered
        # (site set to 'N') based on gender; All genders used in the 'Samples'
