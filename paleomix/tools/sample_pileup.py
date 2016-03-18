@@ -214,7 +214,7 @@ def main(argv):
 
     parser = argparse.ArgumentParser(prog=prog, usage=usage)
     parser.add_argument("--genotype", help="Tabix indexed pileup file.",
-                        required=True, metavar="VCF")
+                        required=True, metavar="PILEUP")
     parser.add_argument("--intervals", help="BED file.", required=True,
                         metavar="BED")
     parser.add_argument("--padding", type=int, default=10, metavar="BED",
