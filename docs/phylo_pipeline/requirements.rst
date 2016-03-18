@@ -41,15 +41,7 @@ Both programs offer a variety of makefiles suited for different server-architect
 Testing the pipeline
 --------------------
 
-An example project is included with the phylogenetic pipeline, and it is recommended to run this project in order to verify that the pipeline and required applications have been correctly installed. Note that running this example project requires that the BAM pipeline has already been setup, as described in section :ref:`bam_requirements`):
-
-    $ cd ~/install/pypeline/examples/phylo_pipeline/alignment/
-    $ ./setup.sh
-    $ bam_pipeline run 000_makefile.yaml
-    $ cd ../phylogeny
-    $ phylo_pipeline genotype+msa+phylogeny 000_makefile.yaml
-
-The resulting files are described in section :ref:`phylo_filestructure`.
+An example project is included with the phylogenetic pipeline, and it is recommended to run this project in order to verify that the pipeline and required applications have been correctly installed. See the :ref:`examples` section for a description of how to run this example project.
 
 
 .. _BEDTools: https://code.google.com/p/bedtools/

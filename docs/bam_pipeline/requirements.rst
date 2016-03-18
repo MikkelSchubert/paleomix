@@ -39,6 +39,12 @@ The example projects included in the PALEOMIX source distribution may be used to
 In case of errors, please consult the :ref:`troubleshooting` section.
 
 
+Testing the pipeline
+--------------------
+
+An example project is included with the BAM pipeline, and it is recommended to run this project in order to verify that the pipeline and required applications have been correctly installed. See the :ref:`examples` section for a description of how to run this example project.
+
+
 .. _AdapterRemoval: https://github.com/MikkelSchubert/adapterremoval
 .. _Bowtie2: http://bowtie-bio.sourceforge.net/bowtie2/
 .. _BWA: http://bio-bwa.sourceforge.net/
