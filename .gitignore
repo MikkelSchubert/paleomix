@@ -14,3 +14,8 @@ sdist
 
 tests/runs
 tests/links/
+
+*.egg/
+*.egg-info/
+.eggs
+.tox
