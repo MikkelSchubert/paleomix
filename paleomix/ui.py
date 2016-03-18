@@ -127,7 +127,7 @@ class CommandLine(object):
                 max_threads = max(1, max_threads - 1)
             elif character in "lL":
                 print_info(file=sys.stdout)
-                progress_printer = paleomix.ui.RunningUI()
+                progress_printer = RunningUI()
                 progress_printer.refresh(nodegraph)
                 progress_printer.flush()
             elif character in "hH":

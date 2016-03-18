@@ -34,8 +34,9 @@ import subprocess
 
 def _select_output(filename):
     """Returns a file-handle for 'filename'; if filename is '-' is stdout."""
-    if not filename or (filename == '-'):
+    if filename in (None, '-'):
         return sys.stdout
+
     return open(filename, 'wb')
 
 
@@ -71,22 +72,27 @@ def _call(input_files, output_file):
     return 0
 
 
+def parse_args(argv):
+    parser = argparse.ArgumentParser(prog="paleomix cat")
+    parser.add_argument("file", nargs="+",
+                        help="One or more input files; these may be "
+                             "uncompressed, compressed using gzip, or "
+                             "compressed using bzip2.")
+    parser.add_argument("--output", default=None,
+                        help="Write output to this file; by default, output "
+                             "is written to STDOUT.")
+
+    return parser.parse_args(argv)
+
+
 def main(argv):
     """Main function; takes a list of arguments but excluding sys.argv[0]."""
-    prog = "paleomix cat"
-    usage = "%s [options] [in|in.gz|in.bz2, ...]" % (prog,)
-
-    parser = argparse.ArgumentParser(prog=prog, usage=usage)
-    parser.add_argument("files", nargs="+", help="Input files.")
-    parser.add_argument("--output", default=None,
-                        help="Write output to this file; defaults to STDOUT.")
-
-    args = parser.parse_args(argv)
+    args = parse_args(argv)
 
     try:
-        return _call(input_files=args.files,
+        return _call(input_files=args.file,
                      output_file=args.output)
-    except Exception, error:  # pylint: disable=W0703
+    except Exception, error:
         sys.stderr.write("Error running 'paleomix cat':\n    %s\n\n" % error)
         sys.stderr.write("Command = %s\n" % (" ".join(sys.argv),))
         return 1
