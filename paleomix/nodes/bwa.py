@@ -108,7 +108,6 @@ class BWABacktrack(CommandNode):
 
         description \
             = _get_node_description(name="BWA Backtrack",
-                                    algorithm="SE",
                                     input_files_1=(parameters.input_file,),
                                     input_files_2=(),
                                     prefix=parameters.prefix,
@@ -213,7 +212,7 @@ class BWASampe(CommandNode):
         input_file_1 = parameters.input_file_fq_1
         input_file_2 = parameters.input_file_fq_2
         description = _get_node_description(name="BWA Samse",
-                                            algorithm="SE",
+                                            algorithm="PE",
                                             input_files_1=(input_file_1,),
                                             input_files_2=(input_file_2,),
                                             prefix=parameters.prefix)
