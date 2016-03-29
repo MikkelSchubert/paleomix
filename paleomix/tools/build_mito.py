@@ -80,7 +80,7 @@ def majority_sequence(handle, padding, contig_name, contig_length):
 
     statistics = {
         "sequence_len": len(sequence),
-        "sequence_name": handle.references[0],
+        "sequence_name": contig_name,
         "nucleotides": coverage,
         "covered_sites": covered,
         "covered_pct": round((100.0 * covered) / len(sequence), 1),
