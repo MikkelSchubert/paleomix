@@ -243,13 +243,11 @@ def build_mito_nodes(config, root, bamfile, dependencies=()):
 
     samples = os.path.join(root, "figures", "samples.txt")
 
-    index = BAMIndexNode(infile=bamfile, dependencies=dependencies)
-
     mt_prefix = os.path.join(root, "mitochondria", "sequences")
     alignment = mitochondria.MitoConsensusNode(database=config.tablefile,
                                                bamfile=bamfile,
                                                output_prefix=mt_prefix,
-                                               dependencies=(index,))
+                                               dependencies=dependencies)
 
     raxml_template = os.path.join(root, "mitochondria", "raxml_%s")
     phylo = RAxMLRapidBSNode.customize(input_alignment=mt_prefix + ".phy",
@@ -270,7 +268,7 @@ def build_mito_nodes(config, root, bamfile, dependencies=()):
     return (trees,)
 
 
-def build_pipeline(config, root, nuc_bam, mito_bam):
+def build_pipeline(config, root, nuc_bam, mito_bam, cache):
     nodes = []
     sample_tbl = os.path.join(root, "figures", "samples.txt")
     samples = common_nodes.WriteSampleList(config=config,
@@ -280,10 +278,12 @@ def build_pipeline(config, root, nuc_bam, mito_bam):
         # When not sampling, BuildTPED relies on indexed access to ease
         # processing of one chromosome at a time. The index is further required
         # for idxstats used by the PlotCoverageNode.
-        index = BAMIndexNode(infile=nuc_bam)
+        index = cache.get(nuc_bam)
+        if index is None:
+            index = cache[nuc_bam] = BAMIndexNode(infile=nuc_bam)
 
         plink = build_plink_nodes(config, config.database, root, nuc_bam,
-                                  (samples, index))
+                                  dependencies=(samples, index))
 
         nodes.extend(build_admixture_nodes(config, config.database, root,
                                            plink))
@@ -297,7 +297,12 @@ def build_pipeline(config, root, nuc_bam, mito_bam):
                                              root, plink))
 
     if mito_bam is not None and not config.admixture_only:
-        nodes.extend(build_mito_nodes(config, root, mito_bam, samples))
+        index = cache.get(mito_bam)
+        if index is None:
+            index = cache[mito_bam] = BAMIndexNode(infile=mito_bam)
+
+        nodes.extend(build_mito_nodes(config, root, mito_bam,
+                                      dependencies=(samples, index)))
 
     if not config.admixture_only:
         nodes.append(report.ReportNode(config, root, nuc_bam, mito_bam,
@@ -311,13 +316,14 @@ def run_admix_pipeline(config):
     if not config.dry_run:
         fileutils.make_dirs(config.temp_root)
 
+    cache = {}
     nodes = []
     for sample in config.samples.itervalues():
         root = sample["Root"]
         nuc_bam = sample["Files"].get("Nuc")
         mito_bam = sample["Files"].get("Mito")
 
-        nodes.extend(build_pipeline(config, root, nuc_bam, mito_bam))
+        nodes.extend(build_pipeline(config, root, nuc_bam, mito_bam, cache))
 
     if config.multisample and not config.admixture_only:
         nodes = [summary.SummaryNode(config, nodes)]
