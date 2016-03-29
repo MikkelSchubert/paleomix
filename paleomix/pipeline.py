@@ -38,7 +38,10 @@ from paleomix.node import \
     Node, \
     NodeError, \
     NodeUnhandledException
-from paleomix.nodegraph import NodeGraph, NodeGraphError
+from paleomix.nodegraph import \
+    FileStatusCache, \
+    NodeGraph, \
+    NodeGraphError
 from paleomix.common.utilities import \
     safe_coerce_to_tuple, \
     fast_pickle_test
@@ -253,13 +256,20 @@ class Pypeline(object):
         return input_files - output_files
 
     def list_output_files(self):
+        cache = FileStatusCache()
+        nodegraph = NodeGraph(self._nodes, lambda: cache)
         output_files = {}
-        nodegraph = NodeGraph(self._nodes)
 
         def collect_output_files(node):
-            state = nodegraph.get_node_state(node)
+            state = None
+            if nodegraph.is_done(node, cache):
+                state = nodegraph.DONE
+                if nodegraph.is_outdated(node, cache):
+                    state = nodegraph.OUTDATED
+
             for filename in node.output_files:
                 output_files[os.path.abspath(filename)] = state
+
             return True
 
         self.walk_nodes(collect_output_files)

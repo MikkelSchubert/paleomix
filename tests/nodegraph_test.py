@@ -83,7 +83,7 @@ def setup_module():
 def test_nodegraph_is_done__no_output():
     cache = FileStatusCache()
     node = flexmock(output_files=())
-    assert NodeGraph._is_done(node, cache)
+    assert NodeGraph.is_done(node, cache)
 
 
 @with_temp_folder
@@ -91,11 +91,11 @@ def test_nodegraph_is_done__output_changes(temp_folder):
     temp_file_1 = os.path.join(temp_folder, "file_1.txt")
     temp_file_2 = os.path.join(temp_folder, "file_2.txt")
     my_node = flexmock(output_files=(temp_file_1, temp_file_2))
-    assert not NodeGraph._is_done(my_node, FileStatusCache())
+    assert not NodeGraph.is_done(my_node, FileStatusCache())
     set_file_contents(temp_file_1, "foo")
-    assert not NodeGraph._is_done(my_node, FileStatusCache())
+    assert not NodeGraph.is_done(my_node, FileStatusCache())
     set_file_contents(temp_file_2, "bar")
-    assert NodeGraph._is_done(my_node, FileStatusCache())
+    assert NodeGraph.is_done(my_node, FileStatusCache())
 
 
 @with_temp_folder
@@ -104,43 +104,43 @@ def test_nodegraph_is_done__subnode_not_considered(temp_folder):
     subnode = flexmock(output_files=(temp_file,))
     my_node = flexmock(output_files=(),
                        subnodes=(subnode,))
-    assert NodeGraph._is_done(my_node, FileStatusCache())
+    assert NodeGraph.is_done(my_node, FileStatusCache())
 
 
 def test_nodegraph_is_outdated__no_output():
     my_node = flexmock(input_files=(),
                        output_files=())
-    assert not NodeGraph._is_outdated(my_node, FileStatusCache())
+    assert not NodeGraph.is_outdated(my_node, FileStatusCache())
 
 
 def test_nodegraph_is_outdated__input_but_no_output():
     my_node = flexmock(input_files=_IN_FILES,
                        output_files=())
-    assert not NodeGraph._is_outdated(my_node, FileStatusCache())
+    assert not NodeGraph.is_outdated(my_node, FileStatusCache())
 
 
 def test_nodegraph_is_outdated__output_but_no_input():
     my_node = flexmock(input_files=(),
                        output_files=_OUT_FILES)
-    assert not NodeGraph._is_outdated(my_node, FileStatusCache())
+    assert not NodeGraph.is_outdated(my_node, FileStatusCache())
 
 
 def test_nodegraph_is_outdated__not_outdated():
     my_node = flexmock(input_files=(test_file("timestamp_a_older"),),
                        output_files=(test_file("timestamp_a_younger"),))
-    assert not NodeGraph._is_outdated(my_node, FileStatusCache())
+    assert not NodeGraph.is_outdated(my_node, FileStatusCache())
 
 
 def test_nodegraph_is_outdated__outdated():
     my_node = flexmock(input_files=(test_file("timestamp_a_younger"),),
                        output_files=(test_file("timestamp_a_older"),))
-    assert NodeGraph._is_outdated(my_node, FileStatusCache())
+    assert NodeGraph.is_outdated(my_node, FileStatusCache())
 
 
 def test_nodegraph_is_outdated__updates():
     my_node = flexmock(input_files=(test_file("timestamp_a_older"),),
                        output_files=(test_file("timestamp_a_younger"),))
-    assert not NodeGraph._is_outdated(my_node, FileStatusCache())
+    assert not NodeGraph.is_outdated(my_node, FileStatusCache())
     my_node = flexmock(input_files=(test_file("timestamp_a_younger"),),
                        output_files=(test_file("timestamp_a_older"),))
-    assert NodeGraph._is_outdated(my_node, FileStatusCache())
+    assert NodeGraph.is_outdated(my_node, FileStatusCache())

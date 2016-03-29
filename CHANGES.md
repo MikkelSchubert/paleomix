@@ -2,6 +2,11 @@
 Changelog
 =========
 
+  * Improve printing of the state of output files when using the command-line
+    option --list-output-files. Outdated files are now always listed as
+    outdated, where previously these could be listed as 'Missing' if the task
+    in question was queued to be run next.
+  * Fix mislabeling of BWA nodes; all were labeled as 'SE'.
   * Don't attempt to validate prefixes when running 'trim_pipeline'; note that
     the structure the makefile still has to be valid.
   * Improve information capture when a node raises an unexpected exception,
