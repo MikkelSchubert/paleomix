@@ -333,16 +333,28 @@ def run_admix_pipeline(config):
 
 
 def setup_mito_mapping(config):
-    if os.path.exists(config.destination):
-        # A bit strict, but avoid accidential overwrites
-        print_err("ERROR: Destination folder already exists, "
-                  "cannot proceed:\n  - %r" % (config.destination,))
-        return 1
-
     genomes_root = os.path.join(config.destination, "genomes")
-    fileutils.make_dirs(genomes_root)
+    if not os.path.exists(genomes_root):
+        fileutils.make_dirs(genomes_root)
 
     mkfile_fpath = os.path.join(config.destination, "makefile.yaml")
+
+    filenames = [mkfile_fpath]
+    for name, record in sorted(config.database.mitochondria.iteritems()):
+        filenames.append(os.path.join(genomes_root, "%s.fasta"
+                                      % (record.name,)))
+
+    existing_filenames = [filename for filename in filenames
+                          if os.path.exists(filename)]
+
+    # A bit strict, but avoid accidential overwrites
+    if existing_filenames:
+        print_err("ERROR: Output file(s) already exists, "
+                  "cannot proceed:\n    %s"
+                  % ("\n    ".join(map(repr, existing_filenames),)))
+
+        return 1
+
     with open(mkfile_fpath, "w") as mkfile:
         mkfile.write(bam_mkfile.build_makefile(add_prefix_tmpl=False,
                                                add_sample_tmpl=False))
@@ -355,7 +367,22 @@ def setup_mito_mapping(config):
                 continue
 
             mkfile.write("  %s:\n" % (record.name,))
-            mkfile.write("    Path: genomes/%s.fasta\n\n" % (record.name,))
+            mkfile.write("    Path: genomes/%s.fasta\n" % (record.name,))
+
+            info = config.database.samples.get(record.name)
+            if info is not None:
+                mkfile.write("    # Group: %s\n"
+                             % (info.get('Group(3)', 'NA'),))
+                mkfile.write("    # Species: %s\n"
+                             % (info.get('Species', 'NA'),))
+                mkfile.write("    # Sex: %s\n"
+                             % (info.get('Sex', 'NA'),))
+                mkfile.write("    # Publication: %s\n"
+                             % (info.get('Publication', 'NA'),))
+                mkfile.write("    # Sample ID: %s\n"
+                             % (info.get('SampleID', 'NA'),))
+
+            mkfile.write('\n')
 
             fasta_fpath = os.path.join(genomes_root,
                                        "%s.fasta" % (record.name,))
