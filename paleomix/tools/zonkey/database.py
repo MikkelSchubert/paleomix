@@ -19,13 +19,17 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import os
 import tarfile
 
 import pysam
 
 import paleomix.yaml
 
-from paleomix.common.formats.fasta import FASTA
+from paleomix.common.fileutils import \
+    swap_ext
+from paleomix.common.formats.fasta import \
+    FASTA
 from paleomix.tools.zonkey.common import \
     get_sample_names, \
     contig_name_to_plink_name
@@ -449,8 +453,19 @@ def _validate_mito_bam(data, handle, info):
                       % (bam_contig, bam_length, db_length))
             return False
 
-        for line in pysam.idxstats(handle.filename):
-            name, _, hits, _ = line.strip().split('\t')
+        if not os.path.exists(handle.filename + '.bai') \
+                and not os.path.exists(swap_ext(handle.filename, '.bai')):
+            print_warn('WARNING:\nAttempting to index BAM file %r!'
+                       % (handle.filename,))
+            pysam.index(handle.filename)
+
+        # Workaround for pysam < 0.9 returning list, >= 0.9 returning str
+        for line in "".join(pysam.idxstats(handle.filename)).split('\n'):
+            line = line.strip()
+            if not line:
+                continue
+
+            name, _, hits, _ = line.split('\t')
             if (name == bam_contig) and not int(hits):
                 print_err("ERROR: Mitochondrial BAM (%r) does not contain "
                           "any reads aligned to contig %r; inferring an "

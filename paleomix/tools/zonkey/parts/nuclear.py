@@ -715,8 +715,13 @@ class PlotCoverageNode(CommandNode):
         with open(os.path.join(temp, "contigs.table"), "w") as handle:
             handle.write("ID\tSize\tNs\tHits\n")
 
-            for line in pysam.idxstats(self._input_file):
-                name, size, hits, _ = line.strip().split('\t')
+            # Workaround for pysam < 0.9 returning list, >= 0.9 returning str
+            for line in "".join(pysam.idxstats(self._input_file)).split('\n'):
+                line = line.strip()
+                if not line:
+                    continue
+
+                name, size, hits, _ = line.split('\t')
                 name = contig_name_to_plink_name(name)
                 if name is None or not (name.isdigit() or name == 'X'):
                     continue
