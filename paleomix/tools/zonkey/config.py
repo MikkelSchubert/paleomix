@@ -41,8 +41,7 @@ import paleomix.tools.zonkey.database as database
 
 _USAGE = """USAGE:
 {0} run <SampleDB> <samples.txt> [<destination>]
-{0} run <SampleDB> <nuclear.bam> [<destination>]
-{0} run <SampleDB> <mitochondrial.bam> [<destination>]
+{0} run <SampleDB> <sample.bam> [<destination>]
 {0} run <SampleDB> <nuclear.bam> <mitochondrial.bam> <destination>
 {0} dryrun <SampleDB> [...]
 {0} mito <SampleDB> <destination>
@@ -280,7 +279,7 @@ def _read_sample_table(config, filename):
 
 
 def _parse_arguments(argv):
-    per_host_cfg = PerHostConfig("hybrid_pipeline")
+    per_host_cfg = PerHostConfig("zonkey")
 
     usage_str = "%prog <command> [options] <SampleDB> <bam/sam> [destination]"
     version_str = "%%prog v%s" % (paleomix.__version__,)
