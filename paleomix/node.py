@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -20,11 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import collections
 import os
 import sys
-import types
 import traceback
-import collections
+import types
 
 import paleomix.common.fileutils as fileutils
 from paleomix.common.utilities import \
@@ -74,7 +74,7 @@ class Node(object):
         # changes to the input, and nodes with output but no input are not
         # expected based on current usage.
         if not self.input_files and self.output_files:
-            raise NodeError("Node not dependant upon input files: %s" % self)
+            raise NodeError("Node not dependent upon input files: %s" % self)
 
     def run(self, config):
         """Runs the node, by calling _setup, _run, and _teardown in that order.
@@ -156,7 +156,7 @@ class Node(object):
         prefix = "\n                   "
         message = ["Command          = %r" % (" ".join(sys.argv),),
                    "CWD              = %r" % (os.getcwd(),),
-                   "PATH             = %r" % (os.environ.get('PATH', '')),
+                   "PATH             = %r" % (os.environ.get('PATH', ''),),
                    "Node             = %s" % (str(self),),
                    "Threads          = %i" % (self.threads,),
                    "Input files      = %s" % (prefix.join(sorted(self.input_files)),),
