@@ -107,7 +107,8 @@ class BWABacktrack(CommandNode):
                                for key in parameters.order])
 
         description \
-            = _get_node_description(name="BWA Backtrack",
+            = _get_node_description(name="BWA",
+                                    algorithm='Backtrack',
                                     input_files_1=(parameters.input_file,),
                                     input_files_2=(),
                                     prefix=parameters.prefix,
@@ -154,7 +155,6 @@ class BWASamse(CommandNode):
 
         input_file = parameters.input_file_fq
         description = _get_node_description(name="BWA Samse",
-                                            algorithm="SE",
                                             input_files_1=(input_file,),
                                             input_files_2=(),
                                             prefix=parameters.prefix)
@@ -211,8 +211,7 @@ class BWASampe(CommandNode):
 
         input_file_1 = parameters.input_file_fq_1
         input_file_2 = parameters.input_file_fq_2
-        description = _get_node_description(name="BWA Samse",
-                                            algorithm="PE",
+        description = _get_node_description(name="BWA Sampe",
                                             input_files_1=(input_file_1,),
                                             input_files_2=(input_file_2,),
                                             prefix=parameters.prefix)
@@ -272,17 +271,17 @@ class BWAAlgorithmNode(CommandNode):
         _check_bwa_prefix(parameters.prefix)
         algorithm = parameters.algorithm.upper()
         algorithm += "_PE" if parameters.input_file_2 else "_SE"
-        description = _get_node_description(name="BWA",
-                                            algorithm=algorithm,
-                                            input_files_1=parameters.input_file_1,
-                                            input_files_2=parameters.input_file_2,
-                                            prefix=parameters.prefix)
+        desc = _get_node_description(name="BWA",
+                                     algorithm=algorithm,
+                                     input_files_1=(parameters.input_file_1,),
+                                     input_files_2=(parameters.input_file_2,),
+                                     prefix=parameters.prefix)
 
         command = ParallelCmds([cmd.finalize()
                                 for cmd in parameters.commands.itervalues()])
         CommandNode.__init__(self,
                              command=command,
-                             description=description,
+                             description=desc,
                              threads=parameters.threads,
                              dependencies=parameters.dependencies)
 
@@ -411,12 +410,22 @@ def _build_cat_command(input_file, output_file):
     return cat
 
 
-def _get_node_description(name, algorithm, input_files_1, input_files_2 = (), prefix = None, threads = 1):
-    threads_str     = ("%i threads" % (threads,)) if (threads > 1) else None
-    prefix_str      = os.path.basename(prefix) if prefix else None
-    if prefix_str.endswith(".fasta") or prefix_str.endswith(".fa"):
-        prefix_str  = prefix_str.rsplit(".", 1)[0]
-    file_desc       = describe_paired_files(input_files_1, input_files_2 or ())
-    info            = ", ".join(filter(None, (prefix_str, algorithm, threads_str)))
+def _get_node_description(name, input_files_1, input_files_2=(),
+                          algorithm=None, prefix=None, threads=1):
+    info = []
+    if prefix is not None:
+        prefix = os.path.basename(prefix)
+        if prefix.endswith(".fasta") or prefix.endswith(".fa"):
+            prefix = prefix.rsplit(".", 1)[0]
 
-    return "<%s (%s): %s>" % (name, info, file_desc)
+        info.append(prefix)
+
+    if algorithm is not None:
+        info.append(algorithm)
+
+    if threads > 1:
+        info.append("%i threads" % (threads,))
+
+    file_desc = describe_paired_files(input_files_1, input_files_2 or ())
+
+    return "<%s (%s): %s>" % (name, ", ".join(info), file_desc)
