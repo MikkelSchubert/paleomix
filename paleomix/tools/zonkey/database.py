@@ -87,16 +87,32 @@ class ZonkeyDB(object):
     def __init__(self, filename):
         self.filename = filename
 
+        if not os.path.exists(filename):
+            raise ZonkeyDBError('Database file does not exist')
+        elif not tarfile.is_tarfile(filename):
+            raise ZonkeyDBError('Database file is not a valid tar-file')
+
+        print_info('Reading Zonkey database from %r ...' % (filename,))
+
+        # Warn if file is gzip / bzip2 compressed; gives worse throughput
+        _check_file_compression(filename)
+
         with tarfile.open(filename) as tar_handle:
+            print_info('  - Reading settings ...')
             self.settings = self._read_settings(tar_handle, "settings.yaml")
+            print_info('  - Reading list of contigs ...')
             self.contigs = self._read_contigs_table(tar_handle, "contigs.txt")
+            print_info('  - Reading list of samples ...')
             self.samples = self._read_samples_table(tar_handle, "samples.txt")
-            self.sample_order = self._read_sample_order(tar_handle,
-                                                        "genotypes.txt")
+            print_info('  - Reading mitochondrial sequences ...')
             self.mitochondria = self._read_mitochondria(tar_handle,
                                                         "mitochondria.fasta")
+            print_info('  - Reading emperical admixture distribution ...')
             self.simulations = self._read_simulations(tar_handle,
                                                       "simulations.txt")
+            print_info('  - Determining sample order ...')
+            self.sample_order = self._read_sample_order(tar_handle,
+                                                        "genotypes.txt")
 
         self._cross_validate()
 
@@ -514,3 +530,23 @@ def _validate_nuclear_bam(data, handle, info):
             info.nuclear = True
 
     return True
+
+
+def _check_file_compression(filename):
+    try:
+        with open(filename) as handle:
+            header = handle.read(2)
+
+            if header == "\x1f\x8b":
+                print_warn('\nWARNING:\n'
+                           'Zonkey database file %r is gzip compressed;\n'
+                           'uncompressing the archive is recommended:\n'
+                           '  $ gunzip "%s"\n' % (filename, filename))
+            elif header == "BZ":
+                print_warn('\nWARNING:\n'
+                           'Zonkey database file %r is bzip2 compressed;\n'
+                           'uncompressing the archive is recommended:\n'
+                           '  $ bunzip2 "%s"\n' % (filename, filename))
+    except IOError:
+        # Errors are ignored at this stage
+        pass
