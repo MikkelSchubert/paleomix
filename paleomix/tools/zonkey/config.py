@@ -45,6 +45,7 @@ _USAGE = """USAGE:
 {0} run <SampleDB> <nuclear.bam> <mitochondrial.bam> <destination>
 {0} dryrun <SampleDB> [...]
 {0} mito <SampleDB> <destination>
+{0} example <SampleDB> <destination>
 """
 
 # List of valid commands / aliases, currently mostly undocumented
@@ -57,6 +58,8 @@ _CMD_ALIASES = {
     "run": "run",
     "dryrun": "dryrun",
     "dry_run": "dryrun",
+    "example": "example",
+    "examples": "example",
 }
 
 
@@ -108,7 +111,7 @@ def parse_run_config(config, args):
                             ", ".join(map(repr, sorted(known_samples)))))
         return
 
-    if config.command == "mito":
+    if config.command in ("mito", "example"):
         if len(args) != 2:
             sys.stderr.write("ERROR: Wrong number of arguments!\n")
             print_usage()

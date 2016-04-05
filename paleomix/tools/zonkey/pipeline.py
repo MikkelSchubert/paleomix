@@ -22,6 +22,8 @@
 #
 import logging
 import os
+import shutil
+import tarfile
 import time
 
 import paleomix
@@ -32,6 +34,7 @@ import paleomix.common.fileutils as fileutils
 
 from paleomix.common.console import \
     print_err, \
+    print_info, \
     print_warn
 
 from paleomix.pipeline import \
@@ -396,6 +399,43 @@ def setup_mito_mapping(config):
     return 0
 
 
+def setup_example(config):
+    root = os.path.join(config.destination, 'zonkey_pipeline')
+
+    with tarfile.TarFile(config.tablefile) as tar_handle:
+        example_files = []
+        existing_files = []
+        for member in tar_handle.getmembers():
+            if os.path.dirname(member.name) == 'examples' and member.isfile():
+                example_files.append(member)
+
+                destination = fileutils.reroot_path(root, member.name)
+                if os.path.exists(destination):
+                    existing_files.append(destination)
+
+        if existing_files:
+            print_err("Output files already exist at destination:\n    - %s"
+                      % ("\n    - ".join(map(repr, existing_files))))
+            return 1
+        elif not example_files:
+            print_err("Sample database %r does not contain example data; "
+                      "cannot proceed." % (config.tablefile,))
+            return 1
+
+        if not os.path.exists(root):
+            fileutils.make_dirs(root)
+
+        for member in example_files:
+            destination = fileutils.reroot_path(root, member.name)
+            src_handle = tar_handle.extractfile(member)
+            with open(destination, 'w') as out_handle:
+                shutil.copyfileobj(src_handle, out_handle)
+
+    print_info("Sucessfully saved example data in %r" % (root,))
+
+    return 0
+
+
 def main(argv):
     try:
         config = zonkey_config.parse_config(argv)
@@ -409,5 +449,7 @@ def main(argv):
         return run_admix_pipeline(config)
     elif config.command == "mito":
         return setup_mito_mapping(config)
+    elif config.command == "example":
+        return setup_example(config)
 
     return 1
