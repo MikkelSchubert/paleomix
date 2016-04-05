@@ -93,7 +93,7 @@ class DrawPhylogenyNode(CommandNode):
             tree = Newick.from_string(handle.read().strip())
 
         tree = tree.reroot_on_midpoint()
-        tree = tree.add_support(bootstraps, "{Percentage}")
+        tree = tree.add_support(bootstraps, "{Percentage:.0f}")
         with open(os.path.join(temp, "rerooted.newick"), "w") as handle:
             handle.write("{}\n".format(tree))
 
