@@ -50,7 +50,6 @@ plot.pca <- function(input_prefix, names.table=NULL)
     final <- merge(d, colors)
 
     pp <- ggplot(final)
-    #pp <- pp + geom_text(aes(x=X, y=Y, label=Name))
     pp <- pp + geom_dl(aes(x=X, y=Y, label=Name), list('last.bumpup',
                        cex = 1.2, hjust = 1))
     pp <- pp + geom_point(aes(x=X, y=Y), color=final$Color, size=3)
@@ -61,17 +60,12 @@ plot.pca <- function(input_prefix, names.table=NULL)
     pp <- pp + theme_minimal()
     pp <- pp + xlim(calc.lims(final$X, final$Y))
     pp <- pp + ylim(calc.lims(final$Y, final$X))
+
+    # Force 1:1 aspect ratio for the PCA plot; this must be done in
+    # order to prevent misrepresenting distances on different axes.
     pp <- pp + coord_fixed()
 
     return(pp)
-
-#    plot(d$V3~d$V2,
-#         col = colors,
-#         xlim = calc.lims(d$V2, d$V3),
-#         ylim = calc.lims(d$V3, d$V2),
-#         pch = 20)#
-#
-#    with(d, text(d$V3~d$V2, labels = names, pos = 3, cex=1))
 }
 
 
