@@ -455,7 +455,7 @@ def _validate_mito_bam(data, handle, info):
 
         if not os.path.exists(handle.filename + '.bai') \
                 and not os.path.exists(swap_ext(handle.filename, '.bai')):
-            print_warn('WARNING:\nAttempting to index BAM file %r!'
+            print_info('    - Attempting to index BAM file %r!'
                        % (handle.filename,))
             pysam.index(handle.filename)
 

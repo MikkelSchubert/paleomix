@@ -29,6 +29,10 @@ import pysam
 import paleomix
 import paleomix.ui
 
+from paleomix.ui import \
+    print_err, \
+    print_info
+
 from paleomix.config import \
     ConfigError, \
     PerHostValue, \
@@ -77,7 +81,7 @@ def parse_config(argv):
 
     config.command = _CMD_ALIASES.get(args[0])
     if config.command is None:
-        sys.stderr.write("ERROR: Unknown command %r\n" % (args[0],))
+        print_err("ERROR: Unknown command %r" % (args[0],))
         return
     elif config.command == "dryrun":
         config.command = "run"
@@ -97,23 +101,23 @@ def parse_run_config(config, args):
     try:
         config.database = database.ZonkeyDB(config.tablefile)
     except database.ZonkeyDBError, error:
-        sys.stderr.write("ERROR reading database %r: %s\n"
-                         % (config.tablefile, error))
+        print_err("ERROR reading database %r: %s"
+                  % (config.tablefile, error))
         return
 
     known_samples = set(config.database.samples) | set(("Sample",))
     unknown_samples = set(config.treemix_outgroup) - known_samples
     if unknown_samples:
-        sys.stderr.write("ERROR: Argument --treemix-outgroup includes unknown "
-                         "sample(s): %s; known samples are %s. Note that "
-                         "names are case-sensitive.\n"
-                         % (", ".join(map(repr, sorted(unknown_samples))),
-                            ", ".join(map(repr, sorted(known_samples)))))
+        print_err("ERROR: Argument --treemix-outgroup includes unknown "
+                  "sample(s): %s; known samples are %s. Note that "
+                  "names are case-sensitive."
+                  % (", ".join(map(repr, sorted(unknown_samples))),
+                     ", ".join(map(repr, sorted(known_samples)))))
         return
 
     if config.command in ("mito", "example"):
         if len(args) != 2:
-            sys.stderr.write("ERROR: Wrong number of arguments!\n")
+            print_err("ERROR: Wrong number of arguments!")
             print_usage()
             return
 
@@ -124,7 +128,7 @@ def parse_run_config(config, args):
         config.destination = fileutils.swap_ext(filename, ".zonkey")
 
         if not os.path.isfile(filename):
-            sys.stderr.write("ERROR: Not a valid filename: %r\n" % (filename,))
+            print_err("ERROR: Not a valid filename: %r" % (filename,))
             return
         elif _is_bamfile(filename):
             # Called as either of
@@ -139,7 +143,7 @@ def parse_run_config(config, args):
     elif 3 <= len(args) <= 4:
         root = args[-1]
         if os.path.exists(root) and not os.path.isdir(root):
-            sys.stderr.write("ERROR: Missing destination folder.\n")
+            print_err("ERROR: Missing destination folder.")
             print_usage()
             return
 
@@ -152,8 +156,7 @@ def parse_run_config(config, args):
             filename = args[-2]
 
             if not os.path.isfile(filename):
-                sys.stderr.write("ERROR: Not a valid filename: %r\n"
-                                 % (filename,))
+                print_err("ERROR: Not a valid filename: %r" % (filename,))
                 return
             elif _is_bamfile(filename):
                 # Called as either of
@@ -197,49 +200,44 @@ def _process_samples(config):
         files = {}
 
         if name == "-":
-            sys.stderr.write("Validating unnamed sample ...\n")
+            print_info("Validating unnamed sample ...")
         else:
-            sys.stderr.write("Validating sample %r ...\n" % (name,))
+            print_info("Validating sample %r ..." % (name,))
 
         for filename in info.pop("Files"):
             filetype = config.database.validate_bam(filename)
             if not filetype:
-                sys.stderr.write("ERROR: File is not a valid BAM file: %r\n"
-                                 % (filename,))
+                print_err("ERROR: File is not a valid BAM file: %r"
+                          % (filename,))
                 return False
 
             if filetype.is_nuclear and filetype.is_mitochondrial:
                 if "Nuc" in files:
-                    sys.stderr.write("ERROR: Two nuclear BAMs specified!\n")
+                    print_err("ERROR: Two nuclear BAMs specified!")
                     return False
                 elif "Mito" in files:
-                    sys.stderr.write("WARNING: Nuclear + mitochondrial BAM, "
-                                     "and mitochondrial BAM specified; the "
-                                     "mitochondrial genome in the first BAM "
-                                     "will not be used!\n")
+                    print_err("WARNING: Nuclear + mitochondrial BAM, and "
+                              "mitochondrial BAM specified; the mitochondrial "
+                              "genome in the first BAM will not be used!")
 
                 files["Nuc"] = filename
                 files.setdefault("Mito", filename)
             elif filetype.is_nuclear:
                 if "Nuc" in files:
-                    sys.stderr.write("ERROR: Two nuclear BAMs specified!\n")
+                    print_err("ERROR: Two nuclear BAMs specified!")
                     return False
 
                 files["Nuc"] = filename
             elif filetype.is_mitochondrial:
                 if "Mito" in files:
-                    sys.stderr.write("ERROR: Two nuclear BAMs specified!\n")
+                    print_err("ERROR: Two nuclear BAMs specified!")
                     return False
 
                 files["Mito"] = filename
             else:
-                sys.stderr.write("ERROR: BAM does not contain known nuclear "
-                                 "or mitochondrial contigs: %r\n"
-                                 % (filename,))
+                print_err("ERROR: BAM does not contain known nuclear "
+                          "or mitochondrial contigs: %r" % (filename,))
                 return False
-
-#        print_info("Found mt sequence; %r, %i bp, %i bp padding.\n"
-#                   % (bam_contig, bam_length, bam_padding))
 
         config.samples[name]["Files"] = files
 
@@ -252,7 +250,7 @@ def _read_sample_table(config, filename):
     either one or to two BAM files, which must represent a single nuclear or
     a single mitochondrial alignment (2 columns), or both (3 columns).
     """
-    sys.stderr.write("Reading table of samples from %r\n" % (filename,))
+    print_info("Reading table of samples from %r" % (filename,))
 
     samples = config.samples = {}
     with fileutils.open_ro(filename) as handle:
@@ -262,17 +260,17 @@ def _read_sample_table(config, filename):
 
             fields = filter(None, line.rstrip('\r\n').split('\t'))
             if len(fields) not in (2, 3):
-                sys.stderr.write("Error reading sample table (%r) at line %i; "
-                                 "expected 2 or 3 columns, found %i; please "
-                                 "correct file before continuing."
-                                 % (filename, linenum, len(fields)))
+                print_err("Error reading sample table (%r) at line %i; "
+                          "expected 2 or 3 columns, found %i; please "
+                          "correct file before continuing."
+                          % (filename, linenum, len(fields)))
                 return
 
             name = fields[0]
             if name in samples:
-                sys.stderr.write("Duplicate sample name found in sample table "
-                                 "(%r) at line %i: %r. All sample names must "
-                                 "be unique!" % (filename, linenum, name))
+                print_err("Duplicate sample name found in sample table "
+                          "(%r) at line %i: %r. All sample names must "
+                          "be unique!" % (filename, linenum, name))
                 return
 
             samples[name] = {"Root": os.path.join(config.destination, name),
