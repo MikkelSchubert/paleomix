@@ -11,9 +11,10 @@ References
 .. [Li2009a] Li and Durbin. "**Fast and accurate short read alignment with Burrows-Wheeler transform**". Bioinformatics. 2009 Jul 15;25(14):1754-60. doi:10.1093/bioinformatics/btp324
 .. [Li2009b] Li *et al*. "**The Sequence Alignment/Map format and SAMtools**". Bioinformatics. 2009 Aug 15;25(16):2078-9. doi:10.1093/bioinformatics/btp352
 .. [Lindgreen2012] Lindgreen. "**AdapterRemoval: Easy Cleaning of Next Generation Sequencing Reads**", BMC Research Notes. 2012 Jul 5:337.
-.. [McKenna2010] McKenna *et al*. "**The Genome Analysis Toolkit: a MapReduce framework for analyzing next-generation DNA sequencing data**"". Genome Res. 2010 Sep;20(9):1297-303. doi:10.1101/gr.107524.110
+.. [McKenna2010] McKenna *et al*. "**The Genome Analysis Toolkit: a MapReduce framework for analyzing next-generation DNA sequencing data**". Genome Res. 2010 Sep;20(9):1297-303. doi:10.1101/gr.107524.110
 .. [Paradis2004] Paradis *et al*. "**APE: Analyses of Phylogenetics and Evolution in R language**". Bioinformatics. 2004 Jan 22;20(2):289-90. doi:10.1093/bioinformatics/btg412
 .. [Patterson2006] Patterson N, Price AL, Reich D. Population structure and eigenanalysis. PLoS Genet. 2006 Dec;2(12):e190. doi:10.1371/journal.pgen.0020190
+.. [Peltzer2016] Peltzer *et al*. "**EAGER: efficient ancient genome reconstruction**". Genome Biology. 2016 Mar 9; 17:60. doi:10.1186/s13059-016-0918-z
 .. [Pickrell2012] Pickrell and Pritchard. "**Inference of population splits and mixtures from genome-wide allele frequency data**". PLoS Genet. 2012;8(11):e1002967. doi:10.1371/journal.pgen.1002967
 .. [Price2006] Price *et al*. "**Principal components analysis corrects for stratification in genome-wide association studies**". Nat Genet. 2006 Aug;38(8):904-9. Epub 2006 Jul 23. doi:10.1038/ng1847
 .. [Quinlan2010] Quinlan and Hall. "**BEDTools: a flexible suite of utilities for comparing genomic features**". Bioinformatics. 2010 Mar 15;26(6):841-2. doi:10.1093/bioinformatics/btq033
