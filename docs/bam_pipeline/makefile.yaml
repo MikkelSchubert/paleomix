@@ -98,7 +98,7 @@ Options:
     Collapsed: no           # Overlapping paired-ended reads collapsed into a
                             # single sequence by AdapterRemoval
     CollapsedTruncated: no  # Like 'Collapsed', except that the reads
-                            # truncated due to the presence ambigious
+                            # truncated due to the presence ambiguous
                             # bases or low quality bases at read termini.
 
   # Optional steps to perform during processing

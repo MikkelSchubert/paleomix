@@ -5,7 +5,7 @@
 Configuring the BAM pipeline
 ============================
 
-The BAM pipeline exposes a number options, including the maximum number of threads used, and the maximum number of threads used for individual programs, the location of JAR files, and more. These may be set using the corresponding command-line options (e.g. --max-threads). However, it is also possible to set default values for such options, including on a per-host bases. This is accomplished by excuting the following command, in order to generate a configuration file at ~/.paleomix/bam_pipeline.ini:
+The BAM pipeline exposes a number options, including the maximum number of threads used, and the maximum number of threads used for individual programs, the location of JAR files, and more. These may be set using the corresponding command-line options (e.g. --max-threads). However, it is also possible to set default values for such options, including on a per-host bases. This is accomplished by executing the following command, in order to generate a configuration file at ~/.paleomix/bam_pipeline.ini:
 
 .. code-block:: bash
 

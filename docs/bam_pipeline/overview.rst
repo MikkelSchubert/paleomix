@@ -1,7 +1,7 @@
 Overview of analytical steps
 ============================
 
-During a typical analyses, the BAM pipeline will proceed through the following steps. Note that the exact order in which each step is carried out during execution is not nessesarily as shown below:
+During a typical analyses, the BAM pipeline will proceed through the following steps. Note that the exact order in which each step is carried out during execution is not necessarily as shown below, since the exact steps depend on the user settings, and since the pipeline will automatically run steps as soon as possible:
 
 
 1. Initial steps
@@ -12,9 +12,9 @@ During a typical analyses, the BAM pipeline will proceed through the following s
 
     3. A sequence dictionary is built for each prefix using Picard BuildSequenceDictionary.jar
 
-2. Pre-processing of reads
+2. Preprocessing of reads
 
-    2. Adapter sequences, low quality bases and ambigous bases are trimmed; overlapping paired-end reads are merged, and short reads are filtered using AdapterRemoval [Lindgreen2012]_.
+    2. Adapter sequences, low quality bases and ambiguous bases are trimmed; overlapping paired-end reads are merged, and short reads are filtered using AdapterRemoval [Lindgreen2012]_.
 
 3. Mapping of reads
 
@@ -26,11 +26,11 @@ During a typical analyses, the BAM pipeline will proceed through the following s
 
     4. Finally, the records are updated using "samtools calmd" to ensure consistent reporting of the number of mismatches relative to the reference genome (BAM tag 'NM').
 
-4. Processing of pre-existing BAM files
+4. Processing of preexisting BAM files
 
-    1. Any pre-existing BAM files are re-tagged using Picard 'AddOrReplaceReadGroups.jar' to match the tagging of other reads processed by the pipeline.
+    1. Any preexisting BAM files are re-tagged using Picard 'AddOrReplaceReadGroups.jar' to match the tagging of other reads processed by the pipeline.
 
-    2. The resulting BAM is sorted, updated using "samtools clmd", indexed using "samtools index" (if required), and validated using Picard ValidateSamFile.jar.
+    2. The resulting BAM is sorted, updated using "samtools calmd", indexed using "samtools index" (if required), and validated using Picard ValidateSamFile.jar.
 
 5. Filtering of duplicates, rescaling of quality scores, and validation
 

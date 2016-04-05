@@ -5,13 +5,13 @@
 Software requirements
 =====================
 
-In addition to the requirements listed in the ref:`installation` section, the BAM pipelien requires that a several other pieces of software be installed:
+In addition to the requirements listed in the ref:`installation` section, the BAM pipeline requires that a several other pieces of software be installed:
 
 * `AdapterRemoval`_ v2.1+ [Lindgreen2012]_
 * `SAMTools`_ v0.1.18+ [Li2009b]_
 * `Picard Tools`_ v1.124+
 
-The Picard Tools JAR-file (picard.jar) is expected to be located in ~/install/jar_root/ by default, but this behaviour may be changed using either the --jar-root command-line option, or via the global configuration file (see section :ref:`bam_configuration`).
+The Picard Tools JAR-file (picard.jar) is expected to be located in ~/install/jar_root/ by default, but this behavior may be changed using either the --jar-root command-line option, or via the global configuration file (see section :ref:`bam_configuration`).
 
 Furthermore, one or both of the following sequence aligners must be installed:
 

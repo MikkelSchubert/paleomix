@@ -6,7 +6,7 @@ Makefile description
 
 .. contents::
 
-The following sections reviews the options available in the BAM pipeline makefiles. As described in the :ref:`bam_usage` section, a default makefile may be generated using the 'paleomix bam\_pipeline mkfile' command. For clariety, the location of options in subsections are specified by concatenating the names using '\:\:' as a seperator. Thus, in the following (simplified example), the 'UseSeed' option (line 13) would be referred to as 'Options \:\: Aligners \:\: BWA \:\: UseSeed':
+The following sections reviews the options available in the BAM pipeline makefiles. As described in the :ref:`bam_usage` section, a default makefile may be generated using the 'paleomix bam\_pipeline mkfile' command. For clarity, the location of options in subsections are specified by concatenating the names using '\:\:' as a separator. Thus, in the following (simplified example), the 'UseSeed' option (line 13) would be referred to as 'Options \:\: Aligners \:\: BWA \:\: UseSeed':
 
 .. code-block:: yaml
     :emphasize-lines: 13
@@ -46,12 +46,12 @@ In some cases the BAM pipeline will enable features by default, but still allow 
     AdapterRemoval:
       --trimns: no
 
-If you need to provide the text "yes" or "no" as the value for an option, it is nessesary to put these in quotes::
+If you need to provide the text "yes" or "no" as the value for an option, it is necessary to put these in quotes::
 
     --my-option: "yes"
     --my-option: "no"
 
-In some cases it is possible or even nessesary to specify an option multiple times. Due to the way YAML works, this is not possible to do so directly. Instead, the pipeline allows multiple instances of the same option by providing these as a list::
+In some cases it is possible or even necessary to specify an option multiple times. Due to the way YAML works, this is not possible to do so directly. Instead, the pipeline allows multiple instances of the same option by providing these as a list::
 
     --my-option:
         - "yes"
@@ -185,13 +185,13 @@ The "AdapterRemoval" subsection allows for options that are applied when Adapter
         :lineno-start: 31
         :lines: 31
 
-    If enabled, AdapterRemoval will attempt to combine overlapping paired-end reads into a single (potentially longer) sequence. This has at least two advantages, namely that longer reads allow for less ambigious alignments against the target reference genome, and that the fidelity of the overlapping region (potentially the entire read) is improved by selecting the highest quality base when discrepancies are observed. The names of reads thus merged are prefixed with either 'M\_' or 'MT\_', with the latter marking reads that have been trimmed from the 5' or 3' termini following collapse, and which therefore do not represent the full insert. To disable this behavior, set the option to 'no' (without quotes)::
+    If enabled, AdapterRemoval will attempt to combine overlapping paired-end reads into a single (potentially longer) sequence. This has at least two advantages, namely that longer reads allow for less ambiguous alignments against the target reference genome, and that the fidelity of the overlapping region (potentially the entire read) is improved by selecting the highest quality base when discrepancies are observed. The names of reads thus merged are prefixed with either 'M\_' or 'MT\_', with the latter marking reads that have been trimmed from the 5' or 3' termini following collapse, and which therefore do not represent the full insert. To disable this behavior, set the option to 'no' (without quotes)::
 
         --trimns: yes  # Option enabled
         --trimns: no   # Option disabled
 
     .. note::
-        This option may be combined with the 'ExcludeReads' option (see below), to either elimate or select for short inserts, depending on the exceptations from the experiement. I.e. for ancient samples, where the most inserts should be short enough to allow collapsing (< 2x read read - 11, by default), excluding paired (uncollapsed) and singleton reads may help reduce the fraction of exogenous DNA mapped.
+        This option may be combined with the 'ExcludeReads' option (see below), to either eliminate or select for short inserts, depending on the expectations from the experiment. I.e. for ancient samples, where the most inserts should be short enough to allow collapsing (< 2x read read - 11, by default), excluding paired (uncollapsed) and singleton reads may help reduce the fraction of exogenous DNA mapped.
 
 
 **Options \:\: AdapterRemoval \:\: --trimns**
@@ -201,7 +201,7 @@ The "AdapterRemoval" subsection allows for options that are applied when Adapter
         :lineno-start: 32
         :lines: 32
 
-    If set to 'yes' (without quotes), AdapterRemoval will trim uncalled bases ('N') from the 5' and 3' end of the reads. Trimming will stop at the first called base ('A', 'C', 'G', or 'T'). If both --trimns and --trimqualities are enabled, then consequtive stretches of Ns and / or low-quality bases are trimmed from the 5' and 3' end of the reads. To disable, set the option to 'no' (without quotes)::
+    If set to 'yes' (without quotes), AdapterRemoval will trim uncalled bases ('N') from the 5' and 3' end of the reads. Trimming will stop at the first called base ('A', 'C', 'G', or 'T'). If both --trimns and --trimqualities are enabled, then consecutive stretches of Ns and / or low-quality bases are trimmed from the 5' and 3' end of the reads. To disable, set the option to 'no' (without quotes)::
 
         --trimns: yes  # Option enabled
         --trimns: no   # Option disabled
@@ -214,7 +214,7 @@ The "AdapterRemoval" subsection allows for options that are applied when Adapter
         :lineno-start: 33
         :lines: 33
 
-    If set to 'yes' (without quotes), AdapterRemoval will trim low-quality bases from the 5' and 3' end of the reads. Trimming will stop at the first base which is greater than the (Phred encoded) minimum quality score specified using the command-line option --minquality. This value defaults to 2. If both --trimns and --trimqualities are enabled, then consequtive stretches of Ns and / or low-quality bases are trimmed from the 5' and 3' end of the reads. To disable, set the option to 'no' (without quotes)::
+    If set to 'yes' (without quotes), AdapterRemoval will trim low-quality bases from the 5' and 3' end of the reads. Trimming will stop at the first base which is greater than the (Phred encoded) minimum quality score specified using the command-line option --minquality. This value defaults to 2. If both --trimns and --trimqualities are enabled, then consecutive stretches of Ns and / or low-quality bases are trimmed from the 5' and 3' end of the reads. To disable, set the option to 'no' (without quotes)::
 
         --trimqualities: yes  # Option enabled
         --trimqualities: no   # Option disabled
@@ -360,7 +360,7 @@ Options: mapDamage plots and rescaling
         Should you wish to change the modeling and rescaling parameters, after having already run the pipeline with RescaleQualities enabled, simply remove the mapDamage files generated for the relevant libraries (see the :ref:`bam_filestructure` section).
 
     .. warning::
-        Rescaling requires a certain minimum number of C>T and G>A substituions, before it is possible to construct a model of *post-mortem* DNA damage. If mapDamage fails with an error indicating that "DNA damage levels are too low", then it is nessesary to disable rescaling for that library to continue.
+        Rescaling requires a certain minimum number of C>T and G>A substitutions, before it is possible to construct a model of *post-mortem* DNA damage. If mapDamage fails with an error indicating that "DNA damage levels are too low", then it is necessary to disable rescaling for that library to continue.
 
 
 **Options \:\: mapDamage :: --downsample**
@@ -370,7 +370,7 @@ Options: mapDamage plots and rescaling
         :lineno-start: 88
         :lines: 88-90
 
-    By default the BAM pipeline only samples 100k reads for use in constructing mapDamage plots; in our experience, this is sufficent for accurate plots and models. If no downsampling is to be done, this value can set to 0 to disable this features::
+    By default the BAM pipeline only samples 100k reads for use in constructing mapDamage plots; in our experience, this is sufficient for accurate plots and models. If no downsampling is to be done, this value can set to 0 to disable this features::
 
         --downsample: 100000   # Sample 100 thousand reads
         --downsample: 1000000  # Sample 1 million reads
@@ -395,7 +395,7 @@ Options: Excluding read-types
         :lineno-start: 92
         :lines: 92-102
 
-    During the adapter-trimming and read-merging step, AdapterRemoval will generate a selection of different read types. This option allows certain read-types to be excluded from further analyses. In particular, it may be useful to exclude non-collapsed (paired and singleton) reads when processing (ancient) DNA for which only short inserts is expected, since this may help exclude exogeneous DNA. The following read types are currently recognized:
+    During the adapter-trimming and read-merging step, AdapterRemoval will generate a selection of different read types. This option allows certain read-types to be excluded from further analyses. In particular, it may be useful to exclude non-collapsed (paired and singleton) reads when processing (ancient) DNA for which only short inserts is expected, since this may help exclude exogenous DNA. The following read types are currently recognized:
 
     *Single*
         Single-end reads; these are the (trimmed) reads generated from supplying single-end FASTQ files to the pipeline.
@@ -465,7 +465,7 @@ Prefixes section
     :lines: 122-139
 
 
-Reference genomes used for mapping are specified by listing these (one or more) in the 'Prefixes' section. Each reference genome is assosiated with a name (used in summary statistics and as part of the resulting filenames), and the path to a FASTA file which contains the reference genome. Several other options are also available, but only the name and the 'Path' value are required, as shown here for several examples::
+Reference genomes used for mapping are specified by listing these (one or more) in the 'Prefixes' section. Each reference genome is associated with a name (used in summary statistics and as part of the resulting filenames), and the path to a FASTA file which contains the reference genome. Several other options are also available, but only the name and the 'Path' value are required, as shown here for several examples::
 
     #  Map of prefixes by name, each having a Path key, which specifies the
     # location of the BWA/Bowtie2 index, and optional label, and an option
@@ -493,9 +493,9 @@ It is possible to specify one or more "regions of interest" for a particular ref
 
 Such regions are specified using a BED file containing one or more regions; in particular, the first three columns (name, 0-based start coordinate, and 1-based end coordinate) are required, with the 4th column (the name) being optional. Strand information (the 6th column) is not used, but must still be valid according to the BED format.
 
-If these regions are named, statistics are merged by these names (esstentially treating them as pseudo contigs), while regions are merged by contig. Thus, it is important to insure that names are unique if statistics are desired for very single region, individually.
+If these regions are named, statistics are merged by these names (essentially treating them as pseudo contigs), while regions are merged by contig. Thus, it is important to insure that names are unique if statistics are desired for very single region, individually.
 
-Specifying regions of interest is accomplished by providing a name and a path for each set of regions of interst under the 'RegionOfInterest' section for a given prefix::
+Specifying regions of interest is accomplished by providing a name and a path for each set of regions of interest under the 'RegionOfInterest' section for a given prefix::
 
     # Produce additional coverage / depth statistics for a set of
     # regions defined in a BED file; if no names are specified for the
@@ -516,7 +516,7 @@ In this case, the resulting tables will contain information about two different 
 Adding multiple prefixes
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-In cases where it is nessesary to map samples against a large number of reference genomes, it may become impractical to add these to the makefile by hand. To allow such use-cases, it is possible to specify the location of the reference genomes via a path containing wild-cards, and letting the BAM pipeline collect these automatically. For the following example, we assume that we have a folder '/path/to/genomes', which contains our reference genomes:
+In cases where it is necessary to map samples against a large number of reference genomes, it may become impractical to add these to the makefile by hand. To allow such use-cases, it is possible to specify the location of the reference genomes via a path containing wild-cards, and letting the BAM pipeline collect these automatically. For the following example, we assume that we have a folder '/path/to/genomes', which contains our reference genomes:
 
 .. code-block:: bash
 
@@ -534,7 +534,7 @@ To automatically add these (4) reference genomes to the makefile, we would add a
     Prefixes:
       # Name of the prefix; is used as part of the output filenames
       MyGenomes*:
-        # Path to .fasta file containg a set of reference sequences.
+        # Path to .fasta file containing a set of reference sequences.
         Path: /path/to/genomes/*.fasta
 
 There are two components to this, namely the name of the pseudo-prefix which *must* end with a star (\*), and the path which may contain one or more wild-cards. If the prefix name does not end with a star, the BAM pipeline will simply treat the path as a regular path. In this particular case, the BAM pipeline will perform the equivalent of 'ls /path/to/genomes/\*.fasta', and then add each file it has located using the filename without extensions as the name of the prefix. In other words, the above is equivalent to the following::
@@ -612,7 +612,7 @@ The following simplified example, derived from the makefile constructed as part 
     The first top section of this target (line 1, 'MyFilename') constitute the target name. This name is used as part of summary statistics and, more importantly, determined the first part of name of files generated as part of the processing of data specified for this target. Thus, in this example all files and folders generated during the processing of this target will start with 'MyFilename'; for example, the summary table normally generated from running the pipeline will be placed in a file named 'MyFilename.summary'.
 
 *Sample name*
-    The subsections listed in the 'Target' section (line 2, 'MySample') consitute the (biological) samples included in this target; in the vast majority of analyses, you will have only a single sample per target, and in that case it is considered good practice to use the same name for both the target and the sample. A single target can, however, contain any number of samples, the data for which are tagged according to the names given in the makefile, using the SAM/BAM readgroup ('RG') tags.
+    The subsections listed in the 'Target' section (line 2, 'MySample') constitute the (biological) samples included in this target; in the vast majority of analyses, you will have only a single sample per target, and in that case it is considered good practice to use the same name for both the target and the sample. A single target can, however, contain any number of samples, the data for which are tagged according to the names given in the makefile, using the SAM/BAM readgroup ('RG') tags.
 
 *Library name*
     The subsections listed in the 'Sample' section (line 3, 'TGCTCA') constitute the sequencing libraries constructed during the extraction and library building for the current sample. For modern samples, there is typically only a single library per sample, but more complex sequencing projects (modern and ancient) may involve any number of libraries constructed from one or more extracts. It is very important that libraries be listed correctly (see below).
@@ -621,9 +621,9 @@ The following simplified example, derived from the makefile constructed as part 
         Note that the BAM pipeline imposes the restriction that each library name specified for a target must be unique, even if these are located in to different samples. This restriction may be removed in future versions of PALEOMIX.
 
 *Lane name*
-    The subsections of each library are used to specify the names of invidual
+    The subsections of each library are used to specify the names of individual
 
-In addition to these target (sub)sections, it is possibel to specify 'Options' for individual targets, samples, and libraries, similarly to how this is done globally at the top of the makefile. This is described below.
+In addition to these target (sub)sections, it is possible to specify 'Options' for individual targets, samples, and libraries, similarly to how this is done globally at the top of the makefile. This is described below.
 
 .. warning::
     It is very important that lanes are assigned to their corresponding libraries in the makefile; while it is possible to simply record every sequencing run / lane under a single library and run the pipeline like that, this will result in several unintended side effects: Firstly, the BAM pipeline uses the library information to ensure that PCR duplicates are filtered correctly. Wrongly grouping together lanes will result either in the loss of sequences which are not, in fact, PCR duplicates, while wrongly splitting a library into multiple entries will result in PCR duplicates not being correctly identified across these. Furthermore, GATK and mapDamage analyses make use of this information to carry out various analyses on a per-library basis, which may similarly be negatively impacted by incorrect specification of libraries.
@@ -664,7 +664,7 @@ To include already trimmed reads, these are specified as values belonging to a l
             # Paired-end reads merged into a single sequence, and then truncated
             CollapsedTruncated: /path/to/collapsed_truncated.fastq.gz
 
-The above examples show how each type of reads are to be listed, but it is not nessesary to specify more than a single type of pre-trimmed reads in the makefile.
+The above examples show how each type of reads are to be listed, but it is not necessary to specify more than a single type of pre-trimmed reads in the makefile.
 
 .. note::
     Including already trimmed reads currently result in the absence of some summary statistics in the .summary file, namely the number of raw reads, as well as trimming statistics, since the BAM pipeline currently relies on AdapterRemoval to collect these statistics.
@@ -699,7 +699,7 @@ In addition to the 'Options' section included, by default, at the beginning of e
         GCTCTG:
           # These options apply to 'Lane_1' in the 'GCTCTG' library
           Options:
-            # It is possible to override options we have previously overriden
+            # It is possible to override options we have previously overridden
             QualityOffset: 33
 
           Lane_1: 000_data/GCTCTG_L1_*.fastq.gz
