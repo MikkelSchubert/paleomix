@@ -139,7 +139,7 @@ _TEMPLATE_BAM_OPTIONS = \
     Collapsed: no           # Overlapping paired-ended reads collapsed into a
                             # single sequence by AdapterRemoval
     CollapsedTruncated: no  # Like 'Collapsed', except that the reads
-                            # truncated due to the presence ambigious
+                            # truncated due to the presence ambiguous
                             # bases or low quality bases at read termini.
 
   # Optional steps to perform during processing
@@ -233,10 +233,37 @@ def strip_comments(text):
 
 
 def read_alignment_records(filename):
+    results = []
     with open(filename) as records:
-        header = records.readline().strip().split(",")
-        for line in records:
-            yield dict(zip(header, line.strip().split(",")))
+        line = records.readline()
+        if not line:
+            print_err("ERROR: Empty SampleSheet.csv file: %r"
+                      % (filename,))
+            return None
+
+        header = line.strip().split(",")
+        missing = set(("SampleID", "Index", "Lane", "FCID")) - set(header)
+        if missing:
+            print_err("ERROR: Required columns missing from SampleSheet file "
+                      "%r: %s" % (filename, ", ".join(map(repr, missing))))
+            return None
+
+        for idx, line in enumerate(records, start=2):
+            line = line.strip()
+            if not line:
+                continue
+
+            fields = line.split(",")
+            if len(fields) != len(header):
+                print_err("Line %i in SampleSheet file %r does not contain "
+                          "the expected number of columns; expected %i, but "
+                          "found %i."
+                          % (idx, filename, len(header), len(fields)))
+                return None
+
+            results.append(dict(zip(header, fields)))
+
+    return results
 
 
 def parse_args(argv):
@@ -257,12 +284,9 @@ def select_path(path):
     return path
 
 
-def main(argv, pipeline="bam"):
-    assert pipeline in ("bam", "trim"), pipeline
-
-    options, paths = parse_args(argv)
+def read_sample_sheets(filenames):
     records = {}
-    for root in paths:
+    for root in filenames:
         if os.path.isdir(root):
             filename = os.path.join(root, _FILENAME)
         else:
@@ -270,34 +294,76 @@ def main(argv, pipeline="bam"):
 
         if not os.path.exists(filename):
             print_err("ERROR: Could not find SampleSheet file: %r" % filename)
-            return 1
+            return None
 
-        for record in read_alignment_records(filename):
-            libraries = records.setdefault(record["SampleID"], {})
-            barcodes = libraries.setdefault(record["Index"], [])
+        sample_sheet = read_alignment_records(filename)
+        if sample_sheet is None:
+            return None
 
+        for record in sample_sheet:
             record["Lane"] = int(record["Lane"])
             path = "%(SampleID)s_%(Index)s_L%(Lane)03i_R{Pair}_*.fastq.gz" \
                 % record
             record["Path"] = select_path(os.path.join(root, path))
-            barcodes.append(record)
+            key = "%(FCID)s_%(Lane)s" % record
+
+            libraries = records.setdefault(record["SampleID"], {})
+            barcodes = libraries.setdefault(record["Index"], {})
+            barcodes.setdefault(key, []).append(path)
+
+    # Clean up names; generate unique names for duplicate lanes
+    for libraries in records.itervalues():
+        for barcodes in libraries.itervalues():
+            for key, paths in barcodes.items():
+                if len(paths) == 1:
+                    barcodes[key] = paths[0]
+                    continue
+
+                counter = 1
+                for path in paths:
+                    new_key = "%s_%i" % (key, counter)
+
+                    while new_key in barcodes:
+                        counter += 1
+                        new_key = "%s_%i" % (key, counter)
+
+                    barcodes[new_key] = path
+
+                barcodes.pop(key)
+
+    return records
+
+
+def print_samples(records):
+    print()
+    for (sample, libraries) in sorted(records.iteritems()):
+        print("%s:" % sample)
+        print("  %s:" % sample)
+        for (library, barcodes) in sorted(libraries.iteritems()):
+            print("    %s:" % library)
+            for key, path in sorted(barcodes.iteritems()):
+                print("      %s: %s" % (key, path))
+            print()
+        print()
+
+
+def main(argv, pipeline="bam"):
+    assert pipeline in ("bam", "trim"), pipeline
+
+    options, filenames = parse_args(argv)
+    records = read_sample_sheets(filenames)
+    if records is None:
+        return 1
 
     template = build_makefile(add_full_options=(pipeline == "bam"),
-                              add_prefix_tmpl=(pipeline == "bam"))
+                              add_prefix_tmpl=(pipeline == "bam"),
+                              add_sample_tmpl=not records)
     if options.minimal:
         template = strip_comments(template)
 
     print(template)
 
-    for (sample, libraries) in records.iteritems():
-        print("%s:" % sample)
-        print("  %s:" % sample)
-        for (library, barcodes) in libraries.iteritems():
-            print("    %s:" % library)
-            for record in barcodes:
-                print("      {FCID}_{Lane}: {Path}".format(**record))
-            print()
-        print()
+    print_samples(records)
 
     if argv:
         print_info("Automatically generated makefile printed.\n"
