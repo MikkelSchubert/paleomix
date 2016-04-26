@@ -110,7 +110,7 @@ class MergeCoverageNode(Node):
         self._output_file = output_file
 
         Node.__init__(self,
-                      description="<MergeCoverage: '%s' -> '%s'>"
+                      description="<MergeCoverage: %s -> '%s'>"
                       % (describe_files(input_files), self._output_file),
                       input_files=input_files,
                       output_files=self._output_file,
