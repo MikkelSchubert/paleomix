@@ -284,10 +284,10 @@ class NodeGraph:
 
     @classmethod
     def is_outdated(cls, node, cache):
-        """Returns true if the output exists (is_done == True), but one or more
-        of the intput files appear to have been changed since the creation of
-        the output files (based on the timestamps). A node that lacks either
-        input or output files is never considered outdated.
+        """Returns true if the not is not done or if one or more of the input
+        files appear to have been changed since the creation of the output
+        files (based on the timestamps). A node that lacks either input or
+        output files is never considered outdated.
         """
         if not (node.input_files and node.output_files):
             return False
