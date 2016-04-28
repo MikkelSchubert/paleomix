@@ -5,19 +5,19 @@
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
-# copies of the Software, and to permit persons to whom the Software is 
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
 """Wrapper and utility functions for VCF handling, using
@@ -29,6 +29,7 @@ import collections
 
 _re_tmpl = "(^|;)%s=([^;]+)(;|$)"
 _re_cache = {}
+
 
 def get_info(vcf, field, default = None, type = str):
     """Returns the value of the specified field from the info column
@@ -91,14 +92,31 @@ def is_indel(vcf):
     return "INDEL" in vcf.info
 
 
+def get_genotype(vcf, sample=0, _re=re.compile(r'[|/]')):
+    """Returns the most likely genotype of a sample in a vcf record. If no
+    single most likely genotype can be determined, the function returns 'N' for
+    both bases."""
+    nucleotides = []
+    nucleotides.extend(vcf.ref.split(","))
+    nucleotides.extend(vcf.alt.split(","))
+
+    result = []
+    for genotype in _re.split(get_format(vcf, sample)["GT"]):
+        result.append(nucleotides[int(genotype)])
+
+    return result
+
+
 # The corresponding nucleotides for each value in the VCF PL field
-_genotype_indices = [(jj, ii) for ii in range(0, 10) for jj in range(0, ii + 1)]
+_genotype_indices = [(jj, ii)
+                     for ii in range(0, 10)
+                     for jj in range(0, ii + 1)]
 
 
 def get_ml_genotype(vcf, sample=0):
-    """Returns the most likely genotype of a sample in a vcf record. Note that
-    only records with exactly one sample are supported. If no single most likely
-    genotype can be determined, the function returns 'N' for both bases."""
+    """Returns the most likely genotype of a sample in a vcf record. If no
+    single most likely genotype can be determined, the function returns 'N' for
+    both bases."""
     genotypes = []
     genotypes.extend(vcf.ref.split(","))
     genotypes.extend(vcf.alt.split(","))
@@ -107,8 +125,8 @@ def get_ml_genotype(vcf, sample=0):
 
     expected_length = (len(genotypes) * (len(genotypes) + 1)) // 2
     if len(PL) != expected_length:
-        raise ValueError("Unexpected number of PL values, expected %i, found %i!" \
-                             % (expected_length, len(PL)))
+        raise ValueError("Expected %i PL values, found %i"
+                         % (expected_length, len(PL)))
 
     if PL.count(min(PL)) > 1:
         # No single most likely genotype
