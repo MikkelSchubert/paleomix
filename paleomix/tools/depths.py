@@ -304,7 +304,11 @@ def count_bases(args, counts, record, rg_to_smlbid, template):
     for _ in xrange(record.alen - len(counts)):
         counts.append(list(template))
 
-    key = rg_to_smlbid[args.get_readgroup_func(record)]
+    key = rg_to_smlbid.get(args.get_readgroup_func(record))
+    if key is None:
+        # Unknown readgroups are treated as missing readgroups
+        key = rg_to_smlbid[None]
+
     index = 0
     for (cigar, count) in record.cigar:
         if cigar in (0, 7, 8):
@@ -374,6 +378,16 @@ def process_file(handle, args):
         mapping.process_counts(counts, last_pos, float("inf"))
         mapping.finalize()
     timer.finalize()
+
+    if not args.ignore_readgroups:
+        # Exclude counts for reads with no read-groups, if none such were seen
+        for (key, _, _), value in totals.iteritems():
+            if key == '<NA>' and value:
+                break
+        else:
+            for key in totals.keys():
+                if key[0] == '<NA>':
+                    totals.pop(key)
 
     print_table(handle, args, totals)
 

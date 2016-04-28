@@ -43,10 +43,10 @@ class BAMStatsError(RuntimeError):
 
 
 def collect_readgroups(args, handle):
+    readgroups = {None: {"SM": "<NA>", "LB": "<NA>"}}
     if args.ignore_readgroups:
-        return {None: {"SM": "<NA>", "LB": "<NA>"}}
+        return readgroups
 
-    readgroups = {}
     for readgroup in handle.header.get("RG", ()):
         key_id = readgroup["ID"]
         sample = readgroup["SM"]
@@ -176,9 +176,7 @@ def _get_readgroup(record):
     try:
         return record.opt("RG")
     except KeyError:
-        raise BAMStatsError("Record lacks readgroup tag ('RG'), use of "
-                            "--ignore-readgroups is required to process this"
-                            "file.\n    Record = %r" % (record.qname,))
+        return None
 
 
 def _get_readgroup_ignored(_):

@@ -74,12 +74,22 @@ def create_or_get_subtable(table, subtable_key, size):
 
 
 def build_table(args, handle, counts):
+    references = collect_references(args, handle)
+
     table = {}
     for (key, readgroup) in collect_readgroups(args, handle).iteritems():
         sample = readgroup["SM"]
         library = readgroup["LB"]
 
-        for (reference, size) in collect_references(args, handle).iteritems():
+        # Exclude counts for reads with no read-groups, if none such were seen
+        if key is None and not args.ignore_readgroups:
+            for reference in references:
+                if any(counts.get(reference, {}).get(key, {}).itervalues()):
+                    break
+            else:
+                continue
+
+        for (reference, size) in references.iteritems():
             subtable_key = (args.target_name, sample, library, reference)
             subtable = create_or_get_subtable(table, subtable_key, size)
 
@@ -150,7 +160,11 @@ def process_file(handle, args):
         for (position, records) in region:
             for record in records:
                 readgroup = args.get_readgroup_func(record)
-                readgroup_table = region_table[readgroup]
+                readgroup_table = region_table.get(readgroup)
+                if readgroup_table is None:
+                    # Unknown readgroups are treated as missing readgroups
+                    readgroup_table = region_table[None]
+
                 process_record(readgroup_table, record, record.flag, region)
                 timer.increment(read=record)
 
