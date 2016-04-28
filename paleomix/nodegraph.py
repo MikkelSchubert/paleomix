@@ -57,20 +57,37 @@ class FileStatusCache(object):
         """Returns a list of paths in fpaths that do not exist."""
         return [fpath for fpath in fpaths if (self._get_state(fpath) is None)]
 
-    def files_up_to_date(self, younger, older):
-        """Returns true if all files listed in 'younger' have a time-stamp
-        post-dating the time-stamp of the youngest file listed in 'older', or
-        if any files are missing which nessesitates rebuilding.
+    def are_files_outdated(self, input_files, output_files):
+        """Returns true if any 'input' files have a time-stamp that post-date
+        any time-stamp for the 'output' files, indicating that one or more of
+        the 'input' files have changed since the creation of the 'output'.
+
+        The function also returns true if any files are missing, as this would
+        indicate either the 'output' files or both the 'input' and 'output'
+        files would need to be rebuilt.
         """
-        younger_files = [self._get_state(fpath) for fpath in younger]
-        if any(state is None for state in younger_files):
+        input_timestamps = []
+        if not self._get_states(input_files, input_timestamps):
             return True
 
-        older_files = [self._get_state(fpath) for fpath in older]
-        if any(state is None for state in older_files):
+        output_timestamps = []
+        if not self._get_states(output_files, output_timestamps):
             return True
 
-        return max(younger_files) > min(older_files)
+        return max(input_timestamps) > min(output_timestamps)
+
+    def _get_states(self, filenames, dst):
+        """Collects the mtimes for a set of filenames, returning true if all
+        could be collected, and aborting early and returning false otherwise.
+        """
+        for filename in filenames:
+            timestamp = self._get_state(filename)
+            if timestamp is None:
+                return False
+
+            dst.append(timestamp)
+
+        return True
 
     def _get_state(self, fpath):
         """Returns the mtime of a path, or None if the path does not exist."""
@@ -275,7 +292,7 @@ class NodeGraph:
         if not (node.input_files and node.output_files):
             return False
 
-        return cache.files_up_to_date(node.input_files, node.output_files)
+        return cache.are_files_outdated(node.input_files, node.output_files)
 
     @classmethod
     def _check_required_executables(cls, nodes):

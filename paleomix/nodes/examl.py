@@ -200,7 +200,7 @@ class ExaMLNode(CommandNode):
             return
 
         cache = FileStatusCache()
-        if cache.files_up_to_date(checkpoints, self.input_files):
+        if not cache.are_files_outdated(self.input_files, checkpoints):
             checkpoints.sort(key=lambda fname: int(fname.rsplit("_", 1)[-1]))
 
             # FIXME: Less hacky solution to modifying AtomicCmds needed
