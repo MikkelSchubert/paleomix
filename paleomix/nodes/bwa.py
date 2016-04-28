@@ -25,15 +25,15 @@ import os
 from paleomix.node import CommandNode, NodeError
 from paleomix.atomiccmd.command import AtomicCmd
 from paleomix.atomiccmd.builder import \
-     AtomicCmdBuilder, \
-     use_customizable_cli_parameters, \
-     create_customizable_cli_parameters
+    AtomicCmdBuilder, \
+    use_customizable_cli_parameters, \
+    create_customizable_cli_parameters
 
 from paleomix.atomiccmd.sets import ParallelCmds
 from paleomix.nodes.samtools import SAMTOOLS_VERSION
 from paleomix.common.fileutils import \
-     describe_paired_files, \
-     missing_files
+    describe_paired_files, \
+    missing_files
 
 import paleomix.common.versions as versions
 import paleomix.tools.factory as factory
@@ -109,8 +109,7 @@ class BWABacktrack(CommandNode):
         description \
             = _get_node_description(name="BWA",
                                     algorithm='Backtrack',
-                                    input_files_1=(parameters.input_file,),
-                                    input_files_2=(),
+                                    input_files_1=parameters.input_file,
                                     prefix=parameters.prefix,
                                     threads=parameters.threads)
 
@@ -155,8 +154,7 @@ class BWASamse(CommandNode):
 
         input_file = parameters.input_file_fq
         description = _get_node_description(name="BWA Samse",
-                                            input_files_1=(input_file,),
-                                            input_files_2=(),
+                                            input_files_1=input_file,
                                             prefix=parameters.prefix)
 
         CommandNode.__init__(self,
@@ -212,8 +210,8 @@ class BWASampe(CommandNode):
         input_file_1 = parameters.input_file_fq_1
         input_file_2 = parameters.input_file_fq_2
         description = _get_node_description(name="BWA Sampe",
-                                            input_files_1=(input_file_1,),
-                                            input_files_2=(input_file_2,),
+                                            input_files_1=input_file_1,
+                                            input_files_2=input_file_2,
                                             prefix=parameters.prefix)
 
         CommandNode.__init__(self,
@@ -273,8 +271,8 @@ class BWAAlgorithmNode(CommandNode):
         algorithm += "_PE" if parameters.input_file_2 else "_SE"
         desc = _get_node_description(name="BWA",
                                      algorithm=algorithm,
-                                     input_files_1=(parameters.input_file_1,),
-                                     input_files_2=(parameters.input_file_2,),
+                                     input_files_1=parameters.input_file_1,
+                                     input_files_2=parameters.input_file_2,
                                      prefix=parameters.prefix)
 
         command = ParallelCmds([cmd.finalize()
@@ -410,7 +408,7 @@ def _build_cat_command(input_file, output_file):
     return cat
 
 
-def _get_node_description(name, input_files_1, input_files_2=(),
+def _get_node_description(name, input_files_1, input_files_2=None,
                           algorithm=None, prefix=None, threads=1):
     info = []
     if prefix is not None:
