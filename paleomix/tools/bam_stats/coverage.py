@@ -47,25 +47,25 @@ READGROUP_TEMPLATE = {"SE": 0, "PE_1": 0, "PE_2": 0, "Collapsed": 0,
 TABLE_HEADER = """# Timestamp: %s
 #
 # Columns:
-#   Contig:   Contig, chromosome, or feature for which a depth histogram was
-#             created. Unnamed features are named after the chromosome or
-#             contig on which they are located, with a star appended. For
-#             example "chr1*".
-#   Size:     The total size of the region. Multiple features with the same
-#             name are combined into one row, with the size representing to
-#             total of these. Note that overlapping bases are counted 2 (or
-#             more) times.
-#  Hits:      Sum of SE, PE_1, and PE_2 hits. Note that supplementary
-#             alignments, duplicates, reads that failed QC, secondary
-#             alignments, and unmapped reads are ignored.
-#  SE, PE_*:  Number of Single Ended, and Pair Ended (mate 1 and 2) hits
-#             overlapping the current contig or intervals. Note that a hit may
-#             be counted multiple times if it overlaps multiple intervals
-#  Collapsed: Number of hits for PE pair collapsed into a single read
-#  M, I, D:   Number of aligned (M), inserted (I) and deleted (D) bases
-#             relative to references
-#  Coverage:  Average number of bases covering each position in the
-#             contig(s)/intervals(s).
+#   Contig:    Contig, chromosome, or feature for which a depth histogram was
+#              created. Unnamed features are named after the chromosome or
+#              contig on which they are located, with a star appended. For
+#              example "chr1*".
+#   Size:      The total size of the region. Multiple features with the same
+#              name are combined into one row, with the size representing to
+#              total of these. Note that overlapping bases are counted 2 (or
+#              more) times.
+#   Hits:      Sum of SE, PE_1, and PE_2 hits. Note that supplementary
+#              alignments, duplicates, reads that failed QC, secondary
+#              alignments, and unmapped reads are ignored.
+#   SE, PE_*:  Number of Single Ended, and Pair Ended (mate 1 and 2) hits
+#              overlapping the current contig or intervals. Note that a hit
+#              may be counted multiple times if it overlaps multiple intervals
+#   Collapsed: Number of hits for PE pair collapsed into a single read.
+#   M, I, D:   Number of aligned (M), inserted (I) and deleted (D) bases
+#              relative to references.
+#   Coverage:  Average number of bases covering each position in the
+#              contig(s)/intervals(s).
 """
 
 
