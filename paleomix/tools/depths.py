@@ -349,7 +349,7 @@ def process_file(handle, args):
     for region in BAMRegionsIter(handle, args.regions):
         if region.name is None:
             # Trailing unmapped reads
-            continue
+            break
         elif not args.regions and (handle.nreferences > args.max_contigs):
             region.name = '<Genome>'
 
