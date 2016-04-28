@@ -134,6 +134,7 @@ def process_file(handle, args):
     timer = BAMTimer(handle, step=1000000)
 
     counts = {}
+    last_tid = 0
     region_template = build_region_template(args, handle)
     for region in BAMRegionsIter(handle, args.regions):
         if region.name is None:
@@ -144,13 +145,22 @@ def process_file(handle, args):
         if not args.regions and (handle.nreferences > args.max_contigs):
             name = '<Genome>'
 
+        last_pos = 0
         region_table = get_region_table(counts, name, region_template)
-        for (_, records) in region:
+        for (position, records) in region:
             for record in records:
                 readgroup = args.get_readgroup_func(record)
                 readgroup_table = region_table[readgroup]
                 process_record(readgroup_table, record, record.flag, region)
                 timer.increment(read=record)
+
+            if (region.tid, position) < (last_tid, last_pos):
+                sys.stderr.write("ERROR: Input BAM file is unsorted\n")
+                return 1
+
+            last_pos = position
+            last_tid = region.tid
+
     timer.finalize()
 
     print_table(args, handle, counts)
