@@ -21,11 +21,15 @@
 # SOFTWARE.
 #
 import os
-import sys
 import argparse
 import collections
 
 import pysam
+
+from paleomix.ui import \
+    print_err, \
+    print_msg, \
+    print_warn
 
 from paleomix.common.fileutils import \
     swap_ext
@@ -148,12 +152,22 @@ def main_wrapper(process_func, argv, ext):
         try:
             args.regions = collect_bed_regions(args.regions_fpath)
         except ValueError, error:
-            sys.stderr.write("Failed to parse BED file %r:\n%s\n"
-                             % (args.regions_fpath, error))
+            print_err("ERROR: Failed to parse BED file %r:\n%s"
+                      % (args.regions_fpath, error))
             return 1
 
-    sys.stderr.write("Opening %r\n" % (args.infile,))
+    print_msg("Opening %r" % (args.infile,))
     with pysam.Samfile(args.infile) as handle:
+        sort_order = handle.header.get('HD', {}).get('SO')
+        if sort_order is None:
+            print_warn("WARNING: BAM file %r is not marked as sorted!"
+                       % (args.infile,))
+        elif sort_order != 'coordinate':
+            print_err("ERROR: BAM file %r is %s-sorted, but only "
+                      "coordinate-sorted BAMs are supported!"
+                      % (args.infile, sort_order))
+            return 1
+
         sort_bed_by_bamfile(handle, args.regions)
         return process_func(handle, args)
 
