@@ -70,8 +70,8 @@ paleomix sample_pileup
     This tool is deprecated, and will be removed in future versions of PALEOMIX.
 
 
-paleomix vcf_to_fasta
----------------------
+paleomix vcf_filter
+-------------------
 
 .. TODO:
 ..    paleomix vcf_filter       -- Quality filters for VCF records, similar to
