@@ -179,6 +179,7 @@ class BaseUI(object):
         """Basic initializer; must be called in subclasses."""
         self.states = []
         self.threads = 0
+        self.max_threads = 0
         self._start_time = None
         self._end_time = None
         self._updated = True
@@ -213,7 +214,7 @@ class BaseUI(object):
                 ("  Number of queued nodes:", self.states[self.QUEUED]),
                 ("  Number of outdated nodes:", self.states[self.OUTDATED]),
                 ("  Number of failed nodes:", self.states[self.ERROR]),
-                ("  Pipeline runtime:", _fmt_runtime(round(runtime)))]
+                ("  Pipeline runtime:", _fmt_runtime(runtime))]
 
         for line in text.padded_table(rows):
             print_info(line)
@@ -265,32 +266,30 @@ class BaseUI(object):
 
         return states, threads
 
-    @classmethod
-    def _describe_states(cls, states, threads=0):
-        """Returns a human readable summary of the states
-        given to the function. 'states' is expected to be
-        a list/tuple such as that produced by the
-        '_count_states' function."""
-        run_tmpl = "running"
-        if threads > 1:
-            run_tmpl = "%s using ~%i threads" % (run_tmpl, threads)
-        elif threads == 1:
-            run_tmpl = "%s using ~1 thread" % (run_tmpl,)
+    def _describe_state(self):
+        """ TODO """
+        runtime = 0
+        if self._start_time is not None:
+            runtime = time.time() - self._start_time
 
-        fields = [(run_tmpl, states[cls.RUNNING]),
-                  ("outdated", states[cls.OUTDATED]),
-                  ("failed", states[cls.ERROR])]
+        fields = [datetime.datetime.now().strftime("%T"),
+                  ' Running ', str(self.states[self.RUNNING]), ' ',
+                  ('task ' if self.states[self.RUNNING] == 1 else 'tasks '),
+                  'using ~%i of max %i threads; ' % (self.threads,
+                                                     self.max_threads)]
 
-        line = []
-        for (name, value) in fields:
-            if value:
-                line.append("%i %s" % (value, name))
+        if self.states[self.OUTDATED]:
+            fields.append('%i outdated, ' % (self.states[self.OUTDATED],))
 
-        line.append("%i done of %i tasks"
-                    % (states[cls.DONE],
-                       sum(states)))
+        if self.states[self.ERROR]:
+            fields.append('%i failed, ' % (self.states[self.ERROR],))
 
-        return ", ".join(line)
+        fields.extend(('%i done of %i tasks' % (self.states[self.DONE],
+                                                sum(self.states),),
+                       ' in ', _fmt_runtime(runtime),
+                       '; press \'h\' for help.'))
+
+        return ''.join(fields)
 
     DONE = paleomix.nodegraph.NodeGraph.DONE
     RUNNING = paleomix.nodegraph.NodeGraph.RUNNING
@@ -311,7 +310,7 @@ class RunningUI(BaseUI):
     def flush(self):
         """See BaseUI.flush."""
         if BaseUI.flush(self) and self._running_nodes:
-            self._print_header(self.states, self.threads)
+            self._print_header()
             for node in sorted(map(str, self._running_nodes)):
                 print_info("  - %s" % (node,), file=sys.stdout)
             print_info(file=sys.stdout)
@@ -333,11 +332,8 @@ class RunningUI(BaseUI):
         elif new_state == self.RUNNING:
             self._running_nodes.append(node)
 
-    @classmethod
-    def _print_header(cls, states, threads):
-        print_msg(datetime.datetime.now().strftime("%F %T"), file=sys.stdout)
-        print_msg("Pipeline; %s (press 'h' for help):"
-                  % cls._describe_states(states, threads), file=sys.stdout)
+    def _print_header(self):
+        print_msg('\n%s' % (self._describe_state(),), file=sys.stdout)
 
         logfile = paleomix.logger.get_logfile()
         if logfile:
@@ -348,11 +344,11 @@ class RunningUI(BaseUI):
 class ProgressUI(BaseUI):
     """Progress based UI: Prints nodes when they start running; they finish
     running; or when they fail running. Changes to state resulting from the
-    above is not printed. Every 25th update is followed by a summary of the
-    current total progress."""
+    above is not printed. Every 20th update is followed by a summary of the
+    current total progress when flush is called."""
 
     # Print a summery of the current state very N events
-    _SUMMARY_EVERY = 25
+    _SUMMARY_EVERY = 20
 
     def __init__(self):
         self._refresh_count = ProgressUI._SUMMARY_EVERY
@@ -371,16 +367,19 @@ class ProgressUI(BaseUI):
             self._print_state(node, new_state)
 
             self._refresh_count -= 1
-            if (self._refresh_count <= 0) or (new_state == self.ERROR):
-                self._refresh_count = ProgressUI._SUMMARY_EVERY
-                self._print_summary()
+            if new_state == self.ERROR:
+                self._refresh_count = 0
+
+    def flush(self):
+        """See BaseUI.flush."""
+        if (self._refresh_count <= 0):
+            self._refresh_count = ProgressUI._SUMMARY_EVERY
+            self._print_summary()
 
     def _print_summary(self):
         """Prints a summary of the pipeline progress."""
-        time_label = datetime.datetime.now().strftime("%T")
-        description = self._describe_states(self.states, self.threads)
-        print_msg("\n%s Pipeline: %s (press 'h' for help):"
-                  % (time_label, description), file=sys.stdout)
+        print_msg()
+        print_msg(self._describe_state(), file=sys.stdout)
 
         logfile = paleomix.logger.get_logfile()
         if logfile:
@@ -399,7 +398,7 @@ class ProgressUI(BaseUI):
 
     def _get_runtime(self, node):
         current_time = time.time()
-        runtime = int(current_time - self._runtimes.pop(node, current_time))
+        runtime = current_time - self._runtimes.pop(node, current_time)
         return _fmt_runtime(runtime)
 
     _DESCRIPTIONS = {
@@ -412,7 +411,6 @@ class ProgressUI(BaseUI):
 class SummaryUI(BaseUI):
     def __init__(self):
         self._max_len = 0
-        self._starting_time = time.time()
         self._new_error = False
         BaseUI.__init__(self)
 
@@ -422,14 +420,10 @@ class SummaryUI(BaseUI):
 
     def flush(self):
         if BaseUI.flush(self):
-            time_label = datetime.datetime.now().strftime("%T")
-            runtime = _fmt_runtime(int(time.time() - self._starting_time))
-            description = self._describe_states(self.states, self.threads)
-            message = "%s Pipeline: %s in %s (press 'h' for help)." \
-                % (time_label, description, runtime)
+            description = self._describe_state()
 
-            self._max_len = max(len(message), self._max_len)
-            print_msg("\r%s" % (message.ljust(self._max_len),), end="",
+            self._max_len = max(len(description), self._max_len)
+            print_msg("\r%s" % (description.ljust(self._max_len),), end="",
                       file=sys.stdout)
 
             logfile = paleomix.logger.get_logfile()
@@ -445,16 +439,18 @@ class SummaryUI(BaseUI):
 
 
 def _fmt_runtime(runtime):
+    runtime = int(round(runtime))
+
     if runtime >= 3600:
-        fmt = "{hours}:{mins:02}:{secs:02.1f}s"
+        fmt = "{hours}:{mins:02}:{secs:02}s"
     elif runtime >= 60:
-        fmt = "{mins}:{secs:02.1f}s"
+        fmt = "{mins}:{secs:02}s"
     else:
-        fmt = "{secs:.1f}s"
+        fmt = "{secs}s"
 
     return fmt.format(hours=int(runtime) // 3600,
                       mins=(int(runtime) // 60) % 60,
-                      secs=(runtime % 60.0))
+                      secs=(runtime % 60))
 
 
 # No longer provided

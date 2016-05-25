@@ -110,6 +110,7 @@ class Pypeline(object):
 
         is_ok = True
         progress_printer = paleomix.ui.get_ui(progress_ui)
+        progress_printer.max_threads = max_threads
         nodegraph.add_state_observer(progress_printer)
 
         with paleomix.ui.CommandLine() as cli:
@@ -126,6 +127,7 @@ class Pypeline(object):
                     progress_printer.flush()
 
                 max_threads = cli.process_key_presses(nodegraph, max_threads)
+                progress_printer.max_threads = max_threads
                 _update_nprocesses(self._pool, max_threads)
 
         self._pool.close()
@@ -349,7 +351,7 @@ class Pypeline(object):
         if not self._interrupted:
             self._interrupted = True
             self._logger.error("\nKeyboard interrupt detected, waiting for "
-                               "current tasks to complete ... Press CTRL-C "
+                               "running tasks to complete ... Press CTRL-C "
                                "again to force termination.\n")
         else:
             self._pool.terminate()
