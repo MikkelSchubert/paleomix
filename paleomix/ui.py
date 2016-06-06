@@ -128,6 +128,7 @@ class CommandLine(object):
             elif character in "lL":
                 print_info(file=sys.stdout)
                 progress_printer = RunningUI()
+                progress_printer.max_threads = max_threads
                 progress_printer.refresh(nodegraph)
                 progress_printer.flush()
             elif character in "hH":
