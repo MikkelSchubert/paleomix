@@ -89,7 +89,8 @@ class MapDamagePlotNode(MultiBAMInputNode):
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
-        bam_input = MultiBAMInput(parameters.config, parameters.input_files)
+        bam_input = MultiBAMInput(parameters.config, parameters.input_files,
+                                  indexed=False)
         bam_input.setup(parameters.command)
         cmd_map = parameters.command.finalize()
 
@@ -214,7 +215,8 @@ class MapDamageRescaleNode(MultiBAMInputNode):
     @use_customizable_cli_parameters
     def __init__(self, parameters):
         self._directory = parameters.directory
-        bam_input = MultiBAMInput(parameters.config, parameters.input_files)
+        bam_input = MultiBAMInput(parameters.config, parameters.input_files,
+                                  indexed=False)
         bam_input.setup(parameters.command)
         command = parameters.command.finalize()
 

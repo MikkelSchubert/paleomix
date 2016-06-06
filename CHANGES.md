@@ -1,6 +1,9 @@
 # Change log
 
 ## [Unreleased]
+### Fixed
+  - mapDamage plots should not require indexed BAMs; this fixed missing file
+    errors for some makefile configurations.
 
 
 ## [1.2.5] - 2015-06-06
