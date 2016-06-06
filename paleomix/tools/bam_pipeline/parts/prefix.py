@@ -59,7 +59,7 @@ class Prefix:
             for sample in self.samples:
                 self.bams.update(sample.bams)
 
-        nodes = []
+        nodes = [self.datadup_check]
         for sample in self.samples:
             nodes.extend(sample.nodes)
         self.nodes = tuple(nodes)
