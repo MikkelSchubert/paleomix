@@ -21,7 +21,7 @@
 # SOFTWARE.
 #
 
-__version_info__ = (1, 2, 4)
+__version_info__ = (1, 2, 5)
 __version__ = '%i.%i.%i' % __version_info__
 
 
