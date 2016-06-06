@@ -88,9 +88,13 @@ def build_pipeline_full(config, makefile, return_nodes=True):
                 for (library_name, barcode_records) in library_records.iteritems():
                     lanes = []
                     for (barcode, record) in barcode_records.iteritems():
-                        lanes.append(parts.Lane(config, prefix, record, barcode))
+                        lane = parts.Lane(config, prefix, record, barcode)
 
-                    if any(lane.bams for lane in lanes):
+                        # ExcludeReads settings may exlude entire lanes
+                        if lane.bams:
+                            lanes.append(lane)
+
+                    if lanes:
                         libraries.append(parts.Library(config, target_name, prefix, lanes, library_name))
 
                 if libraries:
