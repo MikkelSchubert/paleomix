@@ -25,6 +25,8 @@ The resulting file contains a list of options which can be overwritten::
     bowtie2_max_threads = 1
     ui_colors = on
 
+.. note::
+    Options in the configuration file correspond directly to command-line options for the BAM pipeline, with two significant differences: The leading dashes (--) are removed and any remaining dashes are changed to underscores (_); as an example, the command-line option --max-threads becomes max\_threads in the configuration file, as shown above.
 
 These values will be used by the pipeline, unless the corresponding option is also supplied on the command-line. I.e. if "max_threads" is set to 4 in the "bam_pipeline.ini" file, but the pipeline is run using "paleomix bam_pipeline --max-threads 10", then the max threads value is set to 10.
 
