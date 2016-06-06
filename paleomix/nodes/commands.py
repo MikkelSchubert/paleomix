@@ -66,7 +66,7 @@ class DuplicateHistogramNode(MultiBAMInputNode):
     """
 
     def __init__(self, config, input_files, output_file, dependencies=()):
-        bam_input = MultiBAMInput(config, input_files)
+        bam_input = MultiBAMInput(config, input_files, indexed=False)
         duphist_command = factory.new("duphist")
         duphist_command.add_value('%(TEMP_IN_BAM)s')
         duphist_command.set_kwargs(OUT_STDOUT=output_file)
@@ -128,7 +128,8 @@ class MergeCoverageNode(Node):
 class DepthHistogramNode(MultiBAMInputNode):
     def __init__(self, config, target_name, input_files, output_file,
                  regions_file=None, dependencies=()):
-        bam_input = MultiBAMInput(config, input_files)
+        bam_input = MultiBAMInput(config, input_files,
+                                  indexed=bool(regions_file))
         if len(bam_input.files) > 1 and regions_file:
             raise ValueError("DepthHistogram for regions require single, "
                              "indexed input BAM file.")
@@ -147,6 +148,7 @@ class DepthHistogramNode(MultiBAMInputNode):
         command = ParallelCmds(bam_input.commands + [builder.finalize()])
         description = "<DepthHistogram: %s -> '%s'>" \
             % (describe_files(bam_input.files), output_file)
+
         MultiBAMInputNode.__init__(self,
                                    bam_input=bam_input,
                                    command=command,
