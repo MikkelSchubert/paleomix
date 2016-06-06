@@ -44,7 +44,6 @@ Testing the pipeline
 An example project is included with the phylogenetic pipeline, and it is recommended to run this project in order to verify that the pipeline and required applications have been correctly installed. See the :ref:`examples` section for a description of how to run this example project.
 
 
-.. _BEDTools: https://code.google.com/p/bedtools/
 .. _Tabix: http://samtools.sourceforge.net/
 .. _MAFFT: http://mafft.cbrc.jp/alignment/software/
 .. _RAxML: https://github.com/stamatak/standard-RAxML
