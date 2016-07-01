@@ -23,6 +23,7 @@
 library(ape)
 library(ggplot2)
 library(grid)
+library(methods)
 
 
 TTBar <- setRefClass("TTBar",
