@@ -677,7 +677,7 @@ class PlotPCANode(CommandNode):
                         OUT_PNG=output_prefix + ".png",
                         CHECK_R=RSCRIPT_VERSION,
                         CHECK_R_GGPLOT2=rtools.requirement("ggplot2"),
-                        CHECK_R_LABELS=rtools.requirement("directlabels"),
+                        CHECK_R_LABELS=rtools.requirement("ggrepel"),
                         set_cwd=True)
 
         CommandNode.__init__(self,

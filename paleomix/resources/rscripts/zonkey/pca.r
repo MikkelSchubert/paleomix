@@ -7,7 +7,7 @@ if (length(args) != 3) {
 
 
 library(ggplot2)
-library(directlabels)
+library(ggrepel)
 
 
 expanded.range <- function(values, expand.by=0.2)
@@ -50,8 +50,8 @@ plot.pca <- function(input_prefix, names.table=NULL)
     final <- merge(d, colors)
 
     pp <- ggplot(final)
-    pp <- pp + geom_dl(aes(x=X, y=Y, label=Name), list('last.bumpup',
-                       cex = 1.2, hjust = 1))
+    pp <- pp + geom_text_repel(aes(x=X, y=Y, label=Name))
+
     pp <- pp + geom_point(aes(x=X, y=Y), color=final$Color, size=3)
 
     pp <- pp + xlab(sprintf("PC1: %.1f%%", pc1 * 100))
