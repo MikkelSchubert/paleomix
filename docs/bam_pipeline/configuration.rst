@@ -36,7 +36,7 @@ These values will be used by the pipeline, unless the corresponding option is al
 It is furthermore possible to set specific options depending on the current host-name. Assuming that the pipeline was run on multiple servers sharing a single home folder, one might set the maximum number of threads on a per-server basis as follows::
 
     [Defaults]
-    ...
+    max_threads = 32
     [BigServer]
     max_threads = 64
     [SmallServer]
