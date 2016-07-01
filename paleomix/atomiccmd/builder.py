@@ -377,7 +377,7 @@ class AtomicJavaCmdBuilder(AtomicCmdBuilder):
         version = tuple(map(int, version))
         if version not in JAVA_VERSIONS:
             regexp = r"[\._]".join(r"(\d+)" for _ in version)
-            regexp = r'java version "%s' % (regexp,)
+            regexp = r'version "%s' % (regexp,)
             jre_call = ["java", "-Djava.awt.headless=true", "-version"]
 
             JAVA_VERSIONS[version] \
