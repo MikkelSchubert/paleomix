@@ -78,6 +78,6 @@ plot.pca(input_prefix, names_table)
 dev.off()
 
 # bitmap is preferred, since it works in a headless environment
-bitmap(paste(output_prefix, ".png", sep=""), height=5, width=5, res=96)
+bitmap(paste(output_prefix, ".png", sep=""), height=6, width=6, res=96, taa=4, gaa=4)
 plot.pca(input_prefix, names_table)
 dev.off()

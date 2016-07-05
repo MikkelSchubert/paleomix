@@ -608,7 +608,7 @@ if (func_name == "plot_tree") {
     dev.off()
 
     # bitmap is preferred, since it works in a headless environment
-    bitmap(paste(output_prefix, ".png", sep=""), height=5, width=5, res=96)
+    bitmap(paste(output_prefix, ".png", sep=""), height=6, width=6, res=96, taa=4, gaa=4)
     if (check_cov(input_file)) {
         plot_tree(input_file, names_file)
     }
@@ -630,7 +630,7 @@ if (func_name == "plot_tree") {
     dev.off()
 
     # bitmap is preferred, since it works in a headless environment
-    bitmap(paste(output_prefix, ".png", sep=""), height=5, width=5, res=96)
+    bitmap(paste(output_prefix, ".png", sep=""), height=6, width=6, res=96, taa=4, gaa=4)
     if (check_cov(input_file)) {
        plot_resid(input_file, names_file)
     }

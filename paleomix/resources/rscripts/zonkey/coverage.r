@@ -90,11 +90,11 @@ plot_coverage <- function(filename)
 input_file <- args[1]
 output_prefix <- args[2]
 
-pdf(paste(output_prefix, ".pdf", sep=""), width=4, height=4)
+pdf(paste(output_prefix, ".pdf", sep=""), width=5, height=5)
 plot_coverage(input_file)
 dev.off()
 
 # bitmap is preferred, since it works in a headless environment
-bitmap(paste(output_prefix, ".png", sep=""), height=5, width=5, res=96)
+bitmap(paste(output_prefix, ".png", sep=""), height=5, width=5, res=96, taa=4, gaa=4)
 plot_coverage(input_file)
 dev.off()
