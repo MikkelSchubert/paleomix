@@ -76,7 +76,9 @@ class ReportNode(Node):
 
     def _run(self, _config, temp):
         with open(os.path.join(temp, "report.html"), "w") as output_handle:
+            revision = self._data.settings['Revision']
             header = _HTML_HEADER.format(Version=paleomix.__version__,
+                                         Database=revision,
                                          Sidebar=self._build_sidebar())
             output_handle.write(header)
 
@@ -108,7 +110,9 @@ class ReportNode(Node):
         output_handle.write(_SECTION_HEADER.format(name="overview",
                                                    title="Overview"))
 
-        overview = _OVERVIEW_HEADER.format(PYSAM=pysam.__version__,
+        revision = self._data.settings['Revision']
+        overview = _OVERVIEW_HEADER.format(DATABASE=revision,
+                                           PYSAM=pysam.__version__,
                                            SAMTOOLS=_fmt_v(SAMTOOLS_VERSION),
                                            PLINK=_fmt_v(nuclear.PLINK_VERSION),
                                            RSCRIPT=_fmt_v(RSCRIPT_VERSION))
@@ -454,7 +458,7 @@ _TS_LABELS = {
 _HTML_HEADER = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<title>PALEOMIX Zonkey v{Version}</title>
+<title>PALEOMIX Zonkey v{Version} - db rev. {Database}</title>
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
 <link href="report.css" rel="stylesheet" type="text/css" />
 </head>
@@ -462,7 +466,7 @@ _HTML_HEADER = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
 <a name="top" id="top"></a>
 <center>
   <div id="header">
-    <h1>PALEOMIX Zonkey v{Version}</h1>
+    <h1>PALEOMIX Zonkey v{Version} - db rev. {Database}</h1>
     <h2>A pipeline for detection of F1 hybrids in equids.</h2>
   </div>
   <div id="content">
@@ -484,7 +488,8 @@ _SECTION_HEADER = """      <h1><a name="{name}" id="{name}"></a>{title}</h1>
 """
 
 _OVERVIEW_HEADER = """
-      <p> Data processed using
+      <p>
+        Zonkey run using database rev. {DATABASE}. Data processed using
         <a href="https://github.com/pysam-developers/pysam">pysam</a> v{PYSAM},
         <a href="https://samtools.github.io/">SAMTools</a> v{SAMTOOLS}
         [<em>Li <em>et al.</em> 2009</em>] and
