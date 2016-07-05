@@ -235,7 +235,7 @@ def _process_samples(config):
 
                 files["Mito"] = filename
             else:
-                print_err("ERROR: BAM does not contain known nuclear "
+                print_err("ERROR: BAM does not contain usable nuclear "
                           "or mitochondrial contigs: %r" % (filename,))
                 return False
 

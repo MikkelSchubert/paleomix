@@ -483,11 +483,11 @@ def _validate_mito_bam(data, handle, info):
 
             name, _, hits, _ = line.split('\t')
             if (name == bam_contig) and not int(hits):
-                print_err("ERROR: Mitochondrial BAM (%r) does not contain "
+                print_err("WARNING: Mitochondrial BAM (%r) does not contain "
                           "any reads aligned to contig %r; inferring an "
                           "phylogeny is not possible."
                           % (handle.filename, name))
-                return False
+                return True
 
         info.mt_contig = bam_contig
         info.mt_length = bam_length
