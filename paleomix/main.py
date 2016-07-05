@@ -30,17 +30,6 @@ import sys
 import textwrap
 
 
-def _dev_mode():
-    """Returns True if a magic value is set; this allows the use of tools
-    currently heavily in development. No support is provided for these tools;
-    functionality may be changed or removed without warning, and analyses may
-    or may not produce real results at any given point in time.
-    """
-    magic_value = os.environ.get('PALEOMIX')
-
-    return magic_value == "Lasciate ogne speranza, voi ch'intrate"
-
-
 # List of tuples of commands: (name, module, help string).
 # If module is None, the command cannot be invoked directly (e.g. help), and
 # if help string is none, the command is considered a help header.
@@ -53,14 +42,14 @@ def _commands():
     yield ("phylo_pipeline", "paleomix.tools.phylo_pipeline.pipeline",
            "Pipeline for genotyping and phylogenetic inference from BAMs.")
 
-    if _dev_mode():
-        yield ("Zonkey", None, None)
-        yield ("zonkey", "paleomix.tools.zonkey.pipeline",
-               "In development.")
-        yield ("build_tped", "paleomix.tools.build_tped",
-               "In development.")
-        yield ("build_mito", "paleomix.tools.build_mito",
-               "In development.")
+    # In development: No support is provided for these tools; functionality
+    # may be changed or removed without warning, and analyses may or may not
+    # produce real results at any given point in time.
+    # yield ("Zonkey", None, None)
+    yield ("zonkey", "paleomix.tools.zonkey.pipeline", None)
+    yield ("zonkey_db", "paleomix.tools.zonkey.build_db", None)
+    yield ("zonkey_tped", "paleomix.tools.zonkey.build_tped", None)
+    yield ("zonkey_mito", "paleomix.tools.zonkey.build_mito", None)
 
     yield ("BAM/SAM tools", None, None)
     yield ("cleanup", "paleomix.tools.cleanup",
@@ -97,10 +86,10 @@ def _commands():
     yield ("cat", "paleomix.tools.cat",
            "Generalized cat command for gz, bz2 and uncompressed files.")
 
-    if _dev_mode():
-        yield ("ena", "paleomix.tools.ena",
-               "Prepares FASTQ reads recorded in BAM pipeline makefiles "
-               "for submission to the European Nucleotide Archive.")
+    # In development:
+    #   Prepares FASTQ reads recorded in BAM pipeline makefiles
+    #   for submission to the European Nucleotide Archive.
+    yield ("ena", "paleomix.tools.ena", None)
 
 # Error message shown if the Pysam module ('pysam') cannot be imported
 _IMPORT_ERROR_PYSAM = """
@@ -204,9 +193,10 @@ def _print_help():
     sys.stderr.write("PALEOMIX - pipelines and tools for NGS data analyses.\n")
     sys.stderr.write("Version: %s\n\n" % (paleomix.__version__,))
     sys.stderr.write("Usage: paleomix <command> [options]\n")
-    for (key, _, help_str) in _commands():
+    for (key, module, help_str) in _commands():
         if help_str is None:
-            sys.stderr.write("\n%s:\n" % (key,))
+            if module is None:
+                sys.stderr.write("\n%s:\n" % (key,))
         else:
             lines = textwrap.wrap(help_str, help_len)
             padding = (max_len - len(key) + 2) * " "
