@@ -19,3 +19,5 @@ tests/links/
 *.egg-info/
 .eggs
 .tox
+
+docs/_build
