@@ -42,15 +42,6 @@ plot_coverage <- function(filename)
     autosomes$ID <- as.numeric(autosomes$ID)
     autosomes$NormHits <- autosomes$RelHits / mean(autosomes$RelHits)
 
-    sex <- tbl[tbl$ID == 'X' | tbl$ID == 'Y', , drop=FALSE]
-    sex <- sex[order(sex$ID), , drop=FALSE]
-
-    id_range <- range(autosomes$ID)
-    step <- (id_range[2] - id_range[1]) / (nrow(sex) + 1)
-    sex$x <- id_range[1] + step * 1:nrow(sex)
-
-    sex$NormHits <- sex$RelHits / mean(autosomes$RelHits)
-
     pp <- ggplot(autosomes, aes(x=ID, y=NormHits))
 
     pp <- pp + geom_hline(yintercept=max(autosomes$NormHits),
@@ -66,9 +57,6 @@ plot_coverage <- function(filename)
 
     pp <- pp + geom_point()
 
-    pp <- pp + geom_point(data=sex, shape=sex$ID, color="red", size=5,
-                          aes(x=x, y=NormHits))
-
     pp <- pp + ylab("Normalized #Hits")
     pp <- pp + xlab("Chromosome")
     pp <- pp + theme_bw()
@@ -76,12 +64,29 @@ plot_coverage <- function(filename)
                      axis.ticks.x=element_blank(),
                      panel.border=element_blank())
 
-    ymin <- min(0.375, 0.95 * min(autosomes$NormHits, sex$NormHits))
-    ymax <- max(0.375, 1.05 * max(autosomes$NormHits, sex$NormHits))
-    pp <- pp + scale_y_continuous(breaks=seq(0.25, 1.25, 0.25),
-                                  limits=c(ymin, ymax))
     pp <- pp + scale_x_continuous(limits=range(autosomes$ID),
                                   breaks=seq(1, max(autosomes$ID) + 10, 10))
+
+
+    sex <- tbl[tbl$ID == 'X' | tbl$ID == 'Y', , drop=FALSE]
+    sex <- sex[order(sex$ID), , drop=FALSE]
+
+    if (nrow(sex) > 0) {
+        id_range <- range(autosomes$ID)
+        step <- (id_range[2] - id_range[1]) / (nrow(sex) + 1)
+        sex$x <- id_range[1] + step * 1:nrow(sex)
+
+        sex$NormHits <- sex$RelHits / mean(autosomes$RelHits)
+
+        pp <- pp + geom_point(data=sex, shape=sex$ID, color="red", size=5,
+                          aes(x=x, y=NormHits))
+
+        ymin <- min(0.375, 0.95 * min(autosomes$NormHits, sex$NormHits))
+        ymax <- max(0.375, 1.05 * max(autosomes$NormHits, sex$NormHits))
+
+        pp <- pp + scale_y_continuous(breaks=seq(0.25, 1.25, 0.25),
+                                      limits=c(ymin, ymax))
+    }
 
     return(pp)
 }
