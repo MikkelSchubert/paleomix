@@ -27,21 +27,21 @@ li {
 }
 
 table {
-    width:100%;
+	width:100%;
 }
 
 table, th, td {
-    border:0px;
-    border-collapse: collapse;
+	border:0px;
+	border-collapse: collapse;
 }
 
 th, td {
-    padding:5px;
-    text-align:left;
+	padding:5px;
+	text-align:left;
 }
 
 table tr:nth-child(even) {
-    background-color:#eee;
+	background-color:#eee;
 }
 
 table tr:nth-child(odd) {
@@ -49,8 +49,8 @@ table tr:nth-child(odd) {
 }
 
 table th {
-    background-color: #728c40;
-    color: black;
+	background-color: #728c40;
+	color: black;
 }
 
 #header {
@@ -84,7 +84,7 @@ table th {
 }
 
 #content {
-	width:85%;
+	max-width:1280px;
 	margin:0 auto 0 auto;
 	text-align:left;
 }
@@ -190,24 +190,24 @@ table th {
 /*****************************************************************************/
 
 .image {
-    width: 100%;
-    height: 100%;
+	width: 100%;
+	height: 100%;
 }
 
 .image img {
-    -webkit-transition: all 0.5s ease; /* Safari and Chrome */
-    -moz-transition: all 0.5s ease; /* Firefox */
-    -ms-transition: all 0.5s ease; /* IE 9 */
-    -o-transition: all 0.5s ease; /* Opera */
-    transition: all 0.5s ease;
+	-webkit-transition: all 0.5s ease; /* Safari and Chrome */
+	-moz-transition: all 0.5s ease; /* Firefox */
+	-ms-transition: all 0.5s ease; /* IE 9 */
+	-o-transition: all 0.5s ease; /* Opera */
+	transition: all 0.5s ease;
 }
 
 .image:hover img {
-    -webkit-transform:scale(2.5); /* Safari and Chrome */
-    -moz-transform:scale(2.5); /* Firefox */
-    -ms-transform:scale(2.5); /* IE 9 */
-    -o-transform:scale(2.5); /* Opera */
-     transform:scale(2.5);
+	-webkit-transform:scale(2.5); /* Safari and Chrome */
+	-moz-transform:scale(2.5); /* Firefox */
+	-ms-transform:scale(2.5); /* IE 9 */
+	-o-transform:scale(2.5); /* Opera */
+	 transform:scale(2.5);
 }
 
 
@@ -244,14 +244,14 @@ ul#tabs li a.selected {
 }
 
 div.tabContent {
- 	height: 15em;
- 	border: 1px solid #c9c3ba;
+	height: 15em;
+	border: 1px solid #c9c3ba;
 	padding: 0.5em;
 	background-color: #f1f0ee;
 }
 
 div.tabContent.small {
-    height: 5em;
+	height: 5em;
 }
 
 div.tabContent.hide {
