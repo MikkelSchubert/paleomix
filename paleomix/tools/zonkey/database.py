@@ -164,6 +164,9 @@ class ZonkeyDB(object):
                                 "both tables: %s"
                                 % (",".join(differences),))
 
+        if self.mitochondria is None:
+            return
+
         for name, record in self.mitochondria.iteritems():
             if name not in self.samples:
                 # Ignore extra reference sequences
@@ -334,9 +337,12 @@ class ZonkeyDB(object):
         return result
 
     def _read_simulations(self, tar_handle, filename):
-        self._check_required_file(tar_handle, filename)
+        try:
+            handle = tar_handle.extractfile(filename)
+        except KeyError:
+            # Missing simulations file is allowed
+            return None
 
-        handle = tar_handle.extractfile(filename)
         header = handle.readline().rstrip().split('\t')
 
         required_keys = set(('NReads', 'K', 'Sample1', 'Sample2', 'HasTS',
@@ -451,6 +457,10 @@ class ZonkeyDB(object):
 
 
 def _validate_mito_bam(data, handle, info):
+    if data.mitochondria is None:
+        # No mitochondrial data .. skip phylogeny
+        return True
+
     references = handle.references
     min_length = min((len(record.sequence))
                      for record in data.mitochondria.itervalues())

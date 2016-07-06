@@ -48,7 +48,8 @@ ADMIXTURE_VERSION = versions.Requirement(call=("admixture", "--version"),
                                          search="(\d+)\.(\d+).(\d+)",
                                          checks=versions.GE(1, 3, 0))
 
-PLINK_VERSION = versions.Requirement(call=("plink", "--noweb", "--help"),
+PLINK_VERSION = versions.Requirement(call=("plink", "--noweb", "--help",
+                                           "--out", "/tmp/plink"),
                                      search="v(\d+)\.(\d+)",
                                      checks=versions.GE(1, 7))
 
@@ -157,7 +158,8 @@ class BuildFilteredBEDFilesNode(CommandNode):
                               TEMP_OUT_LOG="indep.log",
                               TEMP_OUT_NOSEX="indep.nosex",
                               TEMP_OUT_PRUNE_IN="indep.prune.in",
-                              TEMP_OUT_PRUNE_OUT="indep.prune.out")
+                              TEMP_OUT_PRUNE_OUT="indep.prune.out",
+                              set_cwd=True)
 
         basename = os.path.basename(output_prefix)
         cmd_filter = AtomicCmd(["plink", "--noweb", "--make-bed",
@@ -171,10 +173,12 @@ class BuildFilteredBEDFilesNode(CommandNode):
                                TEMP_OUT_PREFIX=basename,
                                TEMP_IN_PRUNE="indep.prune.in",
                                TEMP_OUT_NOSEX=basename + ".nosex",
+                               TEMP_OUT_LOG=basename + ".log",
                                OUT_LOG=output_prefix + ".log",
                                OUT_BED=output_prefix + ".bed",
                                OUT_BIM=output_prefix + ".bim",
-                               OUT_FAM=output_prefix + ".fam")
+                               OUT_FAM=output_prefix + ".fam",
+                               set_cwd=True)
 
         CommandNode.__init__(self,
                              description="<BuildFilteredBEDFiles -> '%s.*'>"
@@ -383,7 +387,7 @@ class BuildFreqFilesNode(CommandNode):
         basename = os.path.basename(output_prefix)
 
         plink_cmd = ["plink", "--freq", "--missing", "--noweb",
-                     "--bfile", input_prefix,
+                     "--bfile", os.path.abspath(input_prefix),
                      "--within", "%(TEMP_OUT_CLUST)s",
                      "--out", "%(TEMP_OUT_PREFIX)s"]
 
@@ -398,16 +402,15 @@ class BuildFreqFilesNode(CommandNode):
                           OUT_NOSEX=output_prefix + ".frq.strat.nosex",
                           OUT_LOG=output_prefix + ".frq.strat.log",
                           TEMP_OUT_PREFIX=basename,
-                          CHECK_VERSION=PLINK_VERSION)
+                          CHECK_VERSION=PLINK_VERSION,
+                          set_cwd=True)
 
         gzip = AtomicCmd(["gzip", "%(TEMP_IN_FREQ)s"],
                          TEMP_IN_FREQ=basename + ".frq.strat",
                          OUT_FREQ=output_prefix + ".frq.strat.gz")
 
-        # FIXME! Can be
         self._tfam = tfam
         self._basename = basename
-
         CommandNode.__init__(self,
                              description="<BuildFreqFiles -> '%s.*'"
                              % (output_prefix,),
@@ -725,9 +728,15 @@ class PlotCoverageNode(CommandNode):
                 name = contig_name_to_plink_name(name)
                 if name is None or not (name.isdigit() or name == 'X'):
                     continue
+                elif name not in self._contigs:
+                    # Excluding contigs is allowed
+                    continue
 
                 if int(size) != self._contigs[name]['Size']:
-                    raise NodeError("TODO: size mismatch")
+                    raise NodeError("Size mismatch between database and BAM; "
+                                    "expected size %i, found %i for contig %r"
+                                    % (int(size), self._contigs[name]['Size'],
+                                       name))
 
                 row = {
                     'ID': name,

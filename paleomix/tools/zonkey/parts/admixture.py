@@ -134,7 +134,9 @@ def _admixture_read_results(filename, samples):
         lines = handle.readlines()
 
     if len(samples) != len(lines):
-        raise AdmixtureError("TODO")
+        raise AdmixtureError("unexpected number of lines in admixture file; "
+                             "expected %i samples, found %i"
+                             % (len(samples), len(lines)))
 
     result = {}
     for name, line in zip(samples, lines):

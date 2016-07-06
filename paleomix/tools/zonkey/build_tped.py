@@ -270,7 +270,7 @@ def process_bam(args, data, bam_handle):
 
     with open(os.path.join(args.root, 'incl_ts.tped'), 'w') as output_incl:
         with open(os.path.join(args.root, 'excl_ts.tped'), 'w') as output_excl:
-            with GenotypeReader(args.data) as reader:
+            with GenotypeReader(args.database) as reader:
                 for ref, sites in reader:
                     raw_ref = raw_references[references.index(ref)]
 
@@ -291,12 +291,23 @@ def process_bam(args, data, bam_handle):
 
 def parse_args(argv):
     parser = argparse.ArgumentParser()
-    parser.add_argument('root')
-    parser.add_argument('data')
-    parser.add_argument('bam')
-    parser.add_argument('--seed', default=7913, type=int)  # FIXME
-    parser.add_argument('--downsample', type=int)
-    parser.add_argument('--name', default="Sample")
+    parser.add_argument('root', metavar='output_folder',
+                        help='Output folder in which output files are '
+                             'to be placed; is created if it does not '
+                             'already exist.')
+    parser.add_argument('database',
+                        help='Zonkey database file.')
+    parser.add_argument('bam',
+                        help='Sorted BAM file.')
+    parser.add_argument('--seed', type=int,
+                        help='RNG seed used when downsampling reads; '
+                             'defaults to using system time as seed.')
+    parser.add_argument('--downsample', type=int, default=0,
+                        help='Sample N reads from the input BAM file, before '
+                             'building the TPED file. If not set, or set to '
+                             'zero, all reads are used [%(default)s].')
+    parser.add_argument('--name', default="Sample",
+                        help='Name of sample to be used in output.')
 
     return parser.parse_args(argv)
 
@@ -305,19 +316,23 @@ def main(argv):
     args = parse_args(argv)
     random.seed(args.seed)
 
-    print "Reading reference information from %r ..." % (args.data,)
+    print "Reading reference information from %r ..." \
+        % (args.database,)
 
     try:
-        data = database.ZonkeyDB(args.data)
+        data = database.ZonkeyDB(args.database)
     except database.ZonkeyDBError, error:
         sys.stderr.write("Error reading database file %r:\n%s\n"
-                         % (args.data, error))
+                         % (args.database, error))
         return 1
 
     with pysam.Samfile(args.bam) as bam_handle:
         bam_info = data.validate_bam_handle(bam_handle)
-        if not (bam_info or bam_info.is_nuclear):
-            # TODO: Verbose error
+        if not bam_info:
+            return 1
+        elif not bam_info.is_nuclear:
+            sys.stderr.write("ERROR: BAM file does not contain "
+                             "identifiable nuclear alignments.\n")
             return 1
 
         process_bam(args, data, bam_handle)

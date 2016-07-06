@@ -71,7 +71,11 @@ def read_summary(filename, default="[MISSING VALUE!]"):
     results = collections.defaultdict(lambda: default)
     with open(filename) as makefile:
         string = makefile.read()
-        # FIXME: Error handling, ensure that dict is returned. Makefile?
-        results.update(paleomix.yaml.safe_load(string))
+        data = paleomix.yaml.safe_load(string)
+
+        if not isinstance(data, dict):
+            raise DBFileError('Summary file does not contain dictionary')
+
+        results.update(data)
 
     return results

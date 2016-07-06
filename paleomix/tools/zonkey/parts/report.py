@@ -82,7 +82,7 @@ class ReportNode(Node):
                                          Sidebar=self._build_sidebar())
             output_handle.write(header)
 
-            self._write_overview(output_handle)
+            self._write_intro_and_overview(output_handle)
             self._write_sample_description(output_handle)
 
             if self._has_nuc:
@@ -106,9 +106,13 @@ class ReportNode(Node):
         css_path = paleomix.resources.report("zonkey", "report.css")
         fileutils.copy_file(css_path, os.path.join(self._root, "report.css"))
 
-    def _write_overview(self, output_handle):
+    def _write_intro_and_overview(self, output_handle):
+        output_handle.write(_SECTION_HEADER.format(name="intro",
+                                                   title="Introduction"))
+        output_handle.write(_INTRODUCTION)
+
         output_handle.write(_SECTION_HEADER.format(name="overview",
-                                                   title="Overview"))
+                                                   title="Analysis overview"))
 
         revision = self._data.settings['Revision']
         overview = _OVERVIEW_HEADER.format(DATABASE=revision,
@@ -487,18 +491,46 @@ _HTML_HEADER = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
 _SECTION_HEADER = """      <h1><a name="{name}" id="{name}"></a>{title}</h1>
 """
 
-_OVERVIEW_HEADER = """
-      <p>
-        Zonkey run using database rev. {DATABASE}. Data processed using
-        <a href="https://github.com/pysam-developers/pysam">pysam</a> v{PYSAM},
-        <a href="https://samtools.github.io/">SAMTools</a> v{SAMTOOLS}
-        [<em>Li <em>et al.</em> 2009</em>] and
-        <a href="http://pngu.mgh.harvard.edu/purcell/plink/">PLINK</a> v{PLINK}
-        [<em>Purcell <em>et al.</em> 2007</em>]; plotting was carried out using
-        <a href="https://www.r-project.org/">R</a> v{RSCRIPT}. Additional
-        tools listed below.
+_INTRODUCTION = """
+      <div>
+        <div>
+          The Zonkey Pipeline is a easy-to-use pipeline designed for the
+          analyses of low-coverage, ancient DNA derived from historical
+          equid samples, with the purpose of determining the species of
+          the sample, as well as determining possible hybridization between
+          horses, zebras, and asses. This is accomplished by comparing one
+          or more samples aligned against the <em>Equus caballus</em> 2.0
+          reference sequence with a reference panel of modern equids,
+          including wild and domesticated equids.
+        </div>
+        <br/>
+        <div>
+          For more information, please refer to the
+          <a href="http://paleomix.readthedocs.org/en/latest/zonkey_pipeline/index.html">
+            the documentation for the Zonkey pipeline
+          </a>
+          or
+          <a href="http://paleomix.readthedocs.org/en/latest/">
+            the documentation for the PALEOMIX pipeline,
+          </a>
+          on which the Zonkey pipeline is based.
+        </div>
+        <br/>
+"""
 
-      <div style="display:table;width:100%;">
+_OVERVIEW_HEADER = """
+        <div>
+          Zonkey run using database rev. {DATABASE}. Data processed using
+          <a href="https://github.com/pysam-developers/pysam">pysam</a> v{PYSAM},
+          <a href="https://samtools.github.io/">SAMTools</a> v{SAMTOOLS}
+          [<em>Li <em>et al.</em> 2009</em>] and
+          <a href="http://pngu.mgh.harvard.edu/purcell/plink/">PLINK</a> v{PLINK}
+          [<em>Purcell <em>et al.</em> 2007</em>]; plotting was carried out using
+          <a href="https://www.r-project.org/">R</a> v{RSCRIPT}. Additional
+          tools listed below.
+        </div>
+        <br/>
+        <div style="display:table;width:100%;">
           <div style="display:table-cell;">
 """
 
@@ -557,12 +589,16 @@ _OVERVIEW_MITOCHONDRIA = """
 
 _OVERVIEW_NUCLEAR_COVERAGE = """
           </div>
-          <div style="display:table-cell;width:350px;">
-           <strong>Autosomes vs. sex-chromosomes:</strong>
-           <a href="figures/coverage/coverage.pdf">
-             <img src="figures/coverage/coverage.png"
-                  style="vertical-align:top;horizontal-align:center;">
-           </a>
+          <div style="display:table-cell;width:25%;max-width:350px;">
+           <div>
+             <strong>Autosomes vs. sex-chromosomes:</strong>
+           </div>
+           <div>
+             <a href="figures/coverage/coverage.pdf">
+               <img src="figures/coverage/coverage.png"
+                    style="vertical-align:top;horizontal-align:center;">
+             </a>
+           </div>
 """
 
 _OVERVIEW_FOOTER = """
@@ -795,7 +831,8 @@ _SIDEBAR_HEADER = """
       <h1>Contents</h1>
       <div class="submenu">
         <a href="#">Top</a>
-        <a href="#intro">Overview</a>
+        <a href="#intro">Introduction</a>
+        <a href="#overview">Analysis overview</a>
         <a href="#samples">Reference Panel</a>
 """
 

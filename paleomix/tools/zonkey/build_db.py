@@ -90,7 +90,7 @@ then
 fi
 
 FILENAME="zonkey{REVISION}.tar"
-SOURCES="settings.yaml contigs.txt samples.txt ${MITO_FA} ${SIM_TXT} ${EXAMPLES} genotypes.txt"
+SOURCES="settings.yaml contigs.txt samples.txt ${MITO_FA} ${SIM_TXT} ${EXAMPLES} genotypes.txt build.sh"
 
 rm -vf "${FILENAME}"
 

@@ -52,10 +52,13 @@ class SummaryNode(Node):
             input_files.update(report.input_files())
             self._reports[sample] = report
 
+        output_prefix = os.path.join(self._root, "summary")
         Node.__init__(self,
+                      description="<SummaryReport -> %r>"
+                      % (output_prefix + '.html',),
                       input_files=input_files,
-                      output_files=(os.path.join(self._root, "summary.html"),
-                                    os.path.join(self._root, "summary.css")),
+                      output_files=(output_prefix + '.html',
+                                    output_prefix + '.css'),
                       dependencies=dependencies)
 
     def _run(self, _config, temp):
@@ -287,14 +290,36 @@ _HTML_HEADER = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
         <h1>Contents</h1>
         <div class="submenu">
           <a href="#">Top</a>
+          <a href="#intro">Introduction</a>
           {MenuEntries}
         </div>
       </div>
       <div id="mainbar">
         <h1><a name="introduction" id="introduction"></a>Introduction</h1>
-        <p>
-          TODO
-        </p>
+        <div>
+          <div>
+            The Zonkey Pipeline is a easy-to-use pipeline designed for the
+            analyses of low-coverage, ancient DNA derived from historical
+            equid samples, with the purpose of determining the species of
+            the sample, as well as determining possible hybridization between
+            horses, zebras, and asses. This is accomplished by comparing one
+            or more samples aligned against the <em>Equus caballus</em> 2.0
+            reference sequence with a reference panel of modern equids,
+            including wild and domesticated equids.
+          </div>
+          <br/>
+          <div>
+            For more information, please refer to the
+            <a href="http://paleomix.readthedocs.org/en/latest/zonkey_pipeline/index.html">
+              the documentation for the Zonkey pipeline
+            </a>
+            or
+            <a href="http://paleomix.readthedocs.org/en/latest/">
+              the documentation for the PALEOMIX pipeline,
+            </a>
+            on which the Zonkey pipeline is based.
+          </div>
+        </div>
         <h1><a name="samples" id="samples"></a>Sample Overview</h1>
 """
 
