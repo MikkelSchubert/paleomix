@@ -288,18 +288,19 @@ def _parse_arguments(argv):
                                    version=version_str)
 
     group = optparse.OptionGroup(parser, "Program options")
-    group.add_option("--downsample-to", type=int, default=1000000,
+    group.add_option("--downsample-to",
+                     type=int, default=PerHostValue(1000000),
                      help="Number of reads to use for analyses; if 0, no "
                           "downsampling is performed [default: %default]")
-    group.add_option("--admixture-replicates", type=int, default=1,
+    group.add_option("--admixture-replicates",
+                     type=int, default=PerHostValue(1),
                      help="Number of admixture replicates to run, before "
                           "the result with the highest likelihood [%default]")
-    group.add_option("--treemix-k", type=int, default=None,
+    group.add_option("--treemix-k", type=int, default=PerHostValue(0),
                      help="Value passed to treemix's -k option; number of "
                           "SNPs per block for estimation of the covariance "
-                          "matrix. If not set manually, a value will be "
-                          "estimated assuming an even distriution of SNPs "
-                          "[%default]")
+                          "matrix. If set to 0, a value will be estimated "
+                          "assuming an even distribution of SNPs [%default]")
     group.add_option("--treemix-outgroup", default="",
                      help="Comma-seperated list of samples to use as the "
                           "outgroup when running TreeMix; note that these "

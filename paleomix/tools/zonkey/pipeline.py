@@ -175,7 +175,7 @@ def build_treemix_nodes(config, data, root, plink):
                                                    dependencies=(freq_node,))
 
         k_snps = config.treemix_k
-        if k_snps is None:
+        if not k_snps:
             k_snps = ('n_sites_%s' % (postfix,),
                       os.path.join(plink["root"], "common.summary"))
 

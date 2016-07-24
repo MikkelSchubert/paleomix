@@ -45,8 +45,8 @@ from paleomix.tools.zonkey.common import \
 
 
 ADMIXTURE_VERSION = versions.Requirement(call=("admixture", "--version"),
-                                         search="(\d+)\.(\d+).(\d+)",
-                                         checks=versions.GE(1, 3, 0))
+                                         search="(\d+)\.(\d+)",
+                                         checks=versions.GE(1, 3))
 
 PLINK_VERSION = versions.Requirement(call=("plink", "--noweb", "--help",
                                            "--out", "/tmp/plink"),
