@@ -650,6 +650,7 @@ numoutevec:        5
 familynames:       YES
 numoutlieriter:    1
 numchrom:          {nchroms}
+numthreads:        1
 """.format(input_prefix=os.path.abspath(self._input_prefix),
            output_prefix=os.path.basename(self._output_prefix),
            nchroms=self._nchroms))
