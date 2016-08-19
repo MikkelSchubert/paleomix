@@ -26,7 +26,7 @@ import sys
 from setuptools import setup, find_packages
 
 
-if (sys.version_info.major != 2) or (sys.version_info.minor != 7):
+if (sys.version_info[0] != 2) or (sys.version_info[1] != 7):
     sys.stderr.write("ERROR: Python version 2.7.x required!\n")
     sys.stderr.write("       Current version is v%s\n"
                      % (sys.version.replace("\n", " "),))
