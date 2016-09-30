@@ -491,7 +491,7 @@ plot.tree <- function(filename, sample_names, padding=0.3)
     pp <- tinytree.default.sizes(pp, tt, "node"=3, "leaf"=4, "line"=0.75)
 
     defaults <- c("line"="black",
-                  "node"="darkgrey",
+                  "node"="grey40",
                   "leaf"="black",
                   "bar"="blue")
     defaults <- tinytree.defaults.collect(tt, defaults, list())
