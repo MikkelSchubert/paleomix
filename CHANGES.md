@@ -5,6 +5,8 @@
   - mapDamage plots should not require indexed BAMs; this fixed missing file
     errors for some makefile configurations.
   - Version check for java did now works correctly for OpenJDK JVMs.
+  - Pressing 'l' or 'L' to list the currently running tasks now correctly
+    reports the total runtime of the pipeline, rather than 0s.
 
 
 ## [1.2.5] - 2015-06-06

@@ -126,7 +126,9 @@ class Pypeline(object):
                 if running:
                     progress_printer.flush()
 
-                max_threads = cli.process_key_presses(nodegraph, max_threads)
+                max_threads = cli.process_key_presses(nodegraph,
+                                                      max_threads,
+                                                      progress_printer)
                 progress_printer.max_threads = max_threads
                 _update_nprocesses(self._pool, max_threads)
 

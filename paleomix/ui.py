@@ -113,7 +113,7 @@ class CommandLine(object):
             # Restore settings (re-enable echo)
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self._tty_settings)
 
-    def process_key_presses(self, nodegraph, max_threads):
+    def process_key_presses(self, nodegraph, max_threads, ui):
         if not self._tty_settings:
             return max_threads
 
@@ -129,6 +129,7 @@ class CommandLine(object):
                 print_info(file=sys.stdout)
                 progress_printer = RunningUI()
                 progress_printer.max_threads = max_threads
+                progress_printer.start_time = ui.start_time
                 progress_printer.refresh(nodegraph)
                 progress_printer.flush()
             elif character in "hH":
@@ -143,7 +144,7 @@ Commands:
   l     Lists the currently runnning nodes.
   +     Increases the maximum number of threads by one.
   -     Decreases the maximum number of threads by one; already running tasks
-        are NOT terminated if the current number of threads used exceeds the
+        are NOT terminated if the number of threads currently used exceeds the
         resulting maximum.
 """, file=sys.stdout)
             else:
@@ -181,7 +182,7 @@ class BaseUI(object):
         self.states = []
         self.threads = 0
         self.max_threads = 0
-        self._start_time = None
+        self.start_time = None
         self._end_time = None
         self._updated = True
 
@@ -201,7 +202,7 @@ class BaseUI(object):
         this function prints the location of the log-file if one was created
         during the run (e.g. if there were errors), and a summary of all nodes.
         """
-        runtime = (self._end_time or 0) - (self._start_time or 0)
+        runtime = (self._end_time or 0) - (self.start_time or 0)
 
         if self.states[self.ERROR]:
             print_err("Done; but errors were detected ...")
@@ -246,8 +247,8 @@ class BaseUI(object):
         elif new_state == self.RUNNING:
             self.threads += node.threads
 
-        if self._start_time is None:
-            self._start_time = time.time()
+        if self.start_time is None:
+            self.start_time = time.time()
         self._end_time = time.time()
 
     @classmethod
@@ -270,8 +271,8 @@ class BaseUI(object):
     def _describe_state(self):
         """ TODO """
         runtime = 0
-        if self._start_time is not None:
-            runtime = time.time() - self._start_time
+        if self.start_time is not None:
+            runtime = time.time() - self.start_time
 
         fields = [datetime.datetime.now().strftime("%T"),
                   ' Running ', str(self.states[self.RUNNING]), ' ',
