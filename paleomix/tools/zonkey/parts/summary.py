@@ -143,7 +143,8 @@ class SummaryNode(Node):
         if "Nuc" in info["Files"]:
 
             for postfix in ('incl_ts', 'excl_ts'):
-                admix_root = os.path.join(self._root, sample, "admixture")
+                admix_root = os.path.join(self._root, sample,
+                                          "results", "admixture")
 
                 for k_groups in (2, 3):
                     filename = os.path.join(admix_root, "%s.%i.Q" % (postfix,
@@ -184,7 +185,9 @@ class SummaryNode(Node):
         lines.append('            <table summary="Admixture overview for sample {}" style="width:125px;">'.format(sample.replace('"', "")))
         lines.append("              <tr>")
         for postfix in ('incl_ts', 'excl_ts'):
-            admix_root = os.path.join(self._root, sample, "admixture")
+            admix_root = os.path.join(self._root, sample,
+                                      "results", "admixture")
+
             for k_groups in (2, 3):
                 filename = os.path.join(admix_root, "%s.%i.Q" % (postfix, k_groups))
 

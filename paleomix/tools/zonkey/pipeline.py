@@ -85,7 +85,7 @@ def run_pipeline(config, nodes, msg):
 
 
 def build_plink_nodes(config, data, root, bamfile, dependencies=()):
-    plink = {"root": os.path.join(root, 'plink')}
+    plink = {"root": os.path.join(root, 'results', 'plink')}
 
     ped_node = nuclear.BuildTPEDFilesNode(output_root=plink["root"],
                                           table=config.tablefile,
@@ -120,7 +120,7 @@ def build_admixture_nodes(config, data, root, plink):
     for postfix in ('incl_ts', 'excl_ts'):
         bed_node = plink[postfix]
 
-        admix_root = os.path.join(root, "admixture")
+        admix_root = os.path.join(root, "results", "admixture")
         report_root = os.path.join(root, "figures", "admixture")
         for k_groups in (2, 3):
             replicates = []
@@ -156,7 +156,7 @@ def build_admixture_nodes(config, data, root, plink):
 
 
 def build_treemix_nodes(config, data, root, plink):
-    tmix_root = os.path.join(root, 'treemix')
+    tmix_root = os.path.join(root, 'results', 'treemix')
 
     nodes = []
     for postfix in ('incl_ts', 'excl_ts'):
@@ -203,7 +203,7 @@ def build_treemix_nodes(config, data, root, plink):
 
 
 def build_pca_nodes(config, data, root, plink):
-    pca_root = os.path.join(root, 'pca')
+    pca_root = os.path.join(root, 'results', 'pca')
 
     nodes = []
     for postfix in ('incl_ts', 'excl_ts'):
@@ -246,13 +246,13 @@ def build_mito_nodes(config, root, bamfile, dependencies=()):
 
     samples = os.path.join(root, "figures", "samples.txt")
 
-    mt_prefix = os.path.join(root, "mitochondria", "sequences")
+    mt_prefix = os.path.join(root, "results", "mitochondria", "sequences")
     alignment = mitochondria.MitoConsensusNode(database=config.tablefile,
                                                bamfile=bamfile,
                                                output_prefix=mt_prefix,
                                                dependencies=dependencies)
 
-    raxml_template = os.path.join(root, "mitochondria", "raxml_%s")
+    raxml_template = os.path.join(root, "results", "mitochondria", "raxml_%s")
     phylo = RAxMLRapidBSNode.customize(input_alignment=mt_prefix + ".phy",
                                        output_template=raxml_template,
                                        dependencies=(alignment,))

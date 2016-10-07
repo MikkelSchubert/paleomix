@@ -352,15 +352,17 @@ class AnalysisReport(object):
         if self._has_nuc:
             # Summary file generated while building TPED files
             input_files.append(os.path.join(self._root,
+                                            "results",
                                             "plink",
                                             "common.summary"))
 
             for postfix in ('incl_ts', 'excl_ts'):
-                admix_root = os.path.join(self._root, "admixture")
+                admix_root = os.path.join(self._root, "results", "admixture")
 
                 if self._filtered:
                     # Required to count number of SNPs included after filtering
                     input_files.append(os.path.join(self._root,
+                                                    "results",
                                                     "plink",
                                                     postfix + ".bim"))
 
@@ -382,13 +384,16 @@ class AnalysisReport(object):
 
         if self._has_mt:
             input_files.append(os.path.join(self._root,
+                                            "results",
                                             "mitochondria",
                                             "sequences.summary"))
 
         return input_files
 
     def snp_summary(self):
-        summary = read_summary(os.path.join(self._root, "plink",
+        summary = read_summary(os.path.join(self._root,
+                                            "results",
+                                            "plink",
                                             "common.summary"))
 
         if self._filtered:
@@ -405,13 +410,14 @@ class AnalysisReport(object):
 
     def mito_summary(self):
         return read_summary(os.path.join(self._root,
+                                         "results",
                                          "mitochondria",
                                          "sequences.summary"))
 
     def admixture_results(self, k_groups, incl_ts,
                           cutoff=admixture.CUTOFF):
         prefix = "incl_ts" if incl_ts else "excl_ts"
-        filename = os.path.join(self._root, "admixture",
+        filename = os.path.join(self._root, "results", "admixture",
                                 "%s.%i.Q" % (prefix, k_groups))
 
         return admixture.read_admixture_results(filename=filename,
@@ -433,7 +439,9 @@ class AnalysisReport(object):
         sample1, = groups[0]
         sample2, = groups[1]
         delta = abs(max(value for _, value in results) - 0.5)
-        summary = read_summary(os.path.join(self._root, "plink",
+        summary = read_summary(os.path.join(self._root,
+                                            "results",
+                                            "plink",
                                             "common.summary"))
 
         return admixture.get_percentiles(data=data,
