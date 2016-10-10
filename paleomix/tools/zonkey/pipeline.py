@@ -315,6 +315,7 @@ def build_pipeline(config, root, nuc_bam, mito_bam, cache):
 
 
 def run_admix_pipeline(config):
+    print_info("Building Zonkey pipeline ", end='')
     config.temp_root = os.path.join(config.destination, "temp")
     if not config.dry_run:
         fileutils.make_dirs(config.temp_root)
@@ -327,9 +328,11 @@ def run_admix_pipeline(config):
         mito_bam = sample["Files"].get("Mito")
 
         nodes.extend(build_pipeline(config, root, nuc_bam, mito_bam, cache))
+        print_info(".", end='')
 
     if config.multisample and not config.admixture_only:
         nodes = [summary.SummaryNode(config, nodes)]
+    print_info(".")
 
     if not run_pipeline(config, nodes, "\nRunning Zonkey ..."):
         return 1

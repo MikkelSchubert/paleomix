@@ -64,6 +64,8 @@ def build_pipeline_trimming(config, makefile):
 
     nodes = []
     for (_, samples) in makefile["Targets"].iteritems():
+        print_info(".", end='')
+
         for (_, libraries) in samples.iteritems():
             for (_, barcodes) in libraries.iteritems():
                 for (barcode, record) in barcodes.iteritems():
@@ -80,6 +82,8 @@ def build_pipeline_full(config, makefile, return_nodes=True):
     result = []
     features = makefile["Options"]["Features"]
     for (target_name, sample_records) in makefile["Targets"].iteritems():
+        print_info(".", end='')
+
         prefixes = []
         for (_, prefix) in makefile["Prefixes"].iteritems():
             samples = []
@@ -180,7 +184,7 @@ def run(config, args, pipeline_variant):
     pipeline = Pypeline(config)
 
     try:
-        print_info("Building BAM pipeline ...")
+        print_info("Reading makefiles ...")
         makefiles = read_makefiles(config, args, pipeline_variant)
     except (MakefileError, paleomix.yaml.YAMLError, IOError), error:
         print_err("Error reading makefiles:",
@@ -199,6 +203,7 @@ def run(config, args, pipeline_variant):
 
         pipeline_func = build_pipeline_full
 
+    print_info("Building BAM pipeline ", end='')
     for makefile in makefiles:
         # If a destination is not specified, save results in same folder as the
         # makefile
@@ -217,6 +222,8 @@ def run(config, args, pipeline_variant):
         config.destination = old_destination
 
         pipeline.add_nodes(*nodes)
+
+    print_info("")
 
     if config.list_input_files:
         logger.info("Printing output files ...")
