@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -22,16 +22,10 @@
 #
 import os
 import sys
-import ctypes
 
 
-def set_procname(name = os.path.basename(sys.argv[0])):
-    """Attempts to set the current process-name to the
-    given name. Fails silently if this is not possible.
+def set_procname(name=os.path.basename(sys.argv[0])):
+    """Attempts to set the current process-name to the given name."""
+    import setproctitle
 
-    Currently only works for Linux systems."""
-    try:
-        libc = ctypes.cdll.LoadLibrary('libc.so.6')
-        libc.prctl(15, name, 0, 0, 0)
-    except StandardError:
-        pass
+    setproctitle.setproctitle(name)

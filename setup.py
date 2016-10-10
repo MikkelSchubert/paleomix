@@ -78,7 +78,8 @@ setup(
 
     packages=find_packages(exclude=['misc', 'tests']),
 
-    install_requires=['pysam>=0.8.3'],
+    install_requires=['pysam>=0.8.3',
+                      'setproctitle>=1.1.0'],
 
     # Dependencies set in setup_requires to allow use of 'setup.py nosetests'
     setup_requires=['nose>=1.3.0',
