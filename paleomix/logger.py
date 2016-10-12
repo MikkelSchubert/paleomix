@@ -27,9 +27,10 @@ import optparse
 import logging
 
 import paleomix.common.console as _cli
+import paleomix.common.fileutils as _fs
 
 
-def initialize(config, template = None):
+def initialize(config, template=None):
     """Takes an OptionParser object for which 'add_optiongroup' has
     been called, as well as a filename template (containing one '%i'
     field), and initializes logging for a PALEOMIX pipeline.
@@ -153,6 +154,9 @@ class _LazyLogfile(logging.Handler):
 def _open_logfile(folder, template, start = 0):
     """Try to open a new logfile, taking steps to ensure that
     existing logfiles using the same template are not clobbered."""
+    if not os.path.exists(folder):
+        _fs.make_dirs(folder)
+
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
     while True:
         filename = os.path.join(folder, template % (start,))
