@@ -1,12 +1,35 @@
 # Change log
 
 ## [Unreleased]
+
+
+## [1.2.6] - 2016-10-12
+### Changed
+  - PALEOMIX now uses the 'setproctitle' for better compatibility; installing
+    / upgraing PALEOMIX using pip (or equivalent tools) should automatically
+    install this dependency.
+
 ### Fixed
   - mapDamage plots should not require indexed BAMs; this fixed missing file
     errors for some makefile configurations.
   - Version check for java did now works correctly for OpenJDK JVMs.
   - Pressing 'l' or 'L' to list the currently running tasks now correctly
     reports the total runtime of the pipeline, rather than 0s.
+  - Fixed broken version-check in setup.py breaking on versions of python
+    older than than 2.7, preventing meaningful message (patch by beeso018).
+  - The total runtime is now correctly reported when pressing the 'l' key
+    during execution of a pipeline.
+  - The logger will automatically create the output directory if this does
+    not already exist; previously logged messages could cause the pipeline
+    to fail, even if these were not in themselves fatal.
+  - Executables required executables for version checks are now included in
+    the prior checks for missing executables, to avoid version-checks failing
+    due to missing executables.
+
+### Added
+  - PALEOMIX will attempt to automatically limit the per-process maximum
+    number of file-handles used by when invoking Picard tools, in order
+    to prevent failures due to exceeding the system limits (ulimit -n).
 
 
 ## [1.2.5] - 2015-06-06
@@ -390,7 +413,8 @@ the (partially) updated documentation now hosted on ReadTheDocs.
 
 
 
-[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.5...HEAD
+[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.6...HEAD
+[1.2.5]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.5...v1.2.6
 [1.2.5]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.4...v1.2.5
 [1.2.4]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.3...v1.2.4
 [1.2.3]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.2...v1.2.3
