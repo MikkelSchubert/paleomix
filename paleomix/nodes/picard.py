@@ -37,6 +37,7 @@ from paleomix.common.fileutils import \
 from paleomix.common.utilities import \
     safe_coerce_to_tuple
 import paleomix.common.versions as versions
+import paleomix.common.system
 
 
 class PicardNode(CommandNode):
@@ -60,6 +61,7 @@ class ValidateBAMNode(PicardNode):
     @create_customizable_cli_parameters
     def customize(cls, config, input_bam, output_log=None, dependencies=()):
         params = picard_command(config, "ValidateSamFile")
+        _set_max_open_files(params, "MAX_OPEN_TEMP_FILES")
 
         params.set_option("I", "%(IN_BAM)s", sep="=")
 
@@ -112,6 +114,7 @@ class MarkDuplicatesNode(PicardNode):
     def customize(cls, config, input_bams, output_bam, output_metrics=None,
                   keep_dupes=False, dependencies=()):
         params = picard_command(config, "MarkDuplicates")
+        _set_max_open_files(params, "MAX_FILE_HANDLES")
 
         # Create .bai index, since it is required by a lot of other programs
         params.set_option("CREATE_INDEX", "True", sep="=")
@@ -279,3 +282,18 @@ def picard_command(config, command):
     params.set_option(command)
 
     return params
+
+
+# Fraction of per-process max open files to use
+_FRAC_MAX_OPEN_FILES = 0.95
+
+
+def _set_max_open_files(params, key):
+    """Sets the maximum number of open files a picard process
+    should use, at most. Conservatively lowered than the actual
+    ulimit.
+    """
+    max_open_files = paleomix.common.system.get_max_open_files()
+    if max_open_files is not None:
+        max_open_files = int(max_open_files * _FRAC_MAX_OPEN_FILES)
+        params.set_option(key, max_open_files, sep="=")
