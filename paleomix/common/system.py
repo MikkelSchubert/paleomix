@@ -22,6 +22,7 @@
 #
 import os
 import sys
+import resource
 
 
 def set_procname(name=os.path.basename(sys.argv[0])):
@@ -29,3 +30,25 @@ def set_procname(name=os.path.basename(sys.argv[0])):
     import setproctitle
 
     setproctitle.setproctitle(name)
+
+
+def get_max_open_files():
+    """Returns the maximum number of open files per process
+    (soft limit) or None if this could not be determined.
+    """
+    soft_limit = None
+
+    try:
+        key = resource.RLIMIT_NOFILE
+    except AttributeError:
+        try:
+            key = resource.RLIMIT_OFILE
+        except AttributeError:
+            return
+
+    try:
+        soft_limit, _ = resource.getrlimit(key)
+    except resource.error:
+        pass
+
+    return soft_limit
