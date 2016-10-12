@@ -290,7 +290,8 @@ class BWAAlgorithmNode(CommandNode):
 
 def _process_output(stdin, output_file, reference, run_fixmate=False):
     convert = factory.new("cleanup")
-    convert.set_option("--fasta", "%(IN_FASTA_REF)s")
+    if reference is not None:
+        convert.set_option("--fasta", "%(IN_FASTA_REF)s")
     convert.set_option("--temp-prefix", "%(TEMP_OUT_PREFIX)s")
     convert.set_kwargs(IN_STDIN=stdin,
                        IN_FASTA_REF=reference,
@@ -336,7 +337,7 @@ def _get_max_threads(reference, threads):
     otherwise the requested number of threads is returned.
     """
     if reference not in _PREFIX_SIZE_CACHE:
-        if not os.path.exists(reference):
+        if reference is None or not os.path.exists(reference):
             _PREFIX_SIZE_CACHE[reference] = None
         else:
             _PREFIX_SIZE_CACHE[reference] = os.path.getsize(reference)

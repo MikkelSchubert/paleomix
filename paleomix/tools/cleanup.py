@@ -230,7 +230,8 @@ def _setup_paired_ended_pipeline(args, procs, bam_cleanup):
 
 def _build_wrapper_command(args):
     bam_cleanup = paleomix.tools.factory.new("cleanup")
-    bam_cleanup.set_option('--fasta', args.fasta)
+    if args.fasta is not None:
+        bam_cleanup.set_option('--fasta', args.fasta)
     bam_cleanup.set_option('--temp-prefix', args.temp_prefix)
     bam_cleanup.set_option('--min-quality', str(args.min_quality))
     bam_cleanup.set_option('--exclude-flags', hex(args.exclude_flags))
@@ -264,16 +265,18 @@ def _run_cleanup_pipeline(args):
             # Sort, output to stdout (-o)
             call_sort.extend(('-o', '-', args.temp_prefix))
 
+        sort_stdout = None if args.fasta is None else processes.PIPE
         procs["sort"] = processes.open_proc(call_sort,
                                             stdin=last_proc.stdout,
-                                            stdout=processes.PIPE)
+                                            stdout=sort_stdout)
         last_proc.stdout.close()
 
         # Update NM and MD tags; output BAM (-b) to stdout
-        call_calmd = ['samtools', 'calmd', '-b', '-', args.fasta]
-        procs["calmd"] = processes.open_proc(call_calmd,
-                                             stdin=procs["sort"].stdout)
-        procs["sort"].stdout.close()
+        if args.fasta is not None:
+            call_calmd = ['samtools', 'calmd', '-b', '-', args.fasta]
+            procs["calmd"] = processes.open_proc(call_calmd,
+                                                 stdin=procs["sort"].stdout)
+            procs["sort"].stdout.close()
 
         if any(processes.join_procs(procs.values())):
             return 1
@@ -297,8 +300,9 @@ def parse_args(argv):
     parser.add_argument('--cleanup-sam', default=False, action="store_true",
                         help=argparse.SUPPRESS)
 
-    parser.add_argument('--fasta', help="REQUIRED: Reference FASTA sequence",
-                        required=True)
+    parser.add_argument('--fasta', default=None,
+                        help="Reference FASTA sequence; if set, the calmd "
+                             "command is used to re-calculate MD tags.")
     parser.add_argument('--temp-prefix', required=True,
                         help="REQUIRED: Prefix for temp files")
     parser.add_argument("-q", "--min-quality", type=int, default=0,
