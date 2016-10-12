@@ -300,6 +300,13 @@ class NodeGraph:
         for node in nodes:
             exec_filenames.update(node.executables)
 
+            # Requirements may include executables not invoked directly
+            for requirement in node.requirements:
+                if isinstance(requirement, versions.RequirementObj):
+                    executable = requirement.executable
+                    if executable is not None:
+                        exec_filenames.add(executable)
+
         missing_exec = missing_executables(exec_filenames)
         if missing_exec:
             raise NodeGraphError("Required executables are missing:\n\t%s"
