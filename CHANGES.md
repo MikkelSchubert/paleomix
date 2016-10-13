@@ -414,7 +414,7 @@ the (partially) updated documentation now hosted on ReadTheDocs.
 
 
 [Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.6...HEAD
-[1.2.5]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.5...v1.2.6
+[1.2.6]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.5...v1.2.6
 [1.2.5]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.4...v1.2.5
 [1.2.4]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.3...v1.2.4
 [1.2.3]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.2...v1.2.3
