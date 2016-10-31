@@ -93,7 +93,7 @@ class GenotypeSites(object):
         count_used = 0
         count_total = 0
         sites = self._sites
-        for record in records:
+        for record_id, record in enumerate(records):
             count_total += 1
 
             # TODO: Check sorted
@@ -119,9 +119,9 @@ class GenotypeSites(object):
                         assert ref_pos == site_pos, (ref_pos, site_pos)
                         nucleotide = sequence[query_pos]
                         if nucleotide != "N":
-                            nucleotides.append(nucleotide)
+                            nucleotides.append((record_id, nucleotide))
+                            read_used = True
 
-                        read_used = True
                         query_pos, ref_pos = alignment_iter()
                         site_pos, _, nucleotides = sites_iter()
             except StopIteration:
@@ -182,16 +182,20 @@ class GenotypeReader(object):
         self._tar_handle.close()
 
 
-def process_record(chrom, pos, line, nucleotides, statistics,
+def process_record(chrom, pos, line, nucleotides, statistics, records,
                    out_incl_ts=sys.stdout,
                    out_excl_ts=sys.stdout):
+    # Filter reads that have already been used
+    nucleotides = [(rec_id, nuc) for rec_id, nuc in nucleotides
+                   if rec_id not in records]
+
     if not nucleotides:
         return
     elif len(nucleotides) == 1:
         # Avoid unnessary random() call in 'random.choice'
-        nucleotide = nucleotides[0]
+        record_id, nucleotide = nucleotides[0]
     else:
-        nucleotide = random.choice(nucleotides)
+        record_id, nucleotide = random.choice(nucleotides)
 
     # Fields are expected to contain at least 2 columns, the first being the
     # reference nucleotide, and the last being the sample genotypes
@@ -229,6 +233,8 @@ def process_record(chrom, pos, line, nucleotides, statistics,
     if tuple(set(genotypes)) not in _TRANSITIONS:
         statistics["n_sites_excl_ts"] += 1
         out_excl_ts.write("{}\n".format(output))
+
+    records.add(record_id)
 
 
 def write_tfam(filename, data, samples, bam_sample):
@@ -272,6 +278,7 @@ def process_bam(args, data, bam_handle):
         with open(os.path.join(args.root, 'excl_ts.tped'), 'w') as output_excl:
             with GenotypeReader(args.database) as reader:
                 for ref, sites in reader:
+                    records = set()
                     raw_ref = raw_references[references.index(ref)]
 
                     sys.stderr.write("Reading %r from BAM ...\n" % (raw_ref,))
@@ -281,7 +288,8 @@ def process_bam(args, data, bam_handle):
                         process_record(ref, pos, line, nucleotides,
                                        out_incl_ts=output_incl,
                                        out_excl_ts=output_excl,
-                                       statistics=statistics)
+                                       statistics=statistics,
+                                       records=records)
 
                 write_summary(args, os.path.join(args.root, "common.summary"),
                               statistics=statistics)
