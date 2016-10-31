@@ -36,32 +36,39 @@ plot_coverage <- function(filename)
     tbl$Sample <- as.factor("Sample")
 
     # Correct size by number of uncalled ('N' / '-') bases
-    tbl$RelHits <- tbl$Hits / (tbl$Size - tbl$Ns)
+    tbl$RelHits <-  tbl$Hits / (tbl$Size - tbl$Ns)
 
     autosomes <- tbl[tbl$ID != 'X' & tbl$ID != 'Y',]
     autosomes$ID <- as.numeric(autosomes$ID)
-    autosomes$NormHits <- autosomes$RelHits / mean(autosomes$RelHits)
+    autosomes$NormHits <- 2 * autosomes$RelHits / mean(autosomes$RelHits)
 
-    pp <- ggplot(autosomes, aes(x=ID, y=NormHits))
+    pp <- ggplot()
 
-    pp <- pp + geom_hline(yintercept=max(autosomes$NormHits),
-                          linetype='dashed', color="grey")
-    pp <- pp + geom_hline(yintercept=min(autosomes$NormHits),
+    pp <- pp + geom_hline(yintercept=range(autosomes$NormHits),
+                          linetype='dashed', color="grey31")
+
+    labels <- data.frame(x=max(autosomes$ID),
+                         y=max(autosomes$NormHits) * 1.010,
+                         label='Female')
+    pp <- pp + geom_text(data=labels, aes(x=x, y=y, label=label),
+                         vjust=0, hjust=1, color="grey31")
+
+    pp <- pp + geom_hline(yintercept=0.5 * range(autosomes$NormHits),
                           linetype='dashed', color="grey")
 
     labels <- data.frame(x=max(autosomes$ID),
-                         y=c(max(autosomes$NormHits), 0.5),
-                         label=c('Female', 'Male'))
+                         y=max(autosomes$NormHits) * 0.505,
+                         label='Male?', color="grey")
     pp <- pp + geom_text(data=labels, aes(x=x, y=y, label=label),
-                         vjust=0, hjust=1, color="darkgrey")
+                         vjust=0, hjust=1, color="grey")
 
-    pp <- pp + geom_point()
 
-    pp <- pp + ylab("Normalized #Hits")
+    pp <- pp + geom_point(data=autosomes, aes(x=ID, y=NormHits))
+
+    pp <- pp + ylab("Estimated ploidy")
     pp <- pp + xlab("Chromosome")
     pp <- pp + theme_bw()
-    pp <- pp + theme(axis.line.y=element_line(colour = "grey"),
-                     axis.ticks.x=element_blank(),
+    pp <- pp + theme(axis.ticks.x=element_blank(),
                      panel.border=element_blank())
 
     pp <- pp + scale_x_continuous(limits=range(autosomes$ID),
@@ -76,15 +83,15 @@ plot_coverage <- function(filename)
         step <- (id_range[2] - id_range[1]) / (nrow(sex) + 1)
         sex$x <- id_range[1] + step * 1:nrow(sex)
 
-        sex$NormHits <- sex$RelHits / mean(autosomes$RelHits)
+        sex$NormHits <- 2 * sex$RelHits / mean(autosomes$RelHits)
 
         pp <- pp + geom_point(data=sex, shape=sex$ID, color="red", size=5,
                           aes(x=x, y=NormHits))
 
-        ymin <- min(0.375, 0.95 * min(autosomes$NormHits, sex$NormHits))
-        ymax <- max(0.375, 1.05 * max(autosomes$NormHits, sex$NormHits))
+        ymin <- min(0.500, 0.95 * min(autosomes$NormHits, sex$NormHits))
+        ymax <- max(2.500, 1.05 * max(autosomes$NormHits, sex$NormHits))
 
-        pp <- pp + scale_y_continuous(breaks=seq(0.25, 1.25, 0.25),
+        pp <- pp + scale_y_continuous(breaks=seq(1, 2),
                                       limits=c(ymin, ymax))
     }
 
