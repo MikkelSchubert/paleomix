@@ -32,10 +32,35 @@ plot.admixture <- function(input_file, sample_names)
     # Order by name, and then move Sample to the right (Group is '-')
     Q <- Q[, order(samples$Group, samples$Name)]
     Q <- cbind(Q[, -1], Q[, 1, drop=FALSE])
-    color <- samples$Color[order(samples$Group, samples$Name)]
-    color <- c(color[-1], color[1])
 
-    pp <- ggplot(melt(Q), aes(x=Var2, y=value, fill=Var1))
+    data <- melt(Q)
+    colors <- NULL
+    for (variable in unique(data$Var1)) {
+        groups <- NULL
+
+        for (clade in unique(data$Var2)) {
+            group <- samples[clade == samples$Name, 'Group']
+            pct <- data$value[data$Var1 == variable & data$Var2 == clade]
+
+            if (group != '-' && pct >= 0.0010   ) {
+                groups <- unique(c(groups, group))
+            }
+        }
+
+        if (length(groups) != 1) {
+            color <- "ivory3"
+            samples$Color[samples$Group %in% groups] <- "ivory4"
+        } else {
+            color <- samples$Color[samples$Group == groups][1]
+        }
+
+        colors[[variable]] <- color
+    }
+
+    text_color <- samples$Color[order(samples$Group, samples$Name)]
+    text_color <- c(text_color[-1], text_color[1])
+
+    pp <- ggplot(data, aes(x=Var2, y=value, fill=Var1))
     pp <- pp + geom_bar(stat="identity")
 
     pp <- pp + xlab(NULL)
@@ -49,7 +74,8 @@ plot.admixture <- function(input_file, sample_names)
                      axis.text.x=element_text(angle=25,
                                               hjust=1,
                                               size=12,
-                                              color=color))
+                                              color=text_color))
+    pp <- pp + scale_fill_manual(values=colors)
 
     return(pp)
 }
