@@ -167,6 +167,7 @@ class SummaryNode(Node):
         output_handle.write(tmpl.format(sample_idx=sample_idx,
                                         n_tests=n_tests,
                                         n_pos_tests=n_pos_tests))
+        output_handle.write(_SAMPLE_OVERVIEW_FOOTER.format(sample=sample))
 
         output_handle.write(_SAMPLE_DATA_HEADER.format(sample_idx=sample_idx))
 
@@ -365,27 +366,32 @@ _SAMPLE_TAB = """
 
 _SAMPLE_OVERVIEW_INCL_NUCL_POSITIVE = """
     <div class="tabContent small" id="sample{sample_idx}.page1">
-      <p>
+      <div>
         Possible admixture detected in {n_pos_tests} of {n_tests} tests.
-      </p>
-    </div>
+      </div>
 """
 
 
 _SAMPLE_OVERVIEW_INCL_NUCL_NEGATIVE = """
     <div class="tabContent small" id="sample{sample_idx}.page1">
-      <p>
+      <div>
         No admixture detected in nuclear genome.
-      </p>
-    </div>
+      </div>
 """
 
 
 _SAMPLE_OVERVIEW_EXCL_NUCL = """
     <div class="tabContent small" id="sample{sample_idx}.page1">
-      <p>
+      <div>
         Nuclear BAM not provided; no admixture were tests perfomed.
-      </p>
+      </div>
+"""
+
+
+_SAMPLE_OVERVIEW_FOOTER = """
+      <div style="text-align:center;">
+          <a href="{sample}/report.html">(Click here for the full report)</a>
+      </div>
     </div>
 """
 
