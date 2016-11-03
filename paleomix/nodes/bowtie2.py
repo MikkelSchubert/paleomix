@@ -56,6 +56,7 @@ class Bowtie2IndexNode(CommandNode):
                                    IN_FILE=input_file,
                                    TEMP_OUT_PREFIX=os.path.basename(prefix),
                                    CHECK_VERSION=BOWTIE2_VERSION)
+
         params.add_value("%(IN_FILE)s")
         # Destination prefix, in temp folder
         params.add_value("%(TEMP_OUT_PREFIX)s")
@@ -85,6 +86,7 @@ class Bowtie2Node(CommandNode):
         aln = _bowtie2_template(("bowtie2",), prefix,
                                 OUT_STDOUT=AtomicCmd.PIPE,
                                 CHECK_VERSION=BOWTIE2_VERSION)
+
         aln.set_option("-x", prefix)
 
         if log_file is not None:
