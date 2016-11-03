@@ -1,6 +1,16 @@
 # Change log
 
 ## [Unreleased]
+### Changed
+  - The wrongly named per-sample option 'Gender' in the phylogenetic
+    pipeline makefile has been replaced with a 'Sex' option. This does not
+    break backwards compatibility, and makefiles using the old name will still
+    work correctly.
+
+### Fixed
+  - Fixed the phylogenetic pipeline complaining about missing sample genders
+    (now sex) if no regions of interest had been specified. The pipeline will
+    now complain about there being no regions of interest, instead.
 
 
 ## [1.2.6] - 2016-10-12

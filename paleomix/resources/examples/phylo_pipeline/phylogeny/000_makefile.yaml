@@ -9,18 +9,18 @@ Project:
   Samples:
     <Primates>:
       bonobo:
-        Gender: NA
+        Sex: NA
       chimpanzee:
-        Gender: NA
+        Sex: NA
       gorilla:
-        Gender: NA
+        Sex: NA
       rCRS:
-        Gender: NA
+        Sex: NA
         GenotypingMethod: Reference Sequence
       sumatran_orangutan:
-        Gender: NA
+        Sex: NA
       white_handed_gibbon:
-        Gender: NA
+        Sex: NA
 
   # Specifies a set of regions of interest, each representing one or more
   # named regions in a reference sequence (e.g. genes) in BED format.
@@ -42,7 +42,7 @@ Project:
        # 'MultipleSequenceAlignment' is enabled
        IncludeIndels: yes
        # List of contigs for which heterozygous SNPs should be filtered
-       # (site set to 'N') based on gender; All genders used in the 'Samples'
+       # (site set to 'N') based on sex; All sexes used in the 'Samples'
        # section must be listed:
        HomozygousContigs:
          NA:

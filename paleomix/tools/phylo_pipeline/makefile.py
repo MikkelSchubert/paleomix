@@ -22,7 +22,6 @@
 #
 import os
 import pysam
-import sys
 import types
 
 import paleomix.common.makefile
@@ -86,7 +85,7 @@ def _mangle_makefile(options, mkfile, steps):
     _update_msa(mkfile)
     _update_homozygous_contigs(mkfile)
     _check_bam_sequences(options, mkfile, steps)
-    _check_genders(mkfile)
+    _check_sexes(mkfile)
     _update_and_check_max_read_depth(options, mkfile)
     _check_indels_and_msa(mkfile)
     mkfile["Nodes"] = ()
@@ -135,6 +134,10 @@ def _select_samples(select, groups, samples, path):
 def _update_regions(options, mkfile):
     print_info("    - Validating regions of interest ...")
     mkfile["Project"]["Regions"] = mkfile["Project"].pop("RegionsOfInterest")
+
+    if not mkfile["Project"]["Regions"]:
+        raise MakefileError('No regions of interest have been specified; '
+                            'no analyses will be performed.')
 
     for (name, subdd) in mkfile["Project"]["Regions"].iteritems():
         if "Prefix" not in subdd:
@@ -367,39 +370,52 @@ def _check_bam_sequences(options, mkfile, steps):
                     raise MakefileError(message)
 
 
-def _check_genders(mkfile):
+def _check_sexes(mkfile):
     all_contigs = set()
-    contigs_genders = set()
-    regions_genders = set()
+    contigs_sexes = set()
+    regions_sexes = set()
     for regions in mkfile["Project"]["Regions"].itervalues():
         all_contigs.update(_collect_fasta_contigs(regions["FASTA"]))
 
         for contigs in regions["HomozygousContigs"].itervalues():
-            contigs_genders.update(contigs)
+            contigs_sexes.update(contigs)
 
-        current_genders = set(regions["HomozygousContigs"])
-        if not regions_genders:
-            regions_genders = current_genders
-        elif regions_genders != current_genders:
-            raise MakefileError("List of genders for regions %r does not "
+        current_sexes = set(regions["HomozygousContigs"])
+        if not regions_sexes:
+            regions_sexes = current_sexes
+        elif regions_sexes != current_sexes:
+            raise MakefileError("List of sexes for regions %r does not "
                                 "match other regions" % (regions["Name"],))
 
-    if not regions_genders:
-        raise MakefileError("No genders have been specified in makefile; "
-                            "please list all sample genders and assosiated "
+    if not regions_sexes:
+        raise MakefileError("No sexes have been specified in makefile; "
+                            "please list all sample sexes and assosiated "
                             "homozygous contigs (if any).")
 
     for sample in mkfile["Project"]["Samples"].itervalues():
-        if sample["Gender"] not in regions_genders:
-            genders = ", ".join(map(repr, regions_genders))
-            message = "Sample %r has unknown gender %r; known genders are %s" \
-                % (sample["Name"], sample["Gender"], genders)
+        if sample.get("Sex") is None:
+            if sample.get("Gender") is None:
+                raise MakefileError("Please specify a sex for sample %r, or "
+                                    "'NA' if not applicable."
+                                    % (sample["Name"]))
+
+            sample["Sex"] = sample.pop("Gender")
+        elif sample.get("Gender") is not None:
+            raise MakefileError("Both a Sex and a Gender has been specified "
+                                "sample %r; the Gender field is deprecated, "
+                                "please only use the Sex field."
+                                % (sample["Name"]))
+
+        if sample["Sex"] not in regions_sexes:
+            sexes = ", ".join(map(repr, regions_sexes))
+            message = "Sample %r has unknown sex %r; known sexes are %s" \
+                % (sample["Name"], sample["Sex"], sexes)
             raise MakefileError(message)
 
-    unknown_contigs = contigs_genders - all_contigs
+    unknown_contigs = contigs_sexes - all_contigs
     if unknown_contigs:
-        print_warn("WARNING: Unknown contig(s) in 'HomozygousContigs':\n    - "
-                   + "\n    - ".join(unknown_contigs))
+        print_warn("WARNING: Unknown contig(s) in 'HomozygousContigs':\n"
+                   "    - " + "\n    - ".join(unknown_contigs))
         print_warn("Please verify that the list(s) of contigs is correct!")
 
 
@@ -610,7 +626,8 @@ _VALIDATION_SAMPLES = {
                                      default="samtools"),
         "SpeciesName": IsStr,  # Not used; left for backwards compatibility
         "CommonName": IsStr,   # Not used; left for backwards compatibility
-        "Gender": IsStr(default=REQUIRED_VALUE),
+        "Sex": IsStr(),
+        "Gender": IsStr(),
     }
 }
 _VALIDATION_SAMPLES[_VALIDATION_SUBSAMPLE_KEY] = _VALIDATION_SAMPLES

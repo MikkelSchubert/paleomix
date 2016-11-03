@@ -351,9 +351,9 @@ def build_sample_nodes(options, genotyping, regions_sets, sample,
     for regions in regions_sets.itervalues():
         regions = deepcopy(regions)
 
-        # Enforce homozygous contigs based on gender tag
+        # Enforce homozygous contigs based on sex tag
         regions["HomozygousContigs"] \
-            = regions["HomozygousContigs"][sample["Gender"]]
+            = regions["HomozygousContigs"][sample["Sex"]]
 
         genotyping_method = sample["GenotypingMethod"].lower()
         if genotyping_method not in _GENOTYPING_METHODS:

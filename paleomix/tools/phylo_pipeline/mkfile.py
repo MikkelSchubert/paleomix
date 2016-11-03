@@ -35,9 +35,9 @@ Project:
     <GROUP>:
       <SUBGROUP>:
         SAMPLE_NAME:
-          # Gender of the sample; used to filter SNPs on homozygous
+          # Sex of the sample; used to filter SNPs on homozygous
           # contigs (see below). If not relevant, the value 'NA' may be used.
-          Gender:       ...
+          Sex:       ...
           # Method to use when genotyping samples (see 'Genotyping');
           # defaults to 'SAMTools' if not explicitly specified.
 #          Genotyping Method: ...
@@ -62,7 +62,7 @@ Project:
        # sequences. Requires that 'MultipleSequenceAlignment' is enabled
        IncludeIndels: yes
        # List of contigs for which heterozygous SNPs should be filtered
-       # (site set to 'N') based on gender; All genders used in the 'Samples'
+       # (site set to 'N') based on sex; All sexes used in the 'Samples'
        # section must be listed, except for 'NA' which defaults to no contigs.
        HomozygousContigs:
          Female:
