@@ -196,9 +196,10 @@ class ReportNode(Node):
         try:
             groups = self._report.admixture_results(k_groups, incl_ts)
         except admixture.AdmixtureError, error:
-            return "<strong>ERROR: {}</strong".format(error)
+            return _warn("ERROR: {}</strong".format(error))
 
-        if sum((value >= cutoff) for _, value in groups) < 2:
+        n_admixture_candidates = sum((value >= cutoff) for _, value in groups)
+        if n_admixture_candidates < 2:
             return "<strong>No admixture detected.</strong>"
 
         lines = [
@@ -214,7 +215,10 @@ class ReportNode(Node):
 
         lines.append("</ul>")
 
-        if sum((value >= cutoff) for _, value in groups) != 2:
+        if n_admixture_candidates != 2:
+            lines.append(_warn('WARNING: %s-way admixture detected; this may '
+                               'indicate a false-positive result!'
+                               % (n_admixture_candidates,)))
             return "\n            ".join(lines)
 
         percentiles = self._report.admixture_percentiles(data=self._data,
@@ -222,7 +226,7 @@ class ReportNode(Node):
                                                          incl_ts_k=incl_ts)
 
         if not ('Lower' in percentiles or 'Upper' in percentiles):
-            lines.append("WARNING: Could not determine percentiles.")
+            lines.append(_warn("WARNING: Could not determine percentiles."))
 
             return "\n            ".join(lines)
 
@@ -455,6 +459,10 @@ class AnalysisReport(object):
 
 def _fmt_v(requirement):
     return ".".join(map(str, requirement.version))
+
+
+def _warn(text):
+    return "<div class='warning'>%s</div>" % (text,)
 
 
 ###############################################################################

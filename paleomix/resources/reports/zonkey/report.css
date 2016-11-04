@@ -261,3 +261,7 @@ div.tabContent.hide {
 div.tabContent.small div {
 	padding: 0.75em;
 }
+
+div.warning {
+	color: 	#dc143c;
+}
