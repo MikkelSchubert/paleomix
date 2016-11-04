@@ -108,7 +108,13 @@ class PileupRegion(object):
             pass
 
     def _collect_indels(self, pileup, blacklist):
+        previous = None
         for (index, current) in enumerate(pileup.observed):
+            if previous == '^':
+                previous = current
+                continue
+
+            previous = current
             if current == "+":
                 # Insertions do not themselves cover any bases
                 length = 0

@@ -11,6 +11,9 @@
   - Fixed the phylogenetic pipeline complaining about missing sample genders
     (now sex) if no regions of interest had been specified. The pipeline will
     now complain about there being no regions of interest, instead.
+  - The 'random sampling' genotyper would misinterpret mapping qualities 10
+    (encoded as '+') and 12 (encoded as '-') as indels, resulting in the
+    genotyping failing. These mapping qualities are now correctly ignored.
 
 
 ## [1.2.6] - 2016-10-12
