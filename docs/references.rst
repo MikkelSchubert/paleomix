@@ -5,13 +5,16 @@ References
 .. [Alexander2009] Alexander *et al*. "**Fast model-based estimation of ancestry in unrelated individuals**". Genome Res. 2009 Sep;19(9):1655-64. doi:10.1101/gr.094052.109
 .. [Chang2015] Chang *et al*. "**Second-generation PLINK: rising to the challenge of larger and richer datasets**". Gigascience. 2015 Feb 25;4:7. doi: 10.1186/s13742-015-0047-8
 .. [Daley2013] Daley and Smith. "**Predicting the molecular complexity of sequencing libraries**". Nat Methods. 2013 Apr;10(4):325-7. doi:10.1038/nmeth.2375
+.. [DerSarkissian2015] Der Sarkissian *et al*. "**Evolutionary Genomics and Conservation of the Endangered Przewalski's Horse**". Curr Biol. 2015 Oct 5;25(19):2577-83. doi:10.1016/j.cub.2015.08.032
 .. [Jonsson2013] Jónsson *et al*. "**mapDamage2.0: fast approximate Bayesian estimates of ancient DNA damage parameters**". Bioinformatics. 2013 Jul 1;29(13):1682-4. doi:10.1093/bioinformatics/btt193
+.. [Jonsson2014] Jónsson *et al*. "**Speciation with gene flow in equids despite extensive chromosomal plasticity**". PNAS. 2014 Dec 30;111(52):18655-60. doi:10.1073/pnas.1412627111
 .. [Katoh2013] Katoh and Standley. "**MAFFT multiple sequence alignment software version 7: improvements in performance and usability**". Mol Biol Evol. 2013 Apr;30(4):772-80. doi:10.1093/molbev/mst010
 .. [Langmead2012] Langmead and Salzberg. "**Fast gapped-read alignment with Bowtie 2**". Nat Methods. 2012 Mar 4;9(4):357-9. doi:10.1038/nmeth.1923
 .. [Li2009a] Li and Durbin. "**Fast and accurate short read alignment with Burrows-Wheeler transform**". Bioinformatics. 2009 Jul 15;25(14):1754-60. doi:10.1093/bioinformatics/btp324
 .. [Li2009b] Li *et al*. "**The Sequence Alignment/Map format and SAMtools**". Bioinformatics. 2009 Aug 15;25(16):2078-9. doi:10.1093/bioinformatics/btp352
 .. [Lindgreen2012] Lindgreen. "**AdapterRemoval: Easy Cleaning of Next Generation Sequencing Reads**", BMC Research Notes. 2012 Jul 5:337.
 .. [McKenna2010] McKenna *et al*. "**The Genome Analysis Toolkit: a MapReduce framework for analyzing next-generation DNA sequencing data**". Genome Res. 2010 Sep;20(9):1297-303. doi:10.1101/gr.107524.110
+.. [Orlando2013] Orlando *et al*. "**Recalibrating Equus evolution using the genome sequence of an early Middle Pleistocene horse**". Nature. 2013 Jul; 499(7456):74-78. doi:10.1038/nature12323.
 .. [Paradis2004] Paradis *et al*. "**APE: Analyses of Phylogenetics and Evolution in R language**". Bioinformatics. 2004 Jan 22;20(2):289-90. doi:10.1093/bioinformatics/btg412
 .. [Patterson2006] Patterson N, Price AL, Reich D. Population structure and eigenanalysis. PLoS Genet. 2006 Dec;2(12):e190. doi:10.1371/journal.pgen.0020190
 .. [Peltzer2016] Peltzer *et al*. "**EAGER: efficient ancient genome reconstruction**". Genome Biology. 2016 Mar 9; 17:60. doi:10.1186/s13059-016-0918-z

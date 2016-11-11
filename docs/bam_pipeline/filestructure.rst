@@ -4,7 +4,7 @@
 File structure
 ==============
 
-The following section explains the file structure of the BAM pipeline example project (see the folder examples/bam_pipeline), which results if that project is executed::
+The following section explains the file structure of the BAM pipeline example project (see :ref:`examples`), which results if that project is executed::
 
     ExampleProject: # Target name
       Synthetic_Sample_1: # Sample name

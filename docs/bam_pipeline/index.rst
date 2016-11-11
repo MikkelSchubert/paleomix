@@ -1,3 +1,5 @@
+.. _bam_pipeline:
+
 BAM Pipeline
 ============
 

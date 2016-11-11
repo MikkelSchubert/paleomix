@@ -1,3 +1,5 @@
+.. _phylo_pipeline:
+
 Phylogenetic Pipeline
 =====================
 
