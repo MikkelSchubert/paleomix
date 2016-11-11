@@ -303,11 +303,21 @@ def _collect_samples(reference, filenames):
 
 def parse_args(argv):
     parser = argparse.ArgumentParser()
-    parser.add_argument('root')
-    parser.add_argument('reference')
-    parser.add_argument('FASTAs', nargs="+")
-    parser.add_argument('--overwrite', default=False,
-                        action='store_true')
+    parser.add_argument('root',
+                        help='Root directory in which to write reference '
+                             'panel files.')
+    parser.add_argument('reference',
+                        help='Reference genome in FASTA format.')
+    parser.add_argument('samples', nargs="+",
+                        help='Samples to include in the reference-panel, in '
+                             'the form of FASTA files that map one-to-one '
+                             'to the reference sequences. That is to say '
+                             'that every position in the sample FASTA must '
+                             'be homologus to the same position in the '
+                             'reference sequence.')
+    parser.add_argument('--overwrite', default=False, action='store_true',
+                        help='If set, the program is allowed to overwrite '
+                             'already existing output files.')
 
     return parser.parse_args(argv)
 
@@ -316,15 +326,17 @@ def main(argv):
     args = parse_args(argv)
     args.revision = datetime.datetime.today().strftime('%Y%m%d')
 
-    data = _collect_samples(args.reference, args.FASTAs)
+    data = _collect_samples(args.reference, args.samples)
     if not data:
         return 1
 
     fileutils.make_dirs(args.root)
 
     _write_contigs(args, os.path.join(args.root, 'contigs.txt'))
-    _write_samples(args, data['samples'], os.path.join(args.root, 'samples.txt'))
-    _write_settings(args, data['contigs'], os.path.join(args.root, 'settings.yaml'))
+    _write_samples(args, data['samples'],
+                   os.path.join(args.root, 'samples.txt'))
+    _write_settings(args, data['contigs'],
+                    os.path.join(args.root, 'settings.yaml'))
     _write_genotypes(args, data, os.path.join(args.root, 'genotypes.txt'))
     _write_build_sh(args, os.path.join(args.root, 'build.sh'))
 
