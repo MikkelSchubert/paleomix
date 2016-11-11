@@ -93,18 +93,20 @@ To upgrade an installation a self-contained installation, simply activate the en
     $ (paleomix) deactivate
 
 
-.. warning::
-    When upgrading to v1.2.x or later from version 1.1.x or an before, it is nessesary to perform a manual installation the first time. This is accomplished by downloading and unpacking the desired version of PALEOMIX from the list of releases, and then invoking setup.py. For example::
+Upgrading from PALEOMIX v1.1.x
+------------------------------
 
-        $ wget https://github.com/MikkelSchubert/paleomix/archive/v1.2.4.tar.gz
-        $ tar xvzf v1.2.4.tar.gz
-        $ paleomix-1.2.4/
-        # Either for the current user:
-        $ python setup.py install --user
-        # Or, for all users:
-        $ sudo python setup.py install
+When upgrading to v1.2.x or later from version 1.1.x or an before, it is nessesary to perform a manual installation the first time. This is accomplished by downloading and unpacking the desired version of PALEOMIX from the list of releases, and then invoking setup.py. For example::
 
-    Once this has been done once, pip may be used to perform future upgrades as described above.
+    $ wget https://github.com/MikkelSchubert/paleomix/archive/v1.2.4.tar.gz
+    $ tar xvzf v1.2.4.tar.gz
+    $ paleomix-1.2.4/
+    # Either for the current user:
+    $ python setup.py install --user
+    # Or, for all users:
+    $ sudo python setup.py install
+
+Once this has been done once, pip may be used to perform future upgrades as described above.
 
 
 .. _pip: https://pip.pypa.io/en/stable/
