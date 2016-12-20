@@ -1,11 +1,21 @@
 # Change log
 
 ## [Unreleased]
+### Added
+  - PALEOMIX now includes the 'Zonkey' pipeline, a pipeline for
+    detecting equine F1 hybrids from archeological remains. Usage
+    is described in the documentation.
+
+
 ### Changed
   - The wrongly named per-sample option 'Gender' in the phylogenetic
     pipeline makefile has been replaced with a 'Sex' option. This does not
     break backwards compatibility, and makefiles using the old name will still
     work correctly.
+  - The 'RescaleQualities' option has been merged with the 'mapDamage' Feature
+    in the BAM pipeline makefile. The 'mapDamage' feature now takes the options
+    'plot', 'model', and 'rescale', allowing more fine-grained control.
+
 
 ### Fixed
   - Fixed the phylogenetic pipeline complaining about missing sample genders
