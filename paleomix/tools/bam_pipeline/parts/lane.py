@@ -162,7 +162,7 @@ class Lane:
             (self.options["Features"]["RealignedBAM"] and not
              # and for BAMs fed to GATK, but in this case we only use these
              # indexes if we don't generate PCR filtered or recaled BAMs
-             (self.options["RescaleQualities"] or
+             (self.options["Features"]["mapDamage"] == 'rescale' or
               self.options["PCRDuplicates"]))
 
     def _set_rg_tags(self, command):

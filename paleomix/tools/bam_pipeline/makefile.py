@@ -116,7 +116,9 @@ _VALID_FEATURES_DICT = {
     "RawBAM": IsBoolean(default=False),
     "RealignedBAM": IsBoolean(default=True),
     "Summary": IsBoolean(default=True),
-    "mapDamage": IsBoolean(default=True),
+    "mapDamage": Or(IsBoolean,
+                    StringIn(('rescale', 'model', 'plot', 'no', 'yes')),
+                    default=True)
 }
 
 _VALID_FEATURES_LIST = ValuesSubsetOf(("Coverage",
@@ -226,7 +228,7 @@ _VALIDATION_OPTIONS = {
         "--shift": IsUnsignedInt,
         "--qualitymax": IsUnsignedInt,
         "--mate-separator": IsStr,
-        },
+    },
 
     # Which aliger/mapper to use (BWA/Bowtie2)
     "Aligners": {
@@ -263,8 +265,9 @@ _VALIDATION_OPTIONS = {
     # True is equivalent of 'remove'.
     "PCRDuplicates": StringIn((True, False, 'mark', 'filter'),
                               default='filter'),
-    # Qualities should be rescaled using mapDamage
-    "RescaleQualities": IsBoolean(default=False),
+
+    # Qualities should be rescaled using mapDamage (replaced with Features)
+    "RescaleQualities": IsBoolean(),
 
     "mapDamage": {
         # Tabulation options
@@ -336,20 +339,21 @@ def _mangle_makefile(makefile, pipeline_variant):
     makefile["Prefixes"] = makefile["Makefile"].pop("Prefixes")
     makefile["Targets"] = makefile.pop("Makefile")
 
-    _update_options(makefile)
+    _mangle_features(makefile)
+    _mangle_options(makefile)
 
     if pipeline_variant != 'trim':
-        _update_prefixes(makefile)
+        _mangle_prefixes(makefile)
 
-    _update_lanes(makefile)
-    _update_tags(makefile)
+    _mangle_lanes(makefile)
+    _mangle_tags(makefile)
 
     _split_lanes_by_filenames(makefile)
 
     return makefile
 
 
-def _update_options(makefile):
+def _mangle_options(makefile):
     def _do_update_options(options, data, path):
         options = copy.deepcopy(options)
         if "Options" in data:
@@ -372,7 +376,28 @@ def _update_options(makefile):
         _do_update_options(makefile["Options"], data, ())
 
 
-def _update_prefixes(makefile):
+def _mangle_features(makefile):
+    """Updates old-style makefiles to match the current layout.
+
+    Specifically:
+      - v1.2.6 merged the 'RescaleQualities' switch with the 'mapDamage'
+        feature; when the former is present, it is given priority.
+    """
+
+    options = makefile['Options']
+    features = options['Features']
+
+    # Force feature if 'RescaleQualities' is set, for backwards compatibility
+    if options.pop('RescaleQualities', None):
+        features['mapDamage'] = 'rescale'
+
+    if isinstance(features['mapDamage'], bool):
+        features['mapDamage'] = 'plot' if features['mapDamage'] else 'no'
+    elif features['mapDamage'] == 'yes':
+        features['mapDamage'] = 'plot'
+
+
+def _mangle_prefixes(makefile):
     prefixes = {}
     for (name, values) in makefile.get("Prefixes", {}).iteritems():
         filename = values["Path"]
@@ -417,7 +442,7 @@ def _update_prefixes(makefile):
     makefile["Prefixes"] = prefixes
 
 
-def _update_lanes(makefile):
+def _mangle_lanes(makefile):
     formatter = string.Formatter()
     prefixes = makefile["Prefixes"]
     for (target_name, samples) in makefile["Targets"].iteritems():
@@ -510,7 +535,7 @@ def _determine_lane_type(prefixes, data, path):
                         "Found: %s" % (", ".join(data),))
 
 
-def _update_tags(makefile):
+def _mangle_tags(makefile):
     for (target, samples) in makefile["Targets"].iteritems():
         for (sample, libraries) in samples.iteritems():
             for (library, barcodes) in libraries.iteritems():

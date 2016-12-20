@@ -118,10 +118,6 @@ _TEMPLATE_BAM_OPTIONS = \
   # reads are filtered using Picard MarkDuplicates.
   PCRDuplicates: filter
 
-  # Carry out quality base re-scaling of libraries using mapDamage
-  # This will be done using the options set for mapDamage below
-  RescaleQualities: no
-
   # Command-line options for mapDamage; note that the long-form
   # options are expected; --length, not -l, etc. Uncomment the
   # "mapDamage" line adding command-line options below.
@@ -133,31 +129,43 @@ _TEMPLATE_BAM_OPTIONS = \
   # Set to 'yes' exclude a type of trimmed reads from alignment / analysis;
   # possible read-types reflect the output of AdapterRemoval
   ExcludeReads:
-    Single: no              # Single-ended reads / Orphaned paired-ended reads
-    Paired: no              # Paired ended reads
-    Singleton: no           # Paired reads for which the mate was discarded
-    Collapsed: no           # Overlapping paired-ended reads collapsed into a
-                            # single sequence by AdapterRemoval
-    CollapsedTruncated: no  # Like 'Collapsed', except that the reads
-                            # truncated due to the presence ambiguous
-                            # bases or low quality bases at read termini.
+    # Exclude single-end reads (yes / no)?
+    Single: no
+    # Exclude non-collapsed paired-end reads (yes / no)?
+    Paired: no
+    # Exclude paired-end reads for which the mate was discarded (yes / no)?
+    Singleton: no
+    # Exclude overlapping paired-ended reads collapsed into a single sequence
+    # by AdapterRemoval (yes / no)?
+    Collapsed: no
+    # Like 'Collapsed', but only for collapsed reads truncated due to the
+    # presence of ambiguous or low quality bases at read termini (yes / no).
+    CollapsedTruncated: no
 
-  # Optional steps to perform during processing
+  # Optional steps to perform during processing.
   Features:
-    RawBAM: no          # Generate BAM from the raw libraries (no indel realignment)
-                        #   Location: {Destination}/{Target}.{Genome}.bam
-    RealignedBAM: yes   # Generate indel-realigned BAM using the GATK Indel realigner
-                        #   Location: {Destination}/{Target}.{Genome}.realigned.bam
-    mapDamage: yes      # Generate mapDamage plot for each (unrealigned) library
-                        #   Location: {Destination}/{Target}.{Genome}.mapDamage/{Library}/
-    Coverage: yes       # Generate coverage information for the raw BAM (wo/ indel realignment)
-                        #   Location: {Destination}/{Target}.{Genome}.coverage
-    Depths: yes         # Generate histogram of number of sites with a given read-depth
-                        #   Location: {Destination}/{Target}.{Genome}.depths
-    Summary: yes        # Generate summary table for each target
-                        #   Location: {Destination}/{Target}.summary
-    DuplicateHist: no   # Generate histogram of PCR duplicates, for use with PreSeq
-                        #   Location: {Destination}/{Target}.{Genome}.duphist/{Library}/
+    # Generate BAM without realignment around indels (yes / no)
+    RawBAM: no
+    # Generate indel-realigned BAM using the GATK Indel realigner (yes / no)
+    RealignedBAM: yes
+    # To disable mapDamage, write 'no'; to generate basic mapDamage plots,
+    # write 'plot'; to build post-mortem damage models, write 'model',
+    # and to produce rescaled BAMs, write 'rescale'. The 'model' option
+    # includes the 'plot' output, and the 'rescale' option includes both
+    # 'plot' and 'model' results. All analyses are carried out per library.
+    mapDamage: plot
+    # Generate coverage information for the raw BAM (wo/ indel realignment).
+    # If one or more 'RegionsOfInterest' have been specified for a prefix,
+    # additional coverage files are generated for each alignment (yes / no)
+    Coverage: yes
+    # Generate histogram of number of sites with a given read-depth, from 0
+    # to 200. If one or more 'RegionsOfInterest' have been specified for a
+    # prefix, additional histograms are generated for each alignment (yes / no)
+    Depths: yes
+    # Generate summary table for each target (yes / no)
+    Summary: yes
+    # Generate histogram of PCR duplicates, for use with PreSeq (yes / no)
+    DuplicateHist: no
 """
 
 _TEMPLATE_PREFIXES = """
@@ -165,12 +173,14 @@ _TEMPLATE_PREFIXES = """
 # location of the BWA/Bowtie2 index, and optional label, and an option
 # set of regions for which additional statistics are produced.
 Prefixes:
-  # Uncomment and replace 'NAME_OF_PREFIX' with name of the prefix; this name
+  # Replace 'NAME_OF_PREFIX' with name of the prefix; this name
   # is used in summary statistics and as part of output filenames.
-#  NAME_OF_PREFIX:
-    # Uncomment and replace 'PATH_TO_PREFIX' with the path to .fasta file
-    # containing the references against which reads are to be mapped.
-#    Path: PATH_TO_PREFIX
+  NAME_OF_PREFIX:
+    # Replace 'PATH_TO_PREFIX' with the path to .fasta file containing the
+    # references against which reads are to be mapped. Using the same name
+    # as filename is strongly recommended (e.g. /path/to/Human_g1k_v37.fasta
+    # should be named 'Human_g1k_v37').
+    Path: PATH_TO_PREFIX
 
     # (Optional) Uncomment and replace 'PATH_TO_BEDFILE' with the path to a
     # .bed file listing extra regions for which coverage / depth statistics

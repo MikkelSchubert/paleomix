@@ -6,7 +6,7 @@ Makefile description
 
 .. contents::
 
-The following sections reviews the options available in the BAM pipeline makefiles. As described in the :ref:`bam_usage` section, a default makefile may be generated using the 'paleomix bam\_pipeline mkfile' command. For clarity, the location of options in subsections are specified by concatenating the names using '\:\:' as a separator. Thus, in the following (simplified example), the 'UseSeed' option (line 13) would be referred to as 'Options \:\: Aligners \:\: BWA \:\: UseSeed':
+The following sections reviews the options available in the BAM pipeline makefiles. As described in the :ref:`bam_usage` section, a default makefile may be generated using the 'paleomix bam\_pipeline makefile' command. For clarity, the location of options in subsections are specified by concatenating the names using '\:\:' as a separator. Thus, in the following (simplified example), the 'UseSeed' option (line 13) would be referred to as 'Options \:\: Aligners \:\: BWA \:\: UseSeed':
 
 .. code-block:: yaml
     :emphasize-lines: 13
@@ -88,7 +88,7 @@ Options: General
         :language: yaml
         :linenos:
         :lineno-start: 9
-        :lines: 9-14
+        :lines: 9-13
 
     The QualityOffset option refers to the starting ASCII value used to encode `Phred quality-scores`_ in user-provided FASTQ files, with the possible values of 33, 64, and 'Solexa'. For most modern data, this will be 33, corresponding to ASCII characters in the range '!' to 'J'. Older data is often encoded using the offset 64, corresponding to ASCII characters in the range '@' to 'h', and more rarely using Solexa quality-scores, which represent a different scheme than Phred scores, and which occupy the range of ASCII values from ';' to 'h'. For a visual representation of this, refer to the Wikipedia article linked above.
 
@@ -187,8 +187,8 @@ The "AdapterRemoval" subsection allows for options that are applied when Adapter
 
     If enabled, AdapterRemoval will attempt to combine overlapping paired-end reads into a single (potentially longer) sequence. This has at least two advantages, namely that longer reads allow for less ambiguous alignments against the target reference genome, and that the fidelity of the overlapping region (potentially the entire read) is improved by selecting the highest quality base when discrepancies are observed. The names of reads thus merged are prefixed with either 'M\_' or 'MT\_', with the latter marking reads that have been trimmed from the 5' or 3' termini following collapse, and which therefore do not represent the full insert. To disable this behavior, set the option to 'no' (without quotes)::
 
-        --trimns: yes  # Option enabled
-        --trimns: no   # Option disabled
+        --collapse: yes  # Option enabled
+        --collapse: no   # Option disabled
 
     .. note::
         This option may be combined with the 'ExcludeReads' option (see below), to either eliminate or select for short inserts, depending on the expectations from the experiment. I.e. for ancient samples, where the most inserts should be short enough to allow collapsing (< 2x read read - 11, by default), excluding paired (uncollapsed) and singleton reads may help reduce the fraction of exogenous DNA mapped.
@@ -336,24 +336,12 @@ Options: mapDamage plots and rescaling
         :language: yaml
         :linenos:
         :lineno-start: 80
-        :lines: 80-90
+        :lines: 80-86
 
-
-**Options \:\: RescaleQualities**
-    .. literalinclude:: makefile.yaml
-        :language: yaml
-        :linenos:
-        :lineno-start: 80
-        :lines: 80-82
-
-    If enabled, mapDamage will be used to build a model of *post-mortem* DNA damage per library, which is then applied to the per-library BAMs in order to recalibrate quality scores according to the probability that a C>T or G>A substitution is caused by *post-mortem* DNA damage [Jonsson2013]_. To enable, change the value to 'yes' (without quotes)::
-
-        RescaleQualities: no   # Rescaling disabled
-        RescaleQualities: yes  # Rescaling enabled
+    This subsection is used to specify options for mapDamage2.0, when plotting *post-mortem* DNA damage, when building models of the *post-mortem* damage, and when rescaling quality scores to account for this damage. In order to enable plotting, modeling, or rescaling of quality scores, please see the 'mapDamage' option in the 'Features' section below.
 
     .. note::
-        It may be worthwhile to tweak mapDamage parameters before building a model of *post-mortem* DNA damage; this may be accomplished by running the pipeline without rescaling, running with the 'mapDamage'
-        feature set to 'yes' (without quotes), inspecting the plots generated per-library, and then tweaking parameters as appropriate, before setting 'RescaleQualities' to yes.
+        It may be worthwhile to tweak mapDamage parameters before building a model of *post-mortem* DNA damage; this may be accomplished by running the pipeline without rescaling, running with the 'mapDamage' feature set to 'plot' (with or without quotes), inspecting the plots generated per-library, and then tweaking parameters as appropriate, before setting 'RescaleQualities' to 'model' (with or without quotes).
 
         Disabling the construction of the final BAMs may be accomplished by setting the features 'RawBam' and 'RealignedBAM' to 'no' (without quotes) in the 'Features' section (see below), and then setting the desired option to yes again after enabling rescaling and adding the desired options to the mapDamage section.
 
@@ -367,8 +355,8 @@ Options: mapDamage plots and rescaling
     .. literalinclude:: makefile.yaml
         :language: yaml
         :linenos:
-        :lineno-start: 88
-        :lines: 88-90
+        :lineno-start: 84
+        :lines: 84-86
 
     By default the BAM pipeline only samples 100k reads for use in constructing mapDamage plots; in our experience, this is sufficient for accurate plots and models. If no downsampling is to be done, this value can set to 0 to disable this features::
 
@@ -378,11 +366,6 @@ Options: mapDamage plots and rescaling
 
 
 **Options \:\: mapDamage :: \***
-    .. literalinclude:: makefile.yaml
-        :language: yaml
-        :linenos:
-        :lineno-start: 80
-        :lines: 80-82
 
     Additional command-line options may be supplied to mapDamage, just like the '--downsample' parameter, as described in the "Specifying command-line options" section above. These are used during plotting and rescaling (if enabled).
 
@@ -392,8 +375,8 @@ Options: Excluding read-types
     .. literalinclude:: makefile.yaml
         :language: yaml
         :linenos:
-        :lineno-start: 92
-        :lines: 92-102
+        :lineno-start: 88
+        :lines: 88-102
 
     During the adapter-trimming and read-merging step, AdapterRemoval will generate a selection of different read types. This option allows certain read-types to be excluded from further analyses. In particular, it may be useful to exclude non-collapsed (paired and singleton) reads when processing (ancient) DNA for which only short inserts is expected, since this may help exclude exogenous DNA. The following read types are currently recognized:
 
@@ -424,7 +407,7 @@ Options: Optional features
         :language: yaml
         :linenos:
         :lineno-start: 104
-        :lines: 104-118
+        :lines: 104-127
 
     This section lists several optional features, in particular determining which BAM files and which summary statistics are generated when running the pipeline. Currently, the following options are available:
 
@@ -435,7 +418,7 @@ Options: Optional features
         If enabled, the pipeline will generate a final BAM, which is processed using the GATK Indel Realigner [McKenna2010]_, in order to improve the alignment near indels, by performing a multiple sequence alignment in regions containing putative indels.
 
     *mapDamage*
-        If enabled, the pipeline will generate mapDamage plots for each reference genome and for each library. Note that these will be generated even if the option is set to 'no', if the 'RescaleQualities' option is enabled (see above).
+        The 'mapDamage' option accepts four possible values: 'no', 'plot', 'model', and 'rescale'. By default value ('plot'), will cause mapDamage to be run in order to generate simple plots of the *post-mortem* DNA damage rates, as well as base composition plots, and more. If set to 'model', mapDamage will firstly generate the plots described for 'plot', but also construct models of DNA damage parameters, as described in [Jonsson2013]_. Note that a minimum amount of DNA damage is required to be present in order to build these models. If the option is set to 'rescale', both plots and models will be constructed using mapDamage, and in addition, the quality scores of bases will be down-graded based on how likely they are to represent *post-mortem* DNA damage (see above).
 
     *Coverage*
         If enabled, a table summarizing the number of hits, the number of aligned bases, bases inserted, and bases deleted, as well as the mean coverage, is generated for each reference sequence, stratified by sample, library, and contig.
@@ -461,8 +444,8 @@ Prefixes section
 .. literalinclude:: makefile.yaml
     :language: yaml
     :linenos:
-    :lineno-start: 104
-    :lines: 122-139
+    :lineno-start: 129
+    :lines: 129-149
 
 
 Reference genomes used for mapping are specified by listing these (one or more) in the 'Prefixes' section. Each reference genome is associated with a name (used in summary statistics and as part of the resulting filenames), and the path to a FASTA file which contains the reference genome. Several other options are also available, but only the name and the 'Path' value are required, as shown here for several examples::
@@ -587,8 +570,8 @@ Targets section
 .. literalinclude:: makefile.yaml
     :language: yaml
     :linenos:
-    :lineno-start: 104
-    :lines: 142-
+    :lineno-start: 152
+    :lines: 152-
 
 In the BAM pipeline, the term 'Target' is used to refer not to a particular sample (though in typical usage a target includes just one sample), but rather one or more samples to processed together to generate a BAM file per prefix (see above). A sample included in a target may likewise contain one or more libraries, for each of which one or more sets of FASTQ reads are specified.
 

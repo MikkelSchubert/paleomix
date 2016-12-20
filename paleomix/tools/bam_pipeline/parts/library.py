@@ -123,7 +123,7 @@ class Library:
                           # or if we wish to run GATK, but only if we don't
                           # use a downstream rescaled BAM as input for GATK
                           (self.options["Features"]["RealignedBAM"] and not
-                           self.options["RescaleQualities"]))
+                           self.options["Features"]["mapDamage"] == 'rescale'))
 
         results = {}
         for (key, files_and_nodes) in bams.items():
@@ -145,12 +145,22 @@ class Library:
                                    "%s.%s.mapDamage"
                                    % (target, prefix["Name"]), self.name)
 
-        if self.options["RescaleQualities"]:
+        run_type = self.options["Features"]["mapDamage"]
+        if run_type == 'rescale':
             return self._mapdamage_rescale(config=config,
                                            destination=destination,
                                            prefix=prefix,
                                            files_and_nodes=files_and_nodes)
-        elif self.options["Features"]["mapDamage"]:
+
+        elif run_type == 'model':
+            # Run of mapDamage including both plots and damage models
+            node = self._mapdamage_model(config=config,
+                                         destination=destination,
+                                         prefix=prefix,
+                                         files_and_nodes=files_and_nodes)
+
+            return files_and_nodes, (node,)
+        elif run_type == 'plot':
             # Basic run of mapDamage, only generates plots / tables
             node = self._mapdamage_plot(config=config,
                                         destination=destination,
@@ -159,6 +169,7 @@ class Library:
 
             return files_and_nodes, (node,)
         else:
+            assert run_type == 'no', run_type
             return files_and_nodes, ()
 
     def _mapdamage_plot(self, config, destination, prefix, files_and_nodes):
@@ -175,9 +186,7 @@ class Library:
 
         return plot.build_node()
 
-    def _mapdamage_rescale(self, config, destination, prefix, files_and_nodes):
-        output_filename = self.folder + ".rescaled.bam"
-
+    def _mapdamage_model(self, config, destination, prefix, files_and_nodes):
         # Generates basic plots / table files
         plot = self._mapdamage_plot(config=config,
                                     destination=destination,
@@ -189,10 +198,18 @@ class Library:
                                              directory=destination,
                                              dependencies=plot)
         apply_options(model.command, self.options["mapDamage"])
-        model = model.build_node()
+        return model.build_node()
+
+    def _mapdamage_rescale(self, config, destination, prefix, files_and_nodes):
+        model = self._mapdamage_model(config=config,
+                                      destination=destination,
+                                      prefix=prefix,
+                                      files_and_nodes=files_and_nodes)
 
         # Rescales BAM quality scores using model built above
         input_files = files_and_nodes.keys()
+        output_filename = self.folder + ".rescaled.bam"
+
         scale = MapDamageRescaleNode.customize(config=config,
                                                reference=prefix["Reference"],
                                                input_files=input_files,
