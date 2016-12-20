@@ -17,6 +17,7 @@ If you make use of any part of the PALEOMIX pipeline and/or assosiated tools, th
 
    bam_pipeline/index.rst
    phylo_pipeline/index.rst
+   zonkey_pipeline/index.rst
 
    other_tools.rst
    examples.rst
@@ -29,7 +30,6 @@ If you make use of any part of the PALEOMIX pipeline and/or assosiated tools, th
 
    references.rst
 
-..   zonkey_pipeline/index.rst
 
 
 Indices and tables

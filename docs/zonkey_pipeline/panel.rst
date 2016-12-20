@@ -11,9 +11,9 @@ The reference panel has been generated using alignments against the Equus caball
 Obtaining the reference panel
 -------------------------------
 
-The latest version of the Zonkey reference panel (dated 2016-04-05) may be downloaded via the following website:
+The latest version of the Zonkey reference panel (dated 2016-11-01) may be downloaded via the following website:
 
-TODO
+http://geogenetics.ku.dk/publications/zonkey
 
 Once this reference panel has been downloaded, it is strongly recommended that you decompress it using the 'bunzip2' command, since this speeds up several analytical steps (at the cost of about 600 MB of additional disk usage). To decompress the reference panel, simply run 'bunzip2' on the file, as shown here:
 

@@ -41,15 +41,16 @@ def _commands():
            "Equivalent to 'bam_pipeline', but only runs the trimming steps.")
     yield ("phylo_pipeline", "paleomix.tools.phylo_pipeline.pipeline",
            "Pipeline for genotyping and phylogenetic inference from BAMs.")
+    yield ("zonkey", "paleomix.tools.zonkey.pipeline",
+           "Pipeline for detecting F1 (equine) hybrids.")
 
-    # In development: No support is provided for these tools; functionality
-    # may be changed or removed without warning, and analyses may or may not
-    # produce real results at any given point in time.
-    # yield ("Zonkey", None, None)
-    yield ("zonkey", "paleomix.tools.zonkey.pipeline", None)
+    # Currently not documented; used internally by Zonkey
     yield ("zonkey_db", "paleomix.tools.zonkey.build_db", None)
     yield ("zonkey_tped", "paleomix.tools.zonkey.build_tped", None)
     yield ("zonkey_mito", "paleomix.tools.zonkey.build_mito", None)
+
+    # In development: Integration of metabit into PALEOMIX
+    yield ("metabit", "paleomix.tools.metabit.metabit", None)
 
     yield ("BAM/SAM tools", None, None)
     yield ("cleanup", "paleomix.tools.cleanup",
