@@ -1,6 +1,7 @@
 # Change log
 
-## [Unreleased]
+
+## [1.2.7] - 2017-01-03
 ### Added
   - PALEOMIX now includes the 'Zonkey' pipeline, a pipeline for
     detecting equine F1 hybrids from archeological remains. Usage
@@ -436,7 +437,8 @@ the (partially) updated documentation now hosted on ReadTheDocs.
 
 
 
-[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.6...HEAD
+[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.7...HEAD
+[1.2.7]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.6...v1.2.7
 [1.2.6]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.5...v1.2.6
 [1.2.5]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.4...v1.2.5
 [1.2.4]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.3...v1.2.4
