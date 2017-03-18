@@ -95,7 +95,8 @@ def describe_filters(options):
     return {
         "HET": "Heterozygous SNPs observed on homozygous chromosome (e.g. chrX)",
         "q:%i" % options.min_quality: "Minimum Phred score recorded in the QUAL column",
-        "f:%.4f" % options.min_allele_frequency:  "Minimum frequency of the alleles at heterozygous sites",
+        "f:%.4f" % options.min_allele_frequency: "Minimum frequency of the alleles at heterozygous sites",
+        "F:%.4f" % options.min_allele_frequency: "Heterozygous sites for which the frequency was not determined.",
         "k": "SNPs without a most likely genotype (based on PL)",
         "Q:%i" % options.min_mapping_quality: "Minimum RMS mapping quality",
         "d:%i" % options.min_read_depth: "Minimum read depth",

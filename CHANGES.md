@@ -1,12 +1,16 @@
 # Change log
 
+## [Unreleased]
+### Added
+  - Added FILTER entry for 'F' filter used in vcf_filter. This corresponds to
+    heterozygous sites where the allele frequency was not determined.
+
 
 ## [1.2.7] - 2017-01-03
 ### Added
   - PALEOMIX now includes the 'Zonkey' pipeline, a pipeline for
     detecting equine F1 hybrids from archeological remains. Usage
     is described in the documentation.
-
 
 ### Changed
   - The wrongly named per-sample option 'Gender' in the phylogenetic
@@ -16,7 +20,6 @@
   - The 'RescaleQualities' option has been merged with the 'mapDamage' Feature
     in the BAM pipeline makefile. The 'mapDamage' feature now takes the options
     'plot', 'model', and 'rescale', allowing more fine-grained control.
-
 
 ### Fixed
   - Fixed the phylogenetic pipeline complaining about missing sample genders
