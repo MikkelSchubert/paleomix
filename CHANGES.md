@@ -5,6 +5,11 @@
   - Added FILTER entry for 'F' filter used in vcf_filter. This corresponds to
     heterozygous sites where the allele frequency was not determined.
 
+### Changed
+  - Only letters, numbers, and '-', '_', and '.' are allowed in sample-names
+    used in Zonkey, in order to prevent invalid filenames and certain programs
+    breaking on whitespace.
+
 ### Fixed
   - Fixed validation nodes failing on output paths without a directory.
   - Fixed possible uncaught exceptions when terminating cat commands used by

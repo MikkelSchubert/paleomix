@@ -21,6 +21,7 @@
 # SOFTWARE.
 #
 import os
+import string
 import sys
 import optparse
 
@@ -251,6 +252,7 @@ def _read_sample_table(config, filename):
     a single mitochondrial alignment (2 columns), or both (3 columns).
     """
     print_info("Reading table of samples from %r" % (filename,))
+    valid_characters = frozenset(string.letters + string.digits + ".-_")
 
     samples = config.samples = {}
     with fileutils.open_ro(filename) as handle:
@@ -258,16 +260,24 @@ def _read_sample_table(config, filename):
             if not line.strip() or line.lstrip().startswith("#"):
                 continue
 
-            fields = filter(None, line.rstrip('\r\n').split('\t'))
+            fields = filter(None, map(str.strip, line.split('\t')))
             if len(fields) not in (2, 3):
-                print_err("Error reading sample table (%r) at line %i; "
-                          "expected 2 or 3 columns, found %i; please "
+                print_err("Error reading sample table (%r) at line %i: "
+                          "Expected 2 or 3 columns, found %i; please "
                           "correct file before continuing."
                           % (filename, linenum, len(fields)))
                 return
 
             name = fields[0]
-            if name in samples:
+            invalid_letters = frozenset(name) - valid_characters
+            if invalid_letters:
+                print_err("Error reading sample table (%r) at line %i: "
+                          "Sample name contains illegal character(s). Only "
+                          "letters, numbers, and '-', '_', and '.' are "
+                          "allowed, but found %r in name %r "
+                          % (filename, linenum, "".join(invalid_letters), name))
+                return
+            elif name in samples:
                 print_err("Duplicate sample name found in sample table "
                           "(%r) at line %i: %r. All sample names must "
                           "be unique!" % (filename, linenum, name))
