@@ -83,7 +83,9 @@ class DetectInputDuplicationNode(Node):
 
             # Everything is ok, touch the output files
             for fpath in self.output_files:
-                make_dirs(os.path.dirname(fpath))
+                if os.path.dirname(fpath):
+                    make_dirs(os.path.dirname(fpath))
+
                 with open(fpath, "w"):
                     pass
         finally:
@@ -183,7 +185,8 @@ class ValidateFASTQFilesNode(Node):
     def _run(self, _config, _temp):
         check_fastq_files(self.input_files, self._offset, True)
         output_file = tuple(self.output_files)[0]
-        make_dirs(os.path.dirname(output_file))
+        if os.path.dirname(output_file):
+            make_dirs(os.path.dirname(output_file))
         with open(output_file, "w"):
             pass
 
@@ -203,7 +206,8 @@ class ValidateFASTAFilesNode(Node):
         for filename in self.input_files:
             check_fasta_file(filename)
         output_file, = self.output_files
-        make_dirs(os.path.dirname(output_file))
+        if os.path.dirname(output_file):
+            make_dirs(os.path.dirname(output_file))
         with open(output_file, "w"):
             pass
 
@@ -249,12 +253,15 @@ def _read_sequences(filename):
         qualities = _collect_qualities(cat.stdout, filename)
 
         return sampling.reservoir_sampling(qualities, 100000)
-    except:
+    except StandardError as error:
         if cat:
-            cat.kill()
+            try:
+                cat.kill()
+            except OSError:
+                pass
             cat.wait()
             cat = None
-        raise
+        raise error
     finally:
         rc_cat = cat.wait() if cat else 0
         if rc_cat:

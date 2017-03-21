@@ -5,6 +5,11 @@
   - Added FILTER entry for 'F' filter used in vcf_filter. This corresponds to
     heterozygous sites where the allele frequency was not determined.
 
+### Fixed
+  - Fixed validation nodes failing on output paths without a directory.
+  - Fixed possible uncaught exceptions when terminating cat commands used by
+    FASTQ validation nodes resulting in loss of error messages.
+
 
 ## [1.2.7] - 2017-01-03
 ### Added
