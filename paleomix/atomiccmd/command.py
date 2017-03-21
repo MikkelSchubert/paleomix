@@ -21,7 +21,6 @@
 # SOFTWARE.
 #
 import collections
-import errno
 import os
 import re
 import signal
@@ -279,7 +278,7 @@ class AtomicCmd(object):
                         committed_files.add(self._files[key])
                     elif key.startswith("TEMP_OUT_"):
                         fileutils.try_remove(filename)
-        except:
+        except StandardError:
             # Cleanup after failed commit
             for fpath in committed_files:
                 fileutils.try_remove(fpath)
