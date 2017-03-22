@@ -4,11 +4,15 @@
 ### Added
   - Added FILTER entry for 'F' filter used in vcf_filter. This corresponds to
     heterozygous sites where the allele frequency was not determined.
+  - Added 'dupcheck' command. This command roughly corresponds to the
+    DetectInputDuplication step that is part of the BAM pipeline, and attempts
+    to identify duplicate data (not PCR duplicates), by locating reads mapped
+    to the same position, with the same name, sequence, and quality scores.
 
 ### Changed
   - Only letters, numbers, and '-', '_', and '.' are allowed in sample-names
     used in Zonkey, in order to prevent invalid filenames and certain programs
-    breaking on whitespace.
+    breaking on whitespace. Trailing whitespace is stripped.
 
 ### Fixed
   - Fixed validation nodes failing on output paths without a directory.

@@ -53,6 +53,10 @@ def _commands():
     yield ("metabit", "paleomix.tools.metabit.metabit", None)
 
     yield ("BAM/SAM tools", None, None)
+    yield ("dupcheck", "paleomix.tools.dupcheck",
+           "Identifies potential duplicate data in sorted BAM files, defined"
+           "as reads aligned to the same position, with the same name, "
+           "sequence, and qualities.")
     yield ("cleanup", "paleomix.tools.cleanup",
            "Reads SAM file from STDIN, and outputs sorted, tagged, and filter "
            "BAM, for which NM and MD tags have been updated.")

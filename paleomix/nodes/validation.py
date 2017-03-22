@@ -63,113 +63,46 @@ class DetectInputDuplicationNode(Node):
                       dependencies=dependencies)
 
     def run(self, _):
-        handles = []
-        try:
-            last_pos = None
-            observed_reads = collections.defaultdict(list)
-            for (record, filename) in self._open_samfiles(handles, self.input_files):
-                curr_pos = (record.pos, record.tid)
-                if curr_pos != last_pos:
-                    self._process_reads(observed_reads, self.output_files)
-                    observed_reads.clear()
-                    last_pos = curr_pos
+        check_bam_files(self.input_files, self._throw_node_error)
 
-                    # Stop once the trailing, unmapped reads are reached
-                    if record.tid == -1:
-                        break
+        # Everything is ok, touch the output files
+        for fpath in self.output_files:
+            if os.path.dirname(fpath):
+                make_dirs(os.path.dirname(fpath))
 
-                observed_reads[record.qname].append((record, filename))
-            self._process_reads(observed_reads, self.output_files)
+            with open(fpath, "w"):
+                pass
 
-            # Everything is ok, touch the output files
-            for fpath in self.output_files:
-                if os.path.dirname(fpath):
-                    make_dirs(os.path.dirname(fpath))
+    def _throw_node_error(self, chrom, pos, records, name, seq, qual):
+        message = ["The same read was found multiple times at position %i on %r!"
+                   % (pos, chrom),
+                   "    Name:      %r" % (name,),
+                   "    Sequence:  %r" % (seq,),
+                   "    Qualities: %r" % (qual,),
+                   ""]
 
-                with open(fpath, "w"):
-                    pass
-        finally:
-            for handle in handles:
-                handle.close()
+        message.append("Read was found in these BAM files:")
+        for filename, records in sorted(records.iteritems()):
+            message.append("   %s in %r" % (_summarize_reads(records), filename))
 
-    @classmethod
-    def _open_samfiles(cls, handles, filenames):
-        sequences = []
-        for filename in filenames:
-            handle = pysam.Samfile(filename)
-            handles.append(handle)
+        message.append("")
+        message.append("This indicates that the same data has been "
+                       "included multiple times in the project. This "
+                       "can be because multiple copies of the same "
+                       "files were used, or because one or more files "
+                       "contain multiple copies of the same reads. "
+                       "The command 'paleomix dupcheck' may be used "
+                       "to review the potentially duplicated data in "
+                       "these BAM files.\n\n"
 
-            sequences.append(cls._read_samfile(handle, filename))
+                       "If this error was a false positive, then you "
+                       "may execute the following command(s) to mark "
+                       "this test as having succeeded:")
 
-        return chain_sorted(*sequences, key=cls._key_by_tid_pos)
+        for fpath in self.output_files:
+            message.append("$ touch '%s'" % (fpath,))
 
-    @classmethod
-    def _read_samfile(cls, handle, filename):
-        for record in handle:
-            if record.is_unmapped and (not record.pos or record.mate_is_unmapped):
-                # Ignore unmapped reads except when these are sorted
-                # according to the mate position (if mapped)
-                continue
-            elif record.flag & 0x900:
-                # Ignore supplementary / secondary alignments
-                continue
-
-            yield (record, filename)
-
-    @classmethod
-    def _process_reads(cls, observed_reads, output_files):
-        for records_and_filenames in observed_reads.itervalues():
-            if len(records_and_filenames) == 1:
-                # Most read-names should be obseved at most once at a position
-                continue
-
-            result = collections.defaultdict(list)
-            for record, filename in records_and_filenames:
-                key = (record.is_reverse, record.qname, record.seq, record.qual)
-                result[key].append(filename)
-
-            for (is_reverse, name, seq, qual), filenames in result.iteritems():
-                if len(filenames) == 1:
-                    # Two reads had same name, but different characterstics
-                    continue
-
-                filename_counts = collections.defaultdict(int)
-                for filename in filenames:
-                    filename_counts[filename] += 1
-
-                if is_reverse:
-                    seq = reverse_complement(seq)
-                    qual = qual[::-1]
-
-                message = ["The same read was found multiple times!",
-                           "    Name:      %r" % (name,),
-                           "    Sequence:  %r" % (seq,),
-                           "    Qualities: %r" % (qual,),
-                           ""]
-
-                message.append("Read was found")
-                for filename, count in sorted(filename_counts.iteritems()):
-                    message.append("   % 2ix in %r" % (count, filename))
-
-                message.append("")
-                message.append("This indicates that the same data files have "
-                               "been included multiple times in the project. "
-                               "Please review the input files used in this "
-                               "project, to ensure that each set of data is "
-                               "included only once!\n\n"
-
-                               "If this is not the case, then execute the "
-                               "following command(s) to mark this test as "
-                               "having succeeded:")
-
-                for fpath in output_files:
-                    message.append("$ touch '%s'" % (fpath,))
-
-                raise NodeError("\n".join(message))
-
-    @classmethod
-    def _key_by_tid_pos(cls, record):
-        return (record[0].tid, record[0].pos)
+        raise NodeError("\n".join(message))
 
 
 class ValidateFASTQFilesNode(Node):
@@ -210,6 +143,32 @@ class ValidateFASTAFilesNode(Node):
             make_dirs(os.path.dirname(output_file))
         with open(output_file, "w"):
             pass
+
+
+def check_bam_files(input_files, err_func):
+    handles = []
+    try:
+        last_pos = None
+        observed_reads = collections.defaultdict(list)
+        reads_iter = _open_samfiles(handles, input_files)
+        references = handles[0].references
+
+        for (record, filename) in reads_iter:
+            curr_pos = (record.pos, record.tid)
+            if curr_pos != last_pos:
+                _process_bam_reads(observed_reads, references, last_pos, err_func)
+                observed_reads.clear()
+                last_pos = curr_pos
+
+                # Stop once the trailing, unmapped reads are reached
+                if record.tid == -1:
+                    break
+
+            observed_reads[record.qname].append((record, filename))
+        _process_bam_reads(observed_reads, references, last_pos, err_func)
+    finally:
+        for handle in handles:
+            handle.close()
 
 
 def check_fastq_files(filenames, required_offset, allow_empty=False):
@@ -269,6 +228,88 @@ def _read_sequences(filename):
                       "  Unicat return-code = %i\n\n%s" \
                       % (rc_cat, cat.stderr.read())
             raise NodeError(message)
+
+
+def _open_samfiles(handles, filenames):
+    sequences = []
+    for filename in filenames:
+        handle = pysam.Samfile(filename)
+        handles.append(handle)
+
+        sequences.append(_read_samfile(handle, filename))
+
+    return chain_sorted(*sequences, key=_key_by_tid_pos)
+
+
+def _read_samfile(handle, filename):
+    for record in handle:
+        if record.is_unmapped and (not record.pos or record.mate_is_unmapped):
+            # Ignore unmapped reads except when these are sorted
+            # according to the mate position (if mapped)
+            continue
+        elif record.flag & 0x900:
+            # Ignore supplementary / secondary alignments
+            continue
+
+        yield (record, filename)
+
+
+def _process_bam_reads(observed_reads, references, position, err_func):
+    for records_and_filenames in observed_reads.itervalues():
+        if len(records_and_filenames) == 1:
+            # Most read-names should be obseved at most once at a position
+            continue
+
+        result = collections.defaultdict(list)
+        for record, filename in records_and_filenames:
+            key = (record.is_reverse, record.qname, record.seq, record.qual)
+            result[key].append((filename, record))
+
+        for (is_reverse, name, seq, qual), filenames in result.iteritems():
+            if len(filenames) == 1:
+                # Two reads had same name, but different characterstics
+                continue
+
+            records = collections.defaultdict(list)
+            for filename, record in filenames:
+                records[filename].append(record)
+
+            if is_reverse:
+                seq = reverse_complement(seq)
+                qual = qual[::-1]
+
+            chrom = references[position[1]]
+            pos = position[0]
+
+            err_func(chrom, pos, records, name, seq, qual)
+
+
+def _summarize_reads(records):
+    counts = {'mate 1': 0, 'mate 2': 0, 'unpaired': 0}
+
+    for record in records:
+        if record.is_paired:
+            if record.is_pair1:
+                counts['mate 1'] += 1
+            elif record.is_pair2:
+                counts['mate 2'] += 1
+            else:
+                counts['unpaired'] += 1
+        else:
+            counts['unpaired'] += 1
+
+    result = []
+    for key, value in sorted(counts.items()):
+        if value > 1:
+            result.append('%i %s reads' % (value, key))
+        elif value:
+            result.append('%i %s read' % (value, key))
+
+    return ", ".join(result) or "No reads"
+
+
+def _key_by_tid_pos(record):
+    return (record[0].tid, record[0].pos)
 
 
 def _collect_qualities(handle, filename):
