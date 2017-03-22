@@ -46,9 +46,9 @@ class ErrHandler(object):
                 print('% 8i. ' % (idx,), end='')
 
                 if record.is_paired:
-                    if record.is_pair1:
+                    if record.is_read1:
                         print('Mate 1 read', end='')
-                    elif record.is_pair2:
+                    elif record.is_read2:
                         print('Mate 2 read', end='')
                     else:
                         print('Unpaired read', end='')

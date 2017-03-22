@@ -289,9 +289,9 @@ def _summarize_reads(records):
 
     for record in records:
         if record.is_paired:
-            if record.is_pair1:
+            if record.is_read1:
                 counts['mate 1'] += 1
-            elif record.is_pair2:
+            elif record.is_read2:
                 counts['mate 2'] += 1
             else:
                 counts['unpaired'] += 1
