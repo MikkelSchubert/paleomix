@@ -486,6 +486,8 @@ def _create_set_operator(operator_func, description):
         """Operator function for set based operations."""
         if not isinstance(lvalue, (types.ListType,) + types.StringTypes):
             return False
+        elif not _are_keys_hashable(lvalue):
+            return False
 
         return bool(operator_func(frozenset(lvalue), rvalue))
 
@@ -613,6 +615,9 @@ class StringIn(_BinaryOperator):
     @classmethod
     def _string_in_operator(cls, lvalue, rvalues):
         """Implements case-insensitive 'in' operator."""
+        if not _is_hashable(lvalue):
+            return False
+
         return _safe_coerce_to_lowercase(lvalue) in rvalues
 
 
@@ -626,6 +631,8 @@ class _StrSetOperator(_BinaryOperator):
 
     def meets_spec(self, value):
         if not isinstance(value, (types.ListType,) + types.StringTypes):
+            return False
+        elif not _are_keys_hashable(value):
             return False
 
         lvalues = frozenset(map(_safe_coerce_to_lowercase, value))
@@ -777,6 +784,19 @@ class IsDictOf(MakefileSpec):
 ###############################################################################
 ###############################################################################
 # Helper functions
+
+
+def _are_keys_hashable(value):
+    return all(_is_hashable(key) for key in value)
+
+
+def _is_hashable(value):
+    try:
+        hash(value)
+        return True
+    except TypeError:
+        return False
+
 
 def _is_spec(spec):
     """Returns true if 'spec' is a specification instance or class."""

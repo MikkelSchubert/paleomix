@@ -18,6 +18,9 @@
   - Fixed validation nodes failing on output paths without a directory.
   - Fixed possible uncaught exceptions when terminating cat commands used by
     FASTQ validation nodes resulting in loss of error messages.
+  - Fixed makefile validation failing with an unhandled TypeError if unhashable
+    types were found in unexpected locations. For example, a dict found where a
+    subset of strings were allowed. These now result in a proper MakeFileError.
 
 
 ## [1.2.7] - 2017-01-03
