@@ -28,7 +28,7 @@ import types
 
 import paleomix.common.fileutils as fileutils
 from paleomix.common.utilities import \
-     safe_coerce_to_frozenset
+    safe_coerce_to_frozenset
 
 from paleomix.atomiccmd.command import \
     CmdError
@@ -88,8 +88,10 @@ class Node(object):
         NodeUnhandledException, which includes a full backtrace. This is needed
         to allow showing these in the main process."""
 
+        temp = None
+
         try:
-            temp = None
+            # Generate directory name and create dir at temp_root
             temp = self._create_temp_dir(config)
 
             self._setup(config, temp)
@@ -122,7 +124,9 @@ class Node(object):
         function. Checks that required input files exist, and raises an NodeError if
         this is not the case."""
         if fileutils.missing_executables(self.executables):
-            raise NodeError("Executable(s) does not exist for node: %s" % (self,))
+            raise NodeError("Executable(s) does not exist for node: %s"
+                            % (self,))
+
         self._check_for_missing_files(self.input_files, "input")
         self._check_for_missing_files(self.auxiliary_files, "auxiliary")
 
@@ -145,24 +149,26 @@ class Node(object):
         otherwise greatly inflate the amount of information that needs to be
         pickled."""
         obj_dict = self.__dict__.copy()
-        obj_dict["requirements"] = None
-        obj_dict["dependencies"] = None
+        obj_dict["requirements"] = ()
+        obj_dict["dependencies"] = ()
         return obj_dict
 
     def _write_error_log(self, temp, error):
         if not (temp and os.path.isdir(temp)):
             return
 
-        prefix = "\n                   "
+        def _fmt(values):
+            "\n                   ".join(sorted(values))
+
         message = ["Command          = %r" % (" ".join(sys.argv),),
                    "CWD              = %r" % (os.getcwd(),),
                    "PATH             = %r" % (os.environ.get('PATH', ''),),
                    "Node             = %s" % (str(self),),
                    "Threads          = %i" % (self.threads,),
-                   "Input files      = %s" % (prefix.join(sorted(self.input_files)),),
-                   "Output files     = %s" % (prefix.join(sorted(self.output_files)),),
-                   "Auxiliary files  = %s" % (prefix.join(sorted(self.auxiliary_files)),),
-                   "Executables      = %s" % (prefix.join(sorted(self.executables)),),
+                   "Input files      = %s" % (_fmt(self.input_files),),
+                   "Output files     = %s" % (_fmt(self.output_files),),
+                   "Auxiliary files  = %s" % (_fmt(self.auxiliary_files),),
+                   "Executables      = %s" % (_fmt(self.executables),),
                    "",
                    "Errors =\n%s\n" % (error,)]
         message = "\n".join(message)
@@ -171,7 +177,8 @@ class Node(object):
             with open(os.path.join(temp, "pipe.errors"), "w") as handle:
                 handle.write(message)
         except OSError, oserror:
-            sys.stderr.write("ERROR: Could not write failure log: %s\n" % (oserror,))
+            sys.stderr.write("ERROR: Could not write failure log: %s\n"
+                             % (oserror,))
 
     def _collect_nodes(self, nodes):
         if nodes is None:
@@ -210,16 +217,19 @@ class Node(object):
         files = safe_coerce_to_frozenset(files)
         for filename in files:
             if not isinstance(filename, types.StringTypes):
-                raise TypeError('Files must be strings, not %r' % filename.__class__.__name__)
+                raise TypeError('Files must be strings, not %r'
+                                % (filename.__class__.__name__,))
         return files
 
     @classmethod
     def _validate_nthreads(cls, threads):
         if not isinstance(threads, (types.IntType, types.LongType)):
-            raise TypeError("'threads' must be a positive integer, not %s" % (type(threads),))
+            raise TypeError("'threads' must be a positive integer, not a %s"
+                            % (type(threads),))
         elif threads < 1:
-            raise ValueError("'threads' must be a positive integer, not %i" % (threads,))
-        return int(threads)
+            raise ValueError("'threads' must be a positive integer, not %i"
+                             % (threads,))
+        return threads
 
 
 class CommandNode(Node):
@@ -252,18 +262,17 @@ class CommandNode(Node):
             desc = "\n\t".join(str(self._command).split("\n"))
             raise CmdNodeError(desc)
 
-
     def _teardown(self, config, temp):
         required_files = self._command.expected_temp_files
         optional_files = self._command.optional_temp_files
-        current_files  = set(os.listdir(temp))
+        current_files = set(os.listdir(temp))
 
         missing_files = (required_files - current_files)
         if missing_files:
             raise CmdNodeError(("Error running Node, required files not created:\n"
-                               "Temporary directory: %r\n"
-                               "\tRequired files missing from temporary directory:\n\t    - %s") \
-                               % (temp, "\n\t    - ".join(sorted(map(repr, missing_files)))))
+                                "Temporary directory: %r\n"
+                                "\tRequired files missing from temporary directory:\n\t    - %s") \
+                                % (temp, "\n\t    - ".join(sorted(map(repr, missing_files)))))
 
         extra_files = current_files - (required_files | optional_files)
         if extra_files:
