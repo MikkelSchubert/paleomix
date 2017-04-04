@@ -19,3 +19,8 @@ The Zonkey Pipeline is a easy-to-use pipeline designed for the analyses of low-c
 The Zonkey pipeline has been published in Journal of Archaeological Science; if you make use of this pipeline in your work, then please cite
 
   Schubert M, Mashkour M, Gaunitz C, Fages A, Seguin-Orlando A, Sheikhi S, Alfarhan AH, Alquraishi SA, Al-Rasheid KAS, Chuang R, Ermini L, Gamba C, Weinstock J, Vedat O, and Orlando L. "**Zonkey: A simple, accurate and sensitive pipeline to genetically identify equine F1-hybrids in archaeological assemblages**". Journal of Archaeological Science. 2007 Feb; 78:147-157. doi: `10.1016/j.jas.2016.12.005 <http://dx.doi.org/10.1016/j.jas.2016.12.005>`_.
+
+The sequencing data used in the Zonkey publication is available on `ENA`_ under the accession number `PRJEB15037`_.
+
+.. _ENA: https://www.ebi.ac.uk/ena/
+.. _PRJEB15037: https://www.ebi.ac.uk/ena/data/view/PRJEB15037
