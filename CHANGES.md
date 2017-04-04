@@ -8,11 +8,13 @@
     DetectInputDuplication step that is part of the BAM pipeline, and attempts
     to identify duplicate data (not PCR duplicates), by locating reads mapped
     to the same position, with the same name, sequence, and quality scores.
+  - Added link to sample data used in publication to the Zonkey documentation.
 
 ### Changed
   - Only letters, numbers, and '-', '_', and '.' are allowed in sample-names
     used in Zonkey, in order to prevent invalid filenames and certain programs
     breaking on whitespace. Trailing whitespace is stripped.
+  - Show more verbose output when building Zonkey pipelines.
 
 ### Fixed
   - Fixed validation nodes failing on output paths without a directory.
