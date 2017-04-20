@@ -271,7 +271,7 @@ def picard_command(config, command):
         requirement = versions.Requirement(call=params.finalized_call,
                                            name="Picard tools",
                                            search=r"^(\d+)\.(\d+)",
-                                           checks=versions.GE(1, 124))
+                                           checks=versions.GE(1, 137))
         _PICARD_VERSION_CACHE[jar_path] = requirement
 
     version = _PICARD_VERSION_CACHE[jar_path]

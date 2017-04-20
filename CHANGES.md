@@ -15,6 +15,9 @@
     used in Zonkey, in order to prevent invalid filenames and certain programs
     breaking on whitespace. Trailing whitespace is stripped.
   - Show more verbose output when building Zonkey pipelines.
+  - Picard tools version 1.137 or later is now required by the BAM pipeline.
+    This is nessesary as newer BAM files (header version 1.5) would fail to
+    validate when using earlier versions of Picard tools.
 
 ### Fixed
   - Fixed validation nodes failing on output paths without a directory.
