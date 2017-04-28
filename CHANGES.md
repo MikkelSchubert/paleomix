@@ -1,6 +1,6 @@
-# Change log
+# Changelog
 
-## [Unreleased]
+## [1.2.8] - 2017-04-28
 ### Added
   - Added FILTER entry for 'F' filter used in vcf_filter. This corresponds to
     heterozygous sites where the allele frequency was not determined.
@@ -465,7 +465,8 @@ the (partially) updated documentation now hosted on ReadTheDocs.
 
 
 
-[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.7...HEAD
+[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.8...HEAD
+[1.2.8]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.7...v1.2.8
 [1.2.7]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.6...v1.2.7
 [1.2.6]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.5...v1.2.6
 [1.2.5]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.4...v1.2.5
@@ -478,5 +479,3 @@ the (partially) updated documentation now hosted on ReadTheDocs.
 [1.1.0]: https://github.com/MikkelSchubert/paleomix/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/MikkelSchubert/paleomix/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/MikkelSchubert/paleomix/compare/v1.0.0-RC...v1.0.0
-
-
