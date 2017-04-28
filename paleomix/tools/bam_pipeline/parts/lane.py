@@ -263,6 +263,9 @@ class Lane:
         self._set_pe_input_files(parameters)
         node = BWAAlgorithmNode.customize(**parameters)
 
+        apply_options(node.commands["aln"],
+                      self.options["Aligners"]["BWA"])
+
         return self._finalize_nodes(config, prefix, parameters, node)
 
     def _build_bowtie2(self, config, prefix, record, parameters):
@@ -276,9 +279,7 @@ class Lane:
         else:
             command.set_option("--phred64")
 
-        for (key, value) in self.options["Aligners"]["Bowtie2"].iteritems():
-            if key.startswith("-"):
-                command.set_option(key, value)
+        apply_options(command, self.options["Aligners"]["Bowtie2"])
 
         return self._finalize_nodes(config, prefix, parameters, node)
 

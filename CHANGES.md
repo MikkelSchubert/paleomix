@@ -26,6 +26,8 @@
   - Fixed makefile validation failing with an unhandled TypeError if unhashable
     types were found in unexpected locations. For example, a dict found where a
     subset of strings were allowed. These now result in a proper MakeFileError.
+  - Fixed user options in the 'BWA' section of the BAM Pipeline makefiles not
+    being correctly applied when using the 'mem' or the 'bwasw' algorithms.
 
 
 ## [1.2.7] - 2017-01-03
