@@ -21,6 +21,7 @@
 # SOFTWARE.
 #
 import os
+import pwd
 import sys
 import shutil
 import tempfile
@@ -46,8 +47,9 @@ def with_temp_folder(func):
     Creates a unique temporary folder before running 'func'. The
     function is is assumed to take at least one parameter, the first
     of which is assumed to represent the temporary folder."""
-    temp_root = os.path.join(tempfile.gettempdir(), os.getlogin())
-    make_dirs(temp_root) # Ensure that this subdirectory exists
+    name = pwd.getpwuid(os.geteuid()).pw_name
+    temp_root = os.path.join(tempfile.gettempdir(), name)
+    make_dirs(temp_root)
 
     @nose.tools.istest
     def _wrapper(*args, **kwargs):

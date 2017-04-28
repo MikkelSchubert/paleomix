@@ -28,6 +28,7 @@
     subset of strings were allowed. These now result in a proper MakeFileError.
   - Fixed user options in the 'BWA' section of the BAM Pipeline makefiles not
     being correctly applied when using the 'mem' or the 'bwasw' algorithms.
+  - Fixed some unit tests failing when the environment caused getlogin to fail.
 
 
 ## [1.2.7] - 2017-01-03
