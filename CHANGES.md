@@ -3,6 +3,14 @@
 [Unreleased]
 ### Fixed
   - Improved handling of BAM tags to prevent unintended type changes.
+  - Fixed 'rmdup_collapsed' underreporting the number of duplicate reads (in
+    the 'XP' tag), when duplicates with different CIGAR strings were processed.
+
+### Changed
+  - PCR duplicates detected for collapsed reads using 'rmdup\_collapsed' are
+    now identified based on alignments that include clipped bases. This
+    matches the behavior of the Picard 'MarkDuplicates' command.
+  - Depending on work-load, 'rmdup\_collapsed' may now run up to twice as fast.
 
 
 ## [1.2.8] - 2017-04-28
