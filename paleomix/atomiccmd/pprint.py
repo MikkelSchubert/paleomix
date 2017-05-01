@@ -46,9 +46,9 @@ def _get_pipe_file(files, pipe):
 
 def _describe_cls(atomiccmd):
     if _is_cls(atomiccmd, "ParallelCmds"):
-        return "Parallel commands"
+        return "Parallel processes"
     elif _is_cls(atomiccmd, "SequentialCmds"):
-        return "Sequential commands"
+        return "Sequential processes"
     assert False # pragma: no coverage
 
 
@@ -56,7 +56,7 @@ def _collect_stats(atomiccmd, stats):
     assert atomiccmd not in stats["id"]
 
     if _is_cls(atomiccmd, "AtomicCmd"):
-        stats["id"][atomiccmd] = len(stats["id"])
+        stats["id"][atomiccmd] = len(stats["id"]) + 1
         pipe   = _get_pipe_file(atomiccmd._files, "IN_STDIN")
         if _is_cls(pipe, "AtomicCmd"):
             stats["pipe"][pipe] = atomiccmd
@@ -89,7 +89,7 @@ def _build_stdin(atomiccmd, files, stats, indent, lines):
     pipe   = _get_pipe_file(files, "IN_STDIN")
     prefix = "%s%s  = " % (" " * indent, pipe_name)
     if pipe and pipe in stats["id"]:
-        lines.append("%s<%02i>" % (prefix, stats["id"][pipe],))
+        lines.append("%sPiped from process %i" % (prefix, stats["id"][pipe],))
     elif isinstance(pipe, types.StringTypes):
         if atomiccmd._set_cwd and (pipe_name == "STDIN*"):
             pipe = os.path.basename(pipe)
@@ -104,7 +104,7 @@ def _build_out_pipe(atomiccmd, files, stats, indent, lines, pipe):
 
     if (atomiccmd in stats["pipe"]) and (pipe == "OUT_STDOUT"):
         pipe = stats["pipe"].get(atomiccmd)
-        lines.append("%s<%02i>" % (prefix, stats["id"][pipe],))
+        lines.append("%sPiped to process %i" % (prefix, stats["id"][pipe],))
         return
 
     filename = _get_pipe_file(files, pipe)
@@ -125,13 +125,14 @@ def _build_cwd(atomiccmd, indent, lines):
         lines.append("%s'%s'" % (prefix, "${TEMP_DIR}"))
 
 
-def _pformat(atomiccmd, stats, indent, lines, include_prefix = True):
-    s_prefix     = ""
+def _pformat(atomiccmd, stats, indent, lines, include_prefix=True):
+    s_prefix = ""
     if include_prefix:
-        s_prefix = " " * indent + "- "
+        s_prefix = " " * indent
         if _is_cls(atomiccmd, "AtomicCmd"):
             cmd_id = stats["id"][atomiccmd]
-            s_prefix += "<%02i> " % (cmd_id,)
+            lines.append(s_prefix + "Process %i:" % (cmd_id,))
+            s_prefix += "  "
     s_prefix_len = len(s_prefix)
 
     if _is_cls(atomiccmd, "AtomicCmd"):
@@ -153,13 +154,16 @@ def _pformat(atomiccmd, stats, indent, lines, include_prefix = True):
         _build_cwd(atomiccmd,                    s_prefix_len, lines)
     elif _is_cls(atomiccmd, "ParallelCmds", "SequentialCmds"):
         lines.append("%s%s:" % (s_prefix, _describe_cls(atomiccmd)))
-        for subcmd in atomiccmd._commands:
+        for subcmd_idx, subcmd in enumerate(atomiccmd._commands):
+            if subcmd_idx:
+                lines.append("")
+
             _pformat(subcmd, stats, s_prefix_len + 2, lines)
     else:
-        assert False # pragma: no coverage
+        assert False  # pragma: no coverage
 
 
-def _pformat_list(lst, width = 80):
+def _pformat_list(lst, width=80):
     """Return a printable representation of a list, where line-breaks
     are inserted between items to minimize the number of lines with a
     width greater than 'width'. Very long items may cause this maximum
@@ -190,7 +194,7 @@ def pformat(atomiccmd):
     lines = []
     stats = _collect_stats(atomiccmd, {"id" : {}, "pipe" : {}})
     _pformat(atomiccmd, stats, 0, lines, False)
-    return "<%s>" % "\n".join(lines)
+    return "%s" % "\n".join(lines)
 
 
 def pprint(atomiccmd, out = sys.stdout):

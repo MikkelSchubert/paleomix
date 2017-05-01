@@ -102,6 +102,7 @@ class Node(object):
             self._write_error_log(temp, error)
             raise NodeError("Error(s) running Node:\n\tTemporary directory: %s\n\n%s" \
                             % (repr(temp), error))
+
         except Exception, error:
             self._write_error_log(temp, error)
             raise NodeUnhandledException("Error(s) running Node:\n\tTemporary directory: %s\n\n%s" \
@@ -254,13 +255,11 @@ class CommandNode(Node):
         try:
             self._command.run(temp)
         except CmdError, error:
-            desc = "\n\t".join(str(self._command).split("\n"))
-            raise CmdNodeError("%s\n\n%s" % (desc, error))
+            raise CmdNodeError("%s\n\n%s" % (str(self._command), error))
 
         return_codes = self._command.join()
         if any(return_codes):
-            desc = "\n\t".join(str(self._command).split("\n"))
-            raise CmdNodeError(desc)
+            raise CmdNodeError(str(self._command))
 
     def _teardown(self, config, temp):
         required_files = self._command.expected_temp_files

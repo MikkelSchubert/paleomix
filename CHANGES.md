@@ -7,6 +7,9 @@
     as 'Automatically terminated by PALEOMIX'. This is to help differentiate
     between processes that failed or were killed by an external source, and
     processes that were cleaned up by the pipeline itself.
+  - Pretty-printing of commands shown when commands fail have been revised
+    to make it more readable, including explicit descriptions when output
+    is piped from one process to another and vice versa.
 
 
 ## [1.2.9] - 2017-05-01
