@@ -1,6 +1,6 @@
 # Changelog
 
-[Unreleased]
+## [1.2.9] - 2017-05-01
 ### Fixed
   - Improved handling of BAM tags to prevent unintended type changes.
   - Fixed 'rmdup_collapsed' underreporting the number of duplicate reads (in
@@ -478,7 +478,8 @@ the (partially) updated documentation now hosted on ReadTheDocs.
 
 
 
-[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.8...HEAD
+[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.9...HEAD
+[1.2.9]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.8...v1.2.9
 [1.2.8]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.7...v1.2.8
 [1.2.7]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.6...v1.2.7
 [1.2.6]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.5...v1.2.6
