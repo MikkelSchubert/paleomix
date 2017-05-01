@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+  - The 'Status' of processes terminated by the pipeline will now be reported
+    as 'Automatically terminated by PALEOMIX'. This is to help differentiate
+    between processes that failed or were killed by an external source, and
+    processes that were cleaned up by the pipeline itself.
+
+
 ## [1.2.9] - 2017-05-01
 ### Fixed
   - Improved handling of BAM tags to prevent unintended type changes.

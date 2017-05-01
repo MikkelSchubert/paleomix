@@ -143,6 +143,8 @@ class AtomicCmd(object):
         self._running = False
         self._command = map(str, safe_coerce_to_tuple(command))
         self._set_cwd = set_cwd
+        self._terminated = False
+
         if not self._command or not self._command[0]:
             raise ValueError("Empty command in AtomicCmd constructor")
 
@@ -236,6 +238,7 @@ class AtomicCmd(object):
         if self._proc and self._proc.poll() is None:
             try:
                 os.killpg(self._proc.pid, signal.SIGTERM)
+                self._terminated = True
             except OSError:
                 pass  # Already dead / finished process
 

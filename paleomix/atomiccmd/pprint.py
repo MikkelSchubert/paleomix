@@ -74,7 +74,9 @@ def _build_status(atomiccmd, _stats, indent, lines):
     if atomiccmd._proc:
         if atomiccmd.ready():
             return_code = tuple(atomiccmd.join())
-            if isinstance(return_code[0], types.StringTypes):
+            if atomiccmd._terminated:
+                lines.append(prefix + "Automatically terminated by PALEOMIX")
+            elif isinstance(return_code[0], types.StringTypes):
                 lines.append(prefix + "Terminated with signal %s" % return_code)
             else:
                 lines.append(prefix + "Exited with return-code %i" % return_code)

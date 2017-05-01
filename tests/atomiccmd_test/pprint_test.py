@@ -21,6 +21,7 @@
 # SOFTWARE.
 #
 import os
+import signal
 import StringIO
 
 import nose
@@ -128,10 +129,25 @@ def test_pformat__simple__done__set_cwd(temp_folder):
 
 
 @with_temp_folder
-def test_pformat__simple__killed(temp_folder):
+def test_pformat__simple__terminated_by_pipeline(temp_folder):
     cmd = AtomicCmd(("sleep", "10"))
     cmd.run(temp_folder)
     cmd.terminate()
+    assert_equal(cmd.join(), ["SIGTERM"])
+    assert_equal(pformat(cmd), ("<Command = ['sleep', '10']\n"
+                                " Status  = Automatically terminated by PALEOMIX\n"
+                                " STDOUT* = '{temp_dir}/pipe_sleep_{id}.stdout'\n"
+                                " STDERR* = '{temp_dir}/pipe_sleep_{id}.stderr'\n"
+                                " CWD     = '{cwd}'>").format(id=id(cmd),
+                                                              temp_dir=temp_folder,
+                                                              cwd=os.getcwd()))
+
+
+@with_temp_folder
+def test_pformat__simple__killed_by_signal(temp_folder):
+    cmd = AtomicCmd(("sleep", "10"))
+    cmd.run(temp_folder)
+    os.killpg(cmd._proc.pid, signal.SIGTERM)
     assert_equal(cmd.join(), ["SIGTERM"])
     assert_equal(pformat(cmd), ("<Command = ['sleep', '10']\n"
                                 " Status  = Terminated with signal SIGTERM\n"
