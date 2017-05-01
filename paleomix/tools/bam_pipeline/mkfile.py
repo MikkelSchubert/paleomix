@@ -87,9 +87,9 @@ _TEMPLATE_BAM_OPTIONS = \
       MinQuality: 0
       # Filter reads that did not map to the reference sequence
       FilterUnmappedReads: yes
-      # May be disabled ("no") for aDNA alignments, as post-mortem damage
-      # localizes to the seed region, which BWA expects to have few
-      # errors (sets "-l"). See http://pmid.us/22574660
+      # May be disabled ("no") for aDNA alignments with the 'aln' algorithm.
+      # Post-mortem damage localizes to the seed region, which BWA expects to
+      # have few errors (sets "-l"). See http://pmid.us/22574660
       UseSeed: yes
       # Additional command-line options may be specified for the "aln"
       # call(s), as described below for Bowtie2 below.
