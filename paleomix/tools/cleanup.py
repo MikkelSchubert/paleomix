@@ -181,10 +181,10 @@ def _cleanup_unmapped(args, cleanup_sam):
 
                 if args.rg_id is not None:
                     # Ensure that only one RG tag is set
-                    tags = [(key, value) for (key, value) in record.tags
-                            if key != "RG"]
-                    tags.append(("RG", args.rg_id))
-                    record.tags = tags
+                    tags = record.get_tags(with_value_type=True)
+                    tags = [tag for tag in tags if tag[0] != "RG"]
+                    tags.append(("RG", args.rg_id, "Z"))
+                    record.set_tags(tags)
 
                 output_handle.write(record)
 

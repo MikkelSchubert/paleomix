@@ -174,7 +174,7 @@ def main_wrapper(process_func, argv, ext):
 
 def _get_readgroup(record):
     try:
-        return record.opt("RG")
+        return record.get_tag("RG")
     except KeyError:
         return None
 

@@ -1,8 +1,13 @@
 # Changelog
 
+[Unreleased]
+### Fixed
+  - Improved handling of BAM tags to prevent unintended type changes.
+
+
 ## [1.2.8] - 2017-04-28
 ### Added
-  - Added FILTER entry for 'F' filter used in vcf_filter. This corresponds to
+  - Added FILTER entry for 'F' filter used in vcf\_filter. This corresponds to
     heterozygous sites where the allele frequency was not determined.
   - Added 'dupcheck' command. This command roughly corresponds to the
     DetectInputDuplication step that is part of the BAM pipeline, and attempts
