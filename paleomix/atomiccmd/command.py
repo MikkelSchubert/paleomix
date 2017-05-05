@@ -49,6 +49,8 @@ _FILE_MAP = {"IN": "input",
 
 
 class CmdError(RuntimeError):
+    """Exception raised for AtomicCmd specific errors."""
+
     def __init__(self, msg):
         RuntimeError.__init__(self, msg)
 

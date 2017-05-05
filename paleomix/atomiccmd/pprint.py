@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -20,12 +20,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-# pylint: disable=W0212
-
+# pylint: disable=protected-access
+#
 from __future__ import print_function
 
 import os
-import sys
+import pipes
 import types
 import subprocess
 
@@ -33,10 +33,12 @@ import subprocess
 def _is_cls(obj, *cls_names):
     return obj.__class__.__name__ in cls_names
 
+
 def _get_pipe_name(files, pipe):
     if pipe in files:
         return pipe.split("_")[-1] + " "
     return pipe.split("_")[-1] + "*"
+
 
 def _get_pipe_file(files, pipe):
     pipe_filename = files.get(pipe)
@@ -44,12 +46,13 @@ def _get_pipe_file(files, pipe):
         return pipe_filename
     return files.get("TEMP_%s" % (pipe,))
 
+
 def _describe_cls(atomiccmd):
     if _is_cls(atomiccmd, "ParallelCmds"):
         return "Parallel processes"
     elif _is_cls(atomiccmd, "SequentialCmds"):
         return "Sequential processes"
-    assert False # pragma: no coverage
+    assert False  # pragma: no coverage
 
 
 def _collect_stats(atomiccmd, stats):
@@ -57,14 +60,14 @@ def _collect_stats(atomiccmd, stats):
 
     if _is_cls(atomiccmd, "AtomicCmd"):
         stats["id"][atomiccmd] = len(stats["id"]) + 1
-        pipe   = _get_pipe_file(atomiccmd._files, "IN_STDIN")
+        pipe = _get_pipe_file(atomiccmd._files, "IN_STDIN")
         if _is_cls(pipe, "AtomicCmd"):
             stats["pipe"][pipe] = atomiccmd
     elif _is_cls(atomiccmd, "ParallelCmds", "SequentialCmds"):
         for subcmd in atomiccmd._commands:
             _collect_stats(subcmd, stats)
     else:
-        assert False # pragma: no coverage
+        assert False  # pragma: no coverage
 
     return stats
 
@@ -77,16 +80,18 @@ def _build_status(atomiccmd, _stats, indent, lines):
             if atomiccmd._terminated:
                 lines.append(prefix + "Automatically terminated by PALEOMIX")
             elif isinstance(return_code[0], types.StringTypes):
-                lines.append(prefix + "Terminated with signal %s" % return_code)
+                lines.append(prefix + "Terminated with signal %s"
+                             % return_code)
             else:
-                lines.append(prefix + "Exited with return-code %i" % return_code)
+                lines.append(prefix + "Exited with return-code %i"
+                             % return_code)
         else:
             lines.append(prefix + "Running ...")
 
 
 def _build_stdin(atomiccmd, files, stats, indent, lines):
     pipe_name = _get_pipe_name(files, "IN_STDIN")
-    pipe   = _get_pipe_file(files, "IN_STDIN")
+    pipe = _get_pipe_file(files, "IN_STDIN")
     prefix = "%s%s  = " % (" " * indent, pipe_name)
     if pipe and pipe in stats["id"]:
         lines.append("%sPiped from process %i" % (prefix, stats["id"][pipe],))
@@ -141,17 +146,19 @@ def _pformat(atomiccmd, stats, indent, lines, include_prefix=True):
 
         c_prefix = s_prefix + "Command = "
         for line in _pformat_list(atomiccmd._generate_call(temp)).split("\n"):
+            if atomiccmd._temp is not None:
+                line = line.replace('${TEMP_DIR}', atomiccmd._temp)
+
             lines.append("%s%s" % (c_prefix, line))
             c_prefix = " " * len(c_prefix)
 
-        if not s_prefix_len:
-            s_prefix_len += 1
-
-        _build_status(atomiccmd,   stats, s_prefix_len, lines)
-        _build_stdin(atomiccmd,    files, stats, s_prefix_len, lines)
-        _build_out_pipe(atomiccmd, files, stats, s_prefix_len, lines, "OUT_STDOUT")
-        _build_out_pipe(atomiccmd, files, stats, s_prefix_len, lines, "OUT_STDERR")
-        _build_cwd(atomiccmd,                    s_prefix_len, lines)
+        _build_status(atomiccmd, stats, s_prefix_len, lines)
+        _build_stdin(atomiccmd, files, stats, s_prefix_len, lines)
+        _build_out_pipe(atomiccmd, files, stats,
+                        s_prefix_len, lines, "OUT_STDOUT")
+        _build_out_pipe(atomiccmd, files, stats,
+                        s_prefix_len, lines, "OUT_STDERR")
+        _build_cwd(atomiccmd, s_prefix_len, lines)
     elif _is_cls(atomiccmd, "ParallelCmds", "SequentialCmds"):
         lines.append("%s%s:" % (s_prefix, _describe_cls(atomiccmd)))
         for subcmd_idx, subcmd in enumerate(atomiccmd._commands):
@@ -170,35 +177,30 @@ def _pformat_list(lst, width=80):
     to be exceeded."""
     result = [[]]
     current_width = 0
-    for item in map(repr, lst):
-        if current_width + len(item) + 2 > width:
+    for item in (pipes.quote(str(value)) for value in lst):
+        if current_width + len(item) + 1 > width:
             if not result[-1]:
                 result[-1] = [item]
-                current_width = len(item) + 2
             else:
                 result.append([item])
-                current_width = len(item) + 2
+
+            current_width = len(item) + 1
         else:
             result[-1].append(item)
-            current_width += len(item) + 2
+            current_width += len(item) + 1
 
-    return "[%s]" % (",\n ".join(", ".join(line) for line in result))
+    return " \\\n    ".join(" ".join(line) for line in result)
 
 
 def pformat(atomiccmd):
     """Returns a human readable description of an Atomic Cmd or Atomic Set
     of commands. This is currently equivalent to str(cmd_obj)."""
     if not _is_cls(atomiccmd, "AtomicCmd", "ParallelCmds", "SequentialCmds"):
-        raise TypeError("Invalid type in pformat: %r" % atomiccmd.__class__.__name__)
+        raise TypeError("Invalid type in pformat: %r" %
+                        atomiccmd.__class__.__name__)
 
     lines = []
-    stats = _collect_stats(atomiccmd, {"id" : {}, "pipe" : {}})
+    stats = _collect_stats(atomiccmd, {"id": {}, "pipe": {}})
     _pformat(atomiccmd, stats, 0, lines, False)
-    return "%s" % "\n".join(lines)
 
-
-def pprint(atomiccmd, out = sys.stdout):
-    """Prints a human readable description of an Atomic Cmd or Atomic Set
-    of commands. This is currently equivalent to print(str(cmd_obj), ...)."""
-    print(pformat(atomiccmd), file = out)
-
+    return "\n".join(lines)

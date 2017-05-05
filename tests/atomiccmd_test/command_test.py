@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -20,6 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+# pylint: disable=missing-docstring
+#
 import os
 import signal
 import weakref
@@ -28,15 +30,15 @@ from flexmock import flexmock
 
 import nose
 from nose.tools import \
-     assert_in, \
-     assert_equal, \
-     assert_raises
+    assert_in, \
+    assert_equal, \
+    assert_raises
 
 from paleomix.common.testing import \
-     with_temp_folder, \
-     Monkeypatch, \
-     get_file_contents, \
-     set_file_contents
+    with_temp_folder, \
+    Monkeypatch, \
+    get_file_contents, \
+    set_file_contents
 
 import paleomix.atomiccmd.command
 import paleomix.common.fileutils as fileutils
@@ -97,7 +99,8 @@ def test_atomiccmd__set_cwd():
 
         expected = temp_folder if set_cwd else cwd
         result = get_file_contents(os.path.join(temp_folder, "result.txt"))
-        assert os.path.samefile(expected, result), "%r != %r" % (expected, result)
+        assert os.path.samefile(
+            expected, result), "%r != %r" % (expected, result)
 
     yield _do_test_atomiccmd__set_cwd, False
     yield _do_test_atomiccmd__set_cwd, True
@@ -106,7 +109,7 @@ def test_atomiccmd__set_cwd():
 # Full path when set_cwd is False, rel. path when True
 def test_atomiccmd__set_cwd__temp_in_out():
     @with_temp_folder
-    def _do_test_atomiccmd__paths_temp_in(temp_folder, set_cwd, kwargs):
+    def _test_atomiccmd__paths_temp_in(temp_folder, set_cwd, kwargs):
         cmd = AtomicCmd(("echo", "-n", "%%(%s)s" % tuple(kwargs.keys())),
                         TEMP_OUT_STDOUT="result.txt",
                         set_cwd=set_cwd,
@@ -118,10 +121,10 @@ def test_atomiccmd__set_cwd__temp_in_out():
         result = get_file_contents(os.path.join(temp_folder, "result.txt"))
         assert_equal(os.path.abspath(expected), os.path.abspath(result))
 
-    yield _do_test_atomiccmd__paths_temp_in, True,  {"TEMP_IN_FOO": "test_file"}
-    yield _do_test_atomiccmd__paths_temp_in, False, {"TEMP_IN_FOO": "test_file"}
-    yield _do_test_atomiccmd__paths_temp_in, True,  {"TEMP_OUT_FOO": "test_file"}
-    yield _do_test_atomiccmd__paths_temp_in, False, {"TEMP_OUT_FOO": "test_file"}
+    yield _test_atomiccmd__paths_temp_in, True, {"TEMP_IN_FOO": "test_file"}
+    yield _test_atomiccmd__paths_temp_in, False, {"TEMP_IN_FOO": "test_file"}
+    yield _test_atomiccmd__paths_temp_in, True, {"TEMP_OUT_FOO": "test_file"}
+    yield _test_atomiccmd__paths_temp_in, False, {"TEMP_OUT_FOO": "test_file"}
 
 
 ###############################################################################
@@ -143,12 +146,14 @@ def test_atomiccmd__paths():
                     OUT_STDERR="/var/log/pipe.stderr",
                     TEMP_OUT_STDOUT="pipe.stdout")
 
-    assert_equal(cmd.executables,     frozenset(["ls", "true"]))
-    assert_equal(cmd.requirements,    frozenset([bool]))
-    assert_equal(cmd.input_files,     frozenset(["/a/b/c", "/x/y/z"]))
-    assert_equal(cmd.output_files,    frozenset(["/out/foo", "foo/bar", "/var/log/pipe.stderr"]))
+    assert_equal(cmd.executables, frozenset(["ls", "true"]))
+    assert_equal(cmd.requirements, frozenset([bool]))
+    assert_equal(cmd.input_files, frozenset(["/a/b/c", "/x/y/z"]))
+    assert_equal(cmd.output_files, frozenset(
+        ["/out/foo", "foo/bar", "/var/log/pipe.stderr"]))
     assert_equal(cmd.auxiliary_files, frozenset(["wat/wat"]))
-    assert_equal(cmd.expected_temp_files, frozenset(["foo", "bar", "pipe.stderr"]))
+    assert_equal(cmd.expected_temp_files, frozenset(
+        ["foo", "bar", "pipe.stderr"]))
     assert_in("xyb", cmd.optional_temp_files)
     assert_in("pipe.stdout", cmd.optional_temp_files)
 
@@ -171,7 +176,8 @@ def test_atomiccmd__pipes_stdin(temp_folder):
     cmd.run(temp_folder)
     assert_equal(cmd.join(), [0])
     result = get_file_contents(os.path.join(temp_folder, "result.txt"))
-    assert_equal(result, ">This_is_FASTA!\nACGTN\n>This_is_ALSO_FASTA!\nCGTNA\n")
+    assert_equal(
+        result, ">This_is_FASTA!\nACGTN\n>This_is_ALSO_FASTA!\nCGTNA\n")
 
 
 @with_temp_folder
@@ -214,8 +220,11 @@ def test_atomiccmd__pipes_stdin__dev_null_explicit(temp_folder):
 # Test possible combinations of explicit / implicit saving of stdout/err
 def test_atomiccmd__pipes_out():
     @with_temp_folder
-    def _do_test_atomiccmd__pipes_out(temp_folder, stdout, stderr, kwargs):
-        cmd = AtomicCmd(("bash", "-c", "echo -n 'STDERR!' > /dev/stderr; echo -n 'STDOUT!';"), **kwargs)
+    def _test_atomiccmd__pipes_out(temp_folder, stdout, stderr, kwargs):
+        call = ("bash", "-c",
+                "echo -n 'STDERR!' > /dev/stderr; echo -n 'STDOUT!';")
+
+        cmd = AtomicCmd(call, **kwargs)
         cmd.run(temp_folder)
         assert_equal(cmd.join(), [0])
 
@@ -229,99 +238,110 @@ def test_atomiccmd__pipes_out():
 
         assert_equal(set(os.listdir(temp_folder)), set(expected_files))
 
-    yield _do_test_atomiccmd__pipes_out, "pipe_bash_{0}.stdout", "pipe_bash_{0}.stderr", {}
-    yield _do_test_atomiccmd__pipes_out, "pipe_bash_{0}.stdout", "stderr.txt", {"OUT_STDERR": "stderr.txt"}
-    yield _do_test_atomiccmd__pipes_out, "stdout.txt", "pipe_bash_{0}.stderr", {"OUT_STDOUT": "stdout.txt"}
-    yield _do_test_atomiccmd__pipes_out, "stdout.txt", "stderr.txt", {"OUT_STDOUT": "stdout.txt",
-                                                                      "OUT_STDERR": "stderr.txt"}
+    yield _test_atomiccmd__pipes_out, \
+        "pipe_bash_{0}.stdout", "pipe_bash_{0}.stderr", {}
+    yield _test_atomiccmd__pipes_out, \
+        "pipe_bash_{0}.stdout", "stderr.txt", {"OUT_STDERR": "stderr.txt"}
+    yield _test_atomiccmd__pipes_out, \
+        "stdout.txt", "pipe_bash_{0}.stderr", {"OUT_STDOUT": "stdout.txt"}
+    yield _test_atomiccmd__pipes_out, \
+        "stdout.txt", "stderr.txt", {"OUT_STDOUT": "stdout.txt",
+                                     "OUT_STDERR": "stderr.txt"}
 
-    yield _do_test_atomiccmd__pipes_out, None, None, {"OUT_STDOUT": AtomicCmd.DEVNULL,
-                                                      "OUT_STDERR": AtomicCmd.DEVNULL}
-    yield _do_test_atomiccmd__pipes_out, None, "pipe_bash_{0}.stderr", {"OUT_STDOUT": AtomicCmd.DEVNULL}
-    yield _do_test_atomiccmd__pipes_out, "pipe_bash_{0}.stdout", None, {"OUT_STDERR": AtomicCmd.DEVNULL}
-
-
-def test_atomiccmd__pipes_out_dev_null():
-    @with_temp_folder
-    def _do_test_atomiccmd__pipes_out(temp_folder, stdout, stderr, kwargs):
-        cmd = AtomicCmd(("bash", "-c", "echo -n 'STDERR!' > /dev/stderr; echo -n 'STDOUT!';"), **kwargs)
-        cmd.run(temp_folder)
-        assert_equal(cmd.join(), [0])
-        result_out = get_file_contents(os.path.join(temp_folder, stdout.format(id(cmd))))
-        result_err = get_file_contents(os.path.join(temp_folder, stderr.format(id(cmd))))
-        assert_equal(result_out, "STDOUT!")
-        assert_equal(result_err, "STDERR!")
+    yield _test_atomiccmd__pipes_out, \
+        None, None, {"OUT_STDOUT": AtomicCmd.DEVNULL,
+                     "OUT_STDERR": AtomicCmd.DEVNULL}
+    yield _test_atomiccmd__pipes_out, \
+        None, "pipe_bash_{0}.stderr", {"OUT_STDOUT": AtomicCmd.DEVNULL}
+    yield _test_atomiccmd__pipes_out, \
+        "pipe_bash_{0}.stdout", None, {"OUT_STDERR": AtomicCmd.DEVNULL}
 
 
 def test_atomiccmd__paths__malformed_keys():
     def _do_test_atomiccmd__paths__malformed(kwargs):
         assert_raises(ValueError, AtomicCmd, "true", **kwargs)
 
-    yield _do_test_atomiccmd__paths__malformed, {"IN": "/var/foo"}         # Missing key-name #1
-    yield _do_test_atomiccmd__paths__malformed, {"IN_": "/var/foo"}        # Missing key-name #2
-    yield _do_test_atomiccmd__paths__malformed, {"TEMP_OUT": "/var/foo"}   # Missing key-name #3
-    yield _do_test_atomiccmd__paths__malformed, {"TEMP_OUT_": "/var/foo"}  # Missing key-name #4
-    yield _do_test_atomiccmd__paths__malformed, {"TEMP_OUX_FOO": "foo"}    # Invalid key-type #1
-    yield _do_test_atomiccmd__paths__malformed, {"INS_BAR": "foo"}         # Invalid key-type #2
+    # Missing key-name #1
+    yield _do_test_atomiccmd__paths__malformed, {"IN": "/var/foo"}
+    # Missing key-name #2
+    yield _do_test_atomiccmd__paths__malformed, {"IN_": "/var/foo"}
+    # Missing key-name #3
+    yield _do_test_atomiccmd__paths__malformed, {"TEMP_OUT": "/var/foo"}
+    # Missing key-name #4
+    yield _do_test_atomiccmd__paths__malformed, {"TEMP_OUT_": "/var/foo"}
+    # Invalid key-type #1
+    yield _do_test_atomiccmd__paths__malformed, {"TEMP_OUX_FOO": "foo"}
+    # Invalid key-type #2
+    yield _do_test_atomiccmd__paths__malformed, {"INS_BAR": "foo"}
 
 
 def test_atomiccmd__paths__invalid_values():
     def _do_test_atomiccmd__paths__invalid_values(kwargs):
         assert_raises(TypeError, AtomicCmd, "true", **kwargs)
 
-    yield _do_test_atomiccmd__paths__invalid_values, {"IN_FILE": 1}
-    yield _do_test_atomiccmd__paths__invalid_values, {"TEMP_IN_FILE": set()}
-    yield _do_test_atomiccmd__paths__invalid_values, {"OUT_FILE": [1, 2, 3]}
-    yield _do_test_atomiccmd__paths__invalid_values, {"TEMP_OUT_FILE": 1.0}
+    # Long name is used to create more informative error messages
+    test_function = _do_test_atomiccmd__paths__invalid_values
 
-    yield _do_test_atomiccmd__paths__invalid_values, {"IN_STDIN": {}}
-    yield _do_test_atomiccmd__paths__invalid_values, {"TEMP_IN_STDIN": frozenset()}
-    yield _do_test_atomiccmd__paths__invalid_values, {"OUT_STDOUT": 1.7}
-    yield _do_test_atomiccmd__paths__invalid_values, {"TEMP_OUT_STDOUT": ()}
-    yield _do_test_atomiccmd__paths__invalid_values, {"OUT_STDERR": xrange(3)}
-    yield _do_test_atomiccmd__paths__invalid_values, {"TEMP_OUT_STDERR": -1}
+    yield test_function, {"IN_FILE": 1}
+    yield test_function, {"TEMP_IN_FILE": set()}
+    yield test_function, {"OUT_FILE": [1, 2, 3]}
+    yield test_function, {"TEMP_OUT_FILE": 1.0}
+
+    yield test_function, {"IN_STDIN": {}}
+    yield test_function, {"TEMP_IN_STDIN": frozenset()}
+    yield test_function, {"OUT_STDOUT": 1.7}
+    yield test_function, {"TEMP_OUT_STDOUT": ()}
+    yield test_function, {"OUT_STDERR": xrange(3)}
+    yield test_function, {"TEMP_OUT_STDERR": -1}
 
 
-# Subpaths are not allowed for temp IN/OUT files, neither relative nor asbsolute
+# Subpaths are not allowed for temp IN/OUT files, neither relative nor
+# asbsolute
 def test_atomiccmd__paths__invalid_temp_paths():
     def _do_test_atomiccmd__paths__invalid_temp_paths(kwargs):
         assert_raises(ValueError, AtomicCmd, "true", **kwargs)
 
+    # Long name is used to create more informative error messages
+    test_function = _do_test_atomiccmd__paths__invalid_temp_paths
+
     # No relative paths
-    yield _do_test_atomiccmd__paths__invalid_temp_paths, {"TEMP_IN_FOO": "sub/infile"}
-    yield _do_test_atomiccmd__paths__invalid_temp_paths, {"TEMP_IN_STDIN": "sub/stdin"}
-    yield _do_test_atomiccmd__paths__invalid_temp_paths, {"TEMP_OUT_FOO": "sub/outfile"}
-    yield _do_test_atomiccmd__paths__invalid_temp_paths, {"TEMP_OUT_STDOUT": "sub/stdout"}
-    yield _do_test_atomiccmd__paths__invalid_temp_paths, {"TEMP_OUT_STDERR": "sub/stderr"}
+    yield test_function, {"TEMP_IN_FOO": "sub/infile"}
+    yield test_function, {"TEMP_IN_STDIN": "sub/stdin"}
+    yield test_function, {"TEMP_OUT_FOO": "sub/outfile"}
+    yield test_function, {"TEMP_OUT_STDOUT": "sub/stdout"}
+    yield test_function, {"TEMP_OUT_STDERR": "sub/stderr"}
 
     # No absolute paths
-    yield _do_test_atomiccmd__paths__invalid_temp_paths, {"TEMP_IN_FOO": "/tmp/sub/infile"}
-    yield _do_test_atomiccmd__paths__invalid_temp_paths, {"TEMP_IN_STDIN": "/dev/sub/stdin"}
-    yield _do_test_atomiccmd__paths__invalid_temp_paths, {"TEMP_OUT_FOO": "/etc/sub/outfile"}
-    yield _do_test_atomiccmd__paths__invalid_temp_paths, {"TEMP_OUT_STDOUT": "/var/sub/stdout"}
-    yield _do_test_atomiccmd__paths__invalid_temp_paths, {"TEMP_OUT_STDERR": "/home/sub/stderr"}
+    yield test_function, {"TEMP_IN_FOO": "/tmp/sub/infile"}
+    yield test_function, {"TEMP_IN_STDIN": "/dev/sub/stdin"}
+    yield test_function, {"TEMP_OUT_FOO": "/etc/sub/outfile"}
+    yield test_function, {"TEMP_OUT_STDOUT": "/var/sub/stdout"}
+    yield test_function, {"TEMP_OUT_STDERR": "/home/sub/stderr"}
 
 
 # All OUT_ files must be unique, including all TEMP_OUT_
 def test_atomiccmd__paths__overlapping_output():
-    def _do_test_atomiccmd__paths__overlapping_output(key_1, file_1, key_2, file_2):
+    def _do_test_atomiccmd__paths__overlapping_output(key_1, file_1,
+                                                      key_2, file_2):
         assert_raises(ValueError, AtomicCmd, ("ls",), **{key_1: file_1,
                                                          key_2: file_2})
 
-    yield _do_test_atomiccmd__paths__overlapping_output, "OUT_FILE_1", "/foo/bar/outfile", "OUT_FILE_2", "/var/outfile"
-    yield _do_test_atomiccmd__paths__overlapping_output, "TEMP_OUT_FILE_1", "outfile", "OUT_FILE_1", "/var/outfile"
-    yield _do_test_atomiccmd__paths__overlapping_output, "OUT_FILE_1", "/foo/bar/outfile", "TEMP_OUT_FILE_1", "outfile"
-    yield _do_test_atomiccmd__paths__overlapping_output, "TEMP_OUT_FILE_1", "outfile", "TEMP_OUT_FILE_2", "outfile"
+    test = _do_test_atomiccmd__paths__overlapping_output
 
-    yield _do_test_atomiccmd__paths__overlapping_output, "OUT_FILE_1", "/foo/bar/outfile", "OUT_STDOUT", "/var/outfile"
-    yield _do_test_atomiccmd__paths__overlapping_output, "TEMP_OUT_FILE_1", "outfile", "OUT_STDOUT", "/var/outfile"
-    yield _do_test_atomiccmd__paths__overlapping_output, "OUT_FILE_1", "/foo/bar/outfile", "TEMP_OUT_STDOUT", "outfile"
-    yield _do_test_atomiccmd__paths__overlapping_output, "TEMP_OUT_FILE_1", "outfile", "TEMP_OUT_STDOUT", "outfile"
+    yield test, "OUT_FILE_1", "/foo/bar/outfile", "OUT_FILE_2", "/var/outfile"
+    yield test, "TEMP_OUT_FILE_1", "outfile", "OUT_FILE_1", "/var/outfile"
+    yield test, "OUT_FILE_1", "/foo/bar/outfile", "TEMP_OUT_FILE_1", "outfile"
+    yield test, "TEMP_OUT_FILE_1", "outfile", "TEMP_OUT_FILE_2", "outfile"
 
-    yield _do_test_atomiccmd__paths__overlapping_output, "OUT_FILE_1", "/foo/bar/outfile", "OUT_STDERR", "/var/outfile"
-    yield _do_test_atomiccmd__paths__overlapping_output, "TEMP_OUT_FILE_1", "outfile", "OUT_STDERR", "/var/outfile"
-    yield _do_test_atomiccmd__paths__overlapping_output, "OUT_FILE_1", "/foo/bar/outfile", "TEMP_OUT_STDERR", "outfile"
-    yield _do_test_atomiccmd__paths__overlapping_output, "TEMP_OUT_FILE_1", "outfile", "TEMP_OUT_STDERR", "outfile"
+    yield test, "OUT_FILE_1", "/foo/bar/outfile", "OUT_STDOUT", "/var/outfile"
+    yield test, "TEMP_OUT_FILE_1", "outfile", "OUT_STDOUT", "/var/outfile"
+    yield test, "OUT_FILE_1", "/foo/bar/outfile", "TEMP_OUT_STDOUT", "outfile"
+    yield test, "TEMP_OUT_FILE_1", "outfile", "TEMP_OUT_STDOUT", "outfile"
+
+    yield test, "OUT_FILE_1", "/foo/bar/outfile", "OUT_STDERR", "/var/outfile"
+    yield test, "TEMP_OUT_FILE_1", "outfile", "OUT_STDERR", "/var/outfile"
+    yield test, "OUT_FILE_1", "/foo/bar/outfile", "TEMP_OUT_STDERR", "outfile"
+    yield test, "TEMP_OUT_FILE_1", "outfile", "TEMP_OUT_STDERR", "outfile"
 
 
 # A pipe can be w/wo TEMP_, but not both
@@ -538,17 +558,18 @@ def test_atomiccmd__ready(temp_folder):
 
 def test_atomiccmd__join_wait():
     @with_temp_folder
-    def _do_test_atomiccmd__join_wait(temp_folder, func, call, before_run, after_run):
+    def _do_test_atomiccmd__join_wait(temp_folder, func, call,
+                                      before_run, after_run):
         cmd = AtomicCmd(call)
         assert_equal(func(cmd), before_run)
         cmd.run(temp_folder)
         assert_equal(func(cmd), after_run)
 
-    yield _do_test_atomiccmd__join_wait, AtomicCmd.join, "true",  [None], [0]
+    yield _do_test_atomiccmd__join_wait, AtomicCmd.join, "true", [None], [0]
     yield _do_test_atomiccmd__join_wait, AtomicCmd.join, "false", [None], [1]
 
-    yield _do_test_atomiccmd__join_wait, AtomicCmd.wait, "true",  None,   0
-    yield _do_test_atomiccmd__join_wait, AtomicCmd.wait, "false", None,   1
+    yield _do_test_atomiccmd__join_wait, AtomicCmd.wait, "true", None, 0
+    yield _do_test_atomiccmd__join_wait, AtomicCmd.wait, "false", None, 1
 
 
 ###############################################################################
@@ -830,8 +851,8 @@ def test_atomiccmd__cleanup_sigterm():
             if do_kill:
                 raise OSError("KABOOM!")
 
-        def _wrap_exit(rc):
-            exit_called.append(rc)
+        def _wrap_exit(returncode):
+            exit_called.append(returncode)
 
         _procs = [flexmock(pid=7913),
                   # I've got the same combination on my luggage!
@@ -842,7 +863,8 @@ def test_atomiccmd__cleanup_sigterm():
             assert_equal(len(paleomix.atomiccmd.command._PROCS), 2)
             with Monkeypatch("os.killpg", _wrap_killpg):
                 with Monkeypatch("sys.exit", _wrap_exit):
-                    paleomix.atomiccmd.command._cleanup_children(signal.SIGTERM, None)
+                    paleomix.atomiccmd.command._cleanup_children(
+                        signal.SIGTERM, None)
 
         assert_equal(exit_called, [-signal.SIGTERM])
         assert_equal(sigs_sent, {7913: (signal.SIGTERM, kill_at == 0),
@@ -863,11 +885,12 @@ def test_atomiccmd__cleanup_sigterm__dead_weakrefs():
     def _wrap_killpg(_pid, _sig):
         assert False  # pragma: no coverage
 
-    def _wrap_exit(rc):
-        exit_called.append(rc)
+    def _wrap_exit(returncode):
+        exit_called.append(returncode)
 
     with Monkeypatch("paleomix.atomiccmd.command._PROCS", procs_wrapper):
         with Monkeypatch("os.killpg", _wrap_killpg):
             with Monkeypatch("sys.exit", _wrap_exit):
-                paleomix.atomiccmd.command._cleanup_children(signal.SIGTERM, None)
+                paleomix.atomiccmd.command._cleanup_children(
+                    signal.SIGTERM, None)
     assert_equal(exit_called, [-signal.SIGTERM])

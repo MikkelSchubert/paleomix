@@ -10,6 +10,9 @@
   - Pretty-printing of commands shown when commands fail have been revised
     to make it more readable, including explicit descriptions when output
     is piped from one process to another and vice versa.
+  - Commands are now shown in a format more suitable for running on the
+    command-line, instead of as a Python list, when a node fails. Pipes are
+    still specified separately.
 
 
 ## [1.2.9] - 2017-05-01

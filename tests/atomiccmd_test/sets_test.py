@@ -60,13 +60,19 @@ def test_atomicsets__properties():
                                OUT_1="out.txt")
 
         obj = cls([cmd_mock_1, cmd_mock_2])
-        assert_equal(obj.executables, cmd_mock_1.executables | cmd_mock_2.executables)
-        assert_equal(obj.requirements, cmd_mock_1.requirements | cmd_mock_2.requirements)
-        assert_equal(obj.input_files, cmd_mock_1.input_files | cmd_mock_2.input_files)
-        assert_equal(obj.output_files, cmd_mock_1.output_files | cmd_mock_2.output_files)
-        assert_equal(obj.auxiliary_files, cmd_mock_1.auxiliary_files | cmd_mock_2.auxiliary_files)
+        assert_equal(obj.executables, cmd_mock_1.executables |
+                     cmd_mock_2.executables)
+        assert_equal(obj.requirements, cmd_mock_1.requirements |
+                     cmd_mock_2.requirements)
+        assert_equal(obj.input_files, cmd_mock_1.input_files |
+                     cmd_mock_2.input_files)
+        assert_equal(obj.output_files, cmd_mock_1.output_files |
+                     cmd_mock_2.output_files)
+        assert_equal(obj.auxiliary_files,
+                     cmd_mock_1.auxiliary_files | cmd_mock_2.auxiliary_files)
         assert_equal(obj.expected_temp_files, frozenset(["out", "out.txt"]))
-        assert_equal(obj.optional_temp_files, cmd_mock_1.optional_temp_files | cmd_mock_2.optional_temp_files)
+        assert_equal(obj.optional_temp_files,
+                     cmd_mock_1.optional_temp_files | cmd_mock_2.optional_temp_files)
 
     for cls in (ParallelCmds, SequentialCmds):
         yield _do_test, cls
