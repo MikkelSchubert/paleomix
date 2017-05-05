@@ -51,24 +51,24 @@ class NodeUnhandledException(NodeError):
 
 
 class Node(object):
-    def __init__(self, description = None, threads = 1,
-                 input_files = (), output_files = (),
-                 executables = (), auxiliary_files = (),
-                 requirements = (), dependencies = ()):
+    def __init__(self, description=None, threads=1,
+                 input_files=(), output_files=(),
+                 executables=(), auxiliary_files=(),
+                 requirements=(), dependencies=()):
 
         if not isinstance(description, _DESC_TYPES):
-            raise TypeError("'description' must be None or a string, not %r" \
+            raise TypeError("'description' must be None or a string, not %r"
                             % (description.__class__.__name__,))
 
-        self.__description   = description
-        self.input_files     = self._validate_files(input_files)
-        self.output_files    = self._validate_files(output_files)
-        self.executables     = self._validate_files(executables)
+        self.__description = description
+        self.input_files = self._validate_files(input_files)
+        self.output_files = self._validate_files(output_files)
+        self.executables = self._validate_files(executables)
         self.auxiliary_files = self._validate_files(auxiliary_files)
-        self.requirements    = self._validate_requirements(requirements)
+        self.requirements = self._validate_requirements(requirements)
 
-        self.threads         = self._validate_nthreads(threads)
-        self.dependencies    = self._collect_nodes(dependencies)
+        self.threads = self._validate_nthreads(threads)
+        self.dependencies = self._collect_nodes(dependencies)
 
         # If there are no input files, the node cannot be re-run based on
         # changes to the input, and nodes with output but no input are not
@@ -100,12 +100,12 @@ class Node(object):
             self._remove_temp_dir(temp)
         except NodeError, error:
             self._write_error_log(temp, error)
-            raise NodeError("Error(s) running Node:\n\tTemporary directory: %s\n\n%s" \
+            raise NodeError("Error(s) running Node:\n\tTemporary directory: %s\n\n%s"
                             % (repr(temp), error))
 
         except Exception, error:
             self._write_error_log(temp, error)
-            raise NodeUnhandledException("Error(s) running Node:\n\tTemporary directory: %s\n\n%s" \
+            raise NodeUnhandledException("Error(s) running Node:\n\tTemporary directory: %s\n\n%s"
                                          % (repr(temp), traceback.format_exc()))
 
     def _create_temp_dir(self, config):
@@ -237,14 +237,14 @@ class CommandNode(Node):
     def __init__(self, command, description=None, threads=1,
                  dependencies=()):
         Node.__init__(self,
-                      description  = description,
-                      input_files  = command.input_files,
-                      output_files = command.output_files,
-                      auxiliary_files = command.auxiliary_files,
-                      executables  = command.executables,
-                      requirements = command.requirements,
-                      threads      = threads,
-                      dependencies = dependencies)
+                      description=description,
+                      input_files=command.input_files,
+                      output_files=command.output_files,
+                      auxiliary_files=command.auxiliary_files,
+                      executables=command.executables,
+                      requirements=command.requirements,
+                      threads=threads,
+                      dependencies=dependencies)
 
         self._command = command
 
@@ -270,14 +270,14 @@ class CommandNode(Node):
         if missing_files:
             raise CmdNodeError(("Error running Node, required files not created:\n"
                                 "Temporary directory: %r\n"
-                                "\tRequired files missing from temporary directory:\n\t    - %s") \
-                                % (temp, "\n\t    - ".join(sorted(map(repr, missing_files)))))
+                                "\tRequired files missing from temporary directory:\n\t    - %s")
+                               % (temp, "\n\t    - ".join(sorted(map(repr, missing_files)))))
 
         extra_files = current_files - (required_files | optional_files)
         if extra_files:
             raise CmdNodeError("Error running Node, unexpected files created:\n"
                                "\tTemporary directory: %r\n"
-                               "\tUnexpected files found in temporary directory:\n\t    - %s" \
+                               "\tUnexpected files found in temporary directory:\n\t    - %s"
                                % (temp, "\n\t    - ".join(sorted(map(repr, extra_files)))))
 
         self._command.commit(temp)
