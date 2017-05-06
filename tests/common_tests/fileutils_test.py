@@ -336,7 +336,7 @@ def test_is_executable__full_path__folder_is_non_executable():
 
 
 def test_is_executable__rel_path__is_executable():
-    assert is_executable(os.path.join(test_dir(), "run"))
+    assert is_executable(os.path.join(test_dir(), "setup.sh"))
 
 
 def test_is_executable__rel_path__is_non_executable():
@@ -379,7 +379,8 @@ def test_which_executable__executable__by_path_order_1():
         path_2 = os.path.join(os.getcwd(), path_1)
 
         os.environ['PATH'] = ":".join((path_1, path_2))
-        assert_equal(os.path.join(path_1, "run"), which_executable("run"))
+        assert_equal(os.path.join(path_1, "setup.sh"),
+                     which_executable("setup.sh"))
     finally:
         os.environ['PATH'] = path
 
@@ -391,7 +392,8 @@ def test_which_executable__executable__by_path_order_2():
         path_2 = os.path.join(os.getcwd(), path_1)
 
         os.environ['PATH'] = ":".join((path_2, path_1))
-        assert_equal(os.path.join(path_2, "run"), which_executable("run"))
+        assert_equal(os.path.join(path_2, "setup.sh"),
+                     which_executable("setup.sh"))
     finally:
         os.environ['PATH'] = path
 
@@ -417,7 +419,7 @@ def test_executable_exists__full_path__is_non_executable():
 
 
 def test_executable_exists__rel_path__is_executable():
-    assert executable_exists(os.path.join(test_dir(), "run"))
+    assert executable_exists(os.path.join(test_dir(), "setup.sh"))
 
 
 def test_executable_exists__rel_path__is_non_executable():

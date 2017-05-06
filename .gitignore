@@ -14,10 +14,12 @@ sdist
 
 tests/runs
 tests/links/
+tests/all_modules.py
 
 *.egg/
 *.egg-info/
 .eggs
 .tox
+.vscode
 
 docs/_build

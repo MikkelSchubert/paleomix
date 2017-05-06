@@ -1,0 +1,11 @@
+[run]
+branch = True
+
+[report]
+skip_covered = True
+
+omit =
+    */paleomix/yaml*.py
+    */paleomix/yaml/lib2/*.py
+
+
