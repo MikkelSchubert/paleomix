@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -77,10 +77,10 @@ import paleomix.common.versions as versions
 
 
 class AtomicCmdBuilderError(RuntimeError):
-    pass
+    """Error raised by AtomicCmdBuilder."""
 
 
-class AtomicCmdBuilder:
+class AtomicCmdBuilder(object):
     """AtomicCmdBuilder is a class used to allow step-wise construction of an
     AtomicCmd object. This allows the user of a Node to modify the behavior
     of the called programs using some CLI parameters, without explicit support
@@ -162,6 +162,7 @@ class AtomicCmdBuilder:
                               "Singleton": False})
 
     def pop_option(self, key):
+        """Remove option with key; raises error if option does not exist."""
         old_option = self._get_option_for_editing(key, singleton=None)
         if not old_option:
             raise KeyError("Option with key %r does not exist" % key)
@@ -176,6 +177,8 @@ class AtomicCmdBuilder:
         self._values.append(value)
 
     def set_kwargs(self, **kwargs):
+        """Sets any number of keyword arguments; raises an exception if any of
+        the arguments have already been set."""
         if self._object:
             message = "Parameters have already been finalized"
             raise AtomicCmdBuilderError(message)
@@ -279,7 +282,7 @@ class AtomicCmdBuilder:
             raise KeyError("Key cannot be an empty string")
 
         for option in reversed(self._options):
-            if (option["Key"] == key):
+            if option["Key"] == key:
                 if (singleton is not None) \
                         and (option["Singleton"] != singleton):
                     message = "Mixing singleton and non-singleton options: %r"
@@ -300,11 +303,10 @@ class AtomicCmdBuilder:
 class AtomicJavaCmdBuilder(AtomicCmdBuilder):
     """AtomicCmdBuilder for running java JARs.
 
-    The resulting command will run the JAR in head-less mode, in order to ensure
-    that the JARs can be run on head-less servers (and to avoid popups on OSX),
-    using the process-specific temp-folder, and using at most a single thread
-    for garbage collection (to ensure that thread-limits are obeyed).
-
+    The resulting command will run the JAR in head-less mode, in order to
+    ensure that the JARs can be run on head-less servers (and to avoid popups
+    on OSX), using the process-specific temp-folder, and using at most a single
+    thread for garbage collection (to ensure that thread-limits are obeyed).
     """
 
     def __init__(self, jar, jre_options=(), temp_root="%(TEMP_DIR)s",
@@ -387,6 +389,8 @@ class AtomicJavaCmdBuilder(AtomicCmdBuilder):
                                        checks=versions.GE(*version),
                                        priority=10)
         return JAVA_VERSIONS[version]
+
+
 JAVA_VERSIONS = {}
 
 
@@ -400,22 +404,25 @@ class AtomicMPICmdBuilder(AtomicCmdBuilder):
 
     """
 
-    def __init__(self, call, threads = 1, **kwargs):
+    def __init__(self, call, threads=1, **kwargs):
         if not isinstance(threads, (types.IntType, types.LongType)):
-            raise TypeError("'threads' must be an integer value, not %r" % threads.__class__.__name__)
+            raise TypeError("'threads' must be an integer value, not %r"
+                            % threads.__class__.__name__)
         elif threads < 1:
-            raise ValueError("'threads' must be 1 or greater, not %i" % threads)
+            raise ValueError("'threads' must be 1 or greater, not %i"
+                             % threads)
         elif threads == 1:
-            AtomicCmdBuilder.__init__(self, call, EXEC_MPI = "mpirun", **kwargs)
+            AtomicCmdBuilder.__init__(self, call, EXEC_MPI="mpirun", **kwargs)
         else:
             call = safe_coerce_to_tuple(call)
             mpi_call = ["mpirun", "-n", threads]
             mpi_call.extend(call)
 
-            AtomicCmdBuilder.__init__(self, mpi_call, EXEC_MAIN = call[0], **kwargs)
+            AtomicCmdBuilder.__init__(
+                self, mpi_call, EXEC_MAIN=call[0], **kwargs)
 
 
-def use_customizable_cli_parameters(init_func): # pylint: disable=C0103
+def use_customizable_cli_parameters(init_func):  # pylint: disable=C0103
     """Decorator for __init__ functions, implementing the customizable Node
     interface: Allows a node to be implemented either using default behavior:
       >>> node = SomeNode(value1 = ..., value2 = ...)
@@ -434,7 +441,8 @@ def use_customizable_cli_parameters(init_func): # pylint: disable=C0103
         raise ValueError("Function name must be '__init__', not %r"
                          % (init_func.func_name,))
 
-    def do_call(self, parameters = None, **kwargs):
+    def do_call(self, parameters=None, **kwargs):
+        """Call to invoke the decorated __init__ function."""
         if not parameters:
             parameters = self.customize(**kwargs)
 
@@ -443,7 +451,7 @@ def use_customizable_cli_parameters(init_func): # pylint: disable=C0103
     return do_call
 
 
-def create_customizable_cli_parameters(customize_func): # pylint: disable=C0103
+def create_customizable_cli_parameters(customize_func):  # pylint: disable=C0103
     """Decorator complementing the 'use_customizable_cli_parameters' decorator
     defined above, which should be used on a function named 'customize'; this
     function is made a classmethod.
@@ -489,7 +497,7 @@ def create_customizable_cli_parameters(customize_func): # pylint: disable=C0103
     return classmethod(do_call)
 
 
-def apply_options(builder, options, pred = lambda s: s.startswith("-")):
+def apply_options(builder, options, pred=lambda s: s.startswith("-")):
     """Applies a dictionary of options to a builder. By default, only
     options where the key start with "-" are used (determined by 'pred').
     The following rules are used when applying options:
@@ -502,15 +510,19 @@ def apply_options(builder, options, pred = lambda s: s.startswith("-")):
     """
     for (key, values) in dict(options).iteritems():
         if not isinstance(key, types.StringTypes):
-            raise TypeError("Keys must be strings, not %r" % (key.__class__.__name__,))
+            raise TypeError("Keys must be strings, not %r" %
+                            (key.__class__.__name__,))
         elif pred(key):
             if isinstance(values, (types.ListType, types.TupleType)):
                 for value in values:
-                    if not isinstance(value, _ADDABLE_TYPES) or isinstance(value, _SETABLE_ONLY_TYPES):
-                        raise TypeError("Unexpected type when adding options: %r" % (value.__class__.__name__,))
+                    if not isinstance(value, _ADDABLE_TYPES) \
+                            or isinstance(value, _SETABLE_ONLY_TYPES):
+                        raise TypeError("Unexpected type when in options: %r"
+                                        % (value.__class__.__name__,))
                     builder.add_option(key, value)
             elif not isinstance(values, _SETABLE_TYPES):
-                raise TypeError("Unexpected type when setting option: %r" % (values.__class__.__name__,))
+                raise TypeError("Unexpected type when setting option: %r" % (
+                    values.__class__.__name__,))
             elif isinstance(values, (types.BooleanType, types.NoneType)):
                 if values or values is None:
                     builder.set_option(key)
@@ -521,21 +533,23 @@ def apply_options(builder, options, pred = lambda s: s.startswith("-")):
 
 
 _create_cli_parameters_cls_cache = {}
+
+
 def _create_cli_parameters_cls(cls, kwargs):
-    key    = (cls, frozenset(kwargs))
+    key = (cls, frozenset(kwargs))
     clsobj = _create_cli_parameters_cls_cache.get(key)
     if not clsobj:
         _create_cli_parameters_cls_cache[key] = clsobj = \
-          collections.namedtuple("CustomCLIParams", " ".join(kwargs))
+            collections.namedtuple("CustomCLIParams", " ".join(kwargs))
 
-    class _ParametersWrapper(clsobj): # pylint: disable=W0232
+    class _ParametersWrapper(clsobj):  # pylint: disable=W0232
         def build_node(self):
             return cls(self)
 
     return _ParametersWrapper(**kwargs)
 
 
-
-_ADDABLE_TYPES = (types.FloatType, types.IntType, types.LongType) + types.StringTypes
+_ADDABLE_TYPES = (types.FloatType, types.IntType,
+                  types.LongType) + types.StringTypes
 _SETABLE_ONLY_TYPES = (types.BooleanType, types.NoneType)
 _SETABLE_TYPES = _ADDABLE_TYPES + _SETABLE_ONLY_TYPES
