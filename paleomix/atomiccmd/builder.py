@@ -219,6 +219,17 @@ class AtomicCmdBuilder(object):
         self.set_kwargs(**kwargs)
         return kwargs
 
+    def add_multiple_kwargs(self, values, template="IN_FILE_%02i"):
+        """Add multiple keyword arguments using the given values.
+
+        The template determines the key-names used for the arguments,
+        using numbers starting from 1 to differentiate between multiple
+        values.
+        """
+        kwargs = dict(self._get_new_kwarg_keys(values, template))
+        self.set_kwargs(**kwargs)
+        return kwargs
+
     @property
     def call(self):
         """Returns the system-call based on the call passed to the constructor,

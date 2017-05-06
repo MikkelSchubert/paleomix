@@ -20,6 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+# pylint: disable=missing-docstring
+#
 from flexmock import flexmock
 from nose.tools import assert_equal, assert_raises
 
@@ -117,7 +119,8 @@ def test_builder__add_option__overwrite():
     builder.add_option("-name", "*.txt")
     builder.add_option("-or")
     builder.add_option("-name", "*.bat")
-    assert_equal(builder.call, ["find", "-name", "*.txt", "-or", "-name", "*.bat"])
+    assert_equal(builder.call, ["find", "-name",
+                                "*.txt", "-or", "-name", "*.bat"])
 
 
 ###############################################################################
@@ -155,7 +158,8 @@ def test_builder__add_or_set_option__add_and_set():
     def _do_test_builder__add_or_set_option__add_and_set(setter_1, setter_2):
         builder = AtomicCmdBuilder("find")
         setter_1(builder, "-name", "*.txt")
-        assert_raises(AtomicCmdBuilderError, setter_2, builder, "-name", "*.bat")
+        assert_raises(AtomicCmdBuilderError, setter_2,
+                      builder, "-name", "*.bat")
     yield _do_test_builder__add_or_set_option__add_and_set, AtomicCmdBuilder.set_option, AtomicCmdBuilder.add_option
     yield _do_test_builder__add_or_set_option__add_and_set, AtomicCmdBuilder.add_option, AtomicCmdBuilder.set_option
 
@@ -297,7 +301,8 @@ def test_builder__set_kwargs__after_finalize():
     builder = AtomicCmdBuilder("echo")
     builder.set_kwargs(IN_PATH="/a/b/")
     builder.finalize()
-    assert_raises(AtomicCmdBuilderError, builder.set_kwargs, OUT_PATH="/dst/file")
+    assert_raises(AtomicCmdBuilderError,
+                  builder.set_kwargs, OUT_PATH="/dst/file")
     assert_equal(builder.kwargs, expected)
 
 
@@ -305,7 +310,8 @@ def test_builder__set__kwargs__overwriting():
     expected = {"IN_PATH": "/a/b/"}
     builder = AtomicCmdBuilder("echo")
     builder.set_kwargs(IN_PATH="/a/b/")
-    assert_raises(AtomicCmdBuilderError, builder.set_kwargs, IN_PATH="/dst/file")
+    assert_raises(AtomicCmdBuilderError,
+                  builder.set_kwargs, IN_PATH="/dst/file")
     assert_equal(builder.kwargs, expected)
 
 
@@ -349,9 +355,10 @@ def test_builder__finalize__returns_singleton():
 def test_builder__finalize__calls_atomiccmd():
     was_called = []
 
-    class _AtomicCmdMock:
+    class _AtomicCmdMock(object):
         def __init__(self, *args, **kwargs):
-            assert_equal(args, (["echo", "-out", "%(OUT_FILE)s", "%(IN_FILE)s"],))
+            assert_equal(args,
+                         (["echo", "-out", "%(OUT_FILE)s", "%(IN_FILE)s"],))
             assert_equal(kwargs, {"IN_FILE": "/in/file",
                                   "OUT_FILE": "/out/file",
                                   "set_cwd": True})
@@ -473,6 +480,47 @@ def test_builder__add_multiple_values_multiple_times():
 
 ###############################################################################
 ###############################################################################
+# AtomicCmdBuilder: add_multiple_kwargs
+
+def test_builder__add_multiple_kwargs():
+    values = ("file_a", "file_b")
+    expected = {"IN_FILE_01": "file_a", "IN_FILE_02": "file_b"}
+
+    builder = AtomicCmdBuilder("ls")
+    kwargs = builder.add_multiple_kwargs(values)
+
+    assert_equal(kwargs, expected)
+    assert_equal(builder.kwargs, expected)
+    assert_equal(builder.call, ["ls"])
+
+
+def test_builder__add_multiple_kwargs_with_template():
+    values = ("file_a", "file_b")
+    expected = {"OUT_BAM_1": "file_a", "OUT_BAM_2": "file_b"}
+
+    builder = AtomicCmdBuilder("ls")
+    kwargs = builder.add_multiple_kwargs(values, template="OUT_BAM_%i")
+
+    assert_equal(kwargs, expected)
+    assert_equal(builder.kwargs, expected)
+    assert_equal(builder.call, ["ls"])
+
+
+def test_builder__add_multiple_kwargs_multiple_times():
+    expected = {"IN_FILE_01": "file_a", "IN_FILE_02": "file_b"}
+
+    builder = AtomicCmdBuilder("ls")
+    kwargs = builder.add_multiple_kwargs(("file_a",))
+    assert_equal(kwargs, {"IN_FILE_01": "file_a"})
+    kwargs = builder.add_multiple_kwargs(("file_b",))
+    assert_equal(kwargs, {"IN_FILE_02": "file_b"})
+
+    assert_equal(builder.kwargs, expected)
+    assert_equal(builder.call, ["ls"])
+
+
+###############################################################################
+###############################################################################
 # AtomicJavaCmdBuilder
 
 def test_java_builder__default__no_config():
@@ -517,12 +565,15 @@ def test_java_builder__multithreaded_gc():
 
 
 def test_java_builder__multithreaded_gc__zero_or_negative_threads():
-    assert_raises(ValueError, AtomicJavaCmdBuilder, "/path/Foo.jar", gc_threads=0)
-    assert_raises(ValueError, AtomicJavaCmdBuilder, "/path/Foo.jar", gc_threads=-1)
+    assert_raises(ValueError, AtomicJavaCmdBuilder,
+                  "/path/Foo.jar", gc_threads=0)
+    assert_raises(ValueError, AtomicJavaCmdBuilder,
+                  "/path/Foo.jar", gc_threads=-1)
 
 
 def test_java_builder__multithreaded_gc__non_int_threads():
-    assert_raises(TypeError, AtomicJavaCmdBuilder, "/path/Foo.jar", gc_threads="3")
+    assert_raises(TypeError, AtomicJavaCmdBuilder,
+                  "/path/Foo.jar", gc_threads="3")
 
 
 def test_java_builder__kwargs():
@@ -606,13 +657,13 @@ def test_custom_cli__multiple_named_args():
             return {}
 
     obj = SingleNamedArg.customize(123, 456)
-    assert_equal(obj.first,  123)
+    assert_equal(obj.first, 123)
     assert_equal(obj.second, 456)
 
 
 def test_custom_cli__only_customize_is_valid_function_name():
     try:
-        class ClassWithMisnamedFunction:
+        class ClassWithMisnamedFunction(object):
             @create_customizable_cli_parameters
             def not_called_customize(cls, first, second):
                 return {}  # pragma: no coverage
@@ -637,7 +688,7 @@ def test_apply_options__single_option__default_pred__set_when_pred_is_true():
     apply_options(mock, {"--foo": 17})
 
 
-def test_apply_options__single_option__default_pred__ignore_when_pred_is_false():
+def test_apply_options__single_option__default_pred__ignore_false_pred():
     mock = flexmock()
     apply_options(mock, {"Other": None})
 
