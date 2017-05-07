@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-# pylint: disable=W0223
+# pylint: disable=too-few-public-methods
 #
 """Version checks for apps or libraries required by PALEOMIX pipelines.
 
@@ -45,17 +45,14 @@ For example, to check that the Java version is v1.7 or later:
     except VersionRequirementError:
         pass  # requirements not met, or failure to determine version
 """
-import re
-import operator
 import collections
+import operator
+import re
 
 from paleomix.common.utilities import \
-    Immutable, \
     TotallyOrdered, \
     safe_coerce_to_tuple, \
     try_cast
-from paleomix.common.fileutils import \
-    which_executable
 
 import paleomix.common.procs as procs
 
@@ -66,7 +63,7 @@ _CALL_CACHE = {}
 _REQUIREMENT_CACHE = {}
 
 
-class VersionRequirementError(StandardError):
+class VersionRequirementError(Exception):
     """Raised if version requirements are not met, or if a version could not be
     determined for a requirement check.
     """
@@ -141,7 +138,11 @@ class RequirementObj(object):
         describing the cause of the problem.
         """
         if self._version is None:
-            output = _do_call(self._call)
+            try:
+                output = _do_call(self._call)
+            except OSError as error:
+                self._raise_failure(error)
+
             # Raise an exception if the JRE is outdated, even if the
             # version could be determined (likely a false positive match).
             self._check_for_outdated_jre(output)
@@ -198,8 +199,11 @@ class RequirementObj(object):
         lines.extend(self._describe_call())
         lines.append("")
 
-        # Raised if the JRE is too old compared to the JAR
-        if "UnsupportedClassVersionError" in output:
+        if isinstance(output, OSError):
+            lines.append("Exception was raised:")
+            lines.append("    %s: %s" % (output.__class__.__name__, output))
+        elif "UnsupportedClassVersionError" in output:
+            # Raised if the JRE is too old compared to the JAR
             lines.extend([
                 "The version of the Java Runtime Environment on this",
                 "system is too old; please check the the requirement",
@@ -208,29 +212,25 @@ class RequirementObj(object):
                 "See the documentation for more information.",
             ])
         else:
-            lines.append("Program may be broken or a version not supported by the")
-            lines.append("pipeline; please refer to the PALEOMIX documentation.\n")
+            lines.append(
+                "Program may be broken or a version not supported by the")
+            lines.append(
+                "pipeline; please refer to the PALEOMIX documentation.\n")
             lines.append("    Required:       %s" % (self.checks,))
-            lines.append("    Search string:  %r\n" % (self._rege.pattern))
+            lines.append("    Search string:  %s\n" % (self._rege.pattern))
             lines.append("%s Command output %s" % ("-" * 22, "-" * 22))
             lines.append(output)
 
         raise VersionRequirementError("\n".join(lines))
 
     def _describe_call(self):
-        """Yields string describing the current system call, if any.
-        """
-        if self.executable:
-            exec_path = which_executable(self.executable) or self.executable
-            yield "    Executable:    %s" % (exec_path,)
-
+        """Returns lines describing the current system call, if any."""
         if not isinstance(self._call[0], collections.Callable):
-            yield "    Call:          %s" % (" ".join(self._call),)
+            yield "Attempted to run command:"
+            yield "    $ %s" % (" ".join(self._call),)
 
 
-class Check(Immutable, TotallyOrdered):
-    # Ignore "missing" members; required due to use of Immutable
-    # pylint: disable=E1101
+class Check(TotallyOrdered):
     """Abstract base-class for version checks.
 
     Callable with a tuple of version fields (typically integers), and returns
@@ -244,15 +244,14 @@ class Check(Immutable, TotallyOrdered):
     """
 
     def __init__(self, description, func, *values):
-        if not callable(func):
+        if not isinstance(func, collections.Callable):
             raise TypeError('func must be callable, not %r' % (func,))
 
         values = tuple(values)
-        Immutable.__init__(self,
-                           _func=func,
-                           _values=values,
-                           _description=description,
-                           _objs=(description, func, values))
+        self._func = func
+        self._values = values
+        self._description = description
+        self._objs = (description, func, values)
 
     def __str__(self):
         return self._description
@@ -397,7 +396,8 @@ def _func_or(current, checks):
 def _run(call):
     """Carries out a system call and returns STDOUT and STDERR as a combined
     string. If an OSError is raied (e.g. due to missing executables), the
-    resulting message is returned as a string.
+    resulting message is returned as a string. If the call raised an OSError,
+    then the exception is returned as a value.
     """
     try:
         proc = procs.open_proc(call,
@@ -406,23 +406,28 @@ def _run(call):
                                stderr=procs.STDOUT)
 
         return proc.communicate()[0]
-    except (OSError, procs.CalledProcessError), error:
-        return str(error)
+    except OSError as error:
+        return error
 
 
 def _do_call(call):
     """Performs a call; the result is cached, and returned upon subsequent
-    calls with the same signature (either a function call or system call).
+    calls with the same signature (either a function call or system call). If
+    the call raised an OSError, then the exception is returned as a value.
     """
     try:
-        return _CALL_CACHE[call]
+        result = _CALL_CACHE[call]
     except KeyError:
-        if callable(call[0]):
+        if isinstance(call[0], collections.Callable):
             result = call[0](*call[1:])
         else:
             result = _run(call)
         _CALL_CACHE[call] = result
-        return result
+
+    if isinstance(result, OSError):
+        raise result
+
+    return result
 
 
 def _pprint_version(value):

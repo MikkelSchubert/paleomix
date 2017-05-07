@@ -20,8 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-# Disable warnings on strange function names
-# pylint: disable=C0103
+# pylint: disable=missing-docstring,too-few-public-methods
+#
 import pickle
 import operator
 
@@ -51,7 +51,7 @@ def test_check_str():
 
 ###############################################################################
 ###############################################################################
-## Check class -- hash and comparisons
+# Check class -- hash and comparisons
 
 def test_check__eq_same_func_desc_and_version():
     obj_1 = versions.Check("Desc {}", operator.lt, 1, 2, 3)
@@ -83,7 +83,7 @@ def test_check__not_eq_for_same_func_desc_diff_version():
 
 ###############################################################################
 ###############################################################################
-## EQ class
+# EQ class
 
 def test_eq__str__one_value():
     obj = versions.EQ(1)
@@ -124,7 +124,7 @@ def test_eq__check_values__not_equal_too_few_values():
 
 ###############################################################################
 ###############################################################################
-## GE class
+# GE class
 
 def test_ge__str__one_value():
     obj = versions.GE(1)
@@ -167,7 +167,7 @@ def test_ge__check_values__not_equal_too_few_values():
 
 ###############################################################################
 ###############################################################################
-## LT class
+# LT class
 
 def test_lt__str__one_value():
     obj = versions.LT(1)
@@ -209,7 +209,7 @@ def test_lt__check_values__not_less_than_too_few_values():
 
 ###############################################################################
 ###############################################################################
-## Any class
+# Any class
 
 def test_any__str():
     obj = versions.Any()
@@ -226,7 +226,7 @@ def test_lt__check_values__always_true():
 
 ###############################################################################
 ###############################################################################
-## And class
+# And class
 
 def test_and__init__non_check_value():
     assert_raises(ValueError, versions.And, versions.LT(2), None)
@@ -234,7 +234,7 @@ def test_and__init__non_check_value():
 
 ###############################################################################
 ###############################################################################
-## And class -- str
+# And class -- str
 
 def test_and__str__single_item():
     obj = versions.And(versions.GE(1))
@@ -269,7 +269,7 @@ def test_and__str__two_items__second_is_operator():
 
 ###############################################################################
 ###############################################################################
-## And class -- check_version
+# And class -- check_version
 
 def test_and__check_version__both_true():
     obj_1 = versions.GE(1, 2)
@@ -321,7 +321,7 @@ def test_and__check_version__insufficient_number_of_values():
 
 ###############################################################################
 ###############################################################################
-## Or class
+# Or class
 
 def test_or__init__non_check_value():
     assert_raises(ValueError, versions.Or, versions.LT(2), None)
@@ -329,7 +329,7 @@ def test_or__init__non_check_value():
 
 ###############################################################################
 ###############################################################################
-## Or class -- str
+# Or class -- str
 
 def test_or__str__single_item():
     obj = versions.Or(versions.GE(1))
@@ -364,7 +364,7 @@ def test_or__str__two_items__second_is_operator():
 
 ###############################################################################
 ###############################################################################
-## Or class -- check_version
+# Or class -- check_version
 
 def test_or__check_version__both_true():
     obj_1 = versions.GE(1, 2)
@@ -422,7 +422,7 @@ def test_or__check_version__insufficient_number_of_values__is_lazy():
 
 ###############################################################################
 ###############################################################################
-## RequirementObj -- constructor
+# RequirementObj -- constructor
 
 def test_requirementobj__init__defaults():
     obj = versions.RequirementObj(call=("echo", "foo"),
@@ -446,17 +446,19 @@ def test_requirementobj__init__non_defaults():
 
 ###############################################################################
 ###############################################################################
-## RequirementObj -- version
+# RequirementObj -- version
 
-def _echo_version(version, to="stdout", returncode=0):
+def _echo_version(version, dst="stdout", returncode=0):
     tmpl = "import sys; sys.%s.write(%r); sys.exit(%s);"
-    return ("/usr/bin/python", "-c", tmpl % (to, version, returncode))
+    return ("/usr/bin/python", "-c", tmpl % (dst, version, returncode))
+
+
 _PIPES = ("stderr", "stdout")
 
 
 def test_requirementobj__version__call():
     def _do_test_version__single_digit(pipe, regexp, equals):
-        call = _echo_version("v3.5.2\n", to=pipe)
+        call = _echo_version("v3.5.2\n", dst=pipe)
         obj = versions.RequirementObj(call=call,
                                       search=regexp,
                                       checks=versions.Any())
@@ -484,11 +486,24 @@ def test_requirementobj__version__command_not_found():
                                   checks=versions.Any())
 
     try:
-        obj.version  # pylint: disable=
+        obj.version  # pylint: disable=pointless-statement
         assert False  # pragma: no coverage
-    except versions.VersionRequirementError, error:
+    except versions.VersionRequirementError as error:
         # Should include OSError message
         assert_in("No such file or directory", str(error))
+
+
+def test_requirementobj__version__command_not_executable():
+    obj = versions.RequirementObj(call=("./README.md",),
+                                  search=r"v(\d+)\.(\d+)",
+                                  checks=versions.Any())
+
+    try:
+        obj.version  # pylint: disable=pointless-statement
+        assert False  # pragma: no coverage
+    except versions.VersionRequirementError as error:
+        # Should include OSError message
+        assert_in("Permission denied", str(error))
 
 
 def test_requirementobj__version__return_code_is_ignored():
@@ -528,9 +543,9 @@ def test_requirementobj__version__outdated_jre__with_or_without_version_str():
                                       checks=versions.Any())
 
         try:
-            obj.version
+            obj.version  # pylint: disable=pointless-statement
             assert False  # pragma: no coverage
-        except versions.VersionRequirementError, error:
+        except versions.VersionRequirementError as error:
             assert_in(error_msg, str(error))
 
     messages = [
@@ -543,17 +558,46 @@ def test_requirementobj__version__outdated_jre__with_or_without_version_str():
 
 ###############################################################################
 ###############################################################################
-## RequirementObj -- __call__
+# RequirementObj -- executable
+
+
+def test_requirementobj__executable__no_cli_args():
+    obj = versions.RequirementObj(call=["samtools"],
+                                  search=r"v(\d+)\.(\d+)",
+                                  checks=versions.Any())
+
+    assert_equal(obj.executable, "samtools")
+
+
+def test_requirementobj__executable__with_cli_arguments():
+    obj = versions.RequirementObj(call=["samtools", "--version"],
+                                  search=r"v(\d+)\.(\d+)",
+                                  checks=versions.Any())
+
+    assert_equal(obj.executable, "samtools")
+
+
+def test_requirementobj__executable__function():
+    obj = versions.RequirementObj(call=lambda: "v1.1",
+                                  search=r"v(\d+)\.(\d+)",
+                                  checks=versions.Any())
+
+    assert_equal(obj.executable, None)
+
+
+###############################################################################
+###############################################################################
+# RequirementObj -- __call__
 
 class CheckCounted(versions.Check):
     def __init__(self, return_value=True, expected=(1, 1)):
+        self.count = 0
+        self.return_value = return_value
         versions.Check.__init__(self, "counted {}", operator.eq, *expected)
-        object.__setattr__(self, "count", 0)
-        object.__setattr__(self, "return_value", return_value)
 
-    def _do_check_version(self, values, current):
-        assert_equal(values, current)
-        object.__setattr__(self, "count", self.count + 1)
+    def _do_check_version(self, current, reference):
+        assert_equal(current, reference)
+        self.count += 1
         return self.return_value
 
 
@@ -596,7 +640,7 @@ def test_requirementobj__call__check_fails__function():
     try:
         obj()
         assert False  # pragma: no coverage
-    except versions.VersionRequirementError, error:
+    except versions.VersionRequirementError as error:
         assert_equal(str(error), expected)
 
 
@@ -605,8 +649,8 @@ def test_requirementobj__call__check_fails():
         "Version requirements not met for test#1; please refer\n" \
         "to the PALEOMIX documentation for more information.\n" \
         "\n" \
-        "    Executable:    /usr/bin/python\n" \
-        "    Call:          /usr/bin/python -c import sys; " \
+        "Attempted to run command:\n" \
+        "    $ /usr/bin/python -c import sys; " \
         "sys.stdout.write('v1.0.2'); sys.exit(0);\n" \
         "    Version:       v1.0.x\n" \
         "    Required:      at least v1.1.x"
@@ -618,7 +662,7 @@ def test_requirementobj__call__check_fails():
     try:
         obj()
         assert False  # pragma: no coverage
-    except versions.VersionRequirementError, error:
+    except versions.VersionRequirementError as error:
         assert_equal(str(error), expected)
 
 
@@ -626,8 +670,8 @@ def test_requirementobj__call__check_fails__jre_outdated():
     expected = \
         "Version could not be determined for test#1:\n" \
         "\n" \
-        "    Executable:    /usr/bin/python\n" \
-        "    Call:          /usr/bin/python -c import sys; " \
+        "Attempted to run command:\n" \
+        "    $ /usr/bin/python -c import sys; " \
         "sys.stdout.write('UnsupportedClassVersionError'); sys.exit(0);\n" \
         "\n" \
         "The version of the Java Runtime Environment on this\n" \
@@ -644,13 +688,13 @@ def test_requirementobj__call__check_fails__jre_outdated():
     try:
         obj()
         assert False  # pragma: no coverage
-    except versions.VersionRequirementError, error:
+    except versions.VersionRequirementError as error:
         assert_equal(str(error), expected)
 
 
 ###############################################################################
 ###############################################################################
-## Pickling of checks
+# Pickling of checks
 
 def test_check__can_pickle():
     def _do_test_can_pickle(obj):
@@ -666,7 +710,7 @@ def test_check__can_pickle():
 
 ###############################################################################
 ###############################################################################
-## Requirement
+# Requirement
 
 def test_requirement__obj_is_cached_for_same_values():
     obj1 = versions.Requirement("echo", "", versions.LT(1))

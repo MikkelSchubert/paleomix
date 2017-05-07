@@ -13,6 +13,8 @@
   - Commands are now shown in a format more suitable for running on the
     command-line, instead of as a Python list, when a node fails. Pipes are
     still specified separately.
+  - Improved error messages for missing programs during version checks, and for
+    exceptions raised when calling Popen during version checks.
 
 
 ## [1.2.9] - 2017-05-01
