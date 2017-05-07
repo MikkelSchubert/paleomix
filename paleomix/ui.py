@@ -374,7 +374,7 @@ class ProgressUI(BaseUI):
 
     def flush(self):
         """See BaseUI.flush."""
-        if (self._refresh_count <= 0):
+        if self._refresh_count <= 0:
             self._refresh_count = ProgressUI._SUMMARY_EVERY
             self._print_summary()
 
@@ -455,14 +455,10 @@ def _fmt_runtime(runtime):
                       secs=(runtime % 60))
 
 
-# No longer provided
-VerboseUI = RunningUI
-QuietUI = RunningUI
-
 # Different types of UIs
 UI_TYPES = {
-    "Verbose": VerboseUI,
-    "Quiet": RunningUI,
+    "Verbose": RunningUI,  # Deprecated
+    "Quiet": RunningUI,  # Deprecated
     "Running": RunningUI,
     "Progress": ProgressUI,
     "Summary": SummaryUI,

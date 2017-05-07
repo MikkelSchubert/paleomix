@@ -79,7 +79,7 @@ class Pypeline(object):
             return False
 
         for node in nodegraph.iterflat():
-            if (node.threads > max_threads):
+            if node.threads > max_threads:
                 message = "Node(s) use more threads than the max allowed; " \
                           "the pipeline may therefore use more than the " \
                           "expected number of threads.\n"
@@ -87,7 +87,7 @@ class Pypeline(object):
                 break
 
         if dry_run:
-            progress_printer = paleomix.ui.QuietUI()
+            progress_printer = paleomix.ui.RunningUI()
             nodegraph.add_state_observer(progress_printer)
             progress_printer.flush()
             progress_printer.finalize()
