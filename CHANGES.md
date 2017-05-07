@@ -15,6 +15,8 @@
     still specified separately.
   - Improved error messages for missing programs during version checks, and for
     exceptions raised when calling Popen during version checks.
+  - Strip MC tags from reads with unmapped mates during cleanup; this is
+    required since Picard (v2.9.0) ValidateSamFile considers such tags invalid.
 
 
 ## [1.2.9] - 2017-05-01

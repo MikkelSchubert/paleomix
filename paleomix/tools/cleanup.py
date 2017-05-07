@@ -87,8 +87,9 @@ def _pipe_to_bam():
     files that do not contain records (i.e. only a header), which are not
     properly handled by "samtools view -S -", resulting in a parse failure.
     """
-    with pysam.Samfile("-", "r") as input_handle:
-        with pysam.Samfile("-", "wbu", template=input_handle) as output_handle:
+    with pysam.AlignmentFile("-", "r") as input_handle:
+        with pysam.AlignmentFile("-", "wbu",
+                                 template=input_handle) as output_handle:
             for record in input_handle:
                 output_handle.write(record)
 
@@ -108,6 +109,11 @@ def _cleanup_record(record):
         record.rnext = -1
         record.pnext = -1
         record.tlen = 0
+    elif record.mate_is_unmapped and record.has_tag('MC'):
+        # Picard ValidateSamFile (2.9.1) objects to MC tags for unmapped mates,
+        # which are currently added by SAMTools (v1.4).
+        tags = record.get_tags(with_value_type=True)
+        record.set_tags([tag for tag in tags if tag[0] != 'MC'])
 
     if record.is_unmapped:
         record.mapq = 0
@@ -143,7 +149,7 @@ def _filter_record(args, record):
         exclude_flags = args.exclude_flags & _SE_FLAGS_MASK
         require_flags = args.require_flags & _SE_FLAGS_MASK
 
-    if (record.flag & exclude_flags):
+    if record.flag & exclude_flags:
         return True
     elif ~(record.flag & require_flags) & require_flags:
         return True
@@ -162,14 +168,14 @@ def _cleanup_unmapped(args, cleanup_sam):
 
     filter_by_flag = bool(args.exclude_flags or args.require_flags)
     spec = "r" if cleanup_sam else "rb"
-    with pysam.Samfile("-", spec) as input_handle:
+    with pysam.AlignmentFile("-", spec) as input_handle:
         header = copy.deepcopy(input_handle.header)
         _set_sort_order(header)
         _set_pg_tags(header, args.update_pg_tag)
         if args.rg_id is not None:
             _set_rg_tags(header, args.rg_id, args.rg)
 
-        with pysam.Samfile("-", "wbu", header=header) as output_handle:
+        with pysam.AlignmentFile("-", "wbu", header=header) as output_handle:
             for record in input_handle:
                 # Ensure that the properties make sense before filtering
                 record = _cleanup_record(record)
@@ -288,14 +294,14 @@ def _run_cleanup_pipeline(args):
 
 
 def parse_args(argv):
+    """Parses a list of command-line arguments, excluding the program name."""
     prog = "paleomix cleanup"
     usage = "%s --temp-prefix prefix --fasta reference.fasta < in.sam" \
         % (prog,)
 
     parser = argparse.ArgumentParser(prog=prog, usage=usage)
     # "Hidden" commands, invoking the various sub-parts of this script
-    parser.add_argument('command', choices=('pipe', 'cleanup', 'cleanup-sam'),
-                        nargs="?", help=argparse.SUPPRESS)
+    parser.add_argument('command', nargs="?", help=argparse.SUPPRESS)
     # Specifies if the 'cleanup' step should expect SAM input
     parser.add_argument('--cleanup-sam', default=False, action="store_true",
                         help=argparse.SUPPRESS)
@@ -348,10 +354,15 @@ def parse_args(argv):
     parser.add_argument('--samtools1x', choices=('yes', 'no'),
                         help=argparse.SUPPRESS)
 
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    if args.command not in (None, 'pipe', 'cleanup', 'cleanup-sam'):
+        parser.error("unrecognized arguments: %s" % (args.command,))
+
+    return args
 
 
 def main(argv):
+    """Main function; returns 0 on success, non-zero otherwise."""
     args = parse_args(argv)
 
     if args.samtools1x is None:
@@ -370,9 +381,8 @@ def main(argv):
                                  "v1.0+ are supported; please upgrade / "
                                  "replace the installed copy of SAMTools!\n")
                 return 1
-        except versions.VersionRequirementError, error:
-            sys.stderr.write("ERROR: Could not determine SAMTools version: "
-                             "%s\n" % (error,))
+        except versions.VersionRequirementError as error:
+            sys.stderr.write("\nERROR: %s\n" % (error,))
             return 1
 
     if args.command == "pipe":
@@ -381,6 +391,8 @@ def main(argv):
         return _cleanup_unmapped(args, cleanup_sam=False)
     elif args.command == "cleanup-sam":
         return _cleanup_unmapped(args, cleanup_sam=True)
+    elif args.command:
+        raise NotImplementedError('Unexpected command %r' % (args.command,))
 
     sys.stderr.write("Reading SAM file from STDIN ...\n")
     return _run_cleanup_pipeline(args)
