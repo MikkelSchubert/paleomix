@@ -294,7 +294,7 @@ class Lane:
 
         index_required = self._is_indexing_required(prefix)
         validated_node = index_and_validate_bam(config=config,
-                                                prefix=parameters['prefix'],
+                                                prefix=prefix,
                                                 node=node.build_node(),
                                                 create_index=index_required)
 

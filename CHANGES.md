@@ -1,6 +1,12 @@
 # Changelog
 
 ## [Unreleased]
+### Added
+  - Preliminary support for CSI indexed BAM files, required for genomes with
+    chromosomes > 2^29 - 1 bp in size. Support is still missing in HTSJDK, so
+    GATK cannot currently be used with such genomes. CSI indexing is enabled
+    automatically when required.
+
 ### Fixed
   - Reference sequences placed in the current directory no longer cause the
     BAM pipeline to complain about non-writable directories.

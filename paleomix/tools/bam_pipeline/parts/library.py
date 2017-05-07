@@ -67,7 +67,8 @@ class Library:
         self.options = lanes[0].options
         self.folder = os.path.dirname(self.lanes[0].folder)
 
-        assert all((self.folder == os.path.dirname(lane.folder)) for lane in self.lanes)
+        assert all((self.folder == os.path.dirname(lane.folder))
+                   for lane in self.lanes)
         assert all((self.options == lane.options) for lane in self.lanes)
 
         lane_bams = self._collect_bams_by_type(self.lanes)
@@ -75,9 +76,10 @@ class Library:
         pcr_duplicates = self.options["PCRDuplicates"]
         if pcr_duplicates:
             # pcr_duplicates may be "mark" or any trueish value
-            lane_bams = self._remove_pcr_duplicates(config, prefix, lane_bams, pcr_duplicates)
+            lane_bams = self._remove_pcr_duplicates(
+                config, prefix, lane_bams, pcr_duplicates)
 
-        # At this point we no longer need to differentiate between types of reads
+        # At this point we no longer need to differentiate between read types
         files_and_nodes = self._collect_files_and_nodes(lane_bams)
 
         # Collect output bams, possible following rescaling
@@ -87,7 +89,10 @@ class Library:
         nodes = [self._build_dataduplication_node(lane_bams)]
         nodes.extend(mapdamage_nodes)
 
-        histogram_node = self._build_duphist_nodes(config, target, prefix, lane_bams)
+        histogram_node = self._build_duphist_nodes(config=config,
+                                                   target=target,
+                                                   prefix=prefix,
+                                                   files_and_nodes=lane_bams)
         if histogram_node:
             nodes.append(histogram_node)
 
@@ -111,8 +116,8 @@ class Library:
         return files_and_nodes
 
     def _remove_pcr_duplicates(self, config, prefix, bams, strategy):
-        rmdup_cls = {"collapsed"  : FilterCollapsedBAMNode,
-                     "normal"     : MarkDuplicatesNode}
+        rmdup_cls = {"collapsed": FilterCollapsedBAMNode,
+                     "normal": MarkDuplicatesNode}
 
         keep_duplicates = False
         if isinstance(strategy, types.StringTypes) and (strategy.lower() == "mark"):
@@ -128,15 +133,17 @@ class Library:
         results = {}
         for (key, files_and_nodes) in bams.items():
             output_filename = self.folder + ".rmdup.%s.bam" % key
-            node = rmdup_cls[key](config       = config,
-                                  input_bams   = files_and_nodes.keys(),
-                                  output_bam   = output_filename,
-                                  keep_dupes   = keep_duplicates,
-                                  dependencies = files_and_nodes.values())
-            validated_node = index_and_validate_bam(config, prefix, node,
+            node = rmdup_cls[key](config=config,
+                                  input_bams=files_and_nodes.keys(),
+                                  output_bam=output_filename,
+                                  keep_dupes=keep_duplicates,
+                                  dependencies=files_and_nodes.values())
+            validated_node = index_and_validate_bam(config=config,
+                                                    prefix=prefix,
+                                                    node=node,
                                                     create_index=index_required)
 
-            results[key] = {output_filename : validated_node}
+            results[key] = {output_filename: validated_node}
         return results
 
     def _build_mapdamage_nodes(self, config, target, prefix, files_and_nodes):
@@ -222,7 +229,9 @@ class Library:
         # Grab indexing and validation nodes, required by ROIs and GATK
         index_required = bool(prefix.get("RegionsOfInterest")) \
             or self.options["Features"]["RealignedBAM"]
-        validate = index_and_validate_bam(config, prefix, scale,
+        validate = index_and_validate_bam(config=config,
+                                          prefix=prefix,
+                                          node=scale,
                                           create_index=index_required)
 
         return {output_filename: validate}, (model,)
@@ -249,7 +258,8 @@ class Library:
 
     def _build_dataduplication_node(self, bams):
         files_and_nodes = self._collect_files_and_nodes(bams)
+        output_file = self.folder + ".duplications_checked"
 
         return DetectInputDuplicationNode(input_files=files_and_nodes.keys(),
-                                          output_file=self.folder + ".duplications_checked",
+                                          output_file=output_file,
                                           dependencies=files_and_nodes.values())

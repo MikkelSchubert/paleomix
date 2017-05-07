@@ -39,7 +39,7 @@ def add_statistics_nodes(config, makefile, target):
 
     nodes = []
     if features["Depths"]:
-        nodes.extend(_build_depth(config, target))
+        nodes.extend(_build_depth(config, target, makefile["Prefixes"]))
 
     if features["Summary"] or features["Coverage"]:
         make_summary = features["Summary"]
@@ -55,7 +55,7 @@ def add_statistics_nodes(config, makefile, target):
 
 
 def _build_summary_node(config, makefile, target, coverage):
-    coverage_by_label = _build_coverage_nodes(config, target, use_label=True)
+    coverage_by_label = _build_coverage_nodes(target, use_label=True)
 
     return SummaryTableNode(config=config,
                             makefile=makefile,
@@ -65,7 +65,7 @@ def _build_summary_node(config, makefile, target, coverage):
                             dependencies=coverage["Nodes"])
 
 
-def _build_depth(config, target):
+def _build_depth(config, target, prefixes):
     nodes = []
     for prefix in target.prefixes:
         for (roi_name, roi_filename) in _get_roi(prefix, name_prefix="."):
@@ -89,6 +89,7 @@ def _build_depth(config, target):
             node = DepthHistogramNode(config=config,
                                       target_name=target.name,
                                       input_files=input_files,
+                                      prefix=prefixes[prefix.name],
                                       regions_file=roi_filename,
                                       output_file=output_fpath,
                                       dependencies=dependencies)
@@ -108,7 +109,7 @@ def _aggregate_for_prefix(cov, prefix, roi_name=None, into=None):
 
 def _build_coverage(config, target, make_summary):
     merged_nodes = []
-    coverage = _build_coverage_nodes(config, target)
+    coverage = _build_coverage_nodes(target)
     for prefix in target.prefixes:
         for (roi_name, _) in _get_roi(prefix):
             label = _get_prefix_label(prefix.name, roi_name)
@@ -142,7 +143,7 @@ def _build_coverage(config, target, make_summary):
     return coverage
 
 
-def _build_coverage_nodes(config, target, use_label=False):
+def _build_coverage_nodes(target, use_label=False):
     coverage = {"Lanes": collections.defaultdict(dict),
                 "Libraries": collections.defaultdict(dict)}
 
@@ -159,7 +160,7 @@ def _build_coverage_nodes(config, target, use_label=False):
 
                     for lane in library.lanes:
                         for bams in lane.bams.values():
-                            bams = _build_coverage_nodes_cached(config, bams,
+                            bams = _build_coverage_nodes_cached(bams,
                                                                 target.name,
                                                                 roi_name,
                                                                 roi_filename,
@@ -167,14 +168,14 @@ def _build_coverage_nodes(config, target, use_label=False):
 
                             coverage["Lanes"][key].update(bams)
 
-                    bams = _build_coverage_nodes_cached(config, library.bams,
+                    bams = _build_coverage_nodes_cached(library.bams,
                                                         target.name, roi_name,
                                                         roi_filename, cache)
                     coverage["Libraries"][key].update(bams)
     return coverage
 
 
-def _build_coverage_nodes_cached(config, files_and_nodes, target_name,
+def _build_coverage_nodes_cached(files_and_nodes, target_name,
                                  roi_name, roi_filename, cache):
     output_ext = ".coverage"
     if roi_name:
@@ -186,8 +187,7 @@ def _build_coverage_nodes_cached(config, files_and_nodes, target_name,
 
         cache_key = (roi_filename, input_filename)
         if cache_key not in cache:
-            cache[cache_key] = CoverageNode(config=config,
-                                            input_file=input_filename,
+            cache[cache_key] = CoverageNode(input_file=input_filename,
                                             output_file=output_filename,
                                             target_name=target_name,
                                             regions_file=roi_filename,

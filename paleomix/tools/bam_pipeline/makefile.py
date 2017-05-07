@@ -751,13 +751,14 @@ def _validate_prefixes(makefiles):
     genome is ordered 1 .. 23. This is required since GATK will not run with
     human genomes in a different order.
     """
-    already_validated = set()
+    already_validated = {}
     print_info("  - Validating prefixes ...")
     for makefile in makefiles:
         uses_gatk = makefile["Options"]["Features"]["RealignedBAM"]
         for prefix in makefile["Prefixes"].itervalues():
             path = prefix["Path"]
             if path in already_validated:
+                prefix["IndexFormat"] = already_validated[path]["IndexFormat"]
                 continue
 
             if not os.path.exists(path):
@@ -797,7 +798,7 @@ def _validate_prefixes(makefiles):
             else:
                 prefix["IndexFormat"] = ".bai"
 
-            already_validated.add(path)
+            already_validated[path] = prefix
 
 
 def _do_validate_hg_prefix(makefile, prefix, contigs, fatal):

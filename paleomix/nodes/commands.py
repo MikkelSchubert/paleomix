@@ -35,18 +35,19 @@ from paleomix.atomiccmd.command import \
     AtomicCmd
 from paleomix.atomiccmd.sets import \
     ParallelCmds
-from paleomix.common.fileutils import \
-    describe_files
 from paleomix.nodes.picard import \
-    MultiBAMInput, \
     MultiBAMInputNode
 from paleomix.atomiccmd.builder import \
     AtomicCmdBuilder, \
     create_customizable_cli_parameters, \
     use_customizable_cli_parameters
 from paleomix.common.fileutils import \
+    describe_files, \
     reroot_path, \
-    move_file
+    move_file, \
+    swap_ext
+from paleomix.common.utilities import \
+    safe_coerce_to_tuple
 
 from paleomix.nodes.samtools import \
     SAMTOOLS_VERSION, \
@@ -66,26 +67,26 @@ class DuplicateHistogramNode(MultiBAMInputNode):
     """
 
     def __init__(self, config, input_files, output_file, dependencies=()):
-        bam_input = MultiBAMInput(config, input_files, indexed=False)
-        duphist_command = factory.new("duphist")
-        duphist_command.add_value('%(TEMP_IN_BAM)s')
-        duphist_command.set_kwargs(OUT_STDOUT=output_file)
-        bam_input.setup(duphist_command)
-        duphist_command = duphist_command.finalize()
+        input_files = safe_coerce_to_tuple(input_files)
 
-        commands = ParallelCmds(bam_input.commands + [duphist_command])
+        builder = factory.new("duphist")
+        builder.add_value('%(TEMP_IN_BAM)s')
+        builder.set_kwargs(OUT_STDOUT=output_file,
+                           TEMP_IN_BAM=MultiBAMInputNode.PIPE_FILE)
+        builder.add_multiple_kwargs(input_files)
 
         description = "<DuplicateHistogram: %s -> %r>" \
             % (describe_files(input_files), output_file)
         MultiBAMInputNode.__init__(self,
-                                   bam_input=bam_input,
-                                   command=commands,
+                                   config=config,
+                                   input_bams=input_files,
+                                   command=builder.finalize(),
                                    description=description,
                                    dependencies=dependencies)
 
 
 class CoverageNode(CommandNode):
-    def __init__(self, config, target_name, input_file, output_file,
+    def __init__(self, target_name, input_file, output_file,
                  regions_file=None, dependencies=()):
         builder = factory.new("coverage")
         builder.add_value("%(IN_BAM)s")
@@ -127,31 +128,33 @@ class MergeCoverageNode(Node):
 
 class DepthHistogramNode(MultiBAMInputNode):
     def __init__(self, config, target_name, input_files, output_file,
-                 regions_file=None, dependencies=()):
-        bam_input = MultiBAMInput(config, input_files,
-                                  indexed=bool(regions_file))
-        if len(bam_input.files) > 1 and regions_file:
-            raise ValueError("DepthHistogram for regions require single, "
-                             "indexed input BAM file.")
+                 prefix, regions_file=None, dependencies=()):
+        input_files = safe_coerce_to_tuple(input_files)
+        index_format = regions_file and prefix['IndexFormat']
 
         builder = factory.new("depths")
         builder.add_value("%(TEMP_IN_BAM)s")
         builder.add_value("%(OUT_FILE)s")
         builder.set_option("--target-name", target_name)
-        builder.set_kwargs(OUT_FILE=output_file)
-        bam_input.setup(builder)
+        builder.set_kwargs(OUT_FILE=output_file,
+                           TEMP_IN_BAM=MultiBAMInputNode.PIPE_FILE)
+        builder.add_multiple_kwargs(input_files)
 
         if regions_file:
-            builder.set_option('--regions-file', '%(IN_REGIONS)s')
-            builder.set_kwargs(IN_REGIONS=regions_file)
+            index_file = swap_ext(MultiBAMInputNode.PIPE_FILE, index_format)
 
-        command = ParallelCmds(bam_input.commands + [builder.finalize()])
+            builder.set_option('--regions-file', '%(IN_REGIONS)s')
+            builder.set_kwargs(IN_REGIONS=regions_file,
+                               TEMP_IN_INDEX=index_file)
+
         description = "<DepthHistogram: %s -> '%s'>" \
-            % (describe_files(bam_input.files), output_file)
+            % (describe_files(input_files), output_file)
 
         MultiBAMInputNode.__init__(self,
-                                   bam_input=bam_input,
-                                   command=command,
+                                   config=config,
+                                   input_bams=input_files,
+                                   index_format=index_format,
+                                   command=builder.finalize(),
                                    description=description,
                                    dependencies=dependencies)
 
@@ -159,23 +162,23 @@ class DepthHistogramNode(MultiBAMInputNode):
 class FilterCollapsedBAMNode(MultiBAMInputNode):
     def __init__(self, config, input_bams, output_bam, keep_dupes=True,
                  dependencies=()):
-        bam_input = MultiBAMInput(config, input_bams, indexed=False)
+        input_bams = safe_coerce_to_tuple(input_bams)
 
         builder = factory.new("rmdup_collapsed")
         builder.add_value("%(TEMP_IN_BAM)s")
-        builder.set_kwargs(OUT_STDOUT=output_bam)
-        bam_input.setup(builder)
+        builder.set_kwargs(OUT_STDOUT=output_bam,
+                           TEMP_IN_BAM=MultiBAMInputNode.PIPE_FILE)
+        builder.add_multiple_kwargs(input_bams)
 
         if not keep_dupes:
             builder.set_option("--remove-duplicates")
 
-        filteruniq = builder.finalize()
-        command = ParallelCmds(bam_input.commands + [filteruniq])
         description = "<FilterCollapsedBAM: %s>" \
-            % (describe_files(bam_input.files),)
+            % (describe_files(input_bams),)
         MultiBAMInputNode.__init__(self,
-                                   bam_input=bam_input,
-                                   command=command,
+                                   config=config,
+                                   input_bams=input_bams,
+                                   command=builder.finalize(),
                                    description=description,
                                    dependencies=dependencies)
 

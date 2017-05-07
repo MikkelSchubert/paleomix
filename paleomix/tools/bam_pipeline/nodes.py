@@ -24,8 +24,6 @@ import os
 
 import paleomix.nodes.picard as picard
 
-from paleomix.common.fileutils import \
-    swap_ext
 from paleomix.atomiccmd.command import \
     AtomicCmd
 from paleomix.atomiccmd.builder import \
@@ -42,49 +40,44 @@ from paleomix.nodes.samtools import \
 
 def index_and_validate_bam(config, prefix, node, log_file=None,
                            create_index=True):
-    input_file, has_index = _get_input_file(node)
-    if not has_index and create_index:
+    input_file, index_file = _get_input_files(node, prefix['IndexFormat'])
+    if not index_file and create_index:
         node = BAMIndexNode(infile=input_file,
+                            index_format=prefix['IndexFormat'],
                             dependencies=node)
+        index_file, = node.output_files
 
-    validation_params = ValidateBAMNode.customize(config=config,
-                                                  input_bam=input_file,
-                                                  output_log=log_file,
-                                                  dependencies=node)
+    ignored_checks = [
+        # Ignored since we may filter out misses and low-quality hits during
+        # mapping, which leads to a large proportion of missing PE mates.
+        "MATE_NOT_FOUND",
+        # Ignored due to high rate of false positives for lanes with few hits,
+        # where high-quality reads may cause mis-identification of qualities
+        "INVALID_QUALITY_FORMAT"]
 
-    # Ensure that the validation node is re-run if the index changes
-    if has_index or create_index:
-        bai_filename = swap_ext(input_file, ".bai")
-        validation_params.command.set_kwargs(IN_BAI=bai_filename)
+    if prefix['IndexFormat'] == '.csi':
+        # CSI uses a different method for assigning BINs to records, which
+        # Picard currently does not support.
+        ignored_checks.append("INVALID_INDEXING_BIN")
 
-    # Check MD tags against reference sequence
-    # FIXME: Disabled due to issues with Picard/Samtools disagreeing,
-    #   backwards compatibility. See the discussion at
-    #     http://sourceforge.net/mailarchive/message.php?msg_id=31348639
-    # validation_params.command.set_kwargs(IN_REF=prefix["Reference"])
-    # validation_params.command.add_option("R", "%(IN_REF)s", sep="=")
-
-    # Ignored since we may filter out misses and low-quality hits during
-    # mapping, which leads to a large proportion of missing PE mates.
-    validation_params.command.add_option("IGNORE", "MATE_NOT_FOUND",
-                                         sep="=")
-    # Ignored due to high rate of false positives for lanes with few hits,
-    # where high-quality reads may cause mis-identification of qualities
-    validation_params.command.add_option("IGNORE",
-                                         "INVALID_QUALITY_FORMAT", sep="=")
-
-    return validation_params.build_node()
+    return ValidateBAMNode(config=config,
+                           input_bam=input_file,
+                           input_index=index_file,
+                           ignored_checks=ignored_checks,
+                           output_log=log_file,
+                           dependencies=node)
 
 
-def _get_input_file(node):
-    input_filename, has_index = None, False
+def _get_input_files(node, index_format):
+    index_filename = None
+    input_filename = None
     for filename in node.output_files:
-        if filename.lower().endswith(".bai"):
-            has_index = True
+        if filename.lower().endswith(index_format):
+            index_filename = True
         elif filename.lower().endswith(".bam"):
             input_filename = filename
 
-    return input_filename, has_index
+    return input_filename, index_filename
 
 
 class CleanupBAMNode(PicardNode):
@@ -121,7 +114,7 @@ class CleanupBAMNode(PicardNode):
                               TEMP_OUT_BAM="bam.pipe")
 
         calmd = AtomicCmdBuilder(["samtools", "calmd", "-b",
-                                 "%(TEMP_IN_BAM)s", "%(IN_REF)s"],
+                                  "%(TEMP_IN_BAM)s", "%(IN_REF)s"],
                                  IN_REF=reference,
                                  TEMP_IN_BAM="bam.pipe",
                                  OUT_STDOUT=output_bam)

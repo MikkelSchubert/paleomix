@@ -27,14 +27,13 @@ import paleomix.common.versions as versions
 
 from paleomix.common.fileutils import \
     describe_files
+from paleomix.common.utilities import \
+    safe_coerce_to_tuple
 
 from paleomix.node import \
     NodeError, \
     CommandNode
-from paleomix.atomiccmd.sets import \
-    ParallelCmds
 from paleomix.nodes.picard import \
-    MultiBAMInput, \
     MultiBAMInputNode
 from paleomix.atomiccmd.builder import \
     AtomicCmdBuilder, \
@@ -56,6 +55,8 @@ class MapDamagePlotNode(MultiBAMInputNode):
     @create_customizable_cli_parameters
     def customize(self, config, reference, input_files, output_directory,
                   title="mapDamage", dependencies=()):
+        input_files = safe_coerce_to_tuple(input_files)
+
         command = AtomicCmdBuilder(
             ["mapDamage", "--no-stats",
              # Prevent references with many contigs from using excessive
@@ -65,6 +66,8 @@ class MapDamagePlotNode(MultiBAMInputNode):
              "-i", "%(TEMP_IN_BAM)s",
              "-d", "%(TEMP_DIR)s",
              "-r", "%(IN_REFERENCE)s"],
+
+            TEMP_IN_BAM=MultiBAMInputNode.PIPE_FILE,
             IN_REFERENCE=reference,
             OUT_FREQ_3p=os.path.join(output_directory, "3pGtoA_freq.txt"),
             OUT_FREQ_5p=os.path.join(output_directory, "5pCtoT_freq.txt"),
@@ -82,6 +85,8 @@ class MapDamagePlotNode(MultiBAMInputNode):
             CHECK_RSCRIPT=RSCRIPT_VERSION,
             CHECK_MAPDAMAGE=MAPDAMAGE_VERSION)
 
+        command.add_multiple_kwargs(input_files)
+
         return {"command": command,
                 "config": config,
                 "input_files": input_files,
@@ -89,18 +94,13 @@ class MapDamagePlotNode(MultiBAMInputNode):
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
-        bam_input = MultiBAMInput(parameters.config, parameters.input_files,
-                                  indexed=False)
-        bam_input.setup(parameters.command)
-        cmd_map = parameters.command.finalize()
-
         description = "<mapDamage (plots): %s -> '%s'>" \
             % (describe_files(parameters.input_files),
                parameters.output_directory)
         MultiBAMInputNode.__init__(self,
-                                   bam_input=bam_input,
-                                   command=ParallelCmds(bam_input.commands +
-                                                        [cmd_map]),
+                                   config=parameters.config,
+                                   input_bams=parameters.input_files,
+                                   command=parameters.command.finalize(),
                                    description=description,
                                    dependencies=parameters.dependencies)
 
@@ -194,17 +194,23 @@ class MapDamageRescaleNode(MultiBAMInputNode):
     @create_customizable_cli_parameters
     def customize(self, config, reference, input_files, output_file, directory,
                   dependencies=()):
+        input_files = safe_coerce_to_tuple(input_files)
+
         stats_out_fname = "Stats_out_MCMC_correct_prob.csv"
         command = AtomicCmdBuilder(["mapDamage", "--rescale-only",
                                     "-i", "%(TEMP_IN_BAM)s",
                                     "-d", "%(TEMP_DIR)s",
                                     "-r", "%(IN_REFERENCE)s",
                                     "--rescale-out", "%(OUT_BAM)s"],
+
+                                   TEMP_IN_BAM=MultiBAMInputNode.PIPE_FILE,
                                    IN_REFERENCE=reference,
                                    TEMP_OUT_LOG="Runtime_log.txt",
                                    TEMP_OUT_CSV=stats_out_fname,
                                    OUT_BAM=output_file,
                                    CHECK_VERSION=MAPDAMAGE_VERSION)
+
+        command.add_multiple_kwargs(input_files)
 
         return {"command": command,
                 "config": config,
@@ -215,18 +221,14 @@ class MapDamageRescaleNode(MultiBAMInputNode):
     @use_customizable_cli_parameters
     def __init__(self, parameters):
         self._directory = parameters.directory
-        bam_input = MultiBAMInput(parameters.config, parameters.input_files,
-                                  indexed=False)
-        bam_input.setup(parameters.command)
-        command = parameters.command.finalize()
 
         description = "<mapDamage (rescale): %s -> %r>" \
             % (describe_files(parameters.input_files),
                parameters.output_file)
         MultiBAMInputNode.__init__(self,
-                                   bam_input=bam_input,
-                                   command=ParallelCmds(bam_input.commands +
-                                                        [command]),
+                                   config=parameters.config,
+                                   input_bams=parameters.input_files,
+                                   command=parameters.command.finalize(),
                                    description=description,
                                    dependencies=parameters.dependencies)
 

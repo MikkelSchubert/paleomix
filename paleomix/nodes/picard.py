@@ -28,10 +28,11 @@ from paleomix.atomiccmd.builder import \
     AtomicJavaCmdBuilder, \
     create_customizable_cli_parameters, \
     use_customizable_cli_parameters
+from paleomix.atomiccmd.sets import \
+    ParallelCmds
 from paleomix.common.fileutils import \
     swap_ext, \
     try_rmtree, \
-    try_remove, \
     reroot_path, \
     describe_files
 from paleomix.common.utilities import \
@@ -58,54 +59,49 @@ class PicardNode(CommandNode):
 
 
 class ValidateBAMNode(PicardNode):
-    @create_customizable_cli_parameters
-    def customize(cls, config, input_bam, output_log=None, dependencies=()):
-        params = picard_command(config, "ValidateSamFile")
-        _set_max_open_files(params, "MAX_OPEN_TEMP_FILES")
+    def __init__(self, config, input_bam, input_index=None, output_log=None,
+                 ignored_checks=(), dependencies=()):
+        builder = picard_command(config, "ValidateSamFile")
+        _set_max_open_files(builder, "MAX_OPEN_TEMP_FILES")
 
-        params.set_option("I", "%(IN_BAM)s", sep="=")
+        builder.set_option("I", "%(IN_BAM)s", sep="=")
+        for check in ignored_checks:
+            builder.add_option("IGNORE", check, sep="=")
 
         output_log = output_log or swap_ext(input_bam, ".validated")
-        params.set_kwargs(IN_BAM=input_bam,
-                          OUT_STDOUT=output_log)
+        builder.set_kwargs(IN_BAM=input_bam,
+                           IN_INDEX=input_index,
+                           OUT_STDOUT=output_log)
 
-        return {"command": params,
-                "dependencies": dependencies}
-
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
-        description = "<Validate BAM: '%s'>" % (parameters.input_bam,)
+        description = "<Validate BAM: '%s'>" % (input_bam,)
         PicardNode.__init__(self,
-                            command=parameters.command.finalize(),
+                            command=builder.finalize(),
                             description=description,
-                            dependencies=parameters.dependencies)
+                            dependencies=dependencies)
 
 
 class BuildSequenceDictNode(PicardNode):
-    @create_customizable_cli_parameters
-    def customize(cls, config, reference, dependencies=()):
-        params = picard_command(config, "CreateSequenceDictionary")
+    def __init__(self, config, reference, dependencies=()):
+        self._in_reference = os.path.abspath(reference)
 
-        params.set_option("R", "%(TEMP_OUT_REF)s", sep="=")
-        params.set_option("O", "%(OUT_DICT)s", sep="=")
-        params.set_kwargs(IN_REF=reference,
-                          TEMP_OUT_REF=os.path.basename(reference),
-                          OUT_DICT=swap_ext(reference, ".dict"))
+        builder = picard_command(config, "CreateSequenceDictionary")
 
-        return {"command": params,
-                "dependencies": dependencies}
+        builder.set_option("R", "%(TEMP_OUT_REF)s", sep="=")
+        builder.set_option("O", "%(OUT_DICT)s", sep="=")
+        builder.set_kwargs(IN_REFERENCE=reference,
+                           TEMP_OUT_REF=os.path.basename(reference),
+                           OUT_DICT=swap_ext(reference, ".dict"))
 
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
-        self._in_reference = os.path.abspath(parameters.reference)
-        description = "<SequenceDictionary: '%s'>" % (parameters.reference,)
+        description = "<SequenceDictionary: '%s'>" % (reference,)
 
         PicardNode.__init__(self,
-                            command=parameters.command.finalize(),
+                            command=builder.finalize(),
                             description=description,
-                            dependencies=parameters.dependencies)
+                            dependencies=dependencies)
 
     def _setup(self, _config, temp):
+        # Ensure that Picard CreateSequenceDict cannot reuse any existing
+        # sequence dictionaries, if the underlying files have changed.
         os.symlink(self._in_reference, reroot_path(temp, self._in_reference))
 
 
@@ -116,11 +112,11 @@ class MarkDuplicatesNode(PicardNode):
         params = picard_command(config, "MarkDuplicates")
         _set_max_open_files(params, "MAX_FILE_HANDLES")
 
-        # Create .bai index, since it is required by a lot of other programs
-        params.set_option("CREATE_INDEX", "True", sep="=")
-
         params.set_option("OUTPUT", "%(OUT_BAM)s", sep="=")
         params.set_option("METRICS_FILE", "%(OUT_METRICS)s", sep="=")
+        # Validation is mostly left to manual ValidateSamFile runs; required
+        # because .csi indexed BAM records can have "invalid" bins.
+        params.set_option("VALIDATION_STRINGENCY", "LENIENT", sep="=")
         params.add_multiple_options("I", input_bams, sep="=")
 
         if not keep_dupes:
@@ -130,7 +126,6 @@ class MarkDuplicatesNode(PicardNode):
 
         output_metrics = output_metrics or swap_ext(output_bam, ".metrics")
         params.set_kwargs(OUT_BAM=output_bam,
-                          OUT_BAI=swap_ext(output_bam, ".bai"),
                           OUT_METRICS=output_metrics)
 
         return {"command": params,
@@ -147,106 +142,80 @@ class MarkDuplicatesNode(PicardNode):
 
 
 class MergeSamFilesNode(PicardNode):
-    @create_customizable_cli_parameters
-    def customize(cls, config, input_bams, output_bam, dependencies=()):
-        params = picard_command(config, "MergeSamFiles")
+    def __init__(self, config, input_bams, output_bam, dependencies=()):
+        builder = picard_command(config, "MergeSamFiles")
+        builder.set_option("OUTPUT", "%(OUT_BAM)s", sep="=")
+        builder.set_option("SO", "coordinate", sep="=")
+        # Validation is mostly left to manual ValidateSamFile runs; required
+        # because .csi indexed BAM records can have "invalid" bins.
+        builder.set_option("VALIDATION_STRINGENCY", "LENIENT", sep="=")
+        builder.add_multiple_options("I", input_bams, sep="=")
 
-        params.set_option("OUTPUT", "%(OUT_BAM)s", sep="=")
-        params.set_option("CREATE_INDEX", "True", sep="=")
-        params.set_option("SO", "coordinate", sep="=", fixed=False)
-        params.add_multiple_options("I", input_bams, sep="=")
-
-        params.set_kwargs(OUT_BAM=output_bam,
-                          OUT_BAI=swap_ext(output_bam, ".bai"))
-
-        return {"command": params,
-                "dependencies": dependencies}
-
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
+        builder.set_kwargs(OUT_BAM=output_bam)
         description = "<Merge BAMs: %i file(s) -> '%s'>" \
-            % (len(parameters.input_bams), parameters.output_bam)
+            % (len(input_bams), output_bam)
         PicardNode.__init__(self,
-                            command=parameters.command.finalize(),
+                            command=builder.finalize(),
                             description=description,
-                            dependencies=parameters.dependencies)
-
-
-class MultiBAMInput(object):
-    """Container used to ease processing of 1 or more BAM files; used in
-    conjunctin with MultiBAMInputNode.
-    """
-
-    def __init__(self, config, input_bams, pipename="input.bam", indexed=True):
-        self.pipe = pipename
-        self.indexed = indexed
-        self.files = safe_coerce_to_tuple(input_bams)
-
-        self.commands = []
-        self.kwargs = {"TEMP_IN_BAM": self.pipe}
-        if len(self.files) > 1:
-            params = picard_command(config, "MergeSamFiles")
-
-            params.set_option("SO", "coordinate", sep="=", fixed=False)
-            params.set_option("CREATE_INDEX", "False", sep="=")
-            params.set_option("COMPRESSION_LEVEL", 0, sep="=")
-            params.set_option("OUTPUT", "%(TEMP_OUT_BAM)s", sep="=")
-            params.add_multiple_options("I", input_bams, sep="=")
-
-            params.set_kwargs(TEMP_OUT_BAM=self.pipe)
-
-            self.commands = [params.finalize()]
-        else:
-            # Ensure that the actual command depends on the input
-            self.kwargs["IN_FILE_00"] = self.files[0]
-
-            if indexed:
-                self.kwargs["IN_FILE_01"] = swap_ext(self.files[0], ".bai")
-
-    def setup(self, command):
-        command.set_kwargs(**self.kwargs)
+                            dependencies=dependencies)
 
 
 class MultiBAMInputNode(CommandNode):
-    """Node which provides concatenation of input BAM files. Takes a
-    MultiBAMInput object, and creates a pipe in the temporary folder which
-    yields the concatenated BAM resulting from the concatenation of all input
-    files. To avoid unnessary overhead, a symbolic link is used in the case
-    where there is only a single input file.
+    PIPE_FILE = "input.bam"
 
-    Usage example:
-      class ExampleNode(MultiBAMInputNode):
-        def __init__(self, config, input_bams):
-            bam_input = MultiBAMInput(config, input_bams)
-            command = AtomicCmd(['analyse_bam', '%(TEMP_IN_BAM)s'],
-                                TEMP_IN_BAM=bam_input.pipe)
-            commands = ParallelCmds(bam_input.commands + [command])
-            MultiBAMInputNode.__init__(bam_input=bam_input,
-                                       command=commands)
-    """
+    def __init__(self, config, input_bams, command, index_format=None,
+                 description=None, threads=1, dependencies=()):
+        self._input_bams = safe_coerce_to_tuple(input_bams)
+        self._index_format = index_format
 
-    def __init__(self, bam_input, *args, **kwargs):
-        self._bam_input = bam_input
-        CommandNode.__init__(self, *args, **kwargs)
+        if not self._input_bams:
+            raise ValueError("No input BAM files specified!")
+        elif len(self._input_bams) > 1 and index_format:
+            raise ValueError("BAM index cannot be required for > 1 file")
+        elif index_format not in (None, ".bai", ".csi"):
+            raise ValueError("Unknown index format %r" % (index_format,))
 
-    def _setup(self, config, temp_root):
-        CommandNode._setup(self, config, temp_root)
-        dst_fname = os.path.join(temp_root, self._bam_input.pipe)
-        if len(self._bam_input.files) > 1:
-            os.mkfifo(dst_fname)
+        if len(self._input_bams) > 1:
+            merge = picard_command(config, "MergeSamFiles")
+            merge.set_option("SO", "coordinate", sep="=")
+            merge.set_option("COMPRESSION_LEVEL", 0, sep="=")
+            merge.set_option("OUTPUT", "%(TEMP_OUT_BAM)s", sep="=")
+            # Validation is mostly left to manual ValidateSamFile runs; this
+            # is because .csi indexed BAM records can have "invalid" bins.
+            merge.set_option("VALIDATION_STRINGENCY", "LENIENT", sep="=")
+            merge.add_multiple_options("I", input_bams, sep="=")
+
+            merge.set_kwargs(TEMP_OUT_BAM=self.PIPE_FILE)
+
+            command = ParallelCmds([merge.finalize(), command])
+
+        CommandNode.__init__(self,
+                             command=command,
+                             description=description,
+                             threads=threads,
+                             dependencies=dependencies)
+
+    def _setup(self, config, temp):
+        CommandNode._setup(self, config, temp)
+
+        pipe_fname = os.path.join(temp, self.PIPE_FILE)
+        if len(self._input_bams) > 1:
+            os.mkfifo(pipe_fname)
         else:
-            src_fname, = self._bam_input.files
-            os.symlink(os.path.join(os.getcwd(), src_fname), dst_fname)
+            source_fname = os.path.abspath(self._input_bams[0])
+            os.symlink(source_fname, pipe_fname)
 
-            if self._bam_input.indexed:
-                src_fname = os.path.join(os.getcwd(), swap_ext(src_fname, ".bai"))
-                os.symlink(src_fname, dst_fname + ".bai")
+            if self._index_format:
+                os.symlink(swap_ext(source_fname, self._index_format),
+                           swap_ext(pipe_fname, self._index_format))
 
-    def _teardown(self, config, temp_root):
-        pipe_fname = os.path.join(temp_root, self._bam_input.pipe)
-        os.remove(pipe_fname)
-        try_remove(pipe_fname + ".bai")
-        CommandNode._teardown(self, config, temp_root)
+    def _teardown(self, config, temp):
+        os.remove(os.path.join(temp, self.PIPE_FILE))
+        if self._index_format:
+            os.remove(os.path.join(temp, swap_ext(self.PIPE_FILE,
+                                                  self._index_format)))
+
+        CommandNode._teardown(self, config, temp)
 
 
 ###############################################################################
