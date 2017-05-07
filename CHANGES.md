@@ -1,6 +1,9 @@
 # Changelog
 
 ## [Unreleased]
+### Fixed
+  - Reference sequences placed in the current directory no longer cause the
+    BAM pipeline to complain about non-writable directories.
 
 ### Changed
   - The 'Status' of processes terminated by the pipeline will now be reported

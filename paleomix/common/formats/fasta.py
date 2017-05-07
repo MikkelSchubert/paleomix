@@ -27,10 +27,10 @@ import types
 import pysam
 
 from paleomix.common.utilities import \
-     fragment, \
-     split_before, \
-     Immutable, \
-     TotallyOrdered
+    fragment, \
+    split_before, \
+    Immutable, \
+    TotallyOrdered
 from paleomix.common.fileutils import open_ro
 from paleomix.common.formats._common import FormatError
 
@@ -103,12 +103,14 @@ class FASTA(TotallyOrdered, Immutable):
         """
         fai_filename = filename + ".fai"
         if not os.path.exists(fai_filename):
-            if not os.access(os.path.dirname(filename), os.W_OK):
+            dirname = os.path.dirname(filename) or "."
+
+            if not os.access(dirname, os.W_OK):
                 message = \
-                    "FASTA index is missing, but folder is\n" \
+                    "FASTA index is missing, but folder is " \
                     "not writable, so it cannot be created:\n" \
                     "  Filename = %s\n\n" \
-                    "Either change permissions on the folder, or move\n" \
+                    "Either change permissions on the folder, or move " \
                     "the FASTA file to different location." % (filename,)
                 raise FASTAError(message)
 
