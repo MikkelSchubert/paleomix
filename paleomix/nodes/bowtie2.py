@@ -49,32 +49,23 @@ BOWTIE2_VERSION = versions.Requirement(call=("bowtie2", "--version"),
 
 
 class Bowtie2IndexNode(CommandNode):
-    @create_customizable_cli_parameters
-    def customize(cls, input_file, prefix=None, dependencies=()):
+    def __init__(self, input_file, prefix=None, dependencies=()):
         prefix = prefix if prefix else input_file
-        params = _bowtie2_template(("bowtie2-build"), prefix, iotype="OUT",
-                                   IN_FILE=input_file,
-                                   TEMP_OUT_PREFIX=os.path.basename(prefix),
-                                   CHECK_VERSION=BOWTIE2_VERSION)
+        builder = _bowtie2_template(("bowtie2-build"), prefix, iotype="OUT",
+                                    IN_FILE=input_file,
+                                    TEMP_OUT_PREFIX=os.path.basename(prefix),
+                                    CHECK_VERSION=BOWTIE2_VERSION)
 
-        params.add_value("%(IN_FILE)s")
+        builder.add_value("%(IN_FILE)s")
         # Destination prefix, in temp folder
-        params.add_value("%(TEMP_OUT_PREFIX)s")
+        builder.add_value("%(TEMP_OUT_PREFIX)s")
 
-        return {"prefix": prefix,
-                "command": params,
-                "dependencies": dependencies}
-
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
-        command = parameters.command.finalize()
-        description = "<Bowtie2 Index '%s' -> '%s.*'>" \
-            % (parameters.input_file, parameters.prefix)
+        description = "<Bowtie2 Index '%s' -> '%s.*'>" % (input_file, prefix)
 
         CommandNode.__init__(self,
-                             command=command,
+                             command=builder.finalize(),
                              description=description,
-                             dependencies=parameters.dependencies)
+                             dependencies=dependencies)
 
 
 class Bowtie2Node(CommandNode):
@@ -120,7 +111,7 @@ class Bowtie2Node(CommandNode):
     @use_customizable_cli_parameters
     def __init__(self, parameters):
         command = ParallelCmds([parameters.commands[key].finalize()
-                               for key in parameters.order])
+                                for key in parameters.order])
 
         algorithm = "PE" if parameters.input_file_2 else "SE"
         description \

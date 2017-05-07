@@ -66,9 +66,9 @@ def build_pipeline_trimming(config, makefile):
     for (_, samples) in makefile["Targets"].iteritems():
         print_info(".", end='')
 
-        for (_, libraries) in samples.iteritems():
-            for (_, barcodes) in libraries.iteritems():
-                for (barcode, record) in barcodes.iteritems():
+        for libraries in samples.itervalues():
+            for barcodes in libraries.itervalues():
+                for record in barcodes.itervalues():
                     if record["Type"] in ("Raw", "Trimmed"):
                         offset = record["Options"]["QualityOffset"]
                         reads = Reads(config, record, offset)
@@ -99,13 +99,24 @@ def build_pipeline_full(config, makefile, return_nodes=True):
                             lanes.append(lane)
 
                     if lanes:
-                        libraries.append(parts.Library(config, target_name, prefix, lanes, library_name))
+                        libraries.append(parts.Library(config=config,
+                                                       target=target_name,
+                                                       prefix=prefix,
+                                                       lanes=lanes,
+                                                       name=library_name))
 
                 if libraries:
-                    samples.append(parts.Sample(config, prefix, libraries, sample_name))
+                    samples.append(parts.Sample(config=config,
+                                                prefix=prefix,
+                                                libraries=libraries,
+                                                name=sample_name))
 
             if samples:
-                prefixes.append(parts.Prefix(config, prefix, samples, features, target_name))
+                prefixes.append(parts.Prefix(config=config,
+                                             prefix=prefix,
+                                             samples=samples,
+                                             features=features,
+                                             target=target_name))
 
         if prefixes:
             target = parts.Target(config, prefixes, target_name)
@@ -254,16 +265,19 @@ def run(config, args, pipeline_variant):
 
 def _print_usage(pipeline):
     basename = "%s_pipeline" % (pipeline,)
+    usage = \
+        "BAM Pipeline v{version}\n" \
+        "Usage:\n" \
+        "  -- {cmd} help           -- Display this message.\n" \
+        "  -- {cmd} example [...]  -- Create example project.\n" \
+        "  -- {cmd} makefile [...] -- Print makefile template.\n" \
+        "  -- {cmd} dryrun [...]   -- Perform dry run of pipeline.\n" \
+        "  -- {cmd} run [...]      -- Run pipeline on provided makefiles.\n" \
+        "  -- {cmd} remap [...]    -- Re-map hits from previous alignment."
 
-    print_info("BAM Pipeline v%s\n" % (paleomix.__version__,))
-    print_info("Usage:")
-    print_info("  -- %s help           -- Display this message" % basename)
-    print_info("  -- %s example [...]  -- Create example project in folder." % basename)
-    print_info("  -- %s makefile [...] -- Print makefile template." % basename)
-    print_info("  -- %s dryrun [...]   -- Perform dry run of pipeline on provided makefiles." % basename)
-    print_info("     %s                   Equivalent to 'bam_pipeline run --dry-run [...]'." % (" " * len(basename),))
-    print_info("  -- %s run [...]      -- Run pipeline on provided makefiles." % basename)
-    print_info("  -- %s remap [...]    -- Re-map hits from previous alignment." % basename)
+    print_info(usage.format(version=paleomix.__version__,
+                            cmd=basename,
+                            pad=" " * len(basename)))
 
 
 def main(argv, pipeline="bam"):

@@ -68,6 +68,10 @@ _READ_TYPES = set(("Single", "Singleton",
                    "Collapsed", "CollapsedTruncated",
                    "Paired"))
 
+# The maximum reference sequence length supported by the BAI index format:
+#   https://samtools.github.io/hts-specs/SAMv1.pdf
+_BAM_MAX_SEQUENCE_LENGTH = 2 ** 29 - 1
+
 
 def read_makefiles(config, filenames, pipeline_variant="bam"):
     if pipeline_variant not in ("bam", "trim"):
@@ -398,48 +402,54 @@ def _mangle_features(makefile):
 
 
 def _mangle_prefixes(makefile):
-    prefixes = {}
+    records = []
     for (name, values) in makefile.get("Prefixes", {}).iteritems():
-        filename = values["Path"]
         if "*" in name[:-1]:
             raise MakefileError("The character '*' is not allowed in Prefix "
-                                "names; if you use to select .fasta files "
-                                "using a search-string, then use the prefix "
-                                "name '%s*' instead and specify the wildcards "
-                                "in the 'Path' instead."
+                                "names; if you wish to select multiple .fasta "
+                                "files using a search-string, then use the "
+                                "prefix name '%s*' instead and specify the "
+                                "wildcards in the 'Path'."
                                 % (name.replace("*", "",)))
         elif name.endswith("*"):
-            records = []
-            for fname in glob.glob(filename):
-                name = os.path.basename(fname).split(".")[0]
-                _VALID_PREFIX_NAME(("Prefixes", name), name)
-                new_prefix = copy.copy(values)
-                new_prefix["Path"] = fname
+            records.extend(_glob_prefixes(values, values['Path']))
 
-                records.append((name, new_prefix))
-            if not records:
-                raise MakefileError("Did not find any matches for glob %s"
-                                    % repr(filename))
         else:
-            records = [(name, values)]
+            records.append((name, values))
 
-        for (name, record) in records:
-            if name in prefixes:
-                raise MakefileError("Multiple prefixes with the same name: %s"
-                                    % name)
+    prefixes = {}
+    for (name, record) in records:
+        if name in prefixes:
+            raise MakefileError("Multiple prefixes with the same name: %s"
+                                % name)
 
-            if not record["Path"].endswith(".fasta"):
-                raise MakefileError("Path for prefix %r does not end with "
-                                    ".fasta:\n   %r" % (name, record["Path"]))
+        if not record["Path"].endswith(".fasta"):
+            raise MakefileError("Path for prefix %r does not end with "
+                                ".fasta:\n   %r" % (name, record["Path"]))
 
-            record["Name"] = name
-            record["Reference"] = record["Path"]
-            prefixes[name] = record
+        record["Name"] = name
+        record["Reference"] = record["Path"]
+        prefixes[name] = record
 
     if not prefixes:
         raise MakefileError("At least one prefix must be specified")
 
     makefile["Prefixes"] = prefixes
+
+
+def _glob_prefixes(template, pattern):
+    filename = None
+    for filename in glob.iglob(pattern):
+        name = os.path.basename(filename).split(".")[0]
+        _VALID_PREFIX_NAME(("Prefixes", name), name)
+        new_prefix = copy.copy(template)
+        new_prefix["Path"] = filename
+
+        yield (name, new_prefix)
+
+    if filename is None:
+        raise MakefileError("Did not find any matches for search string %r"
+                            % (pattern,))
 
 
 def _mangle_lanes(makefile):
@@ -564,24 +574,26 @@ def _split_lanes_by_filenames(makefile):
             record["Data"] = files = paths.collect_files(path, template)
             split = record["Options"]["SplitLanesByFilenames"]
 
-            if (split is True) or (isinstance(split, list) and (barcode in split)):
+            if (split is True) or (isinstance(split, list) and
+                                   (barcode in split)):
                 if any(len(v) > 1 for v in files.itervalues()):
-                    template = makefile["Targets"][target][sample][library].pop(barcode)
+                    library = makefile["Targets"][target][sample][library]
+                    template = library.pop(barcode)
                     keys = ("SE",) if ("SE" in files) else ("PE_1", "PE_2")
 
                     input_files = [files[key] for key in keys]
-                    assert len(input_files[0]) == len(input_files[-1]), input_files
-
                     input_files_iter = itertools.izip_longest(*input_files)
-                    for (index, filenames) in enumerate(input_files_iter, start=1):
+                    for (index, filenames) in enumerate(input_files_iter,
+                                                        start=1):
                         assert len(filenames) == len(keys)
                         new_barcode = "%s_%03i" % (barcode, index)
 
                         current = copy.deepcopy(template)
-                        current["Data"] = dict((key, [filename]) for (key, filename) in zip(keys, filenames))
+                        current["Data"] = {k: [v]
+                                           for (k, v) in zip(keys, filenames)}
                         current["Tags"]["PU_cur"] = new_barcode
 
-                        makefile["Targets"][target][sample][library][new_barcode] = current
+                        library[new_barcode] = current
 
 
 def _validate_makefiles(config, makefiles):
@@ -749,7 +761,7 @@ def _validate_prefixes(makefiles):
                 continue
 
             if not os.path.exists(path):
-                print_info("    - Reference FASTA file does not exist:\n"
+                print_warn("    - Reference FASTA file does not exist:\n"
                            "      %r" % (path,))
                 continue
             elif not os.path.exists(path + ".fai"):
@@ -775,6 +787,15 @@ def _validate_prefixes(makefiles):
                     raise MakefileError("Error reading regions-of-"
                                         "interest %r for prefix %r:\n%s"
                                         % (name, prefix["Name"], error))
+
+            if max(contigs.itervalues()) > _BAM_MAX_SEQUENCE_LENGTH:
+                print_warn("    - FASTA file %r contains sequences longer "
+                           "than %i! CSI index files will be used instead "
+                           "of BAI index files."
+                           % (path, _BAM_MAX_SEQUENCE_LENGTH))
+                prefix["IndexFormat"] = ".csi"
+            else:
+                prefix["IndexFormat"] = ".bai"
 
             already_validated.add(path)
 
@@ -827,7 +848,7 @@ def _is_invalid_hg_prefix(contigs):
             # Contig not found; probably not hg18, hg19, or hg38
             return False
 
-    return not (hg_contigs["chr1"] < hg_contigs["chr2"] < hg_contigs["chr10"])
+    return not hg_contigs["chr1"] < hg_contigs["chr2"] < hg_contigs["chr10"]
 
 
 def _iterate_over_records(makefile):

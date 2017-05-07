@@ -52,32 +52,23 @@ BWA_VERSION_07x = versions.Requirement(call=("bwa",),
 
 
 class BWAIndexNode(CommandNode):
-    @create_customizable_cli_parameters
-    def customize(cls, input_file, prefix=None, dependencies=()):
+    def __init__(self, input_file, prefix=None, dependencies=()):
         prefix = prefix if prefix else input_file
-        params = _get_bwa_template(("bwa", "index"), prefix, iotype="OUT",
-                                   IN_FILE=input_file,
-                                   TEMP_OUT_PREFIX=os.path.basename(prefix),
-                                   CHECK_BWA=BWA_VERSION)
+        builder = _get_bwa_template(("bwa", "index"), prefix, iotype="OUT",
+                                    IN_FILE=input_file,
+                                    TEMP_OUT_PREFIX=os.path.basename(prefix),
+                                    CHECK_BWA=BWA_VERSION)
 
         # Input fasta sequence
-        params.add_value("%(IN_FILE)s")
+        builder.add_value("%(IN_FILE)s")
         # Destination prefix, in temp folder
-        params.set_option("-p", "%(TEMP_OUT_PREFIX)s")
+        builder.set_option("-p", "%(TEMP_OUT_PREFIX)s")
 
-        return {"prefix": prefix,
-                "command": params,
-                "dependencies": dependencies}
-
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
-        command = parameters.command.finalize()
-        description = "<BWA Index '%s' -> '%s.*'>" % (parameters.input_file,
-                                                      parameters.prefix)
+        description = "<BWA Index '%s' -> '%s.*'>" % (input_file, prefix)
         CommandNode.__init__(self,
-                             command=command,
+                             command=builder.finalize(),
                              description=description,
-                             dependencies=parameters.dependencies)
+                             dependencies=dependencies)
 
 
 class BWABacktrack(CommandNode):
@@ -104,7 +95,7 @@ class BWABacktrack(CommandNode):
     @use_customizable_cli_parameters
     def __init__(self, parameters):
         command = ParallelCmds([parameters.commands[key].finalize()
-                               for key in parameters.order])
+                                for key in parameters.order])
 
         description \
             = _get_node_description(name="BWA",
@@ -150,7 +141,7 @@ class BWASamse(CommandNode):
     @use_customizable_cli_parameters
     def __init__(self, parameters):
         command = ParallelCmds([parameters.commands[key].finalize()
-                               for key in parameters.order])
+                                for key in parameters.order])
 
         input_file = parameters.input_file_fq
         description = _get_node_description(name="BWA Samse",
@@ -205,7 +196,7 @@ class BWASampe(CommandNode):
     @use_customizable_cli_parameters
     def __init__(self, parameters):
         command = ParallelCmds([parameters.commands[key].finalize()
-                               for key in parameters.order])
+                                for key in parameters.order])
 
         input_file_1 = parameters.input_file_fq_1
         input_file_2 = parameters.input_file_fq_2
@@ -346,6 +337,8 @@ def _get_max_threads(reference, threads):
     if prefix_size is None or prefix_size >= 2 ** 20:  # > 1 MB
         return threads
     return 1
+
+
 _PREFIX_SIZE_CACHE = {}
 
 
@@ -395,8 +388,10 @@ def _check_bwa_prefix(prefix):
                         "  Your copy of BWA may have changed, or you may be using the wrong\n"
                         "  prefix. To resolve this issue, either change your prefix, re-install\n"
                         "  BWA %s, or remove the prefix files at\n"
-                        "    $ ls %s.*" \
+                        "    $ ls %s.*"
                         % (".".join(map(str, bwa_version)), expected_version, expected_version, prefix))
+
+
 _PREFIXES_CHECKED = set()
 
 
