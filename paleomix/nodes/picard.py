@@ -255,6 +255,8 @@ def picard_command(config, command):
 
 # Fraction of per-process max open files to use
 _FRAC_MAX_OPEN_FILES = 0.95
+# Default maximum number of open temporary files used by Picard
+_DEFAULT_MAX_OPEN_FILES = 8000
 
 
 def _set_max_open_files(params, key):
@@ -263,6 +265,6 @@ def _set_max_open_files(params, key):
     ulimit.
     """
     max_open_files = paleomix.common.system.get_max_open_files()
-    if max_open_files is not None:
+    if max_open_files and max_open_files < _DEFAULT_MAX_OPEN_FILES:
         max_open_files = int(max_open_files * _FRAC_MAX_OPEN_FILES)
         params.set_option(key, max_open_files, sep="=")
