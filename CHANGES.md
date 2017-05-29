@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.2.10] - 2017-05-29
 ### Added
   - Preliminary support for CSI indexed BAM files, required for genomes with
     chromosomes > 2^29 - 1 bp in size. Support is still missing in HTSJDK, so
@@ -10,6 +10,8 @@
 ### Fixed
   - Reference sequences placed in the current directory no longer cause the
     BAM pipeline to complain about non-writable directories.
+  - The maximum number of temporary files used by picard will no longer be
+    increased above the default value used by the picard tools.
 
 ### Changed
   - The 'Status' of processes terminated by the pipeline will now be reported
@@ -506,7 +508,8 @@ the (partially) updated documentation now hosted on ReadTheDocs.
 
 
 
-[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.9...HEAD
+[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.10...HEAD
+[1.2.10]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.9...v1.2.10
 [1.2.9]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.8...v1.2.9
 [1.2.8]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.7...v1.2.8
 [1.2.7]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.6...v1.2.7
