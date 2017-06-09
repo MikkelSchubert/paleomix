@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.11] - 2017-06-09
+### Fixed
+  - Fixed unhandled exception if a FASTA file for a prefix is missing in a
+    BAM pipeline makefile.
+  - Fixed the 'RescaleQualities' option not being respected for non-global
+    options in BAM pipeline makefiles.
+
+
 ## [1.2.10] - 2017-05-29
 ### Added
   - Preliminary support for CSI indexed BAM files, required for genomes with
@@ -507,8 +515,8 @@ the (partially) updated documentation now hosted on ReadTheDocs.
   - Switching to more traditional version-number tracking.
 
 
-
-[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.10...HEAD
+[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.11...HEAD
+[1.2.11]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.10...v1.2.11
 [1.2.10]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.9...v1.2.10
 [1.2.9]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.8...v1.2.9
 [1.2.8]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.7...v1.2.8
