@@ -761,6 +761,9 @@ def _validate_prefixes(makefiles):
                 prefix["IndexFormat"] = already_validated[path]["IndexFormat"]
                 continue
 
+            # Must be set to a valid value, even if FASTA file does not exist
+            prefix["IndexFormat"] = ".bai"
+
             if not os.path.exists(path):
                 print_warn("    - Reference FASTA file does not exist:\n"
                            "      %r" % (path,))
@@ -795,8 +798,6 @@ def _validate_prefixes(makefiles):
                            "of BAI index files."
                            % (path, _BAM_MAX_SEQUENCE_LENGTH))
                 prefix["IndexFormat"] = ".csi"
-            else:
-                prefix["IndexFormat"] = ".bai"
 
             already_validated[path] = prefix
 
