@@ -369,6 +369,10 @@ def _mangle_options(makefile):
             options = fill_dict(destination=data.pop("Options"),
                                 source=options)
 
+            # Force feature if 'RescaleQualities' is set, see _mangle_features
+            if options.pop('RescaleQualities', None):
+                options['Features']['mapDamage'] = 'rescale'
+
         if len(path) < 2:
             for key in data:
                 if key != "Options":
