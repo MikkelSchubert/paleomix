@@ -123,17 +123,24 @@ def get_ml_genotype(vcf, sample=0):
 
     PL = map(int, get_format(vcf, sample)["PL"].split(","))
 
-    expected_length = (len(genotypes) * (len(genotypes) + 1)) // 2
-    if len(PL) != expected_length:
-        raise ValueError("Expected %i PL values, found %i"
+    if len(PL) == len(genotypes):
+        ploidy = 1
+    else:
+        expected_length = (len(genotypes) * (len(genotypes) + 1)) // 2
+        if len(PL) != expected_length:
+            raise ValueError("Expected %i PL values, found %i"
                          % (expected_length, len(PL)))
+        ploidy = 2
 
     if PL.count(min(PL)) > 1:
         # No single most likely genotype
         return ("N", "N")
 
     most_likely = min(xrange(len(PL)), key=PL.__getitem__)
-    prefix, postfix = _genotype_indices[most_likely]
+    if ploidy == 1:
+        prefix = postfix = most_likely
+    else:
+        prefix, postfix = _genotype_indices[most_likely]
 
     return (genotypes[prefix], genotypes[postfix])
 
