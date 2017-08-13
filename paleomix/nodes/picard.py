@@ -265,6 +265,8 @@ def _set_max_open_files(params, key):
     ulimit.
     """
     max_open_files = paleomix.common.system.get_max_open_files()
-    if max_open_files and max_open_files < _DEFAULT_MAX_OPEN_FILES:
+    if max_open_files:
         max_open_files = int(max_open_files * _FRAC_MAX_OPEN_FILES)
-        params.set_option(key, max_open_files, sep="=")
+
+        if max_open_files < _DEFAULT_MAX_OPEN_FILES:
+            params.set_option(key, max_open_files, sep="=")
