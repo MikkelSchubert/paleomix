@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.2.12] - 2017-08-13
+### Fixed
+  - Fixed input / output files not being listed in 'pipe.errors' files.
+  - Use the same max open files limit for picard (ulimit -n minus headroom)
+    when determining if the default should be changed and as the final value.
+
+### Added
+  - The 'vcf_to_fasta' command now supports VCFs containing haploid genotype
+    calls, courtesy of Graham Gower.
+
+### Changed
+  - Require Pysam version 0.10.0 or later.
+
+
 ## [1.2.11] - 2017-06-09
 ### Fixed
   - Fixed unhandled exception if a FASTA file for a prefix is missing in a
@@ -515,7 +529,8 @@ the (partially) updated documentation now hosted on ReadTheDocs.
   - Switching to more traditional version-number tracking.
 
 
-[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.11...HEAD
+[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.12...HEAD
+[1.2.12]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.11...v1.2.12
 [1.2.11]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.10...v1.2.11
 [1.2.10]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.9...v1.2.10
 [1.2.9]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.8...v1.2.9
