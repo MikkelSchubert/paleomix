@@ -159,7 +159,7 @@ class Node(object):
             return
 
         def _fmt(values):
-            "\n                   ".join(sorted(values))
+            return "\n                   ".join(sorted(values))
 
         message = ["Command          = %r" % (" ".join(sys.argv),),
                    "CWD              = %r" % (os.getcwd(),),
