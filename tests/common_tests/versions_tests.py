@@ -494,7 +494,7 @@ def test_requirementobj__version__command_not_found():
 
 
 def test_requirementobj__version__command_not_executable():
-    obj = versions.RequirementObj(call=("./README.md",),
+    obj = versions.RequirementObj(call=("./README.rst",),
                                   search=r"v(\d+)\.(\d+)",
                                   checks=versions.Any())
 
