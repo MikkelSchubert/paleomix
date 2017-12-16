@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2013 Mikkel Schubert <MSchubert@snm.ku.dk>
+# Copyright (c) 2013 Mikkel Schubert <MikkelSch@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -51,7 +51,7 @@ setup(
     url='https://github.com/MikkelSchubert/paleomix',
 
     author='Mikkel Schubert',
-    author_email='MSchubert@snm.ku.dk',
+    author_email='MikkelSch@gmail.com',
 
     license='MIT',
 
