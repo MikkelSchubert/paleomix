@@ -36,7 +36,6 @@ $ samtools view -H INPUT.BAM | samtools view -Sbu -
 
 """
 import sys
-import copy
 import argparse
 
 import pysam
@@ -169,7 +168,7 @@ def _cleanup_unmapped(args, cleanup_sam):
     filter_by_flag = bool(args.exclude_flags or args.require_flags)
     spec = "r" if cleanup_sam else "rb"
     with pysam.AlignmentFile("-", spec) as input_handle:
-        header = copy.deepcopy(input_handle.header)
+        header = dict(input_handle.header)
         _set_sort_order(header)
         _set_pg_tags(header, args.update_pg_tag)
         if args.rg_id is not None:
