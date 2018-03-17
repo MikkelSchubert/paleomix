@@ -41,7 +41,6 @@ import paleomix.common.text as text
 _PE_READS = frozenset(("Paired", "Singleton",
                        "Collapsed", "CollapsedTruncated"))
 _SE_READS = frozenset(("Single",))
-_BAMS     = frozenset(())
 
 
 class SummaryTableNode(Node):
@@ -65,29 +64,26 @@ class SummaryTableNode(Node):
                         filename = None
                         filetype = None
 
-                        if lane.reads:
-                            if lane.reads.stats:
-                                filetype = 'Raw'
-                                filename = lane.reads.stats
-                            elif lane.reads.validation:
-                                filename = lane.reads.validation
-                                fileset = set(lane.reads.files)
+                        if lane.reads.stats:
+                            filetype = 'Raw'
+                            filename = lane.reads.stats
+                        elif lane.reads.validation:
+                            filename = lane.reads.validation
+                            fileset = set(lane.reads.files)
 
-                                if fileset & _PE_READS and fileset & _SE_READS:
-                                    filetype = '*'
-                                elif fileset & _PE_READS:
-                                    filetype = 'PE'
-                                elif fileset & _SE_READS:
-                                    filetype = 'SE'
-                                else:
-                                    assert False, lane.reads.files
-                                    continue
-
-                                input_files.add(filename)
+                            if fileset & _PE_READS and fileset & _SE_READS:
+                                filetype = '*'
+                            elif fileset & _PE_READS:
+                                filetype = 'PE'
+                            elif fileset & _SE_READS:
+                                filetype = 'SE'
                             else:
-                                assert False
+                                assert False, lane.reads.files
+                                continue
+
+                            input_files.add(filename)
                         else:
-                            filetype = '*'  # BAMs
+                            assert False
 
                         self._in_raw_read[(sample.name, library.name, lane.name)] = (filetype, filename)
 

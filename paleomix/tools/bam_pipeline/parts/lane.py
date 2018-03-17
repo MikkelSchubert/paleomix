@@ -42,7 +42,6 @@ from paleomix.nodes.bowtie2 import \
 from paleomix.tools.bam_pipeline.parts import \
     Reads
 from paleomix.tools.bam_pipeline.nodes import \
-    CleanupBAMNode, \
     index_and_validate_bam
 
 from paleomix.common.fileutils import \
@@ -69,31 +68,8 @@ class Lane:
                                    tags["LB"],
                                    tags["PU_cur"])
 
-        if record["Type"] == "BAMs":
-            self._init_pre_aligned_lane(config, prefix, record)
-        else:
-            self._init_reads(config, record)
-            self._init_unaligned_lane(config, prefix, record)
-
-    def _init_pre_aligned_lane(self, config, prefix, record):
-        if prefix["Name"] not in record["Data"]:
-            return
-
-        input_filename = record["Data"][prefix["Name"]]
-        output_filename = os.path.join(self.folder, "processed.bam")
-
-        node = CleanupBAMNode(config=config,
-                              reference=prefix["Reference"],
-                              input_bam=input_filename,
-                              output_bam=output_filename,
-                              tags=self.tags,
-                              dependencies=prefix["Nodes"])
-
-        index_required = self._is_indexing_required(prefix)
-        validated_node = index_and_validate_bam(config, prefix, node,
-                                                create_index=index_required)
-
-        self.bams["Processed"] = {output_filename: validated_node}
+        self._init_reads(config, record)
+        self._init_unaligned_lane(config, prefix, record)
 
     def _init_reads(self, config, record):
         key = tuple(self.tags[key] for key in ("Target", "SM", "LB", "PU_cur"))

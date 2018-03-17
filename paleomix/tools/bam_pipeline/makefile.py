@@ -533,15 +533,6 @@ def _determine_lane_type(prefixes, data, path):
                                         % (" :: ".join(path + (key,)),))
 
             return "Trimmed"
-        elif all((key in prefixes) for key in data):
-            print_warn("WARNING: Makefile specifies pre-aligned reads in the\n"
-                       "         form of a BAM file; support for including\n"
-                       "         BAMs is deprecated, and will be removed in\n"
-                       "         future versions of PALEOMIX!\n\n"
-                       "         Location =\n"
-                       "         %s\n"
-                       % (" :: ".join(path),))
-            return "BAMs"
 
     raise MakefileError("Error at Barcode level; keys must either be "
                         "prefix-names, OR 'Paired', 'Single', 'Collapsed', "
