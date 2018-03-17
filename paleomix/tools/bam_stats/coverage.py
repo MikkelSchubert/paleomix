@@ -39,9 +39,44 @@ from paleomix.tools.bam_stats.common import \
 ##############################################################################
 ##
 
-READGROUP_TEMPLATE = {"SE": 0, "PE_1": 0, "PE_2": 0, "Collapsed": 0,
-                      "Hits": 0, "M": 0, "I": 0, "D": 0, "Size": 0}
+class ReadGroup(object):
+    __slots__ = ["SE", "PE_1", "PE_2", "Collapsed",
+                 "Hits", "M", "I", "D", "Size"]
 
+    def __init__(self):
+        self.SE = 0
+        self.PE_1 = 0
+        self.PE_2 = 0
+        self.Collapsed = 0
+        self.Hits = 0
+        self.M = 0
+        self.I = 0
+        self.D = 0
+        self.Size = 0
+
+    def __getitem__(self, key):
+        return getattr(self, key)
+
+    def __setitem__(self, key, value):
+        setattr(self, key, value)
+
+    def add(self, other):
+        self.SE += other.SE
+        self.PE_1 += other.PE_1
+        self.PE_2 += other.PE_2
+        self.Collapsed += other.Collapsed
+        self.Hits += other.Hits
+        self.M += other.M
+        self.I += other.I
+        self.D += other.D
+        self.Size += other.Size
+
+    def has_values(self):
+        for slot in ReadGroup.__slots__:
+            if slot != 'Size' and getattr(self, slot):
+                return True
+
+        return False
 
 # Header prepended to output tables
 TABLE_HEADER = """# Timestamp: %s
@@ -76,9 +111,9 @@ def calculate_totals(table):
             for contigs in libraries.values():
                 for (name, contig) in contigs.iteritems():
                     size = lengths.get(name)
-                    if (size is not None) and (size != contig["Size"]):
+                    if (size is not None) and (size != contig.Size):
                         raise BAMStatsError(name)
-                    lengths[name] = contig["Size"]
+                    lengths[name] = contig.Size
 
     for (name, samples) in sorted(table.items()):
         for (sample, libraries) in sorted(samples.items()):
@@ -105,18 +140,18 @@ def build_rows(table):
                            sample,
                            library,
                            contig,
-                           subtable["Size"],
-                           subtable["SE"] + subtable["PE_1"]
-                                          + subtable["PE_2"]
-                                          + subtable["Collapsed"],
-                           subtable["SE"],
-                           subtable["PE_1"],
-                           subtable["PE_2"],
-                           subtable["Collapsed"],
-                           subtable["M"],
-                           subtable["I"],
-                           subtable["D"],
-                           float(subtable["M"]) / subtable["Size"]]
+                           subtable.Size,
+                           subtable.SE + subtable.PE_1
+                                       + subtable.PE_2
+                                       + subtable.Collapsed,
+                           subtable.SE,
+                           subtable.PE_1,
+                           subtable.PE_2,
+                           subtable.Collapsed,
+                           subtable.M,
+                           subtable.I,
+                           subtable.D,
+                           float(subtable.M) / subtable.Size]
                     rows.append(row)
                 rows.append("#")
             rows.append("#")
@@ -136,12 +171,12 @@ def read_table(table, filename):
 
             subtable = get_in(table, key)
             if subtable is None:
-                subtable = dict(READGROUP_TEMPLATE)
-                subtable["Size"] = int(record["Size"])
+                subtable = ReadGroup()
+                subtable.Size = int(record["Size"])
                 set_in(table, key, subtable)
 
-            assert int(subtable["Size"]) == int(record["Size"])
-            for key in READGROUP_TEMPLATE:
+            assert int(subtable.Size) == int(record["Size"])
+            for key in ReadGroup.__slots__:
                 if key != "Size":
                     subtable[key] += int(record.get(key, 0))
 
@@ -166,25 +201,20 @@ def write_table(table, filename):
 
 
 def _calculate_totals_in(tables, lengths):
-    def _defaults():
-        return dict(READGROUP_TEMPLATE)
-
-    totals = collections.defaultdict(_defaults)
+    totals = collections.defaultdict(ReadGroup)
     total_size = sum(lengths.itervalues())
 
     subtables = tables.items()
     while subtables:
         subtable_key, subtable = subtables.pop()
         if subtable_key == "*":
-            totals[subtable_key]["Size"] = total_size
-        elif "SE" in subtable:
-            for key in READGROUP_TEMPLATE:
-                if key != "Size":
-                    totals[subtable_key][key] += subtable[key]
-                    totals["*"][key] += subtable[key]
-                else:
-                    totals[subtable_key][key] = lengths[subtable_key]
-                    totals["*"][key] = total_size
+            totals[subtable_key].Size = total_size
+        elif isinstance(subtable, ReadGroup):
+            totals[subtable_key].add(subtable)
+            totals["*"].add(subtable)
+
+            totals[subtable_key].Size = lengths[subtable_key]
+            totals["*"].Size = total_size
         else:
             subtables.extend(subtable.items())
 

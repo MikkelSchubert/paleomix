@@ -36,7 +36,7 @@ from paleomix.tools.bam_stats.common import \
     collect_references, \
     main_wrapper
 from paleomix.tools.bam_stats.coverage import \
-    READGROUP_TEMPLATE, \
+    ReadGroup, \
     write_table
 
 
@@ -46,7 +46,7 @@ from paleomix.tools.bam_stats.coverage import \
 def build_region_template(args, handle):
     template = {}
     for key in collect_readgroups(args, handle):
-        template[key] = dict(READGROUP_TEMPLATE)
+        template[key] = ReadGroup()
     return template
 
 
@@ -67,8 +67,8 @@ def get_region_table(counts, region, template):
 def create_or_get_subtable(table, subtable_key, size):
     subtable = get_in(table, subtable_key)
     if subtable is None:
-        subtable = dict(READGROUP_TEMPLATE)
-        subtable["Size"] = size
+        subtable = ReadGroup()
+        subtable.Size = size
         set_in(table, subtable_key, subtable)
     return subtable
 
@@ -84,7 +84,8 @@ def build_table(args, handle, counts):
         # Exclude counts for reads with no read-groups, if none such were seen
         if key is None and not args.ignore_readgroups:
             for reference in references:
-                if any(counts.get(reference, {}).get(key, {}).itervalues()):
+                subtable = counts.get(reference, {}).get(key)
+                if subtable is not None and subtable.has_values():
                     break
             else:
                 continue
@@ -93,9 +94,9 @@ def build_table(args, handle, counts):
             subtable_key = (args.target_name, sample, library, reference)
             subtable = create_or_get_subtable(table, subtable_key, size)
 
-            statistics = counts.get(reference, {}).get(key, {})
-            for (stat, value) in statistics.iteritems():
-                subtable[stat] += value
+            statistics = counts.get(reference, {}).get(key)
+            if statistics is not None:
+                subtable.add(statistics)
 
     return table
 
@@ -111,13 +112,13 @@ def print_table(args, handle, counts):
 def process_record(subtable, record, flags, region):
     qname = record.qname
     if qname.startswith("M_") or qname.startswith("MT_"):
-        subtable["Collapsed"] += 1
+        subtable.Collapsed += 1
     elif flags & 0x40:  # first of pair
-        subtable["PE_1"] += 1
+        subtable.PE_1 += 1
     elif flags & 0x80:  # second of pair
-        subtable["PE_2"] += 1
+        subtable.PE_2 += 1
     else:  # Singleton
-        subtable["SE"] += 1
+        subtable.SE += 1
 
     position = record.pos
     start = region.start
