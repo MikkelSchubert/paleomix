@@ -58,6 +58,8 @@ class BEDRecord(object):
     default to 0 or empty string, except the strand which defaults to '+'.
     """
 
+    __slots__ = ['_fields']
+
     def __init__(self, line=None, _len=None):
         """Constructs a BED record from a line of text. The length of the
         object matches the number of columns in the input line; in the case
@@ -82,6 +84,11 @@ class BEDRecord(object):
 
             if len(line) > len(self._fields):
                 self._fields.extend(line[len(self._fields):])
+
+    def freeze(self):
+        record = BEDRecord()
+        record._fields = tuple(self._fields)
+        return record
 
     def __copy__(self):
         """Needed for copy.copy to work correctly as expected."""
@@ -226,8 +233,8 @@ def sort_bed_by_bamfile(bamfile, regions):
     if not regions:
         return
 
-    indices = dict(zip(bamfile.references,
-                   xrange(len(bamfile.references))))
+    references = bamfile.references
+    indices = dict(zip(references, xrange(len(references))))
 
     def _by_bam_layout(region):
         return (indices[region.contig], region.start, region.end)

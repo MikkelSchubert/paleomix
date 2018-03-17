@@ -73,11 +73,15 @@ def collect_references(args, handle):
 
 def collect_bed_regions(filename):
     regions = []
+    name_cache = {}
     for record in read_bed_file(filename):
         if len(record) < 4:
             record.name = "%s*" % (record.contig,)
 
-        regions.append(record)
+        record.contig = name_cache.get(record.contig, record.contig)
+        record.name = name_cache.get(record.name, record.name)
+
+        regions.append(record.freeze())
 
     return regions
 
