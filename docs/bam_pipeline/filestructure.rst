@@ -11,7 +11,7 @@ The following section explains the file structure of the BAM pipeline example pr
         ACGATA: # Library 1
           Lane_1: 000_data/ACGATA_L1_R{Pair}_*.fastq.gz
           Lane_2:
-            Single: 000_data/ACGATA_L2/reads.singleton.truncated.gz
+            Singleton: 000_data/ACGATA_L2/reads.singleton.truncated.gz
             Collapsed: 000_data/ACGATAr_L2/reads.collapsed.gz
             CollapsedTruncated: 000_data/ACGATA_L2/reads.collapsed.truncated.gz
 

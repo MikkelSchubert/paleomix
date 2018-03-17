@@ -157,7 +157,7 @@ ExampleProject:
       # Library also contains a pre-trimmed PE lane
       # As noted above, we only care about the collapsed reads
       Lane_2:
-        Single:             000_data/ACGATA_L2/reads.singleton.truncated.gz
+        Singleton:          000_data/ACGATA_L2/reads.singleton.truncated.gz
         Collapsed:          000_data/ACGATA_L2/reads.collapsed.gz
         CollapsedTruncated: 000_data/ACGATA_L2/reads.collapsed.truncated.gz
 
