@@ -170,29 +170,10 @@ class PerHostConfig:
     @classmethod
     def _get_filenames(cls, name):
         """Return standard list of config files for PALEOMIX pipelines:
-           - /etc/pypeline/{name}.ini
            - /etc/paleomix/{name}.ini
            - ~/.paleomix/{name}.ini
         """
         filename = "%s.ini" % (name,)
         homefolder = os.path.expanduser('~')
-        return ["/etc/pypeline/%s" % (filename,),
-                "/etc/paleomix/%s" % (filename,),
+        return ["/etc/paleomix/%s" % (filename,),
                 os.path.join(homefolder, ".paleomix", filename)]
-
-
-def migrate_config():
-    """Checks for the existence of PALEOMIX config files in the old, deprecated
-    location (~/.pypeline), and moves these to the new location (~/.paleomix),
-    if no config files exist. The old location is replaced with a symbolic
-    link, to ensure that older versions of the pipeline do not break.
-    """
-    homefolder = os.path.expanduser('~')
-    old_root = os.path.join(homefolder, ".pypeline")
-    new_root = os.path.join(homefolder, ".paleomix")
-
-    if not os.path.exists(new_root):
-        if os.path.exists(old_root):
-            sys.stderr.write("INFO: Migrating ~/.pypeline to ~/.paleomix\n")
-            os.rename(old_root, new_root)
-            os.symlink(new_root, old_root)

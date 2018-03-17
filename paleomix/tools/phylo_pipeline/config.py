@@ -33,8 +33,7 @@ import paleomix.common.console as console
 from paleomix.config import \
      ConfigError, \
      PerHostValue, \
-     PerHostConfig, \
-     migrate_config
+     PerHostConfig
 
 
 _DESCRIPTION = \
@@ -146,8 +145,6 @@ def _run_config_parser(argv):
 
 
 def parse_config(argv):
-    migrate_config()
-
     options, args = _run_config_parser(argv)
     paleomix.ui.set_ui_colors(options.ui_colors)
 

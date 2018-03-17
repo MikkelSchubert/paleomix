@@ -37,8 +37,7 @@ from paleomix.ui import \
 from paleomix.config import \
     ConfigError, \
     PerHostValue, \
-    PerHostConfig, \
-    migrate_config
+    PerHostConfig
 
 import paleomix.common.fileutils as fileutils
 import paleomix.tools.zonkey.database as database
@@ -73,8 +72,6 @@ def print_usage(out=sys.stderr):
 
 
 def parse_config(argv):
-    migrate_config()
-
     config, args = _parse_arguments(argv)
     if not args:
         print_usage()

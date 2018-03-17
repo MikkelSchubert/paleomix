@@ -28,8 +28,7 @@ import paleomix.ui
 from paleomix.config import \
      ConfigError, \
      PerHostValue, \
-     PerHostConfig, \
-     migrate_config
+     PerHostConfig
 
 
 def _run_config_parser(argv, pipeline_variant):
@@ -101,8 +100,6 @@ def _run_config_parser(argv, pipeline_variant):
 
 
 def parse_config(argv, pipeline_variant):
-    migrate_config()
-
     config, args = _run_config_parser(argv, pipeline_variant)
     paleomix.ui.set_ui_colors(config.ui_colors)
 
