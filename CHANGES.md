@@ -1,5 +1,38 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+  - Added 'retable' command for pretty-printing whitespace separated data in
+    the previously used by the BAM pipeline.
+  - Basic statistics are collected for pre-trimmed reads in the BAM pipeline.
+
+### Changed
+  - BAM pipeline tables are now saved as tab separated columns. The old
+    pretty-printed format may be produced by running the 'retable' tool on
+    the resulting files.
+  - Memory usage for the 'coverage' and 'depths' commands were reduced when
+    using very big BED files.
+
+### Fixed
+  - Fixed input / output files not being listed in 'pipe.errors' files.
+  - Use the same max open files limit for picard (ulimit -n minus headroom)
+    when determining if the default should be changed and as the final value.
+  - Removed explicit test for JRE version, which was failing on some (valid)
+    runtimes. Java programs are still checked prior to running pipelines.
+  - Fixed changes to recent version of Pysam breaking the alignment step
+    in the BAM pipeline.
+  - Fixed various test failures resulting in different environments.
+  - Fixed validation of pre-trimmed FASTQ files in BAM pipelines stopping
+    early if empty files are encountered.
+
+### Removed
+  - Removed automatic migrating of configuration files created PALEOMIX
+    PALEOMIX prior to v1.2.0.
+  - Previously deprecated support for existing BAM files was removed from
+    the BAM pipeline.
+
+
 ## [1.2.12] - 2017-08-13
 ### Fixed
   - Fixed input / output files not being listed in 'pipe.errors' files.
