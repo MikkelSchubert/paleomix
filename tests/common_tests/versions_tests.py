@@ -503,7 +503,7 @@ def test_requirementobj__version__command_not_executable():
         assert False  # pragma: no coverage
     except versions.VersionRequirementError as error:
         # Should include OSError message
-        assert_in("Permission denied", str(error))
+        assert_in("OSError", str(error))
 
 
 def test_requirementobj__version__return_code_is_ignored():
