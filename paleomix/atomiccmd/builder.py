@@ -376,30 +376,13 @@ class AtomicJavaCmdBuilder(AtomicCmdBuilder):
             if AtomicJavaCmdBuilder._IS_JAVA_64_BIT:
                 call.append("-Xmx4g")
 
-        version = self._get_java_version(java_version)
         call.extend(("-jar", "%(AUX_JAR)s"))
         AtomicCmdBuilder.__init__(self, call,
                                   AUX_JAR=jar,
-                                  CHECK_JRE=version,
                                   **kwargs)
 
     _IS_JAVA_64_BIT = None
 
-    @classmethod
-    def _get_java_version(cls, version):
-        version = tuple(map(int, version))
-        if version not in JAVA_VERSIONS:
-            regexp = r"[\._]".join(r"(\d+)" for _ in version)
-            regexp = r'version "%s' % (regexp,)
-            jre_call = ["java", "-Djava.awt.headless=true", "-version"]
-
-            JAVA_VERSIONS[version] \
-                = versions.Requirement(call=jre_call,
-                                       name="JAVA Runtime Environment",
-                                       search=regexp,
-                                       checks=versions.GE(*version),
-                                       priority=10)
-        return JAVA_VERSIONS[version]
 
 
 JAVA_VERSIONS = {}
