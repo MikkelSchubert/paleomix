@@ -88,20 +88,6 @@ def test_padded_table__with_text():
         [row_1, row_2, comment], [line_1, line_2, comment]
 
 
-@nose.tools.raises(TableError)
-def test_padded_table__misshapen_table_1():
-    _padded_table([(1, 20, 3000),
-                   (3000, 20),
-                   (1, 2, 3)])
-
-
-@nose.tools.raises(TableError)
-def test_padded_table__misshapen_table_2():
-    _padded_table([(1, 20, 3000),
-                   (3000, 20, 1, 0),
-                   (1, 2, 3)])
-
-
 ###############################################################################
 ###############################################################################
 # Tests for 'parse_padded_table'

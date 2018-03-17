@@ -20,9 +20,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import collections
+import itertools
 import re
 import types
-import collections
 
 
 class TableError(RuntimeError):
@@ -44,20 +45,18 @@ def padded_table(table):
     resulting table is to be readable with 'parse_padded_table'.
     """
     str_rows = []
-    nsizes, sizes = None, []
+    max_sizes = []
     for row in table:
         if not isinstance(row, types.StringTypes):
             row = map(str, row)
-            if (len(row) != nsizes):
-                if nsizes is not None:
-                    raise TableError("Malformed table; rows with different "
-                                     "number of columns: %r" % row)
-                nsizes = len(row)
-                sizes = [0] * nsizes
-            sizes = map(max, zip(sizes, map(len, row)))
+            row_sizes = map(len, row)
+            max_sizes = map(max, itertools.izip_longest(max_sizes,
+                                                        row_sizes,
+                                                        fillvalue=0))
+
         str_rows.append(row)
 
-    sizes = [(size + _MIN_PADDING) for size in sizes]
+    sizes = [(size + _MIN_PADDING) for size in max_sizes]
     for row in str_rows:
         if not isinstance(row, types.StringTypes):
             row = "".join(field.ljust(padding)

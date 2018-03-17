@@ -90,6 +90,8 @@ def _commands():
     yield ("Misc tools", None, None)
     yield ("cat", "paleomix.tools.cat",
            "Generalized cat command for gz, bz2 and uncompressed files.")
+    yield ("retable", "paleomix.tools.retable",
+           "Pretty print whitespace separated tabular data.")
 
     # In development:
     #   Prepares FASTQ reads recorded in BAM pipeline makefiles
