@@ -23,14 +23,12 @@
 """
 Reads and pretty-prints whitespace separated tabular data.
 """
-import os
 import sys
 import argparse
 import fileinput
-import itertools
-import subprocess
 
 from paleomix.common.text import padded_table
+
 
 def split_line(line):
     sections = line.rstrip('\r\n').split('#', 1)
