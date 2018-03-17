@@ -384,10 +384,6 @@ class AtomicJavaCmdBuilder(AtomicCmdBuilder):
     _IS_JAVA_64_BIT = None
 
 
-
-JAVA_VERSIONS = {}
-
-
 class AtomicMPICmdBuilder(AtomicCmdBuilder):
     """AtomicCmdBuilder for MPI enabled programs;
 

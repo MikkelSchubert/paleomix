@@ -34,8 +34,7 @@ from paleomix.atomiccmd.builder import \
     AtomicMPICmdBuilder, \
     apply_options, \
     use_customizable_cli_parameters, \
-    create_customizable_cli_parameters, \
-    JAVA_VERSIONS
+    create_customizable_cli_parameters
 
 
 ###############################################################################
@@ -547,8 +546,7 @@ def test_java_builder__defaults__call():
 
 def test_java_builder__defaults__kwargs():
     builder = AtomicJavaCmdBuilder("/path/Foo.jar")
-    assert_equal(builder.kwargs, {"AUX_JAR": "/path/Foo.jar",
-                                  "CHECK_JRE": JAVA_VERSIONS[(1, 6)]})
+    assert_equal(builder.kwargs, {"AUX_JAR": "/path/Foo.jar"})
 
 
 def test_java_builder__multithreaded_gc():
@@ -579,8 +577,7 @@ def test_java_builder__multithreaded_gc__non_int_threads():
 def test_java_builder__kwargs():
     builder = AtomicJavaCmdBuilder("/path/Foo.jar", set_cwd=True)
     assert_equal(builder.kwargs, {"AUX_JAR": "/path/Foo.jar",
-                                  "set_cwd": True,
-                                  "CHECK_JRE": JAVA_VERSIONS[(1, 6)]})
+                                  "set_cwd": True})
 
 
 ###############################################################################
