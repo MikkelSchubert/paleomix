@@ -20,12 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import collections
+import json
+import math
+import numbers
 import os
 import re
 import sys
-import math
-import numbers
-import collections
 
 from paleomix.node import Node, NodeError
 from paleomix.common.utilities import set_in, get_in
@@ -61,19 +62,34 @@ class SummaryTableNode(Node):
             for sample in prefix.samples:
                 for library in sample.libraries:
                     for lane in library.lanes:
+                        filename = None
+                        filetype = None
+
                         if lane.reads:
                             if lane.reads.stats:
-                                value = lane.reads.stats
-                                input_files.add(value)
-                            elif set(lane.reads.files) & _PE_READS:
-                                value = _PE_READS
-                            elif set(lane.reads.files) & _SE_READS:
-                                value = _SE_READS
+                                filetype = 'Raw'
+                                filename = lane.reads.stats
+                            elif lane.reads.validation:
+                                filename = lane.reads.validation
+                                fileset = set(lane.reads.files)
+
+                                if fileset & _PE_READS and fileset & _SE_READS:
+                                    filetype = '*'
+                                elif fileset & _PE_READS:
+                                    filetype = 'PE'
+                                elif fileset & _SE_READS:
+                                    filetype = 'SE'
+                                else:
+                                    assert False, lane.reads.files
+                                    continue
+
+                                input_files.add(filename)
                             else:
                                 assert False
                         else:
-                            value = _BAMS
-                        self._in_raw_read[(sample.name, library.name, lane.name)] = value
+                            filetype = '*'  # BAMs
+
+                        self._in_raw_read[(sample.name, library.name, lane.name)] = (filetype, filename)
 
         Node.__init__(self,
                       description  = "<Summary: %s>" % self._output_file,
@@ -235,11 +251,11 @@ class SummaryTableNode(Node):
 
 
     def _read_reads_settings(self, table):
-        for ((sample, library, barcode), filename) in self._in_raw_read.iteritems():
+        for ((sample, library, barcode), (filetype, filename)) in self._in_raw_read.iteritems():
             key = (self._target, sample, library, "reads", barcode)
-            set_in(table, key, self._stat_read_settings(filename))
+            set_in(table, key, self._stat_read_settings(filetype, filename))
 
-        for (target, samples) in table.iteritems():
+        for (_, samples) in table.iteritems():
             for (sample, libraries) in samples.iteritems():
                 for (library, prefixes) in libraries.iteritems():
                     prefixes["reads"] = self._merge_tables(prefixes["reads"].values())
@@ -304,38 +320,33 @@ class SummaryTableNode(Node):
 
 
     @classmethod
-    def _stat_read_settings(cls, filename):
-        if isinstance(filename, frozenset):
-            if (filename == _SE_READS):
-                return {
-                    "lib_type"           : ("SE", "# SE, PE, or * (for both)"),
-                    "seq_reads_se"       : (float("nan"),  "# Total number of single-ended reads"),
-                    "seq_trash_se"       : (float("nan"),  "# Total number of trashed reads"),
-                    "seq_retained_nts"   : (float("nan"),  "# Total number of NTs in retained reads"),
-                    "seq_retained_reads" : (float("nan"),  "# Total number of retained reads"),
-                    }
-            elif (filename == _PE_READS):
-                return {
-                    "lib_type"            : ("PE", "# SE, PE, or * (for both)"),
-                    "seq_reads_pairs"     : (float("nan"), "# Total number of reads"),
-                    "seq_trash_pe_1"      : (float("nan"), "# Total number of reads"),
-                    "seq_trash_pe_2"      : (float("nan"), "# Total number of reads"),
-                    "seq_retained_nts"    : (float("nan"), "# Total number of NTs in retained reads"),
-                    "seq_retained_reads"  : (float("nan"), "# Total number of retained reads"),
-                    "seq_collapsed"       : (float("nan"), "# Total number of pairs collapsed into one read"),
-                    }
-            else:
-                return {
-                    "lib_type"           : ("*", "# SE, PE, or * (for both)"),
-                    "seq_reads_se"       : (float("nan"),  "# Total number of single-ended reads"),
-                    "seq_trash_se"       : (float("nan"),  "# Total number of trashed reads"),
-                    "seq_reads_pairs"    : (float("nan"), "# Total number of reads"),
-                    "seq_trash_pe_1"     : (float("nan"), "# Total number of reads"),
-                    "seq_trash_pe_2"     : (float("nan"), "# Total number of reads"),
-                    "seq_retained_nts"   : (float("nan"),  "# Total number of NTs in retained reads"),
-                    "seq_retained_reads" : (float("nan"),  "# Total number of retained reads"),
-                    "seq_collapsed"      : (float("nan"), "# Total number of pairs collapsed into one read"),
-                    }
+    def _stat_read_settings(cls, filetype, filename):
+        assert filetype in ('Raw', 'SE', 'PE', '*', 'BAM'), filetype
+
+        if filetype != 'Raw':
+            stats = {
+                "lib_type": (filetype, "# SE, PE, or * (for both)"),
+                "seq_retained_nts": [float("nan"), "# Total number of NTs in retained reads"],
+                "seq_retained_reads": [float("nan"), "# Total number of retained reads"],
+            }
+
+            if filetype in ('SE', '*'):
+                stats["seq_reads_se"] = [float("nan"),  "# Total number of single-ended reads"]
+                stats["seq_trash_se"] = [float("nan"),  "# Total number of trashed reads"]
+
+            if filetype in ('PE', '*'):
+                stats["seq_reads_pairs"] = [float("nan"), "# Total number of reads"]
+                stats["seq_trash_pe_1"] = [float("nan"), "# Total number of reads"]
+                stats["seq_trash_pe_2"] = [float("nan"), "# Total number of reads"]
+                stats["seq_collapsed"] = [float("nan"), "# Total number of pairs collapsed into one read"]
+
+            if filename is not None:
+                with open(filename) as handle:
+                    for key, value in json.load(handle).items():
+                        if key in stats:
+                            stats[key][0] = int(value)
+
+            return stats
 
         with open(filename) as settings_file:
             settings = settings_file.read()

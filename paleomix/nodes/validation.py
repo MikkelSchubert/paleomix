@@ -22,6 +22,7 @@
 #
 import collections
 import io
+import json
 import os
 import re
 
@@ -108,6 +109,15 @@ class DetectInputDuplicationNode(Node):
 class ValidateFASTQFilesNode(Node):
     def __init__(self, input_files, output_file, offset, dependencies=()):
         self._offset = offset
+        self._files = set()
+        for (read_type, filename) in input_files.iteritems():
+            if read_type == "Paired":
+                filename = filename.format(Pair=1)
+                filename = filename.format(Pair=2)
+
+            self._files.add((read_type, filename))
+
+        input_files = [filename for _, filename in self._files]
         Node.__init__(self,
                       description="<Validate FASTQ Files: %s>"
                       % (describe_files(input_files)),
@@ -116,12 +126,14 @@ class ValidateFASTQFilesNode(Node):
                       dependencies=dependencies)
 
     def _run(self, _config, _temp):
-        check_fastq_files(self.input_files, self._offset, True)
+        stats = check_fastq_files(self._files, self._offset, True)
         output_file = tuple(self.output_files)[0]
         if os.path.dirname(output_file):
             make_dirs(os.path.dirname(output_file))
-        with open(output_file, "w"):
-            pass
+
+        data = json.dumps(stats)
+        with open(output_file, "w") as handle:
+            handle.write(data)
 
 
 class ValidateFASTAFilesNode(Node):
@@ -172,8 +184,14 @@ def check_bam_files(input_files, err_func):
 
 
 def check_fastq_files(filenames, required_offset, allow_empty=False):
-    for filename in filenames:
-        qualities = _read_sequences(filename)
+    stats = {
+        "seq_retained_nts": 0,
+        "seq_retained_reads": 0,
+        "seq_collapsed": 0,
+    }
+
+    for file_type, filename in filenames:
+        qualities = _read_sequences(file_type, filename, stats)
         offsets = fastq.classify_quality_strings(qualities)
         if offsets == fastq.OFFSET_BOTH:
             raise NodeError("FASTQ file contains quality scores with both "
@@ -197,8 +215,10 @@ def check_fastq_files(filenames, required_offset, allow_empty=False):
                             "corresponds to the input.\n    Filename = %s"
                             % (offsets, required_offset, filename))
 
+    return stats
 
-def _read_sequences(filename):
+
+def _read_sequences(file_type, filename, stats):
     cat_call = factory.new("cat")
     cat_call.add_multiple_values((filename,))
     cat_call = cat_call.finalized_call
@@ -209,7 +229,7 @@ def _read_sequences(filename):
                               bufsize=io.DEFAULT_BUFFER_SIZE,
                               stderr=procs.PIPE,
                               stdout=procs.PIPE)
-        qualities = _collect_qualities(cat.stdout, filename)
+        qualities = _collect_qualities(cat.stdout, file_type, filename, stats)
 
         return sampling.reservoir_sampling(qualities, 100000)
     except StandardError as error:
@@ -312,7 +332,7 @@ def _key_by_tid_pos(record):
     return (record[0].tid, record[0].pos)
 
 
-def _collect_qualities(handle, filename):
+def _collect_qualities(handle, file_type, filename, stats):
     header = handle.readline()
     while header:
         sequence = handle.readline()
@@ -342,6 +362,12 @@ def _collect_qualities(handle, filename):
                             "length of sequence / qualities are not the "
                             "same.\n    Filename = %r\n    Record = '%s'"
                             % (filename, header.rstrip()))
+
+        stats["seq_retained_nts"] += len(sequence)
+        stats["seq_retained_reads"] += 1
+
+        if "Collapsed" in file_type:
+            stats["seq_collapsed"] += 1
 
         yield qualities
         header = handle.readline()

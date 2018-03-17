@@ -35,6 +35,7 @@ class Reads(object):
         self.quality_offset = quality_offset
         self.files = {}
         self.stats = None
+        self.validation = None
         self.nodes = ()
 
         tags = record["Tags"]
@@ -57,18 +58,11 @@ class Reads(object):
     def _init_pretrimmed_reads(self, record):
         self.files.update(record["Data"])
         output_file = os.path.join(self.folder, "reads.pretrimmed.validated")
-        input_files = set()
-        for (read_type, filename) in self.files.iteritems():
-            if read_type == "Paired":
-                input_files.add(filename.format(Pair=1))
-                input_files.add(filename.format(Pair=2))
-            else:
-                input_files.add(filename)
-
-        node = ValidateFASTQFilesNode(input_files=input_files,
+        node = ValidateFASTQFilesNode(input_files=self.files,
                                       output_file=output_file,
                                       offset=self.quality_offset)
         self.nodes = (node,)
+        self.validation = output_file
 
     def _init_raw_reads(self, config, record):
         ar_options = dict(record["Options"]["AdapterRemoval"])
