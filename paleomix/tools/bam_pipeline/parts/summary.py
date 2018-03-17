@@ -133,7 +133,12 @@ class SummaryTableNode(Node):
 
 
     def _write_tables(self, out, genomes):
-        rows = [["Target", "Sample", "Library", "Measure", "Value", "# Description"]]
+        for row in self._build_tables(genomes):
+            out.write("%s\n" % '\t'.join(map(str, row)))
+
+    def _build_tables(self, genomes):
+        yield ["Target", "Sample", "Library", "Measure", "Value", "# Description"]
+
         for (target, samples) in sorted(self._read_tables(self._prefixes, genomes).iteritems()):
             for (sample, libraries) in sorted(samples.iteritems()):
                 for (library, prefixes) in sorted(libraries.iteritems()):
@@ -146,13 +151,9 @@ class SummaryTableNode(Node):
                         for (key, (value, comment)) in sorted(table.iteritems(), key = _measure_ordering):
                             if isinstance(value, numbers.Number) and math.isnan(value):
                                 value = "NA"
-                            rows.append((target, sample, library, key, value, comment))
-                        rows.append("")
-                    rows.append("")
-
-        for line in text.padded_table(rows):
-            out.write("%s\n" % line)
-
+                            yield (target, sample, library, key, value, comment)
+                        yield ""
+                    yield ""
 
     def _read_tables(self, prefixes, genomes):
         table = {}

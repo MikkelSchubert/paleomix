@@ -28,7 +28,6 @@ from paleomix.common.utilities import \
     get_in, \
     set_in
 from paleomix.common.text import \
-    padded_table, \
     parse_padded_table
 
 from paleomix.tools.bam_stats.common import \
@@ -129,8 +128,8 @@ def calculate_totals(table):
 
 
 def build_rows(table):
-    rows = [("Name", "Sample", "Library", "Contig", "Size", "Hits", "SE",
-             "PE_1", "PE_2", "Collapsed", "M", "I", "D", "Coverage")]
+    yield ("Name", "Sample", "Library", "Contig", "Size", "Hits", "SE",
+           "PE_1", "PE_2", "Collapsed", "M", "I", "D", "Coverage")
 
     for (name, samples) in sorted(table.items()):
         for (sample, libraries) in sorted(samples.items()):
@@ -152,13 +151,9 @@ def build_rows(table):
                            subtable.I,
                            subtable.D,
                            float(subtable.M) / subtable.Size]
-                    rows.append(row)
-                rows.append("#")
-            rows.append("#")
-
-    while rows[-1] == "#":
-        rows.pop()
-    return rows
+                    yield row
+                yield "#"
+            yield "#"
 
 
 def read_table(table, filename):
@@ -192,8 +187,8 @@ def write_table(table, filename):
 
     try:
         output_handle.write(TABLE_HEADER % datetime.datetime.now().isoformat())
-        for line in padded_table(rows):
-            output_handle.write(line)
+        for line in rows:
+            output_handle.write('\t'.join(map(str, line)))
             output_handle.write("\n")
     finally:
         if output_handle is not sys.stdout:

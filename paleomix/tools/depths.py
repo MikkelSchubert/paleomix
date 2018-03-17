@@ -27,8 +27,6 @@ import collections
 
 from paleomix.common.timer import \
     BAMTimer
-from paleomix.common.text import \
-    padded_table
 from paleomix.common.bamfiles import \
     BAMRegionsIter
 
@@ -200,8 +198,8 @@ def print_table(handle, args, totals):
         rows = build_table(args.target_name, totals, lengths)
         output_handle.write(_HEADER % datetime.datetime.now().isoformat())
         output_handle.write("\n")
-        for line in padded_table(rows):
-            output_handle.write(line)
+        for line in rows:
+            output_handle.write('\t'.join(map(str, line)))
             output_handle.write("\n")
 
 
@@ -222,13 +220,14 @@ def build_table(name, totals, lengths):
     for index in xrange(1, _MAX_DEPTH + 1):
         header.append("MD_%03i" % (index,))
 
-    rows = [header]
+    yield header
     last_sm = last_lb = None
     for ((sm_key, lb_key, ct_key), counts) in sorted(totals.items()):
         if (sm_key != last_sm) and (last_sm is not None):
-            rows.extend("##")
+            yield '#'
+            yield '#'
         elif (lb_key != last_lb) and (last_lb is not None):
-            rows.append("#")
+            yield '#'
         last_sm, last_lb = sm_key, lb_key
 
         if ct_key == "*":
@@ -240,9 +239,7 @@ def build_table(name, totals, lengths):
                str(calc_max_depth(counts))]
         row.extend(calculate_depth_pc(counts, length))
 
-        rows.append(row)
-
-    return rows
+        yield row
 
 
 ##############################################################################
