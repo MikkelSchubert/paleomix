@@ -183,7 +183,7 @@ def check_fastq_files(filenames, required_offset, allow_empty=False):
                             "single source.\n    Filename = %r" % (filename,))
         elif offsets == fastq.OFFSET_MISSING:
             if allow_empty and not qualities:
-                return
+                continue
 
             raise NodeError("FASTQ file did not contain quality scores; file "
                             "may be unexpected format or corrupt. Ensure that "
