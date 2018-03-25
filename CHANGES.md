@@ -562,7 +562,8 @@ the (partially) updated documentation now hosted on ReadTheDocs.
   - Switching to more traditional version-number tracking.
 
 
-[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.12...HEAD
+[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13...HEAD
+[1.2.13]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.11...v1.2.13
 [1.2.12]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.11...v1.2.12
 [1.2.11]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.10...v1.2.11
 [1.2.10]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.9...v1.2.10
