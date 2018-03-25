@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.2.13] - 2018-03-25
 
 ### Added
   - Added 'retable' command for pretty-printing whitespace separated data in
