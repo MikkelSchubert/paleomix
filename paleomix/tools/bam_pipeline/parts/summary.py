@@ -211,8 +211,8 @@ class SummaryTableNode(Node):
                 total_uniq  = subtable["hits_unique(%s)" % tblname][0]
                 total_reads = subtables.get("reads",{}).get("seq_retained_reads", (float("NAN"),))[0]
 
-                subtable["hits_raw_frac(%s)" % tblname] = (total_hits / float(total_reads), "# Total number of hits vs. total number of reads retained")
-                subtable["hits_unique_frac(%s)" % tblname] = (total_uniq / float(total_reads), "# Total number of unique hits vs. total number of reads retained")
+                subtable["hits_raw_frac(%s)" % tblname] = (total_hits / (float(total_reads) or float("NaN")), "# Total number of hits vs. total number of reads retained")
+                subtable["hits_unique_frac(%s)" % tblname] = (total_uniq / (float(total_reads) or float("NaN")), "# Total number of unique hits vs. total number of reads retained")
                 subtable["hits_clonality(%s)" % tblname] = (1 - total_uniq / (float(total_hits) or float("NaN")), "# Fraction of hits that were PCR duplicates")
                 subtable["hits_length(%s)" % tblname] = (total_nts / (float(total_uniq) or float("NaN")), "# Average number of aligned bases per unique hit")
                 subtable["hits_coverage(%s)" % tblname] = (total_nts / float(genomes[tblname]["Size"]), "# Estimated coverage from unique hits")
