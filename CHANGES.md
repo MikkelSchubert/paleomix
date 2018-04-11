@@ -1,7 +1,12 @@
 # Changelog
 
-## [1.2.13] - 2018-03-25
 
+## [1.2.13.1] - 2018-03-25
+### Fixed 
+  - Fixed divisions by zero if empty files are listed as pre-trimmed reads.
+
+
+## [1.2.13] - 2018-03-25
 ### Added
   - Added 'retable' command for pretty-printing whitespace separated data in
     the previously used by the BAM pipeline.
