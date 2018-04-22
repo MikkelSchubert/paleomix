@@ -432,8 +432,11 @@ def check_fasta_file(filename):
                 else:
                     assert False
 
-        if state in (_NA, _IN_HEADER):
-            raise NodeError("File does not contain any sequences"
+        if state == _NA:
+            raise NodeError("File does not contain any sequences:\n"
+                            "    Filename = %r" % (filename, ))
+        elif state == _IN_HEADER:
+            raise NodeError("File ends with an empty sequence:\n"
                             "    Filename = %r" % (filename, ))
 
 # Standard nucleotides + UIPAC codes
