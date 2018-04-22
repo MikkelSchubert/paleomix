@@ -57,7 +57,7 @@ class Reads(object):
 
     def _init_pretrimmed_reads(self, record):
         self.files.update(record["Data"])
-        output_file = os.path.join(self.folder, "reads.pretrimmed.validated")
+        output_file = os.path.join(self.folder, "reads.statistics")
         node = ValidateFASTQFilesNode(input_files=self.files,
                                       output_file=output_file,
                                       offset=self.quality_offset)
