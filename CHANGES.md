@@ -1,6 +1,14 @@
 # Changelog
 
 
+## [1.2.13.2] - 2018-04-22
+### Fixed
+  - Additional fixes to divisions by zeros in summary calculations.
+  - Fixed 'empty file' message if FASTA file ends with empty sequence.
+  - Renamed pre-trimmed FASTQ validation/statistics file, to avoid failure if
+    an older run was resumed.
+
+
 ## [1.2.13.1] - 2018-03-25
 ### Fixed 
   - Fixed divisions by zero if empty files are listed as pre-trimmed reads.
@@ -567,7 +575,8 @@ the (partially) updated documentation now hosted on ReadTheDocs.
   - Switching to more traditional version-number tracking.
 
 
-[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.1...HEAD
+[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.2...HEAD
+[1.2.13.1]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.1...v1.2.13.2
 [1.2.13.1]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13...v1.2.13.1
 [1.2.13]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.12...v1.2.13
 [1.2.12]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.11...v1.2.12
