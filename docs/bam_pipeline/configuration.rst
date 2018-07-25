@@ -9,7 +9,7 @@ The BAM pipeline exposes a number options, including the maximum number of threa
 
 .. code-block:: bash
 
-    $ paleomix bam_pipeline --write-config
+    $ paleomix bam_pipeline run --write-config
 
 
 The resulting file contains a list of options which can be overwritten::
