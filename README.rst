@@ -14,4 +14,4 @@ The PALEOMIX pipelines have been published in Nature Protocols; if you make use 
 
 The Zonkey pipeline has been published in Journal of Archaeological Science; if you make use of this pipeline in your work, then please cite
 
-  Schubert M, Mashkour M, Gaunitz C, Fages A, Seguin-Orlando A, Sheikhi S, Alfarhan AH, Alquraishi SA, Al-Rasheid KAS, Chuang R, Ermini L, Gamba C, Weinstock J, Vedat O, and Orlando L. "**Zonkey: A simple, accurate and sensitive pipeline to genetically identify equine F1-hybrids in archaeological assemblages**". Journal of Archaeological Science. 2007 Feb; 78:147-157. doi: `10.1016/j.jas.2016.12.005 <http://dx.doi.org/10.1016/j.jas.2016.12.005>`_. 
+  Schubert M, Mashkour M, Gaunitz C, Fages A, Seguin-Orlando A, Sheikhi S, Alfarhan AH, Alquraishi SA, Al-Rasheid KAS, Chuang R, Ermini L, Gamba C, Weinstock J, Vedat O, and Orlando L. "**Zonkey: A simple, accurate and sensitive pipeline to genetically identify equine F1-hybrids in archaeological assemblages**". Journal of Archaeological Science. 2017 Feb; 78:147-157. doi: `10.1016/j.jas.2016.12.005 <http://dx.doi.org/10.1016/j.jas.2016.12.005>`_. 
