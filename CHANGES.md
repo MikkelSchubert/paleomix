@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.2.13.3] - 2018-11-01
+### Fixed
+  - Fixed validation/read counting of pre-trimmed reads not including
+    the mate 1 files of paired-end reads. This resulted in the
+    'seq_retained_reads' count being half the expected value.
+
 
 ## [1.2.13.2] - 2018-04-22
 ### Fixed
@@ -575,8 +581,9 @@ the (partially) updated documentation now hosted on ReadTheDocs.
   - Switching to more traditional version-number tracking.
 
 
-[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.2...HEAD
-[1.2.13.1]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.1...v1.2.13.2
+[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.3...HEAD
+[1.2.13.3]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.2...v1.2.13.3
+[1.2.13.2]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.1...v1.2.13.2
 [1.2.13.1]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13...v1.2.13.1
 [1.2.13]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.12...v1.2.13
 [1.2.12]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.11...v1.2.12
