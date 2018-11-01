@@ -112,10 +112,10 @@ class ValidateFASTQFilesNode(Node):
         self._files = set()
         for (read_type, filename) in input_files.iteritems():
             if read_type == "Paired":
-                filename = filename.format(Pair=1)
-                filename = filename.format(Pair=2)
-
-            self._files.add((read_type, filename))
+                self._files.add((read_type, filename.format(Pair=1)))
+                self._files.add((read_type, filename.format(Pair=2)))
+            else:
+                self._files.add((read_type, filename))
 
         input_files = [filename for _, filename in self._files]
         Node.__init__(self,
