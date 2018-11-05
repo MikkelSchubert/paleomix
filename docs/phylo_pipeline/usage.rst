@@ -22,15 +22,15 @@ To execute the pipeline, a command corresponding to the step to be invoked is us
 Samples
 -------
 
-The phylogenetic pipeline expects a number of samples to be specified. Each sample has a name, a gender, and a genotyping method::
+The phylogenetic pipeline expects a number of samples to be specified. Each sample has a name, a sex, and a genotyping method::
 
     Samples:
       <GROUP>:
         SAMPLE_NAME:
-          Gender: ...
+          Sex: ...
           Genotyping Method: ...
 
-Gender is required, and is used to filter SNPs at homozygous sex chromsomes (e.g. chrX and chrY for male humans). Any names may be used, and can simply be set to e.g. 'NA' in case this feature is not used.
+Sex is required, and is used to filter SNPs at homozygous sex chromsomes (e.g. chrX and chrY for male humans). Any names may be used, and can simply be set to e.g. 'NA' in case this feature is not used.
 
 The genotyping method is either "SAMTools" for the default genotyping procedure using samtools mpileupe | bcftools view, or "Random Sampling" to sample one random nucleotide in the pileup at each position. This key may be left out to use the default (SAMTools) method.
 

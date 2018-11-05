@@ -8,25 +8,25 @@ Project:
   # in 'ExcludeSamples' and 'FilterSingletons'.
   Samples:
     06_3928A:
-      Gender: NA
+      Sex: NA
     DDR7602:
-      Gender: NA
+      Sex: NA
     LBUS5:
-      Gender: NA
+      Sex: NA
     M-0182896:
-      Gender: NA
+      Sex: NA
     NL07434:
-      Gender: NA
+      Sex: NA
     P13527:
-      Gender: NA
+      Sex: NA
     P13626:
-      Gender: NA
+      Sex: NA
     P17777:
-      Gender: NA
+      Sex: NA
     Pi1845A:
-      Gender: NA
+      Sex: NA
     Pi1889:
-      Gender: NA
+      Sex: NA
 
   # Specifies a set of regions of interest, each representing one or more
   # named regions in a reference sequence (e.g. genes) in BED format.
