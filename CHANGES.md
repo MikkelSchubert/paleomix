@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.2.13.4] - 2019-03-25
+### Fixed
+  - Improved detection of Picard versions in cases where 'java'
+    outputs additional text.
+
+
 ## [1.2.13.3] - 2018-11-01
 ### Fixed
   - Fixed validation/read counting of pre-trimmed reads not including
@@ -581,7 +587,8 @@ the (partially) updated documentation now hosted on ReadTheDocs.
   - Switching to more traditional version-number tracking.
 
 
-[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.3...HEAD
+[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.4...HEAD
+[1.2.13.4]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.3...v1.2.13.4
 [1.2.13.3]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.2...v1.2.13.3
 [1.2.13.2]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.1...v1.2.13.2
 [1.2.13.1]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13...v1.2.13.1
