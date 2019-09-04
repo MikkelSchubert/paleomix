@@ -8,9 +8,9 @@
 MANIFEST
 
 # Packages
-dist
-build
-sdist
+dist/
+build/
+sdist/
 
 tests/runs
 tests/links/
@@ -22,4 +22,6 @@ tests/all_modules.py
 .tox
 .vscode
 
-docs/_build
+# Misc
+venv/
+docs/_build/
