@@ -189,7 +189,6 @@ import copy
 import types
 import hashlib
 import datetime
-import operator
 import StringIO
 
 import paleomix.yaml
@@ -276,9 +275,9 @@ def process_makefile(data, specification, path=("root",), apply_defaults=True):
         raise MakefileError("Inconsistency between makefile specification and "
                             "current makefile at %s:\n    Expected %s, "
                             "found %s %r!" % (_path_to_str(path),
-                                           type(specification).__name__,
-                                           type(data).__name__,
-                                           data))
+                                              type(specification).__name__,
+                                              type(data).__name__,
+                                              data))
 
     return data
 
@@ -311,7 +310,7 @@ class PreProcessMakefile(object):
 
     def __call__(self, path, value):
         """Must return (value, specification) tuple."""
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no coverage
 
 
 class MakefileSpec(object):
@@ -398,12 +397,23 @@ class IsBoolean(MakefileSpec):
 class IsStr(MakefileSpec):
     """Require that the value is a non-empty string."""
 
-    def __init__(self, description="a non-empty string",
-                 default=DEFAULT_NOT_SET):
+    def __init__(self, description=None,
+                 default=DEFAULT_NOT_SET, min_len=1):
+        if description is None:
+            if min_len == 0:
+                description = "a string"
+            elif min_len == 1:
+                description = "a non-empty string"
+            elif min_len >= 2:
+                description = "a string at least %s characters long" % (min_len,)
+            else:
+                raise ValueError('min_len must be non-negative')
+
+        self._min_len = min_len
         MakefileSpec.__init__(self, description, default)
 
     def meets_spec(self, value):
-        return isinstance(value, types.StringTypes) and value
+        return isinstance(value, types.StringTypes) and len(value) >= self._min_len
 
 
 class IsNone(MakefileSpec):
@@ -449,10 +459,8 @@ class _BinaryOperator(MakefileSpec):
         self._keyfunc = key
         self._rvalue = rvalue
 
-        repr_func = repr
-        if list_kword is not None:
-            repr_func = lambda value: _list_values(value, list_kword)
-        description = description.format(rvalue=repr_func(rvalue))
+        rvalue_repr = _list_values(rvalue, list_kword) if list_kword else rvalue
+        description = description.format(rvalue=rvalue_repr)
         MakefileSpec.__init__(self, description, default)
 
     def meets_spec(self, value):
@@ -461,50 +469,56 @@ class _BinaryOperator(MakefileSpec):
         return self._operator(value, self._rvalue)
 
 
-def _create_binary_operator(operator_func, description, list_kword=None):
-    """Creates and returns a BinaryOperator class based on the given
-    operator_func function, which is assumed to be a function taking two
-    arguments (lvalue, rvalue) and returning a boolean value.
-    """
+class ValueIn(_BinaryOperator):
+    def __init__(self, rvalues, key=None,
+                 description="value in {rvalue}",
+                 default=DEFAULT_NOT_SET):
+        description = description.format(rvalue=_list_values(rvalues, "or"))
+        _BinaryOperator.__init__(self, description=description, default=default,
+                                 opfunc=self._in_operator, rvalue=rvalues,
+                                 key=key)
 
-    class _BinaryOperatorImpl(_BinaryOperator):
-        """Implements a binary operator specfication."""
-
-        def __init__(self, rvalue, key=None, description=description,
-                     default=DEFAULT_NOT_SET):
-            _BinaryOperator.__init__(self, description, default, operator_func,
-                                     rvalue, key, list_kword)
-    return _BinaryOperatorImpl
+    def _in_operator(self, lvalue, rvalues):
+        """Implements 'in' operator."""
+        return _is_hashable(lvalue) and lvalue in rvalues
 
 
-def _create_set_operator(operator_func, description):
-    """Creates and returns a BinaryOperator designed to operate on sets of
-    values. Thus, values in the makefile are expected to be either lists or
-    strings (for case sensitive operations).
-    """
+class ValuesIntersect(_BinaryOperator):
+    def __init__(self, rvalues, key=None, description=None, default=DEFAULT_NOT_SET):
+        description = description or "intersects %s" % (_list_values(rvalues, "or"),)
+        _BinaryOperator.__init__(self,
+                                 description=description,
+                                 default=default,
+                                 opfunc=self._operator,
+                                 rvalue=rvalues,
+                                 key=key)
 
-    def _operator(lvalue, rvalue):
-        """Operator function for set based operations."""
-        if not isinstance(lvalue, (types.ListType,) + types.StringTypes):
+    def _operator(self, lvalue, rvalues):
+        try:
+            return not isinstance(lvalue, dict) and bool(
+                frozenset(lvalue).intersection(rvalues)
+            )
+        except TypeError:
             return False
-        elif not _are_keys_hashable(lvalue):
+
+
+class ValuesSubsetOf(_BinaryOperator):
+    def __init__(self, rvalues, key=None, description=None, default=DEFAULT_NOT_SET):
+        description = description or "intersects %s" % (_list_values(rvalues, "or"),)
+        _BinaryOperator.__init__(self,
+                                 description=description,
+                                 default=default,
+                                 opfunc=self._operator,
+                                 rvalue=rvalues,
+                                 key=key)
+
+    def _operator(self, lvalue, rvalues):
+        try:
+            return not isinstance(lvalue, dict) and bool(
+                frozenset(lvalue).issubset(rvalues)
+            )
+        except TypeError:
             return False
-
-        return bool(operator_func(frozenset(lvalue), rvalue))
-
-    description = "%s {rvalue}" % (description,)
-    return _create_binary_operator(_operator, description, "or")
-
-
-ValueLT = _create_binary_operator(operator.lt, "value < {rvalue}")
-ValueLE = _create_binary_operator(operator.le, "value <= {rvalue}")
-ValueEQ = _create_binary_operator(operator.eq, "value = {rvalue}")
-ValueGE = _create_binary_operator(operator.ge, "value >= {rvalue}")
-ValueGT = _create_binary_operator(operator.gt, "value > {rvalue}")
-ValueIn = _create_binary_operator(lambda lvalue, rvalue: lvalue in rvalue,
-                                  "value in {rvalue}", "or")
-ValuesIntersect = _create_set_operator(frozenset.intersection, "contains")
-ValuesSubsetOf = _create_set_operator(frozenset.issubset, "subset of")
 
 
 ###############################################################################
@@ -557,24 +571,6 @@ class Or(_MultipleSpecs):
         return any(spec.meets_spec(value) for spec in self._specs)
 
 
-class Xor(_MultipleSpecs):
-    """Takes two specification objects, and requires that values meets ONE and
-    ONLY ONE of these specifications. A default value may be set for the 'Xor'
-    specification, but not for the specifications given to the 'Xor' object.
-    """
-
-    def __init__(self, *specs, **kwargs):
-        if len(specs) != 2:
-            raise ValueError("'Xor' takes exactly 2 specifications, not %i"
-                             % (len(specs),))
-
-        _MultipleSpecs.__init__(self, specs, kwargs, "Xor",
-                                join_by=" xor ", fmt="(%s)")
-
-    def meets_spec(self, value):
-        return operator.xor(*(spec.meets_spec(value) for spec in self._specs))
-
-
 class Not(_MultipleSpecs):
     """Takes a single specification object, and requires that values do NOT
     meet this specification. A default value may be set for the 'Not'
@@ -622,78 +618,6 @@ class StringIn(_BinaryOperator):
         return _safe_coerce_to_lowercase(lvalue) in rvalues
 
 
-class _StrSetOperator(_BinaryOperator):
-    """Base class for set operations involving case-insensitive strings."""
-
-    def __init__(self, description, default, opfunc, rvalues, key=None):
-        rvalues = frozenset(map(_safe_coerce_to_lowercase, rvalues))
-        _BinaryOperator.__init__(self, description, default, opfunc, rvalues,
-                                 key)
-
-    def meets_spec(self, value):
-        if not isinstance(value, (types.ListType,) + types.StringTypes):
-            return False
-        elif not _are_keys_hashable(value):
-            return False
-
-        lvalues = frozenset(map(_safe_coerce_to_lowercase, value))
-        return _BinaryOperator.meets_spec(self, lvalues)
-
-
-class StringsIntersect(_StrSetOperator):
-    """Require that a set of values overlap with a pre-defined set of values
-    (as set in the constructor). For strings, values are compared in a case-
-    insensitive manner. For case-sensitive comparisons, see 'ValuesIntersect'.
-    """
-
-    def __init__(self, rvalue, key=None,
-                 description="contains {rvalue}, case-insentive",
-                 default=DEFAULT_NOT_SET):
-        description = description.format(rvalue=_list_values(rvalue, "and/or"))
-
-        _StrSetOperator.__init__(self, description, default,
-                                 self._string_intersection_operator,
-                                 frozenset(rvalue), key)
-
-    @classmethod
-    def _string_intersection_operator(cls, lvalue, rvalues):
-        """Implements case-insensitive 'intersect' operator."""
-        return bool(frozenset(lvalue).intersection(rvalues))
-
-
-class StringsSubsetOf(_StrSetOperator):
-    """Require that a set of values are a subset of a pre-defined set of values
-    (as set in the constructor). For strings, values are compared in a case-
-    insensitive manner. For case-sensitive comparisons, see 'ValuesSubsetOf'.
-
-    Note that empty sets are always considered to be a subset of the
-    pre-defined set.
-    """
-
-    def __init__(self, rvalue, key=None,
-                 description="subset of {rvalue}, case-insentive",
-                 default=DEFAULT_NOT_SET):
-        description = description.format(rvalue=_list_values(rvalue, "and"))
-
-        _StrSetOperator.__init__(self, description, default,
-                                 self._operator_func, frozenset(rvalue), key)
-
-    @classmethod
-    def _operator_func(cls, lvalue, rvalue):
-        """Operator implementation."""
-        return bool(frozenset(lvalue).issubset(rvalue))
-
-
-class StringIsUppercase(IsStr):
-    """Require that the value is a uppercase, non-empty string."""
-
-    def __init__(self, default=DEFAULT_NOT_SET):
-        IsStr.__init__(self, "an uppercase non-empty string", default)
-
-    def meets_spec(self, value):
-        return IsStr().meets_spec(value) and value.isupper()
-
-
 class StringStartsWith(IsStr):
     """Require that the value is a string with given prefix."""
 
@@ -704,7 +628,7 @@ class StringStartsWith(IsStr):
         IsStr.__init__(self, description, default)
 
     def meets_spec(self, value):
-        return IsStr.meets_spec(self, value) \
+        return super(StringStartsWith, self).meets_spec(value) \
             and value.startswith(self._prefix)
 
 
@@ -718,7 +642,8 @@ class StringEndsWith(IsStr):
         IsStr.__init__(self, description, default)
 
     def meets_spec(self, value):
-        return IsStr.meets_spec(self, value) and value.endswith(self._postfix)
+        return super(StringEndsWith, self).meets_spec(value) \
+            and value.endswith(self._postfix)
 
 
 ###############################################################################
@@ -785,10 +710,6 @@ class IsDictOf(MakefileSpec):
 ###############################################################################
 ###############################################################################
 # Helper functions
-
-
-def _are_keys_hashable(value):
-    return all(_is_hashable(key) for key in value)
 
 
 def _is_hashable(value):

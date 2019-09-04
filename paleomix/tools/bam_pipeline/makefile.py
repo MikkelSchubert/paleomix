@@ -44,7 +44,6 @@ from paleomix.common.makefile import \
     And, \
     Or, \
     Not, \
-    ValueGE, \
     ValueIn, \
     ValuesIntersect, \
     ValuesSubsetOf, \
@@ -88,13 +87,13 @@ def read_makefiles(config, filenames, pipeline_variant="bam"):
     return _validate_makefiles(config, makefiles)
 
 
-def _alphanum_check(whitelist):
+def _alphanum_check(whitelist, min_len=1):
     description = "characters a-z, A-Z, 0-9%s allowed"
     description %= (", and %r" % whitelist,) if whitelist else ""
 
     whitelist += string.ascii_letters + string.digits
 
-    return And(IsStr(),
+    return And(IsStr(min_len=min_len),
                ValuesSubsetOf(whitelist, description=description))
 
 
@@ -109,9 +108,7 @@ _VALID_PREFIX_PATH = \
         default=REQUIRED_VALUE)
 
 # Valid strings for targets / samples / libraries / lanes
-_VALID_TARGET_NAME = \
-    And(_alphanum_check(whitelist="._-"),
-        ValueGE(2, key=len, description="at least two characters long"))
+_VALID_TARGET_NAME = _alphanum_check(whitelist="._-", min_len=2)
 
 _VALID_FEATURES_DICT = {
     "Coverage": IsBoolean(default=True),

@@ -43,22 +43,14 @@ from paleomix.common.makefile import \
     IsBoolean, \
     IsStr, \
     IsNone, \
-    ValueLT, \
-    ValueLE, \
-    ValueGE, \
-    ValueGT, \
     ValueIn, \
     ValuesIntersect, \
     ValuesSubsetOf, \
     ValueMissing, \
     And, \
     Or, \
-    Xor, \
     Not, \
     StringIn, \
-    StringsIntersect, \
-    StringsSubsetOf, \
-    StringIsUppercase, \
     StringStartsWith, \
     StringEndsWith, \
     IsListOf, \
@@ -290,7 +282,7 @@ def test_is_boolean__rejects_not_boolean():
 
     yield _reject_not_str, 0
     for value in _COMMON_INVALID_VALUES:
-        if value != False:
+        if value is not False:
             yield _reject_not_str, value
 
 
@@ -334,8 +326,19 @@ def test_is_str__accepts_unicode_str():
 
 
 def test_is_str__rejects_empty_str():
-    spec = IsStr()
-    assert_raises(MakefileError, spec, _DUMMY_PATH, "")
+    assert_raises(MakefileError, IsStr(), _DUMMY_PATH, "")
+    assert_raises(MakefileError, IsStr(min_len=1), _DUMMY_PATH, "")
+    assert_raises(MakefileError, IsStr(min_len=2), _DUMMY_PATH, "")
+    assert_raises(MakefileError, IsStr(min_len=3), _DUMMY_PATH, "")
+
+
+def test_is_str__accepts_empty_str():
+    spec = IsStr(min_len=0)
+    spec(_DUMMY_PATH, "")
+
+
+def test_is_str__rejects_negative_min_len():
+    assert_raises(ValueError, IsStr, min_len=-1)
 
 
 def test_is_str__rejects_not_str():
@@ -371,6 +374,28 @@ def test_is_str__default_set__valid_value():
 
 def test_is_str__default_set__must_meet_spec():
     assert_raises(ValueError, IsStr, default=17)
+
+
+def test_is_str__min_len_0():
+    spec = IsStr(min_len=0)
+    spec(_DUMMY_PATH, "")
+    spec(_DUMMY_PATH, "a")
+    spec(_DUMMY_PATH, "ab")
+
+
+def test_is_str__min_len_1():
+    spec = IsStr(min_len=1)
+    assert_raises(MakefileError, spec, _DUMMY_PATH, "")
+    spec(_DUMMY_PATH, "a")
+    spec(_DUMMY_PATH, "ab")
+
+
+def test_is_str__min_len_2():
+    spec = IsStr(min_len=2)
+    assert_raises(MakefileError, spec, _DUMMY_PATH, "")
+    assert_raises(MakefileError, spec, _DUMMY_PATH, "a")
+    spec(_DUMMY_PATH, "ab")
+    spec(_DUMMY_PATH, "abc")
 
 
 ###############################################################################
@@ -413,309 +438,6 @@ def test_is_none__default_not_set():
 
 def test_is_none__default_not_implemented_for_is_none():
     assert_raises(NotImplementedError, IsNone, default=None)
-
-
-###############################################################################
-###############################################################################
-# ValueLT
-
-def test_value_lt__accepts_value_lt():
-    spec = ValueLT(7)
-    spec(_DUMMY_PATH, 6)
-
-
-def test_value_lt__rejects_value_eq():
-    spec = ValueLT(7)
-    assert_raises(MakefileError, spec, _DUMMY_PATH, 7)
-
-
-def test_value_lt__rejects_value_gt():
-    spec = ValueLT(7)
-    assert_raises(MakefileError, spec, _DUMMY_PATH, 8)
-
-
-def test_value_lt__accepts_value_lt__with_key():
-    spec = ValueLT(7, key=len)
-    spec(_DUMMY_PATH, "abcdef")
-
-
-def test_value_lt__rejects_value_eq__with_key():
-    spec = ValueLT(7, key=len)
-    assert_raises(MakefileError, spec, _DUMMY_PATH, "abcdefg")
-
-
-def test_value_lt__rejects_value_gt__with_key():
-    spec = ValueLT(7, key=len)
-    assert_raises(MakefileError, spec, _DUMMY_PATH, "abcdefgh")
-
-
-def test_value_lt__default_description():
-    spec = ValueLT('Foo')
-    assert_equal(spec.description, "value < 'Foo'")
-
-
-def test_value_lt__custom_description():
-    spec = ValueLT('Bar', description='anything less than {rvalue}')
-    assert_equal(spec.description, "anything less than 'Bar'")
-
-
-def test_is_value_lt__default_not_set():
-    spec = ValueLT(10)
-    assert_is(spec.default, DEFAULT_NOT_SET)
-
-
-def test_is_value_lt__default_set__valid_value():
-    spec = ValueLT(10, default=9)
-    assert_equal(spec.default, 9)
-
-
-def test_is_value_lt__default_set__must_meet_spec():
-    assert_raises(ValueError, ValueLT, 10, default=17)
-
-
-def test_is_value_lt__handles_not_number():
-    def _rejects_value(value):
-        spec = ValueLT(123)
-        assert_raises(MakefileError, spec, _DUMMY_PATH, value)
-
-    def _accepts_value(value):
-        spec = ValueLT(123)
-        spec(_DUMMY_PATH, value)
-
-    yield _rejects_value, "foo"
-    yield _accepts_value, None
-    yield _accepts_value, False
-
-    for value in _COMMON_INVALID_VALUES:
-        if value not in (False, None):
-            yield _rejects_value, value
-
-
-###############################################################################
-###############################################################################
-# ValueLE
-
-def test_value_le__accepts_value_lt():
-    spec = ValueLE(7)
-    spec(_DUMMY_PATH, 6)
-
-
-def test_value_le__accepts_value_eq():
-    spec = ValueLE(7)
-    spec(_DUMMY_PATH, 7)
-
-
-def test_value_le__rejects_value_gt():
-    spec = ValueLE(7)
-    assert_raises(MakefileError, spec, _DUMMY_PATH, 8)
-
-
-def test_value_le__accepts_value_lt__with_key():
-    spec = ValueLE(7, key=len)
-    spec(_DUMMY_PATH, "abcdef")
-
-
-def test_value_le__accepts_value_eq__with_key():
-    spec = ValueLE(7, key=len)
-    spec(_DUMMY_PATH, "abcdefg")
-
-
-def test_value_le__rejects_value_gt__with_key():
-    spec = ValueLE(7, key=len)
-    assert_raises(MakefileError, spec, _DUMMY_PATH, "abcdefgh")
-
-
-def test_value_le__default_description():
-    spec = ValueLE('Foo')
-    assert_equal(spec.description, "value <= 'Foo'")
-
-
-def test_value_le__custom_description():
-    spec = ValueLE('Bar', description='no more than {rvalue}')
-    assert_equal(spec.description, "no more than 'Bar'")
-
-
-def test_is_value_le__default_not_set():
-    spec = ValueLE(10)
-    assert_is(spec.default, DEFAULT_NOT_SET)
-
-
-def test_is_value_le__default_set__valid_value():
-    spec = ValueLE(10, default=10)
-    assert_equal(spec.default, 10)
-
-
-def test_is_value_le__default_set__must_meet_spec():
-    assert_raises(ValueError, ValueLE, 10, default=17)
-
-
-def test_is_value_le__handles_not_number():
-    def _rejects_value(value):
-        spec = ValueLE(123)
-        assert_raises(MakefileError, spec, _DUMMY_PATH, value)
-
-    def _accepts_value(value):
-        spec = ValueLE(123)
-        spec(_DUMMY_PATH, value)
-
-    yield _rejects_value, "foo"
-    yield _accepts_value, None
-    yield _accepts_value, False
-
-    for value in _COMMON_INVALID_VALUES:
-        if value not in (False, None):
-            yield _rejects_value, value
-
-
-###############################################################################
-###############################################################################
-# ValueGE
-
-def test_value_ge__rejects_value_lt():
-    spec = ValueGE(7)
-    assert_raises(MakefileError, spec, _DUMMY_PATH, 6)
-
-
-def test_value_ge__accepts_value_eq():
-    spec = ValueGE(7)
-    spec(_DUMMY_PATH, 7)
-
-
-def test_value_ge__accepts_value_gt():
-    spec = ValueGE(7)
-    spec(_DUMMY_PATH, 8)
-
-
-def test_value_ge__accepts_value_lt__with_key():
-    spec = ValueGE(7, key=len)
-    assert_raises(MakefileError, spec, _DUMMY_PATH, "abcdef")
-
-
-def test_value_ge__accepts_value_eq__with_key():
-    spec = ValueGE(7, key=len)
-    spec(_DUMMY_PATH, "abcdefg")
-
-
-def test_value_ge__accepts_value_gt__with_key():
-    spec = ValueGE(7, key=len)
-    spec(_DUMMY_PATH, "abcdefgh")
-
-
-def test_value_ge__default_description():
-    spec = ValueGE('Foo')
-    assert_equal(spec.description, "value >= 'Foo'")
-
-
-def test_value_ge__custom_description():
-    spec = ValueGE('Bar', description='no less than {rvalue}')
-    assert_equal(spec.description, "no less than 'Bar'")
-
-
-def test_is_value_ge__default_not_set():
-    spec = ValueGE(10)
-    assert_is(spec.default, DEFAULT_NOT_SET)
-
-
-def test_is_value_ge__default_set__valid_value():
-    spec = ValueGE(10, default=10)
-    assert_equal(spec.default, 10)
-
-
-def test_is_value_ge__default_set__must_meet_spec():
-    assert_raises(ValueError, ValueGE, 10, default=7)
-
-
-def test_is_value_ge__handles_not_number():
-    def _rejects_value(value):
-        spec = ValueGE(123)
-        assert_raises(MakefileError, spec, _DUMMY_PATH, value)
-
-    def _accepts_value(value):
-        spec = ValueGE(123)
-        spec(_DUMMY_PATH, value)
-
-    yield _accepts_value, "foo"
-    yield _rejects_value, None
-    yield _rejects_value, False
-
-    for value in _COMMON_INVALID_VALUES:
-        if value not in (None, False):
-            yield _accepts_value, value
-
-
-###############################################################################
-###############################################################################
-# ValueGT
-
-def test_value_gt__rejects_value_lt():
-    spec = ValueGT(7)
-    assert_raises(MakefileError, spec, _DUMMY_PATH, 6)
-
-
-def test_value_gt__rejects_value_eq():
-    spec = ValueGT(7)
-    assert_raises(MakefileError, spec, _DUMMY_PATH, 7)
-
-
-def test_value_gt__accepts_value_gt():
-    spec = ValueGT(7)
-    spec(_DUMMY_PATH, 8)
-
-
-def test_value_gt__accepts_value_lt__with_key():
-    spec = ValueGT(7, key=len)
-    assert_raises(MakefileError, spec, _DUMMY_PATH, "abcdef")
-
-
-def test_value_gt__accepts_value_eq__with_key():
-    spec = ValueGT(7, key=len)
-    assert_raises(MakefileError, spec, _DUMMY_PATH, "abcdefg")
-
-
-def test_value_gt__accepts_value_gt__with_key():
-    spec = ValueGT(7, key=len)
-    spec(_DUMMY_PATH, "abcdefgh")
-
-
-def test_value_gt__default_description():
-    spec = ValueGT('Foo')
-    assert_equal(spec.description, "value > 'Foo'")
-
-
-def test_value_gt__custom_description():
-    spec = ValueGT('Bar', description='more than {rvalue}')
-    assert_equal(spec.description, "more than 'Bar'")
-
-
-def test_is_value_gt__default_not_set():
-    spec = ValueGT(10)
-    assert_is(spec.default, DEFAULT_NOT_SET)
-
-
-def test_is_value_gt__default_set__valid_value():
-    spec = ValueGT(10, default=11)
-    assert_equal(spec.default, 11)
-
-
-def test_is_value_gt__default_set__must_meet_spec():
-    assert_raises(ValueError, ValueGT, 10, default=10)
-
-
-def test_is_value_gt__handles_not_number():
-    def _rejects_value(value):
-        spec = ValueGT(123)
-        assert_raises(MakefileError, spec, _DUMMY_PATH, value)
-
-    def _accepts_value(value):
-        spec = ValueGT(123)
-        spec(_DUMMY_PATH, value)
-
-    yield _accepts_value, "foo"
-    yield _rejects_value, None
-    yield _rejects_value, False
-    for value in _COMMON_INVALID_VALUES:
-        if value not in (False, None):
-            yield _accepts_value, value
 
 
 ###############################################################################
@@ -773,7 +495,7 @@ def test_is_value_in__default_set__valid_value():
 
 
 def test_is_value_in__default_set__must_meet_spec():
-    assert_raises(ValueError, ValueGT, range(5), default=5)
+    assert_raises(ValueError, ValueIn, range(5), default=5)
 
 
 def test_is_value_in__handles_types():
@@ -944,7 +666,7 @@ def test_subset_of__handles_types():
 
     yield _rejects_value, "foo"
     for value in _COMMON_INVALID_VALUES:
-        if value != []:
+        if value not in ([], ()):
             yield _rejects_value, value
 
 
@@ -953,23 +675,23 @@ def test_subset_of__handles_types():
 # And
 
 def test_and__accepts_when_all_true():
-    spec = And(IsFloat, ValueLT(1.5))
+    spec = And(IsFloat, ValueIn((0.0, 1, 2)))
     spec(_DUMMY_PATH, 0.0)
 
 
 def test_and__rejects_when_first_is_false():
-    spec = And(IsFloat, ValueLT(1.5))
-    assert_raises(MakefileError, spec, _DUMMY_PATH, 0)
+    spec = And(IsFloat, ValueIn((0.0, 1, 2)))
+    assert_raises(MakefileError, spec, _DUMMY_PATH, 1)
 
 
 def test_and__rejects_when_second_is_false():
-    spec = And(IsFloat, ValueLT(1.5))
-    assert_raises(MakefileError, spec, _DUMMY_PATH, 2.0)
+    spec = And(IsFloat, ValueIn((0.0, 1, 2)))
+    assert_raises(MakefileError, spec, _DUMMY_PATH, 3.0)
 
 
 def test_and__rejects_when_both_is_false():
-    spec = And(IsFloat, ValueLT(1.5))
-    assert_raises(MakefileError, spec, _DUMMY_PATH, 2)
+    spec = And(IsFloat, ValueIn((0.0, 1, 2)))
+    assert_raises(MakefileError, spec, _DUMMY_PATH, 3)
 
 
 def test_and__rejects_no_tests():
@@ -981,21 +703,21 @@ def test_and__rejects_non_spec_tests():
 
 
 def test_and__default_not_set():
-    spec = And(IsInt, ValueGT(10))
+    spec = And(IsInt, ValueIn(range(10)))
     assert_is(spec.default, DEFAULT_NOT_SET)
 
 
 def test_and__default_set__valid_value():
-    spec = And(IsInt, ValueGT(10), default=20)
+    spec = And(IsInt, ValueIn(range(30)), default=20)
     assert_equal(spec.default, 20)
 
 
 def test_and__default_set__must_meet_spec():
-    assert_raises(ValueError, And, IsInt, ValueGT(10), default=5)
+    assert_raises(ValueError, And, IsInt, ValueIn((1,)), default=5)
 
 
 def test_and__defaults_not_set_in_specs():
-    assert_raises(ValueError, And, IsInt(default=10), ValueGT(10))
+    assert_raises(ValueError, And, IsInt(default=10), ValueIn((range(100))))
 
 
 ###############################################################################
@@ -1026,79 +748,21 @@ def test_or__rejects_non_spec_tests():
 
 
 def test_or__default_not_set():
-    spec = Or(IsInt, ValueGT(10))
+    spec = Or(IsInt, ValueIn((10,)))
     assert_is(spec.default, DEFAULT_NOT_SET)
 
 
 def test_or__default_set__valid_value():
-    spec = Or(IsInt, ValueGT(10), default=17)
+    spec = Or(IsInt, ValueIn((10,)), default=17)
     assert_equal(spec.default, 17)
 
 
 def test_or__default_set__must_meet_spec():
-    assert_raises(ValueError, Or, IsInt, ValueGT(10), default=5.5)
+    assert_raises(ValueError, Or, IsInt, ValueIn((10, )), default=5.5)
 
 
 def test_or__defaults_not_set_in_specs():
-    assert_raises(ValueError, Or, IsInt(default=10), ValueGT(10))
-
-
-###############################################################################
-###############################################################################
-# Xor
-
-def test_xor__rejects_when_all_true():
-    spec = Xor(IsFloat, ValueLT(1))
-    assert_raises(MakefileError, spec, _DUMMY_PATH, 0.0)
-
-
-def test_xor__accepts_when_first_is_false():
-    spec = Xor(IsFloat, ValueLT(1))
-    spec(_DUMMY_PATH, 0)
-
-
-def test_xor__accepts_when_second_is_false():
-    spec = Xor(IsFloat, ValueLT(1.0))
-    spec(_DUMMY_PATH, 2.0)
-
-
-def test_xor__rejects_when_both_is_false():
-    spec = Xor(IsFloat, ValueLT(1.0))
-    assert_raises(MakefileError, spec, _DUMMY_PATH, 2)
-
-
-def test_xor__rejects_no_tests():
-    assert_raises(ValueError, Xor)
-
-
-def test_xor__rejects_one_test():
-    assert_raises(ValueError, Xor, IsInt)
-
-
-def test_xor__rejects_three_tests():
-    assert_raises(ValueError, Xor, IsInt, IsFloat, IsStr)
-
-
-def test_xor__rejects_non_spec_tests():
-    assert_raises(TypeError, Xor, id, id)
-
-
-def test_xor__default_not_set():
-    spec = Xor(IsInt, ValueGT(10))
-    assert_is(spec.default, DEFAULT_NOT_SET)
-
-
-def test_xor__default_set__valid_value():
-    spec = Xor(IsInt, ValueGT(10), default=5)
-    assert_equal(spec.default, 5)
-
-
-def test_xor__default_set__must_meet_spec():
-    assert_raises(ValueError, Xor, IsInt, ValueGT(10), default=17)
-
-
-def test_xor__defaults_not_set_in_specs():
-    assert_raises(ValueError, Xor, IsInt(default=10), ValueGT(10))
+    assert_raises(ValueError, Or, IsInt(default=10), ValueIn((10, )))
 
 
 ###############################################################################
@@ -1170,162 +834,6 @@ def test_string_in__handles_types():
     yield _rejects_value, "foo"
     for value in _COMMON_INVALID_VALUES:
         yield _rejects_value, value
-
-
-###############################################################################
-###############################################################################
-# StringsIntersect
-
-def test_strings_intersect__case_insensitive__value_in_set():
-    spec = StringsIntersect(("Abc", "bCe", "cdE"))
-    spec(_DUMMY_PATH, ["Bce"])
-
-
-def test_strings_intersect__chars__case_insensitive__accepts_differt_in_case():
-    spec = StringsIntersect("abcdefghijkl")
-    spec(_DUMMY_PATH, "A BIG DEAL")
-
-
-def test_strings_intersect__case_insensitive__mixed_string__non_string_found():
-    spec = StringsIntersect(("A", "c", "B", 1, 2, 3))
-    spec(_DUMMY_PATH, [1])
-
-
-def test_strings_intersect__case_insensitive__mixed_string_string_found():
-    spec = StringsIntersect(("A", "c", "B", 1, 2, 3))
-    spec(_DUMMY_PATH, "a")
-
-
-def test_strings_intersect__rejects_dictionary():
-    spec = StringsIntersect("abc")
-    assert_raises(MakefileError, spec, _DUMMY_PATH, {"a": 1, "b": 2})
-
-
-def test_strings_intersect__default_not_set():
-    spec = StringsIntersect("ABCDEFGH")
-    assert_is(spec.default, DEFAULT_NOT_SET)
-
-
-def test_strings_intersect__default_set__valid_value():
-    spec = StringsIntersect("ABCDEFGH", default="eabi")
-    assert_equal(spec.default, "eabi")
-
-
-def test_strings_intersect__default_set__must_meet_spec():
-    assert_raises(ValueError, StringsIntersect, "ABCDEFGH", default=[1, 2, 3])
-
-
-def test_string_intersects__handles_types():
-    def _rejects_value(value):
-        spec = StringsIntersect("ABCDEFGH")
-        assert_raises(MakefileError, spec, _DUMMY_PATH, value)
-
-    yield _rejects_value, "xyz"
-    for value in _COMMON_INVALID_VALUES:
-        yield _rejects_value, value
-
-
-###############################################################################
-###############################################################################
-# StringsSubsetOf
-
-def test_subset_of__case_insensitive__value_in_set():
-    spec = StringsSubsetOf(("Abc", "bCe", "cdE"))
-    spec(_DUMMY_PATH, ["Bce"])
-
-
-def test_subset_of__case_insensitive__empty_set_is_subset():
-    spec = StringsSubsetOf(("Abc", "bCe", "cdE"))
-    spec(_DUMMY_PATH, [])
-
-
-def test_subset_of__chars__case_insensitive__accepts_differences_in_case():
-    spec = StringsSubsetOf("abcdefghijkl ")
-    spec(_DUMMY_PATH, "A big DEAL")
-
-
-def test_subset_of__case_insensitive__mixed_string__non_string_found():
-    spec = StringsSubsetOf(("A", "c", "B", 1, 2, 3))
-    spec(_DUMMY_PATH, [1])
-
-
-def test_subset_of__case_insensitive__mixed_string_string_found():
-    spec = StringsSubsetOf(("A", "c", "B", 1, 2, 3))
-    spec(_DUMMY_PATH, "a")
-
-
-def test_strings_subset_of__rejects_dictionary():
-    spec = StringsSubsetOf("abc")
-    assert_raises(MakefileError, spec, _DUMMY_PATH, {"a": 1, "b": 2})
-
-
-def test_strings_subset_of__default_not_set():
-    spec = StringsSubsetOf("ABCDEFGH")
-    assert_is(spec.default, DEFAULT_NOT_SET)
-
-
-def test_strings_subset_of__default_set__valid_value():
-    spec = StringsSubsetOf("ABCDEFGH", default="adFg")
-    assert_equal(spec.default, "adFg")
-
-
-def test_string_subset_of__default_set__must_meet_spec():
-    assert_raises(ValueError, StringsSubsetOf, "ABCDEFGH", default=[1, 2, 3])
-
-
-def test_string_subset_of__handles_types():
-    def _rejects_value(value):
-        spec = StringsSubsetOf("ABCDEFGH")
-        assert_raises(MakefileError, spec, _DUMMY_PATH, value)
-
-    yield _rejects_value, "foo"
-    for value in _COMMON_INVALID_VALUES:
-        if value != []:
-            yield _rejects_value, value
-
-
-###############################################################################
-###############################################################################
-# StringIsUppercase
-
-def test_string_is_uppercase__accepts_standard_str():
-    spec = StringIsUppercase()
-    spec(_DUMMY_PATH, "ABC")
-
-
-def test_string_is_uppercase__accepts_unicode_str():
-    spec = StringIsUppercase()
-    spec(_DUMMY_PATH, u"DEF")
-
-
-def test_string_is_uppercase__rejects_empty_string():
-    spec = StringIsUppercase()
-    assert_raises(MakefileError, spec, _DUMMY_PATH, "")
-
-
-def test_string_is_uppercase__rejects_not_uppercase_str():
-    def _reject_not_uppercase_str(value):
-        spec = StringIsUppercase()
-        assert_raises(MakefileError, spec, _DUMMY_PATH, value)
-
-    yield _reject_not_uppercase_str, "AcEf"
-    yield _reject_not_uppercase_str, 1
-    for value in _COMMON_INVALID_VALUES:
-        yield _reject_not_uppercase_str, value
-
-
-def test_string_is_uppercase__default_not_set():
-    spec = StringIsUppercase()
-    assert_is(spec.default, DEFAULT_NOT_SET)
-
-
-def test_string_is_uppercase__default_set__valid_value():
-    spec = StringIsUppercase(default="FOO")
-    assert_equal(spec.default, "FOO")
-
-
-def test_string_is_uppercase__default_set__must_meet_spec():
-    assert_raises(ValueError, StringIsUppercase, default="foo")
 
 
 ###############################################################################
@@ -1543,22 +1051,14 @@ def test_specs__path_is_displayed_in_exception():
     yield _path_is_displayed_in_exception, IsBoolean(), 1
     yield _path_is_displayed_in_exception, IsStr(), 1
     yield _path_is_displayed_in_exception, IsNone(), 1
-    yield _path_is_displayed_in_exception, ValueLT(0), 1
-    yield _path_is_displayed_in_exception, ValueLE(0), 1
-    yield _path_is_displayed_in_exception, ValueGE(0), -1
-    yield _path_is_displayed_in_exception, ValueGT(0), -1
     yield _path_is_displayed_in_exception, ValueIn([1]), 2
     yield _path_is_displayed_in_exception, ValuesIntersect([1]), [2]
     yield _path_is_displayed_in_exception, ValuesSubsetOf([1]), [2]
     yield _path_is_displayed_in_exception, ValueMissing(), True
     yield _path_is_displayed_in_exception, And(IsStr), 1
     yield _path_is_displayed_in_exception, Or(IsStr), 1
-    yield _path_is_displayed_in_exception, Xor(IsStr, IsInt), True
     yield _path_is_displayed_in_exception, Not(IsInt), 1
     yield _path_is_displayed_in_exception, StringIn("abc"), 1
-    yield _path_is_displayed_in_exception, StringsIntersect("abc"), [1]
-    yield _path_is_displayed_in_exception, StringsSubsetOf("abc"), [1]
-    yield _path_is_displayed_in_exception, StringIsUppercase(), 1
     yield _path_is_displayed_in_exception, StringStartsWith("FOO"), 1
     yield _path_is_displayed_in_exception, StringEndsWith("FOO"), 1
     yield _path_is_displayed_in_exception, IsListOf(IsInt), "foo"
