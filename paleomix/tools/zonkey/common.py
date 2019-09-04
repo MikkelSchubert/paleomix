@@ -69,9 +69,8 @@ def contig_name_to_plink_name(chrom):
 
 def read_summary(filename, default="[MISSING VALUE!]"):
     results = collections.defaultdict(lambda: default)
-    with open(filename) as makefile:
-        string = makefile.read()
-        data = paleomix.yaml.safe_load(string)
+    with open(filename) as handle:
+        data = paleomix.yaml.safe_load(handle)
 
         if not isinstance(data, dict):
             raise DBFileError('Summary file does not contain dictionary')

@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #
-# Copyright (c) 2012 Mikkel Schubert <MikkelSch@gmail.com>
+# Copyright (c) 2013 Mikkel Schubert <MikkelSch@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,12 +20,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import sys
+import warnings
 
-# The following import is done to allow (at some point) for the inclusion of
-# the python 3.x version of PyYAML, and the automatic selection of the correct
-# version. Currently the rest of the pipeline only supports Python 2.x.
-if sys.version_info.major == 2:
-    from paleomix.yaml.lib2 import *
-else:
-    raise NotImplementedError("Python 3.x version of PyYAML not bundled yet")
+import ruamel.yaml
+
+from ruamel.yaml import YAMLError  # noqa: F401
+
+
+def safe_load(stream):
+    yaml = ruamel.yaml.YAML(typ="safe", pure=True)
+    yaml.version = (1, 1)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", ruamel.yaml.error.MantissaNoDotYAML1_1Warning)
+
+        return yaml.load(stream)

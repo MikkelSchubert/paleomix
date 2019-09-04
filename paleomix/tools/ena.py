@@ -275,7 +275,7 @@ def _build_table_rows(args):
 
 def _parse_makefile(filename):
     with open(filename) as handle:
-        mkfile = paleomix.yaml.safe_load(handle.read())
+        mkfile = paleomix.yaml.safe_load(handle)
         mkfile.pop("Options", None)
         mkfile.pop("Prefixes", None)
 

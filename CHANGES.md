@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+### Changed
+  - Removed internal copy of pyyaml and added dependency on ruamel.yaml
+
+
 ## [1.2.13.4] - 2019-03-25
 ### Fixed
   - Improved detection of Picard versions in cases where 'java'

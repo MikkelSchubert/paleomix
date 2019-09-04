@@ -293,7 +293,7 @@ class ZonkeyDB(object):
         handle = tar_handle.extractfile(filename)
 
         try:
-            result = paleomix.yaml.safe_load(handle.read())
+            result = paleomix.yaml.safe_load(handle)
         except paleomix.yaml.YAMLError, error:
             raise ZonkeyDBError("Error reading settings file %r; %s"
                                 % (filename, error))

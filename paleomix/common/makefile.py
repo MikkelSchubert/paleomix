@@ -190,6 +190,7 @@ import types
 import hashlib
 import datetime
 import operator
+import StringIO
 
 import paleomix.yaml
 from paleomix.common.utilities import group_by_pred
@@ -215,8 +216,8 @@ def read_makefile(filename, specification):
     try:
         with open(filename) as makefile:
             string = makefile.read()
-            data = paleomix.yaml.safe_load(string)
-    except paleomix.yaml.error.YAMLError, error:
+            data = paleomix.yaml.safe_load(StringIO.StringIO(string))
+    except paleomix.yaml.YAMLError as error:
         raise MakefileError(error)
 
     mtime = os.path.getmtime(os.path.realpath(filename))
