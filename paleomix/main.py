@@ -93,10 +93,6 @@ def _commands():
     yield ("retable", "paleomix.tools.retable",
            "Pretty print whitespace separated tabular data.")
 
-    # In development:
-    #   Prepares FASTQ reads recorded in BAM pipeline makefiles
-    #   for submission to the European Nucleotide Archive.
-    yield ("ena", "paleomix.tools.ena", None)
 
 # Error message shown if the Pysam module ('pysam') cannot be imported
 _IMPORT_ERROR_PYSAM = """

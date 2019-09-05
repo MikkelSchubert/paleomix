@@ -272,8 +272,7 @@ def _print_usage(pipeline):
         "  -- {cmd} example [...]  -- Create example project.\n" \
         "  -- {cmd} makefile [...] -- Print makefile template.\n" \
         "  -- {cmd} dryrun [...]   -- Perform dry run of pipeline.\n" \
-        "  -- {cmd} run [...]      -- Run pipeline on provided makefiles.\n" \
-        "  -- {cmd} remap [...]    -- Re-map hits from previous alignment."
+        "  -- {cmd} run [...]      -- Run pipeline on provided makefiles.\n"
 
     print_info(usage.format(version=paleomix.__version__,
                             cmd=basename,
@@ -285,7 +284,7 @@ def main(argv, pipeline="bam"):
 
     commands = ("makefile", "mkfile", "run",
                 "dry_run", "dry-run", "dryrun",
-                "remap", "example", "examples")
+                "example", "examples")
 
     if not argv or (argv[0] == "help"):
         _print_usage(pipeline)
@@ -295,11 +294,6 @@ def main(argv, pipeline="bam"):
         return 1
     elif argv[0] in ("mkfile", "makefile"):
         return bam_mkfile.main(argv[1:], pipeline=pipeline)
-    elif argv[0] in ("remap", "remap_prefix"):
-        # Import here to avoid circular dependency issues
-        import paleomix.tools.bam_pipeline.remap as bam_remap
-
-        return bam_remap.main(argv[1:])
     elif argv[0] in ("example", "examples"):
         return paleomix.resources.copy_example("bam_pipeline", argv[1:])
 

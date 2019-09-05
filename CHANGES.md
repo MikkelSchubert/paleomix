@@ -4,6 +4,10 @@
 ### Changed
   - Removed internal copy of pyyaml and added dependency on ruamel.yaml
 
+### Removed
+  - Removed 'bam_pipeline remap' command.
+  - Removed undocumented 'ena' command.
+
 
 ## [1.2.13.4] - 2019-03-25
 ### Fixed
