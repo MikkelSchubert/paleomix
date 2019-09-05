@@ -277,7 +277,6 @@ def test_run__exceptions():
 
         return test_function
 
-    print "foo"
     for key in ('_setup', '_run', '_teardown'):
         yield build_tests(key, TypeError("The castle AAARGH!"), NodeUnhandledException)
         yield build_tests(key, NodeError("He's a very naughty boy!"), NodeError)
