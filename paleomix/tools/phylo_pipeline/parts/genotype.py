@@ -32,8 +32,6 @@ from paleomix.nodes.samtools import \
     BAMIndexNode
 from paleomix.nodes.bedtools import \
     PaddedBedNode
-from paleomix.nodes.sequences import \
-    ExtractReferenceNode
 from paleomix.common.fileutils import \
     swap_ext, \
     add_postfix
@@ -41,7 +39,6 @@ from paleomix.nodes.commands import \
     VCFPileupNode, \
     VCFFilterNode, \
     BuildRegionsNode, \
-    SampleRegionsNode, \
     GenotypeRegionsNode
 
 
@@ -278,73 +275,6 @@ def build_genotyping_nodes(options, genotyping, sample, regions, dependencies):
     return (faidx,)
 
 
-def build_sampling_nodes(options, genotyping, sample, regions, dependencies):
-    fasta_file = regions["Genotypes"][sample]
-    pileup_file = swap_ext(fasta_file, ".pileup.bgz")
-
-    padding = genotyping["Padding"]
-    slop, node = build_regions_nodes(regions, padding, dependencies)
-
-    bam_file = "%s.%s.bam" % (sample, regions["Prefix"])
-    bam_file = os.path.join(options.samples_root, bam_file)
-    if regions["Realigned"]:
-        bam_file = add_postfix(bam_file, ".realigned")
-    bai_node = build_bam_index_node(bam_file)
-
-    genotype = GenotypeRegionsNode.customize(pileup_only=True,
-                                             reference=regions["FASTA"],
-                                             bedfile=slop,
-                                             infile=bam_file,
-                                             outfile=pileup_file,
-                                             nbatches=options.samtools_max_threads,
-                                             dependencies=node + (bai_node,))
-    apply_samtools_options(genotype.command, genotyping["MPileup"],
-                           "--mpileup-argument")
-    genotype = genotype.build_node()
-
-    tabix = TabixIndexNode(infile=pileup_file,
-                           preset="pileup",
-                           dependencies=genotype)
-
-    builder = SampleRegionsNode(infile=pileup_file,
-                                bedfile=regions["BED"],
-                                outfile=fasta_file,
-                                dependencies=tabix)
-
-    faidx = FastaIndexNode(infile=fasta_file,
-                           dependencies=builder)
-
-    return (faidx,)
-
-
-def build_reference_nodes(options, genotyping, sample, regions, dependencies):
-    input_file = "%s.%s.fasta" % (regions["Prefix"], sample)
-    input_fpath = os.path.join(options.refseq_root, input_file)
-
-    output_file = "%s.%s.fasta" % (sample, regions["Desc"])
-    output_fpath = os.path.join(options.destination, "genotypes", output_file)
-
-    dependencies = list(dependencies)
-    dependencies.append(build_fasta_index_node(regions["FASTA"]))
-
-    node = ExtractReferenceNode(reference=input_fpath,
-                                bedfile=regions["BED"],
-                                outfile=output_fpath,
-                                dependencies=dependencies)
-
-    faidx = FastaIndexNode(infile=output_fpath,
-                           dependencies=node)
-    return (faidx,)
-
-
-# Functions used to carry out each of the supported genotyping methods
-_GENOTYPING_METHODS = {
-    "reference sequence": build_reference_nodes,
-    "random sampling": build_sampling_nodes,
-    "samtools": build_genotyping_nodes,
-}
-
-
 def build_sample_nodes(options, genotyping, regions_sets, sample,
                        dependencies=()):
     nodes = []
@@ -352,21 +282,17 @@ def build_sample_nodes(options, genotyping, regions_sets, sample,
         regions = deepcopy(regions)
 
         # Enforce homozygous contigs based on sex tag
-        regions["HomozygousContigs"] \
-            = regions["HomozygousContigs"][sample["Sex"]]
+        regions["HomozygousContigs"] = regions["HomozygousContigs"][sample["Sex"]]
 
-        genotyping_method = sample["GenotypingMethod"].lower()
-        if genotyping_method not in _GENOTYPING_METHODS:
-            assert False, "Unexpected genotyping method %r for sample %r" \
-                          % (genotyping_method, sample["Name"])
-
-        genotyping_function = _GENOTYPING_METHODS[genotyping_method]
-        node = genotyping_function(options=options,
-                                   genotyping=genotyping[regions["Name"]],
-                                   sample=sample["Name"],
-                                   regions=regions,
-                                   dependencies=dependencies)
-        nodes.extend(node)
+        nodes.extend(
+            build_genotyping_nodes(
+                options=options,
+                genotyping=genotyping[regions["Name"]],
+                sample=sample["Name"],
+                regions=regions,
+                dependencies=dependencies,
+            )
+        )
 
     return nodes
 

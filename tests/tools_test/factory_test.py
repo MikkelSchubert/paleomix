@@ -88,7 +88,6 @@ def test_factory__commands():
                 ("rmdup_collapsed", "usage: paleomix rmdup_collapsed [options] < sorted.bam > out.bam"),
                 ("genotype",        "usage: paleomix genotype [options] sorted.bam out.vcf.bgz"),
                 ("gtf_to_bed",      "usage: paleomix gtf_to_bed [options] in.gtf out_prefix [in.scaffolds]"),
-                ("sample_pileup",   "usage: paleomix sample_pileup [options] --genotype in.vcf --intervals in.bed > out.fasta"),
                 ("vcf_filter",      "Usage: paleomix vcf_filter [options] [in1.vcf, ...]"),
                 ("vcf_to_fasta",    "usage: paleomix vcf_to_fasta [options] --genotype in.vcf --intervals in.bed"),
                 ("cat",             "usage: paleomix cat [-h] [--output OUTPUT] file [file ...]"))

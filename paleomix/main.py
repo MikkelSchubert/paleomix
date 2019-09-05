@@ -79,8 +79,6 @@ def _commands():
     yield ("gtf_to_bed", "paleomix.tools.gtf_to_bed",
            "Convert GTF file to BED files grouped by feature "
            "(coding, RNA, etc).")
-    yield ("sample_pileup", "paleomix.tools.sample_pileup",
-           "Randomly sample sites in a pileup to generate a FASTA sequence.")
     yield ("vcf_filter", "paleomix.tools.vcf_filter",
            "Quality filters for VCF records, similar to "
            "'vcfutils.pl varFilter'.")

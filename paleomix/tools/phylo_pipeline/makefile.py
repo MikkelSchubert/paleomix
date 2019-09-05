@@ -427,8 +427,7 @@ def _update_and_check_max_read_depth(options, mkfile):
     for (key, settings) in mkfile["Genotyping"].iteritems():
         required_keys = set()
         for sample in mkfile["Project"]["Samples"].itervalues():
-            if sample["GenotypingMethod"].lower() == "samtools":
-                required_keys.add(sample["Name"])
+            required_keys.add(sample["Name"])
 
         max_depths = settings["VCF_Filter"]["MaxReadDepth"]
         if isinstance(max_depths, types.DictType):
@@ -588,9 +587,7 @@ def _update_genotyping(mkfile):
             raise MakefileError(message)
 
     for key in mkfile["Project"]["Regions"]:
-        subdd = fill_dict(genotyping.get(key, {}), defaults)
-        subdd["Random"]["--padding"] = subdd["Padding"]
-        genotyping[key] = subdd
+        genotyping[key] = fill_dict(genotyping.get(key, {}), defaults)
 
     regions = set(genotyping)
     unknown_regions = regions - set(mkfile["Project"]["Regions"])
@@ -620,12 +617,9 @@ _VALIDATION_SUBSAMPLE_KEY = And(StringStartsWith("<"),
 _VALIDATION_SAMPLES_KEY = And(IsStr, Not(_VALIDATION_SUBSAMPLE_KEY))
 _VALIDATION_SAMPLES = {
     _VALIDATION_SAMPLES_KEY: {
-        "GenotypingMethod": StringIn(("reference sequence",
-                                      "random sampling",
-                                      "samtools"),
-                                     default="samtools"),
-        "SpeciesName": IsStr,  # Not used; left for backwards compatibility
-        "CommonName": IsStr,   # Not used; left for backwards compatibility
+        "GenotypingMethod": IsStr,  # Deprecated
+        "SpeciesName": IsStr,  # Deprecated
+        "CommonName": IsStr,  # Deprecated
         "Sex": IsStr(),
         "Gender": IsStr(),
     }

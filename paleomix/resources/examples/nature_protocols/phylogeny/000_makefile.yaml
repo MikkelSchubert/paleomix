@@ -69,11 +69,6 @@ Genotyping:
     # The final sequences does not include the padding.
     Padding: 10
 
-    # Settings for genotyping by random sampling of nucletoides at each site
-    Random:
-      # Min distance of variants to indels
-      --min-distance-to-indels: 2
-
     MPileup:
       -E: # extended BAQ for higher sensitivity but lower specificity
       -A: # count anomalous read pairs

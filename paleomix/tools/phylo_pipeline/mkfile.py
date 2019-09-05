@@ -38,9 +38,6 @@ Project:
           # Sex of the sample; used to filter SNPs on homozygous
           # contigs (see below). If not relevant, the value 'NA' may be used.
           Sex:       ...
-          # Method to use when genotyping samples (see 'Genotyping');
-          # defaults to 'SAMTools' if not explicitly specified.
-#          Genotyping Method: ...
 
   # Specifies a set of regions of interest, each representing one or more
   # named regions in a reference sequence (e.g. genes) in BED format.
@@ -94,11 +91,6 @@ Genotyping:
     # is genotyped once, and all regions of interest are extracted from this.
     # This can only be done for prefixes that only use genotyping defaults.
     GenotypeEntirePrefix: no
-
-    # Settings for genotyping by random sampling of nucletoides at each site
-    Random:
-      # Min distance of variants to indels
-      --min-distance-to-indels: 2
 
     MPileup:
       -E: # extended BAQ for higher sensitivity but lower specificity

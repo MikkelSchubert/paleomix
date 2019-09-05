@@ -351,28 +351,3 @@ class BuildRegionsNode(CommandNode):
                              description=description,
                              command=command,
                              dependencies=parameters.dependencies)
-
-
-class SampleRegionsNode(CommandNode):
-    @create_customizable_cli_parameters
-    def customize(cls, infile, bedfile, outfile, dependencies=()):
-        params = factory.new("sample_pileup")
-        params.set_option("--genotype", "%(IN_PILEUP)s")
-        params.set_option("--intervals", "%(IN_INTERVALS)s")
-        params.set_kwargs(IN_PILEUP=infile,
-                          IN_INTERVALS=bedfile,
-                          OUT_STDOUT=outfile)
-
-        return {"command": params}
-
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
-        command = parameters.command.finalize()
-
-        description = "<SampleRegions: '%s' -> '%s'>" \
-            % (parameters.infile, parameters.outfile)
-
-        CommandNode.__init__(self,
-                             description=description,
-                             command=command,
-                             dependencies=parameters.dependencies)

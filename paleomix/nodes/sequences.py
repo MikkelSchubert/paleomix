@@ -24,15 +24,11 @@ from __future__ import with_statement
 
 import os
 import copy
-import itertools
-import collections
 
 import pysam
 
 import paleomix.common.fileutils as fileutils
 import paleomix.common.utilities as utilities
-import paleomix.common.sequences as sequtils
-import paleomix.common.text as text
 
 from paleomix.common.formats.fasta import \
     FASTA
@@ -41,8 +37,6 @@ from paleomix.common.formats.msa import \
 from paleomix.node import \
     NodeError, \
     Node
-from paleomix.common.bedtools import \
-    BEDRecord
 
 
 class CollectSequencesNode(Node):
@@ -140,67 +134,3 @@ class FilterSingletonsNode(Node):
         with open(temp_filename, "w") as handle:
             alignment.to_file(handle)
         fileutils.move_file(temp_filename, self._output_file)
-
-
-class ExtractReferenceNode(Node):
-    def __init__(self, reference, bedfile, outfile, dependencies=()):
-        self._reference = reference
-        self._bedfile = bedfile
-        self._outfile = outfile
-
-        description = "<ExtractReference: '%s' -> '%s'>" \
-            % (reference, outfile)
-        Node.__init__(self,
-                      description=description,
-                      input_files=[reference, bedfile],
-                      output_files=[outfile],
-                      dependencies=dependencies)
-
-    def _run(self, _config, temp):
-        def _by_name(bed):
-            return bed.name
-
-        fastafile = pysam.Fastafile(self._reference)
-        seqs = collections.defaultdict(list)
-        with open(self._bedfile) as bedfile:
-            bedrecords = text.parse_lines_by_contig(bedfile, BEDRecord)
-            for (contig, beds) in sorted(bedrecords.iteritems()):
-                beds.sort(key=lambda bed: (bed.contig, bed.name, bed.start))
-
-                for (gene, gene_beds) in itertools.groupby(beds, _by_name):
-                    gene_beds = tuple(gene_beds)
-                    sequence = self._collect_sequence(fastafile, gene_beds)
-                    seqs[(contig, gene)] = sequence
-
-        temp_file = os.path.join(temp, "sequences.fasta")
-        with open(temp_file, "w") as out_file:
-            for ((_, gene), sequence) in sorted(seqs.items()):
-                FASTA(gene, None, sequence).write(out_file)
-
-        fileutils.move_file(temp_file, self._outfile)
-
-    @classmethod
-    def _collect_sequence(cls, fastafile, beds):
-        sequence = []
-        for bed in beds:
-            fragment = fastafile.fetch(bed.contig, bed.start, bed.end)
-            if len(fragment) != (bed.end - bed.start):
-                cls._report_failure(bed, fragment)
-
-            sequence.append(fragment)
-        sequence = "".join(sequence)
-
-        if any((bed.strand == "-") for bed in beds):
-            assert all((bed.strand == "-") for bed in beds)
-            sequence = sequtils.reverse_complement(sequence)
-
-        return sequence
-
-    @classmethod
-    def _report_failure(cls, bed, fragment):
-        message = "Failed to extract region from " \
-                  "reference sequence at %s:%i-%i; got " \
-                  "%i bp, but expected %i bp." \
-                  % (bed.contig, bed.start, bed.end,
-                     len(fragment), (bed.end - bed.start))
-        raise NodeError(message)

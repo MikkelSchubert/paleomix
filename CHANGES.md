@@ -8,6 +8,8 @@
   - Removed 'bam_pipeline remap' command.
   - Removed undocumented 'ena' command.
   - Removed entry-points other than the 'paleomix' command.
+  - Removed 'sample_pileup' command.
+  - Removed 'Random Sampling' and 'Reference Sequence' genotyping methods
 
 
 ## [1.2.13.4] - 2019-03-25
