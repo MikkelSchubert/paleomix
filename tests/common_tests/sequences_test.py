@@ -28,8 +28,6 @@ from paleomix.common.sequences import \
      complement, \
      reverse_complement, \
      encode_genotype, \
-     count_nts, \
-     count_gc_diploid, \
      split
 
 
@@ -117,78 +115,6 @@ def test_comma_or_not():
 
     for sequence in ("CT", "C,T", ",C,T", "C,T,", ",C,T,"):
         yield test_function, sequence
-
-
-###############################################################################
-###############################################################################
-# Tests for 'count_nts'
-
-def test_count_nts__empty_str():
-    assert_equal(count_nts(""), {})
-
-
-def test_count_nts__simple():
-    assert_equal(count_nts("TTATGTGTCT"), {"A": 1, "C": 1, "G": 2, "T": 6})
-
-
-def test_count_nts__simple_mixed_case():
-    assert_equal(count_nts("atATNcaGCC"), {"A": 3, "C": 3, "G": 1, "T": 2, "N": 1})
-
-
-def test_count_nts__complex():
-    assert_equal(count_nts("NNBKVGRVMM"), {"N": 2, "B": 1, "K": 1, "V": 2, "G": 1,
-                                           "R": 1, "M": 2})
-
-
-def test_count_nts__complex_mixed_case():
-    assert_equal(count_nts(""), {})
-
-
-@nose.tools.raises(ValueError)
-def test_count_nts__bad_nt():
-    count_nts("TTAPGTGTCT")  # 'P' not UIPAC
-
-
-@nose.tools.raises(ValueError)
-def test_count_nts__bad_nt_lowercase():
-    count_nts("atATNcoGCC")  # 'o' not UIPAC
-
-
-###############################################################################
-###############################################################################
-# Tests for 'count_gc_diploid'
-
-def test_count_gc_diploid__empty_string():
-    assert_equal(count_gc_diploid(""), (0, 0))
-
-
-def test_count_gc_diploid__simple():
-    assert_equal(count_gc_diploid("ACGGGTATCA"), (10, 20))
-
-
-def test_count_gc_diploid__simple_mixed_case():
-    assert_equal(count_gc_diploid("AcGGgtAtcA"), (10, 20))
-
-
-def test_count_gc_diploid__complex():
-    assert_equal(count_gc_diploid("RTGTKMGTCA"), (9, 20))
-
-
-def test_count_gc_diploid__complex_mixed_case():
-    assert_equal(count_gc_diploid("rtGTKMgTcA"), (9, 20))
-
-
-def test_count_gc_dipoid__ambigious():
-    assert_equal(count_gc_diploid("ACGGNTATCA"), (8, 18))
-
-
-def test_count_gc_diploid__ambigous_mixed_case():
-    assert_equal(count_gc_diploid("AcGGntAtcA"), (8, 18))
-
-
-@nose.tools.raises(ValueError)
-def test_count_gc_diploid__triploid():
-    count_gc_diploid("B")
 
 
 ###############################################################################

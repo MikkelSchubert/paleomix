@@ -24,15 +24,9 @@ import signal
 import types
 
 
-def from_str(value):
-    if not isinstance(value, types.StringTypes):
-        raise TypeError("'from_str' takes strings, not %r" % (value.__class__.__name__,))
-    return FROM_STRING[value]
-
-
 def to_str(value):
     if not isinstance(value, (types.IntType, types.LongType)):
-        raise TypeError("'from_str' takes strings, not %r" % (value.__class__.__name__,))
+        raise TypeError("'to_str' takes strings, not %r" % (value.__class__.__name__,))
     return FROM_SIGNAL[value]
 
 
@@ -50,5 +44,5 @@ def _get_signals():
 
     return signals
 
+
 FROM_SIGNAL = _get_signals()
-FROM_STRING = dict(zip(FROM_SIGNAL.values(), FROM_SIGNAL.keys()))

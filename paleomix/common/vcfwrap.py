@@ -23,32 +23,11 @@
 """Wrapper and utility functions for VCF handling, using
 the VCF data-structures from pysam."""
 
-import re
 import collections
 
 
-_re_tmpl = "(^|;)%s=([^;]+)(;|$)"
-_re_cache = {}
-
-
-def get_info(vcf, field, default = None, type = str):
-    """Returns the value of the specified field from the info column
-    of a VCF record. The type is determined by 'type' parameter, which
-    may be any function. If no matching key is found, or if the key is
-    not associated with a value, the function returns None by default."""
-    try:
-        regexp = _re_cache[field]
-    except KeyError:
-        regexp = _re_cache[field] = re.compile(_re_tmpl % (field,))
-
-    match = regexp.search(vcf.info)
-    if not match:
-        return default
-
-    return type(match.groups()[1])
-
-
 Indel = collections.namedtuple("Indel", ["in_reference", "pos", "prefix", "what", "postfix"])
+
 
 def parse_indel(vcf):
     """Parses the VCF record of an indel, and returns a tuple containing the
@@ -90,21 +69,6 @@ def is_indel(vcf):
     """Returns true if the VCF entry represents an indel."""
     # FIXME: Is this a universal key for indels?
     return "INDEL" in vcf.info
-
-
-def get_genotype(vcf, sample=0, _re=re.compile(r'[|/]')):
-    """Returns the most likely genotype of a sample in a vcf record. If no
-    single most likely genotype can be determined, the function returns 'N' for
-    both bases."""
-    nucleotides = []
-    nucleotides.extend(vcf.ref.split(","))
-    nucleotides.extend(vcf.alt.split(","))
-
-    result = []
-    for genotype in _re.split(get_format(vcf, sample)["GT"]):
-        result.append(nucleotides[int(genotype)])
-
-    return result
 
 
 # The corresponding nucleotides for each value in the VCF PL field

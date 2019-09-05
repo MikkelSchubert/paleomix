@@ -73,7 +73,6 @@ _HEADER = """# Timestamp: %s
 class MappingToTotals(object):
     def __init__(self, totals, region, smlbid_to_smlb):
         self._region = region
-        self._totals = totals
         self._map_by_smlbid, self._totals_src_and_dst \
             = self._build_mappings(totals, region.name, smlbid_to_smlb)
         self._cache = collections.defaultdict(int)

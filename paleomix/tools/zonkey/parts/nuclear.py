@@ -293,7 +293,6 @@ class SelectBestAdmixtureNode(Node):
         output_files = [os.path.join(output_root, filename)
                         for filename in ref_filenames]
 
-        self._ref_filenames = ref_filenames
         self._files = tuple(node.output_files for node in replicates)
         self._output_root = output_root
 

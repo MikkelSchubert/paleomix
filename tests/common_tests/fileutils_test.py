@@ -45,7 +45,6 @@ from paleomix.common.fileutils import \
     reroot_path, \
     create_temp_dir, \
     missing_files, \
-    modified_after, \
     is_executable, \
     which_executable, \
     executable_exists, \
@@ -54,7 +53,6 @@ from paleomix.common.fileutils import \
     move_file, \
     copy_file, \
     open_ro, \
-    try_rmdir, \
     try_remove, \
     try_rmtree, \
     describe_files, \
@@ -286,37 +284,6 @@ def test_missing_files__mixed_files():
     result = [test_file("missing_file_1")]
 
     assert_equal(missing_files(files), result)
-
-
-###############################################################################
-###############################################################################
-# Tests for 'modified_after'
-
-def test_modified_after__modified_after():
-    assert modified_after(test_file("timestamp_a_younger"),
-                          test_file("timestamp_a_older"))
-    assert modified_after(test_file("timestamp_a_younger"),
-                          test_file("timestamp_b_older"))
-    assert modified_after(test_file("timestamp_b_younger"),
-                          test_file("timestamp_a_older"))
-
-
-def test_modified_after__not_modified_after():
-    assert not modified_after(test_file("timestamp_a_older"),
-                              test_file("timestamp_a_younger"))
-    assert not modified_after(test_file("timestamp_a_older"),
-                              test_file("timestamp_b_younger"))
-    assert not modified_after(test_file("timestamp_b_older"),
-                              test_file("timestamp_a_younger"))
-
-
-def test_modified_after__same_file():
-    assert not modified_after(test_file("timestamp_a_older"),
-                              test_file("timestamp_a_older"))
-    assert not modified_after(test_file("timestamp_a_older"),
-                              test_file("timestamp_b_older"))
-    assert not modified_after(test_file("timestamp_b_older"),
-                              test_file("timestamp_a_older"))
 
 
 ###############################################################################
@@ -775,33 +742,7 @@ def test_try_remove__non_file(temp_folder):
 
 ###############################################################################
 ###############################################################################
-# Tests for 'try_rmdir'
-
-@with_temp_folder
-def test_try_rmdir(temp_folder):
-    fpath = os.path.join(temp_folder, "testdir")
-    os.mkdir(fpath)
-    assert try_rmdir(fpath)
-    assert not os.path.exists(fpath)
-
-
-@with_temp_folder
-def test_try_rmdir__missing(temp_folder):
-    fpath = os.path.join(temp_folder, "testdir")
-    assert not try_rmdir(fpath)
-    assert not os.path.exists(fpath)
-
-
-@with_temp_folder
-def test_try_rmdir__non_file(temp_folder):
-    fpath = os.path.join(temp_folder, "test.txt")
-    set_file_contents(fpath, "1 2 3")
-    assert_raises(OSError, try_rmdir, fpath)
-
-
-###############################################################################
-###############################################################################
-# Tests for 'try_rmdir'
+# Tests for 'try_rmtree'
 
 @with_temp_folder
 def test_try_rmtree(temp_folder):

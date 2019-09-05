@@ -33,26 +33,6 @@ _NAME_ENDS_AT    = 36
 _LINE_SIZE       = _NUM_BLOCKS * _BLOCK_SIZE + (_NUM_BLOCKS - 1) * _BLOCK_SPACING
 
 
-def sequential_phy(msa, add_flag = False, max_name_length = _MAX_NAME_LENGTH):
-    MSA.validate(msa)
-    header = "%i %i" % (len(msa), msa.seqlen())
-    if add_flag:
-        header += " S"
-
-    spacing = " " * _BLOCK_SPACING
-    result = [header, ""]
-    for record in sorted(msa):
-        result.append(record.name[:max_name_length])
-
-        blocks = grouper(_BLOCK_SIZE, record.sequence, fillvalue = "")
-        lines  = grouper(_NUM_BLOCKS, blocks)
-        for line in lines:
-            result.append(spacing.join("".join(block) for block in line if block))
-
-    return "\n".join(result)
-
-
-
 def interleaved_phy(msa, add_flag = False, max_name_length = _MAX_NAME_LENGTH):
     MSA.validate(msa)
     header = "%i %i" % (len(msa), msa.seqlen())

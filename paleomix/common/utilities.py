@@ -123,13 +123,6 @@ def split_before(iterable, pred):
         yield items
 
 
-def is_strictly_increasing(lst):
-    """Returns true if the contents of the list is strictly increasing."""
-    pairs = itertools.izip(lst, itertools.islice(lst, 1, None))
-
-    return all(x < y for (x, y) in pairs)
-
-
 # Copied from the Python 'itertools' module documentation
 def grouper(size, iterable, fillvalue=None):
     "grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"

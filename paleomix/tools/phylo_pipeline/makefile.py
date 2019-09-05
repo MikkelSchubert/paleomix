@@ -507,7 +507,7 @@ def _read_max_depth(filename, prefix, sample):
     else:
         name_counts = {}
         name_mapping = {}
-        for cand_sample, cand_max in max_depths.iteritems():
+        for cand_sample in max_depths:
             name = cand_sample.split('.', 1)[0]
             name_mapping[name] = cand_sample
             name_counts[name] = name_counts.get(name, 0) + 1

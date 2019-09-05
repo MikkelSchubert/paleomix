@@ -289,22 +289,6 @@ def test_split_before__no_hits():
 
 ###############################################################################
 ###############################################################################
-# Tests for 'is_strictly_increasing'
-
-def test_is_strictly_increasing__increasing_sequence():
-    assert utils.is_strictly_increasing(range(100))
-
-
-def test_is_strictly_increasing__non_increasing_sequence():
-    lst = range(100)
-    first, second = random.sample(lst, 2)
-    lst[first], lst[second] = lst[second], lst[first]
-
-    assert not utils.is_strictly_increasing(lst)
-
-
-###############################################################################
-###############################################################################
 # Tests for 'grouper'
 
 def test_grouper__empty_list():

@@ -20,58 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import paleomix.common.versions as versions
-
-from paleomix.atomiccmd.command import \
-    AtomicCmd
-from paleomix.node import \
-    CommandNode, \
-    Node, \
-    NodeError
+from paleomix.node import Node, NodeError
 
 from paleomix.common.bedtools import \
     read_bed_file
 from paleomix.common.fileutils import \
     move_file, \
     reroot_path
-
-
-BEDTOOLS_VERSION \
-    = versions.Requirement(call=("bedtools", "--version"),
-                           search=r"bedtools v?(\d+)\.(\d+)\.(\d+)",
-                           checks=versions.GE(2, 15, 0))
-
-
-class SlopBedNode(CommandNode):
-    def __init__(self, infile, outfile, genome, from_start=0, from_end=0,
-                 strand_relative=False, dependencies=()):
-        if type(from_start) != type(from_end):
-            raise ValueError("Parameters 'from_start' and 'from_end' should "
-                             "be of same type!")
-
-        call = ["bedtools", "slop",
-                "-i", "%(IN_FILE)s",
-                "-g", "%(IN_GENOME)s",
-                "-l", str(from_start),
-                "-r", str(from_end)]
-
-        if strand_relative:
-            call.append("-s")
-        if type(from_start) is float:
-            call.append("-pct")
-
-        command = AtomicCmd(call,
-                            IN_FILE=infile,
-                            IN_GENOME=genome,
-                            OUT_STDOUT=outfile,
-                            CHECK_VERSION=BEDTOOLS_VERSION)
-
-        description = "<SlopBed: '%s' -> '%s'>" % (infile, outfile)
-
-        CommandNode.__init__(self,
-                             description=description,
-                             command=command,
-                             dependencies=dependencies)
 
 
 class PaddedBedNode(Node):

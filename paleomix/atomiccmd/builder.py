@@ -321,7 +321,7 @@ class AtomicJavaCmdBuilder(AtomicCmdBuilder):
     """
 
     def __init__(self, jar, jre_options=(), temp_root="%(TEMP_DIR)s",
-                 gc_threads=1, java_version=(1, 6), **kwargs):
+                 gc_threads=1, **kwargs):
         """Parameters:
             jar         -- Path to a JAR file to be executed; is included as an
                            auxiliary file dependency in the final command.

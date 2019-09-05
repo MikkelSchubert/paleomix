@@ -137,25 +137,6 @@ class GenotypeSites(object):
         statistics["n_reads"] += count_total
         statistics["n_reads_used"] += count_used
 
-    @classmethod
-    def _parse_cigar(cls, record):
-        seq_iter = iter(record.seq)
-        seq_pos = record.pos
-        for key, value in record.cigar:
-            if key in (0, 7, 8):  # M, =, X
-                for _ in xrange(value):
-                    yield seq_pos, seq_iter.next()
-                    seq_pos += 1
-            elif key in (1, 4):  # I
-                for _ in xrange(value):
-                    seq_iter.next()
-            elif key in (2, 3, ):  # D, N
-                seq_pos += value
-            elif key in (5, 6):  # H, P
-                pass
-            else:
-                raise ValueError(record.cigar)
-
 
 class GenotypeReader(object):
     def __init__(self, filename):

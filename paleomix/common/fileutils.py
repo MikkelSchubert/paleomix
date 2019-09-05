@@ -82,19 +82,6 @@ def missing_files(filenames):
     return result
 
 
-def modified_after(younger, older):
-    """Returns true any of the files expected to be 'younger' have
-    been modified after any of the files expected to be 'older'."""
-    def get_mtimes(filenames):
-        for filename in filenames:
-            yield os.path.getmtime(filename)
-
-    younger_time = max(get_mtimes(safe_coerce_to_frozenset(younger)))
-    older_time   = min(get_mtimes(safe_coerce_to_frozenset(older)))
-
-    return younger_time > older_time
-
-
 def is_executable(filename):
     """Returns true if the specified file is an executable file."""
     return os.path.isfile(filename) and os.access(filename, os.X_OK)
@@ -203,14 +190,6 @@ def try_remove(filename):
     exceptions on other errors. The return value reflects whether or
     not the file was actually removed."""
     return _try_rm_wrapper(os.remove, filename)
-
-
-def try_rmdir(filename):
-    """Tries to remove a directory. Unlike os.rmdir, the function does not raise
-    an exception if the file does not exist, but does raise exceptions on other
-    errors. The return value reflects whether or not the file was actually
-    removed."""
-    return _try_rm_wrapper(os.rmdir, filename)
 
 
 def try_rmtree(filename):

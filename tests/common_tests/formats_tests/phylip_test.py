@@ -23,9 +23,7 @@
 from flexmock import flexmock
 from nose.tools import assert_equal
 
-from paleomix.common.formats.phylip import \
-     sequential_phy, \
-     interleaved_phy
+from paleomix.common.formats.phylip import interleaved_phy
 
 from paleomix.common.formats.msa import \
      MSA
@@ -54,59 +52,6 @@ _MSA_MEDIUM_NAMES = \
 _MSA_LONG_NAMES = \
   MSA([FASTA("A_really_long_sequence_name_that_is_in_fact_too_long", None, "ACGTTGATAACCAGG"),
        FASTA("Another_really_long_sequence_name_that_is_too_long", None, "TGCAGAGTACGACGT")])
-
-
-###############################################################################
-###############################################################################
-# Tests of 'sequential_phy'
-
-def test_sequential_phy__short_sequences():
-    expected = """2 44
-
-seq1
-ACGTTGATAA  CCAGGAGGGA  TTCGCGATTG  GTGGTAACGT  AGCC
-seq2
-TGCAGAGTAC  GACGTCTCCT  AGATCCTGGA  CAATTTAAAC  CGAA"""
-    assert_equal(sequential_phy(_MSA_MEDIUM_SEQUENCES), expected)
-
-
-def test_sequential_phy__multi_line_sequences():
-    expected = """2 140
-
-seq1
-CGGATCTGCT  CCTCCACTGG  CCACGTTTAC  TGTCCCCCAA  CCGTTCGTCC  CGACCTAGTT
-ATACTTCTTA  GCAAGGTGTA  AAACCAGAGA  TTGAGGTTAT  AACGTTCCTA  ATCAGTTATT
-AAATTACCGC  GCCCCGACAG
-seq2
-AGTTGAAGAG  GCGGAACGTT  TGTAAACCGC  GCTAACGTAG  TTCTACAACC  AGCCACCCGG
-TTCGAAGGAA  CAACTGGTCG  CCATAATTAG  GCGAAACGAT  AGTGCACTAA  GGTCAGGTGC
-GCCCCTGTAA  ATAATTAGAT"""
-    assert_equal(sequential_phy(_MSA_LONG_SEQUENCES), expected)
-
-
-def test_sequential_phy__with_flag():
-    expected = """2 15 S
-
-seq1
-ACGTTGATAA  CCAGG
-seq2
-TGCAGAGTAC  GACGT"""
-    assert_equal(sequential_phy(_MSA_SHORT_SEQUENCES, add_flag=True), expected)
-
-
-def test_sequentual_phy__long_names():
-    expected = """2 15
-
-A_really_long_sequence_name_th
-ACGTTGATAA  CCAGG
-Another_really_long_sequence_n
-TGCAGAGTAC  GACGT"""
-    assert_equal(sequential_phy(_MSA_LONG_NAMES), expected)
-
-
-def test_sequential_phy__different_lengths():
-    _mock = flexmock(MSA).should_receive('validate').at_least.once
-    sequential_phy(_MSA_MEDIUM_NAMES)
 
 
 ###############################################################################
