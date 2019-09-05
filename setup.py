@@ -21,7 +21,6 @@
 # SOFTWARE.
 import codecs
 import os
-import sys
 
 from setuptools import setup, find_packages
 
@@ -84,14 +83,7 @@ setup(
 
     entry_points={
         'console_scripts': [
-            'paleomix=paleomix:run',
-
-            # Aliases used in previous publications
-            'bam_pipeline=paleomix:run_bam_pipeline',
-            'bam_rmdup_collapsed=paleomix:run_rmdup_collapsed',
-            'conv_gtf_to_bed=paleomix:run_gtf_to_bed',
-            'phylo_pipeline=paleomix:run_phylo_pipeline',
-            'trim_pipeline=paleomix:run_trim_pipeline',
+            'paleomix=paleomix.main:entry_point',
         ],
     },
 

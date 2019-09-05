@@ -95,27 +95,3 @@ def test_factory__commands():
 
     for command, expected in commands:
         yield _do_test_factory__commands, command, expected
-
-
-# Simple test of aliased commands
-def test_factory__command_alias():
-    def _do_test_factory__command_alias(alias, command):
-        alias, command = [alias], [command]
-        if alias == ["bam_pipeline"] or alias == ["trim_pipeline"]:
-            alias.append("run")
-            command.append("run")
-
-        stdout_1, stderr_1 = check_run(alias + ["--help"])
-        stdout_2, stderr_2 = check_run(["paleomix"] + command + ["--help"])
-
-        assert_equal(stderr_1, stderr_1)
-        assert_equal(stderr_2, stderr_2)
-
-    commands = (("bam_pipeline", "bam_pipeline"),
-                ("bam_rmdup_collapsed", "rmdup_collapsed"),
-                ("conv_gtf_to_bed", "gtf_to_bed"),
-                ("phylo_pipeline", "phylo_pipeline"),
-                ("trim_pipeline", "trim_pipeline"))
-
-    for alias, command in commands:
-        yield _do_test_factory__command_alias, alias, command

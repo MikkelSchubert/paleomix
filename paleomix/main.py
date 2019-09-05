@@ -234,5 +234,9 @@ def main(argv):
     return 1
 
 
+def entry_point():
+    return main(sys.argv[1:])
+
+
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))

@@ -7,6 +7,7 @@
 ### Removed
   - Removed 'bam_pipeline remap' command.
   - Removed undocumented 'ena' command.
+  - Removed entry-points other than the 'paleomix' command.
 
 
 ## [1.2.13.4] - 2019-03-25
