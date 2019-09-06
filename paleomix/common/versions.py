@@ -137,6 +137,9 @@ class RequirementObj(object):
             except OSError as error:
                 self._raise_failure(error)
 
+            if isinstance(output, bytes):
+                output = output.decode("utf-8", "replace")
+
             # Raise an exception if the JRE is outdated, even if the
             # version could be determined (likely a false positive match).
             self._check_for_outdated_jre(output)
@@ -253,10 +256,10 @@ class Check(TotallyOrdered):
     def __str__(self):
         return self._description
 
-    def __lt__(self, other):
+    def __eq__(self, other):
         if isinstance(other, Check):
-            return self._objs < other._objs
-        return NotImplemented  # pragma: no coverage
+            return self._objs == other._objs
+        return NotImplemented
 
     def __hash__(self):
         return hash(self._objs)

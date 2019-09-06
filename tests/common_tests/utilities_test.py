@@ -363,9 +363,13 @@ def test_fragment__multiple_fragments_partial():
     )
 
 
+def test_fragment__range():
+    assert list(utils.fragment(3, range(6))) == [range(3), range(3, 6)]
+
+
 @nose.tools.raises(TypeError)
 def test_fragment__iterable():
-    list(utils.fragment(3, range(6)))
+    list(utils.fragment(3, iter(range(6))))
 
 
 @nose.tools.raises(TypeError)
