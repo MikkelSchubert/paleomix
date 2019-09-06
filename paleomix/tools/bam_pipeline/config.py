@@ -94,7 +94,7 @@ def parse_config(argv, pipeline_variant):
     )
     group.add_option(
         "--destination",
-        default=None,
+        default=".",
         help="The destination folder for result files. By default, files will be "
         "placed in the same folder as the makefile which generated it.",
     )

@@ -66,7 +66,7 @@ _READ_TYPES = set(("Single", "Singleton", "Collapsed", "CollapsedTruncated", "Pa
 _BAM_MAX_SEQUENCE_LENGTH = 2 ** 29 - 1
 
 
-def read_makefiles(config, filenames, pipeline_variant="bam"):
+def read_makefiles(filenames, pipeline_variant="bam"):
     if pipeline_variant not in ("bam", "trim"):
         raise ValueError(
             "'pipeline_variant' must be 'bam' or 'trim', not %r" % (pipeline_variant,)
@@ -79,10 +79,11 @@ def read_makefiles(config, filenames, pipeline_variant="bam"):
         logger.info("Reading makefile %r", filename)
         makefile = read_makefile(filename, _VALIDATION)
         makefile = _mangle_makefile(makefile, pipeline_variant)
+        makefile["Filename"] = filename
 
         makefiles.append(makefile)
 
-    return _validate_makefiles(config, makefiles)
+    return _validate_makefiles(makefiles)
 
 
 def _alphanum_check(whitelist, min_len=1):
@@ -592,11 +593,11 @@ def _split_lanes_by_filenames(makefile):
                         library[new_barcode] = current
 
 
-def _validate_makefiles(config, makefiles):
+def _validate_makefiles(makefiles):
     for makefile in makefiles:
         _validate_makefile_libraries(makefile)
         _validate_makefile_adapters(makefile)
-    _validate_makefiles_duplicate_targets(config, makefiles)
+    _validate_makefiles_duplicate_targets(makefiles)
     _validate_makefiles_duplicate_files(makefiles)
     _validate_makefiles_features(makefiles)
     _validate_prefixes(makefiles)
@@ -716,22 +717,16 @@ def _describe_files_in_multiple_records(records, pairs):
     return "\n".join(descriptions)
 
 
-def _validate_makefiles_duplicate_targets(config, makefiles):
+def _validate_makefiles_duplicate_targets(makefiles):
     targets = set()
     for makefile in makefiles:
-        destination = config.destination
-        if destination is None:
-            filename = makefile["Statistics"]["Filename"]
-            destination = os.path.dirname(filename)
-
         for target in makefile["Targets"]:
-            key = (destination, target)
-            if key in targets:
+            if target in targets:
                 raise MakefileError(
                     "Target name '%s' used multiple times; "
                     "output files would be clobbered!" % target
                 )
-            targets.add(key)
+            targets.add(target)
 
 
 def _validate_makefiles_features(makefiles):
@@ -828,7 +823,7 @@ def _do_validate_hg_prefix(makefile, prefix, contigs, fatal):
     )
 
     prefix_path = prefix["Path"]
-    mkfile_path = makefile["Statistics"]["Filename"]
+    mkfile_path = makefile["Filename"]
     if fatal:
         details = "Either disable GATK in the makefile, or fix the prefix."
         message %= (mkfile_path, prefix_path, details)

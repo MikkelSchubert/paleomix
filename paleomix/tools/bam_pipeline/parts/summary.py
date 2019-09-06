@@ -48,7 +48,6 @@ class SummaryTableNode(Node):
         self._target = target.name
         self._output_file = os.path.join(config.destination, self._target + ".summary")
         self._prefixes = makefile["Prefixes"]
-        self._makefile = makefile["Statistics"]
 
         self._in_raw_bams = cov_for_lanes
         self._in_lib_bams = cov_for_libs
@@ -107,11 +106,6 @@ class SummaryTableNode(Node):
             table.write("#\n")
             table.write("# Directory:\n")
             table.write("#     %s\n" % (os.getcwd()))
-            table.write("#\n")
-            table.write("# Makefile:\n")
-            table.write("#     Filename: %s\n" % (self._makefile["Filename"],))
-            table.write("#     SHA1Sum:  %s\n" % (self._makefile["Hash"],))
-            table.write("#     MTime:    %s\n" % (self._makefile["MTime"],))
             table.write("#\n")
             self._write_genomes(table, genomes)
             table.write("#\n")

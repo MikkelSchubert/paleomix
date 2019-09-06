@@ -1272,17 +1272,8 @@ def test_read_makefile__not_a_yaml_file():
 
 def test_read_makefile__simple_file():
     specs = {"Defaults": {"First": IsFloat, "Second": IsStr}}
-    expected = {
-        "Makefile": {"Defaults": {"First": 1e-4, "Second": "a string"}},
-        "Statistics": {
-            "Filename": test_file("simple.yaml"),
-            "Hash": "563a2052b67dcde9f193fbe8d51fa2b6f0806505",
-        },
-    }
+    expected = {"Defaults": {"First": 1e-4, "Second": "a string"}}
     result = read_makefile(test_file("simple.yaml"), specs)
-
-    # MTime is troublesome, and will be removed later anyway, so don't bother
-    result.get("Statistics", {}).pop("MTime", None)
 
     assert_equal(expected, result)
 

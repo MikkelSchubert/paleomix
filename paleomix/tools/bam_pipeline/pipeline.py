@@ -205,7 +205,7 @@ def run(config, args, pipeline_variant):
     pipeline = Pypeline(config)
 
     try:
-        makefiles = read_makefiles(config, args, pipeline_variant)
+        makefiles = read_makefiles(args, pipeline_variant)
     except (MakefileError, paleomix.yaml.YAMLError, IOError) as error:
         logger.error("Error reading makefiles: %s", error)
         return 1
@@ -218,21 +218,14 @@ def run(config, args, pipeline_variant):
         pipeline_func = build_pipeline_full
 
     for makefile in makefiles:
-        logger.info("Building BAM pipeline for %r", makefile["Statistics"]["Filename"])
-        # If a destination is not specified, save results in same folder as the
-        # makefile
-        filename = makefile["Statistics"]["Filename"]
-        old_destination = config.destination
-        if old_destination is None:
-            config.destination = os.path.dirname(filename)
-
+        logger.info("Building BAM pipeline for %r", makefile["Filename"])
         try:
             nodes = pipeline_func(config, makefile)
         except paleomix.node.NodeError as error:
-            logger.error("Error while building pipeline for '%s':\n%s", filename, error)
+            logger.error(
+                "Error while building pipeline for %r:\n%s", makefile["Filename"], error
+            )
             return 1
-
-        config.destination = old_destination
 
         pipeline.add_nodes(*nodes)
 

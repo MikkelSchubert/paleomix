@@ -120,26 +120,19 @@ code shown above as follows:
 
 which would yield the following dictionary:
 -------------------------------------------------------------------------------
-|  {'Makefile': {'Defaults': {'--max-depth': 100,
-|                             '--min-depth': 8,
-|                             '--min-end-distance-bias': 0.001,
-|                             '--min-mapq-bias': 0.001},
-|                'VCF_Files': {'path/to/file1.vcf':
-|                                {'Options': {'--max-depth': 100,
-|                                 '--min-baseq-bias': 0.005,
-|                                 '--min-depth': 8,
-|                                 '--min-strand-bias': 0.005},
-|                                 'Output_File': 'path/to/output1.vcf'},
-|                              'path/to/file2.vcf':
-|                                 {'Output_File': 'path/to/output1.vcf'}}},
-|   'Statistics': {'Filename': 'makefile.yaml',
-|                  'Hash': 'c0138fd4ffcbbc0dff2c82c6e7595ec38b01f532',
-|                  'MTime': '2013-08-13 10:22:46.000000 '}}
+|  {'Defaults': {'--max-depth': 100,
+|                '--min-depth': 8,
+|                '--min-end-distance-bias': 0.001,
+|                '--min-mapq-bias': 0.001},
+|   'VCF_Files': {'path/to/file1.vcf':
+|                   {'Options': {'--max-depth': 100,
+|                    '--min-baseq-bias': 0.005,
+|                    '--min-depth': 8,
+|                    '--min-strand-bias': 0.005},
+|                    'Output_File': 'path/to/output1.vcf'},
+|                 'path/to/file2.vcf':
+|                    {'Output_File': 'path/to/output1.vcf'}}},
 -------------------------------------------------------------------------------
-
-Note the actual contents of the makefile is found in the sub-dictionary
-"Makefile", while the sub-dictionary "Statistics" contains various information
-about the file itself.
 
 Unfortunately, the defaults are being applied to BOTH "Options" sub-trees,
 which makes it impossible to tell which values are supposed to be over-ridden
@@ -160,19 +153,14 @@ should NOT be applied, by using the WithoutDefaults wrapper object:
 
 Which yields the following structure following processing:
 -------------------------------------------------------------------------------
-|  {'Makefile': {'Defaults': {'--max-depth': 100,
-|                             '--min-depth': 8,
-|                             '--min-end-distance-bias': 0.001,
-|                             '--min-mapq-bias': 0.001},
-|                'VCF_Files': {'path/to/file1.vcf':
-|                                {'Options': {'--min-baseq-bias': 0.005,
-|                                             '--min-strand-bias': 0.005},
-|                                 'Output_File': 'path/to/output1.vcf'},
-|                              'path/to/file2.vcf':
-|                                {'Output_File': 'path/to/output2.vcf'}}},
-|   'Statistics': {'Filename': 'makefile.yaml',
-|                  'Hash': 'c0138fd4ffcbbc0dff2c82c6e7595ec38b01f532',
-|                  'MTime': '2013-08-13 10:22:46.000000 '}}
+|  {'Defaults': {'--max-depth': 100,
+|                '--min-depth': 8,
+|                '--min-end-distance-bias': 0.001,
+|                '--min-mapq-bias': 0.001},
+|   'VCF_Files': {'path/to/file1.vcf': {'Options': {'--min-baseq-bias': 0.005,
+|                                                   '--min-strand-bias': 0.005},
+|                                       'Output_File': 'path/to/output1.vcf'},
+|                 'path/to/file2.vcf': {'Output_File': 'path/to/output2.vcf'}}}
 -------------------------------------------------------------------------------
 
 If the file contents does not match the expected structure, a MakefileError is
@@ -184,11 +172,7 @@ value has accidentically been left blank ('IsStr' requires a NON-EMPTY string):
 |    Observed value(s): ''
 -------------------------------------------------------------------------------
 """
-import os
 import copy
-import hashlib
-import datetime
-import io
 
 import paleomix.yaml
 from paleomix.common.utilities import group_by_pred
@@ -199,35 +183,14 @@ class MakefileError(RuntimeError):
 
 
 def read_makefile(filename, specification):
-    """Reads and parses a makefile using the given specification.
-
-    Returns a dictionary of the form
-      {
-         "Makefile": <parsed makefile>,
-         "Statistics": {
-            "Filename": <filename>,
-            "Hash": <SHA1 hash of makefile>,
-            "MTime": <Modification time of makefile>,
-         }
-      }
-    """
+    """Reads and parses a makefile using the given specification."""
     try:
-        with open(filename) as makefile:
-            string = makefile.read()
-            data = paleomix.yaml.safe_load(io.StringIO(string))
+        with open(filename) as handle:
+            data = paleomix.yaml.safe_load(handle)
     except paleomix.yaml.YAMLError as error:
         raise MakefileError(error)
 
-    mtime = os.path.getmtime(os.path.realpath(filename))
-    mtime_str = datetime.datetime.fromtimestamp(mtime).strftime("%F %T")
-    return {
-        "Makefile": process_makefile(data, specification),
-        "Statistics": {
-            "Filename": filename,
-            "Hash": hashlib.sha1(string).hexdigest(),
-            "MTime": mtime_str,
-        },
-    }
+    return process_makefile(data, specification)
 
 
 def process_makefile(data, specification, path=("root",), apply_defaults=True):
