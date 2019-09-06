@@ -63,15 +63,12 @@ This class can then be used in two ways:
 
 """
 import os
-import types
 import inspect
 import subprocess
 import collections
 
 from paleomix.atomiccmd.command import AtomicCmd
 from paleomix.common.utilities import safe_coerce_to_tuple
-
-import paleomix.common.versions as versions
 
 
 class AtomicCmdBuilderError(RuntimeError):
@@ -412,7 +409,7 @@ class AtomicMPICmdBuilder(AtomicCmdBuilder):
             AtomicCmdBuilder.__init__(self, mpi_call, EXEC_MAIN=call[0], **kwargs)
 
 
-def use_customizable_cli_parameters(init_func):  # pylint: disable=C0103
+def use_customizable_cli_parameters(init_func):
     """Decorator for __init__ functions, implementing the customizable Node
     interface: Allows a node to be implemented either using default behavior:
       >>> node = SomeNode(value1 = ..., value2 = ...)
@@ -442,7 +439,7 @@ def use_customizable_cli_parameters(init_func):  # pylint: disable=C0103
     return do_call
 
 
-def create_customizable_cli_parameters(customize_func):  # pylint: disable=C0103
+def create_customizable_cli_parameters(customize_func):
     """Decorator complementing the 'use_customizable_cli_parameters' decorator
     defined above, which should be used on a function named 'customize'; this
     function is made a classmethod.
@@ -539,7 +536,7 @@ def _create_cli_parameters_cls(cls, kwargs):
             "CustomCLIParams", " ".join(kwargs)
         )
 
-    class _ParametersWrapper(clsobj):  # pylint: disable=W0232
+    class _ParametersWrapper(clsobj):
         def build_node(self):
             return cls(self)
 

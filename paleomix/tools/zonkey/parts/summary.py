@@ -102,7 +102,7 @@ class SummaryNode(Node):
 
         handle.write(_SAMPLE_HEADER.format(sample=sample, admixture=admixture))
 
-        handle.write("""    <ul id="tabs">""")
+        handle.write("""<ul id="tabs">""")
         handle.write(
             _SAMPLE_TAB_SELECTED.format(sample_idx=sample_idx, page=1, title="Overview")
         )
@@ -125,7 +125,7 @@ class SummaryNode(Node):
                 )
             )
 
-        handle.write("""    </ul>""")
+        handle.write("""</ul>""")
 
         self._write_overview(handle, sample, sample_idx)
 
@@ -193,18 +193,18 @@ class SummaryNode(Node):
     def _read_admixture_results(self, sample, cutoff=admixture.CUTOFF):
         lines = []
         lines.append(
-            '            <table summary="Admixture overview for sample {}" style="width:125px;">'.format(
-                sample.replace('"', "")
+            '<table summary="{} {}" style="width:125px;">'.format(
+                "Admixture overview for sample", sample.replace('"', "")
             )
         )
-        lines.append("              <tr>")
+        lines.append("<tr>")
         for postfix in ("incl_ts", "excl_ts"):
             admix_root = os.path.join(self._root, sample, "results", "admixture")
 
             for k_groups in (2, 3):
                 filename = os.path.join(admix_root, "%s.%i.Q" % (postfix, k_groups))
 
-                lines.append("                <td>")
+                lines.append("<td>")
                 try:
                     ancestral_groups = admixture.read_admixture_results(
                         filename, self._data, k_groups, cutoff
@@ -215,12 +215,10 @@ class SummaryNode(Node):
                         )
                     )
                 except admixture.AdmixtureError:
-                    lines.append(
-                        '                  <div style="height:100px;background:gray"></div>'
-                    )
-                lines.append("                </td>")
-        lines.append("              </tr>")
-        lines.append("            </table>\n")
+                    lines.append('<div style="height:100px;background:gray"></div>')
+                lines.append("</td>")
+        lines.append("</tr>")
+        lines.append("</table>\n")
 
         return "\n".join(lines)
 
@@ -341,7 +339,7 @@ _HTML_HEADER = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
           </div>
         </div>
         <h1><a name="samples" id="samples"></a>Sample Overview</h1>
-"""
+"""  # noqa: E501
 
 
 _SAMPLE_HEADER = """

@@ -20,6 +20,4 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-# pylint: disable=W0611
-
-from paleomix.common.formats._common import FormatError
+from paleomix.common.formats._common import FormatError  # noqa: F401

@@ -218,7 +218,7 @@ def test_newick__reroot_on_midpoint__invalid_branch_lengths():
 
     yield _test_invalid_branch_lengths, "(A,B);"  # No branch lengths
     yield _test_invalid_branch_lengths, "(A:7,B);"  # Length missing for leaf node
-    yield _test_invalid_branch_lengths, "(A:7,(B:3));"  # Length missing for internal node
+    yield _test_invalid_branch_lengths, "(A:7,(B:3));"  # Length missing for inner node
     yield _test_invalid_branch_lengths, "(A:7,(B:3):-1);"  # Negative branch length
     yield _test_invalid_branch_lengths, "(A:7,B:-1);"  # Negative leaf length
 

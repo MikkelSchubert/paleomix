@@ -21,10 +21,9 @@
 # SOFTWARE.
 #
 import copy
-import types
 
-import paleomix.common.fileutils as fileutils
-import paleomix.common.text as text
+from paleomix.common.fileutils import open_ro
+from paleomix.common.utilities import TotallyOrdered
 
 
 def _strand_type(value):
@@ -42,7 +41,7 @@ class BEDError(RuntimeError):
     pass
 
 
-class BEDRecord(object):
+class BEDRecord(TotallyOrdered):
     """Class for parsing and representing a BED records.
 
     The class has the following properties:
@@ -137,11 +136,11 @@ class BEDRecord(object):
 
         self._fields[index] = value
 
-    def __cmp__(self, other):
+    def __lt__(self, other):
         if not isinstance(other, BEDRecord):
-            return cmp(self.__class__, other.__class__)
+            return NotImplemented
 
-        return cmp(self._fields, other._fields)
+        return self._fields < other._fields
 
     @classmethod
     def _set_properties(cls):
@@ -179,7 +178,7 @@ def read_bed_file(filename, min_columns=3, contigs=None):
     infinite = float("inf")
     handle = None
     try:
-        handle = fileutils.open_ro(filename)
+        handle = open_ro(filename)
 
         for (line_num, line) in enumerate(handle):
             line = line.strip()

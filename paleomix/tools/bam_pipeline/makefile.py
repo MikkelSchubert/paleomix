@@ -27,7 +27,6 @@ import itertools
 import logging
 import os
 import string
-import types
 
 import paleomix.tools.bam_pipeline.paths as paths
 from paleomix.common.utilities import fill_dict

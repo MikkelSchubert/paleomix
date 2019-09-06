@@ -24,7 +24,6 @@ import collections
 import os
 import sys
 import traceback
-import types
 
 import paleomix.common.fileutils as fileutils
 from paleomix.common.utilities import safe_coerce_to_frozenset

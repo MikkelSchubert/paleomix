@@ -20,11 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-"""
-
-
-"""
-
 from paleomix.common.utilities import safe_coerce_to_frozenset, get_in, set_in
 
 from paleomix.common.formats import FormatError
@@ -72,7 +67,7 @@ class _Graph:
         if (blength is not None) and float(blength) < 0:
             raise GraphError("Branch-lengths must be non-negative")
         elif (blength is not None) != self.has_branch_lengths:
-            if not self.has_branch_lengths is None:
+            if self.has_branch_lengths is not None:
                 raise GraphError("Tree contains branches with and without lengths")
             self.has_branch_lengths = blength is not None
 
@@ -129,7 +124,7 @@ class _Graph:
 
     ################################################################################
     ################################################################################
-    ## Functions relating to NEWICK rooting on midpoint
+    # Functions relating to NEWICK rooting on midpoint
 
     def reroot_on_midpoint(self):
         if not self.has_branch_lengths:
@@ -200,7 +195,7 @@ class _Graph:
 
     ################################################################################
     ################################################################################
-    ## Functions relating to NEWICK rooting on taxa
+    # Functions relating to NEWICK rooting on taxa
 
     def reroot_on_taxa(self, taxa):
         taxa = safe_coerce_to_frozenset(taxa)
@@ -209,7 +204,7 @@ class _Graph:
 
         clades = self._collect_clades()
         root_on = self._collect_nodes_from_names(taxa)
-        # Because None is the id of the root atm: # pylint: disable=W1111
+        # Because None is the id of the root atm:
         root = self._create_root_with_clade(clades, root_on)
 
         return self.rebuild_tree(root, root)
@@ -271,7 +266,7 @@ class _Graph:
 
     ################################################################################
     ################################################################################
-    ## Functions relating to calculating bootstrap support
+    # Functions relating to calculating bootstrap support
     def get_clade_names(self):
         result = set()
         for (_, connections) in self._collect_clades().items():

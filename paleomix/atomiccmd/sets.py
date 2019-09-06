@@ -44,16 +44,16 @@ class _CommandSet:
             for command in self._commands:
                 command.commit(temp)
                 committed_files.update(command.output_files)
-        except:
+        except Exception:
             # Cleanup after failed commit
             for fpath in committed_files:
                 try_remove(fpath)
             raise
 
-    def _collect_properties(key):  # pylint: disable=E0213
+    def _collect_properties(key):
         def _collector(self):
             values = set()
-            for command in self._commands:  # pylint: disable=W0212
+            for command in self._commands:
                 values.update(getattr(command, key))
             return values
 

@@ -24,7 +24,6 @@ import errno
 import logging
 import multiprocessing
 import os
-import queue
 import signal
 import traceback
 

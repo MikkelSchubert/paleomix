@@ -46,7 +46,7 @@ def test_file(*args):
 
 
 def test_msa_constructor__calls_validate():
-    _mock = flexmock(MSA).should_receive("validate").at_least.once
+    flexmock(MSA).should_receive("validate").at_least.once
     MSA([FASTA("NA", None, "ACGT")])
 
 
@@ -470,8 +470,15 @@ def test_msa_repr():
             FASTA("miRNA", None, "UCAGA"),
         )
     )
-    expected = "MSA(FASTA('miRNA', '', 'UCAGA'), FASTA('nc', '', 'ACGTA'), FASTA('nm', 'META', 'TGAGT'))"
-    assert_equal(str(msa), expected)
+
+    assert_equal(
+        str(msa),
+        (
+            "MSA(FASTA('miRNA', '', 'UCAGA'), "
+            "FASTA('nc', '', 'ACGTA'), "
+            "FASTA('nm', 'META', 'TGAGT'))"
+        ),
+    )
 
 
 def test_msa_repr__same_as_str():

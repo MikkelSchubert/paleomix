@@ -20,13 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-# Disable warning for missing docstring
-# pylint: disable=C0111
-# Disable warning caused by "invalid" function names
-# pylint: disable=C0103
-# Disable warning caused by touching private member variables/functions
-# TODO: Remove this / fix places touching privates
-# pylint: disable=W0212
 import os
 
 from flexmock import flexmock

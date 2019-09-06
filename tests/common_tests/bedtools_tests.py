@@ -20,10 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-# Ignore "invalid" function names
-# pylint: disable=C0103
-# No need for docstrings
-# pylint: disable=C0111
 import copy
 
 from nose.tools import assert_equal, assert_not_equal, assert_raises

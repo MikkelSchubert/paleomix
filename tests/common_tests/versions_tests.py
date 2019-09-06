@@ -20,8 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-# pylint: disable=missing-docstring,too-few-public-methods
-#
 import pickle
 import operator
 
@@ -496,7 +494,7 @@ def test_requirementobj__version__command_not_found():
     )
 
     try:
-        obj.version  # pylint: disable=pointless-statement
+        obj.version
         assert False  # pragma: no coverage
     except versions.VersionRequirementError as error:
         # Should include OSError message
@@ -509,7 +507,7 @@ def test_requirementobj__version__command_not_executable():
     )
 
     try:
-        obj.version  # pylint: disable=pointless-statement
+        obj.version
         assert False  # pragma: no coverage
     except versions.VersionRequirementError as error:
         # Should include OSError message
@@ -555,7 +553,7 @@ def test_requirementobj__version__outdated_jre__with_or_without_version_str():
         )
 
         try:
-            obj.version  # pylint: disable=pointless-statement
+            obj.version
             assert False  # pragma: no coverage
         except versions.VersionRequirementError as error:
             assert_in(error_msg, str(error))

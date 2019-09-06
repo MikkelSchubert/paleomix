@@ -61,9 +61,11 @@ class RAxMLRapidBSNode(CommandNode):
         Arguments:
         input_alignment  -- An alignment file in a format readable by RAxML.
         input_partition  -- A set of partitions in a format readable by RAxML.
-        output_template  -- A template string used to construct final filenames. Should consist
-                            of a full path, including a single '%s', which is replaced with the
-                            variable part of RAxML output files (e.g. 'info', 'bestTree', ...).
+        output_template  -- A template string used to construct final filenames. Should
+                            consist of a full path, including a single '%s', which is
+                            replaced with the  variable part of RAxML output files (e.g.
+                            'info', 'bestTree', ...).
+
                             Example destination: '/disk/project/SN013420.RAxML.%s'
                             Example output:      '/disk/project/SN013420.RAxML.bestTree'
         """
@@ -82,8 +84,9 @@ class RAxMLRapidBSNode(CommandNode):
         command.set_option("-n", "PALEOMIX")
         # Ensures that output is saved to the temporary directory
         command.set_option("-w", "%(TEMP_DIR)s")
-        # Symlink to sequence and partitions, to prevent the creation of *.reduced files outside temp folder
-        # In addition, it may be nessesary to remove the .reduced files if created
+        # Symlink to sequence and partitions, to prevent the creation of *.reduced files
+        # outside temp folder. In addition, it may be nessesary to remove the .reduced
+        # files if created
         command.set_option("-s", "%(TEMP_OUT_ALN)s")
 
         if input_partition is not None:
@@ -94,7 +97,8 @@ class RAxMLRapidBSNode(CommandNode):
                 TEMP_OUT_PART_R=os.path.basename(input_partition) + ".reduced",
             )
 
-        command.set_kwargs(  # Auto-delete: Symlinks and .reduced files that RAxML may generate
+        command.set_kwargs(
+            # Auto-delete: Symlinks and .reduced files that RAxML may generate
             TEMP_OUT_ALN=os.path.basename(input_alignment),
             TEMP_OUT_ALN_R=os.path.basename(input_alignment) + ".reduced",
             # Input files, are not used directly (see below)
@@ -110,11 +114,12 @@ class RAxMLRapidBSNode(CommandNode):
 
         # Use the GTRGAMMA model of NT substitution by default
         command.set_option("-m", "GTRGAMMAI", fixed=False)
-        # Enable Rapid Boostrapping and set random seed. May be set to a fixed value to allow replicability.
+        # Enable Rapid Boostrapping and set random seed. May be set to a fixed value to
+        # allow replicability.
         command.set_option("-x", int(random.random() * 2 ** 31 - 1), fixed=False)
-        # Set random seed for parsimony inference. May be set to a fixed value to allow replicability.
+        # Set random seed for parsimony inference. May be set to allow replicability.
         command.set_option("-p", int(random.random() * 2 ** 31 - 1), fixed=False)
-        # Terminate bootstrapping upon convergence, rather than after a fixed number of repetitions
+        # Terminate bootstrapping upon convergence, not after N repetitions
         command.set_option("-N", "autoMRE", fixed=False)
 
         return {"command": command}
@@ -169,10 +174,11 @@ class RAxMLParsimonyTreeNode(CommandNode):
         command.set_option("-m", "GTRGAMMA")
         # Ensures that output is saved to the temporary directory
         command.set_option("-w", "%(TEMP_DIR)s")
-        # Set random seed for bootstrap generation. May be set to a fixed value to allow replicability.
+        # Set random seed for bootstrap generation. May be set to allow replicability
         command.set_option("-p", int(random.random() * 2 ** 31 - 1), fixed=False)
 
-        # Symlink to sequence and partitions, to prevent the creation of *.reduced files outside temp folder
+        # Symlink to sequence and partitions, to prevent the creation of *.reduced files
+        # outside temp folder
         command.set_option("-s", "%(TEMP_OUT_ALIGNMENT)s")
         command.set_option("-q", "%(TEMP_OUT_PARTITION)s")
 

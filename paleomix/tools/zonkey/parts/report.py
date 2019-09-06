@@ -513,7 +513,7 @@ _HTML_HEADER = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
     </p>
 {Sidebar}
     <div id="mainbar">
-"""
+"""  # noqa: E501
 
 _SECTION_HEADER = """      <h1><a name="{name}" id="{name}"></a>{title}</h1>
 """
@@ -543,7 +543,7 @@ _INTRODUCTION = """
           on which the Zonkey pipeline is based.
         </div>
         <br/>
-"""
+"""  # noqa: E501
 
 _OVERVIEW_HEADER = """
         <div>

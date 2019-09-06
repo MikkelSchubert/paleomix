@@ -34,7 +34,7 @@ _SUPPORTED_DB_FORMAT = 1
 
 RSCRIPT_VERSION = versions.Requirement(
     call=("Rscript", "--version"),
-    search="version (\d+)\.(\d+)\.(\d+)",
+    search=r"version (\d+)\.(\d+)\.(\d+)",
     checks=versions.GE(3, 0, 0),
     priority=10,
 )

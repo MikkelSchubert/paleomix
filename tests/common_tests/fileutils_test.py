@@ -716,7 +716,6 @@ def test_open_ro__close_handle_on_error():
             pass
 
         def read(self, *_args, **_kwargs):
-            # pylint: disable=R0201
             raise OddException("ARGH!")
 
     try:

@@ -20,11 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-# Disable warnings for wierd function names
-# pylint: disable=C0103
-# Disable warnings caused by flexmock setups ("X is assigned to nothing")
-# pylint: disable=W0106
-
 import nose
 import nose.tools
 from nose.tools import assert_equal, assert_raises

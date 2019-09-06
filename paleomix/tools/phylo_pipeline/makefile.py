@@ -22,7 +22,6 @@
 #
 import logging
 import os
-import types
 
 import pysam
 
@@ -313,7 +312,7 @@ def _update_filtering(mkfile):
             )
         elif target in filter_by:
             raise MakefileError(
-                "Attempting to filter singleton in sample using itself as comparison: %r"
+                "Filtering singleton in sample using itself as comparison: %r"
                 % (target,)
             )
 

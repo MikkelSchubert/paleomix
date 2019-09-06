@@ -375,9 +375,10 @@ class NodeGraph:
         for (filename, nodes) in real_output_files.items():
             if len(nodes) > 1:
                 nodes = _summarize_nodes(nodes)
-                yield "Multiple nodes create the same (clobber) output-file:" "\n\tFilename: %s\n\tNodes: %s" % (
-                    filename,
-                    "\n\t       ".join(nodes),
+                yield (
+                    "Multiple nodes create the same (clobber) output-file:\n"
+                    "\tFilename: %s\n\tNodes: %s"
+                    % (filename, "\n\t       ".join(nodes))
                 )
 
     @classmethod
@@ -395,16 +396,21 @@ class NodeGraph:
                 if bad_nodes:
                     producer = next(iter(producers))
                     bad_nodes = _summarize_nodes(bad_nodes)
-                    yield "Node depends on dynamically created file, but not on the node creating it:" + "\n\tFilename: %s\n\tCreated by: %s\n\tDependent node(s): %s" % (
-                        filename,
-                        producer,
-                        "\n\t                   ".join(bad_nodes),
+                    yield (
+                        "Node depends on dynamic file, but not on node creating it:\n"
+                        "\tFilename: %s\n\tCreated by: %s\n\tDependent node(s): %s"
+                        % (
+                            filename,
+                            producer,
+                            "\n\t                   ".join(bad_nodes),
+                        )
                     )
             elif not os.path.exists(filename):
                 nodes = _summarize_nodes(nodes)
-                yield "Required file does not exist, and is not created by a node:" + "\n\tFilename: %s\n\tDependent node(s): %s" % (
-                    filename,
-                    "\n\t                   ".join(nodes),
+                yield (
+                    "Required file does not exist, and is not created by a node:\n"
+                    "\tFilename: %s\n\tDependent node(s): %s"
+                    % (filename, "\n\t                   ".join(nodes))
                 )
 
     @classmethod
@@ -432,7 +438,7 @@ class NodeGraph:
                 processed.add(node)
 
                 # Initialize default-dict
-                rev_dependencies[node]  # pylint: disable=W0104
+                rev_dependencies[node]
 
                 subnodes = node.dependencies
                 for dependency in subnodes:

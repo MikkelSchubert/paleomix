@@ -22,7 +22,6 @@
 #
 import os
 import sys
-import types
 import socket
 import getpass
 import optparse
@@ -76,7 +75,7 @@ class PerHostConfig:
         # Various common options
         temp_root = os.path.join("/tmp", getpass.getuser(), pipeline_name)
         self.temp_root = PerHostValue(temp_root, True)
-        # At least 2 threads are required for e.g. PE BWA nodes, and generally recommended anyway
+        # At least 2 threads are required for e.g. PE BWA nodes, and recommended anyway
         self.max_threads = PerHostValue(max(2, multiprocessing.cpu_count()))
 
         self._filenames = self._get_filenames(pipeline_name)

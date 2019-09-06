@@ -553,7 +553,7 @@ class ValuesSubsetOf(_BinaryOperator):
 # Logical operators
 
 
-class _MultipleSpecs(MakefileSpec):  # pylint: disable=W0223
+class _MultipleSpecs(MakefileSpec):
     """Base-class for logical operators for one or more specifications."""
 
     def __init__(

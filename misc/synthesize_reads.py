@@ -20,8 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from __future__ import print_function
-
 import sys
 import math
 import gzip
@@ -77,13 +75,13 @@ def _mutate_sequence(rng, choices, refseq, indel_lambda=0):
         if ref_nt not in "ACGT":
             read_nt = rng.choice("ACGT")
         else:
-            read_nt = choices[ref_nt].next()
+            read_nt = next(choices[ref_nt])
 
         if read_nt == "D":
-            for _ in xrange(_get_indel_length(indel_lambda, rng)):
+            for _ in range(_get_indel_length(indel_lambda, rng)):
                 position += 1
         elif read_nt == "I":
-            for _ in xrange(_get_indel_length(indel_lambda, rng)):
+            for _ in range(_get_indel_length(indel_lambda, rng)):
                 sequence.append(rng.choice("ACGT"))
                 positions.append(position)
         else:
@@ -156,7 +154,7 @@ class Sample(object):
 
     def _get_contaminant_sequence(self):
         length = self._get_frag_len()
-        sequence = [self._random.choice("ACGT") for _ in xrange(length)]
+        sequence = [self._random.choice("ACGT") for _ in range(length)]
 
         self._contam_id += 1
         name = "Seq_junk_%i" % (self._contam_id,)
@@ -244,7 +242,7 @@ class Library(object):
     @classmethod
     def _generate_lanes(cls, options, rng, sample, pcr1):
         lane_counts = []
-        for _ in xrange(options.lanes_num):
+        for _ in range(options.lanes_num):
             lane_counts.append(
                 toint(random.gauss(options.lanes_reads_mu, options.lanes_reads_sigma))
             )
@@ -265,7 +263,7 @@ class Library(object):
             cur_reverse = reverse_complement(sequence) + PCR2
             # Number of PCR copies -- minimum 1
             num_dupes = toint(_rexp(options.library_pcr_lambda, rng)) + 1
-            for dupe_id in xrange(num_dupes):
+            for dupe_id in range(num_dupes):
                 cur_name = "%s_%s" % (name, dupe_id)
                 reads.append((cur_name, cur_forward, cur_reverse))
         random.shuffle(reads)

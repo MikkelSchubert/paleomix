@@ -127,11 +127,14 @@ class ExaMLNode(CommandNode):
         """
         Arguments:
         input_binary  -- A binary alignment file in a format readable by ExaML.
-        output_template  -- A template string used to construct final filenames. Should consist
-                            of a full path, including a single '%s', which is replaced with the
-                            variable part of RAxML output files (e.g. 'info', 'bestTree', ...).
+        output_template  -- A template string used to construct final filenames. Should
+                            consist of a full path, including a single '%s', which is
+                            replaced with the variable part of RAxML output files (e.g.
+                            'info', 'bestTree', ...).
+
                             Example destination: '/disk/project/SN013420.RAxML.%s'
-                            Example output:      '/disk/project/SN013420.RAxML.bestTree'"""
+                            Example output:      '/disk/project/SN013420.RAxML.bestTree'
+        """
 
         # TODO: Make MPIParams!
         command = AtomicMPICmdBuilder("examl", threads=threads)

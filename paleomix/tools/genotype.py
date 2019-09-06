@@ -181,7 +181,7 @@ def setup_basic_batch(args, regions, prefix, func, first_batch=True):
         setup["procs"]["gzip"] = zip_proc
 
         return setup
-    except:
+    except Exception:
         sys.stderr.write(traceback.format_exc() + "\n")
         cleanup_batch(setup)
         raise
@@ -278,7 +278,7 @@ def run_batch(params):
             return None
 
         return filename
-    except:
+    except Exception:
         # Re-wrap exception with full-traceback; otherwise this information
         # is lost when the exception is retrieved in the main process.
         raise BatchError(traceback.format_exc())
@@ -440,7 +440,7 @@ def process_batches(args, batches):
         pool.close()
         pool.join()
         return 0
-    except:
+    except Exception:
         pool.terminate()
         pool.join()
         raise

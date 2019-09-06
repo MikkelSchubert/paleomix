@@ -21,7 +21,6 @@
 # SOFTWARE.
 #
 import signal
-import types
 
 
 def to_str(value):

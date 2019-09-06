@@ -46,21 +46,21 @@ from paleomix.tools.zonkey.common import (
 
 
 ADMIXTURE_VERSION = versions.Requirement(
-    call=("admixture", "--version"), search="(\d+)\.(\d+)", checks=versions.GE(1, 3)
+    call=("admixture", "--version"), search=r"(\d+)\.(\d+)", checks=versions.GE(1, 3)
 )
 
 PLINK_VERSION = versions.Requirement(
     call=("plink", "--noweb", "--help", "--out", "/tmp/plink"),
-    search="v(\d+)\.(\d+)",
+    search=r"v(\d+)\.(\d+)",
     checks=versions.GE(1, 7),
 )
 
 SMARTPCA_VERSION = versions.Requirement(
-    call=("smartpca",), search="version: (\d+)", checks=versions.GE(13050)
+    call=("smartpca",), search=r"version: (\d+)", checks=versions.GE(13050)
 )
 
 TREEMIX_VERSION = versions.Requirement(
-    call=("treemix",), search="TreeMix v. (\d+)\.(\d+)", checks=versions.GE(1, 12)
+    call=("treemix",), search=r"TreeMix v. (\d+)\.(\d+)", checks=versions.GE(1, 12)
 )
 
 

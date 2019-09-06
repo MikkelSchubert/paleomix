@@ -20,8 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-# pylint: disable=too-few-public-methods
-#
 """Version checks for apps or libraries required by PALEOMIX pipelines.
 
 The module contains to sets of classes: RequirementObj and Check. The
@@ -68,7 +66,6 @@ class VersionRequirementError(Exception):
 
 def Requirement(call, search, checks, name=None, priority=0):
     # Ignore function naming scheme
-    # pylint: disable=C0103
     """Returns a singleton Requirement object, based on the parameters,
     which may be used to check that version requirements are met for a
     given program/utility/module, etc.
@@ -258,7 +255,7 @@ class Check(TotallyOrdered):
 
     def __lt__(self, other):
         if isinstance(other, Check):
-            return self._objs < other._objs  # pylint: disable=W0212
+            return self._objs < other._objs
         return NotImplemented  # pragma: no coverage
 
     def __hash__(self):

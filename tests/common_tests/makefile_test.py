@@ -21,7 +21,6 @@
 # SOFTWARE.
 #
 import os
-import types
 
 from nose.tools import assert_is, assert_equal, assert_raises, assert_raises_regexp
 

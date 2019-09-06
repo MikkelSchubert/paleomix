@@ -20,8 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-# pylint: disable=missing-docstring
-#
 import os
 import signal
 
@@ -109,7 +107,6 @@ def test_pformat__simple__done(temp_folder):
 def test_pformat__simple__done__before_join(temp_folder):
     cmd = AtomicCmd("true")
     cmd.run(temp_folder)
-    # pylint: disable=protected-access
     cmd._proc.wait()
     assert_equal(
         pformat(cmd),
@@ -163,7 +160,6 @@ def test_pformat__simple__terminated_by_pipeline(temp_folder):
 def test_pformat__simple__killed_by_signal(temp_folder):
     cmd = AtomicCmd(("sleep", "10"))
     cmd.run(temp_folder)
-    # pylint: disable=protected-access
     os.killpg(cmd._proc.pid, signal.SIGTERM)
     assert_equal(cmd.join(), ["SIGTERM"])
     assert_equal(

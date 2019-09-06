@@ -25,7 +25,6 @@ import os
 import re
 import signal
 import sys
-import types
 import weakref
 
 import paleomix.atomiccmd.pprint as atomicpp
@@ -245,9 +244,9 @@ class AtomicCmd(object):
                 pass  # Already dead / finished process
 
     # Properties, returning filenames from self._file_sets
-    def _property_file_sets(key):  # pylint: disable=E0213
+    def _property_file_sets(key):
         def _get_property_files(self):
-            return self._file_sets[key]  # pylint: disable=W0212
+            return self._file_sets[key]
 
         return property(_get_property_files)
 
@@ -426,7 +425,6 @@ class AtomicCmd(object):
         if filename in (None, cls.PIPE, cls.DEVNULL):
             return filename
         elif isinstance(filename, AtomicCmd):
-            # pylint: disable=W0212
             return filename._proc and filename._proc.stdout
 
         return open(filename, mode)

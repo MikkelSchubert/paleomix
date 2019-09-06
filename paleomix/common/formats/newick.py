@@ -20,8 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-# Required due to use of NotImplementedError in setattr:
-# pylint: disable=R0921
 import re
 
 from paleomix.common.utilities import safe_coerce_to_tuple, Immutable, TotallyOrdered
@@ -185,7 +183,6 @@ class Newick(TotallyOrdered, Immutable):
         if not isinstance(other, Newick):
             return NotImplemented
 
-        # pylint: disable=W0212
         return (-self._weight, self.name, self.length, self.children) < (
             -other._weight,
             other.name,
@@ -207,7 +204,7 @@ class Newick(TotallyOrdered, Immutable):
         if self.children:
             fields.append("(")
             for child in self.children:
-                fields.append(child._to_str())  # pylint: disable=W0212
+                fields.append(child._to_str())
                 fields.append(",")
             fields.pop()
             fields.append(")")
@@ -246,7 +243,7 @@ class Newick(TotallyOrdered, Immutable):
 
 ################################################################################
 ################################################################################
-## Functions related to NEWICK parsing
+# Functions related to NEWICK parsing
 
 _TOKENIZER = re.compile("([():,;])")
 _NODE_KEYS = frozenset(("name", "length", "children"))
@@ -310,7 +307,7 @@ def _parse_child(tokens, children=None):
 
 ################################################################################
 ################################################################################
-## Class related to tree manipulations
+# Class related to tree manipulations
 
 
 class _NewickGraph(_Graph):

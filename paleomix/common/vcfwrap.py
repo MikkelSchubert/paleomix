@@ -34,10 +34,10 @@ Indel = collections.namedtuple(
 def parse_indel(vcf):
     """Parses the VCF record of an indel, and returns a tuple containing the
     position (0-based) of the previous base, a boolean indicating whether or
-    not the subsequent sequence is found in the reference sequence, and a 
+    not the subsequent sequence is found in the reference sequence, and a
     string containing the bases added to / removed from the reference.
 
-    Thus (7, False, "ACGT", "AC") indicates that the sequence ACGT has been 
+    Thus (7, False, "ACGT", "AC") indicates that the sequence ACGT has been
     inserted following the 8th nucleotide, compared with the reference, and
     that the insertion is followed by the bases "AC" on the reference."""
     if not is_indel(vcf):

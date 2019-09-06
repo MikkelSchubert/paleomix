@@ -35,7 +35,7 @@ from paleomix.tools.bam_stats.common import BAMStatsError
 ##
 
 
-class ReadGroup(object):
+class ReadGroup:
     __slots__ = ["SE", "PE_1", "PE_2", "Collapsed", "Hits", "M", "I", "D", "Size"]
 
     def __init__(self):

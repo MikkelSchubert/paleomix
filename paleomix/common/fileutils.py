@@ -25,7 +25,6 @@ import bz2
 import gzip
 import uuid
 import errno
-import types
 import shutil
 
 from paleomix.common.utilities import safe_coerce_to_tuple, safe_coerce_to_frozenset

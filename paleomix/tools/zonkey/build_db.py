@@ -21,7 +21,6 @@
 # SOFTWARE.
 import argparse
 import datetime
-import itertools
 import os
 import sys
 

@@ -20,14 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-# Disable warning for missign docstrings
-# pylint: disable=C0111
-# Disable warning caused by "invalid" function names
-# pylint: disable=C0103
-# Disable warning caused by touching private member variables/functions
-# pylint: disable=W0212
-# Disable warnings caused by flexmock setups ("X is assigned to nothing")
-# pylint: disable=W0106
 import os
 import random
 

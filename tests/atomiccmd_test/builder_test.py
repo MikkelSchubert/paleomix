@@ -20,8 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-# pylint: disable=missing-docstring
-#
 from flexmock import flexmock
 from nose.tools import assert_equal, assert_raises
 
@@ -128,13 +126,13 @@ def test_builder__add_option__overwrite():
 
 
 def test_builder__add_or_set_option__without_value():
-    def _do_test_builder__add_or_set_option__without_value(setter):
+    def _do_test_builder__option__without_value(setter):
         builder = AtomicCmdBuilder("find")
         setter(builder, "-delete")
         assert_equal(builder.call, ["find", "-delete"])
 
-    yield _do_test_builder__add_or_set_option__without_value, AtomicCmdBuilder.add_option
-    yield _do_test_builder__add_or_set_option__without_value, AtomicCmdBuilder.set_option
+    yield _do_test_builder__option__without_value, AtomicCmdBuilder.add_option
+    yield _do_test_builder__option__without_value, AtomicCmdBuilder.set_option
 
 
 def test_builder__add_or_set_option__with_sep():
@@ -148,42 +146,42 @@ def test_builder__add_or_set_option__with_sep():
 
 
 def test_builder__add_or_set_option__with_non_str_value():
-    def _do_test_test_builder__add_or_set_option__with_non_str_value(setter):
+    def _do_test_test_builder__option__with_non_str_value(setter):
         builder = AtomicCmdBuilder("find")
         setter(builder, "-size", 0)
         assert_equal(builder.call, ["find", "-size", 0])
 
-    yield _do_test_test_builder__add_or_set_option__with_non_str_value, AtomicCmdBuilder.add_option
-    yield _do_test_test_builder__add_or_set_option__with_non_str_value, AtomicCmdBuilder.set_option
+    yield _do_test_test_builder__option__with_non_str_value, AtomicCmdBuilder.add_option
+    yield _do_test_test_builder__option__with_non_str_value, AtomicCmdBuilder.set_option
 
 
 def test_builder__add_or_set_option__add_and_set():
-    def _do_test_builder__add_or_set_option__add_and_set(setter_1, setter_2):
+    def _do_test_builder(setter_1, setter_2):
         builder = AtomicCmdBuilder("find")
         setter_1(builder, "-name", "*.txt")
         assert_raises(AtomicCmdBuilderError, setter_2, builder, "-name", "*.bat")
 
-    yield _do_test_builder__add_or_set_option__add_and_set, AtomicCmdBuilder.set_option, AtomicCmdBuilder.add_option
-    yield _do_test_builder__add_or_set_option__add_and_set, AtomicCmdBuilder.add_option, AtomicCmdBuilder.set_option
+    yield _do_test_builder, AtomicCmdBuilder.set_option, AtomicCmdBuilder.add_option
+    yield _do_test_builder, AtomicCmdBuilder.add_option, AtomicCmdBuilder.set_option
 
 
 def test_builder__add_or_set_option__with_non_str_key():
-    def _do_test_builder__add_or_set_option__with_non_str_key(setter):
+    def _do_test_builder__option__with_non_str_key(setter):
         builder = AtomicCmdBuilder("find")
         assert_raises(TypeError, setter, builder, 7913, "True")
 
-    yield _do_test_builder__add_or_set_option__with_non_str_key, AtomicCmdBuilder.add_option
-    yield _do_test_builder__add_or_set_option__with_non_str_key, AtomicCmdBuilder.set_option
+    yield _do_test_builder__option__with_non_str_key, AtomicCmdBuilder.add_option
+    yield _do_test_builder__option__with_non_str_key, AtomicCmdBuilder.set_option
 
 
 def test_builder__add_or_set_option__after_finalize():
-    def _do_test_builder__add_or_set_option__after_finalize(setter):
+    def _do_test_builder__option__after_finalize(setter):
         builder = AtomicCmdBuilder("find")
         builder.finalize()
         assert_raises(AtomicCmdBuilderError, setter, builder, "-size", "1")
 
-    yield _do_test_builder__add_or_set_option__after_finalize, AtomicCmdBuilder.add_option
-    yield _do_test_builder__add_or_set_option__after_finalize, AtomicCmdBuilder.set_option
+    yield _do_test_builder__option__after_finalize, AtomicCmdBuilder.add_option
+    yield _do_test_builder__option__after_finalize, AtomicCmdBuilder.set_option
 
 
 def test_builder__add_or_set_option__empty_key():

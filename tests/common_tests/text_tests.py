@@ -20,10 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-# Disable warnings on strange function names
-# pylint: disable=C0103
-
-
 import collections
 
 import nose.tools

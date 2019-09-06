@@ -23,7 +23,6 @@
 import collections
 import itertools
 import re
-import types
 
 
 class TableError(RuntimeError):

@@ -21,7 +21,6 @@
 # SOFTWARE.
 #
 import os
-import types
 
 from paleomix.common.utilities import safe_coerce_to_tuple
 
@@ -117,15 +116,11 @@ class Library:
             keep_duplicates = True
 
         # Indexing is required if we wish to calulate per-region statistics,
-        index_required = (
-            bool(prefix.get("RegionsOfInterest"))
-            or
-            # or if we wish to run GATK, but only if we don't
-            # use a downstream rescaled BAM as input for GATK
-            (
-                self.options["Features"]["RealignedBAM"]
-                and not self.options["Features"]["mapDamage"] == "rescale"
-            )
+        # or if we wish to run GATK, but only if we don't use a downstream
+        # rescaled BAM as input for GATK
+        index_required = bool(prefix.get("RegionsOfInterest")) or (
+            self.options["Features"]["RealignedBAM"]
+            and not self.options["Features"]["mapDamage"] == "rescale"
         )
 
         results = {}
