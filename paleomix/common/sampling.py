@@ -49,7 +49,7 @@ def weighted_sampling(choices, weights, rng=random):
 
 
 def reservoir_sampling(items, downsample_to, rng=random):
-    if not isinstance(downsample_to, (types.IntType, types.LongType)):
+    if not isinstance(downsample_to, int):
         raise TypeError("Unexpected type for 'downsample_to': %r"
                         % (type(downsample_to),))
     elif downsample_to < 0:

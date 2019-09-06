@@ -83,7 +83,7 @@ class DetectInputDuplicationNode(Node):
                    ""]
 
         message.append("Read was found in these BAM files:")
-        for filename, records in sorted(records.iteritems()):
+        for filename, records in sorted(records.items()):
             message.append("   %s in %r" % (_summarize_reads(records), filename))
 
         message.append("")
@@ -110,7 +110,7 @@ class ValidateFASTQFilesNode(Node):
     def __init__(self, input_files, output_file, offset, dependencies=()):
         self._offset = offset
         self._files = set()
-        for (read_type, filename) in input_files.iteritems():
+        for (read_type, filename) in input_files.items():
             if read_type == "Paired":
                 self._files.add((read_type, filename.format(Pair=1)))
                 self._files.add((read_type, filename.format(Pair=2)))
@@ -232,7 +232,7 @@ def _read_sequences(file_type, filename, stats):
         qualities = _collect_qualities(cat.stdout, file_type, filename, stats)
 
         return sampling.reservoir_sampling(qualities, 100000)
-    except StandardError as error:
+    except Exception as error:
         if cat:
             try:
                 cat.kill()
@@ -275,7 +275,7 @@ def _read_samfile(handle, filename):
 
 
 def _process_bam_reads(observed_reads, references, position, err_func):
-    for records_and_filenames in observed_reads.itervalues():
+    for records_and_filenames in observed_reads.values():
         if len(records_and_filenames) == 1:
             # Most read-names should be obseved at most once at a position
             continue
@@ -285,7 +285,7 @@ def _process_bam_reads(observed_reads, references, position, err_func):
             key = (record.is_reverse, record.qname, record.seq, record.qual)
             result[key].append((filename, record))
 
-        for (is_reverse, name, seq, qual), filenames in result.iteritems():
+        for (is_reverse, name, seq, qual), filenames in result.items():
             if len(filenames) == 1:
                 # Two reads had same name, but different characterstics
                 continue

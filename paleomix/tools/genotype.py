@@ -74,7 +74,7 @@ def build_call(call, args, positional, new_args):
             key, value = new_arg.split("=", 1)
         args[key] = value
 
-    for (key, value) in sorted(args.iteritems()):
+    for (key, value) in sorted(args.items()):
         call.append(key)
         if value is not None:
             call.append(value)
@@ -126,15 +126,15 @@ def filter_bam(bamfile, bedfile):
 
 def cleanup_batch(setup):
     sys.stderr.write("Cleaning up batch ...\n")
-    for handle in setup["handles"].itervalues():
+    for handle in setup["handles"].values():
         handle.close()
 
-    for proc in setup["procs"].itervalues():
+    for proc in setup["procs"].values():
         if proc.poll() is None:
             proc.terminate()
             proc.wait()
 
-    for filename in setup["temp_files"].itervalues():
+    for filename in setup["temp_files"].values():
         sys.stderr.write("Removing temporary file %r\n" % (filename,))
         os.remove(filename)
 
@@ -267,10 +267,11 @@ def setup_batch(args, regions, filename, first_batch):
     return setup_genotyping_batch(args, regions, filename, first_batch)
 
 
-def run_batch((args, regions, filename, first_batch)):
+def run_batch(params):
+    args, regions, filename, first_batch = params
     setup = setup_batch(args, regions, filename, first_batch)
     try:
-        if any(processes.join_procs(setup["procs"].values())):
+        if any(processes.join_procs(list(setup["procs"].values()))):
             return None
 
         return filename
@@ -515,7 +516,7 @@ def main(argv):
 
     try:
         return process_batches(args, batches)
-    except BatchError, error:
+    except BatchError as error:
         sys.stderr.write("ERROR while processing BAM:\n")
         sys.stderr.write("    %s\n"
                          % ("\n    ".join(str(error).split("\n"),)))

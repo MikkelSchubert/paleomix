@@ -25,9 +25,6 @@
 # feature in the GTF file (CDS, Exon, ...). Also generates a list
 # of introns, and UTRs based on sequences in the GTF.
 #
-from __future__ import with_statement
-from __future__ import print_function
-
 import sys
 from argparse import ArgumentParser
 
@@ -154,7 +151,7 @@ def split_exons(exons, func):
     # By looping over the list sorted by exon-number, we can easily
     # determine whether or not we are dealing with a 5' or 3' UTR.
     seen_cds = False
-    for (_, exon) in sorted(exons.iteritems()):
+    for (_, exon) in sorted(exons.items()):
         if "CDS" in exon:
             seen_cds = True
             cds, exon = exon["CDS"], exon["exon"]
@@ -171,13 +168,13 @@ def select_transcripts(options, transcripts, protein_coding):
     """Returns the largest transcript, preferring well formed
     transcripts (len(CDS) % 3 == 0) if the gene is protein coding."""
     if options.keep_all_transcripts and options.keep_malformed_proteins:
-        return transcripts.itervalues()
+        return iter(transcripts.values())
 
     selection = []
-    for transcript in transcripts.itervalues():
+    for transcript in transcripts.values():
         well_formed = True
         exon_len = cds_len = 0
-        for records in transcript.itervalues():
+        for records in transcript.values():
             exon_record = records["exon"]
             exon_len += exon_record["end"] - exon_record["start"] + 1
 
@@ -203,7 +200,7 @@ def _do_build_feature_table(options, table, features, protein_coding):
             features[record["feature"]].append(record)
 
     retained = read = 0
-    for transcripts in table.itervalues():
+    for transcripts in table.values():
         read += len(transcripts)
         for exons in select_transcripts(options, transcripts, protein_coding):
             retained += 1
@@ -237,7 +234,7 @@ def build_noncoding_seqs_table(options, table):
 
     feature_table = _do_build_feature_table(options, table, features, False)
     for (exons, add_records) in feature_table:
-        add_records(record["exon"] for record in exons.itervalues())
+        add_records(record["exon"] for record in exons.values())
     return features
 
 
@@ -304,7 +301,7 @@ def main(argv):
         print("Reading GTF from %r" % (args.infile,))
         src_table = read_gtf(gtf_file, scaffolds, args.contig_prefix)
 
-    for (source, table) in src_table.iteritems():
+    for (source, table) in src_table.items():
         print("Writing tables for '%s' ..." % source)
 
         if source.startswith("protein"):

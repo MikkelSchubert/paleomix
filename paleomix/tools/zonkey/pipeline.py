@@ -124,7 +124,7 @@ def build_admixture_nodes(config, data, root, plink):
             replicates = []
 
             input_file = os.path.join(plink["root"], postfix + ".bed")
-            for replicate in xrange(config.admixture_replicates):
+            for replicate in range(config.admixture_replicates):
                 output_root = os.path.join(admix_root, "%02i" % (replicate,))
 
                 node = nuclear.AdmixtureNode(input_file=input_file,
@@ -320,7 +320,7 @@ def run_admix_pipeline(config):
 
     cache = {}
     nodes = []
-    items = config.samples.iteritems()
+    items = iter(config.samples.items())
     for idx, (name, sample) in enumerate(sorted(items), start=1):
         root = sample["Root"]
         nuc_bam = sample["Files"].get("Nuc")
@@ -351,7 +351,7 @@ def setup_mito_mapping(config):
     mkfile_fpath = os.path.join(config.destination, "makefile.yaml")
 
     filenames = [mkfile_fpath]
-    for name, record in sorted(config.database.mitochondria.iteritems()):
+    for name, record in sorted(config.database.mitochondria.items()):
         filenames.append(os.path.join(genomes_root, "%s.fasta"
                                       % (record.name,)))
 
@@ -362,7 +362,7 @@ def setup_mito_mapping(config):
     if existing_filenames:
         print_err("ERROR: Output file(s) already exists, "
                   "cannot proceed:\n    %s"
-                  % ("\n    ".join(map(repr, existing_filenames),)))
+                  % ("\n    ".join(list(map(repr, existing_filenames)),)))
 
         return 1
 
@@ -372,9 +372,8 @@ def setup_mito_mapping(config):
 
         mkfile.write("\n\nPrefixes:\n")
 
-        for name, record in sorted(config.database.mitochondria.iteritems()):
-            meta = (record.meta or "").upper()
-            if "EXCLUDE" in meta:
+        for name, record in sorted(config.database.mitochondria.items()):
+            if "EXCLUDE" in record.meta.upper():
                 continue
 
             mkfile.write("  %s:\n" % (record.name,))

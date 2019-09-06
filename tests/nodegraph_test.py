@@ -70,7 +70,7 @@ def setup_module():
                   test_file("timestamp_a_younger"): 1120719000,
                   test_file("timestamp_b_younger"): 1120719000}
 
-    for filename, timestamp in timestamps.iteritems():
+    for filename, timestamp in timestamps.items():
         # Set atime and mtime
         os.utime(filename, (timestamp, timestamp))
 

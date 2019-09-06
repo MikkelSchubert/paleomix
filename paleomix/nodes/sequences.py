@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from __future__ import with_statement
+
 
 import os
 import copy
@@ -52,8 +52,8 @@ class CollectSequencesNode(Node):
         self._outfiles = [os.path.join(destination, name + ".fasta")
                           for name in self._sequences]
 
-        input_files = list(self._infiles.itervalues())
-        for filename in self._infiles.itervalues():
+        input_files = list(self._infiles.values())
+        for filename in self._infiles.values():
             input_files.append(filename + ".fai")
 
         desc = "<CollectSequences: %i sequences from %i files -> '%s'>" \
@@ -65,7 +65,7 @@ class CollectSequencesNode(Node):
                       dependencies=dependencies)
 
     def _setup(self, _config, _temp):
-        for filename in self._infiles.itervalues():
+        for filename in self._infiles.values():
             with open(filename + ".fai") as handle:
                 sequences = set()
                 for line in handle:
@@ -85,7 +85,7 @@ class CollectSequencesNode(Node):
 
     def _run(self, _config, temp):
         fasta_files = []
-        for (name, filename) in sorted(self._infiles.iteritems()):
+        for (name, filename) in sorted(self._infiles.items()):
             fasta_files.append((name, pysam.Fastafile(filename)))
 
         for sequence_name in sorted(self._sequences):
@@ -127,7 +127,7 @@ class FilterSingletonsNode(Node):
 
     def _run(self, _config, temp):
         alignment = MSA.from_file(self._input_file)
-        for (to_filter, groups) in self._filter_by.iteritems():
+        for (to_filter, groups) in self._filter_by.items():
             alignment = alignment.filter_singletons(to_filter, groups)
 
         temp_filename = fileutils.reroot_path(temp, self._output_file)

@@ -22,7 +22,7 @@
 #
 import os
 import copy
-import StringIO
+import io
 
 import nose.tools
 from nose.tools import \
@@ -391,7 +391,7 @@ def test_msa_to_file__complete_line_test():
                FASTA("foobar", None, "CGAATG" * 10 + "TGTCAT" * 5)])
     expected = ">barfoo\n%s\n%s\n" % ("ACGATA" * 10, "CGATAG" * 5)
     expected += ">foobar\n%s\n%s\n" % ("CGAATG" * 10, "TGTCAT" * 5)
-    stringf = StringIO.StringIO()
+    stringf = io.StringIO()
     MSA.to_file(msa, stringf)
     assert_equal(stringf.getvalue(), expected)
 
@@ -428,7 +428,7 @@ def test_msa_repr():
     msa = MSA((FASTA("nc",    None, "ACGTA"),
                FASTA("nm",    "META", "TGAGT"),
                FASTA("miRNA", None, "UCAGA")))
-    expected = "MSA(FASTA('miRNA', None, 'UCAGA'), FASTA('nc', None, 'ACGTA'), FASTA('nm', 'META', 'TGAGT'))"
+    expected = "MSA(FASTA('miRNA', '', 'UCAGA'), FASTA('nc', '', 'ACGTA'), FASTA('nm', 'META', 'TGAGT'))"
     assert_equal(str(msa), expected)
 
 

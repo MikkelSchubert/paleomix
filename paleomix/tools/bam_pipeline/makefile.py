@@ -378,7 +378,7 @@ def _mangle_options(makefile):
         else:
             data["Options"] = options
 
-    for data in makefile["Targets"].itervalues():
+    for data in makefile["Targets"].values():
         _do_update_options(makefile["Options"], data, ())
 
 
@@ -405,7 +405,7 @@ def _mangle_features(makefile):
 
 def _mangle_prefixes(makefile):
     records = []
-    for (name, values) in makefile.get("Prefixes", {}).iteritems():
+    for (name, values) in makefile.get("Prefixes", {}).items():
         if "*" in name[:-1]:
             raise MakefileError("The character '*' is not allowed in Prefix "
                                 "names; if you wish to select multiple .fasta "
@@ -457,12 +457,12 @@ def _glob_prefixes(template, pattern):
 def _mangle_lanes(makefile):
     formatter = string.Formatter()
     prefixes = makefile["Prefixes"]
-    for (target_name, samples) in makefile["Targets"].iteritems():
-        for (sample_name, libraries) in samples.iteritems():
-            for (library_name, lanes) in libraries.iteritems():
+    for (target_name, samples) in makefile["Targets"].items():
+        for (sample_name, libraries) in samples.items():
+            for (library_name, lanes) in libraries.items():
                 options = lanes.pop("Options")
 
-                for (lane, data) in lanes.iteritems():
+                for (lane, data) in lanes.items():
                     path = (target_name, sample_name, library_name, lane)
 
                     _validate_lane_paths(data, path, formatter)
@@ -487,15 +487,15 @@ def _mangle_lanes(makefile):
 
 def _validate_lane_paths(data, path, fmt):
     filenames = []
-    if isinstance(data, types.StringTypes):
+    if isinstance(data, str):
         filenames.append(data)
-    elif isinstance(data, types.DictType):
-        filenames.extend(data.itervalues())
+    elif isinstance(data, dict):
+        filenames.extend(iter(data.values()))
 
     for filename in filenames:
         try:
             fields = tuple(fmt.parse(filename))
-        except ValueError, error:
+        except ValueError as error:
             raise MakefileError("Error parsing path specified at %r; %s; note "
                                 "that the characters '}' and '{' should only "
                                 "be used as part of the key '{Pair}', in "
@@ -512,11 +512,11 @@ def _validate_lane_paths(data, path, fmt):
 
 
 def _determine_lane_type(prefixes, data, path):
-    if isinstance(data, types.StringTypes):
+    if isinstance(data, str):
         return "Raw"
-    elif isinstance(data, types.DictType):
+    elif isinstance(data, dict):
         if all((key in _READ_TYPES) for key in data):
-            for (key, files) in data.iteritems():
+            for (key, files) in data.items():
                 is_paired = paths.is_paired_end(files)
 
                 if is_paired and (key != "Paired"):
@@ -539,10 +539,10 @@ def _determine_lane_type(prefixes, data, path):
 
 
 def _mangle_tags(makefile):
-    for (target, samples) in makefile["Targets"].iteritems():
-        for (sample, libraries) in samples.iteritems():
-            for (library, barcodes) in libraries.iteritems():
-                for (barcode, record) in barcodes.iteritems():
+    for (target, samples) in makefile["Targets"].items():
+        for (sample, libraries) in samples.items():
+            for (library, barcodes) in libraries.items():
+                for (barcode, record) in barcodes.items():
                     tags = {"Target": target,
                             "ID": library,
                             "SM": sample,
@@ -569,13 +569,13 @@ def _split_lanes_by_filenames(makefile):
 
             if (split is True) or (isinstance(split, list) and
                                    (barcode in split)):
-                if any(len(v) > 1 for v in files.itervalues()):
+                if any(len(v) > 1 for v in files.values()):
                     library = makefile["Targets"][target][sample][library]
                     template = library.pop(barcode)
                     keys = ("SE",) if ("SE" in files) else ("PE_1", "PE_2")
 
                     input_files = [files[key] for key in keys]
-                    input_files_iter = itertools.izip_longest(*input_files)
+                    input_files_iter = itertools.zip_longest(*input_files)
                     for (index, filenames) in enumerate(input_files_iter,
                                                         start=1):
                         assert len(filenames) == len(keys)
@@ -617,7 +617,7 @@ def _validate_makefile_adapters(makefile):
     }
 
     def check_options(options, results):
-        for key, value in tests.iteritems():
+        for key, value in tests.items():
             if options.get(key) == value:
                 results[key] = True
 
@@ -629,7 +629,7 @@ def _validate_makefile_adapters(makefile):
     adapterrm_opt = makefile.get("Options", {}).get("AdapterRemoval", {})
     check_options(adapterrm_opt, results)
 
-    if any(results.itervalues()):
+    if any(results.values()):
         logger = logging.getLogger(__name__)
         logger.warn("WARNING: An adapter specified for AdapterRemoval "
                     "corresponds to the default sequence, but is reverse "
@@ -651,7 +651,7 @@ def _validate_makefile_libraries(makefile):
     for (target, sample, library, _, _) in iterator:
         libraries[(target, library)].add(sample)
 
-    for ((target, library), samples) in libraries.iteritems():
+    for ((target, library), samples) in libraries.items():
         if len(samples) > 1:
             raise MakefileError("Library '%s' in target '%s' spans multiple "
                                 " samples: %s" % (library, target,
@@ -665,21 +665,21 @@ def _validate_makefiles_duplicate_files(makefiles):
         for (target, sample, library, barcode, record) in iterator:
             current_filenames = []
             if record["Type"] == "Raw":
-                for raw_filenames in record["Data"].itervalues():
+                for raw_filenames in record["Data"].values():
                     current_filenames.extend(raw_filenames)
             else:
-                current_filenames.extend(record["Data"].values())
+                current_filenames.extend(list(record["Data"].values()))
 
             for realpath in map(os.path.realpath, current_filenames):
                 filenames[realpath].append((target, sample, library, barcode))
 
     has_overlap = {}
-    for (filename, records) in filenames.iteritems():
+    for (filename, records) in filenames.items():
         if len(records) > 1:
             has_overlap[filename] = list(set(records))
 
     logger = logging.getLogger(__name__)
-    by_records = sorted(zip(has_overlap.values(), has_overlap.keys()))
+    by_records = sorted(zip(list(has_overlap.values()), list(has_overlap.keys())))
     for (records, pairs) in itertools.groupby(by_records, lambda x: x[0]):
         pairs = list(pairs)
         description = _describe_files_in_multiple_records(records, pairs)
@@ -727,7 +727,7 @@ def _validate_makefiles_features(makefiles):
         features = makefile["Options"]["Features"]
         roi_enabled = False
 
-        for prefix in makefile["Prefixes"].itervalues():
+        for prefix in makefile["Prefixes"].values():
             roi_enabled |= bool(prefix.get("RegionsOfInterest"))
 
         if features["Depths"] and roi_enabled:
@@ -749,7 +749,7 @@ def _validate_prefixes(makefiles):
     logger.info("Validating FASTA files")
     for makefile in makefiles:
         uses_gatk = makefile["Options"]["Features"]["RealignedBAM"]
-        for prefix in makefile["Prefixes"].itervalues():
+        for prefix in makefile["Prefixes"].values():
             path = prefix["Path"]
             if path in already_validated:
                 prefix["IndexFormat"] = already_validated[path]["IndexFormat"]
@@ -766,7 +766,7 @@ def _validate_prefixes(makefiles):
 
             try:
                 contigs = FASTA.index_and_collect_contigs(path)
-            except FASTAError, error:
+            except FASTAError as error:
                 raise MakefileError("Error indexing FASTA:\n %s" % (error,))
 
             # Implementation of GATK checks for the human genome
@@ -774,17 +774,17 @@ def _validate_prefixes(makefiles):
 
             contigs = dict(contigs)
             regions_of_interest = prefix.get("RegionsOfInterest", {})
-            for (name, fpath) in regions_of_interest.iteritems():
+            for (name, fpath) in regions_of_interest.items():
                 try:
                     # read_bed_file returns iterator
                     for _ in bedtools.read_bed_file(fpath, contigs=contigs):
                         pass
-                except (bedtools.BEDError, IOError), error:
+                except (bedtools.BEDError, IOError) as error:
                     raise MakefileError("Error reading regions-of-"
                                         "interest %r for prefix %r:\n%s"
                                         % (name, prefix["Name"], error))
 
-            if max(contigs.itervalues()) > _BAM_MAX_SEQUENCE_LENGTH:
+            if max(contigs.values()) > _BAM_MAX_SEQUENCE_LENGTH:
                 logger.warn("FASTA file %r contains sequences longer "
                             "than %i! CSI index files will be used instead "
                             "of BAI index files.",
@@ -833,7 +833,7 @@ def _is_invalid_hg_prefix(contigs):
     size_to_idx = dict((size, idx) for (idx, (_, size)) in enumerate(contigs))
 
     # Equivalent to the GATK 'nonCanonicalHumanContigOrder' function
-    for (key, values) in hg_contigs.iteritems():
+    for (key, values) in hg_contigs.items():
         for value in values:
             if value in size_to_idx:
                 hg_contigs[key] = size_to_idx[value]

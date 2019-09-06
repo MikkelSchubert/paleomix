@@ -71,7 +71,7 @@ def select_commands(chain):
         if command in _COMMANDS:
             command_func = _COMMANDS[command_key]
         elif len(command) >= 3:
-            for (key, value) in _COMMANDS.iteritems():
+            for (key, value) in _COMMANDS.items():
                 if key.startswith(command):
                     command_key  = key
                     command_func = value

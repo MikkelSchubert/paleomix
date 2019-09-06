@@ -85,7 +85,7 @@ def get_ml_genotype(vcf, sample=0):
     genotypes.extend(vcf.ref.split(","))
     genotypes.extend(vcf.alt.split(","))
 
-    PL = map(int, get_format(vcf, sample)["PL"].split(","))
+    PL = list(map(int, get_format(vcf, sample)["PL"].split(",")))
 
     if len(PL) == len(genotypes):
         ploidy = 1
@@ -100,7 +100,7 @@ def get_ml_genotype(vcf, sample=0):
         # No single most likely genotype
         return ("N", "N")
 
-    most_likely = min(xrange(len(PL)), key=PL.__getitem__)
+    most_likely = min(range(len(PL)), key=PL.__getitem__)
     if ploidy == 1:
         prefix = postfix = most_likely
     else:

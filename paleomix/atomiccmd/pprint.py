@@ -22,11 +22,10 @@
 #
 # pylint: disable=protected-access
 #
-from __future__ import print_function
+
 
 import os
 import pipes
-import types
 import subprocess
 
 
@@ -79,7 +78,7 @@ def _build_status(atomiccmd, _stats, indent, lines):
             return_code = tuple(atomiccmd.join())
             if atomiccmd._terminated:
                 lines.append(prefix + "Automatically terminated by PALEOMIX")
-            elif isinstance(return_code[0], types.StringTypes):
+            elif isinstance(return_code[0], str):
                 lines.append(prefix + "Terminated with signal %s"
                              % return_code)
             else:
@@ -95,7 +94,7 @@ def _build_stdin(atomiccmd, files, stats, indent, lines):
     prefix = "%s%s  = " % (" " * indent, pipe_name)
     if pipe and pipe in stats["id"]:
         lines.append("%sPiped from process %i" % (prefix, stats["id"][pipe],))
-    elif isinstance(pipe, types.StringTypes):
+    elif isinstance(pipe, str):
         if atomiccmd._set_cwd and (pipe_name == "STDIN*"):
             pipe = os.path.basename(pipe)
         lines.append("%s'%s'" % (prefix, pipe))

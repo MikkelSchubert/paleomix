@@ -26,7 +26,7 @@ import types
 import socket
 import getpass
 import optparse
-import ConfigParser
+import configparser
 import multiprocessing
 
 from paleomix.common.fileutils import \
@@ -82,7 +82,7 @@ class PerHostConfig:
         self.max_threads = PerHostValue(max(2, multiprocessing.cpu_count()))
 
         self._filenames = self._get_filenames(pipeline_name)
-        self._handle = ConfigParser.SafeConfigParser()
+        self._handle = configparser.SafeConfigParser()
         self._handle.read(self._filenames)
         self._sections = []
 
@@ -107,11 +107,11 @@ class PerHostConfig:
     def _write_config_file(self, config, defaults):
         """Writes a basic config files, using the values previously found in the
         config files, and specified on the command-line."""
-        defaults_cfg = ConfigParser.SafeConfigParser()
+        defaults_cfg = configparser.SafeConfigParser()
         defaults_cfg.add_section("Defaults")
         for key in defaults:
             value = getattr(config, key)
-            if isinstance(value, (types.ListType, types.TupleType)):
+            if isinstance(value, (list, tuple)):
                 value = ";".join(value)
 
             defaults_cfg.set("Defaults", key, str(value))
@@ -147,15 +147,15 @@ class PerHostConfig:
     def _get_default(self, option):
         value = option.default.value
         getter = self._handle.get
-        if isinstance(value, types.BooleanType):
+        if isinstance(value, bool):
             getter = self._handle.getboolean
-        elif isinstance(value, (types.IntType, types.LongType)):
+        elif isinstance(value, int):
             getter = self._handle.getint
-        elif isinstance(value, (types.FloatType)):
+        elif isinstance(value, (float)):
             getter = self._handle.getfloat
-        elif isinstance(value, (types.ListType, types.TupleType)):
+        elif isinstance(value, (list, tuple)):
             def getter(section, key):
-                return filter(None, self._handle.get(section, key).split(";"))
+                return [_f for _f in self._handle.get(section, key).split(";") if _f]
 
         for section in self._sections:
             if self._handle.has_option(section, option.dest):

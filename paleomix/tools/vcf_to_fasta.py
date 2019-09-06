@@ -34,7 +34,7 @@ that indels are called near sequence termini, the script expects the VCF file
 to contain a certain amount of padding around the regions of interest.
 
 """
-from __future__ import print_function
+
 
 import argparse
 import copy
@@ -85,7 +85,7 @@ def split_beds(beds, size=_SEQUENCE_CHUNK):
     """
     results = []
     for bed in beds:
-        for start in xrange(bed.start, bed.end, size):
+        for start in range(bed.start, bed.end, size):
             end = min(start + size, bed.end)
             split_bed = copy.copy(bed)
             split_bed.start = start
@@ -236,7 +236,7 @@ def read_intervals(filename):
     with open(filename) as bed_file:
         intervals = text.parse_lines_by_contig(bed_file, BEDRecord)
 
-        for (key, beds) in intervals.iteritems():
+        for (key, beds) in intervals.items():
             bed_tuples = []
             for bed in beds:
                 if len(bed) < 6:

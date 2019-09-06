@@ -22,7 +22,6 @@
 #
 import os
 import sys
-import types
 
 import pysam
 
@@ -41,16 +40,16 @@ class FASTAError(FormatError):
 
 class FASTA(TotallyOrdered, Immutable):
     def __init__(self, name, meta, sequence):
-        if not (name and isinstance(name, types.StringTypes)):
+        if not (name and isinstance(name, str)):
             raise FASTAError("FASTA name must be a non-empty string")
-        elif not (isinstance(meta, types.StringTypes) or (meta is None)):
+        elif not (isinstance(meta, str) or (meta is None)):
             raise FASTAError("FASTA meta must be a string, or None")
-        elif not isinstance(sequence, types.StringTypes):
+        elif not isinstance(sequence, str):
             raise FASTAError("FASTA sequence must be a string")
 
         Immutable.__init__(self,
                            name=name,
-                           meta=meta,
+                           meta=meta or "",
                            sequence=sequence)
 
     def write(self, fileobj=sys.stdout):
@@ -75,7 +74,7 @@ class FASTA(TotallyOrdered, Immutable):
             # Split out any meta information
             name_and_meta = name[1:].split(None, 1)
             if len(name_and_meta) < 2:
-                name_and_meta.append(None)
+                name_and_meta.append("")
             name, meta = name_and_meta
 
             yield FASTA(name=name,

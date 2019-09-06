@@ -117,12 +117,12 @@ def main(argv):
             # Heterozygous for the reference allele
             sites += 1
 
-    print
-    print "%i sites kept after filtering:" % (sites,)
-    print " % 10i homozygous sites containing the reference allele (%.2f%%)" % (sites - sites_non_ref, 100.0 * (sites - sites_non_ref) / float(sites))
-    print " % 10i heterozygous sites containing the reference and a non-reference allele (%.2f%%)" % (sites_het_one_non_ref, (100.0 * sites_het_one_non_ref) / sites)
-    print " % 10i homozygous sites containing a single non-reference allele (%.2f%%)" % (sites_homo_non_ref, (100.0 * sites_homo_non_ref) / sites)
-    print " % 10i heterozygous sites containing two different non-reference alleles (%.2f%%)" % (sites_het_two_non_ref, (100.0 * sites_het_two_non_ref) / sites)
+    print()
+    print("%i sites kept after filtering:" % (sites,))
+    print(" % 10i homozygous sites containing the reference allele (%.2f%%)" % (sites - sites_non_ref, 100.0 * (sites - sites_non_ref) / float(sites)))
+    print(" % 10i heterozygous sites containing the reference and a non-reference allele (%.2f%%)" % (sites_het_one_non_ref, (100.0 * sites_het_one_non_ref) / sites))
+    print(" % 10i homozygous sites containing a single non-reference allele (%.2f%%)" % (sites_homo_non_ref, (100.0 * sites_homo_non_ref) / sites))
+    print(" % 10i heterozygous sites containing two different non-reference alleles (%.2f%%)" % (sites_het_two_non_ref, (100.0 * sites_het_two_non_ref) / sites))
 
 
 if __name__ == '__main__':

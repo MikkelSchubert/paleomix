@@ -79,8 +79,8 @@ def _build_depth(config, target, prefixes):
                 input_files = {}
                 for sample in prefix.samples:
                     input_files.update(sample.bams)
-                dependencies = input_files.values()
-                input_files = input_files.keys()
+                dependencies = list(input_files.values())
+                input_files = list(input_files.keys())
 
             output_filename = "%s.%s%s.depths" % (target.name, prefix.name,
                                                   roi_name)
@@ -101,7 +101,7 @@ def _build_depth(config, target, prefixes):
 def _aggregate_for_prefix(cov, prefix, roi_name=None, into=None):
     prefix = _get_prefix_label(prefix, roi_name)
     results = {} if into is None else into
-    for (key, files_and_nodes) in cov.iteritems():
+    for (key, files_and_nodes) in cov.items():
         if prefix is None or (key[0] == prefix):
             results.update(files_and_nodes)
     return results
@@ -123,9 +123,9 @@ def _build_coverage(config, target, make_summary):
             output_filename = os.path.join(config.destination,
                                            "%s.%s.coverage"
                                            % (target.name, postfix))
-            merged = MergeCoverageNode(input_files=files_and_nodes.keys(),
+            merged = MergeCoverageNode(input_files=list(files_and_nodes.keys()),
                                        output_file=output_filename,
-                                       dependencies=files_and_nodes.values())
+                                       dependencies=list(files_and_nodes.values()))
 
             merged_nodes.append(merged)
 
@@ -135,7 +135,7 @@ def _build_coverage(config, target, make_summary):
                                                 into=files_and_nodes)
 
     all_nodes = []
-    all_nodes.extend(files_and_nodes.itervalues())
+    all_nodes.extend(files_and_nodes.values())
     all_nodes.extend(merged_nodes)
 
     coverage["Nodes"] = tuple(all_nodes)
@@ -182,7 +182,7 @@ def _build_coverage_nodes_cached(files_and_nodes, target_name,
         output_ext = ".%s.coverage" % roi_name
 
     coverages = {}
-    for (input_filename, node) in files_and_nodes.iteritems():
+    for (input_filename, node) in files_and_nodes.items():
         output_filename = swap_ext(input_filename, output_ext)
 
         cache_key = (roi_filename, input_filename)
@@ -199,7 +199,7 @@ def _build_coverage_nodes_cached(files_and_nodes, target_name,
 
 def _get_roi(prefix, name_prefix=""):
     roi = [("", None)]
-    for (name, path) in prefix.roi.iteritems():
+    for (name, path) in prefix.roi.items():
         roi.append((name_prefix + name, path))
     return roi
 

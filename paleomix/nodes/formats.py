@@ -46,7 +46,7 @@ class FastaToPartitionedInterleavedPhyNode(Node):
             raise TypeError("'infiles' must be a dictionary of dictionaries")
 
         input_filenames = []
-        for (name, subdd) in infiles.iteritems():
+        for (name, subdd) in infiles.items():
             if set(subdd) - _VALID_KEYS:
                 raise ValueError("Invalid keys found for %r: %s"
                                  % (name, ", ".join(set(subdd) - _VALID_KEYS)))
@@ -73,7 +73,7 @@ class FastaToPartitionedInterleavedPhyNode(Node):
 
     def _run(self, _config, temp):
         merged_msas = []
-        for (name, files_dd) in sorted(self._infiles.iteritems()):
+        for (name, files_dd) in sorted(self._infiles.items()):
             partitions = files_dd["partitions"]
             msas = dict((key, []) for key in partitions)
             for filename in files_dd["filenames"]:
@@ -81,11 +81,11 @@ class FastaToPartitionedInterleavedPhyNode(Node):
                 if self._excluded:
                     msa = msa.exclude(self._excluded)
 
-                for (key, msa_part) in msa.split(partitions).iteritems():
+                for (key, msa_part) in msa.split(partitions).items():
                     msas[key].append(msa_part)
 
             msas.pop("X", None)
-            for (key, msa_parts) in sorted(msas.iteritems()):
+            for (key, msa_parts) in sorted(msas.items()):
                 merged_msa = MSA.join(*msa_parts)
                 if self._reduce:
                     merged_msa = merged_msa.reduce()

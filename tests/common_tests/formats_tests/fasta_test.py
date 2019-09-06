@@ -21,7 +21,7 @@
 # SOFTWARE.
 #
 import os
-import StringIO
+import io
 
 import nose.tools
 from nose.tools import \
@@ -130,14 +130,14 @@ def test_fasta__repr__partial_line_test_with_meta_information():
 
 def test_fasta__write__partial_line():
     expected = ">foobar\n%s\n" % (_SEQ_FRAG, )
-    stringf = StringIO.StringIO()
+    stringf = io.StringIO()
     FASTA("foobar", None, _SEQ_FRAG).write(stringf)
     assert_equal(stringf.getvalue(), expected)
 
 
 def test_fasta__write__complete_line_test():
     expected = ">barfoo\n%s\n" % (_SEQ_FRAG * 10, )
-    stringf = StringIO.StringIO()
+    stringf = io.StringIO()
     FASTA("barfoo", None, _SEQ_FRAG * 10).write(stringf)
     assert_equal(stringf.getvalue(), expected)
 
@@ -145,7 +145,7 @@ def test_fasta__write__complete_line_test():
 def test_fasta__write__multiple_lines():
     expected = ">foobar\n%s\n%s\n" \
         % (_SEQ_FRAG * 10, _SEQ_FRAG * 5)
-    stringf = StringIO.StringIO()
+    stringf = io.StringIO()
     FASTA("foobar", None, _SEQ_FRAG * 15).write(stringf)
     assert_equal(stringf.getvalue(), expected)
 

@@ -37,7 +37,7 @@ from paleomix.common.sequences import \
 
 _REF_SRC = "ACGTMRWSYKVHDBNX"
 _REF_DST = "TGCAKYWSRMBDHVNX"
-_REF_PAIRS = zip(_REF_SRC, _REF_DST)
+_REF_PAIRS = list(zip(_REF_SRC, _REF_DST))
 
 
 def test_complement__single_nt():
@@ -77,7 +77,7 @@ _IUB_SRC = ("A", "C", "G", "T",
             "AC", "AG", "AT", "CG", "CT", "GT",
             "ACG", "ACT", "AGT", "CGT", "ACGT")
 _IUB_DST = "ACGTMRWSYKVHDB"
-_IUB_PAIRS = zip(_IUB_SRC, _IUB_DST)
+_IUB_PAIRS = list(zip(_IUB_SRC, _IUB_DST))
 
 
 def test_genotype__permutations():

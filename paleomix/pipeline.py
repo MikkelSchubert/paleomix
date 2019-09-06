@@ -20,14 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from __future__ import print_function
-
 import errno
 import logging
 import multiprocessing
 import os
-import pickle
-import Queue
+import queue
 import signal
 import traceback
 
@@ -43,8 +40,7 @@ from paleomix.nodegraph import \
     NodeGraphError
 from paleomix.common.text import padded_table
 from paleomix.common.utilities import \
-    safe_coerce_to_tuple, \
-    fast_pickle_test
+    safe_coerce_to_tuple
 from paleomix.common.versions import \
     VersionRequirementError
 
@@ -73,7 +69,7 @@ class Pypeline(object):
 
         try:
             nodegraph = NodeGraph(self._nodes)
-        except NodeGraphError, error:
+        except NodeGraphError as error:
             self._logger.error(error)
             return False
 
@@ -130,7 +126,7 @@ class Pypeline(object):
                          pool):
         started_nodes = []
         idle_processes = max_threads \
-            - sum(node.threads for (node, _) in running.itervalues())
+            - sum(node.threads for (node, _) in running.values())
 
         if not idle_processes:
             return False
@@ -139,18 +135,6 @@ class Pypeline(object):
             if not running or (idle_processes >= node.threads):
                 state = nodegraph.get_node_state(node)
                 if state == nodegraph.RUNABLE:
-                    try:
-                        # The multi-processing module relies on pickling
-                        fast_pickle_test(node)
-                    except pickle.PicklingError, error:
-                        self._logger.error("Node cannot be pickled; please "
-                                           "file a bug-report:\n"
-                                           "\tNode: %s\n\tError: %s"
-                                           % (self, error))
-                        nodegraph.set_node_state(node, nodegraph.ERROR)
-                        started_nodes.append(node)
-                        continue
-
                     key = id(node)
                     proc_args = (key, node, self._config)
                     running[key] = (node, pool.apply_async(_call_run,
@@ -185,7 +169,7 @@ class Pypeline(object):
                 proc.get()
             except (KeyboardInterrupt, SystemExit):
                 raise
-            except Exception, errors:
+            except Exception as errors:
                 nodegraph.set_node_state(node, nodegraph.ERROR)
 
                 message = [str(node),
@@ -292,7 +276,7 @@ class Pypeline(object):
     def print_output_files(self, print_func=print):
         output_files = self.list_output_files()
 
-        for filename, state in sorted(output_files.iteritems()):
+        for filename, state in sorted(output_files.items()):
             if state == NodeGraph.DONE:
                 state = "Ready      "
             elif state == NodeGraph.OUTDATED:
@@ -357,11 +341,11 @@ class Pypeline(object):
         try:
             key = queue.get(blocking, 0.1)
             return running.pop(key)
-        except IOError, error:
+        except IOError as error:
             # User pressed ctrl-c (SIGINT), or similar event ...
             if error.errno != errno.EINTR:
                 raise
-        except Queue.Empty:
+        except queue.Empty:
             pass
         return None, None
 

@@ -155,7 +155,7 @@ def main_wrapper(process_func, argv, ext):
     if args.regions_fpath:
         try:
             args.regions = collect_bed_regions(args.regions_fpath)
-        except ValueError, error:
+        except ValueError as error:
             print_err("ERROR: Failed to parse BED file %r:\n%s"
                       % (args.regions_fpath, error))
             return 1

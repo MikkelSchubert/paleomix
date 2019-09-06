@@ -77,7 +77,7 @@ def build_table(args, handle, counts):
     references = collect_references(args, handle)
 
     table = {}
-    for (key, readgroup) in collect_readgroups(args, handle).iteritems():
+    for (key, readgroup) in collect_readgroups(args, handle).items():
         sample = readgroup["SM"]
         library = readgroup["LB"]
 
@@ -90,7 +90,7 @@ def build_table(args, handle, counts):
             else:
                 continue
 
-        for (reference, size) in references.iteritems():
+        for (reference, size) in references.items():
             subtable_key = (args.target_name, sample, library, reference)
             subtable = create_or_get_subtable(table, subtable_key, size)
 

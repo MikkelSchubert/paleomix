@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from __future__ import print_function
+
 
 import sys
 import errno
@@ -75,7 +75,7 @@ def main(argv):
     try:
         for vcf in vcffilter.filter_vcfs(args, _read_files(filenames, args)):
             print(vcf)
-    except IOError, error:
+    except IOError as error:
         # Check for broken pipe (head, less, etc).
         if error.errno != errno.EPIPE:
             raise

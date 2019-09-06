@@ -39,11 +39,11 @@ class SummaryNode(Node):
         self._root = config.destination
         self._data = config.database
         self._samples = config.samples
-        self._sample_keys = self._samples.keys()
+        self._sample_keys = list(self._samples.keys())
 
         input_files = set()
         self._reports = {}
-        for sample, info in self._samples.iteritems():
+        for sample, info in self._samples.items():
             report = AnalysisReport(config=config,
                                     root=os.path.join(self._root, sample),
                                     has_nuc="Nuc" in info["Files"],

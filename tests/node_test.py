@@ -222,7 +222,7 @@ def test_constructor__threads():
         node = cls(threads=nthreads)
         assert_equal(node.threads, nthreads)
     for cls in (Node, _CommandNodeWrap):
-        yield _do_test_constructor__threads, cls, 1L
+        yield _do_test_constructor__threads, cls, 1
         yield _do_test_constructor__threads, cls, 3
 
 

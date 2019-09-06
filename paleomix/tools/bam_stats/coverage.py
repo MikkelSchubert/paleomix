@@ -105,10 +105,10 @@ TABLE_HEADER = """# Timestamp: %s
 
 def calculate_totals(table):
     lengths = {}
-    for samples in table.itervalues():
+    for samples in table.values():
         for libraries in samples.values():
             for contigs in libraries.values():
-                for (name, contig) in contigs.iteritems():
+                for (name, contig) in contigs.items():
                     size = lengths.get(name)
                     if (size is not None) and (size != contig.Size):
                         raise BAMStatsError(name)
@@ -197,9 +197,9 @@ def write_table(table, filename):
 
 def _calculate_totals_in(tables, lengths):
     totals = collections.defaultdict(ReadGroup)
-    total_size = sum(lengths.itervalues())
+    total_size = sum(lengths.values())
 
-    subtables = tables.items()
+    subtables = list(tables.items())
     while subtables:
         subtable_key, subtable = subtables.pop()
         if subtable_key == "*":

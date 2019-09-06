@@ -143,7 +143,7 @@ class ReportNode(Node):
 
         last_group_2 = None
         last_group_3 = None
-        for row in sorted(self._data.samples.itervalues(),
+        for row in sorted(self._data.samples.values(),
                           key=lambda row: (row["Group(2)"],
                                            row["Group(3)"],
                                            row["ID"])):
@@ -195,7 +195,7 @@ class ReportNode(Node):
                               cutoff=admixture.CUTOFF):
         try:
             groups = self._report.admixture_results(k_groups, incl_ts)
-        except admixture.AdmixtureError, error:
+        except admixture.AdmixtureError as error:
             return _warn("ERROR: {}</strong".format(error))
 
         n_admixture_candidates = sum((value >= cutoff) for _, value in groups)

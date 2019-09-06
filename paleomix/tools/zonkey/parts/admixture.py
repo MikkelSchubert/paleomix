@@ -42,7 +42,7 @@ def read_admixture_results(filename, data, k_groups, cutoff=CUTOFF):
     _admixture_validate_ancestral_groups(data, table, k_groups, cutoff)
 
     ancestral_groups = [[set(), value] for value in table["-"]]
-    for sample, row in table.iteritems():
+    for sample, row in table.items():
         if sample == '-':
             continue
 
@@ -148,7 +148,7 @@ def _admixture_read_results(filename, samples):
 def _admixture_validate_ancestral_groups(data, table, k_groups, cutoff):
     key = "Group(%i)" % (k_groups,)
     groups = collections.defaultdict(dict)
-    for sample, row in table.iteritems():
+    for sample, row in table.items():
         if sample not in data.samples:
             continue
 
@@ -158,7 +158,7 @@ def _admixture_validate_ancestral_groups(data, table, k_groups, cutoff):
                 groups[group][index] = True
 
     mixed_groups = []
-    for group, memberships in sorted(groups.iteritems()):
+    for group, memberships in sorted(groups.items()):
         count = len(memberships)
 
         if count > 1:

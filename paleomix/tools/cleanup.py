@@ -283,11 +283,11 @@ def _run_cleanup_pipeline(args):
                                                  stdin=procs["sort"].stdout)
             procs["sort"].stdout.close()
 
-        if any(processes.join_procs(procs.values())):
+        if any(processes.join_procs(list(procs.values()))):
             return 1
         return 0
-    except:
-        for proc in procs.itervalues():
+    except Exception:
+        for proc in procs.values():
             proc.terminate()
         raise
 

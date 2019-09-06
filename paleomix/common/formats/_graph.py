@@ -123,7 +123,7 @@ class _Graph:
         For a node to be pruned, both adjacent nodes must have a
         length specified, or both must not have a length specified."""
         while True:
-            for (cur_node, connections) in self.connections.iteritems():
+            for (cur_node, connections) in self.connections.items():
                 if not self.names[cur_node] and (len(connections) == 2):
                     conn_a, conn_b = connections
 
@@ -171,11 +171,11 @@ class _Graph:
                 if other not in key:
                     _collect_paths(list(guide), length, c_node, other)
 
-        for (p_node, connections) in self.connections.iteritems():
+        for (p_node, connections) in self.connections.items():
             for c_node in connections:
                 _collect_paths([p_node], 0, p_node, c_node)
 
-        key, length = max(path_blengths.iteritems(), key = lambda item: item[1])
+        key, length = max(path_blengths.items(), key=lambda item: item[1])
         return path_guides[key], length
 
 
@@ -229,7 +229,7 @@ class _Graph:
 
     def _collect_nodes_from_names(self, taxa):
         known_taxa = set()
-        for (node_id, name) in self.names.iteritems():
+        for (node_id, name) in self.names.items():
             if self.is_leaf(node_id):
                 known_taxa.add(name)
 
@@ -239,12 +239,12 @@ class _Graph:
         elif not (known_taxa - taxa):
             raise ValueError("Cannot root on every taxa in tree")
 
-        return frozenset(key for (key, name) in self.names.iteritems() if name in taxa)
+        return frozenset(key for (key, name) in self.names.items() if name in taxa)
 
 
     def _collect_clades(self):
         clades = {}
-        for (node_a, connections) in self.connections.iteritems():
+        for (node_a, connections) in self.connections.items():
             for node_b in connections:
                 self._collect_clade_from(clades, node_a, node_b)
         return clades
@@ -265,8 +265,8 @@ class _Graph:
 
     def _create_root_with_clade(self, clades, taxa):
         root_key, root_clade, root_length = None, None, None
-        for (p_node, connections) in clades.iteritems():
-            for (n_node, clade) in connections.iteritems():
+        for (p_node, connections) in clades.items():
+            for (n_node, clade) in connections.items():
                 if (root_clade is None) or (len(clade) < len(root_clade)):
                     if taxa.issubset(clade):
                         root_key    = (p_node, n_node)
@@ -289,7 +289,7 @@ class _Graph:
     ## Functions relating to calculating bootstrap support
     def get_clade_names(self):
         result = set()
-        for (_, connections) in self._collect_clades().iteritems():
-            for (_, clade) in connections.iteritems():
+        for (_, connections) in self._collect_clades().items():
+            for (_, clade) in connections.items():
                 result.add(frozenset(self.names[node_id] for node_id in clade))
         return result

@@ -62,14 +62,14 @@ def build_msa_nodes(options, settings, regions, filtering, dependencies):
     else:
         fasta_files = dict((filename, node) for filename in node.output_files)
 
-    if not any(filtering.itervalues()):
-        return fasta_files.values()
+    if not any(filtering.values()):
+        return list(fasta_files.values())
 
     destination = sequencedir + ".filtered"
     filtering = dict(filtering)
     filtered_nodes = []
 
-    for (filename, node) in fasta_files.iteritems():
+    for (filename, node) in fasta_files.items():
         output_filename = fileutils.reroot_path(destination, filename)
         filtered_node = FilterSingletonsNode(input_file=filename,
                                              output_file=output_filename,
@@ -89,7 +89,7 @@ def chain(_pipeline, options, makefiles):
         filtering = makefile["Project"]["FilterSingletons"]
         options.destination = os.path.join(destination, makefile["Project"]["Title"])
 
-        for regions in makefile["Project"]["Regions"].itervalues():
+        for regions in makefile["Project"]["Regions"].values():
             regions_settings = settings[regions["Name"]]
             nodes.extend(build_msa_nodes(options, regions_settings, regions,
                                          filtering, makefile["Nodes"]))

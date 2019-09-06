@@ -68,14 +68,14 @@ def mark_duplicate_reads(reads):
 
     # Select the most common CIGAR strings, favoring simple CIGARs
     best_count, best_cigar_len = max((len(values), -len(cigar))
-                                     for cigar, values in by_cigar.iteritems())
+                                     for cigar, values in by_cigar.items())
     best_cigar_len = -best_cigar_len
 
     best_read = None
     best_quality = -1
     copies = len(reads)
 
-    for cigar, candidates in by_cigar.iteritems():
+    for cigar, candidates in by_cigar.items():
         if len(cigar) == best_cigar_len and len(candidates) == best_count:
             for read in candidates:
                 copies += copy_number(read)

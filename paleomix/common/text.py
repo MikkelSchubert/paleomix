@@ -47,18 +47,18 @@ def padded_table(table):
     str_rows = []
     max_sizes = []
     for row in table:
-        if not isinstance(row, types.StringTypes):
-            row = map(str, row)
-            row_sizes = map(len, row)
-            max_sizes = map(max, itertools.izip_longest(max_sizes,
+        if not isinstance(row, str):
+            row = list(map(str, row))
+            row_sizes = list(map(len, row))
+            max_sizes = list(map(max, itertools.zip_longest(max_sizes, 
                                                         row_sizes,
-                                                        fillvalue=0))
+                                                        fillvalue=0)))
 
         str_rows.append(row)
 
     sizes = [(size + _MIN_PADDING) for size in max_sizes]
     for row in str_rows:
-        if not isinstance(row, types.StringTypes):
+        if not isinstance(row, str):
             row = "".join(field.ljust(padding)
                           for (field, padding) in zip(row, sizes)).rstrip()
         yield row

@@ -177,7 +177,7 @@ class MapDamageModelNode(CommandNode):
     def _run(self, config, temp):
         try:
             CommandNode._run(self, config, temp)
-        except NodeError, error:
+        except NodeError as error:
             err_message = "DNA damage levels are too low"
             if self._command.join() == [1]:
                 fpath = os.path.join(temp, "pipe_mapDamage.stdout")

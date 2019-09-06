@@ -98,12 +98,12 @@ class Node(object):
             self._run(config, temp)
             self._teardown(config, temp)
             self._remove_temp_dir(temp)
-        except NodeError, error:
+        except NodeError as error:
             self._write_error_log(temp, error)
             raise NodeError("Error(s) running Node:\n\tTemporary directory: %s\n\n%s"
                             % (repr(temp), error))
 
-        except Exception, error:
+        except Exception as error:
             self._write_error_log(temp, error)
             raise NodeUnhandledException("Error(s) running Node:\n\tTemporary directory: %s\n\n%s"
                                          % (repr(temp), traceback.format_exc()))
@@ -177,7 +177,7 @@ class Node(object):
         try:
             with open(os.path.join(temp, "pipe.errors"), "w") as handle:
                 handle.write(message)
-        except OSError, oserror:
+        except OSError as oserror:
             sys.stderr.write("ERROR: Could not write failure log: %s\n"
                              % (oserror,))
 
@@ -217,14 +217,14 @@ class Node(object):
     def _validate_files(cls, files):
         files = safe_coerce_to_frozenset(files)
         for filename in files:
-            if not isinstance(filename, types.StringTypes):
+            if not isinstance(filename, str):
                 raise TypeError('Files must be strings, not %r'
                                 % (filename.__class__.__name__,))
         return files
 
     @classmethod
     def _validate_nthreads(cls, threads):
-        if not isinstance(threads, (types.IntType, types.LongType)):
+        if not isinstance(threads, int):
             raise TypeError("'threads' must be a positive integer, not a %s"
                             % (type(threads),))
         elif threads < 1:
@@ -254,7 +254,7 @@ class CommandNode(Node):
         raises a NodeError detailing the returned error-codes."""
         try:
             self._command.run(temp)
-        except CmdError, error:
+        except CmdError as error:
             raise CmdNodeError("%s\n\n%s" % (str(self._command), error))
 
         return_codes = self._command.join()
@@ -286,4 +286,4 @@ class CommandNode(Node):
 
 
 # Types that are allowed for the 'description' property
-_DESC_TYPES = types.StringTypes + (types.NoneType,)
+_DESC_TYPES = (str, type(None))

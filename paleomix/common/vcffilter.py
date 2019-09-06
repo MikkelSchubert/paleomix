@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from __future__ import with_statement
+
 
 import sys
 import optparse
@@ -208,7 +208,7 @@ class AlleleFrequencies:
                     indel_length.append(bases.pop())
                 indel_length = int("".join(indel_length))
 
-                for _ in xrange(abs(indel_length)):
+                for _ in range(abs(indel_length)):
                     bases.pop()
 
                 counts[indel_length] = counts.get(indel_length, 0) + 1
@@ -225,7 +225,7 @@ class AlleleFrequencies:
 def _read_chunk(vcfs, chunk):
     try:
         while len(chunk) < _CHUNK_SIZE:
-            chunk.append(vcfs.next())
+            chunk.append(next(vcfs))
     except StopIteration:
         chunk.append(None)
 
@@ -279,7 +279,7 @@ def _group_indels_near_position(indels, distance):
         start = vcf.pos + 1 - distance
         end   = vcf.pos + 1 + distance + length
 
-        for position in xrange(start, end + 1):
+        for position in range(start, end + 1):
             positions[position].append(vcf)
 
     return positions

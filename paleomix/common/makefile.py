@@ -186,10 +186,9 @@ value has accidentically been left blank ('IsStr' requires a NON-EMPTY string):
 """
 import os
 import copy
-import types
 import hashlib
 import datetime
-import StringIO
+import io
 
 import paleomix.yaml
 from paleomix.common.utilities import group_by_pred
@@ -215,7 +214,7 @@ def read_makefile(filename, specification):
     try:
         with open(filename) as makefile:
             string = makefile.read()
-            data = paleomix.yaml.safe_load(StringIO.StringIO(string))
+            data = paleomix.yaml.safe_load(io.StringIO(string))
     except paleomix.yaml.YAMLError as error:
         raise MakefileError(error)
 
@@ -241,8 +240,7 @@ def process_makefile(data, specification, path=("root",), apply_defaults=True):
         data = process_makefile(data, specification, path, apply_defaults)
     elif _is_spec(specification):
         _instantiate_spec(specification)(path, data)
-    elif isinstance(data, (dict, types.NoneType)) \
-            and isinstance(specification, dict):
+    elif isinstance(data, (dict, type(None))) and isinstance(specification, dict):
         # A limitation of YAML is that empty subtrees are equal to None;
         # this check ensures that empty subtrees to be handled properly
         if data is None:
@@ -258,7 +256,7 @@ def process_makefile(data, specification, path=("root",), apply_defaults=True):
                                              specification[ref_key],
                                              path + (cur_key,),
                                              apply_defaults)
-    elif isinstance(data, (list, types.NoneType)) \
+    elif isinstance(data, (list, type(None))) \
             and isinstance(specification, list):
         if not all(_is_spec(spec) for spec in specification):
             raise TypeError("Lists contains non-specification objects (%r): %r"
@@ -359,8 +357,7 @@ class IsInt(MakefileSpec):
         MakefileSpec.__init__(self, description, default)
 
     def meets_spec(self, value):
-        return isinstance(value, (types.IntType, types.LongType)) \
-            and not isinstance(value, types.BooleanType)
+        return isinstance(value, int) and not isinstance(value, bool)
 
 
 class IsUnsignedInt(IsInt):
@@ -371,7 +368,7 @@ class IsUnsignedInt(IsInt):
         IsInt.__init__(self, description, default)
 
     def meets_spec(self, value):
-        return IsInt.meets_spec(self, value) & (value >= 0)
+        return IsInt.meets_spec(self, value) and value >= 0
 
 
 class IsFloat(MakefileSpec):
@@ -381,7 +378,7 @@ class IsFloat(MakefileSpec):
         MakefileSpec.__init__(self, description, default)
 
     def meets_spec(self, value):
-        return isinstance(value, types.FloatType)
+        return isinstance(value, float)
 
 
 class IsBoolean(MakefileSpec):
@@ -391,7 +388,7 @@ class IsBoolean(MakefileSpec):
         MakefileSpec.__init__(self, description, default)
 
     def meets_spec(self, value):
-        return isinstance(value, types.BooleanType)
+        return isinstance(value, bool)
 
 
 class IsStr(MakefileSpec):
@@ -413,7 +410,7 @@ class IsStr(MakefileSpec):
         MakefileSpec.__init__(self, description, default)
 
     def meets_spec(self, value):
-        return isinstance(value, types.StringTypes) and len(value) >= self._min_len
+        return isinstance(value, str) and len(value) >= self._min_len
 
 
 class IsNone(MakefileSpec):
@@ -622,7 +619,7 @@ class StringStartsWith(IsStr):
     """Require that the value is a string with given prefix."""
 
     def __init__(self, prefix, default=DEFAULT_NOT_SET):
-        assert prefix and isinstance(prefix, types.StringTypes)
+        assert prefix and isinstance(prefix, str)
         self._prefix = prefix
         description = "a string with the prefix %r" % (prefix,)
         IsStr.__init__(self, description, default)
@@ -636,7 +633,7 @@ class StringEndsWith(IsStr):
     """Require that the value is a string with given postfix."""
 
     def __init__(self, postfix, default=DEFAULT_NOT_SET):
-        assert postfix and isinstance(postfix, types.StringTypes)
+        assert postfix and isinstance(postfix, str)
         self._postfix = postfix
         description = "a string with the postfix %r" % (postfix,)
         IsStr.__init__(self, description, default)
@@ -665,7 +662,7 @@ class IsListOf(_MultipleSpecs):
                                 join_by=" or ", fmt="(%s)")
 
     def meets_spec(self, value):
-        if not isinstance(value, types.ListType):
+        if not isinstance(value, list):
             return False
 
         return all(any(spec.meets_spec(lstvalue) for spec in self._specs)
@@ -696,10 +693,10 @@ class IsDictOf(MakefileSpec):
         MakefileSpec.__init__(self, description, default)
 
     def meets_spec(self, value):
-        if not isinstance(value, types.DictType):
+        if not isinstance(value, dict):
             return False
 
-        for (key, value) in value.iteritems():
+        for (key, value) in value.items():
             if not (self._key_spec.meets_spec(key)
                     and self._value_spec.meets_spec(value)):
                 return False
@@ -724,7 +721,7 @@ def _is_spec(spec):
     """Returns true if 'spec' is a specification instance or class."""
     if isinstance(spec, MakefileSpec):
         return True
-    elif isinstance(spec, types.TypeType) and issubclass(spec, MakefileSpec):
+    elif isinstance(spec, type) and issubclass(spec, MakefileSpec):
         return True
     return False
 
@@ -733,7 +730,7 @@ def _instantiate_spec(spec):
     """Takes a specification instance or class, and returns an instance."""
     if isinstance(spec, MakefileSpec):
         return spec
-    elif isinstance(spec, types.TypeType) and issubclass(spec, MakefileSpec):
+    elif isinstance(spec, type) and issubclass(spec, MakefileSpec):
         return spec()
     else:
         raise TypeError("Specifications must derive from 'MakefileSpec'")
@@ -741,7 +738,7 @@ def _instantiate_spec(spec):
 
 def _safe_coerce_to_lowercase(value):
     """Returns strings as lowercase, and any other types of value unchanged."""
-    if isinstance(value, types.StringTypes):
+    if isinstance(value, str):
         return value.lower()
     return value
 
@@ -752,7 +749,7 @@ def _list_values(values, sep):
     $ _list_values([1, 2, 3], "and")
     "[1, 2, and 3]"
     """
-    values = map(repr, values)
+    values = list(map(repr, values))
     if len(values) > 2:
         values = (", ".join(values[:-1]) + ",", values[-1])
     if len(values) == 2:

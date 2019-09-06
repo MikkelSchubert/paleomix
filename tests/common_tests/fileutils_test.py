@@ -77,7 +77,7 @@ def setup_module():
                   test_file("timestamp_a_younger"): 1120719000,
                   test_file("timestamp_b_younger"): 1120719000}
 
-    for filename, timestamp in timestamps.iteritems():
+    for filename, timestamp in timestamps.items():
         # Set atime and mtime
         os.utime(filename, (timestamp, timestamp))
 
@@ -233,7 +233,7 @@ def test_create_temp_dir__empty(temp_folder):
 def test_create_temp_dir__permissions(temp_folder):
     tmp_dir = create_temp_dir(temp_folder)
     stats = os.stat(tmp_dir)
-    assert_equal(stats.st_mode & 0777, 0750)
+    assert_equal(stats.st_mode & 0o777, 0o750)
 
 
 @with_temp_folder
@@ -444,9 +444,9 @@ def test_make_dirs__sub_directories(temp_folder):
 @with_temp_folder
 def test_make_dirs__permissions(temp_folder):
     work_dir = os.path.join(temp_folder, "test_1")
-    assert make_dirs(work_dir, mode=0511)
+    assert make_dirs(work_dir, mode=0o511)
     stats = os.stat(work_dir)
-    assert_equal(oct(stats.st_mode & 0777), oct(0511))
+    assert_equal(oct(stats.st_mode & 0o777), oct(0o511))
 
 
 @with_temp_folder
@@ -666,8 +666,8 @@ def test_open_ro__uncompressed():
     handle = open_ro(test_file('fasta_file.fasta'))
     try:
         assert_equal(handle.read(),
-                     b'>This_is_FASTA!\nACGTN\n'
-                     b'>This_is_ALSO_FASTA!\nCGTNA\n')
+                     '>This_is_FASTA!\nACGTN\n'
+                     '>This_is_ALSO_FASTA!\nCGTNA\n')
     finally:
         handle.close()
 
@@ -676,8 +676,8 @@ def test_open_ro__gz():
     handle = open_ro(test_file('fasta_file.fasta.gz'))
     try:
         assert_equal(handle.read(),
-                     b'>This_is_GZipped_FASTA!\nACGTN\n'
-                     b'>This_is_ALSO_GZipped_FASTA!\nCGTNA\n')
+                     '>This_is_GZipped_FASTA!\nACGTN\n'
+                     '>This_is_ALSO_GZipped_FASTA!\nCGTNA\n')
     finally:
         handle.close()
 
@@ -686,8 +686,8 @@ def test_open_ro__bz2():
     handle = open_ro(test_file('fasta_file.fasta.bz2'))
     try:
         assert_equal(handle.read(),
-                     b'>This_is_BZ_FASTA!\nCGTNA\n'
-                     b'>This_is_ALSO_BZ_FASTA!\nACGTN\n')
+                     '>This_is_BZ_FASTA!\nCGTNA\n'
+                     '>This_is_ALSO_BZ_FASTA!\nACGTN\n')
     finally:
         handle.close()
 
@@ -698,16 +698,21 @@ class OddException(RuntimeError):
 
 def test_open_ro__close_handle_on_error():
     class _FileMock(object):
-        def __init__(self, filename):
+        def __init__(self, filename, mode):
             self._close_called = False
             assert_equal(filename, "/var/abc")
+            assert_equal(mode, "rb")
+
+        def __enter__(self, *args, **kwargs):
+            self._close_called = True
+            return self
+
+        def __exit__(self, *args, **kwargs):
+            pass
 
         def read(self, *_args, **_kwargs):
             # pylint: disable=R0201
             raise OddException("ARGH!")
-
-        def close(self):
-            self._close_called = True
 
     try:
         paleomix.common.fileutils.open = _FileMock

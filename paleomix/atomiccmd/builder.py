@@ -267,7 +267,7 @@ class AtomicCmdBuilder(object):
         If the value of an argument is an AtomicCmdBuilder, then the builder
         is finalized and the resulting value is used."""
         kwargs = {}
-        for (key, value) in self._kwargs.iteritems():
+        for (key, value) in self._kwargs.items():
             if isinstance(value, AtomicCmdBuilder):
                 value = value.finalize()
             kwargs[key] = value
@@ -285,7 +285,7 @@ class AtomicCmdBuilder(object):
         if self._object:
             message = "AtomicCmdBuilder has already been finalized"
             raise AtomicCmdBuilderError(message)
-        elif not isinstance(key, types.StringTypes):
+        elif not isinstance(key, str):
             message = "Key must be a string, not %r" \
                 % (key.__class__.__name__,)
             raise TypeError(message)
@@ -335,7 +335,7 @@ class AtomicJavaCmdBuilder(AtomicCmdBuilder):
                 "-Djava.io.tmpdir=%s" % temp_root,
                 "-Djava.awt.headless=true"]
 
-        if not isinstance(gc_threads, (types.IntType, types.LongType)):
+        if not isinstance(gc_threads, int):
             raise TypeError("'gc_threads' must be an integer value, not %r"
                             % gc_threads.__class__.__name__)
         elif gc_threads > 1:
@@ -395,7 +395,7 @@ class AtomicMPICmdBuilder(AtomicCmdBuilder):
     """
 
     def __init__(self, call, threads=1, **kwargs):
-        if not isinstance(threads, (types.IntType, types.LongType)):
+        if not isinstance(threads, int):
             raise TypeError("'threads' must be an integer value, not %r"
                             % threads.__class__.__name__)
         elif threads < 1:
@@ -427,9 +427,9 @@ def use_customizable_cli_parameters(init_func):  # pylint: disable=C0103
     would take, while the constructor must take a 'parameters' argument.
 
     """
-    if init_func.func_name != '__init__':
+    if init_func.__name__ != '__init__':
         raise ValueError("Function name must be '__init__', not %r"
-                         % (init_func.func_name,))
+                         % (init_func.__name__,))
 
     def do_call(self, parameters=None, **kwargs):
         """Call to invoke the decorated __init__ function."""
@@ -472,9 +472,9 @@ def create_customizable_cli_parameters(customize_func):  # pylint: disable=C0103
     node = wrapper.build_node()
 
     """
-    if customize_func.func_name != 'customize':
+    if customize_func.__name__ != 'customize':
         raise ValueError("Function name must be 'customize', not %r"
-                         % (customize_func.func_name,))
+                         % (customize_func.__name__,))
 
     def do_call(cls, *args, **kwargs):
         # Build dictionary containing all arguments
@@ -498,12 +498,12 @@ def apply_options(builder, options, pred=lambda s: s.startswith("-")):
         allows easy setting/unsetting of '--do-something' type options.
 
     """
-    for (key, values) in dict(options).iteritems():
-        if not isinstance(key, types.StringTypes):
+    for (key, values) in dict(options).items():
+        if not isinstance(key, str):
             raise TypeError("Keys must be strings, not %r" %
                             (key.__class__.__name__,))
         elif pred(key):
-            if isinstance(values, (types.ListType, types.TupleType)):
+            if isinstance(values, (list, tuple)):
                 for value in values:
                     if not isinstance(value, _ADDABLE_TYPES) \
                             or isinstance(value, _SETABLE_ONLY_TYPES):
@@ -513,7 +513,7 @@ def apply_options(builder, options, pred=lambda s: s.startswith("-")):
             elif not isinstance(values, _SETABLE_TYPES):
                 raise TypeError("Unexpected type when setting option: %r" % (
                     values.__class__.__name__,))
-            elif isinstance(values, (types.BooleanType, types.NoneType)):
+            elif isinstance(values, (bool, type(None))):
                 if values or values is None:
                     builder.set_option(key)
                 else:
@@ -539,7 +539,6 @@ def _create_cli_parameters_cls(cls, kwargs):
     return _ParametersWrapper(**kwargs)
 
 
-_ADDABLE_TYPES = (types.FloatType, types.IntType,
-                  types.LongType) + types.StringTypes
-_SETABLE_ONLY_TYPES = (types.BooleanType, types.NoneType)
+_ADDABLE_TYPES = (float, int, str)
+_SETABLE_ONLY_TYPES = (bool, type(None))
 _SETABLE_TYPES = _ADDABLE_TYPES + _SETABLE_ONLY_TYPES

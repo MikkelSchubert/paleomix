@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from __future__ import print_function
+
 
 import argparse
 import sys
@@ -39,7 +39,7 @@ class ErrHandler(object):
             return
 
         print('%s:%i -- %s %s %s:' % (chrom, pos, name, seq, qual))
-        for filename, records in sorted(records.iteritems()):
+        for filename, records in sorted(records.items()):
             print('    - %s:' % (filename,))
 
             for idx, record in enumerate(records, start=1):

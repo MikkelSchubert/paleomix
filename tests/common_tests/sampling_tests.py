@@ -39,7 +39,7 @@ def test_weighted_sampling__select_by_weight():
         weights = (1, 2, 3)
         rng = flexmock(random=lambda: value)
         iterator = sampling.weighted_sampling(choices, weights, rng)
-        assert_equal(iterator.next(), expectation)
+        assert_equal(next(iterator), expectation)
 
     yield _do_select_by_weight, 0.00000, 'a'
     yield _do_select_by_weight, 0.16666, 'a'  # < 1/6
@@ -52,7 +52,7 @@ def test_weighted_sampling__select_by_weight():
 def test_weighted_sampling__empty_input_raises_value_error_for_lists():
     def _do_empty_input_raises(choices, weights):
         iterator = sampling.weighted_sampling(choices, weights)
-        assert_raises(ValueError, iterator.next)
+        assert_raises(ValueError, iterator.__next__)
 
     yield _do_empty_input_raises, [], []
     yield _do_empty_input_raises, [], [1, 2]
@@ -62,7 +62,7 @@ def test_weighted_sampling__empty_input_raises_value_error_for_lists():
 def test_weighted_sampling__different_length_input_raises_value_error():
     def _do_different_length_input_raises(choices, weights):
         iterator = sampling.weighted_sampling(choices, weights)
-        assert_raises(ValueError, iterator.next)
+        assert_raises(ValueError, iterator.__next__)
 
     yield _do_different_length_input_raises, [0, 1], [1, 2, 3]
     yield _do_different_length_input_raises, [0, 1, 2], [1, 2]
@@ -72,24 +72,24 @@ def test_weighted_sampling__different_length_input_raises_value_error():
 
 
 def test_weighted_sampling__negative_weight_value_error():
-    choices = range(3)
+    choices = [0, 1, 2]
     weights = [1, -2, 3]
     iterator = sampling.weighted_sampling(choices, weights)
-    assert_raises(ValueError, iterator.next)
+    assert_raises(ValueError, iterator.__next__)
 
 
 def test_weighted_sampling__zero_weight_raises_value_error():
-    choices = range(3)
+    choices = [0, 1, 2]
     weights = [1, 0, 3]
     iterator = sampling.weighted_sampling(choices, weights)
-    assert_raises(ValueError, iterator.next)
+    assert_raises(ValueError, iterator.__next__)
 
 
 def test_weighted_sampling__non_numerical_weight_raises_type_error():
-    choices = range(3)
+    choices = [0, 1, 2]
     weights = [1, "foo", 3]
     iterator = sampling.weighted_sampling(choices, weights)
-    assert_raises(TypeError, iterator.next)
+    assert_raises(TypeError, iterator.__next__)
 
 
 ###############################################################################
@@ -111,22 +111,22 @@ def test_reservoir_sampling__select_second_item():
 
 
 def test_reservoir_sampling__upsample_equals_input():
-    result = sampling.reservoir_sampling(range(5), 10)
-    assert_equal(result, range(5))
+    result = sampling.reservoir_sampling(list(range(5)), 10)
+    assert_equal(result, list(range(5)))
 
 
 def test_reservoir_sampling__downsample_to_zero():
-    result = sampling.reservoir_sampling(range(5), 0)
+    result = sampling.reservoir_sampling(list(range(5)), 0)
     assert_equal(result, [])
 
 
 def test_reservoir_sampling__downsample_to_negative_raises_value_error():
-    assert_raises(ValueError, sampling.reservoir_sampling, range(5), -1)
+    assert_raises(ValueError, sampling.reservoir_sampling, list(range(5)), -1)
 
 
 def test_reservoir_sampling__downsample_to_float_raises_type_error():
-    assert_raises(TypeError, sampling.reservoir_sampling, range(5), 1.0)
+    assert_raises(TypeError, sampling.reservoir_sampling, list(range(5)), 1.0)
 
 
 def test_reservoir_sampling__downsample_to_non_number_raises_type_error():
-    assert_raises(TypeError, sampling.reservoir_sampling, range(5), "Eh?")
+    assert_raises(TypeError, sampling.reservoir_sampling, list(range(5)), "Eh?")

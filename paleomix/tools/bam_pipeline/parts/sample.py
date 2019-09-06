@@ -33,7 +33,7 @@ class Sample:
 
         self.bams = {}
         for library in self.libraries:
-            self.bams.update(library.bams.iteritems())
+            self.bams.update(library.bams.items())
 
         nodes = []
         for library in self.libraries:

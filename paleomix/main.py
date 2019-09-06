@@ -144,11 +144,11 @@ def _are_requirements_met():
     available, and modules required by the pipeline (Pysam) is available and
     up-to-date.
     """
-    if tuple(sys.version_info)[:2] != (2, 7):
-        sys.stderr.write("ERROR: PALEOMIX requires Python version 2.7.x.\n")
+    if tuple(sys.version_info)[:2] < (3, 6):
+        sys.stderr.write("ERROR: PALEOMIX requires Python version 3.6+\n")
         sys.stderr.write("However, the current version of python is\n\tv%s\n\n"
                          % (sys.version.replace("\n", "\n\t"),))
-        sys.stderr.write("Please install Python v2.7 to continue.\n")
+        sys.stderr.write("Please install Python v3.6+ to continue.\n")
         return False
 
     modules = [('pysam', _IMPORT_ERROR_PYSAM),

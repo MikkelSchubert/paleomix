@@ -105,7 +105,7 @@ def reverse_complement(sequence):
     return complement(sequence)[::-1]
 
 
-for _codon, _aa in CODONS["+"].iteritems():
+for _codon, _aa in CODONS["+"].items():
     assert not set(_codon) - set("ACGT")
     CODONS["-"][reverse_complement(_codon)] = _aa
 
@@ -139,7 +139,7 @@ def split(sequence, split_by = "123"):
 
     results = dict((key, []) for key in split_by)
     keys = itertools.chain(itertools.cycle(split_by))
-    for (key, nucleotide) in itertools.izip(keys, sequence):
+    for (key, nucleotide) in zip(keys, sequence):
         results[key].append(nucleotide)
 
     for key in results:

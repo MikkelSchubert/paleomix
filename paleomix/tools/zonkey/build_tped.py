@@ -101,8 +101,8 @@ class GenotypeSites(object):
                 yield sites.popleft()
 
             sequence = record.seq
-            sites_iter = iter(sites).next
-            alignment_iter = iter(record.get_aligned_pairs()).next
+            sites_iter = iter(sites).__next__
+            alignment_iter = iter(record.get_aligned_pairs()).__next__
             alignment_end = record.aend
 
             try:
@@ -241,7 +241,7 @@ def write_summary(args, filename, statistics):
 
 def process_bam(args, data, bam_handle):
     raw_references = bam_handle.references
-    references = map(common.contig_name_to_plink_name, raw_references)
+    references = list(map(common.contig_name_to_plink_name, raw_references))
 
     if args.downsample:
         sys.stderr.write("Downsampling to at most %i BAM records ...\n"
@@ -305,12 +305,12 @@ def main(argv):
     args = parse_args(argv)
     random.seed(args.seed)
 
-    print "Reading reference information from %r ..." \
-        % (args.database,)
+    print("Reading reference information from %r ..."
+          % (args.database,))
 
     try:
         data = database.ZonkeyDB(args.database)
-    except database.ZonkeyDBError, error:
+    except database.ZonkeyDBError as error:
         sys.stderr.write("Error reading database file %r:\n%s\n"
                          % (args.database, error))
         return 1

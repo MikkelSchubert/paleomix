@@ -88,7 +88,7 @@ class PHYLIPBootstrapNode(Node):
         final_partitions = [[] for _ in sequences]
         for (start, end) in partitions:
             # Convert alignment to columns, and randomly select among those
-            columns = zip(*(sequence[start:end] for sequence in sequences))
+            columns = list(zip(*(sequence[start:end] for sequence in sequences)))
             bootstrap_partition = (rng.choice(columns) for _ in columns)
 
             # Convert randomly selected columns back into sequences
@@ -151,8 +151,8 @@ def _read_sequences(filename):
                 num_sequences, num_bases = map(int, line.split())
                 break
 
-        names     = [None for _ in xrange(num_sequences)]
-        sequences = [[] for _ in xrange(num_sequences)]
+        names     = [None for _ in range(num_sequences)]
+        sequences = [[] for _ in range(num_sequences)]
 
         line_num = 0
         while line:

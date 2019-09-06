@@ -185,7 +185,7 @@ def read_bed_file(filename, min_columns=3, contigs=None):
 
             try:
                 bed = BEDRecord(line)
-            except ValueError, error:
+            except ValueError as error:
                 raise BEDError("Error parsing line %i in regions file:\n"
                                "  Path = %r\n  Line = %r\n\n%s"
                                % (line_num + 1, filename, line, error))
@@ -234,7 +234,7 @@ def sort_bed_by_bamfile(bamfile, regions):
         return
 
     references = bamfile.references
-    indices = dict(zip(references, xrange(len(references))))
+    indices = dict(zip(references, range(len(references))))
 
     def _by_bam_layout(region):
         return (indices[region.contig], region.start, region.end)

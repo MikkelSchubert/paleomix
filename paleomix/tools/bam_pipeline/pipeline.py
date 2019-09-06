@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from __future__ import print_function
+
 
 import os
 import logging
@@ -60,10 +60,10 @@ def build_pipeline_trimming(config, makefile):
     This reduces the required complexity of the makefile to a minimum."""
 
     nodes = []
-    for (_, samples) in makefile["Targets"].iteritems():
-        for libraries in samples.itervalues():
-            for barcodes in libraries.itervalues():
-                for record in barcodes.itervalues():
+    for (_, samples) in makefile["Targets"].items():
+        for libraries in samples.values():
+            for barcodes in libraries.values():
+                for record in barcodes.values():
                     if record["Type"] in ("Raw", "Trimmed"):
                         offset = record["Options"]["QualityOffset"]
                         reads = Reads(config, record, offset)
@@ -76,15 +76,15 @@ def build_pipeline_trimming(config, makefile):
 def build_pipeline_full(config, makefile, return_nodes=True):
     result = []
     features = makefile["Options"]["Features"]
-    for (target_name, sample_records) in makefile["Targets"].iteritems():
+    for (target_name, sample_records) in makefile["Targets"].items():
         prefixes = []
-        for (_, prefix) in makefile["Prefixes"].iteritems():
+        for (_, prefix) in makefile["Prefixes"].items():
             samples = []
-            for (sample_name, library_records) in sample_records.iteritems():
+            for (sample_name, library_records) in sample_records.items():
                 libraries = []
-                for (library_name, barcode_records) in library_records.iteritems():
+                for (library_name, barcode_records) in library_records.items():
                     lanes = []
-                    for (barcode, record) in barcode_records.iteritems():
+                    for (barcode, record) in barcode_records.items():
                         lane = parts.Lane(config, prefix, record, barcode)
 
                         # ExcludeReads settings may exlude entire lanes
@@ -121,7 +121,7 @@ def build_pipeline_full(config, makefile, return_nodes=True):
                 # Extra tasks (e.g. coverage, depth-histograms, etc.)
                 result.extend(target.nodes)
                 # Output BAM files (raw, realigned)
-                result.extend(target.bams.itervalues())
+                result.extend(target.bams.values())
             else:
                 result.append(target)
 
@@ -133,7 +133,7 @@ def index_references(config, makefiles):
     references_bwa = {}
     references_bowtie2 = {}
     for makefile in makefiles:
-        for subdd in makefile["Prefixes"].itervalues():
+        for subdd in makefile["Prefixes"].values():
             reference = subdd["Reference"]
             if reference not in references:
                 # Validation of the FASTA file; not blocking for the other
@@ -218,7 +218,7 @@ def run(config, args, pipeline_variant):
 
         try:
             nodes = pipeline_func(config, makefile)
-        except paleomix.node.NodeError, error:
+        except paleomix.node.NodeError as error:
             logger.error("Error while building pipeline for '%s':\n%s",
                          filename, error)
             return 1

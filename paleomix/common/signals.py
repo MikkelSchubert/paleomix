@@ -25,7 +25,7 @@ import types
 
 
 def to_str(value):
-    if not isinstance(value, (types.IntType, types.LongType)):
+    if not isinstance(value, int):
         raise TypeError("'to_str' takes strings, not %r" % (value.__class__.__name__,))
     return FROM_SIGNAL[value]
 

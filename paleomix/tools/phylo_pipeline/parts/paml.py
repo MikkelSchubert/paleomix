@@ -81,7 +81,7 @@ class CodemlNode(CommandNode):
     def _run(self, config, temp):
         try:
             CommandNode._run(self, config, temp)
-        except NodeError, error:
+        except NodeError as error:
             if self._command.join() == [1, None]:
                 with open(fileutils.reroot_path(temp, "template.stdout")) as handle:
                     lines = handle.readlines()
@@ -119,7 +119,7 @@ class CodemlNode(CommandNode):
 
 def build_codeml_nodes(options, settings, regions, filtering, dependencies):
     in_postfix, out_postfix, afa_ext = "", "", ".afa"
-    if any(filtering.itervalues()):
+    if any(filtering.values()):
         in_postfix = out_postfix = ".filtered"
     if not settings["MultipleSequenceAlignment"][regions["Name"]]["Enabled"]:
         out_postfix = ".unaligned" + out_postfix
@@ -136,12 +136,12 @@ def build_codeml_nodes(options, settings, regions, filtering, dependencies):
         fasta_files[sequence] = os.path.join(sequencedir, sequence + afa_ext)
 
     codeml_nodes = []
-    for (ctl_name, ctl_files) in codeml.iteritems():
+    for (ctl_name, ctl_files) in codeml.items():
         # This dictionary also contains the "ExcludeSamples" option
         if ctl_name in ("ExcludeSamples", "SubsetRegions"):
             continue
 
-        for (sequence, filename) in fasta_files.iteritems():
+        for (sequence, filename) in fasta_files.items():
             output_tar = os.path.join(destination, "%s.%s.tar.gz" % (sequence, ctl_name))
             ctl_file = ctl_files["ControlFile"].format(Name=sequence)
             tree_file = ctl_files["TreeFile"].format(Name=sequence)
@@ -164,7 +164,7 @@ def chain_codeml(_pipeline, options, makefiles):
         filtering = makefile["Project"]["FilterSingletons"]
         options.destination = os.path.join(destination, makefile["Project"]["Title"])
 
-        for regions in makefile["Project"]["Regions"].itervalues():
+        for regions in makefile["Project"]["Regions"].values():
             nodes.extend(build_codeml_nodes(options, makefile, regions, filtering, makefile["Nodes"]))
         makefile["Nodes"] = tuple(nodes)
     options.destination = destination

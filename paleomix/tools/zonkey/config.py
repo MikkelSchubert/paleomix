@@ -96,7 +96,7 @@ def parse_run_config(config, args):
 
     try:
         config.database = database.ZonkeyDB(config.tablefile)
-    except database.ZonkeyDBError, error:
+    except database.ZonkeyDBError as error:
         print_err("ERROR reading database %r: %s"
                   % (config.tablefile, error))
         return
@@ -255,7 +255,7 @@ def _read_sample_table(config, filename):
             if not line.strip() or line.lstrip().startswith("#"):
                 continue
 
-            fields = filter(None, map(str.strip, line.split('\t')))
+            fields = [_f for _f in map(str.strip, line.split('\t')) if _f]
             if len(fields) not in (2, 3):
                 print_err("Error reading sample table (%r) at line %i: "
                           "Expected 2 or 3 columns, found %i; please "
@@ -359,6 +359,6 @@ def _parse_arguments(argv):
         config.indep = 'indep-pairphase'
 
     config.treemix_outgroup \
-        = tuple(filter(None, sorted(config.treemix_outgroup.split(","))))
+        = tuple([_f for _f in sorted(config.treemix_outgroup.split(",")) if _f])
 
     return config, args

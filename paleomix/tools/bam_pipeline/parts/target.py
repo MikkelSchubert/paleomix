@@ -32,4 +32,4 @@ class Target:
         self.nodes = []
         for prefix in self.prefixes:
             self.nodes.extend(prefix.nodes)
-            self.bams.update(prefix.bams.iteritems())
+            self.bams.update(prefix.bams.items())

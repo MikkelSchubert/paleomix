@@ -127,7 +127,7 @@ class ZonkeyDB(object):
 
         try:
             handle = pysam.Samfile(filename)
-        except (ValueError, IOError), error:
+        except (ValueError, IOError) as error:
             print_err("Error reading BAM: %s" % (error,))
             return
 
@@ -167,11 +167,11 @@ class ZonkeyDB(object):
         if self.mitochondria is None:
             return
 
-        for name, record in self.mitochondria.iteritems():
+        for name, record in self.mitochondria.items():
             if name not in self.samples:
                 # Ignore extra reference sequences
-                meta = (record.meta or "").upper()
-                if "EXCLUDE" not in map(str.strip, meta.split(";")):
+                meta = record.meta.upper()
+                if "EXCLUDE" not in list(map(str.strip, meta.split(";"))):
                     raise ZonkeyDBError("Unexpected mitochondrial sequence: %r"
                                         % (name,))
 
@@ -180,10 +180,10 @@ class ZonkeyDB(object):
         cls._check_required_file(tar_handle, filename)
 
         table = cls._read_table(tar_handle, filename, _CONTIGS_TABLE_COLUMNS)
-        for key, row in table.iteritems():
+        for key, row in table.items():
             try:
                 row["Size"] = int(row["Size"])
-            except ValueError, error:
+            except ValueError as error:
                 raise ZonkeyDBError("Invalid size specified for sample %r in "
                                     "%r: %r" % (key, filename, error))
 
@@ -200,7 +200,7 @@ class ZonkeyDB(object):
         if not samples:
             raise ZonkeyDBError("ERROR: No samples found in genotypes table!")
 
-        for row in samples.itervalues():
+        for row in samples.values():
             if row["Sex"].upper() not in ("MALE", "FEMALE", "NA"):
                 raise ZonkeyDBError("ERROR: Unexpected sample sex (%r); "
                                     "expected 'MALE', 'FEMALE', or 'NA'"
@@ -208,7 +208,7 @@ class ZonkeyDB(object):
 
         for k_groups in (2, 3):
             key = "Group(%i)" % (k_groups,)
-            groups = frozenset(row[key] for row in samples.itervalues())
+            groups = frozenset(row[key] for row in samples.values())
 
             if len(groups - set('-')) not in (0, k_groups):
                 raise ZonkeyDBError("The %r column in the samples table must "
@@ -258,7 +258,7 @@ class ZonkeyDB(object):
             results[record.name] = record
 
         lengths = frozenset(len(record.sequence)
-                            for record in results.itervalues())
+                            for record in results.values())
 
         if not lengths:
             raise ZonkeyDBError("No mitochondrial sequences found in %r"
@@ -294,7 +294,7 @@ class ZonkeyDB(object):
 
         try:
             result = paleomix.yaml.safe_load(handle)
-        except paleomix.yaml.YAMLError, error:
+        except paleomix.yaml.YAMLError as error:
             raise ZonkeyDBError("Error reading settings file %r; %s"
                                 % (filename, error))
 
@@ -392,7 +392,7 @@ class ZonkeyDB(object):
             for key in ('Sample1', 'Sample2'):
                 group_key = 'Group(%i)' % (row['K'],)
                 groups = frozenset(row[group_key]
-                                   for row in self.samples.itervalues())
+                                   for row in self.samples.values())
 
                 if row[key] not in groups and row[key] != '-':
                     raise ZonkeyDBError('Invalid group in column %r in '
@@ -463,7 +463,7 @@ def _validate_mito_bam(data, handle, info):
 
     references = handle.references
     min_length = min((len(record.sequence))
-                     for record in data.mitochondria.itervalues())
+                     for record in data.mitochondria.values())
 
     for bam_contig, bam_length in zip(references, handle.lengths):
         if bam_contig not in data.mitochondria:
@@ -514,7 +514,7 @@ def _validate_nuclear_bam(data, handle, info):
     ref_contigs = data.contigs
 
     contigs_found = {}
-    for name, stats in sorted(ref_contigs.iteritems()):
+    for name, stats in sorted(ref_contigs.items()):
         if name not in bam_contigs:
             contigs_found[name] = False
         elif bam_contigs[name] != stats["Size"]:
@@ -528,10 +528,10 @@ def _validate_nuclear_bam(data, handle, info):
         else:
             contigs_found[name] = True
 
-    if any(contigs_found.itervalues()):
-        if not all(contigs_found.itervalues()):
+    if any(contigs_found.values()):
+        if not all(contigs_found.values()):
             print_err("\nERROR: Not all nuclear chromosomes found in BAM:")
-            for (name, stats) in sorted(ref_contigs.iteritems()):
+            for (name, stats) in sorted(ref_contigs.items()):
                 is_found = "Found" if contigs_found[name] else "Not found!"
                 print_err("  - %s: %s" % (name, is_found))
 

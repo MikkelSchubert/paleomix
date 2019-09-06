@@ -96,7 +96,7 @@ def test_file(*args):
 def setup_module():
     timestamps = {test_file("simple.yaml"): 1120719000}
 
-    for filename, timestamp in timestamps.iteritems():
+    for filename, timestamp in timestamps.items():
         # Set atime and mtime
         os.utime(filename, (timestamp, timestamp))
 
@@ -125,13 +125,6 @@ def test_is_int__accepts_integers():
     spec(_DUMMY_PATH, 1234)
     spec(_DUMMY_PATH, 0)
     spec(_DUMMY_PATH, -1234)
-
-
-def test_is_int__accepts_longs():
-    spec = IsInt()
-    spec(_DUMMY_PATH, 1234L)
-    spec(_DUMMY_PATH, 0L)
-    spec(_DUMMY_PATH, -1234L)
 
 
 def test_is_int__rejects_not_int():
@@ -178,19 +171,12 @@ def test_is_unsigned_int__accepts_non_negative_integers():
     spec(_DUMMY_PATH, 0)
 
 
-def test_is_unsigned_int__accepts_longs():
-    spec = IsUnsignedInt()
-    spec(_DUMMY_PATH, 1234L)
-    spec(_DUMMY_PATH, 0L)
-
-
 def test_is_unsigned_int__rejects_not_unsigned_int():
     def _reject_not_str(value):
         spec = IsUnsignedInt()
         assert_raises(MakefileError, spec, _DUMMY_PATH, value)
 
     yield _reject_not_str, -1
-    yield _reject_not_str, -1L
 
     for value in _COMMON_INVALID_VALUES:
         yield _reject_not_str, value
@@ -320,11 +306,6 @@ def test_is_str__accepts_standard_str():
     spec(_DUMMY_PATH, "abc")
 
 
-def test_is_str__accepts_unicode_str():
-    spec = IsStr()
-    spec(_DUMMY_PATH, u"def")
-
-
 def test_is_str__rejects_empty_str():
     assert_raises(MakefileError, IsStr(), _DUMMY_PATH, "")
     assert_raises(MakefileError, IsStr(min_len=1), _DUMMY_PATH, "")
@@ -445,22 +426,22 @@ def test_is_none__default_not_implemented_for_is_none():
 # ValueIn
 
 def test_value_in__single_value_in_set():
-    spec = ValueIn(range(5))
+    spec = ValueIn(list(range(5)))
     spec(_DUMMY_PATH, 1)
 
 
 def test_value_in__single_value_not_in_set():
-    spec = ValueIn(range(5))
+    spec = ValueIn(list(range(5)))
     assert_raises(MakefileError, spec, _DUMMY_PATH, 5)
 
 
 def test_value_in__single_value_in_set__with_key():
-    spec = ValueIn(range(5), key=len)
+    spec = ValueIn(list(range(5)), key=len)
     spec(_DUMMY_PATH, "a")
 
 
 def test_value_in__single_value_not_in_set__with_key():
-    spec = ValueIn(range(5), key=len)
+    spec = ValueIn(list(range(5)), key=len)
     assert_raises(MakefileError, spec, _DUMMY_PATH, "abcde")
 
 
@@ -485,17 +466,17 @@ def test_value_in__custom_description():
 
 
 def test_is_value_in__default_not_set():
-    spec = ValueIn(range(5))
+    spec = ValueIn(list(range(5)))
     assert_is(spec.default, DEFAULT_NOT_SET)
 
 
 def test_is_value_in__default_set__valid_value():
-    spec = ValueIn(range(5), default=4)
+    spec = ValueIn(list(range(5)), default=4)
     assert_equal(spec.default, 4)
 
 
 def test_is_value_in__default_set__must_meet_spec():
-    assert_raises(ValueError, ValueIn, range(5), default=5)
+    assert_raises(ValueError, ValueIn, list(range(5)), default=5)
 
 
 def test_is_value_in__handles_types():
@@ -513,27 +494,27 @@ def test_is_value_in__handles_types():
 # ValuesIntersects
 
 def test_intersects__single_value_in_set():
-    spec = ValuesIntersect(range(5))
+    spec = ValuesIntersect(list(range(5)))
     spec(_DUMMY_PATH, [1])
 
 
 def test_intersects__multiple_values_in_set():
-    spec = ValuesIntersect(range(5))
+    spec = ValuesIntersect(list(range(5)))
     spec(_DUMMY_PATH, [1, 4])
 
 
 def test_intersects__single_value_not_in_set():
-    spec = ValuesIntersect(range(5))
+    spec = ValuesIntersect(list(range(5)))
     assert_raises(MakefileError, spec, _DUMMY_PATH, [5])
 
 
 def test_intersects__some_values_in_set():
-    spec = ValuesIntersect(range(5))
+    spec = ValuesIntersect(list(range(5)))
     spec(_DUMMY_PATH, [4, 5])
 
 
 def test_intersects__empty_set():
-    spec = ValuesIntersect(range(5))
+    spec = ValuesIntersect(list(range(5)))
     assert_raises(MakefileError, spec, _DUMMY_PATH, [])
 
 
@@ -563,22 +544,22 @@ def test_intersects__rejects_dictionary():
 
 
 def test_intersects__default_not_set():
-    spec = ValuesIntersect(range(5))
+    spec = ValuesIntersect(list(range(5)))
     assert_is(spec.default, DEFAULT_NOT_SET)
 
 
 def test_intersects__default_set__valid_value():
-    spec = ValuesIntersect(range(5), default=[3, 4])
+    spec = ValuesIntersect(list(range(5)), default=[3, 4])
     assert_equal(spec.default, [3, 4])
 
 
 def test_intersects__default_set__must_meet_spec():
-    assert_raises(ValueError, ValuesIntersect, range(5), default=[5])
+    assert_raises(ValueError, ValuesIntersect, list(range(5)), default=[5])
 
 
 def test_intersects__handles_types():
     def _rejects_value(value):
-        spec = ValuesIntersect(range(5))
+        spec = ValuesIntersect(list(range(5)))
         assert_raises(MakefileError, spec, _DUMMY_PATH, value)
 
     yield _rejects_value, "foo"
@@ -591,32 +572,32 @@ def test_intersects__handles_types():
 # ValueSubsetOf
 
 def test_subset_of__single_value_in_set():
-    spec = ValuesSubsetOf(range(5))
+    spec = ValuesSubsetOf(list(range(5)))
     spec(_DUMMY_PATH, [1])
 
 
 def test_subset_of__multiple_values_in_set():
-    spec = ValuesSubsetOf(range(5))
+    spec = ValuesSubsetOf(list(range(5)))
     spec(_DUMMY_PATH, [1, 4])
 
 
 def test_subset_of__empty_set_is_subset():
-    spec = ValuesSubsetOf(range(5))
+    spec = ValuesSubsetOf(list(range(5)))
     spec(_DUMMY_PATH, [])
 
 
 def test_subset_of__single_value_not_in_set():
-    spec = ValuesSubsetOf(range(5))
+    spec = ValuesSubsetOf(list(range(5)))
     assert_raises(MakefileError, spec, _DUMMY_PATH, [5])
 
 
 def test_subset_of__multiple_values_not_in_set():
-    spec = ValuesSubsetOf(range(5))
+    spec = ValuesSubsetOf(list(range(5)))
     assert_raises(MakefileError, spec, _DUMMY_PATH, [4, 5])
 
 
 def test_subset_of__empty_set():
-    spec = ValuesSubsetOf(range(5))
+    spec = ValuesSubsetOf(list(range(5)))
     spec(_DUMMY_PATH, [])
 
 
@@ -646,22 +627,22 @@ def test_subset_of__rejects_dictionary():
 
 
 def test_subset_of__default_not_set():
-    spec = ValuesSubsetOf(range(5))
+    spec = ValuesSubsetOf(list(range(5)))
     assert_is(spec.default, DEFAULT_NOT_SET)
 
 
 def test_subset_of__default_set__valid_value():
-    spec = ValuesSubsetOf(range(5), default=[3, 4])
+    spec = ValuesSubsetOf(list(range(5)), default=[3, 4])
     assert_equal(spec.default, [3, 4])
 
 
 def test_subset_of__default_set__must_meet_spec():
-    assert_raises(ValueError, ValuesSubsetOf, range(5), default=[4, 5])
+    assert_raises(ValueError, ValuesSubsetOf, list(range(5)), default=[4, 5])
 
 
 def test_subset_of__handles_types():
     def _rejects_value(value):
-        spec = ValuesSubsetOf(range(5))
+        spec = ValuesSubsetOf(list(range(5)))
         assert_raises(MakefileError, spec, _DUMMY_PATH, value)
 
     yield _rejects_value, "foo"
@@ -703,12 +684,12 @@ def test_and__rejects_non_spec_tests():
 
 
 def test_and__default_not_set():
-    spec = And(IsInt, ValueIn(range(10)))
+    spec = And(IsInt, ValueIn(list(range(10))))
     assert_is(spec.default, DEFAULT_NOT_SET)
 
 
 def test_and__default_set__valid_value():
-    spec = And(IsInt, ValueIn(range(30)), default=20)
+    spec = And(IsInt, ValueIn(list(range(30))), default=20)
     assert_equal(spec.default, 20)
 
 
@@ -717,7 +698,7 @@ def test_and__default_set__must_meet_spec():
 
 
 def test_and__defaults_not_set_in_specs():
-    assert_raises(ValueError, And, IsInt(default=10), ValueIn((range(100))))
+    assert_raises(ValueError, And, IsInt(default=10), ValueIn((list(range(100)))))
 
 
 ###############################################################################
@@ -845,11 +826,6 @@ def test_string_starts_with__accepts_standard_str():
     spec(_DUMMY_PATH, "A_BC")
 
 
-def test_string_starts_with__accepts_unicode_str():
-    spec = StringStartsWith("A_")
-    spec(_DUMMY_PATH, u"A_DEF")
-
-
 def test_string_starts_with__rejects_string_without_prefix():
     spec = StringStartsWith("A_")
     assert_raises(MakefileError, spec, _DUMMY_PATH, "B_GHI")
@@ -887,11 +863,6 @@ def test_string_starts_with__default_set__must_meet_spec():
 def test_string_ends_with__accepts_standard_str():
     spec = StringEndsWith("_A")
     spec(_DUMMY_PATH, "BC_A")
-
-
-def test_string_ends_with__accepts_unicode_str():
-    spec = StringEndsWith("_A")
-    spec(_DUMMY_PATH, u"DEF_A")
 
 
 def test_string_ends_with__rejects_string_without_prefix():
@@ -963,8 +934,8 @@ def test_is_list_of__default_not_set():
 
 
 def test_is_list_of__default_set__valid_value():
-    spec = IsListOf(IsInt, default=range(5))
-    assert_equal(spec.default, range(5))
+    spec = IsListOf(IsInt, default=list(range(5)))
+    assert_equal(spec.default, list(range(5)))
 
 
 def test_is_list_of__default_set__must_meet_spec():
@@ -1313,7 +1284,7 @@ def test_read_makefile__simple_file():
 
 class _PreProcess(PreProcessMakefile):
     def __call__(self, path, value):
-        if isinstance(value, types.StringTypes):
+        if isinstance(value, str):
             return int(value), IsInt
 
         return value, IsInt
@@ -1350,7 +1321,7 @@ class _PreProcessWithDefault(PreProcessMakefile):
         self._default = default
 
     def __call__(self, path, value):
-        if isinstance(value, types.StringTypes):
+        if isinstance(value, str):
             return int(value), IsInt
 
         return value, IsInt(default=self._default)

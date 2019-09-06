@@ -51,7 +51,7 @@ class Reads(object):
             assert False, "Unexpected data type in Reads(): %s" \
                 % (repr(lane_type))
 
-        for name, value in record["Options"]["ExcludeReads"].iteritems():
+        for name, value in record["Options"]["ExcludeReads"].items():
             if value:
                 self.files.pop(name, None)
 

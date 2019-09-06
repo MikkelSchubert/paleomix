@@ -267,7 +267,7 @@ class BWAAlgorithmNode(CommandNode):
                                      prefix=parameters.prefix)
 
         command = ParallelCmds([cmd.finalize()
-                                for cmd in parameters.commands.itervalues()])
+                                for cmd in parameters.commands.values()])
         CommandNode.__init__(self,
                              command=command,
                              description=desc,

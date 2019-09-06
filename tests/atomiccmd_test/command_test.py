@@ -291,7 +291,7 @@ def test_atomiccmd__paths__invalid_values():
     yield test_function, {"TEMP_IN_STDIN": frozenset()}
     yield test_function, {"OUT_STDOUT": 1.7}
     yield test_function, {"TEMP_OUT_STDOUT": ()}
-    yield test_function, {"OUT_STDERR": xrange(3)}
+    yield test_function, {"OUT_STDERR": range(3)}
     yield test_function, {"TEMP_OUT_STDERR": -1}
 
 
@@ -818,7 +818,7 @@ def test_atomiccmd__cleanup_proc():
         assert_equal(paleomix.atomiccmd.command._PROCS, set())
         cmd = AtomicCmd("ls")
         cmd.run(temp_folder)
-        ref = iter(paleomix.atomiccmd.command._PROCS).next()
+        ref = next(iter(paleomix.atomiccmd.command._PROCS))
         assert ref
         assert_equal(ref(), cmd._proc)
 

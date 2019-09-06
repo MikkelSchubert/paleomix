@@ -45,7 +45,7 @@ class Prefix(object):
 
         files_and_nodes = {}
         for sample in self.samples:
-            files_and_nodes.update(sample.bams.iteritems())
+            files_and_nodes.update(iter(sample.bams.items()))
 
         self.datadup_check = self._build_dataduplication_node(
             prefix, files_and_nodes)
@@ -91,7 +91,7 @@ class Prefix(object):
             self.folder, self.target, prefix["Name"] + ".validated")
 
         node = MergeSamFilesNode(config=config,
-                                 input_bams=files_and_bams.keys(),
+                                 input_bams=list(files_and_bams),
                                  output_bam=output_filename,
                                  dependencies=self.datadup_check)
         validated_node = index_and_validate_bam(config=config,
@@ -111,14 +111,14 @@ class Prefix(object):
 
         trainer = gatk.GATKIndelTrainerNode(config=config,
                                             reference=prefix["Reference"],
-                                            infiles=bams.keys(),
+                                            infiles=list(bams),
                                             outfile=intervals_filename,
                                             threads=config.gatk_max_threads,
                                             dependencies=self.datadup_check)
 
         aligner = gatk.GATKIndelRealignerNode(config=config,
                                               reference=prefix["Reference"],
-                                              infiles=bams.keys(),
+                                              infiles=list(bams),
                                               intervals=intervals_filename,
                                               outfile=output_filename,
                                               dependencies=trainer)
@@ -133,9 +133,9 @@ class Prefix(object):
     def _build_dataduplication_node(self, prefix, files_and_nodes):
         filename = prefix["Name"] + ".duplications_checked"
         destination = os.path.join(self.folder, self.target, filename)
-        dependencies = files_and_nodes.values()
+        dependencies = list(files_and_nodes.values())
 
-        return DetectInputDuplicationNode(input_files=files_and_nodes.keys(),
+        return DetectInputDuplicationNode(input_files=list(files_and_nodes),
                                           output_file=destination,
                                           dependencies=dependencies)
 

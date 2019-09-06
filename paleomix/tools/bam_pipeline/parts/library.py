@@ -102,7 +102,7 @@ class Library:
     def _collect_bams_by_type(cls, lanes):
         bams = {}
         for lane in lanes:
-            for key, files in lane.bams.iteritems():
+            for key, files in lane.bams.items():
                 key = "collapsed" if (key == "Collapsed") else "normal"
                 bams.setdefault(key, {}).update(files)
 
@@ -111,7 +111,7 @@ class Library:
     @classmethod
     def _collect_files_and_nodes(cls, bams):
         files_and_nodes = {}
-        for dd in bams.itervalues():
+        for dd in bams.values():
             files_and_nodes.update(dd)
         return files_and_nodes
 
@@ -120,7 +120,7 @@ class Library:
                      "normal": MarkDuplicatesNode}
 
         keep_duplicates = False
-        if isinstance(strategy, types.StringTypes) and (strategy.lower() == "mark"):
+        if isinstance(strategy, str) and (strategy.lower() == "mark"):
             keep_duplicates = True
 
         # Indexing is required if we wish to calulate per-region statistics,
@@ -134,10 +134,10 @@ class Library:
         for (key, files_and_nodes) in bams.items():
             output_filename = self.folder + ".rmdup.%s.bam" % key
             node = rmdup_cls[key](config=config,
-                                  input_bams=files_and_nodes.keys(),
+                                  input_bams=list(files_and_nodes.keys()),
                                   output_bam=output_filename,
                                   keep_dupes=keep_duplicates,
-                                  dependencies=files_and_nodes.values())
+                                  dependencies=list(files_and_nodes.values()))
             validated_node = index_and_validate_bam(config=config,
                                                     prefix=prefix,
                                                     node=node,
@@ -182,10 +182,10 @@ class Library:
     def _mapdamage_plot(self, config, destination, prefix, files_and_nodes):
         title = "mapDamage plot for library %r" % (self.name,)
 
-        dependencies = files_and_nodes.values()
+        dependencies = list(files_and_nodes.values())
         plot = MapDamagePlotNode.customize(config=config,
                                            reference=prefix["Path"],
-                                           input_files=files_and_nodes.keys(),
+                                           input_files=list(files_and_nodes),
                                            output_directory=destination,
                                            title=title,
                                            dependencies=dependencies)
@@ -214,7 +214,7 @@ class Library:
                                       files_and_nodes=files_and_nodes)
 
         # Rescales BAM quality scores using model built above
-        input_files = files_and_nodes.keys()
+        input_files = list(files_and_nodes)
         output_filename = self.folder + ".rescaled.bam"
 
         scale = MapDamageRescaleNode.customize(config=config,
@@ -242,8 +242,8 @@ class Library:
 
         input_files = []
         dependencies = []
-        for values in files_and_nodes.itervalues():
-            for (filename, node) in values.iteritems():
+        for values in files_and_nodes.values():
+            for (filename, node) in values.items():
                 input_files.append(filename)
                 dependencies.append(node)
 
@@ -260,6 +260,6 @@ class Library:
         files_and_nodes = self._collect_files_and_nodes(bams)
         output_file = self.folder + ".duplications_checked"
 
-        return DetectInputDuplicationNode(input_files=files_and_nodes.keys(),
+        return DetectInputDuplicationNode(input_files=list(files_and_nodes),
                                           output_file=output_file,
-                                          dependencies=files_and_nodes.values())
+                                          dependencies=list(files_and_nodes.values()))

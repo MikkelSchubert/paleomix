@@ -47,7 +47,7 @@ def majority_base(site):
 
 
 def majority_sequence(handle, padding, contig_name, contig_length):
-    sequence = [dict.fromkeys("ACGTN", 0) for _ in xrange(contig_length)]
+    sequence = [dict.fromkeys("ACGTN", 0) for _ in range(contig_length)]
 
     for column in handle.pileup(contig_name):
         position = sequence[column.pos]
@@ -61,18 +61,18 @@ def majority_sequence(handle, padding, contig_name, contig_length):
 
     if padding:
         offset = len(sequence) - padding
-        for idx in xrange(padding):
+        for idx in range(padding):
             dst = sequence[idx]
             src = sequence[idx + offset]
 
-            for key, value in src.iteritems():
+            for key, value in src.items():
                 dst[key] += value
 
         del sequence[-padding:]
 
     covered = coverage = 0
     for counts in sequence:
-        total = sum(counts.itervalues()) - counts["N"]
+        total = sum(counts.values()) - counts["N"]
         coverage += total
 
         if total:
@@ -92,7 +92,7 @@ def majority_sequence(handle, padding, contig_name, contig_length):
 
 def align_majority(reference, majority):
     aligned = []
-    reference_iter = iter(reference).next
+    reference_iter = iter(reference).__next__
 
     for nucleotide in majority:
         reference = reference_iter()
@@ -108,7 +108,7 @@ def align_majority(reference, majority):
 def truncate_sequences(sequences, name):
     result = {}
     to_len = len(sequences[name].sequence)
-    for name, record in sequences.iteritems():
+    for name, record in sequences.items():
         result[name] = FASTA(name=record.name,
                              meta=record.meta,
                              sequence=record.sequence[:to_len])
@@ -118,19 +118,16 @@ def truncate_sequences(sequences, name):
 
 def filter_sequences(sequences):
     selection = {}
-    for key, record in sequences.iteritems():
-        if record.meta is not None:
-            if "EXCLUDE" in map(str.strip, record.meta.upper().split(";")):
-                continue
-
-        selection[key] = record
+    for key, record in sequences.items():
+        if "EXCLUDE" not in map(str.strip, record.meta.upper().split(";")):
+            selection[key] = record
 
     return selection
 
 
 def sequences_to_msa(sequences):
     records = []
-    for name, record in sorted(sequences.iteritems()):
+    for name, record in sorted(sequences.items()):
         records.append(record)
 
     return MSA(records)
@@ -152,7 +149,7 @@ def main(argv):
 
     try:
         handle = pysam.Samfile(args.bam)
-    except (IOError, ValueError), error:
+    except (IOError, ValueError) as error:
         print_err("Error reading BAM file: %s" % (error,))
         return 1
 
@@ -184,14 +181,14 @@ def main(argv):
     with open(args.output_prefix + ".summary", "w") as handle:
         stats["filename"] = os.path.abspath(args.bam)
 
-        for key, value in sorted(stats.iteritems()):
+        for key, value in sorted(stats.items()):
             handle.write("{}: {}\n".format(key, value))
 
     with open(args.output_prefix + ".phy", "w") as handle:
         handle.write(interleaved_phy(sequences_to_msa(sequences)))
 
     with open(args.output_prefix + ".fasta", "w") as handle:
-        for key, record in sorted(sequences.iteritems()):
+        for key, record in sorted(sequences.items()):
             handle.write(">{}\n".format(key))
             for line in fragment(60, record.sequence):
                 handle.write("{}\n".format(line))

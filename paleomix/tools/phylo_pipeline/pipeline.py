@@ -43,7 +43,7 @@ from paleomix.tools.phylo_pipeline.config import \
 def main(argv):
     try:
         config, args = parse_config(argv)
-    except ConfigError, error:
+    except ConfigError as error:
         print_err(error)
         return 1
 
@@ -78,7 +78,7 @@ def main(argv):
     if not os.path.exists(config.temp_root):
         try:
             os.makedirs(config.temp_root)
-        except OSError, error:
+        except OSError as error:
             print_err("ERROR: Could not create temp root:\n\t%s" % (error,))
             return 1
 
@@ -92,7 +92,7 @@ def main(argv):
 
     try:
         makefiles = read_makefiles(config, args, commands)
-    except (MakefileError, paleomix.yaml.YAMLError, IOError), error:
+    except (MakefileError, paleomix.yaml.YAMLError, IOError) as error:
         print_err("Error reading makefiles:",
                   "\n  %s:\n   " % (error.__class__.__name__,),
                   "\n    ".join(str(error).split("\n")))

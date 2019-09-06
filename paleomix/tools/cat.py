@@ -92,7 +92,7 @@ def main(argv):
     try:
         return _call(input_files=args.file,
                      output_file=args.output)
-    except Exception, error:
+    except Exception as error:
         sys.stderr.write("Error running 'paleomix cat':\n    %s\n\n" % error)
         sys.stderr.write("Command = %s\n" % (" ".join(sys.argv),))
         return 1

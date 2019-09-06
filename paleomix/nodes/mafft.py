@@ -88,6 +88,6 @@ class MAFFTNode(CommandNode):
         output_file = reroot_path(temp, self._output_file)
         try:
             MSA.from_file(output_file)
-        except MSAError, error:
+        except MSAError as error:
             raise NodeError("Invalid MSA produced by MAFFT:\n%s" % (error,))
         CommandNode._teardown(self, config, temp)

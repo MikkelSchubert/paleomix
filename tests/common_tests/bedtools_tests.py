@@ -209,7 +209,7 @@ def test_bedrecord__cmp():
     record_1 = BEDRecord(record_1_txt)
     record_2 = BEDRecord("chrZ\t132\t4345\tchrZ_region\t0\t+\tbar")
 
-    for idx in xrange(len(record_2)):
+    for idx in range(len(record_2)):
         record_tmp = BEDRecord(record_1_txt)
         assert_equal(record_1, record_tmp)
         record_tmp[idx] = record_2[idx]

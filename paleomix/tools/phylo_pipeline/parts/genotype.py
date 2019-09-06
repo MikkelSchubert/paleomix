@@ -43,7 +43,7 @@ from paleomix.nodes.commands import \
 
 
 def apply_samtools_options(builder, options, argument):
-    for (key, value) in dict(options).iteritems():
+    for (key, value) in dict(options).items():
         sam_argument = key
         if value is not None:
             sam_argument = "%s=%s" % (key, value)
@@ -278,7 +278,7 @@ def build_genotyping_nodes(options, genotyping, sample, regions, dependencies):
 def build_sample_nodes(options, genotyping, regions_sets, sample,
                        dependencies=()):
     nodes = []
-    for regions in regions_sets.itervalues():
+    for regions in regions_sets.values():
         regions = deepcopy(regions)
 
         # Enforce homozygous contigs based on sex tag
@@ -306,7 +306,7 @@ def chain(pipeline, options, makefiles):
                                            makefile["Project"]["Title"])
 
         nodes = []
-        for sample in makefile["Project"]["Samples"].itervalues():
+        for sample in makefile["Project"]["Samples"].values():
             nodes.extend(build_sample_nodes(options, genotyping, regions_sets,
                                             sample, makefile["Nodes"]))
 

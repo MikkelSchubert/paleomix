@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from itertools import izip
+
 from collections import defaultdict
 
 from paleomix.common.sequences import split
@@ -54,7 +54,7 @@ class MSA(frozenset):
 
     def seqlen(self):
         """Retrurns the length of the sequences in the MSA."""
-        return len(iter(self).next().sequence)
+        return len(next(iter(self)).sequence)
 
     def exclude(self, names):
         """Builds a new MSA that excludes the named set of records."""
@@ -69,7 +69,7 @@ class MSA(frozenset):
     def reduce(self):
         columns = []
         uncalled = frozenset("Nn-")
-        for column in izip(*(record.sequence for record in self)):
+        for column in zip(*(record.sequence for record in self)):
             if (frozenset(column) - uncalled):
                 columns.append(column)
 
@@ -77,7 +77,7 @@ class MSA(frozenset):
             return None
 
         records = []
-        for (record, sequence) in izip(self, izip(*columns)):
+        for (record, sequence) in zip(self, zip(*columns)):
             records.append(FASTA(record.name, record.meta, "".join(sequence)))
 
         return MSA(records)
@@ -122,7 +122,7 @@ class MSA(frozenset):
 
         results = dict((key, set()) for key in split_by)
         for record in self:
-            for (key, partition) in split(record.sequence, split_by).iteritems():
+            for (key, partition) in split(record.sequence, split_by).items():
                 results[key].add(FASTA(record.name, None, partition))
 
         for (key, value) in results.items():
@@ -144,7 +144,7 @@ class MSA(frozenset):
                 merged[record.name].append(record.sequence)
 
         sequences = []
-        for (name, sequence) in merged.iteritems():
+        for (name, sequence) in merged.items():
             sequences.append(FASTA(name, None, "".join(sequence)))
         return MSA(sequences)
 
@@ -165,7 +165,7 @@ class MSA(frozenset):
         fasta_file = open_ro(filename)
         try:
             return MSA.from_lines(fasta_file)
-        except MSAError, error:
+        except MSAError as error:
             raise MSAError("%s in file %r" % (error, filename))
         finally:
             fasta_file.close()

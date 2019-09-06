@@ -122,7 +122,7 @@ def _build_examl_bootstraps(options, phylo, destination, input_alignment, input_
     bootstrap_destination = os.path.join(destination, "bootstraps")
     bootstrap_template    = os.path.join(bootstrap_destination, "bootstrap.%04i.phy")
 
-    for bootstrap_num in xrange(num_bootstraps):
+    for bootstrap_num in range(num_bootstraps):
         bootstrap_alignment = bootstrap_template % (bootstrap_num,)
         bootstrap = PHYLIPBootstrapNode(input_alignment  = input_alignment,
                                         input_partition  = input_partition,
@@ -153,7 +153,7 @@ def _build_examl_bootstraps(options, phylo, destination, input_alignment, input_
 
 def add_bootstrap_support(destination, replicate, bootstrap):
     if not (replicate and bootstrap):
-        return filter(None, (replicate, bootstrap))
+        return [_f for _f in (replicate, bootstrap) if _f]
 
     replicate_file = os.path.join(destination, "replicates.newick")
     bootstrap_file = os.path.join(destination, "bootstraps.newick")
@@ -184,7 +184,7 @@ def _build_examl_per_gene_nodes(options, settings, run_dd, roi, destination, fil
     regions            = settings["Project"]["Regions"][roi["Name"]]
     sequences          = regions["Sequences"][roi["SubsetRegions"]]
     subset_files       = regions["SubsetFiles"][roi["SubsetRegions"]]
-    filtering_postfix  = ".filtered" if any(filtering.itervalues()) else ""
+    filtering_postfix  = ".filtered" if any(filtering.values()) else ""
     sequence_dir       = os.path.join(options.destination, "alignments", roi["Name"] + filtering_postfix)
     msa_enabled        = settings["MultipleSequenceAlignment"][regions["Name"]]["Enabled"]
     fasta_extension    = ".afa" if msa_enabled else ".fasta"
@@ -204,14 +204,14 @@ def _build_examl_per_gene_nodes(options, settings, run_dd, roi, destination, fil
 def _build_examl_regions_nodes(options, settings, run_dd, destination, filtering, dependencies):
     input_files  = collections.defaultdict(dict)
     subset_files = []
-    for (roi_name, roi_dd) in run_dd["RegionsOfInterest"].iteritems():
+    for (roi_name, roi_dd) in run_dd["RegionsOfInterest"].items():
         regions     = settings["Project"]["Regions"][roi_name]
         subset_key  = roi_dd.get("SubsetRegions")
         sequences   = regions["Sequences"][subset_key]
         subset_files.extend(regions["SubsetFiles"][subset_key])
 
         partitions  = roi_dd["Partitions"]
-        filtering_postfix  = ".filtered" if any(filtering.itervalues()) else ""
+        filtering_postfix  = ".filtered" if any(filtering.values()) else ""
         sequence_dir       = os.path.join(options.destination, "alignments", roi_name + filtering_postfix)
         msa_enabled        = settings["MultipleSequenceAlignment"][regions["Name"]]["Enabled"]
         fasta_extension    = ".afa" if msa_enabled else ".fasta"
@@ -235,12 +235,12 @@ def _build_examl_regions_nodes(options, settings, run_dd, destination, filtering
 
 def build_phylogeny_nodes(options, settings, filtering, dependencies):
     nodes = []
-    for (run_name, run_dd) in settings["PhylogeneticInference"].iteritems():
+    for (run_name, run_dd) in settings["PhylogeneticInference"].items():
         destination = os.path.join(options.destination, "phylogenies", run_name)
 
         if run_dd["PerGeneTrees"]:
             run_nodes = []
-            for roi in run_dd["RegionsOfInterest"].itervalues():
+            for roi in run_dd["RegionsOfInterest"].values():
                 roi_destination = os.path.join(destination, roi["Name"])
                 run_nodes.extend(_build_examl_per_gene_nodes(options, settings, run_dd, roi, roi_destination, filtering, dependencies))
             nodes.extend(run_nodes)

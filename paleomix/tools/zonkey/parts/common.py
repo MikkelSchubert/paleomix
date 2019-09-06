@@ -44,13 +44,13 @@ class WriteSampleList(Node):
     def _run(self, config, temp):
         output_file, = self.output_files
         samples = self._samples
-        groups = set(sample["Group(3)"] for sample in samples.itervalues())
+        groups = set(sample["Group(3)"] for sample in samples.values())
         colors = dict(zip(groups, _DEFAULT_COLORS))
 
         with open(fileutils.reroot_path(temp, output_file), "w") as handle:
             handle.write("Name\tGroup\tColor\n")
 
-            for name, sample in sorted(samples.iteritems()):
+            for name, sample in sorted(samples.items()):
                 group = sample["Group(3)"]
                 color = colors[group]
 

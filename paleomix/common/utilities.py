@@ -20,18 +20,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import binascii
 import copy
-import cPickle
 import heapq
 import itertools
-import pickle
-import types
 
 
 def _safe_coerce(cls):
     def _do_safe_coerce(value):
-        if isinstance(value, (types.StringTypes, types.DictType)):
+        if isinstance(value, (str, dict)):
             return cls((value,))
 
         try:
@@ -59,10 +55,6 @@ def try_cast(value, cast_to):
         return cast_to(value)
     except (ValueError, TypeError):
         return value
-
-
-def crc32(data):
-    return binascii.crc32(data) & 0xffffffff
 
 
 def set_in(dictionary, keys, value):
@@ -127,7 +119,7 @@ def split_before(iterable, pred):
 def grouper(size, iterable, fillvalue=None):
     "grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"
     args = [iter(iterable)] * size
-    return itertools.izip_longest(fillvalue=fillvalue, *args)
+    return itertools.zip_longest(fillvalue=fillvalue, *args)
 
 
 def group_by_pred(pred, iterable):
@@ -156,18 +148,6 @@ def cumsum(lst, initial=0):
         initial += item
         yield initial
 
-
-def fast_pickle_test(obj):
-    """Attempts to pickle an object, raising a PicklingError
-    if the object is unpicklable. This function uses cPickle
-    to determine if the object is pickable, but 'pickle' to
-    generate the exception, since the python module produces
-    more informative error messages."""
-    try:
-        cPickle.dumps(obj)
-    except (TypeError, cPickle.PicklingError):
-        pickle.dumps(obj)
-        assert False  # pragma: no coverage
 
 
 def fill_dict(destination, source):
@@ -208,7 +188,7 @@ def chain_sorted(*sequences, **kwargs):
     iterators = []
     for index, sequence_iter in enumerate(map(iter, sequences)):
         try:
-            current = sequence_iter.next()
+            current = next(sequence_iter)
             key_value = current if key is None else key(current)
 
             iterators.append((key_value, index, current, sequence_iter))
@@ -252,7 +232,7 @@ class Immutable(object):
 
     def __init__(self, **kwargs):
         object.__init__(self)
-        for (key, value) in kwargs.iteritems():
+        for (key, value) in kwargs.items():
             object.__setattr__(self, key, value)
 
     def __setattr__(self, _name, _value):

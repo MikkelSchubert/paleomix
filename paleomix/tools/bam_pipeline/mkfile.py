@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from __future__ import print_function
+
 
 import os
 import sys
@@ -322,9 +322,9 @@ def read_sample_sheets(filenames):
             barcodes.setdefault(key, []).append(path)
 
     # Clean up names; generate unique names for duplicate lanes
-    for libraries in records.itervalues():
-        for barcodes in libraries.itervalues():
-            for key, paths in barcodes.items():
+    for libraries in records.values():
+        for barcodes in libraries.values():
+            for key, paths in list(barcodes.items()):
                 if len(paths) == 1:
                     barcodes[key] = paths[0]
                     continue
@@ -346,12 +346,12 @@ def read_sample_sheets(filenames):
 
 def print_samples(records):
     print()
-    for (sample, libraries) in sorted(records.iteritems()):
+    for (sample, libraries) in sorted(records.items()):
         print("%s:" % sample)
         print("  %s:" % sample)
-        for (library, barcodes) in sorted(libraries.iteritems()):
+        for (library, barcodes) in sorted(libraries.items()):
             print("    %s:" % library)
-            for key, path in sorted(barcodes.iteritems()):
+            for key, path in sorted(barcodes.items()):
                 print("      %s: %s" % (key, path))
             print()
         print()

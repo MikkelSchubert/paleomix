@@ -146,7 +146,7 @@ def _write_genotypes(args, data, filename):
                 continue
 
             sys.stderr.write('  - %s:   0%%\r' % (contig,))
-            for pos in xrange(0, size, _CHUNK_SIZE):
+            for pos in range(0, size, _CHUNK_SIZE):
                 sys.stderr.write('  - %s: % 3i%%\r'
                                  % (contig, (100 * pos) / size))
 
@@ -162,7 +162,7 @@ def _write_genotypes(args, data, filename):
 
                 ref_chunk = ref_handle.fetch(real_name, pos, pos + _CHUNK_SIZE)
 
-                for idx, row in enumerate(itertools.izip(*chunks)):
+                for idx, row in enumerate(zip(*chunks)):
                     if 'N' in row:
                         continue
 
@@ -205,7 +205,7 @@ def _write_contigs(args, filename):
     for name, (real_name, size) in sorted(contigs.items()):
         sys.stderr.write('  - %s:   0%%\r' % (name,))
         n_uncalled = 0
-        for pos in xrange(0, size, _CHUNK_SIZE):
+        for pos in range(0, size, _CHUNK_SIZE):
             sys.stderr.write('  - %s: % 3i%%\r' % (name, (100 * pos) / size))
             chunk = fasta_handle.fetch(real_name, pos, pos + _CHUNK_SIZE)
             n_uncalled += chunk.count('n')
@@ -240,12 +240,12 @@ def _write_samples(args, samples, filename):
 
 def _process_contigs(reference, samples):
     ref_contigs = _read_contigs(reference)
-    for name, (_, size) in ref_contigs.items():
+    for name, (_, size) in list(ref_contigs.items()):
         ref_contigs[name] = size
 
-    for sample_name, obs_data in samples.items():
+    for sample_name, obs_data in list(samples.items()):
         obs_contigs = obs_data['contigs']
-        for ref_name, ref_size in ref_contigs.iteritems():
+        for ref_name, ref_size in ref_contigs.items():
             if ref_name not in obs_contigs:
                 raise ZonkeyError('Contig missing for sample %r: %r'
                                   % (sample_name, ref_name))

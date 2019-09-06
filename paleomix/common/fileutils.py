@@ -65,7 +65,7 @@ def create_temp_dir(root):
         return os.path.join(root, str(uuid.uuid4()))
 
     path = _generate_path()
-    while not make_dirs(path, mode = 0750):
+    while not make_dirs(path, mode = 0o750):
         path = _generate_path()
     return path
 
@@ -126,7 +126,7 @@ def missing_executables(filenames):
     return result
 
 
-def make_dirs(directory, mode = 0777):
+def make_dirs(directory, mode = 0o777):
     """Wrapper around os.makedirs to make it suitable for using
     in a multithreaded/multiprocessing enviroment: Unlike the
     regular function, this wrapper does not throw an exception if
@@ -141,7 +141,7 @@ def make_dirs(directory, mode = 0777):
     try:
         os.makedirs(directory, mode = mode)
         return True
-    except OSError, error:
+    except OSError as error:
         # make_dirs be called by multiple subprocesses at the same time,
         # so only raise if the actual creation of the folder failed
         if error.errno != errno.EEXIST:
@@ -164,24 +164,15 @@ def copy_file(source, destination):
 def open_ro(filename):
     """Opens a file for reading, transparently handling
     GZip and BZip2 compressed files. Returns a file handle."""
-    handle = open(filename)
-    try:
+    with open(filename, 'rb') as handle:
         header = handle.read(2)
 
-        if header == "\x1f\x8b":
-            handle.close()
-            # TODO: Re-use handle (fileobj)
-            handle = gzip.open(filename)
-        elif header == "BZ":
-            handle.close()
-            handle = bz2.BZ2File(filename)
-        else:
-            handle.seek(0)
-
-        return handle
-    except:
-        handle.close()
-        raise
+    if header == b"\x1f\x8b":
+        return gzip.open(filename, 'rt')
+    elif header == b"BZ":
+        return bz2.open(filename, 'rt')
+    else:
+        return open(filename, 'rt')
 
 
 def try_remove(filename):
@@ -281,7 +272,7 @@ def _validate_filenames(filenames):
     'describe_files' and 'describe_paired_files."""
     filenames = safe_coerce_to_tuple(filenames)
     for filename in filenames:
-        if not isinstance(filename, types.StringTypes):
+        if not isinstance(filename, str):
             raise ValueError("Only string types are allowed for filenames, not %s" \
                              % (filename.__class__.__name__,))
     return filenames
@@ -296,7 +287,7 @@ def _sh_wrapper(func, source, destination):
     directory, and then retry the function."""
     try:
         func(source, destination)
-    except IOError, error:
+    except IOError as error:
         if (error.errno == errno.ENOENT):
             if source and destination and os.path.exists(source):
                 dirname = os.path.dirname(destination)
@@ -316,7 +307,7 @@ def _try_rm_wrapper(func, fpath):
     try:
         func(fpath)
         return True
-    except OSError, error:
+    except OSError as error:
         if error.errno != errno.ENOENT:
             raise
         return False

@@ -200,7 +200,7 @@ class AdmixtureNode(CommandNode):
 
         group_key = "Group(%i)" % (self._k_groups,)
         self._supervised = samples and any((row[group_key] != '-')
-                                           for row in samples.itervalues())
+                                           for row in samples.values())
 
         assert k_groups in (2, 3), k_groups
         prefix = os.path.splitext(os.path.basename(input_file))[0]
@@ -506,7 +506,7 @@ class TreemixNode(CommandNode):
         elif isinstance(k, tuple) and all(isinstance(v, str) for v in k):
             self._k_field, self._k_file = k
             self._genome_size = sum(value["Size"]
-                                    for value in data.contigs.itervalues())
+                                    for value in data.contigs.values())
             self._snp_distance = data.settings["SNPDistance"]
         else:
             raise ValueError("k must be int or (key, path) in TreemixNode")

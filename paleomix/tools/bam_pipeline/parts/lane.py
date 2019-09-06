@@ -81,7 +81,7 @@ class Lane:
     def _init_unaligned_lane(self, config, prefix, record):
         prefix_key = "Nodes:%s" % (self.options["Aligners"]["Program"],)
 
-        for (key, input_filename) in self.reads.files.iteritems():
+        for (key, input_filename) in self.reads.files.items():
             # Common parameters between BWA / Bowtie2
             output_filename = os.path.join(self.folder,
                                            "%s.bam" % (key.lower(),))

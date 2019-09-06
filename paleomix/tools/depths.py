@@ -105,7 +105,7 @@ class MappingToTotals(object):
 
     def finalize(self):
         """Process cached counts."""
-        for (count, multiplier) in self._cache.iteritems():
+        for (count, multiplier) in self._cache.items():
             self._update_totals(count, multiplier)
         self._cache.clear()
 
@@ -139,7 +139,7 @@ class MappingToTotals(object):
             totals_by_smlbid[smlbid] = mappings
 
         totals_src_and_dst = []
-        for (key, dst) in totals_by_table_key.iteritems():
+        for (key, dst) in totals_by_table_key.items():
             totals_src_and_dst.append((totals[key], dst))
 
         return totals_by_smlbid, totals_src_and_dst
@@ -204,7 +204,7 @@ def print_table(handle, args, totals):
 
 def calculate_depth_pc(counts, length):
     final_counts = [0] * (_MAX_DEPTH + 1)
-    for (depth, count) in counts.iteritems():
+    for (depth, count) in counts.items():
         final_counts[min(_MAX_DEPTH, depth)] += count
 
     running_total = sum(final_counts)
@@ -216,7 +216,7 @@ def calculate_depth_pc(counts, length):
 
 def build_table(name, totals, lengths):
     header = ["Name", "Sample", "Library", "Contig", "Size", "MaxDepth"]
-    for index in xrange(1, _MAX_DEPTH + 1):
+    for index in range(1, _MAX_DEPTH + 1):
         header.append("MD_%03i" % (index,))
 
     yield header
@@ -230,7 +230,7 @@ def build_table(name, totals, lengths):
         last_sm, last_lb = sm_key, lb_key
 
         if ct_key == "*":
-            length = sum(lengths.itervalues())
+            length = sum(lengths.values())
         else:
             length = lengths[ct_key]
 
@@ -246,7 +246,7 @@ def build_table(name, totals, lengths):
 
 def build_key_struct(args, handle):
     structure = collections.defaultdict(set)
-    for readgroup in collect_readgroups(args, handle).itervalues():
+    for readgroup in collect_readgroups(args, handle).values():
         lb_key = readgroup["LB"]
         sm_key = readgroup["SM"]
         structure[sm_key].add(lb_key)
@@ -271,7 +271,7 @@ def build_totals_dict(args, handle):
     structure = build_key_struct(args, handle)
 
     totals = {}
-    for (sm_key, libraries) in structure.iteritems():
+    for (sm_key, libraries) in structure.items():
         for lb_key in libraries:
             if len(references) == 1:
                 key = references[0]
@@ -297,7 +297,7 @@ def build_totals_dict(args, handle):
 
 
 def count_bases(args, counts, record, rg_to_smlbid, template):
-    for _ in xrange(record.alen - len(counts)):
+    for _ in range(record.alen - len(counts)):
         counts.append(list(template))
 
     key = rg_to_smlbid.get(args.get_readgroup_func(record))
@@ -325,7 +325,7 @@ def build_rg_to_smlbid_keys(args, handle):
     rg_to_lbsmid = {}
     lbsm_to_lbsmid = {}
     lbsmid_to_smlb = []
-    for (key_rg, readgroup) in collect_readgroups(args, handle).iteritems():
+    for (key_rg, readgroup) in collect_readgroups(args, handle).items():
         key_sm = readgroup["SM"]
         key_lb = readgroup["LB"]
 
@@ -377,11 +377,11 @@ def process_file(handle, args):
 
     if not args.ignore_readgroups:
         # Exclude counts for reads with no read-groups, if none such were seen
-        for (key, _, _), value in totals.iteritems():
+        for (key, _, _), value in totals.items():
             if key == '<NA>' and value:
                 break
         else:
-            for key in totals.keys():
+            for key in list(totals):
                 if key[0] == '<NA>':
                     totals.pop(key)
 

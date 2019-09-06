@@ -94,7 +94,7 @@ class FileStatusCache(object):
         if fpath not in self._stat_cache:
             try:
                 mtime = os.path.getmtime(fpath)
-            except OSError, error:
+            except OSError as error:
                 if error.errno != errno.ENOENT:
                     raise
                 mtime = None
@@ -121,7 +121,7 @@ class NodeGraph:
         self._reverse_dependencies = collections.defaultdict(set)
         self._collect_reverse_dependencies(nodes, self._reverse_dependencies, set())
         self._intersections = {}
-        self._top_nodes = [node for (node, rev_deps) in self._reverse_dependencies.iteritems() if not rev_deps]
+        self._top_nodes = [node for (node, rev_deps) in self._reverse_dependencies.items() if not rev_deps]
 
         self._logger.info("Checking file dependencies")
         self._check_file_dependencies(self._reverse_dependencies)
@@ -156,7 +156,7 @@ class NodeGraph:
             requires_update[dependency] = True
 
         cache = self._cache_factory()
-        while any(requires_update.itervalues()):
+        while any(requires_update.values()):
             for (node, count) in intersections.items():
                 if not count:
                     has_changed = False
@@ -182,7 +182,7 @@ class NodeGraph:
     def refresh_states(self):
         states = {}
         cache = self._cache_factory()
-        for (node, state) in self._states.iteritems():
+        for (node, state) in self._states.items():
             if state in (self.ERROR, self.RUNNING):
                 states[node] = state
         self._states = states
@@ -303,9 +303,9 @@ class NodeGraph:
                 self._logger.info(" - Found %s v%s", requirement.name, version)
 
                 requirement()
-        except versions.VersionRequirementError, error:
+        except versions.VersionRequirementError as error:
             raise NodeGraphError(error)
-        except OSError, error:
+        except OSError as error:
             raise NodeGraphError("Could not check version for %s:\n\t%s"
                                  % (requirement.name, error))
 
@@ -317,11 +317,11 @@ class NodeGraph:
         files["auxiliary_files"] = files["input_files"]
 
         for node in nodes:
-            for (attr, nodes_by_file) in files.iteritems():
+            for (attr, nodes_by_file) in files.items():
                 for filename in getattr(node, attr):
                     nodes_by_file[filename].add(node)
 
-        max_messages = range(_MAX_ERROR_MESSAGES)
+        max_messages = list(range(_MAX_ERROR_MESSAGES))
         error_messages = []
         error_messages.extend(zip(max_messages, cls._check_output_files(files["output_files"])))
         error_messages.extend(zip(max_messages, cls._check_input_dependencies(files["input_files"],
@@ -349,7 +349,7 @@ class NodeGraph:
         replaced, not modified in place, it is not nessesary to
         compare files themselves."""
         dirpath_cache, real_output_files = {}, {}
-        for (filename, nodes) in output_files.iteritems():
+        for (filename, nodes) in output_files.items():
             dirpath = os.path.dirname(filename)
             if dirpath not in dirpath_cache:
                 dirpath_cache[dirpath] = os.path.realpath(dirpath)
@@ -357,7 +357,7 @@ class NodeGraph:
             real_output_file = reroot_path(dirpath_cache[dirpath], filename)
             real_output_files.setdefault(real_output_file, []).extend(nodes)
 
-        for (filename, nodes) in real_output_files.iteritems():
+        for (filename, nodes) in real_output_files.items():
             if (len(nodes) > 1):
                 nodes = _summarize_nodes(nodes)
                 yield "Multiple nodes create the same (clobber) output-file:" \
@@ -378,7 +378,7 @@ class NodeGraph:
                         bad_nodes.add(consumer)
 
                 if bad_nodes:
-                    producer  = iter(producers).next()
+                    producer  = next(iter(producers))
                     bad_nodes = _summarize_nodes(bad_nodes)
                     yield "Node depends on dynamically created file, but not on the node creating it:" + \
                                 "\n\tFilename: %s\n\tCreated by: %s\n\tDependent node(s): %s" \
