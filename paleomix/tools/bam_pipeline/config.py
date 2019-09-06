@@ -25,7 +25,6 @@ import optparse
 import paleomix
 
 from paleomix.config import \
-     ConfigError, \
      PerHostValue, \
      PerHostConfig
 

@@ -282,14 +282,8 @@ def main(argv, pipeline="bam"):
     elif argv[0] in ("example", "examples"):
         return paleomix.resources.copy_example("bam_pipeline", argv[1:])
 
-    try:
-        config, args = bam_config.parse_config(argv, pipeline)
-
-        if args and args[0].startswith("dry"):
-            config.dry_run = True
-    except bam_config.ConfigError as error:
-        logger = logging.getLogger(__name__)
-        logger.error(error)
-        return 1
+    config, args = bam_config.parse_config(argv, pipeline)
+    if args and args[0].startswith("dry"):
+        config.dry_run = True
 
     return run(config, args[1:], pipeline_variant=pipeline)

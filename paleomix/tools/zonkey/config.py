@@ -34,7 +34,6 @@ from paleomix.common.console import \
     print_info
 
 from paleomix.config import \
-    ConfigError, \
     PerHostValue, \
     PerHostConfig
 

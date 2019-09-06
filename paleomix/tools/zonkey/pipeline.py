@@ -445,15 +445,11 @@ def setup_example(config):
 
 
 def main(argv):
-    try:
-        config = zonkey_config.parse_config(argv)
-        if config is None:
-            return 1
-    except zonkey_config.ConfigError, error:
-        print_err(error)
-        return 1
+    config = zonkey_config.parse_config(argv)
 
-    if config.command == "run":
+    if config is None:
+        return 1
+    elif config.command == "run":
         return run_admix_pipeline(config)
     elif config.command == "mito":
         return setup_mito_mapping(config)
