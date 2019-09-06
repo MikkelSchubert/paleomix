@@ -27,29 +27,38 @@ from paleomix.common.fileutils import move_file, reroot_path
 from paleomix.common.formats.msa import MSA
 from paleomix.common.formats.phylip import interleaved_phy
 
-from paleomix.common.utilities import \
-     safe_coerce_to_frozenset, \
-     safe_coerce_to_tuple
+from paleomix.common.utilities import safe_coerce_to_frozenset, safe_coerce_to_tuple
 
 
 _VALID_KEYS = frozenset(["partitions", "filenames"])
 
 
 class FastaToPartitionedInterleavedPhyNode(Node):
-    def __init__(self, infiles, out_prefix, exclude_groups=(), reduce=False,
-                 dependencies=(), file_dependencies=()):
+    def __init__(
+        self,
+        infiles,
+        out_prefix,
+        exclude_groups=(),
+        reduce=False,
+        dependencies=(),
+        file_dependencies=(),
+    ):
         """
         infiles = {names : {"partitions" : ..., "filenames" : [...]}}
         """
-        if not (isinstance(infiles, dict)
-                and all(isinstance(dd, dict) for dd in infiles.values())):
+        if not (
+            isinstance(infiles, dict)
+            and all(isinstance(dd, dict) for dd in infiles.values())
+        ):
             raise TypeError("'infiles' must be a dictionary of dictionaries")
 
         input_filenames = []
         for (name, subdd) in infiles.items():
             if set(subdd) - _VALID_KEYS:
-                raise ValueError("Invalid keys found for %r: %s"
-                                 % (name, ", ".join(set(subdd) - _VALID_KEYS)))
+                raise ValueError(
+                    "Invalid keys found for %r: %s"
+                    % (name, ", ".join(set(subdd) - _VALID_KEYS))
+                )
             elif not isinstance(subdd["filenames"], list):
                 raise ValueError("filenames must be a list of strings")
             input_filenames.extend(subdd["filenames"])
@@ -61,15 +70,19 @@ class FastaToPartitionedInterleavedPhyNode(Node):
         self._out_prefix = out_prefix
         self._excluded = safe_coerce_to_frozenset(exclude_groups)
 
-        description = "<FastaToPartitionedPhy%s: %i file(s) -> '%s.*'>" % \
-            (" (reducing)" if reduce else "", len(infiles), out_prefix)
+        description = "<FastaToPartitionedPhy%s: %i file(s) -> '%s.*'>" % (
+            " (reducing)" if reduce else "",
+            len(infiles),
+            out_prefix,
+        )
 
-        Node.__init__(self,
-                      description=description,
-                      input_files=input_filenames,
-                      output_files=[out_prefix + ".phy",
-                                    out_prefix + ".partitions"],
-                      dependencies=dependencies)
+        Node.__init__(
+            self,
+            description=description,
+            input_files=input_filenames,
+            output_files=[out_prefix + ".phy", out_prefix + ".partitions"],
+            dependencies=dependencies,
+        )
 
     def _run(self, _config, temp):
         merged_msas = []
@@ -91,8 +104,7 @@ class FastaToPartitionedInterleavedPhyNode(Node):
                     merged_msa = merged_msa.reduce()
 
                 if merged_msa is not None:
-                    merged_msas.append(("%s_%s" % (name, key),
-                                        merged_msa))
+                    merged_msas.append(("%s_%s" % (name, key), merged_msa))
 
         out_fname_phy = reroot_path(temp, self._out_prefix + ".phy")
         with open(out_fname_phy, "w") as output_phy:
@@ -104,14 +116,17 @@ class FastaToPartitionedInterleavedPhyNode(Node):
         with open(out_fname_parts, "w") as output_part:
             for (name, msa) in merged_msas:
                 length = msa.seqlen()
-                output_part.write("DNA, %s = %i-%i\n"
-                                  % (name,
-                                     partition_end + 1,
-                                     partition_end + length))
+                output_part.write(
+                    "DNA, %s = %i-%i\n"
+                    % (name, partition_end + 1, partition_end + length)
+                )
                 partition_end += length
 
     def _teardown(self, _config, temp):
-        move_file(reroot_path(temp, self._out_prefix + ".phy"),
-                  self._out_prefix + ".phy")
-        move_file(reroot_path(temp, self._out_prefix + ".partitions"),
-                  self._out_prefix + ".partitions")
+        move_file(
+            reroot_path(temp, self._out_prefix + ".phy"), self._out_prefix + ".phy"
+        )
+        move_file(
+            reroot_path(temp, self._out_prefix + ".partitions"),
+            self._out_prefix + ".partitions",
+        )

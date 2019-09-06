@@ -23,11 +23,8 @@
 import os
 
 from paleomix.atomiccmd.builder import apply_options
-from paleomix.nodes.adapterremoval import \
-    SE_AdapterRemovalNode, \
-    PE_AdapterRemovalNode
-from paleomix.nodes.validation import \
-    ValidateFASTQFilesNode
+from paleomix.nodes.adapterremoval import SE_AdapterRemovalNode, PE_AdapterRemovalNode
+from paleomix.nodes.validation import ValidateFASTQFilesNode
 
 
 class Reads(object):
@@ -39,8 +36,14 @@ class Reads(object):
         self.nodes = ()
 
         tags = record["Tags"]
-        self.folder = os.path.join(config.destination, tags["Target"], "reads",
-                                   tags["SM"], tags["LB"], tags["PU_cur"])
+        self.folder = os.path.join(
+            config.destination,
+            tags["Target"],
+            "reads",
+            tags["SM"],
+            tags["LB"],
+            tags["PU_cur"],
+        )
 
         lane_type = record.get("Type")
         if lane_type == "Raw":
@@ -48,8 +51,7 @@ class Reads(object):
         elif lane_type == "Trimmed":
             self._init_pretrimmed_reads(record)
         else:
-            assert False, "Unexpected data type in Reads(): %s" \
-                % (repr(lane_type))
+            assert False, "Unexpected data type in Reads(): %s" % (repr(lane_type))
 
         for name, value in record["Options"]["ExcludeReads"].items():
             if value:
@@ -58,9 +60,9 @@ class Reads(object):
     def _init_pretrimmed_reads(self, record):
         self.files.update(record["Data"])
         output_file = os.path.join(self.folder, "reads.statistics")
-        node = ValidateFASTQFilesNode(input_files=self.files,
-                                      output_file=output_file,
-                                      offset=self.quality_offset)
+        node = ValidateFASTQFilesNode(
+            input_files=self.files, output_file=output_file, offset=self.quality_offset
+        )
         self.nodes = (node,)
         self.validation = output_file
 
@@ -70,12 +72,14 @@ class Reads(object):
         collapse_reads = ar_options.pop("--collapse")
         collapse_reads = collapse_reads or collapse_reads is None
 
-        init_args = {"output_prefix": os.path.join(self.folder, "reads"),
-                     "output_format": record["Options"]["CompressionFormat"],
-                     "threads": config.adapterremoval_max_threads}
+        init_args = {
+            "output_prefix": os.path.join(self.folder, "reads"),
+            "output_format": record["Options"]["CompressionFormat"],
+            "threads": config.adapterremoval_max_threads,
+        }
         output_tmpl = "{output_prefix}.%s.{output_format}".format(**init_args)
 
-        if ("SE" in record["Data"]):
+        if "SE" in record["Data"]:
             self.files["Single"] = output_tmpl % ("truncated",)
             init_args["input_files"] = record["Data"]["SE"]
             command = SE_AdapterRemovalNode.customize(**init_args)
@@ -85,7 +89,9 @@ class Reads(object):
 
             if collapse_reads:
                 self.files["Collapsed"] = output_tmpl % ("collapsed",)
-                self.files["CollapsedTruncated"] = output_tmpl % ("collapsed.truncated",)
+                self.files["CollapsedTruncated"] = output_tmpl % (
+                    "collapsed.truncated",
+                )
 
             init_args["collapse"] = collapse_reads
             init_args["input_files_1"] = record["Data"]["PE_1"]

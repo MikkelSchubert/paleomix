@@ -29,10 +29,8 @@ import optparse
 import configparser
 import multiprocessing
 
-from paleomix.common.fileutils import \
-     make_dirs
-from paleomix.common.console import \
-     print_info
+from paleomix.common.fileutils import make_dirs
+from paleomix.common.console import print_info
 
 
 class ConfigError(RuntimeError):
@@ -127,10 +125,12 @@ class PerHostConfig:
     def _add_per_host_options(self, parser):
         """Adds options to a parser relating to the PerHostConfig."""
         group = optparse.OptionGroup(parser, "Config files")
-        group.add_option("--write-config-file",
-                         default=False, action="store_true",
-                         help="Write config using current settings to %s"
-                         % (self._filenames[-1],))
+        group.add_option(
+            "--write-config-file",
+            default=False,
+            action="store_true",
+            help="Write config using current settings to %s" % (self._filenames[-1],),
+        )
         parser.add_option_group(group)
 
     def _update_defaults(self, parser):
@@ -154,6 +154,7 @@ class PerHostConfig:
         elif isinstance(value, (float)):
             getter = self._handle.getfloat
         elif isinstance(value, (list, tuple)):
+
             def getter(section, key):
                 return [_f for _f in self._handle.get(section, key).split(";") if _f]
 
@@ -174,6 +175,8 @@ class PerHostConfig:
            - ~/.paleomix/{name}.ini
         """
         filename = "%s.ini" % (name,)
-        homefolder = os.path.expanduser('~')
-        return ["/etc/paleomix/%s" % (filename,),
-                os.path.join(homefolder, ".paleomix", filename)]
+        homefolder = os.path.expanduser("~")
+        return [
+            "/etc/paleomix/%s" % (filename,),
+            os.path.join(homefolder, ".paleomix", filename),
+        ]

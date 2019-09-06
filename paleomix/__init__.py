@@ -22,4 +22,4 @@
 #
 
 __version_info__ = (1, 2, 13, 4)
-__version__ = '%i.%i.%i.%i' % __version_info__
+__version__ = "%i.%i.%i.%i" % __version_info__

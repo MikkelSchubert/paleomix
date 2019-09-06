@@ -20,19 +20,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from paleomix.nodes.picard import \
-    ValidateBAMNode
-from paleomix.nodes.samtools import \
-    BAMIndexNode
+from paleomix.nodes.picard import ValidateBAMNode
+from paleomix.nodes.samtools import BAMIndexNode
 
 
-def index_and_validate_bam(config, prefix, node, log_file=None,
-                           create_index=True):
-    input_file, index_file = _get_input_files(node, prefix['IndexFormat'])
+def index_and_validate_bam(config, prefix, node, log_file=None, create_index=True):
+    input_file, index_file = _get_input_files(node, prefix["IndexFormat"])
     if not index_file and create_index:
-        node = BAMIndexNode(infile=input_file,
-                            index_format=prefix['IndexFormat'],
-                            dependencies=node)
+        node = BAMIndexNode(
+            infile=input_file, index_format=prefix["IndexFormat"], dependencies=node
+        )
         index_file, = node.output_files
 
     ignored_checks = [
@@ -41,19 +38,22 @@ def index_and_validate_bam(config, prefix, node, log_file=None,
         "MATE_NOT_FOUND",
         # Ignored due to high rate of false positives for lanes with few hits,
         # where high-quality reads may cause mis-identification of qualities
-        "INVALID_QUALITY_FORMAT"]
+        "INVALID_QUALITY_FORMAT",
+    ]
 
-    if prefix['IndexFormat'] == '.csi':
+    if prefix["IndexFormat"] == ".csi":
         # CSI uses a different method for assigning BINs to records, which
         # Picard currently does not support.
         ignored_checks.append("INVALID_INDEXING_BIN")
 
-    return ValidateBAMNode(config=config,
-                           input_bam=input_file,
-                           input_index=index_file,
-                           ignored_checks=ignored_checks,
-                           output_log=log_file,
-                           dependencies=node)
+    return ValidateBAMNode(
+        config=config,
+        input_bam=input_file,
+        input_index=index_file,
+        ignored_checks=ignored_checks,
+        output_log=log_file,
+        dependencies=node,
+    )
 
 
 def _get_input_files(node, index_format):

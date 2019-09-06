@@ -31,39 +31,36 @@ import types
 
 import paleomix.tools.bam_pipeline.paths as paths
 from paleomix.common.utilities import fill_dict
-from paleomix.common.makefile import \
-    MakefileError, \
-    REQUIRED_VALUE, \
-    WithoutDefaults, \
-    read_makefile, \
-    IsInt, \
-    IsUnsignedInt, \
-    IsFloat, \
-    IsStr, \
-    IsNone, \
-    IsBoolean, \
-    And, \
-    Or, \
-    Not, \
-    ValueIn, \
-    ValuesIntersect, \
-    ValuesSubsetOf, \
-    StringIn, \
-    StringStartsWith, \
-    IsListOf, \
-    IsDictOf, \
-    PreProcessMakefile
-from paleomix.common.formats.fasta import \
-    FASTA, \
-    FASTAError
+from paleomix.common.makefile import (
+    MakefileError,
+    REQUIRED_VALUE,
+    WithoutDefaults,
+    read_makefile,
+    IsInt,
+    IsUnsignedInt,
+    IsFloat,
+    IsStr,
+    IsNone,
+    IsBoolean,
+    And,
+    Or,
+    Not,
+    ValueIn,
+    ValuesIntersect,
+    ValuesSubsetOf,
+    StringIn,
+    StringStartsWith,
+    IsListOf,
+    IsDictOf,
+    PreProcessMakefile,
+)
+from paleomix.common.formats.fasta import FASTA, FASTAError
 
 import paleomix.common.bedtools as bedtools
 import paleomix.common.sequences as sequences
 
 
-_READ_TYPES = set(("Single", "Singleton",
-                   "Collapsed", "CollapsedTruncated",
-                   "Paired"))
+_READ_TYPES = set(("Single", "Singleton", "Collapsed", "CollapsedTruncated", "Paired"))
 
 # The maximum reference sequence length supported by the BAI index format:
 #   https://samtools.github.io/hts-specs/SAMv1.pdf
@@ -72,14 +69,15 @@ _BAM_MAX_SEQUENCE_LENGTH = 2 ** 29 - 1
 
 def read_makefiles(config, filenames, pipeline_variant="bam"):
     if pipeline_variant not in ("bam", "trim"):
-        raise ValueError("'pipeline_variant' must be 'bam' or 'trim', not %r"
-                         % (pipeline_variant,))
+        raise ValueError(
+            "'pipeline_variant' must be 'bam' or 'trim', not %r" % (pipeline_variant,)
+        )
 
     logger = logging.getLogger(__name__)
 
     makefiles = []
     for filename in filenames:
-        logger.info('Reading makefile %r', filename)
+        logger.info("Reading makefile %r", filename)
         makefile = read_makefile(filename, _VALIDATION)
         makefile = _mangle_makefile(makefile, pipeline_variant)
 
@@ -94,19 +92,21 @@ def _alphanum_check(whitelist, min_len=1):
 
     whitelist += string.ascii_letters + string.digits
 
-    return And(IsStr(min_len=min_len),
-               ValuesSubsetOf(whitelist, description=description))
+    return And(
+        IsStr(min_len=min_len), ValuesSubsetOf(whitelist, description=description)
+    )
 
 
 # Valid names for prefixes
-_VALID_PREFIX_NAME = \
-    And(_alphanum_check(whitelist="._-*"),
-        Not(StringIn(["Options"] + [(s + "Reads") for s in _READ_TYPES])))
+_VALID_PREFIX_NAME = And(
+    _alphanum_check(whitelist="._-*"),
+    Not(StringIn(["Options"] + [(s + "Reads") for s in _READ_TYPES])),
+)
 
 # Valid paths for prefixes; avoids some problems with e.g. Bowtie2
-_VALID_PREFIX_PATH = \
-    And(IsStr(), Not(ValuesIntersect("\\:?\"<>|() \t\n\v\f\r")),
-        default=REQUIRED_VALUE)
+_VALID_PREFIX_PATH = And(
+    IsStr(), Not(ValuesIntersect('\\:?"<>|() \t\n\v\f\r')), default=REQUIRED_VALUE
+)
 
 # Valid strings for targets / samples / libraries / lanes
 _VALID_TARGET_NAME = _alphanum_check(whitelist="._-", min_len=2)
@@ -118,20 +118,24 @@ _VALID_FEATURES_DICT = {
     "RawBAM": IsBoolean(default=False),
     "RealignedBAM": IsBoolean(default=True),
     "Summary": IsBoolean(default=True),
-    "mapDamage": Or(IsBoolean,
-                    StringIn(('rescale', 'model', 'plot', 'no', 'yes')),
-                    default=True)
+    "mapDamage": Or(
+        IsBoolean, StringIn(("rescale", "model", "plot", "no", "yes")), default=True
+    ),
 }
 
-_VALID_FEATURES_LIST = ValuesSubsetOf(("Coverage",
-                                       "Depths",
-                                       "DuplicateHist",
-                                       "mapDamage",
-                                       "Raw BAM",
-                                       "RawBAM",
-                                       "Realigned BAM",
-                                       "RealignedBAM",
-                                       "Summary"))
+_VALID_FEATURES_LIST = ValuesSubsetOf(
+    (
+        "Coverage",
+        "Depths",
+        "DuplicateHist",
+        "mapDamage",
+        "Raw BAM",
+        "RawBAM",
+        "Realigned BAM",
+        "RealignedBAM",
+        "Summary",
+    )
+)
 
 
 _VALID_EXCLUDE_DICT = {
@@ -195,22 +199,18 @@ class ExcludeReads(PreProcessMakefile):
 
 _VALIDATION_OPTIONS = {
     # Sequencing platform, used to tag read-groups.
-    "Platform": StringIn(("CAPILLARY", "LS454", "ILLUMINA", "SOLID",
-                          "HELICOS", "IONTORRENT", "PACBIO"),
-                         default="ILLUMINA"),
+    "Platform": StringIn(
+        ("CAPILLARY", "LS454", "ILLUMINA", "SOLID", "HELICOS", "IONTORRENT", "PACBIO"),
+        default="ILLUMINA",
+    ),
     # Offset for quality scores in FASTQ files.
-    "QualityOffset": ValueIn((33, 64, "Solexa"),
-                             default=33),
+    "QualityOffset": ValueIn((33, 64, "Solexa"), default=33),
     # Split a lane into multiple entries, one for each (pair of) file(s)
-    "SplitLanesByFilenames": Or(IsBoolean, IsListOf(IsStr),
-                                default=True),
+    "SplitLanesByFilenames": Or(IsBoolean, IsListOf(IsStr), default=True),
     # Format to use when compressing FASTQ files ("gz" or "bz2")
-    "CompressionFormat": ValueIn(("gz", "bz2"),
-                                 default="bz2"),
-
+    "CompressionFormat": ValueIn(("gz", "bz2"), default="bz2"),
     "AdapterRemoval": {
-        "Version": ValueIn(("v1.4", "v1.5+"),
-                           default="v1.5+"),
+        "Version": ValueIn(("v1.4", "v1.5+"), default="v1.5+"),
         "--pcr1": IsStr,
         "--pcr2": IsStr,
         "--adapter1": IsStr,
@@ -221,8 +221,7 @@ _VALIDATION_OPTIONS = {
         "--trimns": Or(IsNone, IsBoolean),
         "--trimqualities": Or(IsNone, IsBoolean),
         "--collapse": Or(IsNone, IsBoolean, default=True),
-        "--mm": Or(IsFloat, IsUnsignedInt,
-                   default=3),
+        "--mm": Or(IsFloat, IsUnsignedInt, default=3),
         "--minlength": IsUnsignedInt(default=25),
         "--maxlength": IsUnsignedInt,
         "--minalignmentlength": IsUnsignedInt,
@@ -231,16 +230,12 @@ _VALIDATION_OPTIONS = {
         "--qualitymax": IsUnsignedInt,
         "--mate-separator": IsStr,
     },
-
     # Which aliger/mapper to use (BWA/Bowtie2)
     "Aligners": {
-        "Program": ValueIn(("BWA", "Bowtie2"),
-                           default="BWA"),
+        "Program": ValueIn(("BWA", "Bowtie2"), default="BWA"),
         "BWA": {
             # Mapping algorithm; availability depends on BWA version
-            "Algorithm": StringIn(("backtrack", "mem", "bwasw"),
-                                  default="backtrack"),
-
+            "Algorithm": StringIn(("backtrack", "mem", "bwasw"), default="backtrack"),
             # Minimum mapping quality (PHREAD) of reads to retain
             "MinQuality": IsUnsignedInt(default=0),
             # Remove unmapped reads or not
@@ -249,8 +244,9 @@ _VALIDATION_OPTIONS = {
             # Verbose name for command-line option "-l 65535"
             "UseSeed": IsBoolean(default=True),
             # Any number of user specific options
-            StringStartsWith("-"): Or(IsListOf(IsStr, IsInt, IsFloat),
-                                      Or(IsStr, IsInt, IsFloat, IsNone)),
+            StringStartsWith("-"): Or(
+                IsListOf(IsStr, IsInt, IsFloat), Or(IsStr, IsInt, IsFloat, IsNone)
+            ),
         },
         "Bowtie2": {
             # Minimum mapping quality (PHREAD) of reads to retain
@@ -258,31 +254,26 @@ _VALIDATION_OPTIONS = {
             # Remove unmapped reads or not
             "FilterUnmappedReads": IsBoolean(default=True),
             # Any number of user specific options
-            StringStartsWith("-"): Or(IsListOf(IsStr, IsInt, IsFloat),
-                                      Or(IsStr, IsInt, IsFloat, IsNone)),
+            StringStartsWith("-"): Or(
+                IsListOf(IsStr, IsInt, IsFloat), Or(IsStr, IsInt, IsFloat, IsNone)
+            ),
         },
     },
-
     # Does sample contain PCR duplicates / what to do about it.
     # True is equivalent of 'remove'.
-    "PCRDuplicates": StringIn((True, False, 'mark', 'filter'),
-                              default='filter'),
-
+    "PCRDuplicates": StringIn((True, False, "mark", "filter"), default="filter"),
     # Qualities should be rescaled using mapDamage (replaced with Features)
     "RescaleQualities": IsBoolean(),
-
     "mapDamage": {
         # Tabulation options
         "--downsample": Or(IsUnsignedInt, IsFloat),
         "--length": IsUnsignedInt,
         "--around": IsUnsignedInt,
         "--min-basequal": IsUnsignedInt,
-
         # Plotting options
         "--ymax": IsFloat,
         "--readplot": IsUnsignedInt,
         "--refplot": IsUnsignedInt,
-
         # Model options
         "--rand": IsUnsignedInt,
         "--burn": IsUnsignedInt,
@@ -298,10 +289,8 @@ _VALIDATION_OPTIONS = {
         "--single-stranded": IsNone,
         "--seq-length": IsUnsignedInt,
     },
-
     # Exclude READ_TYPES from alignment/analysis
     "ExcludeReads": ExcludeReads(),
-
     # Features of pipeline
     "Features": BAMFeatures(),
 }
@@ -309,27 +298,30 @@ _VALIDATION_OPTIONS = {
 
 _VALIDATION = {
     "Options": _VALIDATION_OPTIONS,
-
     "Prefixes": {
         _VALID_PREFIX_NAME: {
             "Path": _VALID_PREFIX_PATH,
-            "Label": ValueIn(("nuclear", "mitochondrial", "chloroplast",
-                              "plasmid", "bacterial", "viral")),
+            "Label": ValueIn(
+                (
+                    "nuclear",
+                    "mitochondrial",
+                    "chloroplast",
+                    "plasmid",
+                    "bacterial",
+                    "viral",
+                )
+            ),
             "RegionsOfInterest": IsDictOf(IsStr, IsStr),
-        },
+        }
     },
-
     _VALID_TARGET_NAME: {  # Target
         _VALID_TARGET_NAME: {  # Sample
             _VALID_TARGET_NAME: {  # Library
                 _VALID_TARGET_NAME: Or(IsStr, IsDictOf(IsStr, IsStr)),
-
                 "Options": WithoutDefaults(_VALIDATION_OPTIONS),
             },
-
             "Options": WithoutDefaults(_VALIDATION_OPTIONS),
         },
-
         "Options": WithoutDefaults(_VALIDATION_OPTIONS),
     },
 }
@@ -344,7 +336,7 @@ def _mangle_makefile(makefile, pipeline_variant):
     _mangle_features(makefile)
     _mangle_options(makefile)
 
-    if pipeline_variant != 'trim':
+    if pipeline_variant != "trim":
         _mangle_prefixes(makefile)
 
     _mangle_lanes(makefile)
@@ -360,16 +352,17 @@ def _mangle_options(makefile):
         options = copy.deepcopy(options)
         if "Options" in data:
             if "Features" in data["Options"]:
-                raise MakefileError("Features may only be specified at root "
-                                    "level, not at %r" % (" :: ".join(path),))
+                raise MakefileError(
+                    "Features may only be specified at root "
+                    "level, not at %r" % (" :: ".join(path),)
+                )
 
             # Fill out missing values using those of prior levels
-            options = fill_dict(destination=data.pop("Options"),
-                                source=options)
+            options = fill_dict(destination=data.pop("Options"), source=options)
 
             # Force feature if 'RescaleQualities' is set, see _mangle_features
-            if options.pop('RescaleQualities', None):
-                options['Features']['mapDamage'] = 'rescale'
+            if options.pop("RescaleQualities", None):
+                options["Features"]["mapDamage"] = "rescale"
 
         if len(path) < 2:
             for key in data:
@@ -390,31 +383,32 @@ def _mangle_features(makefile):
         feature; when the former is present, it is given priority.
     """
 
-    options = makefile['Options']
-    features = options['Features']
+    options = makefile["Options"]
+    features = options["Features"]
 
     # Force feature if 'RescaleQualities' is set, for backwards compatibility
-    if options.pop('RescaleQualities', None):
-        features['mapDamage'] = 'rescale'
+    if options.pop("RescaleQualities", None):
+        features["mapDamage"] = "rescale"
 
-    if isinstance(features['mapDamage'], bool):
-        features['mapDamage'] = 'plot' if features['mapDamage'] else 'no'
-    elif features['mapDamage'] == 'yes':
-        features['mapDamage'] = 'plot'
+    if isinstance(features["mapDamage"], bool):
+        features["mapDamage"] = "plot" if features["mapDamage"] else "no"
+    elif features["mapDamage"] == "yes":
+        features["mapDamage"] = "plot"
 
 
 def _mangle_prefixes(makefile):
     records = []
     for (name, values) in makefile.get("Prefixes", {}).items():
         if "*" in name[:-1]:
-            raise MakefileError("The character '*' is not allowed in Prefix "
-                                "names; if you wish to select multiple .fasta "
-                                "files using a search-string, then use the "
-                                "prefix name '%s*' instead and specify the "
-                                "wildcards in the 'Path'."
-                                % (name.replace("*", "",)))
+            raise MakefileError(
+                "The character '*' is not allowed in Prefix "
+                "names; if you wish to select multiple .fasta "
+                "files using a search-string, then use the "
+                "prefix name '%s*' instead and specify the "
+                "wildcards in the 'Path'." % (name.replace("*", ""))
+            )
         elif name.endswith("*"):
-            records.extend(_glob_prefixes(values, values['Path']))
+            records.extend(_glob_prefixes(values, values["Path"]))
 
         else:
             records.append((name, values))
@@ -422,12 +416,13 @@ def _mangle_prefixes(makefile):
     prefixes = {}
     for (name, record) in records:
         if name in prefixes:
-            raise MakefileError("Multiple prefixes with the same name: %s"
-                                % name)
+            raise MakefileError("Multiple prefixes with the same name: %s" % name)
 
         if not record["Path"].endswith(".fasta"):
-            raise MakefileError("Path for prefix %r does not end with "
-                                ".fasta:\n   %r" % (name, record["Path"]))
+            raise MakefileError(
+                "Path for prefix %r does not end with "
+                ".fasta:\n   %r" % (name, record["Path"])
+            )
 
         record["Name"] = name
         record["Reference"] = record["Path"]
@@ -450,8 +445,9 @@ def _glob_prefixes(template, pattern):
         yield (name, new_prefix)
 
     if filename is None:
-        raise MakefileError("Did not find any matches for search string %r"
-                            % (pattern,))
+        raise MakefileError(
+            "Did not find any matches for search string %r" % (pattern,)
+        )
 
 
 def _mangle_lanes(makefile):
@@ -469,20 +465,20 @@ def _mangle_lanes(makefile):
 
                     lane_type = _determine_lane_type(prefixes, data, path)
 
-                    if lane_type == "Trimmed" and \
-                            options["QualityOffset"] == "Solexa":
-                        path = " :: ".join((target_name, sample_name,
-                                            library_name, lane))
+                    if lane_type == "Trimmed" and options["QualityOffset"] == "Solexa":
+                        path = " :: ".join(
+                            (target_name, sample_name, library_name, lane)
+                        )
 
-                        raise MakefileError("Pre-trimmed Solexa data is not "
-                                            "supported; please convert the "
-                                            "quality scores to Phred (offset "
-                                            "33 or 64) to continue:\n"
-                                            "    Path = %s" % (path,))
+                        raise MakefileError(
+                            "Pre-trimmed Solexa data is not "
+                            "supported; please convert the "
+                            "quality scores to Phred (offset "
+                            "33 or 64) to continue:\n"
+                            "    Path = %s" % (path,)
+                        )
 
-                    lanes[lane] = {"Type": lane_type,
-                                   "Data": data,
-                                   "Options": options}
+                    lanes[lane] = {"Type": lane_type, "Data": data, "Options": options}
 
 
 def _validate_lane_paths(data, path, fmt):
@@ -496,19 +492,23 @@ def _validate_lane_paths(data, path, fmt):
         try:
             fields = tuple(fmt.parse(filename))
         except ValueError as error:
-            raise MakefileError("Error parsing path specified at %r; %s; note "
-                                "that the characters '}' and '{' should only "
-                                "be used as part of the key '{Pair}', in "
-                                "order to specify the mate identifier: %r"
-                                % (" :: ".join(path), error, filename))
+            raise MakefileError(
+                "Error parsing path specified at %r; %s; note "
+                "that the characters '}' and '{' should only "
+                "be used as part of the key '{Pair}', in "
+                "order to specify the mate identifier: %r"
+                % (" :: ".join(path), error, filename)
+            )
 
         for _, key, _, _ in fields:
             if key not in (None, "Pair"):
-                raise MakefileError("Invalid path specified at %r; only the "
-                                    "key '{Pair}' is allowed, to specify the "
-                                    "mate 1 / 2 identifier, but the key "
-                                    "'{%s}' was found in the path: %r"
-                                    % (" :: ".join(path), key, filename))
+                raise MakefileError(
+                    "Invalid path specified at %r; only the "
+                    "key '{Pair}' is allowed, to specify the "
+                    "mate 1 / 2 identifier, but the key "
+                    "'{%s}' was found in the path: %r"
+                    % (" :: ".join(path), key, filename)
+                )
 
 
 def _determine_lane_type(prefixes, data, path):
@@ -520,22 +520,27 @@ def _determine_lane_type(prefixes, data, path):
                 is_paired = paths.is_paired_end(files)
 
                 if is_paired and (key != "Paired"):
-                    raise MakefileError("Error at Barcode level; Path "
-                                        "includes {Pair} key, but read-type "
-                                        "is not Paired:\n    %r"
-                                        % (" :: ".join(path + (key,)),))
+                    raise MakefileError(
+                        "Error at Barcode level; Path "
+                        "includes {Pair} key, but read-type "
+                        "is not Paired:\n    %r" % (" :: ".join(path + (key,)),)
+                    )
                 elif not is_paired and (key == "Paired"):
-                    raise MakefileError("Error at Barcode level; Paired pre-"
-                                        "trimmed reads specified, but path "
-                                        "does not contain {Pair} key:\n    %r"
-                                        % (" :: ".join(path + (key,)),))
+                    raise MakefileError(
+                        "Error at Barcode level; Paired pre-"
+                        "trimmed reads specified, but path "
+                        "does not contain {Pair} key:\n    %r"
+                        % (" :: ".join(path + (key,)),)
+                    )
 
             return "Trimmed"
 
-    raise MakefileError("Error at Barcode level; keys must either be "
-                        "prefix-names, OR 'Paired', 'Single', 'Collapsed', "
-                        "'CollapsedTruncated', or 'Singleton'. "
-                        "Found: %s" % (", ".join(data),))
+    raise MakefileError(
+        "Error at Barcode level; keys must either be "
+        "prefix-names, OR 'Paired', 'Single', 'Collapsed', "
+        "'CollapsedTruncated', or 'Singleton'. "
+        "Found: %s" % (", ".join(data),)
+    )
 
 
 def _mangle_tags(makefile):
@@ -543,17 +548,19 @@ def _mangle_tags(makefile):
         for (sample, libraries) in samples.items():
             for (library, barcodes) in libraries.items():
                 for (barcode, record) in barcodes.items():
-                    tags = {"Target": target,
-                            "ID": library,
-                            "SM": sample,
-                            "LB": library,
-                            # Source/Current PU may differ if a lane has been
-                            # split by filenames, in which case PU_src contains
-                            # the original PU, and PU_cur is a derived PU.
-                            "PU_src": barcode,
-                            "PU_cur": barcode,
-                            "PG": record["Options"]["Aligners"]["Program"],
-                            "PL": record["Options"]["Platform"].upper()}
+                    tags = {
+                        "Target": target,
+                        "ID": library,
+                        "SM": sample,
+                        "LB": library,
+                        # Source/Current PU may differ if a lane has been
+                        # split by filenames, in which case PU_src contains
+                        # the original PU, and PU_cur is a derived PU.
+                        "PU_src": barcode,
+                        "PU_cur": barcode,
+                        "PG": record["Options"]["Aligners"]["Program"],
+                        "PL": record["Options"]["Platform"].upper(),
+                    }
 
                     record["Tags"] = tags
 
@@ -567,8 +574,7 @@ def _split_lanes_by_filenames(makefile):
             record["Data"] = files = paths.collect_files(path, template)
             split = record["Options"]["SplitLanesByFilenames"]
 
-            if (split is True) or (isinstance(split, list) and
-                                   (barcode in split)):
+            if (split is True) or (isinstance(split, list) and (barcode in split)):
                 if any(len(v) > 1 for v in files.values()):
                     library = makefile["Targets"][target][sample][library]
                     template = library.pop(barcode)
@@ -576,14 +582,12 @@ def _split_lanes_by_filenames(makefile):
 
                     input_files = [files[key] for key in keys]
                     input_files_iter = itertools.zip_longest(*input_files)
-                    for (index, filenames) in enumerate(input_files_iter,
-                                                        start=1):
+                    for (index, filenames) in enumerate(input_files_iter, start=1):
                         assert len(filenames) == len(keys)
                         new_barcode = "%s_%03i" % (barcode, index)
 
                         current = copy.deepcopy(template)
-                        current["Data"] = {k: [v]
-                                           for (k, v) in zip(keys, filenames)}
+                        current["Data"] = {k: [v] for (k, v) in zip(keys, filenames)}
                         current["Tags"]["PU_cur"] = new_barcode
 
                         library[new_barcode] = current
@@ -613,7 +617,7 @@ def _validate_makefile_adapters(makefile):
         # --pcr2 expects the reverse complement of the mate 2 adapter seq.
         "--pcr2": adapter_2,
         # --adapter2 (AdapterRemoval v2) expects the regular sequence
-        "--adapter2": sequences.reverse_complement(adapter_2)
+        "--adapter2": sequences.reverse_complement(adapter_2),
     }
 
     def check_options(options, results):
@@ -631,18 +635,24 @@ def _validate_makefile_adapters(makefile):
 
     if any(results.values()):
         logger = logging.getLogger(__name__)
-        logger.warn("WARNING: An adapter specified for AdapterRemoval "
-                    "corresponds to the default sequence, but is reverse "
-                    "complemented. Please make sure that this is intended! ")
+        logger.warn(
+            "WARNING: An adapter specified for AdapterRemoval "
+            "corresponds to the default sequence, but is reverse "
+            "complemented. Please make sure that this is intended! "
+        )
 
         if results["--pcr2"]:
-            logger.warn("For --pcr2, the sequence given should be the "
-                        "reverse complement of the sequence observed in the "
-                        "mate 2 FASTQ file.")
+            logger.warn(
+                "For --pcr2, the sequence given should be the "
+                "reverse complement of the sequence observed in the "
+                "mate 2 FASTQ file."
+            )
 
         if results["--adapter2"]:
-            logger.warn("For --adapter2 (AdapterRemoval v2, only) the value "
-                        "should be exactly as observed in the FASTQ reads.")
+            logger.warn(
+                "For --adapter2 (AdapterRemoval v2, only) the value "
+                "should be exactly as observed in the FASTQ reads."
+            )
 
 
 def _validate_makefile_libraries(makefile):
@@ -653,9 +663,10 @@ def _validate_makefile_libraries(makefile):
 
     for ((target, library), samples) in libraries.items():
         if len(samples) > 1:
-            raise MakefileError("Library '%s' in target '%s' spans multiple "
-                                " samples: %s" % (library, target,
-                                                  ", ".join(samples)))
+            raise MakefileError(
+                "Library '%s' in target '%s' spans multiple "
+                " samples: %s" % (library, target, ", ".join(samples))
+            )
 
 
 def _validate_makefiles_duplicate_files(makefiles):
@@ -694,9 +705,10 @@ def _validate_makefiles_duplicate_files(makefiles):
 def _describe_files_in_multiple_records(records, pairs):
     descriptions = []
     for (index, record) in enumerate(records, start=1):
-        descriptions.append("\t- Record {0}: Name: {1},  Sample: {2},  "
-                            "Library: {3},  Barcode: {4}".format(index,
-                                                                 *record))
+        descriptions.append(
+            "\t- Record {0}: Name: {1},  Sample: {2},  "
+            "Library: {3},  Barcode: {4}".format(index, *record)
+        )
 
     for (index, (_, filename)) in enumerate(sorted(pairs), start=1):
         message = "\t- Canonical path {0}: {1}"
@@ -716,9 +728,10 @@ def _validate_makefiles_duplicate_targets(config, makefiles):
         for target in makefile["Targets"]:
             key = (destination, target)
             if key in targets:
-                raise MakefileError("Target name '%s' used multiple times; "
-                                    "output files would be clobbered!"
-                                    % target)
+                raise MakefileError(
+                    "Target name '%s' used multiple times; "
+                    "output files would be clobbered!" % target
+                )
             targets.add(key)
 
 
@@ -732,10 +745,12 @@ def _validate_makefiles_features(makefiles):
 
         if features["Depths"] and roi_enabled:
             if not (features["RawBAM"] or features["RealignedBAM"]):
-                raise MakefileError("The feature 'Depths' (depth histograms) "
-                                    "with RegionsOfInterest enabled, requires "
-                                    "that either the feature 'RawBAM' or the "
-                                    "feature 'RalignedBAM' is enabled.")
+                raise MakefileError(
+                    "The feature 'Depths' (depth histograms) "
+                    "with RegionsOfInterest enabled, requires "
+                    "that either the feature 'RawBAM' or the "
+                    "feature 'RalignedBAM' is enabled."
+                )
 
 
 def _validate_prefixes(makefiles):
@@ -780,15 +795,19 @@ def _validate_prefixes(makefiles):
                     for _ in bedtools.read_bed_file(fpath, contigs=contigs):
                         pass
                 except (bedtools.BEDError, IOError) as error:
-                    raise MakefileError("Error reading regions-of-"
-                                        "interest %r for prefix %r:\n%s"
-                                        % (name, prefix["Name"], error))
+                    raise MakefileError(
+                        "Error reading regions-of-"
+                        "interest %r for prefix %r:\n%s" % (name, prefix["Name"], error)
+                    )
 
             if max(contigs.values()) > _BAM_MAX_SEQUENCE_LENGTH:
-                logger.warn("FASTA file %r contains sequences longer "
-                            "than %i! CSI index files will be used instead "
-                            "of BAI index files.",
-                            path, _BAM_MAX_SEQUENCE_LENGTH)
+                logger.warn(
+                    "FASTA file %r contains sequences longer "
+                    "than %i! CSI index files will be used instead "
+                    "of BAI index files.",
+                    path,
+                    _BAM_MAX_SEQUENCE_LENGTH,
+                )
                 prefix["IndexFormat"] = ".csi"
 
             already_validated[path] = prefix
@@ -798,15 +817,16 @@ def _do_validate_hg_prefix(makefile, prefix, contigs, fatal):
     if not _is_invalid_hg_prefix(contigs):
         return
 
-    message = \
-        "Prefix appears to be a human genome, but chromosomes are ordered\n" \
-        "lexically (chr1, chr10, chr11, ...), rather than numerically\n" \
-        "(chr1, chr2, chr3, ...):\n\n" \
-        "  Makefile = %s\n" \
-        "  Prefix   = %s\n\n" \
-        "GATK requires that human chromosomes are ordered numerically;\n%s\n" \
-        "See the documentation at the GATK website for more information:\n  " \
+    message = (
+        "Prefix appears to be a human genome, but chromosomes are ordered\n"
+        "lexically (chr1, chr10, chr11, ...), rather than numerically\n"
+        "(chr1, chr2, chr3, ...):\n\n"
+        "  Makefile = %s\n"
+        "  Prefix   = %s\n\n"
+        "GATK requires that human chromosomes are ordered numerically;\n%s\n"
+        "See the documentation at the GATK website for more information:\n  "
         "http://www.broadinstitute.org/gatk/guide/article?id=1204\n"
+    )
 
     prefix_path = prefix["Path"]
     mkfile_path = makefile["Statistics"]["Filename"]

@@ -23,25 +23,21 @@
 import sys
 import copy
 
-from paleomix.common.utilities import \
-    get_in, \
-    set_in
-from paleomix.common.timer import \
-    BAMTimer
-from paleomix.common.bamfiles import \
-    BAMRegionsIter
+from paleomix.common.utilities import get_in, set_in
+from paleomix.common.timer import BAMTimer
+from paleomix.common.bamfiles import BAMRegionsIter
 
-from paleomix.tools.bam_stats.common import \
-    collect_readgroups, \
-    collect_references, \
-    main_wrapper
-from paleomix.tools.bam_stats.coverage import \
-    ReadGroup, \
-    write_table
+from paleomix.tools.bam_stats.common import (
+    collect_readgroups,
+    collect_references,
+    main_wrapper,
+)
+from paleomix.tools.bam_stats.coverage import ReadGroup, write_table
 
 
 ##############################################################################
 ##############################################################################
+
 
 def build_region_template(args, handle):
     template = {}
@@ -63,6 +59,7 @@ def get_region_table(counts, region, template):
 
 ##############################################################################
 ##############################################################################
+
 
 def create_or_get_subtable(table, subtable_key, size):
     subtable = get_in(table, subtable_key)
@@ -109,6 +106,7 @@ def print_table(args, handle, counts):
 ##############################################################################
 ##############################################################################
 
+
 def process_record(subtable, record, flags, region):
     qname = record.qname
     if qname.startswith("M_") or qname.startswith("MT_"):
@@ -154,7 +152,7 @@ def process_file(handle, args):
 
         name = region.name
         if not args.regions and (handle.nreferences > args.max_contigs):
-            name = '<Genome>'
+            name = "<Genome>"
 
         last_pos = 0
         region_table = get_region_table(counts, name, region_template)
@@ -190,5 +188,5 @@ def main(argv):
 ##############################################################################
 ##############################################################################
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))

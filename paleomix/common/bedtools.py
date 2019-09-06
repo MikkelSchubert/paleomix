@@ -58,7 +58,7 @@ class BEDRecord(object):
     default to 0 or empty string, except the strand which defaults to '+'.
     """
 
-    __slots__ = ['_fields']
+    __slots__ = ["_fields"]
 
     def __init__(self, line=None, _len=None):
         """Constructs a BED record from a line of text. The length of the
@@ -72,18 +72,19 @@ class BEDRecord(object):
         self._fields = []
 
         if line:
-            line = line.rstrip("\r\n").split('\t')
+            line = line.rstrip("\r\n").split("\t")
             for column, (value, func) in enumerate(zip(line, _BED_TYPES)):
                 try:
                     self._fields.append(func(value))
                 except ValueError:
-                    raise BEDError("Error parsing column %i in BED record "
-                                   "(%r); expected type %s, but found %r."
-                                   % (column, "\t".join(line),
-                                      func.__name__, value,))
+                    raise BEDError(
+                        "Error parsing column %i in BED record "
+                        "(%r); expected type %s, but found %r."
+                        % (column, "\t".join(line), func.__name__, value)
+                    )
 
             if len(line) > len(self._fields):
-                self._fields.extend(line[len(self._fields):])
+                self._fields.extend(line[len(self._fields) :])
 
     def freeze(self):
         record = BEDRecord()
@@ -110,7 +111,7 @@ class BEDRecord(object):
         for name, value in zip(_BED_KEYS, self._fields):
             fields.append("%s=%r" % (name, value))
 
-        fields.extend(repr(value) for value in self._fields[len(_BED_KEYS):])
+        fields.extend(repr(value) for value in self._fields[len(_BED_KEYS) :])
 
         return "BEDRecord(%s)" % (", ".join(fields))
 
@@ -119,7 +120,7 @@ class BEDRecord(object):
 
     def __setitem__(self, index, value):
         if len(self._fields) <= index:
-            defaults = _BED_DEFAULTS[len(self._fields):index + 1]
+            defaults = _BED_DEFAULTS[len(self._fields) : index + 1]
             self._fields.extend(defaults)
             while len(self._fields) <= index:
                 self._fields.append("")
@@ -127,9 +128,10 @@ class BEDRecord(object):
         if index < len(_BED_TYPES):
             if type(_BED_TYPES[index]) is type:
                 if not isinstance(value, _BED_TYPES[index]):
-                    raise ValueError("Expected %s for BED field %i, got %r"
-                                     % (_BED_TYPES[index].__name__,
-                                        index + 1, value))
+                    raise ValueError(
+                        "Expected %s for BED field %i, got %r"
+                        % (_BED_TYPES[index].__name__, index + 1, value)
+                    )
             else:
                 value = _BED_TYPES[index](value)
 
@@ -149,6 +151,7 @@ class BEDRecord(object):
     @classmethod
     def _new_attr(cls, index):
         """Returns an getter / setter property for the given value."""
+
         def _get(self):
             return self._fields[index]
 
@@ -186,19 +189,22 @@ def read_bed_file(filename, min_columns=3, contigs=None):
             try:
                 bed = BEDRecord(line)
             except ValueError as error:
-                raise BEDError("Error parsing line %i in regions file:\n"
-                               "  Path = %r\n  Line = %r\n\n%s"
-                               % (line_num + 1, filename, line, error))
+                raise BEDError(
+                    "Error parsing line %i in regions file:\n"
+                    "  Path = %r\n  Line = %r\n\n%s"
+                    % (line_num + 1, filename, line, error)
+                )
 
             if len(bed) < min_columns:
                 url = "http://genome.ucsc.edu/FAQ/FAQformat.html#format1"
                 name = repr(bed.name) if len(bed) > 3 else "unnamed record"
-                raise BEDError("Region at line #%i (%s) does not "
-                               "contain the expected number of fields; "
-                               "the first %i fields are required. C.f. "
-                               "defination at\n   %s\n\nPath = %r"
-                               % (line_num, name, min_columns,
-                                  url, filename))
+                raise BEDError(
+                    "Region at line #%i (%s) does not "
+                    "contain the expected number of fields; "
+                    "the first %i fields are required. C.f. "
+                    "defination at\n   %s\n\nPath = %r"
+                    % (line_num, name, min_columns, url, filename)
+                )
 
             if contigs is None:
                 contig_len = infinite
@@ -206,18 +212,20 @@ def read_bed_file(filename, min_columns=3, contigs=None):
                 contig_len = contigs.get(bed.contig)
 
             if contig_len is None:
-                raise BEDError("Regions file contains contig not found "
-                               "in reference:\n  Path = %r\n  Contig = "
-                               "%r\n\nPlease ensure that all contig "
-                               "names match the reference names!"
-                               % (filename, bed.contig))
+                raise BEDError(
+                    "Regions file contains contig not found "
+                    "in reference:\n  Path = %r\n  Contig = "
+                    "%r\n\nPlease ensure that all contig "
+                    "names match the reference names!" % (filename, bed.contig)
+                )
             elif not (0 <= bed.start < bed.end <= contig_len):
-                raise BEDError("Regions file contains invalid region:\n"
-                               "  Path   = %r\n  Contig = %r\n"
-                               "  Start  = %s\n  End    = %s\n\n"
-                               "Expected 0 <= Start < End <= %i!"
-                               % (filename, bed.contig, bed.start,
-                                  bed.end, contig_len))
+                raise BEDError(
+                    "Regions file contains invalid region:\n"
+                    "  Path   = %r\n  Contig = %r\n"
+                    "  Start  = %s\n  End    = %s\n\n"
+                    "Expected 0 <= Start < End <= %i!"
+                    % (filename, bed.contig, bed.start, bed.end, contig_len)
+                )
 
             yield bed
     finally:
@@ -238,4 +246,5 @@ def sort_bed_by_bamfile(bamfile, regions):
 
     def _by_bam_layout(region):
         return (indices[region.contig], region.start, region.end)
+
     regions.sort(key=_by_bam_layout)

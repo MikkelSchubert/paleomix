@@ -28,31 +28,23 @@ Each node is equivalent to a particular command:
 import os
 import gzip
 
-from paleomix.node import \
-    CommandNode, \
-    Node
-from paleomix.atomiccmd.command import \
-    AtomicCmd
-from paleomix.atomiccmd.sets import \
-    ParallelCmds
-from paleomix.nodes.picard import \
-    MultiBAMInputNode
-from paleomix.atomiccmd.builder import \
-    AtomicCmdBuilder, \
-    create_customizable_cli_parameters, \
-    use_customizable_cli_parameters
-from paleomix.common.fileutils import \
-    describe_files, \
-    reroot_path, \
-    move_file, \
-    swap_ext
-from paleomix.common.utilities import \
-    safe_coerce_to_tuple
+from paleomix.node import CommandNode, Node
+from paleomix.atomiccmd.command import AtomicCmd
+from paleomix.atomiccmd.sets import ParallelCmds
+from paleomix.nodes.picard import MultiBAMInputNode
+from paleomix.atomiccmd.builder import (
+    AtomicCmdBuilder,
+    create_customizable_cli_parameters,
+    use_customizable_cli_parameters,
+)
+from paleomix.common.fileutils import describe_files, reroot_path, move_file, swap_ext
+from paleomix.common.utilities import safe_coerce_to_tuple
 
-from paleomix.nodes.samtools import \
-    SAMTOOLS_VERSION, \
-    SAMTOOLS_VERSION_0119, \
-    BCFTOOLS_VERSION_0119
+from paleomix.nodes.samtools import (
+    SAMTOOLS_VERSION,
+    SAMTOOLS_VERSION_0119,
+    BCFTOOLS_VERSION_0119,
+)
 
 import paleomix.tools.bam_stats.coverage as coverage
 import paleomix.tools.factory as factory
@@ -70,52 +62,61 @@ class DuplicateHistogramNode(MultiBAMInputNode):
         input_files = safe_coerce_to_tuple(input_files)
 
         builder = factory.new("duphist")
-        builder.add_value('%(TEMP_IN_BAM)s')
-        builder.set_kwargs(OUT_STDOUT=output_file,
-                           TEMP_IN_BAM=MultiBAMInputNode.PIPE_FILE)
+        builder.add_value("%(TEMP_IN_BAM)s")
+        builder.set_kwargs(
+            OUT_STDOUT=output_file, TEMP_IN_BAM=MultiBAMInputNode.PIPE_FILE
+        )
         builder.add_multiple_kwargs(input_files)
 
-        description = "<DuplicateHistogram: %s -> %r>" \
-            % (describe_files(input_files), output_file)
-        MultiBAMInputNode.__init__(self,
-                                   config=config,
-                                   input_bams=input_files,
-                                   command=builder.finalize(),
-                                   description=description,
-                                   dependencies=dependencies)
+        description = "<DuplicateHistogram: %s -> %r>" % (
+            describe_files(input_files),
+            output_file,
+        )
+        MultiBAMInputNode.__init__(
+            self,
+            config=config,
+            input_bams=input_files,
+            command=builder.finalize(),
+            description=description,
+            dependencies=dependencies,
+        )
 
 
 class CoverageNode(CommandNode):
-    def __init__(self, target_name, input_file, output_file,
-                 regions_file=None, dependencies=()):
+    def __init__(
+        self, target_name, input_file, output_file, regions_file=None, dependencies=()
+    ):
         builder = factory.new("coverage")
         builder.add_value("%(IN_BAM)s")
         builder.add_value("%(OUT_FILE)s")
         builder.set_option("--target-name", target_name)
-        builder.set_kwargs(IN_BAM=input_file,
-                           OUT_FILE=output_file)
+        builder.set_kwargs(IN_BAM=input_file, OUT_FILE=output_file)
 
         if regions_file:
-            builder.set_option('--regions-file', '%(IN_REGIONS)s')
+            builder.set_option("--regions-file", "%(IN_REGIONS)s")
             builder.set_kwargs(IN_REGIONS=regions_file)
 
         description = "<Coverage: %s -> '%s'>" % (input_file, output_file)
-        CommandNode.__init__(self,
-                             command=builder.finalize(),
-                             description=description,
-                             dependencies=dependencies)
+        CommandNode.__init__(
+            self,
+            command=builder.finalize(),
+            description=description,
+            dependencies=dependencies,
+        )
 
 
 class MergeCoverageNode(Node):
     def __init__(self, input_files, output_file, dependencies=()):
         self._output_file = output_file
 
-        Node.__init__(self,
-                      description="<MergeCoverage: %s -> '%s'>"
-                      % (describe_files(input_files), self._output_file),
-                      input_files=input_files,
-                      output_files=self._output_file,
-                      dependencies=dependencies)
+        Node.__init__(
+            self,
+            description="<MergeCoverage: %s -> '%s'>"
+            % (describe_files(input_files), self._output_file),
+            input_files=input_files,
+            output_files=self._output_file,
+            dependencies=dependencies,
+        )
 
     def _run(self, _config, temp):
         table = {}
@@ -127,60 +128,75 @@ class MergeCoverageNode(Node):
 
 
 class DepthHistogramNode(MultiBAMInputNode):
-    def __init__(self, config, target_name, input_files, output_file,
-                 prefix, regions_file=None, dependencies=()):
+    def __init__(
+        self,
+        config,
+        target_name,
+        input_files,
+        output_file,
+        prefix,
+        regions_file=None,
+        dependencies=(),
+    ):
         input_files = safe_coerce_to_tuple(input_files)
-        index_format = regions_file and prefix['IndexFormat']
+        index_format = regions_file and prefix["IndexFormat"]
 
         builder = factory.new("depths")
         builder.add_value("%(TEMP_IN_BAM)s")
         builder.add_value("%(OUT_FILE)s")
         builder.set_option("--target-name", target_name)
-        builder.set_kwargs(OUT_FILE=output_file,
-                           TEMP_IN_BAM=MultiBAMInputNode.PIPE_FILE)
+        builder.set_kwargs(
+            OUT_FILE=output_file, TEMP_IN_BAM=MultiBAMInputNode.PIPE_FILE
+        )
         builder.add_multiple_kwargs(input_files)
 
         if regions_file:
             index_file = swap_ext(MultiBAMInputNode.PIPE_FILE, index_format)
 
-            builder.set_option('--regions-file', '%(IN_REGIONS)s')
-            builder.set_kwargs(IN_REGIONS=regions_file,
-                               TEMP_IN_INDEX=index_file)
+            builder.set_option("--regions-file", "%(IN_REGIONS)s")
+            builder.set_kwargs(IN_REGIONS=regions_file, TEMP_IN_INDEX=index_file)
 
-        description = "<DepthHistogram: %s -> '%s'>" \
-            % (describe_files(input_files), output_file)
+        description = "<DepthHistogram: %s -> '%s'>" % (
+            describe_files(input_files),
+            output_file,
+        )
 
-        MultiBAMInputNode.__init__(self,
-                                   config=config,
-                                   input_bams=input_files,
-                                   index_format=index_format,
-                                   command=builder.finalize(),
-                                   description=description,
-                                   dependencies=dependencies)
+        MultiBAMInputNode.__init__(
+            self,
+            config=config,
+            input_bams=input_files,
+            index_format=index_format,
+            command=builder.finalize(),
+            description=description,
+            dependencies=dependencies,
+        )
 
 
 class FilterCollapsedBAMNode(MultiBAMInputNode):
-    def __init__(self, config, input_bams, output_bam, keep_dupes=True,
-                 dependencies=()):
+    def __init__(
+        self, config, input_bams, output_bam, keep_dupes=True, dependencies=()
+    ):
         input_bams = safe_coerce_to_tuple(input_bams)
 
         builder = factory.new("rmdup_collapsed")
         builder.add_value("%(TEMP_IN_BAM)s")
-        builder.set_kwargs(OUT_STDOUT=output_bam,
-                           TEMP_IN_BAM=MultiBAMInputNode.PIPE_FILE)
+        builder.set_kwargs(
+            OUT_STDOUT=output_bam, TEMP_IN_BAM=MultiBAMInputNode.PIPE_FILE
+        )
         builder.add_multiple_kwargs(input_bams)
 
         if not keep_dupes:
             builder.set_option("--remove-duplicates")
 
-        description = "<FilterCollapsedBAM: %s>" \
-            % (describe_files(input_bams),)
-        MultiBAMInputNode.__init__(self,
-                                   config=config,
-                                   input_bams=input_bams,
-                                   command=builder.finalize(),
-                                   description=description,
-                                   dependencies=dependencies)
+        description = "<FilterCollapsedBAM: %s>" % (describe_files(input_bams),)
+        MultiBAMInputNode.__init__(
+            self,
+            config=config,
+            input_bams=input_bams,
+            command=builder.finalize(),
+            description=description,
+            dependencies=dependencies,
+        )
 
 
 class VCFPileupNode(CommandNode):
@@ -193,8 +209,7 @@ class VCFPileupNode(CommandNode):
     """
 
     @create_customizable_cli_parameters
-    def customize(cls, reference, infile_bam, infile_vcf, outfile,
-                  dependencies=()):
+    def customize(cls, reference, infile_bam, infile_vcf, outfile, dependencies=()):
         params = factory.new("genotype")
         params.add_value("%(IN_BAMFILE)s")
         params.add_value("%(OUT_PILEUP)s")
@@ -203,15 +218,16 @@ class VCFPileupNode(CommandNode):
         # Ignore read-groups for pileup
         params.add_option("--mpileup-argument", "-R", sep="=")
         # Reference sequence (FASTA)
-        params.add_option("--mpileup-argument",
-                          "-f=%s" % (reference,), sep="=")
+        params.add_option("--mpileup-argument", "-f=%s" % (reference,), sep="=")
 
-        params.set_kwargs(IN_BAMFILE=infile_bam,
-                          TEMP_IN_INTERVALS="heterozygous_snps.bed",
-                          # Automatically remove this file
-                          TEMP_OUT_INTERVALS="heterozygous_snps.bed",
-                          OUT_PILEUP=outfile,
-                          CHECK_SAMTOOLS=SAMTOOLS_VERSION)
+        params.set_kwargs(
+            IN_BAMFILE=infile_bam,
+            TEMP_IN_INTERVALS="heterozygous_snps.bed",
+            # Automatically remove this file
+            TEMP_OUT_INTERVALS="heterozygous_snps.bed",
+            OUT_PILEUP=outfile,
+            CHECK_SAMTOOLS=SAMTOOLS_VERSION,
+        )
 
         return {"command": params}
 
@@ -219,14 +235,17 @@ class VCFPileupNode(CommandNode):
     def __init__(self, parameters):
         self._in_vcf = parameters.infile_vcf
         command = parameters.command.finalize()
-        description = "<VCFPileup: '%s' -> '%s'>" \
-            % (parameters.infile_vcf,
-               parameters.outfile)
+        description = "<VCFPileup: '%s' -> '%s'>" % (
+            parameters.infile_vcf,
+            parameters.outfile,
+        )
 
-        CommandNode.__init__(self,
-                             description=description,
-                             command=command,
-                             dependencies=parameters.dependencies)
+        CommandNode.__init__(
+            self,
+            description=description,
+            command=command,
+            dependencies=parameters.dependencies,
+        )
 
     def _run(self, config, temp):
         with gzip.open(self._in_vcf) as handle:
@@ -248,42 +267,48 @@ class VCFFilterNode(CommandNode):
     def customize(cls, pileup, infile, outfile, regions, dependencies=()):
         cat = factory.new("cat")
         cat.add_value("%(IN_VCF)s")
-        cat.set_kwargs(IN_VCF=infile,
-                       OUT_STDOUT=AtomicCmd.PIPE)
+        cat.set_kwargs(IN_VCF=infile, OUT_STDOUT=AtomicCmd.PIPE)
 
         vcffilter = factory.new("vcf_filter")
         vcffilter.add_option("--pileup", "%(IN_PILEUP)s")
         for contig in regions["HomozygousContigs"]:
             vcffilter.add_option("--homozygous-chromosome", contig)
-        vcffilter.set_kwargs(IN_PILEUP=pileup,
-                             IN_STDIN=cat,
-                             OUT_STDOUT=AtomicCmd.PIPE)
+        vcffilter.set_kwargs(IN_PILEUP=pileup, IN_STDIN=cat, OUT_STDOUT=AtomicCmd.PIPE)
 
-        bgzip = AtomicCmdBuilder(["bgzip"],
-                                 IN_STDIN=vcffilter,
-                                 OUT_STDOUT=outfile)
+        bgzip = AtomicCmdBuilder(["bgzip"], IN_STDIN=vcffilter, OUT_STDOUT=outfile)
 
-        return {"commands": {"cat": cat,
-                             "filter": vcffilter,
-                             "bgzip": bgzip}}
+        return {"commands": {"cat": cat, "filter": vcffilter, "bgzip": bgzip}}
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
-        commands = [parameters.commands[key].finalize()
-                    for key in ("cat", "filter", "bgzip")]
+        commands = [
+            parameters.commands[key].finalize() for key in ("cat", "filter", "bgzip")
+        ]
 
-        description = "<VCFFilter: '%s' -> '%s'>" % (parameters.infile,
-                                                     parameters.outfile)
-        CommandNode.__init__(self,
-                             description=description,
-                             command=ParallelCmds(commands),
-                             dependencies=parameters.dependencies)
+        description = "<VCFFilter: '%s' -> '%s'>" % (
+            parameters.infile,
+            parameters.outfile,
+        )
+        CommandNode.__init__(
+            self,
+            description=description,
+            command=ParallelCmds(commands),
+            dependencies=parameters.dependencies,
+        )
 
 
 class GenotypeRegionsNode(CommandNode):
     @create_customizable_cli_parameters
-    def customize(cls, reference, infile, bedfile, outfile,
-                  pileup_only=False, nbatches=1, dependencies=()):
+    def customize(
+        cls,
+        reference,
+        infile,
+        bedfile,
+        outfile,
+        pileup_only=False,
+        nbatches=1,
+        dependencies=(),
+    ):
         params = factory.new("genotype")
         params.add_value("%(IN_BAMFILE)s")
         params.add_value("%(OUT_VCFFILE)s")
@@ -298,33 +323,38 @@ class GenotypeRegionsNode(CommandNode):
             params.add_option("--mpileup-argument", "-R", sep="=")
 
         # Reference sequence (FASTA)
-        params.add_option("--mpileup-argument",
-                          "-f=%s" % (reference,), sep="=")
+        params.add_option("--mpileup-argument", "-f=%s" % (reference,), sep="=")
 
-        params.set_kwargs(IN_BAMFILE=infile,
-                          IN_INTERVALS=bedfile,
-                          OUT_VCFFILE=outfile,
-                          CHECK_SAMTOOLS=SAMTOOLS_VERSION_0119,
-                          CHECK_BCFTOOLS=BCFTOOLS_VERSION_0119)
+        params.set_kwargs(
+            IN_BAMFILE=infile,
+            IN_INTERVALS=bedfile,
+            OUT_VCFFILE=outfile,
+            CHECK_SAMTOOLS=SAMTOOLS_VERSION_0119,
+            CHECK_BCFTOOLS=BCFTOOLS_VERSION_0119,
+        )
 
         return {"command": params}
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
         command = parameters.command.finalize()
-        invokation = " (%s%i thread(s))" \
-            % ("pileup; " if parameters.pileup_only else "",
-               parameters.nbatches)
-        description = "<GenotypeRegions%s: '%s' -> '%s'>" \
-            % (invokation,
-               parameters.infile,
-               parameters.outfile)
+        invokation = " (%s%i thread(s))" % (
+            "pileup; " if parameters.pileup_only else "",
+            parameters.nbatches,
+        )
+        description = "<GenotypeRegions%s: '%s' -> '%s'>" % (
+            invokation,
+            parameters.infile,
+            parameters.outfile,
+        )
 
-        CommandNode.__init__(self,
-                             description=description,
-                             command=command,
-                             threads=parameters.nbatches,
-                             dependencies=parameters.dependencies)
+        CommandNode.__init__(
+            self,
+            description=description,
+            command=command,
+            threads=parameters.nbatches,
+            dependencies=parameters.dependencies,
+        )
 
 
 class BuildRegionsNode(CommandNode):
@@ -335,19 +365,25 @@ class BuildRegionsNode(CommandNode):
         params.set_option("--genotype", "%(IN_VCFFILE)s")
         params.set_option("--intervals", "%(IN_INTERVALS)s")
 
-        params.set_kwargs(IN_VCFFILE=infile,
-                          IN_TABIX=infile + ".tbi",
-                          IN_INTERVALS=bedfile,
-                          OUT_STDOUT=outfile)
+        params.set_kwargs(
+            IN_VCFFILE=infile,
+            IN_TABIX=infile + ".tbi",
+            IN_INTERVALS=bedfile,
+            OUT_STDOUT=outfile,
+        )
 
         return {"command": params}
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
         command = parameters.command.finalize()
-        description = "<BuildRegions: '%s' -> '%s'>" % (parameters.infile,
-                                                        parameters.outfile)
-        CommandNode.__init__(self,
-                             description=description,
-                             command=command,
-                             dependencies=parameters.dependencies)
+        description = "<BuildRegions: '%s' -> '%s'>" % (
+            parameters.infile,
+            parameters.outfile,
+        )
+        CommandNode.__init__(
+            self,
+            description=description,
+            command=command,
+            dependencies=parameters.dependencies,
+        )

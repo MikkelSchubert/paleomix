@@ -50,17 +50,18 @@ def padded_table(table):
         if not isinstance(row, str):
             row = list(map(str, row))
             row_sizes = list(map(len, row))
-            max_sizes = list(map(max, itertools.zip_longest(max_sizes, 
-                                                        row_sizes,
-                                                        fillvalue=0)))
+            max_sizes = list(
+                map(max, itertools.zip_longest(max_sizes, row_sizes, fillvalue=0))
+            )
 
         str_rows.append(row)
 
     sizes = [(size + _MIN_PADDING) for size in max_sizes]
     for row in str_rows:
         if not isinstance(row, str):
-            row = "".join(field.ljust(padding)
-                          for (field, padding) in zip(row, sizes)).rstrip()
+            row = "".join(
+                field.ljust(padding) for (field, padding) in zip(row, sizes)
+            ).rstrip()
         yield row
 
 
@@ -82,8 +83,10 @@ def parse_padded_table(lines, header=None):
 
         fields = stripped.split()
         if len(fields) != nheader:
-            raise TableError("Malformed table; #columns does not match header:"
-                             " %r vs %r" % (header, fields))
+            raise TableError(
+                "Malformed table; #columns does not match header:"
+                " %r vs %r" % (header, fields)
+            )
 
         yield dict(zip(header, fields))
 
@@ -95,8 +98,9 @@ def parse_lines(lines, parser):
     Supports the parser functions available in 'pysam': asGTF, asBED, etc.
     """
     if not isinstance(parser, collections.Callable):
-        raise TypeError("'parser' must be a callable, not %r"
-                        % parser.__class__.__name__)
+        raise TypeError(
+            "'parser' must be a callable, not %r" % parser.__class__.__name__
+        )
 
     for line in lines:
         stripped = line.lstrip()

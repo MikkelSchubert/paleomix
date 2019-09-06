@@ -24,21 +24,20 @@ import os
 import io
 
 import nose.tools
-from nose.tools import \
-    assert_is, \
-    assert_equal, \
-    assert_raises, \
-    assert_not_equal, \
-    assert_less, \
-    assert_less_equal, \
-    assert_greater, \
-    assert_greater_equal
+from nose.tools import (
+    assert_is,
+    assert_equal,
+    assert_raises,
+    assert_not_equal,
+    assert_less,
+    assert_less_equal,
+    assert_greater,
+    assert_greater_equal,
+)
 
 
 from paleomix.common.testing import assert_list_equal
-from paleomix.common.formats.fasta import \
-     FASTA, \
-     FASTAError
+from paleomix.common.formats.fasta import FASTA, FASTAError
 
 
 ###############################################################################
@@ -58,6 +57,7 @@ def test_file(*args):
 ###############################################################################
 ###############################################################################
 # Tests for FASTA constructor
+
 
 def _simple_fasta_record():
     return FASTA("Dummy", "Meta-inf", "ACGT")
@@ -98,27 +98,27 @@ def test_fasta__constructor__sequence_must_be_string_type():
 ###############################################################################
 # Tests for __repr__
 
+
 def test_fasta__repr__partial_line_test():
-    expected = ">foobar\n%s\n" % (_SEQ_FRAG, )
+    expected = ">foobar\n%s\n" % (_SEQ_FRAG,)
     result = repr(FASTA("foobar", None, _SEQ_FRAG))
     assert_equal(result, expected)
 
 
 def test_fasta__repr__complete_line_test():
-    expected = ">barfoo\n%s\n" % (_SEQ_FRAG * 10, )
+    expected = ">barfoo\n%s\n" % (_SEQ_FRAG * 10,)
     result = repr(FASTA("barfoo", None, _SEQ_FRAG * 10))
     assert_equal(result, expected)
 
 
 def test_fasta__repr__multiple_lines():
-    expected = ">foobar\n%s\n%s\n" \
-        % (_SEQ_FRAG * 10, _SEQ_FRAG * 5)
+    expected = ">foobar\n%s\n%s\n" % (_SEQ_FRAG * 10, _SEQ_FRAG * 5)
     result = repr(FASTA("foobar", None, _SEQ_FRAG * 15))
     assert_equal(result, expected)
 
 
 def test_fasta__repr__partial_line_test_with_meta_information():
-    expected = ">foobar my Meta-Info\n%s\n" % (_SEQ_FRAG, )
+    expected = ">foobar my Meta-Info\n%s\n" % (_SEQ_FRAG,)
     result = repr(FASTA("foobar", "my Meta-Info", _SEQ_FRAG))
     assert_equal(result, expected)
 
@@ -129,22 +129,21 @@ def test_fasta__repr__partial_line_test_with_meta_information():
 
 
 def test_fasta__write__partial_line():
-    expected = ">foobar\n%s\n" % (_SEQ_FRAG, )
+    expected = ">foobar\n%s\n" % (_SEQ_FRAG,)
     stringf = io.StringIO()
     FASTA("foobar", None, _SEQ_FRAG).write(stringf)
     assert_equal(stringf.getvalue(), expected)
 
 
 def test_fasta__write__complete_line_test():
-    expected = ">barfoo\n%s\n" % (_SEQ_FRAG * 10, )
+    expected = ">barfoo\n%s\n" % (_SEQ_FRAG * 10,)
     stringf = io.StringIO()
     FASTA("barfoo", None, _SEQ_FRAG * 10).write(stringf)
     assert_equal(stringf.getvalue(), expected)
 
 
 def test_fasta__write__multiple_lines():
-    expected = ">foobar\n%s\n%s\n" \
-        % (_SEQ_FRAG * 10, _SEQ_FRAG * 5)
+    expected = ">foobar\n%s\n%s\n" % (_SEQ_FRAG * 10, _SEQ_FRAG * 5)
     stringf = io.StringIO()
     FASTA("foobar", None, _SEQ_FRAG * 15).write(stringf)
     assert_equal(stringf.getvalue(), expected)
@@ -153,6 +152,7 @@ def test_fasta__write__multiple_lines():
 ###############################################################################
 ###############################################################################
 # Tests for FASTA.from_lines
+
 
 def test_fasta__from_lines__no_records():
     assert_list_equal(FASTA.from_lines([]), [])
@@ -165,12 +165,21 @@ def test_fasta__from_lines_single_record():
 
 
 def test_fasta__from_lines__multiple_records():
-    lines = [">first\n",  "TGTTCTCCACCGTGCACAAC\n", "CCTTCATCCA\n",
-             ">Second XT:1:0\n", "GAGAGCTCAGCTAAC\n",
-             ">Third\n",  "CGCTGACCAAAAACGGACAG\n", "GGCATTCGGC\n"]
-    expected = [FASTA("first", None, "TGTTCTCCACCGTGCACAACCCTTCATCCA"),
-                FASTA("Second", "XT:1:0", "GAGAGCTCAGCTAAC"),
-                FASTA("Third", None, "CGCTGACCAAAAACGGACAGGGCATTCGGC")]
+    lines = [
+        ">first\n",
+        "TGTTCTCCACCGTGCACAAC\n",
+        "CCTTCATCCA\n",
+        ">Second XT:1:0\n",
+        "GAGAGCTCAGCTAAC\n",
+        ">Third\n",
+        "CGCTGACCAAAAACGGACAG\n",
+        "GGCATTCGGC\n",
+    ]
+    expected = [
+        FASTA("first", None, "TGTTCTCCACCGTGCACAACCCTTCATCCA"),
+        FASTA("Second", "XT:1:0", "GAGAGCTCAGCTAAC"),
+        FASTA("Third", None, "CGCTGACCAAAAACGGACAGGGCATTCGGC"),
+    ]
     assert_list_equal(FASTA.from_lines(lines), expected)
 
 
@@ -224,29 +233,37 @@ def test_fasta__from_lines__empty_name__with_others():
 ###############################################################################
 # Tests for 'FASTA.from_file'
 
+
 def test_fasta__from_file__uncompressed():
-    expected = [FASTA("This_is_FASTA!", None, "ACGTN"),
-                FASTA("This_is_ALSO_FASTA!", None, "CGTNA")]
+    expected = [
+        FASTA("This_is_FASTA!", None, "ACGTN"),
+        FASTA("This_is_ALSO_FASTA!", None, "CGTNA"),
+    ]
     results = list(FASTA.from_file(test_file("fasta_file.fasta")))
     assert_equal(results, expected)
 
 
 def test_fasta__from_file__compressed_gz():
-    expected = [FASTA("This_is_GZipped_FASTA!", None, "ACGTN"),
-                FASTA("This_is_ALSO_GZipped_FASTA!", None, "CGTNA")]
+    expected = [
+        FASTA("This_is_GZipped_FASTA!", None, "ACGTN"),
+        FASTA("This_is_ALSO_GZipped_FASTA!", None, "CGTNA"),
+    ]
     results = list(FASTA.from_file(test_file("fasta_file.fasta.gz")))
     assert_equal(results, expected)
 
 
 def test_fasta__from_file__compressed_bz2():
-    expected = [FASTA("This_is_BZ_FASTA!", None, "CGTNA"),
-                FASTA("This_is_ALSO_BZ_FASTA!", None, "ACGTN")]
+    expected = [
+        FASTA("This_is_BZ_FASTA!", None, "CGTNA"),
+        FASTA("This_is_ALSO_BZ_FASTA!", None, "ACGTN"),
+    ]
     results = list(FASTA.from_file(test_file("fasta_file.fasta.bz2")))
     assert_equal(results, expected)
 
 
 ###############################################################################
 ###############################################################################
+
 
 def test_fasta__equality():
     assert_equal(FASTA("A", "B", "C"), FASTA("A", "B", "C"))
@@ -293,4 +310,3 @@ def test_fasta__unimplemented_comparison():
     assert_is(NotImplemented, FASTA("A", None, "C").__le__(10))
     assert_is(NotImplemented, FASTA("A", None, "C").__ge__(10))
     assert_is(NotImplemented, FASTA("A", None, "C").__gt__(10))
-

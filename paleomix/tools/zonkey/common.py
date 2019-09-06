@@ -32,10 +32,12 @@ import paleomix.common.versions as versions
 _SUPPORTED_DB_FORMAT = 1
 
 
-RSCRIPT_VERSION = versions.Requirement(call=("Rscript", "--version"),
-                                       search="version (\d+)\.(\d+)\.(\d+)",
-                                       checks=versions.GE(3, 0, 0),
-                                       priority=10)
+RSCRIPT_VERSION = versions.Requirement(
+    call=("Rscript", "--version"),
+    search="version (\d+)\.(\d+)\.(\d+)",
+    checks=versions.GE(3, 0, 0),
+    priority=10,
+)
 
 
 class DBFileError(RuntimeError):
@@ -73,7 +75,7 @@ def read_summary(filename, default="[MISSING VALUE!]"):
         data = paleomix.yaml.safe_load(handle)
 
         if not isinstance(data, dict):
-            raise DBFileError('Summary file does not contain dictionary')
+            raise DBFileError("Summary file does not contain dictionary")
 
         results.update(data)
 

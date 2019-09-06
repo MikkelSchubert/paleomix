@@ -23,39 +23,36 @@
 import os
 import types
 
-from nose.tools import \
-    assert_is, \
-    assert_equal, \
-    assert_raises, \
-    assert_raises_regexp
+from nose.tools import assert_is, assert_equal, assert_raises, assert_raises_regexp
 
-from paleomix.common.makefile import \
-    DEFAULT_NOT_SET, \
-    REQUIRED_VALUE, \
-    MakefileError, \
-    MakefileSpec, \
-    read_makefile, \
-    process_makefile, \
-    WithoutDefaults, \
-    IsInt, \
-    IsUnsignedInt, \
-    IsFloat, \
-    IsBoolean, \
-    IsStr, \
-    IsNone, \
-    ValueIn, \
-    ValuesIntersect, \
-    ValuesSubsetOf, \
-    ValueMissing, \
-    And, \
-    Or, \
-    Not, \
-    StringIn, \
-    StringStartsWith, \
-    StringEndsWith, \
-    IsListOf, \
-    IsDictOf, \
-    PreProcessMakefile
+from paleomix.common.makefile import (
+    DEFAULT_NOT_SET,
+    REQUIRED_VALUE,
+    MakefileError,
+    MakefileSpec,
+    read_makefile,
+    process_makefile,
+    WithoutDefaults,
+    IsInt,
+    IsUnsignedInt,
+    IsFloat,
+    IsBoolean,
+    IsStr,
+    IsNone,
+    ValueIn,
+    ValuesIntersect,
+    ValuesSubsetOf,
+    ValueMissing,
+    And,
+    Or,
+    Not,
+    StringIn,
+    StringStartsWith,
+    StringEndsWith,
+    IsListOf,
+    IsDictOf,
+    PreProcessMakefile,
+)
 
 
 # Dummy value for the path parameters
@@ -85,6 +82,7 @@ _COMMON_INVALID_VALUES = [
 ###############################################################################
 # Setup timestamps for test files
 
+
 def test_dir():
     return os.path.dirname(os.path.dirname(__file__))
 
@@ -105,6 +103,7 @@ def setup_module():
 ###############################################################################
 # MakefileSpec
 
+
 def test_makefilespec__description_is_set():
     desc = "a random description"
     spec = MakefileSpec(description=desc)
@@ -119,6 +118,7 @@ def test_makefilespec__meets_spec_must_be_implemented():
 ###############################################################################
 ###############################################################################
 # IsInt
+
 
 def test_is_int__accepts_integers():
     spec = IsInt()
@@ -164,6 +164,7 @@ def test_is_int__default_set__must_meet_spec():
 ###############################################################################
 ###############################################################################
 # IsUnsignedInt
+
 
 def test_is_unsigned_int__accepts_non_negative_integers():
     spec = IsUnsignedInt()
@@ -211,6 +212,7 @@ def test_is_unsigned_int__default_set__must_meet_spec():
 ###############################################################################
 # IsFloat
 
+
 def test_is_float__accepts_float():
     spec = IsFloat()
     spec(_DUMMY_PATH, 1.0)
@@ -256,6 +258,7 @@ def test_is_float__default_set__must_meet_spec():
 ###############################################################################
 # IsBoolean
 
+
 def test_is_boolean__accepts_boolean():
     spec = IsBoolean()
     spec(_DUMMY_PATH, False)
@@ -300,6 +303,7 @@ def test_is_boolean__default_set__must_meet_spec():
 ###############################################################################
 ###############################################################################
 # IsStr
+
 
 def test_is_str__accepts_standard_str():
     spec = IsStr()
@@ -383,6 +387,7 @@ def test_is_str__min_len_2():
 ###############################################################################
 # IsNone
 
+
 def test_is_none__accepts_none():
     spec = IsNone()
     spec(_DUMMY_PATH, None)
@@ -424,6 +429,7 @@ def test_is_none__default_not_implemented_for_is_none():
 ###############################################################################
 ###############################################################################
 # ValueIn
+
 
 def test_value_in__single_value_in_set():
     spec = ValueIn(list(range(5)))
@@ -492,6 +498,7 @@ def test_is_value_in__handles_types():
 ###############################################################################
 ###############################################################################
 # ValuesIntersects
+
 
 def test_intersects__single_value_in_set():
     spec = ValuesIntersect(list(range(5)))
@@ -570,6 +577,7 @@ def test_intersects__handles_types():
 ###############################################################################
 ###############################################################################
 # ValueSubsetOf
+
 
 def test_subset_of__single_value_in_set():
     spec = ValuesSubsetOf(list(range(5)))
@@ -655,6 +663,7 @@ def test_subset_of__handles_types():
 ###############################################################################
 # And
 
+
 def test_and__accepts_when_all_true():
     spec = And(IsFloat, ValueIn((0.0, 1, 2)))
     spec(_DUMMY_PATH, 0.0)
@@ -705,6 +714,7 @@ def test_and__defaults_not_set_in_specs():
 ###############################################################################
 # Or
 
+
 def test_or__accepts_first_test():
     spec = Or(IsStr, IsBoolean)
     spec(_DUMMY_PATH, "Foo")
@@ -739,16 +749,17 @@ def test_or__default_set__valid_value():
 
 
 def test_or__default_set__must_meet_spec():
-    assert_raises(ValueError, Or, IsInt, ValueIn((10, )), default=5.5)
+    assert_raises(ValueError, Or, IsInt, ValueIn((10,)), default=5.5)
 
 
 def test_or__defaults_not_set_in_specs():
-    assert_raises(ValueError, Or, IsInt(default=10), ValueIn((10, )))
+    assert_raises(ValueError, Or, IsInt(default=10), ValueIn((10,)))
 
 
 ###############################################################################
 ###############################################################################
 # Not
+
 
 def test_not__accepts_when_test_is_false():
     spec = Not(IsInt)
@@ -767,6 +778,7 @@ def test_not__defaults_not_set_in_specs():
 ###############################################################################
 ###############################################################################
 # StringIn
+
 
 def test_string_in__case_sensitive__value_in_set():
     spec = StringIn(("Abc", "bCe", "cdE"))
@@ -821,6 +833,7 @@ def test_string_in__handles_types():
 ###############################################################################
 # StringStartsWith
 
+
 def test_string_starts_with__accepts_standard_str():
     spec = StringStartsWith("A_")
     spec(_DUMMY_PATH, "A_BC")
@@ -860,6 +873,7 @@ def test_string_starts_with__default_set__must_meet_spec():
 ###############################################################################
 # StringEndsWith
 
+
 def test_string_ends_with__accepts_standard_str():
     spec = StringEndsWith("_A")
     spec(_DUMMY_PATH, "BC_A")
@@ -898,6 +912,7 @@ def test_string_ends_with__default_set__must_meet_spec():
 ###############################################################################
 # IsListOf
 
+
 def test_is_list_of__empty_list_always_ok():
     spec = IsListOf(IsInt)
     spec(_DUMMY_PATH, [])
@@ -910,12 +925,12 @@ def test_is_list_of__list_of_ints_accepted():
 
 def test_is_list_of__list_of_non_ints_rejected():
     spec = IsListOf(IsInt)
-    assert_raises(MakefileError, spec, _DUMMY_PATH, ['a', 'b', 'c'])
+    assert_raises(MakefileError, spec, _DUMMY_PATH, ["a", "b", "c"])
 
 
 def test_is_list_of__mixed_list_rejected():
     spec = IsListOf(IsInt)
-    assert_raises(MakefileError, spec, _DUMMY_PATH, [1, 'b', 3])
+    assert_raises(MakefileError, spec, _DUMMY_PATH, [1, "b", 3])
 
 
 def test_is_list_of__default_description():
@@ -949,6 +964,7 @@ def test_is_list_of__defaults_not_set_in_specs():
 ###############################################################################
 ###############################################################################
 # IsDictOf
+
 
 def test_is_dict_of__empty_dict_always_ok():
     spec = IsDictOf(IsInt, IsStr)
@@ -1011,10 +1027,10 @@ def test_is_dict_of__defaults_not_set_in_value_specs():
 ###############################################################################
 # Path is displayed in exception
 
+
 def test_specs__path_is_displayed_in_exception():
     def _path_is_displayed_in_exception(spec, value):
-        assert_raises_regexp(MakefileError, _DUMMY_PATH_STR,
-                             spec, _DUMMY_PATH, value)
+        assert_raises_regexp(MakefileError, _DUMMY_PATH_STR, spec, _DUMMY_PATH, value)
 
     yield _path_is_displayed_in_exception, IsInt(), "foo"
     yield _path_is_displayed_in_exception, IsUnsignedInt(), -1
@@ -1039,6 +1055,7 @@ def test_specs__path_is_displayed_in_exception():
 ###############################################################################
 ###############################################################################
 # process_makefile
+
 
 def test_process_makefile__dict_keys_found():
     def _dict_keys_found(current, specs):
@@ -1085,9 +1102,7 @@ def test_validate_makefile__unexpected_type_in_current():
 
 def test_process_makefile__sets_missing_keys():
     current = {"A": 1}
-    specs = {"A": IsInt(default=0),
-             "B": IsInt(default=-1),
-             "C": IsInt(default=-2)}
+    specs = {"A": IsInt(default=0), "B": IsInt(default=-1), "C": IsInt(default=-2)}
     expected = {"A": 1, "B": -1, "C": -2}
     result = process_makefile(current, specs)
     assert_equal(result, expected)
@@ -1095,56 +1110,48 @@ def test_process_makefile__sets_missing_keys():
 
 def test_process_makefile__mixed_keys():
     current = {"A": 1}
-    specs = {IsStr: IsInt,
-             "B": IsInt(default=-1),
-             "C": IsInt(default=-2)}
+    specs = {IsStr: IsInt, "B": IsInt(default=-1), "C": IsInt(default=-2)}
     expected = {"A": 1, "B": -1, "C": -2}
     result = process_makefile(current, specs)
     assert_equal(result, expected)
 
 
 def test_process_makefile__sets_missing_recursive():
-    current = {"A": 1, "B": {"C":  2}}
-    specs = {"A": IsInt(default=0),
-             "B": {"C": IsInt(default=-1),
-                   "D": IsInt(default=-2)}}
-    expected = {"A": 1, "B": {"C":  2, "D": -2}}
+    current = {"A": 1, "B": {"C": 2}}
+    specs = {
+        "A": IsInt(default=0),
+        "B": {"C": IsInt(default=-1), "D": IsInt(default=-2)},
+    }
+    expected = {"A": 1, "B": {"C": 2, "D": -2}}
     result = process_makefile(current, specs)
     assert_equal(result, expected)
 
 
 def test_process_makefile__sets_missing_recursive__with_missing_substructure():
     current = {"A": 1}
-    specs = {"A": IsInt(default=0),
-             "B": {"C": IsInt(default=-1),
-                   "D": IsInt(default=-2)}}
+    specs = {
+        "A": IsInt(default=0),
+        "B": {"C": IsInt(default=-1), "D": IsInt(default=-2)},
+    }
     expected = {"A": 1, "B": {"C": -1, "D": -2}}
     result = process_makefile(current, specs)
     assert_equal(result, expected)
 
 
 def test_process_makefile__shared_subtrees_with_defaults():
-    subtree = {"A": IsInt(default=1234),
-               "B": IsInt(default=5678)}
-    specs = {"A": subtree,
-             "B": subtree}
-    current = {"A": {"B": 17},
-               "B": {"A": 71}}
-    expected = {"A": {"A": 1234, "B": 17},
-                "B": {"A": 71, "B": 5678}}
+    subtree = {"A": IsInt(default=1234), "B": IsInt(default=5678)}
+    specs = {"A": subtree, "B": subtree}
+    current = {"A": {"B": 17}, "B": {"A": 71}}
+    expected = {"A": {"A": 1234, "B": 17}, "B": {"A": 71, "B": 5678}}
     result = process_makefile(current, specs)
     assert_equal(result, expected)
 
 
 def test_process_makefile__shared_subtrees_with_defaults__defaults_disabled():
-    subtree = {"A": IsInt(default=1234),
-               "B": IsInt(default=5678)}
-    specs = {"A": subtree,
-             "B": WithoutDefaults(subtree)}
-    current = {"A": {"B": 17},
-               "B": {"A": 71}}
-    expected = {"A": {"A": 1234, "B": 17},
-                "B": {"A": 71}}
+    subtree = {"A": IsInt(default=1234), "B": IsInt(default=5678)}
+    specs = {"A": subtree, "B": WithoutDefaults(subtree)}
+    current = {"A": {"B": 17}, "B": {"A": 71}}
+    expected = {"A": {"A": 1234, "B": 17}, "B": {"A": 71}}
     result = process_makefile(current, specs)
     assert_equal(result, expected)
 
@@ -1178,13 +1185,15 @@ def test_process_makefile__accept_missing_value_if_in_implicit_subtree():
 
 
 def test_process_makefile__path_shown_in_exception_for_list():
-    assert_raises_regexp(MakefileError, _DUMMY_PATH_STR,
-                         process_makefile, {}, [], _DUMMY_PATH)
+    assert_raises_regexp(
+        MakefileError, _DUMMY_PATH_STR, process_makefile, {}, [], _DUMMY_PATH
+    )
 
 
 def test_process_makefile__path_shown_in_exception_for_dict():
-    assert_raises_regexp(MakefileError, _DUMMY_PATH_STR,
-                         process_makefile, [], {}, _DUMMY_PATH)
+    assert_raises_regexp(
+        MakefileError, _DUMMY_PATH_STR, process_makefile, [], {}, _DUMMY_PATH
+    )
 
 
 def test_process_makefile__implicit_subdict_is_allowed():
@@ -1198,6 +1207,7 @@ def test_process_makefile__implicit_subdict_is_allowed():
 ###############################################################################
 ###############################################################################
 # process_makefile -- lists
+
 
 def test_process_makefile__list_types_accepted():
     current = {"A": 1, "B": [17, "Foo"]}
@@ -1251,6 +1261,7 @@ def test_process_makefile__list_spec_must_contain_only_specs():
 ###############################################################################
 # read_makefile
 
+
 def test_read_makefile__missing_file():
     assert_raises(IOError, read_makefile, "does_not_exist.yaml", {})
 
@@ -1263,17 +1274,16 @@ def test_read_makefile__not_a_yaml_file():
 def test_read_makefile__simple_file():
     specs = {"Defaults": {"First": IsFloat, "Second": IsStr}}
     expected = {
-        "Makefile": {"Defaults": {"First": 1e-4,
-                                  "Second": "a string"}},
+        "Makefile": {"Defaults": {"First": 1e-4, "Second": "a string"}},
         "Statistics": {
             "Filename": test_file("simple.yaml"),
             "Hash": "563a2052b67dcde9f193fbe8d51fa2b6f0806505",
-        }
+        },
     }
     result = read_makefile(test_file("simple.yaml"), specs)
 
     # MTime is troublesome, and will be removed later anyway, so don't bother
-    result.get('Statistics', {}).pop('MTime', None)
+    result.get("Statistics", {}).pop("MTime", None)
 
     assert_equal(expected, result)
 
@@ -1281,6 +1291,7 @@ def test_read_makefile__simple_file():
 ###############################################################################
 ###############################################################################
 # PreProcessMakefile
+
 
 class _PreProcess(PreProcessMakefile):
     def __call__(self, path, value):

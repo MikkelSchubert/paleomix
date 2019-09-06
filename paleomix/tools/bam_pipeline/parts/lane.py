@@ -25,27 +25,17 @@ import copy
 
 import paleomix.tools.bam_pipeline.paths as paths
 
-from paleomix.atomiccmd.builder import \
-    apply_options
+from paleomix.atomiccmd.builder import apply_options
 
-from paleomix.common.makefile import \
-    MakefileError
+from paleomix.common.makefile import MakefileError
 
-from paleomix.nodes.bwa import \
-    BWAAlgorithmNode, \
-    BWABacktrack, \
-    BWASampe, \
-    BWASamse
-from paleomix.nodes.bowtie2 import \
-    Bowtie2Node
+from paleomix.nodes.bwa import BWAAlgorithmNode, BWABacktrack, BWASampe, BWASamse
+from paleomix.nodes.bowtie2 import Bowtie2Node
 
-from paleomix.tools.bam_pipeline.parts import \
-    Reads
-from paleomix.tools.bam_pipeline.nodes import \
-    index_and_validate_bam
+from paleomix.tools.bam_pipeline.parts import Reads
+from paleomix.tools.bam_pipeline.nodes import index_and_validate_bam
 
-from paleomix.common.fileutils import \
-    swap_ext
+from paleomix.common.fileutils import swap_ext
 
 
 #
@@ -61,12 +51,14 @@ class Lane:
         self.tags = tags = copy.deepcopy(record["Tags"])
         self.tags["PU"] = self.tags["PU_src"]
         self.tags["PG"] = self.tags["PG"].lower()
-        self.folder = os.path.join(config.destination,
-                                   tags["Target"],
-                                   prefix["Name"],
-                                   tags["SM"],
-                                   tags["LB"],
-                                   tags["PU_cur"])
+        self.folder = os.path.join(
+            config.destination,
+            tags["Target"],
+            prefix["Name"],
+            tags["SM"],
+            tags["LB"],
+            tags["PU_cur"],
+        )
 
         self._init_reads(config, record)
         self._init_unaligned_lane(config, prefix, record)
@@ -74,8 +66,9 @@ class Lane:
     def _init_reads(self, config, record):
         key = tuple(self.tags[key] for key in ("Target", "SM", "LB", "PU_cur"))
         if key not in _TRIMMED_READS_CACHE:
-            _TRIMMED_READS_CACHE[key] \
-                = Reads(config, record, record["Options"]["QualityOffset"])
+            _TRIMMED_READS_CACHE[key] = Reads(
+                config, record, record["Options"]["QualityOffset"]
+            )
         self.reads = _TRIMMED_READS_CACHE[key]
 
     def _init_unaligned_lane(self, config, prefix, record):
@@ -83,8 +76,7 @@ class Lane:
 
         for (key, input_filename) in self.reads.files.items():
             # Common parameters between BWA / Bowtie2
-            output_filename = os.path.join(self.folder,
-                                           "%s.bam" % (key.lower(),))
+            output_filename = os.path.join(self.folder, "%s.bam" % (key.lower(),))
 
             parameters = {
                 "input_file": input_filename,
@@ -94,10 +86,9 @@ class Lane:
                 "dependencies": self.reads.nodes + prefix[prefix_key],
             }
 
-            nodes = self._build_alignment_nodes(config=config,
-                                                record=record,
-                                                prefix=prefix,
-                                                parameters=parameters)
+            nodes = self._build_alignment_nodes(
+                config=config, record=record, prefix=prefix, parameters=parameters
+            )
 
             self.bams[key] = {output_filename: nodes}
 
@@ -108,38 +99,39 @@ class Lane:
             parameters["algorithm"] = algorithm
 
             if algorithm == "backtrack":
-                return self._build_bwa_backtrack(config=config,
-                                                 record=record,
-                                                 prefix=prefix,
-                                                 parameters=parameters)
-            elif algorithm in ('mem', 'bwasw'):
-                return self._build_bwa_algorithm(config=config,
-                                                 record=record,
-                                                 prefix=prefix,
-                                                 parameters=parameters)
+                return self._build_bwa_backtrack(
+                    config=config, record=record, prefix=prefix, parameters=parameters
+                )
+            elif algorithm in ("mem", "bwasw"):
+                return self._build_bwa_algorithm(
+                    config=config, record=record, prefix=prefix, parameters=parameters
+                )
             else:
-                raise NotImplementedError('BWA %r not implemented!'
-                                          % (algorithm,))
+                raise NotImplementedError("BWA %r not implemented!" % (algorithm,))
 
         elif self.options["Aligners"]["Program"] == "Bowtie2":
-            return self._build_bowtie2(config=config,
-                                       record=record,
-                                       prefix=prefix,
-                                       parameters=parameters)
+            return self._build_bowtie2(
+                config=config, record=record, prefix=prefix, parameters=parameters
+            )
         else:
-            raise NotImplementedError('Aligner %r not implemented!'
-                                      % (self.options["Aligners"]["Program"],))
+            raise NotImplementedError(
+                "Aligner %r not implemented!" % (self.options["Aligners"]["Program"],)
+            )
 
     def _is_indexing_required(self, prefix):
         """Returns true if indexing lane BAMs is nessesary.
         """
         # Indexes are required for all files when calculating region statistics
-        return bool(prefix.get("RegionsOfInterest")) or \
-            (self.options["Features"]["RealignedBAM"] and not
-             # and for BAMs fed to GATK, but in this case we only use these
-             # indexes if we don't generate PCR filtered or recaled BAMs
-             (self.options["Features"]["mapDamage"] == 'rescale' or
-              self.options["PCRDuplicates"]))
+        return bool(prefix.get("RegionsOfInterest")) or (
+            self.options["Features"]["RealignedBAM"]
+            and not
+            # and for BAMs fed to GATK, but in this case we only use these
+            # indexes if we don't generate PCR filtered or recaled BAMs
+            (
+                self.options["Features"]["mapDamage"] == "rescale"
+                or self.options["PCRDuplicates"]
+            )
+        )
 
     def _set_rg_tags(self, command):
         command.set_option("--rg-id", self.tags["ID"])
@@ -153,25 +145,25 @@ class Lane:
 
     def _build_bwa_backtrack(self, config, prefix, record, parameters):
         if paths.is_paired_end(parameters["input_file"]):
-            return self._build_bwa_backtrack_pe(config=config,
-                                                prefix=prefix,
-                                                record=record,
-                                                parameters=parameters)
+            return self._build_bwa_backtrack_pe(
+                config=config, prefix=prefix, record=record, parameters=parameters
+            )
         else:
-            return self._build_bwa_backtrack_se(config=config,
-                                                prefix=prefix,
-                                                record=record,
-                                                parameters=parameters)
+            return self._build_bwa_backtrack_se(
+                config=config, prefix=prefix, record=record, parameters=parameters
+            )
 
     def _build_bwa_backtrack_aln(self, parameters, input_file, output_file):
         """
         """
-        node = BWABacktrack.customize(input_file=input_file,
-                                      output_file=output_file,
-                                      threads=parameters["threads"],
-                                      prefix=parameters["prefix"],
-                                      reference=parameters["reference"],
-                                      dependencies=parameters["dependencies"])
+        node = BWABacktrack.customize(
+            input_file=input_file,
+            output_file=output_file,
+            threads=parameters["threads"],
+            prefix=parameters["prefix"],
+            reference=parameters["reference"],
+            dependencies=parameters["dependencies"],
+        )
 
         if not self.options["Aligners"]["BWA"]["UseSeed"]:
             node.commands["aln"].set_option("-l", 2 ** 16 - 1)
@@ -188,16 +180,18 @@ class Lane:
         output_file_bam = parameters.pop("output_file")
         output_file_sai = swap_ext(output_file_bam, ".sai")
 
-        aln_node = self._build_bwa_backtrack_aln(parameters=parameters,
-                                                 input_file=input_file_fq,
-                                                 output_file=output_file_sai)
+        aln_node = self._build_bwa_backtrack_aln(
+            parameters=parameters, input_file=input_file_fq, output_file=output_file_sai
+        )
 
-        sam_node = BWASamse.customize(input_file_fq=input_file_fq,
-                                      input_file_sai=output_file_sai,
-                                      output_file=output_file_bam,
-                                      prefix=parameters["prefix"],
-                                      reference=parameters["reference"],
-                                      dependencies=aln_node)
+        sam_node = BWASamse.customize(
+            input_file_fq=input_file_fq,
+            input_file_sai=output_file_sai,
+            output_file=output_file_bam,
+            prefix=parameters["prefix"],
+            reference=parameters["reference"],
+            dependencies=aln_node,
+        )
 
         return self._finalize_nodes(config, prefix, parameters, sam_node)
 
@@ -211,43 +205,45 @@ class Lane:
             input_file = template.format(Pair=mate)
             output_sai = swap_ext(output_bam, "%i.sai" % (mate,))
 
-            aln_node = self._build_bwa_backtrack_aln(parameters=parameters,
-                                                     input_file=input_file,
-                                                     output_file=output_sai)
+            aln_node = self._build_bwa_backtrack_aln(
+                parameters=parameters, input_file=input_file, output_file=output_sai
+            )
 
             aln_files.append(output_sai)
             aln_nodes.append(aln_node)
 
-        sam_node = BWASampe.customize(input_file_sai_1=aln_files[0],
-                                      input_file_sai_2=aln_files[1],
-                                      input_file_fq_1=template.format(Pair=1),
-                                      input_file_fq_2=template.format(Pair=2),
-                                      output_file=output_bam,
-                                      prefix=parameters['prefix'],
-                                      reference=parameters["reference"],
-                                      dependencies=aln_nodes)
+        sam_node = BWASampe.customize(
+            input_file_sai_1=aln_files[0],
+            input_file_sai_2=aln_files[1],
+            input_file_fq_1=template.format(Pair=1),
+            input_file_fq_2=template.format(Pair=2),
+            output_file=output_bam,
+            prefix=parameters["prefix"],
+            reference=parameters["reference"],
+            dependencies=aln_nodes,
+        )
 
         return self._finalize_nodes(config, prefix, parameters, sam_node)
 
     def _build_bwa_algorithm(self, config, prefix, record, parameters):
         if self.options["QualityOffset"] != 33:
-            raise MakefileError("Mapping with BWA using the %r algorithm "
-                                "currently does not support QualityOffsets "
-                                "other than 33; please convert your FASTQ "
-                                "if you wish to proceed.")
+            raise MakefileError(
+                "Mapping with BWA using the %r algorithm "
+                "currently does not support QualityOffsets "
+                "other than 33; please convert your FASTQ "
+                "if you wish to proceed."
+            )
 
         self._set_pe_input_files(parameters)
         node = BWAAlgorithmNode.customize(**parameters)
 
-        apply_options(node.commands["aln"],
-                      self.options["Aligners"]["BWA"])
+        apply_options(node.commands["aln"], self.options["Aligners"]["BWA"])
 
         return self._finalize_nodes(config, prefix, parameters, node)
 
     def _build_bowtie2(self, config, prefix, record, parameters):
         self._set_pe_input_files(parameters)
-        node = Bowtie2Node.customize(threads=config.bowtie2_max_threads,
-                                     **parameters)
+        node = Bowtie2Node.customize(threads=config.bowtie2_max_threads, **parameters)
 
         command = node.commands["aln"]
         if self.options["QualityOffset"] == 33:
@@ -263,16 +259,18 @@ class Lane:
         self._set_rg_tags(node.commands["convert"])
 
         min_quality = self.options["Aligners"]["BWA"]["MinQuality"]
-        node.commands["convert"].set_option('-q', min_quality)
+        node.commands["convert"].set_option("-q", min_quality)
 
         if self.options["Aligners"]["BWA"]["FilterUnmappedReads"]:
-            node.commands["convert"].set_option('-F', "0x4")
+            node.commands["convert"].set_option("-F", "0x4")
 
         index_required = self._is_indexing_required(prefix)
-        validated_node = index_and_validate_bam(config=config,
-                                                prefix=prefix,
-                                                node=node.build_node(),
-                                                create_index=index_required)
+        validated_node = index_and_validate_bam(
+            config=config,
+            prefix=prefix,
+            node=node.build_node(),
+            create_index=index_required,
+        )
 
         return validated_node
 

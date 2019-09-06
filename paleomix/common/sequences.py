@@ -26,19 +26,14 @@ import itertools
 
 
 # Pairs of complementary bases and ambigious basees
-_COMPL = [ "AT", "CG",
-           "NN", "RY",
-           "KM", "SS",
-           "WW", "BV",
-           "DH", "XX" ]
+_COMPL = ["AT", "CG", "NN", "RY", "KM", "SS", "WW", "BV", "DH", "XX"]
 _COMPL_TABLE = ["N"] * 256
-for (_a, _b) in _COMPL :
+for (_a, _b) in _COMPL:
     # Complement both upper/lower-case bases
     for _func in (str.upper, str.lower):
         _COMPL_TABLE[ord(_func(_a))] = _func(_b)
         _COMPL_TABLE[ord(_func(_b))] = _func(_a)
 _COMPL_TABLE = "".join(_COMPL_TABLE)
-
 
 
 # Table of nt codes (IUPAC codes) used to encode (ambigious) bases:
@@ -61,7 +56,8 @@ NT_CODES = [
     ["D", "AGT"],
     ["H", "ACT"],
     ["V", "ACG"],
-    ["N", "ACGT"]]
+    ["N", "ACGT"],
+]
 
 _NT_CODES_TABLE = {}
 for (_abr, _nts) in NT_CODES:
@@ -73,26 +69,73 @@ NT_CODES = dict(NT_CODES)
 
 CODONS = {
     "+": {
-        "TTT": "Phe",  "TCT": "Ser",  "TAT": "Tyr",  "TGT": "Cys",
-        "TTC": "Phe",  "TCC": "Ser",  "TAC": "Tyr",  "TGC": "Cys",
-        "TTA": "Leu",  "TCA": "Ser",  "TAA": "Stop", "TGA": "Stop",
-        "TTG": "Leu",  "TCG": "Ser",  "TAG": "Stop", "TGG": "Trp",
-
-        "CTT": "Leu",  "CCT": "Pro",  "CAT": "His",  "CGT": "Arg",
-        "CTC": "Leu",  "CCC": "Pro",  "CAC": "His",  "CGC": "Arg",
-        "CTA": "Leu",  "CCA": "Pro",  "CAA": "Gln",  "CGA": "Arg",
-        "CTG": "Leu",  "CCG": "Pro",  "CAG": "Gln",  "CGG": "Arg",
-
-        "ATT": "Ile",  "ACT": "Thr",  "AAT": "Asn",  "AGT": "Ser",
-        "ATC": "Ile",  "ACC": "Thr",  "AAC": "Asn",  "AGC": "Ser",
-        "ATA": "Ile",  "ACA": "Thr",  "AAA": "Lys",  "AGA": "Arg",
-        "ATG": "Met",  "ACG": "Thr",  "AAG": "Lys",  "AGG": "Arg",
-
-        "GTT": "Val",  "GCT": "Ala",  "GAT": "Asp",  "GGT": "Gly",
-        "GTC": "Val",  "GCC": "Ala",  "GAC": "Asp",  "GGC": "Gly",
-        "GTA": "Val",  "GCA": "Ala",  "GAA": "Glu",  "GGA": "Gly",
-        "GTG": "Val",  "GCG": "Ala",  "GAG": "Glu",  "GGG": "Gly"},
-    "-": {}}
+        "TTT": "Phe",
+        "TCT": "Ser",
+        "TAT": "Tyr",
+        "TGT": "Cys",
+        "TTC": "Phe",
+        "TCC": "Ser",
+        "TAC": "Tyr",
+        "TGC": "Cys",
+        "TTA": "Leu",
+        "TCA": "Ser",
+        "TAA": "Stop",
+        "TGA": "Stop",
+        "TTG": "Leu",
+        "TCG": "Ser",
+        "TAG": "Stop",
+        "TGG": "Trp",
+        "CTT": "Leu",
+        "CCT": "Pro",
+        "CAT": "His",
+        "CGT": "Arg",
+        "CTC": "Leu",
+        "CCC": "Pro",
+        "CAC": "His",
+        "CGC": "Arg",
+        "CTA": "Leu",
+        "CCA": "Pro",
+        "CAA": "Gln",
+        "CGA": "Arg",
+        "CTG": "Leu",
+        "CCG": "Pro",
+        "CAG": "Gln",
+        "CGG": "Arg",
+        "ATT": "Ile",
+        "ACT": "Thr",
+        "AAT": "Asn",
+        "AGT": "Ser",
+        "ATC": "Ile",
+        "ACC": "Thr",
+        "AAC": "Asn",
+        "AGC": "Ser",
+        "ATA": "Ile",
+        "ACA": "Thr",
+        "AAA": "Lys",
+        "AGA": "Arg",
+        "ATG": "Met",
+        "ACG": "Thr",
+        "AAG": "Lys",
+        "AGG": "Arg",
+        "GTT": "Val",
+        "GCT": "Ala",
+        "GAT": "Asp",
+        "GGT": "Gly",
+        "GTC": "Val",
+        "GCC": "Ala",
+        "GAC": "Asp",
+        "GGC": "Gly",
+        "GTA": "Val",
+        "GCA": "Ala",
+        "GAA": "Glu",
+        "GGA": "Gly",
+        "GTG": "Val",
+        "GCG": "Ala",
+        "GAG": "Glu",
+        "GGG": "Gly",
+    },
+    "-": {},
+}
 
 
 def complement(sequence):
@@ -122,10 +165,12 @@ def encode_genotype(nucleotides):
     try:
         return _NT_CODES_TABLE[frozenset(nucleotides)]
     except KeyError:
-        raise ValueError("Invalid input for 'encode_genotype': %s" % (repr(nucleotides), ))
+        raise ValueError(
+            "Invalid input for 'encode_genotype': %s" % (repr(nucleotides),)
+        )
 
 
-def split(sequence, split_by = "123"):
+def split(sequence, split_by="123"):
     """Splits a sequence by position, as specified by the 'split_by' parameter. By
     default, the function will split by codon position, and return a dictionary
     containing the keys '1', '2' and '3'.

@@ -25,43 +25,42 @@ import stat
 import errno
 
 import nose
-from nose.tools import \
-    assert_is, \
-    assert_in, \
-    assert_equal, \
-    assert_raises
+from nose.tools import assert_is, assert_in, assert_equal, assert_raises
 
 import paleomix
-from paleomix.common.testing import \
-    with_temp_folder, \
-    Monkeypatch, \
-    SetWorkingDirectory, \
-    set_file_contents, \
-    get_file_contents
+from paleomix.common.testing import (
+    with_temp_folder,
+    Monkeypatch,
+    SetWorkingDirectory,
+    set_file_contents,
+    get_file_contents,
+)
 
-from paleomix.common.fileutils import \
-    add_postfix, \
-    swap_ext, \
-    reroot_path, \
-    create_temp_dir, \
-    missing_files, \
-    is_executable, \
-    which_executable, \
-    executable_exists, \
-    missing_executables, \
-    make_dirs, \
-    move_file, \
-    copy_file, \
-    open_ro, \
-    try_remove, \
-    try_rmtree, \
-    describe_files, \
-    describe_paired_files
+from paleomix.common.fileutils import (
+    add_postfix,
+    swap_ext,
+    reroot_path,
+    create_temp_dir,
+    missing_files,
+    is_executable,
+    which_executable,
+    executable_exists,
+    missing_executables,
+    make_dirs,
+    move_file,
+    copy_file,
+    open_ro,
+    try_remove,
+    try_rmtree,
+    describe_files,
+    describe_paired_files,
+)
 
 
 ###############################################################################
 ###############################################################################
 # Setup timestamps for test files
+
 
 def test_dir():
     return os.path.dirname(os.path.dirname(__file__))
@@ -72,10 +71,12 @@ def test_file(*args):
 
 
 def setup_module():
-    timestamps = {test_file("timestamp_a_older"): 1000190760,
-                  test_file("timestamp_b_older"): 1000190760,
-                  test_file("timestamp_a_younger"): 1120719000,
-                  test_file("timestamp_b_younger"): 1120719000}
+    timestamps = {
+        test_file("timestamp_a_older"): 1000190760,
+        test_file("timestamp_b_older"): 1000190760,
+        test_file("timestamp_a_younger"): 1120719000,
+        test_file("timestamp_b_younger"): 1120719000,
+    }
 
     for filename, timestamp in timestamps.items():
         # Set atime and mtime
@@ -85,6 +86,7 @@ def setup_module():
 ###############################################################################
 ###############################################################################
 # Tests for 'add_postfix'
+
 
 def test_add_postfix__no_postfix():
     assert_equal(add_postfix("name.foo", ""), "name.foo")
@@ -113,6 +115,7 @@ def test_add_postfix__no_ext__underscore_postfix():
 ###############################################################################
 ###############################################################################
 # Tests for 'swap_ext'
+
 
 def test_swap_ext__has_ext_vs_empty_ext():
     assert_equal(swap_ext("name.foo", ""), "name")
@@ -162,6 +165,7 @@ def test_swap_ext__dot_ext_vs_new_dot_ext():
 ###############################################################################
 # Tests for 'reroot_path'
 
+
 def test_reroot_path__empty_root():
     assert_equal(reroot_path("", "/etc/apt/sources.list"), "sources.list")
 
@@ -171,48 +175,41 @@ def test_reroot_path__empty_path():
 
 
 def test_reroot_path__abs_abs__wo_final_dash():
-    assert_equal(reroot_path("/etc/apt", "/tmp/sources.list"),
-                 "/etc/apt/sources.list")
+    assert_equal(reroot_path("/etc/apt", "/tmp/sources.list"), "/etc/apt/sources.list")
 
 
 def test_reroot_path__abs_abs__w_final_dash():
-    assert_equal(reroot_path("/etc/apt/", "/tmp/sources.list"),
-                 "/etc/apt/sources.list")
+    assert_equal(reroot_path("/etc/apt/", "/tmp/sources.list"), "/etc/apt/sources.list")
 
 
 def test_reroot_path__abs_rel__wo_final_dash():
-    assert_equal(reroot_path("/etc/apt", "tmp/sources.list"),
-                 "/etc/apt/sources.list")
+    assert_equal(reroot_path("/etc/apt", "tmp/sources.list"), "/etc/apt/sources.list")
 
 
 def test_reroot_path__abs_rel__w_final_dash():
-    assert_equal(reroot_path("/etc/apt/", "tmp/sources.list"),
-                 "/etc/apt/sources.list")
+    assert_equal(reroot_path("/etc/apt/", "tmp/sources.list"), "/etc/apt/sources.list")
 
 
 def test_reroot_path__rel_abs__wo_final_dash():
-    assert_equal(reroot_path("etc/apt", "/tmp/sources.list"),
-                 "etc/apt/sources.list")
+    assert_equal(reroot_path("etc/apt", "/tmp/sources.list"), "etc/apt/sources.list")
 
 
 def test_reroot_path__rel_abs__w_final_dash():
-    assert_equal(reroot_path("etc/apt/", "/tmp/sources.list"),
-                 "etc/apt/sources.list")
+    assert_equal(reroot_path("etc/apt/", "/tmp/sources.list"), "etc/apt/sources.list")
 
 
 def test_reroot_path__rel_rel__wo_final_dash():
-    assert_equal(reroot_path("etc/apt", "tmp/sources.list"),
-                 "etc/apt/sources.list")
+    assert_equal(reroot_path("etc/apt", "tmp/sources.list"), "etc/apt/sources.list")
 
 
 def test_reroot_path__rel_rel__w_final_dash():
-    assert_equal(reroot_path("etc/apt/", "tmp/sources.list"),
-                 "etc/apt/sources.list")
+    assert_equal(reroot_path("etc/apt/", "tmp/sources.list"), "etc/apt/sources.list")
 
 
 ###############################################################################
 ###############################################################################
 # Tests for 'create_temp_dir'
+
 
 @with_temp_folder
 def test_create_temp_dir__create(temp_folder):
@@ -269,18 +266,19 @@ def test_create_temp_dir__permission_denied():
 ###############################################################################
 # Tests for 'missing_files'
 
+
 def test_missing_files__file_exists():
     assert_equal(missing_files([test_file("empty_file_1")]), [])
 
 
 def test_missing_files__file_doesnt_exist():
-    assert_equal(missing_files([test_file("missing_file_1")]),
-                 [test_file("missing_file_1")])
+    assert_equal(
+        missing_files([test_file("missing_file_1")]), [test_file("missing_file_1")]
+    )
 
 
 def test_missing_files__mixed_files():
-    files = [test_file("missing_file_1"),
-             test_file("empty_file_1")]
+    files = [test_file("missing_file_1"), test_file("empty_file_1")]
     result = [test_file("missing_file_1")]
 
     assert_equal(missing_files(files), result)
@@ -289,6 +287,7 @@ def test_missing_files__mixed_files():
 ###############################################################################
 ###############################################################################
 # Tests for 'is_executable'
+
 
 def test_is_executable__full_path__is_executable():
     assert is_executable("/bin/ls")
@@ -314,6 +313,7 @@ def test_is_executable__rel_path__is_non_executable():
 ###############################################################################
 # Tests for 'which_executable'
 
+
 def test_which_executable__executable():
     assert_equal("/bin/ls", which_executable("ls"))
 
@@ -323,51 +323,50 @@ def test_which_executable__non_executable():
 
 
 def test_which_executable__executable__but_no_path():
-    path = os.environ.pop('PATH')
+    path = os.environ.pop("PATH")
     try:
         assert_is(None, which_executable("ls"))
     finally:
-        os.environ['PATH'] = path
+        os.environ["PATH"] = path
 
 
 def test_which_executable__executable__but_empty_path():
-    path = os.environ.pop('PATH')
+    path = os.environ.pop("PATH")
     try:
-        os.environ['PATH'] = ""
+        os.environ["PATH"] = ""
         assert_is(None, which_executable("ls"))
     finally:
-        os.environ['PATH'] = path
+        os.environ["PATH"] = path
 
 
 def test_which_executable__executable__by_path_order_1():
-    path = os.environ.pop('PATH')
+    path = os.environ.pop("PATH")
     try:
         path_1 = test_dir()
         path_2 = os.path.join(os.getcwd(), path_1)
 
-        os.environ['PATH'] = ":".join((path_1, path_2))
-        assert_equal(os.path.join(path_1, "setup.sh"),
-                     which_executable("setup.sh"))
+        os.environ["PATH"] = ":".join((path_1, path_2))
+        assert_equal(os.path.join(path_1, "setup.sh"), which_executable("setup.sh"))
     finally:
-        os.environ['PATH'] = path
+        os.environ["PATH"] = path
 
 
 def test_which_executable__executable__by_path_order_2():
-    path = os.environ.pop('PATH')
+    path = os.environ.pop("PATH")
     try:
         path_1 = test_dir()
         path_2 = os.path.join(os.getcwd(), path_1)
 
-        os.environ['PATH'] = ":".join((path_2, path_1))
-        assert_equal(os.path.join(path_2, "setup.sh"),
-                     which_executable("setup.sh"))
+        os.environ["PATH"] = ":".join((path_2, path_1))
+        assert_equal(os.path.join(path_2, "setup.sh"), which_executable("setup.sh"))
     finally:
-        os.environ['PATH'] = path
+        os.environ["PATH"] = path
 
 
 ###############################################################################
 ###############################################################################
 # Tests for 'executable_exists'
+
 
 def test_executable_exists__executable():
     assert executable_exists("ls")
@@ -397,6 +396,7 @@ def test_executable_exists__rel_path__is_non_executable():
 ###############################################################################
 # Tests for 'missing_executables'
 
+
 def test_missing_executables__executable():
     assert_equal(missing_executables(["ls"]), [])
 
@@ -412,6 +412,7 @@ def test_missing_executables__mixed():
 ###############################################################################
 ###############################################################################
 # Tests for 'make_dirs'
+
 
 @with_temp_folder
 def test_make_dirs__create_dir(temp_folder):
@@ -485,6 +486,7 @@ def test_make_dirs__empty_directory():
 ###############################################################################
 ###############################################################################
 # Tests for 'move_file'
+
 
 @with_temp_folder
 def test_move_file__simple_move(temp_folder):
@@ -579,6 +581,7 @@ def test_move_file__enoent_reraised_if_not_due_to_missing_folder():
 ###############################################################################
 # Tests for 'copy_file'
 
+
 @with_temp_folder
 def test_copy_file__simple_copy(temp_folder):
     file_1 = os.path.join(temp_folder, "file_1")
@@ -663,31 +666,33 @@ def test_copy_file__enoent_reraised_if_not_due_to_missing_folder():
 
 
 def test_open_ro__uncompressed():
-    handle = open_ro(test_file('fasta_file.fasta'))
+    handle = open_ro(test_file("fasta_file.fasta"))
     try:
-        assert_equal(handle.read(),
-                     '>This_is_FASTA!\nACGTN\n'
-                     '>This_is_ALSO_FASTA!\nCGTNA\n')
+        assert_equal(
+            handle.read(), ">This_is_FASTA!\nACGTN\n" ">This_is_ALSO_FASTA!\nCGTNA\n"
+        )
     finally:
         handle.close()
 
 
 def test_open_ro__gz():
-    handle = open_ro(test_file('fasta_file.fasta.gz'))
+    handle = open_ro(test_file("fasta_file.fasta.gz"))
     try:
-        assert_equal(handle.read(),
-                     '>This_is_GZipped_FASTA!\nACGTN\n'
-                     '>This_is_ALSO_GZipped_FASTA!\nCGTNA\n')
+        assert_equal(
+            handle.read(),
+            ">This_is_GZipped_FASTA!\nACGTN\n" ">This_is_ALSO_GZipped_FASTA!\nCGTNA\n",
+        )
     finally:
         handle.close()
 
 
 def test_open_ro__bz2():
-    handle = open_ro(test_file('fasta_file.fasta.bz2'))
+    handle = open_ro(test_file("fasta_file.fasta.bz2"))
     try:
-        assert_equal(handle.read(),
-                     '>This_is_BZ_FASTA!\nCGTNA\n'
-                     '>This_is_ALSO_BZ_FASTA!\nACGTN\n')
+        assert_equal(
+            handle.read(),
+            ">This_is_BZ_FASTA!\nCGTNA\n" ">This_is_ALSO_BZ_FASTA!\nACGTN\n",
+        )
     finally:
         handle.close()
 
@@ -725,6 +730,7 @@ def test_open_ro__close_handle_on_error():
 ###############################################################################
 # Tests for 'try_remove'
 
+
 @with_temp_folder
 def test_try_remove(temp_folder):
     fpath = os.path.join(temp_folder, "test.txt")
@@ -749,6 +755,7 @@ def test_try_remove__non_file(temp_folder):
 ###############################################################################
 # Tests for 'try_rmtree'
 
+
 @with_temp_folder
 def test_try_rmtree(temp_folder):
     fpath = os.path.join(temp_folder, "testdir")
@@ -768,6 +775,7 @@ def test_try_treedir__missing(temp_folder):
 ###############################################################################
 ###############################################################################
 # Tests for 'describe_files'
+
 
 def test_describe_files__no_files():
     assert_equal(describe_files(()), "No files")
@@ -820,6 +828,7 @@ def test_describe_files__none_files():
 ###############################################################################
 ###############################################################################
 # Tests for 'describe_paired_files'
+
 
 def test_describe_paired_files__single_file():
     fpath = "/var/foo/bar"

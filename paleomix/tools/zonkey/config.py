@@ -29,13 +29,9 @@ import pysam
 
 import paleomix
 
-from paleomix.common.console import \
-    print_err, \
-    print_info
+from paleomix.common.console import print_err, print_info
 
-from paleomix.config import \
-    PerHostValue, \
-    PerHostConfig
+from paleomix.config import PerHostValue, PerHostConfig
 
 import paleomix.common.fileutils as fileutils
 import paleomix.tools.zonkey.database as database
@@ -97,18 +93,21 @@ def parse_run_config(config, args):
     try:
         config.database = database.ZonkeyDB(config.tablefile)
     except database.ZonkeyDBError as error:
-        print_err("ERROR reading database %r: %s"
-                  % (config.tablefile, error))
+        print_err("ERROR reading database %r: %s" % (config.tablefile, error))
         return
 
     known_samples = set(config.database.samples) | set(("Sample",))
     unknown_samples = set(config.treemix_outgroup) - known_samples
     if unknown_samples:
-        print_err("ERROR: Argument --treemix-outgroup includes unknown "
-                  "sample(s): %s; known samples are %s. Note that "
-                  "names are case-sensitive."
-                  % (", ".join(map(repr, sorted(unknown_samples))),
-                     ", ".join(map(repr, sorted(known_samples)))))
+        print_err(
+            "ERROR: Argument --treemix-outgroup includes unknown "
+            "sample(s): %s; known samples are %s. Note that "
+            "names are case-sensitive."
+            % (
+                ", ".join(map(repr, sorted(unknown_samples))),
+                ", ".join(map(repr, sorted(known_samples))),
+            )
+        )
         return
 
     if config.command in ("mito", "example"):
@@ -130,8 +129,7 @@ def parse_run_config(config, args):
             # Called as either of
             #   zonkey run <SampleDB> <nuclear.bam>
             #   zonkey run <SampleDB> <mitochondrial.bam>
-            config.samples = {"-": {"Root": config.destination,
-                                    "Files": [filename]}}
+            config.samples = {"-": {"Root": config.destination, "Files": [filename]}}
         else:
             config.multisample = True
             if not _read_sample_table(config, filename):
@@ -158,8 +156,9 @@ def parse_run_config(config, args):
                 # Called as either of
                 #   zonkey run <SampleDB> <nuclear.bam>
                 #   zonkey run <SampleDB> <mitochondrial.bam>
-                config.samples = {"-": {"Root": config.destination,
-                                        "Files": [filename]}}
+                config.samples = {
+                    "-": {"Root": config.destination, "Files": [filename]}
+                }
             else:
                 config.multisample = True
                 if not _read_sample_table(config, filename):
@@ -169,8 +168,9 @@ def parse_run_config(config, args):
             config.destination = root
             config.samples = {"-": {"Root": root, "Files": args[1:-1]}}
     else:
-        raise RuntimeError("Unhandled number of args in parse_config: %i\n"
-                           % (len(args),))
+        raise RuntimeError(
+            "Unhandled number of args in parse_config: %i\n" % (len(args),)
+        )
 
     # Identify (mito or nuc?) and validate BAM files provided by user
     if not _process_samples(config):
@@ -203,8 +203,7 @@ def _process_samples(config):
         for filename in info.pop("Files"):
             filetype = config.database.validate_bam(filename)
             if not filetype:
-                print_err("ERROR: File is not a valid BAM file: %r"
-                          % (filename,))
+                print_err("ERROR: File is not a valid BAM file: %r" % (filename,))
                 return False
 
             if filetype.is_nuclear and filetype.is_mitochondrial:
@@ -212,9 +211,11 @@ def _process_samples(config):
                     print_err("ERROR: Two nuclear BAMs specified!")
                     return False
                 elif "Mito" in files:
-                    print_err("WARNING: Nuclear + mitochondrial BAM, and "
-                              "mitochondrial BAM specified; the mitochondrial "
-                              "genome in the first BAM will not be used!")
+                    print_err(
+                        "WARNING: Nuclear + mitochondrial BAM, and "
+                        "mitochondrial BAM specified; the mitochondrial "
+                        "genome in the first BAM will not be used!"
+                    )
 
                 files["Nuc"] = filename
                 files.setdefault("Mito", filename)
@@ -231,8 +232,10 @@ def _process_samples(config):
 
                 files["Mito"] = filename
             else:
-                print_err("ERROR: BAM does not contain usable nuclear "
-                          "or mitochondrial contigs: %r" % (filename,))
+                print_err(
+                    "ERROR: BAM does not contain usable nuclear "
+                    "or mitochondrial contigs: %r" % (filename,)
+                )
                 return False
 
         config.samples[name]["Files"] = files
@@ -255,31 +258,38 @@ def _read_sample_table(config, filename):
             if not line.strip() or line.lstrip().startswith("#"):
                 continue
 
-            fields = [_f for _f in map(str.strip, line.split('\t')) if _f]
+            fields = [_f for _f in map(str.strip, line.split("\t")) if _f]
             if len(fields) not in (2, 3):
-                print_err("Error reading sample table (%r) at line %i: "
-                          "Expected 2 or 3 columns, found %i; please "
-                          "correct file before continuing."
-                          % (filename, linenum, len(fields)))
+                print_err(
+                    "Error reading sample table (%r) at line %i: "
+                    "Expected 2 or 3 columns, found %i; please "
+                    "correct file before continuing." % (filename, linenum, len(fields))
+                )
                 return
 
             name = fields[0]
             invalid_letters = frozenset(name) - valid_characters
             if invalid_letters:
-                print_err("Error reading sample table (%r) at line %i: "
-                          "Sample name contains illegal character(s). Only "
-                          "letters, numbers, and '-', '_', and '.' are "
-                          "allowed, but found %r in name %r "
-                          % (filename, linenum, "".join(invalid_letters), name))
+                print_err(
+                    "Error reading sample table (%r) at line %i: "
+                    "Sample name contains illegal character(s). Only "
+                    "letters, numbers, and '-', '_', and '.' are "
+                    "allowed, but found %r in name %r "
+                    % (filename, linenum, "".join(invalid_letters), name)
+                )
                 return
             elif name in samples:
-                print_err("Duplicate sample name found in sample table "
-                          "(%r) at line %i: %r. All sample names must "
-                          "be unique!" % (filename, linenum, name))
+                print_err(
+                    "Duplicate sample name found in sample table "
+                    "(%r) at line %i: %r. All sample names must "
+                    "be unique!" % (filename, linenum, name)
+                )
                 return
 
-            samples[name] = {"Root": os.path.join(config.destination, name),
-                             "Files": fields[1:]}
+            samples[name] = {
+                "Root": os.path.join(config.destination, name),
+                "Files": fields[1:],
+            }
 
     return True
 
@@ -289,31 +299,47 @@ def _parse_arguments(argv):
 
     usage_str = "%prog <command> [options] <SampleDB> <bam/sam> [destination]"
     version_str = "%%prog v%s" % (paleomix.__version__,)
-    parser = optparse.OptionParser(usage=usage_str,
-                                   version=version_str)
+    parser = optparse.OptionParser(usage=usage_str, version=version_str)
 
     group = optparse.OptionGroup(parser, "Program options")
-    group.add_option("--downsample-to",
-                     type=int, default=PerHostValue(1000000),
-                     help="Number of reads to use for analyses; if 0, no "
-                          "downsampling is performed [default: %default]")
-    group.add_option("--admixture-replicates",
-                     type=int, default=PerHostValue(1),
-                     help="Number of admixture replicates to run, before "
-                          "the result with the highest likelihood [%default]")
-    group.add_option("--treemix-k", type=int, default=PerHostValue(0),
-                     help="Value passed to treemix's -k option; number of "
-                          "SNPs per block for estimation of the covariance "
-                          "matrix. If set to 0, a value will be estimated "
-                          "assuming an even distribution of SNPs [%default]")
-    group.add_option("--treemix-outgroup", default="",
-                     help="Comma-seperated list of samples to use as the "
-                          "outgroup when running TreeMix; note that these "
-                          "must form a monophyletic clade, or TreeMix will "
-                          "not execute.")
+    group.add_option(
+        "--downsample-to",
+        type=int,
+        default=PerHostValue(1000000),
+        help="Number of reads to use for analyses; if 0, no "
+        "downsampling is performed [default: %default]",
+    )
+    group.add_option(
+        "--admixture-replicates",
+        type=int,
+        default=PerHostValue(1),
+        help="Number of admixture replicates to run, before "
+        "the result with the highest likelihood [%default]",
+    )
+    group.add_option(
+        "--treemix-k",
+        type=int,
+        default=PerHostValue(0),
+        help="Value passed to treemix's -k option; number of "
+        "SNPs per block for estimation of the covariance "
+        "matrix. If set to 0, a value will be estimated "
+        "assuming an even distribution of SNPs [%default]",
+    )
+    group.add_option(
+        "--treemix-outgroup",
+        default="",
+        help="Comma-seperated list of samples to use as the "
+        "outgroup when running TreeMix; note that these "
+        "must form a monophyletic clade, or TreeMix will "
+        "not execute.",
+    )
 
-    group.add_option("--admixture-only", help=optparse.SUPPRESS_HELP,
-                     default=False, action="store_true")
+    group.add_option(
+        "--admixture-only",
+        help=optparse.SUPPRESS_HELP,
+        default=False,
+        action="store_true",
+    )
     group.add_option("--indep", nargs=3, help=optparse.SUPPRESS_HELP)
     group.add_option("--indep-pairwise", nargs=3, help=optparse.SUPPRESS_HELP)
     group.add_option("--indep-pairphase", nargs=3, help=optparse.SUPPRESS_HELP)
@@ -323,23 +349,41 @@ def _parse_arguments(argv):
     paleomix.logger.add_optiongroup(parser, default=PerHostValue("warning"))
 
     group = optparse.OptionGroup(parser, "Pipeline")
-    group.add_option("--dry-run", action="store_true", default=False,
-                     help="If passed, only a dry-run in performed, the "
-                          "dependency tree is printed, and no tasks are "
-                          "executed.")
-    group.add_option("--max-threads",
-                     type=int, default=PerHostValue(1),
-                     help="Maximum number of threads to use [%default]")
-    group.add_option("--list-input-files", action="store_true", default=False,
-                     help="List all input files used by pipeline for the "
-                          "makefile(s), excluding any generated by the "
-                          "pipeline itself.")
-    group.add_option("--list-output-files", action="store_true", default=False,
-                     help="List all output files generated by pipeline for "
-                          "the makefile(s).")
-    group.add_option("--list-executables", action="store_true", default=False,
-                     help="List all executables required by the pipeline, "
-                          "with version requirements (if any).")
+    group.add_option(
+        "--dry-run",
+        action="store_true",
+        default=False,
+        help="If passed, only a dry-run in performed, the "
+        "dependency tree is printed, and no tasks are "
+        "executed.",
+    )
+    group.add_option(
+        "--max-threads",
+        type=int,
+        default=PerHostValue(1),
+        help="Maximum number of threads to use [%default]",
+    )
+    group.add_option(
+        "--list-input-files",
+        action="store_true",
+        default=False,
+        help="List all input files used by pipeline for the "
+        "makefile(s), excluding any generated by the "
+        "pipeline itself.",
+    )
+    group.add_option(
+        "--list-output-files",
+        action="store_true",
+        default=False,
+        help="List all output files generated by pipeline for " "the makefile(s).",
+    )
+    group.add_option(
+        "--list-executables",
+        action="store_true",
+        default=False,
+        help="List all executables required by the pipeline, "
+        "with version requirements (if any).",
+    )
     parser.add_option_group(group)
 
     config, args = per_host_cfg.parse_args(parser, argv)
@@ -350,15 +394,16 @@ def _parse_arguments(argv):
 
     if config.indep:
         config.indep_params = config.indep
-        config.indep = 'indep'
+        config.indep = "indep"
     elif config.indep_pairwise:
         config.indep_params = config.indep_pairwise
-        config.indep = 'indep-pairwise'
+        config.indep = "indep-pairwise"
     elif config.indep_pairphase:
         config.indep_params = config.indep_pairphase
-        config.indep = 'indep-pairphase'
+        config.indep = "indep-pairphase"
 
-    config.treemix_outgroup \
-        = tuple([_f for _f in sorted(config.treemix_outgroup.split(",")) if _f])
+    config.treemix_outgroup = tuple(
+        [_f for _f in sorted(config.treemix_outgroup.split(",")) if _f]
+    )
 
     return config, args

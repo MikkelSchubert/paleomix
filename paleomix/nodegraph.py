@@ -27,11 +27,8 @@ import os
 
 import paleomix.common.versions as versions
 
-from paleomix.common.fileutils import \
-    reroot_path, \
-    missing_executables
-from paleomix.common.utilities import \
-    safe_coerce_to_frozenset
+from paleomix.common.fileutils import reroot_path, missing_executables
+from paleomix.common.utilities import safe_coerce_to_frozenset
 
 
 # Max number of error messages of each type
@@ -108,8 +105,7 @@ class NodeGraphError(RuntimeError):
 
 class NodeGraph:
     NUMBER_OF_STATES = 6
-    DONE, RUNNING, RUNABLE, QUEUED, OUTDATED, ERROR \
-        = range(NUMBER_OF_STATES)
+    DONE, RUNNING, RUNABLE, QUEUED, OUTDATED, ERROR = range(NUMBER_OF_STATES)
 
     def __init__(self, nodes, cache_factory=FileStatusCache):
         self._cache_factory = cache_factory
@@ -121,7 +117,11 @@ class NodeGraph:
         self._reverse_dependencies = collections.defaultdict(set)
         self._collect_reverse_dependencies(nodes, self._reverse_dependencies, set())
         self._intersections = {}
-        self._top_nodes = [node for (node, rev_deps) in self._reverse_dependencies.items() if not rev_deps]
+        self._top_nodes = [
+            node
+            for (node, rev_deps) in self._reverse_dependencies.items()
+            if not rev_deps
+        ]
 
         self._logger.info("Checking file dependencies")
         self._check_file_dependencies(self._reverse_dependencies)
@@ -191,9 +191,9 @@ class NodeGraph:
 
     def _notify_state_observers(self, node, _old_state, new_state):
         if new_state == self.RUNNING:
-            self._logger.info('Started running node %s', node)
+            self._logger.info("Started running node %s", node)
         elif new_state == self.DONE:
-            self._logger.info('Finished running node %s', node)
+            self._logger.info("Finished running node %s", node)
 
     def _calculate_intersections(self, for_node):
         def count_nodes(node, counts):
@@ -232,11 +232,13 @@ class NodeGraph:
                 # outdated, since the input-files should be re-generated, but
                 # obviously it is not possible to run it at this point.
                 missing = cache.missing_files(node.input_files)
-                self._logger.error("ERROR: Input file(s) missing for node; "
-                                   "may have been moved while the pipeline "
-                                   "was running. Cannot proceed:\n"
-                                   "    Node = %s\n    Files = %s\n"
-                                   % (node, "\n            ".join(missing)))
+                self._logger.error(
+                    "ERROR: Input file(s) missing for node; "
+                    "may have been moved while the pipeline "
+                    "was running. Cannot proceed:\n"
+                    "    Node = %s\n    Files = %s\n"
+                    % (node, "\n            ".join(missing))
+                )
                 state = NodeGraph.ERROR
             elif self.is_outdated(node, cache):
                 state = NodeGraph.RUNABLE
@@ -284,8 +286,10 @@ class NodeGraph:
 
         missing_exec = missing_executables(exec_filenames)
         if missing_exec:
-            raise NodeGraphError("Required executables are missing:\n\t%s"
-                                 % ("\n\t".join(sorted(missing_exec))))
+            raise NodeGraphError(
+                "Required executables are missing:\n\t%s"
+                % ("\n\t".join(sorted(missing_exec)))
+            )
 
     def _check_version_requirements(self, nodes):
         exec_requirements = set()
@@ -295,6 +299,7 @@ class NodeGraph:
         def _key_func(reqobj):
             # Sort priority in decreasing order, name in increasing order
             return (-reqobj.priority, reqobj.name)
+
         exec_requirements = list(sorted(exec_requirements, key=_key_func))
 
         try:
@@ -306,8 +311,9 @@ class NodeGraph:
         except versions.VersionRequirementError as error:
             raise NodeGraphError(error)
         except OSError as error:
-            raise NodeGraphError("Could not check version for %s:\n\t%s"
-                                 % (requirement.name, error))
+            raise NodeGraphError(
+                "Could not check version for %s:\n\t%s" % (requirement.name, error)
+            )
 
     @classmethod
     def _check_file_dependencies(cls, nodes):
@@ -323,9 +329,17 @@ class NodeGraph:
 
         max_messages = list(range(_MAX_ERROR_MESSAGES))
         error_messages = []
-        error_messages.extend(zip(max_messages, cls._check_output_files(files["output_files"])))
-        error_messages.extend(zip(max_messages, cls._check_input_dependencies(files["input_files"],
-                                                                              files["output_files"], nodes)))
+        error_messages.extend(
+            zip(max_messages, cls._check_output_files(files["output_files"]))
+        )
+        error_messages.extend(
+            zip(
+                max_messages,
+                cls._check_input_dependencies(
+                    files["input_files"], files["output_files"], nodes
+                ),
+            )
+        )
 
         if error_messages:
             messages = []
@@ -333,9 +347,10 @@ class NodeGraph:
                 for line in error.split("\n"):
                     messages.append("\t" + line)
 
-            raise NodeGraphError("Errors detected during graph construction (max %i shown):\n%s" \
-                                % (_MAX_ERROR_MESSAGES * 2, "\n".join(messages)),)
-
+            raise NodeGraphError(
+                "Errors detected during graph construction (max %i shown):\n%s"
+                % (_MAX_ERROR_MESSAGES * 2, "\n".join(messages))
+            )
 
     @classmethod
     def _check_output_files(cls, output_files):
@@ -358,19 +373,19 @@ class NodeGraph:
             real_output_files.setdefault(real_output_file, []).extend(nodes)
 
         for (filename, nodes) in real_output_files.items():
-            if (len(nodes) > 1):
+            if len(nodes) > 1:
                 nodes = _summarize_nodes(nodes)
-                yield "Multiple nodes create the same (clobber) output-file:" \
-                      "\n\tFilename: %s\n\tNodes: %s" \
-                      % (filename, "\n\t       ".join(nodes))
-
+                yield "Multiple nodes create the same (clobber) output-file:" "\n\tFilename: %s\n\tNodes: %s" % (
+                    filename,
+                    "\n\t       ".join(nodes),
+                )
 
     @classmethod
     def _check_input_dependencies(cls, input_files, output_files, nodes):
         dependencies = cls._collect_dependencies(nodes, {})
 
-        for (filename, nodes) in sorted(input_files.items(), key = lambda v: v[0]):
-            if (filename in output_files):
+        for (filename, nodes) in sorted(input_files.items(), key=lambda v: v[0]):
+            if filename in output_files:
                 producers = output_files[filename]
                 bad_nodes = set()
                 for consumer in nodes:
@@ -378,16 +393,19 @@ class NodeGraph:
                         bad_nodes.add(consumer)
 
                 if bad_nodes:
-                    producer  = next(iter(producers))
+                    producer = next(iter(producers))
                     bad_nodes = _summarize_nodes(bad_nodes)
-                    yield "Node depends on dynamically created file, but not on the node creating it:" + \
-                                "\n\tFilename: %s\n\tCreated by: %s\n\tDependent node(s): %s" \
-                                % (filename, producer, "\n\t                   ".join(bad_nodes))
+                    yield "Node depends on dynamically created file, but not on the node creating it:" + "\n\tFilename: %s\n\tCreated by: %s\n\tDependent node(s): %s" % (
+                        filename,
+                        producer,
+                        "\n\t                   ".join(bad_nodes),
+                    )
             elif not os.path.exists(filename):
                 nodes = _summarize_nodes(nodes)
-                yield "Required file does not exist, and is not created by a node:" + \
-                            "\n\tFilename: %s\n\tDependent node(s): %s" \
-                            % (filename,    "\n\t                   ".join(nodes))
+                yield "Required file does not exist, and is not created by a node:" + "\n\tFilename: %s\n\tDependent node(s): %s" % (
+                    filename,
+                    "\n\t                   ".join(nodes),
+                )
 
     @classmethod
     def _collect_dependencies(cls, nodes, dependencies):
@@ -407,7 +425,6 @@ class NodeGraph:
 
         return dependencies
 
-
     @classmethod
     def _collect_reverse_dependencies(cls, lst, rev_dependencies, processed):
         for node in lst:
@@ -415,13 +432,12 @@ class NodeGraph:
                 processed.add(node)
 
                 # Initialize default-dict
-                rev_dependencies[node] # pylint: disable=W0104
+                rev_dependencies[node]  # pylint: disable=W0104
 
                 subnodes = node.dependencies
                 for dependency in subnodes:
                     rev_dependencies[dependency].add(node)
                 cls._collect_reverse_dependencies(subnodes, rev_dependencies, processed)
-
 
 
 def _summarize_nodes(nodes):

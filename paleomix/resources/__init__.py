@@ -54,14 +54,15 @@ def copy_example(tool, argv):
     returns 0 on success, or 1 on errors.
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('root', help="Destination folder for example data.")
+    parser.add_argument("root", help="Destination folder for example data.")
 
     args = parser.parse_args(argv)
 
     destination = os.path.join(args.root, tool)
     if os.path.exists(destination):
-        sys.stderr.write("Example folder already exists at destination, "
-                         "cannot proceed:\n")
+        sys.stderr.write(
+            "Example folder already exists at destination, " "cannot proceed:\n"
+        )
         sys.stderr.write("  - %r\n" % (destination,))
         return 1
 

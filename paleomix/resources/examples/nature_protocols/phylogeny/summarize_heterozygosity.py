@@ -23,8 +23,7 @@
 import sys
 import pysam
 
-from paleomix.common.vcfwrap import \
-     get_ml_genotype
+from paleomix.common.vcfwrap import get_ml_genotype
 
 import paleomix.common.timer as timer
 
@@ -38,7 +37,7 @@ def read_bed_records(filename):
     with open(filename) as bed_file:
         for line in bed_file:
             line = line.strip()
-            if not line or line.startswith('#'):
+            if not line or line.startswith("#"):
                 continue
             regions.append(bed_parser(line, len(line)))
     return regions
@@ -48,11 +47,11 @@ def select_vcf_records(bed_records, vcf_records):
     """Returns an iterable of VCF records, corresponding to the contents of each
     region specified by the BED records. Records are returned at most once, even
     if covered by multiple BED records."""
-    contigs    = frozenset(vcf_records.contigs)
+    contigs = frozenset(vcf_records.contigs)
     vcf_parser = pysam.asVCF()
 
     # Timer class used processing progress; meant primarily for BAM files
-    progress   = timer.BAMTimer(None)
+    progress = timer.BAMTimer(None)
 
     # Cache of positions observed for this contig, to prevent returning
     # positions in overlapping regions multiple times
@@ -69,7 +68,9 @@ def select_vcf_records(bed_records, vcf_records):
             contig_cache = set()
             contig_cache_name = bed.contig
 
-        for record in vcf_records.fetch(bed.contig, bed.start, bed.end, parser = vcf_parser):
+        for record in vcf_records.fetch(
+            bed.contig, bed.start, bed.end, parser=vcf_parser
+        ):
             progress.increment()
 
             if record.pos in contig_cache:
@@ -78,7 +79,7 @@ def select_vcf_records(bed_records, vcf_records):
 
             contig_cache.add(record.pos)
             # Skip records filtered by VCF_filter
-            if record.filter in ('.', "PASS"):
+            if record.filter in (".", "PASS"):
                 yield record
     progress.finalize()
 
@@ -88,9 +89,9 @@ def main(argv):
         sys.stderr.write("Usage: %s <BED-file> <VCF.bgz>\n")
         return 1
 
-    sites                 = 0
-    sites_non_ref         = 0
-    sites_homo_non_ref    = 0
+    sites = 0
+    sites_non_ref = 0
+    sites_homo_non_ref = 0
     sites_het_one_non_ref = 0
     sites_het_two_non_ref = 0
 
@@ -98,10 +99,10 @@ def main(argv):
     bed_records = read_bed_records(argv[0])
 
     for record in select_vcf_records(bed_records, vcf_records):
-        if record.alt != '.':
+        if record.alt != ".":
             # Get the most likely diploid genotype
             nt_a, nt_b = get_ml_genotype(record)
-            if (nt_a, nt_b) == ('N', 'N'):
+            if (nt_a, nt_b) == ("N", "N"):
                 # Skip sites with no most likely genotype
                 continue
 
@@ -119,11 +120,23 @@ def main(argv):
 
     print()
     print("%i sites kept after filtering:" % (sites,))
-    print(" % 10i homozygous sites containing the reference allele (%.2f%%)" % (sites - sites_non_ref, 100.0 * (sites - sites_non_ref) / float(sites)))
-    print(" % 10i heterozygous sites containing the reference and a non-reference allele (%.2f%%)" % (sites_het_one_non_ref, (100.0 * sites_het_one_non_ref) / sites))
-    print(" % 10i homozygous sites containing a single non-reference allele (%.2f%%)" % (sites_homo_non_ref, (100.0 * sites_homo_non_ref) / sites))
-    print(" % 10i heterozygous sites containing two different non-reference alleles (%.2f%%)" % (sites_het_two_non_ref, (100.0 * sites_het_two_non_ref) / sites))
+    print(
+        " % 10i homozygous sites containing the reference allele (%.2f%%)"
+        % (sites - sites_non_ref, 100.0 * (sites - sites_non_ref) / float(sites))
+    )
+    print(
+        " % 10i heterozygous sites containing the reference and a non-reference allele (%.2f%%)"
+        % (sites_het_one_non_ref, (100.0 * sites_het_one_non_ref) / sites)
+    )
+    print(
+        " % 10i homozygous sites containing a single non-reference allele (%.2f%%)"
+        % (sites_homo_non_ref, (100.0 * sites_homo_non_ref) / sites)
+    )
+    print(
+        " % 10i heterozygous sites containing two different non-reference alleles (%.2f%%)"
+        % (sites_het_two_non_ref, (100.0 * sites_het_two_non_ref) / sites)
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))

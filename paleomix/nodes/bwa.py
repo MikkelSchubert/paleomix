@@ -24,40 +24,47 @@ import os
 
 from paleomix.node import CommandNode, NodeError
 from paleomix.atomiccmd.command import AtomicCmd
-from paleomix.atomiccmd.builder import \
-    AtomicCmdBuilder, \
-    use_customizable_cli_parameters, \
-    create_customizable_cli_parameters
+from paleomix.atomiccmd.builder import (
+    AtomicCmdBuilder,
+    use_customizable_cli_parameters,
+    create_customizable_cli_parameters,
+)
 
 from paleomix.atomiccmd.sets import ParallelCmds
 from paleomix.nodes.samtools import SAMTOOLS_VERSION
-from paleomix.common.fileutils import \
-    describe_paired_files, \
-    missing_files
+from paleomix.common.fileutils import describe_paired_files, missing_files
 
 import paleomix.common.versions as versions
 import paleomix.tools.factory as factory
 
 
-BWA_VERSION = versions.Requirement(call=("bwa",),
-                                   search=r"Version: (\d+)\.(\d+)\.(\d+)",
-                                   checks=versions.Or(versions.EQ(0, 5, 9),
-                                                      versions.EQ(0, 5, 10),
-                                                      versions.EQ(0, 6, 2),
-                                                      versions.GE(0, 7, 9)))
+BWA_VERSION = versions.Requirement(
+    call=("bwa",),
+    search=r"Version: (\d+)\.(\d+)\.(\d+)",
+    checks=versions.Or(
+        versions.EQ(0, 5, 9),
+        versions.EQ(0, 5, 10),
+        versions.EQ(0, 6, 2),
+        versions.GE(0, 7, 9),
+    ),
+)
 
-BWA_VERSION_07x = versions.Requirement(call=("bwa",),
-                                       search=r"Version: (\d+)\.(\d+)\.(\d+)",
-                                       checks=versions.GE(0, 7, 9))
+BWA_VERSION_07x = versions.Requirement(
+    call=("bwa",), search=r"Version: (\d+)\.(\d+)\.(\d+)", checks=versions.GE(0, 7, 9)
+)
 
 
 class BWAIndexNode(CommandNode):
     def __init__(self, input_file, prefix=None, dependencies=()):
         prefix = prefix if prefix else input_file
-        builder = _get_bwa_template(("bwa", "index"), prefix, iotype="OUT",
-                                    IN_FILE=input_file,
-                                    TEMP_OUT_PREFIX=os.path.basename(prefix),
-                                    CHECK_BWA=BWA_VERSION)
+        builder = _get_bwa_template(
+            ("bwa", "index"),
+            prefix,
+            iotype="OUT",
+            IN_FILE=input_file,
+            TEMP_OUT_PREFIX=os.path.basename(prefix),
+            CHECK_BWA=BWA_VERSION,
+        )
 
         # Input fasta sequence
         builder.add_value("%(IN_FILE)s")
@@ -65,50 +72,62 @@ class BWAIndexNode(CommandNode):
         builder.set_option("-p", "%(TEMP_OUT_PREFIX)s")
 
         description = "<BWA Index '%s' -> '%s.*'>" % (input_file, prefix)
-        CommandNode.__init__(self,
-                             command=builder.finalize(),
-                             description=description,
-                             dependencies=dependencies)
+        CommandNode.__init__(
+            self,
+            command=builder.finalize(),
+            description=description,
+            dependencies=dependencies,
+        )
 
 
 class BWABacktrack(CommandNode):
     @create_customizable_cli_parameters
-    def customize(cls, input_file, output_file, reference, prefix, threads=1,
-                  dependencies=()):
+    def customize(
+        cls, input_file, output_file, reference, prefix, threads=1, dependencies=()
+    ):
         _check_bwa_prefix(reference)
         threads = _get_max_threads(reference, threads)
 
         aln_in = _build_cat_command(input_file, "uncompressed_input")
-        aln = _get_bwa_template(("bwa", "aln"), prefix,
-                                TEMP_IN_FILE="uncompressed_input",
-                                OUT_STDOUT=output_file,
-                                CHECK_BWA=BWA_VERSION)
+        aln = _get_bwa_template(
+            ("bwa", "aln"),
+            prefix,
+            TEMP_IN_FILE="uncompressed_input",
+            OUT_STDOUT=output_file,
+            CHECK_BWA=BWA_VERSION,
+        )
         aln.add_value(prefix)
         aln.add_value("%(TEMP_IN_FILE)s")
         aln.set_option("-t", threads)
 
-        return {"commands": {"aln_in": aln_in, "aln": aln},
-                "order": ["aln_in", "aln"],
-                "threads": threads,
-                "dependencies": dependencies}
+        return {
+            "commands": {"aln_in": aln_in, "aln": aln},
+            "order": ["aln_in", "aln"],
+            "threads": threads,
+            "dependencies": dependencies,
+        }
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
-        command = ParallelCmds([parameters.commands[key].finalize()
-                                for key in parameters.order])
+        command = ParallelCmds(
+            [parameters.commands[key].finalize() for key in parameters.order]
+        )
 
-        description \
-            = _get_node_description(name="BWA",
-                                    algorithm='Backtrack',
-                                    input_files_1=parameters.input_file,
-                                    prefix=parameters.prefix,
-                                    threads=parameters.threads)
+        description = _get_node_description(
+            name="BWA",
+            algorithm="Backtrack",
+            input_files_1=parameters.input_file,
+            prefix=parameters.prefix,
+            threads=parameters.threads,
+        )
 
-        CommandNode.__init__(self,
-                             command=command,
-                             description=description,
-                             threads=parameters.threads,
-                             dependencies=parameters.dependencies)
+        CommandNode.__init__(
+            self,
+            command=command,
+            description=description,
+            threads=parameters.threads,
+            dependencies=parameters.dependencies,
+        )
 
     def _setup(self, _config, temp):
         os.mkfifo(os.path.join(temp, "uncompressed_input"))
@@ -116,16 +135,26 @@ class BWABacktrack(CommandNode):
 
 class BWASamse(CommandNode):
     @create_customizable_cli_parameters
-    def customize(cls, input_file_fq, input_file_sai, output_file,
-                  reference, prefix, dependencies=()):
+    def customize(
+        cls,
+        input_file_fq,
+        input_file_sai,
+        output_file,
+        reference,
+        prefix,
+        dependencies=(),
+    ):
         _check_bwa_prefix(reference)
 
         samse_in = _build_cat_command(input_file_fq, "uncompressed_input")
-        samse = _get_bwa_template(("bwa", "samse"), prefix,
-                                  IN_FILE_SAI=input_file_sai,
-                                  TEMP_IN_FQ="uncompressed_input",
-                                  OUT_STDOUT=AtomicCmd.PIPE,
-                                  CHECK_BWA=BWA_VERSION)
+        samse = _get_bwa_template(
+            ("bwa", "samse"),
+            prefix,
+            IN_FILE_SAI=input_file_sai,
+            TEMP_IN_FQ="uncompressed_input",
+            OUT_STDOUT=AtomicCmd.PIPE,
+            CHECK_BWA=BWA_VERSION,
+        )
         samse.add_value(prefix)
         samse.add_value("%(IN_FILE_SAI)s")
         samse.add_value("%(TEMP_IN_FQ)s")
@@ -134,24 +163,29 @@ class BWASamse(CommandNode):
         commands["sam_in"] = samse_in
         commands["sam"] = samse
 
-        return {"commands": commands,
-                "order": ["sam_in", "sam"] + order,
-                "dependencies": dependencies}
+        return {
+            "commands": commands,
+            "order": ["sam_in", "sam"] + order,
+            "dependencies": dependencies,
+        }
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
-        command = ParallelCmds([parameters.commands[key].finalize()
-                                for key in parameters.order])
+        command = ParallelCmds(
+            [parameters.commands[key].finalize() for key in parameters.order]
+        )
 
         input_file = parameters.input_file_fq
-        description = _get_node_description(name="BWA Samse",
-                                            input_files_1=input_file,
-                                            prefix=parameters.prefix)
+        description = _get_node_description(
+            name="BWA Samse", input_files_1=input_file, prefix=parameters.prefix
+        )
 
-        CommandNode.__init__(self,
-                             command=command,
-                             description=description,
-                             dependencies=parameters.dependencies)
+        CommandNode.__init__(
+            self,
+            command=command,
+            description=description,
+            dependencies=parameters.dependencies,
+        )
 
     def _setup(self, _config, temp):
         os.mkfifo(os.path.join(temp, "uncompressed_input"))
@@ -159,56 +193,72 @@ class BWASamse(CommandNode):
 
 class BWASampe(CommandNode):
     @create_customizable_cli_parameters
-    def customize(cls,
-                  input_file_fq_1, input_file_fq_2,
-                  input_file_sai_1, input_file_sai_2,
-                  output_file, reference, prefix, dependencies=()):
+    def customize(
+        cls,
+        input_file_fq_1,
+        input_file_fq_2,
+        input_file_sai_1,
+        input_file_sai_2,
+        output_file,
+        reference,
+        prefix,
+        dependencies=(),
+    ):
         _check_bwa_prefix(reference)
 
-        sampe_in_1 = _build_cat_command(input_file_fq_1,
-                                        "uncompressed_input_1")
-        sampe_in_2 = _build_cat_command(input_file_fq_2,
-                                        "uncompressed_input_2")
+        sampe_in_1 = _build_cat_command(input_file_fq_1, "uncompressed_input_1")
+        sampe_in_2 = _build_cat_command(input_file_fq_2, "uncompressed_input_2")
 
-        sampe = _get_bwa_template(("bwa", "sampe"), prefix,
-                                  IN_FILE_SAI_1=input_file_sai_1,
-                                  IN_FILE_SAI_2=input_file_sai_2,
-                                  TEMP_IN_FQ_1="uncompressed_input_1",
-                                  TEMP_IN_FQ_2="uncompressed_input_2",
-                                  OUT_STDOUT=AtomicCmd.PIPE,
-                                  CHECK_BWA=BWA_VERSION)
+        sampe = _get_bwa_template(
+            ("bwa", "sampe"),
+            prefix,
+            IN_FILE_SAI_1=input_file_sai_1,
+            IN_FILE_SAI_2=input_file_sai_2,
+            TEMP_IN_FQ_1="uncompressed_input_1",
+            TEMP_IN_FQ_2="uncompressed_input_2",
+            OUT_STDOUT=AtomicCmd.PIPE,
+            CHECK_BWA=BWA_VERSION,
+        )
         sampe.add_value(prefix)
         sampe.add_value("%(IN_FILE_SAI_1)s")
         sampe.add_value("%(IN_FILE_SAI_2)s")
         sampe.add_value("%(TEMP_IN_FQ_1)s")
         sampe.add_value("%(TEMP_IN_FQ_2)s")
 
-        order, commands = _process_output(sampe, output_file, reference,
-                                          run_fixmate=True)
+        order, commands = _process_output(
+            sampe, output_file, reference, run_fixmate=True
+        )
         commands["sam_in_1"] = sampe_in_1
         commands["sam_in_2"] = sampe_in_2
         commands["sam"] = sampe
 
-        return {"commands": commands,
-                "order": ["sam_in_1", "sam_in_2", "sam"] + order,
-                "dependencies": dependencies}
+        return {
+            "commands": commands,
+            "order": ["sam_in_1", "sam_in_2", "sam"] + order,
+            "dependencies": dependencies,
+        }
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
-        command = ParallelCmds([parameters.commands[key].finalize()
-                                for key in parameters.order])
+        command = ParallelCmds(
+            [parameters.commands[key].finalize() for key in parameters.order]
+        )
 
         input_file_1 = parameters.input_file_fq_1
         input_file_2 = parameters.input_file_fq_2
-        description = _get_node_description(name="BWA Sampe",
-                                            input_files_1=input_file_1,
-                                            input_files_2=input_file_2,
-                                            prefix=parameters.prefix)
+        description = _get_node_description(
+            name="BWA Sampe",
+            input_files_1=input_file_1,
+            input_files_2=input_file_2,
+            prefix=parameters.prefix,
+        )
 
-        CommandNode.__init__(self,
-                             command=command,
-                             description=description,
-                             dependencies=parameters.dependencies)
+        CommandNode.__init__(
+            self,
+            command=command,
+            description=description,
+            dependencies=parameters.dependencies,
+        )
 
     def _setup(self, _config, temp):
         os.mkfifo(os.path.join(temp, "uncompressed_input_1"))
@@ -217,20 +267,30 @@ class BWASampe(CommandNode):
 
 class BWAAlgorithmNode(CommandNode):
     @create_customizable_cli_parameters
-    def customize(cls, input_file_1, output_file, reference, prefix,
-                  input_file_2=None, threads=1, algorithm="mem",
-                  dependencies=()):
+    def customize(
+        cls,
+        input_file_1,
+        output_file,
+        reference,
+        prefix,
+        input_file_2=None,
+        threads=1,
+        algorithm="mem",
+        dependencies=(),
+    ):
         if algorithm not in ("mem", "bwasw"):
-            raise NotImplementedError("BWA algorithm %r not implemented"
-                                      % (algorithm,))
+            raise NotImplementedError("BWA algorithm %r not implemented" % (algorithm,))
 
         threads = _get_max_threads(reference, threads)
 
         zcat_1 = _build_cat_command(input_file_1, "uncompressed_input_1")
-        aln = _get_bwa_template(("bwa", algorithm), prefix,
-                                TEMP_IN_FILE_1="uncompressed_input_1",
-                                OUT_STDOUT=AtomicCmd.PIPE,
-                                CHECK_BWA=BWA_VERSION_07x)
+        aln = _get_bwa_template(
+            ("bwa", algorithm),
+            prefix,
+            TEMP_IN_FILE_1="uncompressed_input_1",
+            OUT_STDOUT=AtomicCmd.PIPE,
+            CHECK_BWA=BWA_VERSION_07x,
+        )
         aln.add_value(prefix)
         aln.add_value("%(TEMP_IN_FILE_1)s")
 
@@ -251,28 +311,29 @@ class BWAAlgorithmNode(CommandNode):
         aln.set_option("-M")
 
         commands["aln"] = aln
-        return {"commands": commands,
-                "threads": threads,
-                "dependencies": dependencies}
+        return {"commands": commands, "threads": threads, "dependencies": dependencies}
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
         _check_bwa_prefix(parameters.prefix)
         algorithm = parameters.algorithm.upper()
         algorithm += "_PE" if parameters.input_file_2 else "_SE"
-        desc = _get_node_description(name="BWA",
-                                     algorithm=algorithm,
-                                     input_files_1=parameters.input_file_1,
-                                     input_files_2=parameters.input_file_2,
-                                     prefix=parameters.prefix)
+        desc = _get_node_description(
+            name="BWA",
+            algorithm=algorithm,
+            input_files_1=parameters.input_file_1,
+            input_files_2=parameters.input_file_2,
+            prefix=parameters.prefix,
+        )
 
-        command = ParallelCmds([cmd.finalize()
-                                for cmd in parameters.commands.values()])
-        CommandNode.__init__(self,
-                             command=command,
-                             description=desc,
-                             threads=parameters.threads,
-                             dependencies=parameters.dependencies)
+        command = ParallelCmds([cmd.finalize() for cmd in parameters.commands.values()])
+        CommandNode.__init__(
+            self,
+            command=command,
+            description=desc,
+            threads=parameters.threads,
+            dependencies=parameters.dependencies,
+        )
 
     def _setup(self, _config, temp):
         os.mkfifo(os.path.join(temp, "uncompressed_input_1"))
@@ -284,20 +345,22 @@ def _process_output(stdin, output_file, reference, run_fixmate=False):
     if reference is not None:
         convert.set_option("--fasta", "%(IN_FASTA_REF)s")
     convert.set_option("--temp-prefix", "%(TEMP_OUT_PREFIX)s")
-    convert.set_kwargs(IN_STDIN=stdin,
-                       IN_FASTA_REF=reference,
-                       OUT_STDOUT=output_file,
-                       TEMP_OUT_PREFIX="bam_cleanup",
-                       CHECK_SAMTOOLS=SAMTOOLS_VERSION)
+    convert.set_kwargs(
+        IN_STDIN=stdin,
+        IN_FASTA_REF=reference,
+        OUT_STDOUT=output_file,
+        TEMP_OUT_PREFIX="bam_cleanup",
+        CHECK_SAMTOOLS=SAMTOOLS_VERSION,
+    )
 
     if run_fixmate:
-        convert.set_option('--paired-end')
+        convert.set_option("--paired-end")
 
     try:
         if SAMTOOLS_VERSION.version >= (1,):
-            convert.set_option('--samtools1x', 'yes')
+            convert.set_option("--samtools1x", "yes")
         else:
-            convert.set_option('--samtools1x', 'no')
+            convert.set_option("--samtools1x", "no")
     except versions.VersionRequirementError:
         pass
 
@@ -369,27 +432,35 @@ def _check_bwa_prefix(prefix):
     # Files unique to v0.5.x
     v05x_files = set((prefix + ext) for ext in (".rbwt", ".rpac", ".rsa"))
     # Files common to v0.5.x, v0.6.x, and v0.7.x
-    common_files = set((prefix + ext)
-                       for ext in (".amb", ".ann", ".bwt", ".pac", ".sa"))
+    common_files = set(
+        (prefix + ext) for ext in (".amb", ".ann", ".bwt", ".pac", ".sa")
+    )
     all_files = v05x_files | common_files
     current_files = all_files - set(missing_files(all_files))
 
     expected_version = None
-    if (current_files & common_files):
+    if current_files & common_files:
         if bwa_version >= (0, 6, 0):
-            if (current_files & v05x_files):
+            if current_files & v05x_files:
                 expected_version = "v0.5.x"
         elif bwa_version < (0, 6, 0):
             if not (current_files & v05x_files):
                 expected_version = "v0.6.x or later"
 
     if expected_version:
-        raise NodeError("BWA version is v%s, but prefix appears to be created using %s!\n"
-                        "  Your copy of BWA may have changed, or you may be using the wrong\n"
-                        "  prefix. To resolve this issue, either change your prefix, re-install\n"
-                        "  BWA %s, or remove the prefix files at\n"
-                        "    $ ls %s.*"
-                        % (".".join(map(str, bwa_version)), expected_version, expected_version, prefix))
+        raise NodeError(
+            "BWA version is v%s, but prefix appears to be created using %s!\n"
+            "  Your copy of BWA may have changed, or you may be using the wrong\n"
+            "  prefix. To resolve this issue, either change your prefix, re-install\n"
+            "  BWA %s, or remove the prefix files at\n"
+            "    $ ls %s.*"
+            % (
+                ".".join(map(str, bwa_version)),
+                expected_version,
+                expected_version,
+                prefix,
+            )
+        )
 
 
 _PREFIXES_CHECKED = set()
@@ -399,13 +470,13 @@ def _build_cat_command(input_file, output_file):
     cat = factory.new("cat")
     cat.set_option("--output", "%(TEMP_OUT_CAT)s")
     cat.add_value("%(IN_ARCHIVE)s")
-    cat.set_kwargs(TEMP_OUT_CAT=output_file,
-                   IN_ARCHIVE=input_file)
+    cat.set_kwargs(TEMP_OUT_CAT=output_file, IN_ARCHIVE=input_file)
     return cat
 
 
-def _get_node_description(name, input_files_1, input_files_2=None,
-                          algorithm=None, prefix=None, threads=1):
+def _get_node_description(
+    name, input_files_1, input_files_2=None, algorithm=None, prefix=None, threads=1
+):
     info = []
     if prefix is not None:
         prefix = os.path.basename(prefix)

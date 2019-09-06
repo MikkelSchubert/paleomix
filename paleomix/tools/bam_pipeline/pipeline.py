@@ -30,25 +30,16 @@ import paleomix.logger
 import paleomix.resources
 import paleomix.yaml
 
-from paleomix.pipeline import \
-    Pypeline
-from paleomix.nodes.picard import \
-    BuildSequenceDictNode
-from paleomix.nodes.samtools import \
-    FastaIndexNode
-from paleomix.nodes.bwa import \
-    BWAIndexNode
-from paleomix.nodes.bowtie2 import \
-    Bowtie2IndexNode
-from paleomix.nodes.validation import \
-    ValidateFASTAFilesNode
+from paleomix.pipeline import Pypeline
+from paleomix.nodes.picard import BuildSequenceDictNode
+from paleomix.nodes.samtools import FastaIndexNode
+from paleomix.nodes.bwa import BWAIndexNode
+from paleomix.nodes.bowtie2 import Bowtie2IndexNode
+from paleomix.nodes.validation import ValidateFASTAFilesNode
 
-from paleomix.tools.bam_pipeline.makefile import \
-    MakefileError, \
-    read_makefiles
+from paleomix.tools.bam_pipeline.makefile import MakefileError, read_makefiles
 
-from paleomix.tools.bam_pipeline.parts import \
-    Reads
+from paleomix.tools.bam_pipeline.parts import Reads
 
 import paleomix.tools.bam_pipeline.parts as parts
 import paleomix.tools.bam_pipeline.config as bam_config
@@ -92,24 +83,36 @@ def build_pipeline_full(config, makefile, return_nodes=True):
                             lanes.append(lane)
 
                     if lanes:
-                        libraries.append(parts.Library(config=config,
-                                                       target=target_name,
-                                                       prefix=prefix,
-                                                       lanes=lanes,
-                                                       name=library_name))
+                        libraries.append(
+                            parts.Library(
+                                config=config,
+                                target=target_name,
+                                prefix=prefix,
+                                lanes=lanes,
+                                name=library_name,
+                            )
+                        )
 
                 if libraries:
-                    samples.append(parts.Sample(config=config,
-                                                prefix=prefix,
-                                                libraries=libraries,
-                                                name=sample_name))
+                    samples.append(
+                        parts.Sample(
+                            config=config,
+                            prefix=prefix,
+                            libraries=libraries,
+                            name=sample_name,
+                        )
+                    )
 
             if samples:
-                prefixes.append(parts.Prefix(config=config,
-                                             prefix=prefix,
-                                             samples=samples,
-                                             features=features,
-                                             target=target_name))
+                prefixes.append(
+                    parts.Prefix(
+                        config=config,
+                        prefix=prefix,
+                        samples=samples,
+                        features=features,
+                        target=target_name,
+                    )
+                )
 
         if prefixes:
             target = parts.Target(config, prefixes, target_name)
@@ -139,28 +142,38 @@ def index_references(config, makefiles):
                 # Validation of the FASTA file; not blocking for the other
                 # steps, as it is only expected to fail very rarely, but will
                 # block subsequent analyses depending on the FASTA.
-                valid_node = ValidateFASTAFilesNode(input_files=reference,
-                                                    output_file=reference +
-                                                    ".validated")
+                valid_node = ValidateFASTAFilesNode(
+                    input_files=reference, output_file=reference + ".validated"
+                )
                 # Indexing of FASTA file using 'samtools faidx'
                 faidx_node = FastaIndexNode(reference)
                 # Indexing of FASTA file using 'BuildSequenceDictionary.jar'
-                dict_node = BuildSequenceDictNode(config=config,
-                                                  reference=reference,
-                                                  dependencies=(valid_node,))
+                dict_node = BuildSequenceDictNode(
+                    config=config, reference=reference, dependencies=(valid_node,)
+                )
 
                 # Indexing of FASTA file using 'bwa index'
-                bwa_node = BWAIndexNode(input_file=reference,
-                                        dependencies=(valid_node,))
+                bwa_node = BWAIndexNode(
+                    input_file=reference, dependencies=(valid_node,)
+                )
                 # Indexing of FASTA file using ''
-                bowtie2_node = Bowtie2IndexNode(input_file=reference,
-                                                dependencies=(valid_node,))
+                bowtie2_node = Bowtie2IndexNode(
+                    input_file=reference, dependencies=(valid_node,)
+                )
 
                 references[reference] = (valid_node, faidx_node, dict_node)
-                references_bwa[reference] = (valid_node, faidx_node,
-                                             dict_node, bwa_node)
-                references_bowtie2[reference] = (valid_node, faidx_node,
-                                                 dict_node, bowtie2_node)
+                references_bwa[reference] = (
+                    valid_node,
+                    faidx_node,
+                    dict_node,
+                    bwa_node,
+                )
+                references_bowtie2[reference] = (
+                    valid_node,
+                    faidx_node,
+                    dict_node,
+                    bowtie2_node,
+                )
 
             subdd["Nodes"] = references[reference]
             subdd["Nodes:BWA"] = references_bwa[reference]
@@ -169,9 +182,7 @@ def index_references(config, makefiles):
 
 def run(config, args, pipeline_variant):
     paleomix.logger.initialize(
-        log_level=config.log_level,
-        log_file=config.log_file,
-        name='bam_pipeline',
+        log_level=config.log_level, log_file=config.log_file, name="bam_pipeline"
     )
 
     logger = logging.getLogger(__name__)
@@ -187,8 +198,7 @@ def run(config, args, pipeline_variant):
             return 1
 
     if not os.access(config.temp_root, os.R_OK | os.W_OK | os.X_OK):
-        logger.error("Insufficient permissions for temp root: %r",
-                     config.temp_root)
+        logger.error("Insufficient permissions for temp root: %r", config.temp_root)
         return 1
 
     # Init worker-threads before reading in any more data
@@ -208,7 +218,7 @@ def run(config, args, pipeline_variant):
         pipeline_func = build_pipeline_full
 
     for makefile in makefiles:
-        logger.info("Building BAM pipeline for %r", makefile['Statistics']['Filename'])
+        logger.info("Building BAM pipeline for %r", makefile["Statistics"]["Filename"])
         # If a destination is not specified, save results in same folder as the
         # makefile
         filename = makefile["Statistics"]["Filename"]
@@ -219,8 +229,7 @@ def run(config, args, pipeline_variant):
         try:
             nodes = pipeline_func(config, makefile)
         except paleomix.node.NodeError as error:
-            logger.error("Error while building pipeline for '%s':\n%s",
-                         filename, error)
+            logger.error("Error while building pipeline for '%s':\n%s", filename, error)
             return 1
 
         config.destination = old_destination
@@ -241,8 +250,7 @@ def run(config, args, pipeline_variant):
         return 0
 
     logger.info("Running BAM pipeline ...")
-    if not pipeline.run(dry_run=config.dry_run,
-                        max_threads=config.max_threads):
+    if not pipeline.run(dry_run=config.dry_run, max_threads=config.max_threads):
         return 1
 
     return 0
@@ -250,26 +258,36 @@ def run(config, args, pipeline_variant):
 
 def _print_usage(pipeline):
     basename = "%s_pipeline" % (pipeline,)
-    usage = \
-        "BAM Pipeline v{version}\n" \
-        "Usage:\n" \
-        "  -- {cmd} help           -- Display this message.\n" \
-        "  -- {cmd} example [...]  -- Create example project.\n" \
-        "  -- {cmd} makefile [...] -- Print makefile template.\n" \
-        "  -- {cmd} dryrun [...]   -- Perform dry run of pipeline.\n" \
+    usage = (
+        "BAM Pipeline v{version}\n"
+        "Usage:\n"
+        "  -- {cmd} help           -- Display this message.\n"
+        "  -- {cmd} example [...]  -- Create example project.\n"
+        "  -- {cmd} makefile [...] -- Print makefile template.\n"
+        "  -- {cmd} dryrun [...]   -- Perform dry run of pipeline.\n"
         "  -- {cmd} run [...]      -- Run pipeline on provided makefiles.\n"
+    )
 
-    print(usage.format(version=paleomix.__version__,
-                       cmd=basename,
-                       pad=" " * len(basename)))
+    print(
+        usage.format(
+            version=paleomix.__version__, cmd=basename, pad=" " * len(basename)
+        )
+    )
 
 
 def main(argv, pipeline="bam"):
     assert pipeline in ("bam", "trim"), pipeline
 
-    commands = ("makefile", "mkfile", "run",
-                "dry_run", "dry-run", "dryrun",
-                "example", "examples")
+    commands = (
+        "makefile",
+        "mkfile",
+        "run",
+        "dry_run",
+        "dry-run",
+        "dryrun",
+        "example",
+        "examples",
+    )
 
     if not argv or (argv[0] == "help"):
         _print_usage(pipeline)

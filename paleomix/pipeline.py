@@ -30,19 +30,11 @@ import traceback
 
 import paleomix.logger
 
-from paleomix.node import \
-    Node, \
-    NodeError, \
-    NodeUnhandledException
-from paleomix.nodegraph import \
-    FileStatusCache, \
-    NodeGraph, \
-    NodeGraphError
+from paleomix.node import Node, NodeError, NodeUnhandledException
+from paleomix.nodegraph import FileStatusCache, NodeGraph, NodeGraphError
 from paleomix.common.text import padded_table
-from paleomix.common.utilities import \
-    safe_coerce_to_tuple
-from paleomix.common.versions import \
-    VersionRequirementError
+from paleomix.common.utilities import safe_coerce_to_tuple
+from paleomix.common.versions import VersionRequirementError
 
 
 class Pypeline(object):
@@ -59,8 +51,7 @@ class Pypeline(object):
         for subnodes in safe_coerce_to_tuple(nodes):
             for node in safe_coerce_to_tuple(subnodes):
                 if not isinstance(node, Node):
-                    raise TypeError("Node object expected, recieved %s"
-                                    % repr(node))
+                    raise TypeError("Node object expected, recieved %s" % repr(node))
                 self._nodes.append(node)
 
     def run(self, max_threads=1, dry_run=False):
@@ -75,9 +66,11 @@ class Pypeline(object):
 
         for node in nodegraph.iterflat():
             if node.threads > max_threads:
-                message = "Node(s) use more threads than the max allowed; " \
-                          "the pipeline may therefore use more than the " \
-                          "expected number of threads.\n"
+                message = (
+                    "Node(s) use more threads than the max allowed; "
+                    "the pipeline may therefore use more than the "
+                    "expected number of threads.\n"
+                )
                 self._logger.warn(message)
                 break
 
@@ -96,7 +89,7 @@ class Pypeline(object):
                 signal.signal(signal.SIGINT, old_handler)
 
         for filename in paleomix.logger.get_logfiles():
-            self._logger.info('Log-file written to %r', filename)
+            self._logger.info("Log-file written to %r", filename)
 
         return result
 
@@ -108,13 +101,12 @@ class Pypeline(object):
 
         is_ok = True
         while running or (remaining and not self._interrupted):
-            is_ok &= self._poll_running_nodes(running,
-                                              nodegraph,
-                                              self._queue)
+            is_ok &= self._poll_running_nodes(running, nodegraph, self._queue)
 
             if not self._interrupted:  # Prevent starting of new nodes
-                self._start_new_tasks(remaining, running, nodegraph,
-                                      max_threads, self._pool)
+                self._start_new_tasks(
+                    remaining, running, nodegraph, max_threads, self._pool
+                )
 
         self._pool.close()
         self._pool.join()
@@ -122,11 +114,11 @@ class Pypeline(object):
 
         return is_ok
 
-    def _start_new_tasks(self, remaining, running, nodegraph, max_threads,
-                         pool):
+    def _start_new_tasks(self, remaining, running, nodegraph, max_threads, pool):
         started_nodes = []
-        idle_processes = max_threads \
-            - sum(node.threads for (node, _) in running.values())
+        idle_processes = max_threads - sum(
+            node.threads for (node, _) in running.values()
+        )
 
         if not idle_processes:
             return False
@@ -137,8 +129,7 @@ class Pypeline(object):
                 if state == nodegraph.RUNABLE:
                     key = id(node)
                     proc_args = (key, node, self._config)
-                    running[key] = (node, pool.apply_async(_call_run,
-                                                           args=proc_args))
+                    running[key] = (node, pool.apply_async(_call_run, args=proc_args))
                     started_nodes.append(node)
 
                     nodegraph.set_node_state(node, nodegraph.RUNNING)
@@ -172,9 +163,10 @@ class Pypeline(object):
             except Exception as errors:
                 nodegraph.set_node_state(node, nodegraph.ERROR)
 
-                message = [str(node),
-                           "  Error (%r) occurred running command:"
-                           % (type(errors).__name__)]
+                message = [
+                    str(node),
+                    "  Error (%r) occurred running command:" % (type(errors).__name__),
+                ]
 
                 for line in str(errors).strip().split("\n"):
                     message.append("    %s" % (line,))
@@ -298,9 +290,7 @@ class Pypeline(object):
     def print_required_executables(self, print_func=print):
         template = "{: <40s} {: <11s} {}"
         pipeline_executables = self.list_required_executables()
-        print_func(template.format("Executable",
-                                   "Version",
-                                   "Required version"))
+        print_func(template.format("Executable", "Version", "Required version"))
 
         for (name, requirements) in sorted(pipeline_executables.items()):
             if not requirements:
@@ -322,9 +312,11 @@ class Pypeline(object):
         """Signal handler; see signal.signal."""
         if not self._interrupted:
             self._interrupted = True
-            self._logger.error("\nKeyboard interrupt detected, waiting for "
-                               "running tasks to complete ... Press CTRL-C "
-                               "again to force termination.\n")
+            self._logger.error(
+                "\nKeyboard interrupt detected, waiting for "
+                "running tasks to complete ... Press CTRL-C "
+                "again to force termination.\n"
+            )
         else:
             self._pool.terminate()
             raise signal.default_int_handler(signum, frame)
@@ -354,18 +346,20 @@ class Pypeline(object):
         for node in nodegraph.iterflat():
             states[nodegraph.get_node_state(node)] += 1
 
-        rows = [("Number of nodes:", sum(states)),
-                ("Number of done nodes:", states[nodegraph.DONE]),
-                ("Number of runable nodes:", states[nodegraph.RUNABLE]),
-                ("Number of queued nodes:", states[nodegraph.QUEUED]),
-                ("Number of outdated nodes:", states[nodegraph.OUTDATED]),
-                ("Number of failed nodes:", states[nodegraph.ERROR])]
+        rows = [
+            ("Number of nodes:", sum(states)),
+            ("Number of done nodes:", states[nodegraph.DONE]),
+            ("Number of runable nodes:", states[nodegraph.RUNABLE]),
+            ("Number of queued nodes:", states[nodegraph.QUEUED]),
+            ("Number of outdated nodes:", states[nodegraph.OUTDATED]),
+            ("Number of failed nodes:", states[nodegraph.ERROR]),
+        ]
 
         for message in padded_table(rows):
             self._logger.info(message)
 
         if states[nodegraph.ERROR]:
-            self._logger.warning('Errors were detected while running pipeline')
+            self._logger.warning("Errors were detected while running pipeline")
 
 
 def _init_worker(queue):
@@ -390,8 +384,7 @@ def _call_run(key, node, config):
     except NodeError:
         raise
     except Exception:
-        message = "Unhandled error running Node:\n\n%s" \
-            % (traceback.format_exc(),)
+        message = "Unhandled error running Node:\n\n%s" % (traceback.format_exc(),)
 
         raise NodeUnhandledException(message)
     finally:

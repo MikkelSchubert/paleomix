@@ -24,23 +24,19 @@ import sys
 import datetime
 import collections
 
-from paleomix.common.utilities import \
-    get_in, \
-    set_in
-from paleomix.common.text import \
-    parse_padded_table
+from paleomix.common.utilities import get_in, set_in
+from paleomix.common.text import parse_padded_table
 
-from paleomix.tools.bam_stats.common import \
-    BAMStatsError
+from paleomix.tools.bam_stats.common import BAMStatsError
 
 
 ##############################################################################
 ##############################################################################
 ##
 
+
 class ReadGroup(object):
-    __slots__ = ["SE", "PE_1", "PE_2", "Collapsed",
-                 "Hits", "M", "I", "D", "Size"]
+    __slots__ = ["SE", "PE_1", "PE_2", "Collapsed", "Hits", "M", "I", "D", "Size"]
 
     def __init__(self):
         self.SE = 0
@@ -72,10 +68,11 @@ class ReadGroup(object):
 
     def has_values(self):
         for slot in ReadGroup.__slots__:
-            if slot != 'Size' and getattr(self, slot):
+            if slot != "Size" and getattr(self, slot):
                 return True
 
         return False
+
 
 # Header prepended to output tables
 TABLE_HEADER = """# Timestamp: %s
@@ -128,29 +125,46 @@ def calculate_totals(table):
 
 
 def build_rows(table):
-    yield ("Name", "Sample", "Library", "Contig", "Size", "Hits", "SE",
-           "PE_1", "PE_2", "Collapsed", "M", "I", "D", "Coverage")
+    yield (
+        "Name",
+        "Sample",
+        "Library",
+        "Contig",
+        "Size",
+        "Hits",
+        "SE",
+        "PE_1",
+        "PE_2",
+        "Collapsed",
+        "M",
+        "I",
+        "D",
+        "Coverage",
+    )
 
     for (name, samples) in sorted(table.items()):
         for (sample, libraries) in sorted(samples.items()):
             for (library, contigs) in sorted(libraries.items()):
                 for (contig, subtable) in sorted(contigs.items()):
-                    row = [name,
-                           sample,
-                           library,
-                           contig,
-                           subtable.Size,
-                           subtable.SE + subtable.PE_1
-                                       + subtable.PE_2
-                                       + subtable.Collapsed,
-                           subtable.SE,
-                           subtable.PE_1,
-                           subtable.PE_2,
-                           subtable.Collapsed,
-                           subtable.M,
-                           subtable.I,
-                           subtable.D,
-                           float(subtable.M) / subtable.Size]
+                    row = [
+                        name,
+                        sample,
+                        library,
+                        contig,
+                        subtable.Size,
+                        subtable.SE
+                        + subtable.PE_1
+                        + subtable.PE_2
+                        + subtable.Collapsed,
+                        subtable.SE,
+                        subtable.PE_1,
+                        subtable.PE_2,
+                        subtable.Collapsed,
+                        subtable.M,
+                        subtable.I,
+                        subtable.D,
+                        float(subtable.M) / subtable.Size,
+                    ]
                     yield row
                 yield "#"
             yield "#"
@@ -159,8 +173,12 @@ def build_rows(table):
 def read_table(table, filename):
     with open(filename) as table_file:
         for record in parse_padded_table(table_file):
-            key = (record["Name"], record["Sample"],
-                   record["Library"], record["Contig"])
+            key = (
+                record["Name"],
+                record["Sample"],
+                record["Library"],
+                record["Contig"],
+            )
             if "*" in key:
                 continue
 
@@ -188,7 +206,7 @@ def write_table(table, filename):
     try:
         output_handle.write(TABLE_HEADER % datetime.datetime.now().isoformat())
         for line in rows:
-            output_handle.write('\t'.join(map(str, line)))
+            output_handle.write("\t".join(map(str, line)))
             output_handle.write("\n")
     finally:
         if output_handle is not sys.stdout:

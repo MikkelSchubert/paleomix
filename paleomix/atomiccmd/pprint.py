@@ -79,11 +79,9 @@ def _build_status(atomiccmd, _stats, indent, lines):
             if atomiccmd._terminated:
                 lines.append(prefix + "Automatically terminated by PALEOMIX")
             elif isinstance(return_code[0], str):
-                lines.append(prefix + "Terminated with signal %s"
-                             % return_code)
+                lines.append(prefix + "Terminated with signal %s" % return_code)
             else:
-                lines.append(prefix + "Exited with return-code %i"
-                             % return_code)
+                lines.append(prefix + "Exited with return-code %i" % return_code)
         else:
             lines.append(prefix + "Running ...")
 
@@ -93,7 +91,7 @@ def _build_stdin(atomiccmd, files, stats, indent, lines):
     pipe = _get_pipe_file(files, "IN_STDIN")
     prefix = "%s%s  = " % (" " * indent, pipe_name)
     if pipe and pipe in stats["id"]:
-        lines.append("%sPiped from process %i" % (prefix, stats["id"][pipe],))
+        lines.append("%sPiped from process %i" % (prefix, stats["id"][pipe]))
     elif isinstance(pipe, str):
         if atomiccmd._set_cwd and (pipe_name == "STDIN*"):
             pipe = os.path.basename(pipe)
@@ -108,7 +106,7 @@ def _build_out_pipe(atomiccmd, files, stats, indent, lines, pipe):
 
     if (atomiccmd in stats["pipe"]) and (pipe == "OUT_STDOUT"):
         pipe = stats["pipe"].get(atomiccmd)
-        lines.append("%sPiped to process %i" % (prefix, stats["id"][pipe],))
+        lines.append("%sPiped to process %i" % (prefix, stats["id"][pipe]))
         return
 
     filename = _get_pipe_file(files, pipe)
@@ -122,7 +120,7 @@ def _build_cwd(atomiccmd, indent, lines):
     prefix = " " * indent + "CWD     = "
     if atomiccmd._temp:
         if atomiccmd._set_cwd:
-            lines.append("%s'%s'" % (prefix, atomiccmd._temp,))
+            lines.append("%s'%s'" % (prefix, atomiccmd._temp))
         else:
             lines.append("%s'%s'" % (prefix, os.getcwd()))
     elif atomiccmd._set_cwd:
@@ -146,17 +144,15 @@ def _pformat(atomiccmd, stats, indent, lines, include_prefix=True):
         c_prefix = s_prefix + "Command = "
         for line in _pformat_list(atomiccmd._generate_call(temp)).split("\n"):
             if atomiccmd._temp is not None:
-                line = line.replace('${TEMP_DIR}', atomiccmd._temp)
+                line = line.replace("${TEMP_DIR}", atomiccmd._temp)
 
             lines.append("%s%s" % (c_prefix, line))
             c_prefix = " " * len(c_prefix)
 
         _build_status(atomiccmd, stats, s_prefix_len, lines)
         _build_stdin(atomiccmd, files, stats, s_prefix_len, lines)
-        _build_out_pipe(atomiccmd, files, stats,
-                        s_prefix_len, lines, "OUT_STDOUT")
-        _build_out_pipe(atomiccmd, files, stats,
-                        s_prefix_len, lines, "OUT_STDERR")
+        _build_out_pipe(atomiccmd, files, stats, s_prefix_len, lines, "OUT_STDOUT")
+        _build_out_pipe(atomiccmd, files, stats, s_prefix_len, lines, "OUT_STDERR")
         _build_cwd(atomiccmd, s_prefix_len, lines)
     elif _is_cls(atomiccmd, "ParallelCmds", "SequentialCmds"):
         lines.append("%s%s:" % (s_prefix, _describe_cls(atomiccmd)))
@@ -195,8 +191,7 @@ def pformat(atomiccmd):
     """Returns a human readable description of an Atomic Cmd or Atomic Set
     of commands. This is currently equivalent to str(cmd_obj)."""
     if not _is_cls(atomiccmd, "AtomicCmd", "ParallelCmds", "SequentialCmds"):
-        raise TypeError("Invalid type in pformat: %r" %
-                        atomiccmd.__class__.__name__)
+        raise TypeError("Invalid type in pformat: %r" % atomiccmd.__class__.__name__)
 
     lines = []
     stats = _collect_stats(atomiccmd, {"id": {}, "pipe": {}})

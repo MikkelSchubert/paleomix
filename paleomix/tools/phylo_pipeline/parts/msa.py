@@ -22,13 +22,9 @@
 #
 import os
 
-from paleomix.atomiccmd.builder import \
-     apply_options
-from paleomix.nodes.sequences import \
-     CollectSequencesNode, \
-     FilterSingletonsNode
-from paleomix.nodes.mafft import \
-     MAFFTNode
+from paleomix.atomiccmd.builder import apply_options
+from paleomix.nodes.sequences import CollectSequencesNode, FilterSingletonsNode
+from paleomix.nodes.mafft import MAFFTNode
 
 import paleomix.common.fileutils as fileutils
 
@@ -41,10 +37,12 @@ def build_msa_nodes(options, settings, regions, filtering, dependencies):
     # Run on full set of sequences
     sequences = regions["Sequences"][None]
 
-    node = CollectSequencesNode(fasta_files=regions["Genotypes"],
-                                destination=sequencedir,
-                                sequences=sequences,
-                                dependencies=dependencies)
+    node = CollectSequencesNode(
+        fasta_files=regions["Genotypes"],
+        destination=sequencedir,
+        sequences=sequences,
+        dependencies=dependencies,
+    )
 
     if settings["Enabled"]:
         fasta_files = {}
@@ -53,10 +51,12 @@ def build_msa_nodes(options, settings, regions, filtering, dependencies):
             input_file = os.path.join(sequencedir, sequence + ".fasta")
             output_file = os.path.join(sequencedir, sequence + ".afa")
 
-            mafft = MAFFTNode.customize(input_file=input_file,
-                                        output_file=output_file,
-                                        algorithm=algorithm,
-                                        dependencies=node)
+            mafft = MAFFTNode.customize(
+                input_file=input_file,
+                output_file=output_file,
+                algorithm=algorithm,
+                dependencies=node,
+            )
             apply_options(mafft.command, settings["MAFFT"])
             fasta_files[output_file] = mafft.build_node()
     else:
@@ -71,10 +71,12 @@ def build_msa_nodes(options, settings, regions, filtering, dependencies):
 
     for (filename, node) in fasta_files.items():
         output_filename = fileutils.reroot_path(destination, filename)
-        filtered_node = FilterSingletonsNode(input_file=filename,
-                                             output_file=output_filename,
-                                             filter_by=filtering,
-                                             dependencies=node)
+        filtered_node = FilterSingletonsNode(
+            input_file=filename,
+            output_file=output_filename,
+            filter_by=filtering,
+            dependencies=node,
+        )
 
         filtered_nodes.append(filtered_node)
 
@@ -91,8 +93,11 @@ def chain(_pipeline, options, makefiles):
 
         for regions in makefile["Project"]["Regions"].values():
             regions_settings = settings[regions["Name"]]
-            nodes.extend(build_msa_nodes(options, regions_settings, regions,
-                                         filtering, makefile["Nodes"]))
+            nodes.extend(
+                build_msa_nodes(
+                    options, regions_settings, regions, filtering, makefile["Nodes"]
+                )
+            )
 
         makefile["Nodes"] = tuple(nodes)
     options.destination = destination

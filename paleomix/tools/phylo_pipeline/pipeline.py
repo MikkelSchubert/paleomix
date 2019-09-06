@@ -31,13 +31,12 @@ import paleomix.yaml
 
 from paleomix.pipeline import Pypeline
 from paleomix.common.console import print_err
-from paleomix.tools.phylo_pipeline.makefile import \
-    MakefileError, \
-    read_makefiles
-from paleomix.tools.phylo_pipeline.config import \
-    ConfigError, \
-    parse_config, \
-    select_commands
+from paleomix.tools.phylo_pipeline.makefile import MakefileError, read_makefiles
+from paleomix.tools.phylo_pipeline.config import (
+    ConfigError,
+    parse_config,
+    select_commands,
+)
 
 
 def main(argv):
@@ -55,15 +54,13 @@ def main(argv):
 
         # Update interpreter to match the one currently in use;
         # this is required since we may be running from a virtual env
-        filename = os.path.join(argv[1],
-                                'phylo_pipeline',
-                                'synthesize_reads.py')
+        filename = os.path.join(argv[1], "phylo_pipeline", "synthesize_reads.py")
 
         with open(filename) as handle:
-            header, lines = handle.read().split('\n', 1)
+            header, lines = handle.read().split("\n", 1)
 
-        with open(filename, 'w') as handle:
-            handle.write('#!%s\n' % (os.path.abspath(sys.executable, )))
+        with open(filename, "w") as handle:
+            handle.write("#!%s\n" % (os.path.abspath(sys.executable)))
             handle.write(lines)
 
         return 0
@@ -83,8 +80,9 @@ def main(argv):
             return 1
 
     if not os.access(config.temp_root, os.R_OK | os.W_OK | os.X_OK):
-        print_err("ERROR: Insufficient permissions for temp root: '%s'"
-                  % (config.temp_root,))
+        print_err(
+            "ERROR: Insufficient permissions for temp root: '%s'" % (config.temp_root,)
+        )
         return 1
 
     # Init worker-threads before reading in any more data
@@ -93,15 +91,15 @@ def main(argv):
     try:
         makefiles = read_makefiles(config, args, commands)
     except (MakefileError, paleomix.yaml.YAMLError, IOError) as error:
-        print_err("Error reading makefiles:",
-                  "\n  %s:\n   " % (error.__class__.__name__,),
-                  "\n    ".join(str(error).split("\n")))
+        print_err(
+            "Error reading makefiles:",
+            "\n  %s:\n   " % (error.__class__.__name__,),
+            "\n    ".join(str(error).split("\n")),
+        )
         return 1
 
     paleomix.logger.initialize(
-        log_level=config.log_level,
-        log_file=config.log_file,
-        name='phylo_pipeline',
+        log_level=config.log_level, log_file=config.log_file, name="phylo_pipeline"
     )
 
     logger = logging.getLogger(__name__)
@@ -126,7 +124,6 @@ def main(argv):
         pipeline.print_required_executables()
         return 0
 
-    if not pipeline.run(max_threads=config.max_threads,
-                        dry_run=config.dry_run):
+    if not pipeline.run(max_threads=config.max_threads, dry_run=config.dry_run):
         return 1
     return 0

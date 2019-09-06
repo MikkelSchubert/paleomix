@@ -109,9 +109,9 @@ def truncate_sequences(sequences, name):
     result = {}
     to_len = len(sequences[name].sequence)
     for name, record in sequences.items():
-        result[name] = FASTA(name=record.name,
-                             meta=record.meta,
-                             sequence=record.sequence[:to_len])
+        result[name] = FASTA(
+            name=record.name, meta=record.meta, sequence=record.sequence[:to_len]
+        )
 
     return result
 
@@ -135,9 +135,9 @@ def sequences_to_msa(sequences):
 
 def parse_args(argv):
     parser = argparse.ArgumentParser()
-    parser.add_argument('database')
-    parser.add_argument('bam')
-    parser.add_argument('output_prefix')
+    parser.add_argument("database")
+    parser.add_argument("bam")
+    parser.add_argument("output_prefix")
 
     return parser.parse_args(argv)
 
@@ -158,20 +158,25 @@ def main(argv):
         if bam_info is None:
             return 1
         elif not bam_info.is_mitochondrial:
-            print_err("ERROR: BAM does not contain any known mitochondrial "
-                      "sequence found in BAM ..")
+            print_err(
+                "ERROR: BAM does not contain any known mitochondrial "
+                "sequence found in BAM .."
+            )
             return 1
 
         reference = sequences[bam_info.mt_contig]
-        stats, majority = majority_sequence(handle,
-                                            padding=bam_info.mt_padding,
-                                            contig_name=bam_info.mt_contig,
-                                            contig_length=bam_info.mt_length)
+        stats, majority = majority_sequence(
+            handle,
+            padding=bam_info.mt_padding,
+            contig_name=bam_info.mt_contig,
+            contig_length=bam_info.mt_length,
+        )
 
-        sequences["Sample"] = FASTA(name="Sample",
-                                    meta=None,
-                                    sequence=align_majority(reference.sequence,
-                                                            majority))
+        sequences["Sample"] = FASTA(
+            name="Sample",
+            meta=None,
+            sequence=align_majority(reference.sequence, majority),
+        )
 
         # Truncate all sequences to match the (now) unpadded sample sequence
         sequences = truncate_sequences(sequences, "Sample")
@@ -196,5 +201,5 @@ def main(argv):
         return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))

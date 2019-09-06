@@ -22,37 +22,34 @@
 #
 import os
 
-from paleomix.common.formats.newick import \
-     Newick
-from paleomix.common.utilities import \
-    safe_coerce_to_tuple
-from paleomix.common.fileutils import \
-    describe_files, \
-    move_file
-from paleomix.node import \
-    Node
-
+from paleomix.common.formats.newick import Newick
+from paleomix.common.utilities import safe_coerce_to_tuple
+from paleomix.common.fileutils import describe_files, move_file
+from paleomix.node import Node
 
 
 class NewickRerootNode(Node):
-    def __init__(self, tree_files, output_file, taxa = (), dependencies = ()):
-        self._output_file    = output_file
-        self._tree_files     = safe_coerce_to_tuple(tree_files)
+    def __init__(self, tree_files, output_file, taxa=(), dependencies=()):
+        self._output_file = output_file
+        self._tree_files = safe_coerce_to_tuple(tree_files)
         self._reroot_on_taxa = safe_coerce_to_tuple(taxa)
 
         reroot_on = "midpoint"
         if self._reroot_on_taxa:
             reroot_on = repr("', '".join(sorted(self._reroot_on_taxa)))
 
-        description  = "<NewickReroot (on %s): %s>" % \
-          (reroot_on, describe_files(tree_files),)
+        description = "<NewickReroot (on %s): %s>" % (
+            reroot_on,
+            describe_files(tree_files),
+        )
 
-        Node.__init__(self,
-                      description  = description,
-                      input_files  = self._tree_files,
-                      output_files = self._output_file,
-                      dependencies = dependencies)
-
+        Node.__init__(
+            self,
+            description=description,
+            input_files=self._tree_files,
+            output_files=self._output_file,
+            dependencies=dependencies,
+        )
 
     def _run(self, _config, temp):
         lines = []
@@ -71,26 +68,27 @@ class NewickRerootNode(Node):
         move_file(temp_output_file, self._output_file)
 
 
-
-
 class NewickSupportNode(Node):
-    def __init__(self, main_tree_files, support_tree_files, output_file, dependencies = ()):
-        self._output_file        = output_file
-        self._main_tree_files    = safe_coerce_to_tuple(main_tree_files)
+    def __init__(
+        self, main_tree_files, support_tree_files, output_file, dependencies=()
+    ):
+        self._output_file = output_file
+        self._main_tree_files = safe_coerce_to_tuple(main_tree_files)
         self._support_tree_files = safe_coerce_to_tuple(support_tree_files)
         input_files = self._main_tree_files + self._support_tree_files
 
-        description  = "<NewickSupport: %s>" % \
-          (describe_files(main_tree_files),)
+        description = "<NewickSupport: %s>" % (describe_files(main_tree_files),)
 
-        Node.__init__(self,
-                      description  = description,
-                      input_files  = input_files,
-                      output_files = output_file,
-                      dependencies = dependencies)
+        Node.__init__(
+            self,
+            description=description,
+            input_files=input_files,
+            output_files=output_file,
+            dependencies=dependencies,
+        )
 
     def _run(self, _config, temp):
-        main_trees    = _read_tree_files(self._main_tree_files)
+        main_trees = _read_tree_files(self._main_tree_files)
         support_trees = _read_tree_files(self._support_tree_files)
 
         lines = []
@@ -104,7 +102,6 @@ class NewickSupportNode(Node):
             handle.write(lines)
 
         move_file(temp_output_file, self._output_file)
-
 
 
 def _read_tree_files(filenames):

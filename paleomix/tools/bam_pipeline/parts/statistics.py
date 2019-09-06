@@ -23,15 +23,10 @@
 import os
 import collections
 
-from paleomix.common.fileutils import \
-    swap_ext
+from paleomix.common.fileutils import swap_ext
 
-from paleomix.nodes.commands import \
-    CoverageNode, \
-    MergeCoverageNode, \
-    DepthHistogramNode
-from paleomix.tools.bam_pipeline.parts.summary import \
-    SummaryTableNode
+from paleomix.nodes.commands import CoverageNode, MergeCoverageNode, DepthHistogramNode
+from paleomix.tools.bam_pipeline.parts.summary import SummaryTableNode
 
 
 def add_statistics_nodes(config, makefile, target):
@@ -45,8 +40,7 @@ def add_statistics_nodes(config, makefile, target):
         make_summary = features["Summary"]
         coverage = _build_coverage(config, target, make_summary)
         if make_summary:
-            summary_node = _build_summary_node(config, makefile,
-                                               target, coverage)
+            summary_node = _build_summary_node(config, makefile, target, coverage)
             nodes.append(summary_node)
         elif features["Coverage"]:
             nodes.extend(coverage["Nodes"])
@@ -57,12 +51,14 @@ def add_statistics_nodes(config, makefile, target):
 def _build_summary_node(config, makefile, target, coverage):
     coverage_by_label = _build_coverage_nodes(target, use_label=True)
 
-    return SummaryTableNode(config=config,
-                            makefile=makefile,
-                            target=target,
-                            cov_for_lanes=coverage_by_label["Lanes"],
-                            cov_for_libs=coverage_by_label["Libraries"],
-                            dependencies=coverage["Nodes"])
+    return SummaryTableNode(
+        config=config,
+        makefile=makefile,
+        target=target,
+        cov_for_lanes=coverage_by_label["Lanes"],
+        cov_for_libs=coverage_by_label["Libraries"],
+        dependencies=coverage["Nodes"],
+    )
 
 
 def _build_depth(config, target, prefixes):
@@ -82,17 +78,18 @@ def _build_depth(config, target, prefixes):
                 dependencies = list(input_files.values())
                 input_files = list(input_files.keys())
 
-            output_filename = "%s.%s%s.depths" % (target.name, prefix.name,
-                                                  roi_name)
+            output_filename = "%s.%s%s.depths" % (target.name, prefix.name, roi_name)
             output_fpath = os.path.join(config.destination, output_filename)
 
-            node = DepthHistogramNode(config=config,
-                                      target_name=target.name,
-                                      input_files=input_files,
-                                      prefix=prefixes[prefix.name],
-                                      regions_file=roi_filename,
-                                      output_file=output_fpath,
-                                      dependencies=dependencies)
+            node = DepthHistogramNode(
+                config=config,
+                target_name=target.name,
+                input_files=input_files,
+                prefix=prefixes[prefix.name],
+                regions_file=roi_filename,
+                output_file=output_fpath,
+                dependencies=dependencies,
+            )
             nodes.append(node)
 
     return nodes
@@ -118,21 +115,23 @@ def _build_coverage(config, target, make_summary):
             else:
                 postfix = "%s.%s" % (prefix.name, roi_name)
 
-            files_and_nodes = _aggregate_for_prefix(coverage["Libraries"],
-                                                    label)
-            output_filename = os.path.join(config.destination,
-                                           "%s.%s.coverage"
-                                           % (target.name, postfix))
-            merged = MergeCoverageNode(input_files=list(files_and_nodes.keys()),
-                                       output_file=output_filename,
-                                       dependencies=list(files_and_nodes.values()))
+            files_and_nodes = _aggregate_for_prefix(coverage["Libraries"], label)
+            output_filename = os.path.join(
+                config.destination, "%s.%s.coverage" % (target.name, postfix)
+            )
+            merged = MergeCoverageNode(
+                input_files=list(files_and_nodes.keys()),
+                output_file=output_filename,
+                dependencies=list(files_and_nodes.values()),
+            )
 
             merged_nodes.append(merged)
 
     files_and_nodes = _aggregate_for_prefix(coverage["Libraries"], None)
     if make_summary:
-        files_and_nodes = _aggregate_for_prefix(coverage["Lanes"], None,
-                                                into=files_and_nodes)
+        files_and_nodes = _aggregate_for_prefix(
+            coverage["Lanes"], None, into=files_and_nodes
+        )
 
     all_nodes = []
     all_nodes.extend(files_and_nodes.values())
@@ -144,8 +143,10 @@ def _build_coverage(config, target, make_summary):
 
 
 def _build_coverage_nodes(target, use_label=False):
-    coverage = {"Lanes": collections.defaultdict(dict),
-                "Libraries": collections.defaultdict(dict)}
+    coverage = {
+        "Lanes": collections.defaultdict(dict),
+        "Libraries": collections.defaultdict(dict),
+    }
 
     cache = {}
     for prefix in target.prefixes:
@@ -155,28 +156,26 @@ def _build_coverage_nodes(target, use_label=False):
 
             for sample in prefix.samples:
                 for library in sample.libraries:
-                    key = (prefix_label, target.name,
-                           sample.name, library.name)
+                    key = (prefix_label, target.name, sample.name, library.name)
 
                     for lane in library.lanes:
                         for bams in lane.bams.values():
-                            bams = _build_coverage_nodes_cached(bams,
-                                                                target.name,
-                                                                roi_name,
-                                                                roi_filename,
-                                                                cache)
+                            bams = _build_coverage_nodes_cached(
+                                bams, target.name, roi_name, roi_filename, cache
+                            )
 
                             coverage["Lanes"][key].update(bams)
 
-                    bams = _build_coverage_nodes_cached(library.bams,
-                                                        target.name, roi_name,
-                                                        roi_filename, cache)
+                    bams = _build_coverage_nodes_cached(
+                        library.bams, target.name, roi_name, roi_filename, cache
+                    )
                     coverage["Libraries"][key].update(bams)
     return coverage
 
 
-def _build_coverage_nodes_cached(files_and_nodes, target_name,
-                                 roi_name, roi_filename, cache):
+def _build_coverage_nodes_cached(
+    files_and_nodes, target_name, roi_name, roi_filename, cache
+):
     output_ext = ".coverage"
     if roi_name:
         output_ext = ".%s.coverage" % roi_name
@@ -187,11 +186,13 @@ def _build_coverage_nodes_cached(files_and_nodes, target_name,
 
         cache_key = (roi_filename, input_filename)
         if cache_key not in cache:
-            cache[cache_key] = CoverageNode(input_file=input_filename,
-                                            output_file=output_filename,
-                                            target_name=target_name,
-                                            regions_file=roi_filename,
-                                            dependencies=node)
+            cache[cache_key] = CoverageNode(
+                input_file=input_filename,
+                output_file=output_filename,
+                target_name=target_name,
+                regions_file=roi_filename,
+                dependencies=node,
+            )
 
         coverages[output_filename] = cache[cache_key]
     return coverages

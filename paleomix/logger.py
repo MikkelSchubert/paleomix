@@ -51,7 +51,7 @@ def initialize(log_level="info", log_file=None, name="paleomix"):
         handler.setFormatter(logging.Formatter(_LOG_FORMAT))
         root.addHandler(handler)
     elif name:
-        template = '%s.%s_%%02i.log' % (name, time.strftime("%Y%m%d_%H%M%S"))
+        template = "%s.%s_%%02i.log" % (name, time.strftime("%Y%m%d_%H%M%S"))
         handler = LazyLogfile(template)
         handler.setFormatter(logging.Formatter(_LOG_FORMAT))
         handler.setLevel(logging.WARNING)
@@ -103,7 +103,7 @@ class LazyLogfile(logging.FileHandler):
             try:
                 stream = os.fdopen(os.open(filename, flags), "w")
                 logger = logging.getLogger(__name__)
-                logger.info('Logging warnings and errors to %r', filename)
+                logger.info("Logging warnings and errors to %r", filename)
 
                 self.baseFilename = filename
                 return stream

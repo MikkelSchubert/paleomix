@@ -31,7 +31,7 @@ from paleomix.common.text import padded_table
 
 
 def split_line(line):
-    sections = line.rstrip('\r\n').split('#', 1)
+    sections = line.rstrip("\r\n").split("#", 1)
     if len(sections) == 1:
         sections.append(None)
 
@@ -40,17 +40,18 @@ def split_line(line):
 
     if comment is not None:
         if not columns:
-            return '#' + comment
+            return "#" + comment
 
-        columns.append('#' + comment)
+        columns.append("#" + comment)
 
     return columns
 
 
 def parse_args(argv):
     parser = argparse.ArgumentParser(prog="paleomix retable")
-    parser.add_argument("file", nargs="*",
-                        help="One or more text files containing tabular data.")
+    parser.add_argument(
+        "file", nargs="*", help="One or more text files containing tabular data."
+    )
 
     return parser.parse_args(argv)
 
@@ -69,5 +70,5 @@ def main(argv):
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))

@@ -33,29 +33,27 @@ import paleomix.common.versions as versions
 _VERSION_REGEX = r"Version: (\d+)\.(\d+)(?:\.(\d+))?"
 
 # v0.2.0 was the pre-release version of v1.0, and lacks required features
-_COMMON_CHECK = versions.Or(versions.EQ(0, 1, 19),
-                            versions.GE(1, 0, 0))
+_COMMON_CHECK = versions.Or(versions.EQ(0, 1, 19), versions.GE(1, 0, 0))
 
-SAMTOOLS_VERSION = versions.Requirement(call=("samtools",),
-                                        search=_VERSION_REGEX,
-                                        checks=_COMMON_CHECK)
+SAMTOOLS_VERSION = versions.Requirement(
+    call=("samtools",), search=_VERSION_REGEX, checks=_COMMON_CHECK
+)
 
-SAMTOOLS_VERSION_1x = versions.Requirement(call=("samtools",),
-                                           search=_VERSION_REGEX,
-                                           checks=versions.GE(1, 0, 0))
+SAMTOOLS_VERSION_1x = versions.Requirement(
+    call=("samtools",), search=_VERSION_REGEX, checks=versions.GE(1, 0, 0)
+)
 
-SAMTOOLS_VERSION_0119 = versions.Requirement(call=("samtools",),
-                                             search=_VERSION_REGEX,
-                                             checks=versions.EQ(0, 1, 19))
+SAMTOOLS_VERSION_0119 = versions.Requirement(
+    call=("samtools",), search=_VERSION_REGEX, checks=versions.EQ(0, 1, 19)
+)
 
-BCFTOOLS_VERSION_0119 \
-    = versions.Requirement(call=("bcftools",),
-                           search=_VERSION_REGEX,
-                           checks=versions.EQ(0, 1, 19))
+BCFTOOLS_VERSION_0119 = versions.Requirement(
+    call=("bcftools",), search=_VERSION_REGEX, checks=versions.EQ(0, 1, 19)
+)
 
-TABIX_VERSION = versions.Requirement(call=("tabix",),
-                                     search=_VERSION_REGEX,
-                                     checks=versions.GE(0, 2, 5))
+TABIX_VERSION = versions.Requirement(
+    call=("tabix",), search=_VERSION_REGEX, checks=versions.GE(0, 2, 5)
+)
 
 
 class TabixIndexNode(CommandNode):
@@ -76,17 +74,20 @@ class TabixIndexNode(CommandNode):
             assert False, "Unxpected preset: %r" % preset
 
         self._infile = infile
-        cmd_tabix = AtomicCmd(call + ["%(TEMP_IN_VCFFILE)s"],
-                              TEMP_IN_VCFFILE=os.path.basename(infile),
-                              IN_VCFFILE=infile,
-                              OUT_TBI=infile + ".tbi",
-                              CHECK_TABIX=TABIX_VERSION)
+        cmd_tabix = AtomicCmd(
+            call + ["%(TEMP_IN_VCFFILE)s"],
+            TEMP_IN_VCFFILE=os.path.basename(infile),
+            IN_VCFFILE=infile,
+            OUT_TBI=infile + ".tbi",
+            CHECK_TABIX=TABIX_VERSION,
+        )
 
-        CommandNode.__init__(self,
-                             description="<TabixIndex (%s): '%s'>" % (preset,
-                                                                      infile,),
-                             command=cmd_tabix,
-                             dependencies=dependencies)
+        CommandNode.__init__(
+            self,
+            description="<TabixIndex (%s): '%s'>" % (preset, infile),
+            command=cmd_tabix,
+            dependencies=dependencies,
+        )
 
     def _setup(self, config, temp):
         """See CommandNode._setup."""
@@ -108,16 +109,20 @@ class FastaIndexNode(CommandNode):
 
     def __init__(self, infile, dependencies=()):
         self._infile = infile
-        cmd_faidx = AtomicCmd(["samtools", "faidx", "%(TEMP_IN_FASTA)s"],
-                              TEMP_IN_FASTA=os.path.basename(infile),
-                              IN_FASTA=infile,
-                              OUT_TBI=infile + ".fai",
-                              CHECK_SAM=SAMTOOLS_VERSION)
+        cmd_faidx = AtomicCmd(
+            ["samtools", "faidx", "%(TEMP_IN_FASTA)s"],
+            TEMP_IN_FASTA=os.path.basename(infile),
+            IN_FASTA=infile,
+            OUT_TBI=infile + ".fai",
+            CHECK_SAM=SAMTOOLS_VERSION,
+        )
 
-        CommandNode.__init__(self,
-                             description="<FastaIndex: '%s'>" % (infile,),
-                             command=cmd_faidx,
-                             dependencies=dependencies)
+        CommandNode.__init__(
+            self,
+            description="<FastaIndex: '%s'>" % (infile,),
+            command=cmd_faidx,
+            dependencies=dependencies,
+        )
 
     def _setup(self, config, temp):
         """See CommandNode._setup."""
@@ -137,36 +142,42 @@ class FastaIndexNode(CommandNode):
 class BAMIndexNode(CommandNode):
     """Indexed a BAM file using 'samtools index'."""
 
-    def __init__(self, infile, index_format='.bai', dependencies=()):
+    def __init__(self, infile, index_format=".bai", dependencies=()):
         basename = os.path.basename(infile)
 
-        if index_format == '.bai':
+        if index_format == ".bai":
             samtools_version = SAMTOOLS_VERSION
             samtools_call = ["samtools", "index", "%(TEMP_IN_BAM)s"]
-        elif index_format == '.csi':
+        elif index_format == ".csi":
             samtools_version = SAMTOOLS_VERSION_1x
             samtools_call = ["samtools", "index", "-c", "%(TEMP_IN_BAM)s"]
         else:
-            raise ValueError("Unknown format type %r; expected .bai or .csi"
-                             % (index_format,))
+            raise ValueError(
+                "Unknown format type %r; expected .bai or .csi" % (index_format,)
+            )
 
-        cmd_link = AtomicCmd(["ln", "-s", "%(IN_BAM)s", "%(TEMP_OUT_BAM)s"],
-                             IN_BAM=infile,
-                             TEMP_OUT_BAM=basename,
-                             set_cwd=True)
+        cmd_link = AtomicCmd(
+            ["ln", "-s", "%(IN_BAM)s", "%(TEMP_OUT_BAM)s"],
+            IN_BAM=infile,
+            TEMP_OUT_BAM=basename,
+            set_cwd=True,
+        )
 
-        cmd_index = AtomicCmd(samtools_call,
-                              TEMP_IN_BAM=basename,
-                              CHECK_SAM=samtools_version)
+        cmd_index = AtomicCmd(
+            samtools_call, TEMP_IN_BAM=basename, CHECK_SAM=samtools_version
+        )
 
-        cmd_rename = AtomicCmd(["mv", "%(TEMP_IN_BAM)s", "%(OUT_BAM)s"],
-                               TEMP_IN_BAM=basename + index_format,
-                               OUT_BAM=swap_ext(infile, index_format))
+        cmd_rename = AtomicCmd(
+            ["mv", "%(TEMP_IN_BAM)s", "%(OUT_BAM)s"],
+            TEMP_IN_BAM=basename + index_format,
+            OUT_BAM=swap_ext(infile, index_format),
+        )
 
         commands = SequentialCmds((cmd_link, cmd_index, cmd_rename))
 
-        CommandNode.__init__(self,
-                             description="<BAMIndex (%s): '%s'>"
-                             % (index_format[1:].upper(), infile),
-                             command=commands,
-                             dependencies=dependencies)
+        CommandNode.__init__(
+            self,
+            description="<BAMIndex (%s): '%s'>" % (index_format[1:].upper(), infile),
+            command=commands,
+            dependencies=dependencies,
+        )

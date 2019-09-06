@@ -24,22 +24,16 @@ import os
 
 from copy import deepcopy
 
-from paleomix.atomiccmd.builder import \
-    apply_options
-from paleomix.nodes.samtools import \
-    TabixIndexNode, \
-    FastaIndexNode, \
-    BAMIndexNode
-from paleomix.nodes.bedtools import \
-    PaddedBedNode
-from paleomix.common.fileutils import \
-    swap_ext, \
-    add_postfix
-from paleomix.nodes.commands import \
-    VCFPileupNode, \
-    VCFFilterNode, \
-    BuildRegionsNode, \
-    GenotypeRegionsNode
+from paleomix.atomiccmd.builder import apply_options
+from paleomix.nodes.samtools import TabixIndexNode, FastaIndexNode, BAMIndexNode
+from paleomix.nodes.bedtools import PaddedBedNode
+from paleomix.common.fileutils import swap_ext, add_postfix
+from paleomix.nodes.commands import (
+    VCFPileupNode,
+    VCFFilterNode,
+    BuildRegionsNode,
+    GenotypeRegionsNode,
+)
 
 
 def apply_samtools_options(builder, options, argument):
@@ -68,15 +62,13 @@ def build_bam_index_node(bamfile):
 
     """
     if bamfile not in _BAI_CACHE:
-        _BAI_CACHE[bamfile] = \
-            BAMIndexNode(infile=bamfile)
+        _BAI_CACHE[bamfile] = BAMIndexNode(infile=bamfile)
     return _BAI_CACHE[bamfile]
 
 
 def build_fasta_index_node(reference):
     if reference not in _FAI_CACHE:
-        _FAI_CACHE[reference] = \
-            FastaIndexNode(infile=reference)
+        _FAI_CACHE[reference] = FastaIndexNode(infile=reference)
     return _FAI_CACHE[reference]
 
 
@@ -89,12 +81,13 @@ def build_regions_nodes(regions, padding, dependencies=()):
     if destination not in _BED_CACHE:
         dependencies = list(dependencies)
         dependencies.append(build_fasta_index_node(regions["FASTA"]))
-        _BED_CACHE[destination] \
-            = PaddedBedNode(fai_file=regions["FASTA"] + ".fai",
-                            infile=regions["BED"],
-                            outfile=destination,
-                            amount=padding,
-                            dependencies=dependencies)
+        _BED_CACHE[destination] = PaddedBedNode(
+            fai_file=regions["FASTA"] + ".fai",
+            infile=regions["BED"],
+            outfile=destination,
+            amount=padding,
+            dependencies=dependencies,
+        )
 
     return destination, (_BED_CACHE[destination],)
 
@@ -108,8 +101,7 @@ def _apply_vcf_filter_options(vcffilter, genotyping, sample):
     return vcffilter.build_node()
 
 
-def build_genotyping_bedfile_nodes(options, genotyping, sample, regions,
-                                   dependencies):
+def build_genotyping_bedfile_nodes(options, genotyping, sample, regions, dependencies):
     bamfile = "%s.%s.bam" % (sample, regions["Prefix"])
     bamfile = os.path.join(options.samples_root, bamfile)
     if regions["Realigned"]:
@@ -118,21 +110,20 @@ def build_genotyping_bedfile_nodes(options, genotyping, sample, regions,
     prefix = regions["Genotypes"][sample]
     padding, bedfile = genotyping["Padding"], None
     if not genotyping["GenotypeEntirePrefix"]:
-        bedfile, nodes = \
-            build_regions_nodes(regions, padding, dependencies)
+        bedfile, nodes = build_regions_nodes(regions, padding, dependencies)
         bai_node = build_bam_index_node(bamfile)
         dependencies = nodes + (bai_node,)
     else:
-        prefix = os.path.join(os.path.dirname(prefix),
-                              "%s.%s.TEMP" % (sample, regions["Prefix"]))
+        prefix = os.path.join(
+            os.path.dirname(prefix), "%s.%s.TEMP" % (sample, regions["Prefix"])
+        )
 
         dependencies += (build_bam_index_node(bamfile),)
 
     return prefix, bamfile, bedfile, dependencies
 
 
-def build_genotyping_nodes_cached(options, genotyping, sample, regions,
-                                  dependencies):
+def build_genotyping_nodes_cached(options, genotyping, sample, regions, dependencies):
     """Carries out genotyping, filtering of calls, and indexing of files for a
     given sample and prefix. If the option 'GenotypeEntirePrefix' is enabled,
     the BAM is genotyped once, and each set of RegionsOfInterest simply extract
@@ -174,9 +165,9 @@ def build_genotyping_nodes_cached(options, genotyping, sample, regions,
         SAMPLE.PREFIX.ROI.CDS.fasta.fai: FASTA index generated using SAMTools.
 
     """
-    output_prefix, bamfile, bedfile, dependencies \
-        = build_genotyping_bedfile_nodes(options, genotyping, sample, regions,
-                                         dependencies)
+    output_prefix, bamfile, bedfile, dependencies = build_genotyping_bedfile_nodes(
+        options, genotyping, sample, regions, dependencies
+    )
 
     if (bamfile, output_prefix) in _VCF_CACHE:
         return _VCF_CACHE[(bamfile, output_prefix)]
@@ -186,48 +177,53 @@ def build_genotyping_nodes_cached(options, genotyping, sample, regions,
     filtered = swap_ext(output_prefix, ".filtered.vcf.bgz")
 
     # 1. Call samtools mpilup | bcftools view on the bam
-    genotype = GenotypeRegionsNode.customize(reference=regions["FASTA"],
-                                             bedfile=bedfile,
-                                             infile=bamfile,
-                                             outfile=calls,
-                                             nbatches=options.samtools_max_threads,
-                                             dependencies=dependencies)
+    genotype = GenotypeRegionsNode.customize(
+        reference=regions["FASTA"],
+        bedfile=bedfile,
+        infile=bamfile,
+        outfile=calls,
+        nbatches=options.samtools_max_threads,
+        dependencies=dependencies,
+    )
 
-    apply_samtools_options(genotype.command, genotyping["MPileup"],
-                           "--mpileup-argument")
-    apply_samtools_options(genotype.command, genotyping["BCFTools"],
-                           "--bcftools-argument")
+    apply_samtools_options(
+        genotype.command, genotyping["MPileup"], "--mpileup-argument"
+    )
+    apply_samtools_options(
+        genotype.command, genotyping["BCFTools"], "--bcftools-argument"
+    )
     genotype = genotype.build_node()
 
     # 2. Collect pileups of sites with SNPs, to allow proper filtering by
     #    frequency of the minor allele, as only the major non-ref allele is
     #    counted in the VCF (c.f. field DP4).
-    vcfpileup = VCFPileupNode.customize(reference=regions["FASTA"],
-                                        infile_bam=bamfile,
-                                        infile_vcf=calls,
-                                        outfile=pileups,
-                                        dependencies=genotype)
-    apply_samtools_options(vcfpileup.command, genotyping["MPileup"],
-                           "--mpileup-argument")
+    vcfpileup = VCFPileupNode.customize(
+        reference=regions["FASTA"],
+        infile_bam=bamfile,
+        infile_vcf=calls,
+        outfile=pileups,
+        dependencies=genotype,
+    )
+    apply_samtools_options(
+        vcfpileup.command, genotyping["MPileup"], "--mpileup-argument"
+    )
     vcfpileup = vcfpileup.build_node()
 
-    vcf_tabix = TabixIndexNode(infile=pileups,
-                               preset="pileup",
-                               dependencies=vcfpileup)
+    vcf_tabix = TabixIndexNode(infile=pileups, preset="pileup", dependencies=vcfpileup)
 
     # 3. Filter all sites using the 'vcf_filter' command
-    vcffilter = VCFFilterNode.customize(infile=calls,
-                                        pileup=pileups,
-                                        outfile=filtered,
-                                        regions=regions,
-                                        dependencies=vcf_tabix)
+    vcffilter = VCFFilterNode.customize(
+        infile=calls,
+        pileup=pileups,
+        outfile=filtered,
+        regions=regions,
+        dependencies=vcf_tabix,
+    )
     vcffilter = _apply_vcf_filter_options(vcffilter, genotyping, sample)
 
     # 4. Tabix index. This allows random-access to the VCF file when building
     #    the consensus FASTA sequence later in the pipeline.
-    tabix = TabixIndexNode(infile=filtered,
-                           preset="vcf",
-                           dependencies=vcffilter)
+    tabix = TabixIndexNode(infile=filtered, preset="vcf", dependencies=vcffilter)
 
     _VCF_CACHE[(bamfile, output_prefix)] = (filtered, tabix)
     return filtered, tabix
@@ -249,19 +245,23 @@ def build_genotyping_nodes(options, genotyping, sample, regions, dependencies):
 
     """
     # 1. Get path of the filtered VCF file, and the assosiated node
-    filtered, node = build_genotyping_nodes_cached(options=options,
-                                                   genotyping=genotyping,
-                                                   sample=sample,
-                                                   regions=regions,
-                                                   dependencies=dependencies)
+    filtered, node = build_genotyping_nodes_cached(
+        options=options,
+        genotyping=genotyping,
+        sample=sample,
+        regions=regions,
+        dependencies=dependencies,
+    )
 
     # 2. Generate consensus sequence from filtered VCF
     output_fasta = regions["Genotypes"][sample]
-    builder = BuildRegionsNode.customize(infile=filtered,
-                                         bedfile=regions["BED"],
-                                         outfile=output_fasta,
-                                         padding=genotyping["Padding"],
-                                         dependencies=node)
+    builder = BuildRegionsNode.customize(
+        infile=filtered,
+        bedfile=regions["BED"],
+        outfile=output_fasta,
+        padding=genotyping["Padding"],
+        dependencies=node,
+    )
     if regions["ProteinCoding"]:
         builder.command.set_option("--whole-codon-indels-only")
     if not regions["IncludeIndels"]:
@@ -269,14 +269,12 @@ def build_genotyping_nodes(options, genotyping, sample, regions, dependencies):
     builder = builder.build_node()
 
     # 3. Index sequences to make retrival easier for MSA
-    faidx = FastaIndexNode(infile=output_fasta,
-                           dependencies=builder)
+    faidx = FastaIndexNode(infile=output_fasta, dependencies=builder)
 
     return (faidx,)
 
 
-def build_sample_nodes(options, genotyping, regions_sets, sample,
-                       dependencies=()):
+def build_sample_nodes(options, genotyping, regions_sets, sample, dependencies=()):
     nodes = []
     for regions in regions_sets.values():
         regions = deepcopy(regions)
@@ -302,13 +300,15 @@ def chain(pipeline, options, makefiles):
     for makefile in makefiles:
         regions_sets = makefile["Project"]["Regions"]
         genotyping = makefile["Genotyping"]
-        options.destination = os.path.join(destination,
-                                           makefile["Project"]["Title"])
+        options.destination = os.path.join(destination, makefile["Project"]["Title"])
 
         nodes = []
         for sample in makefile["Project"]["Samples"].values():
-            nodes.extend(build_sample_nodes(options, genotyping, regions_sets,
-                                            sample, makefile["Nodes"]))
+            nodes.extend(
+                build_sample_nodes(
+                    options, genotyping, regions_sets, sample, makefile["Nodes"]
+                )
+            )
 
         makefile["Nodes"] = tuple(nodes)
     options.destination = destination

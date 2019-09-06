@@ -25,33 +25,33 @@ from paleomix.common.utilities import grouper
 from paleomix.common.formats.msa import MSA
 
 
-_NUM_BLOCKS      = 6
-_BLOCK_SIZE      = 10
-_BLOCK_SPACING   = 2
+_NUM_BLOCKS = 6
+_BLOCK_SIZE = 10
+_BLOCK_SPACING = 2
 _MAX_NAME_LENGTH = 30
-_NAME_ENDS_AT    = 36
-_LINE_SIZE       = _NUM_BLOCKS * _BLOCK_SIZE + (_NUM_BLOCKS - 1) * _BLOCK_SPACING
+_NAME_ENDS_AT = 36
+_LINE_SIZE = _NUM_BLOCKS * _BLOCK_SIZE + (_NUM_BLOCKS - 1) * _BLOCK_SPACING
 
 
-def interleaved_phy(msa, add_flag = False, max_name_length = _MAX_NAME_LENGTH):
+def interleaved_phy(msa, add_flag=False, max_name_length=_MAX_NAME_LENGTH):
     MSA.validate(msa)
     header = "%i %i" % (len(msa), msa.seqlen())
     if add_flag:
         header += " I"
     result = [header, ""]
 
-    padded_len  = min(max_name_length, max(len(name) for name in msa.names())) + 2
+    padded_len = min(max_name_length, max(len(name) for name in msa.names())) + 2
     padded_len -= padded_len % -(_BLOCK_SIZE + _BLOCK_SPACING) + _BLOCK_SPACING
 
     streams = []
     spacing = " " * _BLOCK_SPACING
     for record in sorted(msa):
-        name    = record.name[:max_name_length]
+        name = record.name[:max_name_length]
         padding = (padded_len - len(name)) * " "
 
         lines = []
-        line  = [name, padding]
-        for block in grouper(_BLOCK_SIZE, record.sequence, fillvalue = ""):
+        line = [name, padding]
+        for block in grouper(_BLOCK_SIZE, record.sequence, fillvalue=""):
             block = "".join(block)
             if sum(len(segment) for segment in line) >= _LINE_SIZE:
                 lines.append("".join(line))

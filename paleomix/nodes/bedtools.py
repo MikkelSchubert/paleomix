@@ -22,11 +22,8 @@
 #
 from paleomix.node import Node, NodeError
 
-from paleomix.common.bedtools import \
-    read_bed_file
-from paleomix.common.fileutils import \
-    move_file, \
-    reroot_path
+from paleomix.common.bedtools import read_bed_file
+from paleomix.common.fileutils import move_file, reroot_path
 
 
 class PaddedBedNode(Node):
@@ -40,32 +37,34 @@ class PaddedBedNode(Node):
         self._outfile = outfile
         self._fai_file = fai_file
 
-        Node.__init__(self,
-                      description='<PaddedBed (%i): %r -> %r>'
-                      % (amount, infile, outfile),
-                      input_files=(infile, fai_file),
-                      output_files=(outfile,),
-                      dependencies=dependencies)
+        Node.__init__(
+            self,
+            description="<PaddedBed (%i): %r -> %r>" % (amount, infile, outfile),
+            input_files=(infile, fai_file),
+            output_files=(outfile,),
+            dependencies=dependencies,
+        )
 
     def _run(self, config, temp):
         contigs = {}
         with open(self._fai_file) as handle:
             for line in handle:
-                name, length, _ = line.split('\t', 2)
+                name, length, _ = line.split("\t", 2)
                 if name in contigs:
-                    raise NodeError('Reference genome contains multiple '
-                                    'identically named contigs (%r)!'
-                                    % (name,))
+                    raise NodeError(
+                        "Reference genome contains multiple "
+                        "identically named contigs (%r)!" % (name,)
+                    )
 
                 contigs[name] = int(length)
 
-        with open(reroot_path(temp, self._outfile), 'w') as handle:
+        with open(reroot_path(temp, self._outfile), "w") as handle:
             for record in read_bed_file(self._infile, contigs=contigs):
                 max_length = contigs[record.contig]
                 record.start = max(0, record.start - self._amount)
                 record.end = min(record.end + self._amount, max_length)
 
-                handle.write('%s\n' % (record,))
+                handle.write("%s\n" % (record,))
 
     def _teardown(self, config, temp):
         source = reroot_path(temp, self._outfile)

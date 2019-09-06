@@ -25,17 +25,13 @@
 
 """
 
-from paleomix.common.utilities import \
-     safe_coerce_to_frozenset, \
-     get_in, \
-     set_in
+from paleomix.common.utilities import safe_coerce_to_frozenset, get_in, set_in
 
 from paleomix.common.formats import FormatError
 
 
 class GraphError(FormatError):
     pass
-
 
 
 class _Graph:
@@ -47,15 +43,13 @@ class _Graph:
     Note that neither the root-length, nor node-ordering is preserved."""
 
     def __init__(self):
-        self.names        = {}
-        self.connections  = {}
+        self.names = {}
+        self.connections = {}
         self.has_branch_lengths = None
-
 
     def is_leaf(self, node):
         """Returns true if the node is a leaf, defined as having a single connection."""
         return len(self.connections[node]) == 1
-
 
     def get_path_length(self, *nodes):
         """Returns the length of a path through the graph. Calling the function
@@ -71,22 +65,19 @@ class _Graph:
 
         return path_length
 
-
     def set_name(self, node_id, name):
         self.names[node_id] = name
 
-
-    def add_connection(self, node_id_a, node_id_b, blength = None):
+    def add_connection(self, node_id_a, node_id_b, blength=None):
         if (blength is not None) and float(blength) < 0:
             raise GraphError("Branch-lengths must be non-negative")
         elif (blength is not None) != self.has_branch_lengths:
             if not self.has_branch_lengths is None:
                 raise GraphError("Tree contains branches with and without lengths")
-            self.has_branch_lengths = (blength is not None)
+            self.has_branch_lengths = blength is not None
 
         set_in(self.connections, (node_id_a, node_id_b), blength)
         set_in(self.connections, (node_id_b, node_id_a), blength)
-
 
     def remove_connection(self, node_a, node_b):
         length_a = self.connections[node_a].pop(node_b)
@@ -94,20 +85,19 @@ class _Graph:
         assert length_a == length_b, (length_a, length_b)
         return length_a
 
-
     def remove_node(self, node):
         connections = self.connections.pop(node)
         for node_b in connections:
             self.connections[node_b].pop(node)
         self.names.pop(node)
 
-
     def rebuild_tree(self, parent_id, node_id):
         """Rebuilds a tree starting at a node with id
         'node_id' and a parent with id 'parent_id' (or the
         same value as 'node_id' if a root node)."""
-        raise NotImplementedError("Subclasses must implement 'rebuild_nodes'.") # pragma: no coverage
-
+        raise NotImplementedError(
+            "Subclasses must implement 'rebuild_nodes'."
+        )  # pragma: no coverage
 
     def prune_uninformative_nodes(self):
         """Removes nodes without names, and which are connected
@@ -137,35 +127,35 @@ class _Graph:
                 # Nothing was pruned this round, terminate
                 break
 
-
-
     ################################################################################
     ################################################################################
     ## Functions relating to NEWICK rooting on midpoint
 
     def reroot_on_midpoint(self):
         if not self.has_branch_lengths:
-            raise GraphError("Cannot reroot on midpoint for tree without branch-lengths")
+            raise GraphError(
+                "Cannot reroot on midpoint for tree without branch-lengths"
+            )
 
         longest_path, length = self._find_longest_path()
         root = self._create_root_at(longest_path, length / 2.0)
 
         return self.rebuild_tree(root, root)
 
-
     def _find_longest_path(self):
         """This function determines the longest non-overlapping path possible,
         and returns a list of the sequence of nodes in this path, as well as
         the total length of this path."""
         path_blengths = {}
-        path_guides   = {}
+        path_guides = {}
+
         def _collect_paths(guide, length, p_node, c_node):
             length += self.get_path_length(p_node, c_node)
 
             guide.append(c_node)
-            key                = frozenset(guide)
+            key = frozenset(guide)
             path_blengths[key] = length
-            path_guides[key ]  = guide
+            path_guides[key] = guide
 
             for other in self.connections[c_node]:
                 if other not in key:
@@ -177,7 +167,6 @@ class _Graph:
 
         key, length = max(path_blengths.items(), key=lambda item: item[1])
         return path_guides[key], length
-
 
     def _create_root_at(self, path, root_at):
         """Finds the midpoint of a path through a tree, and
@@ -195,8 +184,8 @@ class _Graph:
         for (c_node, n_node) in zip(path, path[1:]):
             branch_length = self.get_path_length(c_node, n_node)
 
-            if (branch_length > root_at):
-                left_len  = root_at
+            if branch_length > root_at:
+                left_len = root_at
                 right_len = branch_length - root_at
 
                 self.remove_connection(c_node, n_node)
@@ -207,25 +196,23 @@ class _Graph:
             elif branch_length == root_at:
                 return n_node
             root_at -= branch_length
-        assert False # pragma: no coverage
-
+        assert False  # pragma: no coverage
 
     ################################################################################
     ################################################################################
     ## Functions relating to NEWICK rooting on taxa
 
     def reroot_on_taxa(self, taxa):
-        taxa  = safe_coerce_to_frozenset(taxa)
+        taxa = safe_coerce_to_frozenset(taxa)
         if not taxa:
             raise ValueError("No taxa in outgroup")
 
-        clades   = self._collect_clades()
-        root_on  = self._collect_nodes_from_names(taxa)
+        clades = self._collect_clades()
+        root_on = self._collect_nodes_from_names(taxa)
         # Because None is the id of the root atm: # pylint: disable=W1111
-        root     = self._create_root_with_clade(clades, root_on)
+        root = self._create_root_with_clade(clades, root_on)
 
         return self.rebuild_tree(root, root)
-
 
     def _collect_nodes_from_names(self, taxa):
         known_taxa = set()
@@ -235,12 +222,13 @@ class _Graph:
 
         unknown_taxa = taxa - known_taxa
         if unknown_taxa:
-            raise ValueError("Cannot root on unknown taxa: %s" % (", ".join(unknown_taxa),))
+            raise ValueError(
+                "Cannot root on unknown taxa: %s" % (", ".join(unknown_taxa),)
+            )
         elif not (known_taxa - taxa):
             raise ValueError("Cannot root on every taxa in tree")
 
         return frozenset(key for (key, name) in self.names.items() if name in taxa)
-
 
     def _collect_clades(self):
         clades = {}
@@ -248,7 +236,6 @@ class _Graph:
             for node_b in connections:
                 self._collect_clade_from(clades, node_a, node_b)
         return clades
-
 
     def _collect_clade_from(self, cache, p_node, c_node):
         c_clade = get_in(cache, (p_node, c_node), set())
@@ -262,15 +249,14 @@ class _Graph:
             set_in(cache, (p_node, c_node), frozenset(c_clade))
         return c_clade
 
-
     def _create_root_with_clade(self, clades, taxa):
         root_key, root_clade, root_length = None, None, None
         for (p_node, connections) in clades.items():
             for (n_node, clade) in connections.items():
                 if (root_clade is None) or (len(clade) < len(root_clade)):
                     if taxa.issubset(clade):
-                        root_key    = (p_node, n_node)
-                        root_clade  = clade
+                        root_key = (p_node, n_node)
+                        root_clade = clade
                         root_length = self.get_path_length(p_node, n_node)
 
         p_node, n_node = root_key
@@ -282,7 +268,6 @@ class _Graph:
         self.add_connection(None, n_node, root_length)
 
         return None
-
 
     ################################################################################
     ################################################################################

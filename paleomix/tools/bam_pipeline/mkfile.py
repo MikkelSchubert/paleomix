@@ -28,13 +28,10 @@ import glob
 import datetime
 from optparse import OptionParser
 
-from paleomix.common.console import \
-    print_info, \
-    print_err
+from paleomix.common.console import print_info, print_err
 
 
-_TEMPLATE_TOP = \
-    """# -*- mode: Yaml; -*-
+_TEMPLATE_TOP = """# -*- mode: Yaml; -*-
 # Timestamp: %s
 #
 # Default options.
@@ -72,8 +69,7 @@ Options:
      --trimqualities: yes
 """
 
-_TEMPLATE_BAM_OPTIONS = \
-    """  # Settings for aligners supported by the pipeline
+_TEMPLATE_BAM_OPTIONS = """  # Settings for aligners supported by the pipeline
   Aligners:
     # Choice of aligner software to use, either "BWA" or "Bowtie2"
     Program: BWA
@@ -208,9 +204,7 @@ _TEMPLATE_SAMPLES = """
 _FILENAME = "SampleSheet.csv"
 
 
-def build_makefile(add_full_options=True,
-                   add_prefix_tmpl=True,
-                   add_sample_tmpl=True):
+def build_makefile(add_full_options=True, add_prefix_tmpl=True, add_sample_tmpl=True):
     timestamp = datetime.datetime.now().isoformat()
     template_parts = [_TEMPLATE_TOP % (timestamp,)]
 
@@ -247,15 +241,16 @@ def read_alignment_records(filename):
     with open(filename) as records:
         line = records.readline()
         if not line:
-            print_err("ERROR: Empty SampleSheet.csv file: %r"
-                      % (filename,))
+            print_err("ERROR: Empty SampleSheet.csv file: %r" % (filename,))
             return None
 
         header = line.strip().split(",")
         missing = set(("SampleID", "Index", "Lane", "FCID")) - set(header)
         if missing:
-            print_err("ERROR: Required columns missing from SampleSheet file "
-                      "%r: %s" % (filename, ", ".join(map(repr, missing))))
+            print_err(
+                "ERROR: Required columns missing from SampleSheet file "
+                "%r: %s" % (filename, ", ".join(map(repr, missing)))
+            )
             return None
 
         for idx, line in enumerate(records, start=2):
@@ -265,10 +260,11 @@ def read_alignment_records(filename):
 
             fields = line.split(",")
             if len(fields) != len(header):
-                print_err("Line %i in SampleSheet file %r does not contain "
-                          "the expected number of columns; expected %i, but "
-                          "found %i."
-                          % (idx, filename, len(header), len(fields)))
+                print_err(
+                    "Line %i in SampleSheet file %r does not contain "
+                    "the expected number of columns; expected %i, but "
+                    "found %i." % (idx, filename, len(header), len(fields))
+                )
                 return None
 
             results.append(dict(zip(header, fields)))
@@ -278,8 +274,12 @@ def read_alignment_records(filename):
 
 def parse_args(argv):
     parser = OptionParser("Usage: %prog [/path/to/SampleSheet.csv, ...]")
-    parser.add_option("--minimal", default=False, action="store_true",
-                      help="Strip comments from makefile template.")
+    parser.add_option(
+        "--minimal",
+        default=False,
+        action="store_true",
+        help="Strip comments from makefile template.",
+    )
 
     return parser.parse_args(argv)
 
@@ -312,8 +312,7 @@ def read_sample_sheets(filenames):
 
         for record in sample_sheet:
             record["Lane"] = int(record["Lane"])
-            path = "%(SampleID)s_%(Index)s_L%(Lane)03i_R{Pair}_*.fastq.gz" \
-                % record
+            path = "%(SampleID)s_%(Index)s_L%(Lane)03i_R{Pair}_*.fastq.gz" % record
             record["Path"] = select_path(os.path.join(root, path))
             key = "%(FCID)s_%(Lane)s" % record
 
@@ -365,9 +364,11 @@ def main(argv, pipeline="bam"):
     if records is None:
         return 1
 
-    template = build_makefile(add_full_options=(pipeline == "bam"),
-                              add_prefix_tmpl=(pipeline == "bam"),
-                              add_sample_tmpl=not records)
+    template = build_makefile(
+        add_full_options=(pipeline == "bam"),
+        add_prefix_tmpl=(pipeline == "bam"),
+        add_sample_tmpl=not records,
+    )
     if options.minimal:
         template = strip_comments(template)
 
@@ -376,8 +377,10 @@ def main(argv, pipeline="bam"):
     print_samples(records)
 
     if argv:
-        print_info("Automatically generated makefile printed.\n"
-                   "Please check for correctness before running pipeline.")
+        print_info(
+            "Automatically generated makefile printed.\n"
+            "Please check for correctness before running pipeline."
+        )
     return 0
 
 

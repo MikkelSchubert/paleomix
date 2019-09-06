@@ -20,11 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from nose.tools import \
-     assert_equal, \
-     assert_raises
-from flexmock import \
-     flexmock
+from nose.tools import assert_equal, assert_raises
+from flexmock import flexmock
 
 import paleomix.common.sampling as sampling
 
@@ -32,6 +29,7 @@ import paleomix.common.sampling as sampling
 ###############################################################################
 ###############################################################################
 # weighted_sampling
+
 
 def test_weighted_sampling__select_by_weight():
     def _do_select_by_weight(value, expectation):
@@ -41,12 +39,12 @@ def test_weighted_sampling__select_by_weight():
         iterator = sampling.weighted_sampling(choices, weights, rng)
         assert_equal(next(iterator), expectation)
 
-    yield _do_select_by_weight, 0.00000, 'a'
-    yield _do_select_by_weight, 0.16666, 'a'  # < 1/6
-    yield _do_select_by_weight, 1/6.0, 'b'
-    yield _do_select_by_weight, 0.49999, 'b'  # < 3/6
-    yield _do_select_by_weight, 3/6.0, 'c'
-    yield _do_select_by_weight, 0.99999, 'c'
+    yield _do_select_by_weight, 0.00000, "a"
+    yield _do_select_by_weight, 0.16666, "a"  # < 1/6
+    yield _do_select_by_weight, 1 / 6.0, "b"
+    yield _do_select_by_weight, 0.49999, "b"  # < 3/6
+    yield _do_select_by_weight, 3 / 6.0, "c"
+    yield _do_select_by_weight, 0.99999, "c"
 
 
 def test_weighted_sampling__empty_input_raises_value_error_for_lists():
@@ -95,6 +93,7 @@ def test_weighted_sampling__non_numerical_weight_raises_type_error():
 ###############################################################################
 ###############################################################################
 # reservoir_sampling
+
 
 def test_reservoir_sampling__select_first_item():
     rng = flexmock(randint=lambda _min, _max: 1)

@@ -21,5 +21,6 @@
 # SOFTWARE.
 #
 
+
 class FormatError(RuntimeError):
     pass

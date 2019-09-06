@@ -115,55 +115,52 @@ def _try_cast_int(value):
 
 
 def _write_build_sh(args, filename):
-    sys.stderr.write('Writing %r ...\n' % (filename,))
+    sys.stderr.write("Writing %r ...\n" % (filename,))
     if os.path.exists(filename) and not args.overwrite:
-        sys.stderr.write('  File exists; skipping.\n')
+        sys.stderr.write("  File exists; skipping.\n")
         return
 
     tmpl = _BUILD_SH_TEMPLATE.replace("{REVISION}", args.revision)
-    with open(filename, 'w') as handle:
+    with open(filename, "w") as handle:
         handle.write(tmpl)
 
 
 def _write_genotypes(args, data, filename):
-    sys.stderr.write('Writing %r ...\n' % (filename,))
+    sys.stderr.write("Writing %r ...\n" % (filename,))
     if os.path.exists(filename) and not args.overwrite:
-        sys.stderr.write('  File exists; skipping.\n')
+        sys.stderr.write("  File exists; skipping.\n")
         return
 
-    samples = data['samples']
+    samples = data["samples"]
     keys = tuple(sorted(samples))
 
     ref_handle = pysam.Fastafile(args.reference)
 
-    with open(filename, 'w') as handle:
-        header = ('Chrom', 'Pos', 'Ref', ';'.join(keys))
-        handle.write('%s\n' % ('\t'.join(header)))
+    with open(filename, "w") as handle:
+        header = ("Chrom", "Pos", "Ref", ";".join(keys))
+        handle.write("%s\n" % ("\t".join(header)))
 
-        for contig, size in sorted(data['contigs'].items()):
+        for contig, size in sorted(data["contigs"].items()):
             # Skip non-autosomal contigs
             if not isinstance(contig, int):
                 continue
 
-            sys.stderr.write('  - %s:   0%%\r' % (contig,))
+            sys.stderr.write("  - %s:   0%%\r" % (contig,))
             for pos in range(0, size, _CHUNK_SIZE):
-                sys.stderr.write('  - %s: % 3i%%\r'
-                                 % (contig, (100 * pos) / size))
+                sys.stderr.write("  - %s: % 3i%%\r" % (contig, (100 * pos) / size))
 
                 chunks = []
                 for key in keys:
-                    real_name = samples[key]['contigs'][contig]
-                    fasta_handle = samples[key]['handle']
-                    chunk = fasta_handle.fetch(real_name,
-                                               pos,
-                                               pos + _CHUNK_SIZE)
+                    real_name = samples[key]["contigs"][contig]
+                    fasta_handle = samples[key]["handle"]
+                    chunk = fasta_handle.fetch(real_name, pos, pos + _CHUNK_SIZE)
 
                     chunks.append(chunk)
 
                 ref_chunk = ref_handle.fetch(real_name, pos, pos + _CHUNK_SIZE)
 
                 for idx, row in enumerate(zip(*chunks)):
-                    if 'N' in row:
+                    if "N" in row:
                         continue
 
                     nucleotides = set()
@@ -171,71 +168,69 @@ def _write_genotypes(args, data, filename):
                         nucleotides.update(NT_CODES[nuc])
 
                     if len(nucleotides) == 2:
-                        handle.write('%s\t%i\t%s\t%s\n'
-                                     % (contig, pos + idx + 1,
-                                        ref_chunk[idx], ''.join(row)))
-            sys.stderr.write('  - %s: 100%%\n' % (contig,))
+                        handle.write(
+                            "%s\t%i\t%s\t%s\n"
+                            % (contig, pos + idx + 1, ref_chunk[idx], "".join(row))
+                        )
+            sys.stderr.write("  - %s: 100%%\n" % (contig,))
 
 
 def _write_settings(args, contigs, filename):
-    sys.stderr.write('Writing %r ...\n' % (filename,))
+    sys.stderr.write("Writing %r ...\n" % (filename,))
     if os.path.exists(filename) and not args.overwrite:
-        sys.stderr.write('  File exists; skipping.\n')
+        sys.stderr.write("  File exists; skipping.\n")
         return
 
     # Determine the highest numbered chromosome; this is required by,
     # for example, SmartPCA.
     nchroms = max(name for name in contigs if isinstance(name, int))
 
-    with open(filename, 'w') as handle:
-        handle.write(_SETTINGS_TEMPLATE.format(Revision=args.revision,
-                                               NChroms=nchroms))
+    with open(filename, "w") as handle:
+        handle.write(_SETTINGS_TEMPLATE.format(Revision=args.revision, NChroms=nchroms))
 
 
 def _write_contigs(args, filename):
-    sys.stderr.write('Writing %r ...\n' % (filename,))
+    sys.stderr.write("Writing %r ...\n" % (filename,))
     if os.path.exists(filename) and not args.overwrite:
-        sys.stderr.write('  File exists; skipping.\n')
+        sys.stderr.write("  File exists; skipping.\n")
         return
 
     fasta_handle = pysam.Fastafile(args.reference)
     contigs = _read_contigs(args.reference)
-    lines = ['ID\tSize\tNs\tChecksum']
+    lines = ["ID\tSize\tNs\tChecksum"]
 
     for name, (real_name, size) in sorted(contigs.items()):
-        sys.stderr.write('  - %s:   0%%\r' % (name,))
+        sys.stderr.write("  - %s:   0%%\r" % (name,))
         n_uncalled = 0
         for pos in range(0, size, _CHUNK_SIZE):
-            sys.stderr.write('  - %s: % 3i%%\r' % (name, (100 * pos) / size))
+            sys.stderr.write("  - %s: % 3i%%\r" % (name, (100 * pos) / size))
             chunk = fasta_handle.fetch(real_name, pos, pos + _CHUNK_SIZE)
-            n_uncalled += chunk.count('n')
-            n_uncalled += chunk.count('N')
-            n_uncalled += chunk.count('-')
+            n_uncalled += chunk.count("n")
+            n_uncalled += chunk.count("N")
+            n_uncalled += chunk.count("-")
 
-        sys.stderr.write('  - %s: 100%%\n' % (name,))
-        lines.append('%s\t%i\t%i\t%s'
-                     % (name, size, n_uncalled, 'NA'))
-    lines.append('')
+        sys.stderr.write("  - %s: 100%%\n" % (name,))
+        lines.append("%s\t%i\t%i\t%s" % (name, size, n_uncalled, "NA"))
+    lines.append("")
 
-    with open(filename, 'w') as handle:
-        handle.write('\n'.join(lines))
+    with open(filename, "w") as handle:
+        handle.write("\n".join(lines))
 
 
 def _write_samples(args, samples, filename):
-    sys.stderr.write('Writing %r ...\n' % (filename,))
+    sys.stderr.write("Writing %r ...\n" % (filename,))
     if os.path.exists(filename) and not args.overwrite:
-        sys.stderr.write('  File exists; skipping.\n')
+        sys.stderr.write("  File exists; skipping.\n")
         return
 
-    lines = ['ID\tGroup(2)\tGroup(3)\tSpecies\tSex\tSampleID\tPublication']
+    lines = ["ID\tGroup(2)\tGroup(3)\tSpecies\tSex\tSampleID\tPublication"]
 
     for name in sorted(samples):
-        lines.append('%s\t-\t-\tNA\tNA\t%s\tNA'
-                     % (name, name))
-    lines.append('')
+        lines.append("%s\t-\t-\tNA\tNA\t%s\tNA" % (name, name))
+    lines.append("")
 
-    with open(filename, 'w') as handle:
-        handle.write('\n'.join(lines))
+    with open(filename, "w") as handle:
+        handle.write("\n".join(lines))
 
 
 def _process_contigs(reference, samples):
@@ -244,34 +239,37 @@ def _process_contigs(reference, samples):
         ref_contigs[name] = size
 
     for sample_name, obs_data in list(samples.items()):
-        obs_contigs = obs_data['contigs']
+        obs_contigs = obs_data["contigs"]
         for ref_name, ref_size in ref_contigs.items():
             if ref_name not in obs_contigs:
-                raise ZonkeyError('Contig missing for sample %r: %r'
-                                  % (sample_name, ref_name))
+                raise ZonkeyError(
+                    "Contig missing for sample %r: %r" % (sample_name, ref_name)
+                )
 
             obs_name, obs_size = obs_contigs[ref_name]
             if obs_size != ref_size:
-                raise ZonkeyError('Contig %r for sample %r has wrong size; '
-                                  '%i observed vs %i expected'
-                                  % (obs_name, sample_name,
-                                     obs_size, ref_size))
+                raise ZonkeyError(
+                    "Contig %r for sample %r has wrong size; "
+                    "%i observed vs %i expected"
+                    % (obs_name, sample_name, obs_size, ref_size)
+                )
 
             obs_contigs[ref_name] = obs_name
 
-    return {'samples': samples,
-            'contigs': ref_contigs}
+    return {"samples": samples, "contigs": ref_contigs}
 
 
 def _read_contigs(filename):
     contigs = {}
-    with open(filename + '.fai') as handle:
+    with open(filename + ".fai") as handle:
         for line in handle:
-            name, size, _ = line.split('\t', 2)
+            name, size, _ = line.split("\t", 2)
             if name in contigs:
-                raise ZonkeyError('FASTA file %r contains multiple contigs '
-                                  'with the same name (%r); this is not '
-                                  'supported.' % (filename, name))
+                raise ZonkeyError(
+                    "FASTA file %r contains multiple contigs "
+                    "with the same name (%r); this is not "
+                    "supported." % (filename, name)
+                )
 
             fixed_name = common.contig_name_to_plink_name(name)
             if fixed_name is not None:
@@ -283,48 +281,51 @@ def _read_contigs(filename):
 def _collect_samples(reference, filenames):
     samples = {}
     for filename in filenames:
-        basename = os.path.basename(filename).split('.', 1)[0]
+        basename = os.path.basename(filename).split(".", 1)[0]
         if basename in samples:
-            raise ZonkeyError('Duplicate sample name %r'
-                              % (filename,))
+            raise ZonkeyError("Duplicate sample name %r" % (filename,))
 
         # Open first to insure that file is indexed
         handle = pysam.Fastafile(filename)
         contigs = _read_contigs(filename)
         if not contigs:
-            raise ZonkeyError('No usable contigs found in %r.'
-                              % (filename,))
+            raise ZonkeyError("No usable contigs found in %r." % (filename,))
 
-        samples[basename] = {'handle': handle,
-                             'contigs': contigs}
+        samples[basename] = {"handle": handle, "contigs": contigs}
 
     return _process_contigs(reference, samples)
 
 
 def parse_args(argv):
     parser = argparse.ArgumentParser()
-    parser.add_argument('root',
-                        help='Root directory in which to write reference '
-                             'panel files.')
-    parser.add_argument('reference',
-                        help='Reference genome in FASTA format.')
-    parser.add_argument('samples', nargs="+",
-                        help='Samples to include in the reference-panel, in '
-                             'the form of FASTA files that map one-to-one '
-                             'to the reference sequences. That is to say '
-                             'that every position in the sample FASTA must '
-                             'be homologus to the same position in the '
-                             'reference sequence.')
-    parser.add_argument('--overwrite', default=False, action='store_true',
-                        help='If set, the program is allowed to overwrite '
-                             'already existing output files.')
+    parser.add_argument(
+        "root", help="Root directory in which to write reference " "panel files."
+    )
+    parser.add_argument("reference", help="Reference genome in FASTA format.")
+    parser.add_argument(
+        "samples",
+        nargs="+",
+        help="Samples to include in the reference-panel, in "
+        "the form of FASTA files that map one-to-one "
+        "to the reference sequences. That is to say "
+        "that every position in the sample FASTA must "
+        "be homologus to the same position in the "
+        "reference sequence.",
+    )
+    parser.add_argument(
+        "--overwrite",
+        default=False,
+        action="store_true",
+        help="If set, the program is allowed to overwrite "
+        "already existing output files.",
+    )
 
     return parser.parse_args(argv)
 
 
 def main(argv):
     args = parse_args(argv)
-    args.revision = datetime.datetime.today().strftime('%Y%m%d')
+    args.revision = datetime.datetime.today().strftime("%Y%m%d")
 
     data = _collect_samples(args.reference, args.samples)
     if not data:
@@ -332,16 +333,12 @@ def main(argv):
 
     fileutils.make_dirs(args.root)
 
-    _write_contigs(args, os.path.join(args.root, 'contigs.txt'))
-    _write_samples(args, data['samples'],
-                   os.path.join(args.root, 'samples.txt'))
-    _write_settings(args, data['contigs'],
-                    os.path.join(args.root, 'settings.yaml'))
-    _write_genotypes(args, data, os.path.join(args.root, 'genotypes.txt'))
-    _write_build_sh(args, os.path.join(args.root, 'build.sh'))
+    _write_contigs(args, os.path.join(args.root, "contigs.txt"))
+    _write_samples(args, data["samples"], os.path.join(args.root, "samples.txt"))
+    _write_settings(args, data["contigs"], os.path.join(args.root, "settings.yaml"))
+    _write_genotypes(args, data, os.path.join(args.root, "genotypes.txt"))
+    _write_build_sh(args, os.path.join(args.root, "build.sh"))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))
-
-

@@ -29,16 +29,18 @@ def weighted_sampling(choices, weights, rng=random):
     choices = list(choices)
     weights = list(weights)
     if not weights or (len(weights) != len(choices)):
-        raise ValueError("Choices and probabilities must be non-empty lists "
-                         "of identical length, not lengths %i and %i"
-                         % (len(choices), len(weights)))
+        raise ValueError(
+            "Choices and probabilities must be non-empty lists "
+            "of identical length, not lengths %i and %i" % (len(choices), len(weights))
+        )
 
     total = 0
     totals = []
     for (index, weight) in enumerate(weights, start=1):
         if weight <= 0:
-            raise ValueError("Probablities must be > 0, not %r for weight %i"
-                             % (weight, index))
+            raise ValueError(
+                "Probablities must be > 0, not %r for weight %i" % (weight, index)
+            )
         total += weight
         totals.append(total)
 
@@ -50,11 +52,11 @@ def weighted_sampling(choices, weights, rng=random):
 
 def reservoir_sampling(items, downsample_to, rng=random):
     if not isinstance(downsample_to, int):
-        raise TypeError("Unexpected type for 'downsample_to': %r"
-                        % (type(downsample_to),))
+        raise TypeError(
+            "Unexpected type for 'downsample_to': %r" % (type(downsample_to),)
+        )
     elif downsample_to < 0:
-        raise ValueError("Negative value for 'downsample_to': %i"
-                         % (downsample_to,))
+        raise ValueError("Negative value for 'downsample_to': %i" % (downsample_to,))
 
     reservoir = []
     for (index, item) in enumerate(items):

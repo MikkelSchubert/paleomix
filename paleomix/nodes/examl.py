@@ -28,35 +28,39 @@ import paleomix.common.fileutils as fileutils
 import paleomix.common.versions as versions
 
 from paleomix.node import CommandNode
-from paleomix.atomiccmd.builder import \
-    AtomicCmdBuilder, \
-    AtomicMPICmdBuilder, \
-    use_customizable_cli_parameters, \
-    create_customizable_cli_parameters
+from paleomix.atomiccmd.builder import (
+    AtomicCmdBuilder,
+    AtomicMPICmdBuilder,
+    use_customizable_cli_parameters,
+    create_customizable_cli_parameters,
+)
 
-from paleomix.nodegraph import \
-    FileStatusCache
+from paleomix.nodegraph import FileStatusCache
 
 
-EXAML_VERSION = versions.Requirement(call   = ("examl", "-version"),
-                                     search = r"version (\d+)\.(\d+)\.(\d+)",
-                                     checks = versions.GE(3, 0, 0))
+EXAML_VERSION = versions.Requirement(
+    call=("examl", "-version"),
+    search=r"version (\d+)\.(\d+)\.(\d+)",
+    checks=versions.GE(3, 0, 0),
+)
 
-PARSER_VERSION = versions.Requirement(call   = ("parse-examl", "-h"),
-                                      search = r"version (\d+)\.(\d+)\.(\d+)",
-                                      checks = versions.GE(3, 0, 0))
+PARSER_VERSION = versions.Requirement(
+    call=("parse-examl", "-h"),
+    search=r"version (\d+)\.(\d+)\.(\d+)",
+    checks=versions.GE(3, 0, 0),
+)
 
 
 class ExaMLParserNode(CommandNode):
     @create_customizable_cli_parameters
-    def customize(cls, input_alignment, input_partition, output_file, dependencies = ()):
+    def customize(cls, input_alignment, input_partition, output_file, dependencies=()):
         """
         Arguments:
         input_alignment  -- An alignment file in a format readable by RAxML.
         input_partition  -- A set of partitions in a format readable by RAxML.
         output_filename  -- Filename for the output binary sequence."""
 
-        command = AtomicCmdBuilder("parse-examl", set_cwd = True)
+        command = AtomicCmdBuilder("parse-examl", set_cwd=True)
 
         command.set_option("-s", "%(TEMP_OUT_ALN)s")
         command.set_option("-q", "%(TEMP_OUT_PART)s")
@@ -64,54 +68,51 @@ class ExaMLParserNode(CommandNode):
         command.set_option("-n", "output")
 
         # Substitution model
-        command.set_option("-m", "DNA", fixed = False)
+        command.set_option("-m", "DNA", fixed=False)
 
+        command.set_kwargs(  # Auto-delete: Symlinks
+            TEMP_OUT_PART=os.path.basename(input_partition),
+            TEMP_OUT_ALN=os.path.basename(input_alignment),
+            # Input files, are not used directly (see below)
+            IN_ALIGNMENT=input_alignment,
+            IN_PARTITION=input_partition,
+            # Final output file, are not created directly
+            OUT_BINARY=output_file,
+            CHECK_EXAML=PARSER_VERSION,
+        )
 
-        command.set_kwargs(# Auto-delete: Symlinks
-                          TEMP_OUT_PART   = os.path.basename(input_partition),
-                          TEMP_OUT_ALN    = os.path.basename(input_alignment),
-
-                          # Input files, are not used directly (see below)
-                          IN_ALIGNMENT    = input_alignment,
-                          IN_PARTITION    = input_partition,
-
-                          # Final output file, are not created directly
-                          OUT_BINARY      = output_file,
-
-                          CHECK_EXAML     = PARSER_VERSION)
-
-        return {"command" : command}
-
+        return {"command": command}
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
-        self._symlinks = [os.path.abspath(parameters.input_alignment),
-                          os.path.abspath(parameters.input_partition)]
+        self._symlinks = [
+            os.path.abspath(parameters.input_alignment),
+            os.path.abspath(parameters.input_partition),
+        ]
         self._output_file = os.path.basename(parameters.output_file)
 
-
-        CommandNode.__init__(self,
-                             command      = parameters.command.finalize(),
-                             description  = "<ExaMLParser: '%s' -> '%s'>" \
-                                 % (parameters.input_alignment, parameters.output_file),
-                             dependencies = parameters.dependencies)
-
+        CommandNode.__init__(
+            self,
+            command=parameters.command.finalize(),
+            description="<ExaMLParser: '%s' -> '%s'>"
+            % (parameters.input_alignment, parameters.output_file),
+            dependencies=parameters.dependencies,
+        )
 
     def _setup(self, config, temp):
         CommandNode._setup(self, config, temp)
 
         # Required to avoid the creation of files outside the temp folder
         for filename in self._symlinks:
-            source      = os.path.abspath(filename)
+            source = os.path.abspath(filename)
             destination = os.path.join(temp, os.path.basename(filename))
 
             os.symlink(source, destination)
 
-
     def _teardown(self, config, temp):
         os.remove(os.path.join(temp, "RAxML_info.output"))
 
-        source      = os.path.join(temp, "output.binary")
+        source = os.path.join(temp, "output.binary")
         destination = fileutils.reroot_path(temp, self._output_file)
         fileutils.move_file(source, destination)
 
@@ -120,7 +121,9 @@ class ExaMLParserNode(CommandNode):
 
 class ExaMLNode(CommandNode):
     @create_customizable_cli_parameters
-    def customize(cls, input_binary, initial_tree, output_template, threads = 1, dependencies = ()):
+    def customize(
+        cls, input_binary, initial_tree, output_template, threads=1, dependencies=()
+    ):
         """
         Arguments:
         input_binary  -- A binary alignment file in a format readable by ExaML.
@@ -131,7 +134,7 @@ class ExaMLNode(CommandNode):
                             Example output:      '/disk/project/SN013420.RAxML.bestTree'"""
 
         # TODO: Make MPIParams!
-        command = AtomicMPICmdBuilder("examl", threads = threads)
+        command = AtomicMPICmdBuilder("examl", threads=threads)
 
         # Ensures that output is saved to the temporary directory
         command.set_option("-w", "%(TEMP_DIR)s")
@@ -140,39 +143,36 @@ class ExaMLNode(CommandNode):
         command.set_option("-t", "%(IN_TREE)s")
         command.set_option("-n", "Pypeline")
 
-        command.set_kwargs(IN_ALN=input_binary,
-                           IN_TREE=initial_tree,
-
-                           # Final output files, are not created directly
-                           OUT_INFO=output_template % "info",
-                           OUT_BESTTREE=output_template % "result",
-                           OUT_BOOTSTRAP=output_template % "log",
-
-                           # Only generated by newer versions of ExaML
-                           TEMP_OUT_MODELFILE=os.path.basename(output_template
-                                                               % "modelFile"),
-
-                           CHECK_EXAML=EXAML_VERSION)
+        command.set_kwargs(
+            IN_ALN=input_binary,
+            IN_TREE=initial_tree,
+            # Final output files, are not created directly
+            OUT_INFO=output_template % "info",
+            OUT_BESTTREE=output_template % "result",
+            OUT_BOOTSTRAP=output_template % "log",
+            # Only generated by newer versions of ExaML
+            TEMP_OUT_MODELFILE=os.path.basename(output_template % "modelFile"),
+            CHECK_EXAML=EXAML_VERSION,
+        )
 
         # Use the GAMMA model of NT substitution by default
-        command.set_option("-m", "GAMMA", fixed = False)
+        command.set_option("-m", "GAMMA", fixed=False)
 
-        return {"command"         : command}
-
+        return {"command": command}
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
-        self._dirname  = os.path.dirname(parameters.output_template)
+        self._dirname = os.path.dirname(parameters.output_template)
         self._template = os.path.basename(parameters.output_template)
 
-        CommandNode.__init__(self,
-                             command      = parameters.command.finalize(),
-                             description  = "<ExaML (%i thread(s)): '%s' -> '%s'>" \
-                                 % (parameters.threads,
-                                    parameters.input_binary,
-                                    parameters.output_template),
-                             threads      = parameters.threads,
-                             dependencies = parameters.dependencies)
+        CommandNode.__init__(
+            self,
+            command=parameters.command.finalize(),
+            description="<ExaML (%i thread(s)): '%s' -> '%s'>"
+            % (parameters.threads, parameters.input_binary, parameters.output_template),
+            threads=parameters.threads,
+            dependencies=parameters.dependencies,
+        )
 
     def _create_temp_dir(self, _config):
         """Called by 'run' in order to create a temporary folder.
@@ -193,8 +193,7 @@ class ExaMLNode(CommandNode):
         fileutils.try_remove(os.path.join(temp, "ExaML_info.Pypeline"))
 
         # Resume from last checkpoint, if one such was generated
-        checkpoints = glob.glob(os.path.join(temp,
-                                "ExaML_binaryCheckpoint.Pypeline_*"))
+        checkpoints = glob.glob(os.path.join(temp, "ExaML_binaryCheckpoint.Pypeline_*"))
         if not checkpoints:
             return
 
@@ -216,7 +215,7 @@ class ExaMLNode(CommandNode):
                 if "binaryCheckpoint" in match.groups():
                     os.remove(os.path.join(temp, filename))
                 else:
-                    source      = os.path.join(temp, filename)
+                    source = os.path.join(temp, filename)
                     destination = os.path.join(temp, self._template % match.groups())
 
                     fileutils.move_file(source, destination)

@@ -87,8 +87,7 @@ def _pipe_to_bam():
     properly handled by "samtools view -S -", resulting in a parse failure.
     """
     with pysam.AlignmentFile("-", "r") as input_handle:
-        with pysam.AlignmentFile("-", "wbu",
-                                 template=input_handle) as output_handle:
+        with pysam.AlignmentFile("-", "wbu", template=input_handle) as output_handle:
             for record in input_handle:
                 output_handle.write(record)
 
@@ -108,11 +107,11 @@ def _cleanup_record(record):
         record.rnext = -1
         record.pnext = -1
         record.tlen = 0
-    elif record.mate_is_unmapped and record.has_tag('MC'):
+    elif record.mate_is_unmapped and record.has_tag("MC"):
         # Picard ValidateSamFile (2.9.1) objects to MC tags for unmapped mates,
         # which are currently added by SAMTools (v1.4).
         tags = record.get_tags(with_value_type=True)
-        record.set_tags([tag for tag in tags if tag[0] != 'MC'])
+        record.set_tags([tag for tag in tags if tag[0] != "MC"])
 
     if record.is_unmapped:
         record.mapq = 0
@@ -198,9 +197,9 @@ def _cleanup_unmapped(args, cleanup_sam):
 
 def _setup_single_ended_pipeline(procs, bam_cleanup):
     # Convert input to BAM and cleanup / filter reads
-    procs["pipe"] = processes.open_proc(bam_cleanup + ['cleanup-sam'],
-                                        stdin=sys.stdin,
-                                        stdout=processes.PIPE)
+    procs["pipe"] = processes.open_proc(
+        bam_cleanup + ["cleanup-sam"], stdin=sys.stdin, stdout=processes.PIPE
+    )
     sys.stdin.close()
 
     return procs["pipe"]
@@ -208,26 +207,26 @@ def _setup_single_ended_pipeline(procs, bam_cleanup):
 
 def _setup_paired_ended_pipeline(args, procs, bam_cleanup):
     # Convert input to (uncompressed) BAM
-    procs["pipe"] = processes.open_proc(bam_cleanup + ["pipe"],
-                                        stdin=sys.stdin,
-                                        stdout=processes.PIPE)
+    procs["pipe"] = processes.open_proc(
+        bam_cleanup + ["pipe"], stdin=sys.stdin, stdout=processes.PIPE
+    )
     sys.stdin.close()
 
     # Fix mate information for PE reads
-    call_fixmate = ['samtools', 'fixmate']
+    call_fixmate = ["samtools", "fixmate"]
     if args.samtools1x == "yes":
         call_fixmate.extend(("-O", "bam"))
 
-    procs["fixmate"] = processes.open_proc(call_fixmate + ['-', '-'],
-                                           stdin=procs["pipe"].stdout,
-                                           stdout=processes.PIPE)
+    procs["fixmate"] = processes.open_proc(
+        call_fixmate + ["-", "-"], stdin=procs["pipe"].stdout, stdout=processes.PIPE
+    )
     procs["pipe"].stdout.close()
 
     # Cleanup / filter reads. Must be done after 'fixmate', as BWA may produce
     # hits where the mate-unmapped flag is incorrect, which 'fixmate' fixes.
-    procs["cleanup"] = processes.open_proc(bam_cleanup + ['cleanup'],
-                                           stdin=procs["fixmate"].stdout,
-                                           stdout=processes.PIPE)
+    procs["cleanup"] = processes.open_proc(
+        bam_cleanup + ["cleanup"], stdin=procs["fixmate"].stdout, stdout=processes.PIPE
+    )
     procs["fixmate"].stdout.close()
 
     return procs["cleanup"]
@@ -236,19 +235,19 @@ def _setup_paired_ended_pipeline(args, procs, bam_cleanup):
 def _build_wrapper_command(args):
     bam_cleanup = paleomix.tools.factory.new("cleanup")
     if args.fasta is not None:
-        bam_cleanup.set_option('--fasta', args.fasta)
-    bam_cleanup.set_option('--temp-prefix', args.temp_prefix)
-    bam_cleanup.set_option('--min-quality', str(args.min_quality))
-    bam_cleanup.set_option('--exclude-flags', hex(args.exclude_flags))
-    bam_cleanup.set_option('--samtools1x', args.samtools1x)
+        bam_cleanup.set_option("--fasta", args.fasta)
+    bam_cleanup.set_option("--temp-prefix", args.temp_prefix)
+    bam_cleanup.set_option("--min-quality", str(args.min_quality))
+    bam_cleanup.set_option("--exclude-flags", hex(args.exclude_flags))
+    bam_cleanup.set_option("--samtools1x", args.samtools1x)
 
     for value in args.update_pg_tag:
-        bam_cleanup.add_option('--update-pg-tag', value)
+        bam_cleanup.add_option("--update-pg-tag", value)
 
     if args.rg_id is not None:
-        bam_cleanup.set_option('--rg-id', args.rg_id)
+        bam_cleanup.set_option("--rg-id", args.rg_id)
         for value in args.rg:
-            bam_cleanup.add_option('--rg', value)
+            bam_cleanup.add_option("--rg", value)
 
     return bam_cleanup.call
 
@@ -263,24 +262,23 @@ def _run_cleanup_pipeline(args):
         else:
             last_proc = _setup_single_ended_pipeline(procs, bam_cleanup)
 
-        call_sort = ['samtools', 'sort', '-l', '0']
+        call_sort = ["samtools", "sort", "-l", "0"]
         if args.samtools1x == "yes":
-            call_sort.extend(('-O', 'bam', '-T', args.temp_prefix))
+            call_sort.extend(("-O", "bam", "-T", args.temp_prefix))
         else:
             # Sort, output to stdout (-o)
-            call_sort.extend(('-o', '-', args.temp_prefix))
+            call_sort.extend(("-o", "-", args.temp_prefix))
 
         sort_stdout = None if args.fasta is None else processes.PIPE
-        procs["sort"] = processes.open_proc(call_sort,
-                                            stdin=last_proc.stdout,
-                                            stdout=sort_stdout)
+        procs["sort"] = processes.open_proc(
+            call_sort, stdin=last_proc.stdout, stdout=sort_stdout
+        )
         last_proc.stdout.close()
 
         # Update NM and MD tags; output BAM (-b) to stdout
         if args.fasta is not None:
-            call_calmd = ['samtools', 'calmd', '-b', '-', args.fasta]
-            procs["calmd"] = processes.open_proc(call_calmd,
-                                                 stdin=procs["sort"].stdout)
+            call_calmd = ["samtools", "calmd", "-b", "-", args.fasta]
+            procs["calmd"] = processes.open_proc(call_calmd, stdin=procs["sort"].stdout)
             procs["sort"].stdout.close()
 
         if any(processes.join_procs(list(procs.values()))):
@@ -295,66 +293,98 @@ def _run_cleanup_pipeline(args):
 def parse_args(argv):
     """Parses a list of command-line arguments, excluding the program name."""
     prog = "paleomix cleanup"
-    usage = "%s --temp-prefix prefix --fasta reference.fasta < in.sam" \
-        % (prog,)
+    usage = "%s --temp-prefix prefix --fasta reference.fasta < in.sam" % (prog,)
 
     parser = argparse.ArgumentParser(prog=prog, usage=usage)
     # "Hidden" commands, invoking the various sub-parts of this script
-    parser.add_argument('command', nargs="?", help=argparse.SUPPRESS)
+    parser.add_argument("command", nargs="?", help=argparse.SUPPRESS)
     # Specifies if the 'cleanup' step should expect SAM input
-    parser.add_argument('--cleanup-sam', default=False, action="store_true",
-                        help=argparse.SUPPRESS)
+    parser.add_argument(
+        "--cleanup-sam", default=False, action="store_true", help=argparse.SUPPRESS
+    )
 
-    parser.add_argument('--fasta', default=None,
-                        help="Reference FASTA sequence; if set, the calmd "
-                             "command is used to re-calculate MD tags.")
-    parser.add_argument('--temp-prefix', required=True,
-                        help="REQUIRED: Prefix for temp files")
-    parser.add_argument("-q", "--min-quality", type=int, default=0,
-                        help="Exclude aligned reads with a mapping quality "
-                             "below this value; note that this filter ONLY "
-                             "applies to aligned reads [Default: %(default)s]")
-    parser.add_argument("-f", "--require-flags", default=0,
-                        type=lambda value: int(value, 0),  # Handle hex, etc.
-                        help="Only include reads with all of these flags set; "
-                             "note that flags only valid for paired-end reads "
-                             "(0x2, 0x8, 0x20, 0x40, 0x80) are ignored when "
-                             "processing single-end reads "
-                             "[Default: %(default)s].")
-    parser.add_argument("-F", "--exclude-flags", default=0,
-                        type=lambda value: int(value, 0),  # Handle hex, etc.
-                        help="Exclude reads with any of these flags set; "
-                             "note that flags only valid for paired-end reads "
-                             "(0x2, 0x8, 0x20, 0x40, 0x80) are ignored when "
-                             "processing single-end reads "
-                             "[Default: %(default)s].")
-    parser.add_argument('--paired-end', default=False, action="store_true",
-                        help='If enabled, additional processing of PE reads '
-                             'is carried out, including updating of mate '
-                             'information [Default: off]')
+    parser.add_argument(
+        "--fasta",
+        default=None,
+        help="Reference FASTA sequence; if set, the calmd "
+        "command is used to re-calculate MD tags.",
+    )
+    parser.add_argument(
+        "--temp-prefix", required=True, help="REQUIRED: Prefix for temp files"
+    )
+    parser.add_argument(
+        "-q",
+        "--min-quality",
+        type=int,
+        default=0,
+        help="Exclude aligned reads with a mapping quality "
+        "below this value; note that this filter ONLY "
+        "applies to aligned reads [Default: %(default)s]",
+    )
+    parser.add_argument(
+        "-f",
+        "--require-flags",
+        default=0,
+        type=lambda value: int(value, 0),  # Handle hex, etc.
+        help="Only include reads with all of these flags set; "
+        "note that flags only valid for paired-end reads "
+        "(0x2, 0x8, 0x20, 0x40, 0x80) are ignored when "
+        "processing single-end reads "
+        "[Default: %(default)s].",
+    )
+    parser.add_argument(
+        "-F",
+        "--exclude-flags",
+        default=0,
+        type=lambda value: int(value, 0),  # Handle hex, etc.
+        help="Exclude reads with any of these flags set; "
+        "note that flags only valid for paired-end reads "
+        "(0x2, 0x8, 0x20, 0x40, 0x80) are ignored when "
+        "processing single-end reads "
+        "[Default: %(default)s].",
+    )
+    parser.add_argument(
+        "--paired-end",
+        default=False,
+        action="store_true",
+        help="If enabled, additional processing of PE reads "
+        "is carried out, including updating of mate "
+        "information [Default: off]",
+    )
     # TODO: Remove alias added for backwards compatibility:
-    parser.add_argument('--paired-ended', dest='paired_end',
-                        action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument(
+        "--paired-ended", dest="paired_end", action="store_true", help=argparse.SUPPRESS
+    )
 
-    parser.add_argument("--update-pg-tag", default=[], action="append",
-                        help="Update one PG tags with the given values, "
-                             "creating the tag if it does not already exist. "
-                             "Takes arguments in the form \"PGID:TAG:VALUE\".")
-    parser.add_argument('--rg-id', default=None,
-                        help="If set, the read-group is overwritten based "
-                             "on tags set using the --rg option, using the "
-                             "id specified using --rg-id.")
-    parser.add_argument('--rg', default=[], action="append",
-                        help="Create readgroup values 'ID:TAG:VALUE' "
-                             "represented using a string as shown.")
+    parser.add_argument(
+        "--update-pg-tag",
+        default=[],
+        action="append",
+        help="Update one PG tags with the given values, "
+        "creating the tag if it does not already exist. "
+        'Takes arguments in the form "PGID:TAG:VALUE".',
+    )
+    parser.add_argument(
+        "--rg-id",
+        default=None,
+        help="If set, the read-group is overwritten based "
+        "on tags set using the --rg option, using the "
+        "id specified using --rg-id.",
+    )
+    parser.add_argument(
+        "--rg",
+        default=[],
+        action="append",
+        help="Create readgroup values 'ID:TAG:VALUE' "
+        "represented using a string as shown.",
+    )
 
     # Option to select between incompatible parameters for SAMTools v0.1.x and
     # for samtools v1.x; this is needed for samtools 'sort' and 'fixmate'.
-    parser.add_argument('--samtools1x', choices=('yes', 'no'),
-                        help=argparse.SUPPRESS)
+    parser.add_argument("--samtools1x", choices=("yes", "no"), help=argparse.SUPPRESS)
 
     args = parser.parse_args(argv)
-    if args.command not in (None, 'pipe', 'cleanup', 'cleanup-sam'):
+    if args.command not in (None, "pipe", "cleanup", "cleanup-sam"):
         parser.error("unrecognized arguments: %s" % (args.command,))
 
     return args
@@ -376,9 +406,11 @@ def main(argv):
             elif SAMTOOLS_VERSION.version == (0, 1, 19):
                 args.samtools1x = "no"
             else:
-                sys.stderr.write("ERROR: Only SAMTools versions v0.1.19 and "
-                                 "v1.0+ are supported; please upgrade / "
-                                 "replace the installed copy of SAMTools!\n")
+                sys.stderr.write(
+                    "ERROR: Only SAMTools versions v0.1.19 and "
+                    "v1.0+ are supported; please upgrade / "
+                    "replace the installed copy of SAMTools!\n"
+                )
                 return 1
         except versions.VersionRequirementError as error:
             sys.stderr.write("\nERROR: %s\n" % (error,))
@@ -391,7 +423,7 @@ def main(argv):
     elif args.command == "cleanup-sam":
         return _cleanup_unmapped(args, cleanup_sam=True)
     elif args.command:
-        raise NotImplementedError('Unexpected command %r' % (args.command,))
+        raise NotImplementedError("Unexpected command %r" % (args.command,))
 
     sys.stderr.write("Reading SAM file from STDIN ...\n")
     return _run_cleanup_pipeline(args)

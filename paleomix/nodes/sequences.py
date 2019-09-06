@@ -30,13 +30,9 @@ import pysam
 import paleomix.common.fileutils as fileutils
 import paleomix.common.utilities as utilities
 
-from paleomix.common.formats.fasta import \
-    FASTA
-from paleomix.common.formats.msa import \
-    MSA
-from paleomix.node import \
-    NodeError, \
-    Node
+from paleomix.common.formats.fasta import FASTA
+from paleomix.common.formats.msa import MSA
+from paleomix.node import NodeError, Node
 
 
 class CollectSequencesNode(Node):
@@ -49,20 +45,26 @@ class CollectSequencesNode(Node):
         self._infiles = copy.deepcopy(fasta_files)
         self._sequences = utilities.safe_coerce_to_frozenset(sequences)
         self._destination = copy.copy(destination)
-        self._outfiles = [os.path.join(destination, name + ".fasta")
-                          for name in self._sequences]
+        self._outfiles = [
+            os.path.join(destination, name + ".fasta") for name in self._sequences
+        ]
 
         input_files = list(self._infiles.values())
         for filename in self._infiles.values():
             input_files.append(filename + ".fai")
 
-        desc = "<CollectSequences: %i sequences from %i files -> '%s'>" \
-               % (len(self._sequences), len(self._infiles), self._destination)
-        Node.__init__(self,
-                      description=desc,
-                      input_files=input_files,
-                      output_files=self._outfiles,
-                      dependencies=dependencies)
+        desc = "<CollectSequences: %i sequences from %i files -> '%s'>" % (
+            len(self._sequences),
+            len(self._infiles),
+            self._destination,
+        )
+        Node.__init__(
+            self,
+            description=desc,
+            input_files=input_files,
+            output_files=self._outfiles,
+            dependencies=dependencies,
+        )
 
     def _setup(self, _config, _temp):
         for filename in self._infiles.values():
@@ -77,10 +79,11 @@ class CollectSequencesNode(Node):
                         missing_sequences = missing_sequences[:3]
                         missing_sequences.append("...")
 
-                    message = ("FASTA file does not contain expected "
-                               "sequences:\n  File =  %r\n  "
-                               "Sequences = %s\n") \
-                        % (filename, ", ".join(missing_sequences))
+                    message = (
+                        "FASTA file does not contain expected "
+                        "sequences:\n  File =  %r\n  "
+                        "Sequences = %s\n"
+                    ) % (filename, ", ".join(missing_sequences))
                     raise NodeError(message)
 
     def _run(self, _config, temp):
@@ -110,20 +113,23 @@ class FilterSingletonsNode(Node):
         for (to_filter, groups) in self._filter_by.items():
             # The taxa to be filtered is implied to be part of the group,
             # but is not needed when actually carrying out the filtering
-            groups = utilities.safe_coerce_to_frozenset(groups) \
-                - utilities.safe_coerce_to_frozenset(to_filter)
+            groups = utilities.safe_coerce_to_frozenset(
+                groups
+            ) - utilities.safe_coerce_to_frozenset(to_filter)
 
             if not groups:
-                raise RuntimeError("Singleton filtering must involve at least "
-                                   "one other taxa")
+                raise RuntimeError(
+                    "Singleton filtering must involve at least " "one other taxa"
+                )
             self._filter_by[to_filter] = groups
 
-        Node.__init__(self,
-                      description="<FilterSingleton: '%s' -> '%s'>"
-                      % (input_file, output_file),
-                      input_files=[input_file],
-                      output_files=[output_file],
-                      dependencies=dependencies)
+        Node.__init__(
+            self,
+            description="<FilterSingleton: '%s' -> '%s'>" % (input_file, output_file),
+            input_files=[input_file],
+            output_files=[output_file],
+            dependencies=dependencies,
+        )
 
     def _run(self, _config, temp):
         alignment = MSA.from_file(self._input_file)

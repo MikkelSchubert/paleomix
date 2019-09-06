@@ -35,14 +35,26 @@ import textwrap
 # if help string is none, the command is considered a help header.
 def _commands():
     yield ("Pipelines", None, None)
-    yield ("bam_pipeline", "paleomix.tools.bam_pipeline.pipeline",
-           "Pipeline for trimming and mapping of NGS reads.")
-    yield ("trim_pipeline", "paleomix.tools.bam_pipeline.trim_pipeline",
-           "Equivalent to 'bam_pipeline', but only runs the trimming steps.")
-    yield ("phylo_pipeline", "paleomix.tools.phylo_pipeline.pipeline",
-           "Pipeline for genotyping and phylogenetic inference from BAMs.")
-    yield ("zonkey", "paleomix.tools.zonkey.pipeline",
-           "Pipeline for detecting F1 (equine) hybrids.")
+    yield (
+        "bam_pipeline",
+        "paleomix.tools.bam_pipeline.pipeline",
+        "Pipeline for trimming and mapping of NGS reads.",
+    )
+    yield (
+        "trim_pipeline",
+        "paleomix.tools.bam_pipeline.trim_pipeline",
+        "Equivalent to 'bam_pipeline', but only runs the trimming steps.",
+    )
+    yield (
+        "phylo_pipeline",
+        "paleomix.tools.phylo_pipeline.pipeline",
+        "Pipeline for genotyping and phylogenetic inference from BAMs.",
+    )
+    yield (
+        "zonkey",
+        "paleomix.tools.zonkey.pipeline",
+        "Pipeline for detecting F1 (equine) hybrids.",
+    )
 
     # Currently not documented; used internally by Zonkey
     yield ("zonkey_db", "paleomix.tools.zonkey.build_db", None)
@@ -53,43 +65,76 @@ def _commands():
     yield ("metabit", "paleomix.tools.metabit.metabit", None)
 
     yield ("BAM/SAM tools", None, None)
-    yield ("dupcheck", "paleomix.tools.dupcheck",
-           "Identifies potential duplicate data in sorted BAM files, defined"
-           "as reads aligned to the same position, with the same name, "
-           "sequence, and qualities.")
-    yield ("cleanup", "paleomix.tools.cleanup",
-           "Reads SAM file from STDIN, and outputs sorted, tagged, and filter "
-           "BAM, for which NM and MD tags have been updated.")
-    yield ("coverage", "paleomix.tools.coverage",
-           "Calculate coverage across reference sequences or regions of "
-           "interest.")
-    yield ("depths", "paleomix.tools.depths",
-           "Calculate depth histograms across reference sequences or regions "
-           "of interest.")
-    yield ("duphist", "paleomix.tools.duphist",
-           "Generates PCR duplicate histogram; used with the 'Preseq' tool.")
-    yield ("rmdup_collapsed", "paleomix.tools.rmdup_collapsed",
-           "Filters PCR duplicates for collapsed paired-ended reads generated "
-           "by the AdapterRemoval tool.")
+    yield (
+        "dupcheck",
+        "paleomix.tools.dupcheck",
+        "Identifies potential duplicate data in sorted BAM files, defined"
+        "as reads aligned to the same position, with the same name, "
+        "sequence, and qualities.",
+    )
+    yield (
+        "cleanup",
+        "paleomix.tools.cleanup",
+        "Reads SAM file from STDIN, and outputs sorted, tagged, and filter "
+        "BAM, for which NM and MD tags have been updated.",
+    )
+    yield (
+        "coverage",
+        "paleomix.tools.coverage",
+        "Calculate coverage across reference sequences or regions of " "interest.",
+    )
+    yield (
+        "depths",
+        "paleomix.tools.depths",
+        "Calculate depth histograms across reference sequences or regions "
+        "of interest.",
+    )
+    yield (
+        "duphist",
+        "paleomix.tools.duphist",
+        "Generates PCR duplicate histogram; used with the 'Preseq' tool.",
+    )
+    yield (
+        "rmdup_collapsed",
+        "paleomix.tools.rmdup_collapsed",
+        "Filters PCR duplicates for collapsed paired-ended reads generated "
+        "by the AdapterRemoval tool.",
+    )
 
     yield ("VCF/GTF/BED/Pileup tools", None, None)
-    yield ("genotype", "paleomix.tools.genotype",
-           "Creates bgzipped VCF for a set of (sparse) BED regions, or for "
-           "entire chromosomes / contigs using SAMTools / BCFTools.")
-    yield ("gtf_to_bed", "paleomix.tools.gtf_to_bed",
-           "Convert GTF file to BED files grouped by feature "
-           "(coding, RNA, etc).")
-    yield ("vcf_filter", "paleomix.tools.vcf_filter",
-           "Quality filters for VCF records, similar to "
-           "'vcfutils.pl varFilter'.")
-    yield ("vcf_to_fasta", "paleomix.tools.vcf_to_fasta",
-           "Create most likely FASTA sequence from tabix-indexed VCF file.")
+    yield (
+        "genotype",
+        "paleomix.tools.genotype",
+        "Creates bgzipped VCF for a set of (sparse) BED regions, or for "
+        "entire chromosomes / contigs using SAMTools / BCFTools.",
+    )
+    yield (
+        "gtf_to_bed",
+        "paleomix.tools.gtf_to_bed",
+        "Convert GTF file to BED files grouped by feature " "(coding, RNA, etc).",
+    )
+    yield (
+        "vcf_filter",
+        "paleomix.tools.vcf_filter",
+        "Quality filters for VCF records, similar to " "'vcfutils.pl varFilter'.",
+    )
+    yield (
+        "vcf_to_fasta",
+        "paleomix.tools.vcf_to_fasta",
+        "Create most likely FASTA sequence from tabix-indexed VCF file.",
+    )
 
     yield ("Misc tools", None, None)
-    yield ("cat", "paleomix.tools.cat",
-           "Generalized cat command for gz, bz2 and uncompressed files.")
-    yield ("retable", "paleomix.tools.retable",
-           "Pretty print whitespace separated tabular data.")
+    yield (
+        "cat",
+        "paleomix.tools.cat",
+        "Generalized cat command for gz, bz2 and uncompressed files.",
+    )
+    yield (
+        "retable",
+        "paleomix.tools.retable",
+        "Pretty print whitespace separated tabular data.",
+    )
 
 
 # Error message shown if the Pysam module ('pysam') cannot be imported
@@ -146,13 +191,14 @@ def _are_requirements_met():
     """
     if tuple(sys.version_info)[:2] < (3, 6):
         sys.stderr.write("ERROR: PALEOMIX requires Python version 3.6+\n")
-        sys.stderr.write("However, the current version of python is\n\tv%s\n\n"
-                         % (sys.version.replace("\n", "\n\t"),))
+        sys.stderr.write(
+            "However, the current version of python is\n\tv%s\n\n"
+            % (sys.version.replace("\n", "\n\t"),)
+        )
         sys.stderr.write("Please install Python v3.6+ to continue.\n")
         return False
 
-    modules = [('pysam', _IMPORT_ERROR_PYSAM),
-               ('paleomix', _IMPORT_ERROR_PALEOMIX)]
+    modules = [("pysam", _IMPORT_ERROR_PYSAM), ("paleomix", _IMPORT_ERROR_PALEOMIX)]
 
     for (module, message) in modules:
         try:
@@ -164,14 +210,18 @@ def _are_requirements_met():
 
     # Sanity check, to catch multiple, conflicting PALEOMIX installations
     import paleomix
-    if not os.path.samefile(os.path.dirname(__file__),
-                            os.path.dirname(paleomix.__file__)):
-        sys.stderr.write(_INCONSISTENT_IMPORT_ERROR
-                         % (os.path.dirname(__file__),
-                            os.path.dirname(paleomix.__file__)))
+
+    if not os.path.samefile(
+        os.path.dirname(__file__), os.path.dirname(paleomix.__file__)
+    ):
+        sys.stderr.write(
+            _INCONSISTENT_IMPORT_ERROR
+            % (os.path.dirname(__file__), os.path.dirname(paleomix.__file__))
+        )
         return False
 
     import pysam
+
     version = [int(field) for field in pysam.__version__.split(".")]
     if version[:3] < [0, 8, 3]:
         error = "Pysam is outdated (v%s), version must be at least v0.8.3!"
@@ -216,6 +266,7 @@ def main(argv):
 
     # Process name defaults to the name of the python executable
     import paleomix.common.system
+
     paleomix.common.system.set_procname("paleomix")
 
     if not argv or argv[0] == "help":
@@ -236,5 +287,5 @@ def entry_point():
     return main(sys.argv[1:])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))

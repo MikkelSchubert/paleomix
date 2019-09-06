@@ -28,24 +28,35 @@ import paleomix.common.fileutils as fileutils
 import paleomix.common.versions as versions
 
 from paleomix.node import CommandNode
-from paleomix.atomiccmd.builder import \
-     AtomicCmdBuilder, \
-     use_customizable_cli_parameters, \
-     create_customizable_cli_parameters
+from paleomix.atomiccmd.builder import (
+    AtomicCmdBuilder,
+    use_customizable_cli_parameters,
+    create_customizable_cli_parameters,
+)
 
 
-RAXML_VERSION = versions.Requirement(call   = ("raxmlHPC", "-version"),
-                                     search = r"version (\d+)\.(\d+)\.(\d+)",
-                                     checks = versions.GE(7, 3, 2))
-RAXML_PTHREADS_VERSION = versions.Requirement(call   = ("raxmlHPC-PTHREADS", "-version"),
-                                              search = r"version (\d+)\.(\d+)\.(\d+)",
-                                              checks = versions.GE(7, 3, 2))
+RAXML_VERSION = versions.Requirement(
+    call=("raxmlHPC", "-version"),
+    search=r"version (\d+)\.(\d+)\.(\d+)",
+    checks=versions.GE(7, 3, 2),
+)
+RAXML_PTHREADS_VERSION = versions.Requirement(
+    call=("raxmlHPC-PTHREADS", "-version"),
+    search=r"version (\d+)\.(\d+)\.(\d+)",
+    checks=versions.GE(7, 3, 2),
+)
 
 
 class RAxMLRapidBSNode(CommandNode):
     @create_customizable_cli_parameters
-    def customize(cls, input_alignment, output_template, input_partition=None,
-                  threads=1, dependencies=()):
+    def customize(
+        cls,
+        input_alignment,
+        output_template,
+        input_partition=None,
+        threads=1,
+        dependencies=(),
+    ):
         """
         Arguments:
         input_alignment  -- An alignment file in a format readable by RAxML.
@@ -77,32 +88,32 @@ class RAxMLRapidBSNode(CommandNode):
 
         if input_partition is not None:
             command.set_option("-q", "%(TEMP_OUT_PART)s")
-            command.set_kwargs(IN_PARTITION=input_partition,
-                               TEMP_OUT_PART=os.path.basename(input_partition),
-                               TEMP_OUT_PART_R=os.path.basename(input_partition) + ".reduced")
+            command.set_kwargs(
+                IN_PARTITION=input_partition,
+                TEMP_OUT_PART=os.path.basename(input_partition),
+                TEMP_OUT_PART_R=os.path.basename(input_partition) + ".reduced",
+            )
 
         command.set_kwargs(  # Auto-delete: Symlinks and .reduced files that RAxML may generate
-                           TEMP_OUT_ALN=os.path.basename(input_alignment),
-                           TEMP_OUT_ALN_R=os.path.basename(input_alignment) + ".reduced",
-
-                           # Input files, are not used directly (see below)
-                           IN_ALIGNMENT=input_alignment,
-
-                           # Final output files, are not created directly
-                           OUT_INFO=output_template % "info",
-                           OUT_BESTTREE=output_template % "bestTree",
-                           OUT_BOOTSTRAP=output_template % "bootstrap",
-                           OUT_BIPART=output_template % "bipartitions",
-                           OUT_BIPARTLABEL=output_template % "bipartitionsBranchLabels",
-
-                           CHECK_VERSION=version)
+            TEMP_OUT_ALN=os.path.basename(input_alignment),
+            TEMP_OUT_ALN_R=os.path.basename(input_alignment) + ".reduced",
+            # Input files, are not used directly (see below)
+            IN_ALIGNMENT=input_alignment,
+            # Final output files, are not created directly
+            OUT_INFO=output_template % "info",
+            OUT_BESTTREE=output_template % "bestTree",
+            OUT_BOOTSTRAP=output_template % "bootstrap",
+            OUT_BIPART=output_template % "bipartitions",
+            OUT_BIPARTLABEL=output_template % "bipartitionsBranchLabels",
+            CHECK_VERSION=version,
+        )
 
         # Use the GTRGAMMA model of NT substitution by default
         command.set_option("-m", "GTRGAMMAI", fixed=False)
         # Enable Rapid Boostrapping and set random seed. May be set to a fixed value to allow replicability.
-        command.set_option("-x", int(random.random() * 2**31 - 1), fixed=False)
+        command.set_option("-x", int(random.random() * 2 ** 31 - 1), fixed=False)
         # Set random seed for parsimony inference. May be set to a fixed value to allow replicability.
-        command.set_option("-p", int(random.random() * 2**31 - 1), fixed=False)
+        command.set_option("-p", int(random.random() * 2 ** 31 - 1), fixed=False)
         # Terminate bootstrapping upon convergence, rather than after a fixed number of repetitions
         command.set_option("-N", "autoMRE", fixed=False)
 
@@ -110,17 +121,17 @@ class RAxMLRapidBSNode(CommandNode):
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
-        self._symlinks = [parameters.input_alignment,
-                          parameters.input_partition]
+        self._symlinks = [parameters.input_alignment, parameters.input_partition]
         self._template = os.path.basename(parameters.output_template)
 
-        CommandNode.__init__(self,
-                             command=parameters.command.finalize(),
-                             description="<RAxMLRapidBS: '%s' -> '%s'>"
-                             % (parameters.input_alignment,
-                                parameters.output_template % ("*",)),
-                             threads=parameters.threads,
-                             dependencies=parameters.dependencies)
+        CommandNode.__init__(
+            self,
+            command=parameters.command.finalize(),
+            description="<RAxMLRapidBS: '%s' -> '%s'>"
+            % (parameters.input_alignment, parameters.output_template % ("*",)),
+            threads=parameters.threads,
+            dependencies=parameters.dependencies,
+        )
 
     def _setup(self, config, temp):
         CommandNode._setup(self, config, temp)
@@ -147,7 +158,7 @@ class RAxMLRapidBSNode(CommandNode):
 
 class RAxMLParsimonyTreeNode(CommandNode):
     @create_customizable_cli_parameters
-    def customize(cls, input_alignment, input_partitions, output_tree, dependencies = ()):
+    def customize(cls, input_alignment, input_partitions, output_tree, dependencies=()):
         command = AtomicCmdBuilder("raxmlHPC")
 
         # Compute a randomized parsimony starting tree
@@ -159,49 +170,55 @@ class RAxMLParsimonyTreeNode(CommandNode):
         # Ensures that output is saved to the temporary directory
         command.set_option("-w", "%(TEMP_DIR)s")
         # Set random seed for bootstrap generation. May be set to a fixed value to allow replicability.
-        command.set_option("-p", int(random.random() * 2**31 - 1), fixed = False)
+        command.set_option("-p", int(random.random() * 2 ** 31 - 1), fixed=False)
 
         # Symlink to sequence and partitions, to prevent the creation of *.reduced files outside temp folder
         command.set_option("-s", "%(TEMP_OUT_ALIGNMENT)s")
         command.set_option("-q", "%(TEMP_OUT_PARTITION)s")
 
-        command.set_kwargs(IN_ALIGNMENT       = input_alignment,
-                           IN_PARTITION       = input_partitions,
+        command.set_kwargs(
+            IN_ALIGNMENT=input_alignment,
+            IN_PARTITION=input_partitions,
+            # TEMP_OUT_ is used to automatically remove these files
+            TEMP_OUT_ALIGNMENT="RAxML_alignment",
+            TEMP_OUT_PARTITION="RAxML_partitions",
+            TEMP_OUT_INFO="RAxML_info.Pypeline",
+            OUT_TREE=output_tree,
+            CHECK_VERSION=RAXML_VERSION,
+        )
 
-                           # TEMP_OUT_ is used to automatically remove these files
-                           TEMP_OUT_ALIGNMENT = "RAxML_alignment",
-                           TEMP_OUT_PARTITION = "RAxML_partitions",
-                           TEMP_OUT_INFO      = "RAxML_info.Pypeline",
-
-                           OUT_TREE           = output_tree,
-
-                           CHECK_VERSION      = RAXML_VERSION)
-
-        return {"command" : command}
-
+        return {"command": command}
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
-        self._input_alignment  = parameters.input_alignment
+        self._input_alignment = parameters.input_alignment
         self._input_partitions = parameters.input_partitions
-        self._output_tree      = parameters.output_tree
+        self._output_tree = parameters.output_tree
 
-        CommandNode.__init__(self,
-                             command      = parameters.command.finalize(),
-                             description  = "<RAxMLParsimonyTree: '%s' -> '%s'>" \
-                                     % (parameters.input_alignment, parameters.output_tree),
-                             dependencies = parameters.dependencies)
-
+        CommandNode.__init__(
+            self,
+            command=parameters.command.finalize(),
+            description="<RAxMLParsimonyTree: '%s' -> '%s'>"
+            % (parameters.input_alignment, parameters.output_tree),
+            dependencies=parameters.dependencies,
+        )
 
     def _setup(self, config, temp):
-        os.symlink(os.path.abspath(self._input_alignment),  os.path.join(temp, "RAxML_alignment"))
-        os.symlink(os.path.abspath(self._input_partitions), os.path.join(temp, "RAxML_partitions"))
+        os.symlink(
+            os.path.abspath(self._input_alignment),
+            os.path.join(temp, "RAxML_alignment"),
+        )
+        os.symlink(
+            os.path.abspath(self._input_partitions),
+            os.path.join(temp, "RAxML_partitions"),
+        )
         CommandNode._setup(self, config, temp)
-
 
     def _teardown(self, config, temp):
         basename = os.path.basename(self._output_tree)
-        os.rename(os.path.join(temp, "RAxML_parsimonyTree.Pypeline"),
-                  os.path.join(temp, basename))
+        os.rename(
+            os.path.join(temp, "RAxML_parsimonyTree.Pypeline"),
+            os.path.join(temp, basename),
+        )
 
         CommandNode._teardown(self, config, temp)

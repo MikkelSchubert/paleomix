@@ -25,38 +25,65 @@ from nose.tools import assert_equal
 
 from paleomix.common.formats.phylip import interleaved_phy
 
-from paleomix.common.formats.msa import \
-     MSA
+from paleomix.common.formats.msa import MSA
 
-from paleomix.common.formats.fasta import \
-     FASTA
+from paleomix.common.formats.fasta import FASTA
 
 
-_MSA_SHORT_SEQUENCES = \
-  MSA([FASTA("seq1", None, "ACGTTGATAACCAGG"),
-       FASTA("seq2", None, "TGCAGAGTACGACGT")])
-_MSA_MEDIUM_SEQUENCES = \
-  MSA([FASTA("seq1", None, "ACGTTGATAACCAGGAGGGATTCGCGATTGGTGGTAACGTAGCC"),
-       FASTA("seq2", None, "TGCAGAGTACGACGTCTCCTAGATCCTGGACAATTTAAACCGAA")])
-_MSA_LONG_SEQUENCES = \
-  MSA([FASTA("seq1", None, "CGGATCTGCTCCTCCACTGGCCACGTTTACTGTCCCCCAACCGTT"
-             "CGTCCCGACCTAGTTATACTTCTTAGCAAGGTGTAAAACCAGAGATTGAGGTTATAACG"
-             "TTCCTAATCAGTTATTAAATTACCGCGCCCCGACAG"),
-       FASTA("seq2", None, "AGTTGAAGAGGCGGAACGTTTGTAAACCGCGCTAACGTAGTTCTA"
-             "CAACCAGCCACCCGGTTCGAAGGAACAACTGGTCGCCATAATTAGGCGAAACGATAGTG"
-             "CACTAAGGTCAGGTGCGCCCCTGTAAATAATTAGAT")])
+_MSA_SHORT_SEQUENCES = MSA(
+    [FASTA("seq1", None, "ACGTTGATAACCAGG"), FASTA("seq2", None, "TGCAGAGTACGACGT")]
+)
+_MSA_MEDIUM_SEQUENCES = MSA(
+    [
+        FASTA("seq1", None, "ACGTTGATAACCAGGAGGGATTCGCGATTGGTGGTAACGTAGCC"),
+        FASTA("seq2", None, "TGCAGAGTACGACGTCTCCTAGATCCTGGACAATTTAAACCGAA"),
+    ]
+)
+_MSA_LONG_SEQUENCES = MSA(
+    [
+        FASTA(
+            "seq1",
+            None,
+            "CGGATCTGCTCCTCCACTGGCCACGTTTACTGTCCCCCAACCGTT"
+            "CGTCCCGACCTAGTTATACTTCTTAGCAAGGTGTAAAACCAGAGATTGAGGTTATAACG"
+            "TTCCTAATCAGTTATTAAATTACCGCGCCCCGACAG",
+        ),
+        FASTA(
+            "seq2",
+            None,
+            "AGTTGAAGAGGCGGAACGTTTGTAAACCGCGCTAACGTAGTTCTA"
+            "CAACCAGCCACCCGGTTCGAAGGAACAACTGGTCGCCATAATTAGGCGAAACGATAGTG"
+            "CACTAAGGTCAGGTGCGCCCCTGTAAATAATTAGAT",
+        ),
+    ]
+)
 
-_MSA_MEDIUM_NAMES = \
-  MSA([FASTA("A_really_long_sequence", None, "ACGTTGATAACCAGG"),
-       FASTA("Another_real_long_one!", None, "TGCAGAGTACGACGT")])
-_MSA_LONG_NAMES = \
-  MSA([FASTA("A_really_long_sequence_name_that_is_in_fact_too_long", None, "ACGTTGATAACCAGG"),
-       FASTA("Another_really_long_sequence_name_that_is_too_long", None, "TGCAGAGTACGACGT")])
+_MSA_MEDIUM_NAMES = MSA(
+    [
+        FASTA("A_really_long_sequence", None, "ACGTTGATAACCAGG"),
+        FASTA("Another_real_long_one!", None, "TGCAGAGTACGACGT"),
+    ]
+)
+_MSA_LONG_NAMES = MSA(
+    [
+        FASTA(
+            "A_really_long_sequence_name_that_is_in_fact_too_long",
+            None,
+            "ACGTTGATAACCAGG",
+        ),
+        FASTA(
+            "Another_really_long_sequence_name_that_is_too_long",
+            None,
+            "TGCAGAGTACGACGT",
+        ),
+    ]
+)
 
 
 ###############################################################################
 ###############################################################################
 # Tests of 'interleaved_phy'
+
 
 def test_interleaved_phy__short_sequences():
     expected = """2 44
@@ -105,8 +132,16 @@ Another_really_long_sequence_n      TGCAGAGTAC  GACGT"""
 
 
 def test_sequentual_phy__different_length_names_1():
-    msa = MSA([FASTA("A_short_name", None, "ACGTTGATAACCAGG"),
-               FASTA("Another_really_long_sequence_name_that_is_too_long", None, "TGCAGAGTACGACGT")])
+    msa = MSA(
+        [
+            FASTA("A_short_name", None, "ACGTTGATAACCAGG"),
+            FASTA(
+                "Another_really_long_sequence_name_that_is_too_long",
+                None,
+                "TGCAGAGTACGACGT",
+            ),
+        ]
+    )
     expected = """2 15
 
 A_short_name                        ACGTTGATAA  CCAGG
@@ -115,8 +150,12 @@ Another_really_long_sequence_n      TGCAGAGTAC  GACGT"""
 
 
 def test_sequentual_phy__different_length_names_2():
-    msa = MSA([FASTA("Burchelli_4", None, "ACGTTGATAACCAGG"),
-               FASTA("Donkey",      None, "TGCAGAGTACGACGT")])
+    msa = MSA(
+        [
+            FASTA("Burchelli_4", None, "ACGTTGATAACCAGG"),
+            FASTA("Donkey", None, "TGCAGAGTACGACGT"),
+        ]
+    )
     expected = """2 15
 
 Burchelli_4             ACGTTGATAA  CCAGG
@@ -125,5 +164,5 @@ Donkey                  TGCAGAGTAC  GACGT"""
 
 
 def test_interleaved_phy__different_lengths():
-    _mock = flexmock(MSA).should_receive('validate').at_least.once
+    _mock = flexmock(MSA).should_receive("validate").at_least.once
     interleaved_phy(_MSA_MEDIUM_NAMES)

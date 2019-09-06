@@ -65,6 +65,7 @@ _VCF_DICT = re.compile("##(.*)=<(.*)>")
 ###############################################################################
 # Utility functions
 
+
 def flush_fasta(sequence):
     """Takes a FASTA sequence as a string, fragments it into lines of exactly
     _FASTA_COLUMNS chars (e.g. 60), and prints all complete lines. The final
@@ -97,6 +98,7 @@ def split_beds(beds, size=_SEQUENCE_CHUNK):
 ###############################################################################
 ###############################################################################
 # Genotyping functions
+
 
 def add_snp(options, snp, position, sequence):
     if snp.alt != ".":
@@ -180,7 +182,7 @@ def build_region(options, genotype, bed):
 
     offset = bed.start - start
     length = bed.end - bed.start
-    truncated = sequence[offset:offset + length]
+    truncated = sequence[offset : offset + length]
 
     # Discard insertions after the last position
     truncated[-1] = truncated[-1][:1]
@@ -199,6 +201,7 @@ def build_regions(options, genotype, beds, reverse_compl):
 def build_genes(options, genotype, regions):
     def keyfunc(bed):
         return (bed.contig, bed.name, bed.start)
+
     regions.sort(key=keyfunc)
 
     for (gene, beds) in itertools.groupby(regions, lambda x: x.name):
@@ -232,6 +235,7 @@ def genotype_genes(options, intervals, genotype):
 ###############################################################################
 ###############################################################################
 
+
 def read_intervals(filename):
     with open(filename) as bed_file:
         intervals = text.parse_lines_by_contig(bed_file, BEDRecord)
@@ -240,8 +244,13 @@ def read_intervals(filename):
             bed_tuples = []
             for bed in beds:
                 if len(bed) < 6:
-                    sys.stderr.write(("ERROR: Invalid BED record '%r', must "
-                                      "have at least 6 fields ...\n") % (bed,))
+                    sys.stderr.write(
+                        (
+                            "ERROR: Invalid BED record '%r', must "
+                            "have at least 6 fields ...\n"
+                        )
+                        % (bed,)
+                    )
                     return None
 
                 bed_tuples.append(bed)
@@ -270,8 +279,10 @@ def parse_intervals(genotype):
             records[record.contig] = [record]
 
     if not records:
-        sys.stderr.write("ERROR: List of contigs not found in VCF header; "
-                         "specifying --intervals is required!\n")
+        sys.stderr.write(
+            "ERROR: List of contigs not found in VCF header; "
+            "specifying --intervals is required!\n"
+        )
         return None
 
     return records
@@ -283,9 +294,11 @@ def check_nth_sample(options, genotype):
     for contig in genotype.contigs:
         for record in text.parse_lines(genotype.fetch(contig), parser):
             if len(record) <= options.nth_sample:
-                sys.stderr.write("ERROR: Sample %i selected with --nth-sample,"
-                                 " but file only contains %i sample(s)!\n"
-                                 % (options.nth_sample + 1, len(record)))
+                sys.stderr.write(
+                    "ERROR: Sample %i selected with --nth-sample,"
+                    " but file only contains %i sample(s)!\n"
+                    % (options.nth_sample + 1, len(record))
+                )
                 return False
             return True
     return True
@@ -296,29 +309,50 @@ def main(argv):
     usage = "%s [options] --genotype in.vcf --intervals in.bed" % (prog,)
 
     parser = argparse.ArgumentParser(prog=prog, usage=usage)
-    parser.add_argument("--genotype", required=True, metavar="VCF",
-                        help="Tabix indexed VCF file; by default the first "
-                             "sample is used in multi-sample VCFs. Use "
-                             "--nth-sample option to select another sample.")
-    parser.add_argument("--nth-sample", default=1, type=int, metavar="NTH",
-                        help="Use Nth sample from the VCF, with the first "
-                             "sample numbered '1' [default: %(default)s].")
-    parser.add_argument("--intervals", metavar="BED",
-                        help="Six column BED file; sequences on the same "
-                             "contig with the same name are assumed to "
-                             "represent the same gene, and are merged into a "
-                             "single contiguous FASTA sequence.")
-    parser.add_argument("--padding", type=int, default=10,
-                        help="Number of bases to expand intervals, when "
-                             "checking for adjacent indels [%(default)s]")
-    parser.add_argument("--whole-codon-indels-only",
-                        action="store_true", default=False,
-                        help="If true, only indels where (length %% 3) == 0 "
-                             "are retained [%(default)s]")
-    parser.add_argument("--ignore-indels",
-                        action="store_true", default=False,
-                        help="Do not include indels generated FASTA "
-                             "sequence [%(default)s].")
+    parser.add_argument(
+        "--genotype",
+        required=True,
+        metavar="VCF",
+        help="Tabix indexed VCF file; by default the first "
+        "sample is used in multi-sample VCFs. Use "
+        "--nth-sample option to select another sample.",
+    )
+    parser.add_argument(
+        "--nth-sample",
+        default=1,
+        type=int,
+        metavar="NTH",
+        help="Use Nth sample from the VCF, with the first "
+        "sample numbered '1' [default: %(default)s].",
+    )
+    parser.add_argument(
+        "--intervals",
+        metavar="BED",
+        help="Six column BED file; sequences on the same "
+        "contig with the same name are assumed to "
+        "represent the same gene, and are merged into a "
+        "single contiguous FASTA sequence.",
+    )
+    parser.add_argument(
+        "--padding",
+        type=int,
+        default=10,
+        help="Number of bases to expand intervals, when "
+        "checking for adjacent indels [%(default)s]",
+    )
+    parser.add_argument(
+        "--whole-codon-indels-only",
+        action="store_true",
+        default=False,
+        help="If true, only indels where (length %% 3) == 0 "
+        "are retained [%(default)s]",
+    )
+    parser.add_argument(
+        "--ignore-indels",
+        action="store_true",
+        default=False,
+        help="Do not include indels generated FASTA " "sequence [%(default)s].",
+    )
 
     opts = parser.parse_args(argv)
 
@@ -332,7 +366,7 @@ def main(argv):
         return 1
     elif not os.path.exists(opts.genotype + ".tbi"):
         sys.stderr.write("ERROR: VCF file not tabix indexed.\n")
-        sys.stderr.write("       To index, run \"tabix -p vcf <filename>\".\n")
+        sys.stderr.write('       To index, run "tabix -p vcf <filename>".\n')
         return 1
     elif opts.nth_sample < 1:
         sys.stderr.write("ERROR: --nth-sample uses 1-based offsets, zero and\n")

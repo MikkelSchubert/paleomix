@@ -28,16 +28,10 @@ import re
 
 import pysam
 
-from paleomix.node import \
-    Node, \
-    NodeError
-from paleomix.common.fileutils import \
-    describe_files, \
-    make_dirs
-from paleomix.common.utilities import \
-    chain_sorted
-from paleomix.common.sequences import \
-    reverse_complement
+from paleomix.node import Node, NodeError
+from paleomix.common.fileutils import describe_files, make_dirs
+from paleomix.common.utilities import chain_sorted
+from paleomix.common.sequences import reverse_complement
 
 import paleomix.common.formats.fastq as fastq
 import paleomix.common.procs as procs
@@ -56,12 +50,14 @@ class DetectInputDuplicationNode(Node):
     """
 
     def __init__(self, input_files, output_file, dependencies=()):
-        Node.__init__(self,
-                      description="<Detect Input Duplication: %s>"
-                      % (describe_files(input_files)),
-                      input_files=input_files,
-                      output_files=output_file,
-                      dependencies=dependencies)
+        Node.__init__(
+            self,
+            description="<Detect Input Duplication: %s>"
+            % (describe_files(input_files)),
+            input_files=input_files,
+            output_files=output_file,
+            dependencies=dependencies,
+        )
 
     def run(self, _):
         check_bam_files(self.input_files, self._throw_node_error)
@@ -75,30 +71,33 @@ class DetectInputDuplicationNode(Node):
                 pass
 
     def _throw_node_error(self, chrom, pos, records, name, seq, qual):
-        message = ["The same read was found multiple times at position %i on %r!"
-                   % (pos, chrom),
-                   "    Name:      %r" % (name,),
-                   "    Sequence:  %r" % (seq,),
-                   "    Qualities: %r" % (qual,),
-                   ""]
+        message = [
+            "The same read was found multiple times at position %i on %r!"
+            % (pos, chrom),
+            "    Name:      %r" % (name,),
+            "    Sequence:  %r" % (seq,),
+            "    Qualities: %r" % (qual,),
+            "",
+        ]
 
         message.append("Read was found in these BAM files:")
         for filename, records in sorted(records.items()):
             message.append("   %s in %r" % (_summarize_reads(records), filename))
 
         message.append("")
-        message.append("This indicates that the same data has been "
-                       "included multiple times in the project. This "
-                       "can be because multiple copies of the same "
-                       "files were used, or because one or more files "
-                       "contain multiple copies of the same reads. "
-                       "The command 'paleomix dupcheck' may be used "
-                       "to review the potentially duplicated data in "
-                       "these BAM files.\n\n"
-
-                       "If this error was a false positive, then you "
-                       "may execute the following command(s) to mark "
-                       "this test as having succeeded:")
+        message.append(
+            "This indicates that the same data has been "
+            "included multiple times in the project. This "
+            "can be because multiple copies of the same "
+            "files were used, or because one or more files "
+            "contain multiple copies of the same reads. "
+            "The command 'paleomix dupcheck' may be used "
+            "to review the potentially duplicated data in "
+            "these BAM files.\n\n"
+            "If this error was a false positive, then you "
+            "may execute the following command(s) to mark "
+            "this test as having succeeded:"
+        )
 
         for fpath in self.output_files:
             message.append("$ touch '%s'" % (fpath,))
@@ -118,12 +117,13 @@ class ValidateFASTQFilesNode(Node):
                 self._files.add((read_type, filename))
 
         input_files = [filename for _, filename in self._files]
-        Node.__init__(self,
-                      description="<Validate FASTQ Files: %s>"
-                      % (describe_files(input_files)),
-                      input_files=input_files,
-                      output_files=output_file,
-                      dependencies=dependencies)
+        Node.__init__(
+            self,
+            description="<Validate FASTQ Files: %s>" % (describe_files(input_files)),
+            input_files=input_files,
+            output_files=output_file,
+            dependencies=dependencies,
+        )
 
     def _run(self, _config, _temp):
         stats = check_fastq_files(self._files, self._offset, True)
@@ -138,12 +138,13 @@ class ValidateFASTQFilesNode(Node):
 
 class ValidateFASTAFilesNode(Node):
     def __init__(self, input_files, output_file, dependencies=()):
-        Node.__init__(self,
-                      description="<Validate FASTA Files: %s>"
-                      % (describe_files(input_files)),
-                      input_files=input_files,
-                      output_files=output_file,
-                      dependencies=dependencies)
+        Node.__init__(
+            self,
+            description="<Validate FASTA Files: %s>" % (describe_files(input_files)),
+            input_files=input_files,
+            output_files=output_file,
+            dependencies=dependencies,
+        )
 
         assert len(self.output_files) == 1, self.output_files
 
@@ -184,36 +185,37 @@ def check_bam_files(input_files, err_func):
 
 
 def check_fastq_files(filenames, required_offset, allow_empty=False):
-    stats = {
-        "seq_retained_nts": 0,
-        "seq_retained_reads": 0,
-        "seq_collapsed": 0,
-    }
+    stats = {"seq_retained_nts": 0, "seq_retained_reads": 0, "seq_collapsed": 0}
 
     for file_type, filename in filenames:
         qualities = _read_sequences(file_type, filename, stats)
         offsets = fastq.classify_quality_strings(qualities)
         if offsets == fastq.OFFSET_BOTH:
-            raise NodeError("FASTQ file contains quality scores with both "
-                            "quality offsets (33 and 64); file may be "
-                            "unexpected format or corrupt. Please ensure "
-                            "that this file contains valid FASTQ reads from a "
-                            "single source.\n    Filename = %r" % (filename,))
+            raise NodeError(
+                "FASTQ file contains quality scores with both "
+                "quality offsets (33 and 64); file may be "
+                "unexpected format or corrupt. Please ensure "
+                "that this file contains valid FASTQ reads from a "
+                "single source.\n    Filename = %r" % (filename,)
+            )
         elif offsets == fastq.OFFSET_MISSING:
             if allow_empty and not qualities:
                 continue
 
-            raise NodeError("FASTQ file did not contain quality scores; file "
-                            "may be unexpected format or corrupt. Ensure that "
-                            "the file is a FASTQ file.\n    Filename = %r"
-                            % (filename,))
+            raise NodeError(
+                "FASTQ file did not contain quality scores; file "
+                "may be unexpected format or corrupt. Ensure that "
+                "the file is a FASTQ file.\n    Filename = %r" % (filename,)
+            )
         elif offsets not in (fastq.OFFSET_AMBIGIOUS, required_offset):
-            raise NodeError("FASTQ file contains quality scores with wrong "
-                            "quality score offset (%i); expected reads with "
-                            "quality score offset %i. Ensure that the "
-                            "'QualityOffset' specified in the makefile "
-                            "corresponds to the input.\n    Filename = %s"
-                            % (offsets, required_offset, filename))
+            raise NodeError(
+                "FASTQ file contains quality scores with wrong "
+                "quality score offset (%i); expected reads with "
+                "quality score offset %i. Ensure that the "
+                "'QualityOffset' specified in the makefile "
+                "corresponds to the input.\n    Filename = %s"
+                % (offsets, required_offset, filename)
+            )
 
     return stats
 
@@ -225,10 +227,12 @@ def _read_sequences(file_type, filename, stats):
 
     cat = None
     try:
-        cat = procs.open_proc(cat_call,
-                              bufsize=io.DEFAULT_BUFFER_SIZE,
-                              stderr=procs.PIPE,
-                              stdout=procs.PIPE)
+        cat = procs.open_proc(
+            cat_call,
+            bufsize=io.DEFAULT_BUFFER_SIZE,
+            stderr=procs.PIPE,
+            stdout=procs.PIPE,
+        )
         qualities = _collect_qualities(cat.stdout, file_type, filename, stats)
 
         return sampling.reservoir_sampling(qualities, 100000)
@@ -244,9 +248,10 @@ def _read_sequences(file_type, filename, stats):
     finally:
         rc_cat = cat.wait() if cat else 0
         if rc_cat:
-            message = "Error running 'paleomix cat':\n" \
-                      "  Unicat return-code = %i\n\n%s" \
-                      % (rc_cat, cat.stderr.read())
+            message = (
+                "Error running 'paleomix cat':\n"
+                "  Unicat return-code = %i\n\n%s" % (rc_cat, cat.stderr.read())
+            )
             raise NodeError(message)
 
 
@@ -305,25 +310,25 @@ def _process_bam_reads(observed_reads, references, position, err_func):
 
 
 def _summarize_reads(records):
-    counts = {'mate 1': 0, 'mate 2': 0, 'unpaired': 0}
+    counts = {"mate 1": 0, "mate 2": 0, "unpaired": 0}
 
     for record in records:
         if record.is_paired:
             if record.is_read1:
-                counts['mate 1'] += 1
+                counts["mate 1"] += 1
             elif record.is_read2:
-                counts['mate 2'] += 1
+                counts["mate 2"] += 1
             else:
-                counts['unpaired'] += 1
+                counts["unpaired"] += 1
         else:
-            counts['unpaired'] += 1
+            counts["unpaired"] += 1
 
     result = []
     for key, value in sorted(counts.items()):
         if value > 1:
-            result.append('%i %s reads' % (value, key))
+            result.append("%i %s reads" % (value, key))
         elif value:
-            result.append('%i %s read' % (value, key))
+            result.append("%i %s read" % (value, key))
 
     return ", ".join(result) or "No reads"
 
@@ -341,27 +346,36 @@ def _collect_qualities(handle, file_type, filename, stats):
 
         if not header.startswith("@"):
             if header.startswith(">"):
-                raise NodeError("Input file appears to be in FASTA format "
-                                "(header starts with '>', expected '@'), "
-                                "but only FASTQ files are supported\n"
-                                "Filename = %r" % (filename,))
+                raise NodeError(
+                    "Input file appears to be in FASTA format "
+                    "(header starts with '>', expected '@'), "
+                    "but only FASTQ files are supported\n"
+                    "Filename = %r" % (filename,)
+                )
 
-            raise NodeError("Input file lacks FASTQ header (expected '@', "
-                            "found %r), but only FASTQ files are supported\n"
-                            "    Filename = %r" % (header[:1], filename))
+            raise NodeError(
+                "Input file lacks FASTQ header (expected '@', "
+                "found %r), but only FASTQ files are supported\n"
+                "    Filename = %r" % (header[:1], filename)
+            )
         elif not qualities:
-            raise NodeError("Partial record found; is not 4 lines long:\n"
-                            "Filename = %r\n    Record = '%s'"
-                            % (filename, header.rstrip()))
+            raise NodeError(
+                "Partial record found; is not 4 lines long:\n"
+                "Filename = %r\n    Record = '%s'" % (filename, header.rstrip())
+            )
         elif not seperator.startswith("+"):
-            raise NodeError("Input file lacks FASTQ seperator (expected '+', "
-                            "found %r), but only FASTQ files are supported\n"
-                            "    Filename = %r" % (seperator[:1], filename))
+            raise NodeError(
+                "Input file lacks FASTQ seperator (expected '+', "
+                "found %r), but only FASTQ files are supported\n"
+                "    Filename = %r" % (seperator[:1], filename)
+            )
         elif len(sequence) != len(qualities):
-            raise NodeError("Input file contains malformed FASTQ records; "
-                            "length of sequence / qualities are not the "
-                            "same.\n    Filename = %r\n    Record = '%s'"
-                            % (filename, header.rstrip()))
+            raise NodeError(
+                "Input file contains malformed FASTQ records; "
+                "length of sequence / qualities are not the "
+                "same.\n    Filename = %r\n    Record = '%s'"
+                % (filename, header.rstrip())
+            )
 
         stats["seq_retained_nts"] += len(sequence)
         stats["seq_retained_reads"] += 1
@@ -379,15 +393,16 @@ def check_fasta_file(filename):
         state, linelength, linelengthchanged = _NA, None, False
         for linenum, line in enumerate(handle, start=1):
             # Only \n is allowed as not all tools (e.g. GATK) handle \r
-            line = line.rstrip('\n')
+            line = line.rstrip("\n")
 
             if not line:
                 if state in (_NA, _IN_WHITESPACE):
                     continue
                 elif state == _IN_HEADER:
-                    raise NodeError("Expected FASTA sequence, found empty line"
-                                    "\n    Filename = %r\n    Line = %r"
-                                    % (filename, linenum))
+                    raise NodeError(
+                        "Expected FASTA sequence, found empty line"
+                        "\n    Filename = %r\n    Line = %r" % (filename, linenum)
+                    )
                 elif state == _IN_SEQUENCE:
                     state = _IN_WHITESPACE
                 else:
@@ -399,16 +414,18 @@ def check_fasta_file(filename):
                     linelength = None
                     linelengthchanged = False
                 elif state == _IN_HEADER:
-                    raise NodeError("Empty sequences not allowed\n"
-                                    "    Filename = %r\n    Line = %r"
-                                    % (filename, linenum - 1))
+                    raise NodeError(
+                        "Empty sequences not allowed\n"
+                        "    Filename = %r\n    Line = %r" % (filename, linenum - 1)
+                    )
                 else:
                     assert False
             else:
                 if state == _NA:
-                    raise NodeError("Expected FASTA header, found %r\n"
-                                    "    Filename = %r\n    Line = %r"
-                                    % (line, filename, linenum))
+                    raise NodeError(
+                        "Expected FASTA header, found %r\n"
+                        "    Filename = %r\n    Line = %r" % (line, filename, linenum)
+                    )
                 elif state == _IN_HEADER:
                     _validate_fasta_line(filename, linenum, line)
                     linelength = len(line)
@@ -420,24 +437,31 @@ def check_fasta_file(filename):
                     # sequence length. This is because the FAI index format
                     # expects that each line has the same length.
                     if linelengthchanged or (linelength < len(line)):
-                        raise NodeError("Lines in FASTQ files must be of same "
-                                        "length\n    Filename = %r\n"
-                                        "    Line = %r" % (filename, linenum))
+                        raise NodeError(
+                            "Lines in FASTQ files must be of same "
+                            "length\n    Filename = %r\n"
+                            "    Line = %r" % (filename, linenum)
+                        )
                     elif linelength != len(line):
                         linelengthchanged = True
                 elif state == _IN_WHITESPACE:
-                    raise NodeError("Empty lines not allowed in sequences\n"
-                                    "    Filename = %r\n    Line = %r"
-                                    % (filename, linenum))
+                    raise NodeError(
+                        "Empty lines not allowed in sequences\n"
+                        "    Filename = %r\n    Line = %r" % (filename, linenum)
+                    )
                 else:
                     assert False
 
         if state == _NA:
-            raise NodeError("File does not contain any sequences:\n"
-                            "    Filename = %r" % (filename, ))
+            raise NodeError(
+                "File does not contain any sequences:\n"
+                "    Filename = %r" % (filename,)
+            )
         elif state == _IN_HEADER:
-            raise NodeError("File ends with an empty sequence:\n"
-                            "    Filename = %r" % (filename, ))
+            raise NodeError(
+                "File ends with an empty sequence:\n" "    Filename = %r" % (filename,)
+            )
+
 
 # Standard nucleotides + UIPAC codes
 _VALID_CHARS_STR = "ACGTN" "RYSWKMBDHV"
@@ -448,31 +472,40 @@ _NA, _IN_HEADER, _IN_SEQUENCE, _IN_WHITESPACE = range(4)
 def _validate_fasta_header(filename, linenum, line, cache):
     name = line.split(" ", 1)[0][1:]
     if not name:
-        raise NodeError("FASTA sequence must have non-empty name\n"
-                        "    Filename = %r\n    Line = %r\n"
-                        % (filename, linenum))
+        raise NodeError(
+            "FASTA sequence must have non-empty name\n"
+            "    Filename = %r\n    Line = %r\n" % (filename, linenum)
+        )
     elif not _RE_REF_NAME.match(name):
-        raise NodeError("Invalid name for FASTA sequence: %r\n"
-                        "    Filename = %r\n    Line = %r\n"
-                        % (name, filename, linenum))
+        raise NodeError(
+            "Invalid name for FASTA sequence: %r\n"
+            "    Filename = %r\n    Line = %r\n" % (name, filename, linenum)
+        )
     elif name in cache:
-        raise NodeError("FASTA sequences have identical name\n"
-                        "    Filename = %r\n    Name = %r\n"
-                        "    Line 1 = %r\n    Line 2 = %r\n"
-                        % (filename, name, linenum, cache[name]))
+        raise NodeError(
+            "FASTA sequences have identical name\n"
+            "    Filename = %r\n    Name = %r\n"
+            "    Line 1 = %r\n    Line 2 = %r\n"
+            % (filename, name, linenum, cache[name])
+        )
     cache[name] = linenum
+
+
 _RE_REF_NAME = re.compile("[!-()+-<>-~][!-~]*")
 
 
 def _validate_fasta_line(filename, linenum, line):
     invalid_chars = frozenset(line) - _VALID_CHARS
     if invalid_chars:
-        if invalid_chars == frozenset('\r'):
-            raise NodeError("FASTA file contains carriage-returns ('\\r')!\n"
-                            "Please convert file to unix format, using e.g. "
-                            "dos2unix.\n    Filename = %r\n" % (filename,))
+        if invalid_chars == frozenset("\r"):
+            raise NodeError(
+                "FASTA file contains carriage-returns ('\\r')!\n"
+                "Please convert file to unix format, using e.g. "
+                "dos2unix.\n    Filename = %r\n" % (filename,)
+            )
 
-        raise NodeError("FASTA sequence contains invalid characters\n"
-                        "    Filename = %r\n    Line = %r\n"
-                        "    Invalid characters = %r"
-                        % (filename, linenum, "".join(invalid_chars)))
+        raise NodeError(
+            "FASTA sequence contains invalid characters\n"
+            "    Filename = %r\n    Line = %r\n"
+            "    Invalid characters = %r" % (filename, linenum, "".join(invalid_chars))
+        )

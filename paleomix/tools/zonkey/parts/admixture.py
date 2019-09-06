@@ -43,7 +43,7 @@ def read_admixture_results(filename, data, k_groups, cutoff=CUTOFF):
 
     ancestral_groups = [[set(), value] for value in table["-"]]
     for sample, row in table.items():
-        if sample == '-':
+        if sample == "-":
             continue
 
         group = data.samples[sample][key]
@@ -55,37 +55,46 @@ def read_admixture_results(filename, data, k_groups, cutoff=CUTOFF):
 
 
 def get_percentiles(data, sample1, sample2, nreads, k_groups, has_ts, value):
-    results = {'Sample1': sample1,
-               'Sample2': sample2}
+    results = {"Sample1": sample1, "Sample2": sample2}
 
-    nreads_lower = set(row['NReads'] for row in data.simulations
-                       if row['NReads'] <= nreads)
-    nreads_upper = set(row['NReads'] for row in data.simulations
-                       if row['NReads'] >= nreads)
+    nreads_lower = set(
+        row["NReads"] for row in data.simulations if row["NReads"] <= nreads
+    )
+    nreads_upper = set(
+        row["NReads"] for row in data.simulations if row["NReads"] >= nreads
+    )
 
     if nreads_lower:
-        selection = _select_simulations(data=data,
-                                        sample1=sample1,
-                                        sample2=sample2,
-                                        nreads=max(nreads_lower),
-                                        k_groups=k_groups,
-                                        has_ts=has_ts)
+        selection = _select_simulations(
+            data=data,
+            sample1=sample1,
+            sample2=sample2,
+            nreads=max(nreads_lower),
+            k_groups=k_groups,
+            has_ts=has_ts,
+        )
         lower_bound, upper_bound = _get_percentile_range(selection, value)
-        results['Lower'] = {'NReads': max(nreads_lower),
-                            'Lower': lower_bound,
-                            'Upper': upper_bound}
+        results["Lower"] = {
+            "NReads": max(nreads_lower),
+            "Lower": lower_bound,
+            "Upper": upper_bound,
+        }
 
     if nreads_upper:
-        selection = _select_simulations(data=data,
-                                        sample1=sample1,
-                                        sample2=sample2,
-                                        nreads=min(nreads_upper),
-                                        k_groups=k_groups,
-                                        has_ts=has_ts)
+        selection = _select_simulations(
+            data=data,
+            sample1=sample1,
+            sample2=sample2,
+            nreads=min(nreads_upper),
+            k_groups=k_groups,
+            has_ts=has_ts,
+        )
         lower_bound, upper_bound = _get_percentile_range(selection, value)
-        results['Upper'] = {'NReads': min(nreads_upper),
-                            'Lower': lower_bound,
-                            'Upper': upper_bound}
+        results["Upper"] = {
+            "NReads": min(nreads_upper),
+            "Lower": lower_bound,
+            "Upper": upper_bound,
+        }
 
     return results
 
@@ -94,11 +103,11 @@ def _select_simulations(data, sample1, sample2, nreads, k_groups, has_ts):
     selection = []
     samples = frozenset((sample1, sample2))
     for row in data.simulations:
-        if row['K'] != k_groups or row['HasTS'] != has_ts:
+        if row["K"] != k_groups or row["HasTS"] != has_ts:
             continue
-        elif row['NReads'] != nreads:
+        elif row["NReads"] != nreads:
             continue
-        elif frozenset((row['Sample1'], row['Sample2'])) != samples:
+        elif frozenset((row["Sample1"], row["Sample2"])) != samples:
             continue
 
         selection.append(row)
@@ -107,8 +116,7 @@ def _select_simulations(data, sample1, sample2, nreads, k_groups, has_ts):
 
 
 def _get_percentile_range(selection, value):
-    selection = [(row['Percentile'], row['Value'])
-                 for row in selection]
+    selection = [(row["Percentile"], row["Value"]) for row in selection]
     selection.sort()
 
     lower_bound = 0.0
@@ -134,9 +142,10 @@ def _admixture_read_results(filename, samples):
         lines = handle.readlines()
 
     if len(samples) != len(lines):
-        raise AdmixtureError("unexpected number of lines in admixture file; "
-                             "expected %i samples, found %i"
-                             % (len(samples), len(lines)))
+        raise AdmixtureError(
+            "unexpected number of lines in admixture file; "
+            "expected %i samples, found %i" % (len(samples), len(lines))
+        )
 
     result = {}
     for name, line in zip(samples, lines):
@@ -162,10 +171,13 @@ def _admixture_validate_ancestral_groups(data, table, k_groups, cutoff):
         count = len(memberships)
 
         if count > 1:
-            mixed_groups.append("member(s) of reference group %s assigned to "
-                                "%i ancestral populations" % (group, count))
+            mixed_groups.append(
+                "member(s) of reference group %s assigned to "
+                "%i ancestral populations" % (group, count)
+            )
 
     if mixed_groups:
-        raise AdmixtureError("Inconsistent ADMIXTURE results: %s; "
-                             "cannot determine ancestry!"
-                             % ("; ".join(mixed_groups)))
+        raise AdmixtureError(
+            "Inconsistent ADMIXTURE results: %s; "
+            "cannot determine ancestry!" % ("; ".join(mixed_groups))
+        )

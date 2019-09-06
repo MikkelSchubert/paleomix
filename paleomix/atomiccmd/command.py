@@ -35,17 +35,17 @@ import paleomix.common.signals as signals
 
 from paleomix.common.utilities import safe_coerce_to_tuple
 
-_PIPES = (("IN", "IN_STDIN"),
-          ("OUT", "OUT_STDOUT"),
-          ("OUT", "OUT_STDERR"))
+_PIPES = (("IN", "IN_STDIN"), ("OUT", "OUT_STDOUT"), ("OUT", "OUT_STDERR"))
 _KEY_RE = re.compile("^(IN|OUT|EXEC|AUX|CHECK|TEMP_IN|TEMP_OUT)_[A-Z0-9_]+")
-_FILE_MAP = {"IN": "input",
-             "OUT": "output",
-             "TEMP_IN": None,
-             "TEMP_OUT": "temporary_fname",
-             "EXEC": "executable",
-             "AUX": "auxiliary",
-             "CHECK": "requirements"}
+_FILE_MAP = {
+    "IN": "input",
+    "OUT": "output",
+    "TEMP_IN": None,
+    "TEMP_OUT": "temporary_fname",
+    "EXEC": "executable",
+    "AUX": "auxiliary",
+    "CHECK": "requirements",
+}
 
 
 class CmdError(RuntimeError):
@@ -69,6 +69,7 @@ class AtomicCmd(object):
     which ensures that any running processes are terminated. In the absence
     of this, AtomicCmds run in terminated subprocesses can result in still
     running children after the termination of the parents."""
+
     PIPE = procs.PIPE
     DEVNULL = procs.DEVNULL
 
@@ -186,20 +187,19 @@ class AtomicCmd(object):
             if stdin is None:
                 stdin = self.DEVNULL
 
-            self._proc = procs.open_proc(call,
-                                         stdin=stdin,
-                                         stdout=stdout,
-                                         stderr=stderr,
-                                         cwd=cwd,
-                                         preexec_fn=os.setsid)
+            self._proc = procs.open_proc(
+                call,
+                stdin=stdin,
+                stdout=stdout,
+                stderr=stderr,
+                cwd=cwd,
+                preexec_fn=os.setsid,
+            )
         except Exception as error:
             if not wrap_errors:
                 raise
 
-            message = \
-                "Error running commands:\n" \
-                "  Call = %r\n" \
-                "  Error = %r"
+            message = "Error running commands:\n" "  Call = %r\n" "  Error = %r"
             raise CmdError(message % (self._command, error))
         finally:
             # Close pipes to allow the command to recieve SIGPIPE
@@ -248,6 +248,7 @@ class AtomicCmd(object):
     def _property_file_sets(key):  # pylint: disable=E0213
         def _get_property_files(self):
             return self._file_sets[key]  # pylint: disable=W0212
+
         return property(_get_property_files)
 
     executables = _property_file_sets("executable")
@@ -264,13 +265,16 @@ class AtomicCmd(object):
         elif self._running:
             raise CmdError("Called 'commit' before calling 'join'")
         elif not os.path.samefile(self._temp, temp):
-            raise CmdError("Mismatch between previous and current temp folders"
-                           ": %r != %s" % (self._temp, temp))
+            raise CmdError(
+                "Mismatch between previous and current temp folders"
+                ": %r != %s" % (self._temp, temp)
+            )
 
         missing_files = self.expected_temp_files - set(os.listdir(temp))
         if missing_files:
-            raise CmdError("Expected files not created: %s"
-                           % (", ".join(missing_files)))
+            raise CmdError(
+                "Expected files not created: %s" % (", ".join(missing_files))
+            )
 
         temp = os.path.abspath(temp)
         filenames = self._generate_filenames(self._files, temp)
@@ -301,13 +305,17 @@ class AtomicCmd(object):
         try:
             return [(field % kwords) for field in self._command]
         except (TypeError, ValueError) as error:
-            raise CmdError("Error building Atomic Command:\n"
-                           "  Call = %s\n  Error = %s: %s"
-                           % (self._command, error.__class__.__name__, error))
+            raise CmdError(
+                "Error building Atomic Command:\n"
+                "  Call = %s\n  Error = %s: %s"
+                % (self._command, error.__class__.__name__, error)
+            )
         except KeyError as error:
-            raise CmdError("Error building Atomic Command:\n"
-                           "  Call = %s\n  Value not specified for path = %s"
-                           % (self._command, error))
+            raise CmdError(
+                "Error building Atomic Command:\n"
+                "  Call = %s\n  Value not specified for path = %s"
+                % (self._command, error)
+            )
 
     @classmethod
     def _process_arguments(cls, proc_id, command, kwargs):
@@ -328,8 +336,7 @@ class AtomicCmd(object):
             has_out_pipe = ("OUT_" + pipe) in arguments["OUT"]
             has_temp_out_pipe = ("TEMP_OUT_" + pipe) in arguments["TEMP_OUT"]
             if not (has_out_pipe or has_temp_out_pipe):
-                filename = "pipe_%s_%i.%s" % (executable, proc_id,
-                                              pipe.lower())
+                filename = "pipe_%s_%i.%s" % (executable, proc_id, pipe.lower())
                 arguments["TEMP_OUT"]["TEMP_OUT_" + pipe] = filename
 
         cls._validate_arguments(arguments)
@@ -348,12 +355,15 @@ class AtomicCmd(object):
 
                 if key in ("OUT_STDOUT", "TEMP_OUT_STDOUT"):
                     if value not in (cls.PIPE, cls.DEVNULL):
-                        raise TypeError("STDOUT must be a string, PIPE "
-                                        "or DEVNULL, not %r" % (value,))
+                        raise TypeError(
+                            "STDOUT must be a string, PIPE "
+                            "or DEVNULL, not %r" % (value,)
+                        )
                 elif key in ("OUT_STDERR", "TEMP_OUT_STDERR"):
                     if value is not cls.DEVNULL:
-                        raise TypeError("STDERR must be a string, "
-                                        "or DEVNULL, not %r" % (value,))
+                        raise TypeError(
+                            "STDERR must be a string, " "or DEVNULL, not %r" % (value,)
+                        )
                 else:
                     raise TypeError("%s must be string, not %r" % (key, value))
 
@@ -364,10 +374,11 @@ class AtomicCmd(object):
                     continue
 
                 if key in ("IN_STDIN", "TEMP_IN_STDIN"):
-                    if not isinstance(value, AtomicCmd) \
-                            and value is not cls.DEVNULL:
-                        raise TypeError("STDIN must be string, AtomicCmd, "
-                                        "or DEVNULL, not %r" % (value,))
+                    if not isinstance(value, AtomicCmd) and value is not cls.DEVNULL:
+                        raise TypeError(
+                            "STDIN must be string, AtomicCmd, "
+                            "or DEVNULL, not %r" % (value,)
+                        )
                 else:
                     raise TypeError("%s must be string, not %r" % (key, value))
 
@@ -379,8 +390,9 @@ class AtomicCmd(object):
             for (key, value) in arguments.get(group, {}).items():
                 is_string = isinstance(value, str)
                 if is_string and os.path.dirname(value):
-                    raise ValueError("%s cannot contain dir component: %r"
-                                     % (key, value))
+                    raise ValueError(
+                        "%s cannot contain dir component: %r" % (key, value)
+                    )
 
         return True
 
@@ -395,9 +407,10 @@ class AtomicCmd(object):
 
         for (filename, keys) in output_files.items():
             if len(keys) > 1:
-                raise ValueError("Same output filename (%s) is specified for "
-                                 "multiple keys: %s"
-                                 % (filename, ", ".join(sorted(keys))))
+                raise ValueError(
+                    "Same output filename (%s) is specified for "
+                    "multiple keys: %s" % (filename, ", ".join(sorted(keys)))
+                )
 
     @classmethod
     def _validate_pipes(cls, arguments):

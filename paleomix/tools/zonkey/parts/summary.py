@@ -44,28 +44,31 @@ class SummaryNode(Node):
         input_files = set()
         self._reports = {}
         for sample, info in self._samples.items():
-            report = AnalysisReport(config=config,
-                                    root=os.path.join(self._root, sample),
-                                    has_nuc="Nuc" in info["Files"],
-                                    has_mt="Mito" in info["Files"])
+            report = AnalysisReport(
+                config=config,
+                root=os.path.join(self._root, sample),
+                has_nuc="Nuc" in info["Files"],
+                has_mt="Mito" in info["Files"],
+            )
 
             input_files.update(report.input_files())
             self._reports[sample] = report
 
         output_prefix = os.path.join(self._root, "summary")
-        Node.__init__(self,
-                      description="<SummaryReport -> %r>"
-                      % (output_prefix + '.html',),
-                      input_files=input_files,
-                      output_files=(output_prefix + '.html',
-                                    output_prefix + '.css'),
-                      dependencies=dependencies)
+        Node.__init__(
+            self,
+            description="<SummaryReport -> %r>" % (output_prefix + ".html",),
+            input_files=input_files,
+            output_files=(output_prefix + ".html", output_prefix + ".css"),
+            dependencies=dependencies,
+        )
 
     def _run(self, _config, temp):
         with open(os.path.join(temp, "summary.html"), "w") as output_handle:
             menu_entries = self._build_sidemenu()
-            html_header = _HTML_HEADER.format(Version=paleomix.__version__,
-                                              MenuEntries=menu_entries)
+            html_header = _HTML_HEADER.format(
+                Version=paleomix.__version__, MenuEntries=menu_entries
+            )
             output_handle.write(html_header)
 
             for sample in sorted(self._samples):
@@ -76,8 +79,9 @@ class SummaryNode(Node):
     def _teardown(self, config, temp):
         fileutils.make_dirs(self._root)
 
-        fileutils.move_file(os.path.join(temp, "summary.html"),
-                            os.path.join(self._root, "summary.html"))
+        fileutils.move_file(
+            os.path.join(temp, "summary.html"), os.path.join(self._root, "summary.html")
+        )
 
         css_path = paleomix.resources.report("zonkey", "report.css")
         fileutils.copy_file(css_path, os.path.join(self._root, "summary.css"))
@@ -96,44 +100,51 @@ class SummaryNode(Node):
         if "Nuc" in info["Files"]:
             admixture = self._read_admixture_results(sample)
 
-        handle.write(_SAMPLE_HEADER.format(sample=sample,
-                                           admixture=admixture))
+        handle.write(_SAMPLE_HEADER.format(sample=sample, admixture=admixture))
 
         handle.write("""    <ul id="tabs">""")
-        handle.write(_SAMPLE_TAB_SELECTED.format(sample_idx=sample_idx,
-                                                 page=1, title="Overview"))
-        handle.write(_SAMPLE_TAB.format(sample_idx=sample_idx,
-                                        page=2, title="Sample Data"))
+        handle.write(
+            _SAMPLE_TAB_SELECTED.format(sample_idx=sample_idx, page=1, title="Overview")
+        )
+        handle.write(
+            _SAMPLE_TAB.format(sample_idx=sample_idx, page=2, title="Sample Data")
+        )
 
         if "Nuc" in info["Files"]:
-            handle.write(_SAMPLE_TAB.format(sample_idx=sample_idx,
-                                            page=3, title="PCA Plots"))
-            handle.write(_SAMPLE_TAB.format(sample_idx=sample_idx,
-                                            page=4, title="Treemix Plots"))
+            handle.write(
+                _SAMPLE_TAB.format(sample_idx=sample_idx, page=3, title="PCA Plots")
+            )
+            handle.write(
+                _SAMPLE_TAB.format(sample_idx=sample_idx, page=4, title="Treemix Plots")
+            )
 
         if "Mito" in info["Files"]:
-            handle.write(_SAMPLE_TAB.format(sample_idx=sample_idx,
-                                            page=5,
-                                            title="Mitochondrial Phylogeny"))
+            handle.write(
+                _SAMPLE_TAB.format(
+                    sample_idx=sample_idx, page=5, title="Mitochondrial Phylogeny"
+                )
+            )
 
         handle.write("""    </ul>""")
 
         self._write_overview(handle, sample, sample_idx)
 
         if "Nuc" in info["Files"]:
-            handle.write(_SAMPLE_PAGE_PCA.format(sample=sample,
-                                                 sample_idx=sample_idx))
-            handle.write(_SAMPLE_PAGE_TREEMIX.format(sample=sample,
-                                                     sample_idx=sample_idx))
+            handle.write(_SAMPLE_PAGE_PCA.format(sample=sample, sample_idx=sample_idx))
+            handle.write(
+                _SAMPLE_PAGE_TREEMIX.format(sample=sample, sample_idx=sample_idx)
+            )
 
         if "Mito" in info["Files"]:
-            handle.write(_SAMPLE_PAGE_MITO_PHYLO.format(sample=sample,
-                                                        sample_idx=sample_idx))
+            handle.write(
+                _SAMPLE_PAGE_MITO_PHYLO.format(sample=sample, sample_idx=sample_idx)
+            )
 
         handle.write(_SAMPLE_FOOTER)
 
-    def _write_overview(self, output_handle, sample, sample_idx,
-                        cutoff=admixture.CUTOFF):
+    def _write_overview(
+        self, output_handle, sample, sample_idx, cutoff=admixture.CUTOFF
+    ):
         info = self._samples[sample]
         report = self._reports[sample]
 
@@ -142,17 +153,15 @@ class SummaryNode(Node):
 
         if "Nuc" in info["Files"]:
 
-            for postfix in ('incl_ts', 'excl_ts'):
-                admix_root = os.path.join(self._root, sample,
-                                          "results", "admixture")
+            for postfix in ("incl_ts", "excl_ts"):
+                admix_root = os.path.join(self._root, sample, "results", "admixture")
 
                 for k_groups in (2, 3):
-                    filename = os.path.join(admix_root, "%s.%i.Q" % (postfix,
-                                                                     k_groups))
+                    filename = os.path.join(admix_root, "%s.%i.Q" % (postfix, k_groups))
 
-                    result = admixture.read_admixture_results(filename,
-                                                              self._data,
-                                                              k_groups)
+                    result = admixture.read_admixture_results(
+                        filename, self._data, k_groups
+                    )
 
                     if sum(value >= cutoff for _, value in result) > 1:
                         n_pos_tests += 1
@@ -164,9 +173,9 @@ class SummaryNode(Node):
         else:
             tmpl = _SAMPLE_OVERVIEW_EXCL_NUCL
 
-        output_handle.write(tmpl.format(sample_idx=sample_idx,
-                                        n_tests=n_tests,
-                                        n_pos_tests=n_pos_tests))
+        output_handle.write(
+            tmpl.format(sample_idx=sample_idx, n_tests=n_tests, n_pos_tests=n_pos_tests)
+        )
         output_handle.write(_SAMPLE_OVERVIEW_FOOTER.format(sample=sample))
 
         output_handle.write(_SAMPLE_DATA_HEADER.format(sample_idx=sample_idx))
@@ -183,21 +192,32 @@ class SummaryNode(Node):
 
     def _read_admixture_results(self, sample, cutoff=admixture.CUTOFF):
         lines = []
-        lines.append('            <table summary="Admixture overview for sample {}" style="width:125px;">'.format(sample.replace('"', "")))
+        lines.append(
+            '            <table summary="Admixture overview for sample {}" style="width:125px;">'.format(
+                sample.replace('"', "")
+            )
+        )
         lines.append("              <tr>")
-        for postfix in ('incl_ts', 'excl_ts'):
-            admix_root = os.path.join(self._root, sample,
-                                      "results", "admixture")
+        for postfix in ("incl_ts", "excl_ts"):
+            admix_root = os.path.join(self._root, sample, "results", "admixture")
 
             for k_groups in (2, 3):
                 filename = os.path.join(admix_root, "%s.%i.Q" % (postfix, k_groups))
 
                 lines.append("                <td>")
                 try:
-                    ancestral_groups = admixture.read_admixture_results(filename, self._data, k_groups, cutoff)
-                    lines.extend(self._build_admixture_figure([value for _, value in ancestral_groups]))
+                    ancestral_groups = admixture.read_admixture_results(
+                        filename, self._data, k_groups, cutoff
+                    )
+                    lines.extend(
+                        self._build_admixture_figure(
+                            [value for _, value in ancestral_groups]
+                        )
+                    )
                 except admixture.AdmixtureError:
-                    lines.append('                  <div style="height:100px;background:gray"></div>')
+                    lines.append(
+                        '                  <div style="height:100px;background:gray"></div>'
+                    )
                 lines.append("                </td>")
         lines.append("              </tr>")
         lines.append("            </table>\n")
@@ -212,12 +232,11 @@ class SummaryNode(Node):
         elif len(fractions) == 3:
             colors = ("red", "green", "blue")
         else:
-            raise RuntimeError("Unexpected number of fractions: %r"
-                               % (fractions,))
+            raise RuntimeError("Unexpected number of fractions: %r" % (fractions,))
 
         values = [value for value in fractions if value >= admixture.CUTOFF]
 
-        tmpl = ' ' * 18 + '<div style="height:{}px;background:{}"></div>'
+        tmpl = " " * 18 + '<div style="height:{}px;background:{}"></div>'
         for index, value in enumerate(values):
             height = round((float(value) / sum(values)) * max_height)
             lines.append(tmpl.format(height, colors[index]))
@@ -227,10 +246,7 @@ class SummaryNode(Node):
 
 ###############################################################################
 
-_TS_LABELS = {
-    "incl_ts": "Including transitions",
-    "excl_ts": "Excluding transitions",
-}
+_TS_LABELS = {"incl_ts": "Including transitions", "excl_ts": "Excluding transitions"}
 
 
 ###############################################################################

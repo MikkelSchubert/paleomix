@@ -23,15 +23,14 @@
 import os
 import subprocess
 
-from nose.tools import \
-     assert_in, \
-     assert_equal
+from nose.tools import assert_in, assert_equal
 
 import paleomix.tools.factory as factory
 
 
 ###############################################################################
 ###############################################################################
+
 
 class ProcError(RuntimeError):
     pass
@@ -51,8 +50,10 @@ def check_run(call, *args, **kwargs):
 
     stdout, stderr = proc.communicate()
     if proc.returncode != returncode:
-        raise ProcError("Command returned %i: %r:\nSTDOUT: %r\nSTDERR: %r"
-                        % (proc.returncode, call, stdout, stderr))
+        raise ProcError(
+            "Command returned %i: %r:\nSTDOUT: %r\nSTDERR: %r"
+            % (proc.returncode, call, stdout, stderr)
+        )
 
     return stdout, stderr
 
@@ -78,19 +79,42 @@ def test_factory__commands():
         assert_equal(expected, stdout.split("\n")[0])
         assert_equal("", stderr)
 
-    commands = (("bam_pipeline",    "Usage: paleomix bam_pipeline <command> [options] [makefiles]"),
-                ("trim_pipeline",   "Usage: paleomix trim_pipeline <command> [options] [makefiles]"),
-                ("phylo_pipeline",  "Usage: paleomix phylo_pipeline <command> [options] [makefiles]"),
-                ("cleanup",         "usage: paleomix cleanup --temp-prefix prefix --fasta reference.fasta < in.sam"),
-                ("coverage",        "usage: paleomix coverage [options] sorted.bam [out.coverage]"),
-                ("depths",          "usage: paleomix depths [options] sorted.bam [out.depths]"),
-                ("duphist",         "usage: paleomix duphist sorted.bam > out.histogram"),
-                ("rmdup_collapsed", "usage: paleomix rmdup_collapsed [options] < sorted.bam > out.bam"),
-                ("genotype",        "usage: paleomix genotype [options] sorted.bam out.vcf.bgz"),
-                ("gtf_to_bed",      "usage: paleomix gtf_to_bed [options] in.gtf out_prefix [in.scaffolds]"),
-                ("vcf_filter",      "Usage: paleomix vcf_filter [options] [in1.vcf, ...]"),
-                ("vcf_to_fasta",    "usage: paleomix vcf_to_fasta [options] --genotype in.vcf --intervals in.bed"),
-                ("cat",             "usage: paleomix cat [-h] [--output OUTPUT] file [file ...]"))
+    commands = (
+        (
+            "bam_pipeline",
+            "Usage: paleomix bam_pipeline <command> [options] [makefiles]",
+        ),
+        (
+            "trim_pipeline",
+            "Usage: paleomix trim_pipeline <command> [options] [makefiles]",
+        ),
+        (
+            "phylo_pipeline",
+            "Usage: paleomix phylo_pipeline <command> [options] [makefiles]",
+        ),
+        (
+            "cleanup",
+            "usage: paleomix cleanup --temp-prefix prefix --fasta reference.fasta < in.sam",
+        ),
+        ("coverage", "usage: paleomix coverage [options] sorted.bam [out.coverage]"),
+        ("depths", "usage: paleomix depths [options] sorted.bam [out.depths]"),
+        ("duphist", "usage: paleomix duphist sorted.bam > out.histogram"),
+        (
+            "rmdup_collapsed",
+            "usage: paleomix rmdup_collapsed [options] < sorted.bam > out.bam",
+        ),
+        ("genotype", "usage: paleomix genotype [options] sorted.bam out.vcf.bgz"),
+        (
+            "gtf_to_bed",
+            "usage: paleomix gtf_to_bed [options] in.gtf out_prefix [in.scaffolds]",
+        ),
+        ("vcf_filter", "Usage: paleomix vcf_filter [options] [in1.vcf, ...]"),
+        (
+            "vcf_to_fasta",
+            "usage: paleomix vcf_to_fasta [options] --genotype in.vcf --intervals in.bed",
+        ),
+        ("cat", "usage: paleomix cat [-h] [--output OUTPUT] file [file ...]"),
+    )
 
     for command, expected in commands:
         yield _do_test_factory__commands, command, expected

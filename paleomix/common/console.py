@@ -37,8 +37,10 @@ def set_color_output(clr):
     """
     global _COLORS
     if clr not in (COLORS_OFF, COLORS_ON, COLORS_FORCED):
-        raise ValueError("Invalid value in set_color_output; must be one of "
-                         "COLORS_OFF, COLORS_ON, or COLORS_FORCED.")
+        raise ValueError(
+            "Invalid value in set_color_output; must be one of "
+            "COLORS_OFF, COLORS_ON, or COLORS_FORCED."
+        )
 
     _COLORS = clr
 
@@ -83,7 +85,7 @@ def _do_print_color(*vargs, **kwargs):
 
     print(*vargs, file=destination, **kwargs)
 
-    if '\n' in kwargs.get('end', '\n'):
+    if "\n" in kwargs.get("end", "\n"):
         destination.flush()
 
 

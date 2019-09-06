@@ -49,10 +49,7 @@ import collections
 import operator
 import re
 
-from paleomix.common.utilities import \
-    TotallyOrdered, \
-    safe_coerce_to_tuple, \
-    try_cast
+from paleomix.common.utilities import TotallyOrdered, safe_coerce_to_tuple, try_cast
 
 import paleomix.common.procs as procs
 
@@ -151,8 +148,9 @@ class RequirementObj(object):
             if not match:
                 self._raise_failure(output)
 
-            self._version = tuple(0 if value is None else try_cast(value, int)
-                                  for value in match.groups())
+            self._version = tuple(
+                0 if value is None else try_cast(value, int) for value in match.groups()
+            )
 
         return self._version
 
@@ -167,9 +165,11 @@ class RequirementObj(object):
     def __call__(self, force=False):
         if force or self._done is None:
             if not self.checks(self.version):
-                lines = ["Version requirements not met for %s; please refer\n"
-                         "to the PALEOMIX documentation for more information."
-                         "\n" % (self.name,)]
+                lines = [
+                    "Version requirements not met for %s; please refer\n"
+                    "to the PALEOMIX documentation for more information."
+                    "\n" % (self.name,)
+                ]
                 lines.extend(self._describe_call())
 
                 version = _pprint_version(self.version)
@@ -204,18 +204,18 @@ class RequirementObj(object):
             lines.append("    %s: %s" % (output.__class__.__name__, output))
         elif "UnsupportedClassVersionError" in output:
             # Raised if the JRE is too old compared to the JAR
-            lines.extend([
-                "The version of the Java Runtime Environment on this",
-                "system is too old; please check the the requirement",
-                "for the program and upgrade your version of Java.",
-                "",
-                "See the documentation for more information.",
-            ])
+            lines.extend(
+                [
+                    "The version of the Java Runtime Environment on this",
+                    "system is too old; please check the the requirement",
+                    "for the program and upgrade your version of Java.",
+                    "",
+                    "See the documentation for more information.",
+                ]
+            )
         else:
-            lines.append(
-                "Program may be broken or a version not supported by the")
-            lines.append(
-                "pipeline; please refer to the PALEOMIX documentation.\n")
+            lines.append("Program may be broken or a version not supported by the")
+            lines.append("pipeline; please refer to the PALEOMIX documentation.\n")
             lines.append("    Required:       %s" % (self.checks,))
             lines.append("    Search string:  %s\n" % (self._rege.pattern))
             lines.append("%s Command output %s" % ("-" * 22, "-" * 22))
@@ -245,7 +245,7 @@ class Check(TotallyOrdered):
 
     def __init__(self, description, func, *values):
         if not isinstance(func, collections.Callable):
-            raise TypeError('func must be callable, not %r' % (func,))
+            raise TypeError("func must be callable, not %r" % (func,))
 
         values = tuple(values)
         self._func = func
@@ -287,12 +287,12 @@ class CheckVersion(Check):
 
     def _do_check_version(self, current, reference):
         if len(current) < len(reference):
-            raise ValueError("Expects at least %i fields, not %i: %r"
-                             % (len(reference), len(current), current))
+            raise ValueError(
+                "Expects at least %i fields, not %i: %r"
+                % (len(reference), len(current), current)
+            )
 
-        return Check._do_check_version(self,
-                                       current[:len(reference)],
-                                       reference)
+        return Check._do_check_version(self, current[: len(reference)], reference)
 
 
 class EQ(CheckVersion):
@@ -374,6 +374,7 @@ class Or(Operator):
 ###############################################################################
 # Check functions; must be available for pickle
 
+
 def _func_any(_current, _checks):
     """Implementation of Any."""
     return True
@@ -393,6 +394,7 @@ def _func_or(current, checks):
 ###############################################################################
 # Utility functions
 
+
 def _run(call):
     """Carries out a system call and returns STDOUT and STDERR as a combined
     string. If an OSError is raied (e.g. due to missing executables), the
@@ -400,10 +402,12 @@ def _run(call):
     then the exception is returned as a value.
     """
     try:
-        proc = procs.open_proc(call,
-                               stdout=procs.PIPE,
-                               # Merge STDERR with STDOUT output
-                               stderr=procs.STDOUT)
+        proc = procs.open_proc(
+            call,
+            stdout=procs.PIPE,
+            # Merge STDERR with STDOUT output
+            stderr=procs.STDOUT,
+        )
 
         return proc.communicate()[0]
     except OSError as error:

@@ -26,7 +26,9 @@ the VCF data-structures from pysam."""
 import collections
 
 
-Indel = collections.namedtuple("Indel", ["in_reference", "pos", "prefix", "what", "postfix"])
+Indel = collections.namedtuple(
+    "Indel", ["in_reference", "pos", "prefix", "what", "postfix"]
+)
 
 
 def parse_indel(vcf):
@@ -43,23 +45,25 @@ def parse_indel(vcf):
     elif "," in vcf.alt:
         raise ValueError("VCF records with multiple indels not supported!")
     elif vcf.ref[0] != vcf.alt[0]:
-        raise ValueError("Sequences do not match VCF spec, first base differs: "
-                         "%s:%s -- %s > %s" % (vcf.contig, vcf.pos + 1, vcf.ref, vcf.alt))
+        raise ValueError(
+            "Sequences do not match VCF spec, first base differs: "
+            "%s:%s -- %s > %s" % (vcf.contig, vcf.pos + 1, vcf.ref, vcf.alt)
+        )
 
     ref_len, alt_len = len(vcf.ref), len(vcf.alt)
     # The length of the insertion / deletion
     len_diff = abs(alt_len - ref_len)
 
     # Wheter or not the sequence 'what' is found in the reference
-    in_reference = (ref_len >= alt_len)
+    in_reference = ref_len >= alt_len
 
     # The sequence added or removed from the reference
-    longest = max(vcf.ref, vcf.alt, key = len)
-    shortest = min(vcf.ref, vcf.alt, key = len)
-    what = longest[1:len_diff + 1]
+    longest = max(vcf.ref, vcf.alt, key=len)
+    shortest = min(vcf.ref, vcf.alt, key=len)
+    what = longest[1 : len_diff + 1]
 
     postfix = shortest[1:]
-    if longest[len_diff + 1:] != postfix:
+    if longest[len_diff + 1 :] != postfix:
         raise ValueError("Sequence postfix does not match; malformed indel!")
 
     return Indel(in_reference, vcf.pos, vcf.ref[0], what, postfix)
@@ -72,9 +76,7 @@ def is_indel(vcf):
 
 
 # The corresponding nucleotides for each value in the VCF PL field
-_genotype_indices = [(jj, ii)
-                     for ii in range(0, 10)
-                     for jj in range(0, ii + 1)]
+_genotype_indices = [(jj, ii) for ii in range(0, 10) for jj in range(0, ii + 1)]
 
 
 def get_ml_genotype(vcf, sample=0):
@@ -92,8 +94,9 @@ def get_ml_genotype(vcf, sample=0):
     else:
         expected_length = (len(genotypes) * (len(genotypes) + 1)) // 2
         if len(PL) != expected_length:
-            raise ValueError("Expected %i PL values, found %i"
-                         % (expected_length, len(PL)))
+            raise ValueError(
+                "Expected %i PL values, found %i" % (expected_length, len(PL))
+            )
         ploidy = 2
 
     if PL.count(min(PL)) > 1:
@@ -110,5 +113,4 @@ def get_ml_genotype(vcf, sample=0):
 
 
 def get_format(vcf, sample=0):
-    return dict(zip(vcf.format.split(":"),
-                    vcf[sample].split(":")))
+    return dict(zip(vcf.format.split(":"), vcf[sample].split(":")))

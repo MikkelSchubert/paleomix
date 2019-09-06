@@ -25,84 +25,102 @@ import os
 import paleomix.common.rtools as rtools
 import paleomix.common.versions as versions
 
-from paleomix.common.fileutils import \
-    describe_files
-from paleomix.common.utilities import \
-    safe_coerce_to_tuple
+from paleomix.common.fileutils import describe_files
+from paleomix.common.utilities import safe_coerce_to_tuple
 
-from paleomix.node import \
-    NodeError, \
-    CommandNode
-from paleomix.nodes.picard import \
-    MultiBAMInputNode
-from paleomix.atomiccmd.builder import \
-    AtomicCmdBuilder, \
-    use_customizable_cli_parameters, \
-    create_customizable_cli_parameters
+from paleomix.node import NodeError, CommandNode
+from paleomix.nodes.picard import MultiBAMInputNode
+from paleomix.atomiccmd.builder import (
+    AtomicCmdBuilder,
+    use_customizable_cli_parameters,
+    create_customizable_cli_parameters,
+)
 
 
-MAPDAMAGE_VERSION = versions.Requirement(call=("mapDamage", "--version"),
-                                         search=r"(\d+)\.(\d+).(\d+)",
-                                         checks=versions.GE(2, 0, 1))
+MAPDAMAGE_VERSION = versions.Requirement(
+    call=("mapDamage", "--version"),
+    search=r"(\d+)\.(\d+).(\d+)",
+    checks=versions.GE(2, 0, 1),
+)
 
-RSCRIPT_VERSION = versions.Requirement(call=("Rscript", "--version"),
-                                       search=r"(\d+)\.(\d+).(\d+)",
-                                       checks=versions.GE(2, 15, 1),
-                                       priority=10)
+RSCRIPT_VERSION = versions.Requirement(
+    call=("Rscript", "--version"),
+    search=r"(\d+)\.(\d+).(\d+)",
+    checks=versions.GE(2, 15, 1),
+    priority=10,
+)
 
 
 class MapDamagePlotNode(MultiBAMInputNode):
     @create_customizable_cli_parameters
-    def customize(self, config, reference, input_files, output_directory,
-                  title="mapDamage", dependencies=()):
+    def customize(
+        self,
+        config,
+        reference,
+        input_files,
+        output_directory,
+        title="mapDamage",
+        dependencies=(),
+    ):
         input_files = safe_coerce_to_tuple(input_files)
 
         command = AtomicCmdBuilder(
-            ["mapDamage", "--no-stats",
-             # Prevent references with many contigs from using excessive
-             # amounts of memory, at the cost of per-contig statistics:
-             "--merge-reference-sequences",
-             "-t", title,
-             "-i", "%(TEMP_IN_BAM)s",
-             "-d", "%(TEMP_DIR)s",
-             "-r", "%(IN_REFERENCE)s"],
-
+            [
+                "mapDamage",
+                "--no-stats",
+                # Prevent references with many contigs from using excessive
+                # amounts of memory, at the cost of per-contig statistics:
+                "--merge-reference-sequences",
+                "-t",
+                title,
+                "-i",
+                "%(TEMP_IN_BAM)s",
+                "-d",
+                "%(TEMP_DIR)s",
+                "-r",
+                "%(IN_REFERENCE)s",
+            ],
             TEMP_IN_BAM=MultiBAMInputNode.PIPE_FILE,
             IN_REFERENCE=reference,
             OUT_FREQ_3p=os.path.join(output_directory, "3pGtoA_freq.txt"),
             OUT_FREQ_5p=os.path.join(output_directory, "5pCtoT_freq.txt"),
             OUT_COMP_USER=os.path.join(output_directory, "dnacomp.txt"),
-            OUT_PLOT_FRAG=os.path.join(output_directory,
-                                       "Fragmisincorporation_plot.pdf"),
+            OUT_PLOT_FRAG=os.path.join(
+                output_directory, "Fragmisincorporation_plot.pdf"
+            ),
             OUT_PLOT_LEN=os.path.join(output_directory, "Length_plot.pdf"),
             OUT_LENGTH=os.path.join(output_directory, "lgdistribution.txt"),
-            OUT_MISINCORP=os.path.join(output_directory,
-                                       "misincorporation.txt"),
+            OUT_MISINCORP=os.path.join(output_directory, "misincorporation.txt"),
             OUT_LOG=os.path.join(output_directory, "Runtime_log.txt"),
             TEMP_OUT_STDOUT="pipe_mapDamage.stdout",
             TEMP_OUT_STDERR="pipe_mapDamage.stderr",
-
             CHECK_RSCRIPT=RSCRIPT_VERSION,
-            CHECK_MAPDAMAGE=MAPDAMAGE_VERSION)
+            CHECK_MAPDAMAGE=MAPDAMAGE_VERSION,
+        )
 
         command.add_multiple_kwargs(input_files)
 
-        return {"command": command,
-                "config": config,
-                "input_files": input_files,
-                "dependencies": dependencies}
+        return {
+            "command": command,
+            "config": config,
+            "input_files": input_files,
+            "dependencies": dependencies,
+        }
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
-        description = "<mapDamage (plots): %s -> '%s'>" \
-            % (describe_files(parameters.input_files),
-               parameters.output_directory)
-        MultiBAMInputNode.__init__(self,
-                                   config=parameters.config,
-                                   input_bams=parameters.input_files,
-                                   command=parameters.command.finalize(),
-                                   description=description,
-                                   dependencies=parameters.dependencies)
+        description = "<mapDamage (plots): %s -> '%s'>" % (
+            describe_files(parameters.input_files),
+            parameters.output_directory,
+        )
+        MultiBAMInputNode.__init__(
+            self,
+            config=parameters.config,
+            input_bams=parameters.input_files,
+            command=parameters.command.finalize(),
+            description=description,
+            dependencies=parameters.dependencies,
+        )
 
     def _teardown(self, config, temp):
         # No Length_plot.pdf file is written if there are no SE reads in the
@@ -123,9 +141,14 @@ class MapDamageModelNode(CommandNode):
     @create_customizable_cli_parameters
     def customize(self, reference, directory, dependencies=()):
         command = AtomicCmdBuilder(
-            ["mapDamage", "--stats-only",
-             "-r", "%(IN_REFERENCE)s",
-             "-d", "%(TEMP_DIR)s"],
+            [
+                "mapDamage",
+                "--stats-only",
+                "-r",
+                "%(IN_REFERENCE)s",
+                "-d",
+                "%(TEMP_DIR)s",
+            ],
             IN_REFERENCE=reference,
             TEMP_OUT_FREQ_3p="3pGtoA_freq.txt",
             TEMP_OUT_FREQ_5p="5pCtoT_freq.txt",
@@ -135,41 +158,45 @@ class MapDamageModelNode(CommandNode):
             TEMP_OUT_STDOUT="pipe_mapDamage.stdout",
             TEMP_OUT_STDERR="pipe_mapDamage.stderr",
             OUT_COMP_GENOME=os.path.join(directory, "dnacomp_genome.csv"),
-            OUT_MCMC_PROBS=os.path.join(directory,
-                                        "Stats_out_MCMC_correct_prob.csv"),
+            OUT_MCMC_PROBS=os.path.join(directory, "Stats_out_MCMC_correct_prob.csv"),
             OUT_MCMC_HIST=os.path.join(directory, "Stats_out_MCMC_hist.pdf"),
             OUT_MCMC_ITER=os.path.join(directory, "Stats_out_MCMC_iter.csv"),
-            OUT_MCMC_ITERSUM=os.path.join(directory,
-                                          "Stats_out_MCMC_iter_summ_stat.csv"),
-            OUT_MCMC_POSTPRED=os.path.join(directory,
-                                           "Stats_out_MCMC_post_pred.pdf"),
+            OUT_MCMC_ITERSUM=os.path.join(
+                directory, "Stats_out_MCMC_iter_summ_stat.csv"
+            ),
+            OUT_MCMC_POSTPRED=os.path.join(directory, "Stats_out_MCMC_post_pred.pdf"),
             OUT_MCMC_TRACE=os.path.join(directory, "Stats_out_MCMC_trace.pdf"),
-
             CHECK_RSCRIPT=RSCRIPT_VERSION,
             CHECK_MAPDAMAGE=MAPDAMAGE_VERSION,
             CHECK_R_INLINE=rtools.requirement("inline"),
             CHECK_R_GGPLOT2=rtools.requirement("ggplot2"),
             CHECK_R_RCPP=rtools.requirement("Rcpp"),
             CHECK_R_GAM=rtools.requirement("gam"),
-            CHECK_R_RCPPGSL=rtools.requirement("RcppGSL"))
+            CHECK_R_RCPPGSL=rtools.requirement("RcppGSL"),
+        )
 
-        return {"command": command,
-                "dependencies": dependencies}
+        return {"command": command, "dependencies": dependencies}
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
         self._directory = parameters.directory
 
         description = "<mapDamage (model): %r>" % (parameters.directory,)
-        CommandNode.__init__(self,
-                             command=parameters.command.finalize(),
-                             description=description,
-                             dependencies=parameters.dependencies)
+        CommandNode.__init__(
+            self,
+            command=parameters.command.finalize(),
+            description=description,
+            dependencies=parameters.dependencies,
+        )
 
     def _setup(self, config, temp):
         CommandNode._setup(self, config, temp)
-        for fname in ("3pGtoA_freq.txt", "5pCtoT_freq.txt", "dnacomp.txt",
-                      "misincorporation.txt"):
+        for fname in (
+            "3pGtoA_freq.txt",
+            "5pCtoT_freq.txt",
+            "dnacomp.txt",
+            "misincorporation.txt",
+        ):
             relpath = os.path.join(self._directory, fname)
             abspath = os.path.abspath(relpath)
             os.symlink(abspath, os.path.join(temp, fname))
@@ -192,57 +219,70 @@ class MapDamageModelNode(CommandNode):
 
 class MapDamageRescaleNode(MultiBAMInputNode):
     @create_customizable_cli_parameters
-    def customize(self, config, reference, input_files, output_file, directory,
-                  dependencies=()):
+    def customize(
+        self, config, reference, input_files, output_file, directory, dependencies=()
+    ):
         input_files = safe_coerce_to_tuple(input_files)
 
         stats_out_fname = "Stats_out_MCMC_correct_prob.csv"
-        command = AtomicCmdBuilder(["mapDamage", "--rescale-only",
-                                    "-i", "%(TEMP_IN_BAM)s",
-                                    "-d", "%(TEMP_DIR)s",
-                                    "-r", "%(IN_REFERENCE)s",
-                                    "--rescale-out", "%(OUT_BAM)s"],
-
-                                   TEMP_IN_BAM=MultiBAMInputNode.PIPE_FILE,
-                                   IN_REFERENCE=reference,
-                                   TEMP_OUT_LOG="Runtime_log.txt",
-                                   TEMP_OUT_CSV=stats_out_fname,
-                                   OUT_BAM=output_file,
-                                   CHECK_VERSION=MAPDAMAGE_VERSION)
+        command = AtomicCmdBuilder(
+            [
+                "mapDamage",
+                "--rescale-only",
+                "-i",
+                "%(TEMP_IN_BAM)s",
+                "-d",
+                "%(TEMP_DIR)s",
+                "-r",
+                "%(IN_REFERENCE)s",
+                "--rescale-out",
+                "%(OUT_BAM)s",
+            ],
+            TEMP_IN_BAM=MultiBAMInputNode.PIPE_FILE,
+            IN_REFERENCE=reference,
+            TEMP_OUT_LOG="Runtime_log.txt",
+            TEMP_OUT_CSV=stats_out_fname,
+            OUT_BAM=output_file,
+            CHECK_VERSION=MAPDAMAGE_VERSION,
+        )
 
         command.add_multiple_kwargs(input_files)
 
-        return {"command": command,
-                "config": config,
-                "input_files": input_files,
-                "directory": directory,
-                "dependencies": dependencies}
+        return {
+            "command": command,
+            "config": config,
+            "input_files": input_files,
+            "directory": directory,
+            "dependencies": dependencies,
+        }
 
     @use_customizable_cli_parameters
     def __init__(self, parameters):
         self._directory = parameters.directory
 
-        description = "<mapDamage (rescale): %s -> %r>" \
-            % (describe_files(parameters.input_files),
-               parameters.output_file)
-        MultiBAMInputNode.__init__(self,
-                                   config=parameters.config,
-                                   input_bams=parameters.input_files,
-                                   command=parameters.command.finalize(),
-                                   description=description,
-                                   dependencies=parameters.dependencies)
+        description = "<mapDamage (rescale): %s -> %r>" % (
+            describe_files(parameters.input_files),
+            parameters.output_file,
+        )
+        MultiBAMInputNode.__init__(
+            self,
+            config=parameters.config,
+            input_bams=parameters.input_files,
+            command=parameters.command.finalize(),
+            description=description,
+            dependencies=parameters.dependencies,
+        )
 
     def _setup(self, config, temp):
         MultiBAMInputNode._setup(self, config, temp)
-        for fname in ("Stats_out_MCMC_correct_prob.csv", ):
+        for fname in ("Stats_out_MCMC_correct_prob.csv",):
             relpath = os.path.join(self._directory, fname)
             abspath = os.path.abspath(relpath)
             os.symlink(abspath, os.path.join(temp, fname))
 
 
 # Minimal PDF written if Length_plot.pdf wasn't generated
-_DUMMY_LENGTH_PLOT_PDF = \
-    """%PDF-1.4
+_DUMMY_LENGTH_PLOT_PDF = """%PDF-1.4
 
 1 0 obj
  <</Type /Font /Subtype /Type1 /Encoding /WinAnsiEncoding /BaseFont /Courier >>

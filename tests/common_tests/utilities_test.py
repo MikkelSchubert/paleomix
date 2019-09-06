@@ -22,9 +22,7 @@
 #
 import operator
 import nose.tools
-from nose.tools import \
-     assert_equal, \
-     assert_raises
+from nose.tools import assert_equal, assert_raises
 
 
 import paleomix.common.utilities as utils
@@ -33,6 +31,7 @@ import paleomix.common.utilities as utils
 ################################################################################
 ################################################################################
 # Tests for 'safe_coerce_to_tuple'
+
 
 def test_safe_coerce_to_tuple__str():
     assert_equal(utils.safe_coerce_to_tuple("foo"), ("foo",))
@@ -61,6 +60,7 @@ def test_safe_coerce_to_tuple__dict():
 ###############################################################################
 ###############################################################################
 # Tests for 'safe_coerce_to_frozenset'
+
 
 def test_safe_coerce_to_frozenset__str():
     assert_equal(utils.safe_coerce_to_frozenset("foo"), frozenset(("foo",)))
@@ -95,6 +95,7 @@ def test_safe_coerce_to_frozenset__dict():
 ###############################################################################
 # Tests for 'try_cast'
 
+
 def test_try_cast__int_to_int():
     assert_equal(utils.try_cast(17, int), 17)
 
@@ -118,6 +119,7 @@ def test_try_cast__list_to_int():
 ###############################################################################
 ###############################################################################
 # Tests for 'set_in'
+
 
 def test_set_in__single_kw_in_empty_dictionary():
     value = {}
@@ -189,6 +191,7 @@ def test_set_in__iteratable_keywords():
 ###############################################################################
 # Tests for 'get_in'
 
+
 def test_get_in__get_value_one_keyword():
     assert_equal(utils.get_in({1: 2}, [1]), 2)
 
@@ -241,6 +244,7 @@ def test_get_in__iterator_keywords():
 ###############################################################################
 # Tests for 'split_before'
 
+
 def _do_split(lst, key):
     # Convertion to list allows the implementation to be
     # lazy, while making comparisons for asserts easier
@@ -268,12 +272,15 @@ def test_split_before__split_consequtive_true_pred():
 
 
 def test_split_before__no_hits():
-    assert_equal(_do_split(list(range(1, 5)), lambda x: x % 5 == 0), [list(range(1, 5))])
+    assert_equal(
+        _do_split(list(range(1, 5)), lambda x: x % 5 == 0), [list(range(1, 5))]
+    )
 
 
 ###############################################################################
 ###############################################################################
 # Tests for 'grouper'
+
 
 def test_grouper__empty_list():
     result = utils.grouper(3, [])
@@ -293,14 +300,15 @@ def test_grouper__non_empty_list_with_trailing():
 
 
 def test_grouper__non_empty_list_with_trailing_fill_value():
-    result = utils.grouper(3, list(range(7)), fillvalue=r'\0')
-    expected = [(0, 1, 2), (3, 4, 5), (6, r'\0', r'\0')]
+    result = utils.grouper(3, list(range(7)), fillvalue=r"\0")
+    expected = [(0, 1, 2), (3, 4, 5), (6, r"\0", r"\0")]
     assert_equal(list(result), expected)
 
 
 ###############################################################################
 ###############################################################################
 # Tests for 'group_by_pred'
+
 
 def test_group_by_pred__empty_list():
     assert_equal(utils.group_by_pred(id, []), ([], []))
@@ -326,6 +334,7 @@ def test_group_by_pred__iterable():
 ###############################################################################
 # Tests for 'fragment'
 
+
 def test_fragment__empty():
     assert_equal(list(utils.fragment(5, "")), [])
     assert_equal(list(utils.fragment(5, [])), [])
@@ -348,7 +357,10 @@ def test_fragment__multiple_fragments():
 
 def test_fragment__multiple_fragments_partial():
     assert_equal(list(utils.fragment(3, "abcdefgh")), ["abc", "def", "gh"])
-    assert_equal(list(utils.fragment(3, list("abcdefgh"))), [list("abc"), list("def"), list("gh")])
+    assert_equal(
+        list(utils.fragment(3, list("abcdefgh"))),
+        [list("abc"), list("def"), list("gh")],
+    )
 
 
 @nose.tools.raises(TypeError)
@@ -365,12 +377,15 @@ def test_fragment__set():
 ###############################################################################
 # Tests for 'cumsum'
 
+
 def test_cumsum__empty():
     assert_equal(list(utils.cumsum([])), [])
 
 
 def test_cumsum__integers():
-    assert_equal(list(utils.cumsum(list(range(-4, 5)))), [-4, -7, -9, -10, -10, -9, -7, -4, 0])
+    assert_equal(
+        list(utils.cumsum(list(range(-4, 5)))), [-4, -7, -9, -10, -10, -9, -7, -4, 0]
+    )
 
 
 def test_cumsum__float():
@@ -384,6 +399,7 @@ def test_cumsum__initial():
 ###############################################################################
 ###############################################################################
 # fill_dict
+
 
 def test_fill_dict__empty_dicts():
     result = utils.fill_dict({}, {})
@@ -431,6 +447,7 @@ def test_fill_dict__source_must_be_dict():
 ###############################################################################
 ###############################################################################
 # chain_sorted
+
 
 def test_chain_sorted__no_sequences():
     expected = ()
@@ -489,8 +506,8 @@ def test_chain_sorted__identical_objects_are_preserved():
     expected = (object_a, object_b)
     result = tuple(utils.chain_sorted([object_a], [object_b]))
     assert_equal(expected, result)
-    assert(object_a is result[0] or object_a is result[1])
-    assert(object_b is result[0] or object_b is result[1])
+    assert object_a is result[0] or object_a is result[1]
+    assert object_b is result[0] or object_b is result[1]
 
 
 def test_chain_sorted__stable_sort():
@@ -504,12 +521,12 @@ def test_chain_sorted__stable_sort():
     expected = (object_a, object_b, object_c, object_d)
     result = tuple(utils.chain_sorted(seq_a, seq_b))
     assert_equal(expected, result)
-    assert(all(a is b for (a, b) in zip(expected, result)))
+    assert all(a is b for (a, b) in zip(expected, result))
 
     expected = (object_b, object_a, object_d, object_c)
     result = tuple(utils.chain_sorted(seq_b, seq_a))
     assert_equal(expected, result)
-    assert(all(a is b for (a, b) in zip(expected, result)))
+    assert all(a is b for (a, b) in zip(expected, result))
 
 
 def test_chain_sorted__runs_of_values():
@@ -523,7 +540,7 @@ def test_chain_sorted__runs_of_values():
     expected = (object_a, object_b, object_c, object_d)
     result = tuple(utils.chain_sorted(seq_a, seq_b))
     assert_equal(expected, result)
-    assert(all(a is b for (a, b) in zip(expected, result)))
+    assert all(a is b for (a, b) in zip(expected, result))
 
 
 def test_chain_sorted__invalid_keywords():
@@ -533,6 +550,7 @@ def test_chain_sorted__invalid_keywords():
 ###############################################################################
 ###############################################################################
 # Immutable
+
 
 def test_immutable__properties_set():
     class ImmutableCls(utils.Immutable):
@@ -571,6 +589,7 @@ def test_immutable__properties_del():
 ###############################################################################
 ###############################################################################
 # TotallyOrdered
+
 
 class SomethingOrdered(utils.TotallyOrdered):
     def __init__(self, value):

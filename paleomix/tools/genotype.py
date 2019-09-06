@@ -44,9 +44,7 @@ import multiprocessing
 
 import pysam
 
-from paleomix.common.bedtools import \
-    read_bed_file, \
-    sort_bed_by_bamfile
+from paleomix.common.bedtools import read_bed_file, sort_bed_by_bamfile
 
 import paleomix.tools.factory as factory
 import paleomix.common.procs as processes
@@ -63,6 +61,7 @@ _BAM_BLOCK_SIZE = 16384
 ###############################################################################
 ###############################################################################
 # CLI functions
+
 
 def build_call(call, args, positional, new_args):
     call = list(call)
@@ -88,13 +87,13 @@ def build_call(call, args, positional, new_args):
 ###############################################################################
 # BAM filtering mode
 
+
 def filter_bam(bamfile, bedfile):
     with pysam.Samfile(bamfile) as bam_handle_in:
         regions = collect_regions(bedfile, bam_handle_in)
         regions.reverse()
 
-        with pysam.Samfile("-", "wbu",
-                           template=bam_handle_in) as bam_handle_out:
+        with pysam.Samfile("-", "wbu", template=bam_handle_in) as bam_handle_out:
             while regions:
                 region_aend = 0
                 contig, start, end = regions[-1]
@@ -107,8 +106,9 @@ def filter_bam(bamfile, bedfile):
                             break
 
                         contig, start, end = regions[-1]
-                        if (region_aend + _BAM_BLOCK_SIZE < start) \
-                                or (contig != last_contig):
+                        if (region_aend + _BAM_BLOCK_SIZE < start) or (
+                            contig != last_contig
+                        ):
                             break
 
                     if current_aend >= start:
@@ -123,6 +123,7 @@ def filter_bam(bamfile, bedfile):
 ###############################################################################
 ###############################################################################
 # Common functions
+
 
 def cleanup_batch(setup):
     sys.stderr.write("Cleaning up batch ...\n")
@@ -149,10 +150,7 @@ def write_bed_file(prefix, regions):
 
 
 def setup_basic_batch(args, regions, prefix, func, first_batch=True):
-    setup = {"files": {},
-             "temp_files": {},
-             "procs": {},
-             "handles": {}}
+    setup = {"files": {}, "temp_files": {}, "procs": {}, "handles": {}}
 
     try:
         setup["files"]["bed"] = write_bed_file(prefix, regions)
@@ -164,21 +162,21 @@ def setup_basic_batch(args, regions, prefix, func, first_batch=True):
         filter_builder.add_option(args.bamfile)
         filter_builder.add_option(args.destination)
 
-        setup["procs"]["filter"] \
-            = processes.open_proc(filter_builder.call,
-                                  stdout=processes.PIPE)
+        setup["procs"]["filter"] = processes.open_proc(
+            filter_builder.call, stdout=processes.PIPE
+        )
 
         call_stdout = func(setup)
         if not first_batch:
-            setup["procs"]["grep"] = processes.open_proc(('grep', '-v', '^#'),
-                                                         stdin=call_stdout,
-                                                         stdout=processes.PIPE)
+            setup["procs"]["grep"] = processes.open_proc(
+                ("grep", "-v", "^#"), stdin=call_stdout, stdout=processes.PIPE
+            )
             call_stdout = setup["procs"]["grep"].stdout
 
         setup["handles"]["outfile"] = open(prefix, "w")
-        zip_proc = processes.open_proc(["bgzip"],
-                                       stdin=call_stdout,
-                                       stdout=setup["handles"]["outfile"])
+        zip_proc = processes.open_proc(
+            ["bgzip"], stdin=call_stdout, stdout=setup["handles"]["outfile"]
+        )
 
         setup["procs"]["gzip"] = zip_proc
 
@@ -193,70 +191,75 @@ def setup_basic_batch(args, regions, prefix, func, first_batch=True):
 ###############################################################################
 # Pileup batch generation
 
+
 def setup_mpileup_batch(args, regions, prefix, first_batch=True):
     def _create_mpileup_proc(setup):
         mpileup_args = {"-l": setup["files"]["bed"]}
-        call = build_call(call=("samtools", "mpileup"),
-                          args=mpileup_args,
-                          new_args=args.mpileup_argument,
-                          positional=("-",))
+        call = build_call(
+            call=("samtools", "mpileup"),
+            args=mpileup_args,
+            new_args=args.mpileup_argument,
+            positional=("-",),
+        )
 
         sys.stderr.write("Running 'samtools mpileup': %s\n" % (" ".join(call)))
         procs = setup["procs"]
-        procs["mpileup"] \
-            = processes.open_proc(call,
-                                  stdin=procs["filter"].stdout,
-                                  stdout=processes.PIPE)
+        procs["mpileup"] = processes.open_proc(
+            call, stdin=procs["filter"].stdout, stdout=processes.PIPE
+        )
 
         return procs["mpileup"].stdout
 
-    return setup_basic_batch(args, regions, prefix, _create_mpileup_proc,
-                             first_batch=first_batch)
+    return setup_basic_batch(
+        args, regions, prefix, _create_mpileup_proc, first_batch=first_batch
+    )
 
 
 ###############################################################################
 ###############################################################################
 # Genotyping batch generation
 
+
 def setup_genotyping_batch(args, regions, prefix, first_batch=True):
     def _create_genotyping_proc(setup):
-        mpileup_args = {"-u": None,
-                        "-l": setup["files"]["bed"]}
-        mpileup_call = build_call(call=("samtools", "mpileup"),
-                                  args=mpileup_args,
-                                  new_args=args.mpileup_argument,
-                                  positional=("-",))
+        mpileup_args = {"-u": None, "-l": setup["files"]["bed"]}
+        mpileup_call = build_call(
+            call=("samtools", "mpileup"),
+            args=mpileup_args,
+            new_args=args.mpileup_argument,
+            positional=("-",),
+        )
 
-        sys.stderr.write("Running 'samtools mpileup': %s\n"
-                         % (" ".join(mpileup_call)))
+        sys.stderr.write("Running 'samtools mpileup': %s\n" % (" ".join(mpileup_call)))
 
         procs = setup["procs"]
-        procs["mpileup"] \
-            = processes.open_proc(mpileup_call,
-                                  stdin=procs["filter"].stdout,
-                                  stdout=processes.PIPE)
+        procs["mpileup"] = processes.open_proc(
+            mpileup_call, stdin=procs["filter"].stdout, stdout=processes.PIPE
+        )
 
-        bcftools_call = build_call(call=("bcftools", "view"),
-                                   args={},
-                                   new_args=args.bcftools_argument,
-                                   positional=("-",))
+        bcftools_call = build_call(
+            call=("bcftools", "view"),
+            args={},
+            new_args=args.bcftools_argument,
+            positional=("-",),
+        )
 
-        sys.stderr.write("Running 'bcftools call': %s\n"
-                         % (" ".join(bcftools_call)))
+        sys.stderr.write("Running 'bcftools call': %s\n" % (" ".join(bcftools_call)))
 
-        procs["bcftools"] \
-            = processes.open_proc(bcftools_call,
-                                  stdin=procs["mpileup"].stdout,
-                                  stdout=processes.PIPE)
+        procs["bcftools"] = processes.open_proc(
+            bcftools_call, stdin=procs["mpileup"].stdout, stdout=processes.PIPE
+        )
 
         return procs["bcftools"].stdout
 
-    return setup_basic_batch(args, regions, prefix, _create_genotyping_proc,
-                             first_batch=first_batch)
+    return setup_basic_batch(
+        args, regions, prefix, _create_genotyping_proc, first_batch=first_batch
+    )
 
 
 ###############################################################################
 ###############################################################################
+
 
 def setup_batch(args, regions, filename, first_batch):
     """Setup a batch; either a full genotyping, or just a pileup depending on
@@ -286,6 +289,7 @@ def run_batch(params):
 ###############################################################################
 ###############################################################################
 
+
 def init_worker_thread():
     """Init function for subprocesses created by multiprocessing.Pool: Ensures
     that KeyboardInterrupts only occur in the main process, allowing us to do
@@ -296,6 +300,7 @@ def init_worker_thread():
 
 ###############################################################################
 ###############################################################################
+
 
 def merge_bed_regions(regions):
     """Takes a sequence of bed regions [(contig, start, end), ...], which is
@@ -346,8 +351,7 @@ def create_batches(args, regions):
             new_end = start + batch_size - current_total
             current_batch.append((contig, start, new_end))
             start = new_end
-            yield args, current_batch, _get_batch_fname(batch_count), \
-                not batch_count
+            yield args, current_batch, _get_batch_fname(batch_count), not batch_count
             current_batch = []
             current_total = 0
             batch_count += 1
@@ -355,8 +359,7 @@ def create_batches(args, regions):
         current_total += end - start
 
     if current_batch:
-        yield args, current_batch, _get_batch_fname(batch_count), \
-            not batch_count
+        yield args, current_batch, _get_batch_fname(batch_count), not batch_count
 
 
 def merge_batch_results(filenames_iter):
@@ -413,8 +416,9 @@ def collect_regions(bedfile, bam_input_handle):
         regions = merge_bed_regions(regions)
     else:
         regions = []
-        for (name, length) in zip(bam_input_handle.references,
-                                  bam_input_handle.lengths):
+        for (name, length) in zip(
+            bam_input_handle.references, bam_input_handle.lengths
+        ):
             regions.append((name, 0, length))
     return regions
 
@@ -458,37 +462,64 @@ def parse_args(argv):
     usage = "%s [options] sorted.bam out.vcf.bgz" % (prog,)
 
     parser = argparse.ArgumentParser(prog=prog, usage=usage)
-    parser.add_argument("bamfile", metavar='INPUT',
-                        help="Sorted and indexed BAM file.")
-    parser.add_argument("destination", metavar='OUTPUT',
-                        help="BGZip compressed VCF or pileup. Also used as "
-                             "prefix for temporary files.")
-    parser.add_argument('--bedfile', default=None, metavar="BED",
-                        help="Optional bedfile, specifying regions to pileup "
-                             "or genotype [Default: %(default)s].")
-    parser.add_argument('--mpileup-argument', default=[], action="append",
-                        help="Pass argument to 'samtools mpileup'; must be "
-                             "used as follows: --mpileup-argument=-argument "
-                             "for arguments without values, and "
-                             "--mpileup-argument=-argument=value for "
-                             "arguments with values.")
-    parser.add_argument('--bcftools-argument', default=[], action="append",
-                        help="Pass argument to 'bcftools view'; see the "
-                             "--mpileup-argument command description.")
-    parser.add_argument('--pileup-only', default=False, action="store_true",
-                        help="Only run 'samtools mpileup', generating a text "
-                             "pileup instead of a VCF file [Default: off].")
-    parser.add_argument('--nbatches', metavar="N", default=1, type=int,
-                        help="Split the BED into N number of batches, which "
-                             "are run in parallel [Default: %(default)s].")
-    parser.add_argument('--overwrite', default=False, action="store_true",
-                        help="Overwrite output if it already exists "
-                             "[Default: no].")
+    parser.add_argument("bamfile", metavar="INPUT", help="Sorted and indexed BAM file.")
+    parser.add_argument(
+        "destination",
+        metavar="OUTPUT",
+        help="BGZip compressed VCF or pileup. Also used as "
+        "prefix for temporary files.",
+    )
+    parser.add_argument(
+        "--bedfile",
+        default=None,
+        metavar="BED",
+        help="Optional bedfile, specifying regions to pileup "
+        "or genotype [Default: %(default)s].",
+    )
+    parser.add_argument(
+        "--mpileup-argument",
+        default=[],
+        action="append",
+        help="Pass argument to 'samtools mpileup'; must be "
+        "used as follows: --mpileup-argument=-argument "
+        "for arguments without values, and "
+        "--mpileup-argument=-argument=value for "
+        "arguments with values.",
+    )
+    parser.add_argument(
+        "--bcftools-argument",
+        default=[],
+        action="append",
+        help="Pass argument to 'bcftools view'; see the "
+        "--mpileup-argument command description.",
+    )
+    parser.add_argument(
+        "--pileup-only",
+        default=False,
+        action="store_true",
+        help="Only run 'samtools mpileup', generating a text "
+        "pileup instead of a VCF file [Default: off].",
+    )
+    parser.add_argument(
+        "--nbatches",
+        metavar="N",
+        default=1,
+        type=int,
+        help="Split the BED into N number of batches, which "
+        "are run in parallel [Default: %(default)s].",
+    )
+    parser.add_argument(
+        "--overwrite",
+        default=False,
+        action="store_true",
+        help="Overwrite output if it already exists " "[Default: no].",
+    )
 
     # When set, the --bedfile argument is read and used to filter the BAM
     # specified for the 'bamfile' parameter; all other parameters are ignored.
-    parser.add_argument('--filter-only', default=False, action="store_true",
-                        help=argparse.SUPPRESS)
+    parser.add_argument(
+        "--filter-only", default=False, action="store_true", help=argparse.SUPPRESS
+    )
 
     return parser.parse_args(argv)
 
@@ -503,8 +534,10 @@ def main(argv):
         return filter_bam(args.bamfile, args.bedfile)
 
     if os.path.exists(args.destination) and not args.overwrite:
-        sys.stderr.write("Output already exists; use --overwrite to allow "
-                         "overwriting of this file.\n")
+        sys.stderr.write(
+            "Output already exists; use --overwrite to allow "
+            "overwriting of this file.\n"
+        )
         return 1
 
     with pysam.Samfile(args.bamfile) as bam_input_handle:
@@ -518,8 +551,7 @@ def main(argv):
         return process_batches(args, batches)
     except BatchError as error:
         sys.stderr.write("ERROR while processing BAM:\n")
-        sys.stderr.write("    %s\n"
-                         % ("\n    ".join(str(error).split("\n"),)))
+        sys.stderr.write("    %s\n" % ("\n    ".join(str(error).split("\n"))))
         return 1
 
     return 0

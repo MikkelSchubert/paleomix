@@ -40,6 +40,7 @@ import paleomix.common.text as text
 ###############################################################################
 # Functions used for GTF parsing and filtering
 
+
 def filter_gtf_record(gtf):
     return gtf.feature not in ("exon", "CDS")
 
@@ -54,19 +55,23 @@ def update_gtf_table(table, gtf, scaffolds, contig_prefix):
     if gene_type is None:
         gene_type = properties.get("gene_type", "unknown_genetype")
 
-    keys = (gene_type,
-            properties["gene_id"],
-            properties["transcript_id"],
-            int(properties["exon_number"]),
-            gtf.feature)
+    keys = (
+        gene_type,
+        properties["gene_id"],
+        properties["transcript_id"],
+        int(properties["exon_number"]),
+        gtf.feature,
+    )
 
-    record = {"contig": contig_prefix + gtf.contig,
-              "start": gtf.start,
-              # In pysam, 'end' equals the past-the-end position
-              "end": gtf.end - 1,
-              "strand": gtf.strand,
-              "feature": gtf.feature,
-              "transcript": properties["transcript_id"]}
+    record = {
+        "contig": contig_prefix + gtf.contig,
+        "start": gtf.start,
+        # In pysam, 'end' equals the past-the-end position
+        "end": gtf.end - 1,
+        "strand": gtf.strand,
+        "feature": gtf.feature,
+        "transcript": properties["transcript_id"],
+    }
 
     if record["contig"] in scaffolds:
         contig = scaffolds[record["contig"]]
@@ -100,6 +105,7 @@ def read_scaffolds(filename):
 ###############################################################################
 ###############################################################################
 
+
 def get_introns(exons):
     lst = [exons[n]["exon"] for n in sorted(exons)]
     if lst[0]["strand"] == "-":
@@ -115,9 +121,9 @@ def get_introns(exons):
             continue
 
         record = dict(record_a)
-        record.update(feature="intron",
-                      start=record_a["end"] + 1,
-                      end=record_b["start"] - 1)
+        record.update(
+            feature="intron", start=record_a["end"] + 1, end=record_b["start"] - 1
+        )
         assert record["start"] <= record["end"], lst
 
         introns.append(record)
@@ -134,14 +140,16 @@ def split_exon(exon, cds):
 
     if exon["start"] < cds["start"]:
         utr = dict(exon)
-        utr.update(end=cds["start"] - 1,
-                   feature=(exon["strand"] == "+" and "UTR5" or "UTR3"))
+        utr.update(
+            end=cds["start"] - 1, feature=(exon["strand"] == "+" and "UTR5" or "UTR3")
+        )
         results.append(utr)
 
     if exon["end"] > cds["end"]:
         utr = dict(exon)
-        utr.update(start=cds["end"] + 1,
-                   feature=(exon["strand"] == "+" and "UTR3" or "UTR5"))
+        utr.update(
+            start=cds["end"] + 1, feature=(exon["strand"] == "+" and "UTR3" or "UTR5")
+        )
         results.append(utr)
 
     return results
@@ -183,7 +191,7 @@ def select_transcripts(options, transcripts, protein_coding):
                 cds_len += cds_record["end"] - cds_record["start"] + 1
 
         if protein_coding:
-            well_formed = (cds_len and (cds_len % 3 == 0))
+            well_formed = cds_len and (cds_len % 3 == 0)
 
         if well_formed or options.keep_malformed_proteins:
             selection.append(((well_formed, exon_len), transcript))
@@ -207,8 +215,10 @@ def _do_build_feature_table(options, table, features, protein_coding):
             add_records(get_introns(exons))
             yield (exons, add_records)
 
-    print("\t- Processed %i transcripts, filtered %i (%.1f%%) ..."
-          % (read, read - retained, (100.0 * (read - retained)) / read))
+    print(
+        "\t- Processed %i transcripts, filtered %i (%.1f%%) ..."
+        % (read, read - retained, (100.0 * (read - retained)) / read)
+    )
 
 
 def build_coding_seqs_table(options, table):
@@ -216,10 +226,7 @@ def build_coding_seqs_table(options, table):
        feature, inferring introns and UTRs from the exons and CDSs of the input
        table."""
     print("Building table of features for coding sequences ...")
-    features = {"UTR5": [],
-                "UTR3": [],
-                "CDS": [],
-                "intron": []}
+    features = {"UTR5": [], "UTR3": [], "CDS": [], "intron": []}
 
     feature_table = _do_build_feature_table(options, table, features, True)
     for (exons, add_records) in feature_table:
@@ -229,8 +236,7 @@ def build_coding_seqs_table(options, table):
 
 def build_noncoding_seqs_table(options, table):
     print("Building table of features for non-coding sequences ...")
-    features = {"exon": [],
-                "intron": []}
+    features = {"exon": [], "intron": []}
 
     feature_table = _do_build_feature_table(options, table, features, False)
     for (exons, add_records) in feature_table:
@@ -247,44 +253,62 @@ def write_bed(table, target):
 
     with open(target, "w") as out:
         for record in sorted(table, key=sort_key):
-            out.write("%s\t%i\t%i\t%s\t%i\t%s\n" %
-                      # As described on http://genome.ucsc.edu/FAQ/FAQformat
-                      (record["contig"],      # chrom
-                       record["start"],       # chromStart
-                       record["end"] + 1,     # chromEnd, past-the-end
-                       record["transcript"],  # name
-                       0,                     # score
-                       record["strand"]))     # strand
+            out.write(
+                "%s\t%i\t%i\t%s\t%i\t%s\n"
+                %
+                # As described on http://genome.ucsc.edu/FAQ/FAQformat
+                (
+                    record["contig"],  # chrom
+                    record["start"],  # chromStart
+                    record["end"] + 1,  # chromEnd, past-the-end
+                    record["transcript"],  # name
+                    0,  # score
+                    record["strand"],
+                )
+            )  # strand
 
 
 ###############################################################################
 ###############################################################################
+
 
 def parse_arguments(argv):
     prog = "paleomix gtf_to_bed"
     usage = "%s [options] in.gtf out_prefix [in.scaffolds]" % (prog,)
 
     parser = ArgumentParser(prog=prog, usage=usage)
-    parser.add_argument('infile', metavar="INPUT.gtf",
-                        help="Input file in GTF format.")
-    parser.add_argument('output_prefix', metavar="OUTPUT_PREFIX",
-                        help="Prefix of output files.")
-    parser.add_argument('scaffolds', metavar="SCAFFOLDS", nargs="?",
-                        help="Mapping of scaffolds to contig positions; e.g. "
-                             "mapping individual Un* scaffolds onto chrUn.")
-    parser.add_argument("--keep-all-transcripts",
-                        action="store_true", default=False,
-                        help="Include all transcripts in the output BED "
-                             "files, not just the longest transcript of each "
-                             "gene [default: off]")
-    parser.add_argument("--keep-malformed-proteins",
-                        action="store_true", default=False,
-                        help="Include transcripts of protein-coding in the "
-                             "output, even if the the length of the CDS is "
-                             "not divisible by 3 [default: off]")
-    parser.add_argument('--contig-prefix', default="",
-                        help="Add prefix to contig names (e.g. 'chr') "
-                             "[default: no prefix].")
+    parser.add_argument("infile", metavar="INPUT.gtf", help="Input file in GTF format.")
+    parser.add_argument(
+        "output_prefix", metavar="OUTPUT_PREFIX", help="Prefix of output files."
+    )
+    parser.add_argument(
+        "scaffolds",
+        metavar="SCAFFOLDS",
+        nargs="?",
+        help="Mapping of scaffolds to contig positions; e.g. "
+        "mapping individual Un* scaffolds onto chrUn.",
+    )
+    parser.add_argument(
+        "--keep-all-transcripts",
+        action="store_true",
+        default=False,
+        help="Include all transcripts in the output BED "
+        "files, not just the longest transcript of each "
+        "gene [default: off]",
+    )
+    parser.add_argument(
+        "--keep-malformed-proteins",
+        action="store_true",
+        default=False,
+        help="Include transcripts of protein-coding in the "
+        "output, even if the the length of the CDS is "
+        "not divisible by 3 [default: off]",
+    )
+    parser.add_argument(
+        "--contig-prefix",
+        default="",
+        help="Add prefix to contig names (e.g. 'chr') " "[default: no prefix].",
+    )
 
     return parser.parse_args(argv)
 
@@ -312,7 +336,7 @@ def main(argv):
         for feature in features:
             fpath = "%s.%s.%s.bed" % (args.output_prefix, source, feature)
 
-            print("\tWriting %ss to '%s' ..." % (feature, fpath, ))
+            print("\tWriting %ss to '%s' ..." % (feature, fpath))
             write_bed(features[feature], fpath)
 
     return 0

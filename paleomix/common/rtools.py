@@ -31,10 +31,12 @@ def requirement(module, checks=versions.Any(), cache={}):
     result = cache.get(key)
     if result is None:
         filename = rscript("common", "requires.r")
-        result = versions.Requirement(call=("Rscript", filename, module),
-                                      search="d0fd3ea6: (\d+)\.(\d+)(?:\.(\d+))?",
-                                      checks=checks,
-                                      name="R module: {}".format(module))
+        result = versions.Requirement(
+            call=("Rscript", filename, module),
+            search="d0fd3ea6: (\d+)\.(\d+)(?:\.(\d+))?",
+            checks=checks,
+            name="R module: {}".format(module),
+        )
 
         cache[(module, checks)] = result
 

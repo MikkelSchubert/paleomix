@@ -26,18 +26,15 @@
 # pylint: disable=C0111
 import copy
 
-from nose.tools import \
-    assert_equal, \
-    assert_not_equal, \
-    assert_raises
+from nose.tools import assert_equal, assert_not_equal, assert_raises
 
-from paleomix.common.bedtools import \
-    BEDRecord
+from paleomix.common.bedtools import BEDRecord
 
 
 ###############################################################################
 ###############################################################################
 # BEDRecord constructor
+
 
 def test_bedrecord__constructor__defaults():
     record = BEDRecord()
@@ -59,8 +56,7 @@ def test_bedrecord__constructor__3_fields():
 
     assert_equal(len(record), 3)
     assert_equal(str(record), text)
-    assert_equal(repr(record),
-                 "BEDRecord(contig='my_contig', start=12, end=345)")
+    assert_equal(repr(record), "BEDRecord(contig='my_contig', start=12, end=345)")
 
 
 def test_bedrecord__constructor__6_fields():
@@ -69,9 +65,11 @@ def test_bedrecord__constructor__6_fields():
 
     assert_equal(len(record), 6)
     assert_equal(str(record), text)
-    assert_equal(repr(record),
-                 "BEDRecord(contig='my_contig', start=12, "
-                 "end=345, name='my_name', score=-3, strand='-')")
+    assert_equal(
+        repr(record),
+        "BEDRecord(contig='my_contig', start=12, "
+        "end=345, name='my_name', score=-3, strand='-')",
+    )
 
 
 def test_bedrecord__constructor__extra_fields():
@@ -80,15 +78,18 @@ def test_bedrecord__constructor__extra_fields():
 
     assert_equal(len(record), 8)
     assert_equal(str(record), text)
-    assert_equal(repr(record),
-                 "BEDRecord(contig='my_contig', start=12, "
-                 "end=345, name='my_name', score=-3, strand='-', "
-                 "'foo', 'bar')")
+    assert_equal(
+        repr(record),
+        "BEDRecord(contig='my_contig', start=12, "
+        "end=345, name='my_name', score=-3, strand='-', "
+        "'foo', 'bar')",
+    )
 
 
 ###############################################################################
 ###############################################################################
 # BEDRecord accessors
+
 
 def test_bedrecord__accessors__3_fields():
     record = BEDRecord("my_contig\t12\t345")
@@ -141,8 +142,7 @@ def test_bedrecord__setters__3_fields():
     assert_equal(record.end, 365)
 
     assert_equal(str(record), "chrZ\t12\t365")
-    assert_equal(repr(record),
-                 "BEDRecord(contig='chrZ', start=12, end=365)")
+    assert_equal(repr(record), "BEDRecord(contig='chrZ', start=12, end=365)")
 
 
 def test_bedrecord__setters__type_errors():
@@ -165,13 +165,15 @@ def test_bedrecord__setters__unset_fields__at_end():
     record.score = -13
     assert_equal(record.score, -13)
 
-    record.strand = '-'
-    assert_equal(record.strand, '-')
+    record.strand = "-"
+    assert_equal(record.strand, "-")
 
     assert_equal(str(record), "my_contig\t12\t345\tmy_region\t-13\t-")
-    assert_equal(repr(record),
-                 "BEDRecord(contig='my_contig', start=12, end=345, "
-                 "name='my_region', score=-13, strand='-')")
+    assert_equal(
+        repr(record),
+        "BEDRecord(contig='my_contig', start=12, end=345, "
+        "name='my_region', score=-13, strand='-')",
+    )
 
 
 def test_bedrecord__setters__unset_fields__after_end():
@@ -220,6 +222,7 @@ def test_bedrecord__cmp():
 
 ###############################################################################
 ###############################################################################
+
 
 def test_bedrecord__copy():
     record_1_txt = "my_contig\t12\t345\tmy_name\t-3\t-"

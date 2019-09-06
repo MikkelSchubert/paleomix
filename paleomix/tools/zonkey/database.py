@@ -26,22 +26,21 @@ import pysam
 
 import paleomix.yaml
 
-from paleomix.common.fileutils import \
-    swap_ext
-from paleomix.common.formats.fasta import \
-    FASTA
-from paleomix.tools.zonkey.common import \
-    get_sample_names, \
-    contig_name_to_plink_name
+from paleomix.common.fileutils import swap_ext
+from paleomix.common.formats.fasta import FASTA
+from paleomix.tools.zonkey.common import get_sample_names, contig_name_to_plink_name
 
-from paleomix.common.console import \
-    print_warn, \
-    print_info, \
-    print_err
+from paleomix.common.console import print_warn, print_info, print_err
 
 
-_SETTINGS_KEYS = ('Format', 'Revision', 'Plink', 'NChroms', 'MitoPadding',
-                  'SNPDistance')
+_SETTINGS_KEYS = (
+    "Format",
+    "Revision",
+    "Plink",
+    "NChroms",
+    "MitoPadding",
+    "SNPDistance",
+)
 
 
 class BAMInfo(object):
@@ -62,8 +61,7 @@ class BAMInfo(object):
     def __repr__(self):
         tmpl = "BAMInfo(nuclear=%r, mt_contig=%r, mt_length=%r, mt_padding=%r)"
 
-        return tmpl % (self.nuclear, self.mt_contig,
-                       self.mt_length, self.mt_padding)
+        return tmpl % (self.nuclear, self.mt_contig, self.mt_length, self.mt_padding)
 
 
 # Format number for database file; is incremented when the format is changed.
@@ -73,10 +71,11 @@ _SUPPORTED_DB_FORMAT_MAJOR = 1
 _SUPPORTED_DB_FORMAT_MINOR = 20160112
 
 # Required columns in the 'contigs.txt' table; additional columns are ignored
-_CONTIGS_TABLE_COLUMNS = frozenset(('ID', 'Size', 'Checksum'))
+_CONTIGS_TABLE_COLUMNS = frozenset(("ID", "Size", "Checksum"))
 # Required columns in the 'samples.txt' table; additional columns are ignored
-_SAMPELS_TABLE_COLUMNS = frozenset(('ID', 'Group(2)', 'Group(3)', 'Species',
-                                    'Sex', 'SampleID', 'Publication'))
+_SAMPELS_TABLE_COLUMNS = frozenset(
+    ("ID", "Group(2)", "Group(3)", "Species", "Sex", "SampleID", "Publication")
+)
 
 
 class ZonkeyDBError(RuntimeError):
@@ -88,31 +87,30 @@ class ZonkeyDB(object):
         self.filename = filename
 
         if not os.path.exists(filename):
-            raise ZonkeyDBError('Database file does not exist')
+            raise ZonkeyDBError("Database file does not exist")
         elif not tarfile.is_tarfile(filename):
-            raise ZonkeyDBError('Database file is not a valid tar-file')
+            raise ZonkeyDBError("Database file is not a valid tar-file")
 
-        print_info('Reading Zonkey database from %r ...' % (filename,))
+        print_info("Reading Zonkey database from %r ..." % (filename,))
 
         # Warn if file is gzip / bzip2 compressed; gives worse throughput
         _check_file_compression(filename)
 
         with tarfile.open(filename) as tar_handle:
-            print_info('  - Reading settings ...')
+            print_info("  - Reading settings ...")
             self.settings = self._read_settings(tar_handle, "settings.yaml")
-            print_info('  - Reading list of contigs ...')
+            print_info("  - Reading list of contigs ...")
             self.contigs = self._read_contigs_table(tar_handle, "contigs.txt")
-            print_info('  - Reading list of samples ...')
+            print_info("  - Reading list of samples ...")
             self.samples = self._read_samples_table(tar_handle, "samples.txt")
-            print_info('  - Reading mitochondrial sequences ...')
-            self.mitochondria = self._read_mitochondria(tar_handle,
-                                                        "mitochondria.fasta")
-            print_info('  - Reading emperical admixture distribution ...')
-            self.simulations = self._read_simulations(tar_handle,
-                                                      "simulations.txt")
-            print_info('  - Determining sample order ...')
-            self.sample_order = self._read_sample_order(tar_handle,
-                                                        "genotypes.txt")
+            print_info("  - Reading mitochondrial sequences ...")
+            self.mitochondria = self._read_mitochondria(
+                tar_handle, "mitochondria.fasta"
+            )
+            print_info("  - Reading emperical admixture distribution ...")
+            self.simulations = self._read_simulations(tar_handle, "simulations.txt")
+            print_info("  - Determining sample order ...")
+            self.sample_order = self._read_sample_order(tar_handle, "genotypes.txt")
 
         self._cross_validate()
 
@@ -137,8 +135,10 @@ class ZonkeyDB(object):
         samples = get_sample_names(handle)
         if len(samples) > 1:
             print_warn("\nWARNING:")
-            print_warn("BAM read-groups specify more than one sample, "
-                       "but this tool treats BAMs as a single sample:")
+            print_warn(
+                "BAM read-groups specify more than one sample, "
+                "but this tool treats BAMs as a single sample:"
+            )
 
             for sample in enumerate(samples, start=1):
                 print_warn("    %i: %r" % sample)
@@ -159,10 +159,11 @@ class ZonkeyDB(object):
         samples = set(self.samples)
         differences = (genotypes | samples) - (genotypes & samples)
         if differences:
-            raise ZonkeyDBError("Mismatch between samples in sample-list and "
-                                "genotypes table; some samples not found in "
-                                "both tables: %s"
-                                % (",".join(differences),))
+            raise ZonkeyDBError(
+                "Mismatch between samples in sample-list and "
+                "genotypes table; some samples not found in "
+                "both tables: %s" % (",".join(differences),)
+            )
 
         if self.mitochondria is None:
             return
@@ -172,8 +173,9 @@ class ZonkeyDB(object):
                 # Ignore extra reference sequences
                 meta = record.meta.upper()
                 if "EXCLUDE" not in list(map(str.strip, meta.split(";"))):
-                    raise ZonkeyDBError("Unexpected mitochondrial sequence: %r"
-                                        % (name,))
+                    raise ZonkeyDBError(
+                        "Unexpected mitochondrial sequence: %r" % (name,)
+                    )
 
     @classmethod
     def _read_contigs_table(cls, tar_handle, filename):
@@ -184,12 +186,16 @@ class ZonkeyDB(object):
             try:
                 row["Size"] = int(row["Size"])
             except ValueError as error:
-                raise ZonkeyDBError("Invalid size specified for sample %r in "
-                                    "%r: %r" % (key, filename, error))
+                raise ZonkeyDBError(
+                    "Invalid size specified for sample %r in "
+                    "%r: %r" % (key, filename, error)
+                )
 
             if row["Size"] <= 0:
-                raise ZonkeyDBError("Contig size must be >= 0 for %r in %r, "
-                                    "not %r" % (key, filename, row["Size"]))
+                raise ZonkeyDBError(
+                    "Contig size must be >= 0 for %r in %r, "
+                    "not %r" % (key, filename, row["Size"])
+                )
         return table
 
     @classmethod
@@ -202,18 +208,21 @@ class ZonkeyDB(object):
 
         for row in samples.values():
             if row["Sex"].upper() not in ("MALE", "FEMALE", "NA"):
-                raise ZonkeyDBError("ERROR: Unexpected sample sex (%r); "
-                                    "expected 'MALE', 'FEMALE', or 'NA'"
-                                    % (row["Sex"],))
+                raise ZonkeyDBError(
+                    "ERROR: Unexpected sample sex (%r); "
+                    "expected 'MALE', 'FEMALE', or 'NA'" % (row["Sex"],)
+                )
 
         for k_groups in (2, 3):
             key = "Group(%i)" % (k_groups,)
             groups = frozenset(row[key] for row in samples.values())
 
-            if len(groups - set('-')) not in (0, k_groups):
-                raise ZonkeyDBError("The %r column in the samples table must "
-                                    "either contain %i ancestral groups, or "
-                                    "none" % (key, k_groups))
+            if len(groups - set("-")) not in (0, k_groups):
+                raise ZonkeyDBError(
+                    "The %r column in the samples table must "
+                    "either contain %i ancestral groups, or "
+                    "none" % (key, k_groups)
+                )
 
         return samples
 
@@ -222,7 +231,7 @@ class ZonkeyDB(object):
         cls._check_required_file(tar_handle, filename)
 
         handle = tar_handle.extractfile(filename)
-        header = handle.readline().rstrip('\r\n').split('\t')
+        header = handle.readline().rstrip("\r\n").split("\t")
         sample_order = tuple(header[-1].split(";"))
 
         if len(sample_order) != len(set(sample_order)):
@@ -241,48 +250,51 @@ class ZonkeyDB(object):
 
         results = {}
         for record in FASTA.from_lines(handle):
-            record = FASTA(name=record.name,
-                           meta=record.meta,
-                           sequence=record.sequence.upper())
+            record = FASTA(
+                name=record.name, meta=record.meta, sequence=record.sequence.upper()
+            )
 
             unexpected = set(record.sequence) - set("ACGTN-")
             if unexpected:
                 unexpected = ", ".join(map(repr, sorted(unexpected)))
-                raise ZonkeyDBError("Unexpected nucleotide in %s; only A, C, "
-                                    "G, T, N, and - are allowed, not %s"
-                                    % (unexpected, filename))
+                raise ZonkeyDBError(
+                    "Unexpected nucleotide in %s; only A, C, "
+                    "G, T, N, and - are allowed, not %s" % (unexpected, filename)
+                )
             elif record.name in results:
-                raise ZonkeyDBError("Duplicate sequence name in %s: %r"
-                                    % (filename, record.name))
+                raise ZonkeyDBError(
+                    "Duplicate sequence name in %s: %r" % (filename, record.name)
+                )
 
             results[record.name] = record
 
-        lengths = frozenset(len(record.sequence)
-                            for record in results.values())
+        lengths = frozenset(len(record.sequence) for record in results.values())
 
         if not lengths:
-            raise ZonkeyDBError("No mitochondrial sequences found in %r"
-                                % (filename,))
+            raise ZonkeyDBError("No mitochondrial sequences found in %r" % (filename,))
         elif len(lengths) > 2:
             lengths = tuple(sorted(lengths))
-            lengths_s = "%s, and %s" % (", ".join(map(str, lengths[:-1])),
-                                        lengths[-1])
+            lengths_s = "%s, and %s" % (", ".join(map(str, lengths[:-1])), lengths[-1])
 
-            raise ZonkeyDBError("At most two different sequence lengths "
-                                "expected for mitochondrial sequences, but "
-                                "found %i different lengths in %r: %s"
-                                % (len(lengths), filename, lengths_s))
+            raise ZonkeyDBError(
+                "At most two different sequence lengths "
+                "expected for mitochondrial sequences, but "
+                "found %i different lengths in %r: %s"
+                % (len(lengths), filename, lengths_s)
+            )
         elif len(lengths) != 1:
             # Unpadded sequences are allowed
             delta_len = max(lengths) - min(lengths)
             mito_padding = self.settings["MitoPadding"]
 
-            if (delta_len != mito_padding):
-                raise ZonkeyDBError("Length difference between mitochondrial "
-                                    "sequences in %r does not match the "
-                                    "padding; expected a difference of %i bp, "
-                                    "but found a %i bp difference."
-                                    % (filename, mito_padding, delta_len))
+            if delta_len != mito_padding:
+                raise ZonkeyDBError(
+                    "Length difference between mitochondrial "
+                    "sequences in %r does not match the "
+                    "padding; expected a difference of %i bp, "
+                    "but found a %i bp difference."
+                    % (filename, mito_padding, delta_len)
+                )
 
         return results
 
@@ -295,44 +307,51 @@ class ZonkeyDB(object):
         try:
             result = paleomix.yaml.safe_load(handle)
         except paleomix.yaml.YAMLError as error:
-            raise ZonkeyDBError("Error reading settings file %r; %s"
-                                % (filename, error))
+            raise ZonkeyDBError(
+                "Error reading settings file %r; %s" % (filename, error)
+            )
 
         for key in _SETTINGS_KEYS:
             if key != "Plink":
                 if not isinstance(result[key], int) or result[key] < 0:
-                    raise ZonkeyDBError("Value for %r in %s must be an non-"
-                                        "negative integer, not %r"
-                                        % (key, filename, result[key]))
+                    raise ZonkeyDBError(
+                        "Value for %r in %s must be an non-"
+                        "negative integer, not %r" % (key, filename, result[key])
+                    )
             elif not isinstance(result[key], str):
-                    raise ZonkeyDBError("Value for %r in %s must be a string, "
-                                        "not %r"
-                                        % (key, filename, result[key]))
+                raise ZonkeyDBError(
+                    "Value for %r in %s must be a string, "
+                    "not %r" % (key, filename, result[key])
+                )
 
         if result["Format"] > _SUPPORTED_DB_FORMAT_MAJOR:
-            raise ZonkeyDBError("Database version is too old; this version of "
-                                "PALEOMIX supports the Zonkey DB v%i, but the "
-                                "database is v%i; download an updated "
-                                "database to continue."
-                                % (_SUPPORTED_DB_FORMAT_MAJOR,
-                                   result["Format"]))
+            raise ZonkeyDBError(
+                "Database version is too old; this version of "
+                "PALEOMIX supports the Zonkey DB v%i, but the "
+                "database is v%i; download an updated "
+                "database to continue." % (_SUPPORTED_DB_FORMAT_MAJOR, result["Format"])
+            )
         elif result["Format"] < _SUPPORTED_DB_FORMAT_MAJOR:
-            raise ZonkeyDBError("Database version is too new; this version of "
-                                "PALEOMIX supports the Zonkey DB v%i, but the "
-                                "database is v%i; upgrade PALEOMIX to "
-                                "continue."
-                                % (_SUPPORTED_DB_FORMAT_MAJOR,
-                                   result["Format"]))
+            raise ZonkeyDBError(
+                "Database version is too new; this version of "
+                "PALEOMIX supports the Zonkey DB v%i, but the "
+                "database is v%i; upgrade PALEOMIX to "
+                "continue." % (_SUPPORTED_DB_FORMAT_MAJOR, result["Format"])
+            )
         elif result["Revision"] < _SUPPORTED_DB_FORMAT_MINOR:
-            raise ZonkeyDBError("Database version is too old; this version of "
-                                "PALEOMIX supports the Zonkey DB v%i, rev. %i "
-                                "or newer, but the database is v%i rev. %i; "
-                                "please download an updated database to "
-                                "continue."
-                                % (_SUPPORTED_DB_FORMAT_MAJOR,
-                                   _SUPPORTED_DB_FORMAT_MINOR,
-                                   result["Format"],
-                                   result["Revision"]))
+            raise ZonkeyDBError(
+                "Database version is too old; this version of "
+                "PALEOMIX supports the Zonkey DB v%i, rev. %i "
+                "or newer, but the database is v%i rev. %i; "
+                "please download an updated database to "
+                "continue."
+                % (
+                    _SUPPORTED_DB_FORMAT_MAJOR,
+                    _SUPPORTED_DB_FORMAT_MINOR,
+                    result["Format"],
+                    result["Revision"],
+                )
+            )
 
         return result
 
@@ -343,61 +362,66 @@ class ZonkeyDB(object):
             # Missing simulations file is allowed
             return None
 
-        header = handle.readline().rstrip().split('\t')
+        header = handle.readline().rstrip().split("\t")
 
-        required_keys = set(('NReads', 'K', 'Sample1', 'Sample2', 'HasTS',
-                             'Percentile', 'Value'))
+        required_keys = set(
+            ("NReads", "K", "Sample1", "Sample2", "HasTS", "Percentile", "Value")
+        )
         missing_keys = required_keys - set(header)
         if missing_keys:
-            missing_keys = ', '.join(map(repr, missing_keys))
-            raise ZonkeyDBError('Simulations table %r does not contain all '
-                                'required columns; columns %r are missing!'
-                                % (filename, missing_keys))
+            missing_keys = ", ".join(map(repr, missing_keys))
+            raise ZonkeyDBError(
+                "Simulations table %r does not contain all "
+                "required columns; columns %r are missing!" % (filename, missing_keys)
+            )
 
         result = []
         for linenum, line in enumerate(handle, start=2):
-            fields = line.strip().split('\t')
+            fields = line.strip().split("\t")
             if len(fields) != len(header):
-                raise ZonkeyDBError("Line %i in simulations table %r, does "
-                                    "not contain the expected number of "
-                                    "columns; expected %i, but found %i!"
-                                    % (linenum, filename,
-                                       len(header), len(fields)))
+                raise ZonkeyDBError(
+                    "Line %i in simulations table %r, does "
+                    "not contain the expected number of "
+                    "columns; expected %i, but found %i!"
+                    % (linenum, filename, len(header), len(fields))
+                )
 
             row = dict(zip(header, fields))
 
-            if row['HasTS'] not in ('TRUE', 'FALSE'):
+            if row["HasTS"] not in ("TRUE", "FALSE"):
                 pass
 
-            row['HasTS'] = (row['HasTS'] == 'TRUE')
+            row["HasTS"] = row["HasTS"] == "TRUE"
 
-            for key in ('NReads', 'K'):
+            for key in ("NReads", "K"):
                 try:
                     row[key] = int(row[key])
                 except ValueError:
-                    raise ZonkeyDBError('Malformed value for column %r at '
-                                        'line %i in simulations table %r; '
-                                        'expected int, found %r'
-                                        % (key, linenum, filename, row[key]))
+                    raise ZonkeyDBError(
+                        "Malformed value for column %r at "
+                        "line %i in simulations table %r; "
+                        "expected int, found %r" % (key, linenum, filename, row[key])
+                    )
 
-            for key in ('Percentile', 'Value'):
+            for key in ("Percentile", "Value"):
                 try:
                     row[key] = float(row[key])
                 except ValueError:
-                    raise ZonkeyDBError('Malformed value for column %r at '
-                                        'line %i in simulations table %r; '
-                                        'expected float, found %r'
-                                        % (key, linenum, filename, row[key]))
+                    raise ZonkeyDBError(
+                        "Malformed value for column %r at "
+                        "line %i in simulations table %r; "
+                        "expected float, found %r" % (key, linenum, filename, row[key])
+                    )
 
-            for key in ('Sample1', 'Sample2'):
-                group_key = 'Group(%i)' % (row['K'],)
-                groups = frozenset(row[group_key]
-                                   for row in self.samples.values())
+            for key in ("Sample1", "Sample2"):
+                group_key = "Group(%i)" % (row["K"],)
+                groups = frozenset(row[group_key] for row in self.samples.values())
 
-                if row[key] not in groups and row[key] != '-':
-                    raise ZonkeyDBError('Invalid group in column %r in '
-                                        'simulations table %r: %r'
-                                        % (key, filename, row[key]))
+                if row[key] not in groups and row[key] != "-":
+                    raise ZonkeyDBError(
+                        "Invalid group in column %r in "
+                        "simulations table %r: %r" % (key, filename, row[key])
+                    )
 
             result.append(row)
 
@@ -408,15 +432,18 @@ class ZonkeyDB(object):
         try:
             obj = tar_handle.getmember(filename)
         except KeyError:
-            raise ZonkeyDBError("Database does not contain required file %r; "
-                                "please ensure that this is a valid Zonkey "
-                                "database file!" % (filename,))
+            raise ZonkeyDBError(
+                "Database does not contain required file %r; "
+                "please ensure that this is a valid Zonkey "
+                "database file!" % (filename,)
+            )
 
         if not obj.isfile():
-            raise ZonkeyDBError("Object %r in Zonkey database is not a "
-                                "file; please ensure that this is a valid "
-                                "Zonkey database file!"
-                                % (filename,))
+            raise ZonkeyDBError(
+                "Object %r in Zonkey database is not a "
+                "file; please ensure that this is a valid "
+                "Zonkey database file!" % (filename,)
+            )
 
     @classmethod
     def _read_table(cls, tar_handle, filename, requied_columns=()):
@@ -425,29 +452,33 @@ class ZonkeyDB(object):
         result = {}
 
         try:
-            header = handle.readline().rstrip('\r\n').split('\t')
+            header = handle.readline().rstrip("\r\n").split("\t")
             if len(header) != len(set(header)):
-                raise ZonkeyDBError("Table %r does contains duplicate columns!"
-                                    % (filename,))
+                raise ZonkeyDBError(
+                    "Table %r does contains duplicate columns!" % (filename,)
+                )
 
             if requied_columns - set(header):
-                raise ZonkeyDBError("Required columns are missign in table "
-                                    "%r: %s" % (filename, ", ".join()))
+                raise ZonkeyDBError(
+                    "Required columns are missign in table "
+                    "%r: %s" % (filename, ", ".join())
+                )
 
             for linenum, line in enumerate(handle):
-                fields = line.rstrip('\r\n').split('\t')
+                fields = line.rstrip("\r\n").split("\t")
 
                 if len(fields) != len(header):
-                    raise ZonkeyDBError("Error reading %r at line %i; "
-                                        "expected  %i columns, found %i "
-                                        "columns!"
-                                        % (filename, linenum,
-                                           len(header), len(fields)))
+                    raise ZonkeyDBError(
+                        "Error reading %r at line %i; "
+                        "expected  %i columns, found %i "
+                        "columns!" % (filename, linenum, len(header), len(fields))
+                    )
 
                 row = dict(zip(header, fields))
                 if row["ID"] in result:
-                    raise ZonkeyDBError("Duplicate IDs in %r: %s"
-                                        % (filename, row["ID"]))
+                    raise ZonkeyDBError(
+                        "Duplicate IDs in %r: %s" % (filename, row["ID"])
+                    )
 
                 result[row["ID"]] = row
         finally:
@@ -462,8 +493,7 @@ def _validate_mito_bam(data, handle, info):
         return True
 
     references = handle.references
-    min_length = min((len(record.sequence))
-                     for record in data.mitochondria.values())
+    min_length = min((len(record.sequence)) for record in data.mitochondria.values())
 
     for bam_contig, bam_length in zip(references, handle.lengths):
         if bam_contig not in data.mitochondria:
@@ -473,30 +503,32 @@ def _validate_mito_bam(data, handle, info):
         db_length = len(db_sequence) - db_sequence.count("-")
 
         if bam_length != db_length:
-            print_err("ERROR: Length of mitochondrial contig %r (%i bp) "
-                      "does not match the length of the corresponding "
-                      "sequence in the database (%i bp)"
-                      % (bam_contig, bam_length, db_length))
+            print_err(
+                "ERROR: Length of mitochondrial contig %r (%i bp) "
+                "does not match the length of the corresponding "
+                "sequence in the database (%i bp)" % (bam_contig, bam_length, db_length)
+            )
             return False
 
-        if not os.path.exists(handle.filename + '.bai') \
-                and not os.path.exists(swap_ext(handle.filename, '.bai')):
-            print_info('    - Attempting to index BAM file %r!'
-                       % (handle.filename,))
+        if not os.path.exists(handle.filename + ".bai") and not os.path.exists(
+            swap_ext(handle.filename, ".bai")
+        ):
+            print_info("    - Attempting to index BAM file %r!" % (handle.filename,))
             pysam.index(handle.filename)
 
         # Workaround for pysam < 0.9 returning list, >= 0.9 returning str
-        for line in "".join(pysam.idxstats(handle.filename)).split('\n'):
+        for line in "".join(pysam.idxstats(handle.filename)).split("\n"):
             line = line.strip()
             if not line:
                 continue
 
-            name, _, hits, _ = line.split('\t')
+            name, _, hits, _ = line.split("\t")
             if (name == bam_contig) and not int(hits):
-                print_err("WARNING: Mitochondrial BAM (%r) does not contain "
-                          "any reads aligned to contig %r; inferring an "
-                          "phylogeny is not possible."
-                          % (handle.filename, name))
+                print_err(
+                    "WARNING: Mitochondrial BAM (%r) does not contain "
+                    "any reads aligned to contig %r; inferring an "
+                    "phylogeny is not possible." % (handle.filename, name)
+                )
                 return True
 
         info.mt_contig = bam_contig
@@ -509,8 +541,9 @@ def _validate_mito_bam(data, handle, info):
 
 def _validate_nuclear_bam(data, handle, info):
     # Check that chromosomes are of expected size; unused chroms are ignored.
-    bam_contigs = dict(zip(map(contig_name_to_plink_name, handle.references),
-                           handle.lengths))
+    bam_contigs = dict(
+        zip(map(contig_name_to_plink_name, handle.references), handle.lengths)
+    )
     ref_contigs = data.contigs
 
     contigs_found = {}
@@ -518,11 +551,12 @@ def _validate_nuclear_bam(data, handle, info):
         if name not in bam_contigs:
             contigs_found[name] = False
         elif bam_contigs[name] != stats["Size"]:
-            print_err("\nERROR: Chrom %r in the BAM does not match the "
-                      "length specified in data file:\n"
-                      "    - Expected: %i\n"
-                      "    - Found: %i"
-                      % (name, bam_contigs[name], stats["Size"]))
+            print_err(
+                "\nERROR: Chrom %r in the BAM does not match the "
+                "length specified in data file:\n"
+                "    - Expected: %i\n"
+                "    - Found: %i" % (name, bam_contigs[name], stats["Size"])
+            )
 
             return False
         else:
@@ -548,15 +582,19 @@ def _check_file_compression(filename):
             header = handle.read(2)
 
             if header == "\x1f\x8b":
-                print_warn('\nWARNING:\n'
-                           'Zonkey database file %r is gzip compressed;\n'
-                           'uncompressing the archive is recommended:\n'
-                           '  $ gunzip "%s"\n' % (filename, filename))
+                print_warn(
+                    "\nWARNING:\n"
+                    "Zonkey database file %r is gzip compressed;\n"
+                    "uncompressing the archive is recommended:\n"
+                    '  $ gunzip "%s"\n' % (filename, filename)
+                )
             elif header == "BZ":
-                print_warn('\nWARNING:\n'
-                           'Zonkey database file %r is bzip2 compressed;\n'
-                           'uncompressing the archive is recommended:\n'
-                           '  $ bunzip2 "%s"\n' % (filename, filename))
+                print_warn(
+                    "\nWARNING:\n"
+                    "Zonkey database file %r is bzip2 compressed;\n"
+                    "uncompressing the archive is recommended:\n"
+                    '  $ bunzip2 "%s"\n' % (filename, filename)
+                )
     except IOError:
         # Errors are ignored at this stage
         pass

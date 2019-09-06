@@ -24,11 +24,12 @@ import itertools
 import nose.tools
 from nose.tools import assert_equal
 
-from paleomix.common.sequences import \
-     complement, \
-     reverse_complement, \
-     encode_genotype, \
-     split
+from paleomix.common.sequences import (
+    complement,
+    reverse_complement,
+    encode_genotype,
+    split,
+)
 
 
 ###############################################################################
@@ -65,6 +66,7 @@ def test_complement__multiple_nts_mixed_case():
 ###############################################################################
 # Tests for 'complement'
 
+
 def test_reverse_complement():
     assert_equal(reverse_complement(_REF_SRC), _REF_DST[::-1])
 
@@ -73,9 +75,23 @@ def test_reverse_complement():
 ###############################################################################
 # Tests for 'encode_genotype'
 
-_IUB_SRC = ("A", "C", "G", "T",
-            "AC", "AG", "AT", "CG", "CT", "GT",
-            "ACG", "ACT", "AGT", "CGT", "ACGT")
+_IUB_SRC = (
+    "A",
+    "C",
+    "G",
+    "T",
+    "AC",
+    "AG",
+    "AT",
+    "CG",
+    "CT",
+    "GT",
+    "ACG",
+    "ACT",
+    "AGT",
+    "CGT",
+    "ACGT",
+)
 _IUB_DST = "ACGTMRWSYKVHDB"
 _IUB_PAIRS = list(zip(_IUB_SRC, _IUB_DST))
 
@@ -121,6 +137,7 @@ def test_comma_or_not():
 ###############################################################################
 # Tests for 'split'
 
+
 def test_split__empty_sequence():
     assert_equal(split(""), {"1": "", "2": "", "3": ""})
 
@@ -131,7 +148,7 @@ def test_split__no_split_by():
 
 
 def test_split__single_group():
-    assert_equal(split("ACGCAT", "111"), {'1': 'ACGCAT'})
+    assert_equal(split("ACGCAT", "111"), {"1": "ACGCAT"})
 
 
 def test_split__two_groups():

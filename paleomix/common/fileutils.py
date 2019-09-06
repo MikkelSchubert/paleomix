@@ -28,8 +28,7 @@ import errno
 import types
 import shutil
 
-from paleomix.common.utilities import safe_coerce_to_tuple, \
-     safe_coerce_to_frozenset
+from paleomix.common.utilities import safe_coerce_to_tuple, safe_coerce_to_frozenset
 
 
 def add_postfix(filename, postfix):
@@ -61,11 +60,12 @@ def create_temp_dir(root):
     """Creates a temporary directory, accessible only by the owner,
     at the specified location. The folder name is randomly generated,
     and only the current user has access"""
+
     def _generate_path():
         return os.path.join(root, str(uuid.uuid4()))
 
     path = _generate_path()
-    while not make_dirs(path, mode = 0o750):
+    while not make_dirs(path, mode=0o750):
         path = _generate_path()
     return path
 
@@ -126,7 +126,7 @@ def missing_executables(filenames):
     return result
 
 
-def make_dirs(directory, mode = 0o777):
+def make_dirs(directory, mode=0o777):
     """Wrapper around os.makedirs to make it suitable for using
     in a multithreaded/multiprocessing enviroment: Unlike the
     regular function, this wrapper does not throw an exception if
@@ -139,7 +139,7 @@ def make_dirs(directory, mode = 0o777):
         raise ValueError("Empty directory passed to make_dirs()")
 
     try:
-        os.makedirs(directory, mode = mode)
+        os.makedirs(directory, mode=mode)
         return True
     except OSError as error:
         # make_dirs be called by multiple subprocesses at the same time,
@@ -164,15 +164,15 @@ def copy_file(source, destination):
 def open_ro(filename):
     """Opens a file for reading, transparently handling
     GZip and BZip2 compressed files. Returns a file handle."""
-    with open(filename, 'rb') as handle:
+    with open(filename, "rb") as handle:
         header = handle.read(2)
 
     if header == b"\x1f\x8b":
-        return gzip.open(filename, 'rt')
+        return gzip.open(filename, "rt")
     elif header == b"BZ":
-        return bz2.open(filename, 'rt')
+        return bz2.open(filename, "rt")
     else:
-        return open(filename, 'rt')
+        return open(filename, "rt")
 
 
 def try_remove(filename):
@@ -200,7 +200,7 @@ def describe_files(files):
     elif len(files) == 1:
         return repr(files[0])
 
-    glob_files = _get_files_glob(files, max_differences = 2)
+    glob_files = _get_files_glob(files, max_differences=2)
     if glob_files:
         return repr(glob_files)
 
@@ -223,13 +223,17 @@ def describe_paired_files(files_1, files_2):
     if files_1 and not files_2:
         return describe_files(files_1)
     elif len(files_1) != len(files_2):
-        raise ValueError("Unequal number of files for mate 1 vs mate 2 reads: %i vs %i" \
-                         % (len(files_1), len(files_2)))
+        raise ValueError(
+            "Unequal number of files for mate 1 vs mate 2 reads: %i vs %i"
+            % (len(files_1), len(files_2))
+        )
 
     glob_files_1 = _get_files_glob(files_1, 3)
     glob_files_2 = _get_files_glob(files_2, 3)
     if glob_files_1 and glob_files_2:
-        final_glob = _get_files_glob((glob_files_1, glob_files_2), 1, show_differences = True)
+        final_glob = _get_files_glob(
+            (glob_files_1, glob_files_2), 1, show_differences=True
+        )
         if final_glob:
             return repr(final_glob)
 
@@ -240,7 +244,7 @@ def describe_paired_files(files_1, files_2):
     return "%i pair(s) of files" % (len(files_1),)
 
 
-def _get_files_glob(filenames, max_differences = 1, show_differences = False):
+def _get_files_glob(filenames, max_differences=1, show_differences=False):
     """Tries to generate a glob-string for a set of filenames, containing
     at most 'max_differences' different columns. If more differences are
     found, or if the length of filenames vary, None is returned."""
@@ -251,7 +255,7 @@ def _get_files_glob(filenames, max_differences = 1, show_differences = False):
     glob_fname, differences = [], 0
     for chars in zip(*filenames):
         if "?" in chars:
-            chars = ('?',)
+            chars = ("?",)
 
         if len(frozenset(chars)) > 1:
             if show_differences:
@@ -273,8 +277,10 @@ def _validate_filenames(filenames):
     filenames = safe_coerce_to_tuple(filenames)
     for filename in filenames:
         if not isinstance(filename, str):
-            raise ValueError("Only string types are allowed for filenames, not %s" \
-                             % (filename.__class__.__name__,))
+            raise ValueError(
+                "Only string types are allowed for filenames, not %s"
+                % (filename.__class__.__name__,)
+            )
     return filenames
 
 
@@ -288,13 +294,13 @@ def _sh_wrapper(func, source, destination):
     try:
         func(source, destination)
     except IOError as error:
-        if (error.errno == errno.ENOENT):
+        if error.errno == errno.ENOENT:
             if source and destination and os.path.exists(source):
                 dirname = os.path.dirname(destination)
                 make_dirs(dirname)
                 func(source, destination)
                 return
-        elif (error.errno == errno.ENOSPC):
+        elif error.errno == errno.ENOSPC:
             # Not enough space; remove partial file
             os.unlink(destination)
         raise
@@ -311,4 +317,3 @@ def _try_rm_wrapper(func, fpath):
         if error.errno != errno.ENOENT:
             raise
         return False
-

@@ -37,12 +37,13 @@ BAM_PROPER_SEGMENTS = 0x2
 BAM_SEGMENTED = 0x1
 
 # Default filters when processing reads
-EXCLUDED_FLAGS = \
-    BAM_SUPPLEMENTARY_ALIGNMENT | \
-    BAM_PCR_DUPLICATE | \
-    BAM_QUALITY_CONTROL_FAILED | \
-    BAM_SECONDARY_ALIGNMENT | \
-    BAM_READ_IS_UNMAPPED
+EXCLUDED_FLAGS = (
+    BAM_SUPPLEMENTARY_ALIGNMENT
+    | BAM_PCR_DUPLICATE
+    | BAM_QUALITY_CONTROL_FAILED
+    | BAM_SECONDARY_ALIGNMENT
+    | BAM_READ_IS_UNMAPPED
+)
 
 
 class BAMRegionsIter(object):
@@ -79,17 +80,13 @@ class BAMRegionsIter(object):
     def __iter__(self):
         if self._regions:
             for region in self._regions:
-                records = self._handle.fetch(region.contig,
-                                             region.start,
-                                             region.end)
+                records = self._handle.fetch(region.contig, region.start, region.end)
                 records = self._filter(records)
 
                 tid = self._handle.gettid(region.contig)
-                yield _BAMRegion(tid, records,
-                                 region.name,
-                                 region.start,
-                                 region.end)
+                yield _BAMRegion(tid, records, region.name, region.start, region.end)
         else:
+
             def _by_tid(record):
                 """Group by reference ID."""
                 return record.tid
