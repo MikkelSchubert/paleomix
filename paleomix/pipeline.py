@@ -31,7 +31,6 @@ import Queue
 import signal
 import traceback
 
-import paleomix.ui
 import paleomix.logger
 
 from paleomix.node import \
@@ -42,6 +41,7 @@ from paleomix.nodegraph import \
     FileStatusCache, \
     NodeGraph, \
     NodeGraphError
+from paleomix.common.text import padded_table
 from paleomix.common.utilities import \
     safe_coerce_to_tuple, \
     fast_pickle_test
@@ -57,7 +57,7 @@ class Pypeline(object):
         # Set if a keyboard-interrupt (SIGINT) has been caught
         self._interrupted = False
         self._queue = multiprocessing.Queue()
-        self._pool = multiprocessing.Pool(1, _init_worker, (self._queue,))
+        self._pool = None
 
     def add_nodes(self, *nodes):
         for subnodes in safe_coerce_to_tuple(nodes):
@@ -67,10 +67,9 @@ class Pypeline(object):
                                     % repr(node))
                 self._nodes.append(node)
 
-    def run(self, max_threads=1, dry_run=False, progress_ui="verbose"):
+    def run(self, max_threads=1, dry_run=False):
         if max_threads < 1:
             raise ValueError("Max threads must be >= 1")
-        _update_nprocesses(self._pool, max_threads)
 
         try:
             nodegraph = NodeGraph(self._nodes)
@@ -83,60 +82,47 @@ class Pypeline(object):
                 message = "Node(s) use more threads than the max allowed; " \
                           "the pipeline may therefore use more than the " \
                           "expected number of threads.\n"
-                paleomix.ui.print_warn(message)
+                self._logger.warn(message)
                 break
 
         if dry_run:
-            progress_printer = paleomix.ui.RunningUI()
-            nodegraph.add_state_observer(progress_printer)
-            progress_printer.flush()
-            progress_printer.finalize()
-            self._logger.info("Dry run done ...")
-            return True
+            self._summarize_pipeline(nodegraph)
+            self._logger.info("Dry run done")
 
-        old_handler = signal.signal(signal.SIGINT, self._sigint_handler)
-        try:
-            return self._run(nodegraph, max_threads, progress_ui)
-        finally:
-            signal.signal(signal.SIGINT, old_handler)
+            result = True
+        else:
+            self._pool = multiprocessing.Pool(max_threads, _init_worker, (self._queue,))
+            old_handler = signal.signal(signal.SIGINT, self._sigint_handler)
 
-        return False
+            try:
+                result = self._run(nodegraph, max_threads)
+            finally:
+                signal.signal(signal.SIGINT, old_handler)
 
-    def _run(self, nodegraph, max_threads, progress_ui):
+        for filename in paleomix.logger.get_logfiles():
+            self._logger.info('Log-file written to %r', filename)
+
+        return result
+
+    def _run(self, nodegraph, max_threads):
         # Dictionary of nodes -> async-results
         running = {}
         # Set of remaining nodes to be run
         remaining = set(nodegraph.iterflat())
 
         is_ok = True
-        progress_printer = paleomix.ui.get_ui(progress_ui)
-        progress_printer.max_threads = max_threads
-        nodegraph.add_state_observer(progress_printer)
+        while running or (remaining and not self._interrupted):
+            is_ok &= self._poll_running_nodes(running,
+                                              nodegraph,
+                                              self._queue)
 
-        with paleomix.ui.CommandLine() as cli:
-            while running or (remaining and not self._interrupted):
-                is_ok &= self._poll_running_nodes(running,
-                                                  nodegraph,
-                                                  self._queue)
-
-                if not self._interrupted:  # Prevent starting of new nodes
-                    self._start_new_tasks(remaining, running, nodegraph,
-                                          max_threads, self._pool)
-
-                if running:
-                    progress_printer.flush()
-
-                max_threads = cli.process_key_presses(nodegraph,
-                                                      max_threads,
-                                                      progress_printer)
-                progress_printer.max_threads = max_threads
-                _update_nprocesses(self._pool, max_threads)
+            if not self._interrupted:  # Prevent starting of new nodes
+                self._start_new_tasks(remaining, running, nodegraph,
+                                      max_threads, self._pool)
 
         self._pool.close()
         self._pool.join()
-
-        progress_printer.flush()
-        progress_printer.finalize()
+        self._summarize_pipeline(nodegraph)
 
         return is_ok
 
@@ -448,6 +434,24 @@ class Pypeline(object):
             pass
         return None, None
 
+    def _summarize_pipeline(self, nodegraph):
+        states = [0] * nodegraph.NUMBER_OF_STATES
+        for node in nodegraph.iterflat():
+            states[nodegraph.get_node_state(node)] += 1
+
+        rows = [("Number of nodes:", sum(states)),
+                ("Number of done nodes:", states[nodegraph.DONE]),
+                ("Number of runable nodes:", states[nodegraph.RUNABLE]),
+                ("Number of queued nodes:", states[nodegraph.QUEUED]),
+                ("Number of outdated nodes:", states[nodegraph.OUTDATED]),
+                ("Number of failed nodes:", states[nodegraph.ERROR])]
+
+        for message in padded_table(rows):
+            self._logger.info(message)
+
+        if states[nodegraph.ERROR]:
+            self._logger.warning('Errors were detected while running pipeline')
+
 
 def _init_worker(queue):
     """Init function for subprocesses created by multiprocessing.Pool: Ensures
@@ -478,15 +482,3 @@ def _call_run(key, node, config):
     finally:
         # See comment in _init_worker
         _call_run.queue.put(key)
-
-
-def _update_nprocesses(pool, processes):
-    """multiprocessing.Pool does not expose calls to change number of active
-    processes, but does in fact support this for the 'maxtasksperchild' option.
-    This function calls the related private functions to increase the number
-    of available processes."""
-    # FIXME: Catch ERRNO 11:
-    # OSError: [Errno 11] Resource temporarily unavailable
-    if pool._processes < processes:
-        pool._processes = processes
-        pool._repopulate_pool()

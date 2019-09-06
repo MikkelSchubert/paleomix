@@ -19,7 +19,6 @@ The resulting file contains a list of options which can be overwritten::
     log_level = warning
     jar_root = /home/username/install/jar_root
     bwa_max_threads = 1
-    progress_ui = quiet
     temp_root = /tmp/username/bam_pipeline
     jre_options =
     bowtie2_max_threads = 1

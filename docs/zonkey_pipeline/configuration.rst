@@ -16,7 +16,6 @@ The resulting file contains a list of options which can be overwritten::
 	[Defaults]
 	max_threads = 1
 	log_level = warning
-	progress_ui = progress
 	treemix_k = 0
 	admixture_replicates = 1
 	ui_colors = on

@@ -25,12 +25,12 @@ import sys
 
 import pysam
 
+from paleomix.common.console import print_err
 from paleomix.common.formats.fasta import FASTA
 from paleomix.common.formats.msa import MSA
 from paleomix.common.utilities import fragment
 from paleomix.common.formats.phylip import interleaved_phy
 
-import paleomix.ui as ui
 import paleomix.tools.zonkey.database as database
 
 
@@ -153,7 +153,7 @@ def main(argv):
     try:
         handle = pysam.Samfile(args.bam)
     except (IOError, ValueError), error:
-        ui.print_err("Error reading BAM file: %s" % (error,))
+        print_err("Error reading BAM file: %s" % (error,))
         return 1
 
     with handle:
@@ -161,8 +161,8 @@ def main(argv):
         if bam_info is None:
             return 1
         elif not bam_info.is_mitochondrial:
-            ui.print_err("ERROR: BAM does not contain any known mitochondrial "
-                         "sequence found in BAM ..")
+            print_err("ERROR: BAM does not contain any known mitochondrial "
+                      "sequence found in BAM ..")
             return 1
 
         reference = sequences[bam_info.mt_contig]

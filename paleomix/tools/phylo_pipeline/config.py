@@ -93,9 +93,6 @@ def _run_config_parser(argv):
     parser.formatter.set_parser(parser)
     parser.description = _DESCRIPTION
 
-    paleomix.ui.add_optiongroup(parser,
-                                ui_default=PerHostValue("running"),
-                                color_default=PerHostValue("on"))
     paleomix.logger.add_optiongroup(parser, default = PerHostValue("warning"))
 
     group  = optparse.OptionGroup(parser, "Scheduling")
@@ -146,7 +143,6 @@ def _run_config_parser(argv):
 
 def parse_config(argv):
     options, args = _run_config_parser(argv)
-    paleomix.ui.set_ui_colors(options.ui_colors)
 
     if args and args[0] in ("example", "examples"):
         return options, args

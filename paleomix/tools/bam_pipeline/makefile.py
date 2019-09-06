@@ -20,13 +20,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
+import collections
 import copy
 import glob
-import types
-import string
 import itertools
-import collections
+import logging
+import os
+import string
+import types
 
 import paleomix.tools.bam_pipeline.paths as paths
 from paleomix.common.utilities import fill_dict
@@ -52,9 +53,6 @@ from paleomix.common.makefile import \
     IsListOf, \
     IsDictOf, \
     PreProcessMakefile
-from paleomix.common.console import \
-    print_info, \
-    print_warn
 from paleomix.common.formats.fasta import \
     FASTA, \
     FASTAError
@@ -77,8 +75,11 @@ def read_makefiles(config, filenames, pipeline_variant="bam"):
         raise ValueError("'pipeline_variant' must be 'bam' or 'trim', not %r"
                          % (pipeline_variant,))
 
+    logger = logging.getLogger(__name__)
+
     makefiles = []
     for filename in filenames:
+        logger.info('Reading makefile %r', filename)
         makefile = read_makefile(filename, _VALIDATION)
         makefile = _mangle_makefile(makefile, pipeline_variant)
 
@@ -629,19 +630,19 @@ def _validate_makefile_adapters(makefile):
     check_options(adapterrm_opt, results)
 
     if any(results.itervalues()):
-        print_warn("WARNING: An adapter specified for AdapterRemoval "
-                   "corresponds to the default sequence, but is reverse "
-                   "complemented. Please make sure that this is intended! ",
-                   end="")
+        logger = logging.getLogger(__name__)
+        logger.warn("WARNING: An adapter specified for AdapterRemoval "
+                    "corresponds to the default sequence, but is reverse "
+                    "complemented. Please make sure that this is intended! ")
 
         if results["--pcr2"]:
-            print_warn("For --pcr2, the sequence given should be the "
-                       "reverse complement of the sequence observed in the "
-                       "mate 2 FASTQ file.\n")
+            logger.warn("For --pcr2, the sequence given should be the "
+                        "reverse complement of the sequence observed in the "
+                        "mate 2 FASTQ file.")
 
         if results["--adapter2"]:
-            print_warn("For --adapter2 (AdapterRemoval v2, only) the value "
-                       "should be exactly as observed in the FASTQ reads.\n")
+            logger.warn("For --adapter2 (AdapterRemoval v2, only) the value "
+                        "should be exactly as observed in the FASTQ reads.")
 
 
 def _validate_makefile_libraries(makefile):
@@ -677,6 +678,7 @@ def _validate_makefiles_duplicate_files(makefiles):
         if len(records) > 1:
             has_overlap[filename] = list(set(records))
 
+    logger = logging.getLogger(__name__)
     by_records = sorted(zip(has_overlap.values(), has_overlap.keys()))
     for (records, pairs) in itertools.groupby(by_records, lambda x: x[0]):
         pairs = list(pairs)
@@ -686,8 +688,7 @@ def _validate_makefiles_duplicate_files(makefiles):
             message = "Path included multiple times in target:\n"
             raise MakefileError(message + description)
         else:
-            print_warn("WARNING: Path included in multiple targets:\n%s\n"
-                       % (description,))
+            logger.warn("WARNING: Path included in multiple targets: %r", description)
 
 
 def _describe_files_in_multiple_records(records, pairs):
@@ -743,8 +744,9 @@ def _validate_prefixes(makefiles):
     genome is ordered 1 .. 23. This is required since GATK will not run with
     human genomes in a different order.
     """
+    logger = logging.getLogger(__name__)
     already_validated = {}
-    print_info("  - Validating prefixes ...")
+    logger.info("Validating FASTA files")
     for makefile in makefiles:
         uses_gatk = makefile["Options"]["Features"]["RealignedBAM"]
         for prefix in makefile["Prefixes"].itervalues():
@@ -757,12 +759,10 @@ def _validate_prefixes(makefiles):
             prefix["IndexFormat"] = ".bai"
 
             if not os.path.exists(path):
-                print_warn("    - Reference FASTA file does not exist:\n"
-                           "      %r" % (path,))
+                logger.warn("Reference FASTA file does not exist: %r", path)
                 continue
             elif not os.path.exists(path + ".fai"):
-                print_info("    - Index does not exist for %r; this may "
-                           "take a while ..." % (path,))
+                logger.info("Indexing FASTA at %r", path)
 
             try:
                 contigs = FASTA.index_and_collect_contigs(path)
@@ -785,10 +785,10 @@ def _validate_prefixes(makefiles):
                                         % (name, prefix["Name"], error))
 
             if max(contigs.itervalues()) > _BAM_MAX_SEQUENCE_LENGTH:
-                print_warn("    - FASTA file %r contains sequences longer "
-                           "than %i! CSI index files will be used instead "
-                           "of BAI index files."
-                           % (path, _BAM_MAX_SEQUENCE_LENGTH))
+                logger.warn("FASTA file %r contains sequences longer "
+                            "than %i! CSI index files will be used instead "
+                            "of BAI index files.",
+                            path, _BAM_MAX_SEQUENCE_LENGTH)
                 prefix["IndexFormat"] = ".csi"
 
             already_validated[path] = prefix
@@ -816,10 +816,10 @@ def _do_validate_hg_prefix(makefile, prefix, contigs, fatal):
 
         raise MakefileError(message)
     else:
-        details = \
-            "You will not be able to use the resulting BAM file with GATK."
-        message %= (mkfile_path, prefix_path, details)
-        print_warn("\nWARNING:\n", message, sep="")
+        details = "You will not be able to use the resulting BAM file with GATK."
+
+        logger = logging.getLogger(__name__)
+        logger.warn(message, mkfile_path, prefix_path, details)
 
 
 def _is_invalid_hg_prefix(contigs):

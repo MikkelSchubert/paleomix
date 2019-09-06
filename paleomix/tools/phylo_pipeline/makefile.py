@@ -20,9 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import logging
 import os
-import pysam
 import types
+
+import pysam
 
 import paleomix.common.makefile
 from paleomix.common.makefile import \
@@ -64,11 +66,12 @@ from paleomix.common.formats.fasta import \
 
 
 def read_makefiles(options, filenames, commands):
-    print_info("Reading makefile(s):")
+    logger = logging.getLogger(__name__)
     steps = frozenset(key for (key, _) in commands)
 
     makefiles = []
     for filename in filenames:
+        logger.info("Reading makefile %r", filename)
         makefile = paleomix.common.makefile.read_makefile(filename, _VALIDATION)
         makefile = _mangle_makefile(options, makefile["Makefile"], steps)
         makefiles.append(makefile)

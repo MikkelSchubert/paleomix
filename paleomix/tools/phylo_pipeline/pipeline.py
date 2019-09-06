@@ -23,12 +23,10 @@
 import logging
 import os
 import sys
-import time
 
 import paleomix.logger
 import paleomix.resources
 import paleomix.tools.phylo_pipeline.mkfile as mkfile
-import paleomix.ui
 import paleomix.yaml
 
 from paleomix.pipeline import Pypeline
@@ -100,10 +98,13 @@ def main(argv):
                   "\n    ".join(str(error).split("\n")))
         return 1
 
-    logfile_template = time.strftime("phylo_pipeline.%Y%m%d_%H%M%S_%%02i.log")
-    paleomix.logger.initialize(config, logfile_template)
-    logger = logging.getLogger(__name__)
+    paleomix.logger.initialize(
+        log_level=config.log_level,
+        log_file=config.log_file,
+        name='phylo_pipeline',
+    )
 
+    logger = logging.getLogger(__name__)
     for (command_key, command_func) in commands:
         logger.info("Building %s pipeline ...", command_key)
         command_func(pipeline, config, makefiles)
@@ -131,7 +132,6 @@ def main(argv):
         return 0
 
     if not pipeline.run(max_threads=config.max_threads,
-                        dry_run=config.dry_run,
-                        progress_ui=config.progress_ui):
+                        dry_run=config.dry_run):
         return 1
     return 0

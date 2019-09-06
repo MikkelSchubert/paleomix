@@ -24,7 +24,6 @@ import logging
 import os
 import shutil
 import tarfile
-import time
 
 import paleomix
 import paleomix.yaml
@@ -60,8 +59,11 @@ def run_pipeline(config, nodes, msg):
     pipeline = Pypeline(config)
     pipeline.add_nodes(nodes)
 
-    logfile_template = time.strftime("zonkey_pipeline.%Y%m%d_%H%M%S_%%02i.log")
-    paleomix.logger.initialize(config, logfile_template)
+    paleomix.logger.initialize(
+        log_level=config.log_level,
+        log_file=config.log_file,
+        name='zonkey',
+    )
 
     logger = logging.getLogger(__name__)
     logger.info(msg)
@@ -80,7 +82,6 @@ def run_pipeline(config, nodes, msg):
         return pipeline.to_dot(config.dot_file)
 
     return pipeline.run(max_threads=config.max_threads,
-                        progress_ui=config.progress_ui,
                         dry_run=config.dry_run)
 
 

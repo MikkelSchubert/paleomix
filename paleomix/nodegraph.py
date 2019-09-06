@@ -113,7 +113,6 @@ class NodeGraph:
 
     def __init__(self, nodes, cache_factory=FileStatusCache):
         self._cache_factory = cache_factory
-        self._state_observers = []
         self._states = {}
 
         nodes = safe_coerce_to_frozenset(nodes)
@@ -124,15 +123,15 @@ class NodeGraph:
         self._intersections = {}
         self._top_nodes = [node for (node, rev_deps) in self._reverse_dependencies.iteritems() if not rev_deps]
 
-        self._logger.info("  - Checking file dependencies ...")
+        self._logger.info("Checking file dependencies")
         self._check_file_dependencies(self._reverse_dependencies)
-        self._logger.info("  - Checking for required executables ...")
+        self._logger.info("Checking for required executables")
         self._check_required_executables(self._reverse_dependencies)
-        self._logger.info("  - Checking version requirements ...")
+        self._logger.info("Checking version requirements")
         self._check_version_requirements(self._reverse_dependencies)
-        self._logger.info("  - Determining states ...")
+        self._logger.info("Determining states")
         self.refresh_states()
-        self._logger.info("  - Ready ...\n")
+        self._logger.info("Ready")
 
     def get_node_state(self, node):
         return self._states[node]
@@ -145,7 +144,7 @@ class NodeGraph:
             return
 
         self._states[node] = state
-        self._notify_state_observers(node, old_state, state, True)
+        self._notify_state_observers(node, old_state, state)
 
         intersections = self._calculate_intersections(node)
 
@@ -164,10 +163,7 @@ class NodeGraph:
                     if requires_update[node]:
                         old_state = self._states.pop(node)
                         new_state = self._update_node_state(node, cache)
-                        if new_state != old_state:
-                            self._notify_state_observers(node, old_state,
-                                                         new_state, False)
-                            has_changed = True
+                        has_changed |= new_state != old_state
 
                     for dependency in self._reverse_dependencies[node]:
                         intersections[dependency] -= 1
@@ -192,33 +188,12 @@ class NodeGraph:
         self._states = states
         for node in self._reverse_dependencies:
             self._update_node_state(node, cache)
-        self._refresh_state_observers()
 
-    def add_state_observer(self, observer):
-        """Add an observer of changes to the node-graph. The observer
-        is expected to have the following functions:
-
-        refresh(nodegraph):
-          Called when an observer has been added, or when 'refresh_states'
-          has been called on the nodegraph. The observer should rebuild any
-          internal state at this point.
-
-        state_changed(node, old_state, new_state, is_primary):
-          Called when the state of an node has changed. 'is_primary' is
-          True only if the node for which 'set_node_state' was called,
-          and false for nodes the state of which changed as a consequence
-          of the change to the node marked 'is_primary'. This includes
-          ERROR propegating, and more."""
-        self._state_observers.append(observer)
-        observer.refresh(self)
-
-    def _notify_state_observers(self, node, old_state, new_state, is_primary):
-        for observer in self._state_observers:
-            observer.state_changed(node, old_state, new_state, is_primary)
-
-    def _refresh_state_observers(self):
-        for observer in self._state_observers:
-            observer.refresh(self)
+    def _notify_state_observers(self, node, _old_state, new_state):
+        if new_state == self.RUNNING:
+            self._logger.info('Started running node %s', node)
+        elif new_state == self.DONE:
+            self._logger.info('Finished running node %s', node)
 
     def _calculate_intersections(self, for_node):
         def count_nodes(node, counts):
@@ -324,8 +299,8 @@ class NodeGraph:
 
         try:
             for requirement in exec_requirements:
-                self._logger.info("    - Checking version of %r ..."
-                                  % (requirement.name,))
+                version = ".".join(str(value) for value in requirement.version)
+                self._logger.info(" - Found %s v%s", requirement.name, version)
 
                 requirement()
         except versions.VersionRequirementError, error:

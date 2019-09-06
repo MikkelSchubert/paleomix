@@ -48,11 +48,6 @@ def print_msg(*vargs, **kwargs):
     print(*vargs, **kwargs)
 
 
-def print_debug(*vargs, **kwargs):
-    """Equivalent to print, but prints using shell colorcodes (blue)."""
-    _do_print_color(*vargs, colorcode=36, **kwargs)
-
-
 def print_info(*vargs, **kwargs):
     """Equivalent to print, but prints using shell colorcodes (green)."""
     _do_print_color(*vargs, colorcode=32, **kwargs)
@@ -66,11 +61,6 @@ def print_err(*vargs, **kwargs):
 def print_warn(*vargs, **kwargs):
     """Equivalent to print, but prints using shell colorcodes (yellow)."""
     _do_print_color(*vargs, colorcode=33, **kwargs)
-
-
-def print_disabled(*vargs, **kwargs):
-    """Equivalent to print, but prints using shell colorcodes (gray)."""
-    _do_print_color(*vargs, colorcode=30, **kwargs)
 
 
 def _do_print_color(*vargs, **kwargs):
@@ -95,5 +85,6 @@ def _do_print_color(*vargs, **kwargs):
 
     if '\n' in kwargs.get('end', '\n'):
         destination.flush()
+
 
 _COLORS = COLORS_ON

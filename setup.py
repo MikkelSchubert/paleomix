@@ -70,9 +70,12 @@ setup(
 
     packages=find_packages(exclude=['misc', 'tests']),
 
-    install_requires=['pysam>=0.10.0',
-                      'ruamel.yaml>=0.16.0',
-                      'setproctitle>=1.1.0'],
+    install_requires=[
+        'coloredlogs>=10.0',
+        'pysam>=0.10.0',
+        'ruamel.yaml>=0.16.0',
+        'setproctitle>=1.1.0',
+    ],
 
     # Dependencies set in setup_requires to allow use of 'setup.py nosetests'
     setup_requires=['nose>=1.3.0',

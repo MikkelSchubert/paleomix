@@ -34,7 +34,7 @@ from paleomix.tools.zonkey.common import \
     get_sample_names, \
     contig_name_to_plink_name
 
-from paleomix.ui import \
+from paleomix.common.console import \
     print_warn, \
     print_info, \
     print_err

@@ -21,6 +21,7 @@
 # SOFTWARE.
 #
 import os
+import logging
 
 from paleomix.common.utilities import safe_coerce_to_tuple
 from paleomix.nodes.picard import MergeSamFilesNode
@@ -29,7 +30,6 @@ from paleomix.tools.bam_pipeline.nodes import \
 from paleomix.nodes.validation import \
     DetectInputDuplicationNode
 
-import paleomix.ui as ui
 import paleomix.nodes.gatk as gatk
 
 
@@ -54,14 +54,13 @@ class Prefix(object):
         build_realigned_bam = features["RealignedBAM"]
         if build_realigned_bam and prefix['IndexFormat'] == '.csi':
             if prefix['Path'] not in _CSI_WARNINGS:
-                ui.print_err("\nWARNING: Realigned BAMs enabled for reference "
-                             "genome %r, but the file contains sequences too "
-                             "large for GATK, which does not support .csi "
-                             "index files. Raw BAMs will be built instead of "
-                             "realigned BAMs, for this reference sequence."
-                             % (prefix['Path']))
-
-                # TODO: Add reference to FAQ when written.
+                logging.warning(
+                    "Realigned BAMs enabled for reference "
+                    "genome %r, but the file contains sequences too "
+                    "large for GATK, which does not support .csi "
+                    "index files. Raw BAMs will be built instead of "
+                    "realigned BAMs, for this reference sequence.",
+                    prefix['Path'])
 
             _CSI_WARNINGS.add(prefix['Path'])
             build_realigned_bam = False

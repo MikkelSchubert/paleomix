@@ -23,7 +23,6 @@
 import optparse
 
 import paleomix
-import paleomix.ui
 
 from paleomix.config import \
      ConfigError, \
@@ -31,7 +30,7 @@ from paleomix.config import \
      PerHostConfig
 
 
-def _run_config_parser(argv, pipeline_variant):
+def parse_config(argv, pipeline_variant):
     per_host_cfg = PerHostConfig("bam_pipeline")
     pipeline_variant = "%s_pipeline" % (pipeline_variant,)
 
@@ -39,9 +38,6 @@ def _run_config_parser(argv, pipeline_variant):
     version_str = "paleomix %s v%s" % (pipeline_variant, paleomix.__version__)
     parser = optparse.OptionParser(usage=usage_str, version=version_str)
 
-    paleomix.ui.add_optiongroup(parser,
-                                ui_default=PerHostValue("running"),
-                                color_default=PerHostValue("on"))
     paleomix.logger.add_optiongroup(parser, default = PerHostValue("warning"))
 
     group = optparse.OptionGroup(parser, "Scheduling")
@@ -97,10 +93,3 @@ def _run_config_parser(argv, pipeline_variant):
     parser.add_option_group(group)
 
     return per_host_cfg.parse_args(parser, argv)
-
-
-def parse_config(argv, pipeline_variant):
-    config, args = _run_config_parser(argv, pipeline_variant)
-    paleomix.ui.set_ui_colors(config.ui_colors)
-
-    return config, args

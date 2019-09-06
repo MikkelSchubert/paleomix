@@ -26,7 +26,7 @@ import collections
 
 import pysam
 
-from paleomix.ui import \
+from paleomix.common.console import \
     print_err, \
     print_msg, \
     print_warn

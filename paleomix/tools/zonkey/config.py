@@ -28,9 +28,8 @@ import optparse
 import pysam
 
 import paleomix
-import paleomix.ui
 
-from paleomix.ui import \
+from paleomix.common.console import \
     print_err, \
     print_info
 
@@ -322,9 +321,6 @@ def _parse_arguments(argv):
 
     parser.add_option_group(group)
 
-    paleomix.ui.add_optiongroup(parser,
-                                ui_default=PerHostValue("progress"),
-                                color_default=PerHostValue("on"))
     paleomix.logger.add_optiongroup(parser, default=PerHostValue("warning"))
 
     group = optparse.OptionGroup(parser, "Pipeline")
@@ -350,7 +346,6 @@ def _parse_arguments(argv):
     parser.add_option_group(group)
 
     config, args = per_host_cfg.parse_args(parser, argv)
-    paleomix.ui.set_ui_colors(config.ui_colors)
 
     indep_opts = (config.indep, config.indep_pairwise, config.indep_pairphase)
     if sum(bool(value) for value in indep_opts) > 1:

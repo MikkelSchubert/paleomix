@@ -20,18 +20,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+from __future__ import print_function
+
 import os
-import time
 import logging
 
 import paleomix
 import paleomix.logger
 import paleomix.resources
 import paleomix.yaml
-
-from paleomix.common.console import \
-    print_err, \
-    print_info
 
 from paleomix.pipeline import \
     Pypeline
@@ -64,8 +61,6 @@ def build_pipeline_trimming(config, makefile):
 
     nodes = []
     for (_, samples) in makefile["Targets"].iteritems():
-        print_info(".", end='')
-
         for libraries in samples.itervalues():
             for barcodes in libraries.itervalues():
                 for record in barcodes.itervalues():
@@ -82,8 +77,6 @@ def build_pipeline_full(config, makefile, return_nodes=True):
     result = []
     features = makefile["Options"]["Features"]
     for (target_name, sample_records) in makefile["Targets"].iteritems():
-        print_info(".", end='')
-
         prefixes = []
         for (_, prefix) in makefile["Prefixes"].iteritems():
             samples = []
@@ -175,37 +168,37 @@ def index_references(config, makefiles):
 
 
 def run(config, args, pipeline_variant):
+    paleomix.logger.initialize(
+        log_level=config.log_level,
+        log_file=config.log_file,
+        name='bam_pipeline',
+    )
+
+    logger = logging.getLogger(__name__)
     if pipeline_variant not in ("bam", "trim"):
-        raise ValueError("Unexpected BAM pipeline variant (%r)"
-                         % (pipeline_variant,))
+        logger.critical("Unexpected BAM pipeline variant %r", pipeline_variant)
+        return 1
 
     if not os.path.exists(config.temp_root):
         try:
             os.makedirs(config.temp_root)
-        except OSError, error:
-            print_err("ERROR: Could not create temp root:\n\t%s" % (error,))
+        except OSError as error:
+            logger.error("Could not create temp root: %s", error)
             return 1
 
     if not os.access(config.temp_root, os.R_OK | os.W_OK | os.X_OK):
-        print_err("ERROR: Insufficient permissions for temp root: '%s'"
-                  % (config.temp_root,))
+        logger.error("Insufficient permissions for temp root: %r",
+                     config.temp_root)
         return 1
 
     # Init worker-threads before reading in any more data
     pipeline = Pypeline(config)
 
     try:
-        print_info("Reading makefiles ...")
         makefiles = read_makefiles(config, args, pipeline_variant)
-    except (MakefileError, paleomix.yaml.YAMLError, IOError), error:
-        print_err("Error reading makefiles:",
-                  "\n  %s:\n   " % (error.__class__.__name__,),
-                  "\n    ".join(str(error).split("\n")))
+    except (MakefileError, paleomix.yaml.YAMLError, IOError) as error:
+        logger.error("Error reading makefiles: %s", error)
         return 1
-
-    logfile_template = time.strftime("bam_pipeline.%Y%m%d_%H%M%S_%%02i.log")
-    paleomix.logger.initialize(config, logfile_template)
-    logger = logging.getLogger(__name__)
 
     pipeline_func = build_pipeline_trimming
     if pipeline_variant == "bam":
@@ -214,8 +207,8 @@ def run(config, args, pipeline_variant):
 
         pipeline_func = build_pipeline_full
 
-    print_info("Building BAM pipeline ", end='')
     for makefile in makefiles:
+        logger.info("Building BAM pipeline for %r", makefile['Statistics']['Filename'])
         # If a destination is not specified, save results in same folder as the
         # makefile
         filename = makefile["Statistics"]["Filename"]
@@ -233,8 +226,6 @@ def run(config, args, pipeline_variant):
         config.destination = old_destination
 
         pipeline.add_nodes(*nodes)
-
-    print_info("")
 
     if config.list_input_files:
         logger.info("Printing output files ...")
@@ -256,8 +247,7 @@ def run(config, args, pipeline_variant):
 
     logger.info("Running BAM pipeline ...")
     if not pipeline.run(dry_run=config.dry_run,
-                        max_threads=config.max_threads,
-                        progress_ui=config.progress_ui):
+                        max_threads=config.max_threads):
         return 1
 
     return 0
@@ -274,9 +264,9 @@ def _print_usage(pipeline):
         "  -- {cmd} dryrun [...]   -- Perform dry run of pipeline.\n" \
         "  -- {cmd} run [...]      -- Run pipeline on provided makefiles.\n"
 
-    print_info(usage.format(version=paleomix.__version__,
-                            cmd=basename,
-                            pad=" " * len(basename)))
+    print(usage.format(version=paleomix.__version__,
+                       cmd=basename,
+                       pad=" " * len(basename)))
 
 
 def main(argv, pipeline="bam"):
@@ -300,14 +290,11 @@ def main(argv, pipeline="bam"):
     try:
         config, args = bam_config.parse_config(argv, pipeline)
 
-        if not args[1:]:
-            print_err("Please specify at least one makefile!")
-            print_err("Use --help for more information.")
-            return 1
-        elif args and args[0].startswith("dry"):
+        if args and args[0].startswith("dry"):
             config.dry_run = True
-    except bam_config.ConfigError, error:
-        print_err(error)
+    except bam_config.ConfigError as error:
+        logger = logging.getLogger(__name__)
+        logger.error(error)
         return 1
 
     return run(config, args[1:], pipeline_variant=pipeline)
