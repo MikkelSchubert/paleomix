@@ -341,8 +341,6 @@ def _parse_arguments(argv):
     group.add_option("--list-executables", action="store_true", default=False,
                      help="List all executables required by the pipeline, "
                           "with version requirements (if any).")
-    group.add_option("--to-dot-file", dest="dot_file",
-                     help="Write dependency tree to the specified dot-file.")
     parser.add_option_group(group)
 
     config, args = per_host_cfg.parse_args(parser, argv)

@@ -239,11 +239,6 @@ def run(config, args, pipeline_variant):
         logger.info("Printing required executables ...")
         pipeline.print_required_executables()
         return 0
-    elif config.dot_file:
-        logger.info("Writing dependency graph to %r ...", config.dot_file)
-        if not pipeline.to_dot(config.dot_file):
-            return 1
-        return 0
 
     logger.info("Running BAM pipeline ...")
     if not pipeline.run(dry_run=config.dry_run,

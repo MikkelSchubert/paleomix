@@ -10,7 +10,7 @@
   - Removed entry-points other than the 'paleomix' command.
   - Removed 'sample_pileup' command.
   - Removed 'Random Sampling' and 'Reference Sequence' genotyping methods
-
+  - Removed --to-dot option for pipelines.
 
 ## [1.2.13.4] - 2019-03-25
 ### Fixed
