@@ -20,7 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import collections
 import itertools
 import re
 
@@ -96,7 +95,7 @@ def parse_lines(lines, parser):
 
     Supports the parser functions available in 'pysam': asGTF, asBED, etc.
     """
-    if not isinstance(parser, collections.Callable):
+    if not callable(parser):
         raise TypeError(
             "'parser' must be a callable, not %r" % parser.__class__.__name__
         )

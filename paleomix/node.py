@@ -20,7 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import collections
 import os
 import sys
 import traceback
@@ -223,7 +222,7 @@ class Node(object):
     def _validate_requirements(cls, requirements):
         requirements = safe_coerce_to_frozenset(requirements)
         for requirement in requirements:
-            if not isinstance(requirement, collections.Callable):
+            if not callable(requirement):
                 raise TypeError(
                     "'requirements' must be callable, not %r" % (type(requirement),)
                 )

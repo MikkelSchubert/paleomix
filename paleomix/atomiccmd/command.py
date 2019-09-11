@@ -382,7 +382,7 @@ class AtomicCmd(object):
                     raise TypeError("%s must be string, not %r" % (key, value))
 
         for (key, value) in arguments.get("CHECK", {}).items():
-            if not isinstance(value, collections.Callable):
+            if not callable(value):
                 raise TypeError("%s must be callable, not %r" % (key, value))
 
         for group in ("TEMP_IN", "TEMP_OUT"):

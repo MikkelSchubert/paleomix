@@ -43,7 +43,6 @@ For example, to check that the Java version is v1.7 or later:
     except VersionRequirementError:
         pass  # requirements not met, or failure to determine version
 """
-import collections
 import operator
 import re
 
@@ -159,7 +158,7 @@ class RequirementObj(object):
         """Returns the executable invoked during version determination; if no
         executable is invoked, None is returned.
         """
-        if not isinstance(self._call[0], collections.Callable):
+        if not callable(self._call[0]):
             return self._call[0]
 
     def __call__(self, force=False):
@@ -225,7 +224,7 @@ class RequirementObj(object):
 
     def _describe_call(self):
         """Returns lines describing the current system call, if any."""
-        if not isinstance(self._call[0], collections.Callable):
+        if not callable(self._call[0]):
             yield "Attempted to run command:"
             yield "    $ %s" % (" ".join(self._call),)
 
@@ -244,7 +243,7 @@ class Check(TotallyOrdered):
     """
 
     def __init__(self, description, func, *values):
-        if not isinstance(func, collections.Callable):
+        if not callable(func):
             raise TypeError("func must be callable, not %r" % (func,))
 
         values = tuple(values)
@@ -422,7 +421,7 @@ def _do_call(call):
     try:
         result = _CALL_CACHE[call]
     except KeyError:
-        if isinstance(call[0], collections.Callable):
+        if callable(call[0]):
             result = call[0](*call[1:])
         else:
             result = _run(call)
