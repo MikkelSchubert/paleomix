@@ -165,9 +165,7 @@ def encode_genotype(nucleotides):
     try:
         return _NT_CODES_TABLE[frozenset(nucleotides)]
     except KeyError:
-        raise ValueError(
-            "Invalid input for 'encode_genotype': %s" % (repr(nucleotides),)
-        )
+        raise ValueError(nucleotides)
 
 
 def split(sequence, split_by="123"):
@@ -180,7 +178,7 @@ def split(sequence, split_by="123"):
     are interleaved (e.g. split_by = "112" returns the first two positions in a codon
     as one sequence, as well as the last positions as one sequence."""
     if not split_by:
-        raise TypeError("No partitions to split by specified")
+        raise ValueError("No split_by specified")
 
     results = dict((key, []) for key in split_by)
     keys = itertools.chain(itertools.cycle(split_by))

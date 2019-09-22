@@ -140,7 +140,7 @@ def _pformat(atomiccmd, stats, indent, lines, include_prefix=True):
         c_prefix = s_prefix + "Command = "
         for line in _pformat_list(atomiccmd._generate_call(temp)).split("\n"):
             if atomiccmd._temp is not None:
-                line = line.replace("${TEMP_DIR}", atomiccmd._temp)
+                line = line.replace("${TEMP_DIR}", str(atomiccmd._temp))
 
             lines.append("%s%s" % (c_prefix, line))
             c_prefix = " " * len(c_prefix)

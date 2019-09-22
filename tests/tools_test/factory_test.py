@@ -23,7 +23,7 @@
 import os
 import subprocess
 
-from nose.tools import assert_in, assert_equal
+import pytest
 
 import paleomix.tools.factory as factory
 
@@ -62,8 +62,8 @@ def check_run(call, *args, **kwargs):
 def test_paleomix_command():
     stdout, stderr = check_run(["paleomix"])
 
-    assert_equal("", stdout)
-    assert_in("PALEOMIX - pipelines and tools for NGS data analyses.", stderr)
+    assert stdout == ""
+    assert "PALEOMIX - pipelines and tools for NGS data analyses." in stderr
 
 
 FACTORY_COMMANDS = (
@@ -99,17 +99,14 @@ FACTORY_COMMANDS = (
 
 
 # Simple test that all commands can be executed
-def test_factory__commands():
-    def _do_test_factory__commands(command, expected):
-        cmd = factory.new(command)
-        call = cmd.finalized_call
-        if command in ("bam_pipeline", "trim_pipeline"):
-            call.append("run")
+@pytest.mark.parametrize("command, expected", FACTORY_COMMANDS)
+def test_factory__commands(command, expected):
+    cmd = factory.new(command)
+    call = cmd.finalized_call
+    if command in ("bam_pipeline", "trim_pipeline"):
+        call.append("run")
 
-        stdout, stderr = check_run(call + ["--help"])
+    stdout, stderr = check_run(call + ["--help"])
 
-        assert_equal(expected, stdout.split("\n")[0])
-        assert_equal("", stderr)
-
-    for command, expected in FACTORY_COMMANDS:
-        yield _do_test_factory__commands, command, expected
+    assert stdout.split("\n")[0] == expected
+    assert stderr == ""

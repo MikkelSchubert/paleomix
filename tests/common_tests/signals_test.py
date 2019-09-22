@@ -22,21 +22,21 @@
 #
 
 import signal
-import paleomix.common.signals as signals
 
-import nose
-from nose.tools import assert_equal
+import pytest
+
+import paleomix.common.signals as signals
 
 
 def test_signal__sigterm_to_str():
-    assert_equal(signals.to_str(signal.SIGTERM), "SIGTERM")
+    assert signals.to_str(signal.SIGTERM) == "SIGTERM"
 
 
-@nose.tools.raises(KeyError)
 def test_signal__to_str__unknown_signal():
-    signals.to_str(1024)
+    with pytest.raises(KeyError):
+        signals.to_str(1024)
 
 
-@nose.tools.raises(TypeError)
 def test_signal__to_str__wrong_type():
-    signals.to_str("SIGTERM")
+    with pytest.raises(TypeError):
+        signals.to_str("SIGTERM")

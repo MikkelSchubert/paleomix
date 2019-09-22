@@ -21,8 +21,8 @@
 # SOFTWARE.
 #
 import itertools
-import nose.tools
-from nose.tools import assert_equal
+
+import pytest
 
 from paleomix.common.sequences import (
     complement,
@@ -38,28 +38,24 @@ from paleomix.common.sequences import (
 
 _REF_SRC = "ACGTMRWSYKVHDBNX"
 _REF_DST = "TGCAKYWSRMBDHVNX"
-_REF_PAIRS = list(zip(_REF_SRC, _REF_DST))
 
 
-def test_complement__single_nt():
-    def test_function(source, destination):
-        assert_equal(complement(source), destination)
-
-    for (src, dest) in _REF_PAIRS:
-        yield test_function, src, dest
-        yield test_function, src.lower(), dest.lower()
+@pytest.mark.parametrize("src, dst", zip(_REF_SRC, _REF_DST))
+def test_complement__single_nt(src, dst):
+    assert complement(src) == dst
+    assert complement(src.lower()) == dst.lower()
 
 
 def test_complement__multiple_nts_upper():
-    assert_equal(complement(_REF_SRC), _REF_DST)
+    assert complement(_REF_SRC) == _REF_DST
 
 
 def test_complement__multiple_nts_lower():
-    assert_equal(complement(_REF_SRC.lower()), _REF_DST.lower())
+    assert complement(_REF_SRC.lower()) == _REF_DST.lower()
 
 
 def test_complement__multiple_nts_mixed_case():
-    assert_equal(complement("aGtCn"), "tCaGn")
+    assert complement("aGtCn") == "tCaGn"
 
 
 ###############################################################################
@@ -68,7 +64,7 @@ def test_complement__multiple_nts_mixed_case():
 
 
 def test_reverse_complement():
-    assert_equal(reverse_complement(_REF_SRC), _REF_DST[::-1])
+    assert reverse_complement(_REF_SRC) == _REF_DST[::-1]
 
 
 ###############################################################################
@@ -93,44 +89,23 @@ _IUB_SRC = (
     "ACGT",
 )
 _IUB_DST = "ACGTMRWSYKVHDB"
-_IUB_PAIRS = list(zip(_IUB_SRC, _IUB_DST))
 
 
-def test_genotype__permutations():
-    def test_function(src, dst):
-        assert_equal(encode_genotype(src), dst)
-
-    for (src, dst) in _IUB_PAIRS:
-        for seq in itertools.permutations(src):
-            yield test_function, "".join(seq), dst
+@pytest.mark.parametrize("src, dst", zip(_IUB_SRC, _IUB_DST))
+def test_genotype__permutations(src, dst):
+    for seq in itertools.permutations(src):
+        assert encode_genotype("".join(src)) == dst
 
 
-@nose.tools.raises(ValueError)
-def test_genotype__bad_input__lowercase():
-    encode_genotype("a")
+@pytest.mark.parametrize("value", ("a", "At", "Z", "+"))
+def test_genotype__bad_input(value):
+    with pytest.raises(ValueError):
+        encode_genotype(value)
 
 
-@nose.tools.raises(ValueError)
-def test_genotype__bad_input__mixedcase():
-    encode_genotype("At")
-
-
-@nose.tools.raises(ValueError)
-def test_genotype__bad_input__unknown_nucleotide():
-    encode_genotype("Z")
-
-
-@nose.tools.raises(ValueError)
-def test_genotype__bad_input__non_nucleotide():
-    encode_genotype("+")
-
-
-def test_comma_or_not():
-    def test_function(sequence):
-        assert_equal(encode_genotype(sequence), "Y")
-
-    for sequence in ("CT", "C,T", ",C,T", "C,T,", ",C,T,"):
-        yield test_function, sequence
+@pytest.mark.parametrize("sequence", ("CT", "C,T", ",C,T", "C,T,", ",C,T,"))
+def test_comma_or_not(sequence):
+    assert encode_genotype(sequence) == "Y"
 
 
 ###############################################################################
@@ -139,33 +114,33 @@ def test_comma_or_not():
 
 
 def test_split__empty_sequence():
-    assert_equal(split(""), {"1": "", "2": "", "3": ""})
+    assert split("") == {"1": "", "2": "", "3": ""}
 
 
-@nose.tools.raises(TypeError)
 def test_split__no_split_by():
-    split("", split_by="")
+    with pytest.raises(ValueError, match="No split_by specified"):
+        split("", split_by="")
 
 
 def test_split__single_group():
-    assert_equal(split("ACGCAT", "111"), {"1": "ACGCAT"})
+    assert split("ACGCAT", "111") == {"1": "ACGCAT"}
 
 
 def test_split__two_groups():
-    assert_equal(split("ACGCAT", "112"), {"1": "ACCA", "2": "GT"})
+    assert split("ACGCAT", "112") == {"1": "ACCA", "2": "GT"}
 
 
 def test_split__three_groups():
     expected = {"1": "AC", "2": "CA", "3": "GT"}
-    assert_equal(split("ACGCAT", "123"), expected)
-    assert_equal(split("ACGCAT"), expected)
+    assert split("ACGCAT", "123") == expected
+    assert split("ACGCAT") == expected
 
 
 def test_split__empty_group():
     expected = {"1": "A", "2": "C", "3": ""}
-    assert_equal(split("AC"), expected)
+    assert split("AC") == expected
 
 
 def test_split__partial_group():
     expected = {"1": "AA", "2": "CA", "3": "G"}
-    assert_equal(split("ACGAA"), expected)
+    assert split("ACGAA") == expected

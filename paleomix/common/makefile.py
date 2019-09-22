@@ -168,8 +168,8 @@ raised which describes the problem. For example, suppose that an "Output_File"
 value has accidentically been left blank ('IsStr' requires a NON-EMPTY string):
 -------------------------------------------------------------------------------
 |  Makefile requirement not met at ...:
-|    Expected value(s): a non-empty string
-|    Observed value(s): ''
+|    Expected value: a non-empty string
+|    Observed value: ''
 -------------------------------------------------------------------------------
 """
 import copy
@@ -304,8 +304,8 @@ class MakefileSpec(object):
             raise ValueError(
                 (
                     "Default value does not meet requirements:\n"
-                    "  Expected value(s): %s\n"
-                    "  Observed value(s): %r\n"
+                    "  Expected value: %s\n"
+                    "  Observed value: %r\n"
                 )
                 % (description, default)
             )
@@ -315,9 +315,9 @@ class MakefileSpec(object):
             raise MakefileError(
                 (
                     "Makefile requirement not met at %r:\n"
-                    "  Expected value(s): %s\n"
-                    "  Observed value(s): %r\n"
-                    "  Observed type:     %s"
+                    "  Expected value: %s\n"
+                    "  Observed value: %r\n"
+                    "  Observed type:  %s"
                 )
                 % (_path_to_str(path), self.description, value, type(value).__name__)
             )
@@ -397,7 +397,7 @@ class IsNone(MakefileSpec):
     """Require that the value is None, typically signifying that
     the value was not set in the makefile."""
 
-    def __init__(self, description="None or not set", default=DEFAULT_NOT_SET):
+    def __init__(self, description="null or not set", default=DEFAULT_NOT_SET):
         if default is not DEFAULT_NOT_SET:
             raise NotImplementedError("IsNone does not support default values")
         MakefileSpec.__init__(self, description, default)
@@ -471,7 +471,9 @@ class ValueIn(_BinaryOperator):
 
 class ValuesIntersect(_BinaryOperator):
     def __init__(self, rvalues, key=None, description=None, default=DEFAULT_NOT_SET):
-        description = description or "intersects %s" % (_list_values(rvalues, "or"),)
+        if not description:
+            description = "one or more of %s" % (_list_values(rvalues, "and"),)
+
         _BinaryOperator.__init__(
             self,
             description=description,
@@ -492,7 +494,7 @@ class ValuesIntersect(_BinaryOperator):
 
 class ValuesSubsetOf(_BinaryOperator):
     def __init__(self, rvalues, key=None, description=None, default=DEFAULT_NOT_SET):
-        description = description or "intersects %s" % (_list_values(rvalues, "or"),)
+        description = description or "subset of %s" % (_list_values(rvalues, "and"),)
         _BinaryOperator.__init__(
             self,
             description=description,
@@ -619,7 +621,7 @@ class StringStartsWith(IsStr):
     def __init__(self, prefix, default=DEFAULT_NOT_SET):
         assert prefix and isinstance(prefix, str)
         self._prefix = prefix
-        description = "a string with the prefix %r" % (prefix,)
+        description = "a string with prefix %r" % (prefix,)
         IsStr.__init__(self, description, default)
 
     def meets_spec(self, value):
@@ -634,7 +636,7 @@ class StringEndsWith(IsStr):
     def __init__(self, postfix, default=DEFAULT_NOT_SET):
         assert postfix and isinstance(postfix, str)
         self._postfix = postfix
-        description = "a string with the postfix %r" % (postfix,)
+        description = "a string with postfix %r" % (postfix,)
         IsStr.__init__(self, description, default)
 
     def meets_spec(self, value):

@@ -65,9 +65,6 @@ setup(
         "ruamel.yaml>=0.16.0",
         "setproctitle>=1.1.0",
     ],
-    # Dependencies set in setup_requires to allow use of 'setup.py nosetests'
-    setup_requires=["nose>=1.3.0", "flexmock>=0.9.7", "coverage>=4.0.0"],
-    test_suite="nose.collector",
     entry_points={"console_scripts": ["paleomix=paleomix.main:entry_point"]},
     zip_safe=False,
     include_package_data=True,

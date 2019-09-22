@@ -22,17 +22,15 @@
 #
 import collections
 
-import nose.tools
-from nose.tools import assert_equal
+import pytest
 
 from paleomix.common.text import (
     TableError,
     padded_table,
-    parse_padded_table,
     parse_lines,
     parse_lines_by_contig,
+    parse_padded_table,
 )
-
 
 ###############################################################################
 ###############################################################################
@@ -44,50 +42,43 @@ def _padded_table(*args, **kwargs):
 
 
 def test_padded_table__empty():
-    assert_equal(_padded_table(()), [])
+    assert _padded_table(()) == []
 
 
 def test_padded_table__single_line():
     table = [(1, 20, 3000)]
     expected = ["1    20    3000"]
-    assert_equal(expected, _padded_table(table))
+    assert expected == _padded_table(table)
 
 
 def test_padded_table__two_lines():
     table = [(1, 20, 3000), (3000, 20, 1)]
     expected = ["1       20    3000", "3000    20    1"]
-    assert_equal(expected, _padded_table(table))
+    assert expected == _padded_table(table)
 
 
 def test_padded_table__three_lines():
     table = [(1, 20, 3000), (3000, 20, 1), (1, 2, 30)]
     expected = ["1       20    3000", "3000    20    1", "1       2     30"]
-    assert_equal(expected, _padded_table(table))
+    assert expected == _padded_table(table)
 
 
-def test_padded_table__with_text():
-    row_1, line_1 = (1, 20, 3000), "1       20    3000"
-    row_2, line_2 = (3000, 20, 1), "3000    20    1"
-    comment = "# An insightful comment goes here"
+_PT_COMMENT = "# An insightful comment goes here"
+_PT_ROW_1 = (1, 20, 3000)
+_PT_ROW_2 = (3000, 20, 1)
+_PT_LINE_1 = "1       20    3000"
+_PT_LINE_2 = "3000    20    1"
 
-    def _do_test_padded_table__padding__with_text(table, expected):
-        assert_equal(expected, _padded_table(table))
+_PT_PERMUTATIONS = (
+    ([_PT_COMMENT, _PT_ROW_1, _PT_ROW_2], [_PT_COMMENT, _PT_LINE_1, _PT_LINE_2]),
+    ([_PT_ROW_1, _PT_COMMENT, _PT_ROW_2], [_PT_LINE_1, _PT_COMMENT, _PT_LINE_2]),
+    ([_PT_ROW_1, _PT_ROW_2, _PT_COMMENT], [_PT_LINE_1, _PT_LINE_2, _PT_COMMENT]),
+)
 
-    yield _do_test_padded_table__padding__with_text, [comment, row_1, row_2], [
-        comment,
-        line_1,
-        line_2,
-    ]
-    yield _do_test_padded_table__padding__with_text, [row_1, comment, row_2], [
-        line_1,
-        comment,
-        line_2,
-    ]
-    yield _do_test_padded_table__padding__with_text, [row_1, row_2, comment], [
-        line_1,
-        line_2,
-        comment,
-    ]
+
+@pytest.mark.parametrize("table, expected", _PT_PERMUTATIONS)
+def test_padded_table__with_text(table, expected):
+    assert expected == _padded_table(table)
 
 
 ###############################################################################
@@ -100,17 +91,17 @@ def _parse_padded_table(*args, **kwargs):
 
 
 def test_parse_padded_table__empty():
-    assert_equal([], _parse_padded_table([]))
+    assert [] == _parse_padded_table([])
 
 
 def test_parse_padded_table__header_only():
-    assert_equal([], _parse_padded_table(["A  B  C  D"]))
+    assert [] == _parse_padded_table(["A  B  C  D"])
 
 
 def test_parse_padded_table__single_row():
     table = ["A    B    C    D", "4    3    2    1"]
     expected = [{"A": "4", "B": "3", "C": "2", "D": "1"}]
-    assert_equal(expected, _parse_padded_table(table))
+    assert expected == _parse_padded_table(table)
 
 
 def test_parse_padded_table__two_rows():
@@ -119,69 +110,67 @@ def test_parse_padded_table__two_rows():
         {"A": "4", "B": "3", "C": "2", "D": "1"},
         {"A": "AB", "B": "CD", "C": "EF", "D": "GH"},
     ]
-    assert_equal(expected, _parse_padded_table(table))
+    assert expected == _parse_padded_table(table)
 
 
 # Any amount of whitespace is allowed
 def test_parse_padded_table__single_row__with_whitespace():
     table = ["A   B    C       E F", "1        0  1    2   3"]
     expected = [{"A": "1", "B": "0", "C": "1", "E": "2", "F": "3"}]
-    assert_equal(expected, _parse_padded_table(table))
+    assert expected == _parse_padded_table(table)
 
 
 # Other whitespace should be ignored
 def test_parse_padded_table__single_row__with_tabs():
     table = ["A\t\t\t\tB", "1\t\t\t\t0"]
     expected = [{"A": "1", "B": "0"}]
-    assert_equal(expected, _parse_padded_table(table))
+    assert expected == _parse_padded_table(table)
 
 
-def test_padded_table__comments_and_empty_lines():
-    def _do_test_padded_table__comments(lines):
-        expected = [{"A": "3000", "B": "20", "C": "1"}]
-        assert_equal(expected, _parse_padded_table(lines))
+_PT_COMMENTS_LINE_AND_EMPTY_1 = "A         B      C"
+_PT_COMMENTS_LINE_AND_EMPTY_2 = "3000      20      1"
 
-    line_1 = "A         B      C"
-    line_2 = "3000      20      1"
-
-    yield _do_test_padded_table__comments, ["# comment", line_1, line_2]
-    yield _do_test_padded_table__comments, [line_1, " # comment", line_2]
-    yield _do_test_padded_table__comments, [line_1, line_2, "  # comment"]
-
-    yield _do_test_padded_table__comments, ["", line_1, line_2]
-    yield _do_test_padded_table__comments, [line_1, "  ", line_2]
-    yield _do_test_padded_table__comments, [line_1, line_2, "   "]
+__PT_COMMENTS_LINE_AND_EMPTY = (
+    ["# comment", _PT_COMMENTS_LINE_AND_EMPTY_1, _PT_COMMENTS_LINE_AND_EMPTY_2],
+    [_PT_COMMENTS_LINE_AND_EMPTY_1, " # comment", _PT_COMMENTS_LINE_AND_EMPTY_2],
+    [_PT_COMMENTS_LINE_AND_EMPTY_1, _PT_COMMENTS_LINE_AND_EMPTY_2, "  # comment"],
+    ["", _PT_COMMENTS_LINE_AND_EMPTY_1, _PT_COMMENTS_LINE_AND_EMPTY_2],
+    [_PT_COMMENTS_LINE_AND_EMPTY_1, "  ", _PT_COMMENTS_LINE_AND_EMPTY_2],
+    [_PT_COMMENTS_LINE_AND_EMPTY_1, _PT_COMMENTS_LINE_AND_EMPTY_2, "   "],
+)
 
 
-def test_padded_table__newlines():
+@pytest.mark.parametrize("lines", __PT_COMMENTS_LINE_AND_EMPTY)
+def test_padded_table__comments_and_empty_lines(lines):
+    expected = [{"A": "3000", "B": "20", "C": "1"}]
+    assert expected == _parse_padded_table(lines)
+
+
+@pytest.mark.parametrize("postfix", ("\r", "\n", "\r\n"))
+def test_padded_table__newlines(postfix):
     expected = [{"A": "3000", "B": "20", "C": "1"}]
 
-    def _do_test_padded_table__padding__comments(postfix):
-        line_1 = "A         B       C" + postfix
-        line_2 = "3000      20      1" + postfix
-        assert_equal(expected, _parse_padded_table([line_1, line_2]))
-
-    yield _do_test_padded_table__padding__comments, "\r"
-    yield _do_test_padded_table__padding__comments, "\n"
-    yield _do_test_padded_table__padding__comments, "\r\n"
+    line_1 = "A         B       C" + postfix
+    line_2 = "3000      20      1" + postfix
+    assert expected == _parse_padded_table([line_1, line_2])
 
 
 def test_padded_table__padding__comments__whitespace():
     expected = [{"A": "3000", "B": "20", "C": "1"}]
     lines = ["A         B       C", "3000      20      1", "  # useless comment"]
-    assert_equal(expected, _parse_padded_table(lines))
+    assert expected == _parse_padded_table(lines)
 
 
-@nose.tools.raises(TableError)
 def test_parse_padded_table__malformed_table_0():
     table = ["A    B    C    D", "4    3    2"]
-    _parse_padded_table(table)
+    with pytest.raises(TableError):
+        _parse_padded_table(table)
 
 
-@nose.tools.raises(TableError)
 def test_parse_padded_table__malformed_table_1():
     table = ["A    B    C    D", "4    3    2    1    0"]
-    _parse_padded_table(table)
+    with pytest.raises(TableError):
+        _parse_padded_table(table)
 
 
 ###############################################################################
@@ -199,55 +188,41 @@ def test_parse_lines__empty_file():
     def _assert_false():
         assert False  # pragma: no coverage
 
-    assert_equal(_parse_lines([], _assert_false), [])
+    assert _parse_lines([], _assert_false) == []
 
 
 def test_parse_lines__single():
-    assert_equal(_parse_lines(["abc line1 \n"], _this), [("abc line1", 9)])
+    assert _parse_lines(["abc line1 \n"], _this) == [("abc line1", 9)]
 
 
-def test_parse_lines__comments_and_empty_lines():
-    def _do_test_parse_lines__comments(lines):
-        expected = [("abc line1", 9), ("def line2", 9)]
-        assert_equal(_parse_lines(lines, _this), expected)
-
-    yield _do_test_parse_lines__comments, [
-        "# comment\n",
-        "abc line1 \n",
-        "def line2 \n",
-    ]
-    yield _do_test_parse_lines__comments, [
-        "abc line1 \n",
-        " # comment\n",
-        "def line2 \n",
-    ]
-    yield _do_test_parse_lines__comments, [
-        "abc line1 \n",
-        "def line2 \n",
-        "   # comment\n",
-    ]
-
-    yield _do_test_parse_lines__comments, ["\n", "abc line1 \n", "def line2 \n"]
-    yield _do_test_parse_lines__comments, ["abc line1 \n", " \n", "def line2 \n"]
-    yield _do_test_parse_lines__comments, ["abc line1 \n", "def line2 \n", "   \n"]
+_PT_COMMENTS_AND_EMPTY_LINES = (
+    ["# comment\n", "abc line1 \n", "def line2 \n"],
+    ["abc line1 \n", " # comment\n", "def line2 \n"],
+    ["abc line1 \n", "def line2 \n", "   # comment\n"],
+    ["\n", "abc line1 \n", "def line2 \n"],
+    ["abc line1 \n", " \n", "def line2 \n"],
+    ["abc line1 \n", "def line2 \n", "   \n"],
+)
 
 
-def test_parse_lines__padding__newlines():
+@pytest.mark.parametrize("lines", _PT_COMMENTS_AND_EMPTY_LINES)
+def test_parse_lines__comments_and_empty_lines(lines):
+    expected = [("abc line1", 9), ("def line2", 9)]
+    assert _parse_lines(lines, _this) == expected
+
+
+@pytest.mark.parametrize("postfix", ("\r", "\n", "\r\n"))
+def test_parse_lines__padding__newlines(postfix):
     expected = [("abc line1", 9), ("def line2", 9)]
 
-    def _do_test_padded_table__padding__comments(postfix):
-        line_1 = "abc line1 " + postfix
-        line_2 = "def line2 " + postfix
-        assert_equal(expected, _parse_lines([line_1, line_2], _this))
-
-    yield _do_test_padded_table__padding__comments, "\r"
-    yield _do_test_padded_table__padding__comments, "\n"
-    yield _do_test_padded_table__padding__comments, "\r\n"
+    line_1 = "abc line1 " + postfix
+    line_2 = "def line2 " + postfix
+    assert expected == _parse_lines([line_1, line_2], _this)
 
 
-@nose.tools.raises(TypeError)
 def test_parse_lines__uncallable():
-    _parse_lines([], 1)
+    with pytest.raises(TypeError):
+        _parse_lines([], 1)
 
 
 ###############################################################################
@@ -260,22 +235,22 @@ def test_parse_lines_by_contig__single_contig():
     lines = ["abc line1 \n", "abc line2 \n"]
 
     def _parse(line, length):
-        assert_equal(len(line), length)
+        assert len(line) == length
         return _RecordMock(*line.split())
 
     expected = {"abc": [_RecordMock("abc", "line1"), _RecordMock("abc", "line2")]}
-    assert_equal(parse_lines_by_contig(lines, _parse), expected)
+    assert parse_lines_by_contig(lines, _parse) == expected
 
 
 def test_parse_lines__two_contigs():
     lines = ["abc line1 \n", "def line2 \n"]
 
     def _parse(line, length):
-        assert_equal(len(line), length)
+        assert len(line) == length
         return _RecordMock(*line.split())
 
     expected = {
         "abc": [_RecordMock("abc", "line1")],
         "def": [_RecordMock("def", "line2")],
     }
-    assert_equal(parse_lines_by_contig(lines, _parse), expected)
+    assert parse_lines_by_contig(lines, _parse) == expected

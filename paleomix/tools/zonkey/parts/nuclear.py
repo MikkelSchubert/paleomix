@@ -704,7 +704,7 @@ class PlotTreemixNode(CommandNode):
             CHECK_R=RSCRIPT_VERSION,
             CHECK_R_BREW=rtools.requirement("RColorBrewer"),
             set_cwd=True,
-            **kwargs
+            **kwargs,
         )
 
 

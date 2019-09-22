@@ -60,7 +60,7 @@ class CodemlNode(CommandNode):
             TEMP_OUT_4FOLD="4fold.nuc",
             IN_STDIN="/dev/null",  # Prevent promts from blocking
             set_cwd=True,
-            **CodemlNode._get_codeml_files("TEMP_OUT_CODEML")
+            **CodemlNode._get_codeml_files("TEMP_OUT_CODEML"),
         )
 
         tar_pairs = CodemlNode._get_codeml_files("TEMP_IN_CODEML")
@@ -69,7 +69,7 @@ class CodemlNode(CommandNode):
             ["tar", "cvzf", "%(OUT_FILE)s"] + tar_files,
             OUT_FILE=output_tar,
             set_cwd=True,
-            **tar_pairs
+            **tar_pairs,
         )
 
         CommandNode.__init__(

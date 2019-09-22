@@ -20,25 +20,23 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from flexmock import flexmock
-from nose.tools import assert_equal
-
-from paleomix.common.formats.phylip import interleaved_phy
-
-from paleomix.common.formats.msa import MSA
+from unittest.mock import patch
 
 from paleomix.common.formats.fasta import FASTA
-
+from paleomix.common.formats.msa import MSA
+from paleomix.common.formats.phylip import interleaved_phy
 
 _MSA_SHORT_SEQUENCES = MSA(
     [FASTA("seq1", None, "ACGTTGATAACCAGG"), FASTA("seq2", None, "TGCAGAGTACGACGT")]
 )
+
 _MSA_MEDIUM_SEQUENCES = MSA(
     [
         FASTA("seq1", None, "ACGTTGATAACCAGGAGGGATTCGCGATTGGTGGTAACGTAGCC"),
         FASTA("seq2", None, "TGCAGAGTACGACGTCTCCTAGATCCTGGACAATTTAAACCGAA"),
     ]
 )
+
 _MSA_LONG_SEQUENCES = MSA(
     [
         FASTA(
@@ -64,6 +62,7 @@ _MSA_MEDIUM_NAMES = MSA(
         FASTA("Another_real_long_one!", None, "TGCAGAGTACGACGT"),
     ]
 )
+
 _MSA_LONG_NAMES = MSA(
     [
         FASTA(
@@ -90,7 +89,7 @@ def test_interleaved_phy__short_sequences():
 
 seq1        ACGTTGATAA  CCAGGAGGGA  TTCGCGATTG  GTGGTAACGT  AGCC
 seq2        TGCAGAGTAC  GACGTCTCCT  AGATCCTGGA  CAATTTAAAC  CGAA"""
-    assert_equal(interleaved_phy(_MSA_MEDIUM_SEQUENCES), expected)
+    assert interleaved_phy(_MSA_MEDIUM_SEQUENCES) == expected
 
 
 def test_interleaved_phy__multi_line_sequences():
@@ -104,7 +103,7 @@ AGCCACCCGG  TTCGAAGGAA  CAACTGGTCG  CCATAATTAG  GCGAAACGAT  AGTGCACTAA
 
 ATCAGTTATT  AAATTACCGC  GCCCCGACAG
 GGTCAGGTGC  GCCCCTGTAA  ATAATTAGAT"""
-    assert_equal(interleaved_phy(_MSA_LONG_SEQUENCES), expected)
+    assert interleaved_phy(_MSA_LONG_SEQUENCES) == expected
 
 
 def test_interleaved_phy__with_flag():
@@ -112,7 +111,7 @@ def test_interleaved_phy__with_flag():
 
 seq1        ACGTTGATAA  CCAGG
 seq2        TGCAGAGTAC  GACGT"""
-    assert_equal(interleaved_phy(_MSA_SHORT_SEQUENCES, add_flag=True), expected)
+    assert interleaved_phy(_MSA_SHORT_SEQUENCES, add_flag=True) == expected
 
 
 def test_interleaved_phy__medium_names():
@@ -120,7 +119,7 @@ def test_interleaved_phy__medium_names():
 
 A_really_long_sequence  ACGTTGATAA  CCAGG
 Another_real_long_one!  TGCAGAGTAC  GACGT"""
-    assert_equal(interleaved_phy(_MSA_MEDIUM_NAMES), expected)
+    assert interleaved_phy(_MSA_MEDIUM_NAMES) == expected
 
 
 def test_interleaved_phy__long_names():
@@ -128,7 +127,7 @@ def test_interleaved_phy__long_names():
 
 A_really_long_sequence_name_th      ACGTTGATAA  CCAGG
 Another_really_long_sequence_n      TGCAGAGTAC  GACGT"""
-    assert_equal(interleaved_phy(_MSA_LONG_NAMES), expected)
+    assert interleaved_phy(_MSA_LONG_NAMES) == expected
 
 
 def test_sequentual_phy__different_length_names_1():
@@ -146,7 +145,7 @@ def test_sequentual_phy__different_length_names_1():
 
 A_short_name                        ACGTTGATAA  CCAGG
 Another_really_long_sequence_n      TGCAGAGTAC  GACGT"""
-    assert_equal(interleaved_phy(msa), expected)
+    assert interleaved_phy(msa) == expected
 
 
 def test_sequentual_phy__different_length_names_2():
@@ -160,9 +159,11 @@ def test_sequentual_phy__different_length_names_2():
 
 Burchelli_4             ACGTTGATAA  CCAGG
 Donkey                  TGCAGAGTAC  GACGT"""
-    assert_equal(interleaved_phy(msa), expected)
+    assert interleaved_phy(msa) == expected
 
 
 def test_interleaved_phy__different_lengths():
-    _mock = flexmock(MSA).should_receive("validate").at_least.once
-    interleaved_phy(_MSA_MEDIUM_NAMES)
+    with patch("paleomix.common.formats.msa.MSA.validate", wrap=MSA.validate) as mock:
+        interleaved_phy(_MSA_MEDIUM_NAMES)
+
+    mock.assert_called_once()

@@ -20,16 +20,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
 import copy
 import io
+import os
+from unittest.mock import patch
 
-import nose.tools
-from nose.tools import assert_equal, assert_raises
-from flexmock import flexmock
+import pytest
 
 from paleomix.common.formats.fasta import FASTA
-from paleomix.common.formats.msa import MSA, MSAError, FASTAError
+from paleomix.common.formats.msa import MSA, FASTAError, MSAError
 
 
 def test_dir():
@@ -46,17 +45,21 @@ def test_file(*args):
 
 
 def test_msa_constructor__calls_validate():
-    flexmock(MSA).should_receive("validate").at_least.once
-    MSA([FASTA("NA", None, "ACGT")])
+    with patch("paleomix.common.formats.msa.MSA.validate", wrap=MSA.validate) as mock:
+        MSA([FASTA("NA", None, "ACGT")])
+
+    mock.assert_called_once()
 
 
 def test_msa_constructor__duplicate_names():
     records = [FASTA("Foo", None, "ACGT"), FASTA("Foo", None, "GTCA")]
-    assert_raises(MSAError, MSA, records)
+    with pytest.raises(MSAError):
+        MSA(records)
 
 
 def test_msa_constructor__empty_msa():
-    assert_raises(MSAError, MSA, [])
+    with pytest.raises(MSAError):
+        MSA([])
 
 
 ###############################################################################
@@ -71,7 +74,7 @@ def test_msa__len__corresponds_to_sequence_number_of_records():
             FASTA("seq2", None, "TGAACACACAGTAGGAT"),
         )
     )
-    assert_equal(len(msa), 2)
+    assert len(msa) == 2
 
 
 def test_msa__seqlen__corresponds_to_sequence_lengths():
@@ -81,7 +84,7 @@ def test_msa__seqlen__corresponds_to_sequence_lengths():
             FASTA("seq2", None, "TGAACACACAGTAGGAT"),
         )
     )
-    assert_equal(msa.seqlen(), 17)
+    assert msa.seqlen() == 17
 
 
 ###############################################################################
@@ -95,17 +98,19 @@ def test_msa_exclude__remove_one():
     initial = MSA([fa_1, fa_2])
     expected = MSA([fa_1])
     result = initial.exclude(["B"])
-    assert_equal(result, expected)
+    assert result == expected
 
 
 def test_msa_exclude__missing_keys():
     msa = MSA([FASTA("Foo", None, "ACGT")])
-    assert_raises(KeyError, msa.exclude, ["Bar"])
+    with pytest.raises(KeyError):
+        msa.exclude(["Bar"])
 
 
 def test_msa_exclude__no_keys():
     msa = MSA([FASTA("Foo", None, "ACGT")])
-    assert_raises(ValueError, msa.exclude, [])
+    with pytest.raises(ValueError):
+        msa.exclude([])
 
 
 ###############################################################################
@@ -119,17 +124,19 @@ def test_msa_select__remove_one():
     initial = MSA([fa_1, fa_2])
     expected = MSA([fa_1])
     result = initial.select(["A"])
-    assert_equal(result, expected)
+    assert result == expected
 
 
 def test_msa_select__missing_keys():
     msa = MSA([FASTA("Foo", None, "ACGT")])
-    assert_raises(KeyError, msa.select, ["Bar"])
+    with pytest.raises(KeyError):
+        msa.select(["Bar"])
 
 
 def test_msa_select__no_keys():
     msa = MSA([FASTA("Foo", None, "ACGT")])
-    assert_raises(ValueError, msa.select, [])
+    with pytest.raises(ValueError):
+        msa.select([])
 
 
 ###############################################################################
@@ -142,7 +149,7 @@ def test_msa_reduce__no_empty_columns__no_columns_are_removed():
     fa_2 = FASTA("Name_B", "Meta_B", "C-TN")
     initial = MSA([fa_1, fa_2])
     expected = MSA([fa_1, fa_2])
-    assert_equal(initial.reduce(), expected)
+    assert initial.reduce() == expected
 
 
 def test_msa_reduce__one_empty_column__column_are_removed():
@@ -152,7 +159,7 @@ def test_msa_reduce__one_empty_column__column_are_removed():
     fa_reduced_1 = FASTA("Name_A", "Meta_A", "AT")
     fa_reduced_2 = FASTA("Name_B", "Meta_B", "CN")
     expected = MSA([fa_reduced_1, fa_reduced_2])
-    assert_equal(initial.reduce(), expected)
+    assert initial.reduce() == expected
 
 
 def test_msa_reduce__multiple_empty_column__all_empty_column_are_removed():
@@ -162,14 +169,14 @@ def test_msa_reduce__multiple_empty_column__all_empty_column_are_removed():
     fa_reduced_1 = FASTA("Name_A", "Meta_A", "AT")
     fa_reduced_2 = FASTA("Name_B", "Meta_B", "CN")
     expected = MSA([fa_reduced_1, fa_reduced_2])
-    assert_equal(initial.reduce(), expected)
+    assert initial.reduce() == expected
 
 
 def test_msa_reduce__only_empty_column__none_is_returned():
     fa_1 = FASTA("Name_A", "Meta_A", "---Nn")
     fa_2 = FASTA("Name_B", "Meta_B", "Nn--N")
     initial = MSA([fa_1, fa_2])
-    assert_equal(initial.reduce(), None)
+    assert initial.reduce() is None
 
 
 ###############################################################################
@@ -194,7 +201,7 @@ def test_msa_filter_singletons__filter_by_second():
         )
     )
     result = _FILTER_MSA_1.filter_singletons("Seq1", ["Seq2"])
-    assert_equal(result, expected)
+    assert result == expected
 
 
 def test_msa_filter_singletons__filter_by_third():
@@ -206,20 +213,22 @@ def test_msa_filter_singletons__filter_by_third():
         )
     )
     result = _FILTER_MSA_1.filter_singletons("Seq1", ["Seq3"])
-    assert_equal(result, expected)
+    assert result == expected
 
 
 def test_msa_filter_singletons__filter_by_both():
     result = _FILTER_MSA_1.filter_singletons("Seq1", ["Seq2", "Seq3"])
-    assert_equal(result, _FILTER_MSA_1)
+    assert result == _FILTER_MSA_1
 
 
 def test_msa_filter_singletons__filter_by_itself():
-    assert_raises(MSAError, _FILTER_MSA_1.filter_singletons, "Seq1", ["Seq1", "Seq2"])
+    with pytest.raises(MSAError):
+        _FILTER_MSA_1.filter_singletons("Seq1", ["Seq1", "Seq2"])
 
 
 def test_msa_filter_singletons__filter_by_nothing():
-    assert_raises(ValueError, _FILTER_MSA_1.filter_singletons, "Seq1", [])
+    with pytest.raises(ValueError):
+        _FILTER_MSA_1.filter_singletons("Seq1", [])
 
 
 ###############################################################################
@@ -239,7 +248,7 @@ _JOIN_MSA_3 = MSA(
 
 def test_msa_join__single_msa():
     result = MSA.join(_JOIN_MSA_1)
-    assert_equal(result, _JOIN_MSA_1)
+    assert result == _JOIN_MSA_1
 
 
 def test_msa_join__two_msa():
@@ -251,7 +260,7 @@ def test_msa_join__two_msa():
         )
     )
     result = MSA.join(_JOIN_MSA_1, _JOIN_MSA_2)
-    assert_equal(result, expected)
+    assert result == expected
 
 
 def test_msa_join__three_msa():
@@ -263,12 +272,12 @@ def test_msa_join__three_msa():
         )
     )
     result = MSA.join(_JOIN_MSA_1, _JOIN_MSA_2, _JOIN_MSA_3)
-    assert_equal(result, expected)
+    assert result == expected
 
 
-@nose.tools.raises(TypeError)
 def test_msa_join__missing_arguments():
-    MSA.join()
+    with pytest.raises(TypeError):
+        MSA.join()
 
 
 ###############################################################################
@@ -279,43 +288,43 @@ def test_msa_join__missing_arguments():
 def test_msa_from_lines__single_entry():
     lines = [">seq1", "ACG"]
     result = MSA([FASTA("seq1", None, "ACG")])
-    assert_equal(MSA.from_lines(lines), result)
+    assert MSA.from_lines(lines) == result
 
 
 def test_msa_from_lines__single_entry_with_meta():
     lines = [">seq1 Meta info", "ACG"]
     expected = MSA([FASTA("seq1", "Meta info", "ACG")])
     result = MSA.from_lines(lines)
-    assert_equal(result, expected)
+    assert result == expected
 
 
 def test_msa_from_lines__two_entries():
     lines = [">seq1", "ACG", ">seq2", "TGA"]
     expected = MSA([FASTA("seq1", None, "ACG"), FASTA("seq2", None, "TGA")])
     result = MSA.from_lines(lines)
-    assert_equal(result, expected)
+    assert result == expected
 
 
 def test_msa_from_lines__two_entries_with_meta():
     lines = [">seq1", "ACG", ">seq2 Second meta", "TGA"]
     expected = MSA([FASTA("seq1", None, "ACG"), FASTA("seq2", "Second meta", "TGA")])
     result = MSA.from_lines(lines)
-    assert_equal(result, expected)
+    assert result == expected
 
 
-@nose.tools.raises(MSAError)
 def test_msa_from_lines__duplicate_names():
-    MSA.from_lines([">seq1", "ACG", ">seq1", "TGA"])
+    with pytest.raises(MSAError):
+        MSA.from_lines([">seq1", "ACG", ">seq1", "TGA"])
 
 
-@nose.tools.raises(MSAError)
 def test_msa_from_lines__mismatched_lengths():
-    MSA.from_lines([">seq1", "ACG", ">seq2", "TGAN"])
+    with pytest.raises(MSAError):
+        MSA.from_lines([">seq1", "ACG", ">seq2", "TGAN"])
 
 
-@nose.tools.raises(FASTAError)
 def test_msa_from_lines__empty_name():
-    MSA.from_lines([">", "ACG", ">seq1", "TGAN"])
+    with pytest.raises(FASTAError):
+        MSA.from_lines([">", "ACG", ">seq1", "TGAN"])
 
 
 ###############################################################################
@@ -331,7 +340,7 @@ def test_msa_from_file__uncompressed():
         ]
     )
     results = MSA.from_file(test_file("fasta_file.fasta"))
-    assert_equal(results, expected)
+    assert results == expected
 
 
 def test_msa_from_file__compressed_gz():
@@ -342,7 +351,7 @@ def test_msa_from_file__compressed_gz():
         ]
     )
     results = MSA.from_file(test_file("fasta_file.fasta.gz"))
-    assert_equal(results, expected)
+    assert results == expected
 
 
 def test_msa_from_file__compressed_bz2():
@@ -353,7 +362,7 @@ def test_msa_from_file__compressed_bz2():
         ]
     )
     results = MSA.from_file(test_file("fasta_file.fasta.bz2"))
-    assert_equal(results, expected)
+    assert results == expected
 
 
 ###############################################################################
@@ -364,7 +373,7 @@ def test_msa_from_file__compressed_bz2():
 def test_msa_split_msa__single_group():
     msa = MSA([FASTA("seq1", None, "ACGCAT"), FASTA("seq2", None, "GAGTGA")])
     expected = {"1": copy.copy(msa)}
-    assert_equal(msa.split("111"), expected)
+    assert msa.split("111") == expected
 
 
 def test_msa_split_msa__two_groups():
@@ -373,7 +382,7 @@ def test_msa_split_msa__two_groups():
         "1": MSA([FASTA("seq1", None, "ACCA"), FASTA("seq2", None, "GATG")]),
         "2": MSA([FASTA("seq1", None, "GT"), FASTA("seq2", None, "GA")]),
     }
-    assert_equal(msa.split("112"), expected)
+    assert msa.split("112") == expected
 
 
 def test_msa_split__three_groups():
@@ -383,7 +392,7 @@ def test_msa_split__three_groups():
         "2": MSA([FASTA("seq1", None, "CA"), FASTA("seq2", None, "AG")]),
         "3": MSA([FASTA("seq1", None, "GT"), FASTA("seq2", None, "GA")]),
     }
-    assert_equal(msa.split("123"), expected)
+    assert msa.split("123") == expected
 
 
 def test_msa_split__empty_group():
@@ -393,7 +402,7 @@ def test_msa_split__empty_group():
         "2": MSA([FASTA("seq1", None, "C"), FASTA("seq2", None, "A")]),
         "3": MSA([FASTA("seq1", None, ""), FASTA("seq2", None, "")]),
     }
-    assert_equal(msa.split("123"), expected)
+    assert msa.split("123") == expected
 
 
 def test_msa_split__partial_group():
@@ -403,13 +412,13 @@ def test_msa_split__partial_group():
         "2": MSA([FASTA("seq1", None, "CA"), FASTA("seq2", None, "AG")]),
         "3": MSA([FASTA("seq1", None, "G"), FASTA("seq2", None, "G")]),
     }
-    assert_equal(msa.split("123"), expected)
+    assert msa.split("123") == expected
 
 
-@nose.tools.raises(TypeError)
 def test_msa_split_msa__no_split_by():
     msa = MSA([FASTA("seq1", None, "ACG"), FASTA("seq2", None, "GAT")])
-    msa.split(split_by="")
+    with pytest.raises(TypeError):
+        msa.split(split_by="")
 
 
 ###############################################################################
@@ -428,7 +437,7 @@ def test_msa_to_file__complete_line_test():
     expected += ">foobar\n%s\n%s\n" % ("CGAATG" * 10, "TGTCAT" * 5)
     stringf = io.StringIO()
     MSA.to_file(msa, stringf)
-    assert_equal(stringf.getvalue(), expected)
+    assert stringf.getvalue() == expected
 
 
 ###############################################################################
@@ -439,13 +448,15 @@ def test_msa_to_file__complete_line_test():
 def test_msa_validate__missing_names_first():
     msa_1 = MSA(list(_JOIN_MSA_1)[:-1])
     msa_2 = copy.copy(_JOIN_MSA_2)
-    assert_raises(MSAError, MSA.validate, msa_1, msa_2)
+    with pytest.raises(MSAError):
+        MSA.validate(msa_1, msa_2)
 
 
 def test_msa_validate__missing_names_second():
     msa_1 = copy.copy(_JOIN_MSA_1)
     msa_2 = MSA(list(_JOIN_MSA_2)[:-1])
-    assert_raises(MSAError, MSA.validate, msa_1, msa_2)
+    with pytest.raises(MSAError):
+        MSA.validate(msa_1, msa_2)
 
 
 ###############################################################################
@@ -454,7 +465,7 @@ def test_msa_validate__missing_names_second():
 
 
 def test_msa_names():
-    assert_equal(_JOIN_MSA_1.names(), set(("nc", "nm", "miRNA")))
+    assert _JOIN_MSA_1.names() == set(("nc", "nm", "miRNA"))
 
 
 ###############################################################################
@@ -471,15 +482,12 @@ def test_msa_repr():
         )
     )
 
-    assert_equal(
-        str(msa),
-        (
-            "MSA(FASTA('miRNA', '', 'UCAGA'), "
-            "FASTA('nc', '', 'ACGTA'), "
-            "FASTA('nm', 'META', 'TGAGT'))"
-        ),
+    assert (
+        str(msa) == "MSA(FASTA('miRNA', '', 'UCAGA'), "
+        "FASTA('nc', '', 'ACGTA'), "
+        "FASTA('nm', 'META', 'TGAGT'))"
     )
 
 
 def test_msa_repr__same_as_str():
-    assert_equal(str(_JOIN_MSA_1), repr(_JOIN_MSA_1))
+    assert str(_JOIN_MSA_1) == repr(_JOIN_MSA_1)
