@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.2.13.5] - 2019-09-29
+### Fixed
+  - Ignore ValidateSamFile warning REF_SEQ_TOO_LONG_FOR_BAI warning when
+    processing genomes with contigs too large for BAI index files.
+
+
 ## [1.2.13.4] - 2019-03-25
 ### Fixed
   - Improved detection of Picard versions in cases where 'java'
@@ -587,7 +593,8 @@ the (partially) updated documentation now hosted on ReadTheDocs.
   - Switching to more traditional version-number tracking.
 
 
-[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.4...HEAD
+[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.5...HEAD
+[1.2.13.5]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.3...v1.2.13.5
 [1.2.13.4]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.3...v1.2.13.4
 [1.2.13.3]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.2...v1.2.13.3
 [1.2.13.2]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.1...v1.2.13.2
