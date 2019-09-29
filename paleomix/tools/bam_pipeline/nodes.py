@@ -43,15 +43,11 @@ def index_and_validate_bam(config, prefix, node, log_file=None,
         # where high-quality reads may cause mis-identification of qualities
         "INVALID_QUALITY_FORMAT"]
 
-    if prefix['IndexFormat'] == '.csi':
-        # CSI uses a different method for assigning BINs to records, which
-        # Picard currently does not support.
-        ignored_checks.append("INVALID_INDEXING_BIN")
-
     return ValidateBAMNode(config=config,
                            input_bam=input_file,
                            input_index=index_file,
                            ignored_checks=ignored_checks,
+                           big_genome_mode=prefix["IndexFormat"] == ".csi",
                            output_log=log_file,
                            dependencies=node)
 

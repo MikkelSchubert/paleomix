@@ -60,9 +60,12 @@ class PicardNode(CommandNode):
 
 class ValidateBAMNode(PicardNode):
     def __init__(self, config, input_bam, input_index=None, output_log=None,
-                 ignored_checks=(), dependencies=()):
+                 ignored_checks=(), big_genome_mode=False, dependencies=()):
         builder = picard_command(config, "ValidateSamFile")
         _set_max_open_files(builder, "MAX_OPEN_TEMP_FILES")
+
+        if True or big_genome_mode:
+            self._configure_for_big_genome(config, builder)
 
         builder.set_option("I", "%(IN_BAM)s", sep="=")
         for check in ignored_checks:
@@ -78,6 +81,22 @@ class ValidateBAMNode(PicardNode):
                             command=builder.finalize(),
                             description=description,
                             dependencies=dependencies)
+
+    @staticmethod
+    def _configure_for_big_genome(config, builder):
+        # CSI uses a different method for assigning BINs to records, which
+        # Picard currently does not support.
+        builder.add_option("IGNORE", "INVALID_INDEXING_BIN", sep="=")
+
+        jar_path = os.path.join(config.jar_root, _PICARD_JAR)
+        version_check = _PICARD_VERSION_CACHE[jar_path]
+
+        try:
+            if version_check.version >= (2, 19, 0):
+                # Useless warning, as we do not build BAI indexes for large genomes
+                builder.add_option("IGNORE", "REF_SEQ_TOO_LONG_FOR_BAI", sep="=")
+        except versions.VersionRequirementError:
+            pass  # Ignored here, handled elsewhere
 
 
 class BuildSequenceDictNode(PicardNode):
@@ -247,7 +266,8 @@ def picard_command(config, command):
     params = AtomicJavaCmdBuilder(jar_path,
                                   temp_root=config.temp_root,
                                   jre_options=config.jre_options,
-                                  CHECK_JAR=version)
+                                  CHECK_JAR=version,
+                                  set_cwd=True)
     params.set_option(command)
 
     return params
