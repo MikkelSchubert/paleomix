@@ -399,6 +399,8 @@ class BuildFreqFilesNode(CommandNode):
                           IN_BIM=input_prefix + ".bim",
                           IN_FAM=input_prefix + ".fam",
                           TEMP_OUT_CLUST="samples.clust",
+                          TEMP_OUT_IMISS=basename + ".imiss",
+                          TEMP_OUT_LMISS=basename + ".lmiss",
                           OUT_NOSEX=output_prefix + ".frq.strat.nosex",
                           OUT_LOG=output_prefix + ".frq.strat.log",
                           TEMP_OUT_PREFIX=basename,
