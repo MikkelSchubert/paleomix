@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.2.13.6] - 2019-10-13
+### Fixed
+  - Handle .*miss files created by some versions of plink in Zonkey
+
+
 ## [1.2.13.5] - 2019-09-29
 ### Fixed
   - Ignore ValidateSamFile warning REF_SEQ_TOO_LONG_FOR_BAI warning when
@@ -594,7 +599,8 @@ the (partially) updated documentation now hosted on ReadTheDocs.
 
 
 [Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.5...HEAD
-[1.2.13.5]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.3...v1.2.13.5
+[1.2.13.6]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.5...v1.2.13.6
+[1.2.13.5]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.4...v1.2.13.5
 [1.2.13.4]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.3...v1.2.13.4
 [1.2.13.3]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.2...v1.2.13.3
 [1.2.13.2]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.1...v1.2.13.2
