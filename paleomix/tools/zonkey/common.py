@@ -56,7 +56,7 @@ def contig_name_to_plink_name(chrom):
     identified.
     """
     if chrom.isdigit():
-        return chrom.upper
+        return chrom
     elif chrom.upper() in "XY":
         return chrom.upper()
     elif chrom.lower().startswith("chr") and chrom[3:].isdigit():
