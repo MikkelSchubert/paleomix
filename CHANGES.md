@@ -3,6 +3,7 @@
 ## [1.2.13.7] - 2019-10-15
 ### Fixed
   - Fixed handling of digit only chromosome names in Zonkey
+  - Remove dashes from Zonkey MT genomes when running 'mito' command
 
 
 ## [1.2.13.6] - 2019-10-13

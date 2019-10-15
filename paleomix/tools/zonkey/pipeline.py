@@ -37,6 +37,8 @@ from paleomix.common.console import \
     print_info, \
     print_warn
 
+from paleomix.common.formats.fasta import FASTA
+
 from paleomix.pipeline import \
     Pypeline
 
@@ -401,6 +403,11 @@ def setup_mito_mapping(config):
                                        "%s.fasta" % (record.name,))
 
             with open(fasta_fpath, "w") as fasta_handle:
+                record = FASTA(
+                    name=record.name,
+                    meta=None,
+                    sequence=record.sequence.replace('-', ''))
+
                 fasta_handle.write(str(record))
                 fasta_handle.write("\n")
 
