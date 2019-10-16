@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from unittest.mock import patch
+import pytest
 
 from paleomix.common.formats.fasta import FASTA
 from paleomix.common.formats.msa import MSA
@@ -85,48 +85,40 @@ _MSA_LONG_NAMES = MSA(
 
 
 def test_interleaved_phy__short_sequences():
-    expected = """2 44
-
-seq1        ACGTTGATAA  CCAGGAGGGA  TTCGCGATTG  GTGGTAACGT  AGCC
-seq2        TGCAGAGTAC  GACGTCTCCT  AGATCCTGGA  CAATTTAAAC  CGAA"""
+    expected = """ 2 44
+seq1  ACGTTGATAA CCAGGAGGGA TTCGCGATTG GTGGTAACGT AGCC
+seq2  TGCAGAGTAC GACGTCTCCT AGATCCTGGA CAATTTAAAC CGAA
+"""
     assert interleaved_phy(_MSA_MEDIUM_SEQUENCES) == expected
 
 
 def test_interleaved_phy__multi_line_sequences():
-    expected = """2 140
+    expected = """ 2 140
+seq1  CGGATCTGCT CCTCCACTGG CCACGTTTAC TGTCCCCCAA CCGTTCGTCC
+seq2  AGTTGAAGAG GCGGAACGTT TGTAAACCGC GCTAACGTAG TTCTACAACC
 
-seq1        CGGATCTGCT  CCTCCACTGG  CCACGTTTAC  TGTCCCCCAA  CCGTTCGTCC
-seq2        AGTTGAAGAG  GCGGAACGTT  TGTAAACCGC  GCTAACGTAG  TTCTACAACC
+      CGACCTAGTT ATACTTCTTA GCAAGGTGTA AAACCAGAGA TTGAGGTTAT
+      AGCCACCCGG TTCGAAGGAA CAACTGGTCG CCATAATTAG GCGAAACGAT
 
-CGACCTAGTT  ATACTTCTTA  GCAAGGTGTA  AAACCAGAGA  TTGAGGTTAT  AACGTTCCTA
-AGCCACCCGG  TTCGAAGGAA  CAACTGGTCG  CCATAATTAG  GCGAAACGAT  AGTGCACTAA
-
-ATCAGTTATT  AAATTACCGC  GCCCCGACAG
-GGTCAGGTGC  GCCCCTGTAA  ATAATTAGAT"""
+      AACGTTCCTA ATCAGTTATT AAATTACCGC GCCCCGACAG 
+      AGTGCACTAA GGTCAGGTGC GCCCCTGTAA ATAATTAGAT 
+"""
     assert interleaved_phy(_MSA_LONG_SEQUENCES) == expected
 
 
-def test_interleaved_phy__with_flag():
-    expected = """2 15 I
-
-seq1        ACGTTGATAA  CCAGG
-seq2        TGCAGAGTAC  GACGT"""
-    assert interleaved_phy(_MSA_SHORT_SEQUENCES, add_flag=True) == expected
-
-
 def test_interleaved_phy__medium_names():
-    expected = """2 15
-
-A_really_long_sequence  ACGTTGATAA  CCAGG
-Another_real_long_one!  TGCAGAGTAC  GACGT"""
+    expected = """ 2 15
+A_really_long_sequence  ACGTTGATAA CCAGG
+Another_real_long_one!  TGCAGAGTAC GACGT
+"""
     assert interleaved_phy(_MSA_MEDIUM_NAMES) == expected
 
 
 def test_interleaved_phy__long_names():
-    expected = """2 15
-
-A_really_long_sequence_name_th      ACGTTGATAA  CCAGG
-Another_really_long_sequence_n      TGCAGAGTAC  GACGT"""
+    expected = """ 2 15
+A_really_long_sequence_name_that_is_in_fact_too_long  ACGTTGATAA CCAGG
+Another_really_long_sequence_name_that_is_too_long    TGCAGAGTAC GACGT
+"""
     assert interleaved_phy(_MSA_LONG_NAMES) == expected
 
 
@@ -141,10 +133,10 @@ def test_sequentual_phy__different_length_names_1():
             ),
         ]
     )
-    expected = """2 15
-
-A_short_name                        ACGTTGATAA  CCAGG
-Another_really_long_sequence_n      TGCAGAGTAC  GACGT"""
+    expected = """ 2 15
+A_short_name                                        ACGTTGATAA CCAGG
+Another_really_long_sequence_name_that_is_too_long  TGCAGAGTAC GACGT
+"""
     assert interleaved_phy(msa) == expected
 
 
@@ -155,15 +147,18 @@ def test_sequentual_phy__different_length_names_2():
             FASTA("Donkey", None, "TGCAGAGTACGACGT"),
         ]
     )
-    expected = """2 15
-
-Burchelli_4             ACGTTGATAA  CCAGG
-Donkey                  TGCAGAGTAC  GACGT"""
+    expected = """ 2 15
+Burchelli_4  ACGTTGATAA CCAGG
+Donkey       TGCAGAGTAC GACGT
+"""
     assert interleaved_phy(msa) == expected
 
 
 def test_interleaved_phy__different_lengths():
-    with patch("paleomix.common.formats.msa.MSA.validate", wrap=MSA.validate) as mock:
-        interleaved_phy(_MSA_MEDIUM_NAMES)
-
-    mock.assert_called_once()
+    with pytest.raises(ValueError, match="Sequences must all be the same length"):
+        interleaved_phy(
+            [
+                FASTA("seq1", None, "ACGTTGATAACCAGG"),
+                FASTA("seq2", None, "TGCAGAGTACGACGTA"),
+            ]
+        )

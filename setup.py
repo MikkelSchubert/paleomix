@@ -64,6 +64,7 @@ setup(
         "pysam>=0.10.0",
         "ruamel.yaml>=0.16.0",
         "setproctitle>=1.1.0",
+        "biopython>=1.74",
     ],
     entry_points={"console_scripts": ["paleomix=paleomix.main:entry_point"]},
     zip_safe=False,
