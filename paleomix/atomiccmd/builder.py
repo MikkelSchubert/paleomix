@@ -348,37 +348,12 @@ class AtomicJavaCmdBuilder(AtomicCmdBuilder):
 
         # Only set -Xmx if no user-supplied setting is given
         if not any(opt.startswith("-Xmx") for opt in jre_options):
-            # Our experience is that the default -Xmx value tends to cause
-            # OutOfMemory exceptions with typical datasets, so require at least
-            # 4gb. However, this is not possible on 32bit systems, which cannot
-            # handle such datasets in any case (due to e.g. BWA memory usage).
-            if AtomicJavaCmdBuilder._IS_JAVA_64_BIT is None:
-                with open("/dev/null", "w") as dev_null:
-                    version_call = call + ["-d64", "-version"]
-                    try:
-                        result = subprocess.call(
-                            version_call,
-                            stdout=dev_null,
-                            stderr=dev_null,
-                            preexec_fn=os.setsid,
-                            close_fds=True,
-                        )
-
-                        AtomicJavaCmdBuilder._IS_JAVA_64_BIT = result == 0
-                    except OSError:
-                        # We don't care if this fails here, the exec / version
-                        # checks will report any problems downstream
-                        AtomicJavaCmdBuilder._IS_JAVA_64_BIT = False
-
-            # The default memory-limit tends to be insufficent for whole-genome
-            # datasets, so this is increased on 64-bit architectures.
-            if AtomicJavaCmdBuilder._IS_JAVA_64_BIT:
-                call.append("-Xmx4g")
+            # Our experience is that the default -Xmx value tends to cause OutOfMemory
+            # exceptions with typical datasets, so require at least 4gb. 
+            call.append("-Xmx4g")
 
         call.extend(("-jar", "%(AUX_JAR)s"))
         AtomicCmdBuilder.__init__(self, call, AUX_JAR=jar, **kwargs)
-
-    _IS_JAVA_64_BIT = None
 
 
 class AtomicMPICmdBuilder(AtomicCmdBuilder):
