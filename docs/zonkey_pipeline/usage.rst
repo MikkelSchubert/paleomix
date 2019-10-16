@@ -150,7 +150,7 @@ As noted above, this requires that the the sample has been mapped against the mi
 
 This is accomplished by running the Zonkey 'mito' command, which writes a simple BAM pipeline makefile template to a given directory, along with a directory containing the FASTA sequences of the reference mitochondrial genomes::
 
-    $ paleomix zonkey mito my_mapping/
+    $ paleomix zonkey mito database.tar output_folder/
 
 Please refer to the :ref:`bam_pipeline` documentation if you wish to use the BAM pipeline to perform the mapping itself. Once your data has been mapped against either or all of these mitochondrial genomes, the preferred BAM file (e.g. the alignment with the highest coverage) may be included in the analyses as described above.
 
