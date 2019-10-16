@@ -340,10 +340,6 @@ def _parse_arguments(argv):
         default=False,
         action="store_true",
     )
-    group.add_option("--indep", nargs=3, help=optparse.SUPPRESS_HELP)
-    group.add_option("--indep-pairwise", nargs=3, help=optparse.SUPPRESS_HELP)
-    group.add_option("--indep-pairphase", nargs=3, help=optparse.SUPPRESS_HELP)
-
     parser.add_option_group(group)
 
     paleomix.logger.add_optiongroup(parser, default=PerHostValue("warning"))
@@ -387,20 +383,6 @@ def _parse_arguments(argv):
     parser.add_option_group(group)
 
     config, args = per_host_cfg.parse_args(parser, argv)
-
-    indep_opts = (config.indep, config.indep_pairwise, config.indep_pairphase)
-    if sum(bool(value) for value in indep_opts) > 1:
-        parser.error("Multiple --indep* options specified!")
-
-    if config.indep:
-        config.indep_params = config.indep
-        config.indep = "indep"
-    elif config.indep_pairwise:
-        config.indep_params = config.indep_pairwise
-        config.indep = "indep-pairwise"
-    elif config.indep_pairphase:
-        config.indep_params = config.indep_pairphase
-        config.indep = "indep-pairphase"
 
     config.treemix_outgroup = tuple(
         [_f for _f in sorted(config.treemix_outgroup.split(",")) if _f]

@@ -85,23 +85,13 @@ def build_plink_nodes(config, data, root, bamfile, dependencies=()):
     )
 
     for postfix in ("incl_ts", "excl_ts"):
-        parameters = {
-            "output_prefix": os.path.join(plink["root"], postfix),
-            "tfam": os.path.join(plink["root"], "common.tfam"),
-            "tped": os.path.join(plink["root"], postfix + ".tped"),
-            "plink_parameters": config.database.settings["Plink"],
-            "dependencies": (ped_node,),
-        }
-
-        if config.indep:
-            parameters["indep_filter"] = config.indep
-            parameters["indep_parameters"] = config.indep_params
-
-            bed_node = nuclear.BuildFilteredBEDFilesNode(**parameters)
-        else:
-            bed_node = nuclear.BuildBEDFilesNode(**parameters)
-
-        plink[postfix] = bed_node
+        plink[postfix] = nuclear.BuildBEDFilesNode(
+            output_prefix=os.path.join(plink["root"], postfix),
+            tfam=os.path.join(plink["root"], "common.tfam"),
+            tped=os.path.join(plink["root"], postfix + ".tped"),
+            plink_parameters=config.database.settings["Plink"],
+            dependencies=(ped_node,),
+        )
 
     return plink
 

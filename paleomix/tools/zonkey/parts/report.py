@@ -363,7 +363,6 @@ class AnalysisReport(object):
     def __init__(self, config, root, has_nuc, has_mt):
         self._has_nuc = bool(has_nuc)
         self._has_mt = bool(has_mt)
-        self._filtered = bool(config.indep)
         self._config = config
         self._root = root
         self._data = config.database
@@ -378,12 +377,6 @@ class AnalysisReport(object):
 
             for postfix in ("incl_ts", "excl_ts"):
                 admix_root = os.path.join(self._root, "results", "admixture")
-
-                if self._filtered:
-                    # Required to count number of SNPs included after filtering
-                    input_files.append(
-                        os.path.join(self._root, "results", "plink", postfix + ".bim")
-                    )
 
                 # Include files showing proproation of ancestral populations,
                 # which are required to build admixture figures in the reports.
@@ -409,21 +402,9 @@ class AnalysisReport(object):
         return input_files
 
     def snp_summary(self):
-        summary = read_summary(
+        return read_summary(
             os.path.join(self._root, "results", "plink", "common.summary")
         )
-
-        if self._filtered:
-            for postfix in ("incl_ts", "excl_ts"):
-                key = "n_sites_%s" % (postfix,)
-
-                filename = os.path.join(self._root, "plink", postfix + ".bim")
-                with open(filename) as handle:
-                    n_used = sum(1 for _ in handle)
-
-                summary[key] = "%i of %i" % (n_used, summary[key])
-
-        return summary
 
     def mito_summary(self):
         return read_summary(
