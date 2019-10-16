@@ -193,30 +193,6 @@ PhylogeneticInference:
       Model: GAMMA
 """
 
-_NOT_ENABLED = """
-PAML:
-   # Run codeml on each named sequence in the regions of interest
-  codeml:
-#   Exclude (groups of) samples from this analytical step
-#    ExcludeSamples:
-#      - <NAME_OF_GROUP>
-#      - NAME_OF_SAMPLE
-
-    # Limit analysis to a subset of a RegionOfInterest; subsets are expected to be
-    # located at <genome root>/<prefix>.<region name>.<subset name>.names, and
-    # contain single name (corresponding to column 4 in the BED file) per line.
-#    SubsetRegions:
-#      REGIONS_NAME: SUBSET_NAME
-
-    # One or more 'codeml' runs; name is used as a postfix for results.
-    RUN_NAME:
-      # Control file template; the values 'seqfile', 'treefile'
-      # automatically set to the approriate values.
-      ControlFile: PATH_TO_CODEML_CONTROL_FILE
-      # 'treefile' in the control-file is set to this value
-      TreeFile:    PATH_TO_CODEML_TREEFILE
-"""
-
 
 def main(_argv):
     print(_TEMPLATE)

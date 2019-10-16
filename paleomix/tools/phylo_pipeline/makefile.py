@@ -289,10 +289,6 @@ def _update_subsets(mkfile, steps):
                     )
                     _collect_subsets(subkey, roidd["SubsetRegions"], path)
 
-    if "paml:codeml" in steps:
-        for (roi, subset) in mkfile["PAML"]["codeml"]["SubsetRegions"].items():
-            _collect_subsets(roi, subset, "PAML:codeml:SubsetRegions")
-
 
 def _update_filtering(mkfile):
     samples = mkfile["Project"]["Samples"]
@@ -635,13 +631,6 @@ def _update_sample_sets(mkfile):
             "PhylogeneticInference:%s:RootTreesOn" % (key,),
         )
 
-    mkfile["PAML"]["codeml"]["ExcludeSamples"] = _select_samples(
-        mkfile["PAML"]["codeml"]["ExcludeSamples"],
-        groups,
-        samples,
-        "PAML:codeml:ExcludeSamples",
-    )
-
 
 def _update_genotyping(mkfile):
     genotyping = mkfile["Genotyping"]
@@ -798,16 +787,6 @@ _VALIDATION = {
                 "Bootstraps": IsUnsignedInt(default=100),
                 "Replicates": IsUnsignedInt(default=1),
                 "Model": StringIn(("GAMMA", "PSR"), default="gamma"),
-            },
-        }
-    },
-    "PAML": {
-        "codeml": {
-            "ExcludeSamples": [IsStr],
-            "SubsetRegions": {IsStr: IsStr},
-            IsStr: {
-                "ControlFile": IsStr(default=REQUIRED_VALUE),
-                "TreeFile": IsStr(default=REQUIRED_VALUE),
             },
         }
     },

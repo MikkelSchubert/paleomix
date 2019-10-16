@@ -26,7 +26,6 @@ import paleomix
 
 import paleomix.tools.phylo_pipeline.parts.genotype as genotype
 import paleomix.tools.phylo_pipeline.parts.msa as msa
-import paleomix.tools.phylo_pipeline.parts.paml as paml
 import paleomix.tools.phylo_pipeline.parts.phylo as phylo
 import paleomix.common.console as console
 
@@ -50,7 +49,6 @@ _COMMANDS = {
     "genotype": genotype.chain,
     "genotyping": genotype.chain,
     "msa": msa.chain,
-    "paml:codeml": paml.chain_codeml,
     "phylogeny:examl": phylo.chain_examl,
 }
 
