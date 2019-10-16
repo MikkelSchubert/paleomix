@@ -96,14 +96,7 @@ class BuildTPEDFilesNode(CommandNode):
 
 class BuildBEDFilesNode(CommandNode):
     def __init__(
-        self,
-        output_prefix,
-        tfam,
-        tped,
-        indep_filter=None,
-        indep_parameters=None,
-        plink_parameters=None,
-        dependencies=(),
+        self, output_prefix, tfam, tped, plink_parameters=None, dependencies=()
     ):
         temp_prefix = os.path.basename(output_prefix)
 
