@@ -30,7 +30,6 @@ import weakref
 import paleomix.atomiccmd.pprint as atomicpp
 import paleomix.common.fileutils as fileutils
 import paleomix.common.procs as procs
-import paleomix.common.signals as signals
 
 from paleomix.common.utilities import safe_coerce_to_tuple
 
@@ -224,7 +223,7 @@ class AtomicCmd:
         self._running = False
         return_code = self._proc.wait()
         if return_code < 0:
-            return_code = signals.to_str(-return_code)
+            return_code = signal.Signals(-return_code).name
         return [return_code]
 
     def wait(self):
