@@ -661,7 +661,7 @@ def test_custom_cli__multiple_named_args():
 def test_custom_cli__only_customize_is_valid_function_name():
     try:
 
-        class ClassWithMisnamedFunction(object):
+        class ClassWithMisnamedFunction:
             @create_customizable_cli_parameters
             def not_called_customize(cls, first, second):
                 return {}  # pragma: no coverage

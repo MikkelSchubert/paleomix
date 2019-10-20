@@ -27,7 +27,7 @@ from paleomix.nodes.adapterremoval import SE_AdapterRemovalNode, PE_AdapterRemov
 from paleomix.nodes.validation import ValidateFASTQFilesNode
 
 
-class Reads(object):
+class Reads:
     def __init__(self, config, record, quality_offset):
         self.quality_offset = quality_offset
         self.files = {}

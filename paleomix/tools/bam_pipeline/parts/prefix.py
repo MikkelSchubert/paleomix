@@ -31,7 +31,7 @@ from paleomix.nodes.validation import DetectInputDuplicationNode
 import paleomix.nodes.gatk as gatk
 
 
-class Prefix(object):
+class Prefix:
     def __init__(self, config, prefix, samples, features, target):
         self.name = prefix["Name"]
         self.label = prefix.get("Label") or self.name

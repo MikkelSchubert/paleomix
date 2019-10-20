@@ -47,7 +47,7 @@ def _filter_records(handle, flags=bamtools.EXCLUDED_FLAGS):
             yield record
 
 
-class DownsampledBAM(object):
+class DownsampledBAM:
     def __init__(self, handle, downsample, included_references):
         self._records = collections.defaultdict(list)
 
@@ -73,7 +73,7 @@ class DownsampledBAM(object):
         return self._records.get(chrom, ())
 
 
-class GenotypeSites(object):
+class GenotypeSites:
     def __init__(self, records):
         last_chrom = None
         sites = []
@@ -138,7 +138,7 @@ class GenotypeSites(object):
         statistics["n_reads_used"] += count_used
 
 
-class GenotypeReader(object):
+class GenotypeReader:
     def __init__(self, filename):
         self._tar_handle = tarfile.open(filename)
         self._handle = self._tar_handle.extractfile("genotypes.txt")

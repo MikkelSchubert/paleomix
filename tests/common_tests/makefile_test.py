@@ -59,7 +59,7 @@ _DUMMY_PATH = ("a", "random", "path")
 _DUMMY_PATH_STR = ":".join(_DUMMY_PATH)
 
 
-class Unhashable(object):
+class Unhashable:
     __hash__ = None
 
 

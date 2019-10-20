@@ -28,7 +28,7 @@ import sys
 import paleomix.nodes.validation as validation
 
 
-class ErrHandler(object):
+class ErrHandler:
     def __init__(self, quiet=False):
         self.quiet = quiet
         self.duplicate_reads = 0

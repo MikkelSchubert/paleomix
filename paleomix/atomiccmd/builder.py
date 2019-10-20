@@ -73,7 +73,7 @@ class AtomicCmdBuilderError(RuntimeError):
     """Error raised by AtomicCmdBuilder."""
 
 
-class AtomicCmdBuilder(object):
+class AtomicCmdBuilder:
     """AtomicCmdBuilder is a class used to allow step-wise construction of an
     AtomicCmd object. This allows the user of a Node to modify the behavior
     of the called programs using some CLI parameters, without explicit support

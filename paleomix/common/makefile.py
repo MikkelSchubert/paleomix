@@ -261,7 +261,7 @@ DEFAULT_NOT_SET = object()
 REQUIRED_VALUE = object()
 
 
-class WithoutDefaults(object):
+class WithoutDefaults:
     """Wrapper object, that tells 'process_makefile' not to apply
     default values for the wrapped specification. See module docs
     for example usage.
@@ -271,7 +271,7 @@ class WithoutDefaults(object):
         self.specification = specification
 
 
-class PreProcessMakefile(object):
+class PreProcessMakefile:
     """Allows pre-processing of a part of a makefile prior to validation; when
     encountered, the object is called with the current value, and is expected
     to return a tuple containing (value, specification), which are then used
@@ -284,7 +284,7 @@ class PreProcessMakefile(object):
         raise NotImplementedError  # pragma: no coverage
 
 
-class MakefileSpec(object):
+class MakefileSpec:
     """Base-class for specifications, from which ALL specification
     objects are expected to derive. Sub-classes must implement the
     'meets_spec' function, which must return True or False depending

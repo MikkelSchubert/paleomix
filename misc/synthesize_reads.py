@@ -91,7 +91,7 @@ def _mutate_sequence(rng, choices, refseq, indel_lambda=0):
     return "".join(sequence), positions
 
 
-class Specimen(object):
+class Specimen:
     """Represents a specimen, from which samples are derived.
 
     These are mutated by the addition of changes to the sequence
@@ -131,7 +131,7 @@ class Specimen(object):
         return self._annotations
 
 
-class Sample(object):
+class Sample:
     def __init__(self, options, specimen):
         self._specimen = specimen
         self._random = random.Random(options.sample_seed)
@@ -188,7 +188,7 @@ class Sample(object):
         )
 
 
-class Damage(object):
+class Damage:
     def __init__(self, options, sample):
         self._options = options
         self._sample = sample
@@ -224,7 +224,7 @@ class Damage(object):
         return rates
 
 
-class Library(object):
+class Library:
     def __init__(self, options, sample):
         self._options = options
         self._sample = sample
@@ -270,7 +270,7 @@ class Library(object):
         return reads
 
 
-class Lane(object):
+class Lane:
     def __init__(self, options, reads):
         rng = random.Random()
         choices = _get_weighted_choices(

@@ -224,7 +224,7 @@ def chain_sorted(*sequences, **kwargs):
             yield current
 
 
-class Immutable(object):
+class Immutable:
     """Mixin implementing a immutable class; member variables are specified in
     the init function, cannot be changed afterwards; note that this does not
     prevent changes to the member variables themselves (if not immutable)."""
@@ -241,7 +241,7 @@ class Immutable(object):
         raise NotImplementedError("Object is immutable")
 
 
-class TotallyOrdered(object):
+class TotallyOrdered:
     """Mixin implementing a rich-comparison interface, provided
     that the subclass implements the less-than operator (__lt__).
     The __lt__ function should return NotImplemented if the other

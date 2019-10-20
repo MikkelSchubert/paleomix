@@ -54,7 +54,7 @@ class CmdError(RuntimeError):
         RuntimeError.__init__(self, msg)
 
 
-class AtomicCmd(object):
+class AtomicCmd:
     """Executes a command, only moving resulting files to the destination
     directory if the command was succesful. This helps prevent the
     accidential use of partial files in downstream analysis, and eases

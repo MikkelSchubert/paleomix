@@ -47,7 +47,7 @@ class NodeUnhandledException(NodeError):
     pass
 
 
-class Node(object):
+class Node:
     def __init__(
         self,
         description=None,

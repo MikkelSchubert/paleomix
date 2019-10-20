@@ -110,7 +110,7 @@ def Requirement(call, search, checks, name=None, priority=0):
     return requirement
 
 
-class RequirementObj(object):
+class RequirementObj:
     """Represents a version requirement."""
 
     def __init__(self, call, search, checks, name=None, priority=0):

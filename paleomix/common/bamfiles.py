@@ -46,7 +46,7 @@ EXCLUDED_FLAGS = (
 )
 
 
-class BAMRegionsIter(object):
+class BAMRegionsIter:
     """Iterates over a BAM file, yield a separate iterator for each contig
     in the BAM or region in the list of regions if these are species, which in
     turn iterates over individual positions. This allows for the following
@@ -114,7 +114,7 @@ class BAMRegionsIter(object):
         return records
 
 
-class _BAMRegion(object):
+class _BAMRegion:
     """Implements iteration over sites in a BAM file. It is assumed that the
     BAM file is sorted, and that the input records are from one contig.
     """

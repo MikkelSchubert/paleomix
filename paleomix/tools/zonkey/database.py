@@ -40,7 +40,7 @@ _SETTINGS_KEYS = (
 )
 
 
-class BAMInfo(object):
+class BAMInfo:
     def __init__(self):
         self.nuclear = False
         self.mt_contig = None
@@ -79,7 +79,7 @@ class ZonkeyDBError(RuntimeError):
     pass
 
 
-class ZonkeyDB(object):
+class ZonkeyDB:
     def __init__(self, filename):
         self.filename = filename
 

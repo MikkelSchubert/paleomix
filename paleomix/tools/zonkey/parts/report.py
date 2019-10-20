@@ -359,7 +359,7 @@ class ReportNode(Node):
         return "\n".join(lines)
 
 
-class AnalysisReport(object):
+class AnalysisReport:
     def __init__(self, config, root, has_nuc, has_mt):
         self._has_nuc = bool(has_nuc)
         self._has_mt = bool(has_mt)

@@ -70,7 +70,7 @@ _HEADER = """# Timestamp: %s
 ##############################################################################
 
 
-class MappingToTotals(object):
+class MappingToTotals:
     def __init__(self, totals, region, smlbid_to_smlb):
         self._region = region
         self._map_by_smlbid, self._totals_src_and_dst = self._build_mappings(

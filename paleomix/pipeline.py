@@ -36,7 +36,7 @@ from paleomix.common.utilities import safe_coerce_to_tuple
 from paleomix.common.versions import VersionRequirementError
 
 
-class Pypeline(object):
+class Pypeline:
     def __init__(self, config):
         self._nodes = []
         self._config = config
