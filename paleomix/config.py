@@ -20,16 +20,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
-import sys
-import socket
-import getpass
-import optparse
 import configparser
+import getpass
+import logging
 import multiprocessing
+import optparse
+import os
+import socket
+import sys
 
 from paleomix.common.fileutils import make_dirs
-from paleomix.common.console import print_info
 
 
 class ConfigError(RuntimeError):
@@ -118,7 +118,8 @@ class PerHostConfig:
         with open(filename, "w") as handle:
             defaults_cfg.write(handle)
 
-        print_info("Wrote config file %r" % (filename,))
+        log = logging.getLogger(__name__)
+        log.info("Wrote config file %r", filename)
         sys.exit(0)
 
     def _add_per_host_options(self, parser):

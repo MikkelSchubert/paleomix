@@ -29,6 +29,8 @@ import os
 import sys
 import textwrap
 
+import paleomix.logger
+
 
 # List of tuples of commands: (name, module, help string).
 # If module is None, the command cannot be invoked directly (e.g. help), and
@@ -268,6 +270,7 @@ def main(argv):
     import paleomix.common.system
 
     paleomix.common.system.set_procname("paleomix")
+    paleomix.logger.initialize_console_logging()
 
     if not argv or argv[0] == "help":
         _print_help()

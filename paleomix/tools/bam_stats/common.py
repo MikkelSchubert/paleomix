@@ -20,16 +20,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
 import argparse
 import collections
+import os
+import logging
 
 import pysam
 
-from paleomix.common.console import print_err, print_msg, print_warn
-
+from paleomix.common.bedtools import read_bed_file, sort_bed_by_bamfile
 from paleomix.common.fileutils import swap_ext
-from paleomix.common.bedtools import sort_bed_by_bamfile, read_bed_file
 
 
 class BAMStatsError(RuntimeError):
@@ -168,26 +167,26 @@ def parse_arguments(argv, ext):
 
 
 def main_wrapper(process_func, argv, ext):
+    log = logging.getLogger(__name__)
     args = parse_arguments(argv, ext)
     args.regions = None
     if args.regions_fpath:
         try:
             args.regions = collect_bed_regions(args.regions_fpath)
         except ValueError as error:
-            print_err(
-                "ERROR: Failed to parse BED file %r:\n%s" % (args.regions_fpath, error)
-            )
+            log.error("Failed to parse BED file %r: %s", args.regions_fpath, error)
             return 1
 
-    print_msg("Opening %r" % (args.infile,))
+    log.info("Opening %r", args.infile)
     with pysam.Samfile(args.infile) as handle:
         sort_order = handle.header.get("HD", {}).get("SO")
         if sort_order is None:
-            print_warn("WARNING: BAM file %r is not marked as sorted!" % (args.infile,))
+            log.warning("BAM file %r is not marked as sorted!", args.infile)
         elif sort_order != "coordinate":
-            print_err(
-                "ERROR: BAM file %r is %s-sorted, but only "
-                "coordinate-sorted BAMs are supported!" % (args.infile, sort_order)
+            log.error(
+                "BAM file %r is %s-sorted, but coordinate-sorting is required",
+                args.infile,
+                sort_order,
             )
             return 1
 

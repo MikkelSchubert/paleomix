@@ -26,27 +26,20 @@ import shutil
 import tarfile
 
 import paleomix
-import paleomix.yaml
-import paleomix.logger
-
 import paleomix.common.fileutils as fileutils
-
-from paleomix.common.console import print_err, print_info, print_warn
-
-from paleomix.pipeline import Pypeline
-
-from paleomix.nodes.samtools import BAMIndexNode
-
-from paleomix.nodes.raxml import RAxMLRapidBSNode
-
+import paleomix.logger
 import paleomix.tools.bam_pipeline.mkfile as bam_mkfile
-
 import paleomix.tools.zonkey.config as zonkey_config
+import paleomix.tools.zonkey.parts.common as common_nodes
 import paleomix.tools.zonkey.parts.mitochondria as mitochondria
 import paleomix.tools.zonkey.parts.nuclear as nuclear
 import paleomix.tools.zonkey.parts.report as report
 import paleomix.tools.zonkey.parts.summary as summary
-import paleomix.tools.zonkey.parts.common as common_nodes
+import paleomix.yaml
+
+from paleomix.nodes.raxml import RAxMLRapidBSNode
+from paleomix.nodes.samtools import BAMIndexNode
+from paleomix.pipeline import Pypeline
 
 
 def run_pipeline(config, nodes, msg):
@@ -249,11 +242,8 @@ def build_coverage_nodes(data, root, nuc_bam, dependencies=()):
 
 def build_mito_nodes(config, root, bamfile, dependencies=()):
     if config.database.mitochondria is None:
-        print_warn(
-            "WARNING: Zonkey database %r does not contain "
-            "mitochondrial  sequences; cannot analyze MT BAM %r!\n"
-            % (config.tablefile, bamfile)
-        )
+        log = logging.getLogger(__name__)
+        log.warning("No MT sequences in Zonkey database; cannot perform MT analysis")
         return ()
 
     samples = os.path.join(root, "figures", "samples.txt")
@@ -331,7 +321,8 @@ def build_pipeline(config, root, nuc_bam, mito_bam, cache):
 
 
 def run_admix_pipeline(config):
-    print_info("\nBuilding %i Zonkey pipeline(s):" % (len(config.samples),))
+    log = logging.getLogger(__name__)
+    log.info("Building %i Zonkey pipeline(s):", len(config.samples))
     config.temp_root = os.path.join(config.destination, "temp")
     if not config.dry_run:
         fileutils.make_dirs(config.temp_root)
@@ -350,7 +341,7 @@ def run_admix_pipeline(config):
         if nuc_bam:
             genomes.append("Nuclear")
 
-        print_info("  %i. %s: %s DNA" % (idx, name, " and ".join(genomes)))
+        log.info("  %i. %s: %s DNA", idx, name, " and ".join(genomes))
 
         nodes.extend(build_pipeline(config, root, nuc_bam, mito_bam, cache))
 
@@ -378,11 +369,10 @@ def setup_mito_mapping(config):
 
     # A bit strict, but avoid accidential overwrites
     if existing_filenames:
-        print_err(
-            "ERROR: Output file(s) already exists, "
-            "cannot proceed:\n    %s"
-            % ("\n    ".join(list(map(repr, existing_filenames))))
-        )
+        log = logging.getLogger(__name__)
+        log.error("Output file(s) already exists, cannot proceed:")
+        for filename in sorted(existing_filenames):
+            log.error(" - %r", filename)
 
         return 1
 
@@ -425,6 +415,7 @@ def setup_mito_mapping(config):
 
 def setup_example(config):
     root = os.path.join(config.destination, "zonkey_pipeline")
+    log = logging.getLogger(__name__)
 
     with tarfile.TarFile(config.tablefile) as tar_handle:
         example_files = []
@@ -438,15 +429,14 @@ def setup_example(config):
                     existing_files.append(destination)
 
         if existing_files:
-            print_err(
-                "Output files already exist at destination:\n    - %s"
-                % ("\n    - ".join(map(repr, existing_files)))
-            )
+            log.error("Output files already exist at destination:")
+            for filename in sorted(existing_files):
+                log.error(" - %r", filename)
             return 1
         elif not example_files:
-            print_err(
-                "Sample database %r does not contain example data; "
-                "cannot proceed." % (config.tablefile,)
+            log.error(
+                "Sample database %r does not contain example data; cannot proceed.",
+                config.tablefile,
             )
             return 1
 
@@ -459,7 +449,7 @@ def setup_example(config):
             with open(destination, "w") as out_handle:
                 shutil.copyfileobj(src_handle, out_handle)
 
-    print_info("Sucessfully saved example data in %r" % (root,))
+    log.info("Sucessfully saved example data in %r", root)
 
     return 0
 

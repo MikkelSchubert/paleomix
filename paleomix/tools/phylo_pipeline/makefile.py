@@ -50,7 +50,6 @@ from paleomix.common.makefile import (
 
 from paleomix.common.fileutils import swap_ext, add_postfix
 from paleomix.common.utilities import fill_dict
-from paleomix.common.console import print_info, print_warn
 from paleomix.common.text import parse_padded_table
 from paleomix.common.bedtools import read_bed_file, BEDError
 from paleomix.common.formats.fasta import FASTA
@@ -131,7 +130,8 @@ def _select_samples(select, groups, samples, path):
 
 
 def _update_regions(options, mkfile):
-    print_info("    - Validating regions of interest ...")
+    log = logging.getLogger(__name__)
+    log.info("    - Validating regions of interest")
     mkfile["Project"]["Regions"] = mkfile["Project"].pop("RegionsOfInterest")
 
     if not mkfile["Project"]["Regions"]:
@@ -185,10 +185,8 @@ def _collect_fasta_contigs(filename, cache={}):
         return cache[filename]
 
     if not os.path.exists(filename + ".fai"):
-        print_info(
-            "      - Index does not exist for %r; this may "
-            "take a while ..." % (filename,)
-        )
+        log = logging.getLogger(__name__)
+        log.info("      - Indexing %r; this may take a while", filename)
 
     cache[filename] = contigs = dict(FASTA.index_and_collect_contigs(filename))
     return contigs
@@ -293,6 +291,7 @@ def _update_subsets(mkfile, steps):
 def _update_filtering(mkfile):
     samples = mkfile["Project"]["Samples"]
     groups = mkfile["Project"]["Groups"]
+    log = logging.getLogger(__name__)
 
     filtering = {}
     for (target, filter_by) in mkfile["Project"]["FilterSingletons"].items():
@@ -320,9 +319,9 @@ def _update_filtering(mkfile):
         if target in filtering[target]:
             # The target itself must be excluded, as including it is invalid
             filtering[target] = filtering[target] - set((target,))
-            print_warn(
-                "Warning: Sample %r is singleton-filtered using a "
-                "group it is also a member of; this may be by mistake." % (target,)
+            log.warning(
+                "Sample %r is singleton-filtered using a group it is also a member of",
+                target,
             )
 
         if not filtering[target]:
@@ -356,7 +355,8 @@ def _check_bam_sequences(options, mkfile, steps):
     if ("genotype" not in steps) and ("genotyping" not in steps):
         return
 
-    print_info("    - Validating BAM files ...")
+    log = logging.getLogger(__name__)
+    log.info("    - Validating BAM files")
     bam_files = {}
     for regions in mkfile["Project"]["Regions"].values():
         for sample in mkfile["Project"]["Samples"].values():
@@ -448,11 +448,11 @@ def _check_sexes(mkfile):
 
     unknown_contigs = contigs_sexes - all_contigs
     if unknown_contigs:
-        print_warn(
-            "WARNING: Unknown contig(s) in 'HomozygousContigs':\n"
-            "    - " + "\n    - ".join(unknown_contigs)
-        )
-        print_warn("Please verify that the list(s) of contigs is correct!")
+        log = logging.getLogger(__name__)
+        log.warning("Unknown contig(s) in 'HomozygousContigs':")
+        for name in sorted(unknown_contigs):
+            log.warning("  - %r", name)
+        log.warning("Please verify that the list(s) of contigs is correct!")
 
 
 def _update_and_check_max_read_depth(options, mkfile):
@@ -460,7 +460,8 @@ def _update_and_check_max_read_depth(options, mkfile):
         subdd["VCF_Filter"]["MaxReadDepth"] == "auto"
         for subdd in mkfile["Genotyping"].values()
     ):
-        print_info("    - Determinining max-depth from depth-histograms ...")
+        log = logging.getLogger(__name__)
+        log.info("    - Determinining max-depth from depth-histograms")
 
     for (key, settings) in mkfile["Genotyping"].items():
         required_keys = set()
@@ -548,6 +549,7 @@ def _read_max_depth(filename, prefix, sample):
             "Error reading depth-histogram (%s): %s" % (filename, error)
         )
 
+    log = logging.getLogger(__name__)
     if sample in max_depths:
         max_depth = max_depths[sample]
     else:
@@ -568,9 +570,10 @@ def _read_max_depth(filename, prefix, sample):
             # manually generating files / renaming files would otherwise cause
             # failure when using 'MaxDepth: auto'.
             (cand_sample, max_depth), = max_depths.items()
-            print_warn(
-                "        - Name in depths file not as expected; "
-                "found %r, not %r:" % (cand_sample, sample)
+            log.warning(
+                "        - Name in depths file not as expected; found %r, not %r:",
+                cand_sample,
+                sample,
             )
 
     if max_depth is None:
@@ -590,7 +593,7 @@ def _read_max_depth(filename, prefix, sample):
 
     max_depth = int(max_depth)
 
-    print_info("        - %s.%s = %i" % (sample, prefix, max_depth))
+    log.info("        - %s.%s = %i", sample, prefix, max_depth)
     _DEPTHS_CACHE[filename] = max_depth
     return max_depth
 

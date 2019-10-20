@@ -21,16 +21,14 @@
 # SOFTWARE.
 #
 import optparse
+import sys
 
 import paleomix
-
 import paleomix.tools.phylo_pipeline.parts.genotype as genotype
 import paleomix.tools.phylo_pipeline.parts.msa as msa
 import paleomix.tools.phylo_pipeline.parts.phylo as phylo
-import paleomix.common.console as console
 
-from paleomix.config import ConfigError, PerHostValue, PerHostConfig
-
+from paleomix.config import ConfigError, PerHostConfig, PerHostValue
 
 _DESCRIPTION = (
     "Commands:\n"
@@ -185,8 +183,8 @@ def parse_config(argv):
         return options, args
     elif (len(args) < 2) and (args != ["mkfile"] and args != ["makefile"]):
         description = _DESCRIPTION.replace("%prog", "phylo_pipeline").strip()
-        console.print_info("Phylogeny Pipeline v%s\n" % (paleomix.__version__,))
-        console.print_info(description)
+        print("Phylogeny Pipeline v%s\n" % (paleomix.__version__,), file=sys.stderr)
+        print(description, file=sys.stderr)
         return options, args
 
     commands = select_commands(args[0] if args else ())

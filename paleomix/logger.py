@@ -38,12 +38,21 @@ _LOG_LEVELS = {
 }
 
 _LOG_FORMAT = "%(asctime)s %(name)s %(levelname)s %(message)s"
+_LOG_ENABLED = False
+
+
+def initialize_console_logging():
+    global _LOG_ENABLED
+
+    if not _LOG_ENABLED:
+        coloredlogs.install(fmt=_LOG_FORMAT)
+        _LOG_ENABLED = True
 
 
 def initialize(log_level="info", log_file=None, name="paleomix"):
-    log_level = _LOG_LEVELS[log_level.lower()]
+    initialize_console_logging()
 
-    coloredlogs.install(fmt=_LOG_FORMAT)
+    log_level = _LOG_LEVELS[log_level.lower()]
     root = logging.getLogger()
 
     if log_file:

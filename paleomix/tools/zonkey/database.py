@@ -20,18 +20,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import os
+import logging
 import tarfile
 
 import pysam
 
 import paleomix.yaml
-
 from paleomix.common.fileutils import swap_ext
 from paleomix.common.formats.fasta import FASTA
-from paleomix.tools.zonkey.common import get_sample_names, contig_name_to_plink_name
-
-from paleomix.common.console import print_warn, print_info, print_err
-
+from paleomix.tools.zonkey.common import contig_name_to_plink_name, get_sample_names
 
 _SETTINGS_KEYS = (
     "Format",
@@ -91,25 +88,26 @@ class ZonkeyDB(object):
         elif not tarfile.is_tarfile(filename):
             raise ZonkeyDBError("Database file is not a valid tar-file")
 
-        print_info("Reading Zonkey database from %r ..." % (filename,))
+        log = logging.getLogger(__name__)
+        log.info("Reading Zonkey database from %r" % (filename,))
 
         # Warn if file is gzip / bzip2 compressed; gives worse throughput
         _check_file_compression(filename)
 
         with tarfile.open(filename) as tar_handle:
-            print_info("  - Reading settings ...")
+            log.info("  - Reading settings")
             self.settings = self._read_settings(tar_handle, "settings.yaml")
-            print_info("  - Reading list of contigs ...")
+            log.info("  - Reading list of contigs")
             self.contigs = self._read_contigs_table(tar_handle, "contigs.txt")
-            print_info("  - Reading list of samples ...")
+            log.info("  - Reading list of samples")
             self.samples = self._read_samples_table(tar_handle, "samples.txt")
-            print_info("  - Reading mitochondrial sequences ...")
+            log.info("  - Reading mitochondrial sequences")
             self.mitochondria = self._read_mitochondria(
                 tar_handle, "mitochondria.fasta"
             )
-            print_info("  - Reading emperical admixture distribution ...")
+            log.info("  - Reading emperical admixture distribution")
             self.simulations = self._read_simulations(tar_handle, "simulations.txt")
-            print_info("  - Determining sample order ...")
+            log.info("  - Determining sample order")
             self.sample_order = self._read_sample_order(tar_handle, "genotypes.txt")
 
         self._cross_validate()
@@ -121,12 +119,13 @@ class ZonkeyDB(object):
 
         Returns one of INVALID_BAMFILE, NUC_BAMFILE, and MITO_BAMFILE.
         """
-        print_info("  - Validating BAM file %r ... " % (filename,))
+        log = logging.getLogger(__name__)
+        log.info("  - Validating BAM file %r ", filename)
 
         try:
             handle = pysam.Samfile(filename)
         except (ValueError, IOError) as error:
-            print_err("Error reading BAM: %s" % (error,))
+            log.error("Error reading BAM: %s", error)
             return
 
         return self.validate_bam_handle(handle)
@@ -134,15 +133,14 @@ class ZonkeyDB(object):
     def validate_bam_handle(self, handle):
         samples = get_sample_names(handle)
         if len(samples) > 1:
-            print_warn("\nWARNING:")
-            print_warn(
+            log = logging.getLogger(__name__)
+            log.warning(
                 "BAM read-groups specify more than one sample, "
                 "but this tool treats BAMs as a single sample:"
             )
 
             for sample in enumerate(samples, start=1):
-                print_warn("    %i: %r" % sample)
-            print_warn("")
+                log.warning("    %i: %r" % sample)
 
         info = BAMInfo()
         if not _validate_mito_bam(self, handle, info):
@@ -204,12 +202,12 @@ class ZonkeyDB(object):
 
         samples = cls._read_table(tar_handle, "samples.txt")
         if not samples:
-            raise ZonkeyDBError("ERROR: No samples found in genotypes table!")
+            raise ZonkeyDBError("No samples found in genotypes table!")
 
         for row in samples.values():
             if row["Sex"].upper() not in ("MALE", "FEMALE", "NA"):
                 raise ZonkeyDBError(
-                    "ERROR: Unexpected sample sex (%r); "
+                    "Unexpected sample sex (%r); "
                     "expected 'MALE', 'FEMALE', or 'NA'" % (row["Sex"],)
                 )
 
@@ -494,6 +492,7 @@ def _validate_mito_bam(data, handle, info):
 
     references = handle.references
     min_length = min((len(record.sequence)) for record in data.mitochondria.values())
+    log = logging.getLogger(__name__)
 
     for bam_contig, bam_length in zip(references, handle.lengths):
         if bam_contig not in data.mitochondria:
@@ -503,8 +502,8 @@ def _validate_mito_bam(data, handle, info):
         db_length = len(db_sequence) - db_sequence.count("-")
 
         if bam_length != db_length:
-            print_err(
-                "ERROR: Length of mitochondrial contig %r (%i bp) "
+            log.error(
+                "Length of mitochondrial contig %r (%i bp) "
                 "does not match the length of the corresponding "
                 "sequence in the database (%i bp)" % (bam_contig, bam_length, db_length)
             )
@@ -513,7 +512,7 @@ def _validate_mito_bam(data, handle, info):
         if not os.path.exists(handle.filename + ".bai") and not os.path.exists(
             swap_ext(handle.filename, ".bai")
         ):
-            print_info("    - Attempting to index BAM file %r!" % (handle.filename,))
+            log.info("    - Attempting to index BAM file %r!" % (handle.filename,))
             pysam.index(handle.filename)
 
         # Workaround for pysam < 0.9 returning list, >= 0.9 returning str
@@ -524,7 +523,7 @@ def _validate_mito_bam(data, handle, info):
 
             name, _, hits, _ = line.split("\t")
             if (name == bam_contig) and not int(hits):
-                print_err(
+                log.error(
                     "WARNING: Mitochondrial BAM (%r) does not contain "
                     "any reads aligned to contig %r; inferring an "
                     "phylogeny is not possible." % (handle.filename, name)
@@ -545,14 +544,15 @@ def _validate_nuclear_bam(data, handle, info):
         zip(map(contig_name_to_plink_name, handle.references), handle.lengths)
     )
     ref_contigs = data.contigs
+    log = logging.getLogger(__name__)
 
     contigs_found = {}
     for name, stats in sorted(ref_contigs.items()):
         if name not in bam_contigs:
             contigs_found[name] = False
         elif bam_contigs[name] != stats["Size"]:
-            print_err(
-                "\nERROR: Chrom %r in the BAM does not match the "
+            log.error(
+                "Chrom %r in the BAM does not match the "
                 "length specified in data file:\n"
                 "    - Expected: %i\n"
                 "    - Found: %i" % (name, bam_contigs[name], stats["Size"])
@@ -564,10 +564,10 @@ def _validate_nuclear_bam(data, handle, info):
 
     if any(contigs_found.values()):
         if not all(contigs_found.values()):
-            print_err("\nERROR: Not all nuclear chromosomes found in BAM:")
+            log.error("Not all nuclear chromosomes found in BAM:")
             for (name, stats) in sorted(ref_contigs.items()):
                 is_found = "Found" if contigs_found[name] else "Not found!"
-                print_err("  - %s: %s" % (name, is_found))
+                log.error("  - %s: %s" % (name, is_found))
 
             return False
         else:
@@ -578,23 +578,16 @@ def _validate_nuclear_bam(data, handle, info):
 
 def _check_file_compression(filename):
     try:
+        log = logging.getLogger(__name__)
         with open(filename) as handle:
             header = handle.read(2)
 
             if header == "\x1f\x8b":
-                print_warn(
-                    "\nWARNING:\n"
-                    "Zonkey database file %r is gzip compressed;\n"
-                    "uncompressing the archive is recommended:\n"
-                    '  $ gunzip "%s"\n' % (filename, filename)
-                )
+                log.warning("Zonkey database is gzip compressed; please uncompress:")
+                log.warning("  $ gunzip %r", filename)
             elif header == "BZ":
-                print_warn(
-                    "\nWARNING:\n"
-                    "Zonkey database file %r is bzip2 compressed;\n"
-                    "uncompressing the archive is recommended:\n"
-                    '  $ bunzip2 "%s"\n' % (filename, filename)
-                )
+                log.warning("Zonkey database is bzip2 compressed; please uncompress:")
+                log.warning("  $ bunzip2 %r", filename)
     except IOError:
         # Errors are ignored at this stage
         pass

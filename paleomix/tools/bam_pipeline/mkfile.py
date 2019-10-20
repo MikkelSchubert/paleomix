@@ -20,16 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-
-
+import datetime
+import glob
+import logging
 import os
 import sys
-import glob
-import datetime
+
 from optparse import OptionParser
-
-from paleomix.common.console import print_info, print_err
-
 
 _TEMPLATE_TOP = """# -*- mode: Yaml; -*-
 # Timestamp: %s
@@ -237,19 +234,22 @@ def strip_comments(text):
 
 
 def read_alignment_records(filename):
+    log = logging.getLogger(__name__)
+
     results = []
     with open(filename) as records:
         line = records.readline()
         if not line:
-            print_err("ERROR: Empty SampleSheet.csv file: %r" % (filename,))
+            log.error("Empty SampleSheet.csv file: %r", filename)
             return None
 
         header = line.strip().split(",")
         missing = set(("SampleID", "Index", "Lane", "FCID")) - set(header)
         if missing:
-            print_err(
-                "ERROR: Required columns missing from SampleSheet file "
-                "%r: %s" % (filename, ", ".join(map(repr, missing)))
+            log.error(
+                "Required columns missing from SampleSheet file %r: %s",
+                filename,
+                ", ".join(map(repr, missing)),
             )
             return None
 
@@ -260,10 +260,13 @@ def read_alignment_records(filename):
 
             fields = line.split(",")
             if len(fields) != len(header):
-                print_err(
-                    "Line %i in SampleSheet file %r does not contain "
-                    "the expected number of columns; expected %i, but "
-                    "found %i." % (idx, filename, len(header), len(fields))
+                log.error(
+                    "Line %i in SampleSheet file %r does not contain the expected "
+                    "number of columns; expected %i, but found %i.",
+                    idx,
+                    filename,
+                    len(header),
+                    len(fields),
                 )
                 return None
 
@@ -303,7 +306,8 @@ def read_sample_sheets(filenames):
             root, filename = os.path.split(root)[0], root
 
         if not os.path.exists(filename):
-            print_err("ERROR: Could not find SampleSheet file: %r" % filename)
+            log = logging.getLogger(__name__)
+            log.error("Could not find SampleSheet file: %r", filename)
             return None
 
         sample_sheet = read_alignment_records(filename)
@@ -359,6 +363,7 @@ def print_samples(records):
 def main(argv, pipeline="bam"):
     assert pipeline in ("bam", "trim"), pipeline
 
+    log = logging.getLogger(__name__)
     options, filenames = parse_args(argv)
     records = read_sample_sheets(filenames)
     if records is None:
@@ -377,10 +382,8 @@ def main(argv, pipeline="bam"):
     print_samples(records)
 
     if argv:
-        print_info(
-            "Automatically generated makefile printed.\n"
-            "Please check for correctness before running pipeline."
-        )
+        log.info("Automatically generated makefile printed.")
+        log.info("Please check for correctness before running pipeline.")
     return 0
 
 

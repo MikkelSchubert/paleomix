@@ -21,17 +21,17 @@
 # SOFTWARE.
 import argparse
 import os
+import logging
 import sys
 
 import pysam
 
-from paleomix.common.console import print_err
+import paleomix.tools.zonkey.database as database
+
 from paleomix.common.formats.fasta import FASTA
 from paleomix.common.formats.msa import MSA
-from paleomix.common.utilities import fragment
 from paleomix.common.formats.phylip import interleaved_phy
-
-import paleomix.tools.zonkey.database as database
+from paleomix.common.utilities import fragment
 
 
 def majority_base(site):
@@ -146,11 +146,12 @@ def main(argv):
     args = parse_args(argv)
     data = database.ZonkeyDB(args.database)
     sequences = data.mitochondria
+    log = logging.getLogger(__name__)
 
     try:
         handle = pysam.Samfile(args.bam)
     except (IOError, ValueError) as error:
-        print_err("Error reading BAM file: %s" % (error,))
+        log.error("Error reading BAM file: %s", error)
         return 1
 
     with handle:
@@ -158,10 +159,7 @@ def main(argv):
         if bam_info is None:
             return 1
         elif not bam_info.is_mitochondrial:
-            print_err(
-                "ERROR: BAM does not contain any known mitochondrial "
-                "sequence found in BAM .."
-            )
+            log.error("BAM does not contain any known mitochondrial sequence")
             return 1
 
         reference = sequences[bam_info.mt_contig]
