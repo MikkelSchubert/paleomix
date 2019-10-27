@@ -258,9 +258,10 @@ def write_summary(args, filename, statistics):
             handle.write("%s: %s\n" % (key, statistics.get(key, "MISSING")))
 
 
-def process_bam(args, data, bam_handle):
+def process_bam(args, data, bam_handle, mapping):
+    reverse_mapping = dict(zip(mapping.values(), mapping))
     raw_references = bam_handle.references
-    references = map(common.contig_name_to_plink_name, raw_references)
+    references = [reverse_mapping.get(name, name) for name in raw_references]
 
     if args.downsample:
         sys.stderr.write("Downsampling to at most %i BAM records ...\n"
@@ -343,7 +344,7 @@ def main(argv):
                              "identifiable nuclear alignments.\n")
             return 1
 
-        process_bam(args, data, bam_handle)
+        process_bam(args, data, bam_handle, bam_info.nuclear_contigs)
 
     return 0
 

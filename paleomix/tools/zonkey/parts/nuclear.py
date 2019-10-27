@@ -694,8 +694,9 @@ class PlotPCANode(CommandNode):
 
 
 class PlotCoverageNode(CommandNode):
-    def __init__(self, contigs, input_file, output_prefix, dependencies=()):
+    def __init__(self, contigs, mapping, input_file, output_prefix, dependencies=()):
         self._contigs = contigs
+        self._mapping = dict(zip(mapping.values(), mapping))
         self._input_file = input_file
 
         script = rtools.rscript("zonkey", "coverage.r")
@@ -728,18 +729,10 @@ class PlotCoverageNode(CommandNode):
                     continue
 
                 name, size, hits, _ = line.split('\t')
-                name = contig_name_to_plink_name(name)
-                if name is None or not (name.isdigit() or name == 'X'):
-                    continue
-                elif name not in self._contigs:
+                name = self._mapping.get(name, name)
+                if name not in self._contigs:
                     # Excluding contigs is allowed
                     continue
-
-                if int(size) != self._contigs[name]['Size']:
-                    raise NodeError("Size mismatch between database and BAM; "
-                                    "expected size %i, found %i for contig %r"
-                                    % (int(size), self._contigs[name]['Size'],
-                                       name))
 
                 row = {
                     'ID': name,

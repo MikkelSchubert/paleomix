@@ -19,6 +19,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import collections
 import os
 import tarfile
 
@@ -46,14 +47,14 @@ _SETTINGS_KEYS = ('Format', 'Revision', 'Plink', 'NChroms', 'MitoPadding',
 
 class BAMInfo(object):
     def __init__(self):
-        self.nuclear = False
+        self.nuclear_contigs = {}
         self.mt_contig = None
         self.mt_length = None
         self.mt_padding = None
 
     @property
     def is_nuclear(self):
-        return self.nuclear
+        return bool(self.nuclear_contigs)
 
     @property
     def is_mitochondrial(self):
@@ -62,7 +63,7 @@ class BAMInfo(object):
     def __repr__(self):
         tmpl = "BAMInfo(nuclear=%r, mt_contig=%r, mt_length=%r, mt_padding=%r)"
 
-        return tmpl % (self.nuclear, self.mt_contig,
+        return tmpl % (self.nuclear_contigs, self.mt_contig,
                        self.mt_length, self.mt_padding)
 
 
@@ -508,38 +509,44 @@ def _validate_mito_bam(data, handle, info):
 
 
 def _validate_nuclear_bam(data, handle, info):
-    # Check that chromosomes are of expected size; unused chroms are ignored.
-    bam_contigs = dict(zip(map(contig_name_to_plink_name, handle.references),
-                           handle.lengths))
-    ref_contigs = data.contigs
+    # Match reference panel contigs with BAM contigs; identification is done
+    # by size since different repositories use different naming schemes.
+    bam_contigs = collections.defaultdict(list)
+    for name, length in zip(handle.references, handle.lengths):
+        bam_contigs[length].append(name)
 
-    contigs_found = {}
-    for name, stats in sorted(ref_contigs.iteritems()):
-        if name not in bam_contigs:
-            contigs_found[name] = False
-        elif bam_contigs[name] != stats["Size"]:
-            print_err("\nERROR: Chrom %r in the BAM does not match the "
-                      "length specified in data file:\n"
-                      "    - Expected: %i\n"
-                      "    - Found: %i"
-                      % (name, bam_contigs[name], stats["Size"]))
+    panel_names_to_bam = {}
+    for name, stats in sorted(data.contigs.iteritems()):
+        bam_contig_names = bam_contigs.get(stats["Size"], ())
+        if len(bam_contig_names) == 1:
+            panel_names_to_bam[name] = bam_contig_names[0]
+        elif len(bam_contig_names) > 1:
+            candidates = []
+            for bam_name in bam_contig_names:
+                if contig_name_to_plink_name(bam_name) == name:
+                    candidates.append(bam_name)
 
-            return False
-        else:
-            contigs_found[name] = True
+            if len(candidates) == 1:
+                panel_names_to_bam[name] = candidates[0]
+            else:
+                print_warn("\WARNING: Multiple candidates for chr%s with size %i:"
+                           % (name, stats["Size"]))
 
-    if any(contigs_found.itervalues()):
-        if not all(contigs_found.itervalues()):
-            print_err("\nERROR: Not all nuclear chromosomes found in BAM:")
-            for (name, stats) in sorted(ref_contigs.iteritems()):
-                is_found = "Found" if contigs_found[name] else "Not found!"
-                print_err("  - %s: %s" % (name, is_found))
+                for name in bam_contig_names:
+                    print_warn("  - %r" % (name,))
 
-            return False
-        else:
-            info.nuclear = True
+    if len(panel_names_to_bam) == len(data.contigs):
+        info.nuclear_contigs = panel_names_to_bam
+        return True
+    elif panel_names_to_bam:
+        print_err("\nERROR: Not all nuclear chromosomes found in BAM:")
+        for (name, stats) in sorted(data.contigs.iteritems()):
+            is_found = "OK" if name in panel_names_to_bam else "Not found!"
+            print_err("  - %s: %s" % (name, is_found))
 
-    return True
+        return False
+    else:
+        return True
 
 
 def _check_file_compression(filename):

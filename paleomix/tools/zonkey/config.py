@@ -218,14 +218,14 @@ def _process_samples(config):
                               "mitochondrial BAM specified; the mitochondrial "
                               "genome in the first BAM will not be used!")
 
-                files["Nuc"] = filename
+                files["Nuc"] = {"Path": filename, "Info": filetype}
                 files.setdefault("Mito", filename)
             elif filetype.is_nuclear:
                 if "Nuc" in files:
                     print_err("ERROR: Two nuclear BAMs specified!")
                     return False
 
-                files["Nuc"] = filename
+                files["Nuc"] = {"Path": filename, "Info": filetype}
             elif filetype.is_mitochondrial:
                 if "Mito" in files:
                     print_err("ERROR: Two nuclear BAMs specified!")

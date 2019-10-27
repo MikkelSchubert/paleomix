@@ -230,10 +230,11 @@ def build_pca_nodes(config, data, root, plink):
     return nodes
 
 
-def build_coverage_nodes(data, root, nuc_bam, dependencies=()):
+def build_coverage_nodes(contigs, mapping, root, nuc_bam, dependencies=()):
     output_prefix = os.path.join(root, 'figures', 'coverage', 'coverage')
 
-    return nuclear.PlotCoverageNode(contigs=data.contigs,
+    return nuclear.PlotCoverageNode(contigs=contigs,
+                                    mapping=mapping,
                                     input_file=nuc_bam,
                                     output_prefix=output_prefix,
                                     dependencies=dependencies),
@@ -280,6 +281,8 @@ def build_pipeline(config, root, nuc_bam, mito_bam, cache):
                                            output_file=sample_tbl)
 
     if nuc_bam is not None:
+        nuc_bam, nuc_bam_info = nuc_bam["Path"], nuc_bam["Info"]
+
         # When not sampling, BuildTPED relies on indexed access to ease
         # processing of one chromosome at a time. The index is further required
         # for idxstats used by the PlotCoverageNode.
@@ -294,8 +297,11 @@ def build_pipeline(config, root, nuc_bam, mito_bam, cache):
                                            plink))
 
         if not config.admixture_only:
-            nodes.extend(build_coverage_nodes(config.database,
-                                              root, nuc_bam, (index,)))
+            nodes.extend(build_coverage_nodes(contigs=config.database.contigs,
+                                              mapping=nuc_bam_info.nuclear_contigs,
+                                              root=root,
+                                              nuc_bam=nuc_bam,
+                                              dependencies=(index,)))
             nodes.extend(build_pca_nodes(config, config.database,
                                          root, plink))
             nodes.extend(build_treemix_nodes(config, config.database,
