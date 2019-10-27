@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.2.13.8] - 2019-10-27
+### Changed
+  - Zonkey now identifies nuclear chromosomes by size instead of name; this
+    is done to better handle FASTAs downloaded from different sources
+
+
 ## [1.2.13.7] - 2019-10-15
 ### Fixed
   - Fixed handling of digit only chromosome names in Zonkey
@@ -604,7 +610,8 @@ the (partially) updated documentation now hosted on ReadTheDocs.
   - Switching to more traditional version-number tracking.
 
 
-[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.7...HEAD
+[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.8...HEAD
+[1.2.13.8]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.7...v1.2.13.8
 [1.2.13.7]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.6...v1.2.13.7
 [1.2.13.6]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.5...v1.2.13.6
 [1.2.13.5]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.4...v1.2.13.5
