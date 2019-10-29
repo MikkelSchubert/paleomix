@@ -124,7 +124,7 @@ def build_admixture_nodes(config, data, root, plink):
 
         admix_root = os.path.join(root, "results", "admixture")
         report_root = os.path.join(root, "figures", "admixture")
-        for k_groups in (2, 3):
+        for k_groups in sorted(data.groups):
             replicates = []
 
             input_file = os.path.join(plink["root"], postfix + ".bed")
@@ -134,7 +134,7 @@ def build_admixture_nodes(config, data, root, plink):
                 node = nuclear.AdmixtureNode(input_file=input_file,
                                              output_root=output_root,
                                              k_groups=k_groups,
-                                             samples=data.samples,
+                                             groups=data.groups[k_groups],
                                              dependencies=(bed_node,))
 
                 replicates.append(node)
@@ -392,8 +392,6 @@ def setup_mito_mapping(config):
 
             info = config.database.samples.get(record.name)
             if info is not None:
-                mkfile.write("    # Group: %s\n"
-                             % (info.get('Group(3)', 'NA'),))
                 mkfile.write("    # Species: %s\n"
                              % (info.get('Species', 'NA'),))
                 mkfile.write("    # Sex: %s\n"

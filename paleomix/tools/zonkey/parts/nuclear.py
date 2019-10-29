@@ -192,17 +192,10 @@ class BuildFilteredBEDFilesNode(CommandNode):
 
 
 class AdmixtureNode(CommandNode):
-    def __init__(self, input_file, k_groups, output_root,
-                 samples=None, dependencies=()):
-        self._samples = samples
+    def __init__(self, input_file, k_groups, output_root, groups, dependencies=()):
+        self._groups = groups
         self._input_file = input_file
-        self._k_groups = k_groups
 
-        group_key = "Group(%i)" % (self._k_groups,)
-        self._supervised = samples and any((row[group_key] != '-')
-                                           for row in samples.itervalues())
-
-        assert k_groups in (2, 3), k_groups
         prefix = os.path.splitext(os.path.basename(input_file))[0]
         output_prefix = os.path.join(output_root,
                                      "%s.%i" % (prefix, k_groups))
@@ -227,9 +220,7 @@ class AdmixtureNode(CommandNode):
                                set_cwd=True)
 
         cmd.set_option("-s", random.randint(0, 2 ** 16 - 1))
-
-        if self._supervised:
-            cmd.set_option("--supervised")
+        cmd.set_option("--supervised")
 
         cmd.add_value("%(TEMP_OUT_FILE_BED)s")
         cmd.add_value(int(k_groups))
@@ -253,20 +244,16 @@ class AdmixtureNode(CommandNode):
             basename = os.path.basename(filename)
             os.symlink(os.path.abspath(filename), os.path.join(temp, basename))
 
-        if self._supervised:
-            fam_filename = fileutils.swap_ext(self._input_file, ".fam")
+        fam_filename = fileutils.swap_ext(self._input_file, ".fam")
+        pop_filename = fileutils.swap_ext(fam_filename, ".pop")
+        pop_filename = fileutils.reroot_path(temp, pop_filename)
 
-            pop_filename = fileutils.swap_ext(fam_filename, ".pop")
-            pop_filename = fileutils.reroot_path(temp, pop_filename)
+        with open(fam_filename) as fam_handle:
+            with open(pop_filename, "w") as pop_handle:
+                for line in fam_handle:
+                    sample, _ = line.split(None, 1)
 
-            key = "Group(%i)" % (self._k_groups,)
-            with open(fam_filename) as fam_handle:
-                with open(pop_filename, "w") as pop_handle:
-                    for line in fam_handle:
-                        sample, _ = line.split(None, 1)
-                        group = self._samples.get(sample, {}).get(key, "-")
-
-                        pop_handle.write("%s\n" % (group,))
+                    pop_handle.write("%s\n" % (self._groups.get(sample, "-"),))
 
 
 class SelectBestAdmixtureNode(Node):

@@ -21,6 +21,7 @@
 # SOFTWARE.
 import collections
 import os
+import re
 import tarfile
 
 import pysam
@@ -75,9 +76,10 @@ _SUPPORTED_DB_FORMAT_MINOR = 20160112
 
 # Required columns in the 'contigs.txt' table; additional columns are ignored
 _CONTIGS_TABLE_COLUMNS = frozenset(('ID', 'Size', 'Checksum'))
-# Required columns in the 'samples.txt' table; additional columns are ignored
-_SAMPELS_TABLE_COLUMNS = frozenset(('ID', 'Group(2)', 'Group(3)', 'Species',
-                                    'Sex', 'SampleID', 'Publication'))
+# Required columns in the 'samples.txt' table; additional non-group columns are ignored
+_SAMPLES_TABLE_COLUMNS = frozenset(('ID', 'Species', 'Sex', 'SampleID', 'Publication'))
+# Regular expression for parsing Group(K) columns in samples.txt
+_SAMPLES_TABLE_GROUP = re.compile(r'^Group\((?P<K>.+)\)$')
 
 
 class ZonkeyDBError(RuntimeError):
@@ -104,7 +106,7 @@ class ZonkeyDB(object):
             print_info('  - Reading list of contigs ...')
             self.contigs = self._read_contigs_table(tar_handle, "contigs.txt")
             print_info('  - Reading list of samples ...')
-            self.samples = self._read_samples_table(tar_handle, "samples.txt")
+            self.samples, self.groups = self._read_samples_table(tar_handle, "samples.txt")
             print_info('  - Reading mitochondrial sequences ...')
             self.mitochondria = self._read_mitochondria(tar_handle,
                                                         "mitochondria.fasta")
@@ -197,7 +199,7 @@ class ZonkeyDB(object):
     def _read_samples_table(cls, tar_handle, filename):
         cls._check_required_file(tar_handle, filename)
 
-        samples = cls._read_table(tar_handle, "samples.txt")
+        samples = cls._read_table(tar_handle, "samples.txt", _SAMPLES_TABLE_COLUMNS)
         if not samples:
             raise ZonkeyDBError("ERROR: No samples found in genotypes table!")
 
@@ -207,16 +209,42 @@ class ZonkeyDB(object):
                                     "expected 'MALE', 'FEMALE', or 'NA'"
                                     % (row["Sex"],))
 
-        for k_groups in (2, 3):
-            key = "Group(%i)" % (k_groups,)
-            groups = frozenset(row[key] for row in samples.itervalues())
+        group_keys = []
+        for key in samples.values()[0]:
+            match = _SAMPLES_TABLE_GROUP.match(key)
+            if match is not None:
+                k_value = match.groupdict()["K"]
+                if not k_value.isdigit():
+                    raise ZonkeyDBError("Malformed Group column name; K is "
+                                        "not a number: %r" % (key,))
+                elif not (2 <= int(k_value) <= 7):
+                    raise ZonkeyDBError("K must be between 2 and 7, but found %r"
+                                        % (key,))
 
-            if len(groups - set('-')) not in (0, k_groups):
-                raise ZonkeyDBError("The %r column in the samples table must "
-                                    "either contain %i ancestral groups, or "
-                                    "none" % (key, k_groups))
+                group_keys.append((key, int(k_value)))
 
-        return samples
+        groups = {}
+        for key, k_value in group_keys:
+            group = {}
+            for sample_key, sample in samples.items():
+                group[sample_key] = sample.pop(key)
+
+            group_labels = frozenset(group.values())
+            if group_labels == frozenset('-'):
+                continue  # Allowed for backwards compatibility
+            elif '-' in group_labels:
+                raise ZonkeyDBError("Not all samples column %r assignd a group"
+                                    % (key,))
+            elif len(group_labels) != k_value:
+                raise ZonkeyDBError("Expected %i groups in column %r, found %i"
+                                    % (k_value, key, len(group_labels)))
+
+            groups[k_value] = group
+
+        if not groups:
+            raise ZonkeyDBError("No valid groups in samples.txt")
+
+        return samples, groups
 
     @classmethod
     def _read_sample_order(cls, tar_handle, filename):
@@ -391,9 +419,7 @@ class ZonkeyDB(object):
                                         % (key, linenum, filename, row[key]))
 
             for key in ('Sample1', 'Sample2'):
-                group_key = 'Group(%i)' % (row['K'],)
-                groups = frozenset(row[group_key]
-                                   for row in self.samples.itervalues())
+                groups = frozenset(self.groups[int(row["K"])].values())
 
                 if row[key] not in groups and row[key] != '-':
                     raise ZonkeyDBError('Invalid group in column %r in '

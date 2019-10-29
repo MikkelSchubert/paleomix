@@ -34,6 +34,7 @@ _DEFAULT_COLORS = ("#E69F00", "#56B4E9",
 class WriteSampleList(Node):
     def __init__(self, config, output_file, dependencies=()):
         self._samples = config.database.samples
+        self._groups = config.database.groups
 
         Node.__init__(self,
                       description="<WriteSampleList -> %r>" % (output_file,),
@@ -44,17 +45,18 @@ class WriteSampleList(Node):
     def _run(self, config, temp):
         output_file, = self.output_files
         samples = self._samples
-        groups = set(sample["Group(3)"] for sample in samples.itervalues())
-        colors = dict(zip(groups, _DEFAULT_COLORS))
+
+        group = self._groups[max(self._groups)]
+        group_colors = dict(zip(sorted(set(group.values())), _DEFAULT_COLORS))
 
         with open(fileutils.reroot_path(temp, output_file), "w") as handle:
             handle.write("Name\tGroup\tColor\n")
 
-            for name, sample in sorted(samples.iteritems()):
-                group = sample["Group(3)"]
-                color = colors[group]
+            for sample_name in sorted(samples):
+                group_name = group[sample_name]
+                group_color = group_colors[group_name]
 
-                handle.write("%s\t%s\t%s\n" % (name, group, color))
+                handle.write("%s\t%s\t%s\n" % (sample_name, group_name, group_color))
 
             handle.write("Sample\t-\t#000000\n")
 

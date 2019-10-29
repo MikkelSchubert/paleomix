@@ -36,7 +36,6 @@ class AdmixtureError(RuntimeError):
 
 
 def read_admixture_results(filename, data, k_groups, cutoff=CUTOFF):
-    key = "Group(%i)" % (k_groups,)
     names = tuple(data.sample_order) + ("-",)
     table = _admixture_read_results(filename, names)
     _admixture_validate_ancestral_groups(data, table, k_groups, cutoff)
@@ -46,7 +45,7 @@ def read_admixture_results(filename, data, k_groups, cutoff=CUTOFF):
         if sample == '-':
             continue
 
-        group = data.samples[sample][key]
+        group = data.groups[k_groups][sample]
         for index, value in enumerate(row):
             if value >= cutoff:
                 ancestral_groups[index][0].add(group)
@@ -146,16 +145,13 @@ def _admixture_read_results(filename, samples):
 
 
 def _admixture_validate_ancestral_groups(data, table, k_groups, cutoff):
-    key = "Group(%i)" % (k_groups,)
     groups = collections.defaultdict(dict)
     for sample, row in table.iteritems():
-        if sample not in data.samples:
-            continue
-
-        group = data.samples[sample][key]
-        for index, value in enumerate(row):
-            if value >= cutoff:
-                groups[group][index] = True
+        group = data.groups[k_groups].get(sample)
+        if group is not None:
+            for index, value in enumerate(row):
+                if value >= cutoff:
+                    groups[group][index] = True
 
     mixed_groups = []
     for group, memberships in sorted(groups.iteritems()):

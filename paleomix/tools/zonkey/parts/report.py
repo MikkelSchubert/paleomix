@@ -139,26 +139,19 @@ class ReportNode(Node):
         output_handle.write(_SECTION_HEADER.format(name="samples",
                                                    title="Reference Panel"))
 
-        output_handle.write(_SAMPLE_LIST_HEADER)
+        group_headers = []
+        for k_value in sorted(self._data.groups):
+            group_headers.append("          <th>Group(%i)</th>" % k_value)
+        output_handle.write(_SAMPLE_LIST_HEADER % ('\n'.join(group_headers),))
 
         last_group_2 = None
         last_group_3 = None
-        for row in sorted(self._data.samples.itervalues(),
-                          key=lambda row: (row["Group(2)"],
-                                           row["Group(3)"],
-                                           row["ID"])):
-
+        for name, row in sorted(self._data.samples.iteritems()):
             row = dict(row)
-            if last_group_2 != row["Group(2)"]:
-                last_group_2 = row["Group(2)"]
-                last_group_3 = row["Group(3)"]
-            else:
-                row["Group(2)"] = ""
-
-                if last_group_3 != row["Group(3)"]:
-                    last_group_3 = row["Group(3)"]
-                else:
-                    row["Group(3)"] = ""
+            groups = []
+            for key in self._data.groups:
+                groups.append("          <td>%s</td>" % self._data.groups[key][name])
+            row["Groups"] = "\n".join(groups)
 
             pub = row["Publication"]
             if pub.startswith("http"):
@@ -183,7 +176,7 @@ class ReportNode(Node):
         overview = _ADMIXTURE_OVERVIEW.format(ADMIXTURE=admixture_v)
         output_handle.write(overview)
 
-        for k_groups in (2, 3):
+        for k_groups in sorted(self._data.groups):
             summary_incl = self._build_admixture_cell(k_groups, True)
             summary_excl = self._build_admixture_cell(k_groups, False)
 
@@ -372,7 +365,7 @@ class AnalysisReport(object):
 
                 # Include files showing proproation of ancestral populations,
                 # which are required to build admixture figures in the reports.
-                for k_groups in (2, 3):
+                for k_groups in sorted(self._data.groups):
                     input_files.append(os.path.join(admix_root,
                                                     "%s.%i.Q" % (postfix,
                                                                  k_groups)))
@@ -625,9 +618,8 @@ _OVERVIEW_FOOTER = """
 _SAMPLE_LIST_HEADER = """
       <table summary="List of samples in the reference panel.">
         <tr>
-          <th>Group(2)</th>
-          <th>Group(3)</th>
           <th>ID</th>
+%s
           <th>Species</th>
           <th>Sex</th>
           <th>Sample Name</th>
@@ -637,9 +629,8 @@ _SAMPLE_LIST_HEADER = """
 
 _SAMPLE_LIST_ROW = """
         <tr>
-          <td>{Group(2)}
-          <td>{Group(3)}
           <td>{ID}</td>
+{Groups}
           <td><em>{Species}</em></td>
           <td>{Sex}</th>
           <td>{SampleID}</td>
