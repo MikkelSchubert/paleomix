@@ -45,6 +45,9 @@ from paleomix.nodes.bwa import \
 import paleomix.common.versions as versions
 
 
+_RE_GATK_VERSION = r"^(?:The Genome Analysis Toolkit \(GATK\) v)?(\d+)\.(\d+)"
+
+
 def _get_gatk_version_check(config):
     """Returns a version-check object for the "GenomeAnalysisTK.jar" located at
     config.jar_root; for now, this check only serves to verify that the JAR can
@@ -60,8 +63,8 @@ def _get_gatk_version_check(config):
         # Any version is fine; for now just catch old JREs
         requirement = versions.Requirement(call=params.finalized_call,
                                            name="GenomeAnalysisTK",
-                                           search=r"^(\d+)\.(\d+)",
-                                           checks=versions.Any())
+                                           search=_RE_GATK_VERSION,
+                                           checks=versions.LT(4, 0))
         _GATK_VERSION[jar_file] = requirement
     return _GATK_VERSION[jar_file]
 _GATK_VERSION = {}
