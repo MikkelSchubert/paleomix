@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.2.14] - 2019-12-01
+### Changed
+  - Improved handling of K-groups in zonkey database files
+  - Change BAM pipeline version requirement for GATK to < v4.0, as the
+    the Indel Realigner has been removed in GATK v4.0
+
+### Fixed
+  - Fixed version detection of GATK for v4.0 (issue #23)
+
+
 ## [1.2.13.8] - 2019-10-27
 ### Changed
   - Zonkey now identifies nuclear chromosomes by size instead of name; this
@@ -610,7 +620,8 @@ the (partially) updated documentation now hosted on ReadTheDocs.
   - Switching to more traditional version-number tracking.
 
 
-[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.8...HEAD
+[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.14...HEAD
+[1.2.14]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.8...v1.2.14
 [1.2.13.8]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.7...v1.2.13.8
 [1.2.13.7]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.6...v1.2.13.7
 [1.2.13.6]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.5...v1.2.13.6
