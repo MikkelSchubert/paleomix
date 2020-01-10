@@ -27,6 +27,8 @@ import os
 import signal
 import traceback
 
+from queue import Empty
+
 import paleomix.logger
 
 from paleomix.node import Node, NodeError, NodeUnhandledException
@@ -336,7 +338,7 @@ class Pypeline:
             # User pressed ctrl-c (SIGINT), or similar event ...
             if error.errno != errno.EINTR:
                 raise
-        except queue.Empty:
+        except Empty:
             pass
         return None, None
 

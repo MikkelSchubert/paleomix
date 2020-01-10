@@ -157,7 +157,7 @@ class NodeGraph:
 
         cache = self._cache_factory()
         while any(requires_update.values()):
-            for (node, count) in intersections.items():
+            for (node, count) in tuple(intersections.items()):
                 if not count:
                     has_changed = False
                     if requires_update[node]:

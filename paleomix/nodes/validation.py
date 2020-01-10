@@ -151,7 +151,7 @@ class ValidateFASTAFilesNode(Node):
     def _run(self, _config, _temp):
         for filename in self.input_files:
             check_fasta_file(filename)
-        output_file, = self.output_files
+        (output_file,) = self.output_files
         if os.path.dirname(output_file):
             make_dirs(os.path.dirname(output_file))
         with open(output_file, "w"):
@@ -188,8 +188,8 @@ def check_fastq_files(filenames, required_offset, allow_empty=False):
     stats = {"seq_retained_nts": 0, "seq_retained_reads": 0, "seq_collapsed": 0}
 
     for file_type, filename in filenames:
-        qualities = _read_sequences(file_type, filename, stats)
-        offsets = fastq.classify_quality_strings(qualities)
+        qualities = _read_sequences(file_type, filename, stats) 
+        offsets = fastq.classify_quality_strings(qualities)             
         if offsets == fastq.OFFSET_BOTH:
             raise NodeError(
                 "FASTQ file contains quality scores with both "
@@ -344,8 +344,8 @@ def _collect_qualities(handle, file_type, filename, stats):
         seperator = handle.readline()
         qualities = handle.readline()
 
-        if not header.startswith("@"):
-            if header.startswith(">"):
+        if not header.startswith(b"@"):
+            if header.startswith(b">"):
                 raise NodeError(
                     "Input file appears to be in FASTA format "
                     "(header starts with '>', expected '@'), "
@@ -363,7 +363,7 @@ def _collect_qualities(handle, file_type, filename, stats):
                 "Partial record found; is not 4 lines long:\n"
                 "Filename = %r\n    Record = '%s'" % (filename, header.rstrip())
             )
-        elif not seperator.startswith("+"):
+        elif not seperator.startswith(b"+"):
             raise NodeError(
                 "Input file lacks FASTQ seperator (expected '+', "
                 "found %r), but only FASTQ files are supported\n"

@@ -329,9 +329,11 @@ _VALIDATION = {
 
 def _mangle_makefile(makefile, pipeline_variant):
     makefile = copy.deepcopy(makefile)
-    makefile["Options"] = makefile["Makefile"].pop("Options")
-    makefile["Prefixes"] = makefile["Makefile"].pop("Prefixes")
-    makefile["Targets"] = makefile.pop("Makefile")
+    makefile = {
+        "Options": makefile.pop("Options"),
+        "Prefixes": makefile.pop("Prefixes"),
+        "Targets": makefile,
+    }
 
     _mangle_features(makefile)
     _mangle_options(makefile)
@@ -860,8 +862,8 @@ def _is_invalid_hg_prefix(contigs):
 
 
 def _iterate_over_records(makefile):
-    for (target, samples) in makefile["Targets"].items():
-        for (sample, libraries) in samples.items():
-            for (library, barcodes) in libraries.items():
-                for (barcode, record) in barcodes.items():
+    for (target, samples) in tuple(makefile["Targets"].items()):
+        for (sample, libraries) in tuple(samples.items()):
+            for (library, barcodes) in tuple(libraries.items()):
+                for (barcode, record) in tuple(barcodes.items()):
                     yield target, sample, library, barcode, record

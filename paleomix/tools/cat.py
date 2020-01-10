@@ -44,13 +44,13 @@ def _select_cat(filename):
     """Identifies the compression scheme of a given file (if any) and return a
     tuple with the appropriate cat command to decompress it.
     """
-    with open(filename) as source:
+    with open(filename, "rb") as source:
         header = source.read(2)
         # The command "gzip -cd" is used instead of "zcat" because
         # OSX ships a broken zcat command (only accepts *.Z files).
-        if header == "\x1f\x8b":
+        if header == b"\x1f\x8b":
             return ("gzip", "-cd")
-        elif header == "BZ":
+        elif header == b"BZ":
             return ("bzip2", "-cd")
         return ("cat",)
 
