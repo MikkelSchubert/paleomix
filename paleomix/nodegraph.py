@@ -191,9 +191,9 @@ class NodeGraph:
 
     def _notify_state_observers(self, node, _old_state, new_state):
         if new_state == self.RUNNING:
-            self._logger.info("Started running node %s", node)
+            self._logger.info("Started node %s", node)
         elif new_state == self.DONE:
-            self._logger.info("Finished running node %s", node)
+            self._logger.info("Finished node %s", node)
 
     def _calculate_intersections(self, for_node):
         def count_nodes(node, counts):
