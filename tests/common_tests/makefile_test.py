@@ -42,6 +42,7 @@ from paleomix.common.makefile import (
     ValuesIntersect,
     ValuesSubsetOf,
     ValueMissing,
+    DeprecatedOption,
     And,
     Or,
     Not,
@@ -75,6 +76,20 @@ _COMMON_INVALID_VALUES = {
     "obj_1": object,
     "obj_2": object(),
 }
+
+
+_COMMON_VALUES = [
+    True,
+    False,
+    None,
+    {},
+    {"foo": 1},
+    [],
+    ["label"],
+    1.7,
+    10,
+    "test value",
+]
 
 
 def _common_invalid_values(exclude=(), extra=()):
@@ -426,6 +441,31 @@ def test_is_none__default_not_set():
 def test_is_none__default_not_implemented_for_is_none():
     with pytest.raises(NotImplementedError):
         IsNone(default=None)
+
+
+###############################################################################
+###############################################################################
+# ValueMissing
+
+
+@pytest.mark.parametrize("value", _COMMON_VALUES)
+def test_value_missing(value):
+    spec = ValueMissing()
+
+    with pytest.raises(MakefileError):
+        spec(_DUMMY_PATH, value)
+
+
+###############################################################################
+###############################################################################
+# DeprecatedOption
+
+
+@pytest.mark.parametrize("value", _COMMON_VALUES)
+def test_deprecated_option(value):
+    spec = DeprecatedOption()
+
+    spec(_DUMMY_PATH, value)
 
 
 ###############################################################################

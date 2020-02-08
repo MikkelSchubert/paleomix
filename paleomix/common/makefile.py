@@ -416,6 +416,16 @@ class ValueMissing(MakefileSpec):
         return False
 
 
+class DeprecatedOption(MakefileSpec):
+    """Used to signify substructures that have been deprecated, and are hence ignored."""
+
+    def __init__(self, description="deprecated settings"):
+        MakefileSpec.__init__(self, description, DEFAULT_NOT_SET)
+
+    def meets_spec(self, _value):
+        return True
+
+
 ###############################################################################
 ###############################################################################
 # BinaryOperators
