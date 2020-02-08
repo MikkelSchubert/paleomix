@@ -31,8 +31,6 @@ from paleomix.node import CommandNode
 from paleomix.atomiccmd.builder import (
     AtomicCmdBuilder,
     AtomicMPICmdBuilder,
-    use_customizable_cli_parameters,
-    create_customizable_cli_parameters,
 )
 
 from paleomix.nodegraph import FileStatusCache
@@ -52,8 +50,7 @@ PARSER_VERSION = versions.Requirement(
 
 
 class ExaMLParserNode(CommandNode):
-    @create_customizable_cli_parameters
-    def customize(cls, input_alignment, input_partition, output_file, dependencies=()):
+    def __init__(self, input_alignment, input_partition, output_file, dependencies=()):
         """
         Arguments:
         input_alignment  -- An alignment file in a format readable by RAxML.
@@ -81,23 +78,18 @@ class ExaMLParserNode(CommandNode):
             CHECK_EXAML=PARSER_VERSION,
         )
 
-        return {"command": command}
-
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
-        self._symlinks = [
-            os.path.abspath(parameters.input_alignment),
-            os.path.abspath(parameters.input_partition),
-        ]
-        self._output_file = os.path.basename(parameters.output_file)
-
         CommandNode.__init__(
             self,
-            command=parameters.command.finalize(),
-            description="<ExaMLParser: '%s' -> '%s'>"
-            % (parameters.input_alignment, parameters.output_file),
-            dependencies=parameters.dependencies,
+            command=command.finalize(),
+            description="<ExaMLParser: '%s' -> '%s'>" % (input_alignment, output_file),
+            dependencies=dependencies,
         )
+
+        self._symlinks = [
+            os.path.abspath(input_alignment),
+            os.path.abspath(input_partition),
+        ]
+        self._output_file = os.path.basename(output_file)
 
     def _setup(self, config, temp):
         CommandNode._setup(self, config, temp)
@@ -120,9 +112,14 @@ class ExaMLParserNode(CommandNode):
 
 
 class ExaMLNode(CommandNode):
-    @create_customizable_cli_parameters
-    def customize(
-        cls, input_binary, initial_tree, output_template, threads=1, dependencies=()
+    def __init__(
+        self,
+        input_binary,
+        initial_tree,
+        output_template,
+        model="GAMMA",
+        threads=1,
+        dependencies=(),
     ):
         """
         Arguments:
@@ -159,22 +156,18 @@ class ExaMLNode(CommandNode):
         )
 
         # Use the GAMMA model of NT substitution by default
-        command.set_option("-m", "GAMMA", fixed=False)
+        command.set_option("-m", model)
 
-        return {"command": command}
-
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
-        self._dirname = os.path.dirname(parameters.output_template)
-        self._template = os.path.basename(parameters.output_template)
+        self._dirname = os.path.dirname(output_template)
+        self._template = os.path.basename(output_template)
 
         CommandNode.__init__(
             self,
-            command=parameters.command.finalize(),
+            command=command.finalize(),
             description="<ExaML (%i thread(s)): '%s' -> '%s'>"
-            % (parameters.threads, parameters.input_binary, parameters.output_template),
-            threads=parameters.threads,
-            dependencies=parameters.dependencies,
+            % (threads, input_binary, output_template),
+            threads=threads,
+            dependencies=dependencies,
         )
 
     def _create_temp_dir(self, _config):

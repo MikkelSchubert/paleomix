@@ -77,17 +77,14 @@ def _examl_nodes(
         dependencies=dependencies,
     )
 
-    params = ExaMLNode.customize(
+    return ExaMLNode(
         input_binary=input_binary,
         initial_tree=parsimony_tree,
         output_template=output_template,
+        model=settings["ExaML"]["Model"].upper(),
         threads=options.examl_max_threads,
         dependencies=tree,
     )
-
-    params.command.set_option("-m", settings["ExaML"]["Model"].upper())
-
-    return params.build_node()
 
 
 def _build_rerooted_trees(nodes, reroot_on):
