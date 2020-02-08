@@ -22,13 +22,16 @@
 #
 import os
 
+from pathlib import Path
+from typing import Union
+
 
 class SetWorkingDirectory:
     """Sets the current working directory upon entry to that specified,
     in the constructor upon entry, and reverts to the previously used
     directory upon exiting a with statement."""
 
-    def __init__(self, path):
+    def __init__(self, path: Union[str, Path]):
         self._old_cwd = None
         self._new_cwd = path
 

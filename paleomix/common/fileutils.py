@@ -27,16 +27,17 @@ import uuid
 import errno
 import shutil
 
-from paleomix.common.utilities import safe_coerce_to_tuple, safe_coerce_to_frozenset
+from pathlib import Path
+from typing import Any, Callable, IO, Iterable, List, Optional, Tuple, Union
 
 
-def add_postfix(filename, postfix):
+def add_postfix(filename: Union[str, Path], postfix: str) -> str:
     """Ads a postfix to a filename (before any extensions that filename may have)."""
     filename, ext = os.path.splitext(filename)
     return filename + postfix + ext
 
 
-def swap_ext(filename, ext):
+def swap_ext(filename: str, ext: str) -> str:
     """Replaces the existing extension of a filename with the specified extension,
     ensuring that the extension is prefixed by a '.'. If no extension is specified,
     other than potentially a dot, the existing extension is stripped."""
@@ -50,17 +51,17 @@ def swap_ext(filename, ext):
     return filename + ext
 
 
-def reroot_path(root, filename):
+def reroot_path(root: Union[str, Path], filename: str) -> str:
     """Returns the basename of filename, joined to root."""
     return os.path.join(root, os.path.basename(filename))
 
 
-def create_temp_dir(root):
+def create_temp_dir(root: Union[str, Path]) -> str:
     """Creates a temporary directory, accessible only by the owner,
     at the specified location. The folder name is randomly generated,
     and only the current user has access"""
 
-    def _generate_path():
+    def _generate_path() -> str:
         return os.path.join(root, str(uuid.uuid4()))
 
     path = _generate_path()
@@ -69,27 +70,20 @@ def create_temp_dir(root):
     return path
 
 
-def missing_files(filenames):
+def missing_files(filenames: Iterable[Union[str, Path]]) -> List[Union[str, Path]]:
     """Given a list of filenames, returns a list of those that
     does not exist. Note that this function does not differentiate
     between files and folders."""
-    result = []
-    for filename in safe_coerce_to_frozenset(filenames):
-        if not os.path.exists(filename):
-            result.append(filename)
-
-    return result
+    return [filename for filename in filenames if not os.path.exists(filename)]
 
 
-def missing_executables(filenames):
-    result = []
-    for filename in safe_coerce_to_frozenset(filenames):
-        if not shutil.which(filename):
-            result.append(filename)
-    return result
+def missing_executables(
+    filenames: Iterable[Union[str, Path]]
+) -> List[Union[str, Path]]:
+    return [filename for filename in filenames if not shutil.which(filename)]
 
 
-def make_dirs(directory, mode=0o777):
+def make_dirs(directory: Union[str, Path], mode: int = 0o777) -> bool:
     """Wrapper around os.makedirs to make it suitable for using
     in a multithreaded/multiprocessing enviroment: Unlike the
     regular function, this wrapper does not throw an exception if
@@ -112,19 +106,19 @@ def make_dirs(directory, mode=0o777):
         return False
 
 
-def move_file(source, destination):
+def move_file(source: Union[str, Path], destination: Union[str, Path]) -> None:
     """Wrapper around shutils which ensures that the
     destination directory exists before moving the file."""
     _sh_wrapper(shutil.move, source, destination)
 
 
-def copy_file(source, destination):
+def copy_file(source: Union[str, Path], destination: Union[str, Path]) -> None:
     """Wrapper around shutils which ensures that the
     destination directory exists before copying the file."""
     _sh_wrapper(shutil.copy, source, destination)
 
 
-def open_ro(filename):
+def open_ro(filename: Union[str, Path]) -> IO[str]:
     """Opens a file for reading, transparently handling
     GZip and BZip2 compressed files. Returns a file handle."""
     with open(filename, "rb") as handle:
@@ -138,7 +132,7 @@ def open_ro(filename):
         return open(filename, "rt")
 
 
-def try_remove(filename):
+def try_remove(filename: Union[str, Path]) -> bool:
     """Tries to remove a file. Unlike os.remove, the function does not
     raise an exception if the file does not exist, but does raise
     exceptions on other errors. The return value reflects whether or
@@ -146,7 +140,7 @@ def try_remove(filename):
     return _try_rm_wrapper(os.remove, filename)
 
 
-def try_rmtree(filename):
+def try_rmtree(filename: Union[str, Path]) -> bool:
     """Tries to remove a dir-tree. Unlike shutil.rmtree, the function does not raise
     an exception if the file does not exist, but does raise exceptions on other
     errors. The return value reflects whether or not the file was actually
@@ -154,7 +148,7 @@ def try_rmtree(filename):
     return _try_rm_wrapper(shutil.rmtree, filename)
 
 
-def describe_files(files):
+def describe_files(files: Iterable[str]) -> str:
     """Return a text description of a set of files."""
     files = _validate_filenames(files)
 
@@ -173,7 +167,7 @@ def describe_files(files):
     return "%i files" % (len(files),)
 
 
-def describe_paired_files(files_1, files_2):
+def describe_paired_files(files_1: Iterable[str], files_2: Iterable[str]) -> str:
     """Return a text description of a set of paired filenames; the
     sets must be of the same length, a the description will depend
     on the overall similarity of the filenames / paths. If 'files_2'
@@ -207,7 +201,9 @@ def describe_paired_files(files_1, files_2):
     return "%i pair(s) of files" % (len(files_1),)
 
 
-def _get_files_glob(filenames, max_differences=1, show_differences=False):
+def _get_files_glob(
+    filenames: Iterable[str], max_differences: int = 1, show_differences: bool = False
+) -> Optional[str]:
     """Tries to generate a glob-string for a set of filenames, containing
     at most 'max_differences' different columns. If more differences are
     found, or if the length of filenames vary, None is returned."""
@@ -234,20 +230,25 @@ def _get_files_glob(filenames, max_differences=1, show_differences=False):
     return "".join(glob_fname)
 
 
-def _validate_filenames(filenames):
+def _validate_filenames(filenames: Iterable[str]) -> Tuple[str, ...]:
     """Sanity checks for filenames handled by
     'describe_files' and 'describe_paired_files."""
-    filenames = safe_coerce_to_tuple(filenames)
+    filenames = tuple(filenames)
     for filename in filenames:
         if not isinstance(filename, str):
             raise ValueError(
                 "Only string types are allowed for filenames, not %s"
                 % (filename.__class__.__name__,)
             )
+
     return filenames
 
 
-def _sh_wrapper(func, source, destination):
+def _sh_wrapper(
+    func: Callable[[Union[str, Path], Union[str, Path]], Any],
+    source: Union[str, Path],
+    destination: Union[str, Path],
+) -> None:
     """Runs an 'shutil' function ('func') which takes an 'source' and
     a 'destination' argument (e.g. copy/move/etc.), but silently
     handles the case where the destination directory does not exist.
@@ -269,7 +270,7 @@ def _sh_wrapper(func, source, destination):
         raise
 
 
-def _try_rm_wrapper(func, fpath):
+def _try_rm_wrapper(func: Callable[[Any], Any], fpath: Union[str, Path]) -> bool:
     """Takes a function (e.g. os.remove / os.rmdir), and attempts to remove a
     path; returns true if that path was succesfully remove, and false if it did
     not exist."""

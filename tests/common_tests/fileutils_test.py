@@ -24,6 +24,8 @@ import errno
 import os
 import stat
 
+from pathlib import Path
+from typing import Any
 from unittest.mock import ANY, call, DEFAULT, Mock, patch
 
 import pytest
@@ -53,11 +55,11 @@ from paleomix.common.fileutils import (
 # Setup timestamps for test files
 
 
-def test_dir():
+def test_dir() -> str:
     return os.path.dirname(os.path.dirname(__file__))
 
 
-def test_file(*args):
+def test_file(*args: str) -> str:
     return os.path.join(test_dir(), "data", *args)
 
 
@@ -66,27 +68,27 @@ def test_file(*args):
 # Tests for 'add_postfix'
 
 
-def test_add_postfix__no_postfix():
+def test_add_postfix__no_postfix() -> None:
     assert add_postfix("name.foo", "") == "name.foo"
 
 
-def test_add_postfix__dot_postfix():
+def test_add_postfix__dot_postfix() -> None:
     assert add_postfix("name.foo", ".pf") == "name.pf.foo"
 
 
-def test_add_postfix__underscore_postfix():
+def test_add_postfix__underscore_postfix() -> None:
     assert add_postfix("name.foo", "_pf") == "name_pf.foo"
 
 
-def test_add_postfix__no_ext__no_postfix():
+def test_add_postfix__no_ext__no_postfix() -> None:
     assert add_postfix("name", "") == "name"
 
 
-def test_add_postfix__no_ext__dot_postfix():
+def test_add_postfix__no_ext__dot_postfix() -> None:
     assert add_postfix("name", ".pf") == "name.pf"
 
 
-def test_add_postfix__no_ext__underscore_postfix():
+def test_add_postfix__no_ext__underscore_postfix() -> None:
     assert add_postfix("name", "_pf") == "name_pf"
 
 
@@ -95,47 +97,47 @@ def test_add_postfix__no_ext__underscore_postfix():
 # Tests for 'swap_ext'
 
 
-def test_swap_ext__has_ext_vs_empty_ext():
+def test_swap_ext__has_ext_vs_empty_ext() -> None:
     assert swap_ext("name.foo", "") == "name"
 
 
-def test_swap_ext__empty_ext_vs_empty_ext():
+def test_swap_ext__empty_ext_vs_empty_ext() -> None:
     assert swap_ext("name", "") == "name"
 
 
-def test_swap_ext__has_ext_vs_dot_ext():
+def test_swap_ext__has_ext_vs_dot_ext() -> None:
     assert swap_ext("name.foo", ".") == "name"
 
 
-def test_swap_ext__dot_ext_vs_dot_ext():
+def test_swap_ext__dot_ext_vs_dot_ext() -> None:
     assert swap_ext("name.", ".") == "name"
 
 
-def test_swap_ext__multiple__has_ext_vs_empty_ext():
+def test_swap_ext__multiple__has_ext_vs_empty_ext() -> None:
     assert swap_ext("name.foo.bar", "") == "name.foo"
 
 
-def test_swap_ext__multiple__has_ext_vs_dot_ext():
+def test_swap_ext__multiple__has_ext_vs_dot_ext() -> None:
     assert swap_ext("name.foo.bar", ".") == "name.foo"
 
 
-def test_swap_ext__multiple__dot_ext_vs_dot_ext():
+def test_swap_ext__multiple__dot_ext_vs_dot_ext() -> None:
     assert swap_ext("name.foo.", ".") == "name.foo"
 
 
-def test_swap_ext__has_ext_vs_new_ext():
+def test_swap_ext__has_ext_vs_new_ext() -> None:
     assert swap_ext("name.foo", "bar") == "name.bar"
 
 
-def test_swap_ext__has_ext_vs_new_dot_ext():
+def test_swap_ext__has_ext_vs_new_dot_ext() -> None:
     assert swap_ext("name.foo", ".bar") == "name.bar"
 
 
-def test_swap_ext__empty_ext_vs_new_ext():
+def test_swap_ext__empty_ext_vs_new_ext() -> None:
     assert swap_ext("name", "bar") == "name.bar"
 
 
-def test_swap_ext__dot_ext_vs_new_dot_ext():
+def test_swap_ext__dot_ext_vs_new_dot_ext() -> None:
     assert swap_ext("name", ".bar") == "name.bar"
 
 
@@ -144,43 +146,43 @@ def test_swap_ext__dot_ext_vs_new_dot_ext():
 # Tests for 'reroot_path'
 
 
-def test_reroot_path__empty_root():
+def test_reroot_path__empty_root() -> None:
     assert reroot_path("", "/etc/apt/sources.list") == "sources.list"
 
 
-def test_reroot_path__empty_path():
+def test_reroot_path__empty_path() -> None:
     assert reroot_path("/etc/apt", "") == "/etc/apt/"
 
 
-def test_reroot_path__abs_abs__wo_final_dash():
+def test_reroot_path__abs_abs__wo_final_dash() -> None:
     assert reroot_path("/etc/apt", "/tmp/sources.list") == "/etc/apt/sources.list"
 
 
-def test_reroot_path__abs_abs__w_final_dash():
+def test_reroot_path__abs_abs__w_final_dash() -> None:
     assert reroot_path("/etc/apt/", "/tmp/sources.list") == "/etc/apt/sources.list"
 
 
-def test_reroot_path__abs_rel__wo_final_dash():
+def test_reroot_path__abs_rel__wo_final_dash() -> None:
     assert reroot_path("/etc/apt", "tmp/sources.list") == "/etc/apt/sources.list"
 
 
-def test_reroot_path__abs_rel__w_final_dash():
+def test_reroot_path__abs_rel__w_final_dash() -> None:
     assert reroot_path("/etc/apt/", "tmp/sources.list") == "/etc/apt/sources.list"
 
 
-def test_reroot_path__rel_abs__wo_final_dash():
+def test_reroot_path__rel_abs__wo_final_dash() -> None:
     assert reroot_path("etc/apt", "/tmp/sources.list") == "etc/apt/sources.list"
 
 
-def test_reroot_path__rel_abs__w_final_dash():
+def test_reroot_path__rel_abs__w_final_dash() -> None:
     assert reroot_path("etc/apt/", "/tmp/sources.list") == "etc/apt/sources.list"
 
 
-def test_reroot_path__rel_rel__wo_final_dash():
+def test_reroot_path__rel_rel__wo_final_dash() -> None:
     assert reroot_path("etc/apt", "tmp/sources.list") == "etc/apt/sources.list"
 
 
-def test_reroot_path__rel_rel__w_final_dash():
+def test_reroot_path__rel_rel__w_final_dash() -> None:
     assert reroot_path("etc/apt/", "tmp/sources.list") == "etc/apt/sources.list"
 
 
@@ -189,26 +191,26 @@ def test_reroot_path__rel_rel__w_final_dash():
 # Tests for 'create_temp_dir'
 
 
-def test_create_temp_dir__create(tmp_path):
+def test_create_temp_dir__create(tmp_path: Path) -> None:
     tmp_dir_1 = create_temp_dir(tmp_path)
     tmp_dir_2 = create_temp_dir(tmp_path)
     assert os.path.exists(tmp_dir_1)
     assert os.path.exists(tmp_dir_2)
 
 
-def test_create_temp_dir__empty(tmp_path):
+def test_create_temp_dir__empty(tmp_path: Path) -> None:
     tmp_dir = create_temp_dir(tmp_path)
     contents = os.listdir(tmp_dir)
     assert not contents
 
 
-def test_create_temp_dir__permissions(tmp_path):
+def test_create_temp_dir__permissions(tmp_path: Path) -> None:
     tmp_dir = create_temp_dir(tmp_path)
     stats = os.stat(tmp_dir)
     assert stats.st_mode & 0 == 0
 
 
-def test_create_temp_dir__creation_preempted(tmp_path):
+def test_create_temp_dir__creation_preempted(tmp_path: Path) -> None:
     makedirs = os.makedirs
     mock = Mock(wraps=makedirs)
     # Raise expection first, then pass second call to wrapped function
@@ -224,7 +226,7 @@ def test_create_temp_dir__creation_preempted(tmp_path):
     assert call_1[1] != call_2[1]
 
 
-def test_create_temp_dir__permission_denied():
+def test_create_temp_dir__permission_denied() -> None:
     with patch("os.makedirs") as mock:
         mock.side_effect = OSError(errno.EACCES, "Simulated premission denied")
 
@@ -237,15 +239,15 @@ def test_create_temp_dir__permission_denied():
 # Tests for 'missing_files'
 
 
-def test_missing_files__file_exists():
+def test_missing_files__file_exists() -> None:
     assert missing_files([test_file("empty_file_1")]) == []
 
 
-def test_missing_files__file_doesnt_exist():
+def test_missing_files__file_doesnt_exist() -> None:
     assert missing_files([test_file("missing_file_1")]) == [test_file("missing_file_1")]
 
 
-def test_missing_files__mixed_files():
+def test_missing_files__mixed_files() -> None:
     files = [test_file("missing_file_1"), test_file("empty_file_1")]
     result = [test_file("missing_file_1")]
 
@@ -257,24 +259,24 @@ def test_missing_files__mixed_files():
 # Tests for 'missing_executables'
 
 
-def test_missing_executables__executable():
+def test_missing_executables__executable() -> None:
     assert missing_executables(["ls"]) == []
 
 
-def test_missing_executables__non_executable():
+def test_missing_executables__non_executable() -> None:
     assert missing_executables(["lsxxxx"]) == ["lsxxxx"]
 
 
-def test_missing_executables__mixed():
+def test_missing_executables__mixed() -> None:
     assert missing_executables(["lsxxxx", "ls"]) == ["lsxxxx"]
 
 
-def test_missing_executables__with_path__missing(tmp_path):
+def test_missing_executables__with_path__missing(tmp_path: Path) -> None:
     executable = tmp_path / "ls"
     assert missing_executables([executable]) == [executable]
 
 
-def test_missing_executables__with_path__exists(tmp_path):
+def test_missing_executables__with_path__exists(tmp_path: Path) -> None:
     executable = tmp_path / "ls"
     executable.touch()
     executable.chmod(0o700)
@@ -287,41 +289,41 @@ def test_missing_executables__with_path__exists(tmp_path):
 # Tests for 'make_dirs'
 
 
-def test_make_dirs__create_dir(tmp_path):
+def test_make_dirs__create_dir(tmp_path: Path) -> None:
     assert not os.listdir(tmp_path)
     assert make_dirs(os.path.join(tmp_path, "test123"))
     assert os.listdir(tmp_path) == ["test123"]
 
 
-def test_make_dirs__return_values(tmp_path):
+def test_make_dirs__return_values(tmp_path: Path) -> None:
     assert make_dirs(os.path.join(tmp_path, "test234"))
     assert not make_dirs(os.path.join(tmp_path, "test234"))
 
 
-def test_make_dirs__subdirs_return_values(tmp_path):
+def test_make_dirs__subdirs_return_values(tmp_path: Path) -> None:
     assert make_dirs(os.path.join(tmp_path, "test"))
     assert make_dirs(os.path.join(tmp_path, "test", "234"))
     assert not make_dirs(os.path.join(tmp_path, "test", "234"))
 
 
-def test_make_dirs__sub_directories(tmp_path):
+def test_make_dirs__sub_directories(tmp_path: Path) -> None:
     assert not os.listdir(tmp_path)
     assert make_dirs(os.path.join(tmp_path, "test", "123"))
     assert os.listdir(tmp_path) == ["test"]
     assert os.listdir(os.path.join(tmp_path, "test")) == ["123"]
 
 
-def test_make_dirs__permissions(tmp_path):
+def test_make_dirs__permissions(tmp_path: Path) -> None:
     work_dir = tmp_path / "test_1"
     assert make_dirs(work_dir, mode=0o511)
     stats = work_dir.stat()
     assert oct(stats.st_mode & 0o777) == oct(0o511)
 
 
-def test_make_dirs__creation_preemted(tmp_path):
+def test_make_dirs__creation_preemted(tmp_path: Path) -> None:
     makedirs = os.makedirs
 
-    def _wrap_os_makedirs(*args, **kwargs):
+    def _wrap_os_makedirs(*args: Any, **kwargs: Any):
         # Simulate somebody else creating the directory first
         makedirs(*args, **kwargs)
         makedirs(*args, **kwargs)
@@ -333,7 +335,7 @@ def test_make_dirs__creation_preemted(tmp_path):
         assert os.listdir(tmp_path) == ["test"]
 
 
-def test_make_dirs__permission_denied(tmp_path):
+def test_make_dirs__permission_denied(tmp_path: Path) -> None:
     # Make temporary folder read-only
     mode = os.stat(tmp_path).st_mode
     ro_mode = mode & ~(stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH)
@@ -343,7 +345,7 @@ def test_make_dirs__permission_denied(tmp_path):
         make_dirs(os.path.join(tmp_path, "foo"))
 
 
-def test_make_dirs__empty_directory():
+def test_make_dirs__empty_directory() -> None:
     with pytest.raises(ValueError, match="Empty directory passed to make_dirs"):
         make_dirs("")
 
@@ -353,7 +355,7 @@ def test_make_dirs__empty_directory():
 # Tests for 'move_file'
 
 
-def test_move_file__simple_move(tmp_path):
+def test_move_file__simple_move(tmp_path: Path) -> None:
     file_1 = tmp_path / "file_1"
     file_2 = tmp_path / "file_2"
     assert os.listdir(tmp_path) == []
@@ -364,7 +366,7 @@ def test_move_file__simple_move(tmp_path):
     assert file_2.read_text() == "1"
 
 
-def test_move_file__simple_move_in_cwd(tmp_path):
+def test_move_file__simple_move_in_cwd(tmp_path: Path) -> None:
     with SetWorkingDirectory(tmp_path):
         assert os.listdir(".") == []
         (tmp_path / "file_1").write_text("1")
@@ -374,7 +376,7 @@ def test_move_file__simple_move_in_cwd(tmp_path):
         assert (tmp_path / "file_2").read_text() == "1"
 
 
-def test_move_dirs__permission_denied(tmp_path):
+def test_move_dirs__permission_denied(tmp_path: Path) -> None:
     dst_folder = tmp_path / "dst"
     file_1 = tmp_path / "file"
     file_2 = dst_folder / "file"
@@ -391,7 +393,7 @@ def test_move_dirs__permission_denied(tmp_path):
         move_file(file_1, file_2)
 
 
-def test_move_file__move_to_existing_folder(tmp_path):
+def test_move_file__move_to_existing_folder(tmp_path: Path) -> None:
     assert make_dirs(tmp_path / "src")
     assert make_dirs(tmp_path / "dst")
     file_1 = tmp_path / "src" / "file_1"
@@ -404,7 +406,7 @@ def test_move_file__move_to_existing_folder(tmp_path):
     assert file_2.read_text() == "2"
 
 
-def test_move_file__move_to_new_folder(tmp_path):
+def test_move_file__move_to_new_folder(tmp_path: Path) -> None:
     assert make_dirs(tmp_path / "src")
     file_1 = tmp_path / "src" / "file_1"
     file_2 = tmp_path / "dst" / "file_2"
@@ -417,7 +419,7 @@ def test_move_file__move_to_new_folder(tmp_path):
     assert file_2.read_text() == "2"
 
 
-def test_move_file__move_to_different_folder(tmp_path):
+def test_move_file__move_to_different_folder(tmp_path: Path) -> None:
     (tmp_path / "file_1").write_text("3")
 
     with SetWorkingDirectory(tmp_path):
@@ -428,7 +430,7 @@ def test_move_file__move_to_different_folder(tmp_path):
     assert (tmp_path / "dst" / "file_1").read_text() == "3"
 
 
-def test_move_file__overwrite(tmp_path):
+def test_move_file__overwrite(tmp_path: Path) -> None:
     (tmp_path / "file_1").write_text("4")
     (tmp_path / "file_2").write_text("5")
 
@@ -439,7 +441,7 @@ def test_move_file__overwrite(tmp_path):
     assert (tmp_path / "file_2").read_text() == "4"
 
 
-def test_move_file__enoent_reraised_if_not_due_to_missing_folder():
+def test_move_file__enoent_reraised_if_not_due_to_missing_folder() -> None:
     with pytest.raises(IOError):
         move_file("", "./dst")
 
@@ -449,7 +451,7 @@ def test_move_file__enoent_reraised_if_not_due_to_missing_folder():
 # Tests for 'copy_file'
 
 
-def test_copy_file__simple_copy(tmp_path):
+def test_copy_file__simple_copy(tmp_path: Path) -> None:
     file_1 = tmp_path / "file_1"
     file_2 = tmp_path / "file_2"
     file_1.write_text("1")
@@ -460,7 +462,7 @@ def test_copy_file__simple_copy(tmp_path):
     assert file_2.read_text() == "1"
 
 
-def test_copy_file__simple_copy_in_cwd(tmp_path):
+def test_copy_file__simple_copy_in_cwd(tmp_path: Path) -> None:
     file_1 = tmp_path / "file_1"
     file_2 = tmp_path / "file_2"
     file_1.write_text("1")
@@ -473,7 +475,7 @@ def test_copy_file__simple_copy_in_cwd(tmp_path):
     assert file_2.read_text() == "1"
 
 
-def test_copy_file__copy_to_existing_folder(tmp_path):
+def test_copy_file__copy_to_existing_folder(tmp_path: Path) -> None:
     assert make_dirs(tmp_path / "src")
     assert make_dirs(tmp_path / "dst")
     file_1 = tmp_path / "src" / "file_1"
@@ -486,7 +488,7 @@ def test_copy_file__copy_to_existing_folder(tmp_path):
     assert file_2.read_text() == "2"
 
 
-def test_copy_file__copy_to_new_folder(tmp_path):
+def test_copy_file__copy_to_new_folder(tmp_path: Path) -> None:
     assert make_dirs(tmp_path / "src")
     file_1 = tmp_path / "src" / "file_1"
     file_2 = tmp_path / "dst" / "file_2"
@@ -498,7 +500,7 @@ def test_copy_file__copy_to_new_folder(tmp_path):
     assert file_2.read_text() == "2"
 
 
-def test_copy_file__copy_to_different_folder(tmp_path):
+def test_copy_file__copy_to_different_folder(tmp_path: Path) -> None:
     (tmp_path / "file_1").write_text("3")
 
     with SetWorkingDirectory(tmp_path):
@@ -510,7 +512,7 @@ def test_copy_file__copy_to_different_folder(tmp_path):
     assert (tmp_path / "dst" / "file_1").read_text() == "3"
 
 
-def test_copy_file__overwrite(tmp_path):
+def test_copy_file__overwrite(tmp_path: Path) -> None:
     file_1 = tmp_path / "file_1"
     file_1.write_text("4")
     file_2 = tmp_path / "file_2"
@@ -524,7 +526,7 @@ def test_copy_file__overwrite(tmp_path):
     assert file_2.read_text() == "4"
 
 
-def test_copy_file__enoent_reraised_if_not_due_to_missing_folder():
+def test_copy_file__enoent_reraised_if_not_due_to_missing_folder() -> None:
     with pytest.raises(IOError):
         copy_file("", "./dst")
 
@@ -534,12 +536,12 @@ def test_copy_file__enoent_reraised_if_not_due_to_missing_folder():
 # Tests for 'open'
 
 
-def test_open_ro__uncompressed():
+def test_open_ro__uncompressed() -> None:
     with open_ro(test_file("fasta_file.fasta")) as handle:
         assert handle.read() == ">This_is_FASTA!\nACGTN\n>This_is_ALSO_FASTA!\nCGTNA\n"
 
 
-def test_open_ro__gz():
+def test_open_ro__gz() -> None:
     with open_ro(test_file("fasta_file.fasta.gz")) as handle:
         assert (
             handle.read()
@@ -547,7 +549,7 @@ def test_open_ro__gz():
         )
 
 
-def test_open_ro__bz2():
+def test_open_ro__bz2() -> None:
     with open_ro(test_file("fasta_file.fasta.bz2")) as handle:
         assert (
             handle.read()
@@ -559,7 +561,7 @@ class OddException(RuntimeError):
     pass
 
 
-def test_open_ro__close_handle_on_error():
+def test_open_ro__close_handle_on_error() -> None:
     mocks = Mock()
     mocks.file.read.side_effect = OddException("ARGH!")
     mocks.file.__enter__ = Mock(return_value=mocks.file)
@@ -585,20 +587,20 @@ def test_open_ro__close_handle_on_error():
 # Tests for 'try_remove'
 
 
-def test_try_remove(tmp_path):
+def test_try_remove(tmp_path: Path) -> None:
     fpath = tmp_path / "test.txt"
     fpath.write_text("1 2 3")
     assert try_remove(fpath)
     assert not fpath.exists()
 
 
-def test_try_remove__missing(tmp_path):
+def test_try_remove__missing(tmp_path: Path) -> None:
     fpath = tmp_path / "test.txt"
     assert not try_remove(fpath)
     assert not fpath.exists()
 
 
-def test_try_remove__non_file(tmp_path):
+def test_try_remove__non_file(tmp_path: Path) -> None:
     with pytest.raises(OSError):
         try_remove(tmp_path)
 
@@ -608,7 +610,7 @@ def test_try_remove__non_file(tmp_path):
 # Tests for 'try_rmtree'
 
 
-def test_try_rmtree(tmp_path):
+def test_try_rmtree(tmp_path: Path) -> None:
     fpath = tmp_path / "testdir"
     os.mkdir(fpath)
     (fpath / "file").write_text("1 2 3")
@@ -616,7 +618,7 @@ def test_try_rmtree(tmp_path):
     assert not fpath.exists()
 
 
-def test_try_treedir__missing(tmp_path):
+def test_try_treedir__missing(tmp_path: Path) -> None:
     fpath = tmp_path / "testdir"
     assert not try_rmtree(fpath)
     assert not fpath.exists()
@@ -627,53 +629,48 @@ def test_try_treedir__missing(tmp_path):
 # Tests for 'describe_files'
 
 
-def test_describe_files__no_files():
+def test_describe_files__no_files() -> None:
     assert describe_files(()) == "No files"
 
 
-def test_describe_files__single_file():
+def test_describe_files__single_file() -> None:
     fpath = "/var/foo/bar"
     assert describe_files((fpath,)) == repr(fpath)
 
 
-def test_describe_files__same_path_abs__3_differences():
+def test_describe_files__same_path_abs__3_differences() -> None:
     fpaths = ("/var/foo/bar", "/var/foo/foo")
     assert describe_files(fpaths) == "2 files in '/var/foo'"
 
 
-def test_describe_files__same_path_abs__2_differences():
+def test_describe_files__same_path_abs__2_differences() -> None:
     fpaths = ("/var/foo/faz", "/var/foo/foo")
     assert describe_files(fpaths) == "'/var/foo/f??'"
 
 
-def test_describe_files__same_path_abs__1_differences():
+def test_describe_files__same_path_abs__1_differences() -> None:
     fpaths = ("/var/foo/faz", "/var/foo/fao")
     assert describe_files(fpaths) == "'/var/foo/fa?'"
 
 
-def test_describe_files__different_paths_abs():
+def test_describe_files__different_paths_abs() -> None:
     fpaths = ("/var/foo/bar", "/var/bar/foo")
     assert describe_files(fpaths) == "2 files"
 
 
-def test_describe_files__same_path_rel():
+def test_describe_files__same_path_rel() -> None:
     fpaths = ("var/foo/bar", "var/foo/foo")
     assert describe_files(fpaths) == "2 files in 'var/foo'"
 
 
-def test_describe_files__different_paths_rel():
+def test_describe_files__different_paths_rel() -> None:
     fpaths = ("var/foo/bar", "var/bar/foo")
     assert describe_files(fpaths) == "2 files"
 
 
-def test_describe_files__iterable():
+def test_describe_files__iterable() -> None:
     fpaths = iter(("/var/foo/bar", "/var/foo/foo"))
     assert describe_files(fpaths) == "2 files in '/var/foo'"
-
-
-def test_describe_files__none_files():
-    with pytest.raises(ValueError):
-        describe_files(None)
 
 
 ###############################################################################
@@ -681,18 +678,18 @@ def test_describe_files__none_files():
 # Tests for 'describe_paired_files'
 
 
-def test_describe_paired_files__single_file():
+def test_describe_paired_files__single_file() -> None:
     fpath = "/var/foo/bar"
     assert describe_paired_files((fpath,), ()) == repr(fpath)
 
 
-def test_describe_paired_files__identical_files():
+def test_describe_paired_files__identical_files() -> None:
     fpath = "/var/foo/bar"
     ftuple = (fpath,)
     assert describe_paired_files(ftuple, ftuple) == repr(fpath)
 
 
-def test_describe_paired_files__same_path__similar_files():
+def test_describe_paired_files__same_path__similar_files() -> None:
     files_1 = ("foo/1_abc", "foo/1_def")
     files_2 = ("foo/1_ghi", "foo/1_jkl")
     expected = "'foo/1_???'"
@@ -700,7 +697,7 @@ def test_describe_paired_files__same_path__similar_files():
     assert result == expected
 
 
-def test_describe_paired_files__same_path__similar_files__different_prefixes():
+def test_describe_paired_files__same_path__similar_files__different_prefixes() -> None:
     files_1 = ("foo/1_abc", "foo/1_def")
     files_2 = ("foo/2_ghi", "foo/2_jkl")
     expected = "'foo/[12]_???'"
@@ -708,7 +705,7 @@ def test_describe_paired_files__same_path__similar_files__different_prefixes():
     assert result == expected
 
 
-def test_describe_paired_files__same_path__similar_files__too_different():
+def test_describe_paired_files__same_path__similar_files__too_different() -> None:
     files_1 = ("foo/1a_abc", "foo/1a_def")
     files_2 = ("foo/2b_ghi", "foo/2b_jkl")
     expected = "2 pair(s) of files in 'foo'"
@@ -716,7 +713,7 @@ def test_describe_paired_files__same_path__similar_files__too_different():
     assert result == expected
 
 
-def test_describe_paired_files__same_path__different_files():
+def test_describe_paired_files__same_path__different_files() -> None:
     files_1 = ("foo/1_abc", "foo/2_def")
     files_2 = ("foo/3_ghi", "foo/4_jkl")
     expected = "2 pair(s) of files in 'foo'"
@@ -724,7 +721,7 @@ def test_describe_paired_files__same_path__different_files():
     assert result == expected
 
 
-def test_describe_paired_files__same_path__different_file_lens():
+def test_describe_paired_files__same_path__different_file_lens() -> None:
     files_1 = ("foo/1_a", "foo/2_de")
     files_2 = ("foo/3_g", "foo/4_jk")
     expected = "2 pair(s) of files in 'foo'"
@@ -732,7 +729,7 @@ def test_describe_paired_files__same_path__different_file_lens():
     assert result == expected
 
 
-def test_describe_paired_files__different_path_and_files():
+def test_describe_paired_files__different_path_and_files() -> None:
     files_1 = ("foo/1_abc", "bar/2_def")
     files_2 = ("zed/3_ghi", "not/4_jkl")
     expected = "2 pair(s) of files"
@@ -740,26 +737,11 @@ def test_describe_paired_files__different_path_and_files():
     assert result == expected
 
 
-def test_describe_paired_files__files_1_longer():
+def test_describe_paired_files__files_1_longer() -> None:
     with pytest.raises(ValueError):
         describe_paired_files(("a", "b"), ("c",))
 
 
-def test_describe_paired_files__files_2_longer():
+def test_describe_paired_files__files_2_longer() -> None:
     with pytest.raises(ValueError):
         describe_paired_files(("a",), ("b", "c"))
-
-
-def test_describe_paired_files__none_files():
-    with pytest.raises(ValueError):
-        describe_paired_files(None, None)
-
-
-def test_describe_paired_files__none_files_1():
-    with pytest.raises(ValueError):
-        describe_paired_files(None, ())
-
-
-def test_describe_paired_files__none_files_2():
-    with pytest.raises(ValueError):
-        describe_paired_files((), None)
