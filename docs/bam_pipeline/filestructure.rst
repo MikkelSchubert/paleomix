@@ -21,7 +21,7 @@ The following section explains the file structure of the BAM pipeline example pr
 
         TGCTCA: # Library 3
           Options:
-            SplitLanesByFilenames: no
+            RescaleQualities: yes
 
           Lane_1: 000_data/TGCTCA_L1_R1_*.fastq.gz
           Lane_2: 000_data/TGCTCA_L2_R{Pair}_*.fastq.gz
@@ -101,7 +101,7 @@ Internally, the BAM pipeline uses a simple file structure which corresponds to t
 Trimmed reads
 ^^^^^^^^^^^^^
 
-Each of these folders in turn contains a directory structure that corresponds to the names of the samples, libraries, and lanes, shown here for Lane_1 in library ACGATA. If the option "SplitLanesByFilenames" is enabled (as shown here), several numbered folders may be created for each lane, using a 3-digit postfix:
+Each of these folders in turn contains a directory structure that corresponds to the names of the samples, libraries, and lanes, shown here for Lane_1 in library ACGATA. In addition, numbered folders will be created for each file/pair of files in each lane:
 
 .. code-block:: bash
 

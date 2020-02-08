@@ -92,19 +92,6 @@ Options: General
 
     The QualityOffset option refers to the starting ASCII value used to encode `Phred quality-scores`_ in user-provided FASTQ files, with the possible values of 33, 64, and 'Solexa'. For most modern data, this will be 33, corresponding to ASCII characters in the range '!' to 'J'. Older data is often encoded using the offset 64, corresponding to ASCII characters in the range '@' to 'h', and more rarely using Solexa quality-scores, which represent a different scheme than Phred scores, and which occupy the range of ASCII values from ';' to 'h'. For a visual representation of this, refer to the Wikipedia article linked above.
 
-**Options \:\: SplitLanesByFilenames**
-    .. literalinclude:: makefile.yaml
-        :language: yaml
-        :linenos:
-        :lineno-start: 14
-        :lines: 14-17
-
-    This option influences how the BAM pipeline handles lanes that include multiple files. By default (corresponding to a value of 'yes'), the pipeline will process individual files in parallel, potentially allowing for greater throughput. If set to 'no', all files in a lane are merged during processing, resulting in a single set of trimmed reads per lane. The only effect of this option on the final result is a greater number of read-groups specified in the final BAM files. See the :ref:`bam_filestructure` section for more details on how this is handled.
-
-    .. warning::
-        This option is deprecated, and will be removed in future versions of PALEOMIX.
-
-
 **Options \:\: PCRDuplicates**
     .. literalinclude:: makefile.yaml
         :language: yaml

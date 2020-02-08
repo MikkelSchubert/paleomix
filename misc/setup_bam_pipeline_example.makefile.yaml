@@ -2,7 +2,6 @@
 Options:
   Platform: Illumina
   QualityOffset: 33
-  SplitLanesByFilenames: no
 
   Aligners:
     Program: Bowtie2

@@ -207,7 +207,7 @@ _VALIDATION_OPTIONS = {
     # Offset for quality scores in FASTQ files.
     "QualityOffset": ValueIn((33, 64, "Solexa"), default=33),
     # Split a lane into multiple entries, one for each (pair of) file(s)
-    "SplitLanesByFilenames": Or(IsBoolean, IsListOf(IsStr), default=True),
+    "SplitLanesByFilenames": DeprecatedOption(),
     "CompressionFormat": DeprecatedOption(),
     "AdapterRemoval": {
         "Version": ValueIn(("v1.4", "v1.5+"), default="v1.5+"),
@@ -574,25 +574,23 @@ def _split_lanes_by_filenames(makefile):
             template = record["Data"]
             path = (target, sample, library, barcode)
             record["Data"] = files = paths.collect_files(path, template)
-            split = record["Options"]["SplitLanesByFilenames"]
 
-            if (split is True) or (isinstance(split, list) and (barcode in split)):
-                if any(len(v) > 1 for v in files.values()):
-                    library = makefile["Targets"][target][sample][library]
-                    template = library.pop(barcode)
-                    keys = ("SE",) if ("SE" in files) else ("PE_1", "PE_2")
+            if any(len(v) > 1 for v in files.values()):
+                library = makefile["Targets"][target][sample][library]
+                template = library.pop(barcode)
+                keys = ("SE",) if ("SE" in files) else ("PE_1", "PE_2")
 
-                    input_files = [files[key] for key in keys]
-                    input_files_iter = itertools.zip_longest(*input_files)
-                    for (index, filenames) in enumerate(input_files_iter, start=1):
-                        assert len(filenames) == len(keys)
-                        new_barcode = "%s_%03i" % (barcode, index)
+                input_files = [files[key] for key in keys]
+                input_files_iter = itertools.zip_longest(*input_files)
+                for (index, filenames) in enumerate(input_files_iter, start=1):
+                    assert len(filenames) == len(keys)
+                    new_barcode = "%s_%03i" % (barcode, index)
 
-                        current = copy.deepcopy(template)
-                        current["Data"] = {k: [v] for (k, v) in zip(keys, filenames)}
-                        current["Tags"]["PU_cur"] = new_barcode
+                    current = copy.deepcopy(template)
+                    current["Data"] = {k: [v] for (k, v) in zip(keys, filenames)}
+                    current["Tags"]["PU_cur"] = new_barcode
 
-                        library[new_barcode] = current
+                    library[new_barcode] = current
 
 
 def _validate_makefiles(makefiles):
