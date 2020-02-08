@@ -36,9 +36,6 @@ from paleomix.common.fileutils import (
     reroot_path,
     create_temp_dir,
     missing_files,
-    is_executable,
-    which_executable,
-    executable_exists,
     missing_executables,
     make_dirs,
     move_file,
@@ -257,114 +254,6 @@ def test_missing_files__mixed_files():
 
 ###############################################################################
 ###############################################################################
-# Tests for 'is_executable'
-
-
-def test_is_executable__full_path__is_executable():
-    assert is_executable("/bin/ls")
-
-
-def test_is_executable__full_path__is_non_executable():
-    assert not is_executable("/etc/fstab")
-
-
-def test_is_executable__full_path__folder_is_non_executable():
-    assert not is_executable("/etc")
-
-
-def test_is_executable__rel_path__is_executable():
-    assert is_executable(os.path.join(test_dir(), "setup.sh"))
-
-
-def test_is_executable__rel_path__is_non_executable():
-    assert not is_executable(test_file("empty_file_1"))
-
-
-###############################################################################
-###############################################################################
-# Tests for 'which_executable'
-
-
-def test_which_executable__executable():
-    assert "/bin/ls" == which_executable("ls")
-
-
-def test_which_executable__non_executable():
-    assert None is which_executable("lsxxxx")
-
-
-def test_which_executable__executable__but_no_path():
-    path = os.environ.pop("PATH")
-    try:
-        assert None is which_executable("ls")
-    finally:
-        os.environ["PATH"] = path
-
-
-def test_which_executable__executable__but_empty_path():
-    path = os.environ.pop("PATH")
-    try:
-        os.environ["PATH"] = ""
-        assert None is which_executable("ls")
-    finally:
-        os.environ["PATH"] = path
-
-
-def test_which_executable__executable__by_path_order_1():
-    path = os.environ.pop("PATH")
-    try:
-        path_1 = test_dir()
-        path_2 = os.path.join(os.getcwd(), path_1)
-
-        os.environ["PATH"] = ":".join((path_1, path_2))
-        assert os.path.join(path_1, "setup.sh") == which_executable("setup.sh")
-    finally:
-        os.environ["PATH"] = path
-
-
-def test_which_executable__executable__by_path_order_2():
-    path = os.environ.pop("PATH")
-    try:
-        path_1 = test_dir()
-        path_2 = os.path.join(os.getcwd(), path_1)
-
-        os.environ["PATH"] = ":".join((path_2, path_1))
-        assert os.path.join(path_2, "setup.sh") == which_executable("setup.sh")
-    finally:
-        os.environ["PATH"] = path
-
-
-###############################################################################
-###############################################################################
-# Tests for 'executable_exists'
-
-
-def test_executable_exists__executable():
-    assert executable_exists("ls")
-
-
-def test_executable_exists__non_executable():
-    assert not executable_exists("lsxxxx")
-
-
-def test_executable_exists__full_path__is_executable():
-    assert executable_exists("/bin/ls")
-
-
-def test_executable_exists__full_path__is_non_executable():
-    assert not executable_exists("/etc/fstab")
-
-
-def test_executable_exists__rel_path__is_executable():
-    assert executable_exists(os.path.join(test_dir(), "setup.sh"))
-
-
-def test_executable_exists__rel_path__is_non_executable():
-    assert not executable_exists(test_file("empty_file_1"))
-
-
-###############################################################################
-###############################################################################
 # Tests for 'missing_executables'
 
 
@@ -378,6 +267,19 @@ def test_missing_executables__non_executable():
 
 def test_missing_executables__mixed():
     assert missing_executables(["lsxxxx", "ls"]) == ["lsxxxx"]
+
+
+def test_missing_executables__with_path__missing(tmp_path):
+    executable = tmp_path / "ls"
+    assert missing_executables([executable]) == [executable]
+
+
+def test_missing_executables__with_path__exists(tmp_path):
+    executable = tmp_path / "ls"
+    executable.touch()
+    executable.chmod(0o700)
+
+    assert missing_executables([executable]) == []
 
 
 ###############################################################################
