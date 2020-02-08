@@ -26,7 +26,7 @@ set -o pipefail # Fail is a command in a chain of pipes fails
 
 if [ $# -lt 2 ];
 then
-    echo "Usage: $0 <output-prefix> <input_1.bz2> [<input_2.bz2>, ...]"
+    echo "Usage: $0 <output-prefix> <input_1.gz> [<input_2.gz>, ...]"
     exit 1
 fi
 

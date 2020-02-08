@@ -74,10 +74,9 @@ class Reads:
 
         init_args = {
             "output_prefix": os.path.join(self.folder, "reads"),
-            "output_format": record["Options"]["CompressionFormat"],
             "threads": config.adapterremoval_max_threads,
         }
-        output_tmpl = "{output_prefix}.%s.{output_format}".format(**init_args)
+        output_tmpl = "{output_prefix}.%s.gz".format(**init_args)
 
         if "SE" in record["Data"]:
             self.files["Single"] = output_tmpl % ("truncated",)

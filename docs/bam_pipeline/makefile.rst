@@ -105,20 +105,6 @@ Options: General
         This option is deprecated, and will be removed in future versions of PALEOMIX.
 
 
-**Options \:\: CompressionFormat**
-    .. literalinclude:: makefile.yaml
-        :language: yaml
-        :linenos:
-        :lineno-start: 18
-        :lines: 18-19
-
-
-    This option determines which type of compression is carried out on trimmed FASTQ reads; if set to 'gz', reads are gzip compressed, and if set to 'bz2', reads are compressed using bzip2. This option has no effect on the final results, but may be used to trade off space (gz) for some additional runtime (bz2).
-
-    .. warning::
-        This option is deprecated, and may be removed in future versions of PALEOMIX.
-
-
 **Options \:\: PCRDuplicates**
     .. literalinclude:: makefile.yaml
         :language: yaml

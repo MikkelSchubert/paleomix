@@ -3,7 +3,6 @@ Options:
   Platform: Illumina
   QualityOffset: 33
   SplitLanesByFilenames: no
-  CompressionFormat: gz
 
   Aligners:
     Program: Bowtie2

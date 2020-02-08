@@ -44,16 +44,14 @@ _VERSION_CHECK = versions.Requirement(
 
 class SE_AdapterRemovalNode(CommandNode):
     @create_customizable_cli_parameters
-    def customize(
-        cls, input_files, output_prefix, output_format="bz2", threads=1, dependencies=()
-    ):
+    def customize(cls, input_files, output_prefix, threads=1, dependencies=()):
         # See below for parameters in common between SE/PE
-        cmd = _get_common_parameters(output_format, threads=threads)
+        cmd = _get_common_parameters(threads=threads)
 
         # Prefix for output files, ensure that all end up in temp folder
         cmd.set_option("--basename", "%(TEMP_OUT_BASENAME)s")
 
-        output_tmpl = output_prefix + ".%s." + output_format
+        output_tmpl = output_prefix + ".%s.gz"
         cmd.set_kwargs(
             TEMP_OUT_BASENAME=os.path.basename(output_prefix),
             OUT_SETTINGS=output_prefix + ".settings",
@@ -106,7 +104,6 @@ class PE_AdapterRemovalNode(CommandNode):
         input_files_1,
         input_files_2,
         output_prefix,
-        output_format="bz2",
         collapse=True,
         threads=1,
         dependencies=(),
@@ -114,12 +111,12 @@ class PE_AdapterRemovalNode(CommandNode):
         if len(input_files_1) != len(input_files_2):
             raise ValueError("Unequal number of mate 1 and mate 2 files")
 
-        cmd = _get_common_parameters(output_format, threads=threads)
+        cmd = _get_common_parameters(threads=threads)
 
         # Prefix for output files, to ensure that all end up in temp folder
         cmd.set_option("--basename", "%(TEMP_OUT_BASENAME)s")
 
-        output_tmpl = output_prefix + ".%s." + output_format
+        output_tmpl = output_prefix + ".%s.gz"
         cmd.set_kwargs(
             TEMP_OUT_BASENAME=os.path.basename(output_prefix),
             OUT_SETTINGS=output_prefix + ".settings",
@@ -192,15 +189,11 @@ def _build_cat_command(input_files, output_file):
     return cat.finalize()
 
 
-def _get_common_parameters(output_format, threads=1):
+def _get_common_parameters(threads=1):
     cmd = AtomicCmdBuilder("AdapterRemoval", CHECK_VERSION=_VERSION_CHECK)
 
-    if output_format == "bz2":
-        cmd.set_option("--bzip2")
-    elif output_format == "gz":
-        cmd.set_option("--gzip")
-    else:
-        raise ValueError("Invalid output compression %r" % (output_format,))
+    # Gzip compress FASTQ files
+    cmd.set_option("--gzip")
 
     # Trim Ns at read ends
     cmd.set_option("--trimns", fixed=False)

@@ -350,8 +350,6 @@ Once we've completed the steps described above, the resulting makefile should lo
       # found using the search-string specified for a given lane. Each
       # lane is named by adding a number to the end of the given barcode.
       SplitLanesByFilenames: yes
-      # Compression format for FASTQ reads; 'gz' for GZip, 'bz2' for BZip2
-      CompressionFormat: bz2
 
       # Settings for trimming of reads, see AdapterRemoval man-page
       AdapterRemoval:
