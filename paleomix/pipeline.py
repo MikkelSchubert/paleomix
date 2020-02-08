@@ -144,10 +144,10 @@ class Pypeline:
             remaining.remove(node)
 
     def _poll_running_nodes(self, running, nodegraph, queue):
-        errors = None
+        error_happened = False
         blocking = False
 
-        while running and not errors:
+        while running and not error_happened:
             node, proc = self._get_finished_node(queue, running, blocking)
             if not node:
                 if blocking:
@@ -174,11 +174,12 @@ class Pypeline:
                 message.append("")
 
                 self._logger.error("\n".join(message))
+                error_happened = True
 
-            if not errors:
+            if not error_happened:
                 nodegraph.set_node_state(node, nodegraph.DONE)
 
-        return not errors
+        return not error_happened
 
     @property
     def nodes(self):
