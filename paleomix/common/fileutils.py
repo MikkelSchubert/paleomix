@@ -30,6 +30,8 @@ import shutil
 from pathlib import Path
 from typing import Any, Callable, IO, Iterable, List, Optional, Tuple, Union
 
+from .utilities import safe_coerce_to_tuple
+
 
 def add_postfix(filename: Union[str, Path], postfix: str) -> str:
     """Ads a postfix to a filename (before any extensions that filename may have)."""
@@ -74,13 +76,21 @@ def missing_files(filenames: Iterable[Union[str, Path]]) -> List[Union[str, Path
     """Given a list of filenames, returns a list of those that
     does not exist. Note that this function does not differentiate
     between files and folders."""
-    return [filename for filename in filenames if not os.path.exists(filename)]
+    return [
+        filename
+        for filename in safe_coerce_to_tuple(filenames)
+        if not os.path.exists(filename)
+    ]
 
 
 def missing_executables(
     filenames: Iterable[Union[str, Path]]
 ) -> List[Union[str, Path]]:
-    return [filename for filename in filenames if not shutil.which(filename)]
+    return [
+        filename
+        for filename in safe_coerce_to_tuple(filenames)
+        if not shutil.which(filename)
+    ]
 
 
 def make_dirs(directory: Union[str, Path], mode: int = 0o777) -> bool:
@@ -233,7 +243,7 @@ def _get_files_glob(
 def _validate_filenames(filenames: Iterable[str]) -> Tuple[str, ...]:
     """Sanity checks for filenames handled by
     'describe_files' and 'describe_paired_files."""
-    filenames = tuple(filenames)
+    filenames = safe_coerce_to_tuple(filenames)
     for filename in filenames:
         if not isinstance(filename, str):
             raise ValueError(
