@@ -300,20 +300,24 @@ class NodeGraph:
             # Sort priority in decreasing order, name in increasing order
             return (-reqobj.priority, reqobj.name)
 
-        exec_requirements = list(sorted(exec_requirements, key=_key_func))
-
-        try:
-            for requirement in exec_requirements:
+        any_errors = False
+        for requirement in sorted(exec_requirements, key=_key_func):
+            try:
                 version = ".".join(str(value) for value in requirement.version)
                 self._logger.info(" - Found %s v%s", requirement.name, version)
 
                 requirement()
-        except versions.VersionRequirementError as error:
-            raise NodeGraphError(error)
-        except OSError as error:
-            raise NodeGraphError(
-                "Could not check version for %s:\n\t%s" % (requirement.name, error)
-            )
+            except versions.VersionRequirementError as error:
+                any_errors = True
+                self._logger.error(error)
+            except OSError as error:
+                any_errors = True
+                self._logger.error(
+                    "Could not check version for %s:\n\t%s" % (requirement.name, error)
+                )
+
+        if any_errors:
+            raise NodeGraphError("Version requirements not met; cannot proceed")
 
     @classmethod
     def _check_file_dependencies(cls, nodes):
