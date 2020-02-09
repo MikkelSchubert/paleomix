@@ -23,16 +23,13 @@
 import os
 
 from paleomix.node import CommandNode
-from paleomix.atomiccmd.sets import ParallelCmds
 from paleomix.atomiccmd.builder import (
     AtomicCmdBuilder,
-    use_customizable_cli_parameters,
-    create_customizable_cli_parameters,
+    apply_options,
 )
 
 import paleomix.common.fileutils as fileutils
 import paleomix.common.versions as versions
-import paleomix.tools.factory as factory
 
 
 _VERSION_CHECK = versions.Requirement(
@@ -43,10 +40,11 @@ _VERSION_CHECK = versions.Requirement(
 
 
 class SE_AdapterRemovalNode(CommandNode):
-    @create_customizable_cli_parameters
-    def customize(cls, input_files, output_prefix, threads=1, dependencies=()):
+    def __init__(
+        self, input_file, output_prefix, threads=1, options={}, dependencies=()
+    ):
         # See below for parameters in common between SE/PE
-        cmd = _get_common_parameters(threads=threads)
+        cmd = _get_common_parameters(threads=threads, options=options)
 
         # Prefix for output files, ensure that all end up in temp folder
         cmd.set_option("--basename", "%(TEMP_OUT_BASENAME)s")
@@ -59,59 +57,33 @@ class SE_AdapterRemovalNode(CommandNode):
             OUT_DISCARDED=output_tmpl % ("discarded",),
         )
 
-        if len(input_files) > 1:
-            # Uncompressed reads (piped from 'paleomix cat')
-            cmd.set_option("--file1", "%(TEMP_IN_READS_1)s")
-            cmd.set_kwargs(TEMP_IN_READS_1="uncompressed_input")
-        else:
-            cmd.set_option("--file1", "%(IN_READS_1)s")
-            cmd.set_kwargs(IN_READS_1=input_files[0])
+        cmd.set_option("--file1", "%(IN_READS_1)s")
+        cmd.set_kwargs(IN_READS_1=input_file)
 
-        return {"command": cmd, "threads": threads, "dependencies": dependencies}
-
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
-        command = parameters.command.finalize()
-
-        self._multi_file_input = len(parameters.input_files) > 1
-        if self._multi_file_input:
-            cat = _build_cat_command(parameters.input_files, "uncompressed_input")
-            command = ParallelCmds((command, cat))
+        apply_options(cmd, options)
 
         CommandNode.__init__(
             self,
-            command=command,
-            threads=parameters.threads,
+            command=cmd.finalize(),
+            threads=threads,
             description="<AdapterRM (SE): %s -> '%s.*'>"
-            % (
-                fileutils.describe_files(parameters.input_files),
-                parameters.output_prefix,
-            ),
-            dependencies=parameters.dependencies,
+            % (fileutils.describe_files(input_file), output_prefix,),
+            dependencies=dependencies,
         )
-
-    def _setup(self, config, temp):
-        if self._multi_file_input:
-            os.mkfifo(os.path.join(os.path.join(temp, "uncompressed_input")))
-
-        CommandNode._setup(self, config, temp)
 
 
 class PE_AdapterRemovalNode(CommandNode):
-    @create_customizable_cli_parameters
-    def customize(
-        cls,
-        input_files_1,
-        input_files_2,
+    def __init__(
+        self,
+        input_file_1,
+        input_file_2,
         output_prefix,
         collapse=True,
         threads=1,
+        options={},
         dependencies=(),
     ):
-        if len(input_files_1) != len(input_files_2):
-            raise ValueError("Unequal number of mate 1 and mate 2 files")
-
-        cmd = _get_common_parameters(threads=threads)
+        cmd = _get_common_parameters(threads=threads, options=options)
 
         # Prefix for output files, to ensure that all end up in temp folder
         cmd.set_option("--basename", "%(TEMP_OUT_BASENAME)s")
@@ -134,62 +106,26 @@ class PE_AdapterRemovalNode(CommandNode):
                 OUT_COLLAPSED_TRUNC=output_tmpl % ("collapsed.truncated",),
             )
 
-        if len(input_files_1) > 1:
-            # Uncompressed reads (piped from 'paleomix cat')
-            cmd.set_option("--file1", "%(TEMP_IN_READS_1)s")
-            cmd.set_option("--file2", "%(TEMP_IN_READS_2)s")
-            cmd.set_kwargs(
-                TEMP_IN_READS_1="uncompressed_input_1",
-                TEMP_IN_READS_2="uncompressed_input_2",
-            )
-        else:
-            cmd.set_option("--file1", "%(IN_READS_1)s")
-            cmd.set_option("--file2", "%(IN_READS_2)s")
-            cmd.set_kwargs(IN_READS_1=input_files_1[0], IN_READS_2=input_files_2[0])
+        cmd.set_option("--file1", "%(IN_READS_1)s")
+        cmd.set_option("--file2", "%(IN_READS_2)s")
+        cmd.set_kwargs(IN_READS_1=input_file_1, IN_READS_2=input_file_2)
 
-        return {"command": cmd, "threads": threads, "dependencies": dependencies}
-
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
-        command = parameters.command.finalize()
-        self._multi_file_input = len(parameters.input_files_1) > 1
-        if self._multi_file_input:
-            cat_1 = _build_cat_command(parameters.input_files_1, "uncompressed_input_1")
-            cat_2 = _build_cat_command(parameters.input_files_2, "uncompressed_input_2")
-            command = ParallelCmds((command, cat_1, cat_2))
+        apply_options(cmd, options)
 
         CommandNode.__init__(
             self,
-            command=command,
-            threads=parameters.threads,
+            command=cmd.finalize(),
+            threads=threads,
             description="<AdapterRM (PE): %s -> '%s.*'>"
             % (
-                fileutils.describe_paired_files(
-                    parameters.input_files_1, parameters.input_files_2
-                ),
-                parameters.output_prefix,
+                fileutils.describe_paired_files(input_file_1, input_file_2),
+                output_prefix,
             ),
-            dependencies=parameters.dependencies,
+            dependencies=dependencies,
         )
 
-    def _setup(self, config, temp):
-        if self._multi_file_input:
-            os.mkfifo(os.path.join(os.path.join(temp, "uncompressed_input_1")))
-            os.mkfifo(os.path.join(os.path.join(temp, "uncompressed_input_2")))
 
-        CommandNode._setup(self, config, temp)
-
-
-def _build_cat_command(input_files, output_file):
-    cat = factory.new("cat")
-    cat.set_option("--output", "%(TEMP_OUT_CAT)s")
-    cat.set_kwargs(TEMP_OUT_CAT=output_file)
-    cat.add_multiple_values(input_files)
-
-    return cat.finalize()
-
-
-def _get_common_parameters(threads=1):
+def _get_common_parameters(options, threads=1):
     cmd = AtomicCmdBuilder("AdapterRemoval", CHECK_VERSION=_VERSION_CHECK)
 
     # Gzip compress FASTQ files
@@ -202,5 +138,11 @@ def _get_common_parameters(threads=1):
 
     # Fix number of threads to ensure consistency when scheduling node
     cmd.set_option("--threads", threads)
+
+    # Ensure that any user-specified list of adapters is tracked
+    adapter_list = options.pop("--adapter-list", None)
+    if adapter_list is not None:
+        cmd.cmd.set_option("--adapter-list", "%(IN_ADAPTER_LIST)s")
+        cmd.command.set_kwargs(IN_ADAPTER_LIST=adapter_list)
 
     return cmd

@@ -22,7 +22,6 @@
 #
 import os
 
-from paleomix.atomiccmd.builder import apply_options
 from paleomix.nodes.adapterremoval import SE_AdapterRemovalNode, PE_AdapterRemovalNode
 from paleomix.nodes.validation import ValidateFASTQFilesNode
 
@@ -72,16 +71,25 @@ class Reads:
         collapse_reads = ar_options.pop("--collapse")
         collapse_reads = collapse_reads or collapse_reads is None
 
+        output_quality = self.quality_offset
+        if output_quality == "Solexa":
+            output_quality = "64"
+
+        ar_options["--qualitybase"] = self.quality_offset
+        ar_options["--qualitybase-output"] = output_quality
+
         init_args = {
             "output_prefix": os.path.join(self.folder, "reads"),
             "threads": config.adapterremoval_max_threads,
+            "options": ar_options,
         }
+
         output_tmpl = "{output_prefix}.%s.gz".format(**init_args)
 
         if "SE" in record["Data"]:
             self.files["Single"] = output_tmpl % ("truncated",)
-            init_args["input_files"] = record["Data"]["SE"]
-            command = SE_AdapterRemovalNode.customize(**init_args)
+            init_args["input_file"] = record["Data"]["SE"]
+            command = SE_AdapterRemovalNode(**init_args)
         else:
             self.files["Singleton"] = output_tmpl % ("singleton.truncated",)
             self.files["Paired"] = output_tmpl % ("pair{Pair}.truncated",)
@@ -93,24 +101,9 @@ class Reads:
                 )
 
             init_args["collapse"] = collapse_reads
-            init_args["input_files_1"] = record["Data"]["PE_1"]
-            init_args["input_files_2"] = record["Data"]["PE_2"]
-            command = PE_AdapterRemovalNode.customize(**init_args)
-
-        # Ensure that any user-specified list of adapters is tracked
-        if "--adapter-list" in ar_options:
-            adapter_list = ar_options.pop("--adapter-list")
-            command.command.set_option("--adapter-list", "%(IN_ADAPTER_LIST)s")
-            command.command.set_kwargs(IN_ADAPTER_LIST=adapter_list)
-
-        apply_options(command.command, ar_options)
-
-        output_quality = self.quality_offset
-        if output_quality == "Solexa":
-            output_quality = "64"
-
-        command.command.set_option("--qualitybase", self.quality_offset)
-        command.command.set_option("--qualitybase-output", output_quality)
+            init_args["input_file_1"] = record["Data"]["PE_1"]
+            init_args["input_file_2"] = record["Data"]["PE_2"]
+            command = PE_AdapterRemovalNode(**init_args)
 
         self.stats = os.path.join(self.folder, "reads.settings")
-        self.nodes = (command.build_node(),)
+        self.nodes = (command,)

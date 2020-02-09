@@ -587,7 +587,7 @@ def _split_lanes_by_filenames(makefile):
                     new_barcode = "%s_%03i" % (barcode, index)
 
                     current = copy.deepcopy(template)
-                    current["Data"] = {k: [v] for (k, v) in zip(keys, filenames)}
+                    current["Data"] = {k: v for (k, v) in zip(keys, filenames)}
                     current["Tags"]["PU_cur"] = new_barcode
 
                     library[new_barcode] = current
@@ -674,14 +674,7 @@ def _validate_makefiles_duplicate_files(makefiles):
     for makefile in makefiles:
         iterator = _iterate_over_records(makefile)
         for (target, sample, library, barcode, record) in iterator:
-            current_filenames = []
-            if record["Type"] == "Raw":
-                for raw_filenames in record["Data"].values():
-                    current_filenames.extend(raw_filenames)
-            else:
-                current_filenames.extend(list(record["Data"].values()))
-
-            for realpath in map(os.path.realpath, current_filenames):
+            for realpath in map(os.path.realpath, record["Data"].values()):
                 filenames[realpath].append((target, sample, library, barcode))
 
     has_overlap = {}
