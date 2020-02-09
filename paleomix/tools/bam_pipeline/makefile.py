@@ -366,15 +366,15 @@ def _mangle_options(makefile):
             if options.pop("RescaleQualities", None):
                 options["Features"]["mapDamage"] = "rescale"
 
-        if len(path) < 2:
+        if len(path) < 3:
             for key in data:
                 if key != "Options":
                     _do_update_options(options, data[key], path + (key,))
         else:
             data["Options"] = options
 
-    for data in makefile["Targets"].values():
-        _do_update_options(makefile["Options"], data, ())
+    for key, data in makefile["Targets"].items():
+        _do_update_options(makefile["Options"], data, (key,))
 
 
 def _mangle_features(makefile):
