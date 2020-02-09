@@ -19,19 +19,19 @@ For the purpose of these instructions, we will make use of a tiny FASTQ data set
 
     $ paleomix bam_pipeline example .
 
-This will create a folder named 'bam_pipeline' in the current folder, which contain the example FASTQ reads and a 'makefile' showcasing various features of the BAM pipeline ('000\_makefile.yaml'). We will make use of a subset of the data, but we will not make use of the makefile. The data we will use consists of 3 simulated ancient DNA libraries (independent amplifications), for which either one or two lanes have been simulated:
+This will create a folder named 'bam_pipeline' in the current folder, which contain the example FASTQ reads and a 'makefile' showcasing various features of the BAM pipeline ('makefile.yaml'). We will make use of a subset of the data, but we will not make use of the makefile. The data we will use consists of 3 simulated ancient DNA libraries (independent amplifications), for which either one or two lanes have been simulated:
 
-+-------------+------+------+---------------------------------+
-| Library     | Lane | Type | Files                           |
-+-------------+------+------+---------------------------------+
-| ACGATA      |    1 |   PE | 000_data/ACGATA\_L1\_*.fastq.gz |
-+-------------+------+------+---------------------------------+
-| GCTCTG      |    1 |   SE | 000_data/GCTCTG\_L1\_*.fastq.gz |
-+-------------+------+------+---------------------------------+
-| TGCTCA      |    1 |   SE | 000_data/TGCTCA\_L1\_*.fastq.gz |
-+-------------+------+------+---------------------------------+
-|             |    2 |   PE | 000_data/TGCTCA\_L2\_*.fastq.gz |
-+-------------+------+------+---------------------------------+
++-------------+------+------+-----------------------------+
+| Library     | Lane | Type | Files                       |
++-------------+------+------+-----------------------------+
+| ACGATA      |    1 |   PE | data/ACGATA\_L1\_*.fastq.gz |
++-------------+------+------+-----------------------------+
+| GCTCTG      |    1 |   SE | data/GCTCTG\_L1\_*.fastq.gz |
++-------------+------+------+-----------------------------+
+| TGCTCA      |    1 |   SE | data/TGCTCA\_L1\_*.fastq.gz |
++-------------+------+------+-----------------------------+
+|             |    2 |   PE | data/TGCTCA\_L2\_*.fastq.gz |
++-------------+------+------+-----------------------------+
 
 
 .. warning::
@@ -184,7 +184,7 @@ The name of the prefix (here 'my\_genome') will be used to name the resulting fi
 .. warning::
     FASTA files used in the BAM pipeline *must* be named with a .fasta file extension. Furthermore, if alignments are to be carried out against the human nuclear genome, chromosomes MUST be ordered by their number for GATK to work! See the `GATK FAQ`_ for more information.
 
-In the case of this example project, we will be mapping our data against the revised Cambridge Reference Sequence (rCRS) for the human mitochondrial genome, which is included in examples folder under '000\_prefxies', as a file named 'rCRS.fasta'. To add it to the makefile, locate the 'Prefixes' section located below the 'Options' section, and update it as described above (lines 5 and 7):
+In the case of this example project, we will be mapping our data against the revised Cambridge Reference Sequence (rCRS) for the human mitochondrial genome, which is included in examples folder under 'prefixes', as a file named 'rCRS.fasta'. To add it to the makefile, locate the 'Prefixes' section located below the 'Options' section, and update it as described above (lines 5 and 7):
 
 .. code-block:: yaml
     :emphasize-lines: 6,8
@@ -198,7 +198,7 @@ In the case of this example project, we will be mapping our data against the rev
       # Name of the prefix; is used as part of the output filenames
       rCRS:
         # Path to .fasta file containing a set of reference sequences.
-        Path: 000_prefixes/rCRS.fasta
+        Path: prefixes/rCRS.fasta
 
 Once this is done, we may specify the input data that we wish the pipeline to process for us.
 
@@ -228,17 +228,17 @@ This first name, or grouping, is referred to as the target, and typically corres
 
 Similarly, we need to specify the name of each library in our dataset. By convention, I often use the index used to construct the library as the library name (which allows for easy identification), but any name may be used for a library, provided that it unique to that sample. As described near the start of this document, we are dealing with 3 libraries:
 
-+-------------+------+------+---------------------------------+
-| Library     | Lane | Type | Files                           |
-+-------------+------+------+---------------------------------+
-| ACGATA      |    1 |   PE | 000_data/ACGATA\_L1\_*.fastq.gz |
-+-------------+------+------+---------------------------------+
-| GCTCTG      |    1 |   SE | 000_data/GCTCTG\_L1\_*.fastq.gz |
-+-------------+------+------+---------------------------------+
-| TGCTCA      |    1 |   SE | 000_data/TGCTCA\_L1\_*.fastq.gz |
-+-------------+------+------+---------------------------------+
-|             |    2 |   PE | 000_data/TGCTCA\_L2\_*.fastq.gz |
-+-------------+------+------+---------------------------------+
++-------------+------+------+-----------------------------+
+| Library     | Lane | Type | Fiels                       |
++-------------+------+------+-----------------------------+
+| ACGATA      |    1 |   PE | data/ACGATA\_L1\_*.fastq.gz |
++-------------+------+------+-----------------------------+
+| GCTCTG      |    1 |   SE | data/GCTCTG\_L1\_*.fastq.gz |
++-------------+------+------+-----------------------------+
+| TGCTCA      |    1 |   SE | data/TGCTCA\_L1\_*.fastq.gz |
++-------------+------+------+-----------------------------+
+|             |    2 |   PE | data/TGCTCA\_L2\_*.fastq.gz |
++-------------+------+------+-----------------------------+
 
 It is important to correctly specify the libraries, since the pipeline will not only use this information for summary statistics and record it in the resulting BAM files, but will also carry out filtering of PCR duplicates (and other analyses) on a per-library basis. Wrongly grouping together data will therefore result in a loss of useful alignments wrongly identified as PCR duplicates, or, similarly, in the inclusion of reads that should have been filtered as PCR duplicates. The library names are added below the name of the sample ('MySample'), in a similar manner to the sample itself:
 
@@ -255,14 +255,14 @@ It is important to correctly specify the libraries, since the pipeline will not 
 
         TGCTCA:
 
-The final step involves specifying the location of the raw FASTQ reads that should be processed for each library, and consists of specifying one or more "lanes" of reads, each of which must be given a unique name. For single-end reads, this is accomplished simply by providing a path (with optional wildcards) to the location of the file(s). For example, for lane 1 of library ACGATA, the files are located at 000_data/ACGATA\_L1\_*.fastq.gz:
+The final step involves specifying the location of the raw FASTQ reads that should be processed for each library, and consists of specifying one or more "lanes" of reads, each of which must be given a unique name. For single-end reads, this is accomplished simply by providing a path (with optional wildcards) to the location of the file(s). For example, for lane 1 of library ACGATA, the files are located at data/ACGATA\_L1\_*.fastq.gz:
 
 .. code-block:: bash
 
-    $ ls 000_data/GCTCTG_L1_*.fastq.gz
-    000_data/GCTCTG_L1_R1_01.fastq.gz
-    000_data/GCTCTG_L1_R1_02.fastq.gz
-    000_data/GCTCTG_L1_R1_03.fastq.gz
+    $ ls data/GCTCTG_L1_*.fastq.gz
+    data/GCTCTG_L1_R1_01.fastq.gz
+    data/GCTCTG_L1_R1_02.fastq.gz
+    data/GCTCTG_L1_R1_03.fastq.gz
 
 We simply specify these paths for each of the single-end lanes, here using the lane number to name these (similar to the above, this name is used to tag the data in the resulting BAM file):
 
@@ -276,26 +276,26 @@ We simply specify these paths for each of the single-end lanes, here using the l
         ACGATA:
 
         GCTCTG:
-          Lane_1: 000_data/GCTCTG_L1_*.fastq.gz
+          Lane_1: data/GCTCTG_L1_*.fastq.gz
 
         TGCTCA:
-          Lane_1: 000_data/TGCTCA_L1_*.fastq.gz
+          Lane_1: data/TGCTCA_L1_*.fastq.gz
 
 Specifying the location of paired-end data is slightly more complex, since the pipeline needs to be able to locate both files in a pair. This is accomplished by making the assumption that paired-end files are numbered as either mate 1 or mate 2, as shown here for 4 pairs of files with the common _R1 and _R2 labels:
 
 .. code-block:: bash
 
-    $ ls 000_data/ACGATA_L1_*.fastq.gz
-    000_data/ACGATA_L1_R1_01.fastq.gz
-    000_data/ACGATA_L1_R1_02.fastq.gz
-    000_data/ACGATA_L1_R1_03.fastq.gz
-    000_data/ACGATA_L1_R1_04.fastq.gz
-    000_data/ACGATA_L1_R2_01.fastq.gz
-    000_data/ACGATA_L1_R2_02.fastq.gz
-    000_data/ACGATA_L1_R2_03.fastq.gz
-    000_data/ACGATA_L1_R2_04.fastq.gz
+    $ ls data/ACGATA_L1_*.fastq.gz
+    data/ACGATA_L1_R1_01.fastq.gz
+    data/ACGATA_L1_R1_02.fastq.gz
+    data/ACGATA_L1_R1_03.fastq.gz
+    data/ACGATA_L1_R1_04.fastq.gz
+    data/ACGATA_L1_R2_01.fastq.gz
+    data/ACGATA_L1_R2_02.fastq.gz
+    data/ACGATA_L1_R2_03.fastq.gz
+    data/ACGATA_L1_R2_04.fastq.gz
 
-Knowing how that the files contain a number specifying which file in a pair they correspond to, we can then construct a path that includes the keyword '{Pair}' in place of that number. For the above example, that path would therefore be '000_data/ACGATA\_L1\_R{Pair}_*.fastq.gz' (corresponding to '000_data/ACGATA\_L1\_R[12]_*.fastq.gz'):
+Knowing how that the files contain a number specifying which file in a pair they correspond to, we can then construct a path that includes the keyword '{Pair}' in place of that number. For the above example, that path would therefore be 'data/ACGATA\_L1\_R{Pair}_*.fastq.gz' (corresponding to 'data/ACGATA\_L1\_R[12]_*.fastq.gz'):
 
 .. code-block:: yaml
     :linenos:
@@ -305,14 +305,14 @@ Knowing how that the files contain a number specifying which file in a pair they
     MyFilename:
       MySample:
         ACGATA:
-          Lane_1: 000_data/ACGATA_L1_R{Pair}_*.fastq.gz
+          Lane_1: data/ACGATA_L1_R{Pair}_*.fastq.gz
 
         GCTCTG:
-          Lane_1: 000_data/GCTCTG_L1_*.fastq.gz
+          Lane_1: data/GCTCTG_L1_*.fastq.gz
 
         TGCTCA:
-          Lane_1: 000_data/TGCTCA_L1_*.fastq.gz
-          Lane_2: 000_data/TGCTCA_L2_R{Pair}_*.fastq.gz
+          Lane_1: data/TGCTCA_L1_*.fastq.gz
+          Lane_2: data/TGCTCA_L2_R{Pair}_*.fastq.gz
 
 .. note::
     Note that while the paths given here are relative to the location of where the pipeline is run, it is also possible to provide absolute paths, should the files be located in an entirely different location.
@@ -455,7 +455,7 @@ Once we've completed the steps described above, the resulting makefile should lo
       # Name of the prefix; is used as part of the output filenames
       rCRS:
         # Path to .fasta file containing a set of reference sequences.
-        Path: 000_prefixes/rCRS.fasta
+        Path: prefixes/rCRS.fasta
 
         # Label for prefix: One of nuclear, mitochondrial, chloroplast,
         # plasmid, bacterial, or viral. Is used in the .summary files.
@@ -472,14 +472,14 @@ Once we've completed the steps described above, the resulting makefile should lo
     MyFilename:
       MySample:
         ACGATA:
-          Lane_1: 000_data/ACGATA_L1_R{Pair}_*.fastq.gz
+          Lane_1: data/ACGATA_L1_R{Pair}_*.fastq.gz
 
         GCTCTG:
-          Lane_1: 000_data/GCTCTG_L1_*.fastq.gz
+          Lane_1: data/GCTCTG_L1_*.fastq.gz
 
         TGCTCA:
-          Lane_1: 000_data/TGCTCA_L1_*.fastq.gz
-          Lane_2: 000_data/TGCTCA_L2_R{Pair}_*.fastq.gz
+          Lane_1: data/TGCTCA_L1_*.fastq.gz
+          Lane_2: data/TGCTCA_L2_R{Pair}_*.fastq.gz
 
 
 With this makefile in hand, the pipeline may be executed using the following command:

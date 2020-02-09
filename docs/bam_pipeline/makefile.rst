@@ -560,8 +560,8 @@ The following simplified example, derived from the makefile constructed as part 
         # Library name; used to tag data for segregation in downstream analyses
         TGCTCA:
           # Lane / run names and paths to FASTQ files
-          Lane_1: 000_data/TGCTCA_L1_*.fastq.gz
-          Lane_2: 000_data/TGCTCA_L2_R{Pair}_*.fastq.gz
+          Lane_1: data/TGCTCA_L1_*.fastq.gz
+          Lane_2: data/TGCTCA_L2_R{Pair}_*.fastq.gz
 
 
 *Target name*
@@ -600,7 +600,7 @@ To include already trimmed reads, these are specified as values belonging to a l
       MySample:
         ACGATA:
           # Regular lane, containing reads that are not already trimmed
-          Lane_1: 000_data/ACGATA_L1_R{Pair}_*.fastq.gz
+          Lane_1: data/ACGATA_L1_R{Pair}_*.fastq.gz
 
           # Lane containing pre-trimmed reads of each type
           Lane_2:
@@ -650,7 +650,7 @@ In addition to the 'Options' section included, by default, at the beginning of e
            QualityOffset: 64
 
         ACGATA:
-          Lane_1: 000_data/ACGATA_L1_R{Pair}_*.fastq.gz
+          Lane_1: data/ACGATA_L1_R{Pair}_*.fastq.gz
 
         GCTCTG:
           # These options apply to 'Lane_1' in the 'GCTCTG' library
@@ -658,11 +658,11 @@ In addition to the 'Options' section included, by default, at the beginning of e
             # It is possible to override options we have previously overridden
             QualityOffset: 33
 
-          Lane_1: 000_data/GCTCTG_L1_*.fastq.gz
+          Lane_1: data/GCTCTG_L1_*.fastq.gz
 
         TGCTCA:
-          Lane_1: 000_data/TGCTCA_L1_*.fastq.gz
-          Lane_2: 000_data/TGCTCA_L2_R{Pair}_*.fastq.gz
+          Lane_1: data/TGCTCA_L1_*.fastq.gz
+          Lane_2: data/TGCTCA_L2_R{Pair}_*.fastq.gz
 
 
 In this example, we have overwritten options at 3 places:

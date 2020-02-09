@@ -26,11 +26,11 @@ set -o pipefail # Fail is a command in a chain of pipes fails
 
 SP_SEED=${RANDOM}
 
-rm -rv 000_data
-mkdir -p 000_data
+rm -rv data
+mkdir -p data
 for barcode in ACGATA GCTCTG TGCTCA;
 do
-    python $(dirname $0)/synthesize_reads.py 000_prefixes/rCRS.fasta 000_data/ \
+    python $(dirname $0)/synthesize_reads.py prefixes/rCRS.fasta data/ \
 	--library-barcode=${barcode} \
 	--specimen-seed=${SP_SEED} \
 	--lanes-reads-mu=2500 \
@@ -40,18 +40,18 @@ do
 	--damage
 done
 
-rm -v 000_data/GCTCTG_L*R2*.gz
-rm -v 000_data/TGCTCA_L1_R2*.gz
+rm -v data/GCTCTG_L*R2*.gz
+rm -v data/TGCTCA_L1_R2*.gz
 
 bam_pipeline run $(dirname $0)/setup_bam_pipeline_example.makefile.yaml --destination .
 
-mkdir -p 000_data/ACGATA_L2/
-mv ExampleProject/reads/Synthetic_Sample_1/ACGATA/Lane_2/reads.singleton.truncated.gz 000_data/ACGATA_L2/reads.singleton.truncated.gz
-mv ExampleProject/reads/Synthetic_Sample_1/ACGATA/Lane_2/reads.collapsed.gz 000_data/ACGATA_L2/reads.collapsed.gz
-mv ExampleProject/reads/Synthetic_Sample_1/ACGATA/Lane_2/reads.collapsed.truncated.gz 000_data/ACGATA_L2/reads.collapsed.truncated.gz
+mkdir -p data/ACGATA_L2/
+mv ExampleProject/reads/Synthetic_Sample_1/ACGATA/Lane_2/reads.singleton.truncated.gz data/ACGATA_L2/reads.singleton.truncated.gz
+mv ExampleProject/reads/Synthetic_Sample_1/ACGATA/Lane_2/reads.collapsed.gz data/ACGATA_L2/reads.collapsed.gz
+mv ExampleProject/reads/Synthetic_Sample_1/ACGATA/Lane_2/reads.collapsed.truncated.gz data/ACGATA_L2/reads.collapsed.truncated.gz
 
-mv ExampleProject/rCRS/Synthetic_Sample_1/GCTCTG/Lane_2/single.minQ0.bam 000_data/GCTCTG_L2.bam
+mv ExampleProject/rCRS/Synthetic_Sample_1/GCTCTG/Lane_2/single.minQ0.bam data/GCTCTG_L2.bam
 
-rm -v 000_data/ACGATA_L2_R*.fastq.gz
-rm -v 000_data/GCTCTG_L2_R1_*.fastq.gz
+rm -v data/ACGATA_L2_R*.fastq.gz
+rm -v data/GCTCTG_L2_R1_*.fastq.gz
 rm -rv ExampleProject

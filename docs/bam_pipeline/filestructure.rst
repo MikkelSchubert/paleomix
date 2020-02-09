@@ -9,22 +9,22 @@ The following section explains the file structure of the BAM pipeline example pr
     ExampleProject: # Target name
       Synthetic_Sample_1: # Sample name
         ACGATA: # Library 1
-          Lane_1: 000_data/ACGATA_L1_R{Pair}_*.fastq.gz
+          Lane_1: data/ACGATA_L1_R{Pair}_*.fastq.gz
           Lane_2:
-            Singleton: 000_data/ACGATA_L2/reads.singleton.truncated.gz
-            Collapsed: 000_data/ACGATAr_L2/reads.collapsed.gz
-            CollapsedTruncated: 000_data/ACGATA_L2/reads.collapsed.truncated.gz
+            Singleton: data/ACGATA_L2/reads.singleton.truncated.gz
+            Collapsed: data/ACGATAr_L2/reads.collapsed.gz
+            CollapsedTruncated: data/ACGATA_L2/reads.collapsed.truncated.gz
 
         GCTCTG: # Library 2
-          Lane_1: 000_data/GCTCTG_L1_R1_*.fastq.gz
-          Lane_2: rCRS: 000_data/GCTCTG_L2.bam
+          Lane_1: data/GCTCTG_L1_R1_*.fastq.gz
+          Lane_2: rCRS: data/GCTCTG_L2.bam
 
         TGCTCA: # Library 3
           Options:
             RescaleQualities: yes
 
-          Lane_1: 000_data/TGCTCA_L1_R1_*.fastq.gz
-          Lane_2: 000_data/TGCTCA_L2_R{Pair}_*.fastq.gz
+          Lane_1: data/TGCTCA_L1_R1_*.fastq.gz
+          Lane_2: data/TGCTCA_L2_R{Pair}_*.fastq.gz
 
 Once executed, this example is expected to generate the following result files,
 depending on which options are enabled:

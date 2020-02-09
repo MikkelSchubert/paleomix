@@ -6,7 +6,7 @@ set -o pipefail # Fail is a command in a chain of pipes fails
 
 cd $(dirname $0)
 
-for ENA in `ls */000_ENA | sort`;
+for ENA in `ls */ENA.tsv | sort`;
 do
     SAMPLE=$(dirname ${ENA})
     echo "Fetching FASTQ reads for sample '${SAMPLE}' ..."

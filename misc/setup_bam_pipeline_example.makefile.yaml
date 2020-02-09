@@ -21,13 +21,13 @@ Options:
 
 Prefixes:
  rCRS:
-   Path: 000_prefixes/rCRS.fasta
+   Path: prefixes/rCRS.fasta
 
 
 ExampleProject:
   Synthetic_Sample_1:
     ACGATA:
-      Lane_2: 000_data/ACGATA_L2_R{Pair}_*.fastq.gz
+      Lane_2: data/ACGATA_L2_R{Pair}_*.fastq.gz
 
     GCTCTG:
-      Lane_2: 000_data/GCTCTG_L2_R1_*.fastq.gz
+      Lane_2: data/GCTCTG_L2_R1_*.fastq.gz

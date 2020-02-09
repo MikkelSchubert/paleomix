@@ -51,11 +51,11 @@ In addition, the pipeline performs a number of which during startup, which may r
 
     Before start, the BAM and Phylogenetic pipeline checks for the presence of all required files. Should one or more files be missing, and the missing file is NOT created by the pipeline itself, an error similar to the following will be raised::
 
-        $ bam_pipeline run 000_makefile.yaml
+        $ bam_pipeline run makefile.yaml
         [...]
         Errors detected during graph construction (max 20 shown):
           Required file does not exist, and is not created by a node:
-            Filename: 000_prefix/rCRS.fasta
+            Filename: prefix/rCRS.fasta
             Dependent node(s): [...]
 
     This typically happens if the Makefile contains typos, or if the required files have been moved since the last time the makefile was executed. To proceed, it is necessary to determine the current location of the files in question, and/or update the makefile.
@@ -65,7 +65,7 @@ In addition, the pipeline performs a number of which during startup, which may r
 
     Before starting to execute a makefile, the pipeline will check that the requisite programs are installed, and verify that the installed versions meet the minimum requirements. Should an executable be missing, an error similar to the following will be issued, and the pipeline will not run::
 
-        $ bam_pipeline run 000_makefile.yaml
+        $ bam_pipeline run makefile.yaml
         [...]
         Errors detected during graph construction (max 20 shown):
           Required executables are missing: bwa
@@ -77,7 +77,7 @@ In addition, the pipeline performs a number of which during startup, which may r
 
     In addition to checking for the presence of required executables (including java JARs), version of a program is checked. Should the version of the program not be compatible with the pipeline (e.g. because it is too old), the following error is raised::
 
-        $ bam_pipeline run 000_makefile.yaml
+        $ bam_pipeline run makefile.yaml
         [...]
         Version requirement not met for 'Picard CreateSequenceDictionary.jar';
         please refer to the PALEOMIX documentation for more information.

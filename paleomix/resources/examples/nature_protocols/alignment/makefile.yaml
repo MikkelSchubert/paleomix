@@ -121,7 +121,7 @@ Prefixes:
   # Name of the prefix; is used as part of the output filenames
   Pi_nucl:
     # Path to .fasta file containg a set of reference sequences.
-    Path:  000_prefixes/Pi_nucl.fasta
+    Path:  prefixes/Pi_nucl.fasta
 
     # Label for prefix: One of nuclear, mitochondrial, chloroplast,
     # plasmid, bacterial, or viral. Is used in the .summary files.
@@ -131,7 +131,7 @@ Prefixes:
   # Name of the prefix; is used as part of the output filenames
   Pi_mito:
     # Path to .fasta file containg a set of reference sequences.
-    Path:  000_prefixes/Pi_mito.fasta
+    Path:  prefixes/Pi_mito.fasta
 
     # Label for prefix: One of nuclear, mitochondrial, chloroplast,
     # plasmid, bacterial, or viral. Is used in the .summary files.
@@ -165,19 +165,19 @@ M-0182896:
             # Disable seed for ancient DNA
             UseSeed: no
 
-      ERR267888: "000_rawreads/M-0182896/ERR267888_{Pair}_*.fastq.gz"
+      ERR267888: "rawreads/M-0182896/ERR267888_{Pair}_*.fastq.gz"
 
     M-0182896_UDG:
-      ERR267889: "000_rawreads/M-0182896/ERR267889_{Pair}_*.fastq.gz"
+      ERR267889: "rawreads/M-0182896/ERR267889_{Pair}_*.fastq.gz"
 
     M-0182896_UDGa:
-      ERR267946: "000_rawreads/M-0182896/ERR267946_{Pair}_*.fastq.gz"
+      ERR267946: "rawreads/M-0182896/ERR267946_{Pair}_*.fastq.gz"
 
     M-0182896_UDGb:
-      ERR267947: "000_rawreads/M-0182896/ERR267947_{Pair}_*.fastq.gz"
+      ERR267947: "rawreads/M-0182896/ERR267947_{Pair}_*.fastq.gz"
 
     M-0182896_UDGc:
-      ERR267948: "000_rawreads/M-0182896/ERR267948_{Pair}_*.fastq.gz"
+      ERR267948: "rawreads/M-0182896/ERR267948_{Pair}_*.fastq.gz"
 
 
 # http://www.ebi.ac.uk/ena/data/view/ERS226850
@@ -190,24 +190,24 @@ M-0182896:
 
   06_3928A:
     06_3928A:
-      ERR248815: "000_rawreads/06_3928A/ERR248815_{Pair}_*.fastq.gz"
-      ERR248816: "000_rawreads/06_3928A/ERR248816_{Pair}_*.fastq.gz"
-      ERR248817: "000_rawreads/06_3928A/ERR248817_{Pair}_*.fastq.gz"
-      ERR248818: "000_rawreads/06_3928A/ERR248818_{Pair}_*.fastq.gz"
-      ERR248819: "000_rawreads/06_3928A/ERR248819_{Pair}_*.fastq.gz"
-      ERR248820: "000_rawreads/06_3928A/ERR248820_{Pair}_*.fastq.gz"
+      ERR248815: "rawreads/06_3928A/ERR248815_{Pair}_*.fastq.gz"
+      ERR248816: "rawreads/06_3928A/ERR248816_{Pair}_*.fastq.gz"
+      ERR248817: "rawreads/06_3928A/ERR248817_{Pair}_*.fastq.gz"
+      ERR248818: "rawreads/06_3928A/ERR248818_{Pair}_*.fastq.gz"
+      ERR248819: "rawreads/06_3928A/ERR248819_{Pair}_*.fastq.gz"
+      ERR248820: "rawreads/06_3928A/ERR248820_{Pair}_*.fastq.gz"
 
 # http://www.ebi.ac.uk/ena/data/view/ERS226848
 DDR7602:
   DDR7602:
     DDR7602:
-      ERR248813: "000_rawreads/DDR7602/ERR248813_{Pair}_*.fastq.gz"
+      ERR248813: "rawreads/DDR7602/ERR248813_{Pair}_*.fastq.gz"
 
 # http://www.ebi.ac.uk/ena/data/view/ERS226849
 LBUS5:
   LBUS5:
     LBUS5:
-      ERR248814: "000_rawreads/LBUS5/ERR248814_{Pair}_*.fastq.gz"
+      ERR248814: "rawreads/LBUS5/ERR248814_{Pair}_*.fastq.gz"
 
 # http://www.ebi.ac.uk/ena/data/view/ERS226846
 NL07434:
@@ -219,31 +219,31 @@ NL07434:
 
   NL07434:
     NL07434:
-      ERR248806: "000_rawreads/NL07434/ERR248806_{Pair}_*.fastq.gz"
-      ERR248807: "000_rawreads/NL07434/ERR248807_{Pair}_*.fastq.gz"
-      ERR248808: "000_rawreads/NL07434/ERR248808_{Pair}_*.fastq.gz"
-      ERR248809: "000_rawreads/NL07434/ERR248809_{Pair}_*.fastq.gz"
-      ERR248810: "000_rawreads/NL07434/ERR248810_{Pair}_*.fastq.gz"
-      ERR248811: "000_rawreads/NL07434/ERR248811_{Pair}_*.fastq.gz"
-      ERR248812: "000_rawreads/NL07434/ERR248812_{Pair}_*.fastq.gz"
+      ERR248806: "rawreads/NL07434/ERR248806_{Pair}_*.fastq.gz"
+      ERR248807: "rawreads/NL07434/ERR248807_{Pair}_*.fastq.gz"
+      ERR248808: "rawreads/NL07434/ERR248808_{Pair}_*.fastq.gz"
+      ERR248809: "rawreads/NL07434/ERR248809_{Pair}_*.fastq.gz"
+      ERR248810: "rawreads/NL07434/ERR248810_{Pair}_*.fastq.gz"
+      ERR248811: "rawreads/NL07434/ERR248811_{Pair}_*.fastq.gz"
+      ERR248812: "rawreads/NL07434/ERR248812_{Pair}_*.fastq.gz"
 
 # http://www.ebi.ac.uk/ena/data/view/ERS226844
 P13527:
   P13527:
     P13527:
-      ERR248791: "000_rawreads/P13527/ERR248791_{Pair}_*.fastq.gz"
-      ERR248792: "000_rawreads/P13527/ERR248792_{Pair}_*.fastq.gz"
-      ERR248793: "000_rawreads/P13527/ERR248793_{Pair}_*.fastq.gz"
-      ERR248794: "000_rawreads/P13527/ERR248794_{Pair}_*.fastq.gz"
+      ERR248791: "rawreads/P13527/ERR248791_{Pair}_*.fastq.gz"
+      ERR248792: "rawreads/P13527/ERR248792_{Pair}_*.fastq.gz"
+      ERR248793: "rawreads/P13527/ERR248793_{Pair}_*.fastq.gz"
+      ERR248794: "rawreads/P13527/ERR248794_{Pair}_*.fastq.gz"
 
 # http://www.ebi.ac.uk/ena/data/view/ERS226845
 P13626:
   P13626:
     P13626:
-      ERR248795: "000_rawreads/P13626/ERR248795_{Pair}_*.fastq.gz"
-      ERR248796: "000_rawreads/P13626/ERR248796_{Pair}_*.fastq.gz"
-      ERR248797: "000_rawreads/P13626/ERR248797_{Pair}_*.fastq.gz"
-      ERR248798: "000_rawreads/P13626/ERR248798_{Pair}_*.fastq.gz"
+      ERR248795: "rawreads/P13626/ERR248795_{Pair}_*.fastq.gz"
+      ERR248796: "rawreads/P13626/ERR248796_{Pair}_*.fastq.gz"
+      ERR248797: "rawreads/P13626/ERR248797_{Pair}_*.fastq.gz"
+      ERR248798: "rawreads/P13626/ERR248798_{Pair}_*.fastq.gz"
 
 # http://www.ebi.ac.uk/ena/data/view/ERS226847
 P17777:
@@ -255,13 +255,13 @@ P17777:
 
   P17777:
     P17777:
-      ERR248799: "000_rawreads/P17777/ERR248799_{Pair}_*.fastq.gz"
-      ERR248800: "000_rawreads/P17777/ERR248800_{Pair}_*.fastq.gz"
-      ERR248801: "000_rawreads/P17777/ERR248801_{Pair}_*.fastq.gz"
-      ERR248802: "000_rawreads/P17777/ERR248802_{Pair}_*.fastq.gz"
-      ERR248803: "000_rawreads/P17777/ERR248803_{Pair}_*.fastq.gz"
-      ERR248804: "000_rawreads/P17777/ERR248804_{Pair}_*.fastq.gz"
-      ERR248805: "000_rawreads/P17777/ERR248805_{Pair}_*.fastq.gz"
+      ERR248799: "rawreads/P17777/ERR248799_{Pair}_*.fastq.gz"
+      ERR248800: "rawreads/P17777/ERR248800_{Pair}_*.fastq.gz"
+      ERR248801: "rawreads/P17777/ERR248801_{Pair}_*.fastq.gz"
+      ERR248802: "rawreads/P17777/ERR248802_{Pair}_*.fastq.gz"
+      ERR248803: "rawreads/P17777/ERR248803_{Pair}_*.fastq.gz"
+      ERR248804: "rawreads/P17777/ERR248804_{Pair}_*.fastq.gz"
+      ERR248805: "rawreads/P17777/ERR248805_{Pair}_*.fastq.gz"
 
 
 ################################################################################
@@ -282,17 +282,17 @@ Pi1845A:
 
   Pi1845A:
     Pi1845A_id_CGCTAT:
-      ERR299534: "000_rawreads/Pi1845A/ERR299534_*.fastq.gz"
-      ERR299565: "000_rawreads/Pi1845A/ERR299565_{Pair}_*.fastq.gz"
-      ERR299566: "000_rawreads/Pi1845A/ERR299566_{Pair}_*.fastq.gz"
-      ERR299567: "000_rawreads/Pi1845A/ERR299567_{Pair}_*.fastq.gz"
-      ERR299568: "000_rawreads/Pi1845A/ERR299568_{Pair}_*.fastq.gz"
+      ERR299534: "rawreads/Pi1845A/ERR299534_*.fastq.gz"
+      ERR299565: "rawreads/Pi1845A/ERR299565_{Pair}_*.fastq.gz"
+      ERR299566: "rawreads/Pi1845A/ERR299566_{Pair}_*.fastq.gz"
+      ERR299567: "rawreads/Pi1845A/ERR299567_{Pair}_*.fastq.gz"
+      ERR299568: "rawreads/Pi1845A/ERR299568_{Pair}_*.fastq.gz"
 
     Pi1845A_id_CATAGA:
-      ERR299535: "000_rawreads/Pi1845A/ERR299535_*.fastq.gz"
-      ERR299536: "000_rawreads/Pi1845A/ERR299536_*.fastq.gz"
-      ERR299537: "000_rawreads/Pi1845A/ERR299537_*.fastq.gz"
-      ERR299538: "000_rawreads/Pi1845A/ERR299538_*.fastq.gz"
+      ERR299535: "rawreads/Pi1845A/ERR299535_*.fastq.gz"
+      ERR299536: "rawreads/Pi1845A/ERR299536_*.fastq.gz"
+      ERR299537: "rawreads/Pi1845A/ERR299537_*.fastq.gz"
+      ERR299538: "rawreads/Pi1845A/ERR299538_*.fastq.gz"
 
 
 # http://www.ebi.ac.uk/ena/data/view/ERS258007
@@ -309,23 +309,23 @@ Pi1889:
 
   Pi1889:
     Pi1889_id_TAGCTT:
-      ERR299525: "000_rawreads/Pi1889/ERR299525_*.fastq.gz"
-      ERR299528: "000_rawreads/Pi1889/ERR299528_*.fastq.gz"
-      ERR299531: "000_rawreads/Pi1889/ERR299531_*.fastq.gz"
-      ERR299559: "000_rawreads/Pi1889/ERR299559_{Pair}_*.fastq.gz"
-      ERR299562: "000_rawreads/Pi1889/ERR299562_{Pair}_*.fastq.gz"
+      ERR299525: "rawreads/Pi1889/ERR299525_*.fastq.gz"
+      ERR299528: "rawreads/Pi1889/ERR299528_*.fastq.gz"
+      ERR299531: "rawreads/Pi1889/ERR299531_*.fastq.gz"
+      ERR299559: "rawreads/Pi1889/ERR299559_{Pair}_*.fastq.gz"
+      ERR299562: "rawreads/Pi1889/ERR299562_{Pair}_*.fastq.gz"
 
     Pi1889_id_GGCTAC:
-      ERR299526: "000_rawreads/Pi1889/ERR299526_*.fastq.gz"
-      ERR299529: "000_rawreads/Pi1889/ERR299529_*.fastq.gz"
-      ERR299532: "000_rawreads/Pi1889/ERR299532_*.fastq.gz"
-      ERR299560: "000_rawreads/Pi1889/ERR299560_{Pair}_*.fastq.gz"
-      ERR299563: "000_rawreads/Pi1889/ERR299563_{Pair}_*.fastq.gz"
+      ERR299526: "rawreads/Pi1889/ERR299526_*.fastq.gz"
+      ERR299529: "rawreads/Pi1889/ERR299529_*.fastq.gz"
+      ERR299532: "rawreads/Pi1889/ERR299532_*.fastq.gz"
+      ERR299560: "rawreads/Pi1889/ERR299560_{Pair}_*.fastq.gz"
+      ERR299563: "rawreads/Pi1889/ERR299563_{Pair}_*.fastq.gz"
 
     Pi1889_id_CTTGTA:
-      ERR299527: "000_rawreads/Pi1889/ERR299527_*.fastq.gz"
-      ERR299530: "000_rawreads/Pi1889/ERR299530_*.fastq.gz"
-      ERR299533: "000_rawreads/Pi1889/ERR299533_*.fastq.gz"
-      ERR299561: "000_rawreads/Pi1889/ERR299561_{Pair}_*.fastq.gz"
-      ERR299564: "000_rawreads/Pi1889/ERR299564_{Pair}_*.fastq.gz"
+      ERR299527: "rawreads/Pi1889/ERR299527_*.fastq.gz"
+      ERR299530: "rawreads/Pi1889/ERR299530_*.fastq.gz"
+      ERR299533: "rawreads/Pi1889/ERR299533_*.fastq.gz"
+      ERR299561: "rawreads/Pi1889/ERR299561_{Pair}_*.fastq.gz"
+      ERR299564: "rawreads/Pi1889/ERR299564_{Pair}_*.fastq.gz"
 

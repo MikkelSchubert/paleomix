@@ -1,5 +1,5 @@
 # table produced by mapDamage version 2.0.1-10-g0a7fa27-dirty
-# using mapped file - and 000_prefixes/Pi_mito.fasta as reference file
+# using mapped file - and prefixes/Pi_mito.fasta as reference file
 # Std: strand of reads
 Std	Length	Occurences 
 +	24	2
