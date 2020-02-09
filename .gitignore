@@ -14,9 +14,10 @@ sdist/
 
 *.egg/
 *.egg-info/
-.eggs
-.tox
-.vscode
+.eggs/
+.tox/
+.vscode/
+.mypy_cache/
 
 # Misc
 venv/
