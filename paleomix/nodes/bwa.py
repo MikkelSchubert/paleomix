@@ -31,7 +31,7 @@ from paleomix.atomiccmd.builder import (
 )
 
 from paleomix.atomiccmd.sets import ParallelCmds
-from paleomix.nodes.samtools import SAMTOOLS_VERSION
+from paleomix.nodes.samtools import SAMTOOLS_VERSION_1x
 from paleomix.common.fileutils import describe_paired_files, missing_files
 
 import paleomix.common.versions as versions
@@ -350,19 +350,11 @@ def _process_output(stdin, output_file, reference, run_fixmate=False):
         IN_FASTA_REF=reference,
         OUT_STDOUT=output_file,
         TEMP_OUT_PREFIX="bam_cleanup",
-        CHECK_SAMTOOLS=SAMTOOLS_VERSION,
+        CHECK_SAMTOOLS=SAMTOOLS_VERSION_1x,
     )
 
     if run_fixmate:
         convert.set_option("--paired-end")
-
-    try:
-        if SAMTOOLS_VERSION.version >= (1,):
-            convert.set_option("--samtools1x", "yes")
-        else:
-            convert.set_option("--samtools1x", "no")
-    except versions.VersionRequirementError:
-        pass
 
     return ["convert"], {"convert": convert}
 
