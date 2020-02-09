@@ -699,12 +699,12 @@ def _validate_makefiles_duplicate_files(makefiles):
             message = "Path included multiple times in target:\n"
             raise MakefileError(message + description)
         else:
-            logger.warn("WARNING: Path included in multiple targets: %r", description)
+            logger.warn("WARNING: Path included in multiple targets:\n%s", description)
 
 
 def _describe_files_in_multiple_records(records, pairs):
     descriptions = []
-    for (index, record) in enumerate(records, start=1):
+    for (index, record) in enumerate(sorted(records), start=1):
         descriptions.append(
             "\t- Record {0}: Name: {1},  Sample: {2},  "
             "Library: {3},  Barcode: {4}".format(index, *record)
