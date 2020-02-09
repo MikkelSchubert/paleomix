@@ -26,12 +26,14 @@ from paleomix.node import CommandNode, NodeError
 from paleomix.atomiccmd.command import AtomicCmd
 from paleomix.atomiccmd.builder import (
     AtomicCmdBuilder,
-    use_customizable_cli_parameters,
-    create_customizable_cli_parameters,
+    apply_options,
 )
 from paleomix.atomiccmd.sets import ParallelCmds
-from paleomix.nodes.bwa import _get_node_description, _process_output, _get_max_threads
-from paleomix.common.utilities import safe_coerce_to_tuple
+from paleomix.nodes.bwa import (
+    _get_node_description,
+    _new_cleanup_command,
+    _get_max_threads,
+)
 
 import paleomix.common.versions as versions
 
@@ -70,9 +72,8 @@ class Bowtie2IndexNode(CommandNode):
 
 
 class Bowtie2Node(CommandNode):
-    @create_customizable_cli_parameters
-    def customize(
-        cls,
+    def __init__(
+        self,
         input_file_1,
         input_file_2,
         output_file,
@@ -80,9 +81,10 @@ class Bowtie2Node(CommandNode):
         prefix,
         threads=2,
         log_file=None,
+        mapping_options={},
+        cleanup_options={},
         dependencies=(),
     ):
-
         # Setting IN_FILE_2 to None makes AtomicCmd ignore this key
         aln = _bowtie2_template(
             ("bowtie2",),
@@ -97,16 +99,10 @@ class Bowtie2Node(CommandNode):
             aln.set_kwargs(OUT_STDERR=log_file)
 
         if input_file_1 and not input_file_2:
-            aln.add_multiple_options(
-                "-U", safe_coerce_to_tuple(input_file_1), template="IN_FILE_1_%02i"
-            )
+            aln.add_option("-U", input_file_1)
         elif input_file_1 and input_file_2:
-            aln.add_multiple_options(
-                "-1", safe_coerce_to_tuple(input_file_1), template="IN_FILE_1_%02i"
-            )
-            aln.add_multiple_options(
-                "-2", safe_coerce_to_tuple(input_file_2), template="IN_FILE_2_%02i"
-            )
+            aln.add_option("-1", input_file_1)
+            aln.add_option("-2", input_file_2)
         else:
             raise NodeError(
                 "Input 1, OR both input 1 and input 2 must "
@@ -116,41 +112,29 @@ class Bowtie2Node(CommandNode):
         max_threads = _get_max_threads(reference, threads)
         aln.set_option("--threads", max_threads)
 
-        run_fixmate = input_file_1 and input_file_2
-        order, commands = _process_output(
-            aln, output_file, reference, run_fixmate=run_fixmate
-        )
-        commands["aln"] = aln
-
-        return {
-            "commands": commands,
-            "order": ["aln"] + order,
-            "threads": max_threads,
-            "dependencies": dependencies,
-        }
-
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
-        command = ParallelCmds(
-            [parameters.commands[key].finalize() for key in parameters.order]
+        cleanup = _new_cleanup_command(
+            aln, output_file, reference, paired_end=input_file_1 and input_file_2
         )
 
-        algorithm = "PE" if parameters.input_file_2 else "SE"
+        apply_options(aln, mapping_options)
+        apply_options(cleanup, cleanup_options)
+
+        algorithm = "PE" if input_file_2 else "SE"
         description = _get_node_description(
             name="Bowtie2",
             algorithm=algorithm,
-            input_files_1=parameters.input_file_1,
-            input_files_2=parameters.input_file_2,
-            prefix=parameters.prefix,
-            threads=parameters.threads,
+            input_files_1=input_file_1,
+            input_files_2=input_file_2,
+            prefix=prefix,
+            threads=threads,
         )
 
         CommandNode.__init__(
             self,
-            command=command,
+            command=ParallelCmds([aln.finalize(), cleanup.finalize()]),
             description=description,
-            threads=parameters.threads,
-            dependencies=parameters.dependencies,
+            threads=threads,
+            dependencies=dependencies,
         )
 
 
