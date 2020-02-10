@@ -24,11 +24,7 @@ import os
 import getpass
 
 from paleomix.node import CommandNode
-from paleomix.atomiccmd.builder import (
-    AtomicJavaCmdBuilder,
-    create_customizable_cli_parameters,
-    use_customizable_cli_parameters,
-)
+from paleomix.atomiccmd.builder import AtomicJavaCmdBuilder
 from paleomix.atomiccmd.sets import ParallelCmds
 from paleomix.common.fileutils import swap_ext, try_rmtree, reroot_path, describe_files
 from paleomix.common.utilities import safe_coerce_to_tuple
@@ -114,9 +110,8 @@ class BuildSequenceDictNode(PicardNode):
 
 
 class MarkDuplicatesNode(PicardNode):
-    @create_customizable_cli_parameters
-    def customize(
-        cls,
+    def __init__(
+        self,
         config,
         input_bams,
         output_bam,
@@ -141,16 +136,12 @@ class MarkDuplicatesNode(PicardNode):
         output_metrics = output_metrics or swap_ext(output_bam, ".metrics")
         params.set_kwargs(OUT_BAM=output_bam, OUT_METRICS=output_metrics)
 
-        return {"command": params, "dependencies": dependencies}
-
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
-        description = "<MarkDuplicates: %s>" % (describe_files(parameters.input_bams),)
+        description = "<MarkDuplicates: %s>" % (describe_files(input_bams),)
         PicardNode.__init__(
             self,
-            command=parameters.command.finalize(),
+            command=params.finalize(),
             description=description,
-            dependencies=parameters.dependencies,
+            dependencies=dependencies,
         )
 
 

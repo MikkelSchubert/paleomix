@@ -31,8 +31,6 @@ from paleomix.atomiccmd.builder import (
     AtomicJavaCmdBuilder,
     AtomicMPICmdBuilder,
     apply_options,
-    use_customizable_cli_parameters,
-    create_customizable_cli_parameters,
 )
 
 
@@ -619,61 +617,6 @@ def test_mpi_builder__threads__zero_or_negative():
 def test_mpi_builder__threads__non_int():
     with pytest.raises(TypeError):
         AtomicMPICmdBuilder("ls", threads="3")
-
-
-###############################################################################
-###############################################################################
-# create_customizable_cli_parameters
-
-
-def test_custom_cli__single_named_arg():
-    class SingleNamedArg:
-        @create_customizable_cli_parameters
-        def customize(cls, argument):
-            return {}
-
-    value = "A value"
-    obj = SingleNamedArg.customize(value)
-    assert obj.argument == value
-
-
-def test_custom_cli__adding_new_values():
-    class SingleNamedArg:
-        @create_customizable_cli_parameters
-        def customize(cls):
-            return {"dynamic": 12345}
-
-    obj = SingleNamedArg.customize()
-    assert obj.dynamic == 12345
-
-
-def test_custom_cli__multiple_named_args():
-    class SingleNamedArg:
-        @create_customizable_cli_parameters
-        def customize(cls, first, second):
-            return {}
-
-    obj = SingleNamedArg.customize(123, 456)
-    assert obj.first == 123
-    assert obj.second == 456
-
-
-def test_custom_cli__only_customize_is_valid_function_name():
-    try:
-
-        class ClassWithMisnamedFunction:
-            @create_customizable_cli_parameters
-            def not_called_customize(cls, first, second):
-                return {}  # pragma: no coverage
-
-        assert False, "ValueError not raised"  # pragma: no coverage
-    except ValueError:
-        pass
-
-
-###############################################################################
-###############################################################################
-# use_customizable_cli_parameters
 
 
 ###############################################################################

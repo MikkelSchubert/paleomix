@@ -20,49 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-"""Tools for passing CLI options to AtomicCmds used by Nodes.
-
-The module contains 1 class and 2 decorators, which may be used in conjunction
-to create Node classes for which the call carried out by AtomicCmds may be
-modified by the end user, without explicit support added to the init function
-of the class. The basic outline of such a class is as follows:
-
-
-class ExampleNode(CommandNode):
-    @create_customizable_cli_parameters
-    def customize(self, ...):
-        # Use passed parameters to create AtomicCmdBuilder obj
-        builder = AtomicCmdBuilder(...)
-        builder.set_option(...)
-
-        # Return dictionary of AtomicCmdBuilder objects and any
-        # additional parameters required to run the Node.
-        return {"command"   : builder,
-                "example" : ...}
-
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
-        # Create AtomicCmd object using (potentially tweaked) parameters
-        command = parameters.command.finalize()
-
-        # Do something with a parameter passed to customize
-        description = "<ExampleNode: %s>" % parameters.example
-
-        CommandNode.__init__(command     = command,
-                             description = description,
-                             ...)
-
-This class can then be used in two ways:
-1) Without doing any explicit modifications to the CLI calls:
->> node = ExampleNode(...)
-
-2) Retrieving and tweaking AtomicCmdBuilder before creating the Node:
->> params = ExampleNode.customize(...)
->> params.command.set_option(...)
->> node = params.build_node()
-
-"""
-import inspect
 import collections
 
 from paleomix.atomiccmd.command import AtomicCmd
@@ -380,83 +337,6 @@ class AtomicMPICmdBuilder(AtomicCmdBuilder):
             mpi_call.extend(call)
 
             AtomicCmdBuilder.__init__(self, mpi_call, EXEC_MAIN=call[0], **kwargs)
-
-
-def use_customizable_cli_parameters(init_func):
-    """Decorator for __init__ functions, implementing the customizable Node
-    interface: Allows a node to be implemented either using default behavior:
-      >>> node = SomeNode(value1 = ..., value2 = ...)
-
-    Or using tweaked parameters for calls that support it:
-      >>> parameters = SomeNode.customize(value1 = ..., value2 = ...)
-      >>> parameters["command"].set_options(...)
-      >>> node = SomeNode(parameters)
-
-    To be able to use this interface, the class must implement a
-    function 'customize' that takes the parameters that the constructor
-    would take, while the constructor must take a 'parameters' argument.
-
-    """
-    if init_func.__name__ != "__init__":
-        raise ValueError(
-            "Function name must be '__init__', not %r" % (init_func.__name__,)
-        )
-
-    def do_call(self, parameters=None, **kwargs):
-        """Call to invoke the decorated __init__ function."""
-        if not parameters:
-            parameters = self.customize(**kwargs)
-
-        return init_func(self, parameters)
-
-    return do_call
-
-
-def create_customizable_cli_parameters(customize_func):
-    """Decorator complementing the 'use_customizable_cli_parameters' decorator
-    defined above, which should be used on a function named 'customize'; this
-    function is made a classmethod.
-
-    The modified function returns a object with a member for each keyword
-    parameter, and a 'build_node' function which calls the init function using
-    these parameter values. The initializer function is expected to take a
-    single argument, corresponding to ehe wrapper object.
-
-    Typically, the returned wrapper will include an AtomicCmdBuilder, which can
-    be modified by the user to directly modify the call carried out by the
-    resulting node.
-
-    class Example:
-        @create_customizable_cli_parameters
-        def customize(cls, first, second, third):
-           # (Typicall) builds initial command
-           command = AtomicCmdBuilder(...)
-           return {"command" : command}
-
-    parameters = Example.customize(first = ..., second = ...)
-    print obj.first
-    print obj.second
-    # Modify command-builder object
-    obj.command.set_option(...)
-
-    # Calls __init__ with the parameter object
-    node = wrapper.build_node()
-
-    """
-    if customize_func.__name__ != "customize":
-        raise ValueError(
-            "Function name must be 'customize', not %r" % (customize_func.__name__,)
-        )
-
-    def do_call(cls, *args, **kwargs):
-        # Build dictionary containing all arguments
-        kwargs = inspect.getcallargs(customize_func, cls, *args, **kwargs)
-        # Allow parameters to be updated in the 'customize' function
-        kwargs.update(customize_func(**kwargs))
-
-        return _create_cli_parameters_cls(cls, kwargs)
-
-    return classmethod(do_call)
 
 
 def apply_options(builder, options, pred=lambda s: s.startswith("-")):

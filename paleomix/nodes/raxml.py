@@ -28,11 +28,7 @@ import paleomix.common.fileutils as fileutils
 import paleomix.common.versions as versions
 
 from paleomix.node import CommandNode
-from paleomix.atomiccmd.builder import (
-    AtomicCmdBuilder,
-    use_customizable_cli_parameters,
-    create_customizable_cli_parameters,
-)
+from paleomix.atomiccmd.builder import AtomicCmdBuilder
 
 
 RAXML_VERSION = versions.Requirement(
@@ -159,8 +155,7 @@ class RAxMLRapidBSNode(CommandNode):
 
 
 class RAxMLParsimonyTreeNode(CommandNode):
-    @create_customizable_cli_parameters
-    def customize(cls, input_alignment, input_partitions, output_tree, dependencies=()):
+    def __init__(self, input_alignment, input_partitions, output_tree, dependencies=()):
         command = AtomicCmdBuilder("raxmlHPC")
 
         # Compute a randomized parsimony starting tree
@@ -190,20 +185,16 @@ class RAxMLParsimonyTreeNode(CommandNode):
             CHECK_VERSION=RAXML_VERSION,
         )
 
-        return {"command": command}
-
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
-        self._input_alignment = parameters.input_alignment
-        self._input_partitions = parameters.input_partitions
-        self._output_tree = parameters.output_tree
+        self._input_alignment = input_alignment
+        self._input_partitions = input_partitions
+        self._output_tree = output_tree
 
         CommandNode.__init__(
             self,
-            command=parameters.command.finalize(),
+            command=command.finalize(),
             description="<RAxMLParsimonyTree: '%s' -> '%s'>"
-            % (parameters.input_alignment, parameters.output_tree),
-            dependencies=parameters.dependencies,
+            % (input_alignment, output_tree),
+            dependencies=dependencies,
         )
 
     def _setup(self, config, temp):
