@@ -22,6 +22,7 @@
 import sys
 import argparse
 
+
 def parse_args(argv):
     parser = argparse.ArgumentParser()
 
@@ -33,5 +34,5 @@ def main(argv):
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))

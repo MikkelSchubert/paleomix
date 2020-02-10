@@ -421,8 +421,8 @@ class FreqToTreemixNode(Node):
         )
 
     def _run(self, _config, temp):
-        input_file, = self.input_files
-        output_file, = self.output_files
+        (input_file,) = self.input_files
+        (output_file,) = self.output_files
         temp_filename = os.path.basename(output_file)
 
         with open(os.path.join(temp, temp_filename), "w") as handle:
@@ -444,7 +444,7 @@ class FreqToTreemixNode(Node):
                 handle.write("%s\n" % (" ".join(result),))
 
     def _teardown(self, config, temp):
-        output_file, = self.output_files
+        (output_file,) = self.output_files
         temp_file = os.path.join(temp, os.path.basename(output_file))
 
         fileutils.move_file(temp_file, output_file)

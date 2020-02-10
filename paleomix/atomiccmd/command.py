@@ -325,7 +325,7 @@ class AtomicCmd:
 
             # None is ignored, to make use of default arguments easier
             if value is not None:
-                group, = match.groups()
+                (group,) = match.groups()
                 arguments[group][key] = value
 
         # Pipe stdout/err to files by default

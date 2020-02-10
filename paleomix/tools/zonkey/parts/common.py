@@ -49,7 +49,7 @@ class WriteSampleList(Node):
         )
 
     def _run(self, config, temp):
-        output_file, = self.output_files
+        (output_file,) = self.output_files
         samples = self._samples
         groups = set(sample["Group(3)"] for sample in samples.values())
         colors = dict(zip(groups, _DEFAULT_COLORS))
@@ -66,7 +66,7 @@ class WriteSampleList(Node):
             handle.write("Sample\t-\t#000000\n")
 
     def _teardown(self, config, temp):
-        destination, = self.output_files
+        (destination,) = self.output_files
         source = fileutils.reroot_path(temp, destination)
 
         fileutils.move_file(source, destination)

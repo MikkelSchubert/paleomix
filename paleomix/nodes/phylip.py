@@ -127,7 +127,7 @@ def _read_partitions(filename):
                         "  Found = %r"
                     ) % (line_num, line.rstrip())
                     raise NodeError(message)
-                start, = result.groups()
+                (start,) = result.groups()
                 end = start
 
             partitions.append((int(start) - 1, int(end)))

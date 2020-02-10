@@ -188,8 +188,8 @@ def check_fastq_files(filenames, required_offset, allow_empty=False):
     stats = {"seq_retained_nts": 0, "seq_retained_reads": 0, "seq_collapsed": 0}
 
     for file_type, filename in filenames:
-        qualities = _read_sequences(file_type, filename, stats) 
-        offsets = fastq.classify_quality_strings(qualities)             
+        qualities = _read_sequences(file_type, filename, stats)
+        offsets = fastq.classify_quality_strings(qualities)
         if offsets == fastq.OFFSET_BOTH:
             raise NodeError(
                 "FASTQ file contains quality scores with both "

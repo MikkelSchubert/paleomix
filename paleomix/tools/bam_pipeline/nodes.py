@@ -30,7 +30,7 @@ def index_and_validate_bam(config, prefix, node, log_file=None, create_index=Tru
         node = BAMIndexNode(
             infile=input_file, index_format=prefix["IndexFormat"], dependencies=node
         )
-        index_file, = node.output_files
+        (index_file,) = node.output_files
 
     ignored_checks = [
         # Ignored since we may filter out misses and low-quality hits during

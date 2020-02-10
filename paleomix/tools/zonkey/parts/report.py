@@ -434,8 +434,8 @@ class AnalysisReport:
         if len(groups) != 2:
             return
 
-        sample1, = groups[0]
-        sample2, = groups[1]
+        (sample1,) = groups[0]
+        (sample2,) = groups[1]
         delta = abs(max(value for _, value in results) - 0.5)
         summary = read_summary(
             os.path.join(self._root, "results", "plink", "common.summary")
