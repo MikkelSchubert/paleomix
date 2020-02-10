@@ -63,7 +63,7 @@ def read_makefiles(options, filenames, commands):
     for filename in filenames:
         logger.info("Reading makefile %r", filename)
         makefile = paleomix.common.makefile.read_makefile(filename, _VALIDATION)
-        makefile = _mangle_makefile(options, makefile["Makefile"], steps)
+        makefile = _mangle_makefile(options, makefile, steps)
         makefiles.append(makefile)
     return makefiles
 
@@ -569,7 +569,7 @@ def _read_max_depth(filename, prefix, sample):
             # match, we assuem that this is the correct table. This is because
             # manually generating files / renaming files would otherwise cause
             # failure when using 'MaxDepth: auto'.
-            (cand_sample, max_depth), = max_depths.items()
+            ((cand_sample, max_depth),) = max_depths.items()
             log.warning(
                 "        - Name in depths file not as expected; found %r, not %r:",
                 cand_sample,
