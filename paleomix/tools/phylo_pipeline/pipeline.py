@@ -89,7 +89,7 @@ def main(argv):
     try:
         makefiles = read_makefiles(config, args, commands)
     except (MakefileError, paleomix.yaml.YAMLError, IOError) as error:
-        log.error("Error reading makefiles: %r", error)
+        log.error("Error reading makefiles:\n%s", error)
         return 1
 
     paleomix.logger.initialize(
