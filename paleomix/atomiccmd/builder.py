@@ -20,8 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import collections
-
 from paleomix.atomiccmd.command import AtomicCmd
 from paleomix.common.utilities import safe_coerce_to_tuple
 
@@ -376,24 +374,6 @@ def apply_options(builder, options, pred=lambda s: s.startswith("-")):
                     builder.pop_option(key)
             else:
                 builder.set_option(key, values)
-
-
-_create_cli_parameters_cls_cache = {}
-
-
-def _create_cli_parameters_cls(cls, kwargs):
-    key = (cls, frozenset(kwargs))
-    clsobj = _create_cli_parameters_cls_cache.get(key)
-    if not clsobj:
-        _create_cli_parameters_cls_cache[key] = clsobj = collections.namedtuple(
-            "CustomCLIParams", " ".join(kwargs)
-        )
-
-    class _ParametersWrapper(clsobj):
-        def build_node(self):
-            return cls(self)
-
-    return _ParametersWrapper(**kwargs)
 
 
 _ADDABLE_TYPES = (float, int, str)
