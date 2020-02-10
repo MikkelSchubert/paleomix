@@ -26,13 +26,13 @@ set -o pipefail # Fail is a command in a chain of pipes fails
 
 rm -rvf alignment/s
 mkdir -p alignment/s
-for PREFIX in `ls alignment/ixes/*.fasta | grep -v rCRS`;
+for PREFIX in `ls alignment/prefixes/*.fasta | grep -v rCRS`;
 do
     SP_SEED=${RANDOM}
-    NAME=$(echo ${PREFIX} | sed -e's#alignment/ixes/##' -e's#\..*##')
-    mkdir -p alignment/s/${NAME/*\//}/
+    NAME=$(echo ${PREFIX} | sed -e's#alignment/prefixes/##' -e's#\..*##')
+    mkdir -p alignment/reads/${NAME/*\//}/
 
-    ./synthesize_reads.py ${PREFIX} alignment/s/${NAME}/ \
+    ./synthesize_reads.py ${PREFIX} alignment/reads/${NAME}/ \
 	--specimen-seed=${SP_SEED} \
 	--lanes-reads-mu=50000 \
 	--lanes-reads-sigma=500 \
@@ -42,9 +42,9 @@ do
 done
 
 # These links would not survive the package installation, so setup here
-ln -sf ../../alignment/ixes/ phylogeny/data/prefixes
+ln -sf ../../alignment/prefixes/ phylogeny/data/prefixes
 ln -sf ../../alignment phylogeny/data/samples
 
 # Create link to reference sequence
 mkdir -p phylogeny/data/refseqs
-ln -sf ../../../alignment/ixes/rCRS.fasta phylogeny/data/refseqs/rCRS.rCRS.fasta
+ln -sf ../../../alignment/prefixes/rCRS.fasta phylogeny/data/refseqs/rCRS.rCRS.fasta

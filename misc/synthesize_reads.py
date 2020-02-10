@@ -415,8 +415,8 @@ def main(argv):
             )
 
             print("  Writing %s" % (templ % "{Pair}",))
-            with gzip.open(templ % 1, "w") as out_1:
-                with gzip.open(templ % 2, "w") as out_2:
+            with gzip.open(templ % 1, "wt") as out_1:
+                with gzip.open(templ % 2, "wt") as out_2:
                     for (name, seq_1, seq_2) in reads:
                         out_1.write("@%s%s/1\n%s\n" % (library.barcode, name, seq_1))
                         out_1.write("+\n%s\n" % ("I" * len(seq_1),))
