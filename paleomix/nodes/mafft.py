@@ -23,8 +23,7 @@
 from paleomix.node import CommandNode, NodeError
 from paleomix.atomiccmd.builder import (
     AtomicCmdBuilder,
-    use_customizable_cli_parameters,
-    create_customizable_cli_parameters,
+    apply_options,
 )
 from paleomix.common.fileutils import reroot_path
 from paleomix.common.formats.msa import MSA, MSAError
@@ -52,30 +51,26 @@ _PRESETS = {
 
 
 class MAFFTNode(CommandNode):
-    @create_customizable_cli_parameters
-    def customize(cls, input_file, output_file, algorithm="auto", dependencies=()):
-        command = AtomicCmdBuilder(_PRESETS[algorithm.lower()])
-        command.add_value("%(IN_FASTA)s")
-        command.set_kwargs(
-            IN_FASTA=input_file, OUT_STDOUT=output_file, CHECK_VERSION=MAFFT_VERSION
+    def __init__(
+        self, input_file, output_file, algorithm="auto", options={}, dependencies=()
+    ):
+        command = AtomicCmdBuilder(
+            _PRESETS[algorithm.lower()] + ["%(IN_FASTA)s"],
+            IN_FASTA=input_file,
+            OUT_STDOUT=output_file,
+            CHECK_VERSION=MAFFT_VERSION,
         )
 
-        return {"command": command, "dependencies": dependencies}
+        apply_options(command, options)
 
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
-        self._output_file = parameters.output_file
-        description = "<MAFFTNode (%s): '%s' -> '%s'>" % (
-            parameters.algorithm,
-            parameters.input_file,
-            parameters.output_file,
-        )
+        self._output_file = output_file
 
         CommandNode.__init__(
             self,
-            command=parameters.command.finalize(),
-            description=description,
-            dependencies=parameters.dependencies,
+            command=command.finalize(),
+            description="<MAFFTNode (%s): '%s' -> '%s'>"
+            % (algorithm, input_file, output_file,),
+            dependencies=dependencies,
         )
 
     def _teardown(self, config, temp):

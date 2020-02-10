@@ -48,12 +48,13 @@ RAXML_PTHREADS_VERSION = versions.Requirement(
 
 
 class RAxMLRapidBSNode(CommandNode):
-    @create_customizable_cli_parameters
-    def customize(
-        cls,
+    def __init__(
+        self,
         input_alignment,
         output_template,
         input_partition=None,
+        model="GTRGAMMAI",
+        replicates="autoMRE",
         threads=1,
         dependencies=(),
     ):
@@ -113,29 +114,25 @@ class RAxMLRapidBSNode(CommandNode):
         )
 
         # Use the GTRGAMMA model of NT substitution by default
-        command.set_option("-m", "GTRGAMMAI", fixed=False)
+        command.set_option("-m", model, fixed=False)
         # Enable Rapid Boostrapping and set random seed. May be set to a fixed value to
         # allow replicability.
         command.set_option("-x", int(random.random() * 2 ** 31 - 1), fixed=False)
         # Set random seed for parsimony inference. May be set to allow replicability.
         command.set_option("-p", int(random.random() * 2 ** 31 - 1), fixed=False)
         # Terminate bootstrapping upon convergence, not after N repetitions
-        command.set_option("-N", "autoMRE", fixed=False)
+        command.set_option("-N", replicates, fixed=False)
 
-        return {"command": command}
-
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
-        self._symlinks = [parameters.input_alignment, parameters.input_partition]
-        self._template = os.path.basename(parameters.output_template)
+        self._symlinks = [input_alignment, input_partition]
+        self._template = os.path.basename(output_template)
 
         CommandNode.__init__(
             self,
-            command=parameters.command.finalize(),
+            command=command.finalize(),
             description="<RAxMLRapidBS: '%s' -> '%s'>"
-            % (parameters.input_alignment, parameters.output_template % ("*",)),
-            threads=parameters.threads,
-            dependencies=parameters.dependencies,
+            % (input_alignment, output_template % ("*",)),
+            threads=threads,
+            dependencies=dependencies,
         )
 
     def _setup(self, config, temp):

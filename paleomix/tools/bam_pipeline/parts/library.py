@@ -25,7 +25,6 @@ import os
 from paleomix.common.utilities import safe_coerce_to_tuple
 
 from paleomix.nodes.picard import MarkDuplicatesNode
-from paleomix.atomiccmd.builder import apply_options
 from paleomix.nodes.mapdamage import (
     MapDamagePlotNode,
     MapDamageModelNode,
@@ -182,18 +181,15 @@ class Library:
     def _mapdamage_plot(self, config, destination, prefix, files_and_nodes):
         title = "mapDamage plot for library %r" % (self.name,)
 
-        dependencies = list(files_and_nodes.values())
-        plot = MapDamagePlotNode.customize(
+        return MapDamagePlotNode(
             config=config,
             reference=prefix["Path"],
             input_files=list(files_and_nodes),
             output_directory=destination,
             title=title,
-            dependencies=dependencies,
+            options=self.options["mapDamage"],
+            dependencies=files_and_nodes.values(),
         )
-        apply_options(plot.command, self.options["mapDamage"])
-
-        return plot.build_node()
 
     def _mapdamage_model(self, config, destination, prefix, files_and_nodes):
         # Generates basic plots / table files
@@ -205,11 +201,12 @@ class Library:
         )
 
         # Builds model of post-mortem DNA damage
-        model = MapDamageModelNode.customize(
-            reference=prefix["Reference"], directory=destination, dependencies=plot
+        return MapDamageModelNode(
+            reference=prefix["Reference"],
+            directory=destination,
+            options=self.options["mapDamage"],
+            dependencies=plot,
         )
-        apply_options(model.command, self.options["mapDamage"])
-        return model.build_node()
 
     def _mapdamage_rescale(self, config, destination, prefix, files_and_nodes):
         model = self._mapdamage_model(
@@ -223,16 +220,15 @@ class Library:
         input_files = list(files_and_nodes)
         output_filename = self.folder + ".rescaled.bam"
 
-        scale = MapDamageRescaleNode.customize(
+        scale = MapDamageRescaleNode(
             config=config,
             reference=prefix["Reference"],
             input_files=input_files,
             output_file=output_filename,
             directory=destination,
+            options=self.options["mapDamage"],
             dependencies=model,
         )
-        apply_options(scale.command, self.options["mapDamage"])
-        scale = scale.build_node()
 
         # Grab indexing and validation nodes, required by ROIs and GATK
         index_required = (

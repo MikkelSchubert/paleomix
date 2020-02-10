@@ -257,15 +257,13 @@ def build_mito_nodes(config, root, bamfile, dependencies=()):
     )
 
     raxml_template = os.path.join(root, "results", "mitochondria", "raxml_%s")
-    phylo = RAxMLRapidBSNode.customize(
+    phylo = RAxMLRapidBSNode(
         input_alignment=mt_prefix + ".phy",
         output_template=raxml_template,
+        model="GTRGAMMA",
+        replicates=100,
         dependencies=(alignment,),
     )
-
-    phylo.command.set_option("-N", 100)
-    phylo.command.set_option("-m", "GTRGAMMA")
-    phylo = phylo.build_node()
 
     output_prefix = os.path.join(root, "figures", "mitochondria", "mito_phylo")
     trees = mitochondria.DrawPhylogenyNode(

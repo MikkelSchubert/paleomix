@@ -22,7 +22,6 @@
 #
 import os
 
-from paleomix.atomiccmd.builder import apply_options
 from paleomix.nodes.sequences import CollectSequencesNode, FilterSingletonsNode
 from paleomix.nodes.mafft import MAFFTNode
 
@@ -51,14 +50,13 @@ def build_msa_nodes(options, settings, regions, filtering, dependencies):
             input_file = os.path.join(sequencedir, sequence + ".fasta")
             output_file = os.path.join(sequencedir, sequence + ".afa")
 
-            mafft = MAFFTNode.customize(
+            fasta_files[output_file] = MAFFTNode(
                 input_file=input_file,
                 output_file=output_file,
                 algorithm=algorithm,
+                options=settings["MAFFT"],
                 dependencies=node,
             )
-            apply_options(mafft.command, settings["MAFFT"])
-            fasta_files[output_file] = mafft.build_node()
     else:
         fasta_files = dict((filename, node) for filename in node.output_files)
 

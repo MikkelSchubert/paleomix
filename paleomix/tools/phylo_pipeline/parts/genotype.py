@@ -24,7 +24,6 @@ import os
 
 from copy import deepcopy
 
-from paleomix.atomiccmd.builder import apply_options
 from paleomix.nodes.samtools import TabixIndexNode, FastaIndexNode, BAMIndexNode
 from paleomix.nodes.bedtools import PaddedBedNode
 from paleomix.common.fileutils import swap_ext, add_postfix
@@ -34,15 +33,6 @@ from paleomix.nodes.commands import (
     BuildRegionsNode,
     GenotypeRegionsNode,
 )
-
-
-def apply_samtools_options(builder, options, argument):
-    for (key, value) in dict(options).items():
-        sam_argument = key
-        if value is not None:
-            sam_argument = "%s=%s" % (key, value)
-
-        builder.add_option(argument, sam_argument, sep="=")
 
 
 ###############################################################################
@@ -92,13 +82,11 @@ def build_regions_nodes(regions, padding, dependencies=()):
     return destination, (_BED_CACHE[destination],)
 
 
-def _apply_vcf_filter_options(vcffilter, genotyping, sample):
-    filter_cfg = genotyping["VCF_Filter"]
-    apply_options(vcffilter.commands["filter"], filter_cfg)
-    if filter_cfg["MaxReadDepth"][sample]:
-        max_depth = filter_cfg["MaxReadDepth"][sample]
-        vcffilter.commands["filter"].set_option("--max-read-depth", max_depth)
-    return vcffilter.build_node()
+def _get_vcf_filter_options(genotyping, sample):
+    options = dict(genotyping["VCF_Filter"])
+    if options["MaxReadDepth"][sample]:
+        options["--max-read-depth"] = options["MaxReadDepth"][sample]
+    return options
 
 
 def build_genotyping_bedfile_nodes(options, genotyping, sample, regions, dependencies):
@@ -177,49 +165,40 @@ def build_genotyping_nodes_cached(options, genotyping, sample, regions, dependen
     filtered = swap_ext(output_prefix, ".filtered.vcf.bgz")
 
     # 1. Call samtools mpilup | bcftools view on the bam
-    genotype = GenotypeRegionsNode.customize(
+    genotype = GenotypeRegionsNode(
         reference=regions["FASTA"],
         bedfile=bedfile,
         infile=bamfile,
         outfile=calls,
         nbatches=options.samtools_max_threads,
+        mpileup_options=genotyping["MPileup"],
+        bcftools_options=genotyping["BCFTools"],
         dependencies=dependencies,
     )
-
-    apply_samtools_options(
-        genotype.command, genotyping["MPileup"], "--mpileup-argument"
-    )
-    apply_samtools_options(
-        genotype.command, genotyping["BCFTools"], "--bcftools-argument"
-    )
-    genotype = genotype.build_node()
 
     # 2. Collect pileups of sites with SNPs, to allow proper filtering by
     #    frequency of the minor allele, as only the major non-ref allele is
     #    counted in the VCF (c.f. field DP4).
-    vcfpileup = VCFPileupNode.customize(
+    vcfpileup = VCFPileupNode(
         reference=regions["FASTA"],
         infile_bam=bamfile,
         infile_vcf=calls,
         outfile=pileups,
+        mpileup_options=genotyping["MPileup"],
         dependencies=genotype,
     )
-    apply_samtools_options(
-        vcfpileup.command, genotyping["MPileup"], "--mpileup-argument"
-    )
-    vcfpileup = vcfpileup.build_node()
 
     vcf_tabix = TabixIndexNode(infile=pileups, preset="pileup", dependencies=vcfpileup)
 
     # 3. Filter all sites using the 'vcf_filter' command
-    vcffilter = VCFFilterNode.customize(
+    vcffilter = VCFFilterNode(
         infile=calls,
         pileup=pileups,
         outfile=filtered,
         regions=regions,
+        options=_get_vcf_filter_options(genotyping, sample),
         dependencies=vcf_tabix,
     )
-    vcffilter = _apply_vcf_filter_options(vcffilter, genotyping, sample)
 
     # 4. Tabix index. This allows random-access to the VCF file when building
     #    the consensus FASTA sequence later in the pipeline.
@@ -255,18 +234,20 @@ def build_genotyping_nodes(options, genotyping, sample, regions, dependencies):
 
     # 2. Generate consensus sequence from filtered VCF
     output_fasta = regions["Genotypes"][sample]
-    builder = BuildRegionsNode.customize(
+    builder_options = {}
+    if regions["ProteinCoding"]:
+        builder_options["--whole-codon-indels-only"] = None
+    if not regions["IncludeIndels"]:
+        builder_options["--ignore-indels"] = None
+
+    builder = BuildRegionsNode(
         infile=filtered,
         bedfile=regions["BED"],
         outfile=output_fasta,
         padding=genotyping["Padding"],
+        options=builder_options,
         dependencies=node,
     )
-    if regions["ProteinCoding"]:
-        builder.command.set_option("--whole-codon-indels-only")
-    if not regions["IncludeIndels"]:
-        builder.command.set_option("--ignore-indels")
-    builder = builder.build_node()
 
     # 3. Index sequences to make retrival easier for MSA
     faidx = FastaIndexNode(infile=output_fasta, dependencies=builder)

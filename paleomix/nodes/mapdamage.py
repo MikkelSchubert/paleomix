@@ -30,11 +30,7 @@ from paleomix.common.utilities import safe_coerce_to_tuple
 
 from paleomix.node import NodeError, CommandNode
 from paleomix.nodes.picard import MultiBAMInputNode
-from paleomix.atomiccmd.builder import (
-    AtomicCmdBuilder,
-    use_customizable_cli_parameters,
-    create_customizable_cli_parameters,
-)
+from paleomix.atomiccmd.builder import AtomicCmdBuilder, apply_options
 
 
 MAPDAMAGE_VERSION = versions.Requirement(
@@ -52,14 +48,14 @@ RSCRIPT_VERSION = versions.Requirement(
 
 
 class MapDamagePlotNode(MultiBAMInputNode):
-    @create_customizable_cli_parameters
-    def customize(
+    def __init__(
         self,
         config,
         reference,
         input_files,
         output_directory,
         title="mapDamage",
+        options={},
         dependencies=(),
     ):
         input_files = safe_coerce_to_tuple(input_files)
@@ -99,27 +95,16 @@ class MapDamagePlotNode(MultiBAMInputNode):
         )
 
         command.add_multiple_kwargs(input_files)
+        apply_options(command, options)
 
-        return {
-            "command": command,
-            "config": config,
-            "input_files": input_files,
-            "dependencies": dependencies,
-        }
-
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
-        description = "<mapDamage (plots): %s -> '%s'>" % (
-            describe_files(parameters.input_files),
-            parameters.output_directory,
-        )
         MultiBAMInputNode.__init__(
             self,
-            config=parameters.config,
-            input_bams=parameters.input_files,
-            command=parameters.command.finalize(),
-            description=description,
-            dependencies=parameters.dependencies,
+            config=config,
+            input_bams=input_files,
+            command=command.finalize(),
+            description="<mapDamage (plots): %s -> '%s'>"
+            % (describe_files(input_files), output_directory,),
+            dependencies=dependencies,
         )
 
     def _teardown(self, config, temp):
@@ -129,7 +114,6 @@ class MapDamagePlotNode(MultiBAMInputNode):
         err_message = "No length distributions are available"
         with open(os.path.join(temp, "pipe_mapDamage.stderr")) as in_handle:
             if any(line.startswith(err_message) for line in in_handle):
-
                 fpath = os.path.join(temp, "Length_plot.pdf")
                 with open(fpath, "w") as out_handle:
                     out_handle.write(_DUMMY_LENGTH_PLOT_PDF)
@@ -138,8 +122,7 @@ class MapDamagePlotNode(MultiBAMInputNode):
 
 
 class MapDamageModelNode(CommandNode):
-    @create_customizable_cli_parameters
-    def customize(self, reference, directory, dependencies=()):
+    def __init__(self, reference, directory, options={}, dependencies=()):
         command = AtomicCmdBuilder(
             [
                 "mapDamage",
@@ -175,18 +158,15 @@ class MapDamageModelNode(CommandNode):
             CHECK_R_RCPPGSL=rtools.requirement("RcppGSL"),
         )
 
-        return {"command": command, "dependencies": dependencies}
+        apply_options(command, options)
 
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
-        self._directory = parameters.directory
+        self._directory = directory
 
-        description = "<mapDamage (model): %r>" % (parameters.directory,)
         CommandNode.__init__(
             self,
-            command=parameters.command.finalize(),
-            description=description,
-            dependencies=parameters.dependencies,
+            command=command.finalize(),
+            description="<mapDamage (model): %r>" % (directory,),
+            dependencies=dependencies,
         )
 
     def _setup(self, config, temp):
@@ -218,9 +198,15 @@ class MapDamageModelNode(CommandNode):
 
 
 class MapDamageRescaleNode(MultiBAMInputNode):
-    @create_customizable_cli_parameters
-    def customize(
-        self, config, reference, input_files, output_file, directory, dependencies=()
+    def __init__(
+        self,
+        config,
+        reference,
+        input_files,
+        output_file,
+        directory,
+        options={},
+        dependencies=(),
     ):
         input_files = safe_coerce_to_tuple(input_files)
 
@@ -247,30 +233,18 @@ class MapDamageRescaleNode(MultiBAMInputNode):
         )
 
         command.add_multiple_kwargs(input_files)
+        apply_options(command, options)
 
-        return {
-            "command": command,
-            "config": config,
-            "input_files": input_files,
-            "directory": directory,
-            "dependencies": dependencies,
-        }
+        self._directory = directory
 
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
-        self._directory = parameters.directory
-
-        description = "<mapDamage (rescale): %s -> %r>" % (
-            describe_files(parameters.input_files),
-            parameters.output_file,
-        )
         MultiBAMInputNode.__init__(
             self,
-            config=parameters.config,
-            input_bams=parameters.input_files,
-            command=parameters.command.finalize(),
-            description=description,
-            dependencies=parameters.dependencies,
+            config=config,
+            input_bams=input_files,
+            command=command.finalize(),
+            description="<mapDamage (rescale): %s -> %r>"
+            % (describe_files(input_files), output_file,),
+            dependencies=dependencies,
         )
 
     def _setup(self, config, temp):

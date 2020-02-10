@@ -34,8 +34,7 @@ from paleomix.atomiccmd.sets import ParallelCmds
 from paleomix.nodes.picard import MultiBAMInputNode
 from paleomix.atomiccmd.builder import (
     AtomicCmdBuilder,
-    create_customizable_cli_parameters,
-    use_customizable_cli_parameters,
+    apply_options,
 )
 from paleomix.common.fileutils import describe_files, reroot_path, move_file, swap_ext
 from paleomix.common.utilities import safe_coerce_to_tuple
@@ -208,8 +207,15 @@ class VCFPileupNode(CommandNode):
     reported in the VCF.
     """
 
-    @create_customizable_cli_parameters
-    def customize(cls, reference, infile_bam, infile_vcf, outfile, dependencies=()):
+    def __init__(
+        self,
+        reference,
+        infile_bam,
+        infile_vcf,
+        outfile,
+        mpileup_options={},
+        dependencies=(),
+    ):
         params = factory.new("genotype")
         params.add_value("%(IN_BAMFILE)s")
         params.add_value("%(OUT_PILEUP)s")
@@ -229,22 +235,16 @@ class VCFPileupNode(CommandNode):
             CHECK_SAMTOOLS=SAMTOOLS_VERSION,
         )
 
-        return {"command": params}
+        _apply_samtools_options(params, mpileup_options, "--mpileup-argument")
 
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
-        self._in_vcf = parameters.infile_vcf
-        command = parameters.command.finalize()
-        description = "<VCFPileup: '%s' -> '%s'>" % (
-            parameters.infile_vcf,
-            parameters.outfile,
-        )
+        self._in_vcf = infile_vcf
+        description = "<VCFPileup: '%s' -> '%s'>" % (infile_vcf, outfile,)
 
         CommandNode.__init__(
             self,
             description=description,
-            command=command,
-            dependencies=parameters.dependencies,
+            command=params.finalize(),
+            dependencies=dependencies,
         )
 
     def _run(self, config, temp):
@@ -263,50 +263,39 @@ class VCFPileupNode(CommandNode):
 
 
 class VCFFilterNode(CommandNode):
-    @create_customizable_cli_parameters
-    def customize(cls, pileup, infile, outfile, regions, dependencies=()):
-        cat = factory.new("cat")
-        cat.add_value("%(IN_VCF)s")
-        cat.set_kwargs(IN_VCF=infile, OUT_STDOUT=AtomicCmd.PIPE)
-
+    def __init__(self, pileup, infile, outfile, regions, options, dependencies=()):
         vcffilter = factory.new("vcf_filter")
+        vcffilter.add_value("%(IN_VCF)s")
         vcffilter.add_option("--pileup", "%(IN_PILEUP)s")
+
         for contig in regions["HomozygousContigs"]:
             vcffilter.add_option("--homozygous-chromosome", contig)
-        vcffilter.set_kwargs(IN_PILEUP=pileup, IN_STDIN=cat, OUT_STDOUT=AtomicCmd.PIPE)
+        vcffilter.set_kwargs(IN_PILEUP=pileup, IN_VCF=infile, OUT_STDOUT=AtomicCmd.PIPE)
+
+        apply_options(vcffilter, options)
 
         bgzip = AtomicCmdBuilder(["bgzip"], IN_STDIN=vcffilter, OUT_STDOUT=outfile)
 
-        return {"commands": {"cat": cat, "filter": vcffilter, "bgzip": bgzip}}
-
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
-        commands = [
-            parameters.commands[key].finalize() for key in ("cat", "filter", "bgzip")
-        ]
-
-        description = "<VCFFilter: '%s' -> '%s'>" % (
-            parameters.infile,
-            parameters.outfile,
-        )
+        description = "<VCFFilter: '%s' -> '%s'>" % (infile, outfile,)
         CommandNode.__init__(
             self,
             description=description,
-            command=ParallelCmds(commands),
-            dependencies=parameters.dependencies,
+            command=ParallelCmds([vcffilter.finalize(), bgzip.finalize()]),
+            dependencies=dependencies,
         )
 
 
 class GenotypeRegionsNode(CommandNode):
-    @create_customizable_cli_parameters
-    def customize(
-        cls,
+    def __init__(
+        self,
         reference,
         infile,
         bedfile,
         outfile,
         pileup_only=False,
         nbatches=1,
+        mpileup_options={},
+        bcftools_options={},
         dependencies=(),
     ):
         params = factory.new("genotype")
@@ -333,33 +322,30 @@ class GenotypeRegionsNode(CommandNode):
             CHECK_BCFTOOLS=BCFTOOLS_VERSION_0119,
         )
 
-        return {"command": params}
+        _apply_samtools_options(params, mpileup_options, "--mpileup-argument")
+        _apply_samtools_options(params, bcftools_options, "--bcftools-argument")
 
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
-        command = parameters.command.finalize()
         invokation = " (%s%i thread(s))" % (
-            "pileup; " if parameters.pileup_only else "",
-            parameters.nbatches,
+            "pileup; " if pileup_only else "",
+            nbatches,
         )
         description = "<GenotypeRegions%s: '%s' -> '%s'>" % (
             invokation,
-            parameters.infile,
-            parameters.outfile,
+            infile,
+            outfile,
         )
 
         CommandNode.__init__(
             self,
             description=description,
-            command=command,
-            threads=parameters.nbatches,
-            dependencies=parameters.dependencies,
+            command=params.finalize(),
+            threads=nbatches,
+            dependencies=dependencies,
         )
 
 
 class BuildRegionsNode(CommandNode):
-    @create_customizable_cli_parameters
-    def customize(cls, infile, bedfile, outfile, padding, dependencies=()):
+    def __init__(self, infile, bedfile, outfile, padding, options={}, dependencies=()):
         params = factory.new("vcf_to_fasta")
         params.set_option("--padding", padding)
         params.set_option("--genotype", "%(IN_VCFFILE)s")
@@ -372,18 +358,21 @@ class BuildRegionsNode(CommandNode):
             OUT_STDOUT=outfile,
         )
 
-        return {"command": params}
+        apply_options(params, options)
 
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
-        command = parameters.command.finalize()
-        description = "<BuildRegions: '%s' -> '%s'>" % (
-            parameters.infile,
-            parameters.outfile,
-        )
+        description = "<BuildRegions: '%s' -> '%s'>" % (infile, outfile,)
         CommandNode.__init__(
             self,
             description=description,
-            command=command,
-            dependencies=parameters.dependencies,
+            command=params.finalize(),
+            dependencies=dependencies,
         )
+
+
+def _apply_samtools_options(builder, options, argument):
+    for (key, value) in dict(options).items():
+        sam_argument = key
+        if value is not None:
+            sam_argument = "%s=%s" % (key, value)
+
+        builder.add_option(argument, sam_argument, sep="=")
