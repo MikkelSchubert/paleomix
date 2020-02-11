@@ -128,18 +128,19 @@ def copy_file(source: Union[str, Path], destination: Union[str, Path]) -> None:
     _sh_wrapper(shutil.copy, source, destination)
 
 
-def open_ro(filename: Union[str, Path]) -> IO[str]:
+def open_ro(filename: Union[str, Path], mode: str = "t") -> IO[str]:
     """Opens a file for reading, transparently handling
     GZip and BZip2 compressed files. Returns a file handle."""
     with open(filename, "rb") as handle:
         header = handle.read(2)
 
+    mode = "r" + mode
     if header == b"\x1f\x8b":
-        return gzip.open(filename, "rt")
+        return gzip.open(filename, mode)
     elif header == b"BZ":
-        return bz2.open(filename, "rt")
+        return bz2.open(filename, mode)
     else:
-        return open(filename, "rt")
+        return open(filename, mode)
 
 
 def try_remove(filename: Union[str, Path]) -> bool:
