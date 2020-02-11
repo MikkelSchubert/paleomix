@@ -94,7 +94,7 @@ def main(argv):
     # Default filters, excepting that PCR duplicates are not filtered
     mask = bamfiles.EXCLUDED_FLAGS & ~bamfiles.BAM_PCR_DUPLICATE
     counts = collections.defaultdict(int)
-    with pysam.Samfile(args.bamfile) as handle:
+    with pysam.AlignmentFile(args.bamfile) as handle:
         for region in bamfiles.BAMRegionsIter(handle, exclude_flags=mask):
             for (_, records) in region:
                 process_records(records, counts)

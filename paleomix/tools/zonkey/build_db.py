@@ -133,7 +133,7 @@ def _write_genotypes(args, data, filename):
     samples = data["samples"]
     keys = tuple(sorted(samples))
 
-    ref_handle = pysam.Fastafile(args.reference)
+    ref_handle = pysam.FastaFile(args.reference)
 
     with open(filename, "w") as handle:
         header = ("Chrom", "Pos", "Ref", ";".join(keys))
@@ -194,7 +194,7 @@ def _write_contigs(args, filename):
         sys.stderr.write("  File exists; skipping.\n")
         return
 
-    fasta_handle = pysam.Fastafile(args.reference)
+    fasta_handle = pysam.FastaFile(args.reference)
     contigs = _read_contigs(args.reference)
     lines = ["ID\tSize\tNs\tChecksum"]
 
@@ -285,7 +285,7 @@ def _collect_samples(reference, filenames):
             raise ZonkeyError("Duplicate sample name %r" % (filename,))
 
         # Open first to insure that file is indexed
-        handle = pysam.Fastafile(filename)
+        handle = pysam.FastaFile(filename)
         contigs = _read_contigs(filename)
         if not contigs:
             raise ZonkeyError("No usable contigs found in %r." % (filename,))

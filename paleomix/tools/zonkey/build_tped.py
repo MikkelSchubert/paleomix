@@ -347,7 +347,7 @@ def main(argv):
         )
         return 1
 
-    with pysam.Samfile(args.bam) as bam_handle:
+    with pysam.AlignmentFile(args.bam) as bam_handle:
         bam_info = data.validate_bam_handle(bam_handle)
         if not bam_info:
             return 1

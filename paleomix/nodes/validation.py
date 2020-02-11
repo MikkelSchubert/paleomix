@@ -258,7 +258,7 @@ def _read_sequences(file_type, filename, stats):
 def _open_samfiles(handles, filenames):
     sequences = []
     for filename in filenames:
-        handle = pysam.Samfile(filename)
+        handle = pysam.AlignmentFile(filename)
         handles.append(handle)
 
         sequences.append(_read_samfile(handle, filename))

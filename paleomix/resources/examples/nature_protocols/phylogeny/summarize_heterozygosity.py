@@ -95,7 +95,7 @@ def main(argv):
     sites_het_one_non_ref = 0
     sites_het_two_non_ref = 0
 
-    vcf_records = pysam.Tabixfile(argv[1])
+    vcf_records = pysam.TabixFile(argv[1])
     bed_records = read_bed_records(argv[0])
 
     for record in select_vcf_records(bed_records, vcf_records):

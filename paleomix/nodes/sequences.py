@@ -89,7 +89,7 @@ class CollectSequencesNode(Node):
     def _run(self, _config, temp):
         fasta_files = []
         for (name, filename) in sorted(self._infiles.items()):
-            fasta_files.append((name, pysam.Fastafile(filename)))
+            fasta_files.append((name, pysam.FastaFile(filename)))
 
         for sequence_name in sorted(self._sequences):
             filename = os.path.join(temp, sequence_name + ".fasta")

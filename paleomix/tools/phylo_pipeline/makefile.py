@@ -371,7 +371,7 @@ def _check_bam_sequences(options, mkfile, steps):
                 bam_files[filename] = _collect_fasta_contigs(regions["FASTA"])
 
     for (filename, contigs) in bam_files.items():
-        with pysam.Samfile(filename) as handle:
+        with pysam.AlignmentFile(filename) as handle:
             bam_contigs = dict(list(zip(handle.references, handle.lengths)))
 
             for (contig, length) in contigs.items():

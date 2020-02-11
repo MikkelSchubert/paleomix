@@ -376,7 +376,7 @@ def main(argv):
     # Relevant VCF functions uses zero-based offsets
     opts.nth_sample -= 1
 
-    genotype = pysam.Tabixfile(opts.genotype)
+    genotype = pysam.TabixFile(opts.genotype)
 
     if opts.intervals is None:
         intervals = parse_intervals(genotype)

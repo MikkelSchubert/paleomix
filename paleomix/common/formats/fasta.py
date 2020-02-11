@@ -107,7 +107,7 @@ class FASTA(TotallyOrdered, Immutable):
                 raise FASTAError(message)
 
             # Use pysam to index the file
-            pysam.Fastafile(filename).close()
+            pysam.FastaFile(filename).close()
 
         names = set()
         contigs = []

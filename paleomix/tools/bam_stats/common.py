@@ -178,7 +178,7 @@ def main_wrapper(process_func, argv, ext):
             return 1
 
     log.info("Opening %r", args.infile)
-    with pysam.Samfile(args.infile) as handle:
+    with pysam.AlignmentFile(args.infile) as handle:
         sort_order = handle.header.get("HD", {}).get("SO")
         if sort_order is None:
             log.warning("BAM file %r is not marked as sorted!", args.infile)

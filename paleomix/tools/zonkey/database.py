@@ -123,7 +123,7 @@ class ZonkeyDB:
         log.info("  - Validating BAM file %r ", filename)
 
         try:
-            handle = pysam.Samfile(filename)
+            handle = pysam.AlignmentFile(filename)
         except (ValueError, IOError) as error:
             log.error("Error reading BAM: %s", error)
             return

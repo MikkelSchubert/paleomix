@@ -178,7 +178,7 @@ def _is_bamfile(filename):
     """Returns true if a file is a BAM file, false otherwise.
     """
     try:
-        with pysam.Samfile(filename, "rb"):
+        with pysam.AlignmentFile(filename, "rb"):
             return True
     except ValueError:
         return False

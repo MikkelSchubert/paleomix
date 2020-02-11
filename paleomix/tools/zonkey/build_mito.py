@@ -149,7 +149,7 @@ def main(argv):
     log = logging.getLogger(__name__)
 
     try:
-        handle = pysam.Samfile(args.bam)
+        handle = pysam.AlignmentFile(args.bam)
     except (IOError, ValueError) as error:
         log.error("Error reading BAM file: %s", error)
         return 1
