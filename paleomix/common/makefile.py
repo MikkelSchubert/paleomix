@@ -173,6 +173,7 @@ value has accidentically been left blank ('IsStr' requires a NON-EMPTY string):
 -------------------------------------------------------------------------------
 """
 import copy
+import logging
 
 import paleomix.yaml
 from paleomix.common.utilities import group_by_pred
@@ -421,6 +422,13 @@ class DeprecatedOption(MakefileSpec):
 
     def __init__(self, description="deprecated settings"):
         MakefileSpec.__init__(self, description, DEFAULT_NOT_SET)
+
+    def __call__(self, path, _value):
+        log = logging.getLogger(__name__)
+        log.warning(
+            "option has been deprecated and no longer has any effect: %s"
+            % (_path_to_str(path),)
+        )
 
     def meets_spec(self, _value):
         return True
