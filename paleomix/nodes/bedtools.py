@@ -22,7 +22,7 @@
 #
 from paleomix.node import Node, NodeError
 
-from paleomix.common.bedtools import read_bed_file
+from paleomix.common.bedtools import read_bed_file, pad_bed_records, merge_bed_records
 from paleomix.common.fileutils import move_file, reroot_path
 
 
@@ -59,11 +59,10 @@ class PaddedBedNode(Node):
                 contigs[name] = int(length)
 
         with open(reroot_path(temp, self._outfile), "w") as handle:
-            for record in read_bed_file(self._infile, contigs=contigs):
-                max_length = contigs[record.contig]
-                record.start = max(0, record.start - self._amount)
-                record.end = min(record.end + self._amount, max_length)
+            records = list(read_bed_file(self._infile, contigs=contigs))
+            pad_bed_records(records=records, padding=self._amount, max_sizes=contigs)
 
+            for record in merge_bed_records(records):
                 handle.write("%s\n" % (record,))
 
     def _teardown(self, config, temp):

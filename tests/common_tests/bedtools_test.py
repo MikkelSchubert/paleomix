@@ -24,7 +24,12 @@ import copy
 
 import pytest
 
-from paleomix.common.bedtools import BEDRecord
+from paleomix.common.bedtools import (
+    BEDError,
+    BEDRecord,
+    merge_bed_records,
+    pad_bed_records,
+)
 
 ###############################################################################
 ###############################################################################
@@ -77,6 +82,14 @@ def test_bedrecord__constructor__extra_fields():
         "end=345, name='my_name', score=-3, strand='-', "
         "'foo', 'bar')"
     )
+
+
+def test_bedrecord__constructor__invalid_values():
+    tmpl = "\t1\t%s\t\t0\t-"
+    BEDRecord(tmpl % (1,))  # check template
+
+    with pytest.raises(BEDError):
+        BEDRecord(tmpl % ("not a number",))
 
 
 ###############################################################################
@@ -222,6 +235,32 @@ def test_bedrecord__cmp():
 
 
 ###############################################################################
+# freeze
+
+
+def test_bedrecord__freeze__modify_existing_value():
+    record_str = "my_contig\t12\t345\tmy_name"
+    record = BEDRecord(record_str)
+    frozen_record = record.freeze()
+
+    with pytest.raises(TypeError):
+        frozen_record.start = 1
+
+    assert str(frozen_record) == record_str
+
+
+def test_bedrecord__freeze__add_new_value():
+    record_str = "my_contig\t12\t345\tmy_name"
+    record = BEDRecord(record_str)
+    frozen_record = record.freeze()
+
+    with pytest.raises(AttributeError):
+        frozen_record.score = 1
+
+    assert str(frozen_record) == record_str
+
+
+###############################################################################
 ###############################################################################
 
 
@@ -244,3 +283,125 @@ def test_bedrecord__deepcopy():
 
     assert str(record_1) == record_1_txt + "\t['foo']"
     assert str(record_2) == record_1_txt + "\t['bar']"
+
+
+###############################################################################
+# pad_bed_records
+
+
+def test_pad_bed_records__empty_sequences():
+    pad_bed_records([], 10)
+    pad_bed_records((), 10)
+
+
+def test_pad_bed_records():
+    records = [
+        _new_bed_record("chr1", 10, 90),
+        _new_bed_record("chr2", 100, 200),
+    ]
+
+    pad_bed_records(records, 20)
+    assert records == [
+        _new_bed_record("chr1", 0, 110),
+        _new_bed_record("chr2", 80, 220),
+    ]
+
+
+def test_pad_bed_records__with_max_lengths():
+    max_sizes = {"chr1": 100, "chr2": 200}
+    records = [
+        _new_bed_record("chr1", 10, 90),
+        _new_bed_record("chr2", 10, 90),
+        _new_bed_record("chr2", 100, 190),
+    ]
+
+    pad_bed_records(records, 20, max_sizes)
+    assert records == [
+        _new_bed_record("chr1", 0, 100),
+        _new_bed_record("chr2", 0, 110),
+        _new_bed_record("chr2", 80, 200),
+    ]
+
+
+###############################################################################
+# merge_bed_records
+
+
+def test_merge_records__empty_sequences():
+    assert merge_bed_records(()) == []
+    assert merge_bed_records([]) == []
+
+
+def test_merge_records__single_record():
+    assert merge_bed_records([_new_bed_record("chr1", 1234, 5678)]) == [
+        _new_bed_record("chr1", 1234, 5678)
+    ]
+
+
+def test_merge_records__minimal_fields_only():
+    assert merge_bed_records([_new_bed_record("chr1", 1234, 5678, "foo", 1, "-")]) == [
+        _new_bed_record("chr1", 1234, 5678)
+    ]
+
+
+def test_merge_records__overlapping_records_1():
+    assert merge_bed_records(
+        [_new_bed_record("chr1", 1234, 5678), _new_bed_record("chr1", 5677, 9012)]
+    ) == [_new_bed_record("chr1", 1234, 9012)]
+
+
+def test_merge_records__overlapping_records_2():
+    assert merge_bed_records(
+        [_new_bed_record("chr1", 1234, 5678), _new_bed_record("chr1", 5678, 9012)]
+    ) == [_new_bed_record("chr1", 1234, 9012)]
+
+
+def test_merge_records__non_overlapping_records_1():
+    assert merge_bed_records(
+        [_new_bed_record("chr1", 1234, 5678), _new_bed_record("chr1", 5679, 9012)]
+    ) == [_new_bed_record("chr1", 1234, 5678), _new_bed_record("chr1", 5679, 9012)]
+
+
+def test_merge_records__non_overlapping_records_2():
+    assert merge_bed_records(
+        [_new_bed_record("chr1", 1234, 5678), _new_bed_record("chr1", 5680, 9012)]
+    ) == [_new_bed_record("chr1", 1234, 5678), _new_bed_record("chr1", 5680, 9012)]
+
+
+def test_merge_records__complex_example():
+    assert merge_bed_records(
+        [
+            _new_bed_record("chr1", 1234, 5678),
+            _new_bed_record("chr1", 5678, 9012),
+            _new_bed_record("chr2", 1, 20),
+            _new_bed_record("chr2", 100, 200),
+            _new_bed_record("chr2", 150, 250),
+        ]
+    ) == [
+        _new_bed_record("chr1", 1234, 9012),
+        _new_bed_record("chr2", 1, 20),
+        _new_bed_record("chr2", 100, 250),
+    ]
+
+
+def test_merge_records__complex_example__unsorted():
+    assert merge_bed_records(
+        [
+            _new_bed_record("chr2", 100, 200),
+            _new_bed_record("chr1", 1234, 5678),
+            _new_bed_record("chr2", 150, 250),
+            _new_bed_record("chr2", 1, 20),
+            _new_bed_record("chr1", 5678, 9012),
+        ]
+    ) == [
+        _new_bed_record("chr1", 1234, 9012),
+        _new_bed_record("chr2", 1, 20),
+        _new_bed_record("chr2", 100, 250),
+    ]
+
+
+def _new_bed_record(*args):
+    record = BEDRecord()
+    record._fields = list(args)
+
+    return record
