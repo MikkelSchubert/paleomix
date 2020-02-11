@@ -321,7 +321,7 @@ def main(argv):
         print("Reading scaffolds information from %r" % (args.scaffolds,))
         scaffolds = read_scaffolds(args.scaffolds)
 
-    with open_ro(args.infile) as gtf_file:
+    with open_ro(args.infile, "rb") as gtf_file:
         print("Reading GTF from %r" % (args.infile,))
         src_table = read_gtf(gtf_file, scaffolds, args.contig_prefix)
 

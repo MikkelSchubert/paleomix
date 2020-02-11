@@ -39,7 +39,7 @@ def _read_files(filenames, args):
     reset_filter = args.reset_filter == "yes"
     vcf_parser = pysam.asVCF()
     for filename in filenames:
-        with open_ro(filename, "b") as handle:
+        with open_ro(filename, "rb") as handle:
             for line in handle:
                 if not line.startswith(b"#"):
                     in_header = False

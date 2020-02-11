@@ -558,12 +558,12 @@ def test_open_ro__bz2() -> None:
 
 
 def test_open_ro__binary__uncompressed() -> None:
-    with open_ro(test_file("fasta_file.fasta"), "b") as handle:
+    with open_ro(test_file("fasta_file.fasta"), "rb") as handle:
         assert handle.read() == b">This_is_FASTA!\nACGTN\n>This_is_ALSO_FASTA!\nCGTNA\n"
 
 
 def test_open_ro__binary__gz() -> None:
-    with open_ro(test_file("fasta_file.fasta.gz"), "b") as handle:
+    with open_ro(test_file("fasta_file.fasta.gz"), "rb") as handle:
         assert (
             handle.read()
             == b">This_is_GZipped_FASTA!\nACGTN\n>This_is_ALSO_GZipped_FASTA!\nCGTNA\n"
@@ -571,7 +571,7 @@ def test_open_ro__binary__gz() -> None:
 
 
 def test_open_ro__binary__bz2() -> None:
-    with open_ro(test_file("fasta_file.fasta.bz2"), "b") as handle:
+    with open_ro(test_file("fasta_file.fasta.bz2"), "rb") as handle:
         assert (
             handle.read()
             == b">This_is_BZ_FASTA!\nCGTNA\n>This_is_ALSO_BZ_FASTA!\nACGTN\n"
