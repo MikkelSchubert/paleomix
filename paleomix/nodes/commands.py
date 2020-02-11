@@ -25,9 +25,6 @@
 Each node is equivalent to a particular command:
     $ paleomix [...]
 """
-import os
-import gzip
-
 from paleomix.node import CommandNode, Node
 from paleomix.atomiccmd.command import AtomicCmd
 from paleomix.atomiccmd.sets import ParallelCmds
@@ -39,11 +36,7 @@ from paleomix.atomiccmd.builder import (
 from paleomix.common.fileutils import describe_files, reroot_path, move_file, swap_ext
 from paleomix.common.utilities import safe_coerce_to_tuple
 
-from paleomix.nodes.samtools import (
-    SAMTOOLS_VERSION,
-    SAMTOOLS_VERSION_0119,
-    BCFTOOLS_VERSION_0119,
-)
+from paleomix.nodes.samtools import BCFTOOLS_VERSION
 
 import paleomix.tools.bam_stats.coverage as coverage
 import paleomix.tools.factory as factory
@@ -198,79 +191,14 @@ class FilterCollapsedBAMNode(MultiBAMInputNode):
         )
 
 
-class VCFPileupNode(CommandNode):
-    """Collects heterozygous SNPs from a VCF file, and generates a bgzipped
-    pileup for those sites containing the SNPs.
-
-    The resulting pileup is read by 'paleomix vcf_filter'; this allows
-    filtering based on the frequency of the minority SNP, since this is not
-    reported in the VCF.
-    """
-
-    def __init__(
-        self,
-        reference,
-        infile_bam,
-        infile_vcf,
-        outfile,
-        mpileup_options={},
-        dependencies=(),
-    ):
-        params = factory.new("genotype")
-        params.add_value("%(IN_BAMFILE)s")
-        params.add_value("%(OUT_PILEUP)s")
-        params.set_option("--bedfile", "%(TEMP_IN_INTERVALS)s")
-        params.set_option("--pileup-only")
-        # Ignore read-groups for pileup
-        params.add_option("--mpileup-argument", "-R", sep="=")
-        # Reference sequence (FASTA)
-        params.add_option("--mpileup-argument", "-f=%s" % (reference,), sep="=")
-
-        params.set_kwargs(
-            IN_BAMFILE=infile_bam,
-            TEMP_IN_INTERVALS="heterozygous_snps.bed",
-            # Automatically remove this file
-            TEMP_OUT_INTERVALS="heterozygous_snps.bed",
-            OUT_PILEUP=outfile,
-            CHECK_SAMTOOLS=SAMTOOLS_VERSION,
-        )
-
-        _apply_samtools_options(params, mpileup_options, "--mpileup-argument")
-
-        self._in_vcf = infile_vcf
-        description = "<VCFPileup: '%s' -> '%s'>" % (infile_vcf, outfile,)
-
-        CommandNode.__init__(
-            self,
-            description=description,
-            command=params.finalize(),
-            dependencies=dependencies,
-        )
-
-    def _run(self, config, temp):
-        with gzip.open(self._in_vcf) as handle:
-            with open(os.path.join(temp, "heterozygous_snps.bed"), "w") as bed:
-                for line in handle:
-                    if line.startswith("#"):
-                        continue
-
-                    fields = line.split("\t", 5)
-                    if "," in fields[4]:
-                        pos = int(fields[1])
-                        bed.write("%s\t%i\t%i\n" % (fields[0], pos - 1, pos))
-
-        CommandNode._run(self, config, temp)
-
-
 class VCFFilterNode(CommandNode):
-    def __init__(self, pileup, infile, outfile, regions, options, dependencies=()):
+    def __init__(self, infile, outfile, regions, options, dependencies=()):
         vcffilter = factory.new("vcf_filter")
         vcffilter.add_value("%(IN_VCF)s")
-        vcffilter.add_option("--pileup", "%(IN_PILEUP)s")
 
         for contig in regions["HomozygousContigs"]:
             vcffilter.add_option("--homozygous-chromosome", contig)
-        vcffilter.set_kwargs(IN_PILEUP=pileup, IN_VCF=infile, OUT_STDOUT=AtomicCmd.PIPE)
+        vcffilter.set_kwargs(IN_VCF=infile, OUT_STDOUT=AtomicCmd.PIPE)
 
         apply_options(vcffilter, options)
 
@@ -292,54 +220,46 @@ class GenotypeRegionsNode(CommandNode):
         infile,
         bedfile,
         outfile,
-        pileup_only=False,
-        nbatches=1,
         mpileup_options={},
         bcftools_options={},
         dependencies=(),
     ):
-        params = factory.new("genotype")
-        params.add_value("%(IN_BAMFILE)s")
-        params.add_value("%(OUT_VCFFILE)s")
-        params.set_option("--nbatches", nbatches)
-
-        if bedfile:
-            params.set_option("--bedfile", "%(IN_INTERVALS)s")
-
-        if pileup_only:
-            params.set_option("--pileup-only")
-            # Ignore read-groups for pileup
-            params.add_option("--mpileup-argument", "-R", sep="=")
-
-        # Reference sequence (FASTA)
-        params.add_option("--mpileup-argument", "-f=%s" % (reference,), sep="=")
-
-        params.set_kwargs(
+        mpileup = AtomicCmdBuilder(
+            ("bcftools", "mpileup", "%(IN_BAMFILE)s"),
             IN_BAMFILE=infile,
             IN_INTERVALS=bedfile,
-            OUT_VCFFILE=outfile,
-            CHECK_SAMTOOLS=SAMTOOLS_VERSION_0119,
-            CHECK_BCFTOOLS=BCFTOOLS_VERSION_0119,
+            OUT_STDOUT=AtomicCmd.PIPE,
+            CHECK_VERSION=BCFTOOLS_VERSION,
         )
 
-        _apply_samtools_options(params, mpileup_options, "--mpileup-argument")
-        _apply_samtools_options(params, bcftools_options, "--bcftools-argument")
+        # Ignore read-groups for pileup
+        mpileup.add_option("--ignore-RG")
+        # Reference sequence (FASTA)
+        mpileup.add_option("--fasta-ref", reference)
+        # Output compressed VCF
+        mpileup.add_option("--output-type", "u")
 
-        invokation = " (%s%i thread(s))" % (
-            "pileup; " if pileup_only else "",
-            nbatches,
+        if bedfile:
+            mpileup.set_option("--regions-file", "%(IN_INTERVALS)s")
+
+        apply_options(mpileup, mpileup_options)
+
+        genotype = AtomicCmdBuilder(
+            ("bcftools", "call", "-"),
+            IN_STDIN=mpileup,
+            IN_BAMFILE=infile,
+            OUT_STDOUT=outfile,
+            CHECK_VERSION=BCFTOOLS_VERSION,
         )
-        description = "<GenotypeRegions%s: '%s' -> '%s'>" % (
-            invokation,
-            infile,
-            outfile,
-        )
+
+        genotype.set_option("--output-type", "z")
+
+        apply_options(genotype, bcftools_options)
 
         CommandNode.__init__(
             self,
-            description=description,
-            command=params.finalize(),
-            threads=nbatches,
+            description="<GenotypeRegions: '%s' -> '%s'>" % (infile, outfile,),
+            command=ParallelCmds([mpileup.finalize(), genotype.finalize()]),
             dependencies=dependencies,
         )
 

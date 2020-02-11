@@ -34,7 +34,7 @@ from paleomix.atomiccmd.command import AtomicCmd
 from paleomix.atomiccmd.sets import ParallelCmds
 from paleomix.common.fileutils import describe_paired_files
 from paleomix.node import CommandNode, NodeError
-from paleomix.nodes.samtools import SAMTOOLS_VERSION_1x
+from paleomix.nodes.samtools import SAMTOOLS_VERSION
 
 
 BWA_VERSION = versions.Requirement(
@@ -256,7 +256,7 @@ def _new_cleanup_command(stdin, output_file, reference, paired_end=False):
         IN_FASTA_REF=reference,
         OUT_STDOUT=output_file,
         TEMP_OUT_PREFIX="bam_cleanup",
-        CHECK_SAMTOOLS=SAMTOOLS_VERSION_1x,
+        CHECK_SAMTOOLS=SAMTOOLS_VERSION,
     )
 
     if paired_end:

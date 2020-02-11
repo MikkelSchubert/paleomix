@@ -32,23 +32,12 @@ import paleomix.common.versions as versions
 
 _VERSION_REGEX = r"Version: (\d+)\.(\d+)(?:\.(\d+))?"
 
-# v0.2.0 was the pre-release version of v1.0, and lacks required features
-_COMMON_CHECK = versions.Or(versions.EQ(0, 1, 19), versions.GE(1, 0, 0))
-
 SAMTOOLS_VERSION = versions.Requirement(
-    call=("samtools",), search=_VERSION_REGEX, checks=_COMMON_CHECK
-)
-
-SAMTOOLS_VERSION_1x = versions.Requirement(
     call=("samtools",), search=_VERSION_REGEX, checks=versions.GE(1, 0, 0)
 )
 
-SAMTOOLS_VERSION_0119 = versions.Requirement(
-    call=("samtools",), search=_VERSION_REGEX, checks=versions.EQ(0, 1, 19)
-)
-
-BCFTOOLS_VERSION_0119 = versions.Requirement(
-    call=("bcftools",), search=_VERSION_REGEX, checks=versions.EQ(0, 1, 19)
+BCFTOOLS_VERSION = versions.Requirement(
+    call=("bcftools",), search=_VERSION_REGEX, checks=versions.GE(1, 0, 0)
 )
 
 TABIX_VERSION = versions.Requirement(
@@ -149,7 +138,7 @@ class BAMIndexNode(CommandNode):
             samtools_version = SAMTOOLS_VERSION
             samtools_call = ["samtools", "index", "%(TEMP_IN_BAM)s"]
         elif index_format == ".csi":
-            samtools_version = SAMTOOLS_VERSION_1x
+            samtools_version = SAMTOOLS_VERSION
             samtools_call = ["samtools", "index", "-c", "%(TEMP_IN_BAM)s"]
         else:
             raise ValueError(

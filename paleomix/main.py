@@ -94,12 +94,6 @@ _PALEOMIX_COMMANDS = (
     ),
     ("VCF/GTF/BED/Pileup tools", None, None),
     (
-        "genotype",
-        "paleomix.tools.genotype",
-        "Creates bgzipped VCF for a set of (sparse) BED regions, or for "
-        "entire chromosomes / contigs using SAMTools / BCFTools.",
-    ),
-    (
         "gtf_to_bed",
         "paleomix.tools.gtf_to_bed",
         "Convert GTF file to BED files grouped by feature " "(coding, RNA, etc).",

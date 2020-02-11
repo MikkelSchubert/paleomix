@@ -292,7 +292,7 @@ def check_nth_sample(options, genotype):
     parser = pysam.asVCF()
 
     for contig in genotype.contigs:
-        for record in text.parse_lines(genotype.fetch(contig), parser):
+        for record in genotype.fetch(contig, parser=parser):
             if len(record) <= options.nth_sample:
                 sys.stderr.write(
                     "ERROR: Sample %i selected with --nth-sample,"

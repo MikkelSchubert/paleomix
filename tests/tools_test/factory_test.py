@@ -84,7 +84,6 @@ FACTORY_COMMANDS = (
         "rmdup_collapsed",
         "usage: paleomix rmdup_collapsed [options] < sorted.bam > out.bam",
     ),
-    ("genotype", "usage: paleomix genotype [options] sorted.bam out.vcf.bgz"),
     (
         "gtf_to_bed",
         "usage: paleomix gtf_to_bed [options] in.gtf out_prefix [in.scaffolds]",

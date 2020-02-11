@@ -28,7 +28,6 @@ from paleomix.nodes.samtools import TabixIndexNode, FastaIndexNode, BAMIndexNode
 from paleomix.nodes.bedtools import PaddedBedNode
 from paleomix.common.fileutils import swap_ext, add_postfix
 from paleomix.nodes.commands import (
-    VCFPileupNode,
     VCFFilterNode,
     BuildRegionsNode,
     GenotypeRegionsNode,
@@ -134,8 +133,6 @@ def build_genotyping_nodes_cached(options, genotyping, sample, regions, dependen
     Output files are generated in ./results/PROJECT/genotyping. If the option
     for 'GenotypeEntirePrefix' is enabled, the following files are generated:
         SAMPLE.PREFIX.vcf.bgz: Unfiltered calls for variant/non-variant sites.
-        SAMPLE.PREFIX.vcf.pileup.bgz: Pileup of sites containing SNPs.
-        SAMPLE.PREFIX.vcf.pileup.bgz.tbi: Tabix index of the pileup.
         SAMPLE.PREFIX.filtered.vcf.bgz: Variant calls filtered with vcf_filter.
         SAMPLE.PREFIX.filtered.vcf.bgz.tbi: Tabix index for the filtered VCF.
 
@@ -144,8 +141,6 @@ def build_genotyping_nodes_cached(options, genotyping, sample, regions, dependen
         SAMPLE.PREFIX.ROI.filtered.vcf.bgz
         SAMPLE.PREFIX.ROI.filtered.vcf.bgz.tbi
         SAMPLE.PREFIX.ROI.vcf.bgz
-        SAMPLE.PREFIX.ROI.vcf.pileup.bgz
-        SAMPLE.PREFIX.ROI.vcf.pileup.bgz.tbi
 
     In addition, the following files are generated for each set of
     RegionsOfInterest (ROI), regardless of the 'GenotypeEntirePrefix' option:
@@ -161,7 +156,6 @@ def build_genotyping_nodes_cached(options, genotyping, sample, regions, dependen
         return _VCF_CACHE[(bamfile, output_prefix)]
 
     calls = swap_ext(output_prefix, ".vcf.bgz")
-    pileups = swap_ext(output_prefix, ".vcf.pileup.bgz")
     filtered = swap_ext(output_prefix, ".filtered.vcf.bgz")
 
     # 1. Call samtools mpilup | bcftools view on the bam
@@ -170,37 +164,21 @@ def build_genotyping_nodes_cached(options, genotyping, sample, regions, dependen
         bedfile=bedfile,
         infile=bamfile,
         outfile=calls,
-        nbatches=options.samtools_max_threads,
         mpileup_options=genotyping["MPileup"],
         bcftools_options=genotyping["BCFTools"],
         dependencies=dependencies,
     )
 
-    # 2. Collect pileups of sites with SNPs, to allow proper filtering by
-    #    frequency of the minor allele, as only the major non-ref allele is
-    #    counted in the VCF (c.f. field DP4).
-    vcfpileup = VCFPileupNode(
-        reference=regions["FASTA"],
-        infile_bam=bamfile,
-        infile_vcf=calls,
-        outfile=pileups,
-        mpileup_options=genotyping["MPileup"],
-        dependencies=genotype,
-    )
-
-    vcf_tabix = TabixIndexNode(infile=pileups, preset="pileup", dependencies=vcfpileup)
-
-    # 3. Filter all sites using the 'vcf_filter' command
+    # 2. Filter all sites using the 'vcf_filter' command
     vcffilter = VCFFilterNode(
         infile=calls,
-        pileup=pileups,
         outfile=filtered,
         regions=regions,
         options=_get_vcf_filter_options(genotyping, sample),
-        dependencies=vcf_tabix,
+        dependencies=genotype,
     )
 
-    # 4. Tabix index. This allows random-access to the VCF file when building
+    # 3. Tabix index. This allows random-access to the VCF file when building
     #    the consensus FASTA sequence later in the pipeline.
     tabix = TabixIndexNode(infile=filtered, preset="vcf", dependencies=vcffilter)
 

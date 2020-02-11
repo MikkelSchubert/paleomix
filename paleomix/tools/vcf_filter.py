@@ -25,11 +25,12 @@
 import sys
 import errno
 import optparse
-import fileinput
 
 import pysam
 
 import paleomix.common.vcffilter as vcffilter
+
+from paleomix.common.fileutils import open_ro
 
 
 def _read_files(filenames, args):
@@ -37,22 +38,24 @@ def _read_files(filenames, args):
     has_filters = False
     reset_filter = args.reset_filter == "yes"
     vcf_parser = pysam.asVCF()
-    for line in fileinput.input(filenames):
-        if not line.startswith("#"):
-            in_header = False
-            line = line.rstrip("\n\r")
-            vcf = vcf_parser(line, len(line))
-            if reset_filter:
-                vcf.filter = "."
+    for filename in filenames:
+        with open_ro(filename, "b") as handle:
+            for line in handle:
+                if not line.startswith(b"#"):
+                    in_header = False
+                    line = line.rstrip(b"\n\r")
+                    vcf = vcf_parser(line, len(line))
+                    if reset_filter:
+                        vcf.filter = "."
 
-            yield vcf
-        elif in_header:
-            if not (line.startswith("##") or has_filters):
-                has_filters = True
-                for item in sorted(vcffilter.describe_filters(args).items()):
-                    print('##FILTER=<ID=%s,Description="%s">' % item)
+                    yield vcf
+                elif in_header:
+                    if not (line.startswith(b"##") or has_filters):
+                        has_filters = True
+                        for item in sorted(vcffilter.describe_filters(args).items()):
+                            print('##FILTER=<ID=%s,Description="%s">' % item)
 
-            print(line, end="")
+                    print(line.decode("utf-8"), end="")
 
 
 def main(argv):

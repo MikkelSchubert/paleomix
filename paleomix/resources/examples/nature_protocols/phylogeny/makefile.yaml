@@ -109,8 +109,6 @@ Genotyping:
       --min-mapq-bias: 1.0e-4
       # Min P-value for end distance bias (given PV4)
       --min-end-distance-bias: 1.0e-4
-      # Max frequency of the major allele at heterozygous sites
-      --min-allele-frequency: 0.2
       # Minimum number of alternative bases observed for variants
       --min-num-alt-bases: 2
 
