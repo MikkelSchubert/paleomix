@@ -314,11 +314,11 @@ Options: mapDamage plots and rescaling
     This subsection is used to specify options for mapDamage2.0, when plotting *post-mortem* DNA damage, when building models of the *post-mortem* damage, and when rescaling quality scores to account for this damage. In order to enable plotting, modeling, or rescaling of quality scores, please see the 'mapDamage' option in the 'Features' section below.
 
     .. note::
-        It may be worthwhile to tweak mapDamage parameters before building a model of *post-mortem* DNA damage; this may be accomplished by running the pipeline without rescaling, running with the 'mapDamage' feature set to 'plot' (with or without quotes), inspecting the plots generated per-library, and then tweaking parameters as appropriate, before setting 'RescaleQualities' to 'model' (with or without quotes).
+        It may be worthwhile to tweak mapDamage parameters before building a model of *post-mortem* DNA damage; this may be accomplished by running the pipeline without rescaling, running with the 'mapDamage' feature set to 'plot' (with or without quotes), inspecting the plots generated per-library, and then tweaking parameters as appropriate, before setting 'mapDamage' to 'model' (with or without quotes).
 
         Disabling the construction of the final BAMs may be accomplished by setting the features 'RawBam' and 'RealignedBAM' to 'no' (without quotes) in the 'Features' section (see below), and then setting the desired option to yes again after enabling rescaling and adding the desired options to the mapDamage section.
 
-        Should you wish to change the modeling and rescaling parameters, after having already run the pipeline with RescaleQualities enabled, simply remove the mapDamage files generated for the relevant libraries (see the :ref:`bam_filestructure` section).
+        Should you wish to change the modeling and rescaling parameters, after having already run the pipeline with rescaling enabled, simply remove the mapDamage files generated for the relevant libraries (see the :ref:`bam_filestructure` section).
 
     .. warning::
         Rescaling requires a certain minimum number of C>T and G>A substitutions, before it is possible to construct a model of *post-mortem* DNA damage. If mapDamage fails with an error indicating that "DNA damage levels are too low", then it is necessary to disable rescaling for that library to continue.

@@ -424,21 +424,11 @@ def _check_sexes(mkfile):
 
     for sample in mkfile["Project"]["Samples"].values():
         if sample.get("Sex") is None:
-            if sample.get("Gender") is None:
-                raise MakefileError(
-                    "Please specify a sex for sample %r, or "
-                    "'NA' if not applicable." % (sample["Name"])
-                )
-
-            sample["Sex"] = sample.pop("Gender")
-        elif sample.get("Gender") is not None:
             raise MakefileError(
-                "Both a Sex and a Gender has been specified "
-                "sample %r; the Gender field is deprecated, "
-                "please only use the Sex field." % (sample["Name"])
+                "Please specify a sex for sample %r, or "
+                "'NA' if not applicable." % (sample["Name"])
             )
-
-        if sample["Sex"] not in regions_sexes:
+        elif sample["Sex"] not in regions_sexes:
             sexes = ", ".join(map(repr, regions_sexes))
             message = "Sample %r has unknown sex %r; known sexes are %s" % (
                 sample["Name"],
@@ -684,11 +674,11 @@ _VALIDATION_SUBSAMPLE_KEY = And(StringStartsWith("<"), StringEndsWith(">"))
 _VALIDATION_SAMPLES_KEY = And(IsStr, Not(_VALIDATION_SUBSAMPLE_KEY))
 _VALIDATION_SAMPLES = {
     _VALIDATION_SAMPLES_KEY: {
-        "GenotypingMethod": IsStr,  # Deprecated
-        "SpeciesName": IsStr,  # Deprecated
-        "CommonName": IsStr,  # Deprecated
+        "GenotypingMethod": RemovedOption(),
+        "SpeciesName": RemovedOption(),
+        "CommonName": RemovedOption(),
         "Sex": IsStr(),
-        "Gender": IsStr(),
+        "Gender": RemovedOption(),
     }
 }
 _VALIDATION_SAMPLES[_VALIDATION_SUBSAMPLE_KEY] = _VALIDATION_SAMPLES

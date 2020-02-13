@@ -74,10 +74,6 @@ Options:
   # reads are filtered using Picard MarkDuplicates.
   PCRDuplicates: filter
 
-  # Carry out quality base re-scaling of libraries using mapDamage
-  # This will be done using the options set for mapDamage below
-  RescaleQualities: no
-
   # Command-line options for mapDamage; note that the long-form
   # options are expected; --length, not -l, etc. Uncomment the
   # "mapDamage" line adding command-line options below.

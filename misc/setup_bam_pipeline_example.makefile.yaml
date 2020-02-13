@@ -11,7 +11,6 @@ Options:
       --very-sensitive:
 
   PCRDuplicates:    no
-  RescaleQualities: no
 
   ExcludeReads:
     - Paired

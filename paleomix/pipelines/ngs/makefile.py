@@ -210,7 +210,7 @@ _VALIDATION_OPTIONS = {
     "SplitLanesByFilenames": RemovedOption(),
     "CompressionFormat": RemovedOption(),
     "AdapterRemoval": {
-        "Version": ValueIn(("v1.4", "v1.5+"), default="v1.5+"),
+        "Version": RemovedOption(),
         "--pcr1": IsStr,
         "--pcr2": IsStr,
         "--adapter1": IsStr,
@@ -263,7 +263,7 @@ _VALIDATION_OPTIONS = {
     # True is equivalent of 'remove'.
     "PCRDuplicates": StringIn((True, False, "mark", "filter"), default="filter"),
     # Qualities should be rescaled using mapDamage (replaced with Features)
-    "RescaleQualities": IsBoolean(),
+    "RescaleQualities": ReferenceError(),
     "mapDamage": {
         # Tabulation options
         "--downsample": Or(IsUnsignedInt, IsFloat),
@@ -362,10 +362,6 @@ def _mangle_options(makefile):
             # Fill out missing values using those of prior levels
             options = fill_dict(destination=data.pop("Options"), source=options)
 
-            # Force feature if 'RescaleQualities' is set, see _mangle_features
-            if options.pop("RescaleQualities", None):
-                options["Features"]["mapDamage"] = "rescale"
-
         if len(path) < 3:
             for key in data:
                 if key != "Options":
@@ -379,18 +375,10 @@ def _mangle_options(makefile):
 
 def _mangle_features(makefile):
     """Updates old-style makefiles to match the current layout.
-
-    Specifically:
-      - v1.2.6 merged the 'RescaleQualities' switch with the 'mapDamage'
-        feature; when the former is present, it is given priority.
     """
 
     options = makefile["Options"]
     features = options["Features"]
-
-    # Force feature if 'RescaleQualities' is set, for backwards compatibility
-    if options.pop("RescaleQualities", None):
-        features["mapDamage"] = "rescale"
 
     if isinstance(features["mapDamage"], bool):
         features["mapDamage"] = "plot" if features["mapDamage"] else "no"
