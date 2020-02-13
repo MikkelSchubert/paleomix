@@ -51,7 +51,7 @@ from paleomix.common.makefile import (
     StringStartsWith,
     IsListOf,
     IsDictOf,
-    DeprecatedOption,
+    RemovedOption,
     PreProcessMakefile,
 )
 from paleomix.common.formats.fasta import FASTA, FASTAError
@@ -207,8 +207,8 @@ _VALIDATION_OPTIONS = {
     # Offset for quality scores in FASTQ files.
     "QualityOffset": ValueIn((33, 64, "Solexa"), default=33),
     # Split a lane into multiple entries, one for each (pair of) file(s)
-    "SplitLanesByFilenames": DeprecatedOption(),
-    "CompressionFormat": DeprecatedOption(),
+    "SplitLanesByFilenames": RemovedOption(),
+    "CompressionFormat": RemovedOption(),
     "AdapterRemoval": {
         "Version": ValueIn(("v1.4", "v1.5+"), default="v1.5+"),
         "--pcr1": IsStr,

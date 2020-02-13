@@ -42,7 +42,7 @@ from paleomix.common.makefile import (
     ValuesIntersect,
     ValuesSubsetOf,
     ValueMissing,
-    DeprecatedOption,
+    RemovedOption,
     And,
     Or,
     Not,
@@ -458,12 +458,12 @@ def test_value_missing(value):
 
 ###############################################################################
 ###############################################################################
-# DeprecatedOption
+# RemovedOption
 
 
 @pytest.mark.parametrize("value", _COMMON_VALUES)
 def test_deprecated_option(value):
-    spec = DeprecatedOption()
+    spec = RemovedOption()
 
     spec(_DUMMY_PATH, value)
 

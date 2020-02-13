@@ -417,16 +417,16 @@ class ValueMissing(MakefileSpec):
         return False
 
 
-class DeprecatedOption(MakefileSpec):
-    """Used to signify substructures that have been deprecated, and are hence ignored."""
+class RemovedOption(MakefileSpec):
+    """Used to signify substructures that have been removed, and are hence ignored."""
 
-    def __init__(self, description="deprecated settings"):
+    def __init__(self, description="removed settings"):
         MakefileSpec.__init__(self, description, DEFAULT_NOT_SET)
 
     def __call__(self, path, _value):
         log = logging.getLogger(__name__)
         log.warning(
-            "option has been deprecated and no longer has any effect: %s"
+            "option has been removed and no longer has any effect: %s"
             % (_path_to_str(path),)
         )
 
