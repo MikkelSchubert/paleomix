@@ -29,13 +29,13 @@ import paleomix
 import paleomix.common.fileutils as fileutils
 import paleomix.logger
 
-import paleomix.tools.bam_pipeline.mkfile as bam_mkfile
-import paleomix.tools.zonkey.config as zonkey_config
-import paleomix.tools.zonkey.parts.common as common_nodes
-import paleomix.tools.zonkey.parts.mitochondria as mitochondria
-import paleomix.tools.zonkey.parts.nuclear as nuclear
-import paleomix.tools.zonkey.parts.report as report
-import paleomix.tools.zonkey.parts.summary as summary
+import paleomix.pipelines.ngs.mkfile as bam_mkfile
+import paleomix.pipelines.zonkey.config as zonkey_config
+import paleomix.pipelines.zonkey.parts.common as common_nodes
+import paleomix.pipelines.zonkey.parts.mitochondria as mitochondria
+import paleomix.pipelines.zonkey.parts.nuclear as nuclear
+import paleomix.pipelines.zonkey.parts.report as report
+import paleomix.pipelines.zonkey.parts.summary as summary
 import paleomix.yaml
 
 from paleomix.common.formats.fasta import FASTA

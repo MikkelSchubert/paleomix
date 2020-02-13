@@ -26,7 +26,7 @@ import collections
 from paleomix.common.fileutils import swap_ext
 
 from paleomix.nodes.commands import CoverageNode, MergeCoverageNode, DepthHistogramNode
-from paleomix.tools.bam_pipeline.parts.summary import SummaryTableNode
+from paleomix.pipelines.ngs.parts.summary import SummaryTableNode
 
 
 def add_statistics_nodes(config, makefile, target):

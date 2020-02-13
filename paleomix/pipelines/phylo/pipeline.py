@@ -26,15 +26,15 @@ import sys
 
 import paleomix.logger
 import paleomix.resources
-import paleomix.tools.phylo_pipeline.mkfile as mkfile
+import paleomix.pipelines.phylo.mkfile as mkfile
 import paleomix.yaml
 from paleomix.pipeline import Pypeline
-from paleomix.tools.phylo_pipeline.config import (
+from paleomix.pipelines.phylo.config import (
     ConfigError,
     parse_config,
     select_commands,
 )
-from paleomix.tools.phylo_pipeline.makefile import MakefileError, read_makefiles
+from paleomix.pipelines.phylo.makefile import MakefileError, read_makefiles
 
 
 def main(argv):

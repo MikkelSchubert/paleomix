@@ -26,7 +26,7 @@ import sys
 
 import pysam
 
-import paleomix.tools.zonkey.database as database
+import paleomix.pipelines.zonkey.database as database
 
 from paleomix.common.formats.fasta import FASTA
 from paleomix.common.formats.msa import MSA

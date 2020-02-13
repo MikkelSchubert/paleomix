@@ -24,9 +24,9 @@ import optparse
 import sys
 
 import paleomix
-import paleomix.tools.phylo_pipeline.parts.genotype as genotype
-import paleomix.tools.phylo_pipeline.parts.msa as msa
-import paleomix.tools.phylo_pipeline.parts.phylo as phylo
+import paleomix.pipelines.phylo.parts.genotype as genotype
+import paleomix.pipelines.phylo.parts.msa as msa
+import paleomix.pipelines.phylo.parts.phylo as phylo
 
 from paleomix.config import ConfigError, PerHostConfig, PerHostValue
 

@@ -29,7 +29,7 @@ from paleomix.atomiccmd.command import AtomicCmd
 from paleomix.common.formats.newick import Newick
 from paleomix.node import CommandNode
 
-from paleomix.tools.zonkey.common import RSCRIPT_VERSION
+from paleomix.pipelines.zonkey.common import RSCRIPT_VERSION
 
 
 class MitoConsensusNode(CommandNode):

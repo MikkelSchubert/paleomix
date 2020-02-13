@@ -29,9 +29,9 @@ from paleomix.node import Node
 
 import paleomix.common.fileutils as fileutils
 
-import paleomix.tools.zonkey.parts.admixture as admixture
+import paleomix.pipelines.zonkey.parts.admixture as admixture
 
-from paleomix.tools.zonkey.parts.report import AnalysisReport
+from paleomix.pipelines.zonkey.parts.report import AnalysisReport
 
 
 class SummaryNode(Node):

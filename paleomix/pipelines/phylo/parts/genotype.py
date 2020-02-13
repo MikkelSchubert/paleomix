@@ -117,7 +117,7 @@ def build_genotyping_nodes_cached(options, genotyping, sample, regions, dependen
     the relevant regions during construction of the consensus sequence.
 
     Parameters:
-        options: An options object (c.f. paleomix.tools.phylo_pipeline.config).
+        options: An options object (c.f. paleomix.pipelines.phylo.config).
         genotyping: Genotyping options defined for a specific set of areas of
                     interest, corresponding to Genotyping:NAME in the makefile.
         sample: The name of the sample to be genotyped.

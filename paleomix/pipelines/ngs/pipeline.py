@@ -37,13 +37,13 @@ from paleomix.nodes.bwa import BWAIndexNode
 from paleomix.nodes.bowtie2 import Bowtie2IndexNode
 from paleomix.nodes.validation import ValidateFASTAFilesNode
 
-from paleomix.tools.bam_pipeline.makefile import MakefileError, read_makefiles
+from paleomix.pipelines.ngs.makefile import MakefileError, read_makefiles
 
-from paleomix.tools.bam_pipeline.parts import Reads
+from paleomix.pipelines.ngs.parts import Reads
 
-import paleomix.tools.bam_pipeline.parts as parts
-import paleomix.tools.bam_pipeline.config as bam_config
-import paleomix.tools.bam_pipeline.mkfile as bam_mkfile
+import paleomix.pipelines.ngs.parts as parts
+import paleomix.pipelines.ngs.config as bam_config
+import paleomix.pipelines.ngs.mkfile as bam_mkfile
 
 
 def build_pipeline_trimming(config, makefile):

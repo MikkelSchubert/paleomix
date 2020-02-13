@@ -30,7 +30,7 @@ import pysam
 
 import paleomix
 import paleomix.common.fileutils as fileutils
-import paleomix.tools.zonkey.database as database
+import paleomix.pipelines.zonkey.database as database
 from paleomix.config import PerHostConfig, PerHostValue
 
 _USAGE = """USAGE:

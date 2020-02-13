@@ -38,7 +38,7 @@ from paleomix.atomiccmd.command import AtomicCmd
 from paleomix.atomiccmd.sets import SequentialCmds
 from paleomix.node import CommandNode, Node, NodeError
 
-from paleomix.tools.zonkey.common import (
+from paleomix.pipelines.zonkey.common import (
     RSCRIPT_VERSION,
     read_summary,
 )

@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import paleomix.tools.bam_pipeline.pipeline as pipeline
+import paleomix.pipelines.ngs.pipeline as pipeline
 
 
 def main(argv):

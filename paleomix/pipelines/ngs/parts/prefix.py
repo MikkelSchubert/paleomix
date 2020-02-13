@@ -25,7 +25,7 @@ import logging
 
 from paleomix.common.utilities import safe_coerce_to_tuple
 from paleomix.nodes.picard import MergeSamFilesNode
-from paleomix.tools.bam_pipeline.nodes import index_and_validate_bam
+from paleomix.pipelines.ngs.nodes import index_and_validate_bam
 from paleomix.nodes.validation import DetectInputDuplicationNode
 
 import paleomix.nodes.gatk as gatk

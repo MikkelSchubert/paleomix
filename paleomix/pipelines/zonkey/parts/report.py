@@ -32,10 +32,10 @@ from paleomix.node import Node
 
 import paleomix.common.fileutils as fileutils
 
-import paleomix.tools.zonkey.parts.admixture as admixture
-import paleomix.tools.zonkey.parts.nuclear as nuclear
+import paleomix.pipelines.zonkey.parts.admixture as admixture
+import paleomix.pipelines.zonkey.parts.nuclear as nuclear
 
-from paleomix.tools.zonkey.common import RSCRIPT_VERSION, read_summary
+from paleomix.pipelines.zonkey.common import RSCRIPT_VERSION, read_summary
 
 from paleomix.nodes.samtools import SAMTOOLS_VERSION
 from paleomix.nodes.raxml import RAXML_VERSION
@@ -46,7 +46,7 @@ class ReportNode(Node):
         """
 
         Arguments:
-          config -- Config object generated using paleomix.tools.zonkey.config.
+          config -- Config object generated using paleomix.pipelines.zonkey.config.
           root -- Root folder containing current analysis.
           has_nuc -- True if a nuclear BAM was provided.
           has_mt -- True if a mitochondrial BAM was provided.

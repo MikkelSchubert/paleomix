@@ -34,28 +34,28 @@ _PALEOMIX_COMMANDS = (
     ("Pipelines", None, None),
     (
         "bam_pipeline",
-        "paleomix.tools.bam_pipeline.pipeline",
+        "paleomix.pipelines.ngs.pipeline",
         "Pipeline for trimming and mapping of NGS reads.",
     ),
     (
         "trim_pipeline",
-        "paleomix.tools.bam_pipeline.trim_pipeline",
+        "paleomix.pipelines.ngs.trim_pipeline",
         "Equivalent to 'bam_pipeline', but only runs the trimming steps.",
     ),
     (
         "phylo_pipeline",
-        "paleomix.tools.phylo_pipeline.pipeline",
+        "paleomix.pipelines.phylo.pipeline",
         "Pipeline for genotyping and phylogenetic inference from BAMs.",
     ),
     (
         "zonkey",
-        "paleomix.tools.zonkey.pipeline",
+        "paleomix.pipelines.zonkey.pipeline",
         "Pipeline for detecting F1 (equine) hybrids.",
     ),
     # Currently not documented; used internally by Zonkey
-    ("zonkey_db", "paleomix.tools.zonkey.build_db", None),
-    ("zonkey_tped", "paleomix.tools.zonkey.build_tped", None),
-    ("zonkey_mito", "paleomix.tools.zonkey.build_mito", None),
+    ("zonkey_db", "paleomix.pipelines.zonkey.build_db", None),
+    ("zonkey_tped", "paleomix.pipelines.zonkey.build_tped", None),
+    ("zonkey_mito", "paleomix.pipelines.zonkey.build_mito", None),
     ("BAM/SAM tools", None, None),
     (
         "dupcheck",

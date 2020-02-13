@@ -30,7 +30,7 @@ import pysam
 import paleomix.yaml
 from paleomix.common.fileutils import swap_ext
 from paleomix.common.formats.fasta import FASTA
-from paleomix.tools.zonkey.common import contig_name_to_plink_name, get_sample_names
+from paleomix.pipelines.zonkey.common import contig_name_to_plink_name, get_sample_names
 
 _SETTINGS_KEYS = (
     "Format",

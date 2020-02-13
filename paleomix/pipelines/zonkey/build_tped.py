@@ -34,7 +34,7 @@ from paleomix.common.sampling import reservoir_sampling
 
 import paleomix.common.bamfiles as bamtools
 import paleomix.common.fileutils as fileutils
-import paleomix.tools.zonkey.database as database
+import paleomix.pipelines.zonkey.database as database
 
 
 _TRANSITIONS = frozenset((("C", "T"), ("T", "C"), ("G", "A"), ("A", "G")))

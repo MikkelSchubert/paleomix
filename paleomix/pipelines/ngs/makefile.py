@@ -28,7 +28,7 @@ import logging
 import os
 import string
 
-import paleomix.tools.bam_pipeline.paths as paths
+import paleomix.pipelines.ngs.paths as paths
 from paleomix.common.utilities import fill_dict
 from paleomix.common.makefile import (
     MakefileError,
