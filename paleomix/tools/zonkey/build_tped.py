@@ -34,12 +34,10 @@ from paleomix.common.sampling import reservoir_sampling
 
 import paleomix.common.bamfiles as bamtools
 import paleomix.common.fileutils as fileutils
-import paleomix.tools.zonkey.common as common
 import paleomix.tools.zonkey.database as database
 
 
-_TRANSITIONS = frozenset((('C', 'T'), ('T', 'C'),
-                          ('G', 'A'), ('A', 'G')))
+_TRANSITIONS = frozenset((("C", "T"), ("T", "C"), ("G", "A"), ("A", "G")))
 
 
 def _filter_records(handle, flags=bamtools.EXCLUDED_FLAGS):
@@ -48,14 +46,16 @@ def _filter_records(handle, flags=bamtools.EXCLUDED_FLAGS):
             yield record
 
 
-class DownsampledBAM(object):
+class DownsampledBAM:
     def __init__(self, handle, downsample, included_references):
         self._records = collections.defaultdict(list)
 
         references = handle.references
         if len(references) != len(included_references):
-            raise ValueError("Length of 'included_references' must match the "
-                             "number of references in BAM file.")
+            raise ValueError(
+                "Length of 'included_references' must match the "
+                "number of references in BAM file."
+            )
 
         records = _filter_records(handle)
         for record in reservoir_sampling(records, downsample):
@@ -72,7 +72,7 @@ class DownsampledBAM(object):
         return self._records.get(chrom, ())
 
 
-class GenotypeSites(object):
+class GenotypeSites:
     def __init__(self, records):
         last_chrom = None
         sites = []
@@ -82,8 +82,7 @@ class GenotypeSites(object):
             # Convert pos from 1-based to 0-based (same as BAM.pos)
             sites.append((int(pos) - 1, line, []))
 
-            assert last_chrom is None or chrom == last_chrom, \
-                (chrom, last_chrom)
+            assert last_chrom is None or chrom == last_chrom, (chrom, last_chrom)
             last_chrom = chrom
 
         sites.sort()
@@ -101,8 +100,8 @@ class GenotypeSites(object):
                 yield sites.popleft()
 
             sequence = record.seq
-            sites_iter = iter(sites).next
-            alignment_iter = iter(record.get_aligned_pairs()).next
+            sites_iter = iter(sites).__next__
+            alignment_iter = iter(record.get_aligned_pairs()).__next__
             alignment_end = record.aend
 
             try:
@@ -137,42 +136,24 @@ class GenotypeSites(object):
         statistics["n_reads"] += count_total
         statistics["n_reads_used"] += count_used
 
-    @classmethod
-    def _parse_cigar(cls, record):
-        seq_iter = iter(record.seq)
-        seq_pos = record.pos
-        for key, value in record.cigar:
-            if key in (0, 7, 8):  # M, =, X
-                for _ in xrange(value):
-                    yield seq_pos, seq_iter.next()
-                    seq_pos += 1
-            elif key in (1, 4):  # I
-                for _ in xrange(value):
-                    seq_iter.next()
-            elif key in (2, 3, ):  # D, N
-                seq_pos += value
-            elif key in (5, 6):  # H, P
-                pass
-            else:
-                raise ValueError(record.cigar)
 
-
-class GenotypeReader(object):
+class GenotypeReader:
     def __init__(self, filename):
         self._tar_handle = tarfile.open(filename)
         self._handle = self._tar_handle.extractfile("genotypes.txt")
-        self._header = self._handle.readline().rstrip('\r\n').split('\t')
-        self.samples = self._header[-1].split(';')
+        self._header = self._handle.readline().rstrip("\r\n").split("\t")
+        self.samples = self._header[-1].split(";")
 
     def __iter__(self):
-        for chrom, records in itertools.groupby(self._read_records(),
-                                                lambda rec: rec[0]):
+        for chrom, records in itertools.groupby(
+            self._read_records(), lambda rec: rec[0]
+        ):
             sys.stderr.write("Reading contig %r information ...\n" % (chrom,))
             yield chrom, GenotypeSites(records)
 
     def _read_records(self):
         for line in self._handle:
-            yield line.rstrip().split('\t', 2)
+            yield line.rstrip().split("\t", 2)
 
     def __enter__(self):
         return self
@@ -182,12 +163,20 @@ class GenotypeReader(object):
         self._tar_handle.close()
 
 
-def process_record(chrom, pos, line, nucleotides, statistics, records,
-                   out_incl_ts=sys.stdout,
-                   out_excl_ts=sys.stdout):
+def process_record(
+    chrom,
+    pos,
+    line,
+    nucleotides,
+    statistics,
+    records,
+    out_incl_ts=sys.stdout,
+    out_excl_ts=sys.stdout,
+):
     # Filter reads that have already been used
-    nucleotides = [(rec_id, nuc) for rec_id, nuc in nucleotides
-                   if rec_id not in records]
+    nucleotides = [
+        (rec_id, nuc) for rec_id, nuc in nucleotides if rec_id not in records
+    ]
 
     if not nucleotides:
         return
@@ -199,7 +188,7 @@ def process_record(chrom, pos, line, nucleotides, statistics, records,
 
     # Fields are expected to contain at least 2 columns, the first being the
     # reference nucleotide, and the last being the sample genotypes
-    _, encoded_genotypes = line.strip().rsplit('\t', 1)
+    _, encoded_genotypes = line.strip().rsplit("\t", 1)
 
     genotypes = []
     for encoded_nucleotide in encoded_genotypes:
@@ -210,8 +199,9 @@ def process_record(chrom, pos, line, nucleotides, statistics, records,
         elif len(decoded_nucleotides) == 2:
             genotypes.extend(decoded_nucleotides)
         else:
-            raise ValueError('Invalid nucleotide, not bi-allelic: %r'
-                             % (encoded_nucleotide,))
+            raise ValueError(
+                "Invalid nucleotide, not bi-allelic: %r" % (encoded_nucleotide,)
+            )
 
     if nucleotide not in genotypes:
         # Exclude SNPs not observed in the reference panel
@@ -253,8 +243,7 @@ def write_summary(args, filename, statistics):
         handle.write("name: %s\n" % (args.name,))
         handle.write("filename: %s\n" % (os.path.abspath(args.bam),))
 
-        for key in ("n_reads", "n_reads_used",
-                    "n_sites_incl_ts", "n_sites_excl_ts"):
+        for key in ("n_reads", "n_reads_used", "n_sites_incl_ts", "n_sites_excl_ts"):
             handle.write("%s: %s\n" % (key, statistics.get(key, "MISSING")))
 
 
@@ -264,19 +253,22 @@ def process_bam(args, data, bam_handle, mapping):
     references = [reverse_mapping.get(name, name) for name in raw_references]
 
     if args.downsample:
-        sys.stderr.write("Downsampling to at most %i BAM records ...\n"
-                         % (args.downsample))
+        sys.stderr.write(
+            "Downsampling to at most %i BAM records ...\n" % (args.downsample)
+        )
         bam_handle = DownsampledBAM(bam_handle, args.downsample, references)
 
-    statistics = {"n_reads": 0,
-                  "n_reads_used": 0,
-                  "n_sites_incl_ts": 0,
-                  "n_sites_excl_ts": 0}
+    statistics = {
+        "n_reads": 0,
+        "n_reads_used": 0,
+        "n_sites_incl_ts": 0,
+        "n_sites_excl_ts": 0,
+    }
 
     fileutils.make_dirs(args.root)
 
-    with open(os.path.join(args.root, 'incl_ts.tped'), 'w') as output_incl:
-        with open(os.path.join(args.root, 'excl_ts.tped'), 'w') as output_excl:
+    with open(os.path.join(args.root, "incl_ts.tped"), "w") as output_incl:
+        with open(os.path.join(args.root, "excl_ts.tped"), "w") as output_excl:
             with GenotypeReader(args.database) as reader:
                 for ref, sites in reader:
                     records = set()
@@ -284,39 +276,59 @@ def process_bam(args, data, bam_handle, mapping):
 
                     sys.stderr.write("Reading %r from BAM ...\n" % (raw_ref,))
                     raw_sites = bam_handle.fetch(raw_ref)
-                    for pos, line, nucleotides in sites.process(raw_sites,
-                                                                statistics):
-                        process_record(ref, pos, line, nucleotides,
-                                       out_incl_ts=output_incl,
-                                       out_excl_ts=output_excl,
-                                       statistics=statistics,
-                                       records=records)
+                    for pos, line, nucleotides in sites.process(raw_sites, statistics):
+                        process_record(
+                            ref,
+                            pos,
+                            line,
+                            nucleotides,
+                            out_incl_ts=output_incl,
+                            out_excl_ts=output_excl,
+                            statistics=statistics,
+                            records=records,
+                        )
 
-                write_summary(args, os.path.join(args.root, "common.summary"),
-                              statistics=statistics)
-                write_tfam(os.path.join(args.root, "common.tfam"),
-                           data, reader.samples, args.name)
+                write_summary(
+                    args,
+                    os.path.join(args.root, "common.summary"),
+                    statistics=statistics,
+                )
+                write_tfam(
+                    os.path.join(args.root, "common.tfam"),
+                    data,
+                    reader.samples,
+                    args.name,
+                )
 
 
 def parse_args(argv):
     parser = argparse.ArgumentParser()
-    parser.add_argument('root', metavar='output_folder',
-                        help='Output folder in which output files are '
-                             'to be placed; is created if it does not '
-                             'already exist.')
-    parser.add_argument('database',
-                        help='Zonkey database file.')
-    parser.add_argument('bam',
-                        help='Sorted BAM file.')
-    parser.add_argument('--seed', type=int,
-                        help='RNG seed used when downsampling reads; '
-                             'defaults to using system time as seed.')
-    parser.add_argument('--downsample', type=int, default=0,
-                        help='Sample N reads from the input BAM file, before '
-                             'building the TPED file. If not set, or set to '
-                             'zero, all reads are used [%(default)s].')
-    parser.add_argument('--name', default="Sample",
-                        help='Name of sample to be used in output.')
+    parser.add_argument(
+        "root",
+        metavar="output_folder",
+        help="Output folder in which output files are "
+        "to be placed; is created if it does not "
+        "already exist.",
+    )
+    parser.add_argument("database", help="Zonkey database file.")
+    parser.add_argument("bam", help="Sorted BAM file.")
+    parser.add_argument(
+        "--seed",
+        type=int,
+        help="RNG seed used when downsampling reads; "
+        "defaults to using system time as seed.",
+    )
+    parser.add_argument(
+        "--downsample",
+        type=int,
+        default=0,
+        help="Sample N reads from the input BAM file, before "
+        "building the TPED file. If not set, or set to "
+        "zero, all reads are used [%(default)s].",
+    )
+    parser.add_argument(
+        "--name", default="Sample", help="Name of sample to be used in output."
+    )
 
     return parser.parse_args(argv)
 
@@ -325,23 +337,24 @@ def main(argv):
     args = parse_args(argv)
     random.seed(args.seed)
 
-    print "Reading reference information from %r ..." \
-        % (args.database,)
+    print("Reading reference information from %r ..." % (args.database,))
 
     try:
         data = database.ZonkeyDB(args.database)
-    except database.ZonkeyDBError, error:
-        sys.stderr.write("Error reading database file %r:\n%s\n"
-                         % (args.database, error))
+    except database.ZonkeyDBError as error:
+        sys.stderr.write(
+            "Error reading database file %r:\n%s\n" % (args.database, error)
+        )
         return 1
 
-    with pysam.Samfile(args.bam) as bam_handle:
+    with pysam.AlignmentFile(args.bam) as bam_handle:
         bam_info = data.validate_bam_handle(bam_handle)
         if not bam_info:
             return 1
         elif not bam_info.is_nuclear:
-            sys.stderr.write("ERROR: BAM file does not contain "
-                             "identifiable nuclear alignments.\n")
+            sys.stderr.write(
+                "ERROR: BAM file does not contain " "identifiable nuclear alignments.\n"
+            )
             return 1
 
         process_bam(args, data, bam_handle, bam_info.nuclear_contigs)
@@ -349,5 +362,5 @@ def main(argv):
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))

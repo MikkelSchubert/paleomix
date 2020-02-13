@@ -20,21 +20,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from __future__ import print_function
-
+import datetime
+import glob
+import logging
 import os
 import sys
-import glob
-import datetime
+
 from optparse import OptionParser
 
-from paleomix.common.console import \
-    print_info, \
-    print_err
-
-
-_TEMPLATE_TOP = \
-    """# -*- mode: Yaml; -*-
+_TEMPLATE_TOP = """# -*- mode: Yaml; -*-
 # Timestamp: %s
 #
 # Default options.
@@ -50,12 +44,6 @@ Options:
   # specify 'Solexa', to handle reads on the Solexa scale. This is
   # used during adapter-trimming and sequence alignment
   QualityOffset: 33
-  # Split a lane into multiple entries, one for each (pair of) file(s)
-  # found using the search-string specified for a given lane. Each
-  # lane is named by adding a number to the end of the given barcode.
-  SplitLanesByFilenames: yes
-  # Compression format for FASTQ reads; 'gz' for GZip, 'bz2' for BZip2
-  CompressionFormat: bz2
 
   # Settings for trimming of reads, see AdapterRemoval man-page
   AdapterRemoval:
@@ -72,8 +60,7 @@ Options:
      --trimqualities: yes
 """
 
-_TEMPLATE_BAM_OPTIONS = \
-    """  # Settings for aligners supported by the pipeline
+_TEMPLATE_BAM_OPTIONS = """  # Settings for aligners supported by the pipeline
   Aligners:
     # Choice of aligner software to use, either "BWA" or "Bowtie2"
     Program: BWA
@@ -208,9 +195,7 @@ _TEMPLATE_SAMPLES = """
 _FILENAME = "SampleSheet.csv"
 
 
-def build_makefile(add_full_options=True,
-                   add_prefix_tmpl=True,
-                   add_sample_tmpl=True):
+def build_makefile(add_full_options=True, add_prefix_tmpl=True, add_sample_tmpl=True):
     timestamp = datetime.datetime.now().isoformat()
     template_parts = [_TEMPLATE_TOP % (timestamp,)]
 
@@ -243,19 +228,23 @@ def strip_comments(text):
 
 
 def read_alignment_records(filename):
+    log = logging.getLogger(__name__)
+
     results = []
     with open(filename) as records:
         line = records.readline()
         if not line:
-            print_err("ERROR: Empty SampleSheet.csv file: %r"
-                      % (filename,))
+            log.error("Empty SampleSheet.csv file: %r", filename)
             return None
 
         header = line.strip().split(",")
         missing = set(("SampleID", "Index", "Lane", "FCID")) - set(header)
         if missing:
-            print_err("ERROR: Required columns missing from SampleSheet file "
-                      "%r: %s" % (filename, ", ".join(map(repr, missing))))
+            log.error(
+                "Required columns missing from SampleSheet file %r: %s",
+                filename,
+                ", ".join(map(repr, missing)),
+            )
             return None
 
         for idx, line in enumerate(records, start=2):
@@ -265,10 +254,14 @@ def read_alignment_records(filename):
 
             fields = line.split(",")
             if len(fields) != len(header):
-                print_err("Line %i in SampleSheet file %r does not contain "
-                          "the expected number of columns; expected %i, but "
-                          "found %i."
-                          % (idx, filename, len(header), len(fields)))
+                log.error(
+                    "Line %i in SampleSheet file %r does not contain the expected "
+                    "number of columns; expected %i, but found %i.",
+                    idx,
+                    filename,
+                    len(header),
+                    len(fields),
+                )
                 return None
 
             results.append(dict(zip(header, fields)))
@@ -278,8 +271,12 @@ def read_alignment_records(filename):
 
 def parse_args(argv):
     parser = OptionParser("Usage: %prog [/path/to/SampleSheet.csv, ...]")
-    parser.add_option("--minimal", default=False, action="store_true",
-                      help="Strip comments from makefile template.")
+    parser.add_option(
+        "--minimal",
+        default=False,
+        action="store_true",
+        help="Strip comments from makefile template.",
+    )
 
     return parser.parse_args(argv)
 
@@ -303,7 +300,8 @@ def read_sample_sheets(filenames):
             root, filename = os.path.split(root)[0], root
 
         if not os.path.exists(filename):
-            print_err("ERROR: Could not find SampleSheet file: %r" % filename)
+            log = logging.getLogger(__name__)
+            log.error("Could not find SampleSheet file: %r", filename)
             return None
 
         sample_sheet = read_alignment_records(filename)
@@ -312,8 +310,7 @@ def read_sample_sheets(filenames):
 
         for record in sample_sheet:
             record["Lane"] = int(record["Lane"])
-            path = "%(SampleID)s_%(Index)s_L%(Lane)03i_R{Pair}_*.fastq.gz" \
-                % record
+            path = "%(SampleID)s_%(Index)s_L%(Lane)03i_R{Pair}_*.fastq.gz" % record
             record["Path"] = select_path(os.path.join(root, path))
             key = "%(FCID)s_%(Lane)s" % record
 
@@ -322,9 +319,9 @@ def read_sample_sheets(filenames):
             barcodes.setdefault(key, []).append(path)
 
     # Clean up names; generate unique names for duplicate lanes
-    for libraries in records.itervalues():
-        for barcodes in libraries.itervalues():
-            for key, paths in barcodes.items():
+    for libraries in records.values():
+        for barcodes in libraries.values():
+            for key, paths in list(barcodes.items()):
                 if len(paths) == 1:
                     barcodes[key] = paths[0]
                     continue
@@ -346,12 +343,12 @@ def read_sample_sheets(filenames):
 
 def print_samples(records):
     print()
-    for (sample, libraries) in sorted(records.iteritems()):
+    for (sample, libraries) in sorted(records.items()):
         print("%s:" % sample)
         print("  %s:" % sample)
-        for (library, barcodes) in sorted(libraries.iteritems()):
+        for (library, barcodes) in sorted(libraries.items()):
             print("    %s:" % library)
-            for key, path in sorted(barcodes.iteritems()):
+            for key, path in sorted(barcodes.items()):
                 print("      %s: %s" % (key, path))
             print()
         print()
@@ -360,14 +357,17 @@ def print_samples(records):
 def main(argv, pipeline="bam"):
     assert pipeline in ("bam", "trim"), pipeline
 
+    log = logging.getLogger(__name__)
     options, filenames = parse_args(argv)
     records = read_sample_sheets(filenames)
     if records is None:
         return 1
 
-    template = build_makefile(add_full_options=(pipeline == "bam"),
-                              add_prefix_tmpl=(pipeline == "bam"),
-                              add_sample_tmpl=not records)
+    template = build_makefile(
+        add_full_options=(pipeline == "bam"),
+        add_prefix_tmpl=(pipeline == "bam"),
+        add_sample_tmpl=not records,
+    )
     if options.minimal:
         template = strip_comments(template)
 
@@ -376,8 +376,8 @@ def main(argv, pipeline="bam"):
     print_samples(records)
 
     if argv:
-        print_info("Automatically generated makefile printed.\n"
-                   "Please check for correctness before running pipeline.")
+        log.info("Automatically generated makefile printed.")
+        log.info("Please check for correctness before running pipeline.")
     return 0
 
 

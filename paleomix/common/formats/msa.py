@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from itertools import izip
+
 from collections import defaultdict
 
 from paleomix.common.sequences import split
@@ -41,7 +41,9 @@ class MSA(frozenset):
         records, names = [], set()
         for record in sequences:
             if record.name in names:
-                raise MSAError("Duplicate name found in FASTA records: %r" % record.name)
+                raise MSAError(
+                    "Duplicate name found in FASTA records: %r" % record.name
+                )
             records.append(record)
             names.add(record.name)
 
@@ -54,7 +56,7 @@ class MSA(frozenset):
 
     def seqlen(self):
         """Retrurns the length of the sequences in the MSA."""
-        return len(iter(self).next().sequence)
+        return len(next(iter(self)).sequence)
 
     def exclude(self, names):
         """Builds a new MSA that excludes the named set of records."""
@@ -69,22 +71,21 @@ class MSA(frozenset):
     def reduce(self):
         columns = []
         uncalled = frozenset("Nn-")
-        for column in izip(*(record.sequence for record in self)):
-            if (frozenset(column) - uncalled):
+        for column in zip(*(record.sequence for record in self)):
+            if frozenset(column) - uncalled:
                 columns.append(column)
 
         if not columns:
             return None
 
         records = []
-        for (record, sequence) in izip(self, izip(*columns)):
+        for (record, sequence) in zip(self, zip(*columns)):
             records.append(FASTA(record.name, record.meta, "".join(sequence)))
 
         return MSA(records)
 
     def filter_singletons(self, to_filter, filter_using):
-        included, excluded, to_filter \
-            = self._group(filter_using, to_filter)
+        included, excluded, to_filter = self._group(filter_using, to_filter)
 
         sequence = list(to_filter.sequence)
         sequences = [record.sequence.upper() for record in included]
@@ -105,14 +106,11 @@ class MSA(frozenset):
             genotype = encode_genotype(filtered_nts)
             if genotype != current_nt:
                 sequence[index] = genotype.lower()
-        new_record = FASTA(to_filter.name,
-                           to_filter.meta,
-                           "".join(sequence))
+        new_record = FASTA(to_filter.name, to_filter.meta, "".join(sequence))
 
         return MSA([new_record] + included + excluded)
 
-
-    def split(self, split_by = "123"):
+    def split(self, split_by="123"):
         """Splits a MSA and returns a dictionary of keys to MSAs,
         using the keys in the 'split_by' parameter at the top
         level. See also paleomix.common.sequences.split."""
@@ -122,7 +120,7 @@ class MSA(frozenset):
 
         results = dict((key, set()) for key in split_by)
         for record in self:
-            for (key, partition) in split(record.sequence, split_by).iteritems():
+            for (key, partition) in split(record.sequence, split_by).items():
                 results[key].add(FASTA(record.name, None, partition))
 
         for (key, value) in results.items():
@@ -144,7 +142,7 @@ class MSA(frozenset):
                 merged[record.name].append(record.sequence)
 
         sequences = []
-        for (name, sequence) in merged.iteritems():
+        for (name, sequence) in merged.items():
             sequences.append(FASTA(name, None, "".join(sequence)))
         return MSA(sequences)
 
@@ -165,7 +163,7 @@ class MSA(frozenset):
         fasta_file = open_ro(filename)
         try:
             return MSA.from_lines(fasta_file)
-        except MSAError, error:
+        except MSAError as error:
             raise MSAError("%s in file %r" % (error, filename))
         finally:
             fasta_file.close()
@@ -194,22 +192,23 @@ class MSA(frozenset):
             seqs_common &= set(msa.names())
 
         if seqs_all != seqs_common:
-            raise MSAError("Some sequences not found in all MSAs: '%s'" \
-                           % ("', '".join(seqs_all - seqs_common),))
+            raise MSAError(
+                "Some sequences not found in all MSAs: '%s'"
+                % ("', '".join(seqs_all - seqs_common),)
+            )
 
     def __repr__(self):
         def _fasta_to_str(fst):
-            return "FASTA(%r, %r, %r)" % \
-              (fst.name, fst.meta, fst.sequence)
+            return "FASTA(%r, %r, %r)" % (fst.name, fst.meta, fst.sequence)
+
         return "MSA(%s)" % (", ".join(map(_fasta_to_str, sorted(self))))
 
     def names(self):
         return set(record.name for record in self)
 
-
-    def _group(self, selection, extra = None):
+    def _group(self, selection, extra=None):
         selection = safe_coerce_to_frozenset(selection)
-        if (extra in selection):
+        if extra in selection:
             raise MSAError("Key used for multiple selections: %r" % extra)
         elif not selection:
             raise ValueError("No FASTA names given")

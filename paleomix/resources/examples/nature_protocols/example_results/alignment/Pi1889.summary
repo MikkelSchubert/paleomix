@@ -1,18 +1,18 @@
 # Command:
-#     /home/mischu/bin/pypeline/bin/bam_pipeline run 000_makefile.yaml --max-threads 16 --bwa-max-threads 4
+#     /home/mischu/bin/pypeline/bin/bam_pipeline run makefile.yaml --max-threads 16 --bwa-max-threads 4
 #
 # Directory:
 #     /net/franklin/disk/franklin/data/mischu/projects/2013_09_nature_protocols/FINAL/alignment
 #
 # Makefile:
-#     Filename: 000_makefile.yaml
+#     Filename: makefile.yaml
 #     SHA1Sum:  ee7644dd0ecfee606a2873441020247def0e2355
 #     MTime:    2013-10-21 17:37:32.317334 
 #
 # Genomes:
 #     Name       Label            Contigs    Size         Prefix
-#     Pi_mito    mitochondrial    1          37922        000_prefixes/Pi_mito.fasta
-#     Pi_nucl    nuclear          4921       228543505    000_prefixes/Pi_nucl.fasta
+#     Pi_mito    mitochondrial    1          37922        prefixes/Pi_mito.fasta
+#     Pi_nucl    nuclear          4921       228543505    prefixes/Pi_nucl.fasta
 #
 # Regions Of Interest:
 #     Genome    ROI    Size    NFeatures    NIntervals    Path

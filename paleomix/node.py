@@ -20,18 +20,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import collections
 import os
 import sys
 import traceback
-import types
 
 import paleomix.common.fileutils as fileutils
-from paleomix.common.utilities import \
-    safe_coerce_to_frozenset
+from paleomix.common.utilities import safe_coerce_to_frozenset
 
-from paleomix.atomiccmd.command import \
-    CmdError
+from paleomix.atomiccmd.command import CmdError
 
 
 class NodeError(RuntimeError):
@@ -47,18 +43,28 @@ class NodeUnhandledException(NodeError):
     is raised in a subfunction (e.g. _setup, _run, or _teardown). The text
     for this exception will include both the original error message and a
     stacktrace for that error."""
+
     pass
 
 
-class Node(object):
-    def __init__(self, description=None, threads=1,
-                 input_files=(), output_files=(),
-                 executables=(), auxiliary_files=(),
-                 requirements=(), dependencies=()):
+class Node:
+    def __init__(
+        self,
+        description=None,
+        threads=1,
+        input_files=(),
+        output_files=(),
+        executables=(),
+        auxiliary_files=(),
+        requirements=(),
+        dependencies=(),
+    ):
 
         if not isinstance(description, _DESC_TYPES):
-            raise TypeError("'description' must be None or a string, not %r"
-                            % (description.__class__.__name__,))
+            raise TypeError(
+                "'description' must be None or a string, not %r"
+                % (description.__class__.__name__,)
+            )
 
         self.__description = description
         self.input_files = self._validate_files(input_files)
@@ -98,15 +104,19 @@ class Node(object):
             self._run(config, temp)
             self._teardown(config, temp)
             self._remove_temp_dir(temp)
-        except NodeError, error:
+        except NodeError as error:
             self._write_error_log(temp, error)
-            raise NodeError("Error(s) running Node:\n\tTemporary directory: %s\n\n%s"
-                            % (repr(temp), error))
+            raise NodeError(
+                "Error(s) running Node:\n\tTemporary directory: %s\n\n%s"
+                % (repr(temp), error)
+            )
 
-        except Exception, error:
+        except Exception as error:
             self._write_error_log(temp, error)
-            raise NodeUnhandledException("Error(s) running Node:\n\tTemporary directory: %s\n\n%s"
-                                         % (repr(temp), traceback.format_exc()))
+            raise NodeUnhandledException(
+                "Error(s) running Node:\n\tTemporary directory: %s\n\n%s"
+                % (repr(temp), traceback.format_exc())
+            )
 
     def _create_temp_dir(self, config):
         """Called by 'run' in order to create a temporary folder.
@@ -125,8 +135,7 @@ class Node(object):
         function. Checks that required input files exist, and raises an NodeError if
         this is not the case."""
         if fileutils.missing_executables(self.executables):
-            raise NodeError("Executable(s) does not exist for node: %s"
-                            % (self,))
+            raise NodeError("Executable(s) does not exist for node: %s" % (self,))
 
         self._check_for_missing_files(self.input_files, "input")
         self._check_for_missing_files(self.auxiliary_files, "auxiliary")
@@ -161,25 +170,26 @@ class Node(object):
         def _fmt(values):
             return "\n                   ".join(sorted(values))
 
-        message = ["Command          = %r" % (" ".join(sys.argv),),
-                   "CWD              = %r" % (os.getcwd(),),
-                   "PATH             = %r" % (os.environ.get('PATH', ''),),
-                   "Node             = %s" % (str(self),),
-                   "Threads          = %i" % (self.threads,),
-                   "Input files      = %s" % (_fmt(self.input_files),),
-                   "Output files     = %s" % (_fmt(self.output_files),),
-                   "Auxiliary files  = %s" % (_fmt(self.auxiliary_files),),
-                   "Executables      = %s" % (_fmt(self.executables),),
-                   "",
-                   "Errors =\n%s\n" % (error,)]
+        message = [
+            "Command          = %r" % (" ".join(sys.argv),),
+            "CWD              = %r" % (os.getcwd(),),
+            "PATH             = %r" % (os.environ.get("PATH", ""),),
+            "Node             = %s" % (str(self),),
+            "Threads          = %i" % (self.threads,),
+            "Input files      = %s" % (_fmt(self.input_files),),
+            "Output files     = %s" % (_fmt(self.output_files),),
+            "Auxiliary files  = %s" % (_fmt(self.auxiliary_files),),
+            "Executables      = %s" % (_fmt(self.executables),),
+            "",
+            "Errors =\n%s\n" % (error,),
+        ]
         message = "\n".join(message)
 
         try:
             with open(os.path.join(temp, "pipe.errors"), "w") as handle:
                 handle.write(message)
-        except OSError, oserror:
-            sys.stderr.write("ERROR: Could not write failure log: %s\n"
-                             % (oserror,))
+        except OSError as oserror:
+            sys.stderr.write("ERROR: Could not write failure log: %s\n" % (oserror,))
 
     def _collect_nodes(self, nodes):
         if nodes is None:
@@ -190,9 +200,11 @@ class Node(object):
 
         if bad_nodes:
             bad_nodes = [repr(node) for node in bad_nodes]
-            message = "Dependency-list contain non-Node objects:\n" \
-                "\t- Command: %s\n\t- Objects: %s" \
+            message = (
+                "Dependency-list contain non-Node objects:\n"
+                "\t- Command: %s\n\t- Objects: %s"
                 % (self, "\n\t           ".join(bad_nodes))
+            )
             raise TypeError(message)
 
         return nodes
@@ -200,51 +212,58 @@ class Node(object):
     def _check_for_missing_files(self, filenames, description):
         missing_files = fileutils.missing_files(filenames)
         if missing_files:
-            message = "Missing %s files for command:\n\t- Command: %s\n\t- Files: %s" \
+            message = (
+                "Missing %s files for command:\n\t- Command: %s\n\t- Files: %s"
                 % (description, self, "\n\t         ".join(missing_files))
+            )
             raise NodeError(message)
 
     @classmethod
     def _validate_requirements(cls, requirements):
         requirements = safe_coerce_to_frozenset(requirements)
         for requirement in requirements:
-            if not isinstance(requirement, collections.Callable):
-                raise TypeError("'requirements' must be callable, not %r"
-                                % (type(requirement),))
+            if not callable(requirement):
+                raise TypeError(
+                    "'requirements' must be callable, not %r" % (type(requirement),)
+                )
         return requirements
 
     @classmethod
     def _validate_files(cls, files):
         files = safe_coerce_to_frozenset(files)
         for filename in files:
-            if not isinstance(filename, types.StringTypes):
-                raise TypeError('Files must be strings, not %r'
-                                % (filename.__class__.__name__,))
+            if not isinstance(filename, str):
+                raise TypeError(
+                    "Files must be strings, not %r" % (filename.__class__.__name__,)
+                )
         return files
 
     @classmethod
     def _validate_nthreads(cls, threads):
-        if not isinstance(threads, (types.IntType, types.LongType)):
-            raise TypeError("'threads' must be a positive integer, not a %s"
-                            % (type(threads),))
+        if not isinstance(threads, int):
+            raise TypeError(
+                "'threads' must be a positive integer, not a %s" % (type(threads),)
+            )
         elif threads < 1:
-            raise ValueError("'threads' must be a positive integer, not %i"
-                             % (threads,))
+            raise ValueError(
+                "'threads' must be a positive integer, not %i" % (threads,)
+            )
         return threads
 
 
 class CommandNode(Node):
-    def __init__(self, command, description=None, threads=1,
-                 dependencies=()):
-        Node.__init__(self,
-                      description=description,
-                      input_files=command.input_files,
-                      output_files=command.output_files,
-                      auxiliary_files=command.auxiliary_files,
-                      executables=command.executables,
-                      requirements=command.requirements,
-                      threads=threads,
-                      dependencies=dependencies)
+    def __init__(self, command, description=None, threads=1, dependencies=()):
+        Node.__init__(
+            self,
+            description=description,
+            input_files=command.input_files,
+            output_files=command.output_files,
+            auxiliary_files=command.auxiliary_files,
+            executables=command.executables,
+            requirements=command.requirements,
+            threads=threads,
+            dependencies=dependencies,
+        )
 
         self._command = command
 
@@ -254,7 +273,7 @@ class CommandNode(Node):
         raises a NodeError detailing the returned error-codes."""
         try:
             self._command.run(temp)
-        except CmdError, error:
+        except CmdError as error:
             raise CmdNodeError("%s\n\n%s" % (str(self._command), error))
 
         return_codes = self._command.join()
@@ -266,19 +285,25 @@ class CommandNode(Node):
         optional_files = self._command.optional_temp_files
         current_files = set(os.listdir(temp))
 
-        missing_files = (required_files - current_files)
+        missing_files = required_files - current_files
         if missing_files:
-            raise CmdNodeError(("Error running Node, required files not created:\n"
-                                "Temporary directory: %r\n"
-                                "\tRequired files missing from temporary directory:\n\t    - %s")
-                               % (temp, "\n\t    - ".join(sorted(map(repr, missing_files)))))
+            raise CmdNodeError(
+                (
+                    "Error running Node, required files not created:\n"
+                    "Temporary directory: %r\n"
+                    "\tRequired files missing from temporary directory:\n\t    - %s"
+                )
+                % (temp, "\n\t    - ".join(sorted(map(repr, missing_files))))
+            )
 
         extra_files = current_files - (required_files | optional_files)
         if extra_files:
-            raise CmdNodeError("Error running Node, unexpected files created:\n"
-                               "\tTemporary directory: %r\n"
-                               "\tUnexpected files found in temporary directory:\n\t    - %s"
-                               % (temp, "\n\t    - ".join(sorted(map(repr, extra_files)))))
+            raise CmdNodeError(
+                "Error running Node, unexpected files created:\n"
+                "\tTemporary directory: %r\n"
+                "\tUnexpected files found in temporary directory:\n\t    - %s"
+                % (temp, "\n\t    - ".join(sorted(map(repr, extra_files))))
+            )
 
         self._command.commit(temp)
 
@@ -286,4 +311,4 @@ class CommandNode(Node):
 
 
 # Types that are allowed for the 'description' property
-_DESC_TYPES = types.StringTypes + (types.NoneType,)
+_DESC_TYPES = (str, type(None))

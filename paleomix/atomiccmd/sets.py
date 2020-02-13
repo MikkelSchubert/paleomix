@@ -44,32 +44,34 @@ class _CommandSet:
             for command in self._commands:
                 command.commit(temp)
                 committed_files.update(command.output_files)
-        except:
+        except Exception:
             # Cleanup after failed commit
             for fpath in committed_files:
                 try_remove(fpath)
             raise
 
-    def _collect_properties(key):  # pylint: disable=E0213
+    def _collect_properties(key):
         def _collector(self):
             values = set()
-            for command in self._commands:  # pylint: disable=W0212
+            for command in self._commands:
                 values.update(getattr(command, key))
             return values
+
         return property(_collector)
 
-    input_files     = _collect_properties("input_files")
-    output_files    = _collect_properties("output_files")
+    input_files = _collect_properties("input_files")
+    output_files = _collect_properties("output_files")
     auxiliary_files = _collect_properties("auxiliary_files")
-    executables     = _collect_properties("executables")
-    requirements    = _collect_properties("requirements")
+    executables = _collect_properties("executables")
+    requirements = _collect_properties("requirements")
     expected_temp_files = _collect_properties("expected_temp_files")
     optional_temp_files = _collect_properties("optional_temp_files")
 
     @property
     def stdout(self):
-        raise CmdError("%s does not implement property 'stdout'!" \
-                       % (self.__class__.__name__,))
+        raise CmdError(
+            "%s does not implement property 'stdout'!" % (self.__class__.__name__,)
+        )
 
     def terminate(self):
         for command in self._commands:
@@ -80,8 +82,10 @@ class _CommandSet:
 
     def _validate_commands(self):
         if len(self._commands) != len(set(self._commands)):
-            raise ValueError("Same command included multiple times in %s" \
-                             % (self.__class__.__name__,))
+            raise ValueError(
+                "Same command included multiple times in %s"
+                % (self.__class__.__name__,)
+            )
 
         filenames = collections.defaultdict(int)
         for command in self._commands:
@@ -92,7 +96,9 @@ class _CommandSet:
 
         clobbered = [filename for (filename, count) in filenames.items() if (count > 1)]
         if any(clobbered):
-            raise CmdError("Commands clobber each others' files: %s" % (", ".join(clobbered),))
+            raise CmdError(
+                "Commands clobber each others' files: %s" % (", ".join(clobbered),)
+            )
 
 
 class ParallelCmds(_CommandSet):
@@ -115,7 +121,9 @@ class ParallelCmds(_CommandSet):
         commands = safe_coerce_to_tuple(commands)
         for command in commands:
             if not isinstance(command, (AtomicCmd, ParallelCmds)):
-                raise CmdError("ParallelCmds must only contain AtomicCmds or other ParallelCmds!")
+                raise CmdError(
+                    "ParallelCmds must only contain AtomicCmds or other ParallelCmds!"
+                )
         _CommandSet.__init__(self, commands)
 
     def run(self, temp):
@@ -147,8 +155,6 @@ class ParallelCmds(_CommandSet):
         return sum(return_codes, [])
 
 
-
-
 class SequentialCmds(_CommandSet):
     """This class wraps a set of AtomicCmds, running them sequentially.
     This class therefore corresponds a set of lines in a bash script,
@@ -168,7 +174,9 @@ class SequentialCmds(_CommandSet):
         commands = safe_coerce_to_tuple(commands)
         for command in commands:
             if not isinstance(command, (AtomicCmd, _CommandSet)):
-                raise CmdError("ParallelCmds must only contain AtomicCmds or other ParallelCmds!")
+                raise CmdError(
+                    "ParallelCmds must only contain AtomicCmds or other ParallelCmds!"
+                )
         _CommandSet.__init__(self, commands)
 
     def run(self, temp):

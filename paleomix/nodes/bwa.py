@@ -20,306 +20,262 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import functools
 import os
-
-from paleomix.node import CommandNode, NodeError
-from paleomix.atomiccmd.command import AtomicCmd
-from paleomix.atomiccmd.builder import \
-    AtomicCmdBuilder, \
-    use_customizable_cli_parameters, \
-    create_customizable_cli_parameters
-
-from paleomix.atomiccmd.sets import ParallelCmds
-from paleomix.nodes.samtools import SAMTOOLS_VERSION
-from paleomix.common.fileutils import \
-    describe_paired_files, \
-    missing_files
 
 import paleomix.common.versions as versions
 import paleomix.tools.factory as factory
 
+from paleomix.atomiccmd.builder import (
+    AtomicCmdBuilder,
+    apply_options,
+)
+from paleomix.atomiccmd.command import AtomicCmd
+from paleomix.atomiccmd.sets import ParallelCmds
+from paleomix.common.fileutils import describe_paired_files
+from paleomix.node import CommandNode, NodeError
+from paleomix.nodes.samtools import SAMTOOLS_VERSION
 
-BWA_VERSION = versions.Requirement(call=("bwa",),
-                                   search=r"Version: (\d+)\.(\d+)\.(\d+)",
-                                   checks=versions.Or(versions.EQ(0, 5, 9),
-                                                      versions.EQ(0, 5, 10),
-                                                      versions.EQ(0, 6, 2),
-                                                      versions.GE(0, 7, 9)))
 
-BWA_VERSION_07x = versions.Requirement(call=("bwa",),
-                                       search=r"Version: (\d+)\.(\d+)\.(\d+)",
-                                       checks=versions.GE(0, 7, 9))
+BWA_VERSION = versions.Requirement(
+    call=("bwa",), search=r"Version: (\d+)\.(\d+)\.(\d+)", checks=versions.GE(0, 7, 9)
+)
 
 
 class BWAIndexNode(CommandNode):
     def __init__(self, input_file, prefix=None, dependencies=()):
         prefix = prefix if prefix else input_file
-        builder = _get_bwa_template(("bwa", "index"), prefix, iotype="OUT",
-                                    IN_FILE=input_file,
-                                    TEMP_OUT_PREFIX=os.path.basename(prefix),
-                                    CHECK_BWA=BWA_VERSION)
-
-        # Input fasta sequence
-        builder.add_value("%(IN_FILE)s")
-        # Destination prefix, in temp folder
-        builder.set_option("-p", "%(TEMP_OUT_PREFIX)s")
+        builder = _new_bwa_command(
+            ("bwa", "index", "%(IN_FILE)s", "-p", "%(TEMP_OUT_PREFIX)s"),
+            prefix,
+            iotype="OUT",
+            IN_FILE=input_file,
+            TEMP_OUT_PREFIX=os.path.basename(prefix),
+        )
 
         description = "<BWA Index '%s' -> '%s.*'>" % (input_file, prefix)
-        CommandNode.__init__(self,
-                             command=builder.finalize(),
-                             description=description,
-                             dependencies=dependencies)
+        CommandNode.__init__(
+            self,
+            command=builder.finalize(),
+            description=description,
+            dependencies=dependencies,
+        )
 
 
 class BWABacktrack(CommandNode):
-    @create_customizable_cli_parameters
-    def customize(cls, input_file, output_file, reference, prefix, threads=1,
-                  dependencies=()):
-        _check_bwa_prefix(reference)
+    def __init__(
+        self,
+        input_file,
+        output_file,
+        reference,
+        prefix,
+        threads=1,
+        mapping_options={},
+        dependencies=(),
+    ):
         threads = _get_max_threads(reference, threads)
 
-        aln_in = _build_cat_command(input_file, "uncompressed_input")
-        aln = _get_bwa_template(("bwa", "aln"), prefix,
-                                TEMP_IN_FILE="uncompressed_input",
-                                OUT_STDOUT=output_file,
-                                CHECK_BWA=BWA_VERSION)
+        aln = _new_bwa_command(
+            ("bwa", "aln"), prefix, IN_FILE=input_file, OUT_STDOUT=output_file,
+        )
         aln.add_value(prefix)
-        aln.add_value("%(TEMP_IN_FILE)s")
+        aln.add_value("%(IN_FILE)s")
         aln.set_option("-t", threads)
 
-        return {"commands": {"aln_in": aln_in, "aln": aln},
-                "order": ["aln_in", "aln"],
-                "threads": threads,
-                "dependencies": dependencies}
+        apply_options(aln, mapping_options)
 
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
-        command = ParallelCmds([parameters.commands[key].finalize()
-                                for key in parameters.order])
+        description = _get_node_description(
+            name="BWA",
+            algorithm="Backtrack",
+            input_files_1=input_file,
+            prefix=prefix,
+            threads=threads,
+        )
 
-        description \
-            = _get_node_description(name="BWA",
-                                    algorithm='Backtrack',
-                                    input_files_1=parameters.input_file,
-                                    prefix=parameters.prefix,
-                                    threads=parameters.threads)
-
-        CommandNode.__init__(self,
-                             command=command,
-                             description=description,
-                             threads=parameters.threads,
-                             dependencies=parameters.dependencies)
-
-    def _setup(self, _config, temp):
-        os.mkfifo(os.path.join(temp, "uncompressed_input"))
+        CommandNode.__init__(
+            self,
+            command=aln.finalize(),
+            description=description,
+            threads=threads,
+            dependencies=dependencies,
+        )
 
 
 class BWASamse(CommandNode):
-    @create_customizable_cli_parameters
-    def customize(cls, input_file_fq, input_file_sai, output_file,
-                  reference, prefix, dependencies=()):
-        _check_bwa_prefix(reference)
-
-        samse_in = _build_cat_command(input_file_fq, "uncompressed_input")
-        samse = _get_bwa_template(("bwa", "samse"), prefix,
-                                  IN_FILE_SAI=input_file_sai,
-                                  TEMP_IN_FQ="uncompressed_input",
-                                  OUT_STDOUT=AtomicCmd.PIPE,
-                                  CHECK_BWA=BWA_VERSION)
+    def __init__(
+        self,
+        input_file_fq,
+        input_file_sai,
+        output_file,
+        reference,
+        prefix,
+        mapping_options={},
+        cleanup_options={},
+        dependencies=(),
+    ):
+        samse = _new_bwa_command(
+            ("bwa", "samse"),
+            prefix,
+            IN_FILE_SAI=input_file_sai,
+            IN_FILE_FQ=input_file_fq,
+            OUT_STDOUT=AtomicCmd.PIPE,
+        )
         samse.add_value(prefix)
         samse.add_value("%(IN_FILE_SAI)s")
-        samse.add_value("%(TEMP_IN_FQ)s")
+        samse.add_value("%(IN_FILE_FQ)s")
 
-        order, commands = _process_output(samse, output_file, reference)
-        commands["sam_in"] = samse_in
-        commands["sam"] = samse
+        cleanup = _new_cleanup_command(samse, output_file, reference)
 
-        return {"commands": commands,
-                "order": ["sam_in", "sam"] + order,
-                "dependencies": dependencies}
+        apply_options(samse, mapping_options)
+        apply_options(cleanup, cleanup_options)
 
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
-        command = ParallelCmds([parameters.commands[key].finalize()
-                                for key in parameters.order])
-
-        input_file = parameters.input_file_fq
-        description = _get_node_description(name="BWA Samse",
-                                            input_files_1=input_file,
-                                            prefix=parameters.prefix)
-
-        CommandNode.__init__(self,
-                             command=command,
-                             description=description,
-                             dependencies=parameters.dependencies)
-
-    def _setup(self, _config, temp):
-        os.mkfifo(os.path.join(temp, "uncompressed_input"))
+        CommandNode.__init__(
+            self,
+            command=ParallelCmds([samse.finalize(), cleanup.finalize()]),
+            description=_get_node_description(
+                name="BWA Samse", input_files_1=input_file_fq, prefix=prefix
+            ),
+            dependencies=dependencies,
+        )
 
 
 class BWASampe(CommandNode):
-    @create_customizable_cli_parameters
-    def customize(cls,
-                  input_file_fq_1, input_file_fq_2,
-                  input_file_sai_1, input_file_sai_2,
-                  output_file, reference, prefix, dependencies=()):
-        _check_bwa_prefix(reference)
+    def __init__(
+        self,
+        input_file_fq_1,
+        input_file_fq_2,
+        input_file_sai_1,
+        input_file_sai_2,
+        output_file,
+        reference,
+        prefix,
+        mapping_options={},
+        cleanup_options={},
+        dependencies=(),
+    ):
+        sampe = _new_bwa_command(
+            (
+                "bwa",
+                "sampe",
+                prefix,
+                "%(IN_SAI_1)s",
+                "%(IN_SAI_2)s",
+                "%(IN_FQ_1)s",
+                "%(IN_FQ_2)s",
+            ),
+            prefix,
+            IN_SAI_1=input_file_sai_1,
+            IN_SAI_2=input_file_sai_2,
+            IN_FQ_1=input_file_fq_1,
+            IN_FQ_2=input_file_fq_2,
+            OUT_STDOUT=AtomicCmd.PIPE,
+        )
 
-        sampe_in_1 = _build_cat_command(input_file_fq_1,
-                                        "uncompressed_input_1")
-        sampe_in_2 = _build_cat_command(input_file_fq_2,
-                                        "uncompressed_input_2")
+        cleanup = _new_cleanup_command(sampe, output_file, reference, paired_end=True)
 
-        sampe = _get_bwa_template(("bwa", "sampe"), prefix,
-                                  IN_FILE_SAI_1=input_file_sai_1,
-                                  IN_FILE_SAI_2=input_file_sai_2,
-                                  TEMP_IN_FQ_1="uncompressed_input_1",
-                                  TEMP_IN_FQ_2="uncompressed_input_2",
-                                  OUT_STDOUT=AtomicCmd.PIPE,
-                                  CHECK_BWA=BWA_VERSION)
-        sampe.add_value(prefix)
-        sampe.add_value("%(IN_FILE_SAI_1)s")
-        sampe.add_value("%(IN_FILE_SAI_2)s")
-        sampe.add_value("%(TEMP_IN_FQ_1)s")
-        sampe.add_value("%(TEMP_IN_FQ_2)s")
+        apply_options(sampe, mapping_options)
+        apply_options(cleanup, cleanup_options)
 
-        order, commands = _process_output(sampe, output_file, reference,
-                                          run_fixmate=True)
-        commands["sam_in_1"] = sampe_in_1
-        commands["sam_in_2"] = sampe_in_2
-        commands["sam"] = sampe
-
-        return {"commands": commands,
-                "order": ["sam_in_1", "sam_in_2", "sam"] + order,
-                "dependencies": dependencies}
-
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
-        command = ParallelCmds([parameters.commands[key].finalize()
-                                for key in parameters.order])
-
-        input_file_1 = parameters.input_file_fq_1
-        input_file_2 = parameters.input_file_fq_2
-        description = _get_node_description(name="BWA Sampe",
-                                            input_files_1=input_file_1,
-                                            input_files_2=input_file_2,
-                                            prefix=parameters.prefix)
-
-        CommandNode.__init__(self,
-                             command=command,
-                             description=description,
-                             dependencies=parameters.dependencies)
-
-    def _setup(self, _config, temp):
-        os.mkfifo(os.path.join(temp, "uncompressed_input_1"))
-        os.mkfifo(os.path.join(temp, "uncompressed_input_2"))
+        CommandNode.__init__(
+            self,
+            command=ParallelCmds([sampe.finalize(), cleanup.finalize()]),
+            description=_get_node_description(
+                name="BWA Sampe",
+                input_files_1=input_file_fq_1,
+                input_files_2=input_file_fq_2,
+                prefix=prefix,
+            ),
+            dependencies=dependencies,
+        )
 
 
 class BWAAlgorithmNode(CommandNode):
-    @create_customizable_cli_parameters
-    def customize(cls, input_file_1, output_file, reference, prefix,
-                  input_file_2=None, threads=1, algorithm="mem",
-                  dependencies=()):
+    def __init__(
+        self,
+        input_file_1,
+        output_file,
+        reference,
+        prefix,
+        input_file_2=None,
+        threads=1,
+        algorithm="mem",
+        mapping_options={},
+        cleanup_options={},
+        dependencies=(),
+    ):
         if algorithm not in ("mem", "bwasw"):
-            raise NotImplementedError("BWA algorithm %r not implemented"
-                                      % (algorithm,))
+            raise NotImplementedError("BWA algorithm %r not implemented" % (algorithm,))
 
         threads = _get_max_threads(reference, threads)
 
-        zcat_1 = _build_cat_command(input_file_1, "uncompressed_input_1")
-        aln = _get_bwa_template(("bwa", algorithm), prefix,
-                                TEMP_IN_FILE_1="uncompressed_input_1",
-                                OUT_STDOUT=AtomicCmd.PIPE,
-                                CHECK_BWA=BWA_VERSION_07x)
-        aln.add_value(prefix)
-        aln.add_value("%(TEMP_IN_FILE_1)s")
+        aln = _new_bwa_command(
+            ("bwa", algorithm, prefix, "%(IN_FILE_1)s"),
+            prefix,
+            IN_FILE_1=input_file_1,
+            OUT_STDOUT=AtomicCmd.PIPE,
+        )
 
-        _, commands = _process_output(aln, output_file, reference)
-        commands["aln"] = aln
-        commands["zcat_1"] = zcat_1
         if input_file_2:
-            aln.add_value("%(TEMP_IN_FILE_2)s")
-            aln.set_kwargs(**{"TEMP_IN_FILE_2": "uncompressed_input_2"})
-            zcat_2 = _build_cat_command(input_file_2, "uncompressed_input_2")
-            commands["zcat_2"] = zcat_2
-        else:
-            # Ensure that the pipe is automatically removed
-            aln.set_kwargs(**{"TEMP_OUT_FILE_2": "uncompressed_input_2"})
+            aln.add_value("%(IN_FILE_2)s")
+            aln.set_kwargs(IN_FILE_2=input_file_2)
 
         aln.set_option("-t", threads)
         # Mark alternative hits as secondary; required by e.g. Picard
         aln.set_option("-M")
 
-        commands["aln"] = aln
-        return {"commands": commands,
-                "threads": threads,
-                "dependencies": dependencies}
+        cleanup = _new_cleanup_command(
+            aln, output_file, reference, paired_end=input_file_1 and input_file_2
+        )
 
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
-        _check_bwa_prefix(parameters.prefix)
-        algorithm = parameters.algorithm.upper()
-        algorithm += "_PE" if parameters.input_file_2 else "_SE"
-        desc = _get_node_description(name="BWA",
-                                     algorithm=algorithm,
-                                     input_files_1=parameters.input_file_1,
-                                     input_files_2=parameters.input_file_2,
-                                     prefix=parameters.prefix)
+        apply_options(aln, mapping_options)
+        apply_options(cleanup, cleanup_options)
 
-        command = ParallelCmds([cmd.finalize()
-                                for cmd in parameters.commands.itervalues()])
-        CommandNode.__init__(self,
-                             command=command,
-                             description=desc,
-                             threads=parameters.threads,
-                             dependencies=parameters.dependencies)
+        description = _get_node_description(
+            name="BWA",
+            algorithm="%s%s" % (algorithm.upper(), "_PE" if input_file_2 else "_SE"),
+            input_files_1=input_file_1,
+            input_files_2=input_file_2,
+            prefix=prefix,
+        )
 
-    def _setup(self, _config, temp):
-        os.mkfifo(os.path.join(temp, "uncompressed_input_1"))
-        os.mkfifo(os.path.join(temp, "uncompressed_input_2"))
+        CommandNode.__init__(
+            self,
+            command=ParallelCmds([aln.finalize(), cleanup.finalize()]),
+            description=description,
+            threads=threads,
+            dependencies=dependencies,
+        )
 
 
-def _process_output(stdin, output_file, reference, run_fixmate=False):
+def _new_cleanup_command(stdin, output_file, reference, paired_end=False):
     convert = factory.new("cleanup")
-    if reference is not None:
-        convert.set_option("--fasta", "%(IN_FASTA_REF)s")
+    convert.set_option("--fasta", "%(IN_FASTA_REF)s")
     convert.set_option("--temp-prefix", "%(TEMP_OUT_PREFIX)s")
-    convert.set_kwargs(IN_STDIN=stdin,
-                       IN_FASTA_REF=reference,
-                       OUT_STDOUT=output_file,
-                       TEMP_OUT_PREFIX="bam_cleanup",
-                       CHECK_SAMTOOLS=SAMTOOLS_VERSION)
+    convert.set_kwargs(
+        IN_STDIN=stdin,
+        IN_FASTA_REF=reference,
+        OUT_STDOUT=output_file,
+        TEMP_OUT_PREFIX="bam_cleanup",
+        CHECK_SAMTOOLS=SAMTOOLS_VERSION,
+    )
 
-    if run_fixmate:
-        convert.set_option('--paired-end')
+    if paired_end:
+        convert.set_option("--paired-end")
 
-    try:
-        if SAMTOOLS_VERSION.version >= (1,):
-            convert.set_option('--samtools1x', 'yes')
-        else:
-            convert.set_option('--samtools1x', 'no')
-    except versions.VersionRequirementError:
-        pass
-
-    return ["convert"], {"convert": convert}
+    return convert
 
 
-def _get_bwa_template(call, prefix, iotype="IN", **kwargs):
-    extensions = ["amb", "ann", "bwt", "pac", "sa"]
-    try:
-        if BWA_VERSION.version < (0, 6, 0):
-            extensions.extend(("rbwt", "rpac", "rsa"))
-    except versions.VersionRequirementError:
-        pass  # Ignored here, handled elsewhere
+def _new_bwa_command(call, prefix, iotype="IN", **kwargs):
+    _check_bwa_prefix(prefix)
 
-    params = AtomicCmdBuilder(call, **kwargs)
-    for postfix in extensions:
-        key = "%s_PREFIX_%s" % (iotype, postfix.upper())
-        params.set_kwargs(**{key: (prefix + "." + postfix)})
+    kwargs["CHECK_BWA"] = BWA_VERSION
+    for postfix in ("amb", "ann", "bwt", "pac", "sa"):
+        kwargs["%s_PREFIX_%s" % (iotype, postfix.upper())] = prefix + "." + postfix
 
-    return params
+    return AtomicCmdBuilder(call, **kwargs)
 
 
+@functools.lru_cache()
 def _get_max_threads(reference, threads):
     """Returns the maximum number of threads to use when mapping against a
     given reference sequence. This is done since very little gain is obtained
@@ -327,93 +283,40 @@ def _get_max_threads(reference, threads):
     reference falls below this size, only 1 thread is used (returned),
     otherwise the requested number of threads is returned.
     """
-    if reference not in _PREFIX_SIZE_CACHE:
-        if reference is None or not os.path.exists(reference):
-            _PREFIX_SIZE_CACHE[reference] = None
-        else:
-            _PREFIX_SIZE_CACHE[reference] = os.path.getsize(reference)
+    if os.path.exists(reference) and os.path.getsize(reference) < 2 ** 20:
+        return 1
 
-    prefix_size = _PREFIX_SIZE_CACHE[reference]
-    if prefix_size is None or prefix_size >= 2 ** 20:  # > 1 MB
-        return threads
-    return 1
+    return threads
 
 
-_PREFIX_SIZE_CACHE = {}
-
-
+@functools.lru_cache()
 def _check_bwa_prefix(prefix):
-    """Checks that a given prefix is compatible with the currently
-    installed version of BWA. This is required in order to allow
-    auto-indexing of prefixes, as indexes produced by v0.5.x and
-    by 0.6+ are not only incompatible, but differs in the files
-    produced, with 0.5.x producing a handful of additional files.
+    """Checks that a given prefix is compatible with the currently required version of
+    BWA. Older index files are incompatible with BWA v0.7.x, but may be identified by
+    the presense of a small number of additional files not present when an index is
+    produced using BWA v0.7.x.
+    """
+    if any(os.path.exists(prefix + ext) for ext in (".rbwt", ".rpac", ".rsa.")):
+        filenames = "\n".join(
+            "    %s.%s" % (prefix, ext)
+            for ext in ("amb", "ann", "bwt", "pac", "sa", "rbwt", "rpac", "rsa")
+        )
 
-    As a consequence, simply using normal input-file dependencies
-    would result in prefixes being re-indexed if the version of
-    BWA was changed from 0.6+ to 0.5.x, and in failures during
-    runtime if the version was changed from 0.5.x to 0.6+.
-
-    This function treats that a difference in the version of BWA
-    installed and the version implied by the prefix files is an
-    error, and therefore requires user intervention."""
-    if prefix in _PREFIXES_CHECKED:
-        return
-    _PREFIXES_CHECKED.add(prefix)
-
-    try:
-        bwa_version = BWA_VERSION.version
-    except versions.VersionRequirementError:
-        return  # Ignored here, reported elsewhere
-
-    # Files unique to v0.5.x
-    v05x_files = set((prefix + ext) for ext in (".rbwt", ".rpac", ".rsa"))
-    # Files common to v0.5.x, v0.6.x, and v0.7.x
-    common_files = set((prefix + ext)
-                       for ext in (".amb", ".ann", ".bwt", ".pac", ".sa"))
-    all_files = v05x_files | common_files
-    current_files = all_files - set(missing_files(all_files))
-
-    expected_version = None
-    if (current_files & common_files):
-        if bwa_version >= (0, 6, 0):
-            if (current_files & v05x_files):
-                expected_version = "v0.5.x"
-        elif bwa_version < (0, 6, 0):
-            if not (current_files & v05x_files):
-                expected_version = "v0.6.x or later"
-
-    if expected_version:
-        raise NodeError("BWA version is v%s, but prefix appears to be created using %s!\n"
-                        "  Your copy of BWA may have changed, or you may be using the wrong\n"
-                        "  prefix. To resolve this issue, either change your prefix, re-install\n"
-                        "  BWA %s, or remove the prefix files at\n"
-                        "    $ ls %s.*"
-                        % (".".join(map(str, bwa_version)), expected_version, expected_version, prefix))
+        raise NodeError(
+            "Prefix appears to be created using BWA v0.5.x or older, but PALEOMIX only "
+            "supports BWA v0.7.x or later.\nPlease remove the following files to allow "
+            "PALEOMIX to re-index the FASTA file:\n%s" % (filenames,)
+        )
 
 
-_PREFIXES_CHECKED = set()
+def _get_node_description(
+    name, input_files_1, input_files_2=None, algorithm=None, prefix=None, threads=1
+):
+    prefix = os.path.basename(prefix)
+    if prefix.endswith(".fasta") or prefix.endswith(".fa"):
+        prefix = prefix.rsplit(".", 1)[0]
 
-
-def _build_cat_command(input_file, output_file):
-    cat = factory.new("cat")
-    cat.set_option("--output", "%(TEMP_OUT_CAT)s")
-    cat.add_value("%(IN_ARCHIVE)s")
-    cat.set_kwargs(TEMP_OUT_CAT=output_file,
-                   IN_ARCHIVE=input_file)
-    return cat
-
-
-def _get_node_description(name, input_files_1, input_files_2=None,
-                          algorithm=None, prefix=None, threads=1):
-    info = []
-    if prefix is not None:
-        prefix = os.path.basename(prefix)
-        if prefix.endswith(".fasta") or prefix.endswith(".fa"):
-            prefix = prefix.rsplit(".", 1)[0]
-
-        info.append(prefix)
-
+    info = [prefix]
     if algorithm is not None:
         info.append(algorithm)
 

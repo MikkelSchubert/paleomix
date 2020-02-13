@@ -25,20 +25,21 @@ import bz2
 import gzip
 import uuid
 import errno
-import types
 import shutil
 
-from paleomix.common.utilities import safe_coerce_to_tuple, \
-     safe_coerce_to_frozenset
+from pathlib import Path
+from typing import Any, Callable, IO, Iterable, List, Optional, Tuple, Union
+
+from .utilities import safe_coerce_to_tuple
 
 
-def add_postfix(filename, postfix):
+def add_postfix(filename: Union[str, Path], postfix: str) -> str:
     """Ads a postfix to a filename (before any extensions that filename may have)."""
     filename, ext = os.path.splitext(filename)
     return filename + postfix + ext
 
 
-def swap_ext(filename, ext):
+def swap_ext(filename: str, ext: str) -> str:
     """Replaces the existing extension of a filename with the specified extension,
     ensuring that the extension is prefixed by a '.'. If no extension is specified,
     other than potentially a dot, the existing extension is stripped."""
@@ -52,94 +53,47 @@ def swap_ext(filename, ext):
     return filename + ext
 
 
-def reroot_path(root, filename):
+def reroot_path(root: Union[str, Path], filename: str) -> str:
     """Returns the basename of filename, joined to root."""
     return os.path.join(root, os.path.basename(filename))
 
 
-def create_temp_dir(root):
+def create_temp_dir(root: Union[str, Path]) -> str:
     """Creates a temporary directory, accessible only by the owner,
     at the specified location. The folder name is randomly generated,
     and only the current user has access"""
-    def _generate_path():
+
+    def _generate_path() -> str:
         return os.path.join(root, str(uuid.uuid4()))
 
     path = _generate_path()
-    while not make_dirs(path, mode = 0750):
+    while not make_dirs(path, mode=0o750):
         path = _generate_path()
     return path
 
 
-def missing_files(filenames):
+def missing_files(filenames: Iterable[Union[str, Path]]) -> List[Union[str, Path]]:
     """Given a list of filenames, returns a list of those that
     does not exist. Note that this function does not differentiate
     between files and folders."""
-    result = []
-    for filename in safe_coerce_to_frozenset(filenames):
-        if not os.path.exists(filename):
-            result.append(filename)
-
-    return result
-
-
-def modified_after(younger, older):
-    """Returns true any of the files expected to be 'younger' have
-    been modified after any of the files expected to be 'older'."""
-    def get_mtimes(filenames):
-        for filename in filenames:
-            yield os.path.getmtime(filename)
-
-    younger_time = max(get_mtimes(safe_coerce_to_frozenset(younger)))
-    older_time   = min(get_mtimes(safe_coerce_to_frozenset(older)))
-
-    return younger_time > older_time
+    return [
+        filename
+        for filename in safe_coerce_to_tuple(filenames)
+        if not os.path.exists(filename)
+    ]
 
 
-def is_executable(filename):
-    """Returns true if the specified file is an executable file."""
-    return os.path.isfile(filename) and os.access(filename, os.X_OK)
+def missing_executables(
+    filenames: Iterable[Union[str, Path]]
+) -> List[Union[str, Path]]:
+    return [
+        filename
+        for filename in safe_coerce_to_tuple(filenames)
+        if not shutil.which(filename)
+    ]
 
 
-def which_executable(filename):
-    """Returns the path of the first executable in the PATH which
-    matches the filename, or None if no match was found. If the
-    filename contains a directory component, only that path is
-    tested, and None is returned if that file is not an executable."""
-    if os.path.dirname(filename):
-        if is_executable(filename):
-            return filename
-        return None
-
-    path_variable = os.environ.get("PATH")
-    if not path_variable:
-        return None
-
-    for path in path_variable.split(os.pathsep):
-        fpath = os.path.join(path, filename)
-        if is_executable(fpath):
-            return fpath
-
-    return None
-
-
-def executable_exists(filename):
-    """Returns true if the filename refers to an executable file,
-    either by relative or full path, or if the executable is found
-    on the current PATH."""
-    exec_path = which_executable(filename)
-
-    return exec_path and is_executable(exec_path)
-
-
-def missing_executables(filenames):
-    result = []
-    for filename in safe_coerce_to_frozenset(filenames):
-        if not executable_exists(filename):
-            result.append(filename)
-    return result
-
-
-def make_dirs(directory, mode = 0777):
+def make_dirs(directory: Union[str, Path], mode: int = 0o777) -> bool:
     """Wrapper around os.makedirs to make it suitable for using
     in a multithreaded/multiprocessing enviroment: Unlike the
     regular function, this wrapper does not throw an exception if
@@ -152,9 +106,9 @@ def make_dirs(directory, mode = 0777):
         raise ValueError("Empty directory passed to make_dirs()")
 
     try:
-        os.makedirs(directory, mode = mode)
+        os.makedirs(directory, mode=mode)
         return True
-    except OSError, error:
+    except OSError as error:
         # make_dirs be called by multiple subprocesses at the same time,
         # so only raise if the actual creation of the folder failed
         if error.errno != errno.EEXIST:
@@ -162,42 +116,36 @@ def make_dirs(directory, mode = 0777):
         return False
 
 
-def move_file(source, destination):
+def move_file(source: Union[str, Path], destination: Union[str, Path]) -> None:
     """Wrapper around shutils which ensures that the
     destination directory exists before moving the file."""
     _sh_wrapper(shutil.move, source, destination)
 
 
-def copy_file(source, destination):
+def copy_file(source: Union[str, Path], destination: Union[str, Path]) -> None:
     """Wrapper around shutils which ensures that the
     destination directory exists before copying the file."""
     _sh_wrapper(shutil.copy, source, destination)
 
 
-def open_ro(filename):
+def open_ro(filename: Union[str, Path], mode: str = "rt") -> IO[str]:
     """Opens a file for reading, transparently handling
     GZip and BZip2 compressed files. Returns a file handle."""
-    handle = open(filename)
-    try:
+    if mode not in ("rt", "rb", "r"):
+        raise ValueError(mode)
+
+    with open(filename, "rb") as handle:
         header = handle.read(2)
 
-        if header == "\x1f\x8b":
-            handle.close()
-            # TODO: Re-use handle (fileobj)
-            handle = gzip.open(filename)
-        elif header == "BZ":
-            handle.close()
-            handle = bz2.BZ2File(filename)
-        else:
-            handle.seek(0)
-
-        return handle
-    except:
-        handle.close()
-        raise
+    if header == b"\x1f\x8b":
+        return gzip.open(filename, mode)
+    elif header == b"BZ":
+        return bz2.open(filename, mode)
+    else:
+        return open(filename, mode)
 
 
-def try_remove(filename):
+def try_remove(filename: Union[str, Path]) -> bool:
     """Tries to remove a file. Unlike os.remove, the function does not
     raise an exception if the file does not exist, but does raise
     exceptions on other errors. The return value reflects whether or
@@ -205,15 +153,7 @@ def try_remove(filename):
     return _try_rm_wrapper(os.remove, filename)
 
 
-def try_rmdir(filename):
-    """Tries to remove a directory. Unlike os.rmdir, the function does not raise
-    an exception if the file does not exist, but does raise exceptions on other
-    errors. The return value reflects whether or not the file was actually
-    removed."""
-    return _try_rm_wrapper(os.rmdir, filename)
-
-
-def try_rmtree(filename):
+def try_rmtree(filename: Union[str, Path]) -> bool:
     """Tries to remove a dir-tree. Unlike shutil.rmtree, the function does not raise
     an exception if the file does not exist, but does raise exceptions on other
     errors. The return value reflects whether or not the file was actually
@@ -221,7 +161,7 @@ def try_rmtree(filename):
     return _try_rm_wrapper(shutil.rmtree, filename)
 
 
-def describe_files(files):
+def describe_files(files: Iterable[str]) -> str:
     """Return a text description of a set of files."""
     files = _validate_filenames(files)
 
@@ -230,7 +170,7 @@ def describe_files(files):
     elif len(files) == 1:
         return repr(files[0])
 
-    glob_files = _get_files_glob(files, max_differences = 2)
+    glob_files = _get_files_glob(files, max_differences=2)
     if glob_files:
         return repr(glob_files)
 
@@ -240,7 +180,7 @@ def describe_files(files):
     return "%i files" % (len(files),)
 
 
-def describe_paired_files(files_1, files_2):
+def describe_paired_files(files_1: Iterable[str], files_2: Iterable[str]) -> str:
     """Return a text description of a set of paired filenames; the
     sets must be of the same length, a the description will depend
     on the overall similarity of the filenames / paths. If 'files_2'
@@ -253,13 +193,17 @@ def describe_paired_files(files_1, files_2):
     if files_1 and not files_2:
         return describe_files(files_1)
     elif len(files_1) != len(files_2):
-        raise ValueError("Unequal number of files for mate 1 vs mate 2 reads: %i vs %i" \
-                         % (len(files_1), len(files_2)))
+        raise ValueError(
+            "Unequal number of files for mate 1 vs mate 2 reads: %i vs %i"
+            % (len(files_1), len(files_2))
+        )
 
     glob_files_1 = _get_files_glob(files_1, 3)
     glob_files_2 = _get_files_glob(files_2, 3)
     if glob_files_1 and glob_files_2:
-        final_glob = _get_files_glob((glob_files_1, glob_files_2), 1, show_differences = True)
+        final_glob = _get_files_glob(
+            (glob_files_1, glob_files_2), 1, show_differences=True
+        )
         if final_glob:
             return repr(final_glob)
 
@@ -270,7 +214,9 @@ def describe_paired_files(files_1, files_2):
     return "%i pair(s) of files" % (len(files_1),)
 
 
-def _get_files_glob(filenames, max_differences = 1, show_differences = False):
+def _get_files_glob(
+    filenames: Iterable[str], max_differences: int = 1, show_differences: bool = False
+) -> Optional[str]:
     """Tries to generate a glob-string for a set of filenames, containing
     at most 'max_differences' different columns. If more differences are
     found, or if the length of filenames vary, None is returned."""
@@ -281,7 +227,7 @@ def _get_files_glob(filenames, max_differences = 1, show_differences = False):
     glob_fname, differences = [], 0
     for chars in zip(*filenames):
         if "?" in chars:
-            chars = ('?',)
+            chars = ("?",)
 
         if len(frozenset(chars)) > 1:
             if show_differences:
@@ -297,18 +243,25 @@ def _get_files_glob(filenames, max_differences = 1, show_differences = False):
     return "".join(glob_fname)
 
 
-def _validate_filenames(filenames):
+def _validate_filenames(filenames: Iterable[str]) -> Tuple[str, ...]:
     """Sanity checks for filenames handled by
     'describe_files' and 'describe_paired_files."""
     filenames = safe_coerce_to_tuple(filenames)
     for filename in filenames:
-        if not isinstance(filename, types.StringTypes):
-            raise ValueError("Only string types are allowed for filenames, not %s" \
-                             % (filename.__class__.__name__,))
+        if not isinstance(filename, str):
+            raise ValueError(
+                "Only string types are allowed for filenames, not %s"
+                % (filename.__class__.__name__,)
+            )
+
     return filenames
 
 
-def _sh_wrapper(func, source, destination):
+def _sh_wrapper(
+    func: Callable[[Union[str, Path], Union[str, Path]], Any],
+    source: Union[str, Path],
+    destination: Union[str, Path],
+) -> None:
     """Runs an 'shutil' function ('func') which takes an 'source' and
     a 'destination' argument (e.g. copy/move/etc.), but silently
     handles the case where the destination directory does not exist.
@@ -317,28 +270,27 @@ def _sh_wrapper(func, source, destination):
     directory, and then retry the function."""
     try:
         func(source, destination)
-    except IOError, error:
-        if (error.errno == errno.ENOENT):
+    except IOError as error:
+        if error.errno == errno.ENOENT:
             if source and destination and os.path.exists(source):
                 dirname = os.path.dirname(destination)
                 make_dirs(dirname)
                 func(source, destination)
                 return
-        elif (error.errno == errno.ENOSPC):
+        elif error.errno == errno.ENOSPC:
             # Not enough space; remove partial file
             os.unlink(destination)
         raise
 
 
-def _try_rm_wrapper(func, fpath):
+def _try_rm_wrapper(func: Callable[[Any], Any], fpath: Union[str, Path]) -> bool:
     """Takes a function (e.g. os.remove / os.rmdir), and attempts to remove a
     path; returns true if that path was succesfully remove, and false if it did
     not exist."""
     try:
         func(fpath)
         return True
-    except OSError, error:
+    except OSError as error:
         if error.errno != errno.ENOENT:
             raise
         return False
-

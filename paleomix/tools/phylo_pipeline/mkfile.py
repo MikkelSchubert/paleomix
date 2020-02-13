@@ -38,9 +38,6 @@ Project:
           # Sex of the sample; used to filter SNPs on homozygous
           # contigs (see below). If not relevant, the value 'NA' may be used.
           Sex:       ...
-          # Method to use when genotyping samples (see 'Genotyping');
-          # defaults to 'SAMTools' if not explicitly specified.
-#          Genotyping Method: ...
 
   # Specifies a set of regions of interest, each representing one or more
   # named regions in a reference sequence (e.g. genes) in BED format.
@@ -95,11 +92,6 @@ Genotyping:
     # This can only be done for prefixes that only use genotyping defaults.
     GenotypeEntirePrefix: no
 
-    # Settings for genotyping by random sampling of nucletoides at each site
-    Random:
-      # Min distance of variants to indels
-      --min-distance-to-indels: 2
-
     MPileup:
       -E: # extended BAQ for higher sensitivity but lower specificity
       -A: # count anomalous read pairs
@@ -131,8 +123,6 @@ Genotyping:
       --min-mapq-bias: 1.0e-4
       # Min P-value for end distance bias (given PV4)
       --min-end-distance-bias: 1.0e-4
-      # Max frequency of the major allele at heterozygous sites
-      --min-allele-frequency: 0.2
       # Minimum number of alternative bases observed for variants
       --min-num-alt-bases: 2
 
@@ -201,33 +191,10 @@ PhylogeneticInference:
       Model: GAMMA
 """
 
-_NOT_ENABLED = """
-PAML:
-   # Run codeml on each named sequence in the regions of interest
-  codeml:
-#   Exclude (groups of) samples from this analytical step
-#    ExcludeSamples:
-#      - <NAME_OF_GROUP>
-#      - NAME_OF_SAMPLE
-
-    # Limit analysis to a subset of a RegionOfInterest; subsets are expected to be
-    # located at <genome root>/<prefix>.<region name>.<subset name>.names, and
-    # contain single name (corresponding to column 4 in the BED file) per line.
-#    SubsetRegions:
-#      REGIONS_NAME: SUBSET_NAME
-
-    # One or more 'codeml' runs; name is used as a postfix for results.
-    RUN_NAME:
-      # Control file template; the values 'seqfile', 'treefile'
-      # automatically set to the approriate values.
-      ControlFile: PATH_TO_CODEML_CONTROL_FILE
-      # 'treefile' in the control-file is set to this value
-      TreeFile:    PATH_TO_CODEML_TREEFILE
-"""
-
 
 def main(_argv):
-    print _TEMPLATE
+    print(_TEMPLATE)
+
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))

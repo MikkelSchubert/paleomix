@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from __future__ import print_function
+
 
 import argparse
 import sys
@@ -28,7 +28,7 @@ import sys
 import paleomix.nodes.validation as validation
 
 
-class ErrHandler(object):
+class ErrHandler:
     def __init__(self, quiet=False):
         self.quiet = quiet
         self.duplicate_reads = 0
@@ -38,25 +38,25 @@ class ErrHandler(object):
         if self.quiet:
             return
 
-        print('%s:%i -- %s %s %s:' % (chrom, pos, name, seq, qual))
-        for filename, records in sorted(records.iteritems()):
-            print('    - %s:' % (filename,))
+        print("%s:%i -- %s %s %s:" % (chrom, pos, name, seq, qual))
+        for filename, records in sorted(records.items()):
+            print("    - %s:" % (filename,))
 
             for idx, record in enumerate(records, start=1):
-                print('% 8i. ' % (idx,), end='')
+                print("% 8i. " % (idx,), end="")
 
                 if record.is_paired:
                     if record.is_read1:
-                        print('Mate 1 read', end='')
+                        print("Mate 1 read", end="")
                     elif record.is_read2:
-                        print('Mate 2 read', end='')
+                        print("Mate 2 read", end="")
                     else:
-                        print('Unpaired read', end='')
+                        print("Unpaired read", end="")
                 else:
-                    print('Unpaired read', end='')
+                    print("Unpaired read", end="")
 
                 try:
-                    print(' with read-group %r' % (record.get_tag('RG'),), end='')
+                    print(" with read-group %r" % (record.get_tag("RG"),), end="")
                 except KeyError:
                     pass
 
@@ -65,12 +65,15 @@ class ErrHandler(object):
 
 def parse_args(argv):
     parser = argparse.ArgumentParser(prog="paleomix dupcheck")
-    parser.add_argument("files", nargs="+",
-                        help="One or more input BAM files.")
-    parser.add_argument("--quiet", default=False, action='store_true',
-                        help="Only print the number of BAM records where 1 or "
-                             "more potential duplicates duplicates were "
-                             "identified.")
+    parser.add_argument("files", nargs="+", help="One or more input BAM files.")
+    parser.add_argument(
+        "--quiet",
+        default=False,
+        action="store_true",
+        help="Only print the number of BAM records where 1 or "
+        "more potential duplicates duplicates were "
+        "identified.",
+    )
 
     return parser.parse_args(argv)
 
@@ -82,12 +85,12 @@ def main(argv):
     validation.check_bam_files(args.files, handler)
 
     if args.quiet:
-        print('%i' % (handler.duplicate_reads,))
+        print("%i" % (handler.duplicate_reads,))
     else:
-        print('Found %i record(s) with duplicates.' % (handler.duplicate_reads,))
+        print("Found %i record(s) with duplicates." % (handler.duplicate_reads,))
 
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))

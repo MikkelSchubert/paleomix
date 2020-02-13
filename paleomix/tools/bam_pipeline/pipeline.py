@@ -20,8 +20,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+
+
 import os
-import time
 import logging
 
 import paleomix
@@ -29,29 +30,16 @@ import paleomix.logger
 import paleomix.resources
 import paleomix.yaml
 
-from paleomix.common.console import \
-    print_err, \
-    print_info
+from paleomix.pipeline import Pypeline
+from paleomix.nodes.picard import BuildSequenceDictNode
+from paleomix.nodes.samtools import FastaIndexNode
+from paleomix.nodes.bwa import BWAIndexNode
+from paleomix.nodes.bowtie2 import Bowtie2IndexNode
+from paleomix.nodes.validation import ValidateFASTAFilesNode
 
-from paleomix.pipeline import \
-    Pypeline
-from paleomix.nodes.picard import \
-    BuildSequenceDictNode
-from paleomix.nodes.samtools import \
-    FastaIndexNode
-from paleomix.nodes.bwa import \
-    BWAIndexNode
-from paleomix.nodes.bowtie2 import \
-    Bowtie2IndexNode
-from paleomix.nodes.validation import \
-    ValidateFASTAFilesNode
+from paleomix.tools.bam_pipeline.makefile import MakefileError, read_makefiles
 
-from paleomix.tools.bam_pipeline.makefile import \
-    MakefileError, \
-    read_makefiles
-
-from paleomix.tools.bam_pipeline.parts import \
-    Reads
+from paleomix.tools.bam_pipeline.parts import Reads
 
 import paleomix.tools.bam_pipeline.parts as parts
 import paleomix.tools.bam_pipeline.config as bam_config
@@ -63,12 +51,10 @@ def build_pipeline_trimming(config, makefile):
     This reduces the required complexity of the makefile to a minimum."""
 
     nodes = []
-    for (_, samples) in makefile["Targets"].iteritems():
-        print_info(".", end='')
-
-        for libraries in samples.itervalues():
-            for barcodes in libraries.itervalues():
-                for record in barcodes.itervalues():
+    for (_, samples) in makefile["Targets"].items():
+        for libraries in samples.values():
+            for barcodes in libraries.values():
+                for record in barcodes.values():
                     if record["Type"] in ("Raw", "Trimmed"):
                         offset = record["Options"]["QualityOffset"]
                         reads = Reads(config, record, offset)
@@ -81,17 +67,15 @@ def build_pipeline_trimming(config, makefile):
 def build_pipeline_full(config, makefile, return_nodes=True):
     result = []
     features = makefile["Options"]["Features"]
-    for (target_name, sample_records) in makefile["Targets"].iteritems():
-        print_info(".", end='')
-
+    for (target_name, sample_records) in makefile["Targets"].items():
         prefixes = []
-        for (_, prefix) in makefile["Prefixes"].iteritems():
+        for (_, prefix) in makefile["Prefixes"].items():
             samples = []
-            for (sample_name, library_records) in sample_records.iteritems():
+            for (sample_name, library_records) in sample_records.items():
                 libraries = []
-                for (library_name, barcode_records) in library_records.iteritems():
+                for (library_name, barcode_records) in library_records.items():
                     lanes = []
-                    for (barcode, record) in barcode_records.iteritems():
+                    for (barcode, record) in barcode_records.items():
                         lane = parts.Lane(config, prefix, record, barcode)
 
                         # ExcludeReads settings may exlude entire lanes
@@ -99,24 +83,36 @@ def build_pipeline_full(config, makefile, return_nodes=True):
                             lanes.append(lane)
 
                     if lanes:
-                        libraries.append(parts.Library(config=config,
-                                                       target=target_name,
-                                                       prefix=prefix,
-                                                       lanes=lanes,
-                                                       name=library_name))
+                        libraries.append(
+                            parts.Library(
+                                config=config,
+                                target=target_name,
+                                prefix=prefix,
+                                lanes=lanes,
+                                name=library_name,
+                            )
+                        )
 
                 if libraries:
-                    samples.append(parts.Sample(config=config,
-                                                prefix=prefix,
-                                                libraries=libraries,
-                                                name=sample_name))
+                    samples.append(
+                        parts.Sample(
+                            config=config,
+                            prefix=prefix,
+                            libraries=libraries,
+                            name=sample_name,
+                        )
+                    )
 
             if samples:
-                prefixes.append(parts.Prefix(config=config,
-                                             prefix=prefix,
-                                             samples=samples,
-                                             features=features,
-                                             target=target_name))
+                prefixes.append(
+                    parts.Prefix(
+                        config=config,
+                        prefix=prefix,
+                        samples=samples,
+                        features=features,
+                        target=target_name,
+                    )
+                )
 
         if prefixes:
             target = parts.Target(config, prefixes, target_name)
@@ -128,7 +124,7 @@ def build_pipeline_full(config, makefile, return_nodes=True):
                 # Extra tasks (e.g. coverage, depth-histograms, etc.)
                 result.extend(target.nodes)
                 # Output BAM files (raw, realigned)
-                result.extend(target.bams.itervalues())
+                result.extend(target.bams.values())
             else:
                 result.append(target)
 
@@ -140,34 +136,44 @@ def index_references(config, makefiles):
     references_bwa = {}
     references_bowtie2 = {}
     for makefile in makefiles:
-        for subdd in makefile["Prefixes"].itervalues():
+        for subdd in makefile["Prefixes"].values():
             reference = subdd["Reference"]
             if reference not in references:
                 # Validation of the FASTA file; not blocking for the other
                 # steps, as it is only expected to fail very rarely, but will
                 # block subsequent analyses depending on the FASTA.
-                valid_node = ValidateFASTAFilesNode(input_files=reference,
-                                                    output_file=reference +
-                                                    ".validated")
+                valid_node = ValidateFASTAFilesNode(
+                    input_files=reference, output_file=reference + ".validated"
+                )
                 # Indexing of FASTA file using 'samtools faidx'
                 faidx_node = FastaIndexNode(reference)
                 # Indexing of FASTA file using 'BuildSequenceDictionary.jar'
-                dict_node = BuildSequenceDictNode(config=config,
-                                                  reference=reference,
-                                                  dependencies=(valid_node,))
+                dict_node = BuildSequenceDictNode(
+                    config=config, reference=reference, dependencies=(valid_node,)
+                )
 
                 # Indexing of FASTA file using 'bwa index'
-                bwa_node = BWAIndexNode(input_file=reference,
-                                        dependencies=(valid_node,))
+                bwa_node = BWAIndexNode(
+                    input_file=reference, dependencies=(valid_node,)
+                )
                 # Indexing of FASTA file using ''
-                bowtie2_node = Bowtie2IndexNode(input_file=reference,
-                                                dependencies=(valid_node,))
+                bowtie2_node = Bowtie2IndexNode(
+                    input_file=reference, dependencies=(valid_node,)
+                )
 
                 references[reference] = (valid_node, faidx_node, dict_node)
-                references_bwa[reference] = (valid_node, faidx_node,
-                                             dict_node, bwa_node)
-                references_bowtie2[reference] = (valid_node, faidx_node,
-                                                 dict_node, bowtie2_node)
+                references_bwa[reference] = (
+                    valid_node,
+                    faidx_node,
+                    dict_node,
+                    bwa_node,
+                )
+                references_bowtie2[reference] = (
+                    valid_node,
+                    faidx_node,
+                    dict_node,
+                    bowtie2_node,
+                )
 
             subdd["Nodes"] = references[reference]
             subdd["Nodes:BWA"] = references_bwa[reference]
@@ -175,37 +181,34 @@ def index_references(config, makefiles):
 
 
 def run(config, args, pipeline_variant):
+    paleomix.logger.initialize(
+        log_level=config.log_level, log_file=config.log_file, name="bam_pipeline"
+    )
+
+    logger = logging.getLogger(__name__)
     if pipeline_variant not in ("bam", "trim"):
-        raise ValueError("Unexpected BAM pipeline variant (%r)"
-                         % (pipeline_variant,))
+        logger.critical("Unexpected BAM pipeline variant %r", pipeline_variant)
+        return 1
 
     if not os.path.exists(config.temp_root):
         try:
             os.makedirs(config.temp_root)
-        except OSError, error:
-            print_err("ERROR: Could not create temp root:\n\t%s" % (error,))
+        except OSError as error:
+            logger.error("Could not create temp root: %s", error)
             return 1
 
     if not os.access(config.temp_root, os.R_OK | os.W_OK | os.X_OK):
-        print_err("ERROR: Insufficient permissions for temp root: '%s'"
-                  % (config.temp_root,))
+        logger.error("Insufficient permissions for temp root: %r", config.temp_root)
         return 1
 
     # Init worker-threads before reading in any more data
     pipeline = Pypeline(config)
 
     try:
-        print_info("Reading makefiles ...")
-        makefiles = read_makefiles(config, args, pipeline_variant)
-    except (MakefileError, paleomix.yaml.YAMLError, IOError), error:
-        print_err("Error reading makefiles:",
-                  "\n  %s:\n   " % (error.__class__.__name__,),
-                  "\n    ".join(str(error).split("\n")))
+        makefiles = read_makefiles(args, pipeline_variant)
+    except (MakefileError, paleomix.yaml.YAMLError, IOError) as error:
+        logger.error("Error reading makefiles: %s", error)
         return 1
-
-    logfile_template = time.strftime("bam_pipeline.%Y%m%d_%H%M%S_%%02i.log")
-    paleomix.logger.initialize(config, logfile_template)
-    logger = logging.getLogger(__name__)
 
     pipeline_func = build_pipeline_trimming
     if pipeline_variant == "bam":
@@ -214,27 +217,17 @@ def run(config, args, pipeline_variant):
 
         pipeline_func = build_pipeline_full
 
-    print_info("Building BAM pipeline ", end='')
     for makefile in makefiles:
-        # If a destination is not specified, save results in same folder as the
-        # makefile
-        filename = makefile["Statistics"]["Filename"]
-        old_destination = config.destination
-        if old_destination is None:
-            config.destination = os.path.dirname(filename)
-
+        logger.info("Building BAM pipeline for %r", makefile["Filename"])
         try:
             nodes = pipeline_func(config, makefile)
-        except paleomix.node.NodeError, error:
-            logger.error("Error while building pipeline for '%s':\n%s",
-                         filename, error)
+        except paleomix.node.NodeError as error:
+            logger.error(
+                "Error while building pipeline for %r:\n%s", makefile["Filename"], error
+            )
             return 1
 
-        config.destination = old_destination
-
         pipeline.add_nodes(*nodes)
-
-    print_info("")
 
     if config.list_input_files:
         logger.info("Printing output files ...")
@@ -248,16 +241,9 @@ def run(config, args, pipeline_variant):
         logger.info("Printing required executables ...")
         pipeline.print_required_executables()
         return 0
-    elif config.dot_file:
-        logger.info("Writing dependency graph to %r ...", config.dot_file)
-        if not pipeline.to_dot(config.dot_file):
-            return 1
-        return 0
 
     logger.info("Running BAM pipeline ...")
-    if not pipeline.run(dry_run=config.dry_run,
-                        max_threads=config.max_threads,
-                        progress_ui=config.progress_ui):
+    if not pipeline.run(dry_run=config.dry_run, max_threads=config.max_threads):
         return 1
 
     return 0
@@ -265,27 +251,36 @@ def run(config, args, pipeline_variant):
 
 def _print_usage(pipeline):
     basename = "%s_pipeline" % (pipeline,)
-    usage = \
-        "BAM Pipeline v{version}\n" \
-        "Usage:\n" \
-        "  -- {cmd} help           -- Display this message.\n" \
-        "  -- {cmd} example [...]  -- Create example project.\n" \
-        "  -- {cmd} makefile [...] -- Print makefile template.\n" \
-        "  -- {cmd} dryrun [...]   -- Perform dry run of pipeline.\n" \
-        "  -- {cmd} run [...]      -- Run pipeline on provided makefiles.\n" \
-        "  -- {cmd} remap [...]    -- Re-map hits from previous alignment."
+    usage = (
+        "BAM Pipeline v{version}\n"
+        "Usage:\n"
+        "  -- {cmd} help           -- Display this message.\n"
+        "  -- {cmd} example [...]  -- Create example project.\n"
+        "  -- {cmd} makefile [...] -- Print makefile template.\n"
+        "  -- {cmd} dryrun [...]   -- Perform dry run of pipeline.\n"
+        "  -- {cmd} run [...]      -- Run pipeline on provided makefiles.\n"
+    )
 
-    print_info(usage.format(version=paleomix.__version__,
-                            cmd=basename,
-                            pad=" " * len(basename)))
+    print(
+        usage.format(
+            version=paleomix.__version__, cmd=basename, pad=" " * len(basename)
+        )
+    )
 
 
 def main(argv, pipeline="bam"):
     assert pipeline in ("bam", "trim"), pipeline
 
-    commands = ("makefile", "mkfile", "run",
-                "dry_run", "dry-run", "dryrun",
-                "remap", "example", "examples")
+    commands = (
+        "makefile",
+        "mkfile",
+        "run",
+        "dry_run",
+        "dry-run",
+        "dryrun",
+        "example",
+        "examples",
+    )
 
     if not argv or (argv[0] == "help"):
         _print_usage(pipeline)
@@ -295,25 +290,11 @@ def main(argv, pipeline="bam"):
         return 1
     elif argv[0] in ("mkfile", "makefile"):
         return bam_mkfile.main(argv[1:], pipeline=pipeline)
-    elif argv[0] in ("remap", "remap_prefix"):
-        # Import here to avoid circular dependency issues
-        import paleomix.tools.bam_pipeline.remap as bam_remap
-
-        return bam_remap.main(argv[1:])
     elif argv[0] in ("example", "examples"):
         return paleomix.resources.copy_example("bam_pipeline", argv[1:])
 
-    try:
-        config, args = bam_config.parse_config(argv, pipeline)
-
-        if not args[1:]:
-            print_err("Please specify at least one makefile!")
-            print_err("Use --help for more information.")
-            return 1
-        elif args and args[0].startswith("dry"):
-            config.dry_run = True
-    except bam_config.ConfigError, error:
-        print_err(error)
-        return 1
+    config, args = bam_config.parse_config(argv, pipeline)
+    if args and args[0].startswith("dry"):
+        config.dry_run = True
 
     return run(config, args[1:], pipeline_variant=pipeline)

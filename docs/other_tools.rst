@@ -59,17 +59,6 @@ paleomix gtf_to_bed
 ..                                 feature (coding, RNA, etc).
 
 
-paleomix sample_pileup
-----------------------
-
-.. TODO:
-..    paleomix sample_pileup    -- Randomly sample sites in a pileup to generate a
-..                                FASTA sequence.
-
-.. warning::
-    This tool is deprecated, and will be removed in future versions of PALEOMIX.
-
-
 paleomix vcf_filter
 -------------------
 

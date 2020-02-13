@@ -1,5 +1,5 @@
 # table produced by mapDamage version 2.0.1-10-g0a7fa27-dirty
-# using mapped file - and 000_prefixes/Pi_nucl.fasta as reference file
+# using mapped file - and prefixes/Pi_nucl.fasta as reference file
 # Chr: reference from sam/bam header, End: from which termini of DNA sequences, Std: strand of reads
 Chr	End	Std	Pos	A	C	G	T	Total	G>A	C>T	A>G	T>C	A>C	A>T	C>G	C>A	T>G	T>A	G>C	G>T	A>-	T>-	C>-	G>-	->A	->T	->C	->G	S
 *	3p	+	1	6213	12410	16554	14845	50022	130	63	78	221	36	30	55	91	70	114	34	45	0	0	0	0	0	0	0	0	13

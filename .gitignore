@@ -2,24 +2,23 @@
 .\#*
 \#*
 *~
-*.py[cod]
+__pycache__
 
 .coverage
 MANIFEST
 
 # Packages
-dist
-build
-sdist
-
-tests/runs
-tests/links/
-tests/all_modules.py
+dist/
+build/
+sdist/
 
 *.egg/
 *.egg-info/
-.eggs
-.tox
-.vscode
+.eggs/
+.tox/
+.vscode/
+.mypy_cache/
 
-docs/_build
+# Misc
+venv/
+docs/_build/

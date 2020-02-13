@@ -20,36 +20,25 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from __future__ import print_function
-
 import errno
 import logging
 import multiprocessing
 import os
-import pickle
-import Queue
 import signal
 import traceback
 
-import paleomix.ui
+from queue import Empty
+
 import paleomix.logger
 
-from paleomix.node import \
-    Node, \
-    NodeError, \
-    NodeUnhandledException
-from paleomix.nodegraph import \
-    FileStatusCache, \
-    NodeGraph, \
-    NodeGraphError
-from paleomix.common.utilities import \
-    safe_coerce_to_tuple, \
-    fast_pickle_test
-from paleomix.common.versions import \
-    VersionRequirementError
+from paleomix.node import Node, NodeError, NodeUnhandledException
+from paleomix.nodegraph import FileStatusCache, NodeGraph, NodeGraphError
+from paleomix.common.text import padded_table
+from paleomix.common.utilities import safe_coerce_to_tuple
+from paleomix.common.versions import VersionRequirementError
 
 
-class Pypeline(object):
+class Pypeline:
     def __init__(self, config):
         self._nodes = []
         self._config = config
@@ -57,94 +46,80 @@ class Pypeline(object):
         # Set if a keyboard-interrupt (SIGINT) has been caught
         self._interrupted = False
         self._queue = multiprocessing.Queue()
-        self._pool = multiprocessing.Pool(1, _init_worker, (self._queue,))
+        self._pool = None
 
     def add_nodes(self, *nodes):
         for subnodes in safe_coerce_to_tuple(nodes):
             for node in safe_coerce_to_tuple(subnodes):
                 if not isinstance(node, Node):
-                    raise TypeError("Node object expected, recieved %s"
-                                    % repr(node))
+                    raise TypeError("Node object expected, recieved %s" % repr(node))
                 self._nodes.append(node)
 
-    def run(self, max_threads=1, dry_run=False, progress_ui="verbose"):
+    def run(self, max_threads=1, dry_run=False):
         if max_threads < 1:
             raise ValueError("Max threads must be >= 1")
-        _update_nprocesses(self._pool, max_threads)
 
         try:
             nodegraph = NodeGraph(self._nodes)
-        except NodeGraphError, error:
+        except NodeGraphError as error:
             self._logger.error(error)
             return False
 
         for node in nodegraph.iterflat():
             if node.threads > max_threads:
-                message = "Node(s) use more threads than the max allowed; " \
-                          "the pipeline may therefore use more than the " \
-                          "expected number of threads.\n"
-                paleomix.ui.print_warn(message)
+                message = (
+                    "Node(s) use more threads than the max allowed; "
+                    "the pipeline may therefore use more than the "
+                    "expected number of threads.\n"
+                )
+                self._logger.warn(message)
                 break
 
         if dry_run:
-            progress_printer = paleomix.ui.RunningUI()
-            nodegraph.add_state_observer(progress_printer)
-            progress_printer.flush()
-            progress_printer.finalize()
-            self._logger.info("Dry run done ...")
-            return True
+            self._summarize_pipeline(nodegraph)
+            self._logger.info("Dry run done")
 
-        old_handler = signal.signal(signal.SIGINT, self._sigint_handler)
-        try:
-            return self._run(nodegraph, max_threads, progress_ui)
-        finally:
-            signal.signal(signal.SIGINT, old_handler)
+            result = True
+        else:
+            self._pool = multiprocessing.Pool(max_threads, _init_worker, (self._queue,))
+            old_handler = signal.signal(signal.SIGINT, self._sigint_handler)
 
-        return False
+            try:
+                result = self._run(nodegraph, max_threads)
+            finally:
+                signal.signal(signal.SIGINT, old_handler)
 
-    def _run(self, nodegraph, max_threads, progress_ui):
+        for filename in paleomix.logger.get_logfiles():
+            self._logger.info("Log-file written to %r", filename)
+
+        return result
+
+    def _run(self, nodegraph, max_threads):
         # Dictionary of nodes -> async-results
         running = {}
         # Set of remaining nodes to be run
         remaining = set(nodegraph.iterflat())
 
         is_ok = True
-        progress_printer = paleomix.ui.get_ui(progress_ui)
-        progress_printer.max_threads = max_threads
-        nodegraph.add_state_observer(progress_printer)
+        while running or (remaining and not self._interrupted):
+            is_ok &= self._poll_running_nodes(running, nodegraph, self._queue)
 
-        with paleomix.ui.CommandLine() as cli:
-            while running or (remaining and not self._interrupted):
-                is_ok &= self._poll_running_nodes(running,
-                                                  nodegraph,
-                                                  self._queue)
-
-                if not self._interrupted:  # Prevent starting of new nodes
-                    self._start_new_tasks(remaining, running, nodegraph,
-                                          max_threads, self._pool)
-
-                if running:
-                    progress_printer.flush()
-
-                max_threads = cli.process_key_presses(nodegraph,
-                                                      max_threads,
-                                                      progress_printer)
-                progress_printer.max_threads = max_threads
-                _update_nprocesses(self._pool, max_threads)
+            if not self._interrupted:  # Prevent starting of new nodes
+                self._start_new_tasks(
+                    remaining, running, nodegraph, max_threads, self._pool
+                )
 
         self._pool.close()
         self._pool.join()
-
-        progress_printer.flush()
-        progress_printer.finalize()
+        self._summarize_pipeline(nodegraph)
 
         return is_ok
 
-    def _start_new_tasks(self, remaining, running, nodegraph, max_threads,
-                         pool):
+    def _start_new_tasks(self, remaining, running, nodegraph, max_threads, pool):
         started_nodes = []
-        idle_processes = max_threads \
-            - sum(node.threads for (node, _) in running.itervalues())
+        idle_processes = max_threads - sum(
+            node.threads for (node, _) in running.values()
+        )
 
         if not idle_processes:
             return False
@@ -153,22 +128,9 @@ class Pypeline(object):
             if not running or (idle_processes >= node.threads):
                 state = nodegraph.get_node_state(node)
                 if state == nodegraph.RUNABLE:
-                    try:
-                        # The multi-processing module relies on pickling
-                        fast_pickle_test(node)
-                    except pickle.PicklingError, error:
-                        self._logger.error("Node cannot be pickled; please "
-                                           "file a bug-report:\n"
-                                           "\tNode: %s\n\tError: %s"
-                                           % (self, error))
-                        nodegraph.set_node_state(node, nodegraph.ERROR)
-                        started_nodes.append(node)
-                        continue
-
                     key = id(node)
                     proc_args = (key, node, self._config)
-                    running[key] = (node, pool.apply_async(_call_run,
-                                                           args=proc_args))
+                    running[key] = (node, pool.apply_async(_call_run, args=proc_args))
                     started_nodes.append(node)
 
                     nodegraph.set_node_state(node, nodegraph.RUNNING)
@@ -182,10 +144,10 @@ class Pypeline(object):
             remaining.remove(node)
 
     def _poll_running_nodes(self, running, nodegraph, queue):
-        errors = None
+        error_happened = False
         blocking = False
 
-        while running and not errors:
+        while running and not error_happened:
             node, proc = self._get_finished_node(queue, running, blocking)
             if not node:
                 if blocking:
@@ -199,23 +161,25 @@ class Pypeline(object):
                 proc.get()
             except (KeyboardInterrupt, SystemExit):
                 raise
-            except Exception, errors:
+            except Exception as errors:
                 nodegraph.set_node_state(node, nodegraph.ERROR)
 
-                message = [str(node),
-                           "  Error (%r) occurred running command:"
-                           % (type(errors).__name__)]
+                message = [
+                    str(node),
+                    "  Error (%r) occurred running command:" % (type(errors).__name__),
+                ]
 
                 for line in str(errors).strip().split("\n"):
                     message.append("    %s" % (line,))
                 message.append("")
 
                 self._logger.error("\n".join(message))
+                error_happened = True
 
-            if not errors:
+            if not error_happened:
                 nodegraph.set_node_state(node, nodegraph.DONE)
 
-        return not errors
+        return not error_happened
 
     @property
     def nodes(self):
@@ -306,7 +270,7 @@ class Pypeline(object):
     def print_output_files(self, print_func=print):
         output_files = self.list_output_files()
 
-        for filename, state in sorted(output_files.iteritems()):
+        for filename, state in sorted(output_files.items()):
             if state == NodeGraph.DONE:
                 state = "Ready      "
             elif state == NodeGraph.OUTDATED:
@@ -328,9 +292,7 @@ class Pypeline(object):
     def print_required_executables(self, print_func=print):
         template = "{: <40s} {: <11s} {}"
         pipeline_executables = self.list_required_executables()
-        print_func(template.format("Executable",
-                                   "Version",
-                                   "Required version"))
+        print_func(template.format("Executable", "Version", "Required version"))
 
         for (name, requirements) in sorted(pipeline_executables.items()):
             if not requirements:
@@ -352,81 +314,14 @@ class Pypeline(object):
         """Signal handler; see signal.signal."""
         if not self._interrupted:
             self._interrupted = True
-            self._logger.error("\nKeyboard interrupt detected, waiting for "
-                               "running tasks to complete ... Press CTRL-C "
-                               "again to force termination.\n")
+            self._logger.error(
+                "\nKeyboard interrupt detected, waiting for "
+                "running tasks to complete ... Press CTRL-C "
+                "again to force termination.\n"
+            )
         else:
             self._pool.terminate()
             raise signal.default_int_handler(signum, frame)
-
-    def to_dot(self, destination):
-        """Writes a simlpe dot file to the specified destination, representing
-        the full dependency tree. Nodes are named by their class.
-        """
-        try:
-            nodegraph = NodeGraph(self._nodes)
-        except NodeGraphError, error:
-            self._logger.error(error)
-            return False
-
-        # Dict recording all dependencies of nodes
-        meta_dependencies = {}
-        # Dict recording if anything depends on a speific node
-        meta_rev_dependencies = {}
-        for node in nodegraph.iterflat():
-            selection = node.dependencies
-            meta_dependencies[node] = selection
-            for dep in selection:
-                meta_rev_dependencies[dep] = True
-
-        return self._write_dot(destination,
-                               meta_dependencies,
-                               meta_rev_dependencies)
-
-    @classmethod
-    def _write_dot(cls, destination, meta_dependencies, meta_rev_dependencies):
-        """Writes simple dot file, in which each node is connected to their
-        dependencies, using the object IDs as the node names. Labels are
-        derived from the class names, excluding any "Node" postfix.
-        """
-        with open(destination, "w") as out:
-            out.write("digraph G {\n")
-            out.write("  graph [ dpi = 75 ];\n")
-            out.write("  node [shape=record,width=.1,height=.1];\n")
-            out.write("  splines=ortho;\n\n")
-
-            for node, dependencies in meta_dependencies.iteritems():
-                node_id = "Node_%i" % (id(node),)
-                node_type = node.__class__.__name__
-                if node_type.endswith("Node"):
-                    node_type = node_type[:-4]
-
-                rank = None
-                color = "white"
-                if not meta_dependencies.get(node):
-                    color = "red"
-                elif not meta_rev_dependencies.get(node):
-                    color = "green"
-                    rank = "sink"
-
-                if rank is not None:
-                    out.write("  {")
-                    out.write("    rank = %s;\n  " % (rank,))
-
-                out.write('  %s [label="%s"; fillcolor=%s; style=filled]\n'
-                          % (node_id, node_type, color))
-
-                if rank is not None:
-                    out.write("  }")
-
-                for dependency in dependencies:
-                    dep_id = "Node_%i" % (id(dependency),)
-                    out.write("  %s -> %s\n" % (dep_id, node_id))
-                out.write("\n")
-
-            out.write("}\n")
-
-        return True
 
     @classmethod
     def _get_finished_node(cls, queue, running, blocking):
@@ -440,13 +335,33 @@ class Pypeline(object):
         try:
             key = queue.get(blocking, 0.1)
             return running.pop(key)
-        except IOError, error:
+        except IOError as error:
             # User pressed ctrl-c (SIGINT), or similar event ...
             if error.errno != errno.EINTR:
                 raise
-        except Queue.Empty:
+        except Empty:
             pass
         return None, None
+
+    def _summarize_pipeline(self, nodegraph):
+        states = [0] * nodegraph.NUMBER_OF_STATES
+        for node in nodegraph.iterflat():
+            states[nodegraph.get_node_state(node)] += 1
+
+        rows = [
+            ("Number of nodes:", sum(states)),
+            ("Number of done nodes:", states[nodegraph.DONE]),
+            ("Number of runable nodes:", states[nodegraph.RUNABLE]),
+            ("Number of queued nodes:", states[nodegraph.QUEUED]),
+            ("Number of outdated nodes:", states[nodegraph.OUTDATED]),
+            ("Number of failed nodes:", states[nodegraph.ERROR]),
+        ]
+
+        for message in padded_table(rows):
+            self._logger.info(message)
+
+        if states[nodegraph.ERROR]:
+            self._logger.warning("Errors were detected while running pipeline")
 
 
 def _init_worker(queue):
@@ -471,22 +386,9 @@ def _call_run(key, node, config):
     except NodeError:
         raise
     except Exception:
-        message = "Unhandled error running Node:\n\n%s" \
-            % (traceback.format_exc(),)
+        message = "Unhandled error running Node:\n\n%s" % (traceback.format_exc(),)
 
         raise NodeUnhandledException(message)
     finally:
         # See comment in _init_worker
         _call_run.queue.put(key)
-
-
-def _update_nprocesses(pool, processes):
-    """multiprocessing.Pool does not expose calls to change number of active
-    processes, but does in fact support this for the 'maxtasksperchild' option.
-    This function calls the related private functions to increase the number
-    of available processes."""
-    # FIXME: Catch ERRNO 11:
-    # OSError: [Errno 11] Resource temporarily unavailable
-    if pool._processes < processes:
-        pool._processes = processes
-        pool._repopulate_pool()

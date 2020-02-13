@@ -83,14 +83,14 @@ def join_procs(procs, out=sys.stderr):
                 commands.remove((index, command))
                 sleep_time = 0.05
 
-                out.write("  - Command finished: %s\n"
-                          "    - Return-code:    %s\n"
-                          % (" ".join(command.call),
-                             return_codes[index]))
+                out.write(
+                    "  - Command finished: %s\n"
+                    "    - Return-code:    %s\n"
+                    % (" ".join(command.call), return_codes[index])
+                )
                 out.flush()
             elif any(return_codes):
-                out.write("  - Terminating command: %s\n"
-                          % (" ".join(command.call),))
+                out.write("  - Terminating command: %s\n" % (" ".join(command.call),))
                 out.flush()
 
                 command.terminate()

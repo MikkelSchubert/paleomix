@@ -20,51 +20,58 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from __future__ import print_function
+
 
 import sys
 import errno
 import optparse
-import fileinput
 
 import pysam
 
 import paleomix.common.vcffilter as vcffilter
 
+from paleomix.common.fileutils import open_ro
+
 
 def _read_files(filenames, args):
     in_header = True
     has_filters = False
-    reset_filter = (args.reset_filter == 'yes')
+    reset_filter = args.reset_filter == "yes"
     vcf_parser = pysam.asVCF()
-    for line in fileinput.input(filenames):
-        if not line.startswith("#"):
-            in_header = False
-            line = line.rstrip("\n\r")
-            vcf = vcf_parser(line, len(line))
-            if reset_filter:
-                vcf.filter = '.'
+    for filename in filenames:
+        with open_ro(filename, "rb") as handle:
+            for line in handle:
+                if not line.startswith(b"#"):
+                    in_header = False
+                    line = line.rstrip(b"\n\r")
+                    vcf = vcf_parser(line, len(line))
+                    if reset_filter:
+                        vcf.filter = "."
 
-            yield vcf
-        elif in_header:
-            if not (line.startswith("##") or has_filters):
-                has_filters = True
-                for item in sorted(vcffilter.describe_filters(args).items()):
-                    print('##FILTER=<ID=%s,Description="%s">' % item)
+                    yield vcf
+                elif in_header:
+                    if not (line.startswith(b"##") or has_filters):
+                        has_filters = True
+                        for item in sorted(vcffilter.describe_filters(args).items()):
+                            print('##FILTER=<ID=%s,Description="%s">' % item)
 
-            print(line, end="")
+                    print(line.decode("utf-8"), end="")
 
 
 def main(argv):
     desc = "paleomix vcf_filter [options] [in1.vcf, ...]"
     parser = optparse.OptionParser(desc)
-    parser.add_option('--reset-filter', default='no', choices=('yes', 'no'),
-                      help="If set to 'yes', values in the 'FILTER' column "
-                           "are cleared, and set according to the results "
-                           "from running the filters implemented by this "
-                           "tool. If set to 'no', any existing values are "
-                           "retained, and any (new) failed filters are added "
-                           "to these [default: %default].")
+    parser.add_option(
+        "--reset-filter",
+        default="no",
+        choices=("yes", "no"),
+        help="If set to 'yes', values in the 'FILTER' column "
+        "are cleared, and set according to the results "
+        "from running the filters implemented by this "
+        "tool. If set to 'no', any existing values are "
+        "retained, and any (new) failed filters are added "
+        "to these [default: %default].",
+    )
 
     vcffilter.add_varfilter_options(parser)
     (args, filenames) = parser.parse_args(argv)
@@ -75,11 +82,11 @@ def main(argv):
     try:
         for vcf in vcffilter.filter_vcfs(args, _read_files(filenames, args)):
             print(vcf)
-    except IOError, error:
+    except IOError as error:
         # Check for broken pipe (head, less, etc).
         if error.errno != errno.EPIPE:
             raise
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))

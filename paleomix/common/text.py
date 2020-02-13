@@ -20,10 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import collections
 import itertools
 import re
-import types
 
 
 class TableError(RuntimeError):
@@ -47,20 +45,21 @@ def padded_table(table):
     str_rows = []
     max_sizes = []
     for row in table:
-        if not isinstance(row, types.StringTypes):
-            row = map(str, row)
-            row_sizes = map(len, row)
-            max_sizes = map(max, itertools.izip_longest(max_sizes,
-                                                        row_sizes,
-                                                        fillvalue=0))
+        if not isinstance(row, str):
+            row = list(map(str, row))
+            row_sizes = list(map(len, row))
+            max_sizes = list(
+                map(max, itertools.zip_longest(max_sizes, row_sizes, fillvalue=0))
+            )
 
         str_rows.append(row)
 
     sizes = [(size + _MIN_PADDING) for size in max_sizes]
     for row in str_rows:
-        if not isinstance(row, types.StringTypes):
-            row = "".join(field.ljust(padding)
-                          for (field, padding) in zip(row, sizes)).rstrip()
+        if not isinstance(row, str):
+            row = "".join(
+                field.ljust(padding) for (field, padding) in zip(row, sizes)
+            ).rstrip()
         yield row
 
 
@@ -82,8 +81,10 @@ def parse_padded_table(lines, header=None):
 
         fields = stripped.split()
         if len(fields) != nheader:
-            raise TableError("Malformed table; #columns does not match header:"
-                             " %r vs %r" % (header, fields))
+            raise TableError(
+                "Malformed table; #columns does not match header:"
+                " %r vs %r" % (header, fields)
+            )
 
         yield dict(zip(header, fields))
 
@@ -94,9 +95,10 @@ def parse_lines(lines, parser):
 
     Supports the parser functions available in 'pysam': asGTF, asBED, etc.
     """
-    if not isinstance(parser, collections.Callable):
-        raise TypeError("'parser' must be a callable, not %r"
-                        % parser.__class__.__name__)
+    if not callable(parser):
+        raise TypeError(
+            "'parser' must be a callable, not %r" % parser.__class__.__name__
+        )
 
     for line in lines:
         stripped = line.lstrip()

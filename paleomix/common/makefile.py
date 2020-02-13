@@ -120,26 +120,19 @@ code shown above as follows:
 
 which would yield the following dictionary:
 -------------------------------------------------------------------------------
-|  {'Makefile': {'Defaults': {'--max-depth': 100,
-|                             '--min-depth': 8,
-|                             '--min-end-distance-bias': 0.001,
-|                             '--min-mapq-bias': 0.001},
-|                'VCF_Files': {'path/to/file1.vcf':
-|                                {'Options': {'--max-depth': 100,
-|                                 '--min-baseq-bias': 0.005,
-|                                 '--min-depth': 8,
-|                                 '--min-strand-bias': 0.005},
-|                                 'Output_File': 'path/to/output1.vcf'},
-|                              'path/to/file2.vcf':
-|                                 {'Output_File': 'path/to/output1.vcf'}}},
-|   'Statistics': {'Filename': 'makefile.yaml',
-|                  'Hash': 'c0138fd4ffcbbc0dff2c82c6e7595ec38b01f532',
-|                  'MTime': '2013-08-13 10:22:46.000000 '}}
+|  {'Defaults': {'--max-depth': 100,
+|                '--min-depth': 8,
+|                '--min-end-distance-bias': 0.001,
+|                '--min-mapq-bias': 0.001},
+|   'VCF_Files': {'path/to/file1.vcf':
+|                   {'Options': {'--max-depth': 100,
+|                    '--min-baseq-bias': 0.005,
+|                    '--min-depth': 8,
+|                    '--min-strand-bias': 0.005},
+|                    'Output_File': 'path/to/output1.vcf'},
+|                 'path/to/file2.vcf':
+|                    {'Output_File': 'path/to/output1.vcf'}}},
 -------------------------------------------------------------------------------
-
-Note the actual contents of the makefile is found in the sub-dictionary
-"Makefile", while the sub-dictionary "Statistics" contains various information
-about the file itself.
 
 Unfortunately, the defaults are being applied to BOTH "Options" sub-trees,
 which makes it impossible to tell which values are supposed to be over-ridden
@@ -160,19 +153,14 @@ should NOT be applied, by using the WithoutDefaults wrapper object:
 
 Which yields the following structure following processing:
 -------------------------------------------------------------------------------
-|  {'Makefile': {'Defaults': {'--max-depth': 100,
-|                             '--min-depth': 8,
-|                             '--min-end-distance-bias': 0.001,
-|                             '--min-mapq-bias': 0.001},
-|                'VCF_Files': {'path/to/file1.vcf':
-|                                {'Options': {'--min-baseq-bias': 0.005,
-|                                             '--min-strand-bias': 0.005},
-|                                 'Output_File': 'path/to/output1.vcf'},
-|                              'path/to/file2.vcf':
-|                                {'Output_File': 'path/to/output2.vcf'}}},
-|   'Statistics': {'Filename': 'makefile.yaml',
-|                  'Hash': 'c0138fd4ffcbbc0dff2c82c6e7595ec38b01f532',
-|                  'MTime': '2013-08-13 10:22:46.000000 '}}
+|  {'Defaults': {'--max-depth': 100,
+|                '--min-depth': 8,
+|                '--min-end-distance-bias': 0.001,
+|                '--min-mapq-bias': 0.001},
+|   'VCF_Files': {'path/to/file1.vcf': {'Options': {'--min-baseq-bias': 0.005,
+|                                                   '--min-strand-bias': 0.005},
+|                                       'Output_File': 'path/to/output1.vcf'},
+|                 'path/to/file2.vcf': {'Output_File': 'path/to/output2.vcf'}}}
 -------------------------------------------------------------------------------
 
 If the file contents does not match the expected structure, a MakefileError is
@@ -180,16 +168,12 @@ raised which describes the problem. For example, suppose that an "Output_File"
 value has accidentically been left blank ('IsStr' requires a NON-EMPTY string):
 -------------------------------------------------------------------------------
 |  Makefile requirement not met at ...:
-|    Expected value(s): a non-empty string
-|    Observed value(s): ''
+|    Expected value: a non-empty string
+|    Observed value: ''
 -------------------------------------------------------------------------------
 """
-import os
 import copy
-import types
-import hashlib
-import datetime
-import operator
+import logging
 
 import paleomix.yaml
 from paleomix.common.utilities import group_by_pred
@@ -200,31 +184,14 @@ class MakefileError(RuntimeError):
 
 
 def read_makefile(filename, specification):
-    """Reads and parses a makefile using the given specification.
-
-    Returns a dictionary of the form
-      {
-         "Makefile": <parsed makefile>,
-         "Statistics": {
-            "Filename": <filename>,
-            "Hash": <SHA1 hash of makefile>,
-            "MTime": <Modification time of makefile>,
-         }
-      }
-    """
+    """Reads and parses a makefile using the given specification."""
     try:
-        with open(filename) as makefile:
-            string = makefile.read()
-            data = paleomix.yaml.safe_load(string)
-    except paleomix.yaml.error.YAMLError, error:
+        with open(filename) as handle:
+            data = paleomix.yaml.safe_load(handle)
+    except paleomix.yaml.YAMLError as error:
         raise MakefileError(error)
 
-    mtime = os.path.getmtime(os.path.realpath(filename))
-    mtime_str = datetime.datetime.fromtimestamp(mtime).strftime("%F %T")
-    return {"Makefile": process_makefile(data, specification),
-            "Statistics": {"Filename": filename,
-                           "Hash": hashlib.sha1(string).hexdigest(),
-                           "MTime": mtime_str}}
+    return process_makefile(data, specification)
 
 
 def process_makefile(data, specification, path=("root",), apply_defaults=True):
@@ -234,15 +201,13 @@ def process_makefile(data, specification, path=("root",), apply_defaults=True):
     """
     if isinstance(specification, WithoutDefaults):
         specification = specification.specification
-        data = process_makefile(data, specification, path,
-                                apply_defaults=False)
+        data = process_makefile(data, specification, path, apply_defaults=False)
     elif isinstance(specification, PreProcessMakefile):
         data, specification = specification(path, data)
         data = process_makefile(data, specification, path, apply_defaults)
     elif _is_spec(specification):
         _instantiate_spec(specification)(path, data)
-    elif isinstance(data, (dict, types.NoneType)) \
-            and isinstance(specification, dict):
+    elif isinstance(data, (dict, type(None))) and isinstance(specification, dict):
         # A limitation of YAML is that empty subtrees are equal to None;
         # this check ensures that empty subtrees to be handled properly
         if data is None:
@@ -251,33 +216,40 @@ def process_makefile(data, specification, path=("root",), apply_defaults=True):
         _process_default_values(data, specification, path, apply_defaults)
 
         for cur_key in data:
-            ref_key = _get_matching_spec_or_value(cur_key,
-                                                  specification,
-                                                  path + (cur_key,))
-            data[cur_key] = process_makefile(data[cur_key],
-                                             specification[ref_key],
-                                             path + (cur_key,),
-                                             apply_defaults)
-    elif isinstance(data, (list, types.NoneType)) \
-            and isinstance(specification, list):
+            ref_key = _get_matching_spec_or_value(
+                cur_key, specification, path + (cur_key,)
+            )
+            data[cur_key] = process_makefile(
+                data[cur_key], specification[ref_key], path + (cur_key,), apply_defaults
+            )
+    elif isinstance(data, (list, type(None))) and isinstance(specification, list):
         if not all(_is_spec(spec) for spec in specification):
-            raise TypeError("Lists contains non-specification objects (%r): %r"
-                            % (_path_to_str(path), specification))
+            raise TypeError(
+                "Lists contains non-specification objects (%r): %r"
+                % (_path_to_str(path), specification)
+            )
         elif data is None:  # See comment above
             data = []
 
         specification = IsListOf(*specification)
         _instantiate_spec(specification)(path, data)
     elif not isinstance(specification, (dict, list)):
-        raise TypeError("Unexpected type in makefile specification at %r: %r!"
-                        % (_path_to_str(path), specification))
+        raise TypeError(
+            "Unexpected type in makefile specification at %r: %r!"
+            % (_path_to_str(path), specification)
+        )
     else:
-        raise MakefileError("Inconsistency between makefile specification and "
-                            "current makefile at %s:\n    Expected %s, "
-                            "found %s %r!" % (_path_to_str(path),
-                                           type(specification).__name__,
-                                           type(data).__name__,
-                                           data))
+        raise MakefileError(
+            "Inconsistency between makefile specification and "
+            "current makefile at %s:\n    Expected %s, "
+            "found %s %r!"
+            % (
+                _path_to_str(path),
+                type(specification).__name__,
+                type(data).__name__,
+                data,
+            )
+        )
 
     return data
 
@@ -290,7 +262,7 @@ DEFAULT_NOT_SET = object()
 REQUIRED_VALUE = object()
 
 
-class WithoutDefaults(object):
+class WithoutDefaults:
     """Wrapper object, that tells 'process_makefile' not to apply
     default values for the wrapped specification. See module docs
     for example usage.
@@ -300,7 +272,7 @@ class WithoutDefaults(object):
         self.specification = specification
 
 
-class PreProcessMakefile(object):
+class PreProcessMakefile:
     """Allows pre-processing of a part of a makefile prior to validation; when
     encountered, the object is called with the current value, and is expected
     to return a tuple containing (value, specification), which are then used
@@ -310,10 +282,10 @@ class PreProcessMakefile(object):
 
     def __call__(self, path, value):
         """Must return (value, specification) tuple."""
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no coverage
 
 
-class MakefileSpec(object):
+class MakefileSpec:
     """Base-class for specifications, from which ALL specification
     objects are expected to derive. Sub-classes must implement the
     'meets_spec' function, which must return True or False depending
@@ -327,21 +299,29 @@ class MakefileSpec(object):
 
         self.description = description
         self.default = default
-        if (default not in (DEFAULT_NOT_SET, REQUIRED_VALUE)) \
-                and not self.meets_spec(default):
-            raise ValueError(("Default value does not meet requirements:\n"
-                              "  Expected value(s): %s\n"
-                              "  Observed value(s): %r\n")
-                             % (description, default))
+        if (default not in (DEFAULT_NOT_SET, REQUIRED_VALUE)) and not self.meets_spec(
+            default
+        ):
+            raise ValueError(
+                (
+                    "Default value does not meet requirements:\n"
+                    "  Expected value: %s\n"
+                    "  Observed value: %r\n"
+                )
+                % (description, default)
+            )
 
     def __call__(self, path, value):
         if not self.meets_spec(value):
-            raise MakefileError(("Makefile requirement not met at %r:\n"
-                                 "  Expected value(s): %s\n"
-                                 "  Observed value(s): %r\n"
-                                 "  Observed type:     %s")
-                                % (_path_to_str(path), self.description,
-                                   value, type(value).__name__))
+            raise MakefileError(
+                (
+                    "Makefile requirement not met at %r:\n"
+                    "  Expected value: %s\n"
+                    "  Observed value: %r\n"
+                    "  Observed type:  %s"
+                )
+                % (_path_to_str(path), self.description, value, type(value).__name__)
+            )
 
     def meets_spec(self, _value):
         """Return True if value meets the specification, False otherwise."""
@@ -352,6 +332,7 @@ class MakefileSpec(object):
 ###############################################################################
 # Tests for basic types
 
+
 class IsInt(MakefileSpec):
     """Require that the value is either an Int or a Long."""
 
@@ -359,19 +340,17 @@ class IsInt(MakefileSpec):
         MakefileSpec.__init__(self, description, default)
 
     def meets_spec(self, value):
-        return isinstance(value, (types.IntType, types.LongType)) \
-            and not isinstance(value, types.BooleanType)
+        return isinstance(value, int) and not isinstance(value, bool)
 
 
 class IsUnsignedInt(IsInt):
     """Require that the value is either an Int or a Long, and >= 0."""
 
-    def __init__(self, description="an unsigned integer",
-                 default=DEFAULT_NOT_SET):
+    def __init__(self, description="an unsigned integer", default=DEFAULT_NOT_SET):
         IsInt.__init__(self, description, default)
 
     def meets_spec(self, value):
-        return IsInt.meets_spec(self, value) & (value >= 0)
+        return IsInt.meets_spec(self, value) and value >= 0
 
 
 class IsFloat(MakefileSpec):
@@ -381,7 +360,7 @@ class IsFloat(MakefileSpec):
         MakefileSpec.__init__(self, description, default)
 
     def meets_spec(self, value):
-        return isinstance(value, types.FloatType)
+        return isinstance(value, float)
 
 
 class IsBoolean(MakefileSpec):
@@ -391,25 +370,35 @@ class IsBoolean(MakefileSpec):
         MakefileSpec.__init__(self, description, default)
 
     def meets_spec(self, value):
-        return isinstance(value, types.BooleanType)
+        return isinstance(value, bool)
 
 
 class IsStr(MakefileSpec):
     """Require that the value is a non-empty string."""
 
-    def __init__(self, description="a non-empty string",
-                 default=DEFAULT_NOT_SET):
+    def __init__(self, description=None, default=DEFAULT_NOT_SET, min_len=1):
+        if description is None:
+            if min_len == 0:
+                description = "a string"
+            elif min_len == 1:
+                description = "a non-empty string"
+            elif min_len >= 2:
+                description = "a string at least %s characters long" % (min_len,)
+            else:
+                raise ValueError("min_len must be non-negative")
+
+        self._min_len = min_len
         MakefileSpec.__init__(self, description, default)
 
     def meets_spec(self, value):
-        return isinstance(value, types.StringTypes) and value
+        return isinstance(value, str) and len(value) >= self._min_len
 
 
 class IsNone(MakefileSpec):
     """Require that the value is None, typically signifying that
     the value was not set in the makefile."""
 
-    def __init__(self, description="None or not set", default=DEFAULT_NOT_SET):
+    def __init__(self, description="null or not set", default=DEFAULT_NOT_SET):
         if default is not DEFAULT_NOT_SET:
             raise NotImplementedError("IsNone does not support default values")
         MakefileSpec.__init__(self, description, default)
@@ -428,9 +417,27 @@ class ValueMissing(MakefileSpec):
         return False
 
 
+class DeprecatedOption(MakefileSpec):
+    """Used to signify substructures that have been deprecated, and are hence ignored."""
+
+    def __init__(self, description="deprecated settings"):
+        MakefileSpec.__init__(self, description, DEFAULT_NOT_SET)
+
+    def __call__(self, path, _value):
+        log = logging.getLogger(__name__)
+        log.warning(
+            "option has been deprecated and no longer has any effect: %s"
+            % (_path_to_str(path),)
+        )
+
+    def meets_spec(self, _value):
+        return True
+
+
 ###############################################################################
 ###############################################################################
 # BinaryOperators
+
 
 class _BinaryOperator(MakefileSpec):
     """Base class for binary operations; takes a operation function which is
@@ -442,16 +449,13 @@ class _BinaryOperator(MakefileSpec):
     _list_values is used to convert it to human readable form.
     """
 
-    def __init__(self, description, default, opfunc, rvalue, key=None,
-                 list_kword=None):
+    def __init__(self, description, default, opfunc, rvalue, key=None, list_kword=None):
         self._operator = opfunc
         self._keyfunc = key
         self._rvalue = rvalue
 
-        repr_func = repr
-        if list_kword is not None:
-            repr_func = lambda value: _list_values(value, list_kword)
-        description = description.format(rvalue=repr_func(rvalue))
+        rvalue_repr = _list_values(rvalue, list_kword) if list_kword else rvalue
+        description = description.format(rvalue=rvalue_repr)
         MakefileSpec.__init__(self, description, default)
 
     def meets_spec(self, value):
@@ -460,67 +464,91 @@ class _BinaryOperator(MakefileSpec):
         return self._operator(value, self._rvalue)
 
 
-def _create_binary_operator(operator_func, description, list_kword=None):
-    """Creates and returns a BinaryOperator class based on the given
-    operator_func function, which is assumed to be a function taking two
-    arguments (lvalue, rvalue) and returning a boolean value.
-    """
+class ValueIn(_BinaryOperator):
+    def __init__(
+        self,
+        rvalues,
+        key=None,
+        description="value in {rvalue}",
+        default=DEFAULT_NOT_SET,
+    ):
+        description = description.format(rvalue=_list_values(rvalues, "or"))
+        _BinaryOperator.__init__(
+            self,
+            description=description,
+            default=default,
+            opfunc=self._in_operator,
+            rvalue=rvalues,
+            key=key,
+        )
 
-    class _BinaryOperatorImpl(_BinaryOperator):
-        """Implements a binary operator specfication."""
-
-        def __init__(self, rvalue, key=None, description=description,
-                     default=DEFAULT_NOT_SET):
-            _BinaryOperator.__init__(self, description, default, operator_func,
-                                     rvalue, key, list_kword)
-    return _BinaryOperatorImpl
+    def _in_operator(self, lvalue, rvalues):
+        """Implements 'in' operator."""
+        return _is_hashable(lvalue) and lvalue in rvalues
 
 
-def _create_set_operator(operator_func, description):
-    """Creates and returns a BinaryOperator designed to operate on sets of
-    values. Thus, values in the makefile are expected to be either lists or
-    strings (for case sensitive operations).
-    """
+class ValuesIntersect(_BinaryOperator):
+    def __init__(self, rvalues, key=None, description=None, default=DEFAULT_NOT_SET):
+        if not description:
+            description = "one or more of %s" % (_list_values(rvalues, "and"),)
 
-    def _operator(lvalue, rvalue):
-        """Operator function for set based operations."""
-        if not isinstance(lvalue, (types.ListType,) + types.StringTypes):
+        _BinaryOperator.__init__(
+            self,
+            description=description,
+            default=default,
+            opfunc=self._operator,
+            rvalue=rvalues,
+            key=key,
+        )
+
+    def _operator(self, lvalue, rvalues):
+        try:
+            return not isinstance(lvalue, dict) and bool(
+                frozenset(lvalue).intersection(rvalues)
+            )
+        except TypeError:
             return False
-        elif not _are_keys_hashable(lvalue):
+
+
+class ValuesSubsetOf(_BinaryOperator):
+    def __init__(self, rvalues, key=None, description=None, default=DEFAULT_NOT_SET):
+        description = description or "subset of %s" % (_list_values(rvalues, "and"),)
+        _BinaryOperator.__init__(
+            self,
+            description=description,
+            default=default,
+            opfunc=self._operator,
+            rvalue=rvalues,
+            key=key,
+        )
+
+    def _operator(self, lvalue, rvalues):
+        try:
+            return not isinstance(lvalue, dict) and bool(
+                frozenset(lvalue).issubset(rvalues)
+            )
+        except TypeError:
             return False
-
-        return bool(operator_func(frozenset(lvalue), rvalue))
-
-    description = "%s {rvalue}" % (description,)
-    return _create_binary_operator(_operator, description, "or")
-
-
-ValueLT = _create_binary_operator(operator.lt, "value < {rvalue}")
-ValueLE = _create_binary_operator(operator.le, "value <= {rvalue}")
-ValueEQ = _create_binary_operator(operator.eq, "value = {rvalue}")
-ValueGE = _create_binary_operator(operator.ge, "value >= {rvalue}")
-ValueGT = _create_binary_operator(operator.gt, "value > {rvalue}")
-ValueIn = _create_binary_operator(lambda lvalue, rvalue: lvalue in rvalue,
-                                  "value in {rvalue}", "or")
-ValuesIntersect = _create_set_operator(frozenset.intersection, "contains")
-ValuesSubsetOf = _create_set_operator(frozenset.issubset, "subset of")
 
 
 ###############################################################################
 ###############################################################################
 # Logical operators
 
-class _MultipleSpecs(MakefileSpec):  # pylint: disable=W0223
+
+class _MultipleSpecs(MakefileSpec):
     """Base-class for logical operators for one or more specifications."""
 
-    def __init__(self, specs, kwargs, name, prefix="", postfix="",
-                 join_by=" ", fmt="%s"):
+    def __init__(
+        self, specs, kwargs, name, prefix="", postfix="", join_by=" ", fmt="%s"
+    ):
         self._specs = [_instantiate_spec(spec) for spec in specs]
         if not self._specs:
             raise ValueError("No specification given to %r" % (name.title(),))
         elif not all((spc.default is DEFAULT_NOT_SET) for spc in self._specs):
-            raise ValueError("Default values cannot be set in specs given to "
-                             "logical operators")
+            raise ValueError(
+                "Default values cannot be set in specs given to " "logical operators"
+            )
 
         description = [(fmt % (spec.description,)) for spec in self._specs]
         description = "%s%s%s" % (prefix, join_by.join(description), postfix)
@@ -535,8 +563,7 @@ class And(_MultipleSpecs):
     """
 
     def __init__(self, *specs, **kwargs):
-        _MultipleSpecs.__init__(self, specs, kwargs, "And",
-                                join_by=" and ", fmt="(%s)")
+        _MultipleSpecs.__init__(self, specs, kwargs, "And", join_by=" and ", fmt="(%s)")
 
     def meets_spec(self, value):
         return all(spec.meets_spec(value) for spec in self._specs)
@@ -549,29 +576,10 @@ class Or(_MultipleSpecs):
     """
 
     def __init__(self, *specs, **kwargs):
-        _MultipleSpecs.__init__(self, specs, kwargs, "Or",
-                                join_by=" or ", fmt="(%s)")
+        _MultipleSpecs.__init__(self, specs, kwargs, "Or", join_by=" or ", fmt="(%s)")
 
     def meets_spec(self, value):
         return any(spec.meets_spec(value) for spec in self._specs)
-
-
-class Xor(_MultipleSpecs):
-    """Takes two specification objects, and requires that values meets ONE and
-    ONLY ONE of these specifications. A default value may be set for the 'Xor'
-    specification, but not for the specifications given to the 'Xor' object.
-    """
-
-    def __init__(self, *specs, **kwargs):
-        if len(specs) != 2:
-            raise ValueError("'Xor' takes exactly 2 specifications, not %i"
-                             % (len(specs),))
-
-        _MultipleSpecs.__init__(self, specs, kwargs, "Xor",
-                                join_by=" xor ", fmt="(%s)")
-
-    def meets_spec(self, value):
-        return operator.xor(*(spec.meets_spec(value) for spec in self._specs))
 
 
 class Not(_MultipleSpecs):
@@ -581,8 +589,7 @@ class Not(_MultipleSpecs):
     """
 
     def __init__(self, spec, **kwargs):
-        _MultipleSpecs.__init__(self, [spec], kwargs, "Not",
-                                prefix="not ", fmt="(%s)")
+        _MultipleSpecs.__init__(self, [spec], kwargs, "Not", prefix="not ", fmt="(%s)")
 
     def meets_spec(self, value):
         return not self._specs[0].meets_spec(value)
@@ -603,14 +610,19 @@ class StringIn(_BinaryOperator):
     see 'ValueIn'.
     """
 
-    def __init__(self, rvalues, key=None,
-                 description="one of {rvalue}, case-insentive",
-                 default=DEFAULT_NOT_SET):
+    def __init__(
+        self,
+        rvalues,
+        key=None,
+        description="one of {rvalue}, case-insentive",
+        default=DEFAULT_NOT_SET,
+    ):
         description = description.format(rvalue=_list_values(rvalues, "or"))
         rvalues = frozenset(map(_safe_coerce_to_lowercase, rvalues))
 
-        _BinaryOperator.__init__(self, description, default,
-                                 self._string_in_operator, rvalues)
+        _BinaryOperator.__init__(
+            self, description, default, self._string_in_operator, rvalues
+        )
 
     @classmethod
     def _string_in_operator(cls, lvalue, rvalues):
@@ -621,108 +633,40 @@ class StringIn(_BinaryOperator):
         return _safe_coerce_to_lowercase(lvalue) in rvalues
 
 
-class _StrSetOperator(_BinaryOperator):
-    """Base class for set operations involving case-insensitive strings."""
-
-    def __init__(self, description, default, opfunc, rvalues, key=None):
-        rvalues = frozenset(map(_safe_coerce_to_lowercase, rvalues))
-        _BinaryOperator.__init__(self, description, default, opfunc, rvalues,
-                                 key)
-
-    def meets_spec(self, value):
-        if not isinstance(value, (types.ListType,) + types.StringTypes):
-            return False
-        elif not _are_keys_hashable(value):
-            return False
-
-        lvalues = frozenset(map(_safe_coerce_to_lowercase, value))
-        return _BinaryOperator.meets_spec(self, lvalues)
-
-
-class StringsIntersect(_StrSetOperator):
-    """Require that a set of values overlap with a pre-defined set of values
-    (as set in the constructor). For strings, values are compared in a case-
-    insensitive manner. For case-sensitive comparisons, see 'ValuesIntersect'.
-    """
-
-    def __init__(self, rvalue, key=None,
-                 description="contains {rvalue}, case-insentive",
-                 default=DEFAULT_NOT_SET):
-        description = description.format(rvalue=_list_values(rvalue, "and/or"))
-
-        _StrSetOperator.__init__(self, description, default,
-                                 self._string_intersection_operator,
-                                 frozenset(rvalue), key)
-
-    @classmethod
-    def _string_intersection_operator(cls, lvalue, rvalues):
-        """Implements case-insensitive 'intersect' operator."""
-        return bool(frozenset(lvalue).intersection(rvalues))
-
-
-class StringsSubsetOf(_StrSetOperator):
-    """Require that a set of values are a subset of a pre-defined set of values
-    (as set in the constructor). For strings, values are compared in a case-
-    insensitive manner. For case-sensitive comparisons, see 'ValuesSubsetOf'.
-
-    Note that empty sets are always considered to be a subset of the
-    pre-defined set.
-    """
-
-    def __init__(self, rvalue, key=None,
-                 description="subset of {rvalue}, case-insentive",
-                 default=DEFAULT_NOT_SET):
-        description = description.format(rvalue=_list_values(rvalue, "and"))
-
-        _StrSetOperator.__init__(self, description, default,
-                                 self._operator_func, frozenset(rvalue), key)
-
-    @classmethod
-    def _operator_func(cls, lvalue, rvalue):
-        """Operator implementation."""
-        return bool(frozenset(lvalue).issubset(rvalue))
-
-
-class StringIsUppercase(IsStr):
-    """Require that the value is a uppercase, non-empty string."""
-
-    def __init__(self, default=DEFAULT_NOT_SET):
-        IsStr.__init__(self, "an uppercase non-empty string", default)
-
-    def meets_spec(self, value):
-        return IsStr().meets_spec(value) and value.isupper()
-
-
 class StringStartsWith(IsStr):
     """Require that the value is a string with given prefix."""
 
     def __init__(self, prefix, default=DEFAULT_NOT_SET):
-        assert prefix and isinstance(prefix, types.StringTypes)
+        assert prefix and isinstance(prefix, str)
         self._prefix = prefix
-        description = "a string with the prefix %r" % (prefix,)
+        description = "a string with prefix %r" % (prefix,)
         IsStr.__init__(self, description, default)
 
     def meets_spec(self, value):
-        return IsStr.meets_spec(self, value) \
-            and value.startswith(self._prefix)
+        return super(StringStartsWith, self).meets_spec(value) and value.startswith(
+            self._prefix
+        )
 
 
 class StringEndsWith(IsStr):
     """Require that the value is a string with given postfix."""
 
     def __init__(self, postfix, default=DEFAULT_NOT_SET):
-        assert postfix and isinstance(postfix, types.StringTypes)
+        assert postfix and isinstance(postfix, str)
         self._postfix = postfix
-        description = "a string with the postfix %r" % (postfix,)
+        description = "a string with postfix %r" % (postfix,)
         IsStr.__init__(self, description, default)
 
     def meets_spec(self, value):
-        return IsStr.meets_spec(self, value) and value.endswith(self._postfix)
+        return super(StringEndsWith, self).meets_spec(value) and value.endswith(
+            self._postfix
+        )
 
 
 ###############################################################################
 ###############################################################################
 # Tests for collections
+
 
 class IsListOf(_MultipleSpecs):
     """Require that the value is a list, the contents of which matches one or
@@ -734,16 +678,24 @@ class IsListOf(_MultipleSpecs):
     """
 
     def __init__(self, *specs, **kwargs):
-        _MultipleSpecs.__init__(self, specs, kwargs, "IsListOf",
-                                prefix="[", postfix=", ...]",
-                                join_by=" or ", fmt="(%s)")
+        _MultipleSpecs.__init__(
+            self,
+            specs,
+            kwargs,
+            "IsListOf",
+            prefix="[",
+            postfix=", ...]",
+            join_by=" or ",
+            fmt="(%s)",
+        )
 
     def meets_spec(self, value):
-        if not isinstance(value, types.ListType):
+        if not isinstance(value, list):
             return False
 
-        return all(any(spec.meets_spec(lstvalue) for spec in self._specs)
-                   for lstvalue in value)
+        return all(
+            any(spec.meets_spec(lstvalue) for spec in self._specs) for lstvalue in value
+        )
 
 
 class IsDictOf(MakefileSpec):
@@ -765,17 +717,20 @@ class IsDictOf(MakefileSpec):
         elif self._value_spec.default is not DEFAULT_NOT_SET:
             raise ValueError("Default values cannot be set in value-specs")
 
-        description = "{(%s) : (%s)}" \
-            % (self._key_spec.description, self._value_spec.description)
+        description = "{(%s) : (%s)}" % (
+            self._key_spec.description,
+            self._value_spec.description,
+        )
         MakefileSpec.__init__(self, description, default)
 
     def meets_spec(self, value):
-        if not isinstance(value, types.DictType):
+        if not isinstance(value, dict):
             return False
 
-        for (key, value) in value.iteritems():
-            if not (self._key_spec.meets_spec(key)
-                    and self._value_spec.meets_spec(value)):
+        for (key, value) in value.items():
+            if not (
+                self._key_spec.meets_spec(key) and self._value_spec.meets_spec(value)
+            ):
                 return False
 
         return True
@@ -784,10 +739,6 @@ class IsDictOf(MakefileSpec):
 ###############################################################################
 ###############################################################################
 # Helper functions
-
-
-def _are_keys_hashable(value):
-    return all(_is_hashable(key) for key in value)
 
 
 def _is_hashable(value):
@@ -802,7 +753,7 @@ def _is_spec(spec):
     """Returns true if 'spec' is a specification instance or class."""
     if isinstance(spec, MakefileSpec):
         return True
-    elif isinstance(spec, types.TypeType) and issubclass(spec, MakefileSpec):
+    elif isinstance(spec, type) and issubclass(spec, MakefileSpec):
         return True
     return False
 
@@ -811,7 +762,7 @@ def _instantiate_spec(spec):
     """Takes a specification instance or class, and returns an instance."""
     if isinstance(spec, MakefileSpec):
         return spec
-    elif isinstance(spec, types.TypeType) and issubclass(spec, MakefileSpec):
+    elif isinstance(spec, type) and issubclass(spec, MakefileSpec):
         return spec()
     else:
         raise TypeError("Specifications must derive from 'MakefileSpec'")
@@ -819,7 +770,7 @@ def _instantiate_spec(spec):
 
 def _safe_coerce_to_lowercase(value):
     """Returns strings as lowercase, and any other types of value unchanged."""
-    if isinstance(value, types.StringTypes):
+    if isinstance(value, str):
         return value.lower()
     return value
 
@@ -830,7 +781,7 @@ def _list_values(values, sep):
     $ _list_values([1, 2, 3], "and")
     "[1, 2, and 3]"
     """
-    values = map(repr, values)
+    values = list(map(repr, values))
     if len(values) > 2:
         values = (", ".join(values[:-1]) + ",", values[-1])
     if len(values) == 2:
@@ -891,14 +842,16 @@ def _process_default_values(data, specification, path, apply_defaults):
                 if default_value.default is DEFAULT_NOT_SET:
                     continue
                 elif default_value.default is REQUIRED_VALUE:
-                    raise MakefileError("A value MUST be supplified for %r"
-                                        % (_path_to_str(path + (cur_key,))))
+                    raise MakefileError(
+                        "A value MUST be supplified for %r"
+                        % (_path_to_str(path + (cur_key,)))
+                    )
                 default_value = default_value.default
                 default_value_from_spec = True
 
-            if apply_defaults \
-                    and not isinstance(default_value, (PreProcessMakefile,
-                                                       WithoutDefaults)):
+            if apply_defaults and not isinstance(
+                default_value, (PreProcessMakefile, WithoutDefaults)
+            ):
                 if isinstance(default_value, dict):
                     # Setting of values in the dict will be accomplished
                     # in subsequent calls to _process_default_values
@@ -917,5 +870,4 @@ def _path_to_str(path):
     return ":".join(str(field) for field in path)
 
 
-CLI_PARAMETERS = Or(IsListOf(IsStr, IsInt, IsFloat),
-                    Or(IsStr, IsInt, IsFloat, IsNone))
+CLI_PARAMETERS = Or(IsListOf(IsStr, IsInt, IsFloat), Or(IsStr, IsInt, IsFloat, IsNone))

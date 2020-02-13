@@ -24,15 +24,15 @@ set -o nounset # Fail on unset variables
 set -o errexit # Fail on uncaught non-zero returncodes
 set -o pipefail # Fail is a command in a chain of pipes fails
 
-rm -rvf alignment/000_reads
-mkdir -p alignment/000_reads
-for PREFIX in `ls alignment/000_prefixes/*.fasta | grep -v rCRS`;
+rm -rvf alignment/s
+mkdir -p alignment/s
+for PREFIX in `ls alignment/prefixes/*.fasta | grep -v rCRS`;
 do
     SP_SEED=${RANDOM}
-    NAME=$(echo ${PREFIX} | sed -e's#alignment/000_prefixes/##' -e's#\..*##')
-    mkdir -p alignment/000_reads/${NAME/*\//}/
+    NAME=$(echo ${PREFIX} | sed -e's#alignment/prefixes/##' -e's#\..*##')
+    mkdir -p alignment/reads/${NAME/*\//}/
 
-    ./synthesize_reads.py ${PREFIX} alignment/000_reads/${NAME}/ \
+    ./synthesize_reads.py ${PREFIX} alignment/reads/${NAME}/ \
 	--specimen-seed=${SP_SEED} \
 	--lanes-reads-mu=50000 \
 	--lanes-reads-sigma=500 \
@@ -42,9 +42,9 @@ do
 done
 
 # These links would not survive the package installation, so setup here
-ln -sf ../../alignment/000_prefixes/ phylogeny/data/prefixes
+ln -sf ../../alignment/prefixes/ phylogeny/data/prefixes
 ln -sf ../../alignment phylogeny/data/samples
 
 # Create link to reference sequence
 mkdir -p phylogeny/data/refseqs
-ln -sf ../../../alignment/000_prefixes/rCRS.fasta phylogeny/data/refseqs/rCRS.rCRS.fasta
+ln -sf ../../../alignment/prefixes/rCRS.fasta phylogeny/data/refseqs/rCRS.rCRS.fasta

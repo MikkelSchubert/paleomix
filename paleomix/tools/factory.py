@@ -29,8 +29,7 @@ import sys
 
 import paleomix.main
 
-from paleomix.atomiccmd.builder import \
-    AtomicCmdBuilder
+from paleomix.atomiccmd.builder import AtomicCmdBuilder
 
 
 def new(command, *args, **kwargs):
@@ -46,10 +45,9 @@ def new(command, *args, **kwargs):
 
 def _build_cat_command():
     """Returns an AtomicCmdBuilder for the 'paleomix cat' command."""
-    return _build_paleomix_command("cat",
-                                   EXEC_GZIP="gzip",
-                                   EXEC_BZIP="bzip2",
-                                   EXEC_CAT="cat")
+    return _build_paleomix_command(
+        "cat", EXEC_GZIP="gzip", EXEC_BZIP="bzip2", EXEC_CAT="cat"
+    )
 
 
 def _build_paleomix_command(*args, **kwargs):
@@ -57,11 +55,7 @@ def _build_paleomix_command(*args, **kwargs):
     interpreter = sys.executable
     script = paleomix.main.__file__
 
-    return AtomicCmdBuilder((interpreter, script) + args,
-                            AUX_PALEOMIX=script,
-                            **kwargs)
+    return AtomicCmdBuilder((interpreter, script) + args, AUX_PALEOMIX=script, **kwargs)
 
 
-_SPECIAL_COMMANDS = {
-    "cat": _build_cat_command,
-}
+_SPECIAL_COMMANDS = {"cat": _build_cat_command}

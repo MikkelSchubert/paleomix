@@ -66,14 +66,6 @@ Following succesful completion of these commands, the paleomix tools will be acc
     $ echo 'export PATH=~/bin:$PATH' >> ~/.bashrc
     $ ln -s ~/install/virtualenvs/paleomix/bin/paleomix ~/bin/
 
-PALEOMIX also includes a number of optional shortcuts which may be used in place of running 'paleomix <command>' (for example, the command 'bam_pipeline' is equivalent to running 'paleomix bam_pipeline')::
-
-    $ ln -s ~/install/virtualenvs/paleomix/bin/bam_pipeline ~/bin/
-    $ ln -s ~/install/virtualenvs/paleomix/bin/conv_gtf_to_bed ~/bin/
-    $ ln -s ~/install/virtualenvs/paleomix/bin/phylo_pipeline ~/bin/
-    $ ln -s ~/install/virtualenvs/paleomix/bin/bam_rmdup_collapsed ~/bin/
-    $ ln -s ~/install/virtualenvs/paleomix/bin/trim_pipeline ~/bin/
-
 
 Upgrading an existing installation
 ----------------------------------

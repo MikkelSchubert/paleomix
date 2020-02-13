@@ -22,15 +22,10 @@
 #
 import os
 import sys
-import types
 
 import pysam
 
-from paleomix.common.utilities import \
-    fragment, \
-    split_before, \
-    Immutable, \
-    TotallyOrdered
+from paleomix.common.utilities import fragment, split_before, Immutable, TotallyOrdered
 from paleomix.common.fileutils import open_ro
 from paleomix.common.formats._common import FormatError
 
@@ -41,17 +36,14 @@ class FASTAError(FormatError):
 
 class FASTA(TotallyOrdered, Immutable):
     def __init__(self, name, meta, sequence):
-        if not (name and isinstance(name, types.StringTypes)):
+        if not (name and isinstance(name, str)):
             raise FASTAError("FASTA name must be a non-empty string")
-        elif not (isinstance(meta, types.StringTypes) or (meta is None)):
+        elif not (isinstance(meta, str) or (meta is None)):
             raise FASTAError("FASTA meta must be a string, or None")
-        elif not isinstance(sequence, types.StringTypes):
+        elif not isinstance(sequence, str):
             raise FASTAError("FASTA sequence must be a string")
 
-        Immutable.__init__(self,
-                           name=name,
-                           meta=meta,
-                           sequence=sequence)
+        Immutable.__init__(self, name=name, meta=meta or "", sequence=sequence)
 
     def write(self, fileobj=sys.stdout):
         """Prints a FASTA sequence (iterable), wrapping long sequences at 60
@@ -69,18 +61,17 @@ class FASTA(TotallyOrdered, Immutable):
             if (not name.startswith(">")) or (len(name) == 1):
                 raise FASTAError("Unnamed FASTA record")
             elif len(record) == 1:
-                raise FASTAError("FASTA record does not contain sequence: %s"
-                                 % (name[1:],))
+                raise FASTAError(
+                    "FASTA record does not contain sequence: %s" % (name[1:],)
+                )
 
             # Split out any meta information
             name_and_meta = name[1:].split(None, 1)
             if len(name_and_meta) < 2:
-                name_and_meta.append(None)
+                name_and_meta.append("")
             name, meta = name_and_meta
 
-            yield FASTA(name=name,
-                        meta=meta,
-                        sequence="".join(record[1:]))
+            yield FASTA(name=name, meta=meta, sequence="".join(record[1:]))
 
     @classmethod
     def from_file(cls, filename):
@@ -106,16 +97,17 @@ class FASTA(TotallyOrdered, Immutable):
             dirname = os.path.dirname(filename) or "."
 
             if not os.access(dirname, os.W_OK):
-                message = \
-                    "FASTA index is missing, but folder is " \
-                    "not writable, so it cannot be created:\n" \
-                    "  Filename = %s\n\n" \
-                    "Either change permissions on the folder, or move " \
+                message = (
+                    "FASTA index is missing, but folder is "
+                    "not writable, so it cannot be created:\n"
+                    "  Filename = %s\n\n"
+                    "Either change permissions on the folder, or move "
                     "the FASTA file to different location." % (filename,)
+                )
                 raise FASTAError(message)
 
             # Use pysam to index the file
-            pysam.Fastafile(filename).close()
+            pysam.FastaFile(filename).close()
 
         names = set()
         contigs = []
@@ -123,10 +115,12 @@ class FASTA(TotallyOrdered, Immutable):
             for line in faihandle:
                 name, length, _ = line.split(None, 2)
                 if name in names:
-                    raise FASTAError("Reference contains multiple identically "
-                                     "named sequences:\n  Path = %r\n  Name = "
-                                     "%r\nPlease ensure that sequences have "
-                                     "unique names" % (filename, name))
+                    raise FASTAError(
+                        "Reference contains multiple identically "
+                        "named sequences:\n  Path = %r\n  Name = "
+                        "%r\nPlease ensure that sequences have "
+                        "unique names" % (filename, name)
+                    )
                 names.add(name)
                 contigs.append((name, int(length)))
 
@@ -136,8 +130,11 @@ class FASTA(TotallyOrdered, Immutable):
         if not isinstance(other, FASTA):
             return NotImplemented
 
-        return (self.name, self.meta, self.sequence) \
-            < (other.name, other.meta, other.sequence)
+        return (self.name, self.meta, self.sequence) < (
+            other.name,
+            other.meta,
+            other.sequence,
+        )
 
     def __hash__(self):
         return hash((self.name, self.meta, self.sequence))

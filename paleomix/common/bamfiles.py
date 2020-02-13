@@ -37,15 +37,16 @@ BAM_PROPER_SEGMENTS = 0x2
 BAM_SEGMENTED = 0x1
 
 # Default filters when processing reads
-EXCLUDED_FLAGS = \
-    BAM_SUPPLEMENTARY_ALIGNMENT | \
-    BAM_PCR_DUPLICATE | \
-    BAM_QUALITY_CONTROL_FAILED | \
-    BAM_SECONDARY_ALIGNMENT | \
-    BAM_READ_IS_UNMAPPED
+EXCLUDED_FLAGS = (
+    BAM_SUPPLEMENTARY_ALIGNMENT
+    | BAM_PCR_DUPLICATE
+    | BAM_QUALITY_CONTROL_FAILED
+    | BAM_SECONDARY_ALIGNMENT
+    | BAM_READ_IS_UNMAPPED
+)
 
 
-class BAMRegionsIter(object):
+class BAMRegionsIter:
     """Iterates over a BAM file, yield a separate iterator for each contig
     in the BAM or region in the list of regions if these are species, which in
     turn iterates over individual positions. This allows for the following
@@ -79,17 +80,13 @@ class BAMRegionsIter(object):
     def __iter__(self):
         if self._regions:
             for region in self._regions:
-                records = self._handle.fetch(region.contig,
-                                             region.start,
-                                             region.end)
+                records = self._handle.fetch(region.contig, region.start, region.end)
                 records = self._filter(records)
 
                 tid = self._handle.gettid(region.contig)
-                yield _BAMRegion(tid, records,
-                                 region.name,
-                                 region.start,
-                                 region.end)
+                yield _BAMRegion(tid, records, region.name, region.start, region.end)
         else:
+
             def _by_tid(record):
                 """Group by reference ID."""
                 return record.tid
@@ -113,11 +110,11 @@ class BAMRegionsIter(object):
         """Filters records by flags, if 'exclude_flags' is set."""
         if self._excluded:
             pred = lambda record: not record.flag & self._excluded
-            return itertools.ifilter(pred, records)
+            return filter(pred, records)
         return records
 
 
-class _BAMRegion(object):
+class _BAMRegion:
     """Implements iteration over sites in a BAM file. It is assumed that the
     BAM file is sorted, and that the input records are from one contig.
     """

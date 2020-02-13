@@ -20,18 +20,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import binascii
 import copy
-import cPickle
 import heapq
 import itertools
-import pickle
-import types
 
 
 def _safe_coerce(cls):
     def _do_safe_coerce(value):
-        if isinstance(value, (types.StringTypes, types.DictType)):
+        if isinstance(value, (str, dict)):
             return cls((value,))
 
         try:
@@ -39,16 +35,17 @@ def _safe_coerce(cls):
         except TypeError:
             return cls((value,))
 
-    _do_safe_coerce.__doc__ = \
-        """Takes a value which be a single object, or an an iterable
+    _do_safe_coerce.__doc__ = """Takes a value which be a single object, or an an iterable
         and returns the content wrapped in a {0}. In the case of strings,
         and dictionaries the original string object is returned in a {0},
         and not as a {0} of chars. A TypeError is raised if this is not
-        possible (e.g. dict in frozenset).""".format(cls.__name__)
-    _do_safe_coerce.__name__ = \
-        "safe_coerce_to_{0}".format(cls.__name__)
+        possible (e.g. dict in frozenset).""".format(
+        cls.__name__
+    )
+    _do_safe_coerce.__name__ = "safe_coerce_to_{0}".format(cls.__name__)
 
     return _do_safe_coerce
+
 
 safe_coerce_to_tuple = _safe_coerce(tuple)
 safe_coerce_to_frozenset = _safe_coerce(frozenset)
@@ -59,10 +56,6 @@ def try_cast(value, cast_to):
         return cast_to(value)
     except (ValueError, TypeError):
         return value
-
-
-def crc32(data):
-    return binascii.crc32(data) & 0xffffffff
 
 
 def set_in(dictionary, keys, value):
@@ -123,18 +116,11 @@ def split_before(iterable, pred):
         yield items
 
 
-def is_strictly_increasing(lst):
-    """Returns true if the contents of the list is strictly increasing."""
-    pairs = itertools.izip(lst, itertools.islice(lst, 1, None))
-
-    return all(x < y for (x, y) in pairs)
-
-
 # Copied from the Python 'itertools' module documentation
 def grouper(size, iterable, fillvalue=None):
     "grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"
     args = [iter(iterable)] * size
-    return itertools.izip_longest(fillvalue=fillvalue, *args)
+    return itertools.zip_longest(fillvalue=fillvalue, *args)
 
 
 def group_by_pred(pred, iterable):
@@ -153,7 +139,7 @@ def group_by_pred(pred, iterable):
 
 def fragment(size, lstlike):
     """Faster alternative to grouper for lists/strings."""
-    return (lstlike[i:i + size] for i in range(0, len(lstlike), size))
+    return (lstlike[i : i + size] for i in range(0, len(lstlike), size))
 
 
 def cumsum(lst, initial=0):
@@ -164,19 +150,6 @@ def cumsum(lst, initial=0):
         yield initial
 
 
-def fast_pickle_test(obj):
-    """Attempts to pickle an object, raising a PicklingError
-    if the object is unpicklable. This function uses cPickle
-    to determine if the object is pickable, but 'pickle' to
-    generate the exception, since the python module produces
-    more informative error messages."""
-    try:
-        cPickle.dumps(obj)
-    except (TypeError, cPickle.PicklingError):
-        pickle.dumps(obj)
-        assert False  # pragma: no coverage
-
-
 def fill_dict(destination, source):
     """Returns a copy of 'destination' after setting missing key-
     pairs with copies of those of 'source' recursively."""
@@ -185,8 +158,7 @@ def fill_dict(destination, source):
 
     def _fill_dict(cur_dest, cur_src):
         for key in cur_src:
-            if isinstance(cur_src[key], dict) \
-                    and isinstance(cur_dest.get(key), dict):
+            if isinstance(cur_src[key], dict) and isinstance(cur_dest.get(key), dict):
                 _fill_dict(cur_dest[key], cur_src[key])
             elif key not in cur_dest:
                 cur_dest[key] = cur_src[key]
@@ -207,15 +179,16 @@ def chain_sorted(*sequences, **kwargs):
       >>> tuple(chain_sorted((1, 3, 5), (0, 2, 4)))
       (0, 1, 2, 3, 4, 5)
     """
-    key = kwargs.pop('key', None)
+    key = kwargs.pop("key", None)
     if kwargs:
-        raise TypeError("chain_sorted expected keyword 'key', got %r"
-                        % (', '.join(kwargs)))
+        raise TypeError(
+            "chain_sorted expected keyword 'key', got %r" % (", ".join(kwargs))
+        )
 
     iterators = []
     for index, sequence_iter in enumerate(map(iter, sequences)):
         try:
-            current = sequence_iter.next()
+            current = next(sequence_iter)
             key_value = current if key is None else key(current)
 
             iterators.append((key_value, index, current, sequence_iter))
@@ -235,8 +208,7 @@ def chain_sorted(*sequences, **kwargs):
 
             # Optimization for runs of repeated values
             if key_value != last_key_value:
-                _heapreplace(iterators,
-                             (key_value, index, current, sequence_iter))
+                _heapreplace(iterators, (key_value, index, current, sequence_iter))
                 break
             else:
                 yield current
@@ -252,14 +224,14 @@ def chain_sorted(*sequences, **kwargs):
             yield current
 
 
-class Immutable(object):
+class Immutable:
     """Mixin implementing a immutable class; member variables are specified in
     the init function, cannot be changed afterwards; note that this does not
     prevent changes to the member variables themselves (if not immutable)."""
 
     def __init__(self, **kwargs):
         object.__init__(self)
-        for (key, value) in kwargs.iteritems():
+        for (key, value) in kwargs.items():
             object.__setattr__(self, key, value)
 
     def __setattr__(self, _name, _value):
@@ -269,7 +241,7 @@ class Immutable(object):
         raise NotImplementedError("Object is immutable")
 
 
-class TotallyOrdered(object):
+class TotallyOrdered:
     """Mixin implementing a rich-comparison interface, provided
     that the subclass implements the less-than operator (__lt__).
     The __lt__ function should return NotImplemented if the other
@@ -305,7 +277,7 @@ class TotallyOrdered(object):
     def __gt__(self, other):
         if not isinstance(other, type(self)):
             return NotImplemented
-        return (other < self)
+        return other < self
 
     # Shut up warning; if hashable, then the subclass will have
     # to implement the __hash__ member function.

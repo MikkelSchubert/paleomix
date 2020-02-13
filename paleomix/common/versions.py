@@ -20,8 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-# pylint: disable=too-few-public-methods
-#
 """Version checks for apps or libraries required by PALEOMIX pipelines.
 
 The module contains to sets of classes: RequirementObj and Check. The
@@ -45,14 +43,10 @@ For example, to check that the Java version is v1.7 or later:
     except VersionRequirementError:
         pass  # requirements not met, or failure to determine version
 """
-import collections
 import operator
 import re
 
-from paleomix.common.utilities import \
-    TotallyOrdered, \
-    safe_coerce_to_tuple, \
-    try_cast
+from paleomix.common.utilities import TotallyOrdered, safe_coerce_to_tuple, try_cast
 
 import paleomix.common.procs as procs
 
@@ -71,7 +65,6 @@ class VersionRequirementError(Exception):
 
 def Requirement(call, search, checks, name=None, priority=0):
     # Ignore function naming scheme
-    # pylint: disable=C0103
     """Returns a singleton Requirement object, based on the parameters,
     which may be used to check that version requirements are met for a
     given program/utility/module, etc.
@@ -117,7 +110,7 @@ def Requirement(call, search, checks, name=None, priority=0):
     return requirement
 
 
-class RequirementObj(object):
+class RequirementObj:
     """Represents a version requirement."""
 
     def __init__(self, call, search, checks, name=None, priority=0):
@@ -143,6 +136,9 @@ class RequirementObj(object):
             except OSError as error:
                 self._raise_failure(error)
 
+            if isinstance(output, bytes):
+                output = output.decode("utf-8", "replace")
+
             # Raise an exception if the JRE is outdated, even if the
             # version could be determined (likely a false positive match).
             self._check_for_outdated_jre(output)
@@ -151,8 +147,9 @@ class RequirementObj(object):
             if not match:
                 self._raise_failure(output)
 
-            self._version = tuple(0 if value is None else try_cast(value, int)
-                                  for value in match.groups())
+            self._version = tuple(
+                0 if value is None else try_cast(value, int) for value in match.groups()
+            )
 
         return self._version
 
@@ -161,15 +158,17 @@ class RequirementObj(object):
         """Returns the executable invoked during version determination; if no
         executable is invoked, None is returned.
         """
-        if not isinstance(self._call[0], collections.Callable):
+        if not callable(self._call[0]):
             return self._call[0]
 
     def __call__(self, force=False):
         if force or self._done is None:
             if not self.checks(self.version):
-                lines = ["Version requirements not met for %s; please refer\n"
-                         "to the PALEOMIX documentation for more information."
-                         "\n" % (self.name,)]
+                lines = [
+                    "Version requirements not met for %s; please refer\n"
+                    "to the PALEOMIX documentation for more information."
+                    "\n" % (self.name,)
+                ]
                 lines.extend(self._describe_call())
 
                 version = _pprint_version(self.version)
@@ -204,18 +203,18 @@ class RequirementObj(object):
             lines.append("    %s: %s" % (output.__class__.__name__, output))
         elif "UnsupportedClassVersionError" in output:
             # Raised if the JRE is too old compared to the JAR
-            lines.extend([
-                "The version of the Java Runtime Environment on this",
-                "system is too old; please check the the requirement",
-                "for the program and upgrade your version of Java.",
-                "",
-                "See the documentation for more information.",
-            ])
+            lines.extend(
+                [
+                    "The version of the Java Runtime Environment on this",
+                    "system is too old; please check the the requirement",
+                    "for the program and upgrade your version of Java.",
+                    "",
+                    "See the documentation for more information.",
+                ]
+            )
         else:
-            lines.append(
-                "Program may be broken or a version not supported by the")
-            lines.append(
-                "pipeline; please refer to the PALEOMIX documentation.\n")
+            lines.append("Program may be broken or a version not supported by the")
+            lines.append("pipeline; please refer to the PALEOMIX documentation.\n")
             lines.append("    Required:       %s" % (self.checks,))
             lines.append("    Search string:  %s\n" % (self._rege.pattern))
             lines.append("%s Command output %s" % ("-" * 22, "-" * 22))
@@ -225,7 +224,7 @@ class RequirementObj(object):
 
     def _describe_call(self):
         """Returns lines describing the current system call, if any."""
-        if not isinstance(self._call[0], collections.Callable):
+        if not callable(self._call[0]):
             yield "Attempted to run command:"
             yield "    $ %s" % (" ".join(self._call),)
 
@@ -244,8 +243,8 @@ class Check(TotallyOrdered):
     """
 
     def __init__(self, description, func, *values):
-        if not isinstance(func, collections.Callable):
-            raise TypeError('func must be callable, not %r' % (func,))
+        if not callable(func):
+            raise TypeError("func must be callable, not %r" % (func,))
 
         values = tuple(values)
         self._func = func
@@ -256,10 +255,10 @@ class Check(TotallyOrdered):
     def __str__(self):
         return self._description
 
-    def __lt__(self, other):
+    def __eq__(self, other):
         if isinstance(other, Check):
-            return self._objs < other._objs  # pylint: disable=W0212
-        return NotImplemented  # pragma: no coverage
+            return self._objs == other._objs
+        return NotImplemented
 
     def __hash__(self):
         return hash(self._objs)
@@ -287,12 +286,12 @@ class CheckVersion(Check):
 
     def _do_check_version(self, current, reference):
         if len(current) < len(reference):
-            raise ValueError("Expects at least %i fields, not %i: %r"
-                             % (len(reference), len(current), current))
+            raise ValueError(
+                "Expects at least %i fields, not %i: %r"
+                % (len(reference), len(current), current)
+            )
 
-        return Check._do_check_version(self,
-                                       current[:len(reference)],
-                                       reference)
+        return Check._do_check_version(self, current[: len(reference)], reference)
 
 
 class EQ(CheckVersion):
@@ -374,6 +373,7 @@ class Or(Operator):
 ###############################################################################
 # Check functions; must be available for pickle
 
+
 def _func_any(_current, _checks):
     """Implementation of Any."""
     return True
@@ -393,6 +393,7 @@ def _func_or(current, checks):
 ###############################################################################
 # Utility functions
 
+
 def _run(call):
     """Carries out a system call and returns STDOUT and STDERR as a combined
     string. If an OSError is raied (e.g. due to missing executables), the
@@ -400,10 +401,12 @@ def _run(call):
     then the exception is returned as a value.
     """
     try:
-        proc = procs.open_proc(call,
-                               stdout=procs.PIPE,
-                               # Merge STDERR with STDOUT output
-                               stderr=procs.STDOUT)
+        proc = procs.open_proc(
+            call,
+            stdout=procs.PIPE,
+            # Merge STDERR with STDOUT output
+            stderr=procs.STDOUT,
+        )
 
         return proc.communicate()[0]
     except OSError as error:
@@ -418,7 +421,7 @@ def _do_call(call):
     try:
         result = _CALL_CACHE[call]
     except KeyError:
-        if isinstance(call[0], collections.Callable):
+        if callable(call[0]):
             result = call[0](*call[1:])
         else:
             result = _run(call)

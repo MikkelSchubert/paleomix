@@ -21,26 +21,18 @@
 # SOFTWARE.
 #
 import os
-import types
 
-from paleomix.common.utilities import \
-    safe_coerce_to_tuple
+from paleomix.common.utilities import safe_coerce_to_tuple
 
-from paleomix.nodes.picard import \
-    MarkDuplicatesNode
-from paleomix.atomiccmd.builder import \
-    apply_options
-from paleomix.nodes.mapdamage import \
-    MapDamagePlotNode, \
-    MapDamageModelNode, \
-    MapDamageRescaleNode
-from paleomix.tools.bam_pipeline.nodes import \
-    index_and_validate_bam
-from paleomix.nodes.commands import \
-    DuplicateHistogramNode, \
-    FilterCollapsedBAMNode
-from paleomix.nodes.validation import \
-    DetectInputDuplicationNode
+from paleomix.nodes.picard import MarkDuplicatesNode
+from paleomix.nodes.mapdamage import (
+    MapDamagePlotNode,
+    MapDamageModelNode,
+    MapDamageRescaleNode,
+)
+from paleomix.tools.bam_pipeline.nodes import index_and_validate_bam
+from paleomix.nodes.commands import DuplicateHistogramNode, FilterCollapsedBAMNode
+from paleomix.nodes.validation import DetectInputDuplicationNode
 
 
 class Library:
@@ -67,8 +59,7 @@ class Library:
         self.options = lanes[0].options
         self.folder = os.path.dirname(self.lanes[0].folder)
 
-        assert all((self.folder == os.path.dirname(lane.folder))
-                   for lane in self.lanes)
+        assert all((self.folder == os.path.dirname(lane.folder)) for lane in self.lanes)
         assert all((self.options == lane.options) for lane in self.lanes)
 
         lane_bams = self._collect_bams_by_type(self.lanes)
@@ -77,22 +68,23 @@ class Library:
         if pcr_duplicates:
             # pcr_duplicates may be "mark" or any trueish value
             lane_bams = self._remove_pcr_duplicates(
-                config, prefix, lane_bams, pcr_duplicates)
+                config, prefix, lane_bams, pcr_duplicates
+            )
 
         # At this point we no longer need to differentiate between read types
         files_and_nodes = self._collect_files_and_nodes(lane_bams)
 
         # Collect output bams, possible following rescaling
-        self.bams, mapdamage_nodes \
-            = self._build_mapdamage_nodes(config, target, prefix, files_and_nodes)
+        self.bams, mapdamage_nodes = self._build_mapdamage_nodes(
+            config, target, prefix, files_and_nodes
+        )
 
         nodes = [self._build_dataduplication_node(lane_bams)]
         nodes.extend(mapdamage_nodes)
 
-        histogram_node = self._build_duphist_nodes(config=config,
-                                                   target=target,
-                                                   prefix=prefix,
-                                                   files_and_nodes=lane_bams)
+        histogram_node = self._build_duphist_nodes(
+            config=config, target=target, prefix=prefix, files_and_nodes=lane_bams
+        )
         if histogram_node:
             nodes.append(histogram_node)
 
@@ -102,7 +94,7 @@ class Library:
     def _collect_bams_by_type(cls, lanes):
         bams = {}
         for lane in lanes:
-            for key, files in lane.bams.iteritems():
+            for key, files in lane.bams.items():
                 key = "collapsed" if (key == "Collapsed") else "normal"
                 bams.setdefault(key, {}).update(files)
 
@@ -111,128 +103,141 @@ class Library:
     @classmethod
     def _collect_files_and_nodes(cls, bams):
         files_and_nodes = {}
-        for dd in bams.itervalues():
+        for dd in bams.values():
             files_and_nodes.update(dd)
         return files_and_nodes
 
     def _remove_pcr_duplicates(self, config, prefix, bams, strategy):
-        rmdup_cls = {"collapsed": FilterCollapsedBAMNode,
-                     "normal": MarkDuplicatesNode}
+        rmdup_cls = {"collapsed": FilterCollapsedBAMNode, "normal": MarkDuplicatesNode}
 
         keep_duplicates = False
-        if isinstance(strategy, types.StringTypes) and (strategy.lower() == "mark"):
+        if isinstance(strategy, str) and (strategy.lower() == "mark"):
             keep_duplicates = True
 
         # Indexing is required if we wish to calulate per-region statistics,
-        index_required = (bool(prefix.get("RegionsOfInterest")) or
-                          # or if we wish to run GATK, but only if we don't
-                          # use a downstream rescaled BAM as input for GATK
-                          (self.options["Features"]["RealignedBAM"] and not
-                           self.options["Features"]["mapDamage"] == 'rescale'))
+        # or if we wish to run GATK, but only if we don't use a downstream
+        # rescaled BAM as input for GATK
+        index_required = bool(prefix.get("RegionsOfInterest")) or (
+            self.options["Features"]["RealignedBAM"]
+            and not self.options["Features"]["mapDamage"] == "rescale"
+        )
 
         results = {}
         for (key, files_and_nodes) in bams.items():
             output_filename = self.folder + ".rmdup.%s.bam" % key
-            node = rmdup_cls[key](config=config,
-                                  input_bams=files_and_nodes.keys(),
-                                  output_bam=output_filename,
-                                  keep_dupes=keep_duplicates,
-                                  dependencies=files_and_nodes.values())
-            validated_node = index_and_validate_bam(config=config,
-                                                    prefix=prefix,
-                                                    node=node,
-                                                    create_index=index_required)
+            node = rmdup_cls[key](
+                config=config,
+                input_bams=list(files_and_nodes.keys()),
+                output_bam=output_filename,
+                keep_dupes=keep_duplicates,
+                dependencies=list(files_and_nodes.values()),
+            )
+            validated_node = index_and_validate_bam(
+                config=config, prefix=prefix, node=node, create_index=index_required
+            )
 
             results[key] = {output_filename: validated_node}
         return results
 
     def _build_mapdamage_nodes(self, config, target, prefix, files_and_nodes):
         # Messing with these does not cause the pipeline to re-do other stuff
-        destination = os.path.join(config.destination,
-                                   "%s.%s.mapDamage"
-                                   % (target, prefix["Name"]), self.name)
+        destination = os.path.join(
+            config.destination, "%s.%s.mapDamage" % (target, prefix["Name"]), self.name
+        )
 
         run_type = self.options["Features"]["mapDamage"]
-        if run_type == 'rescale':
-            return self._mapdamage_rescale(config=config,
-                                           destination=destination,
-                                           prefix=prefix,
-                                           files_and_nodes=files_and_nodes)
+        if run_type == "rescale":
+            return self._mapdamage_rescale(
+                config=config,
+                destination=destination,
+                prefix=prefix,
+                files_and_nodes=files_and_nodes,
+            )
 
-        elif run_type == 'model':
+        elif run_type == "model":
             # Run of mapDamage including both plots and damage models
-            node = self._mapdamage_model(config=config,
-                                         destination=destination,
-                                         prefix=prefix,
-                                         files_and_nodes=files_and_nodes)
+            node = self._mapdamage_model(
+                config=config,
+                destination=destination,
+                prefix=prefix,
+                files_and_nodes=files_and_nodes,
+            )
 
             return files_and_nodes, (node,)
-        elif run_type == 'plot':
+        elif run_type == "plot":
             # Basic run of mapDamage, only generates plots / tables
-            node = self._mapdamage_plot(config=config,
-                                        destination=destination,
-                                        prefix=prefix,
-                                        files_and_nodes=files_and_nodes)
+            node = self._mapdamage_plot(
+                config=config,
+                destination=destination,
+                prefix=prefix,
+                files_and_nodes=files_and_nodes,
+            )
 
             return files_and_nodes, (node,)
         else:
-            assert run_type == 'no', run_type
+            assert run_type == "no", run_type
             return files_and_nodes, ()
 
     def _mapdamage_plot(self, config, destination, prefix, files_and_nodes):
         title = "mapDamage plot for library %r" % (self.name,)
 
-        dependencies = files_and_nodes.values()
-        plot = MapDamagePlotNode.customize(config=config,
-                                           reference=prefix["Path"],
-                                           input_files=files_and_nodes.keys(),
-                                           output_directory=destination,
-                                           title=title,
-                                           dependencies=dependencies)
-        apply_options(plot.command, self.options["mapDamage"])
-
-        return plot.build_node()
+        return MapDamagePlotNode(
+            config=config,
+            reference=prefix["Path"],
+            input_files=list(files_and_nodes),
+            output_directory=destination,
+            title=title,
+            options=self.options["mapDamage"],
+            dependencies=files_and_nodes.values(),
+        )
 
     def _mapdamage_model(self, config, destination, prefix, files_and_nodes):
         # Generates basic plots / table files
-        plot = self._mapdamage_plot(config=config,
-                                    destination=destination,
-                                    prefix=prefix,
-                                    files_and_nodes=files_and_nodes)
+        plot = self._mapdamage_plot(
+            config=config,
+            destination=destination,
+            prefix=prefix,
+            files_and_nodes=files_and_nodes,
+        )
 
         # Builds model of post-mortem DNA damage
-        model = MapDamageModelNode.customize(reference=prefix["Reference"],
-                                             directory=destination,
-                                             dependencies=plot)
-        apply_options(model.command, self.options["mapDamage"])
-        return model.build_node()
+        return MapDamageModelNode(
+            reference=prefix["Reference"],
+            directory=destination,
+            options=self.options["mapDamage"],
+            dependencies=plot,
+        )
 
     def _mapdamage_rescale(self, config, destination, prefix, files_and_nodes):
-        model = self._mapdamage_model(config=config,
-                                      destination=destination,
-                                      prefix=prefix,
-                                      files_and_nodes=files_and_nodes)
+        model = self._mapdamage_model(
+            config=config,
+            destination=destination,
+            prefix=prefix,
+            files_and_nodes=files_and_nodes,
+        )
 
         # Rescales BAM quality scores using model built above
-        input_files = files_and_nodes.keys()
+        input_files = list(files_and_nodes)
         output_filename = self.folder + ".rescaled.bam"
 
-        scale = MapDamageRescaleNode.customize(config=config,
-                                               reference=prefix["Reference"],
-                                               input_files=input_files,
-                                               output_file=output_filename,
-                                               directory=destination,
-                                               dependencies=model)
-        apply_options(scale.command, self.options["mapDamage"])
-        scale = scale.build_node()
+        scale = MapDamageRescaleNode(
+            config=config,
+            reference=prefix["Reference"],
+            input_files=input_files,
+            output_file=output_filename,
+            directory=destination,
+            options=self.options["mapDamage"],
+            dependencies=model,
+        )
 
         # Grab indexing and validation nodes, required by ROIs and GATK
-        index_required = bool(prefix.get("RegionsOfInterest")) \
+        index_required = (
+            bool(prefix.get("RegionsOfInterest"))
             or self.options["Features"]["RealignedBAM"]
-        validate = index_and_validate_bam(config=config,
-                                          prefix=prefix,
-                                          node=scale,
-                                          create_index=index_required)
+        )
+        validate = index_and_validate_bam(
+            config=config, prefix=prefix, node=scale, create_index=index_required
+        )
 
         return {output_filename: validate}, (model,)
 
@@ -242,24 +247,27 @@ class Library:
 
         input_files = []
         dependencies = []
-        for values in files_and_nodes.itervalues():
-            for (filename, node) in values.iteritems():
+        for values in files_and_nodes.values():
+            for (filename, node) in values.items():
                 input_files.append(filename)
                 dependencies.append(node)
 
         folder = "%s.%s.duphist" % (target, prefix["Name"])
-        destination = os.path.join(config.destination, folder,
-                                   self.name + ".txt")
+        destination = os.path.join(config.destination, folder, self.name + ".txt")
 
-        return DuplicateHistogramNode(config=config,
-                                      input_files=input_files,
-                                      output_file=destination,
-                                      dependencies=dependencies)
+        return DuplicateHistogramNode(
+            config=config,
+            input_files=input_files,
+            output_file=destination,
+            dependencies=dependencies,
+        )
 
     def _build_dataduplication_node(self, bams):
         files_and_nodes = self._collect_files_and_nodes(bams)
         output_file = self.folder + ".duplications_checked"
 
-        return DetectInputDuplicationNode(input_files=files_and_nodes.keys(),
-                                          output_file=output_file,
-                                          dependencies=files_and_nodes.values())
+        return DetectInputDuplicationNode(
+            input_files=list(files_and_nodes),
+            output_file=output_file,
+            dependencies=list(files_and_nodes.values()),
+        )

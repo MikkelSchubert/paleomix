@@ -21,17 +21,17 @@
 # SOFTWARE.
 import argparse
 import os
+import logging
 import sys
 
 import pysam
 
+import paleomix.tools.zonkey.database as database
+
 from paleomix.common.formats.fasta import FASTA
 from paleomix.common.formats.msa import MSA
-from paleomix.common.utilities import fragment
 from paleomix.common.formats.phylip import interleaved_phy
-
-import paleomix.ui as ui
-import paleomix.tools.zonkey.database as database
+from paleomix.common.utilities import fragment
 
 
 def majority_base(site):
@@ -47,7 +47,7 @@ def majority_base(site):
 
 
 def majority_sequence(handle, padding, contig_name, contig_length):
-    sequence = [dict.fromkeys("ACGTN", 0) for _ in xrange(contig_length)]
+    sequence = [dict.fromkeys("ACGTN", 0) for _ in range(contig_length)]
 
     for column in handle.pileup(contig_name):
         position = sequence[column.pos]
@@ -61,18 +61,18 @@ def majority_sequence(handle, padding, contig_name, contig_length):
 
     if padding:
         offset = len(sequence) - padding
-        for idx in xrange(padding):
+        for idx in range(padding):
             dst = sequence[idx]
             src = sequence[idx + offset]
 
-            for key, value in src.iteritems():
+            for key, value in src.items():
                 dst[key] += value
 
         del sequence[-padding:]
 
     covered = coverage = 0
     for counts in sequence:
-        total = sum(counts.itervalues()) - counts["N"]
+        total = sum(counts.values()) - counts["N"]
         coverage += total
 
         if total:
@@ -92,7 +92,7 @@ def majority_sequence(handle, padding, contig_name, contig_length):
 
 def align_majority(reference, majority):
     aligned = []
-    reference_iter = iter(reference).next
+    reference_iter = iter(reference).__next__
 
     for nucleotide in majority:
         reference = reference_iter()
@@ -108,29 +108,26 @@ def align_majority(reference, majority):
 def truncate_sequences(sequences, name):
     result = {}
     to_len = len(sequences[name].sequence)
-    for name, record in sequences.iteritems():
-        result[name] = FASTA(name=record.name,
-                             meta=record.meta,
-                             sequence=record.sequence[:to_len])
+    for name, record in sequences.items():
+        result[name] = FASTA(
+            name=record.name, meta=record.meta, sequence=record.sequence[:to_len]
+        )
 
     return result
 
 
 def filter_sequences(sequences):
     selection = {}
-    for key, record in sequences.iteritems():
-        if record.meta is not None:
-            if "EXCLUDE" in map(str.strip, record.meta.upper().split(";")):
-                continue
-
-        selection[key] = record
+    for key, record in sequences.items():
+        if "EXCLUDE" not in map(str.strip, record.meta.upper().split(";")):
+            selection[key] = record
 
     return selection
 
 
 def sequences_to_msa(sequences):
     records = []
-    for name, record in sorted(sequences.iteritems()):
+    for name, record in sorted(sequences.items()):
         records.append(record)
 
     return MSA(records)
@@ -138,9 +135,9 @@ def sequences_to_msa(sequences):
 
 def parse_args(argv):
     parser = argparse.ArgumentParser()
-    parser.add_argument('database')
-    parser.add_argument('bam')
-    parser.add_argument('output_prefix')
+    parser.add_argument("database")
+    parser.add_argument("bam")
+    parser.add_argument("output_prefix")
 
     return parser.parse_args(argv)
 
@@ -149,11 +146,12 @@ def main(argv):
     args = parse_args(argv)
     data = database.ZonkeyDB(args.database)
     sequences = data.mitochondria
+    log = logging.getLogger(__name__)
 
     try:
-        handle = pysam.Samfile(args.bam)
-    except (IOError, ValueError), error:
-        ui.print_err("Error reading BAM file: %s" % (error,))
+        handle = pysam.AlignmentFile(args.bam)
+    except (IOError, ValueError) as error:
+        log.error("Error reading BAM file: %s", error)
         return 1
 
     with handle:
@@ -161,20 +159,22 @@ def main(argv):
         if bam_info is None:
             return 1
         elif not bam_info.is_mitochondrial:
-            ui.print_err("ERROR: BAM does not contain any known mitochondrial "
-                         "sequence found in BAM ..")
+            log.error("BAM does not contain any known mitochondrial sequence")
             return 1
 
         reference = sequences[bam_info.mt_contig]
-        stats, majority = majority_sequence(handle,
-                                            padding=bam_info.mt_padding,
-                                            contig_name=bam_info.mt_contig,
-                                            contig_length=bam_info.mt_length)
+        stats, majority = majority_sequence(
+            handle,
+            padding=bam_info.mt_padding,
+            contig_name=bam_info.mt_contig,
+            contig_length=bam_info.mt_length,
+        )
 
-        sequences["Sample"] = FASTA(name="Sample",
-                                    meta=None,
-                                    sequence=align_majority(reference.sequence,
-                                                            majority))
+        sequences["Sample"] = FASTA(
+            name="Sample",
+            meta=None,
+            sequence=align_majority(reference.sequence, majority),
+        )
 
         # Truncate all sequences to match the (now) unpadded sample sequence
         sequences = truncate_sequences(sequences, "Sample")
@@ -184,14 +184,14 @@ def main(argv):
     with open(args.output_prefix + ".summary", "w") as handle:
         stats["filename"] = os.path.abspath(args.bam)
 
-        for key, value in sorted(stats.iteritems()):
+        for key, value in sorted(stats.items()):
             handle.write("{}: {}\n".format(key, value))
 
     with open(args.output_prefix + ".phy", "w") as handle:
         handle.write(interleaved_phy(sequences_to_msa(sequences)))
 
     with open(args.output_prefix + ".fasta", "w") as handle:
-        for key, record in sorted(sequences.iteritems()):
+        for key, record in sorted(sequences.items()):
             handle.write(">{}\n".format(key))
             for line in fragment(60, record.sequence):
                 handle.write("{}\n".format(line))
@@ -199,5 +199,5 @@ def main(argv):
         return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))

@@ -25,10 +25,15 @@ import paleomix.common.fileutils as fileutils
 from paleomix.node import Node
 
 
-_DEFAULT_COLORS = ("#E69F00", "#56B4E9",
-                   "#009E73", "#F0E442",
-                   "#0072B2", "#D55E00",
-                   "#CC79A7")
+_DEFAULT_COLORS = (
+    "#E69F00",
+    "#56B4E9",
+    "#009E73",
+    "#F0E442",
+    "#0072B2",
+    "#D55E00",
+    "#CC79A7",
+)
 
 
 class WriteSampleList(Node):
@@ -36,14 +41,16 @@ class WriteSampleList(Node):
         self._samples = config.database.samples
         self._groups = config.database.groups
 
-        Node.__init__(self,
-                      description="<WriteSampleList -> %r>" % (output_file,),
-                      input_files=(config.tablefile,),
-                      output_files=(output_file,),
-                      dependencies=dependencies)
+        Node.__init__(
+            self,
+            description="<WriteSampleList -> %r>" % (output_file,),
+            input_files=(config.tablefile,),
+            output_files=(output_file,),
+            dependencies=dependencies,
+        )
 
     def _run(self, config, temp):
-        output_file, = self.output_files
+        (output_file,) = self.output_files
         samples = self._samples
 
         group = self._groups[max(self._groups)]
@@ -61,7 +68,7 @@ class WriteSampleList(Node):
             handle.write("Sample\t-\t#000000\n")
 
     def _teardown(self, config, temp):
-        destination, = self.output_files
+        (destination,) = self.output_files
         source = fileutils.reroot_path(temp, destination)
 
         fileutils.move_file(source, destination)

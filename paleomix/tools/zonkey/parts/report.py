@@ -35,9 +35,7 @@ import paleomix.common.fileutils as fileutils
 import paleomix.tools.zonkey.parts.admixture as admixture
 import paleomix.tools.zonkey.parts.nuclear as nuclear
 
-from paleomix.tools.zonkey.common import \
-    RSCRIPT_VERSION, \
-    read_summary
+from paleomix.tools.zonkey.common import RSCRIPT_VERSION, read_summary
 
 from paleomix.nodes.samtools import SAMTOOLS_VERSION
 from paleomix.nodes.raxml import RAXML_VERSION
@@ -64,22 +62,27 @@ class ReportNode(Node):
         self._treemix_outgroup = config.treemix_outgroup
         self._treemix_k = config.treemix_k
         if self._treemix_k is None:
-            self._treemix_k = '<automatic>'
+            self._treemix_k = "<automatic>"
 
-        Node.__init__(self,
-                      description="<Report -> %r>"
-                      % (os.path.join(self._root, "report.html"),),
-                      input_files=self._report.input_files(),
-                      output_files=(os.path.join(self._root, "report.html"),
-                                    os.path.join(self._root, "report.css")),
-                      dependencies=dependencies)
+        Node.__init__(
+            self,
+            description="<Report -> %r>" % (os.path.join(self._root, "report.html"),),
+            input_files=self._report.input_files(),
+            output_files=(
+                os.path.join(self._root, "report.html"),
+                os.path.join(self._root, "report.css"),
+            ),
+            dependencies=dependencies,
+        )
 
     def _run(self, _config, temp):
         with open(os.path.join(temp, "report.html"), "w") as output_handle:
-            revision = self._data.settings['Revision']
-            header = _HTML_HEADER.format(Version=paleomix.__version__,
-                                         Database=revision,
-                                         Sidebar=self._build_sidebar())
+            revision = self._data.settings["Revision"]
+            header = _HTML_HEADER.format(
+                Version=paleomix.__version__,
+                Database=revision,
+                Sidebar=self._build_sidebar(),
+            )
             output_handle.write(header)
 
             self._write_intro_and_overview(output_handle)
@@ -100,26 +103,29 @@ class ReportNode(Node):
     def _teardown(self, config, temp):
         fileutils.make_dirs(self._root)
 
-        fileutils.move_file(os.path.join(temp, "report.html"),
-                            os.path.join(self._root, "report.html"))
+        fileutils.move_file(
+            os.path.join(temp, "report.html"), os.path.join(self._root, "report.html")
+        )
 
         css_path = paleomix.resources.report("zonkey", "report.css")
         fileutils.copy_file(css_path, os.path.join(self._root, "report.css"))
 
     def _write_intro_and_overview(self, output_handle):
-        output_handle.write(_SECTION_HEADER.format(name="intro",
-                                                   title="Introduction"))
+        output_handle.write(_SECTION_HEADER.format(name="intro", title="Introduction"))
         output_handle.write(_INTRODUCTION)
 
-        output_handle.write(_SECTION_HEADER.format(name="overview",
-                                                   title="Analysis overview"))
+        output_handle.write(
+            _SECTION_HEADER.format(name="overview", title="Analysis overview")
+        )
 
-        revision = self._data.settings['Revision']
-        overview = _OVERVIEW_HEADER.format(DATABASE=revision,
-                                           PYSAM=pysam.__version__,
-                                           SAMTOOLS=_fmt_v(SAMTOOLS_VERSION),
-                                           PLINK=_fmt_v(nuclear.PLINK_VERSION),
-                                           RSCRIPT=_fmt_v(RSCRIPT_VERSION))
+        revision = self._data.settings["Revision"]
+        overview = _OVERVIEW_HEADER.format(
+            DATABASE=revision,
+            PYSAM=pysam.__version__,
+            SAMTOOLS=_fmt_v(SAMTOOLS_VERSION),
+            PLINK=_fmt_v(nuclear.PLINK_VERSION),
+            RSCRIPT=_fmt_v(RSCRIPT_VERSION),
+        )
         output_handle.write(overview)
 
         if self._has_nuc:
@@ -136,17 +142,16 @@ class ReportNode(Node):
         output_handle.write(_OVERVIEW_FOOTER)
 
     def _write_sample_description(self, output_handle):
-        output_handle.write(_SECTION_HEADER.format(name="samples",
-                                                   title="Reference Panel"))
+        output_handle.write(
+            _SECTION_HEADER.format(name="samples", title="Reference Panel")
+        )
 
         group_headers = []
         for k_value in sorted(self._data.groups):
             group_headers.append("          <th>Group(%i)</th>" % k_value)
-        output_handle.write(_SAMPLE_LIST_HEADER % ('\n'.join(group_headers),))
+        output_handle.write(_SAMPLE_LIST_HEADER % ("\n".join(group_headers),))
 
-        last_group_2 = None
-        last_group_3 = None
-        for name, row in sorted(self._data.samples.iteritems()):
+        for name, row in sorted(self._data.samples.items()):
             row = dict(row)
             groups = []
             for key in self._data.groups:
@@ -155,21 +160,18 @@ class ReportNode(Node):
 
             pub = row["Publication"]
             if pub.startswith("http"):
-                row["Publication"] \
-                    = '<a href="{0}">Link</a>'.format(pub.strip())
+                row["Publication"] = '<a href="{0}">Link</a>'.format(pub.strip())
             elif row["Publication"].startswith("doi:"):
                 pub = pub[4:].strip()
                 url = "https://doi.org/{}".format(pub)
-                row["Publication"] \
-                    = 'doi:<a href="{0}">{1}</a>'.format(url, pub)
+                row["Publication"] = 'doi:<a href="{0}">{1}</a>'.format(url, pub)
 
             output_handle.write(_SAMPLE_LIST_ROW.format(**row))
 
         output_handle.write("      </table>\n")
 
     def _write_admixture_estimates(self, output_handle):
-        header = _SECTION_HEADER.format(name="admixture",
-                                        title="Admixture Estimates")
+        header = _SECTION_HEADER.format(name="admixture", title="Admixture Estimates")
         output_handle.write(header)
 
         admixture_v = _fmt_v(nuclear.ADMIXTURE_VERSION)
@@ -180,25 +182,23 @@ class ReportNode(Node):
             summary_incl = self._build_admixture_cell(k_groups, True)
             summary_excl = self._build_admixture_cell(k_groups, False)
 
-            output_handle.write(_ADMIXTURE_ROW.format(K=k_groups,
-                                                      Incl_TS=summary_incl,
-                                                      Excl_TS=summary_excl))
+            output_handle.write(
+                _ADMIXTURE_ROW.format(
+                    K=k_groups, Incl_TS=summary_incl, Excl_TS=summary_excl
+                )
+            )
 
-    def _build_admixture_cell(self, k_groups, incl_ts,
-                              cutoff=admixture.CUTOFF):
+    def _build_admixture_cell(self, k_groups, incl_ts, cutoff=admixture.CUTOFF):
         try:
             groups = self._report.admixture_results(k_groups, incl_ts)
-        except admixture.AdmixtureError, error:
+        except admixture.AdmixtureError as error:
             return _warn("ERROR: {}</strong".format(error))
 
         n_admixture_candidates = sum((value >= cutoff) for _, value in groups)
         if n_admixture_candidates < 2:
             return "<strong>No admixture detected.</strong>"
 
-        lines = [
-            "<strong>Possible hybridization detected:</strong>",
-            "<ul>",
-        ]
+        lines = ["<strong>Possible hybridization detected:</strong>", "<ul>"]
 
         for group, value in groups:
             if value >= cutoff:
@@ -209,115 +209,130 @@ class ReportNode(Node):
         lines.append("</ul>")
 
         if n_admixture_candidates != 2:
-            lines.append(_warn('WARNING: %s-way admixture detected; this may '
-                               'indicate a false-positive result!'
-                               % (n_admixture_candidates,)))
+            lines.append(
+                _warn(
+                    "WARNING: %s-way admixture detected; this may "
+                    "indicate a false-positive result!" % (n_admixture_candidates,)
+                )
+            )
             return "\n            ".join(lines)
 
-        percentiles = self._report.admixture_percentiles(data=self._data,
-                                                         k_groups=k_groups,
-                                                         incl_ts_k=incl_ts)
+        percentiles = self._report.admixture_percentiles(
+            data=self._data, k_groups=k_groups, incl_ts_k=incl_ts
+        )
 
-        if not ('Lower' in percentiles or 'Upper' in percentiles):
+        if not ("Lower" in percentiles or "Upper" in percentiles):
             lines.append(_warn("WARNING: Could not determine percentiles."))
 
             return "\n            ".join(lines)
 
-        if 'Lower' not in percentiles:
-            percentiles['Lower'] = percentiles['Upper']
-            finale = \
-                '; note that this is more simulated reads than what was ' \
-                'processed in this analyses, potentially resulting in an ' \
-                'overrestimating of percentages.'
-        elif 'Upper' not in percentiles:
-            percentiles['Upper'] = percentiles['Lower']
-            finale = \
-                '; note that this is fewer simulated reads than what was ' \
-                'processed in this analyses, potentially resulting in an ' \
-                'underrestimating of percentages'
+        if "Lower" not in percentiles:
+            percentiles["Lower"] = percentiles["Upper"]
+            finale = (
+                "; note that this is more simulated reads than what was "
+                "processed in this analyses, potentially resulting in an "
+                "overrestimating of percentages."
+            )
+        elif "Upper" not in percentiles:
+            percentiles["Upper"] = percentiles["Lower"]
+            finale = (
+                "; note that this is fewer simulated reads than what was "
+                "processed in this analyses, potentially resulting in an "
+                "underrestimating of percentages"
+            )
         else:
-            finale = '.'
+            finale = "."
 
-        lower_pct = "%.1f" % ((1.0 - max(percentiles['Lower']['Upper'],
-                                         percentiles['Upper']['Lower'])) *
-                              100.0,)
-        upper_pct = "%.1f" % ((1.0 - min(percentiles['Lower']['Upper'],
-                                         percentiles['Upper']['Lower'])) *
-                              100.0,)
+        lower_pct = "%.1f" % (
+            (1.0 - max(percentiles["Lower"]["Upper"], percentiles["Upper"]["Lower"]))
+            * 100.0,
+        )
+        upper_pct = "%.1f" % (
+            (1.0 - min(percentiles["Lower"]["Upper"], percentiles["Upper"]["Lower"]))
+            * 100.0,
+        )
 
         pct_range = lower_pct
         if lower_pct != upper_pct:
-            pct_range = '%s - %s' % (lower_pct, upper_pct)
+            pct_range = "%s - %s" % (lower_pct, upper_pct)
 
-        lower_reads = min(percentiles['Lower']['NReads'],
-                          percentiles['Upper']['NReads'])
-        upper_reads = max(percentiles['Lower']['NReads'],
-                          percentiles['Upper']['NReads'])
+        lower_reads = min(
+            percentiles["Lower"]["NReads"], percentiles["Upper"]["NReads"]
+        )
+        upper_reads = max(
+            percentiles["Lower"]["NReads"], percentiles["Upper"]["NReads"]
+        )
 
         reads_range = lower_reads
         if lower_reads != upper_reads:
-            reads_range = '%s to %s' % (lower_reads, upper_reads)
+            reads_range = "%s to %s" % (lower_reads, upper_reads)
 
-        lines.append('Admixture results fall within %s percent of those '
-                     'observed for simulated F1 %s / %s hybrids, based on '
-                     '%s randomly selected reads%s'
-                     % (pct_range,
-                        percentiles['Sample1'],
-                        percentiles['Sample2'],
-                        reads_range, finale))
+        lines.append(
+            "Admixture results fall within %s percent of those "
+            "observed for simulated F1 %s / %s hybrids, based on "
+            "%s randomly selected reads%s"
+            % (
+                pct_range,
+                percentiles["Sample1"],
+                percentiles["Sample2"],
+                reads_range,
+                finale,
+            )
+        )
 
         return "\n            ".join(lines)
 
     def _write_pca_plots(self, output_handle):
-        output_handle.write(_SECTION_HEADER.format(name="pca",
-                                                   title="PCA Plots"))
+        output_handle.write(_SECTION_HEADER.format(name="pca", title="PCA Plots"))
 
         smartpca_v = _fmt_v(nuclear.SMARTPCA_VERSION)
         output_handle.write(_PCA_SECTION.format(SMARTPCA=smartpca_v))
 
     def _write_treemix_plots(self, output_handle):
-        output_handle.write(_SECTION_HEADER.format(name="treemix",
-                                                   title="Treemix Plots"))
+        output_handle.write(
+            _SECTION_HEADER.format(name="treemix", title="Treemix Plots")
+        )
 
         outgroups = ""
         if self._treemix_outgroup:
             outgroups = ", ".join(map(repr, self._treemix_outgroup))
-            outgroups = ". The tree was rooted on the clade containing the " \
-                        "sample(s) %s" % (outgroups)
+            outgroups = (
+                ". The tree was rooted on the clade containing the "
+                "sample(s) %s" % (outgroups)
+            )
 
         treemix_v = _fmt_v(nuclear.TREEMIX_VERSION)
-        overview = _TREEMIX_OVERVIEW.format(treemix_k=self._treemix_k,
-                                            treemix_outgroup=outgroups,
-                                            TREEMIX=treemix_v)
+        overview = _TREEMIX_OVERVIEW.format(
+            treemix_k=self._treemix_k, treemix_outgroup=outgroups, TREEMIX=treemix_v
+        )
         output_handle.write(overview)
 
         for prefix in ("incl_ts", "excl_ts"):
             output_handle.write("<h2>%s</h2>\n" % (_TS_LABELS[prefix],))
 
             for n_edges in (0, 1):
-                variance_file = os.path.join(self._root,
-                                             "figures",
-                                             "treemix",
-                                             "%s_%i_variance.txt")
+                variance_file = os.path.join(
+                    self._root, "figures", "treemix", "%s_%i_variance.txt"
+                )
 
                 with open(variance_file % (prefix, n_edges)) as handle:
                     variance = handle.read().strip()
 
-                treemix_row = _TREEMIX_TREE_ROW.format(Prefix=prefix,
-                                                       Edges=n_edges,
-                                                       Variance=variance)
+                treemix_row = _TREEMIX_TREE_ROW.format(
+                    Prefix=prefix, Edges=n_edges, Variance=variance
+                )
                 output_handle.write(treemix_row)
 
     def _write_mitochondrial_plots(self, output_handle):
-        header = _SECTION_HEADER.format(name="mitochondria",
-                                        title="Mitochondrial Phylogeny")
+        header = _SECTION_HEADER.format(
+            name="mitochondria", title="Mitochondrial Phylogeny"
+        )
         output_handle.write(header)
         raxml_v = _fmt_v(RAXML_VERSION)
         output_handle.write(_MITOCONDRIAL_SECTION.format(RAXML=raxml_v))
 
     def _write_references(self, output_handle):
-        header = _SECTION_HEADER.format(name="references",
-                                        title="References")
+        header = _SECTION_HEADER.format(name="references", title="References")
         output_handle.write(header)
         output_handle.write(_REFERENCES)
 
@@ -335,11 +350,10 @@ class ReportNode(Node):
         return "\n".join(lines)
 
 
-class AnalysisReport(object):
+class AnalysisReport:
     def __init__(self, config, root, has_nuc, has_mt):
         self._has_nuc = bool(has_nuc)
         self._has_mt = bool(has_mt)
-        self._filtered = bool(config.indep)
         self._config = config
         self._root = root
         self._data = config.database
@@ -348,82 +362,60 @@ class AnalysisReport(object):
         input_files = [self._config.tablefile]
         if self._has_nuc:
             # Summary file generated while building TPED files
-            input_files.append(os.path.join(self._root,
-                                            "results",
-                                            "plink",
-                                            "common.summary"))
+            input_files.append(
+                os.path.join(self._root, "results", "plink", "common.summary")
+            )
 
-            for postfix in ('incl_ts', 'excl_ts'):
+            for postfix in ("incl_ts", "excl_ts"):
                 admix_root = os.path.join(self._root, "results", "admixture")
-
-                if self._filtered:
-                    # Required to count number of SNPs included after filtering
-                    input_files.append(os.path.join(self._root,
-                                                    "results",
-                                                    "plink",
-                                                    postfix + ".bim"))
 
                 # Include files showing proproation of ancestral populations,
                 # which are required to build admixture figures in the reports.
                 for k_groups in sorted(self._data.groups):
-                    input_files.append(os.path.join(admix_root,
-                                                    "%s.%i.Q" % (postfix,
-                                                                 k_groups)))
+                    input_files.append(
+                        os.path.join(admix_root, "%s.%i.Q" % (postfix, k_groups))
+                    )
 
                 # Include files tabulating variance explained by models
                 figures_path = os.path.join(self._root, "figures", "treemix")
                 for n_edges in (0, 1):
-                    variance_path = os.path.join(figures_path,
-                                                 "%s_%i_variance.txt"
-                                                 % (postfix, n_edges))
+                    variance_path = os.path.join(
+                        figures_path, "%s_%i_variance.txt" % (postfix, n_edges)
+                    )
 
                     input_files.append(variance_path)
 
         if self._has_mt:
-            input_files.append(os.path.join(self._root,
-                                            "results",
-                                            "mitochondria",
-                                            "sequences.summary"))
+            input_files.append(
+                os.path.join(self._root, "results", "mitochondria", "sequences.summary")
+            )
 
         return input_files
 
     def snp_summary(self):
-        summary = read_summary(os.path.join(self._root,
-                                            "results",
-                                            "plink",
-                                            "common.summary"))
-
-        if self._filtered:
-            for postfix in ('incl_ts', 'excl_ts'):
-                key = "n_sites_%s" % (postfix,)
-
-                filename = os.path.join(self._root, "plink", postfix + ".bim")
-                with open(filename) as handle:
-                    n_used = sum(1 for _ in handle)
-
-                summary[key] = "%i of %i" % (n_used, summary[key])
-
-        return summary
+        return read_summary(
+            os.path.join(self._root, "results", "plink", "common.summary")
+        )
 
     def mito_summary(self):
-        return read_summary(os.path.join(self._root,
-                                         "results",
-                                         "mitochondria",
-                                         "sequences.summary"))
+        return read_summary(
+            os.path.join(self._root, "results", "mitochondria", "sequences.summary")
+        )
 
-    def admixture_results(self, k_groups, incl_ts,
-                          cutoff=admixture.CUTOFF):
+    def admixture_results(self, k_groups, incl_ts, cutoff=admixture.CUTOFF):
         prefix = "incl_ts" if incl_ts else "excl_ts"
-        filename = os.path.join(self._root, "results", "admixture",
-                                "%s.%i.Q" % (prefix, k_groups))
+        filename = os.path.join(
+            self._root, "results", "admixture", "%s.%i.Q" % (prefix, k_groups)
+        )
 
-        return admixture.read_admixture_results(filename=filename,
-                                                data=self._config.database,
-                                                k_groups=k_groups,
-                                                cutoff=cutoff)
+        return admixture.read_admixture_results(
+            filename=filename,
+            data=self._config.database,
+            k_groups=k_groups,
+            cutoff=cutoff,
+        )
 
-    def admixture_percentiles(self, data, k_groups, incl_ts_k,
-                              cutoff=admixture.CUTOFF):
+    def admixture_percentiles(self, data, k_groups, incl_ts_k, cutoff=admixture.CUTOFF):
         try:
             results = self.admixture_results(k_groups, incl_ts_k, cutoff)
         except admixture.AdmixtureError:
@@ -433,21 +425,22 @@ class AnalysisReport(object):
         if len(groups) != 2:
             return
 
-        sample1, = groups[0]
-        sample2, = groups[1]
+        (sample1,) = groups[0]
+        (sample2,) = groups[1]
         delta = abs(max(value for _, value in results) - 0.5)
-        summary = read_summary(os.path.join(self._root,
-                                            "results",
-                                            "plink",
-                                            "common.summary"))
+        summary = read_summary(
+            os.path.join(self._root, "results", "plink", "common.summary")
+        )
 
-        return admixture.get_percentiles(data=data,
-                                         sample1=sample1,
-                                         sample2=sample2,
-                                         nreads=summary['n_reads_used'],
-                                         k_groups=k_groups,
-                                         has_ts=incl_ts_k,
-                                         value=delta)
+        return admixture.get_percentiles(
+            data=data,
+            sample1=sample1,
+            sample2=sample2,
+            nreads=summary["n_reads_used"],
+            k_groups=k_groups,
+            has_ts=incl_ts_k,
+            value=delta,
+        )
 
 
 def _fmt_v(requirement):
@@ -460,10 +453,7 @@ def _warn(text):
 
 ###############################################################################
 
-_TS_LABELS = {
-    "incl_ts": "Including transitions",
-    "excl_ts": "Excluding transitions",
-}
+_TS_LABELS = {"incl_ts": "Including transitions", "excl_ts": "Excluding transitions"}
 
 
 ###############################################################################
@@ -495,7 +485,7 @@ _HTML_HEADER = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
     </p>
 {Sidebar}
     <div id="mainbar">
-"""
+"""  # noqa: E501
 
 _SECTION_HEADER = """      <h1><a name="{name}" id="{name}"></a>{title}</h1>
 """
@@ -525,7 +515,7 @@ _INTRODUCTION = """
           on which the Zonkey pipeline is based.
         </div>
         <br/>
-"""
+"""  # noqa: E501
 
 _OVERVIEW_HEADER = """
         <div>

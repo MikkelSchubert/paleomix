@@ -23,14 +23,8 @@
 import re
 import random
 
-from paleomix.node import \
-     Node, \
-     NodeError
-from paleomix.common.fileutils import \
-     move_file, \
-     reroot_path
-
-
+from paleomix.node import Node, NodeError
+from paleomix.common.fileutils import move_file, reroot_path
 
 
 class PHYLIPBootstrapNode(Node):
@@ -47,20 +41,27 @@ class PHYLIPBootstrapNode(Node):
                             The simple (RAxML like) sequential format is used.
       -- seed             - RNG seed for selecting alignment columns."""
 
-    def __init__(self, input_alignment, input_partition, output_alignment,
-                 seed = None, dependencies = ()):
-        self._input_phy  = input_alignment
+    def __init__(
+        self,
+        input_alignment,
+        input_partition,
+        output_alignment,
+        seed=None,
+        dependencies=(),
+    ):
+        self._input_phy = input_alignment
         self._input_part = input_partition
         self._output_phy = output_alignment
-        self._seed       = seed
+        self._seed = seed
 
-        Node.__init__(self,
-                      description  = "<PHYLIPBootstrap: %r -> %r>" \
-                        % (input_alignment, output_alignment),
-                      input_files  = (input_alignment, input_partition),
-                      output_files = (output_alignment,),
-                      dependencies = dependencies)
-
+        Node.__init__(
+            self,
+            description="<PHYLIPBootstrap: %r -> %r>"
+            % (input_alignment, output_alignment),
+            input_files=(input_alignment, input_partition),
+            output_files=(output_alignment,),
+            dependencies=dependencies,
+        )
 
     def _run(self, _config, temp):
         if self._seed is not None:
@@ -82,26 +83,24 @@ class PHYLIPBootstrapNode(Node):
 
         move_file(temp_fpath, self._output_phy)
 
-
     @classmethod
     def _bootstrap_sequences(cls, sequences, partitions, rng):
         final_partitions = [[] for _ in sequences]
         for (start, end) in partitions:
             # Convert alignment to columns, and randomly select among those
-            columns = zip(*(sequence[start:end] for sequence in sequences))
+            columns = list(zip(*(sequence[start:end] for sequence in sequences)))
             bootstrap_partition = (rng.choice(columns) for _ in columns)
 
             # Convert randomly selected columns back into sequences
-            for (dest, partition) in zip(final_partitions,
-                                         zip(*bootstrap_partition)):
+            for (dest, partition) in zip(final_partitions, zip(*bootstrap_partition)):
                 dest.append("".join(partition))
 
         return final_partitions
 
 
-
 _RE_PARTITION = re.compile(r"^[A-Z]+, [^ ]+ = (\d+)-(\d+)$")
 _RE_PARTITION_SINGLE = re.compile(r"^[A-Z]+, [^ ]+ = (\d+)$")
+
 
 def _read_partitions(filename):
     """Read a partition file, as produced by the pipeline itself, and
@@ -120,14 +119,16 @@ def _read_partitions(filename):
             else:
                 result = _RE_PARTITION_SINGLE.match(line.rstrip())
                 if not result:
-                    message = ("Line %i in partitions file does not follow "
-                               "expected format:\n"
-                               "  Expected, either = 'DNA, Name = Start-End'\n"
-                               "                or = 'DNA, Name = Start'\n"
-                               "  Found = %r") % (line_num, line.rstrip())
+                    message = (
+                        "Line %i in partitions file does not follow "
+                        "expected format:\n"
+                        "  Expected, either = 'DNA, Name = Start-End'\n"
+                        "                or = 'DNA, Name = Start'\n"
+                        "  Found = %r"
+                    ) % (line_num, line.rstrip())
                     raise NodeError(message)
-                start, = result.groups()
-                end   = start
+                (start,) = result.groups()
+                end = start
 
             partitions.append((int(start) - 1, int(end)))
     return partitions
@@ -151,8 +152,8 @@ def _read_sequences(filename):
                 num_sequences, num_bases = map(int, line.split())
                 break
 
-        names     = [None for _ in xrange(num_sequences)]
-        sequences = [[] for _ in xrange(num_sequences)]
+        names = [None for _ in range(num_sequences)]
+        sequences = [[] for _ in range(num_sequences)]
 
         line_num = 0
         while line:
@@ -169,20 +170,17 @@ def _read_sequences(filename):
                 line_num += 1
 
     if len(sequences) != num_sequences:
-        message = ("Expected %i sequences, but found %i in PHYLIP file:\n"
-                   "    Filename = %r") % (num_sequences,
-                                           len(sequences),
-                                           filename)
+        message = (
+            "Expected %i sequences, but found %i in PHYLIP file:\n" "    Filename = %r"
+        ) % (num_sequences, len(sequences), filename)
         raise NodeError(message)
 
     for (index, fragments) in enumerate(sequences):
         sequences[index] = "".join(fragments)
         if len(sequences[index]) != num_bases:
-            message = ("Expected %ibp sequences, found %ibp sequence for %r\n"
-                       " Filename = %r") % (num_bases,
-                                            len(sequences[index]),
-                                            names[index],
-                                            filename)
+            message = (
+                "Expected %ibp sequences, found %ibp sequence for %r\n" " Filename = %r"
+            ) % (num_bases, len(sequences[index]), names[index], filename)
             raise NodeError(message)
 
     return header, names, sequences

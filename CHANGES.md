@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+### Changed
+  - Removed internal copy of pyyaml and added dependency on ruamel.yaml
+
+### Removed
+  - Removed 'bam_pipeline remap' command.
+  - Removed undocumented 'ena' command.
+  - Removed entry-points other than the 'paleomix' command.
+  - Removed 'sample_pileup' command.
+  - Removed 'Random Sampling' and 'Reference Sequence' genotyping methods
+  - Removed --to-dot option for pipelines.
+
+
 ## [1.2.14] - 2019-12-01
 ### Changed
   - Improved handling of K-groups in zonkey database files
@@ -31,7 +44,6 @@
 ### Fixed
   - Ignore ValidateSamFile warning REF_SEQ_TOO_LONG_FOR_BAI warning when
     processing genomes with contigs too large for BAI index files.
-
 
 ## [1.2.13.4] - 2019-03-25
 ### Fixed

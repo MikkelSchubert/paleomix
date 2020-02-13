@@ -23,13 +23,12 @@
 import re
 import glob
 
-from paleomix.common.makefile import \
-    MakefileError
+from paleomix.common.makefile import MakefileError
 
 
 def is_paired_end(template):
     """Returns true if a template contains a Pair component."""
-    return (template.format(Pair=1) != template)
+    return template.format(Pair=1) != template
 
 
 def collect_files(path, template):
@@ -38,24 +37,32 @@ def collect_files(path, template):
     """
     if is_paired_end(template):
         if _has_glob_magic(template):
-            result = {"PE_1": _sorted_glob(template.format(Pair=1)),
-                      "PE_2": _sorted_glob(template.format(Pair=2))}
+            result = {
+                "PE_1": _sorted_glob(template.format(Pair=1)),
+                "PE_2": _sorted_glob(template.format(Pair=2)),
+            }
 
             if not (result["PE_1"] or result["PE_2"]):
                 _raise_missing_files("paired-end", path, template)
             elif len(result["PE_1"]) != len(result["PE_2"]):
-                raise MakefileError("Unequal number of mate 1 and mate 2 "
-                                    "files found at path %r; found %i mate 1 "
-                                    "files, and %i mate 2 files; specified in "
-                                    "makefile at %r. Please verify that the "
-                                    "path is correct, and update the makefile!"
-                                    % (template,
-                                       len(result["PE_1"]),
-                                       len(result["PE_2"]),
-                                       " :: ".join(path)))
+                raise MakefileError(
+                    "Unequal number of mate 1 and mate 2 "
+                    "files found at path %r; found %i mate 1 "
+                    "files, and %i mate 2 files; specified in "
+                    "makefile at %r. Please verify that the "
+                    "path is correct, and update the makefile!"
+                    % (
+                        template,
+                        len(result["PE_1"]),
+                        len(result["PE_2"]),
+                        " :: ".join(path),
+                    )
+                )
         else:
-            result = {"PE_1": [template.format(Pair=1)],
-                      "PE_2": [template.format(Pair=2)]}
+            result = {
+                "PE_1": [template.format(Pair=1)],
+                "PE_2": [template.format(Pair=2)],
+            }
     elif _has_glob_magic(template):
         result = {"SE": _sorted_glob(template)}
         if not result["SE"]:
@@ -76,10 +83,12 @@ def _sorted_glob(tmpl):
 
 
 def _raise_missing_files(description, path, template):
-    raise MakefileError("No files found for %s reads using path %r; "
-                        "specified in makefile at %r. Please verify that the "
-                        "path is correct, and update the makefile!"
-                        % (description, template, " :: ".join(path)))
+    raise MakefileError(
+        "No files found for %s reads using path %r; "
+        "specified in makefile at %r. Please verify that the "
+        "path is correct, and update the makefile!"
+        % (description, template, " :: ".join(path))
+    )
 
 
-_GLOB_MAGIC = re.compile('[*?[]')
+_GLOB_MAGIC = re.compile("[*?[]")

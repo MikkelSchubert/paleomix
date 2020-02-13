@@ -39,55 +39,62 @@ class MitoConsensusNode(CommandNode):
         cmd.add_value("%(IN_BAMFILE)s")
         cmd.add_value("%(TEMP_OUT_PREFIX)s")
 
-        cmd.set_kwargs(IN_DATABASE=database,
-                       IN_BAMFILE=bamfile,
-                       TEMP_OUT_PREFIX=os.path.basename(output_prefix),
-                       OUT_PHYLIP=output_prefix + ".phy",
-                       OUT_FASTA=output_prefix + ".fasta",
-                       OUT_SUMMARY=output_prefix + ".summary")
+        cmd.set_kwargs(
+            IN_DATABASE=database,
+            IN_BAMFILE=bamfile,
+            TEMP_OUT_PREFIX=os.path.basename(output_prefix),
+            OUT_PHYLIP=output_prefix + ".phy",
+            OUT_FASTA=output_prefix + ".fasta",
+            OUT_SUMMARY=output_prefix + ".summary",
+        )
 
-        CommandNode.__init__(self,
-                             description="<MitoConsensus -> '%s.*'>"
-                             % (output_prefix,),
-                             command=cmd.finalize(),
-                             dependencies=dependencies)
+        CommandNode.__init__(
+            self,
+            description="<MitoConsensus -> '%s.*'>" % (output_prefix,),
+            command=cmd.finalize(),
+            dependencies=dependencies,
+        )
 
 
 class DrawPhylogenyNode(CommandNode):
-    def __init__(self, samples, treefile, bootstraps, output_prefix,
-                 dependencies=()):
+    def __init__(self, samples, treefile, bootstraps, output_prefix, dependencies=()):
         rscript = rtools.rscript("zonkey", "tinytree.r")
 
-        cmd = AtomicCmd(("Rscript", rscript,
-                         "%(TEMP_OUT_FILE)s",
-                         "%(IN_SAMPLES)s",
-                         "%(TEMP_OUT_PREFIX)s"),
-                        AUX_RSCRIPT=rscript,
-                        IN_SAMPLES=samples,
-                        IN_FILE=treefile,
-                        IN_BOOTSTRAPS=bootstraps,
-                        TEMP_OUT_FILE="rerooted.newick",
-                        TEMP_OUT_PREFIX=os.path.basename(output_prefix),
-                        OUT_TREE_PDF=output_prefix + ".pdf",
-                        OUT_TREE_PNG=output_prefix + ".png",
-                        CHECK_RSCRIPT=RSCRIPT_VERSION,
-                        CHECK_RSCRIPT_APE=rtools.requirement("ape"),
-                        CHECK_RSCRIPT_GGPLOT2=rtools.requirement("ggplot2"),
-                        CHECK_RSCRIPT_GRID=rtools.requirement("grid"))
+        cmd = AtomicCmd(
+            (
+                "Rscript",
+                rscript,
+                "%(TEMP_OUT_FILE)s",
+                "%(IN_SAMPLES)s",
+                "%(TEMP_OUT_PREFIX)s",
+            ),
+            AUX_RSCRIPT=rscript,
+            IN_SAMPLES=samples,
+            IN_FILE=treefile,
+            IN_BOOTSTRAPS=bootstraps,
+            TEMP_OUT_FILE="rerooted.newick",
+            TEMP_OUT_PREFIX=os.path.basename(output_prefix),
+            OUT_TREE_PDF=output_prefix + ".pdf",
+            OUT_TREE_PNG=output_prefix + ".png",
+            CHECK_RSCRIPT=RSCRIPT_VERSION,
+            CHECK_RSCRIPT_APE=rtools.requirement("ape"),
+            CHECK_RSCRIPT_GGPLOT2=rtools.requirement("ggplot2"),
+            CHECK_RSCRIPT_GRID=rtools.requirement("grid"),
+        )
 
         self._treefile = treefile
         self._bootstraps = bootstraps
 
-        CommandNode.__init__(self,
-                             description="<DrawPhylogeny -> '%s.*'>"
-                             % (output_prefix,),
-                             command=cmd,
-                             dependencies=dependencies)
+        CommandNode.__init__(
+            self,
+            description="<DrawPhylogeny -> '%s.*'>" % (output_prefix,),
+            command=cmd,
+            dependencies=dependencies,
+        )
 
     def _setup(self, config, temp):
         with open(self._bootstraps) as handle:
-            bootstraps = [Newick.from_string(line.strip())
-                          for line in handle]
+            bootstraps = [Newick.from_string(line.strip()) for line in handle]
 
         with open(self._treefile) as handle:
             tree = Newick.from_string(handle.read().strip())

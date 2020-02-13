@@ -25,15 +25,14 @@ import datetime
 import itertools
 import collections
 
-from paleomix.common.timer import \
-    BAMTimer
-from paleomix.common.bamfiles import \
-    BAMRegionsIter
+from paleomix.common.timer import BAMTimer
+from paleomix.common.bamfiles import BAMRegionsIter
 
-from paleomix.tools.bam_stats.common import \
-    collect_references, \
-    collect_readgroups, \
-    main_wrapper
+from paleomix.tools.bam_stats.common import (
+    collect_references,
+    collect_readgroups,
+    main_wrapper,
+)
 
 
 ##############################################################################
@@ -70,12 +69,13 @@ _HEADER = """# Timestamp: %s
 ##############################################################################
 ##############################################################################
 
-class MappingToTotals(object):
+
+class MappingToTotals:
     def __init__(self, totals, region, smlbid_to_smlb):
         self._region = region
-        self._totals = totals
-        self._map_by_smlbid, self._totals_src_and_dst \
-            = self._build_mappings(totals, region.name, smlbid_to_smlb)
+        self._map_by_smlbid, self._totals_src_and_dst = self._build_mappings(
+            totals, region.name, smlbid_to_smlb
+        )
         self._cache = collections.defaultdict(int)
 
     def process_counts(self, counts, last_pos, cur_pos):
@@ -106,7 +106,7 @@ class MappingToTotals(object):
 
     def finalize(self):
         """Process cached counts."""
-        for (count, multiplier) in self._cache.iteritems():
+        for (count, multiplier) in self._cache.items():
             self._update_totals(count, multiplier)
         self._cache.clear()
 
@@ -129,18 +129,19 @@ class MappingToTotals(object):
         totals_by_table_key = {}
 
         for (smlbid, (sm_key, lb_key)) in enumerate(smlbid_to_smlb):
-            keys = [('*', '*', '*'),
-                    (sm_key, '*', '*'),
-                    (sm_key, '*', name),
-                    (sm_key, lb_key, '*'),
-                    (sm_key, lb_key, name)]
+            keys = [
+                ("*", "*", "*"),
+                (sm_key, "*", "*"),
+                (sm_key, "*", name),
+                (sm_key, lb_key, "*"),
+                (sm_key, lb_key, name),
+            ]
 
-            mappings = cls._nonoverlapping_mappings(keys, totals,
-                                                    totals_by_table_key)
+            mappings = cls._nonoverlapping_mappings(keys, totals, totals_by_table_key)
             totals_by_smlbid[smlbid] = mappings
 
         totals_src_and_dst = []
-        for (key, dst) in totals_by_table_key.iteritems():
+        for (key, dst) in totals_by_table_key.items():
             totals_src_and_dst.append((totals[key], dst))
 
         return totals_by_smlbid, totals_src_and_dst
@@ -166,6 +167,7 @@ class MappingToTotals(object):
 
 ##############################################################################
 ##############################################################################
+
 
 def calc_max_depth(counts):
     counts = dict(counts)
@@ -199,13 +201,13 @@ def print_table(handle, args, totals):
         output_handle.write(_HEADER % datetime.datetime.now().isoformat())
         output_handle.write("\n")
         for line in rows:
-            output_handle.write('\t'.join(map(str, line)))
+            output_handle.write("\t".join(map(str, line)))
             output_handle.write("\n")
 
 
 def calculate_depth_pc(counts, length):
     final_counts = [0] * (_MAX_DEPTH + 1)
-    for (depth, count) in counts.iteritems():
+    for (depth, count) in counts.items():
         final_counts[min(_MAX_DEPTH, depth)] += count
 
     running_total = sum(final_counts)
@@ -217,26 +219,25 @@ def calculate_depth_pc(counts, length):
 
 def build_table(name, totals, lengths):
     header = ["Name", "Sample", "Library", "Contig", "Size", "MaxDepth"]
-    for index in xrange(1, _MAX_DEPTH + 1):
+    for index in range(1, _MAX_DEPTH + 1):
         header.append("MD_%03i" % (index,))
 
     yield header
     last_sm = last_lb = None
     for ((sm_key, lb_key, ct_key), counts) in sorted(totals.items()):
         if (sm_key != last_sm) and (last_sm is not None):
-            yield '#'
-            yield '#'
+            yield "#"
+            yield "#"
         elif (lb_key != last_lb) and (last_lb is not None):
-            yield '#'
+            yield "#"
         last_sm, last_lb = sm_key, lb_key
 
         if ct_key == "*":
-            length = sum(lengths.itervalues())
+            length = sum(lengths.values())
         else:
             length = lengths[ct_key]
 
-        row = [name, sm_key, lb_key, ct_key, str(length),
-               str(calc_max_depth(counts))]
+        row = [name, sm_key, lb_key, ct_key, str(length), str(calc_max_depth(counts))]
         row.extend(calculate_depth_pc(counts, length))
 
         yield row
@@ -245,9 +246,10 @@ def build_table(name, totals, lengths):
 ##############################################################################
 ##############################################################################
 
+
 def build_key_struct(args, handle):
     structure = collections.defaultdict(set)
-    for readgroup in collect_readgroups(args, handle).itervalues():
+    for readgroup in collect_readgroups(args, handle).values():
         lb_key = readgroup["LB"]
         sm_key = readgroup["SM"]
         structure[sm_key].add(lb_key)
@@ -256,13 +258,13 @@ def build_key_struct(args, handle):
 
 
 def build_new_dicts(totals, dst_sm, dst_lb, references):
-    totals[(dst_sm, dst_lb, '*')] = collections.defaultdict(int)
+    totals[(dst_sm, dst_lb, "*")] = collections.defaultdict(int)
     for contig in references:
         totals[(dst_sm, dst_lb, contig)] = collections.defaultdict(int)
 
 
 def reuse_dicts(totals, dst_sm, dst_lb, src_sm, src_lb, references):
-    totals[(dst_sm, dst_lb, '*')] = totals[(src_sm, src_lb, '*')]
+    totals[(dst_sm, dst_lb, "*")] = totals[(src_sm, src_lb, "*")]
     for contig in references:
         totals[(dst_sm, dst_lb, contig)] = totals[(src_sm, src_lb, contig)]
 
@@ -272,33 +274,33 @@ def build_totals_dict(args, handle):
     structure = build_key_struct(args, handle)
 
     totals = {}
-    for (sm_key, libraries) in structure.iteritems():
+    for (sm_key, libraries) in structure.items():
         for lb_key in libraries:
             if len(references) == 1:
                 key = references[0]
                 counts = collections.defaultdict(int)
                 totals[(sm_key, lb_key, key)] = counts
-                totals[(sm_key, lb_key, '*')] = counts
+                totals[(sm_key, lb_key, "*")] = counts
             else:
                 build_new_dicts(totals, sm_key, lb_key, references)
 
         if len(libraries) == 1:
             key = list(libraries)[0]
-            reuse_dicts(totals, sm_key, '*', sm_key, key, references)
+            reuse_dicts(totals, sm_key, "*", sm_key, key, references)
         else:
-            build_new_dicts(totals, sm_key, '*', references)
+            build_new_dicts(totals, sm_key, "*", references)
 
     if len(structure) == 1:
         key = list(structure)[0]
-        reuse_dicts(totals, '*', '*', key, '*', references)
+        reuse_dicts(totals, "*", "*", key, "*", references)
     else:
-        build_new_dicts(totals, '*', '*', references)
+        build_new_dicts(totals, "*", "*", references)
 
     return totals
 
 
 def count_bases(args, counts, record, rg_to_smlbid, template):
-    for _ in xrange(record.alen - len(counts)):
+    for _ in range(record.alen - len(counts)):
         counts.append(list(template))
 
     key = rg_to_smlbid.get(args.get_readgroup_func(record))
@@ -326,7 +328,7 @@ def build_rg_to_smlbid_keys(args, handle):
     rg_to_lbsmid = {}
     lbsm_to_lbsmid = {}
     lbsmid_to_smlb = []
-    for (key_rg, readgroup) in collect_readgroups(args, handle).iteritems():
+    for (key_rg, readgroup) in collect_readgroups(args, handle).items():
         key_sm = readgroup["SM"]
         key_lb = readgroup["LB"]
 
@@ -352,7 +354,7 @@ def process_file(handle, args):
             # Trailing unmapped reads
             break
         elif not args.regions and (handle.nreferences > args.max_contigs):
-            region.name = '<Genome>'
+            region.name = "<Genome>"
 
         last_pos = 0
         counts = collections.deque()
@@ -378,12 +380,12 @@ def process_file(handle, args):
 
     if not args.ignore_readgroups:
         # Exclude counts for reads with no read-groups, if none such were seen
-        for (key, _, _), value in totals.iteritems():
-            if key == '<NA>' and value:
+        for (key, _, _), value in totals.items():
+            if key == "<NA>" and value:
                 break
         else:
-            for key in totals.keys():
-                if key[0] == '<NA>':
+            for key in list(totals):
+                if key[0] == "<NA>":
                     totals.pop(key)
 
     print_table(handle, args, totals)
@@ -394,8 +396,9 @@ def process_file(handle, args):
 def main(argv):
     return main_wrapper(process_file, argv, ".depths")
 
+
 ##############################################################################
 ##############################################################################
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))

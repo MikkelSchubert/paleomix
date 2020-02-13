@@ -15,8 +15,8 @@ Troubleshooting BAM pipeline makefiles
             Path included multiple times in target:
               - Record 1: Name: ExampleProject, Sample: Synthetic_Sample_1, Library: ACGATA, Barcode: Lane_1_001
               - Record 2: Name: ExampleProject, Sample: Synthetic_Sample_1, Library: ACGATA, Barcode: Lane_3_001
-              - Canonical path 1: /home/username/temp/bam_example/000_data/ACGATA_L1_R1_01.fastq.gz
-              - Canonical path 2: /home/username/temp/bam_example/000_data/ACGATA_L1_R2_01.fastq.gz
+              - Canonical path 1: /home/username/temp/bam_example/data/ACGATA_L1_R1_01.fastq.gz
+              - Canonical path 2: /home/username/temp/bam_example/data/ACGATA_L1_R2_01.fastq.gz
 
     This may be caused by using too broad wildcards, or simple mistakes. The message indicates the lane in which the files were included, as well as the "canonical" (i.e. following the resolution of symbolic links, etc.) path to each of the files. To resolve this issue, ensure that each input file is only included once for a given target.
 
@@ -55,12 +55,12 @@ The AdapterRemoval task will attempt to determine verify the quality-offset spec
 
     In case where the sequence data can be determined to contain FASTQ records with a different quality offset than that specified in the makefile, the task will be aborted with the message corresponding to the following::
 
-        <AdapterRM (SE): '000_data/TGCTCA_L1_R1_02.fastq.gz' -> 'ExampleProject/reads/Synthetic_Sample_1/TGCTCA/Lane_1_002/reads.*'>: Error occurred running command:
+        <AdapterRM (SE): 'data/TGCTCA_L1_R1_02.fastq.gz' -> 'ExampleProject/reads/Synthetic_Sample_1/TGCTCA/Lane_1_002/reads.*'>: Error occurred running command:
           Error(s) running Node:
             Temporary directory: '/path/to/temp/folder'
 
           FASTQ file contains quality scores with wrong quality score offset (33); expected reads with quality score offset 64. Ensure that the 'QualityOffset' specified in the makefile corresponds to the input.
-          Filename = 000_data/TGCTCA_L1_R1_02.fastq.gz
+          Filename = data/TGCTCA_L1_R1_02.fastq.gz
 
     Please verify the format of the input file, and update the makefile to use the correct QualityOffset before starting the pipeline.
 
@@ -69,12 +69,12 @@ The AdapterRemoval task will attempt to determine verify the quality-offset spec
 
     In case where the sequence data can be determined to contain FASTQ records with a different quality scores corresponding to the both of the possible offsets (for example both "!" and "a"), the task will be aborted with the message corresponding to the following example::
 
-        <AdapterRM (SE): '000_data/TGCTCA_L1_R1_02.fastq.gz' -> 'ExampleProject/reads/Synthetic_Sample_1/TGCTCA/Lane_1_002/reads.*'>: Error occurred running command:
+        <AdapterRM (SE): 'data/TGCTCA_L1_R1_02.fastq.gz' -> 'ExampleProject/reads/Synthetic_Sample_1/TGCTCA/Lane_1_002/reads.*'>: Error occurred running command:
             Error(s) running Node:
               Temporary directory: '/path/to/temp/folder'
 
             FASTQ file contains quality scores with both quality offsets (33 and 64); file may be unexpected format or corrupt. Please ensure that this file contains valid FASTQ reads from a single source.
-            Filename = '000_data/TGCTCA_L1_R1_02.fastq.gz'
+            Filename = 'data/TGCTCA_L1_R1_02.fastq.gz'
 
     This error would suggest that the input-file contains a mix of FASTQ records from multiple sources, e.g. resulting from the concatenation of multiple sets of data. If so, make use of the original data, and ensure that the quality score offset set for each is set correctly.
 
@@ -87,12 +87,12 @@ The AdapterRemoval task will attempt to determine verify the quality-offset spec
 
     If the input file can be determined to be in FASTA format, or otherwise be determined to not be in FASTQ format, the task will terminate with the following message::
 
-        <AdapterRM (SE): '000_data/TGCTCA_L1_R1_02.fastq.gz' -> 'ExampleProject/reads/Synthetic_Sample_1/TGCTCA/Lane_1_002/reads.*'>: Error occurred running command:
+        <AdapterRM (SE): 'data/TGCTCA_L1_R1_02.fastq.gz' -> 'ExampleProject/reads/Synthetic_Sample_1/TGCTCA/Lane_1_002/reads.*'>: Error occurred running command:
           Error(s) running Node:
             Temporary directory: '/path/to/temp/folder'
 
           Input file appears to be in FASTA format (header starts with '>', expected '@'), but only FASTQ files are supported.
-          Filename = '000_data/TGCTCA_L1_R1_02.fastq.gz'
+          Filename = 'data/TGCTCA_L1_R1_02.fastq.gz'
 
     Note that the pipeline only supports FASTQ files as input for the trimming stage, and that these have to be either uncompressed, gzipped, or bzipped. Other compression schemes are not supported at this point in time.
 
@@ -147,7 +147,7 @@ Troublshooting validation of BAM files
 
     The following demonstrates this problem, using a contrieved example based on the examples/bam_example project included with the pipeline::
 
-        $ bam_pipeline run 000_makefile.yaml
+        $ bam_pipeline run makefile.yaml
         [...]
         <Validate BAM: 'ExampleProject.rCRS.realigned.bam'>: Error occurred running command:
           Error(s) running Node:

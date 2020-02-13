@@ -92,33 +92,6 @@ Options: General
 
     The QualityOffset option refers to the starting ASCII value used to encode `Phred quality-scores`_ in user-provided FASTQ files, with the possible values of 33, 64, and 'Solexa'. For most modern data, this will be 33, corresponding to ASCII characters in the range '!' to 'J'. Older data is often encoded using the offset 64, corresponding to ASCII characters in the range '@' to 'h', and more rarely using Solexa quality-scores, which represent a different scheme than Phred scores, and which occupy the range of ASCII values from ';' to 'h'. For a visual representation of this, refer to the Wikipedia article linked above.
 
-**Options \:\: SplitLanesByFilenames**
-    .. literalinclude:: makefile.yaml
-        :language: yaml
-        :linenos:
-        :lineno-start: 14
-        :lines: 14-17
-
-    This option influences how the BAM pipeline handles lanes that include multiple files. By default (corresponding to a value of 'yes'), the pipeline will process individual files in parallel, potentially allowing for greater throughput. If set to 'no', all files in a lane are merged during processing, resulting in a single set of trimmed reads per lane. The only effect of this option on the final result is a greater number of read-groups specified in the final BAM files. See the :ref:`bam_filestructure` section for more details on how this is handled.
-
-    .. warning::
-        This option is deprecated, and will be removed in future versions of PALEOMIX.
-
-
-**Options \:\: CompressionFormat**
-    .. literalinclude:: makefile.yaml
-        :language: yaml
-        :linenos:
-        :lineno-start: 18
-        :lines: 18-19
-
-
-    This option determines which type of compression is carried out on trimmed FASTQ reads; if set to 'gz', reads are gzip compressed, and if set to 'bz2', reads are compressed using bzip2. This option has no effect on the final results, but may be used to trade off space (gz) for some additional runtime (bz2).
-
-    .. warning::
-        This option is deprecated, and may be removed in future versions of PALEOMIX.
-
-
 **Options \:\: PCRDuplicates**
     .. literalinclude:: makefile.yaml
         :language: yaml
@@ -587,8 +560,8 @@ The following simplified example, derived from the makefile constructed as part 
         # Library name; used to tag data for segregation in downstream analyses
         TGCTCA:
           # Lane / run names and paths to FASTQ files
-          Lane_1: 000_data/TGCTCA_L1_*.fastq.gz
-          Lane_2: 000_data/TGCTCA_L2_R{Pair}_*.fastq.gz
+          Lane_1: data/TGCTCA_L1_*.fastq.gz
+          Lane_2: data/TGCTCA_L2_R{Pair}_*.fastq.gz
 
 
 *Target name*
@@ -627,7 +600,7 @@ To include already trimmed reads, these are specified as values belonging to a l
       MySample:
         ACGATA:
           # Regular lane, containing reads that are not already trimmed
-          Lane_1: 000_data/ACGATA_L1_R{Pair}_*.fastq.gz
+          Lane_1: data/ACGATA_L1_R{Pair}_*.fastq.gz
 
           # Lane containing pre-trimmed reads of each type
           Lane_2:
@@ -677,7 +650,7 @@ In addition to the 'Options' section included, by default, at the beginning of e
            QualityOffset: 64
 
         ACGATA:
-          Lane_1: 000_data/ACGATA_L1_R{Pair}_*.fastq.gz
+          Lane_1: data/ACGATA_L1_R{Pair}_*.fastq.gz
 
         GCTCTG:
           # These options apply to 'Lane_1' in the 'GCTCTG' library
@@ -685,11 +658,11 @@ In addition to the 'Options' section included, by default, at the beginning of e
             # It is possible to override options we have previously overridden
             QualityOffset: 33
 
-          Lane_1: 000_data/GCTCTG_L1_*.fastq.gz
+          Lane_1: data/GCTCTG_L1_*.fastq.gz
 
         TGCTCA:
-          Lane_1: 000_data/TGCTCA_L1_*.fastq.gz
-          Lane_2: 000_data/TGCTCA_L2_R{Pair}_*.fastq.gz
+          Lane_1: data/TGCTCA_L1_*.fastq.gz
+          Lane_2: data/TGCTCA_L2_R{Pair}_*.fastq.gz
 
 
 In this example, we have overwritten options at 3 places:

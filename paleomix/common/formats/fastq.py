@@ -39,8 +39,8 @@ def classify_quality_strings(quality_strings):
     """Takes a sequence of quality strings from FASTQ"""
     counts = [0] * 256
     for read in quality_strings:
-        for char in read:
-            counts[ord(char)] += 1
+        for byte in read:
+            counts[byte] += 1
 
     return _identify_format(counts)
 

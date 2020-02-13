@@ -70,11 +70,11 @@ def process_records(records, counts):
         # PE reads are assummed to represent a random sample of PE / collapsed
         # reads, and distributed randomly across these to approximate this
         keys = tuple(alignments)
-        for _ in xrange(ambigious_count):
+        for _ in range(ambigious_count):
             key = random.choice(keys)
             alignments[key] += 1
 
-    for count in alignments.itervalues():
+    for count in alignments.values():
         counts[count] += 1
 
 
@@ -94,14 +94,14 @@ def main(argv):
     # Default filters, excepting that PCR duplicates are not filtered
     mask = bamfiles.EXCLUDED_FLAGS & ~bamfiles.BAM_PCR_DUPLICATE
     counts = collections.defaultdict(int)
-    with pysam.Samfile(args.bamfile) as handle:
+    with pysam.AlignmentFile(args.bamfile) as handle:
         for region in bamfiles.BAMRegionsIter(handle, exclude_flags=mask):
             for (_, records) in region:
                 process_records(records, counts)
 
-    for (key, count) in sorted(counts.iteritems()):
-        print "%i\t%i" % (key, count)
+    for (key, count) in sorted(counts.items()):
+        print("%i\t%i" % (key, count))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))

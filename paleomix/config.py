@@ -20,19 +20,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
-import sys
-import types
-import socket
+import configparser
 import getpass
-import optparse
-import ConfigParser
+import logging
 import multiprocessing
+import optparse
+import os
+import socket
+import sys
 
-from paleomix.common.fileutils import \
-     make_dirs
-from paleomix.common.console import \
-     print_info
+from paleomix.common.fileutils import make_dirs
 
 
 class ConfigError(RuntimeError):
@@ -78,11 +75,11 @@ class PerHostConfig:
         # Various common options
         temp_root = os.path.join("/tmp", getpass.getuser(), pipeline_name)
         self.temp_root = PerHostValue(temp_root, True)
-        # At least 2 threads are required for e.g. PE BWA nodes, and generally recommended anyway
+        # At least 2 threads are required for e.g. PE BWA nodes, and recommended anyway
         self.max_threads = PerHostValue(max(2, multiprocessing.cpu_count()))
 
         self._filenames = self._get_filenames(pipeline_name)
-        self._handle = ConfigParser.SafeConfigParser()
+        self._handle = configparser.SafeConfigParser()
         self._handle.read(self._filenames)
         self._sections = []
 
@@ -107,11 +104,11 @@ class PerHostConfig:
     def _write_config_file(self, config, defaults):
         """Writes a basic config files, using the values previously found in the
         config files, and specified on the command-line."""
-        defaults_cfg = ConfigParser.SafeConfigParser()
+        defaults_cfg = configparser.SafeConfigParser()
         defaults_cfg.add_section("Defaults")
         for key in defaults:
             value = getattr(config, key)
-            if isinstance(value, (types.ListType, types.TupleType)):
+            if isinstance(value, (list, tuple)):
                 value = ";".join(value)
 
             defaults_cfg.set("Defaults", key, str(value))
@@ -121,16 +118,19 @@ class PerHostConfig:
         with open(filename, "w") as handle:
             defaults_cfg.write(handle)
 
-        print_info("Wrote config file %r" % (filename,))
+        log = logging.getLogger(__name__)
+        log.info("Wrote config file %r", filename)
         sys.exit(0)
 
     def _add_per_host_options(self, parser):
         """Adds options to a parser relating to the PerHostConfig."""
         group = optparse.OptionGroup(parser, "Config files")
-        group.add_option("--write-config-file",
-                         default=False, action="store_true",
-                         help="Write config using current settings to %s"
-                         % (self._filenames[-1],))
+        group.add_option(
+            "--write-config-file",
+            default=False,
+            action="store_true",
+            help="Write config using current settings to %s" % (self._filenames[-1],),
+        )
         parser.add_option_group(group)
 
     def _update_defaults(self, parser):
@@ -147,15 +147,16 @@ class PerHostConfig:
     def _get_default(self, option):
         value = option.default.value
         getter = self._handle.get
-        if isinstance(value, types.BooleanType):
+        if isinstance(value, bool):
             getter = self._handle.getboolean
-        elif isinstance(value, (types.IntType, types.LongType)):
+        elif isinstance(value, int):
             getter = self._handle.getint
-        elif isinstance(value, (types.FloatType)):
+        elif isinstance(value, (float)):
             getter = self._handle.getfloat
-        elif isinstance(value, (types.ListType, types.TupleType)):
+        elif isinstance(value, (list, tuple)):
+
             def getter(section, key):
-                return filter(None, self._handle.get(section, key).split(";"))
+                return [_f for _f in self._handle.get(section, key).split(";") if _f]
 
         for section in self._sections:
             if self._handle.has_option(section, option.dest):
@@ -174,6 +175,8 @@ class PerHostConfig:
            - ~/.paleomix/{name}.ini
         """
         filename = "%s.ini" % (name,)
-        homefolder = os.path.expanduser('~')
-        return ["/etc/paleomix/%s" % (filename,),
-                os.path.join(homefolder, ".paleomix", filename)]
+        homefolder = os.path.expanduser("~")
+        return [
+            "/etc/paleomix/%s" % (filename,),
+            os.path.join(homefolder, ".paleomix", filename),
+        ]

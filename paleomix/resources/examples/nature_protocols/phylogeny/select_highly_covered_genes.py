@@ -24,8 +24,7 @@ import os
 import sys
 import optparse
 
-from paleomix.common.formats.msa import \
-     MSA
+from paleomix.common.formats.msa import MSA
 
 
 def _is_sufficently_covered(filepath, min_coverage):
@@ -46,9 +45,12 @@ def _is_sufficently_covered(filepath, min_coverage):
 def main(argv):
     usage = "%prog [options] <PATH>"
     parser = optparse.OptionParser(usage=usage)
-    parser.add_option("--min-coverage", default=0.8, type=float,
-                      help="Minimum fraction of called bases in a MSA "
-                           "[%default]")
+    parser.add_option(
+        "--min-coverage",
+        default=0.8,
+        type=float,
+        help="Minimum fraction of called bases in a MSA " "[%default]",
+    )
 
     config, args = parser.parse_args(argv)
     if not args:
@@ -64,5 +66,5 @@ def main(argv):
                     print(sequence_name)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))

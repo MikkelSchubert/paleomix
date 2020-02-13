@@ -26,7 +26,7 @@ set -o pipefail # Fail is a command in a chain of pipes fails
 
 if [ $# -lt 2 ];
 then
-    echo "Usage: $0 <output-prefix> <input_1.bz2> [<input_2.bz2>, ...]"
+    echo "Usage: $0 <output-prefix> <input_1.gz> [<input_2.gz>, ...]"
     exit 1
 fi
 
@@ -56,7 +56,7 @@ then
     exit 1
 fi
 
-for executable in bzcat bowtie2 java bam_rmdup_collapsed samtools;
+for executable in bzcat bowtie2 java paleomix samtools;
 do
     if ! which ${executable} > /dev/null;
     then
@@ -88,7 +88,7 @@ then
 		mv "${OUTPUT_SORTED_BAM}.tmp" "${OUTPUT_SORTED_BAM}"
 	    fi
 
-	    bam_rmdup_collapsed --remove-duplicates < "${OUTPUT_SORTED_BAM}" > "${OUTPUT_RMDUP_BAM}.tmp"
+	    paleomix bam_rmdup_collapsed --remove-duplicates < "${OUTPUT_SORTED_BAM}" > "${OUTPUT_RMDUP_BAM}.tmp"
 	    mv "${OUTPUT_RMDUP_BAM}.tmp" "${OUTPUT_RMDUP_BAM}"
 	fi
 

@@ -24,19 +24,10 @@ import os
 import getpass
 
 from paleomix.node import CommandNode
-from paleomix.atomiccmd.builder import \
-    AtomicJavaCmdBuilder, \
-    create_customizable_cli_parameters, \
-    use_customizable_cli_parameters
-from paleomix.atomiccmd.sets import \
-    ParallelCmds
-from paleomix.common.fileutils import \
-    swap_ext, \
-    try_rmtree, \
-    reroot_path, \
-    describe_files
-from paleomix.common.utilities import \
-    safe_coerce_to_tuple
+from paleomix.atomiccmd.builder import AtomicJavaCmdBuilder
+from paleomix.atomiccmd.sets import ParallelCmds
+from paleomix.common.fileutils import swap_ext, try_rmtree, reroot_path, describe_files
+from paleomix.common.utilities import safe_coerce_to_tuple
 import paleomix.common.versions as versions
 import paleomix.common.system
 
@@ -59,8 +50,16 @@ class PicardNode(CommandNode):
 
 
 class ValidateBAMNode(PicardNode):
-    def __init__(self, config, input_bam, input_index=None, output_log=None,
-                 ignored_checks=(), big_genome_mode=False, dependencies=()):
+    def __init__(
+        self,
+        config,
+        input_bam,
+        input_index=None,
+        output_log=None,
+        ignored_checks=(),
+        big_genome_mode=False,
+        dependencies=(),
+    ):
         builder = picard_command(config, "ValidateSamFile")
         _set_max_open_files(builder, "MAX_OPEN_TEMP_FILES")
 
@@ -72,15 +71,17 @@ class ValidateBAMNode(PicardNode):
             builder.add_option("IGNORE", check, sep="=")
 
         output_log = output_log or swap_ext(input_bam, ".validated")
-        builder.set_kwargs(IN_BAM=input_bam,
-                           IN_INDEX=input_index,
-                           OUT_STDOUT=output_log)
+        builder.set_kwargs(
+            IN_BAM=input_bam, IN_INDEX=input_index, OUT_STDOUT=output_log
+        )
 
         description = "<Validate BAM: '%s'>" % (input_bam,)
-        PicardNode.__init__(self,
-                            command=builder.finalize(),
-                            description=description,
-                            dependencies=dependencies)
+        PicardNode.__init__(
+            self,
+            command=builder.finalize(),
+            description=description,
+            dependencies=dependencies,
+        )
 
     @staticmethod
     def _configure_for_big_genome(config, builder):
@@ -107,16 +108,20 @@ class BuildSequenceDictNode(PicardNode):
 
         builder.set_option("R", "%(TEMP_OUT_REF)s", sep="=")
         builder.set_option("O", "%(OUT_DICT)s", sep="=")
-        builder.set_kwargs(IN_REFERENCE=reference,
-                           TEMP_OUT_REF=os.path.basename(reference),
-                           OUT_DICT=swap_ext(reference, ".dict"))
+        builder.set_kwargs(
+            IN_REFERENCE=reference,
+            TEMP_OUT_REF=os.path.basename(reference),
+            OUT_DICT=swap_ext(reference, ".dict"),
+        )
 
         description = "<SequenceDictionary: '%s'>" % (reference,)
 
-        PicardNode.__init__(self,
-                            command=builder.finalize(),
-                            description=description,
-                            dependencies=dependencies)
+        PicardNode.__init__(
+            self,
+            command=builder.finalize(),
+            description=description,
+            dependencies=dependencies,
+        )
 
     def _setup(self, _config, temp):
         # Ensure that Picard CreateSequenceDict cannot reuse any existing
@@ -125,9 +130,15 @@ class BuildSequenceDictNode(PicardNode):
 
 
 class MarkDuplicatesNode(PicardNode):
-    @create_customizable_cli_parameters
-    def customize(cls, config, input_bams, output_bam, output_metrics=None,
-                  keep_dupes=False, dependencies=()):
+    def __init__(
+        self,
+        config,
+        input_bams,
+        output_bam,
+        output_metrics=None,
+        keep_dupes=False,
+        dependencies=(),
+    ):
         params = picard_command(config, "MarkDuplicates")
         _set_max_open_files(params, "MAX_FILE_HANDLES")
 
@@ -140,24 +151,18 @@ class MarkDuplicatesNode(PicardNode):
 
         if not keep_dupes:
             # Remove duplicates from output by default to save disk-space
-            params.set_option("REMOVE_DUPLICATES", "True",
-                              sep="=", fixed=False)
+            params.set_option("REMOVE_DUPLICATES", "True", sep="=", fixed=False)
 
         output_metrics = output_metrics or swap_ext(output_bam, ".metrics")
-        params.set_kwargs(OUT_BAM=output_bam,
-                          OUT_METRICS=output_metrics)
+        params.set_kwargs(OUT_BAM=output_bam, OUT_METRICS=output_metrics)
 
-        return {"command": params,
-                "dependencies": dependencies}
-
-    @use_customizable_cli_parameters
-    def __init__(self, parameters):
-        description = "<MarkDuplicates: %s>" \
-            % (describe_files(parameters.input_bams),)
-        PicardNode.__init__(self,
-                            command=parameters.command.finalize(),
-                            description=description,
-                            dependencies=parameters.dependencies)
+        description = "<MarkDuplicates: %s>" % (describe_files(input_bams),)
+        PicardNode.__init__(
+            self,
+            command=params.finalize(),
+            description=description,
+            dependencies=dependencies,
+        )
 
 
 class MergeSamFilesNode(PicardNode):
@@ -171,19 +176,28 @@ class MergeSamFilesNode(PicardNode):
         builder.add_multiple_options("I", input_bams, sep="=")
 
         builder.set_kwargs(OUT_BAM=output_bam)
-        description = "<Merge BAMs: %i file(s) -> '%s'>" \
-            % (len(input_bams), output_bam)
-        PicardNode.__init__(self,
-                            command=builder.finalize(),
-                            description=description,
-                            dependencies=dependencies)
+        description = "<Merge BAMs: %i file(s) -> '%s'>" % (len(input_bams), output_bam)
+        PicardNode.__init__(
+            self,
+            command=builder.finalize(),
+            description=description,
+            dependencies=dependencies,
+        )
 
 
 class MultiBAMInputNode(CommandNode):
     PIPE_FILE = "input.bam"
 
-    def __init__(self, config, input_bams, command, index_format=None,
-                 description=None, threads=1, dependencies=()):
+    def __init__(
+        self,
+        config,
+        input_bams,
+        command,
+        index_format=None,
+        description=None,
+        threads=1,
+        dependencies=(),
+    ):
         self._input_bams = safe_coerce_to_tuple(input_bams)
         self._index_format = index_format
 
@@ -208,11 +222,13 @@ class MultiBAMInputNode(CommandNode):
 
             command = ParallelCmds([merge.finalize(), command])
 
-        CommandNode.__init__(self,
-                             command=command,
-                             description=description,
-                             threads=threads,
-                             dependencies=dependencies)
+        CommandNode.__init__(
+            self,
+            command=command,
+            description=description,
+            threads=threads,
+            dependencies=dependencies,
+        )
 
     def _setup(self, config, temp):
         CommandNode._setup(self, config, temp)
@@ -225,14 +241,15 @@ class MultiBAMInputNode(CommandNode):
             os.symlink(source_fname, pipe_fname)
 
             if self._index_format:
-                os.symlink(swap_ext(source_fname, self._index_format),
-                           swap_ext(pipe_fname, self._index_format))
+                os.symlink(
+                    swap_ext(source_fname, self._index_format),
+                    swap_ext(pipe_fname, self._index_format),
+                )
 
     def _teardown(self, config, temp):
         os.remove(os.path.join(temp, self.PIPE_FILE))
         if self._index_format:
-            os.remove(os.path.join(temp, swap_ext(self.PIPE_FILE,
-                                                  self._index_format)))
+            os.remove(os.path.join(temp, swap_ext(self.PIPE_FILE, self._index_format)))
 
         CommandNode._teardown(self, config, temp)
 
@@ -248,26 +265,30 @@ def picard_command(config, command):
     jar_path = os.path.join(config.jar_root, _PICARD_JAR)
 
     if jar_path not in _PICARD_VERSION_CACHE:
-        params = AtomicJavaCmdBuilder(jar_path,
-                                      temp_root=config.temp_root,
-                                      jre_options=config.jre_options)
+        params = AtomicJavaCmdBuilder(
+            jar_path, temp_root=config.temp_root, jre_options=config.jre_options
+        )
 
         # Arbitrary command, since just '--version' does not work
         params.set_option("MarkDuplicates")
         params.set_option("--version")
 
-        requirement = versions.Requirement(call=params.finalized_call,
-                                           name="Picard tools",
-                                           search=r"\b(\d+)\.(\d+)\.\d+",
-                                           checks=versions.GE(1, 137))
+        requirement = versions.Requirement(
+            call=params.finalized_call,
+            name="Picard tools",
+            search=r"\b(\d+)\.(\d+)\.\d+",
+            checks=versions.GE(1, 137),
+        )
         _PICARD_VERSION_CACHE[jar_path] = requirement
 
     version = _PICARD_VERSION_CACHE[jar_path]
-    params = AtomicJavaCmdBuilder(jar_path,
-                                  temp_root=config.temp_root,
-                                  jre_options=config.jre_options,
-                                  CHECK_JAR=version,
-                                  set_cwd=True)
+    params = AtomicJavaCmdBuilder(
+        jar_path,
+        temp_root=config.temp_root,
+        jre_options=config.jre_options,
+        CHECK_JAR=version,
+        set_cwd=True,
+    )
     params.set_option(command)
 
     return params

@@ -20,22 +20,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
 import argparse
 import collections
+import os
+import logging
 
 import pysam
 
-from paleomix.ui import \
-    print_err, \
-    print_msg, \
-    print_warn
-
-from paleomix.common.fileutils import \
-    swap_ext
-from paleomix.common.bedtools import \
-    sort_bed_by_bamfile, \
-    read_bed_file
+from paleomix.common.bedtools import read_bed_file, sort_bed_by_bamfile
+from paleomix.common.fileutils import swap_ext
 
 
 class BAMStatsError(RuntimeError):
@@ -91,40 +84,63 @@ def parse_arguments(argv, ext):
     usage = "%s [options] sorted.bam [out%s]" % (prog, ext)
     parser = argparse.ArgumentParser(prog=prog, usage=usage)
 
-    parser.add_argument("infile", metavar="BAM",
-                        help="Filename of a sorted BAM file. If set to '-' "
-                             "the file is read from STDIN.")
-    parser.add_argument("outfile", metavar="OUTPUT", nargs='?',
-                        help="Filename of output table; defaults to name of "
-                             "the input BAM with a '%s' extension. If "
-                             "set to '-' the table is printed to STDOUT."
-                             % (ext,))
-    parser.add_argument("--target-name", default=None, metavar="NAME",
-                        help="Name used for 'Target' column; defaults to the "
-                             "filename of the BAM file.")
-    parser.add_argument("--regions-file", default=None, dest="regions_fpath",
-                        help="BED file containing regions of interest; %s "
-                             "is calculated only for these grouping by the "
-                             "name used in the BED file, or the contig name "
-                             "if no name has been specified for a record."
-                             % (ext.strip("."),))
-    parser.add_argument('--max-contigs', default=100, type=int,
-                        help="The maximum number of contigs allowed in a BAM "
-                             "file. If this number is exceeded, the entire "
-                             "set of contigs is aggregated into one pseudo-"
-                             "contig named '<Genome>'. This is done to "
-                             "limit table sizes [default: %(default)s]")
-    parser.add_argument('--ignore-readgroups',
-                        default=False, action="store_true",
-                        help="Ignore readgroup information in reads, and only "
-                             "provide aggregated statistics; this is required "
-                             "if readgroup information is missing or partial "
-                             "[default: %(default)s]")
-    parser.add_argument('--overwrite-output',
-                        default=False, action="store_true",
-                        help="Overwrite output file if it it exists; by "
-                             "default, the script will terminate if the file "
-                             "already exists.")
+    parser.add_argument(
+        "infile",
+        metavar="BAM",
+        help="Filename of a sorted BAM file. If set to '-' "
+        "the file is read from STDIN.",
+    )
+    parser.add_argument(
+        "outfile",
+        metavar="OUTPUT",
+        nargs="?",
+        help="Filename of output table; defaults to name of "
+        "the input BAM with a '%s' extension. If "
+        "set to '-' the table is printed to STDOUT." % (ext,),
+    )
+    parser.add_argument(
+        "--target-name",
+        default=None,
+        metavar="NAME",
+        help="Name used for 'Target' column; defaults to the "
+        "filename of the BAM file.",
+    )
+    parser.add_argument(
+        "--regions-file",
+        default=None,
+        dest="regions_fpath",
+        help="BED file containing regions of interest; %s "
+        "is calculated only for these grouping by the "
+        "name used in the BED file, or the contig name "
+        "if no name has been specified for a record." % (ext.strip("."),),
+    )
+    parser.add_argument(
+        "--max-contigs",
+        default=100,
+        type=int,
+        help="The maximum number of contigs allowed in a BAM "
+        "file. If this number is exceeded, the entire "
+        "set of contigs is aggregated into one pseudo-"
+        "contig named '<Genome>'. This is done to "
+        "limit table sizes [default: %(default)s]",
+    )
+    parser.add_argument(
+        "--ignore-readgroups",
+        default=False,
+        action="store_true",
+        help="Ignore readgroup information in reads, and only "
+        "provide aggregated statistics; this is required "
+        "if readgroup information is missing or partial "
+        "[default: %(default)s]",
+    )
+    parser.add_argument(
+        "--overwrite-output",
+        default=False,
+        action="store_true",
+        help="Overwrite output file if it it exists; by "
+        "default, the script will terminate if the file "
+        "already exists.",
+    )
 
     args = parser.parse_args(argv)
     if not args.outfile:
@@ -142,34 +158,36 @@ def parse_arguments(argv, ext):
             args.target_name = os.path.basename(args.infile)
 
     if os.path.exists(args.outfile) and not args.overwrite_output:
-        parser.error("Destination filename already exists (%r); use option "
-                     "--overwrite-output to allow overwriting of this file."
-                     % (args.outfile,))
+        parser.error(
+            "Destination filename already exists (%r); use option "
+            "--overwrite-output to allow overwriting of this file." % (args.outfile,)
+        )
 
     return args
 
 
 def main_wrapper(process_func, argv, ext):
+    log = logging.getLogger(__name__)
     args = parse_arguments(argv, ext)
     args.regions = None
     if args.regions_fpath:
         try:
             args.regions = collect_bed_regions(args.regions_fpath)
-        except ValueError, error:
-            print_err("ERROR: Failed to parse BED file %r:\n%s"
-                      % (args.regions_fpath, error))
+        except ValueError as error:
+            log.error("Failed to parse BED file %r: %s", args.regions_fpath, error)
             return 1
 
-    print_msg("Opening %r" % (args.infile,))
-    with pysam.Samfile(args.infile) as handle:
-        sort_order = handle.header.get('HD', {}).get('SO')
+    log.info("Opening %r", args.infile)
+    with pysam.AlignmentFile(args.infile) as handle:
+        sort_order = handle.header.get("HD", {}).get("SO")
         if sort_order is None:
-            print_warn("WARNING: BAM file %r is not marked as sorted!"
-                       % (args.infile,))
-        elif sort_order != 'coordinate':
-            print_err("ERROR: BAM file %r is %s-sorted, but only "
-                      "coordinate-sorted BAMs are supported!"
-                      % (args.infile, sort_order))
+            log.warning("BAM file %r is not marked as sorted!", args.infile)
+        elif sort_order != "coordinate":
+            log.error(
+                "BAM file %r is %s-sorted, but coordinate-sorting is required",
+                args.infile,
+                sort_order,
+            )
             return 1
 
         sort_bed_by_bamfile(handle, args.regions)
