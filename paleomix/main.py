@@ -114,11 +114,6 @@ _PALEOMIX_COMMANDS = (
         "paleomix.tools.cat",
         "Generalized cat command for gz, bz2 and uncompressed files.",
     ),
-    (
-        "retable",
-        "paleomix.tools.retable",
-        "Pretty print whitespace separated tabular data.",
-    ),
 )
 
 
