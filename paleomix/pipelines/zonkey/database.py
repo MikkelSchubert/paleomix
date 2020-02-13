@@ -25,6 +25,8 @@ import os
 import re
 import tarfile
 
+from io import TextIOWrapper
+
 import pysam
 
 import paleomix.yaml
@@ -221,7 +223,7 @@ class ZonkeyDB:
                 )
 
         group_keys = []
-        for key in samples.values()[0]:
+        for key in next(iter(samples.values())):
             match = _SAMPLES_TABLE_GROUP.match(key)
             if match is not None:
                 k_value = match.groupdict()["K"]
@@ -266,7 +268,7 @@ class ZonkeyDB:
     def _read_sample_order(cls, tar_handle, filename):
         cls._check_required_file(tar_handle, filename)
 
-        handle = tar_handle.extractfile(filename)
+        handle = TextIOWrapper(tar_handle.extractfile(filename))
         header = handle.readline().rstrip("\r\n").split("\t")
         sample_order = tuple(header[-1].split(";"))
 
@@ -282,7 +284,7 @@ class ZonkeyDB:
             # Missing MT file is allowed
             return None
 
-        handle = tar_handle.extractfile(filename)
+        handle = TextIOWrapper(tar_handle.extractfile(filename))
 
         results = {}
         for record in FASTA.from_lines(handle):
@@ -338,7 +340,7 @@ class ZonkeyDB:
     def _read_settings(cls, tar_handle, filename):
         cls._check_required_file(tar_handle, filename)
 
-        handle = tar_handle.extractfile(filename)
+        handle = TextIOWrapper(tar_handle.extractfile(filename))
 
         try:
             result = paleomix.yaml.safe_load(handle)
@@ -393,7 +395,7 @@ class ZonkeyDB:
 
     def _read_simulations(self, tar_handle, filename):
         try:
-            handle = tar_handle.extractfile(filename)
+            handle = TextIOWrapper(tar_handle.extractfile(filename))
         except KeyError:
             # Missing simulations file is allowed
             return None
@@ -483,7 +485,7 @@ class ZonkeyDB:
     @classmethod
     def _read_table(cls, tar_handle, filename, requied_columns=()):
         requied_columns = frozenset(requied_columns) | frozenset(("ID",))
-        handle = tar_handle.extractfile(filename)
+        handle = TextIOWrapper(tar_handle.extractfile(filename))
         result = {}
 
         try:
@@ -546,14 +548,15 @@ def _validate_mito_bam(data, handle, info):
             )
             return False
 
-        if not os.path.exists(handle.filename + ".bai") and not os.path.exists(
-            swap_ext(handle.filename, ".bai")
+        filename = handle.filename.decode("utf-8")
+        if not os.path.exists(filename + ".bai") and not os.path.exists(
+            swap_ext(filename, ".bai")
         ):
-            log.info("    - Attempting to index BAM file %r!" % (handle.filename,))
-            pysam.index(handle.filename)
+            log.info("    - Attempting to index BAM file %r!" % (filename,))
+            pysam.index(filename)
 
         # Workaround for pysam < 0.9 returning list, >= 0.9 returning str
-        for line in "".join(pysam.idxstats(handle.filename)).split("\n"):
+        for line in "".join(pysam.idxstats(filename)).split("\n"):
             line = line.strip()
             if not line:
                 continue
@@ -563,7 +566,7 @@ def _validate_mito_bam(data, handle, info):
                 log.error(
                     "WARNING: Mitochondrial BAM (%r) does not contain "
                     "any reads aligned to contig %r; inferring an "
-                    "phylogeny is not possible." % (handle.filename, name)
+                    "phylogeny is not possible." % (filename, name)
                 )
                 return True
 
@@ -584,7 +587,7 @@ def _validate_nuclear_bam(data, handle, info):
 
     log = logging.getLogger(__name__)
     panel_names_to_bam = {}
-    for name, stats in sorted(data.contigs.iteritems()):
+    for name, stats in sorted(data.contigs.items()):
         bam_contig_names = bam_contigs.get(stats["Size"], ())
         if len(bam_contig_names) == 1:
             panel_names_to_bam[name] = bam_contig_names[0]
@@ -610,7 +613,7 @@ def _validate_nuclear_bam(data, handle, info):
         return True
     elif panel_names_to_bam:
         log.error("ERROR: Not all nuclear chromosomes found in BAM:")
-        for (name, stats) in sorted(data.contigs.iteritems()):
+        for (name, stats) in sorted(data.contigs.items()):
             is_found = "OK" if name in panel_names_to_bam else "Not found!"
             log.error("  - %s: %s" % (name, is_found))
 
@@ -622,13 +625,13 @@ def _validate_nuclear_bam(data, handle, info):
 def _check_file_compression(filename):
     try:
         log = logging.getLogger(__name__)
-        with open(filename) as handle:
+        with open(filename, "rb") as handle:
             header = handle.read(2)
 
-            if header == "\x1f\x8b":
+            if header == b"\x1f\x8b":
                 log.warning("Zonkey database is gzip compressed; please uncompress:")
                 log.warning("  $ gunzip %r", filename)
-            elif header == "BZ":
+            elif header == b"BZ":
                 log.warning("Zonkey database is bzip2 compressed; please uncompress:")
                 log.warning("  $ bunzip2 %r", filename)
     except IOError:

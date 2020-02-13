@@ -27,6 +27,8 @@ import random
 import sys
 import tarfile
 
+from io import TextIOWrapper
+
 import pysam
 
 from paleomix.common.sequences import NT_CODES
@@ -140,7 +142,7 @@ class GenotypeSites:
 class GenotypeReader:
     def __init__(self, filename):
         self._tar_handle = tarfile.open(filename)
-        self._handle = self._tar_handle.extractfile("genotypes.txt")
+        self._handle = TextIOWrapper(self._tar_handle.extractfile("genotypes.txt"))
         self._header = self._handle.readline().rstrip("\r\n").split("\t")
         self.samples = self._header[-1].split(";")
 

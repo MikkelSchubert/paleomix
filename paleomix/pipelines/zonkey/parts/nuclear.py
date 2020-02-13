@@ -745,4 +745,4 @@ class PlotCoverageNode(CommandNode):
 
 
 def hash_params(*args, **kwargs):
-    return hashlib.md5(repr([args, kwargs])).hexdigest()
+    return hashlib.md5(repr([args, kwargs]).encode("utf-8")).hexdigest()

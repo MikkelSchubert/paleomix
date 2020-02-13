@@ -246,7 +246,7 @@ def _read_sample_table(config, filename):
     """
     log = logging.getLogger(__name__)
     log.info("Reading table of samples from %r", filename)
-    valid_characters = frozenset(string.letters + string.digits + ".-_")
+    valid_characters = frozenset(string.ascii_letters + string.digits + ".-_")
 
     samples = config.samples = {}
     with fileutils.open_ro(filename) as handle:

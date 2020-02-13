@@ -462,7 +462,7 @@ def setup_example(config):
         for member in example_files:
             destination = fileutils.reroot_path(root, member.name)
             src_handle = tar_handle.extractfile(member)
-            with open(destination, "w") as out_handle:
+            with open(destination, "wb") as out_handle:
                 shutil.copyfileobj(src_handle, out_handle)
 
     log.info("Sucessfully saved example data in %r", root)
