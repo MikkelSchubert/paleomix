@@ -92,34 +92,32 @@ class ZonkeyDB:
     def __init__(self, filename):
         self.filename = filename
 
-        if not os.path.exists(filename):
-            raise ZonkeyDBError("Database file does not exist")
-        elif not tarfile.is_tarfile(filename):
-            raise ZonkeyDBError("Database file is not a valid tar-file")
-
         log = logging.getLogger(__name__)
         log.info("Reading Zonkey database from %r" % (filename,))
 
-        # Warn if file is gzip / bzip2 compressed; gives worse throughput
-        _check_file_compression(filename)
+        try:
+            # Require that the file is not gzip / bzip2 compressed
+            _check_file_compression(filename)
 
-        with tarfile.open(filename) as tar_handle:
-            log.info("  - Reading settings")
-            self.settings = self._read_settings(tar_handle, "settings.yaml")
-            log.info("  - Reading list of contigs")
-            self.contigs = self._read_contigs_table(tar_handle, "contigs.txt")
-            log.info("  - Reading list of samples")
-            self.samples, self.groups = self._read_samples_table(
-                tar_handle, "samples.txt"
-            )
-            log.info("  - Reading mitochondrial sequences")
-            self.mitochondria = self._read_mitochondria(
-                tar_handle, "mitochondria.fasta"
-            )
-            log.info("  - Reading emperical admixture distribution")
-            self.simulations = self._read_simulations(tar_handle, "simulations.txt")
-            log.info("  - Determining sample order")
-            self.sample_order = self._read_sample_order(tar_handle, "genotypes.txt")
+            with tarfile.open(filename, "r:") as tar_handle:
+                log.info("  - Reading settings")
+                self.settings = self._read_settings(tar_handle, "settings.yaml")
+                log.info("  - Reading list of contigs")
+                self.contigs = self._read_contigs_table(tar_handle, "contigs.txt")
+                log.info("  - Reading list of samples")
+                self.samples, self.groups = self._read_samples_table(
+                    tar_handle, "samples.txt"
+                )
+                log.info("  - Reading mitochondrial sequences")
+                self.mitochondria = self._read_mitochondria(
+                    tar_handle, "mitochondria.fasta"
+                )
+                log.info("  - Reading emperical admixture distribution")
+                self.simulations = self._read_simulations(tar_handle, "simulations.txt")
+                log.info("  - Determining sample order")
+                self.sample_order = self._read_sample_order(tar_handle, "genotypes.txt")
+        except (OSError, tarfile.TarError) as error:
+            raise ZonkeyDBError(str(error))
 
         self._cross_validate()
 
@@ -623,17 +621,16 @@ def _validate_nuclear_bam(data, handle, info):
 
 
 def _check_file_compression(filename):
-    try:
-        log = logging.getLogger(__name__)
-        with open(filename, "rb") as handle:
-            header = handle.read(2)
+    with open(filename, "rb") as handle:
+        header = handle.read(2)
 
-            if header == b"\x1f\x8b":
-                log.warning("Zonkey database is gzip compressed; please uncompress:")
-                log.warning("  $ gunzip %r", filename)
-            elif header == b"BZ":
-                log.warning("Zonkey database is bzip2 compressed; please uncompress:")
-                log.warning("  $ bunzip2 %r", filename)
-    except IOError:
-        # Errors are ignored at this stage
-        pass
+    if header == b"\x1f\x8b":
+        raise ZonkeyDBError(
+            "Zonkey database is gzip compressed; please decompress to continue:\n"
+            "  $ gunzip %r" % (filename,)
+        )
+    elif header == b"BZ":
+        raise ZonkeyDBError(
+            "Zonkey database is bzip2 compressed; please decompress to continue:\n"
+            "  $ bunzip2 %r" % (filename,)
+        )

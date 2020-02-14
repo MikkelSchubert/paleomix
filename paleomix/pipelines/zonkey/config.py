@@ -91,7 +91,7 @@ def parse_run_config(config, args):
     try:
         config.database = database.ZonkeyDB(config.tablefile)
     except database.ZonkeyDBError as error:
-        log.error("Error reading database %r: %s", config.tablefile, error)
+        log.error("Error reading database %r:\n%s", config.tablefile, error)
         return
 
     known_samples = set(config.database.samples) | set(("Sample",))
