@@ -42,6 +42,7 @@ from paleomix.common.makefile import (
     ValuesIntersect,
     ValuesSubsetOf,
     ValueMissing,
+    DeprecatedOption,
     RemovedOption,
     And,
     Or,
@@ -454,6 +455,45 @@ def test_value_missing(value):
 
     with pytest.raises(MakefileError):
         spec(_DUMMY_PATH, value)
+
+
+###############################################################################
+###############################################################################
+# Deprecated option
+
+_DEPRECATED_TMPL = "option has been deprecated and will be removed in the future: %s"
+
+
+def test_deprecated_option__properties():
+    spec = DeprecatedOption(IsInt(default=17))
+
+    assert spec.default == 17
+    assert spec.description == IsInt(default=17).description
+
+
+def test_deprecated_option__meets_spec():
+    spec = DeprecatedOption(IsInt(default=17))
+
+    assert spec.meets_spec(10)
+    assert not spec.meets_spec("10")
+
+
+def test_deprecated_option__logs_on_success(caplog):
+    expected = _DEPRECATED_TMPL % (_DUMMY_PATH_STR,)
+    spec = DeprecatedOption(IsInt(default=17))
+    spec(_DUMMY_PATH, 10)
+
+    assert expected in caplog.text
+
+
+def test_deprecated_option__no_log_on_failure(caplog):
+    expected = _DEPRECATED_TMPL % (_DUMMY_PATH_STR,)
+    spec = DeprecatedOption(IsInt(default=17))
+
+    with pytest.raises(MakefileError):
+        spec(_DUMMY_PATH, "10")
+
+    assert expected not in caplog.text
 
 
 ###############################################################################

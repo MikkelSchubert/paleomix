@@ -417,6 +417,29 @@ class ValueMissing(MakefileSpec):
         return False
 
 
+class DeprecatedOption(MakefileSpec):
+    """Used to signify substructures that have been removed, and are hence ignored."""
+
+    def __init__(self, spec):
+        self._spec = spec
+        if not isinstance(spec, MakefileSpec):
+            raise ValueError(spec)
+
+        MakefileSpec.__init__(self, spec.description, spec.default)
+
+    def __call__(self, path, value):
+        self._spec(path, value)
+
+        log = logging.getLogger(__name__)
+        log.warning(
+            "option has been deprecated and will be removed in the future: %s"
+            % (_path_to_str(path),)
+        )
+
+    def meets_spec(self, value):
+        return self._spec.meets_spec(value)
+
+
 class RemovedOption(MakefileSpec):
     """Used to signify substructures that have been removed, and are hence ignored."""
 
