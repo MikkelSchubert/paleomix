@@ -263,7 +263,7 @@ _VALIDATION_OPTIONS = {
     # True is equivalent of 'remove'.
     "PCRDuplicates": StringIn((True, False, "mark", "filter"), default="filter"),
     # Qualities should be rescaled using mapDamage (replaced with Features)
-    "RescaleQualities": ReferenceError(),
+    "RescaleQualities": RemovedOption(),
     "mapDamage": {
         # Tabulation options
         "--downsample": Or(IsUnsignedInt, IsFloat),
