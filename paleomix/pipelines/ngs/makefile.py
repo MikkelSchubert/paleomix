@@ -657,7 +657,6 @@ def _validate_prefixes(makefiles):
     already_validated = {}
     logger.info("Validating FASTA files")
     for makefile in makefiles:
-        uses_gatk = makefile["Options"]["Features"]["RealignedBAM"]
         for prefix in makefile["Prefixes"].values():
             path = prefix["Path"]
             if path in already_validated:
@@ -677,9 +676,6 @@ def _validate_prefixes(makefiles):
                 contigs = FASTA.index_and_collect_contigs(path)
             except FASTAError as error:
                 raise MakefileError("Error indexing FASTA:\n %s" % (error,))
-
-            # Implementation of GATK checks for the human genome
-            _do_validate_hg_prefix(makefile, prefix, contigs, fatal=uses_gatk)
 
             contigs = dict(contigs)
             regions_of_interest = prefix.get("RegionsOfInterest", {})
@@ -705,58 +701,6 @@ def _validate_prefixes(makefiles):
                 prefix["IndexFormat"] = ".csi"
 
             already_validated[path] = prefix
-
-
-def _do_validate_hg_prefix(makefile, prefix, contigs, fatal):
-    if not _is_invalid_hg_prefix(contigs):
-        return
-
-    message = (
-        "Prefix appears to be a human genome, but chromosomes are ordered\n"
-        "lexically (chr1, chr10, chr11, ...), rather than numerically\n"
-        "(chr1, chr2, chr3, ...):\n\n"
-        "  Makefile = %s\n"
-        "  Prefix   = %s\n\n"
-        "GATK requires that human chromosomes are ordered numerically;\n%s\n"
-        "See the documentation at the GATK website for more information:\n  "
-        "http://www.broadinstitute.org/gatk/guide/article?id=1204\n"
-    )
-
-    prefix_path = prefix["Path"]
-    mkfile_path = makefile["Filename"]
-    if fatal:
-        details = "Either disable GATK in the makefile, or fix the prefix."
-        message %= (mkfile_path, prefix_path, details)
-
-        raise MakefileError(message)
-    else:
-        details = "You will not be able to use the resulting BAM file with GATK."
-
-        logger = logging.getLogger(__name__)
-        logger.warn(message, mkfile_path, prefix_path, details)
-
-
-def _is_invalid_hg_prefix(contigs):
-    hg_contigs = {
-        # Contig sizes based on hg18 and hg19 and hg38
-        "chr1": [247249719, 249250621, 248956422],
-        "chr2": [242951149, 243199373, 242193529],
-        "chr10": [135374737, 135534747, 133797422],
-    }
-
-    size_to_idx = dict((size, idx) for (idx, (_, size)) in enumerate(contigs))
-
-    # Equivalent to the GATK 'nonCanonicalHumanContigOrder' function
-    for (key, values) in hg_contigs.items():
-        for value in values:
-            if value in size_to_idx:
-                hg_contigs[key] = size_to_idx[value]
-                break
-        else:
-            # Contig not found; probably not hg18, hg19, or hg38
-            return False
-
-    return not hg_contigs["chr1"] < hg_contigs["chr2"] < hg_contigs["chr10"]
 
 
 def _iterate_over_records(makefile):
