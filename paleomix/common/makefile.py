@@ -194,7 +194,7 @@ def read_makefile(filename, specification):
     return process_makefile(data, specification)
 
 
-def process_makefile(data, specification, path=("root",), apply_defaults=True):
+def process_makefile(data, specification, path=(), apply_defaults=True):
     """Validates a makefile and applies defaults to missing keys.
 
     Note that that default values are deep-copied before being set.
