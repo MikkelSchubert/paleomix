@@ -51,8 +51,8 @@ from paleomix.common.makefile import (
     StringStartsWith,
     IsListOf,
     IsDictOf,
+    DeprecatedOption,
     RemovedOption,
-    PreProcessMakefile,
 )
 from paleomix.common.formats.fasta import FASTA, FASTAError
 
@@ -117,27 +117,10 @@ _VALID_FEATURES_DICT = {
     "Depths": IsBoolean(default=True),
     "DuplicateHist": IsBoolean(default=False),
     "RawBAM": IsBoolean(default=False),
-    "RealignedBAM": IsBoolean(default=True),
+    "RealignedBAM": DeprecatedOption(IsBoolean(default=True)),
     "Summary": IsBoolean(default=True),
-    "mapDamage": Or(
-        IsBoolean, StringIn(("rescale", "model", "plot", "no", "yes")), default=True
-    ),
+    "mapDamage": StringIn(("rescale", "model", "plot")),
 }
-
-_VALID_FEATURES_LIST = ValuesSubsetOf(
-    (
-        "Coverage",
-        "Depths",
-        "DuplicateHist",
-        "mapDamage",
-        "Raw BAM",
-        "RawBAM",
-        "Realigned BAM",
-        "RealignedBAM",
-        "Summary",
-    )
-)
-
 
 _VALID_EXCLUDE_DICT = {
     "Single": IsBoolean(default=False),
@@ -146,56 +129,6 @@ _VALID_EXCLUDE_DICT = {
     "Paired": IsBoolean(default=False),
     "Singleton": IsBoolean(default=False),
 }
-
-_VALID_EXCLUDE_LIST = ValuesSubsetOf(_READ_TYPES)
-
-
-class BAMFeatures(PreProcessMakefile):
-    """Makefile pre-processor that converts convert an old-style 'Features'
-    list to a dictionary of bools, in order to allow backwards compatibility
-    with older makefiles. All listed values are set to True, and any omitted
-    value is set to False, in order to match the old behavior where inheritance
-    was not possible.
-    """
-
-    def __call__(self, path, value):
-        if not isinstance(value, list):
-            return value, _VALID_FEATURES_DICT
-
-        _VALID_FEATURES_LIST(path, value)
-
-        # All values must be set to prevent inheritance
-        result = dict.fromkeys(_VALID_FEATURES_DICT, False)
-        for key in value:
-            result[key.replace(" ", "")] = True
-
-        return result, _VALID_FEATURES_DICT
-
-
-class ExcludeReads(PreProcessMakefile):
-    """Makefile pre-processor that converts convert an old-style 'ExcludeReads'
-    list to a dictionary of bools, in order to allow backwards compatibility
-    with older makefiles. All listed values are set to False (excluded), and
-    any omitted value is set to True, in order to match the old behavior where
-    inheritance was not possible.
-    """
-
-    def __call__(self, path, value):
-        if not isinstance(value, list):
-            return value, _VALID_EXCLUDE_DICT
-
-        _VALID_EXCLUDE_LIST(path, value)
-
-        result = dict.fromkeys(value, True)
-        # 'Singleton' was treated as 'Single' prior to to v1.2
-        result.setdefault("Singleton", result.get("Single", False))
-
-        # All values must be set to prevent inheritance, which would otherwise
-        # change the behavior of old makefiles.
-        for key in _READ_TYPES:
-            result.setdefault(key, False)
-
-        return result, _VALID_EXCLUDE_DICT
 
 
 _VALIDATION_OPTIONS = {
@@ -290,9 +223,9 @@ _VALIDATION_OPTIONS = {
         "--seq-length": IsUnsignedInt,
     },
     # Exclude READ_TYPES from alignment/analysis
-    "ExcludeReads": ExcludeReads(),
+    "ExcludeReads": _VALID_EXCLUDE_DICT,
     # Features of pipeline
-    "Features": BAMFeatures(),
+    "Features": _VALID_FEATURES_DICT,
 }
 
 
@@ -335,7 +268,6 @@ def _mangle_makefile(makefile, pipeline_variant):
         "Targets": makefile,
     }
 
-    _mangle_features(makefile)
     _mangle_options(makefile)
 
     if pipeline_variant != "trim":
@@ -371,19 +303,6 @@ def _mangle_options(makefile):
 
     for key, data in makefile["Targets"].items():
         _do_update_options(makefile["Options"], data, (key,))
-
-
-def _mangle_features(makefile):
-    """Updates old-style makefiles to match the current layout.
-    """
-
-    options = makefile["Options"]
-    features = options["Features"]
-
-    if isinstance(features["mapDamage"], bool):
-        features["mapDamage"] = "plot" if features["mapDamage"] else "no"
-    elif features["mapDamage"] == "yes":
-        features["mapDamage"] = "plot"
 
 
 def _mangle_prefixes(makefile):
