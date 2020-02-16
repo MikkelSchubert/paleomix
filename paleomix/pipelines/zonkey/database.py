@@ -100,21 +100,21 @@ class ZonkeyDB:
             _check_file_compression(filename)
 
             with tarfile.open(filename, "r:") as tar_handle:
-                log.info("  - Reading settings")
+                log.info("Reading settings")
                 self.settings = self._read_settings(tar_handle, "settings.yaml")
-                log.info("  - Reading list of contigs")
+                log.info("Reading list of contigs")
                 self.contigs = self._read_contigs_table(tar_handle, "contigs.txt")
-                log.info("  - Reading list of samples")
+                log.info("Reading list of samples")
                 self.samples, self.groups = self._read_samples_table(
                     tar_handle, "samples.txt"
                 )
-                log.info("  - Reading mitochondrial sequences")
+                log.info("Reading mitochondrial sequences")
                 self.mitochondria = self._read_mitochondria(
                     tar_handle, "mitochondria.fasta"
                 )
-                log.info("  - Reading emperical admixture distribution")
+                log.info("Reading emperical admixture distribution")
                 self.simulations = self._read_simulations(tar_handle, "simulations.txt")
-                log.info("  - Determining sample order")
+                log.info("Determining sample order")
                 self.sample_order = self._read_sample_order(tar_handle, "genotypes.txt")
         except (OSError, tarfile.TarError) as error:
             raise ZonkeyDBError(str(error))
@@ -129,7 +129,7 @@ class ZonkeyDB:
         Returns one of INVALID_BAMFILE, NUC_BAMFILE, and MITO_BAMFILE.
         """
         log = logging.getLogger(__name__)
-        log.info("  - Validating BAM file %r ", filename)
+        log.info("Validating BAM file %r ", filename)
 
         try:
             handle = pysam.AlignmentFile(filename)
@@ -140,16 +140,12 @@ class ZonkeyDB:
         return self.validate_bam_handle(handle)
 
     def validate_bam_handle(self, handle):
-        samples = get_sample_names(handle)
-        if len(samples) > 1:
+        if len(get_sample_names(handle)) > 1:
             log = logging.getLogger(__name__)
             log.warning(
                 "BAM read-groups specify more than one sample, "
-                "but this tool treats BAMs as a single sample:"
+                "but this tool treats BAMs as a single sample"
             )
-
-            for sample in enumerate(samples, start=1):
-                log.warning("    %i: %r" % sample)
 
         info = BAMInfo()
         if not _validate_mito_bam(self, handle, info):
@@ -550,7 +546,7 @@ def _validate_mito_bam(data, handle, info):
         if not os.path.exists(filename + ".bai") and not os.path.exists(
             swap_ext(filename, ".bai")
         ):
-            log.info("    - Attempting to index BAM file %r!" % (filename,))
+            log.info("Indexing BAM file %r" % (filename,))
             pysam.index(filename)
 
         # Workaround for pysam < 0.9 returning list, >= 0.9 returning str
@@ -561,8 +557,8 @@ def _validate_mito_bam(data, handle, info):
 
             name, _, hits, _ = line.split("\t")
             if (name == bam_contig) and not int(hits):
-                log.error(
-                    "WARNING: Mitochondrial BAM (%r) does not contain "
+                log.warning(
+                    "Mitochondrial BAM (%r) does not contain "
                     "any reads aligned to contig %r; inferring an "
                     "phylogeny is not possible." % (filename, name)
                 )
@@ -598,19 +594,18 @@ def _validate_nuclear_bam(data, handle, info):
             if len(candidates) == 1:
                 panel_names_to_bam[name] = candidates[0]
             else:
-                log.warning(
-                    "WARNING: Multiple candidates for chr%s with size %i:"
-                    % (name, stats["Size"])
+                log.error(
+                    "Multiple candidates for chr%s with size %i: %s",
+                    name,
+                    stats["Size"],
+                    ", ".join(bam_contig_names),
                 )
-
-                for name in bam_contig_names:
-                    log.warning("  - %r" % (name,))
 
     if len(panel_names_to_bam) == len(data.contigs):
         info.nuclear_contigs = panel_names_to_bam
         return True
     elif panel_names_to_bam:
-        log.error("ERROR: Not all nuclear chromosomes found in BAM:")
+        log.error("Not all nuclear chromosomes found in BAM:")
         for (name, stats) in sorted(data.contigs.items()):
             is_found = "OK" if name in panel_names_to_bam else "Not found!"
             log.error("  - %s: %s" % (name, is_found))

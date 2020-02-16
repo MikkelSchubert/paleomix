@@ -543,9 +543,9 @@ def _validate_makefile_adapters(makefile):
     if any(results.values()):
         logger = logging.getLogger(__name__)
         logger.warn(
-            "WARNING: An adapter specified for AdapterRemoval "
-            "corresponds to the default sequence, but is reverse "
-            "complemented. Please make sure that this is intended! "
+            "An adapter specified for AdapterRemoval corresponds to the default "
+            "sequence, but is reverse complemented. Please make sure that this is "
+            "intended! "
         )
 
         if results["--pcr2"]:

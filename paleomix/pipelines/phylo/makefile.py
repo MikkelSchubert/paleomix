@@ -132,7 +132,7 @@ def _select_samples(select, groups, samples, path):
 
 def _update_regions(options, mkfile):
     log = logging.getLogger(__name__)
-    log.info("    - Validating regions of interest")
+    log.info("Validating regions of interest")
     mkfile["Project"]["Regions"] = mkfile["Project"].pop("RegionsOfInterest")
 
     if not mkfile["Project"]["Regions"]:
@@ -187,7 +187,7 @@ def _collect_fasta_contigs(filename, cache={}):
 
     if not os.path.exists(filename + ".fai"):
         log = logging.getLogger(__name__)
-        log.info("      - Indexing %r; this may take a while", filename)
+        log.info("Indexing %r; this may take a while", filename)
 
     cache[filename] = contigs = dict(FASTA.index_and_collect_contigs(filename))
     return contigs
@@ -357,7 +357,7 @@ def _check_bam_sequences(options, mkfile, steps):
         return
 
     log = logging.getLogger(__name__)
-    log.info("    - Validating BAM files")
+    log.info("Validating BAM files")
     bam_files = {}
     for regions in mkfile["Project"]["Regions"].values():
         for sample in mkfile["Project"]["Samples"].values():
@@ -452,7 +452,7 @@ def _update_and_check_max_read_depth(options, mkfile):
         for subdd in mkfile["Genotyping"].values()
     ):
         log = logging.getLogger(__name__)
-        log.info("    - Determinining max-depth from depth-histograms")
+        log.info("Determinining max-depth from depth-histograms")
 
     for (key, settings) in mkfile["Genotyping"].items():
         required_keys = set()
@@ -562,7 +562,7 @@ def _read_max_depth(filename, prefix, sample):
             # failure when using 'MaxDepth: auto'.
             ((cand_sample, max_depth),) = max_depths.items()
             log.warning(
-                "        - Name in depths file not as expected; found %r, not %r:",
+                "Name in depths file not as expected; found %r, not %r:",
                 cand_sample,
                 sample,
             )
@@ -584,7 +584,7 @@ def _read_max_depth(filename, prefix, sample):
 
     max_depth = int(max_depth)
 
-    log.info("        - %s.%s = %i", sample, prefix, max_depth)
+    log.info("%s.%s = %i", sample, prefix, max_depth)
     _DEPTHS_CACHE[filename] = max_depth
     return max_depth
 

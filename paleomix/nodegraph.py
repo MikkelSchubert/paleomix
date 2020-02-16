@@ -233,11 +233,11 @@ class NodeGraph:
                 # obviously it is not possible to run it at this point.
                 missing = cache.missing_files(node.input_files)
                 self._logger.error(
-                    "ERROR: Input file(s) missing for node; "
-                    "may have been moved while the pipeline "
-                    "was running. Cannot proceed:\n"
-                    "    Node = %s\n    Files = %s\n"
-                    % (node, "\n            ".join(missing))
+                    "Input file(s) missing for node; may have been moved while the "
+                    "pipeline was running. Cannot proceed:\n"
+                    "    Node = %s\n    Files = %s\n",
+                    node,
+                    "\n            ".join(missing),
                 )
                 state = NodeGraph.ERROR
             elif self.is_outdated(node, cache):
