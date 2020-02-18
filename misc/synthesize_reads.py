@@ -386,11 +386,7 @@ def parse_args(argv):
 def main(argv):
     options = parse_args(argv)
 
-    print(
-        "Generating %i lane(s) of synthetic reads ...\nDISCLAIMER: For "
-        "demonstration of PALEOMIX only; the synthetic data is not "
-        "biologically meaningful!" % (options.lanes_num,)
-    )
+    print("Generating %i lane(s) of synthetic reads" % (options.lanes_num,))
 
     specimen = Specimen(options, options.fasta)
     sample = Sample(options, specimen)

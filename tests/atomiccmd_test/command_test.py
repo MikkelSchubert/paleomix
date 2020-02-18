@@ -557,7 +557,7 @@ def test_atomiccmd__terminate_race_condition(tmp_path):
     assert cmd.join() == [0]
 
 
-# Calling terminate on an already joined command is acceptable ...
+# Calling terminate on an already joined command is acceptable
 def test_atomiccmd__terminate_after_join(tmp_path):
     cmd = AtomicCmd("true")
     cmd.run(tmp_path)

@@ -150,7 +150,7 @@ class GenotypeReader:
         for chrom, records in itertools.groupby(
             self._read_records(), lambda rec: rec[0]
         ):
-            sys.stderr.write("Reading contig %r information ...\n" % (chrom,))
+            sys.stderr.write("Reading contig %r information\n" % (chrom,))
             yield chrom, GenotypeSites(records)
 
     def _read_records(self):
@@ -255,9 +255,7 @@ def process_bam(args, data, bam_handle, mapping):
     references = [reverse_mapping.get(name, name) for name in raw_references]
 
     if args.downsample:
-        sys.stderr.write(
-            "Downsampling to at most %i BAM records ...\n" % (args.downsample)
-        )
+        sys.stderr.write("Downsampling to at most %i BAM records\n" % (args.downsample))
         bam_handle = DownsampledBAM(bam_handle, args.downsample, references)
 
     statistics = {
@@ -276,7 +274,7 @@ def process_bam(args, data, bam_handle, mapping):
                     records = set()
                     raw_ref = raw_references[references.index(ref)]
 
-                    sys.stderr.write("Reading %r from BAM ...\n" % (raw_ref,))
+                    sys.stderr.write("Reading %r from BAM\n" % (raw_ref,))
                     raw_sites = bam_handle.fetch(raw_ref)
                     for pos, line, nucleotides in sites.process(raw_sites, statistics):
                         process_record(
@@ -339,7 +337,7 @@ def main(argv):
     args = parse_args(argv)
     random.seed(args.seed)
 
-    print("Reading reference information from %r ..." % (args.database,))
+    print("Reading reference information from %r" % (args.database,))
 
     try:
         data = database.ZonkeyDB(args.database)

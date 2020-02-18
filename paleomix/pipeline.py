@@ -316,7 +316,7 @@ class Pypeline:
             self._interrupted = True
             self._logger.error(
                 "\nKeyboard interrupt detected, waiting for "
-                "running tasks to complete ... Press CTRL-C "
+                "running tasks to complete. Press CTRL-C "
                 "again to force termination.\n"
             )
         else:
@@ -336,7 +336,7 @@ class Pypeline:
             key = queue.get(blocking, 0.1)
             return running.pop(key)
         except IOError as error:
-            # User pressed ctrl-c (SIGINT), or similar event ...
+            # User pressed ctrl-c (SIGINT), or similar event
             if error.errno != errno.EINTR:
                 raise
         except Empty:

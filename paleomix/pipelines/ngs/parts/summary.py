@@ -410,7 +410,7 @@ class SummaryTableNode(Node):
             if contigtables is None:
                 raise NodeError(
                     "Error reading table %r; row not found:"
-                    "\n   %s   ...\n\nIf files have been renamed "
+                    "\n   %s\n\nIf files have been renamed "
                     "during the run, then please remove this file "
                     "in that it may be re-generated.\nHowever, "
                     "note that read-group tags in the BAM files "

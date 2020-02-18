@@ -453,5 +453,5 @@ class NodeGraph:
 def _summarize_nodes(nodes):
     nodes = list(sorted(set(map(str, nodes))))
     if len(nodes) > 4:
-        nodes = nodes[:5] + ["and %i more nodes ..." % len(nodes)]
+        nodes = nodes[:5] + ["and %i more nodes" % len(nodes)]
     return nodes

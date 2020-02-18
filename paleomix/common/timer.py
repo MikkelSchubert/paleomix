@@ -26,8 +26,10 @@ import time
 from paleomix.common.utilities import fragment, cumsum
 
 
-_DESC = "Processed {Records} records ({Progress}) in {Time}, est. {Remaining} left. Last {RecordsDelta} records in {TimeDelta}, now at {Contig}: {Position} ..."
-_FINAL = "Processed {Records} records in {Time}. Last {RecordsDelta} records in {TimeDelta} ..."
+_DESC = "Processed {Records} records ({Progress}) in {Time}, est. {Remaining} left. Last {RecordsDelta} records in {TimeDelta}, now at {Contig}: {Position}"
+_FINAL = (
+    "Processed {Records} records in {Time}. Last {RecordsDelta} records in {TimeDelta}"
+)
 
 
 class BAMTimer:
@@ -85,7 +87,7 @@ class BAMTimer:
                 desc = _DESC
             else:
                 print(
-                    "File appears to be unsorted, cannot estimate progress ...",
+                    "File appears to be unsorted, cannot estimate progress",
                     file=self._out,
                 )
                 self._bam = None

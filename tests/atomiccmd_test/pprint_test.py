@@ -49,7 +49,7 @@ def test_pformat__simple__running(tmp_path):
     cmd.run(tmp_path)
     assert pformat(cmd) == (
         "Command = sleep 10\n"
-        "Status  = Running ...\n"
+        "Status  = Running\n"
         "STDOUT* = '{temp_dir}/pipe_sleep_{id}.stdout'\n"
         "STDERR* = '{temp_dir}/pipe_sleep_{id}.stderr'\n"
         "CWD     = '{cwd}'"
@@ -63,7 +63,7 @@ def test_pformat__simple__running__set_cwd(tmp_path):
     cmd.run(tmp_path)
     assert pformat(cmd) == (
         "Command = sleep 10\n"
-        "Status  = Running ...\n"
+        "Status  = Running\n"
         "STDOUT* = 'pipe_sleep_{id}.stdout'\n"
         "STDERR* = 'pipe_sleep_{id}.stderr'\n"
         "CWD     = '{temp_dir}'"

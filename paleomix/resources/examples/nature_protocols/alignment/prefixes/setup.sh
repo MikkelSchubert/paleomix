@@ -14,7 +14,7 @@ then
 	-C - -o "Pi_nucl.fasta.gz"
     gunzip "Pi_nucl.fasta.gz"
 else
-    echo "Pi_mito.fasta already fetched; skipping ..."
+    echo "Pi_mito.fasta already fetched; skipping"
 fi
 
 echo
@@ -25,5 +25,5 @@ then
     curl "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id=AY894835.1&rettype=fasta&retmode=text" \
 	-C - -o "Pi_mito.fasta"
 else
-    echo "Pi_mito.fasta already fetched; skipping ..."
+    echo "Pi_mito.fasta already fetched; skipping"
 fi

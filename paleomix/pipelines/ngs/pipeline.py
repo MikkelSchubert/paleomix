@@ -230,19 +230,19 @@ def run(config, pipeline_variant):
         pipeline.add_nodes(*nodes)
 
     if config.list_input_files:
-        logger.info("Printing output files ...")
+        logger.info("Printing output files")
         pipeline.print_input_files()
         return 0
     elif config.list_output_files:
-        logger.info("Printing output files ...")
+        logger.info("Printing output files")
         pipeline.print_output_files()
         return 0
     elif config.list_executables:
-        logger.info("Printing required executables ...")
+        logger.info("Printing required executables")
         pipeline.print_required_executables()
         return 0
 
-    logger.info("Running BAM pipeline ...")
+    logger.info("Running BAM pipeline")
     if not pipeline.run(dry_run=config.dry_run, max_threads=config.max_threads):
         return 1
 

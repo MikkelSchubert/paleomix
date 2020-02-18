@@ -247,7 +247,7 @@ def read_intervals(filename):
                     sys.stderr.write(
                         (
                             "ERROR: Invalid BED record '%r', must "
-                            "have at least 6 fields ...\n"
+                            "have at least 6 fields\n"
                         )
                         % (bed,)
                     )
@@ -359,7 +359,7 @@ def main(argv):
     print("Running vcf_to_fasta", end="", file=sys.stderr)
     if opts.whole_codon_indels_only:
         print(", assuming sequences represents CDS", end="", file=sys.stderr)
-    print(" ...", file=sys.stderr)
+    print(file=sys.stderr)
 
     if not os.path.exists(opts.genotype):
         sys.stderr.write("ERROR: VCF file does not exist.\n")

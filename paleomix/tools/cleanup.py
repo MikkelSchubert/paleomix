@@ -323,5 +323,5 @@ def main(argv):
     elif args.command:
         raise NotImplementedError("Unexpected command %r" % (args.command,))
 
-    sys.stderr.write("Reading SAM file from STDIN ...\n")
+    sys.stderr.write("Reading SAM file from STDIN\n")
     return _run_cleanup_pipeline(args)

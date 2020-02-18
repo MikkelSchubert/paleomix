@@ -95,7 +95,7 @@ rm -vf "${FILENAME}"
 
 if ! tar cvf "${FILENAME}" ${SOURCES};
 then
-    echo "Removing partial files ..."
+    echo "Removing partial files"
     rm -vf "${FILENAME}"
     exit 1
 fi
@@ -114,7 +114,7 @@ def _try_cast_int(value):
 
 
 def _write_build_sh(args, filename):
-    sys.stderr.write("Writing %r ...\n" % (filename,))
+    sys.stderr.write("Writing %r\n" % (filename,))
     if os.path.exists(filename) and not args.overwrite:
         sys.stderr.write("  File exists; skipping.\n")
         return
@@ -125,7 +125,7 @@ def _write_build_sh(args, filename):
 
 
 def _write_genotypes(args, data, filename):
-    sys.stderr.write("Writing %r ...\n" % (filename,))
+    sys.stderr.write("Writing %r\n" % (filename,))
     if os.path.exists(filename) and not args.overwrite:
         sys.stderr.write("  File exists; skipping.\n")
         return
@@ -175,7 +175,7 @@ def _write_genotypes(args, data, filename):
 
 
 def _write_settings(args, contigs, filename):
-    sys.stderr.write("Writing %r ...\n" % (filename,))
+    sys.stderr.write("Writing %r\n" % (filename,))
     if os.path.exists(filename) and not args.overwrite:
         sys.stderr.write("  File exists; skipping.\n")
         return
@@ -189,7 +189,7 @@ def _write_settings(args, contigs, filename):
 
 
 def _write_contigs(args, filename):
-    sys.stderr.write("Writing %r ...\n" % (filename,))
+    sys.stderr.write("Writing %r\n" % (filename,))
     if os.path.exists(filename) and not args.overwrite:
         sys.stderr.write("  File exists; skipping.\n")
         return
@@ -217,7 +217,7 @@ def _write_contigs(args, filename):
 
 
 def _write_samples(args, samples, filename):
-    sys.stderr.write("Writing %r ...\n" % (filename,))
+    sys.stderr.write("Writing %r\n" % (filename,))
     if os.path.exists(filename) and not args.overwrite:
         sys.stderr.write("  File exists; skipping.\n")
         return

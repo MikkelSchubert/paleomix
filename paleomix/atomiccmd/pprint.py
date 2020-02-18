@@ -79,7 +79,7 @@ def _build_status(atomiccmd, _stats, indent, lines):
             else:
                 lines.append(prefix + "Exited with return-code %i" % return_code)
         else:
-            lines.append(prefix + "Running ...")
+            lines.append(prefix + "Running")
 
 
 def _build_stdin(atomiccmd, files, stats, indent, lines):

@@ -479,9 +479,9 @@ def _process_samples(config):
         files = {}
 
         if name == "-":
-            log.info("Validating unnamed sample ...")
+            log.info("Validating unnamed sample")
         else:
-            log.info("Validating sample %r ...", name)
+            log.info("Validating sample %r", name)
 
         for filename in info.pop("Files"):
             filetype = config.database.validate_bam(filename)

@@ -216,7 +216,7 @@ def _do_build_feature_table(options, table, features, protein_coding):
             yield (exons, add_records)
 
     print(
-        "\t- Processed %i transcripts, filtered %i (%.1f%%) ..."
+        "\t- Processed %i transcripts, filtered %i (%.1f%%)"
         % (read, read - retained, (100.0 * (read - retained)) / read)
     )
 
@@ -225,7 +225,7 @@ def build_coding_seqs_table(options, table):
     """Takes a table generated from a GTF file, and constructs a table for each
        feature, inferring introns and UTRs from the exons and CDSs of the input
        table."""
-    print("Building table of features for coding sequences ...")
+    print("Building table of features for coding sequences")
     features = {"UTR5": [], "UTR3": [], "CDS": [], "intron": []}
 
     feature_table = _do_build_feature_table(options, table, features, True)
@@ -235,7 +235,7 @@ def build_coding_seqs_table(options, table):
 
 
 def build_noncoding_seqs_table(options, table):
-    print("Building table of features for non-coding sequences ...")
+    print("Building table of features for non-coding sequences")
     features = {"exon": [], "intron": []}
 
     feature_table = _do_build_feature_table(options, table, features, False)
@@ -326,7 +326,7 @@ def main(argv):
         src_table = read_gtf(gtf_file, scaffolds, args.contig_prefix)
 
     for (source, table) in src_table.items():
-        print("Writing tables for '%s' ..." % source)
+        print("Writing tables for '%s'" % source)
 
         if source.startswith("protein"):
             features = build_coding_seqs_table(args, table)
@@ -336,7 +336,7 @@ def main(argv):
         for feature in features:
             fpath = "%s.%s.%s.bed" % (args.output_prefix, source, feature)
 
-            print("\tWriting %ss to '%s' ..." % (feature, fpath))
+            print("\tWriting %ss to '%s'" % (feature, fpath))
             write_bed(features[feature], fpath)
 
     return 0
