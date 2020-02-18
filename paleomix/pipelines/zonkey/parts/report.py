@@ -359,7 +359,7 @@ class AnalysisReport:
         self._data = config.database
 
     def input_files(self):
-        input_files = [self._config.tablefile]
+        input_files = [self._config.database.filename]
         if self._has_nuc:
             # Summary file generated while building TPED files
             input_files.append(

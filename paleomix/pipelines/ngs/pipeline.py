@@ -180,7 +180,7 @@ def index_references(config, makefiles):
             subdd["Nodes:Bowtie2"] = references_bowtie2[reference]
 
 
-def run(config, args, pipeline_variant):
+def run(config, pipeline_variant):
     paleomix.logger.initialize(
         log_level=config.log_level, log_file=config.log_file, name="bam_pipeline"
     )
@@ -205,7 +205,7 @@ def run(config, args, pipeline_variant):
     pipeline = Pypeline(config)
 
     try:
-        makefiles = read_makefiles(args, pipeline_variant)
+        makefiles = read_makefiles(config.makefiles, pipeline_variant)
     except (MakefileError, paleomix.yaml.YAMLError, IOError) as error:
         logger.error("Error reading makefiles: %s", error)
         return 1
@@ -249,52 +249,22 @@ def run(config, args, pipeline_variant):
     return 0
 
 
-def _print_usage(pipeline):
-    basename = "%s_pipeline" % (pipeline,)
-    usage = (
-        "BAM Pipeline v{version}\n"
-        "Usage:\n"
-        "  -- {cmd} help           -- Display this message.\n"
-        "  -- {cmd} example [...]  -- Create example project.\n"
-        "  -- {cmd} makefile [...] -- Print makefile template.\n"
-        "  -- {cmd} dryrun [...]   -- Perform dry run of pipeline.\n"
-        "  -- {cmd} run [...]      -- Run pipeline on provided makefiles.\n"
-    )
-
-    print(
-        usage.format(
-            version=paleomix.__version__, cmd=basename, pad=" " * len(basename)
-        )
-    )
-
-
 def main(argv, pipeline="bam"):
-    assert pipeline in ("bam", "trim"), pipeline
+    if pipeline not in ("bam", "trim"):
+        raise ValueError(pipeline)
 
-    commands = (
-        "makefile",
-        "mkfile",
-        "run",
-        "dry_run",
-        "dry-run",
-        "dryrun",
-        "example",
-        "examples",
-    )
-
-    if not argv or (argv[0] == "help"):
-        _print_usage(pipeline)
+    parser = bam_config.build_parser(pipeline)
+    if not argv:
+        parser.print_help()
         return 0
-    elif argv[0] not in commands:
-        _print_usage(pipeline)
-        return 1
-    elif argv[0] in ("mkfile", "makefile"):
-        return bam_mkfile.main(argv[1:], pipeline=pipeline)
-    elif argv[0] in ("example", "examples"):
-        return paleomix.resources.copy_example("bam_pipeline", argv[1:])
 
-    config, args = bam_config.parse_config(argv, pipeline)
-    if args and args[0].startswith("dry"):
-        config.dry_run = True
+    args = parser.parse_args(argv)
+    if args.command in ("makefile",):
+        return bam_mkfile.main(args, pipeline=pipeline)
+    elif args.command in ("example",):
+        return paleomix.resources.copy_example("bam_pipeline", args)
 
-    return run(config, args[1:], pipeline_variant=pipeline)
+    if args.command.startswith("dry"):
+        args.dry_run = True
+
+    return run(args, pipeline_variant=pipeline)

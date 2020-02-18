@@ -23,21 +23,23 @@
 import logging
 import os
 import shutil
+import string
 import tarfile
+
+import pysam
 
 import paleomix
 import paleomix.common.fileutils as fileutils
 import paleomix.logger
-
 import paleomix.pipelines.ngs.mkfile as bam_mkfile
 import paleomix.pipelines.zonkey.config as zonkey_config
+import paleomix.pipelines.zonkey.database as database
 import paleomix.pipelines.zonkey.parts.common as common_nodes
 import paleomix.pipelines.zonkey.parts.mitochondria as mitochondria
 import paleomix.pipelines.zonkey.parts.nuclear as nuclear
 import paleomix.pipelines.zonkey.parts.report as report
 import paleomix.pipelines.zonkey.parts.summary as summary
 import paleomix.yaml
-
 from paleomix.common.formats.fasta import FASTA
 from paleomix.nodes.raxml import RAxMLRapidBSNode
 from paleomix.nodes.samtools import BAMIndexNode
@@ -73,7 +75,7 @@ def build_plink_nodes(config, data, root, bamfile, dependencies=()):
 
     ped_node = nuclear.BuildTPEDFilesNode(
         output_root=plink["root"],
-        table=config.tablefile,
+        table=config.database.filename,
         downsample=config.downsample_to,
         bamfile=bamfile,
         dependencies=dependencies,
@@ -253,7 +255,7 @@ def build_mito_nodes(config, root, bamfile, dependencies=()):
 
     mt_prefix = os.path.join(root, "results", "mitochondria", "sequences")
     alignment = mitochondria.MitoConsensusNode(
-        database=config.tablefile,
+        database=config.database.filename,
         bamfile=bamfile,
         output_prefix=mt_prefix,
         dependencies=dependencies,
@@ -359,7 +361,7 @@ def run_admix_pipeline(config):
     if config.multisample and not config.admixture_only:
         nodes = [summary.SummaryNode(config, nodes)]
 
-    if not run_pipeline(config, nodes, "\nRunning Zonkey:"):
+    if not run_pipeline(config, nodes, "Running Zonkey"):
         return 1
 
 
@@ -432,8 +434,9 @@ def setup_mito_mapping(config):
 def setup_example(config):
     root = os.path.join(config.destination, "zonkey_pipeline")
     log = logging.getLogger(__name__)
+    log.info("Copying example project to %r", root)
 
-    with tarfile.TarFile(config.tablefile) as tar_handle:
+    with tarfile.TarFile(config.database.filename) as tar_handle:
         example_files = []
         existing_files = []
         for member in tar_handle.getmembers():
@@ -452,7 +455,7 @@ def setup_example(config):
         elif not example_files:
             log.error(
                 "Sample database %r does not contain example data; cannot proceed.",
-                config.tablefile,
+                config.database.filename,
             )
             return 1
 
@@ -470,16 +473,199 @@ def setup_example(config):
     return 0
 
 
-def main(argv):
-    config = zonkey_config.parse_config(argv)
+def _process_samples(config):
+    log = logging.getLogger(__name__)
+    for name, info in sorted(config.samples.items()):
+        files = {}
 
-    if config is None:
-        return 1
-    elif config.command == "run":
-        return run_admix_pipeline(config)
-    elif config.command == "mito":
-        return setup_mito_mapping(config)
-    elif config.command == "example":
-        return setup_example(config)
+        if name == "-":
+            log.info("Validating unnamed sample ...")
+        else:
+            log.info("Validating sample %r ...", name)
+
+        for filename in info.pop("Files"):
+            filetype = config.database.validate_bam(filename)
+            if not filetype:
+                log.error("File is not a valid BAM file: %r" % (filename,))
+                return False
+
+            if filetype.is_nuclear and filetype.is_mitochondrial:
+                if "Nuc" in files:
+                    log.error("Two nuclear BAMs specified!")
+                    return False
+                elif "Mito" in files:
+                    log.warning(
+                        "Nuclear + mitochondrial BAM and mitochondrial BAM specified; "
+                        "the mitochondrial genome in the combined BAM will not be used!"
+                    )
+
+                files["Nuc"] = {"Path": filename, "Info": filetype}
+                files.setdefault("Mito", filename)
+            elif filetype.is_nuclear:
+                if "Nuc" in files:
+                    log.error("Two nuclear BAMs specified!")
+                    return False
+
+                files["Nuc"] = {"Path": filename, "Info": filetype}
+            elif filetype.is_mitochondrial:
+                if "Mito" in files:
+                    log.error("Two nuclear BAMs specified!")
+                    return False
+
+                files["Mito"] = filename
+            else:
+                log.error(
+                    "BAM does not contain usable nuclear or mitochondrial contigs: %r",
+                    filename,
+                )
+                return False
+
+        config.samples[name]["Files"] = files
+
+    return True
+
+
+def _read_sample_table(config, filename):
+    """Parses a 2 - 3 column tab-seperated table containing, on each row, a
+    name to be used for a sample in the first row, and then the paths two
+    either one or to two BAM files, which must represent a single nuclear or
+    a single mitochondrial alignment (2 columns), or both (3 columns).
+    """
+    log = logging.getLogger(__name__)
+    log.info("Reading table of samples from %r", filename)
+    valid_characters = frozenset(string.ascii_letters + string.digits + ".-_")
+
+    samples = config.samples = {}
+    with fileutils.open_ro(filename) as handle:
+        for linenum, line in enumerate(handle, start=1):
+            if not line.strip() or line.lstrip().startswith("#"):
+                continue
+
+            fields = [_f for _f in map(str.strip, line.split("\t")) if _f]
+            if len(fields) not in (2, 3):
+                log.error(
+                    "Error reading sample table (%r) at line %i: Expected 2 or 3 "
+                    "columns, found %i; please correct file before continuing.",
+                    filename,
+                    linenum,
+                    len(fields),
+                )
+                return
+
+            name = fields[0]
+            invalid_letters = frozenset(name) - valid_characters
+            if invalid_letters:
+                log.error(
+                    "Error reading sample table (%r) at line %i: Sample name contains "
+                    "illegal character(s). Only letters, numbers, and '-', '_', and "
+                    "'.' are allowed, but found %r in name %r ",
+                    filename,
+                    linenum,
+                    "".join(invalid_letters),
+                    name,
+                )
+                return
+            elif name in samples:
+                log.error(
+                    "Duplicate name %r in sample table; names must be unique!", name
+                )
+                return
+
+            samples[name] = {
+                "Root": os.path.join(config.destination, name),
+                "Files": fields[1:],
+            }
+
+    return True
+
+
+def finalize_run_config(parser, args):
+    log = logging.getLogger(__name__)
+    if args.command in ("run", "dryrun") and not (1 <= len(args.files) <= 3):
+        parser.print_usage()
+        return
+
+    args.multisample = False
+
+    known_samples = set(args.database.samples) | set(("Sample",))
+    unknown_samples = set(args.treemix_outgroup) - known_samples
+    if unknown_samples:
+        log.error(
+            "Argument --treemix-outgroup includes unknown sample(s): %s; known "
+            "samples are %s. Note that names are case-sensitive."
+            ", ".join(map(repr, sorted(unknown_samples))),
+            ", ".join(map(repr, sorted(known_samples))),
+        )
+        return
+
+    if len(args.files) == 1:
+        args.files.append(fileutils.swap_ext(args.files[0], ".zonkey"))
+
+    if len(args.files) == 2:
+        filename, args.destination = args.files
+
+        if os.path.exists(args.destination) and not os.path.isdir(args.destination):
+            log.error("Destination %r is not a directory", args.destination)
+            return
+        elif not os.path.isfile(filename):
+            log.error("Not a valid filename: %r", filename)
+            return
+        elif _is_bamfile(filename):
+            args.samples = {"-": {"Root": args.destination, "Files": [filename]}}
+        else:
+            args.multisample = True
+            if not _read_sample_table(args, filename):
+                return
+    elif len(args.files) == 3:
+        filename_1, filename_2, args.destination = args.files
+
+        args.samples = {
+            "-": {"Root": args.destination, "Files": [filename_1, filename_2]}
+        }
+    else:
+        raise RuntimeError("Unexpected number of arguments: %r" % (args.files,))
+
+    # Identify (mito or nuc?) and validate BAM files provided by user
+    if not _process_samples(args):
+        return
+
+    return args
+
+
+def _is_bamfile(filename):
+    """Returns true if a file is a BAM file, false otherwise.
+    """
+    try:
+        with pysam.AlignmentFile(filename, "rb"):
+            return True
+    except ValueError:
+        return False
+    except IOError:
+        return False
+
+
+def main(argv):
+    parser, run_parser = zonkey_config.build_parser()
+    if not argv:
+        parser.print_help()
+        return
+
+    args = parser.parse_args(argv)
+    log = logging.getLogger(__name__)
+
+    try:
+        args.database = database.ZonkeyDB(args.database)
+    except database.ZonkeyDBError as error:
+        log.error("Error reading database %r: %s", args.database, error)
+        return
+
+    if args.command == "run":
+        args = finalize_run_config(run_parser, args)
+        if args is not None:
+            return run_admix_pipeline(args)
+    elif args.command == "mito":
+        return setup_mito_mapping(args)
+    elif args.command == "example":
+        return setup_example(args)
 
     return 1

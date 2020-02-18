@@ -67,11 +67,17 @@ def test_paleomix_command():
 
 
 FACTORY_COMMANDS = (
-    ("bam_pipeline", "Usage: paleomix bam_pipeline <command> [options] [makefiles]"),
-    ("trim_pipeline", "Usage: paleomix trim_pipeline <command> [options] [makefiles]"),
+    (
+        "bam_pipeline",
+        "usage: paleomix bam_pipeline run [-h] [--version] [--log-file LOG_FILE]",
+    ),
+    (
+        "trim_pipeline",
+        "usage: paleomix trim_pipeline run [-h] [--version] [--log-file LOG_FILE]",
+    ),
     (
         "phylo_pipeline",
-        "Usage: paleomix phylo_pipeline <command> [options] [makefiles]",
+        "usage: paleomix phylo_pipeline [-h] [--version] [--log-file LOG_FILE]",
     ),
     (
         "cleanup",
@@ -88,7 +94,7 @@ FACTORY_COMMANDS = (
         "gtf_to_bed",
         "usage: paleomix gtf_to_bed [options] in.gtf out_prefix [in.scaffolds]",
     ),
-    ("vcf_filter", "Usage: paleomix vcf_filter [options] [in1.vcf, ...]"),
+    ("vcf_filter", "usage: paleomix vcf_filter [-h] [--version] [--reset-filter]"),
     (
         "vcf_to_fasta",
         "usage: paleomix vcf_to_fasta [options] --genotype in.vcf --intervals in.bed",

@@ -20,32 +20,30 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-
-
-import sys
+import argparse
 import errno
-import optparse
+import sys
 
 import pysam
 
+import paleomix
 import paleomix.common.vcffilter as vcffilter
 
 from paleomix.common.fileutils import open_ro
 
 
-def _read_files(filenames, args):
+def _read_files(args):
     in_header = True
     has_filters = False
-    reset_filter = args.reset_filter == "yes"
     vcf_parser = pysam.asVCF()
-    for filename in filenames:
+    for filename in args.filenames:
         with open_ro(filename, "rb") as handle:
             for line in handle:
                 if not line.startswith(b"#"):
                     in_header = False
                     line = line.rstrip(b"\n\r")
                     vcf = vcf_parser(line, len(line))
-                    if reset_filter:
+                    if args.reset_filter:
                         vcf.filter = "."
 
                     yield vcf
@@ -59,28 +57,38 @@ def _read_files(filenames, args):
 
 
 def main(argv):
-    desc = "paleomix vcf_filter [options] [in1.vcf, ...]"
-    parser = optparse.OptionParser(desc)
-    parser.add_option(
+    parser = argparse.ArgumentParser(prog="paleomix vcf_filter")
+
+    parser.add_argument(
+        "--version", action="version", version="%(prog)s v" + paleomix.__version__,
+    )
+
+    parser.add_argument(
+        "filenames",
+        nargs="*",
+        help="VCF files; may be gzip/bzip2 compresssed. Leave blank or use '-' to "
+        "read from STDIN",
+        metavar="file",
+    )
+
+    parser.add_argument(
         "--reset-filter",
-        default="no",
-        choices=("yes", "no"),
-        help="If set to 'yes', values in the 'FILTER' column "
-        "are cleared, and set according to the results "
-        "from running the filters implemented by this "
-        "tool. If set to 'no', any existing values are "
-        "retained, and any (new) failed filters are added "
-        "to these [default: %default].",
+        default=False,
+        action="store_true",
+        help="If set, values in the 'FILTER' column  are cleared, and set according "
+        "to the results from running the filters implemented by this tool. If not "
+        "set, any existing values are retained, and any (new) failed filters are "
+        "added to these.",
     )
 
     vcffilter.add_varfilter_options(parser)
-    (args, filenames) = parser.parse_args(argv)
+    args = parser.parse_args(argv)
 
-    if (not filenames or "-" in filenames) and sys.stdin.isatty():
+    if (not args.filenames or "-" in args.filenames) and sys.stdin.isatty():
         parser.error("STDIN is a terminal, terminating!")
 
     try:
-        for vcf in vcffilter.filter_vcfs(args, _read_files(filenames, args)):
+        for vcf in vcffilter.filter_vcfs(args, _read_files(args)):
             print(vcf)
     except IOError as error:
         # Check for broken pipe (head, less, etc).

@@ -20,15 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import optparse
-import sys
+import argparse
+import multiprocessing
 
 import paleomix
-import paleomix.pipelines.phylo.parts.genotype as genotype
-import paleomix.pipelines.phylo.parts.msa as msa
-import paleomix.pipelines.phylo.parts.phylo as phylo
 
-from paleomix.config import ConfigError, PerHostConfig, PerHostValue
 
 _DESCRIPTION = (
     "Commands:\n"
@@ -41,110 +37,80 @@ _DESCRIPTION = (
 )
 
 
-_COMMANDS = {
-    "mkfile": True,
-    "makefile": True,
-    "genotype": genotype.chain,
-    "genotyping": genotype.chain,
-    "msa": msa.chain,
-    "phylogeny:examl": phylo.chain_examl,
-}
+def build_parser():
+    parser = argparse.ArgumentParser(
+        prog="paleomix phylo_pipeline", description=_DESCRIPTION,
+    )
+    parser.add_argument(
+        "commands",
+        type=lambda it: [_f.strip() for _f in it.split("+") if _f.strip()],
+        help="One or more commands separated by '+'",
+    )
+    parser.add_argument(
+        "files", nargs="*", help="One or more commands separated by '+'"
+    )
 
+    parser.add_argument(
+        "--version", action="version", version="%(prog)s v" + paleomix.__version__,
+    )
 
-class CustomHelpFormatter(optparse.IndentedHelpFormatter):
-    def format_description(self, description):
-        return description or ""
+    paleomix.logger.add_argument_group(parser, default="warning")
 
-
-def select_commands(chain):
-    commands = []
-    for command in chain.split("+"):
-        command_key = command.strip().lower()
-        command_func = None
-
-        if command in _COMMANDS:
-            command_func = _COMMANDS[command_key]
-        elif len(command) >= 3:
-            for (key, value) in _COMMANDS.items():
-                if key.startswith(command):
-                    command_key = key
-                    command_func = value
-                    break
-
-        commands.append((command_key, command_func))
-
-    return commands
-
-
-def _run_config_parser(argv):
-    per_host_cfg = PerHostConfig("phylo_pipeline")
-    usage_str = "paleomix phylo_pipeline <command> [options] [makefiles]"
-    version_str = "paleomix phylo_pipeline v%s" % (paleomix.__version__,)
-    parser = optparse.OptionParser(usage=usage_str, version=version_str)
-
-    parser.formatter = CustomHelpFormatter()
-    parser.formatter.set_parser(parser)
-    parser.description = _DESCRIPTION
-
-    paleomix.logger.add_optiongroup(parser, default=PerHostValue("warning"))
-
-    group = optparse.OptionGroup(parser, "Scheduling")
-    group.add_option(
+    group = parser.add_argument_group("Scheduling")
+    group.add_argument(
         "--examl-max-threads",
-        default=PerHostValue(1),
+        default=1,
         type=int,
-        help="Maximum number of threads to use for each instance of ExaML [%default]",
+        help="Maximum number of threads to use for each instance of ExaML [%(default)s]",
     )
-    group.add_option(
+    group.add_argument(
         "--max-threads",
-        default=per_host_cfg.max_threads,
         type=int,
-        help="Maximum number of threads to use in total [%default]",
+        default=max(2, multiprocessing.cpu_count()),
+        help="Max number of threads to use in total [%(default)s]",
     )
-    group.add_option(
+    group.add_argument(
         "--dry-run",
         default=False,
         action="store_true",
         help="If passed, only a dry-run in performed, the dependency tree is printed, "
         "and no tasks are executed.",
     )
-    parser.add_option_group(group)
 
-    group = optparse.OptionGroup(parser, "Required paths")
-    group.add_option(
+    group = parser.add_argument_group("Required paths")
+    group.add_argument(
         "--temp-root",
-        default=per_host_cfg.temp_root,
-        help="Location for temporary files and folders [%default]",
+        default="./temp",
+        help="Location for temporary files and folders [%(default)s]",
     )
-    group.add_option(
+    group.add_argument(
         "--samples-root",
-        default=PerHostValue("./data/samples", is_path=True),
-        help="Location of BAM files for each sample [%default]",
+        default="./data/samples",
+        help="Location of BAM files for each sample [%(default)s]",
     )
-    group.add_option(
+    group.add_argument(
         "--regions-root",
-        default=PerHostValue("./data/regions", is_path=True),
-        help="Location of BED files containing regions of interest [%default]",
+        default="./data/regions",
+        help="Location of BED files containing regions of interest [%(default)s]",
     )
-    group.add_option(
+    group.add_argument(
         "--prefix-root",
-        default=PerHostValue("./data/prefixes", is_path=True),
-        help="Location of prefixes (FASTAs) [%default]",
+        default="./data/prefixes",
+        help="Location of prefixes (FASTAs) [%(default)s]",
     )
-    group.add_option(
+    group.add_argument(
         "--refseq-root",
-        default=PerHostValue("./data/refseqs", is_path=True),
-        help="Location of reference sequences (FASTAs) [%default]",
+        default="./data/refseqs",
+        help="Location of reference sequences (FASTAs) [%(default)s]",
     )
-    group.add_option(
+    group.add_argument(
         "--destination",
         default="./results",
-        help="The destination folder for result files [%default]",
+        help="The destination folder for result files [%(default)s]",
     )
-    parser.add_option_group(group)
 
-    group = optparse.OptionGroup(parser, "Files and executables")
-    group.add_option(
+    group = parser.add_argument_group("Files and executables")
+    group.add_argument(
         "--list-input-files",
         action="store_true",
         default=False,
@@ -152,40 +118,18 @@ def _run_config_parser(argv):
         "makefile(s), excluding any generated by the "
         "pipeline itself.",
     )
-    group.add_option(
+    group.add_argument(
         "--list-output-files",
         action="store_true",
         default=False,
         help="List all output files generated by pipeline for " "the makefile(s).",
     )
-    group.add_option(
+    group.add_argument(
         "--list-executables",
         action="store_true",
         default=False,
         help="List all executables required by the pipeline, "
         "with version requirements (if any).",
     )
-    parser.add_option_group(group)
 
-    return per_host_cfg.parse_args(parser, argv)
-
-
-def parse_config(argv):
-    options, args = _run_config_parser(argv)
-
-    if args and args[0] in ("example", "examples"):
-        return options, args
-    elif (len(args) < 2) and (args != ["mkfile"] and args != ["makefile"]):
-        description = _DESCRIPTION.replace("%prog", "phylo_pipeline").strip()
-        print("Phylogeny Pipeline v%s\n" % (paleomix.__version__,), file=sys.stderr)
-        print(description, file=sys.stderr)
-        return options, args
-
-    commands = select_commands(args[0] if args else ())
-    if any((func is None) for (_, func) in commands):
-        unknown_commands = ", ".join(
-            repr(key) for (key, func) in commands if func is None
-        )
-        raise ConfigError("Unknown analysis step(s): %s" % (unknown_commands,))
-
-    return options, args
+    return parser

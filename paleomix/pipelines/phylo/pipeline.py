@@ -25,30 +25,31 @@ import os
 import sys
 
 import paleomix.logger
-import paleomix.resources
 import paleomix.pipelines.phylo.mkfile as mkfile
+import paleomix.pipelines.phylo.parts.genotype as genotype
+import paleomix.pipelines.phylo.parts.msa as msa
+import paleomix.pipelines.phylo.parts.phylo as phylo
+import paleomix.resources
 import paleomix.yaml
+
 from paleomix.pipeline import Pypeline
-from paleomix.pipelines.phylo.config import (
-    ConfigError,
-    parse_config,
-    select_commands,
-)
+from paleomix.pipelines.phylo.config import build_parser
 from paleomix.pipelines.phylo.makefile import MakefileError, read_makefiles
+
+
+_COMMANDS = {
+    "genotype": genotype.chain,
+    "msa": msa.chain,
+    "phylogeny": phylo.chain_examl,
+}
 
 
 def main(argv):
     log = logging.getLogger(__name__)
+    parser = build_parser()
+    config = parser.parse_args(argv)
 
-    try:
-        config, args = parse_config(argv)
-    except ConfigError as error:
-        log.error("%s", error)
-        return 1
-
-    if not args or ("help" in args):
-        return 0
-    elif args[0] in ("example", "examples"):
+    if "example" in config.commands:
         if paleomix.resources.copy_example("phylo_pipeline", argv[1:]):
             return 1
 
@@ -64,13 +65,17 @@ def main(argv):
             handle.write(lines)
 
         return 0
-    elif (len(args) < 2) and ("mkfile" not in args and "makefile" not in args):
-        log.error("\nPlease specify at least one makefile!")
-        return 1
+    elif "makefile" in config.commands:
+        return mkfile.main(config.files)
 
-    commands = select_commands(args.pop(0))
-    if any((cmd in ("makefile", "mkfile")) for (cmd, _) in commands):
-        return mkfile.main(args[1:])
+    commands = []
+    for key in config.commands:
+        func = _COMMANDS.get(key)
+        if func is None:
+            log.error("unknown command %r", key)
+            return 1
+
+        commands.append((key, func))
 
     if not os.path.exists(config.temp_root):
         try:
@@ -87,7 +92,7 @@ def main(argv):
     pipeline = Pypeline(config)
 
     try:
-        makefiles = read_makefiles(config, args, commands)
+        makefiles = read_makefiles(config, commands)
     except (MakefileError, paleomix.yaml.YAMLError, IOError) as error:
         log.error("Error reading makefiles:\n%s", error)
         return 1

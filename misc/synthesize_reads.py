@@ -20,17 +20,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import sys
-import math
+import argparse
 import gzip
+import math
 import random
+import sys
 
-from optparse import OptionParser, OptionGroup
-
-from paleomix.common.sequences import reverse_complement
 from paleomix.common.formats.fasta import FASTA
-from paleomix.common.utilities import fragment
 from paleomix.common.sampling import weighted_sampling
+from paleomix.common.sequences import reverse_complement
+from paleomix.common.utilities import fragment
 
 
 def _dexp(lambda_value, position):
@@ -305,10 +304,12 @@ class Lane:
 
 
 def parse_args(argv):
-    parser = OptionParser()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("fasta", help="Input FASTA file")
+    parser.add_argument("output_prefix", help="Prefix for output filenames")
 
-    group = OptionGroup(parser, "Specimen")
-    group.add_option(
+    group = parser.add_argument_group("Specimen")
+    group.add_argument(
         "--specimen-seed",
         default=None,
         help="Seed used to initialize the 'speciment', for the "
@@ -316,82 +317,74 @@ def parse_args(argv):
         "values if runs are to be done for the same "
         "genotype.",
     )
-    group.add_option("--specimen-sub-rate", default=0.005, type=float)
-    group.add_option("--specimen-indel-rate", default=0.0005, type=float)
-    group.add_option("--specimen-indel-lambda", default=0.9, type=float)
-    parser.add_option_group(group)
+    group.add_argument("--specimen-sub-rate", default=0.005, type=float)
+    group.add_argument("--specimen-indel-rate", default=0.0005, type=float)
+    group.add_argument("--specimen-indel-lambda", default=0.9, type=float)
 
-    group = OptionGroup(parser, "Samples from specimens")
-    group.add_option("--sample-seed", default=None)
-    group.add_option(
+    group = parser.add_argument_group("Samples from specimens")
+    group.add_argument("--sample-seed", default=None)
+    group.add_argument(
         "--sample-frag-length-mu", dest="sample_frag_len_mu", default=100, type=int
     )
-    group.add_option(
+    group.add_argument(
         "--sample-frag-length-sigma", dest="sample_frag_len_sigma", default=30, type=int
     )
-    group.add_option(
+    group.add_argument(
         "--sample-frag-length-min", dest="sample_frag_len_min", default=0, type=int
     )
-    group.add_option(
+    group.add_argument(
         "--sample-frag-length-max", dest="sample_frag_len_max", default=500, type=int
     )
-    group.add_option(
+    group.add_argument(
         "--sample-endogenous_mu", dest="sample_endog_mu", default=0.75, type=float
     )
-    group.add_option(
+    group.add_argument(
         "--sample-endogenous_sigma", dest="sample_endog_sigma", default=0.10, type=float
     )
-    parser.add_option_group(group)
 
-    group = OptionGroup(parser, "Post mortem damage of samples")
-    group.add_option("--damage", dest="damage", default=False, action="store_true")
-    group.add_option("--damage-seed", dest="damage_seed", default=None)
-    group.add_option("--damage-lambda", dest="damage_lambda", default=0.25, type=float)
-    parser.add_option_group(group)
+    group = parser.add_argument_group("Post mortem damage of samples")
+    group.add_argument("--damage", dest="damage", default=False, action="store_true")
+    group.add_argument("--damage-seed", dest="damage_seed", default=None)
+    group.add_argument(
+        "--damage-lambda", dest="damage_lambda", default=0.25, type=float
+    )
 
-    group = OptionGroup(parser, "Libraries from samples")
-    group.add_option("--library-seed", dest="library_seed", default=None)
-    group.add_option(
+    group = parser.add_argument_group("Libraries from samples")
+    group.add_argument("--library-seed", dest="library_seed", default=None)
+    group.add_argument(
         "--library-pcr-lambda", dest="library_pcr_lambda", default=3, type=float
     )
-    group.add_option("--library-barcode", dest="library_barcode", default=None)
-    parser.add_option_group(group)
+    group.add_argument("--library-barcode", dest="library_barcode", default=None)
 
-    group = OptionGroup(parser, "Lanes from libraries")
-    group.add_option("--lanes", dest="lanes_num", default=3, type=int)
-    group.add_option("--lanes-reads-mu", dest="lanes_reads_mu", default=10000, type=int)
-    group.add_option(
+    group = parser.add_argument_group("Lanes from libraries")
+    group.add_argument("--lanes", dest="lanes_num", default=3, type=int)
+    group.add_argument(
+        "--lanes-reads-mu", dest="lanes_reads_mu", default=10000, type=int
+    )
+    group.add_argument(
         "--lanes-reads-sigma", dest="lanes_reads_sigma", default=2500, type=int
     )
-    group.add_option(
+    group.add_argument(
         "--lanes-reads-per-file", dest="lanes_per_file", default=2500, type=int
     )
-    parser.add_option_group(group)
 
-    group = OptionGroup(parser, "Reads from lanes")
-    group.add_option(
+    group = parser.add_argument_group("Reads from lanes")
+    group.add_argument(
         "--reads-sub-rate", dest="reads_sub_rate", default=0.005, type=float
     )
-    group.add_option(
+    group.add_argument(
         "--reads-indel-rate", dest="reads_indel_rate", default=0.0005, type=float
     )
-    group.add_option(
+    group.add_argument(
         "--reads-indel-lambda", dest="reads_indel_lambda", default=0.9, type=float
     )
-    group.add_option("--reads-length", dest="reads_len", default=100, type=int)
-    parser.add_option_group(group)
+    group.add_argument("--reads-length", dest="reads_len", default=100, type=int)
 
-    options, args = parser.parse_args(argv)
-    if len(args) != 2:
-        sys.stderr.write("Usage: %s <genome> <prefix>\n" % sys.argv[0])
-        return None, None
-    return options, args
+    return parser.parse_args(argv)
 
 
 def main(argv):
-    options, args = parse_args(argv)
-    if not options:
-        return 1
+    options = parse_args(argv)
 
     print(
         "Generating %i lane(s) of synthetic reads ...\nDISCLAIMER: For "
@@ -399,7 +392,7 @@ def main(argv):
         "biologically meaningful!" % (options.lanes_num,)
     )
 
-    specimen = Specimen(options, args[0])
+    specimen = Specimen(options, options.fasta)
     sample = Sample(options, specimen)
     damage = Damage(options, sample)
     library = Library(options, damage)
@@ -408,7 +401,7 @@ def main(argv):
         fragments = fragment(options.lanes_per_file, lane.sequences)
         for (readsnum, reads) in enumerate(fragments, start=1):
             templ = "%s%s_L%i_R%%s_%02i.fastq.gz" % (
-                args[1],
+                options.output_prefix,
                 library.barcode,
                 lnum,
                 readsnum,

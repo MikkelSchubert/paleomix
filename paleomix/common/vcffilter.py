@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import optparse
+import argparse
 import collections
 
 import paleomix.common.vcfwrap as vcfwrap
@@ -32,106 +32,103 @@ _CHUNK_SIZE = 10000
 
 
 def add_varfilter_options(parser):
-    group = optparse.OptionGroup(parser, "varFilter: Novel options")
-    group.add_option(
+    parser.add_argument(
         "--homozygous-chromosome",
         action="append",
         default=[],
         help="Filter heterozygous SNPs observed on this "
-        "chromosome (e.g. chrX) %default.",
+        "chromosome (e.g. chrX) %(default)s.",
     )
-    group.add_option(
+    parser.add_argument(
         "-q",
         "--min-quality",
         type=int,
         default=30,
-        help="Minimum Phred score recorded in the QUAL column " "[%default]",
+        help="Minimum Phred score recorded in the QUAL column [%(default)s]",
     )
     # No longer supported options:
-    group.add_option("-f", "--min-allele-frequency", help=optparse.SUPPRESS_HELP)
-    group.add_option("-b", "--pileup", help=optparse.SUPPRESS_HELP)
-    group.add_option(
+    parser.add_argument("-f", "--min-allele-frequency", help=argparse.SUPPRESS)
+    parser.add_argument("-b", "--pileup", help=argparse.SUPPRESS)
+    parser.add_argument(
         "-k",
         "--keep-ambigious-genotypes",
         default=False,
         action="store_true",
-        help="Keep SNPs without a most likely genotype " "(based on PL) [%default]",
+        help="Keep SNPs without a most likely genotype (based on PL) [%(default)s]",
     )
-    parser.add_option_group(group)
 
-    group = optparse.OptionGroup(parser, "varFilter: Derived options")
     # Options adapted from varFilter
-    group.add_option(
+    parser.add_argument(
         "-Q",
         "--min-mapping-quality",
         type=int,
         default=10,
-        help="Minimum RMS mapping quality for SNPs [%default]",
+        help="Minimum RMS mapping quality for SNPs [%(default)s]",
     )
-    group.add_option(
+    parser.add_argument(
         "-d",
         "--min-read-depth",
         type=int,
         default=8,
-        help="Minimum read depth [%default]",
+        help="Minimum read depth [%(default)s]",
     )
-    group.add_option(
+    parser.add_argument(
         "-D",
         "--max-read-depth",
         type=int,
         default=10000000,
-        help="Maximum read depth [%default]",
+        help="Maximum read depth [%(default)s]",
     )
-    group.add_option(
+    parser.add_argument(
         "-a",
         "--min-num-alt-bases",
         type=int,
         default=2,
-        help="Minimum number of alternative bases observed for " "variants [%default]",
+        help="Minimum number of alternative bases observed for variants [%(default)s]",
     )
-    group.add_option(
+    parser.add_argument(
         "-w",
         "--min-distance-to-indels",
         type=int,
         default=3,
-        help="SNP within INT bp around a gap to be filtered " "[%default]",
+        help="SNP within INT bp around a gap to be filtered [%(default)s]",
     )
-    group.add_option(
+    parser.add_argument(
         "-W",
         "--min-distance-between-indels",
         type=int,
         default=10,
-        help="Window size for filtering adjacent gaps " "[%default]",
+        help="Window size for filtering adjacent gaps [%(default)s]",
     )
-    group.add_option(
+    parser.add_argument(
         "-1",
         "--min-strand-bias",
         type=float,
         default=1e-4,
-        help="Min P-value for strand bias (given PV4) " "[%default]",
+        help="Min P-value for strand bias (given PV4) [%(default)s]",
     )
-    group.add_option(
+    parser.add_argument(
         "-2",
         "--min-baseq-bias",
         type=float,
         default=1e-100,
-        help="Min P-value for baseQ bias (given PV4) " "[%default]",
+        help="Min P-value for baseQ bias (given PV4) [%(default)s]",
     )
-    group.add_option(
+    parser.add_argument(
         "-3",
         "--min-mapq-bias",
         type=float,
         default=0,
-        help="Min P-value for mapQ bias (given PV4) " "[%default]",
+        help="Min P-value for mapQ bias (given PV4) [%(default)s]",
     )
-    group.add_option(
+    parser.add_argument(
         "-4",
         "--min-end-distance-bias",
         type=float,
         default=1e-4,
-        help="Min P-value for end distance bias (given PV4) " "[%default]",
+        help="Min P-value for end distance bias (given PV4) [%(default)s]",
     )
-    parser.add_option_group(group)
+    parser.add_argument_group(parser)
 
 
 def describe_filters(options):

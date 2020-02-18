@@ -23,7 +23,6 @@
 import errno
 import itertools
 import logging
-import optparse
 import os
 import time
 
@@ -67,25 +66,20 @@ def initialize(log_level="info", log_file=None, name="paleomix"):
         root.addHandler(handler)
 
 
-def add_optiongroup(parser, default="info"):
+def add_argument_group(parser, default="info"):
     """Adds an option-group to an OptionParser object, with options
     pertaining to logging. Note that 'initialize' expects the config
     object to have these options."""
-    group = optparse.OptionGroup(parser, "Logging")
-    group.add_option(
-        "--log-file",
-        default=None,
-        help="Create the specified log-file and write any messages to this file.",
+    group = parser.add_argument_group("Logging")
+    group.add_argument(
+        "--log-file", default=None, help="Write log-messages to this file.",
     )
-    group.add_option(
+    group.add_argument(
         "--log-level",
         default=default,
-        type="choice",
         choices=("info", "warning", "error", "debug"),
-        help="Log messages to log-file at and above the specified level; one of "
-        "'info', 'warning', 'error', or 'debug' [%default]",
+        help="Log messages at the specified level [%(default)s]",
     )
-    parser.add_option_group(group)
 
 
 def get_logfiles():

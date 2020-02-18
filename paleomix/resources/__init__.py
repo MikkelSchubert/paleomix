@@ -20,12 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import argparse
+import logging
 import os
 import shutil
-import sys
 
 from pkg_resources import Requirement, resource_filename
+
+import paleomix
 
 
 _REQUIREMENT = Requirement.parse("PALEOMIX")
@@ -47,23 +48,33 @@ def report(tool, filename):
     return resource_filename(_REQUIREMENT, path)
 
 
-def copy_example(tool, argv):
+def add_copy_example_command(subparsers):
+    parser = subparsers.add_parser("example", help="Create example project")
+
+    parser.add_argument(
+        "--version", action="version", version="%(prog)s v" + paleomix.__version__,
+    )
+
+    parser.add_argument(
+        "destination",
+        default=".",
+        nargs="?",
+        help="Destination folder for example data.",
+    )
+
+
+def copy_example(tool, args):
     """Command-line interface to copy a folder containing example data to a
     folder specified by the user. Arguments are a tool name (e.g.
     'bam_pipeline'), and any command-line options specified by the user;
     returns 0 on success, or 1 on errors.
     """
-    parser = argparse.ArgumentParser()
-    parser.add_argument("root", help="Destination folder for example data.")
+    log = logging.getLogger(__name__)
+    destination = os.path.join(args.destination, tool)
+    log.info("Copying example project to %r", args.destination)
 
-    args = parser.parse_args(argv)
-
-    destination = os.path.join(args.root, tool)
     if os.path.exists(destination):
-        sys.stderr.write(
-            "Example folder already exists at destination, " "cannot proceed:\n"
-        )
-        sys.stderr.write("  - %r\n" % (destination,))
+        log.error("Example folder already exists at %r", destination)
         return 1
 
     path = os.path.join("paleomix", "resources", "examples", tool)
@@ -71,6 +82,6 @@ def copy_example(tool, argv):
 
     shutil.copytree(source, destination)
 
-    sys.stderr.write("Sucessfully saved example in %r\n" % (destination,))
+    log.info("Sucessfully saved example in %r", destination)
 
     return 0

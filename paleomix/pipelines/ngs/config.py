@@ -20,88 +20,127 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import optparse
+import argparse
+import os
+import multiprocessing
 
 import paleomix
 
-from paleomix.config import PerHostValue, PerHostConfig
+from paleomix.resources import add_copy_example_command
 
 
-def parse_config(argv, pipeline_variant):
-    per_host_cfg = PerHostConfig("bam_pipeline")
-    pipeline_variant = "%s_pipeline" % (pipeline_variant,)
+def build_parser(pipeline_variant):
+    parser = argparse.ArgumentParser(prog="paleomix %s_pipeline" % (pipeline_variant,))
 
-    usage_str = "paleomix %s <command> [options] [makefiles]" % (pipeline_variant,)
-    version_str = "paleomix %s v%s" % (pipeline_variant, paleomix.__version__)
-    parser = optparse.OptionParser(usage=usage_str, version=version_str)
+    parser.add_argument(
+        "--version", action="version", version="%(prog)s v" + paleomix.__version__,
+    )
 
-    paleomix.logger.add_optiongroup(parser, default=PerHostValue("warning"))
+    subparsers = parser.add_subparsers(dest="command", metavar="command")
+    add_copy_example_command(subparsers)
+    add_makefile_command(subparsers)
+    add_run_command(subparsers)
 
-    group = optparse.OptionGroup(parser, "Scheduling")
-    group.add_option(
+    return parser
+
+
+def add_makefile_command(subparsers):
+    parser = subparsers.add_parser("makefile", help="Print makefile template",)
+
+    parser.add_argument(
+        "--version", action="version", version="%(prog)s v" + paleomix.__version__,
+    )
+
+    parser.add_argument(
+        "samplesheets",
+        nargs="*",
+        help="Auto-generate targets from illumina samplesheet.csv files",
+    )
+
+    parser.add_argument(
+        "--minimal",
+        default=False,
+        action="store_true",
+        help="Strip comments from makefile template.",
+    )
+
+
+def add_run_command(subparsers):
+    parser = subparsers.add_parser(
+        "run", aliases=("dryrun",), help="Run pipeline on provided makefiles",
+    )
+
+    parser.add_argument(
+        "--version", action="version", version="%(prog)s v" + paleomix.__version__,
+    )
+
+    parser.add_argument(
+        "makefiles",
+        nargs="+",
+        help="Run pipeline on these makefiles",
+        metavar="makefile",
+    )
+
+    paleomix.logger.add_argument_group(parser, default="warning")
+
+    group = parser.add_argument_group("Scheduling")
+    group.add_argument(
         "--dry-run",
         action="store_true",
         default=False,
-        help="If passed, only a dry-run in performed, the "
-        "dependency tree is printed, and no tasks are "
-        "executed.",
+        help="If passed, only a dry-run in performed, and no tasks are executed.",
     )
-    group.add_option(
+    group.add_argument(
         "--max-threads",
         type=int,
-        default=per_host_cfg.max_threads,
-        help="Maximum number of threads to use in total [%default]",
+        default=max(2, multiprocessing.cpu_count()),
+        help="Max number of threads to use in total [%(default)s]",
     )
-    group.add_option(
+    group.add_argument(
         "--adapterremoval-max-threads",
         type=int,
-        default=PerHostValue(1),
-        help="Maximum number of threads to use per AdapterRemoval instance [%default]",
+        default=1,
+        help="Max number of threads to use per AdapterRemoval instance [%(default)s]",
     )
-    group.add_option(
+    group.add_argument(
         "--bowtie2-max-threads",
         type=int,
-        default=PerHostValue(1),
-        help="Maximum number of threads to use per Bowtie2 instance [%default]",
+        default=1,
+        help="Max number of threads to use per Bowtie2 instance [%(default)s]",
     )
-    group.add_option(
+    group.add_argument(
         "--bwa-max-threads",
         type=int,
-        default=PerHostValue(1),
-        help="Maximum number of threads to use per BWA instance [%default]",
+        default=1,
+        help="Max number of threads to use per BWA instance [%(default)s]",
     )
-    group.add_option(
+    group.add_argument(
         "--gatk-max-threads",
         type=int,
-        default=PerHostValue(1),
-        help="Maximum number of threads to use per GATK instance [%default]",
+        default=1,
+        help="Max number of threads to use per GATK instance [%(default)s]",
     )
-    parser.add_option_group(group)
 
-    group = optparse.OptionGroup(parser, "Required paths")
-    group.add_option(
+    group = parser.add_argument_group("Required paths")
+    group.add_argument(
         "--jar-root",
-        default=PerHostValue("~/install/jar_root", is_path=True),
+        default=os.path.expanduser("~/install/jar_root"),
         help="Folder containing Picard JARs (http://picard.sf.net), "
         "and GATK (www.broadinstitute.org/gatk). "
         "The latter is only required if realigning is enabled. "
-        "[%default]",
+        "[%(default)s]",
     )
-    group.add_option(
+    group.add_argument(
         "--temp-root",
-        default=per_host_cfg.temp_root,
-        help="Location for temporary files and folders [%default/]",
+        default="./temp/",
+        help="Location for temporary files and folders [%(default)s/]",
     )
-    group.add_option(
-        "--destination",
-        default=".",
-        help="The destination folder for result files. By default, files will be "
-        "placed in the same folder as the makefile which generated it.",
+    group.add_argument(
+        "--destination", default=".", help="The destination folder for result files.",
     )
-    parser.add_option_group(group)
 
-    group = optparse.OptionGroup(parser, "Files and executables")
-    group.add_option(
+    group = parser.add_argument_group("Files and executables")
+    group.add_argument(
         "--list-input-files",
         action="store_true",
         default=False,
@@ -109,31 +148,27 @@ def parse_config(argv, pipeline_variant):
         "makefile(s), excluding any generated by the "
         "pipeline itself.",
     )
-    group.add_option(
+    group.add_argument(
         "--list-output-files",
         action="store_true",
         default=False,
         help="List all output files generated by pipeline for " "the makefile(s).",
     )
-    group.add_option(
+    group.add_argument(
         "--list-executables",
         action="store_true",
         default=False,
         help="List all executables required by the pipeline, "
         "with version requirements (if any).",
     )
-    parser.add_option_group(group)
 
-    group = optparse.OptionGroup(parser, "Misc")
-    group.add_option(
+    group = parser.add_argument_group("Misc")
+    group.add_argument(
         "--jre-option",
         dest="jre_options",
         action="append",
-        default=PerHostValue([]),
+        default=[],
         help="May be specified one or more times with options to be passed "
         "tot the JRE (Jave Runtime Environment); e.g. to change the "
         "maximum amount of memory (default is -Xmx4g)",
     )
-    parser.add_option_group(group)
-
-    return per_host_cfg.parse_args(parser, argv)

@@ -56,12 +56,12 @@ from paleomix.common.bedtools import read_bed_file, BEDError
 from paleomix.common.formats.fasta import FASTA
 
 
-def read_makefiles(options, filenames, commands):
+def read_makefiles(options, commands):
     logger = logging.getLogger(__name__)
     steps = frozenset(key for (key, _) in commands)
 
     makefiles = []
-    for filename in filenames:
+    for filename in options.files:
         logger.info("Reading makefile %r", filename)
         makefile = paleomix.common.makefile.read_makefile(filename, _VALIDATION)
         makefile = _mangle_makefile(options, makefile, steps)

@@ -26,7 +26,6 @@ import logging
 import os
 import sys
 
-from optparse import OptionParser
 
 _TEMPLATE_TOP = """# -*- mode: Yaml; -*-
 # Timestamp: %s
@@ -269,18 +268,6 @@ def read_alignment_records(filename):
     return results
 
 
-def parse_args(argv):
-    parser = OptionParser("Usage: %prog [/path/to/SampleSheet.csv, ...]")
-    parser.add_option(
-        "--minimal",
-        default=False,
-        action="store_true",
-        help="Strip comments from makefile template.",
-    )
-
-    return parser.parse_args(argv)
-
-
 def select_path(path):
     has_r1 = bool(glob.glob(path.format(Pair=1)))
     has_r2 = bool(glob.glob(path.format(Pair=2)))
@@ -354,12 +341,12 @@ def print_samples(records):
         print()
 
 
-def main(argv, pipeline="bam"):
-    assert pipeline in ("bam", "trim"), pipeline
+def main(args, pipeline="bam"):
+    if pipeline not in ("bam", "trim"):
+        raise ValueError(pipeline)
 
     log = logging.getLogger(__name__)
-    options, filenames = parse_args(argv)
-    records = read_sample_sheets(filenames)
+    records = read_sample_sheets(args.samplesheets)
     if records is None:
         return 1
 
@@ -368,14 +355,14 @@ def main(argv, pipeline="bam"):
         add_prefix_tmpl=(pipeline == "bam"),
         add_sample_tmpl=not records,
     )
-    if options.minimal:
+    if args.minimal:
         template = strip_comments(template)
 
     print(template)
 
     print_samples(records)
 
-    if argv:
+    if args.samplesheets:
         log.info("Automatically generated makefile printed.")
         log.info("Please check for correctness before running pipeline.")
     return 0
