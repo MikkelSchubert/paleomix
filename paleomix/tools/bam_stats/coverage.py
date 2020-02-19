@@ -21,7 +21,6 @@
 # SOFTWARE.
 #
 import sys
-import datetime
 import collections
 
 from paleomix.common.utilities import get_in, set_in
@@ -75,9 +74,7 @@ class ReadGroup:
 
 
 # Header prepended to output tables
-TABLE_HEADER = """# Timestamp: %s
-#
-# Columns:
+TABLE_HEADER = """# Columns:
 #   Contig:    Contig, chromosome, or feature for which a depth histogram was
 #              created. Unnamed features are named after the chromosome or
 #              contig on which they are located, with a star appended. For
@@ -204,7 +201,7 @@ def write_table(table, filename):
         output_handle = open(filename, "w")
 
     try:
-        output_handle.write(TABLE_HEADER % datetime.datetime.now().isoformat())
+        output_handle.write(TABLE_HEADER)
         for line in rows:
             output_handle.write("\t".join(map(str, line)))
             output_handle.write("\n")

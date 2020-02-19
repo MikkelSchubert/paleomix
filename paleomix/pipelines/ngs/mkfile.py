@@ -20,7 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import datetime
 import glob
 import logging
 import os
@@ -28,8 +27,6 @@ import sys
 
 
 _TEMPLATE_TOP = """# -*- mode: Yaml; -*-
-# Timestamp: %s
-#
 # Default options.
 # Can also be specific for a set of samples, libraries, and lanes,
 # by including the "Options" hierarchy at the same level as those
@@ -195,8 +192,7 @@ _FILENAME = "SampleSheet.csv"
 
 
 def build_makefile(add_full_options=True, add_prefix_tmpl=True, add_sample_tmpl=True):
-    timestamp = datetime.datetime.now().isoformat()
-    template_parts = [_TEMPLATE_TOP % (timestamp,)]
+    template_parts = [_TEMPLATE_TOP]
 
     if add_full_options:
         template_parts.append(_TEMPLATE_BAM_OPTIONS)

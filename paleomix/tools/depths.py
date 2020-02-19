@@ -21,7 +21,6 @@
 # SOFTWARE.
 #
 import sys
-import datetime
 import itertools
 import collections
 
@@ -47,9 +46,7 @@ _MAX_CACHE_SIZE = 10000
 
 
 # Header prepended to output tables
-_HEADER = """# Timestamp: %s
-#
-# Columns:
+_HEADER = """# Columns:
 #   Contig:   Contig, chromosome, or feature for which a depth histogram was
 #             created. Unnamed features are named after the chromosome or
 #             contig on which they are located, with a star appended. For
@@ -198,7 +195,7 @@ def print_table(handle, args, totals):
 
     with output_handle:
         rows = build_table(args.target_name, totals, lengths)
-        output_handle.write(_HEADER % datetime.datetime.now().isoformat())
+        output_handle.write(_HEADER)
         output_handle.write("\n")
         for line in rows:
             output_handle.write("\t".join(map(str, line)))
