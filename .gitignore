@@ -20,5 +20,5 @@ sdist/
 .mypy_cache/
 
 # Misc
-venv/
+venv
 docs/_build/
