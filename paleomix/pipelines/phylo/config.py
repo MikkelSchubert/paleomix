@@ -21,6 +21,7 @@
 # SOFTWARE.
 #
 import argparse
+import os
 import multiprocessing
 
 import paleomix
@@ -81,6 +82,7 @@ def build_parser():
     group.add_argument(
         "--temp-root",
         default="./temp",
+        type=os.path.abspath,
         help="Location for temporary files and folders [%(default)s]",
     )
     group.add_argument(
