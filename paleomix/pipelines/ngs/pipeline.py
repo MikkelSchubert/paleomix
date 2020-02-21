@@ -31,7 +31,6 @@ import paleomix.resources
 import paleomix.yaml
 
 from paleomix.pipeline import Pypeline
-from paleomix.nodes.picard import BuildSequenceDictNode
 from paleomix.nodes.samtools import FastaIndexNode
 from paleomix.nodes.bwa import BWAIndexNode
 from paleomix.nodes.bowtie2 import Bowtie2IndexNode
@@ -147,10 +146,6 @@ def index_references(config, makefiles):
                 )
                 # Indexing of FASTA file using 'samtools faidx'
                 faidx_node = FastaIndexNode(reference)
-                # Indexing of FASTA file using 'BuildSequenceDictionary.jar'
-                dict_node = BuildSequenceDictNode(
-                    config=config, reference=reference, dependencies=(valid_node,)
-                )
 
                 # Indexing of FASTA file using 'bwa index'
                 bwa_node = BWAIndexNode(
@@ -161,19 +156,9 @@ def index_references(config, makefiles):
                     input_file=reference, dependencies=(valid_node,)
                 )
 
-                references[reference] = (valid_node, faidx_node, dict_node)
-                references_bwa[reference] = (
-                    valid_node,
-                    faidx_node,
-                    dict_node,
-                    bwa_node,
-                )
-                references_bowtie2[reference] = (
-                    valid_node,
-                    faidx_node,
-                    dict_node,
-                    bowtie2_node,
-                )
+                references[reference] = (valid_node, faidx_node)
+                references_bwa[reference] = (valid_node, faidx_node, bwa_node)
+                references_bowtie2[reference] = (valid_node, faidx_node, bowtie2_node)
 
             subdd["Nodes"] = references[reference]
             subdd["Nodes:BWA"] = references_bwa[reference]

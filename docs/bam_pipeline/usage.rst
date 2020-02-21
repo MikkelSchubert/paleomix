@@ -161,7 +161,7 @@ Mapping is carried out using one or more reference genomes (or other sequences) 
 
     $ bwa index prefixes/my_genome.fa
 
-In addition to the BWA / Bowtie2 index, several other related files are also automatically generated, including a FASTA index file (.fai), and a sequence dictionary (.dict), which are required for various operations of the pipeline. These are similarly located at the same folder as the reference FASTA file. For a more detailed description, please refer to the :ref:`bam_filestructure` section.
+In addition to the BWA / Bowtie2 index, several other related files are also automatically generated, including a FASTA index file (.fai), which are required for various operations of the pipeline. These are similarly located at the same folder as the reference FASTA file. For a more detailed description, please refer to the :ref:`bam_filestructure` section.
 
 .. warning::
     Since the pipeline automatically carries out indexing of the FASTA files, it therefore requires write-access to the folder containing the FASTA files. If this is not possible, one may simply create a local folder containing symbolic links to the original FASTA file(s), and point the makefile to this location. All automatically generated files will then be placed in this location.

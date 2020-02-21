@@ -100,35 +100,6 @@ class ValidateBAMNode(PicardNode):
             pass  # Ignored here, handled elsewhere
 
 
-class BuildSequenceDictNode(PicardNode):
-    def __init__(self, config, reference, dependencies=()):
-        self._in_reference = os.path.abspath(reference)
-
-        builder = picard_command(config, "CreateSequenceDictionary")
-
-        builder.set_option("R", "%(TEMP_OUT_REF)s", sep="=")
-        builder.set_option("O", "%(OUT_DICT)s", sep="=")
-        builder.set_kwargs(
-            IN_REFERENCE=reference,
-            TEMP_OUT_REF=os.path.basename(reference),
-            OUT_DICT=swap_ext(reference, ".dict"),
-        )
-
-        description = "<SequenceDictionary: '%s'>" % (reference,)
-
-        PicardNode.__init__(
-            self,
-            command=builder.finalize(),
-            description=description,
-            dependencies=dependencies,
-        )
-
-    def _setup(self, _config, temp):
-        # Ensure that Picard CreateSequenceDict cannot reuse any existing
-        # sequence dictionaries, if the underlying files have changed.
-        os.symlink(self._in_reference, reroot_path(temp, self._in_reference))
-
-
 class MarkDuplicatesNode(PicardNode):
     def __init__(
         self,
