@@ -29,6 +29,8 @@ import os
 import string
 
 import paleomix.pipelines.ngs.paths as paths
+
+from paleomix.common.fileutils import get_files_glob
 from paleomix.common.utilities import fill_dict
 from paleomix.common.makefile import (
     MakefileError,
@@ -457,47 +459,59 @@ def _mangle_tags(makefile):
         for (sample, libraries) in samples.items():
             for (library, barcodes) in libraries.items():
                 for (barcode, record) in barcodes.items():
-                    tags = {
+                    record["Tags"] = {
                         "Target": target,
                         "ID": library,
                         "SM": sample,
                         "LB": library,
-                        # Source/Current PU may differ if a lane has been
-                        # split by filenames, in which case PU_src contains
-                        # the original PU, and PU_cur is a derived PU.
-                        "PU_src": barcode,
-                        "PU_cur": barcode,
+                        "PU": barcode,
+                        "DS": "NA",
+                        "Folder": "NA",
                         "PG": record["Options"]["Aligners"]["Program"],
                         "PL": record["Options"]["Platform"].upper(),
                     }
 
-                    record["Tags"] = tags
-
 
 def _split_lanes_by_filenames(makefile):
-    iterator = _iterate_over_records(makefile)
-    for (target, sample, library, barcode, record) in iterator:
+    for (target, sample, library, barcode, record) in _iterate_over_records(makefile):
         if record["Type"] == "Raw":
-            template = record["Data"]
             path = (target, sample, library, barcode)
-            record["Data"] = files = paths.collect_files(path, template)
+            filenames = paths.collect_files(path, record["Data"])
+            filename_keys = sorted(filenames)  # Either ["SE"] or ["PE_1", "PE_2"]
 
-            if any(len(v) > 1 for v in files.values()):
-                library = makefile["Targets"][target][sample][library]
-                template = library.pop(barcode)
-                keys = ("SE",) if ("SE" in files) else ("PE_1", "PE_2")
+            library = makefile["Targets"][target][sample][library]
+            template = library.pop(barcode)
 
-                input_files = [files[key] for key in keys]
-                input_files_iter = itertools.zip_longest(*input_files)
-                for (index, filenames) in enumerate(input_files_iter, start=1):
-                    assert len(filenames) == len(keys)
-                    new_barcode = "%s_%03i" % (barcode, index)
+            input_files = [filenames[key] for key in filename_keys]
+            input_files_iter = itertools.zip_longest(*input_files)
+            for (index, filenames) in enumerate(input_files_iter, start=1):
+                current = copy.deepcopy(template)
 
-                    current = copy.deepcopy(template)
-                    current["Data"] = {k: v for (k, v) in zip(keys, filenames)}
-                    current["Tags"]["PU_cur"] = new_barcode
+                assert len(filenames) == len(filename_keys), filenames
+                current["Data"] = dict(zip(filename_keys, filenames))
 
-                    library[new_barcode] = current
+                # Save a summary of file paths in description (DS) tag
+                current["Tags"]["DS"] = _summarize_filenames(
+                    filenames, show_differences=True
+                )
+
+                # Save a summary of file names for use as temporary folders
+                current["Tags"]["Folder"] = _summarize_filenames(
+                    [os.path.basename(filename) for filename in filenames]
+                ).replace("?", "x")
+
+                # ':' is disallowed in barcodes and so are safe for generated names
+                new_barcode = "%s::%03i" % (barcode, index)
+                assert new_barcode not in library, (new_barcode, library)
+                library[new_barcode] = current
+
+
+def _summarize_filenames(filenames, show_differences=False):
+    combined_filenames = get_files_glob(filenames, show_differences=show_differences)
+    if combined_filenames is None:
+        return ";".join(filenames)
+
+    return combined_filenames
 
 
 def _validate_makefiles(makefiles):

@@ -47,7 +47,6 @@ class Lane:
         self.reads = None
         self.options = copy.deepcopy(record["Options"])
         self.tags = tags = copy.deepcopy(record["Tags"])
-        self.tags["PU"] = self.tags["PU_src"]
         self.tags["PG"] = self.tags["PG"].lower()
         self.folder = os.path.join(
             config.destination,
@@ -55,14 +54,15 @@ class Lane:
             prefix["Name"],
             tags["SM"],
             tags["LB"],
-            tags["PU_cur"],
+            tags["PU"],
+            tags["Folder"],
         )
 
         self._init_reads(config, record)
         self._init_unaligned_lane(config, prefix, record)
 
     def _init_reads(self, config, record):
-        key = tuple(self.tags[key] for key in ("Target", "SM", "LB", "PU_cur"))
+        key = tuple(self.tags[key] for key in ("Target", "SM", "LB", "PU", "DS"))
         if key not in _TRIMMED_READS_CACHE:
             _TRIMMED_READS_CACHE[key] = Reads(
                 config, record, record["Options"]["QualityOffset"]
@@ -235,7 +235,7 @@ class Lane:
             "--rg-id": self.tags["ID"],
             "--rg": [
                 "%s:%s" % (tag_name, self.tags[tag_name])
-                for tag_name in ("SM", "LB", "PU", "PL", "PG")
+                for tag_name in ("SM", "LB", "PU", "PL", "PG", "DS")
             ],
             "-q": self.options["Aligners"][aligner]["MinQuality"],
         }

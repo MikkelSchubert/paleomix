@@ -170,7 +170,7 @@ def describe_files(files: Iterable[str]) -> str:
     elif len(files) == 1:
         return repr(files[0])
 
-    glob_files = _get_files_glob(files, max_differences=2)
+    glob_files = get_files_glob(files, max_differences=2)
     if glob_files:
         return repr(glob_files)
 
@@ -198,10 +198,10 @@ def describe_paired_files(files_1: Iterable[str], files_2: Iterable[str]) -> str
             % (len(files_1), len(files_2))
         )
 
-    glob_files_1 = _get_files_glob(files_1, 3)
-    glob_files_2 = _get_files_glob(files_2, 3)
+    glob_files_1 = get_files_glob(files_1, 3)
+    glob_files_2 = get_files_glob(files_2, 3)
     if glob_files_1 and glob_files_2:
-        final_glob = _get_files_glob(
+        final_glob = get_files_glob(
             (glob_files_1, glob_files_2), 1, show_differences=True
         )
         if final_glob:
@@ -214,7 +214,7 @@ def describe_paired_files(files_1: Iterable[str], files_2: Iterable[str]) -> str
     return "%i pair(s) of files" % (len(files_1),)
 
 
-def _get_files_glob(
+def get_files_glob(
     filenames: Iterable[str], max_differences: int = 1, show_differences: bool = False
 ) -> Optional[str]:
     """Tries to generate a glob-string for a set of filenames, containing

@@ -57,9 +57,12 @@ class Library:
         self.name = name
         self.lanes = safe_coerce_to_tuple(lanes)
         self.options = lanes[0].options
-        self.folder = os.path.dirname(self.lanes[0].folder)
+        self.folder = os.path.dirname(os.path.dirname(self.lanes[0].folder))
 
-        assert all((self.folder == os.path.dirname(lane.folder)) for lane in self.lanes)
+        assert all(
+            (self.folder == os.path.dirname(os.path.dirname(lane.folder)))
+            for lane in self.lanes
+        )
         assert all((self.options == lane.options) for lane in self.lanes)
 
         lane_bams = self._collect_bams_by_type(self.lanes)

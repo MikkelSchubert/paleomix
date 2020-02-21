@@ -41,7 +41,8 @@ class Reads:
             "reads",
             tags["SM"],
             tags["LB"],
-            tags["PU_cur"],
+            tags["PU"],
+            tags["Folder"],
         )
 
         lane_type = record.get("Type")
