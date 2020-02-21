@@ -117,7 +117,7 @@ _VALID_TARGET_NAME = _alphanum_check(whitelist="._-", min_len=2)
 _VALID_FEATURES_DICT = {
     "Coverage": IsBoolean(default=True),
     "Depths": IsBoolean(default=True),
-    "DuplicateHist": IsBoolean(default=False),
+    "DuplicateHist": RemovedOption(),
     "RawBAM": IsBoolean(default=False),
     "RealignedBAM": DeprecatedOption(IsBoolean(default=True)),
     "Summary": IsBoolean(default=True),

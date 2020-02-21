@@ -82,11 +82,6 @@ _PALEOMIX_COMMANDS = (
         "of interest.",
     ),
     (
-        "duphist",
-        "paleomix.tools.duphist",
-        "Generates PCR duplicate histogram; used with the 'Preseq' tool.",
-    ),
-    (
         "rmdup_collapsed",
         "paleomix.tools.rmdup_collapsed",
         "Filters PCR duplicates for collapsed paired-ended reads generated "

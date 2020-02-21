@@ -55,5 +55,3 @@ During a typical analyses, the BAM pipeline will proceed through the following s
     3. Depth histograms are calculated using "paleomix depths", similar to coverage statistics, these statistics are genome-wide and for any regions of interest specified by the user.
 
     4. If the "mapDamage" feature or "Rescaling" is enabled, mapDamage plots are generated; if rescaling is enabled, a model of the post-mortem DNA damage is also generated.
-
-    5. If the "DuplicateHist" feature is enabled, histograms of PCR duplicates are estimated for each library, for use with the 'preseq' tool[Daley2013]_, to estimate the complexity of the libraries.

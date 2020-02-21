@@ -147,8 +147,6 @@ _TEMPLATE_BAM_OPTIONS = """  # Settings for aligners supported by the pipeline
     Depths: yes
     # Generate summary table for each target (yes / no)
     Summary: yes
-    # Generate histogram of PCR duplicates, for use with PreSeq (yes / no)
-    DuplicateHist: no
 """
 
 _TEMPLATE_PREFIXES = """

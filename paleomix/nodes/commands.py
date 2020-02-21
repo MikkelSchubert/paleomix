@@ -42,38 +42,6 @@ import paleomix.tools.bam_stats.coverage as coverage
 import paleomix.tools.factory as factory
 
 
-class DuplicateHistogramNode(MultiBAMInputNode):
-    """Node for calling the 'paleomix duphist' command.
-
-    Takes 1 or more BAMs as imput, requiring a config object in order to run
-    MergeSamFiles.jar to merge these files. The output is a histogram of PCR
-    duplicate counts, usable as input for the 'preseq' tool.
-    """
-
-    def __init__(self, config, input_files, output_file, dependencies=()):
-        input_files = safe_coerce_to_tuple(input_files)
-
-        builder = factory.new("duphist")
-        builder.add_value("%(TEMP_IN_BAM)s")
-        builder.set_kwargs(
-            OUT_STDOUT=output_file, TEMP_IN_BAM=MultiBAMInputNode.PIPE_FILE
-        )
-        builder.add_multiple_kwargs(input_files)
-
-        description = "<DuplicateHistogram: %s -> %r>" % (
-            describe_files(input_files),
-            output_file,
-        )
-        MultiBAMInputNode.__init__(
-            self,
-            config=config,
-            input_bams=input_files,
-            command=builder.finalize(),
-            description=description,
-            dependencies=dependencies,
-        )
-
-
 class CoverageNode(CommandNode):
     def __init__(
         self, target_name, input_file, output_file, regions_file=None, dependencies=()

@@ -31,7 +31,7 @@ from paleomix.nodes.mapdamage import (
     MapDamageRescaleNode,
 )
 from paleomix.pipelines.ngs.nodes import index_and_validate_bam
-from paleomix.nodes.commands import DuplicateHistogramNode, FilterCollapsedBAMNode
+from paleomix.nodes.commands import FilterCollapsedBAMNode
 from paleomix.nodes.validation import DetectInputDuplicationNode
 
 
@@ -84,12 +84,6 @@ class Library:
 
         nodes = [self._build_dataduplication_node(lane_bams)]
         nodes.extend(mapdamage_nodes)
-
-        histogram_node = self._build_duphist_nodes(
-            config=config, target=target, prefix=prefix, files_and_nodes=lane_bams
-        )
-        if histogram_node:
-            nodes.append(histogram_node)
 
         self.nodes = tuple(nodes)
 
@@ -243,27 +237,6 @@ class Library:
         )
 
         return {output_filename: validate}, (model,)
-
-    def _build_duphist_nodes(self, config, target, prefix, files_and_nodes):
-        if not self.options["Features"]["DuplicateHist"]:
-            return None
-
-        input_files = []
-        dependencies = []
-        for values in files_and_nodes.values():
-            for (filename, node) in values.items():
-                input_files.append(filename)
-                dependencies.append(node)
-
-        folder = "%s.%s.duphist" % (target, prefix["Name"])
-        destination = os.path.join(config.destination, folder, self.name + ".txt")
-
-        return DuplicateHistogramNode(
-            config=config,
-            input_files=input_files,
-            output_file=destination,
-            dependencies=dependencies,
-        )
 
     def _build_dataduplication_node(self, bams):
         files_and_nodes = self._collect_files_and_nodes(bams)

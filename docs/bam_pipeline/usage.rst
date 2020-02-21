@@ -440,8 +440,6 @@ Once we've completed the steps described above, the resulting makefile should lo
                             #   Location: {Destination}/{Target}.{Genome}.depths
         Summary: yes        # Generate summary table for each target
                             #   Location: {Destination}/{Target}.summary
-        DuplicateHist: no   # Generate histogram of PCR duplicates, for use with PreSeq
-                            #   Location: {Destination}/{Target}.{Genome}.duphist/{Library}/
 
 
     # Map of prefixes by name, each having a Path key, which specifies the

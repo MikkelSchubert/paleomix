@@ -28,13 +28,6 @@ paleomix depths
 ..    paleomix depths           -- Calculate depth histograms across reference
 ..                                 sequences or regions of interest.
 
-paleomix duphist
-----------------
-
-.. TODO:
-..    paleomix duphist          -- Generates PCR duplicate histogram; used with
-..                                 the 'Preseq' tool.
-
 paleomix rmdup_collapsed
 ------------------------
 

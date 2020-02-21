@@ -402,9 +402,6 @@ Options: Optional features
     *Summary*
         If enabled, a single summary table will be generated per target, containing information about the number of reads processed, hits and fraction of PCR duplicates (per prefix and per library), and much more.
 
-    *DuplicateHist*
-        If enabled, a histogram of the estimated number of PCR duplicates observed per DNA fragment is generated per library. This may be used with the 'preseq' program in order to estimate the (remaining) complexity of a given library, and thereby direct future sequencing efforts [Daley2013]_.
-
     For a description of where files are placed, refer to the :ref:`bam_filestructure` section. It is possible to run the BAM pipeline without any of these options enabled, and this may be useful in certain cases (if only the statistics or per-library BAMs are needed). To enable / disable a features, set the value for that feature to 'yes' or 'no' (without quotes)::
 
         Summary: no   # Do NOT generate a per-target summary table

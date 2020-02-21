@@ -85,7 +85,6 @@ FACTORY_COMMANDS = (
     ),
     ("coverage", "usage: paleomix coverage [options] sorted.bam [out.coverage]"),
     ("depths", "usage: paleomix depths [options] sorted.bam [out.depths]"),
-    ("duphist", "usage: paleomix duphist sorted.bam > out.histogram"),
     (
         "rmdup_collapsed",
         "usage: paleomix rmdup_collapsed [options] < sorted.bam > out.bam",
