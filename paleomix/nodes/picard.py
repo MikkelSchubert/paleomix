@@ -242,14 +242,13 @@ class MultiBAMInputNode(CommandNode):
 
             if self._index_format:
                 os.symlink(
-                    swap_ext(source_fname, self._index_format),
-                    swap_ext(pipe_fname, self._index_format),
+                    source_fname + self._index_format, pipe_fname + self._index_format,
                 )
 
     def _teardown(self, config, temp):
         os.remove(os.path.join(temp, self.PIPE_FILE))
         if self._index_format:
-            os.remove(os.path.join(temp, swap_ext(self.PIPE_FILE, self._index_format)))
+            os.remove(os.path.join(temp, self.PIPE_FILE + self._index_format))
 
         CommandNode._teardown(self, config, temp)
 

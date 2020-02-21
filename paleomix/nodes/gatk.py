@@ -27,7 +27,7 @@ from paleomix.node import CommandNode
 from paleomix.atomiccmd.command import AtomicCmd
 from paleomix.atomiccmd.builder import AtomicJavaCmdBuilder
 from paleomix.atomiccmd.sets import ParallelCmds
-from paleomix.common.fileutils import swap_ext, describe_files
+from paleomix.common.fileutils import describe_files
 from paleomix.common.utilities import safe_coerce_to_tuple
 from paleomix.nodes.samtools import SAMTOOLS_VERSION
 from paleomix.nodes.bwa import _get_max_threads
@@ -156,6 +156,6 @@ def _set_input_files(command, input_files):
     for (index, filename) in enumerate(input_files):
         command.add_option("-I", "%%(IN_BAMFILE_%02i)s" % index)
         keys["IN_BAMFILE_%02i" % index] = filename
-        keys["IN_BAIFILE_%02i" % index] = swap_ext(filename, ".bai")
+        keys["IN_BAIFILE_%02i" % index] = filename + ".bai"
 
     command.set_kwargs(**keys)

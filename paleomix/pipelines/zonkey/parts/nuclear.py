@@ -74,7 +74,7 @@ class BuildTPEDFilesNode(CommandNode):
 
         if not downsample:
             # Needed for random access (chromosomes are read 1 ... 31)
-            cmd.set_kwargs(IN_BAI=fileutils.swap_ext(bamfile, ".bai"))
+            cmd.set_kwargs(IN_BAI=bamfile + ".bai")
 
         cmd.set_kwargs(
             OUT_TFAM=os.path.join(output_root, "common.tfam"),

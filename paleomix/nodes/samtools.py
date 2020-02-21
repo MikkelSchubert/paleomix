@@ -24,24 +24,23 @@ import os
 
 from paleomix.node import CommandNode
 from paleomix.atomiccmd.command import AtomicCmd
-from paleomix.atomiccmd.sets import SequentialCmds
 
-from paleomix.common.fileutils import reroot_path, swap_ext
+from paleomix.common.fileutils import reroot_path
 import paleomix.common.versions as versions
 
 
 _VERSION_REGEX = r"Version: (\d+)\.(\d+)(?:\.(\d+))?"
 
 SAMTOOLS_VERSION = versions.Requirement(
-    call=("samtools",), search=_VERSION_REGEX, checks=versions.GE(1, 0, 0)
+    call=("samtools",), search=_VERSION_REGEX, checks=versions.GE(1, 3, 0)
 )
 
 BCFTOOLS_VERSION = versions.Requirement(
-    call=("bcftools",), search=_VERSION_REGEX, checks=versions.GE(1, 0, 0)
+    call=("bcftools",), search=_VERSION_REGEX, checks=versions.GE(1, 3, 0)
 )
 
 TABIX_VERSION = versions.Requirement(
-    call=("tabix",), search=_VERSION_REGEX, checks=versions.GE(0, 2, 5)
+    call=("tabix",), search=_VERSION_REGEX, checks=versions.GE(1, 3, 0)
 )
 
 
@@ -132,41 +131,25 @@ class BAMIndexNode(CommandNode):
     """Indexed a BAM file using 'samtools index'."""
 
     def __init__(self, infile, index_format=".bai", dependencies=()):
-        basename = os.path.basename(infile)
-
         if index_format == ".bai":
-            samtools_version = SAMTOOLS_VERSION
-            samtools_call = ["samtools", "index", "%(TEMP_IN_BAM)s"]
+            samtools_call = ["samtools", "index", "%(IN_BAM)s", "%(OUT_IDX)s"]
         elif index_format == ".csi":
-            samtools_version = SAMTOOLS_VERSION
-            samtools_call = ["samtools", "index", "-c", "%(TEMP_IN_BAM)s"]
+            samtools_call = ["samtools", "index", "-c", "%(IN_BAM)s", "%(OUT_IDX)s"]
         else:
             raise ValueError(
                 "Unknown format type %r; expected .bai or .csi" % (index_format,)
             )
 
-        cmd_link = AtomicCmd(
-            ["ln", "-s", "%(IN_BAM)s", "%(TEMP_OUT_BAM)s"],
+        command = AtomicCmd(
+            samtools_call,
             IN_BAM=infile,
-            TEMP_OUT_BAM=basename,
-            set_cwd=True,
+            OUT_IDX=infile + index_format,
+            CHECK_SAM=SAMTOOLS_VERSION,
         )
-
-        cmd_index = AtomicCmd(
-            samtools_call, TEMP_IN_BAM=basename, CHECK_SAM=samtools_version
-        )
-
-        cmd_rename = AtomicCmd(
-            ["mv", "%(TEMP_IN_BAM)s", "%(OUT_BAM)s"],
-            TEMP_IN_BAM=basename + index_format,
-            OUT_BAM=swap_ext(infile, index_format),
-        )
-
-        commands = SequentialCmds((cmd_link, cmd_index, cmd_rename))
 
         CommandNode.__init__(
             self,
             description="<BAMIndex (%s): '%s'>" % (index_format[1:].upper(), infile),
-            command=commands,
+            command=command,
             dependencies=dependencies,
         )

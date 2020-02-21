@@ -30,7 +30,6 @@ from io import TextIOWrapper
 import pysam
 
 import paleomix.yaml
-from paleomix.common.fileutils import swap_ext
 from paleomix.common.formats.fasta import FASTA
 from paleomix.pipelines.zonkey.common import contig_name_to_plink_name, get_sample_names
 
@@ -543,9 +542,7 @@ def _validate_mito_bam(data, handle, info):
             return False
 
         filename = handle.filename.decode("utf-8")
-        if not os.path.exists(filename + ".bai") and not os.path.exists(
-            swap_ext(filename, ".bai")
-        ):
+        if not os.path.exists(filename + ".bai"):
             log.info("Indexing BAM file %r" % (filename,))
             pysam.index(filename)
 
