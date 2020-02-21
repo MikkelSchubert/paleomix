@@ -21,14 +21,11 @@
 # SOFTWARE.
 #
 import os
-import logging
 
 from paleomix.common.utilities import safe_coerce_to_tuple
 from paleomix.nodes.picard import MergeSamFilesNode
 from paleomix.pipelines.ngs.nodes import index_and_validate_bam
 from paleomix.nodes.validation import DetectInputDuplicationNode
-
-import paleomix.nodes.gatk as gatk
 
 
 class Prefix:
@@ -43,44 +40,17 @@ class Prefix:
 
         files_and_nodes = {}
         for sample in self.samples:
-            files_and_nodes.update(iter(sample.bams.items()))
+            files_and_nodes.update(sample.bams.items())
 
         self.datadup_check = self._build_dataduplication_node(prefix, files_and_nodes)
-
-        build_raw_bam = features["RawBAM"]
-        build_realigned_bam = features["RealignedBAM"]
-        if build_realigned_bam and prefix["IndexFormat"] == ".csi":
-            if prefix["Path"] not in _CSI_WARNINGS:
-                logging.warning(
-                    "Realigned BAMs enabled for reference "
-                    "genome %r, but the file contains sequences too "
-                    "large for GATK, which does not support .csi "
-                    "index files. Raw BAMs will be built instead of "
-                    "realigned BAMs, for this reference sequence.",
-                    prefix["Path"],
-                )
-
-            _CSI_WARNINGS.add(prefix["Path"])
-            build_realigned_bam = False
-            build_raw_bam = True
-
-        self.bams = {}
-        if build_raw_bam:
-            self.bams.update(self._build_raw_bam(config, prefix, files_and_nodes))
-
-        if build_realigned_bam:
-            self.bams.update(self._build_realigned_bam(config, prefix, files_and_nodes))
-
-        if not self.bams:
-            for sample in self.samples:
-                self.bams.update(sample.bams)
+        self.bams = self._build_bam(config, prefix, files_and_nodes)
 
         nodes = [self.datadup_check]
         for sample in self.samples:
             nodes.extend(sample.nodes)
         self.nodes = tuple(nodes)
 
-    def _build_raw_bam(self, config, prefix, files_and_bams):
+    def _build_bam(self, config, prefix, files_and_bams):
         output_filename = os.path.join(
             self.folder, "%s.%s.bam" % (self.target, prefix["Name"])
         )
@@ -100,41 +70,6 @@ class Prefix:
 
         return {output_filename: validated_node}
 
-    def _build_realigned_bam(self, config, prefix, bams):
-        output_filename = os.path.join(
-            self.folder, "%s.%s.realigned.bam" % (self.target, prefix["Name"])
-        )
-        intervals_filename = os.path.join(
-            self.folder, self.target, prefix["Name"] + ".intervals"
-        )
-        validated_filename = os.path.join(
-            self.folder, self.target, prefix["Name"] + ".realigned.validated"
-        )
-
-        trainer = gatk.GATKIndelTrainerNode(
-            config=config,
-            reference=prefix["Reference"],
-            infiles=list(bams),
-            outfile=intervals_filename,
-            threads=config.gatk_max_threads,
-            dependencies=self.datadup_check,
-        )
-
-        aligner = gatk.GATKIndelRealignerNode(
-            config=config,
-            reference=prefix["Reference"],
-            infiles=list(bams),
-            intervals=intervals_filename,
-            outfile=output_filename,
-            dependencies=trainer,
-        )
-
-        validated_node = index_and_validate_bam(
-            config=config, prefix=prefix, node=aligner, log_file=validated_filename
-        )
-
-        return {output_filename: validated_node}
-
     def _build_dataduplication_node(self, prefix, files_and_nodes):
         filename = prefix["Name"] + ".duplications_checked"
         destination = os.path.join(self.folder, self.target, filename)
@@ -145,8 +80,3 @@ class Prefix:
             output_file=destination,
             dependencies=dependencies,
         )
-
-
-# Contains the paths of sequences for which warnings about GATK has been given,
-# if the 'RealignedBAM' feature was enabled for files that require a CSI index.
-_CSI_WARNINGS = set()

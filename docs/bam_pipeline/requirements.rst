@@ -21,7 +21,6 @@ Furthermore, one or both of the following sequence aligners must be installed:
 In addition, the following packages are used by default, but can be omitted if disabled during runtime:
 
 * `mapDamage`_ 2.0.2+ [Jonsson2013]_
-* `Genome Analysis ToolKit`_ [McKenna2010]_
 
 If mapDamage is used to perform rescaling of post-mortem DNA damage, then the GNU Scientific Library (GSL) and the R packages listed in the mapDamage installation instructions are required; these include 'inline', 'gam', 'Rcpp', 'RcppGSL' and 'ggplot2' (>=0.9.2). Use the following commands to verify that these packages have been correctly installed::
 
@@ -31,8 +30,6 @@ If mapDamage is used to perform rescaling of post-mortem DNA damage, then the GN
 
     $ mapDamage --check-R-packages
     All R packages are present
-
-The GATK JAR is only required if the user wishes to carry out local realignment near indels (recommended), and is expected to be placed in the same folder as the Picard Tools JAR (see above).
 
 The example projects included in the PALEOMIX source distribution may be used to test that PALEOMIX and the BAM pipeline has been correctly installed. See the :ref:`examples` section for more information.
 
@@ -49,6 +46,5 @@ An example project is included with the BAM pipeline, and it is recommended to r
 .. _Bowtie2: http://bowtie-bio.sourceforge.net/bowtie2/
 .. _BWA: http://bio-bwa.sourceforge.net/
 .. _mapDamage: http://ginolhac.github.io/mapDamage/
-.. _Genome Analysis ToolKit: http://www.broadinstitute.org/gatk/
 .. _SAMTools: https://samtools.github.io
 .. _Picard Tools: http://broadinstitute.github.io/picard/

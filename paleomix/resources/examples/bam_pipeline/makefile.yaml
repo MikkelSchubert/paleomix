@@ -96,13 +96,9 @@ Options:
 
   # Optional steps to perform during processing
   Features:
-    RawBAM: no          # Generate BAM from the raw libraries (no indel realignment)
-                        #   Location: {Destination}/{Target}.{Genome}.bam
-    RealignedBAM: yes   # Generate indel-realigned BAM using the GATK Indel realigner
-                        #   Location: {Destination}/{Target}.{Genome}.realigned.bam
-    mapDamage: rescale  # Generate mapDamage plot for each (unrealigned) library
+    mapDamage: rescale  # Generate mapDamage plot for each library
                         #   Location: {Destination}/{Target}.{Genome}.mapDamage/{Library}/
-    Coverage: yes       # Generate coverage information for the raw BAM (wo/ indel realignment)
+    Coverage: yes       # Generate coverage information for the final BAM
                         #   Location: {Destination}/{Target}.{Genome}.coverage
     Depths: yes         # Generate histogram of number of sites with a given read-depth
                         #   Location: {Destination}/{Target}.{Genome}.depths

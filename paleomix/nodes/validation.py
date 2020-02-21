@@ -392,7 +392,7 @@ def check_fasta_file(filename):
         namecache = {}
         state, linelength, linelengthchanged = _NA, None, False
         for linenum, line in enumerate(handle, start=1):
-            # Only \n is allowed as not all tools (e.g. GATK) handle \r
+            # Only \n is allowed as not all tools  handle \r
             line = line.rstrip("\n")
 
             if not line:

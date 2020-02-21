@@ -91,9 +91,6 @@ def _get_vcf_filter_options(genotyping, sample):
 def build_genotyping_bedfile_nodes(options, genotyping, sample, regions, dependencies):
     bamfile = "%s.%s.bam" % (sample, regions["Prefix"])
     bamfile = os.path.join(options.samples_root, bamfile)
-    if regions["Realigned"]:
-        bamfile = add_postfix(bamfile, ".realigned")
-
     prefix = regions["Genotypes"][sample]
     padding, bedfile = genotyping["Padding"], None
     if not genotyping["GenotypeEntirePrefix"]:

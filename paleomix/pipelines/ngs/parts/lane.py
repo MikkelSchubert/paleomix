@@ -247,19 +247,11 @@ class Lane:
 
     def _finalize_nodes(self, config, prefix, node):
         # Indexes are required for all files when calculating region statistics
-        index_required = bool(prefix.get("RegionsOfInterest")) or (
-            self.options["Features"]["RealignedBAM"]
-            and not
-            # and for BAMs fed to GATK, but in this case we only use these
-            # indexes if we don't generate PCR filtered or recaled BAMs
-            (
-                self.options["Features"]["mapDamage"] == "rescale"
-                or self.options["PCRDuplicates"]
-            )
-        )
-
         return index_and_validate_bam(
-            config=config, prefix=prefix, node=node, create_index=index_required,
+            config=config,
+            prefix=prefix,
+            node=node,
+            create_index=bool(prefix.get("RegionsOfInterest")),
         )
 
     @staticmethod

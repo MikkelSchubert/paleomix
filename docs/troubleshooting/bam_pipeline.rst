@@ -29,7 +29,7 @@ Troubleshooting BAM pipeline makefiles
           MakefileError:
             Target name 'ExampleProject' used multiple times; output files would be clobbered!
 
-**OutOfMemoryException (PicardTools, GATK, etc.):**
+**OutOfMemoryException (Picard Tools):**
 
     By default, the BAM pipeline will limit the amount of heap-space used by Java programs to 4GB (on 64-bit systems, JVM defaults are used on 32-bit systems), which may prove insufficient in some instances. This will result in the failing program terminating with a stacktrace, such as the following::
 
@@ -143,13 +143,13 @@ Troublshooting validation of BAM files
 
 **Both mates are marked as second / first of pair**:
 
-    This error message may occur during validation of the final (realigned) BAM, if the input files specified for different libraries contained duplicates reads (*not* PCR duplicate). In that case, the final BAM will contain multiple copies of the same data, thereby risking a significant bias in downstream analyses.
+    This error message may occur during validation of the final BAM, if the input files specified for different libraries contained duplicates reads (*not* PCR duplicate). In that case, the final BAM will contain multiple copies of the same data, thereby risking a significant bias in downstream analyses.
 
     The following demonstrates this problem, using a contrieved example based on the examples/bam_example project included with the pipeline::
 
         $ bam_pipeline run makefile.yaml
         [...]
-        <Validate BAM: 'ExampleProject.rCRS.realigned.bam'>: Error occurred running command:
+        <Validate BAM: 'ExampleProject.rCRS.bam'>: Error occurred running command:
           Error(s) running Node:
             Temporary directory: '/path/to/temp/folder'
 
@@ -161,22 +161,22 @@ Troublshooting validation of BAM files
                         '-Djava.io.tmpdir=/tmp/bam_pipeline/9a5beba9-1b24-4494-836e-62a85eb74bf3',
                         '-Djava.awt.headless=true', '-XX:+UseSerialGC', '-jar',
                         '/home/research/tools/opt/jar_root/ValidateSamFile.jar',
-                        'I=ExampleProject.rCRS.realigned.bam',
+                        'I=ExampleProject.rCRS.bam',
                         'IGNORE=MATE_NOT_FOUND', 'IGNORE=INVALID_QUALITY_FORMAT']
              Status  = Exited with return-code 1
-             STDOUT  = '/path/to/temp/folder/rCRS.realigned.validated'
+             STDOUT  = '/path/to/temp/folder/rCRS.validated'
              STDERR* = '/path/to/temp/folder/pipe_java_20885232.stderr'
              CWD     = '/home/temp/bam_example'>
 
     Picard's ValidateSamfile prints the error messages to STDOUT, the location of which is indicated above::
 
-        $ cat '/tmp/bam_pipeline/9a5beba9-1b24-4494-836e-62a85eb74bf3/rCRS.realigned.validated'
+        $ cat '/tmp/bam_pipeline/9a5beba9-1b24-4494-836e-62a85eb74bf3/rCRS.validated'
         ERROR: Record 684, Read name Seq_101_1324_104_rv_0\2, Both mates are marked as second of pair
         ERROR: Record 6810, Read name Seq_1171_13884_131_fw_0\2, Both mates are marked as second of pair
 
     To identify the source of the problems, the problematic reads may be extracted from the BAM file::
 
-        $ samtools view ExampleProject.rCRS.realigned.bam|grep -w "^Seq_101_1324_104_rv_0"
+        $ samtools view ExampleProject.rCRS.bam|grep -w "^Seq_101_1324_104_rv_0"
         Seq_101_1324_104_rv_0\2 131 NC_012920_1 1325 60 100M = 1325 -1 [...]
         Seq_101_1324_104_rv_0\2 131 NC_012920_1 1325 60 100M = 1325 1 [...]
         Seq_101_1324_104_rv_0\1 16 NC_012920_1 1327 37 51M2D49M * 0 0 [...]

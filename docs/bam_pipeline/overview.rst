@@ -42,9 +42,7 @@ During a typical analyses, the BAM pipeline will proceed through the following s
 
 6. Generation of final BAMs
 
-    1. If the "Raw BAM" feature is enabled, each BAM in the previous step is merged into a final BAM file.
-
-    2. If the "Realigned BAM" feature is enabled, each BAM generated in the previous step is merged, and GATK IndelRealigner is used to perform local realignment around indels, to improve downstream analyses. The resulting BAM is updated using "samtools calmd" as above.
+    1. Each BAM in the previous step is merged into a final BAM file.
 
 7. Statistics
 

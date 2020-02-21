@@ -316,8 +316,6 @@ Options: mapDamage plots and rescaling
     .. note::
         It may be worthwhile to tweak mapDamage parameters before building a model of *post-mortem* DNA damage; this may be accomplished by running the pipeline without rescaling, running with the 'mapDamage' feature set to 'plot' (with or without quotes), inspecting the plots generated per-library, and then tweaking parameters as appropriate, before setting 'mapDamage' to 'model' (with or without quotes).
 
-        Disabling the construction of the final BAMs may be accomplished by setting the features 'RawBam' and 'RealignedBAM' to 'no' (without quotes) in the 'Features' section (see below), and then setting the desired option to yes again after enabling rescaling and adding the desired options to the mapDamage section.
-
         Should you wish to change the modeling and rescaling parameters, after having already run the pipeline with rescaling enabled, simply remove the mapDamage files generated for the relevant libraries (see the :ref:`bam_filestructure` section).
 
     .. warning::
@@ -384,12 +382,6 @@ Options: Optional features
 
     This section lists several optional features, in particular determining which BAM files and which summary statistics are generated when running the pipeline. Currently, the following options are available:
 
-    *RawBAM*
-        If enabled, the pipeline will generate a final BAM, which is NOT processed using the GATK Indel Realigner (see below), following all other processing steps.
-
-    *RealignedBAM*
-        If enabled, the pipeline will generate a final BAM, which is processed using the GATK Indel Realigner [McKenna2010]_, in order to improve the alignment near indels, by performing a multiple sequence alignment in regions containing putative indels.
-
     *mapDamage*
         The 'mapDamage' option accepts four possible values: 'no', 'plot', 'model', and 'rescale'. By default value ('plot'), will cause mapDamage to be run in order to generate simple plots of the *post-mortem* DNA damage rates, as well as base composition plots, and more. If set to 'model', mapDamage will firstly generate the plots described for 'plot', but also construct models of DNA damage parameters, as described in [Jonsson2013]_. Note that a minimum amount of DNA damage is required to be present in order to build these models. If the option is set to 'rescale', both plots and models will be constructed using mapDamage, and in addition, the quality scores of bases will be down-graded based on how likely they are to represent *post-mortem* DNA damage (see above).
 
@@ -434,9 +426,6 @@ Reference genomes used for mapping are specified by listing these (one or more) 
         Path: /path/to/genomes/AE008922_1.fasta
 
 Each sample in the makefile is mapped against each prefix, and BAM files are generated according to the enabled 'Features' (see above). In addition to the path, two other options are available per prefix, namely the 'Label' and 'RegionsOfInterest', which are described below.
-
-.. warning::
-    FASTA files used in the BAM pipeline *must* be named with a .fasta file extension. Furthermore, if alignments are to be carried out against the human nuclear genome, chromosomes MUST be ordered by their number for GATK to work! See the `GATK FAQ`_ for more information.
 
 
 Regions of interest
@@ -579,7 +568,7 @@ The following simplified example, derived from the makefile constructed as part 
 In addition to these target (sub)sections, it is possible to specify 'Options' for individual targets, samples, and libraries, similarly to how this is done globally at the top of the makefile. This is described below.
 
 .. warning::
-    It is very important that lanes are assigned to their corresponding libraries in the makefile; while it is possible to simply record every sequencing run / lane under a single library and run the pipeline like that, this will result in several unintended side effects: Firstly, the BAM pipeline uses the library information to ensure that PCR duplicates are filtered correctly. Wrongly grouping together lanes will result either in the loss of sequences which are not, in fact, PCR duplicates, while wrongly splitting a library into multiple entries will result in PCR duplicates not being correctly identified across these. Furthermore, GATK and mapDamage analyses make use of this information to carry out various analyses on a per-library basis, which may similarly be negatively impacted by incorrect specification of libraries.
+    It is very important that lanes are assigned to their corresponding libraries in the makefile; while it is possible to simply record every sequencing run / lane under a single library and run the pipeline like that, this will result in several unintended side effects: Firstly, the BAM pipeline uses the library information to ensure that PCR duplicates are filtered correctly. Wrongly grouping together lanes will result either in the loss of sequences which are not, in fact, PCR duplicates, while wrongly splitting a library into multiple entries will result in PCR duplicates not being correctly identified across these. Furthermore, mapDamage analyses make use of this information to carry out various analyses on a per-library basis, which may similarly be negatively impacted by incorrect specification of libraries.
 
 
 
@@ -679,7 +668,6 @@ In this example, we have overwritten options at 3 places:
 
 .. _AdapterRemoval documentation: https://github.com/MikkelSchubert/adapterremoval
 .. _Bowtie2 documentation: http://bowtie-bio.sourceforge.net/bowtie2/manual.shtml
-.. _GATK FAQ: http://www.broadinstitute.org/gatk/guide/article?id=1204
 .. _NC_012920.1: http://www.ncbi.nlm.nih.gov/nuccore/251831106
 .. _Phred quality-scores: https://en.wikipedia.org/wiki/FASTQ_format#Quality
 .. _SAM/BAM specification: http://samtools.sourceforge.net/SAM1.pdf

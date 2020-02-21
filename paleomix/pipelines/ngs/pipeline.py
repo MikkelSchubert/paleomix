@@ -123,7 +123,7 @@ def build_pipeline_full(config, makefile, return_nodes=True):
             if return_nodes:
                 # Extra tasks (e.g. coverage, depth-histograms, etc.)
                 result.extend(target.nodes)
-                # Output BAM files (raw, realigned)
+                # Output BAM files
                 result.extend(target.bams.values())
             else:
                 result.append(target)

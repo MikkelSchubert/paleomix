@@ -114,21 +114,12 @@ def add_run_command(subparsers):
         default=1,
         help="Max number of threads to use per BWA instance [%(default)s]",
     )
-    group.add_argument(
-        "--gatk-max-threads",
-        type=int,
-        default=1,
-        help="Max number of threads to use per GATK instance [%(default)s]",
-    )
 
     group = parser.add_argument_group("Required paths")
     group.add_argument(
         "--jar-root",
         default=os.path.expanduser("~/install/jar_root"),
-        help="Folder containing Picard JARs (http://picard.sf.net), "
-        "and GATK (www.broadinstitute.org/gatk). "
-        "The latter is only required if realigning is enabled. "
-        "[%(default)s]",
+        help="Folder containing Picard JARs (http://picard.sf.net) [%(default)s]",
     )
     group.add_argument(
         "--temp-root",

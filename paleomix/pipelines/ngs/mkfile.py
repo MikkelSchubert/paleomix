@@ -127,17 +127,13 @@ _TEMPLATE_BAM_OPTIONS = """  # Settings for aligners supported by the pipeline
 
   # Optional steps to perform during processing.
   Features:
-    # Generate BAM without realignment around indels (yes / no)
-    RawBAM: no
-    # Generate indel-realigned BAM using the GATK Indel realigner (yes / no)
-    RealignedBAM: yes
     # To disable mapDamage, write 'no'; to generate basic mapDamage plots,
     # write 'plot'; to build post-mortem damage models, write 'model',
     # and to produce rescaled BAMs, write 'rescale'. The 'model' option
     # includes the 'plot' output, and the 'rescale' option includes both
     # 'plot' and 'model' results. All analyses are carried out per library.
     mapDamage: plot
-    # Generate coverage information for the raw BAM (wo/ indel realignment).
+    # Generate coverage information for the final BAM.
     # If one or more 'RegionsOfInterest' have been specified for a prefix,
     # additional coverage files are generated for each alignment (yes / no)
     Coverage: yes

@@ -49,7 +49,7 @@ from paleomix.common.makefile import (
     Not,
 )
 
-from paleomix.common.fileutils import swap_ext, add_postfix
+from paleomix.common.fileutils import swap_ext
 from paleomix.common.utilities import fill_dict
 from paleomix.common.text import parse_padded_table
 from paleomix.common.bedtools import read_bed_file, BEDError
@@ -364,8 +364,6 @@ def _check_bam_sequences(options, mkfile, steps):
             filename = os.path.join(
                 options.samples_root, "%s.%s.bam" % (sample["Name"], regions["Prefix"])
             )
-            if regions["Realigned"]:
-                filename = add_postfix(filename, ".realigned")
 
             if os.path.exists(filename):
                 bam_files[filename] = _collect_fasta_contigs(regions["FASTA"])
@@ -740,7 +738,7 @@ _VALIDATION = {
         "RegionsOfInterest": {
             IsStr: {
                 "Prefix": IsStr(default=REQUIRED_VALUE),
-                "Realigned": IsBoolean(default=False),
+                "Realigned": RemovedOption(),
                 "ProteinCoding": IsBoolean(default=False),
                 "IncludeIndels": IsBoolean(default=True),
                 "HomozygousContigs": {

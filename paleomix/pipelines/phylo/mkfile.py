@@ -47,9 +47,6 @@ Project:
        # of the FASTA file without the extension / the name of the
        # prefix used in the BAM pipeline.
        Prefix: PREFIX_NAME
-       # If true, BAM files are expected to have the postfix ".realigned";
-       # allows easier interopterability with the BAM pipeline.
-       Realigned: yes
        # Specifies whether or not the sequences are protein coding; if true
        # indels are only included in the final sequence if the length is
        # divisible by 3.

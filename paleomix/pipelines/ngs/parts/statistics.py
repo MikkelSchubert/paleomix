@@ -66,9 +66,7 @@ def _build_depth(config, target, prefixes):
     for prefix in target.prefixes:
         for (roi_name, roi_filename) in _get_roi(prefix, name_prefix="."):
             if roi_filename is not None:
-                # ROIs require indexed access, and hence that the final BAM
-                # (either raw or realigned) has been built. By default, the
-                # the realigned BAM is used (based on lexical order).
+                # ROIs require indexed access and hence the final BAM
                 bam_files = tuple(sorted(prefix.bams.items()))
                 input_files, dependencies = bam_files[-1]
             else:

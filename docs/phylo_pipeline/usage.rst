@@ -33,7 +33,7 @@ Sex is required, and is used to filter SNPs at homozygous sex chromsomes (e.g. c
 
 Groups are optional, and may be used either for the sake of the reader, or to specify a group of samples in lists of samples, e.g. when excluding samples form a subsequent step, when filtering singletons, or when rooting phylogenetic trees (see below)
 
-For a given sample with name S, and a prefix with name P, the pipeline will expect files to be located at ./data/samples/*S*.*P*.bam, or at ./data/samples/*S*.*P*.realigned.bam if the "Realigned" option is enabled (see below).
+For a given sample with name S, and a prefix with name P, the pipeline will expect files to be located at ./data/samples/*S*.*P*.bam.
 
 
 Regions of interest
@@ -41,7 +41,11 @@ Regions of interest
 
 Analysis is carried out for a set of "Regions of Interest", which is defined a set of named regions specified using BED files:
 
-RegionsOfInterest: NAME: Prefix: NAME_OF_PREFIX Realigned: yes/no ProteinCoding: yes/no IncludeIndels: yes/no
+    RegionsOfInterest:
+      NAME:
+        Prefix: NAME_OF_PREFIX
+        ProteinCoding: yes/no
+        IncludeIndels: yes/no
 
 The options 'ProteinCoding' and 'IncludeIndels' takes values 'yes' and 'no' (without quotation marks), and determines the behavior when calling indels. If 'IncludeIndels' is set to yes, indels are included in the consensus sequence, and if 'ProteinCoding' is set to yes, only indels that are a multiple of 3bp long are included.
 

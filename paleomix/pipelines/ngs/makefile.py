@@ -53,7 +53,6 @@ from paleomix.common.makefile import (
     StringStartsWith,
     IsListOf,
     IsDictOf,
-    DeprecatedOption,
     RemovedOption,
 )
 from paleomix.common.formats.fasta import FASTA, FASTAError
@@ -118,8 +117,8 @@ _VALID_FEATURES_DICT = {
     "Coverage": IsBoolean(default=True),
     "Depths": IsBoolean(default=True),
     "DuplicateHist": RemovedOption(),
-    "RawBAM": DeprecatedOption(IsBoolean(default=True)),
-    "RealignedBAM": DeprecatedOption(IsBoolean(default=True)),
+    "RawBAM": RemovedOption(),
+    "RealignedBAM": RemovedOption(),
     "Summary": IsBoolean(default=True),
     "mapDamage": StringIn(("rescale", "model", "plot")),
 }
@@ -520,7 +519,6 @@ def _validate_makefiles(makefiles):
         _validate_makefile_adapters(makefile)
     _validate_makefiles_duplicate_targets(makefiles)
     _validate_makefiles_duplicate_files(makefiles)
-    _validate_makefiles_features(makefiles)
     _validate_prefixes(makefiles)
 
     return makefiles
@@ -643,30 +641,7 @@ def _validate_makefiles_duplicate_targets(makefiles):
             targets.add(target)
 
 
-def _validate_makefiles_features(makefiles):
-    for makefile in makefiles:
-        features = makefile["Options"]["Features"]
-        roi_enabled = False
-
-        for prefix in makefile["Prefixes"].values():
-            roi_enabled |= bool(prefix.get("RegionsOfInterest"))
-
-        if features["Depths"] and roi_enabled:
-            if not (features["RawBAM"] or features["RealignedBAM"]):
-                raise MakefileError(
-                    "The feature 'Depths' (depth histograms) "
-                    "with RegionsOfInterest enabled, requires "
-                    "that either the feature 'RawBAM' or the "
-                    "feature 'RalignedBAM' is enabled."
-                )
-
-
 def _validate_prefixes(makefiles):
-    """Validates prefixes and regions-of-interest, including an implementation
-    of the checks included in GATK, which require that the FASTA for the human
-    genome is ordered 1 .. 23. This is required since GATK will not run with
-    human genomes in a different order.
-    """
     logger = logging.getLogger(__name__)
     already_validated = {}
     logger.info("Validating FASTA files")

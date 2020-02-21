@@ -111,14 +111,6 @@ class Library:
         if isinstance(strategy, str) and (strategy.lower() == "mark"):
             keep_duplicates = True
 
-        # Indexing is required if we wish to calulate per-region statistics,
-        # or if we wish to run GATK, but only if we don't use a downstream
-        # rescaled BAM as input for GATK
-        index_required = bool(prefix.get("RegionsOfInterest")) or (
-            self.options["Features"]["RealignedBAM"]
-            and not self.options["Features"]["mapDamage"] == "rescale"
-        )
-
         results = {}
         for (key, files_and_nodes) in bams.items():
             output_filename = self.folder + ".rmdup.%s.bam" % key
@@ -129,8 +121,13 @@ class Library:
                 keep_dupes=keep_duplicates,
                 dependencies=list(files_and_nodes.values()),
             )
+
+            # Indexing is required if we wish to calulate per-region statistics
             validated_node = index_and_validate_bam(
-                config=config, prefix=prefix, node=node, create_index=index_required
+                config=config,
+                prefix=prefix,
+                node=node,
+                create_index=bool(prefix.get("RegionsOfInterest")),
             )
 
             results[key] = {output_filename: validated_node}
@@ -227,13 +224,12 @@ class Library:
             dependencies=model,
         )
 
-        # Grab indexing and validation nodes, required by ROIs and GATK
-        index_required = (
-            bool(prefix.get("RegionsOfInterest"))
-            or self.options["Features"]["RealignedBAM"]
-        )
+        # Grab indexing and validation nodes, required by ROIs
         validate = index_and_validate_bam(
-            config=config, prefix=prefix, node=scale, create_index=index_required
+            config=config,
+            prefix=prefix,
+            node=scale,
+            create_index=bool(prefix.get("RegionsOfInterest")),
         )
 
         return {output_filename: validate}, (model,)
