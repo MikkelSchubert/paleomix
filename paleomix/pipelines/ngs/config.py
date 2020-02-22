@@ -25,6 +25,7 @@ import os
 import multiprocessing
 
 import paleomix
+import paleomix.common.logging
 
 from paleomix.resources import add_copy_example_command
 
@@ -81,7 +82,7 @@ def add_run_command(subparsers):
         metavar="makefile",
     )
 
-    paleomix.logger.add_argument_group(parser, default="warning")
+    paleomix.common.logging.add_argument_group(parser, default="warning")
 
     group = parser.add_argument_group("Scheduling")
     group.add_argument(

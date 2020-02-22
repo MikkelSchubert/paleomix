@@ -30,7 +30,7 @@ import pysam
 
 import paleomix
 import paleomix.common.fileutils as fileutils
-import paleomix.logger
+import paleomix.common.logging
 import paleomix.pipelines.ngs.mkfile as bam_mkfile
 import paleomix.pipelines.zonkey.config as zonkey_config
 import paleomix.pipelines.zonkey.database as database
@@ -50,7 +50,7 @@ def run_pipeline(config, nodes, msg):
     pipeline = Pypeline(config)
     pipeline.add_nodes(nodes)
 
-    paleomix.logger.initialize(
+    paleomix.common.logging.initialize(
         log_level=config.log_level, log_file=config.log_file, name="zonkey"
     )
 

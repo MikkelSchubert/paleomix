@@ -24,7 +24,7 @@ import logging
 import os
 import sys
 
-import paleomix.logger
+import paleomix.common.logging
 import paleomix.pipelines.phylo.mkfile as mkfile
 import paleomix.pipelines.phylo.parts.genotype as genotype
 import paleomix.pipelines.phylo.parts.msa as msa
@@ -97,7 +97,7 @@ def main(argv):
         log.error("Error reading makefiles:\n%s", error)
         return 1
 
-    paleomix.logger.initialize(
+    paleomix.common.logging.initialize(
         log_level=config.log_level, log_file=config.log_file, name="phylo_pipeline"
     )
 

@@ -29,7 +29,7 @@ import traceback
 
 from queue import Empty
 
-import paleomix.logger
+import paleomix.common.logging
 
 from paleomix.node import Node, NodeError, NodeUnhandledException
 from paleomix.nodegraph import FileStatusCache, NodeGraph, NodeGraphError
@@ -89,7 +89,7 @@ class Pypeline:
             finally:
                 signal.signal(signal.SIGINT, old_handler)
 
-        for filename in paleomix.logger.get_logfiles():
+        for filename in paleomix.common.logging.get_logfiles():
             self._logger.info("Log-file written to %r", filename)
 
         return result

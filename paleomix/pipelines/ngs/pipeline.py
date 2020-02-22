@@ -26,7 +26,7 @@ import os
 import logging
 
 import paleomix
-import paleomix.logger
+import paleomix.common.logging
 import paleomix.resources
 import paleomix.yaml
 
@@ -166,7 +166,7 @@ def index_references(config, makefiles):
 
 
 def run(config, pipeline_variant):
-    paleomix.logger.initialize(
+    paleomix.common.logging.initialize(
         log_level=config.log_level, log_file=config.log_file, name="bam_pipeline"
     )
 

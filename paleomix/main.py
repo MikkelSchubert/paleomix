@@ -24,7 +24,7 @@ import sys
 import textwrap
 
 import paleomix.common.system
-import paleomix.logger
+import paleomix.common.logging
 
 
 # List of tuples of commands: (name, module, help string). If module is None,
@@ -152,7 +152,7 @@ def main(argv):
     # Change process name from 'python' to 'paleomix'
     paleomix.common.system.set_procname("paleomix")
     # Setup basic logging to STDERR
-    paleomix.logger.initialize_console_logging()
+    paleomix.common.logging.initialize_console_logging()
 
     if not argv or argv[0] == "help":
         _print_help()

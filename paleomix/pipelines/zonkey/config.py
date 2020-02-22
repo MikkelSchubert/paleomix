@@ -23,6 +23,7 @@
 import argparse
 
 import paleomix
+import paleomix.common.logging
 
 
 _RUN_USAGE = """%(prog)s [..] <database.tar> <samples.txt> [destination]
@@ -142,7 +143,7 @@ def add_run_command(subparsers):
         "--admixture-only", help=argparse.SUPPRESS, default=False, action="store_true",
     )
 
-    paleomix.logger.add_argument_group(parser, default="warning")
+    paleomix.common.logging.add_argument_group(parser, default="warning")
 
     group = parser.add_argument_group("Pipeline")
     group.add_argument(
