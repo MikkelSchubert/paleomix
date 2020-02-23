@@ -26,7 +26,7 @@ import getpass
 from paleomix.node import CommandNode
 from paleomix.atomiccmd.builder import AtomicJavaCmdBuilder
 from paleomix.atomiccmd.sets import ParallelCmds
-from paleomix.common.fileutils import swap_ext, try_rmtree, reroot_path, describe_files
+from paleomix.common.fileutils import swap_ext, try_rmtree, describe_files
 from paleomix.common.utilities import safe_coerce_to_tuple
 import paleomix.common.versions as versions
 import paleomix.common.system
