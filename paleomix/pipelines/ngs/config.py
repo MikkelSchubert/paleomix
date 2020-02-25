@@ -20,7 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import argparse
 import os
 import multiprocessing
 
@@ -28,10 +27,17 @@ import paleomix
 import paleomix.common.logging
 
 from paleomix.resources import add_copy_example_command
+from paleomix.common.argparse import ArgumentParser
+
+
+_DEFAULT_CONFIG_FILES = [
+    "/etc/paleomix/bam_pipeline.ini",
+    "~/.paleomix/bam_pipeline.ini",
+]
 
 
 def build_parser(pipeline_variant):
-    parser = argparse.ArgumentParser(prog="paleomix %s_pipeline" % (pipeline_variant,))
+    parser = ArgumentParser(prog="paleomix %s_pipeline" % (pipeline_variant,))
 
     parser.add_argument(
         "--version", action="version", version="%(prog)s v" + paleomix.__version__,
@@ -68,7 +74,10 @@ def add_makefile_command(subparsers):
 
 def add_run_command(subparsers):
     parser = subparsers.add_parser(
-        "run", aliases=("dryrun",), help="Run pipeline on provided makefiles",
+        "run",
+        aliases=("dryrun",),
+        help="Run pipeline on provided makefiles",
+        default_config_files=_DEFAULT_CONFIG_FILES,
     )
 
     parser.add_argument(

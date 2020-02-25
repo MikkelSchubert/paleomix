@@ -20,10 +20,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import argparse
-
 import paleomix
 import paleomix.common.logging
+
+from paleomix.common.argparse import ArgumentParser, SUPPRESS
 
 
 _RUN_USAGE = """%(prog)s [..] <database.tar> <samples.txt> [destination]
@@ -31,9 +31,14 @@ _RUN_USAGE = """%(prog)s [..] <database.tar> <samples.txt> [destination]
        %(prog)s [..] <database.tar> <nuclear.bam> <mitochondrial.bam> <destination>
 """
 
+_DEFAULT_CONFIG_FILES = [
+    "/etc/paleomix/zonkey.ini",
+    "~/.paleomix/zonkey.ini",
+]
+
 
 def build_parser():
-    parser = argparse.ArgumentParser(prog="paleomix zonkey")
+    parser = ArgumentParser(prog="paleomix zonkey")
 
     parser.add_argument(
         "--version", action="version", version="%(prog)s v" + paleomix.__version__,
@@ -93,6 +98,7 @@ def add_run_command(subparsers):
         help="Run pipeline on provided makefiles",
         usage=_RUN_USAGE,
         prog="paleomix zonkey run",
+        default_config_files=_DEFAULT_CONFIG_FILES,
     )
 
     parser.add_argument(
@@ -140,7 +146,7 @@ def add_run_command(subparsers):
     )
 
     group.add_argument(
-        "--admixture-only", help=argparse.SUPPRESS, default=False, action="store_true",
+        "--admixture-only", help=SUPPRESS, default=False, action="store_true",
     )
 
     paleomix.common.logging.add_argument_group(parser, default="warning")

@@ -61,6 +61,7 @@ setup(
     packages=find_packages(exclude=["misc", "tests"]),
     install_requires=[
         "coloredlogs>=10.0",
+        "configargparse>=0.13.0",
         "pysam>=0.10.0",
         "ruamel.yaml>=0.16.0",
         "setproctitle>=1.1.0",
