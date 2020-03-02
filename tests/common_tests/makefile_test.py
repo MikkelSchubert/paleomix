@@ -58,7 +58,7 @@ from paleomix.common.makefile import (
 
 # Dummy value for the path parameters
 _DUMMY_PATH = ("a", "random", "path")
-_DUMMY_PATH_STR = ":".join(_DUMMY_PATH)
+_DUMMY_PATH_STR = " :: ".join(_DUMMY_PATH)
 
 
 class Unhashable:

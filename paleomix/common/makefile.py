@@ -890,7 +890,7 @@ def _process_default_values(data, specification, path, apply_defaults):
 
 def _path_to_str(path):
     """Converts a path (tuple of strings) to a printable string."""
-    return ":".join(str(field) for field in path)
+    return " :: ".join(str(field) for field in path)
 
 
 CLI_PARAMETERS = Or(IsListOf(IsStr, IsInt, IsFloat), Or(IsStr, IsInt, IsFloat, IsNone))
