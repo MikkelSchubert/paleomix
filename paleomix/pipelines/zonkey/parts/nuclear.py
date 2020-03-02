@@ -65,7 +65,7 @@ TREEMIX_VERSION = versions.Requirement(
 
 class BuildTPEDFilesNode(CommandNode):
     def __init__(self, output_root, table, bamfile, downsample, dependencies=()):
-        cmd = factory.new("zonkey_tped")
+        cmd = factory.new("zonkey:tped")
         cmd.set_option("--name", "Sample")
         cmd.set_option("--downsample", downsample)
         cmd.add_value("%(TEMP_DIR)s")

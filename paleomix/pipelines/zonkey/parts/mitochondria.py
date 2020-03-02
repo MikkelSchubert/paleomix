@@ -34,7 +34,7 @@ from paleomix.pipelines.zonkey.common import RSCRIPT_VERSION
 
 class MitoConsensusNode(CommandNode):
     def __init__(self, database, bamfile, output_prefix, dependencies=()):
-        cmd = factory.new("zonkey_mito")
+        cmd = factory.new("zonkey:mito")
         cmd.add_value("%(IN_DATABASE)s")
         cmd.add_value("%(IN_BAMFILE)s")
         cmd.add_value("%(TEMP_OUT_PREFIX)s")

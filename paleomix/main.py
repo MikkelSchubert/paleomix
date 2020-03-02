@@ -37,9 +37,9 @@ _COMMANDS = {
     "phylo_pipeline": "paleomix.pipelines.phylo.pipeline",
     # Zonkey
     "zonkey": "paleomix.pipelines.zonkey.pipeline",
-    "zonkey_db": "paleomix.pipelines.zonkey.build_db",
-    "zonkey_mito": "paleomix.pipelines.zonkey.build_mito",
-    "zonkey_tped": "paleomix.pipelines.zonkey.build_tped",
+    "zonkey:db": "paleomix.pipelines.zonkey.build_db",
+    "zonkey:mito": "paleomix.pipelines.zonkey.build_mito",
+    "zonkey:tped": "paleomix.pipelines.zonkey.build_tped",
     # BAM file tools
     "cleanup": "paleomix.tools.cleanup",
     "coverage": "paleomix.tools.coverage",
