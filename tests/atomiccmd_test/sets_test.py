@@ -116,6 +116,30 @@ def test_atomicsets__commit(cls):
 
 
 @pytest.mark.parametrize("cls", _SET_CLASSES)
+def test_atomicsets__commit__remove_files_on_failure(tmp_path, cls):
+    (tmp_path / "tmp").mkdir()
+    out_path = tmp_path / "out"
+
+    cmd_1 = AtomicCmd(["touch", "%(OUT_FILE)s"], OUT_FILE=str(out_path / "file1"))
+    cmd_2 = AtomicCmd(["touch", "%(OUT_FILE)s"], OUT_FILE=str(out_path / "file2"))
+    cmd_2.commit = Mock()
+    cmd_2.commit.side_effect = OSError()
+
+    cmdset = cls((cmd_1, cmd_2))
+    cmdset.run(str(tmp_path / "tmp"))
+    assert cmdset.join() == [0, 0]
+
+    with pytest.raises(OSError):
+        cmdset.commit(tmp_path / "tmp")
+
+    tmp_files = [it.name for it in (tmp_path / "tmp").iterdir()]
+    assert "file1" not in tmp_files
+    assert "file2" in tmp_files
+
+    assert list((tmp_path / "out").iterdir()) == []
+
+
+@pytest.mark.parametrize("cls", _SET_CLASSES)
 def test_atomicsets__stdout(cls):
     cmds = cls([AtomicCmd("ls")])
     with pytest.raises(CmdError):

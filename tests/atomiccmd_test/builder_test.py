@@ -573,6 +573,35 @@ def test_java_builder__kwargs():
     assert builder.kwargs == {"AUX_JAR": "/path/Foo.jar", "set_cwd": True}
 
 
+def test_java_builder__default__jre_options():
+    builder = AtomicJavaCmdBuilder("/path/Foo.jar", jre_options=("-XtraOption",))
+    assert builder.call == [
+        "java",
+        "-server",
+        "-Djava.io.tmpdir=%(TEMP_DIR)s",
+        "-Djava.awt.headless=true",
+        "-XX:+UseSerialGC",
+        "-XtraOption",
+        "-Xmx4g",
+        "-jar",
+        "%(AUX_JAR)s",
+    ]
+
+
+def test_java_builder__default__jre_options__Xmx():
+    builder = AtomicJavaCmdBuilder("/path/Foo.jar", jre_options=("-Xmx8g",))
+    assert builder.call == [
+        "java",
+        "-server",
+        "-Djava.io.tmpdir=%(TEMP_DIR)s",
+        "-Djava.awt.headless=true",
+        "-XX:+UseSerialGC",
+        "-Xmx8g",
+        "-jar",
+        "%(AUX_JAR)s",
+    ]
+
+
 ###############################################################################
 ###############################################################################
 # AtomicMPICmdBuilder

@@ -22,6 +22,7 @@
 #
 import errno
 import os
+import shutil
 import stat
 
 from pathlib import Path
@@ -446,6 +447,25 @@ def test_move_file__enoent_reraised_if_not_due_to_missing_folder() -> None:
         move_file("", "./dst")
 
 
+def test_move_file__destination_removed_if_out_of_space(tmp_path) -> None:
+    _shutil_move = shutil.move
+
+    def _move(source, destination):
+        _shutil_move(source, destination)
+        raise OSError(errno.ENOSPC, "Out of space")
+
+    source = tmp_path / "source"
+    source.write_text("...")
+    destination = tmp_path / "destination"
+
+    with pytest.raises(OSError, match="Out of space"):
+        with patch("shutil.move", wraps=_move):
+            move_file(source, destination)
+
+    assert not source.exists()
+    assert not destination.exists()
+
+
 ###############################################################################
 ###############################################################################
 # Tests for 'copy_file'
@@ -531,6 +551,25 @@ def test_copy_file__enoent_reraised_if_not_due_to_missing_folder() -> None:
         copy_file("", "./dst")
 
 
+def test_copy_file__destination_removed_if_out_of_space(tmp_path) -> None:
+    _shutil_copy = shutil.copy
+
+    def _copy(source, destination):
+        _shutil_copy(source, destination)
+        raise OSError(errno.ENOSPC, "Out of space")
+
+    source = tmp_path / "source"
+    source.write_text("...")
+    destination = tmp_path / "destination"
+
+    with pytest.raises(OSError, match="Out of space"):
+        with patch("shutil.copy", wraps=_copy):
+            copy_file(source, destination)
+
+    assert source.exists()
+    assert not destination.exists()
+
+
 ###############################################################################
 ###############################################################################
 # Tests for 'open'
@@ -539,6 +578,17 @@ def test_copy_file__enoent_reraised_if_not_due_to_missing_folder() -> None:
 def test_open_ro__uncompressed() -> None:
     with open_ro(test_file("fasta_file.fasta")) as handle:
         assert handle.read() == ">This_is_FASTA!\nACGTN\n>This_is_ALSO_FASTA!\nCGTNA\n"
+
+
+@pytest.mark.parametrize("mode", ("r", "rt"))
+def test_open_ro__uncompressed__mode(mode) -> None:
+    with open_ro(test_file("fasta_file.fasta"), mode) as handle:
+        assert handle.read() == ">This_is_FASTA!\nACGTN\n>This_is_ALSO_FASTA!\nCGTNA\n"
+
+
+def test_open_ro__invalid_mode() -> None:
+    with pytest.raises(ValueError, match="foo"):
+        open_ro(test_file("fasta_file.fasta"), "foo")
 
 
 def test_open_ro__gz() -> None:
@@ -694,6 +744,11 @@ def test_describe_files__iterable() -> None:
     assert describe_files(fpaths) == "2 files in '/var/foo'"
 
 
+def test_describe_files__non_str() -> None:
+    with pytest.raises(ValueError):
+        describe_files(1)
+
+
 ###############################################################################
 ###############################################################################
 # Tests for 'describe_paired_files'
@@ -766,3 +821,14 @@ def test_describe_paired_files__files_1_longer() -> None:
 def test_describe_paired_files__files_2_longer() -> None:
     with pytest.raises(ValueError):
         describe_paired_files(("a",), ("b", "c"))
+
+
+def test_describe_paired_files__non_str() -> None:
+    with pytest.raises(ValueError):
+        describe_paired_files((), 1)
+
+    with pytest.raises(ValueError):
+        describe_paired_files(1, ())
+
+    with pytest.raises(ValueError):
+        describe_paired_files(1, 1)
