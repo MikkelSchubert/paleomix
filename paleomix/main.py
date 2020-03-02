@@ -21,98 +21,66 @@
 # SOFTWARE.
 import logging
 import sys
-import textwrap
 
 import paleomix.common.system
 import paleomix.common.logging
 
 
-# List of tuples of commands: (name, module, help string). If module is None,
-# then the ntry is treated as a header, and if the help string is empty then
-# the command is not listed when invoking "help".
-_PALEOMIX_COMMANDS = (
-    ("Pipelines", None, None),
-    (
-        "bam_pipeline",
-        "paleomix.pipelines.ngs.pipeline",
-        "Pipeline for trimming and mapping of NGS reads.",
-    ),
-    (
-        "trim_pipeline",
-        "paleomix.pipelines.ngs.trim_pipeline",
-        "Equivalent to 'bam_pipeline', but only runs the trimming steps.",
-    ),
-    (
-        "phylo_pipeline",
-        "paleomix.pipelines.phylo.pipeline",
-        "Pipeline for genotyping and phylogenetic inference from BAMs.",
-    ),
-    (
-        "zonkey",
-        "paleomix.pipelines.zonkey.pipeline",
-        "Pipeline for detecting F1 (equine) hybrids.",
-    ),
-    # Currently not documented; used internally by Zonkey
-    ("zonkey_db", "paleomix.pipelines.zonkey.build_db", None),
-    ("zonkey_tped", "paleomix.pipelines.zonkey.build_tped", None),
-    ("zonkey_mito", "paleomix.pipelines.zonkey.build_mito", None),
-    ("BAM/SAM tools", None, None),
-    (
-        "dupcheck",
-        "paleomix.tools.dupcheck",
-        "Identifies potential duplicate data in sorted BAM files, defined"
-        "as reads aligned to the same position, with the same name, "
-        "sequence, and qualities.",
-    ),
-    (
-        "cleanup",
-        "paleomix.tools.cleanup",
-        "Reads SAM file from STDIN, and outputs sorted, tagged, and filter "
-        "BAM, for which NM and MD tags have been updated.",
-    ),
-    (
-        "coverage",
-        "paleomix.tools.coverage",
-        "Calculate coverage across reference sequences or regions of " "interest.",
-    ),
-    (
-        "depths",
-        "paleomix.tools.depths",
-        "Calculate depth histograms across reference sequences or regions "
-        "of interest.",
-    ),
-    (
-        "rmdup_collapsed",
-        "paleomix.tools.rmdup_collapsed",
-        "Filters PCR duplicates for collapsed paired-ended reads generated "
-        "by the AdapterRemoval tool.",
-    ),
-    ("VCF/GTF/BED/Pileup tools", None, None),
-    (
-        "gtf_to_bed",
-        "paleomix.tools.gtf_to_bed",
-        "Convert GTF file to BED files grouped by feature " "(coding, RNA, etc).",
-    ),
-    (
-        "vcf_filter",
-        "paleomix.tools.vcf_filter",
-        "Quality filters for VCF records, similar to " "'vcfutils.pl varFilter'.",
-    ),
-    (
-        "vcf_to_fasta",
-        "paleomix.tools.vcf_to_fasta",
-        "Create most likely FASTA sequence from tabix-indexed VCF file.",
-    ),
-    ("Misc tools", None, None),
-    (
-        "cat",
-        "paleomix.tools.cat",
-        "Generalized cat command for gz, bz2 and uncompressed files.",
-    ),
-)
+_COMMANDS = {
+    # BAM/FASTQ pipeline
+    "bam": "paleomix.pipelines.ngs.pipeline",
+    "bam_pipeline": "paleomix.pipelines.ngs.pipeline",
+    "trim": "paleomix.pipelines.ngs.trim_pipeline",
+    "trim_pipeline": "paleomix.pipelines.ngs.trim_pipeline",
+    # Phylogenetic pipeline
+    "phylo": "paleomix.pipelines.phylo.pipeline",
+    "phylo_pipeline": "paleomix.pipelines.phylo.pipeline",
+    # Zonkey
+    "zonkey": "paleomix.pipelines.zonkey.pipeline",
+    "zonkey_db": "paleomix.pipelines.zonkey.build_db",
+    "zonkey_mito": "paleomix.pipelines.zonkey.build_mito",
+    "zonkey_tped": "paleomix.pipelines.zonkey.build_tped",
+    # BAM file tools
+    "cleanup": "paleomix.tools.cleanup",
+    "coverage": "paleomix.tools.coverage",
+    "depths": "paleomix.tools.depths",
+    # VCF/etc. tools
+    "gtf_to_bed": "paleomix.tools.gtf_to_bed",
+    "rmdup_collapsed": "paleomix.tools.rmdup_collapsed",
+    "vcf_filter": "paleomix.tools.vcf_filter",
+    "vcf_to_fasta": "paleomix.tools.vcf_to_fasta",
+    # Misc tools
+    "cat": "paleomix.tools.cat",
+}
 
 
-_PALEOMIX_CITATION = """
+_HELP = """PALEOMIX - pipelines and tools for NGS data analyses
+Version: {version}
+
+Pipelines:
+    paleomix bam              -- Pipeline for trimming and mapping of NGS reads.
+    paleomix trim             -- Equivalent to the 'bam' pipeline, but only runs
+                                 the FASTQ trimming steps.
+    paleomix phylo            -- Pipeline for genotyping and phylogenetic
+                                 inference from BAMs.
+    paleomix zonkey           -- Pipeline for detecting F1 (equine) hybrids.
+
+BAM/SAM tools:
+    paleomix coverage         -- Calculate coverage across reference sequences
+                                 or regions of interest.
+    paleomix depths           -- Calculate depth histograms across reference
+                                 sequences or regions of interest.
+    paleomix rmdup_collapsed  -- Filters PCR duplicates for collapsed paired-
+                                 ended reads generated by the AdapterRemoval
+                                 tool.
+
+VCF/GTF/BED/Pileup tools:
+    paleomix gtf_to_bed       -- Convert GTF file to BED files grouped by
+                                 feature (coding, RNA, etc).
+    paleomix vcf_filter       -- Quality filters for VCF records, similar to
+                                 'vcfutils.pl varFilter'.
+    paleomix vcf_to_fasta     -- Create most likely FASTA sequence from tabix-
+                                 indexed VCF file.
 
 If you make use of PALEOMIX in your work, please cite
   Schubert et al, "Characterization of ancient and modern genomes by SNP
@@ -121,52 +89,28 @@ If you make use of PALEOMIX in your work, please cite
 """
 
 
-def _print_help():
-    """Prints description of commands and reference to PALEOMIX paper."""
-    import paleomix
-
-    template = "    paleomix %s%s-- %s\n"
-    max_len = max(len(key) for (key, module, _) in _PALEOMIX_COMMANDS if module)
-    help_len = 80 - len(template % (" " * max_len, " ", ""))
-    help_padding = (80 - help_len) * " "
-
-    sys.stderr.write("PALEOMIX - pipelines and tools for NGS data analyses.\n")
-    sys.stderr.write("Version: %s\n\n" % (paleomix.__version__,))
-    sys.stderr.write("Usage: paleomix <command> [options]\n")
-    for (key, module, help_str) in _PALEOMIX_COMMANDS:
-        if help_str is None:
-            if module is None:
-                sys.stderr.write("\n%s:\n" % (key,))
-        else:
-            lines = textwrap.wrap(help_str, help_len)
-            padding = (max_len - len(key) + 2) * " "
-            sys.stderr.write(template % (key, padding, lines[0]))
-
-            for line in lines[1:]:
-                sys.stderr.write("%s%s\n" % (help_padding, line))
-
-    sys.stderr.write(_PALEOMIX_CITATION)
-
-
 def main(argv):
     # Change process name from 'python' to 'paleomix'
     paleomix.common.system.set_procname("paleomix")
     # Setup basic logging to STDERR
     paleomix.common.logging.initialize_console_logging()
 
-    if not argv or argv[0] == "help":
-        _print_help()
+    if not argv or argv[0] in ("-h", "--help", "help"):
+        print(_HELP.format(version=paleomix.__version__))
+        return 0
+    elif argv[0] in ("--version",):
+        print("paleomix v{}".format(paleomix.__version__))
         return 0
 
-    command = argv[0]
-    for (cmd_name, cmd_module, _) in _PALEOMIX_COMMANDS:
-        if cmd_module and (command == cmd_name):
-            module = __import__(cmd_module, globals(), locals(), ["main"], 0)
-            return module.main(argv[1:])
+    command = _COMMANDS.get(argv[0])
+    if command is None:
+        log = logging.getLogger(__name__)
+        log.error("Unknown command %r", argv[0])
+        return 1
 
-    log = logging.getLogger(__name__)
-    log.error("Unknown command %r", command)
-    return 1
+    module = __import__(command, fromlist=["main"])
+
+    return module.main(argv[1:])
 
 
 def entry_point():

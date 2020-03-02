@@ -62,8 +62,8 @@ def check_run(call, *args, **kwargs):
 def test_paleomix_command():
     stdout, stderr = check_run(["paleomix"])
 
-    assert stdout == ""
-    assert "PALEOMIX - pipelines and tools for NGS data analyses." in stderr
+    assert "PALEOMIX - pipelines and tools for NGS data analyses" in stdout
+    assert stderr == ""
 
 
 FACTORY_COMMANDS = (
