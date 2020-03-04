@@ -21,22 +21,17 @@
 # SOFTWARE.
 #
 import collections
-import io
 import json
 import os
 import re
 
 import pysam
 
-from paleomix.node import Node, NodeError
 from paleomix.common.fileutils import describe_files, make_dirs
-from paleomix.common.utilities import chain_sorted
+from paleomix.common.formats.fastq import FASTQ, FASTQualities
 from paleomix.common.sequences import reverse_complement
-
-import paleomix.common.formats.fastq as fastq
-import paleomix.common.procs as procs
-import paleomix.common.sampling as sampling
-import paleomix.tools.factory as factory
+from paleomix.common.utilities import chain_sorted
+from paleomix.node import Node, NodeError
 
 
 class DetectInputDuplicationNode(Node):
@@ -188,9 +183,22 @@ def check_fastq_files(filenames, required_offset, allow_empty=False):
     stats = {"seq_retained_nts": 0, "seq_retained_reads": 0, "seq_collapsed": 0}
 
     for file_type, filename in filenames:
-        qualities = _read_sequences(file_type, filename, stats)
-        offsets = fastq.classify_quality_strings(qualities)
-        if offsets == fastq.OFFSET_BOTH:
+        seq_retained_reads = 0
+        seq_retained_nts = 0
+        qualities = FASTQualities()
+        for record in FASTQ.from_file(filename):
+            qualities.update(record)
+
+            seq_retained_reads += 1
+            seq_retained_nts += len(record.sequence)
+
+        stats["seq_retained_reads"] += seq_retained_reads
+        stats["seq_retained_nts"] += seq_retained_nts
+        if "Collapsed" in file_type:
+            stats["seq_collapsed"] += seq_retained_reads
+
+        offsets = qualities.offsets()
+        if offsets == FASTQualities.BOTH:
             raise NodeError(
                 "FASTQ file contains quality scores with both "
                 "quality offsets (33 and 64); file may be "
@@ -198,8 +206,8 @@ def check_fastq_files(filenames, required_offset, allow_empty=False):
                 "that this file contains valid FASTQ reads from a "
                 "single source.\n    Filename = %r" % (filename,)
             )
-        elif offsets == fastq.OFFSET_MISSING:
-            if allow_empty and not qualities:
+        elif offsets == FASTQualities.MISSING:
+            if allow_empty or seq_retained_reads:
                 continue
 
             raise NodeError(
@@ -207,7 +215,7 @@ def check_fastq_files(filenames, required_offset, allow_empty=False):
                 "may be unexpected format or corrupt. Ensure that "
                 "the file is a FASTQ file.\n    Filename = %r" % (filename,)
             )
-        elif offsets not in (fastq.OFFSET_AMBIGIOUS, required_offset):
+        elif offsets not in (FASTQualities.AMBIGIOUS, required_offset):
             raise NodeError(
                 "FASTQ file contains quality scores with wrong "
                 "quality score offset (%i); expected reads with "
@@ -218,41 +226,6 @@ def check_fastq_files(filenames, required_offset, allow_empty=False):
             )
 
     return stats
-
-
-def _read_sequences(file_type, filename, stats):
-    cat_call = factory.new("cat")
-    cat_call.add_multiple_values((filename,))
-    cat_call = cat_call.finalized_call
-
-    cat = None
-    try:
-        cat = procs.open_proc(
-            cat_call,
-            bufsize=io.DEFAULT_BUFFER_SIZE,
-            stderr=procs.PIPE,
-            stdout=procs.PIPE,
-        )
-        qualities = _collect_qualities(cat.stdout, file_type, filename, stats)
-
-        return sampling.reservoir_sampling(qualities, 100000)
-    except Exception as error:
-        if cat:
-            try:
-                cat.kill()
-            except OSError:
-                pass
-            cat.wait()
-            cat = None
-        raise error
-    finally:
-        rc_cat = cat.wait() if cat else 0
-        if rc_cat:
-            message = (
-                "Error running 'paleomix cat':\n"
-                "  Unicat return-code = %i\n\n%s" % (rc_cat, cat.stderr.read())
-            )
-            raise NodeError(message)
 
 
 def _open_samfiles(handles, filenames):
@@ -335,56 +308,6 @@ def _summarize_reads(records):
 
 def _key_by_tid_pos(record):
     return (record[0].tid, record[0].pos)
-
-
-def _collect_qualities(handle, file_type, filename, stats):
-    header = handle.readline()
-    while header:
-        sequence = handle.readline()
-        seperator = handle.readline()
-        qualities = handle.readline()
-
-        if not header.startswith(b"@"):
-            if header.startswith(b">"):
-                raise NodeError(
-                    "Input file appears to be in FASTA format "
-                    "(header starts with '>', expected '@'), "
-                    "but only FASTQ files are supported\n"
-                    "Filename = %r" % (filename,)
-                )
-
-            raise NodeError(
-                "Input file lacks FASTQ header (expected '@', "
-                "found %r), but only FASTQ files are supported\n"
-                "    Filename = %r" % (header[:1], filename)
-            )
-        elif not qualities:
-            raise NodeError(
-                "Partial record found; is not 4 lines long:\n"
-                "Filename = %r\n    Record = '%s'" % (filename, header.rstrip())
-            )
-        elif not seperator.startswith(b"+"):
-            raise NodeError(
-                "Input file lacks FASTQ seperator (expected '+', "
-                "found %r), but only FASTQ files are supported\n"
-                "    Filename = %r" % (seperator[:1], filename)
-            )
-        elif len(sequence) != len(qualities):
-            raise NodeError(
-                "Input file contains malformed FASTQ records; "
-                "length of sequence / qualities are not the "
-                "same.\n    Filename = %r\n    Record = '%s'"
-                % (filename, header.rstrip())
-            )
-
-        stats["seq_retained_nts"] += len(sequence)
-        stats["seq_retained_reads"] += 1
-
-        if "Collapsed" in file_type:
-            stats["seq_collapsed"] += 1
-
-        yield qualities
-        header = handle.readline()
 
 
 def check_fasta_file(filename):

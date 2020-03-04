@@ -20,25 +20,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import bz2
+import gzip
 import io
-import os
 
 import pytest
 
 from paleomix.common.formats.fasta import FASTA, FASTAError
 
-###############################################################################
-###############################################################################
 
 _SEQ_FRAG = "AAGTCC"  # len() = 6
-
-
-def test_dir():
-    return os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-
-
-def test_file(*args):
-    return os.path.join(test_dir(), "data", *args)
 
 
 ###############################################################################
@@ -91,38 +82,45 @@ def test_fasta__constructor__sequence_must_be_string_type():
 
 
 def test_fasta__repr__partial_line_test():
-    expected = ">foobar\n%s\n" % (_SEQ_FRAG,)
+    expected = "FASTA('foobar', '', %r)" % (_SEQ_FRAG,)
     result = repr(FASTA("foobar", None, _SEQ_FRAG))
     assert result == expected
 
 
 def test_fasta__repr__complete_line_test():
-    expected = ">barfoo\n%s\n" % (_SEQ_FRAG * 10,)
+    expected = "FASTA('barfoo', '', %r)" % (_SEQ_FRAG * 10,)
     result = repr(FASTA("barfoo", None, _SEQ_FRAG * 10))
     assert result == expected
 
 
 def test_fasta__repr__multiple_lines():
-    expected = ">foobar\n%s\n%s\n" % (_SEQ_FRAG * 10, _SEQ_FRAG * 5)
+    expected = "FASTA('foobar', '', %r)" % (_SEQ_FRAG * 15,)
     result = repr(FASTA("foobar", None, _SEQ_FRAG * 15))
     assert result == expected
 
 
 def test_fasta__repr__partial_line_test_with_meta_information():
-    expected = ">foobar my Meta-Info\n%s\n" % (_SEQ_FRAG,)
+    expected = "FASTA('foobar', 'my Meta-Info', %r)" % (_SEQ_FRAG,)
     result = repr(FASTA("foobar", "my Meta-Info", _SEQ_FRAG))
     assert result == expected
 
 
 ###############################################################################
 ###############################################################################
-# Tests for print_fasta
+# Tests for write
 
 
 def test_fasta__write__partial_line():
     expected = ">foobar\n%s\n" % (_SEQ_FRAG,)
     stringf = io.StringIO()
     FASTA("foobar", None, _SEQ_FRAG).write(stringf)
+    assert stringf.getvalue() == expected
+
+
+def test_fasta__write__with_metadata():
+    expected = ">foobar my Meta data\n%s\n" % (_SEQ_FRAG,)
+    stringf = io.StringIO()
+    FASTA("foobar", "my Meta data", _SEQ_FRAG).write(stringf)
     assert stringf.getvalue() == expected
 
 
@@ -221,31 +219,18 @@ def test_fasta__from_lines__empty_name__with_others():
 # Tests for 'FASTA.from_file'
 
 
-def test_fasta__from_file__uncompressed():
+@pytest.mark.parametrize("func", (open, gzip.open, bz2.open))
+def test_fasta__from_file(func, tmp_path):
     expected = [
         FASTA("This_is_FASTA!", None, "ACGTN"),
         FASTA("This_is_ALSO_FASTA!", None, "CGTNA"),
     ]
-    results = list(FASTA.from_file(test_file("fasta_file.fasta")))
-    assert results == expected
 
+    with func(tmp_path / "file", "wt") as handle:
+        for item in expected:
+            item.write(handle)
 
-def test_fasta__from_file__compressed_gz():
-    expected = [
-        FASTA("This_is_GZipped_FASTA!", None, "ACGTN"),
-        FASTA("This_is_ALSO_GZipped_FASTA!", None, "CGTNA"),
-    ]
-    results = list(FASTA.from_file(test_file("fasta_file.fasta.gz")))
-    assert results == expected
-
-
-def test_fasta__from_file__compressed_bz2():
-    expected = [
-        FASTA("This_is_BZ_FASTA!", None, "CGTNA"),
-        FASTA("This_is_ALSO_BZ_FASTA!", None, "ACGTN"),
-    ]
-    results = list(FASTA.from_file(test_file("fasta_file.fasta.bz2")))
-    assert results == expected
+    assert list(FASTA.from_file(tmp_path / "file")) == expected
 
 
 ###############################################################################
@@ -297,3 +282,56 @@ def test_fasta__unimplemented_comparison():
     assert NotImplemented is FASTA("A", None, "C").__le__(10)
     assert NotImplemented is FASTA("A", None, "C").__ge__(10)
     assert NotImplemented is FASTA("A", None, "C").__gt__(10)
+
+
+###############################################################################
+###############################################################################
+# Tests for index_and_collect_contigs
+
+_TEST_FASTA_1_A = FASTA("seq1", "meta1", "TCTTTCAGTCTGGAGACTAGCCTCC")
+_TEST_FASTA_1_B = FASTA("seq1", None, "ATTGAGGCGTATTGTGTCG")
+_TEST_FASTA_2 = FASTA("seq2", None, "CAAAGCA")
+_TEST_FASTA_3 = FASTA("seq3", "more meta data", "AGCTCTCCTCCCC")
+
+
+def test_index_and_collect_contigs(tmp_path):
+    fasta_file = tmp_path / "test.fasta"
+    with fasta_file.open("wt") as handle:
+        _TEST_FASTA_1_A.write(handle)
+        _TEST_FASTA_2.write(handle)
+        _TEST_FASTA_3.write(handle)
+
+    assert FASTA.index_and_collect_contigs(fasta_file) == {
+        "seq1": 25,
+        "seq2": 7,
+        "seq3": 13,
+    }
+
+
+def test_index_and_collect_contigs__duplicate_names(tmp_path):
+    fasta_file = tmp_path / "test.fasta"
+    with fasta_file.open("wt") as handle:
+        _TEST_FASTA_1_A.write(handle)
+        _TEST_FASTA_2.write(handle)
+        _TEST_FASTA_1_B.write(handle)
+
+    assert FASTA.index_and_collect_contigs(fasta_file) == {
+        "seq1": 25,
+        "seq2": 7,
+    }
+
+
+def test_index_and_collect_contigs__fai_files(tmp_path):
+    fasta_file = tmp_path / "test.fasta"
+    with fasta_file.open("wt") as handle:
+        _TEST_FASTA_1_A.write(handle)
+
+    fai_file = tmp_path / "test.fasta.fai"
+
+    # Fai file should be created once, and then not modified
+    FASTA.index_and_collect_contigs(fasta_file)
+    stats_1 = fai_file.stat()
+    FASTA.index_and_collect_contigs(fasta_file)
+    stats_2 = fai_file.stat()
+
+    assert stats_1 == stats_2

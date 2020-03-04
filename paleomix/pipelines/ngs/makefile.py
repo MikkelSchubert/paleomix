@@ -666,7 +666,6 @@ def _validate_prefixes(makefiles):
             except FASTAError as error:
                 raise MakefileError("Error indexing FASTA:\n %s" % (error,))
 
-            contigs = dict(contigs)
             regions_of_interest = prefix.get("RegionsOfInterest", {})
             for (name, fpath) in regions_of_interest.items():
                 try:

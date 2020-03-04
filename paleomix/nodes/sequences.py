@@ -97,7 +97,7 @@ class CollectSequencesNode(Node):
                 for (sample, fasta_file) in fasta_files:
                     sequence = fasta_file.fetch(sequence_name)
                     fasta = FASTA(sample, sequence_name, sequence)
-                    out_handle.write(str(fasta))
+                    fasta.write(out_handle)
 
     def _teardown(self, _config, temp):
         for destination in sorted(self._outfiles):

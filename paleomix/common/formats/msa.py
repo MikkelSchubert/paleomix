@@ -170,7 +170,7 @@ class MSA(frozenset):
 
     def to_file(self, fileobj):
         for fst in sorted(self):
-            fileobj.write(str(fst))
+            fst.write(fileobj)
 
     @classmethod
     def validate(cls, *msas):

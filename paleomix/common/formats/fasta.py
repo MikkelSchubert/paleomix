@@ -20,7 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
 import sys
 
 import pysam
@@ -46,9 +45,12 @@ class FASTA(TotallyOrdered, Immutable):
         Immutable.__init__(self, name=name, meta=meta or "", sequence=sequence)
 
     def write(self, fileobj=sys.stdout):
-        """Prints a FASTA sequence (iterable), wrapping long sequences at 60
-        characters."""
-        fileobj.write(repr(self))
+        """Writes a FASTA record to fileobj, wrapping sequences at 60 chars"""
+        name = self.name
+        if self.meta:
+            name = "%s %s" % (name, self.meta)
+
+        fileobj.write(">%s\n%s\n" % (name, "\n".join(fragment(60, self.sequence))))
 
     @classmethod
     def from_lines(cls, lines):
@@ -78,53 +80,17 @@ class FASTA(TotallyOrdered, Immutable):
         """Reads an unindexed FASTA file, returning a sequence of
         tuples containing the name and sequence of each entry in
         the file. The FASTA file may be GZIP/BZ2 compressed."""
-        fasta_file = open_ro(filename)
-        try:
-            for record in FASTA.from_lines(fasta_file):
-                yield record
-        finally:
-            fasta_file.close()
+        with open_ro(filename) as fasta_file:
+            yield from FASTA.from_lines(fasta_file)
 
     @classmethod
     def index_and_collect_contigs(cls, filename):
-        """Creates an index (.fai; if it does not already exist) for a FASTA
-        file using 'pysam', and returns a dictionary of {contig: length} listed
-        in that file; if the .fai file can not be created, or if the FASTA file
-        contains sequences with identical names, then a FASTAError is raised.
+        """Creates an index (.fai; if it does not already exist) for a FASTA file using
+        pysam, and returns a dictionary of {contig: length} listed in that file.
         """
-        fai_filename = filename + ".fai"
-        if not os.path.exists(fai_filename):
-            dirname = os.path.dirname(filename) or "."
-
-            if not os.access(dirname, os.W_OK):
-                message = (
-                    "FASTA index is missing, but folder is "
-                    "not writable, so it cannot be created:\n"
-                    "  Filename = %s\n\n"
-                    "Either change permissions on the folder, or move "
-                    "the FASTA file to different location." % (filename,)
-                )
-                raise FASTAError(message)
-
-            # Use pysam to index the file
-            pysam.FastaFile(filename).close()
-
-        names = set()
-        contigs = []
-        with open(fai_filename) as faihandle:
-            for line in faihandle:
-                name, length, _ = line.split(None, 2)
-                if name in names:
-                    raise FASTAError(
-                        "Reference contains multiple identically "
-                        "named sequences:\n  Path = %r\n  Name = "
-                        "%r\nPlease ensure that sequences have "
-                        "unique names" % (filename, name)
-                    )
-                names.add(name)
-                contigs.append((name, int(length)))
-
-        return contigs
+        # If an index does not already exist, then it is created automatically
+        with pysam.FastaFile(filename) as handle:
+            return dict(zip(handle.references, handle.lengths))
 
     def __lt__(self, other):
         if not isinstance(other, FASTA):
@@ -140,10 +106,4 @@ class FASTA(TotallyOrdered, Immutable):
         return hash((self.name, self.meta, self.sequence))
 
     def __repr__(self):
-        """Returns string representation of FASTA sequence, using the standard,
-        FASTA file format, wrapping long sequences at 60 characters.
-        """
-        name = self.name
-        if self.meta:
-            name = "%s %s" % (name, self.meta)
-        return ">%s\n%s\n" % (name, "\n".join(fragment(60, self.sequence)))
+        return "FASTA(%r, %r, %r)" % (self.name, self.meta, self.sequence)

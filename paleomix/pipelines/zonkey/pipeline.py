@@ -423,8 +423,7 @@ def setup_mito_mapping(config):
                     sequence=record.sequence.replace("-", ""),
                 )
 
-                fasta_handle.write(str(record))
-                fasta_handle.write("\n")
+                record.write(fasta_handle)
 
         mkfile.write("\n")
 

@@ -189,7 +189,7 @@ def _collect_fasta_contigs(filename, cache={}):
         log = logging.getLogger(__name__)
         log.info("Indexing %r; this may take a while", filename)
 
-    cache[filename] = contigs = dict(FASTA.index_and_collect_contigs(filename))
+    cache[filename] = contigs = FASTA.index_and_collect_contigs(filename)
     return contigs
 
 
