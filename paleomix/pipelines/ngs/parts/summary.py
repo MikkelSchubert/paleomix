@@ -179,12 +179,20 @@ class SummaryTableNode(Node):
                     for (prefix, table) in ordered:
                         table.pop("hits_unique_nts(%s)" % prefix, None)
 
-                        for (key, (value, comment)) in sorted(
+                        for (key, value) in sorted(
                             table.items(), key=_measure_ordering
                         ):
                             if isinstance(value, numbers.Number) and math.isnan(value):
                                 value = "NA"
-                            yield (target, sample, library, key, value, comment)
+
+                            yield (
+                                target,
+                                sample,
+                                library,
+                                key,
+                                value,
+                                _get_comment(key),
+                            )
                         yield ""
                     yield ""
 
@@ -222,137 +230,46 @@ class SummaryTableNode(Node):
 
     @classmethod
     def _annotate_subtables(cls, subtables, genomes):
-        if "mitochondrial" in subtables and "nuclear" in subtables:
-            subtables["endogenous"] = cls._create_endogenous_subtable(
-                subtables, genomes
-            )
-
         for (tblname, subtable) in subtables.items():
             if tblname == "reads":
                 fractions = [
-                    (
-                        "seq_trash_se",
-                        "seq_reads_se",
-                        "seq_trash_se_frac",
-                        "# Fraction of SE reads trashed",
-                    ),
-                    (
-                        "seq_trash_pe_1",
-                        "seq_reads_pairs",
-                        "seq_trash_pe_1_frac",
-                        "# Fraction of PE mate 1 reads trashed",
-                    ),
-                    (
-                        "seq_trash_pe_2",
-                        "seq_reads_pairs",
-                        "seq_trash_pe_2_frac",
-                        "# Fraction of PE mate 2 reads trashed",
-                    ),
-                    (
-                        "seq_collapsed",
-                        "seq_reads_pairs",
-                        "seq_collapsed_frac",
-                        "# Fraction of PE pairs collapsed into one read",
-                    ),
-                    (
-                        "seq_retained_nts",
-                        "seq_retained_reads",
-                        "seq_retained_length",
-                        "# Average number of NTs in retained reads",
-                    ),
+                    ("seq_trash_se", "seq_reads_se", "seq_trash_se_frac"),
+                    ("seq_trash_pe_1", "seq_reads_pairs", "seq_trash_pe_1_frac"),
+                    ("seq_trash_pe_2", "seq_reads_pairs", "seq_trash_pe_2_frac"),
+                    ("seq_collapsed", "seq_reads_pairs", "seq_collapsed_frac"),
+                    ("seq_retained_nts", "seq_retained_reads", "seq_retained_length"),
                 ]
 
-                for (numerator, denominator, measure, comment) in fractions:
+                for (numerator, denominator, measure) in fractions:
                     if (numerator in subtable) and (denominator in subtable):
-                        value = subtable[numerator][0] / float(
-                            subtable[denominator][0] or "NaN"
+                        value = subtable[numerator] / float(
+                            subtable[denominator] or "NaN"
                         )
-                        subtable[measure] = (value, comment)
+                        subtable[measure] = value
             else:
-                total_hits = subtable["hits_raw(%s)" % tblname][0]
-                total_nts = subtable["hits_unique_nts(%s)" % tblname][0]
-                total_uniq = subtable["hits_unique(%s)" % tblname][0]
-                total_reads = subtables.get("reads", {}).get(
-                    "seq_retained_reads", (0,)
-                )[0]
+                total_hits = subtable["hits_raw(%s)" % tblname]
+                total_nts = subtable["hits_unique_nts(%s)" % tblname]
+                total_uniq = subtable["hits_unique(%s)" % tblname]
+                total_reads = subtables.get("reads", {}).get("seq_retained_reads", 0)
                 genome_size = genomes[tblname]["Size"]
 
-                subtable["hits_raw_frac(%s)" % tblname] = (
-                    total_hits / float(total_reads or "NaN"),
-                    "# Total number of hits vs. total number of reads retained",
+                subtable["hits_raw_frac(%s)" % tblname] = total_hits / (
+                    total_reads or "NaN"
                 )
-                subtable["hits_unique_frac(%s)" % tblname] = (
-                    total_uniq / float(total_reads or "NaN"),
-                    "# Total number of unique hits vs. total number of reads retained",
+                subtable["hits_unique_frac(%s)" % tblname] = total_uniq / (
+                    total_reads or "NaN"
                 )
-                subtable["hits_clonality(%s)" % tblname] = (
-                    1 - total_uniq / float(total_hits or "NaN"),
-                    "# Fraction of hits that were PCR duplicates",
+                subtable["hits_clonality(%s)" % tblname] = 1 - total_uniq / (
+                    total_hits or "NaN"
                 )
-                subtable["hits_length(%s)" % tblname] = (
-                    total_nts / float(total_uniq or "NaN"),
-                    "# Average number of aligned bases per unique hit",
+                subtable["hits_length(%s)" % tblname] = total_nts / (
+                    total_uniq or "NaN"
                 )
-                subtable["hits_coverage(%s)" % tblname] = (
-                    total_nts / float(genome_size or "NaN"),
-                    "# Estimated coverage from unique hits",
+                subtable["hits_coverage(%s)" % tblname] = total_nts / (
+                    genome_size or "NaN"
                 )
 
         return subtables
-
-    @classmethod
-    def _create_endogenous_subtable(self, subtables, genomes):
-        nucl = subtables["nuclear"]
-        mito = subtables["mitochondrial"]
-
-        total_hits = mito["hits_raw(mitochondrial)"][0] + nucl["hits_raw(nuclear)"][0]
-        total_hits_unique = (
-            mito["hits_unique(mitochondrial)"][0] + nucl["hits_unique(nuclear)"][0]
-        )
-        total_hits_unique_nts = (
-            mito["hits_unique_nts(mitochondrial)"][0]
-            + nucl["hits_unique_nts(nuclear)"][0]
-        )
-
-        ratio_hits, ratio_genome, ratio_genome_inv = "NA", "NA", "NA"
-        if mito["hits_unique(mitochondrial)"][0]:
-            ratio_nts = (
-                float(nucl["hits_unique_nts(nuclear)"][0])
-                / mito["hits_unique_nts(mitochondrial)"][0]
-            )
-            ratio_hits = (
-                float(nucl["hits_unique(nuclear)"][0])
-                / mito["hits_unique(mitochondrial)"][0]
-            )
-            ratio_genome = ratio_nts / (
-                (float(genomes["nuclear"]["Size"]) * 2)
-                / float(genomes["mitochondrial"]["Size"])
-            )
-            ratio_genome_inv = ratio_genome ** -1
-
-        return {
-            "hits_raw(endogenous)": (
-                total_hits,
-                "# Total number of hits against the nuclear and mitochondrial genome",
-            ),
-            "hits_unique(endogenous)": (
-                total_hits_unique,
-                "# Total number of unique reads (PCR duplicates removed)",
-            ),
-            "hits_unique_nts(endogenous)": (total_hits_unique_nts, None),
-            "ratio_reads(nuc,mito)": (
-                ratio_hits,
-                "# Ratio of unique hits: Hits(nuc) / H(mito)",
-            ),
-            "ratio_genome(nuc,mito)": (
-                ratio_genome,
-                "# Ratio of NTs of unique hits corrected by genome sizes: (NTs(nuc) / NTs(mito)) / ((2 * Size(nuc)) / Size(mito))",
-            ),
-            "ratio_genome(mito,nuc)": (
-                ratio_genome_inv,
-                "# Ratio of NTs of unique hits corrected by genome sizes: (NTs(mito) / NTs(nuc)) / (Size(mito) / (2 * Size(nuc)))",
-            ),
-        }
 
     def _read_reads_settings(self, table):
         for (
@@ -376,9 +293,8 @@ class SummaryTableNode(Node):
             key = (target, sample, library)
             hits, _ = self._read_coverage_tables(key, filenames)
 
-            value = (hits, "# Total number of hits (prior to PCR duplicate filtering)")
             set_in(
-                table, (target, sample, library, genome, "hits_raw(%s)" % genome), value
+                table, (target, sample, library, genome, "hits_raw(%s)" % genome), hits
             )
 
     def _read_lib_bam_stats(self, table):
@@ -386,16 +302,15 @@ class SummaryTableNode(Node):
             key = (target, sample, library)
             hits, nts = self._read_coverage_tables(key, filenames)
 
-            value = (hits, "# Total number of hits (excluding any PCR duplicates)")
             set_in(
                 table,
                 (target, sample, library, genome, "hits_unique(%s)" % genome),
-                value,
+                hits,
             )
             set_in(
                 table,
                 (target, sample, library, genome, "hits_unique_nts(%s)" % genome),
-                (nts, None),
+                nts,
             )
 
     @classmethod
@@ -425,13 +340,12 @@ class SummaryTableNode(Node):
     def _merge_tables(cls, tables):
         merged = {}
         for table in tables:
-            for (measure, (value, comment)) in table.items():
+            for (measure, value) in table.items():
                 if not isinstance(value, numbers.Number):
-                    other, _ = merged.get(measure, (value, None))
-                    merged[measure] = (value if (value == other) else "*", comment)
+                    other = merged.get(measure, value)
+                    merged[measure] = value if (value == other) else "*"
                 else:
-                    other, _ = merged.get(measure, (0, None))
-                    merged[measure] = (value + other, comment)
+                    merged[measure] = value + merged.get(measure, 0)
         return merged
 
     @classmethod
@@ -441,29 +355,26 @@ class SummaryTableNode(Node):
         if filetype != "Raw":
             nan = float("nan")
             stats = {
-                "lib_type": (filetype, "# SE, PE, or * (for both)"),
-                "seq_retained_nts": [0, "# Total number of NTs in retained reads",],
-                "seq_retained_reads": [0, "# Total number of retained reads",],
+                "lib_type": filetype,
+                "seq_retained_nts": 0,
+                "seq_retained_reads": 0,
             }
 
             if filetype in ("SE", "*"):
-                stats["seq_reads_se"] = [nan, "# Total number of single-ended reads"]
-                stats["seq_trash_se"] = [nan, "# Total number of trashed reads"]
+                stats["seq_reads_se"] = nan
+                stats["seq_trash_se"] = nan
 
             if filetype in ("PE", "*"):
-                stats["seq_reads_pairs"] = [nan, "# Total number of reads"]
-                stats["seq_trash_pe_1"] = [nan, "# Total number of reads"]
-                stats["seq_trash_pe_2"] = [nan, "# Total number of reads"]
-                stats["seq_collapsed"] = [
-                    0,
-                    "# Total number of pairs collapsed into one read",
-                ]
+                stats["seq_reads_pairs"] = nan
+                stats["seq_trash_pe_1"] = nan
+                stats["seq_trash_pe_2"] = nan
+                stats["seq_collapsed"] = 0
 
             for filename in filenames:
                 with open(filename) as handle:
                     for key, value in json.load(handle).items():
                         if key in stats:
-                            stats[key][0] += int(value)
+                            stats[key] += int(value)
 
             return stats
 
@@ -485,52 +396,26 @@ class SummaryTableNode(Node):
 
             if "Paired end mode" in settings or "paired-end reads" in settings:
                 return {
-                    "lib_type": ("PE", "# SE, PE, or * (for both)"),
-                    "seq_reads_pairs": (
-                        _re_search("number of read pairs: ([0-9]+)"),
-                        "# Total number of pairs",
-                    ),
-                    "seq_trash_pe_1": (
-                        _re_search("discarded mate 1 reads: ([0-9]+)"),
-                        "# Total number of reads",
-                    ),
-                    "seq_trash_pe_2": (
-                        _re_search("discarded mate 2 reads: ([0-9]+)"),
-                        "# Total number of reads",
-                    ),
-                    "seq_retained_nts": (
-                        _re_search("retained nucleotides: ([0-9]+)"),
-                        "# Total number of NTs in retained reads",
-                    ),
-                    "seq_retained_reads": (
-                        _re_search("retained reads: ([0-9]+)"),
-                        "# Total number of retained reads",
-                    ),
-                    "seq_collapsed": (
-                        _re_search("of (?:full-length )?collapsed pairs: ([0-9]+)", 0)
-                        + _re_search("of truncated collapsed pairs: ([0-9]+)", 0),
-                        "# Total number of pairs collapsed into one read",
-                    ),
+                    "lib_type": "PE",
+                    "seq_reads_pairs": _re_search("number of read pairs: ([0-9]+)"),
+                    "seq_trash_pe_1": _re_search("discarded mate 1 reads: ([0-9]+)"),
+                    "seq_trash_pe_2": _re_search("discarded mate 2 reads: ([0-9]+)"),
+                    "seq_retained_nts": _re_search("retained nucleotides: ([0-9]+)"),
+                    "seq_retained_reads": _re_search("retained reads: ([0-9]+)"),
+                    "seq_collapsed": _re_search(
+                        "of (?:full-length )?collapsed pairs: ([0-9]+)", 0
+                    )
+                    + _re_search("of truncated collapsed pairs: ([0-9]+)", 0),
                 }
             elif "Single end mode" in settings or "single-end reads" in settings:
                 return {
-                    "lib_type": ("SE", "# SE, PE, or * (for both)"),
-                    "seq_reads_se": (
-                        _re_search("number of (?:reads|read pairs): ([0-9]+)"),
-                        "# Total number of single-ended reads",
+                    "lib_type": "SE",
+                    "seq_reads_se": _re_search(
+                        "number of (?:reads|read pairs): ([0-9]+)"
                     ),
-                    "seq_trash_se": (
-                        _re_search("discarded mate 1 reads: ([0-9]+)"),
-                        "# Total number of trashed reads",
-                    ),
-                    "seq_retained_nts": (
-                        _re_search("retained nucleotides: ([0-9]+)"),
-                        "# Total number of NTs in retained reads",
-                    ),
-                    "seq_retained_reads": (
-                        _re_search("retained reads: ([0-9]+)"),
-                        "# Total number of retained reads",
-                    ),
+                    "seq_trash_se": _re_search("discarded mate 1 reads: ([0-9]+)"),
+                    "seq_retained_nts": _re_search("retained nucleotides: ([0-9]+)"),
+                    "seq_retained_reads": _re_search("retained reads: ([0-9]+)"),
                 }
             else:
                 assert False, filename
@@ -581,25 +466,24 @@ class SummaryTableNode(Node):
                 statistics["Size"] += sum(lengths)
                 statistics["NContigs"] += len(lengths)
 
-        if "mitochondrial" in genomes and "nuclear" in genomes:
-            nucl = genomes["nuclear"]
-            mito = genomes["mitochondrial"]
-
-            genomes["endogenous"] = {
-                "Size": nucl["Size"] + mito["Size"],
-                "NContigs": nucl["NContigs"] + mito["NContigs"],
-            }
-
         return genomes
 
 
 def _measure_ordering(pair):
     measure = pair[0]
     key = measure.split("(")[0]
-    return (__ORDERING[key], measure)
+    return (_ORDERING[key], measure)
 
 
-__ORDERING = {
+def _get_comment(key):
+    comment = _COMMENTS.get(key)
+    if comment is None:
+        comment = _COMMENTS[key.split("(", 1)[0]]
+
+    return comment
+
+
+_ORDERING = {
     "lib_type": 00,
     "seq_reads_se": 10,
     "seq_trash_se": 20,
@@ -623,4 +507,31 @@ __ORDERING = {
     "hits_length": 200,
     "ratio_reads": 210,
     "ratio_genome": 220,
+}
+
+_COMMENTS = {
+    "hits_clonality": "# Fraction of hits that were PCR duplicates",
+    "hits_coverage": "# Estimated coverage from unique hits",
+    "hits_length": "# Average number of aligned bases per unique hit",
+    "hits_raw_frac": "# Total number of hits vs. total number of reads retained",
+    "hits_raw": "# Total number of hits (prior to PCR duplicate filtering)",
+    "hits_unique_frac": "# Total number of unique hits vs. total number of reads retained",
+    "hits_unique": "# Total number of hits (excluding any PCR duplicates)",
+    "lib_type": "# SE, PE, or * (for both)",
+    "ratio_genome(mito,nuc)": "# Ratio of NTs of unique hits corrected by genome sizes: (NTs(mito) / NTs(nuc)) / (Size(mito) / (2 * Size(nuc)))",
+    "ratio_genome(nuc,mito)": "# Ratio of NTs of unique hits corrected by genome sizes: (NTs(nuc) / NTs(mito)) / ((2 * Size(nuc)) / Size(mito))",
+    "ratio_reads(nuc,mito)": "# Ratio of unique hits: Hits(nuc) / H(mito)",
+    "seq_collapsed_frac": "# Fraction of PE pairs collapsed into one read",
+    "seq_collapsed": "# Total number of pairs collapsed into one read",
+    "seq_reads_pairs": "# Total number of pairs",
+    "seq_reads_se": "# Total number of single-ended reads",
+    "seq_retained_length": "# Average number of NTs in retained reads",
+    "seq_retained_nts": "# Total number of NTs in retained reads",
+    "seq_retained_reads": "# Total number of retained reads",
+    "seq_trash_pe_1_frac": "# Fraction of PE mate 1 reads trashed",
+    "seq_trash_pe_1": "# Total number of reads",
+    "seq_trash_pe_2_frac": "# Fraction of PE mate 2 reads trashed",
+    "seq_trash_pe_2": "# Total number of reads",
+    "seq_trash_se_frac": "# Fraction of SE reads trashed",
+    "seq_trash_se": "# Total number of trashed reads",
 }
