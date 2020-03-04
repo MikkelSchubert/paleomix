@@ -32,30 +32,13 @@ import paleomix.main
 from paleomix.atomiccmd.builder import AtomicCmdBuilder
 
 
-def new(command, *args, **kwargs):
+def new(*args, **kwargs):
     """Returns AtomicCmdBuilder setup to call the tools accessible through the
     'paleomix' command-line tool. This builder adds executable / version checks
     for the specified command, but does not add any arguments. Thus, calling
     new with the argument "cat" produces the equivalent of ["paleomix", "cat"].
     """
-    if command in _SPECIAL_COMMANDS:
-        return _SPECIAL_COMMANDS[command](*args, **kwargs)
-    return _build_paleomix_command(command, *args, **kwargs)
-
-
-def _build_cat_command():
-    """Returns an AtomicCmdBuilder for the 'paleomix cat' command."""
-    return _build_paleomix_command(
-        "cat", EXEC_GZIP="gzip", EXEC_BZIP="bzip2", EXEC_CAT="cat"
-    )
-
-
-def _build_paleomix_command(*args, **kwargs):
-    """Returns an AtomicCmdBuilder for a regular 'paleomix ...' command."""
     interpreter = sys.executable
     script = paleomix.main.__file__
 
     return AtomicCmdBuilder((interpreter, script) + args, AUX_PALEOMIX=script, **kwargs)
-
-
-_SPECIAL_COMMANDS = {"cat": _build_cat_command}

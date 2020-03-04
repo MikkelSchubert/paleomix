@@ -98,7 +98,6 @@ FACTORY_COMMANDS = (
         "vcf_to_fasta",
         "usage: paleomix vcf_to_fasta [options] --genotype in.vcf --intervals in.bed",
     ),
-    ("cat", "usage: paleomix cat [-h] [--output OUTPUT] file [file ...]"),
 )
 
 

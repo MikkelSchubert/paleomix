@@ -50,7 +50,6 @@ _COMMANDS = {
     "vcf_filter": "paleomix.tools.vcf_filter",
     "vcf_to_fasta": "paleomix.tools.vcf_to_fasta",
     # Misc tools
-    "cat": "paleomix.tools.cat",
     ":validate_fastq": "paleomix.tools.validate_fastq",
 }
 
