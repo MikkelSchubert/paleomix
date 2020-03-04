@@ -31,7 +31,7 @@ class Reads:
         self.quality_offset = quality_offset
         self.files = {}
         self.stats = None
-        self.validation = None
+        self.validation = ()
         self.nodes = ()
 
         tags = record["Tags"]
@@ -59,12 +59,31 @@ class Reads:
 
     def _init_pretrimmed_reads(self, record):
         self.files.update(record["Data"])
-        output_file = os.path.join(self.folder, "reads.statistics")
-        node = ValidateFASTQFilesNode(
-            input_files=self.files, output_file=output_file, offset=self.quality_offset
-        )
-        self.nodes = (node,)
-        self.validation = output_file
+
+        nodes = []
+        validation = []
+        for key, templ in self.files.items():
+            if key == "Paired":
+                input_files = [
+                    templ.format(Pair=1),
+                    templ.format(Pair=2),
+                ]
+            else:
+                input_files = [templ]
+
+            output_file = os.path.join(self.folder, key.lower() + ".statistics")
+            node = ValidateFASTQFilesNode(
+                input_files=input_files,
+                output_file=output_file,
+                offset=self.quality_offset,
+                collapsed=("Collapsed" in key),
+            )
+
+            nodes.append(node)
+            validation.append(output_file)
+
+        self.nodes = tuple(nodes)
+        self.validation = tuple(validation)
 
     def _init_raw_reads(self, config, record):
         ar_options = dict(record["Options"]["AdapterRemoval"])

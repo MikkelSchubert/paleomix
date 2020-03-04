@@ -21,17 +21,16 @@
 # SOFTWARE.
 #
 import collections
-import json
 import os
 import re
 
 import pysam
 
+from paleomix.node import CommandNode, Node, NodeError
 from paleomix.common.fileutils import describe_files, make_dirs
-from paleomix.common.formats.fastq import FASTQ, FASTQualities
-from paleomix.common.sequences import reverse_complement
 from paleomix.common.utilities import chain_sorted
-from paleomix.node import Node, NodeError
+from paleomix.common.sequences import reverse_complement
+from paleomix.tools import factory
 
 
 class DetectInputDuplicationNode(Node):
@@ -100,35 +99,23 @@ class DetectInputDuplicationNode(Node):
         raise NodeError("\n".join(message))
 
 
-class ValidateFASTQFilesNode(Node):
-    def __init__(self, input_files, output_file, offset, dependencies=()):
-        self._offset = offset
-        self._files = set()
-        for (read_type, filename) in input_files.items():
-            if read_type == "Paired":
-                self._files.add((read_type, filename.format(Pair=1)))
-                self._files.add((read_type, filename.format(Pair=2)))
-            else:
-                self._files.add((read_type, filename))
+class ValidateFASTQFilesNode(CommandNode):
+    def __init__(
+        self, input_files, output_file, offset, collapsed=False, dependencies=()
+    ):
+        command = factory.new(":validate_fastq")
+        command.set_option("--offset", offset)
+        if collapsed:
+            command.set_option("--collapsed")
+        command.add_multiple_values(input_files)
+        command.set_kwargs(OUT_STDOUT=output_file)
 
-        input_files = [filename for _, filename in self._files]
-        Node.__init__(
+        CommandNode.__init__(
             self,
             description="<Validate FASTQ Files: %s>" % (describe_files(input_files)),
-            input_files=input_files,
-            output_files=output_file,
+            command=command.finalize(),
             dependencies=dependencies,
         )
-
-    def _run(self, _config, _temp):
-        stats = check_fastq_files(self._files, self._offset, True)
-        output_file = tuple(self.output_files)[0]
-        if os.path.dirname(output_file):
-            make_dirs(os.path.dirname(output_file))
-
-        data = json.dumps(stats)
-        with open(output_file, "w") as handle:
-            handle.write(data)
 
 
 class ValidateFASTAFilesNode(Node):
@@ -177,55 +164,6 @@ def check_bam_files(input_files, err_func):
     finally:
         for handle in handles:
             handle.close()
-
-
-def check_fastq_files(filenames, required_offset, allow_empty=False):
-    stats = {"seq_retained_nts": 0, "seq_retained_reads": 0, "seq_collapsed": 0}
-
-    for file_type, filename in filenames:
-        seq_retained_reads = 0
-        seq_retained_nts = 0
-        qualities = FASTQualities()
-        for record in FASTQ.from_file(filename):
-            qualities.update(record)
-
-            seq_retained_reads += 1
-            seq_retained_nts += len(record.sequence)
-
-        stats["seq_retained_reads"] += seq_retained_reads
-        stats["seq_retained_nts"] += seq_retained_nts
-        if "Collapsed" in file_type:
-            stats["seq_collapsed"] += seq_retained_reads
-
-        offsets = qualities.offsets()
-        if offsets == FASTQualities.BOTH:
-            raise NodeError(
-                "FASTQ file contains quality scores with both "
-                "quality offsets (33 and 64); file may be "
-                "unexpected format or corrupt. Please ensure "
-                "that this file contains valid FASTQ reads from a "
-                "single source.\n    Filename = %r" % (filename,)
-            )
-        elif offsets == FASTQualities.MISSING:
-            if allow_empty or seq_retained_reads:
-                continue
-
-            raise NodeError(
-                "FASTQ file did not contain quality scores; file "
-                "may be unexpected format or corrupt. Ensure that "
-                "the file is a FASTQ file.\n    Filename = %r" % (filename,)
-            )
-        elif offsets not in (FASTQualities.AMBIGIOUS, required_offset):
-            raise NodeError(
-                "FASTQ file contains quality scores with wrong "
-                "quality score offset (%i); expected reads with "
-                "quality score offset %i. Ensure that the "
-                "'QualityOffset' specified in the makefile "
-                "corresponds to the input.\n    Filename = %s"
-                % (offsets, required_offset, filename)
-            )
-
-    return stats
 
 
 def _open_samfiles(handles, filenames):
