@@ -33,6 +33,7 @@ from paleomix.common.utilities import set_in, get_in
 from paleomix.common.fileutils import move_file, reroot_path
 from paleomix.tools.bam_stats.coverage import read_table as read_coverage_table
 from paleomix.common.bedtools import BEDRecord
+from paleomix.common.formats.fasta import FASTA
 
 import paleomix.common.text as text
 
@@ -120,17 +121,11 @@ class SummaryTableNode(Node):
 
     def _write_genomes(self, table, genomes):
         table.write("# Genomes:\n")
-        rows = [["Name", "Label", "Contigs", "Size", "Prefix"]]
+        rows = [["Name", "Contigs", "Size", "Prefix"]]
         for (_, prefix) in sorted(self._prefixes.items()):
             stats = genomes[prefix["Name"]]
             rows.append(
-                (
-                    prefix["Name"],
-                    prefix.get("Label", "-"),
-                    stats["NContigs"],
-                    stats["Size"],
-                    prefix["Path"],
-                )
+                (prefix["Name"], stats["NContigs"], stats["Size"], prefix["Path"],)
             )
 
         for line in text.padded_table(rows):
@@ -426,7 +421,6 @@ class SummaryTableNode(Node):
         for a set of areas of interest."""
         areas_of_interest = {}
         for (prefix_name, prefix) in prefixes.items():
-            prefix_label = prefix.get("Label", prefix_name)
             for (roi_name, roi_filename) in prefix.get("RegionsOfInterest", {}).items():
                 count, names, size = 0, set(), 0
                 with open(roi_filename) as handle:
@@ -441,7 +435,6 @@ class SummaryTableNode(Node):
                     "NIntervals": count,
                     "Genome": prefix["Name"],
                     "Name": roi_name,
-                    "Label": "%s:%s" % (prefix_label, roi_name),
                     "Path": roi_filename,
                 }
         return areas_of_interest
@@ -451,20 +444,12 @@ class SummaryTableNode(Node):
         """Returns (size, number of contigs) for a set of BWA prefix."""
         genomes = {}
         for prefix in prefixes:
-            with open(prefixes[prefix]["Reference"] + ".fai") as table:
-                lengths = [int(line.split()[1]) for line in table]
+            contigs = FASTA.index_and_collect_contigs(prefixes[prefix]["Reference"])
 
-            labels = [prefix]
-            if "Label" in prefixes[prefix]:
-                labels.append(prefixes[prefix].get("Label"))
-
-            for label in labels:
-                if label not in genomes:
-                    genomes[label] = {"Size": 0, "NContigs": 0}
-
-                statistics = genomes[label]
-                statistics["Size"] += sum(lengths)
-                statistics["NContigs"] += len(lengths)
+            genomes[prefix] = {
+                "Size": sum(contigs.values()),
+                "NContigs": len(contigs),
+            }
 
         return genomes
 

@@ -235,16 +235,7 @@ _VALIDATION = {
     "Prefixes": {
         _VALID_PREFIX_NAME: {
             "Path": _VALID_PREFIX_PATH,
-            "Label": ValueIn(
-                (
-                    "nuclear",
-                    "mitochondrial",
-                    "chloroplast",
-                    "plasmid",
-                    "bacterial",
-                    "viral",
-                )
-            ),
+            "Label": RemovedOption(),
             "RegionsOfInterest": IsDictOf(IsStr, IsStr),
         }
     },

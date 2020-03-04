@@ -49,7 +49,7 @@ def add_statistics_nodes(config, makefile, target):
 
 
 def _build_summary_node(config, makefile, target, coverage):
-    coverage_by_label = _build_coverage_nodes(target, use_label=True)
+    coverage_by_label = _build_coverage_nodes(target)
 
     return SummaryTableNode(
         config=config,
@@ -140,7 +140,7 @@ def _build_coverage(config, target, make_summary):
     return coverage
 
 
-def _build_coverage_nodes(target, use_label=False):
+def _build_coverage_nodes(target):
     coverage = {
         "Lanes": collections.defaultdict(dict),
         "Libraries": collections.defaultdict(dict),
@@ -149,8 +149,7 @@ def _build_coverage_nodes(target, use_label=False):
     cache = {}
     for prefix in target.prefixes:
         for (roi_name, roi_filename) in _get_roi(prefix):
-            prefix_label = prefix.label if use_label else prefix.name
-            prefix_label = _get_prefix_label(prefix_label, roi_name)
+            prefix_label = _get_prefix_label(prefix.name, roi_name)
 
             for sample in prefix.samples:
                 for library in sample.libraries:

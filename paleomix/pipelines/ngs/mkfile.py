@@ -147,8 +147,8 @@ _TEMPLATE_BAM_OPTIONS = """  # Settings for aligners supported by the pipeline
 
 _TEMPLATE_PREFIXES = """
 # Map of prefixes by name, each having a Path key, which specifies the
-# location of the BWA/Bowtie2 index, and optional label, and an option
-# set of regions for which additional statistics are produced.
+# location of the BWA/Bowtie2 index, and an optional set of regions for
+# which additional statistics are produced.
 Prefixes:
   # Replace 'NAME_OF_PREFIX' with name of the prefix; this name
   # is used in summary statistics and as part of output filenames.
