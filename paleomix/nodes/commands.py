@@ -28,15 +28,12 @@ Each node is equivalent to a particular command:
 from paleomix.node import CommandNode, Node
 from paleomix.atomiccmd.command import AtomicCmd
 from paleomix.atomiccmd.sets import ParallelCmds
-from paleomix.nodes.picard import MultiBAMInputNode
 from paleomix.atomiccmd.builder import (
     AtomicCmdBuilder,
     apply_options,
 )
-from paleomix.common.fileutils import describe_files, reroot_path, move_file, swap_ext
-from paleomix.common.utilities import safe_coerce_to_tuple
-
-from paleomix.nodes.samtools import BCFTOOLS_VERSION
+from paleomix.common.fileutils import describe_files, reroot_path, move_file
+from paleomix.nodes.samtools import merge_bam_files_command, BCFTOOLS_VERSION
 
 import paleomix.tools.bam_stats.coverage as coverage
 import paleomix.tools.factory as factory
@@ -121,28 +118,22 @@ class DepthHistogramNode(CommandNode):
         )
 
 
-class FilterCollapsedBAMNode(MultiBAMInputNode):
+class FilterCollapsedBAMNode(CommandNode):
     def __init__(
         self, config, input_bams, output_bam, keep_dupes=True, dependencies=()
     ):
-        input_bams = safe_coerce_to_tuple(input_bams)
+        merge = merge_bam_files_command(input_bams)
 
         builder = factory.new("rmdup_collapsed")
-        builder.add_value("%(TEMP_IN_BAM)s")
-        builder.set_kwargs(
-            OUT_STDOUT=output_bam, TEMP_IN_BAM=MultiBAMInputNode.PIPE_FILE
-        )
-        builder.add_multiple_kwargs(input_bams)
+        builder.set_kwargs(IN_STDIN=merge, OUT_STDOUT=output_bam)
 
         if not keep_dupes:
             builder.set_option("--remove-duplicates")
 
-        description = "<FilterCollapsedBAM: %s>" % (describe_files(input_bams),)
-        MultiBAMInputNode.__init__(
+        description = "<FilterCollapsedBAM: %s>" % (describe_files(merge.input_files),)
+        CommandNode.__init__(
             self,
-            config=config,
-            input_bams=input_bams,
-            command=builder.finalize(),
+            command=ParallelCmds([merge, builder.finalize()]),
             description=description,
             dependencies=dependencies,
         )

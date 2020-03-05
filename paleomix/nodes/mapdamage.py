@@ -26,11 +26,11 @@ import paleomix.common.rtools as rtools
 import paleomix.common.versions as versions
 
 from paleomix.common.fileutils import describe_files
-from paleomix.common.utilities import safe_coerce_to_tuple
 
 from paleomix.node import NodeError, CommandNode
-from paleomix.nodes.picard import MultiBAMInputNode
+from paleomix.nodes.samtools import merge_bam_files_command
 from paleomix.atomiccmd.builder import AtomicCmdBuilder, apply_options
+from paleomix.atomiccmd.sets import ParallelCmds
 
 
 MAPDAMAGE_VERSION = versions.Requirement(
@@ -47,10 +47,9 @@ RSCRIPT_VERSION = versions.Requirement(
 )
 
 
-class MapDamagePlotNode(MultiBAMInputNode):
+class MapDamagePlotNode(CommandNode):
     def __init__(
         self,
-        config,
         reference,
         input_files,
         output_directory,
@@ -58,8 +57,7 @@ class MapDamagePlotNode(MultiBAMInputNode):
         options={},
         dependencies=(),
     ):
-        input_files = safe_coerce_to_tuple(input_files)
-
+        merge = merge_bam_files_command(input_files)
         command = AtomicCmdBuilder(
             [
                 "mapDamage",
@@ -70,13 +68,13 @@ class MapDamagePlotNode(MultiBAMInputNode):
                 "-t",
                 title,
                 "-i",
-                "%(TEMP_IN_BAM)s",
+                "-",
                 "-d",
                 "%(TEMP_DIR)s",
                 "-r",
                 "%(IN_REFERENCE)s",
             ],
-            TEMP_IN_BAM=MultiBAMInputNode.PIPE_FILE,
+            IN_STDIN=merge,
             IN_REFERENCE=reference,
             OUT_FREQ_3p=os.path.join(output_directory, "3pGtoA_freq.txt"),
             OUT_FREQ_5p=os.path.join(output_directory, "5pCtoT_freq.txt"),
@@ -94,16 +92,13 @@ class MapDamagePlotNode(MultiBAMInputNode):
             CHECK_MAPDAMAGE=MAPDAMAGE_VERSION,
         )
 
-        command.add_multiple_kwargs(input_files)
         apply_options(command, options)
 
-        MultiBAMInputNode.__init__(
+        CommandNode.__init__(
             self,
-            config=config,
-            input_bams=input_files,
-            command=command.finalize(),
+            command=ParallelCmds([merge, command.finalize()]),
             description="<mapDamage (plots): %s -> '%s'>"
-            % (describe_files(input_files), output_directory,),
+            % (describe_files(merge.input_files), output_directory,),
             dependencies=dependencies,
         )
 
@@ -118,7 +113,7 @@ class MapDamagePlotNode(MultiBAMInputNode):
                 with open(fpath, "w") as out_handle:
                     out_handle.write(_DUMMY_LENGTH_PLOT_PDF)
 
-        MultiBAMInputNode._teardown(self, config, temp)
+        CommandNode._teardown(self, config, temp)
 
 
 class MapDamageModelNode(CommandNode):
@@ -197,10 +192,9 @@ class MapDamageModelNode(CommandNode):
             raise error
 
 
-class MapDamageRescaleNode(MultiBAMInputNode):
+class MapDamageRescaleNode(CommandNode):
     def __init__(
         self,
-        config,
         reference,
         input_files,
         output_file,
@@ -208,15 +202,15 @@ class MapDamageRescaleNode(MultiBAMInputNode):
         options={},
         dependencies=(),
     ):
-        input_files = safe_coerce_to_tuple(input_files)
-
         stats_out_fname = "Stats_out_MCMC_correct_prob.csv"
+
+        merge = merge_bam_files_command(input_files)
         command = AtomicCmdBuilder(
             [
                 "mapDamage",
                 "--rescale-only",
                 "-i",
-                "%(TEMP_IN_BAM)s",
+                "-",
                 "-d",
                 "%(TEMP_DIR)s",
                 "-r",
@@ -224,7 +218,7 @@ class MapDamageRescaleNode(MultiBAMInputNode):
                 "--rescale-out",
                 "%(OUT_BAM)s",
             ],
-            TEMP_IN_BAM=MultiBAMInputNode.PIPE_FILE,
+            IN_STDIN=merge,
             IN_REFERENCE=reference,
             TEMP_OUT_LOG="Runtime_log.txt",
             TEMP_OUT_CSV=stats_out_fname,
@@ -232,23 +226,20 @@ class MapDamageRescaleNode(MultiBAMInputNode):
             CHECK_VERSION=MAPDAMAGE_VERSION,
         )
 
-        command.add_multiple_kwargs(input_files)
         apply_options(command, options)
 
         self._directory = directory
 
-        MultiBAMInputNode.__init__(
+        CommandNode.__init__(
             self,
-            config=config,
-            input_bams=input_files,
-            command=command.finalize(),
+            command=ParallelCmds([merge, command.finalize()]),
             description="<mapDamage (rescale): %s -> %r>"
-            % (describe_files(input_files), output_file,),
+            % (describe_files(merge.input_files), output_file,),
             dependencies=dependencies,
         )
 
     def _setup(self, config, temp):
-        MultiBAMInputNode._setup(self, config, temp)
+        CommandNode._setup(self, config, temp)
         for fname in ("Stats_out_MCMC_correct_prob.csv",):
             relpath = os.path.join(self._directory, fname)
             abspath = os.path.abspath(relpath)

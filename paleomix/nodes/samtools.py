@@ -23,6 +23,7 @@
 import os
 
 from paleomix.node import CommandNode
+from paleomix.atomiccmd.builder import AtomicCmdBuilder
 from paleomix.atomiccmd.command import AtomicCmd
 
 from paleomix.common.fileutils import reroot_path
@@ -153,3 +154,15 @@ class BAMIndexNode(CommandNode):
             command=command,
             dependencies=dependencies,
         )
+
+
+def merge_bam_files_command(input_files):
+    merge = AtomicCmdBuilder(
+        ["samtools", "merge", "-u", "-"],
+        OUT_STDOUT=AtomicCmd.PIPE,
+        CHECK_VERSION=SAMTOOLS_VERSION,
+    )
+
+    merge.add_multiple_values(input_files)
+
+    return merge.finalize()
