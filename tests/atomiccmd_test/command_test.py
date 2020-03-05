@@ -35,12 +35,6 @@ from paleomix.common.versions import RequirementObj
 from paleomix.atomiccmd.command import AtomicCmd, CmdError
 
 
-def test_file(*args):
-    test_root = os.path.dirname(os.path.dirname(__file__))
-
-    return os.path.join(test_root, "data", *args)
-
-
 ###############################################################################
 ###############################################################################
 # Constructor: Command
@@ -149,7 +143,10 @@ def test_atomiccmd__paths_optional():
 
 
 def test_atomiccmd__pipes_stdin(tmp_path):
-    fname = test_file("fasta_file.fasta")
+    fname = tmp_path / "input.fasta"
+    fname.write_text(">This_is_FASTA!\nACGTN\n>This_is_ALSO_FASTA!\nCGTNA\n")
+    fname = str(fname)
+
     cmd = AtomicCmd("cat", IN_STDIN=fname, OUT_STDOUT="result.txt")
     assert cmd.input_files == frozenset([fname])
     cmd.run(tmp_path)

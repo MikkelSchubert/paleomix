@@ -20,8 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
-
 import pytest
 
 from paleomix.common.makefile import (
@@ -100,27 +98,6 @@ def _common_invalid_values(exclude=(), extra=()):
             selection.append(value)
 
     return selection
-
-
-###############################################################################
-###############################################################################
-# Setup timestamps for test files
-
-
-def test_dir():
-    return os.path.dirname(os.path.dirname(__file__))
-
-
-def test_file(*args):
-    return os.path.join(test_dir(), "data", *args)
-
-
-def setup_module():
-    timestamps = {test_file("simple.yaml"): 1120719000}
-
-    for filename, timestamp in timestamps.items():
-        # Set atime and mtime
-        os.utime(filename, (timestamp, timestamp))
 
 
 ###############################################################################
@@ -1392,18 +1369,23 @@ def test_read_makefile__missing_file():
         read_makefile("does_not_exist.yaml", {})
 
 
-def test_read_makefile__not_a_yaml_file():
-    fpath = test_file("fasta_file.fasta")
+def test_read_makefile__not_a_yaml_file(tmp_path):
+    fpath = tmp_path / "file.fasta"
+    fpath.write_text(">Sequence\nACGTTAGATAC\n")
+
     with pytest.raises(MakefileError):
         read_makefile(fpath, {})
 
 
-def test_read_makefile__simple_file():
-    specs = {"Defaults": {"First": IsFloat, "Second": IsStr}}
-    expected = {"Defaults": {"First": 1e-4, "Second": "a string"}}
-    result = read_makefile(test_file("simple.yaml"), specs)
+def test_read_makefile__simple_file(tmp_path):
+    fpath = tmp_path / "test.yaml"
+    fpath.write_text('Defaults:\n  "First": 1e-4\n  "Second": "a string"\n')
 
-    assert expected == result
+    specs = {"Defaults": {"First": IsFloat, "Second": IsStr}}
+
+    assert read_makefile(fpath, specs) == {
+        "Defaults": {"First": 1e-4, "Second": "a string"}
+    }
 
 
 ###############################################################################

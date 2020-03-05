@@ -20,23 +20,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import bz2
 import copy
+import gzip
 import io
 import os
+
 from unittest.mock import patch
 
 import pytest
 
 from paleomix.common.formats.fasta import FASTA
 from paleomix.common.formats.msa import MSA, FASTAError, MSAError
-
-
-def test_dir():
-    return os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-
-
-def test_file(*args):
-    return os.path.join(test_dir(), "data", *args)
 
 
 ###############################################################################
@@ -332,37 +327,18 @@ def test_msa_from_lines__empty_name():
 # Tests for 'MSA.from_file'
 
 
-def test_msa_from_file__uncompressed():
-    expected = MSA(
+@pytest.mark.parametrize("func", (open, gzip.open, bz2.open))
+def test_msa_from_file(func, tmp_path):
+    filename = tmp_path / "test.fasta"
+    with func(filename, "wt") as handle:
+        handle.write(">This_is_FASTA!\nACGTN\n>This_is_ALSO_FASTA!\nCGTNA\n")
+
+    assert MSA.from_file(filename) == MSA(
         [
             FASTA("This_is_FASTA!", None, "ACGTN"),
             FASTA("This_is_ALSO_FASTA!", None, "CGTNA"),
         ]
     )
-    results = MSA.from_file(test_file("fasta_file.fasta"))
-    assert results == expected
-
-
-def test_msa_from_file__compressed_gz():
-    expected = MSA(
-        [
-            FASTA("This_is_GZipped_FASTA!", None, "ACGTN"),
-            FASTA("This_is_ALSO_GZipped_FASTA!", None, "CGTNA"),
-        ]
-    )
-    results = MSA.from_file(test_file("fasta_file.fasta.gz"))
-    assert results == expected
-
-
-def test_msa_from_file__compressed_bz2():
-    expected = MSA(
-        [
-            FASTA("This_is_BZ_FASTA!", None, "CGTNA"),
-            FASTA("This_is_ALSO_BZ_FASTA!", None, "ACGTN"),
-        ]
-    )
-    results = MSA.from_file(test_file("fasta_file.fasta.bz2"))
-    assert results == expected
 
 
 ###############################################################################

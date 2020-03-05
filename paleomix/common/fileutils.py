@@ -133,6 +133,9 @@ def open_ro(filename: Union[str, Path], mode: str = "rt") -> IO[str]:
     GZip and BZip2 compressed files. Returns a file handle."""
     if mode not in ("rt", "rb", "r"):
         raise ValueError(mode)
+    elif mode == "r":
+        # Ensure uniform behavior between open/gzip.open/bz2.open
+        mode = "rt"
 
     with open(filename, "rb") as handle:
         header = handle.read(2)

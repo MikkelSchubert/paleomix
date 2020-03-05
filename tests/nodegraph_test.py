@@ -24,44 +24,21 @@ import os
 
 from unittest.mock import Mock
 
-
 from paleomix.nodegraph import NodeGraph, FileStatusCache
 
 
-def test_dir():
-    return os.path.dirname(__file__)
+_TIMESTAMP_1 = 1000190760
+_TIMESTAMP_2 = 1120719000
 
 
-def test_file(*args):
-    return os.path.join(test_dir(), "data", *args)
+def create_test_file(utime, *args):
+    filename = os.path.join(*args)
+    with open(filename, "wb"):
+        pass
 
+    os.utime(filename, (utime, utime))
 
-_DESCRIPTION = "My description of a node"
-_IN_FILES = frozenset((test_file("empty_file_1"), test_file("empty_file_2")))
-_OUT_FILES = frozenset(
-    (test_file("missing_out_file_1"), test_file("missing_out_file_2"))
-)
-_EXEC_FILES = frozenset(("ls", "sh"))
-_AUX_FILES = frozenset((test_file("rCRS.fasta"), test_file("rCRS.fasta.fai")))
-_REQUIREMENTS = frozenset((id, str))
-
-
-###############################################################################
-###############################################################################
-# Setup timestamps for test files
-
-
-def setup_module():
-    timestamps = {
-        test_file("timestamp_a_older"): 1000190760,
-        test_file("timestamp_b_older"): 1000190760,
-        test_file("timestamp_a_younger"): 1120719000,
-        test_file("timestamp_b_younger"): 1120719000,
-    }
-
-    for filename, timestamp in timestamps.items():
-        # Set atime and mtime
-        os.utime(filename, (timestamp, timestamp))
+    return filename
 
 
 ###############################################################################
@@ -99,40 +76,43 @@ def test_nodegraph_is_outdated__no_output():
     assert not NodeGraph.is_outdated(my_node, FileStatusCache())
 
 
-def test_nodegraph_is_outdated__input_but_no_output():
-    my_node = Mock(input_files=_IN_FILES, output_files=())
+def test_nodegraph_is_outdated__input_but_no_output(tmp_path):
+    input_file = tmp_path / "file"
+    input_file.touch()
+
+    my_node = Mock(input_files=(input_file,), output_files=())
     assert not NodeGraph.is_outdated(my_node, FileStatusCache())
 
 
-def test_nodegraph_is_outdated__output_but_no_input():
-    my_node = Mock(input_files=(), output_files=_OUT_FILES)
+def test_nodegraph_is_outdated__output_but_no_input(tmp_path):
+    output_file = tmp_path / "file"
+    output_file.touch()
+
+    my_node = Mock(input_files=(), output_files=(output_file,))
     assert not NodeGraph.is_outdated(my_node, FileStatusCache())
 
 
-def test_nodegraph_is_outdated__not_outdated():
+def test_nodegraph_is_outdated__not_outdated(tmp_path):
     my_node = Mock(
-        input_files=(test_file("timestamp_a_older"),),
-        output_files=(test_file("timestamp_a_younger"),),
+        input_files=(create_test_file(_TIMESTAMP_1, tmp_path, "older_file"),),
+        output_files=(create_test_file(_TIMESTAMP_2, tmp_path, "younger_file"),),
     )
     assert not NodeGraph.is_outdated(my_node, FileStatusCache())
 
 
-def test_nodegraph_is_outdated__outdated():
+def test_nodegraph_is_outdated__outdated(tmp_path):
     my_node = Mock(
-        input_files=(test_file("timestamp_a_younger"),),
-        output_files=(test_file("timestamp_a_older"),),
+        input_files=(create_test_file(_TIMESTAMP_2, tmp_path, "younger_file"),),
+        output_files=(create_test_file(_TIMESTAMP_1, tmp_path, "older_file"),),
     )
     assert NodeGraph.is_outdated(my_node, FileStatusCache())
 
 
-def test_nodegraph_is_outdated__updates():
-    my_node = Mock(
-        input_files=(test_file("timestamp_a_older"),),
-        output_files=(test_file("timestamp_a_younger"),),
-    )
+def test_nodegraph_is_outdated__updates(tmp_path):
+    older_file = create_test_file(_TIMESTAMP_1, tmp_path, "older_file")
+    younger_file = create_test_file(_TIMESTAMP_2, tmp_path, "younger_file")
+
+    my_node = Mock(input_files=(older_file,), output_files=(younger_file,),)
     assert not NodeGraph.is_outdated(my_node, FileStatusCache())
-    my_node = Mock(
-        input_files=(test_file("timestamp_a_younger"),),
-        output_files=(test_file("timestamp_a_older"),),
-    )
+    my_node = Mock(input_files=(younger_file,), output_files=(older_file,),)
     assert NodeGraph.is_outdated(my_node, FileStatusCache())

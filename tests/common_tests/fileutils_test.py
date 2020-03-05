@@ -20,7 +20,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import bz2
 import errno
+import gzip
 import os
 import shutil
 import stat
@@ -49,19 +51,6 @@ from paleomix.common.fileutils import (
     describe_files,
     describe_paired_files,
 )
-
-
-###############################################################################
-###############################################################################
-# Setup timestamps for test files
-
-
-def test_dir() -> str:
-    return os.path.dirname(os.path.dirname(__file__))
-
-
-def test_file(*args: str) -> str:
-    return os.path.join(test_dir(), "data", *args)
 
 
 ###############################################################################
@@ -240,19 +229,25 @@ def test_create_temp_dir__permission_denied() -> None:
 # Tests for 'missing_files'
 
 
-def test_missing_files__file_exists() -> None:
-    assert missing_files([test_file("empty_file_1")]) == []
+def test_missing_files__file_exists(tmp_path) -> None:
+    file_1 = tmp_path / "file_1"
+    file_1.touch()
+
+    assert missing_files([file_1]) == []
 
 
-def test_missing_files__file_doesnt_exist() -> None:
-    assert missing_files([test_file("missing_file_1")]) == [test_file("missing_file_1")]
+def test_missing_files__file_doesnt_exist(tmp_path) -> None:
+    file_1 = tmp_path / "file_1"
+
+    assert missing_files([file_1]) == [file_1]
 
 
-def test_missing_files__mixed_files() -> None:
-    files = [test_file("missing_file_1"), test_file("empty_file_1")]
-    result = [test_file("missing_file_1")]
+def test_missing_files__mixed_files(tmp_path) -> None:
+    file_1 = tmp_path / "file_1"
+    file_2 = tmp_path / "file_2"
+    file_1.touch()
 
-    assert missing_files(files) == result
+    assert missing_files([file_1, file_2]) == [file_2]
 
 
 ###############################################################################
@@ -574,58 +569,44 @@ def test_copy_file__destination_removed_if_out_of_space(tmp_path) -> None:
 ###############################################################################
 # Tests for 'open'
 
+_FASTA_TEXT = ">This_is_FASTA!\nACGTN\n>This_is_ALSO_FASTA!\nCGTNA\n"
+_FASTA_BYTES = _FASTA_TEXT.encode("utf-8")
 
-def test_open_ro__uncompressed() -> None:
-    with open_ro(test_file("fasta_file.fasta")) as handle:
-        assert handle.read() == ">This_is_FASTA!\nACGTN\n>This_is_ALSO_FASTA!\nCGTNA\n"
+
+@pytest.mark.parametrize("func", (open, gzip.open, bz2.open))
+def test_open_ro(func, tmp_path) -> None:
+    filename = tmp_path / "file.fasta"
+    with func(filename, "wt") as handle:
+        handle.write(_FASTA_TEXT)
+
+    with open_ro(filename) as handle:
+        assert handle.read() == _FASTA_TEXT
 
 
 @pytest.mark.parametrize("mode", ("r", "rt"))
-def test_open_ro__uncompressed__mode(mode) -> None:
-    with open_ro(test_file("fasta_file.fasta"), mode) as handle:
-        assert handle.read() == ">This_is_FASTA!\nACGTN\n>This_is_ALSO_FASTA!\nCGTNA\n"
+@pytest.mark.parametrize("func", (open, gzip.open, bz2.open))
+def test_open_ro__mode(func, mode, tmp_path) -> None:
+    filename = tmp_path / "file.fasta"
+    with func(filename, "wt") as handle:
+        handle.write(_FASTA_TEXT)
+
+    with open_ro(filename, mode) as handle:
+        assert handle.read() == _FASTA_TEXT
 
 
 def test_open_ro__invalid_mode() -> None:
     with pytest.raises(ValueError, match="foo"):
-        open_ro(test_file("fasta_file.fasta"), "foo")
+        open_ro("file.fasta", "foo")
 
 
-def test_open_ro__gz() -> None:
-    with open_ro(test_file("fasta_file.fasta.gz")) as handle:
-        assert (
-            handle.read()
-            == ">This_is_GZipped_FASTA!\nACGTN\n>This_is_ALSO_GZipped_FASTA!\nCGTNA\n"
-        )
+@pytest.mark.parametrize("func", (open, gzip.open, bz2.open))
+def test_open_ro__binary(func, tmp_path) -> None:
+    filename = tmp_path / "file.fasta"
+    with func(filename, "wt") as handle:
+        handle.write(_FASTA_TEXT)
 
-
-def test_open_ro__bz2() -> None:
-    with open_ro(test_file("fasta_file.fasta.bz2")) as handle:
-        assert (
-            handle.read()
-            == ">This_is_BZ_FASTA!\nCGTNA\n>This_is_ALSO_BZ_FASTA!\nACGTN\n"
-        )
-
-
-def test_open_ro__binary__uncompressed() -> None:
-    with open_ro(test_file("fasta_file.fasta"), "rb") as handle:
-        assert handle.read() == b">This_is_FASTA!\nACGTN\n>This_is_ALSO_FASTA!\nCGTNA\n"
-
-
-def test_open_ro__binary__gz() -> None:
-    with open_ro(test_file("fasta_file.fasta.gz"), "rb") as handle:
-        assert (
-            handle.read()
-            == b">This_is_GZipped_FASTA!\nACGTN\n>This_is_ALSO_GZipped_FASTA!\nCGTNA\n"
-        )
-
-
-def test_open_ro__binary__bz2() -> None:
-    with open_ro(test_file("fasta_file.fasta.bz2"), "rb") as handle:
-        assert (
-            handle.read()
-            == b">This_is_BZ_FASTA!\nCGTNA\n>This_is_ALSO_BZ_FASTA!\nACGTN\n"
-        )
+    with open_ro(filename, "rb") as handle:
+        assert handle.read() == _FASTA_BYTES
 
 
 class OddException(RuntimeError):
