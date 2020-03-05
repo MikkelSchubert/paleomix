@@ -87,45 +87,34 @@ class MergeCoverageNode(Node):
         move_file(reroot_path(temp, self._output_file), self._output_file)
 
 
-class DepthHistogramNode(MultiBAMInputNode):
+class DepthHistogramNode(CommandNode):
     def __init__(
         self,
-        config,
         target_name,
-        input_files,
+        input_file,
         output_file,
         prefix,
         regions_file=None,
         dependencies=(),
     ):
-        input_files = safe_coerce_to_tuple(input_files)
         index_format = regions_file and prefix["IndexFormat"]
 
         builder = factory.new("depths")
-        builder.add_value("%(TEMP_IN_BAM)s")
+        builder.add_value("%(IN_BAM)s")
         builder.add_value("%(OUT_FILE)s")
         builder.set_option("--target-name", target_name)
-        builder.set_kwargs(
-            OUT_FILE=output_file, TEMP_IN_BAM=MultiBAMInputNode.PIPE_FILE
-        )
-        builder.add_multiple_kwargs(input_files)
+        builder.set_kwargs(OUT_FILE=output_file, IN_BAM=input_file)
 
         if regions_file:
-            index_file = swap_ext(MultiBAMInputNode.PIPE_FILE, index_format)
-
             builder.set_option("--regions-file", "%(IN_REGIONS)s")
-            builder.set_kwargs(IN_REGIONS=regions_file, TEMP_IN_INDEX=index_file)
+            builder.set_kwargs(
+                IN_REGIONS=regions_file, TEMP_IN_INDEX=input_file + index_format
+            )
 
-        description = "<DepthHistogram: %s -> '%s'>" % (
-            describe_files(input_files),
-            output_file,
-        )
+        description = "<DepthHistogram: %s -> '%s'>" % (input_file, output_file,)
 
-        MultiBAMInputNode.__init__(
+        CommandNode.__init__(
             self,
-            config=config,
-            input_bams=input_files,
-            index_format=index_format,
             command=builder.finalize(),
             description=description,
             dependencies=dependencies,

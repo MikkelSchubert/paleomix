@@ -65,30 +65,21 @@ def _build_depth(config, target, prefixes):
     nodes = []
     for prefix in target.prefixes:
         for (roi_name, roi_filename) in _get_roi(prefix, name_prefix="."):
-            if roi_filename is not None:
-                # ROIs require indexed access and hence the final BAM
-                bam_files = tuple(sorted(prefix.bams.items()))
-                input_files, dependencies = bam_files[-1]
-            else:
-                input_files = {}
-                for sample in prefix.samples:
-                    input_files.update(sample.bams)
-                dependencies = list(input_files.values())
-                input_files = list(input_files.keys())
+            ((input_file, dependencies),) = prefix.bams.items()
 
             output_filename = "%s.%s%s.depths" % (target.name, prefix.name, roi_name)
             output_fpath = os.path.join(config.destination, output_filename)
 
-            node = DepthHistogramNode(
-                config=config,
-                target_name=target.name,
-                input_files=input_files,
-                prefix=prefixes[prefix.name],
-                regions_file=roi_filename,
-                output_file=output_fpath,
-                dependencies=dependencies,
+            nodes.append(
+                DepthHistogramNode(
+                    target_name=target.name,
+                    input_file=input_file,
+                    prefix=prefixes[prefix.name],
+                    regions_file=roi_filename,
+                    output_file=output_fpath,
+                    dependencies=dependencies,
+                )
             )
-            nodes.append(node)
 
     return nodes
 
