@@ -22,6 +22,7 @@
 #
 import operator
 import pickle
+import sys
 
 import pytest
 
@@ -469,7 +470,7 @@ def test_requirementobj__init__non_defaults():
 
 def _echo_version(version, dst="stdout", returncode=0):
     tmpl = "import sys; sys.%s.write(%r); sys.exit(%s);"
-    return ("/usr/bin/python", "-c", tmpl % (dst, version, returncode))
+    return (sys.executable, "-c", tmpl % (dst, version, returncode))
 
 
 _PIPES = ("stderr", "stdout")
@@ -668,10 +669,11 @@ def test_requirementobj__call__check_fails():
         "to the PALEOMIX documentation for more information.\n"
         "\n"
         "Attempted to run command:\n"
-        "    $ /usr/bin/python -c import sys; "
+        "    $ %s -c import sys; "
         "sys.stdout.write('v1.0.2'); sys.exit(0);\n"
         "    Version:       v1.0.x\n"
         "    Required:      at least v1.1.x"
+        % (sys.executable,)
     )
 
     obj = versions.RequirementObj(
@@ -692,7 +694,7 @@ def test_requirementobj__call__check_fails__jre_outdated():
         "Version could not be determined for test#1:\n"
         "\n"
         "Attempted to run command:\n"
-        "    $ /usr/bin/python -c import sys; "
+        "    $ %s -c import sys; "
         "sys.stdout.write('UnsupportedClassVersionError'); sys.exit(0);\n"
         "\n"
         "The version of the Java Runtime Environment on this\n"
@@ -700,6 +702,7 @@ def test_requirementobj__call__check_fails__jre_outdated():
         "for the program and upgrade your version of Java.\n"
         "\n"
         "See the documentation for more information."
+        % (sys.executable,)
     )
 
     value = "UnsupportedClassVersionError"
