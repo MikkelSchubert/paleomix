@@ -20,9 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import logging
 import os
+import shutil
 import sys
 import traceback
+
+from pathlib import Path
 
 import paleomix.common.fileutils as fileutils
 from paleomix.common.utilities import safe_coerce_to_frozenset
@@ -127,7 +131,14 @@ class Node:
 
     def _remove_temp_dir(self, temp):
         """Called by 'run' in order to remove an (now) empty temporary folder."""
-        os.rmdir(temp)
+        log = logging.getLogger(__name__)
+        for filename in self._collect_files(temp):
+            log.warning(
+                "Unexpected file in temporary directory: %r",
+                os.path.join(temp, filename),
+            )
+
+        shutil.rmtree(temp)
 
     def _setup(self, _config, _temp):
         """Is called prior to '_run()' by 'run()'. Any code used to copy/link files,
@@ -250,6 +261,17 @@ class Node:
             )
         return threads
 
+    @staticmethod
+    def _collect_files(root):
+        def _walk_dir(path):
+            for entry in os.scandir(path):
+                if entry.is_file():
+                    yield str(Path(entry.path).relative_to(root))
+                elif entry.is_dir():
+                    yield from _walk_dir(entry.path)
+
+        yield from _walk_dir(root)
+
 
 class CommandNode(Node):
     def __init__(self, command, description=None, threads=1, dependencies=()):
@@ -282,8 +304,7 @@ class CommandNode(Node):
 
     def _teardown(self, config, temp):
         required_files = self._command.expected_temp_files
-        optional_files = self._command.optional_temp_files
-        current_files = set(os.listdir(temp))
+        current_files = set(self._collect_files(temp))
 
         missing_files = required_files - current_files
         if missing_files:
@@ -294,15 +315,6 @@ class CommandNode(Node):
                     "\tRequired files missing from temporary directory:\n\t    - %s"
                 )
                 % (temp, "\n\t    - ".join(sorted(map(repr, missing_files))))
-            )
-
-        extra_files = current_files - (required_files | optional_files)
-        if extra_files:
-            raise CmdNodeError(
-                "Error running Node, unexpected files created:\n"
-                "\tTemporary directory: %r\n"
-                "\tUnexpected files found in temporary directory:\n\t    - %s"
-                % (temp, "\n\t    - ".join(sorted(map(repr, extra_files))))
             )
 
         self._command.commit(temp)

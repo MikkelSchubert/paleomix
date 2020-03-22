@@ -20,12 +20,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import logging
 import os
 import random
+import uuid
 
 from unittest.mock import call, Mock
 
 import pytest
+
+import paleomix.node
 
 from paleomix.atomiccmd.command import AtomicCmd
 from paleomix.node import (
@@ -385,6 +389,69 @@ def test__teardown__output_files_missing():
 
 
 ###############################################################################
+# Node._remove_temp_dir
+
+
+def test_node_remove_temp_dir__empty_dir(tmp_path, caplog):
+    with caplog.at_level(logging.WARNING):
+        node = Node()
+        node._remove_temp_dir(tmp_path)
+
+        assert not tmp_path.exists()
+        assert not caplog.messages
+
+
+def test_node_remove_temp_dir__extranous_files(tmp_path, caplog):
+    tmp_file = tmp_path / str(uuid.uuid4())
+    tmp_file.touch()
+
+    with caplog.at_level(logging.WARNING):
+        node = Node()
+        node._remove_temp_dir(tmp_path)
+
+        assert not tmp_path.exists()
+        assert (
+            paleomix.node.__name__,
+            logging.WARNING,
+            "Unexpected file in temporary directory: %r" % (str(tmp_file),),
+        ) in caplog.record_tuples
+
+
+###############################################################################
+# Node._collect_files
+
+
+def test_node_collect_files__empty_folder(tmp_path):
+    assert list(Node._collect_files(tmp_path)) == []
+
+
+def test_node_collect_files__root_files(tmp_path):
+    (tmp_path / "foo.txt").touch()
+    (tmp_path / "bar.txt").touch()
+
+    assert sorted(Node._collect_files(tmp_path)) == [
+        "bar.txt",
+        "foo.txt",
+    ]
+
+
+def test_node_collect_files__files_and_folders(tmp_path):
+    (tmp_path / "foo1.txt").touch()
+    (tmp_path / "bar1").mkdir()
+    (tmp_path / "bar1" / "foo2.txt").touch()
+    (tmp_path / "bar1" / "bar2").mkdir()
+    (tmp_path / "bar1" / "bar2" / "foo3.txt").touch()
+    (tmp_path / "bar1" / "bar2" / "foo4.txt").touch()
+
+    assert sorted(Node._collect_files(tmp_path)) == [
+        "bar1/bar2/foo3.txt",
+        "bar1/bar2/foo4.txt",
+        "bar1/foo2.txt",
+        "foo1.txt",
+    ]
+
+
+###############################################################################
 ###############################################################################
 # CommandNode: Constructor
 
@@ -614,23 +681,21 @@ def test_commandnode_teardown__missing_files_in_dest(tmp_path):
         node._teardown(None, tmp_path)
 
 
-# Unexpected files were found in the temporary directory
 def test_commandnode_teardown__extra_files_in_temp(tmp_path):
     destination, tmp_path = _setup_temp_folders(tmp_path)
 
-    cmd = AtomicCmd(
-        ("echo", "-n", "1 2 3"),
-        IN_DUMMY=_EMPTY_FILE,
-        OUT_STDOUT=os.path.join(destination, "foo.txt"),
-    )
-    cmd.run(tmp_path)
-    assert cmd.join() == [0]
-    node = CommandNode(cmd)
-    (tmp_path / "bar.txt").write_text("1 2 3")
-    temp_files_before = set(os.listdir(tmp_path))
-    dest_files_before = set(os.listdir(destination))
+    unexpected_file = tmp_path / "unexpected_file.txt"
+    unexpected_file.write_text("1 2 3")
 
-    with pytest.raises(CmdNodeError):
-        node._teardown(None, tmp_path)
-    assert temp_files_before == set(os.listdir(tmp_path))
-    assert dest_files_before == set(os.listdir(destination))
+    cmd = AtomicCmd(
+        ("echo", "1 2 3"),
+        IN_DUMMY=_EMPTY_FILE,
+        OUT_STDOUT=str(destination / "foo.txt"),
+    )
+
+    node = CommandNode(cmd)
+    node._run(None, tmp_path)
+    node._teardown(None, tmp_path)
+
+    assert list(tmp_path.iterdir()) == [unexpected_file]
+    assert list(destination.iterdir()) == [destination / "foo.txt"]
