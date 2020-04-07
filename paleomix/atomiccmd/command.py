@@ -35,15 +35,6 @@ from paleomix.common.utilities import safe_coerce_to_tuple
 
 _PIPES = (("IN", "IN_STDIN"), ("OUT", "OUT_STDOUT"), ("OUT", "OUT_STDERR"))
 _KEY_RE = re.compile("^(IN|OUT|EXEC|AUX|CHECK|TEMP_IN|TEMP_OUT)_[A-Z0-9_]+")
-_FILE_MAP = {
-    "IN": "input",
-    "OUT": "output",
-    "TEMP_IN": None,
-    "TEMP_OUT": "temporary_fname",
-    "EXEC": "executable",
-    "AUX": "auxiliary",
-    "CHECK": "requirements",
-}
 
 
 class CmdError(RuntimeError):
@@ -151,7 +142,17 @@ class AtomicCmd:
 
         arguments = self._process_arguments(id(self), self._command, kwargs)
         self._files = self._build_files_dict(arguments)
-        self._file_sets = self._build_files_map(self._command, arguments)
+
+        file_sets = self._build_files_map(self._command, arguments)
+        self.executables = file_sets["EXEC"]
+        self.requirements = file_sets["CHECK"]
+        self.input_files = file_sets["IN"]
+        self.output_files = file_sets["OUT"]
+        self.auxiliary_files = file_sets["AUX"]
+        self.optional_temp_files = file_sets["TEMP_OUT"]
+        self.expected_temp_files = frozenset(
+            os.path.basename(path) for path in file_sets["OUT"]
+        )
 
         # Dry-run, to catch errors early
         self._generate_call("/tmp")
@@ -241,21 +242,6 @@ class AtomicCmd:
                 self._terminated = True
             except OSError:
                 pass  # Already dead / finished process
-
-    # Properties, returning filenames from self._file_sets
-    def _property_file_sets(key):
-        def _get_property_files(self):
-            return self._file_sets[key]
-
-        return property(_get_property_files)
-
-    executables = _property_file_sets("executable")
-    requirements = _property_file_sets("requirements")
-    input_files = _property_file_sets("input")
-    output_files = _property_file_sets("output")
-    auxiliary_files = _property_file_sets("auxiliary")
-    expected_temp_files = _property_file_sets("output_fname")
-    optional_temp_files = _property_file_sets("temporary_fname")
 
     def commit(self, temp):
         if not self.ready():
@@ -452,20 +438,22 @@ class AtomicCmd:
 
     @classmethod
     def _build_files_map(cls, command, arguments):
-        file_sets = dict((key, set()) for key in _FILE_MAP.values())
+        file_sets = {
+            "AUX": set(),
+            "CHECK": set(),
+            "EXEC": set(command[:1]),
+            "IN": set(),
+            "OUT": set(),
+            "TEMP_IN": set(),
+            "TEMP_OUT": set(),
+        }
 
-        file_sets["executable"].add(command[0])
-        for (group, files) in arguments.items():
-            group_set = file_sets[_FILE_MAP[group]]
+        for group, files in arguments.items():
+            for key, filename in files.items():
+                if isinstance(filename, str) or group == "CHECK":
+                    file_sets[group].add(filename)
 
-            for (key, filename) in files.items():
-                is_string = isinstance(filename, str)
-                if is_string or key.startswith("CHECK_"):
-                    group_set.add(filename)
-
-        file_sets["output_fname"] = list(map(os.path.basename, file_sets["output"]))
-
-        return dict(zip(file_sets.keys(), map(frozenset, file_sets.values())))
+        return {key: frozenset(value) for key, value in file_sets.items()}
 
 
 # The following ensures proper cleanup of child processes, for example in the
