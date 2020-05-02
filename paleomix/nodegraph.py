@@ -25,14 +25,12 @@ import errno
 import logging
 import os
 
+from itertools import chain, islice
+
 import paleomix.common.versions as versions
 
 from paleomix.common.fileutils import reroot_path, missing_executables
 from paleomix.common.utilities import safe_coerce_to_frozenset
-
-
-# Max number of error messages of each type
-_MAX_ERROR_MESSAGES = 10
 
 
 class FileStatusCache:
@@ -125,6 +123,8 @@ class NodeGraph:
 
         self._logger.info("Checking file dependencies")
         self._check_file_dependencies(self._reverse_dependencies)
+        self._logger.info("Checking for auxiliary files")
+        self._check_auxiliary_files(self._reverse_dependencies)
         self._logger.info("Checking for required executables")
         self._check_required_executables(self._reverse_dependencies)
         self._logger.info("Checking version requirements")
@@ -320,40 +320,45 @@ class NodeGraph:
             raise NodeGraphError("Version requirements not met; cannot proceed")
 
     @classmethod
-    def _check_file_dependencies(cls, nodes):
-        files = ("input_files", "output_files")
-        files = dict((key, collections.defaultdict(set)) for key in files)
-        # Auxiliary files are treated as input files
-        files["auxiliary_files"] = files["input_files"]
-
+    def _check_file_dependencies(cls, nodes, max_errors=10):
+        input_files = collections.defaultdict(set)
+        output_files = collections.defaultdict(set)
         for node in nodes:
-            for (attr, nodes_by_file) in files.items():
-                for filename in getattr(node, attr):
-                    nodes_by_file[filename].add(node)
+            for filename in node.input_files:
+                input_files[filename].add(node)
 
-        max_messages = list(range(_MAX_ERROR_MESSAGES))
+            for filename in node.output_files:
+                output_files[filename].add(node)
+
+        input_errors = cls._check_output_files(output_files)
+        output_errors = cls._check_input_dependencies(input_files, output_files, nodes)
+
         error_messages = []
-        error_messages.extend(
-            zip(max_messages, cls._check_output_files(files["output_files"]))
-        )
-        error_messages.extend(
-            zip(
-                max_messages,
-                cls._check_input_dependencies(
-                    files["input_files"], files["output_files"], nodes
-                ),
-            )
-        )
+        error_messages.extend(chain.from_iterable(islice(input_errors, max_errors)))
+        error_messages.extend(chain.from_iterable(islice(output_errors, max_errors)))
 
         if error_messages:
-            messages = []
-            for (_, error) in error_messages:
-                for line in error.split("\n"):
-                    messages.append("\t" + line)
-
             raise NodeGraphError(
                 "Errors detected during graph construction (max %i shown):\n%s"
-                % (_MAX_ERROR_MESSAGES * 2, "\n".join(messages))
+                % (max_errors * 2, "".join(error_messages))
+            )
+
+    @classmethod
+    def _check_auxiliary_files(cls, nodes):
+        auxiliary_files = set()
+        for node in nodes:
+            auxiliary_files.update(node.auxiliary_files)
+
+        missing_files = []
+        for filename in sorted(auxiliary_files):
+            if not os.path.exists(filename):
+                missing_files.append(filename)
+
+        if missing_files:
+            raise NodeGraphError(
+                "Errors detected during graph construction:\n"
+                "Required auxiliary files do not exist:\n    %s"
+                % ("\n    ".join(missing_files),)
             )
 
     @classmethod
