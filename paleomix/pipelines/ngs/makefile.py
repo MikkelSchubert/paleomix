@@ -120,7 +120,7 @@ _VALID_FEATURES_DICT = {
     "RawBAM": RemovedOption(),
     "RealignedBAM": RemovedOption(),
     "Summary": IsBoolean(default=True),
-    "mapDamage": StringIn(("rescale", "model", "plot")),
+    "mapDamage": StringIn((False, "rescale", "model", "plot", "no")),
 }
 
 _VALID_EXCLUDE_DICT = {

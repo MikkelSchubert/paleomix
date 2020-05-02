@@ -158,14 +158,12 @@ class Library:
         elif run_type == "plot":
             # Basic run of mapDamage, only generates plots / tables
             node = self._mapdamage_plot(
-                destination=destination,
-                prefix=prefix,
-                files_and_nodes=files_and_nodes,
+                destination=destination, prefix=prefix, files_and_nodes=files_and_nodes,
             )
 
             return files_and_nodes, (node,)
         else:
-            assert run_type == "no", run_type
+            assert run_type in ("no", False), run_type
             return files_and_nodes, ()
 
     def _mapdamage_plot(self, destination, prefix, files_and_nodes):
