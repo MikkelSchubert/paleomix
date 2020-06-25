@@ -60,7 +60,7 @@ The follow example installs paleomix in a virtual environmental located in *~/in
     $ (paleomix) deactivate
 
 
-Following succesful completion of these commands, the paleomix tools will be accessible in the ~/install/virtualenvs/paleomix/bin/ folder. However, as this folder also contains a copy of Python itself, it is not recommended to add it to your PATH. Instead, simply link the paleomix commands to a folder in your PATH. This can, for example, be accomplished as follows::
+Following successful completion of these commands, the paleomix tools will be accessible in the ~/install/virtualenvs/paleomix/bin/ folder. However, as this folder also contains a copy of Python itself, it is not recommended to add it to your PATH. Instead, simply link the paleomix commands to a folder in your PATH. This can, for example, be accomplished as follows::
 
     $ mkdir ~/bin/
     $ echo 'export PATH=~/bin:$PATH' >> ~/.bashrc
@@ -88,7 +88,7 @@ To upgrade an installation a self-contained installation, simply activate the en
 Upgrading from PALEOMIX v1.1.x
 ------------------------------
 
-When upgrading to v1.2.x or later from version 1.1.x or an before, it is nessesary to perform a manual installation the first time. This is accomplished by downloading and unpacking the desired version of PALEOMIX from the list of releases, and then invoking setup.py. For example::
+When upgrading to v1.2.x or later from version 1.1.x or an before, it is necessary to perform a manual installation the first time. This is accomplished by downloading and unpacking the desired version of PALEOMIX from the list of releases, and then invoking setup.py. For example::
 
     $ wget https://github.com/MikkelSchubert/paleomix/archive/v1.2.4.tar.gz
     $ tar xvzf v1.2.4.tar.gz
@@ -105,3 +105,54 @@ Once this has been done once, pip may be used to perform future upgrades as desc
 .. _Pysam: https://github.com/pysam-developers/pysam/
 .. _Python: http://www.python.org/
 .. _virtualenv: https://virtualenv.readthedocs.org/en/latest/
+
+Conda installation
+-------------------
+
+To have a completely contained environment that includes all software dependencies, you can create a [conda](https://docs.conda.io/projects/conda/en/latest/index.html) environment.
+
+To install conda and also set it up so it can use the [bioconda](https://bioconda.github.io) bioinformatics tool repository, you can follow the instructions on the bioconda website [here](https://bioconda.github.io/user/install.html#install-conda).
+
+Once set-up, you can create a conda environment using the following commands::
+
+    $ conda create -c bioconda -n paleomix python=2.7 pip adapterremoval=2.3.1 samtools=1.9 picard=2.22.9 bowtie2=2.3.5.1 bwa=0.7.17 mapdamage2=2.0.9 gatk=3.8 r-base=3.5.1 r-rcpp=1.0.4.6 r-rcppgsl=0.3.7 r-gam=1.16.1 r-inline=0.3.15
+
+Alternatively, you can use the `environment.yaml` file contained in the PALEOMIX github repository.
+
+    $ curl https://raw.githubusercontent.com/MikkelSchubert/paleomix/master/paleomix_environment.yaml 
+    $ conda env create -f paleomix_environment.yaml
+
+> Note the above command(s) currently only contain the dependencies for the bam_pipeline
+
+You can now activate the paleomix environment with::
+
+    $ conda activate paleomix
+
+Paleomix is not within the dependencies list above, so we can install this
+_within_ the environment as explained above::
+
+    $ (paleomix) pip install --user paleomix
+
+The bam_pipeline also needs older versions of GATK, which are now not maintained by the Broad Institute. We can download the JAR file from the Broad archive, and activate
+it within the conda environment like so::
+
+    $ (paleomix) wget https://storage.googleapis.com/gatk-software/package-archive/gatk/GenomeAnalysisTK-3.8-1-0-gf15c1c3ef.tar.bz2
+    $ (paleomix) gatk3-register GenomeAnalysisTK-3.8-1-0-gf15c1c3ef.tar.bz2
+
+Paleomix requires the GATK and Picard JAR files in a specific place, we can symlink the versions in your conda environment into the correct place::
+
+    $ (paleomix) mkdir -p /home/<YOUR_USER>/install/jar_root/
+    $ (paleomix) ln -s /<path>/<to>/miniconda2/envs/paleomix/opt/gatk-3.8/GenomeAnalysisTK.jar /home/<user>/install/jar_root/
+    $ (paleomix) ln -s /<path>/<to>/miniconda2/envs/paleomix/share/picard-2.22.9-0/picard.jar /home/<user>/install/jar_root/
+
+> If you're unsure what your paleomix conda environment path is, you can see this by running `conda env list`.
+
+Once completed, you can test the environment works correctly using the pipeline test commands described in :ref:`examples`.
+
+To deactivate the paleomix environment, simply run::
+
+    $ conda deactivate
+
+If you ever need to remove the entire environment, run the following command::
+
+    $ rm /<path>/<to>/miniconda2/envs/paleomix/
