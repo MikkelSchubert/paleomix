@@ -155,8 +155,9 @@ ExampleProject:
       # Any option not specified here is inherited from the
       # previous levels.
       Options:
-        BWA:
-          MinQuality: 30
+        Aligners:
+          BWA:
+            MinQuality: 30
 
       Lane_1: data/TGCTCA_L1_R1_*.fastq.gz
       Lane_2: data/TGCTCA_L2_R{Pair}_*.fastq.gz
