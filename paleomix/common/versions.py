@@ -164,18 +164,10 @@ class RequirementObj:
     def __call__(self, force=False):
         if force or self._done is None:
             if not self.checks(self.version):
-                lines = [
-                    "Version requirements not met for %s; please refer\n"
-                    "to the PALEOMIX documentation for more information."
-                    "\n" % (self.name,)
-                ]
-                lines.extend(self._describe_call())
-
-                version = _pprint_version(self.version)
-                lines.append("    Version:       %s" % version)
-                lines.append("    Required:      %s" % self.checks)
-
-                raise VersionRequirementError("\n".join(lines))
+                raise VersionRequirementError(
+                    "Version requirements not met for %s: Expected %s, but found %s"
+                    % (self.name, self.checks, _pprint_version(self.version))
+                )
 
             self._done = True
 
@@ -194,7 +186,6 @@ class RequirementObj:
         "UnsupportedClassVersionError") a special message is givenself.
         """
         lines = ["Version could not be determined for %s:" % (self.name,)]
-        lines.append("")
         lines.extend(self._describe_call())
         lines.append("")
 
@@ -225,8 +216,7 @@ class RequirementObj:
     def _describe_call(self):
         """Returns lines describing the current system call, if any."""
         if not callable(self._call[0]):
-            yield "Attempted to run command:"
-            yield "    $ %s" % (" ".join(self._call),)
+            yield "    Command  = %s" % (" ".join(self._call),)
 
 
 class Check(TotallyOrdered):
@@ -437,4 +427,4 @@ def _pprint_version(value):
     """Pretty-print version tuple; takes a tuple of field numbers / values,
     and returns it as a string joined by dots with a 'v' prepended.
     """
-    return "v%s.x" % (".".join(map(str, value)),)
+    return "v%s" % (".".join(map(str, value)),)

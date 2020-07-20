@@ -83,12 +83,12 @@ def test_check__not_eq_for_same_func_desc_diff_version():
 
 def test_eq__str__one_value():
     obj = versions.EQ(1)
-    assert str(obj) == "v1.x"
+    assert str(obj) == "v1"
 
 
 def test_eq__str__two_values():
     obj = versions.EQ(2, 1)
-    assert str(obj) == "v2.1.x"
+    assert str(obj) == "v2.1"
 
 
 def test_eq__check_values__equal():
@@ -127,12 +127,12 @@ def test_eq__check_values__not_equal_too_few_values():
 
 def test_ge__str__one_value():
     obj = versions.GE(1)
-    assert str(obj) == "at least v1.x"
+    assert str(obj) == "at least v1"
 
 
 def test_ge__str__two_values():
     obj = versions.GE(2, 1)
-    assert str(obj) == "at least v2.1.x"
+    assert str(obj) == "at least v2.1"
 
 
 def test_ge__check_values__greater_than_or_equal():
@@ -173,12 +173,12 @@ def test_ge__check_values__not_equal_too_few_values():
 
 def test_lt__str__one_value():
     obj = versions.LT(1)
-    assert str(obj) == "prior to v1.x"
+    assert str(obj) == "prior to v1"
 
 
 def test_lt__str__two_values():
     obj = versions.LT(2, 1)
-    assert str(obj) == "prior to v2.1.x"
+    assert str(obj) == "prior to v2.1"
 
 
 def test_lt__check_values__less_than():
@@ -246,7 +246,7 @@ def test_and__init__non_check_value():
 
 def test_and__str__single_item():
     obj = versions.And(versions.GE(1))
-    assert str(obj) == "at least v1.x"
+    assert str(obj) == "at least v1"
 
 
 def test_and__str__two_items():
@@ -254,7 +254,7 @@ def test_and__str__two_items():
     obj_lt = versions.LT(3, 4)
     obj = versions.And(obj_ge, obj_lt)
 
-    assert str(obj) == "at least v1.2.x and prior to v3.4.x"
+    assert str(obj) == "at least v1.2 and prior to v3.4"
 
 
 def test_and__str__two_items__first_is_operator():
@@ -262,7 +262,7 @@ def test_and__str__two_items__first_is_operator():
     obj_2 = versions.LT(3, 4)
     obj = versions.And(obj_1, obj_2)
 
-    assert str(obj) == "(at least v1.2.x and prior to v2.0.x) and prior to v3.4.x"
+    assert str(obj) == "(at least v1.2 and prior to v2.0) and prior to v3.4"
 
 
 def test_and__str__two_items__second_is_operator():
@@ -270,7 +270,7 @@ def test_and__str__two_items__second_is_operator():
     obj_2 = versions.Or(versions.GE(2, 0), versions.LT(3, 4))
     obj = versions.And(obj_1, obj_2)
 
-    assert str(obj) == "at least v1.2.x and (at least v2.0.x or prior to v3.4.x)"
+    assert str(obj) == "at least v1.2 and (at least v2.0 or prior to v3.4)"
 
 
 ###############################################################################
@@ -350,7 +350,7 @@ def test_or__init__non_check_value():
 
 def test_or__str__single_item():
     obj = versions.Or(versions.GE(1))
-    assert str(obj) == "at least v1.x"
+    assert str(obj) == "at least v1"
 
 
 def test_or__str__two_items():
@@ -358,7 +358,7 @@ def test_or__str__two_items():
     obj_lt = versions.LT(3, 4)
     obj = versions.Or(obj_ge, obj_lt)
 
-    assert str(obj) == "at least v1.2.x or prior to v3.4.x"
+    assert str(obj) == "at least v1.2 or prior to v3.4"
 
 
 def test_or__str__two_items__first_is_operator():
@@ -366,7 +366,7 @@ def test_or__str__two_items__first_is_operator():
     obj_2 = versions.LT(3, 4)
     obj = versions.Or(obj_1, obj_2)
 
-    assert str(obj) == "(at least v1.2.x or prior to v2.0.x) or prior to v3.4.x"
+    assert str(obj) == "(at least v1.2 or prior to v2.0) or prior to v3.4"
 
 
 def test_or__str__two_items__second_is_operator():
@@ -374,7 +374,7 @@ def test_or__str__two_items__second_is_operator():
     obj_2 = versions.And(versions.GE(2, 0), versions.LT(3, 4))
     obj = versions.Or(obj_1, obj_2)
 
-    assert str(obj) == "at least v1.2.x or (at least v2.0.x and prior to v3.4.x)"
+    assert str(obj) == "at least v1.2 or (at least v2.0 and prior to v3.4)"
 
 
 ###############################################################################
@@ -643,11 +643,8 @@ def test_requirementobj__call__result_is_cached_unless_forced():
 
 def test_requirementobj__call__check_fails__function():
     expected = (
-        "Version requirements not met for test#1; please refer\n"
-        "to the PALEOMIX documentation for more information.\n"
-        "\n"
-        "    Version:       v1.0.x\n"
-        "    Required:      at least v1.1.x"
+        "Version requirements not met for test#1: "
+        "Expected at least v1.1, but found v1.0"
     )
 
     obj = versions.RequirementObj(
@@ -665,15 +662,8 @@ def test_requirementobj__call__check_fails__function():
 
 def test_requirementobj__call__check_fails():
     expected = (
-        "Version requirements not met for test#1; please refer\n"
-        "to the PALEOMIX documentation for more information.\n"
-        "\n"
-        "Attempted to run command:\n"
-        "    $ %s -c import sys; "
-        "sys.stdout.write('v1.0.2'); sys.exit(0);\n"
-        "    Version:       v1.0.x\n"
-        "    Required:      at least v1.1.x"
-        % (sys.executable,)
+        "Version requirements not met for test#1: "
+        "Expected at least v1.1, but found v1.0"
     )
 
     obj = versions.RequirementObj(
@@ -692,17 +682,14 @@ def test_requirementobj__call__check_fails():
 def test_requirementobj__call__check_fails__jre_outdated():
     expected = (
         "Version could not be determined for test#1:\n"
-        "\n"
-        "Attempted to run command:\n"
-        "    $ %s -c import sys; "
+        "    Command  = %s -c import sys; "
         "sys.stdout.write('UnsupportedClassVersionError'); sys.exit(0);\n"
         "\n"
         "The version of the Java Runtime Environment on this\n"
         "system is too old; please check the the requirement\n"
         "for the program and upgrade your version of Java.\n"
         "\n"
-        "See the documentation for more information."
-        % (sys.executable,)
+        "See the documentation for more information." % (sys.executable,)
     )
 
     value = "UnsupportedClassVersionError"
