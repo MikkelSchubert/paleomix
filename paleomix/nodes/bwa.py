@@ -38,7 +38,10 @@ from paleomix.nodes.samtools import SAMTOOLS_VERSION
 
 
 BWA_VERSION = versions.Requirement(
-    call=("bwa",), search=r"Version: (\d+)\.(\d+)\.(\d+)", checks=versions.GE(0, 7, 9)
+    name="BWA",
+    call=("bwa",),
+    search=r"Version: (\d+)\.(\d+)\.(\d+)",
+    checks=versions.GE(0, 7, 9),
 )
 
 
