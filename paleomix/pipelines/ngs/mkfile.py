@@ -30,8 +30,7 @@ _TEMPLATE_TOP = """# -*- mode: Yaml; -*-
 # Default options.
 # Can also be specific for a set of samples, libraries, and lanes,
 # by including the "Options" hierarchy at the same level as those
-# samples, libraries, or lanes below. This does not include
-# "Features", which may only be specific globally.
+# samples, libraries, or lanes below.
 Options:
   # Sequencing platform, see SAM/BAM reference for valid values
   Platform: Illumina

@@ -113,14 +113,21 @@ _VALID_PREFIX_PATH = And(
 # Valid strings for targets / samples / libraries / lanes
 _VALID_TARGET_NAME = _alphanum_check(whitelist="._-", min_len=2)
 
+# Features that can be specified at project, sample, and library level
+_VALID_LIBRARY_LEVEL_FEATURES = {
+    "mapDamage",
+    "PCRDuplicates",
+}
+
 _VALID_FEATURES_DICT = {
     "Coverage": IsBoolean(default=True),
     "Depths": IsBoolean(default=True),
     "DuplicateHist": RemovedOption(),
+    "mapDamage": StringIn(("rescale", "model", "plot", "no")),
+    "PCRDuplicates": StringIn((True, False, "mark", "filter"), default="filter"),
     "RawBAM": RemovedOption(),
     "RealignedBAM": RemovedOption(),
     "Summary": IsBoolean(default=True),
-    "mapDamage": StringIn((False, "rescale", "model", "plot", "no")),
 }
 
 _VALID_EXCLUDE_DICT = {
@@ -194,8 +201,7 @@ _VALIDATION_OPTIONS = {
         },
     },
     # Does sample contain PCR duplicates / what to do about it.
-    # True is equivalent of 'remove'.
-    "PCRDuplicates": StringIn((True, False, "mark", "filter"), default="filter"),
+    "PCRDuplicates": RemovedOption(),
     # Qualities should be rescaled using mapDamage (replaced with Features)
     "RescaleQualities": RemovedOption(),
     "mapDamage": {
@@ -277,10 +283,12 @@ def _mangle_options(makefile):
     def _do_update_options(options, data, path):
         options = copy.deepcopy(options)
         if "Options" in data:
-            if "Features" in data["Options"]:
+            features = set(data["Options"].get("Features", ()))
+            invalid_features = features - _VALID_LIBRARY_LEVEL_FEATURES
+            if invalid_features:
                 raise MakefileError(
-                    "Features may only be specified at root "
-                    "level, not at %r" % (" :: ".join(path),)
+                    "Some features (%s) may only be specified at root level, not at %r"
+                    % (", ".join(invalid_features), " :: ".join(path),)
                 )
 
             # Fill out missing values using those of prior levels

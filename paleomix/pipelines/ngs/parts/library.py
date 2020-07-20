@@ -67,7 +67,7 @@ class Library:
 
         lane_bams = self._collect_bams_by_type(self.lanes)
 
-        pcr_duplicates = self.options["PCRDuplicates"]
+        pcr_duplicates = self.options["Features"]["PCRDuplicates"]
         if pcr_duplicates:
             # pcr_duplicates may be "mark" or any trueish value
             lane_bams = self._remove_pcr_duplicates(
