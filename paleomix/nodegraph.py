@@ -25,11 +25,9 @@ import errno
 import logging
 import os
 
-from itertools import chain, islice
-
 import paleomix.common.versions as versions
 
-from paleomix.common.fileutils import reroot_path, missing_executables
+from paleomix.common.fileutils import missing_executables, missing_files
 from paleomix.common.utilities import safe_coerce_to_frozenset
 
 
@@ -122,13 +120,23 @@ class NodeGraph:
         ]
 
         self._logger.info("Checking file dependencies")
-        self._check_file_dependencies(self._reverse_dependencies)
+        if not self._check_file_dependencies(self._reverse_dependencies):
+            raise NodeGraphError("Aborting due to input/output file error")
+
         self._logger.info("Checking for auxiliary files")
-        self._check_auxiliary_files(self._reverse_dependencies)
-        self._logger.info("Checking for required executables")
-        self._check_required_executables(self._reverse_dependencies)
-        self._logger.info("Checking version requirements")
-        self._check_version_requirements(self._reverse_dependencies)
+        if not self._check_auxiliary_files(self._reverse_dependencies):
+            raise NodeGraphError(
+                "Please refer to the PALEOMIX installation instructions at "
+                "https://paleomix.readthedocs.io/"
+            )
+
+        self._logger.info("Checking required software")
+        if not self._check_version_requirements(self._reverse_dependencies):
+            raise NodeGraphError(
+                "Please refer to the PALEOMIX installation instructions at "
+                "https://paleomix.readthedocs.io/"
+            )
+
         self._logger.info("Determining states")
         self.refresh_states()
         self._logger.info("Ready")
@@ -271,8 +279,7 @@ class NodeGraph:
 
         return cache.are_files_outdated(node.input_files, node.output_files)
 
-    @classmethod
-    def _check_required_executables(cls, nodes):
+    def _check_required_executables(self, nodes):
         exec_filenames = set()
         for node in nodes:
             exec_filenames.update(node.executables)
@@ -286,12 +293,16 @@ class NodeGraph:
 
         missing_exec = missing_executables(exec_filenames)
         if missing_exec:
-            raise NodeGraphError(
-                "Required executables are missing:\n\t%s"
-                % ("\n\t".join(sorted(missing_exec)))
-            )
+            self._logger.error("Required executable(s) not found:")
+            for name in sorted(missing_exec):
+                self._logger.error(" - %s", name)
+
+        return not missing_exec
 
     def _check_version_requirements(self, nodes):
+        if not self._check_required_executables(nodes):
+            return False
+
         exec_requirements = set()
         for node in nodes:
             exec_requirements.update(node.requirements)
@@ -316,11 +327,9 @@ class NodeGraph:
                     "Could not check version for %s:\n\t%s" % (requirement.name, error)
                 )
 
-        if any_errors:
-            raise NodeGraphError("Version requirements not met; cannot proceed")
+        return not any_errors
 
-    @classmethod
-    def _check_file_dependencies(cls, nodes, max_errors=10):
+    def _check_file_dependencies(self, nodes, max_errors=10):
         input_files = collections.defaultdict(set)
         output_files = collections.defaultdict(set)
         for node in nodes:
@@ -330,39 +339,16 @@ class NodeGraph:
             for filename in node.output_files:
                 output_files[filename].add(node)
 
-        input_errors = cls._check_output_files(output_files)
-        output_errors = cls._check_input_dependencies(input_files, output_files, nodes)
+        any_errors = False
+        if not self._check_output_files(output_files, max_errors):
+            any_errors = True
 
-        error_messages = []
-        error_messages.extend(chain.from_iterable(islice(input_errors, max_errors)))
-        error_messages.extend(chain.from_iterable(islice(output_errors, max_errors)))
+        if not self._check_input_files(input_files, output_files, nodes, max_errors):
+            any_errors = True
 
-        if error_messages:
-            raise NodeGraphError(
-                "Errors detected during graph construction (max %i shown):\n%s"
-                % (max_errors * 2, "".join(error_messages))
-            )
+        return not any_errors
 
-    @classmethod
-    def _check_auxiliary_files(cls, nodes):
-        auxiliary_files = set()
-        for node in nodes:
-            auxiliary_files.update(node.auxiliary_files)
-
-        missing_files = []
-        for filename in sorted(auxiliary_files):
-            if not os.path.exists(filename):
-                missing_files.append(filename)
-
-        if missing_files:
-            raise NodeGraphError(
-                "Errors detected during graph construction:\n"
-                "Required auxiliary files do not exist:\n    %s"
-                % ("\n    ".join(missing_files),)
-            )
-
-    @classmethod
-    def _check_output_files(cls, output_files):
+    def _check_output_files(self, output_files, max_errors=10):
         """Checks dict of output files to nodes for cases where
         multiple nodes create the same output file.
 
@@ -372,27 +358,37 @@ class NodeGraph:
         due to use of symbolic links). Since output files are
         replaced, not modified in place, it is not nessesary to
         compare files themselves."""
-        dirpath_cache, real_output_files = {}, {}
-        for (filename, nodes) in output_files.items():
-            dirpath = os.path.dirname(filename)
+        dirpath_cache = {}
+        filepaths = collections.defaultdict(list)
+        for filename, nodes in output_files.items():
+            dirpath, filename = os.path.split(filename)
             if dirpath not in dirpath_cache:
                 dirpath_cache[dirpath] = os.path.realpath(dirpath)
 
-            real_output_file = reroot_path(dirpath_cache[dirpath], filename)
-            real_output_files.setdefault(real_output_file, []).extend(nodes)
+            filepath = os.path.join(dirpath_cache[dirpath], filename)
+            filepaths[filepath].extend(nodes)
 
-        for (filename, nodes) in real_output_files.items():
-            if len(nodes) > 1:
-                nodes = _summarize_nodes(nodes)
-                yield (
-                    "Multiple nodes create the same (clobber) output-file:\n"
-                    "\tFilename: %s\n\tNodes: %s"
-                    % (filename, "\n\t       ".join(nodes))
+        clobbered_files = {
+            key: values for key, values in filepaths.items() if len(values) > 1
+        }
+
+        if clobbered_files:
+            for filename, nodes in sorted(clobbered_files.items()):
+                self._logger.error("Multiple nodes write to file %r:", filename)
+                self._logger.debug("depended on by ")
+                for line in _summarize_nodes(nodes):
+                    self._logger.debug("  %s", line)
+
+                self._logger.error(
+                    "This is probably a bug in PALEOMIX; please report at "
+                    "https://github.com/MikkelSchubert/paleomix/issues/new"
                 )
 
-    @classmethod
-    def _check_input_dependencies(cls, input_files, output_files, nodes):
-        dependencies = cls._collect_dependencies(nodes, {})
+        return not clobbered_files
+
+    def _check_input_files(self, input_files, output_files, nodes, max_errors=10):
+        dependencies = self._collect_dependencies(nodes, {})
+        any_errors = False
 
         for (filename, nodes) in sorted(input_files.items(), key=lambda v: v[0]):
             if filename in output_files:
@@ -403,24 +399,44 @@ class NodeGraph:
                         bad_nodes.add(consumer)
 
                 if bad_nodes:
+                    any_errors = True
                     producer = next(iter(producers))
                     bad_nodes = _summarize_nodes(bad_nodes)
-                    yield (
-                        "Node depends on dynamic file, but not on node creating it:\n"
-                        "\tFilename: %s\n\tCreated by: %s\n\tDependent node(s): %s"
-                        % (
-                            filename,
-                            producer,
-                            "\n\t                   ".join(bad_nodes),
-                        )
+                    self._logger.error(
+                        "Tasks depends on file, but not on the task creating it: %r",
+                        filename,
                     )
+
+                    self._logger.debug("  produced by %s", producer)
+                    self._logger.debug("  depended on by")
+                    for line in _summarize_nodes(bad_nodes):
+                        self._logger.debug("    %s", line)
+
+                    self._logger.error(
+                        "This is probably a bug in PALEOMIX; please report at "
+                        "https://github.com/MikkelSchubert/paleomix/issues/new"
+                    )
+
             elif not os.path.exists(filename):
-                nodes = _summarize_nodes(nodes)
-                yield (
-                    "Required file does not exist, and is not created by a node:\n"
-                    "\tFilename: %s\n\tDependent node(s): %s"
-                    % (filename, "\n\t                   ".join(nodes))
-                )
+                any_errors = True
+                self._logger.error("Required input file does not exist: %r", filename)
+                for line in _summarize_nodes(nodes):
+                    self._logger.debug("  required by %s", line)
+
+        return not any_errors
+
+    def _check_auxiliary_files(self, nodes):
+        auxiliary_files = set()
+        for node in nodes:
+            auxiliary_files.update(node.auxiliary_files)
+
+        missing_aux_files = missing_files(auxiliary_files)
+        if missing_aux_files:
+            self._logger.error("Required files not found:")
+            for name in sorted(missing_aux_files):
+                self._logger.error(" - %s", name)
+
+        return not missing_aux_files
 
     @classmethod
     def _collect_dependencies(cls, nodes, dependencies):
