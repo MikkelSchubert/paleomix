@@ -153,6 +153,8 @@ html_static_path = ['_static']
 # Disabled as it also converts double-dashes in, for example, command-line
 # options into a single long-dash.
 html_use_smartypants = False
+# html_use_smartypants deprecated since 1.6, replaced with
+smartquotes = False
 
 # Custom sidebar templates, maps document names to template names.
 #html_sidebars = {}
