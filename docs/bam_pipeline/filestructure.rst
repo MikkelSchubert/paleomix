@@ -12,16 +12,16 @@ The following section explains the file structure of the BAM pipeline example pr
           Lane_1: data/ACGATA_L1_R{Pair}_*.fastq.gz
           Lane_2:
             Singleton: data/ACGATA_L2/reads.singleton.truncated.gz
-            Collapsed: data/ACGATAr_L2/reads.collapsed.gz
+            Collapsed: data/ACGATA_L2/reads.collapsed.gz
             CollapsedTruncated: data/ACGATA_L2/reads.collapsed.truncated.gz
 
         GCTCTG: # Library 2
           Lane_1: data/GCTCTG_L1_R1_*.fastq.gz
-          Lane_2: rCRS: data/GCTCTG_L2.bam
 
         TGCTCA: # Library 3
           Options:
-            RescaleQualities: yes
+            BWA:
+              MinQuality: 30
 
           Lane_1: data/TGCTCA_L1_R1_*.fastq.gz
           Lane_2: data/TGCTCA_L2_R{Pair}_*.fastq.gz
