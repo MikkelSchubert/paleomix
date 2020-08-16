@@ -6,7 +6,7 @@ The PALEOMIX pipelines are a set of pipelines and tools designed to aid the rapi
 
 The pipelines have been designed with ancient DNA (aDNA) in mind, and includes several features especially useful for the analyses of ancient samples, but can all be for the processing of modern samples, in order to ensure consistent data processing.
 
-For a detailed description of the pipeline, please refer to `PALEOMIX <http://geogenetics.ku.dk/publications/paleomix>`_ website and the `documentation <http://paleomix.readthedocs.io/>`_; for questions, bug reports, and/or suggestions, use the `GitHub tracker <https://github.com/MikkelSchubert/paleomix/issues/>`_, or contact Mikkel Schubert at `MikkelSch@gmail.com <mailto:MikkelSch@gmail.com>`_.
+For a detailed description of the pipeline, please refer to the `documentation <http://paleomix.readthedocs.io/>`_; for questions, bug reports, and/or suggestions, use the `GitHub tracker <https://github.com/MikkelSchubert/paleomix/issues/>`_, or contact Mikkel Schubert at `MikkelSch@gmail.com <mailto:MikkelSch@gmail.com>`_.
 
 The PALEOMIX pipelines have been published in Nature Protocols; if you make use of PALEOMIX in your work, then please cite
 
@@ -14,4 +14,4 @@ The PALEOMIX pipelines have been published in Nature Protocols; if you make use 
 
 The Zonkey pipeline has been published in Journal of Archaeological Science; if you make use of this pipeline in your work, then please cite
 
-  Schubert M, Mashkour M, Gaunitz C, Fages A, Seguin-Orlando A, Sheikhi S, Alfarhan AH, Alquraishi SA, Al-Rasheid KAS, Chuang R, Ermini L, Gamba C, Weinstock J, Vedat O, and Orlando L. "**Zonkey: A simple, accurate and sensitive pipeline to genetically identify equine F1-hybrids in archaeological assemblages**". Journal of Archaeological Science. 2017 Feb; 78:147-157. doi: `10.1016/j.jas.2016.12.005 <http://dx.doi.org/10.1016/j.jas.2016.12.005>`_. 
+  Schubert M, Mashkour M, Gaunitz C, Fages A, Seguin-Orlando A, Sheikhi S, Alfarhan AH, Alquraishi SA, Al-Rasheid KAS, Chuang R, Ermini L, Gamba C, Weinstock J, Vedat O, and Orlando L. "**Zonkey: A simple, accurate and sensitive pipeline to genetically identify equine F1-hybrids in archaeological assemblages**". Journal of Archaeological Science. 2017 Feb; 78:147-157. doi: `10.1016/j.jas.2016.12.005 <http://dx.doi.org/10.1016/j.jas.2016.12.005>`_.
