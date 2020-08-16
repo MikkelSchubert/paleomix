@@ -84,23 +84,6 @@ To upgrade an installation a self-contained installation, simply activate the en
     $ (paleomix) pip install --upgrade paleomix
     $ (paleomix) deactivate
 
-
-Upgrading from PALEOMIX v1.1.x
-------------------------------
-
-When upgrading to v1.2.x or later from version 1.1.x or an before, it is necessary to perform a manual installation the first time. This is accomplished by downloading and unpacking the desired version of PALEOMIX from the list of releases, and then invoking setup.py. For example::
-
-    $ wget https://github.com/MikkelSchubert/paleomix/archive/v1.2.4.tar.gz
-    $ tar xvzf v1.2.4.tar.gz
-    $ paleomix-1.2.4/
-    # Either for the current user:
-    $ python setup.py install --user
-    # Or, for all users:
-    $ sudo python setup.py install
-
-Once this has been done once, pip may be used to perform future upgrades as described above.
-
-
 .. _pip: https://pip.pypa.io/en/stable/
 .. _Pysam: https://github.com/pysam-developers/pysam/
 .. _Python: http://www.python.org/
@@ -119,7 +102,7 @@ Once set-up, you can create a conda environment using the following commands::
 
 Alternatively, you can use the `environment.yaml` file contained in the PALEOMIX github repository.
 
-    $ curl https://raw.githubusercontent.com/MikkelSchubert/paleomix/master/paleomix_environment.yaml 
+    $ curl https://raw.githubusercontent.com/MikkelSchubert/paleomix/master/paleomix_environment.yaml
     $ conda env create -f paleomix_environment.yaml
 
 > Note the above command(s) currently only contain the dependencies for the bam_pipeline
