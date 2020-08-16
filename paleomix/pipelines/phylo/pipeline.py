@@ -65,7 +65,7 @@ def main(argv):
             handle.write(lines)
 
         return 0
-    elif "makefile" in config.commands:
+    elif "makefile" in config.commands or "mkfile" in config.commands:
         return mkfile.main(config.files)
 
     commands = []

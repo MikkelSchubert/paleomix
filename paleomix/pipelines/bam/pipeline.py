@@ -244,7 +244,7 @@ def main(argv, pipeline="bam"):
         return 0
 
     args = parser.parse_args(argv)
-    if args.command in ("makefile",):
+    if args.command in ("makefile", "mkfile"):
         return bam_mkfile.main(args, pipeline=pipeline)
     elif args.command in ("example",):
         return paleomix.resources.copy_example("bam_pipeline", args)
