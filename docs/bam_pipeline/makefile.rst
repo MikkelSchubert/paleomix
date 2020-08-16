@@ -123,7 +123,7 @@ The "AdapterRemoval" subsection allows for options that are applied when Adapter
 
         .. code-block:: bash
 
-            $ paleomix bam_pipeline run makefile.yaml --adapterremoval-max-threads 2
+            $ paleomix bam run makefile.yaml --adapterremoval-max-threads 2
 
     .. warning::
         Older versions of PALEOMIX may use the --pcr1 and --pcr2 options instead of --adapter1 and --adapter2; for new projects, using --adapter1 and --adapter2 is strongly recommended, due to the simpler schematics (described above). If your project uses the --pcr1 and --pcr2 options, then refer to the `AdapterRemoval documentation`_ information for how to proceed!

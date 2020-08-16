@@ -23,6 +23,7 @@ References
 .. [Quinlan2010] Quinlan and Hall. "**BEDTools: a flexible suite of utilities for comparing genomic features**". Bioinformatics. 2010 Mar 15;26(6):841-2. doi:10.1093/bioinformatics/btq033
 .. [Schubert2012] Schubert *et al*. "**Improving ancient DNA read mapping against modern reference genomes**". BMC Genomics. 2012 May 10;13:178. doi:10.1186/1471-2164-13-178.
 .. [Schubert2014] Schubert *et al*. "**Characterization of ancient and modern genomes by SNP detection and phylogenomic and metagenomic analysis using PALEOMIX**". Nature Protocols. 2014 May;9(5):1056-82. doi:10.1038/nprot.2014.063
+.. [Schubert2017] Schubert *et al*. "**Zonkey: A simple, accurate and sensitive pipeline to genetically identify equine F1-hybrids in archaeological assemblages**". Journal of Archaeological Science. 2017 Feb; 78:147-157. doi: 10.1016/j.jas.2016.12.005.
 .. [Stamatakis2006] Stamatakis. "**RAxML-VI-HPC: maximum likelihood-based phylogenetic analyses with thousands of taxa and mixed models**". Bioinformatics. 2006 Nov 1;22(21):2688-90.
 .. [Wickham2007] Wickham. "**Reshaping Data with the reshape Package**". Journal of Statistical Software. 2007 21(1).
 .. [Wickham2009] Wichham. "**ggplot2: Elegant Graphics for Data Analysis**". Springer-Verlag New York 2009. ISBN:978-0-387-98140-6

@@ -43,7 +43,7 @@ Troubleshooting BAM pipeline makefiles
 
     To resolve this issue, increase the maximum amount of heap-space used using the "--jre-option" command-line option; this permits the passing of options to the Java Runtime Environment (JRE). For example, to increase the maximum to 8gb, run the BAM pipeline as follows::
 
-        $ bam_pipeline run --jre-option -Xmx8g [...]
+        $ paleomix bam run --jre-option=-Xmx8g [...]
 
 
 Troubleshooting AdapterRemoval
@@ -147,7 +147,7 @@ Troublshooting validation of BAM files
 
     The following demonstrates this problem, using a contrieved example based on the examples/bam_example project included with the pipeline::
 
-        $ bam_pipeline run makefile.yaml
+        $ paleomix bam run makefile.yaml
         [...]
         <Validate BAM: 'ExampleProject.rCRS.bam'>: Error occurred running command:
           Error(s) running Node:

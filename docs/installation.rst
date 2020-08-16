@@ -7,12 +7,9 @@ Installation
 
 The following instructions will install PALEOMIX for the current user, but does not include specific programs required by the pipelines. For pipeline specific instructions, refer to the requirements sections for the :ref:`BAM <bam_requirements>`, the :ref:`Phylogentic <phylo_requirements>`, and the :ref:`Zonkey <zonkey_requirements>` pipeline. The recommended way of installing PALEOMIX is by use of the `pip`_ package manager for Python. If Pip is not installed, then please consult the documentation for your operating system.
 
-In addition to the `pip`_ package manager for Python, the pipelines require `Python`_ 2.7, and `Pysam`_ v0.8.3+, which in turn requires both Python and libz development files (see the :ref:`troubleshooting_install` section). When installing PALEOMIX using pip, Pysam is automatically installed as well. However, note that installing Pysam requires the zlib and Python 2.7 development files. On Debian based distributions, these may be installed as follows:
+In addition to the `pip`_ package manager for Python, the pipelines require `Python`_ 3.7, and `Pysam`_ v0.8.3+, which in turn requires both Python and libz development files (see the :ref:`troubleshooting_install` section). When installing PALEOMIX using pip, Pysam is automatically installed as well. However, note that installing Pysam requires the zlib and Python 2.7 development files. On Debian based distributions, these may be installed as follows:
 
-    # apt-get install libz-dev python2.7-dev
-
-.. warning::
-  PALEOMIX has been developed for 64 bit systems, and has not been extensively tested on 32 bit systems!
+    # apt-get install libz-dev python3-dev
 
 
 Regular installation
@@ -105,7 +102,7 @@ Alternatively, you can use the `environment.yaml` file contained in the PALEOMIX
     $ curl https://raw.githubusercontent.com/MikkelSchubert/paleomix/master/paleomix_environment.yaml
     $ conda env create -f paleomix_environment.yaml
 
-> Note the above command(s) currently only contain the dependencies for the bam_pipeline
+> Note the above command(s) currently only contain the dependencies for the BAM pipeline
 
 You can now activate the paleomix environment with::
 
@@ -116,7 +113,7 @@ _within_ the environment as explained above::
 
     $ (paleomix) pip install --user paleomix
 
-The bam_pipeline also needs older versions of GATK, which are now not maintained by the Broad Institute. We can download the JAR file from the Broad archive, and activate
+The BAM pipeline also needs older versions of GATK, which are now not maintained by the Broad Institute. We can download the JAR file from the Broad archive, and activate
 it within the conda environment like so::
 
     $ (paleomix) wget https://storage.googleapis.com/gatk-software/package-archive/gatk/GenomeAnalysisTK-3.8-1-0-gf15c1c3ef.tar.bz2

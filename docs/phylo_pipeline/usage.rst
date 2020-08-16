@@ -8,7 +8,7 @@ The 'phylo\_pipeline mkfile' command can be used to create a makefile template, 
 
 .. code-block:: bash
 
-    $ phylo_pipeline mkfile > makefile.yaml
+    $ paleomix phylo mkfile > makefile.yaml
 
 Note that filenames are not specified explicitly with this pipeline, but are instead inferred from the names of samples, prefixes, etc. as described below.
 
@@ -16,7 +16,7 @@ To execute the pipeline, a command corresponding to the step to be invoked is us
 
 .. code-block:: bash
 
-    $ phylo_pipeline <STEP> [OPTIONS] <MAKEFILE>
+    $ paleomix phylo <STEP> [OPTIONS] <MAKEFILE>
 
 
 Samples
@@ -202,19 +202,19 @@ The phylogenetic pipeline is excuted similarly to the BAM pipeline, except that 
 
 .. code-block:: bash
 
-    $ phylo_pipeline <COMMAND> [OPTIONS] <MAKEFILE>
+    $ paleomix phylo <COMMAND> [OPTIONS] <MAKEFILE>
 
 Thus, to execute the genotyping step, the following command is used:
 
 .. code-block:: bash
 
-    $ phylo_pipeline genotyping [OPTIONS] <MAKEFILE>
+    $ paleomix phylo genotyping [OPTIONS] <MAKEFILE>
 
 In addition, it is possible to run multiple steps by joining these with the plus-symbol. To run both the 'genotyping' and 'msa' step at the same time, use the following command:
 
 .. code-block:: bash
 
-    $ phylo_pipeline genotyping+msa [OPTIONS] <MAKEFILE>
+    $ paleomix phylo genotyping+msa [OPTIONS] <MAKEFILE>
 
 
 .. _MAFFT website: http://mafft.cbrc.jp/alignment/software/algorithms/algorithms.html
