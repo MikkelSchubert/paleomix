@@ -31,7 +31,7 @@ import pysam
 import paleomix
 import paleomix.common.fileutils as fileutils
 import paleomix.common.logging
-import paleomix.pipelines.ngs.mkfile as bam_mkfile
+import paleomix.pipelines.bam.mkfile as bam_mkfile
 import paleomix.pipelines.zonkey.config as zonkey_config
 import paleomix.pipelines.zonkey.database as database
 import paleomix.pipelines.zonkey.parts.common as common_nodes

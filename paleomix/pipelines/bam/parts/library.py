@@ -30,7 +30,7 @@ from paleomix.nodes.mapdamage import (
     MapDamageModelNode,
     MapDamageRescaleNode,
 )
-from paleomix.pipelines.ngs.nodes import index_and_validate_bam
+from paleomix.pipelines.bam.nodes import index_and_validate_bam
 from paleomix.nodes.commands import FilterCollapsedBAMNode
 from paleomix.nodes.validation import DetectInputDuplicationNode
 

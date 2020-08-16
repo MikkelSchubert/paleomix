@@ -28,7 +28,7 @@ import logging
 import os
 import string
 
-import paleomix.pipelines.ngs.paths as paths
+import paleomix.pipelines.bam.paths as paths
 
 from paleomix.common.fileutils import get_files_glob
 from paleomix.common.utilities import fill_dict

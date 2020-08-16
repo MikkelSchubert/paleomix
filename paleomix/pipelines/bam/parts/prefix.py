@@ -24,7 +24,7 @@ import os
 
 from paleomix.common.utilities import safe_coerce_to_tuple
 from paleomix.nodes.picard import MergeSamFilesNode
-from paleomix.pipelines.ngs.nodes import index_and_validate_bam
+from paleomix.pipelines.bam.nodes import index_and_validate_bam
 from paleomix.nodes.validation import DetectInputDuplicationNode
 
 

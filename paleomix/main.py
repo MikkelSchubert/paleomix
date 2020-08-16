@@ -28,10 +28,10 @@ import paleomix.common.logging
 
 _COMMANDS = {
     # BAM/FASTQ pipeline
-    "bam": "paleomix.pipelines.ngs.pipeline",
-    "bam_pipeline": "paleomix.pipelines.ngs.pipeline",
-    "trim": "paleomix.pipelines.ngs.trim_pipeline",
-    "trim_pipeline": "paleomix.pipelines.ngs.trim_pipeline",
+    "bam": "paleomix.pipelines.bam.pipeline",
+    "bam_pipeline": "paleomix.pipelines.bam.pipeline",
+    "trim": "paleomix.pipelines.bam.trim_pipeline",
+    "trim_pipeline": "paleomix.pipelines.bam.trim_pipeline",
     # Phylogenetic pipeline
     "phylo": "paleomix.pipelines.phylo.pipeline",
     "phylo_pipeline": "paleomix.pipelines.phylo.pipeline",

@@ -23,15 +23,15 @@
 import os
 import copy
 
-import paleomix.pipelines.ngs.paths as paths
+import paleomix.pipelines.bam.paths as paths
 
 from paleomix.common.makefile import MakefileError
 
 from paleomix.nodes.bwa import BWAAlgorithmNode, BWABacktrack, BWASampe, BWASamse
 from paleomix.nodes.bowtie2 import Bowtie2Node
 
-from paleomix.pipelines.ngs.parts import Reads
-from paleomix.pipelines.ngs.nodes import index_and_validate_bam
+from paleomix.pipelines.bam.parts import Reads
+from paleomix.pipelines.bam.nodes import index_and_validate_bam
 
 from paleomix.common.fileutils import swap_ext
 
