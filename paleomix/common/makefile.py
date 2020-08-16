@@ -418,7 +418,7 @@ class ValueMissing(MakefileSpec):
 
 
 class DeprecatedOption(MakefileSpec):
-    """Used to signify substructures that have been removed, and are hence ignored."""
+    """Used to signify substructures that will eventually be removed."""
 
     def __init__(self, spec):
         self._spec = spec
