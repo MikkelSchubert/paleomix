@@ -314,8 +314,12 @@ class NodeGraph:
         any_errors = False
         for requirement in sorted(exec_requirements, key=_key_func):
             try:
+                name = requirement.name
                 version = ".".join(str(value) for value in requirement.version)
-                self._logger.info(" - Found %s v%s", requirement.name, version)
+                if version:
+                    name = "%s v%s" % (name, version)
+
+                self._logger.info(" - Found %s", name)
 
                 requirement()
             except versions.VersionRequirementError as error:
