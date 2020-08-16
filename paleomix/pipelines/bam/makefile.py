@@ -673,7 +673,7 @@ def _validate_prefixes(makefiles):
             prefix["IndexFormat"] = ".bai"
 
             if not os.path.exists(path):
-                logger.warn("Reference FASTA file does not exist: %r", path)
+                logger.error("Reference FASTA file does not exist: %r", path)
                 continue
             elif not os.path.exists(path + ".fai"):
                 logger.info("Indexing FASTA at %r", path)
