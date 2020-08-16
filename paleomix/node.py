@@ -28,6 +28,7 @@ import traceback
 
 from pathlib import Path
 
+import paleomix
 import paleomix.common.fileutils as fileutils
 from paleomix.common.utilities import safe_coerce_to_frozenset
 
@@ -182,6 +183,7 @@ class Node:
             return "\n                   ".join(sorted(values))
 
         message = [
+            "Paleomix         = v%s" % (paleomix.__version__,),
             "Command          = %r" % (" ".join(sys.argv),),
             "CWD              = %r" % (os.getcwd(),),
             "PATH             = %r" % (os.environ.get("PATH", ""),),

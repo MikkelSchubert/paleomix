@@ -341,7 +341,10 @@ def test_run__error_log__node_error(tmp_path, exception):
         node_mock.run(cfg_mock)
     log_file = tmp_path / "xTMPx" / "pipe.errors"
     assert log_file.exists()
-    assert "Errors =" in log_file.read_text()
+
+    error_text = log_file.read_text()
+    assert "Errors =" in error_text
+    assert paleomix.__version__ in error_text
 
     assert mock.mock_calls == [
         call._create_temp_dir(cfg_mock),
