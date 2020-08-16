@@ -53,6 +53,7 @@ def initialize(log_level="info", log_file=None, name="paleomix"):
 
     log_level = _LOG_LEVELS[log_level.lower()]
     root = logging.getLogger()
+    root.setLevel(log_level)
 
     if log_file:
         handler = logging.FileHandler(log_file)
