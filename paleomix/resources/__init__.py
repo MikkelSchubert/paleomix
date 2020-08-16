@@ -24,7 +24,7 @@ import logging
 import os
 import shutil
 
-from pkg_resources import Requirement, resource_filename
+from pkg_resources import Requirement, cleanup_resources, resource_filename
 
 import paleomix
 
@@ -77,10 +77,12 @@ def copy_example(tool, args):
         log.error("Example folder already exists at %r", destination)
         return 1
 
-    path = os.path.join("paleomix", "resources", "examples", tool)
-    source = resource_filename(_REQUIREMENT, path)
+    try:
+        source = resource_filename("paleomix.resources", os.path.join("examples", tool))
 
-    shutil.copytree(source, destination)
+        shutil.copytree(source, destination)
+    finally:
+        cleanup_resources()
 
     log.info("Sucessfully saved example in %r", destination)
 
