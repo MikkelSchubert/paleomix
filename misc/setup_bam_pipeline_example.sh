@@ -43,7 +43,7 @@ done
 rm -v data/GCTCTG_L*R2*.gz
 rm -v data/TGCTCA_L1_R2*.gz
 
-bam_pipeline run $(dirname $0)/setup_bam_pipeline_example.makefile.yaml --destination .
+paleomix bam run $(dirname $0)/setup_bam_pipeline_example.makefile.yaml --destination .
 
 mkdir -p data/ACGATA_L2/
 mv ExampleProject/reads/Synthetic_Sample_1/ACGATA/Lane_2/reads.singleton.truncated.gz data/ACGATA_L2/reads.singleton.truncated.gz
