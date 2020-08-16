@@ -53,6 +53,7 @@ from paleomix.common.makefile import (
     StringStartsWith,
     IsListOf,
     IsDictOf,
+    DeprecatedOption,
     RemovedOption,
 )
 from paleomix.common.formats.fasta import FASTA, FASTAError
@@ -201,9 +202,9 @@ _VALIDATION_OPTIONS = {
         },
     },
     # Does sample contain PCR duplicates / what to do about it.
-    "PCRDuplicates": RemovedOption(),
+    "PCRDuplicates": DeprecatedOption(StringIn((True, False, "mark", "filter"))),
     # Qualities should be rescaled using mapDamage (replaced with Features)
-    "RescaleQualities": RemovedOption(),
+    "RescaleQualities": DeprecatedOption(IsBoolean()),
     "mapDamage": {
         # Tabulation options
         "--downsample": Or(IsUnsignedInt, IsFloat),
@@ -279,6 +280,21 @@ def _mangle_makefile(makefile, pipeline_variant):
     return makefile
 
 
+def _migrate_options(options):
+    pcr_duplicates = options.pop("PCRDuplicates", None)
+    if pcr_duplicates is not None:
+        features = options.setdefault("Features", {})
+        features["PCRDuplicates"] = pcr_duplicates
+
+    rescale_qualities = options.pop("RescaleQualities", None)
+    if rescale_qualities is not None:
+        features = options.setdefault("Features", {})
+        if rescale_qualities:
+            features["mapDamage"] = "rescale"
+        elif features.get("mapDamage") not in ("model", "plot"):
+            features["mapDamage"] = "no"
+
+
 def _mangle_options(makefile):
     def _do_update_options(options, data, path):
         options = copy.deepcopy(options)
@@ -293,6 +309,7 @@ def _mangle_options(makefile):
 
             # Fill out missing values using those of prior levels
             options = fill_dict(destination=data.pop("Options"), source=options)
+            _migrate_options(options)
 
         if len(path) < 3:
             for key in data:
@@ -301,6 +318,7 @@ def _mangle_options(makefile):
         else:
             data["Options"] = options
 
+    _migrate_options(makefile["Options"])
     for key, data in makefile["Targets"].items():
         _do_update_options(makefile["Options"], data, (key,))
 
