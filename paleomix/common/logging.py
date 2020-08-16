@@ -63,7 +63,7 @@ def initialize(log_level="info", log_file=None, name="paleomix"):
         template = "%s.%s_%%02i.log" % (name, time.strftime("%Y%m%d_%H%M%S"))
         handler = LazyLogfile(template)
         handler.setFormatter(logging.Formatter(_LOG_FORMAT))
-        handler.setLevel(logging.WARNING)
+        handler.setLevel(logging.ERROR)
         root.addHandler(handler)
 
 
