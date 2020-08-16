@@ -21,8 +21,15 @@
 # SOFTWARE.
 import codecs
 import os
+import sys
 
 from setuptools import setup, find_packages
+
+if sys.version_info < (3, 5):
+    sys.stderr.write("FATAL ERROR: ")
+    sys.stderr.write("PALEOMIX requires at least Python 3.5, but setup.py ")
+    sys.stderr.write("was run using Python %s.%s!\n" % sys.version_info[:2])
+    sys.exit(1)
 
 
 def _get_version():
@@ -54,8 +61,8 @@ setup(
         "Intended Audience :: Science/Research",
         "Topic :: Scientific/Engineering :: Bio-Informatics",
         "License :: OSI Approved :: MIT License",
-        "Programming Language :: Python :: 2 :: Only",
-        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3 :: Only",
+        "Programming Language :: Python :: 3.5",
     ],
     keywords="pipeline bioinformatics hts phylogeny bam",
     packages=find_packages(exclude=["misc", "tests"]),
