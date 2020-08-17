@@ -106,6 +106,7 @@ class NodeGraph:
     def __init__(self, nodes, cache_factory=FileStatusCache):
         self._cache_factory = cache_factory
         self._states = {}
+        self._state_counts = [0] * self.NUMBER_OF_STATES
 
         nodes = safe_coerce_to_frozenset(nodes)
 
@@ -138,7 +139,7 @@ class NodeGraph:
             )
 
         self._logger.info("Determining states")
-        self.refresh_states()
+        self._refresh_states()
         self._logger.info("Ready")
 
     def get_node_state(self, node):
@@ -152,7 +153,10 @@ class NodeGraph:
             return
 
         self._states[node] = state
-        self._notify_state_observers(node, old_state, state)
+        self._state_counts[old_state] -= 1
+        self._state_counts[state] += 1
+
+        self._log_node_changes(node, old_state, state)
 
         intersections = self._calculate_intersections(node)
 
@@ -173,6 +177,9 @@ class NodeGraph:
                         new_state = self._update_node_state(node, cache)
                         has_changed |= new_state != old_state
 
+                        self._state_counts[old_state] -= 1
+                        self._state_counts[new_state] += 1
+
                     for dependency in self._reverse_dependencies[node]:
                         intersections[dependency] -= 1
                         requires_update[dependency] |= has_changed
@@ -187,21 +194,38 @@ class NodeGraph:
     def iterflat(self):
         return iter(self._reverse_dependencies)
 
-    def refresh_states(self):
+    def get_state_counts(self):
+        return list(self._state_counts)
+
+    def _refresh_states(self):
         states = {}
         cache = self._cache_factory()
         for (node, state) in self._states.items():
             if state in (self.ERROR, self.RUNNING):
                 states[node] = state
         self._states = states
+
         for node in self._reverse_dependencies:
             self._update_node_state(node, cache)
 
-    def _notify_state_observers(self, node, _old_state, new_state):
-        if new_state == self.RUNNING:
-            self._logger.info("Started node %s", node)
-        elif new_state == self.DONE:
-            self._logger.info("Finished node %s", node)
+        state_counts = [0] * self.NUMBER_OF_STATES
+        for state in states.values():
+            state_counts[state] += 1
+        self._state_counts = state_counts
+
+    def _log_node_changes(self, node, old_state, new_state):
+        if new_state in (self.RUNNING, self.DONE):
+            running = self._state_counts[self.RUNNING]
+            remaining = (
+                sum(self._state_counts)
+                - self._state_counts[self.DONE]
+                - self._state_counts[self.ERROR]
+            )
+
+            if new_state == self.RUNNING:
+                self._logger.info("[%i/%i] Started node %s", running, remaining, node)
+            elif new_state == self.DONE:
+                self._logger.info("[%i/%i] Finished node %s", running, remaining, node)
 
     def _calculate_intersections(self, for_node):
         def count_nodes(node, counts):

@@ -344,9 +344,7 @@ class Pypeline:
         return None, None
 
     def _summarize_pipeline(self, nodegraph):
-        states = [0] * nodegraph.NUMBER_OF_STATES
-        for node in nodegraph.iterflat():
-            states[nodegraph.get_node_state(node)] += 1
+        states = nodegraph.get_state_counts()
 
         rows = [
             ("Number of nodes:", sum(states)),
