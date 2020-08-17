@@ -55,8 +55,7 @@ Options:
      --trimqualities: yes
 """
 
-_TEMPLATE_BAM_OPTIONS = """
-  # Settings for aligners supported by the pipeline
+_TEMPLATE_BAM_OPTIONS = """  # Settings for aligners supported by the pipeline
   Aligners:
     # Choice of aligner software to use, either "BWA" or "Bowtie2"
     Program: BWA
