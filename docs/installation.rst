@@ -5,79 +5,70 @@
 Installation
 ============
 
-The following instructions will install PALEOMIX for the current user, but does not include specific programs required by the pipelines. For pipeline specific instructions, refer to the requirements sections for the :ref:`BAM <bam_requirements>`, the :ref:`Phylogentic <phylo_requirements>`, and the :ref:`Zonkey <zonkey_requirements>` pipeline. The recommended way of installing PALEOMIX is by use of the `pip`_ package manager for Python. If Pip is not installed, then please consult the documentation for your operating system.
+The following instructions will install PALEOMIX for the current user, but does not include specific programs required by the pipelines. For pipeline specific instructions, refer to the requirements sections for the :ref:`BAM <bam_requirements>`, the :ref:`Phylogentic <phylo_requirements>`, and the :ref:`Zonkey <zonkey_requirements>` pipeline.
 
-In addition to the `pip`_ package manager for Python, the pipelines require `Python`_ 3.7, and `Pysam`_ v0.8.3+, which in turn requires both Python and libz development files (see the :ref:`troubleshooting_install` section). When installing PALEOMIX using pip, Pysam is automatically installed as well. However, note that installing Pysam requires the zlib and Python 2.7 development files. On Debian based distributions, these may be installed as follows:
+The recommended way of installing PALEOMIX is by use of the `pip`_ package manager for Python 3. If `pip`_ is not installed, then please consult the documentation for your operating system. For Debian based operating systems, pip may be installed as follows::
 
-    # apt-get install libz-dev python3-dev
+    $ sudo apt-get install python3-pip
 
+In addition, some libraries used by PALEOMIX may require additional development files, namely those for zlib and for Python 3::
 
-Regular installation
---------------------
+    $ sudo apt-get install libz-dev python3-dev
 
-The following command will install PALEOMIX, and the Python modules required to run it, for the current user only::
+Once all requirements have been installed, PALEOMIX may be installed using `pip`::
 
-    $ pip install --user paleomix
+    $ python3 -m pip install paleomix
 
-To perform a system-wide installation, simply remove the --user option, and run as root::
-
-    $ sudo pip install paleomix
-
-To verify that the installation was carried out correctly, run the command 'paleomix'::
+To verify that the installation was carried out correctly, run the command `paleomix`::
 
     $ paleomix
-    PALEOMIX - pipelines and tools for NGS data analyses.
-    Version: v1.0.1
+    PALEOMIX - pipelines and tools for NGS data analyses
+    Version: 1.2.14
 
-    Usage: paleomix <command> [options]
     [...]
 
-If the command fails, then please refer to the :ref:`troubleshooting` section.
+If you have not previously used pip, then you may need to add the pip bin folder to your path and restart your terminal before running `paleomix`::
+
+    $ echo 'export PATH=~/.local/bin:$PATH' >> ~/.profile
+
+If the command still fails, then please refer to the :ref:`troubleshooting` section.
 
 
 Self-contained installation
 ---------------------------
 
-In some cases, it may be useful to make a self-contained installation of PALEOMIX, *e.g.* on shared servers. This is because Python modules that have been installed system-wide take precendence over user-installed modules (this is a limitation of Python itself), which may cause problems both with PALEOMIX itself, and with its Python dependencies.
+The recommended method for installing PALEOMIX is using a virtual environment. Doing so
+allows multiple version of PALEOMIX to be installed, for reproducibility, and ensures that PALEOMIX and its dependencies are not affected by the addition or removal of other python modules.
 
-This is accomplished using `virtualenv`_ for Python, which may be installed using `pip`_ as follows::
+This installation method requires the venv module. On Debian based systems, this module is not installed by default::
 
-    $ pip install --user virtualenv
+    $ sudo apt-get install python3-venv
 
-or (for a system-wide installation)::
+Once venv is installed, creation of a virtual environment and instalation of PALEOMIX may be carried out as shown here::
 
-    $ sudo pip install virtualenv
-
-
-The follow example installs paleomix in a virtual environmental located in *~/install/virtualenvs/paleomix*, but any location may be used::
-
-    $ virtualenv ~/install/virtualenvs/paleomix
-    $ source ~/install/virtualenvs/paleomix/bin/activate
-    $ (paleomix) pip install paleomix
-    $ (paleomix) deactivate
+    $ python3 -m venv paleomix_venv
+    $ source ./paleomix_venv/bin/activate
+    $ (paleomix_venv) pip install paleomix
+    $ (paleomix_venv) deactivate
 
 
-Following successful completion of these commands, the paleomix tools will be accessible in the ~/install/virtualenvs/paleomix/bin/ folder. However, as this folder also contains a copy of Python itself, it is not recommended to add it to your PATH. Instead, simply link the paleomix commands to a folder in your PATH. This can, for example, be accomplished as follows::
+Following successful completion of these commands, the paleomix tools will be accessible in the ./paleomix_venv/bin/ folder. However, as this folder also contains a copy of Python itself, it is not recommended to add it to your PATH. Instead, simply link the paleomix commands to a folder in your PATH. This can, for example, be accomplished as follows::
 
     $ mkdir ~/bin/
     $ echo 'export PATH=~/bin:$PATH' >> ~/.bashrc
-    $ ln -s ~/install/virtualenvs/paleomix/bin/paleomix ~/bin/
+    $ ln -s ${PWD}/paleomix_venv/bin/paleomix ~/bin/
 
 
 Upgrading an existing installation
 ----------------------------------
 
-Upgrade an existing installation of PALEOMIX, installed using the methods described above, may also be accomplished using pip. To upgrade a regular installation, simply run pip install with the --upgrade option, for a user installation::
+Upgrade an existing installation of PALEOMIX, installed using the methods described above, may also be accomplished using pip. To upgrade a regular installation, simply run pip install with the --upgrade option::
 
-    $ pip install --user --upgrade paleomix
-
-Or for a system-wide installation::
-
-    $ sudo pip install --upgrade paleomix
+    $ pip install --upgrade paleomix
 
 To upgrade an installation a self-contained installation, simply activate the environment before proceeding::
 
-    $ source ~/install/virtualenvs/paleomix/bin/activate
+    $ source paleomix_venv/bin/activate
     $ (paleomix) pip install --upgrade paleomix
     $ (paleomix) deactivate
 
@@ -85,6 +76,7 @@ To upgrade an installation a self-contained installation, simply activate the en
 .. _Pysam: https://github.com/pysam-developers/pysam/
 .. _Python: http://www.python.org/
 .. _virtualenv: https://virtualenv.readthedocs.org/en/latest/
+
 
 Conda installation
 -------------------
@@ -95,7 +87,7 @@ To install conda and also set it up so it can use the [bioconda](https://biocond
 
 Once set-up, you can create a conda environment using the following commands::
 
-    $ conda create -c bioconda -n paleomix python=2.7 pip adapterremoval=2.3.1 samtools=1.9 picard=2.22.9 bowtie2=2.3.5.1 bwa=0.7.17 mapdamage2=2.0.9 gatk=3.8 r-base=3.5.1 r-rcpp=1.0.4.6 r-rcppgsl=0.3.7 r-gam=1.16.1 r-inline=0.3.15
+    $ conda create -c bioconda -n paleomix python=2.7 pip adapterremoval=2.3.1 samtools=1.9 picard=2.22.9 bowtie2=2.3.5.1 bwa=0.7.17 mapdamage2=2.0.9 r-base=3.5.1 r-rcpp=1.0.4.6 r-rcppgsl=0.3.7 r-gam=1.16.1 r-inline=0.3.15
 
 Alternatively, you can use the `environment.yaml` file contained in the PALEOMIX github repository.
 
@@ -113,17 +105,10 @@ _within_ the environment as explained above::
 
     $ (paleomix) pip install --user paleomix
 
-The BAM pipeline also needs older versions of GATK, which are now not maintained by the Broad Institute. We can download the JAR file from the Broad archive, and activate
-it within the conda environment like so::
+Paleomix requires the Picard JAR file in a specific place, we can symlink the versions in your conda environment into the correct place::
 
-    $ (paleomix) wget https://storage.googleapis.com/gatk-software/package-archive/gatk/GenomeAnalysisTK-3.8-1-0-gf15c1c3ef.tar.bz2
-    $ (paleomix) gatk3-register GenomeAnalysisTK-3.8-1-0-gf15c1c3ef.tar.bz2
-
-Paleomix requires the GATK and Picard JAR files in a specific place, we can symlink the versions in your conda environment into the correct place::
-
-    $ (paleomix) mkdir -p /home/<YOUR_USER>/install/jar_root/
-    $ (paleomix) ln -s /<path>/<to>/miniconda2/envs/paleomix/opt/gatk-3.8/GenomeAnalysisTK.jar /home/<user>/install/jar_root/
-    $ (paleomix) ln -s /<path>/<to>/miniconda2/envs/paleomix/share/picard-2.22.9-0/picard.jar /home/<user>/install/jar_root/
+    $ (paleomix) mkdir -p ~/install/jar_root/
+    $ (paleomix) ln -s /<path>/<to>/miniconda2/envs/paleomix/share/picard-2.22.9-0/picard.jar ~/install/jar_root/
 
 > If you're unsure what your paleomix conda environment path is, you can see this by running `conda env list`.
 
