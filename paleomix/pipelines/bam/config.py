@@ -52,7 +52,9 @@ def build_parser(pipeline_variant):
 
 
 def add_makefile_command(subparsers):
-    parser = subparsers.add_parser("makefile", help="Print makefile template",)
+    parser = subparsers.add_parser(
+        "makefile", help="Print makefile template", aliases=("mkfile",)
+    )
 
     parser.add_argument(
         "--version", action="version", version="%(prog)s v" + paleomix.__version__,
