@@ -68,6 +68,10 @@ def main(argv):
     elif "makefile" in config.commands or "mkfile" in config.commands:
         return mkfile.main(config.files)
 
+    paleomix.common.logging.initialize(
+        log_level=config.log_level, log_file=config.log_file, name="phylo_pipeline"
+    )
+
     commands = []
     for key in config.commands:
         func = _COMMANDS.get(key)
@@ -96,10 +100,6 @@ def main(argv):
     except (MakefileError, paleomix.yaml.YAMLError, IOError) as error:
         log.error("Error reading makefiles:\n%s", error)
         return 1
-
-    paleomix.common.logging.initialize(
-        log_level=config.log_level, log_file=config.log_file, name="phylo_pipeline"
-    )
 
     for (command_key, command_func) in commands:
         log.info("Building %s pipeline", command_key)
