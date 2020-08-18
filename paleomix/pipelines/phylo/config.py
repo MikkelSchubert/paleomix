@@ -64,7 +64,7 @@ def build_parser():
         "--version", action="version", version="%(prog)s v" + paleomix.__version__,
     )
 
-    paleomix.common.logging.add_argument_group(parser, default="warning")
+    paleomix.common.logging.add_argument_group(parser, default="info")
 
     group = parser.add_argument_group("Scheduling")
     group.add_argument(
