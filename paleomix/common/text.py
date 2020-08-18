@@ -102,7 +102,7 @@ def parse_lines(lines, parser):
 
     for line in lines:
         stripped = line.lstrip()
-        if stripped and stripped[0] not in ("#", b"#"):
+        if stripped and stripped[0] not in ("#", 35):
             stripped = line.rstrip()
             yield parser(stripped, len(stripped))
 
