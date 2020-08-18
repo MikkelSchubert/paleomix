@@ -22,14 +22,13 @@
 #
 import logging
 import os
-import sys
 
 import paleomix.common.logging
+import paleomix.pipelines.phylo.example as example
 import paleomix.pipelines.phylo.mkfile as mkfile
 import paleomix.pipelines.phylo.parts.genotype as genotype
 import paleomix.pipelines.phylo.parts.msa as msa
 import paleomix.pipelines.phylo.parts.phylo as phylo
-import paleomix.resources
 import paleomix.yaml
 
 from paleomix.pipeline import Pypeline
@@ -46,24 +45,16 @@ _COMMANDS = {
 
 def main(argv):
     log = logging.getLogger(__name__)
+
+    commands = [it.lower().strip() for it in argv[0].split("+")] if argv else []
+    if "example" in commands:
+        return example.main(argv[1:])
+
     parser = build_parser()
     config = parser.parse_args(argv)
-
-    if "example" in config.commands:
-        if paleomix.resources.copy_example("phylo_pipeline", argv[1:]):
-            return 1
-
-        # Update interpreter to match the one currently in use;
-        # this is required since we may be running from a virtual env
-        filename = os.path.join(argv[1], "phylo_pipeline", "synthesize_reads.py")
-
-        with open(filename) as handle:
-            header, lines = handle.read().split("\n", 1)
-
-        with open(filename, "w") as handle:
-            handle.write("#!%s\n" % (os.path.abspath(sys.executable)))
-            handle.write(lines)
-
+    config.commands = commands
+    if "help" in config.commands:
+        parser.print_help()
         return 0
     elif "makefile" in config.commands or "mkfile" in config.commands:
         return mkfile.main(config.files)

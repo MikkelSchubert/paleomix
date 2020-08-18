@@ -28,17 +28,6 @@ import paleomix.common.logging
 
 from paleomix.common.argparse import ArgumentParser
 
-
-_DESCRIPTION = (
-    "Commands:\n"
-    "  -- %prog help            -- Display this message.\n"
-    "  -- %prog example [...]   -- Copy example project to folder.\n"
-    "  -- %prog makefile        -- Print makefile template.\n"
-    "  -- %prog genotype [...]  -- Carry out genotyping according to makefile.\n"
-    "  -- %prog msa [...]       -- Carry out multiple sequence alignment.\n"
-    "  -- %prog phylogeny [...] -- Carry out phylogenetic inference.\n"
-)
-
 _DEFAULT_CONFIG_FILES = [
     "/etc/paleomix/phylo_pipeline.ini",
     "~/.paleomix/phylo_pipeline.ini",
@@ -47,18 +36,17 @@ _DEFAULT_CONFIG_FILES = [
 
 def build_parser():
     parser = ArgumentParser(
-        prog="paleomix phylo_pipeline",
-        description=_DESCRIPTION,
-        default_config_files=_DEFAULT_CONFIG_FILES,
+        prog="paleomix phylo_pipeline", default_config_files=_DEFAULT_CONFIG_FILES,
     )
     parser.add_argument(
         "commands",
-        type=lambda it: [_f.strip() for _f in it.split("+") if _f.strip()],
-        help="One or more commands separated by '+'",
+        help="One or more commands separated by '+'. Available commands are 'help', to "
+        "display this message; 'example', to create an example project; 'makefile', to "
+        "print a makefile template; 'genotype' to perform genotyping on a makefile; "
+        "'msa' to perform multiple sequence alignment on a makefile; and 'phylogeny', "
+        "to carry out phylogenetic inference on a makefile.",
     )
-    parser.add_argument(
-        "files", nargs="*", help="One or more commands separated by '+'"
-    )
+    parser.add_argument("files", nargs="*", help="One or more YAML files")
 
     parser.add_argument(
         "--version", action="version", version="%(prog)s v" + paleomix.__version__,
@@ -71,7 +59,7 @@ def build_parser():
         "--examl-max-threads",
         default=1,
         type=int,
-        help="Maximum number of threads to use for each instance of ExaML [%(default)s]",
+        help="Maximum number of threads for each instance of ExaML [%(default)s]",
     )
     group.add_argument(
         "--max-threads",
