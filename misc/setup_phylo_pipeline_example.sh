@@ -33,12 +33,12 @@ do
     mkdir -p alignment/reads/${NAME/*\//}/
 
     ./synthesize_reads.py ${PREFIX} alignment/reads/${NAME}/ \
-	--specimen-seed=${SP_SEED} \
-	--lanes-reads-mu=50000 \
-	--lanes-reads-sigma=500 \
-	--lanes-reads-per-file=10000 \
-	--reads-len=50 \
-	--lanes=1
+		--specimen-seed=${SP_SEED} \
+		--lanes-reads-mu=50000 \
+		--lanes-reads-sigma=500 \
+		--lanes-reads-per-file=10000 \
+		--reads-len=50 \
+		--lanes=1
 done
 
 # These links would not survive the package installation, so setup here
