@@ -124,7 +124,7 @@ _VALID_FEATURES_DICT = {
     "Coverage": IsBoolean(default=True),
     "Depths": IsBoolean(default=True),
     "DuplicateHist": RemovedOption(),
-    "mapDamage": StringIn(("rescale", "model", "plot", "no")),
+    "mapDamage": StringIn(("rescale", "model", "plot", True, False)),
     "PCRDuplicates": StringIn((True, False, "mark", "filter"), default="filter"),
     "RawBAM": RemovedOption(),
     "RealignedBAM": RemovedOption(),
@@ -292,7 +292,7 @@ def _migrate_options(options):
         if rescale_qualities:
             features["mapDamage"] = "rescale"
         elif features.get("mapDamage") not in ("model", "plot"):
-            features["mapDamage"] = "no"
+            features["mapDamage"] = False
 
 
 def _mangle_options(makefile):
