@@ -94,7 +94,7 @@ Genotyping:
       -A: # count anomalous read pairs
 
     BCFTools:
-      -g: # Call genotypes at variant sites
+      -c: # Call genotypes at variant sites using consensus caller (see also -m)
 
     VCF_Filter:
       # Maximum coverage acceptable for genotyping calls; if set to zero, the

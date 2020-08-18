@@ -31,13 +31,13 @@ Project:
        # indels are only included in the final sequence if the length is
        # divisible by 3.
        ProteinCoding: yes
-       # Do not include indels in final sequence; note that indels are still
-       # called, and used to filter SNPs. Requires that the option
-       # 'MultipleSequenceAlignment' is enabled
+       # Include indels in final sequence; note that indels are always called,
+       # and used to filter SNPs, even if not included in the resulting FASTA
+       # sequences. Requires that 'MultipleSequenceAlignment' is enabled
        IncludeIndels: yes
        # List of contigs for which heterozygous SNPs should be filtered
        # (site set to 'N') based on sex; All sexes used in the 'Samples'
-       # section must be listed:
+       # section must be listed, except for 'NA' which defaults to no contigs.
        HomozygousContigs:
          NA:
           - NC_012920_1
@@ -70,7 +70,7 @@ Genotyping:
       -A: # count anomalous read pairs
 
     BCFTools:
-      -g: # Call genotypes at variant sites
+      -c: # Call genotypes at variant sites using consensus caller (see also -m)
 
     VCF_Filter:
       # Maximum coverage acceptable for genotyping calls; if set to zero, the
