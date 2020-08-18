@@ -289,8 +289,9 @@ def _filter_by_properties(options, vcfs):
         elif options.max_read_depth < read_depth:
             _mark_as_filtered(vcf, "D:%i" % options.max_read_depth)
 
-        if "MQ" in properties:
-            if float(properties["MQ"]) < options.min_mapping_quality:
+        mapping_qual = properties.get("MQ")
+        if mapping_qual is not None and options.min_mapping_quality:
+            if mapping_qual == "." or float(mapping_qual) < options.min_mapping_quality:
                 _mark_as_filtered(vcf, "Q:%i" % options.min_mapping_quality)
 
         if "PV4" in properties:
