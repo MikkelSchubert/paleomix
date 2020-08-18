@@ -24,8 +24,8 @@ set -o nounset # Fail on unset variables
 set -o errexit # Fail on uncaught non-zero returncodes
 set -o pipefail # Fail is a command in a chain of pipes fails
 
-rm -rvf alignment/s
-mkdir -p alignment/s
+rm -rvf alignment/reads
+mkdir -p alignment/reads
 for PREFIX in `ls alignment/prefixes/*.fasta | grep -v rCRS`;
 do
     SP_SEED=${RANDOM}
