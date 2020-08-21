@@ -27,10 +27,33 @@ import uuid
 import errno
 import shutil
 
-from pathlib import Path
+from pathlib import Path, PosixPath
 from typing import Any, Callable, IO, Iterable, List, Optional, Tuple, Union
 
 from .utilities import safe_coerce_to_tuple
+
+
+try:
+    import pathlib2
+
+    PathClasses = (Path, PosixPath, pathlib2.PosixPath)
+except ImportError:
+    PathClasses = (Path, PosixPath)
+
+
+try:
+    fspath = os.fspath
+except AttributeError:
+    # Backwards compatibility with Python3.5
+    def fspath(value):
+        if isinstance(value, (str, bytes)):
+            return value
+        elif isinstance(value, PathClasses):
+            return str(value)
+
+        raise TypeError(
+            "expected str/bytes/Path/PosixPath, not {}".format(type(value).__name__)
+        )
 
 
 def add_postfix(filename: Union[str, Path], postfix: str) -> str:
@@ -64,7 +87,7 @@ def create_temp_dir(root: Union[str, Path]) -> str:
     and only the current user has access"""
 
     def _generate_path() -> str:
-        return os.path.join(root, str(uuid.uuid4()))
+        return os.path.join(fspath(root), str(uuid.uuid4()))
 
     path = _generate_path()
     while not make_dirs(path, mode=0o750):
@@ -76,21 +99,23 @@ def missing_files(filenames: Iterable[Union[str, Path]]) -> List[Union[str, Path
     """Given a list of filenames, returns a list of those that
     does not exist. Note that this function does not differentiate
     between files and folders."""
-    return [
-        filename
-        for filename in safe_coerce_to_tuple(filenames)
-        if not os.path.exists(filename)
-    ]
+    missing = []
+    for filename in safe_coerce_to_tuple(filenames):
+        filename = fspath(filename)
+        if not os.path.exists(filename):
+            missing.append(filename)
+    return missing
 
 
 def missing_executables(
     filenames: Iterable[Union[str, Path]]
 ) -> List[Union[str, Path]]:
-    return [
-        filename
-        for filename in safe_coerce_to_tuple(filenames)
-        if not shutil.which(filename)
-    ]
+    missing = []
+    for filename in safe_coerce_to_tuple(filenames):
+        filename = fspath(filename)
+        if not shutil.which(filename):
+            missing.append(filename)
+    return missing
 
 
 def make_dirs(directory: Union[str, Path], mode: int = 0o777) -> bool:
@@ -106,7 +131,7 @@ def make_dirs(directory: Union[str, Path], mode: int = 0o777) -> bool:
         raise ValueError("Empty directory passed to make_dirs()")
 
     try:
-        os.makedirs(directory, mode=mode)
+        os.makedirs(fspath(directory), mode=mode)
         return True
     except OSError as error:
         # make_dirs be called by multiple subprocesses at the same time,
@@ -131,6 +156,7 @@ def copy_file(source: Union[str, Path], destination: Union[str, Path]) -> None:
 def open_ro(filename: Union[str, Path], mode: str = "rt") -> IO[str]:
     """Opens a file for reading, transparently handling
     GZip and BZip2 compressed files. Returns a file handle."""
+    filename = fspath(filename)
     if mode not in ("rt", "rb", "r"):
         raise ValueError(mode)
     elif mode == "r":
@@ -166,7 +192,7 @@ def try_rmtree(filename: Union[str, Path]) -> bool:
 
 def describe_files(files: Iterable[str]) -> str:
     """Return a text description of a set of files."""
-    files = _validate_filenames(files)
+    files = validate_filenames(files)
 
     if not files:
         return "No files"
@@ -190,8 +216,8 @@ def describe_paired_files(files_1: Iterable[str], files_2: Iterable[str]) -> str
     is empty, this function is the equivalent of calling
     'describe_files' with 'files_1' as the argument. In all other
     cases the length of the two sets must be the same."""
-    files_1 = _validate_filenames(files_1)
-    files_2 = _validate_filenames(files_2)
+    files_1 = validate_filenames(files_1)
+    files_2 = validate_filenames(files_2)
 
     if files_1 and not files_2:
         return describe_files(files_1)
@@ -246,18 +272,10 @@ def get_files_glob(
     return "".join(glob_fname)
 
 
-def _validate_filenames(filenames: Iterable[str]) -> Tuple[str, ...]:
+def validate_filenames(filenames: Iterable[str]) -> Tuple[str, ...]:
     """Sanity checks for filenames handled by
     'describe_files' and 'describe_paired_files."""
-    filenames = safe_coerce_to_tuple(filenames)
-    for filename in filenames:
-        if not isinstance(filename, str):
-            raise ValueError(
-                "Only string types are allowed for filenames, not %s"
-                % (filename.__class__.__name__,)
-            )
-
-    return filenames
+    return tuple(fspath(filename) for filename in safe_coerce_to_tuple(filenames))
 
 
 def _sh_wrapper(
@@ -271,6 +289,9 @@ def _sh_wrapper(
 
     If this is the case, the function will first create the destination
     directory, and then retry the function."""
+    source = fspath(source)
+    destination = fspath(destination)
+
     try:
         func(source, destination)
     except IOError as error:
@@ -291,7 +312,7 @@ def _try_rm_wrapper(func: Callable[[Any], Any], fpath: Union[str, Path]) -> bool
     path; returns true if that path was succesfully remove, and false if it did
     not exist."""
     try:
-        func(fpath)
+        func(fspath(fpath))
         return True
     except OSError as error:
         if error.errno != errno.ENOENT:

@@ -132,6 +132,7 @@ class Node:
 
     def _remove_temp_dir(self, temp):
         """Called by 'run' in order to remove an (now) empty temporary folder."""
+        temp = fileutils.fspath(temp)
         log = logging.getLogger(__name__)
         for filename in self._collect_files(temp):
             log.warning(
@@ -243,13 +244,7 @@ class Node:
 
     @classmethod
     def _validate_files(cls, files):
-        files = safe_coerce_to_frozenset(files)
-        for filename in files:
-            if not isinstance(filename, str):
-                raise TypeError(
-                    "Files must be strings, not %r" % (filename.__class__.__name__,)
-                )
-        return files
+        return frozenset(fileutils.validate_filenames(files))
 
     @classmethod
     def _validate_nthreads(cls, threads):
@@ -265,6 +260,8 @@ class Node:
 
     @staticmethod
     def _collect_files(root):
+        root = fileutils.fspath(root)
+
         def _walk_dir(path):
             for entry in os.scandir(path):
                 if entry.is_file():

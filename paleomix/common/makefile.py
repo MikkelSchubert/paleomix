@@ -176,6 +176,8 @@ import copy
 import logging
 
 import paleomix.yaml
+
+from paleomix.common.fileutils import fspath
 from paleomix.common.utilities import group_by_pred
 
 
@@ -186,7 +188,7 @@ class MakefileError(RuntimeError):
 def read_makefile(filename, specification):
     """Reads and parses a makefile using the given specification."""
     try:
-        with open(filename) as handle:
+        with open(fspath(filename)) as handle:
             data = paleomix.yaml.safe_load(handle)
     except paleomix.yaml.YAMLError as error:
         raise MakefileError(error)

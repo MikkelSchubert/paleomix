@@ -130,7 +130,7 @@ def test_atomicsets__commit__remove_files_on_failure(tmp_path, cls):
     assert cmdset.join() == [0, 0]
 
     with pytest.raises(OSError):
-        cmdset.commit(tmp_path / "tmp")
+        cmdset.commit(str(tmp_path / "tmp"))
 
     tmp_files = [it.name for it in (tmp_path / "tmp").iterdir()]
     assert "file1" not in tmp_files
@@ -212,7 +212,7 @@ def test_parallel_commands__ready_single(value):
     cmds = ParallelCmds([cmd])
     assert cmds.ready() == value
 
-    cmd.ready.assert_called()
+    assert cmd.ready.mock_calls
 
 
 _READY_TWO_VALUES = (
@@ -235,7 +235,7 @@ def test_parallel_commands__ready_two(first, second, result):
     cmds = ParallelCmds([cmd_1, cmd_2])
     assert cmds.ready() == result
 
-    cmd_1.ready.assert_called()
+    assert cmd_1.ready.mock_calls
     assert bool(first) == bool(cmd_2.ready.call_count)
 
 
@@ -256,7 +256,7 @@ def test_parallel_commands__join_before_run():
 
 def test_parallel_commands__join_after_run(tmp_path):
     cmds = ParallelCmds([AtomicCmd("true") for _ in range(3)])
-    cmds.run(tmp_path)
+    cmds.run(str(tmp_path))
     assert cmds.join() == [0, 0, 0]
 
 
@@ -274,21 +274,21 @@ def _setup_mocks_for_failure(*do_mocks):
 def test_parallel_commands__join_failure_1(tmp_path):
     mocks = _setup_mocks_for_failure(False, True, True)
     cmds = ParallelCmds(mocks)
-    cmds.run(tmp_path)
+    cmds.run(str(tmp_path))
     assert cmds.join() == [1, "SIGTERM", "SIGTERM"]
 
 
 def test_parallel_commands__join_failure_2(tmp_path):
     mocks = _setup_mocks_for_failure(True, False, True)
     cmds = ParallelCmds(mocks)
-    cmds.run(tmp_path)
+    cmds.run(str(tmp_path))
     assert cmds.join() == ["SIGTERM", 1, "SIGTERM"]
 
 
 def test_parallel_commands__join_failure_3(tmp_path):
     mocks = _setup_mocks_for_failure(True, True, False)
     cmds = ParallelCmds(mocks)
-    cmds.run(tmp_path)
+    cmds.run(str(tmp_path))
     assert cmds.join() == ["SIGTERM", "SIGTERM", 1]
 
 
@@ -359,7 +359,7 @@ def test_sequential_commands__abort_on_error_1(tmp_path):
     cmd_2 = AtomicCmd(("sleep", 10))
     cmd_3 = AtomicCmd(("sleep", 10))
     cmds = SequentialCmds([cmd_1, cmd_2, cmd_3])
-    cmds.run(tmp_path)
+    cmds.run(str(tmp_path))
     assert cmds.join() == [1, None, None]
 
 
@@ -368,7 +368,7 @@ def test_sequential_commands__abort_on_error_2(tmp_path):
     cmd_2 = AtomicCmd("false")
     cmd_3 = AtomicCmd(("sleep", 10))
     cmds = SequentialCmds([cmd_1, cmd_2, cmd_3])
-    cmds.run(tmp_path)
+    cmds.run(str(tmp_path))
     assert cmds.join() == [0, 1, None]
 
 
@@ -377,7 +377,7 @@ def test_sequential_commands__abort_on_error_3(tmp_path):
     cmd_2 = AtomicCmd("true")
     cmd_3 = AtomicCmd("false")
     cmds = SequentialCmds([cmd_1, cmd_2, cmd_3])
-    cmds.run(tmp_path)
+    cmds.run(str(tmp_path))
     assert cmds.join() == [0, 0, 1]
 
 

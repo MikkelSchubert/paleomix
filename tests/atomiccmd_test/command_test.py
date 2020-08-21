@@ -80,7 +80,7 @@ def test_atomiccmd__set_cwd(tmp_path, set_cwd):
     assert cmd.join() == [0]
     assert cwd == os.getcwd()
 
-    expected = tmp_path if set_cwd else cwd
+    expected = str(tmp_path) if set_cwd else cwd
     result = (tmp_path / "result.txt").read_text()
     assert os.path.samefile(expected, result), "%r != %r" % (expected, result)
 
@@ -98,7 +98,7 @@ def test_atomiccmd__set_cwd__temp_in_out(tmp_path, set_cwd, key):
     cmd.run(tmp_path)
     assert cmd.join() == [0]
 
-    expected = os.path.join("" if set_cwd else tmp_path, "test_file")
+    expected = os.path.join("" if set_cwd else str(tmp_path), "test_file")
     result = (tmp_path / "result.txt").read_text()
     assert os.path.abspath(expected) == os.path.abspath(result)
 
@@ -218,7 +218,7 @@ def test_atomiccmd__pipes_out(tmp_path, stdout, stderr, kwargs):
             assert result == text
             expected_files.append(fname)
 
-    assert set(os.listdir(tmp_path)) == set(expected_files)
+    assert set(os.listdir(str(tmp_path))) == set(expected_files)
 
 
 _MALFORMED_PATH_KEYS = (
@@ -354,7 +354,7 @@ def test_atomiccmd__paths_non_str(tmp_path):
     cmd = AtomicCmd(("touch", 1234), OUT_FOO="1234", set_cwd=True)
     cmd.run(tmp_path)
     assert cmd.join() == [0]
-    assert os.path.exists(os.path.join(tmp_path, "1234"))
+    assert (tmp_path / "1234").exists()
 
 
 def test_atomiccmd__paths_missing():
@@ -371,7 +371,7 @@ def test_atomiccmd__paths__key(tmp_path):
     cmd = AtomicCmd(("echo", "-n", "%(TEMP_DIR)s"), OUT_STDOUT=AtomicCmd.PIPE)
     cmd.run(tmp_path)
     path = cmd._proc.stdout.read()
-    assert os.path.samefile(tmp_path, path), (tmp_path, path)
+    assert tmp_path.samefile(path), (tmp_path, path)
     assert cmd.join() == [0]
 
 
@@ -471,7 +471,7 @@ def test_atomiccmd__run__exception_on_missing_command__no_wrap(tmp_path):
 def test_atomiccmd__run__invalid_temp(tmp_path):
     cmd = AtomicCmd(("sleep", "10"))
     with pytest.raises(CmdError):
-        cmd.run(os.path.join(tmp_path, "foo"))
+        cmd.run(tmp_path / "foo")
     cmd.terminate()
     cmd.join()
 
@@ -586,13 +586,13 @@ def test_atomiccmd__terminate_sigkill(tmp_path):
 def _setup_for_commit(tmp_path, create_cmd=True):
     destination = tmp_path / "out"
     tmp_path = tmp_path / "tmp"
-    os.makedirs(destination)
-    os.makedirs(tmp_path)
+    destination.mkdir(parents=True)
+    tmp_path.mkdir(parents=True)
 
     if not create_cmd:
         return destination, tmp_path
 
-    cmd = AtomicCmd(("touch", "%(OUT_FOO)s"), OUT_FOO=os.path.join(destination, "1234"))
+    cmd = AtomicCmd(("touch", "%(OUT_FOO)s"), OUT_FOO=str(destination / "1234"))
     cmd.run(tmp_path)
     assert cmd.join() == [0]
 
@@ -602,32 +602,30 @@ def _setup_for_commit(tmp_path, create_cmd=True):
 def test_atomiccmd__commit_simple(tmp_path):
     destination, tmp_path, cmd = _setup_for_commit(tmp_path)
     cmd.commit(tmp_path)
-    assert not os.path.exists(os.path.join(tmp_path, "1234"))
-    assert os.path.exists(os.path.join(destination, "1234"))
+    assert not (tmp_path / "1234").exists()
+    assert (destination / "1234").exists()
 
 
 def test_atomiccmd__commit_temp_out(tmp_path):
     dest, temp = _setup_for_commit(tmp_path, create_cmd=False)
     cmd = AtomicCmd(
-        ("echo", "foo"),
-        OUT_STDOUT=os.path.join(dest, "foo.txt"),
-        TEMP_OUT_FOO="bar.txt",
+        ("echo", "foo"), OUT_STDOUT=str(dest / "foo.txt"), TEMP_OUT_FOO="bar.txt",
     )
     cmd.run(temp)
     assert cmd.join() == [0]
     (temp / "bar.txt").write_text("1 2 3")
     cmd.commit(temp)
-    assert os.listdir(temp) == []
-    assert os.listdir(dest) == ["foo.txt"]
+    assert os.listdir(str(temp)) == []
+    assert os.listdir(str(dest)) == ["foo.txt"]
 
 
 def test_atomiccmd__commit_temp_only(tmp_path):
     cmd = AtomicCmd(("echo", "foo"), TEMP_OUT_STDOUT="bar.txt")
     cmd.run(tmp_path)
     assert cmd.join() == [0]
-    assert os.path.exists(os.path.join(tmp_path, "bar.txt"))
+    assert (tmp_path / "bar.txt").exists()
     cmd.commit(tmp_path)
-    assert os.listdir(tmp_path) == []
+    assert os.listdir(str(tmp_path)) == []
 
 
 def test_atomiccmd__commit_before_run():
@@ -658,9 +656,9 @@ def test_atomiccmd__commit_before_join(tmp_path):
 # The temp path might differ, as long as the actual path is the same
 def test_atomiccmd__commit_temp_folder(tmp_path):
     destination, tmp_path, cmd = _setup_for_commit(tmp_path)
-    cmd.commit(os.path.realpath(tmp_path))
-    assert not os.path.exists(os.path.join(tmp_path, "1234"))
-    assert os.path.exists(os.path.join(destination, "1234"))
+    cmd.commit(tmp_path.resolve())
+    assert not (tmp_path / "1234").exists()
+    assert (destination / "1234").exists()
 
 
 def test_atomiccmd__commit_wrong_temp_folder(tmp_path):
@@ -673,15 +671,15 @@ def test_atomiccmd__commit_missing_files(tmp_path):
     destination, tmp_path = _setup_for_commit(tmp_path, False)
     cmd = AtomicCmd(
         ("touch", "%(OUT_FOO)s"),
-        OUT_FOO=os.path.join(destination, "1234"),
-        OUT_BAR=os.path.join(destination, "4567"),
+        OUT_FOO=str(destination / "1234"),
+        OUT_BAR=str(destination / "4567"),
     )
     cmd.run(tmp_path)
     cmd.join()
-    before = set(os.listdir(tmp_path))
+    before = frozenset(tmp_path.iterdir())
     with pytest.raises(CmdError):
         cmd.commit(tmp_path)
-    assert before == set(os.listdir(tmp_path))
+    assert before == frozenset(tmp_path.iterdir())
 
 
 def test_atomiccmd__commit_failure_cleanup(tmp_path):
@@ -698,9 +696,9 @@ def test_atomiccmd__commit_failure_cleanup(tmp_path):
     destination, tmp_path = _setup_for_commit(tmp_path, False)
     command = AtomicCmd(
         ("touch", "%(OUT_FILE_1)s", "%(OUT_FILE_2)s", "%(OUT_FILE_3)s"),
-        OUT_FILE_1=os.path.join(destination, "file_1"),
-        OUT_FILE_2=os.path.join(destination, "file_2"),
-        OUT_FILE_3=os.path.join(destination, "file_3"),
+        OUT_FILE_1=str(destination / "file_1"),
+        OUT_FILE_2=str(destination / "file_2"),
+        OUT_FILE_3=str(destination / "file_3"),
     )
 
     try:
@@ -710,7 +708,7 @@ def test_atomiccmd__commit_failure_cleanup(tmp_path):
         with pytest.raises(OSError):
             command.commit(tmp_path)
 
-        assert tuple(os.listdir(destination)) == ()
+        assert tuple(destination.iterdir()) == ()
     finally:
         fileutils.move_file = move_file
 
@@ -719,7 +717,7 @@ def test_atomiccmd__commit_with_pipes(tmp_path):
     destination, tmp_path = _setup_for_commit(tmp_path, False)
     command_1 = AtomicCmd(("echo", "Hello, World!"), OUT_STDOUT=AtomicCmd.PIPE)
     command_2 = AtomicCmd(
-        ("gzip",), IN_STDIN=command_1, OUT_STDOUT=os.path.join(destination, "foo.gz")
+        ("gzip",), IN_STDIN=command_1, OUT_STDOUT=str(destination / "foo.gz")
     )
 
     command_1.run(tmp_path)
@@ -731,8 +729,8 @@ def test_atomiccmd__commit_with_pipes(tmp_path):
     command_1.commit(tmp_path)
     command_2.commit(tmp_path)
 
-    assert set(os.listdir(destination)) == set(("foo.gz",))
-    assert set(os.listdir(tmp_path)) == set()
+    assert list(destination.iterdir()) == [destination / "foo.gz"]
+    assert list(tmp_path.iterdir()) == []
 
 
 ###############################################################################

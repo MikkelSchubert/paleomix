@@ -332,11 +332,11 @@ def test_run__error_log__node_error(tmp_path, exception):
     cfg_mock = Mock(temp_root=tmp_path)
     node_mock = Node()
     node_mock._create_temp_dir = mock._create_temp_dir
-    node_mock._create_temp_dir.return_value = temp
+    node_mock._create_temp_dir.return_value = str(temp)
     node_mock._run = mock._run
     node_mock._run.side_effect = exception("ARGH!")
 
-    os.mkdir(temp)
+    temp.mkdir()
     with pytest.raises(NodeError):
         node_mock.run(cfg_mock)
     log_file = tmp_path / "xTMPx" / "pipe.errors"
@@ -348,7 +348,7 @@ def test_run__error_log__node_error(tmp_path, exception):
 
     assert mock.mock_calls == [
         call._create_temp_dir(cfg_mock),
-        call._run(cfg_mock, temp),
+        call._run(cfg_mock, str(temp)),
     ]
 
 
@@ -590,8 +590,8 @@ def test_commandnode_run__exception_on_error():
 def _setup_temp_folders(tmp_path):
     destination = tmp_path / "dst"
     tmp_path = tmp_path / "tmp"
-    os.makedirs(tmp_path)
-    os.makedirs(destination)
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    destination.mkdir(parents=True, exist_ok=True)
     return destination, tmp_path
 
 
@@ -610,16 +610,16 @@ def test_commandnode_teardown(tmp_path):
     cmd = AtomicCmd(
         ("echo", "-n", "1 2 3"),
         IN_DUMMY=_EMPTY_FILE,
-        OUT_STDOUT=os.path.join(destination, "foo.txt"),
+        OUT_STDOUT=str(destination / "foo.txt"),
     )
     cmd.run(tmp_path)
     assert cmd.join() == [0]
     node = CommandNode(cmd)
-    assert os.path.exists(os.path.join(tmp_path, "foo.txt"))
-    assert not os.path.exists(os.path.join(destination, "foo.txt"))
+    assert (tmp_path / "foo.txt").exists()
+    assert not (destination / "foo.txt").exists()
     node._teardown(None, tmp_path)
-    assert not os.path.exists(os.path.join(tmp_path, "foo.txt"))
-    assert os.path.exists(os.path.join(destination, "foo.txt"))
+    assert not (tmp_path / "foo.txt").exists()
+    assert (destination / "foo.txt").exists()
 
 
 # Not all required files have been generated (atomic)
@@ -629,19 +629,19 @@ def test_commandnode_teardown__missing_files_in_temp(tmp_path):
     cmd = AtomicCmd(
         ("echo", "-n", "1 2 3"),
         IN_DUMMY=_EMPTY_FILE,
-        OUT_BAR=os.path.join(destination, "bar.txt"),
-        OUT_STDOUT=os.path.join(destination, "foo.txt"),
+        OUT_BAR=str(destination / "bar.txt"),
+        OUT_STDOUT=str(destination / "foo.txt"),
     )
     cmd.run(tmp_path)
     assert cmd.join() == [0]
     node = CommandNode(cmd)
-    temp_files_before = set(os.listdir(tmp_path))
-    dest_files_before = set(os.listdir(destination))
+    temp_files_before = set(tmp_path.iterdir())
+    dest_files_before = set(destination.iterdir())
 
     with pytest.raises(CmdNodeError):
         node._teardown(None, tmp_path)
-    assert temp_files_before == set(os.listdir(tmp_path))
-    assert dest_files_before == set(os.listdir(destination))
+    assert temp_files_before == set(tmp_path.iterdir())
+    assert dest_files_before == set(destination.iterdir())
 
 
 # Not all specified TEMP_ files exist at _teardown (allowed)
@@ -652,14 +652,14 @@ def test_commandnode_teardown__missing_optional_files(tmp_path):
         ("echo", "-n", "1 2 3"),
         IN_DUMMY=_EMPTY_FILE,
         TEMP_OUT_BAR="bar.txt",
-        OUT_STDOUT=os.path.join(destination, "foo.txt"),
+        OUT_STDOUT=str(destination / "foo.txt"),
     )
     cmd.run(tmp_path)
     assert cmd.join() == [0]
     node = CommandNode(cmd)
     node._teardown(None, tmp_path)
-    assert os.listdir(tmp_path) == []
-    assert os.listdir(destination) == ["foo.txt"]
+    assert os.listdir(str(tmp_path)) == []
+    assert os.listdir(str(destination)) == ["foo.txt"]
 
 
 # Not all required files were in place after commit
@@ -669,13 +669,13 @@ def test_commandnode_teardown__missing_files_in_dest(tmp_path):
     class _CmdMock(AtomicCmd):
         def commit(self, temp):
             AtomicCmd.commit(self, temp)
-            os.remove(os.path.join(destination, "foo.txt"))
+            (destination / "foo.txt").unlink()
 
     cmd = _CmdMock(
         ("touch", "%(OUT_FOO)s", "%(OUT_BAR)s"),
         IN_DUMMY=_EMPTY_FILE,
-        OUT_FOO=os.path.join(destination, "foo.txt"),
-        OUT_BAR=os.path.join(destination, "bar.txt"),
+        OUT_FOO=str(destination / "foo.txt"),
+        OUT_BAR=str(destination / "bar.txt"),
     )
     cmd.run(tmp_path)
     assert cmd.join() == [0]

@@ -165,6 +165,8 @@ class AtomicCmd:
         """
         if self._running:
             raise CmdError("Calling 'run' on already running command.")
+
+        temp = fileutils.fspath(temp)
         self._temp = temp
         self._running = True
 
@@ -244,6 +246,7 @@ class AtomicCmd:
                 pass  # Already dead / finished process
 
     def commit(self, temp):
+        temp = fileutils.fspath(temp)
         if not self.ready():
             raise CmdError("Attempting to commit before command has completed")
         elif self._running:

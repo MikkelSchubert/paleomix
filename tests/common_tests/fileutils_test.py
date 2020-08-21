@@ -50,6 +50,7 @@ from paleomix.common.fileutils import (
     try_rmtree,
     describe_files,
     describe_paired_files,
+    fspath,
 )
 
 
@@ -239,7 +240,7 @@ def test_missing_files__file_exists(tmp_path) -> None:
 def test_missing_files__file_doesnt_exist(tmp_path) -> None:
     file_1 = tmp_path / "file_1"
 
-    assert missing_files([file_1]) == [file_1]
+    assert missing_files([file_1]) == [str(file_1)]
 
 
 def test_missing_files__mixed_files(tmp_path) -> None:
@@ -247,7 +248,7 @@ def test_missing_files__mixed_files(tmp_path) -> None:
     file_2 = tmp_path / "file_2"
     file_1.touch()
 
-    assert missing_files([file_1, file_2]) == [file_2]
+    assert missing_files([file_1, file_2]) == [str(file_2)]
 
 
 ###############################################################################
@@ -269,7 +270,7 @@ def test_missing_executables__mixed() -> None:
 
 def test_missing_executables__with_path__missing(tmp_path: Path) -> None:
     executable = tmp_path / "ls"
-    assert missing_executables([executable]) == [executable]
+    assert missing_executables([executable]) == [str(executable)]
 
 
 def test_missing_executables__with_path__exists(tmp_path: Path) -> None:
@@ -286,27 +287,27 @@ def test_missing_executables__with_path__exists(tmp_path: Path) -> None:
 
 
 def test_make_dirs__create_dir(tmp_path: Path) -> None:
-    assert not os.listdir(tmp_path)
-    assert make_dirs(os.path.join(tmp_path, "test123"))
-    assert os.listdir(tmp_path) == ["test123"]
+    assert not any(tmp_path.iterdir())
+    assert make_dirs(tmp_path / "test123")
+    assert os.listdir(str(tmp_path)) == ["test123"]
 
 
 def test_make_dirs__return_values(tmp_path: Path) -> None:
-    assert make_dirs(os.path.join(tmp_path, "test234"))
-    assert not make_dirs(os.path.join(tmp_path, "test234"))
+    assert make_dirs(tmp_path / "test234")
+    assert not make_dirs(tmp_path / "test234")
 
 
 def test_make_dirs__subdirs_return_values(tmp_path: Path) -> None:
-    assert make_dirs(os.path.join(tmp_path, "test"))
-    assert make_dirs(os.path.join(tmp_path, "test", "234"))
-    assert not make_dirs(os.path.join(tmp_path, "test", "234"))
+    assert make_dirs(tmp_path / "test")
+    assert make_dirs(tmp_path / "test" / "234")
+    assert not make_dirs(tmp_path / "test" / "234")
 
 
 def test_make_dirs__sub_directories(tmp_path: Path) -> None:
-    assert not os.listdir(tmp_path)
-    assert make_dirs(os.path.join(tmp_path, "test", "123"))
-    assert os.listdir(tmp_path) == ["test"]
-    assert os.listdir(os.path.join(tmp_path, "test")) == ["123"]
+    assert not any(tmp_path.iterdir())
+    assert make_dirs(tmp_path / "test" / "123")
+    assert os.listdir(str(tmp_path)) == ["test"]
+    assert os.listdir(str(tmp_path / "test")) == ["123"]
 
 
 def test_make_dirs__permissions(tmp_path: Path) -> None:
@@ -327,18 +328,18 @@ def test_make_dirs__creation_preemted(tmp_path: Path) -> None:
     with patch("os.makedirs", _wrap_os_makedirs):
         work_folder = tmp_path / "test"
         assert not make_dirs(work_folder)
-        assert os.path.exists(work_folder)
-        assert os.listdir(tmp_path) == ["test"]
+        assert work_folder.exists()
+        assert os.listdir(str(tmp_path)) == ["test"]
 
 
 def test_make_dirs__permission_denied(tmp_path: Path) -> None:
     # Make temporary folder read-only
-    mode = os.stat(tmp_path).st_mode
+    mode = tmp_path.stat().st_mode
     ro_mode = mode & ~(stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH)
-    os.chmod(tmp_path, ro_mode)
+    tmp_path.chmod(ro_mode)
     # Non OEXIST errors should be re-raised:
     with pytest.raises(OSError):
-        make_dirs(os.path.join(tmp_path, "foo"))
+        make_dirs(tmp_path / "foo")
 
 
 def test_make_dirs__empty_directory() -> None:
@@ -354,11 +355,11 @@ def test_make_dirs__empty_directory() -> None:
 def test_move_file__simple_move(tmp_path: Path) -> None:
     file_1 = tmp_path / "file_1"
     file_2 = tmp_path / "file_2"
-    assert os.listdir(tmp_path) == []
+    assert os.listdir(str(tmp_path)) == []
     file_1.write_text("1")
-    assert os.listdir(tmp_path) == ["file_1"]
+    assert os.listdir(str(tmp_path)) == ["file_1"]
     move_file(file_1, file_2)
-    assert os.listdir(tmp_path) == ["file_2"]
+    assert os.listdir(str(tmp_path)) == ["file_2"]
     assert file_2.read_text() == "1"
 
 
@@ -380,9 +381,9 @@ def test_move_dirs__permission_denied(tmp_path: Path) -> None:
 
     # Make destination folder read-only
     assert make_dirs(tmp_path / "dst")
-    mode = os.stat(dst_folder).st_mode
+    mode = dst_folder.stat().st_mode
     ro_mode = mode & ~(stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH)
-    os.chmod(dst_folder, ro_mode)
+    dst_folder.chmod(ro_mode)
 
     # Non ENOENT errors should be re-raised:
     with pytest.raises(IOError):
@@ -397,8 +398,8 @@ def test_move_file__move_to_existing_folder(tmp_path: Path) -> None:
     file_1.write_text("2")
     move_file(file_1, file_2)
 
-    assert os.listdir(file_1.parent) == []
-    assert os.listdir(file_2.parent) == ["file_2"]
+    assert os.listdir(str(file_1.parent)) == []
+    assert os.listdir(str(file_2.parent)) == ["file_2"]
     assert file_2.read_text() == "2"
 
 
@@ -410,8 +411,8 @@ def test_move_file__move_to_new_folder(tmp_path: Path) -> None:
 
     move_file(file_1, file_2)
 
-    assert os.listdir(file_1.parent) == []
-    assert os.listdir(file_2.parent) == ["file_2"]
+    assert os.listdir(str(file_1.parent)) == []
+    assert os.listdir(str(file_2.parent)) == ["file_2"]
     assert file_2.read_text() == "2"
 
 
@@ -421,8 +422,8 @@ def test_move_file__move_to_different_folder(tmp_path: Path) -> None:
     with SetWorkingDirectory(tmp_path):
         move_file("file_1", "dst/file_1")
 
-    assert os.listdir(tmp_path), ["dst"]
-    assert os.listdir(tmp_path / "dst"), ["file_1"]
+    assert os.listdir(str(tmp_path)), ["dst"]
+    assert os.listdir(str(tmp_path / "dst")), ["file_1"]
     assert (tmp_path / "dst" / "file_1").read_text() == "3"
 
 
@@ -433,7 +434,7 @@ def test_move_file__overwrite(tmp_path: Path) -> None:
     with SetWorkingDirectory(tmp_path):
         move_file("file_1", "file_2")
 
-    assert os.listdir(tmp_path) == ["file_2"]
+    assert os.listdir(str(tmp_path)) == ["file_2"]
     assert (tmp_path / "file_2").read_text() == "4"
 
 
@@ -470,9 +471,9 @@ def test_copy_file__simple_copy(tmp_path: Path) -> None:
     file_1 = tmp_path / "file_1"
     file_2 = tmp_path / "file_2"
     file_1.write_text("1")
-    assert os.listdir(tmp_path) == ["file_1"]
+    assert os.listdir(str(tmp_path)) == ["file_1"]
     copy_file(file_1, file_2)
-    assert set(os.listdir(tmp_path)) == set(["file_1", "file_2"])
+    assert set(os.listdir(str(tmp_path))) == set(["file_1", "file_2"])
     assert file_1.read_text() == "1"
     assert file_2.read_text() == "1"
 
@@ -485,7 +486,7 @@ def test_copy_file__simple_copy_in_cwd(tmp_path: Path) -> None:
     with SetWorkingDirectory(tmp_path):
         copy_file("file_1", "file_2")
 
-    assert set(os.listdir(tmp_path)) == set(["file_1", "file_2"])
+    assert set(os.listdir(str(tmp_path))) == set(["file_1", "file_2"])
     assert file_1.read_text() == "1"
     assert file_2.read_text() == "1"
 
@@ -497,8 +498,8 @@ def test_copy_file__copy_to_existing_folder(tmp_path: Path) -> None:
     file_2 = tmp_path / "dst" / "file_2"
     file_1.write_text("2")
     copy_file(file_1, file_2)
-    assert os.listdir(file_1.parent) == ["file_1"]
-    assert os.listdir(file_2.parent) == ["file_2"]
+    assert os.listdir(str(file_1.parent)) == ["file_1"]
+    assert os.listdir(str(file_2.parent)) == ["file_2"]
     assert file_1.read_text() == "2"
     assert file_2.read_text() == "2"
 
@@ -509,8 +510,8 @@ def test_copy_file__copy_to_new_folder(tmp_path: Path) -> None:
     file_2 = tmp_path / "dst" / "file_2"
     file_1.write_text("2")
     copy_file(file_1, file_2)
-    assert os.listdir(file_1.parent) == ["file_1"]
-    assert os.listdir(file_2.parent) == ["file_2"]
+    assert os.listdir(str(file_1.parent)) == ["file_1"]
+    assert os.listdir(str(file_2.parent)) == ["file_2"]
     assert file_1.read_text() == "2"
     assert file_2.read_text() == "2"
 
@@ -521,8 +522,8 @@ def test_copy_file__copy_to_different_folder(tmp_path: Path) -> None:
     with SetWorkingDirectory(tmp_path):
         copy_file("file_1", "dst/file_1")
 
-    assert set(os.listdir(tmp_path)) == set(["file_1", "dst"])
-    assert os.listdir(tmp_path / "dst") == ["file_1"]
+    assert set(os.listdir(str(tmp_path))) == set(["file_1", "dst"])
+    assert os.listdir(str(tmp_path / "dst")) == ["file_1"]
     assert (tmp_path / "file_1").read_text() == "3"
     assert (tmp_path / "dst" / "file_1").read_text() == "3"
 
@@ -536,7 +537,7 @@ def test_copy_file__overwrite(tmp_path: Path) -> None:
     with SetWorkingDirectory(tmp_path):
         copy_file("file_1", "file_2")
 
-    assert set(os.listdir(tmp_path)) == set(["file_1", "file_2"])
+    assert set(os.listdir(str(tmp_path))) == set(["file_1", "file_2"])
     assert file_1.read_text() == "4"
     assert file_2.read_text() == "4"
 
@@ -576,7 +577,7 @@ _FASTA_BYTES = _FASTA_TEXT.encode("utf-8")
 @pytest.mark.parametrize("func", (open, gzip.open, bz2.open))
 def test_open_ro(func, tmp_path) -> None:
     filename = tmp_path / "file.fasta"
-    with func(filename, "wt") as handle:
+    with func(fspath(filename), "wt") as handle:
         handle.write(_FASTA_TEXT)
 
     with open_ro(filename) as handle:
@@ -587,7 +588,7 @@ def test_open_ro(func, tmp_path) -> None:
 @pytest.mark.parametrize("func", (open, gzip.open, bz2.open))
 def test_open_ro__mode(func, mode, tmp_path) -> None:
     filename = tmp_path / "file.fasta"
-    with func(filename, "wt") as handle:
+    with func(fspath(filename), "wt") as handle:
         handle.write(_FASTA_TEXT)
 
     with open_ro(filename, mode) as handle:
@@ -602,7 +603,7 @@ def test_open_ro__invalid_mode() -> None:
 @pytest.mark.parametrize("func", (open, gzip.open, bz2.open))
 def test_open_ro__binary(func, tmp_path) -> None:
     filename = tmp_path / "file.fasta"
-    with func(filename, "wt") as handle:
+    with func(fspath(filename), "wt") as handle:
         handle.write(_FASTA_TEXT)
 
     with open_ro(filename, "rb") as handle:
@@ -664,7 +665,7 @@ def test_try_remove__non_file(tmp_path: Path) -> None:
 
 def test_try_rmtree(tmp_path: Path) -> None:
     fpath = tmp_path / "testdir"
-    os.mkdir(fpath)
+    fpath.mkdir()
     (fpath / "file").write_text("1 2 3")
     assert try_rmtree(fpath)
     assert not fpath.exists()
@@ -726,7 +727,7 @@ def test_describe_files__iterable() -> None:
 
 
 def test_describe_files__non_str() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         describe_files(1)
 
 
@@ -805,11 +806,11 @@ def test_describe_paired_files__files_2_longer() -> None:
 
 
 def test_describe_paired_files__non_str() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         describe_paired_files((), 1)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         describe_paired_files(1, ())
 
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         describe_paired_files(1, 1)

@@ -166,4 +166,4 @@ def test_interleaved_phy__different_lengths():
     with patch("paleomix.common.formats.msa.MSA.validate", wrap=MSA.validate) as mock:
         interleaved_phy(_MSA_MEDIUM_NAMES)
 
-    mock.assert_called_once()
+    assert len(mock.mock_calls) == 1

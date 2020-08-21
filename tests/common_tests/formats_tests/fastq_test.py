@@ -26,6 +26,7 @@ import io
 
 import pytest
 
+from paleomix.common.fileutils import fspath
 from paleomix.common.formats.fastq import FASTQ, FASTQError, FASTQualities
 
 
@@ -213,7 +214,7 @@ def test_fasta__from_file(func, tmp_path):
         FASTQ("This_is_ALSO_FASTA!", None, "CGTNA", "56789"),
     ]
 
-    with func(tmp_path / "file", "wt") as handle:
+    with func(fspath(tmp_path / "file"), "wt") as handle:
         for item in expected:
             item.write(handle)
 

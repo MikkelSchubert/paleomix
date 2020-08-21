@@ -24,6 +24,7 @@ import os
 
 from unittest.mock import Mock
 
+from paleomix.common.fileutils import fspath
 from paleomix.nodegraph import NodeGraph, FileStatusCache
 
 
@@ -32,7 +33,7 @@ _TIMESTAMP_2 = 1120719000
 
 
 def create_test_file(utime, *args):
-    filename = os.path.join(*args)
+    filename = os.path.join(*map(fspath, args))
     with open(filename, "wb"):
         pass
 
@@ -56,7 +57,7 @@ def test_nodegraph_is_done__no_output():
 def test_nodegraph_is_done__output_changes(tmp_path):
     temp_file_1 = tmp_path / "file_1.txt"
     temp_file_2 = tmp_path / "file_2.txt"
-    my_node = Mock(output_files=(temp_file_1, temp_file_2))
+    my_node = Mock(output_files=(str(temp_file_1), str(temp_file_2)))
     assert not NodeGraph.is_done(my_node, FileStatusCache())
     temp_file_1.write_text("foo")
     assert not NodeGraph.is_done(my_node, FileStatusCache())
@@ -65,8 +66,8 @@ def test_nodegraph_is_done__output_changes(tmp_path):
 
 
 def test_nodegraph_is_done__subnode_not_considered(tmp_path):
-    temp_file = os.path.join(tmp_path, "file.txt")
-    subnode = Mock(output_files=(temp_file,))
+    temp_file = tmp_path / "file.txt"
+    subnode = Mock(output_files=(str(temp_file),))
     my_node = Mock(output_files=(), subnodes=(subnode,))
     assert NodeGraph.is_done(my_node, FileStatusCache())
 
@@ -80,7 +81,7 @@ def test_nodegraph_is_outdated__input_but_no_output(tmp_path):
     input_file = tmp_path / "file"
     input_file.touch()
 
-    my_node = Mock(input_files=(input_file,), output_files=())
+    my_node = Mock(input_files=(str(input_file),), output_files=())
     assert not NodeGraph.is_outdated(my_node, FileStatusCache())
 
 
@@ -88,7 +89,7 @@ def test_nodegraph_is_outdated__output_but_no_input(tmp_path):
     output_file = tmp_path / "file"
     output_file.touch()
 
-    my_node = Mock(input_files=(), output_files=(output_file,))
+    my_node = Mock(input_files=(), output_files=(str(output_file),))
     assert not NodeGraph.is_outdated(my_node, FileStatusCache())
 
 

@@ -26,6 +26,7 @@ import io
 
 import pytest
 
+from paleomix.common.fileutils import fspath
 from paleomix.common.formats.fasta import FASTA, FASTAError
 
 
@@ -226,7 +227,7 @@ def test_fasta__from_file(func, tmp_path):
         FASTA("This_is_ALSO_FASTA!", None, "CGTNA"),
     ]
 
-    with func(tmp_path / "file", "wt") as handle:
+    with func(fspath(tmp_path / "file"), "wt") as handle:
         for item in expected:
             item.write(handle)
 

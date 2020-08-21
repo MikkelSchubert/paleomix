@@ -25,7 +25,7 @@ import sys
 import pysam
 
 from paleomix.common.utilities import fragment, split_before, Immutable, TotallyOrdered
-from paleomix.common.fileutils import open_ro
+from paleomix.common.fileutils import open_ro, fspath
 from paleomix.common.formats._common import FormatError
 
 
@@ -89,7 +89,7 @@ class FASTA(TotallyOrdered, Immutable):
         pysam, and returns a dictionary of {contig: length} listed in that file.
         """
         # If an index does not already exist, then it is created automatically
-        with pysam.FastaFile(filename) as handle:
+        with pysam.FastaFile(fspath(filename)) as handle:
             return dict(zip(handle.references, handle.lengths))
 
     def __lt__(self, other):

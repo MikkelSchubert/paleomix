@@ -24,12 +24,12 @@ import bz2
 import copy
 import gzip
 import io
-import os
 
 from unittest.mock import patch
 
 import pytest
 
+from paleomix.common.fileutils import fspath
 from paleomix.common.formats.fasta import FASTA
 from paleomix.common.formats.msa import MSA, FASTAError, MSAError
 
@@ -43,7 +43,7 @@ def test_msa_constructor__calls_validate():
     with patch("paleomix.common.formats.msa.MSA.validate", wrap=MSA.validate) as mock:
         MSA([FASTA("NA", None, "ACGT")])
 
-    mock.assert_called_once()
+    assert len(mock.mock_calls) == 1
 
 
 def test_msa_constructor__duplicate_names():
@@ -330,7 +330,7 @@ def test_msa_from_lines__empty_name():
 @pytest.mark.parametrize("func", (open, gzip.open, bz2.open))
 def test_msa_from_file(func, tmp_path):
     filename = tmp_path / "test.fasta"
-    with func(filename, "wt") as handle:
+    with func(fspath(filename), "wt") as handle:
         handle.write(">This_is_FASTA!\nACGTN\n>This_is_ALSO_FASTA!\nCGTNA\n")
 
     assert MSA.from_file(filename) == MSA(

@@ -25,6 +25,8 @@ import os
 from pathlib import Path
 from typing import Union
 
+from .fileutils import fspath
+
 
 class SetWorkingDirectory:
     """Sets the current working directory upon entry to that specified,
@@ -33,7 +35,7 @@ class SetWorkingDirectory:
 
     def __init__(self, path: Union[str, Path]):
         self._old_cwd = None
-        self._new_cwd = path
+        self._new_cwd = fspath(path)
 
     def __enter__(self):
         self._old_cwd = os.getcwd()
