@@ -153,8 +153,6 @@ _VALIDATION_OPTIONS = {
     "CompressionFormat": RemovedOption(),
     "AdapterRemoval": {
         "Version": RemovedOption(),
-        "--pcr1": IsStr,
-        "--pcr2": IsStr,
         "--adapter1": IsStr,
         "--adapter2": IsStr,
         "--adapter-list": IsStr,
