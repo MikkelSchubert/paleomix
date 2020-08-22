@@ -81,7 +81,7 @@ class ExaMLParserNode(CommandNode):
         CommandNode.__init__(
             self,
             command=command.finalize(),
-            description="<ExaMLParser: '%s' -> '%s'>" % (input_alignment, output_file),
+            description="pre-parsing %s for ExaML" % input_alignment,
             dependencies=dependencies,
         )
 
@@ -161,11 +161,14 @@ class ExaMLNode(CommandNode):
         self._dirname = os.path.dirname(output_template)
         self._template = os.path.basename(output_template)
 
+        threads_txt = ""
+        if threads > 1:
+            threads_txt = " using %i threads"
+
         CommandNode.__init__(
             self,
             command=command.finalize(),
-            description="<ExaML (%i thread(s)): '%s' -> '%s'>"
-            % (threads, input_binary, output_template),
+            description="running ExaML on %s%s" % (input_binary, threads_txt),
             threads=threads,
             dependencies=dependencies,
         )

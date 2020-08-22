@@ -46,7 +46,7 @@ class DetectInputDuplicationNode(Node):
     def __init__(self, input_files, output_file, dependencies=()):
         Node.__init__(
             self,
-            description="<Detect Input Duplication: %s>"
+            description="detecting duplicate input in %s"
             % (describe_files(input_files)),
             input_files=input_files,
             output_files=output_file,
@@ -112,7 +112,7 @@ class ValidateFASTQFilesNode(CommandNode):
 
         CommandNode.__init__(
             self,
-            description="<Validate FASTQ Files: %s>" % (describe_files(input_files)),
+            description="validating %s" % (describe_files(input_files),),
             command=command.finalize(),
             dependencies=dependencies,
         )
@@ -122,7 +122,7 @@ class ValidateFASTAFilesNode(Node):
     def __init__(self, input_files, output_file, dependencies=()):
         Node.__init__(
             self,
-            description="<Validate FASTA Files: %s>" % (describe_files(input_files)),
+            description="validating %s" % (describe_files(input_files),),
             input_files=input_files,
             output_files=output_file,
             dependencies=dependencies,

@@ -223,9 +223,9 @@ class NodeGraph:
             )
 
             if new_state == self.RUNNING:
-                self._logger.info("[%i/%i] Started node %s", running, remaining, node)
+                self._logger.info("[%i/%i] Started %s", running, remaining, node)
             elif new_state == self.DONE:
-                self._logger.info("[%i/%i] Finished node %s", running, remaining, node)
+                self._logger.info("[%i/%i] Finished %s", running, remaining, node)
 
     def _calculate_intersections(self, for_node):
         def count_nodes(node, counts):

@@ -66,7 +66,8 @@ class ReportNode(Node):
 
         Node.__init__(
             self,
-            description="<Report -> %r>" % (os.path.join(self._root, "report.html"),),
+            description="writing report to %s"
+            % (os.path.join(self._root, "report.html"),),
             input_files=self._report.input_files(),
             output_files=(
                 os.path.join(self._root, "report.html"),

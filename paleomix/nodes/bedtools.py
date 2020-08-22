@@ -39,7 +39,7 @@ class PaddedBedNode(Node):
 
         Node.__init__(
             self,
-            description="<PaddedBed (%i): %r -> %r>" % (amount, infile, outfile),
+            description="padding BED records (%i) in %s" % (amount, infile),
             input_files=(infile, fai_file),
             output_files=(outfile,),
             dependencies=dependencies,

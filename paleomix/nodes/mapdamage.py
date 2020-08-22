@@ -97,8 +97,8 @@ class MapDamagePlotNode(CommandNode):
         CommandNode.__init__(
             self,
             command=ParallelCmds([merge, command.finalize()]),
-            description="<mapDamage (plots): %s -> '%s'>"
-            % (describe_files(merge.input_files), output_directory,),
+            description="creating mapDamage plots from %s"
+            % (describe_files(merge.input_files),),
             dependencies=dependencies,
         )
 
@@ -160,7 +160,7 @@ class MapDamageModelNode(CommandNode):
         CommandNode.__init__(
             self,
             command=command.finalize(),
-            description="<mapDamage (model): %r>" % (directory,),
+            description="creating mapDamage model from %r" % (directory,),
             dependencies=dependencies,
         )
 
@@ -233,8 +233,8 @@ class MapDamageRescaleNode(CommandNode):
         CommandNode.__init__(
             self,
             command=ParallelCmds([merge, command.finalize()]),
-            description="<mapDamage (rescale): %s -> %r>"
-            % (describe_files(merge.input_files), output_file,),
+            description="rescaling %s using mapDamage"
+            % (describe_files(merge.input_files),),
             dependencies=dependencies,
         )
 

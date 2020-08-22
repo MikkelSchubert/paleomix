@@ -56,11 +56,10 @@ class BWAIndexNode(CommandNode):
             TEMP_OUT_PREFIX=os.path.basename(prefix),
         )
 
-        description = "<BWA Index '%s' -> '%s.*'>" % (input_file, prefix)
         CommandNode.__init__(
             self,
             command=builder.finalize(),
-            description=description,
+            description="creating BWA index for %s" % (input_file,),
             dependencies=dependencies,
         )
 
@@ -136,7 +135,10 @@ class BWASamse(CommandNode):
             self,
             command=ParallelCmds([samse.finalize(), cleanup.finalize()]),
             description=_get_node_description(
-                name="BWA Samse", input_files_1=input_file_fq, prefix=prefix
+                name="BWA",
+                algorithm="samse",
+                input_files_1=input_file_fq,
+                prefix=prefix,
             ),
             dependencies=dependencies,
         )
@@ -183,7 +185,8 @@ class BWASampe(CommandNode):
             self,
             command=ParallelCmds([sampe.finalize(), cleanup.finalize()]),
             description=_get_node_description(
-                name="BWA Sampe",
+                name="BWA",
+                algorithm="sampe",
                 input_files_1=input_file_fq_1,
                 input_files_2=input_file_fq_2,
                 prefix=prefix,
@@ -235,7 +238,7 @@ class BWAAlgorithmNode(CommandNode):
 
         description = _get_node_description(
             name="BWA",
-            algorithm="%s%s" % (algorithm.upper(), "_PE" if input_file_2 else "_SE"),
+            algorithm="%s (%s)" % (algorithm, "PE" if input_file_2 else "SE"),
             input_files_1=input_file_1,
             input_files_2=input_file_2,
             prefix=prefix,
@@ -319,13 +322,12 @@ def _get_node_description(
     if prefix.endswith(".fasta") or prefix.endswith(".fa"):
         prefix = prefix.rsplit(".", 1)[0]
 
-    info = [prefix]
+    input_files = describe_paired_files(input_files_1, input_files_2 or ())
+    info = ["alignment of", input_files, "onto", prefix, "using", name]
     if algorithm is not None:
         info.append(algorithm)
 
-    if threads > 1:
-        info.append("%i threads" % (threads,))
+    if threads > 0:
+        info.append("(%i threads)" % (threads,))
 
-    file_desc = describe_paired_files(input_files_1, input_files_2 or ())
-
-    return "<%s (%s): %s>" % (name, ", ".join(info), file_desc)
+    return " ".join(info)

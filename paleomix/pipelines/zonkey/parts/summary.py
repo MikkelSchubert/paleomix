@@ -57,7 +57,7 @@ class SummaryNode(Node):
         output_prefix = os.path.join(self._root, "summary")
         Node.__init__(
             self,
-            description="<SummaryReport -> %r>" % (output_prefix + ".html",),
+            description="writing summary to %s" % (output_prefix + ".html",),
             input_files=input_files,
             output_files=(output_prefix + ".html", output_prefix + ".css"),
             dependencies=dependencies,

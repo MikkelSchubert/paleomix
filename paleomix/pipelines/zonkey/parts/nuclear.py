@@ -87,7 +87,7 @@ class BuildTPEDFilesNode(CommandNode):
 
         CommandNode.__init__(
             self,
-            description="<BuildTPEDFiles -> %r>" % (os.path.join(output_root, "*"),),
+            description="building TPED file from %s" % (bamfile,),
             command=cmd.finalize(),
             dependencies=dependencies,
         )
@@ -130,7 +130,7 @@ class BuildBEDFilesNode(CommandNode):
 
         CommandNode.__init__(
             self,
-            description="<BuildBEDFiles -> '%s.*'>" % (output_prefix,),
+            description="building BED files from %s" % (tped,),
             command=command,
             dependencies=dependencies,
         )
@@ -172,7 +172,7 @@ class AdmixtureNode(CommandNode):
 
         CommandNode.__init__(
             self,
-            description="<Admixture -> '%s.*''>" % (output_prefix,),
+            description="estimating admixture from %s.*" % (input_file,),
             command=cmd.finalize(),
             dependencies=dependencies,
         )
@@ -234,7 +234,7 @@ class SelectBestAdmixtureNode(Node):
 
         Node.__init__(
             self,
-            description="<SelectBestAdmixture -> %r>" % (output_root,),
+            description="selecting best admixture result from %s" % (output_root,),
             input_files=input_files,
             output_files=output_files,
             dependencies=tuple(dependencies) + tuple(replicates),
@@ -301,7 +301,7 @@ class AdmixturePlotNode(CommandNode):
 
         CommandNode.__init__(
             self,
-            description="<AdmixturePlot -> '%s.*'>" % (output_prefix,),
+            description="plotting admixture results from %s" % (input_file,),
             command=cmd,
             dependencies=dependencies,
         )
@@ -371,7 +371,7 @@ class BuildFreqFilesNode(CommandNode):
         self._basename = basename
         CommandNode.__init__(
             self,
-            description="<BuildFreqFiles -> '%s.*'" % (output_prefix,),
+            description="building frequency files from %s.*" % (input_prefix,),
             command=SequentialCmds((plink, gzip)),
             dependencies=dependencies,
         )
@@ -400,7 +400,7 @@ class FreqToTreemixNode(Node):
     def __init__(self, input_file, output_file, dependencies=()):
         Node.__init__(
             self,
-            description="<FreqToTreemix -> %r" % (output_file,),
+            description="converting %s to treemix format" % (input_file,),
             input_files=(input_file,),
             output_files=(output_file,),
             dependencies=dependencies,
@@ -504,7 +504,7 @@ class TreemixNode(CommandNode):
 
         CommandNode.__init__(
             self,
-            description="<Treemix -> '%s.*'>" % (output_prefix,),
+            description="running treemix on %s.*" % (input_file,),
             command=cmd,
             dependencies=dependencies,
         )
@@ -575,7 +575,7 @@ class PlotTreemixNode(CommandNode):
 
         CommandNode.__init__(
             self,
-            description="<PlotTreemix -> '%s.*'>" % (output_prefix,),
+            description="plotting treemix results to %s.*" % output_prefix,
             command=SequentialCmds((cmd_1, cmd_2, cmd_3)),
             dependencies=dependencies,
         )
@@ -621,7 +621,7 @@ class SmartPCANode(CommandNode):
 
         CommandNode.__init__(
             self,
-            description="<SmartPCA -> '%s.*>" % (output_prefix,),
+            description="performing PCA on %s" % (input_prefix,),
             command=cmd,
             dependencies=dependencies,
         )
@@ -683,7 +683,7 @@ class PlotPCANode(CommandNode):
 
         CommandNode.__init__(
             self,
-            description="<PlotPCA -> '%s.*'>" % (output_prefix,),
+            description="plotting PCA to %s.*" % (output_prefix,),
             command=cmd,
             dependencies=dependencies,
         )
@@ -711,7 +711,7 @@ class PlotCoverageNode(CommandNode):
 
         CommandNode.__init__(
             self,
-            description="<CoveragePlot -> '%s.*'>" % (output_prefix,),
+            description="plotting coverage to %s.*" % (output_prefix,),
             command=cmd,
             dependencies=dependencies,
         )

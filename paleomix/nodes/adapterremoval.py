@@ -66,8 +66,8 @@ class SE_AdapterRemovalNode(CommandNode):
             self,
             command=cmd.finalize(),
             threads=threads,
-            description="<AdapterRM (SE): %s -> '%s.*'>"
-            % (fileutils.describe_files(input_file), output_prefix,),
+            description="trimming SE adapters from %s"
+            % fileutils.describe_files(input_file),
             dependencies=dependencies,
         )
 
@@ -116,11 +116,8 @@ class PE_AdapterRemovalNode(CommandNode):
             self,
             command=cmd.finalize(),
             threads=threads,
-            description="<AdapterRM (PE): %s -> '%s.*'>"
-            % (
-                fileutils.describe_paired_files(input_file_1, input_file_2),
-                output_prefix,
-            ),
+            description="trimming PE adapters from %s"
+            % fileutils.describe_paired_files(input_file_1, input_file_2),
             dependencies=dependencies,
         )
 

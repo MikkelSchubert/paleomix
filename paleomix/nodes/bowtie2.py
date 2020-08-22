@@ -61,12 +61,10 @@ class Bowtie2IndexNode(CommandNode):
         # Destination prefix, in temp folder
         builder.add_value("%(TEMP_OUT_PREFIX)s")
 
-        description = "<Bowtie2 Index '%s' -> '%s.*'>" % (input_file, prefix)
-
         CommandNode.__init__(
             self,
             command=builder.finalize(),
-            description=description,
+            description="creating Bowtie2 index for %s" % (input_file,),
             dependencies=dependencies,
         )
 

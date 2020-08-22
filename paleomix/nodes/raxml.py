@@ -125,8 +125,7 @@ class RAxMLRapidBSNode(CommandNode):
         CommandNode.__init__(
             self,
             command=command.finalize(),
-            description="<RAxMLRapidBS: '%s' -> '%s'>"
-            % (input_alignment, output_template % ("*",)),
+            description="inferring phylogeny from %s using RAxML" % (input_alignment,),
             threads=threads,
             dependencies=dependencies,
         )
@@ -192,8 +191,8 @@ class RAxMLParsimonyTreeNode(CommandNode):
         CommandNode.__init__(
             self,
             command=command.finalize(),
-            description="<RAxMLParsimonyTree: '%s' -> '%s'>"
-            % (input_alignment, output_tree),
+            description="inferring parsimony phylogeny from %s using RAxML"
+            % (input_alignment,),
             dependencies=dependencies,
         )
 

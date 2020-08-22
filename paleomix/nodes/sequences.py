@@ -125,7 +125,7 @@ class FilterSingletonsNode(Node):
 
         Node.__init__(
             self,
-            description="<FilterSingleton: '%s' -> '%s'>" % (input_file, output_file),
+            description="filtering singleton nucleotides in %s" % (input_file,),
             input_files=[input_file],
             output_files=[output_file],
             dependencies=dependencies,

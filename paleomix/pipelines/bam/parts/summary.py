@@ -91,7 +91,7 @@ class SummaryTableNode(Node):
 
         Node.__init__(
             self,
-            description="<Summary: %s>" % self._output_file,
+            description="writing summary to %s" % (self._output_file,),
             input_files=[_f for _f in input_files if _f],
             output_files=[self._output_file],
             dependencies=dependencies,

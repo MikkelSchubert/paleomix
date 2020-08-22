@@ -23,7 +23,7 @@
 import copy
 
 from paleomix.node import Node
-from paleomix.common.fileutils import move_file, reroot_path
+from paleomix.common.fileutils import move_file, reroot_path, describe_files
 from paleomix.common.formats.msa import MSA
 from paleomix.common.formats.phylip import interleaved_phy
 
@@ -70,10 +70,9 @@ class FastaToPartitionedInterleavedPhyNode(Node):
         self._out_prefix = out_prefix
         self._excluded = safe_coerce_to_frozenset(exclude_groups)
 
-        description = "<FastaToPartitionedPhy%s: %i file(s) -> '%s.*'>" % (
-            " (reducing)" if reduce else "",
-            len(infiles),
-            out_prefix,
+        description = "creating%spartitioned phy from %s" % (
+            "  reduced, " if reduce else " ",
+            describe_files(self._infiles),
         )
 
         Node.__init__(

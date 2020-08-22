@@ -25,9 +25,7 @@ import getpass
 
 from paleomix.node import CommandNode
 from paleomix.atomiccmd.builder import AtomicJavaCmdBuilder
-from paleomix.atomiccmd.sets import ParallelCmds
 from paleomix.common.fileutils import swap_ext, try_rmtree, describe_files
-from paleomix.common.utilities import safe_coerce_to_tuple
 import paleomix.common.versions as versions
 import paleomix.common.system
 
@@ -75,11 +73,10 @@ class ValidateBAMNode(PicardNode):
             IN_BAM=input_bam, IN_INDEX=input_index, OUT_STDOUT=output_log
         )
 
-        description = "<Validate BAM: '%s'>" % (input_bam,)
         PicardNode.__init__(
             self,
             command=builder.finalize(),
-            description=description,
+            description="validating %s" % (input_bam,),
             dependencies=dependencies,
         )
 
@@ -127,11 +124,11 @@ class MarkDuplicatesNode(PicardNode):
         output_metrics = output_metrics or swap_ext(output_bam, ".metrics")
         params.set_kwargs(OUT_BAM=output_bam, OUT_METRICS=output_metrics)
 
-        description = "<MarkDuplicates: %s>" % (describe_files(input_bams),)
         PicardNode.__init__(
             self,
             command=params.finalize(),
-            description=description,
+            description="detecting PCR duplicates in %s"
+            % (describe_files(input_bams),),
             dependencies=dependencies,
         )
 
@@ -147,11 +144,10 @@ class MergeSamFilesNode(PicardNode):
         builder.add_multiple_options("I", input_bams, sep="=")
 
         builder.set_kwargs(OUT_BAM=output_bam)
-        description = "<Merge BAMs: %i file(s) -> '%s'>" % (len(input_bams), output_bam)
         PicardNode.__init__(
             self,
             command=builder.finalize(),
-            description=description,
+            description="merging %i file(s) into %s" % (len(input_bams), output_bam),
             dependencies=dependencies,
         )
 

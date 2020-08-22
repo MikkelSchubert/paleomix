@@ -68,8 +68,8 @@ class MAFFTNode(CommandNode):
         CommandNode.__init__(
             self,
             command=command.finalize(),
-            description="<MAFFTNode (%s): '%s' -> '%s'>"
-            % (algorithm, input_file, output_file,),
+            description="aligning sequences in %s using MAFFT %s"
+            % (input_file, algorithm),
             dependencies=dependencies,
         )
 

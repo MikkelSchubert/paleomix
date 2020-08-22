@@ -73,7 +73,7 @@ class TabixIndexNode(CommandNode):
 
         CommandNode.__init__(
             self,
-            description="<TabixIndex (%s): '%s'>" % (preset, infile),
+            description="creating tabix %s index for %s" % (preset, infile),
             command=cmd_tabix,
             dependencies=dependencies,
         )
@@ -108,7 +108,7 @@ class FastaIndexNode(CommandNode):
 
         CommandNode.__init__(
             self,
-            description="<FastaIndex: '%s'>" % (infile,),
+            description="creating FAI index for %s" % (infile,),
             command=cmd_faidx,
             dependencies=dependencies,
         )
@@ -150,7 +150,7 @@ class BAMIndexNode(CommandNode):
 
         CommandNode.__init__(
             self,
-            description="<BAMIndex (%s): '%s'>" % (index_format[1:].upper(), infile),
+            description="creating %s index for %s" % (index_format[1:].upper(), infile),
             command=command,
             dependencies=dependencies,
         )

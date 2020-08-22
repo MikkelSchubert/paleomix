@@ -38,14 +38,10 @@ class NewickRerootNode(Node):
         if self._reroot_on_taxa:
             reroot_on = repr("', '".join(sorted(self._reroot_on_taxa)))
 
-        description = "<NewickReroot (on %s): %s>" % (
-            reroot_on,
-            describe_files(tree_files),
-        )
-
         Node.__init__(
             self,
-            description=description,
+            description="rerooting newick tree %s on %s"
+            % (describe_files(tree_files), reroot_on),
             input_files=self._tree_files,
             output_files=self._output_file,
             dependencies=dependencies,
@@ -77,11 +73,10 @@ class NewickSupportNode(Node):
         self._support_tree_files = safe_coerce_to_tuple(support_tree_files)
         input_files = self._main_tree_files + self._support_tree_files
 
-        description = "<NewickSupport: %s>" % (describe_files(main_tree_files),)
-
         Node.__init__(
             self,
-            description=description,
+            description="calculating newick support for %s"
+            % (describe_files(main_tree_files),),
             input_files=input_files,
             output_files=output_file,
             dependencies=dependencies,

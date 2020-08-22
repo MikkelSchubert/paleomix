@@ -56,8 +56,7 @@ class PHYLIPBootstrapNode(Node):
 
         Node.__init__(
             self,
-            description="<PHYLIPBootstrap: %r -> %r>"
-            % (input_alignment, output_alignment),
+            description="creating bootstraps from %s" % (input_alignment,),
             input_files=(input_alignment, input_partition),
             output_files=(output_alignment,),
             dependencies=dependencies,

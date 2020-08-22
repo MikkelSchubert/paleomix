@@ -50,7 +50,7 @@ class MitoConsensusNode(CommandNode):
 
         CommandNode.__init__(
             self,
-            description="<MitoConsensus -> '%s.*'>" % (output_prefix,),
+            description="building consensus mitochondria from %s" % (bamfile,),
             command=cmd.finalize(),
             dependencies=dependencies,
         )
@@ -87,7 +87,7 @@ class DrawPhylogenyNode(CommandNode):
 
         CommandNode.__init__(
             self,
-            description="<DrawPhylogeny -> '%s.*'>" % (output_prefix,),
+            description="drawing phylogeny in %s" % (treefile,),
             command=cmd,
             dependencies=dependencies,
         )

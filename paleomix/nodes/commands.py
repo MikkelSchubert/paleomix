@@ -53,11 +53,10 @@ class CoverageNode(CommandNode):
             builder.set_option("--regions-file", "%(IN_REGIONS)s")
             builder.set_kwargs(IN_REGIONS=regions_file)
 
-        description = "<Coverage: %s -> '%s'>" % (input_file, output_file)
         CommandNode.__init__(
             self,
             command=builder.finalize(),
-            description=description,
+            description="calculating coverage for %s" % (input_file,),
             dependencies=dependencies,
         )
 
@@ -68,8 +67,8 @@ class MergeCoverageNode(Node):
 
         Node.__init__(
             self,
-            description="<MergeCoverage: %s -> '%s'>"
-            % (describe_files(input_files), self._output_file),
+            description="merging coverage tables from %s"
+            % (describe_files(input_files),),
             input_files=input_files,
             output_files=self._output_file,
             dependencies=dependencies,
@@ -108,12 +107,10 @@ class DepthHistogramNode(CommandNode):
                 IN_REGIONS=regions_file, TEMP_IN_INDEX=input_file + index_format
             )
 
-        description = "<DepthHistogram: %s -> '%s'>" % (input_file, output_file,)
-
         CommandNode.__init__(
             self,
             command=builder.finalize(),
-            description=description,
+            description="calculating depth histogram for %s" % (input_file,),
             dependencies=dependencies,
         )
 
@@ -130,11 +127,11 @@ class FilterCollapsedBAMNode(CommandNode):
         if not keep_dupes:
             builder.set_option("--remove-duplicates")
 
-        description = "<FilterCollapsedBAM: %s>" % (describe_files(merge.input_files),)
         CommandNode.__init__(
             self,
             command=ParallelCmds([merge, builder.finalize()]),
-            description=description,
+            description="filtering collapsed PCR duplicates in %s"
+            % (describe_files(merge.input_files),),
             dependencies=dependencies,
         )
 
@@ -152,10 +149,9 @@ class VCFFilterNode(CommandNode):
 
         bgzip = AtomicCmdBuilder(["bgzip"], IN_STDIN=vcffilter, OUT_STDOUT=outfile)
 
-        description = "<VCFFilter: '%s' -> '%s'>" % (infile, outfile,)
         CommandNode.__init__(
             self,
-            description=description,
+            description="filtering VCF records in %s" % (infile,),
             command=ParallelCmds([vcffilter.finalize(), bgzip.finalize()]),
             dependencies=dependencies,
         )
@@ -206,7 +202,7 @@ class GenotypeRegionsNode(CommandNode):
 
         CommandNode.__init__(
             self,
-            description="<GenotypeRegions: '%s' -> '%s'>" % (infile, outfile,),
+            description="calling genotypes from %s" % (infile,),
             command=ParallelCmds([mpileup.finalize(), genotype.finalize()]),
             dependencies=dependencies,
         )
@@ -228,10 +224,9 @@ class BuildRegionsNode(CommandNode):
 
         apply_options(params, options)
 
-        description = "<BuildRegions: '%s' -> '%s'>" % (infile, outfile,)
         CommandNode.__init__(
             self,
-            description=description,
+            description="building FASTA from %s" % (infile,),
             command=params.finalize(),
             dependencies=dependencies,
         )

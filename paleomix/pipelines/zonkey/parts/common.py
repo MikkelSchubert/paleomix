@@ -43,7 +43,7 @@ class WriteSampleList(Node):
 
         Node.__init__(
             self,
-            description="<WriteSampleList -> %r>" % (output_file,),
+            description="writing sample-list to %s" % (output_file,),
             input_files=(config.database.filename,),
             output_files=(output_file,),
             dependencies=dependencies,
