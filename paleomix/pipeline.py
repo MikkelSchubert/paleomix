@@ -162,19 +162,12 @@ class Pypeline:
             except (KeyboardInterrupt, SystemExit):
                 raise
             except Exception as errors:
+                error_happened = True
                 nodegraph.set_node_state(node, nodegraph.ERROR)
 
-                message = [
-                    str(node),
-                    "  Error (%r) occurred running command:" % (type(errors).__name__),
-                ]
-
+                self._logger.error("%s while %s:", type(errors).__name__, node)
                 for line in str(errors).strip().split("\n"):
-                    message.append("    %s" % (line,))
-                message.append("")
-
-                self._logger.error("\n".join(message))
-                error_happened = True
+                    self._logger.error("    %s", line)
 
             if not error_happened:
                 nodegraph.set_node_state(node, nodegraph.DONE)
