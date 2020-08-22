@@ -22,6 +22,8 @@
 import logging
 import sys
 
+import pysam
+
 import paleomix.common.system
 import paleomix.common.logging
 
@@ -94,6 +96,8 @@ def main(argv):
     paleomix.common.system.set_procname("paleomix")
     # Setup basic logging to STDERR
     paleomix.common.logging.initialize_console_logging()
+    # Silence log-messages from HTSLIB
+    pysam.set_verbosity(0)
 
     if not argv or argv[0] in ("-h", "--help", "help"):
         print(_HELP.format(version=paleomix.__version__))
