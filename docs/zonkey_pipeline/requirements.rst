@@ -29,32 +29,6 @@ The R packages may be installed using the following commands::
     > install.packages(c('RColorBrewer', 'ape', 'ggrepel', 'ggplot2', 'reshape2'))
 
 
-Installing under OSX
---------------------
-
-Installing the Zonkey pipeline under OSX poses several difficulties, mainly due to SmartPCA. In the follow, it is assumed that the `Brew package manager`_ has been installed, as this greatly simplifies the installation of other, required pieces of software.
-
-Firstly, install software and libraries required to compile SmartPCA::
-
-    $ brew install gcc
-    $ brew install homebrew/dupes/lapack
-    $ brew install homebrew/science/openblas
-
-In each case, note down the values indicated for LDFLAGS, CFLAGS, CPPFLAGS, etc.
-
-Next, download and unpack the `EIGENSOFT`_ software. The following has been tested on EIGENSOFT version 6.1.1 ('EIG6.1.1.tar.gz').
-
-To build SmartPCA it may further be nessesary to remove the use of the 'real-time' library::
-
-    $ sed -e's# -lrt##' Makefile > Makefile.no_rt
-
-Once you have done this, you can build SmartPCA using the locally copied libraries::
-
-    $ env CC="/usr/local/opt/gcc/bin/gcc-6" LDFLAGS="-L/usr/local/opt/openblas/lib/" CFLAGS="-flax-vector-conversions -I/usr/local/opt/lapack/include/" make -f Makefile.no_rt
-
-The above worked on my installation, but you may need to correct the variables using the values provided by Brew, which you noted down after running the 'install' command. You may also need to change the location of GGC set in the CC variable.
-
-
 Testing the pipeline
 --------------------
 
