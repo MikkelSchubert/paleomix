@@ -7,13 +7,13 @@ Software Requirements
 
 The Zonkey pipeline requires PALEOMIX version 1.2.7 or later. In addition to the requirements listed for the PALEOMIX pipeline itself in the :ref:`installation` section, the Zonkey pipeline requires that other pieces of software be installed:
 
-* RScript from the `R`_ package, v3.1+.
+* RScript from the `R`_ package, v3.3.3.
 * SmartPCA from the `EIGENSOFT`_ package, v13050+ [Patterson2006]_, [Price2006]_
-* `ADMIXTURE`_ v1.23+ [Alexander2009]_
-* `PLINK`_ v1.7+ [Chang2015]_
-* `RAxML`_ v7.3.2+ [Stamatakis2006]_
-* `SAMTools`_ v0.1.19+ [Li2009b]_
-* `TreeMix`_ v1.12+ [Pickrell2012]_
+* `ADMIXTURE`_ v1.23 [Alexander2009]_
+* `PLINK`_ v1.07 [Chang2015]_
+* `RAxML`_ v8.2.9 [Stamatakis2006]_
+* `SAMTools`_ v1.3.1 [Li2009b]_
+* `TreeMix`_ v1.12 [Pickrell2012]_
 
 The following R packages are required in order to carry out the plotting:
 

@@ -31,7 +31,7 @@ import paleomix.common.versions as versions
 
 
 MAFFT_VERSION = versions.Requirement(
-    call=("mafft", "--version"), search=r"v(\d+)\.(\d+)", checks=versions.GE(7, 0)
+    call=("mafft", "--version"), search=r"v(\d+)\.(\d+)", checks=versions.GE(7, 307)
 )
 
 

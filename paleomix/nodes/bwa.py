@@ -41,7 +41,7 @@ BWA_VERSION = versions.Requirement(
     name="BWA",
     call=("bwa",),
     search=r"Version: (\d+)\.(\d+)\.(\d+)",
-    checks=versions.GE(0, 7, 9),
+    checks=versions.GE(0, 7, 15),
 )
 
 

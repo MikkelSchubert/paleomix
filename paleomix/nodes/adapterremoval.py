@@ -35,7 +35,7 @@ import paleomix.common.versions as versions
 _VERSION_CHECK = versions.Requirement(
     call=("AdapterRemoval", "--version"),
     search=r"ver. (\d+)\.(\d+)\.(\d+)",
-    checks=versions.GE(2, 1, 5),
+    checks=versions.GE(2, 2, 0),
 )
 
 

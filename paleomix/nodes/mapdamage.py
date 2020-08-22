@@ -36,13 +36,13 @@ from paleomix.atomiccmd.sets import ParallelCmds
 MAPDAMAGE_VERSION = versions.Requirement(
     call=("mapDamage", "--version"),
     search=r"(\d+)\.(\d+).(\d+)",
-    checks=versions.GE(2, 0, 1),
+    checks=versions.GE(2, 2, 0),
 )
 
 RSCRIPT_VERSION = versions.Requirement(
     call=("Rscript", "--version"),
-    search=r"(\d+)\.(\d+).(\d+)",
-    checks=versions.GE(2, 15, 1),
+    search=r"version (\d+)\.(\d+).(\d+)",
+    checks=versions.GE(3, 3, 3),
     priority=10,
 )
 

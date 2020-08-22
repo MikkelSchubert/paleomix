@@ -7,16 +7,16 @@ Software requirements
 
 In addition to the requirements listed in the :ref:`installation` section, the BAM pipeline requires several other pieces of software. The version numbers indicates the oldest supported version of each program:
 
-* `AdapterRemoval`_ v2.1 [Lindgreen2012]_
-* `SAMTools`_ v0.1.18 [Li2009b]_
+* `AdapterRemoval`_ v2.2.0 [Lindgreen2012]_
+* `SAMTools`_ v1.3.1 [Li2009b]_
 * `Picard Tools`_ v1.137
 
 The Picard Tools JAR-file (picard.jar) is expected to be located in ~/install/jar_root/ by default, but this behavior may be changed using either the --jar-root command-line option, or via the global configuration file (see section :ref:`bam_configuration`).
 
 Furthermore, one or both of the following sequence aligners must be installed:
 
-* `Bowtie2`_ v2.1.0 [Langmead2012]_
-* `BWA`_ v0.7.9 [Li2009a]_
+* `Bowtie2`_ v2.3.0 [Langmead2012]_
+* `BWA`_ v0.7.15 [Li2009a]_
 
 `mapDamage is required by default, but can be disabled on a per-project basis:
 

@@ -33,15 +33,15 @@ import paleomix.common.versions as versions
 _VERSION_REGEX = r"Version: (\d+)\.(\d+)(?:\.(\d+))?"
 
 SAMTOOLS_VERSION = versions.Requirement(
-    call=("samtools",), search=_VERSION_REGEX, checks=versions.GE(1, 3, 0)
+    call=("samtools",), search=_VERSION_REGEX, checks=versions.GE(1, 3, 1)
 )
 
 BCFTOOLS_VERSION = versions.Requirement(
-    call=("bcftools",), search=_VERSION_REGEX, checks=versions.GE(1, 3, 0)
+    call=("bcftools",), search=_VERSION_REGEX, checks=versions.GE(1, 3, 1)
 )
 
 TABIX_VERSION = versions.Requirement(
-    call=("tabix",), search=_VERSION_REGEX, checks=versions.GE(1, 3, 0)
+    call=("tabix",), search=_VERSION_REGEX, checks=versions.GE(1, 3, 1)
 )
 
 

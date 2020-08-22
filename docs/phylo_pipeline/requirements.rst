@@ -11,8 +11,8 @@ Depending on the parts of the Phylogenetic pipeline used, different programs are
 Genotyping
 ----------
 
-* [SAMTools](http://samtools.sourceforge.net) v0.1.18+ [Li2009b]_
-* `Tabix`_ v0.2.5
+* `SAMTools`_ v1.3.1 [Li2009b]_
+* `Tabix`_ v1.3.1
 
 Both the 'tabix' and the 'bgzip' executable from the Tabix package must be installed.
 
@@ -20,7 +20,7 @@ Both the 'tabix' and the 'bgzip' executable from the Tabix package must be insta
 Multiple Sequence Alignment
 ---------------------------
 
-* `MAFFT`_ v7+ [Katoh2013]_
+* `MAFFT`_ v7.307 [Katoh2013]_
 
 Note that the pipeline requires that the algorithm-specific MAFFT commands (e.g. 'mafft-ginsi', 'mafft-fftnsi'). These are automatically created by the 'make install' command.
 
@@ -28,8 +28,8 @@ Note that the pipeline requires that the algorithm-specific MAFFT commands (e.g.
 Phylogenetic Inference
 ----------------------
 
-* `RAxML`_ v7.3.2+ [Stamatakis2006]_
-* `ExaML`_ v1.0.5+
+* `RAxML`_ v8.2.9 [Stamatakis2006]_
+* `ExaML`_ v3.0.21
 
 The pipeline expects a single-threaded binary named 'raxmlHPC' for RAxML. The pipeline expects the ExaML binary to be named 'examl', and the parser binary to be named 'parse-examl'. Compiling and running ExaML requires an MPI implementation (e.g. `OpenMPI`_), even if ExaML is run single-threaded. On Debian and Debian-based distributions, this may be accomplished installing 'mpi-default-dev' and 'mpi-default-bin'.
 
@@ -44,8 +44,9 @@ Testing the pipeline
 An example project is included with the phylogenetic pipeline, and it is recommended to run this project in order to verify that the pipeline and required applications have been correctly installed. See the :ref:`examples` section for a description of how to run this example project.
 
 
-.. _Tabix: http://samtools.sourceforge.net/
-.. _MAFFT: http://mafft.cbrc.jp/alignment/software/
-.. _RAxML: https://github.com/stamatak/standard-RAxML
 .. _EXaML: https://github.com/stamatak/ExaML
+.. _MAFFT: http://mafft.cbrc.jp/alignment/software/
 .. _OpenMPI: http://www.open-mpi.org/
+.. _RAxML: https://github.com/stamatak/standard-RAxML
+.. _SAMTools: https://github.com/samtools/samtools
+.. _Tabix: https://github.com/samtools/htslib
