@@ -37,7 +37,7 @@ SAMTOOLS_VERSION = versions.Requirement(
 )
 
 BCFTOOLS_VERSION = versions.Requirement(
-    call=("bcftools",), search=_VERSION_REGEX, checks=versions.GE(1, 3, 1)
+    call=("bcftools",), search=_VERSION_REGEX, checks=versions.GE(1, 4, 0)
 )
 
 TABIX_VERSION = versions.Requirement(
