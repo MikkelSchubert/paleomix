@@ -72,7 +72,7 @@ class FastaToPartitionedInterleavedPhyNode(Node):
 
         description = "creating%spartitioned phy from %s" % (
             "  reduced, " if reduce else " ",
-            describe_files(self._infiles),
+            describe_files(input_filenames),
         )
 
         Node.__init__(
