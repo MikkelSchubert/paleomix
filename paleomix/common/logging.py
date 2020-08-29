@@ -36,7 +36,11 @@ _LOG_LEVELS = {
     "debug": logging.DEBUG,
 }
 
-_LOG_FORMAT = "%(asctime)s %(name)s %(levelname)s %(message)s"
+
+_CONSOLE_MESSAGE_FORMAT = "%(asctime)s %(levelname)s %(message)s"
+_CONSOLE_DATE_FORMAT = "%H:%M:%S"
+_FILE_MESSAGE_FORMAT = "%(asctime)s %(name)s %(levelname)s %(message)s"
+
 _LOG_ENABLED = False
 
 
@@ -44,7 +48,7 @@ def initialize_console_logging():
     global _LOG_ENABLED
 
     if not _LOG_ENABLED:
-        coloredlogs.install(fmt=_LOG_FORMAT)
+        coloredlogs.install(fmt=_CONSOLE_MESSAGE_FORMAT, datefmt=_CONSOLE_DATE_FORMAT)
         _LOG_ENABLED = True
 
 
@@ -57,12 +61,12 @@ def initialize(log_level="info", log_file=None, name="paleomix"):
 
     if log_file:
         handler = logging.FileHandler(log_file)
-        handler.setFormatter(logging.Formatter(_LOG_FORMAT))
+        handler.setFormatter(logging.Formatter(_FILE_MESSAGE_FORMAT))
         root.addHandler(handler)
     elif name:
         template = "%s.%s_%%02i.log" % (name, time.strftime("%Y%m%d_%H%M%S"))
         handler = LazyLogfile(template)
-        handler.setFormatter(logging.Formatter(_LOG_FORMAT))
+        handler.setFormatter(logging.Formatter(_FILE_MESSAGE_FORMAT))
         handler.setLevel(logging.ERROR)
         root.addHandler(handler)
 
