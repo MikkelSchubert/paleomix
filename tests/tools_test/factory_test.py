@@ -89,10 +89,6 @@ FACTORY_COMMANDS = (
         "rmdup_collapsed",
         "usage: paleomix rmdup_collapsed [options] < sorted.bam > out.bam",
     ),
-    (
-        "gtf_to_bed",
-        "usage: paleomix gtf_to_bed [options] in.gtf out_prefix [in.scaffolds]",
-    ),
     ("vcf_filter", "usage: paleomix vcf_filter [-h] [--version] [--reset-filter]"),
     (
         "vcf_to_fasta",

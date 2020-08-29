@@ -47,7 +47,6 @@ _COMMANDS = {
     "coverage": "paleomix.tools.coverage",
     "depths": "paleomix.tools.depths",
     # VCF/etc. tools
-    "gtf_to_bed": "paleomix.tools.gtf_to_bed",
     "rmdup_collapsed": "paleomix.tools.rmdup_collapsed",
     "vcf_filter": "paleomix.tools.vcf_filter",
     "vcf_to_fasta": "paleomix.tools.vcf_to_fasta",
@@ -77,8 +76,6 @@ BAM/SAM tools:
                                  tool.
 
 VCF/GTF/BED/Pileup tools:
-    paleomix gtf_to_bed       -- Convert GTF file to BED files grouped by
-                                 feature (coding, RNA, etc).
     paleomix vcf_filter       -- Quality filters for VCF records, similar to
                                  'vcfutils.pl varFilter'.
     paleomix vcf_to_fasta     -- Create most likely FASTA sequence from tabix-
