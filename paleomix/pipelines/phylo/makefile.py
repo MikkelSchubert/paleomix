@@ -687,7 +687,12 @@ _VALIDATION_GENOTYPES = {
     "Padding": IsUnsignedInt,
     "GenotypeEntirePrefix": IsBoolean(default=False),
     "MPileup": {StringStartsWith("-"): Or(IsInt, IsStr, IsNone)},
-    "BCFTools": {StringStartsWith("-"): Or(IsInt, IsStr, IsNone)},
+    "BCFTools": {
+        StringStartsWith("-"): Or(IsInt, IsStr, IsNone),
+        # BCFTools used '-g' by itself to indicate the SNP caller, but now -g has a
+        # different meaning and takes values. Check forces updates to old makefile.
+        "-g": Or(IsInt, IsStr),
+    },
     "Random": {"--min-distance-to-indels": IsUnsignedInt},
     "VCF_Filter": {
         "MaxReadDepth": Or(
