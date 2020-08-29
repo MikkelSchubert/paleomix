@@ -55,13 +55,16 @@ class MAFFTNode(CommandNode):
         self, input_file, output_file, algorithm="auto", options={}, dependencies=()
     ):
         command = AtomicCmdBuilder(
-            _PRESETS[algorithm.lower()] + ["%(IN_FASTA)s"],
+            _PRESETS[algorithm.lower()],
             IN_FASTA=input_file,
             OUT_STDOUT=output_file,
             CHECK_VERSION=MAFFT_VERSION,
         )
 
         apply_options(command, options)
+
+        # Needs to be specified after options and flags
+        command.add_value("%(IN_FASTA)s")
 
         self._output_file = output_file
 
