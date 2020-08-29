@@ -95,7 +95,7 @@ For the purpose of the example project, we need only change a few options. Since
 .. code-block:: yaml
     :emphasize-lines: 12
     :linenos:
-    :lineno-start: 38
+    :lineno-start: 29
 
     # Settings for aligners supported by the pipeline
     Aligners:
@@ -111,9 +111,9 @@ For the purpose of the example project, we need only change a few options. Since
         MinQuality: 30
         # Filter reads that did not map to the reference sequence
         FilterUnmappedReads: yes
-        # Should be disabled ("no") for aDNA alignments, as post-mortem damage
-        # localizes to the seed region, which BWA expects to have few
-        # errors (sets "-l"). See http://pmid.us/22574660
+        # May be disabled ("no") for aDNA alignments with the 'aln' algorithm.
+        # Post-mortem damage localizes to the seed region, which BWA expects to
+        # have few errors (sets "-l"). See http://pmid.us/22574660
         UseSeed: yes
 
 Since the data we will be mapping represents (simulated) ancient DNA, we will furthermore set the UseSeed option to 'no' (line 18), in order to recover a small additional amount of alignments during mapping (c.f. [Schubert2012]_):
@@ -137,9 +137,9 @@ Since the data we will be mapping represents (simulated) ancient DNA, we will fu
         MinQuality: 30
         # Filter reads that did not map to the reference sequence
         FilterUnmappedReads: yes
-        # Should be disabled ("no") for aDNA alignments, as post-mortem damage
-        # localizes to the seed region, which BWA expects to have few
-        # errors (sets "-l"). See http://pmid.us/22574660
+        # May be disabled ("no") for aDNA alignments with the 'aln' algorithm.
+        # Post-mortem damage localizes to the seed region, which BWA expects to
+        # have few errors (sets "-l"). See http://pmid.us/22574660
         UseSeed: no
 
 Once this is done, we can proceed to specify the location of the reference genome(s) that we wish to map our reads against.
@@ -159,7 +159,6 @@ In addition to the BWA / Bowtie2 index, several other related files are also aut
 .. warning::
     Since the pipeline automatically carries out indexing of the FASTA files, it therefore requires write-access to the folder containing the FASTA files. If this is not possible, one may simply create a local folder containing symbolic links to the original FASTA file(s), and point the makefile to this location. All automatically generated files will then be placed in this location.
 
-
 Specifying which FASTA file to align sequences is accomplished by listing these in the "Prefixes" section in the makefile. For example, assuming that we had a FASTA file named "my\_genome.fasta" which is located in the folder "my\_prefixes", the following might be used::
 
     Prefixes:
@@ -177,17 +176,19 @@ The name of the prefix (here 'my\_genome') will be used to name the resulting fi
 In the case of this example project, we will be mapping our data against the revised Cambridge Reference Sequence (rCRS) for the human mitochondrial genome, which is included in examples folder under 'prefixes', as a file named 'rCRS.fasta'. To add it to the makefile, locate the 'Prefixes' section located below the 'Options' section, and update it as described above (lines 5 and 7):
 
 .. code-block:: yaml
-    :emphasize-lines: 6,8
+    :emphasize-lines: 6,10
     :linenos:
-    :lineno-start: 125
+    :lineno-start: 110
 
-    # Map of prefixes by name, each having a Path key, which specifies the
-    # location of the BWA/Bowtie2 index, and optional label, and an option
-    # set of regions for which additional statistics are produced.
+    # Map of prefixes by name, each having a Path, which specifies the location of the
+    # BWA/Bowtie2 index, and optional regions for which additional statistics are produced.
     Prefixes:
-      # Name of the prefix; is used as part of the output filenames
+      # Replace 'NAME_OF_PREFIX' with name of the prefix; this name is used in summary
+      # statistics and as part of output filenames.
       rCRS:
-        # Path to .fasta file containing a set of reference sequences.
+        # Replace 'PATH_TO_PREFIX' with the path to .fasta file containing the references
+        # against which reads are to be mapped. Using the same name as filename is strongly
+        # recommended (e.g. /path/to/Human_g1k_v37.fasta should be named 'Human_g1k_v37').
         Path: prefixes/rCRS.fasta
 
 Once this is done, we may specify the input data that we wish the pipeline to process for us.
@@ -200,7 +201,7 @@ A single makefile may be used to process one or more samples, to generate one or
 
 .. code-block:: yaml
     :linenos:
-    :lineno-start: 145
+    :lineno-start: 129
 
     # You can also add comments like these to document your experiment
     MyFilename:
@@ -210,7 +211,7 @@ This first name, or grouping, is referred to as the target, and typically corres
 
 .. code-block:: yaml
     :linenos:
-    :lineno-start: 145
+    :lineno-start: 129
 
     # You can also add comments like these to document your experiment
     MyFilename:
@@ -234,7 +235,7 @@ It is important to correctly specify the libraries, since the pipeline will not 
 
 .. code-block:: yaml
     :linenos:
-    :lineno-start: 145
+    :lineno-start: 129
 
     # You can also add comments like these to document your experiment
     MyFilename:
@@ -258,7 +259,7 @@ We simply specify these paths for each of the single-end lanes, here using the l
 
 .. code-block:: yaml
     :linenos:
-    :lineno-start: 145
+    :lineno-start: 129
 
     # You can also add comments like these to document your experiment
     MyFilename:
@@ -289,7 +290,7 @@ Knowing how that the files contain a number specifying which file in a pair they
 
 .. code-block:: yaml
     :linenos:
-    :lineno-start: 145
+    :lineno-start: 129
 
     # You can also add comments like these to document your experiment
     MyFilename:
@@ -317,17 +318,14 @@ The final makefile
 Once we've completed the steps described above, the resulting makefile should look like the following, shown here with the modifications that we've made highlighted:
 
 .. code-block:: yaml
-    :emphasize-lines: 49,55,130,132,146-156
+    :emphasize-lines: 40,46,115,119,129-
     :linenos:
 
     # -*- mode: Yaml; -*-
-    # Timestamp: 2016-02-04T10:53:59.906883
-    #
     # Default options.
     # Can also be specific for a set of samples, libraries, and lanes,
     # by including the "Options" hierarchy at the same level as those
-    # samples, libraries, or lanes below. This does not include
-    # "Features", which may only be specific globally.
+    # samples, libraries, or lanes below.
     Options:
       # Sequencing platform, see SAM/BAM reference for valid values
       Platform: Illumina
@@ -339,17 +337,17 @@ Once we've completed the steps described above, the resulting makefile should lo
 
       # Settings for trimming of reads, see AdapterRemoval man-page
       AdapterRemoval:
-         # Adapter sequences, set and uncomment to override defaults
+        # Set and uncomment to override defaults adapter sequences
     #     --adapter1: AGATCGGAAGAGCACACGTCTGAACTCCAGTCACNNNNNNATCTCGTATGCCGTCTTCTGCTTG
     #     --adapter2: AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT
-         # Some BAM pipeline defaults differ from AR defaults;
-         # To override, change these value(s):
-         --mm: 3
-         --minlength: 25
-         # Extra features enabled by default; change 'yes' to 'no' to disable
-         --collapse: yes
-         --trimns: yes
-         --trimqualities: yes
+        # Some BAM pipeline defaults differ from AR defaults;
+        # To override, change these value(s):
+        --mm: 3
+        --minlength: 25
+        # Extra features enabled by default; change 'yes' to 'no' to disable
+        --collapse: yes
+        --trimns: yes
+        --trimqualities: yes
 
       # Settings for aligners supported by the pipeline
       Aligners:
@@ -365,12 +363,13 @@ Once we've completed the steps described above, the resulting makefile should lo
           MinQuality: 30
           # Filter reads that did not map to the reference sequence
           FilterUnmappedReads: yes
-          # Should be disabled ("no") for aDNA alignments, as post-mortem
-          # localizes to the seed region, which BWA expects to have few
-          # errors (sets "-l"). See http://pmid.us/22574660
+          # May be disabled ("no") for aDNA alignments with the 'aln' algorithm.
+          # Post-mortem damage localizes to the seed region, which BWA expects to
+          # have few errors (sets "-l"). See http://pmid.us/22574660
           UseSeed: no
-          # Additional command-line options may be specified for the "aln"
-          # call(s), as described below for Bowtie2 below.
+          # Additional command-line options may be specified below. For 'backtrack' these
+          # are applied to the "bwa aln". See Bowtie2 for more examples.
+    #      -n: 0.04
 
         # Settings for mappings performed using Bowtie2
         Bowtie2:
@@ -388,17 +387,7 @@ Once we've completed the steps described above, the resulting makefile should lo
     #        - CN:SequencingCenterNameHere
     #        - DS:DescriptionOfReadGroup
 
-      # Mark / filter PCR duplicates. If set to 'filter', PCR duplicates are
-      # removed from the output files; if set to 'mark', PCR duplicates are
-      # flagged with bit 0x400, and not removed from the output files; if set to
-      # 'no', the reads are assumed to not have been amplified. Collapsed reads
-      # are filtered using the command 'paleomix rmdup_duplicates', while "normal"
-      # reads are filtered using Picard MarkDuplicates.
-      PCRDuplicates: filter
-
-      # Command-line options for mapDamage; note that the long-form
-      # options are expected; --length, not -l, etc. Uncomment the
-      # "mapDamage" line adding command-line options below.
+      # Command-line options for mapDamage; use long-form options(--length not -l):
       mapDamage:
         # By default, the pipeline will downsample the input to 100k hits
         # when running mapDamage; remove to use all hits
@@ -407,43 +396,55 @@ Once we've completed the steps described above, the resulting makefile should lo
       # Set to 'yes' exclude a type of trimmed reads from alignment / analysis;
       # possible read-types reflect the output of AdapterRemoval
       ExcludeReads:
-        Single: no              # Single-ended reads / Orphaned paired-ended reads
-        Paired: no              # Paired ended reads
-        Singleton: no           # Paired reads for which the mate was discarded
-        Collapsed: no           # Overlapping paired-ended reads collapsed into a
-                                # single sequence by AdapterRemoval
-        CollapsedTruncated: no  # Like 'Collapsed', except that the reads
-                                # truncated due to the presence ambiguous
-                                # bases or low quality bases at read termini.
+        # Exclude single-end reads (yes / no)?
+        Single: no
+        # Exclude non-collapsed paired-end reads (yes / no)?
+        Paired: no
+        # Exclude paired-end reads for which the mate was discarded (yes / no)?
+        Singleton: no
+        # Exclude overlapping paired-ended reads collapsed into a single sequence
+        # by AdapterRemoval (yes / no)?
+        Collapsed: no
+        # Like 'Collapsed', but only for collapsed reads truncated due to the
+        # presence of ambiguous or low quality bases at read termini (yes / no).
+        CollapsedTruncated: no
 
-      # Optional steps to perform during processing
+      # Optional steps to perform during processing.
       Features:
-        mapDamage: yes      # Generate mapDamage plot for each library
-                            #   Location: {Destination}/{Target}.{Genome}.mapDamage/{Library}/
-        Coverage: yes       # Generate coverage information for the final BAM
-                            #   Location: {Destination}/{Target}.{Genome}.coverage
-        Depths: yes         # Generate histogram of number of sites with a given read-depth
-                            #   Location: {Destination}/{Target}.{Genome}.depths
-        Summary: yes        # Generate summary table for each target
-                            #   Location: {Destination}/{Target}.summary
+        # If set to 'filter', PCR duplicates are removed from the output files; if set to
+        # 'mark', PCR duplicates are flagged with bit 0x400, and not removed from the
+        # output files; if set to 'no', the reads are assumed to not have been amplified.
+        PCRDuplicates: filter
+        # Set to 'no' to disable mapDamage; set to 'plots' to build basic mapDamage plots;
+        # set to 'model' to build plots and post-mortem damage models; and set to 'rescale'
+        # to build plots, models, and BAMs with rescaled quality scores. All analyses are
+        # carried out per library.
+        mapDamage: plot
+        # Generate coverage information for the final BAM and for each 'RegionsOfInterest'
+        # specified in 'Prefixes' (yes / no).
+        Coverage: yes
+        # Generate histograms of number of sites with a given read-depth, from 0 to 200,
+        # for each BAM and for each 'RegionsOfInterest' specified in 'Prefixes' (yes / no).
+        Depths: yes
+        # Generate summary table for each target (yes / no)
+        Summary: yes
 
 
-    # Map of prefixes by name, each having a Path key, which specifies the
-    # location of the BWA/Bowtie2 index, and optional label, and an option
-    # set of regions for which additional statistics are produced.
+    # Map of prefixes by name, each having a Path, which specifies the location of the
+    # BWA/Bowtie2 index, and optional regions for which additional statistics are produced.
     Prefixes:
-      # Name of the prefix; is used as part of the output filenames
+      # Replace 'NAME_OF_PREFIX' with name of the prefix; this name is used in summary
+      # statistics and as part of output filenames.
       rCRS:
-        # Path to .fasta file containing a set of reference sequences.
+        # Replace 'PATH_TO_PREFIX' with the path to .fasta file containing the references
+        # against which reads are to be mapped. Using the same name as filename is strongly
+        # recommended (e.g. /path/to/Human_g1k_v37.fasta should be named 'Human_g1k_v37').
         Path: prefixes/rCRS.fasta
 
-        # Label for prefix: One of nuclear, mitochondrial, chloroplast,
-        # plasmid, bacterial, or viral. Is used in the .summary files.
-    #    Label: ...
-
-        # Produce additional coverage / depth statistics for a set of
-        # regions defined in a BED file; if no names are specified for the
-        # BED records, results are named after the chromosome / contig.
+        # (Optional) Uncomment and replace 'PATH_TO_BEDFILE' with the path to a .bed file
+        # listing extra regions for which coverage / depth statistics should be calculated;
+        # if no names are specified for the BED records, results are named after the
+        # chromosome / contig. Replace 'NAME' with the desired name for these regions.
     #    RegionsOfInterest:
     #      NAME: PATH_TO_BEDFILE
 
@@ -479,7 +480,7 @@ The pipeline will run as many simultaneous processes as there are cores in the c
     MyFilename.rCRS.mapDamage
     MyFilename.summary
 
-The files include a table of the average coverages, a histogram of the per-site coverages (depths), a folder containing one set of mapDamage plots per library, and the final BAM file and its index (the .bai file), as well as a table summarizing the entire analysis. For a more detailed description of the files generated by the pipeline, please refer to the :ref:`bam_filestructure` section; should problems occur during the execution of the pipeline, then please verify that the makefile is correctly filled out as described above, and refer to the :ref:`troubleshooting_bam` section.
+The files include a table of the average coverage, a histogram of the per-site coverage (depths), a folder containing one set of mapDamage plots per library, and the final BAM file and its index (the .bai file), as well as a table summarizing the entire analysis. For a more detailed description of the files generated by the pipeline, please refer to the :ref:`bam_filestructure` section; should problems occur during the execution of the pipeline, then please verify that the makefile is correctly filled out as described above, and refer to the :ref:`troubleshooting_bam` section.
 
 .. note::
     The first item, 'MyFilename', is a folder containing intermediate files generated while running the pipeline, required due to the many steps involved in a typical analyses, and which also allows for the pipeline to resume should the process be interrupted. This folder will typically take up 3-4x the disk-space used by the final BAM file(s), and can safely be removed once the pipeline has run to completion, in order to reduce disk-usage.

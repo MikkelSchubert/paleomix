@@ -7,11 +7,16 @@ Software requirements
 
 In addition to the requirements listed in the :ref:`installation` section, the BAM pipeline requires several other pieces of software. The version numbers indicates the oldest supported version of each program:
 
-* `AdapterRemoval`_ v2.2.0 [Lindgreen2012]_
+* `AdapterRemoval`_ v2.2.0 [Schubert2016]_
 * `SAMTools`_ v1.3.1 [Li2009b]_
 * `Picard Tools`_ v1.137
 
-The Picard Tools JAR-file (picard.jar) is expected to be located in ~/install/jar_root/ by default, but this behavior may be changed using either the --jar-root command-line option, or via the global configuration file (see section :ref:`bam_configuration`).
+The Picard Tools JAR-file (picard.jar) is expected to be located in ~/install/jar_root/ by default, but this behavior may be changed using either the --jar-root command-line option, or via the global configuration file (see section :ref:`bam_configuration`)::
+
+    $ mkdir -p ~/install/jar_root
+    $ wget -O ~/install/jar_root/picard.jar https://github.com/broadinstitute/picard/releases/download/2.23.3/picard.jar
+
+Running Picard requires a Jave Runtime Environment (JRE). Please refer to your ditro's documentation for how to install a JRE.
 
 Furthermore, one or both of the following sequence aligners must be installed:
 
@@ -22,7 +27,7 @@ Furthermore, one or both of the following sequence aligners must be installed:
 
 * `mapDamage`_ 2.0.2 [Jonsson2013]_
 
-If mapDamage is used to perform rescaling of post-mortem DNA damage, then the GNU Scientific Library (GSL) and the R packages listed in the mapDamage installation instructions are required; these include 'inline', 'gam', 'Rcpp', 'RcppGSL' and 'ggplot2' (>=0.9.2). Use the following commands to verify that these packages have been correctly installed::
+If mapDamage is used to perform rescaling of post-mortem DNA damage, then the GNU Scientific Library (GSL) and the R packages listed in the mapDamage installation instructions are required; these include `inline`, `gam`, `Rcpp`, `RcppGSL` and `ggplot2`. Use the following commands to verify that these packages have been correctly installed::
 
     $ gsl-config
     Usage: gsl-config [OPTION]
@@ -31,6 +36,10 @@ If mapDamage is used to perform rescaling of post-mortem DNA damage, then the GN
     $ mapDamage --check-R-packages
     All R packages are present
 
+
+On Debian-based systems, most of these dependencies can be installed using the following command::
+
+    $ sudo apt-get install adapterremoval samtools bowtie2 bwa mapdamage
 
 Testing the pipeline
 --------------------

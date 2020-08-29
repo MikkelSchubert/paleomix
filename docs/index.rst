@@ -2,11 +2,9 @@
 Welcome to PALEOMIX's documentation!
 ====================================
 
-The PALEOMIX pipelines are a set of pipelines and tools designed to aid the rapid processing of High-Throughput Sequencing (HTS) data: The BAM pipeline processes de-multiplexed reads from one or more samples, through sequence processing and alignment, to generate BAM alignment files useful in downstream analyses; the Phylogenetic pipeline carries out genotyping and phylogenetic inference on BAM alignment files, either produced using the BAM pipeline or generated elsewhere; and the Zonkey pipeline carries out a suite of analyses on low coverage equine alignments, in order to detect the presence of F1-hybrids in archaeological assemblages. In addition, PALEOMIX aids in metagenomic analysis of the extracts.
+The PALEOMIX pipelines are a set of pipelines and tools designed to aid the rapid processing of High-Throughput Sequencing (HTS) data: The BAM pipeline processes demultiplexed reads from one or more samples, through sequence processing and alignment, to generate BAM alignment files useful in downstream analyses; the Phylogenetic pipeline carries out genotyping and phylogenetic inference on BAM alignment files, either produced using the BAM pipeline or generated elsewhere; and the Zonkey pipeline carries out a suite of analyses on low coverage equine alignments, in order to detect the presence of F1-hybrids in archaeological assemblages.
 
-The pipelines have been designed with ancient DNA (aDNA) in mind, and includes several features especially useful for the analyses of ancient samples, but can all be used for the processing of modern samples, in order to ensure consistent data processing.
-
-For a detailed description of the pipeline, please refer to the `documentation <http://paleomix.readthedocs.io/>`_; for questions, bug reports, and/or suggestions, use the `GitHub tracker <https://github.com/MikkelSchubert/paleomix/issues/>`_, or contact Mikkel Schubert at `MikkelSch@gmail.com <mailto:MikkelSch@gmail.com>`_.
+The pipelines were originally designed with ancient DNA (aDNA) in mind, and includes several features especially useful for the analyses of ancient samples, but can all be used for the processing of modern samples.
 
 The PALEOMIX pipelines have been published in Nature Protocols; if you make use of PALEOMIX in your work, then please cite
 
@@ -15,6 +13,8 @@ The PALEOMIX pipelines have been published in Nature Protocols; if you make use 
 The Zonkey pipeline has been published in Journal of Archaeological Science; if you make use of this pipeline in your work, then please cite
 
   Schubert M, Mashkour M, Gaunitz C, Fages A, Seguin-Orlando A, Sheikhi S, Alfarhan AH, Alquraishi SA, Al-Rasheid KAS, Chuang R, Ermini L, Gamba C, Weinstock J, Vedat O, and Orlando L. "**Zonkey: A simple, accurate and sensitive pipeline to genetically identify equine F1-hybrids in archaeological assemblages**". Journal of Archaeological Science. 2007 Feb; 78:147-157. doi: `10.1016/j.jas.2016.12.005 <http://dx.doi.org/10.1016/j.jas.2016.12.005>`_.
+
+For questions, bug reports, and/or suggestions, please use the PALEOMIX `GitHub tracker <https://github.com/MikkelSchubert/paleomix/issues/>`_.
 
 
 **Table of Contents:**
@@ -39,7 +39,6 @@ The Zonkey pipeline has been published in Journal of Archaeological Science; if 
    related.rst
 
    references.rst
-
 
 
 Indices and tables
