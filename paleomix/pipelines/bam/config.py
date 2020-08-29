@@ -173,6 +173,6 @@ def add_run_command(subparsers):
         action="append",
         default=[],
         help="May be specified one or more times with options to be passed "
-        "tot the JRE (Jave Runtime Environment); e.g. to change the "
+        "to the JRE (Jave Runtime Environment); e.g. to change the "
         "maximum amount of memory (default is -Xmx4g)",
     )
