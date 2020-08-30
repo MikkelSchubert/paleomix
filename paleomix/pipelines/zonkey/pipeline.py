@@ -584,6 +584,7 @@ def finalize_run_config(parser, args):
         parser.print_usage()
         return
 
+    args.dry_run |= args.command == "dryrun"
     args.multisample = False
 
     known_samples = set(args.database.samples) | set(("Sample",))
@@ -658,7 +659,7 @@ def main(argv):
         log.error("Error reading database %r: %s", args.database, error)
         return
 
-    if args.command == "run":
+    if args.command in ("run", "dryrun"):
         args = finalize_run_config(run_parser, args)
         if args is not None:
             return run_admix_pipeline(args)
