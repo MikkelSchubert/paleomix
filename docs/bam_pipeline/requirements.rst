@@ -23,7 +23,7 @@ Furthermore, one or both of the following sequence aligners must be installed:
 * `Bowtie2`_ v2.3.0 [Langmead2012]_
 * `BWA`_ v0.7.15 [Li2009a]_
 
-`mapDamage is required by default, but can be disabled on a per-project basis:
+mapDamage is required by default, but can be disabled on a per-project basis:
 
 * `mapDamage`_ 2.0.2 [Jonsson2013]_
 
@@ -45,6 +45,19 @@ Testing the pipeline
 --------------------
 
 An example project is included with the BAM pipeline, and it is recommended to run this project in order to verify that the pipeline and required applications have been correctly installed. See the :ref:`examples` section for a description of how to run this example project.
+
+.. Note::
+    The example project does not carry out rescaling using mapDamage by default. If you wish to test that the requirements for this feature have been installed correctly, then change the following line
+
+    .. code-block:: yaml
+
+        mapDamage: plot
+
+    to
+
+    .. code-block:: yaml
+
+        mapDamage: rescale
 
 In case of errors, please consult the :ref:`troubleshooting` section.
 
