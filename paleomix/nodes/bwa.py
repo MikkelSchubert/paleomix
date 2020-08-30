@@ -242,6 +242,7 @@ class BWAAlgorithmNode(CommandNode):
             input_files_1=input_file_1,
             input_files_2=input_file_2,
             prefix=prefix,
+            threads=threads,
         )
 
         CommandNode.__init__(
@@ -327,7 +328,7 @@ def _get_node_description(
     if algorithm is not None:
         info.append(algorithm)
 
-    if threads > 0:
-        info.append("(%i threads)" % (threads,))
+    if threads > 1:
+        info.append("using %i threads" % (threads,))
 
     return " ".join(info)
