@@ -1,16 +1,60 @@
 # Changelog
 
-## Unreleased
+## [1.3.0] - 2020-08-31
+
+PALEOMIX v1.3.0 is a major maintenance release, with the goal of porting PALEOMIX to
+Python 3 and to prepare for further work to update and expand the pipeline. A number of
+deprecated tools and options have been removed, as has support for very old versions of
+tools used by the pipelines.
+
+
+Please open an issue if features or options import to your work have been removed.
+
+### Added
+  - The BAM and Phylo pipelines print warnings when deprecated/removed options are used
+  - A log-file is automatically created if errors are encountered during run-time.
+
 ### Changed
-  - Removed internal copy of pyyaml and added dependency on ruamel.yaml
+  - Removed internal copy of pyyaml and added dependency on ruamel.yaml.
+  - Command-line output was changed to a simpler, log-log output.
+  - Bumped minimum version requirements for most tools used by the pipelines; minimum
+    versions were largely informed by availability in Debian stretch.
+  - Changed naming of BAM index files from 'filename.bai' to 'filename.bam.bai' in order
+    to match the behavior of standard tools.
+  - The filenames of input FASTQ files are now used in the intermediate file-structure,
+    with the goal of making the pipeline more robust to changes in input files.
+  - The pipeline no longer fails if a command generates more files than expected,
+    instead this merely triggers a warning.
+  - Moved PCR duplicate filtering and rescaling to 'Features' in BAM pipeline makefiles.
+
+### Fixed
+  - Fixed spurious warnings from pysam (htslib) when opening BAMs without index files.
 
 ### Removed
   - Removed 'bam_pipeline remap' command.
   - Removed undocumented 'ena' command.
   - Removed entry-points other than the 'paleomix' command.
   - Removed 'sample_pileup' command.
-  - Removed 'Random Sampling' and 'Reference Sequence' genotyping methods
+  - Removed 'Random Sampling' and 'Reference Sequence' genotyping methods.
   - Removed --to-dot option for pipelines.
+  - Removed keyboard shortcuts for modifying pipeline behavior during runtime.
+  - Removed makefile metadata (filename, hash, mtime) from summary reports
+  - Removed limited support for 32 bit systems
+  - Removed undocumented functions from Zonkey
+  - Removed undocumented codeml support from the Phylo pipeline
+  - Removed support for compressing intermediate FASTQ files using bzip2; reads are now
+    always compressed using gzip.
+  - Removed ability to merge FASTQ files with the the SplitLanesByFilenames option;
+    files are now always split, meaning that individual FASTQ files or pairs are mapped.
+  - Removed support for indel realignment using GATK due to its removal from GATK itself
+  - Removed creation of FASTA sequence dictionaries as they were only needed by GATK.
+  - Removed the 'retable' command. A more performant standalone version can be found at
+    https://github.com/MikkelSchubert/retable
+  - Removed the 'duphist' tool and the corresponding BAM pipelien feature
+  - Removed data for the original publication of PALEOMIX. The instructions in that
+    publication are outdated and cannot be carried out for current versions of PALEOMIX.
+  - Removed support for labels for BAM pipeline prefixes
+  - Removed the 'cat' command
 
 
 ## [1.2.14] - 2019-12-01
@@ -67,7 +111,7 @@
 
 
 ## [1.2.13.1] - 2018-03-25
-### Fixed 
+### Fixed
   - Fixed divisions by zero if empty files are listed as pre-trimmed reads.
 
 
@@ -632,7 +676,8 @@ the (partially) updated documentation now hosted on ReadTheDocs.
   - Switching to more traditional version-number tracking.
 
 
-[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.14...HEAD
+[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.14...v1.3.0
 [1.2.14]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.8...v1.2.14
 [1.2.13.8]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.7...v1.2.13.8
 [1.2.13.7]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.6...v1.2.13.7
