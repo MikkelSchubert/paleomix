@@ -28,7 +28,7 @@ from paleomix.common.formats.fastq import FASTQ, FASTQualities
 
 
 def parse_args(argv):
-    parser = argparse.ArgumentParser("validate_fastq")
+    parser = argparse.ArgumentParser("paleomix :validate_fastq")
     parser.add_argument("files", nargs="+")
     parser.add_argument("--collapsed", action="store_true")
     parser.add_argument("--no-empty", action="store_true")

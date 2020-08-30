@@ -134,7 +134,7 @@ def sequences_to_msa(sequences):
 
 
 def parse_args(argv):
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(prog="paleomix zonkey:mito")
     parser.add_argument("database")
     parser.add_argument("bam")
     parser.add_argument("output_prefix")

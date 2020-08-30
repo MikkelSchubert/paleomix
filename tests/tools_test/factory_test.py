@@ -25,6 +25,7 @@ import subprocess
 
 import pytest
 
+import paleomix.main as main
 import paleomix.tools.factory as factory
 
 
@@ -66,46 +67,13 @@ def test_paleomix_command():
     assert stderr == ""
 
 
-FACTORY_COMMANDS = (
-    (
-        "bam_pipeline",
-        "usage: paleomix bam_pipeline run [-h] [--version] [--log-file LOG_FILE]",
-    ),
-    (
-        "trim_pipeline",
-        "usage: paleomix trim_pipeline run [-h] [--version] [--log-file LOG_FILE]",
-    ),
-    (
-        "phylo_pipeline",
-        "usage: paleomix phylo_pipeline [-h] [--version] [--log-file LOG_FILE]",
-    ),
-    (
-        "cleanup",
-        "usage: paleomix cleanup --temp-prefix prefix --fasta reference.fasta < in.sam",
-    ),
-    ("coverage", "usage: paleomix coverage [options] sorted.bam [out.coverage]"),
-    ("depths", "usage: paleomix depths [options] sorted.bam [out.depths]"),
-    (
-        "rmdup_collapsed",
-        "usage: paleomix rmdup_collapsed [options] < sorted.bam > out.bam",
-    ),
-    ("vcf_filter", "usage: paleomix vcf_filter [-h] [--version] [--reset-filter]"),
-    (
-        "vcf_to_fasta",
-        "usage: paleomix vcf_to_fasta [options] --genotype in.vcf --intervals in.bed",
-    ),
-)
-
-
 # Simple test that all commands can be executed
-@pytest.mark.parametrize("command, expected", FACTORY_COMMANDS)
-def test_factory__commands(command, expected):
+@pytest.mark.parametrize("command", main._COMMANDS)
+def test_factory__commands(command):
     cmd = factory.new(command)
     call = cmd.finalized_call
-    if command in ("bam_pipeline", "trim_pipeline"):
-        call.append("run")
 
     stdout, stderr = check_run(call + ["--help"])
 
-    assert stdout.split("\n")[0] == expected
-    assert stderr == ""
+    assert stdout.startswith("usage: paleomix {}".format(command))
+    assert not stderr

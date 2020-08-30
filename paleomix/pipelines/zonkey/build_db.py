@@ -296,9 +296,9 @@ def _collect_samples(reference, filenames):
 
 
 def parse_args(argv):
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(prog="paleomix zonkey:db")
     parser.add_argument(
-        "root", help="Root directory in which to write reference " "panel files."
+        "root", help="Root directory in which to write reference panel files."
     )
     parser.add_argument("reference", help="Reference genome in FASTA format.")
     parser.add_argument(

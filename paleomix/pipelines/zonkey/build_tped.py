@@ -302,7 +302,7 @@ def process_bam(args, data, bam_handle, mapping):
 
 
 def parse_args(argv):
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(prog="paleomix zonkey:tped")
     parser.add_argument(
         "root",
         metavar="output_folder",
