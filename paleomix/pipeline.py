@@ -352,6 +352,8 @@ class Pypeline:
 
         if states[nodegraph.ERROR]:
             self._logger.warning("Errors were detected while running pipeline")
+        else:
+            self._logger.info("Pipeline completed successfully")
 
 
 def _init_worker(queue):
