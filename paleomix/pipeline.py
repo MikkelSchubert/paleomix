@@ -307,7 +307,7 @@ class Pypeline:
         """Signal handler; see signal.signal."""
         if not self._interrupted:
             self._interrupted = True
-            self._logger.error(
+            self._logger.warning(
                 "Keyboard interrupt detected, waiting for running tasks to complete. "
                 "Press CTRL-C again to force termination."
             )
