@@ -20,6 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import multiprocessing
+
 import paleomix
 import paleomix.common.logging
 
@@ -163,7 +165,7 @@ def add_run_command(subparsers):
     group.add_argument(
         "--max-threads",
         type=int,
-        default=1,
+        default=max(2, multiprocessing.cpu_count()),
         help="Maximum number of threads to use [%(default)s]",
     )
     group.add_argument(
