@@ -6,7 +6,16 @@ The PALEOMIX pipelines are a set of pipelines and tools designed to aid the rapi
 
 The pipelines have been designed with ancient DNA (aDNA) in mind, and includes several features especially useful for the analyses of ancient samples, but can all be for the processing of modern samples, in order to ensure consistent data processing.
 
-For a detailed description of the pipeline, please refer to the `documentation <http://paleomix.readthedocs.io/>`_; for questions, bug reports, and/or suggestions, use the `GitHub tracker <https://github.com/MikkelSchubert/paleomix/issues/>`_, or contact Mikkel Schubert at `MikkelSch@gmail.com <mailto:MikkelSch@gmail.com>`_.
+----------------------
+Installation and usage
+----------------------
+
+Detailed instructions can be found in the `documentation <http://paleomix.readthedocs.io/>`_ for PALEOMIX. For questions, bug reports, and/or suggestions, please use the `GitHub tracker <https://github.com/MikkelSchubert/paleomix/issues/>`_ or contact Mikkel Schubert at `MikkelSch@gmail.com <mailto:MikkelSch@gmail.com>`_.
+
+
+---------
+Citations
+---------
 
 The PALEOMIX pipelines have been published in Nature Protocols; if you make use of PALEOMIX in your work, then please cite
 
