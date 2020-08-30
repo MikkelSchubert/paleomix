@@ -308,9 +308,8 @@ class Pypeline:
         if not self._interrupted:
             self._interrupted = True
             self._logger.error(
-                "\nKeyboard interrupt detected, waiting for "
-                "running tasks to complete. Press CTRL-C "
-                "again to force termination.\n"
+                "Keyboard interrupt detected, waiting for running tasks to complete. "
+                "Press CTRL-C again to force termination."
             )
         else:
             self._pool.terminate()
