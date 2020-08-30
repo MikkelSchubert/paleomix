@@ -1,19 +1,18 @@
-include README.rst
+include .coveragerc
 include CHANGES.md
+include LICENSE
 include MANIFEST.in
-include pylint.conf
-include licenses/gpl.txt
-include licenses/mit.txt
+include paleomix_environment.yaml
 include paleomix/yaml/CHANGES
 include paleomix/yaml/LICENSE
 include paleomix/yaml/PKG-INFO
 include paleomix/yaml/README
+include pylint.conf
+include README.rst
+include tox.ini
 
-# Examples
+# Non source files
+recursive-include docs *
+recursive-include misc *
 recursive-include paleomix/resources *
-
-# Misc tools
-recursive-include misc *.py *.sh *.yaml
-
-# Tests
 recursive-include tests *
