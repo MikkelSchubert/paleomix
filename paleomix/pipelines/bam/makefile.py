@@ -169,6 +169,9 @@ _VALIDATION_OPTIONS = {
         "--shift": IsUnsignedInt,
         "--qualitymax": IsUnsignedInt,
         "--mate-separator": IsStr,
+        "--trimwindows": Or(IsInt, IsFloat),
+        "--preserve5p": Or(IsNone, IsBoolean),
+        "--collapse-deterministic": Or(IsNone, IsBoolean),
     },
     # Which aliger/mapper to use (BWA/Bowtie2)
     "Aligners": {
