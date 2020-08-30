@@ -29,6 +29,12 @@ The R packages may be installed using the following commands::
     > install.packages(c('RColorBrewer', 'ape', 'ggrepel', 'ggplot2', 'reshape2'))
 
 
+Zonkey reference panel
+----------------------
+
+Running the Zonkey pipeline requires a reference panel containing the information needed for hybrid identification. A detailed description of the reference panel and instructions for where to download the latest version can be found in the :ref:`zonkey_panel` section.
+
+
 Testing the pipeline
 --------------------
 

@@ -39,7 +39,7 @@ These possibilities are described in further detail below.
 Prerequisites
 -------------
 
-All invocations of the Zonkey pipeline takes the path to a 'panel' file as their first argument. This file is the reference panel providing the genetic information necessary for performing species and/or hybrid identification, and currently includes representatives of all extant equid species. The reference panel thereby allows for the identification of first generation hybrids between any living equine species, i.e. within caballines. For a more detailed description of the reference panel, the species included this panel, and instructions for where to download the latest version of the file, please refer to the :ref:`zonkey_panel` section.
+All invocations of the Zonkey pipeline takes the path to a `panel` file as their first argument. This file contains the SNP panel necessary for performing hybrid identification and currently includes representatives of all extant equid species. For a more detailed description of the reference panel, and instructions for where to download the latest version of the file, please refer to the :ref:`zonkey_panel` section.
 
 Secondly, the pipeline requires either one or two BAM files per sample, representing alignments against nuclear and / or mitochondrial genomes as described above. The analyses carried out by the Zonkey pipeline depends on the contents of the BAM alignment file provided for a given sample, and are presented below.
 
