@@ -25,7 +25,7 @@ Furthermore, one or both of the following sequence aligners must be installed:
 
 mapDamage is required by default, but can be disabled on a per-project basis:
 
-* `mapDamage`_ 2.0.2 [Jonsson2013]_
+* `mapDamage`_ 2.2.1 [Jonsson2013]_
 
 If mapDamage is used to perform rescaling of post-mortem DNA damage, then the GNU Scientific Library (GSL) and the R packages listed in the mapDamage installation instructions are required; these include `inline`, `gam`, `Rcpp`, `RcppGSL` and `ggplot2`. Use the following commands to verify that these packages have been correctly installed::
 
