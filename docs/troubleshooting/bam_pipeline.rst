@@ -100,8 +100,6 @@ The AdapterRemoval task will attempt to determine verify the quality-offset spec
 Troubleshooting BWA
 -------------------
 
-The BAM pipeline has primarily been tested with BWA v0.5.x; this is due in part to a number of issues with the Backtrack algorithm in later versions of BWA. For this reason, either v0.5.9-10 or BWA 0.7. Currently there is no version of BWA 0.7.x prior to 0.7.9a for which bugs have not been observed (see sub-sections below), excepting BWA v0.7.0 which does however lack several important bug-fixes added to later versions (see the BWA changelog).
-
 **BWA prefix generated using different version of BWA / corrupt index**:
 
     Between versions 0.5 and 0.6, BWA changed the binary format used to store the index sequenced produced using the command "bwa index". Version 0.7 is compatible with indexes generated using v0.6. The pipeline will attempt to detect the case where the current version of BWA does not correspond to the version used to generate the index, and will terminate if that is the case.
@@ -119,27 +117,8 @@ The BAM pipeline has primarily been tested with BWA v0.5.x; this is due in part 
     If this occurs, removing the old prefix files and generating a new index is advised (see above).
 
 
-**[gzclose] buffer error**:
-
-    On some systems, BWA may terminate with an "[gzclose] buffer error" error when mapping empty files (sometimes produced by AdapterRemoval). This is caused by a bug / regression in some versions of zlibhttp://www.zlib.net/, included with some distributions. As it is typically not possible to upgrade zlib without a full system update, BWA may instead be compiled using a up-to-date version of zlib, as shown here for zlib v1.2.8 and BWA v0.5.10::
-
-        $ wget http://downloads.sourceforge.net/project/bio-bwa/bwa-0.5.10.tar.bz2
-        $ tar xvjf bwa-0.5.10.tar.bz2
-        $ cd bwa-0.5.10
-        $ sed -e's#INCLUDES=#INCLUDES=-Izlib-1.2.8/ #' -e's#-lz#zlib-1.2.8/libz.a#' Makefile > Makefile.zlib
-        $ wget http://zlib.net/zlib-1.2.8.tar.gz
-        $ tar xvzf zlib-1.2.8.tar.gz
-        $ cd zlib-1.2.8
-        $ ./configure
-        $ make
-        $ cd ..
-        $ make -f Makefile.zlib
-
-    The resulting "bwa" executable must be placed in the PATH *before* the version of BWA built against the outdated version of zlib.
-
-
-Troublshooting validation of BAM files
---------------------------------------
+Troubleshooting validation of BAM files
+---------------------------------------
 
 **Both mates are marked as second / first of pair**:
 
