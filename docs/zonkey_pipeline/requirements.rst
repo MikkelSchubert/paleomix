@@ -5,7 +5,7 @@
 Software Requirements
 =====================
 
-The Zonkey pipeline requires PALEOMIX version 1.2.7 or later. In addition to the requirements listed for the PALEOMIX pipeline itself in the :ref:`installation` section, the Zonkey pipeline requires that other pieces of software be installed:
+In addition to the requirements listed for the PALEOMIX pipeline itself in the :ref:`installation` section, the Zonkey pipeline requires that other pieces of software be installed:
 
 * RScript from the `R`_ package, v3.3.3.
 * SmartPCA from the `EIGENSOFT`_ package, v13050+ [Patterson2006]_, [Price2006]_
