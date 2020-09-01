@@ -26,7 +26,7 @@ import multiprocessing
 import paleomix
 import paleomix.common.logging
 
-from paleomix.common.argparse import ArgumentParser
+from paleomix.common.argparse import ArgumentParser, SUPPRESS
 
 _DEFAULT_CONFIG_FILES = [
     "/etc/paleomix/phylo_pipeline.ini",
@@ -97,11 +97,7 @@ def build_parser():
         default="./data/prefixes",
         help="Location of prefixes (FASTAs) [%(default)s]",
     )
-    group.add_argument(
-        "--refseq-root",
-        default="./data/refseqs",
-        help="Location of reference sequences (FASTAs) [%(default)s]",
-    )
+    group.add_argument("--refseq-root", help=SUPPRESS)
     group.add_argument(
         "--destination",
         default="./results",
