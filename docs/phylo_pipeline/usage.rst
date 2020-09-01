@@ -39,7 +39,7 @@ For a given sample with name S, and a prefix with name P, the pipeline will expe
 Regions of interest
 -------------------
 
-Analysis is carried out for a set of "Regions of Interest", which is defined a set of named regions specified using BED files:
+Analysis is carried out for a set of "Regions of Interest", which is defined a set of named regions specified using BED files::
 
     RegionsOfInterest:
       NAME:
