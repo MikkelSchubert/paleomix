@@ -70,6 +70,9 @@ pygments_style = None
 # Disable smart-quotes to prevent conversion of double-dashes into long-dashes
 smartquotes = False
 
+# Use `blah` for inline code / shell snippets
+default_role = "literal"
+
 
 # -- Options for HTML output -------------------------------------------------
 
