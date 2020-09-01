@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 #
 # Based on 'FilterUniqueBAM' by
 #   Martin Kircher

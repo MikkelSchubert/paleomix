@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+  - Updated shebangs to 'python3'. Patch courtesy of Andreas Tille.
+
+
 ## [1.3.0] - 2020-08-31
 
 PALEOMIX v1.3.0 is a major maintenance release, with the goal of porting PALEOMIX to

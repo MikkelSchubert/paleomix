@@ -1,4 +1,4 @@
-#!/usr/bin/python -3
+#!/usr/bin/python3
 #
 # Copyright (c) 2013 Mikkel Schubert <MikkelSch@gmail.com>
 #
