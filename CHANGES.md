@@ -520,7 +520,7 @@ the (partially) updated documentation now hosted on ReadTheDocs.
     FASTQ record(s) included multiple times in one or more files) by ~4x.
 
 ### Added
-  - Paleomix v1.2.0 is now available via Pypi ('pip install paleomix').
+  - PALEOMIX v1.2.0 is now available via Pypi ('pip install paleomix').
   - Added command 'paleomix ena', which is designed to ease the preparation of
     FASTQ reads previously recorded in a BAM pipeline makefile for submission
     to the European Nucleotide Archive; this command is current unstable, and

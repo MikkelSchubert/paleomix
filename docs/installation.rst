@@ -101,12 +101,12 @@ You can now activate the paleomix environment with::
 
     $ conda activate paleomix
 
-Paleomix is not within the dependencies list above, so we can install this
+PALEOMIX is not within the dependencies list above, so we can install this
 _within_ the environment as explained above::
 
     $ (paleomix) pip install --user paleomix
 
-Paleomix requires the Picard JAR file in a specific place, we can symlink the versions in your conda environment into the correct place::
+PALEOMIX requires the Picard JAR file in a specific place, we can symlink the versions in your conda environment into the correct place::
 
     $ (paleomix) mkdir -p ~/install/jar_root/
     $ (paleomix) ln -s /<path>/<to>/miniconda2/envs/paleomix/share/picard-2.22.9-0/picard.jar ~/install/jar_root/

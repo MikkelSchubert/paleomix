@@ -184,7 +184,7 @@ class Node:
             return "\n                   ".join(sorted(values))
 
         message = [
-            "Paleomix         = v%s" % (paleomix.__version__,),
+            "PALEOMIX         = v%s" % (paleomix.__version__,),
             "Command          = %r" % (" ".join(sys.argv),),
             "CWD              = %r" % (os.getcwd(),),
             "PATH             = %r" % (os.environ.get("PATH", ""),),
