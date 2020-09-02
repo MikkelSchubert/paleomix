@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+  - Decoupled `--log-level` from command-line logging. Changed default log-level to
+    ERROR and made it apply to automatically generated log files as well.
+
+
 ## [1.3.1] - 2020-09-01
 
 ### Fixed

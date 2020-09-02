@@ -52,26 +52,26 @@ def initialize_console_logging():
         _LOG_ENABLED = True
 
 
-def initialize(log_level="info", log_file=None, name="paleomix"):
+def initialize(log_level="error", log_file=None, name="paleomix"):
     initialize_console_logging()
 
     log_level = _LOG_LEVELS[log_level.lower()]
     root = logging.getLogger()
-    root.setLevel(log_level)
 
     if log_file:
         handler = logging.FileHandler(log_file)
         handler.setFormatter(logging.Formatter(_FILE_MESSAGE_FORMAT))
+        handler.setLevel(log_level)
         root.addHandler(handler)
     elif name:
         template = "%s.%s_%%02i.log" % (name, time.strftime("%Y%m%d_%H%M%S"))
-        handler = LazyLogfile(template)
+        handler = LazyLogfile(template, log_level=log_level)
         handler.setFormatter(logging.Formatter(_FILE_MESSAGE_FORMAT))
-        handler.setLevel(logging.ERROR)
+        handler.setLevel(log_level)
         root.addHandler(handler)
 
 
-def add_argument_group(parser, default="info"):
+def add_argument_group(parser, default="error"):
     """Adds an option-group to an OptionParser object, with options
     pertaining to logging. Note that 'initialize' expects the config
     object to have these options."""
@@ -95,10 +95,11 @@ def get_logfiles():
 
 
 class LazyLogfile(logging.FileHandler):
-    def __init__(self, template):
+    def __init__(self, template, log_level):
         logging.FileHandler.__init__(self, template, delay=True)
         # Use absolute path for template
         self._template = self.baseFilename
+        self._log_level = log_level
 
     def _open(self):
         """Try to open a new logfile, taking steps to ensure that
@@ -111,7 +112,8 @@ class LazyLogfile(logging.FileHandler):
             try:
                 stream = os.fdopen(os.open(filename, flags), "w")
                 logger = logging.getLogger(__name__)
-                logger.info("Logging warnings and errors to %r", filename)
+                level_name = logging.getLevelName(self._log_level).lower()
+                logger.info("Saving %s logs to %r", level_name, filename)
 
                 self.baseFilename = filename
                 return stream

@@ -151,7 +151,7 @@ def add_run_command(subparsers):
         "--admixture-only", help=SUPPRESS, default=False, action="store_true",
     )
 
-    paleomix.common.logging.add_argument_group(parser, default="info")
+    paleomix.common.logging.add_argument_group(parser)
 
     group = parser.add_argument_group("Pipeline")
     group.add_argument(

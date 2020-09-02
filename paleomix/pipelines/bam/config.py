@@ -93,7 +93,7 @@ def add_run_command(subparsers):
         metavar="makefile",
     )
 
-    paleomix.common.logging.add_argument_group(parser, default="info")
+    paleomix.common.logging.add_argument_group(parser)
 
     group = parser.add_argument_group("Scheduling")
     group.add_argument(

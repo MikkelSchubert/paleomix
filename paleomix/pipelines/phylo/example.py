@@ -42,7 +42,7 @@ def build_parser():
         help="Destination folder for example data.",
     )
 
-    paleomix.common.logging.add_argument_group(parser, default="info")
+    paleomix.common.logging.add_argument_group(parser)
 
     return parser
 
