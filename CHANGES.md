@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.3.1] - 2020-09-01
 
 ### Fixed
   - Updated shebangs to 'python3'. Patch courtesy of Andreas Tille.
@@ -703,7 +703,8 @@ the (partially) updated documentation now hosted on ReadTheDocs.
   - Switching to more traditional version-number tracking.
 
 
-[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.1...HEAD
+[1.3.1]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.14...v1.3.0
 [1.2.14]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.8...v1.2.14
 [1.2.13.8]: https://github.com/MikkelSchubert/paleomix/compare/v1.2.13.7...v1.2.13.8
