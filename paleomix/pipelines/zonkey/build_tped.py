@@ -19,7 +19,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-import argparse
 import collections
 import itertools
 import os
@@ -34,6 +33,7 @@ import pysam
 from paleomix.common.sequences import NT_CODES
 from paleomix.common.sampling import reservoir_sampling
 
+import paleomix.common.argparse as argparse
 import paleomix.common.bamfiles as bamtools
 import paleomix.common.fileutils as fileutils
 import paleomix.pipelines.zonkey.database as database

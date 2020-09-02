@@ -20,13 +20,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import argparse
 import errno
 import sys
 
 import pysam
 
-import paleomix
+import paleomix.common.argparse as argparse
 import paleomix.common.vcffilter as vcffilter
 
 from paleomix.common.fileutils import open_ro
@@ -58,10 +57,6 @@ def _read_files(args):
 
 def main(argv):
     parser = argparse.ArgumentParser(prog="paleomix vcf_filter")
-
-    parser.add_argument(
-        "--version", action="version", version="%(prog)s v" + paleomix.__version__,
-    )
 
     parser.add_argument(
         "filenames",

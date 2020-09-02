@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+  - Added `-v` and `--version` to all command-line tools.
+
 ### Changed
   - Decoupled `--log-level` from command-line logging. Changed default log-level to
     ERROR and made it apply to automatically generated log files as well.

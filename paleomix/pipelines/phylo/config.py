@@ -48,10 +48,6 @@ def build_parser():
     )
     parser.add_argument("files", nargs="*", help="One or more YAML files")
 
-    parser.add_argument(
-        "--version", action="version", version="%(prog)s v" + paleomix.__version__,
-    )
-
     paleomix.common.logging.add_argument_group(parser)
 
     group = parser.add_argument_group("Scheduling")

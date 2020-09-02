@@ -36,12 +36,12 @@ $ samtools view -H INPUT.BAM | samtools view -Sbu -
 
 """
 import sys
-import argparse
 
 import pysam
 
 import paleomix.tools.factory
 
+import paleomix.common.argparse as argparse
 import paleomix.common.procs as processes
 
 

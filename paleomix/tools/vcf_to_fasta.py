@@ -36,7 +36,6 @@ to contain a certain amount of padding around the regions of interest.
 """
 
 
-import argparse
 import copy
 import itertools
 import os
@@ -45,10 +44,11 @@ import re
 
 import pysam
 
-import paleomix.common.vcfwrap as vcfwrap
-import paleomix.common.text as text
+import paleomix.common.argparse as argparse
 import paleomix.common.sequences as sequences
+import paleomix.common.text as text
 import paleomix.common.utilities as utilities
+import paleomix.common.vcfwrap as vcfwrap
 
 from paleomix.common.bedtools import BEDRecord
 

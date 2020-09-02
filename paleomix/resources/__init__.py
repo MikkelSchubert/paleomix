@@ -52,10 +52,6 @@ def add_copy_example_command(subparsers):
     parser = subparsers.add_parser("example", help="Create example project")
 
     parser.add_argument(
-        "--version", action="version", version="%(prog)s v" + paleomix.__version__,
-    )
-
-    parser.add_argument(
         "destination",
         default=".",
         nargs="?",

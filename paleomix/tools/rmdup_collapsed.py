@@ -24,9 +24,9 @@ import collections
 import random
 import sys
 
-from argparse import ArgumentParser
-
 import pysam
+
+from paleomix.common.argparse import ArgumentParser
 
 
 _FILTERED_FLAGS = 0x1  # PE reads
@@ -216,7 +216,7 @@ def process(args, infile, outfile):
 
 
 def parse_args(argv):
-    parser = ArgumentParser(usage=__doc__)
+    parser = ArgumentParser(prog="paleomix rmdup_collapsed", usage=__doc__)
     parser.add_argument(
         "input",
         default="-",

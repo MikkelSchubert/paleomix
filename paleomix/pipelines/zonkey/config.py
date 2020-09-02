@@ -42,10 +42,6 @@ _DEFAULT_CONFIG_FILES = [
 def build_parser():
     parser = ArgumentParser(prog="paleomix zonkey")
 
-    parser.add_argument(
-        "--version", action="version", version="%(prog)s v" + paleomix.__version__,
-    )
-
     subparsers = parser.add_subparsers(dest="command", metavar="command")
     add_copy_example_command(subparsers)
     add_mito_command(subparsers)
@@ -55,10 +51,6 @@ def build_parser():
 
 def add_copy_example_command(subparsers):
     parser = subparsers.add_parser("example", help="Create example project")
-
-    parser.add_argument(
-        "--version", action="version", version="%(prog)s v" + paleomix.__version__,
-    )
 
     parser.add_argument(
         "database", help="Zonkey database file (uncompressed)", metavar="database.tar"
@@ -75,10 +67,6 @@ def add_copy_example_command(subparsers):
 def add_mito_command(subparsers):
     parser = subparsers.add_parser(
         "mito", help="Create phylo pipeline project for mt alignments"
-    )
-
-    parser.add_argument(
-        "--version", action="version", version="%(prog)s v" + paleomix.__version__,
     )
 
     parser.add_argument(
@@ -101,10 +89,6 @@ def add_run_command(subparsers):
         usage=_RUN_USAGE,
         prog="paleomix zonkey run",
         default_config_files=_DEFAULT_CONFIG_FILES,
-    )
-
-    parser.add_argument(
-        "--version", action="version", version="%(prog)s v" + paleomix.__version__,
     )
 
     parser.add_argument(

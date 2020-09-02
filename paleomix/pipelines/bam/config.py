@@ -39,10 +39,6 @@ _DEFAULT_CONFIG_FILES = [
 def build_parser(pipeline_variant):
     parser = ArgumentParser(prog="paleomix %s_pipeline" % (pipeline_variant,))
 
-    parser.add_argument(
-        "--version", action="version", version="%(prog)s v" + paleomix.__version__,
-    )
-
     subparsers = parser.add_subparsers(dest="command", metavar="command")
     add_copy_example_command(subparsers)
     add_makefile_command(subparsers)
@@ -54,10 +50,6 @@ def build_parser(pipeline_variant):
 def add_makefile_command(subparsers):
     parser = subparsers.add_parser(
         "makefile", help="Print makefile template", aliases=("mkfile",)
-    )
-
-    parser.add_argument(
-        "--version", action="version", version="%(prog)s v" + paleomix.__version__,
     )
 
     parser.add_argument(
@@ -80,10 +72,6 @@ def add_run_command(subparsers):
         aliases=("dryrun",),
         help="Run pipeline on provided makefiles",
         default_config_files=_DEFAULT_CONFIG_FILES,
-    )
-
-    parser.add_argument(
-        "--version", action="version", version="%(prog)s v" + paleomix.__version__,
     )
 
     parser.add_argument(

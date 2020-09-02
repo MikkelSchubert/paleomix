@@ -31,9 +31,6 @@ import paleomix.yaml
 
 def build_parser():
     parser = argparse.ArgumentParser(prog="paleomix phylo_pipeline")
-    parser.add_argument(
-        "--version", action="version", version="%(prog)s v" + paleomix.__version__,
-    )
 
     parser.add_argument(
         "destination",

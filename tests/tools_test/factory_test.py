@@ -25,6 +25,7 @@ import subprocess
 
 import pytest
 
+import paleomix
 import paleomix.main as main
 import paleomix.tools.factory as factory
 
@@ -69,11 +70,25 @@ def test_paleomix_command():
 
 # Simple test that all commands can be executed
 @pytest.mark.parametrize("command", main._COMMANDS)
-def test_factory__commands(command):
+def test_factory__command_usage(command):
     cmd = factory.new(command)
     call = cmd.finalized_call
 
     stdout, stderr = check_run(call + ["--help"])
 
     assert stdout.startswith("usage: paleomix {}".format(command))
+    assert not stderr
+
+
+# Simple test that all commands support '--version'
+@pytest.mark.parametrize("arg", ("-v", "--version"))
+@pytest.mark.parametrize("command", main._COMMANDS)
+def test_factory__command_versions(arg, command):
+    cmd = factory.new(command)
+    call = cmd.finalized_call
+
+    stdout, stderr = check_run(call + [arg])
+
+    assert stdout.startswith("paleomix {}".format(command))
+    assert stdout.endswith(" v{}\n".format(paleomix.__version__))
     assert not stderr

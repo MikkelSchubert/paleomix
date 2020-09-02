@@ -20,12 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import argparse
 import collections
 import os
 import logging
 
 import pysam
+
+import paleomix.common.argparse as argparse
 
 from paleomix.common.bedtools import read_bed_file, sort_bed_by_bamfile
 from paleomix.common.fileutils import swap_ext
