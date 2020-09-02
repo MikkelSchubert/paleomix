@@ -169,6 +169,8 @@ def add_run_command(subparsers):
     group = parser.add_argument_group("Misc")
     group.add_argument(
         "--jre-option",
+        "--jre-options",
+        metavar="OPTION",
         dest="jre_options",
         action="append",
         default=[],
