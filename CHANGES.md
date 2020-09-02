@@ -13,6 +13,7 @@
 ### Fixed
   - Fixed the pipeline failing on `jre_options` (now `jre-option`) in config files.
   - Fixed the pipeline failing on empty options in config files from PALEOMIX v1.2.x.
+  - Fixed Bowtie2 using command-line options from the BWA makefile section
 
 
 ## [1.3.1] - 2020-09-01

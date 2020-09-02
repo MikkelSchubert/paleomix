@@ -222,8 +222,8 @@ class Lane:
         parameters = self._set_pe_input_files(parameters)
         parameters["threads"] = config.bowtie2_max_threads
 
-        parameters["mapping_options"] = dict(self.options["Aligners"]["BWA"])
-        parameters["cleanup_options"] = self._cleanup_options("BWA")
+        parameters["mapping_options"] = dict(self.options["Aligners"]["Bowtie2"])
+        parameters["cleanup_options"] = self._cleanup_options("Bowtie2")
 
         if self.options["QualityOffset"] != 33:
             parameters["mapping_options"]["--phred64"] = None
