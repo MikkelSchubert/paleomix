@@ -97,7 +97,6 @@ def build_parser():
         default="./data/prefixes",
         help="Location of prefixes (FASTAs) [%(default)s]",
     )
-    group.add_argument("--refseq-root", help=SUPPRESS)
     group.add_argument(
         "--destination",
         default="./results",
@@ -126,5 +125,10 @@ def build_parser():
         help="List all executables required by the pipeline, "
         "with version requirements (if any).",
     )
+
+    # Removed options
+    parser.add_argument("--refseq-root", help=SUPPRESS)
+    parser.add_argument("--progress-ui", help=SUPPRESS)
+    parser.add_argument("--ui-colors", help=SUPPRESS)
 
     return parser

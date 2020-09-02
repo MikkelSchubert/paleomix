@@ -14,7 +14,7 @@ This is accomplished by writing options in `~/.paleomix/bam_pipeline.ini`::
     jar-root = /home/username/install/jar_root
     bwa-max-threads = 1
     temp-root = /tmp/username/bam_pipeline
-    jre-options =
+    jre-option = -Xmx4g
     bowtie2-max-threads = 1
 
 Options in the configuration file correspond directly to command-line options for the BAM pipeline, with leading dashes removed. For example, the command-line option `--max-threads` becomes `max-threads` in the configuration file.

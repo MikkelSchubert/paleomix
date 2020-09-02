@@ -190,4 +190,8 @@ def add_run_command(subparsers):
         "with version requirements (if any).",
     )
 
+    # Removed options
+    parser.add_argument("--progress-ui", help=SUPPRESS)
+    parser.add_argument("--ui-colors", help=SUPPRESS)
+
     return parser

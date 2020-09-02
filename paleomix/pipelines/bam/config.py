@@ -27,7 +27,7 @@ import paleomix
 import paleomix.common.logging
 
 from paleomix.resources import add_copy_example_command
-from paleomix.common.argparse import ArgumentParser
+from paleomix.common.argparse import ArgumentParser, SUPPRESS
 
 
 _DEFAULT_CONFIG_FILES = [
@@ -176,3 +176,8 @@ def add_run_command(subparsers):
         "to the JRE (Jave Runtime Environment); e.g. to change the "
         "maximum amount of memory (default is -Xmx4g)",
     )
+
+    # Removed options
+    parser.add_argument("--gatk-max-threads", help=SUPPRESS)
+    parser.add_argument("--progress-ui", help=SUPPRESS)
+    parser.add_argument("--ui-colors", help=SUPPRESS)

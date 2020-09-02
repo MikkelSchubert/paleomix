@@ -4,6 +4,8 @@
 
 ### Fixed
   - Updated shebangs to 'python3'. Patch courtesy of Andreas Tille.
+  - Added minimal support for previously removed command-line options, to prevent the
+    pipelines from failing when used with old configuration files.
 
 
 ## [1.3.0] - 2020-08-31
