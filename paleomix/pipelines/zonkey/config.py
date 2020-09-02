@@ -102,15 +102,14 @@ def add_run_command(subparsers):
         "--downsample-to",
         type=int,
         default=1000000,
-        help="Number of reads to use for analyses; if 0, no "
-        "downsampling is performed [default: %(default)s]",
+        help="Number of reads to use for analyses; if 0, no downsampling is performed",
     )
     group.add_argument(
         "--admixture-replicates",
         type=int,
         default=1,
         help="Number of admixture replicates to run, before "
-        "the result with the highest likelihood [%(default)s]",
+        "the result with the highest likelihood",
     )
     group.add_argument(
         "--treemix-k",
@@ -119,7 +118,7 @@ def add_run_command(subparsers):
         help="Value passed to treemix's -k option; number of "
         "SNPs per block for estimation of the covariance "
         "matrix. If set to 0, a value will be estimated "
-        "assuming an even distribution of SNPs [%(default)s]",
+        "assuming an even distribution of SNPs",
     )
     group.add_argument(
         "--treemix-outgroup",
@@ -150,7 +149,7 @@ def add_run_command(subparsers):
         "--max-threads",
         type=int,
         default=max(2, multiprocessing.cpu_count()),
-        help="Maximum number of threads to use [%(default)s]",
+        help="Maximum number of threads to use",
     )
     group.add_argument(
         "--list-input-files",

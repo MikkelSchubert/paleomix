@@ -55,13 +55,13 @@ def build_parser():
         "--examl-max-threads",
         default=1,
         type=int,
-        help="Maximum number of threads for each instance of ExaML [%(default)s]",
+        help="Maximum number of threads for each instance of ExaML",
     )
     group.add_argument(
         "--max-threads",
         type=int,
         default=max(2, multiprocessing.cpu_count()),
-        help="Max number of threads to use in total [%(default)s]",
+        help="Max number of threads to use in total",
     )
     group.add_argument(
         "--dry-run",
@@ -76,27 +76,27 @@ def build_parser():
         "--temp-root",
         default="./temp",
         type=os.path.abspath,
-        help="Location for temporary files and folders [%(default)s]",
+        help="Location for temporary files and folders",
     )
     group.add_argument(
         "--samples-root",
         default="./data/samples",
-        help="Location of BAM files for each sample [%(default)s]",
+        help="Location of BAM files for each sample",
     )
     group.add_argument(
         "--regions-root",
         default="./data/regions",
-        help="Location of BED files containing regions of interest [%(default)s]",
+        help="Location of BED files containing regions of interest",
     )
     group.add_argument(
         "--prefix-root",
         default="./data/prefixes",
-        help="Location of prefixes (FASTAs) [%(default)s]",
+        help="Location of prefixes (FASTAs)",
     )
     group.add_argument(
         "--destination",
         default="./results",
-        help="The destination folder for result files [%(default)s]",
+        help="The destination folder for result files",
     )
 
     group = parser.add_argument_group("Files and executables")

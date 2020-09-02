@@ -123,7 +123,7 @@ def parse_arguments(argv, ext):
         "file. If this number is exceeded, the entire "
         "set of contigs is aggregated into one pseudo-"
         "contig named '<Genome>'. This is done to "
-        "limit table sizes [default: %(default)s]",
+        "limit table sizes",
     )
     parser.add_argument(
         "--ignore-readgroups",
@@ -131,8 +131,7 @@ def parse_arguments(argv, ext):
         action="store_true",
         help="Ignore readgroup information in reads, and only "
         "provide aggregated statistics; this is required "
-        "if readgroup information is missing or partial "
-        "[default: %(default)s]",
+        "if readgroup information is missing or partial",
     )
     parser.add_argument(
         "--overwrite-output",

@@ -322,8 +322,7 @@ def main(argv):
         default=1,
         type=int,
         metavar="NTH",
-        help="Use Nth sample from the VCF, with the first "
-        "sample numbered '1' [default: %(default)s].",
+        help="Use Nth sample from the VCF, with the first sample numbered 1",
     )
     parser.add_argument(
         "--intervals",
@@ -337,21 +336,19 @@ def main(argv):
         "--padding",
         type=int,
         default=10,
-        help="Number of bases to expand intervals, when "
-        "checking for adjacent indels [%(default)s]",
+        help="Number of bases to expand intervals, when checking for adjacent indels",
     )
     parser.add_argument(
         "--whole-codon-indels-only",
         action="store_true",
         default=False,
-        help="If true, only indels where (length %% 3) == 0 "
-        "are retained [%(default)s]",
+        help="If true, only indels where (length %% 3) == 0 are retained",
     )
     parser.add_argument(
         "--ignore-indels",
         action="store_true",
         default=False,
-        help="Do not include indels generated FASTA " "sequence [%(default)s].",
+        help="Do not include indels generated FASTA sequence.",
     )
 
     opts = parser.parse_args(argv)

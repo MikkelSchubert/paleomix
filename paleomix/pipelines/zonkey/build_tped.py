@@ -322,9 +322,8 @@ def parse_args(argv):
         "--downsample",
         type=int,
         default=0,
-        help="Sample N reads from the input BAM file, before "
-        "building the TPED file. If not set, or set to "
-        "zero, all reads are used [%(default)s].",
+        help="Sample N reads from the input BAM file, before building the TPED file. "
+        "If not set, or set to zero, all reads are used",
     )
     parser.add_argument(
         "--name", default="Sample", help="Name of sample to be used in output."

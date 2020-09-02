@@ -4,6 +4,7 @@
 
 ### Added
   - Added `-v` and `--version` to all command-line tools.
+  - Added the default values (if any) to the help-strings of all command-line options.
 
 ### Changed
   - Decoupled `--log-level` from command-line logging. Changed default log-level to

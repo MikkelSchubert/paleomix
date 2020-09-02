@@ -292,22 +292,18 @@ def parse_arguments(argv):
         "--keep-all-transcripts",
         action="store_true",
         default=False,
-        help="Include all transcripts in the output BED "
-        "files, not just the longest transcript of each "
-        "gene [default: off]",
+        help="Include all transcripts in the output BED files, not just the longest "
+        "transcript of each gene",
     )
     parser.add_argument(
         "--keep-malformed-proteins",
         action="store_true",
         default=False,
-        help="Include transcripts of protein-coding in the "
-        "output, even if the the length of the CDS is "
-        "not divisible by 3 [default: off]",
+        help="Include transcripts of protein-coding in the output, even if the the "
+        "length of the CDS is not divisible by 3",
     )
     parser.add_argument(
-        "--contig-prefix",
-        default="",
-        help="Add prefix to contig names (e.g. 'chr') " "[default: no prefix].",
+        "--contig-prefix", default="", help="Add prefix to contig names (e.g. 'chr')",
     )
 
     return parser.parse_args(argv)

@@ -36,15 +36,14 @@ def add_varfilter_options(parser):
         "--homozygous-chromosome",
         action="append",
         default=[],
-        help="Filter heterozygous SNPs observed on this "
-        "chromosome (e.g. chrX) %(default)s.",
+        help="Filter heterozygous SNPs observed on this chromosome (e.g. chrX)",
     )
     parser.add_argument(
         "-q",
         "--min-quality",
         type=int,
         default=30,
-        help="Minimum Phred score recorded in the QUAL column [%(default)s]",
+        help="Minimum Phred score recorded in the QUAL column",
     )
     # No longer supported options:
     parser.add_argument("-f", "--min-allele-frequency", help=argparse.SUPPRESS)
@@ -54,7 +53,7 @@ def add_varfilter_options(parser):
         "--keep-ambigious-genotypes",
         default=False,
         action="store_true",
-        help="Keep SNPs without a most likely genotype (based on PL) [%(default)s]",
+        help="Keep SNPs without a most likely genotype (based on PL)",
     )
 
     # Options adapted from varFilter
@@ -63,70 +62,62 @@ def add_varfilter_options(parser):
         "--min-mapping-quality",
         type=int,
         default=10,
-        help="Minimum RMS mapping quality for SNPs [%(default)s]",
+        help="Minimum RMS mapping quality for SNPs",
     )
     parser.add_argument(
-        "-d",
-        "--min-read-depth",
-        type=int,
-        default=8,
-        help="Minimum read depth [%(default)s]",
+        "-d", "--min-read-depth", type=int, default=8, help="Minimum read depth",
     )
     parser.add_argument(
-        "-D",
-        "--max-read-depth",
-        type=int,
-        default=10000000,
-        help="Maximum read depth [%(default)s]",
+        "-D", "--max-read-depth", type=int, default=10000000, help="Maximum read depth",
     )
     parser.add_argument(
         "-a",
         "--min-num-alt-bases",
         type=int,
         default=2,
-        help="Minimum number of alternative bases observed for variants [%(default)s]",
+        help="Minimum number of alternative bases observed for variants",
     )
     parser.add_argument(
         "-w",
         "--min-distance-to-indels",
         type=int,
         default=3,
-        help="SNP within INT bp around a gap to be filtered [%(default)s]",
+        help="SNP within INT bp around a gap to be filtered",
     )
     parser.add_argument(
         "-W",
         "--min-distance-between-indels",
         type=int,
         default=10,
-        help="Window size for filtering adjacent gaps [%(default)s]",
+        help="Window size for filtering adjacent gaps",
     )
     parser.add_argument(
         "-1",
         "--min-strand-bias",
         type=float,
         default=1e-4,
-        help="Min P-value for strand bias (given PV4) [%(default)s]",
+        help="Min P-value for strand bias (given PV4)",
     )
     parser.add_argument(
         "-2",
         "--min-baseq-bias",
         type=float,
         default=1e-100,
-        help="Min P-value for baseQ bias (given PV4) [%(default)s]",
+        help="Min P-value for baseQ bias (given PV4)",
     )
     parser.add_argument(
         "-3",
         "--min-mapq-bias",
         type=float,
         default=0,
-        help="Min P-value for mapQ bias (given PV4) [%(default)s]",
+        help="Min P-value for mapQ bias (given PV4)",
     )
     parser.add_argument(
         "-4",
         "--min-end-distance-bias",
         type=float,
         default=1e-4,
-        help="Min P-value for end distance bias (given PV4) [%(default)s]",
+        help="Min P-value for end distance bias (given PV4)",
     )
     parser.add_argument_group(parser)
 

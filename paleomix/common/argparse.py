@@ -6,12 +6,38 @@ import paleomix
 SUPPRESS = configargparse.SUPPRESS
 
 
+class ArgumentDefaultsHelpFormatter(configargparse.ArgumentDefaultsHelpFormatter):
+    """Modified ArgumentDefaultsHelpFormatter that excludes several constants (True,
+    False, None) and uses a custom presentation of the default value.
+    """
+
+    def __init__(self, *args, **kwargs):
+        # Enable wordwrapping
+        kwargs.setdefault("width", 79)
+
+        super().__init__(*args, **kwargs)
+
+    def _get_help_string(self, action):
+        # The following values look silly as part of a help string
+        if action.default in [None, True, False, []]:
+            return action.help
+
+        # The subclass does not allow modification to the defaults string, so instead
+        # we access the logic by simply checking if the result was modified.
+        if super()._get_help_string(action) == action.help:
+            return action.help
+
+        return action.help + " [%(default)s]"
+
+
 class ArgumentParser(configargparse.ArgumentParser):
     """Supports keys with underscores instead of dashes, for backwards compatibility
     with old paleomix config files, provided that these do not use per-host setions.
     """
 
     def __init__(self, *args, **kwargs):
+        kwargs.setdefault("formatter_class", ArgumentDefaultsHelpFormatter)
+
         super().__init__(*args, **kwargs)
 
         self.add_argument(

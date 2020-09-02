@@ -259,7 +259,7 @@ def parse_args(argv):
         type=int,
         default=0,
         help="Exclude aligned reads with a mapping quality below this value; note "
-        "that this filter ONLY applies to aligned reads [Default: %(default)s]",
+        "that this filter ONLY applies to aligned reads",
     )
     parser.add_argument(
         "-f",
@@ -268,7 +268,7 @@ def parse_args(argv):
         type=lambda value: int(value, 0),  # Handle hex, etc.
         help="Only include reads with all of these flags set; note that flags only "
         "valid for paired-end reads (0x2, 0x8, 0x20, 0x40, 0x80) are ignored when "
-        "processing single-end reads [Default: %(default)s].",
+        "processing single-end reads.",
     )
     parser.add_argument(
         "-F",
@@ -277,7 +277,7 @@ def parse_args(argv):
         type=lambda value: int(value, 0),  # Handle hex, etc.
         help="Exclude reads with any of these flags set; note that flags only valid "
         "for paired-end reads (0x2, 0x8, 0x20, 0x40, 0x80) are ignored when "
-        "processing single-end reads [Default: %(default)s].",
+        "processing single-end reads.",
     )
     parser.add_argument(
         "--paired-end",

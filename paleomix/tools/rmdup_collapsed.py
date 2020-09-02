@@ -234,9 +234,8 @@ def parse_args(argv):
         "--seed",
         default=None,
         type=int,
-        help="Seed used for randomly selecting representative "
-        "reads when no reads have quality scores assigned"
-        "[default: initialized using system time].",
+        help="Seed used for randomly selecting representative reads, when reads do not "
+        "have quality scores assigned. Is initialized using system time by default.",
     )
 
     return parser.parse_args(argv)

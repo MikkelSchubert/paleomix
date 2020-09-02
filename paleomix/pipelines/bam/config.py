@@ -94,38 +94,38 @@ def add_run_command(subparsers):
         "--max-threads",
         type=int,
         default=max(2, multiprocessing.cpu_count()),
-        help="Max number of threads to use in total [%(default)s]",
+        help="Max number of threads to use in total",
     )
     group.add_argument(
         "--adapterremoval-max-threads",
         type=int,
         default=1,
-        help="Max number of threads to use per AdapterRemoval instance [%(default)s]",
+        help="Max number of threads to use per AdapterRemoval instance",
     )
     group.add_argument(
         "--bowtie2-max-threads",
         type=int,
         default=1,
-        help="Max number of threads to use per Bowtie2 instance [%(default)s]",
+        help="Max number of threads to use per Bowtie2 instance",
     )
     group.add_argument(
         "--bwa-max-threads",
         type=int,
         default=1,
-        help="Max number of threads to use per BWA instance [%(default)s]",
+        help="Max number of threads to use per BWA instance",
     )
 
     group = parser.add_argument_group("Required paths")
     group.add_argument(
         "--jar-root",
         default=os.path.expanduser("~/install/jar_root"),
-        help="Folder containing Picard JARs (http://picard.sf.net) [%(default)s]",
+        help="Folder containing Picard JARs (http://picard.sf.net)",
     )
     group.add_argument(
         "--temp-root",
         default="./temp/",
         type=os.path.abspath,
-        help="Location for temporary files and folders [%(default)s/]",
+        help="Location for temporary files and folders",
     )
     group.add_argument(
         "--destination", default=".", help="The destination folder for result files.",
