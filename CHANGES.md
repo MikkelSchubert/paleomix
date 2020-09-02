@@ -8,6 +8,7 @@
 
 ### Fixed
   - Fixed the pipeline failing on `jre_options` (now `jre-option`) in config files.
+  - Fixed the pipeline failing on empty options in config files from PALEOMIX v1.2.x.
 
 
 ## [1.3.1] - 2020-09-01

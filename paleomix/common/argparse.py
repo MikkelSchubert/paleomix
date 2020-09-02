@@ -18,3 +18,10 @@ class ArgumentParser(configargparse.ArgumentParser):
                 keys.append(key)
 
         return keys
+
+    def convert_item_to_command_line_arg(self, action, key, value):
+        # Ignore empty options from old config files
+        if action and value == "=":
+            return []
+
+        return super().convert_item_to_command_line_arg(action, key, value)
