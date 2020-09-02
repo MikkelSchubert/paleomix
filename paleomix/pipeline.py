@@ -67,12 +67,11 @@ class Pypeline:
 
         for node in nodegraph.iterflat():
             if node.threads > max_threads:
-                message = (
-                    "Node(s) use more threads than the max allowed; "
-                    "the pipeline may therefore use more than the "
-                    "expected number of threads.\n"
+                self._logger.warn(
+                    "One or more tasks require more threads than the user-defined "
+                    "maximum; the number of threads used will therefore exceed the "
+                    "user-defined maximum when running those tasks."
                 )
-                self._logger.warn(message)
                 break
 
         if dry_run:
