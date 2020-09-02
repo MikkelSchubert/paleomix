@@ -320,7 +320,7 @@ def check_fasta_file(filename):
             )
         elif state == _IN_HEADER:
             raise NodeError(
-                "File ends with an empty sequence:\n" "    Filename = %r" % (filename,)
+                "File ends with an empty sequence:\n    Filename = %r" % (filename,)
             )
 
 

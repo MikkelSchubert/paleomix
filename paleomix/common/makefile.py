@@ -572,7 +572,7 @@ class _MultipleSpecs(MakefileSpec):
             raise ValueError("No specification given to %r" % (name.title(),))
         elif not all((spc.default is DEFAULT_NOT_SET) for spc in self._specs):
             raise ValueError(
-                "Default values cannot be set in specs given to " "logical operators"
+                "Default values cannot be set in specs given to logical operators"
             )
 
         description = [(fmt % (spec.description,)) for spec in self._specs]

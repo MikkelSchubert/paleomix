@@ -170,16 +170,16 @@ def _read_sequences(filename):
 
     if len(sequences) != num_sequences:
         message = (
-            "Expected %i sequences, but found %i in PHYLIP file:\n" "    Filename = %r"
+            "Expected %i sequences, but found %i in PHYLIP file:\n    Filename = %r"
         ) % (num_sequences, len(sequences), filename)
         raise NodeError(message)
 
     for (index, fragments) in enumerate(sequences):
         sequences[index] = "".join(fragments)
         if len(sequences[index]) != num_bases:
-            message = (
-                "Expected %ibp sequences, found %ibp sequence for %r\n" " Filename = %r"
-            ) % (num_bases, len(sequences[index]), names[index], filename)
-            raise NodeError(message)
+            raise NodeError(
+                "Expected %ibp sequences, found %ibp sequence for %r\n Filename = %r"
+                % (num_bases, len(sequences[index]), names[index], filename)
+            )
 
     return header, names, sequences

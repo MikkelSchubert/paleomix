@@ -200,7 +200,7 @@ class AtomicCmd:
             if not wrap_errors:
                 raise
 
-            message = "Error running commands:\n" "  Call = %r\n" "  Error = %r"
+            message = "Error running commands:\n  Call = %r\n  Error = %r"
             raise CmdError(message % (self._command, error))
         finally:
             # Close pipes to allow the command to recieve SIGPIPE
@@ -349,7 +349,7 @@ class AtomicCmd:
                 elif key in ("OUT_STDERR", "TEMP_OUT_STDERR"):
                     if value is not cls.DEVNULL:
                         raise TypeError(
-                            "STDERR must be a string, " "or DEVNULL, not %r" % (value,)
+                            "STDERR must be a string, or DEVNULL, not %r" % (value,)
                         )
                 else:
                     raise TypeError("%s must be string, not %r" % (key, value))

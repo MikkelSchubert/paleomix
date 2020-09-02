@@ -352,7 +352,7 @@ def main(argv):
             return 1
         elif not bam_info.is_nuclear:
             sys.stderr.write(
-                "ERROR: BAM file does not contain " "identifiable nuclear alignments.\n"
+                "ERROR: BAM file does not contain identifiable nuclear alignments.\n"
             )
             return 1
 

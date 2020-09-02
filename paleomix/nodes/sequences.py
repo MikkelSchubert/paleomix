@@ -119,7 +119,7 @@ class FilterSingletonsNode(Node):
 
             if not groups:
                 raise RuntimeError(
-                    "Singleton filtering must involve at least " "one other taxa"
+                    "Singleton filtering must involve at least one other taxa"
                 )
             self._filter_by[to_filter] = groups
 
