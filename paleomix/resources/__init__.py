@@ -26,8 +26,6 @@ import shutil
 
 from pkg_resources import Requirement, cleanup_resources, resource_filename
 
-import paleomix
-
 
 _REQUIREMENT = Requirement.parse("PALEOMIX")
 
