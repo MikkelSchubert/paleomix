@@ -16,4 +16,4 @@ dependencies:
   - r-gam
   - r-inline
   - pip:
-    - paleomix==1.3.1
+    - paleomix==1.3.2
