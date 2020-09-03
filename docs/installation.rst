@@ -100,12 +100,6 @@ You can now activate the paleomix environment with::
 
     $ conda activate paleomix
 
-Next, install PALEOMIX in the activated environment using pip:
-
-.. parsed-literal::
-
-    $ (paleomix) pip install paleomix==\ |release|
-
 PALEOMIX requires that the Picard JAR file can be found in a specific location, so we can symlink the versions in your conda environment into the correct place::
 
     $ (paleomix) mkdir -p ~/install/jar_root/
