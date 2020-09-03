@@ -103,7 +103,7 @@ You can now activate the paleomix environment with::
 PALEOMIX requires that the Picard JAR file can be found in a specific location, so we can symlink the versions in your conda environment into the correct place::
 
     $ (paleomix) mkdir -p ~/install/jar_root/
-    $ (paleomix) ln -s ~/miniconda*/envs/paleomix/share/picard-*/picard.jar ~/install/jar_root/
+    $ (paleomix) ln -s ~/*conda*/envs/paleomix/share/picard-*/picard.jar ~/install/jar_root/
 
 .. note::
     If you installed miniconda in a different location, then you can obtain the location of the `paleomix` environment by running `conda env list`.
