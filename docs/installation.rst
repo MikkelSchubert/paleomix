@@ -11,23 +11,27 @@ The recommended way of installing PALEOMIX is by use of the `pip`_ package manag
 
     $ sudo apt-get install python3-pip
 
-In addition, some libraries used by PALEOMIX may require additional development files, namely those for zlib, libbz2, liblzma, and for Python 3::
+In addition, some libraries used by PALEOMIX may require additional development files, namely those for `zlib`, `libbz2`, `liblzma`, and for Python 3::
 
     $ sudo apt-get install libz-dev libbz2-dev liblzma-dev python3-dev
 
-Once all requirements have been installed, PALEOMIX may be installed using `pip`::
+Once all requirements have been installed, PALEOMIX may be installed using `pip`:
 
-    $ python3 -m pip install paleomix
+.. parsed-literal::
 
-To verify that the installation was carried out correctly, run the command `paleomix`::
+    $ python3 -m pip install paleomix==\ |release|
+
+To verify that the installation was carried out correctly, run the command `paleomix`:
+
+.. parsed-literal::
 
     $ paleomix
     PALEOMIX - pipelines and tools for NGS data analyses
-    Version: 1.2.14
+    Version: \ |release|
 
     ...
 
-If you have not previously used `pip`, then you may need to add the `pip` bin folder to your PATH and restart your terminal before running the `paleomix` command::
+If you have not previously used pip, then you may need to add the pip `bin` folder to your `PATH` and restart your terminal before running the `paleomix` command::
 
     $ echo 'export PATH=~/.local/bin:$PATH' >> ~/.bashrc
 
@@ -42,14 +46,16 @@ This installation method requires the `venv` module. On Debian based systems, th
 
     $ sudo apt-get install python3-venv
 
-Once `venv` is installed, creation of a virtual environment and installation of PALEOMIX may be carried out as shown here::
+Once `venv` is installed, creation of a virtual environment and installation of PALEOMIX may be carried out as shown here:
+
+.. parsed-literal::
 
     $ python3 -m venv venv
     $ source ./venv/bin/activate
-    $ (venv) pip install paleomix
+    $ (venv) pip install paleomix==\ |release|
     $ (venv) deactivate
 
-Following successful completion of these commands, the PALEOMIX tools will be accessible in the `./venv/bin/` folder. However, as this folder also contains a copy of Python itself, it is not recommended to add it to your PATH. Instead, simply link the `paleomix` commands to a folder in your PATH. This can be accomplished as follows::
+Following successful completion of these commands, the PALEOMIX tools will be accessible in the `./venv/bin/` folder. However, as this folder also contains a copy of Python itself, it is not recommended to add it to your `PATH`. Instead, simply link the `paleomix` commands to a folder in your `PATH`. This can be accomplished as follows::
 
     $ mkdir -p ~/.local/bin/
     $ ln -s ${PWD}/venv/bin/paleomix ~/.local/bin/
@@ -62,7 +68,7 @@ If ~/.local/bin is not already in your PATH, then it can be added as follows:
 Upgrading an existing installation
 ----------------------------------
 
-Upgrade an existing installation of PALEOMIX, installed using the methods described above, may also be accomplished using pip. To upgrade a regular installation, simply run `pip` install with the --upgrade option::
+Upgrade an existing installation of PALEOMIX, installed using the methods described above, may also be accomplished using pip. To upgrade a regular installation, simply run `pip install` with the `--upgrade` option::
 
     $ pip install --upgrade paleomix
 
@@ -72,47 +78,41 @@ To upgrade an installation a self-contained installation, activate the environme
     $ (paleomix) pip install --upgrade paleomix
     $ (paleomix) deactivate
 
-.. _pip: https://pip.pypa.io/en/stable/
-.. _Pysam: https://github.com/pysam-developers/pysam/
-.. _Python: http://www.python.org/
-.. _virtualenv: https://virtualenv.readthedocs.org/en/latest/
-
 
 Conda installation
 -------------------
 
-To have a completely contained environment that includes all software dependencies, you can create a [conda](https://docs.conda.io/projects/conda/en/latest/index.html) environment.
+To have a completely contained environment that includes all software dependencies, you can create a `conda`_ environment.
 
-To install conda and also set it up so it can use the [bioconda](https://bioconda.github.io) bioinformatics tool repository, you can follow the instructions on the bioconda website [here](https://bioconda.github.io/user/install.html#install-conda).
+To install `conda` and also set it up so it can use the `bioconda`_ bioinformatics tool repository, you can follow the instructions on the bioconda website `here`_.
 
-Once set-up, you can create a conda environment using the following commands::
+Once set-up, you can create a conda environment named `paleomix` using the following commands:
 
-    $ conda create -c bioconda -n paleomix python=2.7 pip adapterremoval=2.3.1 samtools=1.9 picard=2.22.9 bowtie2=2.3.5.1 bwa=0.7.17 mapdamage2=2.0.9 r-base=3.5.1 r-rcpp=1.0.4.6 r-rcppgsl=0.3.7 r-gam=1.16.1 r-inline=0.3.15
+.. parsed-literal::
 
-Alternatively, you can use the `environment.yaml` file contained in the PALEOMIX github repository::
-
-    $ curl https://raw.githubusercontent.com/MikkelSchubert/paleomix/master/paleomix_environment.yaml
-    $ conda env create -f paleomix_environment.yaml
+    $ curl https://raw.githubusercontent.com/MikkelSchubert/paleomix/v\ |release|/paleomix_environment.yaml > paleomix_environment.yaml
+    $ conda env create -n paleomix -f paleomix_environment.yaml
 
 .. note::
-    The above command(s) currently only contain the dependencies for the BAM pipeline
+    The above only installs the dependencies for the BAM pipeline.
 
 You can now activate the paleomix environment with::
 
     $ conda activate paleomix
 
-PALEOMIX is not within the dependencies list above, so we can install this
-_within_ the environment as explained above::
+Next, install PALEOMIX in the activated environment using pip:
 
-    $ (paleomix) pip install --user paleomix
+.. parsed-literal::
 
-PALEOMIX requires the Picard JAR file in a specific place, we can symlink the versions in your conda environment into the correct place::
+    $ (paleomix) pip install paleomix==\ |release|
+
+PALEOMIX requires that the Picard JAR file can be found in a specific location, so we can symlink the versions in your conda environment into the correct place::
 
     $ (paleomix) mkdir -p ~/install/jar_root/
-    $ (paleomix) ln -s /<path>/<to>/miniconda2/envs/paleomix/share/picard-2.22.9-0/picard.jar ~/install/jar_root/
+    $ (paleomix) ln -s ~/miniconda*/envs/paleomix/share/picard-*/picard.jar ~/install/jar_root/
 
 .. note::
-    If you're unsure what your PALEOMIX conda environment path is, you can see this by running `conda env list`.
+    If you installed miniconda in a different location, then you can obtain the location of the `paleomix` environment by running `conda env list`.
 
 Once completed, you can test the environment works correctly using the pipeline test commands described in :ref:`examples`.
 
@@ -122,4 +122,12 @@ To deactivate the paleomix environment, simply run::
 
 If you ever need to remove the entire environment, run the following command::
 
-    $ rm /<path>/<to>/miniconda2/envs/paleomix/
+    $ conda env remove -n paleomix
+
+
+.. _bioconda: https://bioconda.github.io
+.. _conda: https://docs.conda.io/projects/conda/en/latest/index.html
+.. _here: https://bioconda.github.io/user/install.html#install-conda
+.. _pip: https://pip.pypa.io/en/stable/
+.. _Pysam: https://github.com/pysam-developers/pysam/
+.. _Python: http://www.python.org/

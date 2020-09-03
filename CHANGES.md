@@ -14,6 +14,7 @@
   - Fixed the pipeline failing on `jre_options` (now `jre-option`) in config files.
   - Fixed the pipeline failing on empty options in config files from PALEOMIX v1.2.x.
   - Fixed Bowtie2 using command-line options from the BWA makefile section
+  - Fixed conda installation instructions and environment file for PALEOMIX 1.3.x.
 
 
 ## [1.3.1] - 2020-09-01
