@@ -5,7 +5,7 @@
 __pycache__
 
 cov.xml
-.coverage
+.coverage*
 MANIFEST
 
 # Packages
