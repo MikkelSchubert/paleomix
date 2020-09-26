@@ -61,7 +61,7 @@ class ValidateBAMNode(PicardNode):
         builder = picard_command(config, "ValidateSamFile")
         _set_max_open_files(builder, "MAX_OPEN_TEMP_FILES")
 
-        if True or big_genome_mode:
+        if big_genome_mode:
             self._configure_for_big_genome(config, builder)
 
         builder.set_option("I", "%(IN_BAM)s", sep="=")
