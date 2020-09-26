@@ -7,7 +7,7 @@ Installation
 
 The following instructions will install PALEOMIX for the current user, but does not include specific programs required by the pipelines. For pipeline specific instructions, refer to the requirements sections for the :ref:`BAM <bam_requirements>`, the :ref:`Phylogentic <phylo_requirements>`, and the :ref:`Zonkey <zonkey_requirements>` pipeline.
 
-The recommended way of installing PALEOMIX is by use of the `pip`_ package manager for Python 3. If `pip` is not installed, then please consult the documentation for your operating system. For Debian based operating systems, `pip` may be installed as follows::
+The recommended way of installing PALEOMIX is by use of the `pip`_ package manager for Python 3. If pip is not installed, then please consult the documentation for your operating system. For Debian based operating systems, pip may be installed as follows::
 
     $ sudo apt-get install python3-pip
 
@@ -51,16 +51,14 @@ Once `venv` is installed, creation of a virtual environment and installation of 
 .. parsed-literal::
 
     $ python3 -m venv venv
-    $ source ./venv/bin/activate
-    $ (venv) pip install paleomix==\ |release|
-    $ (venv) deactivate
+    $ ./venv/bin/pip install paleomix==\ |release|
 
-Following successful completion of these commands, the PALEOMIX tools will be accessible in the `./venv/bin/` folder. However, as this folder also contains a copy of Python itself, it is not recommended to add it to your `PATH`. Instead, simply link the `paleomix` commands to a folder in your `PATH`. This can be accomplished as follows::
+Following successful completion of these commands, the `paleomix` executable will be accessible in the `./venv/bin/` folder. However, as this folder also contains a copy of Python itself, it is not recommended to add it to your `PATH`. Instead, simply link the `paleomix` executable to a folder in your `PATH`. This can be accomplished as follows::
 
     $ mkdir -p ~/.local/bin/
     $ ln -s ${PWD}/venv/bin/paleomix ~/.local/bin/
 
-If ~/.local/bin is not already in your PATH, then it can be added as follows:
+If ~/.local/bin is not already in your PATH, then it can be added as follows::
 
     $ echo 'export PATH=~/.local/bin:$PATH' >> ~/.bashrc
 
@@ -72,15 +70,13 @@ Upgrade an existing installation of PALEOMIX, installed using the methods descri
 
     $ pip install --upgrade paleomix
 
-To upgrade an installation a self-contained installation, activate the environment before calling `pip`::
+To upgrade an installation a self-contained installation, simply call the `pip` executable in that environment::
 
-    $ source ./venv/bin/activate
-    $ (paleomix) pip install --upgrade paleomix
-    $ (paleomix) deactivate
+    $ ./venv/bin/pip install --upgrade paleomix
 
 
 Conda installation
--------------------
+------------------
 
 To have a completely contained environment that includes all software dependencies, you can create a `conda`_ environment.
 
@@ -106,7 +102,7 @@ PALEOMIX requires that the Picard JAR file can be found in a specific location, 
     $ (paleomix) ln -s ~/*conda*/envs/paleomix/share/picard-*/picard.jar ~/install/jar_root/
 
 .. note::
-    If you installed miniconda in a different location, then you can obtain the location of the `paleomix` environment by running `conda env list`.
+    If you installed conda in a different location, then you can obtain the location of the `paleomix` environment by running `conda env list`.
 
 Once completed, you can test the environment works correctly using the pipeline test commands described in :ref:`examples`.
 

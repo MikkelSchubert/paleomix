@@ -7,15 +7,15 @@ Configuring the BAM pipeline
 
 The BAM pipeline supports a number of command-line options (see `paleomix bam run --help`). These options may be set directly on the command-line (e.g. using `--max-threads 16`), but it is also possible to set default values for such options.
 
-This is accomplished by writing options in `~/.paleomix/bam_pipeline.ini`::
+This is accomplished by writing options in `~/.paleomix/bam_pipeline.ini`, such as::
 
     max-threads = 16
-    log-level = warning
-    jar-root = /home/username/install/jar_root
-    bwa-max-threads = 1
-    temp-root = /tmp/username/bam_pipeline
-    jre-option = -Xmx4g
     bowtie2-max-threads = 1
+    bwa-max-threads = 1
+    jar-root = /home/username/install/jar_root
+    jre-option = -Xmx4g
+    log-level = warning
+    temp-root = /tmp/username/bam_pipeline
 
 Options in the configuration file correspond directly to command-line options for the BAM pipeline, with leading dashes removed. For example, the command-line option `--max-threads` becomes `max-threads` in the configuration file.
 

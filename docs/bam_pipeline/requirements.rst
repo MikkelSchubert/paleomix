@@ -11,12 +11,12 @@ In addition to the requirements listed in the :ref:`installation` section, the B
 * `SAMTools`_ v1.3.1 [Li2009b]_
 * `Picard Tools`_ v1.137
 
-The Picard Tools JAR-file (picard.jar) is expected to be located in ~/install/jar_root/ by default, but this behavior may be changed using either the --jar-root command-line option, or via the global configuration file (see section :ref:`bam_configuration`)::
+The Picard Tools JAR-file (`picard.jar`) is expected to be located in `~/install/jar_root` by default, but this behavior may be changed using either the `--jar-root` command-line option, or via the global configuration file (see section :ref:`bam_configuration`)::
 
     $ mkdir -p ~/install/jar_root
     $ wget -O ~/install/jar_root/picard.jar https://github.com/broadinstitute/picard/releases/download/2.23.3/picard.jar
 
-Running Picard requires a Jave Runtime Environment (JRE). Please refer to your ditro's documentation for how to install a JRE.
+Running Picard requires a Jave Runtime Environment (i.e. the `java` command). Please refer to your distro's documentation for how to install a JRE.
 
 Furthermore, one or both of the following sequence aligners must be installed:
 
@@ -47,7 +47,7 @@ Testing the pipeline
 An example project is included with the BAM pipeline, and it is recommended to run this project in order to verify that the pipeline and required applications have been correctly installed. See the :ref:`examples` section for a description of how to run this example project.
 
 .. Note::
-    The example project does not carry out rescaling using mapDamage by default. If you wish to test that the requirements for this feature have been installed correctly, then change the following line
+    The example project does not carry out rescaling using mapDamage by default. If you wish to test that the requirements for mapDamage rescaling feature have been installed correctly, then change the following line
 
     .. code-block:: yaml
 

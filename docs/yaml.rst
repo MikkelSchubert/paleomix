@@ -7,17 +7,17 @@ YAML usage in PALEOMIX
 `YAML`_ is a simple markup language adopted for use in configuration files by pipelines included in PALEOMIX. YAML was chosen because it is a plain-text format that is easy to read and write by hand. Since YAML files are plain-text, they may be edited using any standard text editors, with the following caveats:
 
 * YAML exclusively uses spaces for indentation, not tabs; attempting to use tabs in YAML files will cause failures when the file is read by the pipelines.
-* YAML is case-sensitive; an option such as 'QualityOffset' is not the same as 'qualityoffset'.
-* It is strongly recommended that all files be named using the '.yaml' file-extension; setting the extension helps ensure proper handling by editors that natively support the YAML format.
+* YAML is case-sensitive; an option such as `QualityOffset` is not the same as  `qualityoffset`.
+* It is strongly recommended that all files be named using the `.yaml` file-extension; setting the extension helps ensure proper handling by editors that natively support the YAML format.
 
-Only a subset of YAML features are actually used by PALEOMIX, which are described below. These include **mappings**, by which values are identified by names; **lists** of values; and **numbers**, **text-strings**, and **true** / **false** values, typically representing program options, file-paths, and the like. In addition, comments prefixed by the hash-sign (#) are frequently used to provide documentation.
+Only a subset of YAML features are actually used by PALEOMIX, which are described below. These include **mappings**, by which values are identified by names; **lists** of values; and **numbers**, **text-strings**, and **true** / **false** values, typically representing program options, file-paths, and the like. In addition, comments prefixed by the hash-sign (`#`) are frequently used to provide documentation.
 
 
 
 Comments
 --------
 
-Comments are specified by prefixing unquoted text with the hash-sign (#); all comments are ignored, and have no effect on the operation of the program. Comments are used solely to document the YAML files used by the pipelines::
+Comments are specified by prefixing unquoted text with the hash-sign (`#`); all comments are ignored, and have no effect on the operation of the program. Comments are used solely to document the YAML files used by the pipelines::
 
     # This is a comment; the next line contains both a value and a comment:
     123  # Comments may be placed on the same line as values.
@@ -63,7 +63,7 @@ And similarly, the following values are all interpreted as *false*::
     no
     off
 
-Template files included with the pipelines mostly use 'yes' and 'no', but either of the above corresponding values may be used. Note however that none of these values are quoted: If single or double-quotations were used, then these vales would be read as text rather than truth-values, as described next.
+Template files included with the pipelines mostly use `yes` and `no`, but either of the above corresponding values may be used. Note however that none of these values are quoted: If single or double-quotations were used, then these vales would be read as text rather than truth-values, as described next.
 
 
 Text (strings)
@@ -90,7 +90,7 @@ For most part it is not necessary to use quotation marks, and the above could in
 
     /path/to/my/files/reads.fastq
 
-However, it is important to make sure that values that are intended to be used strings are not mis-interpreted as a different type of value. For example, without the quotation marks the following values would be interpreted as numbers or truth-values::
+However, it is important to make sure that values that are intended to be used strings are not misinterpreted as a different type of value. For example, without the quotation marks the following values would be interpreted as numbers or truth-values::
 
     "true"
 
@@ -137,7 +137,7 @@ Mappings can be nested any number of times, which is used in this manner to crea
         Option1: /path/to/file.fastq
         Option2: no
 
-Note that the two mappings belonging to the 'Option' mapping are both indented the same number of spaces, which is what allows the program to figure out which values belong to what label. It is therefore important to keep indentation consistent.
+Note that the two mappings belonging to the `Option` mapping are both indented the same number of spaces, which is what allows the program to figure out which values belong to what label. It is therefore important to keep indentation consistent.
 
 Lists of values
 ---------------
