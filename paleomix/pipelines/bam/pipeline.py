@@ -142,7 +142,8 @@ def index_references(config, makefiles):
                 # steps, as it is only expected to fail very rarely, but will
                 # block subsequent analyses depending on the FASTA.
                 valid_node = ValidateFASTAFilesNode(
-                    input_files=reference, output_file=reference + ".validated"
+                    input_file=reference,
+                    output_file=reference + ".validated",
                 )
                 # Indexing of FASTA file using 'samtools faidx'
                 faidx_node = FastaIndexNode(reference)

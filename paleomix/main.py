@@ -52,6 +52,7 @@ _COMMANDS = {
     "vcf_to_fasta": "paleomix.tools.vcf_to_fasta",
     # Misc tools
     ":validate_fastq": "paleomix.tools.validate_fastq",
+    ":validate_fasta": "paleomix.tools.validate_fasta",
 }
 
 

@@ -22,7 +22,6 @@
 #
 import collections
 import os
-import re
 
 import pysam
 
@@ -118,26 +117,18 @@ class ValidateFASTQFilesNode(CommandNode):
         )
 
 
-class ValidateFASTAFilesNode(Node):
-    def __init__(self, input_files, output_file, dependencies=()):
-        Node.__init__(
+class ValidateFASTAFilesNode(CommandNode):
+    def __init__(self, input_file, output_file, dependencies=()):
+        command = factory.new(":validate_fasta")
+        command.add_value("%(IN_FASTA)s")
+        command.set_kwargs(IN_FASTA=input_file, OUT_STDOUT=output_file)
+
+        CommandNode.__init__(
             self,
-            description="validating %s" % (describe_files(input_files),),
-            input_files=input_files,
-            output_files=output_file,
+            description="validating %s" % (input_file,),
+            command=command.finalize(),
             dependencies=dependencies,
         )
-
-        assert len(self.output_files) == 1, self.output_files
-
-    def _run(self, _config, _temp):
-        for filename in self.input_files:
-            check_fasta_file(filename)
-        (output_file,) = self.output_files
-        if os.path.dirname(output_file):
-            make_dirs(os.path.dirname(output_file))
-        with open(output_file, "w"):
-            pass
 
 
 def check_bam_files(input_files, err_func):
@@ -246,127 +237,3 @@ def _summarize_reads(records):
 
 def _key_by_tid_pos(record):
     return (record[0].tid, record[0].pos)
-
-
-def check_fasta_file(filename):
-    with open(filename) as handle:
-        namecache = {}
-        state, linelength, linelengthchanged = _NA, None, False
-        for linenum, line in enumerate(handle, start=1):
-            # Only \n is allowed as not all tools  handle \r
-            line = line.rstrip("\n")
-
-            if not line:
-                if state in (_NA, _IN_WHITESPACE):
-                    continue
-                elif state == _IN_HEADER:
-                    raise NodeError(
-                        "Expected FASTA sequence, found empty line"
-                        "\n    Filename = %r\n    Line = %r" % (filename, linenum)
-                    )
-                elif state == _IN_SEQUENCE:
-                    state = _IN_WHITESPACE
-                else:
-                    assert False
-            elif line.startswith(">"):
-                if state in (_NA, _IN_SEQUENCE, _IN_WHITESPACE):
-                    _validate_fasta_header(filename, linenum, line, namecache)
-                    state = _IN_HEADER
-                    linelength = None
-                    linelengthchanged = False
-                elif state == _IN_HEADER:
-                    raise NodeError(
-                        "Empty sequences not allowed\n"
-                        "    Filename = %r\n    Line = %r" % (filename, linenum - 1)
-                    )
-                else:
-                    assert False
-            else:
-                if state == _NA:
-                    raise NodeError(
-                        "Expected FASTA header, found %r\n"
-                        "    Filename = %r\n    Line = %r" % (line, filename, linenum)
-                    )
-                elif state == _IN_HEADER:
-                    _validate_fasta_line(filename, linenum, line)
-                    linelength = len(line)
-                    state = _IN_SEQUENCE
-                elif state == _IN_SEQUENCE:
-                    _validate_fasta_line(filename, linenum, line)
-                    # If the length has changed, then that line must be the
-                    # last line in the record, which may be shorter due to the
-                    # sequence length. This is because the FAI index format
-                    # expects that each line has the same length.
-                    if linelengthchanged or (linelength < len(line)):
-                        raise NodeError(
-                            "Lines in FASTQ files must be of same "
-                            "length\n    Filename = %r\n"
-                            "    Line = %r" % (filename, linenum)
-                        )
-                    elif linelength != len(line):
-                        linelengthchanged = True
-                elif state == _IN_WHITESPACE:
-                    raise NodeError(
-                        "Empty lines not allowed in sequences\n"
-                        "    Filename = %r\n    Line = %r" % (filename, linenum)
-                    )
-                else:
-                    assert False
-
-        if state == _NA:
-            raise NodeError(
-                "File does not contain any sequences:\n"
-                "    Filename = %r" % (filename,)
-            )
-        elif state == _IN_HEADER:
-            raise NodeError(
-                "File ends with an empty sequence:\n    Filename = %r" % (filename,)
-            )
-
-
-# Standard nucleotides + UIPAC codes
-_VALID_CHARS_STR = "ACGTN" "RYSWKMBDHV"
-_VALID_CHARS = frozenset(_VALID_CHARS_STR.upper() + _VALID_CHARS_STR.lower())
-_NA, _IN_HEADER, _IN_SEQUENCE, _IN_WHITESPACE = range(4)
-
-
-def _validate_fasta_header(filename, linenum, line, cache):
-    name = line.split(" ", 1)[0][1:]
-    if not name:
-        raise NodeError(
-            "FASTA sequence must have non-empty name\n"
-            "    Filename = %r\n    Line = %r\n" % (filename, linenum)
-        )
-    elif not _RE_REF_NAME.match(name):
-        raise NodeError(
-            "Invalid name for FASTA sequence: %r\n"
-            "    Filename = %r\n    Line = %r\n" % (name, filename, linenum)
-        )
-    elif name in cache:
-        raise NodeError(
-            "FASTA sequences have identical name\n"
-            "    Filename = %r\n    Name = %r\n"
-            "    Line 1 = %r\n    Line 2 = %r\n"
-            % (filename, name, linenum, cache[name])
-        )
-    cache[name] = linenum
-
-
-_RE_REF_NAME = re.compile("[!-()+-<>-~][!-~]*")
-
-
-def _validate_fasta_line(filename, linenum, line):
-    invalid_chars = frozenset(line) - _VALID_CHARS
-    if invalid_chars:
-        if invalid_chars == frozenset("\r"):
-            raise NodeError(
-                "FASTA file contains carriage-returns ('\\r')!\n"
-                "Please convert file to unix format, using e.g. "
-                "dos2unix.\n    Filename = %r\n" % (filename,)
-            )
-
-        raise NodeError(
-            "FASTA sequence contains invalid characters\n"
-            "    Filename = %r\n    Line = %r\n"
-            "    Invalid characters = %r" % (filename, linenum, "".join(invalid_chars))
-        )
