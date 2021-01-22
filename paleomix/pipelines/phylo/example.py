@@ -47,9 +47,7 @@ def build_parser():
 def main(argv):
     parser = build_parser()
     config = parser.parse_args(argv)
-    paleomix.common.logging.initialize(
-        log_level=config.log_level, log_file=config.log_file, name="phylo_pipeline"
-    )
+    paleomix.common.logging.initialize_console_logging()
 
     if paleomix.resources.copy_example("phylo_pipeline", config):
         return 1
