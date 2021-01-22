@@ -46,6 +46,7 @@ _COMMANDS = {
     "cleanup": "paleomix.tools.cleanup",
     "coverage": "paleomix.tools.coverage",
     "depths": "paleomix.tools.depths",
+    "dupcheck": "paleomix.tools.dupcheck",
     # VCF/etc. tools
     "rmdup_collapsed": "paleomix.tools.rmdup_collapsed",
     "vcf_filter": "paleomix.tools.vcf_filter",
