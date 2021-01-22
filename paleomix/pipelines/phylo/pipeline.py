@@ -59,10 +59,6 @@ def main(argv):
     elif "makefile" in config.commands or "mkfile" in config.commands:
         return mkfile.main(config.files)
 
-    paleomix.common.logging.initialize(
-        log_level=config.log_level, log_file=config.log_file, name="phylo_pipeline"
-    )
-
     commands = []
     for key in config.commands:
         func = _COMMANDS.get(key)
@@ -71,6 +67,12 @@ def main(argv):
             return 1
 
         commands.append((key, func))
+
+    paleomix.common.logging.initialize(
+        log_level=config.log_level,
+        log_file=config.log_file,
+        name="phylo_pipeline",
+    )
 
     if not os.path.exists(config.temp_root):
         try:
@@ -115,4 +117,5 @@ def main(argv):
 
     if not pipeline.run(max_threads=config.max_threads, dry_run=config.dry_run):
         return 1
+
     return 0
