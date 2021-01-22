@@ -25,7 +25,7 @@ import os
 from copy import deepcopy
 
 from paleomix.nodes.samtools import TabixIndexNode, FastaIndexNode, BAMIndexNode
-from paleomix.nodes.bedtools import PaddedBedNode
+from paleomix.nodes.commands import PaddedBedNode
 from paleomix.common.fileutils import swap_ext, add_postfix
 from paleomix.nodes.commands import (
     VCFFilterNode,

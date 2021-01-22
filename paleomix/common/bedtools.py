@@ -250,11 +250,20 @@ def sort_bed_by_bamfile(bamfile, regions):
 
 
 def pad_bed_records(records, padding, max_sizes={}):
+    results = []
     infinity = float("inf")
     for record in records:
         max_length = max_sizes.get(record.contig, infinity)
-        record.start = max(0, record.start - padding)
-        record.end = min(record.end + padding, max_length)
+
+        new_record = BEDRecord()
+        new_record.start = max(0, record.start - padding)
+        new_record.end = min(record.end + padding, max_length)
+
+        if new_record.start < new_record.end:
+            new_record.contig = record.contig
+            results.append(new_record)
+
+    return results
 
 
 def merge_bed_records(records):

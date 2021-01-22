@@ -30,9 +30,10 @@ import sys
 import paleomix.main
 
 from paleomix.atomiccmd.builder import AtomicCmdBuilder
+from paleomix.common.utilities import safe_coerce_to_tuple
 
 
-def new(*args, **kwargs):
+def new(args, **kwargs):
     """Returns AtomicCmdBuilder setup to call the tools accessible through the
     'paleomix' command-line tool. This builder adds executable / version checks
     for the specified command, but does not add any arguments. Thus, calling
@@ -40,5 +41,6 @@ def new(*args, **kwargs):
     """
     interpreter = sys.executable
     script = paleomix.main.__file__
+    args = safe_coerce_to_tuple(args)
 
     return AtomicCmdBuilder((interpreter, script) + args, AUX_PALEOMIX=script, **kwargs)

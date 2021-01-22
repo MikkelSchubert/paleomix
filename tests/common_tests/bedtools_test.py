@@ -300,8 +300,7 @@ def test_pad_bed_records():
         _new_bed_record("chr2", 100, 200),
     ]
 
-    pad_bed_records(records, 20)
-    assert records == [
+    assert pad_bed_records(records, 20) == [
         _new_bed_record("chr1", 0, 110),
         _new_bed_record("chr2", 80, 220),
     ]
@@ -315,12 +314,41 @@ def test_pad_bed_records__with_max_lengths():
         _new_bed_record("chr2", 100, 190),
     ]
 
-    pad_bed_records(records, 20, max_sizes)
-    assert records == [
+    assert pad_bed_records(records, 20, max_sizes) == [
         _new_bed_record("chr1", 0, 100),
         _new_bed_record("chr2", 0, 110),
         _new_bed_record("chr2", 80, 200),
     ]
+
+
+def test_pad_bed_records__negative_padding():
+    records = [
+        _new_bed_record("chr1", 10, 90),
+        _new_bed_record("chr2", 100, 200),
+    ]
+
+    assert pad_bed_records(records, -15) == [
+        _new_bed_record("chr1", 25, 75),
+        _new_bed_record("chr2", 115, 185),
+    ]
+
+
+def test_pad_bed_records__negative_padding__near_empty_records():
+    assert pad_bed_records([_new_bed_record("chr1", 10, 90)], -38) == [
+        _new_bed_record("chr1", 48, 52)
+    ]
+    assert pad_bed_records([_new_bed_record("chr1", 10, 90)], -39) == [
+        _new_bed_record("chr1", 49, 51)
+    ]
+    assert pad_bed_records([_new_bed_record("chr1", 10, 91)], -40) == [
+        _new_bed_record("chr1", 50, 51)
+    ]
+
+
+def test_pad_bed_records__negative_padding__empty_records():
+    assert pad_bed_records([_new_bed_record("chr1", 10, 90)], -40) == []
+    assert pad_bed_records([_new_bed_record("chr1", 10, 90)], -41) == []
+    assert pad_bed_records([_new_bed_record("chr1", 10, 91)], -41) == []
 
 
 ###############################################################################

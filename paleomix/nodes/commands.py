@@ -232,6 +232,23 @@ class BuildRegionsNode(CommandNode):
         )
 
 
+class PaddedBedNode(CommandNode):
+    def __init__(self, infile, outfile, fai_file, amount=0, dependencies=()):
+        command = factory.new(
+            [":bedtools", "pad", "--padding", amount, "%(IN_FAI)s"],
+            IN_FAI=fai_file,
+            OUT_STDOUT=outfile,
+        )
+        command.add_multiple_values(infile)
+
+        CommandNode.__init__(
+            self,
+            description="padding BED records (%+i) in %s" % (amount, infile),
+            command=command.finalize(),
+            dependencies=dependencies,
+        )
+
+
 def _apply_samtools_options(builder, options, argument):
     for (key, value) in dict(options).items():
         sam_argument = key
