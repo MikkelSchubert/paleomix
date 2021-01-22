@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf8 -*-
 import collections
+import heapq
 import shlex
 import sys
 
@@ -8,7 +9,6 @@ import pysam
 
 from paleomix.common.argparse import ArgumentParser, SUPPRESS
 from paleomix.common.sequences import reverse_complement
-from paleomix.common.utilities import chain_sorted
 
 
 class PipelineHandler:
@@ -115,7 +115,7 @@ def _open_samfiles(handles, filenames):
 
         sequences.append(_read_samfile(handle, filename))
 
-    return chain_sorted(*sequences, key=_key_by_tid_pos)
+    return heapq.merge(*sequences, key=_key_by_tid_pos)
 
 
 def _read_samfile(handle, filename):

@@ -21,7 +21,6 @@
 # SOFTWARE.
 #
 import copy
-import heapq
 import itertools
 
 
@@ -165,63 +164,6 @@ def fill_dict(destination, source):
         return cur_dest
 
     return _fill_dict(copy.deepcopy(destination), copy.deepcopy(source))
-
-
-def chain_sorted(*sequences, **kwargs):
-    """Chains together sorted sequences, and yields the contents
-    in the same order, such that the result is also a sorted sequence.
-    The function accepts a 'key'-function keyword, following sort().
-
-    chain_sorted is intended for a few long sequences, and not many short
-    sequences. Behavior is undefined if the sequences are not sorted.
-
-    Example:
-      >>> tuple(chain_sorted((1, 3, 5), (0, 2, 4)))
-      (0, 1, 2, 3, 4, 5)
-    """
-    key = kwargs.pop("key", None)
-    if kwargs:
-        raise TypeError(
-            "chain_sorted expected keyword 'key', got %r" % (", ".join(kwargs))
-        )
-
-    iterators = []
-    for index, sequence_iter in enumerate(map(iter, sequences)):
-        try:
-            current = next(sequence_iter)
-            key_value = current if key is None else key(current)
-
-            iterators.append((key_value, index, current, sequence_iter))
-        except StopIteration:
-            pass
-
-    heapq.heapify(iterators)
-
-    _len, _heappop, _heapreplace = len, heapq.heappop, heapq.heapreplace
-
-    while _len(iterators) > 1:
-        last_key_value, index, current, sequence_iter = iterators[0]
-        yield current
-
-        for current in sequence_iter:
-            key_value = current if key is None else key(current)
-
-            # Optimization for runs of repeated values
-            if key_value != last_key_value:
-                _heapreplace(iterators, (key_value, index, current, sequence_iter))
-                break
-            else:
-                yield current
-        else:
-            # No items remaining in top iterator
-            _heappop(iterators)
-
-    if _len(iterators) == 1:
-        _, _, current, sequence_iter = iterators[0]
-
-        yield current
-        for current in sequence_iter:
-            yield current
 
 
 class Immutable:
