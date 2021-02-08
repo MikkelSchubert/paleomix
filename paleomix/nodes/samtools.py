@@ -39,10 +39,9 @@ class TabixIndexNode(CommandNode):
     """
 
     def __init__(self, infile, preset="vcf", dependencies=()):
-        assert infile.lower().endswith(".bgz")
         if preset == "pileup":
             call = ["tabix", "-s", 1, "-b", 2, "-e", 2]
-        elif preset == "vcf":
+        elif preset in ("vcf", "gff", "bed", "sam"):
             call = ["tabix", "-p", preset]
         else:
             assert False, "Unxpected preset: %r" % preset
