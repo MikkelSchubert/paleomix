@@ -139,7 +139,7 @@ class AtomicCmd2:
         self._requirements = frozenset(requirements)
         self._input_files = set()
         self._output_files = set()
-        self._output_files_map = {}
+        self._output_basenames = set()
         self._auxiliary_files = set()
 
         self.append(*safe_coerce_to_tuple(command))
@@ -397,13 +397,13 @@ class AtomicCmd2:
         elif isinstance(value, OutputFile):
             basename = value.basename()
             # All output is saved in the same folder, so it is not possible to have
-            # different output files with the same basename. Different OutputFile
-            # objects with the same path are assume to refer to the same file
-            if self._output_files_map.get(basename, value.path) != value.path:
+            # different output files with the same basename. It is however allowed to
+            # use the same instance multiple times
+            if basename in self._output_basenames and value not in self._output_files:
                 raise CmdError("multiple output files with name %r" % (basename,))
 
             self._output_files.add(value)
-            self._output_files_map[basename] = value.path
+            self._output_basenames.add(basename)
         else:
             raise ValueError(value)
 

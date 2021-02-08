@@ -873,12 +873,28 @@ def test_atomiccmd2__append_non_str():
     assert cmd.to_call("/tmp/example") == ["ls", "--option", "17"]
 
 
-def test_atomiccmd2__append_overlapping_output():
+def test_atomiccmd2__append_overlapping_output__temp_and_non_temp():
     cmd = AtomicCmd2("touch")
     cmd.append(OutputFile("/foo/bar/target"))
 
     with pytest.raises(CmdError):
         cmd.append(OutputFile("target", temporary=True))
+
+
+def test_atomiccmd2__append_overlapping_output__different_instances():
+    cmd = AtomicCmd2("touch")
+    cmd.append(OutputFile("/foo/bar/target"))
+
+    with pytest.raises(CmdError):
+        cmd.append(OutputFile("/foo/bar/target"))
+
+
+def test_atomiccmd2__append_overlapping_output__same_instance():
+    cmd = AtomicCmd2("touch")
+
+    output_file = OutputFile("/foo/bar/target")
+    cmd.append(output_file)
+    cmd.append(output_file)
 
 
 def test_atomiccmd2__append_non_atomic_file():
