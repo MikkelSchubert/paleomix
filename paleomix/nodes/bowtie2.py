@@ -117,14 +117,11 @@ class Bowtie2Node(CommandNode):
         apply_options(aln, mapping_options)
         apply_options(cleanup, cleanup_options)
 
-        algorithm = "PE" if input_file_2 else "SE"
         description = _get_node_description(
             name="Bowtie2",
-            algorithm=algorithm,
             input_files_1=input_file_1,
             input_files_2=input_file_2,
             prefix=prefix,
-            threads=threads,
         )
 
         CommandNode.__init__(

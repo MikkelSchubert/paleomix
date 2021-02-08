@@ -78,7 +78,10 @@ class BWABacktrack(CommandNode):
         threads = _get_max_threads(reference, threads)
 
         aln = _new_bwa_command(
-            ("bwa", "aln"), prefix, IN_FILE=input_file, OUT_STDOUT=output_file,
+            ("bwa", "aln"),
+            prefix,
+            IN_FILE=input_file,
+            OUT_STDOUT=output_file,
         )
         aln.add_value(prefix)
         aln.add_value("%(IN_FILE)s")
@@ -87,11 +90,9 @@ class BWABacktrack(CommandNode):
         apply_options(aln, mapping_options)
 
         description = _get_node_description(
-            name="BWA",
-            algorithm="Backtrack",
+            name="BWA backtrack",
             input_files_1=input_file,
             prefix=prefix,
-            threads=threads,
         )
 
         CommandNode.__init__(
@@ -135,8 +136,7 @@ class BWASamse(CommandNode):
             self,
             command=ParallelCmds([samse.finalize(), cleanup.finalize()]),
             description=_get_node_description(
-                name="BWA",
-                algorithm="samse",
+                name="BWA samse",
                 input_files_1=input_file_fq,
                 prefix=prefix,
             ),
@@ -185,8 +185,7 @@ class BWASampe(CommandNode):
             self,
             command=ParallelCmds([sampe.finalize(), cleanup.finalize()]),
             description=_get_node_description(
-                name="BWA",
-                algorithm="sampe",
+                name="BWA sampe",
                 input_files_1=input_file_fq_1,
                 input_files_2=input_file_fq_2,
                 prefix=prefix,
@@ -237,13 +236,13 @@ class BWAAlgorithmNode(CommandNode):
         apply_options(cleanup, cleanup_options)
 
         description = _get_node_description(
-            name="BWA",
-            algorithm="%s (%s)" % (algorithm, "PE" if input_file_2 else "SE"),
+            name="BWA {}".format(algorithm),
             input_files_1=input_file_1,
             input_files_2=input_file_2,
             prefix=prefix,
-            threads=threads,
         )
+
+        self.out_bam = output_file
 
         CommandNode.__init__(
             self,
@@ -316,19 +315,11 @@ def _check_bwa_prefix(prefix):
         )
 
 
-def _get_node_description(
-    name, input_files_1, input_files_2=None, algorithm=None, prefix=None, threads=1
-):
+def _get_node_description(name, input_files_1, input_files_2=None, prefix=None):
     prefix = os.path.basename(prefix)
     if prefix.endswith(".fasta") or prefix.endswith(".fa"):
         prefix = prefix.rsplit(".", 1)[0]
 
     input_files = describe_paired_files(input_files_1, input_files_2 or ())
-    info = ["alignment of", input_files, "onto", prefix, "using", name]
-    if algorithm is not None:
-        info.append(algorithm)
 
-    if threads > 1:
-        info.append("using %i threads" % (threads,))
-
-    return " ".join(info)
+    return "aligning {} onto {} using {}".format(input_files, prefix, name)
