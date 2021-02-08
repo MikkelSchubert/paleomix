@@ -110,6 +110,7 @@ class LazyLogfile(logging.FileHandler):
 
         for start in itertools.count(start=1):
             filename = self._template % (start,)
+            os.makedirs(os.path.dirname(filename), exist_ok=True)
 
             try:
                 stream = os.fdopen(os.open(filename, flags), "w")
