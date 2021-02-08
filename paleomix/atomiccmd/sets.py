@@ -25,6 +25,7 @@ import collections
 
 import paleomix.atomiccmd.pprint as atomicpp
 
+from paleomix.atomiccmd.command2 import AtomicCmd2
 from paleomix.atomiccmd.command import AtomicCmd, CmdError
 from paleomix.common.utilities import safe_coerce_to_tuple
 from paleomix.common.fileutils import try_remove
@@ -120,7 +121,7 @@ class ParallelCmds(_CommandSet):
 
         commands = safe_coerce_to_tuple(commands)
         for command in commands:
-            if not isinstance(command, (AtomicCmd, ParallelCmds)):
+            if not isinstance(command, (AtomicCmd, AtomicCmd2, ParallelCmds)):
                 raise CmdError(
                     "ParallelCmds must only contain AtomicCmds or other ParallelCmds!"
                 )
@@ -173,7 +174,7 @@ class SequentialCmds(_CommandSet):
 
         commands = safe_coerce_to_tuple(commands)
         for command in commands:
-            if not isinstance(command, (AtomicCmd, _CommandSet)):
+            if not isinstance(command, (AtomicCmd, AtomicCmd2, _CommandSet)):
                 raise CmdError(
                     "ParallelCmds must only contain AtomicCmds or other ParallelCmds!"
                 )
