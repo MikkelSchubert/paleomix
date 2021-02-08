@@ -136,7 +136,7 @@ def index_references(config, makefiles):
     references_bowtie2 = {}
     for makefile in makefiles:
         for subdd in makefile["Prefixes"].values():
-            reference = subdd["Reference"]
+            reference = subdd["Path"]
             if reference not in references:
                 # Validation of the FASTA file; not blocking for the other
                 # steps, as it is only expected to fail very rarely, but will

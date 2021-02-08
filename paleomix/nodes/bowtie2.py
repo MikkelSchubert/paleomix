@@ -46,20 +46,15 @@ BOWTIE2_VERSION = versions.Requirement(
 
 
 class Bowtie2IndexNode(CommandNode):
-    def __init__(self, input_file, prefix=None, dependencies=()):
-        prefix = prefix if prefix else input_file
+    def __init__(self, input_file, dependencies=()):
         builder = _bowtie2_template(
-            ("bowtie2-build"),
-            prefix,
+            ("bowtie2-build", "%(IN_FILE)s", "%(TEMP_OUT_PREFIX)s"),
+            input_file,
             iotype="OUT",
             IN_FILE=input_file,
-            TEMP_OUT_PREFIX=os.path.basename(prefix),
+            TEMP_OUT_PREFIX=os.path.basename(input_file),
             CHECK_VERSION=BOWTIE2_VERSION,
         )
-
-        builder.add_value("%(IN_FILE)s")
-        # Destination prefix, in temp folder
-        builder.add_value("%(TEMP_OUT_PREFIX)s")
 
         CommandNode.__init__(
             self,
@@ -76,7 +71,6 @@ class Bowtie2Node(CommandNode):
         input_file_2,
         output_file,
         reference,
-        prefix,
         threads=2,
         log_file=None,
         mapping_options={},
@@ -86,12 +80,12 @@ class Bowtie2Node(CommandNode):
         # Setting IN_FILE_2 to None makes AtomicCmd ignore this key
         aln = _bowtie2_template(
             ("bowtie2",),
-            prefix,
+            reference,
             OUT_STDOUT=AtomicCmd.PIPE,
             CHECK_VERSION=BOWTIE2_VERSION,
         )
 
-        aln.set_option("-x", prefix)
+        aln.set_option("-x", reference)
 
         if log_file is not None:
             aln.set_kwargs(OUT_STDERR=log_file)
@@ -121,7 +115,7 @@ class Bowtie2Node(CommandNode):
             name="Bowtie2",
             input_files_1=input_file_1,
             input_files_2=input_file_2,
-            prefix=prefix,
+            reference=reference,
         )
 
         CommandNode.__init__(
@@ -133,9 +127,9 @@ class Bowtie2Node(CommandNode):
         )
 
 
-def _bowtie2_template(call, prefix, iotype="IN", **kwargs):
+def _bowtie2_template(call, reference, iotype="IN", **kwargs):
     for postfix in ("1.bt2", "2.bt2", "3.bt2", "4.bt2", "rev.1.bt2", "rev.2.bt2"):
         key = "%s_PREFIX_%s" % (iotype, postfix.upper())
-        kwargs[key] = prefix + "." + postfix
+        kwargs[key] = reference + "." + postfix
 
     return AtomicCmdBuilder(call, **kwargs)

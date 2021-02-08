@@ -444,7 +444,7 @@ class SummaryTableNode(Node):
         """Returns (size, number of contigs) for a set of BWA prefix."""
         genomes = {}
         for prefix in prefixes:
-            contigs = FASTA.index_and_collect_contigs(prefixes[prefix]["Reference"])
+            contigs = FASTA.index_and_collect_contigs(prefixes[prefix]["Path"])
 
             genomes[prefix] = {
                 "Size": sum(contigs.values()),

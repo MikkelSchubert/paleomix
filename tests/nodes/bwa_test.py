@@ -25,7 +25,6 @@ def test_bwa_mem_description__se():
     node = BWAAlgorithmNode(
         input_file_1="/path/reads_1.fq.gz",
         output_file="/path/output.bam",
-        prefix="/path/my_genome.fasta",
         reference="/path/my_genome.fasta",
     )
 
@@ -37,7 +36,6 @@ def test_bwa_mem_description__pe():
         input_file_1="/path/reads_1.fq.gz",
         input_file_2="/path/reads_2.fq.gz",
         output_file="/path/output.bam",
-        prefix="/path/my_genome.fasta",
         reference="/path/my_genome.fasta",
     )
 

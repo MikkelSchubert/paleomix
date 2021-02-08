@@ -353,7 +353,6 @@ def _mangle_prefixes(makefile):
             )
 
         record["Name"] = name
-        record["Reference"] = record["Path"]
         prefixes[name] = record
 
     if not prefixes:

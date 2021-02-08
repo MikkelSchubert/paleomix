@@ -46,14 +46,13 @@ BWA_VERSION = versions.Requirement(
 
 
 class BWAIndexNode(CommandNode):
-    def __init__(self, input_file, prefix=None, dependencies=()):
-        prefix = prefix if prefix else input_file
+    def __init__(self, input_file, dependencies=()):
         builder = _new_bwa_command(
             ("bwa", "index", "%(IN_FILE)s", "-p", "%(TEMP_OUT_PREFIX)s"),
-            prefix,
+            input_file,
             iotype="OUT",
             IN_FILE=input_file,
-            TEMP_OUT_PREFIX=os.path.basename(prefix),
+            TEMP_OUT_PREFIX=os.path.basename(input_file),
         )
 
         CommandNode.__init__(
@@ -70,7 +69,6 @@ class BWABacktrack(CommandNode):
         input_file,
         output_file,
         reference,
-        prefix,
         threads=1,
         mapping_options={},
         dependencies=(),
@@ -79,11 +77,11 @@ class BWABacktrack(CommandNode):
 
         aln = _new_bwa_command(
             ("bwa", "aln"),
-            prefix,
+            reference,
             IN_FILE=input_file,
             OUT_STDOUT=output_file,
         )
-        aln.add_value(prefix)
+        aln.add_value(reference)
         aln.add_value("%(IN_FILE)s")
         aln.set_option("-t", threads)
 
@@ -92,7 +90,7 @@ class BWABacktrack(CommandNode):
         description = _get_node_description(
             name="BWA backtrack",
             input_files_1=input_file,
-            prefix=prefix,
+            reference=reference,
         )
 
         CommandNode.__init__(
@@ -111,19 +109,18 @@ class BWASamse(CommandNode):
         input_file_sai,
         output_file,
         reference,
-        prefix,
         mapping_options={},
         cleanup_options={},
         dependencies=(),
     ):
         samse = _new_bwa_command(
             ("bwa", "samse"),
-            prefix,
+            reference,
             IN_FILE_SAI=input_file_sai,
             IN_FILE_FQ=input_file_fq,
             OUT_STDOUT=AtomicCmd.PIPE,
         )
-        samse.add_value(prefix)
+        samse.add_value(reference)
         samse.add_value("%(IN_FILE_SAI)s")
         samse.add_value("%(IN_FILE_FQ)s")
 
@@ -138,7 +135,7 @@ class BWASamse(CommandNode):
             description=_get_node_description(
                 name="BWA samse",
                 input_files_1=input_file_fq,
-                prefix=prefix,
+                reference=reference,
             ),
             dependencies=dependencies,
         )
@@ -153,7 +150,6 @@ class BWASampe(CommandNode):
         input_file_sai_2,
         output_file,
         reference,
-        prefix,
         mapping_options={},
         cleanup_options={},
         dependencies=(),
@@ -162,13 +158,13 @@ class BWASampe(CommandNode):
             (
                 "bwa",
                 "sampe",
-                prefix,
+                reference,
                 "%(IN_SAI_1)s",
                 "%(IN_SAI_2)s",
                 "%(IN_FQ_1)s",
                 "%(IN_FQ_2)s",
             ),
-            prefix,
+            reference,
             IN_SAI_1=input_file_sai_1,
             IN_SAI_2=input_file_sai_2,
             IN_FQ_1=input_file_fq_1,
@@ -188,7 +184,7 @@ class BWASampe(CommandNode):
                 name="BWA sampe",
                 input_files_1=input_file_fq_1,
                 input_files_2=input_file_fq_2,
-                prefix=prefix,
+                reference=reference,
             ),
             dependencies=dependencies,
         )
@@ -200,7 +196,6 @@ class BWAAlgorithmNode(CommandNode):
         input_file_1,
         output_file,
         reference,
-        prefix,
         input_file_2=None,
         threads=1,
         algorithm="mem",
@@ -214,8 +209,8 @@ class BWAAlgorithmNode(CommandNode):
         threads = _get_max_threads(reference, threads)
 
         aln = _new_bwa_command(
-            ("bwa", algorithm, prefix, "%(IN_FILE_1)s"),
-            prefix,
+            ("bwa", algorithm, reference, "%(IN_FILE_1)s"),
+            reference,
             IN_FILE_1=input_file_1,
             OUT_STDOUT=AtomicCmd.PIPE,
         )
@@ -239,7 +234,7 @@ class BWAAlgorithmNode(CommandNode):
             name="BWA {}".format(algorithm),
             input_files_1=input_file_1,
             input_files_2=input_file_2,
-            prefix=prefix,
+            reference=reference,
         )
 
         self.out_bam = output_file
@@ -271,12 +266,12 @@ def _new_cleanup_command(stdin, output_file, reference, paired_end=False):
     return convert
 
 
-def _new_bwa_command(call, prefix, iotype="IN", **kwargs):
-    _check_bwa_prefix(prefix)
+def _new_bwa_command(call, reference, iotype="IN", **kwargs):
+    _check_bwa_prefix(reference)
 
     kwargs["CHECK_BWA"] = BWA_VERSION
     for postfix in ("amb", "ann", "bwt", "pac", "sa"):
-        kwargs["%s_PREFIX_%s" % (iotype, postfix.upper())] = prefix + "." + postfix
+        kwargs["%s_PREFIX_%s" % (iotype, postfix.upper())] = reference + "." + postfix
 
     return AtomicCmdBuilder(call, **kwargs)
 
@@ -315,11 +310,11 @@ def _check_bwa_prefix(prefix):
         )
 
 
-def _get_node_description(name, input_files_1, input_files_2=None, prefix=None):
-    prefix = os.path.basename(prefix)
-    if prefix.endswith(".fasta") or prefix.endswith(".fa"):
-        prefix = prefix.rsplit(".", 1)[0]
+def _get_node_description(name, input_files_1, reference, input_files_2=None):
+    reference = os.path.basename(reference)
+    if reference.endswith(".fasta") or reference.endswith(".fa"):
+        reference = reference.rsplit(".", 1)[0]
 
     input_files = describe_paired_files(input_files_1, input_files_2 or ())
 
-    return "aligning {} onto {} using {}".format(input_files, prefix, name)
+    return "aligning {} onto {} using {}".format(input_files, reference, name)

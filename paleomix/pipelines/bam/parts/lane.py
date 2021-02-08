@@ -83,8 +83,7 @@ class Lane:
                 parameters={
                     "input_file": input_filename,
                     "output_file": output_filename,
-                    "prefix": prefix["Path"],
-                    "reference": prefix["Reference"],
+                    "reference": prefix["Path"],
                     "dependencies": self.reads.nodes + prefix[prefix_key],
                 },
             )
@@ -147,7 +146,6 @@ class Lane:
             input_file=input_file,
             output_file=output_file,
             threads=parameters["threads"],
-            prefix=parameters["prefix"],
             reference=parameters["reference"],
             mapping_options=self.options["Aligners"]["BWA"],
             dependencies=parameters["dependencies"],
@@ -166,7 +164,6 @@ class Lane:
             input_file_fq=input_file_fq,
             input_file_sai=output_file_sai,
             output_file=output_file_bam,
-            prefix=parameters["prefix"],
             reference=parameters["reference"],
             mapping_options=self.options["Aligners"]["BWA"],
             cleanup_options=self._cleanup_options("BWA"),
@@ -197,7 +194,6 @@ class Lane:
             input_file_fq_1=template.format(Pair=1),
             input_file_fq_2=template.format(Pair=2),
             output_file=output_bam,
-            prefix=parameters["prefix"],
             reference=parameters["reference"],
             mapping_options=self.options["Aligners"]["BWA"],
             cleanup_options=self._cleanup_options("BWA"),

@@ -186,7 +186,7 @@ class Library:
 
         # Builds model of post-mortem DNA damage
         return MapDamageModelNode(
-            reference=prefix["Reference"],
+            reference=prefix["Path"],
             directory=destination,
             options=self.options["mapDamage"],
             dependencies=plot,
@@ -202,7 +202,7 @@ class Library:
         output_filename = self.folder + ".rescaled.bam"
 
         scale = MapDamageRescaleNode(
-            reference=prefix["Reference"],
+            reference=prefix["Path"],
             input_files=input_files,
             output_file=output_filename,
             directory=destination,
