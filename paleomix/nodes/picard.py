@@ -1,31 +1,15 @@
-#!/usr/bin/python3
-#
-# Copyright (c) 2012 Mikkel Schubert <MikkelSch@gmail.com>
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-#
+#!/usr/bin/env python3
+"""
+Picard - A set of command line tools (in Java) for manipulating high-throughput sequencing (HTS) data and formats such as SAM/BAM/CRAM and VCF.
+
+https://broadinstitute.github.io/picard/
+"""
 import os
 import getpass
 
 from paleomix.node import CommandNode
 from paleomix.atomiccmd.builder import AtomicJavaCmdBuilder
-from paleomix.common.fileutils import swap_ext, try_rmtree, describe_files
+from paleomix.common.fileutils import swap_ext, try_rmtree, describe_files, reroot_path
 import paleomix.common.versions as versions
 import paleomix.common.system
 
@@ -45,6 +29,25 @@ class PicardNode(CommandNode):
         try_rmtree(os.path.join(temp, "hsperfdata_" + getpass.getuser()))
 
         CommandNode._teardown(self, config, temp)
+
+
+class CreateSequenceDictionaryNode(PicardNode):
+    def __init__(self, config, in_reference, dependencies=()):
+        builder = picard_command(config, "CreateSequenceDictionary")
+
+        builder.set_option("R", "%(IN_REFERENCE)s", sep="=")
+        builder.set_option("O", "%(OUT_DICTIONARY)s", sep="=")
+        builder.set_kwargs(
+            IN_REFERENCE=in_reference,
+            OUT_DICTIONARY=swap_ext(in_reference, ".dict"),
+        )
+
+        PicardNode.__init__(
+            self,
+            command=builder.finalize(),
+            description="creating sequence dictionary for {!r}".format(in_reference),
+            dependencies=dependencies,
+        )
 
 
 class ValidateBAMNode(PicardNode):

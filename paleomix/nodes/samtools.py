@@ -1,25 +1,10 @@
-#!/usr/bin/python3
-#
-# Copyright (c) 2012 Mikkel Schubert <MikkelSch@gmail.com>
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-#
+#!/usr/bin/env python3
+"""
+SAMTools - Tools (written in C using htslib) for manipulating next-generation
+sequencing data
+
+https://github.com/samtools/samtools
+"""
 import os
 
 from paleomix.node import CommandNode
@@ -151,6 +136,29 @@ class BAMIndexNode(CommandNode):
         CommandNode.__init__(
             self,
             description="creating %s index for %s" % (index_format[1:].upper(), infile),
+            command=command,
+            dependencies=dependencies,
+        )
+
+
+class BAMStatsNode(CommandNode):
+    METHODS = ("stats", "idxstats", "flagstats")
+
+    def __init__(self, method, infile, outfile, index_format=".bai", dependencies=()):
+        if method not in self.METHODS:
+            raise ValueError(method)
+
+        command = AtomicCmd(
+            ["samtools", method, "%(IN_BAM)s"],
+            IN_BAM=infile,
+            IN_IDX=infile + index_format if method == "idxstats" else None,
+            OUT_STDOUT=outfile,
+            CHECK_SAM=SAMTOOLS_VERSION,
+        )
+
+        CommandNode.__init__(
+            self,
+            description="collecting %s for %s" % (method, infile),
             command=command,
             dependencies=dependencies,
         )
