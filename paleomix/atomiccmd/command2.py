@@ -220,13 +220,13 @@ class AtomicCmd2:
         )
 
     @property
-    def expected_output_files(self):
+    def expected_temp_files(self):
         return frozenset(
             afile.basename() for afile in self._output_files if not afile.temporary
         )
 
     @property
-    def optional_output_files(self):
+    def optional_temp_files(self):
         return frozenset(
             afile.basename() for afile in self._output_files if afile.temporary
         )

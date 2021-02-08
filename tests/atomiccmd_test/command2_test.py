@@ -192,10 +192,10 @@ def test_atomiccmd2__invalid_extra_paths(value):
 
 
 ########################################################################################
-# Constructor: expected and optional output files
+# Constructor: expected and optional temp files
 
 
-def test_atomiccmd2__expected_and_optional_output_files():
+def test_atomiccmd2__expected_and_optional_temp_files():
     cmd = AtomicCmd2(
         "ls",
         stdout="/foo/bar/data.gz",
@@ -205,8 +205,8 @@ def test_atomiccmd2__expected_and_optional_output_files():
         ),
     )
 
-    assert cmd.expected_output_files == frozenset(["data.gz", "foo"])
-    assert cmd.optional_output_files == frozenset(
+    assert cmd.expected_temp_files == frozenset(["data.gz", "foo"])
+    assert cmd.optional_temp_files == frozenset(
         ["pipe_ls_{}.stderr".format(id(cmd)), "tmp_out"]
     )
 
