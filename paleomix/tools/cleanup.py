@@ -81,8 +81,7 @@ def _set_rg_tags(header, rg_id, rg_tags):
 def _cleanup_record(record):
     """Cleans up the properties of a BAM record, ensuring that only appropriate
     flags and values are set, such that the record follows section 1.4 of the
-    SAM specification (https://samtools.github.io/hts-specs/SAMv1.pdf). The
-    record itself (or a new record) is returned.
+    SAM specification (https://samtools.github.io/hts-specs/SAMv1.pdf).
     """
     if not record.is_paired:
         # Unset 0x2 (properly aligned), 0x8 (next mate unmapped),
@@ -167,6 +166,7 @@ def _cleanup_unmapped(args):
                     continue
 
                 if args.rg_id is not None:
+                    # FIXME: Is this needed?
                     # Ensure that only one RG tag is set
                     tags = record.get_tags(with_value_type=True)
                     tags = [tag for tag in tags if tag[0] != "RG"]
@@ -180,8 +180,7 @@ def _cleanup_unmapped(args):
 
 def _build_wrapper_command(args):
     bam_cleanup = paleomix.tools.factory.new("cleanup")
-    if args.fasta is not None:
-        bam_cleanup.set_option("--fasta", args.fasta)
+    bam_cleanup.set_option("--fasta", args.fasta)
     bam_cleanup.set_option("--temp-prefix", args.temp_prefix)
     bam_cleanup.set_option("--min-quality", str(args.min_quality))
     bam_cleanup.set_option("--exclude-flags", hex(args.exclude_flags))
@@ -197,14 +196,52 @@ def _build_wrapper_command(args):
     return bam_cleanup.call
 
 
+def _distribute_threads(nthreads):
+    nthreads = max(2, nthreads)
+    # FIXME: More benchmarks needed
+    # Sort performance caps out at 3 threads for a while
+    sort = nthreads // 2
+    if nthreads <= 9:
+        sort = min(3, sort)
+
+    return {
+        # Sorting of uncompressed input
+        "sort": sort,
+        # MD tag updates and including writing compressed BAM
+        "calmd": nthreads - sort,
+    }
+
+
+def _samtools_command(tool, *args, level=6, threads=1):
+    command = [
+        "samtools",
+        tool,
+        "--output-fmt",
+        "bam",
+        "--output-fmt-option",
+        "level={}".format(level),
+    ]
+
+    if threads > 1:
+        command.append("--threads")
+        command.append(str(threads))
+
+    command.extend(args)
+
+    return command
+
+
 def _run_cleanup_pipeline(args):
     bam_cleanup = _build_wrapper_command(args)
     commands = []
+    procs = []
+
+    threads = _distribute_threads(args.max_threads)
 
     try:
         if args.paired_end:
             # Convert input to (uncompressed) BAM and fix mate information for PE reads
-            commands.append(["samtools", "fixmate", "-O", "bam", "-", "-"])
+            commands.append(_samtools_command("fixmate", "-", "-", level=0))
 
         # Cleanup / filter reads. Must be done after 'fixmate', as BWA may produce
         # hits where the mate-unmapped flag is incorrect, which 'fixmate' fixes.
@@ -212,14 +249,16 @@ def _run_cleanup_pipeline(args):
 
         # Sort by coordinates and output uncompressed BAM
         commands.append(
-            ["samtools", "sort", "-l", "0", "-O", "bam", "-T", args.temp_prefix]
+            _samtools_command(
+                "sort", "-T", args.temp_prefix, level=0, threads=threads["sort"]
+            )
         )
 
-        # Update NM and MD tags; output BAM (-b) to stdout
-        if args.fasta is not None:
-            commands.append(["samtools", "calmd", "-b", "-", args.fasta])
+        # Update NM and MD tags; output compressed BAM to stdout
+        commands.append(
+            _samtools_command("calmd", "-", args.fasta, threads=threads["calmd"])
+        )
 
-        procs = []
         last_out = sys.stdin
         for cmd in commands:
             proc_stdout = None if cmd is commands[-1] else processes.PIPE
@@ -230,7 +269,7 @@ def _run_cleanup_pipeline(args):
 
         return int(any(processes.join_procs(procs)))
     except Exception:
-        for proc in procs.values():
+        for proc in procs:
             proc.terminate()
         raise
 
@@ -244,16 +283,20 @@ def parse_args(argv):
     # "Hidden" commands, invoking the various sub-parts of this script
     parser.add_argument("command", nargs="?", help=argparse.SUPPRESS)
 
-    parser.add_argument(
+    group = parser.add_argument_group("I/O")
+    group.add_argument(
         "--fasta",
-        default=None,
-        help="Reference FASTA sequence; if set, the calmd command is used to "
-        "re-calculate MD tags.",
+        required=True,
+        help="Reference FASTA sequence; used to re-calculate MD tags with `calmd`.",
     )
-    parser.add_argument(
-        "--temp-prefix", required=True, help="REQUIRED: Prefix for temp files"
+    group.add_argument(
+        "--temp-prefix",
+        required=True,
+        help="REQUIRED: Prefix for temp files generated while sorting reads",
     )
-    parser.add_argument(
+
+    group = parser.add_argument_group("Filtering")
+    group.add_argument(
         "-q",
         "--min-quality",
         type=int,
@@ -261,7 +304,7 @@ def parse_args(argv):
         help="Exclude aligned reads with a mapping quality below this value; note "
         "that this filter ONLY applies to aligned reads",
     )
-    parser.add_argument(
+    group.add_argument(
         "-f",
         "--require-flags",
         default=0,
@@ -270,7 +313,7 @@ def parse_args(argv):
         "valid for paired-end reads (0x2, 0x8, 0x20, 0x40, 0x80) are ignored when "
         "processing single-end reads.",
     )
-    parser.add_argument(
+    group.add_argument(
         "-F",
         "--exclude-flags",
         default=0,
@@ -279,7 +322,9 @@ def parse_args(argv):
         "for paired-end reads (0x2, 0x8, 0x20, 0x40, 0x80) are ignored when "
         "processing single-end reads.",
     )
-    parser.add_argument(
+
+    group = parser.add_argument_group("Processing")
+    group.add_argument(
         "--paired-end",
         default=False,
         action="store_true",
@@ -287,24 +332,33 @@ def parse_args(argv):
         "updating of mate information [Default: off]",
     )
 
-    parser.add_argument(
+    group.add_argument(
         "--update-pg-tag",
         default=[],
         action="append",
         help="Update one PG tags with the given values, creating the tag if it does "
         'not already exist. Takes arguments in the form "PGID:TAG:VALUE".',
     )
-    parser.add_argument(
+    group.add_argument(
         "--rg-id",
         default=None,
         help="If set, the read-group is overwritten based on tags set using the --rg "
         "option, using the id specified using --rg-id.",
     )
-    parser.add_argument(
+    group.add_argument(
         "--rg",
         default=[],
         action="append",
         help="Readgroup in the form 'ID:TAG:VALUE'.",
+    )
+
+    group = parser.add_argument_group("Scheduling")
+    group.add_argument(
+        "--max-threads",
+        default=2,
+        type=int,
+        help="Maximum number of threads used for samtools commands; threads are "
+        "automatically distributed between these tasks",
     )
 
     args = parser.parse_args(argv)

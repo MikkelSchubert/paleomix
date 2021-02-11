@@ -90,7 +90,9 @@ class Lane:
 
             self.bams[key] = {
                 output_filename: self._finalize_nodes(
-                    config=config, prefix=prefix, node=alignment_node,
+                    config=config,
+                    prefix=prefix,
+                    node=alignment_node,
                 )
             }
 
@@ -165,6 +167,7 @@ class Lane:
             input_file_sai=output_file_sai,
             output_file=output_file_bam,
             reference=parameters["reference"],
+            threads=max(2, parameters["threads"] // 2),
             mapping_options=self.options["Aligners"]["BWA"],
             cleanup_options=self._cleanup_options("BWA"),
             dependencies=aln_node,
@@ -195,6 +198,7 @@ class Lane:
             input_file_fq_2=template.format(Pair=2),
             output_file=output_bam,
             reference=parameters["reference"],
+            threads=max(2, parameters["threads"] // 2),
             mapping_options=self.options["Aligners"]["BWA"],
             cleanup_options=self._cleanup_options("BWA"),
             dependencies=(aln_node_1, aln_node_2),

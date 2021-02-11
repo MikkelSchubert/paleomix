@@ -105,7 +105,11 @@ class Bowtie2Node(CommandNode):
         aln.set_option("--threads", max_threads)
 
         cleanup = _new_cleanup_command(
-            aln, output_file, reference, paired_end=input_file_1 and input_file_2
+            stdin=aln,
+            in_reference=reference,
+            out_bam=output_file,
+            max_threads=threads,
+            paired_end=input_file_1 and input_file_2,
         )
 
         apply_options(aln, mapping_options)

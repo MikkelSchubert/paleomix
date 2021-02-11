@@ -109,6 +109,7 @@ class BWASamse(CommandNode):
         input_file_sai,
         output_file,
         reference,
+        threads=1,
         mapping_options={},
         cleanup_options={},
         dependencies=(),
@@ -124,7 +125,12 @@ class BWASamse(CommandNode):
         samse.add_value("%(IN_FILE_SAI)s")
         samse.add_value("%(IN_FILE_FQ)s")
 
-        cleanup = _new_cleanup_command(samse, output_file, reference)
+        cleanup = _new_cleanup_command(
+            stdin=samse,
+            in_reference=reference,
+            out_bam=output_file,
+            max_threads=threads,
+        )
 
         apply_options(samse, mapping_options)
         apply_options(cleanup, cleanup_options)
@@ -137,6 +143,7 @@ class BWASamse(CommandNode):
                 input_files_1=input_file_fq,
                 reference=reference,
             ),
+            threads=threads,
             dependencies=dependencies,
         )
 
@@ -150,6 +157,7 @@ class BWASampe(CommandNode):
         input_file_sai_2,
         output_file,
         reference,
+        threads=1,
         mapping_options={},
         cleanup_options={},
         dependencies=(),
@@ -172,7 +180,13 @@ class BWASampe(CommandNode):
             OUT_STDOUT=AtomicCmd.PIPE,
         )
 
-        cleanup = _new_cleanup_command(sampe, output_file, reference, paired_end=True)
+        cleanup = _new_cleanup_command(
+            stdin=sampe,
+            in_reference=reference,
+            out_bam=output_file,
+            max_threads=threads,
+            paired_end=True,
+        )
 
         apply_options(sampe, mapping_options)
         apply_options(cleanup, cleanup_options)
@@ -186,6 +200,7 @@ class BWASampe(CommandNode):
                 input_files_2=input_file_fq_2,
                 reference=reference,
             ),
+            threads=threads,
             dependencies=dependencies,
         )
 
@@ -224,7 +239,11 @@ class BWAAlgorithmNode(CommandNode):
         aln.set_option("-M")
 
         cleanup = _new_cleanup_command(
-            aln, output_file, reference, paired_end=input_file_1 and input_file_2
+            stdin=aln,
+            in_reference=reference,
+            out_bam=output_file,
+            max_threads=threads,
+            paired_end=input_file_1 and input_file_2,
         )
 
         apply_options(aln, mapping_options)
@@ -248,17 +267,24 @@ class BWAAlgorithmNode(CommandNode):
         )
 
 
-def _new_cleanup_command(stdin, output_file, reference, paired_end=False):
-    convert = factory.new("cleanup")
-    convert.set_option("--fasta", "%(IN_FASTA_REF)s")
-    convert.set_option("--temp-prefix", "%(TEMP_OUT_PREFIX)s")
-    convert.set_kwargs(
+def _new_cleanup_command(stdin, in_reference, out_bam, max_threads=1, paired_end=False):
+    convert = factory.new(
+        [
+            "cleanup",
+            "--fasta",
+            "%(IN_FASTA_REF)s",
+            "--temp-prefix",
+            "%(TEMP_OUT_PREFIX)s",
+        ],
         IN_STDIN=stdin,
-        IN_FASTA_REF=reference,
-        OUT_STDOUT=output_file,
+        IN_FASTA_REF=in_reference,
+        OUT_STDOUT=out_bam,
         TEMP_OUT_PREFIX="bam_cleanup",
         CHECK_SAMTOOLS=SAMTOOLS_VERSION,
     )
+
+    if max_threads > 1:
+        convert.set_option("--max-threads", max_threads)
 
     if paired_end:
         convert.set_option("--paired-end")
