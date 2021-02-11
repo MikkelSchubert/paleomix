@@ -106,6 +106,11 @@ class LazyLogfile(logging.FileHandler):
         self._template = self.baseFilename
         self._log_level = log_level
 
+    def emit(self, record):
+        # Don't try to log self-emitted log events, to avoid recursive loops
+        if record.name != __name__:
+            super().emit(record)
+
     def _open(self):
         """Try to open a new logfile, taking steps to ensure that
         existing logfiles using the same template are not clobbered."""
