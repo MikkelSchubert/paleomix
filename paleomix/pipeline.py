@@ -25,6 +25,7 @@ import logging
 import multiprocessing
 import os
 import signal
+import sys
 import traceback
 
 from queue import Empty
@@ -311,8 +312,9 @@ class Pypeline:
                 "Press CTRL-C again to force termination."
             )
         else:
+            self._logger.warning("Terminating pipeline!")
             self._pool.terminate()
-            raise signal.default_int_handler(signum, frame)
+            sys.exit(-signum)
 
     @classmethod
     def _get_finished_node(cls, queue, running, blocking):
