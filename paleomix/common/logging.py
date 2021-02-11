@@ -77,12 +77,15 @@ def add_argument_group(parser, default="error"):
     object to have these options."""
     group = parser.add_argument_group("Logging")
     group.add_argument(
-        "--log-file", default=None, help="Write log-messages to this file.",
+        "--log-file",
+        default=None,
+        help="Write log-messages to this file.",
     )
     group.add_argument(
         "--log-level",
         default=default,
         choices=("info", "warning", "error", "debug"),
+        type=str.lower,
         help="Log messages at the specified level. If a filename is not specified with "
         "--log-file, PALEOMIX will automatically create a log file in the current "
         "directory should events be logged at this level or above",
