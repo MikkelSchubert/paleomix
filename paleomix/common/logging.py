@@ -57,18 +57,19 @@ def initialize(log_level="error", log_file=None, name="paleomix"):
 
     log_level = _LOG_LEVELS[log_level.lower()]
     root = logging.getLogger()
+    root.setLevel(logging.NOTSET)
 
     if log_file:
         handler = logging.FileHandler(log_file)
         handler.setFormatter(logging.Formatter(_FILE_MESSAGE_FORMAT))
+        handler.setLevel(log_level)
         root.addHandler(handler)
-        root.setLevel(log_level)
     elif name:
         template = "%s.%s_%%02i.log" % (name, time.strftime("%Y%m%d_%H%M%S"))
         handler = LazyLogfile(template, log_level=log_level)
         handler.setFormatter(logging.Formatter(_FILE_MESSAGE_FORMAT))
+        handler.setLevel(log_level)
         root.addHandler(handler)
-        root.setLevel(log_level)
 
 
 def add_argument_group(parser, default="error"):
