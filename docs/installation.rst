@@ -86,7 +86,7 @@ Once set-up, you can create a conda environment named `paleomix` using the follo
 
 .. parsed-literal::
 
-    $ curl https://raw.githubusercontent.com/MikkelSchubert/paleomix/v\ |release|/paleomix_environment.yaml > paleomix_environment.yaml
+    $ curl https://raw.githubusercontent.com/MikkelSchubert/paleomix/master/paleomix_environment.yaml > paleomix_environment.yaml
     $ conda env create -n paleomix -f paleomix_environment.yaml
 
 .. note::
