@@ -189,10 +189,10 @@ class AtomicCmd2:
             self._record_atomic_file(value)
 
     def append_options(self, options, pred=lambda s: s.startswith("-")):
-        if isinstance(options, dict):
-            options = options.items()
+        if not isinstance(options, dict):
+            raise TypeError("options must be dict, not {!r}".format(options))
 
-        for (key, values) in options:
+        for (key, values) in options.items():
             if not isinstance(key, str):
                 raise ValueError("keys must be strings, not %r" % (key,))
             elif not pred(key):

@@ -920,7 +920,6 @@ def test_atomiccmd2__append_to_running_command(tmp_path):
 
 def test_append_options__empty_lists():
     cmd = AtomicCmd2("touch")
-    cmd.append_options(())
     cmd.append_options({})
 
     assert cmd.to_call("${TEMP_DIR}") == ["touch"]
@@ -928,21 +927,21 @@ def test_append_options__empty_lists():
 
 def test_append_options__single_options():
     cmd = AtomicCmd2("touch")
-    cmd.append_options([("--foo", 1), ("--bar", InputFile("/foo/bar"))])
+    cmd.append_options({"--foo": 1, "--bar": InputFile("/foo/bar")})
 
     assert cmd.to_call("${TEMP_DIR}") == ["touch", "--foo", "1", "--bar", "/foo/bar"]
 
 
 def test_append_options__none_value():
     cmd = AtomicCmd2("touch")
-    cmd.append_options([("--foo", None), ("--bar", None)])
+    cmd.append_options({"--foo": None, "--bar": None})
 
     assert cmd.to_call("${TEMP_DIR}") == ["touch", "--foo", "--bar"]
 
 
 def test_append_options__multiple_options():
     cmd = AtomicCmd2("touch")
-    cmd.append_options([("--foo", [3, 2, 1]), ("--bar", InputFile("/foo/bar"))])
+    cmd.append_options({"--foo": [3, 2, 1], "--bar": InputFile("/foo/bar")})
 
     assert cmd.to_call("${TEMP_DIR}") == [
         "touch",
@@ -967,7 +966,7 @@ def test_append_options__filted_options():
 def test_append_options__custom_filtering():
     cmd = AtomicCmd2("touch")
     cmd.append_options(
-        [("foo", 1), ("--bar", InputFile("/foo/bar"))],
+        {"foo": 1, "--bar": InputFile("/foo/bar")},
         pred=lambda s: not s.startswith("-"),
     )
 
