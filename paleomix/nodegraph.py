@@ -215,17 +215,11 @@ class NodeGraph:
 
     def _log_node_changes(self, node, old_state, new_state):
         if new_state in (self.RUNNING, self.DONE):
-            running = self._state_counts[self.RUNNING]
-            remaining = (
-                sum(self._state_counts)
-                - self._state_counts[self.DONE]
-                - self._state_counts[self.ERROR]
-            )
+            progress = self._state_counts[self.DONE] + self._state_counts[self.ERROR]
+            pct = "{: >3d}".format(int(100 * progress / sum(self._state_counts)))
+            event = "Started" if new_state == self.RUNNING else "Finished"
 
-            if new_state == self.RUNNING:
-                self._logger.info("[%i/%i] Started %s", running, remaining, node)
-            elif new_state == self.DONE:
-                self._logger.info("[%i/%i] Finished %s", running, remaining, node)
+            self._logger.info("[%s%%] %s %s", pct, event, node)
 
     def _calculate_intersections(self, for_node):
         def count_nodes(node, counts):
