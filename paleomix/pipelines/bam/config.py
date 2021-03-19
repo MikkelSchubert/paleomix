@@ -128,7 +128,9 @@ def add_run_command(subparsers):
         help="Location for temporary files and folders",
     )
     group.add_argument(
-        "--destination", default=".", help="The destination folder for result files.",
+        "--destination",
+        default=".",
+        help="The destination folder for result files.",
     )
 
     group = parser.add_argument_group("Files and executables")

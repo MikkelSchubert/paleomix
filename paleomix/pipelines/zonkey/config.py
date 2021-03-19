@@ -131,7 +131,10 @@ def add_run_command(subparsers):
     )
 
     group.add_argument(
-        "--admixture-only", help=SUPPRESS, default=False, action="store_true",
+        "--admixture-only",
+        help=SUPPRESS,
+        default=False,
+        action="store_true",
     )
 
     paleomix.common.logging.add_argument_group(parser)

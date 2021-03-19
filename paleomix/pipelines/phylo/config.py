@@ -36,7 +36,8 @@ _DEFAULT_CONFIG_FILES = [
 
 def build_parser():
     parser = ArgumentParser(
-        prog="paleomix phylo_pipeline", default_config_files=_DEFAULT_CONFIG_FILES,
+        prog="paleomix phylo_pipeline",
+        default_config_files=_DEFAULT_CONFIG_FILES,
     )
     parser.add_argument(
         "commands",

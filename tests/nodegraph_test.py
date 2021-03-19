@@ -113,7 +113,13 @@ def test_nodegraph_is_outdated__updates(tmp_path):
     older_file = create_test_file(_TIMESTAMP_1, tmp_path, "older_file")
     younger_file = create_test_file(_TIMESTAMP_2, tmp_path, "younger_file")
 
-    my_node = Mock(input_files=(older_file,), output_files=(younger_file,),)
+    my_node = Mock(
+        input_files=(older_file,),
+        output_files=(younger_file,),
+    )
     assert not NodeGraph.is_outdated(my_node, FileStatusCache())
-    my_node = Mock(input_files=(younger_file,), output_files=(older_file,),)
+    my_node = Mock(
+        input_files=(younger_file,),
+        output_files=(older_file,),
+    )
     assert NodeGraph.is_outdated(my_node, FileStatusCache())

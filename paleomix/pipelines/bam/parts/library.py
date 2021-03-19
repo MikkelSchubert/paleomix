@@ -151,14 +151,18 @@ class Library:
         elif run_type == "model":
             # Run of mapDamage including both plots and damage models
             node = self._mapdamage_model(
-                destination=destination, prefix=prefix, files_and_nodes=files_and_nodes,
+                destination=destination,
+                prefix=prefix,
+                files_and_nodes=files_and_nodes,
             )
 
             return files_and_nodes, (node,)
         elif run_type in ("plot", True):
             # Basic run of mapDamage, only generates plots / tables
             node = self._mapdamage_plot(
-                destination=destination, prefix=prefix, files_and_nodes=files_and_nodes,
+                destination=destination,
+                prefix=prefix,
+                files_and_nodes=files_and_nodes,
             )
 
             return files_and_nodes, (node,)
@@ -181,7 +185,9 @@ class Library:
     def _mapdamage_model(self, destination, prefix, files_and_nodes):
         # Generates basic plots / table files
         plot = self._mapdamage_plot(
-            destination=destination, prefix=prefix, files_and_nodes=files_and_nodes,
+            destination=destination,
+            prefix=prefix,
+            files_and_nodes=files_and_nodes,
         )
 
         # Builds model of post-mortem DNA damage
@@ -194,7 +200,9 @@ class Library:
 
     def _mapdamage_rescale(self, config, destination, prefix, files_and_nodes):
         model = self._mapdamage_model(
-            destination=destination, prefix=prefix, files_and_nodes=files_and_nodes,
+            destination=destination,
+            prefix=prefix,
+            files_and_nodes=files_and_nodes,
         )
 
         # Rescales BAM quality scores using model built above

@@ -59,13 +59,13 @@ def try_cast(value, cast_to):
 
 def set_in(dictionary, keys, value):
     """Traverses a set of nested dictionaries using the given keys,
-       and assigns the specified value to the inner-most
-       dictionary (obtained from the second-to-last key), using
-       the last key in keys. Thus calling set_in is(d, [X, Y, Z], v)
-       is equivalent to calling
-         d.setdefault(X, {}).setdefault(Y, {})[Z] = v
+    and assigns the specified value to the inner-most
+    dictionary (obtained from the second-to-last key), using
+    the last key in keys. Thus calling set_in is(d, [X, Y, Z], v)
+    is equivalent to calling
+      d.setdefault(X, {}).setdefault(Y, {})[Z] = v
 
-       Behavior on non-dictionaries is undefined."""
+    Behavior on non-dictionaries is undefined."""
     keys = list(keys)
     if not keys:
         raise ValueError("No keys passed to 'set_in'!")
@@ -83,13 +83,13 @@ def set_in(dictionary, keys, value):
 
 def get_in(dictionary, keys, default=None):
     """Traverses a set of nested dictionaries using the keys in
-       kws, and returns the value assigned to the final keyword
-       in the innermost dictionary. Calling get_in(d, [X, Y])
-       is equivalent to calling d.get(X).get(Y), with the
-       difference that any missing keys causes the default value
-       to be returned.
+    kws, and returns the value assigned to the final keyword
+    in the innermost dictionary. Calling get_in(d, [X, Y])
+    is equivalent to calling d.get(X).get(Y), with the
+    difference that any missing keys causes the default value
+    to be returned.
 
-       Behavior on non-dictgionaries is undefined."""
+    Behavior on non-dictgionaries is undefined."""
     keys = list(keys)
     for key in keys[:-1]:
         try:

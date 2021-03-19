@@ -125,7 +125,12 @@ class SummaryTableNode(Node):
         for (_, prefix) in sorted(self._prefixes.items()):
             stats = genomes[prefix["Name"]]
             rows.append(
-                (prefix["Name"], stats["NContigs"], stats["Size"], prefix["Path"],)
+                (
+                    prefix["Name"],
+                    stats["NContigs"],
+                    stats["Size"],
+                    prefix["Path"],
+                )
             )
 
         for line in text.padded_table(rows):

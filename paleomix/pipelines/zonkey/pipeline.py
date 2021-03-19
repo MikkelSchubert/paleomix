@@ -633,8 +633,7 @@ def finalize_run_config(parser, args):
 
 
 def _is_bamfile(filename):
-    """Returns true if a file is a BAM file, false otherwise.
-    """
+    """Returns true if a file is a BAM file, false otherwise."""
     try:
         with pysam.AlignmentFile(filename, "rb"):
             return True

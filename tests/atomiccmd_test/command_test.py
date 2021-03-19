@@ -609,7 +609,9 @@ def test_atomiccmd__commit_simple(tmp_path):
 def test_atomiccmd__commit_temp_out(tmp_path):
     dest, temp = _setup_for_commit(tmp_path, create_cmd=False)
     cmd = AtomicCmd(
-        ("echo", "foo"), OUT_STDOUT=str(dest / "foo.txt"), TEMP_OUT_FOO="bar.txt",
+        ("echo", "foo"),
+        OUT_STDOUT=str(dest / "foo.txt"),
+        TEMP_OUT_FOO="bar.txt",
     )
     cmd.run(temp)
     assert cmd.join() == [0]

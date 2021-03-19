@@ -133,9 +133,9 @@ def get_introns(exons):
 
 def split_exon(exon, cds):
     """Takes an exon and a CDS, and returns a map of regions for each
-       feature (UTR5/3, CDS) that may be inferred from the arguments.
-       Note that the CDS is simply returned as is, to simplify
-       downstream handling of these features."""
+    feature (UTR5/3, CDS) that may be inferred from the arguments.
+    Note that the CDS is simply returned as is, to simplify
+    downstream handling of these features."""
     results = [cds]
 
     if exon["start"] < cds["start"]:
@@ -223,8 +223,8 @@ def _do_build_feature_table(options, table, features, protein_coding):
 
 def build_coding_seqs_table(options, table):
     """Takes a table generated from a GTF file, and constructs a table for each
-       feature, inferring introns and UTRs from the exons and CDSs of the input
-       table."""
+    feature, inferring introns and UTRs from the exons and CDSs of the input
+    table."""
     print("Building table of features for coding sequences")
     features = {"UTR5": [], "UTR3": [], "CDS": [], "intron": []}
 
@@ -303,7 +303,9 @@ def parse_arguments(argv):
         "length of the CDS is not divisible by 3",
     )
     parser.add_argument(
-        "--contig-prefix", default="", help="Add prefix to contig names (e.g. 'chr')",
+        "--contig-prefix",
+        default="",
+        help="Add prefix to contig names (e.g. 'chr')",
     )
 
     return parser.parse_args(argv)

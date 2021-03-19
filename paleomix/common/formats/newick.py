@@ -49,7 +49,7 @@ class Newick(TotallyOrdered, Immutable):
     No assumptions are made about the type of the 'name' and the 'length'
     properties when simply parsing the tree, and these are simply converted
     into strings when the Newick string is generated. However, additional
-    contraints apply when unrooting/rerooting trees (see below). """
+    contraints apply when unrooting/rerooting trees (see below)."""
 
     def __init__(self, name=None, length=None, children=None):
         """See class documentation for constraints."""

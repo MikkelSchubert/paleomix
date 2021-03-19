@@ -296,8 +296,8 @@ class MakefileSpec:
 
     def __init__(self, description, default=DEFAULT_NOT_SET):
         """description -- A string describing the specification.
-           default     -- A default value, or DEFAULT_NOT_SET if not used. If a
-                          value is set, it is copied before being applied."""
+        default     -- A default value, or DEFAULT_NOT_SET if not used. If a
+                       value is set, it is copied before being applied."""
 
         self.description = description
         self.default = default
