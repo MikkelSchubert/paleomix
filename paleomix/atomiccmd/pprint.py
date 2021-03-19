@@ -138,7 +138,7 @@ def _build_stdout(atomiccmd, stats, indent, lines):
         pipe = stats["pipe"].get(atomiccmd)
         lines.append("%sPiped to process %i" % (prefix, stats["id"][pipe]))
         return
-    elif _is_cls(atomiccmd._stdout, "InputFile"):
+    elif _is_cls(atomiccmd._stdout, "OutputFile"):
         temp = "${TEMP_DIR}" if atomiccmd._temp is None else atomiccmd._temp
         path = atomiccmd._to_path(temp, pipe)
 
@@ -153,7 +153,7 @@ def _build_stderr(atomiccmd, stats, indent, lines):
     prefix = "%sstderr  = " % (" " * indent,)
 
     pipe = atomiccmd._stdout
-    if _is_cls(atomiccmd._stderr, "InputFile"):
+    if _is_cls(atomiccmd._stderr, "OutputFile"):
         pipe = atomiccmd._stderr
         temp = "${TEMP_DIR}" if atomiccmd._temp is None else atomiccmd._temp
         path = atomiccmd._to_path(temp, pipe)
