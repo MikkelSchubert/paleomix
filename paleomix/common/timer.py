@@ -69,6 +69,13 @@ class BAMTimer:
     def finalize(self):
         self._print(time.time(), None)
 
+    def __iter__(self):
+        for record in self._bam:
+            yield record
+            self.increment(read=record)
+
+        self.finalize()
+
     def _print(self, current_time, read):
         desc = _FINAL
         contig, position, progress, remaining = "NA", "NA", "NA", "NA"
