@@ -247,12 +247,3 @@ class PaddedBedNode(CommandNode):
             command=command.finalize(),
             dependencies=dependencies,
         )
-
-
-def _apply_samtools_options(builder, options, argument):
-    for (key, value) in dict(options).items():
-        sam_argument = key
-        if value is not None:
-            sam_argument = "%s=%s" % (key, value)
-
-        builder.add_option(argument, sam_argument, sep="=")
