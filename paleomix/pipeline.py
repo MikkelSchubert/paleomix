@@ -111,7 +111,9 @@ class Pypeline:
 
         self._pool.close()
         self._pool.join()
-        self._summarize_pipeline(nodegraph)
+
+        if not is_ok:
+            self._summarize_pipeline(nodegraph)
 
         return is_ok
 
