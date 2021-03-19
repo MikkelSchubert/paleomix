@@ -91,6 +91,12 @@ class Reads:
         collapse_reads = ar_options.pop("--collapse")
         collapse_reads = collapse_reads or collapse_reads is None
 
+        # These options imply --collapsed
+        if ar_options.get("collapse-deterministic") in (True, None):
+            collapse_reads = True
+        elif ar_options.get("collapse-conservatively") in (True, None):
+            collapse_reads = True
+
         output_quality = self.quality_offset
         if output_quality == "Solexa":
             output_quality = "64"
