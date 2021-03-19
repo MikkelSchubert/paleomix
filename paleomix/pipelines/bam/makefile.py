@@ -172,6 +172,7 @@ _VALIDATION_OPTIONS = {
         "--trimwindows": Or(IsInt, IsFloat),
         "--preserve5p": Or(IsNone, IsBoolean),
         "--collapse-deterministic": Or(IsNone, IsBoolean),
+        "--collapse-conservatively": Or(IsNone, IsBoolean),
     },
     # Which aliger/mapper to use (BWA/Bowtie2)
     "Aligners": {
@@ -305,7 +306,7 @@ def _mangle_options(makefile):
             if invalid_features:
                 raise MakefileError(
                     "Some features (%s) may only be specified at root level, not at %r"
-                    % (", ".join(invalid_features), " :: ".join(path),)
+                    % (", ".join(invalid_features), " :: ".join(path))
                 )
 
             # Fill out missing values using those of prior levels
