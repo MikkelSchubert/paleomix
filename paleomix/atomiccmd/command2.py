@@ -213,6 +213,35 @@ class AtomicCmd2:
             else:
                 raise ValueError(values)
 
+    def merge_options(
+        self,
+        user_options,
+        fixed_options={},
+        blacklisted_options=(),
+        pred=lambda s: s.startswith("-"),
+    ):
+        if not isinstance(fixed_options, dict):
+            raise TypeError("options must be dict, not {!r}".format(fixed_options))
+        elif not isinstance(user_options, dict):
+            raise TypeError("user_options must be dict, not {!r}".format(user_options))
+
+        errors = []
+        for key in user_options.keys() & fixed_options.keys():
+            errors.append("{} cannot be overridden".format(key))
+
+        for key in user_options.keys() & blacklisted_options:
+            errors.append("{} is not supported".format(key))
+
+        if errors:
+            raise CmdError(
+                "invalid command-line options for {!r}: {}".format(
+                    " ".join(self.to_call("%(TEMP_DIR)s")), "\n".join(errors)
+                )
+            )
+
+        self.append_options(fixed_options, pred=pred)
+        self.append_options(user_options, pred=pred)
+
     @property
     def output_files(self):
         return frozenset(
