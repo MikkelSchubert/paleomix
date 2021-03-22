@@ -45,6 +45,19 @@ EXCLUDED_FLAGS = (
     | BAM_READ_IS_UNMAPPED
 )
 
+# Valid platforms for the read-group PL tag
+BAM_PLATFORMS = (
+    "CAPILLARY",
+    "DNBSEQ",  # MGI / BGI
+    "HELICOS",
+    "ILLUMINA",
+    "IONTORRENT",
+    "LS454",
+    "ONT",  # Oxford Nanopore
+    "PACBIO",  # (Pacific Biosciences),
+    "SOLID",
+)
+
 
 class BAMRegionsIter:
     """Iterates over a BAM file, yield a separate iterator for each contig

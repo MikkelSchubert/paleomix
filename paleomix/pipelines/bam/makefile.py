@@ -30,6 +30,7 @@ import string
 
 import paleomix.pipelines.bam.paths as paths
 
+from paleomix.common.bamfiles import BAM_PLATFORMS
 from paleomix.common.fileutils import get_files_glob
 from paleomix.common.utilities import fill_dict
 from paleomix.common.makefile import (
@@ -142,10 +143,7 @@ _VALID_EXCLUDE_DICT = {
 
 _VALIDATION_OPTIONS = {
     # Sequencing platform, used to tag read-groups.
-    "Platform": StringIn(
-        ("CAPILLARY", "LS454", "ILLUMINA", "SOLID", "HELICOS", "IONTORRENT", "PACBIO"),
-        default="ILLUMINA",
-    ),
+    "Platform": StringIn(BAM_PLATFORMS, default="ILLUMINA"),
     # Offset for quality scores in FASTQ files.
     "QualityOffset": ValueIn((33, 64, "Solexa"), default=33),
     # Split a lane into multiple entries, one for each (pair of) file(s)
