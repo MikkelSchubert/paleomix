@@ -130,7 +130,7 @@ class FilterCollapsedBAMNode(CommandNode):
         CommandNode.__init__(
             self,
             command=ParallelCmds([merge, builder.finalize()]),
-            description="filtering collapsed PCR duplicates in %s"
+            description="filtering merged-read PCR duplicates in %s"
             % (describe_files(merge.input_files),),
             dependencies=dependencies,
         )
