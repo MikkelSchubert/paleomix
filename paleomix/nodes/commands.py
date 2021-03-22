@@ -247,3 +247,41 @@ class PaddedBedNode(CommandNode):
             command=command.finalize(),
             dependencies=dependencies,
         )
+
+
+class FinalizeBAMNode(CommandNode):
+    def __init__(
+        self,
+        in_bam,
+        out_passed,
+        out_failed,
+        out_json,
+        options={},
+        dependencies=(),
+    ):
+        command = factory.new(
+            [
+                "ngs:finalize_bam",
+                "%(IN_BAM)s",
+                "--out-passed",
+                "%(OUT_PASSED)s",
+                "--out-failed",
+                "%(OUT_FAILED)s",
+                "--out-json",
+                "%(OUT_JSON)s",
+            ],
+            IN_BAM=in_bam,
+            OUT_PASSED=out_passed,
+            OUT_FAILED=out_failed,
+            OUT_JSON=out_json,
+        )
+
+        apply_options(command, options)
+
+        CommandNode.__init__(
+            self,
+            description="splitting BAM %r by good/bad alignments" % (in_bam,),
+            command=command.finalize(),
+            dependencies=dependencies,
+            threads=options.get("--threads", 1),
+        )
