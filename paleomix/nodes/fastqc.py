@@ -18,22 +18,23 @@ _FASTQC_EXCLUDED_EXTENSIONS = re.compile(
 
 
 class FastQCNode(CommandNode):
-    def __init__(self, in_file, out_folder, dependencies=()):
+    def __init__(self, in_file, out_folder, options={}, dependencies=()):
         out_prefix = _FASTQC_EXCLUDED_EXTENSIONS.sub("", os.path.basename(in_file))
 
         command = AtomicCmd2(
-            [
-                "fastqc",
-                "--outdir",
-                "%(TEMP_DIR)s",
-                "--dir",
-                "%(TEMP_DIR)s",
-                InputFile(in_file),
-            ],
+            ["fastqc", InputFile(in_file)],
             extra_files=[
                 OutputFile(os.path.join(out_folder, out_prefix + "_fastqc.html")),
                 OutputFile(os.path.join(out_folder, out_prefix + "_fastqc.zip")),
             ],
+        )
+
+        command.merge_options(
+            user_options=options,
+            fixed_options={
+                "--outdir": "%(TEMP_DIR)s",
+                "--dir": "%(TEMP_DIR)s",
+            },
         )
 
         CommandNode.__init__(
