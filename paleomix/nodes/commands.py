@@ -235,11 +235,11 @@ class BuildRegionsNode(CommandNode):
 class PaddedBedNode(CommandNode):
     def __init__(self, infile, outfile, fai_file, amount=0, dependencies=()):
         command = factory.new(
-            [":bedtools", "pad", "--padding", amount, "%(IN_FAI)s"],
+            [":bedtools", "pad", "--padding", amount, "%(IN_FAI)s", "%(IN_BED)s"],
             IN_FAI=fai_file,
+            IN_BED=infile,
             OUT_STDOUT=outfile,
         )
-        command.add_multiple_values(infile)
 
         CommandNode.__init__(
             self,
