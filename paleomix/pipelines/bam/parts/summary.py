@@ -125,7 +125,12 @@ class SummaryTableNode(Node):
         for (_, prefix) in sorted(self._prefixes.items()):
             stats = genomes[prefix["Name"]]
             rows.append(
-                (prefix["Name"], stats["NContigs"], stats["Size"], prefix["Path"],)
+                (
+                    prefix["Name"],
+                    stats["NContigs"],
+                    stats["Size"],
+                    prefix["Path"],
+                )
             )
 
         for line in text.padded_table(rows):
@@ -248,19 +253,19 @@ class SummaryTableNode(Node):
                 total_reads = subtables.get("reads", {}).get("seq_retained_reads", 0)
                 genome_size = genomes[tblname]["Size"]
 
-                subtable["hits_raw_frac(%s)" % tblname] = total_hits / (
+                subtable["hits_raw_frac(%s)" % tblname] = total_hits / float(
                     total_reads or "NaN"
                 )
-                subtable["hits_unique_frac(%s)" % tblname] = total_uniq / (
+                subtable["hits_unique_frac(%s)" % tblname] = total_uniq / float(
                     total_reads or "NaN"
                 )
-                subtable["hits_clonality(%s)" % tblname] = 1 - total_uniq / (
+                subtable["hits_clonality(%s)" % tblname] = 1 - total_uniq / float(
                     total_hits or "NaN"
                 )
-                subtable["hits_length(%s)" % tblname] = total_nts / (
+                subtable["hits_length(%s)" % tblname] = total_nts / float(
                     total_uniq or "NaN"
                 )
-                subtable["hits_coverage(%s)" % tblname] = total_nts / (
+                subtable["hits_coverage(%s)" % tblname] = total_nts / float(
                     genome_size or "NaN"
                 )
 
