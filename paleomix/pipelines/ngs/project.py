@@ -262,7 +262,7 @@ def _process_recalibrator_settings(data):
     # changed (models not beeing updated).
     genotyping = data["Settings"]["Genotyping"]
     if not genotyping["VariantRecalibrator"]["Enabled"]:
-        if not genotyping["ApplyVQSR"]["Enabled"]:
+        if genotyping["ApplyVQSR"]["Enabled"]:
             genotyping["ApplyVQSR"]["Enabled"] = False
             log = logging.getLogger(__name__)
             log.warning(
