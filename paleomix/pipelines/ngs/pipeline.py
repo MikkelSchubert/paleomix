@@ -32,6 +32,9 @@ from paleomix.nodes.gatk import (
     ValidateBAMNode,
     VariantRecalibratorNode,
 )
+from paleomix.pipelines.ngs.nodes import (
+    TranchesPlotsNode,
+)
 
 
 ########################################################################################
@@ -78,8 +81,10 @@ _LAYOUT = {
             },
             "{genome}.uncalibrated.g.vcf.gz": "gvcf_merged",
             "{genome}.uncalibrated.vcf.gz": "vcf_merged",
-            "{genome}.recalibration.training.snp": "vcf_recal_training_snp_prefix",
-            "{genome}.recalibration.training.indel": "vcf_recal_training_indel_prefix",
+            "{genome}.recalibration.training.snp.vcf.gz": "vcf_recal_training_snp_vcf",
+            "{genome}.recalibration.training.snp.vcf.gz.log": "vcf_recal_training_snp_vcf_log",
+            "{genome}.recalibration.training.indel.vcf.gz": "vcf_recal_training_indel_vcf",
+            "{genome}.recalibration.training.indel.vcf.gz.log": "vcf_recal_training_indel_vcf_log",
             "{genome}.recalibration.snp.vcf.gz": "vcf_recal_snp",
             "{genome}.recalibration.snp.log": "vcf_recal_snp_log",
             "{genome}.recalibration.snp.indel.log": "vcf_recal_snp_indel_log",
@@ -94,6 +99,13 @@ _LAYOUT = {
             "{sample}.{genome}.mapping.json": "aln_split_statistics",
             "{sample}.{genome}.{method}.txt": "bam_stats",
             "fastqc": "bam_fastqc_dir",
+        },
+        "genotyping": {
+            "{genome}.recalibration.snp.r": "vcf_recal_training_snp_r",
+            "{genome}.recalibration.snp.tranches": "vcf_recal_training_snp_trances",
+            "{genome}.recalibration.snp.tranches.extras": "vcf_recal_training_snp_trances_extras",
+            "{genome}.recalibration.indel.r": "vcf_recal_training_indel_r",
+            "{genome}.recalibration.indel.tranches": "vcf_recal_training_indel_trances",
         },
         "reads": {
             "fastp_multiQC": "stats_fastp_multiqc",
@@ -609,9 +621,19 @@ def recalibrate_haplotype(args, genome, samples, settings):
             mode="SNP",
             in_reference=genome.filename,
             in_variant=layout["vcf_merged"],
-            out_prefix=layout["vcf_recal_training_snp_prefix"],
+            out_recal=layout["vcf_recal_training_snp_vcf"],
+            out_tranches=layout["vcf_recal_training_snp_trances"],
+            out_r_plot=layout["vcf_recal_training_snp_r"],
+            out_log=layout["vcf_recal_training_snp_vcf_log"],
             options=settings["VariantRecalibrator"]["SNP"],
             java_options=args.jre_options,
+        )
+
+        # Custom tranche plot/table
+        plot_node = TranchesPlotsNode(
+            input_table=layout["vcf_recal_training_snp_trances"],
+            output_prefix=layout["vcf_recal_training_snp_trances_extras"],
+            dependencies=[snp_node],
         )
 
         # 1b. Build model for INDEL recalibration
@@ -619,12 +641,15 @@ def recalibrate_haplotype(args, genome, samples, settings):
             mode="INDEL",
             in_reference=genome.filename,
             in_variant=layout["vcf_merged"],
-            out_prefix=layout["vcf_recal_training_indel_prefix"],
+            out_recal=layout["vcf_recal_training_indel_vcf"],
+            out_tranches=layout["vcf_recal_training_indel_trances"],
+            out_r_plot=layout["vcf_recal_training_indel_r"],
+            out_log=layout["vcf_recal_training_indel_vcf_log"],
             options=settings["VariantRecalibrator"]["INDEL"],
             java_options=args.jre_options,
         )
 
-        yield from (snp_node, indel_node)
+        yield from (snp_node, indel_node, plot_node)
 
         if settings["ApplyVQSR"]["Enabled"]:
             # 2. Apply SNP recalibration to original BAM

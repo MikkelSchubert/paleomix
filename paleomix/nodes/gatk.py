@@ -520,9 +520,11 @@ class VariantRecalibratorNode(CommandNode):
         mode,
         in_reference,
         in_variant,
-        out_prefix,
-        options={},
+        out_recal,
+        out_tranches,
+        out_r_plot,
         out_log=None,
+        options={},
         java_options={},
         dependencies=(),
     ):
@@ -531,10 +533,10 @@ class VariantRecalibratorNode(CommandNode):
 
         self.in_reference = in_reference
         self.in_variant = in_variant
-        self.out_recal = out_prefix + ".recal.vcf.gz"
-        self.out_tranches = out_prefix + ".tranches"
-        self.out_r_plot = out_prefix + ".r"
-        self.out_log = out_prefix + ".log"
+        self.out_recal = out_recal
+        self.out_tranches = out_tranches
+        self.out_r_plot = out_r_plot
+        self.out_log = out_log
 
         options = dict(options)
         extra_files = [
@@ -567,7 +569,7 @@ class VariantRecalibratorNode(CommandNode):
             },
             user_tool_options=options,
             java_options=java_options,
-            stderr=out_log,
+            stderr=self.out_log,
             extra_files=extra_files,
         )
 
