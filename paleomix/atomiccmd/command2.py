@@ -413,6 +413,13 @@ class AtomicCmd2:
                 return os.path.basename(value.path)
             else:
                 return fileutils.reroot_path(temp, value.path)
+        elif isinstance(value, AuxilleryFile):
+            if self._set_cwd:
+                return os.path.abspath(value.path)
+            else:
+                return value.path
+        elif isinstance(value, Executable):
+            return value.path
         else:
             return value.replace("%(TEMP_DIR)s", temp)
 
