@@ -97,7 +97,7 @@ _VALIDATION = {
     },
     "Settings": {
         "Metadata": {
-            "Platform": StringIn(BAM_PLATFORMS, default="DNBSEQ"),
+            "Platform": StringIn(BAM_PLATFORMS, default=REQUIRED_VALUE),
         },
         #
         "Constants": {

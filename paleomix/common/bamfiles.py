@@ -48,7 +48,8 @@ EXCLUDED_FLAGS = (
 # Valid platforms for the read-group PL tag
 BAM_PLATFORMS = (
     "CAPILLARY",
-    "DNBSEQ",  # MGI / BGI
+    # The specification lists "DNBSEQ", but picard expects "BGI"
+    "BGI",  # MGI / BGI / DNBSEQ
     "HELICOS",
     "ILLUMINA",
     "IONTORRENT",
@@ -56,6 +57,8 @@ BAM_PLATFORMS = (
     "ONT",  # Oxford Nanopore
     "PACBIO",  # (Pacific Biosciences),
     "SOLID",
+    # Non-standard value supported by picard
+    "OTHER",
 )
 
 
