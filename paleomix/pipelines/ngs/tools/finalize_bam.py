@@ -192,7 +192,7 @@ def main(argv):
         out_passed.close()
 
     if out_failed:
-        out_failed.closer()
+        out_failed.close()
 
     if args.out_json:
         lengths = in_bam.lengths
