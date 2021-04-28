@@ -274,6 +274,12 @@ def initialize_statistics(args, handle):
             "failed": defaultdict(int),
         }
 
+    totals_template = {
+        "reads": 0,
+        "bases": 0,
+        "coverage": 0.0,
+    }
+
     readgroups = {}
     for readgroup in handle.header["RG"]:
         readgroups[readgroup["ID"]] = readgroup["DS"]
@@ -282,7 +288,10 @@ def initialize_statistics(args, handle):
     statistics = {}
     for group in set(readgroups.values()):
         statistics[group] = {
-            "totals": _passed_and_failed(),
+            "totals": {
+                "passed": dict(totals_template),
+                "failed": dict(totals_template),
+            },
             "filters": dict.fromkeys(args.named_pe_filters, 0),
             "query_lengths": _passed_and_failed(),
             "insert_sizes": _passed_and_failed(),
