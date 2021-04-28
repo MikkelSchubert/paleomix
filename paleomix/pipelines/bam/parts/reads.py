@@ -37,7 +37,7 @@ class Reads:
         tags = record["Tags"]
         self.folder = os.path.join(
             config.destination,
-            tags["Target"],
+            tags["Target"] + ".cache",
             "reads",
             tags["SM"],
             tags["LB"],

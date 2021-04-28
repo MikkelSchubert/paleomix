@@ -50,7 +50,7 @@ class Lane:
         self.tags["PG"] = self.tags["PG"].lower()
         self.folder = os.path.join(
             config.destination,
-            tags["Target"],
+            tags["Target"] + ".cache",
             prefix["Name"],
             tags["SM"],
             tags["LB"],

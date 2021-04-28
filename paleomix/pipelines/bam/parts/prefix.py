@@ -54,7 +54,9 @@ class Prefix:
             self.folder, "%s.%s.bam" % (self.target, prefix["Name"])
         )
         validated_filename = os.path.join(
-            self.folder, self.target, prefix["Name"] + ".validated"
+            self.folder,
+            self.target + ".cache",
+            prefix["Name"] + ".validated",
         )
 
         node = MergeSamFilesNode(
@@ -71,7 +73,7 @@ class Prefix:
 
     def _build_dataduplication_node(self, prefix, files_and_nodes):
         filename = prefix["Name"] + ".duplications_checked"
-        destination = os.path.join(self.folder, self.target, filename)
+        destination = os.path.join(self.folder, self.target + ".cache", filename)
         dependencies = list(files_and_nodes.values())
 
         return DetectInputDuplicationNode(
