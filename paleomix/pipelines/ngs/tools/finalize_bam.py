@@ -451,7 +451,10 @@ def main(argv):
         args.json_insert_size_cap = float("inf")
 
     log = logging.getLogger("ngs:finalize_bam")
-    if not (args.out_passed or args.out_failed or args.out_json):
+    if args.in_bam == Path("-") and sys.stdin.isatty():
+        log.error("No input file specified and STDIN is a terminal.")
+        return 1
+    elif not (args.out_passed or args.out_failed or args.out_json):
         log.error("No --out-* arguments; please specify at least one output file")
         return 1
 
