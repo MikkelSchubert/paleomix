@@ -21,9 +21,9 @@ The following sections reviews the options available in the BAM pipeline makefil
 
         # Settings for mappings performed using BWA
         BWA:
-          # May be disabled ("no") for aDNA alignments with the 'aln' algorithm.
-          # Post-mortem damage localizes to the seed region, which BWA expects to
-          # have few errors (sets "-l"). See http://pmid.us/22574660
+          # Post-mortem damage localizes to the 5' region, which the 'backtrack' algorithm
+          # expects to contain few errors. Disabling the seed may therefore improve mapping
+          # results for aDNA at the cost of increased runtime (see http://pmid.us/22574660).
           UseSeed: yes
 
 

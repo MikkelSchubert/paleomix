@@ -115,9 +115,9 @@ For the purpose of the example project, we need only change a few options. Since
         MinQuality: 30
         # Filter reads that did not map to the reference sequence
         FilterUnmappedReads: yes
-        # May be disabled ("no") for aDNA alignments with the 'aln' algorithm.
-        # Post-mortem damage localizes to the seed region, which BWA expects to
-        # have few errors (sets "-l"). See http://pmid.us/22574660
+        # Post-mortem damage localizes to the 5' region, which the 'backtrack' algorithm
+        # expects to contain few errors. Disabling the seed may therefore improve mapping
+        # results for aDNA at the cost of increased runtime (see http://pmid.us/22574660).
         UseSeed: yes
 
 Since the data we will be mapping represents (simulated) ancient DNA, we will furthermore set the UseSeed option to `no` (line 55), in order to recover a small additional amount of alignments during mapping (see [Schubert2012]_):
@@ -141,7 +141,7 @@ Since the data we will be mapping represents (simulated) ancient DNA, we will fu
         MinQuality: 30
         # Filter reads that did not map to the reference sequence
         FilterUnmappedReads: yes
-        # May be disabled ("no") for aDNA alignments with the 'aln' algorithm.
+        # May be disabled ("no") for aDNA alignments with the 'backtrack' algorithm.
         # Post-mortem damage localizes to the seed region, which BWA expects to
         # have few errors (sets "-l"). See http://pmid.us/22574660
         UseSeed: no
@@ -367,12 +367,12 @@ Once we've completed the steps described above, the resulting makefile should lo
           MinQuality: 30
           # Filter reads that did not map to the reference sequence
           FilterUnmappedReads: yes
-          # May be disabled ("no") for aDNA alignments with the 'aln' algorithm.
-          # Post-mortem damage localizes to the seed region, which BWA expects to
-          # have few errors (sets "-l"). See http://pmid.us/22574660
+          # Post-mortem damage localizes to the 5' region, which the 'backtrack' algorithm
+          # expects to contain few errors. Disabling the seed may therefore improve mapping
+          # results for aDNA at the cost of increased runtime (see http://pmid.us/22574660).
           UseSeed: no
           # Additional command-line options may be specified below. For 'backtrack' these
-          # are applied to the "bwa aln". See Bowtie2 for more examples.
+          # are applied to "bwa aln" calls. See Bowtie2 for more examples.
     #      -n: 0.04
 
         # Settings for mappings performed using Bowtie2
