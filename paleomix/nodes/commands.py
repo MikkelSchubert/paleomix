@@ -119,19 +119,28 @@ class FilterCollapsedBAMNode(CommandNode):
     def __init__(
         self, config, input_bams, output_bam, keep_dupes=True, dependencies=()
     ):
-        merge = merge_bam_files_command(input_bams)
-
-        builder = factory.new("rmdup_collapsed")
-        builder.set_kwargs(IN_STDIN=merge, OUT_STDOUT=output_bam)
-
+        builder = factory.new("rmdup_collapsed", OUT_STDOUT=output_bam)
         if not keep_dupes:
             builder.set_option("--remove-duplicates")
 
+        input_bams = tuple(input_bams)
+        if len(input_bams) > 1:
+            merge = merge_bam_files_command(input_bams)
+            builder.set_kwargs(IN_STDIN=merge)
+
+            command = ParallelCmds([merge, builder.finalize()])
+        elif len(input_bams) == 1:
+            builder.set_kwargs(IN_STDIN=input_bams[0])
+
+            command = builder.finalize()
+        else:
+            raise ValueError(input_bams)
+
         CommandNode.__init__(
             self,
-            command=ParallelCmds([merge, builder.finalize()]),
+            command=command,
             description="filtering merged-read PCR duplicates in %s"
-            % (describe_files(merge.input_files),),
+            % (describe_files(input_bams),),
             dependencies=dependencies,
         )
 
