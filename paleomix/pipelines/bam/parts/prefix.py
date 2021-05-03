@@ -41,32 +41,44 @@ class Prefix:
         for sample in self.samples:
             files_and_nodes.update(sample.bams.items())
 
-        self.datadup_check = self._build_dataduplication_node(prefix, files_and_nodes)
-        self.bams = self._build_bam(config, prefix, files_and_nodes)
+        dependencies = files_and_nodes.values()
+        # Check for duplicate input data (not PCR duplicates) across libraries if needed
+        if sum(len(sample.libraries) for sample in self.samples) > 1:
+            dependencies = [self._build_dataduplication_node(prefix, files_and_nodes)]
 
-        nodes = [self.datadup_check]
+        self.bams = self._build_bam(
+            config=config,
+            prefix=prefix,
+            input_bams=files_and_nodes,
+            dependencies=dependencies,
+        )
+
+        self.nodes = []
         for sample in self.samples:
-            nodes.extend(sample.nodes)
-        self.nodes = tuple(nodes)
+            self.nodes.extend(sample.nodes)
+        self.nodes = tuple(self.nodes)
 
-    def _build_bam(self, config, prefix, files_and_bams):
+    def _build_bam(self, config, prefix, input_bams, dependencies):
         output_filename = os.path.join(
             self.folder, "%s.%s.bam" % (self.target, prefix["Name"])
-        )
-        validated_filename = os.path.join(
-            self.folder,
-            self.target + ".cache",
-            prefix["Name"] + ".validated",
         )
 
         node = MergeSamFilesNode(
             config=config,
-            input_bams=list(files_and_bams),
+            input_bams=input_bams,
             output_bam=output_filename,
-            dependencies=self.datadup_check,
+            dependencies=dependencies,
         )
+
         validated_node = index_and_validate_bam(
-            config=config, prefix=prefix, node=node, log_file=validated_filename
+            config=config,
+            prefix=prefix,
+            node=node,
+            log_file=os.path.join(
+                self.folder,
+                self.target + ".cache",
+                prefix["Name"] + ".validated",
+            ),
         )
 
         return {output_filename: validated_node}
