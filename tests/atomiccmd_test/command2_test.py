@@ -3,6 +3,7 @@ import os
 import signal
 import weakref
 
+from collections import OrderedDict
 from unittest.mock import call, Mock, patch
 from pathlib import Path
 
@@ -926,22 +927,34 @@ def test_append_options__empty_lists():
 
 
 def test_append_options__single_options():
+    options = OrderedDict()
+    options["--foo"] = 1
+    options["--bar"] = InputFile("/foo/bar")
+
     cmd = AtomicCmd2("touch")
-    cmd.append_options({"--foo": 1, "--bar": InputFile("/foo/bar")})
+    cmd.append_options(options)
 
     assert cmd.to_call("${TEMP_DIR}") == ["touch", "--foo", "1", "--bar", "/foo/bar"]
 
 
 def test_append_options__none_value():
+    options = OrderedDict()
+    options["--foo"] = None
+    options["--bar"] = None
+
     cmd = AtomicCmd2("touch")
-    cmd.append_options({"--foo": None, "--bar": None})
+    cmd.append_options(options)
 
     assert cmd.to_call("${TEMP_DIR}") == ["touch", "--foo", "--bar"]
 
 
 def test_append_options__multiple_options():
+    options = OrderedDict()
+    options["--foo"] = [3, 2, 1]
+    options["--bar"] = InputFile("/foo/bar")
+
     cmd = AtomicCmd2("touch")
-    cmd.append_options({"--foo": [3, 2, 1], "--bar": InputFile("/foo/bar")})
+    cmd.append_options(options)
 
     assert cmd.to_call("${TEMP_DIR}") == [
         "touch",
