@@ -440,6 +440,10 @@ def merge_samples_alignments(args, genome, samples, settings):
         indexed = BAMIndexNode(
             infile=layout["aln_split_passed_bam"],
             dependencies=[split],
+            options={
+                # Reasonable performance gains from using up to 3-4 threads
+                "--threads": 3,
+            },
         )
 
         samples[sample] = ValidateBAMNode(
@@ -495,6 +499,10 @@ def final_bam_stats(args, genome, samples, settings):
                 method=method,
                 infile=node.out_bam,
                 outfile=layout["bam_stats"],
+                options={
+                    # Reasonable performance gains from using up to 3-4 threads
+                    "--threads": 3,
+                },
                 dependencies=[node],
             )
 

@@ -28,7 +28,13 @@ def index_and_validate_bam(config, prefix, node, log_file=None, create_index=Tru
     input_file, index_file = _get_input_files(node, prefix["IndexFormat"])
     if not index_file and create_index:
         node = BAMIndexNode(
-            infile=input_file, index_format=prefix["IndexFormat"], dependencies=node
+            infile=input_file,
+            index_format=prefix["IndexFormat"],
+            options={
+                # Reasonable performance gains from using up to 3-4 threads
+                "--threads": config.samtools_max_threads,
+            },
+            dependencies=node,
         )
         (index_file,) = node.output_files
 

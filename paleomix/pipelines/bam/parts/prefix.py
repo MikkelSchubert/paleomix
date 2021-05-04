@@ -66,6 +66,9 @@ class Prefix:
         node = BAMMergeNode(
             in_files=input_bams,
             out_file=output_filename,
+            options={
+                "--threads": config.samtools_max_threads,
+            },
             dependencies=dependencies,
         )
 

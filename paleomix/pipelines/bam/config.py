@@ -114,6 +114,12 @@ def add_run_command(subparsers):
         default=max(1, min(8, multiprocessing.cpu_count() // 2)),
         help="Max number of threads to use per BWA instance",
     )
+    group.add_argument(
+        "--samtools-max-threads",
+        type=int,
+        default=max(1, min(3, multiprocessing.cpu_count() // 2)),
+        help="Max number of threads to use per SAMTools instance",
+    )
 
     group = parser.add_argument_group("Required paths")
     group.add_argument(
