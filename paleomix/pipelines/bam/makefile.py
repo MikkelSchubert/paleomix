@@ -125,7 +125,7 @@ _VALID_FEATURES_DICT = {
     "Coverage": IsBoolean(default=True),
     "Depths": IsBoolean(default=True),
     "DuplicateHist": RemovedOption(),
-    "mapDamage": StringIn(("rescale", "model", "plot", True, False)),
+    "mapDamage": StringIn(("rescale", "model", "plot", True, False), default="plot"),
     "PCRDuplicates": StringIn((True, False, "mark", "filter"), default="filter"),
     "RawBAM": RemovedOption(),
     "RealignedBAM": RemovedOption(),
