@@ -436,7 +436,7 @@ def parse_args(argv):
     group.add_argument(
         "--json-insert-size-cap",
         type=int,
-        default=1_001,
+        default=1001,
         help="Cap insert sizes at this value for reporting purposes. "
         "Set to <= 0 to disable. Does not affect filtering",
     )
