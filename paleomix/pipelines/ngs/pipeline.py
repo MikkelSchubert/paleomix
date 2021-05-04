@@ -31,7 +31,6 @@ from paleomix.nodes.gatk import (
     ValidateBAMNode,
     VariantRecalibratorNode,
 )
-from paleomix.nodes.samtools import BAMMergeNode
 from paleomix.pipelines.ngs.nodes import (
     TranchesPlotsNode,
 )
