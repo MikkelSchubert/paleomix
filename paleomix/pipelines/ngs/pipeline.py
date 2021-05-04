@@ -54,7 +54,6 @@ _LAYOUT = {
                 "{sample}.{genome}.{library}.rmdup.merged.bam": "aln_rmdup_merged_bam",
                 "{sample}.{genome}.{library}.rmdup.paired.bam": "aln_rmdup_paired_bam",
                 "{sample}.{genome}.{library}.rmdup.paired.metrics.txt": "aln_rmdup_paired_metrics",
-                "{sample}.{genome}.bam": "aln_merged_bam",
                 "{sample}.{genome}.good.bam": "aln_split_passed_bam",
                 "{sample}.{genome}.good.ValidateSamfile.log": "aln_split_good_validation_log",
                 "{sample}.{genome}.good.recalibration.table.txt": "aln_recal_training_table",
@@ -425,24 +424,17 @@ def merge_samples_alignments(args, genome, samples, settings):
 
         layout = Layout(args, genome=genome, sample=sample)
 
-        merged = BAMMergeNode(
-            in_files=input_libraries.keys(),
-            out_file=layout["aln_merged_bam"],
-            dependencies=input_libraries.values(),
-        )
-
-        # Split BAM into file containing
-        # FIXME: Can be combined with Merge step to save space / time
+        # Split BAM into file containing proper alignment and BAM containing junk
         split = FinalizeBAMNode(
-            in_bam=layout["aln_merged_bam"],
+            in_bams=input_libraries.keys(),
             out_passed=layout["aln_split_passed_bam"],
             out_failed=layout["aln_split_failed_bam"],
             out_json=layout["aln_split_statistics"],
             options={
-                # Reasonable performance gains from using up to 4 threads
-                "--threads": 4,
+                # Reasonable performance gains from using up to 3-4 threads
+                "--threads": 3,
             },
-            dependencies=[merged],
+            dependencies=input_libraries.values(),
         )
 
         indexed = BAMIndexNode(

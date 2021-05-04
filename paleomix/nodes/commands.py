@@ -25,6 +25,8 @@
 Each node is equivalent to a particular command:
     $ paleomix [...]
 """
+import os
+
 from paleomix.node import CommandNode, Node
 from paleomix.atomiccmd.command import AtomicCmd
 from paleomix.atomiccmd.sets import ParallelCmds
@@ -261,17 +263,16 @@ class PaddedBedNode(CommandNode):
 class FinalizeBAMNode(CommandNode):
     def __init__(
         self,
-        in_bam,
+        in_bams,
         out_passed,
         out_failed,
         out_json,
         options={},
         dependencies=(),
     ):
-        command = factory.new(
+        builder = factory.new(
             [
                 "ngs:finalize_bam",
-                "%(IN_BAM)s",
                 "--out-passed",
                 "%(OUT_PASSED)s",
                 "--out-failed",
@@ -279,18 +280,34 @@ class FinalizeBAMNode(CommandNode):
                 "--out-json",
                 "%(OUT_JSON)s",
             ],
-            IN_BAM=in_bam,
             OUT_PASSED=out_passed,
             OUT_FAILED=out_failed,
             OUT_JSON=out_json,
         )
 
-        apply_options(command, options)
+        apply_options(builder, options)
+
+        in_bams = tuple(in_bams)
+        if len(in_bams) > 1:
+            merge = merge_bam_files_command(in_bams)
+            builder.set_kwargs(IN_STDIN=merge)
+
+            command = ParallelCmds([merge, builder.finalize()])
+        elif len(in_bams) == 1:
+            builder.set_kwargs(IN_STDIN=in_bams[0])
+
+            command = builder.finalize()
+        else:
+            raise ValueError(in_bams)
 
         CommandNode.__init__(
             self,
-            description="splitting BAM %r by good/bad alignments" % (in_bam,),
-            command=command.finalize(),
+            description="creating finalized BAMs %r and %r"
+            % (
+                os.path.basename(out_passed),
+                os.path.basename(out_failed),
+            ),
+            command=command,
             dependencies=dependencies,
             threads=options.get("--threads", 1),
         )
