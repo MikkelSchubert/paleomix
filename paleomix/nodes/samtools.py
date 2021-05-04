@@ -12,8 +12,8 @@ from paleomix.node import CommandNode
 from paleomix.atomiccmd.builder import AtomicCmdBuilder
 from paleomix.atomiccmd.command import AtomicCmd
 from paleomix.atomiccmd.command2 import AtomicCmd2, InputFile, OutputFile
+from paleomix.atomiccmd.sets import SequentialCmds
 
-from paleomix.common.fileutils import reroot_path
 import paleomix.common.versions as versions
 
 
@@ -33,111 +33,92 @@ TABIX_VERSION = versions.Requirement(
 
 
 class TabixIndexNode(CommandNode):
-    """Tabix indexes a BGZip compressed VCF or pileup file.
+    """Tabix indexes a BGZip compressed VCF or pileup file."""
 
-    The class currently supports the following presets:
-        - vcf -- BGZipped VCF file.
-        - pileup -- BGZipped pileup (non-binary) as produced by 'mpileup'.
-    """
+    def __init__(self, infile, preset="vcf", options={}, dependencies=()):
+        if preset not in ("vcf", "gff", "bed", "sam"):
+            raise ValueError(preset)
 
-    def __init__(self, infile, preset="vcf", dependencies=()):
-        if preset == "pileup":
-            call = ["tabix", "-s", 1, "-b", 2, "-e", 2]
-        elif preset in ("vcf", "gff", "bed", "sam"):
-            call = ["tabix", "-p", preset]
-        else:
-            assert False, "Unxpected preset: %r" % preset
+        basename = os.path.basename(infile)
+        infile = os.path.abspath(infile)
 
-        self._infile = infile
-        cmd_tabix = AtomicCmd(
-            call + ["%(TEMP_IN_VCFFILE)s"],
-            TEMP_IN_VCFFILE=os.path.basename(infile),
-            IN_VCFFILE=infile,
-            OUT_TBI=infile + ".tbi",
-            CHECK_TABIX=TABIX_VERSION,
+        # Tabix does not support a custom output path, so we create a symlink to the
+        # input file in the temporary folder and index that.
+        link = AtomicCmd2(
+            ["ln", "-s", InputFile(infile), OutputFile(basename, temporary=True)]
         )
+
+        tabix = AtomicCmd2(
+            ["tabix", "-p", preset, InputFile(basename, temporary=True)],
+            extra_files=[OutputFile(infile + ".tbi")],
+            requirements=[TABIX_VERSION],
+        )
+
+        tabix.append_options(options)
 
         CommandNode.__init__(
             self,
+            command=SequentialCmds([link, tabix]),
             description="creating tabix %s index for %s" % (preset, infile),
-            command=cmd_tabix,
             dependencies=dependencies,
         )
-
-    def _setup(self, config, temp):
-        """See CommandNode._setup."""
-        infile = os.path.abspath(self._infile)
-        outfile = reroot_path(temp, self._infile)
-        os.symlink(infile, outfile)
-
-        CommandNode._setup(self, config, temp)
-
-    def _teardown(self, config, temp):
-        """See CommandNode._teardown."""
-        os.remove(reroot_path(temp, self._infile))
-
-        CommandNode._teardown(self, config, temp)
 
 
 class FastaIndexNode(CommandNode):
     """Indexed a FASTA file using 'samtools faidx'."""
 
     def __init__(self, infile, dependencies=()):
-        self._infile = infile
-        cmd_faidx = AtomicCmd(
-            ["samtools", "faidx", "%(TEMP_IN_FASTA)s"],
-            TEMP_IN_FASTA=os.path.basename(infile),
-            IN_FASTA=infile,
-            OUT_TBI=infile + ".fai",
-            CHECK_SAM=SAMTOOLS_VERSION,
+        basename = os.path.basename(infile)
+
+        # faidx does not support a custom output path, so we create a symlink to the
+        # input file in the temporary folder and index that.
+        link = AtomicCmd2(
+            [
+                "ln",
+                "-s",
+                InputFile(os.path.abspath(infile)),
+                OutputFile(basename, temporary=True),
+            ]
+        )
+
+        faidx = AtomicCmd2(
+            ["samtools", "faidx", InputFile(basename, temporary=True)],
+            extra_files=[OutputFile(infile + ".fai")],
+            requirements=[SAMTOOLS_VERSION],
         )
 
         CommandNode.__init__(
             self,
             description="creating FAI index for %s" % (infile,),
-            command=cmd_faidx,
+            command=SequentialCmds([link, faidx]),
             dependencies=dependencies,
         )
-
-    def _setup(self, config, temp):
-        """See CommandNode._setup."""
-        infile = os.path.abspath(self._infile)
-        outfile = reroot_path(temp, self._infile)
-        os.symlink(infile, outfile)
-
-        CommandNode._setup(self, config, temp)
-
-    def _teardown(self, config, temp):
-        """See CommandNode._teardown."""
-        os.remove(reroot_path(temp, self._infile))
-
-        CommandNode._teardown(self, config, temp)
 
 
 class BAMIndexNode(CommandNode):
     """Indexed a BAM file using 'samtools index'."""
 
-    def __init__(self, infile, index_format=".bai", dependencies=()):
-        if index_format == ".bai":
-            samtools_call = ["samtools", "index", "%(IN_BAM)s", "%(OUT_IDX)s"]
-        elif index_format == ".csi":
-            samtools_call = ["samtools", "index", "-c", "%(IN_BAM)s", "%(OUT_IDX)s"]
-        else:
-            raise ValueError(
-                "Unknown format type %r; expected .bai or .csi" % (index_format,)
-            )
+    def __init__(self, infile, index_format=".bai", options={}, dependencies=()):
+        command = AtomicCmd2(
+            ["samtools", "index"],
+            requirements=[SAMTOOLS_VERSION],
+        )
 
-        command = AtomicCmd(
-            samtools_call,
-            IN_BAM=infile,
-            OUT_IDX=infile + index_format,
-            CHECK_SAM=SAMTOOLS_VERSION,
+        if index_format == ".csi":
+            command.append("-c")
+        elif index_format != ".bai":
+            raise ValueError("Unknown BAM index format %r" % (index_format,))
+
+        command.append(
+            InputFile(infile),
+            OutputFile(infile + index_format),
         )
 
         CommandNode.__init__(
             self,
-            description="creating %s index for %s" % (index_format[1:].upper(), infile),
             command=command,
+            description="creating %s index for %s" % (index_format[1:].upper(), infile),
+            threads=_get_number_of_threads(options),
             dependencies=dependencies,
         )
 
@@ -145,22 +126,34 @@ class BAMIndexNode(CommandNode):
 class BAMStatsNode(CommandNode):
     METHODS = ("stats", "idxstats", "flagstats")
 
-    def __init__(self, method, infile, outfile, index_format=".bai", dependencies=()):
+    def __init__(
+        self,
+        method,
+        infile,
+        outfile,
+        index_format=".bai",
+        options={},
+        dependencies=(),
+    ):
         if method not in self.METHODS:
             raise ValueError(method)
 
-        command = AtomicCmd(
-            ["samtools", method, "%(IN_BAM)s"],
-            IN_BAM=infile,
-            IN_IDX=infile + index_format if method == "idxstats" else None,
-            OUT_STDOUT=outfile,
-            CHECK_SAM=SAMTOOLS_VERSION,
+        command = AtomicCmd2(
+            ["samtools", method, InputFile(infile)],
+            stdout=outfile,
+            requirements=[SAMTOOLS_VERSION],
         )
+
+        command.append_options(options)
+
+        if method == "idxstats":
+            command.add_extra_files([InputFile(infile + index_format)])
 
         CommandNode.__init__(
             self,
-            description="collecting %s for %s" % (method, infile),
             command=command,
+            description="collecting %s for %s" % (method, infile),
+            threads=_get_number_of_threads(options),
             dependencies=dependencies,
         )
 
@@ -171,7 +164,11 @@ class BAMMergeNode(CommandNode):
         if len(in_files) <= 1:
             warnings.warn("creating {!r} from single input file".format(out_file))
 
-        cmd = AtomicCmd2(["samtools", "merge"])
+        cmd = AtomicCmd2(
+            ["samtools", "merge"],
+            requirements=[SAMTOOLS_VERSION],
+        )
+
         cmd.append_options(options)
         cmd.append(OutputFile(out_file))
         for in_file in in_files:
@@ -179,9 +176,9 @@ class BAMMergeNode(CommandNode):
 
         CommandNode.__init__(
             self,
+            command=cmd,
             description="merging %i files into %s" % (len(in_files), out_file),
             threads=_get_number_of_threads(options),
-            command=cmd,
             dependencies=dependencies,
         )
 
