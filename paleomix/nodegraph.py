@@ -128,14 +128,14 @@ class NodeGraph:
         if not self._check_auxiliary_files(self._reverse_dependencies):
             raise NodeGraphError(
                 "Please refer to the PALEOMIX installation instructions at "
-                "https://paleomix.readthedocs.io/"
+                "https://paleomix.readthedocs.io/en/stable/"
             )
 
         self._logger.info("Checking required software")
         if not self._check_version_requirements(self._reverse_dependencies):
             raise NodeGraphError(
                 "Please refer to the PALEOMIX installation instructions at "
-                "https://paleomix.readthedocs.io/"
+                "https://paleomix.readthedocs.io/en/stable/"
             )
 
         self._logger.info("Determining states")
