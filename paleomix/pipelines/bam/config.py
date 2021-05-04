@@ -99,19 +99,19 @@ def add_run_command(subparsers):
     group.add_argument(
         "--adapterremoval-max-threads",
         type=int,
-        default=1,
+        default=min(3, multiprocessing.cpu_count()),
         help="Max number of threads to use per AdapterRemoval instance",
     )
     group.add_argument(
         "--bowtie2-max-threads",
         type=int,
-        default=1,
+        default=max(1, min(8, multiprocessing.cpu_count() // 2)),
         help="Max number of threads to use per Bowtie2 instance",
     )
     group.add_argument(
         "--bwa-max-threads",
         type=int,
-        default=1,
+        default=max(1, min(8, multiprocessing.cpu_count() // 2)),
         help="Max number of threads to use per BWA instance",
     )
 
