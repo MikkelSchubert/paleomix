@@ -506,11 +506,11 @@ _INTRODUCTION = """
         <br/>
         <div>
           For more information, please refer to the
-          <a href="http://paleomix.readthedocs.org/en/latest/zonkey_pipeline/index.html">
+          <a href="http://paleomix.readthedocs.org/en/stable/zonkey_pipeline/index.html">
             the documentation for the Zonkey pipeline
           </a>
           or
-          <a href="http://paleomix.readthedocs.org/en/latest/">
+          <a href="http://paleomix.readthedocs.org/en/stable/">
             the documentation for the PALEOMIX pipeline,
           </a>
           on which the Zonkey pipeline is based.
