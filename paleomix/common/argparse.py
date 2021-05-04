@@ -19,7 +19,7 @@ class ArgumentDefaultsHelpFormatter(configargparse.ArgumentDefaultsHelpFormatter
 
     def _get_help_string(self, action):
         # The following values look silly as part of a help string
-        if action.default in [None, True, False, []]:
+        if isinstance(action.default, bool) or action.default in [None, [], ()]:
             return action.help
 
         # The subclass does not allow modification to the defaults string, so instead
