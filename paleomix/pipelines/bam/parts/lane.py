@@ -141,9 +141,6 @@ class Lane:
         if not self.options["Aligners"]["BWA"]["UseSeed"]:
             options["-l"] = 2 ** 16 - 1
 
-        if self.options["QualityOffset"] in (64, "Solexa"):
-            options["-I"] = None
-
         return BWABacktrack(
             input_file=input_file,
             output_file=output_file,
@@ -205,13 +202,6 @@ class Lane:
         )
 
     def _build_bwa_algorithm(self, config, prefix, record, parameters):
-        if self.options["QualityOffset"] != 33:
-            raise MakefileError(
-                "Mapping with BWA using the %r algorithm currently does not support "
-                "QualityOffsets other than 33; please convert your FASTQ if you wish "
-                "to proceed."
-            )
-
         parameters = self._set_pe_input_files(parameters)
         parameters["mapping_options"] = self.options["Aligners"]["BWA"]
         parameters["cleanup_options"] = self._cleanup_options("BWA")
@@ -224,9 +214,6 @@ class Lane:
 
         parameters["mapping_options"] = dict(self.options["Aligners"]["Bowtie2"])
         parameters["cleanup_options"] = self._cleanup_options("Bowtie2")
-
-        if self.options["QualityOffset"] != 33:
-            parameters["mapping_options"]["--phred64"] = None
 
         return Bowtie2Node(**parameters)
 

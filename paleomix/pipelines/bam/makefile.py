@@ -391,17 +391,11 @@ def _mangle_lanes(makefile):
 
                     lane_type = _determine_lane_type(prefixes, data, path)
 
-                    if lane_type == "Trimmed" and options["QualityOffset"] == "Solexa":
-                        path = " :: ".join(
-                            (target_name, sample_name, library_name, lane)
-                        )
-
+                    if lane_type == "Trimmed" and options["QualityOffset"] != 33:
                         raise MakefileError(
-                            "Pre-trimmed Solexa data is not "
-                            "supported; please convert the "
-                            "quality scores to Phred (offset "
-                            "33 or 64) to continue:\n"
-                            "    Path = %s" % (path,)
+                            "Pre-trimmed data must have quality offset 33 (Phred+33). "
+                            "Please convert your FASTQ files using e.g. seqtk before "
+                            "continuing: {}".format(" :: ".join(path))
                         )
 
                     lanes[lane] = {"Type": lane_type, "Data": data, "Options": options}

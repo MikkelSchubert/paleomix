@@ -97,12 +97,9 @@ class Reads:
         elif ar_options.get("collapse-conservatively") in (True, None):
             collapse_reads = True
 
-        output_quality = self.quality_offset
-        if output_quality == "Solexa":
-            output_quality = "64"
-
-        ar_options["--qualitybase"] = self.quality_offset
-        ar_options["--qualitybase-output"] = output_quality
+        if self.quality_offset != 33:
+            ar_options["--qualitybase"] = self.quality_offset
+            ar_options["--qualitybase-output"] = 33
 
         init_args = {
             "output_prefix": os.path.join(self.folder, "reads"),
