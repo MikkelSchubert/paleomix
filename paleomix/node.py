@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import itertools
 import logging
 import os
 import shutil
@@ -33,6 +34,9 @@ import paleomix.common.fileutils as fileutils
 from paleomix.common.utilities import safe_coerce_to_frozenset
 
 from paleomix.atomiccmd.command import CmdError
+
+
+_GLOBAL_ID = itertools.count()
 
 
 class NodeError(RuntimeError):
@@ -64,7 +68,6 @@ class Node:
         requirements=(),
         dependencies=(),
     ):
-
         if not isinstance(description, _DESC_TYPES):
             raise TypeError(
                 "'description' must be None or a string, not %r"
@@ -86,6 +89,9 @@ class Node:
         # expected based on current usage.
         if not self.input_files and self.output_files:
             raise NodeError("Node not dependent upon input files: %s" % self)
+
+        # Globally unique node ID
+        self.id = next(_GLOBAL_ID)
 
     def run(self, config):
         """Runs the node, by calling _setup, _run, and _teardown in that order.

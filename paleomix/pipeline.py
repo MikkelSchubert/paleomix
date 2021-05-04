@@ -126,7 +126,7 @@ class Pypeline:
         if not idle_processes:
             return False
 
-        for node in remaining:
+        for node in sorted(remaining, key=lambda node: node.id):
             if not running or (idle_processes >= node.threads):
                 state = nodegraph.get_node_state(node)
                 if state == nodegraph.RUNABLE:
