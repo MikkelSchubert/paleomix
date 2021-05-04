@@ -136,25 +136,6 @@ class MarkDuplicatesNode(PicardNode):
         )
 
 
-class MergeSamFilesNode(PicardNode):
-    def __init__(self, config, input_bams, output_bam, dependencies=()):
-        builder = picard_command(config, "MergeSamFiles")
-        builder.set_option("OUTPUT", "%(OUT_BAM)s", sep="=")
-        builder.set_option("SO", "coordinate", sep="=")
-        # Validation is mostly left to manual ValidateSamFile runs; required
-        # because .csi indexed BAM records can have "invalid" bins.
-        builder.set_option("VALIDATION_STRINGENCY", "LENIENT", sep="=")
-        builder.add_multiple_options("I", input_bams, sep="=")
-
-        builder.set_kwargs(OUT_BAM=output_bam)
-        PicardNode.__init__(
-            self,
-            command=builder.finalize(),
-            description="merging %i file(s) into %s" % (len(input_bams), output_bam),
-            dependencies=dependencies,
-        )
-
-
 ###############################################################################
 
 _PICARD_JAR = "picard.jar"

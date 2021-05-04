@@ -383,31 +383,6 @@ class MarkDuplicatesNode(CommandNode):
         )
 
 
-class MergeSamFilesNode(CommandNode):
-    def __init__(self, in_bams, out_bam, options={}, java_options=(), dependencies=()):
-        command = _gatk_command(
-            tool="MergeSamFiles",
-            tool_options={
-                "--INPUT": [InputFile(filename) for filename in in_bams],
-                "--OUTPUT": OutputFile(out_bam),
-                "--SORT_ORDER": "coordinate",
-                # FIXME: Workaround for CSI indexed BAM files
-                # Validation is mostly left to manual ValidateSamFile runs; required
-                # because .csi indexed BAM records can have "invalid" bins.
-                "--VALIDATION_STRINGENCY": "LENIENT",
-            },
-            user_tool_options=options,
-            java_options=java_options,
-        )
-
-        CommandNode.__init__(
-            self,
-            command=command,
-            description="merging {} file(s) into {}".format(len(in_bams), out_bam),
-            dependencies=dependencies,
-        )
-
-
 class ValidateBAMNode(CommandNode):
     def __init__(
         self,

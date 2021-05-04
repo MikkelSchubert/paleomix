@@ -6,10 +6,12 @@ sequencing data
 https://github.com/samtools/samtools
 """
 import os
+import warnings
 
 from paleomix.node import CommandNode
 from paleomix.atomiccmd.builder import AtomicCmdBuilder
 from paleomix.atomiccmd.command import AtomicCmd
+from paleomix.atomiccmd.command2 import AtomicCmd2, InputFile, OutputFile
 
 from paleomix.common.fileutils import reroot_path
 import paleomix.common.versions as versions
@@ -163,6 +165,27 @@ class BAMStatsNode(CommandNode):
         )
 
 
+class BAMMergeNode(CommandNode):
+    def __init__(self, in_files, out_file, options={}, dependencies=()):
+        in_files = tuple(in_files)
+        if len(in_files) <= 1:
+            warnings.warn("creating {!r} from single input file".format(out_file))
+
+        cmd = AtomicCmd2(["samtools", "merge"])
+        cmd.append_options(options)
+        cmd.append(OutputFile(out_file))
+        for in_file in in_files:
+            cmd.append(InputFile(in_file))
+
+        CommandNode.__init__(
+            self,
+            description="merging %i files into %s" % (len(in_files), out_file),
+            threads=_get_number_of_threads(options),
+            command=cmd,
+            dependencies=dependencies,
+        )
+
+
 def merge_bam_files_command(input_files):
     merge = AtomicCmdBuilder(
         ["samtools", "merge", "-u", "-"],
@@ -173,3 +196,10 @@ def merge_bam_files_command(input_files):
     merge.add_multiple_values(input_files)
 
     return merge.finalize()
+
+
+def _get_number_of_threads(options, default=1):
+    if "-@" in options and "--threads" in options:
+        raise ValueError("cannot use both -@ and --threads: {!r}".format(options))
+
+    return options.get("-@", options.get("--threads", default))

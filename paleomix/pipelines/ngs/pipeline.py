@@ -27,11 +27,11 @@ from paleomix.nodes.gatk import (
     GenotypeGVCFs,
     HaplotypeCallerNode,
     MarkDuplicatesNode,
-    MergeSamFilesNode,
     SplitIntervalsNode,
     ValidateBAMNode,
     VariantRecalibratorNode,
 )
+from paleomix.nodes.samtools import BAMMergeNode
 from paleomix.pipelines.ngs.nodes import (
     TranchesPlotsNode,
 )
@@ -425,14 +425,9 @@ def merge_samples_alignments(args, genome, samples, settings):
 
         layout = Layout(args, genome=genome, sample=sample)
 
-        merged = MergeSamFilesNode(
-            in_bams=input_libraries.keys(),
-            out_bam=layout["aln_merged_bam"],
-            options={
-                # Needed to allow the headerless filtered/unpaired BAMs to be merged
-                "--MERGE_SEQUENCE_DICTIONARIES": "true",
-            },
-            java_options=args.jre_options,
+        merged = BAMMergeNode(
+            in_files=input_libraries.keys(),
+            out_file=layout["aln_merged_bam"],
             dependencies=input_libraries.values(),
         )
 
