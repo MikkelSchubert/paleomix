@@ -35,6 +35,7 @@ command will not work:
 $ samtools view -H INPUT.BAM | samtools view -Sbu -
 
 """
+import subprocess
 import sys
 
 import pysam
@@ -261,8 +262,8 @@ def _run_cleanup_pipeline(args):
 
         last_out = sys.stdin
         for cmd in commands:
-            proc_stdout = None if cmd is commands[-1] else processes.PIPE
-            procs.append(processes.open_proc(cmd, stdin=last_out, stdout=proc_stdout))
+            proc_stdout = None if cmd is commands[-1] else subprocess.PIPE
+            procs.append(subprocess.Popen(cmd, stdin=last_out, stdout=proc_stdout))
 
             last_out.close()
             last_out = procs[-1].stdout

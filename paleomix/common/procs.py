@@ -23,45 +23,8 @@
 """
 Tools used for working with subprocesses.
 """
-import os
 import sys
 import time
-
-from subprocess import *
-
-
-DEVNULL = object()
-
-
-def open_proc(call, *args, **kwargs):
-    """Wrapper around subprocess.Popen, which records the system call as a
-    tuple assigned to the .call property of the Popen object. In addition, the
-    'close_fds' option defaults to True, similar to Python 3+, and the DEVNULL
-    value may be passed for 'stdin', 'stdout', and 'stderr' to pipe to / from
-    /dev/null, with stdin defaulting to DEVNULL (set to None or another value
-    to override).
-    """
-    # Reduce the chance of unexpected behavior
-    kwargs.setdefault("close_fds", True)
-    # Unless specifically requested
-    kwargs.setdefault("stdin", DEVNULL)
-
-    devnull = None
-
-    try:
-        for key in ("stdin", "stderr", "stdout"):
-            if kwargs.get(key) is DEVNULL:
-                if devnull is None:
-                    devnull = os.open(os.devnull, os.O_RDWR)
-                kwargs[key] = devnull
-
-        proc = Popen(call, *args, **kwargs)
-        proc.call = tuple(call)
-
-        return proc
-    finally:
-        if devnull is not None:
-            os.close(devnull)
 
 
 def join_procs(procs, out=sys.stderr):
@@ -72,7 +35,7 @@ def join_procs(procs, out=sys.stderr):
     """
     sleep_time = 0.05
     commands = list(enumerate(procs))
-    assert all(hasattr(cmd, "call") for (_, cmd) in commands)
+    assert all(hasattr(cmd, "args") for (_, cmd) in commands)
 
     return_codes = [None] * len(commands)
     out.write("Joinining subprocesses:\n")
@@ -86,11 +49,11 @@ def join_procs(procs, out=sys.stderr):
                 out.write(
                     "  - Command finished: %s\n"
                     "    - Return-code:    %s\n"
-                    % (" ".join(command.call), return_codes[index])
+                    % (" ".join(command.args), return_codes[index])
                 )
                 out.flush()
             elif any(return_codes):
-                out.write("  - Terminating command: %s\n" % (" ".join(command.call),))
+                out.write("  - Terminating command: %s\n" % (" ".join(command.args),))
                 out.flush()
 
                 command.terminate()

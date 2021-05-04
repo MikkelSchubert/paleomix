@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 import os
 import signal
+import subprocess
 
 import paleomix.atomiccmd.pprint as atomicpp
 import paleomix.common.fileutils as fileutils
-import paleomix.common.procs as procs
 
 from paleomix.common.utilities import safe_coerce_to_tuple
 from paleomix.atomiccmd.command import CmdError, _add_to_killlist
@@ -66,8 +66,8 @@ class AtomicCmd2:
     AtomicCmds run in terminated subprocesses can result in still running children
     after the termination of the parents."""
 
-    PIPE = procs.PIPE
-    DEVNULL = procs.DEVNULL
+    PIPE = subprocess.PIPE
+    DEVNULL = subprocess.DEVNULL
 
     InFile = InputFile
     OutFile = OutputFile
@@ -305,7 +305,7 @@ class AtomicCmd2:
             if stdin is None:
                 stdin = self.DEVNULL
 
-            self._proc = procs.open_proc(
+            self._proc = subprocess.Popen(
                 call,
                 stdin=stdin,
                 stdout=stdout,
@@ -453,7 +453,7 @@ class AtomicCmd2:
             filename = "pipe_%s_%i.%s" % (executable, id(self), default)
 
             return filetype(filename, temporary=True)
-        elif pipe in (procs.PIPE, procs.DEVNULL):
+        elif pipe in (self.PIPE, self.DEVNULL):
             return pipe
         elif isinstance(pipe, _AtomicFile):
             if isinstance(pipe, filetype):

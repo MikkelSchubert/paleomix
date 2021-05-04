@@ -24,12 +24,12 @@ import collections
 import os
 import re
 import signal
+import subprocess
 import sys
 import weakref
 
 import paleomix.atomiccmd.pprint as atomicpp
 import paleomix.common.fileutils as fileutils
-import paleomix.common.procs as procs
 
 from paleomix.common.utilities import safe_coerce_to_tuple
 
@@ -59,8 +59,8 @@ class AtomicCmd:
     of this, AtomicCmds run in terminated subprocesses can result in still
     running children after the termination of the parents."""
 
-    PIPE = procs.PIPE
-    DEVNULL = procs.DEVNULL
+    PIPE = subprocess.PIPE
+    DEVNULL = subprocess.DEVNULL
 
     def __init__(self, command, set_cwd=False, **kwargs):
         """Takes a command and a set of files.
@@ -188,7 +188,7 @@ class AtomicCmd:
             if stdin is None:
                 stdin = self.DEVNULL
 
-            self._proc = procs.open_proc(
+            self._proc = subprocess.Popen(
                 call,
                 stdin=stdin,
                 stdout=stdout,

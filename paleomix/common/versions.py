@@ -45,10 +45,9 @@ For example, to check that the Java version is v1.7 or later:
 """
 import operator
 import re
+import subprocess
 
 from paleomix.common.utilities import TotallyOrdered, safe_coerce_to_tuple, try_cast
-
-import paleomix.common.procs as procs
 
 
 # Cache used to store the output of cmd-line / function calls
@@ -390,11 +389,12 @@ def _run(call):
     then the exception is returned as a value.
     """
     try:
-        proc = procs.open_proc(
+        proc = subprocess.Popen(
             call,
-            stdout=procs.PIPE,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
             # Merge STDERR with STDOUT output
-            stderr=procs.STDOUT,
+            stderr=subprocess.STDOUT,
         )
 
         return proc.communicate()[0]
