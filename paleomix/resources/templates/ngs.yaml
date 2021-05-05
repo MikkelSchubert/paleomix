@@ -1,0 +1,89 @@
+# -*- mode: Yaml; -*-
+Samples:
+  # One or more samples ..
+  "SAMPLE_NAME":
+    # With one or more libraries ..
+    "LIBRARY_NAME":
+      # With one or more runs ..
+      "RUN_NAME": "/path/to/filename_{pair}.fastq.gz"
+
+
+Genome:
+  Name: "NAME_OF_GENOME"
+  Path: "/path/to/genome.fasta"
+
+
+Settings:
+  Constants:
+    DBSNP: "resources/dbsp_151.vcf.gz"
+    MILLS: "resources/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz"
+    HAPMAP3: "resources/hapmap_3.3.hg38.vcf.gz"
+    OMNI1000G: "resources/1000G_omni2.5.hg38.vcf.gz"
+    PHASE1_1000G: "resources/1000G_phase1.snps.high_confidence.hg38.vcf.gz"
+
+    # Tranches used for GATK VariantRecalibration
+    TRANCHES: [100.0, 99.95, 99.9, 99.8, 99.7, 99.6, 99.5, 99.4, 99.3, 99.0, 98.0, 97.0, 96.0, 95.0, 94.0, 93.0, 92.0, 91.0, 90.0, 85.0, 84.0, 83.0, 82.0, 81.0, 80.0, 75.0, 70.0, 65.0, 50.0, 25.0]
+
+  JavaOptions:
+    -Xmx4g:
+
+  Preprocessing:
+    FastQC:
+      # Command-line options for FastQC when run on FASTQ reads prior to processing
+
+    Fastp:
+      # Perform quality based correction of overlapping regions
+      --correction:
+      # Filter reads consisting of stretches of the same base
+      --low_complexity_filter:
+      # Merge reads with at least N bp overlap
+      --overlap_len_require: 11
+      # Little benefit from more threads (default is 2)
+      --thread: 8
+
+    MultiQC:
+      # Command-line options for MultiQC used when merging FastQC/Fastp reports
+      --dirs-depth: 3  # Include sample, library, and run in names
+
+  ReadMapping:
+    BWAMem:
+      -t: 32  # Number of threads
+      # -M: # mark shorter split hits as secondary [maybe? Currently default behavior]
+      -Y: # use soft clipping for supplementary alignments [maybe?]
+
+    BaseRecalibrator:
+      --known-sites: ${DBSNP}
+
+  Genotyping:
+    HaplotypeCaller:
+      --emit-ref-confidence: GVCF
+
+    GenotypeGVCFs:
+      # TODO
+
+    VariantRecalibrator:
+      SNP:
+        --resource:hapmap,known=false,training=true,truth=true,prior=15.0: ${HAPMAP3}
+        --resource:omni,known=false,training=true,truth=true,prior=12.0: ${OMNI1000G}
+        --resource:1000G,known=false,training=true,truth=false,prior=10.0: ${PHASE1_1000G}
+        --resource:dbsnp,known=true,training=false,truth=false,prior=2.0: ${DBSNP}
+
+        # FIXME: Required argument
+        --use-annotation: [ExcessHet, DP, MQ, QD, SOR, FS, ReadPosRankSum, MQRankSum, BaseQRankSum]
+        --truth-sensitivity-tranche: ${TRANCHES}
+
+      INDEL:
+        --resource:mills,known=false,training=true,truth=true,prior=12.0: ${MILLS}
+        --resource:dbsnp,known=true,training=false,truth=false,prior=2.0: ${DBSNP}
+
+        # FIXME: Required argument
+        --use-annotation: [ExcessHet, DP, MQ, QD, SOR, FS, ReadPosRankSum, MQRankSum]
+        --truth-sensitivity-tranche: ${TRANCHES}
+        --max-gaussians: 4
+
+    ApplyVQSR:
+      SNP:
+        --truth-sensitivity-filter-level: 99.6
+
+      INDEL:
+        --truth-sensitivity-filter-level: 98.0

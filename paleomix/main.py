@@ -33,8 +33,8 @@ _COMMANDS = {
     "ngs": "paleomix.pipelines.ngs",
     "ngs:finalize_bam": "paleomix.pipelines.ngs.tools.finalize_bam",
     # BAM/FASTQ pipeline
-    "bam": "paleomix.pipelines.bam.pipeline",
-    "bam_pipeline": "paleomix.pipelines.bam.pipeline",
+    "bam": "paleomix.pipelines.bam.main",
+    "bam_pipeline": "paleomix.pipelines.bam.main",
     "trim": "paleomix.pipelines.bam.trim_pipeline",
     "trim_pipeline": "paleomix.pipelines.bam.trim_pipeline",
     # Phylogenetic pipeline

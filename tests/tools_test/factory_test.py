@@ -78,7 +78,8 @@ def test_factory__command_usage(command):
 
     stdout, stderr = check_run(call + ["--help"])
 
-    assert stdout.startswith("usage: paleomix {}".format(command))
+    name = command.replace("_pipeline", "")
+    assert stdout.startswith("usage: paleomix {}".format(name))
     assert not stderr
 
 
@@ -92,6 +93,7 @@ def test_factory__command_versions(arg, command):
 
     stdout, stderr = check_run(call + [arg])
 
-    assert stdout.startswith("paleomix {}".format(command))
+    name = command.replace("_pipeline", "")
+    assert stdout.startswith("paleomix {}".format(name))
     assert stdout.endswith(" v{}\n".format(paleomix.__version__))
     assert not stderr

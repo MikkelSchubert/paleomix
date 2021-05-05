@@ -25,12 +25,12 @@ import os
 
 import paleomix.common.logging
 import paleomix.pipelines.phylo.example as example
-import paleomix.pipelines.phylo.mkfile as mkfile
 import paleomix.pipelines.phylo.parts.genotype as genotype
 import paleomix.pipelines.phylo.parts.msa as msa
 import paleomix.pipelines.phylo.parts.phylo as phylo
 import paleomix.yaml
 
+from paleomix import resources
 from paleomix.pipeline import Pypeline
 from paleomix.pipelines.phylo.config import build_parser
 from paleomix.pipelines.phylo.makefile import MakefileError, read_makefiles
@@ -44,8 +44,6 @@ _COMMANDS = {
 
 
 def main(argv):
-    log = logging.getLogger(__name__)
-
     commands = [it.lower().strip() for it in argv[0].split("+")] if argv else []
     if "example" in commands:
         return example.main(argv[1:])
@@ -56,8 +54,14 @@ def main(argv):
     if "help" in config.commands:
         parser.print_help()
         return 0
-    elif "makefile" in config.commands or "mkfile" in config.commands:
-        return mkfile.main(config.files)
+    elif any(key in config.commands for key in ("new", "makefile", "mkfile")):
+        return _main_template(config)
+
+    return _main_pipeline(config)
+
+
+def _main_pipeline(config):
+    log = logging.getLogger(__name__)
 
     commands = []
     for key in config.commands:
@@ -117,5 +121,11 @@ def main(argv):
 
     if not pipeline.run(max_threads=config.max_threads, dry_run=config.dry_run):
         return 1
+
+    return 0
+
+
+def _main_template(_config):
+    print(resources.template("phylo.yaml"))
 
     return 0

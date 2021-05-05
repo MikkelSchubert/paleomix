@@ -10,6 +10,7 @@ from paleomix.pipeline import Pypeline
 from paleomix.pipelines.ngs.config import build_parser
 from paleomix.pipelines.ngs.project import load_project, MakefileError
 from paleomix.pipelines.ngs.pipeline import build_pipeline
+from paleomix import resources
 
 
 def main(argv):
@@ -19,6 +20,16 @@ def main(argv):
         return 0
 
     args = parser.parse_args(argv)
+    if args.command == "run":
+        return _main_run(args)
+    elif args.command == "new":
+        return _main_new(args)
+
+    parser.print_help()
+    return 0
+
+
+def _main_run(args):
     if args.output is None:
         args.output = swap_ext(args.project, ".output")
     # FIXME: Add cli option
@@ -65,3 +76,9 @@ def main(argv):
 
     logger.info("Running pipeline")
     return not pipeline.run(dry_run=args.dry_run, max_threads=args.max_threads)
+
+
+def _main_new(args):
+    print(resources.template("ngs.yaml"))
+
+    return 0

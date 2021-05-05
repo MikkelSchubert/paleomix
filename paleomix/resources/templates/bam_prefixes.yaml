@@ -1,0 +1,17 @@
+# Map of prefixes by name, each having a Path, which specifies the location of the
+# BWA/Bowtie2 index, and optional regions for which additional statistics are produced.
+Prefixes:
+  # Replace 'NAME_OF_PREFIX' with name of the prefix; this name is used in summary
+  # statistics and as part of output filenames.
+  NAME_OF_PREFIX:
+    # Replace 'PATH_TO_PREFIX' with the path to .fasta file containing the references
+    # against which reads are to be mapped. Using the same name as filename is strongly
+    # recommended (e.g. /path/to/Human_g1k_v37.fasta should be named 'Human_g1k_v37').
+    Path: PATH_TO_PREFIX.fasta
+
+    # (Optional) Uncomment and replace 'PATH_TO_BEDFILE' with the path to a .bed file
+    # listing extra regions for which coverage / depth statistics should be calculated;
+    # if no names are specified for the BED records, results are named after the
+    # chromosome / contig. Replace 'NAME' with the desired name for these regions.
+#    RegionsOfInterest:
+#      NAME: PATH_TO_BEDFILE

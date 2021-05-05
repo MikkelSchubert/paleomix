@@ -42,8 +42,8 @@ def build_parser():
     parser.add_argument(
         "commands",
         help="One or more commands separated by '+'. Available commands are 'help', to "
-        "display this message; 'example', to create an example project; 'makefile', to "
-        "print a makefile template; 'genotype' to perform genotyping on a makefile; "
+        "display this message; 'example', to create an example project; 'new' to "
+        "print a project template; 'genotype' to perform genotyping on a makefile; "
         "'msa' to perform multiple sequence alignment on a makefile; and 'phylogeny', "
         "to carry out phylogenetic inference on a makefile.",
     )

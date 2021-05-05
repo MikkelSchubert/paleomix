@@ -46,6 +46,18 @@ def report(tool, filename):
     return resource_filename(_REQUIREMENT, path)
 
 
+def template(filename):
+    """Returns the path to a report-file for a given tool."""
+    path = os.path.join("paleomix", "resources", "templates", filename)
+
+    try:
+        filepath = resource_filename(_REQUIREMENT, path)
+        with open(filepath, "rt") as handle:
+            return handle.read()
+    finally:
+        cleanup_resources()
+
+
 def add_copy_example_command(subparsers):
     parser = subparsers.add_parser("example", help="Create example project")
 

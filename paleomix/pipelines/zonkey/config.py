@@ -43,10 +43,11 @@ def build_parser():
     parser = ArgumentParser(prog="paleomix zonkey")
 
     subparsers = parser.add_subparsers(dest="command", metavar="command")
-    add_copy_example_command(subparsers)
+    run = add_run_command(subparsers)
     add_mito_command(subparsers)
+    add_copy_example_command(subparsers)
 
-    return parser, add_run_command(subparsers)
+    return parser, run
 
 
 def add_copy_example_command(subparsers):

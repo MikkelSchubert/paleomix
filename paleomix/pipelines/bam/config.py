@@ -37,32 +37,21 @@ _DEFAULT_CONFIG_FILES = [
 
 
 def build_parser(pipeline_variant):
-    parser = ArgumentParser(prog="paleomix %s_pipeline" % (pipeline_variant,))
+    parser = ArgumentParser(prog="paleomix %s" % (pipeline_variant,))
 
     subparsers = parser.add_subparsers(dest="command", metavar="command")
-    add_copy_example_command(subparsers)
     add_makefile_command(subparsers)
     add_run_command(subparsers)
+    add_copy_example_command(subparsers)
 
     return parser
 
 
 def add_makefile_command(subparsers):
     parser = subparsers.add_parser(
-        "makefile", help="Print makefile template", aliases=("mkfile",)
-    )
-
-    parser.add_argument(
-        "samplesheets",
-        nargs="*",
-        help="Auto-generate targets from illumina samplesheet.csv files",
-    )
-
-    parser.add_argument(
-        "--minimal",
-        default=False,
-        action="store_true",
-        help="Strip comments from makefile template.",
+        "new",
+        help="Print project template",
+        aliases=("mkfile", "makefile"),
     )
 
 

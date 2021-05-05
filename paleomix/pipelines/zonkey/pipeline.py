@@ -31,7 +31,6 @@ import pysam
 import paleomix
 import paleomix.common.fileutils as fileutils
 import paleomix.common.logging
-import paleomix.pipelines.bam.mkfile as bam_mkfile
 import paleomix.pipelines.zonkey.config as zonkey_config
 import paleomix.pipelines.zonkey.database as database
 import paleomix.pipelines.zonkey.parts.common as common_nodes
@@ -390,9 +389,8 @@ def setup_mito_mapping(config):
         return 1
 
     with open(mkfile_fpath, "w") as mkfile:
-        mkfile.write(
-            bam_mkfile.build_makefile(add_prefix_tmpl=False, add_sample_tmpl=False)
-        )
+        mkfile.write(paleomix.resources.template("bam_head.yaml"))
+        mkfile.write(paleomix.resources.template("bam_options.yaml"))
 
         mkfile.write("\n\nPrefixes:\n")
 

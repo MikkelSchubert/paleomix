@@ -20,14 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-
-
 import os
 import logging
 
 import paleomix
 import paleomix.common.logging
-import paleomix.resources
 import paleomix.yaml
 
 from paleomix.pipeline import Pypeline
@@ -41,8 +38,6 @@ from paleomix.pipelines.bam.makefile import MakefileError, read_makefiles
 from paleomix.pipelines.bam.parts import Reads
 
 import paleomix.pipelines.bam.parts as parts
-import paleomix.pipelines.bam.config as bam_config
-import paleomix.pipelines.bam.mkfile as bam_mkfile
 
 
 def build_pipeline_trimming(config, makefile):
@@ -233,24 +228,3 @@ def run(config, pipeline_variant):
         return 1
 
     return 0
-
-
-def main(argv, pipeline="bam"):
-    if pipeline not in ("bam", "trim"):
-        raise ValueError(pipeline)
-
-    parser = bam_config.build_parser(pipeline)
-    if not argv:
-        parser.print_help()
-        return 0
-
-    args = parser.parse_args(argv)
-    if args.command in ("makefile", "mkfile"):
-        return bam_mkfile.main(args, pipeline=pipeline)
-    elif args.command in ("example",):
-        return paleomix.resources.copy_example("bam_pipeline", args)
-
-    if args.command.startswith("dry"):
-        args.dry_run = True
-
-    return run(args, pipeline_variant=pipeline)
