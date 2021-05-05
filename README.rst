@@ -10,7 +10,7 @@ The pipelines have been designed with ancient DNA (aDNA) in mind, and includes s
 Installation and usage
 ----------------------
 
-Detailed instructions can be found in the `documentation <http://paleomix.readthedocs.io/>`_ for PALEOMIX. For questions, bug reports, and/or suggestions, please use the `GitHub tracker <https://github.com/MikkelSchubert/paleomix/issues/>`_ or contact Mikkel Schubert at `MikkelSch@gmail.com <mailto:MikkelSch@gmail.com>`_.
+Detailed instructions can be found in the `documentation <https://paleomix.readthedocs.io/en/stable/>`_ for PALEOMIX. For questions, bug reports, and/or suggestions, please use the `GitHub tracker <https://github.com/MikkelSchubert/paleomix/issues/>`_ or contact Mikkel Schubert at `MikkelSch@gmail.com <mailto:MikkelSch@gmail.com>`_.
 
 
 ---------
