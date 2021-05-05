@@ -62,3 +62,21 @@ class ArgumentParser(configargparse.ArgumentParser):
             return []
 
         return super().convert_item_to_command_line_arg(action, key, value)
+
+    def add_subparsers(self, *args, **kwargs):
+        subparsers = super().add_subparsers(*args, **kwargs)
+        # Hack to hide aliases from subcommand help text, since aliases are only used
+        # for deprecated commands/command-names
+        subparsers._ChoicesPseudoAction = _ChoicesPseudoAction
+
+        return subparsers
+
+
+class _ChoicesPseudoAction(configargparse.Action):
+    def __init__(self, name, aliases, help):
+        super(_ChoicesPseudoAction, self).__init__(
+            option_strings=[],
+            dest=name,
+            help=help,
+            metavar=name,
+        )
