@@ -32,7 +32,7 @@ def index_and_validate_bam(config, prefix, node, log_file=None, create_index=Tru
             index_format=prefix["IndexFormat"],
             options={
                 # Reasonable performance gains from using up to 3-4 threads
-                "--threads": config.samtools_max_threads,
+                "-@": config.samtools_max_threads,
             },
             dependencies=node,
         )

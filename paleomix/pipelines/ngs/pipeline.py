@@ -441,7 +441,7 @@ def merge_samples_alignments(args, genome, samples, settings):
             dependencies=[split],
             options={
                 # Reasonable performance gains from using up to 3-4 threads
-                "--threads": 3,
+                "-@": 3,
             },
         )
 

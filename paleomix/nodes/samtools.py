@@ -109,6 +109,7 @@ class BAMIndexNode(CommandNode):
         elif index_format != ".bai":
             raise ValueError("Unknown BAM index format %r" % (index_format,))
 
+        command.append_options(options)
         command.append(
             InputFile(infile),
             OutputFile(infile + index_format),
