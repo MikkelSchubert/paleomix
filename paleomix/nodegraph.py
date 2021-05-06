@@ -179,6 +179,7 @@ class NodeGraph:
 
                         self._state_counts[old_state] -= 1
                         self._state_counts[new_state] += 1
+                        self._log_node_changes(node, old_state, new_state)
 
                     for dependency in self._reverse_dependencies[node]:
                         intersections[dependency] -= 1
@@ -217,7 +218,13 @@ class NodeGraph:
         if new_state in (self.RUNNING, self.DONE):
             progress = self._state_counts[self.DONE] + self._state_counts[self.ERROR]
             pct = "{: >3d}".format(int(100 * progress / sum(self._state_counts)))
-            event = "Started" if new_state == self.RUNNING else "Finished"
+
+            if new_state == self.RUNNING:
+                event = "Started"
+            elif old_state == self.OUTDATED:
+                event = "Already finished"
+            else:
+                event = "Finished"
 
             self._logger.info("[%s%%] %s %s", pct, event, node)
 
