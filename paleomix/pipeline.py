@@ -112,8 +112,7 @@ class Pypeline:
         self._pool.close()
         self._pool.join()
 
-        if not is_ok:
-            self._summarize_pipeline(nodegraph)
+        self._summarize_pipeline(nodegraph, verbose=not is_ok)
 
         return is_ok
 
@@ -338,20 +337,21 @@ class Pypeline:
             pass
         return None, None
 
-    def _summarize_pipeline(self, nodegraph):
+    def _summarize_pipeline(self, nodegraph, verbose=True):
         states = nodegraph.get_state_counts()
 
-        rows = [
-            ("Number of nodes:", sum(states)),
-            ("Number of done nodes:", states[nodegraph.DONE]),
-            ("Number of runable nodes:", states[nodegraph.RUNABLE]),
-            ("Number of queued nodes:", states[nodegraph.QUEUED]),
-            ("Number of outdated nodes:", states[nodegraph.OUTDATED]),
-            ("Number of failed nodes:", states[nodegraph.ERROR]),
-        ]
+        if verbose:
+            rows = [
+                ("Number of nodes:", sum(states)),
+                ("Number of done nodes:", states[nodegraph.DONE]),
+                ("Number of runable nodes:", states[nodegraph.RUNABLE]),
+                ("Number of queued nodes:", states[nodegraph.QUEUED]),
+                ("Number of outdated nodes:", states[nodegraph.OUTDATED]),
+                ("Number of failed nodes:", states[nodegraph.ERROR]),
+            ]
 
-        for message in padded_table(rows):
-            self._logger.info(message)
+            for message in padded_table(rows):
+                self._logger.info(message)
 
         if states[nodegraph.ERROR]:
             self._logger.warning("Errors were detected while running pipeline")
