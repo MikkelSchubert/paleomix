@@ -24,6 +24,9 @@ import collections
 import errno
 import logging
 import os
+import time
+
+import humanfriendly
 
 import paleomix.common.versions as versions
 
@@ -106,6 +109,7 @@ class NodeGraph:
     def __init__(self, nodes, cache_factory=FileStatusCache):
         self._cache_factory = cache_factory
         self._states = {}
+        self._start_times = {}
         self._state_counts = [0] * self.NUMBER_OF_STATES
 
         nodes = safe_coerce_to_frozenset(nodes)
@@ -218,15 +222,23 @@ class NodeGraph:
         if new_state in (self.RUNNING, self.DONE):
             progress = self._state_counts[self.DONE] + self._state_counts[self.ERROR]
             pct = "{: >3d}".format(int(100 * progress / sum(self._state_counts)))
+            runtime = ""
 
             if new_state == self.RUNNING:
+                self._start_times[node] = time.time()
                 event = "Started"
             elif old_state == self.OUTDATED:
                 event = "Already finished"
             else:
+                end_time = time.time()
+                start_time = self._start_times.pop(node)
+                if start_time is not None:
+                    runtime = " in {}".format(
+                        humanfriendly.format_timespan(end_time - start_time)
+                    )
                 event = "Finished"
 
-            self._logger.info("[%s%%] %s %s", pct, event, node)
+            self._logger.info("[%s%%] %s %s%s", pct, event, node, runtime)
 
     def _calculate_intersections(self, for_node):
         def count_nodes(node, counts):
