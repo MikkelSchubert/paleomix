@@ -25,8 +25,6 @@ import copy
 
 import paleomix.pipelines.bam.paths as paths
 
-from paleomix.common.makefile import MakefileError
-
 from paleomix.nodes.bwa import BWAAlgorithmNode, BWABacktrack, BWASampe, BWASamse
 from paleomix.nodes.bowtie2 import Bowtie2Node
 
@@ -219,6 +217,8 @@ class Lane:
 
     def _cleanup_options(self, aligner):
         options = {
+            # Add mate-score tag required by `samtools markdup`
+            "--add-mate-score": None,
             "--rg-id": self.tags["ID"],
             "--rg": [
                 "%s:%s" % (tag_name, self.tags[tag_name])

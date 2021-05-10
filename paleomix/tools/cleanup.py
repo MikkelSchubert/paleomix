@@ -241,8 +241,14 @@ def _run_cleanup_pipeline(args):
 
     try:
         if args.paired_end:
+            fixmate_args = ["fixmate"]
+            if args.add_mate_score:
+                fixmate_args.append("-m")
+
+            fixmate_args.extend("--")
+
             # Convert input to (uncompressed) BAM and fix mate information for PE reads
-            commands.append(_samtools_command("fixmate", "-", "-", level=0))
+            commands.append(_samtools_command(*fixmate_args, level=0))
 
         # Cleanup / filter reads. Must be done after 'fixmate', as BWA may produce
         # hits where the mate-unmapped flag is incorrect, which 'fixmate' fixes.
@@ -331,6 +337,13 @@ def parse_args(argv):
         action="store_true",
         help="If enabled, additional processing of PE reads is carried out, including "
         "updating of mate information [Default: off]",
+    )
+    group.add_argument(
+        "--add-mate-score",
+        default=False,
+        action="store_true",
+        help="If enabled, the -m flag is passed to 'fixmate' and mate-score tags are "
+        "added to reads [Default: off]",
     )
 
     group.add_argument(

@@ -118,9 +118,7 @@ class DepthHistogramNode(CommandNode):
 
 
 class FilterCollapsedBAMNode(CommandNode):
-    def __init__(
-        self, config, input_bams, output_bam, keep_dupes=True, dependencies=()
-    ):
+    def __init__(self, input_bams, output_bam, keep_dupes=True, dependencies=()):
         builder = factory.new("rmdup_collapsed", OUT_STDOUT=output_bam)
         if not keep_dupes:
             builder.set_option("--remove-duplicates")

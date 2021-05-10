@@ -12,7 +12,8 @@ from paleomix.node import CommandNode
 from paleomix.atomiccmd.builder import AtomicCmdBuilder
 from paleomix.atomiccmd.command import AtomicCmd
 from paleomix.atomiccmd.command2 import AtomicCmd2, InputFile, OutputFile
-from paleomix.atomiccmd.sets import SequentialCmds
+from paleomix.atomiccmd.sets import ParallelCmds, SequentialCmds
+from paleomix.common.fileutils import describe_files
 
 import paleomix.common.versions as versions
 
@@ -20,7 +21,7 @@ import paleomix.common.versions as versions
 _VERSION_REGEX = r"Version: (\d+)\.(\d+)(?:\.(\d+))?"
 
 SAMTOOLS_VERSION = versions.Requirement(
-    call=("samtools",), search=_VERSION_REGEX, checks=versions.GE(1, 3, 1)
+    call=("samtools",), search=_VERSION_REGEX, checks=versions.GE(1, 6, 0)
 )
 
 BCFTOOLS_VERSION = versions.Requirement(
@@ -179,6 +180,55 @@ class BAMMergeNode(CommandNode):
             self,
             command=cmd,
             description="merging %i files into %s" % (len(in_files), out_file),
+            threads=_get_number_of_threads(options),
+            dependencies=dependencies,
+        )
+
+
+class MarkDupNode(CommandNode):
+    def __init__(self, in_bams, out_bam, out_stats=None, options={}, dependencies=()):
+        in_bams = tuple(in_bams)
+        if len(in_bams) > 1:
+            merge = AtomicCmd2(
+                ["samtools", "merge", "-u", "-"],
+                stdout=AtomicCmd.PIPE,
+                requirements=[SAMTOOLS_VERSION],
+            )
+
+            for in_file in in_bams:
+                merge.append(InputFile(in_file))
+
+            markdup = AtomicCmd2(
+                ["samtools", "markdup", "-", OutputFile(out_bam)],
+                stdin=merge,
+                # Stderr is piped instead of saved using -f to support samtools < v1.10
+                stderr=out_stats,
+                requirements=[SAMTOOLS_VERSION],
+            )
+
+            command = ParallelCmds([merge, markdup])
+        else:
+            (in_file,) = in_bams
+
+            command = markdup = AtomicCmd2(
+                ["samtools", "markdup", InputFile(in_file), OutputFile(out_bam)],
+                stdin=merge,
+                requirements=[SAMTOOLS_VERSION],
+            )
+
+        fixed_options = {"-T": "%(TEMP_DIR)s/markdup"}
+        if out_stats is not None:
+            fixed_options["-s"] = None
+        markdup.merge_options(
+            user_options=options,
+            fixed_options=fixed_options,
+            blacklisted_options=["-f"],
+        )
+
+        CommandNode.__init__(
+            self,
+            command=command,
+            description="marking PCR duplicates in {}".format(describe_files(in_bams)),
             threads=_get_number_of_threads(options),
             dependencies=dependencies,
         )
