@@ -75,7 +75,7 @@ def _main_pipeline(config):
     paleomix.common.logging.initialize(
         log_level=config.log_level,
         log_file=config.log_file,
-        name="phylo_pipeline",
+        auto_log_file=os.path.join(config.temp_root, "phylo_pipeline"),
     )
 
     if not os.path.exists(config.temp_root):

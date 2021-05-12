@@ -50,7 +50,9 @@ def run_pipeline(config, nodes, msg):
     pipeline.add_nodes(nodes)
 
     paleomix.common.logging.initialize(
-        log_level=config.log_level, log_file=config.log_file, name="zonkey"
+        log_level=config.log_level,
+        log_file=config.log_file,
+        auto_log_file="zonkey",
     )
 
     logger = logging.getLogger(__name__)

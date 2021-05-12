@@ -39,7 +39,7 @@ def _main_run(args):
     paleomix.common.logging.initialize(
         log_level=args.log_level,
         log_file=args.log_file,
-        name=os.path.join(args.output, "cache", "logs", "pipeline"),
+        auto_log_file=os.path.join(args.output, "cache", "logs", "pipeline"),
     )
 
     logger = logging.getLogger(__name__)

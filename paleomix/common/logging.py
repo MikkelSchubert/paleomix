@@ -30,10 +30,10 @@ import coloredlogs
 
 
 _LOG_LEVELS = {
+    "debug": logging.DEBUG,
     "info": logging.INFO,
     "warning": logging.WARNING,
     "error": logging.ERROR,
-    "debug": logging.DEBUG,
 }
 
 
@@ -52,27 +52,31 @@ def initialize_console_logging():
         _LOG_ENABLED = True
 
 
-def initialize(log_level="error", log_file=None, name="paleomix"):
+def initialize(log_level="info", log_file=None, auto_log_file="paleomix"):
     initialize_console_logging()
 
-    log_level = _LOG_LEVELS[log_level.lower()]
+    log_level_name = log_level.lower()
+    log_level = _LOG_LEVELS[log_level_name]
     root = logging.getLogger()
-    root.setLevel(logging.NOTSET)
+    root.setLevel(log_level)
 
     if log_file:
+        logger = logging.getLogger(__name__)
+        logger.info("Writing %s log to %r", log_level_name, log_file)
+
         handler = logging.FileHandler(log_file)
         handler.setFormatter(logging.Formatter(_FILE_MESSAGE_FORMAT))
         handler.setLevel(log_level)
         root.addHandler(handler)
-    elif name:
-        template = "%s.%s_%%02i.log" % (name, time.strftime("%Y%m%d_%H%M%S"))
+    elif auto_log_file:
+        template = "%s.%s_%%02i.log" % (auto_log_file, time.strftime("%Y%m%d_%H%M%S"))
         handler = LazyLogfile(template, log_level=log_level)
         handler.setFormatter(logging.Formatter(_FILE_MESSAGE_FORMAT))
-        handler.setLevel(log_level)
+        handler.setLevel(logging.ERROR)
         root.addHandler(handler)
 
 
-def add_argument_group(parser, default="error"):
+def add_argument_group(parser):
     """Adds an option-group to an OptionParser object, with options
     pertaining to logging. Note that 'initialize' expects the config
     object to have these options."""
@@ -80,16 +84,17 @@ def add_argument_group(parser, default="error"):
     group.add_argument(
         "--log-file",
         default=None,
-        help="Write log-messages to this file.",
+        help="Write log-messages to this file. If a log-file is not specified, error "
+        "messages, and only error messages, will be written to an automatically "
+        "generated log file",
     )
     group.add_argument(
         "--log-level",
-        default=default,
-        choices=("info", "warning", "error", "debug"),
+        default="info",
+        choices=tuple(_LOG_LEVELS),
         type=str.lower,
-        help="Log messages at the specified level. If a filename is not specified with "
-        "--log-file, PALEOMIX will automatically create a log file in the current "
-        "directory should events be logged at this level or above",
+        help="Log messages at the specified level. This option applies to the "
+        "`--log-file` option and to log messages printed to the terminal.",
     )
 
 

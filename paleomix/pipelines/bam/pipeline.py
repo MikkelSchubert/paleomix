@@ -163,7 +163,9 @@ def index_references(config, makefiles):
 
 def run(config, pipeline_variant):
     paleomix.common.logging.initialize(
-        log_level=config.log_level, log_file=config.log_file, name="bam_pipeline"
+        log_level=config.log_level,
+        log_file=config.log_file,
+        auto_log_file=os.path.join(config.temp_root, "bam_pipeline"),
     )
 
     logger = logging.getLogger(__name__)
