@@ -418,7 +418,7 @@ class SummaryTableNode(Node):
                     "seq_retained_reads": _re_search("retained reads: ([0-9]+)"),
                 }
             else:
-                assert False, filename
+                assert False, filenames
 
     @classmethod
     def _stat_areas_of_interest(cls, prefixes):
@@ -496,7 +496,6 @@ _ORDERING = {
     "hits_coverage": 190,
     "hits_length": 200,
     "ratio_reads": 210,
-    "ratio_genome": 220,
 }
 
 _COMMENTS = {
@@ -505,11 +504,9 @@ _COMMENTS = {
     "hits_length": "# Average number of aligned bases per unique hit",
     "hits_raw_frac": "# Total number of hits vs. total number of reads retained",
     "hits_raw": "# Total number of hits (prior to PCR duplicate filtering)",
-    "hits_unique_frac": "# Total number of unique hits vs. total number of reads retained",
+    "hits_unique_frac": "# Total number of unique hits over number of reads retained",
     "hits_unique": "# Total number of hits (excluding any PCR duplicates)",
     "lib_type": "# SE, PE, or * (for both)",
-    "ratio_genome(mito,nuc)": "# Ratio of NTs of unique hits corrected by genome sizes: (NTs(mito) / NTs(nuc)) / (Size(mito) / (2 * Size(nuc)))",
-    "ratio_genome(nuc,mito)": "# Ratio of NTs of unique hits corrected by genome sizes: (NTs(nuc) / NTs(mito)) / ((2 * Size(nuc)) / Size(mito))",
     "ratio_reads(nuc,mito)": "# Ratio of unique hits: Hits(nuc) / H(mito)",
     "seq_collapsed_frac": "# Fraction of PE pairs collapsed into one read",
     "seq_collapsed": "# Total number of pairs collapsed into one read",

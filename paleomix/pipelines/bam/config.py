@@ -48,7 +48,7 @@ def build_parser(pipeline_variant):
 
 
 def add_makefile_command(subparsers):
-    parser = subparsers.add_parser(
+    subparsers.add_parser(
         "new",
         help="Print project template",
         aliases=("mkfile", "makefile"),
