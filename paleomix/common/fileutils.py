@@ -143,14 +143,22 @@ def make_dirs(directory: Union[str, Path], mode: int = 0o777) -> bool:
 
 def move_file(source: Union[str, Path], destination: Union[str, Path]) -> None:
     """Wrapper around shutils which ensures that the
-    destination directory exists before moving the file."""
-    _sh_wrapper(shutil.move, source, destination)
+    destination directory exists before moving the file.
+
+    In addition, the (partial) destination file is autoamtically removed if the copy
+    fails with an out-of-space error.
+    """
+    _sh_wrapper(_atomic_file_move, source, destination)
 
 
 def copy_file(source: Union[str, Path], destination: Union[str, Path]) -> None:
     """Wrapper around shutils which ensures that the
-    destination directory exists before copying the file."""
-    _sh_wrapper(shutil.copy, source, destination)
+    destination directory exists before copying the file.
+
+    In addition, the (partial) destination file is autoamtically removed if the copy
+    fails with an out-of-space error.
+    """
+    _sh_wrapper(_atomic_file_copy, source, destination)
 
 
 def open_ro(filename: Union[str, Path], mode: str = "rt") -> IO[str]:
@@ -278,6 +286,42 @@ def validate_filenames(filenames: Iterable[str]) -> Tuple[str, ...]:
     return tuple(fspath(filename) for filename in safe_coerce_to_tuple(filenames))
 
 
+def _atomic_file_move(source, destination):
+    try:
+        return os.rename(source, destination)
+    except OSError as error:
+        if error.errno != errno.EXDEV:
+            raise
+
+    # Move across filesystem/device
+    if os.path.islink(source):
+        linkto = os.readlink(source)
+        os.symlink(linkto, destination)
+        os.unlink(source)
+        return
+
+    # Copy with copy2 to preserve metadata
+    _atomic_file_copy(source, destination, copyfunc=shutil.copy2)
+    os.unlink(source)
+
+
+def _atomic_file_copy(source, destination, copyfunc=None):
+    # Ensure that hard failures during copy does not leave anything at destination
+    temp_destination = "{}.{}.tmp".format(destination, uuid.uuid4())
+    # Allow function to be monkeypatched for testing
+    copyfunc = shutil.copy if copyfunc is None else copyfunc
+
+    try:
+        copyfunc(source, temp_destination)
+    except OSError as error:
+        if error.errno == errno.ENOSPC:
+            # Not enough space; remove partial file
+            os.unlink(temp_destination)
+        raise
+
+    os.rename(temp_destination, destination)
+
+
 def _sh_wrapper(
     func: Callable[[Union[str, Path], Union[str, Path]], Any],
     source: Union[str, Path],
@@ -297,13 +341,8 @@ def _sh_wrapper(
     except IOError as error:
         if error.errno == errno.ENOENT:
             if source and destination and os.path.exists(source):
-                dirname = os.path.dirname(destination)
-                make_dirs(dirname)
-                func(source, destination)
-                return
-        elif error.errno == errno.ENOSPC:
-            # Not enough space; remove partial file
-            os.unlink(destination)
+                make_dirs(os.path.dirname(destination))
+                return func(source, destination)
         raise
 
 

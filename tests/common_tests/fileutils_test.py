@@ -34,7 +34,6 @@ from unittest.mock import ANY, call, DEFAULT, Mock, patch
 import pytest
 
 from paleomix.common.testing import SetWorkingDirectory
-
 from paleomix.common.fileutils import (
     add_postfix,
     swap_ext,
@@ -444,10 +443,14 @@ def test_move_file__enoent_reraised_if_not_due_to_missing_folder() -> None:
 
 
 def test_move_file__destination_removed_if_out_of_space(tmp_path) -> None:
-    _shutil_move = shutil.move
+    shutil_copy2 = shutil.copy2
 
-    def _move(source, destination):
-        _shutil_move(source, destination)
+    def _rename(source, destination):
+        # Simulated move across devices
+        raise OSError(errno.EXDEV, "error message")
+
+    def _copy2(source, destination):
+        shutil_copy2(source, destination)
         raise OSError(errno.ENOSPC, "Out of space")
 
     source = tmp_path / "source"
@@ -455,11 +458,11 @@ def test_move_file__destination_removed_if_out_of_space(tmp_path) -> None:
     destination = tmp_path / "destination"
 
     with pytest.raises(OSError, match="Out of space"):
-        with patch("shutil.move", wraps=_move):
-            move_file(source, destination)
+        with patch("shutil.copy2", wraps=_copy2):
+            with patch("os.rename", wraps=_rename):
+                move_file(source, destination)
 
-    assert not source.exists()
-    assert not destination.exists()
+    assert list(tmp_path.iterdir()) == [source]
 
 
 ###############################################################################
