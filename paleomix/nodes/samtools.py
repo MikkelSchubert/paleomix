@@ -212,7 +212,6 @@ class MarkDupNode(CommandNode):
 
             command = markdup = AtomicCmd2(
                 ["samtools", "markdup", InputFile(in_file), OutputFile(out_bam)],
-                stdin=merge,
                 requirements=[SAMTOOLS_VERSION],
             )
 
