@@ -398,7 +398,6 @@ def filter_pcr_duplicates(args, genome, samples, settings):
             )
 
             merged = FilterCollapsedBAMNode(
-                config=args,
                 input_bams=read_types["merged"].keys(),
                 output_bam=layout["aln_rmdup_merged_bam"],
                 keep_dupes=True,
