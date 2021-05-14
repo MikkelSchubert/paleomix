@@ -29,50 +29,39 @@ import time
 import coloredlogs
 
 
-_LOG_LEVELS = {
-    "debug": logging.DEBUG,
-    "info": logging.INFO,
-    "warning": logging.WARNING,
-    "error": logging.ERROR,
-}
-
-
 _CONSOLE_MESSAGE_FORMAT = "%(asctime)s %(levelname)s %(message)s"
 _CONSOLE_DATE_FORMAT = "%H:%M:%S"
 _FILE_MESSAGE_FORMAT = "%(asctime)s %(name)s %(levelname)s %(message)s"
 
-_LOG_ENABLED = False
 
-
-def initialize_console_logging():
-    global _LOG_ENABLED
-
-    if not _LOG_ENABLED:
-        coloredlogs.install(fmt=_CONSOLE_MESSAGE_FORMAT, datefmt=_CONSOLE_DATE_FORMAT)
-        _LOG_ENABLED = True
+def initialize_console_logging(log_level="info"):
+    coloredlogs.install(
+        fmt=_CONSOLE_MESSAGE_FORMAT,
+        datefmt=_CONSOLE_DATE_FORMAT,
+        level=log_level,
+    )
 
 
 def initialize(log_level="info", log_file=None, auto_log_file="paleomix"):
-    initialize_console_logging()
-
-    log_level_name = log_level.lower()
-    log_level = _LOG_LEVELS[log_level_name]
-    root = logging.getLogger()
-    root.setLevel(log_level)
+    initialize_console_logging(log_level)
 
     if log_file:
         logger = logging.getLogger(__name__)
-        logger.info("Writing %s log to %r", log_level_name, log_file)
+        logger.info("Writing %s log to %r", log_level, log_file)
 
         handler = logging.FileHandler(log_file)
         handler.setFormatter(logging.Formatter(_FILE_MESSAGE_FORMAT))
         handler.setLevel(log_level)
+
+        root = logging.getLogger()
         root.addHandler(handler)
     elif auto_log_file:
         template = "%s.%s_%%02i.log" % (auto_log_file, time.strftime("%Y%m%d_%H%M%S"))
         handler = LazyLogfile(template, log_level=log_level)
         handler.setFormatter(logging.Formatter(_FILE_MESSAGE_FORMAT))
         handler.setLevel(logging.ERROR)
+
+        root = logging.getLogger()
         root.addHandler(handler)
 
 
@@ -91,7 +80,7 @@ def add_argument_group(parser):
     group.add_argument(
         "--log-level",
         default="info",
-        choices=tuple(_LOG_LEVELS),
+        choices=("debug", "info", "warning", "error"),
         type=str.lower,
         help="Log messages at the specified level. This option applies to the "
         "`--log-file` option and to log messages printed to the terminal.",
