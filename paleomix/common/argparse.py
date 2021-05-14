@@ -37,6 +37,10 @@ class ArgumentParser(configargparse.ArgumentParser):
 
     def __init__(self, *args, **kwargs):
         kwargs.setdefault("formatter_class", ArgumentDefaultsHelpFormatter)
+        # Workaround for configargparse (1.2.3) not considering abbreviations when
+        # applying options from config files, resulting in config file options
+        # overriding abbreviated options supplied on the command-line.
+        kwargs.setdefault("allow_abbrev", False)
 
         super().__init__(*args, **kwargs)
 
