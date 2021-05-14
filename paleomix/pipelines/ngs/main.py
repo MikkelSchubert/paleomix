@@ -45,7 +45,7 @@ def _main_run(args):
     logger = logging.getLogger(__name__)
 
     # Initialize worker-threads before reading in any more data
-    pipeline = Pypeline(args)
+    pipeline = Pypeline(args, implicit_dependencies=True)
 
     try:
         logger.info("Reading project from %r", args.project)

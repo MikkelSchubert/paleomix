@@ -40,7 +40,7 @@ from paleomix.common.versions import VersionRequirementError
 
 
 class Pypeline:
-    def __init__(self, config):
+    def __init__(self, config, implicit_dependencies=False):
         self._nodes = []
         self._config = config
         self._logger = logging.getLogger(__name__)
@@ -48,6 +48,7 @@ class Pypeline:
         self._interrupted = False
         self._queue = multiprocessing.Queue()
         self._pool = None
+        self._implicit_dependencies = implicit_dependencies
 
     def add_nodes(self, *nodes):
         for subnodes in safe_coerce_to_tuple(nodes):
@@ -61,7 +62,10 @@ class Pypeline:
             raise ValueError("Max threads must be >= 1")
 
         try:
-            nodegraph = NodeGraph(self._nodes)
+            nodegraph = NodeGraph(
+                nodes=self._nodes,
+                implicit_dependencies=self._implicit_dependencies,
+            )
         except NodeGraphError as error:
             self._logger.error(error)
             return False

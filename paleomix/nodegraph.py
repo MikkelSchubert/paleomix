@@ -106,7 +106,13 @@ class NodeGraph:
     NUMBER_OF_STATES = 6
     DONE, RUNNING, RUNABLE, QUEUED, OUTDATED, ERROR = range(NUMBER_OF_STATES)
 
-    def __init__(self, nodes, cache_factory=FileStatusCache):
+    def __init__(
+        self,
+        nodes,
+        implicit_dependencies=False,
+        cache_factory=FileStatusCache,
+    ):
+        self._implicit_dependencies = implicit_dependencies
         self._cache_factory = cache_factory
         self._states = {}
         self._start_times = {}
@@ -114,16 +120,13 @@ class NodeGraph:
 
         nodes = safe_coerce_to_frozenset(nodes)
 
-        self._logger = logging.getLogger(__name__)
-        self._reverse_dependencies = collections.defaultdict(set)
-        self._collect_reverse_dependencies(nodes, self._reverse_dependencies, set())
-        self._intersections = {}
-        self._top_nodes = [
-            node
-            for (node, rev_deps) in self._reverse_dependencies.items()
-            if not rev_deps
-        ]
+        self._intersections_cache = {}
+        self._dependencies = self._collect_dependencies(nodes)
+        self._reverse_dependencies = self._collect_reverse_dependencies(
+            self._dependencies
+        )
 
+        self._logger = logging.getLogger(__name__)
         self._logger.info("Checking file dependencies")
         if not self._check_file_dependencies(self._reverse_dependencies):
             raise NodeGraphError("Aborting due to input/output file error")
@@ -192,10 +195,6 @@ class NodeGraph:
                     intersections.pop(node)
                     requires_update.pop(node)
 
-    def __iter__(self):
-        """Returns a graph of nodes."""
-        return iter(self._top_nodes)
-
     def iterflat(self):
         return iter(self._reverse_dependencies)
 
@@ -250,13 +249,13 @@ class NodeGraph:
                     count_nodes(node, counts)
             return counts
 
-        if for_node not in self._intersections:
+        if for_node not in self._intersections_cache:
             counts = count_nodes(for_node, {})
             for dependency in self._reverse_dependencies[for_node]:
                 counts[dependency] -= 1
-            self._intersections[for_node] = counts
+            self._intersections_cache[for_node] = counts
 
-        return dict(self._intersections[for_node])
+        return dict(self._intersections_cache[for_node])
 
     def _update_node_state(self, node, cache):
         if node in self._states:
@@ -264,7 +263,7 @@ class NodeGraph:
 
         # Update sub-nodes before checking for fixed states
         dependency_states = set((NodeGraph.DONE,))
-        for dependency in node.dependencies:
+        for dependency in self._dependencies[node]:
             dependency_states.add(self._update_node_state(dependency, cache))
 
         state = max(dependency_states)
@@ -371,14 +370,21 @@ class NodeGraph:
         return not any_errors
 
     def _check_file_dependencies(self, nodes, max_errors=10):
+        def _abs_path(filename, cache={}):
+            filepath = cache.get(filename)
+            if filepath is None:
+                filepath = cache[filename] = os.path.abspath(filename)
+
+            return filepath
+
         input_files = collections.defaultdict(set)
         output_files = collections.defaultdict(set)
         for node in nodes:
             for filename in node.input_files:
-                input_files[filename].add(node)
+                input_files[_abs_path(filename)].add(node)
 
             for filename in node.output_files:
-                output_files[filename].add(node)
+                output_files[_abs_path(filename)].add(node)
 
         any_errors = False
         if not self._check_output_files(output_files, max_errors):
@@ -399,24 +405,12 @@ class NodeGraph:
         due to use of symbolic links). Since output files are
         replaced, not modified in place, it is not nessesary to
         compare files themselves."""
-        dirpath_cache = {}
-        filepaths = collections.defaultdict(list)
+        any_errors = False
         for filename, nodes in output_files.items():
-            dirpath, filename = os.path.split(filename)
-            if dirpath not in dirpath_cache:
-                dirpath_cache[dirpath] = os.path.realpath(dirpath)
-
-            filepath = os.path.join(dirpath_cache[dirpath], filename)
-            filepaths[filepath].extend(nodes)
-
-        clobbered_files = {
-            key: values for key, values in filepaths.items() if len(values) > 1
-        }
-
-        if clobbered_files:
-            for filename, nodes in sorted(clobbered_files.items()):
-                self._logger.error("Multiple nodes write to file %r:", filename)
-                self._logger.debug("depended on by ")
+            if len(nodes) > 1:
+                any_errors = True
+                self._logger.error("Multiple nodes write to file %r", filename)
+                self._logger.debug("depended on by")
                 for line in _summarize_nodes(nodes):
                     self._logger.debug("  %s", line)
 
@@ -425,24 +419,22 @@ class NodeGraph:
                     "https://github.com/MikkelSchubert/paleomix/issues/new"
                 )
 
-        return not clobbered_files
+        return not any_errors
 
     def _check_input_files(self, input_files, output_files, nodes, max_errors=10):
-        dependencies = self._collect_dependencies(nodes, {})
         any_errors = False
-
         for (filename, nodes) in sorted(input_files.items(), key=lambda v: v[0]):
             if filename in output_files:
-                producers = output_files[filename]
+                (producer,) = output_files[filename]
                 bad_nodes = set()
                 for consumer in nodes:
-                    if not (producers & dependencies[consumer]):
+                    if self._implicit_dependencies:
+                        self._dependencies[consumer].add(producer)
+                    elif not self._dependency_in(producer, consumer.dependencies):
                         bad_nodes.add(consumer)
 
                 if bad_nodes:
                     any_errors = True
-                    producer = next(iter(producers))
-                    bad_nodes = _summarize_nodes(bad_nodes)
                     self._logger.error(
                         "Tasks depends on file, but not on the task creating it: %r",
                         filename,
@@ -457,7 +449,6 @@ class NodeGraph:
                         "This is probably a bug in PALEOMIX; please report at "
                         "https://github.com/MikkelSchubert/paleomix/issues/new"
                     )
-
             elif not os.path.exists(filename):
                 any_errors = True
                 self._logger.error("Required input file does not exist: %r", filename)
@@ -480,36 +471,46 @@ class NodeGraph:
         return not missing_aux_files
 
     @classmethod
-    def _collect_dependencies(cls, nodes, dependencies):
-        for node in nodes:
+    def _collect_dependencies(cls, nodes):
+        dependencies = {}
+        pending = list(nodes)
+
+        while pending:
+            node = pending.pop()
             if node not in dependencies:
-                subnodes = node.dependencies
-                if not subnodes:
-                    dependencies[node] = frozenset()
-                    continue
-
-                cls._collect_dependencies(subnodes, dependencies)
-
-                collected = set(subnodes)
-                for subnode in subnodes:
-                    collected.update(dependencies[subnode])
-                dependencies[node] = frozenset(collected)
+                dependencies[node] = set(node.dependencies)
+                pending.extend(node.dependencies)
 
         return dependencies
 
     @classmethod
-    def _collect_reverse_dependencies(cls, lst, rev_dependencies, processed):
-        for node in lst:
-            if node not in processed:
-                processed.add(node)
+    def _collect_reverse_dependencies(cls, nodes):
+        rev_dependencies = {node: set() for node in nodes}
+        for dependant_node in nodes:
+            for node in dependant_node.dependencies:
+                rev_dependencies[node].add(dependant_node)
 
-                # Initialize default-dict
-                rev_dependencies[node]
+        return rev_dependencies
 
-                subnodes = node.dependencies
-                for dependency in subnodes:
-                    rev_dependencies[dependency].add(node)
-                cls._collect_reverse_dependencies(subnodes, rev_dependencies, processed)
+    @classmethod
+    def _dependency_in(cls, dependency, nodes):
+        if dependency in nodes:
+            return True
+
+        # Dependencies are mostly one or two levels down, so do a breadth-first search
+        checked = set()
+        while nodes:
+            pending = set()
+            for node in nodes:
+                pending.update(node.dependencies)
+
+            if dependency in pending:
+                return True
+
+            checked.update(nodes)
+            nodes = pending - checked
+
+        return False
 
 
 def _summarize_nodes(nodes):

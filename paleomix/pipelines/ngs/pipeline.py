@@ -668,43 +668,6 @@ def recalibrate_haplotype(args, genome, samples, settings):
             )
 
 
-# FIXME: Implicit dependencies should be handled by the NodeGraph
-def update_implicit_dependencies(nodes):
-    def _collect_nodes(dependencies, seen):
-        for node in dependencies:
-            if node not in seen:
-                seen.add(node)
-
-                _collect_nodes(node.dependencies, seen)
-
-        return seen
-
-    nodes = _collect_nodes(nodes, set())
-
-    def _collect_dependencies(node, seen):
-        for dependency in node.dependencies:
-            if dependency not in seen:
-                seen.add(dependency)
-
-                _collect_dependencies(dependency, seen)
-
-        return seen
-
-    nodes = {node: _collect_dependencies(node, set()) for node in nodes}
-
-    output_files = {}
-    for node in nodes:
-        for output_file in node.output_files:
-            output_files[output_file] = node
-
-    for node, dependencies in nodes.items():
-        for input_file in node.input_files:
-            producer = output_files.get(input_file)
-            if producer is not None and producer not in dependencies:
-                # print(producer, "-->", node)
-                node.dependencies = node.dependencies | frozenset((producer,))
-
-
 def build_pipeline(args, project):
     pipeline = []
 
@@ -757,7 +720,5 @@ def build_pipeline(args, project):
 
     # 11. Recalibrate haplotype qualities using known variants
     _add(recalibrate_haplotype, genome, samples, settings["Genotyping"])
-
-    update_implicit_dependencies(pipeline)
 
     return pipeline
