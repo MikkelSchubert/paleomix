@@ -23,11 +23,7 @@
 import os
 
 from paleomix.node import CommandNode, NodeError
-from paleomix.atomiccmd.command import AtomicCmd
-from paleomix.atomiccmd.builder import (
-    AtomicCmdBuilder,
-    apply_options,
-)
+from paleomix.atomiccmd.command2 import AtomicCmd2, InputFile, OutputFile
 from paleomix.atomiccmd.sets import ParallelCmds
 from paleomix.nodes.bwa import (
     _get_node_description,
@@ -47,18 +43,19 @@ BOWTIE2_VERSION = versions.Requirement(
 
 class Bowtie2IndexNode(CommandNode):
     def __init__(self, input_file, dependencies=()):
-        builder = _bowtie2_template(
-            ("bowtie2-build", "%(IN_FILE)s", "%(TEMP_OUT_PREFIX)s"),
-            input_file,
-            iotype="OUT",
-            IN_FILE=input_file,
-            TEMP_OUT_PREFIX=os.path.basename(input_file),
-            CHECK_VERSION=BOWTIE2_VERSION,
+        command = _bowtie2_template(
+            (
+                "bowtie2-build",
+                InputFile(input_file),
+                OutputFile(os.path.basename(input_file), temporary=True),
+            ),
+            reference=input_file,
+            iotype=OutputFile,
         )
 
         CommandNode.__init__(
             self,
-            command=builder.finalize(),
+            command=command,
             description="creating Bowtie2 index for %s" % (input_file,),
             dependencies=dependencies,
         )
@@ -77,43 +74,42 @@ class Bowtie2Node(CommandNode):
         cleanup_options={},
         dependencies=(),
     ):
-        # Setting IN_FILE_2 to None makes AtomicCmd ignore this key
         aln = _bowtie2_template(
-            ("bowtie2",),
-            reference,
-            OUT_STDOUT=AtomicCmd.PIPE,
-            CHECK_VERSION=BOWTIE2_VERSION,
+            ["bowtie2"],
+            reference=reference,
+            stdout=AtomicCmd2.PIPE,
+            stderr=log_file,
         )
 
-        aln.set_option("-x", reference)
-
-        if log_file is not None:
-            aln.set_kwargs(OUT_STDERR=log_file)
+        fixed_options = {
+            "--threads": _get_max_threads(reference, threads),
+            "-x": reference,
+        }
 
         if input_file_1 and not input_file_2:
-            aln.add_option("-U", input_file_1)
+            fixed_options["-U"] = input_file_1
         elif input_file_1 and input_file_2:
-            aln.add_option("-1", input_file_1)
-            aln.add_option("-2", input_file_2)
+            fixed_options["-1"] = input_file_1
+            fixed_options["-2"] = input_file_2
         else:
             raise NodeError(
                 "Input 1, OR both input 1 and input 2 must "
                 "be specified for Bowtie2 node"
             )
 
-        max_threads = _get_max_threads(reference, threads)
-        aln.set_option("--threads", max_threads)
+        aln.merge_options(
+            user_options=mapping_options,
+            fixed_options=fixed_options,
+        )
 
         cleanup = _new_cleanup_command(
             stdin=aln,
             in_reference=reference,
             out_bam=output_file,
-            max_threads=threads,
+            max_threads=fixed_options["--threads"],
             paired_end=input_file_1 and input_file_2,
+            options=cleanup_options,
         )
-
-        apply_options(aln, mapping_options)
-        apply_options(cleanup, cleanup_options)
 
         description = _get_node_description(
             name="Bowtie2",
@@ -124,16 +120,27 @@ class Bowtie2Node(CommandNode):
 
         CommandNode.__init__(
             self,
-            command=ParallelCmds([aln.finalize(), cleanup.finalize()]),
+            command=ParallelCmds([aln, cleanup]),
             description=description,
             threads=threads,
             dependencies=dependencies,
         )
 
 
-def _bowtie2_template(call, reference, iotype="IN", **kwargs):
-    for postfix in ("1.bt2", "2.bt2", "3.bt2", "4.bt2", "rev.1.bt2", "rev.2.bt2"):
-        key = "%s_PREFIX_%s" % (iotype, postfix.upper())
-        kwargs[key] = reference + "." + postfix
-
-    return AtomicCmdBuilder(call, **kwargs)
+def _bowtie2_template(call, reference, iotype=InputFile, **kwargs):
+    return AtomicCmd2(
+        call,
+        extra_files=[
+            iotype(reference + postfix)
+            for postfix in (
+                ".1.bt2",
+                ".2.bt2",
+                ".3.bt2",
+                ".4.bt2",
+                ".rev.1.bt2",
+                ".rev.2.bt2",
+            )
+        ],
+        requirements=[BOWTIE2_VERSION],
+        **kwargs
+    )

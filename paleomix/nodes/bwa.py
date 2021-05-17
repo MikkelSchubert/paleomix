@@ -26,11 +26,7 @@ import os
 import paleomix.common.versions as versions
 import paleomix.tools.factory as factory
 
-from paleomix.atomiccmd.builder import (
-    AtomicCmdBuilder,
-    apply_options,
-)
-from paleomix.atomiccmd.command import AtomicCmd
+from paleomix.atomiccmd.command2 import AtomicCmd2, InputFile, OutputFile
 from paleomix.atomiccmd.sets import ParallelCmds
 from paleomix.common.fileutils import describe_paired_files
 from paleomix.node import CommandNode, NodeError
@@ -47,17 +43,21 @@ BWA_VERSION = versions.Requirement(
 
 class BWAIndexNode(CommandNode):
     def __init__(self, input_file, dependencies=()):
-        builder = _new_bwa_command(
-            ("bwa", "index", "%(IN_FILE)s", "-p", "%(TEMP_OUT_PREFIX)s"),
-            input_file,
-            iotype="OUT",
-            IN_FILE=input_file,
-            TEMP_OUT_PREFIX=os.path.basename(input_file),
+        command = _new_bwa_command(
+            (
+                "bwa",
+                "index",
+                InputFile(input_file),
+                "-p",
+                OutputFile(os.path.basename(input_file), temporary=True),
+            ),
+            reference=input_file,
+            iotype=OutputFile,
         )
 
         CommandNode.__init__(
             self,
-            command=builder.finalize(),
+            command=command,
             description="creating BWA index for %s" % (input_file,),
             dependencies=dependencies,
         )
@@ -74,29 +74,25 @@ class BWABacktrack(CommandNode):
         dependencies=(),
     ):
         threads = _get_max_threads(reference, threads)
-
-        aln = _new_bwa_command(
-            ("bwa", "aln"),
-            reference,
-            IN_FILE=input_file,
-            OUT_STDOUT=output_file,
-        )
-        aln.add_value(reference)
-        aln.add_value("%(IN_FILE)s")
-        aln.set_option("-t", threads)
-
-        apply_options(aln, mapping_options)
-
-        description = _get_node_description(
-            name="BWA backtrack",
-            input_files_1=input_file,
+        command = _new_bwa_command(
+            ("bwa", "aln", reference, InputFile(input_file)),
             reference=reference,
+            stdout=output_file,
+        )
+
+        command.merge_options(
+            user_options=mapping_options,
+            fixed_options={"-t": threads},
         )
 
         CommandNode.__init__(
             self,
-            command=aln.finalize(),
-            description=description,
+            command=command,
+            description=_get_node_description(
+                name="BWA backtrack",
+                input_files_1=input_file,
+                reference=reference,
+            ),
             threads=threads,
             dependencies=dependencies,
         )
@@ -115,29 +111,30 @@ class BWASamse(CommandNode):
         dependencies=(),
     ):
         samse = _new_bwa_command(
-            ("bwa", "samse"),
-            reference,
-            IN_FILE_SAI=input_file_sai,
-            IN_FILE_FQ=input_file_fq,
-            OUT_STDOUT=AtomicCmd.PIPE,
+            (
+                "bwa",
+                "samse",
+                reference,
+                InputFile(input_file_sai),
+                InputFile(input_file_fq),
+            ),
+            reference=reference,
+            stdout=AtomicCmd2.PIPE,
         )
-        samse.add_value(reference)
-        samse.add_value("%(IN_FILE_SAI)s")
-        samse.add_value("%(IN_FILE_FQ)s")
+
+        samse.append_options(mapping_options)
 
         cleanup = _new_cleanup_command(
             stdin=samse,
             in_reference=reference,
             out_bam=output_file,
             max_threads=threads,
+            options=cleanup_options,
         )
-
-        apply_options(samse, mapping_options)
-        apply_options(cleanup, cleanup_options)
 
         CommandNode.__init__(
             self,
-            command=ParallelCmds([samse.finalize(), cleanup.finalize()]),
+            command=ParallelCmds([samse, cleanup]),
             description=_get_node_description(
                 name="BWA samse",
                 input_files_1=input_file_fq,
@@ -167,18 +164,16 @@ class BWASampe(CommandNode):
                 "bwa",
                 "sampe",
                 reference,
-                "%(IN_SAI_1)s",
-                "%(IN_SAI_2)s",
-                "%(IN_FQ_1)s",
-                "%(IN_FQ_2)s",
+                InputFile(input_file_sai_1),
+                InputFile(input_file_sai_2),
+                InputFile(input_file_fq_1),
+                InputFile(input_file_fq_2),
             ),
-            reference,
-            IN_SAI_1=input_file_sai_1,
-            IN_SAI_2=input_file_sai_2,
-            IN_FQ_1=input_file_fq_1,
-            IN_FQ_2=input_file_fq_2,
-            OUT_STDOUT=AtomicCmd.PIPE,
+            reference=reference,
+            stdout=AtomicCmd2.PIPE,
         )
+
+        sampe.append_options(mapping_options)
 
         cleanup = _new_cleanup_command(
             stdin=sampe,
@@ -186,14 +181,12 @@ class BWASampe(CommandNode):
             out_bam=output_file,
             max_threads=threads,
             paired_end=True,
+            options=cleanup_options,
         )
-
-        apply_options(sampe, mapping_options)
-        apply_options(cleanup, cleanup_options)
 
         CommandNode.__init__(
             self,
-            command=ParallelCmds([sampe.finalize(), cleanup.finalize()]),
+            command=ParallelCmds([sampe, cleanup]),
             description=_get_node_description(
                 name="BWA sampe",
                 input_files_1=input_file_fq_1,
@@ -222,21 +215,23 @@ class BWAAlgorithmNode(CommandNode):
             raise NotImplementedError("BWA algorithm %r not implemented" % (algorithm,))
 
         threads = _get_max_threads(reference, threads)
-
         aln = _new_bwa_command(
-            ("bwa", algorithm, reference, "%(IN_FILE_1)s"),
-            reference,
-            IN_FILE_1=input_file_1,
-            OUT_STDOUT=AtomicCmd.PIPE,
+            ("bwa", algorithm, reference, InputFile(input_file_1)),
+            reference=reference,
+            stdout=AtomicCmd2.PIPE,
         )
 
         if input_file_2:
-            aln.add_value("%(IN_FILE_2)s")
-            aln.set_kwargs(IN_FILE_2=input_file_2)
+            aln.append(InputFile(input_file_2))
 
-        aln.set_option("-t", threads)
-        # Mark alternative hits as secondary; required by e.g. Picard
-        aln.set_option("-M")
+        aln.merge_options(
+            user_options=mapping_options,
+            fixed_options={
+                "-t": threads,
+                # Mark alternative hits as secondary; required by e.g. Picard
+                "-M": None,
+            },
+        )
 
         cleanup = _new_cleanup_command(
             stdin=aln,
@@ -244,62 +239,73 @@ class BWAAlgorithmNode(CommandNode):
             out_bam=output_file,
             max_threads=threads,
             paired_end=input_file_1 and input_file_2,
-        )
-
-        apply_options(aln, mapping_options)
-        apply_options(cleanup, cleanup_options)
-
-        description = _get_node_description(
-            name="BWA {}".format(algorithm),
-            input_files_1=input_file_1,
-            input_files_2=input_file_2,
-            reference=reference,
+            options=cleanup_options,
         )
 
         self.out_bam = output_file
 
         CommandNode.__init__(
             self,
-            command=ParallelCmds([aln.finalize(), cleanup.finalize()]),
-            description=description,
+            command=ParallelCmds([aln, cleanup]),
+            description=_get_node_description(
+                name="BWA {}".format(algorithm),
+                input_files_1=input_file_1,
+                input_files_2=input_file_2,
+                reference=reference,
+            ),
             threads=threads,
             dependencies=dependencies,
         )
 
 
-def _new_cleanup_command(stdin, in_reference, out_bam, max_threads=1, paired_end=False):
+def _new_cleanup_command(
+    stdin,
+    in_reference,
+    out_bam,
+    max_threads=1,
+    paired_end=False,
+    options={},
+):
     convert = factory.new(
-        [
-            "cleanup",
-            "--fasta",
-            "%(IN_FASTA_REF)s",
-            "--temp-prefix",
-            "%(TEMP_OUT_PREFIX)s",
+        "cleanup",
+        stdin=stdin,
+        stdout=out_bam,
+        requirements=[
+            SAMTOOLS_VERSION,
         ],
-        IN_STDIN=stdin,
-        IN_FASTA_REF=in_reference,
-        OUT_STDOUT=out_bam,
-        TEMP_OUT_PREFIX="bam_cleanup",
-        CHECK_SAMTOOLS=SAMTOOLS_VERSION,
     )
 
+    fixed_options = {
+        "--fasta": InputFile(in_reference),
+        "--temp-prefix": OutputFile("bam_cleanup", temporary=True),
+    }
+
     if max_threads > 1:
-        convert.set_option("--max-threads", max_threads)
+        fixed_options["--max-threads"] = max_threads
 
     if paired_end:
-        convert.set_option("--paired-end")
+        fixed_options["--paired-end"] = None
+
+    convert.merge_options(
+        user_options=options,
+        fixed_options=fixed_options,
+    )
 
     return convert
 
 
-def _new_bwa_command(call, reference, iotype="IN", **kwargs):
+def _new_bwa_command(call, reference, iotype=InputFile, **kwargs):
     _check_bwa_prefix(reference)
 
-    kwargs["CHECK_BWA"] = BWA_VERSION
-    for postfix in ("amb", "ann", "bwt", "pac", "sa"):
-        kwargs["%s_PREFIX_%s" % (iotype, postfix.upper())] = reference + "." + postfix
-
-    return AtomicCmdBuilder(call, **kwargs)
+    return AtomicCmd2(
+        call,
+        extra_files=[
+            iotype(reference + postfix)
+            for postfix in (".amb", ".ann", ".bwt", ".pac", ".sa")
+        ],
+        requirements=[BWA_VERSION],
+        **kwargs
+    )
 
 
 @functools.lru_cache()

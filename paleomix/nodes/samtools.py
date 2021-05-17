@@ -9,8 +9,6 @@ import os
 import warnings
 
 from paleomix.node import CommandNode
-from paleomix.atomiccmd.builder import AtomicCmdBuilder
-from paleomix.atomiccmd.command import AtomicCmd
 from paleomix.atomiccmd.command2 import AtomicCmd2, InputFile, OutputFile
 from paleomix.atomiccmd.sets import ParallelCmds, SequentialCmds
 from paleomix.common.fileutils import describe_files
@@ -191,7 +189,7 @@ class MarkDupNode(CommandNode):
         if len(in_bams) > 1:
             merge = AtomicCmd2(
                 ["samtools", "merge", "-u", "-"],
-                stdout=AtomicCmd.PIPE,
+                stdout=AtomicCmd2.PIPE,
                 requirements=[SAMTOOLS_VERSION],
             )
 
@@ -234,19 +232,22 @@ class MarkDupNode(CommandNode):
 
 
 def merge_bam_files_command(input_files):
-    merge = AtomicCmdBuilder(
+    merge = AtomicCmd2(
         ["samtools", "merge", "-u", "-"],
-        OUT_STDOUT=AtomicCmd.PIPE,
-        CHECK_VERSION=SAMTOOLS_VERSION,
+        stdout=AtomicCmd2.PIPE,
+        requirements=[SAMTOOLS_VERSION],
     )
 
-    merge.add_multiple_values(input_files)
+    for filename in input_files:
+        merge.append(InputFile(filename))
 
-    return merge.finalize()
+    return merge
 
 
 def _get_number_of_threads(options, default=1):
     if "-@" in options and "--threads" in options:
         raise ValueError("cannot use both -@ and --threads: {!r}".format(options))
 
-    return options.get("-@", options.get("--threads", default))
+    # -@/--threads specify threads in *addition* to the main thread, but in practice
+    # the number of cores used seems to be closer to the that value and not value + 1
+    return max(1, options.get("-@", options.get("--threads", default)))

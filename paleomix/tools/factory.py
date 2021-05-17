@@ -29,12 +29,12 @@ import sys
 
 import paleomix.main
 
-from paleomix.atomiccmd.builder import AtomicCmdBuilder
+from paleomix.atomiccmd.command2 import AtomicCmd2, AuxilleryFile
 from paleomix.common.utilities import safe_coerce_to_tuple
 
 
 def new(args, **kwargs):
-    """Returns AtomicCmdBuilder setup to call the tools accessible through the
+    """Returns AtomicCmd2 setup to call the tools accessible through the
     'paleomix' command-line tool. This builder adds executable / version checks
     for the specified command, but does not add any arguments. Thus, calling
     new with the argument "cat" produces the equivalent of ["paleomix", "cat"].
@@ -43,4 +43,7 @@ def new(args, **kwargs):
     script = paleomix.main.__file__
     args = safe_coerce_to_tuple(args)
 
-    return AtomicCmdBuilder((interpreter, script) + args, AUX_PALEOMIX=script, **kwargs)
+    command = AtomicCmd2((interpreter, script) + args, **kwargs)
+    command.add_extra_files([AuxilleryFile(script)])
+
+    return command

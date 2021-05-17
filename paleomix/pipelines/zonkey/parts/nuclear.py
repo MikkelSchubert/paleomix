@@ -33,8 +33,7 @@ import paleomix.common.rtools as rtools
 import paleomix.common.versions as versions
 import paleomix.tools.factory as factory
 
-from paleomix.atomiccmd.builder import AtomicCmdBuilder
-from paleomix.atomiccmd.command import AtomicCmd
+from paleomix.atomiccmd.command2 import AtomicCmd2, AuxilleryFile, InputFile, OutputFile
 from paleomix.atomiccmd.sets import SequentialCmds
 from paleomix.node import CommandNode, Node, NodeError
 
@@ -65,30 +64,33 @@ TREEMIX_VERSION = versions.Requirement(
 
 class BuildTPEDFilesNode(CommandNode):
     def __init__(self, output_root, table, bamfile, downsample, dependencies=()):
-        cmd = factory.new("zonkey:tped")
-        cmd.set_option("--name", "Sample")
-        cmd.set_option("--downsample", downsample)
-        cmd.add_value("%(TEMP_DIR)s")
-        cmd.add_value("%(IN_TABLE)s")
-        cmd.add_value("%(IN_BAM)s")
+        command = factory.new(
+            [
+                "zonkey:tped",
+                "--name",
+                "Sample",
+                "--downsample",
+                downsample,
+                "%(TEMP_DIR)s",
+                InputFile(table),
+                InputFile(bamfile),
+            ],
+            extra_files=[
+                OutputFile(os.path.join(output_root, "common.tfam")),
+                OutputFile(os.path.join(output_root, "common.summary")),
+                OutputFile(os.path.join(output_root, "incl_ts.tped")),
+                OutputFile(os.path.join(output_root, "excl_ts.tped")),
+            ],
+        )
 
         if not downsample:
             # Needed for random access (chromosomes are read 1 ... 31)
-            cmd.set_kwargs(IN_BAI=bamfile + ".bai")
-
-        cmd.set_kwargs(
-            OUT_TFAM=os.path.join(output_root, "common.tfam"),
-            OUT_SUMMARY=os.path.join(output_root, "common.summary"),
-            OUT_TPED_INCL_TS=os.path.join(output_root, "incl_ts.tped"),
-            OUT_TPED_EXCL_TS=os.path.join(output_root, "excl_ts.tped"),
-            IN_TABLE=table,
-            IN_BAM=bamfile,
-        )
+            command.add_extra_files([InputFile(bamfile + ".bai")])
 
         CommandNode.__init__(
             self,
             description="building TPED file from %s" % (bamfile,),
-            command=cmd.finalize(),
+            command=command,
             dependencies=dependencies,
         )
 
@@ -99,32 +101,28 @@ class BuildBEDFilesNode(CommandNode):
     ):
         temp_prefix = os.path.basename(output_prefix)
 
-        plink_cmd = [
-            "plink",
-            "--make-bed",
-            "--noweb",
-            "--tped",
-            "%(IN_TPED)s",
-            "--tfam",
-            "%(IN_TFAM)s",
-            "--out",
-            "%(TEMP_OUT_PREFIX)s",
-        ]
-
-        plink_cmd.extend(self._parse_parameters(plink_parameters))
-
-        command = AtomicCmd(
-            plink_cmd,
-            IN_TPED=tped,
-            IN_TFAM=tfam,
-            TEMP_OUT_PREFIX=temp_prefix,
-            OUT_BED=output_prefix + ".bed",
-            OUT_BIM=output_prefix + ".bim",
-            OUT_FAM=output_prefix + ".fam",
-            OUT_LOG=output_prefix + ".log",
-            TEMP_OUT_NOSEX=temp_prefix + ".nosex",
-            TEMP_OUT_NOF=temp_prefix + ".nof",
-            CHECK_VERSION=PLINK_VERSION,
+        command = AtomicCmd2(
+            [
+                "plink",
+                "--make-bed",
+                "--noweb",
+                "--tped",
+                InputFile(tped),
+                "--tfam",
+                InputFile(tfam),
+                "--out",
+                OutputFile(temp_prefix, temporary=True),
+            ]
+            + self._parse_parameters(plink_parameters),
+            extra_files=[
+                OutputFile(output_prefix + ".bed"),
+                OutputFile(output_prefix + ".bim"),
+                OutputFile(output_prefix + ".fam"),
+                OutputFile(output_prefix + ".log"),
+                OutputFile(temp_prefix + ".nosex", temporary=True),
+                OutputFile(temp_prefix + ".nof", temporary=True),
+            ],
+            requirements=[PLINK_VERSION],
             set_cwd=True,
         )
 
@@ -148,32 +146,34 @@ class AdmixtureNode(CommandNode):
         prefix = os.path.splitext(os.path.basename(input_file))[0]
         output_prefix = os.path.join(output_root, "%s.%i" % (prefix, k_groups))
 
-        cmd = AtomicCmdBuilder(
-            "admixture",
-            IN_FILE_BED=input_file,
-            IN_FILE_BIM=fileutils.swap_ext(input_file, ".bim"),
-            IN_FILE_FAM=fileutils.swap_ext(input_file, ".fam"),
-            TEMP_OUT_FILE_BED=prefix + ".bed",
-            TEMP_OUT_FILE_BIM=prefix + ".bim",
-            TEMP_OUT_FILE_FAM=prefix + ".fam",
-            TEMP_OUT_FILE_POP=prefix + ".pop",
-            OUT_P=output_prefix + ".P",
-            OUT_Q=output_prefix + ".Q",
-            OUT_STDOUT=output_prefix + ".log",
-            CHECK_VERSION=ADMIXTURE_VERSION,
+        command = AtomicCmd2(
+            [
+                "admixture",
+                "-s",
+                random.randint(0, 2 ** 16 - 1),
+                "--supervised",
+                OutputFile(prefix + ".bed", temporary=True),
+                int(k_groups),
+            ],
+            stdout=output_prefix + ".log",
+            extra_files=[
+                InputFile(input_file),
+                InputFile(fileutils.swap_ext(input_file, ".bim")),
+                InputFile(fileutils.swap_ext(input_file, ".fam")),
+                OutputFile(prefix + ".bim", temporary=True),
+                OutputFile(prefix + ".fam", temporary=True),
+                OutputFile(prefix + ".pop", temporary=True),
+                OutputFile(output_prefix + ".P"),
+                OutputFile(output_prefix + ".Q"),
+            ],
+            requirements=[ADMIXTURE_VERSION],
             set_cwd=True,
         )
-
-        cmd.set_option("-s", random.randint(0, 2 ** 16 - 1))
-        cmd.set_option("--supervised")
-
-        cmd.add_value("%(TEMP_OUT_FILE_BED)s")
-        cmd.add_value(int(k_groups))
 
         CommandNode.__init__(
             self,
             description="estimating admixture from %s.*" % (input_file,),
-            command=cmd.finalize(),
+            command=command,
             dependencies=dependencies,
         )
 
@@ -276,33 +276,31 @@ class AdmixturePlotNode(CommandNode):
         self._samples = samples
         self._order = tuple(order) + ("Sample",)
 
-        script = rtools.rscript("zonkey", "admixture.r")
-
-        cmd = AtomicCmd(
+        command = AtomicCmd2(
             (
                 "Rscript",
-                script,
-                "%(IN_FILE)s",
-                "%(TEMP_OUT_NAMES)s",
-                "%(TEMP_OUT_PREFIX)s",
+                AuxilleryFile(rtools.rscript("zonkey", "admixture.r")),
+                InputFile(input_file),
+                OutputFile("samples.txt", temporary=True),
+                OutputFile(os.path.basename(output_prefix), temporary=True),
             ),
-            AUX_RSCRIPT=script,
-            IN_FILE=input_file,
-            IN_SAMPLES=samples,
-            OUT_PDF=output_prefix + ".pdf",
-            OUT_PNG=output_prefix + ".png",
-            TEMP_OUT_NAMES="samples.txt",
-            TEMP_OUT_PREFIX=os.path.basename(output_prefix),
-            CHECK_R=RSCRIPT_VERSION,
-            CHECK_R_GGPLOT2=rtools.requirement("ggplot2"),
-            CHECK_R_RESHAPE2=rtools.requirement("reshape2"),
+            extra_files=[
+                InputFile(samples),
+                OutputFile(output_prefix + ".pdf"),
+                OutputFile(output_prefix + ".png"),
+            ],
+            requirements=[
+                RSCRIPT_VERSION,
+                rtools.requirement("ggplot2"),
+                rtools.requirement("reshape2"),
+            ],
             set_cwd=True,
         )
 
         CommandNode.__init__(
             self,
             description="plotting admixture results from %s" % (input_file,),
-            command=cmd,
+            command=command,
             dependencies=dependencies,
         )
 
@@ -338,33 +336,36 @@ class BuildFreqFilesNode(CommandNode):
             "--bfile",
             os.path.abspath(input_prefix),
             "--within",
-            "%(TEMP_OUT_CLUST)s",
+            OutputFile("samples.clust", temporary=True),
             "--out",
-            "%(TEMP_OUT_PREFIX)s",
+            OutputFile(basename, temporary=True),
         ]
 
         if parameters:
             plink_cmd.extend(parameters.split())
 
-        plink = AtomicCmd(
+        plink = AtomicCmd2(
             plink_cmd,
-            IN_BED=input_prefix + ".bed",
-            IN_BIM=input_prefix + ".bim",
-            IN_FAM=input_prefix + ".fam",
-            TEMP_OUT_CLUST="samples.clust",
-            TEMP_OUT_IMISS=basename + ".imiss",
-            TEMP_OUT_LMISS=basename + ".lmiss",
-            OUT_NOSEX=output_prefix + ".frq.strat.nosex",
-            OUT_LOG=output_prefix + ".frq.strat.log",
-            TEMP_OUT_PREFIX=basename,
-            CHECK_VERSION=PLINK_VERSION,
+            extra_files=[
+                InputFile(input_prefix + ".bed"),
+                InputFile(input_prefix + ".bim"),
+                InputFile(input_prefix + ".fam"),
+                OutputFile(output_prefix + ".frq.strat.nosex"),
+                OutputFile(output_prefix + ".frq.strat.log"),
+                OutputFile(basename + ".imiss", temporary=True),
+                OutputFile(basename + ".lmiss", temporary=True),
+            ],
+            requirements=[
+                PLINK_VERSION,
+            ],
             set_cwd=True,
         )
 
-        gzip = AtomicCmd(
-            ["gzip", "%(TEMP_IN_FREQ)s"],
-            TEMP_IN_FREQ=basename + ".frq.strat",
-            OUT_FREQ=output_prefix + ".frq.strat.gz",
+        gzip = AtomicCmd2(
+            ["gzip", InputFile(basename + ".frq.strat", temporary=True)],
+            extra_files=[
+                OutputFile(output_prefix + ".frq.strat.gz"),
+            ],
         )
 
         self._tfam = tfam
@@ -451,26 +452,45 @@ class TreemixNode(CommandNode):
     def __init__(
         self, data, input_file, output_prefix, m=0, k=100, outgroup=(), dependencies=()
     ):
-        call = [
-            "treemix",
-            "-i",
-            "%(IN_FILE)s",
-            "-o",
-            "%(TEMP_OUT_PREFIX)s",
-            "-global",
-            "-m",
-            m,
-        ]
-
-        if outgroup:
-            call.extend(("-root", ",".join(outgroup)))
-
         self._param_m = m
         self._param_outgroup = outgroup
         self._params_file = output_prefix + ".parameters.txt"
+        self._parameters_hash = "%s.%s" % (
+            output_prefix,
+            hash_params(k=k, m=m, global_set=True, outgroup=tuple(sorted(outgroup))),
+        )
+
+        command = AtomicCmd2(
+            [
+                "treemix",
+                "-i",
+                InputFile(input_file),
+                "-o",
+                OutputFile(os.path.basename(output_prefix), temporary=True),
+                "-global",
+                "-m",
+                m,
+            ],
+            extra_files=[
+                OutputFile(output_prefix + ".cov.gz"),
+                OutputFile(output_prefix + ".covse.gz"),
+                OutputFile(output_prefix + ".edges.gz"),
+                OutputFile(output_prefix + ".llik"),
+                OutputFile(output_prefix + ".modelcov.gz"),
+                OutputFile(output_prefix + ".treeout.gz"),
+                OutputFile(output_prefix + ".vertices.gz"),
+                OutputFile(self._params_file),
+                OutputFile(self._parameters_hash),
+            ],
+            requirements=[TREEMIX_VERSION],
+            set_cwd=True,
+        )
+
+        if outgroup:
+            command.append("-root", ",".join(outgroup))
 
         if isinstance(k, int):
-            call.extend(("-k", k))
+            command.append("-k", k)
             self._param_k = k
             self._k_file = self._k_field = None
         elif isinstance(k, tuple) and all(isinstance(v, str) for v in k):
@@ -480,32 +500,10 @@ class TreemixNode(CommandNode):
         else:
             raise ValueError("k must be int or (key, path) in TreemixNode")
 
-        self._parameters_hash = "%s.%s" % (
-            output_prefix,
-            hash_params(k=k, m=m, global_set=True, outgroup=tuple(sorted(outgroup))),
-        )
-
-        cmd = AtomicCmd(
-            call,
-            IN_FILE=input_file,
-            TEMP_OUT_PREFIX=os.path.basename(output_prefix),
-            OUT_FILE_COV=output_prefix + ".cov.gz",
-            OUT_FILE_COVSE=output_prefix + ".covse.gz",
-            OUT_FILE_EDGES=output_prefix + ".edges.gz",
-            OUT_FILE_LLIK=output_prefix + ".llik",
-            OUT_FILE_MODELCOV=output_prefix + ".modelcov.gz",
-            OUT_FILE_TREEOUT=output_prefix + ".treeout.gz",
-            OUT_FILE_VERTICES=output_prefix + ".vertices.gz",
-            OUT_FILE_PARAMS=self._params_file,
-            OUT_FILE_PARAMS_HASH=self._parameters_hash,
-            CHECK_VERSION=TREEMIX_VERSION,
-            set_cwd=True,
-        )
-
         CommandNode.__init__(
             self,
             description="running treemix on %s.*" % (input_file,),
-            command=cmd,
+            command=command,
             dependencies=dependencies,
         )
 
@@ -540,37 +538,42 @@ class PlotTreemixNode(CommandNode):
 
         # TreeMix plots with migration edges
         cmd_1 = self._plot_command(
-            prefix,
-            "plot_tree",
-            abs_prefix,
-            "%(IN_SAMPLES)s",
-            "%(TEMP_OUT_PREFIX)s",
-            IN_SAMPLES=samples,
-            TEMP_OUT_PREFIX=basename + "_tree",
-            OUT_PDF=output_prefix + "_tree.pdf",
-            OUT_PNG=output_prefix + "_tree.png",
+            input_prefix=prefix,
+            args=(
+                "plot_tree",
+                abs_prefix,
+                InputFile(samples),
+                OutputFile(basename + "_tree", temporary=True),
+            ),
+            extra_files=[
+                OutputFile(output_prefix + "_tree.pdf"),
+                OutputFile(output_prefix + "_tree.png"),
+            ],
         )
 
         # Heatmap showing TreeMix residuals
         cmd_2 = self._plot_command(
-            prefix,
-            "plot_residuals",
-            abs_prefix,
-            "%(IN_SAMPLES)s",
-            "%(TEMP_OUT_PREFIX)s",
-            IN_SAMPLES=samples,
-            TEMP_OUT_PREFIX=basename + "_residuals",
-            OUT_PDF=output_prefix + "_residuals.pdf",
-            OUT_PNG=output_prefix + "_residuals.png",
+            input_prefix=prefix,
+            args=(
+                "plot_residuals",
+                abs_prefix,
+                InputFile(samples),
+                OutputFile(basename + "_residuals", temporary=True),
+            ),
+            extra_files=[
+                OutputFile(output_prefix + "_residuals.pdf"),
+                OutputFile(output_prefix + "_residuals.png"),
+            ],
         )
 
         # Text file containing % of variance explained by model
         cmd_3 = self._plot_command(
-            prefix,
-            "variance",
-            abs_prefix,
-            "%(OUT_TXT)s",
-            OUT_TXT=output_prefix + "_variance.txt",
+            input_prefix=prefix,
+            args=(
+                "variance",
+                abs_prefix,
+                OutputFile(output_prefix + "_variance.txt"),
+            ),
         )
 
         CommandNode.__init__(
@@ -581,19 +584,23 @@ class PlotTreemixNode(CommandNode):
         )
 
     @classmethod
-    def _plot_command(cls, input_prefix, *args, **kwargs):
+    def _plot_command(cls, input_prefix, args, extra_files=[], **kwargs):
         script = rtools.rscript("zonkey", "treemix.r")
 
-        return AtomicCmd(
-            ("Rscript", script) + args,
-            AUX_RSCRIPT=script,
-            IN_FILE_COV=input_prefix + ".cov.gz",
-            IN_FILE_COVSE=input_prefix + ".covse.gz",
-            IN_FILE_EDGES=input_prefix + ".edges.gz",
-            IN_FILE_MODELCOV=input_prefix + ".modelcov.gz",
-            IN_FILE_VERTICES=input_prefix + ".vertices.gz",
-            CHECK_R=RSCRIPT_VERSION,
-            CHECK_R_BREW=rtools.requirement("RColorBrewer"),
+        return AtomicCmd2(
+            ("Rscript", AuxilleryFile(script)) + tuple(args),
+            extra_files=[
+                InputFile(input_prefix + ".cov.gz"),
+                InputFile(input_prefix + ".covse.gz"),
+                InputFile(input_prefix + ".edges.gz"),
+                InputFile(input_prefix + ".modelcov.gz"),
+                InputFile(input_prefix + ".vertices.gz"),
+            ]
+            + extra_files,
+            requirements=[
+                RSCRIPT_VERSION,
+                rtools.requirement("RColorBrewer"),
+            ],
             set_cwd=True,
             **kwargs,
         )
@@ -605,17 +612,18 @@ class SmartPCANode(CommandNode):
         self._output_prefix = output_prefix
         self._nchroms = nchroms
 
-        cmd = AtomicCmd(
-            ("smartpca", "-p", "%(TEMP_OUT_PARAMS)s"),
-            TEMP_OUT_PARAMS="parameters.txt",
-            IN_FILE_BED=input_prefix + ".bed",
-            IN_FILE_BIM=input_prefix + ".bim",
-            IN_FILE_FAM=input_prefix + ".fam",
-            OUT_STDOUT=output_prefix + ".log",
-            OUT_EVEC=output_prefix + ".evec",
-            OUT_EVAL=output_prefix + ".eval",
-            OUT_SNPS=output_prefix + ".deleted_snps",
-            CHECK_VERSION=SMARTPCA_VERSION,
+        cmd = AtomicCmd2(
+            ("smartpca", "-p", OutputFile("parameters.txt", temporary=True)),
+            stdout=output_prefix + ".log",
+            extra_files=[
+                InputFile(input_prefix + ".bed"),
+                InputFile(input_prefix + ".bim"),
+                InputFile(input_prefix + ".fam"),
+                OutputFile(output_prefix + ".evec"),
+                OutputFile(output_prefix + ".eval"),
+                OutputFile(output_prefix + ".deleted_snps"),
+            ],
+            requirements=[SMARTPCA_VERSION],
             set_cwd=True,
         )
 
@@ -661,23 +669,25 @@ numthreads:        1
 
 class PlotPCANode(CommandNode):
     def __init__(self, samples, prefix, output_prefix, dependencies=()):
-        abs_prefix = os.path.abspath(prefix)
-
-        script = rtools.rscript("zonkey", "pca.r")
-        call = ["Rscript", script, abs_prefix, "%(IN_SAMPLES)s", "%(TEMP_OUT_PREFIX)s"]
-
-        cmd = AtomicCmd(
-            call,
-            AUX_SCRIPT=script,
-            IN_FILE_EVAL=prefix + ".eval",
-            IN_FILE_EVEC=prefix + ".evec",
-            IN_SAMPLES=samples,
-            TEMP_OUT_PREFIX=os.path.basename(output_prefix),
-            OUT_PDF=output_prefix + ".pdf",
-            OUT_PNG=output_prefix + ".png",
-            CHECK_R=RSCRIPT_VERSION,
-            CHECK_R_GGPLOT2=rtools.requirement("ggplot2"),
-            CHECK_R_LABELS=rtools.requirement("ggrepel"),
+        cmd = AtomicCmd2(
+            [
+                "Rscript",
+                AuxilleryFile(rtools.rscript("zonkey", "pca.r")),
+                os.path.abspath(prefix),
+                InputFile(samples),
+                OutputFile(os.path.basename(output_prefix), temporary=True),
+            ],
+            extra_files=[
+                InputFile(prefix + ".eval"),
+                InputFile(prefix + ".evec"),
+                OutputFile(output_prefix + ".pdf"),
+                OutputFile(output_prefix + ".png"),
+            ],
+            requirements=[
+                RSCRIPT_VERSION,
+                rtools.requirement("ggplot2"),
+                rtools.requirement("ggrepel"),
+            ],
             set_cwd=True,
         )
 
@@ -695,17 +705,22 @@ class PlotCoverageNode(CommandNode):
         self._mapping = dict(zip(mapping.values(), mapping))
         self._input_file = input_file
 
-        script = rtools.rscript("zonkey", "coverage.r")
-        cmd = AtomicCmd(
-            ("Rscript", script, "%(TEMP_OUT_TABLE)s", "%(TEMP_OUT_PREFIX)s"),
-            AUX_RSCRIPT=script,
-            IN_FILE=input_file,
-            TEMP_OUT_TABLE="contigs.table",
-            OUT_PDF=output_prefix + ".pdf",
-            OUT_PNG=output_prefix + ".png",
-            TEMP_OUT_PREFIX=os.path.basename(output_prefix),
-            CHECK_R=RSCRIPT_VERSION,
-            CHECK_R_GGPLOT2=rtools.requirement("ggplot2"),
+        cmd = AtomicCmd2(
+            (
+                "Rscript",
+                AuxilleryFile(rtools.rscript("zonkey", "coverage.r")),
+                OutputFile("contigs.table", temporary=True),
+                OutputFile(os.path.basename(output_prefix), temporary=True),
+            ),
+            extra_files=[
+                InputFile(input_file),
+                OutputFile(output_prefix + ".pdf"),
+                OutputFile(output_prefix + ".png"),
+            ],
+            requirements=[
+                RSCRIPT_VERSION,
+                rtools.requirement("ggplot2"),
+            ],
             set_cwd=True,
         )
 

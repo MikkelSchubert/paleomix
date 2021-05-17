@@ -22,14 +22,11 @@
 #
 import os
 
-from paleomix.node import CommandNode
-from paleomix.atomiccmd.builder import (
-    AtomicCmdBuilder,
-    apply_options,
-)
-
 import paleomix.common.fileutils as fileutils
 import paleomix.common.versions as versions
+
+from paleomix.node import CommandNode
+from paleomix.atomiccmd.command2 import AtomicCmd2, InputFile, OutputFile
 
 
 _VERSION_CHECK = versions.Requirement(
@@ -43,28 +40,39 @@ class SE_AdapterRemovalNode(CommandNode):
     def __init__(
         self, input_file, output_prefix, threads=1, options={}, dependencies=()
     ):
-        # See below for parameters in common between SE/PE
-        cmd = _get_common_parameters(threads=threads, options=options)
-
-        # Prefix for output files, ensure that all end up in temp folder
-        cmd.set_option("--basename", "%(TEMP_OUT_BASENAME)s")
-
-        output_tmpl = output_prefix + ".%s.gz"
-        cmd.set_kwargs(
-            TEMP_OUT_BASENAME=os.path.basename(output_prefix),
-            OUT_SETTINGS=output_prefix + ".settings",
-            OUT_MATE_1=output_tmpl % ("truncated",),
-            OUT_DISCARDED=output_tmpl % ("discarded",),
+        command = AtomicCmd2(
+            "AdapterRemoval",
+            extra_files=[
+                OutputFile(output_prefix + ".settings"),
+                OutputFile("{}.truncated.gz".format(output_prefix)),
+                OutputFile("{}.discarded.gz".format(output_prefix)),
+            ],
+            requirements=[_VERSION_CHECK],
         )
 
-        cmd.set_option("--file1", "%(IN_READS_1)s")
-        cmd.set_kwargs(IN_READS_1=input_file)
+        # Ensure that any user-specified list of adapters is tracked
+        if "--adapter-list" in options:
+            options["--adapter-list"] = InputFile(options["--adapter-list"])
 
-        apply_options(cmd, options)
+        command.merge_options(
+            user_options=options,
+            fixed_options={
+                "--file1": InputFile(input_file),
+                # Gzip compress FASTQ files
+                "--gzip": None,
+                # Fix number of threads to ensure consistency when scheduling node
+                "--threads": threads,
+                # Prefix for output files, ensure that all end up in temp folder
+                "--basename": OutputFile(
+                    os.path.basename(output_prefix),
+                    temporary=True,
+                ),
+            },
+        )
 
         CommandNode.__init__(
             self,
-            command=cmd.finalize(),
+            command=command,
             threads=threads,
             description="trimming SE adapters from %s"
             % fileutils.describe_files(input_file),
@@ -83,63 +91,53 @@ class PE_AdapterRemovalNode(CommandNode):
         options={},
         dependencies=(),
     ):
-        cmd = _get_common_parameters(threads=threads, options=options)
 
-        # Prefix for output files, to ensure that all end up in temp folder
-        cmd.set_option("--basename", "%(TEMP_OUT_BASENAME)s")
-
-        output_tmpl = output_prefix + ".%s.gz"
-        cmd.set_kwargs(
-            TEMP_OUT_BASENAME=os.path.basename(output_prefix),
-            OUT_SETTINGS=output_prefix + ".settings",
-            OUT_READS_1=output_tmpl % ("pair1.truncated",),
-            OUT_READS_2=output_tmpl % ("pair2.truncated",),
-            OUT_SINGLETON=output_tmpl % ("singleton.truncated",),
-            OUT_DISCARDED=output_tmpl % ("discarded",),
+        command = AtomicCmd2(
+            "AdapterRemoval",
+            extra_files=[
+                OutputFile(output_prefix + ".settings"),
+                OutputFile("{}.pair1.truncated.gz".format(output_prefix)),
+                OutputFile("{}.pair2.truncated.gz".format(output_prefix)),
+                OutputFile("{}.singleton.truncated.gz".format(output_prefix)),
+                OutputFile("{}.discarded.gz".format(output_prefix)),
+            ],
+            requirements=[_VERSION_CHECK],
         )
 
-        if collapse:
-            cmd.set_option("--collapse")
+        fixed_options = {
+            "--file1": InputFile(input_file_1),
+            "--file2": InputFile(input_file_2),
+            # Gzip compress FASTQ files
+            "--gzip": None,
+            # Fix number of threads to ensure consistency when scheduling node
+            "--threads": threads,
+            # Prefix for output files, ensure that all end up in temp folder
+            "--basename": OutputFile(os.path.basename(output_prefix), temporary=True),
+        }
 
-            cmd.set_kwargs(
-                OUT_COLLAPSED=output_tmpl % ("collapsed",),
-                OUT_COLLAPSED_TRUNC=output_tmpl % ("collapsed.truncated",),
+        if collapse:
+            fixed_options["--collapse"] = None
+            command.add_extra_files(
+                [
+                    OutputFile("{}.collapsed.gz".format(output_prefix)),
+                    OutputFile("{}.collapsed.truncated.gz".format(output_prefix)),
+                ]
             )
 
-        cmd.set_option("--file1", "%(IN_READS_1)s")
-        cmd.set_option("--file2", "%(IN_READS_2)s")
-        cmd.set_kwargs(IN_READS_1=input_file_1, IN_READS_2=input_file_2)
+        # Ensure that any user-specified list of adapters is tracked
+        if "--adapter-list" in options:
+            options["--adapter-list"] = InputFile(options["--adapter-list"])
 
-        apply_options(cmd, options)
+        command.merge_options(
+            user_options=options,
+            fixed_options=fixed_options,
+        )
 
         CommandNode.__init__(
             self,
-            command=cmd.finalize(),
+            command=command,
             threads=threads,
             description="trimming PE adapters from %s"
             % fileutils.describe_paired_files(input_file_1, input_file_2),
             dependencies=dependencies,
         )
-
-
-def _get_common_parameters(options, threads=1):
-    cmd = AtomicCmdBuilder("AdapterRemoval", CHECK_VERSION=_VERSION_CHECK)
-
-    # Gzip compress FASTQ files
-    cmd.set_option("--gzip")
-
-    # Trim Ns at read ends
-    cmd.set_option("--trimns", fixed=False)
-    # Trim low quality scores
-    cmd.set_option("--trimqualities", fixed=False)
-
-    # Fix number of threads to ensure consistency when scheduling node
-    cmd.set_option("--threads", threads)
-
-    # Ensure that any user-specified list of adapters is tracked
-    adapter_list = options.pop("--adapter-list", None)
-    if adapter_list is not None:
-        cmd.cmd.set_option("--adapter-list", "%(IN_ADAPTER_LIST)s")
-        cmd.command.set_kwargs(IN_ADAPTER_LIST=adapter_list)
-
-    return cmd

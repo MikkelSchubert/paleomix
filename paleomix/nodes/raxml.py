@@ -28,7 +28,7 @@ import paleomix.common.fileutils as fileutils
 import paleomix.common.versions as versions
 
 from paleomix.node import CommandNode
-from paleomix.atomiccmd.builder import AtomicCmdBuilder
+from paleomix.atomiccmd.command2 import AtomicCmd2, InputFile, OutputFile
 
 
 RAXML_VERSION = versions.Requirement(
@@ -66,65 +66,71 @@ class RAxMLRapidBSNode(CommandNode):
                             Example destination: '/disk/project/SN013420.RAxML.%s'
                             Example output:      '/disk/project/SN013420.RAxML.bestTree'
         """
-
-        if threads > 1:
-            command = AtomicCmdBuilder("raxmlHPC-PTHREADS")
-            command.set_option("-T", threads)
-            version = RAXML_PTHREADS_VERSION
-        else:
-            command = AtomicCmdBuilder("raxmlHPC")
-            version = RAXML_VERSION
-
-        # Perform rapid bootstrapping
-        command.set_option("-f", "a")
-        # Output files are saved with a .PALEOMIX postfix, and subsequently renamed
-        command.set_option("-n", "PALEOMIX")
-        # Ensures that output is saved to the temporary directory
-        command.set_option("-w", "%(TEMP_DIR)s")
-        # Symlink to sequence and partitions, to prevent the creation of *.reduced files
-        # outside temp folder. In addition, it may be nessesary to remove the .reduced
-        # files if created
-        command.set_option("-s", "%(TEMP_OUT_ALN)s")
-
-        if input_partition is not None:
-            command.set_option("-q", "%(TEMP_OUT_PART)s")
-            command.set_kwargs(
-                IN_PARTITION=input_partition,
-                TEMP_OUT_PART=os.path.basename(input_partition),
-                TEMP_OUT_PART_R=os.path.basename(input_partition) + ".reduced",
-            )
-
-        command.set_kwargs(
-            # Auto-delete: Symlinks and .reduced files that RAxML may generate
-            TEMP_OUT_ALN=os.path.basename(input_alignment),
-            TEMP_OUT_ALN_R=os.path.basename(input_alignment) + ".reduced",
-            # Input files, are not used directly (see below)
-            IN_ALIGNMENT=input_alignment,
-            # Final output files, are not created directly
-            OUT_INFO=output_template % "info",
-            OUT_BESTTREE=output_template % "bestTree",
-            OUT_BOOTSTRAP=output_template % "bootstrap",
-            OUT_BIPART=output_template % "bipartitions",
-            OUT_BIPARTLABEL=output_template % "bipartitionsBranchLabels",
-            CHECK_VERSION=version,
-        )
-
-        # Use the GTRGAMMA model of NT substitution by default
-        command.set_option("-m", model, fixed=False)
-        # Enable Rapid Boostrapping and set random seed. May be set to a fixed value to
-        # allow replicability.
-        command.set_option("-x", int(random.random() * 2 ** 31 - 1), fixed=False)
-        # Set random seed for parsimony inference. May be set to allow replicability.
-        command.set_option("-p", int(random.random() * 2 ** 31 - 1), fixed=False)
-        # Terminate bootstrapping upon convergence, not after N repetitions
-        command.set_option("-N", replicates, fixed=False)
-
         self._symlinks = [input_alignment, input_partition]
         self._template = os.path.basename(output_template)
 
+        options = {
+            # Perform rapid bootstrapping
+            "-f": "a",
+            # Output files are saved with a .PALEOMIX postfix, and subsequently renamed
+            "-n": "PALEOMIX",
+            # Ensures that output is saved to the temporary directory
+            "-w": "%(TEMP_DIR)s",
+            # Use the GTRGAMMA model of NT substitution by default
+            "-m": model,
+            # Enable Rapid Boostrapping and set random seed
+            "-x": int(random.random() * 2 ** 31 - 1),
+            # Set random seed for parsimony inference
+            "-p": int(random.random() * 2 ** 31 - 1),
+            # Terminate bootstrapping upon convergence, not after N repetitions
+            "-N": replicates,
+        }
+
+        extra_files = [
+            # Input files, are not used directly (see below)
+            InputFile(input_alignment),
+            # Final output files, are not created directly
+            OutputFile(output_template % "info"),
+            OutputFile(output_template % "bestTree"),
+            OutputFile(output_template % "bootstrap"),
+            OutputFile(output_template % "bipartitions"),
+            OutputFile(output_template % "bipartitionsBranchLabels"),
+        ]
+
+        # Symlink to sequence and partitions, to prevent the creation of *.reduced files
+        # outside temp folder. In addition, it may be nessesary to remove the .reduced
+        # files if created
+        alignment_basename = os.path.basename(input_alignment)
+        options["-s"] = OutputFile(alignment_basename, temporary=True)
+        extra_files.append(OutputFile(alignment_basename + ".reduced", temporary=True))
+
+        if input_partition is not None:
+            partition_basename = os.path.basename(input_partition)
+
+            options["-q"] = OutputFile(partition_basename, temporary=True)
+            extra_files.append(InputFile(input_partition))
+            extra_files.append(
+                OutputFile(partition_basename + ".reduced", temporary=True)
+            )
+
+        if threads > 1:
+            command = AtomicCmd2(
+                ["raxmlHPC-PTHREADS", "-T", threads],
+                extra_files=extra_files,
+                requirements=[RAXML_PTHREADS_VERSION],
+            )
+        else:
+            command = AtomicCmd2(
+                "raxmlHPC",
+                extra_files=extra_files,
+                requirements=[RAXML_VERSION],
+            )
+
+        command.append_options(options)
+
         CommandNode.__init__(
             self,
-            command=command.finalize(),
+            command=command,
             description="inferring phylogeny from %s using RAxML" % (input_alignment,),
             threads=threads,
             dependencies=dependencies,
@@ -155,42 +161,43 @@ class RAxMLRapidBSNode(CommandNode):
 
 class RAxMLParsimonyTreeNode(CommandNode):
     def __init__(self, input_alignment, input_partitions, output_tree, dependencies=()):
-        command = AtomicCmdBuilder("raxmlHPC")
-
-        # Compute a randomized parsimony starting tree
-        command.set_option("-y")
-        # Output files are saved with a .Pypeline postfix, and subsequently renamed
-        command.set_option("-n", "Pypeline")
-        # Model required, but not used
-        command.set_option("-m", "GTRGAMMA")
-        # Ensures that output is saved to the temporary directory
-        command.set_option("-w", "%(TEMP_DIR)s")
-        # Set random seed for bootstrap generation. May be set to allow replicability
-        command.set_option("-p", int(random.random() * 2 ** 31 - 1), fixed=False)
-
-        # Symlink to sequence and partitions, to prevent the creation of *.reduced files
-        # outside temp folder
-        command.set_option("-s", "%(TEMP_OUT_ALIGNMENT)s")
-        command.set_option("-q", "%(TEMP_OUT_PARTITION)s")
-
-        command.set_kwargs(
-            IN_ALIGNMENT=input_alignment,
-            IN_PARTITION=input_partitions,
-            # TEMP_OUT_ is used to automatically remove these files
-            TEMP_OUT_ALIGNMENT="RAxML_alignment",
-            TEMP_OUT_PARTITION="RAxML_partitions",
-            TEMP_OUT_INFO="RAxML_info.Pypeline",
-            OUT_TREE=output_tree,
-            CHECK_VERSION=RAXML_VERSION,
-        )
-
         self._input_alignment = input_alignment
         self._input_partitions = input_partitions
         self._output_tree = output_tree
 
+        options = {
+            # Compute a randomized parsimony starting tree
+            "-y": None,
+            # Output files are saved with a .Pypeline postfix, and subsequently renamed
+            "-n": "Pypeline",
+            # Model required, but not used
+            "-m": "GTRGAMMA",
+            # Ensures that output is saved to the temporary directory
+            "-w": "%(TEMP_DIR)s",
+            # Set random seed for bootstrap generation.
+            "-p": int(random.random() * 2 ** 31 - 1),
+            # Symlink to sequence and partitions, to prevent the creation of *.reduced
+            # files outside temp folder. Temporary files to automatically remove.
+            "-s": OutputFile("RAxML_alignment", temporary=True),
+            "-q": OutputFile("RAxML_partitions", temporary=True),
+        }
+
+        command = AtomicCmd2(
+            "raxmlHPC",
+            extra_files=[
+                OutputFile(output_tree),
+                InputFile(input_alignment),
+                InputFile(input_partitions),
+                OutputFile("RAxML_info.Pypeline", temporary=True),
+            ],
+            requirements=[RAXML_VERSION],
+        )
+
+        command.append_options(options)
+
         CommandNode.__init__(
             self,
-            command=command.finalize(),
+            command=command,
             description="inferring parsimony phylogeny from %s using RAxML"
             % (input_alignment,),
             dependencies=dependencies,

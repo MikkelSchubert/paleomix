@@ -21,10 +21,7 @@
 # SOFTWARE.
 #
 from paleomix.node import CommandNode, NodeError
-from paleomix.atomiccmd.builder import (
-    AtomicCmdBuilder,
-    apply_options,
-)
+from paleomix.atomiccmd.command2 import AtomicCmd2, InputFile, OutputFile
 from paleomix.common.fileutils import reroot_path
 from paleomix.common.formats.msa import MSA, MSAError
 import paleomix.common.versions as versions
@@ -54,23 +51,21 @@ class MAFFTNode(CommandNode):
     def __init__(
         self, input_file, output_file, algorithm="auto", options={}, dependencies=()
     ):
-        command = AtomicCmdBuilder(
+        command = AtomicCmd2(
             _PRESETS[algorithm.lower()],
-            IN_FASTA=input_file,
-            OUT_STDOUT=output_file,
-            CHECK_VERSION=MAFFT_VERSION,
+            stdout=output_file,
+            requirements=[MAFFT_VERSION],
         )
 
-        apply_options(command, options)
-
+        command.append_options(options)
         # Needs to be specified after options and flags
-        command.add_value("%(IN_FASTA)s")
+        command.append(InputFile(input_file))
 
         self._output_file = output_file
 
         CommandNode.__init__(
             self,
-            command=command.finalize(),
+            command=command,
             description="aligning sequences in %s using MAFFT %s"
             % (input_file, algorithm),
             dependencies=dependencies,

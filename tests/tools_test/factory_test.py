@@ -74,7 +74,7 @@ def test_paleomix_command():
 @pytest.mark.parametrize("command", main._COMMANDS)
 def test_factory__command_usage(command):
     cmd = factory.new(command)
-    call = cmd.finalized_call
+    call = cmd.to_call("%(TEMP_DIR)s")
 
     stdout, stderr = check_run(call + ["--help"])
 
@@ -89,7 +89,7 @@ def test_factory__command_usage(command):
 @pytest.mark.parametrize("command", main._COMMANDS)
 def test_factory__command_versions(arg, command):
     cmd = factory.new(command)
-    call = cmd.finalized_call
+    call = cmd.to_call("%(TEMP_DIR)s")
 
     stdout, stderr = check_run(call + [arg])
 

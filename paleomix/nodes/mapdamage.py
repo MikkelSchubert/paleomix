@@ -25,12 +25,11 @@ import os
 import paleomix.common.rtools as rtools
 import paleomix.common.versions as versions
 
+from paleomix.atomiccmd.command2 import AtomicCmd2, InputFile, OutputFile
+from paleomix.atomiccmd.sets import ParallelCmds
 from paleomix.common.fileutils import describe_files
-
 from paleomix.node import NodeError, CommandNode
 from paleomix.nodes.samtools import merge_bam_files_command
-from paleomix.atomiccmd.builder import AtomicCmdBuilder, apply_options
-from paleomix.atomiccmd.sets import ParallelCmds
 
 
 MAPDAMAGE_VERSION = versions.Requirement(
@@ -57,48 +56,53 @@ class MapDamagePlotNode(CommandNode):
         options={},
         dependencies=(),
     ):
-        merge = merge_bam_files_command(input_files)
-        command = AtomicCmdBuilder(
-            [
-                "mapDamage",
-                "--no-stats",
-                # Prevent references with many contigs from using excessive
-                # amounts of memory, at the cost of per-contig statistics:
-                "--merge-reference-sequences",
-                "-t",
-                title,
-                "-i",
-                "-",
-                "-d",
-                "%(TEMP_DIR)s",
-                "-r",
-                "%(IN_REFERENCE)s",
+        merge = None
+        input_files = tuple(input_files)
+        if len(input_files) > 1:
+            merge = merge_bam_files_command(input_files)
+
+        command = AtomicCmd2(
+            ["mapDamage"],
+            stdin=merge,
+            stdout=OutputFile("pipe_mapDamage.stdout", temporary=True),
+            stderr=OutputFile("pipe_mapDamage.stderr", temporary=True),
+            extra_files=[
+                OutputFile(os.path.join(output_directory, "3pGtoA_freq.txt")),
+                OutputFile(os.path.join(output_directory, "5pCtoT_freq.txt")),
+                OutputFile(os.path.join(output_directory, "dnacomp.txt")),
+                OutputFile(
+                    os.path.join(output_directory, "Fragmisincorporation_plot.pdf")
+                ),
+                OutputFile(os.path.join(output_directory, "Length_plot.pdf")),
+                OutputFile(os.path.join(output_directory, "lgdistribution.txt")),
+                OutputFile(os.path.join(output_directory, "misincorporation.txt")),
+                OutputFile(os.path.join(output_directory, "Runtime_log.txt")),
             ],
-            IN_STDIN=merge,
-            IN_REFERENCE=reference,
-            OUT_FREQ_3p=os.path.join(output_directory, "3pGtoA_freq.txt"),
-            OUT_FREQ_5p=os.path.join(output_directory, "5pCtoT_freq.txt"),
-            OUT_COMP_USER=os.path.join(output_directory, "dnacomp.txt"),
-            OUT_PLOT_FRAG=os.path.join(
-                output_directory, "Fragmisincorporation_plot.pdf"
-            ),
-            OUT_PLOT_LEN=os.path.join(output_directory, "Length_plot.pdf"),
-            OUT_LENGTH=os.path.join(output_directory, "lgdistribution.txt"),
-            OUT_MISINCORP=os.path.join(output_directory, "misincorporation.txt"),
-            OUT_LOG=os.path.join(output_directory, "Runtime_log.txt"),
-            TEMP_OUT_STDOUT="pipe_mapDamage.stdout",
-            TEMP_OUT_STDERR="pipe_mapDamage.stderr",
-            CHECK_RSCRIPT=RSCRIPT_VERSION,
-            CHECK_MAPDAMAGE=MAPDAMAGE_VERSION,
+            requirements=[
+                RSCRIPT_VERSION,
+                MAPDAMAGE_VERSION,
+            ],
         )
 
-        apply_options(command, options)
+        command.merge_options(
+            user_options=options,
+            fixed_options={
+                "--no-stats": None,
+                # Prevent references with many contigs from using excessive
+                # amounts of memory, at the cost of per-contig statistics:
+                "--merge-reference-sequences": None,
+                "-t": title,
+                "-i": InputFile(input_files[0]) if merge is None else "-",
+                "-d": "%(TEMP_DIR)s",
+                "-r": InputFile(reference),
+            },
+        )
 
         CommandNode.__init__(
             self,
-            command=ParallelCmds([merge, command.finalize()]),
+            command=command if merge is None else ParallelCmds([merge, command]),
             description="creating mapDamage plots from %s"
-            % (describe_files(merge.input_files),),
+            % (describe_files(input_files),),
             dependencies=dependencies,
         )
 
@@ -118,48 +122,51 @@ class MapDamagePlotNode(CommandNode):
 
 class MapDamageModelNode(CommandNode):
     def __init__(self, reference, directory, options={}, dependencies=()):
-        command = AtomicCmdBuilder(
-            [
-                "mapDamage",
-                "--stats-only",
-                "-r",
-                "%(IN_REFERENCE)s",
-                "-d",
-                "%(TEMP_DIR)s",
+        command = AtomicCmd2(
+            ["mapDamage"],
+            extra_files=[
+                OutputFile("3pGtoA_freq.txt", temporary=True),
+                OutputFile("5pCtoT_freq.txt", temporary=True),
+                OutputFile("dnacomp.txt", temporary=True),
+                OutputFile("misincorporation.txt", temporary=True),
+                OutputFile("Runtime_log.txt", temporary=True),
+                OutputFile("pipe_mapDamage.stdout", temporary=True),
+                OutputFile("pipe_mapDamage.stderr", temporary=True),
+                OutputFile(os.path.join(directory, "dnacomp_genome.csv")),
+                OutputFile(os.path.join(directory, "Stats_out_MCMC_correct_prob.csv")),
+                OutputFile(os.path.join(directory, "Stats_out_MCMC_hist.pdf")),
+                OutputFile(os.path.join(directory, "Stats_out_MCMC_iter.csv")),
+                OutputFile(
+                    os.path.join(directory, "Stats_out_MCMC_iter_summ_stat.csv")
+                ),
+                OutputFile(os.path.join(directory, "Stats_out_MCMC_post_pred.pdf")),
+                OutputFile(os.path.join(directory, "Stats_out_MCMC_trace.pdf")),
             ],
-            IN_REFERENCE=reference,
-            TEMP_OUT_FREQ_3p="3pGtoA_freq.txt",
-            TEMP_OUT_FREQ_5p="5pCtoT_freq.txt",
-            TEMP_OUT_COMP_USER="dnacomp.txt",
-            TEMP_OUT_MISINCORP="misincorporation.txt",
-            TEMP_OUT_LOG="Runtime_log.txt",
-            TEMP_OUT_STDOUT="pipe_mapDamage.stdout",
-            TEMP_OUT_STDERR="pipe_mapDamage.stderr",
-            OUT_COMP_GENOME=os.path.join(directory, "dnacomp_genome.csv"),
-            OUT_MCMC_PROBS=os.path.join(directory, "Stats_out_MCMC_correct_prob.csv"),
-            OUT_MCMC_HIST=os.path.join(directory, "Stats_out_MCMC_hist.pdf"),
-            OUT_MCMC_ITER=os.path.join(directory, "Stats_out_MCMC_iter.csv"),
-            OUT_MCMC_ITERSUM=os.path.join(
-                directory, "Stats_out_MCMC_iter_summ_stat.csv"
-            ),
-            OUT_MCMC_POSTPRED=os.path.join(directory, "Stats_out_MCMC_post_pred.pdf"),
-            OUT_MCMC_TRACE=os.path.join(directory, "Stats_out_MCMC_trace.pdf"),
-            CHECK_RSCRIPT=RSCRIPT_VERSION,
-            CHECK_MAPDAMAGE=MAPDAMAGE_VERSION,
-            CHECK_R_INLINE=rtools.requirement("inline"),
-            CHECK_R_GGPLOT2=rtools.requirement("ggplot2"),
-            CHECK_R_RCPP=rtools.requirement("Rcpp"),
-            CHECK_R_GAM=rtools.requirement("gam"),
-            CHECK_R_RCPPGSL=rtools.requirement("RcppGSL"),
+            requirements=[
+                RSCRIPT_VERSION,
+                MAPDAMAGE_VERSION,
+                rtools.requirement("inline"),
+                rtools.requirement("ggplot2"),
+                rtools.requirement("Rcpp"),
+                rtools.requirement("gam"),
+                rtools.requirement("RcppGSL"),
+            ],
         )
 
-        apply_options(command, options)
+        command.merge_options(
+            user_options=options,
+            fixed_options={
+                "--stats-only": None,
+                "-r": InputFile(reference),
+                "-d": "%(TEMP_DIR)s",
+            },
+        )
 
         self._directory = directory
 
         CommandNode.__init__(
             self,
-            command=command.finalize(),
+            command=command,
             description="creating mapDamage model from %r" % (directory,),
             dependencies=dependencies,
         )
@@ -202,39 +209,38 @@ class MapDamageRescaleNode(CommandNode):
         options={},
         dependencies=(),
     ):
-        stats_out_fname = "Stats_out_MCMC_correct_prob.csv"
+        merge = None
+        input_files = tuple(input_files)
+        if len(input_files) > 1:
+            merge = merge_bam_files_command(input_files)
 
-        merge = merge_bam_files_command(input_files)
-        command = AtomicCmdBuilder(
-            [
-                "mapDamage",
-                "--rescale-only",
-                "-i",
-                "-",
-                "-d",
-                "%(TEMP_DIR)s",
-                "-r",
-                "%(IN_REFERENCE)s",
-                "--rescale-out",
-                "%(OUT_BAM)s",
+        command = AtomicCmd2(
+            ["mapDamage"],
+            stdin=merge,
+            extra_files=[
+                OutputFile("Runtime_log.txt", temporary=True),
+                OutputFile("Stats_out_MCMC_correct_prob.csv", temporary=True),
             ],
-            IN_STDIN=merge,
-            IN_REFERENCE=reference,
-            TEMP_OUT_LOG="Runtime_log.txt",
-            TEMP_OUT_CSV=stats_out_fname,
-            OUT_BAM=output_file,
-            CHECK_VERSION=MAPDAMAGE_VERSION,
+            requirements=[MAPDAMAGE_VERSION],
         )
 
-        apply_options(command, options)
+        command.merge_options(
+            user_options=options,
+            fixed_options={
+                "--rescale-only": None,
+                "-i": InputFile(input_files[0]) if merge is None else "-",
+                "-d": "%(TEMP_DIR)s",
+                "-r": InputFile(reference),
+                "--rescale-out": OutputFile(output_file),
+            },
+        )
 
         self._directory = directory
 
         CommandNode.__init__(
             self,
-            command=ParallelCmds([merge, command.finalize()]),
-            description="rescaling %s using mapDamage"
-            % (describe_files(merge.input_files),),
+            command=command if merge is None else ParallelCmds([merge, command]),
+            description="rescaling %s using mapDamage" % (describe_files(input_files),),
             dependencies=dependencies,
         )
 

@@ -27,13 +27,9 @@ Each node is equivalent to a particular command:
 """
 import os
 
+from paleomix.atomiccmd.command2 import AtomicCmd2, InputFile, OutputFile
 from paleomix.node import CommandNode, Node
-from paleomix.atomiccmd.command import AtomicCmd
 from paleomix.atomiccmd.sets import ParallelCmds
-from paleomix.atomiccmd.builder import (
-    AtomicCmdBuilder,
-    apply_options,
-)
 from paleomix.common.fileutils import describe_files, reroot_path, move_file
 from paleomix.nodes.samtools import merge_bam_files_command, BCFTOOLS_VERSION
 
@@ -45,19 +41,22 @@ class CoverageNode(CommandNode):
     def __init__(
         self, target_name, input_file, output_file, regions_file=None, dependencies=()
     ):
-        builder = factory.new("coverage")
-        builder.add_value("%(IN_BAM)s")
-        builder.add_value("%(OUT_FILE)s")
-        builder.set_option("--target-name", target_name)
-        builder.set_kwargs(IN_BAM=input_file, OUT_FILE=output_file)
+        command = factory.new(
+            [
+                "coverage",
+                InputFile(input_file),
+                OutputFile(output_file),
+                "--target-name",
+                target_name,
+            ]
+        )
 
         if regions_file:
-            builder.set_option("--regions-file", "%(IN_REGIONS)s")
-            builder.set_kwargs(IN_REGIONS=regions_file)
+            command.append("--regions-file", InputFile(regions_file))
 
         CommandNode.__init__(
             self,
-            command=builder.finalize(),
+            command=command,
             description="calculating coverage for %s" % (input_file,),
             dependencies=dependencies,
         )
@@ -97,21 +96,23 @@ class DepthHistogramNode(CommandNode):
     ):
         index_format = regions_file and prefix["IndexFormat"]
 
-        builder = factory.new("depths")
-        builder.add_value("%(IN_BAM)s")
-        builder.add_value("%(OUT_FILE)s")
-        builder.set_option("--target-name", target_name)
-        builder.set_kwargs(OUT_FILE=output_file, IN_BAM=input_file)
+        command = factory.new(
+            [
+                "depths",
+                InputFile(input_file),
+                OutputFile(output_file),
+                "--target-name",
+                target_name,
+            ],
+        )
 
         if regions_file:
-            builder.set_option("--regions-file", "%(IN_REGIONS)s")
-            builder.set_kwargs(
-                IN_REGIONS=regions_file, TEMP_IN_INDEX=input_file + index_format
-            )
+            command.append("--regions-file", InputFile(regions_file))
+            command.add_extra_files([InputFile(input_file + index_format)])
 
         CommandNode.__init__(
             self,
-            command=builder.finalize(),
+            command=command,
             description="calculating depth histogram for %s" % (input_file,),
             dependencies=dependencies,
         )
@@ -119,22 +120,25 @@ class DepthHistogramNode(CommandNode):
 
 class FilterCollapsedBAMNode(CommandNode):
     def __init__(self, input_bams, output_bam, keep_dupes=True, dependencies=()):
-        builder = factory.new("rmdup_collapsed", OUT_STDOUT=output_bam)
-        if not keep_dupes:
-            builder.set_option("--remove-duplicates")
-
         input_bams = tuple(input_bams)
         if len(input_bams) > 1:
             merge = merge_bam_files_command(input_bams)
-            builder.set_kwargs(IN_STDIN=merge)
-
-            command = ParallelCmds([merge, builder.finalize()])
+            markdup = factory.new(
+                "rmdup_collapsed",
+                stdin=merge,
+                stdout=output_bam,
+            )
+            command = ParallelCmds([merge, markdup])
         elif len(input_bams) == 1:
-            builder.set_kwargs(IN_STDIN=input_bams[0])
-
-            command = builder.finalize()
+            markdup = command = factory.new(
+                ["rmdup_collapsed", InputFile(input_bams[0])],
+                stdout=output_bam,
+            )
         else:
-            raise ValueError(input_bams)
+            raise ValueError("empty list of BAM files")
+
+        if not keep_dupes:
+            markdup.append("--remove-duplicates")
 
         CommandNode.__init__(
             self,
@@ -147,21 +151,24 @@ class FilterCollapsedBAMNode(CommandNode):
 
 class VCFFilterNode(CommandNode):
     def __init__(self, infile, outfile, regions, options, dependencies=()):
-        vcffilter = factory.new("vcf_filter")
-        vcffilter.add_value("%(IN_VCF)s")
+        vcffilter = factory.new(
+            ["vcf_filter", InputFile(infile)],
+            stdout=AtomicCmd2.PIPE,
+        )
 
-        for contig in regions["HomozygousContigs"]:
-            vcffilter.add_option("--homozygous-chromosome", contig)
-        vcffilter.set_kwargs(IN_VCF=infile, OUT_STDOUT=AtomicCmd.PIPE)
+        vcffilter.merge_options(
+            user_options=options,
+            fixed_options={
+                "--homozygous-chromosome": regions["HomozygousContigs"],
+            },
+        )
 
-        apply_options(vcffilter, options)
-
-        bgzip = AtomicCmdBuilder(["bgzip"], IN_STDIN=vcffilter, OUT_STDOUT=outfile)
+        bgzip = AtomicCmd2(["bgzip"], stdin=vcffilter, stdout=outfile)
 
         CommandNode.__init__(
             self,
             description="filtering VCF records in %s" % (infile,),
-            command=ParallelCmds([vcffilter.finalize(), bgzip.finalize()]),
+            command=ParallelCmds([vcffilter, bgzip]),
             dependencies=dependencies,
         )
 
@@ -177,66 +184,74 @@ class GenotypeRegionsNode(CommandNode):
         bcftools_options={},
         dependencies=(),
     ):
-        mpileup = AtomicCmdBuilder(
-            ("bcftools", "mpileup", "%(IN_BAMFILE)s"),
-            IN_BAMFILE=infile,
-            IN_INTERVALS=bedfile,
-            OUT_STDOUT=AtomicCmd.PIPE,
-            CHECK_VERSION=BCFTOOLS_VERSION,
+        mpileup = AtomicCmd2(
+            ("bcftools", "mpileup", InputFile(infile)),
+            stdout=AtomicCmd2.PIPE,
+            requirements=[BCFTOOLS_VERSION],
         )
 
-        # Ignore read-groups for pileup
-        mpileup.add_option("--ignore-RG")
-        # Reference sequence (FASTA)
-        mpileup.add_option("--fasta-ref", reference)
-        # Output compressed VCF
-        mpileup.add_option("--output-type", "u")
+        fixed_options = {
+            # Ignore read-groups for pileup
+            "--ignore-RG": None,
+            # Reference sequence (FASTA)
+            "--fasta-ref": reference,
+            # Output compressed VCF
+            "--output-type": "u",
+        }
 
         if bedfile:
-            mpileup.set_option("--regions-file", "%(IN_INTERVALS)s")
+            fixed_options["--regions-file"] = InputFile(bedfile)
 
-        apply_options(mpileup, mpileup_options)
-
-        genotype = AtomicCmdBuilder(
-            ("bcftools", "call", "-"),
-            IN_STDIN=mpileup,
-            IN_BAMFILE=infile,
-            OUT_STDOUT=outfile,
-            CHECK_VERSION=BCFTOOLS_VERSION,
+        mpileup.merge_options(
+            user_options=mpileup_options,
+            fixed_options=fixed_options,
         )
 
-        genotype.set_option("--output-type", "z")
+        genotype = AtomicCmd2(
+            ("bcftools", "call", "-"),
+            stdin=mpileup,
+            stdout=outfile,
+            requirements=[BCFTOOLS_VERSION],
+        )
 
-        apply_options(genotype, bcftools_options)
+        genotype.merge_options(
+            user_options=bcftools_options,
+            fixed_options={
+                "--output-type": "z",
+            },
+        )
 
         CommandNode.__init__(
             self,
             description="calling genotypes from %s" % (infile,),
-            command=ParallelCmds([mpileup.finalize(), genotype.finalize()]),
+            command=ParallelCmds([mpileup, genotype]),
             dependencies=dependencies,
         )
 
 
 class BuildRegionsNode(CommandNode):
     def __init__(self, infile, bedfile, outfile, padding, options={}, dependencies=()):
-        params = factory.new("vcf_to_fasta")
-        params.set_option("--padding", padding)
-        params.set_option("--genotype", "%(IN_VCFFILE)s")
-        params.set_option("--intervals", "%(IN_INTERVALS)s")
-
-        params.set_kwargs(
-            IN_VCFFILE=infile,
-            IN_TABIX=infile + ".tbi",
-            IN_INTERVALS=bedfile,
-            OUT_STDOUT=outfile,
+        command = factory.new(
+            "vcf_to_fasta",
+            stdout=outfile,
+            extra_files=[
+                InputFile(infile + ".tbi"),
+            ],
         )
 
-        apply_options(params, options)
+        command.merge_options(
+            user_options=options,
+            fixed_options={
+                "--padding": padding,
+                "--genotype": InputFile(infile),
+                "--intervals": InputFile(bedfile),
+            },
+        )
 
         CommandNode.__init__(
             self,
             description="building FASTA from %s" % (infile,),
-            command=params.finalize(),
+            command=command,
             dependencies=dependencies,
         )
 
@@ -244,16 +259,21 @@ class BuildRegionsNode(CommandNode):
 class PaddedBedNode(CommandNode):
     def __init__(self, infile, outfile, fai_file, amount=0, dependencies=()):
         command = factory.new(
-            [":bedtools", "pad", "--padding", amount, "%(IN_FAI)s", "%(IN_BED)s"],
-            IN_FAI=fai_file,
-            IN_BED=infile,
-            OUT_STDOUT=outfile,
+            [
+                ":bedtools",
+                "pad",
+                "--padding",
+                amount,
+                InputFile(fai_file),
+                InputFile(infile),
+            ],
+            stdout=outfile,
         )
 
         CommandNode.__init__(
             self,
             description="padding BED records (%+i) in %s" % (amount, infile),
-            command=command.finalize(),
+            command=command,
             dependencies=dependencies,
         )
 
@@ -268,35 +288,30 @@ class FinalizeBAMNode(CommandNode):
         options={},
         dependencies=(),
     ):
-        builder = factory.new(
-            [
-                "ngs:finalize_bam",
-                "--out-passed",
-                "%(OUT_PASSED)s",
-                "--out-failed",
-                "%(OUT_FAILED)s",
-                "--out-json",
-                "%(OUT_JSON)s",
-            ],
-            OUT_PASSED=out_passed,
-            OUT_FAILED=out_failed,
-            OUT_JSON=out_json,
-        )
-
-        apply_options(builder, options)
-
         in_bams = tuple(in_bams)
         if len(in_bams) > 1:
             merge = merge_bam_files_command(in_bams)
-            builder.set_kwargs(IN_STDIN=merge)
+            finalize = factory.new(
+                "ngs:finalize_bam",
+                stdin=merge,
+            )
 
-            command = ParallelCmds([merge, builder.finalize()])
+            command = ParallelCmds([merge, finalize])
         elif len(in_bams) == 1:
-            builder.set_kwargs(IN_STDIN=in_bams[0])
-
-            command = builder.finalize()
+            finalize = command = factory.new(
+                ["ngs:finalize_bam", InputFile(in_bams[0])]
+            )
         else:
             raise ValueError(in_bams)
+
+        finalize.merge_options(
+            user_options=options,
+            fixed_options={
+                "--out-passed": OutputFile(out_passed),
+                "--out-failed": OutputFile(out_failed),
+                "--out-json": OutputFile(out_json),
+            },
+        )
 
         CommandNode.__init__(
             self,

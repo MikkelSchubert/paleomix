@@ -180,21 +180,23 @@ def _cleanup_unmapped(args):
 
 
 def _build_wrapper_command(args):
-    bam_cleanup = paleomix.tools.factory.new("cleanup")
-    bam_cleanup.set_option("--fasta", args.fasta)
-    bam_cleanup.set_option("--temp-prefix", args.temp_prefix)
-    bam_cleanup.set_option("--min-quality", str(args.min_quality))
-    bam_cleanup.set_option("--exclude-flags", hex(args.exclude_flags))
+    command = paleomix.tools.factory.new("cleanup")
 
-    for value in args.update_pg_tag:
-        bam_cleanup.add_option("--update-pg-tag", value)
+    options = {
+        "--fasta": args.fasta,
+        "--temp-prefix": args.temp_prefix,
+        "--min-quality": str(args.min_quality),
+        "--exclude-flags": hex(args.exclude_flags),
+        "--update-pg-tag": args.update_pg_tag,
+    }
 
     if args.rg_id is not None:
-        bam_cleanup.set_option("--rg-id", args.rg_id)
-        for value in args.rg:
-            bam_cleanup.add_option("--rg", value)
+        options["--rg-id"] = args.rg_id
+        options["--rg"] = args.rg
 
-    return bam_cleanup.call
+    command.append_options(options)
+
+    return command.to_call("%(TEMP_DIR)s")
 
 
 def _distribute_threads(nthreads):

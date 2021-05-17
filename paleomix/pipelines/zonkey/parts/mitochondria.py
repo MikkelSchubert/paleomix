@@ -25,7 +25,7 @@ import os
 import paleomix.common.rtools as rtools
 import paleomix.tools.factory as factory
 
-from paleomix.atomiccmd.command import AtomicCmd
+from paleomix.atomiccmd.command2 import AtomicCmd2, AuxilleryFile, InputFile, OutputFile
 from paleomix.common.formats.newick import Newick
 from paleomix.node import CommandNode
 
@@ -34,52 +34,50 @@ from paleomix.pipelines.zonkey.common import RSCRIPT_VERSION
 
 class MitoConsensusNode(CommandNode):
     def __init__(self, database, bamfile, output_prefix, dependencies=()):
-        cmd = factory.new("zonkey:mito")
-        cmd.add_value("%(IN_DATABASE)s")
-        cmd.add_value("%(IN_BAMFILE)s")
-        cmd.add_value("%(TEMP_OUT_PREFIX)s")
-
-        cmd.set_kwargs(
-            IN_DATABASE=database,
-            IN_BAMFILE=bamfile,
-            TEMP_OUT_PREFIX=os.path.basename(output_prefix),
-            OUT_PHYLIP=output_prefix + ".phy",
-            OUT_FASTA=output_prefix + ".fasta",
-            OUT_SUMMARY=output_prefix + ".summary",
+        command = factory.new(
+            [
+                "zonkey:mito",
+                InputFile(database),
+                InputFile(bamfile),
+                OutputFile(os.path.basename(output_prefix), temporary=True),
+            ],
+            extra_files=[
+                OutputFile(output_prefix + ".phy"),
+                OutputFile(output_prefix + ".fasta"),
+                OutputFile(output_prefix + ".summary"),
+            ],
         )
 
         CommandNode.__init__(
             self,
             description="building consensus mitochondria from %s" % (bamfile,),
-            command=cmd.finalize(),
+            command=command,
             dependencies=dependencies,
         )
 
 
 class DrawPhylogenyNode(CommandNode):
     def __init__(self, samples, treefile, bootstraps, output_prefix, dependencies=()):
-        rscript = rtools.rscript("zonkey", "tinytree.r")
-
-        cmd = AtomicCmd(
+        command = AtomicCmd2(
             (
                 "Rscript",
-                rscript,
-                "%(TEMP_OUT_FILE)s",
-                "%(IN_SAMPLES)s",
-                "%(TEMP_OUT_PREFIX)s",
+                AuxilleryFile(rtools.rscript("zonkey", "tinytree.r")),
+                # Temporary file generated in _setup
+                OutputFile("rerooted.newick", temporary=True),
+                InputFile(samples),
+                OutputFile(os.path.basename(output_prefix), temporary=True),
             ),
-            AUX_RSCRIPT=rscript,
-            IN_SAMPLES=samples,
-            IN_FILE=treefile,
-            IN_BOOTSTRAPS=bootstraps,
-            TEMP_OUT_FILE="rerooted.newick",
-            TEMP_OUT_PREFIX=os.path.basename(output_prefix),
-            OUT_TREE_PDF=output_prefix + ".pdf",
-            OUT_TREE_PNG=output_prefix + ".png",
-            CHECK_RSCRIPT=RSCRIPT_VERSION,
-            CHECK_RSCRIPT_APE=rtools.requirement("ape"),
-            CHECK_RSCRIPT_GGPLOT2=rtools.requirement("ggplot2"),
-            CHECK_RSCRIPT_GRID=rtools.requirement("grid"),
+            extra_files=[
+                InputFile(bootstraps),
+                OutputFile(output_prefix + ".pdf"),
+                OutputFile(output_prefix + ".png"),
+            ],
+            requirements=[
+                RSCRIPT_VERSION,
+                rtools.requirement("ape"),
+                rtools.requirement("ggplot2"),
+                rtools.requirement("grid"),
+            ],
         )
 
         self._treefile = treefile
@@ -88,7 +86,7 @@ class DrawPhylogenyNode(CommandNode):
         CommandNode.__init__(
             self,
             description="drawing phylogeny in %s" % (treefile,),
-            command=cmd,
+            command=command,
             dependencies=dependencies,
         )
 
