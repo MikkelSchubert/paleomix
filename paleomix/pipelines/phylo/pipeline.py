@@ -106,23 +106,7 @@ def _main_pipeline(config):
         if "Nodes" in makefile:
             pipeline.add_nodes(makefile["Nodes"])
 
-    if config.list_input_files:
-        log.info("Printing output files")
-        pipeline.print_input_files()
-        return 0
-    elif config.list_output_files:
-        log.info("Printing output files")
-        pipeline.print_output_files()
-        return 0
-    elif config.list_executables:
-        log.info("Printing required executables")
-        pipeline.print_required_executables()
-        return 0
-
-    if not pipeline.run(max_threads=config.max_threads, dry_run=config.dry_run):
-        return 1
-
-    return 0
+    return pipeline.run(max_threads=config.max_threads, mode=config.pipeline_mode)
 
 
 def _main_template(_config):

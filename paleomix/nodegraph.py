@@ -110,6 +110,7 @@ class NodeGraph:
         self,
         nodes,
         implicit_dependencies=False,
+        software_checks=True,
         cache_factory=FileStatusCache,
     ):
         self._implicit_dependencies = implicit_dependencies
@@ -138,16 +139,16 @@ class NodeGraph:
                 "https://paleomix.readthedocs.io/en/stable/"
             )
 
-        self._logger.info("Checking required software")
-        if not self._check_version_requirements(self._reverse_dependencies):
-            raise NodeGraphError(
-                "Please refer to the PALEOMIX installation instructions at "
-                "https://paleomix.readthedocs.io/en/stable/"
-            )
+        if software_checks:
+            self._logger.info("Checking required software")
+            if not self._check_version_requirements(self._reverse_dependencies):
+                raise NodeGraphError(
+                    "Please refer to the PALEOMIX installation instructions at "
+                    "https://paleomix.readthedocs.io/en/stable/"
+                )
 
-        self._logger.info("Determining states")
+        self._logger.info("Determining state of pipeline tasks")
         self._refresh_states()
-        self._logger.info("Ready")
 
     def get_node_state(self, node):
         return self._states[node]

@@ -69,13 +69,7 @@ def _main_run(args):
 
     pipeline.add_nodes(nodes)
 
-    if args.list_output_files:
-        logger.info("Printing output files")
-        pipeline.print_output_files()
-        return 0
-
-    logger.info("Running pipeline")
-    return not pipeline.run(dry_run=args.dry_run, max_threads=args.max_threads)
+    return pipeline.run(mode=args.pipeline_mode, max_threads=args.max_threads)
 
 
 def _main_new(args):

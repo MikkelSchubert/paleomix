@@ -45,32 +45,6 @@ from paleomix.nodes.samtools import BAMIndexNode
 from paleomix.pipeline import Pypeline
 
 
-def run_pipeline(config, nodes, msg):
-    pipeline = Pypeline(config)
-    pipeline.add_nodes(nodes)
-
-    paleomix.common.logging.initialize(
-        log_level=config.log_level,
-        log_file=config.log_file,
-        auto_log_file="zonkey",
-    )
-
-    logger = logging.getLogger(__name__)
-    logger.info(msg)
-
-    if config.list_executables:
-        pipeline.print_required_executables()
-        return True
-    elif config.list_output_files:
-        pipeline.print_output_files()
-        return True
-    elif config.list_input_files:
-        pipeline.print_input_files()
-        return True
-
-    return pipeline.run(max_threads=config.max_threads, dry_run=config.dry_run)
-
-
 def build_plink_nodes(config, data, root, bamfile, dependencies=()):
     plink = {"root": os.path.join(root, "results", "plink")}
 
@@ -362,8 +336,16 @@ def run_admix_pipeline(config):
     if config.multisample and not config.admixture_only:
         nodes = [summary.SummaryNode(config, nodes)]
 
-    if not run_pipeline(config, nodes, "Running Zonkey"):
-        return 1
+    pipeline = Pypeline(config)
+    pipeline.add_nodes(nodes)
+
+    paleomix.common.logging.initialize(
+        log_level=config.log_level,
+        log_file=config.log_file,
+        auto_log_file="zonkey",
+    )
+
+    return pipeline.run(max_threads=config.max_threads, mode=config.pipeline_mode)
 
 
 def setup_mito_mapping(config):
