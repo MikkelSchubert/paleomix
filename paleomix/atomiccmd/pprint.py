@@ -61,8 +61,6 @@ def _collect_stats(atomiccmd, stats):
             stats["pipe"][pipe] = atomiccmd
     elif _is_cls(atomiccmd, "AtomicCmd2"):
         stats["id"][atomiccmd] = len(stats["id"]) + 1
-        if _is_cls(atomiccmd._stdin, "AtomicCmd2"):
-            stats["pipe"][pipe] = atomiccmd
     elif _is_cls(atomiccmd, "ParallelCmds", "SequentialCmds"):
         for subcmd in atomiccmd._commands:
             _collect_stats(subcmd, stats)
@@ -105,7 +103,7 @@ def _build_stdin2(atomiccmd, stats, indent, lines):
     pipe = atomiccmd._stdin
     prefix = "%s%s   = " % (" " * indent, "stdin")
     if atomiccmd._stdin in stats["id"]:
-        lines.append("%sPiped from process %i" % (prefix, stats["id"][atomiccmd]))
+        lines.append("%sPiped from process %i" % (prefix, stats["id"][pipe]))
     elif _is_cls(pipe, "InputFile"):
         temp = "${TEMP_DIR}" if atomiccmd._temp is None else atomiccmd._temp
         path = atomiccmd._to_path(temp, pipe)
