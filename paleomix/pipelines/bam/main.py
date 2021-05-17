@@ -19,8 +19,8 @@ def main(argv, pipeline="bam"):
     elif args.command in ("example",):
         return paleomix.resources.copy_example("bam_pipeline", args)
 
-    if args.command.startswith("dry"):
-        args.dry_run = True
+    if args.command.startswith("dry") and args.pipeline_mode == "run":
+        args.pipeline_mode = "dry_run"
 
     return bam_pipeline.run(args, pipeline_variant=pipeline)
 

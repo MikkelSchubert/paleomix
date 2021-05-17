@@ -312,7 +312,7 @@ def run_admix_pipeline(config):
     log = logging.getLogger(__name__)
     log.info("Building %i Zonkey pipeline(s):", len(config.samples))
     config.temp_root = os.path.join(config.destination, "temp")
-    if not config.dry_run:
+    if config.pipeline_mode == "run":
         fileutils.make_dirs(config.temp_root)
 
     cache = {}
@@ -566,7 +566,8 @@ def finalize_run_config(parser, args):
         parser.print_usage()
         return
 
-    args.dry_run |= args.command == "dryrun"
+    if args.command == "dryrun":
+        args.pipeline_mode = "dry_run"
     args.multisample = False
 
     known_samples = set(args.database.samples) | set(("Sample",))
