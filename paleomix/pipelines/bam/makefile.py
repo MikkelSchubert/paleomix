@@ -158,9 +158,9 @@ _VALIDATION_OPTIONS = {
         "--minquality": IsUnsignedInt,
         "--trimns": Or(IsNone, IsBoolean),
         "--trimqualities": Or(IsNone, IsBoolean),
-        "--collapse": Or(IsNone, IsBoolean, default=True),
-        "--mm": Or(IsFloat, IsUnsignedInt, default=3),
-        "--minlength": IsUnsignedInt(default=25),
+        "--collapse": Or(IsNone, IsBoolean),
+        "--mm": Or(IsFloat, IsUnsignedInt),
+        "--minlength": IsUnsignedInt,
         "--maxlength": IsUnsignedInt,
         "--minalignmentlength": IsUnsignedInt,
         "--minadapteroverlap": IsUnsignedInt,
@@ -293,6 +293,14 @@ def _migrate_options(options):
             features["mapDamage"] = "rescale"
         elif features.get("mapDamage") not in ("model", "plot"):
             features["mapDamage"] = False
+
+    adapterremoval = options.get("AdapterRemoval", {})
+    for key, value in tuple(adapterremoval.items()):
+        if isinstance(value, bool):
+            if value:
+                adapterremoval[key] = None
+            else:
+                adapterremoval.pop(key)
 
 
 def _mangle_options(makefile):
