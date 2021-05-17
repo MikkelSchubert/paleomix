@@ -29,7 +29,7 @@ import paleomix.tools.factory as factory
 from paleomix.atomiccmd.command2 import AtomicCmd2, InputFile, OutputFile
 from paleomix.atomiccmd.sets import ParallelCmds
 from paleomix.common.fileutils import describe_paired_files
-from paleomix.node import CommandNode, NodeError
+from paleomix.node import CommandNode
 from paleomix.nodes.samtools import SAMTOOLS_VERSION
 
 
@@ -295,8 +295,6 @@ def _new_cleanup_command(
 
 
 def _new_bwa_command(call, reference, iotype=InputFile, **kwargs):
-    _check_bwa_prefix(reference)
-
     return AtomicCmd2(
         call,
         extra_files=[
@@ -320,26 +318,6 @@ def _get_max_threads(reference, threads):
         return 1
 
     return threads
-
-
-@functools.lru_cache()
-def _check_bwa_prefix(prefix):
-    """Checks that a given prefix is compatible with the currently required version of
-    BWA. Older index files are incompatible with BWA v0.7.x, but may be identified by
-    the presense of a small number of additional files not present when an index is
-    produced using BWA v0.7.x.
-    """
-    if any(os.path.exists(prefix + ext) for ext in (".rbwt", ".rpac", ".rsa.")):
-        filenames = "\n".join(
-            "    %s.%s" % (prefix, ext)
-            for ext in ("amb", "ann", "bwt", "pac", "sa", "rbwt", "rpac", "rsa")
-        )
-
-        raise NodeError(
-            "Prefix appears to be created using BWA v0.5.x or older, but PALEOMIX only "
-            "supports BWA v0.7.x or later.\nPlease remove the following files to allow "
-            "PALEOMIX to re-index the FASTA file:\n%s" % (filenames,)
-        )
 
 
 def _get_node_description(name, input_files_1, reference, input_files_2=None):
