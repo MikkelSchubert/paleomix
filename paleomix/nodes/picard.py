@@ -7,11 +7,12 @@ https://broadinstitute.github.io/picard/
 import os
 import getpass
 
-from paleomix.node import CommandNode
-from paleomix.atomiccmd.builder import AtomicJavaCmdBuilder
-from paleomix.common.fileutils import swap_ext, try_rmtree
 import paleomix.common.versions as versions
 import paleomix.common.system
+
+from paleomix.atomiccmd.command2 import AtomicCmd2, AuxilleryFile, InputFile, OutputFile
+from paleomix.node import CommandNode
+from paleomix.common.fileutils import swap_ext, try_rmtree
 
 
 class PicardNode(CommandNode):
@@ -31,25 +32,6 @@ class PicardNode(CommandNode):
         CommandNode._teardown(self, config, temp)
 
 
-class CreateSequenceDictionaryNode(PicardNode):
-    def __init__(self, config, in_reference, dependencies=()):
-        builder = picard_command(config, "CreateSequenceDictionary")
-
-        builder.set_option("R", "%(IN_REFERENCE)s", sep="=")
-        builder.set_option("O", "%(OUT_DICTIONARY)s", sep="=")
-        builder.set_kwargs(
-            IN_REFERENCE=in_reference,
-            OUT_DICTIONARY=swap_ext(in_reference, ".dict"),
-        )
-
-        PicardNode.__init__(
-            self,
-            command=builder.finalize(),
-            description="creating sequence dictionary for {!r}".format(in_reference),
-            dependencies=dependencies,
-        )
-
-
 class ValidateBAMNode(PicardNode):
     def __init__(
         self,
@@ -61,33 +43,40 @@ class ValidateBAMNode(PicardNode):
         big_genome_mode=False,
         dependencies=(),
     ):
-        builder = picard_command(config, "ValidateSamFile")
-        _set_max_open_files(builder, "MAX_OPEN_TEMP_FILES")
+        command = _picard_command(
+            config,
+            [
+                "ValidateSamFile",
+                "--INPUT",
+                InputFile(input_bam),
+                "--OUTPUT",
+                OutputFile(output_log or swap_ext(input_bam, ".validated")),
+            ],
+        )
+
+        for check in ignored_checks:
+            command.append("--IGNORE", check)
 
         if big_genome_mode:
-            self._configure_for_big_genome(config, builder)
+            self._configure_for_big_genome(config, command)
 
-        builder.set_option("I", "%(IN_BAM)s", sep="=")
-        for check in ignored_checks:
-            builder.add_option("IGNORE", check, sep="=")
+        _set_max_open_files(command)
 
-        output_log = output_log or swap_ext(input_bam, ".validated")
-        builder.set_kwargs(
-            IN_BAM=input_bam, IN_INDEX=input_index, OUT_STDOUT=output_log
-        )
+        if input_index is not None:
+            command.add_extra_files([InputFile(input_index)])
 
         PicardNode.__init__(
             self,
-            command=builder.finalize(),
+            command=command,
             description="validating %s" % (input_bam,),
             dependencies=dependencies,
         )
 
     @staticmethod
-    def _configure_for_big_genome(config, builder):
+    def _configure_for_big_genome(config, command):
         # CSI uses a different method for assigning BINs to records, which
         # Picard currently does not support.
-        builder.add_option("IGNORE", "INVALID_INDEXING_BIN", sep="=")
+        command.append("--IGNORE", "INVALID_INDEXING_BIN")
 
         jar_path = os.path.join(config.jar_root, _PICARD_JAR)
         version_check = _PICARD_VERSION_CACHE[jar_path]
@@ -95,7 +84,7 @@ class ValidateBAMNode(PicardNode):
         try:
             if version_check.version >= (2, 19, 0):
                 # Useless warning, as we do not build BAI indexes for large genomes
-                builder.add_option("IGNORE", "REF_SEQ_TOO_LONG_FOR_BAI", sep="=")
+                command.append("--IGNORE", "REF_SEQ_TOO_LONG_FOR_BAI")
         except versions.VersionRequirementError:
             pass  # Ignored here, handled elsewhere
 
@@ -106,38 +95,71 @@ _PICARD_JAR = "picard.jar"
 _PICARD_VERSION_CACHE = {}
 
 
-def picard_command(config, command):
+def _picard_command(config, args):
     """Returns basic AtomicJavaCmdBuilder for Picard tools commands."""
     jar_path = os.path.join(config.jar_root, _PICARD_JAR)
 
     if jar_path not in _PICARD_VERSION_CACHE:
-        params = AtomicJavaCmdBuilder(
-            jar_path, temp_root=config.temp_root, jre_options=config.jre_options
+        command = _java_cmd(
+            jar_path,
+            temp_root=config.temp_root,
+            jre_options=config.jre_options,
         )
 
         # Arbitrary command, since just '--version' does not work
-        params.set_option("MarkDuplicates")
-        params.set_option("--version")
+        command.append("MarkDuplicates", "--version")
 
         requirement = versions.Requirement(
-            call=params.finalized_call,
+            call=command.to_call("%(TEMP_DIR)s"),
             name="Picard tools",
-            search=r"\b(\d+)\.(\d+)\.\d+",
-            checks=versions.GE(1, 137),
+            search=r"\b(\d+)\.(\d+)\.(\d+)",
+            checks=versions.GE(2, 10, 8),
         )
         _PICARD_VERSION_CACHE[jar_path] = requirement
 
     version = _PICARD_VERSION_CACHE[jar_path]
-    params = AtomicJavaCmdBuilder(
+    command = _java_cmd(
         jar_path,
         temp_root=config.temp_root,
         jre_options=config.jre_options,
-        CHECK_JAR=version,
+        requirements=[version],
         set_cwd=True,
     )
-    params.set_option(command)
 
-    return params
+    command.append(*args)
+
+    return command
+
+
+def _java_cmd(jar, jre_options=(), temp_root="%(TEMP_DIR)s", gc_threads=1, **kwargs):
+    call = [
+        "java",
+        "-server",
+        "-Djava.io.tmpdir=%s" % temp_root,
+        "-Djava.awt.headless=true",
+        "-Dpicard.useLegacyParser=false",
+    ]
+
+    if not isinstance(gc_threads, int):
+        raise TypeError("'gc_threads' must be an integer value, not %r" % (gc_threads,))
+    elif gc_threads > 1:
+        call.append("-XX:ParallelGCThreads=%i" % gc_threads)
+    elif gc_threads == 1:
+        call.append("-XX:+UseSerialGC")
+    else:
+        raise ValueError("'gc_threads' must be a 1 or greater, not %r" % gc_threads)
+
+    call.extend(jre_options)
+
+    # Only set -Xmx if no user-supplied setting is given
+    if not any(opt.startswith("-Xmx") for opt in call):
+        # Our experience is that the default -Xmx value tends to cause OutOfMemory
+        # exceptions with typical datasets, so require at least 4gb.
+        call.append("-Xmx4g")
+
+    call.extend(("-jar", AuxilleryFile(jar)))
+
+    return AtomicCmd2(call, **kwargs)
 
 
 # Fraction of per-process max open files to use
@@ -146,7 +168,7 @@ _FRAC_MAX_OPEN_FILES = 0.95
 _DEFAULT_MAX_OPEN_FILES = 8000
 
 
-def _set_max_open_files(params, key):
+def _set_max_open_files(command):
     """Sets the maximum number of open files a picard process
     should use, at most. Conservatively lowered than the actual
     ulimit.
@@ -156,4 +178,4 @@ def _set_max_open_files(params, key):
         max_open_files = int(max_open_files * _FRAC_MAX_OPEN_FILES)
 
         if max_open_files < _DEFAULT_MAX_OPEN_FILES:
-            params.set_option(key, max_open_files, sep="=")
+            command.append("--MAX_OPEN_TEMP_FILES", max_open_files)
