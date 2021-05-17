@@ -377,8 +377,9 @@ def test_atomiccmd2__stderr_invalid_values(value):
         AtomicCmd2("true", stderr=value)
 
 
-def test_atomiccmd2__stdout_implicit_filename(tmp_path):
-    cmd = AtomicCmd2(("echo", "foo"))
+@pytest.mark.parametrize("exe", ("echo", "/bin/echo"))
+def test_atomiccmd2__stdout_implicit_filename(exe, tmp_path):
+    cmd = AtomicCmd2((exe, "foo"))
     cmd.run(tmp_path)
     assert cmd.join() == [0]
 
@@ -399,8 +400,9 @@ def test_atomiccmd2__stdout_explicit_filename(tmp_path):
     assert stderr_path.read_text() == ""
 
 
-def test_atomiccmd2__stderr_implicit_filename(tmp_path):
-    cmd = AtomicCmd2(("bash", "-c", "echo foo > /dev/stderr"))
+@pytest.mark.parametrize("exe", ("bash", "/bin/bash"))
+def test_atomiccmd2__stderr_implicit_filename(exe, tmp_path):
+    cmd = AtomicCmd2((exe, "-c", "echo foo > /dev/stderr"))
     cmd.run(tmp_path)
     assert cmd.join() == [0]
 

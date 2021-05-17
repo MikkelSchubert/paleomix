@@ -448,7 +448,7 @@ class AtomicCmd2:
             if default is None:
                 return None
 
-            executable = self._command[0]
+            executable = os.path.basename(self._command[0])
             # TODO: Use more sensible filename, e.g. log_{exec}_{counter}.{stdout/err}
             filename = "pipe_%s_%i.%s" % (executable, id(self), default)
 
