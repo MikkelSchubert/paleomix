@@ -32,7 +32,7 @@ _MIN_PADDING = 4
 _WHITESPACE_OR_EMPTY = re.compile(r"\s|^$")
 
 
-def padded_table(table):
+def padded_table(table, min_padding=_MIN_PADDING):
     """Takes a sequence of iterables, each of which represents a row in a
     table. Values are converted to string, and padded with whitespace such that
     each column is separated from its adjacent columns by at least 4 spaces.
@@ -54,7 +54,7 @@ def padded_table(table):
 
         str_rows.append(row)
 
-    sizes = [(size + _MIN_PADDING) for size in max_sizes]
+    sizes = [(size + min_padding) for size in max_sizes]
     for row in str_rows:
         if not isinstance(row, str):
             row = "".join(
