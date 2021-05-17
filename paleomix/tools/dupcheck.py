@@ -1,253 +1,256 @@
 #!/usr/bin/env python3
 # -*- coding: utf8 -*-
 import collections
-import heapq
-import shlex
 import sys
+
+from itertools import groupby
 
 import pysam
 
-from paleomix.common.argparse import ArgumentParser, SUPPRESS
-from paleomix.common.sequences import reverse_complement
+from paleomix.common.argparse import ArgumentParser
+from paleomix.common.timer import BAMTimer
+from paleomix.common.text import padded_table
 
 
-class PipelineHandler:
-    def __init__(self, input_files, output_file, quiet):
-        self.duplicate_reads = 0
-        self.input_files = input_files
-        self.output_file = output_file
-        self.quiet = quiet
-
-    def __call__(self, chrom, pos, records, name, seq, qual):
-        self.duplicate_reads += 1
-        if self.quiet or self.duplicate_reads > 1:
-            return
-
-        print("Read was found multiple times:")
-        print("    Name:      ", name)
-        print("    Sequence:  ", seq)
-        print("    Qualities: ", qual)
-        print("    Contig:    ", chrom)
-        print("    Position:  ", pos)
-        print()
-
-        print("Read was found in these BAM files:")
-        for filename, records in sorted(records.items()):
-            print("   %s in %r" % (_summarize_reads(records), filename))
-
-        print()
-        print()
-
-    def finalize(self):
-        if not self.duplicate_reads:
-            print("No duplicate reads found.")
-            return True
-
-        print("A total of", self.duplicate_reads, "reads with duplicates were found.")
-        print()
-        print("This indicates that the same data has been included multiple times in")
-        print("the project. This can be because multiple copies of the same files were")
-        print("used, or because one or more files contain multiple copies of the same ")
-        print("reads.")
-        print()
-        print("The 'paleomix dupcheck' command may be used to review the potentially ")
-        print("duplicated data in these BAM files:")
-        print()
-        print("    $ paleomix dupcheck", " ".join(map(shlex.quote, self.input_files)))
-        print()
-        print()
-        print("If this error was a false positive, then you may execute the following ")
-        print("command to mark this test as having succeeded:")
-        print()
-        print("    $ touch", shlex.quote(self.output_file))
-
-        return False
+def key_with_name(record):
+    return (record.query_name, record.reference_id, record.reference_start)
 
 
-class CLIHandler:
-    def __init__(self, quiet=False):
-        self.quiet = quiet
-        self.duplicate_reads = 0
+def key_without_name(record):
+    return (record.reference_id, record.reference_start)
 
-    def __call__(self, chrom, pos, records, name, seq, qual):
-        self.duplicate_reads += 1
-        if self.quiet:
-            return
 
-        print("%s:%i -- %s %s %s:" % (chrom, pos, name, seq, qual))
-        for filename, records in sorted(records.items()):
-            print("    - %s:" % (filename,))
-
-            for idx, record in enumerate(records, start=1):
-                print("% 8i. " % (idx,), end="")
-
-                if record.is_paired:
-                    if record.is_read1:
-                        print("Mate 1 read", end="")
-                    elif record.is_read2:
-                        print("Mate 2 read", end="")
-                    else:
-                        print("Unpaired read", end="")
-                else:
-                    print("Unpaired read", end="")
-
-                try:
-                    print(" with read-group %r" % (record.get_tag("RG"),), end="")
-                except KeyError:
-                    pass
-
-                print()
-
-    def finalize(self):
-        if self.quiet:
-            print("%i" % (self.duplicate_reads,))
+def read_type(record):
+    if record.is_paired:
+        if record.is_read1:
+            return "Mate 1 read in"
+        elif record.is_read2:
+            return "Mate 2 read in"
         else:
-            print("Found %i record(s) with duplicates." % (self.duplicate_reads,))
-
-        return not self.duplicate_reads
-
-
-def _open_samfiles(handles, filenames):
-    sequences = []
-    for filename in filenames:
-        handle = pysam.AlignmentFile(filename)
-        handles.append(handle)
-
-        sequences.append(_read_samfile(handle, filename))
-
-    return heapq.merge(*sequences, key=_key_by_tid_pos)
+            return "Unpaired read in"
+    else:
+        return "Unpaired read in"
 
 
-def _read_samfile(handle, filename):
-    for record in handle:
-        if record.is_unmapped and (not record.pos or record.mate_is_unmapped):
-            # Ignore unmapped reads except when these are sorted
-            # according to the mate position (if mapped)
-            continue
-        elif record.flag & 0x900:
-            # Ignore supplementary / secondary alignments
-            continue
+def print_duplicates(handle, duplicates):
+    record = duplicates[0]
+    print(
+        "Found {} duplicates at {}:{}".format(
+            len(duplicates),
+            record.reference_name,
+            record.reference_start,
+        )
+    )
 
-        yield (record, filename)
+    samples = {}
+    for rgroup in handle.header.get("RG", ()):
+        samples[rgroup["ID"]] = (
+            rgroup.get("SM", "?"),
+            rgroup.get("LB", "?"),
+            rgroup.get("PU", "?"),
+        )
+
+    groups = collections.defaultdict(list)
+    for record in duplicates:
+        try:
+            key = record.get_tag("RG")
+        except KeyError:
+            key = None
+
+        key = samples.get(key, ("?", "?", "?"))
+        groups[key].append(record)
+
+    for (sample, library, run), records in sorted(groups.items()):
+        rows = []
+
+        for record in records:
+            query_sequence = record.query_sequence
+            if len(query_sequence) > 50:
+                query_sequence = query_sequence[:50] + "..."
+
+            query_qualities = "".join(chr(33 + qual) for qual in record.query_qualities)
+            if len(query_qualities) > 50:
+                query_qualities = query_qualities[:50] + "..."
+
+            rows.append(
+                [
+                    read_type(record),
+                    sample,
+                    library,
+                    run + ":",
+                    record.query_name,
+                    query_sequence,
+                    query_qualities,
+                ]
+            )
+
+        for line in padded_table(rows, min_padding=1):
+            print(" ", line)
+
+    print()
 
 
-def _process_bam_reads(observed_reads, references, position, handler):
-    for records_and_filenames in observed_reads.values():
-        if len(records_and_filenames) == 1:
-            # Most read-names should be obseved at most once at a position
-            continue
+def complexity(record):
+    last_nuc = None
+    complexity = 0
 
-        result = collections.defaultdict(list)
-        for record, filename in records_and_filenames:
-            key = (record.is_reverse, record.qname, record.seq, record.qual)
-            result[key].append((filename, record))
+    last_nuc = None
+    for nuc in record.query_sequence:
+        if nuc != last_nuc:
+            complexity += 1
+            last_nuc = nuc
 
-        for (is_reverse, name, seq, qual), filenames in result.items():
-            if len(filenames) == 1:
-                # Two reads had same name, but different characterstics
-                continue
-
-            records = collections.defaultdict(list)
-            for filename, record in filenames:
-                records[filename].append(record)
-
-            if is_reverse:
-                seq = reverse_complement(seq)
-                qual = qual[::-1]
-
-            chrom = references[position[1]]
-            pos = position[0]
-
-            handler(chrom, pos, records, name, seq, qual)
+    return complexity
 
 
-def _summarize_reads(records):
-    counts = {"mate 1": 0, "mate 2": 0, "unpaired": 0}
-
+def filter_records(records):
     for record in records:
-        if record.is_paired:
-            if record.is_read1:
-                counts["mate 1"] += 1
-            elif record.is_read2:
-                counts["mate 2"] += 1
-            else:
-                counts["unpaired"] += 1
-        else:
-            counts["unpaired"] += 1
-
-    result = []
-    for key, value in sorted(counts.items()):
-        if value > 1:
-            result.append("%i %s reads" % (value, key))
-        elif value:
-            result.append("%i %s read" % (value, key))
-
-    return ", ".join(result) or "No reads"
+        # Ignore unaligned / supplementary / secondary alignments
+        if not record.flag & 0x904:
+            yield record
 
 
-def _key_by_tid_pos(record):
-    return (record[0].tid, record[0].pos)
+def group_by_sequences(records):
+    by_sequence = collections.defaultdict(list)
+    for record in records:
+        query_sequence = record.query_sequence
+        if query_sequence:
+            by_sequence[(record.is_reverse, record.query_sequence)].append(record)
+
+    for _, group in by_sequence.items():
+        if len(group) > 1:
+            yield group
 
 
-def parse_args(argv):
+def group_by_qualities(records):
+    by_qualities = collections.defaultdict(list)
+    for record in records:
+        query_qualities = record.query_qualities
+        if query_qualities is not None:
+            query_qualities = tuple(record.query_qualities)
+
+        by_qualities[tuple(record.query_qualities)].append(record)
+
+    for group in by_qualities.values():
+        if len(group) > 1:
+            yield group
+
+
+def filter_candidate_duplicates(candidates, min_complexity):
+    for group in group_by_sequences(filter_records(candidates)):
+        for group in group_by_qualities(group):
+            filtered_records = group
+            if min_complexity > 0:
+                filtered_records = [
+                    record for record in group if complexity(record) >= min_complexity
+                ]
+
+            yield group, filtered_records
+
+
+def parse_args():
     parser = ArgumentParser(
         prog="paleomix dupcheck",
-        description="Attempt to detect reads included multiple times as input based"
-        "on the presence of reads with identical names AND sequences. This is "
-        "compromise between sensitivity, specificity, and running time.",
+        description="Attempt to detect reads included multiple times as input based "
+        "on the presence of reads with identical names, sequences, and quality scores. "
+        "Alternatively, tool can optionally can detect identical reads based only on "
+        "the read sequence and quality scores. The input data is assumed to be mapped "
+        "and coordinate sorted BAM alignments.",
     )
-    parser.add_argument("files", nargs="+", help="One or more input BAM files.")
+
     parser.add_argument(
-        "--quiet",
-        default=False,
+        "bam",
+        nargs="?",
+        help="BAM file to check for duplicated data [STDIN]",
+    )
+    parser.add_argument(
+        "--max-output",
+        type=int,
+        default=100,
+        help="Print as this many duplicated reads across all positions. Set to zero to "
+        "print all duplicated reads",
+    )
+    parser.add_argument(
+        "--min-complexity",
+        type=float,
+        default=0.0,
+        help="Minimum complexity of reads required for them to be considered possible "
+        "duplicate data. This is intended to exclude low-complexity and easily reads "
+        "produced by empty spots and the like, which can easily result in identical "
+        "sequences",
+    )
+    parser.add_argument(
+        "--any-query-name",
         action="store_true",
-        help="Only print the number of BAM records where one or more potential "
-        "duplicates were identified.",
+        help="If set reads are can be considered duplicates despite their names "
+        "differing. Sequences and quality scores must still be identical.",
     )
 
-    # Pipeline mode, showing output/error messages useful for that use-case
-    parser.add_argument("--pipeline-output", help=SUPPRESS)
-
-    return parser.parse_args(argv)
+    return parser
 
 
 def main(argv):
-    args = parse_args(argv)
+    parser = parse_args()
+    args = parser.parse_args(argv)
+    if args.bam is None:
+        args.bam = "-"
 
-    if args.pipeline_output is not None:
-        handler = PipelineHandler(
-            quiet=args.quiet,
-            input_files=args.files,
-            output_file=args.pipeline_output,
-        )
+        if sys.stdin.isatty():
+            parser.print_help()
+            return 0
+
+    if not args.max_output:
+        args.max_output = float("inf")
+
+    if args.any_query_name:
+        key_function = key_without_name
     else:
-        handler = CLIHandler(quiet=args.quiet)
+        key_function = key_with_name
 
-    handles = []
-    last_pos = None
-    observed_reads = collections.defaultdict(list)
-    reads_iter = _open_samfiles(handles, args.files)
-    references = handles[0].references
+    total_duplicates = 0
+    total_filtered_duplicates = 0
+    truncated_output_warning = args.max_output == 0
+    with pysam.AlignmentFile(args.bam) as handle:
+        for _, reads in groupby(BAMTimer(handle), key_function):
+            filtered_duplicates = filter_candidate_duplicates(
+                candidates=reads, min_complexity=args.min_complexity
+            )
 
-    for (record, filename) in reads_iter:
-        curr_pos = (record.pos, record.tid)
-        if curr_pos != last_pos:
-            _process_bam_reads(observed_reads, references, last_pos, handler)
-            observed_reads.clear()
-            last_pos = curr_pos
+            for duplicates, high_complexity_duplicates in filtered_duplicates:
+                total_duplicates += bool(duplicates)
+                total_filtered_duplicates += bool(high_complexity_duplicates)
+                if args.max_output > 0:
+                    args.max_output -= 1
 
-            # Stop once the trailing, unmapped reads are reached
-            if record.tid == -1:
-                break
+                    print_duplicates(handle, high_complexity_duplicates)
+                elif not truncated_output_warning:
+                    truncated_output_warning = True
+                    print(
+                        "No further errors will be printed (max = {}) ..".format(
+                            args.max_output
+                        )
+                    )
 
-        observed_reads[record.qname].append((record, filename))
+    if not total_filtered_duplicates:
+        print("No duplicate data found.")
+        return 0
 
-    _process_bam_reads(observed_reads, references, last_pos, handler)
+    print()
+    print()
+    print(
+        "A total of {} reads with duplicates were found, with {} remaining ".format(
+            total_duplicates,
+            total_filtered_duplicates,
+        )
+    )
+    print("after excluding low-complexity reads.")
+    print()
+    print("This indicates that the same data has been included multiple times in")
+    print("the project. This can be because multiple copies of the same files were")
+    print("used, or because one or more files contain multiple copies of the same ")
+    print("reads.")
 
-    if not handler.finalize():
-        return 1
-
-    return 0
+    return 1
 
 
 if __name__ == "__main__":

@@ -32,7 +32,6 @@ from paleomix.nodes.mapdamage import (
 from paleomix.nodes.samtools import MarkDupNode
 from paleomix.pipelines.bam.nodes import index_and_validate_bam
 from paleomix.nodes.commands import FilterCollapsedBAMNode
-from paleomix.nodes.validation import DetectInputDuplicationNode
 
 
 class Library:
@@ -78,14 +77,9 @@ class Library:
         files_and_nodes = self._collect_files_and_nodes(lane_bams)
 
         # Collect output bams, possible following rescaling
-        self.bams, mapdamage_nodes = self._build_mapdamage_nodes(
+        self.bams, self.nodes = self._build_mapdamage_nodes(
             config, target, prefix, files_and_nodes
         )
-
-        nodes = [self._build_dataduplication_node(lane_bams)]
-        nodes.extend(mapdamage_nodes)
-
-        self.nodes = tuple(nodes)
 
     @classmethod
     def _collect_bams_by_type(cls, lanes):
@@ -179,7 +173,7 @@ class Library:
             return files_and_nodes, (node,)
         else:
             assert not run_type, run_type
-            return files_and_nodes, ()
+            return files_and_nodes, tuple(files_and_nodes.values())
 
     def _mapdamage_plot(self, destination, prefix, files_and_nodes):
         title = "mapDamage plot for library %r" % (self.name,)
@@ -238,13 +232,3 @@ class Library:
         )
 
         return {output_filename: validate}, (model,)
-
-    def _build_dataduplication_node(self, bams):
-        files_and_nodes = self._collect_files_and_nodes(bams)
-        output_file = self.folder + ".duplications_checked"
-
-        return DetectInputDuplicationNode(
-            input_files=list(files_and_nodes),
-            output_file=output_file,
-            dependencies=list(files_and_nodes.values()),
-        )
