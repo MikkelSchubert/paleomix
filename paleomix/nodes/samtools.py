@@ -9,7 +9,7 @@ import os
 import warnings
 
 from paleomix.node import CommandNode
-from paleomix.atomiccmd.command2 import AtomicCmd2, InputFile, OutputFile
+from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile
 from paleomix.atomiccmd.sets import ParallelCmds, SequentialCmds
 from paleomix.common.fileutils import describe_files
 
@@ -43,11 +43,11 @@ class TabixIndexNode(CommandNode):
 
         # Tabix does not support a custom output path, so we create a symlink to the
         # input file in the temporary folder and index that.
-        link = AtomicCmd2(
+        link = AtomicCmd(
             ["ln", "-s", InputFile(infile), OutputFile(basename, temporary=True)]
         )
 
-        tabix = AtomicCmd2(
+        tabix = AtomicCmd(
             ["tabix", "-p", preset, InputFile(basename, temporary=True)],
             extra_files=[OutputFile(infile + ".tbi")],
             requirements=[TABIX_VERSION],
@@ -71,7 +71,7 @@ class FastaIndexNode(CommandNode):
 
         # faidx does not support a custom output path, so we create a symlink to the
         # input file in the temporary folder and index that.
-        link = AtomicCmd2(
+        link = AtomicCmd(
             [
                 "ln",
                 "-s",
@@ -80,7 +80,7 @@ class FastaIndexNode(CommandNode):
             ]
         )
 
-        faidx = AtomicCmd2(
+        faidx = AtomicCmd(
             ["samtools", "faidx", InputFile(basename, temporary=True)],
             extra_files=[OutputFile(infile + ".fai")],
             requirements=[SAMTOOLS_VERSION],
@@ -98,7 +98,7 @@ class BAMIndexNode(CommandNode):
     """Indexed a BAM file using 'samtools index'."""
 
     def __init__(self, infile, index_format=".bai", options={}, dependencies=()):
-        command = AtomicCmd2(
+        command = AtomicCmd(
             ["samtools", "index"],
             requirements=[SAMTOOLS_VERSION],
         )
@@ -138,7 +138,7 @@ class BAMStatsNode(CommandNode):
         if method not in self.METHODS:
             raise ValueError(method)
 
-        command = AtomicCmd2(
+        command = AtomicCmd(
             ["samtools", method, InputFile(infile)],
             stdout=outfile,
             requirements=[SAMTOOLS_VERSION],
@@ -164,7 +164,7 @@ class BAMMergeNode(CommandNode):
         if len(in_files) <= 1:
             warnings.warn("creating {!r} from single input file".format(out_file))
 
-        cmd = AtomicCmd2(
+        cmd = AtomicCmd(
             ["samtools", "merge"],
             requirements=[SAMTOOLS_VERSION],
         )
@@ -187,16 +187,16 @@ class MarkDupNode(CommandNode):
     def __init__(self, in_bams, out_bam, out_stats=None, options={}, dependencies=()):
         in_bams = tuple(in_bams)
         if len(in_bams) > 1:
-            merge = AtomicCmd2(
+            merge = AtomicCmd(
                 ["samtools", "merge", "-u", "-"],
-                stdout=AtomicCmd2.PIPE,
+                stdout=AtomicCmd.PIPE,
                 requirements=[SAMTOOLS_VERSION],
             )
 
             for in_file in in_bams:
                 merge.append(InputFile(in_file))
 
-            markdup = AtomicCmd2(
+            markdup = AtomicCmd(
                 ["samtools", "markdup", "-", OutputFile(out_bam)],
                 stdin=merge,
                 # Stderr is piped instead of saved using -f to support samtools < v1.10
@@ -208,7 +208,7 @@ class MarkDupNode(CommandNode):
         else:
             (in_file,) = in_bams
 
-            command = markdup = AtomicCmd2(
+            command = markdup = AtomicCmd(
                 ["samtools", "markdup", InputFile(in_file), OutputFile(out_bam)],
                 requirements=[SAMTOOLS_VERSION],
             )
@@ -232,9 +232,9 @@ class MarkDupNode(CommandNode):
 
 
 def merge_bam_files_command(input_files):
-    merge = AtomicCmd2(
+    merge = AtomicCmd(
         ["samtools", "merge", "-u", "-"],
-        stdout=AtomicCmd2.PIPE,
+        stdout=AtomicCmd.PIPE,
         requirements=[SAMTOOLS_VERSION],
     )
 

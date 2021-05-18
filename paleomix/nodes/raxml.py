@@ -28,7 +28,7 @@ import paleomix.common.fileutils as fileutils
 import paleomix.common.versions as versions
 
 from paleomix.node import CommandNode
-from paleomix.atomiccmd.command2 import AtomicCmd2, InputFile, OutputFile
+from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile
 
 
 RAXML_VERSION = versions.Requirement(
@@ -114,13 +114,13 @@ class RAxMLRapidBSNode(CommandNode):
             )
 
         if threads > 1:
-            command = AtomicCmd2(
+            command = AtomicCmd(
                 ["raxmlHPC-PTHREADS", "-T", threads],
                 extra_files=extra_files,
                 requirements=[RAXML_PTHREADS_VERSION],
             )
         else:
-            command = AtomicCmd2(
+            command = AtomicCmd(
                 "raxmlHPC",
                 extra_files=extra_files,
                 requirements=[RAXML_VERSION],
@@ -182,7 +182,7 @@ class RAxMLParsimonyTreeNode(CommandNode):
             "-q": OutputFile("RAxML_partitions", temporary=True),
         }
 
-        command = AtomicCmd2(
+        command = AtomicCmd(
             "raxmlHPC",
             extra_files=[
                 OutputFile(output_tree),

@@ -25,7 +25,7 @@ import os
 import paleomix.common.rtools as rtools
 import paleomix.tools.factory as factory
 
-from paleomix.atomiccmd.command2 import AtomicCmd2, AuxilleryFile, InputFile, OutputFile
+from paleomix.atomiccmd.command import AtomicCmd, AuxilleryFile, InputFile, OutputFile
 from paleomix.common.formats.newick import Newick
 from paleomix.node import CommandNode
 
@@ -58,7 +58,7 @@ class MitoConsensusNode(CommandNode):
 
 class DrawPhylogenyNode(CommandNode):
     def __init__(self, samples, treefile, bootstraps, output_prefix, dependencies=()):
-        command = AtomicCmd2(
+        command = AtomicCmd(
             (
                 "Rscript",
                 AuxilleryFile(rtools.rscript("zonkey", "tinytree.r")),

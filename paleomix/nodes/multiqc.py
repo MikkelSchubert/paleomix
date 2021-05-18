@@ -8,7 +8,7 @@ https://multiqc.info/
 import fnmatch
 import os
 
-from paleomix.atomiccmd.command2 import AtomicCmd2, InputFile, OutputFile
+from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile
 from paleomix.node import CommandNode, NodeError
 
 
@@ -26,7 +26,7 @@ class MultiQCNode(CommandNode):
         if pattern is None:
             raise NodeError("unsupported MultiQC source {!r}".format(source))
 
-        command = AtomicCmd2(
+        command = AtomicCmd(
             [
                 "multiqc",
                 "--zip-data-dir",

@@ -1,28 +1,5 @@
-#!/usr/bin/python3
-#
-# Copyright (c) 2012 Mikkel Schubert <MikkelSch@gmail.com>
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-#
-import collections
+#!/usr/bin/env python3
 import os
-import re
 import signal
 import subprocess
 import sys
@@ -33,9 +10,6 @@ import paleomix.common.fileutils as fileutils
 
 from paleomix.common.utilities import safe_coerce_to_tuple
 
-_PIPES = (("IN", "IN_STDIN"), ("OUT", "OUT_STDOUT"), ("OUT", "OUT_STDERR"))
-_KEY_RE = re.compile("^(IN|OUT|EXEC|AUX|CHECK|TEMP_IN|TEMP_OUT)_[A-Z0-9_]+")
-
 
 class CmdError(RuntimeError):
     """Exception raised for AtomicCmd specific errors."""
@@ -44,120 +18,275 @@ class CmdError(RuntimeError):
         RuntimeError.__init__(self, msg)
 
 
+class _AtomicFile:
+    def __init__(self, path):
+        self.path = fileutils.fspath(path)
+
+        if isinstance(self.path, bytes):
+            raise ValueError(path)
+
+    def basename(self):
+        return os.path.basename(self.path)
+
+    def __repr__(self):
+        return "%s(%r)" % (self.__class__.__name__, self.path)
+
+
+class AuxilleryFile(_AtomicFile):
+    pass
+
+
+class Executable(_AtomicFile):
+    pass
+
+
+class _IOFile(_AtomicFile):
+    def __init__(self, path, temporary=False):
+        super().__init__(path)
+        self.temporary = bool(temporary)
+
+        if temporary and os.path.dirname(self.path):
+            raise ValueError(self.path)
+
+    def __repr__(self):
+        return "%s(%r, %s)" % (self.__class__.__name__, self.path, self.temporary)
+
+
+class InputFile(_IOFile):
+    pass
+
+
+class OutputFile(_IOFile):
+    pass
+
+
 class AtomicCmd:
-    """Executes a command, only moving resulting files to the destination
-    directory if the command was succesful. This helps prevent the
-    accidential use of partial files in downstream analysis, and eases
-    restarting of a pipeline following errors (no cleanup).
+    """Executes a command, only moving resulting files to the destination directory if
+    the command was successful. This prevent the accidental use of partial files
+    in downstream analysis and eases restarting pipelines following errors (no cleanup).
 
-    Inividual files/paths in the command are specified using keywords (see
-    the documentation for the constructor), allowing the command to be
-    transparently modified to execute in a temporary directory.
+    Individual files/paths in the command are specified using the InputFile, OutputFile,
+    AuxiliaryFile, and Executable classes, allowing the command to be transparently
+    modified to execute in a temporary directory.
 
-    When an AtomicCmd is run(), a signal handler is installed for SIGTERM,
-    which ensures that any running processes are terminated. In the absence
-    of this, AtomicCmds run in terminated subprocesses can result in still
-    running children after the termination of the parents."""
+    When an AtomicCmd is run(), a signal handler is installed for SIGTERM, which
+    ensures that any running processes are terminated. In the absence of this,
+    AtomicCmds run in terminated subprocesses can result in still running children
+    after the termination of the parents."""
 
     PIPE = subprocess.PIPE
     DEVNULL = subprocess.DEVNULL
 
-    def __init__(self, command, set_cwd=False, **kwargs):
+    InFile = InputFile
+    OutFile = OutputFile
+    AuxFile = AuxilleryFile
+    Executable = Executable
+
+    def __init__(
+        self,
+        command,
+        stdin=None,
+        stdout=None,
+        stderr=None,
+        set_cwd=False,
+        extra_files=(),
+        requirements=(),
+    ):
         """Takes a command and a set of files.
 
         The command is expected to be an iterable starting with the name of an
-        executable, with each item representing one string on the command line.
-        Thus, the command "find /etc -name 'profile*'" might be represented as
-        the list ["find", "/etc", "-name", "profile*"].
+        executable, with each item representing one string on the command line. Thus,
+        the command "find /etc -name 'profile*'" might be represented as the list
+        ["find", "/etc", "-name", "profile*"].
 
-        Commands typically consist of an executable, one or more input files,
-        one or more output files, and one or more pipes. In atomic command,
-        such files are not specified directly, but instead are specified using
-        keywords, which allows easy tracking of requirements and other
-        features. Note that only files, and not directories, are supported as
-        input/output!
+        Commands typically consist of an executable, one or more input files, one or
+        more output files, and zero or more pipes. Files are specified using the
+        InputFile, OutputFile, AuxiliaryFile, and Executable classes, which allows easy
+        tracking of requirements and other features. Note that only files, and not
+        directories, are supported as input/output!
 
-        Each keyword represents a type of file, as determined by the prefix:
-           IN_    -- Path to input file transformed/analysed the executable.
-           OUT_   -- Path to output file generated by the executable. During
-                     execution of the AtomicCmd, these paths are modified to
-                     point to the temporary directory.
-           EXEC_  -- Name of / path to executable. The first item in the
-                     command is always one of the executables, even if not
-                     specified in this manner.
-           AUX_   -- Auxillery files required by the executable(s), which are
-                     themselves not executable. Examples include scripts,
-                     config files, data-bases, and the like.
-           CHECK_ -- A callable, which upon calling does version checking,
-                     raising an exception in the case of requirements not being
-                     met. This may be used to ensure that prerequisites are met
-                     before running the command. The function is not called by
-                     AtomicCmd itself.
+        Keyword arguments:
+            stdin -- A string path, InputFile, PIPE, DEVNULL, or an AtomicCmd instance.
+                     If stdin is an AtomicCmd instance, stdin is read from its stdout.
+            stdout -- A string path, InputFile, PIPE, DEVNULL, or an AtomicCmd instance.
+            stderr -- A string path, InputFile, PIPE, DEVNULL, or an AtomicCmd instance.
+            set_cwd -- If true, cwd is set to the temporary folder before executing the
+                       command. InputFiles, OutputFiles, and AuxiliaryFiles are
+                       automatically converted to paths relative to the temporary dir.
+            extra_files -- An optional sequence of InputFiles, OutputFiles,
+                           AuxiliaryFiles and Executables used by the command, that are
+                           not explicitly part of the command line arguments. This
+                           could include data files and executables indirectly executed
+                           by a script.
+            requirements -- An optional sequence of callables that can be used to check
+                            that requirements are met for invoking this command.
 
         EXAMPLE 1: Creating a gzipped tar-archive from two files
-        The command "tar cjf output-file input-file-1 input-file-2" could be
-        represented using the following AtomicCmd:
-        cmd = AtomicCmd(["tar", "cjf", "%(OUT_FILE)s",
-                         "%(IN_FILE_1)s", "%(IN_FILE_2)s"],
-                        OUT_FILE  = "output-file",
-                        IN_FILE_1 = "input-file-1",
-                        IN_FILE_2 = "input-file-2")
+        The command "tar cjf /path/to/output.tbz2 /path/to/input1 /path/to/input2"
+        could be represented using the following AtomicCmd:
+        cmd = AtomicCmd(["tar", "cjf", OutputFile("/path/to/output.tbz2"),
+                         InputFile("/path/to/input1"), InputFile("/path/to/input2")])
 
-        Note that files that are not directly invoked may be included above,
-        in order to allow the specification of requirements. This could include
-        required data files, or executables indirectly executed by a script.
-
-        If the above is prefixed with "TEMP_", files are read from / written
-        to the temporary folder in which the command is executed. Note that all
-        TEMP_OUT_ files are deleted when commit is called (if they exist), and
-        only filenames (not dirname component) are allowed for TEMP_ values.
-
-        In addition, the follow special names may be used with the above:
-           STDIN_  -- Takes a filename, or an AtomicCmd, in which case stdout
-                      of that command is piped to the stdin of this instance.
-           STDOUT_ -- Takes a filename, or the special value PIPE to allow
-                      another AtomicCmd instance to use the output directly.
-           STDERR_ -- Takes a filename.
-
-        Each pipe can only be used once, with or without the TEMP_ prefix.
+        InputFiles and OutputFiles marked as 'temporary' are used for files that are
+        read from or written to the temporary directory and which are deleted upon
+        completion of the command (when calling 'commit'). Such files are not allowed
+        to have directory component.
 
         EXAMPLE 2: zcat'ing an archive
-        The command "zcat input-file > output-file" could be represented using
-        the following AtomicCmd:
-        cmd = AtomicCmd(["zcat", "%(IN_FILE)s"],
-                        OUT_STDOUT = "output-file")
-
-        If 'set_cwd' is True, the current working directory is set to the
-        temporary directory before the command is executed. Input paths are
-        automatically turned into absolute paths in this case."""
+        The command "zcat /path/to/input > output" could be represented as follows:
+        cmd = AtomicCmd(["zcat", InputFile("/path/to/input")], stdout="output")
+        """
+        self._command = []
         self._proc = None
         self._temp = None
         self._running = False
-        self._command = list(map(str, safe_coerce_to_tuple(command)))
         self._set_cwd = set_cwd
         self._terminated = False
 
+        self._executables = set()
+        self._requirements = frozenset(requirements)
+        self._input_files = set()
+        self._output_files = set()
+        self._output_basenames = set()
+        self._auxiliary_files = set()
+
+        self.append(*safe_coerce_to_tuple(command))
         if not self._command or not self._command[0]:
             raise ValueError("Empty command in AtomicCmd constructor")
+        elif self._command[0] not in self._executables:
+            self._executables.add(self._command[0])
 
-        arguments = self._process_arguments(id(self), self._command, kwargs)
-        self._files = self._build_files_dict(arguments)
+        self._stdin = stdin = self._wrap_pipe(InputFile, stdin)
+        self._stdout = stdout = self._wrap_pipe(OutputFile, stdout, "stdout")
+        self._stderr = stderr = self._wrap_pipe(OutputFile, stderr, "stderr")
 
-        file_sets = self._build_files_map(self._command, arguments)
-        self.executables = file_sets["EXEC"]
-        self.requirements = file_sets["CHECK"]
-        self.input_files = file_sets["IN"]
-        self.output_files = file_sets["OUT"]
-        self.auxiliary_files = file_sets["AUX"]
-        self.optional_temp_files = file_sets["TEMP_OUT"]
-        self.expected_temp_files = frozenset(
-            os.path.basename(path) for path in file_sets["OUT"]
+        pipes = []
+        for pipe in (stdin, stdout, stderr):
+            if isinstance(pipe, _AtomicFile):
+                pipes.append(pipe)
+
+        self.add_extra_files(extra_files)
+        self.add_extra_files(pipes)
+
+        for value in self._requirements:
+            if not callable(value):
+                raise TypeError("requirement must be callable, not %r" % (value,))
+
+    def append(self, *args):
+        if self._proc is not None:
+            raise CmdError("cannot modify already started command")
+
+        for value in args:
+            if isinstance(value, _AtomicFile):
+                self._record_atomic_file(value)
+                if isinstance(value, Executable):
+                    value = value.path
+            else:
+                value = str(value)
+
+            self._command.append(value)
+
+    def add_extra_files(self, files):
+        if self._proc is not None:
+            raise CmdError("cannot modify already started command")
+
+        for value in files:
+            if not isinstance(value, _AtomicFile):
+                raise ValueError(value)
+
+            self._record_atomic_file(value)
+
+    def append_options(self, options, pred=lambda s: s.startswith("-")):
+        if not isinstance(options, dict):
+            raise TypeError("options must be dict, not {!r}".format(options))
+
+        for (key, values) in options.items():
+            if not isinstance(key, str):
+                raise ValueError("keys must be strings, not %r" % (key,))
+            elif not pred(key):
+                continue
+
+            if isinstance(values, (list, tuple)):
+                for value in values:
+                    if not isinstance(value, (int, str, float, _AtomicFile)):
+                        raise ValueError(value)
+
+                    self.append(key)
+                    self.append(value)
+            elif values is None:
+                self.append(key)
+            elif isinstance(values, (int, str, float, _AtomicFile)):
+                self.append(key)
+                self.append(values)
+            else:
+                raise ValueError(values)
+
+    def merge_options(
+        self,
+        user_options,
+        fixed_options={},
+        blacklisted_options=(),
+        pred=lambda s: s.startswith("-"),
+    ):
+        if not isinstance(fixed_options, dict):
+            raise TypeError("options must be dict, not {!r}".format(fixed_options))
+        elif not isinstance(user_options, dict):
+            raise TypeError("user_options must be dict, not {!r}".format(user_options))
+
+        errors = []
+        for key in user_options.keys() & fixed_options.keys():
+            errors.append("{} cannot be overridden".format(key))
+
+        for key in user_options.keys() & blacklisted_options:
+            errors.append("{} is not supported".format(key))
+
+        if errors:
+            raise CmdError(
+                "invalid command-line options for {!r}: {}".format(
+                    " ".join(self.to_call("%(TEMP_DIR)s")), "\n".join(errors)
+                )
+            )
+
+        self.append_options(fixed_options, pred=pred)
+        self.append_options(user_options, pred=pred)
+
+    @property
+    def output_files(self):
+        return frozenset(
+            afile.path for afile in self._output_files if not afile.temporary
         )
 
-        # Dry-run, to catch errors early
-        self._generate_call("/tmp")
+    @property
+    def expected_temp_files(self):
+        return frozenset(
+            afile.basename() for afile in self._output_files if not afile.temporary
+        )
 
-    def run(self, temp, wrap_errors=True):
+    @property
+    def optional_temp_files(self):
+        return frozenset(
+            afile.basename() for afile in self._output_files if afile.temporary
+        )
+
+    @property
+    def input_files(self):
+        return frozenset(
+            afile.path for afile in self._input_files if not afile.temporary
+        )
+
+    @property
+    def executables(self):
+        return frozenset(self._executables)
+
+    @property
+    def auxiliary_files(self):
+        return frozenset(self._auxiliary_files)
+
+    @property
+    def requirements(self):
+        return self._requirements
+
+    def run(self, temp):
         """Runs the given command, saving files in the specified temp folder.
         To move files to their final destination, call commit(). Note that in
         contexts where the *Cmds classes are used, this function may block.
@@ -170,19 +299,15 @@ class AtomicCmd:
         self._temp = temp
         self._running = True
 
-        # kwords for pipes are always built relative to the current directory,
-        # since these are opened before (possibly) CD'ing to the temp
-        # directory.
         stdin = stdout = stderr = None
         try:
-            kwords = self._generate_filenames(self._files, root=temp)
-            stdin = self._open_pipe(kwords, "IN_STDIN", "rb")
-            stdout = self._open_pipe(kwords, "OUT_STDOUT", "wb")
-            stderr = self._open_pipe(kwords, "OUT_STDERR", "wb")
+            stdin = self._open_pipe(temp, self._stdin, "rb")
+            stdout = self._open_pipe(temp, self._stdout, "wb")
+            stderr = self._open_pipe(temp, self._stderr, "wb")
 
             cwd = temp if self._set_cwd else None
             temp = "" if self._set_cwd else os.path.abspath(temp)
-            call = self._generate_call(temp)
+            call = self.to_call(temp)
 
             # Explicitly set to DEVNULL to ensure that STDIN is not left open.
             if stdin is None:
@@ -197,9 +322,6 @@ class AtomicCmd:
                 preexec_fn=os.setsid,
             )
         except Exception as error:
-            if not wrap_errors:
-                raise
-
             message = "Error running commands:\n  Call = %r\n  Error = %r"
             raise CmdError(message % (self._command, error))
         finally:
@@ -217,9 +339,8 @@ class AtomicCmd:
         return self._proc and self._proc.poll() is not None
 
     def join(self):
-        """Similar to Popen.wait(), but returns the value wrapped in a list,
-        and ensures that any opened handles are closed. Must be called before
-        calling commit."""
+        """Similar to Popen.wait(), but returns the value wrapped in a list.
+        Must be called before calling commit."""
         if not self._proc:
             return [None]
 
@@ -257,23 +378,24 @@ class AtomicCmd:
                 ": %r != %s" % (self._temp, temp)
             )
 
-        missing_files = self.expected_temp_files - set(os.listdir(temp))
+        expected_files = set(os.path.basename(fpath) for fpath in self.output_files)
+        missing_files = expected_files - set(os.listdir(temp))
         if missing_files:
             raise CmdError(
                 "Expected files not created: %s" % (", ".join(missing_files))
             )
 
-        temp = os.path.abspath(temp)
-        filenames = self._generate_filenames(self._files, temp)
-        committed_files = set()
+        committed_files = []
         try:
-            for (key, filename) in filenames.items():
-                if isinstance(filename, str):
-                    if key.startswith("OUT_"):
-                        fileutils.move_file(filename, self._files[key])
-                        committed_files.add(self._files[key])
-                    elif key.startswith("TEMP_OUT_"):
-                        fileutils.try_remove(filename)
+            for output_file in self._output_files:
+                if output_file.temporary:
+                    fileutils.try_remove(os.path.join(temp, output_file.path))
+                else:
+                    destination = output_file.path
+                    source = fileutils.reroot_path(temp, destination)
+
+                    fileutils.move_file(source, destination)
+                    committed_files.append(destination)
         except Exception:
             # Cleanup after failed commit
             for fpath in committed_files:
@@ -283,180 +405,92 @@ class AtomicCmd:
         self._proc = None
         self._temp = None
 
+    def to_call(self, temp):
+        return [self._to_path(temp, value) for value in self._command]
+
+    def _to_path(self, temp, value):
+        if isinstance(value, InputFile):
+            if value.temporary:
+                return os.path.join(temp, value.path)
+            elif self._set_cwd:
+                return os.path.abspath(value.path)
+            else:
+                return value.path
+        elif isinstance(value, OutputFile):
+            if self._set_cwd:
+                return os.path.basename(value.path)
+            else:
+                return fileutils.reroot_path(temp, value.path)
+        elif isinstance(value, AuxilleryFile):
+            if self._set_cwd:
+                return os.path.abspath(value.path)
+            else:
+                return value.path
+        elif isinstance(value, Executable):
+            return value.path
+        else:
+            return value.replace("%(TEMP_DIR)s", temp)
+
+    def _record_atomic_file(self, value):
+        if isinstance(value, AuxilleryFile):
+            self._auxiliary_files.add(value.path)
+        elif isinstance(value, Executable):
+            self._executables.add(value.path)
+        elif isinstance(value, InputFile):
+            self._input_files.add(value)
+        elif isinstance(value, OutputFile):
+            basename = value.basename()
+            # All output is saved in the same folder, so it is not possible to have
+            # different output files with the same basename. It is however allowed to
+            # use the same instance multiple times
+            if basename in self._output_basenames and value not in self._output_files:
+                raise CmdError("multiple output files with name %r" % (basename,))
+
+            self._output_files.add(value)
+            self._output_basenames.add(basename)
+        else:
+            raise ValueError(value)
+
+    def _wrap_pipe(self, filetype, pipe, default=None):
+        if pipe is None:
+            if default is None:
+                return None
+
+            executable = os.path.basename(self._command[0])
+            # TODO: Use more sensible filename, e.g. log_{exec}_{counter}.{stdout/err}
+            filename = "pipe_%s_%i.%s" % (executable, id(self), default)
+
+            return filetype(filename, temporary=True)
+        elif pipe in (self.PIPE, self.DEVNULL):
+            return pipe
+        elif isinstance(pipe, _AtomicFile):
+            if isinstance(pipe, filetype):
+                return pipe
+
+            raise ValueError("expected %s, but got %s" % (filetype, pipe))
+        elif isinstance(pipe, AtomicCmd):
+            return pipe
+
+        return filetype(pipe)
+
+    @classmethod
+    def _open_pipe(cls, temp_dir, pipe, mode):
+        if pipe in (None, cls.PIPE, cls.DEVNULL):
+            return pipe
+        elif isinstance(pipe, AtomicCmd):
+            return pipe._proc and pipe._proc.stdout
+
+        return open(fileutils.reroot_path(temp_dir, pipe.path), mode)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, _value, _traceback):
+        self.terminate()
+        self.join()
+
     def __str__(self):
         return atomicpp.pformat(self)
-
-    def _generate_call(self, temp):
-        kwords = self._generate_filenames(self._files, root=temp)
-
-        try:
-            return [(field % kwords) for field in self._command]
-        except (TypeError, ValueError) as error:
-            raise CmdError(
-                "Error building Atomic Command:\n"
-                "  Call = %s\n  Error = %s: %s"
-                % (self._command, error.__class__.__name__, error)
-            )
-        except KeyError as error:
-            raise CmdError(
-                "Error building Atomic Command:\n"
-                "  Call = %s\n  Value not specified for path = %s"
-                % (self._command, error)
-            )
-
-    @classmethod
-    def _process_arguments(cls, proc_id, command, kwargs):
-        arguments = collections.defaultdict(dict)
-        for (key, value) in kwargs.items():
-            match = _KEY_RE.match(key)
-            if not match:
-                raise ValueError("Invalid keyword argument %r" % (key,))
-
-            # None is ignored, to make use of default arguments easier
-            if value is not None:
-                (group,) = match.groups()
-                arguments[group][key] = value
-
-        # Pipe stdout/err to files by default
-        executable = os.path.basename(command[0])
-        for pipe in ("STDOUT", "STDERR"):
-            has_out_pipe = ("OUT_" + pipe) in arguments["OUT"]
-            has_temp_out_pipe = ("TEMP_OUT_" + pipe) in arguments["TEMP_OUT"]
-            if not (has_out_pipe or has_temp_out_pipe):
-                filename = "pipe_%s_%i.%s" % (executable, proc_id, pipe.lower())
-                arguments["TEMP_OUT"]["TEMP_OUT_" + pipe] = filename
-
-        cls._validate_arguments(arguments)
-        cls._validate_output_files(arguments)
-        cls._validate_pipes(arguments)
-
-        return arguments
-
-    @classmethod
-    def _validate_arguments(cls, arguments):
-        # Output files
-        for group in ("OUT", "TEMP_OUT"):
-            for (key, value) in arguments.get(group, {}).items():
-                if isinstance(value, str):
-                    continue
-
-                if key in ("OUT_STDOUT", "TEMP_OUT_STDOUT"):
-                    if value not in (cls.PIPE, cls.DEVNULL):
-                        raise TypeError(
-                            "STDOUT must be a string, PIPE "
-                            "or DEVNULL, not %r" % (value,)
-                        )
-                elif key in ("OUT_STDERR", "TEMP_OUT_STDERR"):
-                    if value is not cls.DEVNULL:
-                        raise TypeError(
-                            "STDERR must be a string, or DEVNULL, not %r" % (value,)
-                        )
-                else:
-                    raise TypeError("%s must be string, not %r" % (key, value))
-
-        # Input files, including executables and auxiliary files
-        for group in ("IN", "TEMP_IN", "EXEC", "AUX"):
-            for (key, value) in arguments.get(group, {}).items():
-                if isinstance(value, str):
-                    continue
-
-                if key in ("IN_STDIN", "TEMP_IN_STDIN"):
-                    if not isinstance(value, AtomicCmd) and value is not cls.DEVNULL:
-                        raise TypeError(
-                            "STDIN must be string, AtomicCmd, "
-                            "or DEVNULL, not %r" % (value,)
-                        )
-                else:
-                    raise TypeError("%s must be string, not %r" % (key, value))
-
-        for (key, value) in arguments.get("CHECK", {}).items():
-            if not callable(value):
-                raise TypeError("%s must be callable, not %r" % (key, value))
-
-        for group in ("TEMP_IN", "TEMP_OUT"):
-            for (key, value) in arguments.get(group, {}).items():
-                is_string = isinstance(value, str)
-                if is_string and os.path.dirname(value):
-                    raise ValueError(
-                        "%s cannot contain dir component: %r" % (key, value)
-                    )
-
-        return True
-
-    @classmethod
-    def _validate_output_files(cls, arguments):
-        output_files = collections.defaultdict(list)
-        for group in ("OUT", "TEMP_OUT"):
-            for (key, value) in arguments.get(group, {}).items():
-                if isinstance(value, str):
-                    filename = os.path.basename(value)
-                    output_files[filename].append(key)
-
-        for (filename, keys) in output_files.items():
-            if len(keys) > 1:
-                raise ValueError(
-                    "Same output filename (%s) is specified for "
-                    "multiple keys: %s" % (filename, ", ".join(sorted(keys)))
-                )
-
-    @classmethod
-    def _validate_pipes(cls, arguments):
-        for (group, pipe) in _PIPES:
-            has_pipe = pipe in arguments[group]
-            has_temp_pipe = ("TEMP_" + pipe) in arguments["TEMP_" + group]
-            if has_pipe and has_temp_pipe:
-                raise CmdError("Pipes may only be specified once")
-
-    @classmethod
-    def _open_pipe(cls, kwords, pipe, mode):
-        filename = kwords.get(pipe, kwords.get("TEMP_" + pipe))
-        if filename in (None, cls.PIPE, cls.DEVNULL):
-            return filename
-        elif isinstance(filename, AtomicCmd):
-            return filename._proc and filename._proc.stdout
-
-        return open(filename, mode)
-
-    @classmethod
-    def _generate_filenames(cls, files, root):
-        filenames = {"TEMP_DIR": root}
-        for (key, filename) in files.items():
-            if isinstance(filename, str):
-                if key.startswith("TEMP_") or key.startswith("OUT_"):
-                    filename = os.path.join(root, os.path.basename(filename))
-                elif not root and (key.startswith("IN_") or key.startswith("AUX_")):
-                    filename = os.path.abspath(filename)
-            filenames[key] = filename
-
-        return filenames
-
-    @classmethod
-    def _build_files_dict(cls, arguments):
-        files = {}
-        for groups in arguments.values():
-            for (key, value) in groups.items():
-                files[key] = value
-
-        return files
-
-    @classmethod
-    def _build_files_map(cls, command, arguments):
-        file_sets = {
-            "AUX": set(),
-            "CHECK": set(),
-            "EXEC": set(command[:1]),
-            "IN": set(),
-            "OUT": set(),
-            "TEMP_IN": set(),
-            "TEMP_OUT": set(),
-        }
-
-        for group, files in arguments.items():
-            for key, filename in files.items():
-                if isinstance(filename, str) or group == "CHECK":
-                    file_sets[group].add(filename)
-
-        return {key: frozenset(value) for key, value in file_sets.items()}
 
 
 # The following ensures proper cleanup of child processes, for example in the

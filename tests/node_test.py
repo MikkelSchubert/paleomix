@@ -31,7 +31,7 @@ import pytest
 
 import paleomix.node
 
-from paleomix.atomiccmd.command import AtomicCmd
+from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile
 from paleomix.node import (
     Node,
     CommandNode,
@@ -609,8 +609,8 @@ def test_commandnode_teardown(tmp_path):
 
     cmd = AtomicCmd(
         ("echo", "-n", "1 2 3"),
-        IN_DUMMY=_EMPTY_FILE,
-        OUT_STDOUT=str(destination / "foo.txt"),
+        extra_files=[InputFile(_EMPTY_FILE)],
+        stdout=str(destination / "foo.txt"),
     )
     cmd.run(tmp_path)
     assert cmd.join() == [0]
@@ -628,9 +628,11 @@ def test_commandnode_teardown__missing_files_in_temp(tmp_path):
 
     cmd = AtomicCmd(
         ("echo", "-n", "1 2 3"),
-        IN_DUMMY=_EMPTY_FILE,
-        OUT_BAR=str(destination / "bar.txt"),
-        OUT_STDOUT=str(destination / "foo.txt"),
+        extra_files=[
+            InputFile(_EMPTY_FILE),
+            OutputFile(str(destination / "bar.txt")),
+        ],
+        stdout=str(destination / "foo.txt"),
     )
     cmd.run(tmp_path)
     assert cmd.join() == [0]
@@ -650,9 +652,11 @@ def test_commandnode_teardown__missing_optional_files(tmp_path):
 
     cmd = AtomicCmd(
         ("echo", "-n", "1 2 3"),
-        IN_DUMMY=_EMPTY_FILE,
-        TEMP_OUT_BAR="bar.txt",
-        OUT_STDOUT=str(destination / "foo.txt"),
+        extra_files=[
+            InputFile(_EMPTY_FILE),
+            OutputFile("bar.txt", temporary=True),
+        ],
+        stdout=str(destination / "foo.txt"),
     )
     cmd.run(tmp_path)
     assert cmd.join() == [0]
@@ -672,10 +676,12 @@ def test_commandnode_teardown__missing_files_in_dest(tmp_path):
             (destination / "foo.txt").unlink()
 
     cmd = _CmdMock(
-        ("touch", "%(OUT_FOO)s", "%(OUT_BAR)s"),
-        IN_DUMMY=_EMPTY_FILE,
-        OUT_FOO=str(destination / "foo.txt"),
-        OUT_BAR=str(destination / "bar.txt"),
+        (
+            "touch",
+            OutputFile(str(destination / "foo.txt")),
+            OutputFile(str(destination / "bar.txt")),
+        ),
+        extra_files=[InputFile(_EMPTY_FILE)],
     )
     cmd.run(tmp_path)
     assert cmd.join() == [0]
@@ -692,8 +698,8 @@ def test_commandnode_teardown__extra_files_in_temp(tmp_path):
 
     cmd = AtomicCmd(
         ("echo", "1 2 3"),
-        IN_DUMMY=_EMPTY_FILE,
-        OUT_STDOUT=str(destination / "foo.txt"),
+        extra_files=[InputFile(_EMPTY_FILE)],
+        stdout=str(destination / "foo.txt"),
     )
 
     node = CommandNode(cmd)

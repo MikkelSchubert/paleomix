@@ -9,7 +9,7 @@ import os
 import paleomix.common.system
 
 from paleomix.atomiccmd.sets import SequentialCmds
-from paleomix.atomiccmd.command2 import AtomicCmd2, InputFile, OutputFile
+from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile
 from paleomix.common.fileutils import swap_ext
 from paleomix.node import CommandNode, NodeError
 
@@ -565,7 +565,7 @@ def _gatk_command(
     stderr=None,
     extra_files=(),
 ):
-    command = AtomicCmd2(
+    command = AtomicCmd(
         ["gatk"],
         stdout=stdout,
         stderr=stderr,
@@ -590,7 +590,7 @@ def _normalize_idx_extension(command, out_bam):
 
     command.add_extra_files([OutputFile(in_index, temporary=True)])
 
-    rename = AtomicCmd2(
+    rename = AtomicCmd(
         [
             "mv",
             InputFile(in_index, temporary=True),

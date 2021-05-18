@@ -4,12 +4,12 @@ import os
 import paleomix.common.rtools as rtools
 
 from paleomix.node import CommandNode
-from paleomix.atomiccmd.command2 import AtomicCmd2, InputFile, AuxilleryFile, OutputFile
+from paleomix.atomiccmd.command import AtomicCmd, InputFile, AuxilleryFile, OutputFile
 
 
 class TranchesPlotsNode(CommandNode):
     def __init__(self, input_table, output_prefix, dependencies=()):
-        command = AtomicCmd2(
+        command = AtomicCmd(
             (
                 "Rscript",
                 AuxilleryFile(rtools.rscript("ngs", "tranches.r")),

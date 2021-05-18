@@ -4,7 +4,7 @@ fastp - An ultra-fast all-in-one FASTQ preprocessor
 
 https://github.com/OpenGene/fastp
 """
-from paleomix.atomiccmd.command2 import AtomicCmd2, InputFile, OutputFile
+from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile
 from paleomix.common.fileutils import describe_paired_files
 from paleomix.node import CommandNode
 
@@ -24,7 +24,7 @@ class FastpNode(CommandNode):
         options={},
         dependencies=(),
     ):
-        command = AtomicCmd2(
+        command = AtomicCmd(
             ["fastp"],
         )
 

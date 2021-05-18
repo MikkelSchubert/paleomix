@@ -2,7 +2,7 @@ import os
 
 from paleomix.common.fileutils import swap_ext
 
-from paleomix.atomiccmd.command2 import InputFile
+from paleomix.atomiccmd.command import InputFile
 from paleomix.nodes.bwa import BWAIndexNode, BWAAlgorithmNode
 from paleomix.nodes.commands import FilterCollapsedBAMNode, FinalizeBAMNode
 from paleomix.nodes.fastp import FastpNode

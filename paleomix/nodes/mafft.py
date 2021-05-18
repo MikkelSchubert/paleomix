@@ -21,7 +21,7 @@
 # SOFTWARE.
 #
 from paleomix.node import CommandNode, NodeError
-from paleomix.atomiccmd.command2 import AtomicCmd2, InputFile, OutputFile
+from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile
 from paleomix.common.fileutils import reroot_path
 from paleomix.common.formats.msa import MSA, MSAError
 import paleomix.common.versions as versions
@@ -51,7 +51,7 @@ class MAFFTNode(CommandNode):
     def __init__(
         self, input_file, output_file, algorithm="auto", options={}, dependencies=()
     ):
-        command = AtomicCmd2(
+        command = AtomicCmd(
             _PRESETS[algorithm.lower()],
             stdout=output_file,
             requirements=[MAFFT_VERSION],

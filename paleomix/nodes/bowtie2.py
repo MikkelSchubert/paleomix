@@ -23,7 +23,7 @@
 import os
 
 from paleomix.node import CommandNode, NodeError
-from paleomix.atomiccmd.command2 import AtomicCmd2, InputFile, OutputFile
+from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile
 from paleomix.atomiccmd.sets import ParallelCmds
 from paleomix.nodes.bwa import (
     _get_node_description,
@@ -77,7 +77,7 @@ class Bowtie2Node(CommandNode):
         aln = _bowtie2_template(
             ["bowtie2"],
             reference=reference,
-            stdout=AtomicCmd2.PIPE,
+            stdout=AtomicCmd.PIPE,
             stderr=log_file,
         )
 
@@ -128,7 +128,7 @@ class Bowtie2Node(CommandNode):
 
 
 def _bowtie2_template(call, reference, iotype=InputFile, **kwargs):
-    return AtomicCmd2(
+    return AtomicCmd(
         call,
         extra_files=[
             iotype(reference + postfix)

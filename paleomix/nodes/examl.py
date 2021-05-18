@@ -28,7 +28,7 @@ import paleomix.common.fileutils as fileutils
 import paleomix.common.versions as versions
 
 from paleomix.node import CommandNode
-from paleomix.atomiccmd.command2 import AtomicCmd2, InputFile, OutputFile, Executable
+from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile, Executable
 
 from paleomix.nodegraph import FileStatusCache
 
@@ -54,7 +54,7 @@ class ExaMLParserNode(CommandNode):
         input_partition  -- A set of partitions in a format readable by RAxML.
         output_filename  -- Filename for the output binary sequence."""
 
-        command = AtomicCmd2(
+        command = AtomicCmd(
             "parse-examl",
             extra_files=[
                 # Input files, are not used directly (see below)
@@ -140,7 +140,7 @@ class ExaMLNode(CommandNode):
         else:
             raise ValueError("threads must be 1 or greater, not %i" % threads)
 
-        command = AtomicCmd2(
+        command = AtomicCmd(
             call,
             extra_files=[
                 # Final output files, are not created directly

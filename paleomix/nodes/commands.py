@@ -27,7 +27,7 @@ Each node is equivalent to a particular command:
 """
 import os
 
-from paleomix.atomiccmd.command2 import AtomicCmd2, InputFile, OutputFile
+from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile
 from paleomix.node import CommandNode, Node
 from paleomix.atomiccmd.sets import ParallelCmds
 from paleomix.common.fileutils import describe_files, reroot_path, move_file
@@ -153,7 +153,7 @@ class VCFFilterNode(CommandNode):
     def __init__(self, infile, outfile, regions, options, dependencies=()):
         vcffilter = factory.new(
             ["vcf_filter", InputFile(infile)],
-            stdout=AtomicCmd2.PIPE,
+            stdout=AtomicCmd.PIPE,
         )
 
         vcffilter.merge_options(
@@ -163,7 +163,7 @@ class VCFFilterNode(CommandNode):
             },
         )
 
-        bgzip = AtomicCmd2(["bgzip"], stdin=vcffilter, stdout=outfile)
+        bgzip = AtomicCmd(["bgzip"], stdin=vcffilter, stdout=outfile)
 
         CommandNode.__init__(
             self,
@@ -184,9 +184,9 @@ class GenotypeRegionsNode(CommandNode):
         bcftools_options={},
         dependencies=(),
     ):
-        mpileup = AtomicCmd2(
+        mpileup = AtomicCmd(
             ("bcftools", "mpileup", InputFile(infile)),
-            stdout=AtomicCmd2.PIPE,
+            stdout=AtomicCmd.PIPE,
             requirements=[BCFTOOLS_VERSION],
         )
 
@@ -207,7 +207,7 @@ class GenotypeRegionsNode(CommandNode):
             fixed_options=fixed_options,
         )
 
-        genotype = AtomicCmd2(
+        genotype = AtomicCmd(
             ("bcftools", "call", "-"),
             stdin=mpileup,
             stdout=outfile,

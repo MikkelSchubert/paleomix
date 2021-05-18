@@ -10,7 +10,7 @@ import getpass
 import paleomix.common.versions as versions
 import paleomix.common.system
 
-from paleomix.atomiccmd.command2 import AtomicCmd2, AuxilleryFile, InputFile, OutputFile
+from paleomix.atomiccmd.command import AtomicCmd, AuxilleryFile, InputFile, OutputFile
 from paleomix.node import CommandNode
 from paleomix.common.fileutils import swap_ext, try_rmtree
 
@@ -159,7 +159,7 @@ def _java_cmd(jar, jre_options=(), temp_root="%(TEMP_DIR)s", gc_threads=1, **kwa
 
     call.extend(("-jar", AuxilleryFile(jar)))
 
-    return AtomicCmd2(call, **kwargs)
+    return AtomicCmd(call, **kwargs)
 
 
 # Fraction of per-process max open files to use

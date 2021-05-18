@@ -33,7 +33,7 @@ import paleomix.common.rtools as rtools
 import paleomix.common.versions as versions
 import paleomix.tools.factory as factory
 
-from paleomix.atomiccmd.command2 import AtomicCmd2, AuxilleryFile, InputFile, OutputFile
+from paleomix.atomiccmd.command import AtomicCmd, AuxilleryFile, InputFile, OutputFile
 from paleomix.atomiccmd.sets import SequentialCmds
 from paleomix.node import CommandNode, Node, NodeError
 
@@ -101,7 +101,7 @@ class BuildBEDFilesNode(CommandNode):
     ):
         temp_prefix = os.path.basename(output_prefix)
 
-        command = AtomicCmd2(
+        command = AtomicCmd(
             [
                 "plink",
                 "--make-bed",
@@ -146,7 +146,7 @@ class AdmixtureNode(CommandNode):
         prefix = os.path.splitext(os.path.basename(input_file))[0]
         output_prefix = os.path.join(output_root, "%s.%i" % (prefix, k_groups))
 
-        command = AtomicCmd2(
+        command = AtomicCmd(
             [
                 "admixture",
                 "-s",
@@ -276,7 +276,7 @@ class AdmixturePlotNode(CommandNode):
         self._samples = samples
         self._order = tuple(order) + ("Sample",)
 
-        command = AtomicCmd2(
+        command = AtomicCmd(
             (
                 "Rscript",
                 AuxilleryFile(rtools.rscript("zonkey", "admixture.r")),
@@ -344,7 +344,7 @@ class BuildFreqFilesNode(CommandNode):
         if parameters:
             plink_cmd.extend(parameters.split())
 
-        plink = AtomicCmd2(
+        plink = AtomicCmd(
             plink_cmd,
             extra_files=[
                 InputFile(input_prefix + ".bed"),
@@ -361,7 +361,7 @@ class BuildFreqFilesNode(CommandNode):
             set_cwd=True,
         )
 
-        gzip = AtomicCmd2(
+        gzip = AtomicCmd(
             ["gzip", InputFile(basename + ".frq.strat", temporary=True)],
             extra_files=[
                 OutputFile(output_prefix + ".frq.strat.gz"),
@@ -460,7 +460,7 @@ class TreemixNode(CommandNode):
             hash_params(k=k, m=m, global_set=True, outgroup=tuple(sorted(outgroup))),
         )
 
-        command = AtomicCmd2(
+        command = AtomicCmd(
             [
                 "treemix",
                 "-i",
@@ -587,7 +587,7 @@ class PlotTreemixNode(CommandNode):
     def _plot_command(cls, input_prefix, args, extra_files=[], **kwargs):
         script = rtools.rscript("zonkey", "treemix.r")
 
-        return AtomicCmd2(
+        return AtomicCmd(
             ("Rscript", AuxilleryFile(script)) + tuple(args),
             extra_files=[
                 InputFile(input_prefix + ".cov.gz"),
@@ -612,7 +612,7 @@ class SmartPCANode(CommandNode):
         self._output_prefix = output_prefix
         self._nchroms = nchroms
 
-        cmd = AtomicCmd2(
+        cmd = AtomicCmd(
             ("smartpca", "-p", OutputFile("parameters.txt", temporary=True)),
             stdout=output_prefix + ".log",
             extra_files=[
@@ -669,7 +669,7 @@ numthreads:        1
 
 class PlotPCANode(CommandNode):
     def __init__(self, samples, prefix, output_prefix, dependencies=()):
-        cmd = AtomicCmd2(
+        cmd = AtomicCmd(
             [
                 "Rscript",
                 AuxilleryFile(rtools.rscript("zonkey", "pca.r")),
@@ -705,7 +705,7 @@ class PlotCoverageNode(CommandNode):
         self._mapping = dict(zip(mapping.values(), mapping))
         self._input_file = input_file
 
-        cmd = AtomicCmd2(
+        cmd = AtomicCmd(
             (
                 "Rscript",
                 AuxilleryFile(rtools.rscript("zonkey", "coverage.r")),

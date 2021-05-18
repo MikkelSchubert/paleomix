@@ -25,7 +25,14 @@ from unittest.mock import call, Mock
 import pytest
 
 import paleomix.atomiccmd.pprint
-from paleomix.atomiccmd.command import AtomicCmd, CmdError
+from paleomix.atomiccmd.command import (
+    AtomicCmd,
+    CmdError,
+    InputFile,
+    OutputFile,
+    AuxilleryFile,
+    Executable,
+)
 from paleomix.atomiccmd.sets import ParallelCmds, SequentialCmds
 
 _SET_CLASSES = (ParallelCmds, SequentialCmds)
@@ -39,22 +46,30 @@ _SET_CLASSES = (ParallelCmds, SequentialCmds)
 def test_atomicsets__properties(cls):
     cmd_mock_1 = AtomicCmd(
         ("true",),
-        CHECK_A=id,
-        EXEC_1="false",
-        IN_1="/foo/bar/in_1.file",
-        IN_2="/foo/bar/in_2.file",
-        OUT_1="/bar/foo/out",
-        TEMP_OUT_1="out.log",
-        AUX_A="/aux/fA",
-        AUX_B="/aux/fB",
+        extra_files=[
+            Executable("false"),
+            InputFile("/foo/bar/in_1.file"),
+            InputFile("/foo/bar/in_2.file"),
+            OutputFile("/bar/foo/out"),
+            OutputFile("out.log", temporary=True),
+            AuxilleryFile("/aux/fA"),
+            AuxilleryFile("/aux/fB"),
+        ],
+        requirements=[
+            id,
+        ],
     )
     cmd_mock_2 = AtomicCmd(
         ("false",),
-        CHECK_A=list,
-        EXEC_1="echo",
-        EXEC_2="java",
-        IN_1="/foo/bar/in.file",
-        OUT_1="out.txt",
+        extra_files=[
+            Executable("echo"),
+            Executable("java"),
+            InputFile("/foo/bar/in.file"),
+            OutputFile("out.txt"),
+        ],
+        requirements=[
+            list,
+        ],
     )
 
     obj = cls([cmd_mock_1, cmd_mock_2])
@@ -73,20 +88,21 @@ def test_atomicsets__properties(cls):
 
 
 _NO_CLOBBERING_KWARGS = (
-    ({"OUT_A": "/foo/out.txt"}, {"OUT_B": "/bar/out.txt"}),
-    ({"OUT_A": "/foo/out.txt"}, {"TEMP_OUT_B": "out.txt"}),
-    ({"OUT_A": "/foo/out.txt"}, {"OUT_STDOUT": "/bar/out.txt"}),
-    ({"OUT_A": "/foo/out.txt"}, {"TEMP_OUT_STDOUT": "out.txt"}),
-    ({"OUT_A": "/foo/out.txt"}, {"OUT_STDERR": "/bar/out.txt"}),
-    ({"OUT_A": "/foo/out.txt"}, {"TEMP_OUT_STDERR": "out.txt"}),
+    {"extra_files": [OutputFile("/bar/out.txt")]},
+    {"extra_files": [OutputFile("out.txt", temporary=True)]},
+    {"stdout": "/bar/out.txt"},
+    {"stdout": OutputFile("out.txt", temporary=True)},
+    {"stderr": "/bar/out.txt"},
+    {"stderr": OutputFile("out.txt", temporary=True)},
 )
+
 
 # Ensure that commands in a set doesn't clobber eachothers OUT files
 @pytest.mark.parametrize("cls", _SET_CLASSES)
-@pytest.mark.parametrize("kwargs_1, kwargs_2", _NO_CLOBBERING_KWARGS)
-def test_atomicsets__no_clobbering(cls, kwargs_1, kwargs_2):
-    cmd_1 = AtomicCmd("true", **kwargs_1)
-    cmd_2 = AtomicCmd("true", **kwargs_2)
+@pytest.mark.parametrize("kwargs", _NO_CLOBBERING_KWARGS)
+def test_atomicsets__no_clobbering(cls, kwargs):
+    cmd_1 = AtomicCmd(["true", OutputFile("/foo/out.txt")])
+    cmd_2 = AtomicCmd("true", **kwargs)
     with pytest.raises(CmdError):
         cls([cmd_1, cmd_2])
 
@@ -120,8 +136,8 @@ def test_atomicsets__commit__remove_files_on_failure(tmp_path, cls):
     (tmp_path / "tmp").mkdir()
     out_path = tmp_path / "out"
 
-    cmd_1 = AtomicCmd(["touch", "%(OUT_FILE)s"], OUT_FILE=str(out_path / "file1"))
-    cmd_2 = AtomicCmd(["touch", "%(OUT_FILE)s"], OUT_FILE=str(out_path / "file2"))
+    cmd_1 = AtomicCmd(["touch", OutputFile(str(out_path / "file1"))])
+    cmd_2 = AtomicCmd(["touch", OutputFile(str(out_path / "file2"))])
     cmd_2.commit = Mock()
     cmd_2.commit.side_effect = OSError()
 

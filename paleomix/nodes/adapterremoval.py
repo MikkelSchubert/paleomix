@@ -26,7 +26,7 @@ import paleomix.common.fileutils as fileutils
 import paleomix.common.versions as versions
 
 from paleomix.node import CommandNode
-from paleomix.atomiccmd.command2 import AtomicCmd2, InputFile, OutputFile
+from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile
 
 
 _VERSION_CHECK = versions.Requirement(
@@ -40,7 +40,7 @@ class SE_AdapterRemovalNode(CommandNode):
     def __init__(
         self, input_file, output_prefix, threads=1, options={}, dependencies=()
     ):
-        command = AtomicCmd2(
+        command = AtomicCmd(
             "AdapterRemoval",
             extra_files=[
                 OutputFile(output_prefix + ".settings"),
@@ -92,7 +92,7 @@ class PE_AdapterRemovalNode(CommandNode):
         dependencies=(),
     ):
 
-        command = AtomicCmd2(
+        command = AtomicCmd(
             "AdapterRemoval",
             extra_files=[
                 OutputFile(output_prefix + ".settings"),

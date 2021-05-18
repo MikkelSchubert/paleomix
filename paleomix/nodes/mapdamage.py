@@ -25,7 +25,7 @@ import os
 import paleomix.common.rtools as rtools
 import paleomix.common.versions as versions
 
-from paleomix.atomiccmd.command2 import AtomicCmd2, InputFile, OutputFile
+from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile
 from paleomix.atomiccmd.sets import ParallelCmds
 from paleomix.common.fileutils import describe_files
 from paleomix.node import NodeError, CommandNode
@@ -61,7 +61,7 @@ class MapDamagePlotNode(CommandNode):
         if len(input_files) > 1:
             merge = merge_bam_files_command(input_files)
 
-        command = AtomicCmd2(
+        command = AtomicCmd(
             ["mapDamage"],
             stdin=merge,
             stdout=OutputFile("pipe_mapDamage.stdout", temporary=True),
@@ -122,7 +122,7 @@ class MapDamagePlotNode(CommandNode):
 
 class MapDamageModelNode(CommandNode):
     def __init__(self, reference, directory, options={}, dependencies=()):
-        command = AtomicCmd2(
+        command = AtomicCmd(
             ["mapDamage"],
             extra_files=[
                 OutputFile("3pGtoA_freq.txt", temporary=True),
@@ -214,7 +214,7 @@ class MapDamageRescaleNode(CommandNode):
         if len(input_files) > 1:
             merge = merge_bam_files_command(input_files)
 
-        command = AtomicCmd2(
+        command = AtomicCmd(
             ["mapDamage"],
             stdin=merge,
             extra_files=[

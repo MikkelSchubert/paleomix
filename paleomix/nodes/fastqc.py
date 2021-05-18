@@ -7,7 +7,7 @@ https://github.com/s-andrews/FastQC
 import os
 import re
 
-from paleomix.atomiccmd.command2 import AtomicCmd2, InputFile, OutputFile
+from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile
 from paleomix.node import CommandNode
 
 
@@ -21,7 +21,7 @@ class FastQCNode(CommandNode):
     def __init__(self, in_file, out_folder, options={}, dependencies=()):
         out_prefix = _FASTQC_EXCLUDED_EXTENSIONS.sub("", os.path.basename(in_file))
 
-        command = AtomicCmd2(
+        command = AtomicCmd(
             ["fastqc", InputFile(in_file)],
             extra_files=[
                 OutputFile(os.path.join(out_folder, out_prefix + "_fastqc.html")),

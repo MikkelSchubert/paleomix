@@ -26,7 +26,7 @@ import os
 import paleomix.common.versions as versions
 import paleomix.tools.factory as factory
 
-from paleomix.atomiccmd.command2 import AtomicCmd2, InputFile, OutputFile
+from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile
 from paleomix.atomiccmd.sets import ParallelCmds
 from paleomix.common.fileutils import describe_paired_files
 from paleomix.node import CommandNode
@@ -119,7 +119,7 @@ class BWASamse(CommandNode):
                 InputFile(input_file_fq),
             ),
             reference=reference,
-            stdout=AtomicCmd2.PIPE,
+            stdout=AtomicCmd.PIPE,
         )
 
         samse.append_options(mapping_options)
@@ -170,7 +170,7 @@ class BWASampe(CommandNode):
                 InputFile(input_file_fq_2),
             ),
             reference=reference,
-            stdout=AtomicCmd2.PIPE,
+            stdout=AtomicCmd.PIPE,
         )
 
         sampe.append_options(mapping_options)
@@ -218,7 +218,7 @@ class BWAAlgorithmNode(CommandNode):
         aln = _new_bwa_command(
             ("bwa", algorithm, reference, InputFile(input_file_1)),
             reference=reference,
-            stdout=AtomicCmd2.PIPE,
+            stdout=AtomicCmd.PIPE,
         )
 
         if input_file_2:
@@ -295,7 +295,7 @@ def _new_cleanup_command(
 
 
 def _new_bwa_command(call, reference, iotype=InputFile, **kwargs):
-    return AtomicCmd2(
+    return AtomicCmd(
         call,
         extra_files=[
             iotype(reference + postfix)
