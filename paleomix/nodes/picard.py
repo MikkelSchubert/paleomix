@@ -68,6 +68,9 @@ class ValidateBAMNode(PicardNode):
         for check in ignored_checks:
             builder.add_option("IGNORE", check, sep="=")
 
+        # Exhaustive index validation is expensive and doesn't add a whole lot
+        builder.add_option("INDEX_VALIDATION_STRINGENCY", "LESS_EXHAUSTIVE", sep="=")
+
         output_log = output_log or swap_ext(input_bam, ".validated")
         builder.set_kwargs(
             IN_BAM=input_bam, IN_INDEX=input_index, OUT_STDOUT=output_log
