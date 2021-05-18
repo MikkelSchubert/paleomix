@@ -63,7 +63,7 @@
     # 'mark', PCR duplicates are flagged with bit 0x400, and not removed from the
     # output files; if set to 'no', the reads are assumed to not have been amplified.
     PCRDuplicates: filter
-    # Set to 'no' to disable mapDamage; set to 'plots' to build basic mapDamage plots;
+    # Set to 'no' to disable mapDamage; set to 'plot' to build basic mapDamage plots;
     # set to 'model' to build plots and post-mortem damage models; and set to 'rescale'
     # to build plots, models, and BAMs with rescaled quality scores. All analyses are
     # carried out per library.
