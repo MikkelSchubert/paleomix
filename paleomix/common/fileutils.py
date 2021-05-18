@@ -27,7 +27,7 @@ import uuid
 import errno
 import shutil
 
-from pathlib import Path, PosixPath
+from pathlib import Path
 from typing import Any, Callable, IO, Iterable, List, Optional, Tuple, Union
 
 from .utilities import safe_coerce_to_tuple
@@ -36,9 +36,10 @@ from .utilities import safe_coerce_to_tuple
 try:
     import pathlib2
 
-    PathClasses = (Path, PosixPath, pathlib2.PosixPath)
+    # FIXME: pathlib2.PosixPath is used by pytest for py3.5
+    PathClasses = (Path, pathlib2.PosixPath)
 except ImportError:
-    PathClasses = (Path, PosixPath)
+    PathClasses = (Path,)
 
 
 try:
