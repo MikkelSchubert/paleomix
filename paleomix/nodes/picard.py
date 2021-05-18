@@ -62,6 +62,9 @@ class ValidateBAMNode(PicardNode):
 
         _set_max_open_files(command)
 
+        # Exhaustive index validation is expensive and doesn't add a whole lot
+        command.append("--INDEX_VALIDATION_STRINGENCY", "LESS_EXHAUSTIVE")
+
         if input_index is not None:
             command.add_extra_files([InputFile(input_index)])
 
