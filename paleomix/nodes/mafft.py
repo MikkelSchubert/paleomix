@@ -21,7 +21,7 @@
 # SOFTWARE.
 #
 from paleomix.node import CommandNode, NodeError
-from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile
+from paleomix.atomiccmd.command import AtomicCmd, InputFile
 from paleomix.common.fileutils import reroot_path
 from paleomix.common.formats.msa import MSA, MSAError
 import paleomix.common.versions as versions

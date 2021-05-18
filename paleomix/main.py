@@ -24,6 +24,7 @@ import sys
 
 import pysam
 
+import paleomix
 import paleomix.common.system
 import paleomix.common.logging
 

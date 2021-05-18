@@ -21,7 +21,6 @@
 # SOFTWARE.
 #
 import os
-import multiprocessing
 
 import paleomix
 import paleomix.common.logging

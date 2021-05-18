@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Picard - A set of command line tools (in Java) for manipulating high-throughput sequencing (HTS) data and formats such as SAM/BAM/CRAM and VCF.
+Picard - A set of command line tools (in Java) for manipulating high-throughput
+sequencing (HTS) data and formats such as SAM/BAM/CRAM and VCF.
 
 https://broadinstitute.github.io/picard/
 """

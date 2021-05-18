@@ -10,6 +10,8 @@ from pathlib import Path
 import pytest
 
 import paleomix
+import paleomix.atomiccmd.command
+import paleomix.atomiccmd.pprint
 import paleomix.common.fileutils as fileutils
 
 from paleomix.common.versions import RequirementObj
@@ -703,7 +705,7 @@ def _setup_for_commit(tmp_path, create_cmd=True):
     tmp_path.mkdir(parents=True)
 
     if not create_cmd:
-        return destination, tmp_path
+        return destination, tmp_path, None
 
     cmd = AtomicCmd(("touch", OutputFile(destination / "1234")))
     cmd.run(tmp_path)
@@ -720,7 +722,7 @@ def test_atomiccmd2__commit_simple(tmp_path):
 
 
 def test_atomiccmd2__commit_temp_out(tmp_path):
-    dest, temp = _setup_for_commit(tmp_path, create_cmd=False)
+    dest, temp, _ = _setup_for_commit(tmp_path, create_cmd=False)
     cmd = AtomicCmd(
         ("echo", "foo"),
         stdout=dest / "foo.txt",
@@ -783,7 +785,7 @@ def test_atomiccmd2__commit_wrong_temp_folder(tmp_path):
 
 
 def test_atomiccmd2__commit_missing_files(tmp_path):
-    destination, tmp_path = _setup_for_commit(tmp_path, False)
+    destination, tmp_path, _ = _setup_for_commit(tmp_path, False)
     cmd = AtomicCmd(
         ("touch", OutputFile(destination / "1234")),
         extra_files=[OutputFile(destination / "4567")],
@@ -807,7 +809,7 @@ def test_atomiccmd2__commit_failure_cleanup(tmp_path):
 
         return move_file(source, destination)
 
-    destination, tmp_path = _setup_for_commit(tmp_path, False)
+    destination, tmp_path, _ = _setup_for_commit(tmp_path, False)
     command = AtomicCmd(
         (
             "touch",
@@ -830,7 +832,7 @@ def test_atomiccmd2__commit_failure_cleanup(tmp_path):
 
 
 def test_atomiccmd2__commit_with_pipes(tmp_path):
-    destination, tmp_path = _setup_for_commit(tmp_path, False)
+    destination, tmp_path, _ = _setup_for_commit(tmp_path, False)
     command_1 = AtomicCmd(("echo", "Hello, World!"), stdout=AtomicCmd.PIPE)
     command_2 = AtomicCmd(("gzip",), stdin=command_1, stdout=(destination / "foo.gz"))
 
