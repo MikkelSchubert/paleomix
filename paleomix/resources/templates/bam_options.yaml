@@ -67,7 +67,7 @@
     # set to 'model' to build plots and post-mortem damage models; and set to 'rescale'
     # to build plots, models, and BAMs with rescaled quality scores. All analyses are
     # carried out per library.
-    mapDamage: plot
+    mapDamage: no
     # Generate coverage information for the final BAM and for each 'RegionsOfInterest'
     # specified in 'Prefixes' (yes / no).
     Coverage: yes
