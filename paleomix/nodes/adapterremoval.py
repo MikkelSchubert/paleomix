@@ -20,13 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
-
 import paleomix.common.fileutils as fileutils
 import paleomix.common.versions as versions
 
 from paleomix.node import CommandNode
-from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile
+from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile, TempOutputFile
 
 
 _VERSION_CHECK = versions.Requirement(
@@ -63,10 +61,7 @@ class SE_AdapterRemovalNode(CommandNode):
                 # Fix number of threads to ensure consistency when scheduling node
                 "--threads": threads,
                 # Prefix for output files, ensure that all end up in temp folder
-                "--basename": OutputFile(
-                    os.path.basename(output_prefix),
-                    temporary=True,
-                ),
+                "--basename": TempOutputFile(output_prefix),
             },
         )
 
@@ -112,7 +107,7 @@ class PE_AdapterRemovalNode(CommandNode):
             # Fix number of threads to ensure consistency when scheduling node
             "--threads": threads,
             # Prefix for output files, ensure that all end up in temp folder
-            "--basename": OutputFile(os.path.basename(output_prefix), temporary=True),
+            "--basename": TempOutputFile(output_prefix),
         }
 
         if collapse:

@@ -25,7 +25,7 @@ import os
 import paleomix.common.rtools as rtools
 import paleomix.common.versions as versions
 
-from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile
+from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile, TempOutputFile
 from paleomix.atomiccmd.sets import ParallelCmds
 from paleomix.common.fileutils import describe_files
 from paleomix.node import NodeError, CommandNode
@@ -64,8 +64,8 @@ class MapDamagePlotNode(CommandNode):
         command = AtomicCmd(
             ["mapDamage"],
             stdin=merge,
-            stdout=OutputFile("pipe_mapDamage.stdout", temporary=True),
-            stderr=OutputFile("pipe_mapDamage.stderr", temporary=True),
+            stdout=TempOutputFile("pipe_mapDamage.stdout"),
+            stderr=TempOutputFile("pipe_mapDamage.stderr"),
             extra_files=[
                 OutputFile(os.path.join(output_directory, "3pGtoA_freq.txt")),
                 OutputFile(os.path.join(output_directory, "5pCtoT_freq.txt")),
@@ -125,13 +125,13 @@ class MapDamageModelNode(CommandNode):
         command = AtomicCmd(
             ["mapDamage"],
             extra_files=[
-                OutputFile("3pGtoA_freq.txt", temporary=True),
-                OutputFile("5pCtoT_freq.txt", temporary=True),
-                OutputFile("dnacomp.txt", temporary=True),
-                OutputFile("misincorporation.txt", temporary=True),
-                OutputFile("Runtime_log.txt", temporary=True),
-                OutputFile("pipe_mapDamage.stdout", temporary=True),
-                OutputFile("pipe_mapDamage.stderr", temporary=True),
+                TempOutputFile("3pGtoA_freq.txt"),
+                TempOutputFile("5pCtoT_freq.txt"),
+                TempOutputFile("dnacomp.txt"),
+                TempOutputFile("misincorporation.txt"),
+                TempOutputFile("Runtime_log.txt"),
+                TempOutputFile("pipe_mapDamage.stdout"),
+                TempOutputFile("pipe_mapDamage.stderr"),
                 OutputFile(os.path.join(directory, "dnacomp_genome.csv")),
                 OutputFile(os.path.join(directory, "Stats_out_MCMC_correct_prob.csv")),
                 OutputFile(os.path.join(directory, "Stats_out_MCMC_hist.pdf")),
@@ -218,8 +218,8 @@ class MapDamageRescaleNode(CommandNode):
             ["mapDamage"],
             stdin=merge,
             extra_files=[
-                OutputFile("Runtime_log.txt", temporary=True),
-                OutputFile("Stats_out_MCMC_correct_prob.csv", temporary=True),
+                TempOutputFile("Runtime_log.txt"),
+                TempOutputFile("Stats_out_MCMC_correct_prob.csv"),
             ],
             requirements=[MAPDAMAGE_VERSION],
         )

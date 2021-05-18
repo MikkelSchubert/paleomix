@@ -31,7 +31,7 @@ import pytest
 
 import paleomix.node
 
-from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile
+from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile, TempOutputFile
 from paleomix.node import (
     Node,
     CommandNode,
@@ -654,7 +654,7 @@ def test_commandnode_teardown__missing_optional_files(tmp_path):
         ("echo", "-n", "1 2 3"),
         extra_files=[
             InputFile(_EMPTY_FILE),
-            OutputFile("bar.txt", temporary=True),
+            TempOutputFile("bar.txt"),
         ],
         stdout=str(destination / "foo.txt"),
     )

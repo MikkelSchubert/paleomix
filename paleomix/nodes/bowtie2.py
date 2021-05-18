@@ -20,10 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
-
 from paleomix.node import CommandNode, NodeError
-from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile
+from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile, TempOutputFile
 from paleomix.atomiccmd.sets import ParallelCmds
 from paleomix.nodes.bwa import (
     _get_node_description,
@@ -47,7 +45,7 @@ class Bowtie2IndexNode(CommandNode):
             (
                 "bowtie2-build",
                 InputFile(input_file),
-                OutputFile(os.path.basename(input_file), temporary=True),
+                TempOutputFile(input_file),
             ),
             reference=input_file,
             iotype=OutputFile,

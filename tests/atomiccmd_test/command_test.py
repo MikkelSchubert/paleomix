@@ -13,7 +13,7 @@ import paleomix
 import paleomix.common.fileutils as fileutils
 
 from paleomix.common.versions import RequirementObj
-from paleomix.atomiccmd.command import CmdError
+from paleomix.atomiccmd.command import CmdError, TempInputFile, TempOutputFile
 from paleomix.atomiccmd.command import (
     AtomicCmd,
     _AtomicFile,
@@ -53,9 +53,9 @@ def test_atomicfile__repr__():
     assert repr(AuxilleryFile("foo/bar")) == "AuxilleryFile('foo/bar')"
     assert repr(Executable("foo/bar")) == "Executable('foo/bar')"
     assert repr(InputFile("bar")) == "InputFile('bar', False)"
-    assert repr(InputFile("bar", temporary=True)) == "InputFile('bar', True)"
+    assert repr(TempInputFile("bar")) == "TempInputFile('bar', True)"
     assert repr(OutputFile("bar")) == "OutputFile('bar', False)"
-    assert repr(OutputFile("bar", temporary=True)) == "OutputFile('bar', True)"
+    assert repr(TempOutputFile("bar")) == "TempOutputFile('bar', True)"
 
 
 def test_atomicfile__valid_paths():
@@ -148,7 +148,7 @@ def test_atomiccmd2__paths():
             AuxilleryFile("/path/to/index"),
             InputFile("/a/b/c"),
             OutputFile("foo/bar"),
-            OutputFile("xyb", temporary=True),
+            TempOutputFile("xyb"),
         ],
     )
 
@@ -173,7 +173,7 @@ def test_atomiccmd2__extra_files():
         "ls",
         extra_files=(
             InputFile("/x/y/z"),
-            InputFile("tmp_in", temporary=True),
+            TempInputFile("tmp_in"),
             OutputFile("/out/foo"),
             Executable("true"),
             AuxilleryFile("wat/wat"),
@@ -201,7 +201,7 @@ def test_atomiccmd2__expected_and_optional_temp_files():
         "ls",
         stdout="/foo/bar/data.gz",
         extra_files=(
-            OutputFile("tmp_out", temporary=True),
+            TempOutputFile("tmp_out"),
             OutputFile("/out/foo"),
         ),
     )
@@ -217,8 +217,8 @@ def test_atomiccmd2__expected_and_optional_temp_files():
 
 _OVERLAPPING_OUT_FILENAMES = (
     (OutputFile("/foo/bar/output"), OutputFile("/var/output")),
-    (OutputFile("output", temporary=True), OutputFile("/var/output")),
-    (OutputFile("/foo/bar/output"), OutputFile("output", temporary=True)),
+    (TempOutputFile("output"), OutputFile("/var/output")),
+    (OutputFile("/foo/bar/output"), TempOutputFile("output")),
 )
 
 
@@ -271,7 +271,7 @@ def test_atomiccmd2__stdin_valid_values():
     AtomicCmd("true", stdin="/path/to/file")
     AtomicCmd("true", stdin=Path("/path/to/file"))
     AtomicCmd("true", stdin=InputFile("/path/to/file"))
-    AtomicCmd("true", stdin=InputFile("file", temporary=True))
+    AtomicCmd("true", stdin=TempInputFile("file"))
     AtomicCmd("true", stdin=AtomicCmd.DEVNULL)
     AtomicCmd("true", stdin=AtomicCmd.PIPE)
 
@@ -306,7 +306,7 @@ def test_atomiccmd2__stdin_basic(tmp_path):
 def test_atomiccmd2__stdin_from_temp_file(tmp_path):
     cmd = AtomicCmd(
         "cat",
-        stdin=InputFile("infile.fasta", temporary=True),
+        stdin=TempInputFile("infile.fasta"),
         stdout="result.txt",
     )
     assert cmd.input_files == frozenset()
@@ -341,7 +341,7 @@ _VALID_STDOUT_STDERR_VALUES = [
     "/path/to/file",
     Path("/path/to/file"),
     OutputFile("/path/to/file"),
-    OutputFile("file", temporary=True),
+    TempOutputFile("file"),
     AtomicCmd.DEVNULL,
     AtomicCmd.PIPE,
 ]
@@ -503,7 +503,7 @@ _IN_OUT_PATHS_WITH_SET_CWD = [
 def test_atomiccmd2__set_cwd__temp_in_out(tmp_path, cls, temp, set_cwd, expected):
     cmd = AtomicCmd(
         ("echo", "-n", cls("test_file", temporary=temp)),
-        stdout=OutputFile("result.txt", temporary=True),
+        stdout=TempOutputFile("result.txt"),
         set_cwd=set_cwd,
     )
     cmd.run(tmp_path)
@@ -724,7 +724,7 @@ def test_atomiccmd2__commit_temp_out(tmp_path):
     cmd = AtomicCmd(
         ("echo", "foo"),
         stdout=dest / "foo.txt",
-        extra_files=[OutputFile("bar.txt", temporary=True)],
+        extra_files=[TempOutputFile("bar.txt")],
     )
     cmd.run(temp)
     assert cmd.join() == [0]
@@ -735,7 +735,7 @@ def test_atomiccmd2__commit_temp_out(tmp_path):
 
 
 def test_atomiccmd2__commit_temp_only(tmp_path):
-    cmd = AtomicCmd(("echo", "foo"), stdout=OutputFile("bar.txt", temporary=True))
+    cmd = AtomicCmd(("echo", "foo"), stdout=TempOutputFile("bar.txt"))
     cmd.run(tmp_path)
     assert cmd.join() == [0]
     assert (tmp_path / "bar.txt").exists()
@@ -881,7 +881,7 @@ def test_atomiccmd2__append_overlapping_output__temp_and_non_temp():
     cmd.append(OutputFile("/foo/bar/target"))
 
     with pytest.raises(CmdError):
-        cmd.append(OutputFile("target", temporary=True))
+        cmd.append(TempOutputFile("target"))
 
 
 def test_atomiccmd2__append_overlapping_output__different_instances():
@@ -1017,7 +1017,7 @@ def test_atomiccmd2__add_extra_files():
 
     assert cmd.input_files == frozenset()
     assert cmd.output_files == frozenset()
-    cmd.add_extra_files([InputFile("/foo/bar"), OutputFile("zod", temporary=True)])
+    cmd.add_extra_files([InputFile("/foo/bar"), TempOutputFile("zod")])
     assert cmd.input_files == frozenset(["/foo/bar"])
     assert cmd.output_files == frozenset()
     assert cmd.to_call("/tmp/example") == ["ls"]
@@ -1036,16 +1036,14 @@ def test_atomiccmd2__add_extra_files_overlapping_output_1():
     cmd.add_extra_files([OutputFile("/foo/bar/target")])
 
     with pytest.raises(CmdError, match="multiple output files with name 'target'"):
-        cmd.add_extra_files([OutputFile("target", temporary=True)])
+        cmd.add_extra_files([TempOutputFile("target")])
 
 
 def test_atomiccmd2__add_extra_files_overlapping_output_2():
     cmd = AtomicCmd("touch")
 
     with pytest.raises(CmdError, match="multiple output files with name 'target'"):
-        cmd.add_extra_files(
-            [OutputFile("/foo/bar/target"), OutputFile("target", temporary=True)]
-        )
+        cmd.add_extra_files([OutputFile("/foo/bar/target"), TempOutputFile("target")])
 
 
 def test_atomiccmd2__add_extra_files_to_running_command(tmp_path):

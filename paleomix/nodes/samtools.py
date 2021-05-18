@@ -9,7 +9,13 @@ import os
 import warnings
 
 from paleomix.node import CommandNode
-from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile
+from paleomix.atomiccmd.command import (
+    AtomicCmd,
+    InputFile,
+    OutputFile,
+    TempInputFile,
+    TempOutputFile,
+)
 from paleomix.atomiccmd.sets import ParallelCmds, SequentialCmds
 from paleomix.common.fileutils import describe_files
 
@@ -43,12 +49,10 @@ class TabixIndexNode(CommandNode):
 
         # Tabix does not support a custom output path, so we create a symlink to the
         # input file in the temporary folder and index that.
-        link = AtomicCmd(
-            ["ln", "-s", InputFile(infile), OutputFile(basename, temporary=True)]
-        )
+        link = AtomicCmd(["ln", "-s", InputFile(infile), TempOutputFile(basename)])
 
         tabix = AtomicCmd(
-            ["tabix", "-p", preset, InputFile(basename, temporary=True)],
+            ["tabix", "-p", preset, TempInputFile(basename)],
             extra_files=[OutputFile(infile + ".tbi")],
             requirements=[TABIX_VERSION],
         )
@@ -76,12 +80,12 @@ class FastaIndexNode(CommandNode):
                 "ln",
                 "-s",
                 InputFile(os.path.abspath(infile)),
-                OutputFile(basename, temporary=True),
+                TempOutputFile(basename),
             ]
         )
 
         faidx = AtomicCmd(
-            ["samtools", "faidx", InputFile(basename, temporary=True)],
+            ["samtools", "faidx", TempInputFile(basename)],
             extra_files=[OutputFile(infile + ".fai")],
             requirements=[SAMTOOLS_VERSION],
         )

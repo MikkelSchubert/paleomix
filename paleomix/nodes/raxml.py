@@ -28,7 +28,7 @@ import paleomix.common.fileutils as fileutils
 import paleomix.common.versions as versions
 
 from paleomix.node import CommandNode
-from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile
+from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile, TempOutputFile
 
 
 RAXML_VERSION = versions.Requirement(
@@ -101,17 +101,15 @@ class RAxMLRapidBSNode(CommandNode):
         # outside temp folder. In addition, it may be nessesary to remove the .reduced
         # files if created
         alignment_basename = os.path.basename(input_alignment)
-        options["-s"] = OutputFile(alignment_basename, temporary=True)
-        extra_files.append(OutputFile(alignment_basename + ".reduced", temporary=True))
+        options["-s"] = TempOutputFile(alignment_basename)
+        extra_files.append(TempOutputFile(alignment_basename + ".reduced"))
 
         if input_partition is not None:
             partition_basename = os.path.basename(input_partition)
 
-            options["-q"] = OutputFile(partition_basename, temporary=True)
+            options["-q"] = TempOutputFile(partition_basename)
             extra_files.append(InputFile(input_partition))
-            extra_files.append(
-                OutputFile(partition_basename + ".reduced", temporary=True)
-            )
+            extra_files.append(TempOutputFile(partition_basename + ".reduced"))
 
         if threads > 1:
             command = AtomicCmd(
@@ -178,8 +176,8 @@ class RAxMLParsimonyTreeNode(CommandNode):
             "-p": int(random.random() * 2 ** 31 - 1),
             # Symlink to sequence and partitions, to prevent the creation of *.reduced
             # files outside temp folder. Temporary files to automatically remove.
-            "-s": OutputFile("RAxML_alignment", temporary=True),
-            "-q": OutputFile("RAxML_partitions", temporary=True),
+            "-s": TempOutputFile("RAxML_alignment"),
+            "-q": TempOutputFile("RAxML_partitions"),
         }
 
         command = AtomicCmd(
@@ -188,7 +186,7 @@ class RAxMLParsimonyTreeNode(CommandNode):
                 OutputFile(output_tree),
                 InputFile(input_alignment),
                 InputFile(input_partitions),
-                OutputFile("RAxML_info.Pypeline", temporary=True),
+                TempOutputFile("RAxML_info.Pypeline"),
             ],
             requirements=[RAXML_VERSION],
         )

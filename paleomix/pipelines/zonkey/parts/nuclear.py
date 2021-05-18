@@ -33,7 +33,13 @@ import paleomix.common.rtools as rtools
 import paleomix.common.versions as versions
 import paleomix.tools.factory as factory
 
-from paleomix.atomiccmd.command import AtomicCmd, AuxilleryFile, InputFile, OutputFile
+from paleomix.atomiccmd.command import (
+    AtomicCmd,
+    AuxilleryFile,
+    InputFile,
+    OutputFile,
+    TempOutputFile,
+)
 from paleomix.atomiccmd.sets import SequentialCmds
 from paleomix.node import CommandNode, Node, NodeError
 
@@ -111,7 +117,7 @@ class BuildBEDFilesNode(CommandNode):
                 "--tfam",
                 InputFile(tfam),
                 "--out",
-                OutputFile(temp_prefix, temporary=True),
+                TempOutputFile(temp_prefix),
             ]
             + self._parse_parameters(plink_parameters),
             extra_files=[
@@ -119,8 +125,8 @@ class BuildBEDFilesNode(CommandNode):
                 OutputFile(output_prefix + ".bim"),
                 OutputFile(output_prefix + ".fam"),
                 OutputFile(output_prefix + ".log"),
-                OutputFile(temp_prefix + ".nosex", temporary=True),
-                OutputFile(temp_prefix + ".nof", temporary=True),
+                TempOutputFile(temp_prefix + ".nosex"),
+                TempOutputFile(temp_prefix + ".nof"),
             ],
             requirements=[PLINK_VERSION],
             set_cwd=True,
@@ -152,7 +158,7 @@ class AdmixtureNode(CommandNode):
                 "-s",
                 random.randint(0, 2 ** 16 - 1),
                 "--supervised",
-                OutputFile(prefix + ".bed", temporary=True),
+                TempOutputFile(prefix + ".bed"),
                 int(k_groups),
             ],
             stdout=output_prefix + ".log",
@@ -160,9 +166,9 @@ class AdmixtureNode(CommandNode):
                 InputFile(input_file),
                 InputFile(fileutils.swap_ext(input_file, ".bim")),
                 InputFile(fileutils.swap_ext(input_file, ".fam")),
-                OutputFile(prefix + ".bim", temporary=True),
-                OutputFile(prefix + ".fam", temporary=True),
-                OutputFile(prefix + ".pop", temporary=True),
+                TempOutputFile(prefix + ".bim"),
+                TempOutputFile(prefix + ".fam"),
+                TempOutputFile(prefix + ".pop"),
                 OutputFile(output_prefix + ".P"),
                 OutputFile(output_prefix + ".Q"),
             ],
@@ -281,8 +287,8 @@ class AdmixturePlotNode(CommandNode):
                 "Rscript",
                 AuxilleryFile(rtools.rscript("zonkey", "admixture.r")),
                 InputFile(input_file),
-                OutputFile("samples.txt", temporary=True),
-                OutputFile(os.path.basename(output_prefix), temporary=True),
+                TempOutputFile("samples.txt"),
+                TempOutputFile(output_prefix),
             ),
             extra_files=[
                 InputFile(samples),
@@ -336,9 +342,9 @@ class BuildFreqFilesNode(CommandNode):
             "--bfile",
             os.path.abspath(input_prefix),
             "--within",
-            OutputFile("samples.clust", temporary=True),
+            TempOutputFile("samples.clust"),
             "--out",
-            OutputFile(basename, temporary=True),
+            TempOutputFile(basename),
         ]
 
         if parameters:
@@ -352,8 +358,8 @@ class BuildFreqFilesNode(CommandNode):
                 InputFile(input_prefix + ".fam"),
                 OutputFile(output_prefix + ".frq.strat.nosex"),
                 OutputFile(output_prefix + ".frq.strat.log"),
-                OutputFile(basename + ".imiss", temporary=True),
-                OutputFile(basename + ".lmiss", temporary=True),
+                TempOutputFile(basename + ".imiss"),
+                TempOutputFile(basename + ".lmiss"),
             ],
             requirements=[
                 PLINK_VERSION,
@@ -362,7 +368,7 @@ class BuildFreqFilesNode(CommandNode):
         )
 
         gzip = AtomicCmd(
-            ["gzip", InputFile(basename + ".frq.strat", temporary=True)],
+            ["gzip", TempOutputFile(basename + ".frq.strat")],
             extra_files=[
                 OutputFile(output_prefix + ".frq.strat.gz"),
             ],
@@ -466,7 +472,7 @@ class TreemixNode(CommandNode):
                 "-i",
                 InputFile(input_file),
                 "-o",
-                OutputFile(os.path.basename(output_prefix), temporary=True),
+                TempOutputFile(output_prefix),
                 "-global",
                 "-m",
                 m,
@@ -543,7 +549,7 @@ class PlotTreemixNode(CommandNode):
                 "plot_tree",
                 abs_prefix,
                 InputFile(samples),
-                OutputFile(basename + "_tree", temporary=True),
+                TempOutputFile(basename + "_tree"),
             ),
             extra_files=[
                 OutputFile(output_prefix + "_tree.pdf"),
@@ -558,7 +564,7 @@ class PlotTreemixNode(CommandNode):
                 "plot_residuals",
                 abs_prefix,
                 InputFile(samples),
-                OutputFile(basename + "_residuals", temporary=True),
+                TempOutputFile(basename + "_residuals"),
             ),
             extra_files=[
                 OutputFile(output_prefix + "_residuals.pdf"),
@@ -613,7 +619,7 @@ class SmartPCANode(CommandNode):
         self._nchroms = nchroms
 
         cmd = AtomicCmd(
-            ("smartpca", "-p", OutputFile("parameters.txt", temporary=True)),
+            ("smartpca", "-p", TempOutputFile("parameters.txt")),
             stdout=output_prefix + ".log",
             extra_files=[
                 InputFile(input_prefix + ".bed"),
@@ -675,7 +681,7 @@ class PlotPCANode(CommandNode):
                 AuxilleryFile(rtools.rscript("zonkey", "pca.r")),
                 os.path.abspath(prefix),
                 InputFile(samples),
-                OutputFile(os.path.basename(output_prefix), temporary=True),
+                TempOutputFile(output_prefix),
             ],
             extra_files=[
                 InputFile(prefix + ".eval"),
@@ -709,8 +715,8 @@ class PlotCoverageNode(CommandNode):
             (
                 "Rscript",
                 AuxilleryFile(rtools.rscript("zonkey", "coverage.r")),
-                OutputFile("contigs.table", temporary=True),
-                OutputFile(os.path.basename(output_prefix), temporary=True),
+                TempOutputFile("contigs.table"),
+                TempOutputFile(output_prefix),
             ),
             extra_files=[
                 InputFile(input_file),

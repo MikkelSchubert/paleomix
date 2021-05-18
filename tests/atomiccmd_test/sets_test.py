@@ -32,6 +32,7 @@ from paleomix.atomiccmd.command import (
     OutputFile,
     AuxilleryFile,
     Executable,
+    TempOutputFile,
 )
 from paleomix.atomiccmd.sets import ParallelCmds, SequentialCmds
 
@@ -51,7 +52,7 @@ def test_atomicsets__properties(cls):
             InputFile("/foo/bar/in_1.file"),
             InputFile("/foo/bar/in_2.file"),
             OutputFile("/bar/foo/out"),
-            OutputFile("out.log", temporary=True),
+            TempOutputFile("out.log"),
             AuxilleryFile("/aux/fA"),
             AuxilleryFile("/aux/fB"),
         ],
@@ -89,11 +90,11 @@ def test_atomicsets__properties(cls):
 
 _NO_CLOBBERING_KWARGS = (
     {"extra_files": [OutputFile("/bar/out.txt")]},
-    {"extra_files": [OutputFile("out.txt", temporary=True)]},
+    {"extra_files": [TempOutputFile("out.txt")]},
     {"stdout": "/bar/out.txt"},
-    {"stdout": OutputFile("out.txt", temporary=True)},
+    {"stdout": TempOutputFile("out.txt")},
     {"stderr": "/bar/out.txt"},
-    {"stderr": OutputFile("out.txt", temporary=True)},
+    {"stderr": TempOutputFile("out.txt")},
 )
 
 

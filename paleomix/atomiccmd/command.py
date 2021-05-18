@@ -56,8 +56,18 @@ class InputFile(_IOFile):
     pass
 
 
+class TempInputFile(InputFile):
+    def __init__(self, path):
+        super().__init__(os.path.basename(path), temporary=True)
+
+
 class OutputFile(_IOFile):
     pass
+
+
+class TempOutputFile(OutputFile):
+    def __init__(self, path):
+        super().__init__(os.path.basename(path), temporary=True)
 
 
 class AtomicCmd:

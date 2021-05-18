@@ -25,7 +25,13 @@ import os
 import paleomix.common.rtools as rtools
 import paleomix.tools.factory as factory
 
-from paleomix.atomiccmd.command import AtomicCmd, AuxilleryFile, InputFile, OutputFile
+from paleomix.atomiccmd.command import (
+    AtomicCmd,
+    AuxilleryFile,
+    InputFile,
+    OutputFile,
+    TempOutputFile,
+)
 from paleomix.common.formats.newick import Newick
 from paleomix.node import CommandNode
 
@@ -39,7 +45,7 @@ class MitoConsensusNode(CommandNode):
                 "zonkey:mito",
                 InputFile(database),
                 InputFile(bamfile),
-                OutputFile(os.path.basename(output_prefix), temporary=True),
+                TempOutputFile(output_prefix),
             ],
             extra_files=[
                 OutputFile(output_prefix + ".phy"),
@@ -63,9 +69,9 @@ class DrawPhylogenyNode(CommandNode):
                 "Rscript",
                 AuxilleryFile(rtools.rscript("zonkey", "tinytree.r")),
                 # Temporary file generated in _setup
-                OutputFile("rerooted.newick", temporary=True),
+                TempOutputFile("rerooted.newick"),
                 InputFile(samples),
-                OutputFile(os.path.basename(output_prefix), temporary=True),
+                TempOutputFile(output_prefix),
             ),
             extra_files=[
                 InputFile(bootstraps),

@@ -9,7 +9,13 @@ import os
 import paleomix.common.system
 
 from paleomix.atomiccmd.sets import SequentialCmds
-from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile
+from paleomix.atomiccmd.command import (
+    AtomicCmd,
+    InputFile,
+    TempInputFile,
+    OutputFile,
+    TempOutputFile,
+)
 from paleomix.common.fileutils import swap_ext
 from paleomix.node import CommandNode, NodeError
 
@@ -588,12 +594,12 @@ def _normalize_idx_extension(command, out_bam):
     # FIXME: Support for other index formats?
     in_index = swap_ext(os.path.basename(out_bam), ".bai")
 
-    command.add_extra_files([OutputFile(in_index, temporary=True)])
+    command.add_extra_files([TempOutputFile(in_index)])
 
     rename = AtomicCmd(
         [
             "mv",
-            InputFile(in_index, temporary=True),
+            TempInputFile(in_index),
             OutputFile(out_bam + ".bai"),
         ]
     )

@@ -26,7 +26,13 @@ import signal
 
 import pytest
 
-from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile
+from paleomix.atomiccmd.command import (
+    AtomicCmd,
+    InputFile,
+    OutputFile,
+    TempInputFile,
+    TempOutputFile,
+)
 from paleomix.atomiccmd.sets import ParallelCmds, SequentialCmds
 from paleomix.atomiccmd.pprint import pformat, _pformat_list
 
@@ -179,7 +185,7 @@ def test_pformat__atomiccmd__simple_with_infile__set_cwd():
 
 
 def test_pformat__atomiccmd__simple_with_temp_infile():
-    cmd = AtomicCmd(("cat", InputFile("infile.txt", temporary=True)))
+    cmd = AtomicCmd(("cat", TempInputFile("infile.txt")))
     assert pformat(cmd) == (
         "Command = cat '${TEMP_DIR}/infile.txt'\n"
         "STDOUT  = '${TEMP_DIR}/pipe_cat_%i.stdout'\n"
@@ -188,7 +194,7 @@ def test_pformat__atomiccmd__simple_with_temp_infile():
 
 
 def test_pformat__atomiccmd__simple_with_temp_infile__set_cwd():
-    cmd = AtomicCmd(("zcat", InputFile("infile.gz", temporary=True)), set_cwd=True)
+    cmd = AtomicCmd(("zcat", TempInputFile("infile.gz")), set_cwd=True)
     assert pformat(cmd) == (
         "Command = zcat infile.gz\n"
         "STDOUT  = pipe_zcat_%i.stdout\n"
@@ -223,7 +229,7 @@ def test_pformat__atomiccmd__simple_with_outfile__set_cwd():
 
 
 def test_pformat__atomiccmd__simple_with_temp_outfile():
-    cmd = AtomicCmd(("touch", OutputFile("bashrc", temporary=True)))
+    cmd = AtomicCmd(("touch", TempOutputFile("bashrc")))
 
     assert pformat(cmd) == (
         "Command = touch '${TEMP_DIR}/bashrc'\n"
@@ -233,7 +239,7 @@ def test_pformat__atomiccmd__simple_with_temp_outfile():
 
 
 def test_pformat__atomiccmd__simple_with_temp_outfile__set_cwd():
-    cmd = AtomicCmd(("touch", OutputFile("bashrc", temporary=True)), set_cwd=True)
+    cmd = AtomicCmd(("touch", TempOutputFile("bashrc")), set_cwd=True)
 
     assert pformat(cmd) == (
         "Command = touch bashrc\n"
@@ -270,7 +276,7 @@ def test_pformat__atomiccmd__simple_with_stdin__set_cwd():
 
 
 def test_pformat__atomiccmd__simple_with_temp_stdin():
-    cmd = AtomicCmd("gzip", stdin=InputFile("stabstabstab", temporary=True))
+    cmd = AtomicCmd("gzip", stdin=TempInputFile("stabstabstab"))
     assert pformat(cmd) == (
         "Command = gzip\n"
         "STDIN   = '${TEMP_DIR}/stabstabstab'\n"
@@ -280,9 +286,7 @@ def test_pformat__atomiccmd__simple_with_temp_stdin():
 
 
 def test_pformat__atomiccmd__simple_with_temp_stdin__set_cwd():
-    cmd = AtomicCmd(
-        "gzip", stdin=InputFile("stabstabstab", temporary=True), set_cwd=True
-    )
+    cmd = AtomicCmd("gzip", stdin=TempInputFile("stabstabstab"), set_cwd=True)
     assert pformat(cmd) == (
         "Command = gzip\n"
         "STDIN   = '${TEMP_DIR}/stabstabstab'\n"
@@ -328,7 +332,7 @@ def test_pformat__atomiccmd__simple_with_stdout__set_cwd():
 
 
 def test_pformat__atomiccmd__simple_with_temp_stdout():
-    cmd = AtomicCmd(("echo", "Oil. Oil."), stdout=OutputFile("dm", temporary=True))
+    cmd = AtomicCmd(("echo", "Oil. Oil."), stdout=TempOutputFile("dm"))
     assert pformat(cmd) == (
         "Command = echo 'Oil. Oil.'\n"
         "STDOUT  = '${TEMP_DIR}/dm'\n"
@@ -339,7 +343,7 @@ def test_pformat__atomiccmd__simple_with_temp_stdout():
 def test_pformat__atomiccmd__simple_with_temp_stdout__set_cwd():
     cmd = AtomicCmd(
         ("echo", "Room service. Room service."),
-        stdout=OutputFile("pv", temporary=True),
+        stdout=TempOutputFile("pv"),
         set_cwd=True,
     )
     assert pformat(cmd) == (

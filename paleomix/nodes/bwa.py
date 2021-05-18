@@ -26,7 +26,7 @@ import os
 import paleomix.common.versions as versions
 import paleomix.tools.factory as factory
 
-from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile
+from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile, TempOutputFile
 from paleomix.atomiccmd.sets import ParallelCmds
 from paleomix.common.fileutils import describe_paired_files
 from paleomix.node import CommandNode
@@ -49,7 +49,7 @@ class BWAIndexNode(CommandNode):
                 "index",
                 InputFile(input_file),
                 "-p",
-                OutputFile(os.path.basename(input_file), temporary=True),
+                TempOutputFile(input_file),
             ),
             reference=input_file,
             iotype=OutputFile,
@@ -277,7 +277,7 @@ def _new_cleanup_command(
 
     fixed_options = {
         "--fasta": InputFile(in_reference),
-        "--temp-prefix": OutputFile("bam_cleanup", temporary=True),
+        "--temp-prefix": TempOutputFile("bam_cleanup"),
     }
 
     if max_threads > 1:

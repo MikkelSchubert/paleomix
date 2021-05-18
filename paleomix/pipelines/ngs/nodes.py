@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
-import os
-
 import paleomix.common.rtools as rtools
 
 from paleomix.node import CommandNode
-from paleomix.atomiccmd.command import AtomicCmd, InputFile, AuxilleryFile, OutputFile
+from paleomix.atomiccmd.command import (
+    AtomicCmd,
+    InputFile,
+    AuxilleryFile,
+    OutputFile,
+    TempOutputFile,
+)
 
 
 class TranchesPlotsNode(CommandNode):
@@ -14,7 +18,7 @@ class TranchesPlotsNode(CommandNode):
                 "Rscript",
                 AuxilleryFile(rtools.rscript("ngs", "tranches.r")),
                 InputFile(input_table),
-                OutputFile(os.path.basename(output_prefix), temporary=True),
+                TempOutputFile(output_prefix),
             ),
             extra_files=(
                 OutputFile(output_prefix + ".pdf"),

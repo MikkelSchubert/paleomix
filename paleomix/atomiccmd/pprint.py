@@ -72,7 +72,7 @@ def _build_stdin(atomiccmd, stats, indent, lines):
     prefix = "%s%s   = " % (" " * indent, "STDIN")
     if atomiccmd._stdin in stats["id"]:
         lines.append("%sPiped from process %i" % (prefix, stats["id"][pipe]))
-    elif _is_cls(pipe, "InputFile"):
+    elif _is_cls(pipe, "InputFile", "TempInputFile"):
         temp = "${TEMP_DIR}" if atomiccmd._temp is None else atomiccmd._temp
         path = atomiccmd._to_path(temp, pipe)
         lines.append("%s%s" % (prefix, shlex.quote(path)))
@@ -87,7 +87,7 @@ def _build_stdout(atomiccmd, stats, indent, lines):
     if atomiccmd in stats["pipe"]:
         pipe = stats["pipe"][atomiccmd]
         lines.append("%sPiped to process %i" % (prefix, stats["id"][pipe]))
-    elif _is_cls(atomiccmd._stdout, "OutputFile"):
+    elif _is_cls(atomiccmd._stdout, "OutputFile", "TempOutputFile"):
         temp = "${TEMP_DIR}" if atomiccmd._temp is None else atomiccmd._temp
         path = atomiccmd._to_path(temp, pipe)
 
@@ -102,7 +102,7 @@ def _build_stderr(atomiccmd, stats, indent, lines):
     prefix = "%sSTDERR  = " % (" " * indent,)
 
     pipe = atomiccmd._stdout
-    if _is_cls(atomiccmd._stderr, "OutputFile"):
+    if _is_cls(atomiccmd._stderr, "OutputFile", "TempOutputFile"):
         pipe = atomiccmd._stderr
         temp = "${TEMP_DIR}" if atomiccmd._temp is None else atomiccmd._temp
         path = atomiccmd._to_path(temp, pipe)
