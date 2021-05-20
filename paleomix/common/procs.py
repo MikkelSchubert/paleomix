@@ -23,6 +23,7 @@
 """
 Tools used for working with subprocesses.
 """
+import signal
 import sys
 import time
 
@@ -46,10 +47,13 @@ def join_procs(procs, out=sys.stderr):
                 commands.remove((index, command))
                 sleep_time = 0.05
 
+                return_code = return_codes[index]
+                if return_code < 0:
+                    return_code = signal.Signals(-return_code).name
+
                 out.write(
                     "  - Command finished: %s\n"
-                    "    - Return-code:    %s\n"
-                    % (" ".join(command.args), return_codes[index])
+                    "    Return-code:      %s\n" % (" ".join(command.args), return_code)
                 )
                 out.flush()
             elif any(return_codes):
