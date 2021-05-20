@@ -25,6 +25,7 @@ import errno
 import logging
 import multiprocessing
 import os
+from shlex import quote
 import signal
 import sys
 import traceback
@@ -206,6 +207,12 @@ class Pypeline:
                 if backtrace:
                     for line in "".join(backtrace).rstrip().split("\n"):
                         self._logger.error("%s", line)
+
+                if isinstance(error, NodeError) and error.path:
+                    self._logger.error("For more information about this error, see")
+                    self._logger.error(
+                        "  %s", quote(os.path.join(error.path, "pipe.errors"))
+                    )
 
         return not error_happened
 

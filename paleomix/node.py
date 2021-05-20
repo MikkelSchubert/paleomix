@@ -25,7 +25,6 @@ import logging
 import os
 import shutil
 import sys
-import traceback
 
 from pathlib import Path
 
@@ -40,7 +39,9 @@ _GLOBAL_ID = itertools.count()
 
 
 class NodeError(RuntimeError):
-    pass
+    def __init__(self, *args, path=None):
+        super().__init__(*args)
+        self.path = path
 
 
 class CmdNodeError(NodeError):
@@ -106,7 +107,6 @@ class Node:
         to allow showing these in the main process."""
 
         temp = None
-
         try:
             # Generate directory name and create dir at temp_root
             temp = self._create_temp_dir(config)
@@ -118,16 +118,16 @@ class Node:
         except NodeError as error:
             self._write_error_log(temp, error)
             raise NodeError(
-                "Error(s) running Node:\n\tTemporary directory: %s\n\n%s"
-                % (repr(temp), error)
+                "Error while running {}:\n  {}".format(
+                    self, "\n  ".join(str(error).split("\n"))
+                ),
+                path=temp,
             )
-
         except Exception as error:
             self._write_error_log(temp, error)
             raise NodeUnhandledException(
-                "Error(s) running Node:\n\tTemporary directory: %s\n\n%s"
-                % (repr(temp), traceback.format_exc())
-            )
+                "Error while running %s" % (self,), path=temp
+            ) from error
 
     def _create_temp_dir(self, config):
         """Called by 'run' in order to create a temporary folder.
@@ -153,8 +153,9 @@ class Node:
         or other steps needed to ready the node for running may be carried out in this
         function. Checks that required input files exist, and raises an NodeError if
         this is not the case."""
-        if fileutils.missing_executables(self.executables):
-            raise NodeError("Executable(s) does not exist for node: %s" % (self,))
+        missing_executables = fileutils.missing_executables(self.executables)
+        if missing_executables:
+            raise NodeError("Executable(s) not found: %s" % (missing_executables,))
 
         self._check_for_missing_files(self.input_files, "input")
         self._check_for_missing_files(self.auxiliary_files, "auxiliary")
@@ -219,13 +220,7 @@ class Node:
         bad_nodes = [node for node in nodes if not isinstance(node, Node)]
 
         if bad_nodes:
-            bad_nodes = [repr(node) for node in bad_nodes]
-            message = (
-                "Dependency-list contain non-Node objects:\n"
-                "\t- Command: %s\n\t- Objects: %s"
-                % (self, "\n\t           ".join(bad_nodes))
-            )
-            raise TypeError(message)
+            raise TypeError(bad_nodes)
 
         return nodes
 
@@ -243,9 +238,7 @@ class Node:
         requirements = safe_coerce_to_frozenset(requirements)
         for requirement in requirements:
             if not callable(requirement):
-                raise TypeError(
-                    "'requirements' must be callable, not %r" % (type(requirement),)
-                )
+                raise TypeError(requirement)
         return requirements
 
     @classmethod
@@ -255,9 +248,7 @@ class Node:
     @classmethod
     def _validate_nthreads(cls, threads):
         if not isinstance(threads, int):
-            raise TypeError(
-                "'threads' must be a positive integer, not a %s" % (type(threads),)
-            )
+            raise TypeError("'threads' must be a positive integer, not %r" % (threads,))
         elif threads < 1:
             raise ValueError(
                 "'threads' must be a positive integer, not %i" % (threads,)
