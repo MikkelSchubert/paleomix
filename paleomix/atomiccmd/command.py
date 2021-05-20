@@ -329,7 +329,7 @@ class AtomicCmd:
                 stdout=stdout,
                 stderr=stderr,
                 cwd=cwd,
-                preexec_fn=os.setsid,
+                start_new_session=True,
             )
         except Exception as error:
             message = "Error running commands:\n  Call = %r\n  Error = %r"
