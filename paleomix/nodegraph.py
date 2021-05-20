@@ -431,6 +431,7 @@ class NodeGraph:
                 for consumer in nodes:
                     if self._implicit_dependencies:
                         self._dependencies[consumer].add(producer)
+                        self._reverse_dependencies[producer].add(consumer)
                     elif not self._dependency_in(producer, consumer.dependencies):
                         bad_nodes.add(consumer)
 
