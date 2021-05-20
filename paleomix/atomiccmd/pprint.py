@@ -136,7 +136,6 @@ def _pformat(atomiccmd, stats, indent, lines, include_prefix=True):
     s_prefix_len = len(s_prefix)
 
     if _is_cls(atomiccmd, "AtomicCmd"):
-        print(atomiccmd._set_cwd, atomiccmd._temp)
         temp = "" if atomiccmd._set_cwd else (atomiccmd._temp or "${TEMP_DIR}")
 
         c_prefix = s_prefix + "Command = "
