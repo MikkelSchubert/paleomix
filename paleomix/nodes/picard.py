@@ -154,13 +154,6 @@ def _java_cmd(jar, jre_options=(), temp_root="%(TEMP_DIR)s", gc_threads=1, **kwa
         raise ValueError("'gc_threads' must be a 1 or greater, not %r" % gc_threads)
 
     call.extend(jre_options)
-
-    # Only set -Xmx if no user-supplied setting is given
-    if not any(opt.startswith("-Xmx") for opt in call):
-        # Our experience is that the default -Xmx value tends to cause OutOfMemory
-        # exceptions with typical datasets, so require at least 4gb.
-        call.append("-Xmx4g")
-
     call.extend(("-jar", AuxilleryFile(jar)))
 
     return AtomicCmd(call, **kwargs)
