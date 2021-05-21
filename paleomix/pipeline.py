@@ -193,6 +193,7 @@ class Pypeline:
                 blocking = True
                 continue
 
+            blocking = False
             node_happened = True
             node, proc = self._running.pop(key)
             proc.join()
