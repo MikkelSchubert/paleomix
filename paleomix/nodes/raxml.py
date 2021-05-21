@@ -145,6 +145,10 @@ class RAxMLRapidBSNode(CommandNode):
 
                 os.symlink(source, destination)
 
+    def _run(self, temp):
+        # RAxML needs to be run with an absolute path for -w
+        super()._run(os.path.abspath(temp))
+
     def _teardown(self, temp):
         for filename in os.listdir(temp):
             match = re.match("RAxML_(.*).PALEOMIX", filename)
@@ -211,6 +215,10 @@ class RAxMLParsimonyTreeNode(CommandNode):
             os.path.join(temp, "RAxML_partitions"),
         )
         CommandNode._setup(self, temp)
+
+    def _run(self, temp):
+        # RAxML needs to be run with an absolute path for -w
+        super()._run(os.path.abspath(temp))
 
     def _teardown(self, temp):
         basename = os.path.basename(self._output_tree)

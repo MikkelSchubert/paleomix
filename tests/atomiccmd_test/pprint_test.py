@@ -289,7 +289,7 @@ def test_pformat__atomiccmd__simple_with_temp_stdin__set_cwd():
     cmd = AtomicCmd("gzip", stdin=TempInputFile("stabstabstab"), set_cwd=True)
     assert pformat(cmd) == (
         "Command = gzip\n"
-        "STDIN   = '${TEMP_DIR}/stabstabstab'\n"
+        "STDIN   = stabstabstab\n"
         "STDOUT  = pipe_gzip_%i.stdout\n"
         "STDERR  = pipe_gzip_%i.stderr\n"
         "CWD     = '${TEMP_DIR}'"

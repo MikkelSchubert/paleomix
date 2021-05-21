@@ -216,6 +216,10 @@ class ExaMLNode(CommandNode):
             for fpath in checkpoints:
                 fileutils.try_remove(fpath)
 
+    def _run(self, temp):
+        # ExaML needs to be run with an absolute path for -w
+        super()._run(os.path.abspath(temp))
+
     def _teardown(self, temp):
         for filename in os.listdir(temp):
             match = re.match("ExaML_(.*).Pypeline", filename)

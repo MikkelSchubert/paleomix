@@ -293,7 +293,10 @@ def test_atomiccmd2__stdin_invalid_values(value):
 
 
 def test_atomiccmd2__stdin_basic(tmp_path):
-    fname = tmp_path / "input.fasta"
+    sub_path = tmp_path / "subfolder"
+    sub_path.mkdir()
+
+    fname = sub_path / "input.fasta"
     fname.write_text(">This_is_FASTA!\nACGTN\n>This_is_ALSO_FASTA!\nCGTNA\n")
     fname = str(fname)
 
@@ -490,34 +493,25 @@ def test_atomiccmd2__set_cwd(tmp_path):
 # Full path when set_cwd is False, rel. path when True
 _IN_OUT_PATHS_WITH_SET_CWD = [
     # cls, temporary, set_cwd, expected dir
-    (InputFile, False, False, ""),
-    (InputFile, False, True, "${CWD}"),
-    (InputFile, True, False, "${TMP}"),
-    (InputFile, True, True, ""),
-    (OutputFile, False, False, "${TMP}"),
-    (OutputFile, False, True, ""),
-    (OutputFile, True, False, "${TMP}"),
-    (OutputFile, True, True, ""),
+    (InputFile, False, "path/to/filename"),
+    (InputFile, True, "${CWD}/path/to/filename"),
+    (TempInputFile, False, "${TMP}/filename"),
+    (TempInputFile, True, "filename"),
+    (OutputFile, False, "${TMP}/filename"),
+    (OutputFile, True, "filename"),
+    (TempOutputFile, False, "${TMP}/filename"),
+    (TempOutputFile, True, "filename"),
 ]
 
 
-@pytest.mark.parametrize("cls, temp, set_cwd, expected", _IN_OUT_PATHS_WITH_SET_CWD)
-def test_atomiccmd2__set_cwd__temp_in_out(tmp_path, cls, temp, set_cwd, expected):
-    cmd = AtomicCmd(
-        ("echo", "-n", cls("test_file", temporary=temp)),
-        stdout=TempOutputFile("result.txt"),
-        set_cwd=set_cwd,
-    )
-    cmd.run(tmp_path)
-    assert cmd.join() == [0]
+@pytest.mark.parametrize("cls, set_cwd, expected", _IN_OUT_PATHS_WITH_SET_CWD)
+def test_atomiccmd2__set_cwd__temp_in_out(cls, set_cwd, expected):
+    cmd = AtomicCmd(("touch", cls("path/to/filename")), set_cwd=set_cwd)
+    call = cmd.to_call("${TMP}")
 
-    if expected == "${CWD}":
-        expected = os.getcwd()
-    elif expected == "${TMP}":
-        expected = fileutils.fspath(tmp_path)
+    expected = expected.replace("${CWD}", os.getcwd())
 
-    result = (tmp_path / "result.txt").read_text()
-    assert result == os.path.join(expected, "test_file")
+    assert call == ["touch", expected]
 
 
 ########################################################################################

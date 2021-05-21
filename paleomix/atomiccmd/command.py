@@ -316,7 +316,6 @@ class AtomicCmd:
             stderr = self._open_pipe(temp, self._stderr, "wb")
 
             cwd = temp if self._set_cwd else None
-            temp = "" if self._set_cwd else os.path.abspath(temp)
             call = self.to_call(temp)
 
             # Explicitly set to DEVNULL to ensure that STDIN is not left open.
@@ -419,27 +418,32 @@ class AtomicCmd:
         return [self._to_path(temp, value) for value in self._command]
 
     def _to_path(self, temp, value):
-        if isinstance(value, InputFile):
-            if value.temporary:
-                return os.path.join(temp, value.path)
-            elif self._set_cwd:
-                return os.path.abspath(value.path)
-            else:
-                return value.path
-        elif isinstance(value, OutputFile):
-            if self._set_cwd:
-                return os.path.basename(value.path)
-            else:
-                return fileutils.reroot_path(temp, value.path)
-        elif isinstance(value, AuxilleryFile):
-            if self._set_cwd:
-                return os.path.abspath(value.path)
-            else:
-                return value.path
-        elif isinstance(value, Executable):
+        if isinstance(value, Executable):
             return value.path
+        elif self._set_cwd:
+            if isinstance(value, InputFile):
+                if value.temporary:
+                    return value.path
+
+                return os.path.abspath(value.path)
+            elif isinstance(value, OutputFile):
+                return os.path.basename(value.path)
+            elif isinstance(value, AuxilleryFile):
+                return os.path.abspath(value.path)
+            else:
+                return value.replace("%(TEMP_DIR)s", ".")
         else:
-            return value.replace("%(TEMP_DIR)s", temp)
+            if isinstance(value, InputFile):
+                if value.temporary:
+                    return os.path.join(temp, value.path)
+
+                return value.path
+            elif isinstance(value, OutputFile):
+                return fileutils.reroot_path(temp, value.path)
+            elif isinstance(value, AuxilleryFile):
+                return value.path
+            else:
+                return value.replace("%(TEMP_DIR)s", temp)
 
     def _record_atomic_file(self, value):
         if isinstance(value, AuxilleryFile):
@@ -490,7 +494,10 @@ class AtomicCmd:
         elif isinstance(pipe, AtomicCmd):
             return pipe._proc and pipe._proc.stdout
 
-        return open(fileutils.reroot_path(temp_dir, pipe.path), mode)
+        if pipe.temporary or isinstance(pipe, OutputFile):
+            return open(fileutils.reroot_path(temp_dir, pipe.path), mode)
+
+        return open(pipe.path, mode)
 
     def __enter__(self):
         return self
