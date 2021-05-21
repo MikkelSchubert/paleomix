@@ -48,9 +48,10 @@ def index_and_validate_bam(config, prefix, node, log_file=None, create_index=Tru
     ]
 
     return ValidateBAMNode(
-        config=config,
         input_bam=input_file,
         input_index=index_file,
+        jar_root=config.jar_root,
+        jre_options=config.jre_options,
         ignored_checks=ignored_checks,
         big_genome_mode=prefix["IndexFormat"] == ".csi",
         output_log=log_file,

@@ -36,8 +36,9 @@ class PicardNode(CommandNode):
 class ValidateBAMNode(PicardNode):
     def __init__(
         self,
-        config,
         input_bam,
+        jar_root,
+        jre_options=(),
         input_index=None,
         output_log=None,
         ignored_checks=(),
@@ -45,7 +46,6 @@ class ValidateBAMNode(PicardNode):
         dependencies=(),
     ):
         command = _picard_command(
-            config,
             [
                 "ValidateSamFile",
                 "--INPUT",
@@ -53,13 +53,15 @@ class ValidateBAMNode(PicardNode):
                 "--OUTPUT",
                 OutputFile(output_log or swap_ext(input_bam, ".validated")),
             ],
+            jar_root=jar_root,
+            jre_options=jre_options,
         )
 
         for check in ignored_checks:
             command.append("--IGNORE", check)
 
         if big_genome_mode:
-            self._configure_for_big_genome(config, command)
+            self._configure_for_big_genome(jar_root, command)
 
         _set_max_open_files(command)
 
@@ -77,12 +79,12 @@ class ValidateBAMNode(PicardNode):
         )
 
     @staticmethod
-    def _configure_for_big_genome(config, command):
+    def _configure_for_big_genome(jar_root, command):
         # CSI uses a different method for assigning BINs to records, which
         # Picard currently does not support.
         command.append("--IGNORE", "INVALID_INDEXING_BIN")
 
-        jar_path = os.path.join(config.jar_root, _PICARD_JAR)
+        jar_path = os.path.join(jar_root, _PICARD_JAR)
         version_check = _PICARD_VERSION_CACHE[jar_path]
 
         try:
@@ -99,15 +101,15 @@ _PICARD_JAR = "picard.jar"
 _PICARD_VERSION_CACHE = {}
 
 
-def _picard_command(config, args):
+def _picard_command(args, jar_root, jre_options):
     """Returns basic AtomicJavaCmdBuilder for Picard tools commands."""
-    jar_path = os.path.join(config.jar_root, _PICARD_JAR)
+    jar_path = os.path.join(jar_root, _PICARD_JAR)
 
     if jar_path not in _PICARD_VERSION_CACHE:
         command = _java_cmd(
             jar_path,
-            temp_root=config.temp_root,
-            jre_options=config.jre_options,
+            temp_root="%(TEMP_DIR)s",
+            jre_options=jre_options,
         )
 
         # Arbitrary command, since just '--version' does not work
@@ -124,8 +126,8 @@ def _picard_command(config, args):
     version = _PICARD_VERSION_CACHE[jar_path]
     command = _java_cmd(
         jar_path,
-        temp_root=config.temp_root,
-        jre_options=config.jre_options,
+        temp_root="%(TEMP_DIR)s",
+        jre_options=jre_options,
         requirements=[version],
         set_cwd=True,
     )
