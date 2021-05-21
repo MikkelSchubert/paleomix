@@ -94,7 +94,7 @@ class Node:
         # Globally unique node ID
         self.id = next(_GLOBAL_ID)
 
-    def run(self, config):
+    def run(self, temp_root):
         """Runs the node, by calling _setup, _run, and _teardown in that order.
         Prior to calling these functions, a temporary dir is created using the
         'temp_root' prefix from the config object. Both the config object and
@@ -109,11 +109,11 @@ class Node:
         temp = None
         try:
             # Generate directory name and create dir at temp_root
-            temp = self._create_temp_dir(config)
+            temp = self._create_temp_dir(temp_root)
 
-            self._setup(config, temp)
-            self._run(config, temp)
-            self._teardown(config, temp)
+            self._setup(temp)
+            self._run(temp)
+            self._teardown(temp)
             self._remove_temp_dir(temp)
         except NodeError as error:
             self._write_error_log(temp, error)
@@ -129,12 +129,9 @@ class Node:
                 "Error while running %s" % (self,), path=temp
             ) from error
 
-    def _create_temp_dir(self, config):
-        """Called by 'run' in order to create a temporary folder.
-
-        'config' is expected to have a property .temp_root under
-        which the temporary folder is created."""
-        return fileutils.create_temp_dir(config.temp_root)
+    def _create_temp_dir(self, temp_root):
+        """Called by 'run' in order to create a temporary folder."""
+        return fileutils.create_temp_dir(temp_root)
 
     def _remove_temp_dir(self, temp):
         """Called by 'run' in order to remove an (now) empty temporary folder."""
@@ -148,7 +145,7 @@ class Node:
 
         shutil.rmtree(temp)
 
-    def _setup(self, _config, _temp):
+    def _setup(self, _temp):
         """Is called prior to '_run()' by 'run()'. Any code used to copy/link files,
         or other steps needed to ready the node for running may be carried out in this
         function. Checks that required input files exist, and raises an NodeError if
@@ -160,10 +157,10 @@ class Node:
         self._check_for_missing_files(self.input_files, "input")
         self._check_for_missing_files(self.auxiliary_files, "auxiliary")
 
-    def _run(self, _config, _temp):
+    def _run(self, _temp):
         pass
 
-    def _teardown(self, _config, _temp):
+    def _teardown(self, _temp):
         self._check_for_missing_files(self.output_files, "output")
 
     def __str__(self):
@@ -285,7 +282,7 @@ class CommandNode(Node):
 
         self._command = command
 
-    def _run(self, _config, temp):
+    def _run(self, temp):
         """Runs the command object provided in the constructor, and waits for it to
         terminate. If any errors during the running of the command, this function
         raises a NodeError detailing the returned error-codes."""
@@ -298,7 +295,7 @@ class CommandNode(Node):
         if any(return_codes):
             raise CmdNodeError(str(self._command))
 
-    def _teardown(self, config, temp):
+    def _teardown(self, temp):
         required_files = self._command.expected_temp_files
         current_files = set(self._collect_files(temp))
 
@@ -315,7 +312,7 @@ class CommandNode(Node):
 
         self._command.commit(temp)
 
-        Node._teardown(self, config, temp)
+        Node._teardown(self, temp)
 
 
 # Types that are allowed for the 'description' property

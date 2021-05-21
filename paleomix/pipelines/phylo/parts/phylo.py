@@ -334,7 +334,7 @@ def build_phylogeny_nodes(options, settings, filtering, dependencies):
     return nodes
 
 
-def chain_examl(_pipeline, options, makefiles):
+def chain_examl(options, makefiles):
     destination = options.destination  # Move to makefile
     for makefile in makefiles:
         filtering = makefile["Project"]["FilterSingletons"]

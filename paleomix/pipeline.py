@@ -42,28 +42,33 @@ from paleomix.common.versions import VersionRequirementError
 
 
 class Pypeline:
-    def __init__(self, config, implicit_dependencies=False):
-        self._nodes = []
-        self._config = config
+    def __init__(
+        self,
+        nodes,
+        temp_root="/tmp",
+        max_threads=1,
+        implicit_dependencies=False,
+    ):
+        if max_threads < 1:
+            raise ValueError("Max threads must be >= 1")
+
+        self._nodes = safe_coerce_to_tuple(nodes)
+        for node in self._nodes:
+            if not isinstance(node, Node):
+                raise TypeError("Node object expected, recieved %s" % repr(node))
+
         self._logger = logging.getLogger(__name__)
         # Set if a keyboard-interrupt (SIGINT) has been caught
         self._interrupted = False
         # Dict of id(Node): (Node, Process)
         self._running = {}
+        self._max_threads = max_threads
+        self._temp_root = temp_root
         self._implicit_dependencies = implicit_dependencies
 
-    def add_nodes(self, *nodes):
-        for subnodes in safe_coerce_to_tuple(nodes):
-            for node in safe_coerce_to_tuple(subnodes):
-                if not isinstance(node, Node):
-                    raise TypeError("Node object expected, recieved %s" % repr(node))
-                self._nodes.append(node)
-
-    def run(self, max_threads=1, mode="run"):
+    def run(self, mode="run"):
         if mode not in ("run", "dry_run", "input_files", "output_files", "executables"):
             raise ValueError("Unknown pipeline mode {!r}".format(mode))
-        elif max_threads < 1:
-            raise ValueError("Max threads must be >= 1")
         elif mode == "dry_run":
             self._logger.info("Dry running pipeline ..")
         elif mode == "run":
@@ -81,7 +86,7 @@ class Pypeline:
             return 1
 
         for node in nodegraph.iterflat():
-            if node.threads > max_threads:
+            if node.threads > self._max_threads:
                 self._logger.warn(
                     "One or more tasks require more threads than the user-defined "
                     "maximum; the number of threads used will therefore exceed the "
@@ -97,13 +102,13 @@ class Pypeline:
         old_handler = signal.signal(signal.SIGINT, self._sigint_handler)
 
         try:
-            return self._run(nodegraph, max_threads)
+            return self._run(nodegraph)
         finally:
             signal.signal(signal.SIGINT, old_handler)
             for filename in paleomix.common.logging.get_logfiles():
                 self._logger.info("Log-file written to %r", filename)
 
-    def _run(self, nodegraph, max_threads):
+    def _run(self, nodegraph):
         # Set of remaining nodes to be run
         remaining = set(nodegraph.iterflat())
 
@@ -111,7 +116,7 @@ class Pypeline:
         queue = multiprocessing.Queue()
         while self._running or (remaining and not self._interrupted):
             if remaining and not self._interrupted:
-                self._start_new_tasks(remaining, nodegraph, max_threads, queue)
+                self._start_new_tasks(remaining, nodegraph, queue)
                 if remaining and not self._running:
                     self._logger.critical("BUG: Failed to start new tasks!")
                     is_ok = False
@@ -124,8 +129,8 @@ class Pypeline:
 
         return 0 if is_ok else 1
 
-    def _start_new_tasks(self, remaining, nodegraph, max_threads, queue):
-        idle_processes = max_threads - sum(
+    def _start_new_tasks(self, remaining, nodegraph, queue):
+        idle_processes = self._max_threads - sum(
             node.threads for (node, _) in self._running.values()
         )
 
@@ -142,7 +147,7 @@ class Pypeline:
                     key = id(node)
                     proc = multiprocessing.Process(
                         target=_node_wrapper,
-                        args=(queue, key, node, self._config),
+                        args=(queue, key, node, self._temp_root),
                         daemon=True,
                     )
 
@@ -415,11 +420,11 @@ def add_io_argument_group(parser):
     return group
 
 
-def _node_wrapper(queue, key, node, config):
+def _node_wrapper(queue, key, node, temp_root):
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
     try:
-        node.run(config)
+        node.run(temp_root)
         queue.put((key, None, None))
     except NodeError as error:
         backtrace = []

@@ -98,8 +98,8 @@ class ExaMLParserNode(CommandNode):
         ]
         self._output_file = os.path.basename(output_file)
 
-    def _setup(self, config, temp):
-        CommandNode._setup(self, config, temp)
+    def _setup(self, temp):
+        CommandNode._setup(self, temp)
 
         # Required to avoid the creation of files outside the temp folder
         for filename in self._symlinks:
@@ -108,14 +108,14 @@ class ExaMLParserNode(CommandNode):
 
             os.symlink(source, destination)
 
-    def _teardown(self, config, temp):
+    def _teardown(self, temp):
         os.remove(os.path.join(temp, "RAxML_info.output"))
 
         source = os.path.join(temp, "output.binary")
         destination = fileutils.reroot_path(temp, self._output_file)
         fileutils.move_file(source, destination)
 
-        CommandNode._teardown(self, config, temp)
+        CommandNode._teardown(self, temp)
 
 
 class ExaMLNode(CommandNode):
@@ -182,7 +182,7 @@ class ExaMLNode(CommandNode):
             dependencies=dependencies,
         )
 
-    def _create_temp_dir(self, _config):
+    def _create_temp_dir(self, _temp_root):
         """Called by 'run' in order to create a temporary folder.
         To allow restarting from checkpoints, we use a fixed folder
         determined by the output_template."""
@@ -190,8 +190,8 @@ class ExaMLNode(CommandNode):
         fileutils.make_dirs(temp)
         return temp
 
-    def _setup(self, config, temp):
-        CommandNode._setup(self, config, temp)
+    def _setup(self, temp):
+        CommandNode._setup(self, temp)
 
         # The temp folder may contain old files:
         # Remove old pipes to prevent failure at _teardown
@@ -216,7 +216,7 @@ class ExaMLNode(CommandNode):
             for fpath in checkpoints:
                 fileutils.try_remove(fpath)
 
-    def _teardown(self, config, temp):
+    def _teardown(self, temp):
         for filename in os.listdir(temp):
             match = re.match("ExaML_(.*).Pypeline", filename)
             if match:
@@ -228,4 +228,4 @@ class ExaMLNode(CommandNode):
 
                     fileutils.move_file(source, destination)
 
-        CommandNode._teardown(self, config, temp)
+        CommandNode._teardown(self, temp)

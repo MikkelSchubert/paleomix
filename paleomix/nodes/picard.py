@@ -24,13 +24,13 @@ class PicardNode(CommandNode):
     performance issues if these are located in the same folder.
     """
 
-    def _teardown(self, config, temp):
+    def _teardown(self, temp):
         # Picard creates a folder named after the user in the temp-root
         try_rmtree(os.path.join(temp, getpass.getuser()))
         # Some JREs may create a folder for temporary performance counters
         try_rmtree(os.path.join(temp, "hsperfdata_" + getpass.getuser()))
 
-        CommandNode._teardown(self, config, temp)
+        CommandNode._teardown(self, temp)
 
 
 class ValidateBAMNode(PicardNode):

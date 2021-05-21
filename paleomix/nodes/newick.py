@@ -47,7 +47,7 @@ class NewickRerootNode(Node):
             dependencies=dependencies,
         )
 
-    def _run(self, _config, temp):
+    def _run(self, temp):
         lines = []
         for tree in _read_tree_files(self._tree_files):
             if self._reroot_on_taxa:
@@ -82,7 +82,7 @@ class NewickSupportNode(Node):
             dependencies=dependencies,
         )
 
-    def _run(self, _config, temp):
+    def _run(self, temp):
         main_trees = _read_tree_files(self._main_tree_files)
         support_trees = _read_tree_files(self._support_tree_files)
 

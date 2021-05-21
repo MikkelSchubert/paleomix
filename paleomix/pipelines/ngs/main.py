@@ -44,9 +44,6 @@ def _main_run(args):
 
     logger = logging.getLogger(__name__)
 
-    # Initialize worker-threads before reading in any more data
-    pipeline = Pypeline(args, implicit_dependencies=True)
-
     try:
         logger.info("Reading project from %r", args.project)
         project = load_project(args.project)
@@ -67,9 +64,14 @@ def _main_run(args):
         logger.error("Error while building pipeline: %s", error)
         return 1
 
-    pipeline.add_nodes(nodes)
+    pipeline = Pypeline(
+        nodes=nodes,
+        temp_root=args.temp_root,
+        max_threads=args.max_threads,
+        implicit_dependencies=True,
+    )
 
-    return pipeline.run(mode=args.pipeline_mode, max_threads=args.max_threads)
+    return pipeline.run(args.pipeline_mode)
 
 
 def _main_new(args):

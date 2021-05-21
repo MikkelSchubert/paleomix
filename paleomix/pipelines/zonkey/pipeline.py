@@ -336,8 +336,11 @@ def run_admix_pipeline(config):
     if config.multisample and not config.admixture_only:
         nodes = [summary.SummaryNode(config, nodes)]
 
-    pipeline = Pypeline(config)
-    pipeline.add_nodes(nodes)
+    pipeline = Pypeline(
+        nodes=nodes,
+        temp_root=config.temp_root,
+        max_threads=config.max_threads,
+    )
 
     paleomix.common.logging.initialize(
         log_level=config.log_level,
@@ -345,7 +348,7 @@ def run_admix_pipeline(config):
         auto_log_file="zonkey",
     )
 
-    return pipeline.run(max_threads=config.max_threads, mode=config.pipeline_mode)
+    return pipeline.run(config.pipeline_mode)
 
 
 def setup_mito_mapping(config):

@@ -63,7 +63,7 @@ class SummaryNode(Node):
             dependencies=dependencies,
         )
 
-    def _run(self, _config, temp):
+    def _run(self, temp):
         with open(os.path.join(temp, "summary.html"), "w") as output_handle:
             menu_entries = self._build_sidemenu()
             html_header = _HTML_HEADER.format(
@@ -76,7 +76,7 @@ class SummaryNode(Node):
 
             output_handle.write(_HTML_FOOTER)
 
-    def _teardown(self, config, temp):
+    def _teardown(self, temp):
         fileutils.make_dirs(self._root)
 
         fileutils.move_file(

@@ -134,8 +134,8 @@ class RAxMLRapidBSNode(CommandNode):
             dependencies=dependencies,
         )
 
-    def _setup(self, config, temp):
-        CommandNode._setup(self, config, temp)
+    def _setup(self, temp):
+        CommandNode._setup(self, temp)
 
         # Required to avoid the creation of files outside the temp folder
         for filename in self._symlinks:
@@ -145,7 +145,7 @@ class RAxMLRapidBSNode(CommandNode):
 
                 os.symlink(source, destination)
 
-    def _teardown(self, config, temp):
+    def _teardown(self, temp):
         for filename in os.listdir(temp):
             match = re.match("RAxML_(.*).PALEOMIX", filename)
             if match:
@@ -154,7 +154,7 @@ class RAxMLRapidBSNode(CommandNode):
 
                 fileutils.move_file(source, destination)
 
-        CommandNode._teardown(self, config, temp)
+        CommandNode._teardown(self, temp)
 
 
 class RAxMLParsimonyTreeNode(CommandNode):
@@ -201,7 +201,7 @@ class RAxMLParsimonyTreeNode(CommandNode):
             dependencies=dependencies,
         )
 
-    def _setup(self, config, temp):
+    def _setup(self, temp):
         os.symlink(
             os.path.abspath(self._input_alignment),
             os.path.join(temp, "RAxML_alignment"),
@@ -210,13 +210,13 @@ class RAxMLParsimonyTreeNode(CommandNode):
             os.path.abspath(self._input_partitions),
             os.path.join(temp, "RAxML_partitions"),
         )
-        CommandNode._setup(self, config, temp)
+        CommandNode._setup(self, temp)
 
-    def _teardown(self, config, temp):
+    def _teardown(self, temp):
         basename = os.path.basename(self._output_tree)
         os.rename(
             os.path.join(temp, "RAxML_parsimonyTree.Pypeline"),
             os.path.join(temp, basename),
         )
 
-        CommandNode._teardown(self, config, temp)
+        CommandNode._teardown(self, temp)

@@ -251,7 +251,7 @@ def build_sample_nodes(options, genotyping, regions_sets, sample, dependencies=(
     return nodes
 
 
-def chain(pipeline, options, makefiles):
+def chain(options, makefiles):
     destination = options.destination
     for makefile in makefiles:
         regions_sets = makefile["Project"]["Regions"]

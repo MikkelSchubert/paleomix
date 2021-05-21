@@ -62,7 +62,7 @@ class PHYLIPBootstrapNode(Node):
             dependencies=dependencies,
         )
 
-    def _run(self, _config, temp):
+    def _run(self, temp):
         if self._seed is not None:
             rng = random.Random(self._seed)
         partitions = _read_partitions(self._input_part)

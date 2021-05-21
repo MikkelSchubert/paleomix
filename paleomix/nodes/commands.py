@@ -75,7 +75,7 @@ class MergeCoverageNode(Node):
             dependencies=dependencies,
         )
 
-    def _run(self, _config, temp):
+    def _run(self, temp):
         table = {}
         for filename in self.input_files:
             coverage.read_table(table, filename)

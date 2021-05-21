@@ -49,7 +49,7 @@ class WriteSampleList(Node):
             dependencies=dependencies,
         )
 
-    def _run(self, config, temp):
+    def _run(self, temp):
         (output_file,) = self.output_files
         samples = self._samples
 
@@ -67,7 +67,7 @@ class WriteSampleList(Node):
 
             handle.write("Sample\t-\t#000000\n")
 
-    def _teardown(self, config, temp):
+    def _teardown(self, temp):
         (destination,) = self.output_files
         source = fileutils.reroot_path(temp, destination)
 

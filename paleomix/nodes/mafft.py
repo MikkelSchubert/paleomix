@@ -71,11 +71,11 @@ class MAFFTNode(CommandNode):
             dependencies=dependencies,
         )
 
-    def _teardown(self, config, temp):
+    def _teardown(self, temp):
         # Validate output from MAFFT
         output_file = reroot_path(temp, self._output_file)
         try:
             MSA.from_file(output_file)
         except MSAError as error:
             raise NodeError("Invalid MSA produced by MAFFT:\n%s" % (error,))
-        CommandNode._teardown(self, config, temp)
+        CommandNode._teardown(self, temp)

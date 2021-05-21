@@ -106,7 +106,7 @@ class MapDamagePlotNode(CommandNode):
             dependencies=dependencies,
         )
 
-    def _teardown(self, config, temp):
+    def _teardown(self, temp):
         # No Length_plot.pdf file is written if there are no SE reads in the
         # input_file. In that case, we write a dummy PDF to ensure that all
         # expected files exist.
@@ -117,7 +117,7 @@ class MapDamagePlotNode(CommandNode):
                 with open(fpath, "w") as out_handle:
                     out_handle.write(_DUMMY_LENGTH_PLOT_PDF)
 
-        CommandNode._teardown(self, config, temp)
+        CommandNode._teardown(self, temp)
 
 
 class MapDamageModelNode(CommandNode):
@@ -171,8 +171,8 @@ class MapDamageModelNode(CommandNode):
             dependencies=dependencies,
         )
 
-    def _setup(self, config, temp):
-        CommandNode._setup(self, config, temp)
+    def _setup(self, temp):
+        CommandNode._setup(self, temp)
         for fname in (
             "3pGtoA_freq.txt",
             "5pCtoT_freq.txt",
@@ -183,9 +183,9 @@ class MapDamageModelNode(CommandNode):
             abspath = os.path.abspath(relpath)
             os.symlink(abspath, os.path.join(temp, fname))
 
-    def _run(self, config, temp):
+    def _run(self, temp):
         try:
-            CommandNode._run(self, config, temp)
+            CommandNode._run(self, temp)
         except NodeError as error:
             err_message = "DNA damage levels are too low"
             if self._command.join() == [1]:
@@ -244,8 +244,8 @@ class MapDamageRescaleNode(CommandNode):
             dependencies=dependencies,
         )
 
-    def _setup(self, config, temp):
-        CommandNode._setup(self, config, temp)
+    def _setup(self, temp):
+        CommandNode._setup(self, temp)
         for fname in ("Stats_out_MCMC_correct_prob.csv",):
             relpath = os.path.join(self._directory, fname)
             abspath = os.path.abspath(relpath)

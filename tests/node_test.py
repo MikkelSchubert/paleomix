@@ -248,7 +248,6 @@ _DUMMY_TEMP = os.path.join(_DUMMY_TEMP_ROOT, "xTMPx")
 
 
 def test_run__order():
-    cfg_mock = Mock(temp_root=_DUMMY_TEMP_ROOT)
     node_mock = Mock()
 
     node = Node()
@@ -259,13 +258,13 @@ def test_run__order():
     node._teardown = node_mock._teardown
     node._remove_temp_dir = node_mock._remove_temp_dir
 
-    node.run(cfg_mock)
+    node.run(_DUMMY_TEMP_ROOT)
 
     node_mock.mock_calls == [
-        call._create_temp_dir(cfg_mock),
-        call._setup(cfg_mock, _DUMMY_TEMP),
-        call._run(cfg_mock, _DUMMY_TEMP),
-        call._teardown(cfg_mock, _DUMMY_TEMP),
+        call._create_temp_dir(_DUMMY_TEMP_ROOT),
+        call._setup(_DUMMY_TEMP),
+        call._run(_DUMMY_TEMP),
+        call._teardown(_DUMMY_TEMP),
         call._remove_temp_dir(_DUMMY_TEMP),
     ]
 
@@ -287,29 +286,26 @@ def test_run__exceptions(key, exception, expectation):
     setattr(node, key, getattr(mock, key))
     getattr(node, key).side_effect = exception
 
-    cfg_mock = Mock(temp_root=_DUMMY_TEMP_ROOT)
     with pytest.raises(expectation):
-        node.run(cfg_mock)
+        node.run(_DUMMY_TEMP_ROOT)
 
     assert mock.mock_calls == [
-        call._create_temp_dir(cfg_mock),
-        getattr(call, key)(cfg_mock, _DUMMY_TEMP),
+        call._create_temp_dir(_DUMMY_TEMP_ROOT),
+        getattr(call, key)(_DUMMY_TEMP),
     ]
 
 
 def test_run__exception__create_temp_dir():
-    cfg_mock = Mock(temp_root=_DUMMY_TEMP_ROOT)
     node_mock = Node()
     node_mock._create_temp_dir = Mock()
     node_mock._create_temp_dir.side_effect = OSError()
 
     with pytest.raises(NodeUnhandledException):
-        node_mock.run(cfg_mock)
-    assert node_mock._create_temp_dir.mock_calls == [call(cfg_mock)]
+        node_mock.run(_DUMMY_TEMP_ROOT)
+    assert node_mock._create_temp_dir.mock_calls == [call(_DUMMY_TEMP_ROOT)]
 
 
 def test_run__exception__remove_temp_dir():
-    cfg_mock = Mock(temp_root=_DUMMY_TEMP_ROOT)
     mock = Mock()
     node_mock = Node()
     node_mock._create_temp_dir = mock._create_temp_dir
@@ -318,9 +314,9 @@ def test_run__exception__remove_temp_dir():
     node_mock._remove_temp_dir.side_effect = OSError()
 
     with pytest.raises(NodeUnhandledException):
-        node_mock.run(cfg_mock)
+        node_mock.run(_DUMMY_TEMP_ROOT)
     assert mock.mock_calls == [
-        call._create_temp_dir(cfg_mock),
+        call._create_temp_dir(_DUMMY_TEMP_ROOT),
         call._remove_temp_dir(_DUMMY_TEMP),
     ]
 
@@ -329,7 +325,6 @@ def test_run__exception__remove_temp_dir():
 def test_run__error_log__node_error(tmp_path, exception):
     temp = tmp_path / "xTMPx"
     mock = Mock()
-    cfg_mock = Mock(temp_root=tmp_path)
     node_mock = Node()
     node_mock._create_temp_dir = mock._create_temp_dir
     node_mock._create_temp_dir.return_value = str(temp)
@@ -338,7 +333,7 @@ def test_run__error_log__node_error(tmp_path, exception):
 
     temp.mkdir()
     with pytest.raises(NodeError):
-        node_mock.run(cfg_mock)
+        node_mock.run(tmp_path)
     log_file = tmp_path / "xTMPx" / "pipe.errors"
     assert log_file.exists()
 
@@ -347,8 +342,8 @@ def test_run__error_log__node_error(tmp_path, exception):
     assert paleomix.__version__ in error_text
 
     assert mock.mock_calls == [
-        call._create_temp_dir(cfg_mock),
-        call._run(cfg_mock, str(temp)),
+        call._create_temp_dir(tmp_path),
+        call._run(str(temp)),
     ]
 
 
@@ -365,7 +360,7 @@ _INPUT_FILES_EXIST = (
 
 @pytest.mark.parametrize("kwargs", _INPUT_FILES_EXIST)
 def test__setup__input_files(kwargs):
-    Node(**kwargs)._setup(None, None)
+    Node(**kwargs)._setup(None)
 
 
 _INPUT_FILES_MISSING = (
@@ -378,17 +373,17 @@ _INPUT_FILES_MISSING = (
 @pytest.mark.parametrize("kwargs", _INPUT_FILES_MISSING)
 def test__setup__input_files_missing(kwargs):
     with pytest.raises(NodeError):
-        Node(**kwargs)._setup(None, None)
+        Node(**kwargs)._setup(None)
 
 
 def test__teardown__output_files():
-    Node(input_files=_EMPTY_FILE, output_files=_IN_FILES)._teardown(None, None)
+    Node(input_files=_EMPTY_FILE, output_files=_IN_FILES)._teardown(None)
 
 
 def test__teardown__output_files_missing():
     node = Node(input_files=_EMPTY_FILE, output_files=_OUT_FILES)
     with pytest.raises(NodeError):
-        node._teardown(None, None)
+        node._teardown(None)
 
 
 ###############################################################################
@@ -505,7 +500,6 @@ def test_commandnode_constructor__dependencies__default():
 
 
 def test_command_node__run():
-    cfg_mock = Mock(temp_root=_DUMMY_TEMP_ROOT)
     mock = _build_cmd_mock()
 
     node_mock = CommandNode(mock)
@@ -515,14 +509,14 @@ def test_command_node__run():
     node_mock._teardown = mock._test_node_._teardown
     node_mock._remove_temp_dir = mock._test_node_._remove_temp_dir
 
-    node_mock.run(cfg_mock)
+    node_mock.run(_DUMMY_TEMP_ROOT)
 
     assert mock.mock_calls == [
-        call._test_node_._create_temp_dir(cfg_mock),
-        call._test_node_._setup(cfg_mock, _DUMMY_TEMP),
+        call._test_node_._create_temp_dir(_DUMMY_TEMP_ROOT),
+        call._test_node_._setup(_DUMMY_TEMP),
         call.run(_DUMMY_TEMP),
         call.join(),
-        call._test_node_._teardown(cfg_mock, _DUMMY_TEMP),
+        call._test_node_._teardown(_DUMMY_TEMP),
         call._test_node_._remove_temp_dir(_DUMMY_TEMP),
     ]
 
@@ -542,7 +536,7 @@ _SETUP_FILES_EXIST = (
 def test_commandnode_setup__files_exist(kwargs):
     cmd_mock = _build_cmd_mock(**kwargs)
     node = CommandNode(cmd_mock)
-    node._setup(None, None)
+    node._setup(None)
 
 
 _SETUP_FILES_MISSING = (
@@ -557,7 +551,7 @@ def test_commandnode_setup__files_missing(kwargs):
     cmd_mock = _build_cmd_mock(**kwargs)
     node = CommandNode(cmd_mock)
     with pytest.raises(NodeError):
-        node._setup(None, None)
+        node._setup(None)
 
 
 ###############################################################################
@@ -568,7 +562,7 @@ def test_commandnode_setup__files_missing(kwargs):
 def test_commandnode_run__call_order():
     cmd_mock = _build_cmd_mock()
     node = CommandNode(cmd_mock)
-    node._run(None, "xTMPx")
+    node._run("xTMPx")
 
     assert cmd_mock.mock_calls == [call.run("xTMPx"), call.join()]
 
@@ -577,7 +571,7 @@ def test_commandnode_run__exception_on_error():
     cmd_mock = _build_cmd_mock(return_codes=(1,))
     node = CommandNode(cmd_mock)
     with pytest.raises(CmdNodeError):
-        node._run(None, "xTMPx")
+        node._run("xTMPx")
 
     assert cmd_mock.mock_calls == [call.run("xTMPx"), call.join()]
 
@@ -599,7 +593,7 @@ def _setup_temp_folders(tmp_path):
 def test_commandnode_teardown__commit(tmp_path):
     cmd_mock = _build_cmd_mock()
     node = CommandNode(cmd_mock)
-    node._teardown(None, tmp_path)
+    node._teardown(tmp_path)
     assert cmd_mock.mock_calls == [call.commit(tmp_path)]
 
 
@@ -617,7 +611,7 @@ def test_commandnode_teardown(tmp_path):
     node = CommandNode(cmd)
     assert (tmp_path / "foo.txt").exists()
     assert not (destination / "foo.txt").exists()
-    node._teardown(None, tmp_path)
+    node._teardown(tmp_path)
     assert not (tmp_path / "foo.txt").exists()
     assert (destination / "foo.txt").exists()
 
@@ -641,7 +635,7 @@ def test_commandnode_teardown__missing_files_in_temp(tmp_path):
     dest_files_before = set(destination.iterdir())
 
     with pytest.raises(CmdNodeError):
-        node._teardown(None, tmp_path)
+        node._teardown(tmp_path)
     assert temp_files_before == set(tmp_path.iterdir())
     assert dest_files_before == set(destination.iterdir())
 
@@ -661,7 +655,7 @@ def test_commandnode_teardown__missing_optional_files(tmp_path):
     cmd.run(tmp_path)
     assert cmd.join() == [0]
     node = CommandNode(cmd)
-    node._teardown(None, tmp_path)
+    node._teardown(tmp_path)
     assert os.listdir(str(tmp_path)) == []
     assert os.listdir(str(destination)) == ["foo.txt"]
 
@@ -687,7 +681,7 @@ def test_commandnode_teardown__missing_files_in_dest(tmp_path):
     assert cmd.join() == [0]
     node = CommandNode(cmd)
     with pytest.raises(NodeError):
-        node._teardown(None, tmp_path)
+        node._teardown(tmp_path)
 
 
 def test_commandnode_teardown__extra_files_in_temp(tmp_path):
@@ -703,8 +697,8 @@ def test_commandnode_teardown__extra_files_in_temp(tmp_path):
     )
 
     node = CommandNode(cmd)
-    node._run(None, tmp_path)
-    node._teardown(None, tmp_path)
+    node._run(tmp_path)
+    node._teardown(tmp_path)
 
     assert list(tmp_path.iterdir()) == [unexpected_file]
     assert list(destination.iterdir()) == [destination / "foo.txt"]

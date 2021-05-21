@@ -96,7 +96,7 @@ class DrawPhylogenyNode(CommandNode):
             dependencies=dependencies,
         )
 
-    def _setup(self, config, temp):
+    def _setup(self, temp):
         with open(self._bootstraps) as handle:
             bootstraps = [Newick.from_string(line.strip()) for line in handle]
 
@@ -108,4 +108,4 @@ class DrawPhylogenyNode(CommandNode):
         with open(os.path.join(temp, "rerooted.newick"), "w") as handle:
             handle.write("{}\n".format(tree))
 
-        CommandNode._setup(self, config, temp)
+        CommandNode._setup(self, temp)

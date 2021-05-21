@@ -97,7 +97,7 @@ class SummaryTableNode(Node):
             dependencies=dependencies,
         )
 
-    def _run(self, config, temp):
+    def _run(self, temp):
         rois = self._stat_areas_of_interest(self._prefixes)
         genomes = self._stat_prefixes(self._prefixes)
         with open(reroot_path(temp, self._output_file), "w") as table:
@@ -116,7 +116,7 @@ class SummaryTableNode(Node):
                 genomes[roi["Label"]] = {"Size": roi["Size"]}
             self._write_tables(table, genomes)
 
-    def _teardown(self, _config, temp):
+    def _teardown(self, temp):
         move_file(reroot_path(temp, self._output_file), self._output_file)
 
     def _write_genomes(self, table, genomes):

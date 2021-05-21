@@ -83,7 +83,7 @@ class FastaToPartitionedInterleavedPhyNode(Node):
             dependencies=dependencies,
         )
 
-    def _run(self, _config, temp):
+    def _run(self, temp):
         merged_msas = []
         for (name, files_dd) in sorted(self._infiles.items()):
             partitions = files_dd["partitions"]
@@ -121,7 +121,7 @@ class FastaToPartitionedInterleavedPhyNode(Node):
                 )
                 partition_end += length
 
-    def _teardown(self, _config, temp):
+    def _teardown(self, temp):
         move_file(
             reroot_path(temp, self._out_prefix + ".phy"), self._out_prefix + ".phy"
         )

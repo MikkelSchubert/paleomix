@@ -76,7 +76,7 @@ class ReportNode(Node):
             dependencies=dependencies,
         )
 
-    def _run(self, _config, temp):
+    def _run(self, temp):
         with open(os.path.join(temp, "report.html"), "w") as output_handle:
             revision = self._data.settings["Revision"]
             header = _HTML_HEADER.format(
@@ -101,7 +101,7 @@ class ReportNode(Node):
 
             output_handle.write(_HTML_FOOTER)
 
-    def _teardown(self, config, temp):
+    def _teardown(self, temp):
         fileutils.make_dirs(self._root)
 
         fileutils.move_file(

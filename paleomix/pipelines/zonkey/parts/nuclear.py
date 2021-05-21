@@ -183,8 +183,8 @@ class AdmixtureNode(CommandNode):
             dependencies=dependencies,
         )
 
-    def _setup(self, config, temp):
-        CommandNode._setup(self, config, temp)
+    def _setup(self, temp):
+        CommandNode._setup(self, temp)
 
         input_files = [
             self._input_file,
@@ -246,7 +246,7 @@ class SelectBestAdmixtureNode(Node):
             dependencies=tuple(dependencies) + tuple(replicates),
         )
 
-    def _run(self, config, temp):
+    def _run(self, temp):
         likelihoods = []
         for fileset in self._files:
             for filename in fileset:
@@ -310,7 +310,7 @@ class AdmixturePlotNode(CommandNode):
             dependencies=dependencies,
         )
 
-    def _setup(self, config, temp):
+    def _setup(self, temp):
         samples = {}
         with open(self._samples) as handle:
             header = handle.readline().strip().split("\t")
@@ -325,7 +325,7 @@ class AdmixturePlotNode(CommandNode):
                 row = samples[name]
                 handle.write("{}\n".format("\t".join(row[key] for key in header)))
 
-        CommandNode._setup(self, config, temp)
+        CommandNode._setup(self, temp)
 
 
 class BuildFreqFilesNode(CommandNode):
@@ -383,8 +383,8 @@ class BuildFreqFilesNode(CommandNode):
             dependencies=dependencies,
         )
 
-    def _setup(self, config, temp):
-        CommandNode._setup(self, config, temp)
+    def _setup(self, temp):
+        CommandNode._setup(self, temp)
 
         with open(self._tfam) as in_handle:
             samples = [line.split(None, 1)[0] for line in in_handle]
@@ -393,14 +393,14 @@ class BuildFreqFilesNode(CommandNode):
             for sample in samples:
                 handle.write("{0} {0} {0}\n".format(sample))
 
-    def _teardown(self, config, temp):
+    def _teardown(self, temp):
         for ext in ("log", "nosex"):
             os.rename(
                 os.path.join(temp, self._basename + "." + ext),
                 os.path.join(temp, self._basename + ".frq.strat." + ext),
             )
 
-        CommandNode._teardown(self, config, temp)
+        CommandNode._teardown(self, temp)
 
 
 class FreqToTreemixNode(Node):
@@ -413,7 +413,7 @@ class FreqToTreemixNode(Node):
             dependencies=dependencies,
         )
 
-    def _run(self, _config, temp):
+    def _run(self, temp):
         (input_file,) = self.input_files
         (output_file,) = self.output_files
         temp_filename = os.path.basename(output_file)
@@ -436,12 +436,12 @@ class FreqToTreemixNode(Node):
 
                 handle.write("%s\n" % (" ".join(result),))
 
-    def _teardown(self, config, temp):
+    def _teardown(self, temp):
         (output_file,) = self.output_files
         temp_file = os.path.join(temp, os.path.basename(output_file))
 
         fileutils.move_file(temp_file, output_file)
-        Node._teardown(self, config, temp)
+        Node._teardown(self, temp)
 
     @classmethod
     def _parse_freq_table(cls, filename):
@@ -513,7 +513,7 @@ class TreemixNode(CommandNode):
             dependencies=dependencies,
         )
 
-    def _setup(self, config, temp):
+    def _setup(self, temp):
         if self._k_file is not None:
             stats = read_summary(self._k_file)
             n_sites = float(stats[self._k_field])
@@ -524,9 +524,9 @@ class TreemixNode(CommandNode):
             self._param_k = k
             self._command._command.extend(("-k", str(k)))
 
-        CommandNode._setup(self, config, temp)
+        CommandNode._setup(self, temp)
 
-    def _teardown(self, config, temp):
+    def _teardown(self, temp):
         with open(fileutils.reroot_path(temp, self._params_file), "w") as out:
             out.write("k: %i\n" % (self._param_k,))
             out.write("m: %i\n" % (self._param_m,))
@@ -534,7 +534,7 @@ class TreemixNode(CommandNode):
 
         open(fileutils.reroot_path(temp, self._parameters_hash), "w").close()
 
-        CommandNode._teardown(self, config, temp)
+        CommandNode._teardown(self, temp)
 
 
 class PlotTreemixNode(CommandNode):
@@ -640,8 +640,8 @@ class SmartPCANode(CommandNode):
             dependencies=dependencies,
         )
 
-    def _setup(self, config, temp):
-        CommandNode._setup(self, config, temp)
+    def _setup(self, temp):
+        CommandNode._setup(self, temp)
 
         with open(os.path.join(temp, "parameters.txt"), "w") as handle:
             handle.write(
@@ -665,12 +665,12 @@ numthreads:        1
                 )
             )
 
-    def _teardown(self, config, temp):
+    def _teardown(self, temp):
         # Ensure that this file exists even when no filtered SNPs
         deleted_snps = os.path.basename(self._output_prefix) + ".deleted_snps"
         open(os.path.join(temp, deleted_snps), "a").close()
 
-        CommandNode._teardown(self, config, temp)
+        CommandNode._teardown(self, temp)
 
 
 class PlotPCANode(CommandNode):
@@ -737,7 +737,7 @@ class PlotCoverageNode(CommandNode):
             dependencies=dependencies,
         )
 
-    def _setup(self, config, temp):
+    def _setup(self, temp):
         with open(os.path.join(temp, "contigs.table"), "w") as handle:
             handle.write("ID\tSize\tNs\tHits\n")
 
@@ -762,7 +762,7 @@ class PlotCoverageNode(CommandNode):
 
                 handle.write("{ID}\t{Size}\t{Ns}\t{Hits}\n".format(**row))
 
-        CommandNode._setup(self, config, temp)
+        CommandNode._setup(self, temp)
 
 
 def hash_params(*args, **kwargs):

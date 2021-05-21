@@ -81,7 +81,7 @@ def build_msa_nodes(options, settings, regions, filtering, dependencies):
     return filtered_nodes
 
 
-def chain(_pipeline, options, makefiles):
+def chain(options, makefiles):
     destination = options.destination  # Move to makefile
     for makefile in makefiles:
         nodes = []

@@ -66,7 +66,7 @@ class CollectSequencesNode(Node):
             dependencies=dependencies,
         )
 
-    def _setup(self, _config, _temp):
+    def _setup(self, _temp):
         for filename in self._infiles.values():
             with open(filename + ".fai") as handle:
                 sequences = set()
@@ -86,7 +86,7 @@ class CollectSequencesNode(Node):
                     ) % (filename, ", ".join(missing_sequences))
                     raise NodeError(message)
 
-    def _run(self, _config, temp):
+    def _run(self, temp):
         fasta_files = []
         for (name, filename) in sorted(self._infiles.items()):
             fasta_files.append((name, pysam.FastaFile(filename)))
@@ -99,7 +99,7 @@ class CollectSequencesNode(Node):
                     fasta = FASTA(sample, sequence_name, sequence)
                     fasta.write(out_handle)
 
-    def _teardown(self, _config, temp):
+    def _teardown(self, temp):
         for destination in sorted(self._outfiles):
             source = fileutils.reroot_path(temp, destination)
             fileutils.move_file(source, destination)
@@ -131,7 +131,7 @@ class FilterSingletonsNode(Node):
             dependencies=dependencies,
         )
 
-    def _run(self, _config, temp):
+    def _run(self, temp):
         alignment = MSA.from_file(self._input_file)
         for (to_filter, groups) in self._filter_by.items():
             alignment = alignment.filter_singletons(to_filter, groups)

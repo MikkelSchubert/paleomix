@@ -185,9 +185,6 @@ def run(config, pipeline_variant):
         logger.error("Insufficient permissions for temp root: %r", config.temp_root)
         return 1
 
-    # Init worker-threads before reading in any more data
-    pipeline = Pypeline(config)
-
     try:
         makefiles = read_makefiles(config.makefiles, pipeline_variant)
     except (MakefileError, paleomix.yaml.YAMLError, IOError) as error:
@@ -201,16 +198,21 @@ def run(config, pipeline_variant):
 
         pipeline_func = build_pipeline_full
 
+    nodes = []
     for makefile in makefiles:
         logger.info("Building BAM pipeline for %r", makefile["Filename"])
         try:
-            nodes = pipeline_func(config, makefile)
+            nodes.extend(pipeline_func(config, makefile))
         except paleomix.node.NodeError as error:
             logger.error(
                 "Error while building pipeline for %r:\n%s", makefile["Filename"], error
             )
             return 1
 
-        pipeline.add_nodes(*nodes)
+    pipeline = Pypeline(
+        nodes=nodes,
+        temp_root=config.temp_root,
+        max_threads=config.max_threads,
+    )
 
-    return pipeline.run(mode=config.pipeline_mode, max_threads=config.max_threads)
+    return pipeline.run(config.pipeline_mode)
