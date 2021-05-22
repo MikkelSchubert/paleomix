@@ -97,7 +97,7 @@ If you make use of PALEOMIX in your work, please cite
 
 def main(argv):
     # Change process name from 'python' to 'paleomix'
-    paleomix.common.system.set_procname("paleomix " + " ".join(argv))
+    paleomix.common.system.set_procname("paleomix " + " ".join(argv[:1]))
     # Setup basic logging to STDERR
     paleomix.common.logging.initialize_console_logging()
     # Silence log-messages from HTSLIB

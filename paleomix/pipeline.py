@@ -33,6 +33,7 @@ import traceback
 from queue import Empty
 
 import paleomix.common.logging
+import paleomix.common.system
 
 from paleomix.node import Node, NodeError
 from paleomix.nodegraph import FileStatusCache, NodeGraph, NodeGraphError
@@ -422,6 +423,11 @@ def add_io_argument_group(parser):
 
 
 def _node_wrapper(queue, key, node, temp_root):
+    name = "paleomix task"
+    if len(sys.argv) > 1:
+        name = "paleomix {} task".format(sys.argv[1])
+
+    paleomix.common.system.set_procname(name)
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
     try:
