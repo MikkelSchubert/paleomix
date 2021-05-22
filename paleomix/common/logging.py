@@ -27,11 +27,12 @@ import os
 import time
 
 import coloredlogs
+import humanfriendly
 
 
-_CONSOLE_MESSAGE_FORMAT = "%(asctime)s %(levelname)s %(message)s"
+_CONSOLE_MESSAGE_FORMAT = "%(asctime)s %(levelname)s %(colorstatusfield)s%(message)s"
 _CONSOLE_DATE_FORMAT = "%H:%M:%S"
-_FILE_MESSAGE_FORMAT = "%(asctime)s %(name)s %(levelname)s %(message)s"
+_FILE_MESSAGE_FORMAT = "%(asctime)s %(name)s %(levelname)s %(statusfield)s%(message)s"
 
 _LOG_LEVELS = {
     "debug": logging.DEBUG,
@@ -48,6 +49,9 @@ def initialize_console_logging(log_level="info"):
         datefmt=_CONSOLE_DATE_FORMAT,
         level=log_level,
     )
+
+    for handler in logging.getLogger().handlers:
+        StatusFilter.install(handler)
 
 
 def initialize(log_level="info", log_file=None, auto_log_file="paleomix"):
@@ -134,3 +138,33 @@ class LazyLogfile(logging.FileHandler):
             except OSError as error:
                 if error.errno != errno.EEXIST:
                     raise
+
+
+class StatusFilter(logging.Filter):
+    def filter(self, record):
+        record.statusfield = ""
+        record.colorstatusfield = ""
+
+        if hasattr(record, "status"):
+            value = record.status
+            record.statusfield = "[{}] ".format(value)
+            record.colorstatusfield = record.statusfield
+
+            if isinstance(value, Status) and value.color:
+                value = humanfriendly.terminal.ansi_wrap(str(value), color=value.color)
+                record.colorstatusfield = "[{}] ".format(value)
+
+        return 1
+
+    @classmethod
+    def install(cls, handler):
+        if not any(isinstance(flt, StatusFilter) for flt in handler.filters):
+            handler.addFilter(StatusFilter())
+
+
+class Status:
+    def __init__(self, color=None):
+        self.color = color
+
+    def __str__(self):
+        raise NotImplementedError

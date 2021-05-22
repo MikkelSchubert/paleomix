@@ -28,6 +28,7 @@ import time
 
 import humanfriendly
 
+import paleomix.common.logging
 import paleomix.common.versions as versions
 
 from paleomix.common.fileutils import missing_executables, missing_files
@@ -118,6 +119,7 @@ class NodeGraph:
         self._states = {}
         self._start_times = {}
         self._state_counts = [0] * self.NUMBER_OF_STATES
+        self._progress_color = None
 
         nodes = safe_coerce_to_frozenset(nodes)
 
@@ -220,25 +222,24 @@ class NodeGraph:
 
     def _log_node_changes(self, node, old_state, new_state):
         if new_state in (self.RUNNING, self.DONE):
-            progress = self._state_counts[self.DONE] + self._state_counts[self.ERROR]
-            pct = "{: >3d}".format(int(100 * progress / sum(self._state_counts)))
             runtime = ""
-
             if new_state == self.RUNNING:
                 self._start_times[node] = time.time()
                 event = "Started"
             elif old_state == self.OUTDATED:
                 event = "Already finished"
             else:
+                event = "Finished"
                 end_time = time.time()
                 start_time = self._start_times.pop(node)
-                if start_time is not None:
-                    runtime = " in {}".format(
-                        humanfriendly.format_timespan(end_time - start_time)
-                    )
-                event = "Finished"
+                runtime = " in {}".format(
+                    humanfriendly.format_timespan(end_time - start_time)
+                )
 
-            self._logger.info("[%s%%] %s %s%s", pct, event, node, runtime)
+            extra = {"status": _Progress(self._state_counts, self._progress_color)}
+            self._logger.info("%s %s%s", event, node, runtime, extra=extra)
+        elif new_state == self.ERROR:
+            self._progress_color = "red"
 
     def _calculate_intersections(self, for_node):
         def count_nodes(node, counts):
@@ -513,6 +514,25 @@ class NodeGraph:
             nodes = pending - checked
 
         return False
+
+
+class _Progress(paleomix.common.logging.Status):
+    def __init__(self, state_counts, color):
+        super().__init__(color)
+        self._state_counts = state_counts
+
+    def __str__(self):
+        total = sum(self._state_counts)
+        nth = self._state_counts[NodeGraph.DONE] + self._state_counts[NodeGraph.ERROR]
+
+        if total > 200:
+            value = "{: >5.1f}%".format((100 * nth) / total)
+        elif total > 0:
+            value = "{: >3.0f}%".format((100 * nth) / total)
+        else:
+            value = "N/A"
+
+        return value
 
 
 def _summarize_nodes(nodes):
