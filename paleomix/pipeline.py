@@ -113,22 +113,23 @@ class Pypeline:
         # Set of remaining nodes to be run
         remaining = set(nodegraph.iterflat())
 
-        is_ok = True
+        any_errors = False
+        any_changes = True
         queue = multiprocessing.Queue()
         while self._running or (remaining and not self._interrupted):
-            if remaining and not self._interrupted:
+            if any_changes and (remaining and not self._interrupted):
                 self._start_new_tasks(remaining, nodegraph, queue)
                 if remaining and not self._running:
                     self._logger.critical("BUG: Failed to start new tasks!")
-                    is_ok = False
+                    any_errors = True
                     break
 
-            if not self._poll_running_nodes(nodegraph, queue):
-                is_ok = False
+            any_changes, any_node_errors = self._poll_running_nodes(nodegraph, queue)
+            any_errors |= any_node_errors
 
-        self._summarize_pipeline(nodegraph, verbose=not is_ok)
+        self._summarize_pipeline(nodegraph, verbose=any_errors)
 
-        return 0 if is_ok else 1
+        return 1 if any_errors else 0
 
     def _start_new_tasks(self, remaining, nodegraph, queue):
         idle_processes = self._max_threads - sum(
@@ -174,11 +175,11 @@ class Pypeline:
                 queue.put((key, NodeError(message), None))
 
         blocking = False
-        node_happened = False
-        error_happened = False
+        any_errors = False
+        any_changes = False
         while self._running:
             try:
-                key, error, backtrace = queue.get(blocking, 10.0)
+                key, error, backtrace = queue.get(blocking, 1.0)
             except IOError as error:
                 # User pressed ctrl-c (SIGINT), or similar event
                 if error.errno != errno.EINTR:
@@ -188,14 +189,14 @@ class Pypeline:
             except Empty:
                 # Stop looping if we've already waited once or if we've finished one or
                 # more nodes, since the latter means that we can maybe start new nodes
-                if blocking or node_happened:
+                if blocking or any_changes:
                     break
 
                 blocking = True
                 continue
 
             blocking = False
-            node_happened = True
+            any_changes = True
             node, proc = self._running.pop(key)
             proc.join()
 
@@ -203,7 +204,7 @@ class Pypeline:
                 nodegraph.set_node_state(node, nodegraph.DONE)
             else:
                 nodegraph.set_node_state(node, nodegraph.ERROR)
-                error_happened = True
+                any_errors = True
 
                 if not isinstance(error, NodeError):
                     error = "Unhandled exception while running {}:".format(node)
@@ -221,7 +222,7 @@ class Pypeline:
                         "  %s", quote(os.path.join(error.path, "pipe.errors"))
                     )
 
-        return not error_happened
+        return any_changes, any_errors
 
     def _print_files(self, mode):
         try:
