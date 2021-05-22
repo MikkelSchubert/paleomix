@@ -241,7 +241,11 @@ class Pypeline:
 
     def _print_input_files(self):
         self._logger.info("Collecting and printing external input files ..")
-        graph = NodeGraph(nodes=self._nodes, software_checks=False)
+        graph = NodeGraph(
+            nodes=self._nodes,
+            software_checks=False,
+            implicit_dependencies=self._implicit_dependencies,
+        )
 
         input_files = set()
         output_files = set()
@@ -263,6 +267,7 @@ class Pypeline:
         graph = NodeGraph(
             nodes=self._nodes,
             software_checks=False,
+            implicit_dependencies=self._implicit_dependencies,
             cache_factory=lambda: cache,
         )
 
@@ -293,6 +298,7 @@ class Pypeline:
         graph = NodeGraph(
             nodes=self._nodes,
             software_checks=False,
+            implicit_dependencies=self._implicit_dependencies,
         )
 
         executables = set()
