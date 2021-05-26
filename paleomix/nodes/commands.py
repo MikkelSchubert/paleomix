@@ -38,9 +38,7 @@ import paleomix.tools.factory as factory
 
 
 class CoverageNode(CommandNode):
-    def __init__(
-        self, target_name, input_file, output_file, regions_file=None, dependencies=()
-    ):
+    def __init__(self, target_name, input_file, output_file, dependencies=()):
         command = factory.new(
             [
                 "coverage",
@@ -50,9 +48,6 @@ class CoverageNode(CommandNode):
                 target_name,
             ]
         )
-
-        if regions_file:
-            command.append("--regions-file", InputFile(regions_file))
 
         CommandNode.__init__(
             self,
@@ -90,12 +85,8 @@ class DepthHistogramNode(CommandNode):
         target_name,
         input_file,
         output_file,
-        prefix,
-        regions_file=None,
         dependencies=(),
     ):
-        index_format = regions_file and prefix["IndexFormat"]
-
         command = factory.new(
             [
                 "depths",
@@ -105,10 +96,6 @@ class DepthHistogramNode(CommandNode):
                 target_name,
             ],
         )
-
-        if regions_file:
-            command.append("--regions-file", InputFile(regions_file))
-            command.add_extra_files([InputFile(input_file + index_format)])
 
         CommandNode.__init__(
             self,

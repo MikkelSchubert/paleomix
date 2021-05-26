@@ -32,7 +32,6 @@ from paleomix.node import Node, NodeError
 from paleomix.common.utilities import set_in, get_in
 from paleomix.common.fileutils import move_file, reroot_path
 from paleomix.tools.bam_stats.coverage import read_table as read_coverage_table
-from paleomix.common.bedtools import BEDRecord
 from paleomix.common.formats.fasta import FASTA
 
 import paleomix.common.text as text
@@ -98,7 +97,6 @@ class SummaryTableNode(Node):
         )
 
     def _run(self, temp):
-        rois = self._stat_areas_of_interest(self._prefixes)
         genomes = self._stat_prefixes(self._prefixes)
         with open(reroot_path(temp, self._output_file), "w") as table:
             table.write("# Command:\n")
@@ -109,11 +107,8 @@ class SummaryTableNode(Node):
             table.write("#\n")
             self._write_genomes(table, genomes)
             table.write("#\n")
-            self._write_areas_of_interest(table, rois)
             table.write("#\n#\n")
 
-            for roi in rois.values():
-                genomes[roi["Label"]] = {"Size": roi["Size"]}
             self._write_tables(table, genomes)
 
     def _teardown(self, temp):
@@ -131,27 +126,6 @@ class SummaryTableNode(Node):
                     stats["Size"],
                     prefix["Path"],
                 )
-            )
-
-        for line in text.padded_table(rows):
-            table.write("#     %s\n" % (line,))
-
-    def _write_areas_of_interest(self, table, rois):
-        table.write("# Regions Of Interest:\n")
-        rows = [["Genome", "ROI", "Size", "NFeatures", "NIntervals", "Path"]]
-        for (_, roi) in sorted(rois.items()):
-            rows.append(
-                [
-                    roi[key]
-                    for key in (
-                        "Genome",
-                        "Name",
-                        "Size",
-                        "NFeatures",
-                        "NIntervals",
-                        "Path",
-                    )
-                ]
             )
 
         for line in text.padded_table(rows):
@@ -419,30 +393,6 @@ class SummaryTableNode(Node):
                 }
             else:
                 assert False, filenames
-
-    @classmethod
-    def _stat_areas_of_interest(cls, prefixes):
-        """Returns (size, number of named intervals, total number of intervals)
-        for a set of areas of interest."""
-        areas_of_interest = {}
-        for (prefix_name, prefix) in prefixes.items():
-            for (roi_name, roi_filename) in prefix.get("RegionsOfInterest", {}).items():
-                count, names, size = 0, set(), 0
-                with open(roi_filename) as handle:
-                    for line in handle:
-                        bed = BEDRecord(line)
-                        names.add(bed.name if len(bed) >= 4 else (bed.contig + "*"))
-                        size += bed.end - bed.start
-                        count += 1
-                areas_of_interest[(prefix_name, roi_name)] = {
-                    "Size": size,
-                    "NFeatures": len(names),
-                    "NIntervals": count,
-                    "Genome": prefix["Name"],
-                    "Name": roi_name,
-                    "Path": roi_filename,
-                }
-        return areas_of_interest
 
     @classmethod
     def _stat_prefixes(cls, prefixes):

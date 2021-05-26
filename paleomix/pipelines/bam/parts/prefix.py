@@ -30,7 +30,6 @@ from paleomix.pipelines.bam.nodes import index_and_validate_bam
 class Prefix:
     def __init__(self, config, prefix, samples, features, target):
         self.name = prefix["Name"]
-        self.roi = prefix.get("RegionsOfInterest", {})
 
         self.samples = safe_coerce_to_tuple(samples)
         self.folder = config.destination

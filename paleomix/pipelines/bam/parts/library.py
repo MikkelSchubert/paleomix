@@ -132,7 +132,7 @@ class Library:
                 config=config,
                 prefix=prefix,
                 node=node,
-                create_index=bool(prefix.get("RegionsOfInterest")),
+                create_index=False,
             )
 
             results[key] = {output_filename: validated_node}
@@ -228,7 +228,7 @@ class Library:
             config=config,
             prefix=prefix,
             node=scale,
-            create_index=bool(prefix.get("RegionsOfInterest")),
+            create_index=False,
         )
 
         return {output_filename: validate}, (model,)

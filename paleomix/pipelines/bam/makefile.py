@@ -54,12 +54,10 @@ from paleomix.common.makefile import (
     StringStartsWith,
     IsListOf,
     IsDictOf,
-    DeprecatedOption,
     RemovedOption,
 )
 from paleomix.common.formats.fasta import FASTA, FASTAError
 
-import paleomix.common.bedtools as bedtools
 import paleomix.common.sequences as sequences
 
 
@@ -112,8 +110,8 @@ _VALID_PREFIX_PATH = And(
     IsStr(), Not(ValuesIntersect('\\:?"<>|() \t\n\v\f\r')), default=REQUIRED_VALUE
 )
 
-# Valid strings for targets / samples / libraries / lanes
-_VALID_TARGET_NAME = _alphanum_check(whitelist="._-", min_len=2)
+# Valid strings for samples / libraries / lanes
+_VALID_FILENAME = _alphanum_check(whitelist="._-", min_len=2)
 
 # Features that can be specified at project, sample, and library level
 _VALID_LIBRARY_LEVEL_FEATURES = {
@@ -156,9 +154,9 @@ _VALIDATION_OPTIONS = {
         "--adapter-list": IsStr,
         "--maxns": IsUnsignedInt,
         "--minquality": IsUnsignedInt,
-        "--trimns": Or(IsNone, IsBoolean),
-        "--trimqualities": Or(IsNone, IsBoolean),
-        "--collapse": Or(IsNone, IsBoolean),
+        "--trimns": IsNone,
+        "--trimqualities": IsNone,
+        "--collapse": IsNone,
         "--mm": Or(IsFloat, IsUnsignedInt),
         "--minlength": IsUnsignedInt,
         "--maxlength": IsUnsignedInt,
@@ -168,9 +166,9 @@ _VALIDATION_OPTIONS = {
         "--qualitymax": IsUnsignedInt,
         "--mate-separator": IsStr,
         "--trimwindows": Or(IsInt, IsFloat),
-        "--preserve5p": Or(IsNone, IsBoolean),
-        "--collapse-deterministic": Or(IsNone, IsBoolean),
-        "--collapse-conservatively": Or(IsNone, IsBoolean),
+        "--preserve5p": IsNone,
+        "--collapse-deterministic": IsNone,
+        "--collapse-conservatively": IsNone,
     },
     # Which aliger/mapper to use (BWA/Bowtie2)
     "Aligners": {
@@ -201,10 +199,6 @@ _VALIDATION_OPTIONS = {
             ),
         },
     },
-    # Does sample contain PCR duplicates / what to do about it.
-    "PCRDuplicates": DeprecatedOption(StringIn((True, False, "mark", "filter"))),
-    # Qualities should be rescaled using mapDamage (replaced with Features)
-    "RescaleQualities": DeprecatedOption(IsBoolean()),
     "mapDamage": {
         # Tabulation options
         "--downsample": Or(IsUnsignedInt, IsFloat),
@@ -239,34 +233,22 @@ _VALIDATION_OPTIONS = {
 
 _VALIDATION = {
     "Options": _VALIDATION_OPTIONS,
-    "Prefixes": {
-        _VALID_PREFIX_NAME: {
-            "Path": _VALID_PREFIX_PATH,
-            "Label": RemovedOption(),
-            "RegionsOfInterest": IsDictOf(IsStr, IsStr),
-        }
+    "Genomes": {
+        _VALID_PREFIX_NAME: _VALID_PREFIX_PATH,
     },
-    _VALID_TARGET_NAME: {  # Target
-        _VALID_TARGET_NAME: {  # Sample
-            _VALID_TARGET_NAME: {  # Library
-                _VALID_TARGET_NAME: Or(IsStr, IsDictOf(IsStr, IsStr)),
+    "Samples": {
+        _VALID_FILENAME: {  # Sample
+            _VALID_FILENAME: {  # Library
+                _VALID_FILENAME: Or(IsStr, IsDictOf(IsStr, IsStr)),
                 "Options": WithoutDefaults(_VALIDATION_OPTIONS),
             },
             "Options": WithoutDefaults(_VALIDATION_OPTIONS),
-        },
-        "Options": WithoutDefaults(_VALIDATION_OPTIONS),
+        }
     },
 }
 
 
 def _mangle_makefile(makefile, pipeline_variant):
-    makefile = copy.deepcopy(makefile)
-    makefile = {
-        "Options": makefile.pop("Options"),
-        "Prefixes": makefile.pop("Prefixes"),
-        "Targets": makefile,
-    }
-
     _mangle_options(makefile)
 
     if pipeline_variant != "trim":
@@ -277,30 +259,17 @@ def _mangle_makefile(makefile, pipeline_variant):
 
     _split_lanes_by_filenames(makefile)
 
+    # FIXME: Remove from rest of code-base
+    makefile["Targets"] = {
+        sample: {sample: libraries} for sample, libraries in makefile["Samples"].items()
+    }
+
+    makefile["Prefixes"] = {
+        name: {"Name": name, "Path": filename}
+        for name, filename in makefile["Genomes"].items()
+    }
+
     return makefile
-
-
-def _migrate_options(options):
-    pcr_duplicates = options.pop("PCRDuplicates", None)
-    if pcr_duplicates is not None:
-        features = options.setdefault("Features", {})
-        features["PCRDuplicates"] = pcr_duplicates
-
-    rescale_qualities = options.pop("RescaleQualities", None)
-    if rescale_qualities is not None:
-        features = options.setdefault("Features", {})
-        if rescale_qualities:
-            features["mapDamage"] = "rescale"
-        elif features.get("mapDamage") not in ("model", "plot"):
-            features["mapDamage"] = False
-
-    adapterremoval = options.get("AdapterRemoval", {})
-    for key, value in tuple(adapterremoval.items()):
-        if isinstance(value, bool):
-            if value:
-                adapterremoval[key] = None
-            else:
-                adapterremoval.pop(key)
 
 
 def _mangle_options(makefile):
@@ -317,96 +286,73 @@ def _mangle_options(makefile):
 
             # Fill out missing values using those of prior levels
             options = fill_dict(destination=data.pop("Options"), source=options)
-            _migrate_options(options)
 
-        if len(path) < 3:
+        if len(path) < 2:
             for key in data:
                 if key != "Options":
                     _do_update_options(options, data[key], path + (key,))
         else:
             data["Options"] = options
 
-    _migrate_options(makefile["Options"])
-    for key, data in makefile["Targets"].items():
+    for key, data in makefile["Samples"].items():
         _do_update_options(makefile["Options"], data, (key,))
 
 
 def _mangle_prefixes(makefile):
-    records = []
-    for (name, values) in makefile.get("Prefixes", {}).items():
+    genomes = makefile.setdefault("Genomes", {})
+    for (name, filename) in tuple(genomes.items()):
         if "*" in name[:-1]:
             raise MakefileError(
-                "The character '*' is not allowed in Prefix "
-                "names; if you wish to select multiple .fasta "
-                "files using a search-string, then use the "
-                "prefix name '%s*' instead and specify the "
-                "wildcards in the 'Path'." % (name.replace("*", ""))
+                "The character '*' is not allowed in Prefix names; if you wish to "
+                "select multiple .fasta files using a search-string, then use the "
+                "prefix name '%s*' instead and specify the wildcards in the 'Path'."
+                % (name.replace("*", ""))
             )
         elif name.endswith("*"):
-            records.extend(_glob_prefixes(values, values["Path"]))
+            for name, filename in _glob_genomes(genomes.pop(name)):
+                if name in genomes:
+                    raise MakefileError("Multiple genomes with the name %s" % name)
 
-        else:
-            records.append((name, values))
+                genomes[name] = filename
 
-    prefixes = {}
-    for (name, record) in records:
-        if name in prefixes:
-            raise MakefileError("Multiple prefixes with the same name: %s" % name)
-
-        if not record["Path"].endswith(".fasta"):
-            raise MakefileError(
-                "Path for prefix %r does not end with "
-                ".fasta:\n   %r" % (name, record["Path"])
-            )
-
-        record["Name"] = name
-        prefixes[name] = record
-
-    if not prefixes:
-        raise MakefileError("At least one prefix must be specified")
-
-    makefile["Prefixes"] = prefixes
+    if not genomes:
+        raise MakefileError("At least one genome must be specified")
 
 
-def _glob_prefixes(template, pattern):
+def _glob_genomes(pattern):
     filename = None
     for filename in glob.iglob(pattern):
         name = os.path.basename(filename).split(".")[0]
-        _VALID_PREFIX_NAME(("Prefixes", name), name)
-        new_prefix = copy.copy(template)
-        new_prefix["Path"] = filename
+        _VALID_PREFIX_NAME(("Genomes", name), name)
 
-        yield (name, new_prefix)
+        yield (name, filename)
 
     if filename is None:
-        raise MakefileError(
-            "Did not find any matches for search string %r" % (pattern,)
-        )
+        raise MakefileError("Did not find any genomes using wildcards %r" % (pattern,))
 
 
 def _mangle_lanes(makefile):
     formatter = string.Formatter()
-    prefixes = makefile["Prefixes"]
-    for (target_name, samples) in makefile["Targets"].items():
-        for (sample_name, libraries) in samples.items():
-            for (library_name, lanes) in libraries.items():
-                options = lanes.pop("Options")
+    prefixes = makefile["Genomes"]
+    for (sample_name, libraries) in makefile["Samples"].items():
+        for (library_name, lanes) in libraries.items():
+            options = lanes.pop("Options")
 
-                for (lane, data) in lanes.items():
-                    path = (target_name, sample_name, library_name, lane)
+            for (lane, data) in lanes.items():
+                path = (sample_name, library_name, lane)
 
-                    _validate_lane_paths(data, path, formatter)
+                _validate_lane_paths(data, path, formatter)
 
-                    lane_type = _determine_lane_type(prefixes, data, path)
+                lane_type = _determine_lane_type(prefixes, data, path)
 
-                    if lane_type == "Trimmed" and options["QualityOffset"] != 33:
-                        raise MakefileError(
-                            "Pre-trimmed data must have quality offset 33 (Phred+33). "
-                            "Please convert your FASTQ files using e.g. seqtk before "
-                            "continuing: {}".format(" :: ".join(path))
-                        )
+                if lane_type == "Trimmed" and options["QualityOffset"] != 33:
+                    raise MakefileError(
+                        "Pre-trimmed data must have quality offset 33 (Phred+33). "
+                        "Please convert your FASTQ files using e.g. seqtk before "
+                        "continuing: {}".format(" :: ".join(path))
+                    )
 
-                    lanes[lane] = {"Type": lane_type, "Data": data, "Options": options}
+                lanes[lane] = {"Type": lane_type, "Data": data, "Options": options}
 
 
 def _validate_lane_paths(data, path, fmt):
@@ -472,31 +418,31 @@ def _determine_lane_type(prefixes, data, path):
 
 
 def _mangle_tags(makefile):
-    for (target, samples) in makefile["Targets"].items():
-        for (sample, libraries) in samples.items():
-            for (library, barcodes) in libraries.items():
-                for (barcode, record) in barcodes.items():
-                    record["Tags"] = {
-                        "Target": target,
-                        "ID": library,
-                        "SM": sample,
-                        "LB": library,
-                        "PU": barcode,
-                        "DS": "NA",
-                        "Folder": "NA",
-                        "PG": record["Options"]["Aligners"]["Program"],
-                        "PL": record["Options"]["Platform"].upper(),
-                    }
+    for (sample, libraries) in makefile["Samples"].items():
+        for (library, barcodes) in libraries.items():
+            for (barcode, record) in barcodes.items():
+                record["Tags"] = {
+                    # FIXME: Remove
+                    "Target": sample,
+                    "ID": library,
+                    "SM": sample,
+                    "LB": library,
+                    "PU": barcode,
+                    "DS": "NA",
+                    "Folder": "NA",
+                    "PG": record["Options"]["Aligners"]["Program"],
+                    "PL": record["Options"]["Platform"].upper(),
+                }
 
 
 def _split_lanes_by_filenames(makefile):
-    for (target, sample, library, barcode, record) in _iterate_over_records(makefile):
+    for (sample, library, barcode, record) in _iterate_over_records(makefile):
         if record["Type"] == "Raw":
-            path = (target, sample, library, barcode)
+            path = (sample, library, barcode)
             filenames = paths.collect_files(path, record["Data"])
             filename_keys = sorted(filenames)  # Either ["SE"] or ["PE_1", "PE_2"]
 
-            library = makefile["Targets"][target][sample][library]
+            library = makefile["Samples"][sample][library]
             template = library.pop(barcode)
 
             input_files = [filenames[key] for key in filename_keys]
@@ -533,9 +479,8 @@ def _summarize_filenames(filenames, show_differences=False):
 
 def _validate_makefiles(makefiles):
     for makefile in makefiles:
-        _validate_makefile_libraries(makefile)
         _validate_makefile_adapters(makefile)
-    _validate_makefiles_duplicate_targets(makefiles)
+    _validate_makefiles_duplicate_samples(makefiles)
     _validate_makefiles_duplicate_files(makefiles)
     _validate_prefixes(makefiles)
 
@@ -563,7 +508,7 @@ def _validate_makefile_adapters(makefile):
                 results[key] = True
 
     results = dict.fromkeys(tests, False)
-    for (_, _, _, _, record) in _iterate_over_records(makefile):
+    for (_, _, _, record) in _iterate_over_records(makefile):
         adapterrm_opt = record.get("Options", {}).get("AdapterRemoval", {})
         check_options(adapterrm_opt, results)
 
@@ -592,27 +537,13 @@ def _validate_makefile_adapters(makefile):
             )
 
 
-def _validate_makefile_libraries(makefile):
-    libraries = collections.defaultdict(set)
-    iterator = _iterate_over_records(makefile)
-    for (target, sample, library, _, _) in iterator:
-        libraries[(target, library)].add(sample)
-
-    for ((target, library), samples) in libraries.items():
-        if len(samples) > 1:
-            raise MakefileError(
-                "Library '%s' in target '%s' spans multiple "
-                " samples: %s" % (library, target, ", ".join(samples))
-            )
-
-
 def _validate_makefiles_duplicate_files(makefiles):
     filenames = collections.defaultdict(list)
     for makefile in makefiles:
         iterator = _iterate_over_records(makefile)
-        for (target, sample, library, barcode, record) in iterator:
+        for (sample, library, barcode, record) in iterator:
             for realpath in map(os.path.realpath, record["Data"].values()):
-                filenames[realpath].append((target, sample, library, barcode))
+                filenames[realpath].append((sample, library, barcode))
 
     has_overlap = {}
     for (filename, records) in filenames.items():
@@ -626,10 +557,10 @@ def _validate_makefiles_duplicate_files(makefiles):
         description = _describe_files_in_multiple_records(records, pairs)
 
         if len(set(record[0] for record in records)) != len(records):
-            message = "Path included multiple times in target:\n"
+            message = "Path included multiple times in sample:\n"
             raise MakefileError(message + description)
         else:
-            logger.warn("WARNING: Path included in multiple targets:\n%s", description)
+            logger.warn("WARNING: Path included in multiple samples:\n%s", description)
 
 
 def _describe_files_in_multiple_records(records, pairs):
@@ -647,16 +578,15 @@ def _describe_files_in_multiple_records(records, pairs):
     return "\n".join(descriptions)
 
 
-def _validate_makefiles_duplicate_targets(makefiles):
-    targets = set()
+def _validate_makefiles_duplicate_samples(makefiles):
+    samples = set()
     for makefile in makefiles:
-        for target in makefile["Targets"]:
-            if target in targets:
-                raise MakefileError(
-                    "Target name '%s' used multiple times; "
-                    "output files would be clobbered!" % target
-                )
-            targets.add(target)
+        for sample in samples - makefile["Samples"].keys():
+            raise MakefileError(
+                "Sample name '%s' used multiple times; output files would be clobbered!"
+                % (sample,)
+            )
+        samples.update(makefile["Samples"])
 
 
 def _validate_prefixes(makefiles):
@@ -684,18 +614,6 @@ def _validate_prefixes(makefiles):
             except FASTAError as error:
                 raise MakefileError("Error indexing FASTA:\n %s" % (error,))
 
-            regions_of_interest = prefix.get("RegionsOfInterest", {})
-            for (name, fpath) in regions_of_interest.items():
-                try:
-                    # read_bed_file returns iterator
-                    for _ in bedtools.read_bed_file(fpath, contigs=contigs):
-                        pass
-                except (bedtools.BEDError, IOError) as error:
-                    raise MakefileError(
-                        "Error reading regions-of-"
-                        "interest %r for prefix %r:\n%s" % (name, prefix["Name"], error)
-                    )
-
             if max(contigs.values()) > _BAM_MAX_SEQUENCE_LENGTH:
                 logger.warn(
                     "FASTA file %r contains sequences longer "
@@ -710,8 +628,7 @@ def _validate_prefixes(makefiles):
 
 
 def _iterate_over_records(makefile):
-    for (target, samples) in tuple(makefile["Targets"].items()):
-        for (sample, libraries) in tuple(samples.items()):
-            for (library, barcodes) in tuple(libraries.items()):
-                for (barcode, record) in tuple(barcodes.items()):
-                    yield target, sample, library, barcode, record
+    for (sample, libraries) in tuple(makefile["Samples"].items()):
+        for (library, barcodes) in tuple(libraries.items()):
+            for (barcode, record) in tuple(barcodes.items()):
+                yield sample, library, barcode, record

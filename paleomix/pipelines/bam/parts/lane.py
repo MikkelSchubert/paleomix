@@ -238,7 +238,7 @@ class Lane:
             config=config,
             prefix=prefix,
             node=node,
-            create_index=bool(prefix.get("RegionsOfInterest")),
+            create_index=False,
         )
 
     @staticmethod
