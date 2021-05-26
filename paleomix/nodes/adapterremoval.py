@@ -38,15 +38,25 @@ class SE_AdapterRemovalNode(CommandNode):
     def __init__(
         self, input_file, output_prefix, threads=1, options={}, dependencies=()
     ):
+        self.out_settings = output_prefix + ".settings"
+        self.out_truncated = "{}.truncated.gz".format(output_prefix)
+        self.out_discarded = "{}.discarded.gz".format(output_prefix)
+
         command = AtomicCmd(
             "AdapterRemoval",
             extra_files=[
-                OutputFile(output_prefix + ".settings"),
-                OutputFile("{}.truncated.gz".format(output_prefix)),
-                OutputFile("{}.discarded.gz".format(output_prefix)),
+                OutputFile(self.out_settings),
+                OutputFile(self.out_truncated),
+                OutputFile(self.out_discarded),
             ],
             requirements=[_VERSION_CHECK],
         )
+
+        # Ignored for SE reads
+        options = dict(options)
+        options.pop("--collapse", None)
+        options.pop("--collapse-deterministic", None)
+        options.pop("--collapse-conservatively", None)
 
         # Ensure that any user-specified list of adapters is tracked
         if "--adapter-list" in options:
@@ -81,20 +91,25 @@ class PE_AdapterRemovalNode(CommandNode):
         input_file_1,
         input_file_2,
         output_prefix,
-        collapse=True,
         threads=1,
         options={},
         dependencies=(),
     ):
+        self.out_settings = output_prefix + ".settings"
+        self.out_paired = "{}.pair{{Pair}}.truncated.gz".format(output_prefix)
+        self.out_singleton = "{}.singleton.truncated.gz".format(output_prefix)
+        self.out_discarded = "{}.discarded.gz".format(output_prefix)
+        self.out_merged = None
+        self.out_merged_truncated = None
 
         command = AtomicCmd(
             "AdapterRemoval",
             extra_files=[
-                OutputFile(output_prefix + ".settings"),
-                OutputFile("{}.pair1.truncated.gz".format(output_prefix)),
-                OutputFile("{}.pair2.truncated.gz".format(output_prefix)),
-                OutputFile("{}.singleton.truncated.gz".format(output_prefix)),
-                OutputFile("{}.discarded.gz".format(output_prefix)),
+                OutputFile(self.out_settings),
+                OutputFile(self.out_paired.format(Pair=1)),
+                OutputFile(self.out_paired.format(Pair=2)),
+                OutputFile(self.out_singleton),
+                OutputFile(self.out_discarded),
             ],
             requirements=[_VERSION_CHECK],
         )
@@ -110,17 +125,26 @@ class PE_AdapterRemovalNode(CommandNode):
             "--basename": TempOutputFile(output_prefix),
         }
 
-        if collapse:
-            fixed_options["--collapse"] = None
+        if options.keys() & (
+            "--collapse",
+            "--collapse-deterministic",
+            "--collapse-conservatively",
+        ):
+            self.out_merged = "{}.collapsed.gz".format(output_prefix)
+            self.out_merged_truncated = "{}.collapsed.truncated.gz".format(
+                output_prefix
+            )
+
             command.add_extra_files(
                 [
-                    OutputFile("{}.collapsed.gz".format(output_prefix)),
-                    OutputFile("{}.collapsed.truncated.gz".format(output_prefix)),
+                    OutputFile(self.out_merged),
+                    OutputFile(self.out_merged_truncated),
                 ]
             )
 
         # Ensure that any user-specified list of adapters is tracked
         if "--adapter-list" in options:
+            options = dict(options)
             options["--adapter-list"] = InputFile(options["--adapter-list"])
 
         command.merge_options(

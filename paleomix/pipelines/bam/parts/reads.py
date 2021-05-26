@@ -86,47 +86,35 @@ class Reads:
         self.validation = tuple(validation)
 
     def _init_raw_reads(self, config, record):
-        ar_options = dict(record["Options"]["AdapterRemoval"])
-        # Setup of "--collapsed" is handled by the node itself
-        collapse_reads = ar_options.pop("--collapse")
-        collapse_reads = collapse_reads or collapse_reads is None
-
-        # These options imply --collapsed
-        if ar_options.get("collapse-deterministic") in (True, None):
-            collapse_reads = True
-        elif ar_options.get("collapse-conservatively") in (True, None):
-            collapse_reads = True
-
+        options = dict(record["Options"]["AdapterRemoval"])
         if self.quality_offset != 33:
-            ar_options["--qualitybase"] = self.quality_offset
-            ar_options["--qualitybase-output"] = 33
-
-        init_args = {
-            "output_prefix": os.path.join(self.folder, "reads"),
-            "threads": config.adapterremoval_max_threads,
-            "options": ar_options,
-        }
-
-        output_tmpl = "{output_prefix}.%s.gz".format(**init_args)
+            options["--qualitybase"] = self.quality_offset
+            options["--qualitybase-output"] = 33
 
         if "SE" in record["Data"]:
-            self.files["Single"] = output_tmpl % ("truncated",)
-            init_args["input_file"] = record["Data"]["SE"]
-            command = SE_AdapterRemovalNode(**init_args)
+            command = SE_AdapterRemovalNode(
+                input_file=record["Data"]["SE"],
+                output_prefix=os.path.join(self.folder, "reads"),
+                threads=config.adapterremoval_max_threads,
+                options=options,
+            )
+
+            self.files["Single"] = command.out_truncated
         else:
-            self.files["Singleton"] = output_tmpl % ("singleton.truncated",)
-            self.files["Paired"] = output_tmpl % ("pair{Pair}.truncated",)
+            command = PE_AdapterRemovalNode(
+                input_file_1=record["Data"]["PE_1"],
+                input_file_2=record["Data"]["PE_2"],
+                output_prefix=os.path.join(self.folder, "reads"),
+                threads=config.adapterremoval_max_threads,
+                options=options,
+            )
 
-            if collapse_reads:
-                self.files["Collapsed"] = output_tmpl % ("collapsed",)
-                self.files["CollapsedTruncated"] = output_tmpl % (
-                    "collapsed.truncated",
-                )
+            self.files["Singleton"] = command.out_singleton
+            self.files["Paired"] = command.out_paired
 
-            init_args["collapse"] = collapse_reads
-            init_args["input_file_1"] = record["Data"]["PE_1"]
-            init_args["input_file_2"] = record["Data"]["PE_2"]
-            command = PE_AdapterRemovalNode(**init_args)
+            if command.out_merged:
+                self.files["Collapsed"] = command.out_merged
+                self.files["CollapsedTruncated"] = command.out_merged_truncated
 
-        self.stats = os.path.join(self.folder, "reads.settings")
+        self.stats = command.out_settings
         self.nodes = (command,)
