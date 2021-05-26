@@ -14,6 +14,9 @@ Genome:
 
 
 Settings:
+  Metadata:
+    Platform: BGI
+
   Constants:
     DBSNP: "resources/dbsp_151.vcf.gz"
     MILLS: "resources/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz"
@@ -47,7 +50,7 @@ Settings:
 
   ReadMapping:
     BWAMem:
-      -t: 32  # Number of threads
+      -t: 8 # Number of threads
       # -M: # mark shorter split hits as secondary [maybe? Currently default behavior]
       -Y: # use soft clipping for supplementary alignments [maybe?]
 
