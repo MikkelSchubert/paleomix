@@ -175,7 +175,7 @@ value has accidentically been left blank ('IsStr' requires a NON-EMPTY string):
 import copy
 import logging
 
-import paleomix.yaml
+import paleomix.common.yaml as yaml
 
 from paleomix.common.fileutils import fspath
 from paleomix.common.utilities import group_by_pred
@@ -189,8 +189,8 @@ def read_makefile(filename, specification):
     """Reads and parses a makefile using the given specification."""
     try:
         with open(fspath(filename)) as handle:
-            data = paleomix.yaml.safe_load(handle)
-    except paleomix.yaml.YAMLError as error:
+            data = yaml.safe_load(handle)
+    except yaml.YAMLError as error:
         raise MakefileError(error)
 
     return process_makefile(data, specification)

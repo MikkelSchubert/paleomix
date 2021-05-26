@@ -26,16 +26,15 @@ import logging
 import paleomix
 import paleomix.common.logging
 import paleomix.node
-import paleomix.yaml
 
-from paleomix.pipeline import Pypeline
-from paleomix.nodes.samtools import FastaIndexNode
-from paleomix.nodes.bwa import BWAIndexNode
+from paleomix.common.yaml import YAMLError
 from paleomix.nodes.bowtie2 import Bowtie2IndexNode
+from paleomix.nodes.bwa import BWAIndexNode
+from paleomix.nodes.samtools import FastaIndexNode
 from paleomix.nodes.validation import ValidateFASTAFilesNode
+from paleomix.pipeline import Pypeline
 
 from paleomix.pipelines.bam.makefile import MakefileError, read_makefiles
-
 from paleomix.pipelines.bam.parts import Reads
 
 import paleomix.pipelines.bam.parts as parts
@@ -187,7 +186,7 @@ def run(config, pipeline_variant):
 
     try:
         makefiles = read_makefiles(config.makefiles, pipeline_variant)
-    except (MakefileError, paleomix.yaml.YAMLError, IOError) as error:
+    except (MakefileError, YAMLError, IOError) as error:
         logger.error("Error reading makefiles: %s", error)
         return 1
 

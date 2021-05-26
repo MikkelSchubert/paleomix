@@ -38,7 +38,7 @@ import paleomix.pipelines.zonkey.parts.mitochondria as mitochondria
 import paleomix.pipelines.zonkey.parts.nuclear as nuclear
 import paleomix.pipelines.zonkey.parts.report as report
 import paleomix.pipelines.zonkey.parts.summary as summary
-import paleomix.yaml
+
 from paleomix.common.formats.fasta import FASTA
 from paleomix.nodes.raxml import RAxMLRapidBSNode
 from paleomix.nodes.samtools import BAMIndexNode

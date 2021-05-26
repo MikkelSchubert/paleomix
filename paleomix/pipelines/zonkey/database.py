@@ -29,7 +29,8 @@ from io import TextIOWrapper
 
 import pysam
 
-import paleomix.yaml
+import paleomix.common.yaml as yaml
+
 from paleomix.common.formats.fasta import FASTA
 from paleomix.pipelines.zonkey.common import contig_name_to_plink_name, get_sample_names
 
@@ -336,8 +337,8 @@ class ZonkeyDB:
         handle = TextIOWrapper(tar_handle.extractfile(filename))
 
         try:
-            result = paleomix.yaml.safe_load(handle)
-        except paleomix.yaml.YAMLError as error:
+            result = yaml.safe_load(handle)
+        except yaml.YAMLError as error:
             raise ZonkeyDBError(
                 "Error reading settings file %r; %s" % (filename, error)
             )

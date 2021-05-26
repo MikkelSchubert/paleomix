@@ -21,8 +21,7 @@
 # SOFTWARE.
 import collections
 
-import paleomix.yaml
-
+import paleomix.common.yaml as yaml
 import paleomix.common.versions as versions
 
 
@@ -72,7 +71,7 @@ def contig_name_to_plink_name(chrom):
 def read_summary(filename, default="[MISSING VALUE!]"):
     results = collections.defaultdict(lambda: default)
     with open(filename) as handle:
-        data = paleomix.yaml.safe_load(handle)
+        data = yaml.safe_load(handle)
 
         if not isinstance(data, dict):
             raise DBFileError("Summary file does not contain dictionary")

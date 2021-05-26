@@ -26,7 +26,6 @@ import sys
 
 import paleomix.common.logging
 import paleomix.resources
-import paleomix.yaml
 
 
 def build_parser():

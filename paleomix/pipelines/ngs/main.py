@@ -5,6 +5,7 @@ import logging
 import paleomix.common.logging
 
 from paleomix.common.fileutils import swap_ext
+from paleomix.common.yaml import YAMLError
 
 from paleomix.pipeline import Pypeline
 from paleomix.pipelines.ngs.config import build_parser
@@ -47,7 +48,7 @@ def _main_run(args):
     try:
         logger.info("Reading project from %r", args.project)
         project = load_project(args.project)
-    except (MakefileError, paleomix.yaml.YAMLError, IOError) as error:
+    except (MakefileError, YAMLError, IOError) as error:
         logger.error("Error reading project: %s", error)
         return 1
 

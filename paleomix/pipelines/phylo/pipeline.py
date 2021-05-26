@@ -28,9 +28,9 @@ import paleomix.pipelines.phylo.example as example
 import paleomix.pipelines.phylo.parts.genotype as genotype
 import paleomix.pipelines.phylo.parts.msa as msa
 import paleomix.pipelines.phylo.parts.phylo as phylo
-import paleomix.yaml
 
 from paleomix import resources
+from paleomix.common.yaml import YAMLError
 from paleomix.pipeline import Pypeline
 from paleomix.pipelines.phylo.config import build_parser
 from paleomix.pipelines.phylo.makefile import MakefileError, read_makefiles
@@ -91,7 +91,7 @@ def _main_pipeline(config):
 
     try:
         makefiles = read_makefiles(config, commands)
-    except (MakefileError, paleomix.yaml.YAMLError, IOError) as error:
+    except (MakefileError, YAMLError, IOError) as error:
         log.error("Error reading makefiles:\n%s", error)
         return 1
 

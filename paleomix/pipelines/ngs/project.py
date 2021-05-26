@@ -2,7 +2,7 @@ import logging
 import re
 import string
 
-import paleomix.yaml
+import paleomix.common.yaml as yaml
 
 from paleomix.common.bamfiles import BAM_PLATFORMS
 from paleomix.common.makefile import (
@@ -29,8 +29,8 @@ from paleomix.common.makefile import (
 def load_project(filename):
     try:
         with open(filename) as handle:
-            data = paleomix.yaml.safe_load(handle)
-    except paleomix.yaml.YAMLError as error:
+            data = yaml.safe_load(handle)
+    except yaml.YAMLError as error:
         raise MakefileError(error)
 
     # Fill out any values using user-specified constants; this must be done prior
