@@ -25,6 +25,7 @@ import warnings
 import ruamel.yaml
 
 from ruamel.yaml import YAMLError  # noqa: F401
+from ruamel.yaml.constructor import DuplicateKeyError  # noqa: F401
 
 
 def safe_load(stream):

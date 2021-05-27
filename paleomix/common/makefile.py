@@ -190,7 +190,7 @@ def read_makefile(filename, specification):
     try:
         with open(fspath(filename)) as handle:
             data = yaml.safe_load(handle)
-    except yaml.YAMLError as error:
+    except (yaml.YAMLError, yaml.DuplicateKeyError) as error:
         raise MakefileError(error)
 
     return process_makefile(data, specification)
