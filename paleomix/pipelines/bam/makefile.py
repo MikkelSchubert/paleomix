@@ -54,7 +54,6 @@ from paleomix.common.makefile import (
     StringStartsWith,
     IsListOf,
     IsDictOf,
-    RemovedOption,
 )
 from paleomix.common.formats.fasta import FASTA, FASTAError
 
@@ -99,14 +98,14 @@ def _alphanum_check(whitelist, min_len=1):
     )
 
 
-# Valid names for prefixes
-_VALID_PREFIX_NAME = And(
+# Valid names for genomes
+_VALID_GENOME_NAME = And(
     _alphanum_check(whitelist="._-*"),
     Not(StringIn(["Options"] + [(s + "Reads") for s in _READ_TYPES])),
 )
 
-# Valid paths for prefixes; avoids some problems with e.g. Bowtie2
-_VALID_PREFIX_PATH = And(
+# Valid paths for genomes; avoids some problems with e.g. Bowtie2
+_VALID_GENOME_PATH = And(
     IsStr(), Not(ValuesIntersect('\\:?"<>|() \t\n\v\f\r')), default=REQUIRED_VALUE
 )
 
@@ -122,11 +121,8 @@ _VALID_LIBRARY_LEVEL_FEATURES = {
 _VALID_FEATURES_DICT = {
     "Coverage": IsBoolean(default=True),
     "Depths": IsBoolean(default=True),
-    "DuplicateHist": RemovedOption(),
     "mapDamage": StringIn(("rescale", "model", "plot", True, False), default="plot"),
     "PCRDuplicates": StringIn((True, False, "mark", "filter"), default="filter"),
-    "RawBAM": RemovedOption(),
-    "RealignedBAM": RemovedOption(),
     "Summary": IsBoolean(default=True),
 }
 
@@ -145,10 +141,7 @@ _VALIDATION_OPTIONS = {
     # Offset for quality scores in FASTQ files.
     "QualityOffset": ValueIn((33, 64, "Solexa"), default=33),
     # Split a lane into multiple entries, one for each (pair of) file(s)
-    "SplitLanesByFilenames": RemovedOption(),
-    "CompressionFormat": RemovedOption(),
     "AdapterRemoval": {
-        "Version": RemovedOption(),
         "--adapter1": IsStr,
         "--adapter2": IsStr,
         "--adapter-list": IsStr,
@@ -234,26 +227,31 @@ _VALIDATION_OPTIONS = {
 _VALIDATION = {
     "Options": _VALIDATION_OPTIONS,
     "Genomes": {
-        _VALID_PREFIX_NAME: _VALID_PREFIX_PATH,
+        _VALID_GENOME_NAME: _VALID_GENOME_PATH,
     },
-    "Samples": {
+    _VALID_FILENAME: {  # Group
         _VALID_FILENAME: {  # Sample
             _VALID_FILENAME: {  # Library
                 _VALID_FILENAME: Or(IsStr, IsDictOf(IsStr, IsStr)),
                 "Options": WithoutDefaults(_VALIDATION_OPTIONS),
             },
             "Options": WithoutDefaults(_VALIDATION_OPTIONS),
-        }
+        },
+        "Options": WithoutDefaults(_VALIDATION_OPTIONS),
     },
 }
 
 
 def _mangle_makefile(makefile, pipeline_variant):
-    _mangle_options(makefile)
+    options = makefile.pop("Options")
+    genomes = makefile.pop("Genomes")
+    makefile = {
+        "Options": options,
+        "Genomes": genomes,
+        "Samples": _flatten_groups(options, makefile),
+    }
 
-    if pipeline_variant != "trim":
-        _mangle_prefixes(makefile)
-
+    _mangle_genomes(makefile, require_genome=pipeline_variant != "trim")
     _mangle_lanes(makefile)
     _mangle_tags(makefile)
 
@@ -264,48 +262,67 @@ def _mangle_makefile(makefile, pipeline_variant):
         sample: {sample: libraries} for sample, libraries in makefile["Samples"].items()
     }
 
-    makefile["Prefixes"] = {
-        name: {"Name": name, "Path": filename}
-        for name, filename in makefile["Genomes"].items()
-    }
+    # FIXME: Update from rest of code-base
+    makefile["Prefixes"] = makefile["Genomes"]
 
     return makefile
 
 
-def _mangle_options(makefile):
-    def _do_update_options(options, data, path):
-        options = copy.deepcopy(options)
-        if "Options" in data:
-            features = set(data["Options"].get("Features", ()))
-            invalid_features = features - _VALID_LIBRARY_LEVEL_FEATURES
-            if invalid_features:
-                raise MakefileError(
-                    "Some features (%s) may only be specified at root level, not at %r"
-                    % (", ".join(invalid_features), " :: ".join(path))
-                )
+def _flatten_groups(options, groups):
+    results = {}
+    for group, samples in groups.items():
+        _merge_options(options, group, samples)
 
-            # Fill out missing values using those of prior levels
-            options = fill_dict(destination=data.pop("Options"), source=options)
+        for name, sample in samples.items():
+            if name in results:
+                raise MakefileError("Multiple samples with name {!r}".format(name))
 
-        if len(path) < 2:
-            for key in data:
-                if key != "Options":
-                    _do_update_options(options, data[key], path + (key,))
-        else:
-            data["Options"] = options
+            results[name] = sample
 
-    for key, data in makefile["Samples"].items():
-        _do_update_options(makefile["Options"], data, (key,))
+    return results
 
 
-def _mangle_prefixes(makefile):
-    genomes = makefile.setdefault("Genomes", {})
+def _merge_options(options, group, samples):
+    def _combine_options(options, items, path, valid_features=_VALID_FEATURES_DICT):
+        item_options = items.pop("Options", {})
+        if not item_options:
+            return options
+
+        features = item_options.get("Features", {})
+        invalid_features = features.keys() - valid_features
+        if invalid_features:
+            raise MakefileError(
+                "Cannot enable/disable %s on a per-library basis at %s"
+                % (", ".join(map(repr, invalid_features)), " :: ".join(path))
+            )
+
+        # Fill out missing values using those of prior levels
+        return fill_dict(destination=item_options, source=options)
+
+    # Options common to a specific group
+    group_options = _combine_options(options, samples, (group,))
+    for sample, libraries in samples.items():
+        # Options common to a specific sample in a group
+        sample_options = _combine_options(group_options, libraries, (group, sample))
+
+        for library, lanes in libraries.items():
+            # Options common to a specific library in a sample
+            lanes["Options"] = _combine_options(
+                sample_options,
+                lanes,
+                (group, sample, library),
+                _VALID_LIBRARY_LEVEL_FEATURES,
+            )
+
+
+def _mangle_genomes(makefile, require_genome):
+    genomes = makefile.pop("Genomes", {})
     for (name, filename) in tuple(genomes.items()):
         if "*" in name[:-1]:
             raise MakefileError(
-                "The character '*' is not allowed in Prefix names; if you wish to "
+                "The character '*' is not allowed in Genome names; if you wish to "
                 "select multiple .fasta files using a search-string, then use the "
-                "prefix name '%s*' instead and specify the wildcards in the 'Path'."
+                "genome name '%s*' instead and specify the wildcards in the 'Path'."
                 % (name.replace("*", ""))
             )
         elif name.endswith("*"):
@@ -315,7 +332,11 @@ def _mangle_prefixes(makefile):
 
                 genomes[name] = filename
 
-    if not genomes:
+    makefile["Genomes"] = {
+        name: {"Name": name, "Path": filename} for name, filename in genomes.items()
+    }
+
+    if require_genome and not genomes:
         raise MakefileError("At least one genome must be specified")
 
 
@@ -323,7 +344,7 @@ def _glob_genomes(pattern):
     filename = None
     for filename in glob.iglob(pattern):
         name = os.path.basename(filename).split(".")[0]
-        _VALID_PREFIX_NAME(("Genomes", name), name)
+        _VALID_GENOME_NAME(("Genomes", name), name)
 
         yield (name, filename)
 
@@ -333,7 +354,6 @@ def _glob_genomes(pattern):
 
 def _mangle_lanes(makefile):
     formatter = string.Formatter()
-    prefixes = makefile["Genomes"]
     for (sample_name, libraries) in makefile["Samples"].items():
         for (library_name, lanes) in libraries.items():
             options = lanes.pop("Options")
@@ -343,8 +363,7 @@ def _mangle_lanes(makefile):
 
                 _validate_lane_paths(data, path, formatter)
 
-                lane_type = _determine_lane_type(prefixes, data, path)
-
+                lane_type = _determine_lane_type(data, path)
                 if lane_type == "Trimmed" and options["QualityOffset"] != 33:
                     raise MakefileError(
                         "Pre-trimmed data must have quality offset 33 (Phred+33). "
@@ -385,36 +404,33 @@ def _validate_lane_paths(data, path, fmt):
                 )
 
 
-def _determine_lane_type(prefixes, data, path):
+def _determine_lane_type(data, path):
     if isinstance(data, str):
         return "Raw"
-    elif isinstance(data, dict):
-        if all((key in _READ_TYPES) for key in data):
-            for (key, files) in data.items():
-                is_paired = paths.is_paired_end(files)
 
-                if is_paired and (key != "Paired"):
-                    raise MakefileError(
-                        "Error at Barcode level; Path "
-                        "includes {Pair} key, but read-type "
-                        "is not Paired:\n    %r" % (" :: ".join(path + (key,)),)
-                    )
-                elif not is_paired and (key == "Paired"):
-                    raise MakefileError(
-                        "Error at Barcode level; Paired pre-"
-                        "trimmed reads specified, but path "
-                        "does not contain {Pair} key:\n    %r"
-                        % (" :: ".join(path + (key,)),)
-                    )
+    bad_keys = data.keys() - _READ_TYPES
+    if bad_keys:
+        raise MakefileError(
+            "Error at %s: Keys must be any of Paired, Single, Collapsed, "
+            "CollapsedTruncated, or Singleton, but found %s"
+            % (" :: ".join(path), ", ".join(map(repr, bad_keys))),
+        )
 
-            return "Trimmed"
+    for (key, files) in data.items():
+        is_paired = paths.is_paired_end(files)
 
-    raise MakefileError(
-        "Error at Barcode level; keys must either be "
-        "prefix-names, OR 'Paired', 'Single', 'Collapsed', "
-        "'CollapsedTruncated', or 'Singleton'. "
-        "Found: %s" % (", ".join(data),)
-    )
+        if is_paired and key != "Paired":
+            raise MakefileError(
+                "Error at %s: Path includes {Pair} key, but read-type "
+                "is not Paired: %r" % (" :: ".join(path + (key,)), files)
+            )
+        elif not is_paired and key == "Paired":
+            raise MakefileError(
+                "Error at %s: Paired pre-trimmed reads specified, but path "
+                "does not contain {Pair} key: %r" % (" :: ".join(path + (key,)), files)
+            )
+
+    return "Trimmed"
 
 
 def _mangle_tags(makefile):
