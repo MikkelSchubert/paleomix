@@ -227,7 +227,9 @@ _VALIDATION_OPTIONS = {
 _VALIDATION = {
     "Options": _VALIDATION_OPTIONS,
     "Genomes": {
-        _VALID_GENOME_NAME: _VALID_GENOME_PATH,
+        _VALID_GENOME_NAME: {
+            "Path": _VALID_GENOME_PATH,
+        },
     },
     _VALID_FILENAME: {  # Group
         _VALID_FILENAME: {  # Sample
@@ -316,8 +318,8 @@ def _merge_options(options, group, samples):
 
 
 def _mangle_genomes(makefile, require_genome):
-    genomes = makefile.pop("Genomes", {})
-    for (name, filename) in tuple(genomes.items()):
+    genomes = makefile["Genomes"]
+    for name in tuple(genomes):
         if "*" in name[:-1]:
             raise MakefileError(
                 "The character '*' is not allowed in Genome names; if you wish to "
@@ -326,15 +328,17 @@ def _mangle_genomes(makefile, require_genome):
                 % (name.replace("*", ""))
             )
         elif name.endswith("*"):
-            for name, filename in _glob_genomes(genomes.pop(name)):
+            filename = genomes.pop(name)["Path"]
+            for name, filename in _glob_genomes(filename):
                 if name in genomes:
                     raise MakefileError("Multiple genomes with the name %s" % name)
 
-                genomes[name] = filename
-
-    makefile["Genomes"] = {
-        name: {"Name": name, "Path": filename} for name, filename in genomes.items()
-    }
+                genomes[name] = {
+                    "Name": name,
+                    "Path": filename,
+                }
+        else:
+            genomes[name]["Name"] = name
 
     if require_genome and not genomes:
         raise MakefileError("At least one genome must be specified")
