@@ -264,6 +264,7 @@ class Pypeline:
 
     def _print_output_files(self, file=sys.stdout):
         self._logger.info("Collecting and printing output files ..")
+        output_files = {}
         cache = FileStatusCache()
         graph = NodeGraph(
             nodes=self._nodes,
@@ -272,22 +273,20 @@ class Pypeline:
             cache_factory=lambda: cache,
         )
 
-        output_files = {}
+        def _set_output_file_state(filenames, state):
+            for filename in filenames:
+                output_files[os.path.abspath(filename)] = state
+
         for node in graph.iterflat():
             state = graph.get_node_state(node)
             if state == NodeGraph.DONE:
-                state = "Ready      "
-            elif state == graph.RUNABLE:
-                # Pending nodes may have outdated output files
-                if cache.missing_files(node.output_files):
-                    state = "Missing    "
-                else:
-                    state = "Outdated   "
-            else:
-                state = "Missing    "
+                _set_output_file_state(node.output_files, "Ready      ")
+                continue
 
-            for filename in node.output_files:
-                output_files[os.path.abspath(filename)] = state
+            # Pending/queued nodes may have outdated output files
+            missing_files = frozenset(cache.missing_files(node.output_files))
+            _set_output_file_state(missing_files, "Missing    ")
+            _set_output_file_state(node.output_files - missing_files, "Outdated   ")
 
         for filename, state in sorted(output_files.items()):
             print(state, filename, file=file)
