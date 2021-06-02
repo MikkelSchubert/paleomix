@@ -40,6 +40,7 @@ from paleomix.node import (
     CmdNodeError,
 )
 from paleomix.common.utilities import safe_coerce_to_frozenset
+from paleomix.common.versions import Requirement, Any
 
 
 def test_dir():
@@ -68,7 +69,9 @@ _OUT_FILES = frozenset(
 )
 _EXEC_FILES = frozenset(("ls", "sh"))
 _AUX_FILES = frozenset((test_file("rCRS.fasta"), test_file("rCRS.fasta.fai")))
-_REQUIREMENTS = frozenset((id, str))
+_REQUIREMENT_1 = Requirement(["bwa"], r"", Any())
+_REQUIREMENT_2 = Requirement(["bowtie"], r"", Any())
+_REQUIREMENTS = frozenset((_REQUIREMENT_1, _REQUIREMENT_2))
 _EMPTY_FILE = test_file("empty_file_1")
 
 
@@ -148,12 +151,12 @@ def test_constructor__invalid_values(key, value):
 
 
 def test_constructor__requirements():
-    node = Node(requirements=id)
-    assert node.requirements == frozenset([id])
-    node = Node(requirements=[id])
-    assert node.requirements == frozenset([id])
-    node = Node(requirements=[id, str])
-    assert node.requirements == frozenset([id, str])
+    node = Node(requirements=_REQUIREMENT_1)
+    assert node.requirements == frozenset([_REQUIREMENT_1])
+    node = Node(requirements=[_REQUIREMENT_1])
+    assert node.requirements == frozenset([_REQUIREMENT_1])
+    node = Node(requirements=[_REQUIREMENT_1, _REQUIREMENT_2])
+    assert node.requirements == frozenset([_REQUIREMENT_1, _REQUIREMENT_2])
 
 
 @pytest.mark.parametrize("value", (17, {}, "867-5309"))

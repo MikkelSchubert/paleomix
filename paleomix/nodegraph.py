@@ -324,7 +324,7 @@ class NodeGraph:
 
             # Requirements may include executables not invoked directly
             for requirement in node.requirements:
-                if isinstance(requirement, versions.RequirementObj):
+                if isinstance(requirement, versions.Requirement):
                     executable = requirement.executable
                     if executable is not None:
                         exec_filenames.add(executable)
@@ -359,7 +359,11 @@ class NodeGraph:
 
                 self._logger.info(" - Found %s", name)
 
-                requirement()
+                if not requirement.check():
+                    self._logger.error("Version requirements not met for %s:", name)
+                    self._logger.error("  Expected %s", requirement.checks)
+                    self._logger.error("  Found %s", requirement.version_str)
+                    any_errors = True
             except versions.VersionRequirementError as error:
                 any_errors = True
                 self._logger.error(error)

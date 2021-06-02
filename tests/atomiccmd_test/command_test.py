@@ -14,7 +14,7 @@ import paleomix.atomiccmd.command
 import paleomix.atomiccmd.pprint
 import paleomix.common.fileutils as fileutils
 
-from paleomix.common.versions import RequirementObj
+from paleomix.common.versions import Requirement
 from paleomix.atomiccmd.command import CmdError, TempInputFile, TempOutputFile
 from paleomix.atomiccmd.command import (
     AtomicCmd,
@@ -248,18 +248,18 @@ def test_atomiccmd2__paths__overlapping_output_3(file1, file2):
 
 def test_atomicmcd__requirements():
     # RequirementObjs are the standard way to do tests
-    reqobj = RequirementObj(call=("echo", "version"), search="version", checks=str)
+    reqobj = Requirement(call=("echo", "version"), search="version", checks=str)
     cmd = AtomicCmd("true", requirements=[reqobj])
     assert cmd.requirements == frozenset([reqobj])
 
 
 def test_atomicmcd__callable_as_requirements():
-    cmd = AtomicCmd("true", requirements=[bool])
-    assert cmd.requirements == frozenset([bool])
+    with pytest.raises(TypeError):
+        AtomicCmd("true", requirements=[bool])
 
 
 def test_atomiccmd2__invalid_requirements():
-    with pytest.raises(TypeError, match="requirement must be callable"):
+    with pytest.raises(TypeError):
         AtomicCmd("ls", requirements=["ls"])
 
 

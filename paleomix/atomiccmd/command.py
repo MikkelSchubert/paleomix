@@ -8,6 +8,7 @@ import weakref
 import paleomix.atomiccmd.pprint as atomicpp
 import paleomix.common.fileutils as fileutils
 
+from paleomix.common.versions import Requirement
 from paleomix.common.utilities import safe_coerce_to_tuple
 
 
@@ -128,8 +129,8 @@ class AtomicCmd:
                            not explicitly part of the command line arguments. This
                            could include data files and executables indirectly executed
                            by a script.
-            requirements -- An optional sequence of callables that can be used to check
-                            that requirements are met for invoking this command.
+            requirements -- An optional sequence of Requirements that can be used to
+                            check that requirements are met for invoking this command.
 
         EXAMPLE 1: Creating a gzipped tar-archive from two files
         The command "tar cjf /path/to/output.tbz2 /path/to/input1 /path/to/input2"
@@ -179,8 +180,8 @@ class AtomicCmd:
         self.add_extra_files(pipes)
 
         for value in self._requirements:
-            if not callable(value):
-                raise TypeError("requirement must be callable, not %r" % (value,))
+            if not isinstance(value, Requirement):
+                raise TypeError(value)
 
     def append(self, *args):
         if self._proc is not None:

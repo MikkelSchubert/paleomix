@@ -324,12 +324,9 @@ class Pypeline:
 
             for requirement in requirements:
                 try:
-                    if requirement.version:
-                        version = "v" + ".".join(map(str, requirement.version))
-                    else:
-                        version = "NA"
+                    version = requirement.version_str
                 except VersionRequirementError:
-                    version = "UNKNOWN"
+                    version = "ERROR"
 
                 print(template.format(name, version, requirement.checks), file=file)
 

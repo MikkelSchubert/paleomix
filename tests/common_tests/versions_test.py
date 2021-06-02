@@ -438,11 +438,11 @@ def test_or__check_version__insufficient_number_of_values__is_lazy():
 
 ###############################################################################
 ###############################################################################
-# RequirementObj -- constructor
+# Requirement -- constructor
 
 
 def test_requirementobj__init__defaults():
-    obj = versions.RequirementObj(
+    obj = versions.Requirement(
         call=("echo", "foo"), search=r"(\d+)\.(\d+)", checks=versions.Any()
     )
 
@@ -451,7 +451,7 @@ def test_requirementobj__init__defaults():
 
 
 def test_requirementobj__init__non_defaults():
-    obj = versions.RequirementObj(
+    obj = versions.Requirement(
         call=("bash", "foo"),
         search=r"(\d+)\.(\d+)",
         checks=versions.Any(),
@@ -465,7 +465,7 @@ def test_requirementobj__init__non_defaults():
 
 ###############################################################################
 ###############################################################################
-# RequirementObj -- version
+# Requirement -- version
 
 
 def _echo_version(version, dst="stdout", returncode=0):
@@ -486,13 +486,13 @@ _VERSION_CALL_RESULTS = (
 @pytest.mark.parametrize("regexp, equals", _VERSION_CALL_RESULTS)
 def test_requirementobj__version__call(pipe, regexp, equals):
     call = _echo_version("v3.5.2\n", dst=pipe)
-    obj = versions.RequirementObj(call=call, search=regexp, checks=versions.Any())
+    obj = versions.Requirement(call=call, search=regexp, checks=versions.Any())
     assert obj.version == equals
 
 
 def test_requirementobj__version__version_str_not_found():
     call = _echo_version("A typical error\n")
-    obj = versions.RequirementObj(
+    obj = versions.Requirement(
         call=call, search=r"v(\d+)\.(\d+)", checks=versions.Any()
     )
 
@@ -501,7 +501,7 @@ def test_requirementobj__version__version_str_not_found():
 
 
 def test_requirementobj__version__command_not_found():
-    obj = versions.RequirementObj(
+    obj = versions.Requirement(
         call=("xyzabcdefoo",), search=r"v(\d+)\.(\d+)", checks=versions.Any()
     )
 
@@ -514,7 +514,7 @@ def test_requirementobj__version__command_not_found():
 
 
 def test_requirementobj__version__command_not_executable():
-    obj = versions.RequirementObj(
+    obj = versions.Requirement(
         call=("./README.rst",), search=r"v(\d+)\.(\d+)", checks=versions.Any()
     )
 
@@ -527,7 +527,7 @@ def test_requirementobj__version__command_not_executable():
 
 
 def test_requirementobj__version__return_code_is_ignored():
-    obj = versions.RequirementObj(
+    obj = versions.Requirement(
         _echo_version("v1.2.3", returncode=1),
         search=r"v(\d+)\.(\d+)",
         checks=versions.Any(),
@@ -539,7 +539,7 @@ def test_requirementobj__version__func_call():
     def _return_version():
         return "This is v5.3!"
 
-    obj = versions.RequirementObj(
+    obj = versions.Requirement(
         call=_return_version, search=r"v(\d+)\.(\d+)", checks=versions.Any()
     )
     assert obj.version == (5, 3)
@@ -550,7 +550,7 @@ def test_requirementobj__version__func_call_with_arguments():
         assert (arg1, arg2) == (2, "foo")
         return "This is v5.3!"
 
-    obj = versions.RequirementObj(
+    obj = versions.Requirement(
         call=(_return_version, 2, "foo"), search=r"v(\d+)\.(\d+)", checks=versions.Any()
     )
     assert obj.version == (5, 3)
@@ -560,7 +560,7 @@ def test_requirementobj__version__func_call_with_arguments():
     "message", ("UnsupportedClassVersionError", "UnsupportedClassVersionError v1.2.3")
 )
 def test_requirementobj__version__outdated_jre__with_or_without_version_str(message):
-    obj = versions.RequirementObj(
+    obj = versions.Requirement(
         call=lambda: message, search=r"v(\d+)\.(\d+)", checks=versions.Any()
     )
 
@@ -573,11 +573,11 @@ def test_requirementobj__version__outdated_jre__with_or_without_version_str(mess
 
 ###############################################################################
 ###############################################################################
-# RequirementObj -- executable
+# Requirement -- executable
 
 
 def test_requirementobj__executable__no_cli_args():
-    obj = versions.RequirementObj(
+    obj = versions.Requirement(
         call=["samtools"], search=r"v(\d+)\.(\d+)", checks=versions.Any()
     )
 
@@ -585,7 +585,7 @@ def test_requirementobj__executable__no_cli_args():
 
 
 def test_requirementobj__executable__with_cli_arguments():
-    obj = versions.RequirementObj(
+    obj = versions.Requirement(
         call=["samtools", "--version"], search=r"v(\d+)\.(\d+)", checks=versions.Any()
     )
 
@@ -593,7 +593,7 @@ def test_requirementobj__executable__with_cli_arguments():
 
 
 def test_requirementobj__executable__function():
-    obj = versions.RequirementObj(
+    obj = versions.Requirement(
         call=lambda: "v1.1", search=r"v(\d+)\.(\d+)", checks=versions.Any()
     )
 
@@ -602,7 +602,7 @@ def test_requirementobj__executable__function():
 
 ###############################################################################
 ###############################################################################
-# RequirementObj -- __call__
+# Requirement -- __call__
 
 
 class CheckCounted(versions.Check):
@@ -617,66 +617,26 @@ class CheckCounted(versions.Check):
         return self.return_value
 
 
-def test_requirementobj__call__result_is_cached():
-    counter = CheckCounted()
-    obj = versions.RequirementObj(
-        call=lambda: "v1.1.3", search=r"(\d)\.(\d)", checks=counter
-    )
-
-    obj()
-    obj()
-
-    assert counter.count == 1
-
-
-def test_requirementobj__call__result_is_cached_unless_forced():
-    counter = CheckCounted()
-    obj = versions.RequirementObj(
-        call=lambda: "v1.1.3", search=r"(\d)\.(\d)", checks=counter
-    )
-
-    obj()
-    obj(force=True)
-
-    assert counter.count == 2
-
-
 def test_requirementobj__call__check_fails__function():
-    expected = (
-        "Version requirements not met for test#1: "
-        "Expected at least v1.1, but found v1.0"
-    )
-
-    obj = versions.RequirementObj(
+    obj = versions.Requirement(
         call=lambda: "v1.0.3",
         search=r"(\d)\.(\d)",
         checks=versions.GE(1, 1),
         name="test#1",
     )
-    try:
-        obj()
-        assert False  # pragma: no coverage
-    except versions.VersionRequirementError as error:
-        assert str(error) == expected
+
+    assert not obj.check()
 
 
 def test_requirementobj__call__check_fails():
-    expected = (
-        "Version requirements not met for test#1: "
-        "Expected at least v1.1, but found v1.0"
-    )
-
-    obj = versions.RequirementObj(
+    obj = versions.Requirement(
         call=_echo_version("v1.0.2"),
         search=r"(\d)\.(\d)",
         checks=versions.GE(1, 1),
         name="test#1",
     )
-    try:
-        obj()
-        assert False  # pragma: no coverage
-    except versions.VersionRequirementError as error:
-        assert str(error) == expected
+
+    assert not obj.check()
 
 
 def test_requirementobj__call__check_fails__jre_outdated():
@@ -693,14 +653,14 @@ def test_requirementobj__call__check_fails__jre_outdated():
     )
 
     value = "UnsupportedClassVersionError"
-    obj = versions.RequirementObj(
+    obj = versions.Requirement(
         call=_echo_version(value),
         search=r"(\d)\.(\d)",
         checks=versions.GE(1, 1),
         name="test#1",
     )
     try:
-        obj()
+        obj.check()
         assert False  # pragma: no coverage
     except versions.VersionRequirementError as error:
         assert str(error) == expected
@@ -723,64 +683,3 @@ _CAN_PICKLE_VALUES = (
 @pytest.mark.parametrize("obj", _CAN_PICKLE_VALUES)
 def test_check__can_pickle(obj):
     pickle.dumps(obj)
-
-
-###############################################################################
-###############################################################################
-# Requirement
-
-
-def test_requirement__obj_is_cached_for_same_values():
-    obj1 = versions.Requirement("echo", "", versions.LT(1))
-    obj2 = versions.Requirement("echo", "", versions.LT(1))
-    assert obj1 is obj2
-
-
-def test_requirement__new_obj_if_call_differ():
-    obj1 = versions.Requirement("echo", "", versions.LT(1))
-    obj2 = versions.Requirement("true", "", versions.LT(1))
-    assert obj1 is not obj2
-
-
-def test_requirement__new_obj_if_search_differ():
-    obj1 = versions.Requirement("echo", r"(\d+)", versions.LT(1))
-    obj2 = versions.Requirement("echo", "", versions.LT(1))
-    assert obj1 is not obj2
-
-
-def test_requirement__new_obj_if_checks_differ():
-    obj1 = versions.Requirement("echo", "", versions.GE(1))
-    obj2 = versions.Requirement("echo", "", versions.LT(1))
-    assert obj1 is not obj2
-
-
-def test_requirement__same_obj_if_name_differ():
-    obj1 = versions.Requirement("echo", "", versions.GE(1))
-    assert obj1.name == "echo"
-    obj2 = versions.Requirement("echo", "", versions.GE(1), name="foo")
-    assert obj2.name == "foo"
-    assert obj1 is obj2
-
-    obj3 = versions.Requirement("echo", "", versions.GE(1), name="bar")
-    assert obj3.name == "bar"
-    assert obj2 is obj3
-
-    obj4 = versions.Requirement("echo", "", versions.GE(1))
-    assert obj3.name == "bar"
-    assert obj3 is obj4
-
-
-def test_requirement_highest_priority_overrides():
-    obj1 = versions.Requirement("echo", "", versions.LT(1), priority=0)
-    assert obj1.priority == 0
-    obj2 = versions.Requirement("echo", "", versions.LT(1), priority=5)
-    assert obj1 is obj2
-    assert obj2.priority == 5
-
-
-def test_requirement_highest_priority_retained():
-    obj1 = versions.Requirement("echo", "", versions.LT(1), priority=5)
-    assert obj1.priority == 5
-    obj2 = versions.Requirement("echo", "", versions.LT(1), priority=0)
-    assert obj1 is obj2
-    assert obj2.priority == 5

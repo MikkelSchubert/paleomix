@@ -22,26 +22,18 @@
 #
 """Version checks for apps or libraries required by PALEOMIX pipelines.
 
-The module contains to sets of classes: RequirementObj and Check. The
-RequirementObj class implements the determation of the current version for a
-given tool, while the Check (sub)classes implements various comparison
-to be carried against the detected version (less than, greater than or equal,
-etc.).
-
-To reduce the overhead of detmining versions (which mostly involve invoking
-external programs), the RequirementObj caches results. Additionally, to avoid
-redundant calls, RequirementObjs are created using the 'Requirement' function
-which caches RequirementObjs.
+The module contains to sets of classes: Requirement and Check. The Requirement class
+implements the determation of the current version for a given tool, while the Check
+(sub)classes implements various comparison to be carried against the detected version
+(less than, greater than or equal, etc.).
 
 For example, to check that the Java version is v1.7 or later:
     obj = Requirement(call=("java", "-version"),
                       search='java version "(\\d+).(\\d+)',
                       checks=GE(1, 7),
                       name="Java Runtime Environment")
-    try:
-        obj()
-    except VersionRequirementError:
-        pass  # requirements not met, or failure to determine version
+
+    assert obj.check(), "version requirements not met"
 """
 import operator
 import re
@@ -50,77 +42,23 @@ import subprocess
 from paleomix.common.utilities import TotallyOrdered, safe_coerce_to_tuple, try_cast
 
 
-# Cache used to store the output of cmd-line / function calls
-_CALL_CACHE = {}
-# Cache used to store Requirement object
-_REQUIREMENT_CACHE = {}
-
-
 class VersionRequirementError(Exception):
     """Raised if version requirements are not met, or if a version could not be
     determined for a requirement check.
     """
 
 
-def Requirement(call, search, checks, name=None, priority=0):
-    # Ignore function naming scheme
-    """Returns a singleton Requirement object, based on the parameters,
-    which may be used to check that version requirements are met for a
-    given program/utility/module, etc.
-
-    Parameters:
-      call   -- A string, or a tuple containing strings for a system call,
-                or a tuple containing a function at the first position, and
-                a set of positional parameters. In the case of system calls,
-                stdout and stderr are returned as a single string, in the case
-                of a function call, the return value is expected to be a str.
-      search -- A regular expression (string or re object), used to search
-                the output of the "call". Groups are assumed to represent
-                version numbers.
-      checks -- A callable that implements the interface described in the
-                Check class.
-      name   -- Descriptive name for the executable/module/etc. If not
-                specified, first value in 'call' will be used; if multiple
-                otherwise identical checks are made, the last name that
-                does not equal the first value of 'call' will be used.
-      priority -- Order in which requirements are checked; if multiple
-                  otherwise identical checks are made with different priority,
-                  the highest priority takes precedence.
-
-    Implementation detail: To reduce the need for performing calls or system-
-    calls multiple times, caches are implemented using the call object as keys.
-    Thus the same calls should be passed in a manner which allow equality
-    between the same calls to be established.
-    """
-    call = safe_coerce_to_tuple(call)
-    key = (call, search, checks)
-
-    try:
-        requirement = _REQUIREMENT_CACHE[key]
-
-        # Highest priority takes precedence
-        requirement.priority = max(requirement.priority, priority)
-        # Last explicitly specified name takes precedence
-        requirement.name = name or requirement.name
-    except KeyError:
-        requirement = RequirementObj(*key, name=name, priority=priority)
-        _REQUIREMENT_CACHE[key] = requirement
-
-    return requirement
-
-
-class RequirementObj:
+class Requirement:
     """Represents a version requirement."""
 
     def __init__(self, call, search, checks, name=None, priority=0):
         """See function 'Requrement' for a description of parameters."""
         self._call = safe_coerce_to_tuple(call)
-        self._done = None
         self.name = str(name or self._call[0])
         self.priority = int(priority)
         self.checks = checks
         self._rege = re.compile(search)
-        self._version = None
+        self._cached_version = None
 
     @property
     def version(self):
@@ -128,9 +66,9 @@ class RequirementObj:
         could not be determined, a VersionRequirementError is raised,
         describing the cause of the problem.
         """
-        if self._version is None:
+        if self._cached_version is None:
             try:
-                output = _do_call(self._call)
+                output = self._run(self._call)
             except OSError as error:
                 self._raise_failure(error)
 
@@ -145,11 +83,15 @@ class RequirementObj:
             if not match:
                 self._raise_failure(output)
 
-            self._version = tuple(
+            self._cached_version = tuple(
                 0 if value is None else try_cast(value, int) for value in match.groups()
             )
 
-        return self._version
+        return self._cached_version
+
+    @property
+    def version_str(self):
+        return _pprint_version(self.version)
 
     @property
     def executable(self):
@@ -159,15 +101,8 @@ class RequirementObj:
         if not callable(self._call[0]):
             return self._call[0]
 
-    def __call__(self, force=False):
-        if force or self._done is None:
-            if not self.checks(self.version):
-                raise VersionRequirementError(
-                    "Version requirements not met for %s: Expected %s, but found %s"
-                    % (self.name, self.checks, _pprint_version(self.version))
-                )
-
-            self._done = True
+    def check(self):
+        return self.checks(self.version)
 
     def _check_for_outdated_jre(self, output):
         """Checks for the error raised if the JRE is unable to run a JAR file.
@@ -216,6 +151,36 @@ class RequirementObj:
         if not callable(self._call[0]):
             yield "    Command  = %s" % (" ".join(self._call),)
 
+    @staticmethod
+    def _run(call):
+        if callable(call[0]):
+            return call[0](*call[1:])
+
+        proc = subprocess.Popen(
+            call,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            # Merge STDERR with STDOUT output
+            stderr=subprocess.STDOUT,
+        )
+
+        return proc.communicate()[0]
+
+    def __eq__(self, other):
+        if not isinstance(other, Requirement):
+            return NotImplemented
+
+        return (
+            self._call == other._call
+            and self.name == other.name
+            and self.priority == other.priority
+            and self.checks == other.checks
+            and self._rege == other._rege
+        )
+
+    def __hash__(self):
+        return hash((self._call, self.name, self.priority, self.checks, self._rege))
+
 
 class Check(TotallyOrdered):
     """Abstract base-class for version checks.
@@ -238,18 +203,22 @@ class Check(TotallyOrdered):
         self._func = func
         self._values = values
         self._description = description
-        self._objs = (description, func, values)
 
     def __str__(self):
         return self._description
 
     def __eq__(self, other):
         if isinstance(other, Check):
-            return self._objs == other._objs
+            return (
+                self._description == other._description
+                and self._func == other._func
+                and self._values == other._values
+            )
+
         return NotImplemented
 
     def __hash__(self):
-        return hash(self._objs)
+        return hash((self._description, self._func, self._values))
 
     def __call__(self, current):
         """Takes a tuple of version fields (e.g. (1, 7)) and returns True if
@@ -382,48 +351,11 @@ def _func_or(current, checks):
 # Utility functions
 
 
-def _run(call):
-    """Carries out a system call and returns STDOUT and STDERR as a combined
-    string. If an OSError is raied (e.g. due to missing executables), the
-    resulting message is returned as a string. If the call raised an OSError,
-    then the exception is returned as a value.
-    """
-    try:
-        proc = subprocess.Popen(
-            call,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            # Merge STDERR with STDOUT output
-            stderr=subprocess.STDOUT,
-        )
-
-        return proc.communicate()[0]
-    except OSError as error:
-        return error
-
-
-def _do_call(call):
-    """Performs a call; the result is cached, and returned upon subsequent
-    calls with the same signature (either a function call or system call). If
-    the call raised an OSError, then the exception is returned as a value.
-    """
-    try:
-        result = _CALL_CACHE[call]
-    except KeyError:
-        if callable(call[0]):
-            result = call[0](*call[1:])
-        else:
-            result = _run(call)
-        _CALL_CACHE[call] = result
-
-    if isinstance(result, OSError):
-        raise result
-
-    return result
-
-
 def _pprint_version(value):
     """Pretty-print version tuple; takes a tuple of field numbers / values,
     and returns it as a string joined by dots with a 'v' prepended.
     """
+    if not value:
+        return "N/A"
+
     return "v%s" % (".".join(map(str, value)),)

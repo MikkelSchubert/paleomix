@@ -31,6 +31,7 @@ from pathlib import Path
 import paleomix
 import paleomix.common.fileutils as fileutils
 from paleomix.common.utilities import safe_coerce_to_frozenset
+from paleomix.common.versions import Requirement
 
 from paleomix.atomiccmd.command import CmdError
 
@@ -234,7 +235,7 @@ class Node:
     def _validate_requirements(cls, requirements):
         requirements = safe_coerce_to_frozenset(requirements)
         for requirement in requirements:
-            if not callable(requirement):
+            if not isinstance(requirement, Requirement):
                 raise TypeError(requirement)
         return requirements
 

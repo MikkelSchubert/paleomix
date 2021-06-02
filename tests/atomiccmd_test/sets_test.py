@@ -35,6 +35,7 @@ from paleomix.atomiccmd.command import (
     TempOutputFile,
 )
 from paleomix.atomiccmd.sets import ParallelCmds, SequentialCmds
+from paleomix.common.versions import Requirement, Any
 
 _SET_CLASSES = (ParallelCmds, SequentialCmds)
 
@@ -45,6 +46,9 @@ _SET_CLASSES = (ParallelCmds, SequentialCmds)
 
 @pytest.mark.parametrize("cls", _SET_CLASSES)
 def test_atomicsets__properties(cls):
+    requirement_1 = Requirement(call=["bwa"], search=r"(\d+)", checks=Any())
+    requirement_2 = Requirement(call=["bowtie2"], search=r"(\d+)", checks=Any())
+
     cmd_mock_1 = AtomicCmd(
         ("true",),
         extra_files=[
@@ -56,9 +60,7 @@ def test_atomicsets__properties(cls):
             AuxilleryFile("/aux/fA"),
             AuxilleryFile("/aux/fB"),
         ],
-        requirements=[
-            id,
-        ],
+        requirements=[requirement_1],
     )
     cmd_mock_2 = AtomicCmd(
         ("false",),
@@ -68,9 +70,7 @@ def test_atomicsets__properties(cls):
             InputFile("/foo/bar/in.file"),
             OutputFile("out.txt"),
         ],
-        requirements=[
-            list,
-        ],
+        requirements=[requirement_2],
     )
 
     obj = cls([cmd_mock_1, cmd_mock_2])
