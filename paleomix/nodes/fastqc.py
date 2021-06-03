@@ -8,6 +8,7 @@ import os
 import re
 
 from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile
+from paleomix.common.versions import Requirement
 from paleomix.node import CommandNode
 
 
@@ -26,6 +27,13 @@ class FastQCNode(CommandNode):
             extra_files=[
                 OutputFile(os.path.join(out_folder, out_prefix + "_fastqc.html")),
                 OutputFile(os.path.join(out_folder, out_prefix + "_fastqc.zip")),
+            ],
+            requirements=[
+                Requirement(
+                    name="FastQC",
+                    call=["fastqc", "--version"],
+                    search=r"FastQC v(\d+).(\d+).(\d+)",
+                ),
             ],
         )
 

@@ -53,14 +53,18 @@ class VersionRequirementError(Exception):
 class Requirement:
     """Represents a version requirement."""
 
-    def __init__(self, call, search, checks, name=None, priority=0):
+    def __init__(self, call, search=None, checks=None, name=None, priority=0):
         """See function 'Requrement' for a description of parameters."""
         self._call = safe_coerce_to_tuple(call)
         self.name = str(name or self._call[0])
+        self.search = search
+        self.checks = Any() if checks is None else checks
         self.priority = int(priority)
-        self.checks = checks
-        self._rege = re.compile(search)
         self._cached_version = None
+
+        # Checks will always fail without a search string
+        if not (self.search or isinstance(self.checks, Any)):
+            raise ValueError(self.checks)
 
     @property
     def version(self):
@@ -81,13 +85,17 @@ class Requirement:
             # version could be determined (likely a false positive match).
             self._check_for_outdated_jre(output)
 
-            match = self._rege.search(output)
-            if not match:
-                self._raise_failure(output)
+            if self.search:
+                match = re.search(self.search, output)
+                if not match:
+                    self._raise_failure(output)
 
-            self._cached_version = tuple(
-                0 if value is None else try_cast(value, int) for value in match.groups()
-            )
+                self._cached_version = tuple(
+                    0 if value is None else try_cast(value, int)
+                    for value in match.groups()
+                )
+            else:
+                self._cached_version = ()
 
         return self._cached_version
 
@@ -142,7 +150,7 @@ class Requirement:
             lines.append("Program may be broken or a version not supported by the")
             lines.append("pipeline; please refer to the PALEOMIX documentation.\n")
             lines.append("Required:       %s" % (self.checks,))
-            lines.append("Search string:  %s\n" % (self._rege.pattern))
+            lines.append("Search string:  %r\n" % (self.search))
             lines.append("%s Command output %s" % ("-" * 22, "-" * 22))
             lines.append(output)
 
@@ -176,12 +184,12 @@ class Requirement:
             self._call == other._call
             and self.name == other.name
             and self.priority == other.priority
+            and self.search == other.search
             and self.checks == other.checks
-            and self._rege == other._rege
         )
 
     def __hash__(self):
-        return hash((self._call, self.name, self.priority, self.checks, self._rege))
+        return hash((self._call, self.name, self.priority, self.search, self.checks))
 
 
 class Check(TotallyOrdered):

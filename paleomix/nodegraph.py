@@ -333,7 +333,7 @@ class NodeGraph:
 
         # Create dummy Requirements for any executables used in commands but not in reqs
         for executable in executables - requirement_execs:
-            requirements.add(versions.Requirement(executable, r"", versions.Any()))
+            requirements.add(versions.Requirement(executable))
 
         missing_execs = missing_executables(executables | requirement_execs)
 
