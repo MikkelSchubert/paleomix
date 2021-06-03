@@ -21,37 +21,83 @@
 # SOFTWARE.
 #
 import errno
+import copy
 import itertools
 import logging
 import os
+import sys
 import time
 
 import coloredlogs
 import humanfriendly
 
+from humanfriendly.terminal import terminal_supports_colors
 
-_CONSOLE_MESSAGE_FORMAT = "%(asctime)s %(levelname)s %(colorstatusfield)s%(message)s"
+
+_CONSOLE_MESSAGE_FORMAT = "%(asctime)s %(levelname)s %(status)s%(message)s"
 _CONSOLE_DATE_FORMAT = "%H:%M:%S"
-_FILE_MESSAGE_FORMAT = "%(asctime)s %(name)s %(levelname)s %(statusfield)s%(message)s"
+_FILE_MESSAGE_FORMAT = "%(asctime)s %(name)s %(levelname)s %(status)s%(message)s"
 
-_LOG_LEVELS = {
-    "debug": logging.DEBUG,
-    "info": logging.INFO,
-    "warning": logging.WARNING,
-    "error": logging.ERROR,
-}
+
+class _MultilineFomatter:
+    def format(self, record):
+        record = copy.copy(record)
+        if hasattr(record, "status"):
+            value = record.status
+            if self.COLOR_LOGGER and isinstance(value, Status) and value.color:
+                value = humanfriendly.terminal.ansi_wrap(str(value), color=value.color)
+
+            record.status = "[{}] ".format(value)
+        else:
+            record.status = ""
+
+        message = record.msg
+        if not isinstance(message, str):
+            message = str(message)
+
+        if record.args:
+            message = message % record.args
+
+        if "\n" in message:
+            lines = []
+            record.args = ()
+            for line in message.split("\n"):
+                record.msg = line
+                lines.append(super().format(record))
+
+            return "\n".join(lines)
+
+        return super().format(record)
+
+
+class BasicFormatter(_MultilineFomatter, logging.Formatter):
+    COLOR_LOGGER = False
+
+
+class PaleomixFormatter(_MultilineFomatter, coloredlogs.ColoredFormatter):
+    COLOR_LOGGER = True
 
 
 def initialize_console_logging(log_level="info"):
-    log_level = _LOG_LEVELS[log_level.lower()]
-    coloredlogs.install(
+    log_level = coloredlogs.level_to_number(log_level)
+
+    logger = logging.getLogger()
+    logger.setLevel(log_level)
+
+    for handler in logger.handlers:
+        if isinstance(handler, logging.StreamHandler) and handler.stream is sys.stderr:
+            break
+    else:
+        handler = logging.StreamHandler()
+        logger.addHandler(handler)
+
+    fmt_class = PaleomixFormatter if terminal_supports_colors() else BasicFormatter
+    formatter = fmt_class(
         fmt=_CONSOLE_MESSAGE_FORMAT,
         datefmt=_CONSOLE_DATE_FORMAT,
-        level=log_level,
     )
 
-    for handler in logging.getLogger().handlers:
-        StatusFilter.install(handler)
+    handler.setFormatter(formatter)
 
 
 def initialize(log_level="info", log_file=None, auto_log_file="paleomix"):
@@ -62,15 +108,15 @@ def initialize(log_level="info", log_file=None, auto_log_file="paleomix"):
         logger.info("Writing %s log to %r", log_level, log_file)
 
         handler = logging.FileHandler(log_file)
-        handler.setFormatter(logging.Formatter(_FILE_MESSAGE_FORMAT))
-        handler.setLevel(_LOG_LEVELS[log_level.lower()])
+        handler.setFormatter(BasicFormatter(_FILE_MESSAGE_FORMAT))
+        handler.setLevel(coloredlogs.level_to_number(log_level))
 
         root = logging.getLogger()
         root.addHandler(handler)
     elif auto_log_file:
         template = "%s.%s_%%02i.log" % (auto_log_file, time.strftime("%Y%m%d_%H%M%S"))
         handler = LazyLogfile(template, log_level=logging.ERROR)
-        handler.setFormatter(logging.Formatter(_FILE_MESSAGE_FORMAT))
+        handler.setFormatter(BasicFormatter(_FILE_MESSAGE_FORMAT))
         handler.setLevel(logging.ERROR)
 
         root = logging.getLogger()
@@ -138,28 +184,6 @@ class LazyLogfile(logging.FileHandler):
             except OSError as error:
                 if error.errno != errno.EEXIST:
                     raise
-
-
-class StatusFilter(logging.Filter):
-    def filter(self, record):
-        record.statusfield = ""
-        record.colorstatusfield = ""
-
-        if hasattr(record, "status"):
-            value = record.status
-            record.statusfield = "[{}] ".format(value)
-            record.colorstatusfield = record.statusfield
-
-            if isinstance(value, Status) and value.color:
-                value = humanfriendly.terminal.ansi_wrap(str(value), color=value.color)
-                record.colorstatusfield = "[{}] ".format(value)
-
-        return 1
-
-    @classmethod
-    def install(cls, handler):
-        if not any(isinstance(flt, StatusFilter) for flt in handler.filters):
-            handler.addFilter(StatusFilter())
 
 
 class Status:
