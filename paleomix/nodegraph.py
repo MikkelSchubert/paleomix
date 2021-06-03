@@ -317,60 +317,60 @@ class NodeGraph:
 
         return cache.are_files_outdated(node.input_files, node.output_files)
 
-    def _check_required_executables(self, nodes):
-        exec_filenames = set()
-        for node in nodes:
-            exec_filenames.update(node.executables)
-
-            # Requirements may include executables not invoked directly
-            for requirement in node.requirements:
-                if isinstance(requirement, versions.Requirement):
-                    executable = requirement.executable
-                    if executable is not None:
-                        exec_filenames.add(executable)
-
-        missing_exec = missing_executables(exec_filenames)
-        if missing_exec:
-            self._logger.error("Required executable(s) not found:")
-            for name in sorted(missing_exec):
-                self._logger.error(" - %s", name)
-
-        return not missing_exec
-
     def _check_version_requirements(self, nodes):
-        if not self._check_required_executables(nodes):
-            return False
-
-        exec_requirements = set()
+        executables = set()
+        requirements = set()
         for node in nodes:
-            exec_requirements.update(node.requirements)
+            executables.update(node.executables)
+            requirements.update(node.requirements)
+
+        # Executables used by requirement checks
+        requirement_execs = set()
+        for requirement in requirements:
+            executable = requirement.executable
+            if executable is not None:
+                requirement_execs.add(executable)
+
+        # Create dummy Requirements for any executables used in commands but not in reqs
+        for executable in executables - requirement_execs:
+            requirements.add(versions.Requirement(executable, r"", versions.Any()))
+
+        missing_execs = missing_executables(executables | requirement_execs)
 
         def _key_func(reqobj):
             # Sort priority in decreasing order, name in increasing order
             return (-reqobj.priority, reqobj.name)
 
         any_errors = False
-        for requirement in sorted(exec_requirements, key=_key_func):
+        for requirement in sorted(requirements, key=_key_func):
+            name = requirement.name
+            if requirement.executable in missing_execs:
+                self._logger.error(
+                    " [☓] %s not found, but %s is required",
+                    name,
+                    requirement.checks,
+                )
+                any_errors = True
+                continue
+
             try:
-                name = requirement.name
                 version = ".".join(str(value) for value in requirement.version)
                 if version:
                     name = "%s v%s" % (name, version)
 
-                self._logger.info(" - Found %s", name)
-
-                if not requirement.check():
-                    self._logger.error("Version requirements not met for %s:", name)
-                    self._logger.error("  Expected %s", requirement.checks)
-                    self._logger.error("  Found %s", requirement.version_str)
-                    any_errors = True
-            except versions.VersionRequirementError as error:
-                any_errors = True
-                self._logger.error(error)
+                if requirement.check():
+                    self._logger.info("  [✓] %s ", name)
+                else:
+                    self._logger.error(
+                        " [☓] %s found but %s is required", name, requirement.checks
+                    )
             except OSError as error:
                 any_errors = True
+                self._logger.error(" [☓] %s: %s", name, error)
+            except versions.VersionRequirementError as error:
+                any_errors = True
                 self._logger.error(
-                    "Could not check version for %s:\n\t%s" % (requirement.name, error)
+                    " [☓] %s: %s", name, "\n     ".join(str(error).split("\n"))
                 )
 
         return not any_errors

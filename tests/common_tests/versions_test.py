@@ -641,15 +641,9 @@ def test_requirementobj__call__check_fails():
 
 def test_requirementobj__call__check_fails__jre_outdated():
     expected = (
-        "Version could not be determined for test#1:\n"
-        "    Command  = %s -c import sys; "
-        "sys.stdout.write('UnsupportedClassVersionError'); sys.exit(0);\n"
-        "\n"
         "The version of the Java Runtime Environment on this\n"
         "system is too old; please check the the requirement\n"
         "for the program and upgrade your version of Java.\n"
-        "\n"
-        "See the documentation for more information." % (sys.executable,)
     )
 
     value = "UnsupportedClassVersionError"
@@ -659,11 +653,9 @@ def test_requirementobj__call__check_fails__jre_outdated():
         checks=versions.GE(1, 1),
         name="test#1",
     )
-    try:
+
+    with pytest.raises(versions.VersionRequirementError, match=expected):
         obj.check()
-        assert False  # pragma: no coverage
-    except versions.VersionRequirementError as error:
-        assert str(error) == expected
 
 
 ###############################################################################

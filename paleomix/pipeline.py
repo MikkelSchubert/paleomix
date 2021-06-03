@@ -209,18 +209,18 @@ class Pypeline:
                 if not isinstance(error, NodeError):
                     error = "Unhandled exception while running {}:".format(node)
 
-                for line in str(error).rstrip().split("\n"):
-                    self._logger.error("%s%s", "", line)
+                message = str(error).split("\n")
 
                 if backtrace:
-                    for line in "".join(backtrace).rstrip().split("\n"):
-                        self._logger.error("%s", line)
+                    message.extend("".join(backtrace).rstrip().split("\n"))
 
                 if isinstance(error, NodeError) and error.path:
-                    self._logger.error("For more information about this error, see")
-                    self._logger.error(
-                        "  %s", quote(os.path.join(error.path, "pipe.errors"))
+                    message.append("For more information about this error, see")
+                    message.append(
+                        "  " + quote(os.path.join(error.path, "pipe.errors"))
                     )
+
+                self._logger.error("\n".join(message))
 
         return any_changes, any_errors
 

@@ -29,8 +29,18 @@ import sys
 
 import paleomix.main
 
+import paleomix.common.versions as versions
+
 from paleomix.atomiccmd.command import AtomicCmd, AuxilleryFile
 from paleomix.common.utilities import safe_coerce_to_tuple
+
+
+CHECK = versions.Requirement(
+    sys.executable,
+    search="",
+    checks=versions.Any(),
+    name="Python v{}.{}.{}".format(*sys.version_info[:3]),
+)
 
 
 def new(args, **kwargs):
@@ -42,6 +52,10 @@ def new(args, **kwargs):
     interpreter = sys.executable
     script = paleomix.main.__file__
     args = safe_coerce_to_tuple(args)
+
+    requirements = list(kwargs.get("requirements", ()))
+    requirements.append(CHECK)
+    kwargs["requirements"] = requirements
 
     command = AtomicCmd((interpreter, script) + args, **kwargs)
     command.add_extra_files([AuxilleryFile(script)])

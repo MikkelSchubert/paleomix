@@ -39,6 +39,8 @@ import operator
 import re
 import subprocess
 
+from shlex import quote
+
 from paleomix.common.utilities import TotallyOrdered, safe_coerce_to_tuple, try_cast
 
 
@@ -118,7 +120,7 @@ class Requirement:
         output indicates that the JRE is outdated (i.e. the output contains
         "UnsupportedClassVersionError") a special message is givenself.
         """
-        lines = ["Version could not be determined for %s:" % (self.name,)]
+        lines = ["Version could not be determined:"]
         lines.extend(self._describe_call())
         lines.append("")
 
@@ -139,8 +141,8 @@ class Requirement:
         else:
             lines.append("Program may be broken or a version not supported by the")
             lines.append("pipeline; please refer to the PALEOMIX documentation.\n")
-            lines.append("    Required:       %s" % (self.checks,))
-            lines.append("    Search string:  %s\n" % (self._rege.pattern))
+            lines.append("Required:       %s" % (self.checks,))
+            lines.append("Search string:  %s\n" % (self._rege.pattern))
             lines.append("%s Command output %s" % ("-" * 22, "-" * 22))
             lines.append(output)
 
@@ -149,7 +151,7 @@ class Requirement:
     def _describe_call(self):
         """Returns lines describing the current system call, if any."""
         if not callable(self._call[0]):
-            yield "    Command  = %s" % (" ".join(self._call),)
+            yield "Command  = %s" % (" ".join(map(quote, self._call)),)
 
     @staticmethod
     def _run(call):
