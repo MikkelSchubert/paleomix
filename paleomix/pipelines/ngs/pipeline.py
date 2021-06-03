@@ -679,13 +679,16 @@ def build_pipeline(args, project):
     genome = project["Genome"]
 
     # FIXME: Maybe allow different tools to have different options
-    args.jre_options = [
+    args.jre_options = list(settings["JavaOptions"]) + [
+        # Performance profile for longer running tasks
         "-server",
-        "-Djava.io.tmpdir={}".format(args.temp_root),
+        # Default temporary directory used by individual commands
+        "-Djava.io.tmpdir=%(TEMP_DIR)s",
+        # Disable graphical components
         "-Djava.awt.headless=true",
+        # Single threaded garbage collection to make CPU usage predictable
+        "-XX:+UseSerialGC",
     ]
-
-    args.jre_options.extend(settings["JavaOptions"])
 
     # 1. Validate and process genome
     genome = Genome(args, genome["Name"], genome["Path"])
