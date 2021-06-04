@@ -487,7 +487,7 @@ _VERSION_CALL_RESULTS = (
 def test_requirementobj__version__call(pipe, regexp, equals):
     call = _echo_version("v3.5.2\n", dst=pipe)
     obj = versions.Requirement(call=call, search=regexp, checks=versions.Any())
-    assert obj.version == equals
+    assert obj.version() == equals
 
 
 def test_requirementobj__version__version_str_not_found():
@@ -506,7 +506,7 @@ def test_requirementobj__version__command_not_found():
     )
 
     try:
-        obj.version
+        obj.version()
         assert False  # pragma: no coverage
     except versions.VersionRequirementError as error:
         # Should include OSError message
@@ -519,7 +519,7 @@ def test_requirementobj__version__command_not_executable():
     )
 
     try:
-        obj.version
+        obj.version()
         assert False  # pragma: no coverage
     except versions.VersionRequirementError as error:
         # Should include OSError message
@@ -532,7 +532,7 @@ def test_requirementobj__version__return_code_is_ignored():
         search=r"v(\d+)\.(\d+)",
         checks=versions.Any(),
     )
-    assert obj.version == (1, 2)
+    assert obj.version() == (1, 2)
 
 
 def test_requirementobj__version__func_call():
@@ -542,7 +542,7 @@ def test_requirementobj__version__func_call():
     obj = versions.Requirement(
         call=_return_version, search=r"v(\d+)\.(\d+)", checks=versions.Any()
     )
-    assert obj.version == (5, 3)
+    assert obj.version() == (5, 3)
 
 
 def test_requirementobj__version__func_call_with_arguments():
@@ -553,7 +553,7 @@ def test_requirementobj__version__func_call_with_arguments():
     obj = versions.Requirement(
         call=(_return_version, 2, "foo"), search=r"v(\d+)\.(\d+)", checks=versions.Any()
     )
-    assert obj.version == (5, 3)
+    assert obj.version() == (5, 3)
 
 
 @pytest.mark.parametrize(
@@ -565,7 +565,7 @@ def test_requirementobj__version__outdated_jre__with_or_without_version_str(mess
     )
 
     try:
-        obj.version
+        obj.version()
         assert False  # pragma: no coverage
     except versions.VersionRequirementError as error:
         assert "upgrade your version of Java" in str(error)

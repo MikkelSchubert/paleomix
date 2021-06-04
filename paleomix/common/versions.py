@@ -66,13 +66,12 @@ class Requirement:
         if not (self.search or isinstance(self.checks, Any)):
             raise ValueError(self.checks)
 
-    @property
-    def version(self):
+    def version(self, force=False):
         """The version determined for the application / library. If the version
         could not be determined, a VersionRequirementError is raised,
         describing the cause of the problem.
         """
-        if self._cached_version is None:
+        if force or self._cached_version is None:
             try:
                 output = self._run(self._call)
             except OSError as error:
@@ -99,9 +98,8 @@ class Requirement:
 
         return self._cached_version
 
-    @property
-    def version_str(self):
-        return _pprint_version(self.version)
+    def version_str(self, force=False):
+        return _pprint_version(self.version(force))
 
     @property
     def executable(self):
@@ -111,8 +109,8 @@ class Requirement:
         if not callable(self._call[0]):
             return self._call[0]
 
-    def check(self):
-        return self.checks(self.version)
+    def check(self, force=False):
+        return self.checks(self.version(force))
 
     def _check_for_outdated_jre(self, output):
         """Checks for the error raised if the JRE is unable to run a JAR file.

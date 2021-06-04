@@ -445,7 +445,7 @@ class AnalysisReport:
 
 
 def _fmt_v(requirement):
-    return ".".join(map(str, requirement.version))
+    return requirement.version_str()
 
 
 def _warn(text):

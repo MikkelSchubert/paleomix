@@ -88,7 +88,7 @@ class ValidateBAMNode(PicardNode):
         version_check = _PICARD_VERSION_CACHE[jar_path]
 
         try:
-            if version_check.version >= (2, 19, 0):
+            if version_check.version() >= (2, 19, 0):
                 # Useless warning, as we do not build BAI indexes for large genomes
                 command.append("--IGNORE", "REF_SEQ_TOO_LONG_FOR_BAI")
         except versions.VersionRequirementError:

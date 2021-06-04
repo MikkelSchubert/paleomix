@@ -354,7 +354,7 @@ class NodeGraph:
                 continue
 
             try:
-                version = ".".join(str(value) for value in requirement.version)
+                version = ".".join(str(value) for value in requirement.version())
                 if version:
                     name = "%s v%s" % (name, version)
 
