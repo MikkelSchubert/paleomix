@@ -123,18 +123,20 @@ def initialize(log_level="info", log_file=None, auto_log_file="paleomix"):
         root.addHandler(handler)
 
 
-def add_argument_group(parser):
+def add_argument_group(parser, log_file=True):
     """Adds an option-group to an OptionParser object, with options
     pertaining to logging. Note that 'initialize' expects the config
     object to have these options."""
     group = parser.add_argument_group("Logging")
-    group.add_argument(
-        "--log-file",
-        default=None,
-        help="Write log-messages to this file. If a log-file is not specified, error "
-        "messages, and only error messages, will be written to an automatically "
-        "generated log file",
-    )
+    if log_file:
+        group.add_argument(
+            "--log-file",
+            default=None,
+            help="Write log-messages to this file. If a log-file is not specified, "
+            "error messages, and only error messages, will be written to an "
+            "automatically generated log file",
+        )
+
     group.add_argument(
         "--log-level",
         default="info",

@@ -38,6 +38,7 @@ _COMMANDS = {
     "bam_pipeline": "paleomix.pipelines.bam.main",
     "trim": "paleomix.pipelines.bam.trim_pipeline",
     "trim_pipeline": "paleomix.pipelines.bam.trim_pipeline",
+    "worker": "paleomix.tools.worker",
     # Phylogenetic pipeline
     "phylo": "paleomix.pipelines.phylo.pipeline",
     "phylo_pipeline": "paleomix.pipelines.phylo.pipeline",
@@ -72,6 +73,7 @@ Pipelines:
     paleomix phylo            -- Pipeline for genotyping and phylogenetic
                                  inference from BAMs.
     paleomix zonkey           -- Pipeline for detecting F1 (equine) hybrids.
+    paleomix worker           -- Distribute pipelines across multiple systems.
 
 BAM/SAM tools:
     paleomix coverage         -- Calculate coverage across reference sequences

@@ -20,26 +20,28 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+from shlex import quote
 import collections
-import errno
 import logging
 import multiprocessing
 import os
-from shlex import quote
 import signal
 import sys
-import traceback
 
-from queue import Empty
 
 import paleomix.common.logging
-import paleomix.common.system
 
-from paleomix.node import Node, NodeError
-from paleomix.nodegraph import FileStatusCache, NodeGraph, NodeGraphError
 from paleomix.common.text import padded_table
 from paleomix.common.utilities import safe_coerce_to_tuple
 from paleomix.common.versions import VersionRequirementError
+from paleomix.core.workers import (
+    Manager,
+    WORKER_FINISHED,
+    WORKER_THREADS,
+    WORKER_SHUTDOWN,
+)
+from paleomix.node import Node, NodeError
+from paleomix.nodegraph import FileStatusCache, NodeGraph, NodeGraphError
 
 
 class Pypeline:
@@ -50,9 +52,6 @@ class Pypeline:
         max_threads=1,
         implicit_dependencies=False,
     ):
-        if max_threads < 1:
-            raise ValueError("Max threads must be >= 1")
-
         self._nodes = safe_coerce_to_tuple(nodes)
         for node in self._nodes:
             if not isinstance(node, Node):
@@ -61,11 +60,10 @@ class Pypeline:
         self._logger = logging.getLogger(__name__)
         # Set if a keyboard-interrupt (SIGINT) has been caught
         self._interrupted = False
-        # Dict of id(Node): (Node, Process)
-        self._running = {}
-        self._max_threads = max_threads
+        self._threads = max(0, max_threads)
         self._temp_root = temp_root
         self._implicit_dependencies = implicit_dependencies
+        self._manager = None
 
     def run(self, mode="run"):
         if mode not in ("run", "dry_run", "input_files", "output_files", "executables"):
@@ -86,16 +84,22 @@ class Pypeline:
             self._logger.error(error)
             return 1
 
-        for node in nodegraph.iterflat():
-            if node.threads > self._max_threads:
-                self._logger.warn(
-                    "One or more tasks require more threads than the user-defined "
-                    "maximum; the number of threads used will therefore exceed the "
-                    "user-defined maximum when running those tasks."
-                )
-                break
+        self._manager = Manager(
+            threads=self._threads,
+            temp_root=self._temp_root,
+            requirements=nodegraph.requirements,
+        )
+
+        if not self._manager.connect():
+            self._logger.debug("Manager failed to start; terminating")
+            return 1
 
         if mode == "dry_run":
+            while not self._manager.ready:
+                for _ in self._manager.wait():
+                    pass
+
+            self._manager.shutdown()
             self._summarize_pipeline(nodegraph)
             self._logger.info("Dry run done")
             return 0
@@ -111,118 +115,82 @@ class Pypeline:
 
     def _run(self, nodegraph):
         # Set of remaining nodes to be run
-        remaining = set(nodegraph.iterflat())
+        tasks = set()
+        for task in nodegraph.iterflat():
+            state = nodegraph.get_node_state(task)
+            if state not in (nodegraph.DONE, nodegraph.ERROR):
+                tasks.add(task)
 
         any_errors = False
-        any_changes = True
-        queue = multiprocessing.Queue()
-        while self._running or (remaining and not self._interrupted):
-            if any_changes and (remaining and not self._interrupted):
-                self._start_new_tasks(remaining, nodegraph, queue)
-                if remaining and not self._running:
-                    self._logger.critical("BUG: Failed to start new tasks!")
-                    any_errors = True
-                    break
+        while (tasks and not self._interrupted) or not self._manager.idle:
+            for event in self._manager.poll():
+                worker = event["worker"]
 
-            any_changes, any_node_errors = self._poll_running_nodes(nodegraph, queue)
-            any_errors |= any_node_errors
+                # The number of available threads has changed
+                if event["event"] == WORKER_THREADS:
+                    if not self._interrupted:
+                        idle_threads = event["threads"]
+                        for task in sorted(tasks, key=lambda task: task.id):
+                            state = nodegraph.get_node_state(task)
+                            if state == nodegraph.RUNABLE:
+                                if idle_threads >= task.threads or event["overcommit"]:
+                                    if not self._manager.start(worker, task):
+                                        # Error in worker; will be picked up next 'wait'
+                                        break
+
+                                    nodegraph.set_node_state(task, nodegraph.RUNNING)
+                                    tasks.remove(task)
+
+                                    # Overcommiting allowed only if a worker is idle
+                                    event["overcommit"] = False
+                                    idle_threads -= task.threads
+                                    if idle_threads <= 0:
+                                        break
+                            elif state in (nodegraph.DONE, nodegraph.ERROR):
+                                tasks.remove(task)
+
+                # A task has finished running
+                elif event["event"] == WORKER_FINISHED:
+                    task = event["task"]
+
+                    if event["error"] is None:
+                        nodegraph.set_node_state(task, nodegraph.DONE)
+                    else:
+                        nodegraph.set_node_state(task, nodegraph.ERROR)
+                        self._log_task_error(task, event["error"], event["backtrace"])
+                        any_errors = True
+
+                # Worker was shut down, but we can try the tasks on other workers
+                elif event["event"] == WORKER_SHUTDOWN:
+                    self._logger.error("PALEOMIX worker %s terminated", worker.name)
+                    for task in event["tasks"]:
+                        self._logger.warning("Re-trying %s", task)
+                        nodegraph.set_node_state(task, nodegraph.RUNABLE)
+                        tasks.add(task)
+                else:
+                    self._logger.error("Unknown event: %r", event)
+
+        self._logger.info("Shutting down workers")
+        self._manager.shutdown()
 
         self._summarize_pipeline(nodegraph, verbose=any_errors)
 
         return 1 if any_errors else 0
 
-    def _start_new_tasks(self, remaining, nodegraph, queue):
-        idle_processes = self._max_threads - sum(
-            node.threads for (node, _) in self._running.values()
-        )
+    def _log_task_error(self, task, error, backtrace):
+        if not isinstance(error, NodeError):
+            error = "Unhandled exception while running {}:".format(task)
 
-        # Individual node.threads may be > than max_threads, resulting in idle <= 0
-        if idle_processes <= 0:
-            return False
+        message = str(error).split("\n")
 
-        for node in sorted(remaining, key=lambda node: node.id):
-            # Any node is accepted if no nodes are running. This ensures that nodes with
-            # more threads than max_threads will still be run.
-            if not self._running or (idle_processes >= node.threads):
-                state = nodegraph.get_node_state(node)
-                if state == nodegraph.RUNABLE:
-                    key = id(node)
-                    proc = multiprocessing.Process(
-                        target=_node_wrapper,
-                        args=(queue, key, node, self._temp_root),
-                        daemon=True,
-                    )
+        if backtrace:
+            message.extend("".join(backtrace).rstrip().split("\n"))
 
-                    self._running[key] = (node, proc)
-                    remaining.remove(node)
-                    proc.start()
+        if isinstance(error, NodeError) and error.path:
+            message.append("For more information about this error, see")
+            message.append("  " + quote(os.path.join(error.path, "pipe.errors")))
 
-                    nodegraph.set_node_state(node, nodegraph.RUNNING)
-                    idle_processes -= node.threads
-                elif state in (nodegraph.DONE, nodegraph.ERROR):
-                    remaining.remove(node)
-            elif idle_processes <= 0:
-                break
-
-    def _poll_running_nodes(self, nodegraph, queue):
-        # Check for processes killed by external means to avoid waiting endlessly
-        for key, (_node, proc) in self._running.items():
-            proc.join(0)
-            if proc.exitcode:
-                message = "Process exited unexpectedly with exit code {}".format(
-                    proc.exitcode
-                )
-                queue.put((key, NodeError(message), None))
-
-        blocking = False
-        any_errors = False
-        any_changes = False
-        while self._running:
-            try:
-                key, error, backtrace = queue.get(blocking, 1.0)
-            except IOError as error:
-                # User pressed ctrl-c (SIGINT), or similar event
-                if error.errno != errno.EINTR:
-                    raise
-
-                continue
-            except Empty:
-                # Stop looping if we've already waited once or if we've finished one or
-                # more nodes, since the latter means that we can maybe start new nodes
-                if blocking or any_changes:
-                    break
-
-                blocking = True
-                continue
-
-            blocking = False
-            any_changes = True
-            node, proc = self._running.pop(key)
-            proc.join()
-
-            if error is None:
-                nodegraph.set_node_state(node, nodegraph.DONE)
-            else:
-                nodegraph.set_node_state(node, nodegraph.ERROR)
-                any_errors = True
-
-                if not isinstance(error, NodeError):
-                    error = "Unhandled exception while running {}:".format(node)
-
-                message = str(error).split("\n")
-
-                if backtrace:
-                    message.extend("".join(backtrace).rstrip().split("\n"))
-
-                if isinstance(error, NodeError) and error.path:
-                    message.append("For more information about this error, see")
-                    message.append(
-                        "  " + quote(os.path.join(error.path, "pipe.errors"))
-                    )
-
-                self._logger.error("\n".join(message))
-
-        return any_changes, any_errors
+        self._logger.error("\n".join(message))
 
     def _print_files(self, mode):
         try:
@@ -342,10 +310,7 @@ class Pypeline:
             )
         else:
             self._logger.warning("Terminating pipeline!")
-            for _node, proc in self._running.values():
-                proc.terminate()
-            for _node, proc in self._running.values():
-                proc.join()
+            self._manager.shutdown()
             sys.exit(-signum)
 
     def _summarize_pipeline(self, nodegraph, verbose=True):
@@ -423,29 +388,3 @@ def add_io_argument_group(parser):
     )
 
     return group
-
-
-def _node_wrapper(queue, key, node, temp_root):
-    name = "paleomix task"
-    if len(sys.argv) > 1:
-        name = "paleomix {} task".format(sys.argv[1])
-
-    paleomix.common.system.set_procname(name)
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
-
-    try:
-        node.run(temp_root)
-        queue.put((key, None, None))
-    except NodeError as error:
-        backtrace = []
-        if error.__cause__ and error.__cause__.__traceback__:
-            backtrace = traceback.format_tb(error.__cause__.__traceback__)
-            backtrace.append("  {!r}".format(error.__cause__))
-
-        queue.put((key, error, backtrace))
-    except Exception:
-        _exc_type, exc_value, exc_traceback = sys.exc_info()
-        backtrace = traceback.format_tb(exc_traceback)
-        backtrace.append("  {!r}".format(exc_value))
-
-        queue.put((key, exc_value, backtrace))

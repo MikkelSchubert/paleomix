@@ -141,13 +141,7 @@ class NodeGraph:
                 "https://paleomix.readthedocs.io/en/stable/"
             )
 
-        if software_checks:
-            self._logger.info("Checking required software")
-            if not self._check_version_requirements(self._reverse_dependencies):
-                raise NodeGraphError(
-                    "Please refer to the PALEOMIX installation instructions at "
-                    "https://paleomix.readthedocs.io/en/stable/"
-                )
+        self.requirements = self._collect_requirements(self._reverse_dependencies)
 
         self._logger.info("Determining state of pipeline tasks")
         self._refresh_states()
@@ -156,7 +150,12 @@ class NodeGraph:
         return self._states[node]
 
     def set_node_state(self, node, state):
-        if state not in (NodeGraph.RUNNING, NodeGraph.ERROR, NodeGraph.DONE):
+        if state not in (
+            NodeGraph.RUNNING,
+            NodeGraph.RUNABLE,
+            NodeGraph.ERROR,
+            NodeGraph.DONE,
+        ):
             raise ValueError("Invalid state: %r" % (state,))
         old_state = self._states[node]
         if state == old_state:
@@ -317,7 +316,8 @@ class NodeGraph:
 
         return cache.are_files_outdated(node.input_files, node.output_files)
 
-    def _check_version_requirements(self, nodes):
+    @classmethod
+    def _collect_requirements(cls, nodes):
         executables = set()
         requirements = set()
         for node in nodes:
@@ -335,17 +335,23 @@ class NodeGraph:
         for executable in executables - requirement_execs:
             requirements.add(versions.Requirement(executable))
 
-        missing_execs = missing_executables(executables | requirement_execs)
-
         def _key_func(reqobj):
             # Sort priority in decreasing order, name in increasing order
             return (-reqobj.priority, reqobj.name)
 
+        return tuple(sorted(requirements, key=_key_func))
+
+    @classmethod
+    def check_version_requirements(cls, requirements, force=False):
+        executables = set(requirement.executable for requirement in requirements)
+        missing_execs = missing_executables(executables - set([None]))
+
         any_errors = False
-        for requirement in sorted(requirements, key=_key_func):
+        log = logging.getLogger(__name__)
+        for requirement in requirements:
             name = requirement.name
             if requirement.executable in missing_execs:
-                self._logger.error(
+                log.error(
                     " [☓] %s not found, but %s is required",
                     name,
                     requirement.checks,
@@ -354,24 +360,22 @@ class NodeGraph:
                 continue
 
             try:
-                version = ".".join(str(value) for value in requirement.version())
+                version = ".".join(str(value) for value in requirement.version(force))
                 if version:
                     name = "%s v%s" % (name, version)
 
                 if requirement.check():
-                    self._logger.info("  [✓] %s ", name)
+                    log.info("  [✓] %s ", name)
                 else:
-                    self._logger.error(
+                    log.error(
                         " [☓] %s found but %s is required", name, requirement.checks
                     )
             except OSError as error:
                 any_errors = True
-                self._logger.error(" [☓] %s: %s", name, error)
+                log.error(" [☓] %s: %s", name, error)
             except versions.VersionRequirementError as error:
                 any_errors = True
-                self._logger.error(
-                    " [☓] %s: %s", name, "\n     ".join(str(error).split("\n"))
-                )
+                log.error(" [☓] %s: %s", name, "\n     ".join(str(error).split("\n")))
 
         return not any_errors
 
