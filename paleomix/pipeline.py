@@ -28,19 +28,18 @@ import os
 import signal
 import sys
 
-
 import paleomix.common.logging
 
 from paleomix.common.text import padded_table
 from paleomix.common.utilities import safe_coerce_to_tuple
 from paleomix.common.versions import VersionRequirementError
 from paleomix.core.workers import (
-    Manager,
     WORKER_FINISHED,
-    WORKER_THREADS,
     WORKER_SHUTDOWN,
+    WORKER_THREADS,
+    Manager,
 )
-from paleomix.node import Node, NodeError
+from paleomix.node import Node, NodeError, NodeMissingFilesError
 from paleomix.nodegraph import FileStatusCache, NodeGraph, NodeGraphError
 
 
@@ -64,6 +63,8 @@ class Pypeline:
         self._temp_root = temp_root
         self._implicit_dependencies = implicit_dependencies
         self._manager = None
+        # Tasks blacklisted from a worker due to (transient) errors
+        self._blacklists = collections.defaultdict(dict)
 
     def run(self, mode="run"):
         if mode not in ("run", "dry_run", "input_files", "output_files", "executables"):
@@ -132,7 +133,12 @@ class Pypeline:
                 if event["event"] == WORKER_THREADS:
                     if not self._interrupted:
                         idle_threads = event["threads"]
+                        blacklist = self._blacklists[worker]
                         for task in sorted(tasks, key=lambda task: task.id):
+                            # Task failed with a (transient?) error
+                            if task in blacklist:
+                                continue
+
                             state = nodegraph.get_node_state(task)
                             if state == nodegraph.RUNABLE:
                                 if idle_threads >= task.threads or event["overcommit"]:
@@ -157,10 +163,23 @@ class Pypeline:
 
                     if event["error"] is None:
                         nodegraph.set_node_state(task, nodegraph.DONE)
-                    else:
-                        nodegraph.set_node_state(task, nodegraph.ERROR)
-                        self._log_task_error(task, event["error"], event["backtrace"])
-                        any_errors = True
+                        continue
+
+                    elif isinstance(event["error"], NodeMissingFilesError):
+                        # Node was unexpectedly missing input files; this is either a
+                        # programming error, a user deleting stuff, or NFS (caches) not
+                        # having been updated, so we try to run it on another worker.
+                        self._blacklists[worker][task] = event
+                        if not all((task in it) for it in self._blacklists.values()):
+                            self._logger.warning("Re-trying %s", task)
+                            nodegraph.set_node_state(task, nodegraph.RUNABLE)
+                            tasks.add(task)
+                            continue
+
+                    # Permanent failure or no more workers to try
+                    nodegraph.set_node_state(task, nodegraph.ERROR)
+                    self._log_task_error(**event)
+                    any_errors = True
 
                 # Worker was shut down, but we can try the tasks on other workers
                 elif event["event"] == WORKER_SHUTDOWN:
@@ -169,6 +188,23 @@ class Pypeline:
                         self._logger.warning("Re-trying %s", task)
                         nodegraph.set_node_state(task, nodegraph.RUNABLE)
                         tasks.add(task)
+
+                    # Clean out list of blacklisted nodes
+                    self._blacklists.pop(event["worker"], None)
+
+                    # Check nodes that can no longer be completed
+                    blacklist = set.intersection(*map(set, self._blacklists.values()))
+                    for task in tasks & blacklist:
+                        # Pick arbitrary error message
+                        for values in self._blacklists.values():
+                            event = values.get(task)
+                            if event is not None:
+                                tasks.pop(event["task"])
+                                nodegraph.set_node_state(task, nodegraph.ERROR)
+                                self._log_task_error(**event)
+                                any_errors = True
+                                break
+
                 else:
                     self._logger.error("Unknown event: %r", event)
 
@@ -179,7 +215,7 @@ class Pypeline:
 
         return 1 if any_errors else 0
 
-    def _log_task_error(self, task, error, backtrace):
+    def _log_task_error(self, task, error, backtrace, *kwargs):
         if not isinstance(error, NodeError):
             error = "Unhandled exception while running {}:".format(task)
 

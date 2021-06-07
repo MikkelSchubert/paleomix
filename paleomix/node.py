@@ -45,6 +45,10 @@ class NodeError(RuntimeError):
         self.path = path
 
 
+class NodeMissingFilesError(NodeError):
+    pass
+
+
 class CmdNodeError(NodeError):
     pass
 
@@ -116,6 +120,15 @@ class Node:
             self._run(temp)
             self._teardown(temp)
             self._remove_temp_dir(temp)
+        except NodeMissingFilesError:
+            try:
+                # The folder is most likely empty, but it is possible to re-use temp
+                # directories for resumable tasks so we cannot delete it outrigth
+                os.rmdir(temp)
+            except OSError:
+                pass
+
+            raise
         except NodeError as error:
             self._write_error_log(temp, error)
             raise NodeError(
@@ -162,8 +175,7 @@ class Node:
         if missing_executables:
             raise NodeError("Executable(s) not found: %s" % (missing_executables,))
 
-        self._check_for_missing_files(self.input_files, "input")
-        self._check_for_missing_files(self.auxiliary_files, "auxiliary")
+        self._check_for_input_files(self.input_files | self.auxiliary_files)
 
     def _run(self, _temp):
         pass
@@ -228,6 +240,14 @@ class Node:
             raise TypeError(bad_nodes)
 
         return nodes
+
+    def _check_for_input_files(self, filenames):
+        missing_files = fileutils.missing_files(filenames)
+        if missing_files:
+            raise NodeMissingFilesError(
+                "Missing input files for command:\n\t- Command: %s\n\t- Files: %s"
+                % (self, "\n\t         ".join(missing_files))
+            )
 
     def _check_for_missing_files(self, filenames, description):
         missing_files = fileutils.missing_files(filenames)
