@@ -497,7 +497,7 @@ def test_requirementobj__version__version_str_not_found():
     )
 
     with pytest.raises(versions.VersionRequirementError):
-        getattr(obj, "version")
+        obj.version()
 
 
 def test_requirementobj__version__command_not_found():
@@ -505,12 +505,10 @@ def test_requirementobj__version__command_not_found():
         call=("xyzabcdefoo",), search=r"v(\d+)\.(\d+)", checks=versions.Any()
     )
 
-    try:
+    with pytest.raises(
+        versions.VersionRequirementError, match="No such file or directory"
+    ):
         obj.version()
-        assert False  # pragma: no coverage
-    except versions.VersionRequirementError as error:
-        # Should include OSError message
-        assert "No such file or directory" in str(error)
 
 
 def test_requirementobj__version__command_not_executable():
@@ -518,12 +516,8 @@ def test_requirementobj__version__command_not_executable():
         call=("./README.rst",), search=r"v(\d+)\.(\d+)", checks=versions.Any()
     )
 
-    try:
+    with pytest.raises(versions.VersionRequirementError, match="[Errno 13]"):
         obj.version()
-        assert False  # pragma: no coverage
-    except versions.VersionRequirementError as error:
-        # Should include OSError message
-        assert "[Errno 13]" in str(error)
 
 
 def test_requirementobj__version__return_code_is_ignored():
@@ -564,11 +558,10 @@ def test_requirementobj__version__outdated_jre__with_or_without_version_str(mess
         call=lambda: message, search=r"v(\d+)\.(\d+)", checks=versions.Any()
     )
 
-    try:
+    with pytest.raises(
+        versions.VersionRequirementError, match="upgrade your version of Java"
+    ):
         obj.version()
-        assert False  # pragma: no coverage
-    except versions.VersionRequirementError as error:
-        assert "upgrade your version of Java" in str(error)
 
 
 ###############################################################################
