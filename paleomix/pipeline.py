@@ -107,7 +107,9 @@ class Pypeline:
         old_handler = signal.signal(signal.SIGINT, self._sigint_handler)
 
         try:
-            return self._run(nodegraph)
+            # Handle setup and teardown of commandline interface
+            with self._manager:
+                return self._run(nodegraph)
         finally:
             signal.signal(signal.SIGINT, old_handler)
             for filename in paleomix.common.logging.get_logfiles():

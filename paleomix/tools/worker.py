@@ -11,10 +11,9 @@ from multiprocessing.connection import Listener, wait, Connection
 
 import paleomix.common.logging
 
-from paleomix.node import NodeError
-from paleomix.nodegraph import NodeGraph
 from paleomix.common.argparse import ArgumentParser
 from paleomix.common.logging import initialize_console_logging
+from paleomix.core.input import CommandLine
 from paleomix.core.workers import (
     MANAGER_HANDSHAKE,
     MANAGER_SHUTDOWN,
@@ -28,12 +27,16 @@ from paleomix.core.workers import (
     _task_wrapper,
     RemoteAdapter,
 )
+from paleomix.node import NodeError
+from paleomix.nodegraph import NodeGraph
+
 
 TERMINATE = object()
 
 
 class Worker:
     def __init__(self, args):
+        self._args = args
         self._running = {}
         self._handles = {}
         self._queue = Queue()
@@ -56,6 +59,9 @@ class Worker:
     def run(self):
         log = logging.getLogger(__name__)
         log.info("Starting worker with %i threads", self._threads)
+        if not self._threads:
+            log.warning("Worker has no threads; press '+' to allocate more.")
+
         with Listener(address=self._address, authkey=self._authkey) as listener:
             log.info("Listening for PALEOMIX tasks at %s:%s", *listener.address)
             # Create json file containing hostname, port, and secret
@@ -66,27 +72,32 @@ class Worker:
                 self._log = RemoteAdapter(name, logger=log)
                 self._log.info("Connection accepted")
 
-                while self._running or not self._interrupted:
-                    handles = [self._conn]
-                    handles.extend(self._handles)
+                with CommandLine() as interface:
+                    while self._running or not self._interrupted:
+                        handles = [self._conn]
+                        handles.extend(self._handles)
+                        handles.extend(interface.handles)
 
-                    for handle in wait(handles):
-                        if isinstance(handle, Connection):
-                            try:
-                                event = handle.recv()
-                            except EOFError:
-                                log.error("Connection to client broke")
+                        for handle in wait(handles):
+                            if isinstance(handle, Connection):
+                                try:
+                                    event = handle.recv()
+                                except EOFError:
+                                    log.error("Connection to client broke")
+                                    return not self._interrupted
+
+                                func = self._commands.get(event["event"], self._unknown)
+                                for event in func(**event):
+                                    if event is TERMINATE or not self._send(event):
+                                        return not self._interrupted
+                            elif handle in interface.handles:
+                                if not self._poll_commandline(interface):
+                                    return not self._interrupted
+                            elif not self._send(self._join(handle)):
                                 return not self._interrupted
 
-                            func = self._commands.get(event["event"], self._unknown)
-                            for event in func(**event):
-                                if event is TERMINATE or not self._send(event):
-                                    return not self._interrupted
-                        elif not self._send(self._join(handle)):
-                            return not self._interrupted
-
-                # Report the termination of any remaining running tasks
-                self._send({"event": WORKER_SHUTDOWN})
+                    # Report the termination of any remaining running tasks
+                    self._send({"event": WORKER_SHUTDOWN})
 
         return not self._interrupted
 
@@ -98,6 +109,21 @@ class Worker:
         except OSError as error:
             self._log.error("Failed to send %r: %s", event, error)
             return False
+
+    def _poll_commandline(self, interface):
+        new_threads = interface.process_key_presses(
+            threads=self._threads,
+            tasks=self._running.values(),
+        )
+
+        if self._threads == new_threads:
+            return True
+
+        self._threads = new_threads
+        # The number of allocated threads should persist between connections
+        self._args.threads = new_threads
+
+        return self._send({"event": WORKER_THREADS, "threads": self._threads})
 
     def _manager_handshake(self, cwd, requirements, **kwargs):
         try:

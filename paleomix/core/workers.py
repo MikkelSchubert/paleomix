@@ -15,6 +15,7 @@ from multiprocessing.connection import Client, wait
 
 import paleomix.common.system
 
+from paleomix.core.input import CommandLine
 from paleomix.nodegraph import NodeGraph
 from paleomix.node import NodeError
 
@@ -44,6 +45,7 @@ class WorkerError(RuntimeError):
 class Manager:
     def __init__(self, threads, requirements, temp_root, auto_connect=True):
         self._local = None
+        self._interface = CommandLine()
         self._workers = []
         self._requirements = requirements
         self._threads = threads
@@ -56,19 +58,19 @@ class Manager:
         if self._workers or self._local:
             raise WorkerError("Manager already started")
 
-        if self._threads > 0:
-            self._local = LocalWorker(self._threads)
-            if not self._local.connect(self._requirements):
-                # The local worker failing is a fatal error since it cannot be fixed
-                # without restarting the entire pipeline
-                return False
-
-            self._workers.append(self._local)
-        elif self._auto_connect:
-            self._log.info("No local task worker; start workers to run tasks!")
-        else:
-            self._log.error("No local task worker and auto-connections disabled!")
+        self._local = LocalWorker(self, self._interface, self._threads)
+        if not self._local.connect(self._requirements):
+            # The local worker failing is a fatal error since it cannot be fixed
+            # without restarting the entire pipeline
             return False
+
+        self._workers.append(self._local)
+
+        if self._threads <= 0:
+            self._log.warning(
+                "Local worker process has no threads assigned; either "
+                "increase allocation with '+' or start worker processes."
+            )
 
         return self._auto_connect_to_workers()
 
@@ -125,7 +127,12 @@ class Manager:
 
     @property
     def idle(self):
-        return all(worker.idle for worker in self._workers)
+        return not any(self.tasks)
+
+    @property
+    def tasks(self):
+        for worker in self._workers:
+            yield from worker.tasks
 
     def _auto_connect_to_workers(self, blocking=False, interval=15.0):
         any_errors = False
@@ -149,6 +156,13 @@ class Manager:
 
         return not any_errors
 
+    def __enter__(self):
+        self._interface.setup()
+        return self
+
+    def __exit__(self, _type, _value, _traceback):
+        self._interface.teardown()
+
 
 class RemoteAdapter(logging.LoggerAdapter):
     def __init__(self, name, logger):
@@ -159,7 +173,9 @@ class RemoteAdapter(logging.LoggerAdapter):
 
 
 class LocalWorker:
-    def __init__(self, threads):
+    def __init__(self, manager, interface, threads):
+        self._manager = manager
+        self._interface = interface
         self._threads = threads
         self._queue = multiprocessing.Queue()
         self._handles = {}
@@ -169,8 +185,8 @@ class LocalWorker:
         self.name = ":builtin:"
 
     @property
-    def idle(self):
-        return not self._running
+    def tasks(self):
+        yield from self._running.values()
 
     @property
     def threads(self):
@@ -182,7 +198,10 @@ class LocalWorker:
 
     @property
     def handles(self):
-        return self._handles.keys()
+        handles = list(self._handles.keys())
+        handles.extend(self._interface.handles)
+
+        return handles
 
     @property
     def status(self):
@@ -216,6 +235,14 @@ class LocalWorker:
         return True
 
     def get(self, handle):
+        if handle in self._interface.handles:
+            self._threads = self._interface.process_key_presses(
+                threads=self._threads,
+                tasks=self._manager.tasks,
+            )
+
+            return ()
+
         proc, task = self._handles.pop(handle)
 
         proc.join()
@@ -234,12 +261,14 @@ class LocalWorker:
             task = self._running.pop(key)
 
         # Signal that the task is done
-        yield {
-            "event": WORKER_FINISHED,
-            "task": task,
-            "error": error,
-            "backtrace": backtrace,
-        }
+        return [
+            {
+                "event": WORKER_FINISHED,
+                "task": task,
+                "error": error,
+                "backtrace": backtrace,
+            }
+        ]
 
     def shutdown(self):
         self._status = TERMINATED
@@ -261,8 +290,8 @@ class RemoteRunner:
         self._log = RemoteAdapter(self.name, logging.getLogger(__name__))
 
     @property
-    def idle(self):
-        return not self._running
+    def tasks(self):
+        yield from self._running.values()
 
     @property
     def threads(self):
