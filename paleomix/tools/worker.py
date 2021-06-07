@@ -78,7 +78,8 @@ class Worker:
                         handles.extend(self._handles)
                         handles.extend(interface.handles)
 
-                        for handle in wait(handles):
+                        # Time-out is needed to be able to break on Ctrl+C
+                        for handle in wait(handles, 5.0):
                             if isinstance(handle, Connection):
                                 try:
                                     event = handle.recv()
