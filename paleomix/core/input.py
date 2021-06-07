@@ -95,11 +95,12 @@ class CommandLine(object):
             elif character in "lL":
                 tasks = list(tasks)
                 if tasks:
-                    self._log.info("Running threads:")
+                    running = sum(task.threads for task in tasks)
+                    self._log.info("Running tasks (%i/%i threads):", running, threads)
                     for idx, task in enumerate(tasks, start=1):
                         self._log.info("  % 2i. %s", idx, task)
                 else:
-                    self._log.info("No running threads")
+                    self._log.info("No running tasks")
             elif character in "hH":
                 self._log.info("Commands:")
                 self._log.info("  Key   Function")

@@ -27,7 +27,7 @@ from paleomix.core.workers import (
     _task_wrapper,
     RemoteAdapter,
 )
-from paleomix.node import NodeError
+from paleomix.node import NodeError, NodeMissingFilesError
 from paleomix.nodegraph import NodeGraph
 
 
@@ -68,9 +68,11 @@ class Worker:
             self._filename = register_worker(*listener.address, self._authkey)
 
             with listener.accept() as self._conn:
-                name = ":".join(map(str, listener.last_accepted))
+                address = listener.last_accepted
+                name = "{}:{}".format(*socket.getnameinfo(address, 0))
+
                 self._log = RemoteAdapter(name, logger=log)
-                self._log.info("Connection accepted")
+                self._log.info("Connection accepted from %s:%i", *address)
 
                 with CommandLine() as interface:
                     while self._running or not self._interrupted:
@@ -184,7 +186,19 @@ class Worker:
             # May return result from different task
             key, error, backtrace = self._queue.get()
             task = self._running.pop(key)
-            self._log.info("Finished task %s", task)
+
+            if error is None:
+                self._log.info("Finished task %s", task)
+            elif isinstance(error, NodeMissingFilesError):
+                self._log.warning("Finished task %s with error %r", task, error)
+                self._log.warning(
+                    "This may be due to differences in the local/remote filesystem or "
+                    "due to file changes not propagating over NFS. If this happens at "
+                    "specific filesystem locations, then make sure that the "
+                    "local/remote filesystem layout/mount points are identical."
+                )
+            else:
+                self._log.error("Finished task %s with error %r", task, error)
 
         # Signal that the task is done
         return {

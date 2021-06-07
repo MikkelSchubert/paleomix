@@ -6,6 +6,7 @@ import os
 import os.path
 import random
 import signal
+import socket
 import sys
 import time
 import traceback
@@ -286,7 +287,7 @@ class RemoteRunner:
         self._secret = secret
         self._running = {}
         self._threads = 0
-        self.name = "{}:{}".format(host, port)
+        self.name = "{}:{}".format(*socket.getnameinfo((host, port), 0))
         self._log = RemoteAdapter(self.name, logging.getLogger(__name__))
 
     @property
