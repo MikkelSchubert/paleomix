@@ -151,7 +151,14 @@ class Node:
         or other steps needed to ready the node for running may be carried out in this
         function. Checks that required input files exist, and raises an NodeError if
         this is not the case."""
-        missing_executables = fileutils.missing_executables(self.executables)
+        executables = []
+        for executable in self.executables:
+            if executable == "%(PYTHON)s":
+                executable = sys.executable
+
+            executables.append(executable)
+
+        missing_executables = fileutils.missing_executables(executables)
         if missing_executables:
             raise NodeError("Executable(s) not found: %s" % (missing_executables,))
 

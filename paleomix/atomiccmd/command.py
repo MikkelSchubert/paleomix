@@ -443,6 +443,8 @@ class AtomicCmd:
                 return fileutils.reroot_path(temp, value.path)
             elif isinstance(value, AuxilleryFile):
                 return value.path
+            elif value == "%(PYTHON)s":
+                return sys.executable
             else:
                 return value.replace("%(TEMP_DIR)s", temp)
 

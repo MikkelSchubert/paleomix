@@ -38,6 +38,7 @@ For example, to check that the Java version is v1.7 or later:
 import operator
 import re
 import subprocess
+import sys
 
 from shlex import quote
 
@@ -66,6 +67,14 @@ class Requirement:
         if not (self.search or isinstance(self.checks, Any)):
             raise ValueError(self.checks)
 
+    @property
+    def call(self):
+        call = self._call
+        if call[0] == "%(PYTHON)s":
+            return (sys.executable,) + call[1:]
+
+        return call
+
     def version(self, force=False):
         """The version determined for the application / library. If the version
         could not be determined, a VersionRequirementError is raised,
@@ -73,7 +82,7 @@ class Requirement:
         """
         if force or self._cached_version is None:
             try:
-                output = self._run(self._call)
+                output = self._run(self.call)
             except OSError as error:
                 self._raise_failure(error)
 
@@ -106,8 +115,9 @@ class Requirement:
         """Returns the executable invoked during version determination; if no
         executable is invoked, None is returned.
         """
-        if not callable(self._call[0]):
-            return self._call[0]
+        call = self.call
+        if isinstance(call[0], str):
+            return call[0]
 
     def check(self, force=False):
         return self.checks(self.version(force))
@@ -156,8 +166,9 @@ class Requirement:
 
     def _describe_call(self):
         """Returns lines describing the current system call, if any."""
-        if not callable(self._call[0]):
-            yield "Command  = %s" % (" ".join(map(quote, self._call)),)
+        call = self.call
+        if isinstance(call[0], str):
+            yield "Command  = %s" % (" ".join(map(quote, call)),)
 
     @staticmethod
     def _run(call):

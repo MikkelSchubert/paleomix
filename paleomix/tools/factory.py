@@ -36,7 +36,7 @@ from paleomix.common.utilities import safe_coerce_to_tuple
 
 
 CHECK = versions.Requirement(
-    sys.executable,
+    "%(PYTHON)s",
     search="",
     checks=versions.Any(),
     name="Python v{}.{}.{}".format(*sys.version_info[:3]),
@@ -49,7 +49,6 @@ def new(args, **kwargs):
     for the specified command, but does not add any arguments. Thus, calling
     new with the argument "cat" produces the equivalent of ["paleomix", "cat"].
     """
-    interpreter = sys.executable
     script = paleomix.main.__file__
     args = safe_coerce_to_tuple(args)
 
@@ -57,7 +56,7 @@ def new(args, **kwargs):
     requirements.append(CHECK)
     kwargs["requirements"] = requirements
 
-    command = AtomicCmd((interpreter, script) + args, **kwargs)
+    command = AtomicCmd(("%(PYTHON)s", script) + args, **kwargs)
     command.add_extra_files([AuxilleryFile(script)])
 
     return command

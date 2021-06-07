@@ -333,7 +333,10 @@ class NodeGraph:
 
         # Create dummy Requirements for any executables used in commands but not in reqs
         for executable in executables - requirement_execs:
-            requirements.add(versions.Requirement(executable))
+            requirement = versions.Requirement(executable)
+            # Handle the presence of "%(PYTHON)s"
+            if requirement.executable not in requirement_execs:
+                requirements.add(requirement)
 
         def _key_func(reqobj):
             # Sort priority in decreasing order, name in increasing order
