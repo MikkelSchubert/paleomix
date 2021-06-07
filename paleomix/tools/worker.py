@@ -220,7 +220,7 @@ class Worker:
 
     def __exit__(self, type, _value, _traceback):
         log = logging.getLogger(__name__)
-        for handle, _key, task, proc in list(self._handles.items()):
+        for handle, (_key, task, proc) in list(self._handles.items()):
             log.warning("Killing %s", task)
             proc.terminate()
             self._join(handle)
