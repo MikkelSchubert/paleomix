@@ -225,7 +225,7 @@ class NodeGraph:
             if new_state == self.RUNNING:
                 self._start_times[node] = time.time()
                 event = "Started"
-            elif old_state == self.OUTDATED:
+            elif old_state in (self.QUEUED, self.OUTDATED):
                 event = "Already finished"
             else:
                 event = "Finished"
