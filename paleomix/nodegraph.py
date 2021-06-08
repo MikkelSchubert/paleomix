@@ -376,7 +376,7 @@ class NodeGraph:
             except OSError as error:
                 any_errors = True
                 log.error(" [☓] %s: %s", name, error)
-            except versions.VersionRequirementError as error:
+            except versions.RequirementError as error:
                 any_errors = True
                 log.error(" [☓] %s: %s", name, "\n     ".join(str(error).split("\n")))
 

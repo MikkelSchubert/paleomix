@@ -22,7 +22,7 @@
 import os
 import sys
 
-from paleomix.common.versions import VersionRequirementError
+from paleomix.common.versions import RequirementError
 from paleomix.nodegraph import NodeGraph, FileStatusCache
 
 
@@ -76,7 +76,7 @@ def required_executables(nodes, file=sys.stdout):
     for requirement in sorted(graph.requirements, key=lambda it: it.name.lower()):
         try:
             version = requirement.version_str()
-        except VersionRequirementError:
+        except RequirementError:
             version = "ERROR"
 
         print(template.format(requirement.name, version, requirement.checks), file=file)

@@ -45,7 +45,7 @@ from shlex import quote
 from paleomix.common.utilities import TotallyOrdered, safe_coerce_to_tuple, try_cast
 
 
-class VersionRequirementError(Exception):
+class RequirementError(Exception):
     """Raised if version requirements are not met, or if a version could not be
     determined for a requirement check.
     """
@@ -77,8 +77,7 @@ class Requirement:
 
     def version(self, force=False):
         """The version determined for the application / library. If the version
-        could not be determined, a VersionRequirementError is raised,
-        describing the cause of the problem.
+        could not be determined, a RequirementError is raised.
         """
         if force or self._cached_version is None:
             try:
@@ -132,7 +131,7 @@ class Requirement:
             self._raise_failure(output)
 
     def _raise_failure(self, output):
-        """Raises a VersionRequirementError when a version check failed; if the
+        """Raises a RequirementError when a version check failed; if the
         output indicates that the JRE is outdated (i.e. the output contains
         "UnsupportedClassVersionError") a special message is givenself.
         """
@@ -162,7 +161,7 @@ class Requirement:
             lines.append("%s Command output %s" % ("-" * 22, "-" * 22))
             lines.append(output)
 
-        raise VersionRequirementError("\n".join(lines))
+        raise RequirementError("\n".join(lines))
 
     def _describe_call(self):
         """Returns lines describing the current system call, if any."""

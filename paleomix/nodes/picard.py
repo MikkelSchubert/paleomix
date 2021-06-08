@@ -91,7 +91,7 @@ class ValidateBAMNode(PicardNode):
             if version_check.version() >= (2, 19, 0):
                 # Useless warning, as we do not build BAI indexes for large genomes
                 command.append("--IGNORE", "REF_SEQ_TOO_LONG_FOR_BAI")
-        except versions.VersionRequirementError:
+        except versions.RequirementError:
             pass  # Ignored here, handled elsewhere
 
 

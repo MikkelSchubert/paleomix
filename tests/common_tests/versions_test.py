@@ -496,7 +496,7 @@ def test_requirementobj__version__version_str_not_found():
         call=call, search=r"v(\d+)\.(\d+)", checks=versions.Any()
     )
 
-    with pytest.raises(versions.VersionRequirementError):
+    with pytest.raises(versions.RequirementError):
         obj.version()
 
 
@@ -505,9 +505,7 @@ def test_requirementobj__version__command_not_found():
         call=("xyzabcdefoo",), search=r"v(\d+)\.(\d+)", checks=versions.Any()
     )
 
-    with pytest.raises(
-        versions.VersionRequirementError, match="No such file or directory"
-    ):
+    with pytest.raises(versions.RequirementError, match="No such file or directory"):
         obj.version()
 
 
@@ -516,7 +514,7 @@ def test_requirementobj__version__command_not_executable():
         call=("./README.rst",), search=r"v(\d+)\.(\d+)", checks=versions.Any()
     )
 
-    with pytest.raises(versions.VersionRequirementError, match="[Errno 13]"):
+    with pytest.raises(versions.RequirementError, match="[Errno 13]"):
         obj.version()
 
 
@@ -558,9 +556,7 @@ def test_requirementobj__version__outdated_jre__with_or_without_version_str(mess
         call=lambda: message, search=r"v(\d+)\.(\d+)", checks=versions.Any()
     )
 
-    with pytest.raises(
-        versions.VersionRequirementError, match="upgrade your version of Java"
-    ):
+    with pytest.raises(versions.RequirementError, match="upgrade your version of Java"):
         obj.version()
 
 
@@ -647,7 +643,7 @@ def test_requirementobj__call__check_fails__jre_outdated():
         name="test#1",
     )
 
-    with pytest.raises(versions.VersionRequirementError, match=expected):
+    with pytest.raises(versions.RequirementError, match=expected):
         obj.check()
 
 
