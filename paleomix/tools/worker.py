@@ -64,6 +64,9 @@ class Worker:
 
         with Listener(address=self._address, authkey=self._authkey) as listener:
             log.info("Listening for PALEOMIX tasks at %s:%s", *listener.address)
+            if listener.address[0] in ("127.0.0.1", "127.0.1.1"):
+                log.warning("Worker is listening for local connections only!")
+
             # Create json file containing hostname, port, and secret
             self._filename = register_worker(*listener.address, self._authkey)
 
