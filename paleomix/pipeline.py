@@ -193,12 +193,15 @@ class Pypeline:
                     self._blacklists.pop(event["worker"], None)
 
                     # Check nodes that can no longer be completed
-                    blacklist = set.intersection(*map(set, self._blacklists.values()))
-                    for task in tasks & blacklist:
-                        # Pick arbitrary error message
-                        for values in self._blacklists.values():
-                            event = values.get(task)
-                            if event is not None:
+                    if self._blacklists:
+                        blacklist = set.intersection(
+                            *map(set, self._blacklists.values())
+                        )
+
+                        for task in tasks & blacklist:
+                            # Pick arbitrary error message
+                            for values in self._blacklists.values():
+                                event = values[task]
                                 tasks.pop(event["task"])
                                 nodegraph.set_node_state(task, nodegraph.ERROR)
                                 self._log_task_error(**event)
