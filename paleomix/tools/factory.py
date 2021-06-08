@@ -25,8 +25,6 @@ Ensures that the version called corresponds to the running version, in case
 multiple versions are present in the users' PATH, or that the current version
 is not available from the users' PATH.
 """
-import sys
-
 import paleomix.main
 
 import paleomix.common.versions as versions
@@ -36,10 +34,10 @@ from paleomix.common.utilities import safe_coerce_to_tuple
 
 
 CHECK = versions.Requirement(
-    "%(PYTHON)s",
-    search="",
+    ["%(PYTHON)s", "--version"],
+    search=r"Python (\d+)\.(\d+)\.(\d+)",
     checks=versions.Any(),
-    name="Python v{}.{}.{}".format(*sys.version_info[:3]),
+    name="Python",
 )
 
 
