@@ -29,10 +29,10 @@ import signal
 import sys
 
 import paleomix.common.logging
+import paleomix.core.reports
 
 from paleomix.common.text import padded_table
 from paleomix.common.utilities import safe_coerce_to_tuple
-from paleomix.common.versions import VersionRequirementError
 from paleomix.core.workers import (
     WORKER_FINISHED,
     WORKER_SHUTDOWN,
@@ -40,7 +40,7 @@ from paleomix.core.workers import (
     Manager,
 )
 from paleomix.node import Node, NodeError, NodeMissingFilesError
-from paleomix.nodegraph import FileStatusCache, NodeGraph, NodeGraphError
+from paleomix.nodegraph import NodeGraph, NodeGraphError
 
 
 class Pypeline:
@@ -74,7 +74,7 @@ class Pypeline:
         elif mode == "run":
             self._logger.info("Starting pipeline ..")
         else:
-            return self._print_files(mode)
+            return self._print_report(mode)
 
         try:
             nodegraph = NodeGraph(
@@ -230,14 +230,17 @@ class Pypeline:
 
         self._logger.error("\n".join(message))
 
-    def _print_files(self, mode):
+    def _print_report(self, mode, file=sys.stdout):
         try:
             if mode == "input_files":
-                return self._print_input_files()
+                self._logger.info("Collecting and printing input files ..")
+                return paleomix.core.reports.input_files(self._nodes, file)
             elif mode == "output_files":
-                return self._print_output_files()
+                self._logger.info("Collecting and printing output files ..")
+                return paleomix.core.reports.output_files(self._nodes, file)
             elif mode == "executables":
-                return self._print_required_executables()
+                self._logger.info("Collecting and printing required executables ..")
+                return paleomix.core.reports.required_executables(self._nodes, file)
             else:
                 raise ValueError(mode)
         except BrokenPipeError:
@@ -245,98 +248,6 @@ class Pypeline:
         except NodeGraphError as error:
             self._logger.error(error)
             return 1
-
-    def _print_input_files(self):
-        self._logger.info("Collecting and printing external input files ..")
-        graph = NodeGraph(
-            nodes=self._nodes,
-            software_checks=False,
-            implicit_dependencies=self._implicit_dependencies,
-        )
-
-        input_files = set()
-        output_files = set()
-        for node in graph.iterflat():
-            for filename in node.input_files:
-                input_files.add(os.path.abspath(filename))
-
-            for filename in node.output_files:
-                output_files.add(os.path.abspath(filename))
-
-        for filename in sorted(input_files - output_files):
-            print(filename)
-
-        return 0
-
-    def _print_output_files(self, file=sys.stdout):
-        self._logger.info("Collecting and printing output files ..")
-        output_files = {}
-        cache = FileStatusCache()
-        graph = NodeGraph(
-            nodes=self._nodes,
-            software_checks=False,
-            implicit_dependencies=self._implicit_dependencies,
-            cache_factory=lambda: cache,
-        )
-
-        def _set_output_file_state(filenames, state):
-            for filename in filenames:
-                output_files[os.path.abspath(filename)] = state
-
-        for node in graph.iterflat():
-            state = graph.get_node_state(node)
-            if state == NodeGraph.DONE:
-                _set_output_file_state(node.output_files, "Ready      ")
-                continue
-
-            # Pending/queued nodes may have outdated output files
-            missing_files = frozenset(cache.missing_files(node.output_files))
-            _set_output_file_state(missing_files, "Missing    ")
-            _set_output_file_state(node.output_files - missing_files, "Outdated   ")
-
-        for filename, state in sorted(output_files.items()):
-            print(state, filename, file=file)
-
-        return 0
-
-    def _print_required_executables(self, file=sys.stdout):
-        self._logger.info("Collecting and printing required executables ..")
-        graph = NodeGraph(
-            nodes=self._nodes,
-            software_checks=False,
-            implicit_dependencies=self._implicit_dependencies,
-        )
-
-        executables = set()
-        requirements = collections.defaultdict(set)
-        requirement_executables = set()
-        for node in graph.iterflat():
-            executables.update(node.executables)
-
-            for requirement in node.requirements:
-                requirements[requirement.name].add(requirement)
-                requirement_executables.add(requirement.executable)
-
-        for executable in executables - requirement_executables:
-            requirements[executable] = set()
-
-        template = "{: <40s} {: <11s} {}"
-        print(template.format("Executable", "Version", "Required version"), file=file)
-
-        for (name, requirements) in sorted(requirements.items()):
-            if not requirements:
-                print(template.format(name, "-", "any version"), file=file)
-                continue
-
-            for requirement in requirements:
-                try:
-                    version = requirement.version_str
-                except VersionRequirementError:
-                    version = "ERROR"
-
-                print(template.format(name, version, requirement.checks), file=file)
-
-        return 0
 
     def _sigint_handler(self, signum, frame):
         """Signal handler; see signal.signal."""
