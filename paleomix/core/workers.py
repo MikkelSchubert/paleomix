@@ -142,10 +142,10 @@ class Manager:
                 for info in collect_workers():
                     self._log.info("Connecting to %s:%s", info["host"], info["port"])
                     worker = RemoteRunner(info["host"], info["port"], info["secret"])
-                    if not worker.connect(self._requirements):
+                    if worker.connect(self._requirements):
+                        self._workers.append(worker)
+                    else:
                         any_errors = True
-
-                    self._workers.append(worker)
 
                 self._next_auto_connect = time.monotonic() + 15
 
