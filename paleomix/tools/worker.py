@@ -229,9 +229,9 @@ class Worker:
             task = self._running.pop(key)
 
             if error is None:
-                self._log.info("Finished task %s", task)
+                self._log.info("Finished %s", task)
             elif isinstance(error, NodeMissingFilesError):
-                self._log.warning("Finished task %s with error %r", task, error)
+                self._log.warning("Finished %s with error %r", task, error)
                 self._log.warning(
                     "This may be due to differences in the local/remote filesystem or "
                     "due to file changes not propagating over NFS. If this happens at "
@@ -239,7 +239,7 @@ class Worker:
                     "local/remote filesystem layout/mount points are identical."
                 )
             else:
-                self._log.error("Finished task %s with error %r", task, error)
+                self._log.error("Finished %s with error %r", task, error)
 
         # Signal that the task is done
         return {
