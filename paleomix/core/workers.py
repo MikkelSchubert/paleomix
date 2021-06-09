@@ -4,7 +4,6 @@ import logging
 import multiprocessing
 import os
 import os.path
-import random
 import signal
 import socket
 import sys
@@ -12,6 +11,7 @@ import time
 import traceback
 import uuid
 
+from multiprocessing import ProcessError
 from multiprocessing.connection import Client, wait
 
 import paleomix.common.system
@@ -19,6 +19,10 @@ import paleomix.common.system
 from paleomix.core.input import CommandLine
 from paleomix.nodegraph import NodeGraph
 from paleomix.node import NodeError
+
+
+# Default location of auto-registation files
+AUTO_REGISTER_DIR = os.path.expanduser("~/.paleomix/remote/")
 
 
 # Protocol overview:
@@ -61,6 +65,7 @@ class Manager:
         self._local = None
         self._interface = CommandLine()
         self._workers = {}
+        self._worker_blacklist = set()
         self._requirements = requirements
         self._threads = threads
         self._temp_root = temp_root
@@ -186,7 +191,10 @@ class Manager:
     def _auto_connect_to_workers(self, interval=15.0):
         any_errors = False
         if self._next_auto_connect <= time.monotonic():
-            for info in collect_workers():
+            for info in self._collect_workers():
+                if info["id"] in self._worker_blacklist:
+                    continue
+
                 self._log.info("Connecting to %s:%s", info["host"], info["port"])
                 worker = RemoteRunner(**info)
                 if worker.id in self._workers:
@@ -194,12 +202,31 @@ class Manager:
                     any_errors = True
                 elif worker.connect(self._requirements):
                     self._workers[worker.id] = worker
+                    # Prevent other pipelines from attempting to connect
+                    os.unlink(info["filename"])
                 else:
+                    self._worker_blacklist.add(info["id"])
                     any_errors = True
 
             self._next_auto_connect = time.monotonic() + interval
 
         return not any_errors
+
+    def _collect_workers(self, root=AUTO_REGISTER_DIR):
+        for filename in os.listdir(root):
+            filename = os.path.join(root, filename)
+
+            if filename.endswith(".json") and os.path.isfile(filename):
+                with open(filename, "rt") as handle:
+                    try:
+                        data = json.load(handle)
+                    except json.decoder.JSONDecodeError:
+                        continue
+
+                data["filename"] = filename
+                data["secret"] = codecs.decode(data["secret"].encode("utf-8"), "base64")
+
+                yield data
 
     def _check_started(self):
         if self._local is None:
@@ -391,7 +418,7 @@ class RemoteRunner:
             self._status = _CONNECTING
 
             return True
-        except OSError as error:
+        except (OSError, ProcessError) as error:
             self._log.error("Failed to connect to %s: %s", self.name, error)
             return False
 
@@ -471,48 +498,6 @@ class RemoteRunner:
     def _check_running(self):
         if self._status not in (_RUNNING, _CONNECTING):
             raise WorkerError("RemoteWorker {} is not running".format(self.name))
-
-
-def register_worker(id, host, port, secret, root="~/.paleomix/remote/"):
-    root = os.path.expanduser(root)
-    os.makedirs(root, exist_ok=True)
-    filename = os.path.join(root, "{}.json".format(uuid.uuid4()))
-
-    fd = os.open(filename, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode=0o700)
-    with open(fd, "w") as handle:
-        json.dump(
-            {
-                "id": id,
-                "host": host,
-                "port": port,
-                "secret": codecs.encode(secret, "base64").decode("utf-8"),
-            },
-            handle,
-        )
-
-    return filename
-
-
-def collect_workers(root="~/.paleomix/remote/"):
-    root = os.path.expanduser(root)
-    for filename in os.listdir(root):
-        filename = os.path.join(root, filename)
-
-        if filename.endswith(".json") and os.path.isfile(filename):
-            with open(filename, "rt") as handle:
-                try:
-                    data = json.load(handle)
-                except json.decoder.JSONDecodeError:
-                    continue
-            os.unlink(filename)
-
-            data["secret"] = codecs.decode(data["secret"].encode("utf-8"), "base64")
-
-            yield data
-
-
-def create_secret():
-    return bytes(random.randint(0, 255) for _ in range(64))
 
 
 def _task_wrapper(queue, task, temp_root):

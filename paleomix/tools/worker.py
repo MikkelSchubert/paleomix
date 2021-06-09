@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf8 -*-
+import codecs
+import json
 import logging
 import os
+import random
 import signal
 import socket
 import sys
 import uuid
 
-from multiprocessing import Process, Queue, cpu_count
+from multiprocessing import ProcessError, Process, Queue, cpu_count
 from multiprocessing.connection import Listener, wait, Connection
 
 import paleomix.common.logging
@@ -16,14 +19,13 @@ from paleomix.common.argparse import ArgumentParser
 from paleomix.common.logging import initialize_console_logging
 from paleomix.core.input import CommandLine
 from paleomix.core.workers import (
+    AUTO_REGISTER_DIR,
     EVT_CAPACITY,
     EVT_HANDSHAKE,
     EVT_HANDSHAKE_RESPONSE,
     EVT_SHUTDOWN,
     EVT_TASK_START,
     EVT_TASK_DONE,
-    create_secret,
-    register_worker,
     _task_wrapper,
     RemoteAdapter,
 )
@@ -64,15 +66,27 @@ class Worker:
         if not self._threads:
             log.warning("Worker has no threads; press '+' to allocate more.")
 
-        with Listener(address=self._address, authkey=self._authkey) as listener:
+        try:
+            listener = Listener(address=self._address, authkey=self._authkey)
+        except OSError as error:
+            log.error("Could not listen on '%s:%s': %s", *self._address, error)
+            return False
+
+        with listener:
             log.info("Listening for PALEOMIX tasks at %s:%s", *listener.address)
             if listener.address[0] in ("127.0.0.1", "127.0.1.1"):
                 log.warning("Worker is listening for local connections only!")
 
             # Create json file containing hostname, port, and secret
-            self._filename = register_worker(self._id, *listener.address, self._authkey)
+            self._filename = self._register(AUTO_REGISTER_DIR, listener.address)
 
-            with listener.accept() as self._conn:
+            try:
+                self._conn = listener.accept()
+            except (OSError, ProcessError) as error:
+                log.error("Connection attempt rejected: %s", error)
+                return not self._interrupted
+
+            with self._conn:
                 address = listener.last_accepted
                 name = "{}:{}".format(socket.getnameinfo(address, 0)[0], address[1])
 
@@ -111,6 +125,25 @@ class Worker:
     @property
     def tasks(self):
         yield from self._running.values()
+
+    def _register(self, root, address):
+        filename = os.path.join(root, "{}.json".format(uuid.uuid4()))
+        host, port = address
+
+        os.makedirs(root, exist_ok=True)
+        fd = os.open(filename, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode=0o700)
+        with open(fd, "w") as handle:
+            json.dump(
+                {
+                    "id": self._id,
+                    "host": host,
+                    "port": port,
+                    "secret": codecs.encode(self._authkey, "base64").decode("utf-8"),
+                },
+                handle,
+            )
+
+        return filename
 
     def _send(self, event):
         self._log.debug("Sending %r", event)
@@ -309,7 +342,7 @@ def main(argv):
     initialize_console_logging(log_level=args.log_level)
 
     while True:
-        args.authkey = create_secret()
+        args.authkey = bytes(random.randint(0, 255) for _ in range(64))
 
         with Worker(args) as worker:
             if not worker.run() or args.once:
