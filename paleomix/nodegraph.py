@@ -380,6 +380,12 @@ class NodeGraph:
                 any_errors = True
                 log.error(" [☓] %s: %s", name, "\n     ".join(str(error).split("\n")))
 
+        if any_errors:
+            log.error(
+                "Please refer to the PALEOMIX installation instructions at\n"
+                "  https://paleomix.readthedocs.io/en/stable/"
+            )
+
         return not any_errors
 
     def _check_file_dependencies(self, nodes, max_errors=10):

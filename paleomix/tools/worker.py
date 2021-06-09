@@ -5,6 +5,7 @@ import os
 import signal
 import socket
 import sys
+import uuid
 
 from multiprocessing import Process, Queue, cpu_count
 from multiprocessing.connection import Listener, wait, Connection
@@ -15,13 +16,12 @@ from paleomix.common.argparse import ArgumentParser
 from paleomix.common.logging import initialize_console_logging
 from paleomix.core.input import CommandLine
 from paleomix.core.workers import (
-    MANAGER_HANDSHAKE,
-    MANAGER_SHUTDOWN,
-    MANAGER_START,
-    WORKER_FINISHED,
-    WORKER_HANDSHAKE,
-    WORKER_SHUTDOWN,
-    WORKER_THREADS,
+    EVT_CAPACITY,
+    EVT_HANDSHAKE,
+    EVT_HANDSHAKE_RESPONSE,
+    EVT_SHUTDOWN,
+    EVT_TASK_START,
+    EVT_TASK_DONE,
     create_secret,
     register_worker,
     _task_wrapper,
@@ -37,6 +37,7 @@ TERMINATE = object()
 class Worker:
     def __init__(self, args):
         self._args = args
+        self._id = args.id
         self._running = {}
         self._handles = {}
         self._queue = Queue()
@@ -49,9 +50,9 @@ class Worker:
         self._conn = None
 
         self._commands = {
-            MANAGER_HANDSHAKE: self._manager_handshake,
-            MANAGER_SHUTDOWN: self._manager_shutdown,
-            MANAGER_START: self._manager_start,
+            EVT_HANDSHAKE: self._manager_handshake,
+            EVT_SHUTDOWN: self._manager_shutdown,
+            EVT_TASK_START: self._manager_start,
         }
 
         signal.signal(signal.SIGINT, self._sigint_handler)
@@ -68,7 +69,7 @@ class Worker:
                 log.warning("Worker is listening for local connections only!")
 
             # Create json file containing hostname, port, and secret
-            self._filename = register_worker(*listener.address, self._authkey)
+            self._filename = register_worker(self._id, *listener.address, self._authkey)
 
             with listener.accept() as self._conn:
                 address = listener.last_accepted
@@ -102,8 +103,7 @@ class Worker:
                             elif not self._send(self._join(handle)):
                                 return not self._interrupted
 
-                    # Report the termination of any remaining running tasks
-                    self._send({"event": WORKER_SHUTDOWN})
+                    self._send({"event": EVT_SHUTDOWN})
 
         return not self._interrupted
 
@@ -129,7 +129,7 @@ class Worker:
         # The number of allocated threads should persist between connections
         self._args.threads = new_threads
 
-        return self._send({"event": WORKER_THREADS, "threads": self._threads})
+        return self._send({"event": EVT_CAPACITY, "threads": self._threads})
 
     def _manager_handshake(self, cwd, requirements, **kwargs):
         try:
@@ -137,15 +137,15 @@ class Worker:
             os.chdir(cwd)
         except OSError as error:
             self._log.error("Could not change CWD: %r", error)
-            return [{"event": WORKER_HANDSHAKE, "error": error}]
+            return [{"event": EVT_HANDSHAKE_RESPONSE, "error": error}]
 
         self._log.info("Checking software requirements:")
         if not NodeGraph.check_version_requirements(requirements, force=True):
-            return [{"event": WORKER_HANDSHAKE, "error": "Requirements not met"}]
+            return [{"event": EVT_HANDSHAKE_RESPONSE, "error": "Requirements not met"}]
 
         return [
-            {"event": WORKER_HANDSHAKE, "error": None},
-            {"event": WORKER_THREADS, "threads": self._threads},
+            {"event": EVT_HANDSHAKE_RESPONSE, "error": None},
+            {"event": EVT_CAPACITY, "threads": self._threads},
         ]
 
     def _manager_shutdown(self, **kwargs):
@@ -153,20 +153,20 @@ class Worker:
 
         return [TERMINATE]
 
-    def _manager_start(self, key, task, temp_root, **kwargs):
+    def _manager_start(self, task, temp_root, **kwargs):
         self._log.info("Starting %s using %i threads", task, task.threads)
         if self._temp_root:
             temp_root = self._temp_root
 
         proc = Process(
             target=_task_wrapper,
-            args=(self._queue, key, task, temp_root),
+            args=(self._queue, task, temp_root),
             daemon=True,
         )
         proc.start()
 
-        self._handles[proc.sentinel] = (key, task, proc)
-        self._running[key] = task
+        self._handles[proc.sentinel] = (task.id, task, proc)
+        self._running[task.id] = task
 
         threads = sum(task.threads for task in self._running.values())
         if threads > self._threads:
@@ -205,8 +205,8 @@ class Worker:
 
         # Signal that the task is done
         return {
-            "event": WORKER_FINISHED,
-            "key": key,
+            "event": EVT_TASK_DONE,
+            "task_id": key,
             "error": error,
             "backtrace": backtrace,
         }
@@ -220,7 +220,7 @@ class Worker:
         if self._conn and not self._interrupted:
             self._interrupted = True
             self._threads = 0
-            self._send({"event": WORKER_THREADS, "threads": self._threads})
+            self._send({"event": EVT_CAPACITY, "threads": self._threads})
 
             log.warning(
                 "Keyboard interrupt detected, waiting for running tasks to complete. "
@@ -299,6 +299,8 @@ def parse_args(argv):
 
 def main(argv):
     args = parse_args(argv)
+    args.id = str(uuid.uuid4())
+
     initialize_console_logging(log_level=args.log_level)
 
     while True:
