@@ -347,7 +347,7 @@ class RemoteRunner:
         self._secret = secret
         self._running = {}
         self._threads = 0
-        self.name = "{}:{}".format(*socket.getnameinfo((host, port), 0))
+        self.name = "{}:{}".format(socket.getnameinfo((host, port), 0)[0], port)
         self._log = RemoteAdapter(self.name, logging.getLogger(__name__))
 
         self._event_handlers = {

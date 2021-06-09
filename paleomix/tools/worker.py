@@ -74,7 +74,7 @@ class Worker:
 
             with listener.accept() as self._conn:
                 address = listener.last_accepted
-                name = "{}:{}".format(*socket.getnameinfo(address, 0))
+                name = "{}:{}".format(socket.getnameinfo(address, 0)[0], address[1])
 
                 self._log = RemoteAdapter(name, logger=log)
                 self._log.info("Connection accepted from %s:%i", *address)
