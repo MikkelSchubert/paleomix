@@ -190,7 +190,7 @@ class Pypeline:
             # error, a user deleting stuff, or NFS (caches) not having been updated, so
             # we try to run it on another worker, if any are available.
             task_info["blacklisted_from"][worker] = event
-            if self._manager.workers - task_info["blacklisted_from"]:
+            if self._manager.workers.keys() - task_info["blacklisted_from"]:
                 self._logger.warning("Re-trying %s", task)
                 nodegraph.set_node_state(task, nodegraph.RUNABLE)
                 tasks[task] = task_info
@@ -209,7 +209,7 @@ class Pypeline:
         self._logger.error("PALEOMIX worker %s terminated", worker_name)
 
         any_errors = False
-        workers = self._manager.workers
+        workers = self._manager.workers.keys()
         for task, task_info in tuple(tasks.items()):
             if task_info["running_on"] == worker:
                 self._logger.warning("Re-trying %s", task)

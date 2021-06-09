@@ -81,7 +81,7 @@ class CommandLine(object):
 
         return [sys.stdin]
 
-    def process_key_presses(self, threads=1, tasks=()):
+    def process_key_presses(self, threads=1, workers=()):
         if not self._tty_settings:
             return threads
 
@@ -93,14 +93,7 @@ class CommandLine(object):
             elif character == "-":
                 threads = max(0, threads - 1)
             elif character in "lL":
-                tasks = list(tasks)
-                if tasks:
-                    running = sum(task.threads for task in tasks)
-                    self._log.info("Running tasks (%i/%i threads):", running, threads)
-                    for idx, task in enumerate(tasks, start=1):
-                        self._log.info("  % 2i. %s", idx, task)
-                else:
-                    self._log.info("No running tasks")
+                self._log_tasks(workers)
             elif character in "hH":
                 self._log.info("Commands:")
                 self._log.info("  Key   Function")
@@ -115,3 +108,38 @@ class CommandLine(object):
     @classmethod
     def poll_stdin(cls):
         return select.select([sys.stdin], [], [], 0) == ([sys.stdin], [], [])
+
+    def _log_tasks(self, workers):
+        total_threads = 0
+        total_workers = 0
+        for worker in workers:
+            tasks = sorted(worker.tasks, key=lambda it: it.id)
+            threads = sum(task.threads for task in tasks)
+
+            if tasks:
+                self._log.info(
+                    "Running %i tasks on %s (using %i/%i threads):",
+                    len(tasks),
+                    worker.name,
+                    threads,
+                    worker.threads,
+                )
+
+                for idx, task in enumerate(tasks, start=1):
+                    self._log.info("  % 2i. %s", idx, task)
+            else:
+                self._log.info(
+                    "No tasks running on %s (using 0/%i threads)",
+                    worker.name,
+                    worker.threads,
+                )
+
+            total_threads += threads
+            total_workers += 1
+
+        if total_workers > 1:
+            self._log.info(
+                "A total of %i threads are used across %i workers",
+                total_threads,
+                total_workers,
+            )

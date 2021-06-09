@@ -69,7 +69,7 @@ class Manager:
 
     @property
     def workers(self):
-        return self._workers.keys()
+        return dict(self._workers)
 
     @property
     def tasks(self):
@@ -233,7 +233,7 @@ class LocalWorker:
         self._running = {}
         self._status = _UNINITIALIZED
         self._log = logging.getLogger(__name__)
-        self.name = ":builtin:"
+        self.name = "localhost"
         self.events = []
 
     @property
@@ -290,7 +290,7 @@ class LocalWorker:
         if handle in self._interface.handles:
             self._threads = self._interface.process_key_presses(
                 threads=self._threads,
-                tasks=self._manager.tasks,
+                workers=self._manager.workers.values(),
             )
 
             return ()

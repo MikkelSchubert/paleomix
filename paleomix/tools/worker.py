@@ -48,6 +48,7 @@ class Worker:
         self._filename = None
         self._interrupted = False
         self._conn = None
+        self.name = "worker"
 
         self._commands = {
             EVT_HANDSHAKE: self._manager_handshake,
@@ -107,6 +108,10 @@ class Worker:
 
         return not self._interrupted
 
+    @property
+    def tasks(self):
+        yield from self._running.values()
+
     def _send(self, event):
         self._log.debug("Sending %r", event)
         try:
@@ -119,7 +124,7 @@ class Worker:
     def _poll_commandline(self, interface):
         new_threads = interface.process_key_presses(
             threads=self._threads,
-            tasks=self._running.values(),
+            workers=[self],
         )
 
         if self._threads == new_threads:
