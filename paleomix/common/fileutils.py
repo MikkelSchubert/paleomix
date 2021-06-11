@@ -27,34 +27,11 @@ import uuid
 import errno
 import shutil
 
+from os import fspath
 from pathlib import Path
 from typing import Any, Callable, IO, Iterable, List, Optional, Tuple, Union
 
 from .utilities import safe_coerce_to_tuple
-
-
-try:
-    import pathlib2
-
-    # FIXME: pathlib2.PosixPath is used by pytest for py3.5
-    PathClasses = (Path, pathlib2.PosixPath)
-except ImportError:
-    PathClasses = (Path,)
-
-
-try:
-    fspath = os.fspath
-except AttributeError:
-    # Backwards compatibility with Python3.5
-    def fspath(value):
-        if isinstance(value, (str, bytes)):
-            return value
-        elif isinstance(value, PathClasses):
-            return str(value)
-
-        raise TypeError(
-            "expected str/bytes/Path/PosixPath, not {}".format(type(value).__name__)
-        )
 
 
 def add_postfix(filename: Union[str, Path], postfix: str) -> str:

@@ -25,9 +25,9 @@ import sys
 
 from setuptools import setup, find_packages
 
-if sys.version_info < (3, 5):
-    sys.stderr.write("FATAL ERROR: ")
-    sys.stderr.write("PALEOMIX requires at least Python 3.5, but setup.py ")
+if sys.version_info < (3, 7):
+    sys.stderr.write("FATAL ERROR:\n")
+    sys.stderr.write("PALEOMIX requires at least Python 3.7, but setup.py\n")
     sys.stderr.write("was run using Python %s.%s!\n" % sys.version_info[:2])
     sys.exit(1)
 
@@ -62,7 +62,9 @@ setup(
         "Topic :: Scientific/Engineering :: Bio-Informatics",
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 3 :: Only",
-        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
     ],
     keywords="pipeline bioinformatics hts phylogeny bam",
     packages=find_packages(exclude=["misc", "tests"]),
