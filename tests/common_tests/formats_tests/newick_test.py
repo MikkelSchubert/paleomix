@@ -23,12 +23,7 @@
 from typing import Any
 
 import pytest
-from paleomix.common.formats.newick import (
-    GraphError,
-    Newick,
-    NewickError,
-    NewickParseError,
-)
+from paleomix.common.formats.newick import Newick, NewickError, NewickParseError
 
 ###############################################################################
 ###############################################################################
@@ -222,7 +217,7 @@ _INVALID_BRANCH_LENGTHS = (
 @pytest.mark.parametrize("newick", _INVALID_BRANCH_LENGTHS)
 def test_newick__reroot_on_midpoint__invalid_branch_lengths(newick: str):
     source = Newick.from_string(newick)
-    with pytest.raises(GraphError):
+    with pytest.raises(NewickError):
         source.reroot_on_midpoint()
 
 
