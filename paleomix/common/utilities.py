@@ -22,42 +22,57 @@
 #
 import copy
 import itertools
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    FrozenSet,
+    Hashable,
+    Iterable,
+    Iterator,
+    List,
+    Sequence,
+    Tuple,
+    TypeVar,
+    Union,
+    overload,
+)
+
+T = TypeVar("T")
 
 
-def _safe_coerce(cls):
-    def _do_safe_coerce(value):
-        if isinstance(value, (str, dict)):
-            return cls((value,))
+def safe_coerce_to_tuple(value: Any) -> Tuple[Any, ...]:
+    """Convert value to a tuple, unless it is a string or a non-sequence, in which case
+    it is return as a single-element tuple."""
+    if isinstance(value, str):
+        return (value,)
 
-        try:
-            return cls(value)
-        except TypeError:
-            return cls((value,))
-
-    _do_safe_coerce.__doc__ = """Takes a value which be a single object, or an an iterable
-        and returns the content wrapped in a {0}. In the case of strings,
-        and dictionaries the original string object is returned in a {0},
-        and not as a {0} of chars. A TypeError is raised if this is not
-        possible (e.g. dict in frozenset).""".format(
-        cls.__name__
-    )
-    _do_safe_coerce.__name__ = "safe_coerce_to_{0}".format(cls.__name__)
-
-    return _do_safe_coerce
+    try:
+        return tuple(value)
+    except TypeError:
+        return (value,)
 
 
-safe_coerce_to_tuple = _safe_coerce(tuple)
-safe_coerce_to_frozenset = _safe_coerce(frozenset)
+def safe_coerce_to_frozenset(value: Any) -> FrozenSet[Any]:
+    """Convert value to a tuple, unless it is a string or a non-sequence, in which case
+    it is return as a single-element tuple."""
+    if isinstance(value, str):
+        return frozenset((value,))
+
+    try:
+        return frozenset(value)
+    except TypeError:
+        return frozenset((value,))
 
 
-def try_cast(value, cast_to):
+def try_cast(value: Any, cast_to: type) -> Any:
     try:
         return cast_to(value)
     except (ValueError, TypeError):
         return value
 
 
-def set_in(dictionary, keys, value):
+def set_in(dictionary: Dict[Any, Any], keys: Iterable[Hashable], value: Any):
     """Traverses a set of nested dictionaries using the given keys,
     and assigns the specified value to the inner-most
     dictionary (obtained from the second-to-last key), using
@@ -81,7 +96,11 @@ def set_in(dictionary, keys, value):
     dictionary[keys[-1]] = value
 
 
-def get_in(dictionary, keys, default=None):
+def get_in(
+    dictionary: Dict[Any, Any],
+    keys: Iterable[Hashable],
+    default: Any = None,
+) -> Any:
     """Traverses a set of nested dictionaries using the keys in
     kws, and returns the value assigned to the final keyword
     in the innermost dictionary. Calling get_in(d, [X, Y])
@@ -100,11 +119,13 @@ def get_in(dictionary, keys, default=None):
     return dictionary.get(keys[-1], default)
 
 
-def split_before(iterable, pred):
+def split_before(
+    iterable: Iterable[Any], pred: Callable[[Any], bool]
+) -> Iterator[List[Any]]:
     """Takes a sequence and splits it before every value where pred(v) is true.
     Thus split_before(range(10), key = lambda x: x % 2 == 0) would return the
     sequence [[1], [2,3], [4,5], [6,7], [7,8], [9]]"""
-    items = []
+    items = []  # type: List[Any]
     for value in iterable:
         if pred(value) and items:
             yield items
@@ -116,17 +137,20 @@ def split_before(iterable, pred):
 
 
 # Copied from the Python 'itertools' module documentation
-def grouper(size, iterable, fillvalue=None):
+def grouper(size: int, iterable: Iterable[Any], fillvalue: Any = None):
     "grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"
     args = [iter(iterable)] * size
     return itertools.zip_longest(fillvalue=fillvalue, *args)
 
 
-def group_by_pred(pred, iterable):
+def group_by_pred(
+    pred: Callable[[Any], bool], iterable: Iterable[Any]
+) -> Tuple[List[Any], List[Any]]:
     """Splits items in a sequence into two lists, one containing
     items matching the predicate, and another containing those that
     do not."""
-    is_true, is_false = [], []
+    is_true = []  # type: List[Any]
+    is_false = []  # type: List[Any]
     for item in iterable:
         if pred(item):
             is_true.append(item)
@@ -136,12 +160,15 @@ def group_by_pred(pred, iterable):
     return is_true, is_false
 
 
-def fragment(size, lstlike):
+def fragment(size: int, lstlike):
     """Faster alternative to grouper for lists/strings."""
     return (lstlike[i : i + size] for i in range(0, len(lstlike), size))
 
 
-def cumsum(lst, initial=0):
+def cumsum(
+    lst: Iterable[Union[int, float]],
+    initial: Union[int, float] = 0,
+) -> Union[int, float]:
     """Yields the cummulative sums of the values in a
     iterable, starting with the specified initial value."""
     for item in lst:
@@ -149,13 +176,13 @@ def cumsum(lst, initial=0):
         yield initial
 
 
-def fill_dict(destination, source):
+def fill_dict(destination: Dict[Any, Any], source: Dict[Any, Any]) -> Dict[Any, Any]:
     """Returns a copy of 'destination' after setting missing key-
     pairs with copies of those of 'source' recursively."""
     if not isinstance(destination, dict) or not isinstance(source, dict):
         raise TypeError("Non-dictionary parameters in 'fill_dict'")
 
-    def _fill_dict(cur_dest, cur_src):
+    def _fill_dict(cur_dest: Dict[Any, Any], cur_src: Dict[Any, Any]) -> Dict[Any, Any]:
         for key in cur_src:
             if isinstance(cur_src[key], dict) and isinstance(cur_dest.get(key), dict):
                 _fill_dict(cur_dest[key], cur_src[key])
@@ -171,15 +198,15 @@ class Immutable:
     the init function, cannot be changed afterwards; note that this does not
     prevent changes to the member variables themselves (if not immutable)."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any):
         object.__init__(self)
         for (key, value) in kwargs.items():
             object.__setattr__(self, key, value)
 
-    def __setattr__(self, _name, _value):
+    def __setattr__(self, _name: str, _value: Any) -> None:
         raise NotImplementedError("Object is immutable")
 
-    def __delattr__(self, _name):
+    def __delattr__(self, _name: str) -> None:
         raise NotImplementedError("Object is immutable")
 
 
@@ -193,34 +220,30 @@ class TotallyOrdered:
     http://en.wikipedia.org/wiki/Total_order
     """
 
-    def __lt__(self, other):
+    def __lt__(self, other: Any) -> bool:
         raise NotImplementedError("__lt__ must be implemented!")
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, type(self)):
             return NotImplemented
         return not ((self < other) or (other < self))
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         if not isinstance(other, type(self)):
             return NotImplemented
         return not (self == other)
 
-    def __le__(self, other):
+    def __le__(self, other: Any) -> bool:
         if not isinstance(other, type(self)):
             return NotImplemented
         return not (other < self)
 
-    def __ge__(self, other):
+    def __ge__(self, other: Any) -> bool:
         if not isinstance(other, type(self)):
             return NotImplemented
         return not (self < other)
 
-    def __gt__(self, other):
+    def __gt__(self, other: Any) -> bool:
         if not isinstance(other, type(self)):
             return NotImplemented
         return other < self
-
-    # Shut up warning; if hashable, then the subclass will have
-    # to implement the __hash__ member function.
-    __hash__ = None

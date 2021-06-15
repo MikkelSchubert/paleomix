@@ -21,18 +21,14 @@
 # SOFTWARE.
 #
 import itertools
-import re
+from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 
 
 class TableError(RuntimeError):
     pass
 
 
-_MIN_PADDING = 4
-_WHITESPACE_OR_EMPTY = re.compile(r"\s|^$")
-
-
-def padded_table(table, min_padding=_MIN_PADDING):
+def padded_table(table: Iterable[Union[str, List[str]]], min_padding: int = 4):
     """Takes a sequence of iterables, each of which represents a row in a
     table. Values are converted to string, and padded with whitespace such that
     each column is separated from its adjacent columns by at least 4 spaces.
@@ -42,8 +38,8 @@ def padded_table(table, min_padding=_MIN_PADDING):
     that these lines should be whitespace only, or start with a '#' if the
     resulting table is to be readable with 'parse_padded_table'.
     """
-    str_rows = []
-    max_sizes = []
+    str_rows = []  # type: List[Union[str, List[str]]]
+    max_sizes = []  # type: List[int]
     for row in table:
         if not isinstance(row, str):
             row = list(map(str, row))
@@ -63,13 +59,14 @@ def padded_table(table, min_padding=_MIN_PADDING):
         yield row
 
 
-def parse_padded_table(lines, header=None):
+def parse_padded_table(lines: Iterable[str], header: Optional[List[str]] = None):
     """Parses a padded table generated using 'padded_table', or any table which
     consists of a fixed number of columns seperated by whitespace, with no
     whitespace in the cells. Empty lines and lines starting with '#' (comments)
     are ignored. Each row is returned as a dictionary, using the values found
     in the first row as keys.
     """
+    nheader = -1
     for line in lines:
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
@@ -89,16 +86,14 @@ def parse_padded_table(lines, header=None):
         yield dict(zip(header, fields))
 
 
-def parse_lines(lines, parser):
+def parse_lines(lines: Iterable[str], parser: Callable[[str, int], Any]):
     """Parses a set of lines using the supplied callable:
         lambda (line, length): ...
 
     Supports the parser functions available in 'pysam': asGTF, asBED, etc.
     """
     if not callable(parser):
-        raise TypeError(
-            "'parser' must be a callable, not %r" % parser.__class__.__name__
-        )
+        raise TypeError("'parser' must be a callable, not %r" % (parser,))
 
     for line in lines:
         stripped = line.lstrip()
@@ -107,11 +102,11 @@ def parse_lines(lines, parser):
             yield parser(stripped, len(stripped))
 
 
-def parse_lines_by_contig(lines, parser):
+def parse_lines_by_contig(lines: Iterable[str], parser: Callable[[str, int], Any]):
     """Reads the lines of a text file, parsing each line with the specified
     parser, and aggregating results by the 'contig' property of reach record.
     """
-    table = {}
+    table = {}  # type: Dict[str, List[Any]]
     for record in parse_lines(lines, parser):
         try:
             table[record.contig].append(record)

@@ -21,9 +21,23 @@
 # SOFTWARE.
 #
 import re
+from typing import (
+    Any,
+    Dict,
+    FrozenSet,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    Union,
+)
 
-from paleomix.common.utilities import safe_coerce_to_tuple, Immutable, TotallyOrdered
-from paleomix.common.formats._graph import GraphError, _Graph
+from paleomix.common.formats._graph import Graph, GraphError
+from paleomix.common.utilities import Immutable, TotallyOrdered
+
+NodeID = Optional[int]
+NodeName = Optional[str]
 
 
 class NewickError(GraphError):
@@ -51,23 +65,33 @@ class Newick(TotallyOrdered, Immutable):
     into strings when the Newick string is generated. However, additional
     contraints apply when unrooting/rerooting trees (see below)."""
 
-    def __init__(self, name=None, length=None, children=None):
-        """See class documentation for constraints."""
+    __slots__ = ["name", "length", "children", "_hash", "_weight"]
+    name: Optional[str]
+    length: Optional[Union[float, str]]
+    children: Tuple["Newick", ...]
+    _hash: int
+    _weight: int
 
+    def __init__(
+        self,
+        name: Optional[str] = None,
+        length: Optional[Union[str, float]] = None,
+        children: Iterable["Newick"] = (),
+    ):
+        children = tuple(children)
         name = name or None
         length = length or None
-        children = tuple(children or ())
-        nw_hash = hash((name, length, children))
+
         Immutable.__init__(
-            self, name=name, length=length, children=children, _hash=nw_hash
+            self,
+            name=name,
+            length=length,
+            children=children,
+            _hash=hash((name, length, children)),
         )
 
         if not (self.children or self.name or self.length):
             raise NewickError("Leaf nodes MUST have either a name or a length")
-
-        # Ensure that these values are hashable
-        hash(self.name)
-        hash(self.length)
 
         weight = 0
         for child in self.children:
@@ -81,7 +105,7 @@ class Newick(TotallyOrdered, Immutable):
         """Returns true if the node is a leaf (has no children)."""
         return not self.children
 
-    def get_leaf_nodes(self):
+    def get_leaf_nodes(self) -> Iterator["Newick"]:
         """Returns iterable for leaf-nodes accessible from this node."""
         if not self.is_leaf:
             for child in self.children:
@@ -94,7 +118,7 @@ class Newick(TotallyOrdered, Immutable):
         for node in self.get_leaf_nodes():
             yield node.name
 
-    def reroot_on_taxa(self, taxa):
+    def reroot_on_taxa(self, taxa: Iterable[str]) -> "Newick":
         """Returns the Newick tree from this node, but rooted on the midpoint
         of the branch leading to one or more taxa. Note that the taxa are not
         required to form a clade. If the taxa do not form a monophyletic clade,
@@ -120,7 +144,7 @@ class Newick(TotallyOrdered, Immutable):
 
         return _NewickGraph(self).reroot_on_midpoint()
 
-    def add_support(self, bootstraps, fmt="{Support}"):
+    def add_support(self, bootstraps: Iterable["Newick"], fmt: str = "{Support}"):
         """Adds support values to the current tree, based on a set of trees containing
         the same taxa. It is assumed that the support trees represent unrooted or
         arbitarily rooted trees, and no weight is given to the rooted topology of these
@@ -137,7 +161,7 @@ class Newick(TotallyOrdered, Immutable):
         For example, typical percentage support-values can be realized by setting 'fmt'
         to the value "{Percentage:.0f}" to produce integer values.
         """
-        clade_counts = {}
+        clade_counts = {}  # type: Dict[FrozenSet[Optional[str]], int]
         leaf_names_lst = list(self.get_leaf_names())
         leaf_names = frozenset(leaf_names_lst)
         if len(leaf_names) != len(leaf_names_lst):
@@ -145,8 +169,9 @@ class Newick(TotallyOrdered, Immutable):
                 "Cannot add support values to trees with duplicate leaf names"
             )
 
-        bootstraps = safe_coerce_to_tuple(bootstraps)
+        n_bootstraps = 0
         for support_tree in bootstraps:
+            n_bootstraps += 1
             support_tree_names = frozenset(support_tree.get_leaf_names())
             if leaf_names != support_tree_names:
                 raise NewickError(
@@ -157,10 +182,10 @@ class Newick(TotallyOrdered, Immutable):
             for clade in support_graph.get_clade_names():
                 clade_counts[clade] = clade_counts.get(clade, 0) + 1
 
-        return self._add_support(self, len(bootstraps), clade_counts, fmt)
+        return self._add_support(self, n_bootstraps, clade_counts, fmt)
 
     @classmethod
-    def from_string(cls, string):
+    def from_string(cls, string: str) -> "Newick":
         """Parses a Newick string and returns a representation of the tree.
         See e.g. http://en.wikipedia.org/wiki/Newick_format
 
@@ -178,7 +203,7 @@ class Newick(TotallyOrdered, Immutable):
 
         return top_node
 
-    def __lt__(self, other):
+    def __lt__(self, other: Any):
         """See TotallyOrdered"""
         if not isinstance(other, Newick):
             return NotImplemented
@@ -200,7 +225,7 @@ class Newick(TotallyOrdered, Immutable):
         return "%s;" % (self._to_str(),)
 
     def _to_str(self):
-        fields = []
+        fields = []  # type: List[str]
         if self.children:
             fields.append("(")
             for child in self.children:
@@ -215,14 +240,20 @@ class Newick(TotallyOrdered, Immutable):
             fields.append(str(self.length))
         return "".join(fields)
 
-    def _add_support(self, node, total, clade_counts, fmt):
+    def _add_support(
+        self,
+        node: "Newick",
+        total: int,
+        clade_counts: Dict[FrozenSet[Optional[str]], int],
+        fmt: str,
+    ) -> "Newick":
         """Recursively annotates a subtree with support values,
         excepting leaf nodes (where the name is preserved) and
         the root node (where the name is cleared)."""
         if node.is_leaf:
             return node
 
-        clade = frozenset(leaf.name for leaf in node.get_leaf_nodes())
+        clade = frozenset(leaf.name for leaf in node.get_leaf_nodes() if leaf.name)
         support = clade_counts.get(clade, 0)
         name = fmt.format(
             Support=support,
@@ -230,7 +261,7 @@ class Newick(TotallyOrdered, Immutable):
             Fraction=(support * 1.0) / (total or 1),
         )
 
-        children = []
+        children = []  # type: List[Newick]
         for child in node.children:
             children.append(self._add_support(child, total, clade_counts, fmt))
 
@@ -246,11 +277,10 @@ class Newick(TotallyOrdered, Immutable):
 # Functions related to NEWICK parsing
 
 _TOKENIZER = re.compile("([():,;])")
-_NODE_KEYS = frozenset(("name", "length", "children"))
 
 
-def _tokenize(string):
-    result = []
+def _tokenize(string: str) -> List[str]:
+    result = []  # type: List[str]
     for field in _TOKENIZER.split(string):
         field = field.strip()
         if field:
@@ -258,36 +288,37 @@ def _tokenize(string):
     return result
 
 
-def _parse_tokens(tokens):
-    assert tokens and tokens[0] == "("
-
+def _parse_tokens(tokens: List[str]) -> Newick:
     tokens.pop(0)
-    child, children = None, []
-    while tokens and (tokens[0] not in ");"):
+    child = None  # type: Optional[Newick]
+    children = []  # type: List[Newick]
+    while tokens and tokens[0] not in ");":
         if tokens[0] == ",":
+            if child is None:
+                raise NewickParseError("Leaf nodes must have a name or a length")
             children.append(child)
             tokens.pop(0)
         child = _parse_child(tokens)
+
+    if child is None:
+        raise NewickParseError("Leaf nodes must have a name or a length")
     children.append(child)
 
-    if any(child is None for child in children):
+    if not tokens or tokens[0] != ")":
         raise NewickParseError(
-            "Implicit leaf nodes (no name OR length) are not allowed"
-        )
-    elif not tokens or (tokens[0] != ")"):
-        raise NewickParseError(
-            "Malformed Newick string, contains unbalanced parantheses"
+            "Malformed Newick string contains unbalanced parantheses"
         )
     tokens.pop(0)
 
     return _parse_child(tokens, children=children)
 
 
-def _parse_child(tokens, children=None):
+def _parse_child(tokens: List[str], children: List[Newick] = []):
     if tokens and tokens[0] == "(":
         return _parse_tokens(tokens)
 
-    name, length = None, None
+    name: Optional[str] = None
+    length: Optional[str] = None
     while tokens and (tokens[0] not in ",);"):
         if tokens[0] == ":":
             if length is not None:
@@ -310,13 +341,13 @@ def _parse_child(tokens, children=None):
 # Class related to tree manipulations
 
 
-class _NewickGraph(_Graph):
-    def __init__(self, node):
-        _Graph.__init__(self)
+class _NewickGraph(Graph):
+    def __init__(self, node: Newick):
+        Graph.__init__(self)
         self._collect_names_and_blengths(node)
         self.prune_uninformative_nodes()
 
-    def _collect_names_and_blengths(self, c_node):
+    def _collect_names_and_blengths(self, c_node: Newick):
         c_node_id = id(c_node)
 
         self.set_name(c_node_id, c_node.name)
@@ -325,18 +356,18 @@ class _NewickGraph(_Graph):
             self.add_connection(c_node_id, child_id, child.length)
             self._collect_names_and_blengths(child)
 
-    def rebuild_tree(self, parent_id, node_id):
+    def rebuild_tree(self, parent_id: NodeID, node_id: NodeID) -> "Newick":
         """Rebuilds a newick tree starting at a node with id
         'node_id' and a parent with id 'parent_id' (or the
         same value as 'node_id' if a root node)."""
 
-        children = []
+        children = []  # type: List[Newick]
         for child_id in self.connections[node_id]:
             if child_id != parent_id:
                 children.append(self.rebuild_tree(node_id, child_id))
         children.sort()
 
-        blength = self.connections.get(parent_id).get(node_id)
+        blength = self.connections[parent_id].get(node_id)
         if isinstance(blength, float):
             blength = repr(blength)
 

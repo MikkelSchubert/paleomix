@@ -23,7 +23,7 @@
 """Various functions relating to DNA sequence manipulation."""
 
 import itertools
-
+from typing import Dict, FrozenSet, List
 
 # Pairs of complementary bases and ambigious basees
 _COMPL = ["AT", "CG", "NN", "RY", "KM", "SS", "WW", "BV", "DH", "XX"]
@@ -59,7 +59,7 @@ NT_CODES = [
     ["N", "ACGT"],
 ]
 
-_NT_CODES_TABLE = {}
+_NT_CODES_TABLE = {}  # type: Dict[FrozenSet[str], str]
 for (_abr, _nts) in NT_CODES:
     _NT_CODES_TABLE[frozenset(_nts)] = _abr
     _NT_CODES_TABLE[frozenset(_nts + ",")] = _abr
@@ -67,17 +67,17 @@ for (_abr, _nts) in NT_CODES:
 NT_CODES = dict(NT_CODES)
 
 
-def complement(sequence):
+def complement(sequence: str) -> str:
     """Returns the complement of a DNA sequence (string)."""
     return sequence.translate(_COMPL_TABLE)
 
 
-def reverse_complement(sequence):
+def reverse_complement(sequence: str) -> str:
     """Returns the reverse complement of a DNA sequence."""
     return complement(sequence)[::-1]
 
 
-def encode_genotype(nucleotides):
+def encode_genotype(nucleotides: str) -> str:
     """Parses a string representing a set of nucleotides observed at a loci,
     and returns the corresponding IUPAC code. Commas are allowed, but are
     simply ignored if found in the string. Does not handle lower-case
@@ -89,7 +89,7 @@ def encode_genotype(nucleotides):
         raise ValueError(nucleotides)
 
 
-def split(sequence, split_by="123"):
+def split(sequence: str, split_by: str = "123") -> Dict[str, str]:
     """Splits a sequence by position, as specified by the 'split_by' parameter. By
     default, the function will split by codon position, and return a dictionary
     containing the keys '1', '2' and '3'.
@@ -101,12 +101,9 @@ def split(sequence, split_by="123"):
     if not split_by:
         raise ValueError("No split_by specified")
 
-    results = dict((key, []) for key in split_by)
+    results = {key: [] for key in split_by}  # type: Dict[str, List[str]]
     keys = itertools.chain(itertools.cycle(split_by))
     for (key, nucleotide) in zip(keys, sequence):
         results[key].append(nucleotide)
 
-    for key in results:
-        results[key] = "".join(results[key])
-
-    return results
+    return {key: "".join(value) for key, value in results.items()}

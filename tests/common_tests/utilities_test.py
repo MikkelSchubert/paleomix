@@ -54,7 +54,7 @@ def test_safe_coerce_to_tuple__iterable():
 
 
 def test_safe_coerce_to_tuple__dict():
-    assert utils.safe_coerce_to_tuple({1: 2, 3: 4}) == ({1: 2, 3: 4},)
+    assert utils.safe_coerce_to_tuple({1: 2, 3: 4}) == (1, 3)
 
 
 ###############################################################################
@@ -87,8 +87,7 @@ def test_safe_coerce_to_frozenset__iterable():
 
 
 def test_safe_coerce_to_frozenset__dict():
-    with pytest.raises(TypeError):
-        utils.safe_coerce_to_frozenset({1: 2, 3: 4})
+    assert utils.safe_coerce_to_frozenset({1: 2, 3: 4}) == frozenset((1, 3))
 
 
 ###############################################################################

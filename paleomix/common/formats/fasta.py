@@ -21,12 +21,12 @@
 # SOFTWARE.
 #
 import sys
+from typing import IO, Dict, Iterable, Iterator, Optional
 
 import pysam
-
-from paleomix.common.utilities import fragment, split_before, Immutable, TotallyOrdered
-from paleomix.common.fileutils import open_ro, fspath
+from paleomix.common.fileutils import fspath, open_ro
 from paleomix.common.formats._common import FormatError
+from paleomix.common.utilities import Immutable, TotallyOrdered, fragment, split_before
 
 
 class FASTAError(FormatError):
@@ -34,7 +34,14 @@ class FASTAError(FormatError):
 
 
 class FASTA(TotallyOrdered, Immutable):
-    def __init__(self, name, meta, sequence):
+
+    __slots__ = ["name", "meta", "sequence"]
+
+    name: str
+    meta: Optional[str]
+    sequence: str
+
+    def __init__(self, name: str, meta: Optional[str], sequence: str):
         if not (name and isinstance(name, str)):
             raise FASTAError("FASTA name must be a non-empty string")
         elif not (isinstance(meta, str) or (meta is None)):
@@ -44,7 +51,7 @@ class FASTA(TotallyOrdered, Immutable):
 
         Immutable.__init__(self, name=name, meta=meta or "", sequence=sequence)
 
-    def write(self, fileobj=sys.stdout):
+    def write(self, fileobj: IO[str] = sys.stdout):
         """Writes a FASTA record to fileobj, wrapping sequences at 60 chars"""
         name = self.name
         if self.meta:
@@ -53,7 +60,7 @@ class FASTA(TotallyOrdered, Immutable):
         fileobj.write(">%s\n%s\n" % (name, "\n".join(fragment(60, self.sequence))))
 
     @classmethod
-    def from_lines(cls, lines):
+    def from_lines(cls, lines: Iterable[str]):
         """Parses FASTA sequences found in a sequence of lines, and returns
         a tuple for each FASTA record: ((name, meta-information), sequence)
         No assumptions are made about the line-lengths."""
@@ -76,7 +83,7 @@ class FASTA(TotallyOrdered, Immutable):
             yield FASTA(name=name, meta=meta, sequence="".join(record[1:]))
 
     @classmethod
-    def from_file(cls, filename):
+    def from_file(cls, filename: str) -> Iterator["FASTA"]:
         """Reads an unindexed FASTA file, returning a sequence of
         tuples containing the name and sequence of each entry in
         the file. The FASTA file may be GZIP/BZ2 compressed."""
@@ -84,7 +91,7 @@ class FASTA(TotallyOrdered, Immutable):
             yield from FASTA.from_lines(fasta_file)
 
     @classmethod
-    def index_and_collect_contigs(cls, filename):
+    def index_and_collect_contigs(cls, filename: str) -> Dict[str, int]:
         """Creates an index (.fai; if it does not already exist) for a FASTA file using
         pysam, and returns a dictionary of {contig: length} listed in that file.
         """

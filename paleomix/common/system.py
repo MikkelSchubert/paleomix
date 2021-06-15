@@ -21,11 +21,11 @@
 # SOFTWARE.
 #
 import os
-import sys
 import resource
+import sys
 
 
-def set_procname(name=os.path.basename(sys.argv[0])):
+def set_procname(name: str = os.path.basename(sys.argv[0])):
     """Attempts to set the current process-name to the given name."""
     import setproctitle
 

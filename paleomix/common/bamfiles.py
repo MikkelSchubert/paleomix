@@ -21,6 +21,10 @@
 # SOFTWARE.
 #
 import itertools
+from typing import Iterable, List, Optional
+
+from paleomix.common.bedtools import BEDRecord
+from pysam import AlignedSegment, AlignmentFile
 
 # BAM flags as defined in the BAM specification
 BAM_SUPPLEMENTARY_ALIGNMENT = 0x800
@@ -84,7 +88,12 @@ class BAMRegionsIter:
       - name: The name of the region
     """
 
-    def __init__(self, handle, regions=None, exclude_flags=EXCLUDED_FLAGS):
+    def __init__(
+        self,
+        handle: AlignmentFile,
+        regions: List[BEDRecord] = [],
+        exclude_flags: int = EXCLUDED_FLAGS,
+    ):
         """
         - handle: BAM file handle (c.f. module 'pysam')
         - regions: List of BED-like regions (see above)
@@ -103,7 +112,7 @@ class BAMRegionsIter:
                 yield _BAMRegion(tid, records, region.name, region.start, region.end)
         else:
 
-            def _by_tid(record):
+            def _by_tid(record: AlignedSegment) -> int:
                 """Group by reference ID."""
                 return record.tid
 
@@ -122,7 +131,7 @@ class BAMRegionsIter:
 
                 yield _BAMRegion(tid, items, name, 0, length)
 
-    def _filter(self, records):
+    def _filter(self, records: Iterable[AlignedSegment]) -> Iterable[AlignedSegment]:
         """Filters records by flags, if 'exclude_flags' is set."""
         if self._excluded:
             return filter(lambda record: not record.flag & self._excluded, records)
@@ -134,7 +143,14 @@ class _BAMRegion:
     BAM file is sorted, and that the input records are from one contig.
     """
 
-    def __init__(self, tid, records, name, start, end):
+    def __init__(
+        self,
+        tid: int,
+        records: Iterable[AlignedSegment],
+        name: Optional[str],
+        start: int,
+        end: Optional[int],
+    ):
         self._records = records
         self.tid = tid
         self.name = name
@@ -142,7 +158,7 @@ class _BAMRegion:
         self.end = end
 
     def __iter__(self):
-        def _by_pos(record):
+        def _by_pos(record: AlignedSegment):
             """Group by position."""
             return record.pos
 

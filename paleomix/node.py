@@ -25,22 +25,20 @@ import logging
 import os
 import shutil
 import sys
-
 from pathlib import Path
+from typing import Any, FrozenSet, Iterable, List, Optional
 
 import paleomix
 import paleomix.common.fileutils as fileutils
+from paleomix.atomiccmd.command import AtomicCmd, CmdError
 from paleomix.common.utilities import safe_coerce_to_frozenset
 from paleomix.common.versions import Requirement
-
-from paleomix.atomiccmd.command import CmdError
-
 
 _GLOBAL_ID = itertools.count()
 
 
 class NodeError(RuntimeError):
-    def __init__(self, *args, path=None):
+    def __init__(self, *args: Any, path: Optional[str] = None):
         super().__init__(*args)
         self.path = path
 
@@ -65,20 +63,17 @@ class NodeUnhandledException(NodeError):
 class Node:
     def __init__(
         self,
-        description=None,
-        threads=1,
-        input_files=(),
-        output_files=(),
-        executables=(),
-        auxiliary_files=(),
-        requirements=(),
-        dependencies=(),
+        description: Optional[str] = None,
+        threads: int = 1,
+        input_files: Iterable[str] = (),
+        output_files: Iterable[str] = (),
+        executables: Iterable[str] = (),
+        auxiliary_files: Iterable[str] = (),
+        requirements: Iterable[Requirement] = (),
+        dependencies: Iterable["Node"] = (),
     ):
-        if not isinstance(description, _DESC_TYPES):
-            raise TypeError(
-                "'description' must be None or a string, not %r"
-                % (description.__class__.__name__,)
-            )
+        if not (description is None or isinstance(description, str)):
+            raise TypeError(description)
 
         self.__description = description
         self.input_files = self._validate_files(input_files)
@@ -99,7 +94,7 @@ class Node:
         # Globally unique node ID
         self.id = next(_GLOBAL_ID)
 
-    def run(self, temp_root):
+    def run(self, temp_root: str) -> None:
         """Runs the node, by calling _setup, _run, and _teardown in that order.
         Prior to calling these functions, a temporary dir is created using the
         'temp_root' prefix from the config object. Both the config object and
@@ -124,7 +119,8 @@ class Node:
             try:
                 # The folder is most likely empty, but it is possible to re-use temp
                 # directories for resumable tasks so we cannot delete it outrigth
-                os.rmdir(temp)
+                if temp is not None:
+                    os.rmdir(temp)
             except OSError:
                 pass
 
@@ -143,11 +139,11 @@ class Node:
                 "Error while running %s" % (self,), path=temp
             ) from error
 
-    def _create_temp_dir(self, temp_root):
+    def _create_temp_dir(self, temp_root: str) -> str:
         """Called by 'run' in order to create a temporary folder."""
         return fileutils.create_temp_dir(temp_root)
 
-    def _remove_temp_dir(self, temp):
+    def _remove_temp_dir(self, temp: str) -> None:
         """Called by 'run' in order to remove an (now) empty temporary folder."""
         temp = fileutils.fspath(temp)
         log = logging.getLogger(__name__)
@@ -159,12 +155,12 @@ class Node:
 
         shutil.rmtree(temp)
 
-    def _setup(self, _temp):
+    def _setup(self, _temp: str) -> None:
         """Is called prior to '_run()' by 'run()'. Any code used to copy/link files,
         or other steps needed to ready the node for running may be carried out in this
         function. Checks that required input files exist, and raises an NodeError if
         this is not the case."""
-        executables = []
+        executables = []  # type: List[str]
         for executable in self.executables:
             if executable == "%(PYTHON)s":
                 executable = sys.executable
@@ -177,13 +173,13 @@ class Node:
 
         self._check_for_input_files(self.input_files | self.auxiliary_files)
 
-    def _run(self, _temp):
+    def _run(self, _temp: str) -> None:
         pass
 
-    def _teardown(self, _temp):
+    def _teardown(self, _temp: str) -> None:
         self._check_for_missing_files(self.output_files, "output")
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Returns the description passed to the constructor, or a default
         description if no description was passed to the constructor."""
         if self.__description:
@@ -200,11 +196,11 @@ class Node:
         obj_dict["dependencies"] = ()
         return obj_dict
 
-    def _write_error_log(self, temp, error):
+    def _write_error_log(self, temp: Optional[str], error: Exception) -> None:
         if not (temp and os.path.isdir(temp)):
             return
 
-        def _fmt(values):
+        def _fmt(values: Iterable[str]):
             return "\n                   ".join(sorted(values))
 
         message = [
@@ -229,19 +225,15 @@ class Node:
         except OSError as oserror:
             sys.stderr.write("ERROR: Could not write failure log: %s\n" % (oserror,))
 
-    def _collect_nodes(self, nodes):
-        if nodes is None:
-            return frozenset()
-
+    def _collect_nodes(self, nodes: Iterable["Node"]) -> FrozenSet["Node"]:
         nodes = safe_coerce_to_frozenset(nodes)
-        bad_nodes = [node for node in nodes if not isinstance(node, Node)]
-
-        if bad_nodes:
-            raise TypeError(bad_nodes)
+        for node in nodes:
+            if not isinstance(node, Node):
+                raise TypeError(node)
 
         return nodes
 
-    def _check_for_input_files(self, filenames):
+    def _check_for_input_files(self, filenames: Iterable[str]) -> None:
         missing_files = fileutils.missing_files(filenames)
         if missing_files:
             raise NodeMissingFilesError(
@@ -249,7 +241,7 @@ class Node:
                 % (self, "\n\t         ".join(missing_files))
             )
 
-    def _check_for_missing_files(self, filenames, description):
+    def _check_for_missing_files(self, filenames: Iterable[str], description: str):
         missing_files = fileutils.missing_files(filenames)
         if missing_files:
             message = (
@@ -259,7 +251,9 @@ class Node:
             raise NodeError(message)
 
     @classmethod
-    def _validate_requirements(cls, requirements):
+    def _validate_requirements(
+        cls, requirements: Iterable[Requirement]
+    ) -> FrozenSet[Requirement]:
         requirements = safe_coerce_to_frozenset(requirements)
         for requirement in requirements:
             if not isinstance(requirement, Requirement):
@@ -267,11 +261,11 @@ class Node:
         return requirements
 
     @classmethod
-    def _validate_files(cls, files):
+    def _validate_files(cls, files: Iterable[str]):
         return frozenset(fileutils.validate_filenames(files))
 
     @classmethod
-    def _validate_nthreads(cls, threads):
+    def _validate_nthreads(cls, threads: Any) -> int:
         if not isinstance(threads, int):
             raise TypeError("'threads' must be a positive integer, not %r" % (threads,))
         elif threads < 1:
@@ -281,10 +275,10 @@ class Node:
         return threads
 
     @staticmethod
-    def _collect_files(root):
+    def _collect_files(root: str) -> Iterable[str]:
         root = fileutils.fspath(root)
 
-        def _walk_dir(path):
+        def _walk_dir(path: str) -> Iterable[str]:
             for entry in os.scandir(path):
                 if entry.is_file():
                     yield str(Path(entry.path).relative_to(root))
@@ -295,7 +289,13 @@ class Node:
 
 
 class CommandNode(Node):
-    def __init__(self, command, description=None, threads=1, dependencies=()):
+    def __init__(
+        self,
+        command: AtomicCmd,
+        description: Optional[str] = None,
+        threads: int = 1,
+        dependencies: Iterable[Node] = (),
+    ):
         Node.__init__(
             self,
             description=description,
@@ -310,7 +310,7 @@ class CommandNode(Node):
 
         self._command = command
 
-    def _run(self, temp):
+    def _run(self, temp: str) -> None:
         """Runs the command object provided in the constructor, and waits for it to
         terminate. If any errors during the running of the command, this function
         raises a NodeError detailing the returned error-codes."""
@@ -323,7 +323,7 @@ class CommandNode(Node):
         if any(return_codes):
             raise CmdNodeError(str(self._command))
 
-    def _teardown(self, temp):
+    def _teardown(self, temp: str) -> None:
         required_files = self._command.expected_temp_files
         current_files = set(self._collect_files(temp))
 
@@ -341,7 +341,3 @@ class CommandNode(Node):
         self._command.commit(temp)
 
         Node._teardown(self, temp)
-
-
-# Types that are allowed for the 'description' property
-_DESC_TYPES = (str, type(None))

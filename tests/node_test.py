@@ -24,23 +24,20 @@ import logging
 import os
 import random
 import uuid
-
-from unittest.mock import call, Mock
-
-import pytest
+from unittest.mock import Mock, call
 
 import paleomix.node
-
+import pytest
 from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile, TempOutputFile
+from paleomix.common.utilities import safe_coerce_to_frozenset
+from paleomix.common.versions import Any, Requirement
 from paleomix.node import (
-    Node,
+    CmdNodeError,
     CommandNode,
+    Node,
     NodeError,
     NodeUnhandledException,
-    CmdNodeError,
 )
-from paleomix.common.utilities import safe_coerce_to_frozenset
-from paleomix.common.versions import Requirement, Any
 
 
 def test_dir():
@@ -159,8 +156,8 @@ def test_constructor__requirements():
     assert node.requirements == frozenset([_REQUIREMENT_1, _REQUIREMENT_2])
 
 
-@pytest.mark.parametrize("value", (17, {}, "867-5309"))
-def test_constructor__requirements__wrong_type(value):
+@pytest.mark.parametrize("value", (17, "867-5309"))
+def test_constructor__requirements__wrong_type(value: Any):
     with pytest.raises(TypeError):
         Node(requirements=value)
 
@@ -171,8 +168,8 @@ def test_constructor__requirements__wrong_type(value):
 
 
 def test_constructor__nodes_is_none():
-    my_node = Node(dependencies=None)
-    assert my_node.dependencies == frozenset()
+    with pytest.raises(TypeError):
+        Node(dependencies=None)
 
 
 def test_constructor__single_node():

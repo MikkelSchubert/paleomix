@@ -1,26 +1,39 @@
 #!/usr/bin/env python3
+import io
 import os
 import signal
 import subprocess
 import sys
 import weakref
+from typing import (
+    IO,
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    Union,
+)
 
 import paleomix.atomiccmd.pprint as atomicpp
 import paleomix.common.fileutils as fileutils
-
-from paleomix.common.versions import Requirement
 from paleomix.common.utilities import safe_coerce_to_tuple
+from paleomix.common.versions import Requirement
 
 
 class CmdError(RuntimeError):
     """Exception raised for AtomicCmd specific errors."""
 
-    def __init__(self, msg):
+    def __init__(self, msg: object):
         RuntimeError.__init__(self, msg)
 
 
 class _AtomicFile:
-    def __init__(self, path):
+    def __init__(self, path: str):
         self.path = fileutils.fspath(path)
 
         if isinstance(self.path, bytes):
@@ -42,7 +55,7 @@ class Executable(_AtomicFile):
 
 
 class _IOFile(_AtomicFile):
-    def __init__(self, path, temporary=False):
+    def __init__(self, path: str, temporary: bool = False):
         super().__init__(path)
         self.temporary = bool(temporary)
 
@@ -58,7 +71,7 @@ class InputFile(_IOFile):
 
 
 class TempInputFile(InputFile):
-    def __init__(self, path):
+    def __init__(self, path: str):
         super().__init__(os.path.basename(path), temporary=True)
 
 
@@ -67,8 +80,17 @@ class OutputFile(_IOFile):
 
 
 class TempOutputFile(OutputFile):
-    def __init__(self, path):
+    def __init__(self, path: str):
         super().__init__(os.path.basename(path), temporary=True)
+
+
+WrappedPipeType = Union[None, int, _IOFile, "AtomicCmd"]
+PipeType = Union[str, WrappedPipeType]
+
+OptionValueType = Union[str, int, float, "_IOFile", None]
+OptionsType = Dict[
+    str, Union[OptionValueType, List[OptionValueType], Tuple[OptionValueType, ...]]
+]
 
 
 class AtomicCmd:
@@ -93,15 +115,33 @@ class AtomicCmd:
     AuxFile = AuxilleryFile
     Executable = Executable
 
+    _command: List[Union[str, _AtomicFile]]
+    # _proc:  = None
+    _temp: Optional[str]
+    _running: bool
+    _set_cwd: bool
+    _terminated: bool
+
+    _executables: Set[str]
+    _requirements: Set[Requirement]
+    _input_files: Set[_IOFile]
+    _output_files: Set[_IOFile]
+    _output_basenames: Set[str]
+    _auxiliary_files: Set[str]
+
+    _stdin: WrappedPipeType
+    _stdout: WrappedPipeType
+    _stderr: WrappedPipeType
+
     def __init__(
         self,
-        command,
-        stdin=None,
-        stdout=None,
-        stderr=None,
-        set_cwd=False,
-        extra_files=(),
-        requirements=(),
+        command: Iterable[Any],
+        stdin: PipeType = None,
+        stdout: PipeType = None,
+        stderr: PipeType = None,
+        set_cwd: bool = False,
+        extra_files: Iterable[_AtomicFile] = (),
+        requirements: Iterable[Requirement] = (),
     ):
         """Takes a command and a set of files.
 
@@ -155,7 +195,7 @@ class AtomicCmd:
         self._terminated = False
 
         self._executables = set()
-        self._requirements = frozenset(requirements)
+        self._requirements = set(requirements)
         self._input_files = set()
         self._output_files = set()
         self._output_basenames = set()
@@ -164,6 +204,8 @@ class AtomicCmd:
         self.append(*safe_coerce_to_tuple(command))
         if not self._command or not self._command[0]:
             raise ValueError("Empty command in AtomicCmd constructor")
+        elif not isinstance(self._command[0], str):
+            raise ValueError(self._command[0])
         elif self._command[0] not in self._executables:
             self._executables.add(self._command[0])
 
@@ -171,7 +213,7 @@ class AtomicCmd:
         self._stdout = stdout = self._wrap_pipe(OutputFile, stdout, "stdout")
         self._stderr = stderr = self._wrap_pipe(OutputFile, stderr, "stderr")
 
-        pipes = []
+        pipes = []  # type: List[_AtomicFile]
         for pipe in (stdin, stdout, stderr):
             if isinstance(pipe, _AtomicFile):
                 pipes.append(pipe)
@@ -183,7 +225,7 @@ class AtomicCmd:
             if not isinstance(value, Requirement):
                 raise TypeError(value)
 
-    def append(self, *args):
+    def append(self, *args: Any):
         if self._proc is not None:
             raise CmdError("cannot modify already started command")
 
@@ -197,7 +239,7 @@ class AtomicCmd:
 
             self._command.append(value)
 
-    def add_extra_files(self, files):
+    def add_extra_files(self, files: Iterable[Any]):
         if self._proc is not None:
             raise CmdError("cannot modify already started command")
 
@@ -207,7 +249,11 @@ class AtomicCmd:
 
             self._record_atomic_file(value)
 
-    def append_options(self, options, pred=lambda s: s.startswith("-")):
+    def append_options(
+        self,
+        options: OptionsType,
+        pred: Callable[[str], bool] = lambda s: s.startswith("-"),
+    ):
         if not isinstance(options, dict):
             raise TypeError("options must be dict, not {!r}".format(options))
 
@@ -234,17 +280,17 @@ class AtomicCmd:
 
     def merge_options(
         self,
-        user_options,
-        fixed_options={},
-        blacklisted_options=(),
-        pred=lambda s: s.startswith("-"),
+        user_options: OptionsType,
+        fixed_options: OptionsType = {},
+        blacklisted_options: Iterable[str] = (),
+        pred: Callable[[str], bool] = lambda s: s.startswith("-"),
     ):
         if not isinstance(fixed_options, dict):
             raise TypeError("options must be dict, not {!r}".format(fixed_options))
         elif not isinstance(user_options, dict):
             raise TypeError("user_options must be dict, not {!r}".format(user_options))
 
-        errors = []
+        errors = []  # type: List[str]
         for key in user_options.keys() & fixed_options.keys():
             errors.append("{} cannot be overridden".format(key))
 
@@ -297,7 +343,7 @@ class AtomicCmd:
     def requirements(self):
         return self._requirements
 
-    def run(self, temp):
+    def run(self, temp: str):
         """Runs the given command, saving files in the specified temp folder.
         To move files to their final destination, call commit(). Note that in
         contexts where the *Cmds classes are used, this function may block.
@@ -337,7 +383,7 @@ class AtomicCmd:
         finally:
             # Close pipes to allow the command to recieve SIGPIPE
             for handle in (stdin, stdout, stderr):
-                if handle not in (None, self.PIPE, self.DEVNULL):
+                if not (handle is None or isinstance(handle, int)):
                     handle.close()
 
         # Allow subprocesses to be killed in case of a SIGTERM
@@ -376,11 +422,13 @@ class AtomicCmd:
             except OSError:
                 pass  # Already dead / finished process
 
-    def commit(self, temp):
+    def commit(self, temp: str):
         temp = fileutils.fspath(temp)
         if not self.ready():
             raise CmdError("Attempting to commit before command has completed")
-        elif self._running:
+
+        assert self._temp is not None
+        if self._running:
             raise CmdError("Called 'commit' before calling 'join'")
         elif not os.path.samefile(self._temp, temp):
             raise CmdError(
@@ -395,7 +443,7 @@ class AtomicCmd:
                 "Expected files not created: %s" % (", ".join(missing_files))
             )
 
-        committed_files = []
+        committed_files = []  # type: List[str]
         try:
             for output_file in self._output_files:
                 if output_file.temporary:
@@ -415,10 +463,10 @@ class AtomicCmd:
         self._proc = None
         self._temp = None
 
-    def to_call(self, temp):
+    def to_call(self, temp: str) -> List[str]:
         return [self._to_path(temp, value) for value in self._command]
 
-    def _to_path(self, temp, value):
+    def _to_path(self, temp: str, value: Any) -> str:
         if isinstance(value, Executable):
             return value.path
         elif self._set_cwd:
@@ -448,7 +496,7 @@ class AtomicCmd:
             else:
                 return value.replace("%(TEMP_DIR)s", temp)
 
-    def _record_atomic_file(self, value):
+    def _record_atomic_file(self, value: _AtomicFile):
         if isinstance(value, AuxilleryFile):
             self._auxiliary_files.add(value.path)
         elif isinstance(value, Executable):
@@ -468,17 +516,23 @@ class AtomicCmd:
         else:
             raise ValueError(value)
 
-    def _wrap_pipe(self, filetype, pipe, default=None):
+    def _wrap_pipe(
+        self,
+        filetype: Union[Type[InputFile], Type[OutputFile]],
+        pipe: PipeType,
+        default: Optional[str] = None,
+    ) -> WrappedPipeType:
         if pipe is None:
             if default is None:
                 return None
 
+            assert isinstance(self._command[0], str)
             executable = os.path.basename(self._command[0])
             # TODO: Use more sensible filename, e.g. log_{exec}_{counter}.{stdout/err}
             filename = "pipe_%s_%i.%s" % (executable, id(self), default)
 
             return filetype(filename, temporary=True)
-        elif pipe in (self.PIPE, self.DEVNULL):
+        elif isinstance(pipe, int):
             return pipe
         elif isinstance(pipe, _AtomicFile):
             if isinstance(pipe, filetype):
@@ -491,8 +545,13 @@ class AtomicCmd:
         return filetype(pipe)
 
     @classmethod
-    def _open_pipe(cls, temp_dir, pipe, mode):
-        if pipe in (None, cls.PIPE, cls.DEVNULL):
+    def _open_pipe(
+        cls,
+        temp_dir: str,
+        pipe: WrappedPipeType,
+        mode: str,
+    ) -> Union[int, IO[bytes], None]:
+        if pipe is None or isinstance(pipe, int):
             return pipe
         elif isinstance(pipe, AtomicCmd):
             return pipe._proc and pipe._proc.stdout
@@ -505,7 +564,7 @@ class AtomicCmd:
     def __enter__(self):
         return self
 
-    def __exit__(self, type, _value, _traceback):
+    def __exit__(self, type: Any, _value: Any, _traceback: Any):
         self.terminate()
         self.join()
 
@@ -515,10 +574,10 @@ class AtomicCmd:
 
 # The following ensures proper cleanup of child processes, for example in the
 # case where multiprocessing.Pool.terminate() is called.
-_PROCS = None
+_PROCS = ()
 
 
-def _cleanup_children(signum, _frame):
+def _cleanup_children(signum: int, _frame):
     for proc_ref in list(_PROCS):
         proc = proc_ref()
         if proc:
@@ -533,7 +592,7 @@ def _cleanup_children(signum, _frame):
 def _add_to_killlist(proc):
     global _PROCS
 
-    if _PROCS is None:
+    if isinstance(_PROCS, tuple):
         signal.signal(signal.SIGTERM, _cleanup_children)
         _PROCS = set()
 

@@ -21,14 +21,16 @@
 # SOFTWARE.
 #
 import warnings
+from typing import IO, Any
 
 import ruamel.yaml
+from ruamel.yaml import YAMLError
+from ruamel.yaml.constructor import DuplicateKeyError
 
-from ruamel.yaml import YAMLError  # noqa: F401
-from ruamel.yaml.constructor import DuplicateKeyError  # noqa: F401
+__all__ = ["YAMLError", "DuplicateKeyError", "safe_load"]
 
 
-def safe_load(stream):
+def safe_load(stream: IO[str]) -> Any:
     yaml = ruamel.yaml.YAML(typ="safe", pure=True)
     yaml.version = (1, 1)
 

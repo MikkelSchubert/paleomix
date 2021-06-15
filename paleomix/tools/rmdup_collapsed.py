@@ -27,11 +27,13 @@ import pysam
 from paleomix.common.argparse import ArgumentParser
 
 
-_FILTERED_FLAGS = 0x1  # PE reads
-_FILTERED_FLAGS |= 0x4  # Unmapped
-_FILTERED_FLAGS |= 0x100  # Secondary alignment
-_FILTERED_FLAGS |= 0x200  # Failed QC
-_FILTERED_FLAGS |= 0x800  # Chimeric alignment
+_FILTERED_FLAGS = (
+    0x1  # PE reads
+    | 0x4  # Unmapped
+    | 0x100  # Secondary alignment
+    | 0x200  # Failed QC
+    | 0x800  # Chimeric alignment
+)
 
 _CIGAR_SOFTCLIP = 4
 _CIGAR_HARDCLIP = 5
@@ -232,8 +234,6 @@ def parse_args(argv):
         "--seed",
         default=None,
         type=int,
-        help="Seed used for randomly selecting representative reads, when reads do not "
-        "have quality scores assigned. Is initialized using system time by default.",
     )
 
     return parser.parse_args(argv)

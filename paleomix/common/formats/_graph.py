@@ -20,16 +20,20 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from paleomix.common.utilities import safe_coerce_to_frozenset, get_in, set_in
+from typing import Any, Dict, FrozenSet, Iterable, List, Optional, Set, Tuple, Union
 
 from paleomix.common.formats import FormatError
+from paleomix.common.utilities import get_in, set_in
+
+NodeID = Optional[int]
+NodeName = Optional[str]
 
 
 class GraphError(FormatError):
     pass
 
 
-class _Graph:
+class Graph:
     """Internal representation of an unrooted graph, allowing various forms of
     manipulation directly on the graph. To ensure that all manipulations can be
     carried out, it is required that branch-lengths are present for ALL branches,
@@ -38,15 +42,15 @@ class _Graph:
     Note that neither the root-length, nor node-ordering is preserved."""
 
     def __init__(self):
-        self.names = {}
-        self.connections = {}
+        self.names = {}  # type: Dict[NodeID, NodeName]
+        self.connections = {}  # type: Dict[NodeID, Dict[NodeID, Union[str, float]]]
         self.has_branch_lengths = None
 
-    def is_leaf(self, node):
+    def is_leaf(self, node: NodeID) -> bool:
         """Returns true if the node is a leaf, defined as having a single connection."""
         return len(self.connections[node]) == 1
 
-    def get_path_length(self, *nodes):
+    def get_path_length(self, *nodes: NodeID):
         """Returns the length of a path through the graph. Calling the function
         with two nodes is the equivalent of getting the branch-length between
         those two nodes."""
@@ -60,10 +64,15 @@ class _Graph:
 
         return path_length
 
-    def set_name(self, node_id, name):
+    def set_name(self, node_id: int, name: NodeName):
         self.names[node_id] = name
 
-    def add_connection(self, node_id_a, node_id_b, blength=None):
+    def add_connection(
+        self,
+        node_id_a: NodeID,
+        node_id_b: NodeID,
+        blength: Optional[Union[str, float]] = None,
+    ):
         if (blength is not None) and float(blength) < 0:
             raise GraphError("Branch-lengths must be non-negative")
         elif (blength is not None) != self.has_branch_lengths:
@@ -74,19 +83,19 @@ class _Graph:
         set_in(self.connections, (node_id_a, node_id_b), blength)
         set_in(self.connections, (node_id_b, node_id_a), blength)
 
-    def remove_connection(self, node_a, node_b):
+    def remove_connection(self, node_a: NodeID, node_b: NodeID) -> Union[str, float]:
         length_a = self.connections[node_a].pop(node_b)
         length_b = self.connections[node_b].pop(node_a)
         assert length_a == length_b, (length_a, length_b)
         return length_a
 
-    def remove_node(self, node):
+    def remove_node(self, node: NodeID):
         connections = self.connections.pop(node)
         for node_b in connections:
             self.connections[node_b].pop(node)
         self.names.pop(node)
 
-    def rebuild_tree(self, parent_id, node_id):
+    def rebuild_tree(self, parent_id: NodeID, node_id: NodeID) -> Any:
         """Rebuilds a tree starting at a node with id
         'node_id' and a parent with id 'parent_id' (or the
         same value as 'node_id' if a root node)."""
@@ -126,7 +135,7 @@ class _Graph:
     ################################################################################
     # Functions relating to NEWICK rooting on midpoint
 
-    def reroot_on_midpoint(self):
+    def reroot_on_midpoint(self) -> "Graph":
         if not self.has_branch_lengths:
             raise GraphError(
                 "Cannot reroot on midpoint for tree without branch-lengths"
@@ -137,15 +146,23 @@ class _Graph:
 
         return self.rebuild_tree(root, root)
 
-    def _find_longest_path(self):
+    def _find_longest_path(self) -> Tuple[List[NodeID], float]:
         """This function determines the longest non-overlapping path possible,
         and returns a list of the sequence of nodes in this path, as well as
         the total length of this path."""
-        path_blengths = {}
-        path_guides = {}
+        path_blengths = {}  # type: Dict[FrozenSet[NodeID], float]
+        path_guides = {}  # type: Dict[FrozenSet[NodeID], List[NodeID]]
 
-        def _collect_paths(guide, length, p_node, c_node):
-            length += self.get_path_length(p_node, c_node)
+        def _collect_paths(
+            guide: List[NodeID],
+            length: float,
+            p_node: NodeID,
+            c_node: NodeID,
+        ):
+            path_len = self.get_path_length(p_node, c_node)
+            assert path_len is not None
+
+            length += path_len
 
             guide.append(c_node)
             key = frozenset(guide)
@@ -163,7 +180,11 @@ class _Graph:
         key, length = max(path_blengths.items(), key=lambda item: item[1])
         return path_guides[key], length
 
-    def _create_root_at(self, path, root_at):
+    def _create_root_at(
+        self,
+        path: List[NodeID],
+        root_at: float,
+    ) -> NodeID:
         """Finds the midpoint of a path through a tree, and
         either creates a new node at that point, or selects
         the node already present at that point (if any). The
@@ -178,6 +199,7 @@ class _Graph:
         nodes (if created) are always given the id None."""
         for (c_node, n_node) in zip(path, path[1:]):
             branch_length = self.get_path_length(c_node, n_node)
+            assert branch_length is not None
 
             if branch_length > root_at:
                 left_len = root_at
@@ -197,42 +219,45 @@ class _Graph:
     ################################################################################
     # Functions relating to NEWICK rooting on taxa
 
-    def reroot_on_taxa(self, taxa):
-        taxa = safe_coerce_to_frozenset(taxa)
+    def reroot_on_taxa(self, taxa: Iterable[str]) -> Any:
+        clades = self._collect_clades()
+        root_on = self._collect_nodes_from_names(taxa)
         if not taxa:
             raise ValueError("No taxa in outgroup")
 
-        clades = self._collect_clades()
-        root_on = self._collect_nodes_from_names(taxa)
         # Because None is the id of the root atm:
         root = self._create_root_with_clade(clades, root_on)
 
         return self.rebuild_tree(root, root)
 
-    def _collect_nodes_from_names(self, taxa):
-        known_taxa = set()
+    def _collect_nodes_from_names(self, taxa: Iterable[str]) -> FrozenSet[NodeID]:
+        nodes_by_names = {}  # type: Dict[NodeName, List[NodeID]]
         for (node_id, name) in self.names.items():
             if self.is_leaf(node_id):
-                known_taxa.add(name)
+                nodes_by_names.setdefault(name, []).append(node_id)
 
-        unknown_taxa = taxa - known_taxa
-        if unknown_taxa:
-            raise ValueError(
-                "Cannot root on unknown taxa: %s" % (", ".join(unknown_taxa),)
-            )
-        elif not (known_taxa - taxa):
+        selection = []  # type: List[NodeID]
+        for name in taxa:
+            selection.extend(nodes_by_names.pop(name))
+
+        if not nodes_by_names:
             raise ValueError("Cannot root on every taxa in tree")
 
-        return frozenset(key for (key, name) in self.names.items() if name in taxa)
+        return frozenset(selection)
 
-    def _collect_clades(self):
-        clades = {}
+    def _collect_clades(self) -> Dict[NodeID, Dict[NodeID, FrozenSet[NodeID]]]:
+        clades = {}  # type: Dict[NodeID, Dict[NodeID, FrozenSet[NodeID]]]
         for (node_a, connections) in self.connections.items():
             for node_b in connections:
                 self._collect_clade_from(clades, node_a, node_b)
         return clades
 
-    def _collect_clade_from(self, cache, p_node, c_node):
+    def _collect_clade_from(
+        self,
+        cache: Dict[NodeID, Dict[NodeID, FrozenSet[NodeID]]],
+        p_node: NodeID,
+        c_node: NodeID,
+    ):
         c_clade = get_in(cache, (p_node, c_node), set())
         if not c_clade:
             if self.is_leaf(c_node):
@@ -244,8 +269,14 @@ class _Graph:
             set_in(cache, (p_node, c_node), frozenset(c_clade))
         return c_clade
 
-    def _create_root_with_clade(self, clades, taxa):
-        root_key, root_clade, root_length = None, None, None
+    def _create_root_with_clade(
+        self,
+        clades: Dict[NodeID, Dict[NodeID, FrozenSet[NodeID]]],
+        taxa: FrozenSet[NodeID],
+    ) -> NodeID:
+        root_key: Optional[Tuple[NodeID, NodeID]] = None
+        root_clade: Optional[FrozenSet[NodeID]] = None
+        root_length = Optional[float]
         for (p_node, connections) in clades.items():
             for (n_node, clade) in connections.items():
                 if (root_clade is None) or (len(clade) < len(root_clade)):
@@ -254,6 +285,7 @@ class _Graph:
                         root_clade = clade
                         root_length = self.get_path_length(p_node, n_node)
 
+        assert root_key is not None
         p_node, n_node = root_key
         if root_length is not None:
             root_length = float(root_length) / 2.0
@@ -267,8 +299,9 @@ class _Graph:
     ################################################################################
     ################################################################################
     # Functions relating to calculating bootstrap support
-    def get_clade_names(self):
-        result = set()
+
+    def get_clade_names(self) -> Set[FrozenSet[NodeName]]:
+        result = set()  # type: Set[FrozenSet[NodeName]]
         for (_, connections) in self._collect_clades().items():
             for (_, clade) in connections.items():
                 result.add(frozenset(self.names[node_id] for node_id in clade))

@@ -2,28 +2,26 @@
 import os
 import signal
 import weakref
-
-from collections import OrderedDict
-from unittest.mock import call, Mock, patch
 from pathlib import Path
-
-import pytest
+from unittest.mock import Mock, call, patch
 
 import paleomix
 import paleomix.atomiccmd.command
 import paleomix.atomiccmd.pprint
 import paleomix.common.fileutils as fileutils
-
-from paleomix.common.versions import Requirement
-from paleomix.atomiccmd.command import CmdError, TempInputFile, TempOutputFile
+import pytest
 from paleomix.atomiccmd.command import (
     AtomicCmd,
-    _AtomicFile,
     AuxilleryFile,
+    CmdError,
     Executable,
     InputFile,
     OutputFile,
+    TempInputFile,
+    TempOutputFile,
+    _AtomicFile,
 )
+from paleomix.common.versions import Requirement
 
 ########################################################################################
 # AtomicFile
@@ -136,6 +134,11 @@ def test_atomiccmd2__executables_empty_str_in_tuple():
 def test_atomiccmd2__executable_class():
     cmd = AtomicCmd((Executable("cd"), "."))
     assert cmd.executables == frozenset(["cd"])
+
+
+def test_atomiccmd2__command_iofile():
+    with pytest.raises(ValueError):
+        AtomicCmd([InputFile("ls")])
 
 
 ########################################################################################
@@ -925,34 +928,22 @@ def test_append_options__empty_lists():
 
 
 def test_append_options__single_options():
-    options = OrderedDict()
-    options["--foo"] = 1
-    options["--bar"] = InputFile("/foo/bar")
-
     cmd = AtomicCmd("touch")
-    cmd.append_options(options)
+    cmd.append_options({"--foo": 1, "--bar": InputFile("/foo/bar")})
 
     assert cmd.to_call("${TEMP_DIR}") == ["touch", "--foo", "1", "--bar", "/foo/bar"]
 
 
 def test_append_options__none_value():
-    options = OrderedDict()
-    options["--foo"] = None
-    options["--bar"] = None
-
     cmd = AtomicCmd("touch")
-    cmd.append_options(options)
+    cmd.append_options({"--foo": None, "--bar": None})
 
     assert cmd.to_call("${TEMP_DIR}") == ["touch", "--foo", "--bar"]
 
 
 def test_append_options__multiple_options():
-    options = OrderedDict()
-    options["--foo"] = [3, 2, 1]
-    options["--bar"] = InputFile("/foo/bar")
-
     cmd = AtomicCmd("touch")
-    cmd.append_options(options)
+    cmd.append_options({"--foo": [3, 2, 1], "--bar": InputFile("/foo/bar")})
 
     assert cmd.to_call("${TEMP_DIR}") == [
         "touch",
@@ -984,10 +975,16 @@ def test_append_options__custom_filtering():
     assert cmd.to_call("${TEMP_DIR}") == ["touch", "foo", "1"]
 
 
+def test_append_options__invalid_type():
+    cmd = AtomicCmd("touch")
+    with pytest.raises(TypeError):
+        cmd.append_options("-foo")  # type: ignore
+
+
 def test_append_options__invalid_key():
     cmd = AtomicCmd("touch")
     with pytest.raises(ValueError, match="17"):
-        cmd.append_options({17: "yes"})
+        cmd.append_options({17: "yes"})  # type: ignore
 
 
 @pytest.mark.parametrize("value", (object(),))

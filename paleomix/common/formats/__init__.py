@@ -20,4 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from paleomix.common.formats._common import FormatError  # noqa: F401
+from paleomix.common.formats._common import FormatError
+
+__all__ = ["FormatError"]

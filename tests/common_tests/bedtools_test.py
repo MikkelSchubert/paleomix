@@ -21,9 +21,9 @@
 # SOFTWARE.
 #
 import copy
+from typing import Any
 
 import pytest
-
 from paleomix.common.bedtools import (
     BEDError,
     BEDRecord,
@@ -104,11 +104,11 @@ def test_bedrecord__accessors__3_fields():
     assert record.start == 12
     assert record.end == 345
     with pytest.raises(IndexError):
-        record.name()
+        record.name
     with pytest.raises(IndexError):
-        record.score()
+        record.score
     with pytest.raises(IndexError):
-        record.strand()
+        record.strand
 
 
 def test_bedrecord__accessors__6_fields():
@@ -158,15 +158,15 @@ def test_bedrecord__setters__type_errors():
     record = BEDRecord("my_contig\t12\t345\tname\t0\t+")
 
     with pytest.raises(ValueError):
-        record.contig = 17
+        record.contig = 17  # type: ignore
     with pytest.raises(ValueError):
-        record.start = "foo"
+        record.start = "foo"  # type: ignore
     with pytest.raises(ValueError):
-        record.end = "foo"
+        record.end = "foo"  # type: ignore
     with pytest.raises(ValueError):
-        record.name = 17.3
+        record.name = 17.3  # type: ignore
     with pytest.raises(ValueError):
-        record.score = "foo"
+        record.score = "foo"  # type: ignore
     with pytest.raises(ValueError):
         record.strand = "foo"
 
@@ -232,32 +232,6 @@ def test_bedrecord__cmp():
         assert record_1 != record_tmp
         record_tmp[idx] = record_1[idx]
         assert record_1 == record_tmp
-
-
-###############################################################################
-# freeze
-
-
-def test_bedrecord__freeze__modify_existing_value():
-    record_str = "my_contig\t12\t345\tmy_name"
-    record = BEDRecord(record_str)
-    frozen_record = record.freeze()
-
-    with pytest.raises(TypeError):
-        frozen_record.start = 1
-
-    assert str(frozen_record) == record_str
-
-
-def test_bedrecord__freeze__add_new_value():
-    record_str = "my_contig\t12\t345\tmy_name"
-    record = BEDRecord(record_str)
-    frozen_record = record.freeze()
-
-    with pytest.raises(AttributeError):
-        frozen_record.score = 1
-
-    assert str(frozen_record) == record_str
 
 
 ###############################################################################
@@ -428,7 +402,7 @@ def test_merge_records__complex_example__unsorted():
     ]
 
 
-def _new_bed_record(*args):
+def _new_bed_record(*args: Any):
     record = BEDRecord()
     record._fields = list(args)
 

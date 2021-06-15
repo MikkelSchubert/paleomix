@@ -21,9 +21,8 @@
 # SOFTWARE.
 #
 import os
-
 from pathlib import Path
-from typing import Union
+from typing import Any, Union
 
 from .fileutils import fspath
 
@@ -41,5 +40,6 @@ class SetWorkingDirectory:
         self._old_cwd = os.getcwd()
         os.chdir(self._new_cwd)
 
-    def __exit__(self, _type, _value, _traceback):
-        os.chdir(self._old_cwd)
+    def __exit__(self, _type: Any, _value: Any, _traceback: Any):
+        if self._old_cwd:
+            os.chdir(self._old_cwd)

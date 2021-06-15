@@ -21,6 +21,7 @@
 # SOFTWARE.
 #
 import sys
+import typing
 
 from paleomix.common.utilities import Immutable, TotallyOrdered
 from paleomix.common.fileutils import open_ro
@@ -32,6 +33,14 @@ class FASTQError(FormatError):
 
 
 class FASTQ(TotallyOrdered, Immutable):
+
+    __slots__ = ["name", "meta", "sequence", "qualities"]
+
+    name: str
+    meta: typing.Optional[str]
+    sequence: str
+    qualities: str
+
     def __init__(self, name, meta, sequence, qualities):
         if not (name and isinstance(name, str)):
             raise FASTQError("FASTQ name must be a non-empty string")

@@ -20,16 +20,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
 import bz2
-import gzip
-import uuid
 import errno
+import gzip
+import os
 import shutil
-
+import uuid
 from os import fspath
 from pathlib import Path
-from typing import Any, Callable, IO, Iterable, List, Optional, Tuple, Union
+from typing import IO, Any, Callable, Iterable, List, Optional, Tuple, Union
 
 from .utilities import safe_coerce_to_tuple
 
@@ -73,11 +72,11 @@ def create_temp_dir(root: Union[str, Path]) -> str:
     return path
 
 
-def missing_files(filenames: Iterable[Union[str, Path]]) -> List[Union[str, Path]]:
+def missing_files(filenames: Iterable[Union[str, Path]]) -> List[str]:
     """Given a list of filenames, returns a list of those that
     does not exist. Note that this function does not differentiate
     between files and folders."""
-    missing = []
+    missing = []  # type: List[str]
     for filename in safe_coerce_to_tuple(filenames):
         filename = fspath(filename)
         if not os.path.exists(filename):
@@ -85,10 +84,8 @@ def missing_files(filenames: Iterable[Union[str, Path]]) -> List[Union[str, Path
     return missing
 
 
-def missing_executables(
-    filenames: Iterable[Union[str, Path]]
-) -> List[Union[str, Path]]:
-    missing = []
+def missing_executables(filenames: Iterable[Union[str, Path]]) -> List[str]:
+    missing = []  # type: List[str]
     for filename in safe_coerce_to_tuple(filenames):
         filename = fspath(filename)
         if not shutil.which(filename):
@@ -139,7 +136,10 @@ def copy_file(source: Union[str, Path], destination: Union[str, Path]) -> None:
     _sh_wrapper(_atomic_file_copy, source, destination)
 
 
-def open_ro(filename: Union[str, Path], mode: str = "rt") -> IO[str]:
+def open_ro(
+    filename: Union[str, Path],
+    mode: str = "rt",
+) -> Union[IO[Any], gzip.GzipFile, bz2.BZ2File]:
     """Opens a file for reading, transparently handling
     GZip and BZip2 compressed files. Returns a file handle."""
     filename = fspath(filename)
@@ -152,6 +152,7 @@ def open_ro(filename: Union[str, Path], mode: str = "rt") -> IO[str]:
     with open(filename, "rb") as handle:
         header = handle.read(2)
 
+    assert mode == "rt" or mode == "rb"
     if header == b"\x1f\x8b":
         return gzip.open(filename, mode)
     elif header == b"BZ":
@@ -239,7 +240,8 @@ def get_files_glob(
     if len(set(map(len, filenames))) > 1:
         return None
 
-    glob_fname, differences = [], 0
+    glob_fname = []  # type: List[str]
+    differences = 0
     for chars in zip(*filenames):
         if "?" in chars:
             chars = ("?",)
@@ -264,7 +266,7 @@ def validate_filenames(filenames: Iterable[str]) -> Tuple[str, ...]:
     return tuple(fspath(filename) for filename in safe_coerce_to_tuple(filenames))
 
 
-def _atomic_file_move(source, destination):
+def _atomic_file_move(source: Union[str, Path], destination: Union[str, Path]):
     try:
         return os.rename(source, destination)
     except OSError as error:
@@ -283,7 +285,11 @@ def _atomic_file_move(source, destination):
     os.unlink(source)
 
 
-def _atomic_file_copy(source, destination, copyfunc=None):
+def _atomic_file_copy(
+    source: Union[str, Path],
+    destination: Union[str, Path],
+    copyfunc: Optional[Callable[[Union[str, Path], Union[str, Path]], Any]] = None,
+):
     # Ensure that hard failures during copy does not leave anything at destination
     temp_destination = "{}.{}.tmp".format(destination, uuid.uuid4())
     # Allow function to be monkeypatched for testing

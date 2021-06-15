@@ -20,8 +20,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import pytest
+from typing import Any
 
+import pytest
 from paleomix.common.formats.newick import (
     GraphError,
     Newick,
@@ -61,19 +62,14 @@ def test_newick__constructor__is_leaf_false_for_internal_nodes():
     assert not top_node.is_leaf
 
 
-def test_newick__constuctor__leaf_nodes_must_have_name_or_length():
-    with pytest.raises(NewickError):
-        Newick(children=None)
-
-
-def test_newick__constructor__internal_nodes_must_have_children():
+def test_newick__constructor__leaf_nodes_must_have_children():
     with pytest.raises(NewickError):
         Newick(children=[])
 
 
 def test_newick__constructor__children_must_be_newick():
     with pytest.raises(TypeError):
-        Newick(children=["A", "B"])
+        Newick(children=["A", "B"])  # type: ignore
 
 
 ###############################################################################
@@ -165,7 +161,7 @@ def test_newick__reroot_on_taxa__no_taxa():
 
 def test_newick__reroot_on_taxa__unknown_taxa():
     source = Newick.from_string("((B,C),((D,E),A));")
-    with pytest.raises(ValueError):
+    with pytest.raises(KeyError):
         source.reroot_on_taxa(("A", "Z"))
 
 
@@ -224,7 +220,7 @@ _INVALID_BRANCH_LENGTHS = (
 
 
 @pytest.mark.parametrize("newick", _INVALID_BRANCH_LENGTHS)
-def test_newick__reroot_on_midpoint__invalid_branch_lengths(newick):
+def test_newick__reroot_on_midpoint__invalid_branch_lengths(newick: str):
     source = Newick.from_string(newick)
     with pytest.raises(GraphError):
         source.reroot_on_midpoint()
@@ -306,16 +302,16 @@ _ADD_SUPPORT_FORMATTING = (
 
 
 @pytest.mark.parametrize("fmt, expected", _ADD_SUPPORT_FORMATTING)
-def test_newick__add_support__formatting(fmt, expected):
+def test_newick__add_support__formatting(fmt: str, expected: str):
     main_tree = Newick.from_string("(((A,B),C),D);")
     bootstraps = [
         Newick.from_string("(((C,D),A),B);"),
         Newick.from_string("(((C,B),A),D);"),
         Newick.from_string("(((A,D),B),C);"),
     ]
-    expected = Newick.from_string(expected)
+    expected_tree = Newick.from_string(expected)
     result = main_tree.add_support(bootstraps, fmt)
-    assert expected == result
+    assert expected_tree == result
 
 
 def test_newick__add_support__unique_names_required():
@@ -415,7 +411,7 @@ _CMP_NOT_IDENTICAL = (
 
 
 @pytest.mark.parametrize("node_b", _CMP_NOT_IDENTICAL)
-def test_newick__cmp__not_identical(node_b):
+def test_newick__cmp__not_identical(node_b: Newick):
     node_a = Newick(name="A", length=13, children=[Newick(name="B")])
     assert node_a != node_b
 
@@ -431,17 +427,8 @@ def test_newick__hash__identical():
     assert hash(node_a) == hash(node_b)
 
 
-_HASH_NOT_IDENTICAL = (
-    Newick(name="B", length=13, children=[Newick(name="B")]),
-    Newick(name="A", length=14, children=[Newick(name="B")]),
-    Newick(name="A", length=13, children=[]),
-    Newick(name="A", length=13, children=[Newick(name="C")]),
-    Newick(name="B", length=14, children=[Newick(name="C")]),
-)
-
-
 @pytest.mark.parametrize("node_b", _CMP_NOT_IDENTICAL)
-def test_newick__hash__not_identical(node_b):
+def test_newick__hash__not_identical(node_b: Newick):
     node_a = Newick(name="A", length=13, children=[Newick(name="B")])
     assert hash(node_a) != hash(node_b)
 
@@ -625,7 +612,7 @@ def test_newick__wikipedia_example_8():
 
 
 def test_newick__str__non_string_name():
-    node = Newick(children=[Newick(name=17, length="1.3")])
+    node = Newick(children=[Newick(name=17, length="1.3")])  # type: ignore
     assert str(node) == "(17:1.3);"
 
 
@@ -664,7 +651,7 @@ _STR_EQUALITY = (
 
 
 @pytest.mark.parametrize("nwk_str", _STR_EQUALITY)
-def test_newick__wikipedia_examples__str_equality(nwk_str):
+def test_newick__wikipedia_examples__str_equality(nwk_str: str):
     nodes = Newick.from_string(nwk_str)
     result = str(nodes)
     assert result == nwk_str
@@ -677,20 +664,20 @@ def test_newick__wikipedia_examples__str_equality(nwk_str):
 _PROPERTIES_ARE_IMMUTABLE = (
     ("name", "foo"),
     ("length", "13"),
-    ("children", []),
+    ("children", [Newick("foo")]),
     ("foobar", True),
 )
 
 
 @pytest.mark.parametrize("name, value", _PROPERTIES_ARE_IMMUTABLE)
-def test_newick__properties_are_immutable(name, value):
+def test_newick__properties_are_immutable(name: str, value: Any):
     node = Newick(name="A", length=3, children=[Newick(name="B")])
     with pytest.raises(NotImplementedError):
         setattr(node, name, value)
 
 
 @pytest.mark.parametrize("name", ("name", "length", "children", "foobar"))
-def test_newick__properties_cannot_be_deleted(name):
+def test_newick__properties_cannot_be_deleted(name: str):
     node = Newick(name="A", length=3, children=[Newick(name="B")])
     with pytest.raises(NotImplementedError):
         delattr(node, name)
