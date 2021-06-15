@@ -20,15 +20,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-"""
-Tools used for working with subprocesses.
-"""
+from __future__ import annotations
+
 import signal
 import sys
 import time
+from subprocess import Popen
+from typing import IO, Any, Iterable, List, Optional, cast
 
 
-def join_procs(procs, out=sys.stderr):
+def join_procs(procs: Iterable[Popen[Any]], out: IO[str] = sys.stderr):
     """Joins a set of Popen processes. If a processes fail, the remaining
     processes are terminated. The function returns a list of return-code,
     containing the result of each call. Status messages are written to STDERR
@@ -38,26 +39,30 @@ def join_procs(procs, out=sys.stderr):
     commands = list(enumerate(procs))
     assert all(hasattr(cmd, "args") for (_, cmd) in commands)
 
-    return_codes = [None] * len(commands)
+    return_codes = [None] * len(commands)  # type: List[Optional[int]]
     out.write("Joinining subprocesses:\n")
     while commands:
         for (index, command) in list(commands):
             if command.poll() is not None:
-                return_codes[index] = command.wait()
+                return_code = command.wait()
+                return_codes[index] = return_code
                 commands.remove((index, command))
                 sleep_time = 0.05
 
-                return_code = return_codes[index]
                 if return_code < 0:
                     return_code = signal.Signals(-return_code).name
 
                 out.write(
                     "  - Command finished: %s\n"
-                    "    Return-code:      %s\n" % (" ".join(command.args), return_code)
+                    "    Return-code:      %s\n"
+                    % (" ".join(cast(Any, command).args), return_code)
                 )
                 out.flush()
             elif any(return_codes):
-                out.write("  - Terminating command: %s\n" % (" ".join(command.args),))
+                out.write(
+                    "  - Terminating command: %s\n"
+                    % (" ".join(cast(Any, command).args),)
+                )
                 out.flush()
 
                 command.terminate()

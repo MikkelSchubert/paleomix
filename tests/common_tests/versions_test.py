@@ -23,10 +23,10 @@
 import operator
 import pickle
 import sys
-
-import pytest
+from typing import Tuple
 
 import paleomix.common.versions as versions
+import pytest
 
 ###############################################################################
 ###############################################################################
@@ -35,11 +35,11 @@ import paleomix.common.versions as versions
 
 def test_check__func_must_be_callable():
     with pytest.raises(TypeError):
-        versions.Check("FooBar", 3, 7, 5)
+        versions.CheckVersion("FooBar", 3, 7, 5)  # type: ignore
 
 
 def test_check_str():
-    obj = versions.Check("FooBar", operator.lt, 3, 7, 5)
+    obj = versions.CheckVersion("FooBar", operator.lt, 3, 7, 5)
     assert str(obj) == "FooBar"
 
 
@@ -49,29 +49,29 @@ def test_check_str():
 
 
 def test_check__eq_same_func_desc_and_version():
-    obj_1 = versions.Check("Desc {}", operator.lt, 1, 2, 3)
-    obj_2 = versions.Check("Desc {}", operator.lt, 1, 2, 3)
+    obj_1 = versions.CheckVersion("Desc {}", operator.lt, 1, 2, 3)
+    obj_2 = versions.CheckVersion("Desc {}", operator.lt, 1, 2, 3)
     assert hash(obj_1) == hash(obj_2)
     assert obj_1 == obj_2
 
 
 def test_check__not_eq_for_diff_func_same_desc_and_version():
-    obj_1 = versions.Check("Desc {}", operator.gt, 1, 2, 3)
-    obj_2 = versions.Check("Desc {}", operator.lt, 1, 2, 3)
+    obj_1 = versions.CheckVersion("Desc {}", operator.gt, 1, 2, 3)
+    obj_2 = versions.CheckVersion("Desc {}", operator.lt, 1, 2, 3)
     assert hash(obj_1) != hash(obj_2)
     assert obj_1 != obj_2
 
 
 def test_check__not_eq_for_diff_desc_same_func_and_version():
-    obj_1 = versions.Check("Desc1 {}", operator.lt, 1, 2, 3)
-    obj_2 = versions.Check("Desc2 {}", operator.lt, 1, 2, 3)
+    obj_1 = versions.CheckVersion("Desc1 {}", operator.lt, 1, 2, 3)
+    obj_2 = versions.CheckVersion("Desc2 {}", operator.lt, 1, 2, 3)
     assert hash(obj_1) != hash(obj_2)
     assert obj_1 != obj_2
 
 
 def test_check__not_eq_for_same_func_desc_diff_version():
-    obj_1 = versions.Check("Desc {}", operator.lt, 1, 2, 3)
-    obj_2 = versions.Check("Desc {}", operator.lt, 1, 3, 3)
+    obj_1 = versions.CheckVersion("Desc {}", operator.lt, 1, 2, 3)
+    obj_2 = versions.CheckVersion("Desc {}", operator.lt, 1, 3, 3)
     assert hash(obj_1) != hash(obj_2)
     assert obj_1 != obj_2
 
@@ -236,7 +236,7 @@ def test_lt__check_values__always_true():
 
 def test_and__init__non_check_value():
     with pytest.raises(ValueError):
-        versions.And(versions.LT(2), None)
+        versions.And(versions.LT(2), None)  # type: ignore
 
 
 ###############################################################################
@@ -314,7 +314,7 @@ _TRUNCATED_VERSIONS = (
 
 
 @pytest.mark.parametrize("obj_1, obj_2", _TRUNCATED_VERSIONS)
-def test_and__check_version__truncated(obj_1, obj_2):
+def test_and__check_version__truncated(obj_1: versions.Check, obj_2: versions.Check):
     obj = versions.And(obj_1, obj_2)
     assert obj((1, 3, 3))
 
@@ -327,7 +327,10 @@ _INSUFFICIENT_VALUES = (
 
 
 @pytest.mark.parametrize("obj_1, obj_2", _INSUFFICIENT_VALUES)
-def test_and__check_version__insufficient_number_of_values(obj_1, obj_2):
+def test_and__check_version__insufficient_number_of_values(
+    obj_1: versions.Check,
+    obj_2: versions.Check,
+):
     obj = versions.And(obj_1, obj_2)
     with pytest.raises(ValueError):
         obj((1, 3))
@@ -340,7 +343,7 @@ def test_and__check_version__insufficient_number_of_values(obj_1, obj_2):
 
 def test_or__init__non_check_value():
     with pytest.raises(ValueError):
-        versions.Or(versions.LT(2), None)
+        versions.Or(versions.LT(2), None)  # type: ignore
 
 
 ###############################################################################
@@ -411,7 +414,7 @@ def test_or__check_version__neither_true():
 
 
 @pytest.mark.parametrize("obj_1, obj_2", _TRUNCATED_VERSIONS)
-def test_or__check_version__truncated(obj_1, obj_2):
+def test_or__check_version__truncated(obj_1: versions.Check, obj_2: versions.Check):
     obj = versions.Or(obj_1, obj_2)
     assert obj((1, 3, 3))
 
@@ -423,7 +426,10 @@ _INSUFFICIENT_VALUES_OR = (
 
 
 @pytest.mark.parametrize("obj_1, obj_2", _INSUFFICIENT_VALUES_OR)
-def test_or__check_version__insufficient_number_of_values(obj_1, obj_2):
+def test_or__check_version__insufficient_number_of_values(
+    obj_1: versions.Check,
+    obj_2: versions.Check,
+):
     obj = versions.Or(obj_1, obj_2)
     with pytest.raises(ValueError):
         obj((1, 3))
@@ -439,6 +445,34 @@ def test_or__check_version__insufficient_number_of_values__is_lazy():
 ###############################################################################
 ###############################################################################
 # Requirement -- constructor
+
+
+def test_requirementobj__init__str():
+    obj = versions.Requirement("true")
+
+    assert obj.name == "true"
+    assert obj.call == ("true",)
+
+
+def test_requirementobj__init__list():
+    obj = versions.Requirement(["also", "true"])
+
+    assert obj.name == "also"
+    assert obj.call == ("also", "true")
+
+
+def test_requirementobj__init__self_call__str():
+    obj = versions.Requirement("%(PYTHON)s")
+
+    assert obj.name == "%(PYTHON)s"
+    assert obj.call == (sys.executable,)
+
+
+def test_requirementobj__init__self_call__list():
+    obj = versions.Requirement(["%(PYTHON)s", "/path/to/blah.py"])
+
+    assert obj.name == "%(PYTHON)s"
+    assert obj.call == (sys.executable, "/path/to/blah.py")
 
 
 def test_requirementobj__init__defaults():
@@ -468,7 +502,7 @@ def test_requirementobj__init__non_defaults():
 # Requirement -- version
 
 
-def _echo_version(version, dst="stdout", returncode=0):
+def _echo_version(version: str, dst: str = "stdout", returncode: int = 0):
     tmpl = "import sys; sys.%s.write(%r); sys.exit(%s);"
     return (sys.executable, "-c", tmpl % (dst, version, returncode))
 
@@ -484,7 +518,7 @@ _VERSION_CALL_RESULTS = (
 
 @pytest.mark.parametrize("pipe", _PIPES)
 @pytest.mark.parametrize("regexp, equals", _VERSION_CALL_RESULTS)
-def test_requirementobj__version__call(pipe, regexp, equals):
+def test_requirementobj__version__call(pipe: str, regexp: str, equals: Tuple[int, ...]):
     call = _echo_version("v3.5.2\n", dst=pipe)
     obj = versions.Requirement(call=call, search=regexp, checks=versions.Any())
     assert obj.version() == equals
@@ -527,39 +561,6 @@ def test_requirementobj__version__return_code_is_ignored():
     assert obj.version() == (1, 2)
 
 
-def test_requirementobj__version__func_call():
-    def _return_version():
-        return "This is v5.3!"
-
-    obj = versions.Requirement(
-        call=_return_version, search=r"v(\d+)\.(\d+)", checks=versions.Any()
-    )
-    assert obj.version() == (5, 3)
-
-
-def test_requirementobj__version__func_call_with_arguments():
-    def _return_version(arg1, arg2):
-        assert (arg1, arg2) == (2, "foo")
-        return "This is v5.3!"
-
-    obj = versions.Requirement(
-        call=(_return_version, 2, "foo"), search=r"v(\d+)\.(\d+)", checks=versions.Any()
-    )
-    assert obj.version() == (5, 3)
-
-
-@pytest.mark.parametrize(
-    "message", ("UnsupportedClassVersionError", "UnsupportedClassVersionError v1.2.3")
-)
-def test_requirementobj__version__outdated_jre__with_or_without_version_str(message):
-    obj = versions.Requirement(
-        call=lambda: message, search=r"v(\d+)\.(\d+)", checks=versions.Any()
-    )
-
-    with pytest.raises(versions.RequirementError, match="upgrade your version of Java"):
-        obj.version()
-
-
 ###############################################################################
 ###############################################################################
 # Requirement -- executable
@@ -581,40 +582,22 @@ def test_requirementobj__executable__with_cli_arguments():
     assert obj.executable == "samtools"
 
 
-def test_requirementobj__executable__function():
-    obj = versions.Requirement(
-        call=lambda: "v1.1", search=r"v(\d+)\.(\d+)", checks=versions.Any()
-    )
-
-    assert obj.executable is None
-
-
 ###############################################################################
 ###############################################################################
 # Requirement -- __call__
 
 
 class CheckCounted(versions.Check):
-    def __init__(self, return_value=True, expected=(1, 1)):
+    def __init__(self, return_value: bool = True, expected: Tuple[int, ...] = (1, 1)):
         self.count = 0
+        self.expected = tuple(expected)
         self.return_value = return_value
-        versions.Check.__init__(self, "counted {}", operator.eq, *expected)
+        versions.Check.__init__(self, "counted {}")
 
-    def _do_check_version(self, current, reference):
-        assert current == reference
+    def __call__(self, current: Tuple[int, ...]) -> bool:
+        assert current == self.expected
         self.count += 1
         return self.return_value
-
-
-def test_requirementobj__call__check_fails__function():
-    obj = versions.Requirement(
-        call=lambda: "v1.0.3",
-        search=r"(\d)\.(\d)",
-        checks=versions.GE(1, 1),
-        name="test#1",
-    )
-
-    assert not obj.check()
 
 
 def test_requirementobj__call__check_fails():
@@ -662,5 +645,5 @@ _CAN_PICKLE_VALUES = (
 
 
 @pytest.mark.parametrize("obj", _CAN_PICKLE_VALUES)
-def test_check__can_pickle(obj):
+def test_check__can_pickle(obj: versions.Check):
     pickle.dumps(obj)

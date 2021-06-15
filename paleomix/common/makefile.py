@@ -448,8 +448,8 @@ class DeprecatedOption(MakefileSpec):
 
         log = logging.getLogger(__name__)
         log.warning(
-            "option has been deprecated and will be removed in the future: %s"
-            % (_path_to_str(path),)
+            "option has been deprecated and will be removed in the future: %s",
+            _path_to_str(path),
         )
 
     def meets_spec(self, value: Any) -> bool:
@@ -465,8 +465,8 @@ class RemovedOption(MakefileSpec):
     def __call__(self, path, _value):
         log = logging.getLogger(__name__)
         log.warning(
-            "option has been removed and no longer has any effect: %s"
-            % (_path_to_str(path),)
+            "option has been removed and no longer has any effect: %s",
+            _path_to_str(path),
         )
 
     def meets_spec(self, _value):

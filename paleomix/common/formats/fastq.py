@@ -21,11 +21,11 @@
 # SOFTWARE.
 #
 import sys
-import typing
+from typing import IO, Any, Iterable, Iterator, Optional, Set
 
-from paleomix.common.utilities import Immutable, TotallyOrdered
-from paleomix.common.fileutils import open_ro
+from paleomix.common.fileutils import open_rt
 from paleomix.common.formats._common import FormatError
+from paleomix.common.utilities import Immutable, TotallyOrdered
 
 
 class FASTQError(FormatError):
@@ -37,11 +37,11 @@ class FASTQ(TotallyOrdered, Immutable):
     __slots__ = ["name", "meta", "sequence", "qualities"]
 
     name: str
-    meta: typing.Optional[str]
+    meta: Optional[str]
     sequence: str
     qualities: str
 
-    def __init__(self, name, meta, sequence, qualities):
+    def __init__(self, name: str, meta: Optional[str], sequence: str, qualities: str):
         if not (name and isinstance(name, str)):
             raise FASTQError("FASTQ name must be a non-empty string")
         elif not (isinstance(meta, str) or (meta is None)):
@@ -57,7 +57,7 @@ class FASTQ(TotallyOrdered, Immutable):
             self, name=name, meta=meta or "", sequence=sequence, qualities=qualities
         )
 
-    def write(self, fileobj=sys.stdout):
+    def write(self, fileobj: IO[str] = sys.stdout) -> None:
         """Writes a FASTQ record to fileobj."""
         name = self.name
         if self.meta:
@@ -66,7 +66,7 @@ class FASTQ(TotallyOrdered, Immutable):
         fileobj.write("@%s\n%s\n+\n%s\n" % (name, self.sequence, self.qualities))
 
     @classmethod
-    def from_lines(cls, lines):
+    def from_lines(cls, lines: Iterable[str]) -> Iterator["FASTQ"]:
         """Parses FASTQ sequences found in a sequence of lines, and returns
         a tuple for each FASTQ record: ((name, meta-information), sequence)
         No assumptions are made about the line-lengths."""
@@ -108,14 +108,14 @@ class FASTQ(TotallyOrdered, Immutable):
             )
 
     @classmethod
-    def from_file(cls, filename):
+    def from_file(cls, filename: str) -> Iterator["FASTQ"]:
         """Reads an unindexed FASTQ file, returning a sequence of
         tuples containing the name and sequence of each entry in
         the file. The FASTQ file may be GZIP/BZ2 compressed."""
-        with open_ro(filename) as handle:
+        with open_rt(filename) as handle:
             yield from FASTQ.from_lines(handle)
 
-    def __lt__(self, other):
+    def __lt__(self, other: Any) -> bool:
         if not isinstance(other, FASTQ):
             return NotImplemented
 
@@ -126,10 +126,10 @@ class FASTQ(TotallyOrdered, Immutable):
             other.qualities,
         )
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.name, self.meta, self.sequence, self.qualities))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "FASTQ(%r, %r, %r, %r)" % (
             self.name,
             self.meta,
@@ -163,9 +163,9 @@ class FASTQualities:
     AMBIGIOUS = "AMBIGIOUS"
 
     def __init__(self):
-        self._qualities = set()
+        self._qualities = set()  # type: Set[str]
 
-    def update(self, record):
+    def update(self, record: FASTQ):
         self._qualities.update(record.qualities)
 
     def offsets(self):

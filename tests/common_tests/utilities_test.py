@@ -21,12 +21,10 @@
 # SOFTWARE.
 #
 import operator
-
-import pytest
-
+from typing import Any, Dict
 
 import paleomix.common.utilities as utils
-
+import pytest
 
 ################################################################################
 ################################################################################
@@ -121,19 +119,19 @@ def test_try_cast__list_to_int():
 
 
 def test_set_in__single_kw_in_empty_dictionary():
-    value = {}
+    value = {}  # type: Dict[Any, Any]
     utils.set_in(value, ["Foo"], 17)
     assert value == {"Foo": 17}
 
 
 def test_set_in__two_kws_in_empty_dictionary():
-    value = {}
+    value = {}  # type: Dict[Any, Any]
     utils.set_in(value, ["Foo", 13], 17)
     assert value == {"Foo": {13: 17}}
 
 
 def test_set_in__three_kws_in_empty_dictionary():
-    value = {}
+    value = {}  # type: Dict[Any, Any]
     utils.set_in(value, ["Foo", 13, (1, 2)], 17)
     assert value == {"Foo": {13: {(1, 2): 17}}}
 
@@ -181,7 +179,7 @@ def test_set_in__fail_on_invalid_sub_dictionary_third_level():
 
 
 def test_set_in__iteratable_keywords():
-    value = {}
+    value = {}  # type: Dict[Any, Any]
     utils.set_in(value, iter(["Foo", 13, (1, 2)]), 17)
     assert value == {"Foo": {13: {(1, 2): 17}}}
 
@@ -308,7 +306,7 @@ def test_grouper__non_empty_list_with_trailing_fill_value():
 
 
 def test_group_by_pred__empty_list():
-    assert utils.group_by_pred(id, []) == ([], [])
+    assert utils.group_by_pred(bool, []) == ([], [])
 
 
 def test_group_by_pred__always_false():
@@ -367,43 +365,12 @@ def test_fragment__range():
 
 def test_fragment__iterable():
     with pytest.raises(TypeError):
-        list(utils.fragment(3, iter(range(6))))
+        list(utils.fragment(3, iter(range(6))))  # type: ignore
 
 
 def test_fragment__set():
     with pytest.raises(TypeError):
-        list(utils.fragment(3, set(range(6))))
-
-
-###############################################################################
-###############################################################################
-# Tests for 'cumsum'
-
-
-def test_cumsum__empty():
-    assert list(utils.cumsum([])) == []
-
-
-def test_cumsum__integers():
-    assert list(utils.cumsum(list(range(-4, 5)))) == [
-        -4,
-        -7,
-        -9,
-        -10,
-        -10,
-        -9,
-        -7,
-        -4,
-        0,
-    ]
-
-
-def test_cumsum__float():
-    assert list(utils.cumsum((1.0, 2.0, 3.0))) == [1.0, 3.0, 6.0]
-
-
-def test_cumsum__initial():
-    assert list(utils.cumsum(list(range(5)), -10)) == [-10, -9, -7, -4, 0]
+        list(utils.fragment(3, set(range(6))))  # type: ignore
 
 
 ###############################################################################
@@ -463,7 +430,7 @@ def test_fill_dict__source_must_be_dict():
 
 def test_immutable__properties_set():
     class ImmutableCls(utils.Immutable):
-        def __init__(self, value):
+        def __init__(self, value: int):
             utils.Immutable.__init__(self, value=value)
 
     obj = ImmutableCls(17)

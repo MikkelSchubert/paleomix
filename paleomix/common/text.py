@@ -21,14 +21,29 @@
 # SOFTWARE.
 #
 import itertools
-from typing import Any, Callable, Dict, Iterable, List, Optional, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    TypeVar,
+    Union,
+    cast,
+)
+
+T = TypeVar("T")
 
 
 class TableError(RuntimeError):
     pass
 
 
-def padded_table(table: Iterable[Union[str, List[str]]], min_padding: int = 4):
+def padded_table(
+    table: Iterable[Union[str, List[str]]], min_padding: int = 4
+) -> Iterator[str]:
     """Takes a sequence of iterables, each of which represents a row in a
     table. Values are converted to string, and padded with whitespace such that
     each column is separated from its adjacent columns by at least 4 spaces.
@@ -59,7 +74,10 @@ def padded_table(table: Iterable[Union[str, List[str]]], min_padding: int = 4):
         yield row
 
 
-def parse_padded_table(lines: Iterable[str], header: Optional[List[str]] = None):
+def parse_padded_table(
+    lines: Iterable[str],
+    header: Optional[List[str]] = None,
+) -> Iterator[Dict[str, str]]:
     """Parses a padded table generated using 'padded_table', or any table which
     consists of a fixed number of columns seperated by whitespace, with no
     whitespace in the cells. Empty lines and lines starting with '#' (comments)
@@ -86,7 +104,7 @@ def parse_padded_table(lines: Iterable[str], header: Optional[List[str]] = None)
         yield dict(zip(header, fields))
 
 
-def parse_lines(lines: Iterable[str], parser: Callable[[str, int], Any]):
+def parse_lines(lines: Iterable[str], parser: Callable[[str, int], T]) -> Iterator[T]:
     """Parses a set of lines using the supplied callable:
         lambda (line, length): ...
 
@@ -102,15 +120,18 @@ def parse_lines(lines: Iterable[str], parser: Callable[[str, int], Any]):
             yield parser(stripped, len(stripped))
 
 
-def parse_lines_by_contig(lines: Iterable[str], parser: Callable[[str, int], Any]):
+def parse_lines_by_contig(
+    lines: Iterable[str],
+    parser: Callable[[str, int], T],
+) -> Dict[str, List[T]]:
     """Reads the lines of a text file, parsing each line with the specified
     parser, and aggregating results by the 'contig' property of reach record.
     """
     table = {}  # type: Dict[str, List[Any]]
     for record in parse_lines(lines, parser):
         try:
-            table[record.contig].append(record)
+            table[cast(Any, record).contig].append(record)
         except KeyError:
-            table[record.contig] = [record]
+            table[cast(Any, record).contig] = [record]
 
     return table

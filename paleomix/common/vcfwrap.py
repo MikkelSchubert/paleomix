@@ -20,18 +20,20 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-"""Wrapper and utility functions for VCF handling, using
-the VCF data-structures from pysam."""
+from typing import Dict, List, NamedTuple, Tuple
 
-import collections
-
-
-Indel = collections.namedtuple(
-    "Indel", ["in_reference", "pos", "prefix", "what", "postfix"]
-)
+from pysam import VCFRecord
 
 
-def parse_indel(vcf):
+class Indel(NamedTuple):
+    in_reference: bool
+    pos: int
+    prefix: str
+    what: str
+    postfix: str
+
+
+def parse_indel(vcf: VCFRecord) -> Indel:
     """Parses the VCF record of an indel, and returns a tuple containing the
     position (0-based) of the previous base, a boolean indicating whether or
     not the subsequent sequence is found in the reference sequence, and a
@@ -69,7 +71,7 @@ def parse_indel(vcf):
     return Indel(in_reference, vcf.pos, vcf.ref[0], what, postfix)
 
 
-def is_indel(vcf):
+def is_indel(vcf: VCFRecord) -> bool:
     """Returns true if the VCF entry represents an indel."""
     # FIXME: Is this a universal key for indels?
     return "INDEL" in vcf.info
@@ -79,11 +81,11 @@ def is_indel(vcf):
 _genotype_indices = [(jj, ii) for ii in range(0, 10) for jj in range(0, ii + 1)]
 
 
-def get_ml_genotype(vcf, sample=0):
+def get_ml_genotype(vcf: VCFRecord, sample: int = 0) -> Tuple[str, str]:
     """Returns the most likely genotype of a sample in a vcf record. If no
     single most likely genotype can be determined, the function returns 'N' for
     both bases."""
-    genotypes = []
+    genotypes = []  # type: List[str]
     genotypes.extend(vcf.ref.split(","))
     genotypes.extend(vcf.alt.split(","))
 
@@ -112,5 +114,5 @@ def get_ml_genotype(vcf, sample=0):
     return (genotypes[prefix], genotypes[postfix])
 
 
-def get_format(vcf, sample=0):
+def get_format(vcf: VCFRecord, sample: int = 0) -> Dict[str, str]:
     return dict(zip(vcf.format.split(":"), vcf[sample].split(":")))

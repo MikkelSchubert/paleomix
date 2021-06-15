@@ -20,39 +20,39 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import pytest
+from typing import Any, Iterable, List, Sequence
 
+import pytest
 from paleomix.common.makefile import (
     DEFAULT_NOT_SET,
     REQUIRED_VALUE,
+    And,
+    DeprecatedOption,
+    IsBoolean,
+    IsDictOf,
+    IsFloat,
+    IsInt,
+    IsListOf,
+    IsNone,
+    IsStr,
+    IsUnsignedInt,
     MakefileError,
     MakefileSpec,
-    read_makefile,
-    process_makefile,
-    WithoutDefaults,
-    IsInt,
-    IsUnsignedInt,
-    IsFloat,
-    IsBoolean,
-    IsStr,
-    IsNone,
-    ValueIn,
-    ValuesIntersect,
-    ValuesSubsetOf,
-    ValueMissing,
-    DeprecatedOption,
-    RemovedOption,
-    And,
-    Or,
     Not,
+    Or,
+    PreProcessMakefile,
+    RemovedOption,
+    StringEndsWith,
     StringIn,
     StringStartsWith,
-    StringEndsWith,
-    IsListOf,
-    IsDictOf,
-    PreProcessMakefile,
+    ValueIn,
+    ValueMissing,
+    ValuesIntersect,
+    ValuesSubsetOf,
+    WithoutDefaults,
+    process_makefile,
+    read_makefile,
 )
-
 
 # Dummy value for the path parameters
 _DUMMY_PATH = ("a", "random", "path")
@@ -60,7 +60,8 @@ _DUMMY_PATH_STR = " :: ".join(_DUMMY_PATH)
 
 
 class Unhashable:
-    __hash__ = None
+    def __eq__(self, other: Any):
+        return self is other
 
 
 _COMMON_INVALID_VALUES = {
@@ -91,7 +92,10 @@ _COMMON_VALUES = [
 ]
 
 
-def _common_invalid_values(exclude=(), extra=()):
+def _common_invalid_values(
+    exclude: Sequence[Any] = (),
+    extra: Iterable[Any] = (),
+) -> List[Any]:
     selection = list(extra)
     for key, value in _COMMON_INVALID_VALUES.items():
         if key not in exclude:
@@ -130,7 +134,7 @@ def test_is_int__accepts_integers():
 
 
 @pytest.mark.parametrize("value", _common_invalid_values())
-def test_is_int__rejects_not_int(value):
+def test_is_int__rejects_not_int(value: Any):
     spec = IsInt()
     with pytest.raises(MakefileError, match="Expected value: an integer"):
         spec(_DUMMY_PATH, value)
@@ -174,7 +178,7 @@ def test_is_unsigned_int__accepts_non_negative_integers():
 
 
 @pytest.mark.parametrize("value", _common_invalid_values(extra=(-1,)))
-def test_is_unsigned_int__rejects_not_unsigned_int(value):
+def test_is_unsigned_int__rejects_not_unsigned_int(value: Any):
     spec = IsUnsignedInt()
     with pytest.raises(MakefileError, match="Expected value: an unsigned integer"):
         spec(_DUMMY_PATH, value)
@@ -217,7 +221,7 @@ def test_is_float__accepts_float():
 
 
 @pytest.mark.parametrize("value", _common_invalid_values(extra=(0,)))
-def test_is_float__rejects_not_float(value):
+def test_is_float__rejects_not_float(value: Any):
     spec = IsFloat()
     with pytest.raises(MakefileError, match="Expected value: a float"):
         spec(_DUMMY_PATH, value)
@@ -260,7 +264,7 @@ def test_is_boolean__accepts_boolean():
 
 
 @pytest.mark.parametrize("value", _common_invalid_values(exclude=(False,), extra=(0,)))
-def test_is_boolean__rejects_not_boolean(value):
+def test_is_boolean__rejects_not_boolean(value: Any):
     spec = IsBoolean()
     with pytest.raises(MakefileError, match="Expected value: a boolean"):
         spec(_DUMMY_PATH, value)
@@ -324,7 +328,7 @@ def test_is_str__rejects_negative_min_len():
 
 
 @pytest.mark.parametrize("value", _common_invalid_values(extra=(1,)))
-def test_is_str__rejects_not_str(value):
+def test_is_str__rejects_not_str(value: Any):
     spec = IsStr()
     with pytest.raises(MakefileError, match="Expected value: a non-empty string"):
         spec(_DUMMY_PATH, value)
@@ -394,7 +398,7 @@ def test_is_none__accepts_none():
 @pytest.mark.parametrize(
     "value", _common_invalid_values(exclude=(None,), extra=(0, ""))
 )
-def test_is_none__rejects_not_none(value):
+def test_is_none__rejects_not_none(value: Any):
     spec = IsNone()
     with pytest.raises(MakefileError, match="Expected value: null or not set"):
         spec(_DUMMY_PATH, value)
@@ -427,7 +431,7 @@ def test_is_none__default_not_implemented_for_is_none():
 
 
 @pytest.mark.parametrize("value", _COMMON_VALUES)
-def test_value_missing(value):
+def test_value_missing(value: Any):
     spec = ValueMissing()
 
     with pytest.raises(MakefileError):
@@ -455,7 +459,7 @@ def test_deprecated_option__meets_spec():
     assert not spec.meets_spec("10")
 
 
-def test_deprecated_option__logs_on_success(caplog):
+def test_deprecated_option__logs_on_success(caplog: pytest.LogCaptureFixture):
     expected = _DEPRECATED_TMPL % (_DUMMY_PATH_STR,)
     spec = DeprecatedOption(IsInt(default=17))
     spec(_DUMMY_PATH, 10)
@@ -463,7 +467,7 @@ def test_deprecated_option__logs_on_success(caplog):
     assert expected in caplog.text
 
 
-def test_deprecated_option__no_log_on_failure(caplog):
+def test_deprecated_option__no_log_on_failure(caplog: pytest.LogCaptureFixture):
     expected = _DEPRECATED_TMPL % (_DUMMY_PATH_STR,)
     spec = DeprecatedOption(IsInt(default=17))
 
@@ -479,7 +483,7 @@ def test_deprecated_option__no_log_on_failure(caplog):
 
 
 @pytest.mark.parametrize("value", _COMMON_VALUES)
-def test_deprecated_option(value):
+def test_deprecated_option(value: Any):
     spec = RemovedOption()
 
     spec(_DUMMY_PATH, value)
@@ -549,7 +553,7 @@ def test_is_value_in__default_set__must_meet_spec():
 
 
 @pytest.mark.parametrize("value", _common_invalid_values(extra=("foo",)))
-def test_is_value_in__handles_types(value):
+def test_is_value_in__handles_types(value: Any):
     spec = ValueIn((1, 2, 3, 4))
     with pytest.raises(MakefileError, match="Expected value: value in 1, 2, 3, or 4"):
         spec(_DUMMY_PATH, value)
@@ -631,7 +635,7 @@ def test_intersects__default_set__must_meet_spec():
 
 
 @pytest.mark.parametrize("value", _common_invalid_values(extra=("foo",)))
-def test_intersects__handles_types(value):
+def test_intersects__handles_types(value: Any):
     spec = ValuesIntersect(list(range(5)))
     with pytest.raises(
         MakefileError, match="Expected value: one or more of 0, 1, 2, 3, and 4"
@@ -722,7 +726,7 @@ def test_subset_of__default_set__must_meet_spec():
 @pytest.mark.parametrize(
     "value", _common_invalid_values(extra=("foo",), exclude=("list_1", ()))
 )
-def test_subset_of__handles_types(value):
+def test_subset_of__handles_types(value: Any):
     spec = ValuesSubsetOf(list(range(5)))
     with pytest.raises(
         MakefileError, match="Expected value: subset of 0, 1, 2, 3, and 4"
@@ -907,7 +911,7 @@ def test_string_in__default_set__must_meet_spec():
 
 
 @pytest.mark.parametrize("value", _common_invalid_values(extra=("foo",)))
-def test_string_in__handles_types(value):
+def test_string_in__handles_types(value: Any):
     spec = StringIn("ABC")
     with pytest.raises(MakefileError, match="Expected value: one of 'A', 'B', or 'C'"):
         spec(_DUMMY_PATH, value)
@@ -930,7 +934,7 @@ def test_string_starts_with__rejects_string_without_prefix():
 
 
 @pytest.mark.parametrize("value", _common_invalid_values(extra=(1,)))
-def test_string_starts_with__rejects_not_uppercase_str(value):
+def test_string_starts_with__rejects_not_uppercase_str(value: Any):
     spec = StringStartsWith("Foo")
     with pytest.raises(
         MakefileError, match="Expected value: a string with prefix 'Foo'"
@@ -970,7 +974,7 @@ def test_string_ends_with__rejects_string_without_prefix():
 
 
 @pytest.mark.parametrize("value", _common_invalid_values(extra=(1,)))
-def test_string_ends_with__rejects_not_uppercase_str(value):
+def test_string_ends_with__rejects_not_uppercase_str(value: Any):
     spec = StringEndsWith("Foo")
     with pytest.raises(
         MakefileError, match="Expected value: a string with postfix 'Foo'"

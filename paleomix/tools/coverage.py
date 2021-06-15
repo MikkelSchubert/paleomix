@@ -20,20 +20,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import sys
 import copy
+import sys
 
-from paleomix.common.utilities import get_in, set_in
-from paleomix.common.timer import BAMTimer
 from paleomix.common.bamfiles import BAMRegionsIter
-
+from paleomix.common.timer import BAMTimer
+from paleomix.common.utilities import get_in, set_in
 from paleomix.tools.bam_stats.common import (
     collect_readgroups,
     collect_references,
     main_wrapper,
 )
 from paleomix.tools.bam_stats.coverage import ReadGroup, write_table
-
 
 ##############################################################################
 ##############################################################################
@@ -140,7 +138,7 @@ def process_record(subtable, record, flags, region):
 
 
 def process_file(handle, args):
-    timer = BAMTimer(handle, step=1000000)
+    timer = BAMTimer(handle)
 
     counts = {}
     last_tid = 0
@@ -165,7 +163,7 @@ def process_file(handle, args):
                     readgroup_table = region_table[None]
 
                 process_record(readgroup_table, record, record.flag, region)
-                timer.increment(read=record)
+                timer.increment()
 
             if (region.tid, position) < (last_tid, last_pos):
                 sys.stderr.write("ERROR: Input BAM file is unsorted\n")

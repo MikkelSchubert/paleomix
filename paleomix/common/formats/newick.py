@@ -126,7 +126,7 @@ class Newick(TotallyOrdered, Immutable):
         function."""
         return _NewickGraph(self).reroot_on_taxa(taxa)
 
-    def reroot_on_midpoint(self):
+    def reroot_on_midpoint(self) -> "Newick":
         """Returns the newick tree from this node, but rooted on the midpoint
         of the tree. That is to say that a root node is added at the exact
         midpoint of the longest path in the unrooted tree. If this midpoint

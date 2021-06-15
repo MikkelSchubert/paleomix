@@ -26,13 +26,11 @@ import math
 import os
 import random
 
-import pysam
-
 import paleomix.common.fileutils as fileutils
 import paleomix.common.rtools as rtools
 import paleomix.common.versions as versions
 import paleomix.tools.factory as factory
-
+import pysam
 from paleomix.atomiccmd.command import (
     AtomicCmd,
     AuxilleryFile,
@@ -42,12 +40,7 @@ from paleomix.atomiccmd.command import (
 )
 from paleomix.atomiccmd.sets import SequentialCmds
 from paleomix.node import CommandNode, Node, NodeError
-
-from paleomix.pipelines.zonkey.common import (
-    RSCRIPT_VERSION,
-    read_summary,
-)
-
+from paleomix.pipelines.zonkey.common import RSCRIPT_VERSION, read_summary
 
 ADMIXTURE_VERSION = versions.Requirement(
     call=("admixture", "--version"), search=r"(\d+)\.(\d+)", checks=versions.GE(1, 3)
@@ -445,7 +438,7 @@ class FreqToTreemixNode(Node):
 
     @classmethod
     def _parse_freq_table(cls, filename):
-        with fileutils.open_ro(filename) as handle:
+        with fileutils.open_rt(filename) as handle:
             handle.readline()  # Skip header
 
             for line in handle:

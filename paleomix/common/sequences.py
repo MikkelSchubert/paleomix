@@ -23,53 +23,50 @@
 """Various functions relating to DNA sequence manipulation."""
 
 import itertools
-from typing import Dict, FrozenSet, List
-
-# Pairs of complementary bases and ambigious basees
-_COMPL = ["AT", "CG", "NN", "RY", "KM", "SS", "WW", "BV", "DH", "XX"]
-_COMPL_TABLE = ["N"] * 256
-for (_a, _b) in _COMPL:
-    # Complement both upper/lower-case bases
-    for _func in (str.upper, str.lower):
-        _COMPL_TABLE[ord(_func(_a))] = _func(_b)
-        _COMPL_TABLE[ord(_func(_b))] = _func(_a)
-_COMPL_TABLE = "".join(_COMPL_TABLE)
+from typing import Dict, Iterable, List
 
 
-# Table of nt codes (IUPAC codes) used to encode (ambigious) bases:
-#   Nomenclature for incompletely specified bases in nucleic acid sequences.
-#   Recommendations 1984. J Biol Chem. 1986 Jan 5;261(1):13-7.
-#   PubMed PMID: 2416744.
-NT_CODES = [
-    ["A", "A"],
-    ["C", "C"],
-    ["G", "G"],
-    ["T", "T"],
-    ["N", "N"],
-    ["R", "AG"],
-    ["Y", "CT"],
-    ["K", "GT"],
-    ["M", "AC"],
-    ["S", "CG"],
-    ["W", "AT"],
-    ["B", "CGT"],
-    ["D", "AGT"],
-    ["H", "ACT"],
-    ["V", "ACG"],
-    ["N", "ACGT"],
-]
+def _build_complement_table() -> str:
+    # Pairs of complementary bases and ambigious basees
+    table = ["N"] * 256
+    for nuc_a, nuc_b in ["AT", "CG", "NN", "RY", "KM", "SS", "WW", "BV", "DH", "XX"]:
+        # Complement both upper/lower-case bases
+        for _func in (str.upper, str.lower):
+            table[ord(_func(nuc_a))] = _func(nuc_b)
+            table[ord(_func(nuc_b))] = _func(nuc_a)
 
-_NT_CODES_TABLE = {}  # type: Dict[FrozenSet[str], str]
-for (_abr, _nts) in NT_CODES:
-    _NT_CODES_TABLE[frozenset(_nts)] = _abr
-    _NT_CODES_TABLE[frozenset(_nts + ",")] = _abr
+    return "".join(table)
 
-NT_CODES = dict(NT_CODES)
+
+IUPAC_TABLE = {
+    "A": "A",
+    "C": "C",
+    "G": "G",
+    "T": "T",
+    "N": "N",
+    "AG": "R",
+    "CT": "Y",
+    "GT": "K",
+    "AC": "M",
+    "CG": "S",
+    "AT": "W",
+    "CGT": "B",
+    "AGT": "D",
+    "ACT": "H",
+    "ACG": "V",
+    "ACGT": "N",
+}
+
+
+# Table for complemeting sequences using `str.translate`
+NT_COMPLEMENTS = _build_complement_table()
+# IUPAC code to A, C, G, T nucleotides.
+NT_CODES = dict(zip(IUPAC_TABLE.values(), IUPAC_TABLE))
 
 
 def complement(sequence: str) -> str:
     """Returns the complement of a DNA sequence (string)."""
-    return sequence.translate(_COMPL_TABLE)
+    return sequence.translate(NT_COMPLEMENTS)
 
 
 def reverse_complement(sequence: str) -> str:
@@ -77,16 +74,17 @@ def reverse_complement(sequence: str) -> str:
     return complement(sequence)[::-1]
 
 
-def encode_genotype(nucleotides: str) -> str:
+def encode_genotype(nucleotides: Iterable[str]) -> str:
     """Parses a string representing a set of nucleotides observed at a loci,
     and returns the corresponding IUPAC code. Commas are allowed, but are
     simply ignored if found in the string. Does not handle lower-case
     nucleotides, due to lack of clear criteria for mixed case input.
     See e.g. http://www.ebi.ac.uk/2can/tutorials/aa.html"""
-    try:
-        return _NT_CODES_TABLE[frozenset(nucleotides)]
-    except KeyError:
+    chars = set(nucleotides).difference(",")
+    if chars.difference("ACGTN"):
         raise ValueError(nucleotides)
+
+    return IUPAC_TABLE["".join(sorted(chars))]
 
 
 def split(sequence: str, split_by: str = "123") -> Dict[str, str]:

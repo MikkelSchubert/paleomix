@@ -681,3 +681,13 @@ def test_newick__properties_cannot_be_deleted(name: str):
     node = Newick(name="A", length=3, children=[Newick(name="B")])
     with pytest.raises(NotImplementedError):
         delattr(node, name)
+
+
+###############################################################################
+###############################################################################
+# Misc
+
+
+def test_newick__comparisons_with_other_types():
+    with pytest.raises(TypeError):
+        Newick("A") < object()

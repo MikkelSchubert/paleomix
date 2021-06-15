@@ -21,10 +21,10 @@
 # SOFTWARE.
 #
 import sys
-from typing import IO, Dict, Iterable, Iterator, Optional
+from typing import IO, Any, Dict, Iterable, Iterator, Optional
 
 import pysam
-from paleomix.common.fileutils import fspath, open_ro
+from paleomix.common.fileutils import fspath, open_rt
 from paleomix.common.formats._common import FormatError
 from paleomix.common.utilities import Immutable, TotallyOrdered, fragment, split_before
 
@@ -51,7 +51,7 @@ class FASTA(TotallyOrdered, Immutable):
 
         Immutable.__init__(self, name=name, meta=meta or "", sequence=sequence)
 
-    def write(self, fileobj: IO[str] = sys.stdout):
+    def write(self, fileobj: IO[str] = sys.stdout) -> None:
         """Writes a FASTA record to fileobj, wrapping sequences at 60 chars"""
         name = self.name
         if self.meta:
@@ -60,7 +60,7 @@ class FASTA(TotallyOrdered, Immutable):
         fileobj.write(">%s\n%s\n" % (name, "\n".join(fragment(60, self.sequence))))
 
     @classmethod
-    def from_lines(cls, lines: Iterable[str]):
+    def from_lines(cls, lines: Iterable[str]) -> Iterator["FASTA"]:
         """Parses FASTA sequences found in a sequence of lines, and returns
         a tuple for each FASTA record: ((name, meta-information), sequence)
         No assumptions are made about the line-lengths."""
@@ -87,7 +87,7 @@ class FASTA(TotallyOrdered, Immutable):
         """Reads an unindexed FASTA file, returning a sequence of
         tuples containing the name and sequence of each entry in
         the file. The FASTA file may be GZIP/BZ2 compressed."""
-        with open_ro(filename) as fasta_file:
+        with open_rt(filename) as fasta_file:
             yield from FASTA.from_lines(fasta_file)
 
     @classmethod
@@ -99,7 +99,7 @@ class FASTA(TotallyOrdered, Immutable):
         with pysam.FastaFile(fspath(filename)) as handle:
             return dict(zip(handle.references, handle.lengths))
 
-    def __lt__(self, other):
+    def __lt__(self, other: Any) -> bool:
         if not isinstance(other, FASTA):
             return NotImplemented
 
@@ -109,8 +109,8 @@ class FASTA(TotallyOrdered, Immutable):
             other.sequence,
         )
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.name, self.meta, self.sequence))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "FASTA(%r, %r, %r)" % (self.name, self.meta, self.sequence)

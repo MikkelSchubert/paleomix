@@ -23,12 +23,10 @@
 import errno
 import sys
 
-import pysam
-
 import paleomix.common.argparse as argparse
 import paleomix.common.vcffilter as vcffilter
-
-from paleomix.common.fileutils import open_ro
+import pysam
+from paleomix.common.fileutils import open_rb
 
 
 def _read_files(args):
@@ -36,7 +34,7 @@ def _read_files(args):
     has_filters = False
     vcf_parser = pysam.asVCF()
     for filename in args.filenames:
-        with open_ro(filename, "rb") as handle:
+        with open_rb(filename) as handle:
             for line in handle:
                 if not line.startswith(b"#"):
                     in_header = False

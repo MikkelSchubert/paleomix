@@ -407,3 +407,12 @@ def _new_bed_record(*args: Any):
     record._fields = list(args)
 
     return record
+
+
+###############################################################################
+# misc
+
+
+def test_sorting__compared_with_non_bed_record():
+    with pytest.raises(TypeError):
+        _new_bed_record("chr2", 1, 20) < "foo"

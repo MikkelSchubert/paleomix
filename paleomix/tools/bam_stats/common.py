@@ -167,7 +167,7 @@ def parse_arguments(argv, ext):
 def main_wrapper(process_func, argv, ext):
     log = logging.getLogger(__name__)
     args = parse_arguments(argv, ext)
-    args.regions = None
+    args.regions = []
     if args.regions_fpath:
         try:
             args.regions = collect_bed_regions(args.regions_fpath)

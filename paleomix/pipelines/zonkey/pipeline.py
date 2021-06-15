@@ -26,8 +26,6 @@ import shutil
 import string
 import tarfile
 
-import pysam
-
 import paleomix
 import paleomix.common.fileutils as fileutils
 import paleomix.common.logging
@@ -38,7 +36,7 @@ import paleomix.pipelines.zonkey.parts.mitochondria as mitochondria
 import paleomix.pipelines.zonkey.parts.nuclear as nuclear
 import paleomix.pipelines.zonkey.parts.report as report
 import paleomix.pipelines.zonkey.parts.summary as summary
-
+import pysam
 from paleomix.common.formats.fasta import FASTA
 from paleomix.nodes.raxml import RAxMLRapidBSNode
 from paleomix.nodes.samtools import BAMIndexNode
@@ -520,7 +518,7 @@ def _read_sample_table(config, filename):
     valid_characters = frozenset(string.ascii_letters + string.digits + ".-_")
 
     samples = config.samples = {}
-    with fileutils.open_ro(filename) as handle:
+    with fileutils.open_rt(filename) as handle:
         for linenum, line in enumerate(handle, start=1):
             if not line.strip() or line.lstrip().startswith("#"):
                 continue

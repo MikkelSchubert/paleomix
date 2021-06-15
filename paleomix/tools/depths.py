@@ -20,19 +20,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import sys
-import itertools
 import collections
+import itertools
+import sys
 
-from paleomix.common.timer import BAMTimer
 from paleomix.common.bamfiles import BAMRegionsIter
-
+from paleomix.common.timer import BAMTimer
 from paleomix.tools.bam_stats.common import (
-    collect_references,
     collect_readgroups,
+    collect_references,
     main_wrapper,
 )
-
 
 ##############################################################################
 ##############################################################################
@@ -339,7 +337,7 @@ def build_rg_to_smlbid_keys(args, handle):
 
 
 def process_file(handle, args):
-    timer = BAMTimer(handle, step=1000000)
+    timer = BAMTimer(handle)
 
     last_tid = 0
     totals = build_totals_dict(args, handle)
@@ -360,7 +358,7 @@ def process_file(handle, args):
             mapping.process_counts(counts, last_pos, position)
 
             for record in records:
-                timer.increment(read=record)
+                timer.increment()
                 count_bases(args, counts, record, rg_to_smlbid, template)
 
             if (region.tid, position) < (last_tid, last_pos):

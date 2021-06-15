@@ -39,10 +39,13 @@ import operator
 import re
 import subprocess
 import sys
-
+import typing
 from shlex import quote
+from typing import Callable, Iterable, List, NoReturn, Optional, Tuple, Union
 
-from paleomix.common.utilities import TotallyOrdered, safe_coerce_to_tuple, try_cast
+from paleomix.common.utilities import TotallyOrdered, try_cast
+
+Version = Tuple[int, ...]
 
 
 class RequirementError(Exception):
@@ -54,12 +57,19 @@ class RequirementError(Exception):
 class Requirement:
     """Represents a version requirement."""
 
-    def __init__(self, call, search=None, checks=None, name=None, priority=0):
+    def __init__(
+        self,
+        call: Union[str, Iterable[str]],
+        search: Optional[str] = None,
+        checks: Optional["Check"] = None,
+        name: Optional[str] = None,
+        priority: int = 0,
+    ):
         """See function 'Requrement' for a description of parameters."""
-        self._call = safe_coerce_to_tuple(call)
+        self._call = (call,)  if isinstance(call, str) else tuple(call)
         self.name = str(name or self._call[0])
         self.search = search
-        self.checks = Any() if checks is None else checks
+        self.checks = Any() if checks is None else checks  # type: Check
         self.priority = int(priority)
         self._cached_version = None
 
@@ -68,25 +78,30 @@ class Requirement:
             raise ValueError(self.checks)
 
     @property
-    def call(self):
+    def call(self) -> Tuple[str, ...]:
         call = self._call
         if call[0] == "%(PYTHON)s":
             return (sys.executable,) + call[1:]
 
         return call
 
-    def version(self, force=False):
+    def version(self, force: bool = False) -> Version:
         """The version determined for the application / library. If the version
         could not be determined, a RequirementError is raised.
         """
         if force or self._cached_version is None:
             try:
-                output = self._run(self.call)
+                output = subprocess.run(
+                    self.call,
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.PIPE,
+                    # Merge STDERR with STDOUT output
+                    stderr=subprocess.STDOUT,
+                    encoding="utf-8",
+                    errors="replace",
+                ).stdout
             except OSError as error:
                 self._raise_failure(error)
-
-            if isinstance(output, bytes):
-                output = output.decode("utf-8", "replace")
 
             # Raise an exception if the JRE is outdated, even if the
             # version could be determined (likely a false positive match).
@@ -106,22 +121,20 @@ class Requirement:
 
         return self._cached_version
 
-    def version_str(self, force=False):
+    def version_str(self, force: bool = False) -> str:
         return _pprint_version(self.version(force))
 
     @property
-    def executable(self):
+    def executable(self) -> str:
         """Returns the executable invoked during version determination; if no
         executable is invoked, None is returned.
         """
-        call = self.call
-        if isinstance(call[0], str):
-            return call[0]
+        return self.call[0]
 
-    def check(self, force=False):
+    def check(self, force: bool = False) -> bool:
         return self.checks(self.version(force))
 
-    def _check_for_outdated_jre(self, output):
+    def _check_for_outdated_jre(self, output: str) -> None:
         """Checks for the error raised if the JRE is unable to run a JAR file.
         This happens if the JAR was built with a never version of the JRE, e.g.
         if Picard was built with a v1.7 JRE, and then run with a v1.6 JRE.
@@ -130,7 +143,7 @@ class Requirement:
         if "UnsupportedClassVersionError" in output:
             self._raise_failure(output)
 
-    def _raise_failure(self, output):
+    def _raise_failure(self, output: Union[str, Exception]) -> NoReturn:
         """Raises a RequirementError when a version check failed; if the
         output indicates that the JRE is outdated (i.e. the output contains
         "UnsupportedClassVersionError") a special message is givenself.
@@ -139,9 +152,8 @@ class Requirement:
         lines.extend(self._describe_call())
         lines.append("")
 
-        if isinstance(output, OSError):
-            lines.append("Exception was raised:")
-            lines.append("    %s: %s" % (output.__class__.__name__, output))
+        if isinstance(output, Exception):
+            lines.append("Exception was raised: %r" % (output,))
         elif "UnsupportedClassVersionError" in output:
             # Raised if the JRE is too old compared to the JAR
             lines.extend(
@@ -169,22 +181,7 @@ class Requirement:
         if isinstance(call[0], str):
             yield "Command  = %s" % (" ".join(map(quote, call)),)
 
-    @staticmethod
-    def _run(call):
-        if callable(call[0]):
-            return call[0](*call[1:])
-
-        proc = subprocess.Popen(
-            call,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            # Merge STDERR with STDOUT output
-            stderr=subprocess.STDOUT,
-        )
-
-        return proc.communicate()[0]
-
-    def __eq__(self, other):
+    def __eq__(self, other: typing.Any) -> bool:
         if not isinstance(other, Requirement):
             return NotImplemented
 
@@ -213,40 +210,17 @@ class Check(TotallyOrdered):
     passed to the Check constructor.
     """
 
-    def __init__(self, description, func, *values):
-        if not callable(func):
-            raise TypeError("func must be callable, not %r" % (func,))
-
-        values = tuple(values)
-        self._func = func
-        self._values = values
+    def __init__(self, description: str):
         self._description = description
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self._description
 
-    def __eq__(self, other):
-        if isinstance(other, Check):
-            return (
-                self._description == other._description
-                and self._func == other._func
-                and self._values == other._values
-            )
-
-        return NotImplemented
-
-    def __hash__(self):
-        return hash((self._description, self._func, self._values))
-
-    def __call__(self, current):
+    def __call__(self, current: Version) -> bool:
         """Takes a tuple of version fields (e.g. (1, 7)) and returns True if
         this version matches the check.
         """
-        return self._do_check_version(current, self._values)
-
-    def _do_check_version(self, current, reference):
-        """Invokes the actual check; may be overridden in subclasses."""
-        return self._func(current, reference)
+        raise NotImplementedError
 
 
 class CheckVersion(Check):
@@ -255,18 +229,40 @@ class CheckVersion(Check):
     the version checked has more fields, these are truncated away.
     """
 
-    def __init__(self, description, func, *version):
-        description = description.format(_pprint_version(version))
-        Check.__init__(self, description, func, *version)
+    def __init__(
+        self,
+        description: str,
+        func: Callable[[Version, Version], bool],
+        *version: int,
+    ):
+        if not callable(func):
+            raise TypeError("func must be callable, not %r" % (func,))
 
-    def _do_check_version(self, current, reference):
-        if len(current) < len(reference):
+        self._func = func
+        self._version = version
+        Check.__init__(self, description.format(_pprint_version(version)))
+
+    def __call__(self, current: Version) -> bool:
+        if len(current) < len(self._version):
             raise ValueError(
                 "Expects at least %i fields, not %i: %r"
-                % (len(reference), len(current), current)
+                % (len(self._version), len(current), current)
             )
 
-        return Check._do_check_version(self, current[: len(reference)], reference)
+        return self._func(current[: len(self._version)], self._version)
+
+    def __eq__(self, other: typing.Any) -> bool:
+        if not isinstance(other, CheckVersion):
+            return NotImplemented
+
+        return (
+            self._description == other._description
+            and self._func is other._func
+            and self._version == other._version
+        )
+
+    def __hash__(self) -> int:
+        return hash((self._description, self._func, self._version))
 
 
 class EQ(CheckVersion):
@@ -276,7 +272,7 @@ class EQ(CheckVersion):
     'Check' for more information.
     """
 
-    def __init__(self, *version):
+    def __init__(self, *version: int):
         CheckVersion.__init__(self, "{0}", operator.eq, *version)
 
 
@@ -286,7 +282,7 @@ class GE(CheckVersion):
     this Check. See 'Check'.
     """
 
-    def __init__(self, *version):
+    def __init__(self, *version: int):
         CheckVersion.__init__(self, "at least {0}", operator.ge, *version)
 
 
@@ -296,7 +292,7 @@ class LT(CheckVersion):
     See 'Check'.
     """
 
-    def __init__(self, *version):
+    def __init__(self, *version: int):
         CheckVersion.__init__(self, "prior to {0}", operator.lt, *version)
 
 
@@ -310,14 +306,22 @@ class Any(CheckVersion):
 class Operator(Check):
     """Base class for logical operations on Checks; and, or, etc."""
 
-    def __init__(self, keyword, func, *checks):
+    def __init__(
+        self,
+        keyword: str,
+        func: Callable[[Version, Tuple[Check, ...]], bool],
+        *checks: Check,
+    ):
         """Arguments:
         keyword -- Keyword to join description of checks by.
         func -- Function implementing the logical operation; is called as
                 func(*checks). See the 'func' argument for Check.__init__.
         checks -- Zero or more Checks.
         """
-        descriptions = []
+        self._func = func
+        self._checks = checks
+
+        descriptions = []  # type: List[str]
         for check in checks:
             if isinstance(check, Operator):
                 descriptions.append("(%s)" % (check,))
@@ -326,21 +330,36 @@ class Operator(Check):
             else:
                 raise ValueError("%r is not of type Check" % (check,))
 
-        description = keyword.join(descriptions)
-        Check.__init__(self, description, func, *checks)
+        Check.__init__(self, keyword.join(descriptions))
+
+    def __call__(self, current: Version) -> bool:
+        return self._func(current, self._checks)
+
+    def __eq__(self, other: typing.Any) -> bool:
+        if not isinstance(other, Operator):
+            return NotImplemented
+
+        return (
+            self._description == other._description
+            and self._func is other._func
+            and self._checks == other._checks
+        )
+
+    def __hash__(self) -> int:
+        return hash((self._description, self._func, self._checks))
 
 
 class And(Operator):
     """Carries out 'and' on a set of checks; always true for no Checks"""
 
-    def __init__(self, *checks):
+    def __init__(self, *checks: Check):
         Operator.__init__(self, " and ", _func_and, *checks)
 
 
 class Or(Operator):
     """Carries out 'or' on a set of checks; always false for no Checks"""
 
-    def __init__(self, *checks):
+    def __init__(self, *checks: Check):
         Operator.__init__(self, " or ", _func_or, *checks)
 
 
@@ -349,17 +368,17 @@ class Or(Operator):
 # Check functions; must be available for pickle
 
 
-def _func_any(_current, _checks):
+def _func_any(_current: Version, _version: Version) -> bool:
     """Implementation of Any."""
     return True
 
 
-def _func_and(current, checks):
+def _func_and(current: Version, checks: Iterable[Check]) -> bool:
     """Implementation of And."""
     return all(check(current) for check in checks)
 
 
-def _func_or(current, checks):
+def _func_or(current: Version, checks: Iterable[Check]) -> bool:
     """Implementation of Or."""
     return any(check(current) for check in checks)
 
@@ -369,7 +388,7 @@ def _func_or(current, checks):
 # Utility functions
 
 
-def _pprint_version(value):
+def _pprint_version(value: Version):
     """Pretty-print version tuple; takes a tuple of field numbers / values,
     and returns it as a string joined by dots with a 'v' prepended.
     """

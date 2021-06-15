@@ -20,22 +20,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import paleomix.common.versions as versions
-
 from paleomix.resources import rscript
 
 
-def requirement(module, checks=versions.Any(), cache={}):
-    key = (module, checks)
-    result = cache.get(key)
-    if result is None:
-        filename = rscript("common", "requires.r")
-        result = versions.Requirement(
-            call=("Rscript", filename, module),
-            search=r"d0fd3ea6: (\d+)\.(\d+)(?:\.(\d+))?",
-            checks=checks,
-            name="R module: {}".format(module),
-        )
-
-        cache[(module, checks)] = result
-
-    return result
+def requirement(
+    module: str,
+    checks: versions.Check = versions.Any(),
+) -> versions.Requirement:
+    return versions.Requirement(
+        call=("Rscript", rscript("common", "requires.r"), module),
+        # d0fd3ea6 is a magic value printed by the requires.r script. This is used to
+        # ensure that we can differentiate between the version and any other output
+        search=r"d0fd3ea6: (\d+)\.(\d+)(?:\.(\d+))?",
+        checks=checks,
+        name="R module: {}".format(module),
+    )

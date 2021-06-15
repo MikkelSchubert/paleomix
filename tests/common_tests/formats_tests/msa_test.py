@@ -24,15 +24,14 @@ import bz2
 import copy
 import gzip
 import io
-
+from pathlib import Path
+from typing import IO, Callable
 from unittest.mock import patch
 
 import pytest
-
 from paleomix.common.fileutils import fspath
 from paleomix.common.formats.fasta import FASTA
 from paleomix.common.formats.msa import MSA, FASTAError, MSAError
-
 
 ###############################################################################
 ###############################################################################
@@ -226,6 +225,11 @@ def test_msa_filter_singletons__filter_by_nothing():
         _FILTER_MSA_1.filter_singletons("Seq1", [])
 
 
+def test_msa_filter_singletons__filter_unknown():
+    with pytest.raises(KeyError):
+        _FILTER_MSA_1.filter_singletons("Seq0", ["Seq2", "Seq3"])
+
+
 ###############################################################################
 ###############################################################################
 # Tests for 'MSA.join'
@@ -328,7 +332,7 @@ def test_msa_from_lines__empty_name():
 
 
 @pytest.mark.parametrize("func", (open, gzip.open, bz2.open))
-def test_msa_from_file(func, tmp_path):
+def test_msa_from_file(func: Callable[[str, str], IO[str]], tmp_path: Path):
     filename = tmp_path / "test.fasta"
     with func(fspath(filename), "wt") as handle:
         handle.write(">This_is_FASTA!\nACGTN\n>This_is_ALSO_FASTA!\nCGTNA\n")

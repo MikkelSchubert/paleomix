@@ -22,9 +22,16 @@
 #
 import bisect
 import random
+from typing import Iterable, Iterator, List, TypeVar
+
+T = TypeVar("T")
 
 
-def weighted_sampling(choices, weights, rng=random):
+def weighted_sampling(
+    choices: Iterable[T],
+    weights: Iterable[float],
+    rng: random.Random = random.Random(),
+) -> Iterator[T]:
     choices = list(choices)
     weights = list(weights)
     if not weights or (len(weights) != len(choices)):
@@ -33,8 +40,8 @@ def weighted_sampling(choices, weights, rng=random):
             "of identical length, not lengths %i and %i" % (len(choices), len(weights))
         )
 
-    total = 0
-    totals = []
+    total = 0  # type: float
+    totals = []  # type: List[float]
     for (index, weight) in enumerate(weights, start=1):
         if weight <= 0:
             raise ValueError(
@@ -49,7 +56,11 @@ def weighted_sampling(choices, weights, rng=random):
         yield choices[index]
 
 
-def reservoir_sampling(items, downsample_to, rng=random):
+def reservoir_sampling(
+    items: Iterable[T],
+    downsample_to: int,
+    rng: random.Random = random.Random(),
+) -> List[T]:
     if not isinstance(downsample_to, int):
         raise TypeError(
             "Unexpected type for 'downsample_to': %r" % (type(downsample_to),)
@@ -57,7 +68,7 @@ def reservoir_sampling(items, downsample_to, rng=random):
     elif downsample_to < 0:
         raise ValueError("Negative value for 'downsample_to': %i" % (downsample_to,))
 
-    reservoir = []
+    reservoir = []  # type: List[T]
     for (index, item) in enumerate(items):
         if index >= downsample_to:
             index = rng.randint(0, index)

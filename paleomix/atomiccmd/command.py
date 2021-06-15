@@ -87,7 +87,7 @@ class TempOutputFile(OutputFile):
 WrappedPipeType = Union[None, int, _IOFile, "AtomicCmd"]
 PipeType = Union[str, WrappedPipeType]
 
-OptionValueType = Union[str, int, float, "_IOFile", None]
+OptionValueType = Union[str, float, "_IOFile", None]
 OptionsType = Dict[
     str, Union[OptionValueType, List[OptionValueType], Tuple[OptionValueType, ...]]
 ]

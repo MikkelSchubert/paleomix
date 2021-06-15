@@ -22,16 +22,17 @@
 #
 import argparse
 import collections
+from typing import Deque, Dict, Iterable, Iterator, List, Optional, Tuple, cast
 
 import paleomix.common.vcfwrap as vcfwrap
-
+from pysam import VCFRecord
 
 _INF = float("inf")
 # Rough number of records to keep in memory at once
 _CHUNK_SIZE = 10000
 
 
-def add_varfilter_options(parser):
+def add_varfilter_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--homozygous-chromosome",
         action="append",
@@ -130,7 +131,7 @@ def add_varfilter_options(parser):
     parser.add_argument_group(parser)
 
 
-def describe_filters(options):
+def describe_filters(options: argparse.Namespace) -> Dict[str, str]:
     return {
         "HET": "Heterozygous SNPs observed on homozygous chromosome (e.g. chrX)",
         "q:%i" % options.min_quality: "Minimum Phred score recorded in the QUAL column",
@@ -151,12 +152,16 @@ def describe_filters(options):
     }
 
 
-def filter_vcfs(options, vcfs):
+def filter_vcfs(
+    options: argparse.Namespace,
+    vcfs: Iterable[VCFRecord],
+) -> Iterator[VCFRecord]:
     vcfs = iter(vcfs)
-    chunk = collections.deque()
+    chunk = collections.deque()  # type: Deque[Optional[VCFRecord]]
 
     while _read_chunk(vcfs, chunk):
-        chunk = _filter_chunk(options, chunk)
+        _filter_by_indels(options, chunk)
+        _filter_by_properties(options, chunk)
         for vcf in _trim_chunk(options, chunk):
             if vcf.filter == ".":
                 vcf.filter = "PASS"
@@ -164,7 +169,10 @@ def filter_vcfs(options, vcfs):
             yield vcf
 
 
-def _read_chunk(vcfs, chunk):
+def _read_chunk(
+    vcfs: Iterator[VCFRecord],
+    chunk: Deque[Optional[VCFRecord]],
+) -> bool:
     try:
         while len(chunk) < _CHUNK_SIZE:
             chunk.append(next(vcfs))
@@ -174,23 +182,28 @@ def _read_chunk(vcfs, chunk):
     return len(chunk) > 1
 
 
-def _trim_chunk(options, chunk):
+def _trim_chunk(
+    options: argparse.Namespace,
+    chunk: Deque[Optional[VCFRecord]],
+) -> Iterator[VCFRecord]:
     min_distance = max(
         options.min_distance_between_indels, options.min_distance_to_indels
     )
 
     if not chunk:
         return
-    elif chunk[-1] is None:
+
+    record = chunk[-1]
+    if record is None:
         end_chr = "!@#$%^&*()_+"
         end_pos = _INF
         chunk.pop()
     else:
-        end_chr = chunk[-1].contig
-        end_pos = chunk[-1].pos
+        end_chr = record.contig
+        end_pos = record.pos
 
     while chunk:
-        vcf = chunk[0]
+        vcf = cast(VCFRecord, chunk[0])
         if vcf.contig == end_chr:
             # 'length' will become a too large value for heterozygous SNPs,
             # but it is faster than having to parse every position, and has
@@ -199,14 +212,17 @@ def _trim_chunk(options, chunk):
             if (vcf.pos + length + min_distance) >= end_pos:
                 break
 
-        yield chunk.popleft()
+        yield cast(VCFRecord, chunk.popleft())
 
 
-def _group_indels_near_position(indels, distance):
+def _group_indels_near_position(
+    indels: Iterable[VCFRecord],
+    distance: int,
+) -> Dict[int, List[VCFRecord]]:
     """Returns a dictionary of positions that are either directly covered by, or
     adjacent to indels, given some arbitrary distance. For each position, a list
     of adjacent/overlapping indels are provided."""
-    positions = collections.defaultdict(list)
+    positions = collections.defaultdict(list)  # type: Dict[int, List[VCFRecord]]
     if not distance:
         return positions
 
@@ -228,12 +244,12 @@ def _group_indels_near_position(indels, distance):
     return positions
 
 
-def _select_best_indel(indels):
+def _select_best_indel(indels: Iterable[VCFRecord]) -> VCFRecord:
     """Select the highest quality indel, based on the quality,
     prefering low earlier positions above later positions in
     case of ties."""
 
-    def _indel_by_quality_and_position(indel):
+    def _indel_by_quality_and_position(indel: VCFRecord) -> Tuple[float, int]:
         # The negative position is used to select the first
         # of equally quality indels
         return (float(indel.qual), -indel.pos)
@@ -241,7 +257,10 @@ def _select_best_indel(indels):
     return max(indels, key=_indel_by_quality_and_position)
 
 
-def _filter_by_indels(options, chunk):
+def _filter_by_indels(
+    options: argparse.Namespace,
+    chunk: Deque[Optional[VCFRecord]],
+) -> None:
     """Filters a list of SNPs and Indels, such that no SNP is closer to
     an indel than the value set in options.min_distance_to_indels, and
     such that no two indels too close. If two or more indels are within
@@ -249,7 +268,7 @@ def _filter_by_indels(options, chunk):
     no unique highest QUAL score exists, an arbitrary indel is retained
     among those indels with the highest QUAL score. SNPs are filtered
     based on prefiltered Indels."""
-    indels = [vcf for vcf in chunk if vcfwrap.is_indel(vcf)]
+    indels = [vcf for vcf in chunk if vcf is not None and vcfwrap.is_indel(vcf)]
 
     distance_between = options.min_distance_between_indels
     indel_blacklist = _group_indels_near_position(indels, distance_between)
@@ -257,7 +276,9 @@ def _filter_by_indels(options, chunk):
     snp_blacklist = _group_indels_near_position(indels, distance_to)
 
     for vcf in chunk:
-        if vcfwrap.is_indel(vcf):
+        if vcf is None:
+            continue
+        elif vcfwrap.is_indel(vcf):
             blacklisted = indel_blacklist.get(vcf.pos + 1, [vcf])
             if vcf is not _select_best_indel(blacklisted):
                 _mark_as_filtered(vcf, "W:%i" % distance_between)
@@ -266,15 +287,20 @@ def _filter_by_indels(options, chunk):
             _mark_as_filtered(vcf, "w:%i" % distance_to)
 
 
-def _filter_by_properties(options, vcfs):
+def _filter_by_properties(
+    options: argparse.Namespace,
+    vcfs: Deque[Optional[VCFRecord]],
+) -> None:
     """Filters a list of SNPs/indels based on the various properties recorded in
     the info column, and others. This mirrors most of the filtering carried out
     by vcfutils.pl varFilter."""
     for vcf in vcfs:
-        if float(vcf.qual) < options.min_quality:
+        if vcf is None:
+            continue
+        elif float(vcf.qual) < options.min_quality:
             _mark_as_filtered(vcf, "q:%i" % options.min_quality)
 
-        properties = {}
+        properties = {}  # type: Dict[str, Optional[str]]
         for field in vcf.info.split(";"):
             if "=" in field:
                 key, value = field.split("=")
@@ -305,7 +331,7 @@ def _filter_by_properties(options, vcfs):
                 _mark_as_filtered(vcf, "4:%e" % options.min_end_distance_bias)
 
         if vcf.alt != ".":
-            ref_fw, ref_rev, alt_fw, alt_rev = map(int, properties["DP4"].split(","))
+            _, _, alt_fw, alt_rev = map(int, properties["DP4"].split(","))
             if (alt_fw + alt_rev) < options.min_num_alt_bases:
                 _mark_as_filtered(vcf, "a:%i" % options.min_num_alt_bases)
 
@@ -319,24 +345,12 @@ def _filter_by_properties(options, vcfs):
                     _mark_as_filtered(vcf, "HET")
 
 
-def _filter_chunk(options, chunk):
-    at_end = False
-    if chunk[-1] is None:
-        at_end = True
-        chunk.pop()
-
-    _filter_by_indels(options, chunk)
-    _filter_by_properties(options, chunk)
-
-    if at_end:
-        chunk.append(None)
-    return chunk
-
-
-def _mark_as_filtered(vcf, filter_name):
+def _mark_as_filtered(vcf: VCFRecord, filter_name: str) -> bool:
     if vcf.filter in (".", "PASS"):
         vcf.filter = filter_name
         return True
     elif filter_name not in vcf.filter.split(";"):
         vcf.filter += ";" + filter_name
         return True
+
+    return False

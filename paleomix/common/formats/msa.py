@@ -22,11 +22,24 @@
 #
 
 from collections import defaultdict
+from pathlib import Path
+from typing import (
+    IO,
+    Dict,
+    FrozenSet,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+    cast,
+)
 
-from paleomix.common.sequences import split
-from paleomix.common.fileutils import open_ro
+from paleomix.common.fileutils import open_rt
 from paleomix.common.formats.fasta import FASTA, FASTAError
-from paleomix.common.sequences import NT_CODES, encode_genotype
+from paleomix.common.sequences import NT_CODES, encode_genotype, split
 from paleomix.common.utilities import safe_coerce_to_frozenset
 
 
@@ -34,11 +47,12 @@ class MSAError(FASTAError):
     pass
 
 
-class MSA(frozenset):
+class MSA(FrozenSet[FASTA]):
     """Represents a Multiple Sequence Alignment of FASTA records."""
 
-    def __new__(cls, sequences):
-        records, names = [], set()
+    def __new__(cls, sequences: Iterable[FASTA]) -> "MSA":
+        records = []  # type: List[FASTA]
+        names = set()  # type: Set[str]
         for record in sequences:
             if record.name in names:
                 raise MSAError(
@@ -50,26 +64,28 @@ class MSA(frozenset):
         if not records:
             raise MSAError("MSA does not contain any sequences")
 
-        instance = frozenset.__new__(cls, records)
+        instance = super(MSA, cls).__new__(cls, records)  # type: ignore
+        instance = cast(MSA, instance)
+
         MSA.validate(instance)
         return instance
 
-    def seqlen(self):
+    def seqlen(self) -> int:
         """Retrurns the length of the sequences in the MSA."""
         return len(next(iter(self)).sequence)
 
-    def exclude(self, names):
+    def exclude(self, names: Iterable[str]) -> "MSA":
         """Builds a new MSA that excludes the named set of records."""
         _, excluded, _ = self._group(names)
         return MSA(excluded)
 
-    def select(self, names):
+    def select(self, names: Iterable[str]) -> "MSA":
         """Builds a new MSA that includes only the named set of records."""
         included, _, _ = self._group(names)
         return MSA(included)
 
-    def reduce(self):
-        columns = []
+    def reduce(self) -> Optional["MSA"]:
+        columns = []  # type: List[Sequence[str]]
         uncalled = frozenset("Nn-")
         for column in zip(*(record.sequence for record in self)):
             if frozenset(column) - uncalled:
@@ -78,39 +94,41 @@ class MSA(frozenset):
         if not columns:
             return None
 
-        records = []
+        records = []  # type: List[FASTA]
         for (record, sequence) in zip(self, zip(*columns)):
             records.append(FASTA(record.name, record.meta, "".join(sequence)))
 
         return MSA(records)
 
-    def filter_singletons(self, to_filter, filter_using):
-        included, excluded, to_filter = self._group(filter_using, to_filter)
+    def filter_singletons(self, to_filter: str, filter_using: Iterable[str]) -> "MSA":
+        included, excluded_, to_filter_ = self._group(filter_using, to_filter)
+        if to_filter_ is None:
+            raise KeyError(to_filter)
 
-        sequence = list(to_filter.sequence)
+        sequence = list(to_filter_.sequence)
         sequences = [record.sequence.upper() for record in included]
         for (index, nts) in enumerate(zip(*sequences)):
             current_nt = sequence[index].upper()
             if current_nt in "N-":
                 continue
 
-            allowed_nts = set()
+            allowed_nts = set()  # type: Set[str]
             for allowed_nt in nts:
                 if allowed_nt not in "N-":
                     allowed_nts.update(NT_CODES[allowed_nt])
             filtered_nts = frozenset(NT_CODES[current_nt]) & allowed_nts
 
             if not filtered_nts:
-                filtered_nts = "N"
+                filtered_nts = frozenset("N")
 
             genotype = encode_genotype(filtered_nts)
             if genotype != current_nt:
                 sequence[index] = genotype.lower()
-        new_record = FASTA(to_filter.name, to_filter.meta, "".join(sequence))
+        new_record = FASTA(to_filter_.name, to_filter_.meta, "".join(sequence))
 
-        return MSA([new_record] + included + excluded)
+        return MSA([new_record] + included + excluded_)
 
-    def split(self, split_by="123"):
+    def split(self, split_by: str = "123") -> Dict[str, "MSA"]:
         """Splits a MSA and returns a dictionary of keys to MSAs,
         using the keys in the 'split_by' parameter at the top
         level. See also paleomix.common.sequences.split."""
@@ -118,36 +136,33 @@ class MSA(frozenset):
         if not split_by:
             raise TypeError("No partitions to split by specified")
 
-        results = dict((key, set()) for key in split_by)
+        results = {key: set() for key in split_by}  # type: Dict[str, Set[FASTA]]
         for record in self:
             for (key, partition) in split(record.sequence, split_by).items():
                 results[key].add(FASTA(record.name, None, partition))
 
-        for (key, value) in results.items():
-            results[key] = MSA(value)
-
-        return results
+        return {key: MSA(value) for key, value in results.items()}
 
     @classmethod
-    def join(cls, *msas):
+    def join(cls, *msas: "MSA") -> "MSA":
         """Merge multiple MSAs into a single MSA, by concatenating sequences in
         the order of the passed MSAs. Sequences are joined by name, and all MSAs
         must therefore contain the same set of sequence names. Meta information
         is not preserved."""
         cls.validate(*msas)
 
-        merged = defaultdict(list)
+        merged = defaultdict(list)  # type: Dict[str, List[str]]
         for msa in msas:
             for record in msa:
                 merged[record.name].append(record.sequence)
 
-        sequences = []
+        sequences = []  # type: List[FASTA]
         for (name, sequence) in merged.items():
             sequences.append(FASTA(name, None, "".join(sequence)))
         return MSA(sequences)
 
     @classmethod
-    def from_lines(cls, lines):
+    def from_lines(cls, lines: Iterable[str]) -> "MSA":
         """Parses a MSA from a file/list of lines, and returns a dictionary
         of names to sequences. If read_meta is True, meta information included
         after the first space in header of each sequence:
@@ -157,23 +172,18 @@ class MSA(frozenset):
         return MSA(FASTA.from_lines(lines))
 
     @classmethod
-    def from_file(cls, filename):
+    def from_file(cls, filename: Union[str, Path]) -> "MSA":
         """Reads a MSA from the specified filename. The file may
         be uncompressed, gzipped or bzipped. See also 'MSA.from_lines'."""
-        fasta_file = open_ro(filename)
-        try:
-            return MSA.from_lines(fasta_file)
-        except MSAError as error:
-            raise MSAError("%s in file %r" % (error, filename))
-        finally:
-            fasta_file.close()
+        with open_rt(filename) as handle:
+            return MSA.from_lines(handle)
 
-    def to_file(self, fileobj):
+    def to_file(self, fileobj: IO[str]) -> None:
         for fst in sorted(self):
             fst.write(fileobj)
 
     @classmethod
-    def validate(cls, *msas):
+    def validate(cls, *msas: "MSA") -> None:
         """Validates one or more MSAs, requiring:
         1. Identical sets of sequence names across all MSAs.
         2. That all names are non-empty strings.
@@ -197,16 +207,20 @@ class MSA(frozenset):
                 % ("', '".join(seqs_all - seqs_common),)
             )
 
-    def __repr__(self):
-        def _fasta_to_str(fst):
+    def __repr__(self) -> str:
+        def _fasta_to_str(fst: FASTA) -> str:
             return "FASTA(%r, %r, %r)" % (fst.name, fst.meta, fst.sequence)
 
         return "MSA(%s)" % (", ".join(map(_fasta_to_str, sorted(self))))
 
-    def names(self):
+    def names(self) -> Set[str]:
         return set(record.name for record in self)
 
-    def _group(self, selection, extra=None):
+    def _group(
+        self,
+        selection: Iterable[str],
+        extra: Optional[str] = None,
+    ) -> Tuple[List[FASTA], List[FASTA], Optional[FASTA]]:
         selection = safe_coerce_to_frozenset(selection)
         if extra in selection:
             raise MSAError("Key used for multiple selections: %r" % extra)
@@ -217,7 +231,9 @@ class MSA(frozenset):
         if missing_keys:
             raise KeyError("Key(s) not found: %r" % (", ".join(map(str, missing_keys))))
 
-        included, excluded, other = [], [], None
+        included = []  # type: List[FASTA]
+        excluded = []  # type: List[FASTA]
+        other: Optional[FASTA] = None
         for record in self:
             if record.name in selection:
                 included.append(record)

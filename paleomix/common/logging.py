@@ -20,19 +20,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import errno
+import argparse
 import copy
+import errno
 import itertools
 import logging
 import os
 import sys
 import time
+from typing import IO, Any, Iterator, List, Optional, cast
 
 import coloredlogs
 import humanfriendly
-
 from humanfriendly.terminal import terminal_supports_colors
-
 
 _CONSOLE_MESSAGE_FORMAT = "%(asctime)s %(levelname)s %(status)s%(message)s"
 _CONSOLE_DATE_FORMAT = "%H:%M:%S"
@@ -40,7 +40,9 @@ _FILE_MESSAGE_FORMAT = "%(asctime)s %(name)s %(levelname)s %(status)s%(message)s
 
 
 class _MultilineFomatter:
-    def format(self, record):
+    COLOR_LOGGER: bool
+
+    def format(self, record: logging.LogRecord) -> str:
         record = copy.copy(record)
         if hasattr(record, "status"):
             value = record.status
@@ -59,7 +61,7 @@ class _MultilineFomatter:
             message = message % record.args
 
         if "\n" in message:
-            lines = []
+            lines = []  # type: List[str]
             record.args = ()
             for line in message.split("\n"):
                 record.msg = line
@@ -78,7 +80,7 @@ class PaleomixFormatter(_MultilineFomatter, coloredlogs.ColoredFormatter):
     COLOR_LOGGER = True
 
 
-def initialize_console_logging(log_level="info"):
+def initialize_console_logging(log_level: str = "info") -> None:
     log_level = coloredlogs.level_to_number(log_level)
 
     logger = logging.getLogger()
@@ -100,7 +102,11 @@ def initialize_console_logging(log_level="info"):
     handler.setFormatter(formatter)
 
 
-def initialize(log_level="info", log_file=None, auto_log_file="paleomix"):
+def initialize(
+    log_level: str = "info",
+    log_file: Optional[str] = None,
+    auto_log_file: Optional[str] = "paleomix",
+):
     initialize_console_logging(log_level)
 
     if log_file:
@@ -123,7 +129,7 @@ def initialize(log_level="info", log_file=None, auto_log_file="paleomix"):
         root.addHandler(handler)
 
 
-def add_argument_group(parser, log_file=True):
+def add_argument_group(parser: argparse.ArgumentParser, log_file: bool = True) -> None:
     """Adds an option-group to an OptionParser object, with options
     pertaining to logging. Note that 'initialize' expects the config
     object to have these options."""
@@ -147,7 +153,7 @@ def add_argument_group(parser, log_file=True):
     )
 
 
-def get_logfiles():
+def get_logfiles() -> Iterator[str]:
     root = logging.getLogger()
     for handler in root.handlers:
         if isinstance(handler, logging.FileHandler) and handler.stream:
@@ -155,18 +161,18 @@ def get_logfiles():
 
 
 class LazyLogfile(logging.FileHandler):
-    def __init__(self, template, log_level):
+    def __init__(self, template: str, log_level: int):
         logging.FileHandler.__init__(self, template, delay=True)
         # Use absolute path for template
         self._template = self.baseFilename
         self._log_level = log_level
 
-    def emit(self, record):
+    def emit(self, record: logging.LogRecord) -> None:
         # Don't try to log self-emitted log events, to avoid recursive loops
         if record.name != __name__:
             super().emit(record)
 
-    def _open(self):
+    def _open(self) -> IO[str]:
         """Try to open a new logfile, taking steps to ensure that
         existing logfiles using the same template are not clobbered."""
         flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
@@ -187,10 +193,12 @@ class LazyLogfile(logging.FileHandler):
                 if error.errno != errno.EEXIST:
                     raise
 
+        assert False
+
 
 class Status:
-    def __init__(self, color=None):
+    def __init__(self, color: Optional[str] = None):
         self.color = color
 
-    def __str__(self):
+    def __str__(self) -> str:
         raise NotImplementedError

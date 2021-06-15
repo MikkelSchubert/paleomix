@@ -28,13 +28,10 @@
 import sys
 from argparse import ArgumentParser
 
-import pysam
-
-from paleomix.common.fileutils import open_ro
-from paleomix.common.utilities import set_in, get_in
-
 import paleomix.common.text as text
-
+import pysam
+from paleomix.common.fileutils import open_rb
+from paleomix.common.utilities import get_in, set_in
 
 ###############################################################################
 ###############################################################################
@@ -319,7 +316,7 @@ def main(argv):
         print("Reading scaffolds information from %r" % (args.scaffolds,))
         scaffolds = read_scaffolds(args.scaffolds)
 
-    with open_ro(args.infile, "rb") as gtf_file:
+    with open_rb(args.infile) as gtf_file:
         print("Reading GTF from %r" % (args.infile,))
         src_table = read_gtf(gtf_file, scaffolds, args.contig_prefix)
 

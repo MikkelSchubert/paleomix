@@ -23,12 +23,13 @@
 import bz2
 import errno
 import gzip
+import io
 import os
 import shutil
 import uuid
 from os import fspath
 from pathlib import Path
-from typing import IO, Any, Callable, Iterable, List, Optional, Tuple, Union
+from typing import IO, Any, Callable, Iterable, List, Optional, Tuple, Union, cast
 
 from .utilities import safe_coerce_to_tuple
 
@@ -136,29 +137,27 @@ def copy_file(source: Union[str, Path], destination: Union[str, Path]) -> None:
     _sh_wrapper(_atomic_file_copy, source, destination)
 
 
-def open_ro(
-    filename: Union[str, Path],
-    mode: str = "rt",
-) -> Union[IO[Any], gzip.GzipFile, bz2.BZ2File]:
+def open_rb(filename: Union[str, Path]) -> IO[bytes]:
     """Opens a file for reading, transparently handling
     GZip and BZip2 compressed files. Returns a file handle."""
-    filename = fspath(filename)
-    if mode not in ("rt", "rb", "r"):
-        raise ValueError(mode)
-    elif mode == "r":
-        # Ensure uniform behavior between open/gzip.open/bz2.open
-        mode = "rt"
-
-    with open(filename, "rb") as handle:
+    handle = open(fspath(filename), "rb")
+    try:
         header = handle.read(2)
+        handle.seek(0)
 
-    assert mode == "rt" or mode == "rb"
-    if header == b"\x1f\x8b":
-        return gzip.open(filename, mode)
-    elif header == b"BZ":
-        return bz2.open(filename, mode)
-    else:
-        return open(filename, mode)
+        if header == b"\x1f\x8b":
+            return cast(IO[bytes], gzip.GzipFile(mode="rb", fileobj=handle))
+        elif header == b"BZ":
+            return bz2.BZ2File(handle, "rb")
+        else:
+            return handle
+    except:
+        handle.close()
+        raise
+
+
+def open_rt(filename: Union[str, Path]) -> IO[str]:
+    return io.TextIOWrapper(open_rb(filename))
 
 
 def try_remove(filename: Union[str, Path]) -> bool:

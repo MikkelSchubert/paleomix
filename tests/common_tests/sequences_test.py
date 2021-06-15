@@ -23,14 +23,12 @@
 import itertools
 
 import pytest
-
 from paleomix.common.sequences import (
     complement,
-    reverse_complement,
     encode_genotype,
+    reverse_complement,
     split,
 )
-
 
 ###############################################################################
 ###############################################################################
@@ -41,7 +39,7 @@ _REF_DST = "TGCAKYWSRMBDHVNX"
 
 
 @pytest.mark.parametrize("src, dst", zip(_REF_SRC, _REF_DST))
-def test_complement__single_nt(src, dst):
+def test_complement__single_nt(src: str, dst: str):
     assert complement(src) == dst
     assert complement(src.lower()) == dst.lower()
 
@@ -92,19 +90,19 @@ _IUB_DST = "ACGTMRWSYKVHDB"
 
 
 @pytest.mark.parametrize("src, dst", zip(_IUB_SRC, _IUB_DST))
-def test_genotype__permutations(src, dst):
+def test_genotype__permutations(src: str, dst: str):
     for seq in itertools.permutations(src):
-        assert encode_genotype("".join(src)) == dst
+        assert encode_genotype("".join(seq)) == dst
 
 
 @pytest.mark.parametrize("value", ("a", "At", "Z", "+"))
-def test_genotype__bad_input(value):
+def test_genotype__bad_input(value: str):
     with pytest.raises(ValueError):
         encode_genotype(value)
 
 
 @pytest.mark.parametrize("sequence", ("CT", "C,T", ",C,T", "C,T,", ",C,T,"))
-def test_comma_or_not(sequence):
+def test_comma_or_not(sequence: str):
     assert encode_genotype(sequence) == "Y"
 
 

@@ -23,7 +23,7 @@
 import copy
 from typing import Any, Dict, Iterable, List, Optional
 
-from paleomix.common.fileutils import open_ro
+from paleomix.common.fileutils import open_rt
 from paleomix.common.utilities import TotallyOrdered
 from pysam import AlignmentFile
 
@@ -72,7 +72,6 @@ class BEDRecord(TotallyOrdered):
 
         if line:
             fields = line.rstrip("\r\n").split("\t")
-            print(fields)
             for column, (value, func) in enumerate(zip(fields, BEDRecord._TYPES)):
                 try:
                     self._fields.append(func(value))
@@ -85,7 +84,6 @@ class BEDRecord(TotallyOrdered):
 
             if len(fields) > len(self._fields):
                 self._fields.extend(fields[len(self._fields) :])
-            print(self._fields)
 
     def __copy__(self) -> "BEDRecord":
         """Needed for copy.copy to work correctly as expected."""
@@ -184,7 +182,7 @@ def read_bed_file(filename: str, min_columns: int = 3, contigs: Dict[str, int] =
     infinite = float("inf")
     handle = None
     try:
-        handle = open_ro(filename)
+        handle = open_rt(filename)
 
         for (line_num, line) in enumerate(handle):
             line = line.strip()
@@ -238,7 +236,7 @@ def read_bed_file(filename: str, min_columns: int = 3, contigs: Dict[str, int] =
             handle.close()
 
 
-def sort_bed_by_bamfile(bamfile: AlignmentFile, regions: Optional[List[BEDRecord]]):
+def sort_bed_by_bamfile(bamfile: AlignmentFile, regions: List[BEDRecord]):
     """Orders a set of BED regions, such that processing matches
     (as far as possible) the layout of the BAM file. This may be
     used to ensure that extraction of regions occurs (close to)

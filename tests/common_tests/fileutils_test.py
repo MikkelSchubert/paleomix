@@ -26,32 +26,30 @@ import gzip
 import os
 import shutil
 import stat
-
 from pathlib import Path
-from typing import Any
-from unittest.mock import ANY, call, DEFAULT, Mock, patch
+from typing import IO, Any, Callable
+from unittest.mock import ANY, DEFAULT, Mock, call, patch
 
 import pytest
-
-from paleomix.common.testing import SetWorkingDirectory
 from paleomix.common.fileutils import (
     add_postfix,
-    swap_ext,
-    reroot_path,
-    create_temp_dir,
-    missing_files,
-    missing_executables,
-    make_dirs,
-    move_file,
     copy_file,
-    open_ro,
-    try_remove,
-    try_rmtree,
+    create_temp_dir,
     describe_files,
     describe_paired_files,
     fspath,
+    make_dirs,
+    missing_executables,
+    missing_files,
+    move_file,
+    open_rb,
+    open_rt,
+    reroot_path,
+    swap_ext,
+    try_remove,
+    try_rmtree,
 )
-
+from paleomix.common.testing import SetWorkingDirectory
 
 ###############################################################################
 ###############################################################################
@@ -229,20 +227,20 @@ def test_create_temp_dir__permission_denied() -> None:
 # Tests for 'missing_files'
 
 
-def test_missing_files__file_exists(tmp_path) -> None:
+def test_missing_files__file_exists(tmp_path: Path) -> None:
     file_1 = tmp_path / "file_1"
     file_1.touch()
 
     assert missing_files([file_1]) == []
 
 
-def test_missing_files__file_doesnt_exist(tmp_path) -> None:
+def test_missing_files__file_doesnt_exist(tmp_path: Path) -> None:
     file_1 = tmp_path / "file_1"
 
     assert missing_files([file_1]) == [str(file_1)]
 
 
-def test_missing_files__mixed_files(tmp_path) -> None:
+def test_missing_files__mixed_files(tmp_path: Path) -> None:
     file_1 = tmp_path / "file_1"
     file_2 = tmp_path / "file_2"
     file_1.touch()
@@ -442,14 +440,14 @@ def test_move_file__enoent_reraised_if_not_due_to_missing_folder() -> None:
         move_file("", "./dst")
 
 
-def test_move_file__destination_removed_if_out_of_space(tmp_path) -> None:
+def test_move_file__destination_removed_if_out_of_space(tmp_path: Path) -> None:
     shutil_copy2 = shutil.copy2
 
-    def _rename(source, destination):
+    def _rename(source: Path, destination: Path):
         # Simulated move across devices
         raise OSError(errno.EXDEV, "error message")
 
-    def _copy2(source, destination):
+    def _copy2(source: Path, destination: Path):
         shutil_copy2(source, destination)
         raise OSError(errno.ENOSPC, "Out of space")
 
@@ -550,10 +548,10 @@ def test_copy_file__enoent_reraised_if_not_due_to_missing_folder() -> None:
         copy_file("", "./dst")
 
 
-def test_copy_file__destination_removed_if_out_of_space(tmp_path) -> None:
+def test_copy_file__destination_removed_if_out_of_space(tmp_path: Path) -> None:
     _shutil_copy = shutil.copy
 
-    def _copy(source, destination):
+    def _copy(source: Path, destination: Path):
         _shutil_copy(source, destination)
         raise OSError(errno.ENOSPC, "Out of space")
 
@@ -576,40 +574,36 @@ def test_copy_file__destination_removed_if_out_of_space(tmp_path) -> None:
 _FASTA_TEXT = ">This_is_FASTA!\nACGTN\n>This_is_ALSO_FASTA!\nCGTNA\n"
 _FASTA_BYTES = _FASTA_TEXT.encode("utf-8")
 
+IOFunc = Callable[[str, str], IO[str]]
+
 
 @pytest.mark.parametrize("func", (open, gzip.open, bz2.open))
-def test_open_ro(func, tmp_path) -> None:
+def test_open_ro(func: IOFunc, tmp_path: Path) -> None:
     filename = tmp_path / "file.fasta"
     with func(fspath(filename), "wt") as handle:
         handle.write(_FASTA_TEXT)
 
-    with open_ro(filename) as handle:
+    with open_rt(filename) as handle:
         assert handle.read() == _FASTA_TEXT
 
 
-@pytest.mark.parametrize("mode", ("r", "rt"))
 @pytest.mark.parametrize("func", (open, gzip.open, bz2.open))
-def test_open_ro__mode(func, mode, tmp_path) -> None:
+def test_open_ro__mode(func: IOFunc, tmp_path: Path) -> None:
     filename = tmp_path / "file.fasta"
     with func(fspath(filename), "wt") as handle:
         handle.write(_FASTA_TEXT)
 
-    with open_ro(filename, mode) as handle:
+    with open_rt(filename) as handle:
         assert handle.read() == _FASTA_TEXT
 
 
-def test_open_ro__invalid_mode() -> None:
-    with pytest.raises(ValueError, match="foo"):
-        open_ro("file.fasta", "foo")
-
-
 @pytest.mark.parametrize("func", (open, gzip.open, bz2.open))
-def test_open_ro__binary(func, tmp_path) -> None:
+def test_open_ro__binary(func: IOFunc, tmp_path: Path) -> None:
     filename = tmp_path / "file.fasta"
     with func(fspath(filename), "wt") as handle:
         handle.write(_FASTA_TEXT)
 
-    with open_ro(filename, "rb") as handle:
+    with open_rb(filename) as handle:
         assert handle.read() == _FASTA_BYTES
 
 
@@ -618,7 +612,7 @@ class OddException(RuntimeError):
 
 
 def test_open_ro__close_handle_on_error() -> None:
-    mocks = Mock()
+    mocks = Mock()  # type: Any
     mocks.file.read.side_effect = OddException("ARGH!")
     mocks.file.__enter__ = Mock(return_value=mocks.file)
     mocks.file.__exit__ = Mock(return_value=None)
@@ -626,14 +620,13 @@ def test_open_ro__close_handle_on_error() -> None:
 
     with patch("builtins.open", mocks.open):
         with pytest.raises(OddException):
-            open_ro("/var/abc")
+            open_rt("/var/abc")
 
     mocks.assert_has_calls(
         [
             call.open("/var/abc", "rb"),
-            call.file.__enter__(),
             call.file.read(2),
-            call.file.__exit__(ANY, ANY, ANY),
+            call.file.close(),
         ]
     )
 
@@ -731,7 +724,7 @@ def test_describe_files__iterable() -> None:
 
 def test_describe_files__non_str() -> None:
     with pytest.raises(TypeError):
-        describe_files(1)
+        describe_files(1)  # type: ignore
 
 
 ###############################################################################
@@ -810,10 +803,10 @@ def test_describe_paired_files__files_2_longer() -> None:
 
 def test_describe_paired_files__non_str() -> None:
     with pytest.raises(TypeError):
-        describe_paired_files((), 1)
+        describe_paired_files((), 1)  # type: ignore
 
     with pytest.raises(TypeError):
-        describe_paired_files(1, ())
+        describe_paired_files(1, ())  # type: ignore
 
     with pytest.raises(TypeError):
-        describe_paired_files(1, 1)
+        describe_paired_files(1, 1)  # type: ignore

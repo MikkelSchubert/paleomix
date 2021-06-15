@@ -34,8 +34,6 @@ from typing import (
     Sequence,
     Tuple,
     TypeVar,
-    Union,
-    overload,
 )
 
 T = TypeVar("T")
@@ -72,7 +70,7 @@ def try_cast(value: Any, cast_to: type) -> Any:
         return value
 
 
-def set_in(dictionary: Dict[Any, Any], keys: Iterable[Hashable], value: Any):
+def set_in(dictionary: Dict[Any, Any], keys: Iterable[Hashable], value: Any) -> None:
     """Traverses a set of nested dictionaries using the given keys,
     and assigns the specified value to the inner-most
     dictionary (obtained from the second-to-last key), using
@@ -89,7 +87,7 @@ def set_in(dictionary: Dict[Any, Any], keys: Iterable[Hashable], value: Any):
         try:
             dictionary = dictionary[key]
         except KeyError:
-            new_dict = {}
+            new_dict = {}  # type: Dict[Any, Any]
             dictionary[key] = new_dict
             dictionary = new_dict
 
@@ -160,20 +158,9 @@ def group_by_pred(
     return is_true, is_false
 
 
-def fragment(size: int, lstlike):
+def fragment(size: int, lstlike: Sequence[T]) -> Iterable[Sequence[T]]:
     """Faster alternative to grouper for lists/strings."""
     return (lstlike[i : i + size] for i in range(0, len(lstlike), size))
-
-
-def cumsum(
-    lst: Iterable[Union[int, float]],
-    initial: Union[int, float] = 0,
-) -> Union[int, float]:
-    """Yields the cummulative sums of the values in a
-    iterable, starting with the specified initial value."""
-    for item in lst:
-        initial += item
-        yield initial
 
 
 def fill_dict(destination: Dict[Any, Any], source: Dict[Any, Any]) -> Dict[Any, Any]:
