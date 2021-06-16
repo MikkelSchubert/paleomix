@@ -26,11 +26,11 @@ import os
 import shutil
 import sys
 from pathlib import Path
-from typing import Any, FrozenSet, Iterable, List, Optional
+from typing import Any, FrozenSet, Iterable, List, Optional, Union
 
 import paleomix
 import paleomix.common.fileutils as fileutils
-from paleomix.common.command import AtomicCmd, CmdError
+from paleomix.common.command import AtomicCmd, CmdError, ParallelCmds, SequentialCmds
 from paleomix.common.utilities import safe_coerce_to_frozenset
 from paleomix.common.versions import Requirement
 
@@ -291,7 +291,7 @@ class Node:
 class CommandNode(Node):
     def __init__(
         self,
-        command: AtomicCmd,
+        command: Union[AtomicCmd, ParallelCmds, SequentialCmds],
         description: Optional[str] = None,
         threads: int = 1,
         dependencies: Iterable[Node] = (),

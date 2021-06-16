@@ -55,7 +55,8 @@ def format_timespan(seconds: float):
 
 
 def padded_table(
-    table: Iterable[Union[str, List[str]]], min_padding: int = 4
+    table: Iterable[Union[str, Iterable[Any]]],
+    min_padding: int = 4,
 ) -> Iterator[str]:
     """Takes a sequence of iterables, each of which represents a row in a
     table. Values are converted to string, and padded with whitespace such that
@@ -66,8 +67,8 @@ def padded_table(
     that these lines should be whitespace only, or start with a '#' if the
     resulting table is to be readable with 'parse_padded_table'.
     """
-    str_rows = []  # type: List[Union[str, List[str]]]
-    max_sizes = []  # type: List[int]
+    str_rows: List[Union[str, List[str]]] = []
+    max_sizes: List[int] = []
     for row in table:
         if not isinstance(row, str):
             row = list(map(str, row))
@@ -140,7 +141,7 @@ def parse_lines_by_contig(
     """Reads the lines of a text file, parsing each line with the specified
     parser, and aggregating results by the 'contig' property of reach record.
     """
-    table = {}  # type: Dict[str, List[Any]]
+    table: Dict[str, List[Any]] = {}
     for record in parse_lines(lines, parser):
         try:
             table[cast(Any, record).contig].append(record)

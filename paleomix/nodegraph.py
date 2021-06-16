@@ -25,14 +25,24 @@ import errno
 import logging
 import os
 import time
-
-import humanfriendly
+from typing import (
+    Callable,
+    Collection,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Set,
+    Tuple,
+)
 
 import paleomix.common.logging
-import paleomix.common.versions as versions
-
 from paleomix.common.fileutils import missing_executables, missing_files
+from paleomix.common.text import format_timespan
 from paleomix.common.utilities import safe_coerce_to_frozenset
+from paleomix.common.versions import Requirement, RequirementError
+from paleomix.node import Node
 
 
 class FileStatusCache:
@@ -44,17 +54,21 @@ class FileStatusCache:
     """
 
     def __init__(self):
-        self._stat_cache = {}
+        self._stat_cache: Dict[str, Optional[float]] = {}
 
-    def files_exist(self, fpaths):
+    def files_exist(self, fpaths: Iterable[str]) -> bool:
         """Returns true if all paths listed in fpaths exist."""
         return all((self._get_state(fpath) is not None) for fpath in fpaths)
 
-    def missing_files(self, fpaths):
+    def missing_files(self, fpaths: Iterable[str]) -> List[str]:
         """Returns a list of paths in fpaths that do not exist."""
         return [fpath for fpath in fpaths if (self._get_state(fpath) is None)]
 
-    def are_files_outdated(self, input_files, output_files):
+    def are_files_outdated(
+        self,
+        input_files: Iterable[str],
+        output_files: Iterable[str],
+    ) -> bool:
         """Returns true if any 'input' files have a time-stamp that post-date
         any time-stamp for the 'output' files, indicating that one or more of
         the 'input' files have changed since the creation of the 'output'.
@@ -63,17 +77,17 @@ class FileStatusCache:
         indicate either the 'output' files or both the 'input' and 'output'
         files would need to be rebuilt.
         """
-        input_timestamps = []
+        input_timestamps: List[float] = []
         if not self._get_states(input_files, input_timestamps):
             return True
 
-        output_timestamps = []
+        output_timestamps: List[float] = []
         if not self._get_states(output_files, output_timestamps):
             return True
 
         return max(input_timestamps) > min(output_timestamps)
 
-    def _get_states(self, filenames, dst):
+    def _get_states(self, filenames: Iterable[str], dst: List[float]) -> bool:
         """Collects the mtimes for a set of filenames, returning true if all
         could be collected, and aborting early and returning false otherwise.
         """
@@ -86,7 +100,7 @@ class FileStatusCache:
 
         return True
 
-    def _get_state(self, fpath):
+    def _get_state(self, fpath: str) -> Optional[float]:
         """Returns the mtime of a path, or None if the path does not exist."""
         if fpath not in self._stat_cache:
             try:
@@ -109,21 +123,20 @@ class NodeGraph:
 
     def __init__(
         self,
-        nodes,
-        implicit_dependencies=False,
-        software_checks=True,
-        cache_factory=FileStatusCache,
+        nodes: Iterable[Node],
+        implicit_dependencies: bool = False,
+        cache_factory: Callable[[], FileStatusCache] = FileStatusCache,
     ):
         self._implicit_dependencies = implicit_dependencies
         self._cache_factory = cache_factory
-        self._states = {}
-        self._start_times = {}
+        self._states: Dict[Node, int] = {}
+        self._start_times: Dict[Node, float] = {}
         self._state_counts = [0] * self.NUMBER_OF_STATES
-        self._progress_color = None
+        self._progress_color: Optional[str] = None
 
         nodes = safe_coerce_to_frozenset(nodes)
 
-        self._intersections_cache = {}
+        self._intersections_cache: Dict[Node, Dict[Node, int]] = {}
         self._dependencies = self._collect_dependencies(nodes)
         self._reverse_dependencies = self._collect_reverse_dependencies(
             self._dependencies
@@ -146,10 +159,10 @@ class NodeGraph:
         self._logger.info("Determining state of pipeline tasks")
         self._refresh_states()
 
-    def get_node_state(self, node):
+    def get_node_state(self, node: Node) -> int:
         return self._states[node]
 
-    def set_node_state(self, node, state):
+    def set_node_state(self, node: Node, state: int) -> None:
         if state not in (
             NodeGraph.RUNNING,
             NodeGraph.RUNABLE,
@@ -197,14 +210,14 @@ class NodeGraph:
                     intersections.pop(node)
                     requires_update.pop(node)
 
-    def iterflat(self):
+    def iterflat(self) -> Iterator[Node]:
         return iter(self._reverse_dependencies)
 
     def get_state_counts(self):
         return list(self._state_counts)
 
     def _refresh_states(self):
-        states = {}
+        states: Dict[Node, int] = {}
         cache = self._cache_factory()
         for (node, state) in self._states.items():
             if state in (self.ERROR, self.RUNNING):
@@ -219,7 +232,7 @@ class NodeGraph:
             state_counts[state] += 1
         self._state_counts = state_counts
 
-    def _log_node_changes(self, node, old_state, new_state):
+    def _log_node_changes(self, node: Node, old_state: int, new_state: int) -> None:
         if new_state in (self.RUNNING, self.DONE):
             runtime = ""
             if new_state == self.RUNNING:
@@ -231,17 +244,15 @@ class NodeGraph:
                 event = "Finished"
                 end_time = time.time()
                 start_time = self._start_times.pop(node)
-                runtime = " in {}".format(
-                    humanfriendly.format_timespan(end_time - start_time)
-                )
+                runtime = " in {}".format(format_timespan(end_time - start_time))
 
             extra = {"status": _Progress(self._state_counts, self._progress_color)}
             self._logger.info("%s %s%s", event, node, runtime, extra=extra)
         elif new_state == self.ERROR:
             self._progress_color = "red"
 
-    def _calculate_intersections(self, for_node):
-        def count_nodes(node, counts):
+    def _calculate_intersections(self, for_node: Node) -> Dict[Node, int]:
+        def count_nodes(node: Node, counts: Dict[Node, int]) -> Dict[Node, int]:
             for node in self._reverse_dependencies[node]:
                 if node in counts:
                     counts[node] += 1
@@ -258,7 +269,7 @@ class NodeGraph:
 
         return dict(self._intersections_cache[for_node])
 
-    def _update_node_state(self, node, cache):
+    def _update_node_state(self, node: Node, cache: FileStatusCache) -> int:
         if node in self._states:
             return self._states[node]
 
@@ -297,7 +308,7 @@ class NodeGraph:
         return state
 
     @classmethod
-    def is_done(cls, node, cache):
+    def is_done(cls, node: Node, cache: FileStatusCache) -> bool:
         """Returns true if the node itself is done; this only implies that the
         output files generated by this node exists. The files themselves may
         be outdated.
@@ -305,7 +316,7 @@ class NodeGraph:
         return cache.files_exist(node.output_files)
 
     @classmethod
-    def is_outdated(cls, node, cache):
+    def is_outdated(cls, node: Node, cache: FileStatusCache) -> int:
         """Returns true if the not is not done or if one or more of the input
         files appear to have been changed since the creation of the output
         files (based on the timestamps). A node that lacks either input or
@@ -317,15 +328,15 @@ class NodeGraph:
         return cache.are_files_outdated(node.input_files, node.output_files)
 
     @classmethod
-    def _collect_requirements(cls, nodes):
-        executables = set()
-        requirements = set()
+    def _collect_requirements(cls, nodes: Iterable[Node]) -> Tuple[Requirement, ...]:
+        executables: Set[str] = set()
+        requirements: Set[Requirement] = set()
         for node in nodes:
             executables.update(node.executables)
             requirements.update(node.requirements)
 
         # Executables used by requirement checks
-        requirement_execs = set()
+        requirement_execs: Set[str] = set()
         for requirement in requirements:
             executable = requirement.executable
             if executable is not None:
@@ -333,19 +344,23 @@ class NodeGraph:
 
         # Create dummy Requirements for any executables used in commands but not in reqs
         for executable in executables - requirement_execs:
-            requirement = versions.Requirement(executable)
+            requirement = Requirement(executable)
             # Handle the presence of "%(PYTHON)s"
             if requirement.executable not in requirement_execs:
                 requirements.add(requirement)
 
-        def _key_func(reqobj):
+        def _key_func(reqobj: Requirement):
             # Sort priority in decreasing order, name in increasing order
             return (-reqobj.priority, reqobj.name)
 
         return tuple(sorted(requirements, key=_key_func))
 
     @classmethod
-    def check_version_requirements(cls, requirements, force=False):
+    def check_version_requirements(
+        cls,
+        requirements: Iterable[Requirement],
+        force: bool = False,
+    ) -> bool:
         executables = set(requirement.executable for requirement in requirements)
         missing_execs = missing_executables(executables - set([None]))
 
@@ -376,7 +391,7 @@ class NodeGraph:
             except OSError as error:
                 any_errors = True
                 log.error(" [☓] %s: %s", name, error)
-            except versions.RequirementError as error:
+            except RequirementError as error:
                 any_errors = True
                 log.error(" [☓] %s: %s", name, "\n     ".join(str(error).split("\n")))
 
@@ -388,16 +403,20 @@ class NodeGraph:
 
         return not any_errors
 
-    def _check_file_dependencies(self, nodes, max_errors=10):
-        def _abs_path(filename, cache={}):
+    def _check_file_dependencies(
+        self,
+        nodes: Iterable[Node],
+        max_errors: int = 10,
+    ) -> bool:
+        def _abs_path(filename: str, cache: Dict[str, str] = {}) -> str:
             filepath = cache.get(filename)
             if filepath is None:
                 filepath = cache[filename] = os.path.abspath(filename)
 
             return filepath
 
-        input_files = collections.defaultdict(set)
-        output_files = collections.defaultdict(set)
+        input_files: Dict[str, Set[Node]] = collections.defaultdict(set)
+        output_files: Dict[str, Set[Node]] = collections.defaultdict(set)
         for node in nodes:
             for filename in node.input_files:
                 input_files[_abs_path(filename)].add(node)
@@ -409,12 +428,16 @@ class NodeGraph:
         if not self._check_output_files(output_files, max_errors):
             any_errors = True
 
-        if not self._check_input_files(input_files, output_files, nodes, max_errors):
+        if not self._check_input_files(input_files, output_files, max_errors):
             any_errors = True
 
         return not any_errors
 
-    def _check_output_files(self, output_files, max_errors=10):
+    def _check_output_files(
+        self,
+        output_files: Dict[str, Set[Node]],
+        max_errors: int = 10,
+    ) -> bool:
         """Checks dict of output files to nodes for cases where
         multiple nodes create the same output file.
 
@@ -440,12 +463,17 @@ class NodeGraph:
 
         return not any_errors
 
-    def _check_input_files(self, input_files, output_files, nodes, max_errors=10):
+    def _check_input_files(
+        self,
+        input_files: Dict[str, Set[Node]],
+        output_files: Dict[str, Set[Node]],
+        max_errors: int = 10,
+    ):
         any_errors = False
         for (filename, nodes) in sorted(input_files.items(), key=lambda v: v[0]):
             if filename in output_files:
                 (producer,) = output_files[filename]
-                bad_nodes = set()
+                bad_nodes: Set[Node] = set()
                 for consumer in nodes:
                     if self._implicit_dependencies:
                         self._dependencies[consumer].add(producer)
@@ -477,8 +505,8 @@ class NodeGraph:
 
         return not any_errors
 
-    def _check_auxiliary_files(self, nodes):
-        auxiliary_files = set()
+    def _check_auxiliary_files(self, nodes: Iterable[Node]) -> bool:
+        auxiliary_files: Set[str] = set()
         for node in nodes:
             auxiliary_files.update(node.auxiliary_files)
 
@@ -491,8 +519,8 @@ class NodeGraph:
         return not missing_aux_files
 
     @classmethod
-    def _collect_dependencies(cls, nodes):
-        dependencies = {}
+    def _collect_dependencies(cls, nodes: Iterable[Node]):
+        dependencies: Dict[Node, Set[Node]] = {}
         pending = list(nodes)
 
         while pending:
@@ -504,23 +532,24 @@ class NodeGraph:
         return dependencies
 
     @classmethod
-    def _collect_reverse_dependencies(cls, nodes):
-        rev_dependencies = {node: set() for node in nodes}
-        for dependant_node in nodes:
+    def _collect_reverse_dependencies(cls, nodes: Iterable[Node]):
+        rev_dependencies: Dict[Node, Set[Node]] = {node: set() for node in nodes}
+
+        for dependant_node in rev_dependencies:
             for node in dependant_node.dependencies:
                 rev_dependencies[node].add(dependant_node)
 
         return rev_dependencies
 
     @classmethod
-    def _dependency_in(cls, dependency, nodes):
+    def _dependency_in(cls, dependency: Node, nodes: Collection[Node]) -> bool:
         if dependency in nodes:
             return True
 
         # Dependencies are mostly one or two levels down, so do a breadth-first search
-        checked = set()
+        checked: Set[Node] = set()
         while nodes:
-            pending = set()
+            pending: Set[Node] = set()
             for node in nodes:
                 pending.update(node.dependencies)
 
@@ -534,7 +563,7 @@ class NodeGraph:
 
 
 class _Progress(paleomix.common.logging.Status):
-    def __init__(self, state_counts, color):
+    def __init__(self, state_counts: List[int], color: Optional[str]):
         super().__init__(color)
         self._state_counts = state_counts
 
@@ -552,8 +581,8 @@ class _Progress(paleomix.common.logging.Status):
         return value
 
 
-def _summarize_nodes(nodes):
-    nodes = list(sorted(set(map(str, nodes))))
-    if len(nodes) > 4:
-        nodes = nodes[:5] + ["and %i more nodes" % len(nodes)]
-    return nodes
+def _summarize_nodes(nodes: Iterable[Node]) -> List[str]:
+    lines = list(sorted(set(map(str, nodes))))
+    if len(lines) > 4:
+        lines = lines[:5] + ["and %i more nodes" % len(lines)]
+    return lines

@@ -20,10 +20,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+from typing import Iterable
+
 import paleomix.common.fileutils as fileutils
 import paleomix.common.versions as versions
-from paleomix.common.command import AtomicCmd, InputFile, OutputFile, TempOutputFile
-from paleomix.node import CommandNode
+from paleomix.common.command import (
+    AtomicCmd,
+    InputFile,
+    OptionsType,
+    OutputFile,
+    TempOutputFile,
+)
+from paleomix.node import CommandNode, Node
 
 _VERSION_CHECK = versions.Requirement(
     call=("AdapterRemoval", "--version"),
@@ -34,7 +42,12 @@ _VERSION_CHECK = versions.Requirement(
 
 class SE_AdapterRemovalNode(CommandNode):
     def __init__(
-        self, input_file, output_prefix, threads=1, options={}, dependencies=()
+        self,
+        input_file: str,
+        output_prefix: str,
+        threads: int = 1,
+        options: OptionsType = {},
+        dependencies: Iterable[Node] = (),
     ):
         self.out_settings = output_prefix + ".settings"
         self.out_truncated = "{}.truncated.gz".format(output_prefix)
@@ -57,8 +70,9 @@ class SE_AdapterRemovalNode(CommandNode):
         options.pop("--collapse-conservatively", None)
 
         # Ensure that any user-specified list of adapters is tracked
-        if "--adapter-list" in options:
-            options["--adapter-list"] = InputFile(options["--adapter-list"])
+        adapter_list = options.get("--adapter-list")
+        if isinstance(adapter_list, str):
+            options["--adapter-list"] = InputFile(adapter_list)
 
         command.merge_options(
             user_options=options,
@@ -86,12 +100,12 @@ class SE_AdapterRemovalNode(CommandNode):
 class PE_AdapterRemovalNode(CommandNode):
     def __init__(
         self,
-        input_file_1,
-        input_file_2,
-        output_prefix,
-        threads=1,
-        options={},
-        dependencies=(),
+        input_file_1: str,
+        input_file_2: str,
+        output_prefix: str,
+        threads: int = 1,
+        options: OptionsType = {},
+        dependencies: Iterable[Node] = (),
     ):
         self.out_settings = output_prefix + ".settings"
         self.out_paired = "{}.pair{{Pair}}.truncated.gz".format(output_prefix)
@@ -112,7 +126,7 @@ class PE_AdapterRemovalNode(CommandNode):
             requirements=[_VERSION_CHECK],
         )
 
-        fixed_options = {
+        fixed_options: OptionsType = {
             "--file1": InputFile(input_file_1),
             "--file2": InputFile(input_file_2),
             # Gzip compress FASTQ files
@@ -141,9 +155,10 @@ class PE_AdapterRemovalNode(CommandNode):
             )
 
         # Ensure that any user-specified list of adapters is tracked
-        if "--adapter-list" in options:
+        adapter_list = options.get("--adapter-list")
+        if isinstance(adapter_list, str):
             options = dict(options)
-            options["--adapter-list"] = InputFile(options["--adapter-list"])
+            options["--adapter-list"] = InputFile(adapter_list)
 
         command.merge_options(
             user_options=options,

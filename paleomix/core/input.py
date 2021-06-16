@@ -27,7 +27,7 @@ import select
 import sys
 import termios
 import tty
-
+from typing import Any
 
 _COMMANDS = {
     "h": "Prints this message.",
@@ -47,7 +47,7 @@ class CommandLine(object):
 
         return self
 
-    def __exit__(self, _type, _value, _traceback):
+    def __exit__(self, _type: Any, _value: Any, _traceback: Any):
         self.teardown()
 
     @property
@@ -65,7 +65,7 @@ class CommandLine(object):
                         self._tty_settings = termios.tcgetattr(sys.stdin)
                         # Disable echo
                         tty.setcbreak(sys.stdin.fileno())
-                    except tty.error:
+                    except termios.error:
                         pass  # Silently ignore failures
 
     def teardown(self):
@@ -81,7 +81,7 @@ class CommandLine(object):
 
         return [sys.stdin]
 
-    def process_key_presses(self, threads=1, workers=()):
+    def process_key_presses(self, threads: int = 1, workers=()):
         if not self._tty_settings:
             return threads
 

@@ -20,25 +20,20 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import argparse
 import logging
 import multiprocessing
 import os
 import signal
 import sys
-
 from shlex import quote
+from typing import IO, Any, Dict, Iterable, List, Optional
 
 import paleomix.common.logging
 import paleomix.core.reports
-
 from paleomix.common.text import padded_table
 from paleomix.common.utilities import safe_coerce_to_tuple
-from paleomix.core.workers import (
-    EVT_CAPACITY,
-    EVT_SHUTDOWN,
-    EVT_TASK_DONE,
-    Manager,
-)
+from paleomix.core.workers import EVT_CAPACITY, EVT_SHUTDOWN, EVT_TASK_DONE, Manager
 from paleomix.node import Node, NodeError, NodeMissingFilesError
 from paleomix.nodegraph import NodeGraph, NodeGraphError
 
@@ -46,10 +41,10 @@ from paleomix.nodegraph import NodeGraph, NodeGraphError
 class Pypeline:
     def __init__(
         self,
-        nodes,
-        temp_root="/tmp",
-        max_threads=1,
-        implicit_dependencies=False,
+        nodes: Iterable[Node],
+        temp_root: str = "/tmp",
+        max_threads: int = 1,
+        implicit_dependencies: bool = False,
     ):
         self._nodes = safe_coerce_to_tuple(nodes)
         for node in self._nodes:
@@ -62,7 +57,6 @@ class Pypeline:
         self._threads = max(0, max_threads)
         self._temp_root = temp_root
         self._implicit_dependencies = implicit_dependencies
-        self._manager = None
 
         self._event_handlers = {
             # The number of available threads has changed
@@ -73,7 +67,7 @@ class Pypeline:
             EVT_SHUTDOWN: self._event_shutdown,
         }
 
-    def run(self, mode="run"):
+    def run(self, mode: str = "run") -> int:
         if mode not in ("run", "dry_run", "input_files", "output_files", "executables"):
             raise ValueError("Unknown pipeline mode {!r}".format(mode))
         elif mode == "dry_run":
@@ -92,7 +86,7 @@ class Pypeline:
             self._logger.error(error)
             return 1
 
-        self._manager = Manager(
+        manager = Manager(
             threads=self._threads,
             temp_root=self._temp_root,
             requirements=nodegraph.requirements,
@@ -102,14 +96,14 @@ class Pypeline:
 
         try:
             # Handle setup/teardown of commandline interface and termination of workers
-            with self._manager:
-                if not self._manager.start():
+            with manager:
+                if not manager.start():
                     self._logger.error("Manager failed to start; terminating")
                     return 1
 
                 if mode == "dry_run":
                     # Wait for any remote workers discovered during startup
-                    if not self._manager.wait_for_workers():
+                    if not manager.wait_for_workers():
                         self._logger.error("Workers failed to start; terminating")
                         return 1
 
@@ -120,54 +114,58 @@ class Pypeline:
                 # Install signal handler used to allow graceful termination
                 signal.signal(signal.SIGINT, self._sigint_handler)
 
-                return self._run(nodegraph)
+                return self._run(nodegraph, manager)
         finally:
             signal.signal(signal.SIGINT, sigint_handler)
             for filename in paleomix.common.logging.get_logfiles():
                 self._logger.info("Log-file written to %r", filename)
 
-    def _run(self, nodegraph):
+    def _run(self, nodegraph: NodeGraph, manager: Manager) -> int:
         # Set of remaining nodes to be run
-        tasks = {}
+        tasks: Dict[Node, _TaskInfo] = {}
         for task in nodegraph.iterflat():
             state = nodegraph.get_node_state(task)
             if state not in (nodegraph.DONE, nodegraph.ERROR):
-                tasks[task] = {
-                    "running_on": None,
-                    "blacklisted_from": {},
-                }
+                tasks[task] = _TaskInfo(task)
 
         any_errors = False
         # Keep looping as long as there are tasks left to run or tasks running
-        while (tasks and not self._interrupted) or any(self._manager.tasks):
-            for event in self._manager.poll():
+        while (tasks and not self._interrupted) or any(manager.tasks):
+            for event in manager.poll():
                 handler = self._event_handlers.get(event["event"])
                 if handler is None:
                     self._logger.error("Unknown event in pipeline: %r", event)
-                elif not handler(nodegraph, tasks, **event):
+                elif not handler(nodegraph, manager, tasks, **event):
                     any_errors = True
 
         self._logger.info("Shutting down workers")
-        self._manager.shutdown()
+        manager.shutdown()
 
         self._summarize_pipeline(nodegraph, verbose=any_errors)
 
         return 1 if any_errors else 0
 
-    def _event_capacity(self, nodegraph, tasks, worker, **event):
+    def _event_capacity(
+        self,
+        nodegraph: NodeGraph,
+        manager: Manager,
+        tasks: Dict[Node, "_TaskInfo"],
+        worker: str,
+        **event: Any
+    ):
         if not self._interrupted:
             idle_threads = event["threads"]
             for task, task_info in sorted(tasks.items(), key=lambda it: it[0].id):
-                if worker in task_info["blacklisted_from"]:
+                if worker in task_info.blacklisted_from:
                     continue
 
                 if nodegraph.get_node_state(task) == nodegraph.RUNABLE:
                     if idle_threads >= task.threads or event["overcommit"]:
-                        if not self._manager.start_task(worker, task):
+                        if not manager.start_task(worker, task):
                             # Error in worker; this will probably be picked up next loop
                             return False
 
-                        task_info["running_on"] = worker
+                        task_info.running_on = worker
                         nodegraph.set_node_state(task, nodegraph.RUNNING)
 
                         # Overcommiting allowed only if a worker is idle
@@ -179,7 +177,14 @@ class Pypeline:
 
         return True
 
-    def _event_task_done(self, nodegraph, tasks, worker, **event):
+    def _event_task_done(
+        self,
+        nodegraph: NodeGraph,
+        manager: Manager,
+        tasks: Dict[Node, "_TaskInfo"],
+        worker: str,
+        **event: Any
+    ):
         any_errors = False
         task = event["task"]
         task_info = tasks.pop(task)
@@ -189,8 +194,8 @@ class Pypeline:
             # Node was unexpectedly missing input files; this is either a programming
             # error, a user deleting stuff, or NFS (caches) not having been updated, so
             # we try to run it on another worker, if any are available.
-            task_info["blacklisted_from"][worker] = event
-            if self._manager.workers.keys() - task_info["blacklisted_from"]:
+            task_info.blacklisted_from[worker] = event
+            if manager.workers.keys() - task_info.blacklisted_from:
                 self._logger.warning("Re-trying %s", task)
                 nodegraph.set_node_state(task, nodegraph.RUNABLE)
                 tasks[task] = task_info
@@ -205,21 +210,29 @@ class Pypeline:
 
         return not any_errors
 
-    def _event_shutdown(self, nodegraph, tasks, worker, worker_name, **event):
+    def _event_shutdown(
+        self,
+        nodegraph: NodeGraph,
+        manager: Manager,
+        tasks: Dict[Node, "_TaskInfo"],
+        worker: str,
+        worker_name: str,
+        **event: Any
+    ):
         self._logger.error("PALEOMIX worker %s terminated", worker_name)
 
         any_errors = False
-        workers = self._manager.workers.keys()
+        workers = manager.workers.keys()
         for task, task_info in tuple(tasks.items()):
-            if task_info["running_on"] == worker:
+            if task_info.running_on == worker:
                 self._logger.warning("Re-trying %s", task)
                 nodegraph.set_node_state(task, nodegraph.RUNABLE)
-                task_info["running_on"] = None
+                task_info.running_on = None
 
             # Check nodes that can no longer be completed
-            if not (workers - task_info["blacklisted_from"]):
+            if not (workers - task_info.blacklisted_from):
                 # Pick arbitrary error message
-                for event in task_info["blacklisted_from"].values():
+                for event in task_info.blacklisted_from.values():
                     self._handle_task_error(nodegraph, **event)
                     any_errors = True
                     tasks.pop(task)
@@ -229,14 +242,21 @@ class Pypeline:
 
         return not any_errors
 
-    def _prune_tasks(self, nodegraph, tasks):
+    def _prune_tasks(self, nodegraph: NodeGraph, tasks: Dict[Node, "_TaskInfo"]):
         # The completion or failure of a task may result in the failure/completion of
         # any number of other tasks, the latter when tasks depend on validation steps
         for task in tuple(tasks):
             if nodegraph.get_node_state(task) in (nodegraph.DONE, nodegraph.ERROR):
                 tasks.pop(task)
 
-    def _handle_task_error(self, nodegraph, task, error, backtrace, **kwargs):
+    def _handle_task_error(
+        self,
+        nodegraph: NodeGraph,
+        task: Node,
+        error: Any,
+        backtrace: Optional[List[str]],
+        **kwargs: Any
+    ):
         nodegraph.set_node_state(task, nodegraph.ERROR)
 
         if not isinstance(error, NodeError):
@@ -253,7 +273,7 @@ class Pypeline:
 
         self._logger.error("\n".join(message))
 
-    def _print_report(self, mode, file=sys.stdout):
+    def _print_report(self, mode: str, file: IO[str] = sys.stdout) -> int:
         try:
             if mode == "input_files":
                 self._logger.info("Collecting and printing input files ..")
@@ -272,7 +292,7 @@ class Pypeline:
             self._logger.error(error)
             return 1
 
-    def _sigint_handler(self, signum, frame):
+    def _sigint_handler(self, signum: int, frame: Any):
         """Signal handler; see signal.signal."""
         if not self._interrupted:
             self._interrupted = True
@@ -284,17 +304,17 @@ class Pypeline:
             self._logger.warning("Terminating pipeline!")
             sys.exit(-signum)
 
-    def _summarize_pipeline(self, nodegraph, verbose=True):
+    def _summarize_pipeline(self, nodegraph: NodeGraph, verbose: bool = True):
         states = nodegraph.get_state_counts()
 
         if verbose:
             rows = [
-                ("Number of nodes:", sum(states)),
-                ("Number of done nodes:", states[nodegraph.DONE]),
-                ("Number of runable nodes:", states[nodegraph.RUNABLE]),
-                ("Number of queued nodes:", states[nodegraph.QUEUED]),
-                ("Number of outdated nodes:", states[nodegraph.OUTDATED]),
-                ("Number of failed nodes:", states[nodegraph.ERROR]),
+                ("Number of tasks:", sum(states)),
+                ("Number of done tasks:", states[nodegraph.DONE]),
+                ("Number of runable tasks:", states[nodegraph.RUNABLE]),
+                ("Number of queued tasks:", states[nodegraph.QUEUED]),
+                ("Number of outdated tasks:", states[nodegraph.OUTDATED]),
+                ("Number of failed tasks:", states[nodegraph.ERROR]),
             ]
 
             for message in padded_table(rows):
@@ -306,12 +326,14 @@ class Pypeline:
             self._logger.info("Pipeline completed successfully")
 
 
-def add_argument_groups(parser):
+def add_argument_groups(parser: argparse.ArgumentParser) -> None:
     add_scheduling_argument_group(parser)
     add_io_argument_group(parser)
 
 
-def add_scheduling_argument_group(parser):
+def add_scheduling_argument_group(
+    parser: argparse.ArgumentParser,
+) -> argparse._ArgumentGroup:
     parser.set_defaults(pipeline_mode="run")
 
     group = parser.add_argument_group("Pipeline Scheduling")
@@ -332,7 +354,7 @@ def add_scheduling_argument_group(parser):
     return group
 
 
-def add_io_argument_group(parser):
+def add_io_argument_group(parser: argparse.ArgumentParser) -> argparse._ArgumentGroup:
     parser.set_defaults(pipeline_mode="run")
 
     group = parser.add_argument_group("Pipeline Input/Output")
@@ -359,3 +381,10 @@ def add_io_argument_group(parser):
     )
 
     return group
+
+
+class _TaskInfo:
+    def __init__(self, task: Node):
+        self.task = task
+        self.running_on: Optional[str] = None
+        self.blacklisted_from: Dict[str, Any] = {}

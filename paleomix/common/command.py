@@ -96,7 +96,7 @@ WrappedPipeType = Union[int, _IOFile, "AtomicCmd"]
 PipeType = Union[None, str, Path, WrappedPipeType]
 
 # Pos
-OptionValueType = Union[str, float, "_IOFile", None]
+OptionValueType = Union[str, float, _IOFile, None]
 OptionsType = Dict[
     str,
     Union[
@@ -309,7 +309,7 @@ class AtomicCmd:
         elif not isinstance(user_options, dict):
             raise TypeError("user_options must be dict, not {!r}".format(user_options))
 
-        errors = []  # type: List[str]
+        errors: List[str] = []
         for key in user_options.keys() & fixed_options.keys():
             errors.append("{} cannot be overridden".format(key))
 
@@ -458,7 +458,7 @@ class AtomicCmd:
                 "Expected files not created: %s" % (", ".join(missing_files))
             )
 
-        committed_files = []  # type: List[str]
+        committed_files: List[str] = []
         try:
             for output_file in self._output_files:
                 if output_file.temporary:
@@ -617,14 +617,14 @@ class AtomicCmd:
 
 class _CommandSet:
     def __init__(self, commands: Iterable[Union[AtomicCmd, "_CommandSet"]]) -> None:
-        self._commands = safe_coerce_to_tuple(commands)  # type: Tuple[CommandTypes,...]
+        self._commands: Tuple[CommandTypes, ...] = safe_coerce_to_tuple(commands)
         if not self._commands:
             raise CmdError("Empty list passed to command set")
 
         self._validate_commands()
 
     def commit(self, temp: str) -> None:
-        committed_files = set()  # type: Set[str]
+        committed_files: Set[str] = set()
         try:
             for command in self._commands:
                 command.commit(temp)
@@ -680,7 +680,7 @@ class _CommandSet:
                 % (self.__class__.__name__,)
             )
 
-        filenames = collections.defaultdict(int)  # type: Dict[str, int]
+        filenames: Dict[str, int] = collections.defaultdict(int)
         for command in self._commands:
             for filename in command.expected_temp_files:
                 filenames[filename] += 1
@@ -730,7 +730,7 @@ class ParallelCmds(_CommandSet):
     def join(self) -> JoinType:
         sleep_time = 0.05
         commands = list(enumerate(self._commands))
-        return_codes = [[None]] * len(commands)  # type: List[JoinType]
+        return_codes: List[JoinType] = [[None]] * len(commands)
         while commands and self._joinable:
             for (index, command) in list(commands):
                 if command.ready():
@@ -746,7 +746,7 @@ class ParallelCmds(_CommandSet):
             time.sleep(sleep_time)
             sleep_time = min(1, sleep_time * 2)
 
-        result = []  # type: JoinType
+        result: JoinType = []
         for return_code in return_codes:
             result.extend(return_code)
 
@@ -793,7 +793,7 @@ class SequentialCmds(_CommandSet):
         return self._ready
 
     def join(self) -> JoinType:
-        return_codes = []  # type: JoinType
+        return_codes: JoinType = []
         for command in self._commands:
             return_codes.extend(command.join())
 
@@ -963,7 +963,7 @@ def _pformat_list(lst: List[Any], width: int = 80):
     are inserted between items to minimize the number of lines with a
     width greater than 'width'. Very long items may cause this maximum
     to be exceeded."""
-    result = [[]]  # type: List[List[str]]
+    result: List[List[str]] = [[]]
     current_width = 0
     for item in (shlex.quote(str(value)) for value in lst):
         if current_width + len(item) + 1 > width:
@@ -986,9 +986,9 @@ def pformat(command: CommandTypes) -> str:
     if not isinstance(command, (AtomicCmd, ParallelCmds, SequentialCmds)):
         raise TypeError(command)
 
-    lines = []  # type: List[str]
-    ids = {}  # type: Dict[CommandTypes, int]
-    pipes = {}  # type: Dict[AtomicCmd, AtomicCmd]
+    lines: List[str] = []
+    ids: Dict[CommandTypes, int] = {}
+    pipes: Dict[AtomicCmd, AtomicCmd] = {}
 
     _collect_stats(command, ids, pipes)
     _pformat(command, ids, pipes, 0, lines, False)
@@ -999,7 +999,7 @@ def pformat(command: CommandTypes) -> str:
 # The following ensures proper cleanup of child processes, for example in the
 # case where multiprocessing.Pool.terminate() is called or if the script exits due to
 # an unhandled exception.
-_PROCS = []  # type: List[weakref.ReferenceType[subprocess.Popen[Any]]]
+_PROCS: List[weakref.ReferenceType[subprocess.Popen[Any]]] = []
 
 
 @atexit.register

@@ -20,15 +20,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+from typing import Any, Iterable, Type, Union
+
 import paleomix.common.versions as versions
 from paleomix.common.command import (
     AtomicCmd,
     InputFile,
+    OptionsType,
     OutputFile,
     ParallelCmds,
     TempOutputFile,
 )
-from paleomix.node import CommandNode, NodeError
+from paleomix.node import CommandNode, Node, NodeError
 from paleomix.nodes.bwa import (
     _get_max_threads,
     _get_node_description,
@@ -43,7 +46,7 @@ BOWTIE2_VERSION = versions.Requirement(
 
 
 class Bowtie2IndexNode(CommandNode):
-    def __init__(self, input_file, dependencies=()):
+    def __init__(self, input_file: str, dependencies: Iterable[Node] = ()):
         command = _bowtie2_template(
             (
                 "bowtie2-build",
@@ -65,24 +68,22 @@ class Bowtie2IndexNode(CommandNode):
 class Bowtie2Node(CommandNode):
     def __init__(
         self,
-        input_file_1,
-        input_file_2,
-        output_file,
-        reference,
-        threads=2,
-        log_file=None,
-        mapping_options={},
-        cleanup_options={},
-        dependencies=(),
+        input_file_1: str,
+        input_file_2: str,
+        output_file: str,
+        reference: str,
+        threads: int = 2,
+        mapping_options: OptionsType = {},
+        cleanup_options: OptionsType = {},
+        dependencies: Iterable[Node] = (),
     ):
         aln = _bowtie2_template(
             ["bowtie2"],
             reference=reference,
             stdout=AtomicCmd.PIPE,
-            stderr=log_file,
         )
 
-        fixed_options = {
+        fixed_options: OptionsType = {
             "--threads": _get_max_threads(reference, threads),
             "-x": reference,
         }
@@ -128,7 +129,12 @@ class Bowtie2Node(CommandNode):
         )
 
 
-def _bowtie2_template(call, reference, iotype=InputFile, **kwargs):
+def _bowtie2_template(
+    call: Any,
+    reference: str,
+    iotype: Union[Type[InputFile], Type[OutputFile]] = InputFile,
+    **kwargs: Any
+):
     return AtomicCmd(
         call,
         extra_files=[

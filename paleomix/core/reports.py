@@ -21,15 +21,17 @@
 # SOFTWARE.
 import os
 import sys
+from typing import IO, Dict, Iterable, Set, Tuple
 
 from paleomix.common.versions import RequirementError
-from paleomix.nodegraph import NodeGraph, FileStatusCache
+from paleomix.node import Node
+from paleomix.nodegraph import FileStatusCache, NodeGraph
 
 
-def input_files(nodes, file=sys.stdout):
-    input_files = set()
-    output_files = set()
-    graph, _cache = _create_graph(nodes)
+def input_files(nodes: Iterable[Node], file: IO[str] = sys.stdout) -> int:
+    input_files: Set[str] = set()
+    output_files: Set[str] = set()
+    graph, _ = _create_graph(nodes)
     for node in graph.iterflat():
         for filename in node.input_files:
             input_files.add(os.path.abspath(filename))
@@ -43,11 +45,11 @@ def input_files(nodes, file=sys.stdout):
     return 0
 
 
-def output_files(nodes, file=sys.stdout):
-    output_files = {}
+def output_files(nodes: Iterable[Node], file: IO[str] = sys.stdout) -> int:
+    output_files: Dict[str, str] = {}
     graph, cache = _create_graph(nodes)
 
-    def _set_output_file_state(filenames, state):
+    def _set_output_file_state(filenames: Iterable[str], state: str):
         for filename in filenames:
             output_files[os.path.abspath(filename)] = state
 
@@ -68,8 +70,8 @@ def output_files(nodes, file=sys.stdout):
     return 0
 
 
-def required_executables(nodes, file=sys.stdout):
-    graph, _cache = _create_graph(nodes)
+def required_executables(nodes: Iterable[Node], file: IO[str] = sys.stdout) -> int:
+    graph, _ = _create_graph(nodes)
 
     template = "  {: <20s} {: <11s} {}"
     print(template.format("Executable", "Version", "Required version"), file=file)
@@ -84,11 +86,10 @@ def required_executables(nodes, file=sys.stdout):
     return 0
 
 
-def _create_graph(nodes):
+def _create_graph(nodes: Iterable[Node]) -> Tuple[NodeGraph, FileStatusCache]:
     cache = FileStatusCache()
     graph = NodeGraph(
         nodes=nodes,
-        software_checks=False,
         implicit_dependencies=True,
         cache_factory=lambda: cache,
     )
