@@ -27,7 +27,7 @@ is not available from the users' PATH.
 """
 import paleomix.common.versions as versions
 import paleomix.main
-from paleomix.atomiccmd.command import AtomicCmd, AuxilleryFile
+from paleomix.common.command import AtomicCmd, AuxilleryFile
 from paleomix.common.utilities import safe_coerce_to_tuple
 
 CHECK = versions.Requirement(

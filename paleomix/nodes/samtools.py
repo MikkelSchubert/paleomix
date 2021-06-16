@@ -8,19 +8,18 @@ https://github.com/samtools/samtools
 import os
 import warnings
 
-from paleomix.node import CommandNode
-from paleomix.atomiccmd.command import (
+import paleomix.common.versions as versions
+from paleomix.common.command import (
     AtomicCmd,
     InputFile,
     OutputFile,
+    ParallelCmds,
+    SequentialCmds,
     TempInputFile,
     TempOutputFile,
 )
-from paleomix.atomiccmd.sets import ParallelCmds, SequentialCmds
 from paleomix.common.fileutils import describe_files
-
-import paleomix.common.versions as versions
-
+from paleomix.node import CommandNode
 
 _VERSION_REGEX = r"Version: (\d+)\.(\d+)(?:\.(\d+))?"
 

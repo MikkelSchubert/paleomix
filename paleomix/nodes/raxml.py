@@ -21,15 +21,13 @@
 # SOFTWARE.
 #
 import os
-import re
 import random
+import re
 
 import paleomix.common.fileutils as fileutils
 import paleomix.common.versions as versions
-
+from paleomix.common.command import AtomicCmd, InputFile, OutputFile, TempOutputFile
 from paleomix.node import CommandNode
-from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile, TempOutputFile
-
 
 RAXML_VERSION = versions.Requirement(
     call=("raxmlHPC", "-version"),

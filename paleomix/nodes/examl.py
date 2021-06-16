@@ -20,24 +20,21 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import glob
 import os
 import re
-import glob
 
 import paleomix.common.fileutils as fileutils
 import paleomix.common.versions as versions
-
-from paleomix.node import CommandNode
-from paleomix.atomiccmd.command import (
+from paleomix.common.command import (
     AtomicCmd,
+    Executable,
     InputFile,
     OutputFile,
     TempOutputFile,
-    Executable,
 )
-
+from paleomix.node import CommandNode
 from paleomix.nodegraph import FileStatusCache
-
 
 EXAML_VERSION = versions.Requirement(
     call=("examl", "-version"),

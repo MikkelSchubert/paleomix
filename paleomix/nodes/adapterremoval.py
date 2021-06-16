@@ -22,10 +22,8 @@
 #
 import paleomix.common.fileutils as fileutils
 import paleomix.common.versions as versions
-
+from paleomix.common.command import AtomicCmd, InputFile, OutputFile, TempOutputFile
 from paleomix.node import CommandNode
-from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile, TempOutputFile
-
 
 _VERSION_CHECK = versions.Requirement(
     call=("AdapterRemoval", "--version"),

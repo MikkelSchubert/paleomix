@@ -1,21 +1,11 @@
 import os
 
+from paleomix.common.command import InputFile
 from paleomix.common.fileutils import swap_ext
-
-from paleomix.atomiccmd.command import InputFile
-from paleomix.nodes.bwa import BWAIndexNode, BWAAlgorithmNode
+from paleomix.nodes.bwa import BWAAlgorithmNode, BWAIndexNode
 from paleomix.nodes.commands import FilterCollapsedBAMNode, FinalizeBAMNode
 from paleomix.nodes.fastp import FastpNode
 from paleomix.nodes.fastqc import FastQCNode
-from paleomix.nodes.multiqc import MultiQCNode
-from paleomix.nodes.samtools import (
-    FastaIndexNode,
-    BAMIndexNode,
-    BAMStatsNode,
-    TabixIndexNode,
-)
-from paleomix.nodes.validation import ValidateFASTAFilesNode
-
 from paleomix.nodes.gatk import (
     ApplyBQSRNode,
     ApplyVQSRNode,
@@ -31,10 +21,15 @@ from paleomix.nodes.gatk import (
     ValidateBAMNode,
     VariantRecalibratorNode,
 )
-from paleomix.pipelines.ngs.nodes import (
-    TranchesPlotsNode,
+from paleomix.nodes.multiqc import MultiQCNode
+from paleomix.nodes.samtools import (
+    BAMIndexNode,
+    BAMStatsNode,
+    FastaIndexNode,
+    TabixIndexNode,
 )
-
+from paleomix.nodes.validation import ValidateFASTAFilesNode
+from paleomix.pipelines.ngs.nodes import TranchesPlotsNode
 
 ########################################################################################
 # Project layout

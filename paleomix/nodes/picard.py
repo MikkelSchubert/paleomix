@@ -5,15 +5,14 @@ sequencing (HTS) data and formats such as SAM/BAM/CRAM and VCF.
 
 https://broadinstitute.github.io/picard/
 """
-import os
 import getpass
+import os
 
-import paleomix.common.versions as versions
 import paleomix.common.system
-
-from paleomix.atomiccmd.command import AtomicCmd, AuxilleryFile, InputFile, OutputFile
-from paleomix.node import CommandNode
+import paleomix.common.versions as versions
+from paleomix.common.command import AtomicCmd, AuxilleryFile, InputFile, OutputFile
 from paleomix.common.fileutils import swap_ext, try_rmtree
+from paleomix.node import CommandNode
 
 
 class PicardNode(CommandNode):

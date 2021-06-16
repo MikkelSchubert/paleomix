@@ -8,9 +8,8 @@ https://multiqc.info/
 import fnmatch
 import os
 
-from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile
+from paleomix.common.command import AtomicCmd, InputFile, OutputFile
 from paleomix.node import CommandNode, NodeError
-
 
 # Supported modules and their expected files
 # For more, see https://multiqc.info/docs/#multiqc-modules

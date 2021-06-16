@@ -27,14 +27,12 @@ Each node is equivalent to a particular command:
 """
 import os
 
-from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile
-from paleomix.node import CommandNode, Node
-from paleomix.atomiccmd.sets import ParallelCmds
-from paleomix.common.fileutils import describe_files, reroot_path, move_file
-from paleomix.nodes.samtools import merge_bam_files_command, BCFTOOLS_VERSION
-
 import paleomix.tools.bam_stats.coverage as coverage
 import paleomix.tools.factory as factory
+from paleomix.common.command import AtomicCmd, InputFile, OutputFile, ParallelCmds
+from paleomix.common.fileutils import describe_files, move_file, reroot_path
+from paleomix.node import CommandNode, Node
+from paleomix.nodes.samtools import BCFTOOLS_VERSION, merge_bam_files_command
 
 
 class CoverageNode(CommandNode):

@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 import paleomix.common.rtools as rtools
-
-from paleomix.node import CommandNode
-from paleomix.atomiccmd.command import (
+from paleomix.common.command import (
     AtomicCmd,
-    InputFile,
     AuxilleryFile,
+    InputFile,
     OutputFile,
     TempOutputFile,
 )
+from paleomix.node import CommandNode
 
 
 class TranchesPlotsNode(CommandNode):

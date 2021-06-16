@@ -30,7 +30,7 @@ from typing import Any, FrozenSet, Iterable, List, Optional
 
 import paleomix
 import paleomix.common.fileutils as fileutils
-from paleomix.atomiccmd.command import AtomicCmd, CmdError
+from paleomix.common.command import AtomicCmd, CmdError
 from paleomix.common.utilities import safe_coerce_to_frozenset
 from paleomix.common.versions import Requirement
 

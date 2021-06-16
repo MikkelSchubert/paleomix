@@ -7,13 +7,12 @@ https://gatk.broadinstitute.org/
 import os
 
 import paleomix.common.system
-
-from paleomix.atomiccmd.sets import SequentialCmds
-from paleomix.atomiccmd.command import (
+from paleomix.common.command import (
     AtomicCmd,
     InputFile,
-    TempInputFile,
     OutputFile,
+    SequentialCmds,
+    TempInputFile,
     TempOutputFile,
 )
 from paleomix.common.fileutils import swap_ext

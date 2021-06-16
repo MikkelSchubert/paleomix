@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-from paleomix.atomiccmd.command import InputFile
+from paleomix.common.command import InputFile
 from paleomix.common.fileutils import describe_files
 from paleomix.node import CommandNode
 from paleomix.tools import factory

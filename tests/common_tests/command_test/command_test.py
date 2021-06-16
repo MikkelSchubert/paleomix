@@ -1,16 +1,16 @@
 #!/usr/bin/python3
 import os
 import signal
-import weakref
+import sys
 from pathlib import Path
+from typing import Any, List, Tuple, Type
 from unittest.mock import Mock, call, patch
 
 import paleomix
-import paleomix.atomiccmd.command
-import paleomix.atomiccmd.pprint
+import paleomix.common.command
 import paleomix.common.fileutils as fileutils
 import pytest
-from paleomix.atomiccmd.command import (
+from paleomix.common.command import (
     AtomicCmd,
     AuxilleryFile,
     CmdError,
@@ -20,6 +20,7 @@ from paleomix.atomiccmd.command import (
     TempInputFile,
     TempOutputFile,
     _AtomicFile,
+    _IOFile,
 )
 from paleomix.common.versions import Requirement
 
@@ -45,7 +46,7 @@ _ATOMICFILE_INVALID_VALUES = (
     range(3),
     AtomicCmd.DEVNULL,
     AtomicCmd.PIPE,
-)
+)  # type: Tuple[Any, ...]
 
 
 def test_atomicfile__repr__():
@@ -66,15 +67,15 @@ def test_atomicfile__valid_paths():
 
 @pytest.mark.parametrize("cls", _ATOMICFILE_CLASSES)
 @pytest.mark.parametrize("value", _ATOMICFILE_INVALID_VALUES)
-def test_atomiccmd2__paths__invalid_values(cls, value):
+def test_atomiccmd__paths__invalid_values(cls: Type[_IOFile], value: Any):
     with pytest.raises(TypeError):
         cls(value)
 
 
 @pytest.mark.parametrize("cls", _ATOMICFILE_CLASSES)
-def test_atomiccmd2__paths__byte_path(cls):
+def test_atomiccmd__paths__byte_path(cls: Type[_IOFile]):
     with pytest.raises(ValueError):
-        cls(b"/byte/path")
+        cls(b"/byte/path")  # type: ignore
 
 
 # Subpaths are not allowed for temp IN/OUT files, neither relative nor asbsolute
@@ -96,7 +97,7 @@ _INVALID_TEMP_PATHS = (
 
 @pytest.mark.parametrize("cls", (InputFile, OutputFile))
 @pytest.mark.parametrize("value", _INVALID_TEMP_PATHS)
-def test_atomiccmd2__paths__invalid_temp_paths(cls, value):
+def test_atomiccmd__paths__invalid_temp_paths(cls: Type[_IOFile], value: Any):
     cls(value)
     with pytest.raises(ValueError):
         cls(value, temporary=True)
@@ -106,37 +107,38 @@ def test_atomiccmd2__paths__invalid_temp_paths(cls, value):
 # Constructor: Executable
 
 
-def test_atomiccmd2__command_str():
+def test_atomiccmd__command_str():
     cmd = AtomicCmd("ls")
     assert cmd.executables == frozenset(["ls"])
 
 
-def test_atomiccmd2__executables_empty_str():
+def test_atomiccmd__executables_empty_str():
     with pytest.raises(ValueError, match="Empty command in AtomicCmd constructor"):
         AtomicCmd("")
 
 
-def test_atomiccmd2__command_tuple():
+def test_atomiccmd__command_tuple():
     cmd = AtomicCmd(("cd", "."))
     assert cmd.executables == frozenset(["cd"])
 
 
-def test_atomiccmd2__executables_empty_tuple():
+def test_atomiccmd__executables_empty_tuple():
     with pytest.raises(ValueError, match="Empty command in AtomicCmd constructor"):
         AtomicCmd(())
 
 
-def test_atomiccmd2__executables_empty_str_in_tuple():
+def test_atomiccmd__executables_empty_str_in_tuple():
     with pytest.raises(ValueError, match="Empty command in AtomicCmd constructor"):
         AtomicCmd((""))
 
 
-def test_atomiccmd2__executable_class():
+def test_atomiccmd__executable_class():
     cmd = AtomicCmd((Executable("cd"), "."))
     assert cmd.executables == frozenset(["cd"])
+    assert cmd.to_call("%(TEMP_DIR)s") == ["cd", "."]
 
 
-def test_atomiccmd2__command_iofile():
+def test_atomiccmd__command_iofile():
     with pytest.raises(ValueError):
         AtomicCmd([InputFile("ls")])
 
@@ -146,7 +148,7 @@ def test_atomiccmd2__command_iofile():
 
 
 # Check that specified paths/etc. are available via getters
-def test_atomiccmd2__paths():
+def test_atomiccmd__paths():
     cmd = AtomicCmd(
         [
             "ls",
@@ -164,7 +166,7 @@ def test_atomiccmd2__paths():
 
 
 @pytest.mark.parametrize("value", _ATOMICFILE_INVALID_VALUES)
-def test_atomiccmd2__values_in_path(value):
+def test_atomiccmd__values_in_path(value: Any):
     cmd = AtomicCmd(["echo", value])
     assert cmd.to_call("/tmp") == ["echo", str(value)]
 
@@ -173,7 +175,7 @@ def test_atomiccmd2__values_in_path(value):
 # Constructor: Extra files
 
 # Check that specified paths/etc. are available via getters
-def test_atomiccmd2__extra_files():
+def test_atomiccmd__extra_files():
     cmd = AtomicCmd(
         "ls",
         extra_files=(
@@ -192,7 +194,7 @@ def test_atomiccmd2__extra_files():
 
 
 @pytest.mark.parametrize("value", _ATOMICFILE_INVALID_VALUES)
-def test_atomiccmd2__invalid_extra_paths(value):
+def test_atomiccmd__invalid_extra_paths(value: Any):
     with pytest.raises(ValueError):
         AtomicCmd("ls", extra_files=[value])
 
@@ -201,7 +203,7 @@ def test_atomiccmd2__invalid_extra_paths(value):
 # Constructor: expected and optional temp files
 
 
-def test_atomiccmd2__expected_and_optional_temp_files():
+def test_atomiccmd__expected_and_optional_temp_files():
     cmd = AtomicCmd(
         "ls",
         stdout="/foo/bar/data.gz",
@@ -228,19 +230,19 @@ _OVERLAPPING_OUT_FILENAMES = (
 
 
 @pytest.mark.parametrize("file1, file2", _OVERLAPPING_OUT_FILENAMES)
-def test_atomiccmd2__paths__overlapping_output_1(file1, file2):
+def test_atomiccmd__paths__overlapping_output_1(file1: _IOFile, file2: _IOFile):
     with pytest.raises(CmdError, match="multiple output files with name 'output'"):
         AtomicCmd(("touch", file1, file2))
 
 
 @pytest.mark.parametrize("file1, file2", _OVERLAPPING_OUT_FILENAMES)
-def test_atomiccmd2__paths__overlapping_output_2(file1, file2):
+def test_atomiccmd__paths__overlapping_output_2(file1: _IOFile, file2: _IOFile):
     with pytest.raises(CmdError, match="multiple output files with name 'output'"):
         AtomicCmd(("touch", file1), stdout=file2)
 
 
 @pytest.mark.parametrize("file1, file2", _OVERLAPPING_OUT_FILENAMES)
-def test_atomiccmd2__paths__overlapping_output_3(file1, file2):
+def test_atomiccmd__paths__overlapping_output_3(file1: _IOFile, file2: _IOFile):
     with pytest.raises(CmdError, match="multiple output files with name 'output'"):
         AtomicCmd(("touch"), stderr=file1, stdout=file2)
 
@@ -251,26 +253,36 @@ def test_atomiccmd2__paths__overlapping_output_3(file1, file2):
 
 def test_atomicmcd__requirements():
     # RequirementObjs are the standard way to do tests
-    reqobj = Requirement(call=("echo", "version"), search="version", checks=str)
+    reqobj = Requirement(
+        call=("echo", "version"),
+        search="version",
+        checks=str,  # type: ignore
+    )
     cmd = AtomicCmd("true", requirements=[reqobj])
     assert cmd.requirements == frozenset([reqobj])
 
 
 def test_atomicmcd__callable_as_requirements():
     with pytest.raises(TypeError):
-        AtomicCmd("true", requirements=[bool])
+        AtomicCmd(
+            "true",
+            requirements=[bool],  # type: ignore
+        )
 
 
-def test_atomiccmd2__invalid_requirements():
+def test_atomiccmd__invalid_requirements():
     with pytest.raises(TypeError):
-        AtomicCmd("ls", requirements=["ls"])
+        AtomicCmd(
+            "ls",
+            requirements=["ls"],  # type: ignore
+        )
 
 
 ########################################################################################
 # STDIN
 
 
-def test_atomiccmd2__stdin_valid_values():
+def test_atomiccmd__stdin_valid_values():
     AtomicCmd("true")
     AtomicCmd("true", stdin=None)
     AtomicCmd("true", stdin="/path/to/file")
@@ -278,7 +290,6 @@ def test_atomiccmd2__stdin_valid_values():
     AtomicCmd("true", stdin=InputFile("/path/to/file"))
     AtomicCmd("true", stdin=TempInputFile("file"))
     AtomicCmd("true", stdin=AtomicCmd.DEVNULL)
-    AtomicCmd("true", stdin=AtomicCmd.PIPE)
 
 
 _INVALID_STDIN_VALUES = (
@@ -286,16 +297,17 @@ _INVALID_STDIN_VALUES = (
     OutputFile("foo"),
     AuxilleryFile("/path/to/foo"),
     _AtomicFile("/foo/bar"),
+    AtomicCmd.PIPE,
 )
 
 
 @pytest.mark.parametrize("value", _INVALID_STDIN_VALUES)
-def test_atomiccmd2__stdin_invalid_values(value):
+def test_atomiccmd__stdin_invalid_values(value: Any):
     with pytest.raises(ValueError):
         AtomicCmd("true", stdin=value)
 
 
-def test_atomiccmd2__stdin_basic(tmp_path):
+def test_atomiccmd__stdin_basic(tmp_path: Path):
     sub_path = tmp_path / "subfolder"
     sub_path.mkdir()
 
@@ -311,7 +323,7 @@ def test_atomiccmd2__stdin_basic(tmp_path):
     assert result == ">This_is_FASTA!\nACGTN\n>This_is_ALSO_FASTA!\nCGTNA\n"
 
 
-def test_atomiccmd2__stdin_from_temp_file(tmp_path):
+def test_atomiccmd__stdin_from_temp_file(tmp_path: Path):
     cmd = AtomicCmd(
         "cat",
         stdin=TempInputFile("infile.fasta"),
@@ -325,7 +337,7 @@ def test_atomiccmd2__stdin_from_temp_file(tmp_path):
     assert result == "a\nbc\nd"
 
 
-def test_atomiccmd2__stdin_implicit_dev_null(tmp_path):
+def test_atomiccmd__stdin_implicit_dev_null(tmp_path: Path):
     # STDIN should be implicitly set to /dev/null; deadlocks if not
     cmd = AtomicCmd("cat")
     cmd.run(tmp_path)
@@ -333,7 +345,7 @@ def test_atomiccmd2__stdin_implicit_dev_null(tmp_path):
 
 
 @pytest.mark.parametrize("value", (None, AtomicCmd.DEVNULL))
-def test_atomiccmd2__stdin_explicit_dev_null(tmp_path, value):
+def test_atomiccmd__stdin_explicit_dev_null(tmp_path: Path, value: Any):
     # STDIN should be implicitly set to /dev/null; deadlocks if not
     cmd = AtomicCmd("cat", stdin=value)
     cmd.run(tmp_path)
@@ -351,17 +363,20 @@ _VALID_STDOUT_STDERR_VALUES = [
     OutputFile("/path/to/file"),
     TempOutputFile("file"),
     AtomicCmd.DEVNULL,
-    AtomicCmd.PIPE,
 ]
 
 
 @pytest.mark.parametrize("value", _VALID_STDOUT_STDERR_VALUES)
-def test_atomiccmd2__stdout_valid_values(value):
+def test_atomiccmd__stdout_valid_values(value: Any):
     AtomicCmd("true", stdout=value)
 
 
+def test_atomiccmd__stdout_valid_values__pipe():
+    AtomicCmd("true", stdout=AtomicCmd.PIPE)
+
+
 @pytest.mark.parametrize("value", _VALID_STDOUT_STDERR_VALUES)
-def test_atomiccmd2__stderr_valid_values(value):
+def test_atomiccmd__stderr_valid_values(value: Any):
     AtomicCmd("true", stderr=value)
 
 
@@ -370,24 +385,31 @@ _INVALID_STDOUT_STDERR_VALUES = (
     InputFile("foo"),
     AuxilleryFile("/path/to/foo"),
     _AtomicFile("/foo/bar"),
+    AtomicCmd("true"),
 )
 
 
 @pytest.mark.parametrize("value", _INVALID_STDOUT_STDERR_VALUES)
-def test_atomiccmd2__stdout_invalid_values(value):
+def test_atomiccmd__stdout_invalid_values(value: Any):
     with pytest.raises(ValueError):
         AtomicCmd("true", stdout=value)
 
 
 @pytest.mark.parametrize("value", _INVALID_STDOUT_STDERR_VALUES)
-def test_atomiccmd2__stderr_invalid_values(value):
+def test_atomiccmd__stderr_invalid_values(value: Any):
     with pytest.raises(ValueError):
         AtomicCmd("true", stderr=value)
 
 
+def test_atomiccmd__stderr_invalid_values__pipe():
+    with pytest.raises(ValueError):
+        AtomicCmd("true", stderr=AtomicCmd.PIPE)
+
+
+@pytest.mark.parametrize("cls", (str, Executable))
 @pytest.mark.parametrize("exe", ("echo", "/bin/echo"))
-def test_atomiccmd2__stdout_implicit_filename(exe, tmp_path):
-    cmd = AtomicCmd((exe, "foo"))
+def test_atomiccmd__stdout_implicit_filename(exe: str, cls: Any, tmp_path: Path):
+    cmd = AtomicCmd((cls(exe), "foo"))
     cmd.run(tmp_path)
     assert cmd.join() == [0]
 
@@ -397,7 +419,21 @@ def test_atomiccmd2__stdout_implicit_filename(exe, tmp_path):
     assert stderr_path.read_text() == ""
 
 
-def test_atomiccmd2__stdout_explicit_filename(tmp_path):
+@pytest.mark.parametrize("cls", (str, Executable))
+def test_atomiccmd__stdout_implicit_filename__python(cls: Any, tmp_path: Path):
+    cmd = AtomicCmd((cls("%(PYTHON)s"), "-c", "print('foo')"))
+    cmd.run(tmp_path)
+    assert cmd.join() == [0]
+
+    executable = os.path.basename(sys.executable)
+
+    stdout_path = tmp_path / ("pipe_%s_%i.stdout" % (executable, id(cmd)))
+    assert stdout_path.read_text() == "foo\n"
+    stderr_path = tmp_path / ("pipe_%s_%i.stderr" % (executable, id(cmd)))
+    assert stderr_path.read_text() == ""
+
+
+def test_atomiccmd__stdout_explicit_filename(tmp_path: Path):
     cmd = AtomicCmd(("echo", "foo"), stdout="/path/to/my_output.txt")
     cmd.run(tmp_path)
     assert cmd.join() == [0]
@@ -409,7 +445,7 @@ def test_atomiccmd2__stdout_explicit_filename(tmp_path):
 
 
 @pytest.mark.parametrize("exe", ("bash", "/bin/bash"))
-def test_atomiccmd2__stderr_implicit_filename(exe, tmp_path):
+def test_atomiccmd__stderr_implicit_filename(exe: str, tmp_path: Path):
     cmd = AtomicCmd((exe, "-c", "echo foo > /dev/stderr"))
     cmd.run(tmp_path)
     assert cmd.join() == [0]
@@ -420,7 +456,7 @@ def test_atomiccmd2__stderr_implicit_filename(exe, tmp_path):
     assert stderr_path.read_text() == "foo\n"
 
 
-def test_atomiccmd2__stderr_explicit_filename(tmp_path):
+def test_atomiccmd__stderr_explicit_filename(tmp_path: Path):
     cmd = AtomicCmd(
         ("bash", "-c", "echo foo > /dev/stderr"),
         stderr="/path/to/my_output.txt",
@@ -434,7 +470,7 @@ def test_atomiccmd2__stderr_explicit_filename(tmp_path):
     assert stderr_path.read_text() == "foo\n"
 
 
-def test_atomiccmd2__stdout_stderr_explicit_filename(tmp_path):
+def test_atomiccmd__stdout_stderr_explicit_filename(tmp_path: Path):
     cmd = AtomicCmd(
         ("bash", "-c", "echo foo; echo bar > /dev/stderr"),
         stdout="/path/to/my_output.txt",
@@ -453,20 +489,24 @@ def test_atomiccmd2__stdout_stderr_explicit_filename(tmp_path):
 # Path components
 
 
-def test_atomiccmd2__temp_dir_in_path(tmp_path):
+def test_atomiccmd__temp_dir_in_path(tmp_path: Path):
     cmd = AtomicCmd(("echo", "-n", "%(TEMP_DIR)s"), stdout=AtomicCmd.PIPE)
     cmd.run(tmp_path)
+    assert cmd._proc is not None
+    assert cmd._proc.stdout is not None
     path = cmd._proc.stdout.read()
     assert tmp_path.samefile(path), (tmp_path, path)
     assert cmd.join() == [0]
 
 
-def test_atomiccmd2__temp_dir_inside_path(tmp_path):
+def test_atomiccmd__temp_dir_inside_path(tmp_path: Path):
     cmd = AtomicCmd(
         ("echo", "-n", "-Djava.io.tmpdir=%(TEMP_DIR)s"),
         stdout=AtomicCmd.PIPE,
     )
     cmd.run(tmp_path)
+    assert cmd._proc is not None
+    assert cmd._proc.stdout is not None
     assert cmd._proc.stdout.read() == (b"-Djava.io.tmpdir=" + bytes(tmp_path))
     assert cmd.join() == [0]
 
@@ -475,53 +515,83 @@ def test_atomiccmd2__temp_dir_inside_path(tmp_path):
 # Constructor: set_cwd
 
 
-def test_atomiccmd2__default_cwd(tmp_path):
+def test_atomiccmd__default_cwd(tmp_path: Path):
     cwd = os.getcwd()
     cmd = AtomicCmd("pwd", stdout=AtomicCmd.PIPE)
     cmd.run(tmp_path)
     assert cwd == os.getcwd()
+    assert cmd._proc is not None
+    assert cmd._proc.stdout is not None
     assert cmd._proc.stdout.read().decode() == cwd + "\n"
     assert cmd.join() == [0]
 
 
-def test_atomiccmd2__set_cwd(tmp_path):
+def test_atomiccmd__set_cwd(tmp_path: Path):
     cwd = os.getcwd()
     cmd = AtomicCmd("pwd", stdout=AtomicCmd.PIPE, set_cwd=True)
     cmd.run(tmp_path)
     assert cwd == os.getcwd()
+    assert cmd._proc is not None
+    assert cmd._proc.stdout is not None
     assert cmd._proc.stdout.read() == bytes(tmp_path) + b"\n"
     assert cmd.join() == [0]
 
 
 # Full path when set_cwd is False, rel. path when True
 _IN_OUT_PATHS_WITH_SET_CWD = [
-    # cls, temporary, set_cwd, expected dir
+    # cls, set_cwd, expected dir
     (InputFile, False, "path/to/filename"),
-    (InputFile, True, "${CWD}/path/to/filename"),
+    (InputFile, True, os.path.join(os.getcwd(), "path/to/filename")),
     (TempInputFile, False, "${TMP}/filename"),
     (TempInputFile, True, "filename"),
     (OutputFile, False, "${TMP}/filename"),
     (OutputFile, True, "filename"),
     (TempOutputFile, False, "${TMP}/filename"),
     (TempOutputFile, True, "filename"),
+    (AuxilleryFile, False, "path/to/filename"),
+    (AuxilleryFile, True, os.path.join(os.getcwd(), "path/to/filename")),
 ]
 
 
 @pytest.mark.parametrize("cls, set_cwd, expected", _IN_OUT_PATHS_WITH_SET_CWD)
-def test_atomiccmd2__set_cwd__temp_in_out(cls, set_cwd, expected):
+def test_atomiccmd__set_cwd__temp_in_out(
+    cls: Type[_IOFile], set_cwd: bool, expected: str
+):
     cmd = AtomicCmd(("touch", cls("path/to/filename")), set_cwd=set_cwd)
-    call = cmd.to_call("${TMP}")
 
-    expected = expected.replace("${CWD}", os.getcwd())
+    assert cmd.to_call("${TMP}") == ["touch", expected]
 
-    assert call == ["touch", expected]
+
+_EXECUTABLES_WITH_SET_CWD = [
+    # set_cwd, input, expected output
+    (False, "exec", "exec"),
+    (True, "exec", "exec"),
+    (False, "/bin/ls", "/bin/ls"),
+    (True, "/bin/ls", "/bin/ls"),
+    (False, "./bin/ls", "./bin/ls"),
+    (True, "./bin/ls", os.path.join(os.getcwd(), "bin/ls")),
+]
+
+
+@pytest.mark.parametrize("set_cwd, in_exec, out_exec", _EXECUTABLES_WITH_SET_CWD)
+def test_atomiccmd__set_cwd__executables(set_cwd: bool, in_exec: str, out_exec: str):
+    cmd = AtomicCmd(Executable(in_exec), set_cwd=set_cwd)
+
+    assert cmd.to_call("${TMP}") == [out_exec]
+
+
+@pytest.mark.parametrize("set_cwd, in_exec, out_exec", _EXECUTABLES_WITH_SET_CWD)
+def test_atomiccmd__set_cwd__executable_str(set_cwd: bool, in_exec: str, out_exec: str):
+    cmd = AtomicCmd(in_exec, set_cwd=set_cwd)
+
+    assert cmd.to_call("${TMP}") == [out_exec]
 
 
 ########################################################################################
 # Constructor: Piping commands
 
 
-def test_atomiccmd2__piping(tmp_path):
+def test_atomiccmd__piping(tmp_path: Path):
     cmd_1 = AtomicCmd(["echo", "-n", "#@!$^"], stdout=AtomicCmd.PIPE)
     assert cmd_1.output_files == frozenset()
     cmd_2 = AtomicCmd(["cat"], stdin=cmd_1, stdout="piped.txt")
@@ -533,7 +603,7 @@ def test_atomiccmd2__piping(tmp_path):
     assert (tmp_path / "piped.txt").read_text() == "#@!$^"
 
 
-def test_atomiccmd2__piping_is_only_allowed_once(tmp_path):
+def test_atomiccmd__piping_is_only_allowed_once(tmp_path: Path):
     cmd_1 = AtomicCmd(["echo", "-n", "foo\nbar"], stdout=AtomicCmd.PIPE)
     cmd_2a = AtomicCmd(["grep", "foo"], stdin=cmd_1)
     cmd_2b = AtomicCmd(["grep", "bar"], stdin=cmd_1)
@@ -546,11 +616,54 @@ def test_atomiccmd2__piping_is_only_allowed_once(tmp_path):
     assert cmd_2b.join() == [None]
 
 
+def test_atomiccmd__piping_must_run_in_order(tmp_path: Path):
+    cmd_1 = AtomicCmd(["echo", "-n", "foo\nbar"], stdout=AtomicCmd.PIPE)
+    cmd_2 = AtomicCmd(["grep", "bar"], stdin=cmd_1)
+
+    with pytest.raises(CmdError, match="attempted to pipe non-running command"):
+        cmd_2.run(tmp_path)
+
+    assert cmd_1.join() == [None]
+    assert cmd_2.join() == [None]
+
+
+def test_atomiccmd__piped_command_must_have_stdout_pipe(tmp_path: Path):
+    cmd_1 = AtomicCmd(["echo", "-n", "foo\nbar"])
+    cmd_2 = AtomicCmd(["grep", "bar"], stdin=cmd_1)
+
+    cmd_1.run(tmp_path)
+    with pytest.raises(CmdError, match="attempted to pipe from command without stdout"):
+        cmd_2.run(tmp_path)
+
+    assert cmd_1.join() == [0]
+    assert cmd_2.join() == [None]
+
+
+########################################################################################
+# Constructor: Python interpreter
+
+
+@pytest.mark.parametrize("set_cwd", (True, False))
+def test_atomiccmd__python_call(set_cwd: bool):
+    cmd = AtomicCmd("%(PYTHON)s", set_cwd=set_cwd)
+
+    assert cmd.to_call("%(TMP_DIR)s") == [sys.executable]
+    assert cmd.executables == frozenset(["%(PYTHON)s"])
+
+
+@pytest.mark.parametrize("set_cwd", (True, False))
+def test_atomiccmd__python_exec(set_cwd: bool):
+    cmd = AtomicCmd(["ls", "%(PYTHON)s"], set_cwd=set_cwd)
+
+    assert cmd.to_call("%(TMP_DIR)s") == ["ls", sys.executable]
+    assert cmd.executables == frozenset(["ls", "%(PYTHON)s"])
+
+
 ########################################################################################
 # run
 
 
-def test_atomiccmd2__run__already_running(tmp_path):
+def test_atomiccmd__run__already_running(tmp_path: Path):
     cmd = AtomicCmd(("sleep", "10"))
     cmd.run(tmp_path)
     with pytest.raises(CmdError):
@@ -559,7 +672,7 @@ def test_atomiccmd2__run__already_running(tmp_path):
     assert cmd.join() == ["SIGTERM"]
 
 
-def test_atomiccmd2__run__exception_on_missing_command(tmp_path):
+def test_atomiccmd__run__exception_on_missing_command(tmp_path: Path):
     cmd = AtomicCmd(("xyzabcefgh", "10"))
     with pytest.raises(CmdError):
         cmd.run(tmp_path)
@@ -567,7 +680,7 @@ def test_atomiccmd2__run__exception_on_missing_command(tmp_path):
     assert cmd.join() == [None]
 
 
-def test_atomiccmd2__run__exception_on_missing_command__no_wrap(tmp_path):
+def test_atomiccmd__run__exception_on_missing_command__no_wrap(tmp_path: Path):
     cmd = AtomicCmd(("xyzabcefgh", "10"))
     with pytest.raises(CmdError, match="Error = FileNotFoundError"):
         cmd.run(tmp_path)
@@ -575,7 +688,7 @@ def test_atomiccmd2__run__exception_on_missing_command__no_wrap(tmp_path):
     assert cmd.join() == [None]
 
 
-def test_atomiccmd2__run__invalid_temp(tmp_path):
+def test_atomiccmd__run__invalid_temp(tmp_path: Path):
     cmd = AtomicCmd(("sleep", "10"))
     with pytest.raises(CmdError):
         cmd.run(tmp_path / "foo")
@@ -587,7 +700,7 @@ def test_atomiccmd2__run__invalid_temp(tmp_path):
 # Ready
 
 
-def test_atomiccmd2__ready_1(tmp_path):
+def test_atomiccmd__ready_1(tmp_path: Path):
     cmd = AtomicCmd("ls")
     assert cmd.join() == [None]
     assert not cmd.ready()
@@ -596,7 +709,7 @@ def test_atomiccmd2__ready_1(tmp_path):
     assert cmd.ready()
 
 
-def test_atomiccmd2__ready_2(tmp_path):
+def test_atomiccmd__ready_2(tmp_path: Path):
     cmd = AtomicCmd(("sleep", "10"))
     cmd.run(tmp_path)
     assert not cmd.ready()
@@ -610,7 +723,7 @@ def test_atomiccmd2__ready_2(tmp_path):
 
 
 @pytest.mark.parametrize("call, after", (("true", 0), ("false", 1)))
-def test_atomiccmd2__join(tmp_path, call, after):
+def test_atomiccmd__join(tmp_path: Path, call: str, after: int):
     cmd = AtomicCmd(call)
     assert cmd.join() == [None]
     cmd.run(tmp_path)
@@ -618,7 +731,7 @@ def test_atomiccmd2__join(tmp_path, call, after):
 
 
 @pytest.mark.parametrize("call, after", (("true", 0), ("false", 1)))
-def test_atomiccmd2__wait(tmp_path, call, after):
+def test_atomiccmd__wait(tmp_path: Path, call: str, after: int):
     cmd = AtomicCmd(call)
     assert cmd.wait() is None
     cmd.run(tmp_path)
@@ -629,9 +742,10 @@ def test_atomiccmd2__wait(tmp_path, call, after):
 # Terminate
 
 
-def test_atomiccmd2__terminate(tmp_path):
+def test_atomiccmd__terminate(tmp_path: Path):
     cmd = AtomicCmd(("sleep", "10"))
     cmd.run(tmp_path)
+    assert cmd._proc is not None
 
     with patch("os.killpg", wraps=os.killpg) as os_killpg:
         cmd.terminate()
@@ -640,12 +754,13 @@ def test_atomiccmd2__terminate(tmp_path):
         assert os_killpg.mock_calls == [call(cmd._proc.pid, signal.SIGTERM)]
 
 
-def test_atomiccmd2__terminate_exception(tmp_path):
+def test_atomiccmd__terminate_exception(tmp_path: Path):
     killpg = os.killpg
     cmd = AtomicCmd(("sleep", "10"))
     cmd.run(tmp_path)
+    assert cmd._proc is not None
 
-    def _killpg(pid, sig):
+    def _killpg(pid: int, sig: int):
         killpg(pid, sig)
         raise OSError("Proccess not found")
 
@@ -658,9 +773,10 @@ def test_atomiccmd2__terminate_exception(tmp_path):
 
 # Ensure that no OSException is raised, even if the command
 # managed to finish before terminate was called
-def test_atomiccmd2__terminate_race_condition(tmp_path):
+def test_atomiccmd__terminate_race_condition(tmp_path: Path):
     cmd = AtomicCmd("true")
     cmd.run(tmp_path)
+    assert cmd._proc is not None
     while cmd._proc.poll() is None:
         pass
     cmd.terminate()
@@ -668,7 +784,7 @@ def test_atomiccmd2__terminate_race_condition(tmp_path):
 
 
 # Calling terminate on an already joined command is acceptable
-def test_atomiccmd2__terminate_after_join(tmp_path):
+def test_atomiccmd__terminate_after_join(tmp_path: Path):
     cmd = AtomicCmd("true")
     cmd.run(tmp_path)
     assert cmd.join() == [0]
@@ -677,16 +793,17 @@ def test_atomiccmd2__terminate_after_join(tmp_path):
 
 
 # Signals are translated into strings
-def test_atomiccmd2__terminate_sigterm(tmp_path):
+def test_atomiccmd__terminate_sigterm(tmp_path: Path):
     cmd = AtomicCmd(("sleep", "10"))
     cmd.run(tmp_path)
     cmd.terminate()
     assert cmd.join() == ["SIGTERM"]
 
 
-def test_atomiccmd2__terminate_sigkill(tmp_path):
+def test_atomiccmd__terminate_sigkill(tmp_path: Path):
     cmd = AtomicCmd(("sleep", "10"))
     cmd.run(tmp_path)
+    assert cmd._proc is not None
     cmd._proc.kill()
     assert cmd.join() == ["SIGKILL"]
 
@@ -695,14 +812,17 @@ def test_atomiccmd2__terminate_sigkill(tmp_path):
 # commit
 
 
-def _setup_for_commit(tmp_path, create_cmd=True):
+def _setup_paths(tmp_path: Path) -> Tuple[Path, Path]:
     destination = tmp_path / "out"
     tmp_path = tmp_path / "tmp"
     destination.mkdir(parents=True)
     tmp_path.mkdir(parents=True)
 
-    if not create_cmd:
-        return destination, tmp_path, None
+    return destination, tmp_path
+
+
+def _setup_command(tmp_path: Path) -> Tuple[Path, Path, AtomicCmd]:
+    destination, tmp_path = _setup_paths(tmp_path)
 
     cmd = AtomicCmd(("touch", OutputFile(destination / "1234")))
     cmd.run(tmp_path)
@@ -711,15 +831,15 @@ def _setup_for_commit(tmp_path, create_cmd=True):
     return destination, tmp_path, cmd
 
 
-def test_atomiccmd2__commit_simple(tmp_path):
-    destination, tmp_path, cmd = _setup_for_commit(tmp_path)
+def test_atomiccmd__commit_simple(tmp_path: Path):
+    destination, tmp_path, cmd = _setup_command(tmp_path)
     cmd.commit(tmp_path)
     assert not (tmp_path / "1234").exists()
     assert (destination / "1234").exists()
 
 
-def test_atomiccmd2__commit_temp_out(tmp_path):
-    dest, temp, _ = _setup_for_commit(tmp_path, create_cmd=False)
+def test_atomiccmd__commit_temp_out(tmp_path: Path):
+    dest, temp = _setup_paths(tmp_path)
     cmd = AtomicCmd(
         ("echo", "foo"),
         stdout=dest / "foo.txt",
@@ -733,7 +853,7 @@ def test_atomiccmd2__commit_temp_out(tmp_path):
     assert os.listdir(fileutils.fspath(dest)) == ["foo.txt"]
 
 
-def test_atomiccmd2__commit_temp_only(tmp_path):
+def test_atomiccmd__commit_temp_only(tmp_path: Path):
     cmd = AtomicCmd(("echo", "foo"), stdout=TempOutputFile("bar.txt"))
     cmd.run(tmp_path)
     assert cmd.join() == [0]
@@ -742,13 +862,13 @@ def test_atomiccmd2__commit_temp_only(tmp_path):
     assert os.listdir(fileutils.fspath(tmp_path)) == []
 
 
-def test_atomiccmd2__commit_before_run():
+def test_atomiccmd__commit_before_run():
     cmd = AtomicCmd("true")
     with pytest.raises(CmdError):
         cmd.commit("/tmp")
 
 
-def test_atomiccmd2__commit_while_running(tmp_path):
+def test_atomiccmd__commit_while_running(tmp_path: Path):
     cmd = AtomicCmd(("sleep", "10"))
     cmd.run(tmp_path)
     with pytest.raises(CmdError):
@@ -757,9 +877,10 @@ def test_atomiccmd2__commit_while_running(tmp_path):
     cmd.join()
 
 
-def test_atomiccmd2__commit_before_join(tmp_path):
+def test_atomiccmd__commit_before_join(tmp_path: Path):
     cmd = AtomicCmd(("sleep", "0.1"))
     cmd.run(tmp_path)
+    assert cmd._proc is not None
     while cmd._proc.poll() is None:
         pass
     with pytest.raises(CmdError):
@@ -768,21 +889,21 @@ def test_atomiccmd2__commit_before_join(tmp_path):
 
 
 # The temp path might differ, as long as the actual path is the same
-def test_atomiccmd2__commit_temp_folder(tmp_path):
-    destination, tmp_path, cmd = _setup_for_commit(tmp_path)
+def test_atomiccmd__commit_temp_folder(tmp_path: Path):
+    destination, tmp_path, cmd = _setup_command(tmp_path)
     cmd.commit(tmp_path.resolve())
     assert not (tmp_path / "1234").exists()
     assert (destination / "1234").exists()
 
 
-def test_atomiccmd2__commit_wrong_temp_folder(tmp_path):
-    destination, tmp_path, cmd = _setup_for_commit(tmp_path)
+def test_atomiccmd__commit_wrong_temp_folder(tmp_path: Path):
+    destination, tmp_path, cmd = _setup_command(tmp_path)
     with pytest.raises(CmdError):
         cmd.commit(destination)
 
 
-def test_atomiccmd2__commit_missing_files(tmp_path):
-    destination, tmp_path, _ = _setup_for_commit(tmp_path, False)
+def test_atomiccmd__commit_missing_files(tmp_path: Path):
+    destination, tmp_path = _setup_paths(tmp_path)
     cmd = AtomicCmd(
         ("touch", OutputFile(destination / "1234")),
         extra_files=[OutputFile(destination / "4567")],
@@ -795,18 +916,18 @@ def test_atomiccmd2__commit_missing_files(tmp_path):
     assert before == frozenset(tmp_path.iterdir())
 
 
-def test_atomiccmd2__commit_failure_cleanup(tmp_path):
-    counter = []
+def test_atomiccmd__commit_failure_cleanup(tmp_path: Path):
+    counter = []  # type: List[Path]
     move_file = fileutils.move_file
 
-    def _monkey_move_file(source, destination):
+    def _monkey_move_file(source: Path, destination: Path):
         if counter:
             raise OSError("ARRRGHHH!")
         counter.append(destination)
 
         return move_file(source, destination)
 
-    destination, tmp_path, _ = _setup_for_commit(tmp_path, False)
+    destination, tmp_path = _setup_paths(tmp_path)
     command = AtomicCmd(
         (
             "touch",
@@ -828,8 +949,8 @@ def test_atomiccmd2__commit_failure_cleanup(tmp_path):
         fileutils.move_file = move_file
 
 
-def test_atomiccmd2__commit_with_pipes(tmp_path):
-    destination, tmp_path, _ = _setup_for_commit(tmp_path, False)
+def test_atomiccmd__commit_with_pipes(tmp_path: Path):
+    destination, tmp_path = _setup_paths(tmp_path)
     command_1 = AtomicCmd(("echo", "Hello, World!"), stdout=AtomicCmd.PIPE)
     command_2 = AtomicCmd(("gzip",), stdin=command_1, stdout=(destination / "foo.gz"))
 
@@ -850,7 +971,7 @@ def test_atomiccmd2__commit_with_pipes(tmp_path):
 # append
 
 
-def test_atomiccmd2__append():
+def test_atomiccmd__append():
     cmd = AtomicCmd("ls")
 
     assert cmd.input_files == frozenset()
@@ -859,7 +980,7 @@ def test_atomiccmd2__append():
     assert cmd.to_call("/tmp/example") == ["ls", "/foo/bar"]
 
 
-def test_atomiccmd2__append_multiple():
+def test_atomiccmd__append_multiple():
     cmd = AtomicCmd("ls")
 
     assert cmd.output_files == frozenset()
@@ -868,14 +989,14 @@ def test_atomiccmd2__append_multiple():
     assert cmd.to_call("/tmp/example") == ["ls", "--file", "/tmp/example/bar"]
 
 
-def test_atomiccmd2__append_non_str():
+def test_atomiccmd__append_non_str():
     cmd = AtomicCmd("ls")
 
     cmd.append("--option", 17)
     assert cmd.to_call("/tmp/example") == ["ls", "--option", "17"]
 
 
-def test_atomiccmd2__append_overlapping_output__temp_and_non_temp():
+def test_atomiccmd__append_overlapping_output__temp_and_non_temp():
     cmd = AtomicCmd("touch")
     cmd.append(OutputFile("/foo/bar/target"))
 
@@ -883,7 +1004,7 @@ def test_atomiccmd2__append_overlapping_output__temp_and_non_temp():
         cmd.append(TempOutputFile("target"))
 
 
-def test_atomiccmd2__append_overlapping_output__different_instances():
+def test_atomiccmd__append_overlapping_output__different_instances():
     cmd = AtomicCmd("touch")
     cmd.append(OutputFile("/foo/bar/target"))
 
@@ -891,7 +1012,7 @@ def test_atomiccmd2__append_overlapping_output__different_instances():
         cmd.append(OutputFile("/foo/bar/target"))
 
 
-def test_atomiccmd2__append_overlapping_output__same_instance():
+def test_atomiccmd__append_overlapping_output__same_instance():
     cmd = AtomicCmd("touch")
 
     output_file = OutputFile("/foo/bar/target")
@@ -899,7 +1020,7 @@ def test_atomiccmd2__append_overlapping_output__same_instance():
     cmd.append(output_file)
 
 
-def test_atomiccmd2__append_non_atomic_file():
+def test_atomiccmd__append_non_atomic_file():
     cmd = AtomicCmd("touch")
     assert cmd.input_files == frozenset()
     assert cmd.output_files == frozenset()
@@ -908,7 +1029,7 @@ def test_atomiccmd2__append_non_atomic_file():
     assert cmd.output_files == frozenset()
 
 
-def test_atomiccmd2__append_to_running_command(tmp_path):
+def test_atomiccmd__append_to_running_command(tmp_path: Path):
     with AtomicCmd("true") as cmd:
         cmd.run(tmp_path)
 
@@ -988,14 +1109,14 @@ def test_append_options__invalid_key():
 
 
 @pytest.mark.parametrize("value", (object(),))
-def test_append_options__invalid_values(value):
+def test_append_options__invalid_values(value: Any):
     cmd = AtomicCmd("touch")
     with pytest.raises(ValueError, match=str(value)):
         cmd.append_options({"--foo": value})
 
 
 @pytest.mark.parametrize("value", (object(),))
-def test_append_options__invalid_values_in_list(value):
+def test_append_options__invalid_values_in_list(value: Any):
     cmd = AtomicCmd("touch")
     with pytest.raises(ValueError, match=str(value)):
         cmd.append_options({"--foo": [1, 2, value]})
@@ -1005,7 +1126,7 @@ def test_append_options__invalid_values_in_list(value):
 # add_extra_files
 
 
-def test_atomiccmd2__add_extra_files():
+def test_atomiccmd__add_extra_files():
     cmd = AtomicCmd("ls")
 
     assert cmd.input_files == frozenset()
@@ -1017,14 +1138,14 @@ def test_atomiccmd2__add_extra_files():
 
 
 @pytest.mark.parametrize("value", ("/path/to/file", 1, _AtomicFile("foo"), -1))
-def test_atomiccmd2__add_extra_files_invalid_values(value):
+def test_atomiccmd__add_extra_files_invalid_values(value: Any):
     cmd = AtomicCmd("ls")
 
     with pytest.raises(ValueError):
         cmd.add_extra_files([value])
 
 
-def test_atomiccmd2__add_extra_files_overlapping_output_1():
+def test_atomiccmd__add_extra_files_overlapping_output_1():
     cmd = AtomicCmd("touch")
     cmd.add_extra_files([OutputFile("/foo/bar/target")])
 
@@ -1032,28 +1153,28 @@ def test_atomiccmd2__add_extra_files_overlapping_output_1():
         cmd.add_extra_files([TempOutputFile("target")])
 
 
-def test_atomiccmd2__add_extra_files_overlapping_output_2():
+def test_atomiccmd__add_extra_files_overlapping_output_2():
     cmd = AtomicCmd("touch")
 
     with pytest.raises(CmdError, match="multiple output files with name 'target'"):
         cmd.add_extra_files([OutputFile("/foo/bar/target"), TempOutputFile("target")])
 
 
-def test_atomiccmd2__add_extra_files_to_running_command(tmp_path):
+def test_atomiccmd__add_extra_files_to_running_command(tmp_path: Path):
     with AtomicCmd("true") as cmd:
         cmd.run(tmp_path)
 
         with pytest.raises(CmdError, match="cannot modify already started command"):
-            cmd.add_extra_files(OutputFile("foo"))
+            cmd.add_extra_files([OutputFile("foo")])
 
 
 ########################################################################################
 # __str__
 
 # Additional tests in atomicpp_test.py
-def test_atomiccmd2__str__():
+def test_atomiccmd__str__():
     cmd = AtomicCmd(("echo", "test"), stdin="/foo/bar")
-    assert paleomix.atomiccmd.pprint.pformat(cmd) == str(cmd)
+    assert paleomix.common.command.pformat(cmd) == str(cmd)
 
 
 ########################################################################################
@@ -1064,76 +1185,103 @@ def test_atomiccmd2__str__():
 #        2. don't use weak references to avoid accidental leaks
 
 # Test that the internal list of processes is kept clean of old objects
-def test_atomiccmd2__cleanup_proc__commit(tmp_path):
-    assert paleomix.atomiccmd.command._PROCS == set()
+def test_atomiccmd__cleanup_proc__commit(tmp_path: Path):
     cmd = AtomicCmd("ls")
     cmd.run(tmp_path)
 
-    ref = next(iter(paleomix.atomiccmd.command._PROCS))
-    assert ref() == cmd._proc
+    for ref in paleomix.common.command._PROCS:
+        if ref() == cmd._proc:
+            break
+    else:
+        assert False
+
     assert cmd.join() == [0]
     # Commit frees proc object
     cmd.commit(tmp_path)
     assert ref() is None
 
-    assert ref not in paleomix.atomiccmd.command._PROCS
+    assert ref not in paleomix.common.command._PROCS
 
 
 # Test that the internal list of processes is kept clean of old objects
-def test_atomiccmd2__cleanup_proc__gc(tmp_path):
-    assert paleomix.atomiccmd.command._PROCS == set()
+def test_atomiccmd__cleanup_proc__gc(tmp_path: Path):
     cmd = AtomicCmd("ls")
     cmd.run(tmp_path)
 
-    ref = next(iter(paleomix.atomiccmd.command._PROCS))
-    assert ref() == cmd._proc
+    for ref in paleomix.common.command._PROCS:
+        if ref() == cmd._proc:
+            break
+    else:
+        assert False
+
     assert cmd.join() == [0]
     # GC frees proc object
     cmd = None
     assert ref() is None
 
-    assert ref not in paleomix.atomiccmd.command._PROCS
+    assert ref not in paleomix.common.command._PROCS
 
 
-def test_atomiccmd2__cleanup_sigterm():
-    procs = [lambda: Mock(pid=7913), lambda: Mock(pid=12345)]
-    with patch("paleomix.atomiccmd.command._PROCS", procs):
-        patches = Mock()
-        with patch("os.killpg", patches.killpg):
-            with patch("sys.exit", patches.exit):
-                paleomix.atomiccmd.command._cleanup_children(signal.SIGTERM, None)
+def test_atomiccmd__cleanup_sigterm():
+    mock = Mock()  # type: Any
+    paleomix.common.command._add_to_killlist(mock.proc_1)
+    paleomix.common.command._add_to_killlist(mock.proc_2)
 
-                assert patches.mock_calls == [
-                    call.killpg(7913, signal.SIGTERM),
-                    call.killpg(12345, signal.SIGTERM),
-                    call.exit(-signal.SIGTERM),
-                ]
+    with patch("sys.exit", mock.exit):
+        paleomix.common.command._on_sig_term(signal.SIGTERM, None)
+
+        assert mock.mock_calls == [
+            call.proc_1.terminate(),
+            call.proc_2.terminate(),
+            call.exit(-signal.SIGTERM),
+        ]
 
 
-def test_atomiccmd2__cleanup_sigterm__continues_on_exception():
-    procs = [lambda: Mock(pid=7913), lambda: Mock(pid=12345)]
-    with patch("paleomix.atomiccmd.command._PROCS", procs):
-        patches = Mock()
-        with patch("os.killpg", patches.killpg):
-            with patch("sys.exit", patches.exit):
-                patches.killpg.side_effect = [OSError("already killed"), None]
+def test_atomiccmd__cleanup_sigterm__continues_on_exception():
+    mock = Mock()  # type: Any
+    paleomix.common.command._add_to_killlist(mock.proc_1)
+    paleomix.common.command._add_to_killlist(mock.proc_2)
 
-                paleomix.atomiccmd.command._cleanup_children(signal.SIGTERM, None)
+    mock.proc_1.terminate.side_effect = OSError("already killed")
 
-                assert patches.mock_calls == [
-                    call.killpg(7913, signal.SIGTERM),
-                    call.killpg(12345, signal.SIGTERM),
-                    call.exit(-signal.SIGTERM),
-                ]
+    with patch("sys.exit", mock.exit):
+        paleomix.common.command._on_sig_term(signal.SIGTERM, None)
+
+        assert mock.mock_calls == [
+            call.proc_1.terminate(),
+            call.proc_2.terminate(),
+            call.exit(-signal.SIGTERM),
+        ]
 
 
 # Ensure that the cleanup function handles weakrefs that have been freed
-def test_atomiccmd2__cleanup_sigterm__dead_weakrefs():
-    dead_ref = weakref.ref(AtomicCmd("ls"))
-    with patch("paleomix.atomiccmd.command._PROCS", [dead_ref]):
-        patches = Mock()
-        with patch("os.killpg", patches.killpg):
-            with patch("sys.exit", patches.exit):
-                paleomix.atomiccmd.command._cleanup_children(signal.SIGTERM, None)
+def test_atomiccmd__cleanup_sigterm__dead_weakrefs_1():
+    mock = Mock()  # type: Any
+    paleomix.common.command._add_to_killlist(mock.proc_1)
+    paleomix.common.command._add_to_killlist(mock.proc_2)
 
-                assert patches.mock_calls == [call.exit(-signal.SIGTERM)]
+    del mock.proc_1
+
+    with patch("sys.exit", mock.exit):
+        paleomix.common.command._on_sig_term(signal.SIGTERM, None)
+
+        assert mock.mock_calls == [
+            call.proc_2.terminate(),
+            call.exit(-signal.SIGTERM),
+        ]
+
+
+# Ensure that the cleanup function handles weakrefs have haven't been removed; this
+# shouldn't happen, but it is useful to be sure that the code doesn't crash if it does
+def test_atomiccmd__cleanup_sigterm__dead_weakrefs_2():
+    mock = Mock()  # type: Any
+    paleomix.common.command._add_to_killlist(mock.proc_1)
+    paleomix.common.command._PROCS.append(lambda: None)  # type: ignore
+
+    with patch("sys.exit", mock.exit):
+        paleomix.common.command._on_sig_term(signal.SIGTERM, None)
+
+        assert mock.mock_calls == [
+            call.proc_1.terminate(),
+            call.exit(-signal.SIGTERM),
+        ]

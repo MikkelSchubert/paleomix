@@ -24,8 +24,7 @@ import os
 
 import paleomix.common.rtools as rtools
 import paleomix.tools.factory as factory
-
-from paleomix.atomiccmd.command import (
+from paleomix.common.command import (
     AtomicCmd,
     AuxilleryFile,
     InputFile,
@@ -34,7 +33,6 @@ from paleomix.atomiccmd.command import (
 )
 from paleomix.common.formats.newick import Newick
 from paleomix.node import CommandNode
-
 from paleomix.pipelines.zonkey.common import RSCRIPT_VERSION
 
 

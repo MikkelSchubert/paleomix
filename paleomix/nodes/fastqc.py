@@ -7,10 +7,9 @@ https://github.com/s-andrews/FastQC
 import os
 import re
 
-from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile
+from paleomix.common.command import AtomicCmd, InputFile, OutputFile
 from paleomix.common.versions import Requirement
 from paleomix.node import CommandNode
-
 
 # File extensions striped by FASTQ for output filenames
 _FASTQC_EXCLUDED_EXTENSIONS = re.compile(

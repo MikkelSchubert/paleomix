@@ -28,7 +28,7 @@ from unittest.mock import Mock, call
 
 import paleomix.node
 import pytest
-from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile, TempOutputFile
+from paleomix.common.command import AtomicCmd, InputFile, OutputFile, TempOutputFile
 from paleomix.common.utilities import safe_coerce_to_frozenset
 from paleomix.common.versions import Any, Requirement
 from paleomix.node import (

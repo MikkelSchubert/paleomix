@@ -20,17 +20,20 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import paleomix.common.versions as versions
+from paleomix.common.command import (
+    AtomicCmd,
+    InputFile,
+    OutputFile,
+    ParallelCmds,
+    TempOutputFile,
+)
 from paleomix.node import CommandNode, NodeError
-from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile, TempOutputFile
-from paleomix.atomiccmd.sets import ParallelCmds
 from paleomix.nodes.bwa import (
+    _get_max_threads,
     _get_node_description,
     _new_cleanup_command,
-    _get_max_threads,
 )
-
-import paleomix.common.versions as versions
-
 
 BOWTIE2_VERSION = versions.Requirement(
     call=("bowtie2", "--version"),

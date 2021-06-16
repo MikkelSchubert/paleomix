@@ -25,13 +25,16 @@ import os
 
 import paleomix.common.versions as versions
 import paleomix.tools.factory as factory
-
-from paleomix.atomiccmd.command import AtomicCmd, InputFile, OutputFile, TempOutputFile
-from paleomix.atomiccmd.sets import ParallelCmds
+from paleomix.common.command import (
+    AtomicCmd,
+    InputFile,
+    OutputFile,
+    ParallelCmds,
+    TempOutputFile,
+)
 from paleomix.common.fileutils import describe_paired_files
 from paleomix.node import CommandNode
 from paleomix.nodes.samtools import SAMTOOLS_VERSION
-
 
 BWA_VERSION = versions.Requirement(
     name="BWA",

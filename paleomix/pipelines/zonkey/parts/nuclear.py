@@ -31,14 +31,14 @@ import paleomix.common.rtools as rtools
 import paleomix.common.versions as versions
 import paleomix.tools.factory as factory
 import pysam
-from paleomix.atomiccmd.command import (
+from paleomix.common.command import (
     AtomicCmd,
     AuxilleryFile,
     InputFile,
     OutputFile,
+    SequentialCmds,
     TempOutputFile,
 )
-from paleomix.atomiccmd.sets import SequentialCmds
 from paleomix.node import CommandNode, Node, NodeError
 from paleomix.pipelines.zonkey.common import RSCRIPT_VERSION, read_summary
 

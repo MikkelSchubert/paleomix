@@ -23,19 +23,21 @@
 import os
 import shlex
 import signal
+from pathlib import Path
+from typing import Any, Type, Union
 
 import pytest
-
-from paleomix.atomiccmd.command import (
+from paleomix.common.command import (
     AtomicCmd,
     InputFile,
     OutputFile,
+    ParallelCmds,
+    SequentialCmds,
     TempInputFile,
     TempOutputFile,
+    _pformat_list,
+    pformat,
 )
-from paleomix.atomiccmd.sets import ParallelCmds, SequentialCmds
-from paleomix.atomiccmd.pprint import pformat, _pformat_list
-
 
 ###############################################################################
 ###############################################################################
@@ -51,7 +53,7 @@ def test_pformat__simple():
     ) % (id(cmd), id(cmd))
 
 
-def test_pformat__simple__running(tmp_path):
+def test_pformat__simple__running(tmp_path: Path) -> None:
     cmd = AtomicCmd(("sleep", "10"))
     cmd.run(tmp_path)
     assert pformat(cmd) == (
@@ -65,7 +67,7 @@ def test_pformat__simple__running(tmp_path):
     cmd.join()
 
 
-def test_pformat__simple__running__set_cwd(tmp_path):
+def test_pformat__simple__running__set_cwd(tmp_path: Path) -> None:
     cmd = AtomicCmd(("sleep", "10"), set_cwd=True)
     cmd.run(tmp_path)
     assert pformat(cmd) == (
@@ -79,7 +81,7 @@ def test_pformat__simple__running__set_cwd(tmp_path):
     cmd.join()
 
 
-def test_pformat__simple__done(tmp_path):
+def test_pformat__simple__done(tmp_path: Path) -> None:
     cmd = AtomicCmd("true")
     cmd.run(tmp_path)
     assert cmd.join() == [0]
@@ -92,9 +94,10 @@ def test_pformat__simple__done(tmp_path):
     ).format(id=id(cmd), cwd=os.getcwd(), temp_dir=tmp_path)
 
 
-def test_pformat__simple__done__before_join(tmp_path):
+def test_pformat__simple__done__before_join(tmp_path: Path) -> None:
     cmd = AtomicCmd("true")
     cmd.run(tmp_path)
+    assert cmd._proc is not None
     cmd._proc.wait()
     assert pformat(cmd) == (
         "Command = true\n"
@@ -106,7 +109,7 @@ def test_pformat__simple__done__before_join(tmp_path):
     assert cmd.join() == [0]
 
 
-def test_pformat__simple__done__set_cwd(tmp_path):
+def test_pformat__simple__done__set_cwd(tmp_path: Path) -> None:
     cmd = AtomicCmd("true", set_cwd=True)
     cmd.run(tmp_path)
     assert cmd.join() == [0]
@@ -119,7 +122,7 @@ def test_pformat__simple__done__set_cwd(tmp_path):
     ).format(id=id(cmd), temp_dir=tmp_path)
 
 
-def test_pformat__simple__terminated_by_pipeline(tmp_path):
+def test_pformat__simple__terminated_by_pipeline(tmp_path: Path) -> None:
     cmd = AtomicCmd(("sleep", "10"))
     cmd.run(tmp_path)
     cmd.terminate()
@@ -133,9 +136,10 @@ def test_pformat__simple__terminated_by_pipeline(tmp_path):
     ).format(id=id(cmd), temp_dir=tmp_path, cwd=os.getcwd())
 
 
-def test_pformat__simple__killed_by_signal(tmp_path):
+def test_pformat__simple__killed_by_signal(tmp_path: Path) -> None:
     cmd = AtomicCmd(("sleep", "10"))
     cmd.run(tmp_path)
+    assert cmd._proc is not None
     os.killpg(cmd._proc.pid, signal.SIGTERM)
     assert cmd.join() == ["SIGTERM"]
     assert pformat(cmd) == (
@@ -147,7 +151,7 @@ def test_pformat__simple__killed_by_signal(tmp_path):
     ).format(id=id(cmd), temp_dir=tmp_path, cwd=os.getcwd())
 
 
-def test_pformat__simple__temp_root_in_arguments(tmp_path):
+def test_pformat__simple__temp_root_in_arguments(tmp_path: Path) -> None:
     cmd = AtomicCmd(("echo", "%(TEMP_DIR)s"))
     cmd.run(tmp_path)
     assert cmd.join() == [0]
@@ -363,6 +367,71 @@ def test_pformat__atomiccmd__simple_with_stdout_pipe():
     ) % (id(cmd),)
 
 
+def test_pformat__atomiccmd__simple_with_stdout_devnull():
+    cmd = AtomicCmd(("echo", "!"), stdout=AtomicCmd.DEVNULL)
+    assert pformat(cmd) == (
+        "Command = echo '!'\n"
+        "STDOUT  = /dev/null\n"
+        "STDERR  = '${TEMP_DIR}/pipe_echo_%i.stderr'"
+    ) % (id(cmd),)
+
+
+###############################################################################
+###############################################################################
+# STDERR
+
+
+def test_pformat__atomiccmd__simple_with_stderr():
+    cmd = AtomicCmd(("echo", "Water. Water."), stderr="/dev/ls")
+    assert pformat(cmd) == (
+        "Command = echo 'Water. Water.'\n"
+        "STDOUT  = '${TEMP_DIR}/pipe_echo_%i.stdout'\n"
+        "STDERR  = '${TEMP_DIR}/ls'"
+    ) % (id(cmd),)
+
+
+def test_pformat__atomiccmd__simple_with_stderr__set_cwd():
+    cmd = AtomicCmd(("echo", "*pant*. *pant*."), stderr="/dev/barf", set_cwd=True)
+    assert pformat(cmd) == (
+        "Command = echo '*pant*. *pant*.'\n"
+        "STDOUT  = pipe_echo_%i.stdout\n"
+        "STDERR  = barf\n"
+        "CWD     = '${TEMP_DIR}'"
+    ) % (id(cmd),)
+
+
+def test_pformat__atomiccmd__simple_with_temp_stderr():
+    cmd = AtomicCmd(("echo", "Oil. Oil."), stderr=TempOutputFile("dm"))
+    assert pformat(cmd) == (
+        "Command = echo 'Oil. Oil.'\n"
+        "STDOUT  = '${TEMP_DIR}/pipe_echo_%i.stdout'\n"
+        "STDERR  = '${TEMP_DIR}/dm'"
+    ) % (id(cmd),)
+
+
+def test_pformat__atomiccmd__simple_with_temp_stderr__set_cwd():
+    cmd = AtomicCmd(
+        ("echo", "Room service. Room service."),
+        stderr=TempOutputFile("pv"),
+        set_cwd=True,
+    )
+    assert pformat(cmd) == (
+        "Command = echo 'Room service. Room service.'\n"
+        "STDOUT  = pipe_echo_%i.stdout\n"
+        "STDERR  = pv\n"
+        "CWD     = '${TEMP_DIR}'"
+    ) % (id(cmd),)
+
+
+def test_pformat__atomiccmd__simple_with_stderr_devnull():
+    cmd = AtomicCmd(("echo", "!"), stderr=AtomicCmd.DEVNULL)
+    assert pformat(cmd) == (
+        "Command = echo '!'\n"
+        "STDOUT  = '${TEMP_DIR}/pipe_echo_%i.stdout'\n"
+        "STDERR  = /dev/null"
+    ) % (id(cmd),)
+
+
 ###############################################################################
 ###############################################################################
 # ParallelCmds
@@ -372,7 +441,10 @@ def test_pformat__atomiccmd__simple_with_stdout_pipe():
     "cls, description",
     ((ParallelCmds, "Parallel processes"), (SequentialCmds, "Sequential processes")),
 )
-def test_pformat__sets__simple(cls, description):
+def test_pformat__sets__simple(
+    cls: Union[Type[ParallelCmds], Type[SequentialCmds]],
+    description: str,
+):
     template = (
         "{description}:\n"
         "  Process 1:\n"
@@ -428,7 +500,7 @@ def test_pformat__sets__nested():
 
 
 @pytest.mark.parametrize("value", (1, {}, ""))
-def test_pformat__bad_input(value):
+def test_pformat__bad_input(value: Any):
     with pytest.raises(TypeError):
         pformat(value)
 
