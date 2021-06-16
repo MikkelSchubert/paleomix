@@ -244,20 +244,23 @@ class Manager:
         return not any_errors
 
     def _collect_workers(self, root: str = AUTO_REGISTER_DIR) -> Iterator[EventType]:
-        for filename in os.listdir(root):
-            filename = os.path.join(root, filename)
+        if os.path.isdir(root):
+            for filename in os.listdir(root):
+                filename = os.path.join(root, filename)
 
-            if filename.endswith(".json") and os.path.isfile(filename):
-                with open(filename, "rt") as handle:
-                    try:
-                        data = json.load(handle)
-                    except json.decoder.JSONDecodeError:
-                        continue
+                if filename.endswith(".json") and os.path.isfile(filename):
+                    with open(filename, "rt") as handle:
+                        try:
+                            data = json.load(handle)
+                        except json.decoder.JSONDecodeError:
+                            continue
 
-                data["filename"] = filename
-                data["secret"] = codecs.decode(data["secret"].encode("utf-8"), "base64")
+                    data["filename"] = filename
+                    data["secret"] = codecs.decode(
+                        data["secret"].encode("utf-8"), "base64"
+                    )
 
-                yield data
+                    yield data
 
     def _check_started(self):
         if self._local is None:
