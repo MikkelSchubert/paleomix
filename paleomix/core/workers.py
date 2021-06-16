@@ -133,7 +133,7 @@ class Manager:
 
     def wait_for_workers(self) -> bool:
         self._check_started()
-        while not all(worker.status != _RUNNING for worker in self._workers.values()):
+        while not all(worker.status == _RUNNING for worker in self._workers.values()):
             for event in self.poll():
                 if event["event"] == EVT_HANDSHAKE_RESPONSE:
                     if event["error"] is not None:
