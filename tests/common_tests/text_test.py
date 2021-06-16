@@ -23,14 +23,31 @@
 import collections
 
 import pytest
-
 from paleomix.common.text import (
     TableError,
+    format_timespan,
     padded_table,
     parse_lines,
     parse_lines_by_contig,
     parse_padded_table,
 )
+
+###############################################################################
+###############################################################################
+# Tests for 'padded_table'
+
+
+def test_format_timespan__seconds():
+    assert format_timespan(0) == "0.0s"
+    assert format_timespan(1.2234) == "1.2s"
+    assert format_timespan(59.9) == "59.9s"
+    assert format_timespan(60) == "1:00s"
+    assert format_timespan(27 * 60 + 30.9) == "27:31s"
+    assert format_timespan(59 * 60 + 59) == "59:59s"
+    assert format_timespan(1 * 60 * 60) == "1:00:00s"
+    assert format_timespan(15 * 60 * 60 + 38 * 60 + 17) == "15:38:17s"
+    assert format_timespan(123 * 60 * 60 + 38 * 60 + 17) == "123:38:17s"
+
 
 ###############################################################################
 ###############################################################################

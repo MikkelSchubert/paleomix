@@ -41,6 +41,19 @@ class TableError(RuntimeError):
     pass
 
 
+def format_timespan(seconds: float):
+    if seconds < 60:
+        return "{:.1f}s".format(seconds)
+    elif seconds < 3600:
+        return "{:.0f}:{:02.0f}s".format(seconds // 60, seconds % 60)
+    else:
+        return "{:.0f}:{:02.0f}:{:02.0f}s".format(
+            seconds // 3600,
+            (seconds % 3600) // 60,
+            seconds % 60,
+        )
+
+
 def padded_table(
     table: Iterable[Union[str, List[str]]], min_padding: int = 4
 ) -> Iterator[str]:
