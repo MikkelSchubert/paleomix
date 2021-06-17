@@ -26,8 +26,8 @@ import os
 
 import paleomix.common.argparse as argparse
 import pysam
-from paleomix.common.bedtools import read_bed_file, sort_bed_by_bamfile
 from paleomix.common.fileutils import swap_ext
+from paleomix.common.formats.bed import read_bed_file, sort_bed_by_bamfile
 
 
 class BAMStatsError(RuntimeError):

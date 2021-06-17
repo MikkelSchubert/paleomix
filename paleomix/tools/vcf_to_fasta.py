@@ -39,19 +39,16 @@ to contain a certain amount of padding around the regions of interest.
 import copy
 import itertools
 import os
-import sys
 import re
-
-import pysam
+import sys
 
 import paleomix.common.argparse as argparse
 import paleomix.common.sequences as sequences
 import paleomix.common.text as text
 import paleomix.common.utilities as utilities
 import paleomix.common.vcfwrap as vcfwrap
-
-from paleomix.common.bedtools import BEDRecord
-
+import pysam
+from paleomix.common.formats.bed import BEDRecord
 
 # Max number of positions to keep in memory / genotype at once
 _SEQUENCE_CHUNK = 1024 * 1024  # 1kbp

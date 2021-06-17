@@ -23,37 +23,35 @@
 import logging
 import os
 
-import pysam
-
 import paleomix.common.makefile
+import pysam
+from paleomix.common.fileutils import swap_ext
+from paleomix.common.formats.bed import BEDError, read_bed_file
+from paleomix.common.formats.fasta import FASTA
 from paleomix.common.makefile import (
-    MakefileError,
+    CLI_PARAMETERS,
     REQUIRED_VALUE,
-    IsDictOf,
-    IsListOf,
-    IsInt,
-    IsStr,
-    StringIn,
-    IsFloat,
-    IsUnsignedInt,
+    And,
     IsBoolean,
+    IsDictOf,
+    IsFloat,
+    IsInt,
+    IsListOf,
     IsNone,
+    IsStr,
+    IsUnsignedInt,
+    MakefileError,
+    Not,
+    Or,
     RemovedOption,
+    StringEndsWith,
+    StringIn,
+    StringStartsWith,
     ValueIn,
     ValuesSubsetOf,
-    StringStartsWith,
-    StringEndsWith,
-    CLI_PARAMETERS,
-    And,
-    Or,
-    Not,
 )
-
-from paleomix.common.fileutils import swap_ext
-from paleomix.common.utilities import fill_dict
 from paleomix.common.text import parse_padded_table
-from paleomix.common.bedtools import read_bed_file, BEDError
-from paleomix.common.formats.fasta import FASTA
+from paleomix.common.utilities import fill_dict
 
 
 def read_makefiles(options, commands):

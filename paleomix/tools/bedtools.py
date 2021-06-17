@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf8 -*-
 import sys
-
 from pathlib import Path
 
-from paleomix.common.bedtools import read_bed_file, pad_bed_records, merge_bed_records
 from paleomix.common.argparse import ArgumentParser
+from paleomix.common.formats.bed import (
+    merge_bed_records,
+    pad_bed_records,
+    read_bed_file,
+)
 
 
 def main_pad(args):

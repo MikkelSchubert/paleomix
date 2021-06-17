@@ -23,7 +23,7 @@
 import itertools
 from typing import Iterable, List, Optional
 
-from paleomix.common.bedtools import BEDRecord
+from paleomix.common.formats.bed import BEDRecord
 from pysam import AlignedSegment, AlignmentFile
 
 # BAM flags as defined in the BAM specification
@@ -81,7 +81,7 @@ class BAMRegionsIter:
         # Teardown per region
 
     The list of regions given to the iterator is expected to be in BED-like
-    records (see e.g. paleomix.common.bedtools), with these properties:
+    records (see e.g. paleomix.common.formats.bed), with these properties:
       - contig: Name of the contig in the BED file
       - start: 0-based offset for the start of the region
       - end: 1-based offset (i.e. past-the-end) of the region

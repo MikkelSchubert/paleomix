@@ -24,7 +24,7 @@ import copy
 from typing import Any
 
 import pytest
-from paleomix.common.bedtools import (
+from paleomix.common.formats.bed import (
     BEDError,
     BEDRecord,
     merge_bed_records,
