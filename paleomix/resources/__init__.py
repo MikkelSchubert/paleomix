@@ -20,17 +20,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import argparse
 import logging
 import os
 import shutil
 
 from pkg_resources import Requirement, cleanup_resources, resource_filename
 
-
 _REQUIREMENT = Requirement.parse("PALEOMIX")
 
 
-def rscript(tool, script):
+def rscript(tool: str, script: str) -> str:
     """Returns the path to an Rscript for a given tool."""
 
     path = os.path.join("paleomix", "resources", "rscripts", tool, script)
@@ -38,7 +38,7 @@ def rscript(tool, script):
     return resource_filename(_REQUIREMENT, path)
 
 
-def report(tool, filename):
+def report(tool: str, filename: str) -> str:
     """Returns the path to a report-file for a given tool."""
 
     path = os.path.join("paleomix", "resources", "reports", tool, filename)
@@ -46,7 +46,7 @@ def report(tool, filename):
     return resource_filename(_REQUIREMENT, path)
 
 
-def template(filename):
+def template(filename: str) -> str:
     """Returns the path to a report-file for a given tool."""
     path = os.path.join("paleomix", "resources", "templates", filename)
 
@@ -58,7 +58,7 @@ def template(filename):
         cleanup_resources()
 
 
-def add_copy_example_command(subparsers):
+def add_copy_example_command(subparsers: argparse._SubParsersAction) -> None:
     parser = subparsers.add_parser("example", help="Create example project")
 
     parser.add_argument(
@@ -69,15 +69,15 @@ def add_copy_example_command(subparsers):
     )
 
 
-def copy_example(tool, args):
+def copy_example(tool: str, destination: str) -> int:
     """Command-line interface to copy a folder containing example data to a
     folder specified by the user. Arguments are a tool name (e.g.
     'bam_pipeline'), and any command-line options specified by the user;
     returns 0 on success, or 1 on errors.
     """
     log = logging.getLogger(__name__)
-    destination = os.path.join(args.destination, tool)
-    log.info("Copying example project to %r", args.destination)
+    destination = os.path.join(destination, tool)
+    log.info("Copying example project to %r", destination)
 
     if os.path.exists(destination):
         log.error("Example folder already exists at %r", destination)

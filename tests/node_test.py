@@ -24,6 +24,8 @@ import logging
 import os
 import random
 import uuid
+from pathlib import Path
+from typing import Iterable, Optional, Sequence, Tuple, Type, TypeVar
 from unittest.mock import Mock, call
 
 import paleomix.node
@@ -39,24 +41,32 @@ from paleomix.node import (
     NodeUnhandledException,
 )
 
+T = TypeVar("T")
+
 
 def test_dir():
     return os.path.dirname(__file__)
 
 
-def test_file(*args):
+def test_file(*args: str):
     return os.path.join(test_dir(), "data", *args)
 
 
-def first(values):
+def choice(values: Iterable[T]) -> T:
     return random.choice(tuple(values))
 
 
-def _CommandNodeWrap(**kwargs):
-    return CommandNode(command=AtomicCmd("true"), **kwargs)
+class CommandNodeWithDefaultCommand(CommandNode):
+    def __init__(
+        self,
+        description: Optional[str] = None,
+        threads: int = 1,
+        dependencies: Iterable[Node] = (),
+    ):
+        super().__init__(AtomicCmd("true"), description, threads, dependencies)
 
 
-_NODE_TYPES = (Node, _CommandNodeWrap)
+_NODE_TYPES: Tuple[Type[Node], ...] = (Node, CommandNodeWithDefaultCommand)
 
 
 _DESCRIPTION = "My description of a node"
@@ -73,13 +83,13 @@ _EMPTY_FILE = test_file("empty_file_1")
 
 
 def _build_cmd_mock(
-    input_files=_IN_FILES,
-    output_files=(),
-    executables=(),
-    auxiliary_files=(),
-    requirements=(),
-    optional_temp_files=(),
-    return_codes=(0,),
+    input_files: Iterable[str] = _IN_FILES,
+    output_files: Iterable[str] = (),
+    executables: Iterable[str] = (),
+    auxiliary_files: Iterable[str] = (),
+    requirements: Iterable[str] = (),
+    optional_temp_files: Iterable[str] = (),
+    return_codes: Sequence[int] = (0,),
 ):
     cmd = Mock(
         input_files=frozenset(input_files),
@@ -102,15 +112,15 @@ def _build_cmd_mock(
 
 _CONSTUCTOR_SINGLE_VALUES = (
     # Single values
-    ("input_files", first(_IN_FILES)),
-    ("output_files", first(_OUT_FILES)),
-    ("executables", first(_EXEC_FILES)),
-    ("auxiliary_files", first(_AUX_FILES)),
+    ("input_files", choice(_IN_FILES)),
+    ("output_files", choice(_OUT_FILES)),
+    ("executables", choice(_EXEC_FILES)),
+    ("auxiliary_files", choice(_AUX_FILES)),
     # Single value in list
-    ("input_files", [first(_IN_FILES)]),
-    ("output_files", [first(_OUT_FILES)]),
-    ("executables", [first(_EXEC_FILES)]),
-    ("auxiliary_files", [first(_AUX_FILES)]),
+    ("input_files", [choice(_IN_FILES)]),
+    ("output_files", [choice(_OUT_FILES)]),
+    ("executables", [choice(_EXEC_FILES)]),
+    ("auxiliary_files", [choice(_AUX_FILES)]),
     # Multiple values in list
     ("input_files", _IN_FILES),
     ("output_files", _OUT_FILES),
@@ -120,7 +130,7 @@ _CONSTUCTOR_SINGLE_VALUES = (
 
 
 @pytest.mark.parametrize("key, value", _CONSTUCTOR_SINGLE_VALUES)
-def test_constructor(key, value):
+def test_constructor(key: str, value: str):
     defaults = {"input_files": _EMPTY_FILE}
     defaults[key] = value
     node = Node(**defaults)
@@ -137,7 +147,7 @@ _CONSTUCTOR_INVALID_VALUES = (
 
 
 @pytest.mark.parametrize("key, value", _CONSTUCTOR_INVALID_VALUES)
-def test_constructor__invalid_values(key, value):
+def test_constructor__invalid_values(key: str, value: Any):
     with pytest.raises(TypeError):
         Node(**{key: value})
 
@@ -195,20 +205,20 @@ def test_constructor__not_a_node():
 
 
 @pytest.mark.parametrize("cls", _NODE_TYPES)
-def test_constructor__description(cls):
+def test_constructor__description(cls: Type[Node]):
     my_node = cls(description=_DESCRIPTION)
     assert str(my_node) == _DESCRIPTION
 
 
 @pytest.mark.parametrize("cls", _NODE_TYPES)
-def test_constructor__description__default(cls):
+def test_constructor__description__default(cls: Type[Node]):
     my_node = cls()
     assert str(my_node) == repr(my_node)
 
 
 @pytest.mark.parametrize("cls", _NODE_TYPES)
 @pytest.mark.parametrize("value", (1, {}))
-def test_constructor__description__non_string(cls, value):
+def test_constructor__description__non_string(cls: Type[Node], value: Any):
     with pytest.raises(TypeError):
         cls(description=value)
 
@@ -220,21 +230,21 @@ def test_constructor__description__non_string(cls, value):
 
 @pytest.mark.parametrize("cls", _NODE_TYPES)
 @pytest.mark.parametrize("nthreads", (1, 3))
-def test_constructor__threads(cls, nthreads):
+def test_constructor__threads(cls: Type[Node], nthreads: int):
     node = cls(threads=nthreads)
     assert node.threads == nthreads
 
 
 @pytest.mark.parametrize("cls", _NODE_TYPES)
 @pytest.mark.parametrize("nthreads", (-1, 0))
-def test_constructor__threads_invalid_range(cls, nthreads):
+def test_constructor__threads_invalid_range(cls: Type[Node], nthreads: int):
     with pytest.raises(ValueError):
         cls(threads=nthreads)
 
 
 @pytest.mark.parametrize("cls", _NODE_TYPES)
 @pytest.mark.parametrize("nthreads", ("1", {}, 2.7))
-def test_constructor__threads_invalid_type(cls, nthreads):
+def test_constructor__threads_invalid_type(cls: Type[Node], nthreads: int):
     with pytest.raises(TypeError):
         cls(threads=nthreads)
 
@@ -419,11 +429,11 @@ def test_node_remove_temp_dir__extranous_files(tmp_path, caplog):
 # Node._collect_files
 
 
-def test_node_collect_files__empty_folder(tmp_path):
+def test_node_collect_files__empty_folder(tmp_path: Path):
     assert list(Node._collect_files(tmp_path)) == []
 
 
-def test_node_collect_files__root_files(tmp_path):
+def test_node_collect_files__root_files(tmp_path: Path):
     (tmp_path / "foo.txt").touch()
     (tmp_path / "bar.txt").touch()
 
@@ -433,7 +443,7 @@ def test_node_collect_files__root_files(tmp_path):
     ]
 
 
-def test_node_collect_files__files_and_folders(tmp_path):
+def test_node_collect_files__files_and_folders(tmp_path: Path):
     (tmp_path / "foo1.txt").touch()
     (tmp_path / "bar1").mkdir()
     (tmp_path / "bar1" / "foo2.txt").touch()
@@ -454,7 +464,6 @@ def test_node_collect_files__files_and_folders(tmp_path):
 # CommandNode: Constructor
 
 _SIMPLE_DEPS = Node()
-_SIMPLE_SUBS = Node()
 _SIMPLE_CMD_MOCK = Mock(
     input_files=_IN_FILES,
     output_files=_OUT_FILES,
@@ -532,7 +541,7 @@ _SETUP_FILES_EXIST = (
 )
 
 
-@pytest.mark.parametrize("kwargs", _INPUT_FILES_EXIST)
+@pytest.mark.parametrize("kwargs", _SETUP_FILES_EXIST)
 def test_commandnode_setup__files_exist(kwargs):
     cmd_mock = _build_cmd_mock(**kwargs)
     node = CommandNode(cmd_mock)
@@ -546,7 +555,7 @@ _SETUP_FILES_MISSING = (
 )
 
 
-@pytest.mark.parametrize("kwargs", _INPUT_FILES_MISSING)
+@pytest.mark.parametrize("kwargs", _SETUP_FILES_MISSING)
 def test_commandnode_setup__files_missing(kwargs):
     cmd_mock = _build_cmd_mock(**kwargs)
     node = CommandNode(cmd_mock)
@@ -581,7 +590,7 @@ def test_commandnode_run__exception_on_error():
 # CommandNode: _teardown
 
 
-def _setup_temp_folders(tmp_path):
+def _setup_temp_folders(tmp_path: Path):
     destination = tmp_path / "dst"
     tmp_path = tmp_path / "tmp"
     tmp_path.mkdir(parents=True, exist_ok=True)
@@ -590,7 +599,7 @@ def _setup_temp_folders(tmp_path):
 
 
 # Commit is called on the command obj
-def test_commandnode_teardown__commit(tmp_path):
+def test_commandnode_teardown__commit(tmp_path: Path):
     cmd_mock = _build_cmd_mock()
     node = CommandNode(cmd_mock)
     node._teardown(tmp_path)
@@ -598,7 +607,7 @@ def test_commandnode_teardown__commit(tmp_path):
 
 
 # Files exist in temp folder, and in destination after commit
-def test_commandnode_teardown(tmp_path):
+def test_commandnode_teardown(tmp_path: Path):
     destination, tmp_path = _setup_temp_folders(tmp_path)
 
     cmd = AtomicCmd(
@@ -617,7 +626,7 @@ def test_commandnode_teardown(tmp_path):
 
 
 # Not all required files have been generated (atomic)
-def test_commandnode_teardown__missing_files_in_temp(tmp_path):
+def test_commandnode_teardown__missing_files_in_temp(tmp_path: Path):
     destination, tmp_path = _setup_temp_folders(tmp_path)
 
     cmd = AtomicCmd(
@@ -641,7 +650,7 @@ def test_commandnode_teardown__missing_files_in_temp(tmp_path):
 
 
 # Not all specified TEMP_ files exist at _teardown (allowed)
-def test_commandnode_teardown__missing_optional_files(tmp_path):
+def test_commandnode_teardown__missing_optional_files(tmp_path: Path):
     destination, tmp_path = _setup_temp_folders(tmp_path)
 
     cmd = AtomicCmd(
@@ -661,7 +670,7 @@ def test_commandnode_teardown__missing_optional_files(tmp_path):
 
 
 # Not all required files were in place after commit
-def test_commandnode_teardown__missing_files_in_dest(tmp_path):
+def test_commandnode_teardown__missing_files_in_dest(tmp_path: Path):
     destination, tmp_path = _setup_temp_folders(tmp_path)
 
     class _CmdMock(AtomicCmd):
@@ -684,7 +693,7 @@ def test_commandnode_teardown__missing_files_in_dest(tmp_path):
         node._teardown(tmp_path)
 
 
-def test_commandnode_teardown__extra_files_in_temp(tmp_path):
+def test_commandnode_teardown__extra_files_in_temp(tmp_path: Path):
     destination, tmp_path = _setup_temp_folders(tmp_path)
 
     unexpected_file = tmp_path / "unexpected_file.txt"

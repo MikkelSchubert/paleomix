@@ -1,10 +1,11 @@
-import paleomix.resources
+from typing import List
 
 import paleomix.pipelines.bam.config as bam_config
 import paleomix.pipelines.bam.pipeline as bam_pipeline
+import paleomix.resources
 
 
-def main(argv, pipeline="bam"):
+def main(argv: List[str], pipeline: str = "bam") -> int:
     if pipeline not in ("bam", "trim"):
         raise ValueError(pipeline)
 
@@ -15,9 +16,9 @@ def main(argv, pipeline="bam"):
 
     args = parser.parse_args(argv)
     if args.command in ("new", "makefile", "mkfile"):
-        return _main_template(args, pipeline=pipeline)
+        return _main_template(pipeline=pipeline)
     elif args.command in ("example",):
-        return paleomix.resources.copy_example("bam_pipeline", args)
+        return paleomix.resources.copy_example("bam_pipeline", args.destination)
 
     if args.command.startswith("dry") and args.pipeline_mode == "run":
         args.pipeline_mode = "dry_run"
@@ -25,7 +26,7 @@ def main(argv, pipeline="bam"):
     return bam_pipeline.run(args, pipeline_variant=pipeline)
 
 
-def _main_template(args, pipeline="bam"):
+def _main_template(pipeline: str = "bam") -> int:
     if pipeline not in ("bam", "trim"):
         raise ValueError(pipeline)
 

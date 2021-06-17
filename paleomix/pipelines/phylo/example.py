@@ -23,12 +23,13 @@
 import argparse
 import os
 import sys
+from typing import List
 
 import paleomix.common.logging
 import paleomix.resources
 
 
-def build_parser():
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="paleomix phylo_pipeline")
 
     parser.add_argument(
@@ -43,12 +44,12 @@ def build_parser():
     return parser
 
 
-def main(argv):
+def main(argv: List[str]) -> int:
     parser = build_parser()
     config = parser.parse_args(argv)
     paleomix.common.logging.initialize_console_logging()
 
-    if paleomix.resources.copy_example("phylo_pipeline", config):
+    if paleomix.resources.copy_example("phylo_pipeline", config.destination):
         return 1
 
     # Update interpreter to match the one currently in use;
@@ -56,7 +57,7 @@ def main(argv):
     filename = os.path.join(config.destination, "phylo_pipeline", "synthesize_reads.py")
 
     with open(filename) as handle:
-        header, lines = handle.read().split("\n", 1)
+        _, lines = handle.read().split("\n", 1)
 
     with open(filename, "w") as handle:
         handle.write("#!%s\n" % (os.path.abspath(sys.executable)))

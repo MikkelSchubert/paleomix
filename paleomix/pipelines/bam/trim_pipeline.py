@@ -20,9 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+from typing import List
+
 import paleomix.pipelines.bam.main as bam_main
 
 
-def main(argv):
+def main(argv: List[str]) -> int:
     """Wrapper to invoke the trimming pipeline; used by paleomix.main."""
     return bam_main.main(argv, pipeline="trim")

@@ -28,11 +28,10 @@ import logging
 import os
 import sys
 import time
-from typing import IO, Any, Iterator, List, Optional, cast
+from typing import IO, Iterator, List, Optional
 
 import coloredlogs
-import humanfriendly
-from humanfriendly.terminal import terminal_supports_colors
+from humanfriendly.terminal import ansi_wrap, terminal_supports_colors
 
 _CONSOLE_MESSAGE_FORMAT = "%(asctime)s %(levelname)s %(status)s%(message)s"
 _CONSOLE_DATE_FORMAT = "%H:%M:%S"
@@ -47,7 +46,7 @@ class _MultilineFomatter:
         if hasattr(record, "status"):
             value = record.status
             if self.COLOR_LOGGER and isinstance(value, Status) and value.color:
-                value = humanfriendly.terminal.ansi_wrap(str(value), color=value.color)
+                value = ansi_wrap(str(value), color=value.color)
 
             record.status = "[{}] ".format(value)
         else:

@@ -20,16 +20,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
+import argparse
 import multiprocessing
+import os
 
 import paleomix
-import paleomix.pipeline
 import paleomix.common.logging
-
+import paleomix.pipeline
+from paleomix.common.argparse import SUPPRESS, ArgumentParser
 from paleomix.resources import add_copy_example_command
-from paleomix.common.argparse import ArgumentParser, SUPPRESS
-
 
 _DEFAULT_CONFIG_FILES = [
     "/etc/paleomix/bam_pipeline.ini",
@@ -37,7 +36,7 @@ _DEFAULT_CONFIG_FILES = [
 ]
 
 
-def build_parser(pipeline_variant):
+def build_parser(pipeline_variant: str) -> ArgumentParser:
     parser = ArgumentParser(prog="paleomix %s" % (pipeline_variant,))
 
     subparsers = parser.add_subparsers(dest="command", metavar="command")
@@ -48,7 +47,7 @@ def build_parser(pipeline_variant):
     return parser
 
 
-def add_makefile_command(subparsers):
+def add_makefile_command(subparsers: argparse._SubParsersAction) -> None:
     subparsers.add_parser(
         "new",
         help="Print project template",
@@ -56,7 +55,7 @@ def add_makefile_command(subparsers):
     )
 
 
-def add_run_command(subparsers):
+def add_run_command(subparsers: argparse._SubParsersAction) -> None:
     parser = subparsers.add_parser(
         "run",
         aliases=("dryrun",),
