@@ -17,6 +17,7 @@ from multiprocessing.connection import Client, wait
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     Collection,
     Dict,
     Iterable,
@@ -31,7 +32,7 @@ from typing import (
 
 import paleomix.common.system
 from paleomix.common.versions import Requirement
-from paleomix.core.input import CommandLine
+from paleomix.core.input import CommandLine, ListTasksEvent, ThreadsEvent
 from paleomix.node import Node, NodeError
 from paleomix.nodegraph import NodeGraph
 
@@ -74,11 +75,25 @@ EVT_TASK_DONE = "TASK_DONE"
 EVT_SHUTDOWN = "SHUTDOWN"
 
 
-#
+# Worker (connection) states
 _UNINITIALIZED = "uninitialized"
 _CONNECTING = "connecting"
 _RUNNING = "running"
 _TERMINATED = "terminated"
+
+
+def address_to_name(value: Union[str, Tuple[str, int]]) -> str:
+    if isinstance(value, str):
+        return value
+
+    host, port = value
+
+    try:
+        host, _ = socket.getnameinfo((host, port), 0)
+    except OSError:
+        pass
+
+    return "{}:{}".format(host, port)
 
 
 class WorkerError(RuntimeError):
@@ -116,7 +131,7 @@ class Manager:
         if self._local is not None:
             raise WorkerError("Manager already started")
 
-        local_worker = LocalWorker(self, self._interface, self._threads)
+        local_worker = LocalWorker(self, self._threads)
         if not local_worker.connect(self._requirements):
             return False
 
@@ -207,17 +222,75 @@ class Manager:
             # No need to block if we already have events to act on
             timeout = 0
 
-        handles: Dict[Any, WorkerType] = {}
+        handles: Dict[Any, Optional[WorkerType]] = {}
         for worker in self._workers.values():
             for handle in worker.handles:
                 handles[handle] = worker
 
+        # Detect keyboard input from the user (optional)
+        for handle in self._interface.handles:
+            handles[handle] = None
+
         for handle in wait(handles, timeout):
             worker = handles[handle]
-            for event in worker.get(handle):
-                events.append((worker, event))
+            if worker is None:
+                self._handle_keyboard_input()
+            else:
+                for event in worker.get(handle):
+                    events.append((worker, event))
 
         return events
+
+    def _handle_keyboard_input(self):
+        for event in self._interface.process_key_presses():
+            if isinstance(event, ThreadsEvent):
+                self._handle_threads_event(event.change)
+            elif isinstance(event, ListTasksEvent):
+                self._handle_list_tasks_event()
+
+    def _handle_threads_event(self, change: int) -> None:
+        assert self._local is not None
+
+        threads = min(multiprocessing.cpu_count(), max(0, self._threads + change))
+        if threads != self._threads:
+            self._log.info("Max threads changed from %i to %i", self._threads, threads)
+            self._local.threads = threads
+            self._threads = threads
+
+    def _handle_list_tasks_event(self) -> None:
+        total_threads = 0
+        total_workers = 0
+        for worker in self._workers.values():
+            tasks = sorted(worker.tasks, key=lambda it: it.id)
+            threads = sum(task.threads for task in tasks)
+
+            if tasks:
+                self._log.info(
+                    "Running %i tasks on %s (using %i/%i threads):",
+                    len(tasks),
+                    worker.name,
+                    threads,
+                    worker.threads,
+                )
+
+                for idx, task in enumerate(tasks, start=1):
+                    self._log.info("  % 2i. %s", idx, task)
+            else:
+                self._log.info(
+                    "No tasks running on %s (using 0/%i threads)",
+                    worker.name,
+                    worker.threads,
+                )
+
+            total_threads += threads
+            total_workers += 1
+
+        if total_workers > 1:
+            self._log.info(
+                "A total of %i threads are used across %i workers",
+                total_threads,
+                total_workers,
+            )
 
     def _auto_connect_to_workers(self, interval: float = 15.0) -> bool:
         any_errors = False
@@ -286,17 +359,16 @@ class RemoteAdapter(logging.LoggerAdapter):
 
 
 class LocalWorker:
-    def __init__(self, manager: Manager, interface: CommandLine, threads: int):
+    def __init__(self, manager: Manager, threads: int):
         self.id = str(uuid.uuid4())
         self._manager = manager
-        self._interface = interface
-        self._threads = threads
         self._queue: QueueType = multiprocessing.Queue()
         self._handles: Dict[Any, Tuple[multiprocessing.Process, Node]] = {}
         self._running: Dict[int, Node] = {}
         self._status = _UNINITIALIZED
         self._log = logging.getLogger(__name__)
         self.name = "localhost"
+        self.threads = threads
         self.events: List[EventType] = []
 
     @property
@@ -304,15 +376,8 @@ class LocalWorker:
         yield from self._running.values()
 
     @property
-    def threads(self) -> int:
-        return self._threads
-
-    @property
     def handles(self) -> List[Any]:
-        handles = list(self._handles)
-        handles.extend(self._interface.handles)
-
-        return handles
+        return list(self._handles)
 
     @property
     def status(self):
@@ -349,14 +414,6 @@ class LocalWorker:
 
     def get(self, handle: Any):
         self._check_running()
-
-        if handle in self._interface.handles:
-            self._threads = self._interface.process_key_presses(
-                threads=self._threads,
-                workers=self._manager.workers.values(),
-            )
-
-            return ()
 
         # The process for this task has completed, but the results may already have been
         # returned to the pipeline in an earlier call, since it is returned via a queue.
@@ -410,7 +467,7 @@ class RemoteWorker:
         self._secret = secret
         self._running: Dict[int, Node] = {}
         self._threads: int = 0
-        self.name = "{}:{}".format(socket.getnameinfo((host, port), 0)[0], port)
+        self.name = address_to_name((host, port))
         self._log = RemoteAdapter(self.name, logging.getLogger(__name__))
 
         self._event_handlers = {
@@ -418,7 +475,7 @@ class RemoteWorker:
             (_RUNNING, EVT_CAPACITY): self._event_capacity,
             (_RUNNING, EVT_TASK_DONE): self._event_task_done,
             (_RUNNING, EVT_SHUTDOWN): self._event_shutdown,
-        }
+        }  # type: Dict[Tuple[str, str], Callable[[EventType], Iterable[EventType]]]
 
     @property
     def tasks(self) -> Iterator[Node]:

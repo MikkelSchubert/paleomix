@@ -21,13 +21,12 @@
 # SOFTWARE.
 #
 import logging
-import multiprocessing
 import os
 import select
 import sys
 import termios
 import tty
-from typing import Any
+from typing import Any, Iterator, List
 
 _COMMANDS = {
     "h": "Prints this message.",
@@ -35,6 +34,19 @@ _COMMANDS = {
     "+": "Increases the maximum number of threads by one.",
     "-": "Decreases the maximum number of threads by one; does not kill running tasks.",
 }
+
+
+class CLIEvent:
+    pass
+
+
+class ListTasksEvent(CLIEvent):
+    pass
+
+
+class ThreadsEvent(CLIEvent):
+    def __init__(self, change: int):
+        self.change = change
 
 
 class CommandLine(object):
@@ -75,71 +87,31 @@ class CommandLine(object):
             self._tty_settings = None
 
     @property
-    def handles(self):
+    def handles(self) -> List[Any]:
         if self._tty_settings is None:
             return []
 
         return [sys.stdin]
 
-    def process_key_presses(self, threads: int = 1, workers=()):
-        if not self._tty_settings:
-            return threads
-
-        old_threads = threads
-        while self.poll_stdin():
+    def process_key_presses(self) -> Iterator[CLIEvent]:
+        while self._tty_settings and self._poll_stdin():
             character = sys.stdin.read(1)
+
             if character == "+":
-                threads = min(multiprocessing.cpu_count(), threads + 1)
+                yield ThreadsEvent(1)
             elif character == "-":
-                threads = max(0, threads - 1)
+                yield ThreadsEvent(-1)
             elif character in "lL":
-                self._log_tasks(workers)
+                yield ListTasksEvent()
             elif character in "hH":
-                self._log.info("Commands:")
-                self._log.info("  Key   Function")
-                for key, help in _COMMANDS.items():
-                    self._log.info("  %s    %s", key, help)
-
-        if threads != old_threads:
-            self._log.info("Max threads changed from %i to %i", old_threads, threads)
-
-        return threads
+                self._log_help()
 
     @classmethod
-    def poll_stdin(cls):
+    def _poll_stdin(cls) -> bool:
         return select.select([sys.stdin], [], [], 0) == ([sys.stdin], [], [])
 
-    def _log_tasks(self, workers):
-        total_threads = 0
-        total_workers = 0
-        for worker in workers:
-            tasks = sorted(worker.tasks, key=lambda it: it.id)
-            threads = sum(task.threads for task in tasks)
-
-            if tasks:
-                self._log.info(
-                    "Running %i tasks on %s (using %i/%i threads):",
-                    len(tasks),
-                    worker.name,
-                    threads,
-                    worker.threads,
-                )
-
-                for idx, task in enumerate(tasks, start=1):
-                    self._log.info("  % 2i. %s", idx, task)
-            else:
-                self._log.info(
-                    "No tasks running on %s (using 0/%i threads)",
-                    worker.name,
-                    worker.threads,
-                )
-
-            total_threads += threads
-            total_workers += 1
-
-        if total_workers > 1:
-            self._log.info(
-                "A total of %i threads are used across %i workers",
-                total_threads,
-                total_workers,
-            )
+    def _log_help(self):
+        self._log.info("Commands:")
+        self._log.info("  Key   Function")
+        for key, help in _COMMANDS.items():
+            self._log.info("  %s    %s", key, help)

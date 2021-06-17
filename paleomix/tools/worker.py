@@ -1,60 +1,63 @@
 #!/usr/bin/env python3
 # -*- coding: utf8 -*-
+import argparse
 import codecs
 import json
 import logging
+import multiprocessing
 import os
 import random
 import signal
 import socket
 import sys
 import uuid
-
-from multiprocessing import ProcessError, Process, Queue, cpu_count
-from multiprocessing.connection import Listener, wait, Connection
+from multiprocessing import Process, ProcessError, Queue, cpu_count
+from multiprocessing.connection import Connection, Listener, wait
+from typing import Any, Collection, Dict, Iterable, Iterator, List, Optional, Tuple
 
 import paleomix.common.logging
-
 from paleomix.common.argparse import ArgumentParser
 from paleomix.common.logging import initialize_console_logging
-from paleomix.core.input import CommandLine
+from paleomix.common.versions import Requirement
+from paleomix.core.input import CommandLine, ListTasksEvent, ThreadsEvent
 from paleomix.core.workers import (
     AUTO_REGISTER_DIR,
     EVT_CAPACITY,
     EVT_HANDSHAKE,
     EVT_HANDSHAKE_RESPONSE,
     EVT_SHUTDOWN,
-    EVT_TASK_START,
     EVT_TASK_DONE,
-    _task_wrapper,
+    EVT_TASK_START,
+    QueueType,
     RemoteAdapter,
+    _task_wrapper,
+    address_to_name,
 )
-from paleomix.node import NodeError, NodeMissingFilesError
+from paleomix.node import Node, NodeError, NodeMissingFilesError
 from paleomix.nodegraph import NodeGraph
 
-
-TERMINATE = object()
+EventType = Dict[str, Any]
+Events = Iterable[EventType]
 
 
 class Worker:
-    def __init__(self, args):
+    def __init__(self, args: argparse.Namespace):
         self._args = args
-        self._id = args.id
-        self._running = {}
-        self._handles = {}
-        self._queue = Queue()
-        self._address = (args.host, args.port)
-        self._authkey = args.authkey
-        self._threads = args.threads
-        self._temp_root = args.temp_root
-        self._filename = None
-        self._interrupted = False
-        self._conn = None
-        self.name = "worker"
+        self._id: str = args.id
+        self._running: Dict[int, Node] = {}
+        self._handles: Dict[Any, Tuple[int, Node, Any]] = {}
+        self._queue: QueueType = Queue()
+        self._address: Tuple[str, int] = (args.host, args.port)
+        self._authkey: bytes = args.authkey
+        self._threads: int = args.threads
+        self._temp_root: str = args.temp_root
+        self._filename: Optional[str] = None
+        self._interrupted: bool = False
+        self._conn: Optional[Connection] = None
+        self.name: str = "worker"
 
         self._commands = {
             EVT_HANDSHAKE: self._manager_handshake,
-            EVT_SHUTDOWN: self._manager_shutdown,
             EVT_TASK_START: self._manager_start,
         }
 
@@ -73,6 +76,7 @@ class Worker:
             return False
 
         with listener:
+            assert isinstance(listener.address, tuple)
             log.info("Listening for PALEOMIX tasks at %s:%s", *listener.address)
             if listener.address[0] in ("127.0.0.1", "127.0.1.1"):
                 log.warning("Worker is listening for local connections only!")
@@ -88,45 +92,55 @@ class Worker:
 
             with self._conn:
                 address = listener.last_accepted
-                name = "{}:{}".format(socket.getnameinfo(address, 0)[0], address[1])
+                assert isinstance(address, tuple)
 
+                name = address_to_name(address)
                 self._log = RemoteAdapter(name, logger=log)
                 self._log.info("Connection accepted from %s:%i", *address)
 
-                with CommandLine() as interface:
-                    while self._running or not self._interrupted:
-                        handles = [self._conn]
-                        handles.extend(self._handles)
-                        handles.extend(interface.handles)
+                self._main_loop(log)
 
-                        # Time-out is needed to be able to break on Ctrl+C
-                        for handle in wait(handles, 5.0):
-                            if isinstance(handle, Connection):
-                                try:
-                                    event = handle.recv()
-                                except EOFError:
-                                    log.error("Connection to client broke")
-                                    return not self._interrupted
-
-                                func = self._commands.get(event["event"], self._unknown)
-                                for event in func(**event):
-                                    if event is TERMINATE or not self._send(event):
-                                        return not self._interrupted
-                            elif handle in interface.handles:
-                                if not self._poll_commandline(interface):
-                                    return not self._interrupted
-                            elif not self._send(self._join(handle)):
-                                return not self._interrupted
-
-                    self._send({"event": EVT_SHUTDOWN})
-
-        return not self._interrupted
+                return not self._interrupted
 
     @property
-    def tasks(self):
+    def tasks(self) -> Iterator[Node]:
         yield from self._running.values()
 
-    def _register(self, root, address):
+    def _main_loop(self, log: logging.Logger) -> None:
+        assert self._conn is not None
+
+        with CommandLine() as interface:
+            while self._running or not self._interrupted:
+                handles: List[Any] = [self._conn]
+                handles.extend(self._handles)
+                handles.extend(interface.handles)
+
+                # Time-out is needed to be able to break on Ctrl+C
+                for handle in wait(handles, 1.0):
+                    if isinstance(handle, Connection):
+                        try:
+                            event = handle.recv()
+                        except EOFError:
+                            log.error("Connection to client broke")
+                            return
+
+                        if event["event"] == EVT_SHUTDOWN:
+                            self._log.info("Shutting down ..")
+                            return
+
+                        func = self._commands.get(event["event"], self._unknown)
+                        for event in func(**event):
+                            if not self._send(event):
+                                return
+                    elif handle in interface.handles:
+                        if not self._poll_commandline(interface):
+                            return
+                    elif not self._send(self._join(handle)):
+                        return
+
+            self._send({"event": EVT_SHUTDOWN})
+
+    def _register(self, root: str, address: Tuple[str, int]) -> str:
         filename = os.path.join(root, "{}.json".format(uuid.uuid4()))
         host, port = address
 
@@ -145,7 +159,9 @@ class Worker:
 
         return filename
 
-    def _send(self, event):
+    def _send(self, event: Dict[str, Any]) -> bool:
+        assert self._conn is not None
+
         self._log.debug("Sending %r", event)
         try:
             self._conn.send(event)
@@ -154,22 +170,55 @@ class Worker:
             self._log.error("Failed to send %r: %s", event, error)
             return False
 
-    def _poll_commandline(self, interface):
-        new_threads = interface.process_key_presses(
-            threads=self._threads,
-            workers=[self],
-        )
+    def _poll_commandline(self, interface: CommandLine) -> bool:
+        for event in interface.process_key_presses():
+            if isinstance(event, ListTasksEvent):
+                return self._handle_commandline_list_tasks()
+            elif isinstance(event, ThreadsEvent):
+                return self._handle_commandline_threads(event.change)
 
-        if self._threads == new_threads:
+        return True
+
+    def _handle_commandline_threads(self, change: int) -> bool:
+        threads = min(multiprocessing.cpu_count(), max(0, self._threads + change))
+        if threads == self._threads:
             return True
 
-        self._threads = new_threads
+        self._log.info("Max threads changed from %i to %i", self._threads, threads)
+        self._threads = threads
         # The number of allocated threads should persist between connections
-        self._args.threads = new_threads
+        self._args.threads = threads
 
         return self._send({"event": EVT_CAPACITY, "threads": self._threads})
 
-    def _manager_handshake(self, cwd, requirements, **kwargs):
+    def _handle_commandline_list_tasks(self):
+        tasks = sorted(self.tasks, key=lambda it: it.id)
+        threads = sum(task.threads for task in tasks)
+
+        if tasks:
+            self._log.info(
+                "Running %i tasks on %s (using %i/%i threads):",
+                len(tasks),
+                self.name,
+                threads,
+                self._threads,
+            )
+
+            for idx, task in enumerate(tasks, start=1):
+                self._log.info("  % 2i. %s", idx, task)
+        else:
+            self._log.info(
+                "No tasks running on %s (using 0/%i threads)", self.name, self._threads
+            )
+
+        return True
+
+    def _manager_handshake(
+        self,
+        cwd: str,
+        requirements: Collection[Requirement],
+        **kwargs: Any,
+    ) -> Events:
         try:
             self._log.info("Changing CWD to %r", cwd)
             os.chdir(cwd)
@@ -186,12 +235,7 @@ class Worker:
             {"event": EVT_CAPACITY, "threads": self._threads},
         ]
 
-    def _manager_shutdown(self, **kwargs):
-        self._log.info("Shutting down ..")
-
-        return [TERMINATE]
-
-    def _manager_start(self, task, temp_root, **kwargs):
+    def _manager_start(self, task: Node, temp_root: str, **kwargs: Any) -> Events:
         self._log.info("Starting %s using %i threads", task, task.threads)
         if self._temp_root:
             temp_root = self._temp_root
@@ -212,7 +256,7 @@ class Worker:
 
         return ()
 
-    def _join(self, handle):
+    def _join(self, handle: Any) -> EventType:
         key, task, proc = self._handles.pop(handle)
 
         proc.join()
@@ -249,11 +293,11 @@ class Worker:
             "backtrace": backtrace,
         }
 
-    def _unknown(self, **event):
+    def _unknown(self, **event: Any):
         self._log.error("Unknown event: %r", event)
         return ()
 
-    def _sigint_handler(self, signum, frame):
+    def _sigint_handler(self, signum: int, frame: Any) -> None:
         log = logging.getLogger(__name__)
         if self._conn and not self._interrupted:
             self._interrupted = True
@@ -273,9 +317,9 @@ class Worker:
     def __enter__(self):
         return self
 
-    def __exit__(self, type, _value, _traceback):
+    def __exit__(self, type: Any, _value: Any, _traceback: Any):
         log = logging.getLogger(__name__)
-        for handle, (_key, task, proc) in list(self._handles.items()):
+        for handle, (_, task, proc) in list(self._handles.items()):
             log.warning("Killing %s", task)
             proc.terminate()
             self._join(handle)
@@ -285,7 +329,7 @@ class Worker:
             os.unlink(self._filename)
 
 
-def parse_args(argv):
+def parse_args(argv: List[str]) -> argparse.Namespace:
     parser = ArgumentParser(
         prog="paleomix worker",
         description="Worker process for paleomix pipelines, allowing tasks to be "
@@ -335,7 +379,7 @@ def parse_args(argv):
     return parser.parse_args(argv)
 
 
-def main(argv):
+def main(argv: List[str]) -> int:
     args = parse_args(argv)
     args.id = str(uuid.uuid4())
 
