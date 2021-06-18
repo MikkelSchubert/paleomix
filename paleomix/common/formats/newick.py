@@ -81,7 +81,7 @@ class Newick(TotallyOrdered, Immutable):
     ):
         children = tuple(children)
         name = name or None
-        length = length or None
+        length = length
 
         Immutable.__init__(
             self,
@@ -91,7 +91,7 @@ class Newick(TotallyOrdered, Immutable):
             _hash=hash((name, length, children)),
         )
 
-        if not (self.children or self.name or self.length):
+        if not (self.children or self.name is not None or self.length is not None):
             raise NewickError("Leaf nodes MUST have either a name or a length")
 
         weight = 0
@@ -209,12 +209,10 @@ class Newick(TotallyOrdered, Immutable):
         if not isinstance(other, Newick):
             return NotImplemented
 
-        return (-self._weight, self.name, self.length, self.children) < (
-            -other._weight,
-            other.name,
-            other.length,
-            other.children,
-        )
+        node_1 = (-self._weight, self.name or "", self.length or 0, self.children)
+        node_2 = (-other._weight, other.name or "", other.length or 0, other.children)
+
+        return node_1 < node_2
 
     def __hash__(self):
         """Hashing function, see 'hash'."""

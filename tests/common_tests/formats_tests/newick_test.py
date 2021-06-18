@@ -682,6 +682,28 @@ def test_newick__properties_cannot_be_deleted(name: str):
 ###############################################################################
 # Misc
 
+_NAME_VALUES = (None, "Leaf")
+_LENGTH_VALUES = (None, 0, 1)
+_CHILD_VALUES = [[], [Newick("Leaf")]]
+
+
+@pytest.mark.parametrize("name_1", _NAME_VALUES)
+@pytest.mark.parametrize("name_2", _NAME_VALUES)
+def test_newick__ordering_handles_empty__name(name_1, name_2):
+    Newick(name_1, length=1) < Newick(name_2, length=1)
+
+
+@pytest.mark.parametrize("length_1", _LENGTH_VALUES)
+@pytest.mark.parametrize("length_2", _LENGTH_VALUES)
+def test_newick__ordering_handles_empty__name(length_1, length_2):
+    Newick("Leaf", length=length_1) < Newick("Leaf", length=length_2)
+
+
+@pytest.mark.parametrize("children_1", _CHILD_VALUES)
+@pytest.mark.parametrize("children_2", _CHILD_VALUES)
+def test_newick__ordering_handles_empty__children(children_1, children_2):
+    Newick("Node", children=children_1) < Newick("Node", children=children_2)
+
 
 def test_newick__comparisons_with_other_types():
     with pytest.raises(TypeError):
