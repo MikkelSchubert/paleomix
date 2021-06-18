@@ -20,12 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import copy
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Iterable, List, Mapping, Optional, Type, TypeVar
 
 from paleomix.common.fileutils import open_rt
 from paleomix.common.utilities import TotallyOrdered
 from pysam import AlignmentFile
+
+T = TypeVar("T")
 
 
 class BEDError(RuntimeError):
@@ -33,7 +34,7 @@ class BEDError(RuntimeError):
 
 
 class BEDRecord(TotallyOrdered):
-    """Class for parsing and representing a BED records.
+    """Class for parsing and representing a BED record.
 
     The class has the following properties:
        .contig -> str
@@ -43,197 +44,129 @@ class BEDRecord(TotallyOrdered):
        .score -> int
        .strand -> '+' or '-'
 
-    These fields can also be accessed using the square brackets notation, which
-    also gives access to any additional values after the strand column. Fields
-    default to 0 or empty string, except the strand which defaults to '+'.
+    Fields past these 6 are ignored when parsing BED records.
     """
 
-    __slots__ = ["_fields"]
+    __slots__ = ["contig", "start", "end", "name", "score", "strand"]
 
-    contig: str
-    start: int
-    end: int
-    name: str
-    score: int
-    strand: str
+    def __init__(
+        self,
+        contig: str,
+        start: int,
+        end: int,
+        name: Optional[str] = None,
+        score: Optional[int] = None,
+        strand: Optional[str] = None,
+    ):
+        self.contig = contig
+        self.start = start
+        self.end = end
+        self.name = name
+        self.score = score
+        self.strand = strand
 
-    _fields: List[Any]
+        if not contig:
+            raise ValueError("contig is blank")
+        elif strand not in (None, "+", "-"):
+            raise ValueError("invalid strand {!r}".format(strand))
+        elif not (0 <= start < end):
+            raise ValueError("invalid start/end coordinates")
 
-    def __init__(self, line: Optional[str] = None, _len: Optional[int] = None):
+    @classmethod
+    def parse(cls, line: str, _len: Optional[int] = None) -> "BEDRecord":
         """Constructs a BED record from a line of text. The length of the
         object matches the number of columns in the input line; in the case
         incompatible values, a BEDError exception is raised.
-
-        The len parameter is unused, and included only for compatibility with
-        pysam parser objects, such as 'asBED'. No minimum number of columns are
-        required, and it is possible to construct an empty bed record.
         """
-        self._fields = []
+        fields = line.rstrip("\r\n").split("\t")
+        length = len(fields)
+        if length < 3:
+            raise BEDError("invalid BED record; not enough columns")
+        elif not fields[0]:
+            raise BEDError("contig is blank")
+        elif length >= 6 and fields[5] not in "+-":
+            raise BEDError("strand must be + or -")
 
-        if line:
-            fields = line.rstrip("\r\n").split("\t")
-            for column, (value, func) in enumerate(zip(fields, BEDRecord._TYPES)):
-                try:
-                    self._fields.append(func(value))
-                except ValueError:
-                    raise BEDError(
-                        "Error parsing column %i in BED record "
-                        "(%r); expected type %s, but found %r."
-                        % (column, "\t".join(fields), func.__name__, value)
-                    )
+        return BEDRecord(
+            contig=fields[0],
+            start=cls._parse_field(1, int, fields),
+            end=cls._parse_field(2, int, fields),
+            name=fields[3] if length >= 4 else None,
+            score=cls._parse_field(4, int, fields) if length >= 5 else None,
+            strand=fields[5] if length >= 6 else None,
+        )
 
-            if len(fields) > len(self._fields):
-                self._fields.extend(fields[len(self._fields) :])
-
-    def __copy__(self) -> "BEDRecord":
-        """Needed for copy.copy to work correctly as expected."""
-        record = BEDRecord()
-        record._fields = copy.copy(self._fields)
-        return record
-
-    def __len__(self) -> int:
-        """Returns the number of fields in the record; 0 .. N."""
-        return len(self._fields)
+    @staticmethod
+    def _parse_field(column: int, type: Type[T], values: List[Any]) -> T:
+        try:
+            return type(values[column])
+        except ValueError:
+            raise BEDError(
+                "Expected {} in column {} but found {!r}".format(
+                    type.__name__, column + 1, values[column]
+                )
+            )
 
     def __str__(self) -> str:
-        """Returns a string suitable for writing to a .bed file."""
-        return "\t".join(str(value) for value in self._fields)
+        values = [self.contig, self.start, self.end, self.name, self.score, self.strand]
+        while values and values[-1] is None:
+            values.pop()
+
+        length = len(values)
+        # Default score if strand is set
+        if length >= 5 and values[4] is None:
+            values[4] = "0"
+
+        # Default name if strand or score is set
+        if length >= 4 and values[3] is None:
+            values[3] = ""
+
+        return "\t".join(map(str, values))
 
     def __repr__(self) -> str:
-        """Returns a printable representation of the record."""
-        fields = []  # type: List[str]
-        for name, value in zip(BEDRecord._KEYS, self._fields):
-            fields.append("%s=%r" % (name, value))
+        keys = ("contig", "start", "end", "name", "score", "strand")
+        values = [self.contig, self.start, self.end, self.name, self.score, self.strand]
+        while values and values[-1] is None:
+            values.pop()
 
-        fields.extend(repr(value) for value in self._fields[len(BEDRecord._KEYS) :])
+        return "BEDRecord({})".format(
+            ", ".join("{}={!r}".format(key, value) for key, value in zip(keys, values))
+        )
 
-        return "BEDRecord(%s)" % (", ".join(fields))
-
-    def __getitem__(self, index: int) -> Any:
-        return self._fields[index]
-
-    def __setitem__(self, index: int, value: Any) -> None:
-        if len(self._fields) <= index:
-            defaults = BEDRecord._DEFAULTS[len(self._fields) : index + 1]
-            self._fields.extend(defaults)
-            while len(self._fields) <= index:
-                self._fields.append("")
-
-        if index < 5:
-            if not isinstance(value, BEDRecord._TYPES[index]):
-                raise ValueError(
-                    "Expected %s for BED field %i, got %r"
-                    % (BEDRecord._TYPES[index].__name__, index + 1, value)
-                )
-        elif index == 5:
-            value = BEDRecord._strand_type(value)
-
-        self._fields[index] = value
-
-    def __lt__(self, other: Any) -> bool:
-        if not isinstance(other, BEDRecord):
+    def __lt__(self, obj: Any) -> bool:
+        if not isinstance(obj, BEDRecord):
             return NotImplemented
 
-        return self._fields < other._fields
+        bed_1 = (self.contig, self.start, self.end, self.name, self.score, self.strand)
+        bed_2 = (obj.contig, obj.start, obj.end, obj.name, obj.score, obj.strand)
 
-    @classmethod
-    def _set_properties(cls) -> None:
-        for index, name in enumerate(cls._KEYS):
-            setattr(cls, name, cls._new_attr(index))
-
-    @staticmethod
-    def _new_attr(index: int) -> property:
-        """Returns an getter / setter property for the given value."""
-
-        def _get(self: "BEDRecord") -> Any:
-            return self._fields[index]
-
-        def _set(self: "BEDRecord", value: Any) -> None:
-            self[index] = value
-
-        return property(_get, _set)
-
-    @staticmethod
-    def _strand_type(value: str) -> str:
-        if value not in ("+", "-"):
-            raise ValueError("Strand must be '+' or '-', not %r" % (value,))
-        return value
-
-    _DEFAULTS = ("", 0, 0, "", 0, "+")
-    _KEYS = ("contig", "start", "end", "name", "score", "strand")
-    _TYPES = (str, int, int, str, int)
+        return bed_1 < bed_2
 
 
-# Fill out properties for BEDRecord
-BEDRecord._set_properties()
-
-
-def read_bed_file(filename: str, min_columns: int = 3, contigs: Dict[str, int] = {}):
-    """Parses a (gzip/bzip2 compressed) BED file, and yields a sequence of
-    records. Comments and empty lines are skipped. If the number of columns in
-    the bed record is less than the specified ('min_columns'), a BEDError is
-    raised. If a dictionary of {contig: length} is supplied, and min_columns
-    is at least 6, then the coordinates are validated against the known contig
-    lengths.
+def read_bed_file(filename: str, contigs: Mapping[str, int] = {}):
+    """Parses a (gzip/bzip2 compressed) BED file, and yields a sequence of BED records.
+    Comments and empty lines are skipped. If the number of columns in the bed record is
+    less than the specified ('min_columns'), a BEDError is raised. If a dictionary of
+    {contig: length} is supplied then contigs/coordinates are validated.
     """
-    if min_columns < 3:
-        raise ValueError("'min_columns' must be >= 3 in 'read_bed_file'")
-
-    infinite = float("inf")
-    handle = None
-    try:
-        handle = open_rt(filename)
-
-        for (line_num, line) in enumerate(handle):
+    with open_rt(filename) as handle:
+        for (line_num, line) in enumerate(handle, start=1):
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
 
             try:
-                bed = BEDRecord(line)
-            except ValueError as error:
-                raise BEDError(
-                    "Error parsing line %i in regions file:\n"
-                    "  Path = %r\n  Line = %r\n\n%s"
-                    % (line_num + 1, filename, line, error)
-                )
-
-            if len(bed) < min_columns:
-                url = "http://genome.ucsc.edu/FAQ/FAQformat.html#format1"
-                name = repr(bed.name) if len(bed) > 3 else "unnamed record"
-                raise BEDError(
-                    "Region at line #%i (%s) does not "
-                    "contain the expected number of fields; "
-                    "the first %i fields are required. C.f. "
-                    "defination at\n   %s\n\nPath = %r"
-                    % (line_num, name, min_columns, url, filename)
-                )
-
-            if contigs is None:
-                contig_len = infinite
-            else:
-                contig_len = contigs.get(bed.contig)
-
-            if contig_len is None:
-                raise BEDError(
-                    "Regions file contains contig not found "
-                    "in reference:\n  Path = %r\n  Contig = "
-                    "%r\n\nPlease ensure that all contig "
-                    "names match the reference names!" % (filename, bed.contig)
-                )
-            elif not (0 <= bed.start < bed.end <= contig_len):
-                raise BEDError(
-                    "Regions file contains invalid region:\n"
-                    "  Path   = %r\n  Contig = %r\n"
-                    "  Start  = %s\n  End    = %s\n\n"
-                    "Expected 0 <= Start < End <= %i!"
-                    % (filename, bed.contig, bed.start, bed.end, contig_len)
-                )
+                bed = BEDRecord.parse(line)
+                if contigs:
+                    contig_len = contigs.get(bed.contig)
+                    if contig_len is None:
+                        raise ValueError(f"unknown contig {bed.contig}")
+                    elif bed.end > contig_len:
+                        raise BEDError("coordinates outside contig")
+            except Exception as error:
+                raise BEDError(f"{filename}:{line_num}: {error}") from error
 
             yield bed
-    finally:
-        if handle:
-            handle.close()
 
 
 def sort_bed_by_bamfile(bamfile: AlignmentFile, regions: List[BEDRecord]):
@@ -246,9 +179,10 @@ def sort_bed_by_bamfile(bamfile: AlignmentFile, regions: List[BEDRecord]):
 
     references = bamfile.references
     indices = dict(zip(references, range(len(references))))
+    infinite = float("inf")
 
-    def _by_bam_layout(region: BEDRecord):
-        return (indices[region.contig], region.start, region.end)
+    def _by_bam_layout(it: BEDRecord):
+        return (indices.get(it.contig, infinite), it.contig, it.start, it.end)
 
     regions.sort(key=_by_bam_layout)
 
@@ -256,22 +190,16 @@ def sort_bed_by_bamfile(bamfile: AlignmentFile, regions: List[BEDRecord]):
 def pad_bed_records(
     records: Iterable[BEDRecord],
     padding: int,
-    max_sizes: Dict[str, int] = {},
+    max_sizes: Mapping[str, int] = {},
 ) -> List[BEDRecord]:
     results = []  # type: List[BEDRecord]
     for record in records:
-        new_record = BEDRecord()
-        new_record.start = max(0, record.start - padding)
-        new_record.end = record.end + padding
+        start = max(0, record.start - padding)
+        end = record.end + padding
+        end = min(end, max_sizes.get(record.contig, end))
 
-        max_length = max_sizes.get(record.contig)
-        if max_length is not None:
-            new_record.end = min(new_record.end, max_length)
-
-        if new_record.start < new_record.end:
-            new_record.contig = record.contig
-            results.append(new_record)
-
+        if start < end:
+            results.append(BEDRecord(contig=record.contig, start=start, end=end))
     return results
 
 
@@ -280,14 +208,20 @@ def merge_bed_records(records: Iterable[BEDRecord]) -> List[BEDRecord]:
     if not records:
         return []
 
-    last_record = BEDRecord()
-    last_record._fields = records[0]._fields[:3]
+    last_record = BEDRecord(
+        contig=records[0].contig,
+        start=records[0].start,
+        end=records[0].end,
+    )
 
     results = [last_record]
     for record in records:
         if last_record.contig != record.contig or last_record.end < record.start:
-            last_record = BEDRecord()
-            last_record._fields = record._fields[:3]
+            last_record = BEDRecord(
+                contig=record.contig,
+                start=record.start,
+                end=record.end,
+            )
             results.append(last_record)
         else:
             last_record.end = record.end

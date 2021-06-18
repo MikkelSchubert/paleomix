@@ -41,6 +41,7 @@ import itertools
 import os
 import re
 import sys
+from typing import Dict, List, Optional
 
 import paleomix.common.argparse as argparse
 import paleomix.common.sequences as sequences
@@ -233,27 +234,19 @@ def genotype_genes(options, intervals, genotype):
 ###############################################################################
 
 
-def read_intervals(filename):
+def read_intervals(filename: str) -> Optional[Dict[str, List[BEDRecord]]]:
     with open(filename) as bed_file:
-        intervals = text.parse_lines_by_contig(bed_file, BEDRecord)
+        intervals = text.parse_lines_by_contig(bed_file, BEDRecord.parse)
 
-        for (key, beds) in intervals.items():
-            bed_tuples = []
+        for beds in intervals.values():
             for bed in beds:
-                if len(bed) < 6:
+                if not (bed.name and bed.strand):
                     sys.stderr.write(
-                        (
-                            "ERROR: Invalid BED record '%r', must "
-                            "have at least 6 fields\n"
-                        )
-                        % (bed,)
+                        "ERROR: BED records must include name and strand:\n  %s\n" % bed
                     )
                     return None
 
-                bed_tuples.append(bed)
-            intervals[key] = bed_tuples
-
-    return intervals
+        return intervals
 
 
 def parse_intervals(genotype):
@@ -266,12 +259,13 @@ def parse_intervals(genotype):
         key, values = match.groups()
         if key == "contig":
             values = dict(pair.split("=", 1) for pair in values.split(","))
-            record = BEDRecord()
-            record.contig = values["ID"]
-            record.start = 0
-            record.end = int(values["length"])
-            record.name = record.contig
-            record.strand = "+"
+            record = BEDRecord(
+                contig=values["ID"],
+                start=0,
+                end=int(values["length"]),
+                name=values["ID"],
+                strand="+",
+            )
 
             records[record.contig] = [record]
 

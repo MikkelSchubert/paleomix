@@ -67,11 +67,11 @@ def collect_bed_regions(filename):
     regions = []
     name_cache = {}
     for record in read_bed_file(filename):
-        if len(record) < 4:
+        if not record.name:
             record.name = "%s*" % (record.contig,)
 
-        record.contig = name_cache.get(record.contig, record.contig)
-        record.name = name_cache.get(record.name, record.name)
+        record.contig = name_cache.setdefault(record.contig, record.contig)
+        record.name = name_cache.setdefault(record.name, record.name)
 
         regions.append(record)
 

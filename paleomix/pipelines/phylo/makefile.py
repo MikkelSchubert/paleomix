@@ -22,6 +22,7 @@
 #
 import logging
 import os
+from typing import FrozenSet
 
 import paleomix.common.makefile
 import pysam
@@ -191,11 +192,16 @@ def _collect_fasta_contigs(filename, cache={}):
     return contigs
 
 
-def _collect_sequence_names(bed_file, fasta_file, min_columns=6):
+def _collect_sequence_names(bed_file: str, fasta_file: str) -> FrozenSet[str]:
     contigs = _collect_fasta_contigs(fasta_file)
     sequences = {}
 
-    for record in read_bed_file(bed_file, min_columns=6, contigs=contigs):
+    for record in read_bed_file(bed_file, contigs=contigs):
+        if record.strand is None:
+            raise MakefileError(
+                "Found BED record in %r without a strand:\n%s" % (bed_file, record)
+            )
+
         current = (record.contig, record.strand)
         reference = sequences.setdefault(record.name, current)
 
