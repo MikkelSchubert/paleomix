@@ -112,6 +112,7 @@ class Manager:
         self._local: Optional[LocalWorker] = None
         self._interface = CommandLine()
         self._workers: Dict[str, Union[LocalWorker, RemoteWorker]] = {}
+        self._json_blacklist: Set[str] = set()
         self._worker_blacklist: Set[str] = set()
         self._requirements = requirements
         self._threads = threads
@@ -326,20 +327,25 @@ class Manager:
         if os.path.isdir(root):
             for filename in os.listdir(root):
                 filename = os.path.join(root, filename)
+                if filename in self._json_blacklist or not (
+                    filename.endswith(".json") and os.path.isfile(filename)
+                ):
+                    continue
 
-                if filename.endswith(".json") and os.path.isfile(filename):
+                try:
                     with open(filename, "rt") as handle:
-                        try:
-                            data = json.load(handle)
-                        except json.decoder.JSONDecodeError:
-                            continue
+                        data = json.load(handle)
 
                     data["filename"] = filename
                     data["secret"] = codecs.decode(
                         data["secret"].encode("utf-8"), "base64"
                     )
+                except Exception as error:
+                    self._log.error("Error reading worker file %r: %s", filename, error)
+                    self._json_blacklist.add(filename)
+                    continue
 
-                    yield data
+                yield data
 
     def _check_started(self):
         if self._local is None:
