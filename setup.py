@@ -23,7 +23,7 @@ import codecs
 import os
 import sys
 
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 if sys.version_info < (3, 7):
     sys.stderr.write("FATAL ERROR:\n")
@@ -52,6 +52,7 @@ setup(
     version=_get_version(),
     description="Bioinformatics pipelines for HTS data",
     long_description=_get_readme(),
+    long_description_content_type="text/x-rst",
     url="https://github.com/MikkelSchubert/paleomix",
     author="Mikkel Schubert",
     author_email="MikkelSch@gmail.com",
