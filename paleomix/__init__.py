@@ -21,5 +21,4 @@
 # SOFTWARE.
 #
 
-__version_info__ = (2, 0, 0, "alpha")
-__version__ = "%i.%i.%i-%s" % __version_info__
+__version__ = "2.0.0a0"
