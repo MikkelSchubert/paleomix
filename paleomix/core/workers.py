@@ -30,6 +30,7 @@ from typing import (
     Union,
 )
 
+import paleomix
 import paleomix.common.system
 from paleomix.common.versions import Requirement
 from paleomix.core.input import CommandLine, ListTasksEvent, ThreadsEvent
@@ -504,6 +505,7 @@ class RemoteWorker:
                 {
                     "event": EVT_HANDSHAKE,
                     "cwd": os.getcwd(),
+                    "version": paleomix.__version__,
                     "requirements": requirements,
                 }
             )

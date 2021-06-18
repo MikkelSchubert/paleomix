@@ -15,6 +15,7 @@ from multiprocessing import Process, ProcessError, Queue, cpu_count
 from multiprocessing.connection import Connection, Listener, wait
 from typing import Any, Collection, Dict, Iterable, Iterator, List, Optional, Tuple
 
+import paleomix
 import paleomix.common.logging
 from paleomix.common.argparse import ArgumentParser
 from paleomix.common.logging import initialize_console_logging
@@ -216,9 +217,21 @@ class Worker:
     def _manager_handshake(
         self,
         cwd: str,
+        version: str,
         requirements: Collection[Requirement],
         **kwargs: Any,
     ) -> Events:
+        if version != paleomix.__version__:
+            self._log.error("Version mismatch: %r != %r", version, paleomix.__version__)
+            return [
+                {
+                    "event": EVT_HANDSHAKE_RESPONSE,
+                    "error": "Client ({!r}) and worker ({!r}) version mismatch".format(
+                        version, paleomix.__version__
+                    ),
+                }
+            ]
+
         try:
             self._log.info("Changing CWD to %r", cwd)
             os.chdir(cwd)
