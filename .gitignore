@@ -4,8 +4,9 @@
 *~
 __pycache__
 
-cov.xml
-.coverage*
+cov*.xml
+.coverage
+.coverage.*
 MANIFEST
 
 # Packages

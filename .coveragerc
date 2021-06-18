@@ -3,3 +3,8 @@ branch = True
 
 [report]
 skip_covered = True
+show_missing = True
+precision = 1
+
+[xml]
+output = cov.xml
