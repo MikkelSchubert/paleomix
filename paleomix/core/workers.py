@@ -177,8 +177,13 @@ class Manager:
 
             if event["event"] == EVT_HANDSHAKE_RESPONSE:
                 if event["error"] is not None:
-                    self._log.error("Handshake with worker %r failed", worker.name)
+                    self._worker_blacklist.add(worker.id)
                     self._workers.pop(worker.id)
+                    self._log.error(
+                        "Handshake with worker %r failed:\n  %s",
+                        worker.name,
+                        event["error"],
+                    )
 
                 continue
             elif event["event"] == EVT_SHUTDOWN:
@@ -559,6 +564,8 @@ class RemoteWorker:
         if event["error"] is None:
             self._log.debug("Completed handshake")
             self._status = _RUNNING
+        else:
+            self.shutdown()
 
         yield event
 
