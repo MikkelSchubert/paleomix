@@ -254,6 +254,8 @@ def process_fastq_files(args, samples, settings):
     settings_preproc = settings["Preprocessing"]
     settings_meta = settings["Metadata"]
 
+    settings_preproc["Fastp"]["--thread"] = args.max_threads_fastp
+
     nodes = []
     for sample, libraries in samples.items():
         for library, runs in libraries.items():
@@ -319,7 +321,7 @@ def process_fastq_files(args, samples, settings):
 def map_sample_runs(args, genome, samples, settings):
     # FIXME: Should be handled by Node itself
     bwa_settings = dict(settings["BWAMem"])
-    bwa_threads = bwa_settings.pop("-t", 4)
+    bwa_threads = args.max_threads_bwa
 
     for sample, libraries in samples.items():
         for library, runs in libraries.items():
@@ -396,6 +398,12 @@ def filter_pcr_duplicates(args, genome, samples, settings):
     elif mode not in ("mark", "filter"):
         raise RuntimeError(f"unknown PCRDuplicates mode {mode!r}")
 
+    markdup_options = {}
+    if mode == "filter":
+        markdup_options["-r"] = None
+    if args.max_threads_samtools > 1:
+        markdup_options["--threads"] = args.max_threads_samtools
+
     for sample, libraries in samples.items():
         for library, read_types in libraries.items():
             layout = Layout(args, genome=genome, sample=sample, library=library)
@@ -404,7 +412,7 @@ def filter_pcr_duplicates(args, genome, samples, settings):
                 in_bams=read_types["paired"].keys(),
                 out_bam=layout["aln_rmdup_paired_bam"],
                 out_stats=layout["aln_rmdup_paired_metrics"],
-                options={} if mode == "mark" else {"-r": None},
+                options=markdup_options,
                 dependencies=read_types["paired"].values(),
             )
 
@@ -440,8 +448,7 @@ def merge_samples_alignments(args, genome, samples, settings):
             out_failed=layout["aln_split_failed_bam"],
             out_json=layout["aln_split_statistics"],
             options={
-                # Reasonable performance gains from using up to 3-4 threads
-                "--threads": 3,
+                "--threads": args.max_threads_samtools,
             },
             dependencies=input_libraries.values(),
         )
@@ -450,8 +457,7 @@ def merge_samples_alignments(args, genome, samples, settings):
             infile=layout["aln_split_passed_bam"],
             dependencies=[split],
             options={
-                # Reasonable performance gains from using up to 3-4 threads
-                "-@": 3,
+                "-@": args.max_threads_samtools,
             },
         )
 

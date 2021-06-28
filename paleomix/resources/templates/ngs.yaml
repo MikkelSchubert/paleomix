@@ -41,8 +41,6 @@ Settings:
       --low_complexity_filter:
       # Merge reads with at least N bp overlap
       --overlap_len_require: 11
-      # Little benefit from more threads (default is 2)
-      --thread: 8
 
     MultiQC:
       # Command-line options for MultiQC used when merging FastQC/Fastp reports
@@ -50,7 +48,6 @@ Settings:
 
   ReadMapping:
     BWAMem:
-      -t: 8 # Number of threads
       # -M: # mark shorter split hits as secondary [maybe? Currently default behavior]
       -Y: # use soft clipping for supplementary alignments [maybe?]
 

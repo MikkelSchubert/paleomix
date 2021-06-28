@@ -1,9 +1,9 @@
+import multiprocessing
+
 import paleomix
-import paleomix.pipeline
 import paleomix.common.logging
-
+import paleomix.pipeline
 from paleomix.common.argparse import ArgumentParser
-
 
 _DEFAULT_CONFIG_FILES = [
     "/etc/paleomix/ngs_pipeline.ini",
@@ -40,7 +40,24 @@ def _build_run_parser(subparsers):
     )
 
     paleomix.common.logging.add_argument_group(parser)
-    paleomix.pipeline.add_argument_groups(parser)
+
+    group = paleomix.pipeline.add_scheduling_argument_group(parser)
+
+    threaded_software = {
+        "fastp": 4,
+        "BWA": 8,
+        "SAMtools": 3,
+    }
+
+    for name, max_default in threaded_software.items():
+        group.add_argument(
+            f"--max-threads-{name.lower()}",
+            type=int,
+            default=max(1, min(max_default, multiprocessing.cpu_count() // 2)),
+            help=f"Max number of threads to use per {name} instance",
+        )
+
+    paleomix.pipeline.add_io_argument_group(parser)
 
 
 def _build_new_parser(subparsers):
