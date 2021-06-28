@@ -28,6 +28,7 @@ Settings:
     TRANCHES: [100.0, 99.95, 99.9, 99.8, 99.7, 99.6, 99.5, 99.4, 99.3, 99.0, 98.0, 97.0, 96.0, 95.0, 94.0, 93.0, 92.0, 91.0, 90.0, 85.0, 84.0, 83.0, 82.0, 81.0, 80.0, 75.0, 70.0, 65.0, 50.0, 25.0]
 
   JavaOptions:
+    # ...
 
   Preprocessing:
     FastQC:
@@ -53,15 +54,21 @@ Settings:
       # -M: # mark shorter split hits as secondary [maybe? Currently default behavior]
       -Y: # use soft clipping for supplementary alignments [maybe?]
 
+    PCRDuplicates:
+      mode: mark  # [mark] or [filter] duplicates, or [skip] duplicate scan entirely
+
     BaseRecalibrator:
       --known-sites: ${DBSNP}
+
+    ApplyBQSR:
+      # ...
 
   Genotyping:
     HaplotypeCaller:
       --emit-ref-confidence: GVCF
 
     GenotypeGVCFs:
-      # TODO
+      # ...
 
     VariantRecalibrator:
       SNP:

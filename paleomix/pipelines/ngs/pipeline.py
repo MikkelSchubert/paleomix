@@ -16,7 +16,6 @@ from paleomix.nodes.gatk import (
     GatherVcfsNode,
     GenotypeGVCFs,
     HaplotypeCallerNode,
-    MarkDuplicatesNode,
     SplitIntervalsNode,
     ValidateBAMNode,
     VariantRecalibratorNode,
@@ -26,6 +25,7 @@ from paleomix.nodes.samtools import (
     BAMIndexNode,
     BAMStatsNode,
     FastaIndexNode,
+    MarkDupNode,
     TabixIndexNode,
 )
 from paleomix.nodes.validation import ValidateFASTAFilesNode
@@ -354,6 +354,8 @@ def map_sample_runs(args, genome, samples, settings):
                         mapping_options=bwa_settings,
                         # Options passed to 'paleomix cleanup'
                         cleanup_options={
+                            # Add mate-score tag required by `samtools markdup`
+                            "--add-mate-score": None,
                             "--rg-id": run,
                             "--rg": [
                                 # FIXME: PL should not be hardcoded
@@ -380,22 +382,36 @@ def map_sample_runs(args, genome, samples, settings):
 
 
 def filter_pcr_duplicates(args, genome, samples, settings):
+    mode = settings["PCRDuplicates"]["mode"]
+    if mode == "skip":
+        for libraries in samples.values():
+            for library, read_types in libraries.items():
+                bam_files = {}
+                for library_files in read_types.values():
+                    bam_files.update(library_files)
+
+                libraries[library] = bam_files
+
+        return ()
+    elif mode not in ("mark", "filter"):
+        raise RuntimeError(f"unknown PCRDuplicates mode {mode!r}")
+
     for sample, libraries in samples.items():
         for library, read_types in libraries.items():
             layout = Layout(args, genome=genome, sample=sample, library=library)
 
-            paired = MarkDuplicatesNode(
+            paired = MarkDupNode(
                 in_bams=read_types["paired"].keys(),
                 out_bam=layout["aln_rmdup_paired_bam"],
-                out_metrics=layout["aln_rmdup_paired_metrics"],
-                java_options=args.jre_options,
+                out_stats=layout["aln_rmdup_paired_metrics"],
+                options={} if mode == "mark" else {"-r": None},
                 dependencies=read_types["paired"].values(),
             )
 
             merged = FilterCollapsedBAMNode(
                 input_bams=read_types["merged"].keys(),
                 output_bam=layout["aln_rmdup_merged_bam"],
-                keep_dupes=True,
+                keep_dupes=mode == "mark",
                 dependencies=read_types["merged"].values(),
             )
 

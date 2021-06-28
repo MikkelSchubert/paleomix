@@ -3,11 +3,9 @@ import re
 import string
 
 import paleomix.common.yaml as yaml
-
 from paleomix.common.bamfiles import BAM_PLATFORMS
 from paleomix.common.makefile import (
     REQUIRED_VALUE,
-    process_makefile,
     And,
     IsBoolean,
     IsFloat,
@@ -23,6 +21,7 @@ from paleomix.common.makefile import (
     ValueIn,
     ValuesIntersect,
     ValuesSubsetOf,
+    process_makefile,
 )
 
 
@@ -118,6 +117,9 @@ _VALIDATION = {
         "ReadMapping": {
             # FIXME: Should be grouped with other mapping-step programs (fixmate, etc.)
             "BWAMem": _SHORT_COMMAND_LINE_OPTIONS,
+            "PCRDuplicates": {
+                "mode": ValueIn(("mark", "filter", "skip"), default="mark"),
+            },
             "BaseRecalibrator": {
                 StringStartsWith("--"): _COMMAND_LINE_VALUE,
                 "--known-sites": IsStr(default=REQUIRED_VALUE),
