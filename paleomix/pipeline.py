@@ -22,6 +22,7 @@
 #
 import argparse
 import logging
+import math
 import multiprocessing
 import os
 import signal
@@ -426,9 +427,9 @@ class _Progress(paleomix.common.logging.Status):
         nth = self._state_counts[NodeGraph.DONE] + self._state_counts[NodeGraph.ERROR]
 
         if total > 200:
-            value = "{: >5.1f}%".format((100 * nth) / total)
+            value = "{: >5.1f}%".format(math.floor((1000 * nth) / total) / 10)
         elif total > 0:
-            value = "{: >3.0f}%".format((100 * nth) / total)
+            value = "{: >3g}%".format((100 * nth) // total)
         else:
             value = "N/A"
 
