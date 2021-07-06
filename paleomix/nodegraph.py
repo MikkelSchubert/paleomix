@@ -338,11 +338,10 @@ class NodeGraph:
         for requirement in requirements:
             name = requirement.name
             if requirement.executable in missing_execs:
-                log.error(
-                    " [☓] %s not found, but %s is required",
-                    name,
-                    requirement.checks,
-                )
+                if requirement.name != requirement.executable:
+                    name = f"Executable for {name} ({requirement.executable!r})"
+
+                log.error(" [☓] %s not found", name)
                 any_errors = True
                 continue
 
