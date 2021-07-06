@@ -1,6 +1,5 @@
-# Mapping targets are specified using the following structure. Replace 'NAME_OF_TARGET'
-# with the desired prefix for filenames.
-NAME_OF_TARGET:
+# Samples are specified using the following structure:
+Samples:
   # Replace 'NAME_OF_SAMPLE' with the name of this sample.
   NAME_OF_SAMPLE:
     # Replace 'NAME_OF_LIBRARY' with the name of this sample.

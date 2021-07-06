@@ -1,6 +1,6 @@
 # Map of prefixes by name, each having a Path, which specifies the location of the
 # BWA/Bowtie2 index, and optional regions for which additional statistics are produced.
-Prefixes:
+Genomes:
   # Replace 'NAME_OF_PREFIX' with name of the prefix; this name is used in summary
   # statistics and as part of output filenames.
   NAME_OF_PREFIX:
