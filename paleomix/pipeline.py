@@ -26,12 +26,13 @@ import multiprocessing
 import os
 import signal
 import sys
+import time
 from shlex import quote
 from typing import IO, Any, Dict, Iterable, List, Optional
 
 import paleomix.common.logging
 import paleomix.core.reports
-from paleomix.common.text import padded_table
+from paleomix.common.text import format_timespan, padded_table
 from paleomix.common.utilities import safe_coerce_to_tuple
 from paleomix.core.workers import EVT_CAPACITY, EVT_SHUTDOWN, EVT_TASK_DONE, Manager
 from paleomix.node import Node, NodeError, NodeMissingFilesError
@@ -57,6 +58,8 @@ class Pypeline:
         self._threads = max(0, max_threads)
         self._temp_root = temp_root
         self._implicit_dependencies = implicit_dependencies
+        self._start_times: Dict[Node, float] = {}
+        self._progress_color: Optional[str] = None
 
         self._event_handlers = {
             # The number of available threads has changed
@@ -166,7 +169,7 @@ class Pypeline:
                             return False
 
                         task_info.running_on = worker
-                        nodegraph.set_node_state(task, nodegraph.RUNNING)
+                        self._set_node_state(nodegraph, task, nodegraph.RUNNING)
 
                         # Overcommiting allowed only if a worker is idle
                         event["overcommit"] = False
@@ -189,7 +192,7 @@ class Pypeline:
         task = event["task"]
         task_info = tasks.pop(task)
         if event["error"] is None:
-            nodegraph.set_node_state(task, nodegraph.DONE)
+            self._set_node_state(nodegraph, task, nodegraph.DONE)
         elif isinstance(event["error"], NodeMissingFilesError):
             # Node was unexpectedly missing input files; this is either a programming
             # error, a user deleting stuff, or NFS (caches) not having been updated, so
@@ -197,7 +200,7 @@ class Pypeline:
             task_info.blacklisted_from[worker] = event
             if manager.workers.keys() - task_info.blacklisted_from:
                 self._logger.warning("Re-trying %s", task)
-                nodegraph.set_node_state(task, nodegraph.RUNABLE)
+                self._set_node_state(nodegraph, task, nodegraph.RUNABLE)
                 tasks[task] = task_info
             else:  # No more nodes left to try so we'll just have to error out
                 self._handle_task_error(nodegraph, **event)
@@ -226,7 +229,7 @@ class Pypeline:
         for task, task_info in tuple(tasks.items()):
             if task_info.running_on == worker:
                 self._logger.warning("Re-trying %s", task)
-                nodegraph.set_node_state(task, nodegraph.RUNABLE)
+                self._set_node_state(nodegraph, task, nodegraph.RUNABLE)
                 task_info.running_on = None
 
             # Check nodes that can no longer be completed
@@ -257,7 +260,7 @@ class Pypeline:
         backtrace: Optional[List[str]],
         **kwargs: Any
     ):
-        nodegraph.set_node_state(task, nodegraph.ERROR)
+        self._set_node_state(nodegraph, task, nodegraph.ERROR)
 
         if not isinstance(error, NodeError):
             error = "Unhandled exception while running {}:".format(task)
@@ -325,6 +328,28 @@ class Pypeline:
         else:
             self._logger.info("Pipeline completed successfully")
 
+    def _set_node_state(self, graph: NodeGraph, node: Node, state: int) -> None:
+        for node, old_state, new_state in graph.set_node_state(node, state):
+            if new_state in (NodeGraph.RUNNING, NodeGraph.DONE):
+                runtime = ""
+                if new_state == NodeGraph.RUNNING:
+                    self._start_times[node] = time.time()
+                    event = "Started"
+                elif old_state == NodeGraph.RUNNING:
+                    event = "Finished"
+                    end_time = time.time()
+                    start_time = self._start_times.pop(node)
+                    runtime = " in {}".format(format_timespan(end_time - start_time))
+                else:
+                    event = "Already finished"
+
+                status = _Progress(graph.get_state_counts(), self._progress_color)
+                extra = {"status": status}
+
+                self._logger.info("%s %s%s", event, node, runtime, extra=extra)
+            elif new_state == graph.ERROR:
+                self._progress_color = "red"
+
 
 def add_argument_groups(parser: argparse.ArgumentParser) -> None:
     add_scheduling_argument_group(parser)
@@ -388,3 +413,23 @@ class _TaskInfo:
         self.task = task
         self.running_on: Optional[str] = None
         self.blacklisted_from: Dict[str, Any] = {}
+        self.start_time = 0.0
+
+
+class _Progress(paleomix.common.logging.Status):
+    def __init__(self, state_counts: List[int], color: Optional[str]):
+        super().__init__(color)
+        self._state_counts = state_counts
+
+    def __str__(self):
+        total = sum(self._state_counts)
+        nth = self._state_counts[NodeGraph.DONE] + self._state_counts[NodeGraph.ERROR]
+
+        if total > 200:
+            value = "{: >5.1f}%".format((100 * nth) / total)
+        elif total > 0:
+            value = "{: >3.0f}%".format((100 * nth) / total)
+        else:
+            value = "N/A"
+
+        return value

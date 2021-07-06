@@ -24,7 +24,6 @@ import collections
 import errno
 import logging
 import os
-import time
 from typing import (
     Callable,
     Collection,
@@ -37,9 +36,7 @@ from typing import (
     Tuple,
 )
 
-import paleomix.common.logging
 from paleomix.common.fileutils import missing_executables, missing_files
-from paleomix.common.text import format_timespan
 from paleomix.common.utilities import safe_coerce_to_frozenset
 from paleomix.common.versions import Requirement, RequirementError
 from paleomix.node import Node
@@ -130,9 +127,7 @@ class NodeGraph:
         self._implicit_dependencies = implicit_dependencies
         self._cache_factory = cache_factory
         self._states: Dict[Node, int] = {}
-        self._start_times: Dict[Node, float] = {}
         self._state_counts = [0] * self.NUMBER_OF_STATES
-        self._progress_color: Optional[str] = None
 
         nodes = safe_coerce_to_frozenset(nodes)
 
@@ -162,14 +157,7 @@ class NodeGraph:
     def get_node_state(self, node: Node) -> int:
         return self._states[node]
 
-    def set_node_state(self, node: Node, state: int) -> None:
-        if state not in (
-            NodeGraph.RUNNING,
-            NodeGraph.RUNABLE,
-            NodeGraph.ERROR,
-            NodeGraph.DONE,
-        ):
-            raise ValueError("Invalid state: %r" % (state,))
+    def set_node_state(self, node: Node, state: int) -> Iterator[Tuple[Node, int, int]]:
         old_state = self._states[node]
         if state == old_state:
             return
@@ -178,7 +166,7 @@ class NodeGraph:
         self._state_counts[old_state] -= 1
         self._state_counts[state] += 1
 
-        self._log_node_changes(node, old_state, state)
+        yield node, old_state, state
 
         intersections = self._calculate_intersections(node)
 
@@ -201,7 +189,7 @@ class NodeGraph:
 
                         self._state_counts[old_state] -= 1
                         self._state_counts[new_state] += 1
-                        self._log_node_changes(node, old_state, new_state)
+                        yield node, old_state, new_state
 
                     for dependency in self._reverse_dependencies[node]:
                         intersections[dependency] -= 1
@@ -231,25 +219,6 @@ class NodeGraph:
         for state in states.values():
             state_counts[state] += 1
         self._state_counts = state_counts
-
-    def _log_node_changes(self, node: Node, old_state: int, new_state: int) -> None:
-        if new_state in (self.RUNNING, self.DONE):
-            runtime = ""
-            if new_state == self.RUNNING:
-                self._start_times[node] = time.time()
-                event = "Started"
-            elif old_state in (self.QUEUED, self.OUTDATED):
-                event = "Already finished"
-            else:
-                event = "Finished"
-                end_time = time.time()
-                start_time = self._start_times.pop(node)
-                runtime = " in {}".format(format_timespan(end_time - start_time))
-
-            extra = {"status": _Progress(self._state_counts, self._progress_color)}
-            self._logger.info("%s %s%s", event, node, runtime, extra=extra)
-        elif new_state == self.ERROR:
-            self._progress_color = "red"
 
     def _calculate_intersections(self, for_node: Node) -> Dict[Node, int]:
         def count_nodes(node: Node, counts: Dict[Node, int]) -> Dict[Node, int]:
@@ -560,25 +529,6 @@ class NodeGraph:
             nodes = pending - checked
 
         return False
-
-
-class _Progress(paleomix.common.logging.Status):
-    def __init__(self, state_counts: List[int], color: Optional[str]):
-        super().__init__(color)
-        self._state_counts = state_counts
-
-    def __str__(self):
-        total = sum(self._state_counts)
-        nth = self._state_counts[NodeGraph.DONE] + self._state_counts[NodeGraph.ERROR]
-
-        if total > 200:
-            value = "{: >5.1f}%".format((100 * nth) / total)
-        elif total > 0:
-            value = "{: >3.0f}%".format((100 * nth) / total)
-        else:
-            value = "N/A"
-
-        return value
 
 
 def _summarize_nodes(nodes: Iterable[Node]) -> List[str]:
