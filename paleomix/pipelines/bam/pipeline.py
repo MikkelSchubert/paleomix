@@ -20,24 +20,21 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
 import logging
+import os
 
 import paleomix
 import paleomix.common.logging
 import paleomix.node
-
+import paleomix.pipelines.bam.parts as parts
 from paleomix.common.yaml import YAMLError
 from paleomix.nodes.bowtie2 import Bowtie2IndexNode
 from paleomix.nodes.bwa import BWAIndexNode
 from paleomix.nodes.samtools import FastaIndexNode
 from paleomix.nodes.validation import ValidateFASTAFilesNode
 from paleomix.pipeline import Pypeline
-
 from paleomix.pipelines.bam.makefile import MakefileError, read_makefiles
 from paleomix.pipelines.bam.parts import Reads
-
-import paleomix.pipelines.bam.parts as parts
 
 
 def build_pipeline_trimming(config, makefile):
@@ -125,11 +122,17 @@ def build_pipeline_full(config, makefile, return_nodes=True):
     return result
 
 
-def index_references(config, makefiles):
+def index_references(log, makefiles):
+    any_errors = False
     references = {}
     references_bwa = {}
     references_bowtie2 = {}
     for makefile in makefiles:
+        genomes = makefile["Genomes"]
+        if not genomes:
+            log.error("No genomes specified in %r", makefile["Filename"])
+            any_errors = True
+
         for subdd in makefile["Prefixes"].values():
             reference = subdd["Path"]
             if reference not in references:
@@ -160,6 +163,8 @@ def index_references(config, makefiles):
             subdd["Nodes:BWA"] = references_bwa[reference]
             subdd["Nodes:Bowtie2"] = references_bowtie2[reference]
 
+    return not any_errors
+
 
 def run(config, pipeline_variant):
     paleomix.common.logging.initialize(
@@ -185,7 +190,7 @@ def run(config, pipeline_variant):
         return 1
 
     try:
-        makefiles = read_makefiles(config.makefiles, pipeline_variant)
+        makefiles = read_makefiles(config.makefiles)
     except (MakefileError, YAMLError, IOError) as error:
         logger.error("Error reading makefiles: %s", error)
         return 1
@@ -193,7 +198,8 @@ def run(config, pipeline_variant):
     pipeline_func = build_pipeline_trimming
     if pipeline_variant == "bam":
         # Build .fai files for reference .fasta files
-        index_references(config, makefiles)
+        if not index_references(logger, makefiles):
+            return 1
 
         pipeline_func = build_pipeline_full
 

@@ -28,37 +28,34 @@ import logging
 import os
 import string
 
+import paleomix.common.sequences as sequences
 import paleomix.pipelines.bam.paths as paths
-
 from paleomix.common.bamfiles import BAM_PLATFORMS
 from paleomix.common.fileutils import get_files_glob
-from paleomix.common.utilities import fill_dict
+from paleomix.common.formats.fasta import FASTA, FASTAError
 from paleomix.common.makefile import (
-    MakefileError,
     REQUIRED_VALUE,
-    WithoutDefaults,
-    read_makefile,
-    IsInt,
-    IsUnsignedInt,
-    IsFloat,
-    IsStr,
-    IsNone,
-    IsBoolean,
     And,
-    Or,
+    IsBoolean,
+    IsDictOf,
+    IsFloat,
+    IsInt,
+    IsListOf,
+    IsNone,
+    IsStr,
+    IsUnsignedInt,
+    MakefileError,
     Not,
+    Or,
+    StringIn,
+    StringStartsWith,
     ValueIn,
     ValuesIntersect,
     ValuesSubsetOf,
-    StringIn,
-    StringStartsWith,
-    IsListOf,
-    IsDictOf,
+    WithoutDefaults,
+    read_makefile,
 )
-from paleomix.common.formats.fasta import FASTA, FASTAError
-
-import paleomix.common.sequences as sequences
-
+from paleomix.common.utilities import fill_dict
 
 _READ_TYPES = set(("Single", "Singleton", "Collapsed", "CollapsedTruncated", "Paired"))
 
@@ -67,24 +64,19 @@ _READ_TYPES = set(("Single", "Singleton", "Collapsed", "CollapsedTruncated", "Pa
 _BAM_MAX_SEQUENCE_LENGTH = 2 ** 29 - 1
 
 
-def read_makefiles(filenames, pipeline_variant="bam"):
-    if pipeline_variant not in ("bam", "trim"):
-        raise ValueError(
-            "'pipeline_variant' must be 'bam' or 'trim', not %r" % (pipeline_variant,)
-        )
-
+def read_makefiles(filenames):
     logger = logging.getLogger(__name__)
 
     makefiles = []
     for filename in filenames:
         logger.info("Reading makefile %r", filename)
-        makefile = read_makefile(filename, _VALIDATION)
-        makefile = _mangle_makefile(makefile, pipeline_variant)
+        makefile = read_makefile(filename, MAKEFILE_SPECIFICATION)
+        makefile = _mangle_makefile(makefile)
         makefile["Filename"] = filename
 
         makefiles.append(makefile)
 
-    return _validate_makefiles(makefiles)
+    return validate_makefiles(makefiles)
 
 
 def _alphanum_check(whitelist, min_len=1):
@@ -224,7 +216,7 @@ _VALIDATION_OPTIONS = {
 }
 
 
-_VALIDATION = {
+MAKEFILE_SPECIFICATION = {
     "Options": _VALIDATION_OPTIONS,
     "Genomes": {
         _VALID_GENOME_NAME: {
@@ -244,7 +236,7 @@ _VALIDATION = {
 }
 
 
-def _mangle_makefile(makefile, pipeline_variant):
+def _mangle_makefile(makefile):
     options = makefile.pop("Options")
     genomes = makefile.pop("Genomes")
     makefile = {
@@ -253,7 +245,7 @@ def _mangle_makefile(makefile, pipeline_variant):
         "Samples": _flatten_groups(options, makefile),
     }
 
-    _mangle_genomes(makefile, require_genome=pipeline_variant != "trim")
+    _mangle_genomes(makefile)
     _mangle_lanes(makefile)
     _mangle_tags(makefile)
 
@@ -317,7 +309,7 @@ def _merge_options(options, group, samples):
             )
 
 
-def _mangle_genomes(makefile, require_genome):
+def _mangle_genomes(makefile):
     genomes = makefile["Genomes"]
     for name in tuple(genomes):
         if "*" in name[:-1]:
@@ -339,9 +331,6 @@ def _mangle_genomes(makefile, require_genome):
                 }
         else:
             genomes[name]["Name"] = name
-
-    if require_genome and not genomes:
-        raise MakefileError("At least one genome must be specified")
 
 
 def _glob_genomes(pattern):
@@ -497,7 +486,7 @@ def _summarize_filenames(filenames, show_differences=False):
     return combined_filenames
 
 
-def _validate_makefiles(makefiles):
+def validate_makefiles(makefiles):
     for makefile in makefiles:
         _validate_makefile_adapters(makefile)
     _validate_makefiles_duplicate_samples(makefiles)
