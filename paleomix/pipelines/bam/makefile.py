@@ -121,7 +121,7 @@ _VALID_LIBRARY_LEVEL_FEATURES = {
 _VALID_FEATURES_DICT = {
     "Coverage": IsBoolean(default=True),
     "Depths": IsBoolean(default=True),
-    "mapDamage": StringIn(("rescale", "model", "plot", True, False), default="plot"),
+    "mapDamage": StringIn(("rescale", "model", "plot", True, False), default=False),
     "PCRDuplicates": StringIn((True, False, "mark", "filter"), default="filter"),
     "Summary": IsBoolean(default=True),
 }
