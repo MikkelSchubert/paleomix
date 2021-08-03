@@ -549,8 +549,10 @@ def _validate_makefile_adapters(makefile):
 def _validate_makefiles_duplicate_files(makefiles):
     filenames = collections.defaultdict(list)
     for makefile in makefiles:
-        iterator = _iterate_over_records(makefile)
-        for (sample, library, barcode, record) in iterator:
+        for (sample, library, _, record) in _iterate_over_records(makefile):
+            # use user defined barcode rather than auto-numbered barcode
+            barcode = record["Tags"]["PU"]
+
             for realpath in map(os.path.realpath, record["Data"].values()):
                 filenames[realpath].append((sample, library, barcode))
 
@@ -562,29 +564,29 @@ def _validate_makefiles_duplicate_files(makefiles):
     logger = logging.getLogger(__name__)
     by_records = sorted(zip(list(has_overlap.values()), list(has_overlap.keys())))
     for (records, pairs) in itertools.groupby(by_records, lambda x: x[0]):
-        pairs = list(pairs)
         description = _describe_files_in_multiple_records(records, pairs)
 
         if len(set(record[0] for record in records)) != len(records):
-            message = "Path included multiple times in sample:\n"
+            message = "FASTQ files are used multiple times in sample:\n"
             raise MakefileError(message + description)
         else:
             logger.warn("WARNING: Path included in multiple samples:\n%s", description)
 
 
 def _describe_files_in_multiple_records(records, pairs):
-    descriptions = []
-    for (index, record) in enumerate(sorted(records), start=1):
-        descriptions.append(
-            "\t- Record {0}: Name: {1},  Sample: {2},  "
-            "Library: {3},  Barcode: {4}".format(index, *record)
-        )
+    lines = []
+    prefix = "Filename"
+    for (_, filename) in sorted(pairs):
+        lines.append("  {0} {1}".format(prefix, filename))
+        prefix = " " * len(prefix)
 
-    for (index, (_, filename)) in enumerate(sorted(pairs), start=1):
-        message = "\t- Canonical path {0}: {1}"
-        descriptions.append(message.format(index, filename))
+    prefix = "Found at"
+    for record in sorted(records):
+        # FIXME: Show the glob that found the above files
+        lines.append("  {0} {1} > {2} > {3}".format(prefix, *record))
+        prefix = " " * len(prefix)
 
-    return "\n".join(descriptions)
+    return "\n".join(lines)
 
 
 def _validate_makefiles_duplicate_samples(makefiles):
