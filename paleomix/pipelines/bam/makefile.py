@@ -90,9 +90,6 @@ def read_makefiles(filenames):
             for sample, libraries in makefile["Samples"].items()
         }
 
-        # FIXME: Remove from rest of code-base
-        makefile["Prefixes"] = makefile["Genomes"]
-
         makefiles.append(makefile)
 
     return validate_makefiles(makefiles)
@@ -636,7 +633,7 @@ def _validate_prefixes(makefiles):
     already_validated = {}
     logger.info("Validating FASTA files")
     for makefile in makefiles:
-        for prefix in makefile["Prefixes"].values():
+        for prefix in makefile["Genomes"].values():
             path = prefix["Path"]
             if path in already_validated:
                 prefix["IndexFormat"] = already_validated[path]["IndexFormat"]

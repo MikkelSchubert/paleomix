@@ -60,7 +60,7 @@ def build_pipeline_full(config, makefile, return_nodes=True):
     features = makefile["Options"]["Features"]
     for (target_name, sample_records) in makefile["Targets"].items():
         prefixes = []
-        for (_, prefix) in makefile["Prefixes"].items():
+        for (_, prefix) in makefile["Genomes"].items():
             samples = []
             for (sample_name, library_records) in sample_records.items():
                 libraries = []
@@ -133,7 +133,7 @@ def index_references(log, makefiles):
             log.error("No genomes specified in %r", makefile["Filename"])
             any_errors = True
 
-        for subdd in makefile["Prefixes"].values():
+        for subdd in makefile["Genomes"].values():
             reference = subdd["Path"]
             if reference not in references:
                 # Validation of the FASTA file; not blocking for the other

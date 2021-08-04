@@ -14,7 +14,6 @@ def _read_makefile(filepath):
 
     # TODO: Remove once no longer needed for backwards compatibility
     del result["Targets"]
-    del result["Prefixes"]
 
     return result
 

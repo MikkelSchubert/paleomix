@@ -28,14 +28,12 @@ import os
 import re
 import sys
 
-from paleomix.node import Node, NodeError
-from paleomix.common.utilities import set_in, get_in
-from paleomix.common.fileutils import move_file, reroot_path
-from paleomix.tools.bam_stats.coverage import read_table as read_coverage_table
-from paleomix.common.formats.fasta import FASTA
-
 import paleomix.common.text as text
-
+from paleomix.common.fileutils import move_file, reroot_path
+from paleomix.common.formats.fasta import FASTA
+from paleomix.common.utilities import get_in, set_in
+from paleomix.node import Node, NodeError
+from paleomix.tools.bam_stats.coverage import read_table as read_coverage_table
 
 _PE_READS = frozenset(("Paired", "Singleton", "Collapsed", "CollapsedTruncated"))
 _SE_READS = frozenset(("Single",))
@@ -47,7 +45,7 @@ class SummaryTableNode(Node):
     ):
         self._target = target.name
         self._output_file = os.path.join(config.destination, self._target + ".summary")
-        self._prefixes = makefile["Prefixes"]
+        self._prefixes = makefile["Genomes"]
 
         self._in_raw_bams = cov_for_lanes
         self._in_lib_bams = cov_for_libs
