@@ -23,11 +23,12 @@
 import os
 import random
 import re
+from typing import Iterable, Optional, Union
 
 import paleomix.common.fileutils as fileutils
 import paleomix.common.versions as versions
 from paleomix.common.command import AtomicCmd, InputFile, OutputFile, TempOutputFile
-from paleomix.node import CommandNode
+from paleomix.node import CommandNode, Node
 
 RAXML_VERSION = versions.Requirement(
     call=("raxmlHPC", "-version"),
@@ -44,13 +45,13 @@ RAXML_PTHREADS_VERSION = versions.Requirement(
 class RAxMLRapidBSNode(CommandNode):
     def __init__(
         self,
-        input_alignment,
-        output_template,
-        input_partition=None,
-        model="GTRGAMMAI",
-        replicates="autoMRE",
-        threads=1,
-        dependencies=(),
+        input_alignment: str,
+        output_template: str,
+        input_partition: Optional[str] = None,
+        model: str = "GTRGAMMAI",
+        replicates: Union[str, int] = "autoMRE",
+        threads: int = 1,
+        dependencies: Iterable[Node] = (),
     ):
         """
         Arguments:
@@ -160,7 +161,13 @@ class RAxMLRapidBSNode(CommandNode):
 
 
 class RAxMLParsimonyTreeNode(CommandNode):
-    def __init__(self, input_alignment, input_partitions, output_tree, dependencies=()):
+    def __init__(
+        self,
+        input_alignment: str,
+        input_partitions: str,
+        output_tree: str,
+        dependencies: Iterable[Node] = (),
+    ):
         self._input_alignment = input_alignment
         self._input_partitions = input_partitions
         self._output_tree = output_tree

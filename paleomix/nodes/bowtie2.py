@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from typing import Any, Iterable, Type, Union
+from typing import Any, Iterable, Optional, Type, Union
 
 import paleomix.common.versions as versions
 from paleomix.common.command import (
@@ -69,7 +69,7 @@ class Bowtie2Node(CommandNode):
     def __init__(
         self,
         input_file_1: str,
-        input_file_2: str,
+        input_file_2: Optional[str],
         output_file: str,
         reference: str,
         threads: int = 2,

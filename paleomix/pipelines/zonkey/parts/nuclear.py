@@ -25,12 +25,14 @@ import itertools
 import math
 import os
 import random
+from typing import Iterable, Optional
+
+import pysam
 
 import paleomix.common.fileutils as fileutils
 import paleomix.common.rtools as rtools
 import paleomix.common.versions as versions
 import paleomix.tools.factory as factory
-import pysam
 from paleomix.common.command import (
     AtomicCmd,
     AuxilleryFile,
@@ -96,7 +98,12 @@ class BuildTPEDFilesNode(CommandNode):
 
 class BuildBEDFilesNode(CommandNode):
     def __init__(
-        self, output_prefix, tfam, tped, plink_parameters=None, dependencies=()
+        self,
+        output_prefix: str,
+        tfam: str,
+        tped: str,
+        plink_parameters=None,
+        dependencies: Iterable[Node] = (),
     ):
         temp_prefix = os.path.basename(output_prefix)
 
@@ -138,7 +145,14 @@ class BuildBEDFilesNode(CommandNode):
 
 
 class AdmixtureNode(CommandNode):
-    def __init__(self, input_file, k_groups, output_root, groups, dependencies=()):
+    def __init__(
+        self,
+        input_file: str,
+        k_groups: int,
+        output_root: str,
+        groups,
+        dependencies: Iterable[Node] = (),
+    ):
         self._groups = groups
         self._input_file = input_file
 
@@ -202,7 +216,12 @@ class AdmixtureNode(CommandNode):
 
 
 class SelectBestAdmixtureNode(Node):
-    def __init__(self, replicates, output_root, dependencies=()):
+    def __init__(
+        self,
+        replicates: Iterable[AdmixtureNode],
+        output_root: str,
+        dependencies: Iterable[Node] = (),
+    ):
         replicates = tuple(replicates)
         if not replicates:
             raise ValueError("No replicates passed to SelectBestAdmixture")
@@ -224,6 +243,7 @@ class SelectBestAdmixtureNode(Node):
 
             input_files.extend(node.output_files)
 
+        assert ref_filenames is not None
         output_files = [
             os.path.join(output_root, filename) for filename in ref_filenames
         ]
@@ -323,7 +343,12 @@ class AdmixturePlotNode(CommandNode):
 
 class BuildFreqFilesNode(CommandNode):
     def __init__(
-        self, input_prefix, output_prefix, tfam, parameters=None, dependencies=()
+        self,
+        input_prefix: str,
+        output_prefix: str,
+        tfam: str,
+        parameters: Optional[str] = None,
+        dependencies: Iterable[Node] = (),
     ):
         basename = os.path.basename(output_prefix)
 
@@ -449,7 +474,14 @@ class FreqToTreemixNode(Node):
 
 class TreemixNode(CommandNode):
     def __init__(
-        self, data, input_file, output_prefix, m=0, k=100, outgroup=(), dependencies=()
+        self,
+        data,
+        input_file: str,
+        output_prefix: str,
+        m: int = 0,
+        k=100,
+        outgroup=(),
+        dependencies: Iterable[Node] = (),
     ):
         self._param_m = m
         self._param_outgroup = outgroup
@@ -506,7 +538,7 @@ class TreemixNode(CommandNode):
             dependencies=dependencies,
         )
 
-    def _setup(self, temp):
+    def _setup(self, temp: str):
         if self._k_file is not None:
             stats = read_summary(self._k_file)
             n_sites = float(stats[self._k_field])
@@ -515,11 +547,12 @@ class TreemixNode(CommandNode):
             )
 
             self._param_k = k
+            assert isinstance(self._command, AtomicCmd)
             self._command._command.extend(("-k", str(k)))
 
         CommandNode._setup(self, temp)
 
-    def _teardown(self, temp):
+    def _teardown(self, temp: str):
         with open(fileutils.reroot_path(temp, self._params_file), "w") as out:
             out.write("k: %i\n" % (self._param_k,))
             out.write("m: %i\n" % (self._param_m,))
@@ -531,7 +564,13 @@ class TreemixNode(CommandNode):
 
 
 class PlotTreemixNode(CommandNode):
-    def __init__(self, samples, prefix, output_prefix, dependencies=()):
+    def __init__(
+        self,
+        samples: str,
+        prefix: str,
+        output_prefix: str,
+        dependencies: Iterable[Node] = (),
+    ):
         abs_prefix = os.path.abspath(prefix)
         basename = os.path.basename(output_prefix)
 
@@ -606,7 +645,7 @@ class PlotTreemixNode(CommandNode):
 
 
 class SmartPCANode(CommandNode):
-    def __init__(self, input_prefix, output_prefix, nchroms, dependencies=()):
+    def __init__(self, input_prefix:str, output_prefix:str, nchroms:int, dependencies:Iterable[Node]=()):
         self._input_prefix = input_prefix
         self._output_prefix = output_prefix
         self._nchroms = nchroms
