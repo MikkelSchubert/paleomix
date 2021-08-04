@@ -62,7 +62,7 @@ class SummaryTableNode(Node):
                         filetype = None
 
                         if lane.reads.stats:
-                            filetype = "Raw"
+                            filetype = "Untrimmed"
                             filenames.append(lane.reads.stats)
                         elif lane.reads.validation:
                             filenames.extend(lane.reads.validation)
@@ -322,9 +322,9 @@ class SummaryTableNode(Node):
 
     @classmethod
     def _stat_read_settings(cls, filetype, filenames):
-        assert filetype in ("Raw", "SE", "PE", "*", "BAM"), filetype
+        assert filetype in ("Untrimmed", "SE", "PE", "*", "BAM"), filetype
 
-        if filetype != "Raw":
+        if filetype != "Untrimmed":
             nan = float("nan")
             stats = {
                 "lib_type": filetype,

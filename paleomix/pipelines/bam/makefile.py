@@ -228,7 +228,7 @@ _VALIDATE_LANE = {
     "CollapsedTruncated": IsStr,
     "Paired": IsStr,
     "Singleton": IsStr,
-    "Raw": IsStr,
+    "Untrimmed": IsStr,
     "Options": WithoutDefaults(_VALIDATION_OPTIONS),
 }
 
@@ -381,7 +381,7 @@ def _combine_options(
 def _normalize_lane(data, path) -> Dict[str, Any]:
     if isinstance(data, str):
         # The simple case: raw data without options
-        return {"Type": "Raw", "Data": data}
+        return {"Type": "Untrimmed", "Data": data}
 
     # the structure needs to be validated here, since the specification uses an IsAny
     data = process_makefile(
@@ -393,10 +393,12 @@ def _normalize_lane(data, path) -> Dict[str, Any]:
 
     options = data.pop("Options", None)
 
-    if "Raw" in data:
+    if "Untrimmed" in data:
         # it doesn't make sense to have both trimmed and untrimmed reads in one lane
         if data.keys() & _READ_TYPES:
-            raise MakefileError(f"both raw and trimmed reads at {_path_to_str(path)}")
+            raise MakefileError(
+                f"both untrimmed and trimmed reads at {_path_to_str(path)}"
+            )
 
         ((type_, data),) = data.items()
     else:
@@ -452,7 +454,7 @@ def _finalize_samples(data):
 
 
 def _split_lanes_by_filenames(group, sample, library, barcode, record):
-    if record["Type"] == "Raw":
+    if record["Type"] == "Untrimmed":
         path = (group, sample, library, barcode)
         filenames = paths.collect_files(path, record["Data"])
         filename_keys = sorted(filenames)  # Either ["SE"] or ["PE_1", "PE_2"]

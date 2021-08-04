@@ -46,11 +46,10 @@ def build_pipeline_trimming(config, makefile):
         for libraries in samples.values():
             for barcodes in libraries.values():
                 for record in barcodes.values():
-                    if record["Type"] in ("Raw", "Trimmed"):
-                        offset = record["Options"]["QualityOffset"]
-                        reads = Reads(config, record, offset)
+                    offset = record["Options"]["QualityOffset"]
+                    reads = Reads(config, record, offset)
 
-                        nodes.extend(reads.nodes)
+                    nodes.extend(reads.nodes)
 
     return nodes
 

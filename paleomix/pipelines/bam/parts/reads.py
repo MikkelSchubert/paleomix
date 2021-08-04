@@ -22,7 +22,7 @@
 #
 import os
 
-from paleomix.nodes.adapterremoval import SE_AdapterRemovalNode, PE_AdapterRemovalNode
+from paleomix.nodes.adapterremoval import PE_AdapterRemovalNode, SE_AdapterRemovalNode
 from paleomix.nodes.validation import ValidateFASTQFilesNode
 
 
@@ -46,8 +46,8 @@ class Reads:
         )
 
         lane_type = record.get("Type")
-        if lane_type == "Raw":
-            self._init_raw_reads(config, record)
+        if lane_type == "Untrimmed":
+            self._init_untrimmed_reads(config, record)
         elif lane_type == "Trimmed":
             self._init_pretrimmed_reads(record)
         else:
@@ -85,7 +85,7 @@ class Reads:
         self.nodes = tuple(nodes)
         self.validation = tuple(validation)
 
-    def _init_raw_reads(self, config, record):
+    def _init_untrimmed_reads(self, config, record):
         options = dict(record["Options"]["AdapterRemoval"])
         if self.quality_offset != 33:
             options["--qualitybase"] = self.quality_offset

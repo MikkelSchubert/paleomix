@@ -90,7 +90,7 @@ TEMPLATE_BAM = {
                         "Target": "NAME_OF_SAMPLE",
                         "Group": "Samples",
                     },
-                    "Type": "Raw",
+                    "Type": "Untrimmed",
                 }
             }
         }
@@ -282,7 +282,7 @@ def _sample_template(filepath):
         "Sam1": {
             "Lib1": {
                 "Run1::001": {
-                    "Type": "Raw",
+                    "Type": "Untrimmed",
                     "Data": {"SE": "/path/to/run1.fq.gz"},
                     "Options": copy.deepcopy(options),
                     "Tags": {
@@ -299,7 +299,7 @@ def _sample_template(filepath):
                     },
                 },
                 "Run2::001": {
-                    "Type": "Raw",
+                    "Type": "Untrimmed",
                     "Data": {
                         "PE_1": "/path/to/run2_1.fq.gz",
                         "PE_2": "/path/to/run2_2.fq.gz",
@@ -321,7 +321,7 @@ def _sample_template(filepath):
             },
             "Lib2": {
                 "Run3::001": {
-                    "Type": "Raw",
+                    "Type": "Untrimmed",
                     "Data": {"SE": "/path/to/run3.fq.gz"},
                     "Options": copy.deepcopy(options),
                     "Tags": {
@@ -458,7 +458,7 @@ def test_makefile__sample__lane_options(tmp_path):
             Lib1:
               Run1: /path/to/run1.fq.gz
               Run2:
-                Raw: /path/to/run2_{Pair}.fq.gz
+                Untrimmed: /path/to/run2_{Pair}.fq.gz
                 Options:
                   AdapterRemoval:
                     --adapter1: CATCATDOGCAT
@@ -485,7 +485,7 @@ def test_makefile__sample__mixed_options(tmp_path):
               Run2: /path/to/run2_{Pair}.fq.gz
             Lib2:
               Run3:
-                Raw: /path/to/run3.fq.gz
+                Untrimmed: /path/to/run3.fq.gz
                 Options:
                   AdapterRemoval:
                     --adapter1: DOGCATDOGDOG
@@ -650,7 +650,7 @@ def test_makefile__sample__features__lane(tmp_path, key):
           Sam1:
             Lib1:
               Run1:
-                Raw: /path/to/run1.fq.gz
+                Untrimmed: /path/to/run1.fq.gz
                 Options:
                   Features:
                     {key}: yes
@@ -678,7 +678,7 @@ def test_makefile__sample__pretrimmed_reads(tmp_path):
               Run2: /path/to/run2_{Pair}.fq.gz
             Lib2:
               Run3:
-                Raw: /path/to/run3.fq.gz
+                Untrimmed: /path/to/run3.fq.gz
     """,
     )
 
@@ -698,7 +698,7 @@ def test_makefile__sample__pretrimmed_reads(tmp_path):
     assert _read_makefile(filepath) == expected
 
 
-def test_makefile__sample__pretrimmed_reads__including_raw(tmp_path):
+def test_makefile__sample__pretrimmed_reads__including_untrimmed(tmp_path):
     filepath = _write_sample_yaml(
         tmp_path,
         """
@@ -706,16 +706,16 @@ def test_makefile__sample__pretrimmed_reads__including_raw(tmp_path):
           Sam1:
             Lib1:
               Run1:
-                Raw: /path/to/trimmed_se.fq.gz
+                Untrimmed: /path/to/trimmed_se.fq.gz
                 Paired: /path/to/trimmed_pe_{Pair}.fq.gz
               Run2: /path/to/run2_{Pair}.fq.gz
             Lib2:
               Run3:
-                Raw: /path/to/run3.fq.gz
+                Untrimmed: /path/to/run3.fq.gz
     """,
     )
 
-    with pytest.raises(MakefileError, match="both raw and trimmed reads at"):
+    with pytest.raises(MakefileError, match="both untrimmed and trimmed reads at"):
         _read_makefile(filepath)
 
 
