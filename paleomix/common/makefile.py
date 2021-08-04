@@ -340,6 +340,16 @@ class MakefileSpec:
 # Tests for basic types
 
 
+class IsAny(MakefileSpec):
+    """Any value is allowed; if validation is too complex to implement using specs"""
+
+    def __init__(self, description: str = "any value", default: Any = DEFAULT_NOT_SET):
+        MakefileSpec.__init__(self, description, default)
+
+    def meets_spec(self, value: Any) -> bool:
+        return True
+
+
 class IsInt(MakefileSpec):
     """Require that the value is either an Int or a Long."""
 
