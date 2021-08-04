@@ -26,19 +26,14 @@ import os
 import pysam
 
 import paleomix
-import paleomix.resources
-
-from paleomix.node import Node
-
 import paleomix.common.fileutils as fileutils
-
 import paleomix.pipelines.zonkey.parts.admixture as admixture
 import paleomix.pipelines.zonkey.parts.nuclear as nuclear
-
-from paleomix.pipelines.zonkey.common import RSCRIPT_VERSION, read_summary
-
-from paleomix.nodes.samtools import SAMTOOLS_VERSION
+import paleomix.resources
+from paleomix.node import Node
 from paleomix.nodes.raxml import RAXML_VERSION
+from paleomix.nodes.samtools import SAMTOOLS_VERSION
+from paleomix.pipelines.zonkey.common import RSCRIPT_VERSION, read_summary
 
 
 class ReportNode(Node):
@@ -420,11 +415,11 @@ class AnalysisReport:
         try:
             results = self.admixture_results(k_groups, incl_ts_k, cutoff)
         except admixture.AdmixtureError:
-            return
+            return {}
 
         groups = [group for group, value in results if value >= cutoff]
         if len(groups) != 2:
-            return
+            return {}
 
         (sample1,) = groups[0]
         (sample2,) = groups[1]
