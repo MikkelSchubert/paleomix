@@ -23,15 +23,14 @@
 import os
 
 from paleomix.common.utilities import safe_coerce_to_tuple
-
+from paleomix.nodes.commands import FilterCollapsedBAMNode
 from paleomix.nodes.mapdamage import (
-    MapDamagePlotNode,
     MapDamageModelNode,
+    MapDamagePlotNode,
     MapDamageRescaleNode,
 )
 from paleomix.nodes.samtools import MarkDupNode
 from paleomix.pipelines.bam.nodes import index_and_validate_bam
-from paleomix.nodes.commands import FilterCollapsedBAMNode
 
 
 class Library:
@@ -62,7 +61,6 @@ class Library:
             (self.folder == os.path.dirname(os.path.dirname(lane.folder)))
             for lane in self.lanes
         )
-        assert all((self.options == lane.options) for lane in self.lanes)
 
         lane_bams = self._collect_bams_by_type(self.lanes)
 
