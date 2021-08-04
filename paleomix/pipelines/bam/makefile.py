@@ -339,6 +339,11 @@ def _postprocess_samples(data, global_options):
                     # lane data must be normalized since there are 2 possible forms
                     record = _normalize_lane(record, path)
 
+                    if "mapDamage" in record.get("Options", {}):
+                        raise MakefileError(
+                            "Cannot set mapDamage options for individual lanes"
+                        )
+
                     # once the lanes are normalized, we generate lane-specific options
                     record["Options"] = _combine_options(
                         options=library_options,

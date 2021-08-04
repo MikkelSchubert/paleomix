@@ -556,7 +556,7 @@ def test_makefile__sample__duplicate_sample_names_1(tmp_path):
 
 
 ########################################################################################
-# Features -- can only be modified at certain levels
+# Limited options -- can only be modified at certain levels
 
 
 FEATURES = ("Coverage", "Depths", "mapDamage", "PCRDuplicates", "Summary")
@@ -658,6 +658,28 @@ def test_makefile__sample__features__lane(tmp_path, key):
     )
 
     with pytest.raises(MakefileError, match=f"Cannot override {key!r} at"):
+        _read_makefile(filepath)
+
+
+def test_makefile__sample__mapdamage_at_lane_level(tmp_path):
+    filepath = _write_sample_yaml(
+        tmp_path,
+        f"""
+        Samples:
+          Sam1:
+            Lib1:
+              Run1:
+                Untrimmed: /path/to/run1.fq.gz
+                Options:
+                  mapDamage:
+                    --ymax: 17.0
+    """,
+    )
+
+    with pytest.raises(
+        MakefileError,
+        match=f"Cannot set mapDamage options for individual lanes",
+    ):
         _read_makefile(filepath)
 
 
