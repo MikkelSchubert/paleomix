@@ -1,3 +1,4 @@
+import logging
 import os
 
 from paleomix.common.layout import Layout
@@ -684,6 +685,15 @@ def build_pipeline(args, project):
 
     # 2. Validate and index resource files
     _add(validate_and_index_resources, settings)
+
+    if not samples:
+        logger = logging.getLogger(__name__)
+        logger.warning(
+            "Project does not contain any samples; genomes will be prepared for later "
+            "use, but no mapping/genotyping will be performed"
+        )
+
+        return pipeline
 
     # 3. Do quality analysis of input FASTQ files
     _add(fastqc_sample_runs, samples, settings["Preprocessing"])

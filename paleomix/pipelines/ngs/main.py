@@ -52,12 +52,6 @@ def _main_run(args):
         logger.error("Error reading project: %s", error)
         return 1
 
-    if not project["Samples"]:
-        logger.warning(
-            "Project does not contain any samples; genomes will be prepared for later "
-            "use, but no reads mapped to these"
-        )
-
     try:
         logger.info("Building pipeline for project")
         nodes = build_pipeline(args, project)
