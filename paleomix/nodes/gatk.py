@@ -349,45 +349,6 @@ class HaplotypeCallerNode(CommandNode):
         )
 
 
-class MarkDuplicatesNode(CommandNode):
-    def __init__(
-        self,
-        in_bams,
-        out_bam,
-        out_metrics=None,
-        options={},
-        java_options=(),
-        dependencies=(),
-    ):
-        out_metrics = out_metrics or swap_ext(out_bam, ".metrics")
-
-        command = _gatk_command(
-            tool="MarkDuplicates",
-            tool_options={
-                "--OUTPUT": OutputFile(out_bam),
-                "--METRICS_FILE": OutputFile(out_metrics),
-                # FIXME: Workaround for CSI indexed BAM files
-                # Validation is mostly left to manual ValidateSamFile runs; required
-                # because .csi indexed BAM records can have "invalid" bins.
-                "--VALIDATION_STRINGENCY": "LENIENT",
-            },
-            user_tool_options=options,
-            java_options=java_options,
-        )
-
-        _set_max_open_files(command, "--MAX_FILE_HANDLES_FOR_READ_ENDS_MAP")
-
-        for filename in in_bams:
-            command.append("--INPUT", InputFile(filename))
-
-        CommandNode.__init__(
-            self,
-            command=command,
-            description="detecting PCR duplicates in {} BAM files".format(len(in_bams)),
-            dependencies=dependencies,
-        )
-
-
 class ValidateBAMNode(CommandNode):
     def __init__(
         self,
