@@ -24,7 +24,8 @@ import warnings
 from typing import IO, Any
 
 import ruamel.yaml
-from ruamel.yaml import YAMLError
+import ruamel.yaml.error
+from ruamel.yaml.error import YAMLError
 from ruamel.yaml.constructor import DuplicateKeyError
 
 __all__ = ["YAMLError", "DuplicateKeyError", "safe_load"]

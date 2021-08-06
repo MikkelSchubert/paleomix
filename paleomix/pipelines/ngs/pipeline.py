@@ -228,6 +228,7 @@ def process_fastq_files(args, samples, settings):
     settings_preproc["Fastp"]["--thread"] = args.max_threads_fastp
 
     nodes = []
+    sample = None
     for sample, libraries in samples.items():
         for library, runs in libraries.items():
             for run, files in runs.items():
@@ -512,7 +513,7 @@ def final_bam_stats(args, genome, samples, settings):
 
     yield MultiQCNode(
         source="fastqc",
-        output_prefix=layout["bam_multiqc_prefix"],
+        output_prefix=args.layout["bam_multiqc_prefix"],
         dependencies=fastqc_nodes,
     )
 

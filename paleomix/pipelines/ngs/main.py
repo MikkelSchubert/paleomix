@@ -2,6 +2,7 @@ import os
 
 import logging
 
+import paleomix.node
 import paleomix.common.logging
 
 from paleomix.common.fileutils import swap_ext
