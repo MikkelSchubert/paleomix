@@ -27,11 +27,10 @@ Each node is equivalent to a particular command:
 """
 import os
 
-import paleomix.tools.bam_stats.coverage as coverage
 import paleomix.tools.factory as factory
 from paleomix.common.command import AtomicCmd, InputFile, OutputFile, ParallelCmds
-from paleomix.common.fileutils import describe_files, move_file, reroot_path
-from paleomix.node import CommandNode, Node
+from paleomix.common.fileutils import describe_files
+from paleomix.node import CommandNode
 from paleomix.nodes.samtools import BCFTOOLS_VERSION, merge_bam_files_command
 
 
@@ -53,28 +52,6 @@ class CoverageNode(CommandNode):
             description="calculating coverage for %s" % (input_file,),
             dependencies=dependencies,
         )
-
-
-class MergeCoverageNode(Node):
-    def __init__(self, input_files, output_file, dependencies=()):
-        self._output_file = output_file
-
-        Node.__init__(
-            self,
-            description="merging coverage tables from %s"
-            % (describe_files(input_files),),
-            input_files=input_files,
-            output_files=self._output_file,
-            dependencies=dependencies,
-        )
-
-    def _run(self, temp):
-        table = {}
-        for filename in self.input_files:
-            coverage.read_table(table, filename)
-
-        coverage.write_table(table, reroot_path(temp, self._output_file))
-        move_file(reroot_path(temp, self._output_file), self._output_file)
 
 
 class DepthHistogramNode(CommandNode):

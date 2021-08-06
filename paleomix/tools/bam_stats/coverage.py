@@ -20,14 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import sys
 import collections
+import sys
 
-from paleomix.common.utilities import get_in, set_in
-from paleomix.common.text import parse_padded_table
-
+from paleomix.common.utilities import set_in
 from paleomix.tools.bam_stats.common import BAMStatsError
-
 
 ##############################################################################
 ##############################################################################
@@ -165,30 +162,6 @@ def build_rows(table):
                     yield row
                 yield "#"
             yield "#"
-
-
-def read_table(table, filename):
-    with open(filename) as table_file:
-        for record in parse_padded_table(table_file):
-            key = (
-                record["Name"],
-                record["Sample"],
-                record["Library"],
-                record["Contig"],
-            )
-            if "*" in key:
-                continue
-
-            subtable = get_in(table, key)
-            if subtable is None:
-                subtable = ReadGroup()
-                subtable.Size = int(record["Size"])
-                set_in(table, key, subtable)
-
-            assert int(subtable.Size) == int(record["Size"])
-            for key in ReadGroup.__slots__:
-                if key != "Size":
-                    subtable[key] += int(record.get(key, 0))
 
 
 def write_table(table, filename):

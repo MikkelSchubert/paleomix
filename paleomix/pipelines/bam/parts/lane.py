@@ -20,19 +20,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
 import copy
+import os
 
 import paleomix.pipelines.bam.paths as paths
-
-from paleomix.nodes.bwa import BWAAlgorithmNode, BWABacktrack, BWASampe, BWASamse
-from paleomix.nodes.bowtie2 import Bowtie2Node
-
-from paleomix.pipelines.bam.parts import Reads
-from paleomix.pipelines.bam.nodes import index_and_validate_bam
-
 from paleomix.common.fileutils import swap_ext
-
+from paleomix.nodes.bowtie2 import Bowtie2Node
+from paleomix.nodes.bwa import BWAAlgorithmNode, BWABacktrack, BWASampe, BWASamse
+from paleomix.pipelines.bam.nodes import index_and_validate_bam
+from paleomix.pipelines.bam.parts.reads import Reads
 
 #
 _TRIMMED_READS_CACHE = {}

@@ -26,7 +26,6 @@ import os
 import paleomix
 import paleomix.common.logging
 import paleomix.node
-import paleomix.pipelines.bam.parts as parts
 from paleomix.common.yaml import YAMLError
 from paleomix.nodes.bowtie2 import Bowtie2IndexNode
 from paleomix.nodes.bwa import BWAIndexNode
@@ -34,7 +33,13 @@ from paleomix.nodes.samtools import FastaIndexNode
 from paleomix.nodes.validation import ValidateFASTAFilesNode
 from paleomix.pipeline import Pypeline
 from paleomix.pipelines.bam.makefile import MakefileError, read_makefiles
-from paleomix.pipelines.bam.parts import Reads
+from paleomix.pipelines.bam.parts.lane import Lane
+from paleomix.pipelines.bam.parts.library import Library
+from paleomix.pipelines.bam.parts.prefix import Prefix
+from paleomix.pipelines.bam.parts.reads import Reads
+from paleomix.pipelines.bam.parts.sample import Sample
+from paleomix.pipelines.bam.parts.statistics import add_statistics_nodes
+from paleomix.pipelines.bam.parts.target import Target
 
 
 def build_pipeline_trimming(config, makefile):
@@ -66,7 +71,7 @@ def build_pipeline_full(config, makefile, return_nodes=True):
                 for (library_name, barcode_records) in library_records.items():
                     lanes = []
                     for (barcode, record) in barcode_records.items():
-                        lane = parts.Lane(config, prefix, record, barcode)
+                        lane = Lane(config, prefix, record, barcode)
 
                         # ExcludeReads settings may exlude entire lanes
                         if lane.bams:
@@ -74,7 +79,7 @@ def build_pipeline_full(config, makefile, return_nodes=True):
 
                     if lanes:
                         libraries.append(
-                            parts.Library(
+                            Library(
                                 config=config,
                                 target=target_name,
                                 prefix=prefix,
@@ -85,7 +90,7 @@ def build_pipeline_full(config, makefile, return_nodes=True):
 
                 if libraries:
                     samples.append(
-                        parts.Sample(
+                        Sample(
                             config=config,
                             prefix=prefix,
                             libraries=libraries,
@@ -95,7 +100,7 @@ def build_pipeline_full(config, makefile, return_nodes=True):
 
             if samples:
                 prefixes.append(
-                    parts.Prefix(
+                    Prefix(
                         config=config,
                         prefix=prefix,
                         samples=samples,
@@ -105,10 +110,10 @@ def build_pipeline_full(config, makefile, return_nodes=True):
                 )
 
         if prefixes:
-            target = parts.Target(config, prefixes, target_name)
+            target = Target(config, prefixes, target_name)
 
             # Construct coverage, depth-histogram, and summary nodes, etc.
-            parts.add_statistics_nodes(config, makefile, target)
+            add_statistics_nodes(config, makefile, target)
 
             if return_nodes:
                 # Extra tasks (e.g. coverage, depth-histograms, etc.)
