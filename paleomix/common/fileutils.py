@@ -29,7 +29,18 @@ import shutil
 import uuid
 from os import fspath
 from pathlib import Path
-from typing import IO, Any, Callable, Iterable, List, Optional, Tuple, Union, cast
+from typing import (
+    IO,
+    Any,
+    Callable,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+    cast,
+)
 
 from .utilities import safe_coerce_to_tuple
 
@@ -230,7 +241,9 @@ def describe_paired_files(files_1: Iterable[str], files_2: Iterable[str]) -> str
 
 
 def get_files_glob(
-    filenames: Iterable[str], max_differences: int = 1, show_differences: bool = False
+    filenames: Sequence[str],
+    max_differences: int = 1,
+    show_differences: bool = False,
 ) -> Optional[str]:
     """Tries to generate a glob-string for a set of filenames, containing
     at most 'max_differences' different columns. If more differences are
