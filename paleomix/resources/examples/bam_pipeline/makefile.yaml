@@ -22,9 +22,9 @@ Options:
      --mm: 3
      --minlength: 25
      # Extra features enabled by default; change 'yes' to 'no' to disable
-     --collapse: yes
-     --trimns: yes
-     --trimqualities: yes
+     --collapse:
+     --trimns:
+     --trimqualities:
 
   # Settings for aligners supported by the pipeline
   Aligners:
@@ -108,7 +108,7 @@ Options:
 
 # Map of prefixes by name, each having a Path, which specifies the location of the
 # BWA/Bowtie2 index, and optional regions for which additional statistics are produced.
-Prefixes:
+Genomes:
   # Replace 'NAME_OF_PREFIX' with name of the prefix; this name is used in summary
   # statistics and as part of output filenames.
   rCRS:
@@ -116,13 +116,6 @@ Prefixes:
     # against which reads are to be mapped. Using the same name as filename is strongly
     # recommended (e.g. /path/to/Human_g1k_v37.fasta should be named 'Human_g1k_v37').
     Path: prefixes/rCRS.fasta
-
-    # (Optional) Uncomment and replace 'PATH_TO_BEDFILE' with the path to a .bed file
-    # listing extra regions for which coverage / depth statistics should be calculated;
-    # if no names are specified for the BED records, results are named after the
-    # chromosome / contig. Replace 'NAME' with the desired name for these regions.
-#    RegionsOfInterest:
-#      NAME: PATH_TO_BEDFILE
 
 
 # Targets are specified using the following structure:
