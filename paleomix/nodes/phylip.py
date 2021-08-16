@@ -20,11 +20,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import re
 import random
+import re
+from typing import Iterable, Optional
 
-from paleomix.node import Node, NodeError
 from paleomix.common.fileutils import move_file, reroot_path
+from paleomix.node import Node, NodeError
 
 
 class PHYLIPBootstrapNode(Node):
@@ -43,11 +44,11 @@ class PHYLIPBootstrapNode(Node):
 
     def __init__(
         self,
-        input_alignment,
-        input_partition,
-        output_alignment,
-        seed=None,
-        dependencies=(),
+        input_alignment: str,
+        input_partition: str,
+        output_alignment: str,
+        seed: Optional[int] = None,
+        dependencies: Iterable[Node] = (),
     ):
         self._input_phy = input_alignment
         self._input_part = input_partition
@@ -63,6 +64,7 @@ class PHYLIPBootstrapNode(Node):
         )
 
     def _run(self, temp):
+        rng = random
         if self._seed is not None:
             rng = random.Random(self._seed)
         partitions = _read_partitions(self._input_part)

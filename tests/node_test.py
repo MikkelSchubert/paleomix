@@ -28,8 +28,9 @@ from pathlib import Path
 from typing import Iterable, Optional, Sequence, Tuple, Type, TypeVar
 from unittest.mock import Mock, call
 
-import paleomix.node
 import pytest
+
+import paleomix.node
 from paleomix.common.command import AtomicCmd, InputFile, OutputFile, TempOutputFile
 from paleomix.common.utilities import safe_coerce_to_frozenset
 from paleomix.common.versions import Any, Requirement
@@ -97,7 +98,7 @@ def _build_cmd_mock(
         executables=frozenset(executables),
         auxiliary_files=frozenset(auxiliary_files),
         requirements=frozenset(requirements),
-        expected_temp_files=frozenset(map(os.path.basename, output_files)),
+        expected_temp_files=frozenset(os.path.basename(f) for f in output_files),
         optional_temp_files=frozenset(optional_temp_files),
     )
     cmd.join.return_value = return_codes
@@ -169,7 +170,7 @@ def test_constructor__requirements():
 @pytest.mark.parametrize("value", (17, "867-5309"))
 def test_constructor__requirements__wrong_type(value: Any):
     with pytest.raises(TypeError):
-        Node(requirements=value)
+        Node(requirements=value)  # type: ignore
 
 
 ###############################################################################
@@ -179,7 +180,7 @@ def test_constructor__requirements__wrong_type(value: Any):
 
 def test_constructor__nodes_is_none():
     with pytest.raises(TypeError):
-        Node(dependencies=None)
+        Node(dependencies=None)  # type: ignore
 
 
 def test_constructor__single_node():
@@ -196,7 +197,7 @@ def test_constructor__iterable():
 
 def test_constructor__not_a_node():
     with pytest.raises(TypeError):
-        Node(dependencies=(1,))
+        Node(dependencies=(1,))  # type: ignore
 
 
 ###############################################################################
@@ -220,7 +221,7 @@ def test_constructor__description__default(cls: Type[Node]):
 @pytest.mark.parametrize("value", (1, {}))
 def test_constructor__description__non_string(cls: Type[Node], value: Any):
     with pytest.raises(TypeError):
-        cls(description=value)
+        cls(description=value)  # type: ignore
 
 
 ###############################################################################

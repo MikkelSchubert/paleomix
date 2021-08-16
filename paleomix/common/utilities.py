@@ -24,6 +24,7 @@ import copy
 import itertools
 from typing import (
     Any,
+    AnyStr,
     Callable,
     Dict,
     FrozenSet,
@@ -34,6 +35,8 @@ from typing import (
     Sequence,
     Tuple,
     TypeVar,
+    Union,
+    overload,
 )
 
 T = TypeVar("T")
@@ -158,7 +161,20 @@ def group_by_pred(
     return is_true, is_false
 
 
+@overload
+def fragment(size: int, lstlike: AnyStr) -> Iterable[AnyStr]:
+    ...
+
+
+@overload
 def fragment(size: int, lstlike: Sequence[T]) -> Iterable[Sequence[T]]:
+    ...
+
+
+_Fragmentable = Union[AnyStr, Sequence[T]]
+
+
+def fragment(size: int, lstlike: _Fragmentable) -> Iterable[_Fragmentable]:
     """Faster alternative to grouper for lists/strings."""
     return (lstlike[i : i + size] for i in range(0, len(lstlike), size))
 

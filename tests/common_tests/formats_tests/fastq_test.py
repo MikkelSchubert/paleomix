@@ -29,7 +29,6 @@ import pytest
 from paleomix.common.fileutils import fspath
 from paleomix.common.formats.fastq import FASTQ, FASTQError, FASTQualities
 
-
 _SEQ_FRAG = "AAGTCC"  # len() = 6
 _QUAL_FRAG = "123456"  # len() = 6
 
@@ -61,7 +60,7 @@ def test_fastq__constructor__no_meta():
 
 def test_fastq__constructor__name_must_be_string_type():
     with pytest.raises(FASTQError, match="FASTQ name must be a non-empty string"):
-        FASTQ(1, None, "ACGT", "1234")
+        FASTQ(1, None, "ACGT", "1234")  # type: ignore
 
 
 def test_fastq__constructor__name_must_be_non_empty():
@@ -71,17 +70,17 @@ def test_fastq__constructor__name_must_be_non_empty():
 
 def test_fastq__constructor__meta_must_be_string_type_or_none():
     with pytest.raises(FASTQError, match="FASTQ meta must be a string, or None"):
-        FASTQ("Seq1", 1, "ACGT", "1234")
+        FASTQ("Seq1", 1, "ACGT", "1234")  # type: ignore
 
 
 def test_fastq__constructor__seq_must_be_string_type():
     with pytest.raises(FASTQError, match="FASTQ sequence must be a string"):
-        FASTQ("Seq1", None, 1, "1234")
+        FASTQ("Seq1", None, 1, "1234")  # type: ignore
 
 
 def test_fastq__constructor__qual_must_be_string_type():
     with pytest.raises(FASTQError, match="FASTQ qualities must be a string"):
-        FASTQ("Seq1", None, "ACGT", 1234)
+        FASTQ("Seq1", None, "ACGT", 1234)  # type: ignore
 
 
 def test_fastq__constructor__seq_and_qual_must_have_same_len():

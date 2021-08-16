@@ -299,7 +299,11 @@ class MakefileSpec:
     on whether or not the given value meets the specification.
     """
 
-    def __init__(self, description: str, default: Any = DEFAULT_NOT_SET):
+    def __init__(
+        self,
+        description: str = "N/A",
+        default: Any = DEFAULT_NOT_SET,
+    ):
         """description -- A string describing the specification.
         default     -- A default value, or DEFAULT_NOT_SET if not used. If a
                        value is set, it is copied before being applied."""

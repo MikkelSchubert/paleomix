@@ -88,7 +88,7 @@ def test_layout__unknown_field__in_update():
 
 def test_layout__non_string_name():
     with pytest.raises(LayoutError, match="invalid key 17"):
-        Layout({17: "my_file"})
+        Layout({17: "my_file"})  # type: ignore
 
 
 def test_layout__non_string_dict_value():

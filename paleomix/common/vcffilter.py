@@ -24,8 +24,9 @@ import argparse
 import collections
 from typing import Deque, Dict, Iterable, Iterator, List, Optional, Tuple, cast
 
-import paleomix.common.vcfwrap as vcfwrap
 from pysam import VCFRecord
+
+import paleomix.common.vcfwrap as vcfwrap
 
 _INF = float("inf")
 # Rough number of records to keep in memory at once

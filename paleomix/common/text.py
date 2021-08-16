@@ -23,6 +23,7 @@
 import itertools
 from typing import (
     Any,
+    AnyStr,
     Callable,
     Dict,
     Iterable,
@@ -32,6 +33,7 @@ from typing import (
     TypeVar,
     Union,
     cast,
+    overload,
 )
 
 T = TypeVar("T")
@@ -118,7 +120,10 @@ def parse_padded_table(
         yield dict(zip(header, fields))
 
 
-def parse_lines(lines: Iterable[str], parser: Callable[[str, int], T]) -> Iterator[T]:
+def parse_lines(
+    lines: Iterable[AnyStr],
+    parser: Callable[[AnyStr, int], T],
+) -> Iterator[T]:
     """Parses a set of lines using the supplied callable:
         lambda (line, length): ...
 
@@ -135,8 +140,8 @@ def parse_lines(lines: Iterable[str], parser: Callable[[str, int], T]) -> Iterat
 
 
 def parse_lines_by_contig(
-    lines: Iterable[str],
-    parser: Callable[[str, int], T],
+    lines: Iterable[AnyStr],
+    parser: Callable[[AnyStr, int], T],
 ) -> Dict[str, List[T]]:
     """Reads the lines of a text file, parsing each line with the specified
     parser, and aggregating results by the 'contig' property of reach record.

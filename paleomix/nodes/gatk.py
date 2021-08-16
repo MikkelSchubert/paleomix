@@ -5,18 +5,20 @@ Genome Analysis Toolkit
 https://gatk.broadinstitute.org/
 """
 import os
+from typing import Iterable, List, Union
 
 import paleomix.common.system
 from paleomix.common.command import (
     AtomicCmd,
     InputFile,
+    OptionsType,
     OutputFile,
     SequentialCmds,
     TempInputFile,
     TempOutputFile,
 )
 from paleomix.common.fileutils import swap_ext
-from paleomix.node import CommandNode, NodeError
+from paleomix.node import CommandNode, Node, NodeError
 
 
 class ApplyBQSRNode(CommandNode):
@@ -408,12 +410,12 @@ class ValidateBAMNode(CommandNode):
 class SplitIntervalsNode(CommandNode):
     def __init__(
         self,
-        in_reference,
-        out_folder,
-        scatter_count=1,
-        options={},
-        java_options=(),
-        dependencies=(),
+        in_reference: str,
+        out_folder: str,
+        scatter_count: int = 1,
+        options: OptionsType = {},
+        java_options: Iterable[str] = (),
+        dependencies: Iterable[Node] = (),
     ):
         if scatter_count < 1:
             raise ValueError("scatter_count must be >= 1, not {}".format(scatter_count))
@@ -427,7 +429,10 @@ class SplitIntervalsNode(CommandNode):
             # is needed for some operations that require intervals in genome order
             self.intervals.append({"name": name, "filename": filename})
 
-        extra_files = [OutputFile(interval["filename"]) for interval in self.intervals]
+        extra_files: List[Union[InputFile, OutputFile]] = []
+        for interval in self.intervals:
+            extra_files.append(OutputFile(interval["filename"]))
+
         # Both the fai and dict files are required by the command
         extra_files.append(InputFile(in_reference + ".fai"))
         extra_files.append(InputFile(swap_ext(in_reference, ".dict")))

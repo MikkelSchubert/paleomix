@@ -23,6 +23,7 @@
 import glob
 import os
 import re
+from typing import Iterable
 
 import paleomix.common.fileutils as fileutils
 import paleomix.common.versions as versions
@@ -33,7 +34,7 @@ from paleomix.common.command import (
     OutputFile,
     TempOutputFile,
 )
-from paleomix.node import CommandNode
+from paleomix.node import CommandNode, Node
 from paleomix.nodegraph import FileStatusCache
 
 EXAML_VERSION = versions.Requirement(
@@ -50,7 +51,13 @@ PARSER_VERSION = versions.Requirement(
 
 
 class ExaMLParserNode(CommandNode):
-    def __init__(self, input_alignment, input_partition, output_file, dependencies=()):
+    def __init__(
+        self,
+        input_alignment: str,
+        input_partition: str,
+        output_file: str,
+        dependencies: Iterable[Node] = (),
+    ):
         """
         Arguments:
         input_alignment  -- An alignment file in a format readable by RAxML.
@@ -118,12 +125,12 @@ class ExaMLParserNode(CommandNode):
 class ExaMLNode(CommandNode):
     def __init__(
         self,
-        input_binary,
-        initial_tree,
-        output_template,
-        model="GAMMA",
-        threads=1,
-        dependencies=(),
+        input_binary: str,
+        initial_tree: str,
+        output_template: str,
+        model: str = "GAMMA",
+        threads: int = 1,
+        dependencies: Iterable[Node] = (),
     ):
         """
         Arguments:
@@ -191,7 +198,7 @@ class ExaMLNode(CommandNode):
         CommandNode._setup(self, temp)
 
         # The temp folder may contain old files:
-        # Remove old pipes to prevent failure at _teardown
+        # Remove old pipes to prevent warnings at _teardown
         for pipe_fname in glob.glob(os.path.join(temp, "pipe*")):
             fileutils.try_remove(pipe_fname)
         # ExaML refuses to overwrite old info files
@@ -206,7 +213,8 @@ class ExaMLNode(CommandNode):
         if not cache.are_files_outdated(self.input_files, checkpoints):
             checkpoints.sort(key=lambda fname: int(fname.rsplit("_", 1)[-1]))
 
-            # FIXME: Less hacky solution to modifying AtomicCmds needed
+            assert isinstance(self._command, CommandNode)
+            assert isinstance(self._command._command, AtomicCmd)
             self._command._command.append("-R")
             self._command._command.append(checkpoints[-1])
         else:

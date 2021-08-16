@@ -21,15 +21,22 @@
 # SOFTWARE.
 #
 import os
+from typing import Iterable
 
+from paleomix.common.fileutils import describe_files, move_file
 from paleomix.common.formats.newick import Newick
 from paleomix.common.utilities import safe_coerce_to_tuple
-from paleomix.common.fileutils import describe_files, move_file
 from paleomix.node import Node
 
 
 class NewickRerootNode(Node):
-    def __init__(self, tree_files, output_file, taxa=(), dependencies=()):
+    def __init__(
+        self,
+        tree_files: Iterable[str],
+        output_file: str,
+        taxa: Iterable[str] = (),
+        dependencies: Iterable[Node] = (),
+    ):
         self._output_file = output_file
         self._tree_files = safe_coerce_to_tuple(tree_files)
         self._reroot_on_taxa = safe_coerce_to_tuple(taxa)
@@ -66,7 +73,11 @@ class NewickRerootNode(Node):
 
 class NewickSupportNode(Node):
     def __init__(
-        self, main_tree_files, support_tree_files, output_file, dependencies=()
+        self,
+        main_tree_files: Iterable[str],
+        support_tree_files: Iterable[str],
+        output_file: str,
+        dependencies: Iterable[Node] = (),
     ):
         self._output_file = output_file
         self._main_tree_files = safe_coerce_to_tuple(main_tree_files)

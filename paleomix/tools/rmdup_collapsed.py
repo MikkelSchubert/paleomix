@@ -21,11 +21,11 @@ rmdup_collapsed is based on the 'FilterUniqueBAM' script by Martin Kircher.
 import collections
 import random
 import sys
+from typing import Sequence
 
 import pysam
 
 from paleomix.common.argparse import ArgumentParser
-
 
 _FILTERED_FLAGS = (
     0x1  # PE reads
@@ -39,7 +39,7 @@ _CIGAR_SOFTCLIP = 4
 _CIGAR_HARDCLIP = 5
 
 
-def read_quality(read):
+def read_quality(read: pysam.AlignedSegment):
     qualities = read.query_alignment_qualities
     if qualities is None:
         # Generate value in range (-1; 0]
@@ -48,7 +48,7 @@ def read_quality(read):
     return sum(qualities)
 
 
-def copy_number(read):
+def copy_number(read: pysam.AlignedSegment):
     # has_tag is faster than try/except, since most reads lack the tag.
     if read.has_tag("XP"):
         return read.get_tag("XP")
@@ -56,7 +56,7 @@ def copy_number(read):
     return 0
 
 
-def mark_duplicate_reads(reads):
+def mark_duplicate_reads(reads: Sequence[pysam.AlignedSegment]):
     """Identifies the best read from a set of PCR duplicates, and marks all
     other reads as duplicates. The best read is selected by quality, among the
     reads sharing the most common CIGAR string.
@@ -88,9 +88,10 @@ def mark_duplicate_reads(reads):
         else:
             copies += sum(copy_number(read) for read in candidates)
 
-    best_read.set_tag("XP", copies, "i")
-    for read in reads:
-        read.is_duplicate = read is not best_read
+    if best_read is not None:
+        best_read.set_tag("XP", copies, "i")
+        for read in reads:
+            read.is_duplicate = read is not best_read
 
 
 def write_read(args, out, read_and_alignment, duplicates_by_alignment):

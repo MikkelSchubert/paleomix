@@ -23,8 +23,9 @@
 import operator
 from typing import Any, Dict
 
-import paleomix.common.utilities as utils
 import pytest
+
+import paleomix.common.utilities as utils
 
 ################################################################################
 ################################################################################
@@ -165,7 +166,7 @@ def test_set_in__fail_on_no_kws():
 
 def test_set_in__fail_on_invalid_sub_dictionary_first_level():
     with pytest.raises(TypeError):
-        utils.set_in(None, [1], 17)
+        utils.set_in(None, [1], 17)  # type: ignore
 
 
 def test_set_in__fail_on_invalid_sub_dictionary_second_level():
@@ -415,12 +416,12 @@ def test_fill_dict__source_not_modified():
 
 def test_fill_dict__destination_must_be_dict():
     with pytest.raises(TypeError):
-        utils.fill_dict([], {})
+        utils.fill_dict([], {})  # type: ignore
 
 
 def test_fill_dict__source_must_be_dict():
     with pytest.raises(TypeError):
-        utils.fill_dict({}, [])
+        utils.fill_dict({}, [])  # type: ignore
 
 
 ###############################################################################
@@ -430,6 +431,8 @@ def test_fill_dict__source_must_be_dict():
 
 def test_immutable__properties_set():
     class ImmutableCls(utils.Immutable):
+        value: int
+
         def __init__(self, value: int):
             utils.Immutable.__init__(self, value=value)
 

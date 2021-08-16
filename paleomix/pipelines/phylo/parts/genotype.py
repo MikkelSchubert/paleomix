@@ -21,18 +21,16 @@
 # SOFTWARE.
 #
 import os
-
 from copy import deepcopy
 
-from paleomix.nodes.samtools import TabixIndexNode, FastaIndexNode, BAMIndexNode
-from paleomix.nodes.commands import PaddedBedNode
-from paleomix.common.fileutils import swap_ext, add_postfix
+from paleomix.common.fileutils import add_postfix, swap_ext
 from paleomix.nodes.commands import (
-    VCFFilterNode,
     BuildRegionsNode,
     GenotypeRegionsNode,
+    PaddedBedNode,
+    VCFFilterNode,
 )
-
+from paleomix.nodes.samtools import BAMIndexNode, FastaIndexNode, TabixIndexNode
 
 ###############################################################################
 ###############################################################################
@@ -177,7 +175,7 @@ def build_genotyping_nodes_cached(options, genotyping, sample, regions, dependen
 
     # 3. Tabix index. This allows random-access to the VCF file when building
     #    the consensus FASTA sequence later in the pipeline.
-    tabix = TabixIndexNode(infile=filtered, preset="vcf", dependencies=vcffilter)
+    tabix = TabixIndexNode(infile=filtered, preset="vcf", dependencies=[vcffilter])
 
     _VCF_CACHE[(bamfile, output_prefix)] = (filtered, tabix)
     return filtered, tabix
@@ -225,7 +223,7 @@ def build_genotyping_nodes(options, genotyping, sample, regions, dependencies):
     )
 
     # 3. Index sequences to make retrival easier for MSA
-    faidx = FastaIndexNode(infile=output_fasta, dependencies=builder)
+    faidx = FastaIndexNode(infile=output_fasta, dependencies=[builder])
 
     return (faidx,)
 

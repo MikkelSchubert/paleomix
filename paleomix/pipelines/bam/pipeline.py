@@ -494,7 +494,7 @@ def _filter_pcr_duplicates_by_type(args, layout, options, tasks_by_read_type, st
 ########################################################################################
 
 
-def run_mapdamage(layout, genome, records):
+def run_mapdamage(layout: Layout, genome, records):
     options = records[0]["Options"]
     run_type = options["Features"]["mapDamage"]
 
@@ -512,6 +512,7 @@ def run_mapdamage(layout, genome, records):
 
     if run_type in ("rescale", "model"):
         # Builds model of post-mortem DNA damage
+        assert extra_task is not None
         extra_task = MapDamageModelNode(
             reference=genome["Path"],
             directory=layout["mapdamage_folder"],
@@ -521,6 +522,7 @@ def run_mapdamage(layout, genome, records):
 
     if run_type in ("rescale",):
         # Rescales BAM quality scores using model built above
+        assert extra_task is not None
         task = MapDamageRescaleNode(
             reference=genome["Path"],
             input_files=[record["Path"] for record in records],

@@ -2,12 +2,10 @@
 # -*- coding: utf8 -*-
 import re
 import sys
-
 from pathlib import Path
 
-from paleomix.common.formats import FormatError
 from paleomix.common.argparse import ArgumentParser
-
+from paleomix.common.formats import FormatError
 
 # Standard nucleotides + UIPAC codes
 _VALID_CHARS_STR = b"ACGTN" b"RYSWKMBDHV"
@@ -44,8 +42,9 @@ def _validate_fasta_line(line, valid_chars=_VALID_CHARS):
 
 
 def check_fasta_file(handle):
+    linenum = 0
     sequence_names = set()
-    state, linelength, linelengthchanged = _NA, None, False
+    state, linelength, linelengthchanged = _NA, -1, False
     try:
         for linenum, line in enumerate(handle, start=1):
             # Only \n is allowed as not all tools handle \r
@@ -60,7 +59,7 @@ def check_fasta_file(handle):
                 if state in (_NA, _IN_SEQUENCE, _IN_WHITESPACE):
                     _validate_fasta_header(line, sequence_names)
                     state = _IN_HEADER
-                    linelength = None
+                    linelength = -1
                     linelengthchanged = False
                 else:
                     assert state == _IN_HEADER, state

@@ -21,18 +21,20 @@
 # SOFTWARE.
 #
 import os
+from typing import Iterable
 
 import paleomix.common.rtools as rtools
 import paleomix.common.versions as versions
 from paleomix.common.command import (
     AtomicCmd,
     InputFile,
+    OptionsType,
     OutputFile,
     ParallelCmds,
     TempOutputFile,
 )
 from paleomix.common.fileutils import describe_files
-from paleomix.node import CommandNode, NodeError
+from paleomix.node import CommandNode, Node, NodeError
 from paleomix.nodes.samtools import merge_bam_files_command
 
 MAPDAMAGE_VERSION = versions.Requirement(
@@ -52,12 +54,12 @@ RSCRIPT_VERSION = versions.Requirement(
 class MapDamagePlotNode(CommandNode):
     def __init__(
         self,
-        reference,
-        input_files,
-        output_directory,
-        title="mapDamage",
-        options={},
-        dependencies=(),
+        reference: str,
+        input_files: Iterable[str],
+        output_directory: str,
+        title: str = "mapDamage",
+        options: OptionsType = {},
+        dependencies: Iterable[Node] = (),
     ):
         merge = None
         input_files = tuple(input_files)
@@ -124,7 +126,13 @@ class MapDamagePlotNode(CommandNode):
 
 
 class MapDamageModelNode(CommandNode):
-    def __init__(self, reference, directory, options={}, dependencies=()):
+    def __init__(
+        self,
+        reference: str,
+        directory: str,
+        options: OptionsType = {},
+        dependencies: Iterable[Node] = (),
+    ):
         command = AtomicCmd(
             ["mapDamage"],
             extra_files=[
@@ -205,12 +213,12 @@ class MapDamageModelNode(CommandNode):
 class MapDamageRescaleNode(CommandNode):
     def __init__(
         self,
-        reference,
-        input_files,
-        output_file,
-        directory,
-        options={},
-        dependencies=(),
+        reference: str,
+        input_files: Iterable[str],
+        output_file: str,
+        directory: str,
+        options: OptionsType = {},
+        dependencies: Iterable[Node] = (),
     ):
         merge = None
         input_files = tuple(input_files)

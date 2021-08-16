@@ -25,19 +25,16 @@ import os
 import random
 import sys
 import tarfile
-
 from io import TextIOWrapper
 
 import pysam
-
-from paleomix.common.sequences import NT_CODES
-from paleomix.common.sampling import reservoir_sampling
 
 import paleomix.common.argparse as argparse
 import paleomix.common.bamfiles as bamtools
 import paleomix.common.fileutils as fileutils
 import paleomix.pipelines.zonkey.database as database
-
+from paleomix.common.sampling import reservoir_sampling
+from paleomix.common.sequences import NT_CODES
 
 _TRANSITIONS = frozenset((("C", "T"), ("T", "C"), ("G", "A"), ("A", "G")))
 
@@ -105,9 +102,9 @@ class GenotypeSites:
             sites_iter = iter(sites).__next__
             alignment_iter = iter(record.get_aligned_pairs()).__next__
             alignment_end = record.aend
+            read_used = False
 
             try:
-                read_used = False
                 site_pos, _, nucleotides = sites_iter()
                 query_pos, ref_pos = alignment_iter()
 

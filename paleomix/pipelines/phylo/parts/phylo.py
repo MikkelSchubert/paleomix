@@ -20,16 +20,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import collections
 import os
 import random
-import collections
 
-from paleomix.nodes.formats import FastaToPartitionedInterleavedPhyNode as ToPhylipNode
-from paleomix.nodes.raxml import RAxMLParsimonyTreeNode
-from paleomix.nodes.phylip import PHYLIPBootstrapNode
+from paleomix.common.fileutils import add_postfix, swap_ext
 from paleomix.nodes.examl import ExaMLNode, ExaMLParserNode
+from paleomix.nodes.formats import FastaToPartitionedInterleavedPhyNode as ToPhylipNode
 from paleomix.nodes.newick import NewickRerootNode, NewickSupportNode
-from paleomix.common.fileutils import swap_ext, add_postfix
+from paleomix.nodes.phylip import PHYLIPBootstrapNode
+from paleomix.nodes.raxml import RAxMLParsimonyTreeNode
 
 
 def _build_supermatrix(
@@ -83,7 +83,7 @@ def _examl_nodes(
         output_template=output_template,
         model=settings["ExaML"]["Model"].upper(),
         threads=options.examl_max_threads,
-        dependencies=tree,
+        dependencies=[tree],
     )
 
 
@@ -163,7 +163,7 @@ def _build_examl_bootstraps(
             input_alignment=bootstrap_alignment,
             input_partition=input_partition,
             output_file=bootstrap_binary,
-            dependencies=bootstrap,
+            dependencies=[bootstrap],
         )
 
         bootstraps.append(

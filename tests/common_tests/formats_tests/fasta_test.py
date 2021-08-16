@@ -29,7 +29,6 @@ import pytest
 from paleomix.common.fileutils import fspath
 from paleomix.common.formats.fasta import FASTA, FASTAError
 
-
 _SEQ_FRAG = "AAGTCC"  # len() = 6
 
 
@@ -64,17 +63,17 @@ def test_fasta__constructor__name_must_be_non_empty():
 
 def test_fasta__constructor__name_must_be_string_type():
     with pytest.raises(FASTAError):
-        FASTA(1, None, "ACGT")
+        FASTA(1, None, "ACGT")  # type: ignore
 
 
 def test_fasta__constructor__name_must_be_string_type_or_none():
     with pytest.raises(FASTAError):
-        FASTA("Seq1", 1, "ACGT")
+        FASTA("Seq1", 1, "ACGT")  # type: ignore
 
 
 def test_fasta__constructor__sequence_must_be_string_type():
     with pytest.raises(FASTAError):
-        FASTA("Seq1", None, 1)
+        FASTA("Seq1", None, 1)  # type: ignore
 
 
 ###############################################################################

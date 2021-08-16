@@ -22,13 +22,13 @@
 #
 import os
 import subprocess
+from typing import cast
 
 import pytest
 
 import paleomix
 import paleomix.main as main
 import paleomix.tools.factory as factory
-
 
 ###############################################################################
 ###############################################################################
@@ -57,7 +57,11 @@ def check_run(call, *args, **kwargs):
             % (proc.returncode, call, stdout, stderr)
         )
 
-    return stdout.decode("utf-8", "replace"), stderr.decode("utf-8", "replace")
+    # FIXME: Workaround for wrong function signature for `Popen.communicate`
+    stdout = cast(bytes, stdout).decode("utf-8", "replace")
+    stderr = cast(bytes, stderr).decode("utf-8", "replace")
+
+    return stdout, stderr
 
 
 # Simple test of the paleomxi command

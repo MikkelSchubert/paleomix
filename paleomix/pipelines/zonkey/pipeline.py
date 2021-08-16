@@ -26,6 +26,8 @@ import shutil
 import string
 import tarfile
 
+import pysam
+
 import paleomix
 import paleomix.common.fileutils as fileutils
 import paleomix.common.logging
@@ -36,7 +38,7 @@ import paleomix.pipelines.zonkey.parts.mitochondria as mitochondria
 import paleomix.pipelines.zonkey.parts.nuclear as nuclear
 import paleomix.pipelines.zonkey.parts.report as report
 import paleomix.pipelines.zonkey.parts.summary as summary
-import pysam
+import paleomix.resources
 from paleomix.common.formats.fasta import FASTA
 from paleomix.nodes.raxml import RAxMLRapidBSNode
 from paleomix.nodes.samtools import BAMIndexNode
@@ -418,7 +420,8 @@ def setup_example(config):
     log = logging.getLogger(__name__)
     log.info("Copying example project to %r", root)
 
-    with tarfile.TarFile(config.database.filename) as tar_handle:
+    database = config.database.filename
+    with tarfile.TarFile(database) as tar_handle:
         example_files = []
         existing_files = []
         for member in tar_handle.getmembers():
@@ -435,10 +438,7 @@ def setup_example(config):
                 log.error(" - %r", filename)
             return 1
         elif not example_files:
-            log.error(
-                "Sample database %r does not contain example data; cannot proceed.",
-                config.database.filename,
-            )
+            log.error("%r does not contain example data; cannot proceed", database)
             return 1
 
         if not os.path.exists(root):
@@ -447,6 +447,10 @@ def setup_example(config):
         for member in example_files:
             destination = fileutils.reroot_path(root, member.name)
             src_handle = tar_handle.extractfile(member)
+            if src_handle is None:
+                log.error("Could not extract %r from %r", member, database)
+                return 1
+
             with open(destination, "wb") as out_handle:
                 shutil.copyfileobj(src_handle, out_handle)
 

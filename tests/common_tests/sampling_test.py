@@ -26,7 +26,6 @@ import pytest
 
 import paleomix.common.sampling as sampling
 
-
 ###############################################################################
 ###############################################################################
 # weighted_sampling
@@ -133,9 +132,9 @@ def test_reservoir_sampling__downsample_to_negative_raises_value_error():
 
 def test_reservoir_sampling__downsample_to_float_raises_type_error():
     with pytest.raises(TypeError):
-        sampling.reservoir_sampling(list(range(5)), 1.0)
+        sampling.reservoir_sampling(list(range(5)), 1.0)  # type: ignore
 
 
 def test_reservoir_sampling__downsample_to_non_number_raises_type_error():
     with pytest.raises(TypeError):
-        sampling.reservoir_sampling(list(range(5)), "Eh?")
+        sampling.reservoir_sampling(list(range(5)), "Eh?")  # type: ignore

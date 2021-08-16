@@ -26,11 +26,18 @@ Each node is equivalent to a particular command:
     $ paleomix [...]
 """
 import os
+from typing import Iterable
 
 import paleomix.tools.factory as factory
-from paleomix.common.command import AtomicCmd, InputFile, OutputFile, ParallelCmds
+from paleomix.common.command import (
+    AtomicCmd,
+    InputFile,
+    OptionsType,
+    OutputFile,
+    ParallelCmds,
+)
 from paleomix.common.fileutils import describe_files
-from paleomix.node import CommandNode
+from paleomix.node import CommandNode, Node
 from paleomix.nodes.samtools import BCFTOOLS_VERSION, merge_bam_files_command
 
 
@@ -81,7 +88,13 @@ class DepthHistogramNode(CommandNode):
 
 
 class FilterCollapsedBAMNode(CommandNode):
-    def __init__(self, input_bams, output_bam, keep_dupes=True, dependencies=()):
+    def __init__(
+        self,
+        input_bams: Iterable[str],
+        output_bam: str,
+        keep_dupes: bool = True,
+        dependencies: Iterable[Node] = (),
+    ):
         input_bams = tuple(input_bams)
         if len(input_bams) > 1:
             merge = merge_bam_files_command(input_bams)
@@ -243,12 +256,13 @@ class PaddedBedNode(CommandNode):
 class FinalizeBAMNode(CommandNode):
     def __init__(
         self,
-        in_bams,
-        out_passed,
-        out_failed,
-        out_json,
-        options={},
-        dependencies=(),
+        in_bams: Iterable[str],
+        out_passed: str,
+        out_failed: str,
+        out_json: str,
+        threads: int = 1,
+        options: OptionsType = {},
+        dependencies: Iterable[Node] = (),
     ):
         in_bams = tuple(in_bams)
         if len(in_bams) > 1:
@@ -272,6 +286,7 @@ class FinalizeBAMNode(CommandNode):
                 "--out-passed": OutputFile(out_passed),
                 "--out-failed": OutputFile(out_failed),
                 "--out-json": OutputFile(out_json),
+                "--threads": threads,
             },
         )
 
@@ -284,5 +299,5 @@ class FinalizeBAMNode(CommandNode):
             ),
             command=command,
             dependencies=dependencies,
-            threads=options.get("--threads", 1),
+            threads=threads,
         )

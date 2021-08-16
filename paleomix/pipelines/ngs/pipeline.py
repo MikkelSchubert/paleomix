@@ -1,9 +1,9 @@
 import logging
 import os
 
-from paleomix.common.layout import Layout
 from paleomix.common.command import InputFile
 from paleomix.common.fileutils import swap_ext
+from paleomix.common.layout import Layout
 from paleomix.nodes.bwa import BWAAlgorithmNode, BWAIndexNode
 from paleomix.nodes.commands import FilterCollapsedBAMNode, FinalizeBAMNode
 from paleomix.nodes.fastp import FastpNode
@@ -418,9 +418,7 @@ def merge_samples_alignments(args, genome, samples, settings):
             out_passed=layout["aln_split_passed_bam"],
             out_failed=layout["aln_split_failed_bam"],
             out_json=layout["aln_split_statistics"],
-            options={
-                "--threads": args.max_threads_samtools,
-            },
+            threads=args.max_threads_samtools,
             dependencies=input_libraries.values(),
         )
 
