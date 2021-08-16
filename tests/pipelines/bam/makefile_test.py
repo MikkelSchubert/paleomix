@@ -9,11 +9,7 @@ from paleomix.resources import template
 
 
 def _read_makefile(filepath):
-    # The template options should always be valid
     (result,) = read_makefiles([filepath])
-
-    # TODO: Remove once no longer needed for backwards compatibility
-    del result["Targets"]
 
     return result
 
@@ -75,23 +71,14 @@ TEMPLATE_BAM = {
     "Samples": {
         "NAME_OF_SAMPLE": {
             "NAME_OF_LIBRARY": {
-                "NAME_OF_LANE::001": {
-                    "Data": {"SE": "PATH_WITH_WILDCARDS"},
-                    "Options": copy.deepcopy(TEMPLATE_BAM_OPTIONS),
-                    "Tags": {
-                        "DS": "PATH_WITH_WILDCARDS",
-                        "Folder": "PATH_WITH_WILDCARDS",
-                        "ID": "NAME_OF_LIBRARY",
-                        "LB": "NAME_OF_LIBRARY",
-                        "PG": "BWA",
-                        "PL": "ILLUMINA",
-                        "PU": "NAME_OF_LANE",
-                        "SM": "NAME_OF_SAMPLE",
-                        "Target": "NAME_OF_SAMPLE",
-                        "Group": "Samples",
-                    },
-                    "Type": "Untrimmed",
-                }
+                "NAME_OF_LANE": [
+                    {
+                        "Path": ("PATH_WITH_WILDCARDS", None),
+                        "Shortname": "PATH_WITH_WILDCARDS",
+                        "Options": copy.deepcopy(TEMPLATE_BAM_OPTIONS),
+                        "Type": "Untrimmed",
+                    }
+                ]
             }
         }
     },
@@ -100,14 +87,11 @@ TEMPLATE_BAM = {
 
 def _trim_template():
     data = copy.deepcopy(TEMPLATE_BAM)
-    options = [
-        data,
-        data["Samples"]["NAME_OF_SAMPLE"]["NAME_OF_LIBRARY"]["NAME_OF_LANE::001"],
-    ]
-
     del data["Genomes"]["NAME_OF_PREFIX"]
+    del data["Options"]["Aligners"]["Bowtie2"]["--very-sensitive"]
+    del data["Options"]["mapDamage"]["--downsample"]
 
-    for dd in options:
+    for dd in data["Samples"]["NAME_OF_SAMPLE"]["NAME_OF_LIBRARY"]["NAME_OF_LANE"]:
         del dd["Options"]["Aligners"]["Bowtie2"]["--very-sensitive"]
         del dd["Options"]["mapDamage"]["--downsample"]
 
@@ -281,62 +265,32 @@ def _sample_template(filepath):
     data["Samples"] = {
         "Sam1": {
             "Lib1": {
-                "Run1::001": {
-                    "Type": "Untrimmed",
-                    "Data": {"SE": "/path/to/run1.fq.gz"},
-                    "Options": copy.deepcopy(options),
-                    "Tags": {
-                        "Target": "Sam1",
-                        "Group": "Samples",
-                        "ID": "Lib1",
-                        "SM": "Sam1",
-                        "LB": "Lib1",
-                        "PU": "Run1",
-                        "DS": "/path/to/run1.fq.gz",
-                        "Folder": "run1.fq.gz",
-                        "PG": "BWA",
-                        "PL": "ILLUMINA",
-                    },
-                },
-                "Run2::001": {
-                    "Type": "Untrimmed",
-                    "Data": {
-                        "PE_1": "/path/to/run2_1.fq.gz",
-                        "PE_2": "/path/to/run2_2.fq.gz",
-                    },
-                    "Options": copy.deepcopy(options),
-                    "Tags": {
-                        "Target": "Sam1",
-                        "Group": "Samples",
-                        "ID": "Lib1",
-                        "SM": "Sam1",
-                        "LB": "Lib1",
-                        "PU": "Run2",
-                        "DS": "/path/to/run2_[12].fq.gz",
-                        "Folder": "run2_x.fq.gz",
-                        "PG": "BWA",
-                        "PL": "ILLUMINA",
-                    },
-                },
+                "Run1": [
+                    {
+                        "Type": "Untrimmed",
+                        "Path": ("/path/to/run1.fq.gz", None),
+                        "Shortname": "run1.fq.gz",
+                        "Options": copy.deepcopy(options),
+                    }
+                ],
+                "Run2": [
+                    {
+                        "Type": "Untrimmed",
+                        "Path": ("/path/to/run2_1.fq.gz", "/path/to/run2_2.fq.gz"),
+                        "Shortname": "run2_x.fq.gz",
+                        "Options": copy.deepcopy(options),
+                    }
+                ],
             },
             "Lib2": {
-                "Run3::001": {
-                    "Type": "Untrimmed",
-                    "Data": {"SE": "/path/to/run3.fq.gz"},
-                    "Options": copy.deepcopy(options),
-                    "Tags": {
-                        "Target": "Sam1",
-                        "Group": "Samples",
-                        "ID": "Lib2",
-                        "SM": "Sam1",
-                        "LB": "Lib2",
-                        "PU": "Run3",
-                        "DS": "/path/to/run3.fq.gz",
-                        "Folder": "run3.fq.gz",
-                        "PG": "BWA",
-                        "PL": "ILLUMINA",
-                    },
-                }
+                "Run3": [
+                    {
+                        "Type": "Untrimmed",
+                        "Path": ("/path/to/run3.fq.gz", None),
+                        "Shortname": "run3.fq.gz",
+                        "Options": copy.deepcopy(options),
+                    }
+                ]
             },
         }
     }
@@ -369,9 +323,7 @@ def test_makefile__sample__basic(tmp_path):
     """,
     )
 
-    expected = _sample_template(filepath)
-
-    assert _read_makefile(filepath) == expected
+    assert _read_makefile(filepath) == _sample_template(filepath)
 
 
 def test_makefile__sample__group_options(tmp_path):
@@ -393,7 +345,7 @@ def test_makefile__sample__group_options(tmp_path):
 
     expected = _sample_template(filepath)
     for (lib, run) in [("Lib1", "Run1"), ("Lib1", "Run2"), ("Lib2", "Run3")]:
-        options = expected["Samples"]["Sam1"][lib][f"{run}::001"]["Options"]
+        options = expected["Samples"]["Sam1"][lib][run][0]["Options"]
         options["AdapterRemoval"]["--adapter1"] = "CATCATDOGCAT"
 
     assert _read_makefile(filepath) == expected
@@ -418,7 +370,7 @@ def test_makefile__sample__sample_options(tmp_path):
 
     expected = _sample_template(filepath)
     for (lib, run) in [("Lib1", "Run1"), ("Lib1", "Run2"), ("Lib2", "Run3")]:
-        options = expected["Samples"]["Sam1"][lib][f"{run}::001"]["Options"]
+        options = expected["Samples"]["Sam1"][lib][run][0]["Options"]
         options["AdapterRemoval"]["--adapter1"] = "CATCATDOGCAT"
 
     assert _read_makefile(filepath) == expected
@@ -442,9 +394,9 @@ def test_makefile__sample__library_options(tmp_path):
     )
 
     expected = _sample_template(filepath)
-    for (lib, run) in [("Lib1", "Run1"), ("Lib1", "Run2")]:
-        options = expected["Samples"]["Sam1"][lib][f"{run}::001"]["Options"]
-        options["AdapterRemoval"]["--adapter1"] = "CATCATDOGCAT"
+    for lane in ("Run1", "Run2"):
+        for record in expected["Samples"]["Sam1"]["Lib1"][lane]:
+            record["Options"]["AdapterRemoval"]["--adapter1"] = "CATCATDOGCAT"
 
     assert _read_makefile(filepath) == expected
 
@@ -468,8 +420,8 @@ def test_makefile__sample__lane_options(tmp_path):
     )
 
     expected = _sample_template(filepath)
-    options = expected["Samples"]["Sam1"]["Lib1"][f"Run2::001"]["Options"]
-    options["AdapterRemoval"]["--adapter1"] = "CATCATDOGCAT"
+    for record in expected["Samples"]["Sam1"]["Lib1"]["Run2"]:
+        record["Options"]["AdapterRemoval"]["--adapter1"] = "CATCATDOGCAT"
 
     assert _read_makefile(filepath) == expected
 
@@ -496,12 +448,13 @@ def test_makefile__sample__mixed_options(tmp_path):
     )
 
     expected = _sample_template(filepath)
-    for (lib, run) in [("Lib1", "Run1"), ("Lib1", "Run2")]:
-        options = expected["Samples"]["Sam1"][lib][f"{run}::001"]["Options"]
-        options["AdapterRemoval"]["--adapter1"] = "CATCATDOGCAT"
 
-    options = expected["Samples"]["Sam1"]["Lib2"]["Run3::001"]["Options"]
-    options["AdapterRemoval"]["--adapter1"] = "DOGCATDOGDOG"
+    for lane in ("Run1", "Run2"):
+        for record in expected["Samples"]["Sam1"]["Lib1"][lane]:
+            record["Options"]["AdapterRemoval"]["--adapter1"] = "CATCATDOGCAT"
+
+    for record in expected["Samples"]["Sam1"]["Lib2"]["Run3"]:
+        record["Options"]["AdapterRemoval"]["--adapter1"] = "DOGCATDOGDOG"
 
     assert _read_makefile(filepath) == expected
 
@@ -527,11 +480,6 @@ def test_makefile__sample__multiple_samples(tmp_path):
         "Sam1": {"Lib1": expected["Samples"]["Sam1"]["Lib1"]},
         "Sam2": {"Lib2": expected["Samples"]["Sam1"]["Lib2"]},
     }
-
-    tags = expected["Samples"]["Sam2"]["Lib2"]["Run3::001"]["Tags"]
-    tags["Group"] = "MoreSamples"
-    tags["SM"] = "Sam2"
-    tags["Target"] = "Sam2"
 
     assert _read_makefile(filepath) == expected
 
@@ -573,13 +521,13 @@ def test_makefile__sample__features__group(tmp_path, key):
               Run1: /path/to/run1.fq.gz
           Options:
             Features:
-              {key}: yes
+              {key}: no
     """,
     )
 
     result = _read_makefile(filepath)
-    options = result["Samples"]["Sam1"]["Lib1"]["Run1::001"]["Options"]
-    assert options["Features"][key] == True
+    for record in result["Samples"]["Sam1"]["Lib1"]["Run1"]:
+        assert not record["Options"]["Features"][key]
 
 
 @pytest.mark.parametrize("key", FEATURES)
@@ -593,13 +541,13 @@ def test_makefile__sample__features__sample(tmp_path, key):
               Run1: /path/to/run1.fq.gz
           Options:
             Features:
-              {key}: yes
+              {key}: no
     """,
     )
 
     result = _read_makefile(filepath)
-    options = result["Samples"]["Sam1"]["Lib1"]["Run1::001"]["Options"]
-    assert options["Features"][key] == True
+    for record in result["Samples"]["Sam1"]["Lib1"]["Run1"]:
+        assert not record["Options"]["Features"][key]
 
 
 @pytest.mark.parametrize("key", ("mapDamage", "PCRDuplicates"))
@@ -613,13 +561,13 @@ def test_makefile__sample__features__library__allowed(tmp_path, key):
               Run1: /path/to/run1.fq.gz
               Options:
                 Features:
-                  {key}: yes
+                  {key}: no
     """,
     )
 
     result = _read_makefile(filepath)
-    options = result["Samples"]["Sam1"]["Lib1"]["Run1::001"]["Options"]
-    assert options["Features"][key] == True
+    for record in result["Samples"]["Sam1"]["Lib1"]["Run1"]:
+        assert not record["Options"]["Features"][key]
 
 
 @pytest.mark.parametrize("key", ("Coverage", "Depths", "Summary"))
@@ -678,7 +626,7 @@ def test_makefile__sample__mapdamage_at_lane_level(tmp_path):
 
     with pytest.raises(
         MakefileError,
-        match=f"Cannot set mapDamage options for individual lanes",
+        match=f"Cannot set mapDamage options at",
     ):
         _read_makefile(filepath)
 
@@ -705,17 +653,20 @@ def test_makefile__sample__pretrimmed_reads(tmp_path):
     )
 
     expected = _sample_template(filepath)
-    # No auto-renumbering of split lanes
-    run = expected["Samples"]["Sam1"]["Lib1"].pop("Run1::001")
-    expected["Samples"]["Sam1"]["Lib1"]["Run1"] = run
-    # Minor differences in structure
-    run["Type"] = "Trimmed"
-    run["Data"] = {
-        "Single": "/path/to/trimmed_se.fq.gz",
-        "Paired": "/path/to/trimmed_pe_{Pair}.fq.gz",
-    }
-    run["Tags"]["DS"] = "NA"
-    run["Tags"]["Folder"] = "NA"
+    expected["Samples"]["Sam1"]["Lib1"]["Run1"] = [
+        {
+            "Path": ("/path/to/trimmed_se.fq.gz", None),
+            "Shortname": "trimmed_se.fq.gz",
+            "Type": "Single",
+            "Options": expected["Options"],
+        },
+        {
+            "Path": ("/path/to/trimmed_pe_1.fq.gz", "/path/to/trimmed_pe_2.fq.gz"),
+            "Shortname": "trimmed_pe_x.fq.gz",
+            "Type": "Paired",
+            "Options": expected["Options"],
+        },
+    ]
 
     assert _read_makefile(filepath) == expected
 
@@ -776,21 +727,5 @@ def test_makefile__validation__paired_must_have_key(tmp_path):
     """,
     )
 
-    with pytest.raises(MakefileError, match="Paired pre-trimmed reads specified, but"):
-        _read_makefile(filepath)
-
-
-def test_makefile__validation__single_must_not_have_key(tmp_path):
-    filepath = _write_sample_yaml(
-        tmp_path,
-        f"""
-        Samples:
-          Sam1:
-            Lib1:
-              Run1:
-                Single: /path/to/trimmed_pe_{{Pair}}.fq.gz
-    """,
-    )
-
-    with pytest.raises(MakefileError, match="read-type is not Paired"):
+    with pytest.raises(MakefileError, match="Paired data path .* does not have"):
         _read_makefile(filepath)

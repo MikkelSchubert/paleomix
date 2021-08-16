@@ -26,17 +26,18 @@ import glob
 import itertools
 import logging
 import os
+import re
 import string
-from typing import Any, Dict, Iterable, Tuple
+from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple
 
 import paleomix.common.sequences as sequences
-import paleomix.pipelines.bam.paths as paths
 from paleomix.common.bamfiles import BAM_PLATFORMS
 from paleomix.common.fileutils import get_files_glob
 from paleomix.common.formats.fasta import FASTA
 from paleomix.common.makefile import (
     REQUIRED_VALUE,
     And,
+    DeprecatedOption,
     IsAny,
     IsBoolean,
     IsFloat,
@@ -77,20 +78,14 @@ def read_makefiles(filenames):
         options = data.pop("Options")
         genomes = data.pop("Genomes")
 
-        makefile = {
-            "Filename": filename,
-            "Options": options,
-            "Genomes": _postprocess_genomes(genomes),
-            "Samples": _postprocess_samples(data, options),
-        }
-
-        # FIXME: Remove from rest of code-base
-        makefile["Targets"] = {
-            sample: {sample: libraries}
-            for sample, libraries in makefile["Samples"].items()
-        }
-
-        makefiles.append(makefile)
+        makefiles.append(
+            {
+                "Filename": filename,
+                "Options": options,
+                "Genomes": _postprocess_genomes(genomes),
+                "Samples": _postprocess_samples(data, options),
+            }
+        )
 
     return validate_makefiles(makefiles)
 
@@ -213,11 +208,12 @@ _VALIDATION_OPTIONS = {
     },
     # Features of pipeline
     "Features": {
-        "Coverage": IsBoolean(default=True),
-        "Depths": IsBoolean(default=True),
         "mapDamage": StringIn(("rescale", "model", "plot", True, False), default=False),
         "PCRDuplicates": StringIn((True, False, "mark", "filter"), default="filter"),
-        "Summary": IsBoolean(default=True),
+        # TODO: Statistics to be combined into new report (HTML + JSON?)
+        "Coverage": DeprecatedOption(IsBoolean(default=True)),
+        "Depths": DeprecatedOption(IsBoolean(default=True)),
+        "Summary": DeprecatedOption(IsBoolean(default=True)),
     },
 }
 
@@ -336,28 +332,9 @@ def _postprocess_samples(data, global_options):
                 for barcode, record in lanes.items():
                     path = (group, sample, library, barcode)
 
-                    # lane data must be normalized since there are 2 possible forms
-                    record = _normalize_lane(record, path)
+                    # Split a trimmed/untrimmed lane into one record per input file
+                    lanes[barcode] = _split_lane(record, path, library_options)
 
-                    if "mapDamage" in record.get("Options", {}):
-                        raise MakefileError(
-                            "Cannot set mapDamage options for individual lanes"
-                        )
-
-                    # once the lanes are normalized, we generate lane-specific options
-                    record["Options"] = _combine_options(
-                        options=library_options,
-                        data=record,
-                        path=path,
-                        valid_features=(),
-                    )
-
-                    # Record information used for tagging/naming files
-                    _add_lane_tags(record, group, sample, library, barcode)
-
-                    lanes[barcode] = record
-
-    # Flatten groups and split lanes by filenames
     return _finalize_samples(data)
 
 
@@ -379,14 +356,16 @@ def _combine_options(
             % (", ".join(map(repr, invalid_features)), _path_to_str(path))
         )
 
+    if "mapDamage" in item_options and "mapDamage" not in valid_features:
+        raise MakefileError(f"Cannot set mapDamage options at {_path_to_str(path)}")
+
     # Fill out missing values using those of prior levels
     return fill_dict(destination=item_options, source=options)
 
 
-def _normalize_lane(data, path) -> Dict[str, Any]:
+def _split_lane(data, path, options):
     if isinstance(data, str):
-        # The simple case: raw data without options
-        return {"Type": "Untrimmed", "Data": data}
+        data = {"Untrimmed": data}
 
     # the structure needs to be validated here, since the specification uses an IsAny
     data = process_makefile(
@@ -396,104 +375,110 @@ def _normalize_lane(data, path) -> Dict[str, Any]:
         apply_defaults=False,
     )
 
-    options = data.pop("Options", None)
+    # Generate final options for this lane
+    options = _combine_options(
+        options=options,
+        data=data,
+        path=path,
+        valid_features=(),
+    )
 
-    if "Untrimmed" in data:
-        # it doesn't make sense to have both trimmed and untrimmed reads in one lane
-        if data.keys() & _READ_TYPES:
+    return [
+        {
+            "Path": files,
+            "Type": read_type,
+            "Shortname": _filenames_to_shortname(files),
+            "Options": options,
+        }
+        for read_type, files in _collect_files_and_split_lane(data, path)
+    ]
+
+
+def _collect_files_and_split_lane(data, path):
+    if "Untrimmed" in data and len(data) > 1:
+        raise MakefileError(f"both untrimmed and trimmed reads at {_path_to_str(path)}")
+
+    for read_type, filepath in data.items():
+        if read_type == "Untrimmed":
+            for files in _collect_files(path, filepath):
+                yield read_type, files
+        elif read_type == "Paired":
+            if not _is_paired_end(filepath):
+                raise MakefileError(
+                    "Paired data path at %s does not have a '{Pair}' key: %s"
+                    % (_path_to_str(path + (read_type,)), filepath)
+                )
+
+            yield read_type, (filepath.format(Pair=1), filepath.format(Pair=2))
+        else:
+            yield read_type, (filepath, None)
+
+
+def _filenames_to_shortname(filenames):
+    if not (1 <= len(filenames) <= 2):
+        raise ValueError(filenames)
+
+    basenames = []
+    for filename in filenames:
+        if filename is not None:
+            basenames.append(os.path.basename(filename))
+
+    filename = get_files_glob(basenames)
+    if filename is None:
+        raise ValueError(filenames)
+
+    return filename.replace("?", "x")
+
+
+def _collect_files(path, template) -> Iterable[Tuple[str, Optional[str]]]:
+    if _is_paired_end(template):
+        files_1 = _sorted_glob(template.format(Pair=1))
+        files_2 = _sorted_glob(template.format(Pair=2))
+
+        if len(files_1) != len(files_2):
             raise MakefileError(
-                f"both untrimmed and trimmed reads at {_path_to_str(path)}"
+                "Unequal number of mate 1 and mate 2 files found at %r; found %i "
+                "mate 1 files and %i mate 2 files; specified in makefile at %r. "
+                % (template, len(files_1), len(files_2), _path_to_str(path))
             )
+        elif not (files_1 and files_2):
+            return [(template, None)]
 
-        ((type_, data),) = data.items()
+        return zip(files_1, files_2)
     else:
-        type_ = "Trimmed"
+        files = _sorted_glob(template)
+        if not files:
+            return [(template, None)]
 
-    data = {"Type": type_, "Data": data}
-    if options is not None:
-        data["Options"] = options
-
-    return data
+        return [(filename, None) for filename in files]
 
 
-def _add_lane_tags(record, group, sample, library, barcode):
-    record["Tags"] = {
-        "Target": sample,  # FIXME: Remove
-        "Group": group,
-        "ID": library,
-        "SM": sample,
-        "LB": library,
-        "PU": barcode,
-        "DS": "NA",
-        "Folder": "NA",
-        "PG": record["Options"]["Aligners"]["Program"],
-        "PL": record["Options"]["Platform"].upper(),
-    }
+def _sorted_glob(filename):
+    if _GLOB_MAGIC.search(filename):
+        return sorted(glob.iglob(filename))
+
+    return [filename]
+
+
+def _is_paired_end(template):
+    """Returns true if a template contains a Pair component."""
+    return template.format(Pair=1) != template
+
+
+# based on check in `glob`
+_GLOB_MAGIC = re.compile("[*?[]")
 
 
 def _finalize_samples(data):
     results = {}
-    for group, samples in data.items():
+    for samples in data.values():
         for sample, libraries in samples.items():
             if sample in results:
                 raise MakefileError(f"Multiple samples named {sample!r}")
 
-            split_libraries = {}
-            for library, lanes in libraries.items():
-                split_lanes = {}
-                for barcode, record in lanes.items():
-                    split_lanes.update(
-                        _split_lanes_by_filenames(
-                            group=group,
-                            sample=sample,
-                            library=library,
-                            barcode=barcode,
-                            record=record,
-                        )
-                    )
-
-                split_libraries[library] = split_lanes
-            results[sample] = split_libraries
+            results[sample] = libraries
 
     return results
-
-
-def _split_lanes_by_filenames(group, sample, library, barcode, record):
-    if record["Type"] == "Untrimmed":
-        path = (group, sample, library, barcode)
-        filenames = paths.collect_files(path, record["Data"])
-        filename_keys = sorted(filenames)  # Either ["SE"] or ["PE_1", "PE_2"]
-
-        input_files = [filenames[key] for key in filename_keys]
-        input_files_iter = itertools.zip_longest(*input_files)
-        for (index, filenames) in enumerate(input_files_iter, start=1):
-            current = copy.deepcopy(record)
-
-            assert len(filenames) == len(filename_keys), filenames
-            current["Data"] = dict(zip(filename_keys, filenames))
-
-            # Save a summary of file paths in description (DS) tag
-            current["Tags"]["DS"] = _summarize_filenames(
-                filenames, show_differences=True
-            )
-
-            # Save a summary of file names for use as temporary folders
-            current["Tags"]["Folder"] = _summarize_filenames(
-                [os.path.basename(filename) for filename in filenames]
-            ).replace("?", "x")
-
-            # ':' is disallowed in barcodes and so are safe for generated names
-            yield (f"{barcode}::{index:03}", current)
-    else:
-        yield (barcode, record)
-
-
-def _summarize_filenames(filenames, show_differences=False):
-    combined_filenames = get_files_glob(filenames, show_differences=show_differences)
-    if combined_filenames is None:
-        return ";".join(filenames)
-
-    return combined_filenames
 
 
 ########################################################################################
@@ -511,30 +496,15 @@ def validate_makefiles(makefiles):
 
 def _validate_makefile_options(makefile):
     for (sample, library, barcode, record) in _iterate_over_records(makefile):
-        path = (record["Tags"]["Group"], sample, library, barcode)
+        path = (sample, library, barcode)
 
-        if record["Type"] == "Trimmed":
+        if record["Type"] != "Untrimmed":
             if record["Options"]["QualityOffset"] != 33:
                 raise MakefileError(
                     "Pre-trimmed data must have quality offset 33 (Phred+33). "
                     "Please convert your FASTQ files using e.g. seqtk before "
                     "continuing: {}".format(_path_to_str(path))
                 )
-
-            for (key, files) in record["Data"].items():
-                is_paired = paths.is_paired_end(files)
-
-                if is_paired and key != "Paired":
-                    raise MakefileError(
-                        "Error at %s: Path includes {Pair} key, but read-type "
-                        "is not Paired: %r" % (_path_to_str(path + (key,)), files)
-                    )
-                elif not is_paired and key == "Paired":
-                    raise MakefileError(
-                        "Error at %s: Paired pre-trimmed reads specified, but path "
-                        "does not contain {Pair} key: %r"
-                        % (_path_to_str(path + (key,)), files)
-                    )
 
         _validate_makefile_adapters(record, path)
 
@@ -584,12 +554,12 @@ def _validate_makefile_adapters(record, path):
 def _validate_makefiles_duplicate_files(makefiles):
     filenames = collections.defaultdict(list)
     for makefile in makefiles:
-        for (sample, library, _, record) in _iterate_over_records(makefile):
-            # use user defined barcode rather than auto-numbered barcode
-            barcode = record["Tags"]["PU"]
+        for (sample, library, barcode, record) in _iterate_over_records(makefile):
+            for filepath in record["Path"]:
+                if filepath is not None:
+                    realpath = os.path.realpath(filepath)
 
-            for realpath in map(os.path.realpath, record["Data"].values()):
-                filenames[realpath].append((sample, library, barcode))
+                    filenames[realpath].append((sample, library, barcode))
 
     has_overlap = {}
     for (filename, records) in filenames.items():
@@ -680,5 +650,6 @@ def _path_to_str(path):
 def _iterate_over_records(makefile):
     for (sample, libraries) in tuple(makefile["Samples"].items()):
         for (library, barcodes) in tuple(libraries.items()):
-            for (barcode, record) in tuple(barcodes.items()):
-                yield sample, library, barcode, record
+            for (barcode, records) in tuple(barcodes.items()):
+                for record in records:
+                    yield sample, library, barcode, record
