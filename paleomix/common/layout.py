@@ -1,7 +1,6 @@
 import copy
 import os.path
 import string
-
 from typing import Any, Dict, Iterator, Tuple
 
 
@@ -15,6 +14,9 @@ class Layout:
 
         self._layout = {}
         for key, value in self._flatten_layout(layout):
+            if key in self._layout:
+                raise LayoutError(f"key {key!r} used multiple times")
+
             self._layout[key] = value
 
         fmt = string.Formatter()
@@ -23,10 +25,20 @@ class Layout:
             for _, name, _, _ in fmt.parse(value):
                 if name == "":
                     raise LayoutError(f"unnamed field are not allowed in {value!r}")
+                elif name in self._layout:
+                    raise LayoutError(f"{name!r} used as both a key and a field name")
 
                 self._fields.add(name)
 
         self._validate_kwargs(self.kwargs)
+
+    def get(self, key, **kwargs):
+        layout = self.update(**kwargs)
+
+        return layout[key]
+
+    def get_field(self, key):
+        return self.kwargs[key]
 
     def update(self, **kwargs) -> "Layout":
         self._validate_kwargs(kwargs)

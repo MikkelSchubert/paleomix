@@ -55,6 +55,13 @@ def test_layout__update():
     assert layout4["my_file"] == "/home/username/foobar"
 
 
+def test_layout__get_without_updates():
+    layout1 = Layout({"{root}": {"{name}": "my_file"}})
+
+    assert layout1.get("my_file", root="foo", name="bar") == "foo/bar"
+    assert layout1.kwargs == {}
+
+
 def test_layout__unnamed_field():
     with pytest.raises(LayoutError, match="unnamed field are not allowed in"):
         Layout({"{}": "my_file"})
@@ -87,3 +94,26 @@ def test_layout__non_string_name():
 def test_layout__non_string_dict_value():
     with pytest.raises(LayoutError, match="invalid value 17"):
         Layout({"{root}": 17})
+
+
+def test_layout__duplicate_path_names():
+    with pytest.raises(LayoutError, match="'file_1' used multiple times"):
+        Layout({"foo": "file_1", "{root}": {"zod": "file_1"}})
+
+
+def test_layout__non_unique_key_field_name():
+    with pytest.raises(LayoutError, match="'file_1' used as both a key and a field"):
+        Layout({"foo": "file_1", "{root}": {"{file_1}": "file_2"}})
+
+
+def test_layout__get_field():
+    layout = Layout({"{root}": {"b": "other_file"}}, root="/root")
+
+    assert layout.get_field("root") == "/root"
+
+
+def test_layout__get_missing_field():
+    layout = Layout({"{root}": {"b": "other_file"}}, root="/root")
+
+    with pytest.raises(KeyError):
+        assert layout.get_field("unknown_key")
