@@ -440,7 +440,12 @@ class NodeGraph:
         any_errors = False
         for (filename, nodes) in sorted(input_files.items(), key=lambda v: v[0]):
             if filename in output_files:
-                (producer,) = output_files[filename]
+                producers = tuple(output_files[filename])
+                # Output files being clobbered is handled in `_check_output_files`
+                if len(producers) > 1:
+                    continue
+
+                producer = producers[0]
                 bad_nodes: Set[Node] = set()
                 for consumer in nodes:
                     if self._implicit_dependencies:
