@@ -371,11 +371,7 @@ class NodeGraph:
 
         return not any_errors
 
-    def _check_file_dependencies(
-        self,
-        nodes: Iterable[Node],
-        max_errors: int = 10,
-    ) -> bool:
+    def _check_file_dependencies(self, nodes: Iterable[Node]) -> bool:
         def _abs_path(filename: str, cache: Dict[str, str] = {}) -> str:
             filepath = cache.get(filename)
             if filepath is None:
@@ -393,19 +389,21 @@ class NodeGraph:
                 output_files[_abs_path(filename)].add(node)
 
         any_errors = False
-        if not self._check_output_files(output_files, max_errors):
+        if not self._check_output_files(output_files):
             any_errors = True
 
-        if not self._check_input_files(input_files, output_files, max_errors):
+        if not self._check_input_files(input_files, output_files):
             any_errors = True
+
+        if any_errors:
+            self._logger.error(
+                "This is probably a bug in PALEOMIX; please report at "
+                "https://github.com/MikkelSchubert/paleomix/issues/new"
+            )
 
         return not any_errors
 
-    def _check_output_files(
-        self,
-        output_files: Dict[str, Set[Node]],
-        max_errors: int = 10,
-    ) -> bool:
+    def _check_output_files(self, output_files: Dict[str, Set[Node]]) -> bool:
         """Checks dict of output files to nodes for cases where
         multiple nodes create the same output file.
 
@@ -419,15 +417,10 @@ class NodeGraph:
         for filename, nodes in output_files.items():
             if len(nodes) > 1:
                 any_errors = True
-                self._logger.error("Multiple nodes write to file %r", filename)
+                self._logger.error("Multiple tasks write to file %r", filename)
                 self._logger.debug("depended on by")
                 for line in _summarize_nodes(nodes):
                     self._logger.debug("  %s", line)
-
-                self._logger.error(
-                    "This is probably a bug in PALEOMIX; please report at "
-                    "https://github.com/MikkelSchubert/paleomix/issues/new"
-                )
 
         return not any_errors
 
@@ -435,8 +428,7 @@ class NodeGraph:
         self,
         input_files: Dict[str, Set[Node]],
         output_files: Dict[str, Set[Node]],
-        max_errors: int = 10,
-    ):
+    ) -> bool:
         any_errors = False
         for (filename, nodes) in sorted(input_files.items(), key=lambda v: v[0]):
             if filename in output_files:
@@ -461,20 +453,15 @@ class NodeGraph:
                         filename,
                     )
 
-                    self._logger.debug("  produced by %s", producer)
-                    self._logger.debug("  depended on by")
+                    self._logger.debug("  produced when %s", producer)
+                    self._logger.debug("  required when")
                     for line in _summarize_nodes(bad_nodes):
                         self._logger.debug("    %s", line)
-
-                    self._logger.error(
-                        "This is probably a bug in PALEOMIX; please report at "
-                        "https://github.com/MikkelSchubert/paleomix/issues/new"
-                    )
             elif not os.path.exists(filename):
                 any_errors = True
                 self._logger.error("Required input file does not exist: %r", filename)
                 for line in _summarize_nodes(nodes):
-                    self._logger.debug("  required by %s", line)
+                    self._logger.debug("  required when %s", line)
 
         return not any_errors
 
