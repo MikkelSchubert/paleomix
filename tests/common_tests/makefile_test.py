@@ -23,6 +23,7 @@
 from typing import Any, Iterable, List, Sequence
 
 import pytest
+
 from paleomix.common.makefile import (
     DEFAULT_NOT_SET,
     REQUIRED_VALUE,
@@ -60,8 +61,7 @@ _DUMMY_PATH_STR = " :: ".join(_DUMMY_PATH)
 
 
 class Unhashable:
-    def __eq__(self, other: Any):
-        return self is other
+    __hash__ = None
 
 
 _COMMON_INVALID_VALUES = {
@@ -1451,4 +1451,4 @@ def test__preprocess_makefile__with_default__missing_value():
 
 def test__preprocess_makefile__with_default__expected_value():
     spec = {"Key": _PreProcessWithDefault(314)}
-    assert {"Key": 14} == process_makefile({"Key": 14}, spec)
+    assert {"Key": 14} == process_makefile({"Key": "14"}, spec)

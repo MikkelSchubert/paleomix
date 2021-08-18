@@ -6,10 +6,11 @@ from pathlib import Path
 from typing import Any, List, Tuple, Type
 from unittest.mock import Mock, call, patch
 
+import pytest
+
 import paleomix
 import paleomix.common.command
 import paleomix.common.fileutils as fileutils
-import pytest
 from paleomix.common.command import (
     AtomicCmd,
     AuxilleryFile,
@@ -1184,22 +1185,26 @@ def test_atomiccmd__str__():
 #        1. track for termination until joined
 #        2. don't use weak references to avoid accidental leaks
 
+
+def _get_proc_ref(cmd):
+    for ref in paleomix.common.command._PROCS:
+        if ref() == cmd._proc:  # pragma: no cover
+            return ref
+    else:
+        assert False  # pragma: no cover
+
+
 # Test that the internal list of processes is kept clean of old objects
 def test_atomiccmd__cleanup_proc__commit(tmp_path: Path):
     cmd = AtomicCmd("ls")
     cmd.run(tmp_path)
-
-    for ref in paleomix.common.command._PROCS:
-        if ref() == cmd._proc:
-            break
-    else:
-        assert False
+    ref = _get_proc_ref(cmd)
 
     assert cmd.join() == [0]
     # Commit frees proc object
     cmd.commit(tmp_path)
-    assert ref() is None
 
+    assert ref() is None
     assert ref not in paleomix.common.command._PROCS
 
 
@@ -1207,18 +1212,13 @@ def test_atomiccmd__cleanup_proc__commit(tmp_path: Path):
 def test_atomiccmd__cleanup_proc__gc(tmp_path: Path):
     cmd = AtomicCmd("ls")
     cmd.run(tmp_path)
-
-    for ref in paleomix.common.command._PROCS:
-        if ref() == cmd._proc:
-            break
-    else:
-        assert False
+    ref = _get_proc_ref(cmd)
 
     assert cmd.join() == [0]
     # GC frees proc object
     cmd = None
-    assert ref() is None
 
+    assert ref() is None
     assert ref not in paleomix.common.command._PROCS
 
 

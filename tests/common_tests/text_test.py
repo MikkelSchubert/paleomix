@@ -23,6 +23,7 @@
 import collections
 
 import pytest
+
 from paleomix.common.text import (
     TableError,
     format_timespan,
@@ -242,14 +243,14 @@ def test_parse_lines__uncallable():
         _parse_lines([], 1)
 
 
-def parse_lines__binary():
+def test_parse_lines__binary():
     lines = [b"# foo", b"12", b"3456"]
     expected = [(12, 2), (3456, 4)]
 
     def parser(value, length):
         return (int(value), length)
 
-    assert parse_lines(lines, parser) == expected
+    assert _parse_lines(lines, parser) == expected
 
 
 ###############################################################################
