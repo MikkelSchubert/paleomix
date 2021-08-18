@@ -40,8 +40,8 @@ from paleomix.nodes.bwa import (
 
 BOWTIE2_VERSION = versions.Requirement(
     call=("bowtie2", "--version"),
-    search=r"version (\d+)\.(\d+)\.(\d+)",
-    checks=versions.GE(2, 3, 0),
+    regexp=r"version (\d+\.\d+\.\d+)",
+    specifiers=">=2.3.0",
 )
 
 

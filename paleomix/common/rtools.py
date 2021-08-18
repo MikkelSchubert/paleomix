@@ -25,13 +25,13 @@ from paleomix.resources import rscript
 
 def requirement(
     module: str,
-    checks: versions.Check = versions.Any(),
+    specifiers: str = "",
 ) -> versions.Requirement:
     return versions.Requirement(
         call=("Rscript", rscript("common", "requires.r"), module),
         # d0fd3ea6 is a magic value printed by the requires.r script. This is used to
         # ensure that we can differentiate between the version and any other output
-        search=r"d0fd3ea6: (\d+)\.(\d+)(?:\.(\d+))?",
-        checks=checks,
+        regexp=r"d0fd3ea6: (\d+)\.(\d+)(?:\.(\d+))?",
+        specifiers=specifiers,
         name="R module: {}".format(module),
     )

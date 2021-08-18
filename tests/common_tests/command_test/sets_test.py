@@ -24,8 +24,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Type, Union
 from unittest.mock import Mock, call
 
-import paleomix.common.command
 import pytest
+
+import paleomix.common.command
 from paleomix.common.command import (
     AtomicCmd,
     AuxilleryFile,
@@ -37,7 +38,7 @@ from paleomix.common.command import (
     SequentialCmds,
     TempOutputFile,
 )
-from paleomix.common.versions import Any, Requirement
+from paleomix.common.versions import Requirement
 
 _SET_CLASSES = (ParallelCmds, SequentialCmds)
 SetTypes = Union[Type[ParallelCmds], Type[SequentialCmds]]
@@ -49,8 +50,8 @@ SetTypes = Union[Type[ParallelCmds], Type[SequentialCmds]]
 
 @pytest.mark.parametrize("cls", _SET_CLASSES)
 def test_atomicsets__properties(cls: SetTypes):
-    requirement_1 = Requirement(call=["bwa"], search=r"(\d+)", checks=Any())
-    requirement_2 = Requirement(call=["bowtie2"], search=r"(\d+)", checks=Any())
+    requirement_1 = Requirement(call=["bwa"], regexp=r"(\d+)")
+    requirement_2 = Requirement(call=["bowtie2"], regexp=r"(\d+)")
 
     cmd_mock_1 = AtomicCmd(
         ("true",),

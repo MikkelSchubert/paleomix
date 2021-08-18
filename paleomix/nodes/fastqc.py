@@ -31,7 +31,7 @@ class FastQCNode(CommandNode):
                 Requirement(
                     name="FastQC",
                     call=["fastqc", "--version"],
-                    search=r"FastQC v(\d+).(\d+).(\d+)",
+                    regexp=r"FastQC v(\d+\.\d+\.\d+)",
                 ),
             ],
         )

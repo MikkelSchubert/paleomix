@@ -81,7 +81,10 @@ def required_executables(nodes: Iterable[Node], file: IO[str] = sys.stdout) -> i
         except RequirementError:
             version = "ERROR"
 
-        print(template.format(requirement.name, version, requirement.checks), file=file)
+        print(
+            template.format(requirement.name, version, requirement.specifiers),
+            file=file,
+        )
 
     return 0
 

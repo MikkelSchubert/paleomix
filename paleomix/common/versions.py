@@ -20,32 +20,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-"""Version checks for apps or libraries required by PALEOMIX pipelines.
-
-The module contains to sets of classes: Requirement and Check. The Requirement class
-implements the determation of the current version for a given tool, while the Check
-(sub)classes implements various comparison to be carried against the detected version
-(less than, greater than or equal, etc.).
-
-For example, to check that the Java version is v1.7 or later:
-    obj = Requirement(call=("java", "-version"),
-                      search='java version "(\\d+).(\\d+)',
-                      checks=GE(1, 7),
-                      name="Java Runtime Environment")
-
-    assert obj.check(), "version requirements not met"
-"""
-import operator
 import re
 import subprocess
 import sys
 import typing
 from shlex import quote
-from typing import Callable, Iterable, List, NoReturn, Optional, Tuple, Union
+from typing import Iterable, NoReturn, Optional, Tuple, Union
 
-from paleomix.common.utilities import TotallyOrdered, try_cast
-
-Version = Tuple[int, ...]
+from packaging.specifiers import SpecifierSet
 
 
 class RequirementError(Exception):
@@ -55,27 +37,39 @@ class RequirementError(Exception):
 
 
 class Requirement:
-    """Represents a version requirement."""
+    """Version checks for executables required by PALEOMIX pipelines.
+
+    A requirement consists of three parts, namely a command that is to be invoked, a
+    regexp that extracts an 'X.Y.Z' version string from the output of the command, and a
+    standard version specification (e.g. '>=X.Y.Z') to determine if the extracted
+    version is acceptable.
+
+    For example, to check that the Java version is v1.7 or later:
+        obj = Requirement(call=("java", "-version"),
+                        regexp='java version "(\\d+\\.\\d+)',
+                        specifiers=">=1.7",
+                        name="Java Runtime Environment")
+
+        assert obj.check(), "version requirements not met"
+    """
 
     def __init__(
         self,
         call: Union[str, Iterable[str]],
-        search: Optional[str] = None,
-        checks: Optional["Check"] = None,
+        regexp: Optional[str] = None,
+        specifiers: Optional[str] = None,
         name: Optional[str] = None,
-        priority: int = 0,
     ):
-        """See function 'Requrement' for a description of parameters."""
-        self._call = (call,)  if isinstance(call, str) else tuple(call)
+        self._call = (call,) if isinstance(call, str) else tuple(call)
         self.name = str(name or self._call[0])
-        self.search = search
-        self.checks = Any() if checks is None else checks  # type: Check
-        self.priority = int(priority)
-        self._cached_version = None
+        self.regexp = re.compile(regexp) if regexp else None
+        self.specifiers = SpecifierSet(specifiers or "")
+        self._has_cached_version = False
+        self._cached_version = ""
 
-        # Checks will always fail without a search string
-        if not (self.search or isinstance(self.checks, Any)):
-            raise ValueError(self.checks)
+        # Checks will always fail without a regexp string
+        if specifiers and not regexp:
+            raise RequirementError("specifiers require a regexp str")
 
     @property
     def call(self) -> Tuple[str, ...]:
@@ -85,74 +79,86 @@ class Requirement:
 
         return call
 
-    def version(self, force: bool = False) -> Version:
+    def version(self, force: bool = False) -> str:
         """The version determined for the application / library. If the version
         could not be determined, a RequirementError is raised.
         """
-        if force or self._cached_version is None:
-            try:
-                output = subprocess.run(
-                    self.call,
-                    stdin=subprocess.DEVNULL,
-                    stdout=subprocess.PIPE,
-                    # Merge STDERR with STDOUT output
-                    stderr=subprocess.STDOUT,
-                    encoding="utf-8",
-                    errors="replace",
-                ).stdout
-            except OSError as error:
-                self._raise_failure(error)
+        if force or not self._has_cached_version:
+            self._cached_version = self._determine_version()
+            self._has_cached_version = True
 
-            # Raise an exception if the JRE is outdated, even if the
-            # version could be determined (likely a false positive match).
-            self._check_for_outdated_jre(output)
-
-            if self.search:
-                match = re.search(self.search, output)
-                if not match:
-                    self._raise_failure(output)
-
-                self._cached_version = tuple(
-                    0 if value is None else try_cast(value, int)
-                    for value in match.groups()
-                )
-            else:
-                self._cached_version = ()
+        if isinstance(self._cached_version, Exception):
+            raise self._cached_version
 
         return self._cached_version
 
     def version_str(self, force: bool = False) -> str:
-        return _pprint_version(self.version(force))
+        version = self.version(force)
+        if not version:
+            return "N/A"
+
+        return f"v{version}"
 
     @property
     def executable(self) -> str:
-        """Returns the executable invoked during version determination; if no
-        executable is invoked, None is returned.
-        """
         return self.call[0]
 
     def check(self, force: bool = False) -> bool:
-        return self.checks(self.version(force))
+        version = self.version(force)
+        if not self.specifiers:
+            return True
 
-    def _check_for_outdated_jre(self, output: str) -> None:
-        """Checks for the error raised if the JRE is unable to run a JAR file.
-        This happens if the JAR was built with a never version of the JRE, e.g.
-        if Picard was built with a v1.7 JRE, and then run with a v1.6 JRE.
-        """
-        # This exception is raised if the JRE is incompatible with the JAR
+        return version in self.specifiers
+
+    def _determine_version(self) -> Union[str, Exception]:
+        try:
+            output = subprocess.run(
+                self.call,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                # Merge STDERR with STDOUT output
+                stderr=subprocess.STDOUT,
+                encoding="utf-8",
+                errors="replace",
+            ).stdout
+        except OSError as error:
+            return self._raise_failure(error)
+
+        # Raise an exception if the JRE is outdated
         if "UnsupportedClassVersionError" in output:
-            self._raise_failure(output)
+            return self._raise_failure(output)
 
-    def _raise_failure(self, output: Union[str, Exception]) -> NoReturn:
+        return self._parse_version_string(output)
+
+    def _parse_version_string(self, output: str) -> Union[str, Exception]:
+        if self.regexp:
+            match = self.regexp.search(output)
+            if not match:
+                return self._raise_failure(output)
+
+            fields = list(match.groups())
+            # Support for optional minor versions using optional fields
+            while fields and fields[-1] is None:
+                fields.pop(-1)
+
+            return ".".join(field.strip(".") for field in fields)
+
+        return ""
+
+    def _raise_failure(self, output: Union[str, Exception]) -> RequirementError:
         """Raises a RequirementError when a version check failed; if the
         output indicates that the JRE is outdated (i.e. the output contains
-        "UnsupportedClassVersionError") a special message is givenself.
+        "UnsupportedClassVersionError") a special message is given.
         """
-        lines = ["Version could not be determined:"]
-        lines.extend(self._describe_call())
-        lines.append("")
+        lines = [
+            "Version could not be determined for:",
+            "Command  = {}".format(" ".join(map(quote, self.call))),
+            "",
+        ]
 
+        origin = None
         if isinstance(output, Exception):
+            origin = output
             lines.append("Exception was raised: %r" % (output,))
         elif "UnsupportedClassVersionError" in output:
             # Raised if the JRE is too old compared to the JAR
@@ -166,233 +172,29 @@ class Requirement:
                 ]
             )
         else:
-            lines.append("Program may be broken or a version not supported by the")
-            lines.append("pipeline; please refer to the PALEOMIX documentation.\n")
-            lines.append("Required:       %s" % (self.checks,))
-            lines.append("Search string:  %r\n" % (self.search))
-            lines.append("%s Command output %s" % ("-" * 22, "-" * 22))
-            lines.append(output)
+            lines.extend(
+                [
+                    "Program may be broken or a version not supported by the",
+                    "pipeline; please refer to the PALEOMIX documentation.",
+                    "",
+                    "Requirements:   %s" % (self.specifiers,),
+                    "Search string:  %r" % (self.regexp),
+                    "",
+                    "%s Command output %s" % ("-" * 22, "-" * 22),
+                    output,
+                ]
+            )
 
-        raise RequirementError("\n".join(lines))
-
-    def _describe_call(self):
-        """Returns lines describing the current system call, if any."""
-        call = self.call
-        if isinstance(call[0], str):
-            yield "Command  = %s" % (" ".join(map(quote, call)),)
+        raise RequirementError("\n".join(lines)) from origin
 
     def __eq__(self, other: typing.Any) -> bool:
         if not isinstance(other, Requirement):
             return NotImplemented
 
-        return (
-            self._call == other._call
-            and self.name == other.name
-            and self.priority == other.priority
-            and self.search == other.search
-            and self.checks == other.checks
-        )
+        return self._to_tuple() == other._to_tuple()
 
     def __hash__(self):
-        return hash((self._call, self.name, self.priority, self.search, self.checks))
+        return hash(self._to_tuple())
 
-
-class Check(TotallyOrdered):
-    """Abstract base-class for version checks.
-
-    Callable with a tuple of version fields (typically integers), and returns
-    either True or False, depending on whether or not the specified check
-    passed.
-
-    The contructor takes a string describing the check ('description'), a
-    function with the signature 'func(version, values)', where version is the
-    version determined for a app/library, and where values are the values
-    passed to the Check constructor.
-    """
-
-    def __init__(self, description: str):
-        self._description = description
-
-    def __str__(self) -> str:
-        return self._description
-
-    def __call__(self, current: Version) -> bool:
-        """Takes a tuple of version fields (e.g. (1, 7)) and returns True if
-        this version matches the check.
-        """
-        raise NotImplementedError
-
-
-class CheckVersion(Check):
-    """Base class for comparisons involving versions; requires that the version
-    checks has at least as many fields as specified for the Check object. If
-    the version checked has more fields, these are truncated away.
-    """
-
-    def __init__(
-        self,
-        description: str,
-        func: Callable[[Version, Version], bool],
-        *version: int,
-    ):
-        if not callable(func):
-            raise TypeError("func must be callable, not %r" % (func,))
-
-        self._func = func
-        self._version = version
-        Check.__init__(self, description.format(_pprint_version(version)))
-
-    def __call__(self, current: Version) -> bool:
-        if len(current) < len(self._version):
-            raise ValueError(
-                "Expects at least %i fields, not %i: %r"
-                % (len(self._version), len(current), current)
-            )
-
-        return self._func(current[: len(self._version)], self._version)
-
-    def __eq__(self, other: typing.Any) -> bool:
-        if not isinstance(other, CheckVersion):
-            return NotImplemented
-
-        return (
-            self._description == other._description
-            and self._func is other._func
-            and self._version == other._version
-        )
-
-    def __hash__(self) -> int:
-        return hash((self._description, self._func, self._version))
-
-
-class EQ(CheckVersion):
-    """Checks that a version is Equal to this version; note that version fields
-    are truncated to the number of fields specified for this Check. As a
-    consequence, EQ(1, 5) is true for (1, 5), (1, 5, 7), (1, 5, 7, 1), etc. See
-    'Check' for more information.
-    """
-
-    def __init__(self, *version: int):
-        CheckVersion.__init__(self, "{0}", operator.eq, *version)
-
-
-class GE(CheckVersion):
-    """Checks that a version is Greater-than or Equal to this version; note
-    that version fields are truncated to the number of fields specified for
-    this Check. See 'Check'.
-    """
-
-    def __init__(self, *version: int):
-        CheckVersion.__init__(self, "at least {0}", operator.ge, *version)
-
-
-class LT(CheckVersion):
-    """Checks that a version is Less Than this version; note that version
-    fields are truncated to the number of fields specified for this Check.
-    See 'Check'.
-    """
-
-    def __init__(self, *version: int):
-        CheckVersion.__init__(self, "prior to {0}", operator.lt, *version)
-
-
-class Any(CheckVersion):
-    """Dummy check; is always true."""
-
-    def __init__(self):
-        CheckVersion.__init__(self, "any version", _func_any)
-
-
-class Operator(Check):
-    """Base class for logical operations on Checks; and, or, etc."""
-
-    def __init__(
-        self,
-        keyword: str,
-        func: Callable[[Version, Tuple[Check, ...]], bool],
-        *checks: Check,
-    ):
-        """Arguments:
-        keyword -- Keyword to join description of checks by.
-        func -- Function implementing the logical operation; is called as
-                func(*checks). See the 'func' argument for Check.__init__.
-        checks -- Zero or more Checks.
-        """
-        self._func = func
-        self._checks = checks
-
-        descriptions = []  # type: List[str]
-        for check in checks:
-            if isinstance(check, Operator):
-                descriptions.append("(%s)" % (check,))
-            elif isinstance(check, Check):
-                descriptions.append("%s" % (check,))
-            else:
-                raise ValueError("%r is not of type Check" % (check,))
-
-        Check.__init__(self, keyword.join(descriptions))
-
-    def __call__(self, current: Version) -> bool:
-        return self._func(current, self._checks)
-
-    def __eq__(self, other: typing.Any) -> bool:
-        if not isinstance(other, Operator):
-            return NotImplemented
-
-        return (
-            self._description == other._description
-            and self._func is other._func
-            and self._checks == other._checks
-        )
-
-    def __hash__(self) -> int:
-        return hash((self._description, self._func, self._checks))
-
-
-class And(Operator):
-    """Carries out 'and' on a set of checks; always true for no Checks"""
-
-    def __init__(self, *checks: Check):
-        Operator.__init__(self, " and ", _func_and, *checks)
-
-
-class Or(Operator):
-    """Carries out 'or' on a set of checks; always false for no Checks"""
-
-    def __init__(self, *checks: Check):
-        Operator.__init__(self, " or ", _func_or, *checks)
-
-
-###############################################################################
-###############################################################################
-# Check functions; must be available for pickle
-
-
-def _func_any(_current: Version, _version: Version) -> bool:
-    """Implementation of Any."""
-    return True
-
-
-def _func_and(current: Version, checks: Iterable[Check]) -> bool:
-    """Implementation of And."""
-    return all(check(current) for check in checks)
-
-
-def _func_or(current: Version, checks: Iterable[Check]) -> bool:
-    """Implementation of Or."""
-    return any(check(current) for check in checks)
-
-
-###############################################################################
-###############################################################################
-# Utility functions
-
-
-def _pprint_version(value: Version):
-    """Pretty-print version tuple; takes a tuple of field numbers / values,
-    and returns it as a string joined by dots with a 'v' prepended.
-    """
-    if not value:
-        return "N/A"
-
-    return "v%s" % (".".join(map(str, value)),)
+    def _to_tuple(self):
+        return (self._call, self.name, self.regexp, self.specifiers)

@@ -27,7 +27,9 @@ from paleomix.common.formats.msa import MSA, MSAError
 from paleomix.node import CommandNode, NodeError
 
 MAFFT_VERSION = versions.Requirement(
-    call=("mafft", "--version"), search=r"v(\d+)\.(\d+)", checks=versions.GE(7, 307)
+    call=("mafft", "--version"),
+    regexp=r"v(\d+\.\d+)",
+    specifiers=">=7.307",
 )
 
 

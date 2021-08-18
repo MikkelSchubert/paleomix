@@ -23,18 +23,24 @@ from paleomix.common.command import (
 from paleomix.common.fileutils import describe_files
 from paleomix.node import CommandNode, Node
 
-_VERSION_REGEX = r"Version: (\d+)\.(\d+)(?:\.(\d+))?"
+_VERSION_REGEX = r"Version: (\d+\.\d+)(?:\.(\d+))?"
 
 SAMTOOLS_VERSION = versions.Requirement(
-    call=("samtools",), search=_VERSION_REGEX, checks=versions.GE(1, 6, 0)
+    call=("samtools",),
+    regexp=_VERSION_REGEX,
+    specifiers=">=1.6.0",
 )
 
 BCFTOOLS_VERSION = versions.Requirement(
-    call=("bcftools",), search=_VERSION_REGEX, checks=versions.GE(1, 4, 0)
+    call=("bcftools",),
+    regexp=_VERSION_REGEX,
+    specifiers=">=1.4.0",
 )
 
 TABIX_VERSION = versions.Requirement(
-    call=("tabix",), search=_VERSION_REGEX, checks=versions.GE(1, 3, 1)
+    call=("tabix",),
+    regexp=_VERSION_REGEX,
+    specifiers=">=1.3.1",
 )
 
 

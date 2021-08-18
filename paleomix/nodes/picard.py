@@ -8,6 +8,8 @@ https://broadinstitute.github.io/picard/
 import getpass
 import os
 
+from packaging.specifiers import Specifier
+
 import paleomix.common.system
 import paleomix.common.versions as versions
 from paleomix.common.command import AtomicCmd, AuxilleryFile, InputFile, OutputFile
@@ -87,7 +89,8 @@ class ValidateBAMNode(PicardNode):
         version_check = _PICARD_VERSION_CACHE[jar_path]
 
         try:
-            if version_check.version() >= (2, 19, 0):
+            version = version_check.version()
+            if version and version in Specifier(">=2.19.0"):
                 # Useless warning, as we do not build BAI indexes for large genomes
                 command.append("--IGNORE", "REF_SEQ_TOO_LONG_FOR_BAI")
         except versions.RequirementError:
@@ -117,8 +120,8 @@ def _picard_command(args, jar_root, jre_options):
         requirement = versions.Requirement(
             call=command.to_call("%(TEMP_DIR)s"),
             name="Picard tools",
-            search=r"\b(\d+)\.(\d+)\.(\d+)",
-            checks=versions.GE(2, 10, 8),
+            regexp=r"\b(\d+\.\d+\.\d+)",
+            specifiers=">=2.10.8",
         )
         _PICARD_VERSION_CACHE[jar_path] = requirement
 

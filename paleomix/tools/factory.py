@@ -32,8 +32,8 @@ from paleomix.common.utilities import safe_coerce_to_tuple
 
 CHECK = versions.Requirement(
     ["%(PYTHON)s", "--version"],
-    search=r"Python (\d+)\.(\d+)\.(\d+)",
-    checks=versions.Any(),
+    regexp=r"Python (\d+\.\d+\.\d+)",
+    specifiers=">=3.7",
     name="Python",
 )
 

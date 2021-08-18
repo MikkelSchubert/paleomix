@@ -318,11 +318,7 @@ class NodeGraph:
             if requirement.executable not in requirement_execs:
                 requirements.add(requirement)
 
-        def _key_func(reqobj: Requirement):
-            # Sort priority in decreasing order, name in increasing order
-            return (-reqobj.priority, reqobj.name)
-
-        return tuple(sorted(requirements, key=_key_func))
+        return tuple(sorted(requirements, key=lambda req: req.name))
 
     @classmethod
     def check_version_requirements(
@@ -346,7 +342,7 @@ class NodeGraph:
                 continue
 
             try:
-                version = ".".join(str(value) for value in requirement.version(force))
+                version = requirement.version(force)
                 if version:
                     name = "%s v%s" % (name, version)
 
@@ -354,7 +350,7 @@ class NodeGraph:
                     log.info("  [✓] %s ", name)
                 else:
                     log.error(
-                        " [☓] %s found but %s is required", name, requirement.checks
+                        " [☓] %s found but %s is required", name, requirement.specifiers
                     )
             except OSError as error:
                 any_errors = True

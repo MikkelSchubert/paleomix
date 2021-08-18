@@ -35,8 +35,8 @@ from paleomix.node import CommandNode, Node
 
 _VERSION_CHECK = versions.Requirement(
     call=("AdapterRemoval", "--version"),
-    search=r"ver. (\d+)\.(\d+)\.(\d+)",
-    checks=versions.GE(2, 2, 0),
+    regexp=r"ver. (\d+\.\d+\.\d+)",
+    specifiers=">=2.2.0",
 )
 
 

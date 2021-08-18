@@ -25,7 +25,7 @@ import os
 import random
 import uuid
 from pathlib import Path
-from typing import Iterable, Optional, Sequence, Tuple, Type, TypeVar
+from typing import Any, Iterable, Optional, Sequence, Tuple, Type, TypeVar
 from unittest.mock import Mock, call
 
 import pytest
@@ -33,7 +33,7 @@ import pytest
 import paleomix.node
 from paleomix.common.command import AtomicCmd, InputFile, OutputFile, TempOutputFile
 from paleomix.common.utilities import safe_coerce_to_frozenset
-from paleomix.common.versions import Any, Requirement
+from paleomix.common.versions import Requirement
 from paleomix.node import (
     CmdNodeError,
     CommandNode,
@@ -77,8 +77,8 @@ _OUT_FILES = frozenset(
 )
 _EXEC_FILES = frozenset(("ls", "sh"))
 _AUX_FILES = frozenset((test_file("rCRS.fasta"), test_file("rCRS.fasta.fai")))
-_REQUIREMENT_1 = Requirement(["bwa"], r"", Any())
-_REQUIREMENT_2 = Requirement(["bowtie"], r"", Any())
+_REQUIREMENT_1 = Requirement(["bwa"], r"", "")
+_REQUIREMENT_2 = Requirement(["bowtie"], r"", "")
 _REQUIREMENTS = frozenset((_REQUIREMENT_1, _REQUIREMENT_2))
 _EMPTY_FILE = test_file("empty_file_1")
 

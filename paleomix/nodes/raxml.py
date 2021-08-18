@@ -32,13 +32,13 @@ from paleomix.node import CommandNode, Node
 
 RAXML_VERSION = versions.Requirement(
     call=("raxmlHPC", "-version"),
-    search=r"version (\d+)\.(\d+)\.(\d+)",
-    checks=versions.GE(8, 2, 9),
+    regexp=r"version (\d+\.\d+\.\d+)",
+    specifiers=">=8.2.9",
 )
 RAXML_PTHREADS_VERSION = versions.Requirement(
     call=("raxmlHPC-PTHREADS", "-version"),
-    search=r"version (\d+)\.(\d+)\.(\d+)",
-    checks=versions.GE(8, 2, 9),
+    regexp=r"version (\d+\.\d+\.\d+)",
+    specifiers=">=8.2.9",
 )
 
 

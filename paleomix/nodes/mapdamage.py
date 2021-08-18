@@ -39,15 +39,14 @@ from paleomix.nodes.samtools import merge_bam_files_command
 
 MAPDAMAGE_VERSION = versions.Requirement(
     call=("mapDamage", "--version"),
-    search=r"(\d+)\.(\d+).(\d+)",
-    checks=versions.GE(2, 2, 1),
+    regexp=r"(\d+\.\d+\.\d+)",
+    specifiers=">=2.2.1",
 )
 
 RSCRIPT_VERSION = versions.Requirement(
     call=("Rscript", "--version"),
-    search=r"version (\d+)\.(\d+).(\d+)",
-    checks=versions.GE(3, 3, 3),
-    priority=10,
+    regexp=r"version (\d+\.\d+\.\d+)",
+    specifiers=">=3.3.3",
 )
 
 

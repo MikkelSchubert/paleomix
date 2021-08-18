@@ -39,14 +39,14 @@ from paleomix.nodegraph import FileStatusCache
 
 EXAML_VERSION = versions.Requirement(
     call=("examl", "-version"),
-    search=r"version (\d+)\.(\d+)\.(\d+)",
-    checks=versions.GE(3, 0, 21),
+    regexp=r"version (\d+\.\d+\.\d+)",
+    specifiers=">=3.0.21",
 )
 
 PARSER_VERSION = versions.Requirement(
     call=("parse-examl", "-h"),
-    search=r"version (\d+)\.(\d+)\.(\d+)",
-    checks=versions.GE(3, 0, 21),
+    regexp=r"version (\d+\.\d+\.\d+)",
+    specifiers=">=3.0.21",
 )
 
 

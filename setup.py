@@ -73,6 +73,7 @@ setup(
         "coloredlogs>=10.0",
         "configargparse>=0.13.0",
         "humanfriendly>=4.7",
+        "packaging>=19.0",
         "pysam>=0.10.0",
         "ruamel.yaml>=0.16.0",
         "setproctitle>=1.1.0",

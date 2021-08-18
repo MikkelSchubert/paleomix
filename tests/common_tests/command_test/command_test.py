@@ -254,11 +254,7 @@ def test_atomiccmd__paths__overlapping_output_3(file1: _IOFile, file2: _IOFile):
 
 def test_atomicmcd__requirements():
     # RequirementObjs are the standard way to do tests
-    reqobj = Requirement(
-        call=("echo", "version"),
-        search="version",
-        checks=str,  # type: ignore
-    )
+    reqobj = Requirement(call=("echo", "version"), regexp="version")
     cmd = AtomicCmd("true", requirements=[reqobj])
     assert cmd.requirements == frozenset([reqobj])
 

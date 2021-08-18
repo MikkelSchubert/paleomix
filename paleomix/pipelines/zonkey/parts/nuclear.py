@@ -45,21 +45,27 @@ from paleomix.node import CommandNode, Node, NodeError
 from paleomix.pipelines.zonkey.common import RSCRIPT_VERSION, read_summary
 
 ADMIXTURE_VERSION = versions.Requirement(
-    call=("admixture", "--version"), search=r"(\d+)\.(\d+)", checks=versions.GE(1, 3)
+    call=("admixture", "--version"),
+    regexp=r"(\d+\.\d+)",
+    specifiers=">=1.3",
 )
 
 PLINK_VERSION = versions.Requirement(
     call=("plink", "--noweb", "--help", "--out", "/tmp/plink"),
-    search=r"v(\d+)\.(\d+)",
-    checks=versions.GE(1, 7),
+    regexp=r"v(\d+\.\d+)",
+    specifiers=">=1.7",
 )
 
 SMARTPCA_VERSION = versions.Requirement(
-    call=("smartpca",), search=r"version: (\d+)", checks=versions.GE(13050)
+    call=("smartpca",),
+    regexp=r"version: (\d+)",
+    specifiers=">=13050",
 )
 
 TREEMIX_VERSION = versions.Requirement(
-    call=("treemix",), search=r"TreeMix v. (\d+)\.(\d+)", checks=versions.GE(1, 12)
+    call=("treemix",),
+    regexp=r"TreeMix v. (\d+\.\d+)",
+    specifiers=">=1.12",
 )
 
 
@@ -645,7 +651,13 @@ class PlotTreemixNode(CommandNode):
 
 
 class SmartPCANode(CommandNode):
-    def __init__(self, input_prefix:str, output_prefix:str, nchroms:int, dependencies:Iterable[Node]=()):
+    def __init__(
+        self,
+        input_prefix: str,
+        output_prefix: str,
+        nchroms: int,
+        dependencies: Iterable[Node] = (),
+    ):
         self._input_prefix = input_prefix
         self._output_prefix = output_prefix
         self._nchroms = nchroms
