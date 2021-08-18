@@ -25,12 +25,6 @@ import paleomix.common.versions as versions
 import paleomix.common.yaml as yaml
 
 
-# Format number for database file; is incremented when the format is changed.
-# The 'revision' field specifies updates to the table that do not change the
-# format of the database (see below).
-_SUPPORTED_DB_FORMAT = 1
-
-
 RSCRIPT_VERSION = versions.Requirement(
     call=("Rscript", "--version"),
     regexp=r"version (\d+\.\d+\.\d+)",
