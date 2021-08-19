@@ -72,9 +72,7 @@ class Pypeline:
         }
 
     def run(self, mode: str = "run") -> int:
-        if mode not in ("run", "dry_run", "input_files", "output_files", "executables"):
-            raise ValueError("Unknown pipeline mode {!r}".format(mode))
-        elif mode == "dry_run":
+        if mode == "dry_run":
             self._logger.info("Dry running pipeline ..")
         elif mode == "run":
             self._logger.info("Starting pipeline ..")
@@ -288,8 +286,11 @@ class Pypeline:
             elif mode == "executables":
                 self._logger.info("Collecting and printing required executables ..")
                 return paleomix.core.reports.required_executables(self._nodes, file)
+            elif mode == "pipeline_tasks":
+                self._logger.info("Printing pipeline tasks ..")
+                return paleomix.core.reports.pipeline_tasks(self._nodes, file)
             else:
-                raise ValueError(mode)
+                raise ValueError("Unknown pipeline mode {!r}".format(mode))
         except BrokenPipeError:
             return 0
         except NodeGraphError as error:
@@ -404,6 +405,13 @@ def add_io_argument_group(parser: argparse.ArgumentParser) -> argparse._Argument
         action="store_const",
         dest="pipeline_mode",
         help="List executables used by the pipeline and their version requirements.",
+    )
+    group.add_argument(
+        "--list-pipeline-tasks",
+        const="pipeline_tasks",
+        action="store_const",
+        dest="pipeline_mode",
+        help="Print tree of tasks in the current pipeline",
     )
 
     return group
