@@ -35,20 +35,23 @@ command will not work:
 $ samtools view -H INPUT.BAM | samtools view -Sbu -
 
 """
+import signal
 import subprocess
 import sys
 
 import pysam
 
-import paleomix.tools.factory
-
 import paleomix.common.argparse as argparse
 import paleomix.common.procs as processes
-
+import paleomix.tools.factory
 
 # Mask to select flags that are relevant to SE reads; this excludes flags where
 # no assumptions can if 0x1 is not set, per the SAM specification (see below).
 _SE_FLAGS_MASK = ~(0x2 | 0x8 | 0x20 | 0x40 | 0x80)
+
+
+def _on_sigterm(signum: int, frame):
+    sys.exit(-signum)
 
 
 def _set_sort_order(header):
@@ -277,7 +280,7 @@ def _run_cleanup_pipeline(args):
             last_out = procs[-1].stdout
 
         return int(any(processes.join_procs(procs)))
-    except Exception:
+    except:
         for proc in procs:
             proc.terminate()
         raise
@@ -387,6 +390,9 @@ def parse_args(argv):
 def main(argv):
     """Main function; returns 0 on success, non-zero otherwise."""
     args = parse_args(argv)
+
+    # Signal handler to allow cleanups during termination
+    signal.signal(signal.SIGTERM, _on_sigterm)
 
     if args.command == "cleanup":
         return _cleanup_unmapped(args)

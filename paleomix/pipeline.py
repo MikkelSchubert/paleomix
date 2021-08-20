@@ -94,8 +94,6 @@ class Pypeline:
             requirements=nodegraph.requirements,
         )
 
-        sigint_handler = signal.getsignal(signal.SIGINT)
-
         try:
             # Handle setup/teardown of commandline interface and termination of workers
             with manager:
@@ -113,12 +111,13 @@ class Pypeline:
                     self._logger.info("Dry run done")
                     return 0
 
-                # Install signal handler used to allow graceful termination
+                # Install signal handlers to allow graceful termination
                 signal.signal(signal.SIGINT, self._sigint_handler)
+                signal.signal(signal.SIGHUP, self._sigterm_handler)
+                signal.signal(signal.SIGTERM, self._sigterm_handler)
 
                 return self._run(nodegraph, manager)
         finally:
-            signal.signal(signal.SIGINT, sigint_handler)
             for filename in paleomix.common.logging.get_logfiles():
                 self._logger.info("Log-file written to %r", filename)
 
@@ -306,8 +305,11 @@ class Pypeline:
                 "Press CTRL-C again to force termination."
             )
         else:
-            self._logger.warning("Terminating pipeline!")
-            sys.exit(-signum)
+            self._sigterm_handler(signum, frame)
+
+    def _sigterm_handler(self, signum: int, frame: Any):
+        self._logger.warning("Terminating due to signal %i", signum)
+        sys.exit(-signum)
 
     def _summarize_pipeline(self, nodegraph: NodeGraph, verbose: bool = True):
         states = nodegraph.get_state_counts()

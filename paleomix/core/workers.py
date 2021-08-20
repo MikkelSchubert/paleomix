@@ -462,6 +462,7 @@ class LocalWorker:
             for proc, task in tuple(self._handles.values()):
                 self._log.warning("Killing task %s", task)
                 proc.terminate()
+                proc.join()
             self._handles.clear()
             self._running.clear()
 
@@ -614,7 +615,13 @@ def _task_wrapper(queue: QueueType, task: Node, temp_root: str) -> None:
         name = "paleomix {} task".format(sys.argv[1])
 
     paleomix.common.system.set_procname(name)
+    # SIGINTs are handled in the main thread only
     signal.signal(signal.SIGINT, signal.SIG_IGN)
+    # SIGTERM and SIGHUP are translated to group-wide SIGTERMs with setpgrp/killpg
+    signal.signal(signal.SIGHUP, _task_wrapper_sigterm_handler)
+    signal.signal(signal.SIGTERM, _task_wrapper_sigterm_handler)
+    # Create process group to cleanly all subprocesses started in the current process
+    os.setpgrp()
 
     try:
         task.run(temp_root)
@@ -632,3 +639,8 @@ def _task_wrapper(queue: QueueType, task: Node, temp_root: str) -> None:
         backtrace.append("  {!r}".format(exc_value))
 
         queue.put((task.id, exc_value, backtrace))
+
+
+def _task_wrapper_sigterm_handler(signum: int, frame: Any):
+    # Transmit SIGTERM to all sub-processes started by this Process
+    os.killpg(os.getpid(), signal.SIGTERM)

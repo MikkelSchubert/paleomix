@@ -389,8 +389,7 @@ class AtomicCmd:
                 stdin=stdin,
                 stdout=stdout,
                 stderr=stderr,
-                cwd=cwd,
-                start_new_session=True,
+                cwd=cwd
             )
         except Exception as error:
             message = "Error running commands:\n  Call = %r\n  Error = %r"
