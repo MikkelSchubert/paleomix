@@ -87,7 +87,7 @@ def read_makefiles(filenames):
             }
         )
 
-    return validate_makefiles(makefiles)
+    return finalize_makefiles(makefiles)
 
 
 def _alphanum_check(whitelist, min_len=1):
@@ -335,7 +335,7 @@ def _postprocess_samples(data, global_options):
                     # Split a trimmed/untrimmed lane into one record per input file
                     lanes[barcode] = _split_lane(record, path, library_options)
 
-    return _finalize_samples(data)
+    return data
 
 
 def _combine_options(
@@ -468,26 +468,36 @@ def _is_paired_end(template):
 # based on check in `glob`
 _GLOB_MAGIC = re.compile("[*?[]")
 
-
-def _finalize_samples(data):
-    results = {}
-    for samples in data.values():
-        for sample, libraries in samples.items():
-            if sample in results:
-                raise MakefileError(f"Multiple samples named {sample!r}")
-
-            results[sample] = libraries
-
-    return results
-
-
 ########################################################################################
 
 
-def validate_makefiles(makefiles):
+def finalize_makefiles(makefiles):
+    sample_names = set()
+    duplicate_samples = set()
+    for makefile in makefiles:
+        results = {}
+        # Groups are used to structure the YAML file and can be discarded for simplicity
+        for samples in makefile["Samples"].values():
+            for sample, libraries in samples.items():
+                if sample in sample_names:
+                    duplicate_samples.add(sample)
+
+                sample_names.add(sample)
+                results[sample] = libraries
+
+        makefile["Samples"] = results
+
+    if duplicate_samples:
+        log = logging.getLogger(__name__)
+        log.error("One or more sample names have been used multiple times:")
+        for idx, sample in enumerate(sorted(duplicate_samples), start=1):
+            log.error("  %i. %s", idx, sample)
+        log.error("All samples must have a unique name")
+
+        raise MakefileError("Duplicate sample names found")
+
     for makefile in makefiles:
         _validate_makefile_options(makefile)
-    _validate_makefiles_duplicate_samples(makefiles)
     _validate_makefiles_duplicate_files(makefiles)
     _validate_prefixes(makefiles)
 
@@ -592,17 +602,6 @@ def _describe_files_in_multiple_records(records, pairs):
         prefix = " " * len(prefix)
 
     return "\n".join(lines)
-
-
-def _validate_makefiles_duplicate_samples(makefiles):
-    samples = set()
-    for makefile in makefiles:
-        for sample in samples - makefile["Samples"].keys():
-            raise MakefileError(
-                "Sample name '%s' used multiple times; output files would be clobbered!"
-                % (sample,)
-            )
-        samples.update(makefile["Samples"])
 
 
 def _validate_prefixes(makefiles):
