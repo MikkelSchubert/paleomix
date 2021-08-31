@@ -68,6 +68,7 @@ class ApplyVQSRNode(CommandNode):
     def __init__(
         self,
         mode,
+        in_vcf,
         in_node,
         out_vcf,
         out_log=None,
@@ -87,7 +88,7 @@ class ApplyVQSRNode(CommandNode):
             tool_options={
                 "--mode": mode,
                 "--reference": InputFile(in_node.in_reference),
-                "--variant": InputFile(in_node.in_variant),
+                "--variant": InputFile(in_vcf),
                 "--recal-file": InputFile(in_node.out_recal),
                 "--tranches-file": InputFile(in_node.out_tranches),
                 "--output": OutputFile(out_vcf),
@@ -106,7 +107,7 @@ class ApplyVQSRNode(CommandNode):
         CommandNode.__init__(
             self,
             command=command,
-            description="recalibrating {}s for {!r}".format(mode, in_node.in_variant),
+            description="recalibrating {}s for {!r}".format(mode, in_vcf),
             dependencies=dependencies,
         )
 

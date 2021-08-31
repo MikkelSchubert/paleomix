@@ -637,6 +637,7 @@ def recalibrate_haplotype(args, genome, samples, settings):
             # 2. Apply SNP recalibration to original BAM
             recal_node = ApplyVQSRNode(
                 mode="SNP",
+                in_vcf=snp_node.in_variant,
                 in_node=snp_node,
                 out_vcf=layout["vcf_recal_snp"],
                 out_log=layout["vcf_recal_snp_log"],
@@ -645,9 +646,10 @@ def recalibrate_haplotype(args, genome, samples, settings):
                 dependencies=[snp_node],
             )
 
-            # 3. Apply INDEL recalibration to original SNP recalibrated BAM
+            # 3. Apply INDEL recalibration to SNP recalibrated BAM
             yield ApplyVQSRNode(
                 mode="INDEL",
+                in_vcf=recal_node.out_vcf,
                 in_node=indel_node,
                 out_vcf=layout["vcf_recal_snp_indel"],
                 out_log=layout["vcf_recal_snp_indel_log"],
