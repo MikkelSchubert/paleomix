@@ -172,6 +172,9 @@ class Genome:
             self.intervals_node,
         )
 
+    def __str__(self):
+        return self.name
+
 
 def validate_and_index_resources(args, settings):
     # GATK resource files (VCFs); should be tabix indexed
