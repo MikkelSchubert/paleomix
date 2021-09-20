@@ -190,27 +190,34 @@ class BAMMergeNode(CommandNode):
         dependencies: Iterable[Node] = (),
     ):
         in_files = tuple(in_files)
-        if len(in_files) <= 1:
-            warnings.warn("creating {!r} from single input file".format(out_file))
+        if not in_files:
+            raise ValueError("no input files for samtools merge")
+        elif len(in_files) == 1:
+            # FIXME: hardlinking is faster, but could have unintended side-effects
+            cmd = AtomicCmd(["cp", InputFile(in_files[0]), OutputFile(out_file)])
 
-        cmd = AtomicCmd(
-            ["samtools", "merge"],
-            requirements=[SAMTOOLS_VERSION],
-        )
+            threads = 1
+        else:
+            cmd = AtomicCmd(
+                ["samtools", "merge"],
+                requirements=[SAMTOOLS_VERSION],
+            )
 
-        cmd.append_options(options)
-        cmd.append(OutputFile(out_file))
-        for in_file in in_files:
-            cmd.append(InputFile(in_file))
+            cmd.append_options(options)
+            cmd.append(OutputFile(out_file))
+            for in_file in in_files:
+                cmd.append(InputFile(in_file))
 
-        if "--write-index" in options:
-            cmd.add_extra_files([OutputFile(out_file + ".csi")])
+            if "--write-index" in options:
+                cmd.add_extra_files([OutputFile(out_file + ".csi")])
+
+            threads = _get_number_of_threads(options)
 
         CommandNode.__init__(
             self,
             command=cmd,
             description="merging %i files into %s" % (len(in_files), out_file),
-            threads=_get_number_of_threads(options),
+            threads=threads,
             dependencies=dependencies,
         )
 
