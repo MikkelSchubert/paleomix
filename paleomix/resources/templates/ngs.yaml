@@ -41,6 +41,9 @@ Settings:
       --low_complexity_filter:
       # Merge reads with at least N bp overlap
       --overlap_len_require: 11
+      # Adapter sequences for mate 1 and 2
+      # --adapter_sequence: ...
+      # --adapter_sequence_r2: ...
 
     MultiQC:
       # Command-line options for MultiQC used when merging FastQC/Fastp reports
