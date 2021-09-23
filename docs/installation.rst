@@ -15,19 +15,15 @@ In addition, some libraries used by PALEOMIX may require additional development 
 
     $ sudo apt-get install libz-dev libbz2-dev liblzma-dev python3-dev
 
-Once all requirements have been installed, PALEOMIX may be installed using `pip`:
+Once all requirements have been installed, PALEOMIX may be installed using `pip`::
 
-.. parsed-literal::
+    $ python3 -m pip install paleomix==2.0.0a0
 
-    $ python3 -m pip install paleomix==\ |release|
-
-To verify that the installation was carried out correctly, run the command `paleomix`:
-
-.. parsed-literal::
+To verify that the installation was carried out correctly, run the command `paleomix`::
 
     $ paleomix
     PALEOMIX - pipelines and tools for NGS data analyses
-    Version: \ |release|
+    Version: v2.0.0a0
 
     ...
 
@@ -46,12 +42,10 @@ This installation method requires the `venv` module. On Debian based systems, th
 
     $ sudo apt-get install python3-venv
 
-Once `venv` is installed, creation of a virtual environment and installation of PALEOMIX may be carried out as shown here:
-
-.. parsed-literal::
+Once `venv` is installed, creation of a virtual environment and installation of PALEOMIX may be carried out as shown here::
 
     $ python3 -m venv venv
-    $ ./venv/bin/pip install paleomix==\ |release|
+    $ ./venv/bin/pip install paleomix==v2.0.0a0
 
 Following successful completion of these commands, the `paleomix` executable will be accessible in the `./venv/bin/` folder. However, as this folder also contains a copy of Python itself, it is not recommended to add it to your `PATH`. Instead, simply link the `paleomix` executable to a folder in your `PATH`. This can be accomplished as follows::
 
@@ -78,19 +72,14 @@ To upgrade an installation a self-contained installation, simply call the `pip` 
 Conda installation
 ------------------
 
-To have a completely contained environment that includes all software dependencies, you can create a `conda`_ environment.
+`Conda`_ can be used to automatically setup a self-contained environment that includes the software required by PALEOMIX.
 
-To install `conda` and also set it up so it can use the `bioconda`_ bioinformatics tool repository, you can follow the instructions on the bioconda website `here`_.
+To install `conda` and also set it up so it can use the `bioconda`_ bioinformatics repository, follow the instructions on the bioconda website `here`_.
 
-Once set-up, you can create a conda environment named `paleomix` using the following commands:
+Next, run the following commands to download the conda environment template for this release of PALEOMIX and to create a new conda environment named `paleomix` using that template::
 
-.. parsed-literal::
-
-    $ curl https://raw.githubusercontent.com/MikkelSchubert/paleomix/master/paleomix_environment.yaml > paleomix_environment.yaml
+    $ curl -fL https://github.com/MikkelSchubert/paleomix/releases/download/v2.0.0a0/paleomix_environment.yaml > paleomix_environment.yaml
     $ conda env create -n paleomix -f paleomix_environment.yaml
-
-.. note::
-    The above only installs the dependencies for the BAM pipeline.
 
 You can now activate the paleomix environment with::
 
