@@ -3,6 +3,7 @@ Release checklist
 
 * Update changelog
 * Update version in `paleomix/__init__.py` and in `docs/conf.py`
+* Update version numbers referenced in `installation.rst`
 * Update version in paleomix_environment.yaml
 
 
@@ -26,3 +27,9 @@ Publish to github
 
 * Tag release
 * git push --tags
+
+
+Misc
+----
+
+* Prune list of versions listed on https://paleomix.readthedocs.io/
