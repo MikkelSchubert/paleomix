@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.3.4] - 2021-09-23
+
+### Added
+  - Added support for the `--collapse-conservatively` AdapterRemoval option.
+
+### Changed
+  - Avoid creating log files on invalid commandline arguments.
+  - The directory for the log-file is created automatically if it does not exist.
+  - No longer prints stack-trace if the user terminates a pipeline wiht Ctrl + C.
+  - Log-level command-line options are now case insensitive.
+  - The default number of threads used by AdapterRemova, Bowtie2, and BWA are now scaled
+    based on the available number of cores instead of defaulting to 1 thread.
+  - Less exhaustive validation of .bai index files using picard ValidateSamFile. The
+    overhead of validating these files was excessive in light of the small benefit.
+
+### Fixed
+  - Fixed regression causing certain option to not be applied when mapping with BWA.
+  - Fixed --log-level not having an effect.
+  - Fixed possible infinite recursion when using lazily created log-files.
+  - Fixed BAM pipeline failing if mapDamage feature was not explicitly set.
+  - Fixed default values of 0 or 1 not being listed in commnad-line help text.
+
+
 ## [1.3.3] - 2021-04-06
 
 ### Fixed
@@ -729,7 +752,8 @@ the (partially) updated documentation now hosted on ReadTheDocs.
   - Switching to more traditional version-number tracking.
 
 
-[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.3...HEAD
+[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.4...HEAD
+[1.3.3]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.3...v1.3.4
 [1.3.3]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.2...v1.3.3
 [1.3.2]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.0...v1.3.1
