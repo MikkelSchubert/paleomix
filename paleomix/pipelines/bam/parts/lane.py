@@ -149,7 +149,7 @@ class Lane:
             threads=parameters["threads"],
             prefix=parameters["prefix"],
             reference=parameters["reference"],
-            mapping_options=self.options["Aligners"]["BWA"],
+            mapping_options=options,
             dependencies=parameters["dependencies"],
         )
 
