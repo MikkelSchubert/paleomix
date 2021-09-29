@@ -34,7 +34,6 @@ import coloredlogs
 from humanfriendly.terminal import ansi_wrap, terminal_supports_colors
 
 _CONSOLE_MESSAGE_FORMAT = "%(asctime)s %(levelname)s %(status)s%(message)s"
-_CONSOLE_DATE_FORMAT = "%H:%M:%S"
 _FILE_MESSAGE_FORMAT = "%(asctime)s %(name)s %(levelname)s %(status)s%(message)s"
 
 
@@ -93,10 +92,7 @@ def initialize_console_logging(log_level: str = "info") -> None:
         logger.addHandler(handler)
 
     fmt_class = PaleomixFormatter if terminal_supports_colors() else BasicFormatter
-    formatter = fmt_class(
-        fmt=_CONSOLE_MESSAGE_FORMAT,
-        datefmt=_CONSOLE_DATE_FORMAT,
-    )
+    formatter = fmt_class(fmt=_CONSOLE_MESSAGE_FORMAT)
 
     handler.setFormatter(formatter)
 
