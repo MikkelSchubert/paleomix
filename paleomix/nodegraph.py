@@ -384,20 +384,16 @@ class NodeGraph:
             for filename in node.output_files:
                 output_files[_abs_path(filename)].add(node)
 
-        any_errors = False
-        if not self._check_output_files(output_files):
-            any_errors = True
+        output_bugs = self._check_output_files(output_files)
+        input_bugs, input_errors = self._check_input_files(input_files, output_files)
 
-        if not self._check_input_files(input_files, output_files):
-            any_errors = True
-
-        if any_errors:
+        if output_bugs or input_bugs:
             self._logger.error(
                 "This is probably a bug in PALEOMIX; please report at "
                 "https://github.com/MikkelSchubert/paleomix/issues/new"
             )
 
-        return not any_errors
+        return not (output_bugs or input_bugs or input_errors)
 
     def _check_output_files(self, output_files: Dict[str, Set[Node]]) -> bool:
         """Checks dict of output files to nodes for cases where
@@ -409,23 +405,24 @@ class NodeGraph:
         due to use of symbolic links). Since output files are
         replaced, not modified in place, it is not nessesary to
         compare files themselves."""
-        any_errors = False
+        any_bugs = False
         for filename, nodes in output_files.items():
             if len(nodes) > 1:
-                any_errors = True
+                any_bugs = True
                 self._logger.error("Multiple tasks write to file %r", filename)
                 self._logger.debug("depended on by")
                 for line in _summarize_nodes(nodes):
                     self._logger.debug("  %s", line)
 
-        return not any_errors
+        return any_bugs
 
     def _check_input_files(
         self,
         input_files: Dict[str, Set[Node]],
         output_files: Dict[str, Set[Node]],
-    ) -> bool:
-        any_errors = False
+    ) -> Tuple[bool, bool]:
+        any_bugs = False
+        any_user_errors = False
         for (filename, nodes) in sorted(input_files.items(), key=lambda v: v[0]):
             if filename in output_files:
                 producers = tuple(output_files[filename])
@@ -443,7 +440,7 @@ class NodeGraph:
                         bad_nodes.add(consumer)
 
                 if bad_nodes:
-                    any_errors = True
+                    any_bugs = True
                     self._logger.error(
                         "Tasks depends on file, but not on the task creating it: %r",
                         filename,
@@ -454,12 +451,12 @@ class NodeGraph:
                     for line in _summarize_nodes(bad_nodes):
                         self._logger.debug("    %s", line)
             elif not os.path.exists(filename):
-                any_errors = True
+                any_user_errors = True
                 self._logger.error("Required input file does not exist: %r", filename)
                 for line in _summarize_nodes(nodes):
                     self._logger.debug("  required when %s", line)
 
-        return not any_errors
+        return any_bugs, any_user_errors
 
     def _check_auxiliary_files(self, nodes: Iterable[Node]) -> bool:
         auxiliary_files: Set[str] = set()
