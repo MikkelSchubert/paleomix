@@ -62,6 +62,26 @@ def test_layout__get_without_updates():
     assert layout1.kwargs == {}
 
 
+def test_layout__get_without_updates__override():
+    layout1 = Layout({"{root}": {"{name}": "my_file"}}, root="bar")
+
+    assert layout1.get("my_file", root="foo", name="bar") == "foo/bar"
+    assert layout1.kwargs == {"root": "bar"}
+
+
+def test_layout__get_without_updates__partial():
+    layout1 = Layout({"{root}": {"{name}": "my_file"}}, root="foo")
+
+    assert layout1.get("my_file", name="bar") == "foo/bar"
+    assert layout1.kwargs == {"root": "foo"}
+
+
+def test_layout__extranous_path_components():
+    layout = Layout({"{root}": {"{name}": "my_file"}})
+
+    assert layout.get("my_file", root="foo/", name="test") == "foo/test"
+
+
 def test_layout__unnamed_field():
     with pytest.raises(LayoutError, match="unnamed field are not allowed in"):
         Layout({"{}": "my_file"})
@@ -102,7 +122,7 @@ def test_layout__duplicate_path_names():
 
 
 def test_layout__non_unique_key_field_name():
-    with pytest.raises(LayoutError, match="'file_1' used as both a key and a field"):
+    with pytest.raises(LayoutError, match="'file_1' used as both key and field"):
         Layout({"foo": "file_1", "{root}": {"{file_1}": "file_2"}})
 
 
