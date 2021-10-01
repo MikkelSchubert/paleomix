@@ -62,7 +62,7 @@ def join_procs(procs: Iterable[Popen[Any]], out: IO[str] = sys.stderr):
     assert all(hasattr(cmd, "args") for (_, cmd) in commands)
 
     return_codes = [None] * len(commands)  # type: List[Optional[int]]
-    out.write("Joinining subprocesses:\n")
+    print("Joinining subprocesses:", file=out)
     while commands:
         for (index, command) in list(commands):
             if command.poll() is not None:
@@ -74,18 +74,10 @@ def join_procs(procs: Iterable[Popen[Any]], out: IO[str] = sys.stderr):
                 if return_code < 0:
                     return_code = signal.Signals(-return_code).name
 
-                out.write(
-                    "  - Command finished: %s\n"
-                    "    Return-code:      %s\n"
-                    % (" ".join(cast(Any, command).args), return_code)
-                )
-                out.flush()
+                print(f"  - Command finished: {quote_args(command.args)}", file=out)
+                print(f"    Return-code:      {return_code}", file=out)
             elif any(return_codes):
-                out.write(
-                    "  - Terminating command: %s\n"
-                    % (" ".join(cast(Any, command).args),)
-                )
-                out.flush()
+                print(f"  - Terminating command: {quote_args(command.args)}", file=out)
 
                 command.terminate()
                 return_codes[index] = command.wait()
@@ -96,8 +88,7 @@ def join_procs(procs: Iterable[Popen[Any]], out: IO[str] = sys.stderr):
         sleep_time = min(1, sleep_time * 2)
 
     if any(return_codes):
-        out.write("Errors occured during processing!\n")
-        out.flush()
+        print("Errors occured during processing!", file=out)
 
     return return_codes
 
