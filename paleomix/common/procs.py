@@ -22,11 +22,15 @@
 #
 from __future__ import annotations
 
+import atexit
 import signal
 import sys
 import time
 from subprocess import Popen
 from typing import IO, Any, Iterable, List, Optional, cast
+
+# List of running processes; can be terminated with `terminate_all_processes`
+_RUNNING_PROCS: List[Any] = []
 
 
 def join_procs(procs: Iterable[Popen[Any]], out: IO[str] = sys.stderr):
@@ -78,3 +82,27 @@ def join_procs(procs: Iterable[Popen[Any]], out: IO[str] = sys.stderr):
         out.flush()
 
     return return_codes
+
+
+def register_process(proc):
+    """Register a process for automatic/forced termination."""
+    _RUNNING_PROCS.append(proc)
+
+
+def unregister_process(proc):
+    """Unregister a process for automatic/forced termination."""
+    if proc in _RUNNING_PROCS:
+        _RUNNING_PROCS.remove(proc)
+
+
+@atexit.register
+def terminate_all_processes():
+    """Terminate all registered proceses. Must be called in signal handlers."""
+    while _RUNNING_PROCS:
+        proc = _RUNNING_PROCS.pop()
+
+        try:
+            proc.terminate()
+        except OSError:
+            # Ignore already closed processes, etc.
+            pass

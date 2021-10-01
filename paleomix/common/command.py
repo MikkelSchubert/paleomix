@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import atexit
 import collections
 import os
 import shlex
@@ -9,7 +8,6 @@ import signal
 import subprocess
 import sys
 import time
-import weakref
 from pathlib import Path
 from typing import (
     IO,
@@ -27,6 +25,7 @@ from typing import (
 )
 
 import paleomix.common.fileutils as fileutils
+from paleomix.common.procs import register_process, unregister_process
 from paleomix.common.utilities import safe_coerce_to_tuple
 from paleomix.common.versions import Requirement
 
@@ -389,7 +388,8 @@ class AtomicCmd:
                 stdin=stdin,
                 stdout=stdout,
                 stderr=stderr,
-                cwd=cwd
+                cwd=cwd,
+                start_new_session=True,
             )
         except Exception as error:
             message = "Error running commands:\n  Call = %r\n  Error = %r"
@@ -400,8 +400,8 @@ class AtomicCmd:
                 if not (handle is None or isinstance(handle, int)):
                     handle.close()
 
-        # Allow subprocesses to be killed in case of a SIGTERM
-        _add_to_killlist(self._proc)
+        # Allow subprocesses to be cleaned up in case of unplanned termination
+        register_process(self)
 
     def ready(self):
         """Returns true if the command has been run to completion,
@@ -415,7 +415,9 @@ class AtomicCmd:
             return [None]
 
         return_code = self._proc.wait()
+        unregister_process(self)
         self._running = False
+
         if return_code < 0:
             return_code = signal.Signals(-return_code).name
         return [return_code]
@@ -993,33 +995,3 @@ def pformat(command: CommandTypes) -> str:
     _pformat(command, ids, pipes, 0, lines, False)
 
     return "\n".join(lines)
-
-
-# The following ensures proper cleanup of child processes, for example in the
-# case where multiprocessing.Pool.terminate() is called or if the script exits due to
-# an unhandled exception.
-_PROCS: List[weakref.ReferenceType[subprocess.Popen[Any]]] = []
-
-
-@atexit.register
-def _cleanup_children() -> None:
-    for proc_ref in list(_PROCS):
-        proc = proc_ref()
-        try:
-            if proc:
-                proc.terminate()
-        except OSError:
-            # Ignore already closed processes, etc.
-            pass
-
-
-def _on_sig_term(signum: int, _frame: Any) -> NoReturn:
-    _cleanup_children()
-    sys.exit(-signum)
-
-
-def _add_to_killlist(proc: subprocess.Popen[Any]) -> None:
-    _PROCS.append(weakref.ref(proc, _PROCS.remove))
-
-
-signal.signal(signal.SIGTERM, _on_sig_term)

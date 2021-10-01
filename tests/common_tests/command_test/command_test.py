@@ -23,6 +23,11 @@ from paleomix.common.command import (
     _AtomicFile,
     _IOFile,
 )
+from paleomix.common.procs import (
+    _RUNNING_PROCS,
+    register_process,
+    terminate_all_processes,
+)
 from paleomix.common.versions import Requirement
 
 ########################################################################################
@@ -1177,107 +1182,57 @@ def test_atomiccmd__str__():
 ########################################################################################
 # Cleanup
 
-# FIXME: Needs better tracking of procs
-#        1. track for termination until joined
-#        2. don't use weak references to avoid accidental leaks
 
-
-def _get_proc_ref(cmd):
-    for ref in paleomix.common.command._PROCS:
-        if ref() == cmd._proc:  # pragma: no cover
-            return ref
-    else:
-        assert False  # pragma: no cover
-
-
-# Test that the internal list of processes is kept clean of old objects
+# Test that the internal list of processes is kept clean of joined processes objects
 def test_atomiccmd__cleanup_proc__commit(tmp_path: Path):
-    cmd = AtomicCmd("ls")
+    cmd = AtomicCmd("true")
+    assert cmd not in _RUNNING_PROCS
     cmd.run(tmp_path)
-    ref = _get_proc_ref(cmd)
-
+    assert cmd in _RUNNING_PROCS
     assert cmd.join() == [0]
-    # Commit frees proc object
-    cmd.commit(tmp_path)
-
-    assert ref() is None
-    assert ref not in paleomix.common.command._PROCS
+    assert cmd not in _RUNNING_PROCS
 
 
-# Test that the internal list of processes is kept clean of old objects
 def test_atomiccmd__cleanup_proc__gc(tmp_path: Path):
-    cmd = AtomicCmd("ls")
+    cmd = AtomicCmd("true")
+    assert cmd not in _RUNNING_PROCS
     cmd.run(tmp_path)
-    ref = _get_proc_ref(cmd)
+    assert cmd in _RUNNING_PROCS
 
-    assert cmd.join() == [0]
-    # GC frees proc object
-    cmd = None
+    cmd_id = id(cmd)
+    del cmd
 
-    assert ref() is None
-    assert ref not in paleomix.common.command._PROCS
+    try:
+        assert any(id(cmd) == cmd_id for cmd in _RUNNING_PROCS)
+    finally:
+        terminate_all_processes()
 
 
-def test_atomiccmd__cleanup_sigterm():
+def test_atomiccmd__terminate_all():
     mock = Mock()  # type: Any
-    paleomix.common.command._add_to_killlist(mock.proc_1)
-    paleomix.common.command._add_to_killlist(mock.proc_2)
+    register_process(mock.proc_1)
+    register_process(mock.proc_2)
 
     with patch("sys.exit", mock.exit):
-        paleomix.common.command._on_sig_term(signal.SIGTERM, None)
+        terminate_all_processes()
 
-        assert mock.mock_calls == [
-            call.proc_1.terminate(),
-            call.proc_2.terminate(),
-            call.exit(-signal.SIGTERM),
-        ]
+    assert mock.mock_calls == [
+        call.proc_2.terminate(),
+        call.proc_1.terminate(),
+    ]
 
 
-def test_atomiccmd__cleanup_sigterm__continues_on_exception():
+def test_atomiccmd__terminate_all__continues_on_exception():
     mock = Mock()  # type: Any
-    paleomix.common.command._add_to_killlist(mock.proc_1)
-    paleomix.common.command._add_to_killlist(mock.proc_2)
+    register_process(mock.proc_1)
+    register_process(mock.proc_2)
 
     mock.proc_1.terminate.side_effect = OSError("already killed")
 
     with patch("sys.exit", mock.exit):
-        paleomix.common.command._on_sig_term(signal.SIGTERM, None)
+        terminate_all_processes()
 
-        assert mock.mock_calls == [
-            call.proc_1.terminate(),
-            call.proc_2.terminate(),
-            call.exit(-signal.SIGTERM),
-        ]
-
-
-# Ensure that the cleanup function handles weakrefs that have been freed
-def test_atomiccmd__cleanup_sigterm__dead_weakrefs_1():
-    mock = Mock()  # type: Any
-    paleomix.common.command._add_to_killlist(mock.proc_1)
-    paleomix.common.command._add_to_killlist(mock.proc_2)
-
-    del mock.proc_1
-
-    with patch("sys.exit", mock.exit):
-        paleomix.common.command._on_sig_term(signal.SIGTERM, None)
-
-        assert mock.mock_calls == [
-            call.proc_2.terminate(),
-            call.exit(-signal.SIGTERM),
-        ]
-
-
-# Ensure that the cleanup function handles weakrefs have haven't been removed; this
-# shouldn't happen, but it is useful to be sure that the code doesn't crash if it does
-def test_atomiccmd__cleanup_sigterm__dead_weakrefs_2():
-    mock = Mock()  # type: Any
-    paleomix.common.command._add_to_killlist(mock.proc_1)
-    paleomix.common.command._PROCS.append(lambda: None)  # type: ignore
-
-    with patch("sys.exit", mock.exit):
-        paleomix.common.command._on_sig_term(signal.SIGTERM, None)
-
-        assert mock.mock_calls == [
-            call.proc_1.terminate(),
-            call.exit(-signal.SIGTERM),
-        ]
+    assert mock.mock_calls == [
+        call.proc_2.terminate(),
+        call.proc_1.terminate(),
+    ]

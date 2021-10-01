@@ -32,6 +32,7 @@ from typing import (
 
 import paleomix
 import paleomix.common.system
+from paleomix.common.procs import terminate_all_processes
 from paleomix.common.versions import Requirement
 from paleomix.core.input import CommandLine, ListTasksEvent, ThreadsEvent
 from paleomix.node import Node, NodeError
@@ -617,11 +618,9 @@ def _task_wrapper(queue: QueueType, task: Node, temp_root: str) -> None:
     paleomix.common.system.set_procname(name)
     # SIGINTs are handled in the main thread only
     signal.signal(signal.SIGINT, signal.SIG_IGN)
-    # SIGTERM and SIGHUP are translated to group-wide SIGTERMs with setpgrp/killpg
+    # SIGTERM and SIGHUP are caught to allow proper termination of all sub-commands
     signal.signal(signal.SIGHUP, _task_wrapper_sigterm_handler)
     signal.signal(signal.SIGTERM, _task_wrapper_sigterm_handler)
-    # Create process group to cleanly all subprocesses started in the current process
-    os.setpgrp()
 
     try:
         task.run(temp_root)
@@ -642,5 +641,6 @@ def _task_wrapper(queue: QueueType, task: Node, temp_root: str) -> None:
 
 
 def _task_wrapper_sigterm_handler(signum: int, frame: Any):
-    # Transmit SIGTERM to all sub-processes started by this Process
-    os.killpg(os.getpid(), signal.SIGTERM)
+    terminate_all_processes()
+
+    sys.exit(-signum)
