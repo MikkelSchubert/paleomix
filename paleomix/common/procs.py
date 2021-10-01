@@ -23,6 +23,8 @@
 from __future__ import annotations
 
 import atexit
+import os
+import shlex
 import signal
 import sys
 import time
@@ -31,6 +33,22 @@ from typing import IO, Any, Iterable, List, Optional, cast
 
 # List of running processes; can be terminated with `terminate_all_processes`
 _RUNNING_PROCS: List[Any] = []
+
+
+def quote_args(args) -> str:
+    if isinstance(args, (str, bytes, os.PathLike)):
+        args = [args]
+
+    values = []
+    for arg in args:
+        if isinstance(arg, os.PathLike):
+            arg = os.fspath(arg)
+        elif isinstance(arg, bytes):
+            arg = arg.decode("utf-8", errors="replace")
+
+        values.append(shlex.quote(arg))
+
+    return " ".join(values)
 
 
 def join_procs(procs: Iterable[Popen[Any]], out: IO[str] = sys.stderr):
