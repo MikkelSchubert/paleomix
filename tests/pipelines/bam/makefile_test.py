@@ -499,7 +499,7 @@ def test_makefile__sample__duplicate_sample_names_1(tmp_path):
     """,
     )
 
-    with pytest.raises(MakefileError, match="Multiple samples named"):
+    with pytest.raises(MakefileError, match="Duplicate sample names found"):
         _read_makefile(filepath)
 
 
