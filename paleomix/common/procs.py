@@ -27,9 +27,8 @@ import os
 import shlex
 import signal
 import sys
-import time
-from subprocess import Popen
-from typing import IO, Any, Iterable, List, Optional, cast
+from subprocess import Popen, TimeoutExpired
+from typing import IO, Any, Iterable, List, Optional
 
 # List of running processes; can be terminated with `terminate_all_processes`
 _RUNNING_PROCS: List[Any] = []
@@ -59,11 +58,18 @@ def join_procs(procs: Iterable[Popen[Any]], out: IO[str] = sys.stderr):
     """
     sleep_time = 0.05
     commands = list(enumerate(procs))
+    return_codes = [None] * len(commands)  # type: List[Optional[int]]
+
     assert all(hasattr(cmd, "args") for (_, cmd) in commands)
 
-    return_codes = [None] * len(commands)  # type: List[Optional[int]]
     print("Joinining subprocesses:", file=out)
-    while commands:
+    while commands and not any(return_codes):
+        try:
+            # Wait for arbitrary command
+            commands[0][1].wait(sleep_time if len(commands) > 1 else None)
+        except TimeoutExpired:
+            sleep_time = min(1, sleep_time * 2)
+
         for (index, command) in list(commands):
             if command.poll() is not None:
                 return_code = command.wait()
@@ -76,18 +82,13 @@ def join_procs(procs: Iterable[Popen[Any]], out: IO[str] = sys.stderr):
 
                 print(f"  - Command finished: {quote_args(command.args)}", file=out)
                 print(f"    Return-code:      {return_code}", file=out)
-            elif any(return_codes):
-                print(f"  - Terminating command: {quote_args(command.args)}", file=out)
-
-                command.terminate()
-                return_codes[index] = command.wait()
-                commands.remove((index, command))
-                sleep_time = 0.05
-
-        time.sleep(sleep_time)
-        sleep_time = min(1, sleep_time * 2)
 
     if any(return_codes):
+        for index, command in commands:
+            print(f"  - Terminating command: {quote_args(command.args)}", file=out)
+            command.terminate()
+            return_codes[index] = command.wait()
+
         print("Errors occured during processing!", file=out)
 
     return return_codes

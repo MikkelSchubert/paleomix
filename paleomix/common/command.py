@@ -7,7 +7,6 @@ import shlex
 import signal
 import subprocess
 import sys
-import time
 from pathlib import Path
 from typing import (
     IO,
@@ -408,13 +407,13 @@ class AtomicCmd:
         regardless of wether or not an error occured."""
         return self._proc and self._proc.poll() is not None
 
-    def join(self) -> JoinType:
+    def join(self, timeout: Optional[float] = None) -> JoinType:
         """Similar to Popen.wait(), but returns the value wrapped in a list.
         Must be called before calling commit."""
         if not self._proc:
             return [None]
 
-        return_code = self._proc.wait()
+        return_code = self._proc.wait(timeout)
         unregister_process(self)
         self._running = False
 
@@ -714,10 +713,8 @@ class ParallelCmds(_CommandSet):
 
         commands = tuple(commands)
         for command in commands:
-            if not isinstance(command, (AtomicCmd, ParallelCmds)):
-                raise CmdError(
-                    "ParallelCmds must only contain AtomicCmds or other ParallelCmds!"
-                )
+            if not isinstance(command, AtomicCmd):
+                raise CmdError("ParallelCmds must only contain AtomicCmds")
         _CommandSet.__init__(self, commands)
 
     def run(self, temp: str) -> None:
@@ -731,27 +728,30 @@ class ParallelCmds(_CommandSet):
     def join(self) -> JoinType:
         sleep_time = 0.05
         commands = list(enumerate(self._commands))
-        return_codes: List[JoinType] = [[None]] * len(commands)
-        while commands and self._joinable:
-            for (index, command) in list(commands):
+        return_codes: JoinType = [None] * len(commands)
+        if not self._joinable:
+            return return_codes
+
+        while commands and not any(return_codes):
+            try:
+                # Wait for arbitrary command
+                commands[0][1].join(sleep_time if len(commands) > 1 else None)
+            except subprocess.TimeoutExpired:
+                sleep_time = min(1, sleep_time * 2)
+
+            for index, command in list(commands):
                 if command.ready():
-                    return_codes[index] = command.join()
-                    commands.remove((index, command))
-                    sleep_time = 0.05
-                elif any(any(codes) for codes in return_codes):
-                    command.terminate()
-                    return_codes[index] = command.join()
+                    (return_code,) = command.join()
+                    return_codes[index] = return_code
                     commands.remove((index, command))
                     sleep_time = 0.05
 
-            time.sleep(sleep_time)
-            sleep_time = min(1, sleep_time * 2)
+        if any(return_codes):
+            for index, command in commands:
+                command.terminate()
+                (return_codes[index],) = command.join()
 
-        result: JoinType = []
-        for return_code in return_codes:
-            result.extend(return_code)
-
-        return result
+        return return_codes
 
     def __str__(self) -> str:
         return pformat(self)

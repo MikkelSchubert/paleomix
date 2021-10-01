@@ -313,17 +313,12 @@ def test_parallel_commands__join_failure_3(tmp_path: Path) -> None:
     assert cmds.join() == ["SIGTERM", "SIGTERM", 1]
 
 
-def test_parallel_commands__reject_sequential():
+@pytest.mark.parametrize("cls", (SequentialCmds, ParallelCmds))
+def test_parallel_commands__reject_sets(cls):
     command = AtomicCmd(["ls"])
-    seqcmd = SequentialCmds([command])
+    seqcmd = cls([command])
     with pytest.raises(CmdError):
         ParallelCmds([seqcmd])  # type: ignore
-
-
-def test_parallel_commands__accept_parallel():
-    command = AtomicCmd(["ls"])
-    parcmd = ParallelCmds([command])
-    ParallelCmds([parcmd])
 
 
 def test_parallel_commands__reject_noncommand():
