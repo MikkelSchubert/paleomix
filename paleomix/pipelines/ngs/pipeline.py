@@ -112,11 +112,19 @@ _LAYOUT = {
                     },
                 },
             },
-            "fastqc_multiQC": "stats_fastqc_multiqc",
-            "fastqc": {
+            "pre_trimmed_multiQC": "stats_fastqc_multiqc_pre",
+            "pre_trimmed": {
                 "{sample}": {
                     "{library}": {
-                        "{run}": "stats_fastqc",
+                        "{run}": "stats_fastqc_pre",
+                    },
+                },
+            },
+            "post_trimmed_multiQC": "stats_fastqc_multiqc_post",
+            "post_trimmed": {
+                "{sample}": {
+                    "{library}": {
+                        "{run}": "stats_fastqc_post",
                     },
                 },
             },
@@ -206,7 +214,7 @@ def fastqc_sample_runs(args, genome, samples, settings):
                 nodes.extend(
                     FastQCNode(
                         in_file=filename,
-                        out_folder=layout["stats_fastqc"],
+                        out_folder=layout["stats_fastqc_pre"],
                         options=settings["FastQC"],
                     )
                     for filename in files.values()
@@ -216,7 +224,7 @@ def fastqc_sample_runs(args, genome, samples, settings):
     nodes.append(
         MultiQCNode(
             source="fastqc",
-            output_prefix=args.layout["stats_fastqc_multiqc"],
+            output_prefix=args.layout["stats_fastqc_multiqc_pre"],
             dependencies=nodes,
             options=settings["MultiQC"],
         )
@@ -292,6 +300,45 @@ def process_fastq_files(args, genome, samples, settings):
         options=settings["MultiQC"],
         dependencies=nodes,
     )
+
+
+def fastqc_trimmed_reads(args, genome, samples, settings):
+    settings = settings["Preprocessing"]
+    nodes = []
+
+    # 1. FastQC reports for each input file
+    for sample, libraries in samples.items():
+        for library, lanes in libraries.items():
+            for run, files in lanes.items():
+                layout = args.layout.update(
+                    sample=sample,
+                    library=library,
+                    run=run,
+                )
+
+                for read_type in ("merged", "paired"):
+                    for read_pair in (1, 2):
+                        filename = files.get(f"out_{read_type}_{read_pair}")
+                        if filename is not None:
+                            nodes.append(
+                                FastQCNode(
+                                    in_file=filename,
+                                    out_folder=layout["stats_fastqc_post"],
+                                    options=settings["FastQC"],
+                                )
+                            )
+
+    # 2. MultiQC report for all files across all samples
+    nodes.append(
+        MultiQCNode(
+            source="fastqc",
+            output_prefix=args.layout["stats_fastqc_multiqc_post"],
+            dependencies=nodes,
+            options=settings["MultiQC"],
+        )
+    )
+
+    return nodes
 
 
 def map_sample_runs(args, genome, samples, settings):
@@ -707,19 +754,21 @@ def build_pipeline(args, project):
         "pre-trimming-qc": fastqc_sample_runs,
         # 4. Process FASTQ files to produce mapping-ready reads
         "read-trimming": process_fastq_files,
-        # 5. Map merged runs to genome and genotype samples
+        # 5. Do quality analysis of trimmed FASTQ files
+        "post-trimming-qc": fastqc_trimmed_reads,
+        # 6. Map merged runs to genome and genotype samples
         "read-mapping": map_sample_runs,
-        # 6. Filter (mark) PCR duplicates for merged and paired reads
+        # 7. Filter (mark) PCR duplicates for merged and paired reads
         "pcr-duplicate-filtering-0": filter_pcr_duplicates,
-        # 7. Merged PCR duplicate filtered libraries to produce an intermediate BAM.
+        # 8. Merged PCR duplicate filtered libraries to produce an intermediate BAM.
         "pcr-duplicate-filtering": merge_samples_alignments,
-        # 8. Recalibrate base qualities using known variable sites
+        # 9. Recalibrate base qualities using known variable sites
         "base-recalibration": recalibrate_nucleotides,
-        # 9. Collect statistics for the final, processed BAM files
+        # 10. Collect statistics for the final, processed BAM files
         "mapping-statistics": final_bam_stats,
-        # 10. Call haplotypes for each sample
+        # 11. Call haplotypes for each sample
         "haplotyping": haplotype_samples,
-        # 11. Recalibrate haplotype qualities using known variants
+        # 12. Recalibrate haplotype qualities using known variants
         "haplotype-recalibration": recalibrate_haplotype,
     }
 

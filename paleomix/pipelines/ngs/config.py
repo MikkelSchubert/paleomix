@@ -46,6 +46,7 @@ def _build_run_parser(subparsers):
             "indexing",
             "pre-trimming-qc",
             "read-trimming",
+            "post-trimming-qc",
             "read-mapping",
             "pcr-duplicate-filtering",
             "base-recalibration",
