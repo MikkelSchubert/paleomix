@@ -400,9 +400,9 @@ def map_sample_runs(args, genome, samples, settings):
                         dependencies=[bwa],
                     )
 
-            libraries[library] = mapped_reads
+                    yield mapped_reads[name][out_bam]
 
-    return ()
+            libraries[library] = mapped_reads
 
 
 def filter_pcr_duplicates(args, genome, samples, settings):
@@ -416,7 +416,7 @@ def filter_pcr_duplicates(args, genome, samples, settings):
 
                 libraries[library] = bam_files
 
-        return ()
+        return
     elif mode not in ("mark", "filter"):
         raise RuntimeError(f"unknown PCRDuplicates mode {mode!r}")
 
@@ -452,7 +452,8 @@ def filter_pcr_duplicates(args, genome, samples, settings):
 
             libraries[library].update(read_types["unmapped"])
 
-    return ()
+            yield paired
+            yield merged
 
 
 def merge_samples_alignments(args, genome, samples, settings):
@@ -489,7 +490,7 @@ def merge_samples_alignments(args, genome, samples, settings):
             dependencies=[indexed],
         )
 
-    return ()
+        yield samples[sample]
 
 
 def recalibrate_nucleotides(args, genome, samples, settings):
