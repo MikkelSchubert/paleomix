@@ -27,6 +27,7 @@ import paleomix.common.versions as versions
 import paleomix.tools.factory as factory
 from paleomix.common.command import (
     AtomicCmd,
+    Executable,
     InputFile,
     OutputFile,
     ParallelCmds,
@@ -210,6 +211,7 @@ class BWAAlgorithmNode(CommandNode):
         input_file_2=None,
         threads=1,
         algorithm="mem",
+        alt_aware=False,
         mapping_options={},
         cleanup_options={},
         dependencies=(),
@@ -227,6 +229,12 @@ class BWAAlgorithmNode(CommandNode):
         if input_file_2:
             aln.append(InputFile(input_file_2))
 
+        if alt_aware:
+            if algorithm != "mem":
+                raise NotImplementedError("bwasw is not ALT aware")
+
+            aln.add_extra_files([InputFile(reference + ".alt")])
+
         aln.merge_options(
             user_options=mapping_options,
             fixed_options={
@@ -242,6 +250,7 @@ class BWAAlgorithmNode(CommandNode):
             out_bam=output_file,
             max_threads=threads,
             paired_end=input_file_1 and input_file_2,
+            alt_aware=alt_aware,
             options=cleanup_options,
         )
 
@@ -267,6 +276,7 @@ def _new_cleanup_command(
     out_bam,
     max_threads=1,
     paired_end=False,
+    alt_aware=False,
     options={},
 ):
     convert = factory.new(
@@ -289,6 +299,15 @@ def _new_cleanup_command(
     if paired_end:
         fixed_options["--paired-end"] = None
 
+    if alt_aware:
+        fixed_options["--alt-aware"] = None
+        convert.add_extra_files(
+            [
+                InputFile(f"{in_reference}.alt"),
+                Executable("bwa-postalt.js"),
+            ]
+        )
+
     convert.merge_options(
         user_options=options,
         fixed_options=fixed_options,
@@ -305,7 +324,7 @@ def _new_bwa_command(call, reference, iotype=InputFile, **kwargs):
             for postfix in (".amb", ".ann", ".bwt", ".pac", ".sa")
         ],
         requirements=[BWA_VERSION],
-        **kwargs
+        **kwargs,
     )
 
 

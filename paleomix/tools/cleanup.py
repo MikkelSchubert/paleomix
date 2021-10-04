@@ -245,6 +245,11 @@ def _run_cleanup_pipeline(args):
     threads = _distribute_threads(args.max_threads)
 
     try:
+        if args.alt_aware:
+            # Optimize alignments against ALT sequences
+            # https://github.com/lh3/bwa/blob/master/bwakit/bwa-postalt.js
+            commands.append(["bwa-postalt.js", f"{args.fasta}.alt"])
+
         if args.paired_end:
             fixmate_args = ["fixmate"]
             if args.add_mate_score:
@@ -349,6 +354,14 @@ def parse_args(argv):
         action="store_true",
         help="If enabled, the -m flag is passed to 'fixmate' and mate-score tags are "
         "added to reads [Default: off]",
+    )
+    group.add_argument(
+        "--alt-aware",
+        default=False,
+        action="store_true",
+        help="If set, reads are assumed to have been mapped in the presence of an ALT "
+        "file (`genome.fasta.alt`) and are processed using the `bwa-postalt.js` script "
+        "from the BWA toolkit as part of the cleanup.",
     )
 
     group.add_argument(
