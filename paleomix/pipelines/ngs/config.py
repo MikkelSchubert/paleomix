@@ -39,6 +39,24 @@ def _build_run_parser(subparsers):
         "'.output' extension.",
     )
 
+    parser.add_argument(
+        "--run-until",
+        metavar="STEP",
+        choices=(
+            "indexing",
+            "pre-trimming-qc",
+            "read-trimming",
+            "read-mapping",
+            "pcr-duplicate-filtering",
+            "base-recalibration",
+            "mapping-statistics",
+            "haplotyping",
+            "haplotype-recalibration",
+        ),
+        default="haplotype-recalibration",
+        help="Run the pipeline only until (and including) the specified analytical step",
+    )
+
     paleomix.common.logging.add_argument_group(parser)
 
     group = paleomix.pipeline.add_scheduling_argument_group(parser)

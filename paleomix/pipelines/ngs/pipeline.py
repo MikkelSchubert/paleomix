@@ -189,7 +189,8 @@ def validate_and_index_resources(args, settings):
         yield TabixIndexNode(infile=filename, preset="vcf")
 
 
-def fastqc_sample_runs(args, samples, settings):
+def fastqc_sample_runs(args, genome, samples, settings):
+    settings = settings["Preprocessing"]
     nodes = []
 
     # 1. FastQC reports for each input file
@@ -224,11 +225,11 @@ def fastqc_sample_runs(args, samples, settings):
     return nodes
 
 
-def process_fastq_files(args, samples, settings):
-    settings_preproc = settings["Preprocessing"]
-    settings_meta = settings["Metadata"]
+def process_fastq_files(args, genome, samples, settings):
+    metadata = settings["Metadata"]
+    settings = settings["Preprocessing"]
 
-    settings_preproc["Fastp"]["--thread"] = args.max_threads_fastp
+    settings["Fastp"]["--thread"] = args.max_threads_fastp
 
     nodes = []
     sample = None
@@ -248,7 +249,7 @@ def process_fastq_files(args, samples, settings):
                     out_failed=layout["fastp_failed"],
                     out_html=layout["fastp_report_html"],
                     out_json=layout["fastp_report_json"],
-                    options=settings_preproc["Fastp"],
+                    options=settings["Fastp"],
                 )
 
                 # Filtered reads and orphan paired end reads are converted to unmapped
@@ -263,7 +264,7 @@ def process_fastq_files(args, samples, settings):
                             # Marked as coordinate sorted for faster conversion/merging
                             "--SORT_ORDER": "coordinate",
                             "--READ_GROUP_NAME": run,
-                            "--PLATFORM": settings_meta["Platform"],
+                            "--PLATFORM": metadata["Platform"],
                             "--SAMPLE_NAME": sample,
                             "--LIBRARY_NAME": library,
                             "--PLATFORM_UNIT": run,
@@ -288,14 +289,13 @@ def process_fastq_files(args, samples, settings):
     yield MultiQCNode(
         source="fastp",
         output_prefix=layout["stats_fastp_multiqc"],
-        options=settings_preproc["MultiQC"],
+        options=settings["MultiQC"],
         dependencies=nodes,
     )
 
 
 def map_sample_runs(args, genome, samples, settings):
-    # FIXME: Should be handled by Node itself
-    bwa_settings = dict(settings["BWAMem"])
+    bwa_settings = dict(settings["ReadMapping"]["BWAMem"])
     bwa_threads = args.max_threads_bwa
 
     for sample, libraries in samples.items():
@@ -358,7 +358,7 @@ def map_sample_runs(args, genome, samples, settings):
 
 
 def filter_pcr_duplicates(args, genome, samples, settings):
-    mode = settings["PCRDuplicates"]["mode"]
+    mode = settings["ReadMapping"]["PCRDuplicates"]["mode"]
     if mode == "skip":
         for libraries in samples.values():
             for library, read_types in libraries.items():
@@ -445,6 +445,7 @@ def merge_samples_alignments(args, genome, samples, settings):
 
 
 def recalibrate_nucleotides(args, genome, samples, settings):
+    settings = settings["ReadMapping"]
     # FIXME: Nicer way to specify known sites. Maybe just remove known_sites param?
     recalibrator_options = dict(settings["BaseRecalibrator"])
     recalibrator_known_sites = recalibrator_options.pop("--known-sites")
@@ -520,6 +521,8 @@ def final_bam_stats(args, genome, samples, settings):
 
 
 def haplotype_samples(args, genome, samples, settings):
+    settings = settings["Genotyping"]
+
     sample_gvcfs = {}
     for sample, node in samples.items():
         layout = args.layout.update(genome=genome, sample=sample)
@@ -595,6 +598,7 @@ def haplotype_samples(args, genome, samples, settings):
 
 
 def recalibrate_haplotype(args, genome, samples, settings):
+    settings = settings["Genotyping"]
     layout = args.layout.update(genome=genome)
 
     if settings["VariantRecalibrator"]["Enabled"]:
@@ -662,9 +666,6 @@ def recalibrate_haplotype(args, genome, samples, settings):
 def build_pipeline(args, project):
     pipeline = []
 
-    def _add(func, *args_, **kwargs):
-        pipeline.extend(func(args, *args_, **kwargs))
-
     samples = project["Samples"]
     settings = project["Settings"]
     genome = project["Genome"]
@@ -688,7 +689,7 @@ def build_pipeline(args, project):
     pipeline.extend(genome.dependencies)
 
     # 2. Validate and index resource files
-    _add(validate_and_index_resources, settings)
+    pipeline.extend(validate_and_index_resources(args, settings))
 
     if not samples:
         logger = logging.getLogger(__name__)
@@ -698,32 +699,33 @@ def build_pipeline(args, project):
         )
 
         return pipeline
+    elif args.run_until == "indexing":
+        return pipeline
 
-    # 3. Do quality analysis of input FASTQ files
-    _add(fastqc_sample_runs, samples, settings["Preprocessing"])
+    analytical_steps = {
+        # 3. Do quality analysis of input FASTQ files
+        "pre-trimming-qc": fastqc_sample_runs,
+        # 4. Process FASTQ files to produce mapping-ready reads
+        "read-trimming": process_fastq_files,
+        # 5. Map merged runs to genome and genotype samples
+        "read-mapping": map_sample_runs,
+        # 6. Filter (mark) PCR duplicates for merged and paired reads
+        "pcr-duplicate-filtering-0": filter_pcr_duplicates,
+        # 7. Merged PCR duplicate filtered libraries to produce an intermediate BAM.
+        "pcr-duplicate-filtering": merge_samples_alignments,
+        # 8. Recalibrate base qualities using known variable sites
+        "base-recalibration": recalibrate_nucleotides,
+        # 9. Collect statistics for the final, processed BAM files
+        "mapping-statistics": final_bam_stats,
+        # 10. Call haplotypes for each sample
+        "haplotyping": haplotype_samples,
+        # 11. Recalibrate haplotype qualities using known variants
+        "haplotype-recalibration": recalibrate_haplotype,
+    }
 
-    # 4. Process FASTQ files to produce mapping-ready reads
-    _add(process_fastq_files, samples, settings)
-
-    # 5. Map merged runs to genome and genotype samples
-    _add(map_sample_runs, genome, samples, settings["ReadMapping"])
-
-    # 6. Filter (mark) PCR duplicates for merged and paired reads
-    _add(filter_pcr_duplicates, genome, samples, settings["ReadMapping"])
-
-    # 7. Merged PCR duplicate filtered libraries to produce an intermediate BAM.
-    _add(merge_samples_alignments, genome, samples, settings["ReadMapping"])
-
-    # 9. Recalibrate base qualities using known variable sites
-    _add(recalibrate_nucleotides, genome, samples, settings["ReadMapping"])
-
-    # 9. Collect statistics for the final, processed BAM files
-    _add(final_bam_stats, genome, samples, settings["ReadMapping"])
-
-    # 10. Call haplotypes for each sample
-    _add(haplotype_samples, genome, samples, settings["Genotyping"])
-
-    # 11. Recalibrate haplotype qualities using known variants
-    _add(recalibrate_haplotype, genome, samples, settings["Genotyping"])
+    for analytical_step, func in analytical_steps.items():
+        pipeline.extend(func(args, genome, samples, settings))
+        if args.run_until == analytical_step:
+            break
 
     return pipeline
