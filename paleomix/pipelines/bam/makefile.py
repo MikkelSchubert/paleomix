@@ -67,7 +67,7 @@ _READ_TYPES = set(("Single", "Singleton", "Collapsed", "CollapsedTruncated", "Pa
 _BAM_MAX_SEQUENCE_LENGTH = 2 ** 29 - 1
 
 
-def read_makefiles(filenames, pipeline_variant):
+def read_makefiles(filenames, pipeline_variant="bam"):
     logger = logging.getLogger(__name__)
 
     makefiles = []
