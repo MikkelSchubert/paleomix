@@ -21,14 +21,13 @@
 # SOFTWARE.
 #
 import collections
-import copy
 import glob
 import itertools
 import logging
 import os
 import re
 import string
-from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple
+from typing import Any, Dict, Iterable, Optional, Tuple
 
 import paleomix.common.sequences as sequences
 from paleomix.common.bamfiles import BAM_PLATFORMS
