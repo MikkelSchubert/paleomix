@@ -646,7 +646,7 @@ def run(config, pipeline_variant):
         return 1
 
     try:
-        makefiles = read_makefiles(config.makefiles)
+        makefiles = read_makefiles(config.makefiles, pipeline_variant)
     except (MakefileError, YAMLError, IOError) as error:
         logger.error("Error reading makefiles: %s", error)
         return 1

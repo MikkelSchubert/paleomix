@@ -67,7 +67,7 @@ _READ_TYPES = set(("Single", "Singleton", "Collapsed", "CollapsedTruncated", "Pa
 _BAM_MAX_SEQUENCE_LENGTH = 2 ** 29 - 1
 
 
-def read_makefiles(filenames):
+def read_makefiles(filenames, pipeline_variant):
     logger = logging.getLogger(__name__)
 
     makefiles = []
@@ -87,7 +87,7 @@ def read_makefiles(filenames):
             }
         )
 
-    return finalize_makefiles(makefiles)
+    return finalize_makefiles(makefiles, pipeline_variant)
 
 
 def _alphanum_check(whitelist, min_len=1):
@@ -471,7 +471,7 @@ _GLOB_MAGIC = re.compile("[*?[]")
 ########################################################################################
 
 
-def finalize_makefiles(makefiles):
+def finalize_makefiles(makefiles, pipeline_variant):
     sample_names = set()
     duplicate_samples = set()
     for makefile in makefiles:
@@ -499,7 +499,7 @@ def finalize_makefiles(makefiles):
     for makefile in makefiles:
         _validate_makefile_options(makefile)
     _validate_makefiles_duplicate_files(makefiles)
-    _validate_prefixes(makefiles)
+    _validate_prefixes(makefiles, pipeline_variant)
 
     return makefiles
 
@@ -604,7 +604,7 @@ def _describe_files_in_multiple_records(records, pairs):
     return "\n".join(lines)
 
 
-def _validate_prefixes(makefiles):
+def _validate_prefixes(makefiles, pipeline_variant):
     logger = logging.getLogger(__name__)
     already_validated = {}
     logger.info("Validating FASTA files")
@@ -619,7 +619,8 @@ def _validate_prefixes(makefiles):
             prefix["IndexFormat"] = ".bai"
 
             if not os.path.exists(path):
-                logger.error("Reference FASTA file does not exist: %r", path)
+                level = logging.ERROR if pipeline_variant == "bam" else logging.WARNING
+                logger.log(level, "Reference FASTA file does not exist: %r", path)
                 continue
             elif not os.path.exists(path + ".fai"):
                 logger.info("Indexing FASTA at %r", path)
@@ -627,7 +628,9 @@ def _validate_prefixes(makefiles):
             try:
                 contigs = FASTA.index_and_collect_contigs(path)
             except Exception as error:
-                raise MakefileError("Error reading/indexing FASTA: %s" % (error,))
+                if pipeline_variant == "bam":
+                    raise MakefileError(f"Error reading/indexing FASTA: {error}")
+                logging.warn("Error reading/indexing FASTA: %s", error)
 
             if max(contigs.values()) > _BAM_MAX_SEQUENCE_LENGTH:
                 logger.warn(

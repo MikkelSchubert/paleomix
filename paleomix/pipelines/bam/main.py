@@ -16,7 +16,7 @@ def main(argv: List[str], pipeline: str = "bam") -> int:
 
     args = parser.parse_args(argv)
     if args.command in ("new", "makefile", "mkfile"):
-        return _main_template(pipeline=pipeline)
+        return _main_template()
     elif args.command in ("example",):
         return paleomix.resources.copy_example("bam_pipeline", args.destination)
 
@@ -26,16 +26,13 @@ def main(argv: List[str], pipeline: str = "bam") -> int:
     return bam_pipeline.run(args, pipeline_variant=pipeline)
 
 
-def _main_template(pipeline: str = "bam") -> int:
-    if pipeline not in ("bam", "trim"):
-        raise ValueError(pipeline)
-
+def _main_template() -> int:
     print(paleomix.resources.template("bam_head.yaml"))
+    print(paleomix.resources.template("bam_options.yaml"))
 
-    if pipeline == "bam":
-        print(paleomix.resources.template("bam_options.yaml"))
-        print()
-        print(paleomix.resources.template("bam_prefixes.yaml"))
+    print()
+
+    print(paleomix.resources.template("bam_prefixes.yaml"))
 
     print()
     print(paleomix.resources.template("bam_samples.yaml"))
