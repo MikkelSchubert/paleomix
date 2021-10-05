@@ -7,7 +7,6 @@ https://gatk.broadinstitute.org/
 import os
 from typing import Iterable, List, Union
 
-import paleomix.common.system
 from paleomix.common.command import (
     AtomicCmd,
     InputFile,
@@ -352,62 +351,6 @@ class HaplotypeCallerNode(CommandNode):
         )
 
 
-class ValidateBAMNode(CommandNode):
-    def __init__(
-        self,
-        in_bam,
-        in_index=None,
-        out_log=None,
-        big_genome_mode=False,
-        options={},
-        java_options=(),
-        dependencies=(),
-    ):
-        self.out_log = out_log or swap_ext(in_bam, ".validated")
-        # Allows the node to be used as if it was the mapping/indexing node itself
-        self.out_bam = in_bam
-        self.out_idx = in_index
-
-        command = _gatk_command(
-            tool="ValidateSamFile",
-            tool_options={
-                "--INPUT": InputFile(in_bam),
-                "--OUTPUT": OutputFile(self.out_log),
-            },
-            user_tool_options=options,
-            java_options=java_options,
-        )
-
-        # FIXME: Workaround for check with high rate of false positives
-        # Ignored due to rate of false positives for runs with few hits,
-        # where high-quality reads may cause mis-identification of qualities
-        command.append("--IGNORE", "INVALID_QUALITY_FORMAT")
-
-        _set_max_open_files(command, "--MAX_OPEN_TEMP_FILES")
-
-        if big_genome_mode:
-            self._configure_for_big_genome(command)
-
-        if in_index:
-            command.add_extra_files([InputFile(in_index)])
-
-        CommandNode.__init__(
-            self,
-            command=command,
-            description="validating {!r}".format(in_bam),
-            dependencies=dependencies,
-        )
-
-    def _configure_for_big_genome(self, command):
-        # FIXME: Workaround for CSI indexed BAM files
-        # Validation is mostly left to manual ValidateSamFile runs; required
-        # because .csi indexed BAM records can have "invalid" bins.
-        command.append("--IGNORE", "INVALID_INDEXING_BIN")
-
-        # FIXME: Workaround for useless warning; no BAI indexes for large genomes
-        command.append("--IGNORE", "REF_SEQ_TOO_LONG_FOR_BAI")
-
-
 class SplitIntervalsNode(CommandNode):
     def __init__(
         self,
@@ -571,27 +514,3 @@ def _normalize_idx_extension(command, out_bam):
     )
 
     return SequentialCmds([command, rename])
-
-
-# Maximum number of open files
-_MAX_OPEN_FILES = None
-# Fraction of per-process max open files to use
-_FRAC_MAX_OPEN_FILES = 0.95
-# Default maximum number of open temporary files used by Picard
-_DEFAULT_MAX_OPEN_FILES = 8000
-
-
-def _set_max_open_files(command, key):
-    """Sets the maximum number of open files a picard process should use, at most.
-    Conservatively lowered than the actual ulimit.
-    """
-    global _MAX_OPEN_FILES
-    if _MAX_OPEN_FILES is None:
-        _MAX_OPEN_FILES = (paleomix.common.system.get_max_open_files(),)
-
-    (max_open_files,) = _MAX_OPEN_FILES
-    if max_open_files:
-        max_open_files = int(max_open_files * _FRAC_MAX_OPEN_FILES)
-
-        if max_open_files < _DEFAULT_MAX_OPEN_FILES:
-            command.append(key, max_open_files)

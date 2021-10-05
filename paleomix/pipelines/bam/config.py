@@ -102,11 +102,6 @@ def add_run_command(subparsers: argparse._SubParsersAction) -> None:
 
     group = parser.add_argument_group("Required paths")
     group.add_argument(
-        "--jar-root",
-        default=os.path.expanduser("~/install/jar_root"),
-        help="Folder containing Picard JARs (http://picard.sf.net)",
-    )
-    group.add_argument(
         "--temp-root",
         default="./temp/",
         type=os.path.abspath,
@@ -118,20 +113,9 @@ def add_run_command(subparsers: argparse._SubParsersAction) -> None:
         help="The destination folder for result files.",
     )
 
-    group = parser.add_argument_group("Misc")
-    group.add_argument(
-        "--jre-option",
-        "--jre-options",
-        metavar="OPTION",
-        dest="jre_options",
-        action="append",
-        default=[],
-        help="May be specified one or more times with options to be passed "
-        "to the JRE (Jave Runtime Environment); e.g. to change the "
-        "maximum amount of memory (default is -Xmx4g)",
-    )
-
     # Removed options
+    group.add_argument("--jar-root", help=SUPPRESS)
+    parser.add_argument("--jre-option", "--jre-options", help=SUPPRESS)
     parser.add_argument("--gatk-max-threads", help=SUPPRESS)
     parser.add_argument("--progress-ui", help=SUPPRESS)
     parser.add_argument("--ui-colors", help=SUPPRESS)

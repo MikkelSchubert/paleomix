@@ -45,7 +45,6 @@ from paleomix.nodes.mapdamage import (
     MapDamagePlotNode,
     MapDamageRescaleNode,
 )
-from paleomix.nodes.picard import ValidateBAMNode
 from paleomix.nodes.samtools import (
     BAMIndexNode,
     BAMMergeNode,
@@ -268,13 +267,11 @@ def map_fastq_reads(args, layout, genome, record):
     else:
         raise NotImplementedError(f"Aligner {aligner!r} not supported!")
 
-    task = mapping_task_func(**parameters)
-
     return {
         "Type": record["Type"],
         "Path": output_file,
         "Options": record["Options"],
-        "Task": _validate_bam(args, genome, task, input_file=output_file),
+        "Task": mapping_task_func(**parameters),
     }
 
 
@@ -393,28 +390,6 @@ def _cleanup_options(record, layout):
         options["-F"] = "0x4"
 
     return options
-
-
-def _validate_bam(args, genome, task, input_file, index_file=None, log_file=None):
-    ignored_checks = [
-        # Ignored since we may filter out misses and low-quality hits during
-        # mapping, which leads to a large proportion of missing PE mates.
-        "MATE_NOT_FOUND",
-        # Ignored due to high rate of false positives for lanes with few reads,
-        # where high-quality reads may cause mis-identification of qualities
-        "INVALID_QUALITY_FORMAT",
-    ]
-
-    return ValidateBAMNode(
-        input_bam=input_file,
-        input_index=index_file,
-        jar_root=args.jar_root,
-        jre_options=args.jre_options,
-        ignored_checks=ignored_checks,
-        big_genome_mode=genome["IndexFormat"] == ".csi",
-        output_log=log_file,
-        dependencies=[task],
-    )
 
 
 ########################################################################################
@@ -566,15 +541,6 @@ def merge_libraries(args, layout, genome, records):
             "-@": args.samtools_max_threads,
         },
         dependencies=[task],
-    )
-
-    task = _validate_bam(
-        args=args,
-        genome=genome,
-        task=task,
-        input_file=layout["final_bam"],
-        index_file=layout["final_bam"] + genome["IndexFormat"],
-        log_file=layout["final_validated"],
     )
 
     return {

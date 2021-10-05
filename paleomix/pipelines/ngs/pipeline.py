@@ -19,7 +19,6 @@ from paleomix.nodes.gatk import (
     GenotypeGVCFs,
     HaplotypeCallerNode,
     SplitIntervalsNode,
-    ValidateBAMNode,
     VariantRecalibratorNode,
 )
 from paleomix.nodes.multiqc import MultiQCNode
@@ -367,7 +366,7 @@ def map_sample_runs(args, genome, samples, settings):
                     )
 
                     out_bam = layout["aln_run_bam"]
-                    bwa = BWAAlgorithmNode(
+                    mapped_reads[name][out_bam] = BWAAlgorithmNode(
                         reference=genome.filename,
                         input_file_1=files["out_{}_1".format(name)],
                         input_file_2=files["out_{}_2".format(name)],
@@ -391,13 +390,6 @@ def map_sample_runs(args, genome, samples, settings):
                             ],
                         },
                         dependencies=[files["node"]],
-                    )
-
-                    mapped_reads[name][out_bam] = ValidateBAMNode(
-                        in_bam=out_bam,
-                        java_options=args.jre_options,
-                        out_log=layout["aln_run_validation_log"],
-                        dependencies=[bwa],
                     )
 
                     yield mapped_reads[name][out_bam]
@@ -474,20 +466,12 @@ def merge_samples_alignments(args, genome, samples, settings):
             dependencies=input_libraries.values(),
         )
 
-        indexed = BAMIndexNode(
+        samples[sample] = BAMIndexNode(
             infile=layout["aln_split_passed_bam"],
             dependencies=[split],
             options={
                 "-@": args.max_threads_samtools,
             },
-        )
-
-        samples[sample] = ValidateBAMNode(
-            in_bam=layout["aln_split_passed_bam"],
-            in_index=layout["aln_split_passed_bam"] + ".bai",
-            java_options=args.jre_options,
-            out_log=layout["aln_split_good_validation_log"],
-            dependencies=[indexed],
         )
 
         yield samples[sample]
@@ -505,7 +489,7 @@ def recalibrate_nucleotides(args, genome, samples, settings):
         model = BaseRecalibratorNode(
             in_reference=genome.filename,
             in_known_sites=recalibrator_known_sites,
-            in_bam=node.out_bam,
+            in_bam=layout["aln_split_passed_bam"],
             out_table=layout["aln_recal_training_table"],
             out_log=layout["aln_recal_training_log"],
             options=recalibrator_options,
