@@ -21,7 +21,6 @@
 # SOFTWARE.
 #
 import os
-import resource
 import sys
 
 import setproctitle

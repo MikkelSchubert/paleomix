@@ -26,6 +26,7 @@ import sys
 import pysam
 
 from paleomix.common.sequences import NT_CODES
+from paleomix.common.utilities import try_cast
 
 import paleomix.common.argparse as argparse
 import paleomix.common.fileutils as fileutils
@@ -104,13 +105,6 @@ fi
 
 class ZonkeyError(RuntimeError):
     pass
-
-
-def _try_cast_int(value):
-    try:
-        return int(value)
-    except ValueError:
-        return value
 
 
 def _write_build_sh(args, filename):
@@ -272,7 +266,7 @@ def _read_contigs(filename):
 
             fixed_name = common.contig_name_to_plink_name(name)
             if fixed_name is not None:
-                contigs[_try_cast_int(fixed_name)] = (name, int(size))
+                contigs[try_cast(fixed_name, int)] = (name, int(size))
 
     return contigs
 
