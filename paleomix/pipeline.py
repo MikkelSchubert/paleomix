@@ -72,11 +72,7 @@ class Pypeline:
         }
 
     def run(self, mode: str = "run") -> int:
-        if mode == "dry_run":
-            self._logger.info("Dry running pipeline ..")
-        elif mode == "run":
-            self._logger.info("Starting pipeline ..")
-        else:
+        if mode not in ("run", "dry_run"):
             return self._print_report(mode)
 
         try:
@@ -107,9 +103,10 @@ class Pypeline:
                         self._logger.error("Workers failed to start; terminating")
                         return 1
 
-                    self._summarize_pipeline(nodegraph)
-                    self._logger.info("Dry run done")
+                    self._summarize_pipeline(nodegraph, dry_run=mode == "dry_run")
                     return 0
+
+                self._logger.info("Running pipeline (press 'h' for help):")
 
                 # Install signal handlers to allow graceful termination
                 signal.signal(signal.SIGINT, self._sigint_handler)
@@ -311,7 +308,12 @@ class Pypeline:
         self._logger.warning("Terminating due to signal %i", signum)
         sys.exit(-signum)
 
-    def _summarize_pipeline(self, nodegraph: NodeGraph, verbose: bool = True):
+    def _summarize_pipeline(
+        self,
+        nodegraph: NodeGraph,
+        dry_run: bool = False,
+        verbose: bool = True,
+    ):
         states = nodegraph.get_state_counts()
 
         if verbose:
@@ -328,7 +330,11 @@ class Pypeline:
                 self._logger.info(message)
 
         if states[nodegraph.ERROR]:
-            self._logger.warning("Errors were detected while running pipeline")
+            self._logger.warning("Errors were detected in pipeline")
+        elif self._interrupted:
+            self._logger.info("Pipeline terminated following interruption by user")
+        elif dry_run:
+            self._logger.info("Dry run completed successfully")
         else:
             self._logger.info("Pipeline completed successfully")
 
