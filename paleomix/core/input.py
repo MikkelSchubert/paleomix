@@ -33,6 +33,7 @@ _COMMANDS = {
     "l": "Lists the currently runnning tasks.",
     "+": "Increases the maximum number of threads by one.",
     "-": "Decreases the maximum number of threads by one; does not kill running tasks.",
+    "Ctrl+C": "Quit after finishing running tasks; press twice to quit immediately.",
 }
 
 
@@ -112,6 +113,6 @@ class CommandLine(object):
 
     def _log_help(self):
         self._log.info("Commands:")
-        self._log.info("  Key   Function")
+        self._log.info("  Key      Function")
         for key, help in _COMMANDS.items():
-            self._log.info("  %s    %s", key, help)
+            self._log.info("  %s  %s", key.ljust(7), help)
