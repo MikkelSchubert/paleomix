@@ -24,8 +24,8 @@ import os
 
 from paleomix.common.utilities import safe_coerce_to_tuple
 from paleomix.nodes.picard import MergeSamFilesNode
-from paleomix.pipelines.bam.nodes import index_and_validate_bam
 from paleomix.nodes.validation import DetectInputDuplicationNode
+from paleomix.pipelines.bam.nodes import index_and_validate_bam
 
 
 class Prefix:
@@ -64,7 +64,11 @@ class Prefix:
             dependencies=self.datadup_check,
         )
         validated_node = index_and_validate_bam(
-            config=config, prefix=prefix, node=node, log_file=validated_filename
+            config=config,
+            prefix=prefix,
+            node=node,
+            log_file=validated_filename,
+            validation_levels=("full", "partial"),
         )
 
         return {output_filename: validated_node}

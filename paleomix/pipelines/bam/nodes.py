@@ -24,13 +24,24 @@ from paleomix.nodes.picard import ValidateBAMNode
 from paleomix.nodes.samtools import BAMIndexNode
 
 
-def index_and_validate_bam(config, prefix, node, log_file=None, create_index=True):
+def index_and_validate_bam(
+    config,
+    prefix,
+    node,
+    log_file=None,
+    create_index=True,
+    validation_levels=("full",),
+):
     input_file, index_file = _get_input_files(node, prefix["IndexFormat"])
     if not index_file and create_index:
         node = BAMIndexNode(
             infile=input_file, index_format=prefix["IndexFormat"], dependencies=node
         )
         (index_file,) = node.output_files
+
+    # Only enable validation if the user picked a corresponding level
+    if config.validation not in validation_levels:
+        return node
 
     ignored_checks = [
         # Ignored since we may filter out misses and low-quality hits during

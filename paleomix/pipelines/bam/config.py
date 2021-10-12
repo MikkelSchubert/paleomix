@@ -166,6 +166,18 @@ def add_run_command(subparsers):
         "to the JRE (Jave Runtime Environment); e.g. to change the "
         "maximum amount of memory (default is -Xmx4g)",
     )
+    group.add_argument(
+        "--validation",
+        metavar="LEVEL",
+        type=str.lower,
+        choices=("off", "partial", "full"),
+        default="full",
+        help="Change the amount of validation performed using picard ValidateSamFile. "
+        "Set to 'full' to validate both intermediate and final BAM files; set to "
+        "'partial' to validate only the final BAM files; and set to 'off' to disable "
+        "validation. Reducing the amount of validation may greatly decrease the total "
+        "runtime",
+    )
 
     # Removed options
     parser.add_argument("--gatk-max-threads", help=SUPPRESS)
