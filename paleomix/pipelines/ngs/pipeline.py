@@ -341,6 +341,7 @@ def fastqc_trimmed_reads(args, genome, samples, settings):
 
 
 def map_sample_runs(args, genome, samples, settings):
+    metadata = settings["Metadata"]
     bwa_settings = dict(settings["ReadMapping"]["BWAMem"])
     bwa_threads = args.max_threads_bwa
 
@@ -381,8 +382,7 @@ def map_sample_runs(args, genome, samples, settings):
                             "--add-mate-score": None,
                             "--rg-id": run,
                             "--rg": [
-                                # FIXME: PL should not be hardcoded
-                                "PL:ILLUMINA",
+                                "PL:" + metadata["Platform"],
                                 "SM:" + sample,
                                 "LB:" + library,
                                 "PU:" + run,
