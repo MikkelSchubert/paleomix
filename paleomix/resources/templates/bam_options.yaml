@@ -4,7 +4,7 @@
 
     # Settings for mappings performed using BWA
     BWA:
-      # One of "backtrack", "bwasw", or "mem"; see the BWA documentation
+      # One of "backtrack", "bwasw", "mem", or "mem2"; see the BWA documentation
       # for a description of each algorithm (defaults to 'backtrack')
       Algorithm: backtrack
       # Filter aligned reads with a mapping quality (Phred) below this value

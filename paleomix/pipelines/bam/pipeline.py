@@ -36,6 +36,7 @@ from paleomix.nodes.bwa import (
     BWAAlgorithmNode,
     BWABacktrack,
     BWAIndexNode,
+    BWAMem2IndexNode,
     BWASampe,
     BWASamse,
 )
@@ -123,11 +124,15 @@ def index_genomes(log, makefiles):
                 # Indexing of FASTA file using 'bwa index'
                 bwa_indexing = BWAIndexNode(path, dependencies=[validation])
 
+                # Indexing of FASTA file using 'bwa-mem2 index'
+                bwa_mem2_indexing = BWAMem2IndexNode(path, dependencies=[validation])
+
                 # Indexing of FASTA file using 'bowtie2-build'
                 bowtie2_indexing = Bowtie2IndexNode(path, dependencies=[validation])
 
                 tasks[abspath] = {
                     "BWA": [fai_indexing, bwa_indexing],
+                    "BWA-MEM2": [fai_indexing, bwa_mem2_indexing],
                     "Bowtie2": [fai_indexing, bowtie2_indexing],
                 }
 
@@ -245,7 +250,7 @@ def map_fastq_reads(args, layout, genome, record):
         "reference": genome["Path"],
         "mapping_options": record["Options"]["Aligners"][aligner],
         "cleanup_options": _cleanup_options(record, layout),
-        "dependencies": [record["Task"]] + genome["Tasks"][aligner],
+        "dependencies": [record["Task"]],
     }
 
     if aligner == "BWA":
@@ -254,10 +259,14 @@ def map_fastq_reads(args, layout, genome, record):
 
         if algorithm == "backtrack":
             mapping_task_func = _build_bwa_backtrack_task
-        elif algorithm in ("mem", "bwasw"):
+        elif algorithm in ("mem", "bwasw", "mem2"):
             parameters["algorithm"] = algorithm
 
             mapping_task_func = BWAAlgorithmNode
+
+            # BWA-MEM2 uses a new index format
+            if algorithm == "mem2":
+                aligner = "BWA-MEM2"
         else:
             raise NotImplementedError(f"BWA {algorithm} not implemented!")
     elif aligner == "Bowtie2":
@@ -266,6 +275,9 @@ def map_fastq_reads(args, layout, genome, record):
         mapping_task_func = Bowtie2Node
     else:
         raise NotImplementedError(f"Aligner {aligner!r} not supported!")
+
+    # Dependencies for genome indexing for the selected aligner
+    parameters["dependencies"].extend(genome["Tasks"][aligner])
 
     return {
         "Type": record["Type"],

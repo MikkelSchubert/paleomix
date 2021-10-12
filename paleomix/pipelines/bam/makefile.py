@@ -148,7 +148,10 @@ _VALIDATION_OPTIONS = {
         "Program": ValueIn(("BWA", "Bowtie2"), default="BWA"),
         "BWA": {
             # Mapping algorithm; availability depends on BWA version
-            "Algorithm": StringIn(("backtrack", "mem", "bwasw"), default="backtrack"),
+            "Algorithm": StringIn(
+                ("backtrack", "mem", "mem2", "bwasw"),
+                default="backtrack",
+            ),
             # Minimum mapping quality (PHREAD) of reads to retain
             "MinQuality": IsUnsignedInt(default=0),
             # Remove unmapped reads or not

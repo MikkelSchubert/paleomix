@@ -37,11 +37,23 @@ from paleomix.common.fileutils import describe_paired_files
 from paleomix.node import CommandNode
 from paleomix.nodes.samtools import SAMTOOLS_VERSION
 
+# Index files used by BWA and BWA-MEM2 respectively
+BWA_INDEX_EXT = (".amb", ".ann", ".bwt", ".pac", ".sa")
+BWA_MEM2_INDEX_EXT = (".0123", ".amb", ".ann", ".bwt.2bit.64", ".pac")
+
 BWA_VERSION = versions.Requirement(
     name="BWA",
     call=("bwa",),
     regexp=r"Version: (\d+\.\d+\.\d+)",
     specifiers=">=0.7.15",
+)
+
+
+BWA_MEM2_VERSION = versions.Requirement(
+    name="BWA MEM2",
+    call=("bwa-mem2", "version"),
+    regexp=r"(\d+\.\d+\.\d+)",
+    specifiers=">=2.2.1",
 )
 
 
@@ -56,13 +68,33 @@ class BWAIndexNode(CommandNode):
                 TempOutputFile(input_file),
             ),
             reference=input_file,
-            iotype=OutputFile,
+            index_iotype=OutputFile,
         )
 
         CommandNode.__init__(
             self,
             command=command,
             description="creating BWA index for %s" % (input_file,),
+            dependencies=dependencies,
+        )
+
+
+class BWAMem2IndexNode(CommandNode):
+    def __init__(self, input_file, dependencies=()):
+        in_file = InputFile(input_file)
+        tmp_file = TempOutputFile(input_file)
+        index_call = ("bwa-mem2", "index", in_file, "-p", tmp_file)
+
+        CommandNode.__init__(
+            self,
+            command=_new_bwa_command(
+                index_call,
+                reference=input_file,
+                index_ext=BWA_MEM2_INDEX_EXT,
+                index_iotype=OutputFile,
+                requirements=[BWA_MEM2_VERSION],
+            ),
+            description="creating BWA MEM2 index for %s" % (input_file,),
             dependencies=dependencies,
         )
 
@@ -216,13 +248,22 @@ class BWAAlgorithmNode(CommandNode):
         cleanup_options={},
         dependencies=(),
     ):
-        if algorithm not in ("mem", "bwasw"):
+        if algorithm in ("mem", "bwasw"):
+            aln_call = ("bwa", algorithm, reference, InputFile(input_file_1))
+            index_ext = BWA_INDEX_EXT
+            requirements = [BWA_VERSION]
+        elif algorithm == "mem2":
+            aln_call = ("bwa-mem2", "mem", reference, InputFile(input_file_1))
+            index_ext = BWA_MEM2_INDEX_EXT
+            requirements = [BWA_MEM2_VERSION]
+        else:
             raise NotImplementedError("BWA algorithm %r not implemented" % (algorithm,))
 
-        threads = _get_max_threads(reference, threads)
         aln = _new_bwa_command(
-            ("bwa", algorithm, reference, InputFile(input_file_1)),
+            aln_call,
             reference=reference,
+            index_ext=index_ext,
+            requirements=requirements,
             stdout=AtomicCmd.PIPE,
         )
 
@@ -234,6 +275,8 @@ class BWAAlgorithmNode(CommandNode):
                 raise NotImplementedError("bwasw is not ALT aware")
 
             aln.add_extra_files([InputFile(reference + ".alt")])
+
+        threads = _get_max_threads(reference, threads)
 
         aln.merge_options(
             user_options=mapping_options,
@@ -316,15 +359,19 @@ def _new_cleanup_command(
     return convert
 
 
-def _new_bwa_command(call, reference, iotype=InputFile, **kwargs):
+def _new_bwa_command(
+    call,
+    reference,
+    index_ext=BWA_INDEX_EXT,
+    index_iotype=InputFile,
+    requirements=(BWA_VERSION,),
+    stdout=None,
+):
     return AtomicCmd(
         call,
-        extra_files=[
-            iotype(reference + postfix)
-            for postfix in (".amb", ".ann", ".bwt", ".pac", ".sa")
-        ],
-        requirements=[BWA_VERSION],
-        **kwargs,
+        extra_files=[index_iotype(reference + postfix) for postfix in index_ext],
+        requirements=requirements,
+        stdout=stdout,
     )
 
 
