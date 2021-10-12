@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.3.5] - 2021-10-12
+
+### Added
+  - Added command-line option to reduce/turn off validation with picard ValidateSamFile.
+
+
 ## [1.3.4] - 2021-09-23
 
 ### Added
@@ -752,8 +758,8 @@ the (partially) updated documentation now hosted on ReadTheDocs.
   - Switching to more traditional version-number tracking.
 
 
-[Unreleased]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.4...HEAD
-[1.3.3]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.3...v1.3.4
+[1.3.5]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.4...v1.3.5
+[1.3.4]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.3...v1.3.4
 [1.3.3]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.2...v1.3.3
 [1.3.2]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.0...v1.3.1
