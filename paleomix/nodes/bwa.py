@@ -271,7 +271,7 @@ class BWAAlgorithmNode(CommandNode):
             aln.append(InputFile(input_file_2))
 
         if alt_aware:
-            if algorithm != "mem":
+            if algorithm == "bwasw":
                 raise NotImplementedError("bwasw is not ALT aware")
 
             aln.add_extra_files([InputFile(reference + ".alt")])
