@@ -95,16 +95,19 @@ class CommandLine(object):
         return [sys.stdin]
 
     def process_key_presses(self) -> Iterator[CLIEvent]:
-        while self._tty_settings and self._poll_stdin():
-            character = sys.stdin.read(1)
+        if self._tty_settings:
+            characters = []
+            while self._poll_stdin():
+                characters.append(sys.stdin.read(1))
 
+            character = "".join(characters)
             if character == "+":
                 yield ThreadsEvent(1)
             elif character == "-":
                 yield ThreadsEvent(-1)
-            elif character in "lL":
+            elif character in ["l", "L"]:
                 yield ListTasksEvent()
-            elif character in "hH":
+            elif character in ["h", "H"]:
                 self._log_help()
 
     @classmethod
