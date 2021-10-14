@@ -4,7 +4,7 @@ import os
 from paleomix.common.command import InputFile
 from paleomix.common.fileutils import swap_ext
 from paleomix.common.layout import Layout
-from paleomix.nodes.bwa import BWAAlgorithmNode, BWAIndexNode
+from paleomix.nodes.bwa import BWAAlgorithmNode, BWAIndexNode, BWAMem2IndexNode
 from paleomix.nodes.commands import FilterCollapsedBAMNode, FinalizeBAMNode
 from paleomix.nodes.fastp import FastpNode
 from paleomix.nodes.fastqc import FastQCNode
@@ -149,7 +149,14 @@ class Genome:
         )
 
         # Indexing of FASTA file using 'bwa index'
-        self.bwa_node = BWAIndexNode(
+        if args.bwa_algorithm == "mem":
+            indexing_class = BWAIndexNode
+        elif args.bwa_algorithm == "mem2":
+            indexing_class = BWAMem2IndexNode
+        else:
+            raise RuntimeError(f"unexpected BWA algorithm: {args.bwa_algorithm!r}")
+
+        self.bwa_node = indexing_class(
             input_file=filename,
             dependencies=[self.validation_node],
         )

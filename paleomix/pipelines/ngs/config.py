@@ -58,6 +58,16 @@ def _build_run_parser(subparsers):
         help="Run the pipeline only until (and including) the specified analytical step",
     )
 
+    parser.add_argument(
+        "--bwa-algorithm",
+        metavar="NAME",
+        type=str.lower,
+        choices=("mem", "mem2"),
+        default="mem2",
+        help="Mapping algorithm to use. Output should be identical, but BWA MEM2 is "
+        "faster at the cost of 3x greater RAM usage",
+    )
+
     paleomix.common.logging.add_argument_group(parser)
 
     group = paleomix.pipeline.add_scheduling_argument_group(parser)
