@@ -42,6 +42,7 @@ def _build_run_parser(subparsers):
     parser.add_argument(
         "--run-until",
         metavar="STEP",
+        type=str.lower,
         choices=(
             "indexing",
             "pre-trimming-qc",
