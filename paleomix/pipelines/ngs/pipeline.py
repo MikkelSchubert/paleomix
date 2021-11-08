@@ -1,9 +1,11 @@
+import enum
 import logging
 import os
 
 from paleomix.common.command import InputFile
 from paleomix.common.fileutils import swap_ext
 from paleomix.common.layout import Layout
+from paleomix.nodes.adapterremoval import IdentifyAdaptersNode
 from paleomix.nodes.bwa import BWAAlgorithmNode, BWAIndexNode, BWAMem2IndexNode
 from paleomix.nodes.commands import FilterCollapsedBAMNode, FinalizeBAMNode
 from paleomix.nodes.fastp import FastpNode
@@ -116,6 +118,7 @@ _LAYOUT = {
                 "{sample}": {
                     "{library}": {
                         "{run}": "stats_fastqc_pre",
+                        "{run}_adapters.txt": "stats_adapters_id",
                     },
                 },
             },
@@ -224,6 +227,24 @@ def fastqc_sample_runs(args, genome, samples, settings):
                         options=settings["FastQC"],
                     )
                     for filename in files.values()
+                )
+
+                # This mainly serves as a QC step since fastp is too lax
+                user_options = {}
+                fastp_adapter_options = ("--adapter_sequence", "--adapter_sequence_r2")
+                for idx, key in enumerate(fastp_adapter_options, start=1):
+                    adapter_sequence = settings["Fastp"].get(key)
+                    if adapter_sequence:
+                        user_options[f"--adapter{idx}"] = adapter_sequence
+
+                nodes.append(
+                    IdentifyAdaptersNode(
+                        input_file_1=files[1],
+                        input_file_2=files[2],
+                        output_file=layout["stats_adapters_id"],
+                        threads=args.max_threads_fastp,
+                        options=user_options,
+                    )
                 )
 
     # 2. MultiQC report for all files across all samples

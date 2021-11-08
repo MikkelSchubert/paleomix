@@ -173,3 +173,41 @@ class PE_AdapterRemovalNode(CommandNode):
             % fileutils.describe_paired_files(input_file_1, input_file_2),
             dependencies=dependencies,
         )
+
+
+class IdentifyAdaptersNode(CommandNode):
+    def __init__(
+        self,
+        input_file_1: str,
+        input_file_2: str,
+        output_file: str,
+        threads: int = 1,
+        options: OptionsType = {},
+        dependencies: Iterable[Node] = (),
+    ):
+        command = AtomicCmd(
+            "AdapterRemoval",
+            stdout=output_file,
+            requirements=[_VERSION_CHECK],
+        )
+
+        fixed_options: OptionsType = {
+            "--identify-adapters": None,
+            "--file1": InputFile(input_file_1),
+            "--file2": InputFile(input_file_2),
+            # Fix number of threads to ensure consistency when scheduling node
+            "--threads": threads,
+        }
+
+        command.merge_options(
+            user_options=options,
+            fixed_options=fixed_options,
+        )
+        CommandNode.__init__(
+            self,
+            command=command,
+            threads=threads,
+            description="identifying PE adapters in %s"
+            % fileutils.describe_paired_files(input_file_1, input_file_2),
+            dependencies=dependencies,
+        )
