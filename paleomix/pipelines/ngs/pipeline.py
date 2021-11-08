@@ -380,7 +380,7 @@ def map_sample_runs(args, genome, samples, settings):
                         input_file_2=files["out_{}_2".format(name)],
                         output_file=out_bam,
                         # FIXME: Remove constructor option and only use -t instead?
-                        algorithm="mem2",
+                        algorithm=args.bwa_algorithm,
                         alt_aware=True,
                         threads=bwa_threads,
                         mapping_options=bwa_settings,
