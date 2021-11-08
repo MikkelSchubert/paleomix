@@ -237,14 +237,12 @@ def fastqc_sample_runs(args, genome, samples, settings):
                     if adapter_sequence:
                         user_options[f"--adapter{idx}"] = adapter_sequence
 
-                nodes.append(
-                    IdentifyAdaptersNode(
-                        input_file_1=files[1],
-                        input_file_2=files[2],
-                        output_file=layout["stats_adapters_id"],
-                        threads=args.max_threads_fastp,
-                        options=user_options,
-                    )
+                yield IdentifyAdaptersNode(
+                    input_file_1=files[1],
+                    input_file_2=files[2],
+                    output_file=layout["stats_adapters_id"],
+                    threads=args.max_threads_fastp,
+                    options=user_options,
                 )
 
     # 2. MultiQC report for all files across all samples
@@ -257,7 +255,7 @@ def fastqc_sample_runs(args, genome, samples, settings):
         )
     )
 
-    return nodes
+    yield from nodes
 
 
 def process_fastq_files(args, genome, samples, settings):
