@@ -244,6 +244,7 @@ class BWAAlgorithmNode(CommandNode):
         threads=1,
         algorithm="mem",
         alt_aware=False,
+        alt_optimize=False,
         mapping_options={},
         cleanup_options={},
         dependencies=(),
@@ -270,7 +271,7 @@ class BWAAlgorithmNode(CommandNode):
         if input_file_2:
             aln.append(InputFile(input_file_2))
 
-        if alt_aware:
+        if alt_aware or alt_optimize:
             if algorithm == "bwasw":
                 raise NotImplementedError("bwasw is not ALT aware")
 
@@ -294,6 +295,7 @@ class BWAAlgorithmNode(CommandNode):
             max_threads=threads,
             paired_end=input_file_1 and input_file_2,
             alt_aware=alt_aware,
+            alt_optimize=alt_optimize,
             options=cleanup_options,
         )
 

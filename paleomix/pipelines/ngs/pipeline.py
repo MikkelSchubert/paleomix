@@ -401,6 +401,7 @@ def map_sample_runs(args, genome, samples, settings):
                         # FIXME: Remove constructor option and only use -t instead?
                         algorithm=args.bwa_algorithm,
                         alt_aware=True,
+                        alt_optimize=True,
                         threads=bwa_threads,
                         mapping_options=bwa_settings,
                         # Options passed to 'paleomix cleanup'
