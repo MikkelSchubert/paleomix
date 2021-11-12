@@ -320,6 +320,7 @@ def _new_cleanup_command(
     max_threads=1,
     paired_end=False,
     alt_aware=False,
+    alt_optimize=False,
     options={},
 ):
     convert = factory.new(
@@ -342,14 +343,12 @@ def _new_cleanup_command(
     if paired_end:
         fixed_options["--paired-end"] = None
 
-    if alt_aware:
-        fixed_options["--alt-aware"] = None
-        convert.add_extra_files(
-            [
-                InputFile(f"{in_reference}.alt"),
-                Executable("bwa-postalt.js"),
-            ]
-        )
+    if alt_aware or alt_optimize:
+        convert.add_extra_files([InputFile(f"{in_reference}.alt")])
+
+    if alt_optimize:
+        fixed_options["--alt-optimize"] = None
+        convert.add_extra_files([Executable("bwa-postalt.js")])
 
     convert.merge_options(
         user_options=options,

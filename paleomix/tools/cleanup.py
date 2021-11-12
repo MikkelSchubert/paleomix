@@ -245,7 +245,7 @@ def _run_cleanup_pipeline(args):
     threads = _distribute_threads(args.max_threads)
 
     try:
-        if args.alt_aware:
+        if args.alt_optimize:
             # Optimize alignments against ALT sequences
             # https://github.com/lh3/bwa/blob/master/bwakit/bwa-postalt.js
             commands.append(["bwa-postalt.js", f"{args.fasta}.alt"])
@@ -356,12 +356,13 @@ def parse_args(argv):
         "added to reads [Default: off]",
     )
     group.add_argument(
-        "--alt-aware",
+        "--alt-optimize",
         default=False,
         action="store_true",
         help="If set, reads are assumed to have been mapped in the presence of an ALT "
         "file (`genome.fasta.alt`) and are processed using the `bwa-postalt.js` script "
-        "from the BWA toolkit as part of the cleanup.",
+        "from the BWA toolkit as part of the cleanup to optimize alignments against "
+        "these contigs.",
     )
 
     group.add_argument(
