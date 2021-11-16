@@ -611,7 +611,7 @@ def haplotype_samples(args, genome, samples, settings):
         combined_gvcf = layout["gvcf_merged"]
         gather_node = GatherVcfsNode(
             # Note that in_vcfs must be in genomic order
-            in_vcfs=[node.out_vcf for node in part_nodes],
+            in_vcfs=part_vcfs,
             out_vcf=combined_gvcf,
             java_options=args.jre_options,
             dependencies=part_nodes,
