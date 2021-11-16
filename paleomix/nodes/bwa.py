@@ -299,8 +299,6 @@ class BWAAlgorithmNode(CommandNode):
             options=cleanup_options,
         )
 
-        self.out_bam = output_file
-
         CommandNode.__init__(
             self,
             command=ParallelCmds([aln, cleanup]),

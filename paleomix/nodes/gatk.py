@@ -33,8 +33,6 @@ class ApplyBQSRNode(CommandNode):
         if not isinstance(in_node, BaseRecalibratorNode):
             raise ValueError(in_node)
 
-        self.out_bam = out_bam
-
         command = _gatk_command(
             tool="ApplyBQSR",
             tool_options={
@@ -163,8 +161,6 @@ class CombineGVCFsNode(CommandNode):
         java_options=(),
         dependencies=(),
     ):
-        self.out_vcf = out_vcf
-
         command = _gatk_command(
             tool="CombineGVCFs",
             tool_options={

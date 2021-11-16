@@ -44,6 +44,18 @@ def _build_run_parser(subparsers):
     )
 
     parser.add_argument(
+        "--run-from",
+        metavar="STEP",
+        type=str.lower,
+        choices=(
+            "indexing",
+            "haplotyping",
+        ),
+        default="indexing",
+        help="Run the pipeline from and (and including) the specified analytical step",
+    )
+
+    parser.add_argument(
         "--run-until",
         metavar="STEP",
         type=str.lower,
