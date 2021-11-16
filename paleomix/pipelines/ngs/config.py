@@ -23,7 +23,11 @@ def build_parser():
 
 
 def _build_run_parser(subparsers):
-    parser = subparsers.add_parser("run")
+    parser = subparsers.add_parser(
+        "run",
+        help="Run pipeline on provided project file",
+        default_config_files=_DEFAULT_CONFIG_FILES,
+    )
     parser.set_defaults(command="run")
 
     parser.add_argument(
