@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.3.6] - 2021-11-28
+
+### Added
+  - Added explicit support for the AdapterRemoval `--trim5p` and `--trim3p` options,
+    which may take one or two values (as a list).
+
+### Changed
+  - User options for AdapterRemoval are no longer restricted by a whitelist.
+
+
 ## [1.3.5] - 2021-10-12
 
 ### Added
@@ -758,6 +768,7 @@ the (partially) updated documentation now hosted on ReadTheDocs.
   - Switching to more traditional version-number tracking.
 
 
+[1.3.6]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.5...v1.3.6
 [1.3.5]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.4...v1.3.5
 [1.3.4]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.3...v1.3.4
 [1.3.3]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.2...v1.3.3
