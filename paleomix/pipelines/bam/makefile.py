@@ -173,6 +173,9 @@ _VALIDATION_OPTIONS = {
         "--preserve5p": Or(IsNone, IsBoolean),
         "--collapse-deterministic": Or(IsNone, IsBoolean),
         "--collapse-conservatively": Or(IsNone, IsBoolean),
+        "--trim5p": Or(IsInt, IsListOf(IsInt)),
+        "--trim3p": Or(IsInt, IsListOf(IsInt)),
+        StringStartsWith("--"): Or(IsStr, IsInt, IsFloat, IsNone),
     },
     # Which aliger/mapper to use (BWA/Bowtie2)
     "Aligners": {

@@ -142,4 +142,14 @@ def _get_common_parameters(options, threads=1):
         cmd.cmd.set_option("--adapter-list", "%(IN_ADAPTER_LIST)s")
         cmd.command.set_kwargs(IN_ADAPTER_LIST=adapter_list)
 
+    for key in ("--trim5p", "--trim3p"):
+        values = options.pop(key, None)
+        if values is not None:
+            cmd.add_value(key)
+            if isinstance(values, list):
+                for value in values:
+                    cmd.add_value(value)
+            else:
+                cmd.add_value(values)
+
     return cmd
