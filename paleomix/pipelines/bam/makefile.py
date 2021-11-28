@@ -63,7 +63,7 @@ _READ_TYPES = set(("Single", "Singleton", "Collapsed", "CollapsedTruncated", "Pa
 
 # The maximum reference sequence length supported by the BAI index format:
 #   https://samtools.github.io/hts-specs/SAMv1.pdf
-_BAM_MAX_SEQUENCE_LENGTH = 2 ** 29 - 1
+_BAM_MAX_SEQUENCE_LENGTH = 2**29 - 1
 
 
 def read_makefiles(filenames, pipeline_variant="bam"):
@@ -142,6 +142,9 @@ _VALIDATION_OPTIONS = {
         "--preserve5p": IsNone,
         "--collapse-deterministic": IsNone,
         "--collapse-conservatively": IsNone,
+        "--trim5p": Or(IsInt, IsListOf(IsInt)),
+        "--trim3p": Or(IsInt, IsListOf(IsInt)),
+        StringStartsWith("--"): Or(IsStr, IsInt, IsFloat, IsNone),
     },
     # Which aliger/mapper to use (BWA/Bowtie2)
     "Aligners": {

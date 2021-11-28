@@ -69,12 +69,8 @@ class SE_AdapterRemovalNode(CommandNode):
         options.pop("--collapse-deterministic", None)
         options.pop("--collapse-conservatively", None)
 
-        # Ensure that any user-specified list of adapters is tracked
-        adapter_list = options.get("--adapter-list")
-        if isinstance(adapter_list, str):
-            options["--adapter-list"] = InputFile(adapter_list)
-
-        command.merge_options(
+        _finalize_options(
+            command=command,
             user_options=options,
             fixed_options={
                 "--file1": InputFile(input_file),
@@ -126,17 +122,6 @@ class PE_AdapterRemovalNode(CommandNode):
             requirements=[_VERSION_CHECK],
         )
 
-        fixed_options: OptionsType = {
-            "--file1": InputFile(input_file_1),
-            "--file2": InputFile(input_file_2),
-            # Gzip compress FASTQ files
-            "--gzip": None,
-            # Fix number of threads to ensure consistency when scheduling node
-            "--threads": threads,
-            # Prefix for output files, ensure that all end up in temp folder
-            "--basename": TempOutputFile(output_prefix),
-        }
-
         if options.keys() & (
             "--collapse",
             "--collapse-deterministic",
@@ -154,15 +139,19 @@ class PE_AdapterRemovalNode(CommandNode):
                 ]
             )
 
-        # Ensure that any user-specified list of adapters is tracked
-        adapter_list = options.get("--adapter-list")
-        if isinstance(adapter_list, str):
-            options = dict(options)
-            options["--adapter-list"] = InputFile(adapter_list)
-
-        command.merge_options(
-            user_options=options,
-            fixed_options=fixed_options,
+        _finalize_options(
+            command,
+            user_options=dict(options),
+            fixed_options={
+                "--file1": InputFile(input_file_1),
+                "--file2": InputFile(input_file_2),
+                # Gzip compress FASTQ files
+                "--gzip": None,
+                # Fix number of threads to ensure consistency when scheduling node
+                "--threads": threads,
+                # Prefix for output files, ensure that all end up in temp folder
+                "--basename": TempOutputFile(output_prefix),
+            },
         )
 
         CommandNode.__init__(
@@ -203,6 +192,7 @@ class IdentifyAdaptersNode(CommandNode):
             user_options=options,
             fixed_options=fixed_options,
         )
+
         CommandNode.__init__(
             self,
             command=command,
@@ -211,3 +201,30 @@ class IdentifyAdaptersNode(CommandNode):
             % fileutils.describe_paired_files(input_file_1, input_file_2),
             dependencies=dependencies,
         )
+
+
+def _finalize_options(
+    command: AtomicCmd,
+    user_options: OptionsType,
+    fixed_options: OptionsType,
+):
+    # Ensure that any user-specified list of adapters is tracked
+    adapter_list = user_options.get("--adapter-list")
+    if isinstance(adapter_list, str):
+        user_options["--adapter-list"] = InputFile(adapter_list)
+
+    # Terminal trimming options are specified as --trimXp A B
+    extra_options = []
+    for key in ("--trim5p", "--trim3p"):
+        value = user_options.get(key)
+        if isinstance(value, list):
+            extra_options.append(key)
+            extra_options.extend(value)
+            user_options.pop(key)
+
+    command.merge_options(
+        user_options=user_options,
+        fixed_options=fixed_options,
+    )
+
+    command.append(*extra_options)
