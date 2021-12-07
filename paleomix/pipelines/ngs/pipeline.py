@@ -74,6 +74,7 @@ _LAYOUT = {
         "haplotypes": {
             "{genome}.uncalibrated": {
                 "{part}.g.vcf.gz": "gvcf_merged_part",
+                "{part}.vcf.gz": "vcf_merged_part",
             },
             "{genome}.uncalibrated.g.vcf.gz": "gvcf_merged",
             "{genome}.uncalibrated.vcf.gz": "vcf_merged",
@@ -103,8 +104,8 @@ _LAYOUT = {
             "{genome}.recalibration.indel.r": "vcf_recal_training_indel_r",
             "{genome}.recalibration.indel.tranches": "vcf_recal_training_indel_trances",
         },
+        "reads_trimming_multiQC": "stats_fastp_multiqc",
         "reads": {
-            "fastp_multiQC": "stats_fastp_multiqc",
             "fastp": {
                 "{sample}": {
                     "{library}": {
@@ -581,63 +582,131 @@ def haplotype_samples(args, genome, samples, settings):
 
     layout = args.layout.update(genome=genome)
 
-    if len(sample_gvcfs) == 1:
-        # In the simplest case, we only have a single GVCFs. No additional work is
-        # needed to obtain a "merged" file.
-        (combined_gvcf,) = sample_gvcfs
-        (combined_node,) = sample_gvcfs.values()
-    elif len(genome.intervals) > 1:
-        part_nodes = []
-        part_vcfs = []
-        for interval in genome.intervals:
-            layout = args.layout.update(genome=genome, part=interval["name"])
-
-            part_vcfs.append(layout["gvcf_merged_part"])
-            part_nodes.append(
-                CombineGVCFsNode(
-                    in_reference=genome.filename,
-                    in_variants=sample_gvcfs,
-                    out_vcf=layout["gvcf_merged_part"],
-                    options={
-                        "--intervals": InputFile(interval["filename"]),
-                        "--ignore-variants-starting-outside-interval": "true",
-                    },
-                    java_options=args.jre_options,
-                    dependencies=sample_gvcfs.values(),
-                )
-            )
-
-        # Combine scattered GVCFs into a single
-        combined_gvcf = layout["gvcf_merged"]
-        gather_node = GatherVcfsNode(
-            # Note that in_vcfs must be in genomic order
-            in_vcfs=part_vcfs,
-            out_vcf=combined_gvcf,
-            java_options=args.jre_options,
-            dependencies=part_nodes,
-        )
-
-        combined_node = TabixIndexNode(infile=combined_gvcf, dependencies=[gather_node])
-
-        yield from part_nodes
+    if len(sample_gvcfs) == 1 and len(genome.intervals) == 1:
+        haplotyping_func = _haplotype_1_sample_1_interval
+    elif len(sample_gvcfs) == 1:
+        haplotyping_func = _haplotype_1_sample_n_intervals
+    elif len(genome.intervals) == 1:
+        haplotyping_func = _haplotype_n_samples_1_interval
     else:
-        combined_gvcf = layout["gvcf_merged"]
-        combined_node = CombineGVCFsNode(
-            in_reference=genome.filename,
-            in_variants=sample_gvcfs,
-            out_vcf=combined_gvcf,
-            java_options=args.jre_options,
-            dependencies=sample_gvcfs.values(),
-        )
+        haplotyping_func = _haplotype_n_samples_n_interval
 
-    yield GenotypeGVCFs(
+    yield haplotyping_func(
+        args=args,
+        genome=genome,
+        settings=settings,
+        layout=layout,
+        gvcfs=sample_gvcfs,
+    )
+
+
+def _haplotype_1_sample_1_interval(args, genome, settings, layout, gvcfs):
+    # In the simplest case, we only have a single GVCFs. No additional work is
+    # needed to obtain a "merged" file.
+    (in_gvcf,) = gvcfs
+
+    return GenotypeGVCFs(
         in_reference=genome.filename,
-        in_gvcf=combined_gvcf,
+        in_gvcf=in_gvcf,
         out_vcf=layout["vcf_merged"],
         options=settings["GenotypeGVCFs"],
         java_options=args.jre_options,
-        dependencies=[combined_node],
+        dependencies=gvcfs.values(),
     )
+
+
+def _haplotype_n_samples_1_interval(args, genome, settings, layout, gvcfs):
+    task = CombineGVCFsNode(
+        in_reference=genome.filename,
+        in_variants=gvcfs,
+        out_vcf=layout["gvcf_merged"],
+        java_options=args.jre_options,
+        dependencies=gvcfs.values(),
+    )
+
+    return GenotypeGVCFs(
+        in_reference=genome.filename,
+        in_gvcf=layout["gvcf_merged"],
+        out_vcf=layout["vcf_merged"],
+        options=settings["GenotypeGVCFs"],
+        java_options=args.jre_options,
+        dependencies=[task],
+    )
+
+
+def _haplotype_1_sample_n_intervals(args, genome, settings, layout, gvcfs):
+    (in_gvcf,) = gvcfs
+    tasks = []
+    vcfs = []
+
+    for interval in genome.intervals:
+        layout = args.layout.update(genome=genome, part=interval["name"])
+
+        options = dict(settings["GenotypeGVCFs"])
+        options["--intervals"] = InputFile(interval["filename"])
+
+        task = GenotypeGVCFs(
+            in_reference=genome.filename,
+            in_gvcf=in_gvcf,
+            out_vcf=layout["vcf_merged_part"],
+            options=options,
+            java_options=args.jre_options,
+            dependencies=gvcfs.values(),
+        )
+
+        tasks.append(task)
+        vcfs.append(layout["vcf_merged_part"])
+
+    task = GatherVcfsNode(
+        # Note that in_vcfs must be in genomic order
+        in_vcfs=vcfs,
+        out_vcf=layout["vcf_merged"],
+        java_options=args.jre_options,
+        dependencies=tasks,
+    )
+
+    return TabixIndexNode(layout["vcf_merged"], dependencies=[task])
+
+
+def _haplotype_n_samples_n_interval(args, genome, settings, layout, gvcfs):
+    tasks = []
+    vcfs = []
+    for interval in genome.intervals:
+        layout = args.layout.update(genome=genome, part=interval["name"])
+
+        task = CombineGVCFsNode(
+            in_reference=genome.filename,
+            in_variants=gvcfs,
+            out_vcf=layout["gvcf_merged_part"],
+            options={
+                "--intervals": InputFile(interval["filename"]),
+                "--ignore-variants-starting-outside-interval": "true",
+            },
+            java_options=args.jre_options,
+            dependencies=gvcfs.values(),
+        )
+
+        task = GenotypeGVCFs(
+            in_reference=genome.filename,
+            in_gvcf=layout["gvcf_merged_part"],
+            out_vcf=layout["vcf_merged_part"],
+            options=settings["GenotypeGVCFs"],
+            java_options=args.jre_options,
+            dependencies=[task],
+        )
+
+        tasks.append(task)
+        vcfs.append(layout["vcf_merged_part"])
+
+    task = GatherVcfsNode(
+        # Note that in_vcfs must be in genomic order
+        in_vcfs=vcfs,
+        out_vcf=layout["vcf_merged"],
+        java_options=args.jre_options,
+        dependencies=tasks,
+    )
+
+    return TabixIndexNode(layout["vcf_merged"], dependencies=[task])
 
 
 def recalibrate_haplotype(args, genome, samples, settings):
