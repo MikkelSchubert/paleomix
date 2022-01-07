@@ -150,7 +150,7 @@ _VALIDATION_OPTIONS = {
             # Mapping algorithm; availability depends on BWA version
             "Algorithm": StringIn(
                 ("backtrack", "mem", "mem2", "bwasw"),
-                default="backtrack",
+                default="mem",
             ),
             # Minimum mapping quality (PHREAD) of reads to retain
             "MinQuality": IsUnsignedInt(default=0),
