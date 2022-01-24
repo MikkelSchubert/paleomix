@@ -104,7 +104,9 @@ _LAYOUT = {
             "{genome}.recalibration.indel.r": "vcf_recal_training_indel_r",
             "{genome}.recalibration.indel.tranches": "vcf_recal_training_indel_trances",
         },
+        "reads_pre_trimmed_multiQC": "stats_fastqc_multiqc_pre",
         "reads_trimming_multiQC": "stats_fastp_multiqc",
+        "reads_post_trimmed_multiQC": "stats_fastqc_multiqc_post",
         "reads": {
             "fastp": {
                 "{sample}": {
@@ -114,7 +116,6 @@ _LAYOUT = {
                     },
                 },
             },
-            "pre_trimmed_multiQC": "stats_fastqc_multiqc_pre",
             "pre_trimmed": {
                 "{sample}": {
                     "{library}": {
@@ -123,7 +124,6 @@ _LAYOUT = {
                     },
                 },
             },
-            "post_trimmed_multiQC": "stats_fastqc_multiqc_post",
             "post_trimmed": {
                 "{sample}": {
                     "{library}": {
