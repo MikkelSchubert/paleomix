@@ -28,7 +28,7 @@ TEMPLATE_BAM_OPTIONS = {
     "Aligners": {
         "Program": "BWA",
         "BWA": {
-            "Algorithm": "backtrack",
+            "Algorithm": "mem",
             "FilterUnmappedReads": True,
             "MinQuality": 0,
             "UseSeed": True,
