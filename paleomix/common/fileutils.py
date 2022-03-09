@@ -83,10 +83,12 @@ def create_temp_dir(root: Union[str, Path]) -> str:
 
         return os.path.join(root, f"{prefix}_{postfix}")
 
-    path = _generate_path()
-    while not make_dirs(path, mode=0o700):
+    for _ in range(10_000):
         path = _generate_path()
-    return path
+        if make_dirs(path, mode=0o700):
+            return path
+
+    raise FileExistsError(errno.EEXIST, "Could not create new temp directory")
 
 
 def missing_files(filenames: Iterable[Union[str, Path]]) -> List[str]:

@@ -223,6 +223,18 @@ def test_create_temp_dir__permission_denied() -> None:
             create_temp_dir("/tmp")
 
 
+def test_create_temp_dir__finite_attempts(tmp_path: Path) -> None:
+    mock = Mock(wraps=os.makedirs)
+    mock.side_effect = OSError(errno.EEXIST, "dir exists")
+    with patch("os.makedirs", mock):
+        with pytest.raises(FileExistsError):
+            create_temp_dir(tmp_path)
+
+    # Exact number isn't important
+    assert mock.call_count >= 100
+    assert list(tmp_path.iterdir()) == []
+
+
 ###############################################################################
 ###############################################################################
 # Tests for 'missing_files'
