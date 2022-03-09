@@ -57,10 +57,6 @@ _LAYOUT = {
                 "{sample}.{genome}.good.recalibration.table.log": "aln_recal_training_log",
                 "{sample}.{genome}.good.recalibration.log": "aln_recal_log",
             },
-            "haplotypes": {
-                "{sample}.{genome}.g.vcf.gz": "gvcf_per_sample",
-                "{sample}.{genome}.g.vcf.gz.log": "gvcf_per_sample_log",
-            },
             "reads": {
                 "{sample}.{library}.{run}.paired_1.fastq.gz": "fastp_paired_1",
                 "{sample}.{library}.{run}.paired_2.fastq.gz": "fastp_paired_2",
@@ -86,6 +82,10 @@ _LAYOUT = {
             "{genome}.recalibration.snp.log": "vcf_recal_snp_log",
             "{genome}.recalibration.snp.indel.log": "vcf_recal_snp_indel_log",
         },
+    },
+    "haplotypes": {
+        "{sample}.{genome}.g.vcf.gz": "gvcf_per_sample",
+        "{sample}.{genome}.g.vcf.gz.log": "gvcf_per_sample_log",
     },
     "genotypes": {
         "{genome}.vcf.gz": "vcf_recal_snp_indel",
