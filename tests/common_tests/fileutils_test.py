@@ -31,6 +31,7 @@ from typing import IO, Any, Callable
 from unittest.mock import ANY, DEFAULT, Mock, call, patch
 
 import pytest
+
 from paleomix.common.fileutils import (
     add_postfix,
     copy_file,
@@ -209,7 +210,7 @@ def test_create_temp_dir__creation_preempted(tmp_path: Path) -> None:
     assert work_dir.startswith(str(tmp_path))
 
     # Must be called with different directories
-    assert mock.mock_calls == [call(ANY, mode=0o750), call(ANY, mode=0o750)]
+    assert mock.mock_calls == [call(ANY, mode=0o700), call(ANY, mode=0o700)]
     call_1, call_2 = mock.mock_calls
     assert call_1[1] != call_2[1]
 
