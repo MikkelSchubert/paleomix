@@ -25,8 +25,9 @@ import errno
 import gzip
 import io
 import os
+import random
 import shutil
-import uuid
+from datetime import datetime
 from os import fspath
 from pathlib import Path
 from typing import (
@@ -71,12 +72,16 @@ def reroot_path(root: Union[str, Path], filename: str) -> str:
 
 
 def create_temp_dir(root: Union[str, Path]) -> str:
-    """Creates a temporary directory, accessible only by the owner,
-    at the specified location. The folder name is randomly generated,
-    and only the current user has access"""
+    """Creates a temporary directory, accessible only by the owner at the specified
+    location. The folder name is includes the current time and includes a random
+    component. Only the current user has access.
+    """
 
     def _generate_path() -> str:
-        return os.path.join(fspath(root), str(uuid.uuid4()))
+        prefix = datetime.now().strftime("%Y%m%d_%H%M%S")
+        postfix = "{:04x}".format(random.getrandbits(16))
+
+        return os.path.join(root, f"{prefix}_{postfix}")
 
     path = _generate_path()
     while not make_dirs(path, mode=0o700):
@@ -303,7 +308,8 @@ def _atomic_file_copy(
     copyfunc: Optional[Callable[[Union[str, Path], Union[str, Path]], Any]] = None,
 ):
     # Ensure that hard failures during copy does not leave anything at destination
-    temp_destination = "{}.{}.tmp".format(destination, uuid.uuid4())
+    postfix = "{:04x}".format(random.getrandbits(16))
+    temp_destination = "{}.{}.tmp".format(destination, postfix)
     # Allow function to be monkeypatched for testing
     copyfunc = shutil.copy if copyfunc is None else copyfunc
 
