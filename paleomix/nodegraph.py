@@ -349,6 +349,7 @@ class NodeGraph:
                 if requirement.check():
                     log.info("  [✓] %s ", name)
                 else:
+                    any_errors = True
                     log.error(
                         " [☓] %s found but %s is required", name, requirement.specifiers
                     )
