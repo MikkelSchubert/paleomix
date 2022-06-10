@@ -64,7 +64,7 @@ class ArgumentParser(configargparse.ArgumentParser):
 
     def convert_item_to_command_line_arg(self, action, key, value):
         # Ignore empty options from old config files
-        if action and value == "=":
+        if action and value in ("", "="):
             return []
 
         return super().convert_item_to_command_line_arg(action, key, value)
