@@ -4,8 +4,11 @@ Genome Analysis Toolkit
 
 https://gatk.broadinstitute.org/
 """
+import logging
 import os
 from typing import Iterable, List, Union
+
+import pysam
 
 from paleomix.common.command import (
     AtomicCmd,
@@ -16,7 +19,7 @@ from paleomix.common.command import (
     TempInputFile,
     TempOutputFile,
 )
-from paleomix.common.fileutils import swap_ext
+from paleomix.common.fileutils import move_file, open_rb, reroot_path, swap_ext
 from paleomix.node import CommandNode, Node, NodeError
 
 
@@ -219,6 +222,11 @@ class FastqToSamNode(CommandNode):
         java_options=(),
         dependencies=(),
     ):
+        self._enabled = True
+        self._in_fastq = in_fastq
+        self._out_bam = out_bam
+        self._sort_order = options.get("--SORT-ORDER")
+
         if "--SAMPLE_NAME" not in dict(options):
             raise NodeError("--SAMPLE_NAME must be specified for FastqToSamNode")
 
@@ -238,6 +246,40 @@ class FastqToSamNode(CommandNode):
             description="converting {} to BAM".format(in_fastq),
             dependencies=dependencies,
         )
+
+    def _setup(self, temp: str) -> None:
+        self._enabled = False
+        with open_rb(self._in_fastq) as handle:
+            # Empty files cannot be processed by GATK
+            self._enabled = bool(handle.readline().strip())
+
+        # Prerequisites should always be checked, even if command is not run
+        return CommandNode._setup(self, temp)
+
+    def _run(self, temp: str) -> None:
+        if self._enabled:
+            return CommandNode._run(self, temp)
+
+        return Node._run(self, temp)
+
+    def _teardown(self, temp: str) -> None:
+        if self._enabled:
+            return CommandNode._teardown(self, temp)
+
+        log = logging.getLogger(__name__)
+        log.debug("creating dummy BAM file for %r", self._out_bam)
+
+        header = {"HD": {"VN": "1.6"}}
+        if self._sort_order:
+            header["HD"]["SO"] = self._sort_order
+
+        filename = reroot_path(temp, self._out_bam)
+        with pysam.AlignmentFile(filename, "wb", header=header):
+            pass
+
+        move_file(filename, self._out_bam)
+
+        return Node._teardown(self, temp)
 
 
 class GatherVcfsNode(CommandNode):
