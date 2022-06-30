@@ -633,16 +633,16 @@ def _validate_prefixes(makefiles, pipeline_variant):
                 if pipeline_variant == "bam":
                     raise MakefileError(f"Error reading/indexing FASTA: {error}")
                 logging.warn("Error reading/indexing FASTA: %s", error)
-
-            if max(contigs.values()) > _BAM_MAX_SEQUENCE_LENGTH:
-                logger.warn(
-                    "FASTA file %r contains sequences longer "
-                    "than %i! CSI index files will be used instead "
-                    "of BAI index files.",
-                    path,
-                    _BAM_MAX_SEQUENCE_LENGTH,
-                )
-                prefix["IndexFormat"] = ".csi"
+            else:
+                if max(contigs.values()) > _BAM_MAX_SEQUENCE_LENGTH:
+                    logger.warn(
+                        "FASTA file %r contains sequences longer "
+                        "than %i! CSI index files will be used instead "
+                        "of BAI index files.",
+                        path,
+                        _BAM_MAX_SEQUENCE_LENGTH,
+                    )
+                    prefix["IndexFormat"] = ".csi"
 
             already_validated[path] = prefix
 
