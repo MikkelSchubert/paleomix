@@ -471,6 +471,7 @@ class VariantRecalibratorNode(CommandNode):
             InputFile(in_reference + ".fai"),
             InputFile(swap_ext(in_reference, ".dict")),
             # FIXME: Extension depends on fname: .idx for .vcf, .tbi for vcf.gz, ..
+            InputFile(self.in_variant + ".tbi"),
             OutputFile(self.out_recal + ".tbi"),
             OutputFile(self.out_r_plot + ".pdf"),
         ]
