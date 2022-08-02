@@ -31,6 +31,7 @@ import paleomix.resources
 import paleomix.yaml
 
 from paleomix.pipeline import Pypeline
+from paleomix.node import NodeError
 from paleomix.nodes.samtools import FastaIndexNode
 from paleomix.nodes.bwa import BWAIndexNode
 from paleomix.nodes.bowtie2 import Bowtie2IndexNode
@@ -206,10 +207,9 @@ def run(config, pipeline_variant):
         logger.info("Building BAM pipeline for %r", makefile["Filename"])
         try:
             nodes = pipeline_func(config, makefile)
-        except paleomix.node.NodeError as error:
-            logger.error(
-                "Error while building pipeline for %r:\n%s", makefile["Filename"], error
-            )
+        except (NodeError, MakefileError) as error:
+            logger.error("Error while building pipeline for %r", makefile["Filename"])
+            logger.error("%s", error)
             return 1
 
         pipeline.add_nodes(*nodes)

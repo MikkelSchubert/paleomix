@@ -209,7 +209,7 @@ class Lane:
             raise MakefileError(
                 "Mapping with BWA using the %r algorithm currently does not support "
                 "QualityOffsets other than 33; please convert your FASTQ if you wish "
-                "to proceed."
+                "to proceed." % (parameters["algorithm"],)
             )
 
         parameters = self._set_pe_input_files(parameters)
