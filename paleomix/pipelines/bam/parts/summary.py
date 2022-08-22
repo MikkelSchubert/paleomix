@@ -112,8 +112,8 @@ class SummaryTableNode(Node):
             self._write_areas_of_interest(table, rois)
             table.write("#\n#\n")
 
-            for roi in rois.values():
-                genomes[roi["Label"]] = {"Size": roi["Size"]}
+            for key, roi in rois.items():
+                genomes[":".join(key)] = {"Size": roi["Size"]}
             self._write_tables(table, genomes)
 
     def _teardown(self, _config, temp):

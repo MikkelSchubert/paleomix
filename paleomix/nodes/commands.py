@@ -104,7 +104,8 @@ class DepthHistogramNode(CommandNode):
         if regions_file:
             builder.set_option("--regions-file", "%(IN_REGIONS)s")
             builder.set_kwargs(
-                IN_REGIONS=regions_file, TEMP_IN_INDEX=input_file + index_format
+                IN_REGIONS=regions_file,
+                IN_INDEX=input_file + index_format,
             )
 
         CommandNode.__init__(
