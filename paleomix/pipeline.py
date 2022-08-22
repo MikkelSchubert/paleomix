@@ -218,7 +218,11 @@ class Pypeline:
 
     def list_output_files(self):
         cache = FileStatusCache()
-        nodegraph = NodeGraph(self._nodes, lambda: cache)
+        nodegraph = NodeGraph(
+            self._nodes,
+            allow_missing_files=True,
+            cache_factory=lambda: cache,
+        )
         output_files = {}
 
         def collect_output_files(node):

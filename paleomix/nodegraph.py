@@ -103,7 +103,12 @@ class NodeGraph:
     NUMBER_OF_STATES = 6
     DONE, RUNNING, RUNABLE, QUEUED, OUTDATED, ERROR = range(NUMBER_OF_STATES)
 
-    def __init__(self, nodes, cache_factory=FileStatusCache):
+    def __init__(
+        self,
+        nodes,
+        allow_missing_files=False,
+        cache_factory=FileStatusCache,
+    ):
         self._cache_factory = cache_factory
         self._states = {}
         self._state_counts = [0] * self.NUMBER_OF_STATES
@@ -126,17 +131,19 @@ class NodeGraph:
 
         self._logger.info("Checking for auxiliary files")
         if not self._check_auxiliary_files(self._reverse_dependencies):
-            raise NodeGraphError(
-                "Please refer to the PALEOMIX installation instructions at "
-                "https://paleomix.readthedocs.io/en/stable/"
-            )
+            if not allow_missing_files:
+                raise NodeGraphError(
+                    "Please refer to the PALEOMIX installation instructions at "
+                    "https://paleomix.readthedocs.io/en/stable/"
+                )
 
         self._logger.info("Checking required software")
         if not self._check_version_requirements(self._reverse_dependencies):
-            raise NodeGraphError(
-                "Please refer to the PALEOMIX installation instructions at "
-                "https://paleomix.readthedocs.io/en/stable/"
-            )
+            if not allow_missing_files:
+                raise NodeGraphError(
+                    "Please refer to the PALEOMIX installation instructions at "
+                    "https://paleomix.readthedocs.io/en/stable/"
+                )
 
         self._logger.info("Determining states")
         self._refresh_states()
