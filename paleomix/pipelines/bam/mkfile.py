@@ -53,6 +53,9 @@ Options:
      --collapse: yes
      --trimns: yes
      --trimqualities: yes
+     # Increase the maximum Phred allowed for input FASTQs, as well as for merged bases
+     # when using --collapse (default = 41). This is needed for some modern FASTQs.
+#     --qualitymax: 42
 """
 
 _TEMPLATE_BAM_OPTIONS = """  # Settings for aligners supported by the pipeline
