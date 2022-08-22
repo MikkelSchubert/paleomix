@@ -17,13 +17,13 @@ In addition, some libraries used by PALEOMIX may require additional development 
 
 Once all requirements have been installed, PALEOMIX may be installed using `pip`::
 
-    $ python3 -m pip install paleomix==1.3.6
+    $ python3 -m pip install paleomix==1.3.7
 
 To verify that the installation was carried out correctly, run the command `paleomix`::
 
     $ paleomix
     PALEOMIX - pipelines and tools for NGS data analyses
-    Version: v1.3.6
+    Version: v1.3.7
 
     ...
 
@@ -45,7 +45,7 @@ This installation method requires the `venv` module. On Debian based systems, th
 Once `venv` is installed, creation of a virtual environment and installation of PALEOMIX may be carried out as shown here::
 
     $ python3 -m venv venv
-    $ ./venv/bin/pip install paleomix==v1.3.6
+    $ ./venv/bin/pip install paleomix==v1.3.7
 
 Following successful completion of these commands, the `paleomix` executable will be accessible in the `./venv/bin/` folder. However, as this folder also contains a copy of Python itself, it is not recommended to add it to your `PATH`. Instead, simply link the `paleomix` executable to a folder in your `PATH`. This can be accomplished as follows::
 
@@ -78,7 +78,7 @@ To install `conda` and also set it up so it can use the `bioconda`_ bioinformati
 
 Next, run the following commands to download the conda environment template for this release of PALEOMIX and to create a new conda environment named `paleomix` using that template::
 
-    $ curl -fL https://github.com/MikkelSchubert/paleomix/releases/download/v1.3.6/paleomix_environment.yaml > paleomix_environment.yaml
+    $ curl -fL https://github.com/MikkelSchubert/paleomix/releases/download/v1.3.7/paleomix_environment.yaml > paleomix_environment.yaml
     $ conda env create -n paleomix -f paleomix_environment.yaml
 
 You can now activate the paleomix environment with::
