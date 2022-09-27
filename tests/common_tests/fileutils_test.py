@@ -626,7 +626,7 @@ class OddException(RuntimeError):
 
 def test_open_ro__close_handle_on_error() -> None:
     mocks = Mock()  # type: Any
-    mocks.file.read.side_effect = OddException("ARGH!")
+    mocks.file.peek.side_effect = OddException("ARGH!")
     mocks.file.__enter__ = Mock(return_value=mocks.file)
     mocks.file.__exit__ = Mock(return_value=None)
     mocks.open.return_value = mocks.file
@@ -638,7 +638,7 @@ def test_open_ro__close_handle_on_error() -> None:
     mocks.assert_has_calls(
         [
             call.open("/var/abc", "rb"),
-            call.file.read(2),
+            call.file.peek(2),
             call.file.close(),
         ]
     )

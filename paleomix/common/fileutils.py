@@ -159,13 +159,13 @@ def open_rb(filename: Union[str, Path]) -> IO[bytes]:
     """Opens a file for reading, transparently handling
     GZip and BZip2 compressed files. Returns a file handle."""
     handle = open(fspath(filename), "rb")
-    try:
-        header = handle.read(2)
-        handle.seek(0)
 
-        if header == b"\x1f\x8b":
+    try:
+        header = handle.peek(2)
+
+        if header.startswith(b"\x1f\x8b"):
             return cast(IO[bytes], gzip.GzipFile(mode="rb", fileobj=handle))
-        elif header == b"BZ":
+        elif header.startswith(b"BZ"):
             return bz2.BZ2File(handle, "rb")
         else:
             return handle
