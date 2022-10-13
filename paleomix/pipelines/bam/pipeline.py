@@ -359,7 +359,7 @@ def _build_bwa_backtrack_pe_task(
 def _build_bwa_backtrack_task(input_file_1, input_file_2, mapping_options, **kwargs):
     if not mapping_options["UseSeed"]:
         mapping_options = dict(mapping_options)
-        mapping_options["-l"] = 2 ** 16 - 1
+        mapping_options["-l"] = 2**16 - 1
 
     if input_file_2 is None:
         return _build_bwa_backtrack_se_task(
@@ -540,20 +540,23 @@ def merge_libraries(args, layout, genome, records):
     task = BAMMergeNode(
         in_files=[record["Path"] for record in records],
         out_file=layout["final_bam"],
+        index_format=genome["IndexFormat"],
         options={
             "--threads": args.samtools_max_threads,
         },
         dependencies=[record["Task"] for record in records],
     )
 
-    task = BAMIndexNode(
-        infile=layout["final_bam"],
-        index_format=genome["IndexFormat"],
-        options={
-            "-@": args.samtools_max_threads,
-        },
-        dependencies=[task],
-    )
+    # Manually index if samtools could not be run with --write-index
+    if task.index is None:
+        task = BAMIndexNode(
+            infile=layout["final_bam"],
+            index_format=genome["IndexFormat"],
+            options={
+                "-@": args.samtools_max_threads,
+            },
+            dependencies=[task],
+        )
 
     return {
         "Genome": genome,

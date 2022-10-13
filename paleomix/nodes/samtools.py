@@ -6,8 +6,7 @@ sequencing data
 https://github.com/samtools/samtools
 """
 import os
-import warnings
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Tuple
 
 import paleomix.common.versions as versions
 from paleomix.common.command import (
@@ -29,6 +28,13 @@ SAMTOOLS_VERSION = versions.Requirement(
     call=("samtools",),
     regexp=_VERSION_REGEX,
     specifiers=">=1.6.0",
+)
+
+# Version required for --write-index
+SAMTOOLS_VERSION_1_10 = versions.Requirement(
+    call=("samtools",),
+    regexp=_VERSION_REGEX,
+    specifiers=">=1.10.0",
 )
 
 BCFTOOLS_VERSION = versions.Requirement(
@@ -186,6 +192,7 @@ class BAMMergeNode(CommandNode):
         self,
         in_files: Iterable[str],
         out_file: str,
+        index_format: Optional[str] = None,
         options: OptionsType = {},
         dependencies: Iterable[Node] = (),
     ):
@@ -195,21 +202,25 @@ class BAMMergeNode(CommandNode):
         elif len(in_files) == 1:
             # FIXME: hardlinking is faster, but could have unintended side-effects
             cmd = AtomicCmd(["cp", InputFile(in_files[0]), OutputFile(out_file)])
+            self.index = None
 
             threads = 1
         else:
+            self.index, requirement = _try_write_index(out_file, index_format)
+
             cmd = AtomicCmd(
                 ["samtools", "merge"],
-                requirements=[SAMTOOLS_VERSION],
+                requirements=[requirement],
             )
+
+            if self.index is not None:
+                cmd.append("--write-index")
+                cmd.add_extra_files([OutputFile(self.index)])
 
             cmd.append_options(options)
             cmd.append(OutputFile(out_file))
             for in_file in in_files:
                 cmd.append(InputFile(in_file))
-
-            if "--write-index" in options:
-                cmd.add_extra_files([OutputFile(out_file + ".csi")])
 
             threads = _get_number_of_threads(options)
 
@@ -301,3 +312,19 @@ def _get_number_of_threads(options: OptionsType, default: int = 1) -> int:
     # -@/--threads specify threads in *addition* to the main thread, but in practice
     # the number of cores used seems to be closer to the that value and not value + 1
     return max(1, value)
+
+
+def _try_write_index(
+    out_bam: str,
+    index_format: Optional[str],
+) -> Tuple[Optional[str], versions.Requirement]:
+    if index_format not in (None, ".bai", ".csi"):
+        raise ValueError(index_format)
+
+    try:
+        if index_format is not None and SAMTOOLS_VERSION_1_10.check():
+            return out_bam + index_format, SAMTOOLS_VERSION_1_10
+    except versions.RequirementError:
+        pass
+
+    return None, SAMTOOLS_VERSION
