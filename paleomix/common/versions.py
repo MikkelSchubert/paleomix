@@ -25,7 +25,7 @@ import subprocess
 import sys
 import typing
 from shlex import quote
-from typing import Iterable, NoReturn, Optional, Tuple, Union
+from typing import Iterable, Optional, Tuple, Union
 
 from packaging.specifiers import SpecifierSet
 
