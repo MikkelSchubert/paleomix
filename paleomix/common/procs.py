@@ -27,22 +27,26 @@ import os
 import shlex
 import signal
 import sys
+from os import PathLike
 from subprocess import Popen, TimeoutExpired
-from typing import IO, Any, Iterable, List, Optional
+from typing import IO, Any, AnyStr, Iterable, List, Optional, TypeAlias, cast
+
+PathTypes: TypeAlias = str | bytes | PathLike[str] | PathLike[bytes]  # stable
 
 # List of running processes; can be terminated with `terminate_all_processes`
-_RUNNING_PROCS: List[Any] = []
+_RUNNING_PROCS: List[Popen[Any]] = []
 
 
-def quote_args(args) -> str:
+def quote_args(args: PathTypes | Iterable[PathTypes]) -> str:
     if isinstance(args, (str, bytes, os.PathLike)):
         args = [args]
 
-    values = []
+    values: List[str] = []
     for arg in args:
         if isinstance(arg, os.PathLike):
-            arg = os.fspath(arg)
-        elif isinstance(arg, bytes):
+            arg = os.fspath(cast(os.PathLike[AnyStr], arg))
+
+        if isinstance(arg, bytes):
             arg = arg.decode("utf-8", errors="replace")
 
         values.append(shlex.quote(arg))
@@ -58,7 +62,7 @@ def join_procs(procs: Iterable[Popen[Any]], out: IO[str] = sys.stderr):
     """
     sleep_time = 0.05
     commands = list(enumerate(procs))
-    return_codes = [None] * len(commands)  # type: List[Optional[int]]
+    return_codes: List[Optional[int]] = [None] * len(commands)
 
     assert all(hasattr(cmd, "args") for (_, cmd) in commands)
 
@@ -94,19 +98,19 @@ def join_procs(procs: Iterable[Popen[Any]], out: IO[str] = sys.stderr):
     return return_codes
 
 
-def register_process(proc):
+def register_process(proc: Popen[Any]) -> None:
     """Register a process for automatic/forced termination."""
     _RUNNING_PROCS.append(proc)
 
 
-def unregister_process(proc):
+def unregister_process(proc: Popen[Any]) -> None:
     """Unregister a process for automatic/forced termination."""
     if proc in _RUNNING_PROCS:
         _RUNNING_PROCS.remove(proc)
 
 
 @atexit.register
-def terminate_all_processes():
+def terminate_all_processes() -> None:
     """Terminate all registered proceses. Must be called in signal handlers."""
     while _RUNNING_PROCS:
         proc = _RUNNING_PROCS.pop()
