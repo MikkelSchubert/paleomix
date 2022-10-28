@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import errno
 import itertools
 import logging
 import os
@@ -153,7 +154,13 @@ class Node:
                 os.path.join(temp, filename),
             )
 
-        shutil.rmtree(temp)
+        try:
+            shutil.rmtree(temp)
+        except OSError as error:
+            if error.errno != errno.EBUSY:
+                raise
+
+            log.warning("Could not remove temporary directory: %r", error)
 
     def _setup(self, _temp: str) -> None:
         """Is called prior to '_run()' by 'run()'. Any code used to copy/link files,
