@@ -548,7 +548,9 @@ class RemoteWorker:
         while not self._conn.closed and self._conn.poll():
             try:
                 event = self._conn.recv()
-            except EOFError:
+            except (ConnectionError, EOFError) as error:
+                self._log.error("Connection to worker broke: %s", error)
+
                 if self._status != _TERMINATED:
                     self.shutdown()
 

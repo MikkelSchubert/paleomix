@@ -121,8 +121,8 @@ class Worker:
                     if isinstance(handle, Connection):
                         try:
                             event = handle.recv()
-                        except EOFError:
-                            log.error("Connection to client broke")
+                        except (ConnectionError, EOFError) as error:
+                            log.error("Connection to client broke: %s", error)
                             return
 
                         if event["event"] == EVT_SHUTDOWN:
