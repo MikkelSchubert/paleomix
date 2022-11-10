@@ -45,12 +45,12 @@ from paleomix.node import (
 T = TypeVar("T")
 
 
-def test_dir():
+def _test_dir():
     return os.path.dirname(__file__)
 
 
-def test_file(*args: str):
-    return os.path.join(test_dir(), "data", *args)
+def _test_file(*args: str):
+    return os.path.join(_test_dir(), "data", *args)
 
 
 def choice(values: Iterable[T]) -> T:
@@ -71,16 +71,16 @@ _NODE_TYPES: Tuple[Type[Node], ...] = (Node, CommandNodeWithDefaultCommand)
 
 
 _DESCRIPTION = "My description of a node"
-_IN_FILES = frozenset((test_file("empty_file_1"), test_file("empty_file_2")))
+_IN_FILES = frozenset((_test_file("empty_file_1"), _test_file("empty_file_2")))
 _OUT_FILES = frozenset(
-    (test_file("missing_out_file_1"), test_file("missing_out_file_2"))
+    (_test_file("missing_out_file_1"), _test_file("missing_out_file_2"))
 )
 _EXEC_FILES = frozenset(("ls", "sh"))
-_AUX_FILES = frozenset((test_file("rCRS.fasta"), test_file("rCRS.fasta.fai")))
+_AUX_FILES = frozenset((_test_file("rCRS.fasta"), _test_file("rCRS.fasta.fai")))
 _REQUIREMENT_1 = Requirement(["bwa"], r"", "")
 _REQUIREMENT_2 = Requirement(["bowtie"], r"", "")
 _REQUIREMENTS = frozenset((_REQUIREMENT_1, _REQUIREMENT_2))
-_EMPTY_FILE = test_file("empty_file_1")
+_EMPTY_FILE = _test_file("empty_file_1")
 
 
 def _build_cmd_mock(

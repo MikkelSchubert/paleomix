@@ -1,18 +1,15 @@
+import logging
 import os
 
-import logging
-
-import paleomix.node
 import paleomix.common.logging
-
+import paleomix.node
+from paleomix import resources
 from paleomix.common.fileutils import swap_ext
 from paleomix.common.yaml import YAMLError
-
 from paleomix.pipeline import Pypeline
 from paleomix.pipelines.ngs.config import build_parser
-from paleomix.pipelines.ngs.project import load_project, MakefileError
 from paleomix.pipelines.ngs.pipeline import build_pipeline
-from paleomix import resources
+from paleomix.pipelines.ngs.project import MakefileError, load_project
 
 
 def main(argv):
@@ -64,7 +61,7 @@ def _main_run(args):
         nodes=nodes,
         temp_root=args.temp_root,
         max_threads=args.max_threads,
-        implicit_dependencies=True,
+        intermediate_files=args.intermediate_files,
     )
 
     return pipeline.run(args.pipeline_mode)

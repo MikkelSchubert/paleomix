@@ -33,11 +33,18 @@ from typing import IO, Any, Dict, Iterable, List, Optional
 
 import paleomix.common.logging
 import paleomix.core.reports
+from paleomix.common.fileutils import try_remove
 from paleomix.common.text import format_timespan, padded_table
 from paleomix.common.utilities import safe_coerce_to_tuple
 from paleomix.core.workers import EVT_CAPACITY, EVT_SHUTDOWN, EVT_TASK_DONE, Manager
 from paleomix.node import Node, NodeError, NodeMissingFilesError
-from paleomix.nodegraph import NodeGraph, NodeGraphError
+from paleomix.nodegraph import (
+    CleanupStrategy,
+    FileStatusCache,
+    NodeGraph,
+    NodeGraphError,
+    StatusEnum,
+)
 
 
 class Pypeline:
@@ -46,7 +53,7 @@ class Pypeline:
         nodes: Iterable[Node],
         temp_root: str = "/tmp",
         max_threads: int = 1,
-        implicit_dependencies: bool = False,
+        intermediate_files: CleanupStrategy = CleanupStrategy.DELETE,
     ):
         self._nodes = safe_coerce_to_tuple(nodes)
         for node in self._nodes:
@@ -58,7 +65,7 @@ class Pypeline:
         self._interrupted = False
         self._threads = max(0, max_threads)
         self._temp_root = temp_root
-        self._implicit_dependencies = implicit_dependencies
+        self._intermediate_files_strategy = intermediate_files
         self._start_times: Dict[Node, float] = {}
         self._progress_color: Optional[str] = None
 
@@ -72,16 +79,21 @@ class Pypeline:
         }
 
     def run(self, mode: str = "run") -> int:
-        if mode not in ("run", "dry_run"):
-            return self._print_report(mode)
+        fscache = FileStatusCache()
 
         try:
             nodegraph = NodeGraph(
-                nodes=self._nodes,
-                implicit_dependencies=self._implicit_dependencies,
+                tasks=self._nodes,
+                fscache=fscache,
+                intermediate_files=self._intermediate_files_strategy,
             )
         except NodeGraphError as error:
             self._logger.error(error)
+            return 1
+
+        if mode not in ("run", "dry_run"):
+            return self._print_report(mode, nodegraph, fscache)
+        elif not nodegraph.check_file_dependencies(fscache):
             return 1
 
         manager = Manager(
@@ -121,7 +133,7 @@ class Pypeline:
     def _run(self, nodegraph: NodeGraph, manager: Manager) -> int:
         # Set of remaining nodes to be run
         tasks: Dict[Node, _TaskInfo] = {}
-        for task in nodegraph.iterflat():
+        for task in nodegraph.tasks:
             state = nodegraph.get_node_state(task)
             if state not in (nodegraph.DONE, nodegraph.ERROR):
                 tasks[task] = _TaskInfo(task)
@@ -135,6 +147,10 @@ class Pypeline:
                     self._logger.error("Unknown event in pipeline: %r", event)
                 elif not handler(nodegraph, manager, tasks, **event):
                     any_errors = True
+
+            self._clean_intermediate_files(nodegraph)
+
+        self._clean_intermediate_files(nodegraph)
 
         self._logger.info("Shutting down workers")
         manager.shutdown()
@@ -247,6 +263,13 @@ class Pypeline:
             if nodegraph.get_node_state(task) in (nodegraph.DONE, nodegraph.ERROR):
                 tasks.pop(task)
 
+    def _clean_intermediate_files(self, nodegraph: NodeGraph) -> None:
+        # FIXME: Should not block main thread
+        for filepath in nodegraph.get_and_reset_intermediate_files():
+            self._logger.debug("Removing no longer needed file %s", quote(filepath))
+            if not try_remove(filepath):
+                self._logger.error("Failed to remove temp file %s", quote(filepath))
+
     def _handle_task_error(
         self,
         nodegraph: NodeGraph,
@@ -271,20 +294,25 @@ class Pypeline:
 
         self._logger.error("\n".join(message))
 
-    def _print_report(self, mode: str, file: IO[str] = sys.stdout) -> int:
+    def _print_report(
+        self,
+        mode: str,
+        graph: NodeGraph,
+        fscache: FileStatusCache,
+    ) -> int:
         try:
             if mode == "input_files":
                 self._logger.info("Collecting and printing input files ..")
-                return paleomix.core.reports.input_files(self._nodes, file)
+                return paleomix.core.reports.input_files(graph, fscache)
             elif mode == "output_files":
                 self._logger.info("Collecting and printing output files ..")
-                return paleomix.core.reports.output_files(self._nodes, file)
+                return paleomix.core.reports.output_files(graph, fscache)
             elif mode == "executables":
                 self._logger.info("Collecting and printing required executables ..")
-                return paleomix.core.reports.required_executables(self._nodes, file)
+                return paleomix.core.reports.required_executables(graph)
             elif mode == "pipeline_tasks":
                 self._logger.info("Printing pipeline tasks ..")
-                return paleomix.core.reports.pipeline_tasks(self._nodes, file)
+                return paleomix.core.reports.pipeline_tasks(graph)
             else:
                 raise ValueError("Unknown pipeline mode {!r}".format(mode))
         except BrokenPipeError:
@@ -318,11 +346,10 @@ class Pypeline:
 
         if verbose:
             rows = [
-                ("Number of tasks:", sum(states)),
+                ("Number of tasks:", sum(states.values())),
                 ("Number of done tasks:", states[nodegraph.DONE]),
                 ("Number of runable tasks:", states[nodegraph.RUNABLE]),
                 ("Number of queued tasks:", states[nodegraph.QUEUED]),
-                ("Number of outdated tasks:", states[nodegraph.OUTDATED]),
                 ("Number of failed tasks:", states[nodegraph.ERROR]),
             ]
 
@@ -338,8 +365,8 @@ class Pypeline:
         else:
             self._logger.info("Pipeline completed successfully")
 
-    def _set_node_state(self, graph: NodeGraph, node: Node, state: int) -> None:
-        for node, old_state, new_state in graph.set_node_state(node, state):
+    def _set_node_state(self, graph: NodeGraph, node: Node, state: StatusEnum) -> None:
+        for node, old_state, new_state in graph.set_node_status(node, state):
             if new_state in (NodeGraph.RUNNING, NodeGraph.DONE):
                 runtime = ""
                 if new_state == NodeGraph.RUNNING:
@@ -384,6 +411,16 @@ def add_scheduling_argument_group(
         type=int,
         default=max(2, multiprocessing.cpu_count()),
         help="Max number of threads to use in total",
+    )
+    group.add_argument(
+        "--intermediate-files",
+        type=CleanupStrategy,
+        default=CleanupStrategy.DELETE,
+        choices=tuple(CleanupStrategy),
+        help="Strategy for handling intermediate files: 'delete' removes intermediate "
+        "as soon as they are no longer needed; 'keep' keeps any existing intermediate "
+        "files, but does not regenerate missing intermediate files; and 'require' will "
+        "re-run tasks if intermediate files are missing",
     )
 
     return group
@@ -434,12 +471,12 @@ class _TaskInfo:
 
 
 class _Progress(paleomix.common.logging.Status):
-    def __init__(self, state_counts: List[int], color: Optional[str]):
+    def __init__(self, state_counts: Dict[StatusEnum, int], color: Optional[str]):
         super().__init__(color)
         self._state_counts = state_counts
 
     def __str__(self):
-        total = sum(self._state_counts)
+        total = sum(self._state_counts.values())
         nth = self._state_counts[NodeGraph.DONE] + self._state_counts[NodeGraph.ERROR]
 
         if total > 200:

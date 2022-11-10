@@ -21,13 +21,14 @@
 # SOFTWARE.
 #
 import errno
+import fnmatch
 import itertools
 import logging
 import os
 import shutil
 import sys
 from pathlib import Path
-from typing import Any, FrozenSet, Iterable, List, Optional, Union
+from typing import Any, FrozenSet, Iterable, List, Optional, Set, Union
 
 import paleomix
 import paleomix.common.fileutils as fileutils
@@ -62,6 +63,17 @@ class NodeUnhandledException(NodeError):
 
 
 class Node:
+    __description: Optional[str]
+    input_files: FrozenSet[str]
+    output_files: FrozenSet[str]
+    intermediate_output_files: Set[str]
+    executables: FrozenSet[str]
+    auxiliary_files: FrozenSet[str]
+    requirements: FrozenSet[Requirement]
+
+    threads: int
+    dependencies: FrozenSet["Node"]
+
     def __init__(
         self,
         description: Optional[str] = None,
@@ -79,6 +91,7 @@ class Node:
         self.__description = description
         self.input_files = self._validate_files(input_files)
         self.output_files = self._validate_files(output_files)
+        self.intermediate_output_files = set()
         self.executables = self._validate_files(executables)
         self.auxiliary_files = self._validate_files(auxiliary_files)
         self.requirements = self._validate_requirements(requirements)
@@ -140,6 +153,13 @@ class Node:
                 "Error while running %s" % (self,), path=temp
             ) from error
 
+    def mark_intermediate_files(self, glob: str = "*") -> None:
+        if glob == "*":
+            self.intermediate_output_files = set(self.output_files)
+            return
+
+        self.intermediate_output_files.update(fnmatch.filter(self.output_files, glob))
+
     def _create_temp_dir(self, temp_root: str) -> str:
         """Called by 'run' in order to create a temporary folder."""
         return fileutils.create_temp_dir(temp_root)
@@ -167,7 +187,7 @@ class Node:
         or other steps needed to ready the node for running may be carried out in this
         function. Checks that required input files exist, and raises an NodeError if
         this is not the case."""
-        executables = []  # type: List[str]
+        executables: List[str] = []
         for executable in self.executables:
             if executable == "%(PYTHON)s":
                 executable = sys.executable

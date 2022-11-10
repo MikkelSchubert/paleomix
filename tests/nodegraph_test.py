@@ -20,106 +20,112 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
+from typing import Dict, Optional
 
-from unittest.mock import Mock
-
-from paleomix.common.fileutils import fspath
-from paleomix.nodegraph import NodeGraph, FileStatusCache
+from paleomix.node import Node as Task
+from paleomix.nodegraph import FileStatusCache, NodeGraph, StatusEnum
 
 
-_TIMESTAMP_1 = 1000190760
-_TIMESTAMP_2 = 1120719000
+class MockCache(FileStatusCache):
+    def __init__(
+        self,
+        abspaths: Optional[Dict[str, str]] = None,
+        mtimes: Optional[Dict[str, int]] = None,
+    ):
+        self._abspaths = {} if abspaths is None else dict(abspaths)
+        self._mtimes = {} if mtimes is None else dict(mtimes)
+
+    def abspath(self, fpath: str) -> str:
+        return self._abspaths.get(fpath, fpath)
+
+    def _mtime_ns(self, fpath: str) -> Optional[int]:
+        return self._mtimes.get(fpath)
+
+    def update_mtime(self, fpath: str, mtime: int) -> None:
+        self._mtimes[fpath] = mtime
 
 
-def create_test_file(utime, *args):
-    filename = os.path.join(*map(fspath, args))
-    with open(filename, "wb"):
-        pass
+def single_task_status(task: Task) -> StatusEnum:
+    return NodeGraph([task]).get_node_state(task)
 
-    os.utime(filename, (utime, utime))
 
-    return filename
+def state_counts(**kwargs: int) -> Dict[StatusEnum, int]:
+    states = dict.fromkeys(StatusEnum, 0)
+    for key, value in kwargs.items():
+        states[StatusEnum(key)] += value
+
+    return states
 
 
 ###############################################################################
 ###############################################################################
-# NodeGraph: _is_done
-# TODO: Avoid testing private function, mock cache
 
 
-def test_nodegraph_is_done__no_output():
-    cache = FileStatusCache()
-    node = Mock(output_files=())
-    assert NodeGraph.is_done(node, cache)
+def test_empty_nodegraph():
+    graph = NodeGraph(tasks=())
+    assert graph.tasks == frozenset()
+    assert graph.requirements == ()
+    assert graph.get_state_counts() == dict.fromkeys(StatusEnum, 0)
+    assert graph.get_and_reset_intermediate_files() == []
+    assert graph.check_file_dependencies(MockCache())
 
 
-def test_nodegraph_is_done__output_changes(tmp_path):
-    temp_file_1 = tmp_path / "file_1.txt"
-    temp_file_2 = tmp_path / "file_2.txt"
-    my_node = Mock(output_files=(str(temp_file_1), str(temp_file_2)))
-    assert not NodeGraph.is_done(my_node, FileStatusCache())
-    temp_file_1.write_text("foo")
-    assert not NodeGraph.is_done(my_node, FileStatusCache())
-    temp_file_2.write_text("bar")
-    assert NodeGraph.is_done(my_node, FileStatusCache())
+def test_minimal_nodegraph_that_is_done():
+    fscache = MockCache(mtimes={"input": 0, "output": 1})
+    task = Task(input_files=["input"], output_files=["output"])
+    graph = NodeGraph(tasks=[task], fscache=fscache)
+
+    assert graph.tasks == frozenset([task])
+    assert graph.check_file_dependencies(fscache)
+
+    states = dict.fromkeys(StatusEnum, 0)
+    states[StatusEnum.DONE] = 1
+    assert graph.get_state_counts() == states
 
 
-def test_nodegraph_is_done__subnode_not_considered(tmp_path):
-    temp_file = tmp_path / "file.txt"
-    subnode = Mock(output_files=(str(temp_file),))
-    my_node = Mock(output_files=(), subnodes=(subnode,))
-    assert NodeGraph.is_done(my_node, FileStatusCache())
+def test_minimal_nodegraph_that_is_ready():
+    fscache = MockCache(mtimes={"input": 0})
+    task = Task(input_files=["input"], output_files=["output"])
+    graph = NodeGraph(tasks=[task], fscache=fscache)
+
+    assert graph.tasks == frozenset([task])
+    assert graph.get_state_counts() == state_counts(runable=1)
+    assert graph.check_file_dependencies(fscache)
+    assert graph.get_state_counts() == state_counts(runable=1)
 
 
-def test_nodegraph_is_outdated__no_output():
-    my_node = Mock(input_files=(), output_files=())
-    assert not NodeGraph.is_outdated(my_node, FileStatusCache())
+def test_minimal_nodegraph_that_depends_on_missing_input_file():
+    fscache = MockCache()
+    task = Task(input_files=["input"], output_files=["output"])
+    graph = NodeGraph(tasks=[task], fscache=fscache)
+
+    assert graph.get_node_state(task) == StatusEnum.RUNABLE
+    assert graph.get_state_counts() == state_counts(runable=1)
+    assert not graph.check_file_dependencies(fscache)
+    assert graph.get_node_state(task) == StatusEnum.ERROR
+    assert graph.get_state_counts() == state_counts(error=1)
+
+    states = dict.fromkeys(StatusEnum, 0)
+    states[StatusEnum.ERROR] = 1
+    assert graph.get_state_counts() == states
 
 
-def test_nodegraph_is_outdated__input_but_no_output(tmp_path):
-    input_file = tmp_path / "file"
-    input_file.touch()
+def test_minimal_nodegraph_that_depends_on_missing_auxiliary_file():
+    fscache = MockCache(mtimes={"input": 0})
+    task = Task(input_files=["input"], auxiliary_files=["aux"], output_files=["output"])
+    graph = NodeGraph(tasks=[task], fscache=fscache)
 
-    my_node = Mock(input_files=(str(input_file),), output_files=())
-    assert not NodeGraph.is_outdated(my_node, FileStatusCache())
-
-
-def test_nodegraph_is_outdated__output_but_no_input(tmp_path):
-    output_file = tmp_path / "file"
-    output_file.touch()
-
-    my_node = Mock(input_files=(), output_files=(str(output_file),))
-    assert not NodeGraph.is_outdated(my_node, FileStatusCache())
+    assert graph.get_node_state(task) == StatusEnum.RUNABLE
+    assert graph.get_state_counts() == state_counts(runable=1)
+    assert not graph.check_file_dependencies(fscache)
+    assert graph.get_node_state(task) == StatusEnum.ERROR
+    assert graph.get_state_counts() == state_counts(error=1)
 
 
-def test_nodegraph_is_outdated__not_outdated(tmp_path):
-    my_node = Mock(
-        input_files=(create_test_file(_TIMESTAMP_1, tmp_path, "older_file"),),
-        output_files=(create_test_file(_TIMESTAMP_2, tmp_path, "younger_file"),),
-    )
-    assert not NodeGraph.is_outdated(my_node, FileStatusCache())
+def test_check_empty_version_requirements_is_ok():
+    assert NodeGraph.check_version_requirements(())
+    assert NodeGraph.check_version_requirements((), force=True)
 
 
-def test_nodegraph_is_outdated__outdated(tmp_path):
-    my_node = Mock(
-        input_files=(create_test_file(_TIMESTAMP_2, tmp_path, "younger_file"),),
-        output_files=(create_test_file(_TIMESTAMP_1, tmp_path, "older_file"),),
-    )
-    assert NodeGraph.is_outdated(my_node, FileStatusCache())
-
-
-def test_nodegraph_is_outdated__updates(tmp_path):
-    older_file = create_test_file(_TIMESTAMP_1, tmp_path, "older_file")
-    younger_file = create_test_file(_TIMESTAMP_2, tmp_path, "younger_file")
-
-    my_node = Mock(
-        input_files=(older_file,),
-        output_files=(younger_file,),
-    )
-    assert not NodeGraph.is_outdated(my_node, FileStatusCache())
-    my_node = Mock(
-        input_files=(younger_file,),
-        output_files=(older_file,),
-    )
-    assert NodeGraph.is_outdated(my_node, FileStatusCache())
+# TODO: Detect tasks that only generate intermediate files, none of which are used
+#       by a downstream task, as these will not be run (unless strategy = required)
