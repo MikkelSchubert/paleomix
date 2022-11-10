@@ -255,7 +255,10 @@ class AtomicCmd:
 
             self._command.append(value)
 
-    def add_extra_files(self, files: Iterable[Any]):
+    def add_requirement(self, requirements: Requirement):
+        self._requirements.add(requirements)
+
+    def add_extra_files(self, files: Iterable[_AtomicFile]):
         if self._proc is not None:
             raise CmdError("cannot modify already started command")
 

@@ -206,21 +206,28 @@ class BAMMergeNode(CommandNode):
 
             threads = 1
         else:
-            self.index, requirement = _try_write_index(out_file, index_format)
-
-            cmd = AtomicCmd(
-                ["samtools", "merge"],
-                requirements=[requirement],
-            )
-
-            if self.index is not None:
-                cmd.append("--write-index")
-                cmd.add_extra_files([OutputFile(self.index)])
-
+            cmd = AtomicCmd(["samtools", "merge"])
             cmd.append_options(options)
-            cmd.append(OutputFile(out_file))
+
+            self.index, requirement = _try_write_index(out_file, index_format)
+            if self.index is not None:
+                cmd.add_extra_files([OutputFile(self.index), OutputFile(out_file)])
+                cmd.append("--write-index")
+                # The location of the output index (and its format) can be specified by
+                # writing the output file as "${outfile}##idx##${outindex}"
+                cmd.append(
+                    "%(TEMP_DIR)s/{}##idx##%(TEMP_DIR)s/{}".format(
+                        os.path.basename(out_file),
+                        os.path.basename(self.index),
+                    )
+                )
+            else:
+                cmd.append(OutputFile(out_file))
+
             for in_file in in_files:
                 cmd.append(InputFile(in_file))
+
+            cmd.add_requirement(requirement)
 
             threads = _get_number_of_threads(options)
 
