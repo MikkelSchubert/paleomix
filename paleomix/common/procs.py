@@ -29,15 +29,13 @@ import signal
 import sys
 from os import PathLike
 from subprocess import Popen, TimeoutExpired
-from typing import IO, Any, AnyStr, Iterable, List, Optional, TypeAlias, cast
-
-PathTypes: TypeAlias = str | bytes | PathLike[str] | PathLike[bytes]  # stable
+from typing import IO, Any, AnyStr, Iterable, List, Optional, cast
 
 # List of running processes; can be terminated with `terminate_all_processes`
 _RUNNING_PROCS: List[Popen[Any]] = []
 
 
-def quote_args(args: PathTypes | Iterable[PathTypes]) -> str:
+def quote_args(args: Any) -> str:
     if isinstance(args, (str, bytes, os.PathLike)):
         args = [args]
 
