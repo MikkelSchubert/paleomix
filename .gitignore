@@ -24,3 +24,4 @@ sdist/
 # Misc
 venv
 docs/_build/
+.pytype
