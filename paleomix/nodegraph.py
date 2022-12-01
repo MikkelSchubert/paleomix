@@ -208,6 +208,8 @@ class NodeGraph:
         self._resolve_task_status(status, producers, fscache)
         self._log.debug("Re-add explicit (validation) dependencies")
         self._link_explicit_dependencies(self._status)
+        self._log.debug("Check for intermediate files without dependencies")
+        self._check_intermediate_files(self._status)
         self._log.debug("Locating first batch of runable tasks")
         self._mark_runable_tasks(self._status)
         self._log.debug("Gathering task state statistics")
@@ -522,6 +524,17 @@ class NodeGraph:
                     # blocked even if the task depending on the validation step is done.
                     if tstatus.is_done() and not dstatus.is_done():
                         _add_dependencies(dstatus, list(tstatus.rev_dependencies))
+
+    def _check_intermediate_files(self, tasks: Dict[Task, TaskStatus]) -> None:
+        any_errors = False
+        for task, tstatus in tasks.items():
+            if tstatus.intermediate_output_files.issuperset(tstatus.output_files):
+                if not tstatus.rev_dependencies:
+                    self._log.error("Intermediate task with no dependencies: %s", task)
+                    any_errors = True
+
+        if any_errors:
+            raise NodeGraphError("Aborted due to bug!")
 
     def _mark_runable_tasks(self, tasks: Dict[Task, TaskStatus]) -> None:
         for task in tasks.values():
