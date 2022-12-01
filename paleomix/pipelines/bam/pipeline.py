@@ -708,6 +708,7 @@ def run(config):
         temp_root=config.temp_root,
         max_threads=config.max_threads,
         intermediate_files=config.intermediate_files,
+        required_files=config.require_files,
     )
 
     return pipeline.run(config.pipeline_mode)

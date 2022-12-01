@@ -22,6 +22,7 @@
 #
 import collections
 import errno
+import fnmatch
 import logging
 import os
 from enum import Enum
@@ -125,7 +126,7 @@ class TaskStatus:
     input_files: FrozenSet[str]
     output_files: FrozenSet[str]
     auxiliary_files: FrozenSet[str]
-    intermediate_output_files: FrozenSet[str]
+    intermediate_output_files: Set[str]
 
     def __init__(self, task: Task, fscache: FileStatusCache) -> None:
         self._task = task
@@ -137,9 +138,9 @@ class TaskStatus:
         self.input_files = frozenset(map(fscache.abspath, task.input_files))
         self.output_files = frozenset(map(fscache.abspath, task.output_files))
         self.auxiliary_files = frozenset(map(fscache.abspath, task.auxiliary_files))
-        self.intermediate_output_files = frozenset(
-            map(fscache.abspath, task.intermediate_output_files)
-        )
+        self.intermediate_output_files = {
+            fscache.abspath(filepath) for filepath in task.intermediate_output_files
+        }
 
     def is_queued_and_runnable(self):
         if self.status != StatusEnum.QUEUED:
@@ -184,6 +185,7 @@ class NodeGraph:
         tasks: Iterable[Task],
         fscache: Optional[FileStatusCache] = None,
         intermediate_files: CleanupStrategy = CleanupStrategy.DELETE,
+        required_files: Iterable[str] = (),
     ):
         if not fscache:
             fscache = FileStatusCache()
@@ -204,6 +206,8 @@ class NodeGraph:
 
         self._log.debug("Determining tasks that must be (re-)run due to outdated files")
         self._flag_outdated_tasks(status, fscache)
+        self._log.debug("Mark user-requested intermediate files")
+        self._require_intermediate_files(producers, required_files)
         self._log.debug("Iteratively resolving status of tasks")
         self._resolve_task_status(status, producers, fscache)
         self._log.debug("Re-add explicit (validation) dependencies")
@@ -365,7 +369,7 @@ class NodeGraph:
                     queue.add(dependency)
 
             if self._intermediate_files_strategy == CleanupStrategy.REQUIRE:
-                status.intermediate_output_files = frozenset()
+                status.intermediate_output_files.clear()
 
         return tasks
 
@@ -460,6 +464,29 @@ class NodeGraph:
                         self._log.debug(" - [%s] %s", StatusEnum.QUEUED, task)
                         task.status = StatusEnum.QUEUED
                         break
+
+    def _require_intermediate_files(
+        self,
+        producers: Dict[str, TaskStatus],
+        globs: Iterable[str],
+    ) -> None:
+        any_errors = False
+        for glob in globs:
+            nmarked = 0
+            tstatus = None
+            for filename in fnmatch.filter(producers, glob):
+                tstatus = producers[filename]
+                if filename in tstatus.intermediate_output_files:
+                    tstatus.intermediate_output_files.remove(filename)
+                    nmarked += 1
+
+            self._log.debug("Required %i intermediate files matching %r", nmarked, glob)
+            if tstatus is None:
+                self._log.error("No output files found for --require-files %r", glob)
+                any_errors = True
+
+        if any_errors:
+            raise NodeGraphError("Files requested via --require-files do not exist")
 
     def _resolve_task_status(
         self,

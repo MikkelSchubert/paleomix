@@ -29,7 +29,7 @@ import signal
 import sys
 import time
 from shlex import quote
-from typing import IO, Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 import paleomix.common.logging
 import paleomix.core.reports
@@ -54,6 +54,7 @@ class Pypeline:
         temp_root: str = "/tmp",
         max_threads: int = 1,
         intermediate_files: CleanupStrategy = CleanupStrategy.DELETE,
+        required_files: Iterable[str] = (),
     ):
         self._nodes = safe_coerce_to_tuple(nodes)
         for node in self._nodes:
@@ -66,6 +67,7 @@ class Pypeline:
         self._threads = max(0, max_threads)
         self._temp_root = temp_root
         self._intermediate_files_strategy = intermediate_files
+        self._required_files = frozenset(required_files)
         self._start_times: Dict[Node, float] = {}
         self._progress_color: Optional[str] = None
 
@@ -86,6 +88,7 @@ class Pypeline:
                 tasks=self._nodes,
                 fscache=fscache,
                 intermediate_files=self._intermediate_files_strategy,
+                required_files=self._required_files,
             )
         except NodeGraphError as error:
             self._logger.error(error)
@@ -412,6 +415,8 @@ def add_scheduling_argument_group(
         default=max(2, multiprocessing.cpu_count()),
         help="Max number of threads to use in total",
     )
+
+    group = parser.add_argument_group("Intermediate files")
     group.add_argument(
         "--intermediate-files",
         type=CleanupStrategy,
@@ -421,6 +426,14 @@ def add_scheduling_argument_group(
         "as soon as they are no longer needed; 'keep' keeps any existing intermediate "
         "files, but does not regenerate missing intermediate files; and 'require' will "
         "re-run tasks if intermediate files are missing",
+    )
+    group.add_argument(
+        "--require-files",
+        metavar="glob",
+        default=[],
+        action="append",
+        help="Intermediate files matching the glob will never be deleted and will be "
+        "re-generated if missing, no matter what --intermediate-files strategy is used.",
     )
 
     return group
