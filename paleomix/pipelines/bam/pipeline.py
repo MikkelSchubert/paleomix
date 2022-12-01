@@ -228,6 +228,9 @@ def _process_untrimmed_reads(layout, record, args):
         if task.out_merged_truncated:
             yield ("CollapsedTruncated", (task.out_merged_truncated, None), task)
 
+    if args.pipeline_variant != "trim":
+        task.mark_intermediate_files("*.gz")
+
 
 ########################################################################################
 
@@ -279,11 +282,14 @@ def map_fastq_reads(args, layout, genome, record):
     # Dependencies for genome indexing for the selected aligner
     parameters["dependencies"].extend(genome["Tasks"][aligner])
 
+    task = mapping_task_func(**parameters)
+    task.mark_intermediate_files()
+
     return {
         "Type": record["Type"],
         "Path": output_file,
         "Options": record["Options"],
-        "Task": mapping_task_func(**parameters),
+        "Task": task,
     }
 
 
@@ -307,6 +313,8 @@ def _build_bwa_backtrack_se_task(
         mapping_options=mapping_options,
         dependencies=dependencies,
     )
+
+    sai_task.mark_intermediate_files()
 
     return BWASamse(
         input_file_fq=input_file,
@@ -343,6 +351,9 @@ def _build_bwa_backtrack_pe_task(
     task_sai_1 = BWABacktrack(input_file_1, output_sai_1, **backtrack_options)
     task_sai_2 = BWABacktrack(input_file_2, output_sai_2, **backtrack_options)
 
+    task_sai_1.mark_intermediate_files()
+    task_sai_2.mark_intermediate_files()
+
     return BWASampe(
         input_file_sai_1=output_sai_1,
         input_file_sai_2=output_sai_2,
@@ -359,7 +370,7 @@ def _build_bwa_backtrack_pe_task(
 def _build_bwa_backtrack_task(input_file_1, input_file_2, mapping_options, **kwargs):
     if not mapping_options["UseSeed"]:
         mapping_options = dict(mapping_options)
-        mapping_options["-l"] = 2**16 - 1
+        mapping_options["-l"] = 2 ** 16 - 1
 
     if input_file_2 is None:
         return _build_bwa_backtrack_se_task(
@@ -466,6 +477,8 @@ def _filter_pcr_duplicates_by_type(args, layout, options, tasks_by_read_type, st
         else:
             raise RuntimeError("unexpected read type {!r}".format(key))
 
+        task.mark_intermediate_files("*.bam")
+
         records.append(
             {
                 "Type": key,
@@ -518,6 +531,8 @@ def run_mapdamage(layout: Layout, genome, records):
             options=options["mapDamage"],
             dependencies=(extra_task,),
         )
+
+        task.mark_intermediate_files("*.bam")
 
         extra_task = None
         records = [
@@ -637,7 +652,7 @@ def build_pipeline_full(args, makefile):
         # TODO: Per sample statistics
 
 
-def run(config, pipeline_variant):
+def run(config):
     paleomix.common.logging.initialize(
         log_level=config.log_level,
         log_file=config.log_file,
@@ -645,8 +660,8 @@ def run(config, pipeline_variant):
     )
 
     logger = logging.getLogger(__name__)
-    if pipeline_variant not in ("bam", "trim"):
-        logger.critical("Unexpected BAM pipeline variant %r", pipeline_variant)
+    if config.pipeline_variant not in ("bam", "trim"):
+        logger.critical("Unexpected BAM pipeline variant %r", config.pipeline_variant)
         return 1
 
     if not os.path.exists(config.temp_root):
@@ -661,13 +676,13 @@ def run(config, pipeline_variant):
         return 1
 
     try:
-        makefiles = read_makefiles(config.makefiles, pipeline_variant)
+        makefiles = read_makefiles(config.makefiles, config.pipeline_variant)
     except (MakefileError, YAMLError, IOError) as error:
         logger.error("Error reading makefiles: %s", error)
         return 1
 
     pipeline_func = build_pipeline_trimming
-    if pipeline_variant != "trim":
+    if config.pipeline_variant != "trim":
         # Genomes are processed first so that these tasks are started before reads are
         # trimmed. This allows mapping to be started as early as possible.
         if not index_genomes(logger, makefiles):
@@ -692,6 +707,7 @@ def run(config, pipeline_variant):
         nodes=nodes,
         temp_root=config.temp_root,
         max_threads=config.max_threads,
+        intermediate_files=config.intermediate_files,
     )
 
     return pipeline.run(config.pipeline_mode)

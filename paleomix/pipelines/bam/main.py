@@ -23,7 +23,9 @@ def main(argv: List[str], pipeline: str = "bam") -> int:
     if args.command.startswith("dry") and args.pipeline_mode == "run":
         args.pipeline_mode = "dry_run"
 
-    return bam_pipeline.run(args, pipeline_variant=pipeline)
+    args.pipeline_variant = pipeline
+
+    return bam_pipeline.run(args)
 
 
 def _main_template() -> int:
