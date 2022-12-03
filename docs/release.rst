@@ -6,6 +6,12 @@ Release checklist
 * Update version numbers referenced in `installation.rst`
 * Update version in paleomix_environment.yaml
 
+Publish to github
+-----------------
+
+* Tag release
+* git push --tags
+
 
 Publish to PyPi
 ---------------
@@ -21,12 +27,6 @@ Publish to PyPi
 * pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple paleomix
 * twine upload dist/*
 
-
-Publish to github
------------------
-
-* Tag release
-* git push --tags
 
 
 Misc

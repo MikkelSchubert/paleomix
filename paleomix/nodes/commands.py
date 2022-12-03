@@ -38,7 +38,7 @@ from paleomix.common.command import (
 )
 from paleomix.common.fileutils import describe_files
 from paleomix.node import CommandNode, Node
-from paleomix.nodes.samtools import BCFTOOLS_VERSION, merge_bam_files_command
+from paleomix.nodes.samtools import merge_bam_files_command
 
 
 class CoverageNode(CommandNode):
@@ -120,135 +120,6 @@ class FilterCollapsedBAMNode(CommandNode):
             command=command,
             description="filtering merged-read PCR duplicates in %s"
             % (describe_files(input_bams),),
-            dependencies=dependencies,
-        )
-
-
-class VCFFilterNode(CommandNode):
-    def __init__(self, infile, outfile, regions, options, dependencies=()):
-        vcffilter = factory.new(
-            ["vcf_filter", InputFile(infile)],
-            stdout=AtomicCmd.PIPE,
-        )
-
-        vcffilter.merge_options(
-            user_options=options,
-            fixed_options={
-                "--homozygous-chromosome": regions["HomozygousContigs"],
-            },
-        )
-
-        bgzip = AtomicCmd(["bgzip"], stdin=vcffilter, stdout=outfile)
-
-        CommandNode.__init__(
-            self,
-            description="filtering VCF records in %s" % (infile,),
-            command=ParallelCmds([vcffilter, bgzip]),
-            dependencies=dependencies,
-        )
-
-
-class GenotypeRegionsNode(CommandNode):
-    def __init__(
-        self,
-        reference,
-        infile,
-        bedfile,
-        outfile,
-        mpileup_options={},
-        bcftools_options={},
-        dependencies=(),
-    ):
-        mpileup = AtomicCmd(
-            ("bcftools", "mpileup", InputFile(infile)),
-            stdout=AtomicCmd.PIPE,
-            requirements=[BCFTOOLS_VERSION],
-        )
-
-        fixed_options = {
-            # Ignore read-groups for pileup
-            "--ignore-RG": None,
-            # Reference sequence (FASTA)
-            "--fasta-ref": reference,
-            # Output compressed VCF
-            "--output-type": "u",
-        }
-
-        if bedfile:
-            fixed_options["--regions-file"] = InputFile(bedfile)
-
-        mpileup.merge_options(
-            user_options=mpileup_options,
-            fixed_options=fixed_options,
-        )
-
-        genotype = AtomicCmd(
-            ("bcftools", "call", "-"),
-            stdin=mpileup,
-            stdout=outfile,
-            requirements=[BCFTOOLS_VERSION],
-        )
-
-        genotype.merge_options(
-            user_options=bcftools_options,
-            fixed_options={
-                "--output-type": "z",
-            },
-        )
-
-        CommandNode.__init__(
-            self,
-            description="calling genotypes from %s" % (infile,),
-            command=ParallelCmds([mpileup, genotype]),
-            dependencies=dependencies,
-        )
-
-
-class BuildRegionsNode(CommandNode):
-    def __init__(self, infile, bedfile, outfile, padding, options={}, dependencies=()):
-        command = factory.new(
-            "vcf_to_fasta",
-            stdout=outfile,
-            extra_files=[
-                InputFile(infile + ".tbi"),
-            ],
-        )
-
-        command.merge_options(
-            user_options=options,
-            fixed_options={
-                "--padding": padding,
-                "--genotype": InputFile(infile),
-                "--intervals": InputFile(bedfile),
-            },
-        )
-
-        CommandNode.__init__(
-            self,
-            description="building FASTA from %s" % (infile,),
-            command=command,
-            dependencies=dependencies,
-        )
-
-
-class PaddedBedNode(CommandNode):
-    def __init__(self, infile, outfile, fai_file, amount=0, dependencies=()):
-        command = factory.new(
-            [
-                ":bedtools",
-                "pad",
-                "--padding",
-                amount,
-                InputFile(fai_file),
-                InputFile(infile),
-            ],
-            stdout=outfile,
-        )
-
-        CommandNode.__init__(
-            self,
-            description="padding BED records (%+i) in %s" % (amount, infile),
-            command=command,
             dependencies=dependencies,
         )
 

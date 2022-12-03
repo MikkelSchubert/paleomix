@@ -2,7 +2,7 @@
 Welcome to PALEOMIX's documentation!
 ====================================
 
-The PALEOMIX pipelines are a set of pipelines and tools designed to aid the rapid processing of High-Throughput Sequencing (HTS) data: The BAM pipeline processes demultiplexed reads from one or more samples, through sequence processing and alignment, to generate BAM alignment files useful in downstream analyses; the Phylogenetic pipeline carries out genotyping and phylogenetic inference on BAM alignment files, either produced using the BAM pipeline or generated elsewhere; and the Zonkey pipeline carries out a suite of analyses on low coverage equine alignments, in order to detect the presence of F1-hybrids in archaeological assemblages.
+The PALEOMIX pipelines are a set of pipelines and tools designed to aid the rapid processing of High-Throughput Sequencing (HTS) data: The BAM pipeline processes demultiplexed reads from one or more samples, through sequence processing and alignment, to generate BAM alignment files useful in downstream analyses, and the Zonkey pipeline carries out a suite of analyses on low coverage equine alignments, in order to detect the presence of F1-hybrids in archaeological assemblages.
 
 The pipelines were originally designed with ancient DNA (aDNA) in mind, and includes several features especially useful for the analyses of ancient samples, but can all be used for the processing of modern samples.
 
@@ -26,7 +26,6 @@ For questions, bug reports, and/or suggestions, please use the PALEOMIX `GitHub 
    installation.rst
 
    bam_pipeline/index.rst
-   phylo_pipeline/index.rst
    zonkey_pipeline/index.rst
 
    other_tools.rst

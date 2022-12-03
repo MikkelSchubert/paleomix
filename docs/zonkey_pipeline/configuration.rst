@@ -4,7 +4,7 @@
 Configuring the Zonkey pipeline
 ===============================
 
-Unlike the :ref:`bam_pipeline` and the :ref:`phylo_pipeline`, the :ref:`zonkey_pipeline` does not make use of makefiles. However, the pipeline does expose a number options, including the maximum number of threads used, various program parameters, and more. These may be set using the corresponding command-line options (e.g. --max-threads to set the maximum number of threads used during runtime). However, it is also possible to set default values for such options, including on a per-host bases. This is accomplished by executing the following command, in order to generate a configuration file at ~/.paleomix/zonkey.ini:
+Unlike the :ref:`bam_pipeline`, the :ref:`zonkey_pipeline` does not make use of makefiles. However, the pipeline does expose a number options, including the maximum number of threads used, various program parameters, and more. These may be set using the corresponding command-line options (e.g. --max-threads to set the maximum number of threads used during runtime). However, it is also possible to set default values for such options, including on a per-host bases. This is accomplished by executing the following command, in order to generate a configuration file at ~/.paleomix/zonkey.ini:
 
 .. code-block:: bash
 

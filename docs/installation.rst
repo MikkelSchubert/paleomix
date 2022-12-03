@@ -5,7 +5,7 @@
 Installation
 ============
 
-The following instructions will install PALEOMIX for the current user, but does not include specific programs required by the pipelines. For pipeline specific instructions, refer to the requirements sections for the :ref:`BAM <bam_requirements>`, the :ref:`Phylogentic <phylo_requirements>`, and the :ref:`Zonkey <zonkey_requirements>` pipeline.
+The following instructions will install PALEOMIX for the current user, but does not include specific programs required by the pipelines. For pipeline specific instructions, refer to the requirements sections for the :ref:`BAM <bam_requirements>`, and the :ref:`Zonkey <zonkey_requirements>` pipeline.
 
 The recommended way of installing PALEOMIX is by use of the `pip`_ package manager for Python 3. If pip is not installed, then please consult the documentation for your operating system. For Debian based operating systems, pip may be installed as follows::
 

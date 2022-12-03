@@ -383,7 +383,7 @@ Optional features
         If enabled, a table summarizing the number of hits, the number of aligned bases, bases inserted, and bases deleted, as well as the mean coverage, is generated for each reference sequence, stratified by sample, library, and contig.
 
     *Depths*
-        If enabled, a table containing a histogram of the depth of coverage, ranging from 0 to 200, is generated for each reference sequence, stratified by sample, library, and contig. These files may further be used by the Phylogenetic pipeline, in order to automatically select a maximum read depth during SNP calling (see the :ref:`phylo_usage` section for more information).
+        If enabled, a table containing a histogram of the depth of coverage, ranging from 0 to 200, is generated for each reference sequence, stratified by sample, library, and contig.
 
     *Summary*
         If enabled, a single summary table will be generated per target, containing information about the number of reads processed, hits and fraction of PCR duplicates (per prefix and per library), and much more.

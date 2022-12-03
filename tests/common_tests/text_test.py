@@ -25,12 +25,10 @@ import collections
 import pytest
 
 from paleomix.common.text import (
-    TableError,
     format_timespan,
     padded_table,
     parse_lines,
     parse_lines_by_contig,
-    parse_padded_table,
 )
 
 ###############################################################################
@@ -97,98 +95,6 @@ _PT_PERMUTATIONS = (
 @pytest.mark.parametrize("table, expected", _PT_PERMUTATIONS)
 def test_padded_table__with_text(table, expected):
     assert expected == _padded_table(table)
-
-
-###############################################################################
-###############################################################################
-# Tests for 'parse_padded_table'
-
-
-def _parse_padded_table(*args, **kwargs):
-    return list(parse_padded_table(*args, **kwargs))
-
-
-def test_parse_padded_table__empty():
-    assert [] == _parse_padded_table([])
-
-
-def test_parse_padded_table__header_only():
-    assert [] == _parse_padded_table(["A  B  C  D"])
-
-
-def test_parse_padded_table__single_row():
-    table = ["A    B    C    D", "4    3    2    1"]
-    expected = [{"A": "4", "B": "3", "C": "2", "D": "1"}]
-    assert expected == _parse_padded_table(table)
-
-
-def test_parse_padded_table__two_rows():
-    table = ["A     B     C     D", "4     3     2     1", "AB    CD    EF    GH"]
-    expected = [
-        {"A": "4", "B": "3", "C": "2", "D": "1"},
-        {"A": "AB", "B": "CD", "C": "EF", "D": "GH"},
-    ]
-    assert expected == _parse_padded_table(table)
-
-
-# Any amount of whitespace is allowed
-def test_parse_padded_table__single_row__with_whitespace():
-    table = ["A   B    C       E F", "1        0  1    2   3"]
-    expected = [{"A": "1", "B": "0", "C": "1", "E": "2", "F": "3"}]
-    assert expected == _parse_padded_table(table)
-
-
-# Other whitespace should be ignored
-def test_parse_padded_table__single_row__with_tabs():
-    table = ["A\t\t\t\tB", "1\t\t\t\t0"]
-    expected = [{"A": "1", "B": "0"}]
-    assert expected == _parse_padded_table(table)
-
-
-_PT_COMMENTS_LINE_AND_EMPTY_1 = "A         B      C"
-_PT_COMMENTS_LINE_AND_EMPTY_2 = "3000      20      1"
-
-__PT_COMMENTS_LINE_AND_EMPTY = (
-    ["# comment", _PT_COMMENTS_LINE_AND_EMPTY_1, _PT_COMMENTS_LINE_AND_EMPTY_2],
-    [_PT_COMMENTS_LINE_AND_EMPTY_1, " # comment", _PT_COMMENTS_LINE_AND_EMPTY_2],
-    [_PT_COMMENTS_LINE_AND_EMPTY_1, _PT_COMMENTS_LINE_AND_EMPTY_2, "  # comment"],
-    ["", _PT_COMMENTS_LINE_AND_EMPTY_1, _PT_COMMENTS_LINE_AND_EMPTY_2],
-    [_PT_COMMENTS_LINE_AND_EMPTY_1, "  ", _PT_COMMENTS_LINE_AND_EMPTY_2],
-    [_PT_COMMENTS_LINE_AND_EMPTY_1, _PT_COMMENTS_LINE_AND_EMPTY_2, "   "],
-)
-
-
-@pytest.mark.parametrize("lines", __PT_COMMENTS_LINE_AND_EMPTY)
-def test_padded_table__comments_and_empty_lines(lines):
-    expected = [{"A": "3000", "B": "20", "C": "1"}]
-    assert expected == _parse_padded_table(lines)
-
-
-@pytest.mark.parametrize("postfix", ("\r", "\n", "\r\n"))
-def test_padded_table__newlines(postfix):
-    expected = [{"A": "3000", "B": "20", "C": "1"}]
-
-    line_1 = "A         B       C" + postfix
-    line_2 = "3000      20      1" + postfix
-    assert expected == _parse_padded_table([line_1, line_2])
-
-
-def test_padded_table__padding__comments__whitespace():
-    expected = [{"A": "3000", "B": "20", "C": "1"}]
-    lines = ["A         B       C", "3000      20      1", "  # useless comment"]
-    assert expected == _parse_padded_table(lines)
-
-
-def test_parse_padded_table__malformed_table_0():
-    table = ["A    B    C    D", "4    3    2"]
-    with pytest.raises(TableError):
-        _parse_padded_table(table)
-
-
-def test_parse_padded_table__malformed_table_1():
-    table = ["A    B    C    D", "4    3    2    1    0"]
-    with pytest.raises(TableError):
-        _parse_padded_table(table)
 
 
 ###############################################################################

@@ -146,17 +146,6 @@ def test_basic__read_makefiles__bam_template(tmp_path):
 # Tests for genome specifications
 
 
-def _genome_template():
-    template = copy.deepcopy(TEMPLATE_BAM)
-    template.pop("Samples")
-    template["Genomes"].pop("NAME_OF_PREFIX")
-
-    return template
-
-
-GENOMES_TEMPLATE = _genome_template()
-
-
 def _write_genome_yaml(tmp_path, genomes):
     filepath = tmp_path / "temp.yaml"
     with filepath.open("wt") as handle:

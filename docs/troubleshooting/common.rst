@@ -49,7 +49,7 @@ In addition, the pipeline performs a number of which during startup, which may r
 
 **Required file does not exist, and is not created by a node**:
 
-    Before start, the BAM and Phylogenetic pipeline checks for the presence of all required files. Should one or more files be missing, and the missing file is NOT created by the pipeline itself, an error similar to the following will be raised::
+    Before start, the pipeline check for the presence of all required files. Should one or more files be missing, and the missing file is NOT created by the pipeline itself, an error similar to the following will be raised::
 
         $ paleomix bam run makefile.yaml
         [...]
