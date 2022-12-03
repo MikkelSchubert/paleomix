@@ -194,6 +194,26 @@ def try_rmtree(filename: Union[str, Path]) -> bool:
     return _try_rm_wrapper(shutil.rmtree, filename)
 
 
+def try_rmdirs(dirpath: Union[str, Path]) -> bool:
+    try:
+        items = os.scandir(dirpath)
+    except FileNotFoundError:
+        return True
+
+    is_empty = True
+    for it in items:
+        if it.is_symlink() or not it.is_dir():
+            is_empty = False
+        elif not try_rmdirs(it.path):
+            is_empty = False
+
+    if is_empty:
+        # If _try_rm_wrapper returns then the folder no longer exists
+        _try_rm_wrapper(os.rmdir, dirpath)
+
+    return is_empty
+
+
 def describe_files(files: Iterable[str]) -> str:
     """Return a text description of a set of files."""
     files = validate_filenames(files)
@@ -340,11 +360,10 @@ def _sh_wrapper(
 
     try:
         func(source, destination)
-    except IOError as error:
-        if error.errno == errno.ENOENT:
-            if source and destination and os.path.exists(source):
-                make_dirs(os.path.dirname(destination))
-                return func(source, destination)
+    except FileNotFoundError:
+        if source and destination and os.path.exists(source):
+            make_dirs(os.path.dirname(destination))
+            return func(source, destination)
         raise
 
 
@@ -355,7 +374,5 @@ def _try_rm_wrapper(func: Callable[[Any], Any], fpath: Union[str, Path]) -> bool
     try:
         func(fspath(fpath))
         return True
-    except OSError as error:
-        if error.errno != errno.ENOENT:
-            raise
+    except FileNotFoundError:
         return False

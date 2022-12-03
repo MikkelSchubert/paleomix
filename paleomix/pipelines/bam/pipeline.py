@@ -27,7 +27,7 @@ from collections import defaultdict
 import paleomix
 import paleomix.common.logging
 import paleomix.node
-from paleomix.common.fileutils import swap_ext
+from paleomix.common.fileutils import swap_ext, try_rmdirs
 from paleomix.common.layout import Layout
 from paleomix.common.yaml import YAMLError
 from paleomix.nodegraph import CleanupStrategy
@@ -727,4 +727,16 @@ def run(config):
         required_files=config.require_files,
     )
 
-    return pipeline.run(config.pipeline_mode)
+    returncode = pipeline.run(config.pipeline_mode)
+
+    if (
+        not returncode
+        and config.pipeline_mode == "run"
+        and config.intermediate_files == CleanupStrategy.DELETE
+    ):
+        logger.info("Cleaning up temporary directories")
+        for makefile in makefiles:
+            for sample in makefile["Samples"]:
+                try_rmdirs(os.path.join(config.destination, "{}.cache".format(sample)))
+
+    return returncode
