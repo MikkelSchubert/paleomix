@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from typing import Iterable
+from typing import Any, Iterable, List, Optional
 
 import paleomix.common.fileutils as fileutils
 import paleomix.common.versions as versions
@@ -45,18 +45,21 @@ class SE_AdapterRemovalNode(CommandNode):
         self,
         input_file: str,
         output_prefix: str,
+        output_settings: Optional[str] = None,
         threads: int = 1,
         options: OptionsType = {},
         dependencies: Iterable[Node] = (),
     ):
         self.out_settings = output_prefix + ".settings"
+        if output_settings is not None:
+            self.out_settings = output_settings
+
         self.out_truncated = "{}.truncated.gz".format(output_prefix)
         self.out_discarded = "{}.discarded.gz".format(output_prefix)
 
         command = AtomicCmd(
             "AdapterRemoval",
             extra_files=[
-                OutputFile(self.out_settings),
                 OutputFile(self.out_truncated),
                 OutputFile(self.out_discarded),
             ],
@@ -80,6 +83,8 @@ class SE_AdapterRemovalNode(CommandNode):
                 "--threads": threads,
                 # Prefix for output files, ensure that all end up in temp folder
                 "--basename": TempOutputFile(output_prefix),
+                # Possibly non-standard locations for settings
+                "--settings": OutputFile(self.out_settings),
             },
         )
 
@@ -99,11 +104,15 @@ class PE_AdapterRemovalNode(CommandNode):
         input_file_1: str,
         input_file_2: str,
         output_prefix: str,
+        output_settings: Optional[str] = None,
         threads: int = 1,
         options: OptionsType = {},
         dependencies: Iterable[Node] = (),
     ):
         self.out_settings = output_prefix + ".settings"
+        if output_settings is not None:
+            self.out_settings = output_settings
+
         self.out_paired = "{}.pair{{Pair}}.truncated.gz".format(output_prefix)
         self.out_singleton = "{}.singleton.truncated.gz".format(output_prefix)
         self.out_discarded = "{}.discarded.gz".format(output_prefix)
@@ -113,7 +122,6 @@ class PE_AdapterRemovalNode(CommandNode):
         command = AtomicCmd(
             "AdapterRemoval",
             extra_files=[
-                OutputFile(self.out_settings),
                 OutputFile(self.out_paired.format(Pair=1)),
                 OutputFile(self.out_paired.format(Pair=2)),
                 OutputFile(self.out_singleton),
@@ -151,6 +159,8 @@ class PE_AdapterRemovalNode(CommandNode):
                 "--threads": threads,
                 # Prefix for output files, ensure that all end up in temp folder
                 "--basename": TempOutputFile(output_prefix),
+                # Possibly non-standard locations for settings
+                "--settings": OutputFile(self.out_settings),
             },
         )
 
@@ -214,7 +224,7 @@ def _finalize_options(
         user_options["--adapter-list"] = InputFile(adapter_list)
 
     # Terminal trimming options are specified as --trimXp A B
-    extra_options = []
+    extra_options: List[Any] = []
     for key in ("--trim5p", "--trim3p"):
         value = user_options.get(key)
         if isinstance(value, list):

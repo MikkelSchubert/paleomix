@@ -30,6 +30,7 @@ import paleomix.node
 from paleomix.common.fileutils import swap_ext
 from paleomix.common.layout import Layout
 from paleomix.common.yaml import YAMLError
+from paleomix.nodegraph import CleanupStrategy
 from paleomix.nodes.adapterremoval import PE_AdapterRemovalNode, SE_AdapterRemovalNode
 from paleomix.nodes.bowtie2 import Bowtie2IndexNode, Bowtie2Node
 from paleomix.nodes.bwa import (
@@ -64,13 +65,11 @@ LAYOUT = {
                 "{lane}": {
                     "{shortname}": {
                         "{read_type}.bam": "initial_bam",
-                        "{read_type}.stats": "initial_stats",
                     }
                 }
             },
             # Libraries processed using `samtools markdup` or `paleomix rmdup_collapsed`
             "{library}.rmdup.{method}.bam": "deduplicated_bam",
-            "{library}.rmdup.{method}.statistics": "deduplicated_stats",
             # Libraries where quality scores have been rescaled using mapDamage
             "{library}.rescaled.bam": "rescaled_bam",
         },
@@ -79,7 +78,6 @@ LAYOUT = {
                 "{lane}": {
                     "{shortname}": {
                         "reads": "reads_prefix",
-                        "pretrimmed.json": "reads_statistics",
                     },
                 },
             },
@@ -87,8 +85,25 @@ LAYOUT = {
     },
     "{sample}.{genome}.bam": "final_bam",
     "{sample}.{genome}.bam.bai": "final_bai",
-    "{sample}.{genome}.mapDamage": {
-        "{library}": "mapdamage_folder",
+    "{sample}.stats": {
+        "reads": {
+            "{library}": {
+                "{lane}": {
+                    "{shortname}": {
+                        "pre_trimmed.json": "pre_trimmed_statistics",
+                        "post_trimmed.txt": "post_trimmed_statistics",
+                    }
+                }
+            }
+        },
+        "genomes": {
+            "{genome}": {
+                "{library}": {
+                    "duplicates.{method}.txt": "deduplicated_stats",
+                    "mapDamage": "mapdamage_folder",
+                }
+            }
+        },
     },
 }
 
@@ -175,7 +190,7 @@ def _process_pretrimmed_reads(layout, record):
     yield read_type, record["Path"], ValidateFASTQFilesNode(
         input_files=input_files,
         output_file=layout.get(
-            "reads_statistics",
+            "pre_trimmed_statistics",
             shortname=record["Shortname"],
         ),
         offset=record["Options"]["QualityOffset"],
@@ -192,10 +207,9 @@ def _process_untrimmed_reads(layout, record, args):
         # Quality scores of trimmed reads is normalized to Phred+33
         options["--qualitybase-output"] = 33
 
-    output_prefix = layout.get(
-        "reads_prefix",
-        shortname=record["Shortname"],
-    )
+    layout = layout.update(shortname=record["Shortname"])
+    output_prefix = layout.get("reads_prefix")
+    output_settings = layout["post_trimmed_statistics"]
 
     file_1, file_2 = record["Path"]
 
@@ -203,6 +217,7 @@ def _process_untrimmed_reads(layout, record, args):
         task = SE_AdapterRemovalNode(
             input_file=file_1,
             output_prefix=output_prefix,
+            output_settings=output_settings,
             threads=args.adapterremoval_max_threads,
             options=options,
         )
@@ -213,6 +228,7 @@ def _process_untrimmed_reads(layout, record, args):
             input_file_1=file_1,
             input_file_2=file_2,
             output_prefix=output_prefix,
+            output_settings=output_settings,
             threads=args.adapterremoval_max_threads,
             options=options,
         )
