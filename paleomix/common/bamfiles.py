@@ -23,8 +23,9 @@
 import itertools
 from typing import Iterable, List, Optional
 
-from paleomix.common.formats.bed import BEDRecord
 from pysam import AlignedSegment, AlignmentFile
+
+from paleomix.common.formats.bed import BEDRecord
 
 # BAM flags as defined in the BAM specification
 BAM_SUPPLEMENTARY_ALIGNMENT = 0x800

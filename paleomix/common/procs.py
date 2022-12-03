@@ -64,7 +64,7 @@ def join_procs(procs: Iterable[Popen[Any]], out: IO[str] = sys.stderr):
 
     assert all(hasattr(cmd, "args") for (_, cmd) in commands)
 
-    print("Joinining subprocesses:", file=out)
+    print("Joining subprocesses:", file=out)
     while commands and not any(return_codes):
         try:
             # Wait for arbitrary command
@@ -91,7 +91,7 @@ def join_procs(procs: Iterable[Popen[Any]], out: IO[str] = sys.stderr):
             command.terminate()
             return_codes[index] = command.wait()
 
-        print("Errors occured during processing!", file=out)
+        print("Errors occurred during processing!", file=out)
 
     return return_codes
 
@@ -109,7 +109,7 @@ def unregister_process(proc: Popen[Any]) -> None:
 
 @atexit.register
 def terminate_all_processes() -> None:
-    """Terminate all registered proceses. Must be called in signal handlers."""
+    """Terminate all registered processes. Must be called in signal handlers."""
     while _RUNNING_PROCS:
         proc = _RUNNING_PROCS.pop()
 

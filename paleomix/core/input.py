@@ -30,7 +30,7 @@ from typing import Any, Iterator, List
 
 _COMMANDS = {
     "h": "Prints this message.",
-    "l": "Lists the currently runnning tasks.",
+    "l": "Lists the currently running tasks.",
     "+": "Increases the maximum number of threads by one.",
     "-": "Decreases the maximum number of threads by one; does not kill running tasks.",
     "Ctrl+C": "Quit after finishing running tasks; press twice to quit immediately.",

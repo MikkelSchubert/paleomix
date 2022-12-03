@@ -229,7 +229,7 @@ def _group_indels_near_position(
 
     for vcf in indels:
         # The number of bases covered (excluding the prefix)
-        # For ambigious indels (e.g. in low complexity regions), this ensures
+        # For ambiguous indels (e.g. in low complexity regions), this ensures
         # that the entire region is considered. Note that we do not need to
         # consider the alternative sequence(s)
         length = len(vcf.ref) - 1
@@ -247,7 +247,7 @@ def _group_indels_near_position(
 
 def _select_best_indel(indels: Iterable[VCFRecord]) -> VCFRecord:
     """Select the highest quality indel, based on the quality,
-    prefering low earlier positions above later positions in
+    preferring low earlier positions above later positions in
     case of ties."""
 
     def _indel_by_quality_and_position(indel: VCFRecord) -> Tuple[float, int]:
@@ -268,7 +268,7 @@ def _filter_by_indels(
     this distance, the indel with the highest QUAL score is retained. When
     no unique highest QUAL score exists, an arbitrary indel is retained
     among those indels with the highest QUAL score. SNPs are filtered
-    based on prefiltered Indels."""
+    based on pre-filtered Indels."""
     indels = [vcf for vcf in chunk if vcf is not None and vcfwrap.is_indel(vcf)]
 
     distance_between = options.min_distance_between_indels

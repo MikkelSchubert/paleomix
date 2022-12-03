@@ -49,7 +49,7 @@ class _AtomicFile:
         return "%s(%r)" % (self.__class__.__name__, self.path)
 
 
-class AuxilleryFile(_AtomicFile):
+class AuxiliaryFile(_AtomicFile):
     pass
 
 
@@ -125,7 +125,7 @@ class AtomicCmd:
 
     InFile = InputFile
     OutFile = OutputFile
-    AuxFile = AuxilleryFile
+    AuxFile = AuxiliaryFile
     Executable = Executable
 
     _command: List[Union[str, _AtomicFile]]
@@ -328,27 +328,19 @@ class AtomicCmd:
 
     @property
     def output_files(self):
-        return frozenset(
-            afile.path for afile in self._output_files if not afile.temporary
-        )
+        return frozenset(it.path for it in self._output_files if not it.temporary)
 
     @property
     def expected_temp_files(self):
-        return frozenset(
-            afile.basename() for afile in self._output_files if not afile.temporary
-        )
+        return frozenset(it.basename() for it in self._output_files if not it.temporary)
 
     @property
     def optional_temp_files(self):
-        return frozenset(
-            afile.basename() for afile in self._output_files if afile.temporary
-        )
+        return frozenset(it.basename() for it in self._output_files if it.temporary)
 
     @property
     def input_files(self):
-        return frozenset(
-            afile.path for afile in self._input_files if not afile.temporary
-        )
+        return frozenset(it.path for it in self._input_files if not it.temporary)
 
     @property
     def executables(self):
@@ -396,7 +388,7 @@ class AtomicCmd:
             message = "Error running commands:\n  Call = %r\n  Error = %r"
             raise CmdError(message % (self._command, error))
         finally:
-            # Close pipes to allow the command to recieve SIGPIPE
+            # Close pipes to allow the command to receive SIGPIPE
             for handle in (stdin, stdout, stderr):
                 if not (handle is None or isinstance(handle, int)):
                     handle.close()
@@ -424,7 +416,7 @@ class AtomicCmd:
         return [return_code]
 
     def wait(self):
-        """Equivalent to Subproces.wait. This function should only
+        """Equivalent to Subprocess.wait. This function should only
         be used in contexts where a AtomicCmd needs to be combined
         with Subprocesses, as it does not exist for AtomicSets."""
         return self.join()[0]
@@ -500,7 +492,7 @@ class AtomicCmd:
                 return os.path.abspath(value.path)
             elif isinstance(value, OutputFile):
                 return os.path.basename(value.path)
-            elif isinstance(value, AuxilleryFile):
+            elif isinstance(value, AuxiliaryFile):
                 return os.path.abspath(value.path)
             else:
                 return value.replace("%(TEMP_DIR)s", ".")
@@ -518,13 +510,13 @@ class AtomicCmd:
                 return value.path
             elif isinstance(value, OutputFile):
                 return fileutils.reroot_path(temp, value.path)
-            elif isinstance(value, AuxilleryFile):
+            elif isinstance(value, AuxiliaryFile):
                 return value.path
             else:
                 return value.replace("%(TEMP_DIR)s", temp)
 
     def _record_atomic_file(self, value: _AtomicFile):
-        if isinstance(value, AuxilleryFile):
+        if isinstance(value, AuxiliaryFile):
             self._auxiliary_files.add(value.path)
         elif isinstance(value, Executable):
             self._executables.add(value.path)
@@ -704,7 +696,7 @@ class ParallelCmds(_CommandSet):
 
     In case of any one sub-command failing, the remaining commands are
     automatically terminated. This is done to ensure that commands waiting
-    on pipes are not left running indefinetly.
+    on pipes are not left running indefinitely.
 
     Note that only AtomicCmds and ParallelCmds are allowed as
     sub-commands for this class, since the model requires non-
@@ -762,14 +754,14 @@ class ParallelCmds(_CommandSet):
 class SequentialCmds(_CommandSet):
     """This class wraps a set of AtomicCmds, running them sequentially.
     This class therefore corresponds a set of lines in a bash script,
-    each of which invokes a forground job. For example:
+    each of which invokes a foreground job. For example:
     $ bcftools view snps.bcf | bgzip > snps.vcf.bgz
     $ tabix snps.vcf.bgz
 
     The list of commands may include any type of command. Note that
     the run function only returns once each sub-command has completed.
     A command is only executed if the previous command in the sequence
-    was succesfully completed, and as a consequence the return codes
+    was successfully completed, and as a consequence the return codes
     of a failed SequentialCommand may contain None."""
 
     def __init__(self, commands: Iterable[Union[AtomicCmd, _CommandSet]]):

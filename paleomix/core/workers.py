@@ -49,7 +49,7 @@ else:
 
 WorkerType = Union["LocalWorker", "RemoteWorker"]
 
-# Default location of auto-registation files
+# Default location of auto-registration files
 AUTO_REGISTER_DIR = os.path.expanduser("~/.paleomix/remote/")
 
 

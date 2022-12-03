@@ -89,9 +89,9 @@ def test_minimal_nodegraph_that_is_ready():
     graph = NodeGraph(tasks=[task], fscache=fscache)
 
     assert graph.tasks == frozenset([task])
-    assert graph.get_state_counts() == state_counts(runable=1)
+    assert graph.get_state_counts() == state_counts(runnable=1)
     assert graph.check_file_dependencies(fscache)
-    assert graph.get_state_counts() == state_counts(runable=1)
+    assert graph.get_state_counts() == state_counts(runnable=1)
 
 
 def test_minimal_nodegraph_that_depends_on_missing_input_file():
@@ -99,8 +99,8 @@ def test_minimal_nodegraph_that_depends_on_missing_input_file():
     task = Task(input_files=["input"], output_files=["output"])
     graph = NodeGraph(tasks=[task], fscache=fscache)
 
-    assert graph.get_node_state(task) == StatusEnum.RUNABLE
-    assert graph.get_state_counts() == state_counts(runable=1)
+    assert graph.get_node_state(task) == StatusEnum.RUNNABLE
+    assert graph.get_state_counts() == state_counts(runnable=1)
     assert not graph.check_file_dependencies(fscache)
     assert graph.get_node_state(task) == StatusEnum.ERROR
     assert graph.get_state_counts() == state_counts(error=1)
@@ -115,8 +115,8 @@ def test_minimal_nodegraph_that_depends_on_missing_auxiliary_file():
     task = Task(input_files=["input"], auxiliary_files=["aux"], output_files=["output"])
     graph = NodeGraph(tasks=[task], fscache=fscache)
 
-    assert graph.get_node_state(task) == StatusEnum.RUNABLE
-    assert graph.get_state_counts() == state_counts(runable=1)
+    assert graph.get_node_state(task) == StatusEnum.RUNNABLE
+    assert graph.get_state_counts() == state_counts(runnable=1)
     assert not graph.check_file_dependencies(fscache)
     assert graph.get_node_state(task) == StatusEnum.ERROR
     assert graph.get_state_counts() == state_counts(error=1)

@@ -27,7 +27,7 @@ from typing import Dict, Iterable, List
 
 
 def _build_complement_table() -> str:
-    # Pairs of complementary bases and ambigious basees
+    # Pairs of complementary bases and ambiguous bases
     table = ["N"] * 256
     for nuc_a, nuc_b in ["AT", "CG", "NN", "RY", "KM", "SS", "WW", "BV", "DH", "XX"]:
         # Complement both upper/lower-case bases
@@ -58,7 +58,7 @@ IUPAC_TABLE = {
 }
 
 
-# Table for complemeting sequences using `str.translate`
+# Table for complementing sequences using `str.translate`
 NT_COMPLEMENTS = _build_complement_table()
 # IUPAC code to A, C, G, T nucleotides.
 NT_CODES = dict(zip(IUPAC_TABLE.values(), IUPAC_TABLE))

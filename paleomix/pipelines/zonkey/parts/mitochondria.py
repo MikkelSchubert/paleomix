@@ -26,7 +26,7 @@ import paleomix.common.rtools as rtools
 import paleomix.tools.factory as factory
 from paleomix.common.command import (
     AtomicCmd,
-    AuxilleryFile,
+    AuxiliaryFile,
     InputFile,
     OutputFile,
     TempOutputFile,
@@ -65,7 +65,7 @@ class DrawPhylogenyNode(CommandNode):
         command = AtomicCmd(
             (
                 "Rscript",
-                AuxilleryFile(rtools.rscript("zonkey", "tinytree.r")),
+                AuxiliaryFile(rtools.rscript("zonkey", "tinytree.r")),
                 # Temporary file generated in _setup
                 TempOutputFile("rerooted.newick"),
                 InputFile(samples),

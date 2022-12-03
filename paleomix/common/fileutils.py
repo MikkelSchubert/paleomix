@@ -114,7 +114,7 @@ def missing_executables(filenames: Iterable[Union[str, Path]]) -> List[str]:
 
 def make_dirs(directory: Union[str, Path], mode: int = 0o777) -> bool:
     """Wrapper around os.makedirs to make it suitable for using
-    in a multithreaded/multiprocessing enviroment: Unlike the
+    in a multithreaded/multiprocessing environment: Unlike the
     regular function, this wrapper does not throw an exception if
     the directory already exists, which may happen if another
     thread/process created the directory during the function call.
@@ -139,7 +139,7 @@ def move_file(source: Union[str, Path], destination: Union[str, Path]) -> None:
     """Wrapper around shutils which ensures that the
     destination directory exists before moving the file.
 
-    In addition, the (partial) destination file is autoamtically removed if the copy
+    In addition, the (partial) destination file is automatically removed if the copy
     fails with an out-of-space error.
     """
     _sh_wrapper(_atomic_file_move, source, destination)
@@ -149,7 +149,7 @@ def copy_file(source: Union[str, Path], destination: Union[str, Path]) -> None:
     """Wrapper around shutils which ensures that the
     destination directory exists before copying the file.
 
-    In addition, the (partial) destination file is autoamtically removed if the copy
+    In addition, the (partial) destination file is automatically removed if the copy
     fails with an out-of-space error.
     """
     _sh_wrapper(_atomic_file_copy, source, destination)
@@ -240,8 +240,7 @@ def describe_paired_files(files_1: Iterable[str], files_2: Iterable[str]) -> str
         if final_glob:
             return repr(final_glob)
 
-    fnames = files_1 + files_2
-    paths = set(os.path.dirname(fname) for fname in fnames)
+    paths = {os.path.dirname(fname) for fname in (files_1 + files_2)}
     if len(paths) == 1:
         return "%i pair(s) of files in '%s'" % (len(files_1), paths.pop())
     return "%i pair(s) of files" % (len(files_1),)
@@ -294,29 +293,28 @@ def _atomic_file_move(source: Union[str, Path], destination: Union[str, Path]):
 
     # Move across filesystem/device
     if os.path.islink(source):
-        linkto = os.readlink(source)
-        os.symlink(linkto, destination)
+        os.symlink(os.readlink(source), destination)
         os.unlink(source)
         return
 
     # Copy with copy2 to preserve metadata
-    _atomic_file_copy(source, destination, copyfunc=shutil.copy2)
+    _atomic_file_copy(source, destination, shutil.copy2)
     os.unlink(source)
 
 
 def _atomic_file_copy(
     source: Union[str, Path],
     destination: Union[str, Path],
-    copyfunc: Optional[Callable[[Union[str, Path], Union[str, Path]], Any]] = None,
+    func: Optional[Callable[[Union[str, Path], Union[str, Path]], Any]] = None,
 ):
     # Ensure that hard failures during copy does not leave anything at destination
     postfix = "{:04x}".format(random.getrandbits(16))
     temp_destination = "{}.{}.tmp".format(destination, postfix)
-    # Allow function to be monkeypatched for testing
-    copyfunc = shutil.copy if copyfunc is None else copyfunc
+    # Allow function to be monkey-patched for testing
+    func = shutil.copy if func is None else func
 
     try:
-        copyfunc(source, temp_destination)
+        func(source, temp_destination)
     except OSError as error:
         if error.errno == errno.ENOSPC:
             # Not enough space; remove partial file
@@ -352,7 +350,7 @@ def _sh_wrapper(
 
 def _try_rm_wrapper(func: Callable[[Any], Any], fpath: Union[str, Path]) -> bool:
     """Takes a function (e.g. os.remove / os.rmdir), and attempts to remove a
-    path; returns true if that path was succesfully remove, and false if it did
+    path; returns true if that path was successfully remove, and false if it did
     not exist."""
     try:
         func(fspath(fpath))

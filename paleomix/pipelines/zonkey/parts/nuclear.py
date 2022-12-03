@@ -35,7 +35,7 @@ import paleomix.common.versions as versions
 import paleomix.tools.factory as factory
 from paleomix.common.command import (
     AtomicCmd,
-    AuxilleryFile,
+    AuxiliaryFile,
     InputFile,
     OutputFile,
     SequentialCmds,
@@ -304,7 +304,7 @@ class AdmixturePlotNode(CommandNode):
         command = AtomicCmd(
             (
                 "Rscript",
-                AuxilleryFile(rtools.rscript("zonkey", "admixture.r")),
+                AuxiliaryFile(rtools.rscript("zonkey", "admixture.r")),
                 InputFile(input_file),
                 TempOutputFile("samples.txt"),
                 TempOutputFile(output_prefix),
@@ -632,7 +632,7 @@ class PlotTreemixNode(CommandNode):
         script = rtools.rscript("zonkey", "treemix.r")
 
         return AtomicCmd(
-            ("Rscript", AuxilleryFile(script)) + tuple(args),
+            ("Rscript", AuxiliaryFile(script)) + tuple(args),
             extra_files=[
                 InputFile(input_prefix + ".cov.gz"),
                 InputFile(input_prefix + ".covse.gz"),
@@ -722,7 +722,7 @@ class PlotPCANode(CommandNode):
         cmd = AtomicCmd(
             [
                 "Rscript",
-                AuxilleryFile(rtools.rscript("zonkey", "pca.r")),
+                AuxiliaryFile(rtools.rscript("zonkey", "pca.r")),
                 os.path.abspath(prefix),
                 InputFile(samples),
                 TempOutputFile(output_prefix),
@@ -758,7 +758,7 @@ class PlotCoverageNode(CommandNode):
         cmd = AtomicCmd(
             (
                 "Rscript",
-                AuxilleryFile(rtools.rscript("zonkey", "coverage.r")),
+                AuxiliaryFile(rtools.rscript("zonkey", "coverage.r")),
                 TempOutputFile("contigs.table"),
                 TempOutputFile(output_prefix),
             ),

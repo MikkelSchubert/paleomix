@@ -13,7 +13,7 @@ import paleomix.common.command
 import paleomix.common.fileutils as fileutils
 from paleomix.common.command import (
     AtomicCmd,
-    AuxilleryFile,
+    AuxiliaryFile,
     CmdError,
     Executable,
     InputFile,
@@ -39,7 +39,7 @@ _ATOMICFILE_CLASSES = (
     InputFile,
     OutputFile,
     Executable,
-    AuxilleryFile,
+    AuxiliaryFile,
 )
 
 _ATOMICFILE_INVALID_VALUES = (
@@ -57,7 +57,7 @@ _ATOMICFILE_INVALID_VALUES = (
 
 def test_atomicfile__repr__():
     assert repr(_AtomicFile("foo/bar")) == "_AtomicFile('foo/bar')"
-    assert repr(AuxilleryFile("foo/bar")) == "AuxilleryFile('foo/bar')"
+    assert repr(AuxiliaryFile("foo/bar")) == "AuxiliaryFile('foo/bar')"
     assert repr(Executable("foo/bar")) == "Executable('foo/bar')"
     assert repr(InputFile("bar")) == "InputFile('bar', False)"
     assert repr(TempInputFile("bar")) == "TempInputFile('bar', True)"
@@ -158,7 +158,7 @@ def test_atomiccmd__paths():
     cmd = AtomicCmd(
         [
             "ls",
-            AuxilleryFile("/path/to/index"),
+            AuxiliaryFile("/path/to/index"),
             InputFile("/a/b/c"),
             OutputFile("foo/bar"),
             TempOutputFile("xyb"),
@@ -189,7 +189,7 @@ def test_atomiccmd__extra_files():
             TempInputFile("tmp_in"),
             OutputFile("/out/foo"),
             Executable("true"),
-            AuxilleryFile("wat/wat"),
+            AuxiliaryFile("wat/wat"),
         ),
     )
 
@@ -297,7 +297,7 @@ def test_atomiccmd__stdin_valid_values():
 _INVALID_STDIN_VALUES = (
     b"/path/to/file",
     OutputFile("foo"),
-    AuxilleryFile("/path/to/foo"),
+    AuxiliaryFile("/path/to/foo"),
     _AtomicFile("/foo/bar"),
     AtomicCmd.PIPE,
 )
@@ -385,7 +385,7 @@ def test_atomiccmd__stderr_valid_values(value: Any):
 _INVALID_STDOUT_STDERR_VALUES = (
     b"/path/to/file",
     InputFile("foo"),
-    AuxilleryFile("/path/to/foo"),
+    AuxiliaryFile("/path/to/foo"),
     _AtomicFile("/foo/bar"),
     AtomicCmd("true"),
 )
@@ -550,8 +550,8 @@ _IN_OUT_PATHS_WITH_SET_CWD = [
     (OutputFile, True, "filename"),
     (TempOutputFile, False, "${TMP}/filename"),
     (TempOutputFile, True, "filename"),
-    (AuxilleryFile, False, "path/to/filename"),
-    (AuxilleryFile, True, os.path.join(os.getcwd(), "path/to/filename")),
+    (AuxiliaryFile, False, "path/to/filename"),
+    (AuxiliaryFile, True, os.path.join(os.getcwd(), "path/to/filename")),
 ]
 
 

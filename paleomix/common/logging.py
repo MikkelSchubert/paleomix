@@ -37,7 +37,7 @@ _CONSOLE_MESSAGE_FORMAT = "%(asctime)s %(levelname)s %(status)s%(message)s"
 _FILE_MESSAGE_FORMAT = "%(asctime)s %(name)s %(levelname)s %(status)s%(message)s"
 
 
-class _MultilineFomatter:
+class _MultilineFormatter:
     COLOR_LOGGER: bool
 
     def format(self, record: logging.LogRecord) -> str:
@@ -70,11 +70,11 @@ class _MultilineFomatter:
         return super().format(record)
 
 
-class BasicFormatter(_MultilineFomatter, logging.Formatter):
+class BasicFormatter(_MultilineFormatter, logging.Formatter):
     COLOR_LOGGER = False
 
 
-class PaleomixFormatter(_MultilineFomatter, coloredlogs.ColoredFormatter):
+class PaleomixFormatter(_MultilineFormatter, coloredlogs.ColoredFormatter):
     COLOR_LOGGER = True
 
 

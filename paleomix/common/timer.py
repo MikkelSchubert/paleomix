@@ -71,5 +71,5 @@ class BAMTimer:
             file=self._out,
         )
 
-    def _format_time(self, ftime: float) -> str:
-        return time.strftime("%H:%M:%Ss", time.gmtime(ftime))
+    def _format_time(self, secs: float) -> str:
+        return time.strftime("%H:%M:%Ss", time.gmtime(secs))

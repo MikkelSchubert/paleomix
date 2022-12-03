@@ -74,7 +74,7 @@ as so:
 Note that specification objects that do not take any parameters (IsInt, etc.)
 do not need to be instantiated. Thus one can use both 'IsInt' or 'IsInt()',
 whereas 'IsListOf', 'IsDictOf', etc. needs to be instantiated. This is purely
-for convinience.
+for convenience.
 
 
 Having specified the expected structure of the options, we can specify the
@@ -165,7 +165,7 @@ Which yields the following structure following processing:
 
 If the file contents does not match the expected structure, a MakefileError is
 raised which describes the problem. For example, suppose that an "Output_File"
-value has accidentically been left blank ('IsStr' requires a NON-EMPTY string):
+value has accidentally been left blank ('IsStr' requires a NON-EMPTY string):
 -------------------------------------------------------------------------------
 |  Makefile requirement not met at ...:
 |    Expected value: a non-empty string
@@ -502,8 +502,10 @@ class _BinaryOperator(MakefileSpec):
     _list_values is used to convert it to human readable form.
     """
 
-    def __init__(self, description, default, opfunc, rvalue, key=None, list_kword=None):
-        self._operator = opfunc
+    def __init__(
+        self, description, default, operator, rvalue, key=None, list_kword=None
+    ):
+        self._operator = operator
         self._keyfunc = key
         self._rvalue = rvalue
 
@@ -530,7 +532,7 @@ class ValueIn(_BinaryOperator):
             self,
             description=description,
             default=default,
-            opfunc=self._in_operator,
+            operator=self._in_operator,
             rvalue=rvalues,
             key=key,
         )
@@ -542,7 +544,11 @@ class ValueIn(_BinaryOperator):
 
 class ValuesIntersect(_BinaryOperator):
     def __init__(
-        self, rvalues, key=None, description: str = None, default: Any = DEFAULT_NOT_SET
+        self,
+        rvalues,
+        key=None,
+        description: str = None,
+        default: Any = DEFAULT_NOT_SET,
     ):
         if not description:
             description = "one or more of %s" % (_list_values(rvalues, "and"),)
@@ -551,7 +557,7 @@ class ValuesIntersect(_BinaryOperator):
             self,
             description=description,
             default=default,
-            opfunc=self._operator,
+            operator=self._operator,
             rvalue=rvalues,
             key=key,
         )
@@ -567,14 +573,18 @@ class ValuesIntersect(_BinaryOperator):
 
 class ValuesSubsetOf(_BinaryOperator):
     def __init__(
-        self, rvalues, key=None, description: str = None, default: Any = DEFAULT_NOT_SET
+        self,
+        rvalues,
+        key=None,
+        description: str = None,
+        default: Any = DEFAULT_NOT_SET,
     ):
         description = description or "subset of %s" % (_list_values(rvalues, "and"),)
         _BinaryOperator.__init__(
             self,
             description=description,
             default=default,
-            opfunc=self._operator,
+            operator=self._operator,
             rvalue=rvalues,
             key=key,
         )
@@ -658,7 +668,7 @@ class Not(_MultipleSpecs):
 #
 # In addition to providing string-specific operators (is uppercase, ends/starts
 # with), "in" and set operators are provided which do case-insensitive
-# comparsions. For case-sensitive operations, use the Value* specifications.
+# comparisons. For case-sensitive operations, use the Value* specifications.
 
 
 class StringIn(_BinaryOperator):
@@ -671,7 +681,7 @@ class StringIn(_BinaryOperator):
         self,
         rvalues,
         key=None,
-        description: str = "one of {rvalue}, case-insentive",
+        description: str = "one of {rvalue}, case-insensitive",
         default: Any = DEFAULT_NOT_SET,
     ):
         description = description.format(rvalue=_list_values(rvalues, "or"))
@@ -750,15 +760,13 @@ class IsListOf(_MultipleSpecs):
         if not isinstance(value, list):
             return False
 
-        return all(
-            any(spec.meets_spec(lstvalue) for spec in self._specs) for lstvalue in value
-        )
+        return all(any(spec.meets_spec(it) for spec in self._specs) for it in value)
 
 
 class IsDictOf(MakefileSpec):
     """Require that the value is a list, the keys/values of which matches
     the specifications provided for keys/values; if no default value (ie. a
-    dictioanry) is required, then using the following syntax is preferred:
+    dictionary) is required, then using the following syntax is preferred:
       {IsType1: IsType2}
 
     This is equivalent to the following:
@@ -900,7 +908,7 @@ def _process_default_values(data, specification, path, apply_defaults):
                     continue
                 elif default_value.default is REQUIRED_VALUE:
                     raise MakefileError(
-                        "A value MUST be supplified for %r"
+                        "A value MUST be supplied for %r"
                         % (_path_to_str(path + (cur_key,)))
                     )
                 default_value = default_value.default

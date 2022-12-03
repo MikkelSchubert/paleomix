@@ -29,7 +29,7 @@ import pytest
 import paleomix.common.command
 from paleomix.common.command import (
     AtomicCmd,
-    AuxilleryFile,
+    AuxiliaryFile,
     CmdError,
     Executable,
     InputFile,
@@ -61,8 +61,8 @@ def test_atomicsets__properties(cls: SetTypes):
             InputFile("/foo/bar/in_2.file"),
             OutputFile("/bar/foo/out"),
             TempOutputFile("out.log"),
-            AuxilleryFile("/aux/fA"),
-            AuxilleryFile("/aux/fB"),
+            AuxiliaryFile("/aux/fA"),
+            AuxiliaryFile("/aux/fB"),
         ],
         requirements=[requirement_1],
     )

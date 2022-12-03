@@ -109,7 +109,7 @@ def get_in(
     difference that any missing keys causes the default value
     to be returned.
 
-    Behavior on non-dictgionaries is undefined."""
+    Behavior on non-dictionaries is undefined."""
     keys = list(keys)
     for key in keys[:-1]:
         try:
@@ -141,7 +141,7 @@ def split_before(
 def grouper(size: int, iterable: Iterable[Any], fillvalue: Any = None):
     "grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"
     args = [iter(iterable)] * size
-    return itertools.zip_longest(fillvalue=fillvalue, *args)
+    return itertools.zip_longest(*args, fillvalue=fillvalue)
 
 
 def group_by_pred(
@@ -162,21 +162,21 @@ def group_by_pred(
 
 
 @overload
-def fragment(size: int, lstlike: AnyStr) -> Iterable[AnyStr]:
+def fragment(size: int, items: AnyStr) -> Iterable[AnyStr]:
     ...
 
 
 @overload
-def fragment(size: int, lstlike: Sequence[T]) -> Iterable[Sequence[T]]:
+def fragment(size: int, items: Sequence[T]) -> Iterable[Sequence[T]]:
     ...
 
 
-_Fragmentable = Union[AnyStr, Sequence[T]]
+_Items = Union[AnyStr, Sequence[T]]
 
 
-def fragment(size: int, lstlike: _Fragmentable) -> Iterable[_Fragmentable]:
+def fragment(size: int, items: _Items) -> Iterable[_Items]:
     """Faster alternative to grouper for lists/strings."""
-    return (lstlike[i : i + size] for i in range(0, len(lstlike), size))
+    return (items[i : i + size] for i in range(0, len(items), size))
 
 
 def fill_dict(destination: Dict[Any, Any], source: Dict[Any, Any]) -> Dict[Any, Any]:

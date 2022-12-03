@@ -59,7 +59,7 @@ class Pypeline:
         self._nodes = safe_coerce_to_tuple(nodes)
         for node in self._nodes:
             if not isinstance(node, Node):
-                raise TypeError("Node object expected, recieved %s" % repr(node))
+                raise TypeError("Node object expected, received %s" % repr(node))
 
         self._logger = logging.getLogger(__name__)
         # Set if a keyboard-interrupt (SIGINT) has been caught
@@ -76,7 +76,7 @@ class Pypeline:
             EVT_CAPACITY: self._event_capacity,
             # A task has finished running
             EVT_TASK_DONE: self._event_task_done,
-            # Worker was shut down, possibily killing tasks in the process
+            # Worker was shut down, possibly killing tasks in the process
             EVT_SHUTDOWN: self._event_shutdown,
         }
 
@@ -106,7 +106,7 @@ class Pypeline:
         )
 
         try:
-            # Handle setup/teardown of commandline interface and termination of workers
+            # Handle setup/teardown of command-line interface and termination of workers
             with manager:
                 if not manager.start():
                     self._logger.error("Manager failed to start; terminating")
@@ -176,7 +176,7 @@ class Pypeline:
                 if worker in task_info.blacklisted_from:
                     continue
 
-                if nodegraph.get_node_state(task) == nodegraph.RUNABLE:
+                if nodegraph.get_node_state(task) == nodegraph.RUNNABLE:
                     if idle_threads >= task.threads or event["overcommit"]:
                         if not manager.start_task(worker, task):
                             # Error in worker; this will probably be picked up next loop
@@ -214,7 +214,7 @@ class Pypeline:
             task_info.blacklisted_from[worker] = event
             if manager.workers.keys() - task_info.blacklisted_from:
                 self._logger.warning("Re-trying %s", task)
-                self._set_node_state(nodegraph, task, nodegraph.RUNABLE)
+                self._set_node_state(nodegraph, task, nodegraph.RUNNABLE)
                 tasks[task] = task_info
             else:  # No more nodes left to try so we'll just have to error out
                 self._handle_task_error(nodegraph, **event)
@@ -243,7 +243,7 @@ class Pypeline:
         for task, task_info in tuple(tasks.items()):
             if task_info.running_on == worker:
                 self._logger.warning("Re-trying %s", task)
-                self._set_node_state(nodegraph, task, nodegraph.RUNABLE)
+                self._set_node_state(nodegraph, task, nodegraph.RUNNABLE)
                 task_info.running_on = None
 
             # Check nodes that can no longer be completed
@@ -351,7 +351,7 @@ class Pypeline:
             rows = [
                 ("Number of tasks:", sum(states.values())),
                 ("Number of done tasks:", states[nodegraph.DONE]),
-                ("Number of runable tasks:", states[nodegraph.RUNABLE]),
+                ("Number of runnable tasks:", states[nodegraph.RUNNABLE]),
                 ("Number of queued tasks:", states[nodegraph.QUEUED]),
                 ("Number of failed tasks:", states[nodegraph.ERROR]),
             ]

@@ -2,7 +2,7 @@
 import paleomix.common.rtools as rtools
 from paleomix.common.command import (
     AtomicCmd,
-    AuxilleryFile,
+    AuxiliaryFile,
     InputFile,
     OutputFile,
     TempOutputFile,
@@ -15,7 +15,7 @@ class TranchesPlotsNode(CommandNode):
         command = AtomicCmd(
             (
                 "Rscript",
-                AuxilleryFile(rtools.rscript("ngs", "tranches.r")),
+                AuxiliaryFile(rtools.rscript("ngs", "tranches.r")),
                 InputFile(input_table),
                 TempOutputFile(output_prefix),
             ),

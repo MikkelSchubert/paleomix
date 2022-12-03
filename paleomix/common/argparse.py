@@ -2,6 +2,7 @@
 from typing import Any, List
 
 import configargparse
+
 import paleomix
 
 SUPPRESS = configargparse.SUPPRESS
@@ -13,7 +14,7 @@ class ArgumentDefaultsHelpFormatter(configargparse.ArgumentDefaultsHelpFormatter
     """
 
     def __init__(self, *args: Any, **kwargs: Any):
-        # Enable wordwrapping
+        # Enable word wrapping
         kwargs.setdefault("width", 79)
 
         super().__init__(*args, **kwargs)
@@ -34,7 +35,7 @@ class ArgumentDefaultsHelpFormatter(configargparse.ArgumentDefaultsHelpFormatter
 
 class ArgumentParser(configargparse.ArgumentParser):
     """Supports keys with underscores instead of dashes, for backwards compatibility
-    with old paleomix config files, provided that these do not use per-host setions.
+    with old paleomix config files, provided that these do not use per-host sections.
     """
 
     def __init__(self, *args: Any, **kwargs: Any):
