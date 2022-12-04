@@ -497,20 +497,13 @@ class _BinaryOperator(MakefileSpec):
     assumed to take parameters (lvalue, rvalue), a rvalue to use when calling
     the function, and a description in the form 'operator {rvalue}' which is
     used to generate a human readable description of the specification.
-
-    If list_kword is specified, the rvalue is assumed to be a sequence, and
-    _list_values is used to convert it to human readable form.
     """
 
-    def __init__(
-        self, description, default, operator, rvalue, key=None, list_kword=None
-    ):
+    def __init__(self, description, default, operator, rvalue, key=None):
         self._operator = operator
         self._keyfunc = key
         self._rvalue = rvalue
 
-        rvalue_repr = _list_values(rvalue, list_kword) if list_kword else rvalue
-        description = description.format(rvalue=rvalue_repr)
         MakefileSpec.__init__(self, description, default)
 
     def meets_spec(self, value: Any) -> bool:
@@ -547,7 +540,7 @@ class ValuesIntersect(_BinaryOperator):
         self,
         rvalues,
         key=None,
-        description: str = None,
+        description: Optional[str] = None,
         default: Any = DEFAULT_NOT_SET,
     ):
         if not description:
@@ -576,7 +569,7 @@ class ValuesSubsetOf(_BinaryOperator):
         self,
         rvalues,
         key=None,
-        description: str = None,
+        description: Optional[str] = None,
         default: Any = DEFAULT_NOT_SET,
     ):
         description = description or "subset of %s" % (_list_values(rvalues, "and"),)
