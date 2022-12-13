@@ -109,13 +109,13 @@ class BAMRegionsIter:
                 records = self._handle.fetch(region.contig, region.start, region.end)
                 records = self._filter(records)
 
-                tid = self._handle.gettid(region.contig)
+                tid = self._handle.get_tid(region.contig)
                 yield _BAMRegion(tid, records, region.name, region.start, region.end)
         else:
 
             def _by_tid(record: AlignedSegment) -> int:
                 """Group by reference ID."""
-                return record.tid
+                return record.reference_id
 
             # Save a copy, as these are properties generated upon every access!
             names = self._handle.references
@@ -161,7 +161,7 @@ class _BAMRegion:
     def __iter__(self):
         def _by_pos(record: AlignedSegment):
             """Group by position."""
-            return record.pos
+            return record.reference_start
 
         for group in itertools.groupby(self._records, _by_pos):
             yield group
