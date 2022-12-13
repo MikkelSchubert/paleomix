@@ -25,15 +25,15 @@ from typing import IO, Any
 
 import ruamel.yaml
 import ruamel.yaml.error
-from ruamel.yaml.error import YAMLError
 from ruamel.yaml.constructor import DuplicateKeyError
+from ruamel.yaml.error import YAMLError
 
 __all__ = ["YAMLError", "DuplicateKeyError", "safe_load"]
 
 
 def safe_load(stream: IO[str]) -> Any:
     yaml = ruamel.yaml.YAML(typ="safe", pure=True)
-    yaml.version = (1, 1)
+    yaml.version = (1, 1)  # type: ignore
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", ruamel.yaml.error.MantissaNoDotYAML1_1Warning)

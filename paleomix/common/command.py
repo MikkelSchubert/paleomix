@@ -20,9 +20,11 @@ from typing import (
     Tuple,
     Type,
     Union,
+    cast,
 )
 
 import paleomix.common.fileutils as fileutils
+from paleomix.common.fileutils import PathTypes
 from paleomix.common.procs import register_process, unregister_process
 from paleomix.common.utilities import safe_coerce_to_tuple
 from paleomix.common.versions import Requirement
@@ -36,7 +38,7 @@ class CmdError(RuntimeError):
 
 
 class _AtomicFile:
-    def __init__(self, path: Union[Path, str]):
+    def __init__(self, path: PathTypes):
         self.path = fileutils.fspath(path)
 
         if isinstance(self.path, bytes):
@@ -58,7 +60,7 @@ class Executable(_AtomicFile):
 
 
 class _IOFile(_AtomicFile):
-    def __init__(self, path: Union[Path, str], temporary: bool = False):
+    def __init__(self, path: PathTypes, temporary: bool = False):
         super().__init__(path)
         self.temporary = bool(temporary)
 
@@ -74,7 +76,7 @@ class InputFile(_IOFile):
 
 
 class TempInputFile(InputFile):
-    def __init__(self, path: Union[Path, str]):
+    def __init__(self, path: PathTypes):
         super().__init__(os.path.basename(path), temporary=True)
 
 
@@ -83,7 +85,7 @@ class OutputFile(_IOFile):
 
 
 class TempOutputFile(OutputFile):
-    def __init__(self, path: str):
+    def __init__(self, path: PathTypes):
         super().__init__(os.path.basename(path), temporary=True)
 
 
@@ -354,7 +356,7 @@ class AtomicCmd:
     def requirements(self):
         return self._requirements
 
-    def run(self, temp: Union[Path, str]):
+    def run(self, temp: PathTypes):
         """Runs the given command, saving files in the specified temp folder.
         To move files to their final destination, call commit(). Note that in
         contexts where the *Cmds classes are used, this function may block.
@@ -431,7 +433,7 @@ class AtomicCmd:
             except OSError:
                 pass  # Already dead / finished process
 
-    def commit(self, temp: Union[Path, str]):
+    def commit(self, temp: PathTypes):
         temp = fileutils.fspath(temp)
         if not self.ready():
             raise CmdError("Attempting to commit before command has completed")
@@ -472,10 +474,10 @@ class AtomicCmd:
         self._proc = None
         self._temp = None
 
-    def to_call(self, temp: str) -> List[str]:
+    def to_call(self, temp: PathTypes) -> List[str]:
         return [self._to_path(temp, value) for value in self._command]
 
-    def _to_path(self, temp: str, value: Any) -> str:
+    def _to_path(self, temp: PathTypes, value: Any) -> str:
         if self._set_cwd:
             if isinstance(value, Executable):
                 executable = value.path
@@ -579,7 +581,7 @@ class AtomicCmd:
     @classmethod
     def _open_pipe(
         cls,
-        temp_dir: str,
+        temp_dir: PathTypes,
         pipe: WrappedPipeType,
         mode: str,
     ) -> Union[int, IO[bytes], None]:
@@ -617,7 +619,7 @@ class _CommandSet:
 
         self._validate_commands()
 
-    def commit(self, temp: str) -> None:
+    def commit(self, temp: PathTypes) -> None:
         committed_files: Set[str] = set()
         try:
             for command in self._commands:
@@ -698,11 +700,12 @@ class ParallelCmds(_CommandSet):
     automatically terminated. This is done to ensure that commands waiting
     on pipes are not left running indefinitely.
 
-    Note that only AtomicCmds and ParallelCmds are allowed as
-    sub-commands for this class, since the model requires non-
-    blocking commands."""
+    Note that only AtomicCmds are allowed as sub-commands for this class,
+    since the model requires non-blocking commands."""
 
-    def __init__(self, commands: Iterable[Union[AtomicCmd, "ParallelCmds"]]):
+    _commands: Tuple[AtomicCmd, ...]
+
+    def __init__(self, commands: Iterable[AtomicCmd]):
         self._joinable = False
 
         commands = tuple(commands)
@@ -711,7 +714,7 @@ class ParallelCmds(_CommandSet):
                 raise CmdError("ParallelCmds must only contain AtomicCmds")
         _CommandSet.__init__(self, commands)
 
-    def run(self, temp: str) -> None:
+    def run(self, temp: PathTypes) -> None:
         for command in self._commands:
             command.run(temp)
         self._joinable = True
@@ -775,7 +778,7 @@ class SequentialCmds(_CommandSet):
                 )
         _CommandSet.__init__(self, commands)
 
-    def run(self, temp: str) -> None:
+    def run(self, temp: PathTypes) -> None:
         self._ready = False
         for command in self._commands:
             command.run(temp)

@@ -83,8 +83,9 @@ class Bowtie2Node(CommandNode):
             stdout=AtomicCmd.PIPE,
         )
 
+        threads = _get_max_threads(reference, threads)
         fixed_options: OptionsType = {
-            "--threads": _get_max_threads(reference, threads),
+            "--threads": threads,
             "-x": reference,
         }
 
@@ -108,8 +109,8 @@ class Bowtie2Node(CommandNode):
             stdin=aln,
             in_reference=reference,
             out_bam=output_file,
-            max_threads=fixed_options["--threads"],
-            paired_end=input_file_1 and input_file_2,
+            max_threads=threads,
+            paired_end=bool(input_file_1 and input_file_2),
             options=cleanup_options,
         )
 

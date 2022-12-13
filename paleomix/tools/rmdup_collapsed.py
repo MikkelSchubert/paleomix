@@ -21,7 +21,7 @@ rmdup_collapsed is based on the 'FilterUniqueBAM' script by Martin Kircher.
 import collections
 import random
 import sys
-from typing import Sequence
+from typing import Sequence, cast
 
 import pysam
 
@@ -63,7 +63,7 @@ def mark_duplicate_reads(reads: Sequence[pysam.AlignedSegment]):
     """
     by_cigar = collections.defaultdict(list)
     for read in reads:
-        key = tuple(read.cigartuples)
+        key = tuple(read.cigartuples or ())
         by_cigar[key].append(read)
 
     # Select the most common CIGAR strings, favoring simple CIGARs

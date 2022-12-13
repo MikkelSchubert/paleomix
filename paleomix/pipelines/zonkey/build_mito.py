@@ -19,15 +19,14 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-import os
 import logging
+import os
 import sys
 
 import pysam
 
 import paleomix.common.argparse as argparse
 import paleomix.pipelines.zonkey.database as database
-
 from paleomix.common.formats.fasta import FASTA
 from paleomix.common.formats.msa import MSA
 from paleomix.common.formats.phylip import interleaved_phy

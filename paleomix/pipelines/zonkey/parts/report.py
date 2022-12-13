@@ -96,7 +96,7 @@ class ReportNode(Node):
 
             output_handle.write(_HTML_FOOTER)
 
-    def _teardown(self, temp):
+    def _teardown(self, temp: fileutils.PathTypes) -> None:
         fileutils.make_dirs(self._root)
 
         fileutils.move_file(

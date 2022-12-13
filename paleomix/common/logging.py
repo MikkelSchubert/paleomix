@@ -28,7 +28,7 @@ import logging
 import os
 import sys
 import time
-from typing import IO, Iterator, List, Optional
+from typing import IO, Iterator, List, Optional, Union
 
 import coloredlogs
 from humanfriendly.terminal import ansi_wrap, terminal_supports_colors
@@ -37,10 +37,14 @@ _CONSOLE_MESSAGE_FORMAT = "%(asctime)s %(levelname)s %(status)s%(message)s"
 _FILE_MESSAGE_FORMAT = "%(asctime)s %(name)s %(levelname)s %(status)s%(message)s"
 
 
+class LogRecord(logging.LogRecord):
+    status: Optional[Union[str, "Status"]]
+
+
 class _MultilineFormatter:
     COLOR_LOGGER: bool
 
-    def format(self, record: logging.LogRecord) -> str:
+    def format(self, record: LogRecord) -> str:
         record = copy.copy(record)
         if hasattr(record, "status"):
             value = record.status
@@ -162,7 +166,7 @@ class LazyLogfile(logging.FileHandler):
         self._template = self.baseFilename
         self._log_level = log_level
 
-    def emit(self, record: logging.LogRecord) -> None:
+    def emit(self, record: LogRecord) -> None:
         # Don't try to log self-emitted log events, to avoid recursive loops
         if record.name != __name__:
             super().emit(record)

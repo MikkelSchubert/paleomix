@@ -22,6 +22,7 @@
 #
 import functools
 import os
+from typing import Iterable, Type, Union
 
 import paleomix.common.versions as versions
 import paleomix.tools.factory as factory
@@ -31,9 +32,10 @@ from paleomix.common.command import (
     InputFile,
     OutputFile,
     ParallelCmds,
+    PipeType,
     TempOutputFile,
 )
-from paleomix.common.fileutils import describe_paired_files
+from paleomix.common.fileutils import PathTypes, describe_paired_files
 from paleomix.node import CommandNode
 from paleomix.nodes.samtools import SAMTOOLS_VERSION
 
@@ -293,7 +295,7 @@ class BWAAlgorithmNode(CommandNode):
             in_reference=reference,
             out_bam=output_file,
             max_threads=threads,
-            paired_end=input_file_1 and input_file_2,
+            paired_end=bool(input_file_1 and input_file_2),
             alt_aware=alt_aware,
             alt_optimize=alt_optimize,
             options=cleanup_options,
@@ -360,15 +362,15 @@ def _new_cleanup_command(
 
 def _new_bwa_command(
     call,
-    reference,
-    index_ext=BWA_INDEX_EXT,
-    index_iotype=InputFile,
-    requirements=(BWA_VERSION,),
-    stdout=None,
+    reference: PathTypes,
+    index_ext: Iterable[str] = BWA_INDEX_EXT,
+    index_iotype: Union[Type[InputFile], Type[OutputFile]] = InputFile,
+    requirements: Iterable[versions.Requirement] = (BWA_VERSION,),
+    stdout: PipeType = None,
 ):
     return AtomicCmd(
         call,
-        extra_files=[index_iotype(reference + postfix) for postfix in index_ext],
+        extra_files=[index_iotype(os.fspath(reference) + ext) for ext in index_ext],
         requirements=requirements,
         stdout=stdout,
     )

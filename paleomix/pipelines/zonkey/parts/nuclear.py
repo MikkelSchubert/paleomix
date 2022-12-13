@@ -25,7 +25,7 @@ import itertools
 import math
 import os
 import random
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Tuple, Union
 
 import pysam
 
@@ -196,7 +196,7 @@ class AdmixtureNode(CommandNode):
             dependencies=dependencies,
         )
 
-    def _setup(self, temp):
+    def _setup(self, temp: fileutils.PathTypes) -> None:
         CommandNode._setup(self, temp)
 
         input_files = [
@@ -329,7 +329,7 @@ class AdmixturePlotNode(CommandNode):
             dependencies=dependencies,
         )
 
-    def _setup(self, temp):
+    def _setup(self, temp: fileutils.PathTypes) -> None:
         samples = {}
         with open(self._samples) as handle:
             header = handle.readline().strip().split("\t")
@@ -407,7 +407,7 @@ class BuildFreqFilesNode(CommandNode):
             dependencies=dependencies,
         )
 
-    def _setup(self, temp):
+    def _setup(self, temp: fileutils.PathTypes) -> None:
         CommandNode._setup(self, temp)
 
         with open(self._tfam) as in_handle:
@@ -417,7 +417,7 @@ class BuildFreqFilesNode(CommandNode):
             for sample in samples:
                 handle.write("{0} {0} {0}\n".format(sample))
 
-    def _teardown(self, temp):
+    def _teardown(self, temp: fileutils.PathTypes) -> None:
         for ext in ("log", "nosex"):
             os.rename(
                 os.path.join(temp, self._basename + "." + ext),
@@ -460,7 +460,7 @@ class FreqToTreemixNode(Node):
 
                 handle.write("%s\n" % (" ".join(result),))
 
-    def _teardown(self, temp):
+    def _teardown(self, temp: fileutils.PathTypes) -> None:
         (output_file,) = self.output_files
         temp_file = os.path.join(temp, os.path.basename(output_file))
 
@@ -485,8 +485,8 @@ class TreemixNode(CommandNode):
         input_file: str,
         output_prefix: str,
         m: int = 0,
-        k=100,
-        outgroup=(),
+        k: Union[int, Tuple[str, str]] = 100,
+        outgroup: Iterable[str] = (),
         dependencies: Iterable[Node] = (),
     ):
         self._param_m = m
@@ -544,7 +544,7 @@ class TreemixNode(CommandNode):
             dependencies=dependencies,
         )
 
-    def _setup(self, temp: str):
+    def _setup(self, temp: fileutils.PathTypes) -> None:
         if self._k_file is not None:
             stats = read_summary(self._k_file)
             n_sites = float(stats[self._k_field])
@@ -684,7 +684,7 @@ class SmartPCANode(CommandNode):
             dependencies=dependencies,
         )
 
-    def _setup(self, temp):
+    def _setup(self, temp: fileutils.PathTypes) -> None:
         CommandNode._setup(self, temp)
 
         with open(os.path.join(temp, "parameters.txt"), "w") as handle:
@@ -709,7 +709,7 @@ numthreads:        1
                 )
             )
 
-    def _teardown(self, temp):
+    def _teardown(self, temp: fileutils.PathTypes) -> None:
         # Ensure that this file exists even when no filtered SNPs
         deleted_snps = os.path.basename(self._output_prefix) + ".deleted_snps"
         open(os.path.join(temp, deleted_snps), "a").close()
@@ -781,7 +781,7 @@ class PlotCoverageNode(CommandNode):
             dependencies=dependencies,
         )
 
-    def _setup(self, temp):
+    def _setup(self, temp: fileutils.PathTypes) -> None:
         with open(os.path.join(temp, "contigs.table"), "w") as handle:
             handle.write("ID\tSize\tNs\tHits\n")
 

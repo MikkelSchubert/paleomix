@@ -23,14 +23,10 @@
 import os
 
 import paleomix
-import paleomix.resources
-
-from paleomix.node import Node
-
 import paleomix.common.fileutils as fileutils
-
 import paleomix.pipelines.zonkey.parts.admixture as admixture
-
+import paleomix.resources
+from paleomix.node import Node
 from paleomix.pipelines.zonkey.parts.report import AnalysisReport
 
 
@@ -76,7 +72,7 @@ class SummaryNode(Node):
 
             output_handle.write(_HTML_FOOTER)
 
-    def _teardown(self, temp):
+    def _teardown(self, temp: fileutils.PathTypes) -> None:
         fileutils.make_dirs(self._root)
 
         fileutils.move_file(

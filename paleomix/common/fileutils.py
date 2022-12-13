@@ -29,7 +29,6 @@ import random
 import shutil
 from datetime import datetime
 from os import fspath
-from pathlib import Path
 from typing import (
     IO,
     Any,
@@ -45,8 +44,10 @@ from typing import (
 
 from .utilities import safe_coerce_to_tuple
 
+PathTypes = Union[str, "os.PathLike[str]"]
 
-def add_postfix(filename: Union[str, Path], postfix: str) -> str:
+
+def add_postfix(filename: PathTypes, postfix: str) -> str:
     """Ads a postfix to a filename (before any extensions that filename may have)."""
     filename, ext = os.path.splitext(filename)
     return filename + postfix + ext
@@ -66,12 +67,12 @@ def swap_ext(filename: str, ext: str) -> str:
     return filename + ext
 
 
-def reroot_path(root: Union[str, Path], filename: str) -> str:
+def reroot_path(root: PathTypes, filename: str) -> str:
     """Returns the basename of filename, joined to root."""
     return os.path.join(root, os.path.basename(filename))
 
 
-def create_temp_dir(root: Union[str, Path]) -> str:
+def create_temp_dir(root: PathTypes) -> str:
     """Creates a temporary directory, accessible only by the owner at the specified
     location. The folder name is includes the current time and includes a random
     component. Only the current user has access.
@@ -91,7 +92,7 @@ def create_temp_dir(root: Union[str, Path]) -> str:
     raise FileExistsError(errno.EEXIST, "Could not create new temp directory")
 
 
-def missing_files(filenames: Iterable[Union[str, Path]]) -> List[str]:
+def missing_files(filenames: Iterable[PathTypes]) -> List[str]:
     """Given a list of filenames, returns a list of those that
     does not exist. Note that this function does not differentiate
     between files and folders."""
@@ -103,7 +104,7 @@ def missing_files(filenames: Iterable[Union[str, Path]]) -> List[str]:
     return missing
 
 
-def missing_executables(filenames: Iterable[Union[str, Path]]) -> List[str]:
+def missing_executables(filenames: Iterable[PathTypes]) -> List[str]:
     missing = []  # type: List[str]
     for filename in safe_coerce_to_tuple(filenames):
         filename = fspath(filename)
@@ -112,7 +113,7 @@ def missing_executables(filenames: Iterable[Union[str, Path]]) -> List[str]:
     return missing
 
 
-def make_dirs(directory: Union[str, Path], mode: int = 0o777) -> bool:
+def make_dirs(directory: PathTypes, mode: int = 0o777) -> bool:
     """Wrapper around os.makedirs to make it suitable for using
     in a multithreaded/multiprocessing environment: Unlike the
     regular function, this wrapper does not throw an exception if
@@ -135,7 +136,7 @@ def make_dirs(directory: Union[str, Path], mode: int = 0o777) -> bool:
         return False
 
 
-def move_file(source: Union[str, Path], destination: Union[str, Path]) -> None:
+def move_file(source: PathTypes, destination: PathTypes) -> None:
     """Wrapper around shutils which ensures that the
     destination directory exists before moving the file.
 
@@ -145,7 +146,7 @@ def move_file(source: Union[str, Path], destination: Union[str, Path]) -> None:
     _sh_wrapper(_atomic_file_move, source, destination)
 
 
-def copy_file(source: Union[str, Path], destination: Union[str, Path]) -> None:
+def copy_file(source: PathTypes, destination: PathTypes) -> None:
     """Wrapper around shutils which ensures that the
     destination directory exists before copying the file.
 
@@ -155,7 +156,7 @@ def copy_file(source: Union[str, Path], destination: Union[str, Path]) -> None:
     _sh_wrapper(_atomic_file_copy, source, destination)
 
 
-def open_rb(filename: Union[str, Path]) -> IO[bytes]:
+def open_rb(filename: PathTypes) -> IO[bytes]:
     """Opens a file for reading, transparently handling
     GZip and BZip2 compressed files. Returns a file handle."""
     handle = open(fspath(filename), "rb")
@@ -174,11 +175,11 @@ def open_rb(filename: Union[str, Path]) -> IO[bytes]:
         raise
 
 
-def open_rt(filename: Union[str, Path]) -> IO[str]:
+def open_rt(filename: PathTypes) -> IO[str]:
     return io.TextIOWrapper(open_rb(filename))
 
 
-def try_remove(filename: Union[str, Path]) -> bool:
+def try_remove(filename: PathTypes) -> bool:
     """Tries to remove a file. Unlike os.remove, the function does not
     raise an exception if the file does not exist, but does raise
     exceptions on other errors. The return value reflects whether or
@@ -186,7 +187,7 @@ def try_remove(filename: Union[str, Path]) -> bool:
     return _try_rm_wrapper(os.remove, filename)
 
 
-def try_rmtree(filename: Union[str, Path]) -> bool:
+def try_rmtree(filename: PathTypes) -> bool:
     """Tries to remove a dir-tree. Unlike shutil.rmtree, the function does not raise
     an exception if the file does not exist, but does raise exceptions on other
     errors. The return value reflects whether or not the file was actually
@@ -194,7 +195,7 @@ def try_rmtree(filename: Union[str, Path]) -> bool:
     return _try_rm_wrapper(shutil.rmtree, filename)
 
 
-def try_rmdirs(dirpath: Union[str, Path]) -> bool:
+def try_rmdirs(dirpath: PathTypes) -> bool:
     try:
         items = os.scandir(dirpath)
     except FileNotFoundError:
@@ -304,7 +305,7 @@ def validate_filenames(filenames: Iterable[str]) -> Tuple[str, ...]:
     return tuple(fspath(filename) for filename in safe_coerce_to_tuple(filenames))
 
 
-def _atomic_file_move(source: Union[str, Path], destination: Union[str, Path]):
+def _atomic_file_move(source: PathTypes, destination: PathTypes):
     try:
         return os.rename(source, destination)
     except OSError as error:
@@ -323,9 +324,9 @@ def _atomic_file_move(source: Union[str, Path], destination: Union[str, Path]):
 
 
 def _atomic_file_copy(
-    source: Union[str, Path],
-    destination: Union[str, Path],
-    func: Optional[Callable[[Union[str, Path], Union[str, Path]], Any]] = None,
+    source: PathTypes,
+    destination: PathTypes,
+    func: Optional[Callable[[PathTypes, PathTypes], Any]] = None,
 ):
     # Ensure that hard failures during copy does not leave anything at destination
     postfix = "{:04x}".format(random.getrandbits(16))
@@ -345,9 +346,9 @@ def _atomic_file_copy(
 
 
 def _sh_wrapper(
-    func: Callable[[Union[str, Path], Union[str, Path]], Any],
-    source: Union[str, Path],
-    destination: Union[str, Path],
+    func: Callable[[PathTypes, PathTypes], Any],
+    source: PathTypes,
+    destination: PathTypes,
 ) -> None:
     """Runs an 'shutil' function ('func') which takes an 'source' and
     a 'destination' argument (e.g. copy/move/etc.), but silently
@@ -367,7 +368,7 @@ def _sh_wrapper(
         raise
 
 
-def _try_rm_wrapper(func: Callable[[Any], Any], fpath: Union[str, Path]) -> bool:
+def _try_rm_wrapper(func: Callable[[Any], Any], fpath: PathTypes) -> bool:
     """Takes a function (e.g. os.remove / os.rmdir), and attempts to remove a
     path; returns true if that path was successfully remove, and false if it did
     not exist."""

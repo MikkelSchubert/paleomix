@@ -25,13 +25,11 @@ import sys
 
 import pysam
 
-from paleomix.common.sequences import NT_CODES
-from paleomix.common.utilities import try_cast
-
 import paleomix.common.argparse as argparse
 import paleomix.common.fileutils as fileutils
 import paleomix.pipelines.zonkey.common as common
-
+from paleomix.common.sequences import NT_CODES
+from paleomix.common.utilities import try_cast
 
 _CHUNK_SIZE = 1000000
 
@@ -143,6 +141,7 @@ def _write_genotypes(args, data, filename):
                 sys.stderr.write("  - %s: % 3i%%\r" % (contig, (100 * pos) / size))
 
                 chunks = []
+                real_name = None
                 for key in keys:
                     real_name = samples[key]["contigs"][contig]
                     fasta_handle = samples[key]["handle"]

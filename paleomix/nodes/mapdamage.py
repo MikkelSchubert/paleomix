@@ -33,7 +33,7 @@ from paleomix.common.command import (
     ParallelCmds,
     TempOutputFile,
 )
-from paleomix.common.fileutils import describe_files
+from paleomix.common.fileutils import PathTypes, describe_files
 from paleomix.node import CommandNode, Node, NodeError
 from paleomix.nodes.samtools import merge_bam_files_command
 
@@ -110,7 +110,7 @@ class MapDamagePlotNode(CommandNode):
             dependencies=dependencies,
         )
 
-    def _teardown(self, temp):
+    def _teardown(self, temp: PathTypes) -> None:
         # No Length_plot.pdf file is written if there are no SE reads in the
         # input_file. In that case, we write a dummy PDF to ensure that all
         # expected files exist.
@@ -181,7 +181,7 @@ class MapDamageModelNode(CommandNode):
             dependencies=dependencies,
         )
 
-    def _setup(self, temp):
+    def _setup(self, temp: PathTypes) -> None:
         CommandNode._setup(self, temp)
         for fname in (
             "3pGtoA_freq.txt",
@@ -254,7 +254,7 @@ class MapDamageRescaleNode(CommandNode):
             dependencies=dependencies,
         )
 
-    def _setup(self, temp):
+    def _setup(self, temp: PathTypes) -> None:
         CommandNode._setup(self, temp)
         for fname in ("Stats_out_MCMC_correct_prob.csv",):
             relpath = os.path.join(self._directory, fname)

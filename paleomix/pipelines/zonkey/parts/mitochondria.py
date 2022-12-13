@@ -31,6 +31,7 @@ from paleomix.common.command import (
     OutputFile,
     TempOutputFile,
 )
+from paleomix.common.fileutils import PathTypes
 from paleomix.common.formats.newick import Newick
 from paleomix.node import CommandNode
 from paleomix.pipelines.zonkey.common import RSCRIPT_VERSION
@@ -94,7 +95,7 @@ class DrawPhylogenyNode(CommandNode):
             dependencies=dependencies,
         )
 
-    def _setup(self, temp):
+    def _setup(self, temp: PathTypes) -> None:
         with open(self._bootstraps) as handle:
             bootstraps = [Newick.from_string(line.strip()) for line in handle]
 

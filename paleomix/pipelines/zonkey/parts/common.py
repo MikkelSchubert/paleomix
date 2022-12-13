@@ -21,9 +21,7 @@
 # SOFTWARE.
 #
 import paleomix.common.fileutils as fileutils
-
 from paleomix.node import Node
-
 
 _DEFAULT_COLORS = (
     "#E69F00",
@@ -67,7 +65,7 @@ class WriteSampleList(Node):
 
             handle.write("Sample\t-\t#000000\n")
 
-    def _teardown(self, temp):
+    def _teardown(self, temp: fileutils.PathTypes) -> None:
         (destination,) = self.output_files
         source = fileutils.reroot_path(temp, destination)
 

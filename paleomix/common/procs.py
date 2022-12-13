@@ -27,12 +27,19 @@ import os
 import shlex
 import signal
 import sys
-from os import PathLike
 from subprocess import Popen, TimeoutExpired
 from typing import IO, Any, AnyStr, Iterable, List, Optional, cast
 
-# List of running processes; can be terminated with `terminate_all_processes`
-_RUNNING_PROCS: List[Popen[Any]] = []
+try:
+    from typing import Protocol
+
+    class _SupportsTerminate(Protocol):
+        def terminate(self) -> None:
+            ...
+
+except ImportError:
+    # FIXME: Workaround for python3.7
+    _SupportsTerminate = Any
 
 
 def quote_args(args: Any) -> str:
@@ -96,12 +103,16 @@ def join_procs(procs: Iterable[Popen[Any]], out: IO[str] = sys.stderr):
     return return_codes
 
 
-def register_process(proc: Popen[Any]) -> None:
+# List of running processes; can be terminated with `terminate_all_processes`
+_RUNNING_PROCS: List[_SupportsTerminate] = []
+
+
+def register_process(proc: _SupportsTerminate) -> None:
     """Register a process for automatic/forced termination."""
     _RUNNING_PROCS.append(proc)
 
 
-def unregister_process(proc: Popen[Any]) -> None:
+def unregister_process(proc: _SupportsTerminate) -> None:
     """Unregister a process for automatic/forced termination."""
     if proc in _RUNNING_PROCS:
         _RUNNING_PROCS.remove(proc)

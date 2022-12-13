@@ -37,7 +37,7 @@ from typing import (
     cast,
 )
 
-from paleomix.common.fileutils import open_rt
+from paleomix.common.fileutils import PathTypes, open_rt
 from paleomix.common.formats.fasta import FASTA, FASTAError
 from paleomix.common.sequences import NT_CODES, encode_genotype, split
 from paleomix.common.utilities import safe_coerce_to_frozenset
@@ -172,7 +172,7 @@ class MSA(FrozenSet[FASTA]):
         return MSA(FASTA.from_lines(lines))
 
     @classmethod
-    def from_file(cls, filename: Union[str, Path]) -> "MSA":
+    def from_file(cls, filename: PathTypes) -> "MSA":
         """Reads a MSA from the specified filename. The file may
         be uncompressed, gzipped or bzipped. See also 'MSA.from_lines'."""
         with open_rt(filename) as handle:

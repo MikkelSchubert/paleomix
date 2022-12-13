@@ -33,6 +33,7 @@ from typing import Any, FrozenSet, Iterable, List, Optional, Set, Union
 import paleomix
 import paleomix.common.fileutils as fileutils
 from paleomix.common.command import AtomicCmd, CmdError, ParallelCmds, SequentialCmds
+from paleomix.common.fileutils import PathTypes
 from paleomix.common.utilities import safe_coerce_to_frozenset
 from paleomix.common.versions import Requirement
 
@@ -108,7 +109,7 @@ class Node:
         # Globally unique node ID
         self.id = next(_GLOBAL_ID)
 
-    def run(self, temp_root: str) -> None:
+    def run(self, temp_root: PathTypes) -> None:
         """Runs the node, by calling _setup, _run, and _teardown in that order.
         Prior to calling these functions, a temporary dir is created using the
         'temp_root' prefix from the config object. Both the config object and
@@ -160,11 +161,11 @@ class Node:
 
         self.intermediate_output_files.update(fnmatch.filter(self.output_files, glob))
 
-    def _create_temp_dir(self, temp_root: str) -> str:
+    def _create_temp_dir(self, temp_root: PathTypes) -> str:
         """Called by 'run' in order to create a temporary folder."""
         return fileutils.create_temp_dir(temp_root)
 
-    def _remove_temp_dir(self, temp: str) -> None:
+    def _remove_temp_dir(self, temp: PathTypes) -> None:
         """Called by 'run' in order to remove an (now) empty temporary folder."""
         temp = fileutils.fspath(temp)
         log = logging.getLogger(__name__)
@@ -182,7 +183,7 @@ class Node:
 
             log.warning("Could not remove temporary directory: %r", error)
 
-    def _setup(self, _temp: str) -> None:
+    def _setup(self, _temp: PathTypes) -> None:
         """Is called prior to '_run()' by 'run()'. Any code used to copy/link files,
         or other steps needed to ready the node for running may be carried out in this
         function. Checks that required input files exist, and raises an NodeError if
@@ -200,10 +201,10 @@ class Node:
 
         self._check_for_input_files(self.input_files | self.auxiliary_files)
 
-    def _run(self, _temp: str) -> None:
+    def _run(self, _temp: PathTypes) -> None:
         pass
 
-    def _teardown(self, _temp: str) -> None:
+    def _teardown(self, _temp: PathTypes) -> None:
         self._check_for_missing_files(self.output_files, "output")
 
     def __str__(self) -> str:
@@ -302,7 +303,7 @@ class Node:
         return threads
 
     @staticmethod
-    def _collect_files(root: str) -> Iterable[str]:
+    def _collect_files(root: PathTypes) -> Iterable[str]:
         root = fileutils.fspath(root)
 
         def _walk_dir(path: str) -> Iterable[str]:
@@ -337,7 +338,7 @@ class CommandNode(Node):
 
         self._command = command
 
-    def _run(self, temp: str) -> None:
+    def _run(self, temp: PathTypes) -> None:
         """Runs the command object provided in the constructor, and waits for it to
         terminate. If any errors during the running of the command, this function
         raises a NodeError detailing the returned error-codes."""
@@ -350,7 +351,7 @@ class CommandNode(Node):
         if any(return_codes):
             raise CmdNodeError(str(self._command))
 
-    def _teardown(self, temp: str) -> None:
+    def _teardown(self, temp: PathTypes) -> None:
         required_files = self._command.expected_temp_files
         current_files = set(self._collect_files(temp))
 

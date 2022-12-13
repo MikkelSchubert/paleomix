@@ -19,7 +19,13 @@ from paleomix.common.command import (
     TempInputFile,
     TempOutputFile,
 )
-from paleomix.common.fileutils import move_file, open_rb, reroot_path, swap_ext
+from paleomix.common.fileutils import (
+    PathTypes,
+    move_file,
+    open_rb,
+    reroot_path,
+    swap_ext,
+)
 from paleomix.node import CommandNode, Node, NodeError
 
 
@@ -221,7 +227,7 @@ class FastqToSamNode(CommandNode):
         options={},
         java_options=(),
         dependencies=(),
-    ):
+    ) -> None:
         self._enabled = True
         self._in_fastq = in_fastq
         self._out_bam = out_bam
@@ -247,7 +253,7 @@ class FastqToSamNode(CommandNode):
             dependencies=dependencies,
         )
 
-    def _setup(self, temp: str) -> None:
+    def _setup(self, temp: PathTypes) -> None:
         self._enabled = False
         with open_rb(self._in_fastq) as handle:
             # Empty files cannot be processed by GATK
@@ -256,13 +262,13 @@ class FastqToSamNode(CommandNode):
         # Prerequisites should always be checked, even if command is not run
         return CommandNode._setup(self, temp)
 
-    def _run(self, temp: str) -> None:
+    def _run(self, temp: PathTypes) -> None:
         if self._enabled:
             return CommandNode._run(self, temp)
 
         return Node._run(self, temp)
 
-    def _teardown(self, temp: str) -> None:
+    def _teardown(self, temp: PathTypes) -> None:
         if self._enabled:
             return CommandNode._teardown(self, temp)
 
@@ -290,7 +296,7 @@ class GatherVcfsNode(CommandNode):
         options={},
         java_options=(),
         dependencies=(),
-    ):
+    ) -> None:
         command = _gatk_command(
             tool="GatherVcfs",
             tool_options={

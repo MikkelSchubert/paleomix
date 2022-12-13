@@ -133,7 +133,7 @@ class RAxMLRapidBSNode(CommandNode):
             dependencies=dependencies,
         )
 
-    def _setup(self, temp):
+    def _setup(self, temp: fileutils.PathTypes) -> None:
         CommandNode._setup(self, temp)
 
         # Required to avoid the creation of files outside the temp folder
@@ -148,7 +148,7 @@ class RAxMLRapidBSNode(CommandNode):
         # RAxML needs to be run with an absolute path for -w
         super()._run(os.path.abspath(temp))
 
-    def _teardown(self, temp):
+    def _teardown(self, temp: fileutils.PathTypes) -> None:
         for filename in os.listdir(temp):
             match = re.match("RAxML_(.*).PALEOMIX", filename)
             if match:

@@ -24,13 +24,12 @@ import logging
 import os
 import re
 import tarfile
-
 from io import TextIOWrapper
+from typing import Any, Dict, Set
 
 import pysam
 
 import paleomix.common.yaml as yaml
-
 from paleomix.common.formats.fasta import FASTA
 from paleomix.pipelines.zonkey.common import contig_name_to_plink_name, get_sample_names
 
@@ -396,7 +395,7 @@ class ZonkeyDB:
 
         header = handle.readline().rstrip().split("\t")
 
-        required_keys = set(
+        required_keys: Set[str] = set(
             ("NReads", "K", "Sample1", "Sample2", "HasTS", "Percentile", "Value")
         )
         missing_keys = required_keys - set(header)
@@ -418,7 +417,7 @@ class ZonkeyDB:
                     % (linenum, filename, len(header), len(fields))
                 )
 
-            row = dict(zip(header, fields))
+            row: Dict[str, Any] = dict(zip(header, fields))
 
             if row["HasTS"] not in ("TRUE", "FALSE"):
                 pass
