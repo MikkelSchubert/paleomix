@@ -488,10 +488,11 @@ class ZonkeyDB:
                     "Table %r does contains duplicate columns!" % (filename,)
                 )
 
-            if requied_columns - set(header):
+            missing_columns = requied_columns - set(header)
+            if missing_columns:
                 raise ZonkeyDBError(
                     "Required columns are missign in table "
-                    "%r: %s" % (filename, ", ".join())
+                    "%r: %s" % (filename, ", ".join(missing_columns))
                 )
 
             for linenum, line in enumerate(handle):
