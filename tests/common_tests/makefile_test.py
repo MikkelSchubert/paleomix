@@ -61,7 +61,7 @@ _DUMMY_PATH_STR = " :: ".join(_DUMMY_PATH)
 
 
 class Unhashable:
-    __hash__ = None
+    __hash__ = None  # type: ignore
 
 
 _COMMON_INVALID_VALUES = {

@@ -159,7 +159,7 @@ def test_constructor__invalid_values(key: str, value: Any):
 
 
 def test_constructor__requirements():
-    node = Node(requirements=_REQUIREMENT_1)
+    node = Node(requirements=(_REQUIREMENT_1,))
     assert node.requirements == frozenset([_REQUIREMENT_1])
     node = Node(requirements=[_REQUIREMENT_1])
     assert node.requirements == frozenset([_REQUIREMENT_1])
@@ -185,7 +185,7 @@ def test_constructor__nodes_is_none():
 
 def test_constructor__single_node():
     sub_node = Node()
-    my_node = Node(dependencies=sub_node)
+    my_node = Node(dependencies=(sub_node,))
     assert my_node.dependencies == frozenset([sub_node])
 
 
@@ -271,7 +271,7 @@ def test_run__order():
 
     node.run(_DUMMY_TEMP_ROOT)
 
-    node_mock.mock_calls == [
+    assert node_mock.mock_calls == [
         call._create_temp_dir(_DUMMY_TEMP_ROOT),
         call._setup(_DUMMY_TEMP),
         call._run(_DUMMY_TEMP),
@@ -371,7 +371,7 @@ _INPUT_FILES_EXIST = (
 
 @pytest.mark.parametrize("kwargs", _INPUT_FILES_EXIST)
 def test__setup__input_files(kwargs):
-    Node(**kwargs)._setup(None)
+    Node(**kwargs)._setup(Path())
 
 
 _INPUT_FILES_MISSING = (
@@ -384,17 +384,17 @@ _INPUT_FILES_MISSING = (
 @pytest.mark.parametrize("kwargs", _INPUT_FILES_MISSING)
 def test__setup__input_files_missing(kwargs):
     with pytest.raises(NodeError):
-        Node(**kwargs)._setup(None)
+        Node(**kwargs)._setup(Path())
 
 
 def test__teardown__output_files():
-    Node(input_files=_EMPTY_FILE, output_files=_IN_FILES)._teardown(None)
+    Node(input_files=_EMPTY_FILE, output_files=_IN_FILES)._teardown(Path())
 
 
 def test__teardown__output_files_missing():
     node = Node(input_files=_EMPTY_FILE, output_files=_OUT_FILES)
     with pytest.raises(NodeError):
-        node._teardown(None)
+        node._teardown(Path())
 
 
 ###############################################################################
@@ -472,7 +472,7 @@ _SIMPLE_CMD_MOCK = Mock(
     auxiliary_files=_AUX_FILES,
     requirements=_REQUIREMENTS,
 )
-_SIMPLE_CMD_NODE = CommandNode(command=_SIMPLE_CMD_MOCK, dependencies=_SIMPLE_DEPS)
+_SIMPLE_CMD_NODE = CommandNode(command=_SIMPLE_CMD_MOCK, dependencies=(_SIMPLE_DEPS,))
 
 
 def test_commandnode_constructor__input_files():
@@ -546,7 +546,7 @@ _SETUP_FILES_EXIST = (
 def test_commandnode_setup__files_exist(kwargs):
     cmd_mock = _build_cmd_mock(**kwargs)
     node = CommandNode(cmd_mock)
-    node._setup(None)
+    node._setup(Path())
 
 
 _SETUP_FILES_MISSING = (
@@ -561,7 +561,7 @@ def test_commandnode_setup__files_missing(kwargs):
     cmd_mock = _build_cmd_mock(**kwargs)
     node = CommandNode(cmd_mock)
     with pytest.raises(NodeError):
-        node._setup(None)
+        node._setup(Path())
 
 
 ###############################################################################

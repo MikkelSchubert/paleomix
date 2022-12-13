@@ -119,11 +119,11 @@ class MappingToTotals:
     @classmethod
     def _build_mappings(cls, totals, name, smlbid_to_smlb):
         # Accumulators mapped by sample+library IDs
-        totals_by_smlbid = [None] * len(smlbid_to_smlb)
+        totals_by_smlbid = []
         # Accumulators mapped by the corresponding table keys
         totals_by_table_key = {}
 
-        for (smlbid, (sm_key, lb_key)) in enumerate(smlbid_to_smlb):
+        for sm_key, lb_key in smlbid_to_smlb:
             keys = [
                 ("*", "*", "*"),
                 (sm_key, "*", "*"),
@@ -133,7 +133,7 @@ class MappingToTotals:
             ]
 
             mappings = cls._nonoverlapping_mappings(keys, totals, totals_by_table_key)
-            totals_by_smlbid[smlbid] = mappings
+            totals_by_smlbid.append(mappings)
 
         totals_src_and_dst = []
         for (key, dst) in totals_by_table_key.items():

@@ -26,6 +26,7 @@ from typing import Any, List
 from unittest.mock import Mock
 
 import pytest
+
 from paleomix.common.formats.bed import (
     BEDError,
     BEDRecord,
@@ -175,7 +176,7 @@ def test_bedrecord__setters__unset_fields__after_end():
 
 def test_sorting__compared_with_non_bed_record():
     with pytest.raises(TypeError):
-        BEDRecord("chr2", 1, 20) < "foo"
+        _ = BEDRecord("chr2", 1, 20) < "foo"
 
 
 def test_bedrecord__cmp():

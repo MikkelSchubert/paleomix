@@ -23,6 +23,7 @@
 from typing import Any, List
 
 import pytest
+
 from paleomix.common.formats.newick import Newick, NewickError, NewickParseError
 
 ###############################################################################
@@ -690,13 +691,13 @@ _CHILD_VALUES = [[], [Newick("Leaf")]]
 @pytest.mark.parametrize("name_1", _NAME_VALUES)
 @pytest.mark.parametrize("name_2", _NAME_VALUES)
 def test_newick__ordering_handles_empty__name(name_1: str, name_2: str):
-    Newick(name_1, length=1) < Newick(name_2, length=1)
+    _ = Newick(name_1, length=1) < Newick(name_2, length=1)
 
 
 @pytest.mark.parametrize("length_1", _LENGTH_VALUES)
 @pytest.mark.parametrize("length_2", _LENGTH_VALUES)
 def test_newick__ordering_handles_empty__length(length_1: int, length_2: int):
-    Newick("Leaf", length=length_1) < Newick("Leaf", length=length_2)
+    _ = Newick("Leaf", length=length_1) < Newick("Leaf", length=length_2)
 
 
 @pytest.mark.parametrize("children_1", _CHILD_VALUES)
@@ -704,9 +705,9 @@ def test_newick__ordering_handles_empty__length(length_1: int, length_2: int):
 def test_newick__ordering_handles_empty__children(
     children_1: List[Newick], children_2: List[Newick]
 ):
-    Newick("Node", children=children_1) < Newick("Node", children=children_2)
+    _ = Newick("Node", children=children_1) < Newick("Node", children=children_2)
 
 
 def test_newick__comparisons_with_other_types():
     with pytest.raises(TypeError):
-        Newick("A") < object()
+        _ = Newick("A") < object()
