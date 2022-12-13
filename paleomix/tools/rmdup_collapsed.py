@@ -48,10 +48,12 @@ def read_quality(read: pysam.AlignedSegment):
     return sum(qualities)
 
 
-def copy_number(read: pysam.AlignedSegment):
+def copy_number(read: pysam.AlignedSegment) -> int:
     # has_tag is faster than try/except, since most reads lack the tag.
     if read.has_tag("XP"):
-        return read.get_tag("XP")
+        value, tag_type = read.get_tag("XP", with_value_type=True)
+        if tag_type == "i":
+            return cast(int, value)
 
     return 0
 
