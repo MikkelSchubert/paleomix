@@ -139,7 +139,11 @@ class GenotypeSites:
 class GenotypeReader:
     def __init__(self, filename):
         self._tar_handle = tarfile.open(filename)
-        self._handle = TextIOWrapper(self._tar_handle.extractfile("genotypes.txt"))
+        handle = self._tar_handle.extractfile("genotypes.txt")
+        if handle is None:
+            raise FileNotFoundError("genotypes.txt")
+
+        self._handle = TextIOWrapper(handle)
         self._header = self._handle.readline().rstrip("\r\n").split("\t")
         self.samples = self._header[-1].split(";")
 

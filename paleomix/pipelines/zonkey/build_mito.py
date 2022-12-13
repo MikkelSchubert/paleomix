@@ -147,6 +147,10 @@ def main(argv):
     sequences = data.mitochondria
     log = logging.getLogger(__name__)
 
+    if sequences is None:
+        log.error("No mitochondria data in database")
+        return 1
+
     try:
         handle = pysam.AlignmentFile(args.bam)
     except (IOError, ValueError) as error:
