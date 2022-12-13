@@ -602,7 +602,7 @@ class _NewickGraph:
     ) -> NodeID:
         root_key: Optional[Tuple[NodeID, NodeID]] = None
         root_clade: Optional[FrozenSet[NodeID]] = None
-        root_length = Optional[float]
+        root_length: Optional[float] = None
         for (p_node, connections) in clades.items():
             for (n_node, clade) in connections.items():
                 if (root_clade is None) or (len(clade) < len(root_clade)):
