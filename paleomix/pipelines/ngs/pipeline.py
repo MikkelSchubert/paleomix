@@ -31,6 +31,7 @@ from paleomix.nodes.samtools import (
     TabixIndexNode,
 )
 from paleomix.nodes.validation import ValidateFASTAFilesNode
+from paleomix.pipelines.ngs.config import PipelineTarget
 from paleomix.pipelines.ngs.nodes import TranchesPlotsNode
 
 ########################################################################################
@@ -46,15 +47,10 @@ _LAYOUT = {
         "{sample}": {
             "alignments": {
                 "{sample}.{genome}.{library}.{run}.{kind}.bam": "aln_run_bam",
-                "{sample}.{genome}.{library}.{run}.{kind}.ValidateSamfile.log": "aln_run_validation_log",
                 "{sample}.{genome}.{library}.rmdup.merged.bam": "aln_rmdup_merged_bam",
                 "{sample}.{genome}.{library}.rmdup.paired.bam": "aln_rmdup_paired_bam",
                 "{sample}.{genome}.{library}.rmdup.paired.metrics.txt": "aln_rmdup_paired_metrics",
                 "{sample}.{genome}.good.bam": "aln_split_passed_bam",
-                "{sample}.{genome}.good.ValidateSamfile.log": "aln_split_good_validation_log",
-                "{sample}.{genome}.good.recalibration.table.txt": "aln_recal_training_table",
-                "{sample}.{genome}.good.recalibration.table.log": "aln_recal_training_log",
-                "{sample}.{genome}.good.recalibration.log": "aln_recal_log",
             },
             "reads": {
                 "{sample}.{library}.{run}.paired_1.fastq.gz": "fastp_paired_1",
@@ -73,18 +69,11 @@ _LAYOUT = {
             },
             "{genome}.uncalibrated.g.vcf.gz": "gvcf_merged",
             "{genome}.uncalibrated.vcf.gz": "vcf_merged",
-            "{genome}.recalibration.training.snp.vcf.gz": "vcf_recal_training_snp_vcf",
-            "{genome}.recalibration.training.snp.vcf.gz.log": "vcf_recal_training_snp_vcf_log",
-            "{genome}.recalibration.training.indel.vcf.gz": "vcf_recal_training_indel_vcf",
-            "{genome}.recalibration.training.indel.vcf.gz.log": "vcf_recal_training_indel_vcf_log",
-            "{genome}.recalibration.snp.vcf.gz": "vcf_recal_snp",
-            "{genome}.recalibration.snp.log": "vcf_recal_snp_log",
-            "{genome}.recalibration.snp.indel.log": "vcf_recal_snp_indel_log",
+            "{genome}.recalibrated.snp.vcf.gz": "vcf_recal_snp",
         },
     },
     "haplotypes": {
         "{sample}.{genome}.g.vcf.gz": "gvcf_per_sample",
-        "{sample}.{genome}.g.vcf.gz.log": "gvcf_per_sample_log",
     },
     "genotypes": {
         "{genome}.vcf.gz": "vcf_recal_snp_indel",
@@ -92,6 +81,7 @@ _LAYOUT = {
     "statistics": {
         "alignments_multiQC": "bam_multiqc_prefix",
         "alignments": {
+            "{sample}.{genome}.recalibration.txt": "aln_recal_training_table",
             "{sample}.{genome}.mapping.json": "aln_split_statistics",
             "{sample}.{genome}.{method}.txt": "bam_stats",
             "fastqc": "bam_fastqc_dir",
@@ -102,6 +92,8 @@ _LAYOUT = {
             "{genome}.recalibration.snp.tranches.extras": "vcf_recal_training_snp_trances_extras",
             "{genome}.recalibration.indel.r": "vcf_recal_training_indel_r",
             "{genome}.recalibration.indel.tranches": "vcf_recal_training_indel_trances",
+            "{genome}.recalibration.indel.vcf.gz": "vcf_recal_training_indel_vcf",
+            "{genome}.recalibration.snp.vcf.gz": "vcf_recal_training_snp_vcf",
         },
         "reads_pre_trimmed_multiQC": "stats_fastqc_multiqc_pre",
         "reads_trimming_multiQC": "stats_fastp_multiqc",
@@ -285,10 +277,12 @@ def process_fastq_files(args, genome, samples, settings):
                     options=settings["Fastp"],
                 )
 
+                fastp_node.mark_intermediate_files("*.fastq.gz")
+
                 # Filtered reads and orphan paired end reads are converted to unmapped
                 # BAM alignments so that they can be merged into the final junk BAM
                 for key in ("failed", "unpaired"):
-                    yield FastqToSamNode(
+                    to_sam_task = FastqToSamNode(
                         in_fastq=layout["fastp_{}".format(key)],
                         out_bam=layout["fastp_{}_bam".format(key)],
                         options={
@@ -303,6 +297,9 @@ def process_fastq_files(args, genome, samples, settings):
                         },
                         dependencies=[fastp_node],
                     )
+
+                    to_sam_task.mark_intermediate_files()
+                    yield to_sam_task
 
                 nodes.append(fastp_node)
 
@@ -389,7 +386,7 @@ def map_sample_runs(args, genome, samples, settings):
                     out_bam = layout.get("aln_run_bam", kind=name)
                     mapped_reads[name].append(out_bam)
 
-                    yield BWAAlgorithmNode(
+                    task = BWAAlgorithmNode(
                         reference=genome.filename,
                         input_file_1=filename_1,
                         input_file_2=filename_2,
@@ -414,6 +411,9 @@ def map_sample_runs(args, genome, samples, settings):
                             ],
                         },
                     )
+
+                    task.mark_intermediate_files()
+                    yield task
 
             libraries[library] = mapped_reads
 
@@ -443,18 +443,24 @@ def filter_pcr_duplicates(args, genome, samples, settings):
         for library, read_types in libraries.items():
             layout = args.layout.update(genome=genome, sample=sample, library=library)
 
-            yield MarkDupNode(
+            task = MarkDupNode(
                 in_bams=read_types["paired"],
                 out_bam=layout["aln_rmdup_paired_bam"],
                 out_stats=layout["aln_rmdup_paired_metrics"],
                 options=markdup_options,
             )
 
-            yield FilterCollapsedBAMNode(
+            task.mark_intermediate_files()
+            yield task
+
+            task = FilterCollapsedBAMNode(
                 input_bams=read_types["merged"],
                 output_bam=layout["aln_rmdup_merged_bam"],
                 keep_dupes=mode == "mark",
             )
+
+            task.mark_intermediate_files()
+            yield task
 
             libraries[library] = [
                 layout["aln_rmdup_paired_bam"],
@@ -473,13 +479,15 @@ def merge_samples_alignments(args, genome, samples, settings):
         layout = args.layout.update(genome=genome, sample=sample)
 
         # Split BAM into file containing proper alignment and BAM containing junk
-        split = FinalizeBAMNode(
+        split: FinalizeBAMNode = FinalizeBAMNode(
             in_bams=input_libraries,
             out_passed=layout["aln_split_passed_bam"],
             out_failed=layout["aln_split_failed_bam"],
             out_json=layout["aln_split_statistics"],
             threads=args.max_threads_samtools,
         )
+
+        split.mark_intermediate_files(layout["aln_split_passed_bam"])
 
         samples[sample] = BAMIndexNode(
             infile=layout["aln_split_passed_bam"],
@@ -488,6 +496,8 @@ def merge_samples_alignments(args, genome, samples, settings):
                 "-@": args.max_threads_samtools,
             },
         )
+
+        samples[sample].mark_intermediate_files()
 
         yield samples[sample]
 
@@ -506,7 +516,6 @@ def recalibrate_nucleotides(args, genome, samples, settings):
             in_known_sites=recalibrator_known_sites,
             in_bam=layout["aln_split_passed_bam"],
             out_table=layout["aln_recal_training_table"],
-            out_log=layout["aln_recal_training_log"],
             options=recalibrator_options,
             java_options=args.jre_options,
         )
@@ -514,7 +523,6 @@ def recalibrate_nucleotides(args, genome, samples, settings):
         yield ApplyBQSRNode(
             in_node=model,
             out_bam=layout["aln_recal_bam"],
-            out_log=layout["aln_recal_log"],
             options=settings["ApplyBQSR"],
             java_options=args.jre_options,
             dependencies=[model],
@@ -565,38 +573,45 @@ def final_bam_stats(args, genome, samples, settings):
 def haplotype_samples(args, genome, samples, settings):
     settings = settings["Genotyping"]
 
-    sample_gvcfs = {}
     for sample in samples:
         layout = args.layout.update(genome=genome, sample=sample)
         out_vcf = layout["gvcf_per_sample"]
 
-        sample_gvcfs[out_vcf] = HaplotypeCallerNode(
+        yield HaplotypeCallerNode(
             in_reference=genome.filename,
             in_bam=layout["aln_recal_bam"],
             out_vcf=out_vcf,
-            out_log=layout["gvcf_per_sample_log"],
             options=settings["HaplotypeCaller"],
             java_options=args.jre_options,
         )
 
-    layout = args.layout.update(genome=genome)
 
-    if len(sample_gvcfs) == 1 and len(genome.intervals) == 1:
+def genotype_samples(args, genome, samples, settings):
+    layout = args.layout.update(genome=genome)
+    settings = settings["Genotyping"]
+
+    gvcfs = []
+    for sample in samples:
+        gvcfs.append(layout.get("gvcf_per_sample", genome=genome, sample=sample))
+
+    if len(gvcfs) == 1 and len(genome.intervals) == 1:
         haplotyping_func = _haplotype_1_sample_1_interval
-    elif len(sample_gvcfs) == 1:
+    elif len(gvcfs) == 1:
         haplotyping_func = _haplotype_1_sample_n_intervals
     elif len(genome.intervals) == 1:
         haplotyping_func = _haplotype_n_samples_1_interval
     else:
         haplotyping_func = _haplotype_n_samples_n_interval
 
-    yield haplotyping_func(
+    for task in haplotyping_func(
         args=args,
         genome=genome,
         settings=settings,
         layout=layout,
-        gvcfs=sample_gvcfs,
-    )
+        gvcfs=gvcfs,
+    ):
+        task.mark_intermediate_files()
+        yield task
 
 
 def _haplotype_1_sample_1_interval(args, genome, settings, layout, gvcfs):
@@ -604,38 +619,34 @@ def _haplotype_1_sample_1_interval(args, genome, settings, layout, gvcfs):
     # needed to obtain a "merged" file.
     (in_gvcf,) = gvcfs
 
-    return GenotypeGVCFs(
+    yield GenotypeGVCFs(
         in_reference=genome.filename,
         in_gvcf=in_gvcf,
         out_vcf=layout["vcf_merged"],
         options=settings["GenotypeGVCFs"],
         java_options=args.jre_options,
-        dependencies=gvcfs.values(),
     )
 
 
 def _haplotype_n_samples_1_interval(args, genome, settings, layout, gvcfs):
-    task = CombineGVCFsNode(
+    yield CombineGVCFsNode(
         in_reference=genome.filename,
         in_variants=gvcfs,
         out_vcf=layout["gvcf_merged"],
         java_options=args.jre_options,
-        dependencies=gvcfs.values(),
     )
 
-    return GenotypeGVCFs(
+    yield GenotypeGVCFs(
         in_reference=genome.filename,
         in_gvcf=layout["gvcf_merged"],
         out_vcf=layout["vcf_merged"],
         options=settings["GenotypeGVCFs"],
         java_options=args.jre_options,
-        dependencies=[task],
     )
 
 
 def _haplotype_1_sample_n_intervals(args, genome, settings, layout, gvcfs):
     (in_gvcf,) = gvcfs
-    tasks = []
     vcfs = []
 
     for interval in genome.intervals:
@@ -644,36 +655,32 @@ def _haplotype_1_sample_n_intervals(args, genome, settings, layout, gvcfs):
         options = dict(settings["GenotypeGVCFs"])
         options["--intervals"] = InputFile(interval["filename"])
 
-        task = GenotypeGVCFs(
+        yield GenotypeGVCFs(
             in_reference=genome.filename,
             in_gvcf=in_gvcf,
             out_vcf=layout["vcf_merged_part"],
             options=options,
             java_options=args.jre_options,
-            dependencies=gvcfs.values(),
         )
 
-        tasks.append(task)
         vcfs.append(layout["vcf_merged_part"])
 
-    task = GatherVcfsNode(
+    yield GatherVcfsNode(
         # Note that in_vcfs must be in genomic order
         in_vcfs=vcfs,
         out_vcf=layout["vcf_merged"],
         java_options=args.jre_options,
-        dependencies=tasks,
     )
 
-    return TabixIndexNode(layout["vcf_merged"], dependencies=[task])
+    yield TabixIndexNode(layout["vcf_merged"])
 
 
 def _haplotype_n_samples_n_interval(args, genome, settings, layout, gvcfs):
-    tasks = []
     vcfs = []
     for interval in genome.intervals:
         layout = args.layout.update(genome=genome, part=interval["name"])
 
-        task = CombineGVCFsNode(
+        yield CombineGVCFsNode(
             in_reference=genome.filename,
             in_variants=gvcfs,
             out_vcf=layout["gvcf_merged_part"],
@@ -682,30 +689,26 @@ def _haplotype_n_samples_n_interval(args, genome, settings, layout, gvcfs):
                 "--ignore-variants-starting-outside-interval": "true",
             },
             java_options=args.jre_options,
-            dependencies=gvcfs.values(),
         )
 
-        task = GenotypeGVCFs(
+        yield GenotypeGVCFs(
             in_reference=genome.filename,
             in_gvcf=layout["gvcf_merged_part"],
             out_vcf=layout["vcf_merged_part"],
             options=settings["GenotypeGVCFs"],
             java_options=args.jre_options,
-            dependencies=[task],
         )
 
-        tasks.append(task)
         vcfs.append(layout["vcf_merged_part"])
 
-    task = GatherVcfsNode(
+    yield GatherVcfsNode(
         # Note that in_vcfs must be in genomic order
         in_vcfs=vcfs,
         out_vcf=layout["vcf_merged"],
         java_options=args.jre_options,
-        dependencies=tasks,
     )
 
-    return TabixIndexNode(layout["vcf_merged"], dependencies=[task])
+    yield TabixIndexNode(layout["vcf_merged"])
 
 
 def recalibrate_haplotype(args, genome, samples, settings):
@@ -721,7 +724,6 @@ def recalibrate_haplotype(args, genome, samples, settings):
             out_recal=layout["vcf_recal_training_snp_vcf"],
             out_tranches=layout["vcf_recal_training_snp_trances"],
             out_r_plot=layout["vcf_recal_training_snp_r"],
-            out_log=layout["vcf_recal_training_snp_vcf_log"],
             options=settings["VariantRecalibrator"]["SNP"],
             java_options=args.jre_options,
         )
@@ -741,7 +743,6 @@ def recalibrate_haplotype(args, genome, samples, settings):
             out_recal=layout["vcf_recal_training_indel_vcf"],
             out_tranches=layout["vcf_recal_training_indel_trances"],
             out_r_plot=layout["vcf_recal_training_indel_r"],
-            out_log=layout["vcf_recal_training_indel_vcf_log"],
             options=settings["VariantRecalibrator"]["INDEL"],
             java_options=args.jre_options,
         )
@@ -755,11 +756,12 @@ def recalibrate_haplotype(args, genome, samples, settings):
                 in_vcf=snp_node.in_variant,
                 in_node=snp_node,
                 out_vcf=layout["vcf_recal_snp"],
-                out_log=layout["vcf_recal_snp_log"],
                 options=settings["ApplyVQSR"]["SNP"],
                 java_options=args.jre_options,
                 dependencies=[snp_node],
             )
+
+            recal_node.mark_intermediate_files()
 
             # 3. Apply INDEL recalibration to SNP recalibrated BAM
             yield ApplyVQSRNode(
@@ -767,7 +769,6 @@ def recalibrate_haplotype(args, genome, samples, settings):
                 in_vcf=recal_node.out_vcf,
                 in_node=indel_node,
                 out_vcf=layout["vcf_recal_snp_indel"],
-                out_log=layout["vcf_recal_snp_indel_log"],
                 options=settings["ApplyVQSR"]["INDEL"],
                 java_options=args.jre_options,
                 dependencies=[indel_node, recal_node],
@@ -810,39 +811,43 @@ def build_pipeline(args, project):
         )
 
         return pipeline
-    elif args.run_until == "indexing":
-        return pipeline
 
     analytical_steps = {
-        # 3. Do quality analysis of input FASTQ files
-        "pre-trimming-qc": fastqc_sample_runs,
-        # 4. Process FASTQ files to produce mapping-ready reads
-        "read-trimming": process_fastq_files,
-        # 5. Do quality analysis of trimmed FASTQ files
-        "post-trimming-qc": fastqc_trimmed_reads,
-        # 6. Map merged runs to genome and genotype samples
-        "read-mapping": map_sample_runs,
-        # 7. Filter (mark) PCR duplicates for merged and paired reads
-        "pcr-duplicate-filtering-0": filter_pcr_duplicates,
-        # 8. Merged PCR duplicate filtered libraries to produce an intermediate BAM.
-        "pcr-duplicate-filtering": merge_samples_alignments,
-        # 9. Recalibrate base qualities using known variable sites
-        "base-recalibration": recalibrate_nucleotides,
-        # 10. Collect statistics for the final, processed BAM files
-        "mapping-statistics": final_bam_stats,
-        # 11. Call haplotypes for each sample
-        "haplotyping": haplotype_samples,
-        # 12. Recalibrate haplotype qualities using known variants
-        "haplotype-recalibration": recalibrate_haplotype,
+        PipelineTarget.ALIGNMENTS: (
+            # 3. Do quality analysis of input FASTQ files
+            fastqc_sample_runs,
+            # 4. Process FASTQ files to produce mapping-ready reads
+            process_fastq_files,
+            # 5. Do quality analysis of trimmed FASTQ files
+            fastqc_trimmed_reads,
+            # 6. Map merged runs to genome and genotype samples
+            map_sample_runs,
+            # 7. Filter (mark) PCR duplicates for merged and paired reads
+            filter_pcr_duplicates,
+            # 8. Merged PCR duplicate filtered libraries to produce an intermediate BAM.
+            merge_samples_alignments,
+            # 9. Recalibrate base qualities using known variable sites
+            recalibrate_nucleotides,
+            # 10. Collect statistics for the final, processed BAM files
+            final_bam_stats,
+        ),
+        PipelineTarget.HAPLOTYPES: (
+            # 11. Call haplotypes for each sample
+            haplotype_samples,
+        ),
+        PipelineTarget.GENOTYPES: (
+            # 12. Call genotypes for the combined set of samples
+            genotype_samples,
+            # 13. Recalibrate haplotype qualities using known variants
+            recalibrate_haplotype,
+        ),
     }
 
-    include_steps = args.run_from == "indexing"
-    for analytical_step, func in analytical_steps.items():
-        if include_steps or args.run_from == analytical_step:
+    for target, functions in analytical_steps.items():
+        for func in functions:
             pipeline.extend(func(args, genome, samples, settings))
-            include_steps = True
 
-        if args.run_until == analytical_step:
+        if target == args.target:
             break
 
     return pipeline

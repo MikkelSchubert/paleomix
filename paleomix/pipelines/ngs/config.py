@@ -1,4 +1,5 @@
 import multiprocessing
+from enum import Enum
 
 import paleomix
 import paleomix.common.logging
@@ -9,6 +10,15 @@ _DEFAULT_CONFIG_FILES = [
     "/etc/paleomix/ngs_pipeline.ini",
     "~/.paleomix/ngs_pipeline.ini",
 ]
+
+
+class PipelineTarget(Enum):
+    ALIGNMENTS = "alignments"
+    HAPLOTYPES = "haplotypes"
+    GENOTYPES = "genotypes"
+
+    def str(self) -> str:
+        return self.value
 
 
 def build_parser():
@@ -44,35 +54,12 @@ def _build_run_parser(subparsers):
     )
 
     parser.add_argument(
-        "--run-from",
-        metavar="STEP",
-        type=str.lower,
-        choices=(
-            "indexing",
-            "haplotyping",
-        ),
-        default="indexing",
-        help="Run the pipeline from and (and including) the specified analytical step",
-    )
-
-    parser.add_argument(
-        "--run-until",
-        metavar="STEP",
-        type=str.lower,
-        choices=(
-            "indexing",
-            "pre-trimming-qc",
-            "read-trimming",
-            "post-trimming-qc",
-            "read-mapping",
-            "pcr-duplicate-filtering",
-            "base-recalibration",
-            "mapping-statistics",
-            "haplotyping",
-            "haplotype-recalibration",
-        ),
-        default="haplotype-recalibration",
-        help="Run the pipeline only until (and including) the specified analytical step",
+        "--target",
+        metavar="OUTPUT",
+        type=PipelineTarget,
+        choices=list(PipelineTarget),
+        default=PipelineTarget.GENOTYPES,
+        help="Run the pipeline until the specified target output has been created",
     )
 
     parser.add_argument(

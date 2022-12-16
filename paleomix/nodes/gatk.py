@@ -54,6 +54,7 @@ class ApplyBQSRNode(CommandNode):
             java_options=java_options,
             stderr=out_log,
             extra_files=[
+                InputFile(in_node.in_bam + ".bai"),
                 InputFile(in_node.in_reference + ".fai"),
                 InputFile(swap_ext(in_node.in_reference, ".dict")),
             ],
@@ -106,6 +107,7 @@ class ApplyVQSRNode(CommandNode):
                 InputFile(in_node.in_reference + ".fai"),
                 InputFile(swap_ext(in_node.in_reference, ".dict")),
                 # FIXME: Index depends on vcf extension
+                InputFile(in_vcf + ".tbi"),
                 OutputFile(out_vcf + ".tbi"),
             ],
         )
@@ -146,6 +148,7 @@ class BaseRecalibratorNode(CommandNode):
             java_options=java_options,
             stderr=out_log,
             extra_files=[
+                InputFile(in_bam + ".bai"),
                 InputFile(in_reference + ".fai"),
                 InputFile(swap_ext(in_reference, ".dict")),
             ],
