@@ -496,7 +496,7 @@ def test_atomiccmd__temp_dir_in_path(tmp_path: Path):
     cmd.run(tmp_path)
     assert cmd._proc is not None
     assert cmd._proc.stdout is not None
-    path = cmd._proc.stdout.read()
+    path = cmd._proc.stdout.read().decode()
     assert tmp_path.samefile(path), (tmp_path, path)
     assert cmd.join() == [0]
 
