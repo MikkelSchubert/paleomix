@@ -163,7 +163,7 @@ class FASTQualities:
     AMBIGIOUS = "AMBIGIOUS"
 
     def __init__(self):
-        self._qualities = set()  # type: Set[str]
+        self._qualities: Set[str] = set()
 
     def update(self, record: FASTQ):
         self._qualities.update(record.qualities)

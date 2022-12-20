@@ -29,13 +29,7 @@ import os
 from typing import Iterable
 
 import paleomix.tools.factory as factory
-from paleomix.common.command import (
-    AtomicCmd,
-    InputFile,
-    OptionsType,
-    OutputFile,
-    ParallelCmds,
-)
+from paleomix.common.command import InputFile, OptionsType, OutputFile, ParallelCmds
 from paleomix.common.fileutils import describe_files
 from paleomix.node import CommandNode, Node
 from paleomix.nodes.samtools import merge_bam_files_command

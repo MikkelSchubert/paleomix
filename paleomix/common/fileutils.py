@@ -96,7 +96,7 @@ def missing_files(filenames: Iterable[PathTypes]) -> List[str]:
     """Given a list of filenames, returns a list of those that
     does not exist. Note that this function does not differentiate
     between files and folders."""
-    missing = []  # type: List[str]
+    missing: List[str] = []
     for filename in safe_coerce_to_tuple(filenames):
         filename = fspath(filename)
         if not os.path.exists(filename):
@@ -105,7 +105,7 @@ def missing_files(filenames: Iterable[PathTypes]) -> List[str]:
 
 
 def missing_executables(filenames: Iterable[PathTypes]) -> List[str]:
-    missing = []  # type: List[str]
+    missing: List[str] = []
     for filename in safe_coerce_to_tuple(filenames):
         filename = fspath(filename)
         if not shutil.which(filename):
@@ -279,7 +279,7 @@ def get_files_glob(
     if len(set(map(len, filenames))) > 1:
         return None
 
-    glob_fname = []  # type: List[str]
+    glob_fname: List[str] = []
     differences = 0
     for chars in zip(*filenames):
         if "?" in chars:

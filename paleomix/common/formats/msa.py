@@ -22,7 +22,6 @@
 #
 
 from collections import defaultdict
-from pathlib import Path
 from typing import (
     IO,
     Dict,
@@ -33,7 +32,6 @@ from typing import (
     Sequence,
     Set,
     Tuple,
-    Union,
     cast,
 )
 
@@ -51,8 +49,8 @@ class MSA(FrozenSet[FASTA]):
     """Represents a Multiple Sequence Alignment of FASTA records."""
 
     def __new__(cls, sequences: Iterable[FASTA]) -> "MSA":
-        records = []  # type: List[FASTA]
-        names = set()  # type: Set[str]
+        records: List[FASTA] = []
+        names: Set[str] = set()
         for record in sequences:
             if record.name in names:
                 raise MSAError(
@@ -85,7 +83,7 @@ class MSA(FrozenSet[FASTA]):
         return MSA(included)
 
     def reduce(self) -> Optional["MSA"]:
-        columns = []  # type: List[Sequence[str]]
+        columns: List[Sequence[str]] = []
         uncalled = frozenset("Nn-")
         for column in zip(*(record.sequence for record in self)):
             if frozenset(column) - uncalled:
@@ -94,7 +92,7 @@ class MSA(FrozenSet[FASTA]):
         if not columns:
             return None
 
-        records = []  # type: List[FASTA]
+        records: List[FASTA] = []
         for (record, sequence) in zip(self, zip(*columns)):
             records.append(FASTA(record.name, record.meta, "".join(sequence)))
 

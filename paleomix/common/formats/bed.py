@@ -22,9 +22,10 @@
 #
 from typing import Any, Iterable, List, Mapping, Optional, Type, TypeVar
 
+from pysam import AlignmentFile
+
 from paleomix.common.fileutils import open_rt
 from paleomix.common.utilities import TotallyOrdered
-from pysam import AlignmentFile
 
 T = TypeVar("T")
 
@@ -192,7 +193,7 @@ def pad_bed_records(
     padding: int,
     max_sizes: Mapping[str, int] = {},
 ) -> List[BEDRecord]:
-    results = []  # type: List[BEDRecord]
+    results: List[BEDRecord] = []
     for record in records:
         start = max(0, record.start - padding)
         end = record.end + padding

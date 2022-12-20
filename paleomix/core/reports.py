@@ -21,7 +21,7 @@
 # SOFTWARE.
 import os
 import sys
-from typing import IO, Dict, Iterable, Set, Tuple, Union
+from typing import IO, Dict, Iterable, Set, Union
 
 from humanfriendly.terminal import ansi_wrap, terminal_supports_colors
 

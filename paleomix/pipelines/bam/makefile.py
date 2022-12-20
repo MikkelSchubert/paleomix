@@ -48,6 +48,7 @@ from paleomix.common.makefile import (
     MakefileError,
     Not,
     Or,
+    SpecTree,
     StringIn,
     StringStartsWith,
     ValueIn,
@@ -66,7 +67,7 @@ _READ_TYPES = set(("Single", "Singleton", "Collapsed", "CollapsedTruncated", "Pa
 _BAM_MAX_SEQUENCE_LENGTH = 2**29 - 1
 
 
-def read_makefiles(filenames, pipeline_variant="bam"):
+def read_makefiles(filenames: Iterable[str], pipeline_variant: str = "bam"):
     logger = logging.getLogger(__name__)
 
     makefiles = []
@@ -101,21 +102,21 @@ def _alphanum_check(whitelist, min_len=1):
 
 
 # Valid names for genomes
-_VALID_GENOME_NAME = And(
+_VALID_GENOME_NAME: SpecTree = And(
     _alphanum_check(whitelist="._-*"),
     Not(StringIn(["Options"])),
 )
 
 # Valid paths for genomes; avoids some problems with e.g. Bowtie2
-_VALID_GENOME_PATH = And(
+_VALID_GENOME_PATH: SpecTree = And(
     IsStr(), Not(ValuesIntersect('\\:?"<>|() \t\n\v\f\r')), default=REQUIRED_VALUE
 )
 
 # Valid strings for samples / libraries / lanes
-_VALID_FILENAME = _alphanum_check(whitelist="._-", min_len=2)
+_VALID_FILENAME: SpecTree = _alphanum_check(whitelist="._-", min_len=2)
 
 
-_VALIDATION_OPTIONS = {
+_VALIDATION_OPTIONS: SpecTree = {
     # Sequencing platform, used to tag read-groups.
     "Platform": StringIn(BAM_PLATFORMS, default="ILLUMINA"),
     # Offset for quality scores in FASTQ files.
@@ -223,7 +224,7 @@ _VALIDATION_OPTIONS = {
 }
 
 # validation of a complex lane, containing trimmed reads and/or options
-_VALIDATE_LANE = {
+_VALIDATE_LANE: SpecTree = {
     "Single": IsStr,
     "Collapsed": IsStr,
     "CollapsedTruncated": IsStr,
@@ -233,7 +234,7 @@ _VALIDATE_LANE = {
     "Options": WithoutDefaults(_VALIDATION_OPTIONS),
 }
 
-MAKEFILE_SPECIFICATION = {
+MAKEFILE_SPECIFICATION: SpecTree = {
     "Options": _VALIDATION_OPTIONS,
     "Genomes": {
         _VALID_GENOME_NAME: {

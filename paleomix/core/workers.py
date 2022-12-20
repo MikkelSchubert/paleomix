@@ -368,7 +368,10 @@ class RemoteAdapter(logging.LoggerAdapter):
     def process(
         self, msg: logging.LogRecord, kwargs: MutableMapping[str, Any]
     ) -> Tuple[str, MutableMapping[str, Any]]:
-        return "[{}] {}".format(self.extra["remote"], msg), kwargs
+        if self.extra is not None:
+            return "[{}] {}".format(self.extra["remote"], msg), kwargs
+
+        return str(msg), kwargs
 
 
 class LocalWorker:
@@ -484,12 +487,14 @@ class RemoteWorker:
         self.name = address_to_name((host, port))
         self._log = RemoteAdapter(self.name, logging.getLogger(__name__))
 
-        self._event_handlers = {
+        self._event_handlers: Dict[
+            Tuple[str, str], Callable[[EventType], Iterable[EventType]]
+        ] = {
             (_CONNECTING, EVT_HANDSHAKE_RESPONSE): self._event_handshake,
             (_RUNNING, EVT_CAPACITY): self._event_capacity,
             (_RUNNING, EVT_TASK_DONE): self._event_task_done,
             (_RUNNING, EVT_SHUTDOWN): self._event_shutdown,
-        }  # type: Dict[Tuple[str, str], Callable[[EventType], Iterable[EventType]]]
+        }
 
     @property
     def tasks(self) -> Iterator[Node]:

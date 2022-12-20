@@ -1,7 +1,9 @@
 import copy
 import os.path
 import string
-from typing import Any, Dict, Iterator, Tuple
+from typing import Dict, Iterator, List, Set, Tuple, Union
+
+LayoutType = Dict[str, Union[str, "LayoutType"]]
 
 
 class LayoutError(Exception):
@@ -9,10 +11,13 @@ class LayoutError(Exception):
 
 
 class Layout:
-    def __init__(self, layout: Dict[str, Any], **kwargs) -> None:
-        self.kwargs = kwargs
+    kwargs: Dict[str, str]
+    _layout: Dict[str, Tuple[str, ...]]
+    _fields: Set[str]
 
-        self._layout: Dict[str, Tuple[str, ...]] = {}
+    def __init__(self, layout: LayoutType, **kwargs: str) -> None:
+        self.kwargs = kwargs
+        self._layout = {}
         for key, value in self._flatten_layout(layout):
             if key in self._layout:
                 raise LayoutError(f"key {key!r} used multiple times")
@@ -23,7 +28,7 @@ class Layout:
 
         self._validate_kwargs(self.kwargs)
 
-    def get(self, key, **kwargs):
+    def get(self, key: str, **kwargs: str) -> str:
         self._validate_kwargs(kwargs)
 
         merged_kwargs = dict(self.kwargs)
@@ -31,10 +36,10 @@ class Layout:
 
         return self._build_path(key, merged_kwargs)
 
-    def get_field(self, key):
+    def get_field(self, key: str) -> str:
         return self.kwargs[key]
 
-    def update(self, **kwargs) -> "Layout":
+    def update(self, **kwargs: str) -> "Layout":
         self._validate_kwargs(kwargs)
 
         layout = copy.deepcopy(self)
@@ -42,19 +47,19 @@ class Layout:
 
         return layout
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str]:
         return iter(self._layout)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> str:
         return self._build_path(key, self.kwargs)
 
-    def _validate_kwargs(self, kwargs):
+    def _validate_kwargs(self, kwargs: Dict[str, str]) -> None:
         for key in kwargs:
             if key not in self._fields:
                 raise LayoutError(f"unknown key {key!r}")
 
-    def _build_path(self, key, kwargs):
-        components = []
+    def _build_path(self, key: str, kwargs: Dict[str, str]) -> str:
+        components: List[str] = []
         for component in self._layout[key]:
             components.append(component.format(**kwargs))
 
@@ -62,7 +67,8 @@ class Layout:
 
     @classmethod
     def _flatten_layout(
-        cls, layout: Dict[str, Any]
+        cls,
+        layout: LayoutType,
     ) -> Iterator[Tuple[str, Tuple[str, ...]]]:
         for key, value in layout.items():
             if not isinstance(key, str):
@@ -76,9 +82,9 @@ class Layout:
                 raise LayoutError(f"invalid value {value!r}")
 
     @staticmethod
-    def _collect_fields(layout):
+    def _collect_fields(layout: Dict[str, Tuple[str, ...]]) -> Set[str]:
         fmt = string.Formatter()
-        fields = set()
+        fields: Set[str] = set()
         for path in layout.values():
             for value in path:
                 for _, name, _, _ in fmt.parse(value):
@@ -86,7 +92,7 @@ class Layout:
                         raise LayoutError(f"unnamed field are not allowed in {value!r}")
                     elif name in layout:
                         raise LayoutError(f"{name!r} used as both key and field name")
-
-                    fields.add(name)
+                    elif name is not None:
+                        fields.add(name)
 
         return fields

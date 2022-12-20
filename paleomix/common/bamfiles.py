@@ -92,25 +92,29 @@ class BAMRegionsIter:
     def __init__(
         self,
         handle: AlignmentFile,
-        regions: List[BEDRecord] = [],
+        regions: Optional[List[BEDRecord]] = None,
         exclude_flags: int = EXCLUDED_FLAGS,
-    ):
+    ) -> None:
         """
         - handle: BAM file handle (c.f. module 'pysam')
         - regions: List of BED-like regions (see above)
         """
         self._handle = handle
-        self._regions = regions
+        self._regions = [] if regions is None else regions
         self._excluded = exclude_flags
 
     def __iter__(self):
         if self._regions:
             for region in self._regions:
                 records = self._handle.fetch(region.contig, region.start, region.end)
-                records = self._filter(records)
 
-                tid = self._handle.get_tid(region.contig)
-                yield _BAMRegion(tid, records, region.name, region.start, region.end)
+                yield _BAMRegion(
+                    tid=self._handle.get_tid(region.contig),
+                    records=self._filter(records),
+                    name=region.name,
+                    start=region.start,
+                    end=region.end,
+                )
         else:
 
             def _by_tid(record: AlignedSegment) -> int:
@@ -121,14 +125,13 @@ class BAMRegionsIter:
             names = self._handle.references
             lengths = self._handle.lengths
             records = self._filter(self._handle)
-            records = itertools.groupby(records, key=_by_tid)
 
-            for (tid, items) in records:
+            for tid, items in itertools.groupby(records, key=_by_tid):
+                name: Optional[str] = None
+                length: Optional[int] = None
                 if tid >= 0:
                     name = names[tid]
                     length = lengths[tid]
-                else:
-                    name = length = None
 
                 yield _BAMRegion(tid, items, name, 0, length)
 

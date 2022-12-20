@@ -96,7 +96,7 @@ class CommandLine(object):
 
     def process_key_presses(self) -> Iterator[CLIEvent]:
         if self._tty_settings:
-            characters = []
+            characters: List[str] = []
             while self._poll_stdin():
                 characters.append(sys.stdin.read(1))
 

@@ -99,7 +99,7 @@ def split(sequence: str, split_by: str = "123") -> Dict[str, str]:
     if not split_by:
         raise ValueError("No split_by specified")
 
-    results = {key: [] for key in split_by}  # type: Dict[str, List[str]]
+    results: Dict[str, List[str]] = {key: [] for key in split_by}
     keys = itertools.chain(itertools.cycle(split_by))
     for (key, nucleotide) in zip(keys, sequence):
         results[key].append(nucleotide)

@@ -169,7 +169,7 @@ class AdmixtureNode(CommandNode):
             [
                 "admixture",
                 "-s",
-                random.randint(0, 2 ** 16 - 1),
+                random.randint(0, 2**16 - 1),
                 "--supervised",
                 TempOutputFile(prefix + ".bed"),
                 int(k_groups),

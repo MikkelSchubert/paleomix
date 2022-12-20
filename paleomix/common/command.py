@@ -20,7 +20,6 @@ from typing import (
     Tuple,
     Type,
     Union,
-    cast,
 )
 
 import paleomix.common.fileutils as fileutils
@@ -125,13 +124,8 @@ class AtomicCmd:
     PIPE = subprocess.PIPE
     DEVNULL = subprocess.DEVNULL
 
-    InFile = InputFile
-    OutFile = OutputFile
-    AuxFile = AuxiliaryFile
-    Executable = Executable
-
     _command: List[Union[str, _AtomicFile]]
-    # _proc:  = None
+    _proc: Optional[subprocess.Popen[bytes]]
     _temp: Optional[str]
     _running: bool
     _set_cwd: bool
@@ -230,7 +224,7 @@ class AtomicCmd:
         self._stdout = stdout = self._wrap_pipe(OutputFile, stdout, "stdout")
         self._stderr = stderr = self._wrap_pipe(OutputFile, stderr, "stderr")
 
-        pipes = []  # type: List[_AtomicFile]
+        pipes: List[_AtomicFile] = []
         for pipe in (stdin, stdout, stderr):
             if isinstance(pipe, _AtomicFile):
                 pipes.append(pipe)

@@ -386,7 +386,7 @@ def _build_bwa_backtrack_pe_task(
 def _build_bwa_backtrack_task(input_file_1, input_file_2, mapping_options, **kwargs):
     if not mapping_options["UseSeed"]:
         mapping_options = dict(mapping_options)
-        mapping_options["-l"] = 2 ** 16 - 1
+        mapping_options["-l"] = 2**16 - 1
 
     if input_file_2 is None:
         return _build_bwa_backtrack_se_task(

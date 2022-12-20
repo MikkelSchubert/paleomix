@@ -40,8 +40,8 @@ def weighted_sampling(
             "of identical length, not lengths %i and %i" % (len(choices), len(weights))
         )
 
-    total = 0  # type: float
-    totals = []  # type: List[float]
+    total: float = 0
+    totals: List[float] = []
     for (index, weight) in enumerate(weights, start=1):
         if weight <= 0:
             raise ValueError(
@@ -68,7 +68,7 @@ def reservoir_sampling(
     elif downsample_to < 0:
         raise ValueError("Negative value for 'downsample_to': %i" % (downsample_to,))
 
-    reservoir = []  # type: List[T]
+    reservoir: List[T] = []
     for (index, item) in enumerate(items):
         if index >= downsample_to:
             index = rng.randint(0, index)

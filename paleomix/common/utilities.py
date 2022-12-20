@@ -171,10 +171,10 @@ def fragment(size: int, items: Sequence[T]) -> Iterable[Sequence[T]]:
     ...
 
 
-_Items = Union[AnyStr, Sequence[T]]
-
-
-def fragment(size: int, items: _Items) -> Iterable[_Items]:
+def fragment(
+    size: int,
+    items: Union[AnyStr, Sequence[T]],
+) -> Iterable[Union[AnyStr, Sequence[T]]]:
     """Faster alternative to grouper for lists/strings."""
     return (items[i : i + size] for i in range(0, len(items), size))
 

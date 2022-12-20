@@ -28,13 +28,14 @@ import logging
 import os
 import sys
 import time
-from typing import IO, Iterator, List, Optional, Union
+from io import TextIOWrapper
+from typing import Iterator, List, Optional, Union
 
 import coloredlogs
 from humanfriendly.terminal import ansi_wrap, terminal_supports_colors
 
-_CONSOLE_MESSAGE_FORMAT = "%(asctime)s %(levelname)s %(status)s%(message)s"
-_FILE_MESSAGE_FORMAT = "%(asctime)s %(name)s %(levelname)s %(status)s%(message)s"
+_CONSOLE_MESSAGE_FORMAT: str = "%(asctime)s %(levelname)s %(status)s%(message)s"
+_FILE_MESSAGE_FORMAT: str = "%(asctime)s %(name)s %(levelname)s %(status)s%(message)s"
 
 
 class LogRecord(logging.LogRecord):
@@ -63,7 +64,7 @@ class _MultilineFormatter:
             message = message % record.args
 
         if "\n" in message:
-            lines = []  # type: List[str]
+            lines: List[str] = []
             record.args = ()
             for line in message.split("\n"):
                 record.msg = line
@@ -166,12 +167,12 @@ class LazyLogfile(logging.FileHandler):
         self._template = self.baseFilename
         self._log_level = log_level
 
-    def emit(self, record: LogRecord) -> None:
+    def emit(self, record: logging.LogRecord) -> None:
         # Don't try to log self-emitted log events, to avoid recursive loops
         if record.name != __name__:
             super().emit(record)
 
-    def _open(self) -> IO[str]:
+    def _open(self) -> TextIOWrapper:
         """Try to open a new logfile, taking steps to ensure that
         existing logfiles using the same template are not clobbered."""
         flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL

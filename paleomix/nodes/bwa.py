@@ -384,7 +384,7 @@ def _get_max_threads(reference, threads):
     reference falls below this size, only 1 thread is used (returned),
     otherwise the requested number of threads is returned.
     """
-    if os.path.exists(reference) and os.path.getsize(reference) < 2 ** 20:
+    if os.path.exists(reference) and os.path.getsize(reference) < 2**20:
         return 1
 
     return threads

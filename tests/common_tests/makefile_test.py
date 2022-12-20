@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+from pathlib import Path
 from typing import Any, Iterable, List, Sequence
 
 import pytest
@@ -29,6 +30,7 @@ from paleomix.common.makefile import (
     REQUIRED_VALUE,
     And,
     DeprecatedOption,
+    InputType,
     IsBoolean,
     IsDictOf,
     IsFloat,
@@ -43,6 +45,7 @@ from paleomix.common.makefile import (
     Or,
     PreProcessMakefile,
     RemovedOption,
+    SpecTree,
     StringEndsWith,
     StringIn,
     StringStartsWith,
@@ -505,17 +508,6 @@ def test_value_in__single_value_not_in_set():
         spec(_DUMMY_PATH, 5)
 
 
-def test_value_in__single_value_in_set__with_key():
-    spec = ValueIn(list(range(5)), key=len)
-    spec(_DUMMY_PATH, "a")
-
-
-def test_value_in__single_value_not_in_set__with_key():
-    spec = ValueIn(list(range(5)), key=len)
-    with pytest.raises(MakefileError):
-        spec(_DUMMY_PATH, "abcde")
-
-
 def test_value_in__case_sensitive__value_in_set():
     spec = ValueIn(("Abc", "bCe", "cdE"))
     spec(_DUMMY_PATH, "bCe")
@@ -769,7 +761,7 @@ def test_and__rejects_no_tests():
 
 def test_and__rejects_non_spec_tests():
     with pytest.raises(TypeError):
-        And(id)
+        And(id)  # type: ignore
 
 
 def test_and__default_not_set():
@@ -820,7 +812,7 @@ def test_or__rejects_no_tests():
 
 def test_or__rejects_non_spec_tests():
     with pytest.raises(TypeError):
-        Or(id)
+        Or(id)  # type: ignore
 
 
 def test_or__default_not_set():
@@ -1190,38 +1182,42 @@ def test_process_makefile__dict_keys_not_found(makefile, spec):
 
 
 def test_validate_makefile__unexpected_type_in_reference():
-    current = {1: 2}
-    specs = {IsInt: 2}
+    current: InputType = {1: 2}
+    specs: SpecTree = {IsInt: 2}
     with pytest.raises(TypeError):
         process_makefile(current, specs)
 
 
 def test_validate_makefile__unexpected_type_in_current():
-    current = {1: []}
-    specs = {IsInt: {IsInt: IsInt}}
+    current: InputType = {1: []}
+    specs: SpecTree = {IsInt: {IsInt: IsInt}}
     with pytest.raises(MakefileError):
         process_makefile(current, specs)
 
 
 def test_process_makefile__sets_missing_keys():
-    current = {"A": 1}
-    specs = {"A": IsInt(default=0), "B": IsInt(default=-1), "C": IsInt(default=-2)}
+    current: InputType = {"A": 1}
+    specs: SpecTree = {
+        "A": IsInt(default=0),
+        "B": IsInt(default=-1),
+        "C": IsInt(default=-2),
+    }
     expected = {"A": 1, "B": -1, "C": -2}
     result = process_makefile(current, specs)
     assert result == expected
 
 
 def test_process_makefile__mixed_keys():
-    current = {"A": 1}
-    specs = {IsStr: IsInt, "B": IsInt(default=-1), "C": IsInt(default=-2)}
+    current: InputType = {"A": 1}
+    specs: SpecTree = {IsStr: IsInt, "B": IsInt(default=-1), "C": IsInt(default=-2)}
     expected = {"A": 1, "B": -1, "C": -2}
     result = process_makefile(current, specs)
     assert result == expected
 
 
 def test_process_makefile__sets_missing_recursive():
-    current = {"A": 1, "B": {"C": 2}}
-    specs = {
+    current: InputType = {"A": 1, "B": {"C": 2}}
+    specs: SpecTree = {
         "A": IsInt(default=0),
         "B": {"C": IsInt(default=-1), "D": IsInt(default=-2)},
     }
@@ -1231,8 +1227,8 @@ def test_process_makefile__sets_missing_recursive():
 
 
 def test_process_makefile__sets_missing_recursive__with_missing_substructure():
-    current = {"A": 1}
-    specs = {
+    current: InputType = {"A": 1}
+    specs: SpecTree = {
         "A": IsInt(default=0),
         "B": {"C": IsInt(default=-1), "D": IsInt(default=-2)},
     }
@@ -1242,49 +1238,49 @@ def test_process_makefile__sets_missing_recursive__with_missing_substructure():
 
 
 def test_process_makefile__shared_subtrees_with_defaults():
-    subtree = {"A": IsInt(default=1234), "B": IsInt(default=5678)}
-    specs = {"A": subtree, "B": subtree}
-    current = {"A": {"B": 17}, "B": {"A": 71}}
+    subtree: SpecTree = {"A": IsInt(default=1234), "B": IsInt(default=5678)}
+    specs: SpecTree = {"A": subtree, "B": subtree}
+    current: InputType = {"A": {"B": 17}, "B": {"A": 71}}
     expected = {"A": {"A": 1234, "B": 17}, "B": {"A": 71, "B": 5678}}
     result = process_makefile(current, specs)
     assert result == expected
 
 
 def test_process_makefile__shared_subtrees_with_defaults__defaults_disabled():
-    subtree = {"A": IsInt(default=1234), "B": IsInt(default=5678)}
-    specs = {"A": subtree, "B": WithoutDefaults(subtree)}
-    current = {"A": {"B": 17}, "B": {"A": 71}}
+    subtree: SpecTree = {"A": IsInt(default=1234), "B": IsInt(default=5678)}
+    specs: SpecTree = {"A": subtree, "B": WithoutDefaults(subtree)}
+    current: InputType = {"A": {"B": 17}, "B": {"A": 71}}
     expected = {"A": {"A": 1234, "B": 17}, "B": {"A": 71}}
     result = process_makefile(current, specs)
     assert result == expected
 
 
 def test_process_makefile__accept_when_required_value_is_set():
-    current = {"A": 1, "B": {"C": 3}}
+    current: InputType = {"A": 1, "B": {"C": 3}}
     expected = {"A": 1, "B": {"C": 3}}
-    specs = {"A": IsInt, "B": {"C": IsInt(default=REQUIRED_VALUE)}}
+    specs: SpecTree = {"A": IsInt, "B": {"C": IsInt(default=REQUIRED_VALUE)}}
     result = process_makefile(current, specs)
     assert result == expected
 
 
 def test_process_makefile__fails_when_required_value_not_set():
-    current = {"A": 1}
-    specs = {"A": IsInt, "B": {"C": IsInt(default=REQUIRED_VALUE)}}
+    current: InputType = {"A": 1}
+    specs: SpecTree = {"A": IsInt, "B": {"C": IsInt(default=REQUIRED_VALUE)}}
     with pytest.raises(MakefileError):
         process_makefile(current, specs)
 
 
 def test_process_makefile__fails_required_value_not_set_in_dynamic_subtree():
-    current = {"A": 1, "B": {}}
-    specs = {"A": IsInt, IsStr: {"C": IsInt(default=REQUIRED_VALUE)}}
+    current: InputType = {"A": 1, "B": {}}
+    specs: SpecTree = {"A": IsInt, IsStr: {"C": IsInt(default=REQUIRED_VALUE)}}
     with pytest.raises(MakefileError):
         process_makefile(current, specs)
 
 
 def test_process_makefile__accept_missing_value_if_in_implicit_subtree():
-    current = {"A": 1}
+    current: InputType = {"A": 1}
     expected = {"A": 1}
-    specs = {"A": IsInt, IsStr: {"C": IsInt(default=REQUIRED_VALUE)}}
+    specs: SpecTree = {"A": IsInt, IsStr: {"C": IsInt(default=REQUIRED_VALUE)}}
     result = process_makefile(current, specs)
     assert result == expected
 
@@ -1300,9 +1296,9 @@ def test_process_makefile__path_shown_in_exception_for_dict():
 
 
 def test_process_makefile__implicit_subdict_is_allowed():
-    current = {"A": 1, "B": None}
+    current: InputType = {"A": 1, "B": None}
     expected = {"A": 1, "B": {"C": 3}}
-    specs = {"A": IsInt, "B": {"C": IsInt(default=3)}}
+    specs: SpecTree = {"A": IsInt, "B": {"C": IsInt(default=3)}}
     result = process_makefile(current, specs)
     assert result == expected
 
@@ -1313,52 +1309,52 @@ def test_process_makefile__implicit_subdict_is_allowed():
 
 
 def test_process_makefile__list_types_accepted():
-    current = {"A": 1, "B": [17, "Foo"]}
+    current: InputType = {"A": 1, "B": [17, "Foo"]}
     expected = {"A": 1, "B": [17, "Foo"]}
-    specs = {"A": IsInt, "B": [IsInt, IsStr]}
+    specs: SpecTree = {"A": IsInt, "B": [IsInt, IsStr]}
     result = process_makefile(current, specs)
     assert result == expected
 
 
 def test_process_makefile__wrong_list_types():
-    current = {"A": 1, "B": [17, "foo"]}
-    specs = {"A": IsInt, "B": [IsInt]}
+    current: InputType = {"A": 1, "B": [17, "foo"]}
+    specs: SpecTree = {"A": IsInt, "B": [IsInt]}
     with pytest.raises(MakefileError):
         process_makefile(current, specs)
 
 
 def test_process_makefile__missing_list_defaults_to_empty():
-    current = {"A": 1}
+    current: InputType = {"A": 1}
     expected = {"A": 1, "B": {"C": []}}
-    specs = {"A": IsInt, "B": {"C": [IsInt]}}
+    specs: SpecTree = {"A": IsInt, "B": {"C": [IsInt]}}
     result = process_makefile(current, specs)
     assert result == expected
 
 
 def test_process_makefile__missing_list_default_value():
-    current = {"A": 1}
+    current: InputType = {"A": 1}
     expected = {"A": 1, "B": [1, 2, 3]}
-    specs = {"A": IsInt, "B": IsListOf(IsInt, default=[1, 2, 3])}
+    specs: SpecTree = {"A": IsInt, "B": IsListOf(IsInt, default=[1, 2, 3])}
     result = process_makefile(current, specs)
     assert result == expected
 
 
 def test_process_makefile__key_specified_but_no_entries():
-    current = {"A": 1, "B": None}
+    current: InputType = {"A": 1, "B": None}
     expected = {"A": 1, "B": []}
-    specs = {"A": IsInt, "B": [IsInt]}
+    specs: SpecTree = {"A": IsInt, "B": [IsInt]}
     result = process_makefile(current, specs)
     assert result == expected
 
 
 def test_process_makefile__list_spec_must_contain_specs():
-    specs = {"A": IsInt, "B": [1, 2, 3]}
+    specs: SpecTree = {"A": IsInt, "B": [1, 2, 3]}
     with pytest.raises(TypeError):
         process_makefile({}, specs)
 
 
 def test_process_makefile__list_spec_must_contain_only_specs():
-    specs = {"A": IsInt, "B": [1, 2, IsStr]}
+    specs: SpecTree = {"A": IsInt, "B": [1, 2, IsStr]}
     with pytest.raises(TypeError):
         process_makefile({}, specs)
 
@@ -1373,7 +1369,7 @@ def test_read_makefile__missing_file():
         read_makefile("does_not_exist.yaml", {})
 
 
-def test_read_makefile__not_a_yaml_file(tmp_path):
+def test_read_makefile__not_a_yaml_file(tmp_path: Path):
     fpath = tmp_path / "file.fasta"
     fpath.write_text(">Sequence\nACGTTAGATAC\n")
 
@@ -1381,11 +1377,11 @@ def test_read_makefile__not_a_yaml_file(tmp_path):
         read_makefile(fpath, {})
 
 
-def test_read_makefile__simple_file(tmp_path):
+def test_read_makefile__simple_file(tmp_path: Path):
     fpath = tmp_path / "test.yaml"
     fpath.write_text('Defaults:\n  "First": 1e-4\n  "Second": "a string"\n')
 
-    specs = {"Defaults": {"First": IsFloat, "Second": IsStr}}
+    specs: SpecTree = {"Defaults": {"First": IsFloat, "Second": IsStr}}
 
     assert read_makefile(fpath, specs) == {
         "Defaults": {"First": 1e-4, "Second": "a string"}
@@ -1406,28 +1402,28 @@ class _PreProcess(PreProcessMakefile):
 
 
 def test__preprocess_makefile__missing_value():
-    spec = {"Key": _PreProcess()}
+    spec: SpecTree = {"Key": _PreProcess()}
     assert {} == process_makefile({}, spec)
 
 
 def test__preprocess_makefile__expected_value():
-    spec = {"Key": _PreProcess()}
+    spec: SpecTree = {"Key": _PreProcess()}
     assert {"Key": 13} == process_makefile({"Key": 13}, spec)
 
 
 def test__preprocess_makefile__processed_value():
-    spec = {"Key": _PreProcess()}
+    spec: SpecTree = {"Key": _PreProcess()}
     assert {"Key": 14} == process_makefile({"Key": "14"}, spec)
 
 
 def test__preprocess_makefile__invalid_value():
-    spec = {"Key": _PreProcess()}
+    spec: SpecTree = {"Key": _PreProcess()}
     with pytest.raises(MakefileError):
         process_makefile({"Key": False}, spec)
 
 
 def test__preprocess_makefile__invalid_string():
-    spec = {"Key": _PreProcess()}
+    spec: SpecTree = {"Key": _PreProcess()}
     # Failures in processing should propagate out
     with pytest.raises(ValueError):
         process_makefile({"Key": "x14"}, spec)
@@ -1445,10 +1441,10 @@ class _PreProcessWithDefault(PreProcessMakefile):
 
 
 def test__preprocess_makefile__with_default__missing_value():
-    spec = {"Key": _PreProcessWithDefault(314)}
+    spec: SpecTree = {"Key": _PreProcessWithDefault(314)}
     assert {"Key": 314} == process_makefile({}, spec)
 
 
 def test__preprocess_makefile__with_default__expected_value():
-    spec = {"Key": _PreProcessWithDefault(314)}
+    spec: SpecTree = {"Key": _PreProcessWithDefault(314)}
     assert {"Key": 14} == process_makefile({"Key": "14"}, spec)

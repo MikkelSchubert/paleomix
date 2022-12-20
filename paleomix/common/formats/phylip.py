@@ -47,13 +47,13 @@ def interleaved_phy(
     padded_len = min(max_name_length, max(len(name) for name in msa.names())) + 2
     padded_len -= padded_len % -(_BLOCK_SIZE + _BLOCK_SPACING) + _BLOCK_SPACING
 
-    streams = []  # type: List[List[str]]
+    streams: List[List[str]] = []
     spacing = " " * _BLOCK_SPACING
     for record in sorted(msa):
         name = record.name[:max_name_length]
         padding = (padded_len - len(name)) * " "
 
-        lines = []  # type: List[str]
+        lines: List[str] = []
         line = [name, padding]
         for block in grouper(_BLOCK_SIZE, record.sequence, fillvalue=""):
             block = "".join(block)

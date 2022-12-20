@@ -78,9 +78,9 @@ class RAxMLRapidBSNode(CommandNode):
             # Use the GTRGAMMA model of NT substitution by default
             "-m": model,
             # Enable Rapid Boostrapping and set random seed
-            "-x": int(random.random() * 2 ** 31 - 1),
+            "-x": int(random.random() * 2**31 - 1),
             # Set random seed for parsimony inference
-            "-p": int(random.random() * 2 ** 31 - 1),
+            "-p": int(random.random() * 2**31 - 1),
             # Terminate bootstrapping upon convergence, not after N repetitions
             "-N": replicates,
         }

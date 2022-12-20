@@ -113,7 +113,7 @@ def test_layout__non_string_name():
 
 def test_layout__non_string_dict_value():
     with pytest.raises(LayoutError, match="invalid value 17"):
-        Layout({"{root}": 17})
+        Layout({"{root}": 17})  # type: ignore
 
 
 def test_layout__duplicate_path_names():
