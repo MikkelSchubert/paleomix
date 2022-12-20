@@ -794,6 +794,10 @@ def build_pipeline(args, project):
         "-XX:+UseSerialGC",
     ]
 
+    # Default to permitting up to 8GB of ram usage per java (GATK) instance
+    if not any(value.startswith("-Xmx") for value in args.jre_options):
+        args.jre_options.append("-Xmx8G")
+
     args.layout = Layout({"{root}": _LAYOUT}, root=args.output)
 
     # 1. Validate and process genome
