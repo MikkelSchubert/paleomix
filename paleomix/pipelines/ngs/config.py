@@ -17,7 +17,7 @@ class PipelineTarget(Enum):
     HAPLOTYPES = "haplotypes"
     GENOTYPES = "genotypes"
 
-    def str(self) -> str:
+    def __str__(self) -> str:
         return self.value
 
 
