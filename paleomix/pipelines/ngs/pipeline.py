@@ -20,6 +20,7 @@ from paleomix.nodes.gatk import (
     GenotypeGVCFs,
     HaplotypeCallerNode,
     SplitIntervalsNode,
+    TranchesPlotsNode,
     VariantRecalibratorNode,
 )
 from paleomix.nodes.multiqc import MultiQCNode
@@ -32,7 +33,6 @@ from paleomix.nodes.samtools import (
 )
 from paleomix.nodes.validation import ValidateFASTAFilesNode
 from paleomix.pipelines.ngs.config import PipelineTarget
-from paleomix.pipelines.ngs.nodes import TranchesPlotsNode
 
 ########################################################################################
 # Project layout
