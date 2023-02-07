@@ -515,9 +515,10 @@ class VariantRecalibratorNode(CommandNode):
             OutputFile(self.out_r_plot + ".pdf"),
         ]
 
-        if mode == "SNP":
-            # This plot is not generated in INDEL mode
-            extra_files.append(OutputFile(self.out_tranches + ".pdf"))
+        # WORKAROUND: GATK creates unreadable tranche plots due to unsorted data, so we
+        #             use a custom R-script instead (via TranchesPlotsNode). This issue
+        #             applies to GATK 4.2.4.1 and others.
+        extra_files.append(TempOutputFile(self.out_tranches + ".pdf"))
 
         for key, value in options.items():
             if key.startswith("--resource"):

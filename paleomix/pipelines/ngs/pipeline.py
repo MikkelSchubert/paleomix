@@ -76,7 +76,7 @@ _LAYOUT = {
         "{sample}.{genome}.g.vcf.gz": "gvcf_per_sample",
     },
     "genotypes": {
-        "{genome}.vcf.gz": "vcf_recal_snp_indel",
+        "{genome}.vcf.gz": "vcf_recal_indel",
     },
     "statistics": {
         "alignments_multiQC": "bam_multiqc_prefix",
@@ -89,7 +89,6 @@ _LAYOUT = {
         "genotyping": {
             "{genome}.recalibration.snp.r": "vcf_recal_training_snp_r",
             "{genome}.recalibration.snp.tranches": "vcf_recal_training_snp_trances",
-            "{genome}.recalibration.snp.tranches.extras": "vcf_recal_training_snp_trances_extras",
             "{genome}.recalibration.indel.r": "vcf_recal_training_indel_r",
             "{genome}.recalibration.indel.tranches": "vcf_recal_training_indel_trances",
             "{genome}.recalibration.indel.vcf.gz": "vcf_recal_training_indel_vcf",
@@ -716,63 +715,47 @@ def recalibrate_haplotype(args, genome, samples, settings):
     layout = args.layout.update(genome=genome)
 
     if settings["VariantRecalibrator"]["Enabled"]:
-        # 1a. Build model for SNP recalibration
-        snp_node = VariantRecalibratorNode(
-            mode="SNP",
-            in_reference=genome.filename,
-            in_variant=layout["vcf_merged"],
-            out_recal=layout["vcf_recal_training_snp_vcf"],
-            out_tranches=layout["vcf_recal_training_snp_trances"],
-            out_r_plot=layout["vcf_recal_training_snp_r"],
-            options=settings["VariantRecalibrator"]["SNP"],
-            java_options=args.jre_options,
-        )
+        intermediate_vcf = layout["vcf_merged"]
 
-        # Custom tranche plot/table
-        plot_node = TranchesPlotsNode(
-            input_table=layout["vcf_recal_training_snp_trances"],
-            output_prefix=layout["vcf_recal_training_snp_trances_extras"],
-            dependencies=[snp_node],
-        )
-
-        # 1b. Build model for INDEL recalibration
-        indel_node = VariantRecalibratorNode(
-            mode="INDEL",
-            in_reference=genome.filename,
-            in_variant=layout["vcf_merged"],
-            out_recal=layout["vcf_recal_training_indel_vcf"],
-            out_tranches=layout["vcf_recal_training_indel_trances"],
-            out_r_plot=layout["vcf_recal_training_indel_r"],
-            options=settings["VariantRecalibrator"]["INDEL"],
-            java_options=args.jre_options,
-        )
-
-        yield from (snp_node, indel_node, plot_node)
-
-        if settings["ApplyVQSR"]["Enabled"]:
-            # 2. Apply SNP recalibration to original BAM
-            recal_node = ApplyVQSRNode(
-                mode="SNP",
-                in_vcf=snp_node.in_variant,
-                in_node=snp_node,
-                out_vcf=layout["vcf_recal_snp"],
-                options=settings["ApplyVQSR"]["SNP"],
+        for mode in ("snp", "indel"):
+            # 1. Build models for SNP/INDEL recalibration
+            model_node = VariantRecalibratorNode(
+                mode=mode.upper(),
+                in_reference=genome.filename,
+                # Train on the merged VCF to allow SNP/INDEL model building in parallel
+                in_variant=layout["vcf_merged"],
+                out_recal=layout[f"vcf_recal_training_{mode}_vcf"],
+                out_tranches=layout[f"vcf_recal_training_{mode}_trances"],
+                out_r_plot=layout[f"vcf_recal_training_{mode}_r"],
+                options=settings["VariantRecalibrator"][mode.upper()],
                 java_options=args.jre_options,
-                dependencies=[snp_node],
             )
 
-            recal_node.mark_intermediate_files()
-
-            # 3. Apply INDEL recalibration to SNP recalibrated BAM
-            yield ApplyVQSRNode(
-                mode="INDEL",
-                in_vcf=recal_node.out_vcf,
-                in_node=indel_node,
-                out_vcf=layout["vcf_recal_snp_indel"],
-                options=settings["ApplyVQSR"]["INDEL"],
-                java_options=args.jre_options,
-                dependencies=[indel_node, recal_node],
+            # 2. Custom tranche plot/table for SNPs/indels
+            yield TranchesPlotsNode(
+                input_table=layout[f"vcf_recal_training_{mode}_trances"],
+                output_prefix=layout[f"vcf_recal_training_{mode}_trances"],
+                dependencies=[model_node],
             )
+
+            if settings["ApplyVQSR"]["Enabled"]:
+                # 3. Apply SNP/INDEL recalibration to current BAM
+                recal_node = ApplyVQSRNode(
+                    mode=mode.upper(),
+                    in_vcf=intermediate_vcf,
+                    in_node=model_node,
+                    out_vcf=layout[f"vcf_recal_{mode}"],
+                    options=settings["ApplyVQSR"][mode.upper()],
+                    java_options=args.jre_options,
+                )
+
+                if mode == "snp":
+                    # Only the final INDEL + SNP recalibrated BAM is kept
+                    recal_node.mark_intermediate_files()
+                    # The merged BAM is SNP recalibrated and then indel recalibrated
+                    intermediate_vcf = recal_node.out_vcf
+
+                yield recal_node
 
 
 def build_pipeline(args, project):
