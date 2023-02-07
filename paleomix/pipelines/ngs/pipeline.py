@@ -777,9 +777,14 @@ def build_pipeline(args, project):
         "-XX:+UseSerialGC",
     ]
 
-    # Default to permitting up to 8GB of ram usage per java (GATK) instance
-    if not any(value.startswith("-Xmx") for value in args.jre_options):
-        args.jre_options.append("-Xmx8G")
+    # It is difficult to predict exactly how much memory a given task will use so
+    # instead the limits are losened and users are encouraged to use tools like
+    # `earlyoom` to avoid running out of memory.
+    for value in args.jre_options:
+        if value.startswith("-Xmx") or value.startswith("-XX:MaxRAMPercentage="):
+            break
+    else:
+        args.jre_options.append("-XX:MaxRAMPercentage=95.0")
 
     args.layout = Layout({"{root}": _LAYOUT}, root=args.output)
 
