@@ -44,6 +44,13 @@ class ApplyBQSRNode(CommandNode):
         if not isinstance(in_node, BaseRecalibratorNode):
             raise ValueError(in_node)
 
+        # WORKAROUND: ApplyBQSR defaults to using compression level 2 for output,
+        #             resulting in significantly larger BAMs. Revert that behavior
+        #             unless the user has already done so. GATK 4.2.3.0 and more.
+        if not any(o.startswith("-Dsamjdk.compression_level=") for o in java_options):
+            java_options = list(java_options)
+            java_options.append("-Dsamjdk.compression_level=6")
+
         command = _gatk_command(
             tool="ApplyBQSR",
             tool_options={
