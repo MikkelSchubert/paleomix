@@ -62,6 +62,7 @@ def _main_run(args):
         temp_root=args.temp_root,
         max_threads=args.max_threads,
         intermediate_files=args.intermediate_files,
+        required_files=args.require_files,
     )
 
     return pipeline.run(args.pipeline_mode)
