@@ -168,7 +168,8 @@ class Lane:
             output_file=output_file_bam,
             prefix=parameters["prefix"],
             reference=parameters["reference"],
-            mapping_options=self.options["Aligners"]["BWA"],
+            # FIXME: There needs to be a way to set BWASamse options
+            # mapping_options=self.options["Aligners"]["BWA"],
             cleanup_options=self._cleanup_options("BWA"),
             dependencies=aln_node,
         )
@@ -199,7 +200,8 @@ class Lane:
             output_file=output_bam,
             prefix=parameters["prefix"],
             reference=parameters["reference"],
-            mapping_options=self.options["Aligners"]["BWA"],
+            # FIXME: There needs to be a way to set BWASamse options
+            # mapping_options=self.options["Aligners"]["BWA"],
             cleanup_options=self._cleanup_options("BWA"),
             dependencies=(aln_node_1, aln_node_2),
         )
