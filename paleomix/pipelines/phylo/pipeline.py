@@ -38,6 +38,7 @@ from paleomix.pipelines.phylo.makefile import MakefileError, read_makefiles
 
 _COMMANDS = {
     "genotype": genotype.chain,
+    "genotyping": genotype.chain,
     "msa": msa.chain,
     "phylogeny": phylo.chain_examl,
 }
