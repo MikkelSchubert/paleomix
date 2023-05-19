@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.8] - 2023-05-19
+
+#### Fixed
+  - Added 'genotyping' alias to match phylo pipeline documentation (issue #48).
+  - Fixed options for BWA `aln` being applied to `samse` and `sampe` (issue #49).
+
+
 ## [1.3.7] - 2022-08-22
 
 #### Added
