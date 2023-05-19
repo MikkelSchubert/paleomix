@@ -42,12 +42,12 @@ from paleomix.node import (
 from paleomix.common.utilities import safe_coerce_to_frozenset
 
 
-def test_dir():
+def create_test_dir():
     return os.path.dirname(__file__)
 
 
-def test_file(*args):
-    return os.path.join(test_dir(), "data", *args)
+def create_test_file(*args):
+    return os.path.join(create_test_dir(), "data", *args)
 
 
 def first(values):
@@ -62,14 +62,18 @@ _NODE_TYPES = (Node, _CommandNodeWrap)
 
 
 _DESCRIPTION = "My description of a node"
-_IN_FILES = frozenset((test_file("empty_file_1"), test_file("empty_file_2")))
+_IN_FILES = frozenset(
+    (create_test_file("empty_file_1"), create_test_file("empty_file_2"))
+)
 _OUT_FILES = frozenset(
-    (test_file("missing_out_file_1"), test_file("missing_out_file_2"))
+    (create_test_file("missing_out_file_1"), create_test_file("missing_out_file_2"))
 )
 _EXEC_FILES = frozenset(("ls", "sh"))
-_AUX_FILES = frozenset((test_file("rCRS.fasta"), test_file("rCRS.fasta.fai")))
+_AUX_FILES = frozenset(
+    (create_test_file("rCRS.fasta"), create_test_file("rCRS.fasta.fai"))
+)
 _REQUIREMENTS = frozenset((id, str))
-_EMPTY_FILE = test_file("empty_file_1")
+_EMPTY_FILE = create_test_file("empty_file_1")
 
 
 def _build_cmd_mock(
