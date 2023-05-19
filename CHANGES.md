@@ -1,5 +1,40 @@
 # Changelog
 
+## [1.3.8] - 2023-05-19
+
+#### Fixed
+  - Added 'genotyping' alias to match phylo pipeline documentation (issue #48).
+  - Fixed options for BWA `aln` being applied to `samse` and `sampe` (issue #49).
+
+
+## [1.3.7] - 2022-08-22
+
+#### Added
+  - Added example to BAM pipeline YAML template, showing how to increase the maximum
+    allowed Phred score for AdapterRemoval. This is needed due to the value being
+    capped at 41 by default, lower than the maximum observed in some modern data.
+
+#### Fixed
+  - Fixed regression in config file parsing, that would cause failure if no value
+    was specified for an option.
+  - Fixed error message not being printed correctly when attempting to use Phred+64
+    data with BWA mem/bwasw.
+  - Fixed regressions that prevented the use of "regions of interest" in the BAM
+    pipeline.
+  - Fixed failure when using `--list-output-files` and auxilary files were missing
+    or dependecies were unmet. Output files are now printed.
+
+
+## [1.3.6] - 2021-11-28
+
+### Added
+  - Added explicit support for the AdapterRemoval `--trim5p` and `--trim3p` options,
+    which may take one or two values (as a list).
+
+### Changed
+  - User options for AdapterRemoval are no longer restricted by a whitelist.
+
+
 ## [1.3.5] - 2021-10-12
 
 ### Added
@@ -758,6 +793,9 @@ the (partially) updated documentation now hosted on ReadTheDocs.
   - Switching to more traditional version-number tracking.
 
 
+[1.3.8]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.7...v1.3.8
+[1.3.7]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.6...v1.3.7
+[1.3.6]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.5...v1.3.6
 [1.3.5]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.4...v1.3.5
 [1.3.4]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.3...v1.3.4
 [1.3.3]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.2...v1.3.3
