@@ -317,6 +317,8 @@ class Node:
 
 
 class CommandNode(Node):
+    _command: Union[AtomicCmd, ParallelCmds, SequentialCmds]
+
     def __init__(
         self,
         command: Union[AtomicCmd, ParallelCmds, SequentialCmds],

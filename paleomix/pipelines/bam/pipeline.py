@@ -31,7 +31,7 @@ from paleomix.common.fileutils import swap_ext, try_rmdirs
 from paleomix.common.layout import Layout
 from paleomix.common.yaml import YAMLError
 from paleomix.nodegraph import CleanupStrategy
-from paleomix.nodes.adapterremoval import PE_AdapterRemovalNode, SE_AdapterRemovalNode
+from paleomix.nodes.adapterremoval import AdapterRemoval2Node
 from paleomix.nodes.bowtie2 import Bowtie2IndexNode, Bowtie2Node
 from paleomix.nodes.bwa import (
     BWAAlgorithmNode,
@@ -212,37 +212,18 @@ def _process_untrimmed_reads(layout, record, args):
     output_settings = layout["post_trimmed_statistics"]
 
     file_1, file_2 = record["Path"]
+    task = AdapterRemoval2Node(
+        input_file_1=file_1,
+        input_file_2=file_2,
+        output_prefix=output_prefix,
+        output_settings=output_settings,
+        threads=args.adapterremoval_max_threads,
+        options=options,
+    )
 
-    if file_2 is None:
-        task = SE_AdapterRemovalNode(
-            input_file=file_1,
-            output_prefix=output_prefix,
-            output_settings=output_settings,
-            threads=args.adapterremoval_max_threads,
-            options=options,
-        )
-
-        yield ("Single", (task.out_truncated, None), task)
-    else:
-        task = PE_AdapterRemovalNode(
-            input_file_1=file_1,
-            input_file_2=file_2,
-            output_prefix=output_prefix,
-            output_settings=output_settings,
-            threads=args.adapterremoval_max_threads,
-            options=options,
-        )
-
-        yield ("Singleton", (task.out_singleton, None), task)
-
-        out_paired = (task.out_paired.format(Pair=1), task.out_paired.format(Pair=2))
-        yield ("Paired", out_paired, task)
-
-        if task.out_merged:
-            yield ("Collapsed", (task.out_merged, None), task)
-
-        if task.out_merged_truncated:
-            yield ("CollapsedTruncated", (task.out_merged_truncated, None), task)
+    for key, files in task.out_fastq.items():
+        if key != "Discarded":
+            yield (key, files, task)
 
     if args.pipeline_variant != "trim":
         task.mark_intermediate_files("*.gz")

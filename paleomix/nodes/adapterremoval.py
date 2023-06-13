@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from typing import Any, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import paleomix.common.fileutils as fileutils
 import paleomix.common.versions as versions
@@ -33,143 +33,86 @@ from paleomix.common.command import (
 )
 from paleomix.node import CommandNode, Node
 
-_VERSION_CHECK = versions.Requirement(
+_VERSION_2_CHECK = versions.Requirement(
     call=("AdapterRemoval", "--version"),
     regexp=r"ver. (\d+\.\d+\.\d+)",
     specifiers=">=2.2.0",
 )
 
 
-class SE_AdapterRemovalNode(CommandNode):
-    def __init__(
-        self,
-        input_file: str,
-        output_prefix: str,
-        output_settings: Optional[str] = None,
-        threads: int = 1,
-        options: OptionsType = {},
-        dependencies: Iterable[Node] = (),
-    ):
-        self.out_settings = output_prefix + ".settings"
-        if output_settings is not None:
-            self.out_settings = output_settings
+class AdapterRemoval2Node(CommandNode):
+    out_fastq: Dict[str, Tuple[str, Optional[str]]]
 
-        self.out_truncated = "{}.truncated.gz".format(output_prefix)
-        self.out_discarded = "{}.discarded.gz".format(output_prefix)
-
-        command = AtomicCmd(
-            "AdapterRemoval",
-            extra_files=[
-                OutputFile(self.out_truncated),
-                OutputFile(self.out_discarded),
-            ],
-            requirements=[_VERSION_CHECK],
-        )
-
-        # Ignored for SE reads
-        options = dict(options)
-        options.pop("--collapse", None)
-        options.pop("--collapse-deterministic", None)
-        options.pop("--collapse-conservatively", None)
-
-        _finalize_options(
-            command=command,
-            user_options=options,
-            fixed_options={
-                "--file1": InputFile(input_file),
-                # Gzip compress FASTQ files
-                "--gzip": None,
-                # Fix number of threads to ensure consistency when scheduling node
-                "--threads": threads,
-                # Prefix for output files, ensure that all end up in temp folder
-                "--basename": TempOutputFile(output_prefix),
-                # Possibly non-standard locations for settings
-                "--settings": OutputFile(self.out_settings),
-            },
-        )
-
-        CommandNode.__init__(
-            self,
-            command=command,
-            threads=threads,
-            description="trimming SE adapters from %s"
-            % fileutils.describe_files(input_file),
-            dependencies=dependencies,
-        )
-
-
-class PE_AdapterRemovalNode(CommandNode):
     def __init__(
         self,
         input_file_1: str,
-        input_file_2: str,
+        input_file_2: Optional[str],
         output_prefix: str,
-        output_settings: Optional[str] = None,
+        output_settings: str,
         threads: int = 1,
         options: OptionsType = {},
         dependencies: Iterable[Node] = (),
-    ):
-        self.out_settings = output_prefix + ".settings"
-        if output_settings is not None:
-            self.out_settings = output_settings
+    ) -> None:
+        # Options that cannot be overwritten
+        fixed_options: OptionsType = {
+            "--file1": InputFile(input_file_1),
+            # Gzip compress FASTQ files
+            "--gzip": None,
+            # Fix number of threads to ensure consistency when scheduling node
+            "--threads": threads,
+            # Prefix for output files, ensure that all end up in temp folder
+            "--basename": TempOutputFile(output_prefix),
+            # Possibly non-standard locations for settings
+            "--settings": OutputFile(output_settings),
+        }
 
-        self.out_paired = "{}.pair{{Pair}}.truncated.gz".format(output_prefix)
-        self.out_singleton = "{}.singleton.truncated.gz".format(output_prefix)
-        self.out_discarded = "{}.discarded.gz".format(output_prefix)
-        self.out_merged = None
-        self.out_merged_truncated = None
+        if input_file_2 is None:
+            self.out_fastq = {
+                "Single": (f"{output_prefix}.truncated.gz", None),
+                "Discarded": (f"{output_prefix}.discarded.gz", None),
+            }
 
-        command = AtomicCmd(
-            "AdapterRemoval",
-            extra_files=[
-                OutputFile(self.out_paired.format(Pair=1)),
-                OutputFile(self.out_paired.format(Pair=2)),
-                OutputFile(self.out_singleton),
-                OutputFile(self.out_discarded),
-            ],
-            requirements=[_VERSION_CHECK],
-        )
+            # The ability to "collapse" SE reads is not used
+            options = {
+                key: value
+                for key, value in options.items()
+                if not key.startswith("--collapse")
+            }
+        else:
+            self.out_fastq = {
+                "Paired": (
+                    f"{output_prefix}.pair1.truncated.gz",
+                    f"{output_prefix}.pair2.truncated.gz",
+                ),
+                "Singleton": (f"{output_prefix}.singleton.truncated.gz", None),
+                "Discarded": (f"{output_prefix}.discarded.gz", None),
+            }
 
-        if options.keys() & (
-            "--collapse",
-            "--collapse-deterministic",
-            "--collapse-conservatively",
-        ):
-            self.out_merged = "{}.collapsed.gz".format(output_prefix)
-            self.out_merged_truncated = "{}.collapsed.truncated.gz".format(
-                output_prefix
-            )
+            fixed_options["--file2"] = InputFile(input_file_2)
 
-            command.add_extra_files(
-                [
-                    OutputFile(self.out_merged),
-                    OutputFile(self.out_merged_truncated),
-                ]
-            )
+            # merging is enabled if any of the --collapse arguments are used
+            if any(key.startswith("--collapse") for key in options):
+                self.out_fastq["Collapsed"] = (f"{output_prefix}.collapsed.gz", None)
+                self.out_fastq["CollapsedTruncated"] = (
+                    f"{output_prefix}.collapsed.truncated.gz",
+                    None,
+                )
 
-        _finalize_options(
-            command,
-            user_options=dict(options),
-            fixed_options={
-                "--file1": InputFile(input_file_1),
-                "--file2": InputFile(input_file_2),
-                # Gzip compress FASTQ files
-                "--gzip": None,
-                # Fix number of threads to ensure consistency when scheduling node
-                "--threads": threads,
-                # Prefix for output files, ensure that all end up in temp folder
-                "--basename": TempOutputFile(output_prefix),
-                # Possibly non-standard locations for settings
-                "--settings": OutputFile(self.out_settings),
-            },
+        command = _finalize_options(
+            command=AtomicCmd(
+                "AdapterRemoval",
+                requirements=[_VERSION_2_CHECK],
+            ),
+            out_fastq=self.out_fastq,
+            user_options=options,
+            fixed_options=fixed_options,
         )
 
         CommandNode.__init__(
             self,
             command=command,
             threads=threads,
-            description="trimming PE adapters from %s"
-            % fileutils.describe_paired_files(input_file_1, input_file_2),
+            description=_describe_trimming_task(input_file_1, input_file_2),
             dependencies=dependencies,
         )
 
@@ -183,11 +126,11 @@ class IdentifyAdaptersNode(CommandNode):
         threads: int = 1,
         options: OptionsType = {},
         dependencies: Iterable[Node] = (),
-    ):
+    ) -> None:
         command = AtomicCmd(
             "AdapterRemoval",
             stdout=output_file,
-            requirements=[_VERSION_CHECK],
+            requirements=[_VERSION_2_CHECK],
         )
 
         fixed_options: OptionsType = {
@@ -213,11 +156,31 @@ class IdentifyAdaptersNode(CommandNode):
         )
 
 
+def _describe_trimming_task(input_file_1: str, input_file_2: Optional[str]) -> str:
+    if input_file_2 is None:
+        return "trimming SE adapters from {}".format(
+            fileutils.describe_files(input_file_1)
+        )
+
+    return "trimming PE adapters from {}".format(
+        fileutils.describe_paired_files(input_file_1, input_file_2)
+    )
+
+
 def _finalize_options(
     command: AtomicCmd,
+    out_fastq: Dict[str, Tuple[str, Optional[str]]],
     user_options: OptionsType,
     fixed_options: OptionsType,
-):
+) -> AtomicCmd:
+    output_fastq: List[OutputFile] = []
+    for file_1, file_2 in out_fastq.values():
+        output_fastq.append(OutputFile(file_1))
+        if file_2 is not None:
+            output_fastq.append(OutputFile(file_2))
+
+    command.add_extra_files(output_fastq)
+
     # Ensure that any user-specified list of adapters is tracked
     adapter_list = user_options.get("--adapter-list")
     if isinstance(adapter_list, str):
@@ -238,3 +201,5 @@ def _finalize_options(
     )
 
     command.append(*extra_options)
+
+    return command
