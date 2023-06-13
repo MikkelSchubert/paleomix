@@ -40,6 +40,14 @@ _VERSION_2_CHECK = versions.Requirement(
 )
 
 
+_VERSION_3_CHECK = versions.Requirement(
+    call=("adapterremoval3", "--version"),
+    # Currently fixed to specify development version
+    regexp=r"AdapterRemoval v(\d+\.\d+\.\d+-alpha\d+)",
+    specifiers=">=3.0.0-alpha2",
+)
+
+
 class AdapterRemoval2Node(CommandNode):
     out_fastq: Dict[str, Tuple[str, Optional[str]]]
 
@@ -102,6 +110,82 @@ class AdapterRemoval2Node(CommandNode):
             command=AtomicCmd(
                 "AdapterRemoval",
                 requirements=[_VERSION_2_CHECK],
+            ),
+            out_fastq=self.out_fastq,
+            user_options=options,
+            fixed_options=fixed_options,
+        )
+
+        CommandNode.__init__(
+            self,
+            command=command,
+            threads=threads,
+            description=_describe_trimming_task(input_file_1, input_file_2),
+            dependencies=dependencies,
+        )
+
+
+class AdapterRemoval3Node(CommandNode):
+    out_fastq: Dict[str, Tuple[str, Optional[str]]]
+
+    def __init__(
+        self,
+        input_file_1: str,
+        input_file_2: Optional[str],
+        output_prefix: str,
+        output_json: str,
+        output_html: str,
+        threads: int = 1,
+        options: OptionsType = {},
+        dependencies: Iterable[Node] = (),
+    ) -> None:
+        # Options that cannot be overwritten
+        fixed_options: OptionsType = {
+            "--file1": InputFile(input_file_1),
+            # Gzip compress FASTQ files
+            "--gzip": None,
+            # Fix number of threads to ensure consistency when scheduling node
+            "--threads": threads,
+            # Prefix for output files, ensure that all end up in temp folder
+            "--basename": TempOutputFile(output_prefix),
+            # Possibly non-standard locations for settings
+            "--out-json": OutputFile(output_json),
+            # Possibly non-standard locations for settings
+            "--out-html": OutputFile(output_html),
+        }
+
+        options = dict(options)
+        # Option is no longer supported (output is always Phred+33)
+        options.pop("--qualitybase-output", None)
+
+        if input_file_2 is None:
+            self.out_fastq = {
+                "Single": (f"{output_prefix}.r1.fastq.gz", None),
+                "Discarded": (f"{output_prefix}.discarded.fastq.gz", None),
+            }
+        else:
+            self.out_fastq = {
+                "Paired": (
+                    f"{output_prefix}.r1.fastq.gz",
+                    f"{output_prefix}.r2.fastq.gz",
+                ),
+                "Singleton": (f"{output_prefix}.singleton.fastq.gz", None),
+                "Discarded": (f"{output_prefix}.discarded.fastq.gz", None),
+            }
+
+            fixed_options["--file2"] = InputFile(input_file_2)
+
+            # merging is enabled if any of the --merge/--collapse arguments are used
+            if any(
+                key.startswith("--collapse") or key.startswith("--merge")
+                for key in options
+            ):
+                self.out_fastq["Collapsed"] = (f"{output_prefix}.merged.fastq.gz", None)
+
+        command = _finalize_options(
+            command=AtomicCmd(
+                "adapterremoval3",
+                requirements=[_VERSION_3_CHECK],
             ),
             out_fastq=self.out_fastq,
             user_options=options,

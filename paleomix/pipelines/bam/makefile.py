@@ -123,6 +123,7 @@ _VALIDATION_OPTIONS: SpecTree = {
     "QualityOffset": ValueIn((33, 64, "Solexa"), default=33),
     # Split a lane into multiple entries, one for each (pair of) file(s)
     "AdapterRemoval": {
+        "Version": ValueIn((2, 3), default=2),
         "--adapter1": IsStr,
         "--adapter2": IsStr,
         "--adapter-list": IsStr,
@@ -308,7 +309,7 @@ def _glob_genomes(pattern):
 def _postprocess_samples(data, global_options):
     top_level_features = ("Coverage", "Depths", "mapDamage", "PCRDuplicates", "Summary")
 
-    for (group, samples) in tuple(data.items()):
+    for group, samples in tuple(data.items()):
         # Options common to a specific group
         group_options = _combine_options(
             options=global_options,
@@ -511,7 +512,7 @@ def finalize_makefiles(makefiles, pipeline_variant):
 
 
 def _validate_makefile_options(makefile):
-    for (sample, library, barcode, record) in _iterate_over_records(makefile):
+    for sample, library, barcode, record in _iterate_over_records(makefile):
         path = (sample, library, barcode)
 
         if record["Type"] != "Untrimmed":
@@ -570,7 +571,7 @@ def _validate_makefile_adapters(record, path):
 def _validate_makefiles_duplicate_files(makefiles):
     filenames = collections.defaultdict(list)
     for makefile in makefiles:
-        for (sample, library, barcode, record) in _iterate_over_records(makefile):
+        for sample, library, barcode, record in _iterate_over_records(makefile):
             for filepath in record["Path"]:
                 if filepath is not None:
                     realpath = os.path.realpath(filepath)
@@ -578,13 +579,13 @@ def _validate_makefiles_duplicate_files(makefiles):
                     filenames[realpath].append((sample, library, barcode))
 
     has_overlap = {}
-    for (filename, records) in filenames.items():
+    for filename, records in filenames.items():
         if len(records) > 1:
             has_overlap[filename] = list(set(records))
 
     logger = logging.getLogger(__name__)
     by_records = sorted(zip(list(has_overlap.values()), list(has_overlap.keys())))
-    for (records, pairs) in itertools.groupby(by_records, lambda x: x[0]):
+    for records, pairs in itertools.groupby(by_records, lambda x: x[0]):
         description = _describe_files_in_multiple_records(records, pairs)
 
         if len(set(record[0] for record in records)) != len(records):
@@ -597,7 +598,7 @@ def _validate_makefiles_duplicate_files(makefiles):
 def _describe_files_in_multiple_records(records, pairs):
     lines = []
     prefix = "Filename"
-    for (_, filename) in sorted(pairs):
+    for _, filename in sorted(pairs):
         lines.append("  {0} {1}".format(prefix, filename))
         prefix = " " * len(prefix)
 
@@ -656,8 +657,8 @@ def _path_to_str(path):
 
 
 def _iterate_over_records(makefile):
-    for (sample, libraries) in tuple(makefile["Samples"].items()):
-        for (library, barcodes) in tuple(libraries.items()):
-            for (barcode, records) in tuple(barcodes.items()):
+    for sample, libraries in tuple(makefile["Samples"].items()):
+        for library, barcodes in tuple(libraries.items()):
+            for barcode, records in tuple(barcodes.items()):
                 for record in records:
                     yield sample, library, barcode, record

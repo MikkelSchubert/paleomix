@@ -31,7 +31,7 @@ from paleomix.common.fileutils import swap_ext, try_rmdirs
 from paleomix.common.layout import Layout
 from paleomix.common.yaml import YAMLError
 from paleomix.nodegraph import CleanupStrategy
-from paleomix.nodes.adapterremoval import AdapterRemoval2Node
+from paleomix.nodes.adapterremoval import AdapterRemoval2Node, AdapterRemoval3Node
 from paleomix.nodes.bowtie2 import Bowtie2IndexNode, Bowtie2Node
 from paleomix.nodes.bwa import (
     BWAAlgorithmNode,
@@ -91,7 +91,9 @@ LAYOUT = {
                 "{lane}": {
                     "{shortname}": {
                         "pre_trimmed.json": "pre_trimmed_statistics",
-                        "post_trimmed.txt": "post_trimmed_statistics",
+                        "post_trimmed.txt": "post_trimmed_settings",
+                        "post_trimmed.json": "post_trimmed_json",
+                        "post_trimmed.html": "post_trimmed_html",
                     }
                 }
             }
@@ -198,7 +200,7 @@ def _process_pretrimmed_reads(layout, record):
     )
 
 
-def _process_untrimmed_reads(layout, record, args):
+def _process_untrimmed_reads(layout: Layout, record, args):
     quality_offset = record["Options"]["QualityOffset"]
     options = dict(record["Options"]["AdapterRemoval"])
 
@@ -208,18 +210,29 @@ def _process_untrimmed_reads(layout, record, args):
         options["--qualitybase-output"] = 33
 
     layout = layout.update(shortname=record["Shortname"])
-    output_prefix = layout.get("reads_prefix")
-    output_settings = layout["post_trimmed_statistics"]
 
     file_1, file_2 = record["Path"]
-    task = AdapterRemoval2Node(
-        input_file_1=file_1,
-        input_file_2=file_2,
-        output_prefix=output_prefix,
-        output_settings=output_settings,
-        threads=args.adapterremoval_max_threads,
-        options=options,
-    )
+    if options["Version"] == 2:
+        task = AdapterRemoval2Node(
+            input_file_1=file_1,
+            input_file_2=file_2,
+            output_prefix=layout.get("reads_prefix"),
+            output_settings=layout["post_trimmed_settings"],
+            threads=args.adapterremoval_max_threads,
+            options=options,
+        )
+    elif options["Version"] == 3:
+        task = AdapterRemoval3Node(
+            input_file_1=file_1,
+            input_file_2=file_2,
+            output_prefix=layout.get("reads_prefix"),
+            output_json=layout["post_trimmed_json"],
+            output_html=layout["post_trimmed_html"],
+            threads=args.adapterremoval_max_threads,
+            options=options,
+        )
+    else:
+        raise NotImplementedError(options["Version"])
 
     for key, files in task.out_fastq.items():
         if key != "Discarded":
