@@ -174,6 +174,7 @@ value has accidentally been left blank ('IsStr' requires a NON-EMPTY string):
 """
 import copy
 import logging
+import re
 from typing import Any, Dict, Hashable, List, Optional, Sequence, Tuple, Type, Union
 
 import paleomix.common.yaml as yaml
@@ -712,6 +713,47 @@ class StringEndsWith(IsStr):
 
     def meets_spec(self, value: Any) -> bool:
         return super().meets_spec(value) and value.endswith(self._postfix)
+
+
+class FASTQPath(IsStr):
+    """String path with optional, case-insensitive {pair} key to specify where the
+    mate 1/2 identifier is located."""
+
+    _PAIR_KEY = re.compile("{pair}", re.I)
+
+    def __init__(
+        self,
+        paired_end: Optional[bool] = False,
+        default: Any = DEFAULT_NOT_SET,
+    ) -> None:
+        self._paired_end = paired_end
+        if paired_end is None:
+            desc = "a path with an optional {pair} key"
+        elif paired_end:
+            desc = "a path with a {pair} key"
+        else:
+            desc = "a path without a {pair} key"
+
+        IsStr.__init__(self, desc, default)
+
+    def meets_spec(self, value: Any) -> bool:
+        return super().meets_spec(value) and (
+            self._paired_end is None or self.is_paired_end(value) == self._paired_end
+        )
+
+    @classmethod
+    def is_paired_end(cls, path: str):
+        """Returns true if a path contains a {pair} component."""
+        return bool(cls._PAIR_KEY.search(path))
+
+    @classmethod
+    def format(cls, path: str, pair: int) -> str:
+        assert pair in (1, 2), pair
+
+        result, count = cls._PAIR_KEY.subn(str(pair), path)
+        assert count
+
+        return result
 
 
 ###############################################################################

@@ -30,6 +30,7 @@ from paleomix.common.makefile import (
     REQUIRED_VALUE,
     And,
     DeprecatedOption,
+    FASTQPath,
     InputType,
     IsBoolean,
     IsDictOf,
@@ -987,6 +988,64 @@ def test_string_ends_with__default_set__valid_value():
 def test_string_ends_with__default_set__must_meet_spec():
     with pytest.raises(ValueError):
         StringEndsWith("FooBar", default="BarFoo")
+
+
+###############################################################################
+###############################################################################
+# FASTQPath
+
+
+def test_fastq_path__path_must_meet_spec():
+    se_reads = "/path/read.fq.gz"
+    pe_reads = "/path/read_{pair}.fq.gz"
+
+    accept_pe = FASTQPath(paired_end=True)
+    accept_se = FASTQPath(paired_end=False)
+    accept_any = FASTQPath(paired_end=None)
+
+    accept_se(_DUMMY_PATH, se_reads)
+    accept_pe(_DUMMY_PATH, pe_reads)
+    accept_any(_DUMMY_PATH, se_reads)
+    accept_any(_DUMMY_PATH, pe_reads)
+
+    with pytest.raises(MakefileError, match="Expected value: a path without a {pair}"):
+        accept_se(_DUMMY_PATH, pe_reads)
+
+    with pytest.raises(MakefileError, match="Expected value: a path with a {pair} key"):
+        accept_pe(_DUMMY_PATH, se_reads)
+
+
+@pytest.mark.parametrize("value", _common_invalid_values(extra=(1,)))
+def test_fastq_path__rejects_non_strings(value: Any):
+    spec = FASTQPath()
+    with pytest.raises(MakefileError, match="Expected value: a path without a {pair}"):
+        spec(_DUMMY_PATH, value)
+
+
+def test_fastq_path__default_not_set():
+    spec = FASTQPath()
+    assert spec.default is DEFAULT_NOT_SET
+
+
+def test_fastq_path__default_set__valid_value():
+    spec = FASTQPath(default="FooBar")
+    assert spec.default == "FooBar"
+
+
+def test_fastq_path__default_set__must_meet_spec():
+    se_reads = "/path/read.fq.gz"
+    pe_reads = "/path/read_{pair}.fq.gz"
+
+    FASTQPath(paired_end=None, default=pe_reads)
+    FASTQPath(paired_end=None, default=pe_reads)
+
+    FASTQPath(paired_end=True, default=pe_reads)
+    with pytest.raises(ValueError, match="Default value does not meet requirements"):
+        FASTQPath(paired_end=True, default=se_reads)
+
+    FASTQPath(paired_end=False, default=se_reads)
+    with pytest.raises(ValueError, match="Default value does not meet requirements"):
+        FASTQPath(paired_end=False, default=pe_reads)
 
 
 ###############################################################################
