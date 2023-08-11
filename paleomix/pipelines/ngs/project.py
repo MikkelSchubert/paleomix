@@ -1,5 +1,4 @@
 import logging
-import re
 import string
 
 import paleomix.common.yaml as yaml
@@ -7,6 +6,7 @@ from paleomix.common.bamfiles import BAM_PLATFORMS
 from paleomix.common.makefile import (
     REQUIRED_VALUE,
     And,
+    FASTQPath,
     IsBoolean,
     IsFloat,
     IsInt,
@@ -86,7 +86,7 @@ _VALIDATION = {
     "Samples": {
         _VALID_SAMPLE_NAME: {  # Sample
             _VALID_NAME: {  # Library
-                _VALID_NAME: IsStr,  # Lane
+                _VALID_NAME: FASTQPath(paired_end=True),  # Lane
             },
         },
     },
@@ -205,24 +205,15 @@ def _post_process_project(data):
 
 
 def _process_fastq_paths(data):
-    any_errors = False
-    key = re.compile("{pair}", re.I)
-
-    log = logging.getLogger(__name__)
     for libraries in data["Samples"].values():
         for lanes in libraries.values():
             for lane, filename in lanes.items():
-                if not key.search(filename):
-                    any_errors = True
-                    log.error(
-                        "Path %r does not contain '{pair}'. Please specify the "
-                        "location of the 1/2 mate identifier using this key.",
-                        filename,
-                    )
+                lanes[lane] = {
+                    1: FASTQPath.format(filename, 1),
+                    2: FASTQPath.format(filename, 2),
+                }
 
-                lanes[lane] = {1: key.sub("1", filename), 2: key.sub("2", filename)}
-
-    return not any_errors
+    return True
 
 
 def _process_gatk_resources(data):

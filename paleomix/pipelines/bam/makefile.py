@@ -37,6 +37,7 @@ from paleomix.common.makefile import (
     REQUIRED_VALUE,
     And,
     DeprecatedOption,
+    FASTQPath,
     IsAny,
     IsBoolean,
     IsFloat,
@@ -226,12 +227,12 @@ _VALIDATION_OPTIONS: SpecTree = {
 
 # validation of a complex lane, containing trimmed reads and/or options
 _VALIDATE_LANE: SpecTree = {
-    "Single": IsStr,
-    "Collapsed": IsStr,
-    "CollapsedTruncated": IsStr,
-    "Paired": IsStr,
-    "Singleton": IsStr,
-    "Untrimmed": IsStr,
+    "Single": FASTQPath,
+    "Collapsed": FASTQPath,
+    "CollapsedTruncated": FASTQPath,
+    "Paired": FASTQPath(paired_end=True),
+    "Singleton": FASTQPath,
+    "Untrimmed": FASTQPath(paired_end=None),
     "Options": WithoutDefaults(_VALIDATION_OPTIONS),
 }
 
@@ -410,13 +411,10 @@ def _collect_files_and_split_lane(data, path):
             for files in _collect_files(path, filepath):
                 yield read_type, files
         elif read_type == "Paired":
-            if not _is_paired_end(filepath):
-                raise MakefileError(
-                    "Paired data path at %s does not have a '{Pair}' key: %s"
-                    % (_path_to_str(path + (read_type,)), filepath)
-                )
-
-            yield read_type, (filepath.format(Pair=1), filepath.format(Pair=2))
+            yield read_type, (
+                FASTQPath.format(filepath, 1),
+                FASTQPath.format(filepath, 2),
+            )
         else:
             yield read_type, (filepath, None)
 
@@ -438,9 +436,9 @@ def _filenames_to_shortname(filenames):
 
 
 def _collect_files(path, template) -> Iterable[Tuple[str, Optional[str]]]:
-    if _is_paired_end(template):
-        files_1 = _sorted_glob(template.format(Pair=1))
-        files_2 = _sorted_glob(template.format(Pair=2))
+    if FASTQPath.is_paired_end(template):
+        files_1 = _sorted_glob(FASTQPath.format(template, 1))
+        files_2 = _sorted_glob(FASTQPath.format(template, 2))
 
         if len(files_1) != len(files_2):
             raise MakefileError(
@@ -465,11 +463,6 @@ def _sorted_glob(filename):
         return sorted(glob.iglob(filename))
 
     return [filename]
-
-
-def _is_paired_end(template):
-    """Returns true if a template contains a Pair component."""
-    return template.format(Pair=1) != template
 
 
 # based on check in `glob`

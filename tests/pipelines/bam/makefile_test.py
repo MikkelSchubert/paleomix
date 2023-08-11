@@ -717,5 +717,5 @@ def test_makefile__validation__paired_must_have_key(tmp_path):
     """,
     )
 
-    with pytest.raises(MakefileError, match="Paired data path .* does not have"):
+    with pytest.raises(MakefileError, match="Expected value: a path with a {pair} key"):
         _read_makefile(filepath)
