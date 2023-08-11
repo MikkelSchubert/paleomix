@@ -20,6 +20,7 @@ def _read_makefile(filepath):
 # Options specified in a basic YAML file
 TEMPLATE_BAM_OPTIONS = {
     "AdapterRemoval": {
+        "Version": 2,
         "--collapse": None,
         "--minlength": 25,
         "--trimns": None,
@@ -333,7 +334,7 @@ def test_makefile__sample__group_options(tmp_path):
     )
 
     expected = _sample_template(filepath)
-    for (lib, run) in [("Lib1", "Run1"), ("Lib1", "Run2"), ("Lib2", "Run3")]:
+    for lib, run in [("Lib1", "Run1"), ("Lib1", "Run2"), ("Lib2", "Run3")]:
         options = expected["Samples"]["Sam1"][lib][run][0]["Options"]
         options["AdapterRemoval"]["--adapter1"] = "CATCATDOGCAT"
 
@@ -358,7 +359,7 @@ def test_makefile__sample__sample_options(tmp_path):
     )
 
     expected = _sample_template(filepath)
-    for (lib, run) in [("Lib1", "Run1"), ("Lib1", "Run2"), ("Lib2", "Run3")]:
+    for lib, run in [("Lib1", "Run1"), ("Lib1", "Run2"), ("Lib2", "Run3")]:
         options = expected["Samples"]["Sam1"][lib][run][0]["Options"]
         options["AdapterRemoval"]["--adapter1"] = "CATCATDOGCAT"
 
