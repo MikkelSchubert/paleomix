@@ -226,7 +226,7 @@ def process_makefile(
         data, specification = specification(path, data)
         data = process_makefile(data, specification, path, apply_defaults)
     elif _is_spec(specification):
-        _instantiate_spec(specification)(path, data)
+        data = _instantiate_spec(specification)(path, data)
     elif isinstance(data, (dict, type(None))) and isinstance(specification, dict):
         # A limitation of YAML is that empty subtrees are equal to None;
         # this check ensures that empty subtrees to be handled properly
@@ -343,7 +343,7 @@ class MakefileSpec(_SpecBase):
                 % (description, default)
             )
 
-    def __call__(self, path: SpecPath, value: Any) -> None:
+    def __call__(self, path: SpecPath, value: Any) -> Any:
         if not self.meets_spec(value):
             raise MakefileError(
                 (
@@ -354,6 +354,8 @@ class MakefileSpec(_SpecBase):
                 )
                 % (_path_to_str(path), self.description, value, type(value).__name__)
             )
+
+        return value
 
     def meets_spec(self, _value: Any) -> bool:
         """Return True if value meets the specification, False otherwise."""
@@ -498,7 +500,7 @@ class DeprecatedOption(MakefileSpec):
 
         MakefileSpec.__init__(self, spec.description, spec.default)
 
-    def __call__(self, path: SpecPath, value: Any) -> None:
+    def __call__(self, path: SpecPath, value: Any) -> Any:
         self._spec(path, value)
 
         log = logging.getLogger(__name__)
@@ -506,6 +508,8 @@ class DeprecatedOption(MakefileSpec):
             "option has been deprecated and will be removed in the future: %s",
             _path_to_str(path),
         )
+
+        return value
 
     def meets_spec(self, value: Any) -> bool:
         return self._spec.meets_spec(value)
@@ -517,12 +521,14 @@ class RemovedOption(MakefileSpec):
     def __init__(self, description: str = "removed settings") -> None:
         MakefileSpec.__init__(self, description, DEFAULT_NOT_SET)
 
-    def __call__(self, path: SpecPath, _value: Any) -> None:
+    def __call__(self, path: SpecPath, value: Any) -> Any:
         log = logging.getLogger(__name__)
         log.warning(
             "option has been removed and no longer has any effect: %s",
             _path_to_str(path),
         )
+
+        return value
 
     def meets_spec(self, _value: Any) -> bool:
         return True
