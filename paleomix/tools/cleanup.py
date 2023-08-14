@@ -177,6 +177,13 @@ def _cleanup_unmapped(args):
                     tags.append(("RG", args.rg_id, "Z"))
                     record.set_tags(tags)
 
+                # Workaround for case where FASTQ input is a single base with quality-
+                # score 9 ('*'), which is interpreted as *no* qualities by `samtools`.
+                # As `cleanup` only handles data derived from FASTQ files we can assume
+                # that query sequence and qualities should both be set.
+                if record.query_length == 1 and record.query_qualities is None:
+                    record.query_qualities = [9]
+
                 output_handle.write(record)
 
     return 0
