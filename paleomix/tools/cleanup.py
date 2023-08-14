@@ -189,6 +189,7 @@ def _build_wrapper_command(args):
         "--fasta": args.fasta,
         "--temp-prefix": args.temp_prefix,
         "--min-quality": str(args.min_quality),
+        "--require-flags": hex(args.require_flags),
         "--exclude-flags": hex(args.exclude_flags),
         "--update-pg-tag": args.update_pg_tag,
     }
