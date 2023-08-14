@@ -63,7 +63,7 @@ class Pypeline:
 
         self._logger = logging.getLogger(__name__)
         # Set if a keyboard-interrupt (SIGINT) has been caught
-        self._interrupted = False
+        self._interrupted = 0
         self._threads = max(0, max_threads)
         self._temp_root = temp_root
         self._intermediate_files_strategy = intermediate_files
@@ -326,14 +326,21 @@ class Pypeline:
 
     def _sigint_handler(self, signum: int, frame: Any):
         """Signal handler; see signal.signal."""
+        now = time.time()
         if not self._interrupted:
-            self._interrupted = True
+            self._interrupted = now
             self._logger.warning(
                 "Keyboard interrupt detected, waiting for running tasks to complete. "
-                "Press CTRL-C again to force termination."
+                "Press CTRL-C again within the next 5 seconds to force termination."
             )
-        else:
+        elif now - self._interrupted <= 5.0:
             self._sigterm_handler(signum, frame)
+        else:
+            self._interrupted = now
+            self._logger.warning(
+                "Pipeline is waiting for running tasks to terminate. Press CTRL-C "
+                "again within the next 5 seconds to force termination."
+            )
 
     def _sigterm_handler(self, signum: int, frame: Any):
         self._logger.warning("Terminating due to signal %i", signum)
@@ -362,7 +369,7 @@ class Pypeline:
         if states[nodegraph.ERROR]:
             self._logger.warning("Errors were detected in pipeline")
         elif self._interrupted:
-            self._logger.info("Pipeline terminated following interruption by user")
+            self._logger.info("Pipeline interrupted by user")
         elif dry_run:
             self._logger.info("Dry run completed successfully")
         else:
