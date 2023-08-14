@@ -104,7 +104,7 @@ class Node:
         # changes to the input, and nodes with output but no input are not
         # expected based on current usage.
         if not self.input_files and self.output_files:
-            raise NodeError("Node not dependent upon input files: %s" % self)
+            raise NodeError("Task not dependent upon input files: %s" % self)
 
         # Globally unique node ID
         self.id = next(_GLOBAL_ID)
@@ -236,7 +236,7 @@ class Node:
             "Command          = %r" % (" ".join(sys.argv),),
             "CWD              = %r" % (os.getcwd(),),
             "PATH             = %r" % (os.environ.get("PATH", ""),),
-            "Node             = %s" % (str(self),),
+            "Task             = %s" % (str(self),),
             "Threads          = %i" % (self.threads,),
             "Input files      = %s" % (_fmt(self.input_files),),
             "Output files     = %s" % (_fmt(self.output_files),),
@@ -361,7 +361,7 @@ class CommandNode(Node):
         if missing_files:
             raise CmdNodeError(
                 (
-                    "Error running Node, required files not created:\n"
+                    "Error running task, required files were not created:\n"
                     "Temporary directory: %r\n"
                     "\tRequired files missing from temporary directory:\n\t    - %s"
                 )

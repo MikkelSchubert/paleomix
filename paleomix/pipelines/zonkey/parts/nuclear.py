@@ -243,7 +243,7 @@ class SelectBestAdmixtureNode(Node):
                 ref_filenames = filenames
             elif ref_filenames != filenames:
                 raise RuntimeError(
-                    "Node %r does not contain expected files, "
+                    "Task %r does not contain expected files, "
                     "%r, vs %r" % (node, ref_filenames, filenames)
                 )
 
