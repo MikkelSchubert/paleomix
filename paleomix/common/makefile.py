@@ -546,13 +546,30 @@ class ValueIn(MakefileSpec):
         description: str = "value in {rvalue}",
         default: Any = DEFAULT_NOT_SET,
     ):
-        self._rvalues = rvalues
-        description = description.format(rvalue=_list_values(rvalues, "or"))
+        self._rvalues = tuple(rvalues)
+        self._normalized_values: Dict[str, str] = {}
+        for value in self._rvalues:
+            if isinstance(value, str):
+                assert value.lower() not in self._normalized_values, value
+                self._normalized_values[value.lower()] = value
 
-        MakefileSpec.__init__(self, description=description, default=default)
+        if isinstance(default, str):
+            default = self._normalized_values.get(default, default)
+
+        MakefileSpec.__init__(
+            self,
+            description=description.format(rvalue=_list_values(self._rvalues, "or")),
+            default=default,
+        )
 
     def meets_spec(self, value: Any) -> bool:
         return _is_hashable(value) and value in self._rvalues
+
+    def __call__(self, path: SpecPath, value: Any) -> Any:
+        if isinstance(value, str):
+            value = self._normalized_values.get(value.lower(), value)
+
+        return super().__call__(path, value)
 
 
 class ValuesIntersect(MakefileSpec):
@@ -678,25 +695,7 @@ class Not(_MultipleSpecs):
 # comparisons. For case-sensitive operations, use the Value* specifications.
 
 
-class StringIn(MakefileSpec):
-    """Require that values are found in a set of values. For strings, the
-    comparison is done in a case-insensitive. For case-sensitive comparisons,
-    see 'ValueIn'.
-    """
-
-    def __init__(
-        self,
-        rvalues: Sequence[Hashable],
-        description: str = "one of {rvalue}, case-insensitive",
-        default: Any = DEFAULT_NOT_SET,
-    ):
-        description = description.format(rvalue=_list_values(rvalues, "or"))
-        self._rvalues = frozenset(map(_safe_coerce_to_lowercase, rvalues))
-
-        MakefileSpec.__init__(self, description, default)
-
-    def meets_spec(self, value: Any) -> bool:
-        return _is_hashable(value) and _safe_coerce_to_lowercase(value) in self._rvalues
+StringIn = ValueIn
 
 
 class StringStartsWith(IsStr):

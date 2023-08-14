@@ -132,9 +132,9 @@ def test_makefilespec__meets_spec_must_be_implemented():
 
 def test_is_int__accepts_integers():
     spec = IsInt()
-    spec(_DUMMY_PATH, 1234)
-    spec(_DUMMY_PATH, 0)
-    spec(_DUMMY_PATH, -1234)
+    assert spec(_DUMMY_PATH, 1234) == 1234
+    assert spec(_DUMMY_PATH, 0) == 0
+    assert spec(_DUMMY_PATH, -1234) == -1234
 
 
 @pytest.mark.parametrize("value", _common_invalid_values())
@@ -177,8 +177,8 @@ def test_is_int__default_set__must_meet_spec():
 
 def test_is_unsigned_int__accepts_non_negative_integers():
     spec = IsUnsignedInt()
-    spec(_DUMMY_PATH, 1234)
-    spec(_DUMMY_PATH, 0)
+    assert spec(_DUMMY_PATH, 1234) == 1234
+    assert spec(_DUMMY_PATH, 0) == 0
 
 
 @pytest.mark.parametrize("value", _common_invalid_values(extra=(-1,)))
@@ -221,7 +221,7 @@ def test_is_unsigned_int__default_set__must_meet_spec():
 
 def test_is_float__accepts_float():
     spec = IsFloat()
-    spec(_DUMMY_PATH, 1.0)
+    assert spec(_DUMMY_PATH, 1.0) == 1.0
 
 
 @pytest.mark.parametrize("value", _common_invalid_values(extra=(0,)))
@@ -264,7 +264,8 @@ def test_is_float__default_set__must_meet_spec():
 
 def test_is_boolean__accepts_boolean():
     spec = IsBoolean()
-    spec(_DUMMY_PATH, False)
+    assert spec(_DUMMY_PATH, False) == False
+    assert spec(_DUMMY_PATH, True) == True
 
 
 @pytest.mark.parametrize("value", _common_invalid_values(exclude=(False,), extra=(0,)))
@@ -307,7 +308,7 @@ def test_is_boolean__default_set__must_meet_spec():
 
 def test_is_str__accepts_standard_str():
     spec = IsStr()
-    spec(_DUMMY_PATH, "abc")
+    assert spec(_DUMMY_PATH, "abc") == "abc"
 
 
 def test_is_str__rejects_empty_str():
@@ -396,7 +397,7 @@ def test_is_str__min_len_2():
 
 def test_is_none__accepts_none():
     spec = IsNone()
-    spec(_DUMMY_PATH, None)
+    assert spec(_DUMMY_PATH, None) is None
 
 
 @pytest.mark.parametrize(
@@ -447,6 +448,7 @@ def test_value_missing(value: Any):
 # Deprecated option
 
 _DEPRECATED_TMPL = "option has been deprecated and will be removed in the future: %s"
+_REMOVED_TMPL = "option has been removed and no longer has any effect: %s"
 
 
 def test_deprecated_option__properties():
@@ -466,7 +468,7 @@ def test_deprecated_option__meets_spec():
 def test_deprecated_option__logs_on_success(caplog: pytest.LogCaptureFixture):
     expected = _DEPRECATED_TMPL % (_DUMMY_PATH_STR,)
     spec = DeprecatedOption(IsInt(default=17))
-    spec(_DUMMY_PATH, 10)
+    assert spec(_DUMMY_PATH, 10) == 10
 
     assert expected in caplog.text
 
@@ -487,10 +489,12 @@ def test_deprecated_option__no_log_on_failure(caplog: pytest.LogCaptureFixture):
 
 
 @pytest.mark.parametrize("value", _COMMON_VALUES)
-def test_deprecated_option(value: Any):
+def test_deprecated_option(caplog: pytest.LogCaptureFixture, value: Any):
+    expected = _REMOVED_TMPL % (_DUMMY_PATH_STR,)
     spec = RemovedOption()
 
-    spec(_DUMMY_PATH, value)
+    assert spec(_DUMMY_PATH, value) == value
+    assert expected in caplog.text
 
 
 ###############################################################################
@@ -500,7 +504,7 @@ def test_deprecated_option(value: Any):
 
 def test_value_in__single_value_in_set():
     spec = ValueIn(list(range(5)))
-    spec(_DUMMY_PATH, 1)
+    assert spec(_DUMMY_PATH, 1) == 1
 
 
 def test_value_in__single_value_not_in_set():
@@ -514,10 +518,9 @@ def test_value_in__case_sensitive__value_in_set():
     spec(_DUMMY_PATH, "bCe")
 
 
-def test_value_in__case_sensitive__value_in_not_set():
+def test_value_in__case_sensitive__case_is_normalized():
     spec = ValueIn(("Abc", "bCe", "cdE"))
-    with pytest.raises(MakefileError):
-        spec(_DUMMY_PATH, "Bce")
+    assert spec(_DUMMY_PATH, "Bce") == "bCe"
 
 
 def test_value_in__default_description():
@@ -559,7 +562,7 @@ def test_is_value_in__handles_types(value: Any):
 
 def test_intersects__single_value_in_set():
     spec = ValuesIntersect(list(range(5)))
-    spec(_DUMMY_PATH, [1])
+    assert spec(_DUMMY_PATH, [1]) == [1]
 
 
 def test_intersects__multiple_values_in_set():
@@ -643,7 +646,7 @@ def test_intersects__handles_types(value: Any):
 
 def test_subset_of__single_value_in_set():
     spec = ValuesSubsetOf(list(range(5)))
-    spec(_DUMMY_PATH, [1])
+    assert spec(_DUMMY_PATH, [1]) == [1]
 
 
 def test_subset_of__multiple_values_in_set():
@@ -734,7 +737,7 @@ def test_subset_of__handles_types(value: Any):
 
 def test_and__accepts_when_all_true():
     spec = And(IsFloat, ValueIn((0.0, 1, 2)))
-    spec(_DUMMY_PATH, 0.0)
+    assert spec(_DUMMY_PATH, 0.0) == 0.0
 
 
 def test_and__rejects_when_first_is_false():
@@ -792,7 +795,7 @@ def test_and__defaults_not_set_in_specs():
 
 def test_or__accepts_first_test():
     spec = Or(IsStr, IsBoolean)
-    spec(_DUMMY_PATH, "Foo")
+    assert spec(_DUMMY_PATH, "Foo") == "Foo"
 
 
 def test_or__accepts_second_test():
@@ -843,7 +846,7 @@ def test_or__defaults_not_set_in_specs():
 
 def test_not__accepts_when_test_is_false():
     spec = Not(IsInt)
-    spec(_DUMMY_PATH, True)
+    assert spec(_DUMMY_PATH, True) == True
 
 
 def test_not__rejects_when_test_is_true():
@@ -864,7 +867,7 @@ def test_not__defaults_not_set_in_specs():
 
 def test_string_in__case_sensitive__value_in_set():
     spec = StringIn(("Abc", "bCe", "cdE"))
-    spec(_DUMMY_PATH, "bCe")
+    assert spec(_DUMMY_PATH, "bCe") == "bCe"
 
 
 def test_string_in__case_insensitive__value_in_set():
@@ -895,7 +898,7 @@ def test_string_in__default_not_set():
 
 def test_string_in__default_set__valid_value():
     spec = StringIn("ABCDEFGH", default="e")
-    assert spec.default == "e"
+    assert spec.default == "E"
 
 
 def test_string_in__default_set__must_meet_spec():
@@ -906,7 +909,10 @@ def test_string_in__default_set__must_meet_spec():
 @pytest.mark.parametrize("value", _common_invalid_values(extra=("foo",)))
 def test_string_in__handles_types(value: Any):
     spec = StringIn("ABC")
-    with pytest.raises(MakefileError, match="Expected value: one of 'A', 'B', or 'C'"):
+    with pytest.raises(
+        MakefileError,
+        match="Expected value: value in 'A', 'B', or 'C'",
+    ):
         spec(_DUMMY_PATH, value)
 
 
@@ -917,7 +923,7 @@ def test_string_in__handles_types(value: Any):
 
 def test_string_starts_with__accepts_standard_str():
     spec = StringStartsWith("A_")
-    spec(_DUMMY_PATH, "A_BC")
+    assert spec(_DUMMY_PATH, "A_BC") == "A_BC"
 
 
 def test_string_starts_with__rejects_string_without_prefix():
@@ -957,7 +963,7 @@ def test_string_starts_with__default_set__must_meet_spec():
 
 def test_string_ends_with__accepts_standard_str():
     spec = StringEndsWith("_A")
-    spec(_DUMMY_PATH, "BC_A")
+    assert spec(_DUMMY_PATH, "BC_A") == "BC_A"
 
 
 def test_string_ends_with__rejects_string_without_prefix():
@@ -1003,10 +1009,10 @@ def test_fastq_path__path_must_meet_spec():
     accept_se = FASTQPath(paired_end=False)
     accept_any = FASTQPath(paired_end=None)
 
-    accept_se(_DUMMY_PATH, se_reads)
-    accept_pe(_DUMMY_PATH, pe_reads)
-    accept_any(_DUMMY_PATH, se_reads)
-    accept_any(_DUMMY_PATH, pe_reads)
+    assert accept_se(_DUMMY_PATH, se_reads) == se_reads
+    assert accept_pe(_DUMMY_PATH, pe_reads) == pe_reads
+    assert accept_any(_DUMMY_PATH, se_reads) == se_reads
+    assert accept_any(_DUMMY_PATH, pe_reads) == pe_reads
 
     with pytest.raises(MakefileError, match="Expected value: a path without a {pair}"):
         accept_se(_DUMMY_PATH, pe_reads)

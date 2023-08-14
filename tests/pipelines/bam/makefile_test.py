@@ -54,7 +54,7 @@ TEMPLATE_BAM_OPTIONS = {
         "Summary": True,
         "mapDamage": False,
     },
-    "Platform": "Illumina",
+    "Platform": "ILLUMINA",
     "QualityOffset": 33,
     "mapDamage": {"--downsample": 100000},
 }
