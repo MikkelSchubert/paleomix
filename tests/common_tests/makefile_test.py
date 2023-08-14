@@ -48,7 +48,6 @@ from paleomix.common.makefile import (
     RemovedOption,
     SpecTree,
     StringEndsWith,
-    StringIn,
     StringStartsWith,
     ValueIn,
     ValueMissing,
@@ -862,53 +861,53 @@ def test_not__defaults_not_set_in_specs():
 
 ###############################################################################
 ###############################################################################
-# StringIn
+# ValueIn for strings (formerly ValueIn)
 
 
 def test_string_in__case_sensitive__value_in_set():
-    spec = StringIn(("Abc", "bCe", "cdE"))
+    spec = ValueIn(("Abc", "bCe", "cdE"))
     assert spec(_DUMMY_PATH, "bCe") == "bCe"
 
 
 def test_string_in__case_insensitive__value_in_set():
-    spec = StringIn(("Abc", "bCe", "cdE"))
+    spec = ValueIn(("Abc", "bCe", "cdE"))
     spec(_DUMMY_PATH, "Bce")
 
 
 def test_string_in__case_insensitive__value_not_set():
-    spec = StringIn(("Abc", "bCe", "cdE"))
+    spec = ValueIn(("Abc", "bCe", "cdE"))
     with pytest.raises(MakefileError):
         spec(_DUMMY_PATH, "ABce")
 
 
 def test_string_in__case_insensitive__mixed_string__non_string_found():
-    spec = StringIn(("A", "c", "B", 1, 2, 3))
+    spec = ValueIn(("A", "c", "B", 1, 2, 3))
     spec(_DUMMY_PATH, 1)
 
 
 def test_string_in__case_insensitive__mixed_string__string_found():
-    spec = StringIn(("A", "c", "B", 1, 2, 3))
+    spec = ValueIn(("A", "c", "B", 1, 2, 3))
     spec(_DUMMY_PATH, "a")
 
 
 def test_string_in__default_not_set():
-    spec = StringIn("ABCDEFGH")
+    spec = ValueIn("ABCDEFGH")
     assert spec.default is DEFAULT_NOT_SET
 
 
 def test_string_in__default_set__valid_value():
-    spec = StringIn("ABCDEFGH", default="e")
+    spec = ValueIn("ABCDEFGH", default="e")
     assert spec.default == "E"
 
 
 def test_string_in__default_set__must_meet_spec():
     with pytest.raises(ValueError):
-        StringIn("ABCDEFGH", default="i")
+        ValueIn("ABCDEFGH", default="i")
 
 
 @pytest.mark.parametrize("value", _common_invalid_values(extra=("foo",)))
 def test_string_in__handles_types(value: Any):
-    spec = StringIn("ABC")
+    spec = ValueIn("ABC")
     with pytest.raises(
         MakefileError,
         match="Expected value: value in 'A', 'B', or 'C'",
@@ -1199,7 +1198,7 @@ _PATH_IN_EXCEPTION_VALUES = (
     (And(IsStr), 1),
     (Or(IsStr), 1),
     (Not(IsInt), 1),
-    (StringIn("abc"), 1),
+    (ValueIn("abc"), 1),
     (StringStartsWith("FOO"), 1),
     (StringEndsWith("FOO"), 1),
     (IsListOf(IsInt), "foo"),

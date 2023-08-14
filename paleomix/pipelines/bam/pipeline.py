@@ -267,7 +267,7 @@ def map_fastq_reads(args, layout, genome, record):
     }
 
     if aligner == "BWA":
-        algorithm = options["Aligners"][aligner]["Algorithm"].lower()
+        algorithm = options["Aligners"][aligner]["Algorithm"]
         parameters["threads"] = args.bwa_max_threads
 
         if algorithm == "backtrack":
@@ -400,7 +400,7 @@ def _build_bwa_backtrack_task(input_file_1, input_file_2, mapping_options, **kwa
 def _cleanup_options(record, layout):
     aligner = record["Options"]["Aligners"]["Program"]
     aligner_options = record["Options"]["Aligners"][aligner]
-    platform = record["Options"]["Platform"].upper()
+    platform = record["Options"]["Platform"]
 
     sample = layout.get_field("sample")
     library = layout.get_field("library")

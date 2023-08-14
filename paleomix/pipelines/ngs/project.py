@@ -16,7 +16,6 @@ from paleomix.common.makefile import (
     MakefileError,
     Not,
     Or,
-    StringIn,
     StringStartsWith,
     ValueIn,
     ValuesIntersect,
@@ -96,7 +95,7 @@ _VALIDATION = {
     },
     "Settings": {
         "Metadata": {
-            "Platform": StringIn(BAM_PLATFORMS, default=REQUIRED_VALUE),
+            "Platform": ValueIn(BAM_PLATFORMS, default=REQUIRED_VALUE),
         },
         #
         "Constants": {

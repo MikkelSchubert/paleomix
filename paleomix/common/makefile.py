@@ -690,12 +690,6 @@ class Not(_MultipleSpecs):
 ###############################################################################
 # String operators
 #
-# In addition to providing string-specific operators (is uppercase, ends/starts
-# with), "in" and set operators are provided which do case-insensitive
-# comparisons. For case-sensitive operations, use the Value* specifications.
-
-
-StringIn = ValueIn
 
 
 class StringStartsWith(IsStr):

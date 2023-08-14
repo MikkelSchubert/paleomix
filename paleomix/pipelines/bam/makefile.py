@@ -50,7 +50,6 @@ from paleomix.common.makefile import (
     Not,
     Or,
     SpecTree,
-    StringIn,
     StringStartsWith,
     ValueIn,
     ValuesIntersect,
@@ -105,7 +104,7 @@ def _alphanum_check(whitelist, min_len=1):
 # Valid names for genomes
 _VALID_GENOME_NAME: SpecTree = And(
     _alphanum_check(whitelist="._-*"),
-    Not(StringIn(["Options"])),
+    Not(ValueIn(["Options"])),
 )
 
 # Valid paths for genomes; avoids some problems with e.g. Bowtie2
@@ -119,7 +118,7 @@ _VALID_FILENAME: SpecTree = _alphanum_check(whitelist="._-", min_len=2)
 
 _VALIDATION_OPTIONS: SpecTree = {
     # Sequencing platform, used to tag read-groups.
-    "Platform": StringIn(BAM_PLATFORMS, default="ILLUMINA"),
+    "Platform": ValueIn(BAM_PLATFORMS, default="ILLUMINA"),
     # Offset for quality scores in FASTQ files.
     "QualityOffset": ValueIn((33, 64, "Solexa"), default=33),
     # Split a lane into multiple entries, one for each (pair of) file(s)
@@ -154,7 +153,7 @@ _VALIDATION_OPTIONS: SpecTree = {
         "Program": ValueIn(("BWA", "Bowtie2"), default="BWA"),
         "BWA": {
             # Mapping algorithm; availability depends on BWA version
-            "Algorithm": StringIn(
+            "Algorithm": ValueIn(
                 ("backtrack", "mem", "mem2", "bwasw"),
                 default="mem",
             ),
@@ -216,8 +215,8 @@ _VALIDATION_OPTIONS: SpecTree = {
     },
     # Features of pipeline
     "Features": {
-        "mapDamage": StringIn(("rescale", "model", "plot", True, False), default=False),
-        "PCRDuplicates": StringIn((True, False, "mark", "filter"), default="filter"),
+        "mapDamage": ValueIn(("rescale", "model", "plot", True, False), default=False),
+        "PCRDuplicates": ValueIn((True, False, "mark", "filter"), default="filter"),
         # TODO: Statistics to be combined into new report (HTML + JSON?)
         "Coverage": DeprecatedOption(IsBoolean(default=True)),
         "Depths": DeprecatedOption(IsBoolean(default=True)),
