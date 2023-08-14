@@ -165,9 +165,9 @@ def open_rb(filename: PathTypes) -> IO[bytes]:
         header = handle.peek(2)
 
         if header.startswith(b"\x1f\x8b"):
-            return cast(IO[bytes], gzip.GzipFile(mode="rb", fileobj=handle))
+            return cast(IO[bytes], _GzipFile(mode="rb", fileobj=handle))
         elif header.startswith(b"BZ"):
-            return bz2.BZ2File(handle, "rb")
+            return _BZ2File(handle, "rb")
         else:
             return handle
     except:
@@ -377,3 +377,23 @@ def _try_rm_wrapper(func: Callable[[Any], Any], fpath: PathTypes) -> bool:
         return True
     except FileNotFoundError:
         return False
+
+
+class _GzipFile(gzip.GzipFile):
+    "Wrapper ensuring that passed filehandles are properly closed"
+
+    def close(self) -> None:
+        fileobj: Any = self.fileobj
+        super().close()
+        if hasattr(fileobj, "close"):
+            fileobj.close()
+
+
+class _BZ2File(bz2.BZ2File):
+    "Wrapper ensuring that passed filehandles are properly closed"
+
+    def close(self) -> None:
+        fileobj = self._fp  # type: ignore
+        super().close()
+        if hasattr(fileobj, "close"):
+            fileobj.close()
