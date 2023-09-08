@@ -272,7 +272,7 @@ class AtomicCmd:
         if not isinstance(options, dict):
             raise TypeError("options must be dict, not {!r}".format(options))
 
-        for (key, values) in options.items():
+        for key, values in options.items():
             if not isinstance(key, str):
                 raise ValueError("keys must be strings, not %r" % (key,))
             elif not pred(key):

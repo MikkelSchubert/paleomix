@@ -148,7 +148,6 @@ class SummaryNode(Node):
         n_pos_tests = 0
 
         if "Nuc" in info["Files"]:
-
             for postfix in ("incl_ts", "excl_ts"):
                 admix_root = os.path.join(self._root, sample, "results", "admixture")
 

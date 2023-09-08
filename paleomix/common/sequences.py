@@ -101,7 +101,7 @@ def split(sequence: str, split_by: str = "123") -> Dict[str, str]:
 
     results: Dict[str, List[str]] = {key: [] for key in split_by}
     keys = itertools.chain(itertools.cycle(split_by))
-    for (key, nucleotide) in zip(keys, sequence):
+    for key, nucleotide in zip(keys, sequence):
         results[key].append(nucleotide)
 
     return {key: "".join(value) for key, value in results.items()}

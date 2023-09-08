@@ -33,7 +33,6 @@ class FASTQError(FormatError):
 
 
 class FASTQ(TotallyOrdered, Immutable):
-
     __slots__ = ["name", "meta", "sequence", "qualities"]
 
     name: str

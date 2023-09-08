@@ -604,7 +604,7 @@ def _validate_nuclear_bam(data, handle, info):
         return True
     elif panel_names_to_bam:
         log.error("Not all nuclear chromosomes found in BAM:")
-        for (name, stats) in sorted(data.contigs.items()):
+        for name, stats in sorted(data.contigs.items()):
             is_found = "OK" if name in panel_names_to_bam else "Not found!"
             log.error("  - %s: %s" % (name, is_found))
 

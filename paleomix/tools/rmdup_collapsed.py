@@ -131,7 +131,7 @@ def can_write_read(read_and_alignment, current_position):
 def clipped_bases_at_front(cigartuples):
     """Returns number of bases soft or hard clipped at start of the CIGAR."""
     total = 0
-    for (operation, length) in cigartuples:
+    for operation, length in cigartuples:
         if operation != _CIGAR_SOFTCLIP and operation != _CIGAR_HARDCLIP:
             break
 

@@ -99,15 +99,15 @@ def calculate_totals(table):
     for samples in table.values():
         for libraries in samples.values():
             for contigs in libraries.values():
-                for (name, contig) in contigs.items():
+                for name, contig in contigs.items():
                     size = lengths.get(name)
                     if (size is not None) and (size != contig.Size):
                         raise BAMStatsError(name)
                     lengths[name] = contig.Size
 
-    for (name, samples) in sorted(table.items()):
-        for (sample, libraries) in sorted(samples.items()):
-            for (library, contigs) in sorted(libraries.items()):
+    for name, samples in sorted(table.items()):
+        for sample, libraries in sorted(samples.items()):
+            for library, contigs in sorted(libraries.items()):
                 totals = _calculate_totals_in(contigs, lengths)
                 set_in(table, (name, sample, library), totals)
 
@@ -136,10 +136,10 @@ def build_rows(table):
         "Coverage",
     )
 
-    for (name, samples) in sorted(table.items()):
-        for (sample, libraries) in sorted(samples.items()):
-            for (library, contigs) in sorted(libraries.items()):
-                for (contig, subtable) in sorted(contigs.items()):
+    for name, samples in sorted(table.items()):
+        for sample, libraries in sorted(samples.items()):
+            for library, contigs in sorted(libraries.items()):
+                for contig, subtable in sorted(contigs.items()):
                     row = [
                         name,
                         sample,

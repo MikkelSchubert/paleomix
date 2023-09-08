@@ -112,7 +112,7 @@ def get_introns(exons):
         lst = lst[::-1]
 
     introns = []
-    for (record_a, record_b) in zip(lst, lst[1:]):
+    for record_a, record_b in zip(lst, lst[1:]):
         if record_a["end"] == record_b["start"] - 1:
             # Intron has been lost?
             continue
@@ -156,7 +156,7 @@ def split_exons(exons, func):
     # By looping over the list sorted by exon-number, we can easily
     # determine whether or not we are dealing with a 5' or 3' UTR.
     seen_cds = False
-    for (_, exon) in sorted(exons.items()):
+    for _, exon in sorted(exons.items()):
         if "CDS" in exon:
             seen_cds = True
             cds, exon = exon["CDS"], exon["exon"]
@@ -226,7 +226,7 @@ def build_coding_seqs_table(options, table):
     features = {"UTR5": [], "UTR3": [], "CDS": [], "intron": []}
 
     feature_table = _do_build_feature_table(options, table, features, True)
-    for (exons, add_records) in feature_table:
+    for exons, add_records in feature_table:
         split_exons(exons, add_records)
     return features
 
@@ -236,7 +236,7 @@ def build_noncoding_seqs_table(options, table):
     features = {"exon": [], "intron": []}
 
     feature_table = _do_build_feature_table(options, table, features, False)
-    for (exons, add_records) in feature_table:
+    for exons, add_records in feature_table:
         add_records(record["exon"] for record in exons.values())
     return features
 
@@ -320,7 +320,7 @@ def main(argv):
         print("Reading GTF from %r" % (args.infile,))
         src_table = read_gtf(gtf_file, scaffolds, args.contig_prefix)
 
-    for (source, table) in src_table.items():
+    for source, table in src_table.items():
         print("Writing tables for '%s'" % source)
 
         if source.startswith("protein"):

@@ -379,7 +379,7 @@ class _NewickGraph:
             return None
 
         path_length = 0.0
-        for (node_a, node_b) in zip(nodes, nodes[1:]):
+        for node_a, node_b in zip(nodes, nodes[1:]):
             segment_length = self.connections[node_a][node_b]
             assert segment_length is not None
             path_length += float(segment_length)
@@ -451,7 +451,7 @@ class _NewickGraph:
         For a node to be pruned, both adjacent nodes must have a
         length specified, or both must not have a length specified."""
         while True:
-            for (cur_node, connections) in self.connections.items():
+            for cur_node, connections in self.connections.items():
                 if not self.names[cur_node] and (len(connections) == 2):
                     conn_a, conn_b = connections
 
@@ -507,7 +507,7 @@ class _NewickGraph:
                 if other not in key:
                     _collect_paths(list(guide), length, c_node, other)
 
-        for (p_node, connections) in self.connections.items():
+        for p_node, connections in self.connections.items():
             for c_node in connections:
                 _collect_paths([p_node], 0, p_node, c_node)
 
@@ -531,7 +531,7 @@ class _NewickGraph:
 
         The id of the new / selected node is returned. New
         nodes (if created) are always given the id None."""
-        for (c_node, n_node) in zip(path, path[1:]):
+        for c_node, n_node in zip(path, path[1:]):
             branch_length = self.get_path_length(c_node, n_node)
             assert branch_length is not None
 
@@ -566,7 +566,7 @@ class _NewickGraph:
 
     def _collect_nodes_from_names(self, taxa: Iterable[str]) -> FrozenSet[NodeID]:
         nodes_by_names: Dict[NodeName, List[NodeID]] = {}
-        for (node_id, name) in self.names.items():
+        for node_id, name in self.names.items():
             if self.is_leaf(node_id):
                 nodes_by_names.setdefault(name, []).append(node_id)
 
@@ -581,7 +581,7 @@ class _NewickGraph:
 
     def _collect_clades(self) -> Dict[NodeID, Dict[NodeID, FrozenSet[NodeID]]]:
         clades: Dict[NodeID, Dict[NodeID, FrozenSet[NodeID]]] = {}
-        for (node_a, connections) in self.connections.items():
+        for node_a, connections in self.connections.items():
             for node_b in connections:
                 self._collect_clade_from(clades, node_a, node_b)
         return clades
@@ -616,8 +616,8 @@ class _NewickGraph:
         root_key: Optional[Tuple[NodeID, NodeID]] = None
         root_clade: Optional[FrozenSet[NodeID]] = None
         root_length: Optional[float] = None
-        for (p_node, connections) in clades.items():
-            for (n_node, clade) in connections.items():
+        for p_node, connections in clades.items():
+            for n_node, clade in connections.items():
                 if (root_clade is None) or (len(clade) < len(root_clade)):
                     if taxa.issubset(clade):
                         root_key = (p_node, n_node)

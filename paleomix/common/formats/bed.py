@@ -151,7 +151,7 @@ def read_bed_file(filename: str, contigs: Mapping[str, int] = {}):
     {contig: length} is supplied then contigs/coordinates are validated.
     """
     with open_rt(filename) as handle:
-        for (line_num, line) in enumerate(handle, start=1):
+        for line_num, line in enumerate(handle, start=1):
             line = line.strip()
             if not line or line.startswith("#"):
                 continue

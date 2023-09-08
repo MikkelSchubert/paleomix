@@ -79,7 +79,7 @@ def join_procs(procs: Iterable[Popen[Any]], out: IO[str] = sys.stderr):
         except TimeoutExpired:
             sleep_time = min(1, sleep_time * 2)
 
-        for (index, command) in list(commands):
+        for index, command in list(commands):
             if command.poll() is not None:
                 return_code = command.wait()
                 return_codes[index] = return_code

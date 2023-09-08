@@ -93,7 +93,7 @@ class MSA(FrozenSet[FASTA]):
             return None
 
         records: List[FASTA] = []
-        for (record, sequence) in zip(self, zip(*columns)):
+        for record, sequence in zip(self, zip(*columns)):
             records.append(FASTA(record.name, record.meta, "".join(sequence)))
 
         return MSA(records)
@@ -105,7 +105,7 @@ class MSA(FrozenSet[FASTA]):
 
         sequence = list(to_filter_.sequence)
         sequences = [record.sequence.upper() for record in included]
-        for (index, nts) in enumerate(zip(*sequences)):
+        for index, nts in enumerate(zip(*sequences)):
             current_nt = sequence[index].upper()
             if current_nt in "N-":
                 continue
@@ -136,7 +136,7 @@ class MSA(FrozenSet[FASTA]):
 
         results = {key: set() for key in split_by}  # type: Dict[str, Set[FASTA]]
         for record in self:
-            for (key, partition) in split(record.sequence, split_by).items():
+            for key, partition in split(record.sequence, split_by).items():
                 results[key].add(FASTA(record.name, None, partition))
 
         return {key: MSA(value) for key, value in results.items()}
@@ -155,7 +155,7 @@ class MSA(FrozenSet[FASTA]):
                 merged[record.name].append(record.sequence)
 
         sequences = []  # type: List[FASTA]
-        for (name, sequence) in merged.items():
+        for name, sequence in merged.items():
             sequences.append(FASTA(name, None, "".join(sequence)))
         return MSA(sequences)
 
