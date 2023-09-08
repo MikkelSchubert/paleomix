@@ -73,7 +73,11 @@ def try_cast(value: Any, cast_to: type) -> Any:
         return value
 
 
-def set_in(dictionary: Dict[Any, Any], keys: Iterable[Hashable], value: Any) -> None:
+def set_in(
+    dictionary: Dict[object, object],
+    keys: Iterable[Hashable],
+    value: object,
+) -> None:
     """Traverses a set of nested dictionaries using the given keys,
     and assigns the specified value to the inner-most
     dictionary (obtained from the second-to-last key), using
@@ -88,9 +92,13 @@ def set_in(dictionary: Dict[Any, Any], keys: Iterable[Hashable], value: Any) -> 
 
     for key in keys[:-1]:
         try:
-            dictionary = dictionary[key]
+            child = dictionary[key]
+            if not isinstance(child, dict):
+                raise TypeError(child)
+
+            dictionary = child
         except KeyError:
-            new_dict = {}  # type: Dict[Any, Any]
+            new_dict = {}  # type: Dict[object, object]
             dictionary[key] = new_dict
             dictionary = new_dict
 
@@ -203,7 +211,7 @@ class Immutable:
 
     def __init__(self, **kwargs: Any):
         object.__init__(self)
-        for (key, value) in kwargs.items():
+        for key, value in kwargs.items():
             object.__setattr__(self, key, value)
 
     def __setattr__(self, _name: str, _value: Any) -> None:

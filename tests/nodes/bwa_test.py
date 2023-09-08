@@ -1,11 +1,4 @@
-from paleomix.nodes.bwa import (
-    BWAAlgorithmNode,
-    BWABacktrack,
-    BWAIndexNode,
-    BWASampe,
-    BWASamse,
-)
-
+from paleomix.nodes.bwa import BWAAlgorithmNode, BWAIndexNode
 
 ########################################################################################
 # Indexing

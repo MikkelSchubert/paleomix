@@ -602,7 +602,7 @@ def test_makefile__sample__features__lane(tmp_path, key):
 def test_makefile__sample__mapdamage_at_lane_level(tmp_path):
     filepath = _write_sample_yaml(
         tmp_path,
-        f"""
+        """
         Samples:
           Sam1:
             Lib1:
@@ -616,7 +616,7 @@ def test_makefile__sample__mapdamage_at_lane_level(tmp_path):
 
     with pytest.raises(
         MakefileError,
-        match=f"Cannot set mapDamage options at",
+        match="Cannot set mapDamage options at",
     ):
         _read_makefile(filepath)
 
@@ -708,7 +708,7 @@ def test_makefile__validation__trimmed_qualities_must_be_33(tmp_path, offset):
 def test_makefile__validation__paired_must_have_key(tmp_path):
     filepath = _write_sample_yaml(
         tmp_path,
-        f"""
+        """
         Samples:
           Sam1:
             Lib1:

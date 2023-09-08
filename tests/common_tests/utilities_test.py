@@ -21,7 +21,7 @@
 # SOFTWARE.
 #
 import operator
-from typing import Any, Dict
+from typing import Dict
 
 import pytest
 
@@ -120,41 +120,41 @@ def test_try_cast__list_to_int():
 
 
 def test_set_in__single_kw_in_empty_dictionary():
-    value = {}  # type: Dict[Any, Any]
+    value: Dict[object, object] = {}
     utils.set_in(value, ["Foo"], 17)
     assert value == {"Foo": 17}
 
 
 def test_set_in__two_kws_in_empty_dictionary():
-    value = {}  # type: Dict[Any, Any]
+    value: Dict[object, object] = {}
     utils.set_in(value, ["Foo", 13], 17)
     assert value == {"Foo": {13: 17}}
 
 
 def test_set_in__three_kws_in_empty_dictionary():
-    value = {}  # type: Dict[Any, Any]
+    value: Dict[object, object] = {}
     utils.set_in(value, ["Foo", 13, (1, 2)], 17)
     assert value == {"Foo": {13: {(1, 2): 17}}}
 
 
 def test_set_in__three_kws_in_partial_dictionary():
-    value = {"Foo": {12: 0}}
+    value: Dict[object, object] = {"Foo": {12: 0}}
     utils.set_in(value, ["Foo", 13, (1, 2)], 17)
     assert value == {"Foo": {12: 0, 13: {(1, 2): 17}}}
 
-    value = {"Foo": {13: {"Bar": None}}}
+    value: Dict[object, object] = {"Foo": {13: {"Bar": None}}}
     utils.set_in(value, ["Foo", 13, (1, 2)], 17)
     assert value == {"Foo": {13: {(1, 2): 17, "Bar": None}}}
 
 
 def test_set_in__update_value_one_kw():
-    value = {1: None}
+    value: Dict[object, object] = {1: None}
     utils.set_in(value, [1], 3.14)
     assert value == {1: 3.14}
 
 
 def test_set_in__update_value_two_kw():
-    value = {1: {2: 3}}
+    value: Dict[object, object] = {1: {2: 3}}
     utils.set_in(value, [1, 2], 365)
     assert value == {1: {2: 365}}
 
@@ -180,7 +180,7 @@ def test_set_in__fail_on_invalid_sub_dictionary_third_level():
 
 
 def test_set_in__iteratable_keywords():
-    value = {}  # type: Dict[Any, Any]
+    value: Dict[object, object] = {}
     utils.set_in(value, iter(["Foo", 13, (1, 2)]), 17)
     assert value == {"Foo": {13: {(1, 2): 17}}}
 

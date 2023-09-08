@@ -263,8 +263,8 @@ def test_is_float__default_set__must_meet_spec():
 
 def test_is_boolean__accepts_boolean():
     spec = IsBoolean()
-    assert spec(_DUMMY_PATH, False) == False
-    assert spec(_DUMMY_PATH, True) == True
+    assert spec(_DUMMY_PATH, False) is False
+    assert spec(_DUMMY_PATH, True) is True
 
 
 @pytest.mark.parametrize("value", _common_invalid_values(exclude=(False,), extra=(0,)))
@@ -845,7 +845,7 @@ def test_or__defaults_not_set_in_specs():
 
 def test_not__accepts_when_test_is_false():
     spec = Not(IsInt)
-    assert spec(_DUMMY_PATH, True) == True
+    assert spec(_DUMMY_PATH, True) is True
 
 
 def test_not__rejects_when_test_is_true():

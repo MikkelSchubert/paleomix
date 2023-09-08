@@ -180,6 +180,7 @@ def test_atomiccmd__values_in_path(value: Any):
 ########################################################################################
 # Constructor: Extra files
 
+
 # Check that specified paths/etc. are available via getters
 def test_atomiccmd__extra_files():
     cmd = AtomicCmd(
@@ -919,7 +920,7 @@ def test_atomiccmd__commit_missing_files(tmp_path: Path):
 
 
 def test_atomiccmd__commit_failure_cleanup(tmp_path: Path):
-    counter = []  # type: List[Path]
+    counter: List[Path] = []
     move_file = fileutils.move_file
 
     def _monkey_move_file(source: Path, destination: Path):
@@ -1172,6 +1173,7 @@ def test_atomiccmd__add_extra_files_to_running_command(tmp_path: Path):
 
 ########################################################################################
 # __str__
+
 
 # Additional tests in atomicpp_test.py
 def test_atomiccmd__str__():
