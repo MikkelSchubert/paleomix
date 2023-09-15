@@ -6,7 +6,7 @@ import json
 import logging
 import multiprocessing
 import os
-import random
+import secrets
 import signal
 import socket
 import sys
@@ -399,7 +399,7 @@ def main(argv: List[str]) -> int:
     initialize_console_logging(log_level=args.log_level)
 
     while True:
-        args.authkey = bytes(random.randint(0, 255) for _ in range(64))
+        args.authkey = secrets.token_bytes(64)
 
         with Worker(args) as worker:
             if not worker.run() or args.once:
