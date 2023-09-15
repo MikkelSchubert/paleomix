@@ -24,8 +24,9 @@ import collections
 import logging
 import os
 
-import paleomix.common.argparse as argparse
 import pysam
+
+import paleomix.common.argparse as argparse
 from paleomix.common.fileutils import swap_ext
 from paleomix.common.formats.bed import read_bed_file, sort_bed_by_bamfile
 
@@ -177,7 +178,8 @@ def main_wrapper(process_func, argv, ext):
 
     log.info("Opening %r", args.infile)
     with pysam.AlignmentFile(args.infile) as handle:
-        sort_order = handle.header.get("HD", {}).get("SO")
+        header = handle.header.to_dict()
+        sort_order = header.get("HD", {}).get("SO")
         if sort_order is None:
             log.warning("BAM file %r is not marked as sorted!", args.infile)
         elif sort_order != "coordinate":

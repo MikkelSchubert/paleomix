@@ -42,19 +42,10 @@ class LogRecord(logging.LogRecord):
     status: Optional[Union[str, "Status"]]
 
 
-class _MultilineFormatter:
-    COLOR_LOGGER: bool
-
+class BasicFormatter(logging.Formatter):
     def format(self, record: LogRecord) -> str:
         record = copy.copy(record)
-        if hasattr(record, "status"):
-            value = record.status
-            if self.COLOR_LOGGER and isinstance(value, Status) and value.color:
-                value = ansi_wrap(str(value), color=value.color)
-
-            record.status = "[{}] ".format(value)
-        else:
-            record.status = ""
+        record.status = self._process_status(record)
 
         message = record.msg
         if not isinstance(message, str):
@@ -74,17 +65,24 @@ class _MultilineFormatter:
 
         return super().format(record)
 
+    def _process_status(self, record: LogRecord) -> str:
+        if hasattr(record, "status") and record.status:
+            return "[{}] ".format(record.status)
 
-class BasicFormatter(_MultilineFormatter, logging.Formatter):
-    COLOR_LOGGER = False
+        return ""
 
 
-class PaleomixFormatter(_MultilineFormatter, coloredlogs.ColoredFormatter):
-    COLOR_LOGGER = True
+class PaleomixFormatter(BasicFormatter):
+    def _process_status(self, record: LogRecord) -> str:
+        status = getattr(record, "status", None)
+        if isinstance(status, Status) and status.color:
+            return "[{}] ".format(ansi_wrap(str(status), color=status.color))
+
+        return ""
 
 
 def initialize_console_logging(log_level: str = "info") -> None:
-    log_level = coloredlogs.level_to_number(log_level)
+    log_level = coloredlogs.level_to_number(log_level)  # type: ignore
 
     logger = logging.getLogger()
     logger.setLevel(log_level)

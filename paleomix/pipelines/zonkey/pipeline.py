@@ -25,6 +25,7 @@ import os
 import shutil
 import string
 import tarfile
+from typing import Dict, Union
 
 import pysam
 
@@ -40,16 +41,18 @@ import paleomix.pipelines.zonkey.parts.report as report
 import paleomix.pipelines.zonkey.parts.summary as summary
 import paleomix.resources
 from paleomix.common.formats.fasta import FASTA
+from paleomix.node import Node
 from paleomix.nodes.raxml import RAxMLRapidBSNode
 from paleomix.nodes.samtools import BAMIndexNode
 from paleomix.pipeline import Pypeline
 
 
 def build_plink_nodes(config, data, root, bamfile, dependencies=()):
-    plink = {"root": os.path.join(root, "results", "plink")}
+    root = os.path.join(root, "results", "plink")
+    plink: Dict[str, Union[str, Node]] = {"root": root}
 
     ped_node = nuclear.BuildTPEDFilesNode(
-        output_root=plink["root"],
+        output_root=root,
         table=config.database.filename,
         downsample=config.downsample_to,
         bamfile=bamfile,
@@ -58,9 +61,9 @@ def build_plink_nodes(config, data, root, bamfile, dependencies=()):
 
     for postfix in ("incl_ts", "excl_ts"):
         plink[postfix] = nuclear.BuildBEDFilesNode(
-            output_prefix=os.path.join(plink["root"], postfix),
-            tfam=os.path.join(plink["root"], "common.tfam"),
-            tped=os.path.join(plink["root"], postfix + ".tped"),
+            output_prefix=os.path.join(root, postfix),
+            tfam=os.path.join(root, "common.tfam"),
+            tped=os.path.join(root, postfix + ".tped"),
             plink_parameters=config.database.settings["Plink"],
             dependencies=(ped_node,),
         )

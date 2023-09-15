@@ -117,7 +117,7 @@ class ReportNode(Node):
         revision = self._data.settings["Revision"]
         overview = _OVERVIEW_HEADER.format(
             DATABASE=revision,
-            PYSAM=pysam.__version__,
+            PYSAM=pysam.__version__,  # type: ignore
             SAMTOOLS=_fmt_v(SAMTOOLS_VERSION),
             PLINK=_fmt_v(nuclear.PLINK_VERSION),
             RSCRIPT=_fmt_v(RSCRIPT_VERSION),

@@ -75,6 +75,9 @@ def read_makefiles(filenames: Iterable[str], pipeline_variant: str = "bam"):
         logger.info("Reading makefile %r", filename)
 
         data = read_makefile(filename, MAKEFILE_SPECIFICATION)
+        if not isinstance(data, dict):
+            raise AssertionError("makefile is not a dict")
+
         options = data.pop("Options")
         genomes = data.pop("Genomes")
 

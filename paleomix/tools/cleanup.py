@@ -153,7 +153,7 @@ def _cleanup_unmapped(args):
 
     filter_by_flag = bool(args.exclude_flags or args.require_flags)
     with pysam.AlignmentFile("-") as input_handle:
-        header = dict(input_handle.header)
+        header = input_handle.header.to_dict()
         _set_sort_order(header)
         _set_pg_tags(header, args.update_pg_tag)
         if args.rg_id is not None:
