@@ -1,0 +1,94 @@
+[tool.black]
+required-version = 23
+target-versions = ["py37", "py38", "py39", "py310", "py310", "py311"]
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+skip_covered = true
+show_missing = true
+precision = 1
+
+[tool.coverage.xml]
+output = "cov.xml"
+
+[tool.isort]
+profile = "black"
+
+[tool.pyright]
+strict = ["paleomix"]
+
+[tool.pytest.ini_options]
+markers = ["slow"]
+
+[tool.ruff]
+target-version = "py37"
+
+select = [
+    "A",     # flake8-builtins
+    "AIR",   # Airflow
+    "ANN",   # flake8-annotations
+    # "ARG", # flake8-unused-arguments -- too many intentionally unused arguments
+    "ASYNC", # flake8-async
+    "B",     # flake8-bugbear
+    "BLE",   # flake8-blind-except
+    "C4",    # flake8-comprehensions
+    "C90",   # mccabe
+    # "COM", # flake8-commas
+    # "CPY", # flake8-copyright -- requires --preview
+    # "D",   # pydocstyle
+    "DJ",    # flake8-django
+    "DTZ",   # flake8-datetimez
+    "E",     # Error
+    "E",     # pycodestyle
+    "EM",    # flake8-errmsg
+    "ERA",   # eradicate
+    "EXE",   # flake8-executable
+    "F",     # Pyflakes
+    "FA",    # flake8-future-annotations
+    "FBT",   # flake8-boolean-trap
+    # "FIX", # flake8-fixme
+    "FLY",   # flynt
+    # "FURB",# refurb -- requires --preview
+    "G",     # flake8-logging-format
+    # "I",   # isort -- treats imports with 'type: ignore' comments as unsorted
+    "ICN",   # flake8-import-conventions
+    "INP",   # flake8-no-pep420
+    "INT",   # flake8-gettext
+    "ISC",   # flake8-implicit-str-concat
+    "N",     # pep8-naming
+    "PERF",  # Perflint
+    "PGH",   # pygrep-hooks
+    "PIE",   # flake8-pie
+    "PL",    # Pylint
+    "PT",    # flake8-pytest-style
+    # "PTH",   # flake8-use-pathlib
+    "PYI",   # flake8-pyi
+    "Q",     # flake8-quotes
+    "RET",   # flake8-return
+    "RSE",   # flake8-raise
+    "RUF",   # Ruff-specific rules
+    "S",     # flake8-bandit
+    "SIM",   # flake8-simplify
+    "SLF",   # flake8-self
+    "SLOT",  # flake8-slots
+    "T10",   # flake8-debugger
+    "TCH",   # flake8-type-checking
+    "TID",   # flake8-tidy-imports
+    "TRY",   # tryceratops
+    "UP",    # pyupgrade
+    "W",     # pycodestyl
+    "W",     # Warning
+    "YTT",   # flake8-2020
+]
+
+ignore = [
+    "ANN101",  # missing-type-self -- Missing type annotation for `self` in method
+    "ANN102",  # missing-type-cls -- Missing type annotation for `cls` in classmethod
+    "EM101",   # raw-string-in-exception -- Exception must not use a string literal
+    "EM102",   # f-string-in-exception -- Exception must not use an f-string literal
+    "PLR0913", # too-many-arguments -- Too many arguments to function call
+    "RET505",  # superfluous-else-return -- Unnecessary `elif` after `return` statement
+    "TRY003",  # raise-vanilla-args
+]

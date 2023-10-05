@@ -1,0 +1,3 @@
+ignore = [
+	"S101", # flake8-bandit -- Use of assert detected
+]
