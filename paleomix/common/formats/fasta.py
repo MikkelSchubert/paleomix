@@ -1,6 +1,5 @@
-#!/usr/bin/python3
 #
-# Copyright (c) 2012 Mikkel Schubert <MikkelSch@gmail.com>
+# Copyright (c) 2023 Mikkel Schubert <MikkelSch@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,10 +19,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+from __future__ import annotations
+
 import sys
 from typing import IO, Any, Dict, Iterable, Iterator, Optional
 
 import pysam
+
 from paleomix.common.fileutils import fspath, open_rt
 from paleomix.common.formats._common import FormatError
 from paleomix.common.utilities import Immutable, TotallyOrdered, fragment, split_before

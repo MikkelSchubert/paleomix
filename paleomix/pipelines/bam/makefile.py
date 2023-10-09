@@ -1,6 +1,5 @@
-#!/usr/bin/python3
 #
-# Copyright (c) 2012 Mikkel Schubert <MikkelSch@gmail.com>
+# Copyright (c) 2023 Mikkel Schubert <MikkelSch@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,6 +19,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+from __future__ import annotations
+
 import collections
 import glob
 import itertools
@@ -29,7 +30,7 @@ import re
 import string
 from typing import Any, Dict, Iterable, Optional, Tuple
 
-import paleomix.common.sequences as sequences
+from paleomix.common import sequences
 from paleomix.common.bamfiles import BAM_PLATFORMS
 from paleomix.common.fileutils import get_files_glob
 from paleomix.common.formats.fasta import FASTA

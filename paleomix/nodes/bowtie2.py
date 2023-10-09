@@ -1,6 +1,5 @@
-#!/usr/bin/python3
 #
-# Copyright (c) 2012 Mikkel Schubert <MikkelSch@gmail.com>
+# Copyright (c) 2023 Mikkel Schubert <MikkelSch@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,9 +19,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+from __future__ import annotations
+
 from typing import Any, Iterable, Optional, Type, Union
 
-import paleomix.common.versions as versions
+from paleomix.common import versions
 from paleomix.common.command import (
     AtomicCmd,
     InputFile,
@@ -134,7 +135,7 @@ def _bowtie2_template(
     call: Any,
     reference: str,
     iotype: Union[Type[InputFile], Type[OutputFile]] = InputFile,
-    **kwargs: Any
+    **kwargs: Any,
 ):
     return AtomicCmd(
         call,
@@ -150,5 +151,5 @@ def _bowtie2_template(
             )
         ],
         requirements=[BOWTIE2_VERSION],
-        **kwargs
+        **kwargs,
     )

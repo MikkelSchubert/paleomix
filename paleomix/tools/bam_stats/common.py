@@ -1,6 +1,5 @@
-#!/usr/bin/python3
 #
-# Copyright (c) 2012 Mikkel Schubert <MikkelSch@gmail.com>
+# Copyright (c) 2023 Mikkel Schubert <MikkelSch@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,13 +19,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+from __future__ import annotations
+
 import collections
 import logging
 import os
 
 import pysam
 
-import paleomix.common.argparse as argparse
+from paleomix.common import argparse
 from paleomix.common.fileutils import swap_ext
 from paleomix.common.formats.bed import read_bed_file, sort_bed_by_bamfile
 

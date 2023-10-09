@@ -1,6 +1,5 @@
-#!/usr/bin/python3
-# -*- coding: utf-8 -*-
-# Copyright (c) 2014 Mikkel Schubert <MikkelSch@gmail.com>
+#
+# Copyright (c) 2023 Mikkel Schubert <MikkelSch@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -19,6 +18,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+#
+from __future__ import annotations
+
 import collections
 import itertools
 import os
@@ -29,17 +31,15 @@ from io import TextIOWrapper
 
 import pysam
 
-import paleomix.common.argparse as argparse
-import paleomix.common.bamfiles as bamtools
-import paleomix.common.fileutils as fileutils
-import paleomix.pipelines.zonkey.database as database
+from paleomix.common import argparse, bamfiles, fileutils
 from paleomix.common.sampling import reservoir_sampling
 from paleomix.common.sequences import NT_CODES
+from paleomix.pipelines.zonkey import database
 
 _TRANSITIONS = frozenset((("C", "T"), ("T", "C"), ("G", "A"), ("A", "G")))
 
 
-def _filter_records(handle, flags=bamtools.EXCLUDED_FLAGS):
+def _filter_records(handle, flags=bamfiles.EXCLUDED_FLAGS):
     for record in handle:
         if not record.flag & flags:
             yield record

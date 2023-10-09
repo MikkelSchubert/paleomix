@@ -1,6 +1,5 @@
-#!/usr/bin/python3
 #
-# Copyright (c) 2012 Mikkel Schubert <MikkelSch@gmail.com>
+# Copyright (c) 2023 Mikkel Schubert <MikkelSch@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,10 +19,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+from __future__ import annotations
+
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
-import paleomix.common.fileutils as fileutils
-import paleomix.common.versions as versions
+from paleomix.common import fileutils, versions
 from paleomix.common.command import (
     AtomicCmd,
     InputFile,

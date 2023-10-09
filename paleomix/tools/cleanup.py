@@ -1,6 +1,5 @@
-#!/usr/bin/python3
 #
-# Copyright (c) 2012 Mikkel Schubert <MikkelSch@gmail.com>
+# Copyright (c) 2023 Mikkel Schubert <MikkelSch@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -35,15 +34,17 @@ command will not work:
 $ samtools view -H INPUT.BAM | samtools view -Sbu -
 
 """
+from __future__ import annotations
+
 import signal
 import subprocess
 import sys
 
 import pysam
 
-import paleomix.common.argparse as argparse
 import paleomix.common.procs as processes
 import paleomix.tools.factory
+from paleomix.common import argparse
 
 # Mask to select flags that are relevant to SE reads; this excludes flags where
 # no assumptions can if 0x1 is not set, per the SAM specification (see below).

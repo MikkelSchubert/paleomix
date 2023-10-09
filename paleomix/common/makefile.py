@@ -1,6 +1,5 @@
-#!/usr/bin/python3
 #
-# Copyright (c) 2012 Mikkel Schubert <MikkelSch@gmail.com>
+# Copyright (c) 2023 Mikkel Schubert <MikkelSch@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -172,12 +171,14 @@ value has accidentally been left blank ('IsStr' requires a NON-EMPTY string):
 |    Observed value: ''
 -------------------------------------------------------------------------------
 """
+from __future__ import annotations
+
 import copy
 import logging
 import re
 from typing import Any, Dict, Hashable, List, Optional, Sequence, Tuple, Type, Union
 
-import paleomix.common.yaml as yaml
+from paleomix.common import yaml
 from paleomix.common.fileutils import PathTypes, fspath
 from paleomix.common.utilities import group_by_pred
 

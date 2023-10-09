@@ -1,6 +1,5 @@
-#!/usr/bin/python3
 #
-# Copyright (c) 2016 Mikkel Schubert <MikkelSch@gmail.com>
+# Copyright (c) 2023 Mikkel Schubert <MikkelSch@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,20 +19,21 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+from __future__ import annotations
+
 import copy
 import os
 
 import pysam
 
 import paleomix
-import paleomix.common.fileutils as fileutils
-import paleomix.pipelines.zonkey.parts.admixture as admixture
-import paleomix.pipelines.zonkey.parts.nuclear as nuclear
 import paleomix.resources
+from paleomix.common import fileutils
 from paleomix.node import Node
 from paleomix.nodes.raxml import RAXML_VERSION
 from paleomix.nodes.samtools import SAMTOOLS_VERSION
 from paleomix.pipelines.zonkey.common import RSCRIPT_VERSION, read_summary
+from paleomix.pipelines.zonkey.parts import admixture, nuclear
 
 
 class ReportNode(Node):

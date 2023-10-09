@@ -1,6 +1,5 @@
-#!/usr/bin/python3
 #
-# Copyright (c) 2012 Mikkel Schubert <MikkelSch@gmail.com>
+# Copyright (c) 2023 Mikkel Schubert <MikkelSch@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,6 +19,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+from __future__ import annotations
+
 import argparse
 import logging
 import math
@@ -168,7 +169,7 @@ class Pypeline:
         manager: Manager,
         tasks: Dict[Node, "_TaskInfo"],
         worker: str,
-        **event: Any
+        **event: Any,
     ):
         if not self._interrupted:
             idle_threads = event["threads"]
@@ -200,7 +201,7 @@ class Pypeline:
         manager: Manager,
         tasks: Dict[Node, "_TaskInfo"],
         worker: str,
-        **event: Any
+        **event: Any,
     ):
         any_errors = False
         task = event["task"]
@@ -234,7 +235,7 @@ class Pypeline:
         tasks: Dict[Node, "_TaskInfo"],
         worker: str,
         worker_name: str,
-        **event: Any
+        **event: Any,
     ):
         self._logger.error("PALEOMIX worker %s terminated", worker_name)
 
@@ -279,7 +280,7 @@ class Pypeline:
         task: Node,
         error: Any,
         backtrace: Optional[List[str]],
-        **kwargs: Any
+        **kwargs: Any,
     ):
         self._set_node_state(nodegraph, task, nodegraph.ERROR)
 

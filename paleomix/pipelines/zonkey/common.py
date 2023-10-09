@@ -1,6 +1,5 @@
-#!/usr/bin/python3
-# -*- coding: utf-8 -*-
-# Copyright (c) 2016 Mikkel Schubert <MikkelSch@gmail.com>
+#
+# Copyright (c) 2023 Mikkel Schubert <MikkelSch@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -19,11 +18,12 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+#
+from __future__ import annotations
+
 import collections
 
-import paleomix.common.versions as versions
-import paleomix.common.yaml as yaml
-
+from paleomix.common import versions, yaml
 
 RSCRIPT_VERSION = versions.Requirement(
     call=("Rscript", "--version"),

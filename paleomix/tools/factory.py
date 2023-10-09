@@ -1,4 +1,5 @@
-# Copyright (c) 2014 Mikkel Schubert <MikkelSch@gmail.com>
+#
+# Copyright (c) 2023 Mikkel Schubert <MikkelSch@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -17,12 +18,15 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+#
 """Factory for AtomicCmds for the various PALEOMIX commands.
 
 Ensures that the version called corresponds to the running version, in case
 multiple versions are present in the users' PATH, or that the current version
 is not available from the users' PATH.
 """
+from __future__ import annotations
+
 from typing import Iterable
 
 from paleomix.common.command import AtomicCmd, PipeType, _AtomicFile

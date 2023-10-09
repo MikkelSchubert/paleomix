@@ -1,6 +1,5 @@
-#!/usr/bin/python3
 #
-# Copyright (c) 2012 Mikkel Schubert <MikkelSch@gmail.com>
+# Copyright (c) 2023 Mikkel Schubert <MikkelSch@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,16 +19,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-#
-# Converts a GTF file to a set of BED6 files, one for each
-# feature in the GTF file (CDS, Exon, ...). Also generates a list
-# of introns, and UTRs based on sequences in the GTF.
-#
+"""
+Converts a GTF file to a set of BED6 files, one for each
+feature in the GTF file (CDS, Exon, ...). Also generates a list
+of introns, and UTRs based on sequences in the GTF.
+"""
+from __future__ import annotations
+
 import sys
 from argparse import ArgumentParser
 
-import paleomix.common.text as text
 import pysam
+
+from paleomix.common import text
 from paleomix.common.fileutils import open_rb
 from paleomix.common.utilities import get_in, set_in
 

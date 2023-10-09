@@ -1,6 +1,5 @@
-#!/usr/bin/python3
 #
-# Copyright (c) 2012 Mikkel Schubert <MikkelSch@gmail.com>
+# Copyright (c) 2023 Mikkel Schubert <MikkelSch@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,6 +19,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+from __future__ import annotations
+
 import errno
 import fnmatch
 import itertools
@@ -31,7 +32,7 @@ from pathlib import Path
 from typing import Any, FrozenSet, Iterable, List, Optional, Set, Union
 
 import paleomix
-import paleomix.common.fileutils as fileutils
+from paleomix.common import fileutils
 from paleomix.common.command import AtomicCmd, CmdError, ParallelCmds, SequentialCmds
 from paleomix.common.fileutils import PathTypes
 from paleomix.common.utilities import safe_coerce_to_frozenset

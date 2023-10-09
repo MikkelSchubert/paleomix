@@ -1,6 +1,5 @@
-#!/usr/bin/python3
 #
-# Copyright (c) 2012 Mikkel Schubert <MikkelSch@gmail.com>
+# Copyright (c) 2023 Mikkel Schubert <MikkelSch@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -25,14 +24,16 @@
 Each node is equivalent to a particular command:
     $ paleomix [...]
 """
+from __future__ import annotations
+
 import os
 from typing import Iterable
 
-import paleomix.tools.factory as factory
 from paleomix.common.command import InputFile, OptionsType, OutputFile, ParallelCmds
 from paleomix.common.fileutils import describe_files
 from paleomix.node import CommandNode, Node
 from paleomix.nodes.samtools import merge_bam_files_command
+from paleomix.tools import factory
 
 
 class CoverageNode(CommandNode):

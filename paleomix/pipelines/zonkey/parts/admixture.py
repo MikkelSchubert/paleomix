@@ -1,6 +1,5 @@
-#!/usr/bin/python3
 #
-# Copyright (c) 2016 Mikkel Schubert <MikkelSch@gmail.com>
+# Copyright (c) 2023 Mikkel Schubert <MikkelSch@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -25,8 +24,9 @@
 Parsing and validation of admixture results.
 
 """
-import collections
+from __future__ import annotations
 
+import collections
 
 CUTOFF = 0.001
 

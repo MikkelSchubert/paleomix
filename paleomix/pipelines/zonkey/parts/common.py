@@ -1,6 +1,5 @@
-#!/usr/bin/python3
 #
-# Copyright (c) 2016 Mikkel Schubert <MikkelSch@gmail.com>
+# Copyright (c) 2023 Mikkel Schubert <MikkelSch@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,7 +19,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import paleomix.common.fileutils as fileutils
+from __future__ import annotations
+
+from paleomix.common import fileutils
 from paleomix.node import Node
 
 _DEFAULT_COLORS = (

@@ -1,6 +1,5 @@
-#!/usr/bin/python3
 #
-# Copyright (c) 2016 Mikkel Schubert <MikkelSch@gmail.com>
+# Copyright (c) 2023 Mikkel Schubert <MikkelSch@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,12 +19,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+from __future__ import annotations
+
 import paleomix
-import paleomix.pipeline
 import paleomix.common.logging
-
-from paleomix.common.argparse import ArgumentParser, SUPPRESS
-
+import paleomix.pipeline
+from paleomix.common.argparse import SUPPRESS, ArgumentParser
 
 _RUN_USAGE = """%(prog)s [..] <database.tar> <samples.txt> [destination]
        %(prog)s [..] <database.tar> <sample.bam> [destination]

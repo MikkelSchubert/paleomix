@@ -1,6 +1,5 @@
-#!/usr/bin/python3
 #
-# Copyright (c) 2016 Mikkel Schubert <MikkelSch@gmail.com>
+# Copyright (c) 2023 Mikkel Schubert <MikkelSch@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,6 +19,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+from __future__ import annotations
+
 import hashlib
 import itertools
 import math
@@ -29,10 +30,7 @@ from typing import Iterable, Optional, Tuple, Union
 
 import pysam
 
-import paleomix.common.fileutils as fileutils
-import paleomix.common.rtools as rtools
-import paleomix.common.versions as versions
-import paleomix.tools.factory as factory
+from paleomix.common import fileutils, rtools, versions
 from paleomix.common.command import (
     AtomicCmd,
     AuxiliaryFile,
@@ -43,6 +41,7 @@ from paleomix.common.command import (
 )
 from paleomix.node import CommandNode, Node, NodeError
 from paleomix.pipelines.zonkey.common import RSCRIPT_VERSION, read_summary
+from paleomix.tools import factory
 
 ADMIXTURE_VERSION = versions.Requirement(
     call=("admixture", "--version"),

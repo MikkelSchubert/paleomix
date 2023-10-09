@@ -1,6 +1,5 @@
-#!/usr/bin/python3
 #
-# Copyright (c) 2016 Mikkel Schubert <MikkelSch@gmail.com>
+# Copyright (c) 2023 Mikkel Schubert <MikkelSch@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,10 +19,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+from __future__ import annotations
+
 import os
 
-import paleomix.common.rtools as rtools
-import paleomix.tools.factory as factory
+from paleomix.common import rtools
 from paleomix.common.command import (
     AtomicCmd,
     AuxiliaryFile,
@@ -35,6 +35,7 @@ from paleomix.common.fileutils import PathTypes
 from paleomix.common.formats.newick import Newick
 from paleomix.node import CommandNode
 from paleomix.pipelines.zonkey.common import RSCRIPT_VERSION
+from paleomix.tools import factory
 
 
 class MitoConsensusNode(CommandNode):

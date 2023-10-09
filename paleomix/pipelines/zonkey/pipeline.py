@@ -1,6 +1,5 @@
-#!/usr/bin/python3
 #
-# Copyright (c) 2016 Mikkel Schubert <MikkelSch@gmail.com>
+# Copyright (c) 2023 Mikkel Schubert <MikkelSch@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,6 +19,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+from __future__ import annotations
+
 import logging
 import os
 import shutil
@@ -30,21 +31,17 @@ from typing import Dict, Union
 import pysam
 
 import paleomix
-import paleomix.common.fileutils as fileutils
 import paleomix.common.logging
+import paleomix.pipelines.zonkey.common as common_nodes
 import paleomix.pipelines.zonkey.config as zonkey_config
-import paleomix.pipelines.zonkey.database as database
-import paleomix.pipelines.zonkey.parts.common as common_nodes
-import paleomix.pipelines.zonkey.parts.mitochondria as mitochondria
-import paleomix.pipelines.zonkey.parts.nuclear as nuclear
-import paleomix.pipelines.zonkey.parts.report as report
-import paleomix.pipelines.zonkey.parts.summary as summary
 import paleomix.resources
 from paleomix.common.formats.fasta import FASTA
 from paleomix.node import Node
 from paleomix.nodes.raxml import RAxMLRapidBSNode
 from paleomix.nodes.samtools import BAMIndexNode
 from paleomix.pipeline import Pypeline
+from paleomix.pipelines.zonkey import database
+from paleomix.pipelines.zonkey.parts import mitochondria, nuclear, report, summary
 
 
 def build_plink_nodes(config, data, root, bamfile, dependencies=()):
