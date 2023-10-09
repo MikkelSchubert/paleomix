@@ -27,7 +27,7 @@ from typing import cast
 import pytest
 
 import paleomix
-import paleomix.main as main
+import paleomix.__main__ as main
 import paleomix.tools.factory as factory
 
 ###############################################################################

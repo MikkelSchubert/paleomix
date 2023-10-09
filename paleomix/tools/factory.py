@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-# -*- coding: utf-8 -*-
 # Copyright (c) 2014 Mikkel Schubert <MikkelSch@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -25,12 +23,13 @@ Ensures that the version called corresponds to the running version, in case
 multiple versions are present in the users' PATH, or that the current version
 is not available from the users' PATH.
 """
-import paleomix.common.versions as versions
-import paleomix.main
-from paleomix.common.command import AtomicCmd, AuxiliaryFile
-from paleomix.common.utilities import safe_coerce_to_tuple
+from typing import Iterable
 
-CHECK = versions.Requirement(
+from paleomix.common.command import AtomicCmd, PipeType, _AtomicFile
+from paleomix.common.utilities import safe_coerce_to_tuple
+from paleomix.common.versions import Requirement
+
+CHECK = Requirement(
     ["%(PYTHON)s", "--version"],
     regexp=r"Python (\d+\.\d+\.\d+)",
     specifiers=">=3.7",
@@ -38,20 +37,27 @@ CHECK = versions.Requirement(
 )
 
 
-def new(args, **kwargs):
+def new(
+    args: object,
+    *,
+    stdin: PipeType = None,
+    stdout: PipeType = None,
+    stderr: PipeType = None,
+    set_cwd: bool = False,
+    extra_files: Iterable[_AtomicFile] = (),
+    requirements: Iterable[Requirement] = (),
+) -> AtomicCmd:
     """Returns AtomicCmd setup to call the tools accessible through the
     'paleomix' command-line tool. This builder adds executable / version checks
     for the specified command, but does not add any arguments. Thus, calling
     new with the argument "cat" produces the equivalent of ["paleomix", "cat"].
     """
-    script = paleomix.main.__file__
-    args = safe_coerce_to_tuple(args)
-
-    requirements = list(kwargs.get("requirements", ()))
-    requirements.append(CHECK)
-    kwargs["requirements"] = requirements
-
-    command = AtomicCmd(("%(PYTHON)s", script) + args, **kwargs)
-    command.add_extra_files([AuxiliaryFile(script)])
-
-    return command
+    return AtomicCmd(
+        ("%(PYTHON)s", "-m", "paleomix", *safe_coerce_to_tuple(args)),
+        stdin=stdin,
+        stdout=stdout,
+        stderr=stderr,
+        set_cwd=set_cwd,
+        extra_files=extra_files,
+        requirements=[*requirements, CHECK],
+    )

@@ -80,7 +80,7 @@ setup(
         "ruamel.yaml>=0.16.0",
         "setproctitle>=1.1.0",
     ],
-    entry_points={"console_scripts": ["paleomix=paleomix.main:entry_point"]},
+    entry_points={"console_scripts": ["paleomix=paleomix.__main__:main"]},
     zip_safe=False,
     include_package_data=True,
 )

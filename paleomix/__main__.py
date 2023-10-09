@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-# -*- coding: utf-8 -*-
 # Copyright (c) 2014 Mikkel Schubert <MikkelSch@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -19,6 +17,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+from __future__ import annotations
+
 import logging
 import sys
 
@@ -82,19 +82,22 @@ If you make use of PALEOMIX in your work, please cite
 """
 
 
-def main(argv):
-    # Change process name from 'python' to 'paleomix'
+def main(argv: list[str] | None = None) -> int:
+    if argv is None:
+        argv = sys.argv[1:]
+
+    # Change process name to 'paleomix' regardless of how the script was invoked
     paleomix.common.system.set_procname("paleomix " + " ".join(argv[:1]))
     # Setup basic logging to STDERR
     paleomix.common.logging.initialize_console_logging()
     # Silence log-messages from HTSLIB
-    pysam.set_verbosity(0)
+    pysam.set_verbosity(0)  # pyright: ignore[reportUnknownMemberType]
 
     if not argv or argv[0] in ("-h", "--help", "help"):
         print(_HELP.format(version=paleomix.__version__))
         return 0
     elif argv[0] in ("--version",):
-        print("paleomix v{}".format(paleomix.__version__))
+        print(f"paleomix v{paleomix.__version__}")
         return 0
 
     command = _COMMANDS.get(argv[0])
@@ -108,9 +111,5 @@ def main(argv):
     return module.main(argv[1:])
 
 
-def entry_point():
-    return main(sys.argv[1:])
-
-
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+    sys.exit(main())
