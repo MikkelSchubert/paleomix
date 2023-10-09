@@ -17,7 +17,12 @@ output = "cov.xml"
 profile = "black"
 
 [tool.pyright]
-strict = ["paleomix"]
+# Used since `strict = [...]` prevents individual `reportX` settings:
+include = ["paleomix", "tests"]
+typeCheckingMode = "strict"
+
+# FIXME: Disabled until project is fully typed
+reportUnnecessaryIsInstance = "none"
 
 [tool.pytest.ini_options]
 markers = ["slow"]
@@ -63,7 +68,7 @@ select = [
     "PIE",   # flake8-pie
     "PL",    # Pylint
     "PT",    # flake8-pytest-style
-    # "PTH",   # flake8-use-pathlib
+    # "PTH", # flake8-use-pathlib
     "PYI",   # flake8-pyi
     "Q",     # flake8-quotes
     "RET",   # flake8-return
@@ -90,6 +95,7 @@ ignore = [
     "EM102",   # f-string-in-exception -- Exception must not use an f-string literal
     "PLR0913", # too-many-arguments -- Too many arguments to function call
     "RET505",  # superfluous-else-return -- Unnecessary `elif` after `return` statement
+    "S603",    # subprocess-without-shell-equals-true
     "TRY003",  # raise-vanilla-args
 ]
 
