@@ -27,8 +27,7 @@ import gzip
 import os
 import shutil
 import stat
-from pathlib import Path
-from typing import IO, Any, Callable
+from typing import IO, TYPE_CHECKING, Any, Callable, NoReturn
 from unittest.mock import ANY, DEFAULT, Mock, call, patch
 
 import pytest
@@ -52,6 +51,10 @@ from paleomix.common.fileutils import (
     try_rmtree,
 )
 from paleomix.common.testing import SetWorkingDirectory
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
 
 ###############################################################################
 ###############################################################################
@@ -227,9 +230,8 @@ def test_create_temp_dir__permission_denied() -> None:
 def test_create_temp_dir__finite_attempts(tmp_path: Path) -> None:
     mock = Mock(wraps=os.makedirs)
     mock.side_effect = OSError(errno.EEXIST, "dir exists")
-    with patch("os.makedirs", mock):
-        with pytest.raises(FileExistsError):
-            create_temp_dir(tmp_path)
+    with patch("os.makedirs", mock), pytest.raises(FileExistsError):
+        create_temp_dir(tmp_path)
 
     # Exact number isn't important
     assert mock.call_count >= 100
@@ -331,10 +333,14 @@ def test_make_dirs__permissions(tmp_path: Path) -> None:
 def test_make_dirs__creation_preemted(tmp_path: Path) -> None:
     makedirs = os.makedirs
 
-    def _wrap_os_makedirs(*args: Any, **kwargs: Any):
+    def _wrap_os_makedirs(
+        name: str | bytes,
+        mode: int = 511,
+        exist_ok: bool = False,  #  noqa: FBT001,FBT002
+    ) -> None:
         # Simulate somebody else creating the directory first
-        makedirs(*args, **kwargs)
-        makedirs(*args, **kwargs)
+        makedirs(name, mode, exist_ok)
+        makedirs(name, mode, exist_ok)
 
     with patch("os.makedirs", _wrap_os_makedirs):
         work_folder = tmp_path / "test"
@@ -349,7 +355,7 @@ def test_make_dirs__permission_denied(tmp_path: Path) -> None:
     ro_mode = mode & ~(stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH)
     tmp_path.chmod(ro_mode)
     # Non OEXIST errors should be re-raised:
-    with pytest.raises(OSError):
+    with pytest.raises(OSError, match="Permission denied"):
         make_dirs(tmp_path / "foo")
 
 
@@ -397,7 +403,7 @@ def test_move_dirs__permission_denied(tmp_path: Path) -> None:
     dst_folder.chmod(ro_mode)
 
     # Non ENOENT errors should be re-raised:
-    with pytest.raises(IOError):
+    with pytest.raises(IOError, match="Permission denied"):
         move_file(file_1, file_2)
 
 
@@ -450,18 +456,18 @@ def test_move_file__overwrite(tmp_path: Path) -> None:
 
 
 def test_move_file__enoent_reraised_if_not_due_to_missing_folder() -> None:
-    with pytest.raises(IOError):
+    with pytest.raises(IOError, match="No such file or directory"):
         move_file("", "./dst")
 
 
 def test_move_file__destination_removed_if_out_of_space(tmp_path: Path) -> None:
     shutil_copy2 = shutil.copy2
 
-    def _rename(source: Path, destination: Path):
+    def _rename(source: Path, destination: Path) -> NoReturn:
         # Simulated move across devices
         raise OSError(errno.EXDEV, "error message")
 
-    def _copy2(source: Path, destination: Path):
+    def _copy2(source: Path, destination: Path) -> NoReturn:
         shutil_copy2(source, destination)
         raise OSError(errno.ENOSPC, "Out of space")
 
@@ -469,10 +475,10 @@ def test_move_file__destination_removed_if_out_of_space(tmp_path: Path) -> None:
     source.write_text("...")
     destination = tmp_path / "destination"
 
-    with pytest.raises(OSError, match="Out of space"):
-        with patch("shutil.copy2", wraps=_copy2):
-            with patch("os.rename", wraps=_rename):
-                move_file(source, destination)
+    with pytest.raises(OSError, match="Out of space"), patch(
+        "shutil.copy2", wraps=_copy2
+    ), patch("os.rename", wraps=_rename):
+        move_file(source, destination)
 
     assert list(tmp_path.iterdir()) == [source]
 
@@ -488,7 +494,7 @@ def test_copy_file__simple_copy(tmp_path: Path) -> None:
     file_1.write_text("1")
     assert os.listdir(str(tmp_path)) == ["file_1"]
     copy_file(file_1, file_2)
-    assert set(os.listdir(str(tmp_path))) == set(["file_1", "file_2"])
+    assert set(os.listdir(str(tmp_path))) == {"file_1", "file_2"}
     assert file_1.read_text() == "1"
     assert file_2.read_text() == "1"
 
@@ -501,7 +507,7 @@ def test_copy_file__simple_copy_in_cwd(tmp_path: Path) -> None:
     with SetWorkingDirectory(tmp_path):
         copy_file("file_1", "file_2")
 
-    assert set(os.listdir(str(tmp_path))) == set(["file_1", "file_2"])
+    assert set(os.listdir(str(tmp_path))) == {"file_1", "file_2"}
     assert file_1.read_text() == "1"
     assert file_2.read_text() == "1"
 
@@ -537,7 +543,7 @@ def test_copy_file__copy_to_different_folder(tmp_path: Path) -> None:
     with SetWorkingDirectory(tmp_path):
         copy_file("file_1", "dst/file_1")
 
-    assert set(os.listdir(str(tmp_path))) == set(["file_1", "dst"])
+    assert set(os.listdir(str(tmp_path))) == {"file_1", "dst"}
     assert os.listdir(str(tmp_path / "dst")) == ["file_1"]
     assert (tmp_path / "file_1").read_text() == "3"
     assert (tmp_path / "dst" / "file_1").read_text() == "3"
@@ -552,20 +558,20 @@ def test_copy_file__overwrite(tmp_path: Path) -> None:
     with SetWorkingDirectory(tmp_path):
         copy_file("file_1", "file_2")
 
-    assert set(os.listdir(str(tmp_path))) == set(["file_1", "file_2"])
+    assert set(os.listdir(str(tmp_path))) == {"file_1", "file_2"}
     assert file_1.read_text() == "4"
     assert file_2.read_text() == "4"
 
 
 def test_copy_file__enoent_reraised_if_not_due_to_missing_folder() -> None:
-    with pytest.raises(IOError):
+    with pytest.raises(IOError, match="No such file or directory"):
         copy_file("", "./dst")
 
 
 def test_copy_file__destination_removed_if_out_of_space(tmp_path: Path) -> None:
     _shutil_copy = shutil.copy
 
-    def _copy(source: Path, destination: Path):
+    def _copy(source: Path, destination: Path) -> NoReturn:
         _shutil_copy(source, destination)
         raise OSError(errno.ENOSPC, "Out of space")
 
@@ -573,9 +579,10 @@ def test_copy_file__destination_removed_if_out_of_space(tmp_path: Path) -> None:
     source.write_text("...")
     destination = tmp_path / "destination"
 
-    with pytest.raises(OSError, match="Out of space"):
-        with patch("shutil.copy", wraps=_copy):
-            copy_file(source, destination)
+    with pytest.raises(OSError, match="Out of space"), patch(
+        "shutil.copy", wraps=_copy
+    ):
+        copy_file(source, destination)
 
     assert source.exists()
     assert not destination.exists()
@@ -591,7 +598,7 @@ _FASTA_BYTES = _FASTA_TEXT.encode("utf-8")
 IOFunc = Callable[[str, str], IO[str]]
 
 
-@pytest.mark.parametrize("func", (open, gzip.open, bz2.open))
+@pytest.mark.parametrize("func", [open, gzip.open, bz2.open])
 def test_open_ro(func: IOFunc, tmp_path: Path) -> None:
     filename = tmp_path / "file.fasta"
     with func(fspath(filename), "wt") as handle:
@@ -601,7 +608,7 @@ def test_open_ro(func: IOFunc, tmp_path: Path) -> None:
         assert handle.read() == _FASTA_TEXT
 
 
-@pytest.mark.parametrize("func", (open, gzip.open, bz2.open))
+@pytest.mark.parametrize("func", [open, gzip.open, bz2.open])
 def test_open_ro__mode(func: IOFunc, tmp_path: Path) -> None:
     filename = tmp_path / "file.fasta"
     with func(fspath(filename), "wt") as handle:
@@ -611,7 +618,7 @@ def test_open_ro__mode(func: IOFunc, tmp_path: Path) -> None:
         assert handle.read() == _FASTA_TEXT
 
 
-@pytest.mark.parametrize("func", (open, gzip.open, bz2.open))
+@pytest.mark.parametrize("func", [open, gzip.open, bz2.open])
 def test_open_ro__binary(func: IOFunc, tmp_path: Path) -> None:
     filename = tmp_path / "file.fasta"
     with func(fspath(filename), "wt") as handle:
@@ -621,20 +628,19 @@ def test_open_ro__binary(func: IOFunc, tmp_path: Path) -> None:
         assert handle.read() == _FASTA_BYTES
 
 
-class OddException(RuntimeError):
+class OddError(RuntimeError):
     pass
 
 
 def test_open_ro__close_handle_on_error() -> None:
-    mocks = Mock()  # type: Any
-    mocks.file.peek.side_effect = OddException("ARGH!")
+    mocks: Any = Mock()
+    mocks.file.peek.side_effect = OddError("ARGH!")
     mocks.file.__enter__ = Mock(return_value=mocks.file)
     mocks.file.__exit__ = Mock(return_value=None)
     mocks.open.return_value = mocks.file
 
-    with patch("builtins.open", mocks.open):
-        with pytest.raises(OddException):
-            open_rt("/var/abc")
+    with patch("builtins.open", mocks.open), pytest.raises(OddError, match="ARGH!"):
+        open_rt("/var/abc")
 
     mocks.assert_has_calls(
         [
@@ -664,7 +670,7 @@ def test_try_remove__missing(tmp_path: Path) -> None:
 
 
 def test_try_remove__non_file(tmp_path: Path) -> None:
-    with pytest.raises(OSError):
+    with pytest.raises(OSError, match="Is a directory"):
         try_remove(tmp_path)
 
 
@@ -738,7 +744,7 @@ def test_describe_files__iterable() -> None:
 
 def test_describe_files__non_str() -> None:
     with pytest.raises(TypeError):
-        describe_files(1)  # type: ignore
+        describe_files(1)  # pyright: ignore[reportGeneralTypeIssues]
 
 
 ###############################################################################
@@ -806,21 +812,21 @@ def test_describe_paired_files__different_path_and_files() -> None:
 
 
 def test_describe_paired_files__files_1_longer() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Unequal number of files"):
         describe_paired_files(("a", "b"), ("c",))
 
 
 def test_describe_paired_files__files_2_longer() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Unequal number of files"):
         describe_paired_files(("a",), ("b", "c"))
 
 
 def test_describe_paired_files__non_str() -> None:
     with pytest.raises(TypeError):
-        describe_paired_files((), 1)  # type: ignore
+        describe_paired_files((), 1)  # pyright: ignore[reportGeneralTypeIssues]
 
     with pytest.raises(TypeError):
-        describe_paired_files(1, ())  # type: ignore
+        describe_paired_files(1, ())  # pyright: ignore[reportGeneralTypeIssues]
 
     with pytest.raises(TypeError):
-        describe_paired_files(1, 1)  # type: ignore
+        describe_paired_files(1, 1)  # pyright: ignore[reportGeneralTypeIssues]

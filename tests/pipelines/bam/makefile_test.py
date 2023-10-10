@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import copy
 import textwrap
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -30,8 +31,11 @@ from paleomix.common.makefile import MakefileError
 from paleomix.pipelines.bam.makefile import read_makefiles
 from paleomix.resources import template
 
+if TYPE_CHECKING:
+    from pathlib import Path
 
-def _read_makefile(filepath):
+
+def _read_makefile(filepath: Path) -> object:
     (result,) = read_makefiles([filepath])
 
     return result
@@ -125,7 +129,7 @@ def _trim_template():
 TEMPLATE_TRIM = _trim_template()
 
 
-def test_basic__read_makefiles__trim_template(tmp_path):
+def test_basic__read_makefiles__trim_template(tmp_path: Path) -> None:
     filepath = tmp_path / "temp.yaml"
     with filepath.open("wt") as handle:
         # Minimal template containing options required for trim pipeline
@@ -153,7 +157,7 @@ TEMPLATE_FILES = [
 ]
 
 
-def test_basic__read_makefiles__bam_template(tmp_path):
+def test_basic__read_makefiles__bam_template(tmp_path: Path) -> None:
     filepath = tmp_path / "temp.yaml"
     with filepath.open("wt") as handle:
         for filename in TEMPLATE_FILES:
@@ -184,14 +188,14 @@ def _write_genome_yaml(tmp_path, genomes):
     return filepath
 
 
-def test_genomes__no_genomes(tmp_path):
+def test_genomes__no_genomes(tmp_path: Path) -> None:
     filepath = _write_genome_yaml(tmp_path, {})
     makefile = _read_makefile(filepath)
 
     assert makefile["Genomes"] == {}
 
 
-def test_genomes__simple_genome(tmp_path):
+def test_genomes__simple_genome(tmp_path: Path) -> None:
     filepath = _write_genome_yaml(tmp_path, {"Test": "/path/to/genome.fasta"})
     makefile = _read_makefile(filepath)
 
@@ -200,14 +204,14 @@ def test_genomes__simple_genome(tmp_path):
     }
 
 
-def test_genomes__bad_wildcard_in_name(tmp_path):
+def test_genomes__bad_wildcard_in_name(tmp_path: Path) -> None:
     filepath = _write_genome_yaml(tmp_path, {"T*est": "/path/to/genome.fasta"})
 
     with pytest.raises(MakefileError, match="'*' is not allowed in Genome names"):
         _read_makefile(filepath)
 
 
-def test_genomes__wildcard_in_name(tmp_path):
+def test_genomes__wildcard_in_name(tmp_path: Path) -> None:
     filepath = _write_genome_yaml(tmp_path, {"Test*": f"{tmp_path}/*.fasta"})
 
     (tmp_path / "foo.fasta").write_text(">foo\nACGT\n")
@@ -220,7 +224,7 @@ def test_genomes__wildcard_in_name(tmp_path):
     }
 
 
-def test_genomes__wildcard_in_name__duplicate_name_1(tmp_path):
+def test_genomes__wildcard_in_name__duplicate_name_1(tmp_path: Path) -> None:
     filepath = _write_genome_yaml(
         tmp_path,
         {
@@ -235,7 +239,7 @@ def test_genomes__wildcard_in_name__duplicate_name_1(tmp_path):
         _read_makefile(filepath)
 
 
-def test_genomes__wildcard_in_name__duplicate_name_2(tmp_path):
+def test_genomes__wildcard_in_name__duplicate_name_2(tmp_path: Path) -> None:
     filepath = _write_genome_yaml(
         tmp_path,
         {
@@ -250,14 +254,14 @@ def test_genomes__wildcard_in_name__duplicate_name_2(tmp_path):
         _read_makefile(filepath)
 
 
-def test_genomes__wildcard_in_name__no_genomes(tmp_path):
+def test_genomes__wildcard_in_name__no_genomes(tmp_path: Path) -> None:
     filepath = _write_genome_yaml(tmp_path, {"Test*": f"{tmp_path}/*.fasta"})
 
     with pytest.raises(MakefileError, match="Did not find any genomes"):
         _read_makefile(filepath)
 
 
-def test_genomes__wildcard_in_name__invalid_file(tmp_path):
+def test_genomes__wildcard_in_name__invalid_file(tmp_path: Path) -> None:
     filepath = _write_genome_yaml(tmp_path, {"Test*": f"{tmp_path}/*.fasta"})
 
     (tmp_path / "foo.fasta").touch()
@@ -322,7 +326,7 @@ def _write_sample_yaml(tmp_path, text):
     return filepath
 
 
-def test_makefile__sample__basic(tmp_path):
+def test_makefile__sample__basic(tmp_path: Path) -> None:
     filepath = _write_sample_yaml(
         tmp_path,
         """
@@ -339,7 +343,7 @@ def test_makefile__sample__basic(tmp_path):
     assert _read_makefile(filepath) == _sample_template(filepath)
 
 
-def test_makefile__sample__group_options(tmp_path):
+def test_makefile__sample__group_options(tmp_path: Path) -> None:
     filepath = _write_sample_yaml(
         tmp_path,
         """
@@ -364,7 +368,7 @@ def test_makefile__sample__group_options(tmp_path):
     assert _read_makefile(filepath) == expected
 
 
-def test_makefile__sample__sample_options(tmp_path):
+def test_makefile__sample__sample_options(tmp_path: Path) -> None:
     filepath = _write_sample_yaml(
         tmp_path,
         """
@@ -389,7 +393,7 @@ def test_makefile__sample__sample_options(tmp_path):
     assert _read_makefile(filepath) == expected
 
 
-def test_makefile__sample__library_options(tmp_path):
+def test_makefile__sample__library_options(tmp_path: Path) -> None:
     filepath = _write_sample_yaml(
         tmp_path,
         """
@@ -414,7 +418,7 @@ def test_makefile__sample__library_options(tmp_path):
     assert _read_makefile(filepath) == expected
 
 
-def test_makefile__sample__lane_options(tmp_path):
+def test_makefile__sample__lane_options(tmp_path: Path) -> None:
     filepath = _write_sample_yaml(
         tmp_path,
         """
@@ -439,7 +443,7 @@ def test_makefile__sample__lane_options(tmp_path):
     assert _read_makefile(filepath) == expected
 
 
-def test_makefile__sample__mixed_options(tmp_path):
+def test_makefile__sample__mixed_options(tmp_path: Path) -> None:
     filepath = _write_sample_yaml(
         tmp_path,
         """
@@ -472,7 +476,7 @@ def test_makefile__sample__mixed_options(tmp_path):
     assert _read_makefile(filepath) == expected
 
 
-def test_makefile__sample__multiple_samples(tmp_path):
+def test_makefile__sample__multiple_samples(tmp_path: Path) -> None:
     filepath = _write_sample_yaml(
         tmp_path,
         """
@@ -497,7 +501,7 @@ def test_makefile__sample__multiple_samples(tmp_path):
     assert _read_makefile(filepath) == expected
 
 
-def test_makefile__sample__duplicate_sample_names_1(tmp_path):
+def test_makefile__sample__duplicate_sample_names_1(tmp_path: Path) -> None:
     filepath = _write_sample_yaml(
         tmp_path,
         """
@@ -524,7 +528,7 @@ FEATURES = ("Coverage", "Depths", "mapDamage", "PCRDuplicates", "Summary")
 
 
 @pytest.mark.parametrize("key", FEATURES)
-def test_makefile__sample__features__group(tmp_path, key):
+def test_makefile__sample__features__group(tmp_path, key) -> None:
     filepath = _write_sample_yaml(
         tmp_path,
         f"""
@@ -544,7 +548,7 @@ def test_makefile__sample__features__group(tmp_path, key):
 
 
 @pytest.mark.parametrize("key", FEATURES)
-def test_makefile__sample__features__sample(tmp_path, key):
+def test_makefile__sample__features__sample(tmp_path, key) -> None:
     filepath = _write_sample_yaml(
         tmp_path,
         f"""
@@ -564,7 +568,7 @@ def test_makefile__sample__features__sample(tmp_path, key):
 
 
 @pytest.mark.parametrize("key", ("mapDamage", "PCRDuplicates"))
-def test_makefile__sample__features__library__allowed(tmp_path, key):
+def test_makefile__sample__features__library__allowed(tmp_path, key) -> None:
     filepath = _write_sample_yaml(
         tmp_path,
         f"""
@@ -584,7 +588,7 @@ def test_makefile__sample__features__library__allowed(tmp_path, key):
 
 
 @pytest.mark.parametrize("key", ("Coverage", "Depths", "Summary"))
-def test_makefile__sample__features__library__prohibited(tmp_path, key):
+def test_makefile__sample__features__library__prohibited(tmp_path, key) -> None:
     filepath = _write_sample_yaml(
         tmp_path,
         f"""
@@ -603,7 +607,7 @@ def test_makefile__sample__features__library__prohibited(tmp_path, key):
 
 
 @pytest.mark.parametrize("key", FEATURES)
-def test_makefile__sample__features__lane(tmp_path, key):
+def test_makefile__sample__features__lane(tmp_path, key) -> None:
     filepath = _write_sample_yaml(
         tmp_path,
         f"""
@@ -622,7 +626,7 @@ def test_makefile__sample__features__lane(tmp_path, key):
         _read_makefile(filepath)
 
 
-def test_makefile__sample__mapdamage_at_lane_level(tmp_path):
+def test_makefile__sample__mapdamage_at_lane_level(tmp_path: Path) -> None:
     filepath = _write_sample_yaml(
         tmp_path,
         """
@@ -648,7 +652,7 @@ def test_makefile__sample__mapdamage_at_lane_level(tmp_path):
 # Pre-trimmed reads
 
 
-def test_makefile__sample__pretrimmed_reads(tmp_path):
+def test_makefile__sample__pretrimmed_reads(tmp_path: Path) -> None:
     filepath = _write_sample_yaml(
         tmp_path,
         """
@@ -684,7 +688,9 @@ def test_makefile__sample__pretrimmed_reads(tmp_path):
     assert _read_makefile(filepath) == expected
 
 
-def test_makefile__sample__pretrimmed_reads__including_untrimmed(tmp_path):
+def test_makefile__sample__pretrimmed_reads__including_untrimmed(
+    tmp_path: Path,
+) -> None:
     filepath = _write_sample_yaml(
         tmp_path,
         """
@@ -710,7 +716,7 @@ def test_makefile__sample__pretrimmed_reads__including_untrimmed(tmp_path):
 
 
 @pytest.mark.parametrize("offset", (64, "Solexa"))
-def test_makefile__validation__trimmed_qualities_must_be_33(tmp_path, offset):
+def test_makefile__validation__trimmed_qualities_must_be_33(tmp_path, offset) -> None:
     filepath = _write_sample_yaml(
         tmp_path,
         f"""
@@ -728,7 +734,7 @@ def test_makefile__validation__trimmed_qualities_must_be_33(tmp_path, offset):
         _read_makefile(filepath)
 
 
-def test_makefile__validation__paired_must_have_key(tmp_path):
+def test_makefile__validation__paired_must_have_key(tmp_path: Path) -> None:
     filepath = _write_sample_yaml(
         tmp_path,
         """

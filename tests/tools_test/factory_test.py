@@ -21,9 +21,7 @@
 #
 from __future__ import annotations
 
-import os
 import subprocess
-from typing import cast
 
 import pytest
 
@@ -39,35 +37,30 @@ class ProcError(RuntimeError):
     pass
 
 
-def check_run(call, *args, **kwargs):
-    devnull = os.open(os.devnull, os.O_RDONLY)
-    kwargs.setdefault("stdin", devnull)
-    kwargs.setdefault("close_fds", True)
-    kwargs["stdout"] = subprocess.PIPE
-    kwargs["stderr"] = subprocess.PIPE
-
-    returncode = kwargs.pop("expected_returncode", 0)
-
-    proc = subprocess.Popen(call, *args, **kwargs)
-    os.close(devnull)
+def check_run(call: list[str], expected_returncode: int = 0) -> tuple[str, str]:
+    proc = subprocess.Popen(
+        call,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        stdin=subprocess.DEVNULL,
+        encoding="utf-8",
+        errors="replace",
+        close_fds=True,
+    )
 
     stdout, stderr = proc.communicate()
-    if proc.returncode != returncode:
+    if proc.returncode != expected_returncode:
         raise ProcError(
             "Command returned %i: %r:\nSTDOUT: %r\nSTDERR: %r"
             % (proc.returncode, call, stdout, stderr)
         )
 
-    # FIXME: Workaround for wrong function signature for `Popen.communicate`
-    stdout = cast(bytes, stdout).decode("utf-8", "replace")
-    stderr = cast(bytes, stderr).decode("utf-8", "replace")
-
     return stdout, stderr
 
 
 # Simple test of the paleomxi command
-@pytest.mark.slow
-def test_paleomix_command():
+@pytest.mark.slow()
+def test_paleomix_command() -> None:
     stdout, stderr = check_run(["paleomix"])
 
     assert "PALEOMIX - pipelines and tools for NGS data analyses" in stdout
@@ -75,30 +68,30 @@ def test_paleomix_command():
 
 
 # Simple test that all commands can be executed
-@pytest.mark.slow
-@pytest.mark.parametrize("command", main._COMMANDS)
-def test_factory__command_usage(command):
+@pytest.mark.slow()
+@pytest.mark.parametrize("command", main.COMMANDS)
+def test_factory__command_usage(command: str) -> None:
     cmd = factory.new(command)
     call = cmd.to_call("%(TEMP_DIR)s")
 
-    stdout, stderr = check_run(call + ["--help"])
+    stdout, stderr = check_run([*call, "--help"])
 
     name = command.replace("_pipeline", "")
-    assert stdout.startswith("usage: paleomix {}".format(name))
+    assert stdout.startswith(f"usage: paleomix {name}")
     assert not stderr
 
 
 # Simple test that all commands support '--version'
-@pytest.mark.slow
-@pytest.mark.parametrize("arg", ("-v", "--version"))
-@pytest.mark.parametrize("command", main._COMMANDS)
-def test_factory__command_versions(arg, command):
+@pytest.mark.slow()
+@pytest.mark.parametrize("arg", ["-v", "--version"])
+@pytest.mark.parametrize("command", main.COMMANDS)
+def test_factory__command_versions(arg: str, command: str) -> None:
     cmd = factory.new(command)
     call = cmd.to_call("%(TEMP_DIR)s")
 
-    stdout, stderr = check_run(call + [arg])
+    stdout, stderr = check_run([*call, arg])
 
     name = command.replace("_pipeline", "")
-    assert stdout.startswith("paleomix {}".format(name))
-    assert stdout.endswith(" v{}\n".format(paleomix.__version__))
+    assert stdout.startswith(f"paleomix {name}")
+    assert stdout.endswith(f" v{paleomix.__version__}\n")
     assert not stderr

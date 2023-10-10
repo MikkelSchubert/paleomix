@@ -21,8 +21,7 @@
 #
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any, Dict, List, Type, Union
+from typing import TYPE_CHECKING, Any, Type, Union
 from unittest.mock import Mock, call
 
 import pytest
@@ -41,6 +40,10 @@ from paleomix.common.command import (
 )
 from paleomix.common.versions import Requirement
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
+
 _SET_CLASSES = (ParallelCmds, SequentialCmds)
 SetTypes = Union[Type[ParallelCmds], Type[SequentialCmds]]
 
@@ -50,7 +53,7 @@ SetTypes = Union[Type[ParallelCmds], Type[SequentialCmds]]
 
 
 @pytest.mark.parametrize("cls", _SET_CLASSES)
-def test_atomicsets__properties(cls: SetTypes):
+def test_atomicsets__properties(cls: SetTypes) -> None:
     requirement_1 = Requirement(call=["bwa"], regexp=r"(\d+)")
     requirement_2 = Requirement(call=["bowtie2"], regexp=r"(\d+)")
 
@@ -106,7 +109,7 @@ _NO_CLOBBERING_KWARGS = (
 # Ensure that commands in a set doesn't clobber eachothers OUT files
 @pytest.mark.parametrize("cls", _SET_CLASSES)
 @pytest.mark.parametrize("kwargs", _NO_CLOBBERING_KWARGS)
-def test_atomicsets__no_clobbering(cls: SetTypes, kwargs: Dict[str, Any]):
+def test_atomicsets__no_clobbering(cls: SetTypes, kwargs: dict[str, Any]) -> None:
     cmd_1 = AtomicCmd(["true", OutputFile("/foo/out.txt")])
     cmd_2 = AtomicCmd("true", **kwargs)
     with pytest.raises(CmdError):
@@ -119,14 +122,14 @@ def test_atomicsets__no_clobbering(cls: SetTypes, kwargs: Dict[str, Any]):
 
 
 @pytest.mark.parametrize("cls", _SET_CLASSES)
-def test_atomicsets__commit(cls: SetTypes):
-    mock = Mock()
+def test_atomicsets__commit(cls: SetTypes) -> None:
+    mock: Any = Mock()
     cmd_1 = AtomicCmd(["ls"])
-    cmd_1.commit = mock.commit_1  # type: ignore
+    cmd_1.commit = mock.commit_1
     cmd_2 = AtomicCmd(["ls"])
-    cmd_2.commit = mock.commit_2  # type: ignore
+    cmd_2.commit = mock.commit_2
     cmd_3 = AtomicCmd(["ls"])
-    cmd_3.commit = mock.commit_3  # type: ignore
+    cmd_3.commit = mock.commit_3
 
     cls((cmd_1, cmd_2, cmd_3)).commit("xTMPx")
 
@@ -138,20 +141,22 @@ def test_atomicsets__commit(cls: SetTypes):
 
 
 @pytest.mark.parametrize("cls", _SET_CLASSES)
-def test_atomicsets__commit__remove_files_on_failure(tmp_path: Path, cls: SetTypes):
+def test_atomicsets__commit__remove_files_on_failure(
+    tmp_path: Path, cls: SetTypes
+) -> None:
     (tmp_path / "tmp").mkdir()
     out_path = tmp_path / "out"
 
     cmd_1 = AtomicCmd(["touch", OutputFile(str(out_path / "file1"))])
     cmd_2 = AtomicCmd(["touch", OutputFile(str(out_path / "file2"))])
     cmd_2.commit = Mock()
-    cmd_2.commit.side_effect = OSError()
+    cmd_2.commit.side_effect = OSError("mocked failure")
 
     cmdset = cls((cmd_1, cmd_2))
     cmdset.run(str(tmp_path / "tmp"))
     assert cmdset.join() == [0, 0]
 
-    with pytest.raises(OSError):
+    with pytest.raises(OSError, match="mocked failure"):
         cmdset.commit(str(tmp_path / "tmp"))
 
     tmp_files = [it.name for it in (tmp_path / "tmp").iterdir()]
@@ -162,21 +167,21 @@ def test_atomicsets__commit__remove_files_on_failure(tmp_path: Path, cls: SetTyp
 
 
 @pytest.mark.parametrize("cls", _SET_CLASSES)
-def test_atomicsets__stdout(cls: SetTypes):
+def test_atomicsets__stdout(cls: SetTypes) -> None:
     cmds = cls([AtomicCmd("ls")])
     with pytest.raises(CmdError):
-        cmds.stdout
+        cmds.stdout  #   noqa: B018
 
 
 @pytest.mark.parametrize("cls", _SET_CLASSES)
-def test_atomicsets__terminate(cls: SetTypes):
-    mock = Mock()
+def test_atomicsets__terminate(cls: SetTypes) -> None:
+    mock: Any = Mock()
     cmd_1 = AtomicCmd(["ls"])
-    cmd_1.terminate = mock.terminate_1  # type: ignore
+    cmd_1.terminate = mock.terminate_1
     cmd_2 = AtomicCmd(["ls"])
-    cmd_2.terminate = mock.terminate_2  # type: ignore
+    cmd_2.terminate = mock.terminate_2
     cmd_3 = AtomicCmd(["ls"])
-    cmd_3.terminate = mock.terminate_3  # type: ignore
+    cmd_3.terminate = mock.terminate_3
 
     cmds = cls((cmd_3, cmd_2, cmd_1))
     cmds.terminate()
@@ -189,16 +194,16 @@ def test_atomicsets__terminate(cls: SetTypes):
 
 
 @pytest.mark.parametrize("cls", _SET_CLASSES)
-def test_atomicsets__str__(cls: SetTypes):
+def test_atomicsets__str__(cls: SetTypes) -> None:
     cmds = cls([AtomicCmd("ls")])
     assert paleomix.common.command.pformat(cmds) == str(cmds)
 
 
 @pytest.mark.parametrize("cls", _SET_CLASSES)
-def test_atomicsets__duplicate_cmds(cls: SetTypes):
+def test_atomicsets__duplicate_cmds(cls: SetTypes) -> None:
     cmd_1 = AtomicCmd("true")
     cmd_2 = AtomicCmd("false")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Same command included multiple times"):
         cls([cmd_1, cmd_2, cmd_1])
 
 
@@ -207,14 +212,14 @@ def test_atomicsets__duplicate_cmds(cls: SetTypes):
 # Parallel commands
 
 
-def test_parallel_commands__run():
-    mock = Mock()
+def test_parallel_commands__run() -> None:
+    mock: Any = Mock()
     cmd_1 = AtomicCmd(["ls"])
-    cmd_1.run = mock.run_1  # type: ignore
+    cmd_1.run = mock.run_1
     cmd_2 = AtomicCmd(["ls"])
-    cmd_2.run = mock.run_2  # type: ignore
+    cmd_2.run = mock.run_2
     cmd_3 = AtomicCmd(["ls"])
-    cmd_3.run = mock.run_3  # type: ignore
+    cmd_3.run = mock.run_3
 
     cmds = ParallelCmds((cmd_1, cmd_2, cmd_3))
     cmds.run("xTMPx")
@@ -226,8 +231,8 @@ def test_parallel_commands__run():
     ]
 
 
-@pytest.mark.parametrize("value", (True, False))
-def test_parallel_commands__ready_single(value: bool):
+@pytest.mark.parametrize("value", [True, False])
+def test_parallel_commands__ready_single(*, value: bool) -> None:
     cmd = AtomicCmd(["ls"])
     cmd.ready = Mock()
     cmd.ready.return_value = value
@@ -245,8 +250,10 @@ _READY_TWO_VALUES = (
 )
 
 
-@pytest.mark.parametrize("first, second, result", _READY_TWO_VALUES)
-def test_parallel_commands__ready_two(first: bool, second: bool, result: bool):
+@pytest.mark.parametrize(("first", "second", "result"), _READY_TWO_VALUES)
+def test_parallel_commands__ready_two(
+    *, first: bool, second: bool, result: bool
+) -> None:
     cmd_1 = AtomicCmd(["ls"])
     cmd_1.ready = Mock()
     cmd_1.ready.return_value = first
@@ -261,14 +268,14 @@ def test_parallel_commands__ready_two(first: bool, second: bool, result: bool):
     assert bool(first) == bool(cmd_2.ready.call_count)
 
 
-def test_parallel_commands__join_before_run():
-    mock = Mock()
+def test_parallel_commands__join_before_run() -> None:
+    mock: Any = Mock()
     cmd_1 = AtomicCmd(["ls"])
-    cmd_1.join = mock.join_1  # type: ignore
+    cmd_1.join = mock.join_1
     cmd_2 = AtomicCmd(["ls"])
-    cmd_2.join = mock.join_2  # type: ignore
+    cmd_2.join = mock.join_2
     cmd_3 = AtomicCmd(["ls"])
-    cmd_3.join = mock.join_3  # type: ignore
+    cmd_3.join = mock.join_3
 
     cmds = ParallelCmds((cmd_3, cmd_2, cmd_1))
     assert cmds.join() == [None, None, None]
@@ -276,58 +283,57 @@ def test_parallel_commands__join_before_run():
     assert mock.mock_calls == []
 
 
-def test_parallel_commands__join_after_run(tmp_path: Path):
+def test_parallel_commands__join_after_run(tmp_path: Path) -> None:
     cmds = ParallelCmds([AtomicCmd("true") for _ in range(3)])
     cmds.run(str(tmp_path))
     assert cmds.join() == [0, 0, 0]
 
 
-def _setup_mocks_for_failure(*do_mocks: bool) -> List[AtomicCmd]:
-    results = []  # type: List[AtomicCmd]
-    for do_mock in do_mocks:
-        if do_mock:
-            mock = AtomicCmd(("sleep", 10))
-        else:
-            mock = AtomicCmd("false")
-        results.append(mock)
-    return results
+def _sleep_mock() -> AtomicCmd:
+    return AtomicCmd(("sleep", 10))
+
+
+def _false_mock() -> AtomicCmd:
+    return AtomicCmd("false")
 
 
 def test_parallel_commands__join_failure_1(tmp_path: Path) -> None:
-    mocks = _setup_mocks_for_failure(False, True, True)
+    mocks = [_false_mock(), _sleep_mock(), _sleep_mock()]
     cmds = ParallelCmds(mocks)
     cmds.run(str(tmp_path))
     assert cmds.join() == [1, "SIGTERM", "SIGTERM"]
 
 
 def test_parallel_commands__join_failure_2(tmp_path: Path) -> None:
-    mocks = _setup_mocks_for_failure(True, False, True)
+    mocks = [_sleep_mock(), _false_mock(), _sleep_mock()]
     cmds = ParallelCmds(mocks)
     cmds.run(str(tmp_path))
     assert cmds.join() == ["SIGTERM", 1, "SIGTERM"]
 
 
 def test_parallel_commands__join_failure_3(tmp_path: Path) -> None:
-    mocks = _setup_mocks_for_failure(True, True, False)
+    mocks = [_sleep_mock(), _sleep_mock(), _false_mock()]
     cmds = ParallelCmds(mocks)
     cmds.run(str(tmp_path))
     assert cmds.join() == ["SIGTERM", "SIGTERM", 1]
 
 
-@pytest.mark.parametrize("cls", (SequentialCmds, ParallelCmds))
-def test_parallel_commands__reject_sets(cls):
+@pytest.mark.parametrize("cls", [SequentialCmds, ParallelCmds])
+def test_parallel_commands__reject_sets(
+    cls: type[SequentialCmds | ParallelCmds],
+) -> None:
     command = AtomicCmd(["ls"])
     seqcmd = cls([command])
     with pytest.raises(CmdError):
-        ParallelCmds([seqcmd])  # type: ignore
+        ParallelCmds([seqcmd])  # pyright: ignore[reportGeneralTypeIssues]
 
 
-def test_parallel_commands__reject_noncommand():
+def test_parallel_commands__reject_noncommand() -> None:
     with pytest.raises(CmdError):
-        ParallelCmds([object()])  # type: ignore
+        ParallelCmds([object()])  # pyright: ignore[reportGeneralTypeIssues]
 
 
-def test_parallel_commands__reject_empty_commandset():
+def test_parallel_commands__reject_empty_commandset() -> None:
     with pytest.raises(CmdError):
         ParallelCmds([])
 
@@ -337,20 +343,20 @@ def test_parallel_commands__reject_empty_commandset():
 # Sequential commands
 
 
-def test_sequential_commands__atomiccmds():
-    mock = Mock()
+def test_sequential_commands__atomiccmds() -> None:
+    mock: Any = Mock()
     cmd_1 = AtomicCmd(["ls"])
-    cmd_1.run = mock.run_1  # type: ignore
-    cmd_1.join = mock.join_1  # type: ignore
-    cmd_1.join.return_value = [0]  # type: ignore
+    cmd_1.run = mock.run_1
+    cmd_1.join = mock.join_1
+    cmd_1.join.return_value = [0]
     cmd_2 = AtomicCmd(["ls"])
-    cmd_2.run = mock.run_2  # type: ignore
-    cmd_2.join = mock.join_2  # type: ignore
-    cmd_2.join.return_value = [0]  # type: ignore
+    cmd_2.run = mock.run_2
+    cmd_2.join = mock.join_2
+    cmd_2.join.return_value = [0]
     cmd_3 = AtomicCmd(["ls"])
-    cmd_3.run = mock.run_3  # type: ignore
-    cmd_3.join = mock.join_3  # type: ignore
-    cmd_3.join.return_value = [0]  # type: ignore
+    cmd_3.run = mock.run_3
+    cmd_3.join = mock.join_3
+    cmd_3.join.return_value = [0]
 
     cmds = SequentialCmds((cmd_1, cmd_2, cmd_3))
     assert not cmds.ready()
@@ -398,23 +404,23 @@ def test_sequential_commands__abort_on_error_3(tmp_path: Path) -> None:
     assert cmds.join() == [0, 0, 1]
 
 
-def test_sequential_commands__accept_parallel():
+def test_sequential_commands__accept_parallel() -> None:
     command = AtomicCmd(["ls"])
     parcmd = ParallelCmds([command])
     SequentialCmds([parcmd])
 
 
-def test_sequential_commands__accept_sequential():
+def test_sequential_commands__accept_sequential() -> None:
     command = AtomicCmd(["ls"])
     seqcmd = SequentialCmds([command])
     SequentialCmds([seqcmd])
 
 
-def test_sequential_commands__reject_noncommand():
+def test_sequential_commands__reject_noncommand() -> None:
     with pytest.raises(CmdError):
-        SequentialCmds([object()])  # type: ignore
+        SequentialCmds([object()])  # pyright: ignore[reportGeneralTypeIssues]
 
 
-def test_sequential_commands__reject_empty_commandset():
+def test_sequential_commands__reject_empty_commandset() -> None:
     with pytest.raises(CmdError):
         SequentialCmds([])

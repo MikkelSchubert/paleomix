@@ -22,47 +22,53 @@
 from __future__ import annotations
 
 import re
+import subprocess
 import sys
-from typing import Tuple
+from typing import TYPE_CHECKING
+from unittest.mock import Mock, patch
 
 import pytest
 
 from paleomix.common.versions import Requirement, RequirementError
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
 
 ###############################################################################
 ###############################################################################
 # Requirement -- constructor
 
 
-def test_requirement__init__str():
+def test_requirement__init__str() -> None:
     obj = Requirement("true")
 
     assert obj.name == "true"
     assert obj.call == ("true",)
 
 
-def test_requirement__init__list():
+def test_requirement__init__list() -> None:
     obj = Requirement(["also", "true"])
 
     assert obj.name == "also"
     assert obj.call == ("also", "true")
 
 
-def test_requirement__init__self_call__str():
+def test_requirement__init__self_call__str() -> None:
     obj = Requirement("%(PYTHON)s")
 
     assert obj.name == "%(PYTHON)s"
     assert obj.call == (sys.executable,)
 
 
-def test_requirement__init__self_call__list():
+def test_requirement__init__self_call__list() -> None:
     obj = Requirement(["%(PYTHON)s", "/path/to/blah.py"])
 
     assert obj.name == "%(PYTHON)s"
     assert obj.call == (sys.executable, "/path/to/blah.py")
 
 
-def test_requirement__init__defaults():
+def test_requirement__init__defaults() -> None:
     obj = Requirement(call=("echo", "foo"), regexp=r"(\d+)\.(\d+)")
 
     assert obj.call == ("echo", "foo")
@@ -70,7 +76,7 @@ def test_requirement__init__defaults():
     assert obj.name == "echo"
 
 
-def test_requirement__init__non_defaults():
+def test_requirement__init__non_defaults() -> None:
     obj = Requirement(
         call=("bash", "foo"),
         regexp=r"(\d+)\.(\d+)",
@@ -82,7 +88,7 @@ def test_requirement__init__non_defaults():
     assert obj.name == "A name"
 
 
-def test_requirement__checks_require_search():
+def test_requirement__checks_require_search() -> None:
     with pytest.raises(RequirementError, match="specifiers require a regexp str"):
         Requirement("true", specifiers=">1.2.3")
 
@@ -92,7 +98,9 @@ def test_requirement__checks_require_search():
 # Requirement -- version
 
 
-def _echo_version(version: str, dst: str = "stdout", returncode: int = 0):
+def _echo_version(
+    version: str, dst: str = "stdout", returncode: int = 0
+) -> tuple[str, ...]:
     tmpl = "import sys; sys.%s.write(%r); sys.exit(%s);"
     return (sys.executable, "-c", tmpl % (dst, version, returncode))
 
@@ -107,14 +115,16 @@ _VERSION_CALL_RESULTS = (
 
 
 @pytest.mark.parametrize("pipe", _PIPES)
-@pytest.mark.parametrize("regexp, equals", _VERSION_CALL_RESULTS)
-def test_requirement__version__call(pipe: str, regexp: str, equals: Tuple[int, ...]):
+@pytest.mark.parametrize(("regexp", "equals"), _VERSION_CALL_RESULTS)
+def test_requirement__version__call(
+    pipe: str, regexp: str, equals: tuple[int, ...]
+) -> None:
     call = _echo_version("v3.5.2\n", dst=pipe)
     obj = Requirement(call=call, regexp=regexp)
     assert obj.version() == equals
 
 
-def test_requirement__version__version_str_not_found():
+def test_requirement__version__version_str_not_found() -> None:
     call = _echo_version("A typical error\n")
     obj = Requirement(call=call, regexp=r"v(\d+\.\d+)")
 
@@ -122,53 +132,54 @@ def test_requirement__version__version_str_not_found():
         obj.version()
 
 
-def test_requirement__version__command_not_found():
+def test_requirement__version__command_not_found() -> None:
     obj = Requirement(call=("xyzabcdefoo",), regexp=r"v(\d+\.\d+)")
 
     with pytest.raises(RequirementError, match="No such file or directory"):
         obj.version()
 
 
-def test_requirement__version__command_not_executable():
+def test_requirement__version__command_not_executable() -> None:
     obj = Requirement(call=("./README.rst",), regexp=r"v(\d+\.\d+)")
 
     with pytest.raises(RequirementError, match="[Errno 13]"):
         obj.version()
 
 
-def test_requirement__version__return_code_is_ignored():
+def test_requirement__version__return_code_is_ignored() -> None:
     obj = Requirement(_echo_version("v1.2.3", returncode=1), regexp=r"v(\d+\.\d+)")
     assert obj.version() == "1.2"
     assert obj.version_str() == "v1.2"
 
 
-def test_requirement__version__call_is_cached():
+def test_requirement__version__call_is_cached() -> None:
     call = ("echo", "v1.2.3")
     obj = Requirement(call, regexp=r"v(\d+\.\d+)")
 
-    assert obj.call == ("echo", "v1.2.3")
-    assert obj.version() == "1.2"
+    wrapper = Mock(wraps=subprocess.run)
+    with patch("subprocess.run", wrapper):
+        assert obj.call == ("echo", "v1.2.3")
+        assert obj.version() == "1.2"
+        assert obj.version() == "1.2"
 
-    obj._call = ("echo", "v3.2.1")
-    assert obj.call == ("echo", "v3.2.1")
-    assert obj.version() == "1.2"
+    assert len(wrapper.mock_calls) == 1
 
 
-def test_requirement__version__found_optional_fields_are_included():
+def test_requirement__version__found_optional_fields_are_included() -> None:
     call = ("echo", "v1.2.5")
     obj = Requirement(call, regexp=r"v(\d+\.\d+)(\.\d+)?")
 
     assert obj.version() == "1.2.5"
 
 
-def test_requirement__version__missing_optional_fields_are_trimmed():
+def test_requirement__version__missing_optional_fields_are_trimmed() -> None:
     call = ("echo", "v1.2")
     obj = Requirement(call, regexp=r"v(\d+\.\d+)(\.\d+)?")
 
     assert obj.version() == "1.2"
 
 
-def test_requirement__version__calls_without_checks_still_invoked_1():
+def test_requirement__version__calls_without_checks_still_invoked_1() -> None:
     call = ("echo", "v1.2")
     obj = Requirement(call)
 
@@ -176,7 +187,9 @@ def test_requirement__version__calls_without_checks_still_invoked_1():
     assert obj.version_str() == "N/A"
 
 
-def test_requirement__version__calls_without_checks_still_invoked_2(tmp_path):
+def test_requirement__version__calls_without_checks_still_invoked_2(
+    tmp_path: Path,
+) -> None:
     call = (str(tmp_path / "echo"), "v1.2")
     obj = Requirement(call)
 
@@ -189,13 +202,13 @@ def test_requirement__version__calls_without_checks_still_invoked_2(tmp_path):
 # Requirement -- executable
 
 
-def test_requirement__executable__no_cli_args():
+def test_requirement__executable__no_cli_args() -> None:
     obj = Requirement(call=["samtools"], regexp=r"v(\d+\.\d+)")
 
     assert obj.executable == "samtools"
 
 
-def test_requirement__executable__with_cli_arguments():
+def test_requirement__executable__with_cli_arguments() -> None:
     obj = Requirement(call=["samtools", "--version"], regexp=r"v(\d+\.\d+)")
 
     assert obj.executable == "samtools"
@@ -206,7 +219,7 @@ def test_requirement__executable__with_cli_arguments():
 # Requirement -- check
 
 
-def test_requirement__call__check_succeeds():
+def test_requirement__call__check_succeeds() -> None:
     obj = Requirement(
         call=_echo_version("v1.0.2"),
         regexp=r"(\d\.\d)",
@@ -217,7 +230,7 @@ def test_requirement__call__check_succeeds():
     assert obj.check()
 
 
-def test_requirement__call__check_fails():
+def test_requirement__call__check_fails() -> None:
     obj = Requirement(
         call=_echo_version("v1.0.2"),
         regexp=r"(\d\.\d)",
@@ -228,13 +241,13 @@ def test_requirement__call__check_fails():
     assert not obj.check()
 
 
-def test_requirement__call__check_succeeds_if_no_checks():
+def test_requirement__call__check_succeeds_if_no_checks() -> None:
     obj = Requirement(call=_echo_version("v1.0.2"))
 
     assert obj.check()
 
 
-def test_requirement__call__check_fails__jre_outdated():
+def test_requirement__call__check_fails__jre_outdated() -> None:
     expected = (
         "The version of the Java Runtime Environment on this\n"
         "system is too old; please check the the requirement\n"

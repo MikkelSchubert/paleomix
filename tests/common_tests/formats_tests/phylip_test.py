@@ -85,7 +85,7 @@ _MSA_LONG_NAMES = MSA(
 # Tests of 'interleaved_phy'
 
 
-def test_interleaved_phy__short_sequences():
+def test_interleaved_phy__short_sequences() -> None:
     expected = """2 44
 
 seq1        ACGTTGATAA  CCAGGAGGGA  TTCGCGATTG  GTGGTAACGT  AGCC
@@ -93,7 +93,7 @@ seq2        TGCAGAGTAC  GACGTCTCCT  AGATCCTGGA  CAATTTAAAC  CGAA"""
     assert interleaved_phy(_MSA_MEDIUM_SEQUENCES) == expected
 
 
-def test_interleaved_phy__multi_line_sequences():
+def test_interleaved_phy__multi_line_sequences() -> None:
     expected = """2 140
 
 seq1        CGGATCTGCT  CCTCCACTGG  CCACGTTTAC  TGTCCCCCAA  CCGTTCGTCC
@@ -107,7 +107,7 @@ GGTCAGGTGC  GCCCCTGTAA  ATAATTAGAT"""
     assert interleaved_phy(_MSA_LONG_SEQUENCES) == expected
 
 
-def test_interleaved_phy__with_flag():
+def test_interleaved_phy__with_flag() -> None:
     expected = """2 15 I
 
 seq1        ACGTTGATAA  CCAGG
@@ -115,7 +115,7 @@ seq2        TGCAGAGTAC  GACGT"""
     assert interleaved_phy(_MSA_SHORT_SEQUENCES, add_flag=True) == expected
 
 
-def test_interleaved_phy__medium_names():
+def test_interleaved_phy__medium_names() -> None:
     expected = """2 15
 
 A_really_long_sequence  ACGTTGATAA  CCAGG
@@ -123,7 +123,7 @@ Another_real_long_one!  TGCAGAGTAC  GACGT"""
     assert interleaved_phy(_MSA_MEDIUM_NAMES) == expected
 
 
-def test_interleaved_phy__long_names():
+def test_interleaved_phy__long_names() -> None:
     expected = """2 15
 
 A_really_long_sequence_name_th      ACGTTGATAA  CCAGG
@@ -131,7 +131,7 @@ Another_really_long_sequence_n      TGCAGAGTAC  GACGT"""
     assert interleaved_phy(_MSA_LONG_NAMES) == expected
 
 
-def test_sequentual_phy__different_length_names_1():
+def test_sequentual_phy__different_length_names_1() -> None:
     msa = MSA(
         [
             FASTA("A_short_name", None, "ACGTTGATAACCAGG"),
@@ -149,7 +149,7 @@ Another_really_long_sequence_n      TGCAGAGTAC  GACGT"""
     assert interleaved_phy(msa) == expected
 
 
-def test_sequentual_phy__different_length_names_2():
+def test_sequentual_phy__different_length_names_2() -> None:
     msa = MSA(
         [
             FASTA("Burchelli_4", None, "ACGTTGATAACCAGG"),
@@ -163,7 +163,7 @@ Donkey                  TGCAGAGTAC  GACGT"""
     assert interleaved_phy(msa) == expected
 
 
-def test_interleaved_phy__different_lengths():
+def test_interleaved_phy__different_lengths() -> None:
     with patch("paleomix.common.formats.msa.MSA.validate", wrap=MSA.validate) as mock:
         interleaved_phy(_MSA_MEDIUM_NAMES)
 

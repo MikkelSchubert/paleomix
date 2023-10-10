@@ -19,13 +19,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+# pyright: reportPrivateUsage=none
+# ruff: noqa: SLF001, UP032
+#
 from __future__ import annotations
 
 import os
 import shlex
 import signal
-from pathlib import Path
-from typing import Any, Type, Union
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -41,12 +43,16 @@ from paleomix.common.command import (
     pformat,
 )
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
+
 ###############################################################################
 ###############################################################################
 # pformat
 
 
-def test_pformat__simple():
+def test_pformat__simple() -> None:
     cmd = AtomicCmd(("touch", "something"))
     assert pformat(cmd) == (
         "Command = touch something\n"
@@ -171,7 +177,7 @@ def test_pformat__simple__temp_root_in_arguments(tmp_path: Path) -> None:
 # INFILE
 
 
-def test_pformat__atomiccmd__simple_with_infile():
+def test_pformat__atomiccmd__simple_with_infile() -> None:
     cmd = AtomicCmd(("cat", InputFile("/etc/fstab")))
     assert pformat(cmd) == (
         "Command = cat /etc/fstab\n"
@@ -180,7 +186,7 @@ def test_pformat__atomiccmd__simple_with_infile():
     ) % (id(cmd), id(cmd))
 
 
-def test_pformat__atomiccmd__simple_with_infile__set_cwd():
+def test_pformat__atomiccmd__simple_with_infile__set_cwd() -> None:
     cmd = AtomicCmd(("cat", InputFile("/etc/fstab")), set_cwd=True)
     assert pformat(cmd) == (
         "Command = cat /etc/fstab\n"
@@ -190,7 +196,7 @@ def test_pformat__atomiccmd__simple_with_infile__set_cwd():
     ) % (id(cmd), id(cmd))
 
 
-def test_pformat__atomiccmd__simple_with_temp_infile():
+def test_pformat__atomiccmd__simple_with_temp_infile() -> None:
     cmd = AtomicCmd(("cat", TempInputFile("infile.txt")))
     assert pformat(cmd) == (
         "Command = cat '${TEMP_DIR}/infile.txt'\n"
@@ -199,7 +205,7 @@ def test_pformat__atomiccmd__simple_with_temp_infile():
     ) % (id(cmd), id(cmd))
 
 
-def test_pformat__atomiccmd__simple_with_temp_infile__set_cwd():
+def test_pformat__atomiccmd__simple_with_temp_infile__set_cwd() -> None:
     cmd = AtomicCmd(("zcat", TempInputFile("infile.gz")), set_cwd=True)
     assert pformat(cmd) == (
         "Command = zcat infile.gz\n"
@@ -214,7 +220,7 @@ def test_pformat__atomiccmd__simple_with_temp_infile__set_cwd():
 # OUTFILE
 
 
-def test_pformat__atomiccmd__simple_with_outfile():
+def test_pformat__atomiccmd__simple_with_outfile() -> None:
     cmd = AtomicCmd(("touch", OutputFile("/etc/bashrc")))
     assert pformat(cmd) == (
         "Command = touch '${TEMP_DIR}/bashrc'\n"
@@ -223,7 +229,7 @@ def test_pformat__atomiccmd__simple_with_outfile():
     ) % (id(cmd), id(cmd))
 
 
-def test_pformat__atomiccmd__simple_with_outfile__set_cwd():
+def test_pformat__atomiccmd__simple_with_outfile__set_cwd() -> None:
     cmd = AtomicCmd(("touch", OutputFile("/etc/bashrc")), set_cwd=True)
 
     assert pformat(cmd) == (
@@ -234,7 +240,7 @@ def test_pformat__atomiccmd__simple_with_outfile__set_cwd():
     ) % (id(cmd), id(cmd))
 
 
-def test_pformat__atomiccmd__simple_with_temp_outfile():
+def test_pformat__atomiccmd__simple_with_temp_outfile() -> None:
     cmd = AtomicCmd(("touch", TempOutputFile("bashrc")))
 
     assert pformat(cmd) == (
@@ -244,7 +250,7 @@ def test_pformat__atomiccmd__simple_with_temp_outfile():
     ) % (id(cmd), id(cmd))
 
 
-def test_pformat__atomiccmd__simple_with_temp_outfile__set_cwd():
+def test_pformat__atomiccmd__simple_with_temp_outfile__set_cwd() -> None:
     cmd = AtomicCmd(("touch", TempOutputFile("bashrc")), set_cwd=True)
 
     assert pformat(cmd) == (
@@ -260,7 +266,7 @@ def test_pformat__atomiccmd__simple_with_temp_outfile__set_cwd():
 # STDIN
 
 
-def test_pformat__atomiccmd__simple_with_stdin():
+def test_pformat__atomiccmd__simple_with_stdin() -> None:
     cmd = AtomicCmd("gzip", stdin="/etc/fstab")
     assert pformat(cmd) == (
         "Command = gzip\n"
@@ -270,7 +276,7 @@ def test_pformat__atomiccmd__simple_with_stdin():
     ) % (id(cmd), id(cmd))
 
 
-def test_pformat__atomiccmd__simple_with_stdin__set_cwd():
+def test_pformat__atomiccmd__simple_with_stdin__set_cwd() -> None:
     cmd = AtomicCmd("gzip", stdin="/etc/fstab", set_cwd=True)
     assert pformat(cmd) == (
         "Command = gzip\n"
@@ -281,7 +287,7 @@ def test_pformat__atomiccmd__simple_with_stdin__set_cwd():
     ) % (id(cmd), id(cmd))
 
 
-def test_pformat__atomiccmd__simple_with_temp_stdin():
+def test_pformat__atomiccmd__simple_with_temp_stdin() -> None:
     cmd = AtomicCmd("gzip", stdin=TempInputFile("stabstabstab"))
     assert pformat(cmd) == (
         "Command = gzip\n"
@@ -291,7 +297,7 @@ def test_pformat__atomiccmd__simple_with_temp_stdin():
     ) % (id(cmd), id(cmd))
 
 
-def test_pformat__atomiccmd__simple_with_temp_stdin__set_cwd():
+def test_pformat__atomiccmd__simple_with_temp_stdin__set_cwd() -> None:
     cmd = AtomicCmd("gzip", stdin=TempInputFile("stabstabstab"), set_cwd=True)
     assert pformat(cmd) == (
         "Command = gzip\n"
@@ -302,7 +308,7 @@ def test_pformat__atomiccmd__simple_with_temp_stdin__set_cwd():
     ) % (id(cmd), id(cmd))
 
 
-def test_pformat__atomiccmd__simple_with_stdin__cmd():
+def test_pformat__atomiccmd__simple_with_stdin__cmd() -> None:
     cmd_1 = AtomicCmd("gzip", stdout=AtomicCmd.PIPE)
     cmd_2 = AtomicCmd("gzip", stdin=cmd_1)
     assert pformat(cmd_2) == (
@@ -318,7 +324,7 @@ def test_pformat__atomiccmd__simple_with_stdin__cmd():
 # STDOUT
 
 
-def test_pformat__atomiccmd__simple_with_stdout():
+def test_pformat__atomiccmd__simple_with_stdout() -> None:
     cmd = AtomicCmd(("echo", "Water. Water."), stdout="/dev/ls")
     assert pformat(cmd) == (
         "Command = echo 'Water. Water.'\n"
@@ -327,7 +333,7 @@ def test_pformat__atomiccmd__simple_with_stdout():
     ) % (id(cmd),)
 
 
-def test_pformat__atomiccmd__simple_with_stdout__set_cwd():
+def test_pformat__atomiccmd__simple_with_stdout__set_cwd() -> None:
     cmd = AtomicCmd(("echo", "*pant*. *pant*."), stdout="/dev/barf", set_cwd=True)
     assert pformat(cmd) == (
         "Command = echo '*pant*. *pant*.'\n"
@@ -337,7 +343,7 @@ def test_pformat__atomiccmd__simple_with_stdout__set_cwd():
     ) % (id(cmd),)
 
 
-def test_pformat__atomiccmd__simple_with_temp_stdout():
+def test_pformat__atomiccmd__simple_with_temp_stdout() -> None:
     cmd = AtomicCmd(("echo", "Oil. Oil."), stdout=TempOutputFile("dm"))
     assert pformat(cmd) == (
         "Command = echo 'Oil. Oil.'\n"
@@ -346,7 +352,7 @@ def test_pformat__atomiccmd__simple_with_temp_stdout():
     ) % (id(cmd),)
 
 
-def test_pformat__atomiccmd__simple_with_temp_stdout__set_cwd():
+def test_pformat__atomiccmd__simple_with_temp_stdout__set_cwd() -> None:
     cmd = AtomicCmd(
         ("echo", "Room service. Room service."),
         stdout=TempOutputFile("pv"),
@@ -360,7 +366,7 @@ def test_pformat__atomiccmd__simple_with_temp_stdout__set_cwd():
     ) % (id(cmd),)
 
 
-def test_pformat__atomiccmd__simple_with_stdout_pipe():
+def test_pformat__atomiccmd__simple_with_stdout_pipe() -> None:
     cmd = AtomicCmd(("echo", "!"), stdout=AtomicCmd.PIPE)
     assert pformat(cmd) == (
         "Command = echo '!'\n"
@@ -369,7 +375,7 @@ def test_pformat__atomiccmd__simple_with_stdout_pipe():
     ) % (id(cmd),)
 
 
-def test_pformat__atomiccmd__simple_with_stdout_devnull():
+def test_pformat__atomiccmd__simple_with_stdout_devnull() -> None:
     cmd = AtomicCmd(("echo", "!"), stdout=AtomicCmd.DEVNULL)
     assert pformat(cmd) == (
         "Command = echo '!'\n"
@@ -383,7 +389,7 @@ def test_pformat__atomiccmd__simple_with_stdout_devnull():
 # STDERR
 
 
-def test_pformat__atomiccmd__simple_with_stderr():
+def test_pformat__atomiccmd__simple_with_stderr() -> None:
     cmd = AtomicCmd(("echo", "Water. Water."), stderr="/dev/ls")
     assert pformat(cmd) == (
         "Command = echo 'Water. Water.'\n"
@@ -392,7 +398,7 @@ def test_pformat__atomiccmd__simple_with_stderr():
     ) % (id(cmd),)
 
 
-def test_pformat__atomiccmd__simple_with_stderr__set_cwd():
+def test_pformat__atomiccmd__simple_with_stderr__set_cwd() -> None:
     cmd = AtomicCmd(("echo", "*pant*. *pant*."), stderr="/dev/barf", set_cwd=True)
     assert pformat(cmd) == (
         "Command = echo '*pant*. *pant*.'\n"
@@ -402,7 +408,7 @@ def test_pformat__atomiccmd__simple_with_stderr__set_cwd():
     ) % (id(cmd),)
 
 
-def test_pformat__atomiccmd__simple_with_temp_stderr():
+def test_pformat__atomiccmd__simple_with_temp_stderr() -> None:
     cmd = AtomicCmd(("echo", "Oil. Oil."), stderr=TempOutputFile("dm"))
     assert pformat(cmd) == (
         "Command = echo 'Oil. Oil.'\n"
@@ -411,7 +417,7 @@ def test_pformat__atomiccmd__simple_with_temp_stderr():
     ) % (id(cmd),)
 
 
-def test_pformat__atomiccmd__simple_with_temp_stderr__set_cwd():
+def test_pformat__atomiccmd__simple_with_temp_stderr__set_cwd() -> None:
     cmd = AtomicCmd(
         ("echo", "Room service. Room service."),
         stderr=TempOutputFile("pv"),
@@ -425,7 +431,7 @@ def test_pformat__atomiccmd__simple_with_temp_stderr__set_cwd():
     ) % (id(cmd),)
 
 
-def test_pformat__atomiccmd__simple_with_stderr_devnull():
+def test_pformat__atomiccmd__simple_with_stderr_devnull() -> None:
     cmd = AtomicCmd(("echo", "!"), stderr=AtomicCmd.DEVNULL)
     assert pformat(cmd) == (
         "Command = echo '!'\n"
@@ -440,13 +446,13 @@ def test_pformat__atomiccmd__simple_with_stderr_devnull():
 
 
 @pytest.mark.parametrize(
-    "cls, description",
-    ((ParallelCmds, "Parallel processes"), (SequentialCmds, "Sequential processes")),
+    ("cls", "description"),
+    [(ParallelCmds, "Parallel processes"), (SequentialCmds, "Sequential processes")],
 )
 def test_pformat__sets__simple(
-    cls: Union[Type[ParallelCmds], Type[SequentialCmds]],
+    cls: type[ParallelCmds | SequentialCmds],
     description: str,
-):
+) -> None:
     template = (
         "{description}:\n"
         "  Process 1:\n"
@@ -469,7 +475,7 @@ def test_pformat__sets__simple(
     )
 
 
-def test_pformat__sets__nested():
+def test_pformat__sets__nested() -> None:
     cmd_1 = AtomicCmd(("echo", "foo"), stdout=AtomicCmd.PIPE)
     cmd_2 = AtomicCmd("gzip", stdin=cmd_1)
     cmd_3 = AtomicCmd("sha1sum")
@@ -501,10 +507,10 @@ def test_pformat__sets__nested():
 # Bad input
 
 
-@pytest.mark.parametrize("value", (1, {}, ""))
-def test_pformat__bad_input(value: Any):
+@pytest.mark.parametrize("value", [1, {}, ""])
+def test_pformat__bad_input(value: object) -> None:
     with pytest.raises(TypeError):
-        pformat(value)
+        pformat(value)  # pyright: ignore[reportGeneralTypeIssues]
 
 
 ###############################################################################
@@ -512,19 +518,19 @@ def test_pformat__bad_input(value: Any):
 # _pformat_list
 
 
-def test_pformat_list__empty():
+def test_pformat_list__empty() -> None:
     assert _pformat_list([]) == ""
 
 
-def test_pformat_list__single():
+def test_pformat_list__single() -> None:
     assert _pformat_list([3]) == "3"
 
 
-def test_pformat_list__multiple():
+def test_pformat_list__multiple() -> None:
     assert _pformat_list([3, 2, 1]) == "3 2 1"
 
 
-def test_pformat_list__wrapped():
+def test_pformat_list__wrapped() -> None:
     assert _pformat_list([3, 2, 1], width=1) == "3 \\\n    2 \\\n    1"
     assert _pformat_list([3, 2, 1], width=2) == "3 \\\n    2 \\\n    1"
     assert _pformat_list([3, 2, 1], width=3) == "3 \\\n    2 \\\n    1"
@@ -534,7 +540,7 @@ def test_pformat_list__wrapped():
     assert _pformat_list([3, 2, 1], width=7) == "3 2 1"
 
 
-def test_pformat_list__escaped():
+def test_pformat_list__escaped() -> None:
     assert _pformat_list(["a", "b c"], width=100) == "a 'b c'"
     assert _pformat_list(["a", "$c"], width=100) == "a '$c'"
     assert _pformat_list(["!a", "c"], width=100) == "'!a' c"

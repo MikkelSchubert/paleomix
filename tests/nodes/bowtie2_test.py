@@ -27,7 +27,7 @@ from paleomix.nodes.bowtie2 import Bowtie2IndexNode, Bowtie2Node
 # Indexing
 
 
-def test_index_description():
+def test_index_description() -> None:
     node = Bowtie2IndexNode(input_file="/path/genome.fasta")
 
     assert str(node) == "creating Bowtie2 index for /path/genome.fasta"
@@ -37,7 +37,7 @@ def test_index_description():
 # BWA mem
 
 
-def test_bwa_mem_description__se():
+def test_bwa_mem_description__se() -> None:
     node = Bowtie2Node(
         input_file_1="/path/reads_1.fq.gz",
         input_file_2=None,
@@ -48,7 +48,7 @@ def test_bwa_mem_description__se():
     assert str(node) == "aligning '/path/reads_1.fq.gz' onto my_genome using Bowtie2"
 
 
-def test_bwa_mem_description__pe():
+def test_bwa_mem_description__pe() -> None:
     node = Bowtie2Node(
         input_file_1="/path/reads_1.fq.gz",
         input_file_2="/path/reads_2.fq.gz",

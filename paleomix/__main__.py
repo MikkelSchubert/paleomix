@@ -30,7 +30,7 @@ import paleomix
 import paleomix.common.logging
 import paleomix.common.system
 
-_COMMANDS = {
+COMMANDS = {
     # CMBR NGS pipeline
     "ngs": "paleomix.pipelines.ngs",
     "ngs:finalize_bam": "paleomix.pipelines.ngs.tools.finalize_bam",
@@ -102,7 +102,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"paleomix v{paleomix.__version__}")
         return 0
 
-    command = _COMMANDS.get(argv[0])
+    command = COMMANDS.get(argv[0])
     if command is None:
         log = logging.getLogger(__name__)
         log.error("Unknown command %r", argv[0])

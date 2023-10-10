@@ -22,11 +22,14 @@
 from __future__ import annotations
 
 import sys
-from typing import IO, Any, Iterable, Iterator, Optional, Set
+from typing import IO, TYPE_CHECKING, Iterable, Iterator
 
 from paleomix.common.fileutils import open_rt
 from paleomix.common.formats._common import FormatError
 from paleomix.common.utilities import Immutable, TotallyOrdered
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class FASTQError(FormatError):
@@ -37,11 +40,17 @@ class FASTQ(TotallyOrdered, Immutable):
     __slots__ = ["name", "meta", "sequence", "qualities"]
 
     name: str
-    meta: Optional[str]
+    meta: str | None
     sequence: str
     qualities: str
 
-    def __init__(self, name: str, meta: Optional[str], sequence: str, qualities: str):
+    def __init__(
+        self,
+        name: str,
+        meta: str | None,
+        sequence: str,
+        qualities: str,
+    ) -> None:
         if not (name and isinstance(name, str)):
             raise FASTQError("FASTQ name must be a non-empty string")
         elif not (isinstance(meta, str) or (meta is None)):
@@ -61,12 +70,12 @@ class FASTQ(TotallyOrdered, Immutable):
         """Writes a FASTQ record to fileobj."""
         name = self.name
         if self.meta:
-            name = "%s %s" % (name, self.meta)
+            name = f"{name} {self.meta}"
 
-        fileobj.write("@%s\n%s\n+\n%s\n" % (name, self.sequence, self.qualities))
+        fileobj.write(f"@{name}\n{self.sequence}\n+\n{self.qualities}\n")
 
     @classmethod
-    def from_lines(cls, lines: Iterable[str]) -> Iterator["FASTQ"]:
+    def from_lines(cls, lines: Iterable[str]) -> Iterator[FASTQ]:
         """Parses FASTQ sequences found in a sequence of lines, and returns
         a tuple for each FASTQ record: ((name, meta-information), sequence)
         No assumptions are made about the line-lengths."""
@@ -80,7 +89,7 @@ class FASTQ(TotallyOrdered, Immutable):
                 break  # No sequences left
 
             if not header.startswith("@"):
-                raise FASTQError("Invalid FASTQ header: %r" % (header,))
+                raise FASTQError(f"Invalid FASTQ header: {header!r}]")
 
             header_fields = header.split(None, 1)
             name = header_fields[0]
@@ -90,17 +99,17 @@ class FASTQ(TotallyOrdered, Immutable):
                 sequence = next(lines_iter).rstrip()
                 separator = next(lines_iter).rstrip()
                 qualities = next(lines_iter).rstrip()
-            except StopIteration:
-                raise FASTQError("Partial FASTQ record: %r" % (name,))
+            except StopIteration as error:
+                raise FASTQError(f"Partial FASTQ record: {name}") from error
 
             if not separator.startswith("+"):
                 raise FASTQError(
-                    "Invalid FASTQ separator for %r; expected '+', found %r"
-                    % (name, separator)
+                    f"Invalid FASTQ separator for {name!r}; "
+                    f"expected '+', found {separator!r}"
                 )
             elif len(sequence) != len(qualities):
                 raise FASTQError(
-                    "Sequence length does not match qualities length for %r" % (name,)
+                    f"Sequence length does not match qualities length for {name!r}"
                 )
 
             yield FASTQ(
@@ -108,14 +117,14 @@ class FASTQ(TotallyOrdered, Immutable):
             )
 
     @classmethod
-    def from_file(cls, filename: str) -> Iterator["FASTQ"]:
+    def from_file(cls, filename: str | Path) -> Iterator[FASTQ]:
         """Reads an unindexed FASTQ file, returning a sequence of
         tuples containing the name and sequence of each entry in
         the file. The FASTQ file may be GZIP/BZ2 compressed."""
         with open_rt(filename) as handle:
             yield from FASTQ.from_lines(handle)
 
-    def __lt__(self, other: Any) -> bool:
+    def __lt__(self, other: object) -> bool:
         if not isinstance(other, FASTQ):
             return NotImplemented
 
@@ -130,7 +139,7 @@ class FASTQ(TotallyOrdered, Immutable):
         return hash((self.name, self.meta, self.sequence, self.qualities))
 
     def __repr__(self) -> str:
-        return "FASTQ(%r, %r, %r, %r)" % (
+        return "FASTQ({!r}, {!r}, {!r}, {!r})".format(
             self.name,
             self.meta,
             self.sequence,
@@ -162,10 +171,10 @@ class FASTQualities:
     # low-quality reads with offset 64, or high-quality reads with offset 33
     AMBIGIOUS = "AMBIGIOUS"
 
-    def __init__(self):
-        self._qualities: Set[str] = set()
+    def __init__(self) -> None:
+        self._qualities: set[str] = set()
 
-    def update(self, record: FASTQ):
+    def update(self, record: FASTQ) -> None:
         self._qualities.update(record.qualities)
 
     def offsets(self):

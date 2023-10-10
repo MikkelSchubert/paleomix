@@ -25,18 +25,15 @@ import copy
 import itertools
 from typing import (
     Any,
-    AnyStr,
     Callable,
     Dict,
     FrozenSet,
     Hashable,
     Iterable,
     Iterator,
-    List,
     Sequence,
     Tuple,
     TypeVar,
-    Union,
     overload,
 )
 
@@ -129,13 +126,11 @@ def get_in(
     return dictionary.get(keys[-1], default)
 
 
-def split_before(
-    iterable: Iterable[Any], pred: Callable[[Any], bool]
-) -> Iterator[List[Any]]:
+def split_before(iterable: Iterable[T], pred: Callable[[T], bool]) -> Iterator[list[T]]:
     """Takes a sequence and splits it before every value where pred(v) is true.
     Thus split_before(range(10), key = lambda x: x % 2 == 0) would return the
     sequence [[1], [2,3], [4,5], [6,7], [7,8], [9]]"""
-    items = []  # type: List[Any]
+    items: list[T] = []
     for value in iterable:
         if pred(value) and items:
             yield items
@@ -147,20 +142,25 @@ def split_before(
 
 
 # Copied from the Python 'itertools' module documentation
-def grouper(size: int, iterable: Iterable[Any], fillvalue: Any = None):
+def grouper(
+    size: int,
+    iterable: Iterable[T],
+    fillvalue: object = None,
+) -> itertools.zip_longest[tuple[T]]:
     "grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"
     args = [iter(iterable)] * size
     return itertools.zip_longest(*args, fillvalue=fillvalue)
 
 
 def group_by_pred(
-    pred: Callable[[Any], bool], iterable: Iterable[Any]
-) -> Tuple[List[Any], List[Any]]:
+    pred: Callable[[T], bool],
+    iterable: Iterable[T],
+) -> tuple[list[T], list[T]]:
     """Splits items in a sequence into two lists, one containing
     items matching the predicate, and another containing those that
     do not."""
-    is_true = []  # type: List[Any]
-    is_false = []  # type: List[Any]
+    is_true: list[T] = []
+    is_false: list[T] = []
     for item in iterable:
         if pred(item):
             is_true.append(item)
@@ -171,7 +171,12 @@ def group_by_pred(
 
 
 @overload
-def fragment(size: int, items: AnyStr) -> Iterable[AnyStr]:
+def fragment(size: int, items: str) -> Iterable[str]:
+    ...
+
+
+@overload
+def fragment(size: int, items: bytes) -> Iterable[bytes]:
     ...
 
 
@@ -180,10 +185,7 @@ def fragment(size: int, items: Sequence[T]) -> Iterable[Sequence[T]]:
     ...
 
 
-def fragment(
-    size: int,
-    items: Union[AnyStr, Sequence[T]],
-) -> Iterable[Union[AnyStr, Sequence[T]]]:
+def fragment(size: int, items: Sequence[T]) -> Iterable[Sequence[T]]:
     """Faster alternative to grouper for lists/strings."""
     return (items[i : i + size] for i in range(0, len(items), size))
 

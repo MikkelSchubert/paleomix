@@ -26,14 +26,14 @@ import pytest
 from paleomix.common.layout import Layout, LayoutError
 
 
-def test_layout__minimal():
+def test_layout__minimal() -> None:
     layout = Layout({})
 
     assert layout.kwargs == {}
     assert list(layout) == []
 
 
-def test_layout__simple_layout():
+def test_layout__simple_layout() -> None:
     layout = Layout({"{root}": "my_file"}, root="/root")
 
     assert layout.kwargs == {"root": "/root"}
@@ -41,7 +41,7 @@ def test_layout__simple_layout():
     assert layout["my_file"] == "/root"
 
 
-def test_layout__nested_layout():
+def test_layout__nested_layout() -> None:
     layout = Layout(
         {
             "{root}": {
@@ -59,7 +59,7 @@ def test_layout__nested_layout():
     assert layout["other_file"] == "/root/b"
 
 
-def test_layout__update():
+def test_layout__update() -> None:
     layout1 = Layout({"{root}": {"{name}": "my_file"}})
 
     layout2 = layout1.update(root="/tmp")
@@ -78,84 +78,84 @@ def test_layout__update():
     assert layout4["my_file"] == "/home/username/foobar"
 
 
-def test_layout__get_without_updates():
+def test_layout__get_without_updates() -> None:
     layout1 = Layout({"{root}": {"{name}": "my_file"}})
 
     assert layout1.get("my_file", root="foo", name="bar") == "foo/bar"
     assert layout1.kwargs == {}
 
 
-def test_layout__get_without_updates__override():
+def test_layout__get_without_updates__override() -> None:
     layout1 = Layout({"{root}": {"{name}": "my_file"}}, root="bar")
 
     assert layout1.get("my_file", root="foo", name="bar") == "foo/bar"
     assert layout1.kwargs == {"root": "bar"}
 
 
-def test_layout__get_without_updates__partial():
+def test_layout__get_without_updates__partial() -> None:
     layout1 = Layout({"{root}": {"{name}": "my_file"}}, root="foo")
 
     assert layout1.get("my_file", name="bar") == "foo/bar"
     assert layout1.kwargs == {"root": "foo"}
 
 
-def test_layout__extranous_path_components():
+def test_layout__extranous_path_components() -> None:
     layout = Layout({"{root}": {"{name}": "my_file"}})
 
     assert layout.get("my_file", root="foo/", name="test") == "foo/test"
 
 
-def test_layout__unnamed_field():
+def test_layout__unnamed_field() -> None:
     with pytest.raises(LayoutError, match="unnamed field are not allowed in"):
         Layout({"{}": "my_file"})
 
 
-def test_layout__missing_value():
+def test_layout__missing_value() -> None:
     layout = Layout({"{root}": "my_file"})
 
     with pytest.raises(KeyError, match="root"):
         layout["my_file"]
 
 
-def test_layout__unknown_field__in_init():
+def test_layout__unknown_field__in_init() -> None:
     with pytest.raises(LayoutError, match="unknown key"):
         Layout({"{root}": "my_file"}, foobar="/path/to/somewhere")
 
 
-def test_layout__unknown_field__in_update():
+def test_layout__unknown_field__in_update() -> None:
     layout = Layout({"{root}": "my_file"})
 
     with pytest.raises(LayoutError, match="unknown key"):
         layout.update(foobar="/path/to/somewhere")
 
 
-def test_layout__non_string_name():
+def test_layout__non_string_name() -> None:
     with pytest.raises(LayoutError, match="invalid key 17"):
-        Layout({17: "my_file"})  # type: ignore
+        Layout({17: "my_file"})  # pyright: ignore[reportGeneralTypeIssues]
 
 
-def test_layout__non_string_dict_value():
+def test_layout__non_string_dict_value() -> None:
     with pytest.raises(LayoutError, match="invalid value 17"):
-        Layout({"{root}": 17})  # type: ignore
+        Layout({"{root}": 17})  # pyright: ignore[reportGeneralTypeIssues]
 
 
-def test_layout__duplicate_path_names():
+def test_layout__duplicate_path_names() -> None:
     with pytest.raises(LayoutError, match="'file_1' used multiple times"):
         Layout({"foo": "file_1", "{root}": {"zod": "file_1"}})
 
 
-def test_layout__non_unique_key_field_name():
+def test_layout__non_unique_key_field_name() -> None:
     with pytest.raises(LayoutError, match="'file_1' used as both key and field"):
         Layout({"foo": "file_1", "{root}": {"{file_1}": "file_2"}})
 
 
-def test_layout__get_field():
+def test_layout__get_field() -> None:
     layout = Layout({"{root}": {"b": "other_file"}}, root="/root")
 
     assert layout.get_field("root") == "/root"
 
 
-def test_layout__get_missing_field():
+def test_layout__get_missing_field() -> None:
     layout = Layout({"{root}": {"b": "other_file"}}, root="/root")
 
     with pytest.raises(KeyError):

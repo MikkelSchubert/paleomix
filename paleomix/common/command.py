@@ -61,7 +61,7 @@ class _AtomicFile:
         self.path = fileutils.fspath(path)
 
         if isinstance(self.path, bytes):
-            raise ValueError(path)
+            raise TypeError(f"invalid path {path!r}")
 
     def basename(self):
         return os.path.basename(self.path)
@@ -84,7 +84,7 @@ class _IOFile(_AtomicFile):
         self.temporary = bool(temporary)
 
         if temporary and os.path.dirname(self.path):
-            raise ValueError(self.path)
+            raise ValueError(f"directory component in temporary path {self.path!r}")
 
     def __repr__(self):
         return "%s(%r, %s)" % (self.__class__.__name__, self.path, self.temporary)
@@ -165,9 +165,9 @@ class AtomicCmd:
     def __init__(
         self,
         command: Any,
-        stdin: PipeType = None,
-        stdout: PipeType = None,
-        stderr: PipeType = None,
+        stdin: int | str | Path | InputFile | AtomicCmd | None = None,
+        stdout: int | str | Path | OutputFile | None = None,
+        stderr: int | str | Path | OutputFile | None = None,
         set_cwd: bool = False,
         extra_files: Iterable[_AtomicFile] = (),
         requirements: Iterable[Requirement] = (),
@@ -238,14 +238,14 @@ class AtomicCmd:
             # Ensure that executables with path components are handled properly
             self._command[0] = Executable(self._command[0])
         elif not isinstance(self._command[0], Executable):
-            raise ValueError(self._command[0])
+            raise TypeError(f"exe must be str or Executable, not {self._command[0]}")
 
-        self._stdin = stdin = self._wrap_pipe(InputFile, stdin)
-        self._stdout = stdout = self._wrap_pipe(OutputFile, stdout, "stdout")
-        self._stderr = stderr = self._wrap_pipe(OutputFile, stderr, "stderr")
+        self._stdin = self._wrap_pipe(InputFile, stdin)
+        self._stdout = self._wrap_pipe(OutputFile, stdout, "stdout")
+        self._stderr = self._wrap_pipe(OutputFile, stderr, "stderr")
 
-        pipes: List[_AtomicFile] = []
-        for pipe in (stdin, stdout, stderr):
+        pipes: list[_AtomicFile] = []
+        for pipe in (self._stdin, self._stdout, self._stderr):
             if isinstance(pipe, _AtomicFile):
                 pipes.append(pipe)
 
@@ -582,7 +582,7 @@ class AtomicCmd:
             if isinstance(pipe, filetype):
                 return pipe
 
-            raise ValueError("expected %s, but got %s" % (filetype, pipe))
+            raise ValueError(f"expected {filetype.__name__}, but got {pipe}")
         elif isinstance(pipe, AtomicCmd):
             # Piping with a AtomicCmd is only allowed for STDIN
             if out_name is None:

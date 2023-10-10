@@ -24,26 +24,27 @@ from __future__ import annotations
 import re
 import sys
 from pathlib import Path
+from typing import IO, NoReturn
 
 from paleomix.common.argparse import ArgumentParser
 from paleomix.common.formats import FormatError
 
 # Standard nucleotides + UIPAC codes
-_VALID_CHARS_STR = b"ACGTN" b"RYSWKMBDHV"
+_VALID_CHARS_STR = b"ACGTNRYSWKMBDHV"
 _VALID_CHARS = frozenset(_VALID_CHARS_STR.upper() + _VALID_CHARS_STR.lower())
 _NA, _IN_HEADER, _IN_SEQUENCE, _IN_WHITESPACE = range(4)
 
 _SEQUENCE_NAME = re.compile(b"[!-()+-<>-~][!-~]*")
 
 
-def _raise_error(line, value=None):
+def _raise_error(line: str, value: bytes | None = None) -> NoReturn:
     if value is not None:
         line = line.format(value.decode("utf-8", errors="replace"))
 
     raise FormatError(line)
 
 
-def _validate_fasta_header(line, sequence_names):
+def _validate_fasta_header(line: bytes, sequence_names: set[bytes]) -> None:
     name = line.split(b" ", 1)[0][1:]
     if not name:
         _raise_error("Unnamed fasta sequence")
@@ -55,16 +56,18 @@ def _validate_fasta_header(line, sequence_names):
     sequence_names.add(name)
 
 
-def _validate_fasta_line(line, valid_chars=_VALID_CHARS):
-    invalid_chars = bytes(set(line) - valid_chars)
+def _validate_fasta_line(
+    line: bytes, valid_chars: frozenset[int] = _VALID_CHARS
+) -> None:
+    invalid_chars = bytes(frozenset(line) - valid_chars)
 
     if invalid_chars:
         _raise_error("Invalid characters {!r} in sequence", invalid_chars)
 
 
-def check_fasta_file(handle):
+def check_fasta_file(handle: IO[bytes]) -> None:
     linenum = 0
-    sequence_names = set()
+    sequence_names: set[bytes] = set()
     state, linelength, linelengthchanged = _NA, -1, False
     try:
         for linenum, line in enumerate(handle, start=1):
@@ -112,7 +115,7 @@ def check_fasta_file(handle):
                     assert state == _IN_SEQUENCE, state
                     state = _IN_WHITESPACE
     except FormatError as error:
-        _raise_error("Line {}: {}".format(linenum, error))
+        _raise_error(f"Line {linenum}: {error}")
 
     if state == _NA:
         _raise_error("File does not contain any sequences")
@@ -120,14 +123,14 @@ def check_fasta_file(handle):
         _raise_error("File ends with an empty sequence")
 
 
-def parse_args(argv):
+def parse_args(argv: list[str]):
     parser = ArgumentParser("paleomix :validate_fasta")
     parser.add_argument("fasta", type=Path)
 
     return parser.parse_args(argv)
 
 
-def main(argv):
+def main(argv: list[str]) -> int:
     args = parse_args(argv)
     with args.fasta.open("rb") as handle:
         try:

@@ -105,12 +105,12 @@ def missing_files(filenames: Iterable[PathTypes]) -> List[str]:
     return missing
 
 
-def missing_executables(filenames: Iterable[PathTypes]) -> List[str]:
-    missing: List[str] = []
-    for filename in safe_coerce_to_tuple(filenames):
-        filename = fspath(filename)
-        if not shutil.which(filename):
-            missing.append(filename)
+def missing_executables(filenames: Iterable[PathTypes]) -> list[str]:
+    missing: list[str] = []
+    for filename in filenames:
+        value = fspath(filename)
+        if not shutil.which(value):
+            missing.append(value)
     return missing
 
 

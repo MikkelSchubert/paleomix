@@ -21,23 +21,21 @@
 #
 from __future__ import annotations
 
-import collections
+from typing import AnyStr, Callable, Iterable, NamedTuple, NoReturn, TypeVar
 
 import pytest
 
-from paleomix.common.text import (
-    format_timespan,
-    padded_table,
-    parse_lines,
-    parse_lines_by_contig,
-)
+from paleomix.common import text
+from paleomix.common.text import format_timespan, parse_lines_by_contig
+
+T = TypeVar("T")
 
 ###############################################################################
 ###############################################################################
 # Tests for 'padded_table'
 
 
-def test_format_timespan__seconds():
+def test_format_timespan__seconds() -> None:
     assert format_timespan(0) == "0.0s"
     assert format_timespan(1.2234) == "1.2s"
     assert format_timespan(59.9) == "59.9s"
@@ -54,30 +52,33 @@ def test_format_timespan__seconds():
 # Tests for 'padded_table'
 
 
-def _padded_table(*args, **kwargs):
-    return list(padded_table(*args, **kwargs))
+def padded_table(
+    table: Iterable[str | Iterable[object]],
+    min_padding: int = 4,
+) -> list[str]:
+    return list(text.padded_table(table, min_padding=min_padding))
 
 
-def test_padded_table__empty():
-    assert _padded_table(()) == []
+def test_padded_table__empty() -> None:
+    assert padded_table(()) == []
 
 
-def test_padded_table__single_line():
+def test_padded_table__single_line() -> None:
     table = [(1, 20, 3000)]
     expected = ["1    20    3000"]
-    assert expected == _padded_table(table)
+    assert expected == padded_table(table)
 
 
-def test_padded_table__two_lines():
+def test_padded_table__two_lines() -> None:
     table = [(1, 20, 3000), (3000, 20, 1)]
     expected = ["1       20    3000", "3000    20    1"]
-    assert expected == _padded_table(table)
+    assert expected == padded_table(table)
 
 
-def test_padded_table__three_lines():
+def test_padded_table__three_lines() -> None:
     table = [(1, 20, 3000), (3000, 20, 1), (1, 2, 30)]
     expected = ["1       20    3000", "3000    20    1", "1       2     30"]
-    assert expected == _padded_table(table)
+    assert expected == padded_table(table)
 
 
 _PT_COMMENT = "# An insightful comment goes here"
@@ -93,31 +94,39 @@ _PT_PERMUTATIONS = (
 )
 
 
-@pytest.mark.parametrize("table, expected", _PT_PERMUTATIONS)
-def test_padded_table__with_text(table, expected):
-    assert expected == _padded_table(table)
+@pytest.mark.parametrize(("table", "expected"), _PT_PERMUTATIONS)
+def test_padded_table__with_text(
+    table: tuple[list[object], ...], expected: str
+) -> None:
+    assert expected == padded_table(table)
 
 
 ###############################################################################
 ###############################################################################
 # Tests for 'parse_linse'
-def _this(*args):
-    return args
 
 
-def _parse_lines(*args, **kwargs):
-    return list(parse_lines(*args, **kwargs))
+def _this(value: str, length: int) -> tuple[str, int]:
+    return (value, length)
 
 
-def test_parse_lines__empty_file():
-    def _assert_false():
-        assert False  # pragma: no coverage
+def parse_lines(
+    lines: Iterable[AnyStr],
+    parser: Callable[[AnyStr, int], T],
+) -> list[T]:
+    return list(text.parse_lines(lines, parser))
 
-    assert _parse_lines([], _assert_false) == []
+
+def test_parse_lines__empty_file() -> None:
+    def _assert_false(value: str, length: int) -> NoReturn:
+        pytest.fail("parse should not be called")  # pragma: no coverage
+
+    value: list[str] = []
+    assert parse_lines(value, _assert_false) == []
 
 
-def test_parse_lines__single():
-    assert _parse_lines(["abc line1 \n"], _this) == [("abc line1", 9)]
+def test_parse_lines__single() -> None:
+    assert parse_lines(["abc line1 \n"], _this) == [("abc line1", 9)]
 
 
 _PT_COMMENTS_AND_EMPTY_LINES = (
@@ -131,45 +140,50 @@ _PT_COMMENTS_AND_EMPTY_LINES = (
 
 
 @pytest.mark.parametrize("lines", _PT_COMMENTS_AND_EMPTY_LINES)
-def test_parse_lines__comments_and_empty_lines(lines):
+def test_parse_lines__comments_and_empty_lines(lines: list[str]) -> None:
     expected = [("abc line1", 9), ("def line2", 9)]
-    assert _parse_lines(lines, _this) == expected
+    assert parse_lines(lines, _this) == expected
 
 
-@pytest.mark.parametrize("postfix", ("\r", "\n", "\r\n"))
-def test_parse_lines__padding__newlines(postfix):
+@pytest.mark.parametrize("postfix", ["\r", "\n", "\r\n"])
+def test_parse_lines__padding__newlines(postfix: str) -> None:
     expected = [("abc line1", 9), ("def line2", 9)]
 
     line_1 = "abc line1 " + postfix
     line_2 = "def line2 " + postfix
-    assert expected == _parse_lines([line_1, line_2], _this)
+    assert expected == parse_lines([line_1, line_2], _this)
 
 
-def test_parse_lines__uncallable():
+def test_parse_lines__uncallable() -> None:
+    value: list[str] = []
     with pytest.raises(TypeError):
-        _parse_lines([], 1)
+        parse_lines(value, 1)  # pyright: ignore[reportGeneralTypeIssues]
 
 
-def test_parse_lines__binary():
+def test_parse_lines__binary() -> None:
     lines = [b"# foo", b"12", b"3456"]
     expected = [(12, 2), (3456, 4)]
 
-    def parser(value, length):
+    def parser(value: AnyStr, length: int) -> tuple[int, int]:
         return (int(value), length)
 
-    assert _parse_lines(lines, parser) == expected
+    assert parse_lines(lines, parser) == expected
 
 
 ###############################################################################
 ###############################################################################
 # Tests for 'parse_lines_by_contig'
-_RecordMock = collections.namedtuple("_RecordMock", "contig value")
 
 
-def test_parse_lines_by_contig__single_contig():
+class _RecordMock(NamedTuple):
+    contig: str
+    value: str
+
+
+def test_parse_lines_by_contig__single_contig() -> None:
     lines = ["abc line1 \n", "abc line2 \n"]
 
-    def _parse(line, length):
+    def _parse(line: str, length: int) -> _RecordMock:
         assert len(line) == length
         return _RecordMock(*line.split())
 
@@ -177,10 +191,10 @@ def test_parse_lines_by_contig__single_contig():
     assert parse_lines_by_contig(lines, _parse) == expected
 
 
-def test_parse_lines__two_contigs():
+def test_parse_lines__two_contigs() -> None:
     lines = ["abc line1 \n", "def line2 \n"]
 
-    def _parse(line, length):
+    def _parse(line: str, length: int) -> _RecordMock:
         assert len(line) == length
         return _RecordMock(*line.split())
 

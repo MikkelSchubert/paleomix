@@ -22,13 +22,16 @@
 from __future__ import annotations
 
 import sys
-from typing import IO, Any, Dict, Iterable, Iterator, Optional
+from typing import IO, TYPE_CHECKING, Iterable, Iterator
 
 import pysam
 
 from paleomix.common.fileutils import fspath, open_rt
 from paleomix.common.formats._common import FormatError
 from paleomix.common.utilities import Immutable, TotallyOrdered, fragment, split_before
+
+if TYPE_CHECKING:
+    import os
 
 
 class FASTAError(FormatError):
@@ -39,10 +42,10 @@ class FASTA(TotallyOrdered, Immutable):
     __slots__ = ["name", "meta", "sequence"]
 
     name: str
-    meta: Optional[str]
+    meta: str | None
     sequence: str
 
-    def __init__(self, name: str, meta: Optional[str], sequence: str):
+    def __init__(self, name: str, meta: str | None, sequence: str) -> None:
         if not (name and isinstance(name, str)):
             raise FASTAError("FASTA name must be a non-empty string")
         elif not (isinstance(meta, str) or (meta is None)):
@@ -56,12 +59,12 @@ class FASTA(TotallyOrdered, Immutable):
         """Writes a FASTA record to fileobj, wrapping sequences at 60 chars"""
         name = self.name
         if self.meta:
-            name = "%s %s" % (name, self.meta)
+            name = f"{name} {self.meta}"
 
-        fileobj.write(">%s\n%s\n" % (name, "\n".join(fragment(60, self.sequence))))
+        fileobj.write(">{}\n{}\n".format(name, "\n".join(fragment(60, self.sequence))))
 
     @classmethod
-    def from_lines(cls, lines: Iterable[str]) -> Iterator["FASTA"]:
+    def from_lines(cls, lines: Iterable[str]) -> Iterator[FASTA]:
         """Parses FASTA sequences found in a sequence of lines, and returns
         a tuple for each FASTA record: ((name, meta-information), sequence)
         No assumptions are made about the line-lengths."""
@@ -71,9 +74,7 @@ class FASTA(TotallyOrdered, Immutable):
             if (not name.startswith(">")) or (len(name) == 1):
                 raise FASTAError("Unnamed FASTA record")
             elif len(record) == 1:
-                raise FASTAError(
-                    "FASTA record does not contain sequence: %s" % (name[1:],)
-                )
+                raise FASTAError(f"FASTA record does not contain sequence: {name[1:]}")
 
             # Split out any meta information
             name_and_meta = name[1:].split(None, 1)
@@ -84,7 +85,7 @@ class FASTA(TotallyOrdered, Immutable):
             yield FASTA(name=name, meta=meta, sequence="".join(record[1:]))
 
     @classmethod
-    def from_file(cls, filename: str) -> Iterator["FASTA"]:
+    def from_file(cls, filename: str) -> Iterator[FASTA]:
         """Reads an unindexed FASTA file, returning a sequence of
         tuples containing the name and sequence of each entry in
         the file. The FASTA file may be GZIP/BZ2 compressed."""
@@ -92,7 +93,7 @@ class FASTA(TotallyOrdered, Immutable):
             yield from FASTA.from_lines(fasta_file)
 
     @classmethod
-    def index_and_collect_contigs(cls, filename: str) -> Dict[str, int]:
+    def index_and_collect_contigs(cls, filename: os.PathLike[str]) -> dict[str, int]:
         """Creates an index (.fai; if it does not already exist) for a FASTA file using
         pysam, and returns a dictionary of {contig: length} listed in that file.
         """
@@ -100,7 +101,7 @@ class FASTA(TotallyOrdered, Immutable):
         with pysam.FastaFile(fspath(filename)) as handle:
             return dict(zip(handle.references, handle.lengths))
 
-    def __lt__(self, other: Any) -> bool:
+    def __lt__(self, other: object) -> bool:
         if not isinstance(other, FASTA):
             return NotImplemented
 
@@ -114,4 +115,4 @@ class FASTA(TotallyOrdered, Immutable):
         return hash((self.name, self.meta, self.sequence))
 
     def __repr__(self) -> str:
-        return "FASTA(%r, %r, %r)" % (self.name, self.meta, self.sequence)
+        return f"FASTA({self.name!r}, {self.meta!r}, {self.sequence!r})"
