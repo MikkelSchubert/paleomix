@@ -26,13 +26,10 @@ import itertools
 from typing import (
     Any,
     Callable,
-    Dict,
-    FrozenSet,
     Hashable,
     Iterable,
     Iterator,
     Sequence,
-    Tuple,
     TypeVar,
     overload,
 )
@@ -40,31 +37,31 @@ from typing import (
 T = TypeVar("T")
 
 
-def safe_coerce_to_tuple(value: Any) -> Tuple[Any, ...]:
+def safe_coerce_to_tuple(value: object) -> tuple[Any, ...]:
     """Convert value to a tuple, unless it is a string or a non-sequence, in which case
     it is return as a single-element tuple."""
-    if isinstance(value, str):
+    if isinstance(value, (str, bytes)):
         return (value,)
 
     try:
-        return tuple(value)
+        return tuple(value)  # pyright: ignore[reportGeneralTypeIssues]
     except TypeError:
         return (value,)
 
 
-def safe_coerce_to_frozenset(value: Any) -> FrozenSet[Any]:
+def safe_coerce_to_frozenset(value: object) -> frozenset[Any]:
     """Convert value to a tuple, unless it is a string or a non-sequence, in which case
     it is return as a single-element tuple."""
-    if isinstance(value, str):
+    if isinstance(value, (str, bytes)):
         return frozenset((value,))
 
     try:
-        return frozenset(value)
+        return frozenset(value)  # pyright: ignore[reportGeneralTypeIssues]
     except TypeError:
         return frozenset((value,))
 
 
-def try_cast(value: Any, cast_to: type) -> Any:
+def try_cast(value: object, cast_to: type) -> object:
     try:
         return cast_to(value)
     except (ValueError, TypeError):
@@ -72,7 +69,7 @@ def try_cast(value: Any, cast_to: type) -> Any:
 
 
 def set_in(
-    dictionary: Dict[object, object],
+    dictionary: dict[object, object],
     keys: Iterable[Hashable],
     value: object,
 ) -> None:
@@ -95,8 +92,8 @@ def set_in(
                 raise TypeError(child)
 
             dictionary = child
-        except KeyError:
-            new_dict = {}  # type: Dict[object, object]
+        except KeyError:  # noqa: PERF203
+            new_dict = {}
             dictionary[key] = new_dict
             dictionary = new_dict
 
@@ -104,10 +101,10 @@ def set_in(
 
 
 def get_in(
-    dictionary: Dict[Any, Any],
+    dictionary: dict[Any, Any],
     keys: Iterable[Hashable],
-    default: Any = None,
-) -> Any:
+    default: object = None,
+) -> object:
     """Traverses a set of nested dictionaries using the keys in
     kws, and returns the value assigned to the final keyword
     in the innermost dictionary. Calling get_in(d, [X, Y])
@@ -117,11 +114,12 @@ def get_in(
 
     Behavior on non-dictionaries is undefined."""
     keys = list(keys)
-    for key in keys[:-1]:
-        try:
+
+    try:
+        for key in keys[:-1]:
             dictionary = dictionary[key]
-        except KeyError:
-            return default
+    except KeyError:
+        return default
 
     return dictionary.get(keys[-1], default)
 
@@ -190,13 +188,13 @@ def fragment(size: int, items: Sequence[T]) -> Iterable[Sequence[T]]:
     return (items[i : i + size] for i in range(0, len(items), size))
 
 
-def fill_dict(destination: Dict[Any, Any], source: Dict[Any, Any]) -> Dict[Any, Any]:
+def fill_dict(destination: dict[Any, Any], source: dict[Any, Any]) -> dict[Any, Any]:
     """Returns a copy of 'destination' after setting missing key-
     pairs with copies of those of 'source' recursively."""
     if not isinstance(destination, dict) or not isinstance(source, dict):
         raise TypeError("Non-dictionary parameters in 'fill_dict'")
 
-    def _fill_dict(cur_dest: Dict[Any, Any], cur_src: Dict[Any, Any]) -> Dict[Any, Any]:
+    def _fill_dict(cur_dest: dict[Any, Any], cur_src: dict[Any, Any]) -> dict[Any, Any]:
         for key in cur_src:
             if isinstance(cur_src[key], dict) and isinstance(cur_dest.get(key), dict):
                 _fill_dict(cur_dest[key], cur_src[key])
@@ -212,12 +210,12 @@ class Immutable:
     the init function, cannot be changed afterwards; note that this does not
     prevent changes to the member variables themselves (if not immutable)."""
 
-    def __init__(self, **kwargs: Any):
+    def __init__(self, **kwargs: object) -> None:
         object.__init__(self)
         for key, value in kwargs.items():
             object.__setattr__(self, key, value)
 
-    def __setattr__(self, _name: str, _value: Any) -> None:
+    def __setattr__(self, _name: str, _value: object) -> None:
         raise NotImplementedError("Object is immutable")
 
     def __delattr__(self, _name: str) -> None:
@@ -234,30 +232,30 @@ class TotallyOrdered:
     http://en.wikipedia.org/wiki/Total_order
     """
 
-    def __lt__(self, other: Any) -> bool:
+    def __lt__(self, other: object) -> bool:
         raise NotImplementedError("__lt__ must be implemented!")
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, type(self)):
             return NotImplemented
         return not ((self < other) or (other < self))
 
-    def __ne__(self, other: Any) -> bool:
+    def __ne__(self, other: object) -> bool:
         if not isinstance(other, type(self)):
             return NotImplemented
         return not (self == other)
 
-    def __le__(self, other: Any) -> bool:
+    def __le__(self, other: object) -> bool:
         if not isinstance(other, type(self)):
             return NotImplemented
         return not (other < self)
 
-    def __ge__(self, other: Any) -> bool:
+    def __ge__(self, other: object) -> bool:
         if not isinstance(other, type(self)):
             return NotImplemented
         return not (self < other)
 
-    def __gt__(self, other: Any) -> bool:
+    def __gt__(self, other: object) -> bool:
         if not isinstance(other, type(self)):
             return NotImplemented
         return other < self

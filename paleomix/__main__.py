@@ -25,10 +25,10 @@ import logging
 import sys
 
 import pysam
+import setproctitle
 
 import paleomix
 import paleomix.common.logging
-import paleomix.common.system
 
 COMMANDS = {
     # CMBR NGS pipeline
@@ -89,7 +89,7 @@ def main(argv: list[str] | None = None) -> int:
         argv = sys.argv[1:]
 
     # Change process name to 'paleomix' regardless of how the script was invoked
-    paleomix.common.system.set_procname("paleomix " + " ".join(argv[:1]))
+    setproctitle.setproctitle("paleomix " + " ".join(argv[:1]))
     # Setup basic logging to STDERR
     paleomix.common.logging.initialize_console_logging()
     # Silence log-messages from HTSLIB

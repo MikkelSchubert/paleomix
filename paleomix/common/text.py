@@ -22,27 +22,16 @@
 from __future__ import annotations
 
 import itertools
-from typing import (
-    Any,
-    AnyStr,
-    Callable,
-    Dict,
-    Iterable,
-    Iterator,
-    List,
-    TypeVar,
-    Union,
-    cast,
-)
+from typing import Any, AnyStr, Callable, Iterable, Iterator, TypeVar
 
 T = TypeVar("T")
 
 
-def format_timespan(seconds: float):
+def format_timespan(seconds: float) -> str:
     if seconds < 60:
-        return "{:.1f}s".format(seconds)
+        return f"{seconds:.1f}s"
     elif seconds < 3600:
-        return "{:.0f}:{:02.0f}s".format(seconds // 60, seconds % 60)
+        return f"{seconds // 60:.0f}:{seconds % 60:02.0f}s"
     else:
         return "{:.0f}:{:02.0f}:{:02.0f}s".format(
             seconds // 3600,
@@ -52,7 +41,7 @@ def format_timespan(seconds: float):
 
 
 def padded_table(
-    table: Iterable[Union[str, Iterable[Any]]],
+    table: Iterable[str | Iterable[Any]],
     min_padding: int = 4,
 ) -> Iterator[str]:
     """Takes a sequence of iterables, each of which represents a row in a
@@ -64,8 +53,8 @@ def padded_table(
     that these lines should be whitespace only, or start with a '#' if the
     resulting table is to be readable with 'parse_padded_table'.
     """
-    str_rows: List[Union[str, List[str]]] = []
-    max_sizes: List[int] = []
+    str_rows: list[str | list[str]] = []
+    max_sizes: list[int] = []
     for row in table:
         if not isinstance(row, str):
             row = list(map(str, row))
@@ -95,27 +84,10 @@ def parse_lines(
     Supports the parser functions available in 'pysam': asGTF, asBED, etc.
     """
     if not callable(parser):
-        raise TypeError("'parser' must be a callable, not %r" % (parser,))
+        raise TypeError(f"'parser' must be a callable, not {parser!r}")
 
     for line in lines:
         stripped = line.lstrip()
         if stripped and stripped[0] not in ("#", 35):
             stripped = line.rstrip()
             yield parser(stripped, len(stripped))
-
-
-def parse_lines_by_contig(
-    lines: Iterable[AnyStr],
-    parser: Callable[[AnyStr, int], T],
-) -> Dict[str, List[T]]:
-    """Reads the lines of a text file, parsing each line with the specified
-    parser, and aggregating results by the 'contig' property of reach record.
-    """
-    table: Dict[str, List[Any]] = {}
-    for record in parse_lines(lines, parser):
-        try:
-            table[cast(Any, record).contig].append(record)
-        except KeyError:
-            table[cast(Any, record).contig] = [record]
-
-    return table

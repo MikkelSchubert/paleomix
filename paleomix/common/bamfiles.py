@@ -22,11 +22,13 @@
 from __future__ import annotations
 
 import itertools
-from typing import Iterable, List, Optional
+from typing import TYPE_CHECKING, Generator, Iterable, Iterator
 
-from pysam import AlignedSegment, AlignmentFile
+if TYPE_CHECKING:
+    from pysam import AlignedSegment, AlignmentFile
 
-from paleomix.common.formats.bed import BEDRecord
+    from paleomix.common.formats.bed import BEDRecord
+
 
 # BAM flags as defined in the BAM specification
 BAM_SUPPLEMENTARY_ALIGNMENT = 0x800
@@ -93,7 +95,7 @@ class BAMRegionsIter:
     def __init__(
         self,
         handle: AlignmentFile,
-        regions: Optional[List[BEDRecord]] = None,
+        regions: list[BEDRecord] | None = None,
         exclude_flags: int = EXCLUDED_FLAGS,
     ) -> None:
         """
@@ -104,7 +106,7 @@ class BAMRegionsIter:
         self._regions = [] if regions is None else regions
         self._excluded = exclude_flags
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[_BAMRegion, None, None]:
         if self._regions:
             for region in self._regions:
                 records = self._handle.fetch(region.contig, region.start, region.end)
@@ -128,8 +130,8 @@ class BAMRegionsIter:
             records = self._filter(self._handle)
 
             for tid, items in itertools.groupby(records, key=_by_tid):
-                name: Optional[str] = None
-                length: Optional[int] = None
+                name: str | None = None
+                length: int | None = None
                 if tid >= 0:
                     name = names[tid]
                     length = lengths[tid]
@@ -152,20 +154,20 @@ class _BAMRegion:
         self,
         tid: int,
         records: Iterable[AlignedSegment],
-        name: Optional[str],
+        name: str | None,
         start: int,
-        end: Optional[int],
-    ):
+        end: int | None,
+    ) -> None:
         self._records = records
         self.tid = tid
         self.name = name
         self.start = start
         self.end = end
 
-    def __iter__(self):
-        def _by_pos(record: AlignedSegment):
-            """Group by position."""
-            return record.reference_start
+    def __iter__(self) -> Generator[tuple[int, Iterator[AlignedSegment]], None, None]:
+        yield from itertools.groupby(self._records, self._by_pos)
 
-        for group in itertools.groupby(self._records, _by_pos):
-            yield group
+    @staticmethod
+    def _by_pos(record: AlignedSegment) -> int:
+        """Group by position."""
+        return record.reference_start

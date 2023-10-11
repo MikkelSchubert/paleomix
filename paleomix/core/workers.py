@@ -51,10 +51,10 @@ from typing import (
     Union,
 )
 
+import setproctitle
+
 import paleomix
-import paleomix.common.system
 from paleomix.common.procs import terminate_all_processes
-from paleomix.common.versions import Requirement
 from paleomix.core.input import CommandLine, ListTasksEvent, ThreadsEvent
 from paleomix.node import Node, NodeError
 from paleomix.nodegraph import NodeGraph
@@ -63,6 +63,8 @@ EventType = Dict[str, Any]
 MessageType = Tuple[int, Optional[BaseException], Optional[List[str]]]
 
 if TYPE_CHECKING:
+    from paleomix.common.versions import Requirement
+
     QueueType = multiprocessing.Queue[MessageType]
 else:
     QueueType = multiprocessing.Queue
@@ -643,7 +645,7 @@ def _task_wrapper(queue: QueueType, task: Node, temp_root: str) -> None:
     if len(sys.argv) > 1:
         name = "paleomix {} task".format(sys.argv[1])
 
-    paleomix.common.system.set_procname(name)
+    setproctitle.setproctitle(name)
     # SIGINTs are handled in the main thread only
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     # SIGTERM and SIGHUP are caught to allow proper termination of all sub-commands

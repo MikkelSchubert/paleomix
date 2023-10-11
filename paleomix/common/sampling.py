@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import bisect
 import random
-from typing import Iterable, Iterator, List, TypeVar
+from typing import Iterable, Iterator, TypeVar
 
 T = TypeVar("T")
 
@@ -31,8 +31,11 @@ T = TypeVar("T")
 def weighted_sampling(
     choices: Iterable[T],
     weights: Iterable[float],
-    rng: random.Random = random.Random(),
+    rng: random.Random | None = None,
 ) -> Iterator[T]:
+    if rng is None:
+        rng = random.Random()
+
     choices = list(choices)
     weights = list(weights)
     if not weights or (len(weights) != len(choices)):
@@ -42,7 +45,7 @@ def weighted_sampling(
         )
 
     total: float = 0
-    totals: List[float] = []
+    totals: list[float] = []
     for index, weight in enumerate(weights, start=1):
         if weight <= 0:
             raise ValueError(
@@ -60,16 +63,17 @@ def weighted_sampling(
 def reservoir_sampling(
     items: Iterable[T],
     downsample_to: int,
-    rng: random.Random = random.Random(),
-) -> List[T]:
-    if not isinstance(downsample_to, int):
-        raise TypeError(
-            "Unexpected type for 'downsample_to': %r" % (type(downsample_to),)
-        )
-    elif downsample_to < 0:
-        raise ValueError("Negative value for 'downsample_to': %i" % (downsample_to,))
+    rng: random.Random | None = None,
+) -> list[T]:
+    if rng is None:
+        rng = random.Random()
 
-    reservoir: List[T] = []
+    if not isinstance(downsample_to, int):
+        raise TypeError(f"downsample_to must be an int, not {downsample_to!r}")
+    elif downsample_to < 0:
+        raise ValueError(f"downsample_to must be >= 0, not {downsample_to}")
+
+    reservoir: list[T] = []
     for index, item in enumerate(items):
         if index >= downsample_to:
             index = rng.randint(0, index)

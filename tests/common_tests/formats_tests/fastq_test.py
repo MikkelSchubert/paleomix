@@ -29,7 +29,7 @@ from typing import TYPE_CHECKING, Callable
 import pytest
 
 from paleomix.common.fileutils import fspath
-from paleomix.common.formats.fastq import FASTQ, FASTQError, FASTQualities
+from paleomix.common.formats.fastq import FASTQ, FASTQError, FASTQOffsets, FASTQualities
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -241,28 +241,28 @@ _AMBIGIOUS_read = FASTQ("33", None, "ACGT", ";CDI")
 def test_fastqualities__no_qualities() -> None:
     quals = FASTQualities()
 
-    assert quals.offsets() == FASTQualities.MISSING
+    assert quals.offsets() == FASTQOffsets.MISSING
 
 
 def test_fastqualities__phred_33() -> None:
     quals = FASTQualities()
     quals.update(_33_READ)
 
-    assert quals.offsets() == FASTQualities.OFFSET_33
+    assert quals.offsets() == FASTQOffsets.OFFSET_33
 
 
 def test_fastqualities__phred_64() -> None:
     quals = FASTQualities()
     quals.update(_64_READ)
 
-    assert quals.offsets() == FASTQualities.OFFSET_64
+    assert quals.offsets() == FASTQOffsets.OFFSET_64
 
 
 def test_fastqualities__phred_ambigious() -> None:
     quals = FASTQualities()
     quals.update(_AMBIGIOUS_read)
 
-    assert quals.offsets() == FASTQualities.AMBIGIOUS
+    assert quals.offsets() == FASTQOffsets.AMBIGIOUS
 
 
 def test_fastqualities__phred_both() -> None:
@@ -270,7 +270,7 @@ def test_fastqualities__phred_both() -> None:
     quals.update(_33_READ)
     quals.update(_64_READ)
 
-    assert quals.offsets() == FASTQualities.BOTH
+    assert quals.offsets() == FASTQOffsets.BOTH
 
 
 ###############################################################################

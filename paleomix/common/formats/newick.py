@@ -22,18 +22,7 @@
 from __future__ import annotations
 
 import re
-from typing import (
-    Any,
-    Dict,
-    FrozenSet,
-    Iterable,
-    Iterator,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Union,
-)
+from typing import Generator, Iterable, Iterator, Optional, Sequence
 
 from paleomix.common.formats import FormatError
 from paleomix.common.utilities import Immutable, TotallyOrdered
@@ -49,8 +38,6 @@ class NewickError(FormatError):
 class NewickParseError(NewickError):
     """Exception raised if errors occur during parsing
     of Newick strings."""
-
-    pass
 
 
 class Newick(TotallyOrdered, Immutable):
@@ -68,18 +55,18 @@ class Newick(TotallyOrdered, Immutable):
     contraints apply when unrooting/rerooting trees (see below)."""
 
     __slots__ = ["name", "length", "children", "_hash", "_weight"]
-    name: Optional[str]
-    length: Optional[Union[float, str]]
-    children: Tuple["Newick", ...]
+    name: str | None
+    length: float | str | None
+    children: tuple[Newick, ...]
     _hash: int
     _weight: int
 
     def __init__(
         self,
-        name: Optional[str] = None,
-        length: Optional[Union[str, float]] = None,
-        children: Iterable["Newick"] = (),
-    ):
+        name: str | None = None,
+        length: str | float | None = None,
+        children: Iterable[Newick] = (),
+    ) -> None:
         children = tuple(children)
         name = name or None
 
@@ -102,24 +89,23 @@ class Newick(TotallyOrdered, Immutable):
         object.__setattr__(self, "_weight", weight)
 
     @property
-    def is_leaf(self):
+    def is_leaf(self) -> bool:
         """Returns true if the node is a leaf (has no children)."""
         return not self.children
 
-    def get_leaf_nodes(self) -> Iterator["Newick"]:
+    def get_leaf_nodes(self) -> Iterator[Newick]:
         """Returns iterable for leaf-nodes accessible from this node."""
         if not self.is_leaf:
             for child in self.children:
-                for leaf in child.get_leaf_nodes():
-                    yield leaf
+                yield from child.get_leaf_nodes()
         else:
             yield self
 
-    def get_leaf_names(self):
+    def get_leaf_names(self) -> Generator[str | None, None, None]:
         for node in self.get_leaf_nodes():
             yield node.name
 
-    def reroot_on_taxa(self, taxa: Iterable[str]) -> "Newick":
+    def reroot_on_taxa(self, taxa: Iterable[str]) -> Newick:
         """Returns the Newick tree from this node, but rooted on the midpoint
         of the branch leading to one or more taxa. Note that the taxa are not
         required to form a clade. If the taxa do not form a monophyletic clade,
@@ -127,7 +113,7 @@ class Newick(TotallyOrdered, Immutable):
         function."""
         return _NewickGraph(self).reroot_on_taxa(taxa)
 
-    def reroot_on_midpoint(self) -> "Newick":
+    def reroot_on_midpoint(self) -> Newick:
         """Returns the newick tree from this node, but rooted on the midpoint
         of the tree. That is to say that a root node is added at the exact
         midpoint of the longest path in the unrooted tree. If this midpoint
@@ -147,9 +133,9 @@ class Newick(TotallyOrdered, Immutable):
 
     def add_support(
         self,
-        bootstraps: Iterable["Newick"],
+        bootstraps: Iterable[Newick],
         fmt: str = "{Support}",
-    ) -> "Newick":
+    ) -> Newick:
         """Adds support values to the current tree, based on a set of trees containing
         the same taxa. It is assumed that the support trees represent unrooted or
         arbitarily rooted trees, and no weight is given to the rooted topology of these
@@ -166,7 +152,7 @@ class Newick(TotallyOrdered, Immutable):
         For example, typical percentage support-values can be realized by setting 'fmt'
         to the value "{Percentage:.0f}" to produce integer values.
         """
-        clade_counts: Dict[FrozenSet[Optional[str]], int] = {}
+        clade_counts: dict[frozenset[str | None], int] = {}
         leaf_names_lst = list(self.get_leaf_names())
         leaf_names = frozenset(leaf_names_lst)
         if len(leaf_names) != len(leaf_names_lst):
@@ -190,7 +176,7 @@ class Newick(TotallyOrdered, Immutable):
         return self._add_support(self, n_bootstraps, clade_counts, fmt)
 
     @classmethod
-    def from_string(cls, string: str) -> "Newick":
+    def from_string(cls, string: str) -> Newick:
         """Parses a Newick string and returns a representation of the tree.
         See e.g. http://en.wikipedia.org/wiki/Newick_format
 
@@ -208,7 +194,7 @@ class Newick(TotallyOrdered, Immutable):
 
         return top_node
 
-    def __lt__(self, other: Any):
+    def __lt__(self, other: object) -> bool:
         """See TotallyOrdered"""
         if not isinstance(other, Newick):
             return NotImplemented
@@ -218,17 +204,17 @@ class Newick(TotallyOrdered, Immutable):
 
         return node_1 < node_2
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         """Hashing function, see 'hash'."""
         return self._hash
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Representation corresponds to the Newick string for the (sub)tree,
         which can be parsed by 'from_string'."""
-        return "%s;" % (self._to_str(),)
+        return f"{self._to_str()};"
 
-    def _to_str(self):
-        fields: List[str] = []
+    def _to_str(self) -> str:
+        fields: list[str] = []
         if self.children:
             fields.append("(")
             for child in self.children:
@@ -245,11 +231,11 @@ class Newick(TotallyOrdered, Immutable):
 
     def _add_support(
         self,
-        node: "Newick",
+        node: Newick,
         total: int,
-        clade_counts: Dict[FrozenSet[Optional[str]], int],
+        clade_counts: dict[frozenset[str | None], int],
         fmt: str,
-    ) -> "Newick":
+    ) -> Newick:
         """Recursively annotates a subtree with support values,
         excepting leaf nodes (where the name is preserved) and
         the root node (where the name is cleared)."""
@@ -264,7 +250,7 @@ class Newick(TotallyOrdered, Immutable):
             Fraction=(support * 1.0) / (total or 1),
         )
 
-        children: List[Newick] = []
+        children: list[Newick] = []
         for child in node.children:
             children.append(self._add_support(child, total, clade_counts, fmt))
 
@@ -282,8 +268,8 @@ class Newick(TotallyOrdered, Immutable):
 _TOKENIZER = re.compile("([():,;])")
 
 
-def _tokenize(string: str) -> List[str]:
-    result: List[str] = []
+def _tokenize(string: str) -> list[str]:
+    result: list[str] = []
     for field in _TOKENIZER.split(string):
         field = field.strip()
         if field:
@@ -291,10 +277,10 @@ def _tokenize(string: str) -> List[str]:
     return result
 
 
-def _parse_tokens(tokens: List[str]) -> Newick:
+def _parse_tokens(tokens: list[str]) -> Newick:
     tokens.pop(0)
-    child: Optional[Newick] = None
-    children: List[Newick] = []
+    child: Newick | None = None
+    children: list[Newick] = []
     while tokens and tokens[0] not in ");":
         if tokens[0] == ",":
             if child is None:
@@ -316,12 +302,12 @@ def _parse_tokens(tokens: List[str]) -> Newick:
     return _parse_child(tokens, children=children)
 
 
-def _parse_child(tokens: List[str], children: List[Newick] = []):
+def _parse_child(tokens: list[str], children: Sequence[Newick] = ()) -> Newick:
     if tokens and tokens[0] == "(":
         return _parse_tokens(tokens)
 
-    name: Optional[str] = None
-    length: Optional[str] = None
+    name: str | None = None
+    length: str | None = None
     while tokens and (tokens[0] not in ",);"):
         if tokens[0] == ":":
             if length is not None:
@@ -352,14 +338,14 @@ class _NewickGraph:
 
     Note that neither the root-length, nor node-ordering is preserved."""
 
-    def __init__(self, node: Newick):
-        self.names: Dict[NodeID, NodeName] = {}
-        self.connections: Dict[NodeID, Dict[NodeID, Union[str, float, None]]] = {}
-        self.has_branch_lengths: Optional[bool] = None
+    def __init__(self, node: Newick) -> None:
+        self.names: dict[NodeID, NodeName] = {}
+        self.connections: dict[NodeID, dict[NodeID, str | float | None]] = {}
+        self.has_branch_lengths: bool | None = None
         self._collect_names_and_blengths(node)
         self.prune_uninformative_nodes()
 
-    def _collect_names_and_blengths(self, c_node: Newick):
+    def _collect_names_and_blengths(self, c_node: Newick) -> None:
         c_node_id = id(c_node)
 
         self.set_name(c_node_id, c_node.name)
@@ -372,7 +358,7 @@ class _NewickGraph:
         """Returns true if the node is a leaf, defined as having a single connection."""
         return len(self.connections[node]) == 1
 
-    def get_path_length(self, *nodes: NodeID):
+    def get_path_length(self, *nodes: NodeID) -> float | None:
         """Returns the length of a path through the graph. Calling the function
         with two nodes is the equivalent of getting the branch-length between
         those two nodes."""
@@ -382,7 +368,8 @@ class _NewickGraph:
         path_length = 0.0
         for node_a, node_b in zip(nodes, nodes[1:]):
             segment_length = self.connections[node_a][node_b]
-            assert segment_length is not None
+            if segment_length is None:
+                raise AssertionError("segment_length is unexpectedly None")
             path_length += float(segment_length)
 
         return path_length
@@ -394,7 +381,7 @@ class _NewickGraph:
         self,
         node_id_a: NodeID,
         node_id_b: NodeID,
-        blength: Optional[Union[str, float]] = None,
+        blength: str | float | None = None,
     ) -> None:
         if (blength is not None) and float(blength) < 0:
             raise NewickError("Branch-lengths must be non-negative")
@@ -410,7 +397,7 @@ class _NewickGraph:
         self,
         node_a: NodeID,
         node_b: NodeID,
-    ) -> Union[str, float, None]:
+    ) -> str | float | None:
         length_a = self.connections[node_a].pop(node_b)
         length_b = self.connections[node_b].pop(node_a)
         assert length_a == length_b, (length_a, length_b)
@@ -422,11 +409,11 @@ class _NewickGraph:
             self.connections[node_b].pop(node)
         self.names.pop(node)
 
-    def rebuild_tree(self, parent_id: NodeID, node_id: NodeID) -> "Newick":
+    def rebuild_tree(self, parent_id: NodeID, node_id: NodeID) -> Newick:
         """Rebuilds a newick tree starting at a node with id 'node_id' and a parent
         with id 'parent_id' (or the same value as 'node_id' if a root node).
         """
-        children: List[Newick] = []
+        children: list[Newick] = []
         for child_id in self.connections[node_id]:
             if child_id != parent_id:
                 children.append(self.rebuild_tree(node_id, child_id))
@@ -438,7 +425,7 @@ class _NewickGraph:
 
         return Newick(name=self.names.get(node_id), length=blength, children=children)
 
-    def prune_uninformative_nodes(self):
+    def prune_uninformative_nodes(self) -> None:
         """Removes nodes without names, and which are connected
         to two other nodes, extending the branch lengths of the
         two connected nodes. This process is repreated, until no
@@ -481,19 +468,19 @@ class _NewickGraph:
 
         return self.rebuild_tree(root, root)
 
-    def _find_longest_path(self) -> Tuple[List[NodeID], float]:
+    def _find_longest_path(self) -> tuple[list[NodeID], float]:
         """This function determines the longest non-overlapping path possible,
         and returns a list of the sequence of nodes in this path, as well as
         the total length of this path."""
-        path_blengths: Dict[FrozenSet[NodeID], float] = {}
-        path_guides: Dict[FrozenSet[NodeID], List[NodeID]] = {}
+        path_blengths: dict[frozenset[NodeID], float] = {}
+        path_guides: dict[frozenset[NodeID], list[NodeID]] = {}
 
         def _collect_paths(
-            guide: List[NodeID],
+            guide: list[NodeID],
             length: float,
             p_node: NodeID,
             c_node: NodeID,
-        ):
+        ) -> None:
             path_len = self.get_path_length(p_node, c_node)
             assert path_len is not None
 
@@ -517,7 +504,7 @@ class _NewickGraph:
 
     def _create_root_at(
         self,
-        path: List[NodeID],
+        path: list[NodeID],
         root_at: float,
     ) -> NodeID:
         """Finds the midpoint of a path through a tree, and
@@ -554,7 +541,7 @@ class _NewickGraph:
     ################################################################################
     # Functions relating to NEWICK rooting on taxa
 
-    def reroot_on_taxa(self, taxa: Iterable[str]) -> Any:
+    def reroot_on_taxa(self, taxa: Iterable[str]) -> Newick:
         clades = self._collect_clades()
         root_on = self._collect_nodes_from_names(taxa)
         if not taxa:
@@ -565,13 +552,13 @@ class _NewickGraph:
 
         return self.rebuild_tree(root, root)
 
-    def _collect_nodes_from_names(self, taxa: Iterable[str]) -> FrozenSet[NodeID]:
-        nodes_by_names: Dict[NodeName, List[NodeID]] = {}
+    def _collect_nodes_from_names(self, taxa: Iterable[str]) -> frozenset[NodeID]:
+        nodes_by_names: dict[NodeName, list[NodeID]] = {}
         for node_id, name in self.names.items():
             if self.is_leaf(node_id):
                 nodes_by_names.setdefault(name, []).append(node_id)
 
-        selection: List[NodeID] = []
+        selection: list[NodeID] = []
         for name in taxa:
             selection.extend(nodes_by_names.pop(name))
 
@@ -580,8 +567,8 @@ class _NewickGraph:
 
         return frozenset(selection)
 
-    def _collect_clades(self) -> Dict[NodeID, Dict[NodeID, FrozenSet[NodeID]]]:
-        clades: Dict[NodeID, Dict[NodeID, FrozenSet[NodeID]]] = {}
+    def _collect_clades(self) -> dict[NodeID, dict[NodeID, frozenset[NodeID]]]:
+        clades: dict[NodeID, dict[NodeID, frozenset[NodeID]]] = {}
         for node_a, connections in self.connections.items():
             for node_b in connections:
                 self._collect_clade_from(clades, node_a, node_b)
@@ -589,15 +576,15 @@ class _NewickGraph:
 
     def _collect_clade_from(
         self,
-        cache: Dict[NodeID, Dict[NodeID, FrozenSet[NodeID]]],
+        cache: dict[NodeID, dict[NodeID, frozenset[NodeID]]],
         p_node: NodeID,
         c_node: NodeID,
-    ) -> FrozenSet[NodeID]:
+    ) -> frozenset[NodeID]:
         c_clade = cache.setdefault(p_node, {}).get(c_node)
         if c_clade is not None:
             return c_clade
 
-        clade: Set[NodeID] = set()
+        clade: set[NodeID] = set()
         if self.is_leaf(c_node):
             clade.add(c_node)
 
@@ -611,12 +598,12 @@ class _NewickGraph:
 
     def _create_root_with_clade(
         self,
-        clades: Dict[NodeID, Dict[NodeID, FrozenSet[NodeID]]],
-        taxa: FrozenSet[NodeID],
+        clades: dict[NodeID, dict[NodeID, frozenset[NodeID]]],
+        taxa: frozenset[NodeID],
     ) -> NodeID:
-        root_key: Optional[Tuple[NodeID, NodeID]] = None
-        root_clade: Optional[FrozenSet[NodeID]] = None
-        root_length: Optional[float] = None
+        root_key: tuple[NodeID, NodeID] | None = None
+        root_clade: frozenset[NodeID] | None = None
+        root_length: float | None = None
         for p_node, connections in clades.items():
             for n_node, clade in connections.items():
                 if (root_clade is None) or (len(clade) < len(root_clade)):
@@ -640,8 +627,8 @@ class _NewickGraph:
     ################################################################################
     # Functions relating to calculating bootstrap support
 
-    def get_clade_names(self) -> Set[FrozenSet[NodeName]]:
-        result: Set[FrozenSet[NodeName]] = set()
+    def get_clade_names(self) -> set[frozenset[NodeName]]:
+        result: set[frozenset[NodeName]] = set()
         for connections in self._collect_clades().values():
             for clade in connections.values():
                 result.add(frozenset(self.names[node_id] for node_id in clade))

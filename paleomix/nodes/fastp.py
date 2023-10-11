@@ -26,32 +26,38 @@ https://github.com/OpenGene/fastp
 """
 from __future__ import annotations
 
-from paleomix.common.command import AtomicCmd, InputFile, OutputFile
+from typing import Iterable
+
+from paleomix.common.command import AtomicCmd, InputFile, OptionsType, OutputFile
 from paleomix.common.fileutils import describe_paired_files
-from paleomix.node import CommandNode
+from paleomix.node import CommandNode, Node
 
 
 class FastpNode(CommandNode):
     def __init__(
         self,
-        in_fq_1,
-        in_fq_2,
-        out_fq_1,
-        out_fq_2,
-        out_merged,
-        out_unpaired,
-        out_failed,
-        out_html,
-        out_json,
-        options={},
-        dependencies=(),
-    ):
+        *,
+        in_fq_1: str,
+        in_fq_2: str,
+        out_fq_1: str,
+        out_fq_2: str,
+        out_merged: str,
+        out_unpaired: str,
+        out_failed: str,
+        out_html: str,
+        out_json: str,
+        options: OptionsType | None = None,
+        dependencies: Iterable[Node] = (),
+    ) -> None:
+        if options is None:
+            options = {}
+
         command = AtomicCmd(
             ["fastp"],
         )
 
         # All unpaired reads are written to the same file
-        out_unpaired = OutputFile(out_unpaired)
+        out_unpaired_file = OutputFile(out_unpaired)
 
         command.merge_options(
             user_options=options,
@@ -65,8 +71,8 @@ class FastpNode(CommandNode):
                 "--failed_out": OutputFile(out_failed),
                 "--merged_out": OutputFile(out_merged),
                 # Using the same output path for both --unpaired is supported by fastp
-                "--unpaired1": out_unpaired,
-                "--unpaired2": out_unpaired,
+                "--unpaired1": out_unpaired_file,
+                "--unpaired2": out_unpaired_file,
                 "--html": OutputFile(out_html),
                 "--json": OutputFile(out_json),
             },
@@ -78,12 +84,15 @@ class FastpNode(CommandNode):
             ],
         )
 
+        threads = options.get("--thread", 2)
+        if not isinstance(threads, int):
+            raise TypeError(threads)
+
         CommandNode.__init__(
             self,
             command=command,
-            description="pre-processing %s"
-            % (describe_paired_files([in_fq_1], [in_fq_2]),),
+            description=f"pre-processing {describe_paired_files([in_fq_1], [in_fq_2])}",
             # FIXME: Number of threads seems hard to predict; about --thread +1/+2?
-            threads=options.get("--thread", 2) + 1,
+            threads=threads + 1,
             dependencies=dependencies,
         )

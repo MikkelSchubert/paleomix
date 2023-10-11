@@ -31,18 +31,7 @@ import shutil
 import tempfile
 from datetime import datetime
 from os import fspath
-from typing import (
-    IO,
-    Any,
-    Callable,
-    Iterable,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-    Union,
-    cast,
-)
+from typing import IO, Any, Callable, Iterable, Sequence, Union, cast
 
 from .utilities import safe_coerce_to_tuple
 
@@ -87,20 +76,12 @@ def create_temp_dir(root: PathTypes) -> str:
     )
 
 
-    for _ in range(10_000):
-        path = _generate_path()
-        if make_dirs(path, mode=0o700):
-            return path
-
-    raise FileExistsError(errno.EEXIST, "Could not create new temp directory")
-
-
-def missing_files(filenames: Iterable[PathTypes]) -> List[str]:
+def missing_files(filenames: Iterable[PathTypes]) -> list[str]:
     """Given a list of filenames, returns a list of those that
     does not exist. Note that this function does not differentiate
     between files and folders."""
-    missing: List[str] = []
-    for filename in safe_coerce_to_tuple(filenames):
+    missing: list[str] = []
+    for filename in filenames:
         filename = fspath(filename)
         if not os.path.exists(filename):
             missing.append(filename)
@@ -130,13 +111,14 @@ def make_dirs(directory: PathTypes, mode: int = 0o777) -> bool:
 
     try:
         os.makedirs(fspath(directory), mode=mode)
-        return True
     except OSError as error:
         # make_dirs be called by multiple subprocesses at the same time,
         # so only raise if the actual creation of the folder failed
         if error.errno != errno.EEXIST:
             raise
         return False
+    else:
+        return True
 
 
 def move_file(source: PathTypes, destination: PathTypes) -> None:
@@ -162,7 +144,7 @@ def copy_file(source: PathTypes, destination: PathTypes) -> None:
 def open_rb(filename: PathTypes) -> IO[bytes]:
     """Opens a file for reading, transparently handling
     GZip and BZip2 compressed files. Returns a file handle."""
-    handle = open(fspath(filename), "rb")
+    handle = open(fspath(filename), "rb")  # noqa: SIM115
 
     try:
         header = handle.peek(2)
@@ -231,7 +213,7 @@ def describe_files(files: Iterable[str]) -> str:
     if glob_files:
         return repr(glob_files)
 
-    paths = set(os.path.dirname(filename) for filename in files)
+    paths = {os.path.dirname(filename) for filename in files}
     if len(paths) == 1:
         return "%i files in '%s'" % (len(files), paths.pop())
     return "%i files" % (len(files),)
@@ -255,11 +237,11 @@ def describe_paired_files(files_1: Iterable[str], files_2: Iterable[str]) -> str
             % (len(files_1), len(files_2))
         )
 
-    glob_files_1 = get_files_glob(files_1, 3)
-    glob_files_2 = get_files_glob(files_2, 3)
+    glob_files_1 = get_files_glob(files_1, max_differences=3)
+    glob_files_2 = get_files_glob(files_2, max_differences=3)
     if glob_files_1 and glob_files_2:
         final_glob = get_files_glob(
-            (glob_files_1, glob_files_2), 1, show_differences=True
+            (glob_files_1, glob_files_2), max_differences=1, show_differences=True
         )
         if final_glob:
             return repr(final_glob)
@@ -272,9 +254,10 @@ def describe_paired_files(files_1: Iterable[str], files_2: Iterable[str]) -> str
 
 def get_files_glob(
     filenames: Sequence[str],
+    *,
     max_differences: int = 1,
     show_differences: bool = False,
-) -> Optional[str]:
+) -> str | None:
     """Tries to generate a glob-string for a set of filenames, containing
     at most 'max_differences' different columns. If more differences are
     found, or if the length of filenames vary, None is returned."""
@@ -282,7 +265,7 @@ def get_files_glob(
     if len(set(map(len, filenames))) > 1:
         return None
 
-    glob_fname: List[str] = []
+    glob_fname: list[str] = []
     differences = 0
     for chars in zip(*filenames):
         if "?" in chars:
@@ -302,13 +285,13 @@ def get_files_glob(
     return "".join(glob_fname)
 
 
-def validate_filenames(filenames: Iterable[str]) -> Tuple[str, ...]:
+def validate_filenames(filenames: Iterable[str]) -> tuple[str, ...]:
     """Sanity checks for filenames handled by
     'describe_files' and 'describe_paired_files."""
     return tuple(fspath(filename) for filename in safe_coerce_to_tuple(filenames))
 
 
-def _atomic_file_move(source: PathTypes, destination: PathTypes):
+def _atomic_file_move(source: PathTypes, destination: PathTypes) -> None:
     try:
         return os.rename(source, destination)
     except OSError as error:
@@ -319,21 +302,23 @@ def _atomic_file_move(source: PathTypes, destination: PathTypes):
     if os.path.islink(source):
         os.symlink(os.readlink(source), destination)
         os.unlink(source)
-        return
+        return None
 
     # Copy with copy2 to preserve metadata
     _atomic_file_copy(source, destination, shutil.copy2)
     os.unlink(source)
 
+    return None
+
 
 def _atomic_file_copy(
     source: PathTypes,
     destination: PathTypes,
-    func: Optional[Callable[[PathTypes, PathTypes], Any]] = None,
-):
+    func: Callable[[PathTypes, PathTypes], Any] | None = None,
+) -> None:
     # Ensure that hard failures during copy does not leave anything at destination
-    postfix = "{:04x}".format(random.getrandbits(16))
-    temp_destination = "{}.{}.tmp".format(destination, postfix)
+    postfix = f"{random.getrandbits(16):04x}"
+    temp_destination = f"{destination}.{postfix}.tmp"
     # Allow function to be monkey-patched for testing
     func = shutil.copy if func is None else func
 
@@ -377,9 +362,10 @@ def _try_rm_wrapper(func: Callable[[Any], Any], fpath: PathTypes) -> bool:
     not exist."""
     try:
         func(fspath(fpath))
-        return True
     except FileNotFoundError:
         return False
+    else:
+        return True
 
 
 class _GzipFile(gzip.GzipFile):
@@ -396,7 +382,7 @@ class _BZ2File(bz2.BZ2File):
     "Wrapper ensuring that passed filehandles are properly closed"
 
     def close(self) -> None:
-        fileobj = self._fp  # type: ignore
+        fileobj: Any = getattr(self, "_fp", None)
         super().close()
         if hasattr(fileobj, "close"):
             fileobj.close()

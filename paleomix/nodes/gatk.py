@@ -23,13 +23,14 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Iterable, List, Union
+from typing import TYPE_CHECKING, Iterable
 
 import pysam
 
 from paleomix.common import rtools
 from paleomix.common.command import (
     AtomicCmd,
+    AtomicFileTypes,
     AuxiliaryFile,
     InputFile,
     OptionsType,
@@ -47,19 +48,25 @@ from paleomix.common.fileutils import (
 )
 from paleomix.node import CommandNode, Node, NodeError
 
+if TYPE_CHECKING:
+    from typing_extensions import Literal
+
 
 class ApplyBQSRNode(CommandNode):
     def __init__(
         self,
-        in_node,
-        out_bam,
-        out_log=None,
-        options={},
-        java_options=(),
-        dependencies=(),
-    ):
+        in_node: BaseRecalibratorNode,
+        out_bam: str,
+        out_log: str | None = None,
+        options: OptionsType | None = None,
+        java_options: Iterable[str] = (),
+        dependencies: Iterable[Node] = (),
+    ) -> None:
+        if options is None:
+            options = {}
+
         if not isinstance(in_node, BaseRecalibratorNode):
-            raise ValueError(in_node)
+            raise TypeError(in_node)
 
         # WORKAROUND: ApplyBQSR defaults to using compression level 2 for output,
         #             resulting in significantly larger BAMs. Revert that behavior
@@ -92,7 +99,7 @@ class ApplyBQSRNode(CommandNode):
         CommandNode.__init__(
             self,
             command=command,
-            description="recalibrating base qualities for {!r}".format(in_node.in_bam),
+            description=f"recalibrating base qualities for {in_node.in_bam!r}",
             dependencies=dependencies,
         )
 
@@ -100,17 +107,20 @@ class ApplyBQSRNode(CommandNode):
 class ApplyVQSRNode(CommandNode):
     def __init__(
         self,
-        mode,
-        in_vcf,
-        in_node,
-        out_vcf,
-        out_log=None,
-        options={},
-        java_options=(),
-        dependencies=(),
-    ):
+        mode: Literal["INDEL", "SNP"],
+        in_vcf: str,
+        in_node: str,
+        out_vcf: str,
+        out_log: str | None = None,
+        options: OptionsType | None = None,
+        java_options: Iterable[str] = (),
+        dependencies: Iterable[Node] = (),
+    ) -> None:
+        if options is None:
+            options = {}
+
         if not isinstance(in_node, VariantRecalibratorNode):
-            raise ValueError(in_node)
+            raise TypeError(in_node)
         elif mode not in ("INDEL", "SNP"):
             raise ValueError(mode)
 
@@ -141,7 +151,7 @@ class ApplyVQSRNode(CommandNode):
         CommandNode.__init__(
             self,
             command=command,
-            description="recalibrating {}s for {!r}".format(mode, in_vcf),
+            description=f"recalibrating {mode}s for {in_vcf!r}",
             dependencies=dependencies,
         )
 
@@ -149,15 +159,18 @@ class ApplyVQSRNode(CommandNode):
 class BaseRecalibratorNode(CommandNode):
     def __init__(
         self,
-        in_reference,
-        in_known_sites,
-        in_bam,
-        out_table,
-        out_log=None,
-        options={},
-        java_options=(),
-        dependencies=(),
-    ):
+        in_reference: str,
+        in_known_sites: str,
+        in_bam: str,
+        out_table: str,
+        out_log: str | None = None,
+        options: OptionsType | None = None,
+        java_options: Iterable[str] = (),
+        dependencies: Iterable[Node] = (),
+    ) -> None:
+        if options is None:
+            options = {}
+
         self.in_reference = in_reference
         self.in_bam = in_bam
         self.out_table = out_table
@@ -183,7 +196,7 @@ class BaseRecalibratorNode(CommandNode):
         CommandNode.__init__(
             self,
             command=command,
-            description="training base recalibrator on {!r}".format(in_bam),
+            description=f"training base recalibrator on {in_bam!r}",
             dependencies=dependencies,
         )
 
@@ -191,14 +204,17 @@ class BaseRecalibratorNode(CommandNode):
 class CombineGVCFsNode(CommandNode):
     def __init__(
         self,
-        in_reference,
-        in_variants,
-        out_vcf,
-        out_log=None,
-        options={},
-        java_options=(),
-        dependencies=(),
-    ):
+        in_reference: str,
+        in_variants: str,
+        out_vcf: str,
+        out_log: str | None = None,
+        options: OptionsType | None = None,
+        java_options: Iterable[str] = (),
+        dependencies: Iterable[Node] = (),
+    ) -> None:
+        if options is None:
+            options = {}
+
         command = _gatk_command(
             tool="CombineGVCFs",
             tool_options={
@@ -223,13 +239,23 @@ class CombineGVCFsNode(CommandNode):
         CommandNode.__init__(
             self,
             command=command,
-            description="combining {} VCFs".format(len(in_variants)),
+            description=f"combining {len(in_variants)} VCFs",
             dependencies=dependencies,
         )
 
 
 class CreateSequenceDictionaryNode(CommandNode):
-    def __init__(self, in_fasta, options={}, java_options=(), dependencies=()):
+    def __init__(
+        self,
+        *,
+        in_fasta: str,
+        options: OptionsType | None = None,
+        java_options: Iterable[str] = (),
+        dependencies: Iterable[Node] = (),
+    ) -> None:
+        if options is None:
+            options = {}
+
         command = _gatk_command(
             tool="CreateSequenceDictionary",
             tool_options={
@@ -243,7 +269,7 @@ class CreateSequenceDictionaryNode(CommandNode):
         CommandNode.__init__(
             self,
             command=command,
-            description="creating sequence dictionary for {!r}".format(in_fasta),
+            description=f"creating sequence dictionary for {in_fasta!r}",
             dependencies=dependencies,
         )
 
@@ -251,12 +277,15 @@ class CreateSequenceDictionaryNode(CommandNode):
 class FastqToSamNode(CommandNode):
     def __init__(
         self,
-        in_fastq,
-        out_bam,
-        options={},
-        java_options=(),
-        dependencies=(),
+        in_fastq: str,
+        out_bam: str,
+        options: OptionsType | None = None,
+        java_options: Iterable[str] = (),
+        dependencies: Iterable[Node] = (),
     ) -> None:
+        if options is None:
+            options = {}
+
         self._enabled = True
         self._in_fastq = in_fastq
         self._out_bam = out_bam
@@ -278,7 +307,7 @@ class FastqToSamNode(CommandNode):
         CommandNode.__init__(
             self,
             command=command,
-            description="converting {} to BAM".format(in_fastq),
+            description=f"converting {in_fastq} to BAM",
             dependencies=dependencies,
         )
 
@@ -289,17 +318,15 @@ class FastqToSamNode(CommandNode):
             self._enabled = bool(handle.readline().strip())
 
         # Prerequisites should always be checked, even if command is not run
-        return CommandNode._setup(self, temp)
+        return super()._setup(temp)
 
     def _run(self, temp: PathTypes) -> None:
         if self._enabled:
-            return CommandNode._run(self, temp)
-
-        return Node._run(self, temp)
+            super()._run(temp)
 
     def _teardown(self, temp: PathTypes) -> None:
         if self._enabled:
-            return CommandNode._teardown(self, temp)
+            return super()._teardown(temp)
 
         log = logging.getLogger(__name__)
         log.debug("creating dummy BAM file for %r", self._out_bam)
@@ -320,12 +347,15 @@ class FastqToSamNode(CommandNode):
 class GatherVcfsNode(CommandNode):
     def __init__(
         self,
-        in_vcfs,
-        out_vcf,
-        options={},
-        java_options=(),
-        dependencies=(),
+        in_vcfs: str,
+        out_vcf: str,
+        options: OptionsType | None = None,
+        java_options: Iterable[str] = (),
+        dependencies: Iterable[Node] = (),
     ) -> None:
+        if options is None:
+            options = {}
+
         command = _gatk_command(
             tool="GatherVcfs",
             tool_options={
@@ -339,7 +369,7 @@ class GatherVcfsNode(CommandNode):
         CommandNode.__init__(
             self,
             command=command,
-            description="gathering {} VCFs into {!r}".format(len(in_vcfs), out_vcf),
+            description=f"gathering {len(in_vcfs)} VCFs into {out_vcf!r}",
             dependencies=dependencies,
         )
 
@@ -347,14 +377,18 @@ class GatherVcfsNode(CommandNode):
 class GenotypeGVCFs(CommandNode):
     def __init__(
         self,
-        in_reference,
-        in_gvcf,
-        out_vcf,
-        out_log=None,
-        options={},
-        java_options=(),
-        dependencies=(),
-    ):
+        *,
+        in_reference: str,
+        in_gvcf: str,
+        out_vcf: str,
+        out_log: str | None = None,
+        options: OptionsType | None = None,
+        java_options: Iterable[str] = (),
+        dependencies: Iterable[Node] = (),
+    ) -> None:
+        if options is None:
+            options = {}
+
         self.out_vcf = out_vcf
 
         command = _gatk_command(
@@ -379,7 +413,7 @@ class GenotypeGVCFs(CommandNode):
         CommandNode.__init__(
             self,
             command=command,
-            description="genotyping {!r}".format(in_gvcf),
+            description=f"genotyping {in_gvcf!r}",
             dependencies=dependencies,
         )
 
@@ -387,14 +421,18 @@ class GenotypeGVCFs(CommandNode):
 class HaplotypeCallerNode(CommandNode):
     def __init__(
         self,
-        in_reference,
-        in_bam,
-        out_vcf,
-        options={},
-        out_log=None,
-        java_options=(),
-        dependencies=(),
-    ):
+        *,
+        in_reference: str,
+        in_bam: str,
+        out_vcf: str,
+        out_log: str | None = None,
+        options: OptionsType | None = None,
+        java_options: Iterable[str] = (),
+        dependencies: Iterable[Node] = (),
+    ) -> None:
+        if options is None:
+            options = {}
+
         self.out_vcf = out_vcf
 
         command = _gatk_command(
@@ -418,7 +456,7 @@ class HaplotypeCallerNode(CommandNode):
         CommandNode.__init__(
             self,
             command=command,
-            description="calling haplotypes for {!r}".format(in_bam),
+            description=f"calling haplotypes for {in_bam!r}",
             threads=options.get("--native-pair-hmm-threads", 4),
             dependencies=dependencies,
         )
@@ -430,23 +468,26 @@ class SplitIntervalsNode(CommandNode):
         in_reference: str,
         out_folder: str,
         scatter_count: int = 1,
-        options: OptionsType = {},
+        options: OptionsType | None = None,
         java_options: Iterable[str] = (),
         dependencies: Iterable[Node] = (),
-    ):
-        if scatter_count < 1:
-            raise ValueError("scatter_count must be >= 1, not {}".format(scatter_count))
+    ) -> None:
+        if options is None:
+            options = {}
 
-        self.intervals = []
+        if scatter_count < 1:
+            raise ValueError(f"scatter_count must be >= 1, not {scatter_count}")
+
+        self.intervals: list[dict[str, str]] = []
         for idx in range(scatter_count):
-            name = "{:03}_of_{:03}".format(idx, scatter_count)
-            filename = os.path.join(out_folder, "{:04}.interval_list".format(idx))
+            name = f"{idx:03}_of_{scatter_count:03}"
+            filename = os.path.join(out_folder, f"{idx:04}.interval_list")
 
             # A list of dicts is used so that sort order is always predictable; this
             # is needed for some operations that require intervals in genome order
             self.intervals.append({"name": name, "filename": filename})
 
-        extra_files: List[Union[InputFile, OutputFile]] = []
+        extra_files: list[InputFile | OutputFile] = []
         for interval in self.intervals:
             extra_files.append(OutputFile(interval["filename"]))
 
@@ -470,9 +511,7 @@ class SplitIntervalsNode(CommandNode):
         CommandNode.__init__(
             self,
             command=command,
-            description="splitting {!r} into {} intervals".format(
-                in_reference, scatter_count
-            ),
+            description=f"splitting {in_reference!r} into {scatter_count} intervals",
             dependencies=dependencies,
         )
 
@@ -483,7 +522,12 @@ class TranchesPlotsNode(CommandNode):
     in some cases, and to make plotting independant of the variant calling task.
     """
 
-    def __init__(self, input_table, output_prefix, dependencies=()):
+    def __init__(
+        self,
+        input_table: str,
+        output_prefix: str,
+        dependencies: Iterable[Node] = (),
+    ) -> None:
         command = AtomicCmd(
             (
                 "Rscript",
@@ -500,7 +544,7 @@ class TranchesPlotsNode(CommandNode):
         CommandNode.__init__(
             self,
             command=command,
-            description="plotting recalibration tranches for {!r}".format(input_table),
+            description=f"plotting recalibration tranches for {input_table!r}",
             dependencies=dependencies,
         )
 
@@ -508,17 +552,21 @@ class TranchesPlotsNode(CommandNode):
 class VariantRecalibratorNode(CommandNode):
     def __init__(
         self,
-        mode,
-        in_reference,
-        in_variant,
-        out_recal,
-        out_tranches,
-        out_r_plot,
-        out_log=None,
-        options={},
-        java_options={},
-        dependencies=(),
-    ):
+        *,
+        mode: Literal["INDEL", "SNP"],
+        in_reference: str,
+        in_variant: str,
+        out_recal: str,
+        out_tranches: str,
+        out_r_plot: str,
+        out_log: str | None = None,
+        options: OptionsType | None = None,
+        java_options: Iterable[str] = (),
+        dependencies: Iterable[Node] = (),
+    ) -> None:
+        if options is None:
+            options = {}
+
         if mode not in ("INDEL", "SNP"):
             raise ValueError(mode)
 
@@ -546,6 +594,9 @@ class VariantRecalibratorNode(CommandNode):
 
         for key, value in options.items():
             if key.startswith("--resource"):
+                if not isinstance(value, str):
+                    raise TypeError(f"--resource={value!r} is not a string")
+
                 options[key] = InputFile(value)
                 # FIXME: Expected index may also depend on extension (see above)
                 extra_files.append(InputFile(value + ".tbi"))
@@ -569,20 +620,20 @@ class VariantRecalibratorNode(CommandNode):
         CommandNode.__init__(
             self,
             command=command,
-            description="training {} recalibrator for {!r}".format(mode, in_variant),
+            description=f"training {mode} recalibrator for {in_variant!r}",
             dependencies=dependencies,
         )
 
 
 def _gatk_command(
-    tool,
-    java_options,
-    tool_options,
-    user_tool_options,
-    stdout=None,
-    stderr=None,
-    extra_files=(),
-):
+    tool: str,
+    java_options: Iterable[str],
+    tool_options: OptionsType,
+    user_tool_options: OptionsType,
+    stdout: int | str | OutputFile | None = None,
+    stderr: int | str | OutputFile | None = None,
+    extra_files: Iterable[AtomicFileTypes] = (),
+) -> AtomicCmd:
     command = AtomicCmd(
         ["gatk"],
         stdout=stdout,
@@ -602,7 +653,7 @@ def _gatk_command(
     return command
 
 
-def _normalize_idx_extension(command, out_bam):
+def _normalize_idx_extension(command: AtomicCmd, out_bam: str) -> SequentialCmds:
     # FIXME: Support for other index formats?
     in_index = swap_ext(os.path.basename(out_bam), ".bai")
 

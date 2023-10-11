@@ -22,10 +22,10 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
-from typing import Any, Union
+from typing import TYPE_CHECKING
 
-from .fileutils import fspath
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class SetWorkingDirectory:
@@ -33,14 +33,14 @@ class SetWorkingDirectory:
     in the constructor upon entry, and reverts to the previously used
     directory upon exiting a with statement."""
 
-    def __init__(self, path: Union[str, Path]):
+    def __init__(self, path: str | Path) -> None:
         self._old_cwd = None
-        self._new_cwd = fspath(path)
+        self._new_cwd = os.fspath(path)
 
-    def __enter__(self):
+    def __enter__(self) -> None:
         self._old_cwd = os.getcwd()
         os.chdir(self._new_cwd)
 
-    def __exit__(self, _type: Any, _value: Any, _traceback: Any):
+    def __exit__(self, typ: object, exc: object, tb: object) -> None:
         if self._old_cwd:
             os.chdir(self._old_cwd)

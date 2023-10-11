@@ -23,9 +23,10 @@ from __future__ import annotations
 
 import sys
 import time
-from typing import IO, Iterator
+from typing import IO, TYPE_CHECKING, Iterator
 
-from pysam import AlignedSegment, AlignmentFile
+if TYPE_CHECKING:
+    from pysam import AlignedSegment, AlignmentFile
 
 
 class BAMTimer:
@@ -34,7 +35,7 @@ class BAMTimer:
         handle: AlignmentFile,
         step: int = 1_000_000,
         out: IO[str] = sys.stderr,
-    ):
+    ) -> None:
         self._handle = handle
         self._out = out
         self._step = step

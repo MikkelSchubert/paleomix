@@ -29,9 +29,13 @@ from __future__ import annotations
 
 import fnmatch
 import os
+from typing import TYPE_CHECKING, Iterable
 
-from paleomix.common.command import AtomicCmd, InputFile, OutputFile
-from paleomix.node import CommandNode, NodeError
+from paleomix.common.command import AtomicCmd, InputFile, OptionsType, OutputFile
+from paleomix.node import CommandNode, Node, NodeError
+
+if TYPE_CHECKING:
+    from typing_extensions import Literal
 
 # Supported modules and their expected files
 # For more, see https://multiqc.info/docs/#multiqc-modules
@@ -42,10 +46,19 @@ MODULES = {
 
 
 class MultiQCNode(CommandNode):
-    def __init__(self, source, output_prefix, dependencies, options={}):
+    def __init__(
+        self,
+        source: Literal["fastp", "fastqc"],
+        output_prefix: str,
+        dependencies: Iterable[Node],
+        options: OptionsType | None = None,
+    ) -> None:
         pattern = MODULES.get(source)
         if pattern is None:
-            raise NodeError("unsupported MultiQC source {!r}".format(source))
+            raise NodeError(f"unsupported MultiQC source {source!r}")
+
+        if options is None:
+            options = {}
 
         command = AtomicCmd(
             [
@@ -67,13 +80,14 @@ class MultiQCNode(CommandNode):
         command.append_options(options)
 
         input_files_found = False
+        dependencies = list(dependencies)
         for node in dependencies:
             for filename in fnmatch.filter(node.output_files, pattern):
                 input_files_found = True
                 command.append(InputFile(filename))
 
         if not input_files_found:
-            raise NodeError("no {!r} input files found for MultiQC".format(source))
+            raise NodeError(f"no {source!r} input files found for MultiQC")
 
         CommandNode.__init__(
             self,

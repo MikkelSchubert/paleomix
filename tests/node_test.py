@@ -31,7 +31,7 @@ import random
 import re
 import uuid
 from pathlib import Path
-from typing import TYPE_CHECKING, TypeVar
+from typing import Any, Iterable, Sequence, TypeVar
 from unittest.mock import Mock, call
 
 import pytest
@@ -47,11 +47,6 @@ from paleomix.node import (
     NodeError,
     NodeUnhandledException,
 )
-
-if TYPE_CHECKING:
-    from typing import Any, Iterable, Sequence
-
-    from paleomix.common.fileutils import PathTypes
 
 T = TypeVar("T")
 
@@ -614,7 +609,7 @@ def test_commandnode_teardown__commit(tmp_path: Path) -> None:
     cmd_mock = _build_cmd_mock()
     node = CommandNode(cmd_mock)
     node._teardown(tmp_path)
-    assert cmd_mock.mock_calls == [call.commit(tmp_path)]
+    assert cmd_mock.mock_calls == [call.commit()]
 
 
 # Files exist in temp folder, and in destination after commit
@@ -685,8 +680,8 @@ def test_commandnode_teardown__missing_files_in_dest(tmp_path: Path) -> None:
     destination, tmp_path = _setup_temp_folders(tmp_path)
 
     class _CmdMock(AtomicCmd):
-        def commit(self, temp: PathTypes) -> None:
-            AtomicCmd.commit(self, temp)
+        def commit(self) -> None:
+            AtomicCmd.commit(self)
             (destination / "foo.txt").unlink()
 
     cmd = _CmdMock(

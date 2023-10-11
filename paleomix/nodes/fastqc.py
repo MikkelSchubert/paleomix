@@ -28,10 +28,11 @@ from __future__ import annotations
 
 import os
 import re
+from typing import Iterable
 
-from paleomix.common.command import AtomicCmd, InputFile, OutputFile
+from paleomix.common.command import AtomicCmd, InputFile, OptionsType, OutputFile
 from paleomix.common.versions import Requirement
-from paleomix.node import CommandNode
+from paleomix.node import CommandNode, Node
 
 # File extensions striped by FASTQ for output filenames
 _FASTQC_EXCLUDED_EXTENSIONS = re.compile(
@@ -40,9 +41,17 @@ _FASTQC_EXCLUDED_EXTENSIONS = re.compile(
 
 
 class FastQCNode(CommandNode):
-    def __init__(self, in_file, out_folder, options={}, dependencies=()):
-        out_prefix = _FASTQC_EXCLUDED_EXTENSIONS.sub("", os.path.basename(in_file))
+    def __init__(
+        self,
+        in_file: str,
+        out_folder: str,
+        options: OptionsType | None = None,
+        dependencies: Iterable[Node] = (),
+    ) -> None:
+        if options is None:
+            options = {}
 
+        out_prefix = _FASTQC_EXCLUDED_EXTENSIONS.sub("", os.path.basename(in_file))
         command = AtomicCmd(
             ["fastqc", InputFile(in_file)],
             extra_files=[
@@ -69,6 +78,6 @@ class FastQCNode(CommandNode):
         CommandNode.__init__(
             self,
             command=command,
-            description="fastQC of {}".format(in_file),
+            description=f"fastQC of {in_file}",
             dependencies=dependencies,
         )

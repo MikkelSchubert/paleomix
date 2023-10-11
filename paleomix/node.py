@@ -318,15 +318,15 @@ class Node:
 
 
 class CommandNode(Node):
-    _command: Union[AtomicCmd, ParallelCmds, SequentialCmds]
+    _command: AtomicCmd | ParallelCmds | SequentialCmds
 
     def __init__(
         self,
-        command: Union[AtomicCmd, ParallelCmds, SequentialCmds],
-        description: Optional[str] = None,
+        command: AtomicCmd | ParallelCmds | SequentialCmds,
+        description: str | None = None,
         threads: int = 1,
         dependencies: Iterable[Node] = (),
-    ):
+    ) -> None:
         Node.__init__(
             self,
             description=description,
@@ -348,7 +348,7 @@ class CommandNode(Node):
         try:
             self._command.run(temp)
         except CmdError as error:
-            raise CmdNodeError("%s\n\n%s" % (str(self._command), error))
+            raise CmdNodeError(f"{self._command!s}\n\n{error}") from error
 
         return_codes = self._command.join()
         if any(return_codes):
@@ -363,12 +363,11 @@ class CommandNode(Node):
             raise CmdNodeError(
                 (
                     "Error running task, required files were not created:\n"
-                    "Temporary directory: %r\n"
-                    "\tRequired files missing from temporary directory:\n\t    - %s"
-                )
-                % (temp, "\n\t    - ".join(sorted(map(repr, missing_files))))
+                    "Temporary directory: {!r}\n"
+                    "\tRequired files missing from temporary directory:\n\t    - {}"
+                ).format(temp, "\n\t    - ".join(sorted(map(repr, missing_files))))
             )
 
-        self._command.commit(temp)
+        self._command.commit()
 
-        Node._teardown(self, temp)
+        super()._teardown(temp)

@@ -22,6 +22,7 @@
 from __future__ import annotations
 
 import sys
+from enum import Enum
 from typing import IO, TYPE_CHECKING, Iterable, Iterator
 
 from paleomix.common.fileutils import open_rt
@@ -147,18 +148,7 @@ class FASTQ(TotallyOrdered, Immutable):
         )
 
 
-class FASTQualities:
-    """Given a set of FASTQ records, this class attempts to identify the
-    offset used to encode the quality scores pf those records.
-
-    The following constants may be returned:
-    - OFFSET_33: Offset identified as being 33
-    - OFFSET_64: Offset identified as being 64
-    - BOTH: Both offset 33 and 64 found, mixed file? (error)
-    - MISSING: No quality scores found, wrong file? (error)
-    - AMBIGIOUS: Qualities could be either offset. (warning)
-    """
-
+class FASTQOffsets(Enum):
     # Quality score offsets for Phred (or similar) scores in FASTQ reads (33 or 64)
     OFFSET_33 = 33
     OFFSET_64 = 64
@@ -171,13 +161,26 @@ class FASTQualities:
     # low-quality reads with offset 64, or high-quality reads with offset 33
     AMBIGIOUS = "AMBIGIOUS"
 
+
+class FASTQualities:
+    """Given a set of FASTQ records, this class attempts to identify the
+    offset used to encode the quality scores pf those records.
+
+    The following constants may be returned:
+    - OFFSET_33: Offset identified as being 33
+    - OFFSET_64: Offset identified as being 64
+    - BOTH: Both offset 33 and 64 found, mixed file? (error)
+    - MISSING: No quality scores found, wrong file? (error)
+    - AMBIGIOUS: Qualities could be either offset. (warning)
+    """
+
     def __init__(self) -> None:
         self._qualities: set[str] = set()
 
     def update(self, record: FASTQ) -> None:
         self._qualities.update(record.qualities)
 
-    def offsets(self):
+    def offsets(self) -> FASTQOffsets:
         qualities = [False] * 256
         for quality in self._qualities:
             qualities[ord(quality)] = True
@@ -192,11 +195,11 @@ class FASTQualities:
 
         if has_offset_33_scores:
             if has_offset_64_scores:
-                return FASTQualities.BOTH
-            return FASTQualities.OFFSET_33
+                return FASTQOffsets.BOTH
+            return FASTQOffsets.OFFSET_33
         elif has_offset_64_scores:
-            return FASTQualities.OFFSET_64
+            return FASTQOffsets.OFFSET_64
         elif has_ambigious_scores:
-            return FASTQualities.AMBIGIOUS
+            return FASTQOffsets.AMBIGIOUS
 
-        return FASTQualities.MISSING
+        return FASTQOffsets.MISSING

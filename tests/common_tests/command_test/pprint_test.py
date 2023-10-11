@@ -523,21 +523,21 @@ def test_pformat_list__empty() -> None:
 
 
 def test_pformat_list__single() -> None:
-    assert _pformat_list([3]) == "3"
+    assert _pformat_list(["3"]) == "3"
 
 
 def test_pformat_list__multiple() -> None:
-    assert _pformat_list([3, 2, 1]) == "3 2 1"
+    assert _pformat_list(["3", "2", "1"]) == "3 2 1"
 
 
 def test_pformat_list__wrapped() -> None:
-    assert _pformat_list([3, 2, 1], width=1) == "3 \\\n    2 \\\n    1"
-    assert _pformat_list([3, 2, 1], width=2) == "3 \\\n    2 \\\n    1"
-    assert _pformat_list([3, 2, 1], width=3) == "3 \\\n    2 \\\n    1"
-    assert _pformat_list([3, 2, 1], width=4) == "3 2 \\\n    1"
-    assert _pformat_list([3, 2, 1], width=5) == "3 2 \\\n    1"
-    assert _pformat_list([3, 2, 1], width=6) == "3 2 1"
-    assert _pformat_list([3, 2, 1], width=7) == "3 2 1"
+    assert _pformat_list(["3", "2", "1"], width=1) == "3 \\\n    2 \\\n    1"
+    assert _pformat_list(["3", "2", "1"], width=2) == "3 \\\n    2 \\\n    1"
+    assert _pformat_list(["3", "2", "1"], width=3) == "3 \\\n    2 \\\n    1"
+    assert _pformat_list(["3", "2", "1"], width=4) == "3 2 \\\n    1"
+    assert _pformat_list(["3", "2", "1"], width=5) == "3 2 \\\n    1"
+    assert _pformat_list(["3", "2", "1"], width=6) == "3 2 1"
+    assert _pformat_list(["3", "2", "1"], width=7) == "3 2 1"
 
 
 def test_pformat_list__escaped() -> None:

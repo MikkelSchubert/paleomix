@@ -23,22 +23,28 @@ from __future__ import annotations
 
 import functools
 import os
-from typing import Iterable, Type, Union
+from typing import TYPE_CHECKING, Iterable
 
 from paleomix.common import versions
 from paleomix.common.command import (
     AtomicCmd,
+    AtomicFileTypes,
     Executable,
     InputFile,
+    OptionsType,
     OutputFile,
     ParallelCmds,
-    PipeType,
     TempOutputFile,
 )
 from paleomix.common.fileutils import PathTypes, describe_paired_files
-from paleomix.node import CommandNode
+from paleomix.node import CommandNode, Node
 from paleomix.nodes.samtools import SAMTOOLS_VERSION
 from paleomix.tools import factory
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from typing_extensions import Literal
 
 # Index files used by BWA and BWA-MEM2 respectively
 BWA_INDEX_EXT = (".amb", ".ann", ".bwt", ".pac", ".sa")
@@ -61,7 +67,7 @@ BWA_MEM2_VERSION = versions.Requirement(
 
 
 class BWAIndexNode(CommandNode):
-    def __init__(self, input_file, dependencies=()):
+    def __init__(self, *, input_file: str, dependencies: Iterable[Node] = ()) -> None:
         command = _new_bwa_command(
             (
                 "bwa",
@@ -77,13 +83,13 @@ class BWAIndexNode(CommandNode):
         CommandNode.__init__(
             self,
             command=command,
-            description="creating BWA index for %s" % (input_file,),
+            description=f"creating BWA index for {input_file}",
             dependencies=dependencies,
         )
 
 
 class BWAMem2IndexNode(CommandNode):
-    def __init__(self, input_file, dependencies=()):
+    def __init__(self, *, input_file: str, dependencies: Iterable[Node] = ()) -> None:
         in_file = InputFile(input_file)
         tmp_file = TempOutputFile(input_file)
         index_call = ("bwa-mem2", "index", in_file, "-p", tmp_file)
@@ -97,7 +103,7 @@ class BWAMem2IndexNode(CommandNode):
                 index_iotype=OutputFile,
                 requirements=[BWA_MEM2_VERSION],
             ),
-            description="creating BWA MEM2 index for %s" % (input_file,),
+            description=f"creating BWA MEM2 index for {input_file}",
             dependencies=dependencies,
         )
 
@@ -105,14 +111,15 @@ class BWAMem2IndexNode(CommandNode):
 class BWABacktrack(CommandNode):
     def __init__(
         self,
-        input_file,
-        output_file,
-        reference,
-        threads=1,
-        mapping_options={},
-        dependencies=(),
-    ):
-        threads = _get_max_threads(reference, threads)
+        *,
+        input_file: str,
+        output_file: str,
+        reference: str,
+        threads: int = 1,
+        mapping_options: OptionsType | None = None,
+        dependencies: Iterable[Node] = (),
+    ) -> None:
+        threads = get_max_threads(reference, threads)
         command = _new_bwa_command(
             ("bwa", "aln", reference, InputFile(input_file)),
             reference=reference,
@@ -127,7 +134,7 @@ class BWABacktrack(CommandNode):
         CommandNode.__init__(
             self,
             command=command,
-            description=_get_node_description(
+            description=get_node_description(
                 name="BWA backtrack",
                 input_files_1=input_file,
                 reference=reference,
@@ -140,15 +147,21 @@ class BWABacktrack(CommandNode):
 class BWASamse(CommandNode):
     def __init__(
         self,
-        input_file_fq,
-        input_file_sai,
-        output_file,
-        reference,
-        threads=1,
-        mapping_options={},
-        cleanup_options={},
-        dependencies=(),
-    ):
+        *,
+        input_file_fq: str,
+        input_file_sai: str,
+        output_file: str,
+        reference: str,
+        threads: int = 1,
+        mapping_options: OptionsType | None = None,
+        cleanup_options: OptionsType | None = None,
+        dependencies: Iterable[Node] = (),
+    ) -> None:
+        if cleanup_options is None:
+            cleanup_options = {}
+        if mapping_options is None:
+            mapping_options = {}
+
         samse = _new_bwa_command(
             (
                 "bwa",
@@ -163,7 +176,7 @@ class BWASamse(CommandNode):
 
         samse.append_options(mapping_options)
 
-        cleanup = _new_cleanup_command(
+        cleanup = new_cleanup_command(
             stdin=samse,
             in_reference=reference,
             out_bam=output_file,
@@ -174,7 +187,7 @@ class BWASamse(CommandNode):
         CommandNode.__init__(
             self,
             command=ParallelCmds([samse, cleanup]),
-            description=_get_node_description(
+            description=get_node_description(
                 name="BWA samse",
                 input_files_1=input_file_fq,
                 reference=reference,
@@ -187,17 +200,23 @@ class BWASamse(CommandNode):
 class BWASampe(CommandNode):
     def __init__(
         self,
-        input_file_fq_1,
-        input_file_fq_2,
-        input_file_sai_1,
-        input_file_sai_2,
-        output_file,
-        reference,
-        threads=1,
-        mapping_options={},
-        cleanup_options={},
-        dependencies=(),
-    ):
+        *,
+        input_file_fq_1: str,
+        input_file_fq_2: str,
+        input_file_sai_1: str,
+        input_file_sai_2: str,
+        output_file: str,
+        reference: str,
+        threads: int = 1,
+        mapping_options: OptionsType | None = None,
+        cleanup_options: OptionsType | None = None,
+        dependencies: Iterable[Node] = (),
+    ) -> None:
+        if cleanup_options is None:
+            cleanup_options = {}
+        if mapping_options is None:
+            mapping_options = {}
+
         sampe = _new_bwa_command(
             (
                 "bwa",
@@ -214,7 +233,7 @@ class BWASampe(CommandNode):
 
         sampe.append_options(mapping_options)
 
-        cleanup = _new_cleanup_command(
+        cleanup = new_cleanup_command(
             stdin=sampe,
             in_reference=reference,
             out_bam=output_file,
@@ -226,7 +245,7 @@ class BWASampe(CommandNode):
         CommandNode.__init__(
             self,
             command=ParallelCmds([sampe, cleanup]),
-            description=_get_node_description(
+            description=get_node_description(
                 name="BWA sampe",
                 input_files_1=input_file_fq_1,
                 input_files_2=input_file_fq_2,
@@ -240,18 +259,24 @@ class BWASampe(CommandNode):
 class BWAAlgorithmNode(CommandNode):
     def __init__(
         self,
-        input_file_1,
-        output_file,
-        reference,
-        input_file_2=None,
-        threads=1,
-        algorithm="mem",
-        alt_aware=False,
-        alt_optimize=False,
-        mapping_options={},
-        cleanup_options={},
-        dependencies=(),
-    ):
+        *,
+        input_file_1: str,
+        output_file: str,
+        reference: str,
+        input_file_2: str | None = None,
+        threads: int = 1,
+        algorithm: Literal["mem", "bwasw", "mem2"] = "mem",
+        alt_aware: bool = False,
+        alt_optimize: bool = False,
+        mapping_options: OptionsType | None = None,
+        cleanup_options: OptionsType | None = None,
+        dependencies: Iterable[Node] = (),
+    ) -> None:
+        if cleanup_options is None:
+            cleanup_options = {}
+        if mapping_options is None:
+            mapping_options = {}
+
         if algorithm in ("mem", "bwasw"):
             aln_call = ("bwa", algorithm, reference, InputFile(input_file_1))
             index_ext = BWA_INDEX_EXT
@@ -261,7 +286,7 @@ class BWAAlgorithmNode(CommandNode):
             index_ext = BWA_MEM2_INDEX_EXT
             requirements = [BWA_MEM2_VERSION]
         else:
-            raise NotImplementedError("BWA algorithm %r not implemented" % (algorithm,))
+            raise NotImplementedError(f"BWA algorithm {algorithm!r} not implemented")
 
         aln = _new_bwa_command(
             aln_call,
@@ -280,7 +305,7 @@ class BWAAlgorithmNode(CommandNode):
 
             aln.add_extra_files([InputFile(reference + ".alt")])
 
-        threads = _get_max_threads(reference, threads)
+        threads = get_max_threads(reference, threads)
 
         aln.merge_options(
             user_options=mapping_options,
@@ -291,7 +316,7 @@ class BWAAlgorithmNode(CommandNode):
             },
         )
 
-        cleanup = _new_cleanup_command(
+        cleanup = new_cleanup_command(
             stdin=aln,
             in_reference=reference,
             out_bam=output_file,
@@ -305,8 +330,8 @@ class BWAAlgorithmNode(CommandNode):
         CommandNode.__init__(
             self,
             command=ParallelCmds([aln, cleanup]),
-            description=_get_node_description(
-                name="BWA {}".format(algorithm),
+            description=get_node_description(
+                name=f"BWA {algorithm}",
                 input_files_1=input_file_1,
                 input_files_2=input_file_2,
                 reference=reference,
@@ -316,16 +341,20 @@ class BWAAlgorithmNode(CommandNode):
         )
 
 
-def _new_cleanup_command(
-    stdin,
-    in_reference,
-    out_bam,
-    max_threads=1,
-    paired_end=False,
-    alt_aware=False,
-    alt_optimize=False,
-    options={},
-):
+def new_cleanup_command(
+    *,
+    stdin: AtomicCmd,
+    in_reference: str,
+    out_bam: str,
+    max_threads: int = 1,
+    paired_end: bool = False,
+    alt_aware: bool = False,
+    alt_optimize: bool = False,
+    options: OptionsType | None = None,
+) -> AtomicCmd:
+    if options is None:
+        options = {}
+
     convert = factory.new(
         "cleanup",
         stdin=stdin,
@@ -335,7 +364,7 @@ def _new_cleanup_command(
         ],
     )
 
-    fixed_options = {
+    fixed_options: OptionsType = {
         "--fasta": InputFile(in_reference),
         "--temp-prefix": TempOutputFile("bam_cleanup"),
     }
@@ -362,13 +391,14 @@ def _new_cleanup_command(
 
 
 def _new_bwa_command(
-    call,
+    call: Iterable[AtomicFileTypes | str | int | Path],
+    *,
     reference: PathTypes,
     index_ext: Iterable[str] = BWA_INDEX_EXT,
-    index_iotype: Union[Type[InputFile], Type[OutputFile]] = InputFile,
+    index_iotype: type[InputFile | OutputFile] = InputFile,
     requirements: Iterable[versions.Requirement] = (BWA_VERSION,),
-    stdout: PipeType = None,
-):
+    stdout: int | str | Path | OutputFile | None = None,
+) -> AtomicCmd:
     return AtomicCmd(
         call,
         extra_files=[index_iotype(os.fspath(reference) + ext) for ext in index_ext],
@@ -378,7 +408,7 @@ def _new_bwa_command(
 
 
 @functools.lru_cache()
-def _get_max_threads(reference, threads):
+def get_max_threads(reference: str, threads: int) -> int:
     """Returns the maximum number of threads to use when mapping against a
     given reference sequence. This is done since very little gain is obtained
     when using multiple threads for a small genome (e.g. < 1MB). If the
@@ -391,11 +421,16 @@ def _get_max_threads(reference, threads):
     return threads
 
 
-def _get_node_description(name, input_files_1, reference, input_files_2=None):
+def get_node_description(
+    name: str,
+    input_files_1: str,
+    reference: str,
+    input_files_2: str | None = None,
+) -> str:
     reference = os.path.basename(reference)
-    if reference.endswith(".fasta") or reference.endswith(".fa"):
+    if reference.endswith((".fasta", ".fa")):
         reference = reference.rsplit(".", 1)[0]
 
     input_files = describe_paired_files(input_files_1, input_files_2 or ())
 
-    return "aligning {} onto {} using {}".format(input_files, reference, name)
+    return f"aligning {input_files} onto {reference} using {name}"

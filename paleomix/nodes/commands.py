@@ -37,7 +37,14 @@ from paleomix.tools import factory
 
 
 class CoverageNode(CommandNode):
-    def __init__(self, target_name, input_file, output_file, dependencies=()):
+    def __init__(
+        self,
+        *,
+        target_name: str,
+        input_file: str,
+        output_file: str,
+        dependencies: Iterable[Node] = (),
+    ) -> None:
         command = factory.new(
             [
                 "coverage",
@@ -51,7 +58,7 @@ class CoverageNode(CommandNode):
         CommandNode.__init__(
             self,
             command=command,
-            description="calculating coverage for %s" % (input_file,),
+            description=f"calculating coverage for {input_file}",
             dependencies=dependencies,
         )
 
@@ -59,11 +66,12 @@ class CoverageNode(CommandNode):
 class DepthHistogramNode(CommandNode):
     def __init__(
         self,
-        target_name,
-        input_file,
-        output_file,
-        dependencies=(),
-    ):
+        *,
+        target_name: str,
+        input_file: str,
+        output_file: str,
+        dependencies: Iterable[Node] = (),
+    ) -> None:
         command = factory.new(
             [
                 "depths",
@@ -77,7 +85,7 @@ class DepthHistogramNode(CommandNode):
         CommandNode.__init__(
             self,
             command=command,
-            description="calculating depth histogram for %s" % (input_file,),
+            description=f"calculating depth histogram for {input_file}",
             dependencies=dependencies,
         )
 
@@ -85,11 +93,12 @@ class DepthHistogramNode(CommandNode):
 class FilterCollapsedBAMNode(CommandNode):
     def __init__(
         self,
+        *,
         input_bams: Iterable[str],
         output_bam: str,
         keep_dupes: bool = True,
         dependencies: Iterable[Node] = (),
-    ):
+    ) -> None:
         input_bams = tuple(input_bams)
         if len(input_bams) > 1:
             merge = merge_bam_files_command(input_bams)
@@ -113,8 +122,9 @@ class FilterCollapsedBAMNode(CommandNode):
         CommandNode.__init__(
             self,
             command=command,
-            description="filtering merged-read PCR duplicates in %s"
-            % (describe_files(input_bams),),
+            description="filtering merged-read PCR duplicates in {}".format(
+                describe_files(input_bams)
+            ),
             dependencies=dependencies,
         )
 
@@ -127,9 +137,12 @@ class FinalizeBAMNode(CommandNode):
         out_failed: str,
         out_json: str,
         threads: int = 1,
-        options: OptionsType = {},
+        options: OptionsType | None = None,
         dependencies: Iterable[Node] = (),
-    ):
+    ) -> None:
+        if options is None:
+            options = {}
+
         in_bams = tuple(in_bams)
         if len(in_bams) > 1:
             merge = merge_bam_files_command(in_bams)
@@ -158,8 +171,7 @@ class FinalizeBAMNode(CommandNode):
 
         CommandNode.__init__(
             self,
-            description="creating finalized BAMs %r and %r"
-            % (
+            description="creating finalized BAMs {!r} and {!r}".format(
                 os.path.basename(out_passed),
                 os.path.basename(out_failed),
             ),

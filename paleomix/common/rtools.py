@@ -35,5 +35,5 @@ def requirement(
         # ensure that we can differentiate between the version and any other output
         regexp=r"d0fd3ea6: (\d+)\.(\d+)(?:\.(\d+))?",
         specifiers=specifiers,
-        name="R module: {}".format(module),
+        name=f"R module: {module}",
     )

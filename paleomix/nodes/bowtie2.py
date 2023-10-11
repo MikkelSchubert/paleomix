@@ -21,11 +21,12 @@
 #
 from __future__ import annotations
 
-from typing import Any, Iterable, Optional, Type, Union
+from typing import Iterable
 
 from paleomix.common import versions
 from paleomix.common.command import (
     AtomicCmd,
+    AtomicFileTypes,
     InputFile,
     OptionsType,
     OutputFile,
@@ -34,9 +35,9 @@ from paleomix.common.command import (
 )
 from paleomix.node import CommandNode, Node, NodeError
 from paleomix.nodes.bwa import (
-    _get_max_threads,
-    _get_node_description,
-    _new_cleanup_command,
+    get_max_threads,
+    get_node_description,
+    new_cleanup_command,
 )
 
 BOWTIE2_VERSION = versions.Requirement(
@@ -47,21 +48,21 @@ BOWTIE2_VERSION = versions.Requirement(
 
 
 class Bowtie2IndexNode(CommandNode):
-    def __init__(self, input_file: str, dependencies: Iterable[Node] = ()):
-        command = _bowtie2_template(
+    def __init__(self, *, input_file: str, dependencies: Iterable[Node] = ()) -> None:
+        command = AtomicCmd(
             (
                 "bowtie2-build",
                 InputFile(input_file),
                 TempOutputFile(input_file),
             ),
-            reference=input_file,
-            iotype=OutputFile,
+            extra_files=_reference_files(input_file, iotype=OutputFile),
+            requirements=[BOWTIE2_VERSION],
         )
 
         CommandNode.__init__(
             self,
             command=command,
-            description="creating Bowtie2 index for %s" % (input_file,),
+            description=f"creating Bowtie2 index for {input_file}",
             dependencies=dependencies,
         )
 
@@ -69,22 +70,29 @@ class Bowtie2IndexNode(CommandNode):
 class Bowtie2Node(CommandNode):
     def __init__(
         self,
+        *,
         input_file_1: str,
-        input_file_2: Optional[str],
+        input_file_2: str | None,
         output_file: str,
         reference: str,
         threads: int = 2,
-        mapping_options: OptionsType = {},
-        cleanup_options: OptionsType = {},
+        mapping_options: OptionsType | None = None,
+        cleanup_options: OptionsType | None = None,
         dependencies: Iterable[Node] = (),
-    ):
-        aln = _bowtie2_template(
+    ) -> None:
+        if cleanup_options is None:
+            cleanup_options = {}
+        if mapping_options is None:
+            mapping_options = {}
+
+        aln = AtomicCmd(
             ["bowtie2"],
-            reference=reference,
+            extra_files=_reference_files(reference, iotype=InputFile),
             stdout=AtomicCmd.PIPE,
+            requirements=[BOWTIE2_VERSION],
         )
 
-        threads = _get_max_threads(reference, threads)
+        threads = get_max_threads(reference, threads)
         fixed_options: OptionsType = {
             "--threads": threads,
             "-x": reference,
@@ -106,7 +114,7 @@ class Bowtie2Node(CommandNode):
             fixed_options=fixed_options,
         )
 
-        cleanup = _new_cleanup_command(
+        cleanup = new_cleanup_command(
             stdin=aln,
             in_reference=reference,
             out_bam=output_file,
@@ -115,7 +123,7 @@ class Bowtie2Node(CommandNode):
             options=cleanup_options,
         )
 
-        description = _get_node_description(
+        description = get_node_description(
             name="Bowtie2",
             input_files_1=input_file_1,
             input_files_2=input_file_2,
@@ -131,25 +139,16 @@ class Bowtie2Node(CommandNode):
         )
 
 
-def _bowtie2_template(
-    call: Any,
+def _reference_files(
     reference: str,
-    iotype: Union[Type[InputFile], Type[OutputFile]] = InputFile,
-    **kwargs: Any,
-):
-    return AtomicCmd(
-        call,
-        extra_files=[
-            iotype(reference + postfix)
-            for postfix in (
-                ".1.bt2",
-                ".2.bt2",
-                ".3.bt2",
-                ".4.bt2",
-                ".rev.1.bt2",
-                ".rev.2.bt2",
-            )
-        ],
-        requirements=[BOWTIE2_VERSION],
-        **kwargs,
-    )
+    iotype: type[InputFile | OutputFile],
+) -> Iterable[AtomicFileTypes]:
+    for postfix in (
+        ".1.bt2",
+        ".2.bt2",
+        ".3.bt2",
+        ".4.bt2",
+        ".rev.1.bt2",
+        ".rev.2.bt2",
+    ):
+        yield iotype(reference + postfix)

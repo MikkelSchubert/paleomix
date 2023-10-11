@@ -23,12 +23,16 @@ from __future__ import annotations
 
 import json
 import sys
+from typing import TYPE_CHECKING
 
 from paleomix.common.argparse import ArgumentParser
-from paleomix.common.formats.fastq import FASTQ, FASTQualities
+from paleomix.common.formats.fastq import FASTQ, FASTQOffsets, FASTQualities
+
+if TYPE_CHECKING:
+    import argparse
 
 
-def parse_args(argv):
+def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = ArgumentParser("paleomix :validate_fastq")
     parser.add_argument("files", nargs="+")
     parser.add_argument("--collapsed", action="store_true")
@@ -38,7 +42,7 @@ def parse_args(argv):
     return parser.parse_args(argv)
 
 
-def main(argv):
+def main(argv: list[str]) -> int:
     args = parse_args(argv)
 
     seq_retained_nts = 0
@@ -52,8 +56,8 @@ def main(argv):
             seq_retained_reads += 1
             seq_retained_nts += len(record.sequence)
 
-        offsets = qualities.offsets()
-        if offsets == FASTQualities.BOTH:
+        offsets: FASTQOffsets = qualities.offsets()
+        if offsets == FASTQOffsets.BOTH:
             print(
                 "FASTQ file(s) contains quality scores with both quality offsets (33 "
                 "and 64); file may be unexpected format or corrupt. Please ensure that "
@@ -62,12 +66,12 @@ def main(argv):
             )
 
             return 1
-        elif offsets == FASTQualities.MISSING:
+        elif offsets == FASTQOffsets.MISSING:
             if args.no_empty:
                 print("FASTQ file is empty.", file=sys.stderr)
 
                 return 1
-        elif offsets not in (FASTQualities.AMBIGIOUS, args.offset):
+        elif offsets not in (FASTQOffsets.AMBIGIOUS, args.offset):
             print(
                 "FASTQ file contains quality scores with wrong quality score offset "
                 "(%i); expected reads with quality score offset %i. Ensure that the "

@@ -28,46 +28,38 @@ import signal
 import subprocess
 import sys
 from pathlib import Path
-from typing import (
-    IO,
-    Any,
-    Callable,
-    Dict,
-    Iterable,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    Union,
-)
+from typing import IO, TYPE_CHECKING, Callable, Dict, Iterable, List, Tuple, Union
 
 from paleomix.common import fileutils
-from paleomix.common.fileutils import PathTypes
 from paleomix.common.procs import register_process, unregister_process
 from paleomix.common.utilities import safe_coerce_to_tuple
 from paleomix.common.versions import Requirement
+
+if TYPE_CHECKING:
+    from typing_extensions import Self
+
+    from paleomix.common.fileutils import PathTypes
 
 
 class CmdError(RuntimeError):
     """Exception raised for AtomicCmd specific errors."""
 
-    def __init__(self, msg: object):
+    def __init__(self, msg: object) -> None:
         RuntimeError.__init__(self, msg)
 
 
 class _AtomicFile:
-    def __init__(self, path: PathTypes):
+    def __init__(self, path: PathTypes) -> None:
         self.path = fileutils.fspath(path)
 
         if isinstance(self.path, bytes):
             raise TypeError(f"invalid path {path!r}")
 
-    def basename(self):
+    def basename(self) -> str:
         return os.path.basename(self.path)
 
-    def __repr__(self):
-        return "%s(%r)" % (self.__class__.__name__, self.path)
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self.path!r})"
 
 
 class AuxiliaryFile(_AtomicFile):
@@ -79,15 +71,15 @@ class Executable(_AtomicFile):
 
 
 class _IOFile(_AtomicFile):
-    def __init__(self, path: PathTypes, temporary: bool = False):
+    def __init__(self, path: PathTypes, *, temporary: bool = False) -> None:
         super().__init__(path)
         self.temporary = bool(temporary)
 
         if temporary and os.path.dirname(self.path):
             raise ValueError(f"directory component in temporary path {self.path!r}")
 
-    def __repr__(self):
-        return "%s(%r, %s)" % (self.__class__.__name__, self.path, self.temporary)
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self.path!r}, {self.temporary})"
 
 
 class InputFile(_IOFile):
@@ -95,7 +87,7 @@ class InputFile(_IOFile):
 
 
 class TempInputFile(InputFile):
-    def __init__(self, path: PathTypes):
+    def __init__(self, path: PathTypes) -> None:
         super().__init__(os.path.basename(path), temporary=True)
 
 
@@ -104,17 +96,20 @@ class OutputFile(_IOFile):
 
 
 class TempOutputFile(OutputFile):
-    def __init__(self, path: PathTypes):
+    def __init__(self, path: PathTypes) -> None:
         super().__init__(os.path.basename(path), temporary=True)
 
 
+IOFileTypes = Union[InputFile, OutputFile, TempInputFile, TempOutputFile]
+AtomicFileTypes = Union[AuxiliaryFile, Executable, IOFileTypes]
+
 # Possible types of .stdin/.stdout/.stderr, int being either DEVNULL or PIPE
-WrappedPipeType = Union[int, _IOFile, "AtomicCmd"]
+WrappedPipeType = Union[int, IOFileTypes, "AtomicCmd"]
 # Types that can be passed as values for STDIN, STDOUT, and STDERR
 PipeType = Union[None, str, Path, WrappedPipeType]
 
 # Pos
-OptionValueType = Union[str, float, _IOFile, None]
+OptionValueType = Union[str, float, IOFileTypes, None]
 OptionsType = Dict[
     str,
     Union[
@@ -144,19 +139,19 @@ class AtomicCmd:
     PIPE = subprocess.PIPE
     DEVNULL = subprocess.DEVNULL
 
-    _command: List[Union[str, _AtomicFile]]
-    _proc: Optional[subprocess.Popen[bytes]]
-    _temp: Optional[str]
+    _command: list[str | AtomicFileTypes]
+    _proc: subprocess.Popen[bytes] | None
+    _temp: str | None
     _running: bool
     _set_cwd: bool
     _terminated: bool
 
-    _executables: Set[str]
-    _requirements: Set[Requirement]
-    _input_files: Set[_IOFile]
-    _output_files: Set[_IOFile]
-    _output_basenames: Set[str]
-    _auxiliary_files: Set[str]
+    _executables: set[str]
+    _requirements: set[Requirement]
+    _input_files: set[IOFileTypes]
+    _output_files: set[IOFileTypes]
+    _output_basenames: set[str]
+    _auxiliary_files: set[str]
 
     _stdin: WrappedPipeType
     _stdout: WrappedPipeType
@@ -164,14 +159,15 @@ class AtomicCmd:
 
     def __init__(
         self,
-        command: Any,
+        command: Iterable[str | int | Path | AtomicFileTypes],
+        *,
         stdin: int | str | Path | InputFile | AtomicCmd | None = None,
         stdout: int | str | Path | OutputFile | None = None,
         stderr: int | str | Path | OutputFile | None = None,
         set_cwd: bool = False,
-        extra_files: Iterable[_AtomicFile] = (),
+        extra_files: Iterable[AtomicFileTypes] = (),
         requirements: Iterable[Requirement] = (),
-    ):
+    ) -> None:
         """Takes a command and a set of files.
 
         The command is expected to be an iterable starting with the name of an
@@ -244,19 +240,18 @@ class AtomicCmd:
         self._stdout = self._wrap_pipe(OutputFile, stdout, "stdout")
         self._stderr = self._wrap_pipe(OutputFile, stderr, "stderr")
 
-        pipes: list[_AtomicFile] = []
-        for pipe in (self._stdin, self._stdout, self._stderr):
-            if isinstance(pipe, _AtomicFile):
-                pipes.append(pipe)
-
         self.add_extra_files(extra_files)
-        self.add_extra_files(pipes)
+        self.add_extra_files(
+            pipe
+            for pipe in (self._stdin, self._stdout, self._stderr)
+            if isinstance(pipe, _AtomicFile)
+        )
 
         for value in self._requirements:
             if not isinstance(value, Requirement):
                 raise TypeError(value)
 
-    def append(self, *args: Any):
+    def append(self, *args: object) -> None:
         if self._proc is not None:
             raise CmdError("cannot modify already started command")
 
@@ -271,16 +266,16 @@ class AtomicCmd:
 
             self._command.append(value)
 
-    def add_requirement(self, requirements: Requirement):
+    def add_requirement(self, requirements: Requirement) -> None:
         self._requirements.add(requirements)
 
-    def add_extra_files(self, files: Iterable[_AtomicFile]):
+    def add_extra_files(self, files: Iterable[AtomicFileTypes]) -> None:
         if self._proc is not None:
             raise CmdError("cannot modify already started command")
 
         for value in files:
             if not isinstance(value, _AtomicFile):
-                raise ValueError(value)
+                raise TypeError(value)
 
             self._record_atomic_file(value)
 
@@ -288,20 +283,20 @@ class AtomicCmd:
         self,
         options: OptionsType,
         pred: Callable[[str], bool] = lambda s: s.startswith("-"),
-    ):
+    ) -> None:
         if not isinstance(options, dict):
-            raise TypeError("options must be dict, not {!r}".format(options))
+            raise TypeError(f"options must be dict, not {options!r}")
 
         for key, values in options.items():
             if not isinstance(key, str):
-                raise ValueError("keys must be strings, not %r" % (key,))
+                raise TypeError(f"keys must be strings, not {key!r}")
             elif not pred(key):
                 continue
 
             if isinstance(values, (list, tuple)):
                 for value in values:
                     if not isinstance(value, (int, str, float, _AtomicFile)):
-                        raise ValueError(value)
+                        raise TypeError(value)
 
                     self.append(key)
                     self.append(value)
@@ -311,26 +306,27 @@ class AtomicCmd:
                 self.append(key)
                 self.append(values)
             else:
-                raise ValueError(values)
+                raise TypeError(values)
 
     def merge_options(
         self,
-        user_options: OptionsType,
-        fixed_options: OptionsType = {},
+        *,
+        user_options: OptionsType | None = None,
+        fixed_options: OptionsType | None = None,
         blacklisted_options: Iterable[str] = (),
         pred: Callable[[str], bool] = lambda s: s.startswith("-"),
-    ):
+    ) -> None:
         if not isinstance(fixed_options, dict):
-            raise TypeError("options must be dict, not {!r}".format(fixed_options))
+            raise TypeError(f"options must be dict, not {fixed_options!r}")
         elif not isinstance(user_options, dict):
-            raise TypeError("user_options must be dict, not {!r}".format(user_options))
+            raise TypeError(f"user_options must be dict, not {user_options!r}")
 
-        errors: List[str] = []
+        errors: list[str] = []
         for key in user_options.keys() & fixed_options.keys():
-            errors.append("{} cannot be overridden".format(key))
+            errors.append(f"{key} cannot be overridden")
 
         for key in user_options.keys() & blacklisted_options:
-            errors.append("{} is not supported".format(key))
+            errors.append(f"{key} is not supported")
 
         if errors:
             raise CmdError(
@@ -343,34 +339,34 @@ class AtomicCmd:
         self.append_options(user_options, pred=pred)
 
     @property
-    def output_files(self):
-        return frozenset(it.path for it in self._output_files if not it.temporary)
+    def output_files(self) -> set[str]:
+        return {it.path for it in self._output_files if not it.temporary}
 
     @property
-    def expected_temp_files(self):
-        return frozenset(it.basename() for it in self._output_files if not it.temporary)
+    def expected_temp_files(self) -> set[str]:
+        return {it.basename() for it in self._output_files if not it.temporary}
 
     @property
-    def optional_temp_files(self):
-        return frozenset(it.basename() for it in self._output_files if it.temporary)
+    def optional_temp_files(self) -> set[str]:
+        return {it.basename() for it in self._output_files if it.temporary}
 
     @property
-    def input_files(self):
-        return frozenset(it.path for it in self._input_files if not it.temporary)
+    def input_files(self) -> set[str]:
+        return {it.path for it in self._input_files if not it.temporary}
 
     @property
-    def executables(self):
-        return frozenset(self._executables)
+    def executables(self) -> set[str]:
+        return set(self._executables)
 
     @property
-    def auxiliary_files(self):
-        return frozenset(self._auxiliary_files)
+    def auxiliary_files(self) -> set[str]:
+        return set(self._auxiliary_files)
 
     @property
-    def requirements(self):
-        return self._requirements
+    def requirements(self) -> set[Requirement]:
+        return set(self._requirements)
 
-    def run(self, temp: PathTypes):
+    def run(self, temp: PathTypes) -> None:
         """Runs the given command, saving files in the specified temp folder.
         To move files to their final destination, call commit(). Note that in
         contexts where the *Cmds classes are used, this function may block.
@@ -401,8 +397,8 @@ class AtomicCmd:
                 start_new_session=True,
             )
         except Exception as error:
-            message = "Error running commands:\n  Call = %r\n  Error = %r"
-            raise CmdError(message % (self._command, error))
+            message = "Error running commands:\n  Call = {!r}\n  Error = {!r}"
+            raise CmdError(message.format(self._command, error)) from error
         finally:
             # Close pipes to allow the command to receive SIGPIPE
             for handle in (stdin, stdout, stderr):
@@ -412,12 +408,12 @@ class AtomicCmd:
         # Allow subprocesses to be cleaned up in case of unplanned termination
         register_process(self)
 
-    def ready(self):
+    def ready(self) -> bool:
         """Returns true if the command has been run to completion,
         regardless of wether or not an error occured."""
-        return self._proc and self._proc.poll() is not None
+        return bool(self._proc and self._proc.poll() is not None)
 
-    def join(self, timeout: Optional[float] = None) -> JoinType:
+    def join(self, timeout: float | None = None) -> JoinType:
         """Similar to Popen.wait(), but returns the value wrapped in a list.
         Must be called before calling commit."""
         if not self._proc:
@@ -431,13 +427,13 @@ class AtomicCmd:
             return_code = signal.Signals(-return_code).name
         return [return_code]
 
-    def wait(self):
+    def wait(self) -> str | int | None:
         """Equivalent to Subprocess.wait. This function should only
         be used in contexts where a AtomicCmd needs to be combined
         with Subprocesses, as it does not exist for AtomicSets."""
         return self.join()[0]
 
-    def terminate(self):
+    def terminate(self) -> None:
         """Sends SIGTERM to process if it is still running.
         Has no effect if the command has already finished."""
         if self._proc and self._proc.poll() is None:
@@ -447,40 +443,35 @@ class AtomicCmd:
             except OSError:
                 pass  # Already dead / finished process
 
-    def commit(self, temp: PathTypes):
-        temp = fileutils.fspath(temp)
+    def commit(self) -> None:
         if not self.ready():
             raise CmdError("Attempting to commit before command has completed")
+        elif self._temp is None:
+            raise AssertionError("self._temp should not be None")
 
-        assert self._temp is not None
         if self._running:
             raise CmdError("Called 'commit' before calling 'join'")
-        elif not os.path.samefile(self._temp, temp):
-            raise CmdError(
-                "Mismatch between previous and current temp folders"
-                ": %r != %s" % (self._temp, temp)
-            )
 
-        expected_files = set(os.path.basename(fpath) for fpath in self.output_files)
-        missing_files = expected_files - set(os.listdir(temp))
+        expected_files = {os.path.basename(fpath) for fpath in self.output_files}
+        missing_files = expected_files - set(os.listdir(self._temp))
         if missing_files:
             raise CmdError(
                 "Expected files not created: %s" % (", ".join(missing_files))
             )
 
-        committed_files: List[str] = []
+        committed_files: list[str] = []
         try:
             for output_file in self._output_files:
                 if output_file.temporary:
-                    fileutils.try_remove(os.path.join(temp, output_file.path))
+                    fileutils.try_remove(os.path.join(self._temp, output_file.path))
                 else:
                     destination = output_file.path
-                    source = fileutils.reroot_path(temp, destination)
+                    source = fileutils.reroot_path(self._temp, destination)
 
                     fileutils.move_file(source, destination)
                     committed_files.append(destination)
         except Exception:
-            # Cleanup after failed commit
+            # Cleanup after failed commit;
             for fpath in committed_files:
                 fileutils.try_remove(fpath)
             raise
@@ -488,50 +479,76 @@ class AtomicCmd:
         self._proc = None
         self._temp = None
 
-    def to_call(self, temp: PathTypes) -> List[str]:
+    def to_call(self, temp: PathTypes) -> list[str]:
         return [self._to_path(temp, value) for value in self._command]
 
-    def _to_path(self, temp: PathTypes, value: Any) -> str:
+    @property
+    def temp_dir(self) -> str | None:
+        return self._temp
+
+    @property
+    def set_cwd(self) -> bool:
+        return self._set_cwd
+
+    @property
+    def stdin(self) -> WrappedPipeType:
+        return self._stdin
+
+    @property
+    def stdout(self) -> WrappedPipeType:
+        return self._stdout
+
+    @property
+    def stderr(self) -> WrappedPipeType:
+        return self._stderr
+
+    @property
+    def terminated(self) -> bool:
+        return self._terminated
+
+    def _to_path(self, temp: PathTypes, value: str | AtomicFileTypes) -> str:
         if self._set_cwd:
-            if isinstance(value, Executable):
-                executable = value.path
-                if executable == "%(PYTHON)s":
-                    executable = sys.executable
-                elif os.path.dirname(executable) and os.path.relpath(executable):
-                    return os.path.abspath(executable)
+            return self._to_abs_path(value)
+        elif isinstance(value, Executable):
+            executable = value.path
+            if executable == "%(PYTHON)s":
+                executable = sys.executable
 
-                return executable
-            elif isinstance(value, InputFile):
-                if value.temporary:
-                    return value.path
+            return executable
+        elif isinstance(value, InputFile):
+            if value.temporary:
+                return os.path.join(temp, value.path)
 
-                return os.path.abspath(value.path)
-            elif isinstance(value, OutputFile):
-                return os.path.basename(value.path)
-            elif isinstance(value, AuxiliaryFile):
-                return os.path.abspath(value.path)
-            else:
-                return value.replace("%(TEMP_DIR)s", ".")
+            return value.path
+        elif isinstance(value, OutputFile):
+            return fileutils.reroot_path(temp, value.path)
+        elif isinstance(value, AuxiliaryFile):
+            return value.path
         else:
-            if isinstance(value, Executable):
-                executable = value.path
-                if executable == "%(PYTHON)s":
-                    executable = sys.executable
+            return value.replace("%(TEMP_DIR)s", str(temp))
 
-                return executable
-            elif isinstance(value, InputFile):
-                if value.temporary:
-                    return os.path.join(temp, value.path)
+    def _to_abs_path(self, value: str | AtomicFileTypes) -> str:
+        if isinstance(value, Executable):
+            executable = value.path
+            if executable == "%(PYTHON)s":
+                executable = sys.executable
+            elif os.path.dirname(executable) and os.path.relpath(executable):
+                executable = os.path.abspath(executable)
 
+            return executable
+        elif isinstance(value, InputFile):
+            if value.temporary:
                 return value.path
-            elif isinstance(value, OutputFile):
-                return fileutils.reroot_path(temp, value.path)
-            elif isinstance(value, AuxiliaryFile):
-                return value.path
-            else:
-                return value.replace("%(TEMP_DIR)s", temp)
 
-    def _record_atomic_file(self, value: _AtomicFile):
+            return os.path.abspath(value.path)
+        elif isinstance(value, OutputFile):
+            return os.path.basename(value.path)
+        elif isinstance(value, AuxiliaryFile):
+            return os.path.abspath(value.path)
+        else:
+            return value.replace("%(TEMP_DIR)s", ".")
+
+    def _record_atomic_file(self, value: _AtomicFile) -> None:
         if isinstance(value, AuxiliaryFile):
             self._auxiliary_files.add(value.path)
         elif isinstance(value, Executable):
@@ -544,35 +561,21 @@ class AtomicCmd:
             # different output files with the same basename. It is however allowed to
             # use the same instance multiple times
             if basename in self._output_basenames and value not in self._output_files:
-                raise CmdError("multiple output files with name %r" % (basename,))
+                raise CmdError(f"multiple output files with name {basename!r}")
 
             self._output_files.add(value)
             self._output_basenames.add(basename)
         else:
-            raise ValueError(value)
+            raise TypeError(value)
 
     def _wrap_pipe(
         self,
-        filetype: Union[Type[InputFile], Type[OutputFile]],
+        filetype: type[InputFile | OutputFile],
         pipe: PipeType,
-        out_name: Optional[str] = None,
+        out_name: str | None = None,
     ) -> WrappedPipeType:
         if pipe is None:
-            # Pipes without a default destination (stdin) are explicitly closed
-            if out_name is None:
-                return self.DEVNULL
-
-            assert isinstance(self._command[0], Executable)
-            executable = self._command[0].path
-            if executable == "%(PYTHON)s":
-                executable = sys.executable
-
-            executable = os.path.basename(executable)
-
-            # TODO: Use more sensible filename, e.g. log_{exec}_{counter}.{stdout/err}
-            filename = "pipe_%s_%i.%s" % (executable, id(self), out_name)
-
-            return filetype(filename, temporary=True)
+            return self._wrap_pipe_default(filetype=filetype, out_name=out_name)
         elif isinstance(pipe, int):
             if pipe == AtomicCmd.DEVNULL or (
                 pipe == AtomicCmd.PIPE and out_name == "stdout"
@@ -592,13 +595,34 @@ class AtomicCmd:
 
         raise ValueError(pipe)
 
+    def _wrap_pipe_default(
+        self,
+        filetype: type[InputFile | OutputFile],
+        out_name: str | None = None,
+    ) -> WrappedPipeType:
+        # Pipes without a default destination (stdin) are explicitly closed
+        if out_name is None:
+            return self.DEVNULL
+
+        assert isinstance(self._command[0], Executable)
+        executable = self._command[0].path
+        if executable == "%(PYTHON)s":
+            executable = sys.executable
+
+        executable = os.path.basename(executable)
+
+        # TODO: Use more sensible filename, e.g. log_{exec}_{counter}.{stdout/err}
+        filename = "pipe_%s_%i.%s" % (executable, id(self), out_name)
+
+        return filetype(filename, temporary=True)
+
     @classmethod
     def _open_pipe(
         cls,
         temp_dir: PathTypes,
         pipe: WrappedPipeType,
         mode: str,
-    ) -> Union[int, IO[bytes], None]:
+    ) -> int | IO[bytes] | None:
         if isinstance(pipe, int):
             return pipe
         elif isinstance(pipe, AtomicCmd):
@@ -612,12 +636,12 @@ class AtomicCmd:
         if pipe.temporary or isinstance(pipe, OutputFile):
             return open(fileutils.reroot_path(temp_dir, pipe.path), mode)
 
-        return open(pipe.path, mode)
+        return open(pipe.path, mode)  # noqa: SIM115
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, type: Any, _value: Any, _traceback: Any):
+    def __exit__(self, typ: object, exc: object, tb: object) -> None:
         self.terminate()
         self.join()
 
@@ -626,71 +650,65 @@ class AtomicCmd:
 
 
 class _CommandSet:
-    def __init__(self, commands: Iterable[Union[AtomicCmd, "_CommandSet"]]) -> None:
-        self._commands: Tuple[CommandTypes, ...] = safe_coerce_to_tuple(commands)
+    def __init__(self, commands: Iterable[AtomicCmd | _CommandSet]) -> None:
+        self._commands: tuple[CommandTypes, ...] = safe_coerce_to_tuple(commands)
         if not self._commands:
             raise CmdError("Empty list passed to command set")
 
         self._validate_commands()
 
-    def commit(self, temp: PathTypes) -> None:
-        committed_files: Set[str] = set()
+    def commit(self) -> None:
+        committed_files: set[str] = set()
         try:
             for command in self._commands:
-                command.commit(temp)
+                command.commit()
                 committed_files.update(command.output_files)
         except Exception:
-            # Cleanup after failed commit
+            # Cleanup after failed commit; files belonging to the command currently
+            # being comitted are cleaned up in `AtomicCmd.commit`
             for fpath in committed_files:
                 fileutils.try_remove(fpath)
             raise
 
     @property
-    def input_files(self) -> Set[str]:
-        return set(it for cmd in self._commands for it in cmd.input_files)
+    def input_files(self) -> set[str]:
+        return {it for cmd in self._commands for it in cmd.input_files}
 
     @property
-    def output_files(self) -> Set[str]:
-        return set(it for cmd in self._commands for it in cmd.output_files)
+    def output_files(self) -> set[str]:
+        return {it for cmd in self._commands for it in cmd.output_files}
 
     @property
-    def auxiliary_files(self) -> Set[str]:
-        return set(it for cmd in self._commands for it in cmd.auxiliary_files)
+    def auxiliary_files(self) -> set[str]:
+        return {it for cmd in self._commands for it in cmd.auxiliary_files}
 
     @property
-    def executables(self) -> Set[str]:
-        return set(it for cmd in self._commands for it in cmd.executables)
+    def executables(self) -> set[str]:
+        return {it for cmd in self._commands for it in cmd.executables}
 
     @property
-    def requirements(self) -> Set[Requirement]:
-        return set(it for cmd in self._commands for it in cmd.requirements)
+    def requirements(self) -> set[Requirement]:
+        return {it for cmd in self._commands for it in cmd.requirements}
 
     @property
-    def expected_temp_files(self) -> Set[str]:
-        return set(it for cmd in self._commands for it in cmd.expected_temp_files)
+    def expected_temp_files(self) -> set[str]:
+        return {it for cmd in self._commands for it in cmd.expected_temp_files}
 
     @property
-    def optional_temp_files(self) -> Set[str]:
-        return set(it for cmd in self._commands for it in cmd.optional_temp_files)
-
-    @property
-    def stdout(self):
-        raise CmdError(
-            "%s does not implement property 'stdout'!" % (self.__class__.__name__,)
-        )
+    def optional_temp_files(self) -> set[str]:
+        return {it for cmd in self._commands for it in cmd.optional_temp_files}
 
     def terminate(self) -> None:
         for command in self._commands:
             command.terminate()
 
-    def _validate_commands(self):
+    def _validate_commands(self) -> None:
         if len(self._commands) != len(set(self._commands)):
             raise ValueError(
-                "Same command included multiple times in %s"
-                % (self.__class__.__name__,)
+                f"Same command included multiple times in {self.__class__.__name__}"
             )
 
-        filenames: Dict[str, int] = collections.defaultdict(int)
+        filenames: dict[str, int] = collections.defaultdict(int)
         for command in self._commands:
             for filename in command.expected_temp_files:
                 filenames[filename] += 1
@@ -700,7 +718,7 @@ class _CommandSet:
         clobbered = [filename for (filename, count) in filenames.items() if (count > 1)]
         if any(clobbered):
             raise CmdError(
-                "Commands clobber each others' files: %s" % (", ".join(clobbered),)
+                "Commands clobber each others' files: {}".format(", ".join(clobbered))
             )
 
 
@@ -717,9 +735,7 @@ class ParallelCmds(_CommandSet):
     Note that only AtomicCmds are allowed as sub-commands for this class,
     since the model requires non-blocking commands."""
 
-    _commands: Tuple[AtomicCmd, ...]
-
-    def __init__(self, commands: Iterable[AtomicCmd]):
+    def __init__(self, commands: Iterable[AtomicCmd]) -> None:
         self._joinable = False
 
         commands = tuple(commands)
@@ -738,7 +754,13 @@ class ParallelCmds(_CommandSet):
 
     def join(self) -> JoinType:
         sleep_time = 0.05
-        commands = list(enumerate(self._commands))
+        commands: list[tuple[int, AtomicCmd]] = []
+        for idx, command in enumerate(self._commands):
+            if not isinstance(command, AtomicCmd):
+                raise TypeError("non AtomicCmd in ParallelCmds")
+
+            commands.append((idx, command))
+
         return_codes: JoinType = [None] * len(commands)
         if not self._joinable:
             return return_codes
@@ -750,7 +772,7 @@ class ParallelCmds(_CommandSet):
             except subprocess.TimeoutExpired:
                 sleep_time = min(1, sleep_time * 2)
 
-            for index, command in list(commands):
+            for index, command in tuple(commands):
                 if command.ready():
                     (return_code,) = command.join()
                     return_codes[index] = return_code
@@ -781,7 +803,7 @@ class SequentialCmds(_CommandSet):
     was successfully completed, and as a consequence the return codes
     of a failed SequentialCommand may contain None."""
 
-    def __init__(self, commands: Iterable[Union[AtomicCmd, _CommandSet]]):
+    def __init__(self, commands: Iterable[AtomicCmd | _CommandSet]) -> None:
         self._ready = False
 
         commands = safe_coerce_to_tuple(commands)
@@ -818,25 +840,24 @@ class SequentialCmds(_CommandSet):
 CommandTypes = Union[AtomicCmd, ParallelCmds, SequentialCmds]
 
 
-def _describe_cls(command: Union[ParallelCmds, SequentialCmds]) -> str:
+def _describe_cls(command: ParallelCmds | SequentialCmds) -> str:
     if isinstance(command, ParallelCmds):
         return "Parallel processes"
-    elif isinstance(command, SequentialCmds):
-        return "Sequential processes"
-    assert False  # pragma: no coverage
+
+    return "Sequential processes"
 
 
 def _collect_stats(
     command: CommandTypes,
-    ids: Dict[CommandTypes, int],
-    pipes: Dict[AtomicCmd, AtomicCmd],
-):
+    ids: dict[CommandTypes, int],
+    pipes: dict[AtomicCmd, AtomicCmd],
+) -> None:
     assert command not in ids
 
     if isinstance(command, AtomicCmd):
         ids[command] = len(ids) + 1
-        if isinstance(command._stdin, AtomicCmd):
-            pipes[command._stdin] = command
+        if isinstance(command.stdin, AtomicCmd):
+            pipes[command.stdin] = command
     elif isinstance(command, (ParallelCmds, SequentialCmds)):
         for subcmd in command._commands:
             _collect_stats(subcmd, ids, pipes)
@@ -844,12 +865,12 @@ def _collect_stats(
         assert False  # pragma: no coverage
 
 
-def _build_status(command: AtomicCmd, indent: int, lines: List[str]) -> None:
+def _build_status(command: AtomicCmd, indent: int, lines: list[str]) -> None:
     prefix = " " * indent + "Status  = "
     if command._proc:
         if command.ready():
             return_code = tuple(command.join())
-            if command._terminated:
+            if command.terminated:
                 lines.append(prefix + "Automatically terminated by PALEOMIX")
             elif isinstance(return_code[0], str):
                 lines.append(prefix + "Terminated with signal %s" % return_code)
@@ -861,84 +882,84 @@ def _build_status(command: AtomicCmd, indent: int, lines: List[str]) -> None:
 
 def _build_stdin(
     command: AtomicCmd,
-    ids: Dict[CommandTypes, int],
+    ids: dict[CommandTypes, int],
     indent: int,
-    lines: List[str],
+    lines: list[str],
 ) -> None:
-    pipe = command._stdin
-    prefix = "%s%s   = " % (" " * indent, "STDIN")
+    pipe = command.stdin
+    prefix = "{}{}   = ".format(" " * indent, "STDIN")
     if isinstance(pipe, AtomicCmd):
         if pipe in ids:
             lines.append("%sPiped from process %i" % (prefix, ids[pipe]))
         else:
-            lines.append("%s<PIPE>" % (prefix,))
+            lines.append(f"{prefix}<PIPE>")
     elif isinstance(pipe, (InputFile, TempInputFile)):
-        temp = "${TEMP_DIR}" if command._temp is None else command._temp
+        temp = "${TEMP_DIR}" if command.temp_dir is None else command.temp_dir
         path = command._to_path(temp, pipe)
-        lines.append("%s%s" % (prefix, shlex.quote(path)))
+        lines.append(f"{prefix}{shlex.quote(path)}")
 
 
 def _build_stdout(
     command: AtomicCmd,
-    ids: Dict[CommandTypes, int],
-    pipes: Dict[AtomicCmd, AtomicCmd],
+    ids: dict[CommandTypes, int],
+    pipes: dict[AtomicCmd, AtomicCmd],
     indent: int,
-    lines: List[str],
+    lines: list[str],
 ) -> None:
-    prefix = "%sSTDOUT  = " % (" " * indent,)
+    prefix = "{}STDOUT  = ".format(" " * indent)
 
-    pipe = command._stdout
+    pipe = command.stdout
     if command in pipes:
         pipe = pipes[command]
         lines.append("%sPiped to process %i" % (prefix, ids[pipe]))
     elif isinstance(pipe, (OutputFile, TempOutputFile)):
-        temp = "${TEMP_DIR}" if command._temp is None else command._temp
+        temp = "${TEMP_DIR}" if command.temp_dir is None else command.temp_dir
         path = command._to_path(temp, pipe)
 
-        lines.append("%s%s" % (prefix, shlex.quote(path)))
+        lines.append(f"{prefix}{shlex.quote(path)}")
     elif pipe == command.PIPE:
-        lines.append("%s<PIPE>" % (prefix,))
+        lines.append(f"{prefix}<PIPE>")
     elif pipe == command.DEVNULL:
-        lines.append("%s/dev/null" % (prefix,))
+        lines.append(f"{prefix}/dev/null")
     else:
-        assert False, pipe  # pragma: no coverage
+        raise TypeError(pipe)  # pragma: no coverage
 
 
-def _build_stderr(command: AtomicCmd, indent: int, lines: List[str]) -> None:
-    prefix = "%sSTDERR  = " % (" " * indent,)
+def _build_stderr(command: AtomicCmd, indent: int, lines: list[str]) -> None:
+    prefix = "{}STDERR  = ".format(" " * indent)
 
-    pipe = command._stderr
+    pipe = command.stderr
     if isinstance(pipe, (OutputFile, TempOutputFile)):
-        pipe = pipe
-        temp = "${TEMP_DIR}" if command._temp is None else command._temp
+        temp = "${TEMP_DIR}" if command.temp_dir is None else command.temp_dir
         path = command._to_path(temp, pipe)
 
-        lines.append("%s%s" % (prefix, shlex.quote(path)))
+        lines.append(f"{prefix}{shlex.quote(path)}")
     elif pipe == command.DEVNULL:
-        lines.append("%s/dev/null" % (prefix,))
+        lines.append(f"{prefix}/dev/null")
     else:
-        assert False, pipe  # pragma: no coverage
+        raise TypeError(pipe)  # pragma: no coverage
 
 
-def _build_cwd(command: AtomicCmd, indent: int, lines: List[str]) -> None:
+def _build_cwd(command: AtomicCmd, indent: int, lines: list[str]) -> None:
     prefix = " " * indent + "CWD     = "
-    if command._temp:
-        if command._set_cwd:
-            lines.append("%s%s" % (prefix, shlex.quote(command._temp)))
+    if command.temp_dir:
+        if command.set_cwd:
+            lines.append(f"{prefix}{shlex.quote(command.temp_dir)}")
         else:
-            lines.append("%s%s" % (prefix, shlex.quote(os.getcwd())))
-    elif command._set_cwd:
-        lines.append("%s%s" % (prefix, shlex.quote("${TEMP_DIR}")))
+            lines.append(f"{prefix}{shlex.quote(os.getcwd())}")
+    elif command.set_cwd:
+        lines.append("{}{}".format(prefix, shlex.quote("${TEMP_DIR}")))
 
 
 def _pformat(
     command: CommandTypes,
-    ids: Dict[CommandTypes, int],
-    pipes: Dict[AtomicCmd, AtomicCmd],
+    *,
+    ids: dict[CommandTypes, int],
+    pipes: dict[AtomicCmd, AtomicCmd],
     indent: int,
-    lines: List[str],
+    lines: list[str],
     include_prefix: bool = True,
-):
+) -> None:
     s_prefix = ""
     if include_prefix:
         s_prefix = " " * indent
@@ -949,11 +970,11 @@ def _pformat(
     s_prefix_len = len(s_prefix)
 
     if isinstance(command, AtomicCmd):
-        temp = command._temp or "${TEMP_DIR}"
+        temp = command.temp_dir or "${TEMP_DIR}"
 
         c_prefix = s_prefix + "Command = "
         for line in _pformat_list(command.to_call(temp)).split("\n"):
-            lines.append("%s%s" % (c_prefix, line))
+            lines.append(f"{c_prefix}{line}")
             c_prefix = " " * len(c_prefix)
 
         _build_status(command, s_prefix_len, lines)
@@ -962,22 +983,22 @@ def _pformat(
         _build_stderr(command, s_prefix_len, lines)
         _build_cwd(command, s_prefix_len, lines)
     else:
-        lines.append("%s%s:" % (s_prefix, _describe_cls(command)))
+        lines.append(f"{s_prefix}{_describe_cls(command)}:")
         for subcmd_idx, subcmd in enumerate(command._commands):
             if subcmd_idx:
                 lines.append("")
 
-            _pformat(subcmd, ids, pipes, s_prefix_len + 2, lines)
+            _pformat(subcmd, ids=ids, pipes=pipes, indent=s_prefix_len + 2, lines=lines)
 
 
-def _pformat_list(lst: List[Any], width: int = 80):
+def _pformat_list(lst: list[str], width: int = 80) -> str:
     """Return a printable representation of a list, where line-breaks
     are inserted between items to minimize the number of lines with a
     width greater than 'width'. Very long items may cause this maximum
     to be exceeded."""
-    result: List[List[str]] = [[]]
+    result: list[list[str]] = [[]]
     current_width = 0
-    for item in (shlex.quote(str(value)) for value in lst):
+    for item in (shlex.quote(value) for value in lst):
         if current_width + len(item) + 1 > width:
             if not result[-1]:
                 result[-1] = [item]
@@ -998,11 +1019,11 @@ def pformat(command: CommandTypes) -> str:
     if not isinstance(command, (AtomicCmd, ParallelCmds, SequentialCmds)):
         raise TypeError(command)
 
-    lines: List[str] = []
-    ids: Dict[CommandTypes, int] = {}
-    pipes: Dict[AtomicCmd, AtomicCmd] = {}
+    lines: list[str] = []
+    ids: dict[CommandTypes, int] = {}
+    pipes: dict[AtomicCmd, AtomicCmd] = {}
 
     _collect_stats(command, ids, pipes)
-    _pformat(command, ids, pipes, 0, lines, False)
+    _pformat(command, ids=ids, pipes=pipes, indent=0, lines=lines, include_prefix=False)
 
     return "\n".join(lines)

@@ -21,12 +21,12 @@
 #
 from __future__ import annotations
 
-from typing import AnyStr, Callable, Iterable, NamedTuple, NoReturn, TypeVar
+from typing import AnyStr, Callable, Iterable, NoReturn, TypeVar
 
 import pytest
 
 from paleomix.common import text
-from paleomix.common.text import format_timespan, parse_lines_by_contig
+from paleomix.common.text import format_timespan
 
 T = TypeVar("T")
 
@@ -168,38 +168,3 @@ def test_parse_lines__binary() -> None:
         return (int(value), length)
 
     assert parse_lines(lines, parser) == expected
-
-
-###############################################################################
-###############################################################################
-# Tests for 'parse_lines_by_contig'
-
-
-class _RecordMock(NamedTuple):
-    contig: str
-    value: str
-
-
-def test_parse_lines_by_contig__single_contig() -> None:
-    lines = ["abc line1 \n", "abc line2 \n"]
-
-    def _parse(line: str, length: int) -> _RecordMock:
-        assert len(line) == length
-        return _RecordMock(*line.split())
-
-    expected = {"abc": [_RecordMock("abc", "line1"), _RecordMock("abc", "line2")]}
-    assert parse_lines_by_contig(lines, _parse) == expected
-
-
-def test_parse_lines__two_contigs() -> None:
-    lines = ["abc line1 \n", "def line2 \n"]
-
-    def _parse(line: str, length: int) -> _RecordMock:
-        assert len(line) == length
-        return _RecordMock(*line.split())
-
-    expected = {
-        "abc": [_RecordMock("abc", "line1")],
-        "def": [_RecordMock("def", "line2")],
-    }
-    assert parse_lines_by_contig(lines, _parse) == expected

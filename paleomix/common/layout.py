@@ -24,7 +24,7 @@ from __future__ import annotations
 import copy
 import os.path
 import string
-from typing import Dict, Iterator, List, Set, Tuple, Union
+from typing import Dict, Iterator, Union
 
 LayoutType = Dict[str, Union[str, "LayoutType"]]
 
@@ -34,9 +34,9 @@ class LayoutError(Exception):
 
 
 class Layout:
-    kwargs: Dict[str, str]
-    _layout: Dict[str, Tuple[str, ...]]
-    _fields: Set[str]
+    kwargs: dict[str, str]
+    _layout: dict[str, tuple[str, ...]]
+    _fields: set[str]
 
     def __init__(self, layout: LayoutType, **kwargs: str) -> None:
         self.kwargs = kwargs
@@ -62,7 +62,7 @@ class Layout:
     def get_field(self, key: str) -> str:
         return self.kwargs[key]
 
-    def update(self, **kwargs: str) -> "Layout":
+    def update(self, **kwargs: str) -> Layout:
         self._validate_kwargs(kwargs)
 
         layout = copy.deepcopy(self)
@@ -76,15 +76,13 @@ class Layout:
     def __getitem__(self, key: str) -> str:
         return self._build_path(key, self.kwargs)
 
-    def _validate_kwargs(self, kwargs: Dict[str, str]) -> None:
+    def _validate_kwargs(self, kwargs: dict[str, str]) -> None:
         for key in kwargs:
             if key not in self._fields:
                 raise LayoutError(f"unknown key {key!r}")
 
-    def _build_path(self, key: str, kwargs: Dict[str, str]) -> str:
-        components: List[str] = []
-        for component in self._layout[key]:
-            components.append(component.format(**kwargs))
+    def _build_path(self, key: str, kwargs: dict[str, str]) -> str:
+        components = (it.format(**kwargs) for it in self._layout[key])
 
         return os.path.join(*components)
 
@@ -92,7 +90,7 @@ class Layout:
     def _flatten_layout(
         cls,
         layout: LayoutType,
-    ) -> Iterator[Tuple[str, Tuple[str, ...]]]:
+    ) -> Iterator[tuple[str, tuple[str, ...]]]:
         for key, value in layout.items():
             if not isinstance(key, str):
                 raise LayoutError(f"invalid key {key!r}")
@@ -100,14 +98,14 @@ class Layout:
                 yield value, (key,)
             elif isinstance(value, dict):
                 for label, path in cls._flatten_layout(value):
-                    yield label, (key,) + path
+                    yield label, (key, *path)
             else:
                 raise LayoutError(f"invalid value {value!r}")
 
     @staticmethod
-    def _collect_fields(layout: Dict[str, Tuple[str, ...]]) -> Set[str]:
+    def _collect_fields(layout: dict[str, tuple[str, ...]]) -> set[str]:
         fmt = string.Formatter()
-        fields: Set[str] = set()
+        fields: set[str] = set()
         for path in layout.values():
             for value in path:
                 for _, name, _, _ in fmt.parse(value):

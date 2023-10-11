@@ -78,6 +78,7 @@ setup(
         "pysam>=0.10.0",
         "ruamel.yaml>=0.16.0",
         "setproctitle>=1.1.0",
+        "typing_extensions>=4.0",
     ],
     entry_points={"console_scripts": ["paleomix=paleomix.__main__:main"]},
     zip_safe=False,

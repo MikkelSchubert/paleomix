@@ -22,43 +22,49 @@
 from __future__ import annotations
 
 import atexit
+import contextlib
 import os
 import shlex
 import signal
 import sys
 from subprocess import Popen, TimeoutExpired
-from typing import IO, Any, AnyStr, Iterable, List, Optional, cast
+from typing import IO, TYPE_CHECKING, Any, Iterable, cast
 
-try:
-    from typing import Protocol
+if TYPE_CHECKING:
+    from typing_extensions import Protocol
 
     class _SupportsTerminate(Protocol):
         def terminate(self) -> None:
             ...
 
-except ImportError:
-    # FIXME: Workaround for python3.7
-    _SupportsTerminate = Any
 
+def quote_args(args: object) -> str:
+    objects: Iterable[object]
+    if isinstance(args, os.PathLike):
+        # WORKAROUND for pyright warning about "partially unknown" types
+        objects = [cast(object, args)]
+    elif isinstance(args, (str, bytes)) or not isinstance(args, Iterable):
+        objects = [args]
+    else:
+        objects = args
 
-def quote_args(args: Any) -> str:
-    if isinstance(args, (str, bytes, os.PathLike)):
-        args = [args]
+    values: list[str] = []
+    for value in objects:
+        if isinstance(value, os.PathLike):
+            value = os.fsdecode(cast(Any, value))
 
-    values: List[str] = []
-    for arg in args:
-        if isinstance(arg, os.PathLike):
-            arg = os.fspath(cast(os.PathLike[AnyStr], arg))
+        if isinstance(value, bytes):
+            value = value.decode("utf-8", errors="replace")
 
-        if isinstance(arg, bytes):
-            arg = arg.decode("utf-8", errors="replace")
-
-        values.append(shlex.quote(arg))
+        values.append(shlex.quote(str(value)))
 
     return " ".join(values)
 
 
-def join_procs(procs: Iterable[Popen[Any]], out: IO[str] = sys.stderr):
+def join_procs(
+    procs: Iterable[Popen[Any]],
+    out: IO[str] = sys.stderr,
+) -> list[int | None]:
     """Joins a set of Popen processes. If a processes fail, the remaining
     processes are terminated. The function returns a list of return-code,
     containing the result of each call. Status messages are written to STDERR
@@ -66,9 +72,7 @@ def join_procs(procs: Iterable[Popen[Any]], out: IO[str] = sys.stderr):
     """
     sleep_time = 0.05
     commands = list(enumerate(procs))
-    return_codes: List[Optional[int]] = [None] * len(commands)
-
-    assert all(hasattr(cmd, "args") for (_, cmd) in commands)
+    return_codes: list[int | None] = [None] * len(commands)
 
     print("Joining subprocesses:", file=out)
     while commands and not any(return_codes):
@@ -103,7 +107,7 @@ def join_procs(procs: Iterable[Popen[Any]], out: IO[str] = sys.stderr):
 
 
 # List of running processes; can be terminated with `terminate_all_processes`
-_RUNNING_PROCS: List[_SupportsTerminate] = []
+_RUNNING_PROCS: list[_SupportsTerminate] = []
 
 
 def register_process(proc: _SupportsTerminate) -> None:
@@ -123,8 +127,6 @@ def terminate_all_processes() -> None:
     while _RUNNING_PROCS:
         proc = _RUNNING_PROCS.pop()
 
-        try:
-            proc.terminate()
-        except OSError:
+        with contextlib.suppress(OSError):
             # Ignore already closed processes, etc.
-            pass
+            proc.terminate()

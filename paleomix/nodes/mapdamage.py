@@ -57,9 +57,12 @@ class MapDamagePlotNode(CommandNode):
         input_files: Iterable[str],
         output_directory: str,
         title: str = "mapDamage",
-        options: OptionsType = {},
+        options: OptionsType | None = None,
         dependencies: Iterable[Node] = (),
-    ):
+    ) -> None:
+        if options is None:
+            options = {}
+
         merge = None
         input_files = tuple(input_files)
         if len(input_files) > 1:
@@ -105,8 +108,7 @@ class MapDamagePlotNode(CommandNode):
         CommandNode.__init__(
             self,
             command=command if merge is None else ParallelCmds([merge, command]),
-            description="creating mapDamage plots from %s"
-            % (describe_files(input_files),),
+            description=f"creating mapDamage plots from {describe_files(input_files)}",
             dependencies=dependencies,
         )
 
@@ -121,7 +123,7 @@ class MapDamagePlotNode(CommandNode):
                 with open(fpath, "w") as out_handle:
                     out_handle.write(_DUMMY_LENGTH_PLOT_PDF)
 
-        CommandNode._teardown(self, temp)
+        super()._teardown(temp)
 
 
 class MapDamageModelNode(CommandNode):
@@ -129,9 +131,12 @@ class MapDamageModelNode(CommandNode):
         self,
         reference: str,
         directory: str,
-        options: OptionsType = {},
+        options: OptionsType | None = None,
         dependencies: Iterable[Node] = (),
-    ):
+    ) -> None:
+        if options is None:
+            options = {}
+
         command = AtomicCmd(
             ["mapDamage"],
             extra_files=[
@@ -177,12 +182,12 @@ class MapDamageModelNode(CommandNode):
         CommandNode.__init__(
             self,
             command=command,
-            description="creating mapDamage model from %r" % (directory,),
+            description=f"creating mapDamage model from {directory!r}",
             dependencies=dependencies,
         )
 
     def _setup(self, temp: PathTypes) -> None:
-        CommandNode._setup(self, temp)
+        super()._setup(temp)
         for fname in (
             "3pGtoA_freq.txt",
             "5pCtoT_freq.txt",
@@ -193,20 +198,19 @@ class MapDamageModelNode(CommandNode):
             abspath = os.path.abspath(relpath)
             os.symlink(abspath, os.path.join(temp, fname))
 
-    def _run(self, temp):
+    def _run(self, temp: PathTypes) -> None:
         try:
-            CommandNode._run(self, temp)
+            super()._run(temp)
         except NodeError as error:
-            err_message = "DNA damage levels are too low"
             if self._command.join() == [1]:
                 fpath = os.path.join(temp, "pipe_mapDamage.stdout")
                 with open(fpath) as handle:
                     for line in handle:
-                        if err_message in line:
+                        if "DNA damage levels are too low" in line:
                             line = line.strip().replace("Warning:", "ERROR:")
-                            error = NodeError("%s\n\n%s" % (error, line))
-                            break
-            raise error
+                            raise NodeError(f"{error}\n\n{line}") from error
+
+            raise
 
 
 class MapDamageRescaleNode(CommandNode):
@@ -216,9 +220,12 @@ class MapDamageRescaleNode(CommandNode):
         input_files: Iterable[str],
         output_file: str,
         directory: str,
-        options: OptionsType = {},
+        options: OptionsType | None = None,
         dependencies: Iterable[Node] = (),
-    ):
+    ) -> None:
+        if options is None:
+            options = {}
+
         merge = None
         input_files = tuple(input_files)
         if len(input_files) > 1:
@@ -250,12 +257,12 @@ class MapDamageRescaleNode(CommandNode):
         CommandNode.__init__(
             self,
             command=command if merge is None else ParallelCmds([merge, command]),
-            description="rescaling %s using mapDamage" % (describe_files(input_files),),
+            description=f"rescaling {describe_files(input_files)} using mapDamage",
             dependencies=dependencies,
         )
 
     def _setup(self, temp: PathTypes) -> None:
-        CommandNode._setup(self, temp)
+        super()._setup(temp)
         for fname in ("Stats_out_MCMC_correct_prob.csv",):
             relpath = os.path.join(self._directory, fname)
             abspath = os.path.abspath(relpath)

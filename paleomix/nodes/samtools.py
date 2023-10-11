@@ -28,7 +28,7 @@ https://github.com/samtools/samtools
 from __future__ import annotations
 
 import os
-from typing import Iterable, Optional, Tuple
+from typing import TYPE_CHECKING, Iterable
 
 from paleomix.common import versions
 from paleomix.common.command import (
@@ -43,6 +43,9 @@ from paleomix.common.command import (
 )
 from paleomix.common.fileutils import describe_files
 from paleomix.node import CommandNode, Node
+
+if TYPE_CHECKING:
+    from typing_extensions import Literal
 
 _VERSION_REGEX = r"Version: (\d+\.\d+)(?:\.(\d+))?"
 
@@ -71,11 +74,15 @@ class TabixIndexNode(CommandNode):
 
     def __init__(
         self,
+        *,
         infile: str,
-        preset: str = "vcf",
-        options: OptionsType = {},
+        preset: Literal["vcf", "gff", "bed", "sam"] = "vcf",
+        options: OptionsType | None = None,
         dependencies: Iterable[Node] = (),
-    ):
+    ) -> None:
+        if options is None:
+            options = {}
+
         if preset not in ("vcf", "gff", "bed", "sam"):
             raise ValueError(preset)
 
@@ -97,7 +104,7 @@ class TabixIndexNode(CommandNode):
         CommandNode.__init__(
             self,
             command=SequentialCmds([link, tabix]),
-            description="creating tabix %s index for %s" % (preset, infile),
+            description=f"creating tabix {preset} index for {infile}",
             dependencies=dependencies,
         )
 
@@ -105,7 +112,7 @@ class TabixIndexNode(CommandNode):
 class FastaIndexNode(CommandNode):
     """Indexed a FASTA file using 'samtools faidx'."""
 
-    def __init__(self, infile: str, dependencies: Iterable[Node] = ()):
+    def __init__(self, infile: str, dependencies: Iterable[Node] = ()) -> None:
         basename = os.path.basename(infile)
 
         # faidx does not support a custom output path, so we create a symlink to the
@@ -127,7 +134,7 @@ class FastaIndexNode(CommandNode):
 
         CommandNode.__init__(
             self,
-            description="creating FAI index for %s" % (infile,),
+            description=f"creating FAI index for {infile}",
             command=SequentialCmds([link, faidx]),
             dependencies=dependencies,
         )
@@ -138,11 +145,15 @@ class BAMIndexNode(CommandNode):
 
     def __init__(
         self,
+        *,
         infile: str,
-        index_format: str = ".bai",
-        options: OptionsType = {},
+        index_format: Literal[".bai", ".csi"] = ".bai",
+        options: OptionsType | None = None,
         dependencies: Iterable[Node] = (),
-    ):
+    ) -> None:
+        if options is None:
+            options = {}
+
         command = AtomicCmd(
             ["samtools", "index"],
             requirements=[SAMTOOLS_VERSION],
@@ -151,7 +162,7 @@ class BAMIndexNode(CommandNode):
         if index_format == ".csi":
             command.append("-c")
         elif index_format != ".bai":
-            raise ValueError("Unknown BAM index format %r" % (index_format,))
+            raise ValueError(f"Unknown BAM index format {index_format!r}")
 
         command.append_options(options)
         command.append(
@@ -162,25 +173,27 @@ class BAMIndexNode(CommandNode):
         CommandNode.__init__(
             self,
             command=command,
-            description="creating %s index for %s" % (index_format[1:].upper(), infile),
+            description=f"creating {index_format[1:].upper()} index for {infile}",
             threads=_get_number_of_threads(options),
             dependencies=dependencies,
         )
 
 
 class BAMStatsNode(CommandNode):
-    METHODS = ("stats", "idxstats", "flagstats")
-
     def __init__(
         self,
-        method: str,
+        *,
+        method: Literal["stats", "idxstats", "flagstats"],
         infile: str,
         outfile: str,
         index_format: str = ".bai",
-        options: OptionsType = {},
+        options: OptionsType | None = None,
         dependencies: Iterable[Node] = (),
-    ):
-        if method not in self.METHODS:
+    ) -> None:
+        if options is None:
+            options = {}
+
+        if method not in ("stats", "idxstats", "flagstats"):
             raise ValueError(method)
 
         command = AtomicCmd(
@@ -197,7 +210,7 @@ class BAMStatsNode(CommandNode):
         CommandNode.__init__(
             self,
             command=command,
-            description="collecting %s for %s" % (method, infile),
+            description=f"collecting {method} for {infile}",
             threads=_get_number_of_threads(options),
             dependencies=dependencies,
         )
@@ -206,12 +219,16 @@ class BAMStatsNode(CommandNode):
 class BAMMergeNode(CommandNode):
     def __init__(
         self,
+        *,
         in_files: Iterable[str],
         out_file: str,
-        index_format: Optional[str] = None,
-        options: OptionsType = {},
+        index_format: Literal[".bai", ".csi"] | None = None,
+        options: OptionsType | None = None,
         dependencies: Iterable[Node] = (),
-    ):
+    ) -> None:
+        if options is None:
+            options = {}
+
         in_files = tuple(in_files)
         if not in_files:
             raise ValueError("no input files for samtools merge")
@@ -259,12 +276,16 @@ class BAMMergeNode(CommandNode):
 class MarkDupNode(CommandNode):
     def __init__(
         self,
+        *,
         in_bams: Iterable[str],
         out_bam: str,
-        out_stats: Optional[str] = None,
-        options: OptionsType = {},
+        out_stats: str | None = None,
+        options: OptionsType | None = None,
         dependencies: Iterable[Node] = (),
-    ):
+    ) -> None:
+        if options is None:
+            options = {}
+
         in_bams = tuple(in_bams)
         if len(in_bams) > 1:
             merge = AtomicCmd(
@@ -305,13 +326,13 @@ class MarkDupNode(CommandNode):
         CommandNode.__init__(
             self,
             command=command,
-            description="marking PCR duplicates in {}".format(describe_files(in_bams)),
+            description=f"marking PCR duplicates in {describe_files(in_bams)}",
             threads=_get_number_of_threads(options),
             dependencies=dependencies,
         )
 
 
-def merge_bam_files_command(input_files: Iterable[str]):
+def merge_bam_files_command(input_files: Iterable[str]) -> AtomicCmd:
     merge = AtomicCmd(
         ["samtools", "merge", "-u", "-"],
         stdout=AtomicCmd.PIPE,
@@ -326,11 +347,11 @@ def merge_bam_files_command(input_files: Iterable[str]):
 
 def _get_number_of_threads(options: OptionsType, default: int = 1) -> int:
     if "-@" in options and "--threads" in options:
-        raise ValueError("cannot use both -@ and --threads: {!r}".format(options))
+        raise ValueError(f"cannot use both -@ and --threads: {options!r}")
 
     value = options.get("-@", options.get("--threads", default))
     if not isinstance(value, int):
-        raise ValueError(f"invalid number of samtools threads: {value}")
+        raise TypeError(f"invalid number of samtools threads: {value}")
 
     # -@/--threads specify threads in *addition* to the main thread, but in practice
     # the number of cores used seems to be closer to the that value and not value + 1
@@ -339,8 +360,8 @@ def _get_number_of_threads(options: OptionsType, default: int = 1) -> int:
 
 def _try_write_index(
     out_bam: str,
-    index_format: Optional[str],
-) -> Tuple[Optional[str], versions.Requirement]:
+    index_format: str | None,
+) -> tuple[str | None, versions.Requirement]:
     if index_format not in (None, ".bai", ".csi"):
         raise ValueError(index_format)
 

@@ -23,7 +23,7 @@
 from __future__ import annotations
 
 import itertools
-from typing import Dict, Iterable, List
+from typing import Iterable
 
 
 def _build_complement_table() -> str:
@@ -87,7 +87,7 @@ def encode_genotype(nucleotides: Iterable[str]) -> str:
     return IUPAC_TABLE["".join(sorted(chars))]
 
 
-def split(sequence: str, split_by: str = "123") -> Dict[str, str]:
+def split(sequence: str, split_by: str = "123") -> dict[str, str]:
     """Splits a sequence by position, as specified by the 'split_by' parameter. By
     default, the function will split by codon position, and return a dictionary
     containing the keys '1', '2' and '3'.
@@ -99,7 +99,7 @@ def split(sequence: str, split_by: str = "123") -> Dict[str, str]:
     if not split_by:
         raise ValueError("No split_by specified")
 
-    results: Dict[str, List[str]] = {key: [] for key in split_by}
+    results: dict[str, list[str]] = {key: [] for key in split_by}
     keys = itertools.chain(itertools.cycle(split_by))
     for key, nucleotide in zip(keys, sequence):
         results[key].append(nucleotide)

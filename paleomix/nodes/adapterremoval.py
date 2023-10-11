@@ -21,7 +21,7 @@
 #
 from __future__ import annotations
 
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Iterable
 
 from paleomix.common import fileutils, versions
 from paleomix.common.command import (
@@ -49,18 +49,21 @@ _VERSION_3_CHECK = versions.Requirement(
 
 
 class AdapterRemoval2Node(CommandNode):
-    out_fastq: Dict[str, Tuple[str, Optional[str]]]
+    out_fastq: dict[str, tuple[str, str | None]]
 
     def __init__(
         self,
         input_file_1: str,
-        input_file_2: Optional[str],
+        input_file_2: str | None,
         output_prefix: str,
         output_settings: str,
         threads: int = 1,
-        options: OptionsType = {},
+        options: OptionsType | None = None,
         dependencies: Iterable[Node] = (),
     ) -> None:
+        if options is None:
+            options = {}
+
         # Options that cannot be overwritten
         fixed_options: OptionsType = {
             "--file1": InputFile(input_file_1),
@@ -126,19 +129,22 @@ class AdapterRemoval2Node(CommandNode):
 
 
 class AdapterRemoval3Node(CommandNode):
-    out_fastq: Dict[str, Tuple[str, Optional[str]]]
+    out_fastq: dict[str, tuple[str, str | None]]
 
     def __init__(
         self,
         input_file_1: str,
-        input_file_2: Optional[str],
+        input_file_2: str | None,
         output_prefix: str,
         output_json: str,
         output_html: str,
         threads: int = 1,
-        options: OptionsType = {},
+        options: OptionsType | None = None,
         dependencies: Iterable[Node] = (),
     ) -> None:
+        if options is None:
+            options = {}
+
         # Options that cannot be overwritten
         fixed_options: OptionsType = {
             "--file1": InputFile(input_file_1),
@@ -176,10 +182,7 @@ class AdapterRemoval3Node(CommandNode):
             fixed_options["--file2"] = InputFile(input_file_2)
 
             # merging is enabled if any of the --merge/--collapse arguments are used
-            if any(
-                key.startswith("--collapse") or key.startswith("--merge")
-                for key in options
-            ):
+            if any(key.startswith(("--collapse", "--merge")) for key in options):
                 self.out_fastq["Collapsed"] = (f"{output_prefix}.merged.fastq.gz", None)
 
         command = _finalize_options(
@@ -208,9 +211,12 @@ class IdentifyAdaptersNode(CommandNode):
         input_file_2: str,
         output_file: str,
         threads: int = 1,
-        options: OptionsType = {},
+        options: OptionsType | None = None,
         dependencies: Iterable[Node] = (),
     ) -> None:
+        if options is None:
+            options = {}
+
         command = AtomicCmd(
             "AdapterRemoval",
             stdout=output_file,
@@ -240,11 +246,9 @@ class IdentifyAdaptersNode(CommandNode):
         )
 
 
-def _describe_trimming_task(input_file_1: str, input_file_2: Optional[str]) -> str:
+def _describe_trimming_task(input_file_1: str, input_file_2: str | None) -> str:
     if input_file_2 is None:
-        return "trimming SE adapters from {}".format(
-            fileutils.describe_files(input_file_1)
-        )
+        return f"trimming SE adapters from {fileutils.describe_files(input_file_1)}"
 
     return "trimming PE adapters from {}".format(
         fileutils.describe_paired_files(input_file_1, input_file_2)
@@ -253,11 +257,11 @@ def _describe_trimming_task(input_file_1: str, input_file_2: Optional[str]) -> s
 
 def _finalize_options(
     command: AtomicCmd,
-    out_fastq: Dict[str, Tuple[str, Optional[str]]],
+    out_fastq: dict[str, tuple[str, str | None]],
     user_options: OptionsType,
     fixed_options: OptionsType,
 ) -> AtomicCmd:
-    output_fastq: List[OutputFile] = []
+    output_fastq: list[OutputFile] = []
     for file_1, file_2 in out_fastq.values():
         output_fastq.append(OutputFile(file_1))
         if file_2 is not None:
@@ -271,7 +275,7 @@ def _finalize_options(
         user_options["--adapter-list"] = InputFile(adapter_list)
 
     # Terminal trimming options are specified as --trimXp A B
-    extra_options: List[Any] = []
+    extra_options: list[Any] = []
     for key in ("--trim5p", "--trim3p"):
         value = user_options.get(key)
         if isinstance(value, list):

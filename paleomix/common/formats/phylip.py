@@ -21,8 +21,6 @@
 #
 from __future__ import annotations
 
-from typing import List
-
 from paleomix.common.formats.msa import MSA
 from paleomix.common.utilities import grouper
 
@@ -35,6 +33,7 @@ _LINE_SIZE = _NUM_BLOCKS * _BLOCK_SIZE + (_NUM_BLOCKS - 1) * _BLOCK_SPACING
 
 def interleaved_phy(
     msa: MSA,
+    *,
     add_flag: bool = False,
     max_name_length: int = _MAX_NAME_LENGTH,
 ) -> str:
@@ -47,13 +46,13 @@ def interleaved_phy(
     padded_len = min(max_name_length, max(len(name) for name in msa.names())) + 2
     padded_len -= padded_len % -(_BLOCK_SIZE + _BLOCK_SPACING) + _BLOCK_SPACING
 
-    streams: List[List[str]] = []
+    streams: list[list[str]] = []
     spacing = " " * _BLOCK_SPACING
     for record in sorted(msa):
         name = record.name[:max_name_length]
         padding = (padded_len - len(name)) * " "
 
-        lines: List[str] = []
+        lines: list[str] = []
         line = [name, padding]
         for block in grouper(_BLOCK_SIZE, record.sequence, fillvalue=""):
             block = "".join(block)

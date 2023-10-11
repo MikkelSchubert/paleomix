@@ -28,7 +28,7 @@ import os
 import shutil
 import stat
 from typing import IO, TYPE_CHECKING, Any, Callable, NoReturn
-from unittest.mock import ANY, DEFAULT, Mock, call, patch
+from unittest.mock import Mock, call, patch
 
 import pytest
 

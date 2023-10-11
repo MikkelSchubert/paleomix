@@ -44,11 +44,11 @@ from paleomix.common.command import (
     CmdError,
     Executable,
     InputFile,
+    IOFileTypes,
     OutputFile,
     TempInputFile,
     TempOutputFile,
     _AtomicFile,
-    _IOFile,
 )
 from paleomix.common.procs import (
     _RUNNING_PROCS,
@@ -106,13 +106,15 @@ def test_atomicfile__valid_paths() -> None:
 
 @pytest.mark.parametrize("cls", _ATOMICFILE_CLASSES)
 @pytest.mark.parametrize("value", _ATOMICFILE_INVALID_VALUES)
-def test_atomiccmd__paths__invalid_values(cls: type[_IOFile], value: object) -> None:
+def test_atomiccmd__paths__invalid_values(
+    cls: type[IOFileTypes], value: object
+) -> None:
     with pytest.raises(TypeError, match="expected str, bytes or os.PathLike object"):
         cls(value)  # pyright: ignore[reportGeneralTypeIssues]
 
 
 @pytest.mark.parametrize("cls", _ATOMICFILE_CLASSES)
-def test_atomiccmd__paths__byte_path(cls: type[_IOFile]) -> None:
+def test_atomiccmd__paths__byte_path(cls: type[IOFileTypes]) -> None:
     with pytest.raises(TypeError, match="invalid path"):
         cls(b"/byte/path")  # pyright: ignore[reportGeneralTypeIssues]
 
@@ -136,7 +138,9 @@ _INVALID_TEMP_PATHS = (
 
 @pytest.mark.parametrize("cls", [InputFile, OutputFile])
 @pytest.mark.parametrize("value", _INVALID_TEMP_PATHS)
-def test_atomiccmd__paths__invalid_temp_paths(cls: type[_IOFile], value: str) -> None:
+def test_atomiccmd__paths__invalid_temp_paths(
+    cls: type[InputFile | OutputFile], value: str
+) -> None:
     cls(value)
     with pytest.raises(ValueError, match="directory component in temporary path"):
         cls(value, temporary=True)
@@ -177,7 +181,7 @@ def test_atomiccmd__executable_class() -> None:
     assert cmd.to_call("%(TEMP_DIR)s") == ["cd", "."]
 
 
-def test_atomiccmd__command_iofile() -> None:
+def test_atomiccmd__command_io_types() -> None:
     with pytest.raises(TypeError, match="exe must be str or Executable"):
         AtomicCmd([InputFile("ls")])
 
@@ -206,7 +210,8 @@ def test_atomiccmd__paths() -> None:
 
 @pytest.mark.parametrize("value", _ATOMICFILE_INVALID_VALUES)
 def test_atomiccmd__values_in_path(value: object) -> None:
-    cmd = AtomicCmd(["echo", value])
+    # FIXME: AtomicCmd should throw on most of these types
+    cmd = AtomicCmd(["echo", value])  # pyright: ignore[reportGeneralTypeIssues]
     assert cmd.to_call("/tmp") == ["echo", str(value)]
 
 
@@ -235,7 +240,7 @@ def test_atomiccmd__extra_files() -> None:
 
 @pytest.mark.parametrize("value", _ATOMICFILE_INVALID_VALUES)
 def test_atomiccmd__invalid_extra_paths(value: object) -> None:
-    with pytest.raises(ValueError, match=escape_match(value)):
+    with pytest.raises(TypeError, match=escape_match(value)):
         AtomicCmd("ls", extra_files=[value])  # pyright: ignore[reportGeneralTypeIssues]
 
 
@@ -603,7 +608,7 @@ _IN_OUT_PATHS_WITH_SET_CWD = [
 
 @pytest.mark.parametrize(("cls", "set_cwd", "expected"), _IN_OUT_PATHS_WITH_SET_CWD)
 def test_atomiccmd__set_cwd__temp_in_out(
-    cls: type[_IOFile], *, set_cwd: bool, expected: str
+    cls: type[IOFileTypes], *, set_cwd: bool, expected: str
 ) -> None:
     cmd = AtomicCmd(("touch", cls("path/to/filename")), set_cwd=set_cwd)
 
@@ -625,7 +630,7 @@ _EXECUTABLES_WITH_SET_CWD = [
 def test_atomiccmd__set_cwd__executables(
     *, set_cwd: bool, in_exec: str, out_exec: str
 ) -> None:
-    cmd = AtomicCmd(Executable(in_exec), set_cwd=set_cwd)
+    cmd = AtomicCmd([Executable(in_exec)], set_cwd=set_cwd)
 
     assert cmd.to_call("${TMP}") == [out_exec]
 
@@ -885,7 +890,7 @@ def _setup_command(tmp_path: Path) -> tuple[Path, Path, AtomicCmd]:
 
 def test_atomiccmd__commit_simple(tmp_path: Path) -> None:
     destination, tmp_path, cmd = _setup_command(tmp_path)
-    cmd.commit(tmp_path)
+    cmd.commit()
     assert not (tmp_path / "1234").exists()
     assert (destination / "1234").exists()
 
@@ -900,7 +905,7 @@ def test_atomiccmd__commit_temp_out(tmp_path: Path) -> None:
     cmd.run(temp)
     assert cmd.join() == [0]
     (temp / "bar.txt").write_text("1 2 3")
-    cmd.commit(temp)
+    cmd.commit()
     assert os.listdir(fileutils.fspath(temp)) == []
     assert os.listdir(fileutils.fspath(dest)) == ["foo.txt"]
 
@@ -910,21 +915,21 @@ def test_atomiccmd__commit_temp_only(tmp_path: Path) -> None:
     cmd.run(tmp_path)
     assert cmd.join() == [0]
     assert (tmp_path / "bar.txt").exists()
-    cmd.commit(tmp_path)
+    cmd.commit()
     assert os.listdir(fileutils.fspath(tmp_path)) == []
 
 
 def test_atomiccmd__commit_before_run() -> None:
     cmd = AtomicCmd("true")
     with pytest.raises(CmdError):
-        cmd.commit("/tmp")
+        cmd.commit()
 
 
 def test_atomiccmd__commit_while_running(tmp_path: Path) -> None:
     cmd = AtomicCmd(("sleep", "10"))
     cmd.run(tmp_path)
     with pytest.raises(CmdError):
-        cmd.commit(tmp_path)
+        cmd.commit()
     cmd.terminate()
     cmd.join()
 
@@ -936,22 +941,8 @@ def test_atomiccmd__commit_before_join(tmp_path: Path) -> None:
     while cmd._proc.poll() is None:
         pass
     with pytest.raises(CmdError):
-        cmd.commit(tmp_path)
+        cmd.commit()
     cmd.join()
-
-
-# The temp path might differ, as long as the actual path is the same
-def test_atomiccmd__commit_temp_folder(tmp_path: Path) -> None:
-    destination, tmp_path, cmd = _setup_command(tmp_path)
-    cmd.commit(tmp_path.resolve())
-    assert not (tmp_path / "1234").exists()
-    assert (destination / "1234").exists()
-
-
-def test_atomiccmd__commit_wrong_temp_folder(tmp_path: Path) -> None:
-    destination, tmp_path, cmd = _setup_command(tmp_path)
-    with pytest.raises(CmdError):
-        cmd.commit(destination)
 
 
 def test_atomiccmd__commit_missing_files(tmp_path: Path) -> None:
@@ -964,7 +955,7 @@ def test_atomiccmd__commit_missing_files(tmp_path: Path) -> None:
     cmd.join()
     before = frozenset(tmp_path.iterdir())
     with pytest.raises(CmdError):
-        cmd.commit(tmp_path)
+        cmd.commit()
     assert before == frozenset(tmp_path.iterdir())
 
 
@@ -993,7 +984,7 @@ def test_atomiccmd__commit_failure_cleanup(tmp_path: Path) -> None:
         command.run(tmp_path)
         assert command.join() == [0]
         with pytest.raises(OSError, match="ARRRGHHH!"):
-            command.commit(tmp_path)
+            command.commit()
 
         assert tuple(destination.iterdir()) == ()
 
@@ -1013,8 +1004,8 @@ def test_atomiccmd__commit_with_pipes(tmp_path: Path) -> None:
     assert command_1.join() == [0]
     assert command_2.join() == [0]
 
-    command_1.commit(tmp_path)
-    command_2.commit(tmp_path)
+    command_1.commit()
+    command_2.commit()
 
     assert list(destination.iterdir()) == [destination / "foo.gz"]
     assert list(tmp_path.iterdir()) == []
@@ -1157,21 +1148,21 @@ def test_append_options__invalid_type() -> None:
 
 def test_append_options__invalid_key() -> None:
     cmd = AtomicCmd("touch")
-    with pytest.raises(ValueError, match="17"):
+    with pytest.raises(TypeError, match="17"):
         cmd.append_options({17: "yes"})  # pyright: ignore[reportGeneralTypeIssues]
 
 
 @pytest.mark.parametrize("value", [object()])
 def test_append_options__invalid_values(value: object) -> None:
     cmd = AtomicCmd("touch")
-    with pytest.raises(ValueError, match=escape_match(value)):
+    with pytest.raises(TypeError, match=escape_match(value)):
         cmd.append_options({"--foo": value})  # pyright: ignore[reportGeneralTypeIssues]
 
 
 @pytest.mark.parametrize("value", [object()])
 def test_append_options__invalid_values_in_list(value: object) -> None:
     cmd = AtomicCmd("touch")
-    with pytest.raises(ValueError, match=escape_match(value)):
+    with pytest.raises(TypeError, match=escape_match(value)):
         cmd.append_options(
             {"--foo": [1, 2, value]}  # pyright: ignore[reportGeneralTypeIssues]
         )
@@ -1196,7 +1187,7 @@ def test_atomiccmd__add_extra_files() -> None:
 def test_atomiccmd__add_extra_files_invalid_values(value: object) -> None:
     cmd = AtomicCmd("ls")
 
-    with pytest.raises(ValueError, match=escape_match(value)):
+    with pytest.raises(TypeError, match=escape_match(value)):
         cmd.add_extra_files([value])  # pyright: ignore[reportGeneralTypeIssues]
 
 

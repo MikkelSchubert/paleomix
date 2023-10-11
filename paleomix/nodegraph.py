@@ -296,7 +296,7 @@ class NodeGraph:
                 continue
 
             try:
-                version = requirement.version(force)
+                version = requirement.version(force=force)
                 if version:
                     name = "%s v%s" % (name, version)
 

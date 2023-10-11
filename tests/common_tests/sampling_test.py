@@ -142,7 +142,7 @@ def test_reservoir_sampling__downsample_to_zero() -> None:
 
 
 def test_reservoir_sampling__downsample_to_negative_raises_value_error() -> None:
-    with pytest.raises(ValueError, match="Negative value for 'downsample_to'"):
+    with pytest.raises(ValueError, match="downsample_to must be >= 0"):
         sampling.reservoir_sampling(list(range(5)), -1)
 
 

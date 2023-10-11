@@ -21,7 +21,6 @@
 #
 from __future__ import annotations
 
-import argparse
 import copy
 import errno
 import itertools
@@ -29,22 +28,26 @@ import logging
 import os
 import sys
 import time
-from io import TextIOWrapper
-from typing import Iterator, List, Optional, Union
+from logging import LogRecord
+from typing import TYPE_CHECKING, Iterator
 
 import coloredlogs
 from humanfriendly.terminal import ansi_wrap, terminal_supports_colors
+
+if TYPE_CHECKING:
+    import argparse
+    from io import TextIOWrapper
 
 _CONSOLE_MESSAGE_FORMAT: str = "%(asctime)s %(levelname)s %(status)s%(message)s"
 _FILE_MESSAGE_FORMAT: str = "%(asctime)s %(name)s %(levelname)s %(status)s%(message)s"
 
 
-class LogRecord(logging.LogRecord):
-    status: Optional[Union[str, "Status"]]
+class LogRecordWithStatus(logging.LogRecord):
+    status: str | Status | None
 
 
 class BasicFormatter(logging.Formatter):
-    def format(self, record: LogRecord) -> str:
+    def format(self, record: LogRecord) -> str:  # noqa: A003
         record = copy.copy(record)
         record.status = self._process_status(record)
 
@@ -56,7 +59,7 @@ class BasicFormatter(logging.Formatter):
             message = message % record.args
 
         if "\n" in message:
-            lines: List[str] = []
+            lines: list[str] = []
             record.args = ()
             for line in message.split("\n"):
                 record.msg = line
@@ -67,8 +70,8 @@ class BasicFormatter(logging.Formatter):
         return super().format(record)
 
     def _process_status(self, record: LogRecord) -> str:
-        if hasattr(record, "status") and record.status:
-            return "[{}] ".format(record.status)
+        if isinstance(record, LogRecordWithStatus):
+            return f"[{record.status}] "
 
         return ""
 
@@ -77,7 +80,7 @@ class PaleomixFormatter(BasicFormatter):
     def _process_status(self, record: LogRecord) -> str:
         status = getattr(record, "status", None)
         if isinstance(status, Status) and status.color:
-            return "[{}] ".format(ansi_wrap(str(status), color=status.color))
+            return f"[{ansi_wrap(str(status), color=status.color)}] "
 
         return ""
 
@@ -103,9 +106,9 @@ def initialize_console_logging(log_level: str = "info") -> None:
 
 def initialize(
     log_level: str = "info",
-    log_file: Optional[str] = None,
-    auto_log_file: Optional[str] = "paleomix",
-):
+    log_file: str | None = None,
+    auto_log_file: str | None = "paleomix",
+) -> None:
     initialize_console_logging(log_level)
 
     if log_file:
@@ -119,7 +122,9 @@ def initialize(
         root = logging.getLogger()
         root.addHandler(handler)
     elif auto_log_file:
-        template = "%s.%s_%%02i.log" % (auto_log_file, time.strftime("%Y%m%d_%H%M%S"))
+        template = "{}.{}_%02i.log".format(
+            auto_log_file, time.strftime("%Y%m%d_%H%M%S")
+        )
         handler = LazyLogfile(template, log_level=logging.ERROR)
         handler.setFormatter(BasicFormatter(_FILE_MESSAGE_FORMAT))
         handler.setLevel(logging.ERROR)
@@ -128,7 +133,11 @@ def initialize(
         root.addHandler(handler)
 
 
-def add_argument_group(parser: argparse.ArgumentParser, log_file: bool = True) -> None:
+def add_argument_group(
+    parser: argparse.ArgumentParser,
+    *,
+    log_file: bool = True,
+) -> None:
     """Adds an option-group to an OptionParser object, with options
     pertaining to logging. Note that 'initialize' expects the config
     object to have these options."""
@@ -160,7 +169,7 @@ def get_logfiles() -> Iterator[str]:
 
 
 class LazyLogfile(logging.FileHandler):
-    def __init__(self, template: str, log_level: int):
+    def __init__(self, template: str, log_level: int) -> None:
         logging.FileHandler.__init__(self, template, delay=True)
         # Use absolute path for template
         self._template = self.baseFilename
@@ -187,16 +196,17 @@ class LazyLogfile(logging.FileHandler):
                 logger.info("Saving %s logs to %r", level_name, filename)
 
                 self.baseFilename = filename
-                return stream
             except OSError as error:
                 if error.errno != errno.EEXIST:
                     raise
+            else:
+                return stream
 
-        assert False
+        raise AssertionError("loop should have ended")
 
 
 class Status:
-    def __init__(self, color: Optional[str] = None):
+    def __init__(self, color: str | None = None) -> None:
         self.color = color
 
     def __str__(self) -> str:

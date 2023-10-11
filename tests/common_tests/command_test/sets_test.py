@@ -131,12 +131,12 @@ def test_atomicsets__commit(cls: SetTypes) -> None:
     cmd_3 = AtomicCmd(["ls"])
     cmd_3.commit = mock.commit_3
 
-    cls((cmd_1, cmd_2, cmd_3)).commit("xTMPx")
+    cls((cmd_1, cmd_2, cmd_3)).commit()
 
     assert mock.mock_calls == [
-        call.commit_1("xTMPx"),
-        call.commit_2("xTMPx"),
-        call.commit_3("xTMPx"),
+        call.commit_1(),
+        call.commit_2(),
+        call.commit_3(),
     ]
 
 
@@ -157,20 +157,13 @@ def test_atomicsets__commit__remove_files_on_failure(
     assert cmdset.join() == [0, 0]
 
     with pytest.raises(OSError, match="mocked failure"):
-        cmdset.commit(str(tmp_path / "tmp"))
+        cmdset.commit()
 
     tmp_files = [it.name for it in (tmp_path / "tmp").iterdir()]
     assert "file1" not in tmp_files
     assert "file2" in tmp_files
 
     assert list((tmp_path / "out").iterdir()) == []
-
-
-@pytest.mark.parametrize("cls", _SET_CLASSES)
-def test_atomicsets__stdout(cls: SetTypes) -> None:
-    cmds = cls([AtomicCmd("ls")])
-    with pytest.raises(CmdError):
-        cmds.stdout  #   noqa: B018
 
 
 @pytest.mark.parametrize("cls", _SET_CLASSES)

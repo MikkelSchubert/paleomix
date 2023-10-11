@@ -24,10 +24,16 @@ from __future__ import annotations
 import os
 import random
 import re
-from typing import Iterable, Optional, Union
+from typing import Iterable
 
 from paleomix.common import fileutils, versions
-from paleomix.common.command import AtomicCmd, InputFile, OutputFile, TempOutputFile
+from paleomix.common.command import (
+    AtomicCmd,
+    InputFile,
+    OptionsType,
+    OutputFile,
+    TempOutputFile,
+)
 from paleomix.node import CommandNode, Node
 
 RAXML_VERSION = versions.Requirement(
@@ -45,14 +51,16 @@ RAXML_PTHREADS_VERSION = versions.Requirement(
 class RAxMLRapidBSNode(CommandNode):
     def __init__(
         self,
+        *,
         input_alignment: str,
         output_template: str,
-        input_partition: Optional[str] = None,
+        input_partition: str | None = None,
         model: str = "GTRGAMMAI",
-        replicates: Union[str, int] = "autoMRE",
+        replicates: str | int = "autoMRE",
         threads: int = 1,
         dependencies: Iterable[Node] = (),
-    ):
+        rng: random.Random | None = None,
+    ) -> None:
         """
         Arguments:
         input_alignment  -- An alignment file in a format readable by RAxML.
@@ -67,8 +75,10 @@ class RAxMLRapidBSNode(CommandNode):
         """
         self._symlinks = [input_alignment, input_partition]
         self._template = os.path.basename(output_template)
+        if rng is None:
+            rng = random.Random()
 
-        options = {
+        options: OptionsType = {
             # Perform rapid bootstrapping
             "-f": "a",
             # Output files are saved with a .PALEOMIX postfix, and subsequently renamed
@@ -78,9 +88,9 @@ class RAxMLRapidBSNode(CommandNode):
             # Use the GTRGAMMA model of NT substitution by default
             "-m": model,
             # Enable Rapid Boostrapping and set random seed
-            "-x": int(random.random() * 2**31 - 1),
+            "-x": rng.randint(0, 2**31 - 1),
             # Set random seed for parsimony inference
-            "-p": int(random.random() * 2**31 - 1),
+            "-p": rng.randint(0, 2**31 - 1),
             # Terminate bootstrapping upon convergence, not after N repetitions
             "-N": replicates,
         }
@@ -128,13 +138,13 @@ class RAxMLRapidBSNode(CommandNode):
         CommandNode.__init__(
             self,
             command=command,
-            description="inferring phylogeny from %s using RAxML" % (input_alignment,),
+            description=f"inferring phylogeny from {input_alignment} using RAxML",
             threads=threads,
             dependencies=dependencies,
         )
 
     def _setup(self, temp: fileutils.PathTypes) -> None:
-        CommandNode._setup(self, temp)
+        super()._setup(temp)
 
         # Required to avoid the creation of files outside the temp folder
         for filename in self._symlinks:
@@ -144,7 +154,7 @@ class RAxMLRapidBSNode(CommandNode):
 
                 os.symlink(source, destination)
 
-    def _run(self, temp):
+    def _run(self, temp: fileutils.PathTypes) -> None:
         # RAxML needs to be run with an absolute path for -w
         super()._run(os.path.abspath(temp))
 
@@ -157,4 +167,4 @@ class RAxMLRapidBSNode(CommandNode):
 
                 fileutils.move_file(source, destination)
 
-        CommandNode._teardown(self, temp)
+        super()._teardown(temp)

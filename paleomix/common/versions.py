@@ -24,9 +24,8 @@ from __future__ import annotations
 import re
 import subprocess
 import sys
-import typing
 from shlex import quote
-from typing import Iterable, Optional, Tuple, Union
+from typing import Iterable
 
 from packaging.specifiers import SpecifierSet
 
@@ -56,11 +55,11 @@ class Requirement:
 
     def __init__(
         self,
-        call: Union[str, Iterable[str]],
-        regexp: Optional[str] = None,
-        specifiers: Optional[str] = None,
-        name: Optional[str] = None,
-    ):
+        call: str | Iterable[str],
+        regexp: str | None = None,
+        specifiers: str | None = None,
+        name: str | None = None,
+    ) -> None:
         self._call = (call,) if isinstance(call, str) else tuple(call)
         self.name = str(name or self._call[0])
         self.regexp = re.compile(regexp) if regexp else None
@@ -73,14 +72,14 @@ class Requirement:
             raise RequirementError("specifiers require a regexp str")
 
     @property
-    def call(self) -> Tuple[str, ...]:
+    def call(self) -> tuple[str, ...]:
         call = self._call
         if call[0] == "%(PYTHON)s":
             return (sys.executable,) + call[1:]
 
         return call
 
-    def version(self, force: bool = False) -> str:
+    def version(self, *, force: bool = False) -> str:
         """The version determined for the application / library. If the version
         could not be determined, a RequirementError is raised.
         """
@@ -93,8 +92,8 @@ class Requirement:
 
         return self._cached_version
 
-    def version_str(self, force: bool = False) -> str:
-        version = self.version(force)
+    def version_str(self, *, force: bool = False) -> str:
+        version = self.version(force=force)
         if not version:
             return "N/A"
 
@@ -104,14 +103,14 @@ class Requirement:
     def executable(self) -> str:
         return self.call[0]
 
-    def check(self, force: bool = False) -> bool:
-        version = self.version(force)
+    def check(self, *, force: bool = False) -> bool:
+        version = self.version(force=force)
         if not self.specifiers:
             return True
 
         return version in self.specifiers
 
-    def _determine_version(self) -> Union[str, Exception]:
+    def _determine_version(self) -> str | Exception:
         try:
             output = subprocess.run(
                 self.call,
@@ -121,6 +120,7 @@ class Requirement:
                 stderr=subprocess.STDOUT,
                 encoding="utf-8",
                 errors="replace",
+                check=False,
             ).stdout
         except OSError as error:
             return self._raise_failure(error)
@@ -131,7 +131,7 @@ class Requirement:
 
         return self._parse_version_string(output)
 
-    def _parse_version_string(self, output: str) -> Union[str, Exception]:
+    def _parse_version_string(self, output: str) -> str | Exception:
         if self.regexp:
             match = self.regexp.search(output)
             if not match:
@@ -146,7 +146,7 @@ class Requirement:
 
         return ""
 
-    def _raise_failure(self, output: Union[str, Exception]) -> RequirementError:
+    def _raise_failure(self, output: str | Exception) -> RequirementError:
         """Raises a RequirementError when a version check failed; if the
         output indicates that the JRE is outdated (i.e. the output contains
         "UnsupportedClassVersionError") a special message is given.
@@ -160,7 +160,7 @@ class Requirement:
         origin = None
         if isinstance(output, Exception):
             origin = output
-            lines.append("Exception was raised: %r" % (output,))
+            lines.append(f"Exception was raised: {output!r}")
         elif "UnsupportedClassVersionError" in output:
             # Raised if the JRE is too old compared to the JAR
             lines.extend(
@@ -178,24 +178,26 @@ class Requirement:
                     "Program may be broken or a version not supported by the",
                     "pipeline; please refer to the PALEOMIX documentation.",
                     "",
-                    "Requirements:   %s" % (self.specifiers,),
-                    "Search string:  %r" % (self.regexp),
+                    f"Requirements:   {self.specifiers}",
+                    f"Search string:  {self.regexp!r}",
                     "",
-                    "%s Command output %s" % ("-" * 22, "-" * 22),
+                    "{} Command output {}".format("-" * 22, "-" * 22),
                     output,
                 ]
             )
 
         raise RequirementError("\n".join(lines)) from origin
 
-    def __eq__(self, other: typing.Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, Requirement):
             return NotImplemented
 
         return self._to_tuple() == other._to_tuple()
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self._to_tuple())
 
-    def _to_tuple(self):
+    def _to_tuple(
+        self,
+    ) -> tuple[tuple[str, ...], str, re.Pattern[str] | None, SpecifierSet]:
         return (self._call, self.name, self.regexp, self.specifiers)
