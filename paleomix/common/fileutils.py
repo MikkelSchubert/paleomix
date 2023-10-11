@@ -28,6 +28,7 @@ import io
 import os
 import random
 import shutil
+import tempfile
 from datetime import datetime
 from os import fspath
 from typing import (
@@ -78,12 +79,13 @@ def create_temp_dir(root: PathTypes) -> str:
     location. The folder name is includes the current time and includes a random
     component. Only the current user has access.
     """
+    now = datetime.now()  # noqa: DTZ005
 
-    def _generate_path() -> str:
-        prefix = datetime.now().strftime("%Y%m%d_%H%M%S")
-        postfix = "{:04x}".format(random.getrandbits(16))
+    return tempfile.mkdtemp(
+        prefix=now.strftime("%Y%m%d_%H%M%S_"),
+        dir=root,
+    )
 
-        return os.path.join(root, f"{prefix}_{postfix}")
 
     for _ in range(10_000):
         path = _generate_path()

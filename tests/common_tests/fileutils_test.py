@@ -200,42 +200,13 @@ def test_create_temp_dir__empty(tmp_path: Path) -> None:
 def test_create_temp_dir__permissions(tmp_path: Path) -> None:
     tmp_dir = create_temp_dir(tmp_path)
     stats = os.stat(tmp_dir)
-    assert stats.st_mode & 0 == 0
+    assert stats.st_mode & 0o777 == 0o700
 
 
-def test_create_temp_dir__creation_preempted(tmp_path: Path) -> None:
-    makedirs = os.makedirs
-    mock = Mock(wraps=makedirs)
-    # Raise expection first, then pass second call to wrapped function
-    mock.side_effect = [OSError(errno.EEXIST, "dir exists"), DEFAULT]
-    with patch("os.makedirs", mock):
-        work_dir = create_temp_dir(tmp_path)
-
-    assert work_dir.startswith(str(tmp_path))
-
-    # Must be called with different directories
-    assert mock.mock_calls == [call(ANY, mode=0o700), call(ANY, mode=0o700)]
-    call_1, call_2 = mock.mock_calls
-    assert call_1[1] != call_2[1]
-
-
-def test_create_temp_dir__permission_denied() -> None:
-    with patch("os.makedirs") as mock:
-        mock.side_effect = OSError(errno.EACCES, "Simulated premission denied")
-
-        with pytest.raises(OSError, match="Simulated premission denied"):
-            create_temp_dir("/tmp")
-
-
-def test_create_temp_dir__finite_attempts(tmp_path: Path) -> None:
-    mock = Mock(wraps=os.makedirs)
-    mock.side_effect = OSError(errno.EEXIST, "dir exists")
-    with patch("os.makedirs", mock), pytest.raises(FileExistsError):
+def test_create_temp_dir__permission_denied(tmp_path: Path) -> None:
+    tmp_path.chmod(0o500)
+    with pytest.raises(OSError, match="Permission denied"):
         create_temp_dir(tmp_path)
-
-    # Exact number isn't important
-    assert mock.call_count >= 100
-    assert list(tmp_path.iterdir()) == []
 
 
 ###############################################################################
