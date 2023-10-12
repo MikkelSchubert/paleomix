@@ -408,6 +408,14 @@ class AtomicCmd:
         # Allow subprocesses to be cleaned up in case of unplanned termination
         register_process(self)
 
+    def communicate(self) -> tuple[bytes, bytes]:
+        if not self._running:
+            raise CmdError("Calling 'communicate' on non-running command.")
+        elif self._proc is None:
+            raise AssertionError("self._proc is none in AtomicCmd.communicate")
+
+        return self._proc.communicate()
+
     def ready(self) -> bool:
         """Returns true if the command has been run to completion,
         regardless of wether or not an error occured."""
@@ -433,12 +441,12 @@ class AtomicCmd:
         with Subprocesses, as it does not exist for AtomicSets."""
         return self.join()[0]
 
-    def terminate(self) -> None:
+    def terminate(self, signal: int = signal.SIGTERM) -> None:
         """Sends SIGTERM to process if it is still running.
         Has no effect if the command has already finished."""
         if self._proc and self._proc.poll() is None:
             try:
-                os.killpg(self._proc.pid, signal.SIGTERM)
+                os.killpg(self._proc.pid, signal)
                 self._terminated = True
             except OSError:
                 pass  # Already dead / finished process
@@ -501,6 +509,10 @@ class AtomicCmd:
     @property
     def stderr(self) -> WrappedPipeType:
         return self._stderr
+
+    @property
+    def pid(self) -> int | None:
+        return None if self._proc is None else self._proc.pid
 
     @property
     def terminated(self) -> bool:

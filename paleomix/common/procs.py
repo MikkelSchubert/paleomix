@@ -110,6 +110,10 @@ def join_procs(
 _RUNNING_PROCS: list[_SupportsTerminate] = []
 
 
+def running_processes() -> list[_SupportsTerminate]:
+    return list(_RUNNING_PROCS)
+
+
 def register_process(proc: _SupportsTerminate) -> None:
     """Register a process for automatic/forced termination."""
     _RUNNING_PROCS.append(proc)

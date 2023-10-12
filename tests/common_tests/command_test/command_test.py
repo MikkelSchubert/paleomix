@@ -19,10 +19,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-#
-# pyright: reportPrivateUsage=none
-# ruff: noqa: SLF001
-#
 from __future__ import annotations
 
 import os
@@ -40,6 +36,7 @@ import paleomix.common.command
 from paleomix.common import fileutils
 from paleomix.common.command import (
     AtomicCmd,
+    AtomicFileTypes,
     AuxiliaryFile,
     CmdError,
     Executable,
@@ -48,11 +45,10 @@ from paleomix.common.command import (
     OutputFile,
     TempInputFile,
     TempOutputFile,
-    _AtomicFile,
 )
 from paleomix.common.procs import (
-    _RUNNING_PROCS,
     register_process,
+    running_processes,
     terminate_all_processes,
 )
 from paleomix.common.versions import Requirement
@@ -66,12 +62,13 @@ def escape_match(obj: object) -> str:
 # AtomicFile
 
 
-_ATOMICFILE_CLASSES: tuple[type[_AtomicFile], ...] = (
-    _AtomicFile,
+_ATOMICFILE_CLASSES: tuple[type[AtomicFileTypes], ...] = (
+    AuxiliaryFile,
+    Executable,
     InputFile,
     OutputFile,
-    Executable,
-    AuxiliaryFile,
+    TempInputFile,
+    TempOutputFile,
 )
 
 
@@ -89,7 +86,6 @@ _ATOMICFILE_INVALID_VALUES: tuple[object, ...] = (
 
 
 def test_atomicfile__repr__() -> None:
-    assert repr(_AtomicFile("foo/bar")) == "_AtomicFile('foo/bar')"
     assert repr(AuxiliaryFile("foo/bar")) == "AuxiliaryFile('foo/bar')"
     assert repr(Executable("foo/bar")) == "Executable('foo/bar')"
     assert repr(InputFile("bar")) == "InputFile('bar', False)"
@@ -99,9 +95,9 @@ def test_atomicfile__repr__() -> None:
 
 
 def test_atomicfile__valid_paths() -> None:
-    assert _AtomicFile("").path == ""
-    assert _AtomicFile("/foo/bar").path == "/foo/bar"
-    assert _AtomicFile(Path("/foo/bar")).path == "/foo/bar"
+    assert AuxiliaryFile("").path == ""
+    assert AuxiliaryFile("/foo/bar").path == "/foo/bar"
+    assert AuxiliaryFile(Path("/foo/bar")).path == "/foo/bar"
 
 
 @pytest.mark.parametrize("cls", _ATOMICFILE_CLASSES)
@@ -343,7 +339,7 @@ _INVALID_STDIN_VALUES = (
     b"/path/to/file",
     OutputFile("foo"),
     AuxiliaryFile("/path/to/foo"),
-    _AtomicFile("/foo/bar"),
+    AuxiliaryFile("/foo/bar"),
     AtomicCmd.PIPE,
 )
 
@@ -433,7 +429,7 @@ _INVALID_STDOUT_STDERR_VALUES = (
     b"/path/to/file",
     InputFile("foo"),
     AuxiliaryFile("/path/to/foo"),
-    _AtomicFile("/foo/bar"),
+    AuxiliaryFile("/foo/bar"),
     AtomicCmd("true"),
 )
 
@@ -545,9 +541,9 @@ def test_atomiccmd__stdout_stderr_explicit_filename(tmp_path: Path) -> None:
 def test_atomiccmd__temp_dir_in_path(tmp_path: Path) -> None:
     cmd = AtomicCmd(("echo", "-n", "%(TEMP_DIR)s"), stdout=AtomicCmd.PIPE)
     cmd.run(tmp_path)
-    assert cmd._proc is not None
-    assert cmd._proc.stdout is not None
-    path = cmd._proc.stdout.read().decode()
+    stdout, stderr = cmd.communicate()
+    assert stderr is None
+    path = stdout.decode()
     assert tmp_path.samefile(path), (tmp_path, path)
     assert cmd.join() == [0]
 
@@ -558,9 +554,9 @@ def test_atomiccmd__temp_dir_inside_path(tmp_path: Path) -> None:
         stdout=AtomicCmd.PIPE,
     )
     cmd.run(tmp_path)
-    assert cmd._proc is not None
-    assert cmd._proc.stdout is not None
-    assert cmd._proc.stdout.read() == (b"-Djava.io.tmpdir=" + bytes(tmp_path))
+    stdout, stderr = cmd.communicate()
+    assert stdout == (b"-Djava.io.tmpdir=" + bytes(tmp_path))
+    assert stderr is None
     assert cmd.join() == [0]
 
 
@@ -573,9 +569,9 @@ def test_atomiccmd__default_cwd(tmp_path: Path) -> None:
     cmd = AtomicCmd("pwd", stdout=AtomicCmd.PIPE)
     cmd.run(tmp_path)
     assert cwd == os.getcwd()
-    assert cmd._proc is not None
-    assert cmd._proc.stdout is not None
-    assert cmd._proc.stdout.read().decode() == cwd + "\n"
+    stdout, stderr = cmd.communicate()
+    assert stdout.decode() == cwd + "\n"
+    assert stderr is None
     assert cmd.join() == [0]
 
 
@@ -584,9 +580,9 @@ def test_atomiccmd__set_cwd(tmp_path: Path) -> None:
     cmd = AtomicCmd("pwd", stdout=AtomicCmd.PIPE, set_cwd=True)
     cmd.run(tmp_path)
     assert cwd == os.getcwd()
-    assert cmd._proc is not None
-    assert cmd._proc.stdout is not None
-    assert cmd._proc.stdout.read() == bytes(tmp_path) + b"\n"
+    stdout, stderr = cmd.communicate()
+    assert stdout == bytes(tmp_path) + b"\n"
+    assert stderr is None
     assert cmd.join() == [0]
 
 
@@ -802,20 +798,24 @@ def test_atomiccmd__wait(tmp_path: Path, call: str, after: int) -> None:
 def test_atomiccmd__terminate(tmp_path: Path) -> None:
     cmd = AtomicCmd(("sleep", "10"))
     cmd.run(tmp_path)
-    assert cmd._proc is not None
+
+    pid = cmd.pid
+    assert pid is not None
 
     with patch("os.killpg", wraps=os.killpg) as os_killpg:
         cmd.terminate()
         assert cmd.join() == ["SIGTERM"]
 
-        assert os_killpg.mock_calls == [call(cmd._proc.pid, signal.SIGTERM)]
+        assert os_killpg.mock_calls == [call(pid, signal.SIGTERM)]
 
 
 def test_atomiccmd__terminate_exception(tmp_path: Path) -> None:
     killpg = os.killpg
     cmd = AtomicCmd(("sleep", "10"))
     cmd.run(tmp_path)
-    assert cmd._proc is not None
+
+    pid = cmd.pid
+    assert pid is not None
 
     def _killpg(pid: int, sig: int) -> NoReturn:
         killpg(pid, sig)
@@ -825,7 +825,7 @@ def test_atomiccmd__terminate_exception(tmp_path: Path) -> None:
         cmd.terminate()
         assert cmd.join() == ["SIGTERM"]
 
-        assert os_killpg.mock_calls == [call(cmd._proc.pid, signal.SIGTERM)]
+        assert os_killpg.mock_calls == [call(pid, signal.SIGTERM)]
 
 
 # Ensure that no OSException is raised, even if the command
@@ -833,9 +833,9 @@ def test_atomiccmd__terminate_exception(tmp_path: Path) -> None:
 def test_atomiccmd__terminate_race_condition(tmp_path: Path) -> None:
     cmd = AtomicCmd("true")
     cmd.run(tmp_path)
-    assert cmd._proc is not None
-    while cmd._proc.poll() is None:
-        pass
+    stdout, stderr = cmd.communicate()
+    assert stdout is None
+    assert stderr is None
     cmd.terminate()
     assert cmd.join() == [0]
 
@@ -860,8 +860,7 @@ def test_atomiccmd__terminate_sigterm(tmp_path: Path) -> None:
 def test_atomiccmd__terminate_sigkill(tmp_path: Path) -> None:
     cmd = AtomicCmd(("sleep", "10"))
     cmd.run(tmp_path)
-    assert cmd._proc is not None
-    cmd._proc.kill()
+    cmd.terminate(signal=signal.SIGKILL)
     assert cmd.join() == ["SIGKILL"]
 
 
@@ -937,9 +936,9 @@ def test_atomiccmd__commit_while_running(tmp_path: Path) -> None:
 def test_atomiccmd__commit_before_join(tmp_path: Path) -> None:
     cmd = AtomicCmd(("sleep", "0.1"))
     cmd.run(tmp_path)
-    assert cmd._proc is not None
-    while cmd._proc.poll() is None:
-        pass
+    stdout, stderr = cmd.communicate()
+    assert stdout is None
+    assert stderr is None
     with pytest.raises(CmdError):
         cmd.commit()
     cmd.join()
@@ -1183,7 +1182,7 @@ def test_atomiccmd__add_extra_files() -> None:
     assert cmd.to_call("/tmp/example") == ["ls"]
 
 
-@pytest.mark.parametrize("value", ["/path/to/file", 1, _AtomicFile("foo"), -1])
+@pytest.mark.parametrize("value", ["/path/to/file", 1, (), -1])
 def test_atomiccmd__add_extra_files_invalid_values(value: object) -> None:
     cmd = AtomicCmd("ls")
 
@@ -1231,24 +1230,24 @@ def test_atomiccmd__str__() -> None:
 # Test that the internal list of processes is kept clean of joined processes objects
 def test_atomiccmd__cleanup_proc__commit(tmp_path: Path) -> None:
     cmd = AtomicCmd("true")
-    assert cmd not in _RUNNING_PROCS
+    assert cmd not in running_processes()
     cmd.run(tmp_path)
-    assert cmd in _RUNNING_PROCS
+    assert cmd in running_processes()
     assert cmd.join() == [0]
-    assert cmd not in _RUNNING_PROCS
+    assert cmd not in running_processes()
 
 
 def test_atomiccmd__cleanup_proc__gc(tmp_path: Path) -> None:
     cmd = AtomicCmd("true")
-    assert cmd not in _RUNNING_PROCS
+    assert cmd not in running_processes()
     cmd.run(tmp_path)
-    assert cmd in _RUNNING_PROCS
+    assert cmd in running_processes()
 
     cmd_id = id(cmd)
     del cmd
 
     try:
-        assert any(id(cmd) == cmd_id for cmd in _RUNNING_PROCS)
+        assert any(id(cmd) == cmd_id for cmd in running_processes())
     finally:
         terminate_all_processes()
 
