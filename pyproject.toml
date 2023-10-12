@@ -1,6 +1,6 @@
 [tool.black]
 required-version = 23
-target-versions = ["py37", "py38", "py39", "py310", "py310", "py311"]
+target-versions = ["py37", "py38", "py39", "py310", "py310", "py311", "py12"]
 
 [tool.coverage.run]
 branch = true
@@ -93,14 +93,26 @@ ignore = [
     "ANN102",  # missing-type-cls -- Missing type annotation for `cls` in classmethod
     "EM101",   # raw-string-in-exception -- Exception must not use a string literal
     "EM102",   # f-string-in-exception -- Exception must not use an f-string literal
+    "EM103",   # dot-format-in-exception -- Exception must not use a `.format` string
+    "ERA001",  # commented-out-code -- Found commented out code
     "PLR0913", # too-many-arguments -- Too many arguments to function call
-    "RET505",  # superfluous-else-return -- Unnecessary `elif` after `return` statement
     "S603",    # subprocess-without-shell-equals-true
     "TRY003",  # raise-vanilla-args
+    # Disabled due to too many false positives
+    "PLR2004", # magic-value-comparison -- Magic value used in comparison
+    # Disabled due to personal style preferences
+    "PLW2901", # redefined-loop-name -- `for` loop variable `value` overwritten
+    "RET505",  # superfluous-else-return -- Unnecessary `elif` after `return` statement
+    "RET506",  # superfluous-else-raise -- Unnecessary `elif` after `raise` statement
+    # Disabled due to hits in non-performance critical code where manual is clearer
+    "PERF401", # manual-list-comprehension -- Use a list comprehension
 ]
 
 [tool.ruff.per-file-ignores]
 
 "tests/**.py" = [
-    "S101", # flake8-bandit -- Use of assert detected
+    "S101", # assert -- Use of assert detected
+    "S108", # hardcoded-temp-file -- Probable insecure usage of temporary file or dir
+    "S311", # suspicious-non-cryptographic-random-usage
+    "PLR2004", # magic-value-comparison -- Magic value used in comparison
 ]
