@@ -554,7 +554,7 @@ def recalibrate_nucleotides(args, genome, samples, settings):
 def final_bam_stats(args, genome, samples, settings):
     fastqc_nodes = []
     for sample in samples:
-        for method in BAMStatsNode.METHODS:
+        for method in ("stats", "idxstats", "flagstats"):
             layout = args.layout.update(genome=genome, sample=sample, method=method)
 
             yield BAMStatsNode(
@@ -694,7 +694,7 @@ def _haplotype_1_sample_n_intervals(args, genome, settings, layout, gvcfs):
         java_options=args.jre_options,
     )
 
-    yield TabixIndexNode(layout["vcf_merged"])
+    yield TabixIndexNode(infile=layout["vcf_merged"])
 
 
 def _haplotype_n_samples_n_interval(args, genome, settings, layout, gvcfs):
@@ -730,7 +730,7 @@ def _haplotype_n_samples_n_interval(args, genome, settings, layout, gvcfs):
         java_options=args.jre_options,
     )
 
-    yield TabixIndexNode(layout["vcf_merged"])
+    yield TabixIndexNode(infile=layout["vcf_merged"])
 
 
 def recalibrate_haplotype(args, genome, samples, settings):

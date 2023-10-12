@@ -33,7 +33,7 @@ import pysam
 import paleomix
 import paleomix.common.logging
 import paleomix.pipelines.zonkey.config as zonkey_config
-from paleomix.common import resources
+from paleomix.common import fileutils, resources
 from paleomix.common.formats.fasta import FASTA
 from paleomix.nodes.raxml import RAxMLRapidBSNode
 from paleomix.nodes.samtools import BAMIndexNode

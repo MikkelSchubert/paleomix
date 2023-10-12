@@ -140,13 +140,17 @@ def index_genomes(log, makefiles):
                 fai_indexing = FastaIndexNode(path, dependencies=[validation])
 
                 # Indexing of FASTA file using 'bwa index'
-                bwa_indexing = BWAIndexNode(path, dependencies=[validation])
+                bwa_indexing = BWAIndexNode(input_file=path, dependencies=[validation])
 
                 # Indexing of FASTA file using 'bwa-mem2 index'
-                bwa_mem2_indexing = BWAMem2IndexNode(path, dependencies=[validation])
+                bwa_mem2_indexing = BWAMem2IndexNode(
+                    input_file=path, dependencies=[validation]
+                )
 
                 # Indexing of FASTA file using 'bowtie2-build'
-                bowtie2_indexing = Bowtie2IndexNode(path, dependencies=[validation])
+                bowtie2_indexing = Bowtie2IndexNode(
+                    input_file=path, dependencies=[validation]
+                )
 
                 tasks[abspath] = {
                     "BWA": [fai_indexing, bwa_indexing],
@@ -334,7 +338,7 @@ def _build_bwa_backtrack_se_task(
         reference=reference,
         threads=max(2, threads // 2),
         cleanup_options=cleanup_options,
-        dependencies=sai_task,
+        dependencies=(sai_task,),
     )
 
 
@@ -359,8 +363,16 @@ def _build_bwa_backtrack_pe_task(
     output_sai_1 = swap_ext(output_file, "%i.sai" % (1,))
     output_sai_2 = swap_ext(output_file, "%i.sai" % (2,))
 
-    task_sai_1 = BWABacktrack(input_file_1, output_sai_1, **backtrack_options)
-    task_sai_2 = BWABacktrack(input_file_2, output_sai_2, **backtrack_options)
+    task_sai_1 = BWABacktrack(
+        input_file=input_file_1,
+        output_file=output_sai_1,
+        **backtrack_options,
+    )
+    task_sai_2 = BWABacktrack(
+        input_file=input_file_2,
+        output_file=output_sai_2,
+        **backtrack_options,
+    )
 
     task_sai_1.mark_intermediate_files()
     task_sai_2.mark_intermediate_files()
