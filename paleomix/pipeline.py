@@ -21,7 +21,6 @@
 #
 from __future__ import annotations
 
-import argparse
 import logging
 import math
 import multiprocessing
@@ -30,7 +29,7 @@ import signal
 import sys
 import time
 from shlex import quote
-from typing import Any, Dict, Iterable, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional
 
 import paleomix.common.logging
 import paleomix.core.reports
@@ -46,6 +45,9 @@ from paleomix.nodegraph import (
     NodeGraphError,
     StatusEnum,
 )
+
+if TYPE_CHECKING:
+    from paleomix.common.argparse import ArgumentGroup, ArgumentParser
 
 
 class Pypeline:
@@ -399,14 +401,12 @@ class Pypeline:
                 self._progress_color = "red"
 
 
-def add_argument_groups(parser: argparse.ArgumentParser) -> None:
+def add_argument_groups(parser: ArgumentParser) -> None:
     add_scheduling_argument_group(parser)
     add_io_argument_group(parser)
 
 
-def add_scheduling_argument_group(
-    parser: argparse.ArgumentParser,
-) -> argparse._ArgumentGroup:
+def add_scheduling_argument_group(parser: ArgumentParser) -> ArgumentGroup:
     parser.set_defaults(pipeline_mode="run")
 
     group = parser.add_argument_group("Pipeline Scheduling")
@@ -447,7 +447,7 @@ def add_scheduling_argument_group(
     return group
 
 
-def add_io_argument_group(parser: argparse.ArgumentParser) -> argparse._ArgumentGroup:
+def add_io_argument_group(parser: ArgumentParser) -> ArgumentGroup:
     parser.set_defaults(pipeline_mode="run")
 
     group = parser.add_argument_group("Pipeline Input/Output")

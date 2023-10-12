@@ -35,8 +35,10 @@ import coloredlogs
 from humanfriendly.terminal import ansi_wrap, terminal_supports_colors
 
 if TYPE_CHECKING:
-    import argparse
     from io import TextIOWrapper
+
+    from paleomix.common.argparse import ArgumentParser
+
 
 _CONSOLE_MESSAGE_FORMAT: str = "%(asctime)s %(levelname)s %(status)s%(message)s"
 _FILE_MESSAGE_FORMAT: str = "%(asctime)s %(name)s %(levelname)s %(status)s%(message)s"
@@ -133,11 +135,7 @@ def initialize(
         root.addHandler(handler)
 
 
-def add_argument_group(
-    parser: argparse.ArgumentParser,
-    *,
-    log_file: bool = True,
-) -> None:
+def add_argument_group(parser: ArgumentParser, *, log_file: bool = True) -> None:
     """Adds an option-group to an OptionParser object, with options
     pertaining to logging. Note that 'initialize' expects the config
     object to have these options."""

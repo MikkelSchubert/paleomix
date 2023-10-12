@@ -21,15 +21,13 @@
 #
 from __future__ import annotations
 
-import argparse
 import multiprocessing
 import os
 
 import paleomix
 import paleomix.common.logging
 import paleomix.pipeline
-from paleomix.common.argparse import SUPPRESS, ArgumentParser
-from paleomix.resources import add_copy_example_command
+from paleomix.common.argparse import SUPPRESS, ArgumentParser, SubParsersAction
 
 _DEFAULT_CONFIG_FILES = [
     "/etc/paleomix/bam_pipeline.ini",
@@ -38,7 +36,7 @@ _DEFAULT_CONFIG_FILES = [
 
 
 def build_parser(pipeline_variant: str) -> ArgumentParser:
-    parser = ArgumentParser(prog="paleomix %s" % (pipeline_variant,))
+    parser = ArgumentParser(prog=f"paleomix {pipeline_variant}")
 
     subparsers = parser.add_subparsers(dest="command", metavar="command")
     add_makefile_command(subparsers)
@@ -48,7 +46,7 @@ def build_parser(pipeline_variant: str) -> ArgumentParser:
     return parser
 
 
-def add_makefile_command(subparsers: argparse._SubParsersAction) -> None:
+def add_makefile_command(subparsers: SubParsersAction[ArgumentParser]) -> None:
     subparsers.add_parser(
         "new",
         help="Print project template",
@@ -56,7 +54,7 @@ def add_makefile_command(subparsers: argparse._SubParsersAction) -> None:
     )
 
 
-def add_run_command(subparsers: argparse._SubParsersAction) -> None:
+def add_run_command(subparsers: SubParsersAction[ArgumentParser]) -> None:
     parser = subparsers.add_parser(
         "run",
         aliases=("dryrun",),
@@ -120,3 +118,14 @@ def add_run_command(subparsers: argparse._SubParsersAction) -> None:
     parser.add_argument("--gatk-max-threads", help=SUPPRESS)
     parser.add_argument("--progress-ui", help=SUPPRESS)
     parser.add_argument("--ui-colors", help=SUPPRESS)
+
+
+def add_copy_example_command(subparsers: SubParsersAction[ArgumentParser]) -> None:
+    parser = subparsers.add_parser("example", help="Create example project")
+
+    parser.add_argument(
+        "destination",
+        default=".",
+        nargs="?",
+        help="Destination folder for example data.",
+    )

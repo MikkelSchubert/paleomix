@@ -23,16 +23,12 @@ from __future__ import annotations
 
 import json
 import sys
-from typing import TYPE_CHECKING
 
-from paleomix.common.argparse import ArgumentParser
+from paleomix.common.argparse import ArgumentParser, Namespace
 from paleomix.common.formats.fastq import FASTQ, FASTQOffsets, FASTQualities
 
-if TYPE_CHECKING:
-    import argparse
 
-
-def parse_args(argv: list[str]) -> argparse.Namespace:
+def parse_args(argv: list[str]) -> Namespace:
     parser = ArgumentParser("paleomix :validate_fastq")
     parser.add_argument("files", nargs="+")
     parser.add_argument("--collapsed", action="store_true")

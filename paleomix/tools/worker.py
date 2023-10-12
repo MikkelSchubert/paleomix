@@ -21,7 +21,6 @@
 #
 from __future__ import annotations
 
-import argparse
 import codecs
 import json
 import logging
@@ -38,7 +37,7 @@ from typing import Any, Collection, Dict, Iterable, Iterator, List, Optional, Tu
 
 import paleomix
 import paleomix.common.logging
-from paleomix.common.argparse import ArgumentParser
+from paleomix.common.argparse import ArgumentParser, Namespace
 from paleomix.common.logging import initialize_console_logging
 from paleomix.common.versions import Requirement
 from paleomix.core.input import CommandLine, ListTasksEvent, ThreadsEvent
@@ -63,7 +62,7 @@ Events = Iterable[EventType]
 
 
 class Worker:
-    def __init__(self, args: argparse.Namespace):
+    def __init__(self, args: Namespace) -> None:
         self._args = args
         self._id: str = args.id
         self._running: Dict[int, Node] = {}
@@ -363,7 +362,7 @@ class Worker:
             os.unlink(self._filename)
 
 
-def parse_args(argv: List[str]) -> argparse.Namespace:
+def parse_args(argv: list[str]) -> Namespace:
     parser = ArgumentParser(
         prog="paleomix worker",
         description="Worker process for paleomix pipelines, allowing tasks to be "

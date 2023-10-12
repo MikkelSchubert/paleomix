@@ -21,13 +21,26 @@
 #
 from __future__ import annotations
 
+import argparse
 from typing import Any, List
 
 import configargparse
 
 import paleomix
 
-SUPPRESS = configargparse.SUPPRESS
+__all__ = [
+    "ArgumentDefaultsHelpFormatter",
+    "ArgumentGroup",
+    "ArgumentParser",
+    "Namespace",
+    "SubParsersAction",
+    "SUPPRESS",
+]
+
+ArgumentGroup = argparse._ArgumentGroup  # pyright: ignore[reportPrivateUsage]
+Namespace = argparse.Namespace
+SubParsersAction = argparse._SubParsersAction  # pyright: ignore[reportPrivateUsage]
+SUPPRESS = argparse.SUPPRESS
 
 
 class ArgumentDefaultsHelpFormatter(configargparse.ArgumentDefaultsHelpFormatter):
