@@ -26,13 +26,12 @@ import os
 import shutil
 import string
 import tarfile
-from typing import Dict, Union
+from typing import TYPE_CHECKING, Dict, Union
 
 import pysam
 
 import paleomix
 import paleomix.common.logging
-import paleomix.pipelines.zonkey.common as common_nodes
 import paleomix.pipelines.zonkey.config as zonkey_config
 from paleomix.common import resources
 from paleomix.common.formats.fasta import FASTA
@@ -41,6 +40,10 @@ from paleomix.nodes.samtools import BAMIndexNode
 from paleomix.pipeline import Pypeline
 from paleomix.pipelines.zonkey import database
 from paleomix.pipelines.zonkey.parts import mitochondria, nuclear, report, summary
+from paleomix.pipelines.zonkey.parts.common import WriteSampleList
+
+if TYPE_CHECKING:
+    from paleomix.node import Node
 
 
 def build_plink_nodes(config, data, root, bamfile, dependencies=()):
@@ -259,7 +262,7 @@ def build_mito_nodes(config, root, bamfile, dependencies=()):
 def build_pipeline(config, root, nuc_bam, mito_bam, cache):
     nodes = []
     sample_tbl = os.path.join(root, "figures", "samples.txt")
-    samples = common_nodes.WriteSampleList(config=config, output_file=sample_tbl)
+    samples = WriteSampleList(config=config, output_file=sample_tbl)
 
     if nuc_bam is not None:
         nuc_bam, nuc_bam_info = nuc_bam["Path"], nuc_bam["Info"]
