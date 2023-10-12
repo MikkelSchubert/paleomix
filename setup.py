@@ -81,6 +81,5 @@ setup(
         "typing_extensions>=4.0",
     ],
     entry_points={"console_scripts": ["paleomix=paleomix.__main__:main"]},
-    zip_safe=False,
     include_package_data=True,
 )

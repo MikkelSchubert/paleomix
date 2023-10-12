@@ -28,8 +28,8 @@ from typing import TYPE_CHECKING
 import pytest
 
 from paleomix.common.makefile import MakefileError
+from paleomix.common.resources import read_template
 from paleomix.pipelines.bam.makefile import read_makefiles
-from paleomix.resources import template
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -133,9 +133,9 @@ def test_basic__read_makefiles__trim_template(tmp_path: Path) -> None:
     filepath = tmp_path / "temp.yaml"
     with filepath.open("wt") as handle:
         # Minimal template containing options required for trim pipeline
-        handle.write(template("bam_head.yaml"))
+        handle.write(read_template("bam_head.yaml"))
         # Example samples (not used when auto generating a YAML file)
-        handle.write(template("bam_samples.yaml"))
+        handle.write(read_template("bam_samples.yaml"))
 
     expected = copy.deepcopy(TEMPLATE_TRIM)
     expected["Filename"] = filepath
@@ -161,7 +161,7 @@ def test_basic__read_makefiles__bam_template(tmp_path: Path) -> None:
     filepath = tmp_path / "temp.yaml"
     with filepath.open("wt") as handle:
         for filename in TEMPLATE_FILES:
-            handle.write(template(filename))
+            handle.write(read_template(filename))
 
     expected = copy.deepcopy(TEMPLATE_BAM)
     expected["Filename"] = filepath
@@ -178,7 +178,7 @@ def _write_genome_yaml(tmp_path, genomes):
     filepath = tmp_path / "temp.yaml"
     with filepath.open("wt") as handle:
         for filename in TEMPLATE_FILES[:-2]:
-            handle.write(template(filename))
+            handle.write(read_template(filename))
 
         handle.write("\nGenomes:\n")
         for key, value in genomes.items():
@@ -319,7 +319,7 @@ def _write_sample_yaml(tmp_path, text):
     filepath = tmp_path / "temp.yaml"
     with filepath.open("wt") as handle:
         for filename in TEMPLATE_FILES[:-1]:
-            handle.write(template(filename))
+            handle.write(read_template(filename))
 
         handle.write(textwrap.dedent(text))
 

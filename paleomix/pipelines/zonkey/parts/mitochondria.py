@@ -24,17 +24,10 @@ from __future__ import annotations
 import os
 
 from paleomix.common import rtools
-from paleomix.common.command import (
-    AtomicCmd,
-    AuxiliaryFile,
-    InputFile,
-    OutputFile,
-    TempOutputFile,
-)
+from paleomix.common.command import InputFile, OutputFile, TempOutputFile
 from paleomix.common.fileutils import PathTypes
 from paleomix.common.formats.newick import Newick
 from paleomix.node import CommandNode
-from paleomix.pipelines.zonkey.common import RSCRIPT_VERSION
 from paleomix.tools import factory
 
 
@@ -64,10 +57,9 @@ class MitoConsensusNode(CommandNode):
 
 class DrawPhylogenyNode(CommandNode):
     def __init__(self, samples, treefile, bootstraps, output_prefix, dependencies=()):
-        command = AtomicCmd(
+        command = factory.rscript(
             (
-                "Rscript",
-                AuxiliaryFile(rtools.rscript("zonkey", "tinytree.r")),
+                os.path.join("zonkey", "tinytree.r"),
                 # Temporary file generated in _setup
                 TempOutputFile("rerooted.newick"),
                 InputFile(samples),
@@ -79,7 +71,6 @@ class DrawPhylogenyNode(CommandNode):
                 OutputFile(output_prefix + ".png"),
             ],
             requirements=[
-                RSCRIPT_VERSION,
                 rtools.requirement("ape"),
                 rtools.requirement("ggplot2"),
                 rtools.requirement("grid"),

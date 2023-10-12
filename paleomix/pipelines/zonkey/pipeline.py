@@ -34,9 +34,8 @@ import paleomix
 import paleomix.common.logging
 import paleomix.pipelines.zonkey.common as common_nodes
 import paleomix.pipelines.zonkey.config as zonkey_config
-import paleomix.resources
+from paleomix.common import resources
 from paleomix.common.formats.fasta import FASTA
-from paleomix.node import Node
 from paleomix.nodes.raxml import RAxMLRapidBSNode
 from paleomix.nodes.samtools import BAMIndexNode
 from paleomix.pipeline import Pypeline
@@ -376,8 +375,8 @@ def setup_mito_mapping(config):
         return 1
 
     with open(mkfile_fpath, "w") as mkfile:
-        mkfile.write(paleomix.resources.template("bam_head.yaml"))
-        mkfile.write(paleomix.resources.template("bam_options.yaml"))
+        mkfile.write(resources.read_template("bam_head.yaml"))
+        mkfile.write(resources.read_template("bam_options.yaml"))
 
         mkfile.write("\n\nPrefixes:\n")
 

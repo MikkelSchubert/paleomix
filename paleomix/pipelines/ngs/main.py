@@ -26,7 +26,7 @@ import os
 
 import paleomix.common.logging
 import paleomix.node
-from paleomix import resources
+from paleomix.common import resources
 from paleomix.common.fileutils import swap_ext
 from paleomix.common.yaml import YAMLError
 from paleomix.pipeline import Pypeline
@@ -91,7 +91,7 @@ def _main_run(args):
     return pipeline.run(args.pipeline_mode)
 
 
-def _main_new(args):
-    print(resources.template("ngs.yaml"))
+def _main_new(args) -> int:
+    print(resources.read_template("ngs.yaml"))
 
     return 0

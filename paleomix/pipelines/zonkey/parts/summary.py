@@ -24,8 +24,7 @@ from __future__ import annotations
 import os
 
 import paleomix
-import paleomix.resources
-from paleomix.common import fileutils
+from paleomix.common import fileutils, resources
 from paleomix.node import Node
 from paleomix.pipelines.zonkey.parts import admixture
 from paleomix.pipelines.zonkey.parts.report import AnalysisReport
@@ -80,8 +79,10 @@ class SummaryNode(Node):
             os.path.join(temp, "summary.html"), os.path.join(self._root, "summary.html")
         )
 
-        css_path = paleomix.resources.report("zonkey", "report.css")
-        fileutils.copy_file(css_path, os.path.join(self._root, "summary.css"))
+        resources.copy_resource(
+            os.path.join("reports", "zonkey", "report.css"),
+            os.path.join(self._root, "report.css"),
+        )
 
     def _build_sidemenu(self):
         lines = []

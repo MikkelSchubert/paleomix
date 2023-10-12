@@ -33,14 +33,14 @@ import pysam
 from paleomix.common import fileutils, rtools, versions
 from paleomix.common.command import (
     AtomicCmd,
-    AuxiliaryFile,
     InputFile,
     OutputFile,
     SequentialCmds,
     TempOutputFile,
 )
+from paleomix.common.utilities import safe_coerce_to_tuple
 from paleomix.node import CommandNode, Node, NodeError
-from paleomix.pipelines.zonkey.common import RSCRIPT_VERSION, read_summary
+from paleomix.pipelines.zonkey.common import read_summary
 from paleomix.tools import factory
 
 ADMIXTURE_VERSION = versions.Requirement(
@@ -300,10 +300,9 @@ class AdmixturePlotNode(CommandNode):
         self._samples = samples
         self._order = tuple(order) + ("Sample",)
 
-        command = AtomicCmd(
+        command = factory.rscript(
             (
-                "Rscript",
-                AuxiliaryFile(rtools.rscript("zonkey", "admixture.r")),
+                os.path.join("zonkey", "admixture.r"),
                 InputFile(input_file),
                 TempOutputFile("samples.txt"),
                 TempOutputFile(output_prefix),
@@ -314,7 +313,6 @@ class AdmixturePlotNode(CommandNode):
                 OutputFile(output_prefix + ".png"),
             ],
             requirements=[
-                RSCRIPT_VERSION,
                 rtools.requirement("ggplot2"),
                 rtools.requirement("reshape2"),
             ],
@@ -628,20 +626,17 @@ class PlotTreemixNode(CommandNode):
 
     @classmethod
     def _plot_command(cls, input_prefix, args, extra_files=[], **kwargs):
-        script = rtools.rscript("zonkey", "treemix.r")
-
-        return AtomicCmd(
-            ("Rscript", AuxiliaryFile(script)) + tuple(args),
+        return factory.rscript(
+            (os.path.join("zonkey", "treemix.r"), *safe_coerce_to_tuple(args)),
             extra_files=[
                 InputFile(input_prefix + ".cov.gz"),
                 InputFile(input_prefix + ".covse.gz"),
                 InputFile(input_prefix + ".edges.gz"),
                 InputFile(input_prefix + ".modelcov.gz"),
                 InputFile(input_prefix + ".vertices.gz"),
-            ]
-            + extra_files,
+                *extra_files,
+            ],
             requirements=[
-                RSCRIPT_VERSION,
                 rtools.requirement("RColorBrewer"),
             ],
             set_cwd=True,
@@ -718,10 +713,9 @@ numthreads:        1
 
 class PlotPCANode(CommandNode):
     def __init__(self, samples, prefix, output_prefix, dependencies=()):
-        cmd = AtomicCmd(
+        cmd = factory.rscript(
             [
-                "Rscript",
-                AuxiliaryFile(rtools.rscript("zonkey", "pca.r")),
+                os.path.join("zonkey", "pca.r"),
                 os.path.abspath(prefix),
                 InputFile(samples),
                 TempOutputFile(output_prefix),
@@ -733,7 +727,6 @@ class PlotPCANode(CommandNode):
                 OutputFile(output_prefix + ".png"),
             ],
             requirements=[
-                RSCRIPT_VERSION,
                 rtools.requirement("ggplot2"),
                 rtools.requirement("ggrepel"),
             ],
@@ -754,10 +747,9 @@ class PlotCoverageNode(CommandNode):
         self._mapping = dict(zip(mapping.values(), mapping))
         self._input_file = input_file
 
-        cmd = AtomicCmd(
+        cmd = factory.rscript(
             (
-                "Rscript",
-                AuxiliaryFile(rtools.rscript("zonkey", "coverage.r")),
+                os.path.join("zonkey", "coverage.r"),
                 TempOutputFile("contigs.table"),
                 TempOutputFile(output_prefix),
             ),
@@ -767,7 +759,6 @@ class PlotCoverageNode(CommandNode):
                 OutputFile(output_prefix + ".png"),
             ],
             requirements=[
-                RSCRIPT_VERSION,
                 rtools.requirement("ggplot2"),
             ],
             set_cwd=True,

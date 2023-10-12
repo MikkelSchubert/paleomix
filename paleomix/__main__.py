@@ -53,6 +53,7 @@ COMMANDS = {
     # VCF/etc. tools
     "rmdup_collapsed": "paleomix.tools.rmdup_collapsed",
     # Misc tools
+    ":rscript": "paleomix.tools.rscript",
     ":validate_fastq": "paleomix.tools.validate_fastq",
     ":validate_fasta": "paleomix.tools.validate_fasta",
 }

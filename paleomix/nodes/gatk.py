@@ -27,11 +27,9 @@ from typing import TYPE_CHECKING, Iterable
 
 import pysam
 
-from paleomix.common import rtools
 from paleomix.common.command import (
     AtomicCmd,
     AtomicFileTypes,
-    AuxiliaryFile,
     InputFile,
     OptionsType,
     OutputFile,
@@ -47,6 +45,7 @@ from paleomix.common.fileutils import (
     swap_ext,
 )
 from paleomix.node import CommandNode, Node, NodeError
+from paleomix.tools import factory
 
 if TYPE_CHECKING:
     from typing_extensions import Literal
@@ -528,10 +527,9 @@ class TranchesPlotsNode(CommandNode):
         output_prefix: str,
         dependencies: Iterable[Node] = (),
     ) -> None:
-        command = AtomicCmd(
+        command = factory.rscript(
             (
-                "Rscript",
-                AuxiliaryFile(rtools.rscript("ngs", "tranches.r")),
+                os.path.join("ngs", "tranches.r"),
                 InputFile(input_table),
                 TempOutputFile(output_prefix),
             ),

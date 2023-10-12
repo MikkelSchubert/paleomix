@@ -27,13 +27,13 @@ import os
 import pysam
 
 import paleomix
-import paleomix.resources
-from paleomix.common import fileutils
+from paleomix.common import fileutils, resources
 from paleomix.node import Node
 from paleomix.nodes.raxml import RAXML_VERSION
 from paleomix.nodes.samtools import SAMTOOLS_VERSION
-from paleomix.pipelines.zonkey.common import RSCRIPT_VERSION, read_summary
+from paleomix.pipelines.zonkey.common import read_summary
 from paleomix.pipelines.zonkey.parts import admixture, nuclear
+from paleomix.tools.factory import RSCRIPT_VERSION
 
 
 class ReportNode(Node):
@@ -103,8 +103,10 @@ class ReportNode(Node):
             os.path.join(temp, "report.html"), os.path.join(self._root, "report.html")
         )
 
-        css_path = paleomix.resources.report("zonkey", "report.css")
-        fileutils.copy_file(css_path, os.path.join(self._root, "report.css"))
+        resources.copy_resource(
+            os.path.join("reports", "zonkey", "report.css"),
+            os.path.join(self._root, "report.css"),
+        )
 
     def _write_intro_and_overview(self, output_handle):
         output_handle.write(_SECTION_HEADER.format(name="intro", title="Introduction"))

@@ -23,13 +23,7 @@ from __future__ import annotations
 
 import collections
 
-from paleomix.common import versions, yaml
-
-RSCRIPT_VERSION = versions.Requirement(
-    call=("Rscript", "--version"),
-    regexp=r"version (\d+\.\d+\.\d+)",
-    specifiers=">=3.3.3",
-)
+from paleomix.common import yaml
 
 
 class DBFileError(RuntimeError):

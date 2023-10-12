@@ -21,14 +21,16 @@
 #
 from __future__ import annotations
 
-from typing import List
+import logging
+import os
 
+import paleomix.common.logging
 import paleomix.pipelines.bam.config as bam_config
 import paleomix.pipelines.bam.pipeline as bam_pipeline
-import paleomix.resources
+from paleomix.common import resources
 
 
-def main(argv: List[str], pipeline: str = "bam") -> int:
+def main(argv: list[str], pipeline: str = "bam") -> int:
     if pipeline not in ("bam", "trim"):
         raise ValueError(pipeline)
 
@@ -41,7 +43,7 @@ def main(argv: List[str], pipeline: str = "bam") -> int:
     if args.command in ("new", "makefile", "mkfile"):
         return _main_template()
     elif args.command in ("example",):
-        return paleomix.resources.copy_example("bam_pipeline", args.destination)
+        return _main_copy_example(args.destination)
 
     if args.command.startswith("dry") and args.pipeline_mode == "run":
         args.pipeline_mode = "dry_run"
@@ -52,14 +54,32 @@ def main(argv: List[str], pipeline: str = "bam") -> int:
 
 
 def _main_template() -> int:
-    print(paleomix.resources.template("bam_head.yaml"))
-    print(paleomix.resources.template("bam_options.yaml"))
+    print(resources.read_template("bam_head.yaml"))
+    print(resources.read_template("bam_options.yaml"))
 
     print()
 
-    print(paleomix.resources.template("bam_prefixes.yaml"))
+    print(resources.read_template("bam_prefixes.yaml"))
 
     print()
-    print(paleomix.resources.template("bam_samples.yaml"))
+    print(resources.read_template("bam_samples.yaml"))
+
+    return 0
+
+
+def _main_copy_example(destination: str) -> int:
+    paleomix.common.logging.initialize()
+
+    log = logging.getLogger(__name__)
+    destination = os.path.join(destination, "bam_pipeline")
+    log.info("Copying example project to %r", destination)
+
+    if os.path.exists(destination):
+        log.error("Example folder already exists at %r", destination)
+        return 1
+
+    resources.copy_resource(os.path.join("examples", "bam_pipeline"), destination)
+
+    log.info("Sucessfully saved example in %r", destination)
 
     return 0
