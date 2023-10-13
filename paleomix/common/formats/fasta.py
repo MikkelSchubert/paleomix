@@ -39,8 +39,6 @@ class FASTAError(FormatError):
 
 
 class FASTA(TotallyOrdered, Immutable):
-    __slots__ = ["name", "meta", "sequence"]
-
     name: str
     meta: str | None
     sequence: str

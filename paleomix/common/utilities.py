@@ -205,12 +205,16 @@ def fill_dict(destination: dict[Any, Any], source: dict[Any, Any]) -> dict[Any, 
     return _fill_dict(copy.deepcopy(destination), copy.deepcopy(source))
 
 
+# FIXME: Properly handle slots, type-safety
 class Immutable:
     """Mixin implementing a immutable class; member variables are specified in
     the init function, cannot be changed afterwards; note that this does not
     prevent changes to the member variables themselves (if not immutable)."""
 
     def __init__(self, **kwargs: object) -> None:
+        if hasattr(self, "__slots__"):
+            raise AssertionError("Immutable does not support slots")
+
         object.__init__(self)
         for key, value in kwargs.items():
             object.__setattr__(self, key, value)
