@@ -27,7 +27,8 @@ import gzip
 import os
 import shutil
 import stat
-from typing import IO, TYPE_CHECKING, Any, Callable, NoReturn
+from pathlib import Path
+from typing import IO, Any, Callable, NoReturn
 from unittest.mock import Mock, call, patch
 
 import pytest
@@ -51,10 +52,6 @@ from paleomix.common.fileutils import (
     try_rmtree,
 )
 from paleomix.common.testing import SetWorkingDirectory
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
 
 ###############################################################################
 ###############################################################################
@@ -207,6 +204,15 @@ def test_create_temp_dir__permission_denied(tmp_path: Path) -> None:
     tmp_path.chmod(0o500)
     with pytest.raises(OSError, match="Permission denied"):
         create_temp_dir(tmp_path)
+
+
+def test_create_temp_dir__root_does_not_exist(tmp_path: Path) -> None:
+    root = tmp_path / "root"
+    assert not root.is_dir()
+    tmp_dir = Path(create_temp_dir(root))
+    assert root.is_dir()
+    assert tmp_dir.is_dir()
+    assert tmp_dir.parent == root
 
 
 ###############################################################################

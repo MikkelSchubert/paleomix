@@ -68,8 +68,9 @@ def create_temp_dir(root: PathTypes) -> str:
     location. The folder name is includes the current time and includes a random
     component. Only the current user has access.
     """
-    now = datetime.now()  # noqa: DTZ005
+    make_dirs(root)
 
+    now = datetime.now()  # noqa: DTZ005
     return tempfile.mkdtemp(
         prefix=now.strftime("%Y%m%d_%H%M%S_"),
         dir=root,
