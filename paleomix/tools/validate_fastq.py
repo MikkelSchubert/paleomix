@@ -40,6 +40,7 @@ def parse_args(argv: list[str]) -> Namespace:
 
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
+    expected_offsets = FASTQOffsets(args.offset)
 
     seq_retained_nts = 0
     seq_retained_reads = 0
@@ -67,12 +68,12 @@ def main(argv: list[str]) -> int:
                 print("FASTQ file is empty.", file=sys.stderr)
 
                 return 1
-        elif offsets not in (FASTQOffsets.AMBIGIOUS, args.offset):
+        elif offsets not in (FASTQOffsets.AMBIGIOUS, expected_offsets):
             print(
                 "FASTQ file contains quality scores with wrong quality score offset "
-                "(%i); expected reads with quality score offset %i. Ensure that the "
-                "'QualityOffset' specified in the makefile corresponds to the input."
-                % (offsets, args.offset),
+                f"({offsets}); expected reads with quality score offset "
+                f"{expected_offsets}. Ensure that the 'QualityOffset' specified in the "
+                "makefile corresponds to the input.",
                 file=sys.stderr,
             )
 

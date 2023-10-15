@@ -159,6 +159,9 @@ class FASTQOffsets(Enum):
     # low-quality reads with offset 64, or high-quality reads with offset 33
     AMBIGIOUS = "AMBIGIOUS"
 
+    def __str__(self) -> str:
+        return str(self.value)
+
 
 class FASTQualities:
     """Given a set of FASTQ records, this class attempts to identify the
