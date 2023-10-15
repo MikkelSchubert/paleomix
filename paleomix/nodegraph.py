@@ -261,6 +261,9 @@ class NodeGraph:
         elif status == StatusEnum.ERROR:
             for rdep in it.rev_dependencies:
                 yield from self.set_node_status(rdep._task, status)
+        elif status == StatusEnum.RUNNABLE:
+            if old_status != StatusEnum.RUNNING:
+                raise ValueError(status)  # FIXME
         else:
             raise ValueError(status)
 
