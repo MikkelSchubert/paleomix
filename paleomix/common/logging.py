@@ -48,7 +48,7 @@ class LogRecordWithStatus(logging.LogRecord):
     status: str | Status | None
 
 
-class BasicFormatter(logging.Formatter):
+class BasicFormatter(coloredlogs.ColoredFormatter):
     def format(self, record: LogRecord) -> str:  # noqa: A003
         record = copy.copy(record)
         record.status = self._process_status(record)
