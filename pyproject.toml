@@ -10,6 +10,11 @@ skip_covered = true
 show_missing = true
 precision = 1
 
+exclude_also = [
+    # Exclude code-blocks that are only used during (pyright) type-checking
+    "^if TYPE_CHECKING:",
+]
+
 [tool.coverage.xml]
 output = "cov.xml"
 
