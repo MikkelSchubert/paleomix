@@ -21,21 +21,26 @@
 #
 from __future__ import annotations
 
-import atexit
 import contextlib
+import logging
 import os
 import shlex
 import signal
+import subprocess
 import sys
+import time
+from collections import defaultdict
+from multiprocessing import Process
 from subprocess import Popen, TimeoutExpired
-from typing import IO, TYPE_CHECKING, Any, Iterable, cast
+from typing import IO, TYPE_CHECKING, Any, Iterable, Sequence, Union, cast
 
 if TYPE_CHECKING:
-    from typing_extensions import Protocol
+    from pathlib import Path
 
-    class _SupportsTerminate(Protocol):
-        def terminate(self) -> None:
-            ...
+    ProcessTypes = Union[Popen[str], Popen[bytes], Process]
+
+
+PIPE = subprocess.PIPE
 
 
 def quote_args(args: object) -> str:
@@ -107,30 +112,112 @@ def join_procs(
 
 
 # List of running processes; can be terminated with `terminate_all_processes`
-_RUNNING_PROCS: list[_SupportsTerminate] = []
+_RUNNING_PROCS: dict[int, list[ProcessTypes]] = defaultdict(list)
 
 
-def running_processes() -> list[_SupportsTerminate]:
-    return list(_RUNNING_PROCS)
+class RegisteredProcess(Process):
+    def start(self) -> None:
+        _register_process(self)
+        super().start()
+
+    def join(self, timeout: float | None = None) -> None:
+        super().join(timeout)
+        _unregister_process(self)
 
 
-def register_process(proc: _SupportsTerminate) -> None:
-    """Register a process for automatic/forced termination."""
-    _RUNNING_PROCS.append(proc)
+PopenBase = Popen[bytes] if TYPE_CHECKING else Popen
 
 
-def unregister_process(proc: _SupportsTerminate) -> None:
-    """Unregister a process for automatic/forced termination."""
-    if proc in _RUNNING_PROCS:
-        _RUNNING_PROCS.remove(proc)
+class RegisteredPopen(PopenBase):
+    def __init__(
+        self,
+        args: str | bytes | Sequence[str | bytes],
+        *,
+        stdin: None | int | IO[bytes] = None,
+        stdout: None | int | IO[bytes] = None,
+        stderr: None | int | IO[bytes] = None,
+        close_fds: bool = True,
+        cwd: str | Path | None = None,
+        start_new_session: bool = False,
+    ) -> None:
+        super().__init__(
+            args=args,
+            stdin=stdin,
+            stdout=stdout,
+            stderr=stderr,
+            close_fds=close_fds,
+            cwd=cwd,
+            start_new_session=start_new_session,
+        )
+
+        _register_process(self)
+
+    def wait(self, timeout: float | None = None) -> int:
+        return_code = super().wait(timeout)
+        _unregister_process(self)
+
+        return return_code
 
 
-@atexit.register
-def terminate_all_processes() -> None:
-    """Terminate all registered processes. Must be called in signal handlers."""
-    while _RUNNING_PROCS:
-        proc = _RUNNING_PROCS.pop()
+def running_processes() -> list[ProcessTypes]:
+    return list(_RUNNING_PROCS[os.getpid()])
 
+
+def terminate_processes(
+    processes: Iterable[ProcessTypes],
+    timeout: float | None = None,
+) -> None:
+    log = logging.getLogger(__name__)
+    start = time.time()
+
+    processes = tuple(processes)
+    for proc in tuple(processes):
+        # Ignore already closed processes, etc.
         with contextlib.suppress(OSError):
-            # Ignore already closed processes, etc.
+            if isinstance(proc, Popen):
+                command = quote_args(proc.args)
+                if len(command) > 80:
+                    command = command[:77] + "..."
+
+                log.warning("Terminating process %s: %s", proc.pid, command)
+            else:
+                log.warning("Terminating worker processes %s", proc.pid)
+
             proc.terminate()
+
+    for proc in processes:
+        time_left = None
+        if timeout is not None:
+            time_left = max(0.0, timeout - (time.time() - start))
+
+        with contextlib.suppress(TimeoutError):
+            if isinstance(proc, Process):
+                proc.join(timeout=time_left)
+            else:
+                proc.wait(timeout=time_left)
+
+            log.debug("Joined %s (timeout=%r)", proc, time_left)
+
+
+def terminate_all_processes(timeout: float | None = None) -> None:
+    """Terminate all registered processes. Must be called in signal handlers."""
+    terminate_processes(running_processes(), timeout=timeout)
+
+
+def _register_process(proc: ProcessTypes) -> None:
+    """Register a process for automatic/forced termination."""
+    log = logging.getLogger(__name__)
+    log.debug("[%s] register :%s", os.getpid(), proc)
+
+    _RUNNING_PROCS[os.getpid()].append(proc)
+
+
+def _unregister_process(proc: ProcessTypes) -> None:
+    """Unregister a process for automatic/forced termination."""
+    processes = _RUNNING_PROCS[os.getpid()]
+    # May have been removed by `terminate_all_processes`, exception handlers, etc.
+    if proc in processes:
+        log = logging.getLogger(__name__)
+        log.debug("[%s] unregister %s", os.getpid(), proc)
+
+        processes.remove(proc)

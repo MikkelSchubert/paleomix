@@ -31,7 +31,7 @@ from pathlib import Path
 from typing import IO, TYPE_CHECKING, Callable, Dict, Iterable, List, Tuple, Union
 
 from paleomix.common import fileutils
-from paleomix.common.procs import register_process, unregister_process
+from paleomix.common.procs import RegisteredPopen
 from paleomix.common.utilities import safe_coerce_to_tuple
 from paleomix.common.versions import Requirement
 
@@ -388,7 +388,7 @@ class AtomicCmd:
             cwd = temp if self._set_cwd else None
             call = self.to_call(temp)
 
-            self._proc = subprocess.Popen(
+            self._proc = RegisteredPopen(
                 call,
                 stdin=stdin,
                 stdout=stdout,
@@ -404,9 +404,6 @@ class AtomicCmd:
             for handle in (stdin, stdout, stderr):
                 if not (handle is None or isinstance(handle, int)):
                     handle.close()
-
-        # Allow subprocesses to be cleaned up in case of unplanned termination
-        register_process(self)
 
     def communicate(self) -> tuple[bytes, bytes]:
         if not self._running:
@@ -428,7 +425,6 @@ class AtomicCmd:
             return [None]
 
         return_code = self._proc.wait(timeout)
-        unregister_process(self)
         self._running = False
 
         if return_code < 0:

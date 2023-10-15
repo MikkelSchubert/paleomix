@@ -37,7 +37,6 @@ $ samtools view -H INPUT.BAM | samtools view -Sbu -
 from __future__ import annotations
 
 import signal
-import subprocess
 import sys
 
 import pysam
@@ -227,14 +226,19 @@ def _distribute_threads(nthreads):
     }
 
 
-def _samtools_command(tool, *args, level=6, threads=1):
-    command = [
+def _samtools_command(
+    tool: str,
+    *args: str,
+    level: int = 6,
+    threads: int = 1,
+) -> list[str]:
+    command: list[str] = [
         "samtools",
         tool,
         "--output-fmt",
         "bam",
         "--output-fmt-option",
-        "level={}".format(level),
+        f"level={level}",
     ]
 
     if threads > 1:
@@ -246,10 +250,10 @@ def _samtools_command(tool, *args, level=6, threads=1):
     return command
 
 
-def _run_cleanup_pipeline(args):
+def _run_cleanup_pipeline(args: argparse.Namespace) -> int:
     bam_cleanup = _build_wrapper_command(args)
-    commands = []
-    procs = []
+    commands: list[list[str]] = []
+    procs: list[processes.RegisteredPopen] = []
 
     threads = _distribute_threads(args.max_threads)
 
@@ -271,7 +275,7 @@ def _run_cleanup_pipeline(args):
 
         # Cleanup / filter reads. Must be done after 'fixmate', as BWA may produce
         # hits where the mate-unmapped flag is incorrect, which 'fixmate' fixes.
-        commands.append(bam_cleanup + ["cleanup"])
+        commands.append([*bam_cleanup, "cleanup"])
 
         # Sort by coordinates and output uncompressed BAM
         commands.append(
@@ -285,18 +289,20 @@ def _run_cleanup_pipeline(args):
             _samtools_command("calmd", "-", args.fasta, threads=threads["calmd"])
         )
 
-        last_out = sys.stdin
+        last_out = sys.stdin.buffer
         for cmd in commands:
-            proc_stdout = None if cmd is commands[-1] else subprocess.PIPE
-            procs.append(subprocess.Popen(cmd, stdin=last_out, stdout=proc_stdout))
+            proc_stdout = None if cmd is commands[-1] else processes.PIPE
+            procs.append(
+                processes.RegisteredPopen(cmd, stdin=last_out, stdout=proc_stdout)
+            )
 
-            last_out.close()
+            if last_out is not None:
+                last_out.close()
             last_out = procs[-1].stdout
 
         return int(any(processes.join_procs(procs)))
     except:
-        for proc in procs:
-            proc.terminate()
+        processes.terminate_processes(procs)
         raise
 
 

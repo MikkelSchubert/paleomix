@@ -34,6 +34,7 @@ from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional
 import paleomix.common.logging
 import paleomix.core.reports
 from paleomix.common.fileutils import try_remove
+from paleomix.common.procs import terminate_all_processes
 from paleomix.common.text import format_timespan, padded_table
 from paleomix.common.utilities import safe_coerce_to_tuple
 from paleomix.core.workers import EVT_CAPACITY, EVT_SHUTDOWN, EVT_TASK_DONE, Manager
@@ -133,6 +134,8 @@ class Pypeline:
 
                 return self._run(nodegraph, manager)
         finally:
+            terminate_all_processes()
+
             for filename in paleomix.common.logging.get_logfiles():
                 self._logger.info("Log-file written to %r", filename)
 

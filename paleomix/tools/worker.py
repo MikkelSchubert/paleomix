@@ -31,7 +31,7 @@ import signal
 import socket
 import sys
 import uuid
-from multiprocessing import Process, ProcessError, Queue, cpu_count
+from multiprocessing import ProcessError, Queue, cpu_count
 from multiprocessing.connection import Connection, Listener, wait
 from typing import Any, Collection, Dict, Iterable, Iterator, List, Optional, Tuple
 
@@ -39,6 +39,11 @@ import paleomix
 import paleomix.common.logging
 from paleomix.common.argparse import ArgumentParser, Namespace
 from paleomix.common.logging import initialize_console_logging
+from paleomix.common.procs import (
+    RegisteredProcess,
+    terminate_all_processes,
+    terminate_processes,
+)
 from paleomix.common.versions import Requirement
 from paleomix.core.input import CommandLine, ListTasksEvent, ThreadsEvent
 from paleomix.core.workers import (
@@ -273,7 +278,7 @@ class Worker:
         if self._temp_root:
             temp_root = self._temp_root
 
-        proc = Process(
+        proc = RegisteredProcess(
             target=_task_wrapper,
             args=(self._queue, task, temp_root),
             daemon=True,
@@ -351,13 +356,10 @@ class Worker:
         return self
 
     def __exit__(self, type: Any, _value: Any, _traceback: Any):
-        log = logging.getLogger(__name__)
-        for handle, (_, task, proc) in list(self._handles.items()):
-            log.warning("Killing %s", task)
-            proc.terminate()
-            self._join(handle)
+        terminate_processes([proc for _, _, proc in self._handles.values()])
 
         if self._filename and os.path.exists(self._filename):
+            log = logging.getLogger(__name__)
             log.info("Cleaning up auto-registration JSON at %r", self._filename)
             os.unlink(self._filename)
 
@@ -418,12 +420,15 @@ def main(argv: List[str]) -> int:
 
     initialize_console_logging(log_level=args.log_level)
 
-    while True:
-        args.authkey = secrets.token_bytes(64)
+    try:
+        while True:
+            args.authkey = secrets.token_bytes(64)
 
-        with Worker(args) as worker:
-            if not worker.run() or args.once:
-                break
+            with Worker(args) as worker:
+                if not worker.run() or args.once:
+                    break
+    finally:
+        terminate_all_processes()
 
     return 0
 

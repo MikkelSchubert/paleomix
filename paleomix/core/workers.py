@@ -54,7 +54,11 @@ from typing import (
 import setproctitle
 
 import paleomix
-from paleomix.common.procs import terminate_all_processes
+from paleomix.common.procs import (
+    RegisteredProcess,
+    terminate_all_processes,
+    terminate_processes,
+)
 from paleomix.core.input import CommandLine, ListTasksEvent, ThreadsEvent
 from paleomix.node import Node, NodeError
 from paleomix.nodegraph import NodeGraph
@@ -439,7 +443,7 @@ class LocalWorker:
         self._check_running()
 
         self._log.debug("Starting local task %s with id %s", task, task.id)
-        proc = multiprocessing.Process(
+        proc = RegisteredProcess(
             target=_task_wrapper,
             args=(self._queue, task, temp_root),
             daemon=True,
@@ -486,10 +490,9 @@ class LocalWorker:
         if self._status != _TERMINATED:
             self._status = _TERMINATED
             self._log.debug("Shutting down local worker")
-            for proc, task in tuple(self._handles.values()):
-                self._log.warning("Killing task %s", task)
-                proc.terminate()
-                proc.join()
+
+            terminate_processes([proc for proc, _ in self._handles.values()])
+
             self._handles.clear()
             self._running.clear()
 
@@ -668,6 +671,8 @@ def _task_wrapper(queue: QueueType, task: Node, temp_root: str) -> None:
         backtrace.append("  {!r}".format(exc_value))
 
         queue.put((task.id, exc_value, backtrace))
+    finally:
+        terminate_all_processes()
 
 
 def _task_wrapper_sigterm_handler(signum: int, frame: Any):

@@ -26,8 +26,8 @@ import re
 import signal
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, NoReturn
-from unittest.mock import Mock, call, patch
+from typing import TYPE_CHECKING, NoReturn
+from unittest.mock import call, patch
 
 import pytest
 
@@ -45,11 +45,6 @@ from paleomix.common.command import (
     OutputFile,
     TempInputFile,
     TempOutputFile,
-)
-from paleomix.common.procs import (
-    register_process,
-    running_processes,
-    terminate_all_processes,
 )
 from paleomix.common.versions import Requirement
 
@@ -1221,62 +1216,3 @@ def test_atomiccmd__add_extra_files_to_running_command(tmp_path: Path) -> None:
 def test_atomiccmd__str__() -> None:
     cmd = AtomicCmd(("echo", "test"), stdin="/foo/bar")
     assert paleomix.common.command.pformat(cmd) == str(cmd)
-
-
-########################################################################################
-# Cleanup
-
-
-# Test that the internal list of processes is kept clean of joined processes objects
-def test_atomiccmd__cleanup_proc__commit(tmp_path: Path) -> None:
-    cmd = AtomicCmd("true")
-    assert cmd not in running_processes()
-    cmd.run(tmp_path)
-    assert cmd in running_processes()
-    assert cmd.join() == [0]
-    assert cmd not in running_processes()
-
-
-def test_atomiccmd__cleanup_proc__gc(tmp_path: Path) -> None:
-    cmd = AtomicCmd("true")
-    assert cmd not in running_processes()
-    cmd.run(tmp_path)
-    assert cmd in running_processes()
-
-    cmd_id = id(cmd)
-    del cmd
-
-    try:
-        assert any(id(cmd) == cmd_id for cmd in running_processes())
-    finally:
-        terminate_all_processes()
-
-
-def test_atomiccmd__terminate_all() -> None:
-    mock: Any = Mock()
-    register_process(mock.proc_1)
-    register_process(mock.proc_2)
-
-    with patch("sys.exit", mock.exit):
-        terminate_all_processes()
-
-    assert mock.mock_calls == [
-        call.proc_2.terminate(),
-        call.proc_1.terminate(),
-    ]
-
-
-def test_atomiccmd__terminate_all__continues_on_exception() -> None:
-    mock: Any = Mock()
-    register_process(mock.proc_1)
-    register_process(mock.proc_2)
-
-    mock.proc_1.terminate.side_effect = OSError("already killed")
-
-    with patch("sys.exit", mock.exit):
-        terminate_all_processes()
-
-    assert mock.mock_calls == [
-        call.proc_2.terminate(),
-        call.proc_1.terminate(),
-    ]
