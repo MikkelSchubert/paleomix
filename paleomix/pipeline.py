@@ -347,6 +347,11 @@ class Pypeline:
 
     def _sigterm_handler(self, signum: int, frame: Any):
         self._logger.warning("Terminating due to signal %i", signum)
+
+        signal.signal(signal.SIGINT, signal.SIG_DFL)
+        signal.signal(signal.SIGHUP, signal.SIG_DFL)
+        signal.signal(signal.SIGTERM, signal.SIG_DFL)
+
         sys.exit(-signum)
 
     def _summarize_pipeline(

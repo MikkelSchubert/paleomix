@@ -671,6 +671,7 @@ def _task_wrapper(queue: QueueType, task: Node, temp_root: str) -> None:
 
 
 def _task_wrapper_sigterm_handler(signum: int, frame: Any):
-    terminate_all_processes()
+    signal.signal(signal.SIGHUP, signal.SIG_DFL)
+    signal.signal(signal.SIGTERM, signal.SIG_DFL)
 
     sys.exit(-signum)
