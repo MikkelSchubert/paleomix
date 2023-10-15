@@ -47,6 +47,10 @@ def tests(session: nox.Session) -> None:
     # TODO: Treat warnings as errors
     # "-Werror",
     session.run(
+        "python3",
+        "-X",
+        "dev",
+        "-m",
         "pytest",
         "tests",
         "--cov",
@@ -67,4 +71,12 @@ def full_tests(session: nox.Session) -> None:
     session.install("pytest~=7.4")
 
     # TODO: add "-Werror"
-    session.run("pytest", "tests", "--quiet")
+    session.run(
+        "python3",
+        "-X",
+        "dev",
+        "-m",
+        "pytest",
+        "tests",
+        "--quiet",
+    )
