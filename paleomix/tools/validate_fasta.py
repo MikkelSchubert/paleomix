@@ -24,10 +24,13 @@ from __future__ import annotations
 import re
 import sys
 from pathlib import Path
-from typing import IO, NoReturn
+from typing import IO, TYPE_CHECKING, NoReturn
 
 from paleomix.common.argparse import ArgumentParser
 from paleomix.common.formats import FormatError
+
+if TYPE_CHECKING:
+    from paleomix.common import argparse
 
 # Standard nucleotides + UIPAC codes
 _VALID_CHARS_STR = b"ACGTNRYSWKMBDHV"
@@ -123,7 +126,7 @@ def check_fasta_file(handle: IO[bytes]) -> None:
         _raise_error("File ends with an empty sequence")
 
 
-def parse_args(argv: list[str]):
+def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = ArgumentParser("paleomix :validate_fasta")
     parser.add_argument("fasta", type=Path)
 

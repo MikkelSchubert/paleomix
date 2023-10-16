@@ -29,7 +29,7 @@ import signal
 import sys
 import time
 from shlex import quote
-from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional
+from typing import TYPE_CHECKING, Any, Iterable, NoReturn
 
 import paleomix.common.logging
 import paleomix.core.reports
@@ -59,7 +59,7 @@ class Pypeline:
         max_threads: int = 1,
         intermediate_files: CleanupStrategy = CleanupStrategy.DELETE,
         required_files: Iterable[str] = (),
-    ):
+    ) -> None:
         self._nodes = safe_coerce_to_tuple(nodes)
         for node in self._nodes:
             if not isinstance(node, Node):
@@ -72,8 +72,8 @@ class Pypeline:
         self._temp_root = temp_root
         self._intermediate_files_strategy = intermediate_files
         self._required_files = frozenset(required_files)
-        self._start_times: Dict[Node, float] = {}
-        self._progress_color: Optional[str] = None
+        self._start_times: dict[Node, float] = {}
+        self._progress_color: str | None = None
 
         self._event_handlers = {
             # The number of available threads has changed
@@ -141,7 +141,7 @@ class Pypeline:
 
     def _run(self, nodegraph: NodeGraph, manager: Manager) -> int:
         # Set of remaining nodes to be run
-        tasks: Dict[Node, _TaskInfo] = {}
+        tasks: dict[Node, _TaskInfo] = {}
         for task in nodegraph.tasks:
             state = nodegraph.get_node_state(task)
             if state not in (nodegraph.DONE, nodegraph.ERROR):
@@ -172,10 +172,10 @@ class Pypeline:
         self,
         nodegraph: NodeGraph,
         manager: Manager,
-        tasks: Dict[Node, "_TaskInfo"],
+        tasks: dict[Node, _TaskInfo],
         worker: str,
         **event: Any,
-    ):
+    ) -> bool:
         if not self._interrupted:
             idle_threads = event["threads"]
             for task, task_info in sorted(tasks.items(), key=lambda it: it[0].id):
@@ -204,10 +204,10 @@ class Pypeline:
         self,
         nodegraph: NodeGraph,
         manager: Manager,
-        tasks: Dict[Node, "_TaskInfo"],
+        tasks: dict[Node, _TaskInfo],
         worker: str,
         **event: Any,
-    ):
+    ) -> bool:
         any_errors = False
         task = event["task"]
         task_info = tasks.pop(task)
@@ -237,7 +237,7 @@ class Pypeline:
         self,
         nodegraph: NodeGraph,
         manager: Manager,
-        tasks: Dict[Node, "_TaskInfo"],
+        tasks: dict[Node, _TaskInfo],
         worker: str,
         worker_name: str,
         **event: Any,
@@ -265,7 +265,7 @@ class Pypeline:
 
         return not any_errors
 
-    def _prune_tasks(self, nodegraph: NodeGraph, tasks: Dict[Node, "_TaskInfo"]):
+    def _prune_tasks(self, nodegraph: NodeGraph, tasks: dict[Node, _TaskInfo]):
         # The completion or failure of a task may result in the failure/completion of
         # any number of other tasks, the latter when tasks depend on validation steps
         for task in tuple(tasks):
@@ -284,13 +284,13 @@ class Pypeline:
         nodegraph: NodeGraph,
         task: Node,
         error: Any,
-        backtrace: Optional[List[str]],
+        backtrace: list[str] | None,
         **kwargs: Any,
     ):
         self._set_node_state(nodegraph, task, nodegraph.ERROR)
 
         if not isinstance(error, NodeError):
-            error = "Unhandled exception while running {}:".format(task)
+            error = f"Unhandled exception while running {task}:"
 
         message = str(error).split("\n")
 
@@ -323,14 +323,14 @@ class Pypeline:
                 self._logger.info("Printing pipeline tasks ..")
                 return paleomix.core.reports.pipeline_tasks(graph)
             else:
-                raise ValueError("Unknown pipeline mode {!r}".format(mode))
+                raise ValueError(f"Unknown pipeline mode {mode!r}")
         except BrokenPipeError:
             return 0
         except NodeGraphError as error:
             self._logger.error(error)
             return 1
 
-    def _sigint_handler(self, signum: int, frame: Any):
+    def _sigint_handler(self, signum: int, frame: object) -> None:
         """Signal handler; see signal.signal."""
         now = time.time()
         if not self._interrupted:
@@ -348,7 +348,7 @@ class Pypeline:
                 "again within the next 5 seconds to force termination."
             )
 
-    def _sigterm_handler(self, signum: int, frame: Any):
+    def _sigterm_handler(self, signum: int, frame: object) -> NoReturn:
         self._logger.warning("Terminating due to signal %i", signum)
 
         signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -360,9 +360,10 @@ class Pypeline:
     def _summarize_pipeline(
         self,
         nodegraph: NodeGraph,
+        *,
         dry_run: bool = False,
         verbose: bool = True,
-    ):
+    ) -> None:
         states = nodegraph.get_state_counts()
 
         if verbose:
@@ -397,7 +398,7 @@ class Pypeline:
                     event = "Finished"
                     end_time = time.time()
                     start_time = self._start_times.pop(node)
-                    runtime = " in {}".format(format_timespan(end_time - start_time))
+                    runtime = f" in {format_timespan(end_time - start_time)}"
                 else:
                     event = "Already finished"
 
@@ -449,7 +450,7 @@ def add_scheduling_argument_group(parser: ArgumentParser) -> ArgumentGroup:
         default=[],
         action="append",
         help="Intermediate files matching the glob will never be deleted and will be "
-        "re-generated if missing, no matter what --intermediate-files strategy is used.",
+        "re-generated if missing, no matter what --intermediate-files strategy is used",
     )
 
     return group
@@ -492,19 +493,19 @@ def add_io_argument_group(parser: ArgumentParser) -> ArgumentGroup:
 
 
 class _TaskInfo:
-    def __init__(self, task: Node):
+    def __init__(self, task: Node) -> None:
         self.task = task
-        self.running_on: Optional[str] = None
-        self.blacklisted_from: Dict[str, Any] = {}
+        self.running_on: str | None = None
+        self.blacklisted_from: dict[str, object] = {}
         self.start_time = 0.0
 
 
 class _Progress(paleomix.common.logging.Status):
-    def __init__(self, state_counts: Dict[StatusEnum, int], color: Optional[str]):
+    def __init__(self, state_counts: dict[StatusEnum, int], color: str | None) -> None:
         super().__init__(color)
         self._state_counts = state_counts
 
-    def __str__(self):
+    def __str__(self) -> str:
         total = sum(self._state_counts.values())
         nth = self._state_counts[NodeGraph.DONE] + self._state_counts[NodeGraph.ERROR]
 

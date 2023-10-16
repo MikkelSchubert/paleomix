@@ -23,13 +23,15 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import IO, Dict, Iterable, Set, Union
+from typing import IO, TYPE_CHECKING, Iterable
 
 from humanfriendly.terminal import ansi_wrap, terminal_supports_colors
 
 from paleomix.common.versions import RequirementError
-from paleomix.node import Node
 from paleomix.nodegraph import FileStatusCache, NodeGraph, StatusEnum
+
+if TYPE_CHECKING:
+    from paleomix.node import Node
 
 
 def input_files(
@@ -37,8 +39,8 @@ def input_files(
     fscache: FileStatusCache,
     file: IO[str] = sys.stdout,
 ) -> int:
-    input_files: Set[str] = set()
-    output_files: Set[str] = set()
+    input_files: set[str] = set()
+    output_files: set[str] = set()
 
     for node in graph.tasks:
         for filename in node.input_files:
@@ -58,9 +60,9 @@ def output_files(
     fscache: FileStatusCache,
     file: IO[str] = sys.stdout,
 ) -> int:
-    output_files: Dict[str, str] = {}
+    output_files: dict[str, str] = {}
 
-    def _set_output_file_state(filenames: Iterable[str], state: str):
+    def _set_output_file_state(filenames: Iterable[str], state: str) -> None:
         for filename in filenames:
             output_files[os.path.abspath(filename)] = state
 
@@ -101,8 +103,8 @@ def required_executables(graph: NodeGraph, file: IO[str] = sys.stdout) -> int:
 
 
 def pipeline_tasks(graph: NodeGraph, file: IO[str] = sys.stdout) -> int:
-    top_tasks = []
-    for task, status in graph._status.items():
+    top_tasks: list[Node] = []
+    for task, status in graph.get_node_states().items():
         if not status.rev_dependencies:
             top_tasks.append(task)
 
@@ -119,7 +121,7 @@ def pipeline_tasks(graph: NodeGraph, file: IO[str] = sys.stdout) -> int:
 
 class _TaskPrinter:
     def __init__(self, graph: NodeGraph, file: IO[str]) -> None:
-        self._cache = set()
+        self._cache: set[Node] = set()
         self._graph = graph
         self._file = file
         self.supports_colors = terminal_supports_colors()
@@ -153,7 +155,7 @@ class _TaskPrinter:
     def _is_task_done(self, task: Node) -> bool:
         return self._graph.get_node_state(task) == self._graph.DONE
 
-    def _color_done(self, value: Union[str, Node]) -> str:
+    def _color_done(self, value: str | Node) -> str:
         if self.supports_colors:
             return ansi_wrap(str(value), color="black", bold=True)
 

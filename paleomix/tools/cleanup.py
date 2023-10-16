@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import signal
 import sys
+from typing import NoReturn
 
 import pysam
 
@@ -50,11 +51,11 @@ from paleomix.common import argparse
 _SE_FLAGS_MASK = ~(0x2 | 0x8 | 0x20 | 0x40 | 0x80)
 
 
-def _on_sigterm(signum: int, frame):
+def _on_sigterm(signum: int, frame: object) -> NoReturn:
     sys.exit(-signum)
 
 
-def _set_sort_order(header):
+def _set_sort_order(header) -> None:
     """Updates a BAM header to indicate coordinate sorting."""
     hd_dict = header.setdefault("HD", {"GO": "none", "VN": "1.0"})
     hd_dict["SO"] = "coordinate"
@@ -82,7 +83,7 @@ def _set_rg_tags(header, rg_id, rg_tags):
     header["RG"] = [readgroup]
 
 
-def _cleanup_record(record):
+def _cleanup_record(record: pysam.AlignedSegment) -> pysam.AlignedSegment:
     """Cleans up the properties of a BAM record, ensuring that only appropriate
     flags and values are set, such that the record follows section 1.4 of the
     SAM specification (https://samtools.github.io/hts-specs/SAMv1.pdf).
@@ -91,9 +92,9 @@ def _cleanup_record(record):
         # Unset 0x2 (properly aligned), 0x8 (next mate unmapped),
         # 0x20 (next mate reverse), 0x40 (first mate), and 0x80 (last mate).
         record.flag = record.flag & (~0xEA)
-        record.rnext = -1
-        record.pnext = -1
-        record.tlen = 0
+        record.next_reference_id = -1
+        record.next_reference_start = -1
+        record.template_length = 0
     elif record.mate_is_unmapped and record.has_tag("MC"):
         # Picard ValidateSamFile (2.9.1) objects to MC tags for unmapped mates,
         # which are currently added by SAMTools (v1.4).
@@ -101,28 +102,28 @@ def _cleanup_record(record):
         record.set_tags([tag for tag in tags if tag[0] != "MC"])
 
     if record.is_unmapped:
-        record.mapq = 0
-        record.cigar = None
+        record.mapping_quality = 0
+        record.cigartuples = None
         # Unset 0x2 (properly aligned), 0x100 (secondary), and 0x800 (chimeric)
         record.flag = record.flag & (~0x902)
 
         if record.mate_is_unmapped:
-            record.rnext = -1
-            record.pnext = -1
+            record.next_reference_id = -1
+            record.next_reference_start = -1
 
         # Per the spec, unmapped reads should be placed with their mate
-        record.tid = record.rnext
-        record.pos = record.pnext
-        record.tlen = 0
+        record.reference_id = record.next_reference_id
+        record.reference_start = record.next_reference_start
+        record.template_length = 0
     elif record.mate_is_unmapped:
-        record.rnext = record.tid
-        record.pnext = record.pos
-        record.tlen = 0
+        record.next_reference_id = record.reference_id
+        record.next_reference_start = record.reference_start
+        record.template_length = 0
 
     return record
 
 
-def _filter_record(args, record):
+def _filter_record(args: argparse.Namespace, record: pysam.AlignedSegment) -> bool:
     """Returns True if the record should be filtered (excluded), based on the
     --exclude-flags and --require-flags options. Certain flags are ignored when
     filtering SE reads, namely those not included in _SE_FLAGS_MASK (above).
@@ -134,15 +135,12 @@ def _filter_record(args, record):
         exclude_flags = args.exclude_flags & _SE_FLAGS_MASK
         require_flags = args.require_flags & _SE_FLAGS_MASK
 
-    if record.flag & exclude_flags:
-        return True
-    elif ~(record.flag & require_flags) & require_flags:
-        return True
-
-    return False
+    return (record.flag & exclude_flags) or ~(
+        record.flag & require_flags
+    ) & require_flags
 
 
-def _cleanup_unmapped(args):
+def _cleanup_unmapped(args: argparse.Namespace) -> int:
     """Reads a BAM (or SAM, if cleanup_sam is True) file from STDIN, and
     filters reads according to the filters specified in the commandline
     arguments 'args'. The resulting records are written to STDOUT in
@@ -164,9 +162,9 @@ def _cleanup_unmapped(args):
                 # Ensure that the properties make sense before filtering
                 record = _cleanup_record(record)
 
-                if not record.is_unmapped and (record.mapq < args.min_quality):
-                    continue
-                elif filter_by_flag and _filter_record(args, record):
+                if (
+                    not record.is_unmapped and record.mapping_quality < args.min_quality
+                ) or (filter_by_flag and _filter_record(args, record)):
                     continue
 
                 if args.rg_id is not None:
@@ -189,7 +187,7 @@ def _cleanup_unmapped(args):
     return 0
 
 
-def _build_wrapper_command(args):
+def _build_wrapper_command(args: argparse.Namespace) -> list[str]:
     command = paleomix.tools.factory.new("cleanup")
 
     options = {
@@ -210,7 +208,7 @@ def _build_wrapper_command(args):
     return command.to_call("%(TEMP_DIR)s")
 
 
-def _distribute_threads(nthreads):
+def _distribute_threads(nthreads: int) -> dict[str, int]:
     nthreads = max(2, nthreads)
     # FIXME: More benchmarks needed
     # Sort performance caps out at 3 threads for a while
@@ -306,10 +304,10 @@ def _run_cleanup_pipeline(args: argparse.Namespace) -> int:
         raise
 
 
-def parse_args(argv):
+def parse_args(argv: list[str]) -> argparse.Namespace:
     """Parses a list of command-line arguments, excluding the program name."""
     prog = "paleomix cleanup"
-    usage = "%s --temp-prefix prefix --fasta reference.fasta < in.sam" % (prog,)
+    usage = f"{prog} --temp-prefix prefix --fasta reference.fasta < in.sam"
 
     parser = argparse.ArgumentParser(prog=prog, usage=usage)
     # "Hidden" commands, invoking the various sub-parts of this script
@@ -411,12 +409,12 @@ def parse_args(argv):
 
     args = parser.parse_args(argv)
     if args.command not in (None, "cleanup"):
-        parser.error("unrecognized arguments: %s" % (args.command,))
+        parser.error(f"unrecognized arguments: {args.command}")
 
     return args
 
 
-def main(argv):
+def main(argv: list[str]) -> int:
     """Main function; returns 0 on success, non-zero otherwise."""
     args = parse_args(argv)
 
@@ -426,7 +424,7 @@ def main(argv):
     if args.command == "cleanup":
         return _cleanup_unmapped(args)
     elif args.command:
-        raise NotImplementedError("Unexpected command %r" % (args.command,))
+        raise NotImplementedError(f"Unexpected command {args.command!r}")
 
     sys.stderr.write("Reading SAM file from STDIN\n")
     return _run_cleanup_pipeline(args)

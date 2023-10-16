@@ -29,20 +29,23 @@ import os
 import shutil
 import sys
 from pathlib import Path
-from typing import Any, FrozenSet, Iterable, List, Optional, Set, Union
+from typing import TYPE_CHECKING, Any, Iterable
 
 import paleomix
 from paleomix.common import fileutils
 from paleomix.common.command import AtomicCmd, CmdError, ParallelCmds, SequentialCmds
-from paleomix.common.fileutils import PathTypes
+from paleomix.common.procs import quote_args
 from paleomix.common.utilities import safe_coerce_to_frozenset
 from paleomix.common.versions import Requirement
+
+if TYPE_CHECKING:
+    from paleomix.common.fileutils import PathTypes
 
 _GLOBAL_ID = itertools.count()
 
 
 class NodeError(RuntimeError):
-    def __init__(self, *args: Any, path: Optional[str] = None):
+    def __init__(self, *args: object, path: str | None = None) -> None:
         super().__init__(*args)
         self.path = path
 
@@ -55,38 +58,36 @@ class CmdNodeError(NodeError):
     pass
 
 
-class NodeUnhandledException(NodeError):
+class NodeUnhandledError(NodeError):
     """This exception is thrown by Node.run() if a non-NodeError exception
     is raised in a subfunction (e.g. _setup, _run, or _teardown). The text
     for this exception will include both the original error message and a
     stacktrace for that error."""
 
-    pass
-
 
 class Node:
-    __description: Optional[str]
-    input_files: FrozenSet[str]
-    output_files: FrozenSet[str]
-    intermediate_output_files: Set[str]
-    executables: FrozenSet[str]
-    auxiliary_files: FrozenSet[str]
-    requirements: FrozenSet[Requirement]
+    __description: str | None
+    input_files: frozenset[str]
+    output_files: frozenset[str]
+    intermediate_output_files: set[str]
+    executables: frozenset[str]
+    auxiliary_files: frozenset[str]
+    requirements: frozenset[Requirement]
 
     threads: int
-    dependencies: FrozenSet["Node"]
+    dependencies: frozenset[Node]
 
     def __init__(
         self,
-        description: Optional[str] = None,
+        description: str | None = None,
         threads: int = 1,
         input_files: Iterable[str] = (),
         output_files: Iterable[str] = (),
         executables: Iterable[str] = (),
         auxiliary_files: Iterable[str] = (),
         requirements: Iterable[Requirement] = (),
-        dependencies: Iterable["Node"] = (),
-    ):
+        dependencies: Iterable[Node] = (),
+    ) -> None:
         if not (description is None or isinstance(description, str)):
             raise TypeError(description)
 
@@ -119,7 +120,7 @@ class Node:
         should have been removed/renamed at that point.
 
         Any non-NodeError exception raised in this function is wrapped in a
-        NodeUnhandledException, which includes a full backtrace. This is needed
+        NodeUnhandledError, which includes a full backtrace. This is needed
         to allow showing these in the main process."""
 
         temp = None
@@ -148,11 +149,11 @@ class Node:
                     self, "\n  ".join(str(error).split("\n"))
                 ),
                 path=temp,
-            )
-        except Exception as error:
+            ) from None
+        except Exception as error:  # noqa: BLE001
             self._write_error_log(temp, error)
-            raise NodeUnhandledException(
-                "Error while running %s" % (self,), path=temp
+            raise NodeUnhandledError(
+                f"Error while running {self}", path=temp
             ) from error
 
     def mark_intermediate_files(self, glob: str = "*") -> None:
@@ -189,7 +190,7 @@ class Node:
         or other steps needed to ready the node for running may be carried out in this
         function. Checks that required input files exist, and raises an NodeError if
         this is not the case."""
-        executables: List[str] = []
+        executables: list[str] = []
         for executable in self.executables:
             if executable == "%(PYTHON)s":
                 executable = sys.executable
@@ -198,7 +199,7 @@ class Node:
 
         missing_executables = fileutils.missing_executables(executables)
         if missing_executables:
-            raise NodeError("Executable(s) not found: %s" % (missing_executables,))
+            raise NodeError(f"Executable(s) not found: {missing_executables}")
 
         self._check_for_input_files(self.input_files | self.auxiliary_files)
 
@@ -215,7 +216,7 @@ class Node:
             return self.__description
         return repr(self)
 
-    def __getstate__(self):
+    def __getstate__(self) -> dict[str, Any]:
         """Called by pickle/cPickle to determine what to pickle; this is
         overridden to avoid pickling of requirements, dependencies, which would
         otherwise greatly inflate the amount of information that needs to be
@@ -225,26 +226,26 @@ class Node:
         obj_dict["dependencies"] = ()
         return obj_dict
 
-    def _write_error_log(self, temp: Optional[str], error: Exception) -> None:
+    def _write_error_log(self, temp: str | None, error: Exception) -> None:
         if not (temp and os.path.isdir(temp)):
             return
 
-        def _fmt(values: Iterable[str]):
+        def _fmt(values: Iterable[str]) -> str:
             return "\n                   ".join(sorted(values))
 
         message = [
-            "PALEOMIX         = v%s" % (paleomix.__version__,),
-            "Command          = %r" % (" ".join(sys.argv),),
-            "CWD              = %r" % (os.getcwd(),),
-            "PATH             = %r" % (os.environ.get("PATH", ""),),
-            "Task             = %s" % (str(self),),
-            "Threads          = %i" % (self.threads,),
-            "Input files      = %s" % (_fmt(self.input_files),),
-            "Output files     = %s" % (_fmt(self.output_files),),
-            "Auxiliary files  = %s" % (_fmt(self.auxiliary_files),),
-            "Executables      = %s" % (_fmt(self.executables),),
+            f"PALEOMIX         = v{paleomix.__version__}",
+            f"Command          = {quote_args(sys.argv)}",
+            f"CWD              = {os.getcwd()!r}",
+            "PATH             = {!r}".format(os.environ.get("PATH", "")),
+            f"Task             = {self}",
+            f"Threads          = {self.threads}",
+            f"Input files      = {_fmt(self.input_files)}",
+            f"Output files     = {_fmt(self.output_files)}",
+            f"Auxiliary files  = {_fmt(self.auxiliary_files)}",
+            f"Executables      = {_fmt(self.executables)}",
             "",
-            "Errors =\n%s\n" % (error,),
+            f"Errors =\n{error}\n",
         ]
         message = "\n".join(message)
 
@@ -252,9 +253,9 @@ class Node:
             with open(os.path.join(temp, "pipe.errors"), "w") as handle:
                 handle.write(message)
         except OSError as oserror:
-            sys.stderr.write("ERROR: Could not write failure log: %s\n" % (oserror,))
+            sys.stderr.write(f"ERROR: Could not write failure log: {oserror}\n")
 
-    def _collect_nodes(self, nodes: Iterable["Node"]) -> FrozenSet["Node"]:
+    def _collect_nodes(self, nodes: Iterable[Node]) -> frozenset[Node]:
         nodes = safe_coerce_to_frozenset(nodes)
         for node in nodes:
             if not isinstance(node, Node):
@@ -266,23 +267,29 @@ class Node:
         missing_files = fileutils.missing_files(filenames)
         if missing_files:
             raise NodeMissingFilesError(
-                "Missing input files for command:\n\t- Command: %s\n\t- Files: %s"
-                % (self, "\n\t         ".join(missing_files))
+                "Missing input files for command:\n\t- Command: {}\n\t- Files: {}".format(
+                    self, "\n\t         ".join(missing_files)
+                )
             )
 
-    def _check_for_missing_files(self, filenames: Iterable[str], description: str):
+    def _check_for_missing_files(
+        self,
+        filenames: Iterable[str],
+        description: str,
+    ) -> None:
         missing_files = fileutils.missing_files(filenames)
         if missing_files:
             message = (
-                "Missing %s files for command:\n\t- Command: %s\n\t- Files: %s"
-                % (description, self, "\n\t         ".join(missing_files))
+                "Missing {} files for command:\n\t- Command: {}\n\t- Files: {}".format(
+                    description, self, "\n\t         ".join(missing_files)
+                )
             )
             raise NodeError(message)
 
     @classmethod
     def _validate_requirements(
         cls, requirements: Iterable[Requirement]
-    ) -> FrozenSet[Requirement]:
+    ) -> frozenset[Requirement]:
         requirements = safe_coerce_to_frozenset(requirements)
         for requirement in requirements:
             if not isinstance(requirement, Requirement):
@@ -290,13 +297,13 @@ class Node:
         return requirements
 
     @classmethod
-    def _validate_files(cls, files: Iterable[str]):
+    def _validate_files(cls, files: Iterable[str]) -> frozenset[str]:
         return frozenset(fileutils.validate_filenames(files))
 
     @classmethod
-    def _validate_nthreads(cls, threads: Any) -> int:
+    def _validate_nthreads(cls, threads: object) -> int:
         if not isinstance(threads, int):
-            raise TypeError("'threads' must be a positive integer, not %r" % (threads,))
+            raise TypeError(f"'threads' must be a positive integer, not {threads!r}")
         elif threads < 1:
             raise ValueError(
                 "'threads' must be a positive integer, not %i" % (threads,)

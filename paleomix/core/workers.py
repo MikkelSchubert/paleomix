@@ -22,6 +22,7 @@
 from __future__ import annotations
 
 import codecs
+import contextlib
 import json
 import logging
 import multiprocessing
@@ -34,20 +35,16 @@ import time
 import traceback
 import uuid
 from multiprocessing import ProcessError
-from multiprocessing.connection import Client, wait
+from multiprocessing.connection import Client, Connection, wait
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
     Collection,
-    Dict,
     Iterable,
     Iterator,
-    List,
     MutableMapping,
-    Optional,
-    Set,
-    Tuple,
+    NoReturn,
     Union,
 )
 
@@ -63,18 +60,21 @@ from paleomix.core.input import CommandLine, ListTasksEvent, ThreadsEvent
 from paleomix.node import Node, NodeError
 from paleomix.nodegraph import NodeGraph
 
-EventType = Dict[str, Any]
-MessageType = Tuple[int, Optional[BaseException], Optional[List[str]]]
-
 if TYPE_CHECKING:
+    from typing_extensions import Self
+
     from paleomix.common.versions import Requirement
 
+    EventType = dict[str, Any]
+    MessageType = tuple[int, BaseException | None, list[str] | None]
     QueueType = multiprocessing.Queue[MessageType]
+    WorkerType = Union["LocalWorker", "RemoteWorker"]
+    HandleType = Connection | socket.socket | int
+    AdapterType = logging.LoggerAdapter[logging.Logger]
 else:
     QueueType = multiprocessing.Queue
+    AdapterType = logging.LoggerAdapter
 
-
-WorkerType = Union["LocalWorker", "RemoteWorker"]
 
 # Default location of auto-registration files
 AUTO_REGISTER_DIR = os.path.expanduser("~/.paleomix/remote/")
@@ -111,18 +111,16 @@ _RUNNING = "running"
 _TERMINATED = "terminated"
 
 
-def address_to_name(value: Union[str, Tuple[str, int]]) -> str:
+def address_to_name(value: str | tuple[str, int]) -> str:
     if isinstance(value, str):
         return value
 
     host, port = value
 
-    try:
+    with contextlib.suppress(OSError):
         host, _ = socket.getnameinfo((host, port), 0)
-    except OSError:
-        pass
 
-    return "{}:{}".format(host, port)
+    return f"{host}:{port}"
 
 
 class WorkerError(RuntimeError):
@@ -132,16 +130,17 @@ class WorkerError(RuntimeError):
 class Manager:
     def __init__(
         self,
+        *,
         threads: int,
         requirements: Collection[Requirement],
         temp_root: str,
         auto_connect: bool = True,
-    ):
-        self._local: Optional[LocalWorker] = None
+    ) -> None:
+        self._local: LocalWorker | None = None
         self._interface = CommandLine()
-        self._workers: Dict[str, Union[LocalWorker, RemoteWorker]] = {}
-        self._json_blacklist: Set[str] = set()
-        self._worker_blacklist: Set[str] = set()
+        self._workers: dict[str, LocalWorker | RemoteWorker] = {}
+        self._json_blacklist: set[str] = set()
+        self._worker_blacklist: set[str] = set()
         self._requirements = requirements
         self._threads = threads
         self._temp_root = temp_root
@@ -149,7 +148,7 @@ class Manager:
         self._log = logging.getLogger(__name__)
 
     @property
-    def workers(self):
+    def workers(self) -> dict[str, LocalWorker | RemoteWorker]:
         return dict(self._workers)
 
     @property
@@ -157,7 +156,7 @@ class Manager:
         for worker in self._workers.values():
             yield from worker.tasks
 
-    def start(self):
+    def start(self) -> bool:
         if self._local is not None:
             raise WorkerError("Manager already started")
 
@@ -180,9 +179,11 @@ class Manager:
         self._check_started()
         while not all(worker.status == _RUNNING for worker in self._workers.values()):
             for event in self.poll():
-                if event["event"] == EVT_HANDSHAKE_RESPONSE:
-                    if event["error"] is not None:
-                        return False
+                if (
+                    event["event"] == EVT_HANDSHAKE_RESPONSE
+                    and event["error"] is not None
+                ):
+                    return False
 
         return True
 
@@ -246,8 +247,8 @@ class Manager:
 
         return worker.start_task(task, self._temp_root)
 
-    def _collect_events(self):
-        events: List[Tuple[WorkerType, EventType]] = []
+    def _collect_events(self) -> list[tuple[WorkerType, EventType]]:
+        events: list[tuple[WorkerType, EventType]] = []
         timeout = 5.0
         while self._local and self._local.events:
             for event in self._local.events:
@@ -257,7 +258,7 @@ class Manager:
             # No need to block if we already have events to act on
             timeout = 0
 
-        handles: Dict[Any, Optional[WorkerType]] = {}
+        handles: dict[HandleType, WorkerType | None] = {}
         for worker in self._workers.values():
             for handle in worker.handles:
                 handles[handle] = worker
@@ -276,7 +277,7 @@ class Manager:
 
         return events
 
-    def _handle_keyboard_input(self):
+    def _handle_keyboard_input(self) -> None:
         for event in self._interface.process_key_presses():
             if isinstance(event, ThreadsEvent):
                 self._handle_threads_event(event.change)
@@ -361,40 +362,40 @@ class Manager:
                     continue
 
                 try:
-                    with open(filename, "rt") as handle:
+                    with open(filename) as handle:
                         data = json.load(handle)
 
                     data["filename"] = filename
                     data["secret"] = codecs.decode(
                         data["secret"].encode("utf-8"), "base64"
                     )
-                except Exception as error:
+                except (OSError, KeyError, ValueError) as error:
                     self._log.error("Error reading worker file %r: %s", filename, error)
                     self._json_blacklist.add(filename)
                     continue
 
                 yield data
 
-    def _check_started(self):
+    def _check_started(self) -> None:
         if self._local is None:
             raise WorkerError("Manager not started")
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         self._interface.setup()
         return self
 
-    def __exit__(self, _type: Any, _value: Any, _traceback: Any):
+    def __exit__(self, typ: object, exc: object, tb: object) -> None:
         self._interface.teardown()
         self.shutdown()
 
 
-class RemoteAdapter(logging.LoggerAdapter):
-    def __init__(self, name: str, logger: logging.Logger):
+class RemoteAdapter(AdapterType):
+    def __init__(self, name: str, logger: logging.Logger) -> None:
         super().__init__(logger, {"remote": name})
 
     def process(
-        self, msg: logging.LogRecord, kwargs: MutableMapping[str, Any]
-    ) -> Tuple[str, MutableMapping[str, Any]]:
+        self, msg: logging.LogRecord, kwargs: MutableMapping[str, object]
+    ) -> tuple[str, MutableMapping[str, object]]:
         if self.extra is not None:
             return "[{}] {}".format(self.extra["remote"], msg), kwargs
 
@@ -402,28 +403,28 @@ class RemoteAdapter(logging.LoggerAdapter):
 
 
 class LocalWorker:
-    def __init__(self, manager: Manager, threads: int):
+    def __init__(self, manager: Manager, threads: int) -> None:
         self.id = str(uuid.uuid4())
         self._manager = manager
         self._queue: QueueType = multiprocessing.Queue()
-        self._handles: Dict[Any, Tuple[multiprocessing.Process, Node]] = {}
-        self._running: Dict[int, Node] = {}
+        self._handles: dict[HandleType, tuple[multiprocessing.Process, Node]] = {}
+        self._running: dict[int, Node] = {}
         self._status = _UNINITIALIZED
         self._log = logging.getLogger(__name__)
         self.name = "localhost"
         self.threads = threads
-        self.events: List[EventType] = []
+        self.events: list[EventType] = []
 
     @property
     def tasks(self) -> Iterator[Node]:
         yield from self._running.values()
 
     @property
-    def handles(self) -> List[Any]:
-        return list(self._handles)
+    def handles(self) -> Iterator[HandleType]:
+        yield from self._handles
 
     @property
-    def status(self):
+    def status(self) -> str:
         return self._status
 
     def connect(self, requirements: Collection[Requirement]) -> bool:
@@ -455,7 +456,7 @@ class LocalWorker:
 
         return True
 
-    def get(self, handle: Any):
+    def get(self, handle: HandleType):
         self._check_running()
 
         # The process for this task has completed, but the results may already have been
@@ -465,7 +466,7 @@ class LocalWorker:
         proc.join()
         if proc.exitcode:
             self._log.debug("Local join of task %s with failed", task)
-            message = "Process terminated with exit code {}".format(proc.exitcode)
+            message = f"Process terminated with exit code {proc.exitcode}"
 
             error = NodeError(message)
             backtrace = None
@@ -486,7 +487,7 @@ class LocalWorker:
             },
         ]
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         if self._status != _TERMINATED:
             self._status = _TERMINATED
             self._log.debug("Shutting down local worker")
@@ -496,25 +497,27 @@ class LocalWorker:
             self._handles.clear()
             self._running.clear()
 
-    def _check_running(self):
+    def _check_running(self) -> None:
         if self._status != _RUNNING:
             raise WorkerError("LocalWorker is not running")
 
 
 class RemoteWorker:
-    def __init__(self, id: str, host: str, port: int, secret: bytes, **_kwargs: Any):
+    def __init__(
+        self, id: str, host: str, port: int, secret: bytes, **_kwargs: Any
+    ) -> None:
         self.id = id
         self._conn: Any = None
         self._status = _UNINITIALIZED
         self._address = (host, port)
         self._secret = secret
-        self._running: Dict[int, Node] = {}
+        self._running: dict[int, Node] = {}
         self._threads: int = 0
         self.name = address_to_name((host, port))
         self._log = RemoteAdapter(self.name, logging.getLogger(__name__))
 
-        self._event_handlers: Dict[
-            Tuple[str, str], Callable[[EventType], Iterable[EventType]]
+        self._event_handlers: dict[
+            tuple[str, str], Callable[[EventType], Iterable[EventType]]
         ] = {
             (_CONNECTING, EVT_HANDSHAKE_RESPONSE): self._event_handshake,
             (_RUNNING, EVT_CAPACITY): self._event_capacity,
@@ -531,7 +534,7 @@ class RemoteWorker:
         return self._threads
 
     @property
-    def handles(self) -> Iterator[Any]:
+    def handles(self) -> Iterator[HandleType]:
         yield self._conn
 
     @property
@@ -553,13 +556,12 @@ class RemoteWorker:
                     "requirements": requirements,
                 }
             )
-
-            self._status = _CONNECTING
-
-            return True
         except (OSError, ProcessError) as error:
             self._log.error("Failed to connect to %s: %s", self.name, error)
             return False
+        else:
+            self._status = _CONNECTING
+            return True
 
     def start_task(self, task: Node, temp_root: str) -> bool:
         self._check_running()
@@ -571,7 +573,7 @@ class RemoteWorker:
         self._running[task.id] = task
         return True
 
-    def get(self, handle: Any) -> Iterator[EventType]:
+    def get(self, handle: object) -> Iterator[EventType]:
         self._check_running()
         if handle is not self._conn:
             raise ValueError(handle)
@@ -633,20 +635,21 @@ class RemoteWorker:
         self._log.debug("Sending %r", event)
         try:
             self._conn.send(event)
-            return True
         except OSError as error:
             self._log.error("Failed to send %r: %s", event, error)
             return False
+        else:
+            return True
 
     def _check_running(self) -> None:
         if self._status not in (_RUNNING, _CONNECTING):
-            raise WorkerError("RemoteWorker {} is not running".format(self.name))
+            raise WorkerError(f"RemoteWorker {self.name} is not running")
 
 
 def _task_wrapper(queue: QueueType, task: Node, temp_root: str) -> None:
     name = "paleomix task"
     if len(sys.argv) > 1:
-        name = "paleomix {} task".format(sys.argv[1])
+        name = f"paleomix {sys.argv[1]} task"
 
     setproctitle.setproctitle(name)
     # SIGINTs are handled in the main thread only
@@ -662,20 +665,20 @@ def _task_wrapper(queue: QueueType, task: Node, temp_root: str) -> None:
         backtrace = []
         if error.__cause__ and error.__cause__.__traceback__:
             backtrace = traceback.format_tb(error.__cause__.__traceback__)
-            backtrace.append("  {!r}".format(error.__cause__))
+            backtrace.append(f"  {error.__cause__!r}")
 
         queue.put((task.id, error, backtrace))
-    except Exception:
+    except Exception:  # noqa: BLE001
         _, exc_value, exc_traceback = sys.exc_info()
         backtrace = traceback.format_tb(exc_traceback)
-        backtrace.append("  {!r}".format(exc_value))
+        backtrace.append(f"  {exc_value!r}")
 
         queue.put((task.id, exc_value, backtrace))
     finally:
         terminate_all_processes()
 
 
-def _task_wrapper_sigterm_handler(signum: int, frame: Any):
+def _task_wrapper_sigterm_handler(signum: int, frame: object) -> NoReturn:
     signal.signal(signal.SIGHUP, signal.SIG_DFL)
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
 

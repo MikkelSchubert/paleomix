@@ -159,8 +159,8 @@ def parse_arguments(argv, ext):
 
     if os.path.exists(args.outfile) and not args.overwrite_output:
         parser.error(
-            "Destination filename already exists (%r); use option "
-            "--overwrite-output to allow overwriting of this file." % (args.outfile,)
+            f"Destination filename already exists ({args.outfile!r}); use option "
+            "--overwrite-output to allow overwriting of this file."
         )
 
     return args
@@ -202,5 +202,5 @@ def _get_readgroup(record):
         return None
 
 
-def _get_readgroup_ignored(_):
+def _get_readgroup_ignored(_) -> None:
     return None

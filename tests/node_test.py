@@ -40,13 +40,7 @@ import paleomix.node
 from paleomix.common.command import AtomicCmd, InputFile, OutputFile, TempOutputFile
 from paleomix.common.utilities import safe_coerce_to_frozenset
 from paleomix.common.versions import Requirement
-from paleomix.node import (
-    CmdNodeError,
-    CommandNode,
-    Node,
-    NodeError,
-    NodeUnhandledException,
-)
+from paleomix.node import CmdNodeError, CommandNode, Node, NodeError, NodeUnhandledError
 
 T = TypeVar("T")
 
@@ -287,7 +281,7 @@ def test_run__order() -> None:
 
 
 _EXCEPTIONS = (
-    (TypeError("The castle AAARGH!"), NodeUnhandledException),
+    (TypeError("The castle AAARGH!"), NodeUnhandledError),
     (NodeError("He's a very naughty boy!"), NodeError),
 )
 
@@ -317,7 +311,7 @@ def test_run__exception__create_temp_dir() -> None:
     node_mock._create_temp_dir = Mock()
     node_mock._create_temp_dir.side_effect = OSError()
 
-    with pytest.raises(NodeUnhandledException):
+    with pytest.raises(NodeUnhandledError):
         node_mock.run(_DUMMY_TEMP_ROOT)
     assert node_mock._create_temp_dir.mock_calls == [call(_DUMMY_TEMP_ROOT)]
 
@@ -330,7 +324,7 @@ def test_run__exception__remove_temp_dir() -> None:
     node_mock._remove_temp_dir = mock._remove_temp_dir
     node_mock._remove_temp_dir.side_effect = OSError()
 
-    with pytest.raises(NodeUnhandledException):
+    with pytest.raises(NodeUnhandledError):
         node_mock.run(_DUMMY_TEMP_ROOT)
     assert mock.mock_calls == [
         call._create_temp_dir(_DUMMY_TEMP_ROOT),

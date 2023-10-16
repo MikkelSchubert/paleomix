@@ -43,7 +43,7 @@ class ValidateFASTQFilesNode(CommandNode):
         dependencies: Iterable[Node] = (),
     ) -> None:
         command = factory.new(
-            [":validate_fastq", "--offset", offset],
+            [":validate_fastq", "--offset", str(offset)],
             stdout=output_file,
         )
 

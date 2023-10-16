@@ -29,7 +29,7 @@ import os
 import sys
 import time
 from logging import LogRecord
-from typing import TYPE_CHECKING, Iterator
+from typing import TYPE_CHECKING, Any, Iterator
 
 import coloredlogs
 from humanfriendly.terminal import ansi_wrap, terminal_supports_colors
@@ -42,10 +42,6 @@ if TYPE_CHECKING:
 
 _CONSOLE_MESSAGE_FORMAT: str = "%(asctime)s %(levelname)s %(status)s%(message)s"
 _FILE_MESSAGE_FORMAT: str = "%(asctime)s %(name)s %(levelname)s %(status)s%(message)s"
-
-
-class LogRecordWithStatus(logging.LogRecord):
-    status: str | Status | None
 
 
 class BasicFormatter(coloredlogs.ColoredFormatter):
@@ -72,8 +68,9 @@ class BasicFormatter(coloredlogs.ColoredFormatter):
         return super().format(record)
 
     def _process_status(self, record: LogRecord) -> str:
-        if isinstance(record, LogRecordWithStatus):
-            return f"[{record.status}] "
+        status: Any = getattr(record, "status", None)
+        if status is not None:
+            return f"[{status}] "
 
         return ""
 
@@ -84,7 +81,7 @@ class PaleomixFormatter(BasicFormatter):
         if isinstance(status, Status) and status.color:
             return f"[{ansi_wrap(str(status), color=status.color)}] "
 
-        return ""
+        return super()._process_status(record)
 
 
 def initialize_console_logging(log_level: str = "info") -> None:

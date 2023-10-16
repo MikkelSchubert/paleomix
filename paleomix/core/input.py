@@ -27,7 +27,10 @@ import select
 import sys
 import termios
 import tty
-from typing import Any, Iterator, List
+from typing import TYPE_CHECKING, Any, Iterator
+
+if TYPE_CHECKING:
+    from typing_extensions import Self
 
 _COMMANDS = {
     "h": "Prints this message.",
@@ -47,49 +50,52 @@ class ListTasksEvent(CLIEvent):
 
 
 class ThreadsEvent(CLIEvent):
-    def __init__(self, change: int):
+    def __init__(self, change: int) -> None:
         self.change = change
 
 
-class CommandLine(object):
-    def __init__(self):
+class CommandLine:
+    def __init__(self) -> None:
         self._tty_settings = None
         self._log = logging.getLogger(__name__)
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         self.setup()
 
         return self
 
-    def __exit__(self, _type: Any, _value: Any, _traceback: Any):
+    def __exit__(self, typ: object, exc: object, tb: object) -> None:
         self.teardown()
 
     @property
-    def active(self):
+    def active(self) -> bool:
         return self._tty_settings is not None
 
-    def setup(self):
-        if self._tty_settings is None:
+    def setup(self) -> None:
+        if (
+            self._tty_settings is None
             # False if the pipeline is being piped somewhere
-            if sys.stdin.isatty() and sys.stdout.isatty():
-                # False if the process is running in the background
-                if os.getpgrp() == os.tcgetpgrp(sys.stdout.fileno()):
-                    try:
-                        # Store old settings
-                        self._tty_settings = termios.tcgetattr(sys.stdin)
-                        # Disable echo
-                        tty.setcbreak(sys.stdin.fileno())
-                    except termios.error:
-                        pass  # Silently ignore failures
+            and sys.stdin.isatty()
+            and sys.stdout.isatty()
+            # False if the process is running in the background
+            and os.getpgrp() == os.tcgetpgrp(sys.stdout.fileno())
+        ):
+            try:
+                # Store old settings
+                self._tty_settings = termios.tcgetattr(sys.stdin)
+                # Disable echo
+                tty.setcbreak(sys.stdin.fileno())
+            except termios.error:
+                pass  # Silently ignore failures
 
-    def teardown(self):
+    def teardown(self) -> None:
         if self._tty_settings is not None:
             # Restore settings (re-enable echo)
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self._tty_settings)
             self._tty_settings = None
 
     @property
-    def handles(self) -> List[Any]:
+    def handles(self) -> list[Any]:
         if self._tty_settings is None:
             return []
 
@@ -97,7 +103,7 @@ class CommandLine(object):
 
     def process_key_presses(self) -> Iterator[CLIEvent]:
         if self._tty_settings:
-            characters: List[str] = []
+            characters: list[str] = []
             while self._poll_stdin():
                 characters.append(sys.stdin.read(1))
 
@@ -115,8 +121,8 @@ class CommandLine(object):
     def _poll_stdin(cls) -> bool:
         return select.select([sys.stdin], [], [], 0) == ([sys.stdin], [], [])
 
-    def _log_help(self):
+    def _log_help(self) -> None:
         self._log.info("Commands:")
         self._log.info("  Key      Function")
-        for key, help in _COMMANDS.items():
-            self._log.info("  %s  %s", key.ljust(7), help)
+        for key, text in _COMMANDS.items():
+            self._log.info("  %s  %s", key.ljust(7), text)

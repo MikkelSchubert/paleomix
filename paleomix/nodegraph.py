@@ -29,7 +29,7 @@ import os
 from enum import Enum
 from itertools import islice
 from shlex import quote
-from typing import Dict, FrozenSet, Iterable, List, Optional, Set, Tuple, TypeVar
+from typing import Iterable, TypeVar
 
 from paleomix.common.fileutils import missing_executables
 from paleomix.common.versions import Requirement, RequirementError
@@ -48,9 +48,9 @@ class FileStatusCache:
     periods of time.
     """
 
-    def __init__(self):
-        self._abs_cache: Dict[str, str] = {}
-        self._mtime_ns_cache: Dict[str, Optional[int]] = {}
+    def __init__(self) -> None:
+        self._abs_cache: dict[str, str] = {}
+        self._mtime_ns_cache: dict[str, int | None] = {}
 
     def abspath(self, fpath: str) -> str:
         abspath = self._abs_cache.get(fpath)
@@ -67,7 +67,7 @@ class FileStatusCache:
             if self._mtime_ns(fpath) is None:
                 yield fpath
 
-    def newest_mtime_ns(self, filepaths: Iterable[str]) -> Optional[int]:
+    def newest_mtime_ns(self, filepaths: Iterable[str]) -> int | None:
         newest = None
         for fpath in filepaths:
             mtime = self._mtime_ns(fpath)
@@ -76,7 +76,7 @@ class FileStatusCache:
 
         return newest
 
-    def oldest_mtime_ns(self, filepaths: Iterable[str]) -> Optional[int]:
+    def oldest_mtime_ns(self, filepaths: Iterable[str]) -> int | None:
         oldest = None
         for fpath in filepaths:
             mtime = self._mtime_ns(fpath)
@@ -85,7 +85,7 @@ class FileStatusCache:
 
         return oldest
 
-    def _mtime_ns(self, fpath: str) -> Optional[int]:
+    def _mtime_ns(self, fpath: str) -> int | None:
         """Returns the mtime of a path, or None if the path does not exist."""
         if fpath not in self._mtime_ns_cache:
             try:
@@ -111,26 +111,26 @@ class CleanupStrategy(Enum):
     KEEP = "keep"
     REQUIRE = "require"
 
-    def __str__(self):
+    def __str__(self) -> str:
         # Use `X` rather than `CleanupStrategy.X` when used with argparse, etc.
         return self.value
 
 
 class TaskStatus:
-    _task: Task
+    obj: Task
     status: StatusEnum
     outdated: bool
-    dependencies: Set["TaskStatus"]
-    rev_dependencies: Set["TaskStatus"]
+    dependencies: set[TaskStatus]
+    rev_dependencies: set[TaskStatus]
 
     # Normalized input/output file paths
-    input_files: FrozenSet[str]
-    output_files: FrozenSet[str]
-    auxiliary_files: FrozenSet[str]
-    intermediate_output_files: Set[str]
+    input_files: frozenset[str]
+    output_files: frozenset[str]
+    auxiliary_files: frozenset[str]
+    intermediate_output_files: set[str]
 
     def __init__(self, task: Task, fscache: FileStatusCache) -> None:
-        self._task = task
+        self.obj = task
 
         self.status = StatusEnum.DONE
         self.dependencies = set()
@@ -143,31 +143,31 @@ class TaskStatus:
             fscache.abspath(filepath) for filepath in task.intermediate_output_files
         }
 
-    def is_queued_and_runnable(self):
+    def is_queued_and_runnable(self) -> bool:
         if self.status != StatusEnum.QUEUED:
             return False
 
         return all(task.is_done() for task in self.dependencies)
 
-    def is_needed_by_dependencies(self):
+    def is_needed_by_dependencies(self) -> bool:
         if self.status != StatusEnum.DONE:
             return True
 
         return any(task.status != StatusEnum.DONE for task in self.rev_dependencies)
 
-    def is_done(self):
+    def is_done(self) -> bool:
         return self.status == StatusEnum.DONE
 
-    def __str__(self):
-        return str(self._task)
+    def __str__(self) -> str:
+        return str(self.obj)
 
-    def __repr__(self):
-        return "TaskStatus({})".format(self._task)
+    def __repr__(self) -> str:
+        return f"TaskStatus({self.obj})"
 
 
 class NodeGraph:
-    tasks: FrozenSet[Task]
-    requirements: Tuple[Requirement, ...]
+    tasks: frozenset[Task]
+    requirements: tuple[Requirement, ...]
 
     DONE = StatusEnum.DONE
     RUNNING = StatusEnum.RUNNING
@@ -176,18 +176,18 @@ class NodeGraph:
     ERROR = StatusEnum.ERROR
 
     _log: logging.Logger
-    _status: Dict[Task, TaskStatus]
-    _status_counts: Dict[StatusEnum, int]
-    _intermediate_files: List[str]
+    _status: dict[Task, TaskStatus]
+    _status_counts: dict[StatusEnum, int]
+    _intermediate_files: list[str]
     _intermediate_files_strategy: CleanupStrategy
 
     def __init__(
         self,
         tasks: Iterable[Task],
-        fscache: Optional[FileStatusCache] = None,
+        fscache: FileStatusCache | None = None,
         intermediate_files: CleanupStrategy = CleanupStrategy.DELETE,
         required_files: Iterable[str] = (),
-    ):
+    ) -> None:
         if not fscache:
             fscache = FileStatusCache()
 
@@ -225,6 +225,9 @@ class NodeGraph:
         self._log.debug("Collecting software requirements")
         self.requirements = self._collect_requirements(self.tasks)
 
+    def get_node_states(self) -> dict[Task, TaskStatus]:
+        return dict(self._status.items())
+
     def get_node_state(self, task: Task) -> StatusEnum:
         return self._status[task].status
 
@@ -232,7 +235,7 @@ class NodeGraph:
         self,
         task: Task,
         status: StatusEnum,
-    ) -> Iterable[Tuple[Task, StatusEnum, StatusEnum]]:
+    ) -> Iterable[tuple[Task, StatusEnum, StatusEnum]]:
         it = self._status[task]
         old_status = it.status
         it.status = status
@@ -247,7 +250,7 @@ class NodeGraph:
             for rdep in it.rev_dependencies:
                 if rdep.is_queued_and_runnable():
                     self._log.debug("[%s] %s", StatusEnum.RUNNABLE, rdep)
-                    yield rdep._task, StatusEnum.QUEUED, StatusEnum.RUNNABLE
+                    yield rdep.obj, StatusEnum.QUEUED, StatusEnum.RUNNABLE
 
                     rdep.status = StatusEnum.RUNNABLE
                     self._status_counts[StatusEnum.QUEUED] -= 1
@@ -260,7 +263,7 @@ class NodeGraph:
             self._locate_unneeded_files(it)
         elif status == StatusEnum.ERROR:
             for rdep in it.rev_dependencies:
-                yield from self.set_node_status(rdep._task, status)
+                yield from self.set_node_status(rdep.obj, status)
         elif status == StatusEnum.RUNNABLE:
             if old_status != StatusEnum.RUNNING:
                 raise ValueError(status)  # FIXME
@@ -269,10 +272,10 @@ class NodeGraph:
 
         yield task, old_status, status
 
-    def get_state_counts(self) -> Dict[StatusEnum, int]:
+    def get_state_counts(self) -> dict[StatusEnum, int]:
         return dict(self._status_counts)
 
-    def get_and_reset_intermediate_files(self):
+    def get_and_reset_intermediate_files(self) -> list[str]:
         self._intermediate_files, intermediate_files = [], self._intermediate_files
 
         return intermediate_files
@@ -281,10 +284,11 @@ class NodeGraph:
     def check_version_requirements(
         cls,
         requirements: Iterable[Requirement],
+        *,
         force: bool = False,
     ) -> bool:
-        executables = set(requirement.executable for requirement in requirements)
-        missing_execs = missing_executables(executables - set([None]))
+        executables = {requirement.executable for requirement in requirements}
+        missing_execs = missing_executables(executables - {None})
 
         any_errors = False
         log = logging.getLogger(__name__)
@@ -301,7 +305,7 @@ class NodeGraph:
             try:
                 version = requirement.version(force=force)
                 if version:
-                    name = "%s v%s" % (name, version)
+                    name = f"{name} v{version}"
 
                 if requirement.check():
                     log.info("  [✓] %s ", name)
@@ -326,9 +330,9 @@ class NodeGraph:
         return not any_errors
 
     def check_file_dependencies(self, fscache: FileStatusCache) -> bool:
-        in_files: Dict[str, List[TaskStatus]] = collections.defaultdict(list)
-        aux_files: Dict[str, List[TaskStatus]] = collections.defaultdict(list)
-        out_files: Set[str] = set()
+        in_files: dict[str, list[TaskStatus]] = collections.defaultdict(list)
+        aux_files: dict[str, list[TaskStatus]] = collections.defaultdict(list)
+        out_files: set[str] = set()
 
         for task in self._status.values():
             out_files.update(task.output_files)
@@ -352,7 +356,7 @@ class NodeGraph:
                     for task in _summarize(tasks[fpath]):
                         self._log.debug("    required when %s", task)
                         # Failed tasks are marked, to be able to report initial states
-                        for _ in self.set_node_status(task._task, StatusEnum.ERROR):
+                        for _ in self.set_node_status(task.obj, StatusEnum.ERROR):
                             pass
 
         return not any_missing_files
@@ -361,9 +365,9 @@ class NodeGraph:
         self,
         graph: Iterable[Task],
         fscache: FileStatusCache,
-    ) -> Dict[Task, TaskStatus]:
+    ) -> dict[Task, TaskStatus]:
         queue = set(graph)
-        tasks: Dict[Task, TaskStatus] = {}
+        tasks: dict[Task, TaskStatus] = {}
 
         while queue:
             task = queue.pop()
@@ -379,10 +383,10 @@ class NodeGraph:
 
     def _collect_file_producers(
         self, tasks: Iterable[TaskStatus]
-    ) -> Dict[str, TaskStatus]:
+    ) -> dict[str, TaskStatus]:
         """Collects actual dependencies, as determined input files used by each task"""
-        producers: Dict[str, TaskStatus] = {}
-        clobbers: Dict[str, Set[TaskStatus]] = collections.defaultdict(set)
+        producers: dict[str, TaskStatus] = {}
+        clobbers: dict[str, set[TaskStatus]] = collections.defaultdict(set)
         for task in tasks:
             for output_file in task.output_files:
                 existing_producer = producers.get(output_file)
@@ -399,7 +403,7 @@ class NodeGraph:
 
     def _on_error_producers_clobber(
         self,
-        clobbers: Dict[str, Set[TaskStatus]],
+        clobbers: dict[str, set[TaskStatus]],
         max_items: int = 4,
     ) -> None:
         self._log.error("Multiple tasks write to the same output files:")
@@ -421,7 +425,7 @@ class NodeGraph:
     @staticmethod
     def _update_dependencies(
         tasks: Iterable[TaskStatus],
-        producers: Dict[str, TaskStatus],
+        producers: dict[str, TaskStatus],
     ) -> None:
         """Collects actual dependencies, as determined input files used by each task"""
         for task in tasks:
@@ -440,11 +444,11 @@ class NodeGraph:
         this does not take missing files into consideration, since these are handled
         iteratively elsewhere.
         """
-        cache: Dict[TaskStatus, Optional[int]] = {}
+        cache: dict[TaskStatus, int | None] = {}
 
-        def _calculate_implied_output_age(task: TaskStatus) -> Optional[int]:
+        def _calculate_implied_output_age(task: TaskStatus) -> int | None:
             if task not in cache:
-                timestamps: List[int] = []
+                timestamps: list[int] = []
                 for dependency in task.dependencies:
                     timestamp = _calculate_implied_output_age(dependency)
                     if timestamp is not None:
@@ -471,7 +475,7 @@ class NodeGraph:
 
     def _require_intermediate_files(
         self,
-        producers: Dict[str, TaskStatus],
+        producers: dict[str, TaskStatus],
         globs: Iterable[str],
     ) -> None:
         any_errors = False
@@ -495,7 +499,7 @@ class NodeGraph:
     def _resolve_task_status(
         self,
         tasks: Iterable[TaskStatus],
-        producers: Dict[str, TaskStatus],
+        producers: dict[str, TaskStatus],
         fscache: FileStatusCache,
     ) -> None:
         queue = set(tasks)
@@ -525,11 +529,11 @@ class NodeGraph:
                     dependency.status = StatusEnum.QUEUED
                     queue.add(dependency)
 
-    def _link_explicit_dependencies(self, tasks: Dict[Task, TaskStatus]) -> None:
+    def _link_explicit_dependencies(self, tasks: dict[Task, TaskStatus]) -> None:
         # Explicit dependencies are those not corresponding to use of output files and
         # typically equate to validation steps, and must therefore be added separately
         # from dependencies determined by I/O.
-        def _add_dependencies(dependency: TaskStatus, queue: List[TaskStatus]) -> None:
+        def _add_dependencies(dependency: TaskStatus, queue: list[TaskStatus]) -> None:
             while queue:
                 task: TaskStatus = queue.pop()
                 if dependency not in task.dependencies:
@@ -556,18 +560,20 @@ class NodeGraph:
                     if tstatus.is_done() and not dependency.is_done():
                         _add_dependencies(dependency, list(tstatus.rev_dependencies))
 
-    def _check_intermediate_files(self, tasks: Dict[Task, TaskStatus]) -> None:
+    def _check_intermediate_files(self, tasks: dict[Task, TaskStatus]) -> None:
         any_errors = False
         for task, tstatus in tasks.items():
-            if tstatus.intermediate_output_files.issuperset(tstatus.output_files):
-                if not tstatus.rev_dependencies:
-                    self._log.error("Intermediate task with no dependencies: %s", task)
-                    any_errors = True
+            if (
+                tstatus.intermediate_output_files.issuperset(tstatus.output_files)
+                and not tstatus.rev_dependencies
+            ):
+                self._log.error("Intermediate task with no dependencies: %s", task)
+                any_errors = True
 
         if any_errors:
             raise NodeGraphError("Aborted due to bug!")
 
-    def _mark_runnable_tasks(self, tasks: Dict[Task, TaskStatus]) -> None:
+    def _mark_runnable_tasks(self, tasks: dict[Task, TaskStatus]) -> None:
         for task in tasks.values():
             if task.status == StatusEnum.QUEUED:
                 if all(dep.status == StatusEnum.DONE for dep in task.dependencies):
@@ -577,19 +583,15 @@ class NodeGraph:
                 self._locate_unneeded_files(task)
 
     @staticmethod
-    def _collect_requirements(tasks: Iterable[Task]) -> Tuple[Requirement, ...]:
-        executables: Set[str] = set()
-        requirements: Set[Requirement] = set()
+    def _collect_requirements(tasks: Iterable[Task]) -> tuple[Requirement, ...]:
+        executables: set[str] = set()
+        requirements: set[Requirement] = set()
         for task in tasks:
             executables.update(task.executables)
             requirements.update(task.requirements)
 
         # Executables used by requirement checks
-        requirement_execs: Set[str] = set()
-        for requirement in requirements:
-            executable = requirement.executable
-            if executable is not None:
-                requirement_execs.add(executable)
+        requirement_execs = {requirement.executable for requirement in requirements}
 
         # Create dummy Requirements object for any executables without Requirements
         for executable in executables - requirement_execs:
@@ -601,7 +603,8 @@ class NodeGraph:
         return tuple(sorted(requirements, key=lambda req: req.name))
 
     def _locate_unneeded_files(self, task: TaskStatus) -> None:
-        assert task.is_done()
+        if not task.is_done():
+            raise AssertionError("called _locate_unneeded_files on unfinished task")
 
         if (
             self._intermediate_files_strategy == CleanupStrategy.DELETE
