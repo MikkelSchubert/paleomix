@@ -21,7 +21,7 @@
 # SOFTWARE.
 #
 import os
-import pipes
+import shlex
 import subprocess
 
 
@@ -168,7 +168,7 @@ def _pformat_list(lst, width=80):
     to be exceeded."""
     result = [[]]
     current_width = 0
-    for item in (pipes.quote(str(value)) for value in lst):
+    for item in (shlex.quote(str(value)) for value in lst):
         if current_width + len(item) + 1 > width:
             if not result[-1]:
                 result[-1] = [item]
