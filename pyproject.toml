@@ -111,6 +111,8 @@ ignore = [
     "RET506",  # superfluous-else-raise -- Unnecessary `elif` after `raise` statement
     # Disabled due to hits in non-performance critical code where manual is clearer
     "PERF401", # manual-list-comprehension -- Use a list comprehension
+    # Disabled due to conflict with `format` command
+    "ISC001",  # single-line-implicit-string-concatenation
 ]
 
 [tool.ruff.per-file-ignores]

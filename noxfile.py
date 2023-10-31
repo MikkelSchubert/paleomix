@@ -14,18 +14,22 @@ SOURCES = (
 )
 
 
+RUFF_REQUIREMENT = "ruff==0.1.3"
+
+
 @nox.session
 def style(session: nox.Session) -> None:
-    session.install("black~=23.9.1")
-    session.run("black", "--check", *SOURCES)
-    session.install("isort~=5.12.0")
-    session.run("isort", "--check-only", *SOURCES)
+    session.install(RUFF_REQUIREMENT)
+    # Replaces `black --check`
+    session.run("ruff", "format", "--check", *SOURCES)
+    # Replaces `isort --check-only`
+    session.run("ruff", "check", "--select", "I", *SOURCES)
 
 
 @nox.session
 def lints(session: nox.Session) -> None:
-    session.install("ruff==0.0.292")
-    session.run("ruff", *SOURCES)
+    session.install(RUFF_REQUIREMENT)
+    session.run("ruff", "check", *SOURCES)
 
 
 @nox.session()

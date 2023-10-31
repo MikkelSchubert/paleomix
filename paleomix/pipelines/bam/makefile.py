@@ -414,9 +414,12 @@ def _collect_files_and_split_lane(data, path):
             for files in _collect_files(path, filepath):
                 yield read_type, files
         elif read_type == "Paired":
-            yield read_type, (
-                FASTQPath.format(filepath, 1),
-                FASTQPath.format(filepath, 2),
+            yield (
+                read_type,
+                (
+                    FASTQPath.format(filepath, 1),
+                    FASTQPath.format(filepath, 2),
+                ),
             )
         else:
             yield read_type, (filepath, None)

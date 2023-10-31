@@ -194,14 +194,18 @@ def _process_pretrimmed_reads(layout, record):
     read_type = record["Type"]
     input_files = [filename for filename in record["Path"] if filename is not None]
 
-    yield read_type, record["Path"], ValidateFASTQFilesNode(
-        input_files=input_files,
-        output_file=layout.get(
-            "pre_trimmed_statistics",
-            shortname=record["Shortname"],
+    yield (
+        read_type,
+        record["Path"],
+        ValidateFASTQFilesNode(
+            input_files=input_files,
+            output_file=layout.get(
+                "pre_trimmed_statistics",
+                shortname=record["Shortname"],
+            ),
+            offset=record["Options"]["QualityOffset"],
+            collapsed=("Collapsed" in read_type),
         ),
-        offset=record["Options"]["QualityOffset"],
-        collapsed=("Collapsed" in read_type),
     )
 
 
