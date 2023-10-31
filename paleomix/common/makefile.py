@@ -309,7 +309,7 @@ class PreProcessMakefile(_SpecBase):
         self,
         path: SpecPath,
         value: InputType,
-    ) -> Tuple[InputType, SpecTree]:
+    ) -> tuple[InputType, SpecTree]:
         """Must return (value, specification) tuple."""
         raise NotImplementedError  # pragma: no coverage
 
@@ -548,7 +548,7 @@ class ValueIn(MakefileSpec):
         default: Any = DEFAULT_NOT_SET,
     ):
         self._rvalues = tuple(rvalues)
-        self._normalized_values: Dict[str, str] = {}
+        self._normalized_values: dict[str, str] = {}
         for value in self._rvalues:
             if isinstance(value, str):
                 assert value.lower() not in self._normalized_values, value
@@ -627,7 +627,7 @@ class _MultipleSpecs(MakefileSpec):
     def __init__(
         self,
         specs: Sequence[SpecType],
-        kwargs: Dict[str, Any],
+        kwargs: dict[str, Any],
         name: str,
         prefix: str = "",
         postfix: str = "",
@@ -832,18 +832,17 @@ class IsDictOf(MakefileSpec):
 def _is_hashable(value: InputType) -> bool:
     try:
         hash(value)
-        return True
     except TypeError:
         return False
+    else:
+        return True
 
 
 def _is_spec(spec: SpecTree) -> bool:
     """Returns true if 'spec' is a specification instance or class."""
-    if isinstance(spec, MakefileSpec):
-        return True
-    elif isinstance(spec, type) and issubclass(spec, MakefileSpec):
-        return True
-    return False
+    return isinstance(spec, MakefileSpec) or (
+        isinstance(spec, type) and issubclass(spec, MakefileSpec)
+    )
 
 
 def _instantiate_spec(spec: SpecTree) -> MakefileSpec:
@@ -936,7 +935,7 @@ def _process_default_values(
                 elif default_value.default is REQUIRED_VALUE:
                     raise MakefileError(
                         "A value MUST be supplied for %r"
-                        % (_path_to_str(path + (cur_key,)))
+                        % (_path_to_str((*path, cur_key)))
                     )
                 default_value = default_value.default
                 default_value_from_spec = True

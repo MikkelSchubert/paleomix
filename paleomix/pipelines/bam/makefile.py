@@ -28,7 +28,7 @@ import logging
 import os
 import re
 import string
-from typing import Any, Dict, Iterable, Optional, Tuple
+from typing import Any, Iterable, Optional
 
 from paleomix.common import sequences
 from paleomix.common.bamfiles import BAM_PLATFORMS
@@ -61,7 +61,7 @@ from paleomix.common.makefile import (
 )
 from paleomix.common.utilities import fill_dict
 
-_READ_TYPES = set(("Single", "Singleton", "Collapsed", "CollapsedTruncated", "Paired"))
+_READ_TYPES = {"Single", "Singleton", "Collapsed", "CollapsedTruncated", "Paired"}
 
 # The maximum reference sequence length supported by the BAI index format:
 #   https://samtools.github.io/hts-specs/SAMv1.pdf
@@ -77,7 +77,7 @@ def read_makefiles(filenames: Iterable[str], pipeline_variant: str = "bam"):
 
         data = read_makefile(filename, MAKEFILE_SPECIFICATION)
         if not isinstance(data, dict):
-            raise AssertionError("makefile is not a dict")
+            raise TypeError("makefile is not a dict")
 
         options = data.pop("Options")
         genomes = data.pop("Genomes")
@@ -350,11 +350,11 @@ def _postprocess_samples(data, global_options):
 
 
 def _combine_options(
-    options: Dict[str, Any],
-    data: Dict[str, Any],
-    path: Tuple[str, ...],
+    options: dict[str, Any],
+    data: dict[str, Any],
+    path: tuple[str, ...],
     valid_features: Iterable[str],
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     item_options = data.pop("Options", {})
     if not item_options:
         return options
@@ -363,8 +363,9 @@ def _combine_options(
     invalid_features = features.keys() - valid_features
     if invalid_features:
         raise MakefileError(
-            "Cannot override %s at %s"
-            % (", ".join(map(repr, invalid_features)), _path_to_str(path))
+            "Cannot override {} at {}".format(
+                ", ".join(map(repr, invalid_features)), _path_to_str(path)
+            )
         )
 
     if "mapDamage" in item_options and "mapDamage" not in valid_features:
@@ -441,7 +442,7 @@ def _filenames_to_shortname(filenames):
     return filename.replace("?", "x")
 
 
-def _collect_files(path, template) -> Iterable[Tuple[str, Optional[str]]]:
+def _collect_files(path, template) -> Iterable[tuple[str, Optional[str]]]:
     if FASTQPath.is_paired_end(template):
         files_1 = _sorted_glob(FASTQPath.format(template, 1))
         files_2 = _sorted_glob(FASTQPath.format(template, 2))
@@ -519,7 +520,7 @@ def _validate_makefile_options(makefile):
                 raise MakefileError(
                     "Pre-trimmed data must have quality offset 33 (Phred+33). "
                     "Please convert your FASTQ files using e.g. seqtk before "
-                    "continuing: {}".format(_path_to_str(path))
+                    f"continuing: {_path_to_str(path)}"
                 )
 
         _validate_makefile_adapters(record, path)
@@ -547,21 +548,21 @@ def _validate_makefile_adapters(record, path):
 
     if any(results.values()):
         logger = logging.getLogger(__name__)
-        logger.warn(
+        logger.warning(
             "An adapter specified for AdapterRemoval corresponds to the default "
             "sequence, but is reverse complemented. Please make sure that this is "
             "intended! "
         )
 
         if results["--pcr2"]:
-            logger.warn(
+            logger.warning(
                 "For --pcr2, the sequence given should be the "
                 "reverse complement of the sequence observed in the "
                 "mate 2 FASTQ file."
             )
 
         if results["--adapter2"]:
-            logger.warn(
+            logger.warning(
                 "For --adapter2 (AdapterRemoval v2, only) the value "
                 "should be exactly as observed in the FASTQ reads."
             )
@@ -591,14 +592,16 @@ def _validate_makefiles_duplicate_files(makefiles):
             message = "FASTQ files are used multiple times in sample:\n"
             raise MakefileError(message + description)
         else:
-            logger.warn("WARNING: Path included in multiple samples:\n%s", description)
+            logger.warning(
+                "WARNING: Path included in multiple samples:\n%s", description
+            )
 
 
 def _describe_files_in_multiple_records(records, pairs):
     lines = []
     prefix = "Filename"
     for _, filename in sorted(pairs):
-        lines.append("  {0} {1}".format(prefix, filename))
+        lines.append(f"  {prefix} {filename}")
         prefix = " " * len(prefix)
 
     prefix = "Found at"
@@ -636,10 +639,10 @@ def _validate_prefixes(makefiles, pipeline_variant):
             except Exception as error:
                 if pipeline_variant == "bam":
                     raise MakefileError(f"Error reading/indexing FASTA: {error}")
-                logging.warn("Error reading/indexing FASTA: %s", error)
+                logging.warning("Error reading/indexing FASTA: %s", error)
             else:
                 if max(contigs.values()) > _BAM_MAX_SEQUENCE_LENGTH:
-                    logger.warn(
+                    logger.warning(
                         "FASTA file %r contains sequences longer "
                         "than %i! CSI index files will be used instead "
                         "of BAI index files.",

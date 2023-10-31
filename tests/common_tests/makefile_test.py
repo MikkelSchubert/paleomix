@@ -21,8 +21,7 @@
 #
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any, Iterable, List, Sequence
+from typing import TYPE_CHECKING, Any, Iterable, Sequence
 
 import pytest
 
@@ -58,6 +57,9 @@ from paleomix.common.makefile import (
     process_makefile,
     read_makefile,
 )
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 # Dummy value for the path parameters
 _DUMMY_PATH = ("a", "random", "path")
@@ -99,7 +101,7 @@ _COMMON_VALUES = [
 def _common_invalid_values(
     exclude: Sequence[Any] = (),
     extra: Iterable[Any] = (),
-) -> List[Any]:
+) -> list[Any]:
     selection = list(extra)
     for key, value in _COMMON_INVALID_VALUES.items():
         if key not in exclude:
@@ -785,7 +787,7 @@ def test_and__default_set__must_meet_spec() -> None:
 
 def test_and__defaults_not_set_in_specs() -> None:
     with pytest.raises(ValueError):
-        And(IsInt(default=10), ValueIn((list(range(100)))))
+        And(IsInt(default=10), ValueIn(list(range(100))))
 
 
 ###############################################################################
@@ -1207,7 +1209,7 @@ _PATH_IN_EXCEPTION_VALUES = (
 )
 
 
-@pytest.mark.parametrize("spec, value", _PATH_IN_EXCEPTION_VALUES)
+@pytest.mark.parametrize(("spec", "value"), _PATH_IN_EXCEPTION_VALUES)
 def test_specs__path_is_displayed_in_exception(spec, value) -> None:
     with pytest.raises(MakefileError, match=_DUMMY_PATH_STR):
         spec(_DUMMY_PATH, value)
@@ -1226,7 +1228,7 @@ _MAKEFILE_SPEC_MET = (
 )
 
 
-@pytest.mark.parametrize("makefile, spec", _MAKEFILE_SPEC_MET)
+@pytest.mark.parametrize(("makefile", "spec"), _MAKEFILE_SPEC_MET)
 def test_process_makefile__dict_keys_found(makefile, spec) -> None:
     process_makefile(makefile, spec)
 
@@ -1240,7 +1242,7 @@ _MAKEFILE_SPEC_NOT_MET = (
 )
 
 
-@pytest.mark.parametrize("makefile, spec", _MAKEFILE_SPEC_NOT_MET)
+@pytest.mark.parametrize(("makefile", "spec"), _MAKEFILE_SPEC_NOT_MET)
 def test_process_makefile__dict_keys_not_found(makefile, spec) -> None:
     with pytest.raises(MakefileError):
         process_makefile(makefile, spec)

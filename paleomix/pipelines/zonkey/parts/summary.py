@@ -87,7 +87,7 @@ class SummaryNode(Node):
     def _build_sidemenu(self):
         lines = []
         for sample in sorted(self._samples):
-            lines.append('        <a href="#sample_{0}">{0}</a>'.format(sample))
+            lines.append(f'        <a href="#sample_{sample}">{sample}</a>')
         return "\n".join(lines)
 
     def _write_sample_overview(self, handle, sample):
@@ -336,7 +336,7 @@ _HTML_HEADER = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
           </div>
         </div>
         <h1><a name="samples" id="samples"></a>Sample Overview</h1>
-"""  # noqa: E501
+"""
 
 
 _SAMPLE_HEADER = """

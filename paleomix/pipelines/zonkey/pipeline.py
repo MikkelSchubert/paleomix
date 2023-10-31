@@ -26,7 +26,7 @@ import os
 import shutil
 import string
 import tarfile
-from typing import TYPE_CHECKING, Dict, Union
+from typing import TYPE_CHECKING
 
 import pysam
 
@@ -48,7 +48,7 @@ if TYPE_CHECKING:
 
 def build_plink_nodes(config, data, root, bamfile, dependencies=()):
     root = os.path.join(root, "results", "plink")
-    plink: Dict[str, Union[str, Node]] = {"root": root}
+    plink: dict[str, str | Node] = {"root": root}
 
     ped_node = nuclear.BuildTPEDFilesNode(
         output_root=root,
@@ -145,7 +145,7 @@ def build_treemix_nodes(config, data, root, plink):
         k_snps = config.treemix_k
         if not k_snps:
             k_snps = (
-                "n_sites_%s" % (postfix,),
+                f"n_sites_{postfix}",
                 os.path.join(plink["root"], "common.summary"),
             )
 
@@ -361,8 +361,8 @@ def setup_mito_mapping(config):
     mkfile_fpath = os.path.join(config.destination, "makefile.yaml")
 
     filenames = [mkfile_fpath]
-    for name, record in sorted(config.database.mitochondria.items()):
-        filenames.append(os.path.join(genomes_root, "%s.fasta" % (record.name,)))
+    for _name, record in sorted(config.database.mitochondria.items()):
+        filenames.append(os.path.join(genomes_root, f"{record.name}.fasta"))
 
     existing_filenames = [
         filename for filename in filenames if os.path.exists(filename)
@@ -383,25 +383,25 @@ def setup_mito_mapping(config):
 
         mkfile.write("\n\nPrefixes:\n")
 
-        for name, record in sorted(config.database.mitochondria.items()):
+        for _name, record in sorted(config.database.mitochondria.items()):
             if "EXCLUDE" in record.meta.upper():
                 continue
 
-            mkfile.write("  %s:\n" % (record.name,))
-            mkfile.write("    Path: genomes/%s.fasta\n" % (record.name,))
+            mkfile.write(f"  {record.name}:\n")
+            mkfile.write(f"    Path: genomes/{record.name}.fasta\n")
 
             info = config.database.samples.get(record.name)
             if info is not None:
-                mkfile.write("    # Species: %s\n" % (info.get("Species", "NA"),))
-                mkfile.write("    # Sex: %s\n" % (info.get("Sex", "NA"),))
+                mkfile.write("    # Species: {}\n".format(info.get("Species", "NA")))
+                mkfile.write("    # Sex: {}\n".format(info.get("Sex", "NA")))
                 mkfile.write(
-                    "    # Publication: %s\n" % (info.get("Publication", "NA"),)
+                    "    # Publication: {}\n".format(info.get("Publication", "NA"))
                 )
-                mkfile.write("    # Sample ID: %s\n" % (info.get("SampleID", "NA"),))
+                mkfile.write("    # Sample ID: {}\n".format(info.get("SampleID", "NA")))
 
             mkfile.write("\n")
 
-            fasta_fpath = os.path.join(genomes_root, "%s.fasta" % (record.name,))
+            fasta_fpath = os.path.join(genomes_root, f"{record.name}.fasta")
 
             with open(fasta_fpath, "w") as fasta_handle:
                 record = FASTA(
@@ -474,7 +474,7 @@ def _process_samples(config):
         for filename in info.pop("Files"):
             filetype = config.database.validate_bam(filename)
             if not filetype:
-                log.error("File is not a valid BAM file: %r" % (filename,))
+                log.error("File is not a valid BAM file: %r", filename)
                 return False
 
             if filetype.is_nuclear and filetype.is_mitochondrial:
@@ -538,7 +538,7 @@ def _read_sample_table(config, filename):
                     linenum,
                     len(fields),
                 )
-                return
+                return None
 
             name = fields[0]
             invalid_letters = frozenset(name) - valid_characters
@@ -552,12 +552,12 @@ def _read_sample_table(config, filename):
                     "".join(invalid_letters),
                     name,
                 )
-                return
+                return None
             elif name in samples:
                 log.error(
                     "Duplicate name %r in sample table; names must be unique!", name
                 )
-                return
+                return None
 
             samples[name] = {
                 "Root": os.path.join(config.destination, name),
@@ -571,13 +571,13 @@ def finalize_run_config(parser, args):
     log = logging.getLogger(__name__)
     if args.command in ("run", "dryrun") and not (1 <= len(args.files) <= 3):
         parser.print_usage()
-        return
+        return None
 
     if args.command == "dryrun":
         args.pipeline_mode = "dry_run"
     args.multisample = False
 
-    known_samples = set(args.database.samples) | set(("Sample",))
+    known_samples = set(args.database.samples) | {"Sample"}
     unknown_samples = set(args.treemix_outgroup) - known_samples
     if unknown_samples:
         log.error(
@@ -586,7 +586,7 @@ def finalize_run_config(parser, args):
             ", ".join(map(repr, sorted(unknown_samples))),
             ", ".join(map(repr, sorted(known_samples))),
         )
-        return
+        return None
 
     if len(args.files) == 1:
         args.files.append(fileutils.swap_ext(args.files[0], ".zonkey"))
@@ -596,16 +596,16 @@ def finalize_run_config(parser, args):
 
         if os.path.exists(args.destination) and not os.path.isdir(args.destination):
             log.error("Destination %r is not a directory", args.destination)
-            return
+            return None
         elif not os.path.isfile(filename):
             log.error("Not a valid filename: %r", filename)
-            return
+            return None
         elif _is_bamfile(filename):
             args.samples = {"-": {"Root": args.destination, "Files": [filename]}}
         else:
             args.multisample = True
             if not _read_sample_table(args, filename):
-                return
+                return None
     elif len(args.files) == 3:
         filename_1, filename_2, args.destination = args.files
 
@@ -613,11 +613,11 @@ def finalize_run_config(parser, args):
             "-": {"Root": args.destination, "Files": [filename_1, filename_2]}
         }
     else:
-        raise RuntimeError("Unexpected number of arguments: %r" % (args.files,))
+        raise RuntimeError(f"Unexpected number of arguments: {args.files!r}")
 
     # Identify (mito or nuc?) and validate BAM files provided by user
     if not _process_samples(args):
-        return
+        return None
 
     return args
 
@@ -629,7 +629,7 @@ def _is_bamfile(filename):
             return True
     except ValueError:
         return False
-    except IOError:
+    except OSError:
         return False
 
 
@@ -637,7 +637,7 @@ def main(argv):
     parser, run_parser = zonkey_config.build_parser()
     if not argv:
         parser.print_help()
-        return
+        return None
 
     args = parser.parse_args(argv)
     log = logging.getLogger(__name__)
@@ -646,7 +646,7 @@ def main(argv):
         args.database = database.ZonkeyDB(args.database)
     except database.ZonkeyDBError as error:
         log.error("Error reading database %r: %s", args.database, error)
-        return
+        return None
 
     if args.command in ("run", "dryrun"):
         args = finalize_run_config(run_parser, args)

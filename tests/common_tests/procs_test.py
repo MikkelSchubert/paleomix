@@ -22,12 +22,9 @@
 from __future__ import annotations
 
 import signal
-from typing import Any
-from unittest.mock import ANY, Mock, call, patch
 
 from paleomix.common.procs import (
     RegisteredPopen,
-    RegisteredProcess,
     running_processes,
     terminate_all_processes,
     terminate_processes,

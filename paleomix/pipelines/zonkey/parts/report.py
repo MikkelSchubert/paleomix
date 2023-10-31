@@ -61,8 +61,9 @@ class ReportNode(Node):
 
         Node.__init__(
             self,
-            description="writing report to %s"
-            % (os.path.join(self._root, "report.html"),),
+            description="writing report to {}".format(
+                os.path.join(self._root, "report.html")
+            ),
             input_files=self._report.input_files(),
             output_files=(
                 os.path.join(self._root, "report.html"),
@@ -158,11 +159,11 @@ class ReportNode(Node):
 
             pub = row["Publication"]
             if pub.startswith("http"):
-                row["Publication"] = '<a href="{0}">Link</a>'.format(pub.strip())
+                row["Publication"] = f'<a href="{pub.strip()}">Link</a>'
             elif row["Publication"].startswith("doi:"):
                 pub = pub[4:].strip()
-                url = "https://doi.org/{}".format(pub)
-                row["Publication"] = 'doi:<a href="{0}">{1}</a>'.format(url, pub)
+                url = f"https://doi.org/{pub}"
+                row["Publication"] = f'doi:<a href="{url}">{pub}</a>'
 
             output_handle.write(_SAMPLE_LIST_ROW.format(**row))
 
@@ -177,8 +178,8 @@ class ReportNode(Node):
         output_handle.write(overview)
 
         for k_groups in sorted(self._data.groups):
-            summary_incl = self._build_admixture_cell(k_groups, True)
-            summary_excl = self._build_admixture_cell(k_groups, False)
+            summary_incl = self._build_admixture_cell(k_groups, incl_ts=True)
+            summary_excl = self._build_admixture_cell(k_groups, incl_ts=False)
 
             output_handle.write(
                 _ADMIXTURE_ROW.format(
@@ -190,7 +191,7 @@ class ReportNode(Node):
         try:
             groups = self._report.admixture_results(k_groups, incl_ts)
         except admixture.AdmixtureError as error:
-            return _warn("ERROR: {}</strong".format(error))
+            return _warn(f"ERROR: {error}</strong")
 
         n_admixture_candidates = sum((value >= cutoff) for _, value in groups)
         if n_admixture_candidates < 2:
@@ -202,15 +203,15 @@ class ReportNode(Node):
             if value >= cutoff:
                 name = " / ".join(sorted(group))
 
-                lines.append("  <li>%s (%.2f%%)</li>" % (name, value * 100))
+                lines.append(f"  <li>{name} ({value * 100:.2f}%)</li>")
 
         lines.append("</ul>")
 
         if n_admixture_candidates != 2:
             lines.append(
                 _warn(
-                    "WARNING: %s-way admixture detected; this may "
-                    "indicate a false-positive result!" % (n_admixture_candidates,)
+                    f"WARNING: {n_admixture_candidates}-way admixture detected; this "
+                    "may indicate a false-positive result!"
                 )
             )
             return "\n            ".join(lines)
@@ -241,18 +242,18 @@ class ReportNode(Node):
         else:
             finale = "."
 
-        lower_pct = "%.1f" % (
+        lower_pct = "{:.1f}".format(
             (1.0 - max(percentiles["Lower"]["Upper"], percentiles["Upper"]["Lower"]))
             * 100.0,
         )
-        upper_pct = "%.1f" % (
+        upper_pct = "{:.1f}".format(
             (1.0 - min(percentiles["Lower"]["Upper"], percentiles["Upper"]["Lower"]))
             * 100.0,
         )
 
         pct_range = lower_pct
         if lower_pct != upper_pct:
-            pct_range = "%s - %s" % (lower_pct, upper_pct)
+            pct_range = f"{lower_pct} - {upper_pct}"
 
         lower_reads = min(
             percentiles["Lower"]["NReads"], percentiles["Upper"]["NReads"]
@@ -263,13 +264,12 @@ class ReportNode(Node):
 
         reads_range = lower_reads
         if lower_reads != upper_reads:
-            reads_range = "%s to %s" % (lower_reads, upper_reads)
+            reads_range = f"{lower_reads} to {upper_reads}"
 
         lines.append(
-            "Admixture results fall within %s percent of those "
-            "observed for simulated F1 %s / %s hybrids, based on "
-            "%s randomly selected reads%s"
-            % (
+            "Admixture results fall within {} percent of those "
+            "observed for simulated F1 {} / {} hybrids, based on "
+            "{} randomly selected reads{}".format(
                 pct_range,
                 percentiles["Sample1"],
                 percentiles["Sample2"],
@@ -306,7 +306,7 @@ class ReportNode(Node):
         output_handle.write(overview)
 
         for prefix in ("incl_ts", "excl_ts"):
-            output_handle.write("<h2>%s</h2>\n" % (_TS_LABELS[prefix],))
+            output_handle.write(f"<h2>{_TS_LABELS[prefix]}</h2>\n")
 
             for n_edges in (0, 1):
                 variance_file = os.path.join(
@@ -446,7 +446,7 @@ def _fmt_v(requirement):
 
 
 def _warn(text):
-    return "<div class='warning'>%s</div>" % (text,)
+    return f"<div class='warning'>{text}</div>"
 
 
 ###############################################################################
@@ -483,7 +483,7 @@ _HTML_HEADER = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
     </p>
 {Sidebar}
     <div id="mainbar">
-"""  # noqa: E501
+"""
 
 _SECTION_HEADER = """      <h1><a name="{name}" id="{name}"></a>{title}</h1>
 """
@@ -513,7 +513,7 @@ _INTRODUCTION = """
           on which the Zonkey pipeline is based.
         </div>
         <br/>
-"""  # noqa: E501
+"""
 
 _OVERVIEW_HEADER = """
         <div>

@@ -97,6 +97,6 @@ class DrawPhylogenyNode(CommandNode):
         tree = tree.reroot_on_midpoint()
         tree = tree.add_support(bootstraps, "{Percentage:.0f}")
         with open(os.path.join(temp, "rerooted.newick"), "w") as handle:
-            handle.write("{}\n".format(tree))
+            handle.write(f"{tree}\n")
 
         CommandNode._setup(self, temp)

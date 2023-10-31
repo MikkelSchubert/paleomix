@@ -33,7 +33,7 @@ import sys
 import uuid
 from multiprocessing import ProcessError, Queue, cpu_count
 from multiprocessing.connection import Connection, Listener, wait
-from typing import Any, Collection, Dict, Iterable, Iterator, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Collection, Dict, Iterable, Iterator
 
 import paleomix
 import paleomix.common.logging
@@ -44,7 +44,6 @@ from paleomix.common.procs import (
     terminate_all_processes,
     terminate_processes,
 )
-from paleomix.common.versions import Requirement
 from paleomix.core.input import CommandLine, ListTasksEvent, ThreadsEvent
 from paleomix.core.workers import (
     AUTO_REGISTER_DIR,
@@ -62,6 +61,9 @@ from paleomix.core.workers import (
 from paleomix.node import Node, NodeError, NodeMissingFilesError
 from paleomix.nodegraph import NodeGraph
 
+if TYPE_CHECKING:
+    from paleomix.common.versions import Requirement
+
 EventType = Dict[str, Any]
 Events = Iterable[EventType]
 
@@ -70,16 +72,16 @@ class Worker:
     def __init__(self, args: Namespace) -> None:
         self._args = args
         self._id: str = args.id
-        self._running: Dict[int, Node] = {}
-        self._handles: Dict[Any, Tuple[int, Node, Any]] = {}
+        self._running: dict[int, Node] = {}
+        self._handles: dict[Any, tuple[int, Node, Any]] = {}
         self._queue: QueueType = Queue()
-        self._address: Tuple[str, int] = (args.host, args.port)
+        self._address: tuple[str, int] = (args.host, args.port)
         self._authkey: bytes = args.authkey
         self._threads: int = args.threads
         self._temp_root: str = args.temp_root
-        self._filename: Optional[str] = None
+        self._filename: str | None = None
         self._interrupted: bool = False
-        self._conn: Optional[Connection] = None
+        self._conn: Connection | None = None
         self.name: str = "worker"
 
         self._commands = {
@@ -137,7 +139,7 @@ class Worker:
 
         with CommandLine() as interface:
             while self._running or not self._interrupted:
-                handles: List[Any] = [self._conn]
+                handles: list[Any] = [self._conn]
                 handles.extend(self._handles)
                 handles.extend(interface.handles)
 
@@ -166,8 +168,8 @@ class Worker:
 
             self._send({"event": EVT_SHUTDOWN})
 
-    def _register(self, root: str, address: Tuple[str, int]) -> str:
-        filename = os.path.join(root, "{}.json".format(uuid.uuid4()))
+    def _register(self, root: str, address: tuple[str, int]) -> str:
+        filename = os.path.join(root, f"{uuid.uuid4()}.json")
         host, port = address
 
         os.makedirs(root, exist_ok=True)
@@ -185,16 +187,17 @@ class Worker:
 
         return filename
 
-    def _send(self, event: Dict[str, Any]) -> bool:
+    def _send(self, event: dict[str, Any]) -> bool:
         assert self._conn is not None
 
         self._log.debug("Sending %r", event)
         try:
             self._conn.send(event)
-            return True
         except OSError as error:
             self._log.error("Failed to send %r: %s", event, error)
             return False
+        else:
+            return True
 
     def _poll_commandline(self, interface: CommandLine) -> bool:
         for event in interface.process_key_presses():
@@ -302,7 +305,7 @@ class Worker:
             self._log.error("Task process for %s failed with %i", task, proc.exitcode)
             # Task will be the same, but we need to remove it
             task = self._running.pop(key)
-            error = NodeError("Process exited with code {}".format(proc.exitcode))
+            error = NodeError(f"Process exited with code {proc.exitcode}")
             backtrace = None
         else:
             assert proc.exitcode == 0, proc.exitcode
@@ -317,10 +320,10 @@ class Worker:
 
                 if isinstance(error, NodeMissingFilesError):
                     self._log.warning(
-                        "This may be due to differences in the local/remote filesystem or "
-                        "due to file changes not propagating over NFS. If this happens at "
-                        "specific filesystem locations, then make sure that the "
-                        "local/remote filesystem layout/mount points are identical."
+                        "This may be due to differences in the local/remote filesystem "
+                        "or due to file changes not propagating over NFS. If this "
+                        "happens at specific filesystem locations, then make sure that "
+                        "the local/remote filesystem layout/mount points are identical."
                     )
 
         # Signal that the task is done
@@ -355,7 +358,7 @@ class Worker:
     def __enter__(self):
         return self
 
-    def __exit__(self, type: Any, _value: Any, _traceback: Any):
+    def __exit__(self, typ: object, exc: object, tb: object) -> None:
         terminate_processes([proc for _, _, proc in self._handles.values()])
 
         if self._filename and os.path.exists(self._filename):
@@ -414,7 +417,7 @@ def parse_args(argv: list[str]) -> Namespace:
     return parser.parse_args(argv)
 
 
-def main(argv: List[str]) -> int:
+def main(argv: list[str]) -> int:
     args = parse_args(argv)
     args.id = str(uuid.uuid4())
 

@@ -510,9 +510,9 @@ class _Progress(paleomix.common.logging.Status):
         nth = self._state_counts[NodeGraph.DONE] + self._state_counts[NodeGraph.ERROR]
 
         if total > 200:
-            value = "{: >5.1f}%".format(math.floor((1000 * nth) / total) / 10)
+            value = f"{math.floor((1000 * nth) / total) / 10: >5.1f}%"
         elif total > 0:
-            value = "{: >3g}%".format((100 * nth) // total)
+            value = f"{(100 * nth) // total: >3g}%"
         else:
             value = "N/A"
 

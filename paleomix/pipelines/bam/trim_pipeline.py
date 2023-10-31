@@ -21,11 +21,9 @@
 #
 from __future__ import annotations
 
-from typing import List
-
 import paleomix.pipelines.bam.main as bam_main
 
 
-def main(argv: List[str]) -> int:
+def main(argv: list[str]) -> int:
     """Wrapper to invoke the trimming pipeline; used by paleomix.main."""
     return bam_main.main(argv, pipeline="trim")

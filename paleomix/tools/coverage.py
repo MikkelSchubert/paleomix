@@ -108,7 +108,7 @@ def print_table(args, handle, counts):
 
 def process_record(subtable, record, flags, region):
     qname = record.qname
-    if qname.startswith("M_") or qname.startswith("MT_"):
+    if qname.startswith(("M_", "MT_")):
         subtable.Collapsed += 1
     elif flags & 0x40:  # first of pair
         subtable.PE_1 += 1

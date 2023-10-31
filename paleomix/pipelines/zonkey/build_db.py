@@ -107,7 +107,7 @@ class ZonkeyError(RuntimeError):
 
 
 def _write_build_sh(args, filename):
-    sys.stderr.write("Writing %r\n" % (filename,))
+    sys.stderr.write(f"Writing {filename!r}\n")
     if os.path.exists(filename) and not args.overwrite:
         sys.stderr.write("  File exists; skipping.\n")
         return
@@ -118,7 +118,7 @@ def _write_build_sh(args, filename):
 
 
 def _write_genotypes(args, data, filename):
-    sys.stderr.write("Writing %r\n" % (filename,))
+    sys.stderr.write(f"Writing {filename!r}\n")
     if os.path.exists(filename) and not args.overwrite:
         sys.stderr.write("  File exists; skipping.\n")
         return
@@ -137,7 +137,7 @@ def _write_genotypes(args, data, filename):
             if not isinstance(contig, int):
                 continue
 
-            sys.stderr.write("  - %s:   0%%\r" % (contig,))
+            sys.stderr.write(f"  - {contig}:   0%\r")
             for pos in range(0, size, _CHUNK_SIZE):
                 sys.stderr.write("  - %s: % 3i%%\r" % (contig, (100 * pos) / size))
 
@@ -165,11 +165,11 @@ def _write_genotypes(args, data, filename):
                             "%s\t%i\t%s\t%s\n"
                             % (contig, pos + idx + 1, ref_chunk[idx], "".join(row))
                         )
-            sys.stderr.write("  - %s: 100%%\n" % (contig,))
+            sys.stderr.write(f"  - {contig}: 100%\n")
 
 
 def _write_settings(args, contigs, filename):
-    sys.stderr.write("Writing %r\n" % (filename,))
+    sys.stderr.write(f"Writing {filename!r}\n")
     if os.path.exists(filename) and not args.overwrite:
         sys.stderr.write("  File exists; skipping.\n")
         return
@@ -183,7 +183,7 @@ def _write_settings(args, contigs, filename):
 
 
 def _write_contigs(args, filename):
-    sys.stderr.write("Writing %r\n" % (filename,))
+    sys.stderr.write(f"Writing {filename!r}\n")
     if os.path.exists(filename) and not args.overwrite:
         sys.stderr.write("  File exists; skipping.\n")
         return
@@ -193,7 +193,7 @@ def _write_contigs(args, filename):
     lines = ["ID\tSize\tNs\tChecksum"]
 
     for name, (real_name, size) in sorted(contigs.items()):
-        sys.stderr.write("  - %s:   0%%\r" % (name,))
+        sys.stderr.write(f"  - {name}:   0%\r")
         n_uncalled = 0
         for pos in range(0, size, _CHUNK_SIZE):
             sys.stderr.write("  - %s: % 3i%%\r" % (name, (100 * pos) / size))
@@ -202,7 +202,7 @@ def _write_contigs(args, filename):
             n_uncalled += chunk.count("N")
             n_uncalled += chunk.count("-")
 
-        sys.stderr.write("  - %s: 100%%\n" % (name,))
+        sys.stderr.write(f"  - {name}: 100%\n")
         lines.append("%s\t%i\t%i\t%s" % (name, size, n_uncalled, "NA"))
     lines.append("")
 
@@ -211,7 +211,7 @@ def _write_contigs(args, filename):
 
 
 def _write_samples(args, samples, filename):
-    sys.stderr.write("Writing %r\n" % (filename,))
+    sys.stderr.write(f"Writing {filename!r}\n")
     if os.path.exists(filename) and not args.overwrite:
         sys.stderr.write("  File exists; skipping.\n")
         return
@@ -219,7 +219,7 @@ def _write_samples(args, samples, filename):
     lines = ["ID\tGroup(2)\tGroup(3)\tSpecies\tSex\tSampleID\tPublication"]
 
     for name in sorted(samples):
-        lines.append("%s\t-\t-\tNA\tNA\t%s\tNA" % (name, name))
+        lines.append(f"{name}\t-\t-\tNA\tNA\t{name}\tNA")
     lines.append("")
 
     with open(filename, "w") as handle:
@@ -236,7 +236,7 @@ def _process_contigs(reference, samples):
         for ref_name, ref_size in ref_contigs.items():
             if ref_name not in obs_contigs:
                 raise ZonkeyError(
-                    "Contig missing for sample %r: %r" % (sample_name, ref_name)
+                    f"Contig missing for sample {sample_name!r}: {ref_name!r}"
                 )
 
             obs_name, obs_size = obs_contigs[ref_name]
@@ -259,9 +259,8 @@ def _read_contigs(filename):
             name, size, _ = line.split("\t", 2)
             if name in contigs:
                 raise ZonkeyError(
-                    "FASTA file %r contains multiple contigs "
-                    "with the same name (%r); this is not "
-                    "supported." % (filename, name)
+                    f"FASTA file {filename!r} contains multiple contigs "
+                    f"with the same name ({name!r}); this is not supported."
                 )
 
             fixed_name = common.contig_name_to_plink_name(name)
@@ -276,13 +275,13 @@ def _collect_samples(reference, filenames):
     for filename in filenames:
         basename = os.path.basename(filename).split(".", 1)[0]
         if basename in samples:
-            raise ZonkeyError("Duplicate sample name %r" % (filename,))
+            raise ZonkeyError(f"Duplicate sample name {filename!r}")
 
         # Open first to insure that file is indexed
         handle = pysam.FastaFile(filename)
         contigs = _read_contigs(filename)
         if not contigs:
-            raise ZonkeyError("No usable contigs found in %r." % (filename,))
+            raise ZonkeyError(f"No usable contigs found in {filename!r}.")
 
         samples[basename] = {"handle": handle, "contigs": contigs}
 
@@ -331,6 +330,8 @@ def main(argv):
     _write_settings(args, data["contigs"], os.path.join(args.root, "settings.yaml"))
     _write_genotypes(args, data, os.path.join(args.root, "genotypes.txt"))
     _write_build_sh(args, os.path.join(args.root, "build.sh"))
+
+    return 0
 
 
 if __name__ == "__main__":

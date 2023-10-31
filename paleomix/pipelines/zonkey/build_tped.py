@@ -151,7 +151,7 @@ class GenotypeReader:
         for chrom, records in itertools.groupby(
             self._read_records(), lambda rec: rec[0]
         ):
-            sys.stderr.write("Reading contig %r information\n" % (chrom,))
+            sys.stderr.write(f"Reading contig {chrom!r} information\n")
             yield chrom, GenotypeSites(records)
 
     def _read_records(self):
@@ -161,7 +161,7 @@ class GenotypeReader:
     def __enter__(self):
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, typ: object, exc: object, tb: object) -> None:
         self._handle.close()
         self._tar_handle.close()
 
@@ -203,7 +203,7 @@ def process_record(
             genotypes.extend(decoded_nucleotides)
         else:
             raise ValueError(
-                "Invalid nucleotide, not bi-allelic: %r" % (encoded_nucleotide,)
+                f"Invalid nucleotide, not bi-allelic: {encoded_nucleotide!r}"
             )
 
     if nucleotide not in genotypes:
@@ -214,18 +214,18 @@ def process_record(
     pos += 1
 
     # Chromosome, SNP identifier, (dummy) pos in (centi)Morgans, position
-    output = [chrom, "chr{}_{}".format(chrom, pos), "0", str(pos)]
+    output = [chrom, f"chr{chrom}_{pos}", "0", str(pos)]
     output.extend(genotypes)
     output.append(nucleotide)
     output.append(nucleotide)
     output = " ".join(output)
 
     statistics["n_sites_incl_ts"] += 1
-    out_incl_ts.write("{}\n".format(output))
+    out_incl_ts.write(f"{output}\n")
 
     if tuple(set(genotypes)) not in _TRANSITIONS:
         statistics["n_sites_excl_ts"] += 1
-        out_excl_ts.write("{}\n".format(output))
+        out_excl_ts.write(f"{output}\n")
 
     records.add(record_id)
 
@@ -236,18 +236,18 @@ def write_tfam(filename, data, samples, bam_sample):
             row = data.samples[key]
             sex = {"MALE": 1, "FEMALE": 2, "NA": 0}[row["Sex"].upper()]
             # Family, Individual, Paternal ID, Maternal ID, Sex, Phenotype
-            handle.write("{0} {0} 0 0 {1} -9\n".format(key, sex))
+            handle.write(f"{key} {key} 0 0 {sex} -9\n")
 
-        handle.write("{0} {0} 0 0 0 -9\n".format(bam_sample))
+        handle.write(f"{bam_sample} {bam_sample} 0 0 0 -9\n")
 
 
 def write_summary(args, filename, statistics):
     with open(filename, "w") as handle:
-        handle.write("name: %s\n" % (args.name,))
-        handle.write("filename: %s\n" % (os.path.abspath(args.bam),))
+        handle.write(f"name: {args.name}\n")
+        handle.write(f"filename: {os.path.abspath(args.bam)}\n")
 
         for key in ("n_reads", "n_reads_used", "n_sites_incl_ts", "n_sites_excl_ts"):
-            handle.write("%s: %s\n" % (key, statistics.get(key, "MISSING")))
+            handle.write("{}: {}\n".format(key, statistics.get(key, "MISSING")))
 
 
 def process_bam(args, data, bam_handle, mapping):
@@ -275,7 +275,7 @@ def process_bam(args, data, bam_handle, mapping):
                     records = set()
                     raw_ref = raw_references[references.index(ref)]
 
-                    sys.stderr.write("Reading %r from BAM\n" % (raw_ref,))
+                    sys.stderr.write(f"Reading {raw_ref!r} from BAM\n")
                     raw_sites = bam_handle.fetch(raw_ref)
                     for pos, line, nucleotides in sites.process(raw_sites, statistics):
                         process_record(
@@ -337,14 +337,12 @@ def main(argv):
     args = parse_args(argv)
     random.seed(args.seed)
 
-    print("Reading reference information from %r" % (args.database,))
+    print(f"Reading reference information from {args.database!r}")
 
     try:
         data = database.ZonkeyDB(args.database)
     except database.ZonkeyDBError as error:
-        sys.stderr.write(
-            "Error reading database file %r:\n%s\n" % (args.database, error)
-        )
+        sys.stderr.write(f"Error reading database file {args.database!r}:\n{error}\n")
         return 1
 
     with pysam.AlignmentFile(args.bam) as bam_handle:

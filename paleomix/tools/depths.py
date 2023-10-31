@@ -187,12 +187,9 @@ def calc_max_depth(counts):
 def print_table(handle, args, totals):
     lengths = collect_references(args, handle)
 
-    if args.outfile == "-":
-        output_handle = sys.stdout
-    else:
-        output_handle = open(args.outfile, "w")
-
-    with output_handle:
+    with (
+        sys.stdout if args.outfile == "-" else open(args.outfile, "w")
+    ) as output_handle:
         rows = build_table(args.target_name, totals, lengths)
         output_handle.write(_HEADER)
         output_handle.write("\n")
@@ -209,7 +206,7 @@ def calculate_depth_pc(counts, length):
     running_total = sum(final_counts)
     total = float(length)
     for count in final_counts[1:]:
-        yield "%.4f" % (running_total / total,)
+        yield f"{running_total / total:.4f}"
         running_total -= count
 
 
@@ -228,10 +225,7 @@ def build_table(name, totals, lengths):
             yield "#"
         last_sm, last_lb = sm_key, lb_key
 
-        if ct_key == "*":
-            length = sum(lengths.values())
-        else:
-            length = lengths[ct_key]
+        length = sum(lengths.values()) if ct_key == "*" else lengths[ct_key]
 
         row = [name, sm_key, lb_key, ct_key, str(length), str(calc_max_depth(counts))]
         row.extend(calculate_depth_pc(counts, length))
@@ -281,13 +275,13 @@ def build_totals_dict(args, handle):
                 build_new_dicts(totals, sm_key, lb_key, references)
 
         if len(libraries) == 1:
-            key = list(libraries)[0]
+            (key,) = libraries
             reuse_dicts(totals, sm_key, "*", sm_key, key, references)
         else:
             build_new_dicts(totals, sm_key, "*", references)
 
     if len(structure) == 1:
-        key = list(structure)[0]
+        (key,) = structure
         reuse_dicts(totals, "*", "*", key, "*", references)
     else:
         build_new_dicts(totals, "*", "*", references)

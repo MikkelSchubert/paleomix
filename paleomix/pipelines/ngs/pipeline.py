@@ -305,8 +305,8 @@ def process_fastq_files(args, genome, samples, settings):
                 # BAM alignments so that they can be merged into the final junk BAM
                 for key in ("failed", "unpaired"):
                     to_sam_task = FastqToSamNode(
-                        in_fastq=layout["fastp_{}".format(key)],
-                        out_bam=layout["fastp_{}_bam".format(key)],
+                        in_fastq=layout[f"fastp_{key}"],
+                        out_bam=layout[f"fastp_{key}_bam"],
                         options={
                             # Marked as coordinate sorted for faster conversion/merging
                             "--SORT_ORDER": "coordinate",
@@ -315,7 +315,7 @@ def process_fastq_files(args, genome, samples, settings):
                             "--SAMPLE_NAME": sample,
                             "--LIBRARY_NAME": library,
                             "--PLATFORM_UNIT": run,
-                            "--DESCRIPTION": "{} reads".format(key.title()),
+                            "--DESCRIPTION": f"{key.title()} reads",
                         },
                         dependencies=[fastp_node],
                     )
@@ -443,7 +443,7 @@ def map_sample_runs(args, genome, samples, settings):
 def filter_pcr_duplicates(args, genome, samples, settings):
     mode = settings["ReadMapping"]["PCRDuplicates"]["mode"]
     if mode == "skip":
-        for sample, libraries in samples.items():
+        for libraries in samples.values():
             for library, read_types in libraries.items():
                 bam_files = []
                 for library_files in read_types.values():

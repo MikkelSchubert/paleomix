@@ -70,7 +70,7 @@ def collect_bed_regions(filename):
     name_cache = {}
     for record in read_bed_file(filename):
         if not record.name:
-            record.name = "%s*" % (record.contig,)
+            record.name = f"{record.contig}*"
 
         record.contig = name_cache.setdefault(record.contig, record.contig)
         record.name = name_cache.setdefault(record.name, record.name)
@@ -81,8 +81,8 @@ def collect_bed_regions(filename):
 
 
 def parse_arguments(argv, ext):
-    prog = "paleomix %s" % (ext.strip("."),)
-    usage = "%s [options] sorted.bam [out%s]" % (prog, ext)
+    prog = "paleomix {}".format(ext.strip("."))
+    usage = f"{prog} [options] sorted.bam [out{ext}]"
     parser = argparse.ArgumentParser(prog=prog, usage=usage)
 
     parser.add_argument(
@@ -96,8 +96,8 @@ def parse_arguments(argv, ext):
         metavar="OUTPUT",
         nargs="?",
         help="Filename of output table; defaults to name of "
-        "the input BAM with a '%s' extension. If "
-        "set to '-' the table is printed to STDOUT." % (ext,),
+        f"the input BAM with a '{ext}' extension. If "
+        "set to '-' the table is printed to STDOUT.",
     )
     parser.add_argument(
         "--target-name",
@@ -110,10 +110,10 @@ def parse_arguments(argv, ext):
         "--regions-file",
         default=None,
         dest="regions_fpath",
-        help="BED file containing regions of interest; %s "
+        help="BED file containing regions of interest; {} "
         "is calculated only for these grouping by the "
         "name used in the BED file, or the contig name "
-        "if no name has been specified for a record." % (ext.strip("."),),
+        "if no name has been specified for a record.".format(ext.strip(".")),
     )
     parser.add_argument(
         "--max-contigs",
@@ -174,7 +174,7 @@ def main_wrapper(process_func, argv, ext):
         try:
             args.regions = collect_bed_regions(args.regions_fpath)
         except ValueError as error:
-            log.error("Failed to parse BED file %r: %s", args.regions_fpath, error)
+            log.error("Failed to parse BED file %r: %s", args.regions_fpath, error)  # noqa: TRY400
             return 1
 
     log.info("Opening %r", args.infile)

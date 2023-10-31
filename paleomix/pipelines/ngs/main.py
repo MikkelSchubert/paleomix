@@ -69,7 +69,7 @@ def _main_run(args):
     try:
         logger.info("Reading project from %r", args.project)
         project = load_project(args.project)
-    except (MakefileError, YAMLError, IOError) as error:
+    except (OSError, MakefileError, YAMLError) as error:
         logger.error("Error reading project: %s", error)
         return 1
 

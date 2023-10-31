@@ -176,7 +176,7 @@ def _replace_constants(data):
     constants = settings.pop("Constants", {})
     if not isinstance(constants, dict):
         # Invalid constants will be caught during global processing
-        return
+        return None
 
     # Validate user-supplied constants; the structure is replicated to ensure that
     # error messages give the correct path into the settings structure
@@ -186,7 +186,7 @@ def _replace_constants(data):
     )
     constants = {("${%s}" % (key)): value for key, value in constants.items()}
     if not constants:
-        return
+        return None
 
     data["Settings"] = _replace_constants_recursive(settings, constants)
 

@@ -236,7 +236,7 @@ def calculate_totals(src, dst):
         elif isinstance(value, dict):
             calculate_totals(value, dst.setdefault(key, {}))
         else:
-            raise ValueError(key)
+            raise TypeError(key)
 
 
 def calculate_statistics(args, handle, statistics):

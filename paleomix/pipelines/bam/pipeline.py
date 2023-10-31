@@ -502,7 +502,7 @@ def _filter_pcr_duplicates_by_type(args, layout, options, tasks_by_read_type, st
                 dependencies=filenames_and_tasks.values(),
             )
         else:
-            raise RuntimeError("unexpected read type {!r}".format(key))
+            raise RuntimeError(f"unexpected read type {key!r}")
 
         task.mark_intermediate_files("*.bam")
 
@@ -704,7 +704,7 @@ def run(config):
 
     try:
         makefiles = read_makefiles(config.makefiles, config.pipeline_variant)
-    except (MakefileError, YAMLError, IOError) as error:
+    except (OSError, MakefileError, YAMLError) as error:
         logger.error("Error reading makefiles: %s", error)
         return 1
 
@@ -748,6 +748,6 @@ def run(config):
         logger.info("Cleaning up temporary directories")
         for makefile in makefiles:
             for sample in makefile["Samples"]:
-                try_rmdirs(os.path.join(config.destination, "{}.cache".format(sample)))
+                try_rmdirs(os.path.join(config.destination, f"{sample}.cache"))
 
     return returncode

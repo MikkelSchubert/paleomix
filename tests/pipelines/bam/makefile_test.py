@@ -567,7 +567,7 @@ def test_makefile__sample__features__sample(tmp_path, key) -> None:
         assert not record["Options"]["Features"][key]
 
 
-@pytest.mark.parametrize("key", ("mapDamage", "PCRDuplicates"))
+@pytest.mark.parametrize("key", ["mapDamage", "PCRDuplicates"])
 def test_makefile__sample__features__library__allowed(tmp_path, key) -> None:
     filepath = _write_sample_yaml(
         tmp_path,
@@ -587,7 +587,7 @@ def test_makefile__sample__features__library__allowed(tmp_path, key) -> None:
         assert not record["Options"]["Features"][key]
 
 
-@pytest.mark.parametrize("key", ("Coverage", "Depths", "Summary"))
+@pytest.mark.parametrize("key", ["Coverage", "Depths", "Summary"])
 def test_makefile__sample__features__library__prohibited(tmp_path, key) -> None:
     filepath = _write_sample_yaml(
         tmp_path,
@@ -715,7 +715,7 @@ def test_makefile__sample__pretrimmed_reads__including_untrimmed(
 # Post-processing validation
 
 
-@pytest.mark.parametrize("offset", (64, "Solexa"))
+@pytest.mark.parametrize("offset", [64, "Solexa"])
 def test_makefile__validation__trimmed_qualities_must_be_33(tmp_path, offset) -> None:
     filepath = _write_sample_yaml(
         tmp_path,

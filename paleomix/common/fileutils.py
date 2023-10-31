@@ -189,9 +189,7 @@ def try_rmdirs(dirpath: PathTypes) -> bool:
 
     is_empty = True
     for it in items:
-        if it.is_symlink() or not it.is_dir():
-            is_empty = False
-        elif not try_rmdirs(it.path):
+        if it.is_symlink() or not it.is_dir() or not try_rmdirs(it.path):
             is_empty = False
 
     if is_empty:

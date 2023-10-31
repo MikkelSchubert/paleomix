@@ -22,7 +22,7 @@
 from __future__ import annotations
 
 import argparse
-from typing import Any, List
+from typing import Any
 
 import configargparse
 
@@ -37,9 +37,9 @@ __all__ = [
     "SUPPRESS",
 ]
 
-ArgumentGroup = argparse._ArgumentGroup  # pyright: ignore[reportPrivateUsage]
+ArgumentGroup = argparse._ArgumentGroup  # pyright: ignore[reportPrivateUsage]  # noqa: SLF001
 Namespace = argparse.Namespace
-SubParsersAction = argparse._SubParsersAction  # pyright: ignore[reportPrivateUsage]
+SubParsersAction = argparse._SubParsersAction  # pyright: ignore[reportPrivateUsage]  # noqa: SLF001
 SUPPRESS = argparse.SUPPRESS
 
 
@@ -89,7 +89,7 @@ class ArgumentParser(configargparse.ArgumentParser):
             version="%(prog)s v" + paleomix.__version__,
         )
 
-    def get_possible_config_keys(self, *args: Any, **kwargs: Any) -> List[str]:
+    def get_possible_config_keys(self, *args: Any, **kwargs: Any) -> list[str]:
         keys = super().get_possible_config_keys(*args, **kwargs)
         for key in keys:
             key = key.strip("-").replace("-", "_")
@@ -109,14 +109,14 @@ class ArgumentParser(configargparse.ArgumentParser):
         subparsers = super().add_subparsers(*args, **kwargs)
         # Hack to hide aliases from subcommand help text, since aliases are only used
         # for deprecated commands/command-names
-        subparsers._ChoicesPseudoAction = _ChoicesPseudoAction
+        subparsers._ChoicesPseudoAction = _ChoicesPseudoAction  # noqa: SLF001
 
         return subparsers
 
 
 class _ChoicesPseudoAction(configargparse.Action):
-    def __init__(self, name, aliases, help):
-        super(_ChoicesPseudoAction, self).__init__(
+    def __init__(self, name, aliases, help):  # noqa: A002
+        super().__init__(
             option_strings=[],
             dest=name,
             help=help,

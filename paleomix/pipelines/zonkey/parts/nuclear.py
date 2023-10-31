@@ -26,7 +26,7 @@ import itertools
 import math
 import os
 import random
-from typing import Iterable, Optional, Tuple, Union
+from typing import Iterable, Union
 
 import pysam
 
@@ -95,7 +95,7 @@ class BuildTPEDFilesNode(CommandNode):
 
         CommandNode.__init__(
             self,
-            description="building TPED file from %s" % (bamfile,),
+            description=f"building TPED file from {bamfile}",
             command=command,
             dependencies=dependencies,
         )
@@ -123,8 +123,8 @@ class BuildBEDFilesNode(CommandNode):
                 InputFile(tfam),
                 "--out",
                 TempOutputFile(temp_prefix),
-            ]
-            + self._parse_parameters(plink_parameters),
+                *self._parse_parameters(plink_parameters),
+            ],
             extra_files=[
                 OutputFile(output_prefix + ".bed"),
                 OutputFile(output_prefix + ".bim"),
@@ -139,7 +139,7 @@ class BuildBEDFilesNode(CommandNode):
 
         CommandNode.__init__(
             self,
-            description="building BED files from %s" % (tped,),
+            description=f"building BED files from {tped}",
             command=command,
             dependencies=dependencies,
         )
@@ -190,13 +190,13 @@ class AdmixtureNode(CommandNode):
 
         CommandNode.__init__(
             self,
-            description="estimating admixture from %s.*" % (input_file,),
+            description=f"estimating admixture from {input_file}.*",
             command=command,
             dependencies=dependencies,
         )
 
     def _setup(self, temp: fileutils.PathTypes) -> None:
-        CommandNode._setup(self, temp)
+        super()._setup(temp)
 
         input_files = [
             self._input_file,
@@ -217,7 +217,7 @@ class AdmixtureNode(CommandNode):
                 for line in fam_handle:
                     sample, _ = line.split(None, 1)
 
-                    pop_handle.write("%s\n" % (self._groups.get(sample, "-"),))
+                    pop_handle.write("{}\n".format(self._groups.get(sample, "-")))
 
 
 class SelectBestAdmixtureNode(Node):
@@ -242,8 +242,8 @@ class SelectBestAdmixtureNode(Node):
                 ref_filenames = filenames
             elif ref_filenames != filenames:
                 raise RuntimeError(
-                    "Task %r does not contain expected files, "
-                    "%r, vs %r" % (node, ref_filenames, filenames)
+                    f"Task {node!r} does not contain expected files, "
+                    f"{ref_filenames!r}, vs {filenames!r}"
                 )
 
             input_files.extend(node.output_files)
@@ -258,7 +258,7 @@ class SelectBestAdmixtureNode(Node):
 
         Node.__init__(
             self,
-            description="selecting best admixture result from %s" % (output_root,),
+            description=f"selecting best admixture result from {output_root}",
             input_files=input_files,
             output_files=output_files,
             dependencies=tuple(dependencies) + tuple(replicates),
@@ -273,8 +273,7 @@ class SelectBestAdmixtureNode(Node):
                     break
             else:
                 raise NodeError(
-                    "No log-file found in list of admixture "
-                    "output-files: %r" % (fileset,)
+                    f"No log-file found in list of admixture output-files: {fileset!r}"
                 )
 
         _, fileset = max(likelihoods)
@@ -290,8 +289,8 @@ class SelectBestAdmixtureNode(Node):
                     return float(line.split()[1])
 
             raise NodeError(
-                "Could not find likelihood value in log-file %r; "
-                "looking for line starting with 'Loglikelihood:'" % (filename,)
+                f"Could not find likelihood value in log-file {filename!r}; "
+                "looking for line starting with 'Loglikelihood:'"
             )
 
 
@@ -321,7 +320,7 @@ class AdmixturePlotNode(CommandNode):
 
         CommandNode.__init__(
             self,
-            description="plotting admixture results from %s" % (input_file,),
+            description=f"plotting admixture results from {input_file}",
             command=command,
             dependencies=dependencies,
         )
@@ -341,7 +340,7 @@ class AdmixturePlotNode(CommandNode):
                 row = samples[name]
                 handle.write("{}\n".format("\t".join(row[key] for key in header)))
 
-        CommandNode._setup(self, temp)
+        super()._setup(temp)
 
 
 class BuildFreqFilesNode(CommandNode):
@@ -350,7 +349,7 @@ class BuildFreqFilesNode(CommandNode):
         input_prefix: str,
         output_prefix: str,
         tfam: str,
-        parameters: Optional[str] = None,
+        parameters: str | None = None,
         dependencies: Iterable[Node] = (),
     ):
         basename = os.path.basename(output_prefix)
@@ -399,20 +398,20 @@ class BuildFreqFilesNode(CommandNode):
         self._basename = basename
         CommandNode.__init__(
             self,
-            description="building frequency files from %s.*" % (input_prefix,),
+            description=f"building frequency files from {input_prefix}.*",
             command=SequentialCmds((plink, gzip)),
             dependencies=dependencies,
         )
 
     def _setup(self, temp: fileutils.PathTypes) -> None:
-        CommandNode._setup(self, temp)
+        super()._setup(temp)
 
         with open(self._tfam) as in_handle:
             samples = [line.split(None, 1)[0] for line in in_handle]
 
         with open(os.path.join(temp, "samples.clust"), "w") as handle:
             for sample in samples:
-                handle.write("{0} {0} {0}\n".format(sample))
+                handle.write(f"{sample} {sample} {sample}\n")
 
     def _teardown(self, temp: fileutils.PathTypes) -> None:
         for ext in ("log", "nosex"):
@@ -421,14 +420,14 @@ class BuildFreqFilesNode(CommandNode):
                 os.path.join(temp, self._basename + ".frq.strat." + ext),
             )
 
-        CommandNode._teardown(self, temp)
+        super()._teardown(temp)
 
 
 class FreqToTreemixNode(Node):
     def __init__(self, input_file, output_file, dependencies=()):
         Node.__init__(
             self,
-            description="converting %s to treemix format" % (input_file,),
+            description=f"converting {input_file} to treemix format",
             input_files=(input_file,),
             output_files=(output_file,),
             dependencies=dependencies,
@@ -446,23 +445,23 @@ class FreqToTreemixNode(Node):
             for _, rows in itertools.groupby(table, lambda row: row[:2]):
                 if header is None:
                     rows = tuple(rows)  # Must not consume iterator
-                    header = list(sorted(row[2] for row in rows))
+                    header = sorted(row[2] for row in rows)
                     handle.write("%s\n" % (" ".join(header)))
 
                 result = []
-                rows = dict((row[2], row) for row in rows)
+                rows = {row[2]: row for row in rows}
                 for sample in header:
                     _, _, _, mac, nchroms = rows[sample]
                     result.append("%s,%i" % (mac, int(nchroms) - int(mac)))
 
-                handle.write("%s\n" % (" ".join(result),))
+                handle.write("{}\n".format(" ".join(result)))
 
     def _teardown(self, temp: fileutils.PathTypes) -> None:
         (output_file,) = self.output_files
         temp_file = os.path.join(temp, os.path.basename(output_file))
 
         fileutils.move_file(temp_file, output_file)
-        Node._teardown(self, temp)
+        super()._teardown(temp)
 
     @classmethod
     def _parse_freq_table(cls, filename):
@@ -482,14 +481,14 @@ class TreemixNode(CommandNode):
         input_file: str,
         output_prefix: str,
         m: int = 0,
-        k: Union[int, Tuple[str, str]] = 100,
+        k: int | tuple[str, str] = 100,
         outgroup: Iterable[str] = (),
         dependencies: Iterable[Node] = (),
     ):
         self._param_m = m
         self._param_outgroup = outgroup
         self._params_file = output_prefix + ".parameters.txt"
-        self._parameters_hash = "%s.%s" % (
+        self._parameters_hash = "{}.{}".format(
             output_prefix,
             hash_params(k=k, m=m, global_set=True, outgroup=tuple(sorted(outgroup))),
         )
@@ -536,7 +535,7 @@ class TreemixNode(CommandNode):
 
         CommandNode.__init__(
             self,
-            description="running treemix on %s.*" % (input_file,),
+            description=f"running treemix on {input_file}.*",
             command=command,
             dependencies=dependencies,
         )
@@ -551,19 +550,19 @@ class TreemixNode(CommandNode):
 
             self._param_k = k
             assert isinstance(self._command, AtomicCmd)
-            self._command._command.extend(("-k", str(k)))
+            self._command.append("-k", str(k))
 
-        CommandNode._setup(self, temp)
+        super()._setup(temp)
 
     def _teardown(self, temp: str):
         with open(fileutils.reroot_path(temp, self._params_file), "w") as out:
             out.write("k: %i\n" % (self._param_k,))
             out.write("m: %i\n" % (self._param_m,))
-            out.write("outgroup: %r\n" % (list(self._param_outgroup),))
+            out.write(f"outgroup: {list(self._param_outgroup)!r}\n")
 
         open(fileutils.reroot_path(temp, self._parameters_hash), "w").close()
 
-        CommandNode._teardown(self, temp)
+        super()._teardown(temp)
 
 
 class PlotTreemixNode(CommandNode):
@@ -625,7 +624,7 @@ class PlotTreemixNode(CommandNode):
         )
 
     @classmethod
-    def _plot_command(cls, input_prefix, args, extra_files=[], **kwargs):
+    def _plot_command(cls, input_prefix, args, extra_files=(), **kwargs):
         return factory.rscript(
             (os.path.join("zonkey", "treemix.r"), *safe_coerce_to_tuple(args)),
             extra_files=[
@@ -673,17 +672,19 @@ class SmartPCANode(CommandNode):
 
         CommandNode.__init__(
             self,
-            description="performing PCA on %s" % (input_prefix,),
+            description=f"performing PCA on {input_prefix}",
             command=cmd,
             dependencies=dependencies,
         )
 
     def _setup(self, temp: fileutils.PathTypes) -> None:
-        CommandNode._setup(self, temp)
+        super()._setup(temp)
 
         with open(os.path.join(temp, "parameters.txt"), "w") as handle:
+            input_prefix = os.path.abspath(self._input_prefix)
+            output_prefix = os.path.basename(self._output_prefix)
             handle.write(
-                """
+                f"""
 genotypename:      {input_prefix}.bed
 snpname:           {input_prefix}.bim
 indivname:         {input_prefix}.fam
@@ -694,13 +695,9 @@ altnormstyle:      NO
 numoutevec:        5
 familynames:       YES
 numoutlieriter:    1
-numchrom:          {nchroms}
+numchrom:          {self._nchroms}
 numthreads:        1
-""".format(
-                    input_prefix=os.path.abspath(self._input_prefix),
-                    output_prefix=os.path.basename(self._output_prefix),
-                    nchroms=self._nchroms,
-                )
+"""
             )
 
     def _teardown(self, temp: fileutils.PathTypes) -> None:
@@ -708,7 +705,7 @@ numthreads:        1
         deleted_snps = os.path.basename(self._output_prefix) + ".deleted_snps"
         open(os.path.join(temp, deleted_snps), "a").close()
 
-        CommandNode._teardown(self, temp)
+        super()._teardown(temp)
 
 
 class PlotPCANode(CommandNode):
@@ -735,7 +732,7 @@ class PlotPCANode(CommandNode):
 
         CommandNode.__init__(
             self,
-            description="plotting PCA to %s.*" % (output_prefix,),
+            description=f"plotting PCA to {output_prefix}.*",
             command=cmd,
             dependencies=dependencies,
         )
@@ -766,7 +763,7 @@ class PlotCoverageNode(CommandNode):
 
         CommandNode.__init__(
             self,
-            description="plotting coverage to %s.*" % (output_prefix,),
+            description=f"plotting coverage to {output_prefix}.*",
             command=cmd,
             dependencies=dependencies,
         )
@@ -796,7 +793,7 @@ class PlotCoverageNode(CommandNode):
 
                 handle.write("{ID}\t{Size}\t{Ns}\t{Hits}\n".format(**row))
 
-        CommandNode._setup(self, temp)
+        super()._setup(temp)
 
 
 def hash_params(*args, **kwargs):

@@ -155,7 +155,7 @@ def main(argv):
 
     try:
         handle = pysam.AlignmentFile(args.bam)
-    except (IOError, ValueError) as error:
+    except (OSError, ValueError) as error:
         log.error("Error reading BAM file: %s", error)
         return 1
 
@@ -190,16 +190,16 @@ def main(argv):
         stats["filename"] = os.path.abspath(args.bam)
 
         for key, value in sorted(stats.items()):
-            handle.write("{}: {}\n".format(key, value))
+            handle.write(f"{key}: {value}\n")
 
     with open(args.output_prefix + ".phy", "w") as handle:
         handle.write(interleaved_phy(sequences_to_msa(sequences)))
 
     with open(args.output_prefix + ".fasta", "w") as handle:
         for key, record in sorted(sequences.items()):
-            handle.write(">{}\n".format(key))
+            handle.write(f">{key}\n")
             for line in fragment(60, record.sequence):
-                handle.write("{}\n".format(line))
+                handle.write(f"{line}\n")
 
         return 0
 
