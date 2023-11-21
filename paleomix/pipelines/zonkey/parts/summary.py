@@ -81,7 +81,7 @@ class SummaryNode(Node):
 
         resources.copy_resource(
             os.path.join("reports", "zonkey", "report.css"),
-            os.path.join(self._root, "report.css"),
+            os.path.join(self._root, "summary.css"),
         )
 
     def _build_sidemenu(self):
