@@ -24,6 +24,7 @@ from __future__ import annotations
 import collections
 import sys
 from itertools import groupby
+from typing import TYPE_CHECKING, Iterable, Iterator
 
 import pysam
 
@@ -31,16 +32,19 @@ from paleomix.common.argparse import ArgumentParser
 from paleomix.common.text import padded_table
 from paleomix.common.timer import BAMTimer
 
+if TYPE_CHECKING:
+    from pysam import AlignedSegment
 
-def key_with_name(record):
+
+def key_with_name(record: AlignedSegment) -> tuple[str | None, int, int]:
     return (record.query_name, record.reference_id, record.reference_start)
 
 
-def key_without_name(record):
+def key_without_name(record: AlignedSegment) -> tuple[int, int]:
     return (record.reference_id, record.reference_start)
 
 
-def read_type(record):
+def read_type(record: AlignedSegment) -> str:
     if record.is_paired:
         if record.is_read1:
             return "Mate 1 read in"
@@ -52,7 +56,10 @@ def read_type(record):
         return "Unpaired read in"
 
 
-def print_duplicates(handle, duplicates):
+def print_duplicates(
+    handle: pysam.AlignmentFile,
+    duplicates: list[AlignedSegment],
+) -> None:
     record = duplicates[0]
     print(
         "Found {} duplicates at {}:{}".format(
@@ -70,7 +77,10 @@ def print_duplicates(handle, duplicates):
             rgroup.get("PU", "?"),
         )
 
-    groups = collections.defaultdict(list)
+    groups: dict[tuple[str, str, str], list[AlignedSegment]] = collections.defaultdict(
+        list
+    )
+
     for record in duplicates:
         try:
             key = record.get_tag("RG")
@@ -81,7 +91,7 @@ def print_duplicates(handle, duplicates):
         groups[key].append(record)
 
     for (sample, library, run), records in sorted(groups.items()):
-        rows = []
+        rows: list[list[str | None]] = []
 
         for record in records:
             query_sequence = record.query_sequence
@@ -110,7 +120,7 @@ def print_duplicates(handle, duplicates):
     print()
 
 
-def complexity(record):
+def complexity(record: AlignedSegment) -> int:
     last_nuc = None
     complexity = 0
 
@@ -123,40 +133,50 @@ def complexity(record):
     return complexity
 
 
-def filter_records(records):
+def filter_records(records: Iterable[AlignedSegment]) -> Iterator[AlignedSegment]:
     for record in records:
         # Ignore unaligned / supplementary / secondary alignments
         if not record.flag & 0x904:
             yield record
 
 
-def group_by_sequences(records):
-    by_sequence = collections.defaultdict(list)
+def group_by_sequences(
+    records: Iterable[AlignedSegment],
+) -> Iterator[list[AlignedSegment]]:
+    by_sequence: dict[
+        tuple[bool, str | None], list[AlignedSegment]
+    ] = collections.defaultdict(list)
     for record in records:
         query_sequence = record.query_sequence
         if query_sequence:
             by_sequence[(record.is_reverse, record.query_sequence)].append(record)
 
-    for _, group in by_sequence.items():
+    for group in by_sequence.values():
         if len(group) > 1:
             yield group
 
 
-def group_by_qualities(records):
-    by_qualities = collections.defaultdict(list)
+def group_by_qualities(
+    records: Iterable[AlignedSegment],
+) -> Iterator[list[AlignedSegment]]:
+    by_qualities: dict[
+        tuple[int, ...] | None, list[AlignedSegment]
+    ] = collections.defaultdict(list)
     for record in records:
         query_qualities = record.query_qualities
         if query_qualities is not None:
-            query_qualities = tuple(record.query_qualities)
+            query_qualities = tuple(query_qualities)
 
-        by_qualities[tuple(record.query_qualities)].append(record)
+        by_qualities[query_qualities].append(record)
 
     for group in by_qualities.values():
         if len(group) > 1:
             yield group
 
 
-def filter_candidate_duplicates(candidates, min_complexity):
+def filter_candidate_duplicates(
+    candidates: Iterable[AlignedSegment], min_complexity: float
+) -> Iterator[tuple[list[AlignedSegment], list[AlignedSegment]]]:
     for group in group_by_sequences(filter_records(candidates)):
         for group in group_by_qualities(group):
             filtered_records = group
@@ -168,7 +188,7 @@ def filter_candidate_duplicates(candidates, min_complexity):
             yield group, filtered_records
 
 
-def parse_args():
+def build_parser() -> ArgumentParser:
     parser = ArgumentParser(
         prog="paleomix dupcheck",
         description="Attempt to detect reads included multiple times as input based "
@@ -209,8 +229,8 @@ def parse_args():
     return parser
 
 
-def main(argv):
-    parser = parse_args()
+def main(argv: list[str]) -> int:
+    parser = build_parser()
     args = parser.parse_args(argv)
     if args.bam is None:
         args.bam = "-"

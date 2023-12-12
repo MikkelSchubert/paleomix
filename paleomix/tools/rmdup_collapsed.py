@@ -40,14 +40,19 @@ rmdup_collapsed is based on the 'FilterUniqueBAM' script by Martin Kircher.
 """
 from __future__ import annotations
 
-import collections
 import random
 import sys
-from typing import Sequence, cast
+from collections import defaultdict, deque
+from typing import TYPE_CHECKING, Optional, Sequence, Tuple, cast
 
-import pysam
+from pysam import AlignedSegment, AlignmentFile
 
 from paleomix.common.argparse import ArgumentParser
+
+if TYPE_CHECKING:
+    from argparse import Namespace
+
+    from typing_extensions import TypeAlias
 
 _FILTERED_FLAGS = (
     0x1  # PE reads
@@ -61,7 +66,11 @@ _CIGAR_SOFTCLIP = 4
 _CIGAR_HARDCLIP = 5
 
 
-def read_quality(read: pysam.AlignedSegment):
+AlignmentCoords: TypeAlias = Tuple[int, bool, int, int]
+ReadAndAlignment: TypeAlias = Tuple[AlignedSegment, Optional[AlignmentCoords]]
+
+
+def read_quality(read: AlignedSegment) -> float | int:
     qualities = read.query_alignment_qualities
     if qualities is None:
         # Generate value in range (-1; 0]
@@ -70,7 +79,7 @@ def read_quality(read: pysam.AlignedSegment):
     return sum(qualities)
 
 
-def copy_number(read: pysam.AlignedSegment) -> int:
+def copy_number(read: AlignedSegment) -> int:
     # has_tag is faster than try/except, since most reads lack the tag.
     if read.has_tag("XP"):
         value, tag_type = read.get_tag("XP", with_value_type=True)
@@ -80,12 +89,14 @@ def copy_number(read: pysam.AlignedSegment) -> int:
     return 0
 
 
-def mark_duplicate_reads(reads: Sequence[pysam.AlignedSegment]):
+def mark_duplicate_reads(reads: Sequence[AlignedSegment]) -> None:
     """Identifies the best read from a set of PCR duplicates, and marks all
     other reads as duplicates. The best read is selected by quality, among the
     reads sharing the most common CIGAR string.
     """
-    by_cigar = collections.defaultdict(list)
+    by_cigar: dict[tuple[tuple[int, int], ...], list[AlignedSegment]] = defaultdict(
+        list
+    )
     for read in reads:
         key = tuple(read.cigartuples or ())
         by_cigar[key].append(read)
@@ -118,7 +129,12 @@ def mark_duplicate_reads(reads: Sequence[pysam.AlignedSegment]):
             read.is_duplicate = read is not best_read
 
 
-def write_read(args, out, read_and_alignment, duplicates_by_alignment):
+def write_read(
+    args: Namespace,
+    out: AlignmentFile,
+    read_and_alignment: ReadAndAlignment,
+    duplicates_by_alignment: dict[AlignmentCoords, list[AlignedSegment]],
+) -> None:
     read, alignment = read_and_alignment
     if alignment is not None:
         duplicates = duplicates_by_alignment.pop(alignment)
@@ -134,7 +150,10 @@ def write_read(args, out, read_and_alignment, duplicates_by_alignment):
         out.write(read)
 
 
-def can_write_read(read_and_alignment, current_position):
+def can_write_read(
+    read_and_alignment: ReadAndAlignment,
+    current_position: tuple[int, int],
+) -> bool:
     """Returns true if the first read in the cache can safely be written. This
     will be the case if the read was not the first in a set of reads with the
     same alignment, or if the current position has gone beyond the last base
@@ -150,7 +169,7 @@ def can_write_read(read_and_alignment, current_position):
     return alignment_ref_id != current_ref_id or alignment_ref_end < current_ref_start
 
 
-def clipped_bases_at_front(cigartuples):
+def clipped_bases_at_front(cigartuples: list[tuple[int, int]]) -> int:
     """Returns number of bases soft or hard clipped at start of the CIGAR."""
     total = 0
     for operation, length in cigartuples:
@@ -162,19 +181,23 @@ def clipped_bases_at_front(cigartuples):
     return total
 
 
-def unclipped_alignment_coordinates(read):
+def unclipped_alignment_coordinates(read: AlignedSegment) -> AlignmentCoords:
     """Returns tuple describing the alignment, with external coordinates
     modified to account for clipped bases, assuming an ungapped alignment to
     the reference. This is equivalent to the behavior of Picard MarkDuplicates.
     """
-    cigartuples = read.cigartuples
+    cigartuples: list[tuple[int, int]] | None = read.cigartuples
     start = read.reference_start - clipped_bases_at_front(cigartuples)
     end = read.reference_end + clipped_bases_at_front(reversed(cigartuples))
 
     return (read.reference_id, read.is_reverse, start, end)
 
 
-def process_aligned_read(cache, duplicates_by_alignment, read):
+def process_aligned_read(
+    cache: deque[ReadAndAlignment],
+    duplicates_by_alignment: dict[AlignmentCoords, list[AlignedSegment]],
+    read: AlignedSegment,
+) -> None:
     """Processes an aligned read, either pairing it with an existing read, or
     creating a new alignment block to track copies of this copies.
     """
@@ -190,12 +213,12 @@ def process_aligned_read(cache, duplicates_by_alignment, read):
         cache.append((read, alignment))
 
 
-def is_trailing_unmapped_read(read):
+def is_trailing_unmapped_read(read: AlignedSegment) -> bool:
     return read.is_unmapped and read.reference_id == -1 and read.reference_start == -1
 
 
-def process(args, infile, outfile):
-    cache = collections.deque()
+def process(args: Namespace, infile: AlignmentFile, outfile: AlignmentFile) -> int:
+    cache: deque[ReadAndAlignment] = deque()
     duplicates_by_alignment = {}
     last_position = (0, 0)
     read_num = 1
@@ -240,7 +263,7 @@ def process(args, infile, outfile):
     return 0
 
 
-def parse_args(argv):
+def parse_args(argv: list[str]) -> Namespace:
     parser = ArgumentParser(prog="paleomix rmdup_collapsed", usage=__doc__)
     parser.add_argument(
         "input",
@@ -264,7 +287,7 @@ def parse_args(argv):
     return parser.parse_args(argv)
 
 
-def main(argv):
+def main(argv: list[str]) -> int:
     args = parse_args(argv)
 
     # Initialize seed used when selecting among reads without quality scores
@@ -277,8 +300,8 @@ def main(argv):
         sys.stderr.write("STDOUT is a terminal, terminating!\n")
         return 1
 
-    with pysam.AlignmentFile(args.input, "rb") as infile:
-        with pysam.AlignmentFile("-", "wb", template=infile) as outfile:
+    with AlignmentFile(args.input, "rb") as infile:
+        with AlignmentFile("-", "wb", template=infile) as outfile:
             return process(args, infile, outfile)
 
     return 0
