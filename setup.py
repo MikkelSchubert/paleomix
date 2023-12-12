@@ -18,31 +18,35 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-import codecs
 import os
+import re
 import sys
 
 from setuptools import find_packages, setup
 
 if sys.version_info < (3, 7):
-    sys.stderr.write("FATAL ERROR:\n")
-    sys.stderr.write("PALEOMIX requires at least Python 3.7, but setup.py\n")
-    sys.stderr.write("was run using Python %s.%s!\n" % sys.version_info[:2])
+    print(
+        "ERROR: PALEOMIX requires at least Python 3.7, but setup.py was run using "
+        "Python v{}.{}".format(*sys.version_info),
+        file=sys.stderr,
+    )
     sys.exit(1)
 
 
-def _get_version():
+def _get_version() -> str:
     """Retrieve version from current install directory."""
-    env = {}
     with open(os.path.join("paleomix", "__init__.py")) as handle:
-        exec(handle.read(), env)
+        for line in handle:
+            match = re.match(r'__version__ = "(.*)"', line)
+            if match is not None:
+                return match.group(1)
 
-    return env["__version__"]
+    raise AssertionError("Could not determine PALEOMIX version")
 
 
-def _get_readme():
+def _get_readme() -> str:
     """Retrieves contents of README.rst, forcing UTF-8 encoding."""
-    with codecs.open("README.rst", encoding="utf-8") as handle:
+    with open("README.rst", encoding="utf-8") as handle:
         return handle.read()
 
 
