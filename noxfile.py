@@ -11,6 +11,7 @@ SOURCES = (
     "paleomix",
     "setup.py",
     "tests",
+    "typings",
 )
 
 
