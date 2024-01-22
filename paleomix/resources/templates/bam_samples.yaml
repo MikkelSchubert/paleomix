@@ -2,9 +2,9 @@
 Samples:
   # Replace 'NAME_OF_SAMPLE' with the name of this sample.
   NAME_OF_SAMPLE:
-    # Replace 'NAME_OF_LIBRARY' with the name of this sample.
+    # Replace 'NAME_OF_LIBRARY' with the name of this library.
     NAME_OF_LIBRARY:
-       # Replace 'NAME_OF_LANE' with the lane name (e.g. the barcode) and replace
-       # 'PATH_WITH_WILDCARDS' with the path to the FASTQ files to be trimmed and mapped
-       # for this lane (may include wildcards).
+      # Replace 'NAME_OF_LANE' with the lane name (e.g. the barcode) and replace
+      # 'PATH_WITH_WILDCARDS' with the path to the FASTQ files to be trimmed and mapped
+      # for this lane (may include wildcards).
       NAME_OF_LANE: PATH_WITH_WILDCARDS
