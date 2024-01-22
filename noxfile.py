@@ -18,7 +18,7 @@ SOURCES = (
 class Requirements:
     COVERAGE = "coverage[toml]~=7.3"
     NOX = "nox~=2023.4.22"
-    PYRIGHT = "pyright==1.1.338"
+    PYRIGHT = "pyright==1.1.348"
     PYTEST = "pytest~=7.4"
     PYTEST_COV = "pytest-cov~=4.1"
     RUFF = "ruff==0.1.14"
