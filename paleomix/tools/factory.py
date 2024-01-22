@@ -97,7 +97,7 @@ def rscript(
     requirements: Iterable[Requirement] = (),
 ) -> AtomicCmd:
     return new(
-        rscript_command(args),
+        (":rscript", *safe_coerce_to_tuple(args)),
         stdin=stdin,
         stdout=stdout,
         stderr=stderr,
