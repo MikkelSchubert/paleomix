@@ -15,12 +15,18 @@ SOURCES = (
 )
 
 
-RUFF_REQUIREMENT = "ruff==0.1.3"
+class Requirements:
+    COVERAGE = "coverage[toml]~=7.3"
+    NOX = "nox~=2023.4.22"
+    PYRIGHT = "pyright==1.1.338"
+    PYTEST = "pytest~=7.4"
+    PYTEST_COV = "pytest-cov~=4.1"
+    RUFF = "ruff==0.1.3"
 
 
 @nox.session
 def style(session: nox.Session) -> None:
-    session.install(RUFF_REQUIREMENT)
+    session.install(Requirements.RUFF)
     # Replaces `black --check`
     session.run("ruff", "format", "--check", *SOURCES)
     # Replaces `isort --check-only`
@@ -29,25 +35,25 @@ def style(session: nox.Session) -> None:
 
 @nox.session
 def lints(session: nox.Session) -> None:
-    session.install(RUFF_REQUIREMENT)
+    session.install(Requirements.RUFF)
     session.run("ruff", "check", *SOURCES)
 
 
 @nox.session()
 def typing(session: nox.Session) -> None:
     session.install(".")
-    session.install("pytest~=7.4")
-    session.install("nox~=2023.4.22")
-    session.install("pyright==1.1.330")
+    session.install(Requirements.PYTEST)
+    session.install(Requirements.NOX)
+    session.install(Requirements.PYRIGHT)
     session.run("pyright", *SOURCES)
 
 
 @nox.session()
 def tests(session: nox.Session) -> None:
     session.install("-e", ".")
-    session.install("pytest~=7.4")
-    session.install("coverage[toml]~=7.3")
-    session.install("pytest-cov~=4.1")
+    session.install(Requirements.PYTEST)
+    session.install(Requirements.COVERAGE)
+    session.install(Requirements.PYTEST_COV)
 
     session.run(
         "python3",
