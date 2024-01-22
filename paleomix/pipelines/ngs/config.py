@@ -27,7 +27,7 @@ from enum import Enum
 import paleomix
 import paleomix.common.logging
 import paleomix.pipeline
-from paleomix.common.argparse import ArgumentParser
+from paleomix.common.argparse import ArgumentParser, SubParsersAction
 
 _DEFAULT_CONFIG_FILES = [
     "/etc/paleomix/ngs_pipeline.ini",
@@ -44,7 +44,7 @@ class PipelineTarget(Enum):
         return self.value
 
 
-def build_parser():
+def build_parser() -> ArgumentParser:
     parser = ArgumentParser(prog="paleomix ngs")
     parser.set_defaults(command=None)
 
@@ -55,7 +55,7 @@ def build_parser():
     return parser
 
 
-def _build_run_parser(subparsers):
+def _build_run_parser(subparsers: SubParsersAction[ArgumentParser]) -> None:
     parser = subparsers.add_parser(
         "run",
         help="Run pipeline on provided project file",
@@ -116,6 +116,6 @@ def _build_run_parser(subparsers):
     paleomix.pipeline.add_io_argument_group(parser)
 
 
-def _build_new_parser(subparsers):
+def _build_new_parser(subparsers: SubParsersAction[ArgumentParser]) -> None:
     parser = subparsers.add_parser("new")
     parser.set_defaults(command="new")

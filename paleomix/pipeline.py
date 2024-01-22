@@ -48,7 +48,9 @@ from paleomix.nodegraph import (
 )
 
 if TYPE_CHECKING:
-    from paleomix.common.argparse import ArgumentGroup, ArgumentParser
+    from configargparse import ArgumentParser
+
+    from paleomix.common.argparse import ArgumentGroup
 
 
 class Pypeline:

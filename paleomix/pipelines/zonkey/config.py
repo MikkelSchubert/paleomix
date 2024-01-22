@@ -21,10 +21,15 @@
 #
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import paleomix
 import paleomix.common.logging
 import paleomix.pipeline
-from paleomix.common.argparse import SUPPRESS, ArgumentParser
+from paleomix.common.argparse import SUPPRESS, ArgumentParser, SubParsersAction
+
+if TYPE_CHECKING:
+    from paleomix.common.argparse import ArgumentParserBase
 
 _RUN_USAGE = """%(prog)s [..] <database.tar> <samples.txt> [destination]
        %(prog)s [..] <database.tar> <sample.bam> [destination]
@@ -37,7 +42,7 @@ _DEFAULT_CONFIG_FILES = [
 ]
 
 
-def build_parser():
+def build_parser() -> tuple[ArgumentParserBase, ArgumentParserBase]:
     parser = ArgumentParser(prog="paleomix zonkey")
 
     subparsers = parser.add_subparsers(dest="command", metavar="command")
@@ -48,7 +53,7 @@ def build_parser():
     return parser, run
 
 
-def add_copy_example_command(subparsers):
+def add_copy_example_command(subparsers: SubParsersAction[ArgumentParser]) -> None:
     parser = subparsers.add_parser("example", help="Create example project")
 
     parser.add_argument(
@@ -63,7 +68,7 @@ def add_copy_example_command(subparsers):
     )
 
 
-def add_mito_command(subparsers):
+def add_mito_command(subparsers: SubParsersAction[ArgumentParser]) -> None:
     parser = subparsers.add_parser(
         "mito", help="Create phylo pipeline project for mt alignments"
     )
@@ -80,7 +85,7 @@ def add_mito_command(subparsers):
     )
 
 
-def add_run_command(subparsers):
+def add_run_command(subparsers: SubParsersAction[ArgumentParser]) -> ArgumentParserBase:
     parser = subparsers.add_parser(
         "run",
         aliases=("dryrun",),

@@ -37,10 +37,12 @@ __all__ = [
     "SUPPRESS",
 ]
 
+Action = configargparse.Action
 ArgumentGroup = argparse._ArgumentGroup  # pyright: ignore[reportPrivateUsage]  # noqa: SLF001
-Namespace = argparse.Namespace
+ArgumentParserBase = configargparse.ArgumentParser
+Namespace = configargparse.Namespace
 SubParsersAction = argparse._SubParsersAction  # pyright: ignore[reportPrivateUsage]  # noqa: SLF001
-SUPPRESS = argparse.SUPPRESS
+SUPPRESS = configargparse.SUPPRESS
 
 
 class ArgumentDefaultsHelpFormatter(configargparse.ArgumentDefaultsHelpFormatter):
@@ -48,13 +50,22 @@ class ArgumentDefaultsHelpFormatter(configargparse.ArgumentDefaultsHelpFormatter
     False, None) and uses a custom presentation of the default value.
     """
 
-    def __init__(self, *args: Any, **kwargs: Any):
-        # Enable word wrapping
-        kwargs.setdefault("width", 79)
+    def __init__(
+        self,
+        prog: str,
+        *,
+        indent_increment: int = 2,
+        max_help_position: int = 24,
+        width: int | None = 79,
+    ) -> None:
+        super().__init__(
+            prog=prog,
+            indent_increment=indent_increment,
+            max_help_position=max_help_position,
+            width=width,
+        )
 
-        super().__init__(*args, **kwargs)
-
-    def _get_help_string(self, action: configargparse.Action):
+    def _get_help_string(self, action: configargparse.Action) -> str | None:
         # The following values look silly as part of a help string
         if isinstance(action.default, bool) or action.default in [None, [], ()]:
             return action.help
@@ -68,12 +79,12 @@ class ArgumentDefaultsHelpFormatter(configargparse.ArgumentDefaultsHelpFormatter
         return action.help + " [%(default)s]"
 
 
-class ArgumentParser(configargparse.ArgumentParser):
+class ArgumentParser(ArgumentParserBase):
     """Supports keys with underscores instead of dashes, for backwards compatibility
     with old paleomix config files, provided that these do not use per-host sections.
     """
 
-    def __init__(self, *args: Any, **kwargs: Any):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         kwargs.setdefault("formatter_class", ArgumentDefaultsHelpFormatter)
         # Workaround for configargparse (1.2.3) not considering abbreviations when
         # applying options from config files, resulting in config file options
@@ -98,15 +109,19 @@ class ArgumentParser(configargparse.ArgumentParser):
 
         return keys
 
-    def convert_item_to_command_line_arg(self, action, key, value):
+    def convert_item_to_command_line_arg(self, action, key, value) -> list[str]:
         # Ignore empty options from old config files
         if action and value in ("", "="):
             return []
 
         return super().convert_item_to_command_line_arg(action, key, value)
 
-    def add_subparsers(self, *args: Any, **kwargs: Any):
-        subparsers = super().add_subparsers(*args, **kwargs)
+    def add_subparsers(self, **kwargs: Any) -> SubParsersAction[ArgumentParser]:
+        subparsers = super().add_subparsers(
+            **kwargs,
+            parser_class=ArgumentParser,
+        )
+
         # Hack to hide aliases from subcommand help text, since aliases are only used
         # for deprecated commands/command-names
         subparsers._ChoicesPseudoAction = _ChoicesPseudoAction  # noqa: SLF001
