@@ -339,7 +339,7 @@ class Pypeline:
             self._interrupted = now
             self._logger.warning(
                 "Keyboard interrupt detected, waiting for running tasks to complete. "
-                "Press CTRL-C again within the next 5 seconds to force termination."
+                "Press CTRL-C again within the next 5 seconds to terminate immediately."
             )
         elif now - self._interrupted <= 5.0:
             self._sigterm_handler(signum, frame)
@@ -347,7 +347,7 @@ class Pypeline:
             self._interrupted = now
             self._logger.warning(
                 "Pipeline is waiting for running tasks to terminate. Press CTRL-C "
-                "again within the next 5 seconds to force termination."
+                "again within the next 5 seconds to terminate immediately."
             )
 
     def _sigterm_handler(self, signum: int, frame: object) -> NoReturn:
