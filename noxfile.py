@@ -3,6 +3,7 @@ import nox
 nox.options.sessions = [
     "style",
     "tests",
+    "lints",
 ]
 
 
@@ -21,7 +22,7 @@ class Requirements:
     PYRIGHT = "pyright==1.1.348"
     PYTEST = "pytest~=7.4"
     PYTEST_COV = "pytest-cov~=4.1"
-    RUFF = "ruff==0.1.14"
+    RUFF = "ruff==0.1.15"
 
 
 @nox.session

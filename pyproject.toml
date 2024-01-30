@@ -24,7 +24,7 @@ profile = "black"
 [tool.pyright]
 # Used since `strict = [...]` prevents individual `reportX` settings:
 include = ["paleomix", "tests"]
-typeCheckingMode = "strict"
+# typeCheckingMode = "strict"
 
 # FIXME: Disabled until project is fully typed
 reportUnnecessaryIsInstance = "none"
@@ -36,73 +36,58 @@ markers = ["slow"]
 target-version = "py37"
 
 select = [
-    "A",     # flake8-builtins
-    "AIR",   # Airflow
-    "ANN",   # flake8-annotations
-    # "ARG", # flake8-unused-arguments -- too many intentionally unused arguments
-    "ASYNC", # flake8-async
-    "B",     # flake8-bugbear
-    "BLE",   # flake8-blind-except
+    # "A",   # flake8-builtins
+    # "ANN", # flake8-annotations
+    # "B",   # flake8-bugbear
+    # "BLE", # flake8-blind-except
     "C4",    # flake8-comprehensions
     # "C90", # mccabe -- complexity measured disabled for now
-    # "COM", # flake8-commas
+    # "COM", # flake8-commas -- probably not worthwhlie on top of `ruff format`
     # "CPY", # flake8-copyright -- requires `--preview`
-    # "D",   # pydocstyle
-    "DJ",    # flake8-django
-    "DTZ",   # flake8-datetimez
+    # "DTZ", # flake8-datetimez
     "E",     # Error
-    "E",     # pycodestyle
-    "EM",    # flake8-errmsg
-    "ERA",   # eradicate
     "EXE",   # flake8-executable
     "F",     # Pyflakes
     "FA",    # flake8-future-annotations
-    "FBT",   # flake8-boolean-trap
+    # "FBT", # flake8-boolean-trap
     # "FIX", # flake8-fixme
     "FLY",   # flynt
     # "FURB",# refurb -- requires --preview
     "G",     # flake8-logging-format
     "I",     # isort
-    "ICN",   # flake8-import-conventions
     "INP",   # flake8-no-pep420
-    "INT",   # flake8-gettext
     "ISC",   # flake8-implicit-str-concat
     "N",     # pep8-naming
     "PERF",  # Perflint
     "PGH",   # pygrep-hooks
     "PIE",   # flake8-pie
     "PL",    # Pylint
-    "PT",    # flake8-pytest-style
-    # "PTH", # flake8-use-pathlib
+    # "PT",  # flake8-pytest-style
+    # "PTH", # flake8-use-pathlib -- long term goal
     "PYI",   # flake8-pyi
     "Q",     # flake8-quotes
     "RET",   # flake8-return
     "RSE",   # flake8-raise
-    "RUF",   # Ruff-specific rules
-    "S",     # flake8-bandit
-    "SIM",   # flake8-simplify
-    "SLF",   # flake8-self
+    # "RUF", # Ruff-specific rules
+    # "S",   # flake8-bandit
+    # "SIM", # flake8-simplify
+    # "SLF", # flake8-self
     "SLOT",  # flake8-slots
     "T10",   # flake8-debugger
     "TCH",   # flake8-type-checking
     "TID",   # flake8-tidy-imports
-    "TRY",   # tryceratops
+    # "TRY", # tryceratops
     "UP",    # pyupgrade
-    "W",     # pycodestyl
-    "W",     # Warning
+    "W",     # pycodestyle warnings
     "YTT",   # flake8-2020
 ]
 
 ignore = [
     "ANN101",  # missing-type-self -- Missing type annotation for `self` in method
     "ANN102",  # missing-type-cls -- Missing type annotation for `cls` in classmethod
-    "EM101",   # raw-string-in-exception -- Exception must not use a string literal
-    "EM102",   # f-string-in-exception -- Exception must not use an f-string literal
-    "EM103",   # dot-format-in-exception -- Exception must not use a `.format` string
     "S603",    # subprocess-without-shell-equals-true
     "TRY003",  # raise-vanilla-args
     # Disabled due to too many false positives
-    "ERA001",  # commented-out-code -- Found commented out code
     "PLR2004", # magic-value-comparison -- Magic value used in comparison
     # Disabled due to personal style preferences
     "PLW2901", # redefined-loop-name -- `for` loop variable `value` overwritten
