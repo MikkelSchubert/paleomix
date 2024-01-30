@@ -1,27 +1,27 @@
+__pycache__
+
+# Temporary files
 *.swp
 .\#*
 \#*
 *~
-__pycache__
 
-cov*.xml
-.coverage
-.coverage.*
+# Packaging
 MANIFEST
-
-# Packages
 dist/
 build/
 sdist/
-
 *.egg/
 *.egg-info/
-.eggs/
-.tox/
-.vscode/
-.mypy_cache/
 
 # Misc
-venv
-docs/_build/
+.coverage
+.coverage.*
+.eggs/
+.mypy_cache/
+.nox
 .pytype
+.vscode/
+cov*.xml
+docs/_build/
+venv
