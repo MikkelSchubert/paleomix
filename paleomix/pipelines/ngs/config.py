@@ -36,6 +36,7 @@ _DEFAULT_CONFIG_FILES = [
 
 
 class PipelineTarget(Enum):
+    PREPROCESSING = "preprocessing"
     ALIGNMENTS = "alignments"
     HAPLOTYPES = "haplotypes"
     GENOTYPES = "genotypes"

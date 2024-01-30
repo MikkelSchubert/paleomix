@@ -299,7 +299,8 @@ def process_fastq_files(args, genome, samples, settings):
                     options=settings["Fastp"],
                 )
 
-                fastp_node.mark_intermediate_files("*.fastq.gz")
+                if args.target != PipelineTarget.PREPROCESSING:
+                    fastp_node.mark_intermediate_files("*.fastq.gz")
 
                 # Filtered reads and orphan paired end reads are converted to unmapped
                 # BAM alignments so that they can be merged into the final junk BAM
@@ -320,7 +321,9 @@ def process_fastq_files(args, genome, samples, settings):
                         dependencies=[fastp_node],
                     )
 
-                    to_sam_task.mark_intermediate_files()
+                    if args.target != PipelineTarget.PREPROCESSING:
+                        to_sam_task.mark_intermediate_files()
+
                     yield to_sam_task
 
                 nodes.append(fastp_node)
@@ -828,13 +831,15 @@ def build_pipeline(args, project):
         return pipeline
 
     analytical_steps = {
-        PipelineTarget.ALIGNMENTS: (
+        PipelineTarget.PREPROCESSING: (
             # 3. Do quality analysis of input FASTQ files
             fastqc_sample_runs,
             # 4. Process FASTQ files to produce mapping-ready reads
             process_fastq_files,
             # 5. Do quality analysis of trimmed FASTQ files
             fastqc_trimmed_reads,
+        ),
+        PipelineTarget.ALIGNMENTS: (
             # 6. Map merged runs to genome and genotype samples
             map_sample_runs,
             # 7. Filter (mark) PCR duplicates for merged and paired reads
