@@ -29,11 +29,13 @@ import os
 from enum import Enum
 from itertools import islice
 from shlex import quote
-from typing import Iterable, TypeVar
+from typing import TYPE_CHECKING, Iterable, TypeVar
 
 from paleomix.common.fileutils import missing_executables
 from paleomix.common.versions import Requirement, RequirementError
-from paleomix.node import Node as Task  # FIXME
+
+if TYPE_CHECKING:
+    from paleomix.node import Node as Task  # FIXME
 
 
 class NodeGraphError(RuntimeError):

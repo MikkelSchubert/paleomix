@@ -22,7 +22,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import IO, TYPE_CHECKING, FrozenSet, Iterable, Sequence, cast
+from typing import IO, TYPE_CHECKING, FrozenSet, Iterable, Sequence
 
 from paleomix.common.fileutils import PathTypes, open_rt
 from paleomix.common.formats.fasta import FASTA, FASTAError
@@ -53,7 +53,6 @@ class MSA(FrozenSet[FASTA]):
             raise MSAError("MSA does not contain any sequences")
 
         instance = super().__new__(cls, records)
-        instance = cast(MSA, instance)
 
         MSA.validate(instance)
         return instance

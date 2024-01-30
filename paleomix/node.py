@@ -267,9 +267,9 @@ class Node:
         missing_files = fileutils.missing_files(filenames)
         if missing_files:
             raise NodeMissingFilesError(
-                "Missing input files for command:\n\t- Command: {}\n\t- Files: {}".format(
-                    self, "\n\t         ".join(missing_files)
-                )
+                "Missing input files for command:\n"
+                "\t- Command: {}\n"
+                "\t- Files: {}".format(self, "\n\t         ".join(missing_files))
             )
 
     def _check_for_missing_files(

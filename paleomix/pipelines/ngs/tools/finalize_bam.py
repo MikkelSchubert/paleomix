@@ -517,9 +517,8 @@ def main(argv):
         if passed:
             if out_passed:
                 out_passed.write(record)
-        else:
-            if out_failed:
-                out_failed.write(record)
+        elif out_failed:
+            out_failed.write(record)
 
     if out_passed:
         out_passed.close()

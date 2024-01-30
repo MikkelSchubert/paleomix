@@ -99,7 +99,7 @@ then
     rm -vf "${FILENAME}"
     exit 1
 fi
-"""
+"""  # noqa: E501
 
 
 class ZonkeyError(RuntimeError):

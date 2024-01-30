@@ -56,12 +56,12 @@ def read_admixture_results(filename, data, k_groups, cutoff=CUTOFF):
 def get_percentiles(data, sample1, sample2, nreads, k_groups, has_ts, value):
     results = {"Sample1": sample1, "Sample2": sample2}
 
-    nreads_lower = set(
+    nreads_lower = {
         row["NReads"] for row in data.simulations if row["NReads"] <= nreads
-    )
-    nreads_upper = set(
+    }
+    nreads_upper = {
         row["NReads"] for row in data.simulations if row["NReads"] >= nreads
-    )
+    }
 
     if nreads_lower:
         selection = _select_simulations(

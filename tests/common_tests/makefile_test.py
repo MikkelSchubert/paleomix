@@ -31,7 +31,6 @@ from paleomix.common.makefile import (
     And,
     DeprecatedOption,
     FASTQPath,
-    InputType,
     IsBoolean,
     IsDictOf,
     IsFloat,
@@ -46,6 +45,7 @@ from paleomix.common.makefile import (
     Or,
     PreProcessMakefile,
     RemovedOption,
+    SpecPath,
     SpecTree,
     StringEndsWith,
     StringStartsWith,
@@ -67,7 +67,7 @@ _DUMMY_PATH_STR = " :: ".join(_DUMMY_PATH)
 
 
 class Unhashable:
-    __hash__ = None  # type: ignore
+    __hash__ = None  # pyright: ignore[reportGeneralTypeIssues]
 
 
 _COMMON_INVALID_VALUES = {
@@ -140,7 +140,7 @@ def test_is_int__accepts_integers() -> None:
 
 
 @pytest.mark.parametrize("value", _common_invalid_values())
-def test_is_int__rejects_not_int(value: Any) -> None:
+def test_is_int__rejects_not_int(value: object) -> None:
     spec = IsInt()
     with pytest.raises(MakefileError, match="Expected value: an integer"):
         spec(_DUMMY_PATH, value)
@@ -184,7 +184,7 @@ def test_is_unsigned_int__accepts_non_negative_integers() -> None:
 
 
 @pytest.mark.parametrize("value", _common_invalid_values(extra=(-1,)))
-def test_is_unsigned_int__rejects_not_unsigned_int(value: Any) -> None:
+def test_is_unsigned_int__rejects_not_unsigned_int(value: object) -> None:
     spec = IsUnsignedInt()
     with pytest.raises(MakefileError, match="Expected value: an unsigned integer"):
         spec(_DUMMY_PATH, value)
@@ -227,7 +227,7 @@ def test_is_float__accepts_float() -> None:
 
 
 @pytest.mark.parametrize("value", _common_invalid_values(extra=(0,)))
-def test_is_float__rejects_not_float(value: Any) -> None:
+def test_is_float__rejects_not_float(value: object) -> None:
     spec = IsFloat()
     with pytest.raises(MakefileError, match="Expected value: a float"):
         spec(_DUMMY_PATH, value)
@@ -271,7 +271,7 @@ def test_is_boolean__accepts_boolean() -> None:
 
 
 @pytest.mark.parametrize("value", _common_invalid_values(exclude=(False,), extra=(0,)))
-def test_is_boolean__rejects_not_boolean(value: Any) -> None:
+def test_is_boolean__rejects_not_boolean(value: object) -> None:
     spec = IsBoolean()
     with pytest.raises(MakefileError, match="Expected value: a boolean"):
         spec(_DUMMY_PATH, value)
@@ -335,7 +335,7 @@ def test_is_str__rejects_negative_min_len() -> None:
 
 
 @pytest.mark.parametrize("value", _common_invalid_values(extra=(1,)))
-def test_is_str__rejects_not_str(value: Any) -> None:
+def test_is_str__rejects_not_str(value: object) -> None:
     spec = IsStr()
     with pytest.raises(MakefileError, match="Expected value: a non-empty string"):
         spec(_DUMMY_PATH, value)
@@ -405,7 +405,7 @@ def test_is_none__accepts_none() -> None:
 @pytest.mark.parametrize(
     "value", _common_invalid_values(exclude=(None,), extra=(0, ""))
 )
-def test_is_none__rejects_not_none(value: Any) -> None:
+def test_is_none__rejects_not_none(value: object) -> None:
     spec = IsNone()
     with pytest.raises(MakefileError, match="Expected value: null or not set"):
         spec(_DUMMY_PATH, value)
@@ -438,7 +438,7 @@ def test_is_none__default_not_implemented_for_is_none() -> None:
 
 
 @pytest.mark.parametrize("value", _COMMON_VALUES)
-def test_value_missing(value: Any) -> None:
+def test_value_missing(value: object) -> None:
     spec = ValueMissing()
 
     with pytest.raises(MakefileError):
@@ -491,7 +491,7 @@ def test_deprecated_option__no_log_on_failure(caplog: pytest.LogCaptureFixture) 
 
 
 @pytest.mark.parametrize("value", _COMMON_VALUES)
-def test_deprecated_option(caplog: pytest.LogCaptureFixture, value: Any) -> None:
+def test_deprecated_option(caplog: pytest.LogCaptureFixture, value: object) -> None:
     expected = _REMOVED_TMPL % (_DUMMY_PATH_STR,)
     spec = RemovedOption()
 
@@ -551,7 +551,7 @@ def test_is_value_in__default_set__must_meet_spec() -> None:
 
 
 @pytest.mark.parametrize("value", _common_invalid_values(extra=("foo",)))
-def test_is_value_in__handles_types(value: Any) -> None:
+def test_is_value_in__handles_types(value: object) -> None:
     spec = ValueIn((1, 2, 3, 4))
     with pytest.raises(MakefileError, match="Expected value: value in 1, 2, 3, or 4"):
         spec(_DUMMY_PATH, value)
@@ -633,7 +633,7 @@ def test_intersects__default_set__must_meet_spec() -> None:
 
 
 @pytest.mark.parametrize("value", _common_invalid_values(extra=("foo",)))
-def test_intersects__handles_types(value: Any) -> None:
+def test_intersects__handles_types(value: object) -> None:
     spec = ValuesIntersect(list(range(5)))
     with pytest.raises(
         MakefileError, match="Expected value: one or more of 0, 1, 2, 3, and 4"
@@ -724,7 +724,7 @@ def test_subset_of__default_set__must_meet_spec() -> None:
 @pytest.mark.parametrize(
     "value", _common_invalid_values(extra=("foo",), exclude=("list_1", ()))
 )
-def test_subset_of__handles_types(value: Any) -> None:
+def test_subset_of__handles_types(value: object) -> None:
     spec = ValuesSubsetOf(list(range(5)))
     with pytest.raises(
         MakefileError, match="Expected value: subset of 0, 1, 2, 3, and 4"
@@ -767,7 +767,7 @@ def test_and__rejects_no_tests() -> None:
 
 def test_and__rejects_non_spec_tests() -> None:
     with pytest.raises(TypeError):
-        And(id)  # type: ignore
+        And(id)  # pyright: ignore[reportGeneralTypeIssues]
 
 
 def test_and__default_not_set() -> None:
@@ -818,7 +818,7 @@ def test_or__rejects_no_tests() -> None:
 
 def test_or__rejects_non_spec_tests() -> None:
     with pytest.raises(TypeError):
-        Or(id)  # type: ignore
+        Or(id)  # pyright: ignore[reportGeneralTypeIssues]
 
 
 def test_or__default_not_set() -> None:
@@ -909,7 +909,7 @@ def test_string_in__default_set__must_meet_spec() -> None:
 
 
 @pytest.mark.parametrize("value", _common_invalid_values(extra=("foo",)))
-def test_string_in__handles_types(value: Any) -> None:
+def test_string_in__handles_types(value: object) -> None:
     spec = ValueIn("ABC")
     with pytest.raises(
         MakefileError,
@@ -935,7 +935,7 @@ def test_string_starts_with__rejects_string_without_prefix() -> None:
 
 
 @pytest.mark.parametrize("value", _common_invalid_values(extra=(1,)))
-def test_string_starts_with__rejects_not_uppercase_str(value: Any) -> None:
+def test_string_starts_with__rejects_not_uppercase_str(value: object) -> None:
     spec = StringStartsWith("Foo")
     with pytest.raises(
         MakefileError, match="Expected value: a string with prefix 'Foo'"
@@ -975,7 +975,7 @@ def test_string_ends_with__rejects_string_without_prefix() -> None:
 
 
 @pytest.mark.parametrize("value", _common_invalid_values(extra=(1,)))
-def test_string_ends_with__rejects_not_uppercase_str(value: Any) -> None:
+def test_string_ends_with__rejects_not_uppercase_str(value: object) -> None:
     spec = StringEndsWith("Foo")
     with pytest.raises(
         MakefileError, match="Expected value: a string with postfix 'Foo'"
@@ -1024,7 +1024,7 @@ def test_fastq_path__path_must_meet_spec() -> None:
 
 
 @pytest.mark.parametrize("value", _common_invalid_values(extra=(1,)))
-def test_fastq_path__rejects_non_strings(value: Any) -> None:
+def test_fastq_path__rejects_non_strings(value: object) -> None:
     spec = FASTQPath()
     with pytest.raises(MakefileError, match="Expected value: a path without a {pair}"):
         spec(_DUMMY_PATH, value)
@@ -1210,7 +1210,9 @@ _PATH_IN_EXCEPTION_VALUES = (
 
 
 @pytest.mark.parametrize(("spec", "value"), _PATH_IN_EXCEPTION_VALUES)
-def test_specs__path_is_displayed_in_exception(spec, value) -> None:
+def test_specs__path_is_displayed_in_exception(
+    spec: MakefileSpec, value: object
+) -> None:
     with pytest.raises(MakefileError, match=_DUMMY_PATH_STR):
         spec(_DUMMY_PATH, value)
 
@@ -1219,7 +1221,7 @@ def test_specs__path_is_displayed_in_exception(spec, value) -> None:
 ###############################################################################
 # process_makefile
 
-_MAKEFILE_SPEC_MET = (
+_MAKEFILE_SPEC_MET: tuple[tuple[object, SpecTree], ...] = (
     ({"B": 7}, {"A": IsInt, "B": IsInt}),  # String keys
     ({1: "Abc"}, {IsStr: IsInt, IsInt: IsStr}),  # Spec keys
     ({1: "Abc"}, {IsStr(): IsInt, IsInt: IsStr()}),  # Spec keys, instantiated
@@ -1229,11 +1231,11 @@ _MAKEFILE_SPEC_MET = (
 
 
 @pytest.mark.parametrize(("makefile", "spec"), _MAKEFILE_SPEC_MET)
-def test_process_makefile__dict_keys_found(makefile, spec) -> None:
+def test_process_makefile__dict_keys_found(makefile: object, spec: SpecTree) -> None:
     process_makefile(makefile, spec)
 
 
-_MAKEFILE_SPEC_NOT_MET = (
+_MAKEFILE_SPEC_NOT_MET: tuple[tuple[object, SpecTree], ...] = (
     ({"C": 7}, {"A": IsInt, "B": IsInt}),  # String keys
     ({1.3: "Abc"}, {IsStr: IsInt, IsInt: IsStr}),  # Spec keys
     ({1.3: "Abc"}, {IsStr(): IsInt, IsInt: IsStr()}),  # Spec keys, instantiated
@@ -1243,27 +1245,30 @@ _MAKEFILE_SPEC_NOT_MET = (
 
 
 @pytest.mark.parametrize(("makefile", "spec"), _MAKEFILE_SPEC_NOT_MET)
-def test_process_makefile__dict_keys_not_found(makefile, spec) -> None:
+def test_process_makefile__dict_keys_not_found(
+    makefile: object,
+    spec: SpecTree,
+) -> None:
     with pytest.raises(MakefileError):
         process_makefile(makefile, spec)
 
 
 def test_validate_makefile__unexpected_type_in_reference() -> None:
-    current: InputType = {1: 2}
+    current = {1: 2}
     specs: SpecTree = {IsInt: 2}
     with pytest.raises(TypeError):
         process_makefile(current, specs)
 
 
 def test_validate_makefile__unexpected_type_in_current() -> None:
-    current: InputType = {1: []}
+    current = {1: []}
     specs: SpecTree = {IsInt: {IsInt: IsInt}}
     with pytest.raises(MakefileError):
         process_makefile(current, specs)
 
 
 def test_process_makefile__sets_missing_keys() -> None:
-    current: InputType = {"A": 1}
+    current = {"A": 1}
     specs: SpecTree = {
         "A": IsInt(default=0),
         "B": IsInt(default=-1),
@@ -1275,7 +1280,7 @@ def test_process_makefile__sets_missing_keys() -> None:
 
 
 def test_process_makefile__mixed_keys() -> None:
-    current: InputType = {"A": 1}
+    current = {"A": 1}
     specs: SpecTree = {IsStr: IsInt, "B": IsInt(default=-1), "C": IsInt(default=-2)}
     expected = {"A": 1, "B": -1, "C": -2}
     result = process_makefile(current, specs)
@@ -1283,7 +1288,7 @@ def test_process_makefile__mixed_keys() -> None:
 
 
 def test_process_makefile__sets_missing_recursive() -> None:
-    current: InputType = {"A": 1, "B": {"C": 2}}
+    current = {"A": 1, "B": {"C": 2}}
     specs: SpecTree = {
         "A": IsInt(default=0),
         "B": {"C": IsInt(default=-1), "D": IsInt(default=-2)},
@@ -1294,7 +1299,7 @@ def test_process_makefile__sets_missing_recursive() -> None:
 
 
 def test_process_makefile__sets_missing_recursive__with_missing_substructure() -> None:
-    current: InputType = {"A": 1}
+    current = {"A": 1}
     specs: SpecTree = {
         "A": IsInt(default=0),
         "B": {"C": IsInt(default=-1), "D": IsInt(default=-2)},
@@ -1307,7 +1312,7 @@ def test_process_makefile__sets_missing_recursive__with_missing_substructure() -
 def test_process_makefile__shared_subtrees_with_defaults() -> None:
     subtree: SpecTree = {"A": IsInt(default=1234), "B": IsInt(default=5678)}
     specs: SpecTree = {"A": subtree, "B": subtree}
-    current: InputType = {"A": {"B": 17}, "B": {"A": 71}}
+    current = {"A": {"B": 17}, "B": {"A": 71}}
     expected = {"A": {"A": 1234, "B": 17}, "B": {"A": 71, "B": 5678}}
     result = process_makefile(current, specs)
     assert result == expected
@@ -1316,14 +1321,14 @@ def test_process_makefile__shared_subtrees_with_defaults() -> None:
 def test_process_makefile__shared_subtrees_with_defaults__defaults_disabled() -> None:
     subtree: SpecTree = {"A": IsInt(default=1234), "B": IsInt(default=5678)}
     specs: SpecTree = {"A": subtree, "B": WithoutDefaults(subtree)}
-    current: InputType = {"A": {"B": 17}, "B": {"A": 71}}
+    current = {"A": {"B": 17}, "B": {"A": 71}}
     expected = {"A": {"A": 1234, "B": 17}, "B": {"A": 71}}
     result = process_makefile(current, specs)
     assert result == expected
 
 
 def test_process_makefile__accept_when_required_value_is_set() -> None:
-    current: InputType = {"A": 1, "B": {"C": 3}}
+    current = {"A": 1, "B": {"C": 3}}
     expected = {"A": 1, "B": {"C": 3}}
     specs: SpecTree = {"A": IsInt, "B": {"C": IsInt(default=REQUIRED_VALUE)}}
     result = process_makefile(current, specs)
@@ -1331,21 +1336,21 @@ def test_process_makefile__accept_when_required_value_is_set() -> None:
 
 
 def test_process_makefile__fails_when_required_value_not_set() -> None:
-    current: InputType = {"A": 1}
+    current = {"A": 1}
     specs: SpecTree = {"A": IsInt, "B": {"C": IsInt(default=REQUIRED_VALUE)}}
     with pytest.raises(MakefileError):
         process_makefile(current, specs)
 
 
 def test_process_makefile__fails_required_value_not_set_in_dynamic_subtree() -> None:
-    current: InputType = {"A": 1, "B": {}}
+    current = {"A": 1, "B": {}}
     specs: SpecTree = {"A": IsInt, IsStr: {"C": IsInt(default=REQUIRED_VALUE)}}
     with pytest.raises(MakefileError):
         process_makefile(current, specs)
 
 
 def test_process_makefile__accept_missing_value_if_in_implicit_subtree() -> None:
-    current: InputType = {"A": 1}
+    current = {"A": 1}
     expected = {"A": 1}
     specs: SpecTree = {"A": IsInt, IsStr: {"C": IsInt(default=REQUIRED_VALUE)}}
     result = process_makefile(current, specs)
@@ -1363,7 +1368,7 @@ def test_process_makefile__path_shown_in_exception_for_dict() -> None:
 
 
 def test_process_makefile__implicit_subdict_is_allowed() -> None:
-    current: InputType = {"A": 1, "B": None}
+    current = {"A": 1, "B": None}
     expected = {"A": 1, "B": {"C": 3}}
     specs: SpecTree = {"A": IsInt, "B": {"C": IsInt(default=3)}}
     result = process_makefile(current, specs)
@@ -1376,7 +1381,7 @@ def test_process_makefile__implicit_subdict_is_allowed() -> None:
 
 
 def test_process_makefile__list_types_accepted() -> None:
-    current: InputType = {"A": 1, "B": [17, "Foo"]}
+    current = {"A": 1, "B": [17, "Foo"]}
     expected = {"A": 1, "B": [17, "Foo"]}
     specs: SpecTree = {"A": IsInt, "B": [IsInt, IsStr]}
     result = process_makefile(current, specs)
@@ -1384,14 +1389,14 @@ def test_process_makefile__list_types_accepted() -> None:
 
 
 def test_process_makefile__wrong_list_types() -> None:
-    current: InputType = {"A": 1, "B": [17, "foo"]}
+    current = {"A": 1, "B": [17, "foo"]}
     specs: SpecTree = {"A": IsInt, "B": [IsInt]}
     with pytest.raises(MakefileError):
         process_makefile(current, specs)
 
 
 def test_process_makefile__missing_list_defaults_to_empty() -> None:
-    current: InputType = {"A": 1}
+    current = {"A": 1}
     expected = {"A": 1, "B": {"C": []}}
     specs: SpecTree = {"A": IsInt, "B": {"C": [IsInt]}}
     result = process_makefile(current, specs)
@@ -1399,7 +1404,7 @@ def test_process_makefile__missing_list_defaults_to_empty() -> None:
 
 
 def test_process_makefile__missing_list_default_value() -> None:
-    current: InputType = {"A": 1}
+    current = {"A": 1}
     expected = {"A": 1, "B": [1, 2, 3]}
     specs: SpecTree = {"A": IsInt, "B": IsListOf(IsInt, default=[1, 2, 3])}
     result = process_makefile(current, specs)
@@ -1407,7 +1412,7 @@ def test_process_makefile__missing_list_default_value() -> None:
 
 
 def test_process_makefile__key_specified_but_no_entries() -> None:
-    current: InputType = {"A": 1, "B": None}
+    current = {"A": 1, "B": None}
     expected = {"A": 1, "B": []}
     specs: SpecTree = {"A": IsInt, "B": [IsInt]}
     result = process_makefile(current, specs)
@@ -1461,7 +1466,7 @@ def test_read_makefile__simple_file(tmp_path: Path) -> None:
 
 
 class _PreProcess(PreProcessMakefile):
-    def __call__(self, path, value):
+    def __call__(self, path: SpecPath, value: object) -> tuple[object, SpecTree]:
         if isinstance(value, str):
             return int(value), IsInt
 
@@ -1497,10 +1502,10 @@ def test__preprocess_makefile__invalid_string() -> None:
 
 
 class _PreProcessWithDefault(PreProcessMakefile):
-    def __init__(self, default):
+    def __init__(self, default: object) -> None:
         self._default = default
 
-    def __call__(self, path, value):
+    def __call__(self, path: SpecPath, value: object) -> tuple[object, SpecTree]:
         if isinstance(value, str):
             return int(value), IsInt
 

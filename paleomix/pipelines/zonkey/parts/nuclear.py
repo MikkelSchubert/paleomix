@@ -26,7 +26,7 @@ import itertools
 import math
 import os
 import random
-from typing import Iterable, Union
+from typing import Iterable
 
 import pysam
 

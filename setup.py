@@ -24,7 +24,7 @@ import sys
 
 from setuptools import find_packages, setup
 
-if sys.version_info < (3, 7):
+if sys.version_info < (3, 7):  # noqa: UP036
     print(
         "ERROR: PALEOMIX requires at least Python 3.7, but setup.py was run using "
         "Python v{}.{}".format(*sys.version_info),

@@ -173,7 +173,7 @@ def clipped_bases_at_front(cigartuples: list[tuple[int, int]]) -> int:
     """Returns number of bases soft or hard clipped at start of the CIGAR."""
     total = 0
     for operation, length in cigartuples:
-        if operation != _CIGAR_SOFTCLIP and operation != _CIGAR_HARDCLIP:
+        if operation not in (_CIGAR_SOFTCLIP, _CIGAR_HARDCLIP):
             break
 
         total += length

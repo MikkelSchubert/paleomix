@@ -532,7 +532,7 @@ def run_mapdamage(layout: Layout, genome, records):
             reference=genome["Path"],
             input_files=[record["Path"] for record in records],
             output_directory=layout["mapdamage_folder"],
-            title="mapDamage plot for library %r" % (layout.get_field("library"),),
+            title="mapDamage plot for library {!r}".format(layout.get_field("library")),
             options=options["mapDamage"],
             dependencies=[record["Task"] for record in records],
         )

@@ -109,14 +109,13 @@ def check_fasta_file(handle: IO[bytes]) -> None:
                 else:
                     assert state == _IN_WHITESPACE, state
                     _raise_error("Empty lines not allowed in sequences")
+            elif state in (_NA, _IN_WHITESPACE):
+                continue
+            elif state == _IN_HEADER:
+                _raise_error("Expected FASTA sequence, found empty line")
             else:
-                if state in (_NA, _IN_WHITESPACE):
-                    continue
-                elif state == _IN_HEADER:
-                    _raise_error("Expected FASTA sequence, found empty line")
-                else:
-                    assert state == _IN_SEQUENCE, state
-                    state = _IN_WHITESPACE
+                assert state == _IN_SEQUENCE, state
+                state = _IN_WHITESPACE
     except FormatError as error:
         _raise_error(f"Line {linenum}: {error}")
 

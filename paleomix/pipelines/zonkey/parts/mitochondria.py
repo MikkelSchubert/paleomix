@@ -22,13 +22,16 @@
 from __future__ import annotations
 
 import os
+from typing import TYPE_CHECKING
 
 from paleomix.common import rtools
 from paleomix.common.command import InputFile, OutputFile, TempOutputFile
-from paleomix.common.fileutils import PathTypes
 from paleomix.common.formats.newick import Newick
 from paleomix.node import CommandNode
 from paleomix.tools import factory
+
+if TYPE_CHECKING:
+    from paleomix.common.fileutils import PathTypes
 
 
 class MitoConsensusNode(CommandNode):
@@ -49,7 +52,7 @@ class MitoConsensusNode(CommandNode):
 
         CommandNode.__init__(
             self,
-            description="building consensus mitochondria from %s" % (bamfile,),
+            description=f"building consensus mitochondria from {bamfile}",
             command=command,
             dependencies=dependencies,
         )
@@ -82,7 +85,7 @@ class DrawPhylogenyNode(CommandNode):
 
         CommandNode.__init__(
             self,
-            description="drawing phylogeny in %s" % (treefile,),
+            description=f"drawing phylogeny in {treefile}",
             command=command,
             dependencies=dependencies,
         )

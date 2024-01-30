@@ -251,7 +251,7 @@ class AtomicCmd:
             if not isinstance(value, Requirement):
                 raise TypeError(value)
 
-    def append(self, *args: object) -> None:
+    def append(self, *args: AtomicFileTypes | str | float) -> None:
         if self._proc is not None:
             raise CmdError("cannot modify already started command")
 

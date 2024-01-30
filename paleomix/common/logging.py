@@ -85,10 +85,8 @@ class PaleomixFormatter(BasicFormatter):
 
 
 def initialize_console_logging(log_level: str = "info") -> None:
-    log_level = coloredlogs.level_to_number(log_level)  # type: ignore
-
     logger = logging.getLogger()
-    logger.setLevel(log_level)
+    logger.setLevel(coloredlogs.level_to_number(log_level))
 
     for handler in logger.handlers:
         if isinstance(handler, logging.StreamHandler) and handler.stream is sys.stderr:

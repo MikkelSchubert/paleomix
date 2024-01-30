@@ -42,7 +42,7 @@ class WriteSampleList(Node):
 
         Node.__init__(
             self,
-            description="writing sample-list to %s" % (output_file,),
+            description=f"writing sample-list to {output_file}",
             input_files=(config.database.filename,),
             output_files=(output_file,),
             dependencies=dependencies,
@@ -62,7 +62,7 @@ class WriteSampleList(Node):
                 group_name = group[sample_name]
                 group_color = group_colors[group_name]
 
-                handle.write("%s\t%s\t%s\n" % (sample_name, group_name, group_color))
+                handle.write(f"{sample_name}\t{group_name}\t{group_color}\n")
 
             handle.write("Sample\t-\t#000000\n")
 

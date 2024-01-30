@@ -72,7 +72,7 @@ _LAYOUT = {
                 "{sample}.{genome}.{library}.{run}.{kind}.bam": "aln_run_bam",
                 "{sample}.{genome}.{library}.rmdup.merged.bam": "aln_rmdup_merged_bam",
                 "{sample}.{genome}.{library}.rmdup.paired.bam": "aln_rmdup_paired_bam",
-                "{sample}.{genome}.{library}.rmdup.paired.metrics.txt": "aln_rmdup_paired_metrics",
+                "{sample}.{genome}.{library}.rmdup.paired.metrics.txt": "aln_rmdup_paired_metrics",  # noqa: E501
                 "{sample}.{genome}.good.bam": "aln_split_passed_bam",
             },
             "reads": {
@@ -804,7 +804,7 @@ def build_pipeline(args, project):
     # instead the limits are losened and users are encouraged to use tools like
     # `earlyoom` to avoid running out of memory.
     for value in args.jre_options:
-        if value.startswith("-Xmx") or value.startswith("-XX:MaxRAMPercentage="):
+        if value.startswith(("-Xmx", "-XX:MaxRAMPercentage=")):
             break
     else:
         args.jre_options.append("-XX:MaxRAMPercentage=95.0")

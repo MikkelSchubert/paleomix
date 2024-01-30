@@ -28,7 +28,7 @@ import logging
 import os
 import re
 import string
-from typing import Any, Iterable, Optional
+from typing import Any, Iterable
 
 from paleomix.common import sequences
 from paleomix.common.bamfiles import BAM_PLATFORMS
@@ -442,7 +442,7 @@ def _filenames_to_shortname(filenames):
     return filename.replace("?", "x")
 
 
-def _collect_files(path, template) -> Iterable[tuple[str, Optional[str]]]:
+def _collect_files(path, template) -> Iterable[tuple[str, str | None]]:
     if FASTQPath.is_paired_end(template):
         files_1 = _sorted_glob(FASTQPath.format(template, 1))
         files_2 = _sorted_glob(FASTQPath.format(template, 2))
@@ -588,7 +588,7 @@ def _validate_makefiles_duplicate_files(makefiles):
     for records, pairs in itertools.groupby(by_records, lambda x: x[0]):
         description = _describe_files_in_multiple_records(records, pairs)
 
-        if len(set(record[0] for record in records)) != len(records):
+        if len({record[0] for record in records}) != len(records):
             message = "FASTQ files are used multiple times in sample:\n"
             raise MakefileError(message + description)
         else:
@@ -607,7 +607,7 @@ def _describe_files_in_multiple_records(records, pairs):
     prefix = "Found at"
     for record in sorted(records):
         # FIXME: Show the glob that found the above files
-        lines.append("  {0} {1} :: {2} :: {3}".format(prefix, *record))
+        lines.append("  {} {} :: {} :: {}".format(prefix, *record))
         prefix = " " * len(prefix)
 
     return "\n".join(lines)

@@ -195,7 +195,7 @@ class ZonkeyDB:
 
             if row["Size"] <= 0:
                 raise ZonkeyDBError(
-                    "Contig size must be >= 0 for {!r} in {!r}, " "not {!r}".format(
+                    "Contig size must be >= 0 for {!r} in {!r}, not {!r}".format(
                         key, filename, row["Size"]
                     )
                 )
@@ -431,7 +431,7 @@ class ZonkeyDB:
             for key in ("NReads", "K"):
                 try:
                     row[key] = int(row[key])
-                except ValueError:
+                except ValueError:  # noqa: PERF203
                     raise ZonkeyDBError(
                         "Malformed value for column %r at "
                         "line %i in simulations table %r; "
@@ -441,7 +441,7 @@ class ZonkeyDB:
             for key in ("Percentile", "Value"):
                 try:
                     row[key] = float(row[key])
-                except ValueError:
+                except ValueError:  # noqa: PERF203
                     raise ZonkeyDBError(
                         "Malformed value for column %r at "
                         "line %i in simulations table %r; "
