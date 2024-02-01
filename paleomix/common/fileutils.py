@@ -22,12 +22,14 @@
 from __future__ import annotations
 
 import bz2
+import contextlib
 import errno
 import gzip
 import io
 import os
 import random
 import shutil
+import sys
 import tempfile
 from datetime import datetime
 from os import fspath
@@ -36,6 +38,14 @@ from typing import IO, Any, Callable, Iterable, Sequence, Union, cast
 from .utilities import safe_coerce_to_tuple
 
 PathTypes = Union[str, "os.PathLike[str]"]
+
+
+def file_or_stdout(filename: PathTypes) -> contextlib.AbstractContextManager[IO[str]]:
+    if str(filename) == "-":
+        # Prevent stdout from being closed
+        return contextlib.nullcontext(sys.stdout)
+
+    return open(filename, "w")  # noqa: SIM115
 
 
 def add_postfix(filename: PathTypes, postfix: str) -> str:
