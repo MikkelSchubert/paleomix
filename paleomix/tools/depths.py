@@ -24,14 +24,34 @@ from __future__ import annotations
 import collections
 import itertools
 import sys
+from typing import TYPE_CHECKING, NewType
 
-from paleomix.common.bamfiles import BAMRegionsIter
+from paleomix.common.bamfiles import BAMRegion, BAMRegionsIter
+from paleomix.common.fileutils import file_or_stdout
 from paleomix.common.timer import BAMTimer
 from paleomix.tools.bam_stats.common import (
+    Args,
     collect_readgroups,
     collect_references,
     main_wrapper,
 )
+
+SampleLibraryKey = NewType("SampleLibraryKey", tuple[str, str])
+SampleLibraryID = NewType("SampleLibraryID", int)
+
+if TYPE_CHECKING:
+    from typing import Dict, Iterable, Iterator, Tuple, TypeAlias
+
+    import pysam
+
+    CountsCache: TypeAlias = collections.deque[list[int]]
+    CountsDict: TypeAlias = Dict[int, int]
+    TotalsKey: TypeAlias = Tuple[str, str, str]
+    TotalsDict: TypeAlias = Dict[TotalsKey, CountsDict]
+
+    ReadGroupToID: TypeAlias = Dict[str | None, SampleLibraryID]
+    IDToLibrary: TypeAlias = list[SampleLibraryKey]
+
 
 ##############################################################################
 ##############################################################################
@@ -67,21 +87,35 @@ _HEADER = """# Columns:
 
 
 class MappingToTotals:
-    def __init__(self, totals, region, smlbid_to_smlb):
+    def __init__(
+        self,
+        totals: TotalsDict,
+        region: BAMRegion,
+        id_to_library: IDToLibrary,
+    ) -> None:
+        assert region.name is not None, "regions should have been named"
+
         self._region = region
         self._map_by_smlbid, self._totals_src_and_dst = self._build_mappings(
-            totals, region.name, smlbid_to_smlb
+            totals, region.name, id_to_library
         )
-        self._cache = collections.defaultdict(int)
+        self._cache: dict[tuple[int, ...], int] = collections.defaultdict(int)
 
-    def process_counts(self, counts, last_pos, cur_pos):
+    def process_counts(
+        self,
+        counts: CountsCache,
+        last_pos: int,
+        cur_pos: float,
+    ) -> None:
         start = self._region.start
         end = self._region.end
+        if end is None:
+            end = float("inf")
 
         # Pileups tends to contain identical stretches, so
         # try to avoid repeated lookups by aggregating these
         repeats = 1
-        last_count = None
+        last_count: list[int] | None = None
         while counts and (last_pos < cur_pos):
             count = counts.popleft()
             if start <= last_pos < end:
@@ -100,31 +134,34 @@ class MappingToTotals:
         if len(self._cache) > _MAX_CACHE_SIZE:
             self.finalize()
 
-    def finalize(self):
+    def finalize(self) -> None:
         """Process cached counts."""
-        for count, multiplier in self._cache.items():
-            self._update_totals(count, multiplier)
+        for counts, multiplier in self._cache.items():
+            for smlbid, count in enumerate(counts):
+                if count:
+                    for lst in self._map_by_smlbid[smlbid]:
+                        lst[0] += count
+
+            for dst_counts, src_count in self._totals_src_and_dst:
+                if src_count[0]:
+                    dst_counts[src_count[0]] += multiplier
+                    src_count[0] = 0
+
         self._cache.clear()
 
-    def _update_totals(self, count, multiplier=1):
-        for smlbid, count in enumerate(count):
-            if count:
-                for lst in self._map_by_smlbid[smlbid]:
-                    lst[0] += count
-
-        for dst_counts, src_count in self._totals_src_and_dst:
-            if src_count[0]:
-                dst_counts[src_count[0]] += multiplier
-                src_count[0] = 0
-
     @classmethod
-    def _build_mappings(cls, totals, name, smlbid_to_smlb):
+    def _build_mappings(
+        cls,
+        totals: TotalsDict,
+        name: str,
+        id_to_library: IDToLibrary,
+    ) -> tuple[list[tuple[CountsDict, ...]], list[tuple[CountsDict, CountsDict]]]:
         # Accumulators mapped by sample+library IDs
-        totals_by_smlbid = []
+        totals_by_smlbid: list[tuple[CountsDict, ...]] = []
         # Accumulators mapped by the corresponding table keys
-        totals_by_table_key = {}
+        totals_by_table_key: TotalsDict = {}
 
-        for sm_key, lb_key in smlbid_to_smlb:
+        for sm_key, lb_key in id_to_library:
             keys = [
                 ("*", "*", "*"),
                 (sm_key, "*", "*"),
@@ -136,27 +173,31 @@ class MappingToTotals:
             mappings = cls._nonoverlapping_mappings(keys, totals, totals_by_table_key)
             totals_by_smlbid.append(mappings)
 
-        totals_src_and_dst = []
+        totals_src_and_dst: list[tuple[CountsDict, CountsDict]] = []
         for key, dst in totals_by_table_key.items():
             totals_src_and_dst.append((totals[key], dst))
 
         return totals_by_smlbid, totals_src_and_dst
 
-    @classmethod
-    def _nonoverlapping_mappings(cls, keys, totals, totals_by_table_key):
+    @staticmethod
+    def _nonoverlapping_mappings(
+        keys: Iterable[TotalsKey],
+        totals: TotalsDict,
+        totals_by_table_key: TotalsDict,
+    ) -> tuple[CountsDict, ...]:
         """Returns a tuple of accumulators for a given set of table keys. As
         multiple table keys may share the same accumulator (e.g. if there is
         only one sample, then sample "*" and that sample will be identical),
         the tuple of accumulators may contain fewer items than keys."""
 
-        mapping = []
-        totals_used = set()
+        mapping: list[CountsDict] = []
+        totals_used: set[int] = set()
         for key in keys:
             # Check that accumulator is not already included
             totals_id = id(totals[key])
             if totals_id not in totals_used:
                 totals_used.add(totals_id)
-                accumulator = totals_by_table_key.setdefault(key, [0])
+                accumulator = totals_by_table_key.setdefault(key, {0: 0})
                 mapping.append(accumulator)
         return tuple(mapping)
 
@@ -165,7 +206,7 @@ class MappingToTotals:
 ##############################################################################
 
 
-def calc_max_depth(counts):
+def calc_max_depth(counts: CountsDict) -> int | str:
     counts = dict(counts)
     counts.pop(0, None)
 
@@ -184,33 +225,31 @@ def calc_max_depth(counts):
     return "NA"
 
 
-def print_table(handle, args, totals):
+def print_table(args: Args, handle: pysam.AlignmentFile, totals: TotalsDict) -> None:
     lengths = collect_references(args, handle)
 
-    with (
-        sys.stdout if args.outfile == "-" else open(args.outfile, "w")
-    ) as output_handle:
-        rows = build_table(args.target_name, totals, lengths)
-        output_handle.write(_HEADER)
-        output_handle.write("\n")
-        for line in rows:
-            output_handle.write("\t".join(map(str, line)))
-            output_handle.write("\n")
+    with file_or_stdout(args.outfile) as out:
+        print(_HEADER, file=out)
+        for line in build_table(args.target_name, totals, lengths):
+            print(*line, sep="\t", file=out)
 
 
-def calculate_depth_pc(counts, length):
+def calculate_depth_pc(counts: CountsDict, length: float) -> Iterator[str]:
     final_counts = [0] * (_MAX_DEPTH + 1)
     for depth, count in counts.items():
         final_counts[min(_MAX_DEPTH, depth)] += count
 
     running_total = sum(final_counts)
-    total = float(length)
     for count in final_counts[1:]:
-        yield f"{running_total / total:.4f}"
+        yield f"{running_total / length:.4f}"
         running_total -= count
 
 
-def build_table(name, totals, lengths):
+def build_table(
+    name: str,
+    totals: TotalsDict,
+    lengths: dict[str, int],
+) -> Iterator[list[str] | str]:
     header = ["Name", "Sample", "Library", "Contig", "Size", "MaxDepth"]
     for index in range(1, _MAX_DEPTH + 1):
         header.append("MD_%03i" % (index,))
@@ -237,38 +276,50 @@ def build_table(name, totals, lengths):
 ##############################################################################
 
 
-def build_key_struct(args, handle):
-    structure = collections.defaultdict(set)
-    for readgroup in collect_readgroups(args, handle).values():
-        lb_key = readgroup["LB"]
-        sm_key = readgroup["SM"]
-        structure[sm_key].add(lb_key)
+def build_key_struct(
+    args: Args, handle: pysam.AlignmentFile
+) -> collections.defaultdict[str, set[str]]:
+    structure: dict[str, set[str]] = collections.defaultdict(set)
+    for readgroup in collect_readgroups(args, handle):
+        structure[readgroup.sample].add(readgroup.library)
 
     return structure
 
 
-def build_new_dicts(totals, dst_sm, dst_lb, references):
-    totals[(dst_sm, dst_lb, "*")] = collections.defaultdict(int)
-    for contig in references:
-        totals[(dst_sm, dst_lb, contig)] = collections.defaultdict(int)
+def build_new_dicts(
+    totals: TotalsDict,
+    sample: str,
+    library: str,
+    contigs: Iterable[str],
+) -> None:
+    totals[(sample, library, "*")] = collections.defaultdict(int)
+    for contig in contigs:
+        totals[(sample, library, contig)] = collections.defaultdict(int)
 
 
-def reuse_dicts(totals, dst_sm, dst_lb, src_sm, src_lb, references):
+def reuse_dicts(
+    totals: TotalsDict,
+    dst_sm: str,
+    dst_lb: str,
+    src_sm: str,
+    src_lb: str,
+    contigs: Iterable[str],
+) -> None:
     totals[(dst_sm, dst_lb, "*")] = totals[(src_sm, src_lb, "*")]
-    for contig in references:
+    for contig in contigs:
         totals[(dst_sm, dst_lb, contig)] = totals[(src_sm, src_lb, contig)]
 
 
-def build_totals_dict(args, handle):
+def build_totals_dict(args: Args, handle: pysam.AlignmentFile) -> TotalsDict:
     references = tuple(collect_references(args, handle))
     structure = build_key_struct(args, handle)
 
-    totals = {}
+    totals: TotalsDict = {}
     for sm_key, libraries in structure.items():
         for lb_key in libraries:
             if len(references) == 1:
                 key = references[0]
-                counts = collections.defaultdict(int)
+                counts: CountsDict = collections.defaultdict(int)
                 totals[(sm_key, lb_key, key)] = counts
                 totals[(sm_key, lb_key, "*")] = counts
             else:
@@ -289,55 +340,63 @@ def build_totals_dict(args, handle):
     return totals
 
 
-def count_bases(args, counts, record, rg_to_smlbid, template):
-    for _ in range(record.alen - len(counts)):
-        counts.append(list(template))
+def count_bases(
+    args: Args,
+    counts: CountsCache,
+    record: pysam.AlignedSegment,
+    rg_to_smlbid: ReadGroupToID,
+    template: list[int],
+) -> None:
+    cigartuples = record.cigartuples
+    if cigartuples is not None and record.reference_length is not None:
+        for _ in range(record.reference_length - len(counts)):
+            counts.append(list(template))
 
-    key = rg_to_smlbid.get(args.get_readgroup_func(record))
-    if key is None:
-        # Unknown readgroups are treated as missing readgroups
-        key = rg_to_smlbid[None]
+        key = rg_to_smlbid.get(args.get_readgroup_func(record))
+        if key is None:
+            # Unknown readgroups are treated as missing readgroups
+            key = rg_to_smlbid[None]
 
-    index = 0
-    for cigar, count in record.cigar:
-        if cigar in (0, 7, 8):
-            for counter in itertools.islice(counts, index, index + count):
-                counter[key] += 1
-            index += count
-        elif cigar in (2, 3, 6):
-            index += count
+        index = 0
+        for cigar, count in cigartuples:
+            if cigar in (0, 7, 8):
+                for counter in itertools.islice(counts, index, index + count):
+                    counter[key] += 1
+                index += count
+            elif cigar in (2, 3, 6):
+                index += count
 
 
-def build_rg_to_smlbid_keys(args, handle):
+def build_rg_to_smlbid_keys(
+    args: Args,
+    handle: pysam.AlignmentFile,
+) -> tuple[ReadGroupToID, IDToLibrary]:
     """Returns a dictionary which maps a readgroup ID to an index value,
-    as well as a list containing a tuple (samples, library) corresponding
+    as well as a list containing a tuple (sample, library) corresponding
     to each index. Typically, this list will be shorter than the map of read-
     groups, as multiple read-groups will map to the same sample / library.
     """
+    readgroup_to_id: dict[str | None, SampleLibraryID] = {}
+    library_to_id: dict[SampleLibraryKey, SampleLibraryID] = {}
+    id_to_library: list[SampleLibraryKey] = []
+    for readgroup in collect_readgroups(args, handle):
+        key = SampleLibraryKey((readgroup.sample, readgroup.library))
+        if key not in library_to_id:
+            library_to_id[key] = SampleLibraryID(len(library_to_id))
+            id_to_library.append(key)
 
-    rg_to_lbsmid = {}
-    lbsm_to_lbsmid = {}
-    lbsmid_to_smlb = []
-    for key_rg, readgroup in collect_readgroups(args, handle).items():
-        key_sm = readgroup["SM"]
-        key_lb = readgroup["LB"]
+        readgroup_to_id[readgroup.key] = library_to_id[key]
 
-        key_lbsm = (key_sm, key_lb)
-        if key_lbsm not in lbsm_to_lbsmid:
-            lbsm_to_lbsmid[key_lbsm] = len(lbsm_to_lbsmid)
-            lbsmid_to_smlb.append(key_lbsm)
-
-        rg_to_lbsmid[key_rg] = lbsm_to_lbsmid[key_lbsm]
-    return rg_to_lbsmid, lbsmid_to_smlb
+    return readgroup_to_id, id_to_library
 
 
-def process_file(handle, args):
+def process_file(args: Args, handle: pysam.AlignmentFile) -> int:
     timer = BAMTimer(handle)
 
     last_tid = 0
     totals = build_totals_dict(args, handle)
-    rg_to_smlbid, smlbid_to_smlb = build_rg_to_smlbid_keys(args, handle)
-    template = [0] * len(smlbid_to_smlb)
+    rg_to_smlbid, id_to_library = build_rg_to_smlbid_keys(args, handle)
+    template = [0] * len(id_to_library)
 
     for region in BAMRegionsIter(handle, args.regions):
         if region.name is None:
@@ -347,8 +406,8 @@ def process_file(handle, args):
             region.name = "<Genome>"
 
         last_pos = 0
-        counts = collections.deque()
-        mapping = MappingToTotals(totals, region, smlbid_to_smlb)
+        counts: CountsCache = collections.deque()
+        mapping = MappingToTotals(totals, region, id_to_library)
         for position, records in region:
             mapping.process_counts(counts, last_pos, position)
 
@@ -378,12 +437,12 @@ def process_file(handle, args):
                 if key[0] == "<NA>":
                     totals.pop(key)
 
-    print_table(handle, args, totals)
+    print_table(args, handle, totals)
 
     return 0
 
 
-def main(argv):
+def main(argv: list[str]) -> int:
     return main_wrapper(process_file, argv, ".depths")
 
 

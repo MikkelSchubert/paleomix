@@ -106,12 +106,12 @@ class BAMRegionsIter:
         self._regions = [] if regions is None else regions
         self._excluded = exclude_flags
 
-    def __iter__(self) -> Generator[_BAMRegion, None, None]:
+    def __iter__(self) -> Generator[BAMRegion, None, None]:
         if self._regions:
             for region in self._regions:
                 records = self._handle.fetch(region.contig, region.start, region.end)
 
-                yield _BAMRegion(
+                yield BAMRegion(
                     tid=self._handle.get_tid(region.contig),
                     records=self._filter(records),
                     name=region.name,
@@ -136,7 +136,7 @@ class BAMRegionsIter:
                     name = names[tid]
                     length = lengths[tid]
 
-                yield _BAMRegion(tid, items, name, 0, length)
+                yield BAMRegion(tid, items, name, 0, length)
 
     def _filter(self, records: Iterable[AlignedSegment]) -> Iterable[AlignedSegment]:
         """Filters records by flags, if 'exclude_flags' is set."""
@@ -145,7 +145,7 @@ class BAMRegionsIter:
         return records
 
 
-class _BAMRegion:
+class BAMRegion:
     """Implements iteration over sites in a BAM file. It is assumed that the
     BAM file is sorted, and that the input records are from one contig.
     """

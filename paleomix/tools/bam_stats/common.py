@@ -24,35 +24,63 @@ from __future__ import annotations
 import collections
 import logging
 import os
+from dataclasses import dataclass, field
+from typing import Callable
 
 import pysam
 
 from paleomix.common import argparse
 from paleomix.common.fileutils import swap_ext
-from paleomix.common.formats.bed import read_bed_file, sort_bed_by_bamfile
+from paleomix.common.formats.bed import BEDRecord, read_bed_file, sort_bed_by_bamfile
 
 
 class BAMStatsError(RuntimeError):
     pass
 
 
-def collect_readgroups(args, handle):
-    readgroups = {None: {"SM": "<NA>", "LB": "<NA>"}}
+@dataclass
+class Args:
+    infile: str
+    outfile: str
+    target_name: str
+    regions_fpath: str | None
+    max_contigs: int
+    ignore_readgroups: bool
+    overwrite_output: bool
+    get_readgroup_func: Callable[[pysam.AlignedSegment], str | None]
+    regions: list[BEDRecord] = field(default_factory=list)
+
+
+@dataclass
+class Readgroup:
+    key: str | None
+    sample: str
+    library: str
+
+
+def collect_readgroups(
+    args: Args,
+    handle: pysam.AlignmentFile,
+) -> list[Readgroup]:
+    readgroups = [Readgroup(key=None, sample="<NA>", library="<NA>")]
     if args.ignore_readgroups:
         return readgroups
 
     for readgroup in handle.header.get("RG", ()):
-        key_id = readgroup["ID"]
-        sample = readgroup["SM"]
-        library = readgroup["LB"]
+        readgroups.append(
+            Readgroup(
+                key=readgroup["ID"],
+                sample=readgroup["SM"],
+                library=readgroup["LB"],
+            )
+        )
 
-        readgroups[key_id] = {"SM": sample, "LB": library}
     return readgroups
 
 
-def collect_references(args, handle):
+def collect_references(args: Args, handle: pysam.AlignmentFile) -> dict[str, int]:
     if args.regions:
-        lengths = collections.defaultdict(int)
+        lengths: dict[str, int] = collections.defaultdict(int)
         for region in args.regions:
             lengths[region.name] += region.end - region.start
 
@@ -65,22 +93,30 @@ def collect_references(args, handle):
     return lengths
 
 
-def collect_bed_regions(filename):
-    regions = []
-    name_cache = {}
+def collect_bed_regions(filename: str) -> list[BEDRecord]:
+    cache: dict[str, str] = {}
+    regions: list[BEDRecord] = []
     for record in read_bed_file(filename):
-        if not record.name:
-            record.name = f"{record.contig}*"
+        name = record.name
+        if not name:
+            name = f"{record.contig}*"
 
-        record.contig = name_cache.setdefault(record.contig, record.contig)
-        record.name = name_cache.setdefault(record.name, record.name)
+        record.contig = cache.setdefault(record.contig, record.contig)
+        record.name = cache.setdefault(name, name)
 
-        regions.append(record)
+        regions.append(
+            BEDRecord(
+                contig=record.contig,
+                start=record.start,
+                end=record.end,
+                name=name,
+            )
+        )
 
     return regions
 
 
-def parse_arguments(argv, ext):
+def parse_arguments(argv: list[str], ext: str) -> Args:
     prog = "paleomix {}".format(ext.strip("."))
     usage = f"{prog} [options] sorted.bam [out{ext}]"
     parser = argparse.ArgumentParser(prog=prog, usage=usage)
@@ -147,9 +183,9 @@ def parse_arguments(argv, ext):
         args.outfile = swap_ext(args.infile, ext)
 
     if args.ignore_readgroups:
-        args.get_readgroup_func = _get_readgroup_ignored
+        get_readgroup_func = _get_readgroup_ignored
     else:
-        args.get_readgroup_func = _get_readgroup
+        get_readgroup_func = _get_readgroup
 
     if not args.target_name:
         if args.infile == "-":
@@ -163,13 +199,25 @@ def parse_arguments(argv, ext):
             "--overwrite-output to allow overwriting of this file."
         )
 
-    return args
+    return Args(
+        infile=args.infile,
+        outfile=args.outfile,
+        target_name=args.target_name,
+        regions_fpath=args.regions_fpath,
+        max_contigs=args.max_contigs,
+        ignore_readgroups=args.ignore_readgroups,
+        overwrite_output=args.overwrite_output,
+        get_readgroup_func=get_readgroup_func,
+    )
 
 
-def main_wrapper(process_func, argv, ext):
+def main_wrapper(
+    process_func: Callable[[Args, pysam.AlignmentFile], int],
+    argv: list[str],
+    ext: str,
+) -> int:
     log = logging.getLogger(__name__)
     args = parse_arguments(argv, ext)
-    args.regions = []
     if args.regions_fpath:
         try:
             args.regions = collect_bed_regions(args.regions_fpath)
@@ -192,15 +240,15 @@ def main_wrapper(process_func, argv, ext):
             return 1
 
         sort_bed_by_bamfile(handle, args.regions)
-        return process_func(handle, args)
+        return process_func(args, handle)
 
 
-def _get_readgroup(record):
+def _get_readgroup(record: pysam.AlignedSegment) -> str | None:
     try:
         return record.get_tag("RG")
     except KeyError:
         return None
 
 
-def _get_readgroup_ignored(_) -> None:
+def _get_readgroup_ignored(_: pysam.AlignedSegment) -> str | None:
     return None
