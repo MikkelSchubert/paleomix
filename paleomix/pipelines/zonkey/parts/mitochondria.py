@@ -102,4 +102,4 @@ class DrawPhylogenyNode(CommandNode):
         with open(os.path.join(temp, "rerooted.newick"), "w") as handle:
             handle.write(f"{tree}\n")
 
-        CommandNode._setup(self, temp)
+        super()._setup(temp)

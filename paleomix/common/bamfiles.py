@@ -164,7 +164,7 @@ class BAMRegion:
         self.start = start
         self.end = end
 
-    def __iter__(self) -> Generator[tuple[int, Iterator[AlignedSegment]], None, None]:
+    def __iter__(self) -> Iterator[tuple[int, Iterator[AlignedSegment]]]:
         yield from itertools.groupby(self._records, self._by_pos)
 
     @staticmethod

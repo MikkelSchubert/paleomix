@@ -168,7 +168,7 @@ def test_is_int__default_set__valid_value() -> None:
 
 
 def test_is_int__default_set__must_meet_spec() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Default value does not meet requirements"):
         IsInt(default="abc")
 
 
@@ -212,7 +212,7 @@ def test_is_unsigned_int__default_set__valid_value() -> None:
 
 
 def test_is_unsigned_int__default_set__must_meet_spec() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Default value does not meet requirements"):
         IsUnsignedInt(default=-3)
 
 
@@ -255,7 +255,7 @@ def test_is_float__default_set__valid_value() -> None:
 
 
 def test_is_float__default_set__must_meet_spec() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Default value does not meet requirements"):
         IsFloat(default="abc")
 
 
@@ -299,7 +299,7 @@ def test_is_boolean__default_set__valid_value() -> None:
 
 
 def test_is_boolean__default_set__must_meet_spec() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Default value does not meet requirements"):
         IsBoolean(default="abc")
 
 
@@ -330,7 +330,7 @@ def test_is_str__accepts_empty_str() -> None:
 
 
 def test_is_str__rejects_negative_min_len() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="min_len must be non-negative"):
         IsStr(min_len=-1)
 
 
@@ -363,7 +363,7 @@ def test_is_str__default_set__valid_value() -> None:
 
 
 def test_is_str__default_set__must_meet_spec() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Default value does not meet requirements"):
         IsStr(default=17)
 
 
@@ -546,7 +546,7 @@ def test_is_value_in__default_set__valid_value() -> None:
 
 
 def test_is_value_in__default_set__must_meet_spec() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Default value does not meet requirements"):
         ValueIn(list(range(5)), default=5)
 
 
@@ -628,7 +628,7 @@ def test_intersects__default_set__valid_value() -> None:
 
 
 def test_intersects__default_set__must_meet_spec() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Default value does not meet requirements"):
         ValuesIntersect(list(range(5)), default=[5])
 
 
@@ -717,7 +717,7 @@ def test_subset_of__default_set__valid_value() -> None:
 
 
 def test_subset_of__default_set__must_meet_spec() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Default value does not meet requirements"):
         ValuesSubsetOf(list(range(5)), default=[4, 5])
 
 
@@ -761,7 +761,7 @@ def test_and__rejects_when_both_is_false() -> None:
 
 
 def test_and__rejects_no_tests() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="No specification given"):
         And()
 
 
@@ -781,12 +781,15 @@ def test_and__default_set__valid_value() -> None:
 
 
 def test_and__default_set__must_meet_spec() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Default value does not meet requirements"):
         And(IsInt, ValueIn((1,)), default=5)
 
 
 def test_and__defaults_not_set_in_specs() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError,
+        match="Default values cannot be set in specs given to logical operators",
+    ):
         And(IsInt(default=10), ValueIn(list(range(100))))
 
 
@@ -812,7 +815,7 @@ def test_or__rejects_if_both_specs_fail() -> None:
 
 
 def test_or__rejects_no_tests() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="No specification given"):
         Or()
 
 
@@ -832,12 +835,15 @@ def test_or__default_set__valid_value() -> None:
 
 
 def test_or__default_set__must_meet_spec() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Default value does not meet requirements"):
         Or(IsInt, ValueIn((10,)), default=5.5)
 
 
 def test_or__defaults_not_set_in_specs() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError,
+        match="Default values cannot be set in specs given to logical operators",
+    ):
         Or(IsInt(default=10), ValueIn((10,)))
 
 
@@ -858,7 +864,10 @@ def test_not__rejects_when_test_is_true() -> None:
 
 
 def test_not__defaults_not_set_in_specs() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError,
+        match="Default values cannot be set in specs given to logical operators",
+    ):
         Not(IsInt(default=10))
 
 
@@ -904,7 +913,7 @@ def test_string_in__default_set__valid_value() -> None:
 
 
 def test_string_in__default_set__must_meet_spec() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Default value does not meet requirements"):
         ValueIn("ABCDEFGH", default="i")
 
 
@@ -954,7 +963,7 @@ def test_string_starts_with__default_set__valid_value() -> None:
 
 
 def test_string_starts_with__default_set__must_meet_spec() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Default value does not meet requirements"):
         StringStartsWith("FooBar", default="BarFoo")
 
 
@@ -994,7 +1003,7 @@ def test_string_ends_with__default_set__valid_value() -> None:
 
 
 def test_string_ends_with__default_set__must_meet_spec() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Default value does not meet requirements"):
         StringEndsWith("FooBar", default="BarFoo")
 
 
@@ -1105,12 +1114,15 @@ def test_is_list_of__default_set__valid_value() -> None:
 
 
 def test_is_list_of__default_set__must_meet_spec() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Default value does not meet requirements"):
         IsListOf(IsInt, default=17)
 
 
 def test_is_list_of__defaults_not_set_in_specs() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError,
+        match="Default values cannot be set in specs given to logical operators",
+    ):
         IsListOf(IsInt(default=10))
 
 
@@ -1169,17 +1181,17 @@ def test_is_dict_of__default_set__valid_value() -> None:
 
 
 def test_is_dict_of__default_set__must_meet_spec() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Default value does not meet requirements"):
         IsDictOf(IsInt, IsInt, default={1: "b"})
 
 
 def test_is_dict_of__defaults_not_set_in_key_specs() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Default values cannot be set"):
         IsDictOf(IsInt(default=10), IsInt)
 
 
 def test_is_dict_of__defaults_not_set_in_value_specs() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Default values cannot be set"):
         IsDictOf(IsInt, IsInt(default=10))
 
 
@@ -1261,7 +1273,7 @@ def test_validate_makefile__unexpected_type_in_reference() -> None:
 
 
 def test_validate_makefile__unexpected_type_in_current() -> None:
-    current = {1: []}
+    current: object = {1: []}
     specs: SpecTree = {IsInt: {IsInt: IsInt}}
     with pytest.raises(MakefileError):
         process_makefile(current, specs)
@@ -1343,7 +1355,7 @@ def test_process_makefile__fails_when_required_value_not_set() -> None:
 
 
 def test_process_makefile__fails_required_value_not_set_in_dynamic_subtree() -> None:
-    current = {"A": 1, "B": {}}
+    current: object = {"A": 1, "B": {}}
     specs: SpecTree = {"A": IsInt, IsStr: {"C": IsInt(default=REQUIRED_VALUE)}}
     with pytest.raises(MakefileError):
         process_makefile(current, specs)
@@ -1397,7 +1409,7 @@ def test_process_makefile__wrong_list_types() -> None:
 
 def test_process_makefile__missing_list_defaults_to_empty() -> None:
     current = {"A": 1}
-    expected = {"A": 1, "B": {"C": []}}
+    expected: object = {"A": 1, "B": {"C": []}}
     specs: SpecTree = {"A": IsInt, "B": {"C": [IsInt]}}
     result = process_makefile(current, specs)
     assert result == expected
@@ -1413,7 +1425,7 @@ def test_process_makefile__missing_list_default_value() -> None:
 
 def test_process_makefile__key_specified_but_no_entries() -> None:
     current = {"A": 1, "B": None}
-    expected = {"A": 1, "B": []}
+    expected: object = {"A": 1, "B": []}
     specs: SpecTree = {"A": IsInt, "B": [IsInt]}
     result = process_makefile(current, specs)
     assert result == expected
@@ -1437,7 +1449,7 @@ def test_process_makefile__list_spec_must_contain_only_specs() -> None:
 
 
 def test_read_makefile__missing_file() -> None:
-    with pytest.raises(IOError):
+    with pytest.raises(FileNotFoundError):
         read_makefile("does_not_exist.yaml", {})
 
 
@@ -1497,7 +1509,7 @@ def test__preprocess_makefile__invalid_value() -> None:
 def test__preprocess_makefile__invalid_string() -> None:
     spec: SpecTree = {"Key": _PreProcess()}
     # Failures in processing should propagate out
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="invalid literal"):
         process_makefile({"Key": "x14"}, spec)
 
 

@@ -300,9 +300,10 @@ def main(argv: list[str]) -> int:
         sys.stderr.write("STDOUT is a terminal, terminating!\n")
         return 1
 
-    with AlignmentFile(args.input, "rb") as infile:
-        with AlignmentFile("-", "wb", template=infile) as outfile:
-            return process(args, infile, outfile)
+    with AlignmentFile(args.input, "rb") as infile, AlignmentFile(
+        "-", "wb", template=infile
+    ) as outfile:
+        return process(args, infile, outfile)
 
     return 0
 

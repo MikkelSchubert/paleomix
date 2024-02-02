@@ -317,7 +317,7 @@ def parse_args(argv):
 
 def main(argv):
     args = parse_args(argv)
-    args.revision = datetime.datetime.today().strftime("%Y%m%d")
+    args.revision = datetime.datetime.now(tz=datetime.timezone.utc).strftime("%Y%m%d")
 
     data = _collect_samples(args.reference, args.samples)
     if not data:

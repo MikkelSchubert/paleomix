@@ -268,38 +268,38 @@ def process_bam(args, data, bam_handle, mapping):
 
     fileutils.make_dirs(args.root)
 
-    with open(os.path.join(args.root, "incl_ts.tped"), "w") as output_incl:
-        with open(os.path.join(args.root, "excl_ts.tped"), "w") as output_excl:
-            with GenotypeReader(args.database) as reader:
-                for ref, sites in reader:
-                    records = set()
-                    raw_ref = raw_references[references.index(ref)]
+    with open(os.path.join(args.root, "incl_ts.tped"), "w") as output_incl, open(
+        os.path.join(args.root, "excl_ts.tped"), "w"
+    ) as output_excl, GenotypeReader(args.database) as reader:
+        for ref, sites in reader:
+            records = set()
+            raw_ref = raw_references[references.index(ref)]
 
-                    sys.stderr.write(f"Reading {raw_ref!r} from BAM\n")
-                    raw_sites = bam_handle.fetch(raw_ref)
-                    for pos, line, nucleotides in sites.process(raw_sites, statistics):
-                        process_record(
-                            ref,
-                            pos,
-                            line,
-                            nucleotides,
-                            out_incl_ts=output_incl,
-                            out_excl_ts=output_excl,
-                            statistics=statistics,
-                            records=records,
-                        )
-
-                write_summary(
-                    args,
-                    os.path.join(args.root, "common.summary"),
+            sys.stderr.write(f"Reading {raw_ref!r} from BAM\n")
+            raw_sites = bam_handle.fetch(raw_ref)
+            for pos, line, nucleotides in sites.process(raw_sites, statistics):
+                process_record(
+                    ref,
+                    pos,
+                    line,
+                    nucleotides,
+                    out_incl_ts=output_incl,
+                    out_excl_ts=output_excl,
                     statistics=statistics,
+                    records=records,
                 )
-                write_tfam(
-                    os.path.join(args.root, "common.tfam"),
-                    data,
-                    reader.samples,
-                    args.name,
-                )
+
+        write_summary(
+            args,
+            os.path.join(args.root, "common.summary"),
+            statistics=statistics,
+        )
+        write_tfam(
+            os.path.join(args.root, "common.tfam"),
+            data,
+            reader.samples,
+            args.name,
+        )
 
 
 def parse_args(argv):

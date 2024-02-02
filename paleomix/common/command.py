@@ -396,7 +396,7 @@ class AtomicCmd:
                 cwd=cwd,
                 start_new_session=True,
             )
-        except Exception as error:
+        except (OSError, ValueError, CmdError) as error:
             message = "Error running commands:\n  Call = {!r}\n  Error = {!r}"
             raise CmdError(message.format(self._command, error)) from error
         finally:
@@ -642,7 +642,7 @@ class AtomicCmd:
             return pipe._proc.stdout
 
         if pipe.temporary or isinstance(pipe, OutputFile):
-            return open(fileutils.reroot_path(temp_dir, pipe.path), mode)
+            return open(fileutils.reroot_path(temp_dir, pipe.path), mode)  # noqa: SIM115
 
         return open(pipe.path, mode)  # noqa: SIM115
 
@@ -870,7 +870,7 @@ def _collect_stats(
         for subcmd in command._commands:
             _collect_stats(subcmd, ids, pipes)
     else:
-        assert False  # pragma: no coverage
+        raise ValueError(command)
 
 
 def _build_status(command: AtomicCmd, indent: int, lines: list[str]) -> None:

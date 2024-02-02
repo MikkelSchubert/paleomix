@@ -277,14 +277,16 @@ def _process_recalibrator_settings(data):
     # had been built, but this would result in unexpected behavior if upstream files
     # changed (models not beeing updated).
     genotyping = data["Settings"]["Genotyping"]
-    if not genotyping["VariantRecalibrator"]["Enabled"]:
-        if genotyping["ApplyVQSR"]["Enabled"]:
-            genotyping["ApplyVQSR"]["Enabled"] = False
-            log = logging.getLogger(__name__)
-            log.warning(
-                "GATK variant recalibration (ApplyVQSR) is enabled, but model building "
-                "(VariantRecalibrator) is disabled. Variant recalibration will NOT be "
-                "performed!"
-            )
+    if (
+        not genotyping["VariantRecalibrator"]["Enabled"]
+        and genotyping["ApplyVQSR"]["Enabled"]
+    ):
+        genotyping["ApplyVQSR"]["Enabled"] = False
+        log = logging.getLogger(__name__)
+        log.warning(
+            "GATK variant recalibration (ApplyVQSR) is enabled, but model building "
+            "(VariantRecalibrator) is disabled. Variant recalibration will NOT be "
+            "performed!"
+        )
 
     return True

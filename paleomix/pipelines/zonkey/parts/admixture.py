@@ -100,16 +100,15 @@ def get_percentiles(data, sample1, sample2, nreads, k_groups, has_ts, value):
 
 def _select_simulations(data, sample1, sample2, nreads, k_groups, has_ts):
     selection = []
-    samples = frozenset((sample1, sample2))
+    samples = {sample1, sample2}
     for row in data.simulations:
-        if row["K"] != k_groups or row["HasTS"] != has_ts:
-            continue
-        elif row["NReads"] != nreads:
-            continue
-        elif frozenset((row["Sample1"], row["Sample2"])) != samples:
-            continue
-
-        selection.append(row)
+        if (
+            row["K"] == k_groups
+            and row["HasTS"] == has_ts
+            and row["NReads"] == nreads
+            and {row["Sample1"], row["Sample2"]} == samples
+        ):
+            selection.append(row)
 
     return selection
 

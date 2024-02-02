@@ -242,10 +242,7 @@ def main(argv: list[str]) -> int:
     if not args.max_output:
         args.max_output = float("inf")
 
-    if args.any_query_name:
-        key_function = key_without_name
-    else:
-        key_function = key_with_name
+    key_function = key_without_name if args.any_query_name else key_with_name
 
     total_duplicates = 0
     total_filtered_duplicates = 0

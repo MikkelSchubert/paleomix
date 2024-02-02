@@ -278,18 +278,18 @@ def get_files_glob(
     differences = 0
     for chars in zip(*filenames):
         if "?" in chars:
-            chars = ("?",)
-
-        if len(frozenset(chars)) > 1:
+            glob_fname.append("?")
+        elif len(frozenset(chars)) > 1:
             if show_differences:
-                chars = ("[%s]" % ("".join(sorted(chars))),)
+                glob_fname.append("[%s]" % "".join(sorted(chars)))
             else:
-                chars = ("?",)
-            differences += 1
-        glob_fname.append(chars[0])
+                glob_fname.append("?")
 
-    if differences > max_differences:
-        return None
+            differences += 1
+            if differences > max_differences:
+                return None
+        else:
+            glob_fname.append(chars[0])
 
     return "".join(glob_fname)
 

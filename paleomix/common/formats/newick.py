@@ -535,7 +535,8 @@ class _NewickGraph:
             elif branch_length == root_at:
                 return n_node
             root_at -= branch_length
-        assert False  # pragma: no coverage
+
+        raise AssertionError("midpoint not found")  # pragma: no coverage
 
     ################################################################################
     ################################################################################
@@ -606,11 +607,12 @@ class _NewickGraph:
         root_length: float | None = None
         for p_node, connections in clades.items():
             for n_node, clade in connections.items():
-                if (root_clade is None) or (len(clade) < len(root_clade)):
-                    if taxa.issubset(clade):
-                        root_key = (p_node, n_node)
-                        root_clade = clade
-                        root_length = self.get_path_length(p_node, n_node)
+                if (
+                    root_clade is None or len(clade) < len(root_clade)
+                ) and taxa.issubset(clade):
+                    root_key = (p_node, n_node)
+                    root_clade = clade
+                    root_length = self.get_path_length(p_node, n_node)
 
         assert root_key is not None
         p_node, n_node = root_key

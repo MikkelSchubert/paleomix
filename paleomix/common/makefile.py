@@ -176,12 +176,15 @@ from __future__ import annotations
 import copy
 import logging
 import re
-from typing import Dict, Hashable, List, Sequence, Tuple, Type, Union
+from typing import TYPE_CHECKING, Dict, Hashable, List, Sequence, Tuple, Type, Union
 
 from typing_extensions import TypeGuard
 
 from paleomix.common import yaml
 from paleomix.common.fileutils import PathTypes, fspath
+
+if TYPE_CHECKING:
+    from collections.abc import Collection
 
 BasicType = Union[str, int, float, bool, None]
 SpecType = Union["_SpecBase", "Type[_SpecBase]"]
@@ -204,7 +207,7 @@ def read_makefile(filename: PathTypes, specification: SpecTree) -> object:
         with open(fspath(filename)) as handle:
             data = yaml.safe_load(handle)
     except (yaml.YAMLError, yaml.DuplicateKeyError) as error:
-        raise MakefileError(error)
+        raise MakefileError(error) from None
 
     return process_makefile(data, specification)
 
@@ -870,7 +873,7 @@ def _list_values(raw: Sequence[Hashable], sep: str) -> str:
         return tail
 
 
-def _get_summary_spec(specs_or_keys: Sequence[SpecType | str]) -> _SpecBase:
+def _get_summary_spec(specs_or_keys: Collection[SpecType | str]) -> MakefileSpec:
     """Returns a specification object that may be used to describe a set of
     requirements. This is used if a key or value does not match the possible
     specs, thereby describing the set of allowed values.
@@ -888,7 +891,7 @@ def _get_summary_spec(specs_or_keys: Sequence[SpecType | str]) -> _SpecBase:
 
 def _get_matching_spec_or_value(
     value: object,
-    specs: dict[SpecType | str, SpecTree],
+    specs: Collection[SpecType | str],
     path: SpecPath,
 ) -> object:
     """Returns the specification object or value that matches the observed
@@ -905,7 +908,8 @@ def _get_matching_spec_or_value(
 
     # No matching key or spec; create combined spec to raise error message
     _get_summary_spec(specs)(path, value)
-    assert False  # pragma: no coverage
+
+    raise AssertionError("combined spec-test should have failed")  # pragma: no coverage
 
 
 def _process_default_values(
@@ -945,10 +949,9 @@ def _process_default_values(
                     # Setting of values in the dict will be accomplished
                     # in subsequent calls to _process_default_values
                     default_value = {}
-                elif isinstance(default_value, list):
+                elif isinstance(default_value, list) and not default_value_from_spec:
                     # Lists of specs defaults to empty lists
-                    if not default_value_from_spec:
-                        default_value = []
+                    default_value = []
 
                 # Prevent clobbering of values when re-using sub-specs
                 data[cur_key] = copy.deepcopy(default_value)

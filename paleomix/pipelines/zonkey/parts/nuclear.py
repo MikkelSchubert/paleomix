@@ -212,12 +212,11 @@ class AdmixtureNode(CommandNode):
         pop_filename = fileutils.swap_ext(fam_filename, ".pop")
         pop_filename = fileutils.reroot_path(temp, pop_filename)
 
-        with open(fam_filename) as fam_handle:
-            with open(pop_filename, "w") as pop_handle:
-                for line in fam_handle:
-                    sample, _ = line.split(None, 1)
+        with open(fam_filename) as fam_handle, open(pop_filename, "w") as pop_handle:
+            for line in fam_handle:
+                sample, _ = line.split(None, 1)
 
-                    pop_handle.write("{}\n".format(self._groups.get(sample, "-")))
+                pop_handle.write("{}\n".format(self._groups.get(sample, "-")))
 
 
 class SelectBestAdmixtureNode(Node):

@@ -184,21 +184,22 @@ class Pypeline:
                 if worker in task_info.blacklisted_from:
                     continue
 
-                if nodegraph.get_node_state(task) == nodegraph.RUNNABLE:
-                    if idle_threads >= task.threads or event["overcommit"]:
-                        if not manager.start_task(worker, task):
-                            # Error in worker; this will probably be picked up next loop
-                            return False
+                if nodegraph.get_node_state(task) == nodegraph.RUNNABLE and (
+                    idle_threads >= task.threads or event["overcommit"]
+                ):
+                    if not manager.start_task(worker, task):
+                        # Error in worker; this will probably be picked up next loop
+                        return False
 
-                        task_info.running_on = worker
-                        self._set_node_state(nodegraph, task, nodegraph.RUNNING)
+                    task_info.running_on = worker
+                    self._set_node_state(nodegraph, task, nodegraph.RUNNING)
 
-                        # Overcommiting allowed only if a worker is idle
-                        event["overcommit"] = False
+                    # Overcommiting allowed only if a worker is idle
+                    event["overcommit"] = False
 
-                        idle_threads -= task.threads
-                        if idle_threads <= 0:
-                            break
+                    idle_threads -= task.threads
+                    if idle_threads <= 0:
+                        break
 
         return True
 

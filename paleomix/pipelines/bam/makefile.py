@@ -515,13 +515,12 @@ def _validate_makefile_options(makefile):
     for sample, library, barcode, record in _iterate_over_records(makefile):
         path = (sample, library, barcode)
 
-        if record["Type"] != "Untrimmed":
-            if record["Options"]["QualityOffset"] != 33:
-                raise MakefileError(
-                    "Pre-trimmed data must have quality offset 33 (Phred+33). "
-                    "Please convert your FASTQ files using e.g. seqtk before "
-                    f"continuing: {_path_to_str(path)}"
-                )
+        if record["Type"] != "Untrimmed" and record["Options"]["QualityOffset"] != 33:
+            raise MakefileError(
+                "Pre-trimmed data must have quality offset 33 (Phred+33). "
+                "Please convert your FASTQ files using e.g. seqtk before "
+                f"continuing: {_path_to_str(path)}"
+            )
 
         _validate_makefile_adapters(record, path)
 
@@ -636,7 +635,7 @@ def _validate_prefixes(makefiles, pipeline_variant):
 
             try:
                 contigs = FASTA.index_and_collect_contigs(path)
-            except Exception as error:
+            except (OSError, ValueError) as error:
                 if pipeline_variant == "bam":
                     raise MakefileError(f"Error reading/indexing FASTA: {error}")
                 logging.warning("Error reading/indexing FASTA: %s", error)
