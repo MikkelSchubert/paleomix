@@ -26,7 +26,6 @@ import itertools
 from typing import (
     Any,
     Callable,
-    Hashable,
     Iterable,
     Iterator,
     Sequence,
@@ -66,62 +65,6 @@ def try_cast(value: object, cast_to: type) -> object:
         return cast_to(value)
     except (ValueError, TypeError):
         return value
-
-
-def set_in(
-    dictionary: dict[object, object],
-    keys: Iterable[Hashable],
-    value: object,
-) -> None:
-    """Traverses a set of nested dictionaries using the given keys,
-    and assigns the specified value to the inner-most
-    dictionary (obtained from the second-to-last key), using
-    the last key in keys. Thus calling set_in is(d, [X, Y, Z], v)
-    is equivalent to calling
-      d.setdefault(X, {}).setdefault(Y, {})[Z] = v
-
-    Behavior on non-dictionaries is undefined."""
-    keys = list(keys)
-    if not keys:
-        raise ValueError("No keys passed to 'set_in'!")
-
-    for key in keys[:-1]:
-        try:
-            child = dictionary[key]
-            if not isinstance(child, dict):
-                raise TypeError(child)
-
-            dictionary = child
-        except KeyError:  # noqa: PERF203
-            new_dict = {}
-            dictionary[key] = new_dict
-            dictionary = new_dict
-
-    dictionary[keys[-1]] = value
-
-
-def get_in(
-    dictionary: dict[Any, Any],
-    keys: Iterable[Hashable],
-    default: object = None,
-) -> object:
-    """Traverses a set of nested dictionaries using the keys in
-    kws, and returns the value assigned to the final keyword
-    in the innermost dictionary. Calling get_in(d, [X, Y])
-    is equivalent to calling d.get(X).get(Y), with the
-    difference that any missing keys causes the default value
-    to be returned.
-
-    Behavior on non-dictionaries is undefined."""
-    keys = list(keys)
-
-    try:
-        for key in keys[:-1]:
-            dictionary = dictionary[key]
-    except KeyError:
-        return default
-
-    return dictionary.get(keys[-1], default)
 
 
 def split_before(iterable: Iterable[T], pred: Callable[[T], bool]) -> Iterator[list[T]]:
