@@ -27,9 +27,15 @@ is not available from the users' PATH.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Iterable, TypeVar, Union
+from typing import TYPE_CHECKING, Iterable, TypeVar
 
-from paleomix.common.command import AtomicCmd, AtomicFileTypes, InputFile, OutputFile
+from paleomix.common.command import (
+    ArgsType,
+    AtomicCmd,
+    AtomicFileTypes,
+    InputFile,
+    OutputFile,
+)
 from paleomix.common.utilities import safe_coerce_to_tuple
 from paleomix.common.versions import Requirement
 
@@ -49,7 +55,8 @@ RSCRIPT_VERSION = Requirement(
     specifiers=">=3.3.3",
 )
 
-T = TypeVar("T", str, Union[str, AtomicFileTypes])
+# Avoid returning a union type in the the case where all values are str
+T = TypeVar("T", str, ArgsType)
 
 
 def command(args: Iterable[T]) -> tuple[T | str, ...]:
@@ -57,7 +64,7 @@ def command(args: Iterable[T]) -> tuple[T | str, ...]:
 
 
 def new(
-    args: Iterable[T],
+    args: Iterable[ArgsType],
     *,
     stdin: int | str | Path | InputFile | AtomicCmd | None = None,
     stdout: int | str | Path | OutputFile | None = None,
@@ -87,7 +94,7 @@ def rscript_command(args: Iterable[T] = ()) -> tuple[T | str, ...]:
 
 
 def rscript(
-    args: Iterable[T] = (),
+    args: Iterable[ArgsType] = (),
     *,
     stdin: int | str | Path | InputFile | AtomicCmd | None = None,
     stdout: int | str | Path | OutputFile | None = None,

@@ -119,6 +119,7 @@ OptionsType = Dict[
     ],
 ]
 
+ArgsType = Union[str, int, Path, AtomicFileTypes]
 JoinType = List[Union[str, None, int]]
 
 
@@ -159,7 +160,7 @@ class AtomicCmd:
 
     def __init__(
         self,
-        command: Iterable[str | int | Path | AtomicFileTypes],
+        command: Iterable[ArgsType],
         *,
         stdin: int | str | Path | InputFile | AtomicCmd | None = None,
         stdout: int | str | Path | OutputFile | None = None,
