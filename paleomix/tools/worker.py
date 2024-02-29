@@ -53,10 +53,11 @@ from paleomix.core.workers import (
     EVT_SHUTDOWN,
     EVT_TASK_DONE,
     EVT_TASK_START,
+    HandleType,
     QueueType,
     RemoteAdapter,
-    _task_wrapper,
     address_to_name,
+    task_wrapper,
 )
 from paleomix.node import Node, NodeError, NodeMissingFilesError
 from paleomix.nodegraph import NodeGraph
@@ -139,7 +140,7 @@ class Worker:
 
         with CommandLine() as interface:
             while self._running or not self._interrupted:
-                handles: list[Any] = [self._conn]
+                handles: list[HandleType] = [self._conn]
                 handles.extend(self._handles)
                 handles.extend(interface.handles)
 
@@ -282,7 +283,7 @@ class Worker:
             temp_root = self._temp_root
 
         proc = RegisteredProcess(
-            target=_task_wrapper,
+            target=task_wrapper,
             args=(self._queue, task, temp_root),
             daemon=True,
         )

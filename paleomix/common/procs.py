@@ -171,7 +171,7 @@ def terminate_processes(
     start = time.time()
 
     processes = tuple(processes)
-    for proc in tuple(processes):
+    for proc in processes:
         # Ignore already closed processes, etc.
         with contextlib.suppress(OSError):
             if isinstance(proc, Popen):

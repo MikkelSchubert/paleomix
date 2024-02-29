@@ -27,10 +27,12 @@ import select
 import sys
 import termios
 import tty
-from typing import TYPE_CHECKING, Any, Iterator
+from typing import TYPE_CHECKING, Iterator
 
 if TYPE_CHECKING:
     from typing_extensions import Self
+
+    from paleomix.core.workers import HandleType
 
 _COMMANDS = {
     "h": "Prints this message.",
@@ -86,23 +88,26 @@ class CommandLine:
                 # Disable echo
                 tty.setcbreak(sys.stdin.fileno())
             except termios.error:
-                pass  # Silently ignore failures
+                self._tty_settings = None
+                self._log.debug("Command-line interface could not be enabled")
+            else:
+                self._log.debug("Enabled command-line interface")
+        else:
+            self._log.debug("Command-line interface disabled; not in interactive mode")
 
     def teardown(self) -> None:
         if self._tty_settings is not None:
-            # Restore settings (re-enable echo)
+            self._log.debug("Restoring terminal settings (enabling echo, etc.)")
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self._tty_settings)
             self._tty_settings = None
 
     @property
-    def handles(self) -> list[Any]:
-        if self._tty_settings is None:
-            return []
-
-        return [sys.stdin]
+    def handles(self) -> Iterator[HandleType]:
+        if self._tty_settings is not None:
+            yield sys.stdin.fileno()
 
     def process_key_presses(self) -> Iterator[CLIEvent]:
-        if self._tty_settings:
+        if self._tty_settings is not None:
             characters: list[str] = []
             while self._poll_stdin():
                 characters.append(sys.stdin.read(1))

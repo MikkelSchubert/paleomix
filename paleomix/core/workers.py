@@ -445,7 +445,7 @@ class LocalWorker:
 
         self._log.debug("Starting local task %s with id %s", task, task.id)
         proc = RegisteredProcess(
-            target=_task_wrapper,
+            target=task_wrapper,
             args=(self._queue, task, temp_root),
             daemon=True,
         )
@@ -646,7 +646,7 @@ class RemoteWorker:
             raise WorkerError(f"RemoteWorker {self.name} is not running")
 
 
-def _task_wrapper(queue: QueueType, task: Node, temp_root: str) -> None:
+def task_wrapper(queue: QueueType, task: Node, temp_root: str) -> None:
     name = "paleomix task"
     if len(sys.argv) > 1:
         name = f"paleomix {sys.argv[1]} task"
