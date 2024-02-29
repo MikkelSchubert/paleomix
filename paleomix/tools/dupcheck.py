@@ -22,10 +22,10 @@
 #
 
 
-import argparse
 import sys
 
 import paleomix.nodes.validation as validation
+from paleomix.common import argparse
 
 
 class ErrHandler:
