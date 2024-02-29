@@ -28,8 +28,23 @@ is not available from the users' PATH.
 import sys
 
 import paleomix.main
-
 from paleomix.atomiccmd.builder import AtomicCmdBuilder
+from paleomix.common import versions
+from paleomix.common.utilities import safe_coerce_to_tuple
+
+RSCRIPT_VERSION = versions.Requirement(
+    call=("Rscript", "--version"),
+    search=r"version (\d+)\.(\d+).(\d+)",
+    checks=versions.GE(3, 3, 3),
+    priority=10,
+)
+
+
+def command(args):
+    interpreter = sys.executable
+    script = paleomix.main.__file__
+
+    return (interpreter, script, *safe_coerce_to_tuple(args))
 
 
 def new(*args, **kwargs):
@@ -38,7 +53,19 @@ def new(*args, **kwargs):
     for the specified command, but does not add any arguments. Thus, calling
     new with the argument "cat" produces the equivalent of ["paleomix", "cat"].
     """
-    interpreter = sys.executable
     script = paleomix.main.__file__
 
-    return AtomicCmdBuilder((interpreter, script) + args, AUX_PALEOMIX=script, **kwargs)
+    return AtomicCmdBuilder(command(args), AUX_PALEOMIX=script, **kwargs)
+
+
+def rscript_command(args):
+    return command((":rscript", *safe_coerce_to_tuple(args)))
+
+
+def rscript(args, **kwargs):
+    return new(
+        ":rscript",
+        *args,
+        CHECK_R=RSCRIPT_VERSION,
+        **kwargs,
+    ).finalize()

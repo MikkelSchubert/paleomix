@@ -32,18 +32,12 @@ from paleomix.nodes.samtools import merge_bam_files_command
 from paleomix.atomiccmd.builder import AtomicCmdBuilder, apply_options
 from paleomix.atomiccmd.sets import ParallelCmds
 
+from paleomix.tools.factory import RSCRIPT_VERSION
 
 MAPDAMAGE_VERSION = versions.Requirement(
     call=("mapDamage", "--version"),
     search=r"(\d+)\.(\d+).(\d+)",
     checks=versions.GE(2, 2, 1),
-)
-
-RSCRIPT_VERSION = versions.Requirement(
-    call=("Rscript", "--version"),
-    search=r"version (\d+)\.(\d+).(\d+)",
-    checks=versions.GE(3, 3, 3),
-    priority=10,
 )
 
 

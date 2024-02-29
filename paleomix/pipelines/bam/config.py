@@ -26,7 +26,7 @@ import multiprocessing
 import paleomix
 import paleomix.common.logging
 
-from paleomix.resources import add_copy_example_command
+from paleomix.common.resources import add_copy_example_command
 from paleomix.common.argparse import ArgumentParser, SUPPRESS
 
 

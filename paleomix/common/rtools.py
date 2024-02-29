@@ -19,18 +19,20 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import os
+
 import paleomix.common.versions as versions
 
-from paleomix.resources import rscript
+from paleomix.tools.factory import rscript_command
 
 
 def requirement(module, checks=versions.Any(), cache={}):
     key = (module, checks)
     result = cache.get(key)
     if result is None:
-        filename = rscript("common", "requires.r")
+        filename = os.path.join("common", "requires.r")
         result = versions.Requirement(
-            call=("Rscript", filename, module),
+            call=rscript_command((filename, module)),
             search=r"d0fd3ea6: (\d+)\.(\d+)(?:\.(\d+))?",
             checks=checks,
             name="R module: {}".format(module),

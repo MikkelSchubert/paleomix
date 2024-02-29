@@ -25,7 +25,7 @@ import os
 import sys
 
 import paleomix.common.logging
-import paleomix.resources
+from paleomix.common import resources
 import paleomix.yaml
 
 
@@ -49,7 +49,7 @@ def main(argv):
     config = parser.parse_args(argv)
     paleomix.common.logging.initialize_console_logging()
 
-    if paleomix.resources.copy_example("phylo_pipeline", config):
+    if resources.copy_example("phylo_pipeline", config):
         return 1
 
     # Update interpreter to match the one currently in use;

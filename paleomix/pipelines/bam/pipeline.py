@@ -27,7 +27,7 @@ import logging
 
 import paleomix
 import paleomix.common.logging
-import paleomix.resources
+from paleomix.common import resources
 import paleomix.yaml
 
 from paleomix.pipeline import Pypeline
@@ -247,7 +247,7 @@ def main(argv, pipeline="bam"):
     if args.command in ("makefile", "mkfile"):
         return bam_mkfile.main(args, pipeline=pipeline)
     elif args.command in ("example",):
-        return paleomix.resources.copy_example("bam_pipeline", args)
+        return resources.copy_example("bam_pipeline", args)
 
     if args.command.startswith("dry"):
         args.dry_run = True

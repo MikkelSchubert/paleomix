@@ -24,12 +24,8 @@ import os
 
 import paleomix.common.rtools as rtools
 import paleomix.tools.factory as factory
-
-from paleomix.atomiccmd.command import AtomicCmd
 from paleomix.common.formats.newick import Newick
 from paleomix.node import CommandNode
-
-from paleomix.pipelines.zonkey.common import RSCRIPT_VERSION
 
 
 class MitoConsensusNode(CommandNode):
@@ -58,17 +54,13 @@ class MitoConsensusNode(CommandNode):
 
 class DrawPhylogenyNode(CommandNode):
     def __init__(self, samples, treefile, bootstraps, output_prefix, dependencies=()):
-        rscript = rtools.rscript("zonkey", "tinytree.r")
-
-        cmd = AtomicCmd(
+        cmd = factory.rscript(
             (
-                "Rscript",
-                rscript,
+                os.path.join("zonkey", "tinytree.r"),
                 "%(TEMP_OUT_FILE)s",
                 "%(IN_SAMPLES)s",
                 "%(TEMP_OUT_PREFIX)s",
             ),
-            AUX_RSCRIPT=rscript,
             IN_SAMPLES=samples,
             IN_FILE=treefile,
             IN_BOOTSTRAPS=bootstraps,
@@ -76,7 +68,6 @@ class DrawPhylogenyNode(CommandNode):
             TEMP_OUT_PREFIX=os.path.basename(output_prefix),
             OUT_TREE_PDF=output_prefix + ".pdf",
             OUT_TREE_PNG=output_prefix + ".png",
-            CHECK_RSCRIPT=RSCRIPT_VERSION,
             CHECK_RSCRIPT_APE=rtools.requirement("ape"),
             CHECK_RSCRIPT_GGPLOT2=rtools.requirement("ggplot2"),
             CHECK_RSCRIPT_GRID=rtools.requirement("grid"),

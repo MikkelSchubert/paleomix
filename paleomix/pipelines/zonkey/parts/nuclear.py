@@ -39,7 +39,6 @@ from paleomix.atomiccmd.sets import SequentialCmds
 from paleomix.node import CommandNode, Node, NodeError
 
 from paleomix.pipelines.zonkey.common import (
-    RSCRIPT_VERSION,
     read_summary,
 )
 
@@ -276,24 +275,19 @@ class AdmixturePlotNode(CommandNode):
         self._samples = samples
         self._order = tuple(order) + ("Sample",)
 
-        script = rtools.rscript("zonkey", "admixture.r")
-
-        cmd = AtomicCmd(
+        cmd = factory.rscript(
             (
-                "Rscript",
-                script,
+                os.path.join("zonkey", "admixture.r"),
                 "%(IN_FILE)s",
                 "%(TEMP_OUT_NAMES)s",
                 "%(TEMP_OUT_PREFIX)s",
             ),
-            AUX_RSCRIPT=script,
             IN_FILE=input_file,
             IN_SAMPLES=samples,
             OUT_PDF=output_prefix + ".pdf",
             OUT_PNG=output_prefix + ".png",
             TEMP_OUT_NAMES="samples.txt",
             TEMP_OUT_PREFIX=os.path.basename(output_prefix),
-            CHECK_R=RSCRIPT_VERSION,
             CHECK_R_GGPLOT2=rtools.requirement("ggplot2"),
             CHECK_R_RESHAPE2=rtools.requirement("reshape2"),
             set_cwd=True,
@@ -582,17 +576,13 @@ class PlotTreemixNode(CommandNode):
 
     @classmethod
     def _plot_command(cls, input_prefix, *args, **kwargs):
-        script = rtools.rscript("zonkey", "treemix.r")
-
-        return AtomicCmd(
-            ("Rscript", script) + args,
-            AUX_RSCRIPT=script,
+        return factory.rscript(
+            (os.path.join("zonkey", "treemix.r"), *args),
             IN_FILE_COV=input_prefix + ".cov.gz",
             IN_FILE_COVSE=input_prefix + ".covse.gz",
             IN_FILE_EDGES=input_prefix + ".edges.gz",
             IN_FILE_MODELCOV=input_prefix + ".modelcov.gz",
             IN_FILE_VERTICES=input_prefix + ".vertices.gz",
-            CHECK_R=RSCRIPT_VERSION,
             CHECK_R_BREW=rtools.requirement("RColorBrewer"),
             set_cwd=True,
             **kwargs,
@@ -663,19 +653,19 @@ class PlotPCANode(CommandNode):
     def __init__(self, samples, prefix, output_prefix, dependencies=()):
         abs_prefix = os.path.abspath(prefix)
 
-        script = rtools.rscript("zonkey", "pca.r")
-        call = ["Rscript", script, abs_prefix, "%(IN_SAMPLES)s", "%(TEMP_OUT_PREFIX)s"]
-
-        cmd = AtomicCmd(
-            call,
-            AUX_SCRIPT=script,
+        cmd = factory.rscript(
+            [
+                os.path.join("zonkey", "pca.r"),
+                abs_prefix,
+                "%(IN_SAMPLES)s",
+                "%(TEMP_OUT_PREFIX)s",
+            ],
             IN_FILE_EVAL=prefix + ".eval",
             IN_FILE_EVEC=prefix + ".evec",
             IN_SAMPLES=samples,
             TEMP_OUT_PREFIX=os.path.basename(output_prefix),
             OUT_PDF=output_prefix + ".pdf",
             OUT_PNG=output_prefix + ".png",
-            CHECK_R=RSCRIPT_VERSION,
             CHECK_R_GGPLOT2=rtools.requirement("ggplot2"),
             CHECK_R_LABELS=rtools.requirement("ggrepel"),
             set_cwd=True,
@@ -695,16 +685,17 @@ class PlotCoverageNode(CommandNode):
         self._mapping = dict(zip(mapping.values(), mapping))
         self._input_file = input_file
 
-        script = rtools.rscript("zonkey", "coverage.r")
-        cmd = AtomicCmd(
-            ("Rscript", script, "%(TEMP_OUT_TABLE)s", "%(TEMP_OUT_PREFIX)s"),
-            AUX_RSCRIPT=script,
+        cmd = factory.rscript(
+            (
+                os.path.join("zonkey", "coverage.r"),
+                "%(TEMP_OUT_TABLE)s",
+                "%(TEMP_OUT_PREFIX)s"
+            ),
             IN_FILE=input_file,
             TEMP_OUT_TABLE="contigs.table",
             OUT_PDF=output_prefix + ".pdf",
             OUT_PNG=output_prefix + ".png",
             TEMP_OUT_PREFIX=os.path.basename(output_prefix),
-            CHECK_R=RSCRIPT_VERSION,
             CHECK_R_GGPLOT2=rtools.requirement("ggplot2"),
             set_cwd=True,
         )
