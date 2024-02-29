@@ -272,7 +272,9 @@ class Pypeline:
         # The completion or failure of a task may result in the failure/completion of
         # any number of other tasks, the latter when tasks depend on validation steps
         for task in tuple(tasks):
-            if nodegraph.get_node_state(task) in (nodegraph.DONE, nodegraph.ERROR):
+            state = nodegraph.get_node_state(task)
+            if state in (nodegraph.DONE, nodegraph.ERROR):
+                self._logger.debug("Pruning task with state %s: %r", state, task)
                 tasks.pop(task)
 
     def _clean_intermediate_files(self, nodegraph: NodeGraph) -> None:
@@ -335,6 +337,7 @@ class Pypeline:
 
     def _sigint_handler(self, signum: int, frame: object) -> None:
         """Signal handler; see signal.signal."""
+        self._logger.debug("Received SIGINT")
         now = time.time()
         if not self._interrupted:
             self._interrupted = now
