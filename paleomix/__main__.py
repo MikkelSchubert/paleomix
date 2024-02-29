@@ -21,7 +21,9 @@
 #
 from __future__ import annotations
 
+import faulthandler
 import logging
+import signal
 import sys
 
 import pysam
@@ -89,19 +91,23 @@ def main(argv: list[str] | None = None) -> int:
     if argv is None:
         argv = sys.argv[1:]
 
-    # Change process name to 'paleomix' regardless of how the script was invoked
-    setproctitle.setproctitle("paleomix " + " ".join(argv[:1]))
-    # Setup basic logging to STDERR
-    paleomix.common.logging.initialize_console_logging()
-    # Silence log-messages from HTSLIB
-    pysam.set_verbosity(0)  # pyright: ignore[reportUnknownMemberType]
-
     if not argv or argv[0] in ("-h", "--help", "help"):
         print(_HELP.format(version=paleomix.__version__))
         return 0
     elif argv[0] in ("--version",):
         print(f"paleomix v{paleomix.__version__}")
         return 0
+
+    # Change process name to 'paleomix' regardless of how the script was invoked
+    setproctitle.setproctitle("paleomix " + " ".join(argv[:1]))
+    # Setup basic logging to STDERR
+    paleomix.common.logging.initialize_console_logging()
+    # Silence log-messages from HTSLIB
+    pysam.set_verbosity(0)  # pyright: ignore[reportUnknownMemberType]
+    # Add handlers to print backtraces on SIGSEGV, SIGFPE, SIGABRT, SIGBUS and SIGILL
+    faulthandler.enable()
+    # Add handler to print backtraces on SIGUSR1
+    faulthandler.register(signal.SIGUSR1)
 
     command = COMMANDS.get(argv[0])
     if command is None:
