@@ -371,6 +371,9 @@ def test_atomiccmd__paths__key(tmp_path):
     cmd = AtomicCmd(("echo", "-n", "%(TEMP_DIR)s"), OUT_STDOUT=AtomicCmd.PIPE)
     cmd.run(tmp_path)
     path = cmd._proc.stdout.read()
+    if isinstance(path, bytes):
+        path = path.decode()
+
     assert tmp_path.samefile(path), (tmp_path, path)
     assert cmd.join() == [0]
 
