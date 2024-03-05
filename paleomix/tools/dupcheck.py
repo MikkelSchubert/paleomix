@@ -143,9 +143,9 @@ def filter_records(records: Iterable[AlignedSegment]) -> Iterator[AlignedSegment
 def group_by_sequences(
     records: Iterable[AlignedSegment],
 ) -> Iterator[list[AlignedSegment]]:
-    by_sequence: dict[
-        tuple[bool, str | None], list[AlignedSegment]
-    ] = collections.defaultdict(list)
+    by_sequence: dict[tuple[bool, str | None], list[AlignedSegment]] = (
+        collections.defaultdict(list)
+    )
     for record in records:
         query_sequence = record.query_sequence
         if query_sequence:
@@ -159,9 +159,9 @@ def group_by_sequences(
 def group_by_qualities(
     records: Iterable[AlignedSegment],
 ) -> Iterator[list[AlignedSegment]]:
-    by_qualities: dict[
-        tuple[int, ...] | None, list[AlignedSegment]
-    ] = collections.defaultdict(list)
+    by_qualities: dict[tuple[int, ...] | None, list[AlignedSegment]] = (
+        collections.defaultdict(list)
+    )
     for record in records:
         query_qualities = record.query_qualities
         if query_qualities is not None:

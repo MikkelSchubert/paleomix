@@ -25,6 +25,7 @@ single report
 
 https://multiqc.info/
 """
+
 from __future__ import annotations
 
 import fnmatch

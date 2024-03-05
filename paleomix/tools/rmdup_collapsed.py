@@ -38,6 +38,7 @@ instead remove these records from the output.
 
 rmdup_collapsed is based on the 'FilterUniqueBAM' script by Martin Kircher.
 """
+
 from __future__ import annotations
 
 import random

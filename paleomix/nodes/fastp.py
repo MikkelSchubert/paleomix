@@ -24,6 +24,7 @@ fastp - An ultra-fast all-in-one FASTQ preprocessor
 
 https://github.com/OpenGene/fastp
 """
+
 from __future__ import annotations
 
 from typing import Iterable

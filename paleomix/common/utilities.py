@@ -112,18 +112,15 @@ def group_by_pred(
 
 
 @overload
-def fragment(size: int, items: str) -> Iterable[str]:
-    ...
+def fragment(size: int, items: str) -> Iterable[str]: ...
 
 
 @overload
-def fragment(size: int, items: bytes) -> Iterable[bytes]:
-    ...
+def fragment(size: int, items: bytes) -> Iterable[bytes]: ...
 
 
 @overload
-def fragment(size: int, items: Sequence[T]) -> Iterable[Sequence[T]]:
-    ...
+def fragment(size: int, items: Sequence[T]) -> Iterable[Sequence[T]]: ...
 
 
 def fragment(size: int, items: Sequence[T]) -> Iterable[Sequence[T]]:

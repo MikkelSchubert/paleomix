@@ -24,6 +24,7 @@
 Parsing and validation of admixture results.
 
 """
+
 from __future__ import annotations
 
 import collections

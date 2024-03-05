@@ -25,6 +25,7 @@ sequencing data
 
 https://github.com/samtools/samtools
 """
+
 from __future__ import annotations
 
 import os

@@ -24,6 +24,7 @@
 Each node is equivalent to a particular command:
     $ paleomix [...]
 """
+
 from __future__ import annotations
 
 import os

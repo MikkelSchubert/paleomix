@@ -34,6 +34,7 @@ command will not work:
 $ samtools view -H INPUT.BAM | samtools view -Sbu -
 
 """
+
 from __future__ import annotations
 
 import signal

@@ -25,6 +25,7 @@ Ensures that the version called corresponds to the running version, in case
 multiple versions are present in the users' PATH, or that the current version
 is not available from the users' PATH.
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Iterable, TypeVar

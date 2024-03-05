@@ -20,6 +20,7 @@
 # SOFTWARE.
 #
 """Various functions relating to DNA sequence manipulation."""
+
 from __future__ import annotations
 
 import itertools

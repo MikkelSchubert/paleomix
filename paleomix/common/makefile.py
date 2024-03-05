@@ -171,6 +171,7 @@ value has accidentally been left blank ('IsStr' requires a NON-EMPTY string):
 |    Observed value: ''
 -------------------------------------------------------------------------------
 """
+
 from __future__ import annotations
 
 import copy

@@ -24,6 +24,7 @@ FastQC - A quality control analysis tool for high throughput sequencing data
 
 https://github.com/s-andrews/FastQC
 """
+
 from __future__ import annotations
 
 import os
