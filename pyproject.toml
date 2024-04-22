@@ -32,56 +32,29 @@ markers = ["slow"]
 target-version = "py37"
 
 [tool.ruff.lint]
-select = [
-    # "A",   # flake8-builtins
-    # "ANN", # flake8-annotations
-    # "B",   # flake8-bugbear
-    "BLE", # flake8-blind-except
-    "C4",    # flake8-comprehensions
-    # "C90", # mccabe -- complexity measured disabled for now
-    # "CPY", # flake8-copyright -- requires `--preview`
-    "DTZ", # flake8-datetimez
-    "E",     # Error
-    "EXE",   # flake8-executable
-    "F",     # Pyflakes
-    "FA",    # flake8-future-annotations
-    # "FBT", # flake8-boolean-trap
-    # "FIX", # flake8-fixme
-    "FLY",   # flynt
-    # "FURB",# refurb -- requires --preview
-    "G",     # flake8-logging-format
-    "I",     # isort
-    "INP",   # flake8-no-pep420
-    "ISC",   # flake8-implicit-str-concat
-    "N",     # pep8-naming
-    "PERF",  # Perflint
-    "PGH",   # pygrep-hooks
-    "PIE",   # flake8-pie
-    "PL",    # Pylint
-    "PT",    # flake8-pytest-style
-    # "PTH", # flake8-use-pathlib -- long term goal
-    "PYI",   # flake8-pyi
-    "Q",     # flake8-quotes
-    "RET",   # flake8-return
-    "RSE",   # flake8-raise
-    # "RUF", # Ruff-specific rules
-    # "S",   # flake8-bandit
-    "SIM", # flake8-simplify
-    "SLOT",  # flake8-slots
-    "T10",   # flake8-debugger
-    "TCH",   # flake8-type-checking
-    "TID",   # flake8-tidy-imports
-    # "TRY", # tryceratops
-    "UP",    # pyupgrade
-    "W",     # pycodestyle warnings
-    "YTT",   # flake8-2020
-]
+select = ["ALL"]
 
 ignore = [
-    "ANN101",  # missing-type-self -- Missing type annotation for `self` in method
-    "ANN102",  # missing-type-cls -- Missing type annotation for `cls` in classmethod
-    "S603",    # subprocess-without-shell-equals-true
-    "TRY003",  # raise-vanilla-args
+    # Rules either deemed too burdonsome to implement or not useful
+    "ANN", # flake8-annotations
+    "B",   # flake8-bugbear
+    "C90", # mccabe -- Complexity measures not deemed useful
+    "COM", # flake8-commas -- Formatting handled by ruff/black
+    "D",   # pydocstyle
+    "ERA", # eradicate
+    "EM",  # flake8-errmsg
+    "T20", # flake8-print
+    "FBT", # flake8-boolean-trap
+    "TD",  # flake8-todos
+    "FIX", # flake8-fixme
+    "PTH", # flake8-use-pathlib
+    "S",   # flake8-bandit
+    "TRY", # tryceratops
+    # Individual rules deemed too burdonsome or not useful
+    "ANN101", # missing-type-self -- Missing type annotation for `self` in method
+    "ANN102", # missing-type-cls -- Missing type annotation for `cls` in classmethod
+    "S603",   # subprocess-without-shell-equals-true
+    "TRY003", # raise-vanilla-args
     # Disabled due to too many false positives
     "PLR2004", # magic-value-comparison -- Magic value used in comparison
     # Disabled due to personal style preferences
@@ -93,14 +66,9 @@ ignore = [
     # Disabled due to hits in non-performance critical code where manual is clearer
     "PERF401", # manual-list-comprehension -- Use a list comprehension
     # Disabled due to conflict with `format` command
-    "ISC001",  # single-line-implicit-string-concatenation
+    "ISC001", # single-line-implicit-string-concatenation
     # Complexity warnings disabled for now
-    "PLR0904", # too-many-public-methods
-    "PLR0911", # too-many-return-statements
-    "PLR0912", # too-many-branches
-    "PLR0913", # too-many-arguments
-    "PLR0915", # too-many-statements
-    "PLR0916", # too-many-boolean-expressions
+    "PLR09", # too-many-*
 ]
 
 [tool.ruff.lint.per-file-ignores]
