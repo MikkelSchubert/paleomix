@@ -2,11 +2,12 @@ include CHANGES.md
 include LICENSE
 include MANIFEST.in
 include noxfile.py
-include paleomix_environment.yaml
+include paleomix/py.typed
 include paleomix/yaml/CHANGES
 include paleomix/yaml/LICENSE
 include paleomix/yaml/PKG-INFO
 include paleomix/yaml/README
+include paleomix_environment.yaml
 include pyproject.toml
 include README.rst
 
