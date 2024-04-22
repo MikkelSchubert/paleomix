@@ -18,11 +18,11 @@ SOURCES = (
 
 class Requirements:
     COVERAGE = "coverage[toml]~=7.3"
-    NOX = "nox~=2023.4.22"
-    PYRIGHT = "pyright==1.1.348"
+    NOX = "nox~=2024.3.2"
+    PYRIGHT = "basedpyright==1.10.3"
     PYTEST = "pytest~=7.4"
     PYTEST_COV = "pytest-cov~=4.1"
-    RUFF = "ruff==0.3.0"
+    RUFF = "ruff==0.4.1"
 
 
 @nox.session
@@ -42,19 +42,25 @@ def lints(session: nox.Session) -> None:
 
 @nox.session()
 def typing(session: nox.Session) -> None:
-    session.install(".")
-    session.install(Requirements.PYTEST)
-    session.install(Requirements.NOX)
-    session.install(Requirements.PYRIGHT)
-    session.run("pyright", *SOURCES)
+    session.install(
+        ".",
+        Requirements.PYTEST,
+        Requirements.NOX,
+        Requirements.PYRIGHT,
+    )
+
+    session.run("basedpyright", *SOURCES)
 
 
 @nox.session()
 def tests(session: nox.Session) -> None:
-    session.install("-e", ".")
-    session.install(Requirements.PYTEST)
-    session.install(Requirements.COVERAGE)
-    session.install(Requirements.PYTEST_COV)
+    session.install(
+        "-e",
+        ".",
+        Requirements.PYTEST,
+        Requirements.COVERAGE,
+        Requirements.PYTEST_COV,
+    )
 
     session.run(
         "python3",
@@ -86,8 +92,10 @@ def tests(session: nox.Session) -> None:
 
 @nox.session(python=["3.7", "3.8", "3.9", "3.10", "3.11", "3.12"])
 def full_tests(session: nox.Session) -> None:
-    session.install(".")
-    session.install("pytest~=7.4")
+    session.install(
+        ".",
+        Requirements.PYTEST,
+    )
 
     session.run(
         "python3",
