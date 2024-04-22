@@ -34,11 +34,11 @@ class LayoutError(Exception):
 
 
 class Layout:
-    kwargs: dict[str, str]
+    kwargs: dict[str, str | int]
     _layout: dict[str, tuple[str, ...]]
     _fields: set[str]
 
-    def __init__(self, layout: LayoutType, **kwargs: str) -> None:
+    def __init__(self, layout: LayoutType, **kwargs: str | int) -> None:
         self.kwargs = kwargs
         self._layout = {}
         for key, value in self._flatten_layout(layout):
@@ -51,7 +51,7 @@ class Layout:
 
         self._validate_kwargs(self.kwargs)
 
-    def get(self, key: str, **kwargs: str) -> str:
+    def get(self, key: str, **kwargs: str | int) -> str:
         self._validate_kwargs(kwargs)
 
         merged_kwargs = dict(self.kwargs)
@@ -59,10 +59,10 @@ class Layout:
 
         return self._build_path(key, merged_kwargs)
 
-    def get_field(self, key: str) -> str:
+    def get_field(self, key: str) -> str | int:
         return self.kwargs[key]
 
-    def update(self, **kwargs: str) -> Layout:
+    def update(self, **kwargs: str | int) -> Layout:
         self._validate_kwargs(kwargs)
 
         layout = copy.deepcopy(self)
@@ -76,12 +76,12 @@ class Layout:
     def __getitem__(self, key: str) -> str:
         return self._build_path(key, self.kwargs)
 
-    def _validate_kwargs(self, kwargs: dict[str, str]) -> None:
+    def _validate_kwargs(self, kwargs: dict[str, str | int]) -> None:
         for key in kwargs:
             if key not in self._fields:
                 raise LayoutError(f"unknown key {key!r}")
 
-    def _build_path(self, key: str, kwargs: dict[str, str]) -> str:
+    def _build_path(self, key: str, kwargs: dict[str, str | int]) -> str:
         components = (it.format(**kwargs) for it in self._layout[key])
 
         return os.path.join(*components)
