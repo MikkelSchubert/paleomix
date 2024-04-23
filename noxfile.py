@@ -10,7 +10,6 @@ nox.options.sessions = [
 SOURCES = (
     "noxfile.py",
     "paleomix",
-    "setup.py",
     "tests",
     "typings",
 )
