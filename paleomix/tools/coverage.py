@@ -25,7 +25,7 @@ import copy
 import sys
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, Iterator, Mapping, Sequence, TypeAlias, Union
+from typing import TYPE_CHECKING, Dict, Iterator, Mapping, Sequence, Union
 
 from paleomix.common.bamfiles import BAMRegion, BAMRegionsIter
 from paleomix.common.fileutils import file_or_stdout
@@ -40,6 +40,15 @@ from paleomix.tools.bam_stats.common import (
 
 if TYPE_CHECKING:
     import pysam
+    from typing_extensions import TypeAlias
+
+    CoverageTable: TypeAlias = defaultdict[
+        str, defaultdict[str, defaultdict[str, Dict[str, "CoverageStats"]]]
+    ]
+    CoverageTableComponent: TypeAlias = Mapping[
+        str, Union["CoverageStats", "CoverageTableComponent"]
+    ]
+    CountsTable: TypeAlias = Dict[str, Dict[str | None, "CoverageStats"]]
 
 
 # Header prepended to output tables
@@ -100,15 +109,6 @@ class CoverageStats:
             or self.i
             or self.d
         )
-
-
-CoverageTable: TypeAlias = defaultdict[
-    str, defaultdict[str, defaultdict[str, Dict[str, CoverageStats]]]
-]
-CoverageTableComponent: TypeAlias = Mapping[
-    str, Union[CoverageStats, "CoverageTableComponent"]
-]
-CountsTable: TypeAlias = Dict[str, Dict[str | None, CoverageStats]]
 
 
 def _calculate_totals(table: CoverageTable) -> CoverageTable:

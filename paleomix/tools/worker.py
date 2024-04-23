@@ -53,8 +53,6 @@ from paleomix.core.workers import (
     EVT_SHUTDOWN,
     EVT_TASK_DONE,
     EVT_TASK_START,
-    HandleType,
-    QueueType,
     RemoteAdapter,
     address_to_name,
     task_wrapper,
@@ -64,6 +62,8 @@ from paleomix.nodegraph import NodeGraph
 
 if TYPE_CHECKING:
     from paleomix.common.versions import Requirement
+    from paleomix.core.workers import HandleType, QueueType
+
 
 EventType = Dict[str, Any]
 Events = Iterable[EventType]

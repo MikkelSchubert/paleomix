@@ -5,13 +5,12 @@ from typing import (
     Callable,
     OrderedDict,
     Sequence,
-    TypeAlias,
     TypeVar,
     overload,
 )
 
 from _typeshed import Incomplete
-from typing_extensions import Protocol
+from typing_extensions import Protocol, TypeAlias
 
 HelpFormatter = argparse.HelpFormatter
 RawDescriptionHelpFormatter = argparse.RawDescriptionHelpFormatter

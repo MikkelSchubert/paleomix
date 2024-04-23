@@ -24,7 +24,7 @@ from __future__ import annotations
 import collections
 import itertools
 import sys
-from typing import TYPE_CHECKING, NewType
+from typing import TYPE_CHECKING, NewType, Tuple
 
 from paleomix.common.bamfiles import BAMRegion, BAMRegionsIter
 from paleomix.common.fileutils import file_or_stdout
@@ -36,13 +36,14 @@ from paleomix.tools.bam_stats.common import (
     main_wrapper,
 )
 
-SampleLibraryKey = NewType("SampleLibraryKey", tuple[str, str])
+SampleLibraryKey = NewType("SampleLibraryKey", Tuple[str, str])
 SampleLibraryID = NewType("SampleLibraryID", int)
 
 if TYPE_CHECKING:
-    from typing import Dict, Iterable, Iterator, Tuple, TypeAlias
+    from typing import Dict, Iterable, Iterator
 
     import pysam
+    from typing_extensions import TypeAlias
 
     CountsCache: TypeAlias = collections.deque[list[int]]
     CountsDict: TypeAlias = Dict[int, int]
