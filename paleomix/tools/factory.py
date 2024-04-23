@@ -46,7 +46,7 @@ if TYPE_CHECKING:
 PYTHON_VERSION = Requirement(
     ["%(PYTHON)s", "--version"],
     regexp=r"Python (\d+\.\d+\.\d+)",
-    specifiers=">=3.7",
+    specifiers=">=3.8",
     name="Python",
 )
 

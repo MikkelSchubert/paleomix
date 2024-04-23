@@ -89,7 +89,7 @@ def tests(session: nox.Session) -> None:
     )
 
 
-@nox.session(python=["3.7", "3.8", "3.9", "3.10", "3.11", "3.12"])
+@nox.session(python=["3.8", "3.9", "3.10", "3.11", "3.12"])
 def full_tests(session: nox.Session) -> None:
     session.install(
         ".",
