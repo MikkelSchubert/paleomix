@@ -267,6 +267,7 @@ class Manager:
         for handle in self._interface.handles:
             handles[handle] = None
 
+        self._log.debug("Waiting for handles %r with timeout %r", handles, timeout)
         for handle in wait(handles, timeout):
             worker = handles[handle]
             if worker is None:
@@ -274,6 +275,8 @@ class Manager:
             else:
                 for event in worker.get(handle):
                     events.append((worker, event))
+
+        self._log.debug("Retrieved events for handles %r", handles)
 
         return events
 
@@ -500,6 +503,9 @@ class LocalWorker:
     def _check_running(self) -> None:
         if self._status != _RUNNING:
             raise WorkerError("LocalWorker is not running")
+
+    def __repr__(self) -> str:
+        return f"<LocalWorker 0x{id(self):x}>"
 
 
 class RemoteWorker:
