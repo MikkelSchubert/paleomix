@@ -445,6 +445,7 @@ class HaplotypeCallerNode(CommandNode):
             java_options=java_options,
             stderr=out_log,
             extra_files=[
+                InputFile(in_bam + ".bai"),
                 InputFile(in_reference + ".fai"),
                 InputFile(swap_ext(in_reference, ".dict")),
                 # FIXME: Index depends on vcf extension

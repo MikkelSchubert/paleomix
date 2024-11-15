@@ -62,7 +62,7 @@ from paleomix.pipelines.ngs.config import PipelineTarget
 # File structure with leaf values representing labels used to refer a given path
 _LAYOUT = {
     "alignments": {
-        "{sample}.{genome}.bam": "aln_recal_bam",
+        "{sample}.{genome}.bam": "aln_final_bam",
         "{sample}.{genome}.junk.bam": "aln_split_failed_bam",
     },
     "cache": {
@@ -478,6 +478,11 @@ def filter_pcr_duplicates(args, genome, samples, settings):
 
 
 def merge_samples_alignments(args, genome, samples, settings):
+    bsqr_enabled = (
+        settings["ReadMapping"]["BaseRecalibrator"]["Enabled"]
+        and settings["ReadMapping"]["ApplyBQSR"]["Enabled"]
+    )
+
     for sample, libraries in samples.items():
         input_libraries = []
         for library in libraries.values():
@@ -485,19 +490,25 @@ def merge_samples_alignments(args, genome, samples, settings):
 
         layout = args.layout.update(genome=genome, sample=sample)
 
+        # Write final BAM directly if BSQR is not enabled
+        out_passed = (
+            layout["aln_split_passed_bam"] if bsqr_enabled else layout["aln_final_bam"]
+        )
+
         # Split BAM into file containing proper alignment and BAM containing junk
-        split: FinalizeBAMNode = FinalizeBAMNode(
+        split = FinalizeBAMNode(
             in_bams=input_libraries,
-            out_passed=layout["aln_split_passed_bam"],
+            out_passed=out_passed,
             out_failed=layout["aln_split_failed_bam"],
             out_json=layout["aln_split_statistics"],
             threads=args.max_threads_samtools,
         )
 
-        split.mark_intermediate_files(layout["aln_split_passed_bam"])
+        if bsqr_enabled:
+            split.mark_intermediate_files(out_passed)
 
         samples[sample] = BAMIndexNode(
-            infile=layout["aln_split_passed_bam"],
+            infile=out_passed,
             dependencies=[split],
             options={
                 "-@": args.max_threads_samtools,
@@ -511,29 +522,38 @@ def merge_samples_alignments(args, genome, samples, settings):
 
 def recalibrate_nucleotides(args, genome, samples, settings):
     settings = settings["ReadMapping"]
+
+    train_bsqr_options = dict(settings["BaseRecalibrator"])
+    train_bsqr_enabled = train_bsqr_options.pop("Enabled")
     # FIXME: Nicer way to specify known sites. Maybe just remove known_sites param?
-    recalibrator_options = dict(settings["BaseRecalibrator"])
-    recalibrator_known_sites = recalibrator_options.pop("--known-sites")
+    train_bsqr_known_sites = train_bsqr_options.pop("--known-sites")
 
-    for sample in samples:
-        layout = args.layout.update(genome=genome, sample=sample)
+    apply_bsqr_options = dict(settings["ApplyBQSR"])
+    apply_bsqr_enabled = apply_bsqr_options.pop("Enabled")
 
-        model = BaseRecalibratorNode(
-            in_reference=genome.filename,
-            in_known_sites=recalibrator_known_sites,
-            in_bam=layout["aln_split_passed_bam"],
-            out_table=layout["aln_recal_training_table"],
-            options=recalibrator_options,
-            java_options=args.jre_options,
-        )
+    if train_bsqr_enabled:
+        for sample in samples:
+            layout = args.layout.update(genome=genome, sample=sample)
 
-        yield ApplyBQSRNode(
-            in_node=model,
-            out_bam=layout["aln_recal_bam"],
-            options=settings["ApplyBQSR"],
-            java_options=args.jre_options,
-            dependencies=[model],
-        )
+            model = BaseRecalibratorNode(
+                in_reference=genome.filename,
+                in_known_sites=train_bsqr_known_sites,
+                in_bam=layout["aln_split_passed_bam"],
+                out_table=layout["aln_recal_training_table"],
+                options=train_bsqr_options,
+                java_options=args.jre_options,
+            )
+
+            if apply_bsqr_enabled:
+                yield ApplyBQSRNode(
+                    in_node=model,
+                    out_bam=layout["aln_final_bam"],
+                    options=apply_bsqr_options,
+                    java_options=args.jre_options,
+                    dependencies=[model],
+                )
+            else:
+                yield model
 
 
 def final_bam_stats(args, genome, samples, settings):
@@ -544,7 +564,7 @@ def final_bam_stats(args, genome, samples, settings):
 
             yield BAMStatsNode(
                 method=method,
-                infile=layout["aln_recal_bam"],
+                infile=layout["aln_final_bam"],
                 outfile=layout["bam_stats"],
                 options={
                     # Reasonable performance gains from using up to 3-4 threads
@@ -557,7 +577,7 @@ def final_bam_stats(args, genome, samples, settings):
         # FastQC of proper alignments
         fastqc_nodes.append(
             FastQCNode(
-                in_file=layout["aln_recal_bam"],
+                in_file=layout["aln_final_bam"],
                 out_folder=layout["bam_fastqc_dir"],
             )
         )
@@ -586,7 +606,7 @@ def haplotype_samples(args, genome, samples, settings):
 
         yield HaplotypeCallerNode(
             in_reference=genome.filename,
-            in_bam=layout["aln_recal_bam"],
+            in_bam=layout["aln_final_bam"],
             out_vcf=out_vcf,
             options=settings["HaplotypeCaller"],
             java_options=args.jre_options,

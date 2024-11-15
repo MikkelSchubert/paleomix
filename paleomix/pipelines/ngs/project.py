@@ -144,10 +144,14 @@ _VALIDATION: SpecTree = {
                 "mode": ValueIn(("mark", "filter", "skip"), default="mark"),
             },
             "BaseRecalibrator": {
+                "Enabled": IsBoolean(default=False),
                 StringStartsWith("--"): _COMMAND_LINE_VALUE,
                 "--known-sites": IsStr(default=REQUIRED_VALUE),
             },
-            "ApplyBQSR": _LONG_COMMAND_LINE_OPTIONS,
+            "ApplyBQSR": {
+                "Enabled": IsBoolean(default=False),
+                StringStartsWith("--"): _COMMAND_LINE_VALUE,
+            },
         },
         "Genotyping": {
             "HaplotypeCaller": _LONG_COMMAND_LINE_OPTIONS,
