@@ -84,7 +84,10 @@ class PaleomixFormatter(BasicFormatter):
         return super()._process_status(record)
 
 
-def initialize_console_logging(log_level: str = "info") -> None:
+def initialize_console_logging(
+    log_level: str = "info",
+    log_color: str = "never",
+) -> None:
     logger = logging.getLogger()
     logger.setLevel(coloredlogs.level_to_number(log_level))
 
@@ -95,18 +98,22 @@ def initialize_console_logging(log_level: str = "info") -> None:
         handler = logging.StreamHandler()
         logger.addHandler(handler)
 
-    fmt_class = PaleomixFormatter if terminal_supports_colors() else BasicFormatter
-    formatter = fmt_class(fmt=_CONSOLE_MESSAGE_FORMAT)
+    if _color_logging_supported(log_color):
+        fmt_class = PaleomixFormatter
+    else:
+        fmt_class = BasicFormatter
 
-    handler.setFormatter(formatter)
+    handler.setFormatter(fmt_class(fmt=_CONSOLE_MESSAGE_FORMAT))
 
 
-def initialize(
+def initialize_console_and_file_logging(
+    *,
     log_level: str = "info",
+    log_color: str = "auto",
     log_file: str | None = None,
     auto_log_file: str | None = "paleomix",
 ) -> None:
-    initialize_console_logging(log_level)
+    initialize_console_logging(log_level=log_level, log_color=log_color)
 
     if log_file:
         logger = logging.getLogger(__name__)
@@ -131,9 +138,9 @@ def initialize(
 
 
 def add_argument_group(parser: ArgumentParserBase, *, log_file: bool = True) -> None:
-    """Adds an option-group to an OptionParser object, with options
-    pertaining to logging. Note that 'initialize' expects the config
-    object to have these options."""
+    """Adds an option-group to an OptionParser object, with options pertaining to
+    logging. These arguments should be passed to the initialize function.
+    """
     group = parser.add_argument_group("Logging")
     if log_file:
         group.add_argument(
@@ -151,6 +158,16 @@ def add_argument_group(parser: ArgumentParserBase, *, log_file: bool = True) -> 
         type=str.lower,
         help="Log messages at the specified level. This option applies to the "
         "`--log-file` option and to log messages printed to the terminal.",
+    )
+
+    group.add_argument(
+        "--log-color",
+        default="auto",
+        choices=("auto", "always", "never"),
+        type=str.lower,
+        help="Enable colors in logging output to STDERR; if set to 'auto', colors will "
+        "be enabled if paleomix is running in a terminal, colors are supported, and "
+        "NO_COLORS is not set",
     )
 
 
@@ -204,3 +221,18 @@ class Status:
 
     def __str__(self) -> str:
         raise NotImplementedError
+
+
+def _color_logging_supported(log_color: str) -> bool:
+    if log_color == "always":
+        return True
+    elif log_color == "never":
+        return False
+    elif log_color != "auto":
+        raise ValueError(log_color)
+
+    return (
+        "NO_COLOR" not in os.environ
+        and sys.stderr.isatty
+        and terminal_supports_colors()
+    )

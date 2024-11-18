@@ -68,7 +68,7 @@ def _main_template() -> int:
 
 
 def _main_copy_example(destination: str) -> int:
-    paleomix.common.logging.initialize()
+    paleomix.common.logging.initialize_console_logging()
 
     log = logging.getLogger(__name__)
     destination = os.path.join(destination, "bam_pipeline")

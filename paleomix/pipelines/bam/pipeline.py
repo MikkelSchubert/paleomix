@@ -680,8 +680,9 @@ def build_pipeline_full(args, makefile):
 
 
 def run(config):
-    paleomix.common.logging.initialize(
+    paleomix.common.logging.initialize_console_and_file_logging(
         log_level=config.log_level,
+        log_color=config.log_color,
         log_file=config.log_file,
         auto_log_file=os.path.join(config.temp_root, "bam_pipeline"),
     )

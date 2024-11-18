@@ -58,8 +58,9 @@ def _main_run(args):
     args.temp_root = os.path.join(args.output, "cache", "temp")
 
     # FIXME: Place logs in output folder
-    paleomix.common.logging.initialize(
+    paleomix.common.logging.initialize_console_and_file_logging(
         log_level=args.log_level,
+        log_color=args.log_color,
         log_file=args.log_file,
         auto_log_file=os.path.join(args.output, "cache", "logs", "pipeline"),
     )
