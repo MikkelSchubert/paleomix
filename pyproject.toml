@@ -78,8 +78,11 @@ profile = "black"
 
 [tool.pyright]
 # Used since `strict = [...]` prevents individual `reportX` settings:
-include = ["paleomix", "tests"]
+include = ["paleomix", "tests", "typings","noxfile.py"]
 # typeCheckingMode = "strict"
+
+# Location of custom stub files
+stubPath = "typings"
 
 # FIXME: Disabled until project is fully typed
 reportUnnecessaryIsInstance = "none"
@@ -89,6 +92,7 @@ markers = ["slow"]
 
 [tool.ruff]
 target-version = "py37"
+output-format = "concise"
 
 [tool.ruff.lint]
 select = ["ALL"]
@@ -110,24 +114,22 @@ ignore = [
     "S",   # flake8-bandit
     "TRY", # tryceratops
     # Individual rules deemed too burdonsome or not useful
-    "ANN101", # missing-type-self -- Missing type annotation for `self` in method
-    "ANN102", # missing-type-cls -- Missing type annotation for `cls` in classmethod
-    "S603",   # subprocess-without-shell-equals-true
-    "TRY003", # raise-vanilla-args
-    # Disabled due to too many false positives
-    "PLR2004", # magic-value-comparison -- Magic value used in comparison
-    # Disabled due to personal style preferences
-    "PLW2901", # redefined-loop-name -- `for` loop variable `value` overwritten
-    "RET505",  # superfluous-else-return -- Unnecessary `elif` after `return` statement
-    "RET506",  # superfluous-else-raise -- Unnecessary `elif` after `raise` statement
-    "RET507",  # superfluous-else-continue --Unnecessary `elif` after `continue`
-    "RET508",  # superfluous-else-break -- Unnecessary `elif` after `break` statement
-    # Disabled due to hits in non-performance critical code where manual is clearer
-    "PERF401", # manual-list-comprehension -- Use a list comprehension
-    # Disabled due to conflict with `format` command
-    "ISC001", # single-line-implicit-string-concatenation
-    # Complexity warnings disabled for now
-    "PLR09", # too-many-*
+    "A001",    # builtin-variable-shadowing -- id/help/etc. are often useful variables
+    "A002",    # builtin-argument-shadowing -- id/help/etc. are often useful arguments
+    "ANN101",  # missing-type-self -- Missing type annotation for `self` in method
+    "ANN102",  # missing-type-cls -- Missing type annotation for `cls` in classmethod
+    "ISC001",  # single-line-implicit-string-concatenation -- conflict with `ruff format`
+    "PERF401", # manual-list-comprehension -- a manual loop is clearer in many cases
+    "PLR09",   # too-many-* -- complexity warnings disabled for now
+    "PLR2004", # magic-value-comparison -- Produces too many false positives
+    "PLW2901", # redefined-loop-name -- commonly used to prevent using the old variable
+    "RET505",  # superfluous-else-return -- stylistic preference
+    "RET506",  # superfluous-else-raise -- stylistic preference
+    "RET507",  # superfluous-else-continue --stylistic preference
+    "RET508",  # superfluous-else-break -- stylistic preference
+    "S603",    # subprocess-without-shell-equals-true -- `shell=True` is never used
+    "TRY003",  # raise-vanilla-args
+    "UP032",   # f-string -- replacing `format` may decrease readability in some cases
 ]
 
 [tool.ruff.lint.per-file-ignores]
