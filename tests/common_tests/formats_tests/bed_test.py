@@ -75,7 +75,7 @@ def test_bedrecord__constructor_6() -> None:
 def test_bedrecord__constructor__empty_contig(contig: object) -> None:
     with pytest.raises(ValueError, match="contig is blank"):
         BEDRecord(
-            contig,  # pyright: ignore[reportGeneralTypeIssues]
+            contig,  # pyright: ignore[reportArgumentType]
             12,
             345,
             "my_name",
@@ -93,7 +93,7 @@ def test_bedrecord__constructor__invalid_strand(strand: object) -> None:
             345,
             "my_name",
             -3,
-            strand,  # pyright: ignore[reportGeneralTypeIssues]
+            strand,  # pyright: ignore[reportArgumentType]
         )
 
 

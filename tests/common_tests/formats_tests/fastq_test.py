@@ -66,7 +66,7 @@ def test_fastq__constructor__no_meta() -> None:
 
 def test_fastq__constructor__name_must_be_string_type() -> None:
     with pytest.raises(FASTQError, match="FASTQ name must be a non-empty string"):
-        FASTQ(1, None, "ACGT", "1234")  # pyright: ignore[reportGeneralTypeIssues]
+        FASTQ(1, None, "ACGT", "1234")  # pyright: ignore[reportArgumentType]
 
 
 def test_fastq__constructor__name_must_be_non_empty() -> None:
@@ -76,17 +76,17 @@ def test_fastq__constructor__name_must_be_non_empty() -> None:
 
 def test_fastq__constructor__meta_must_be_string_type_or_none() -> None:
     with pytest.raises(FASTQError, match="FASTQ meta must be a string, or None"):
-        FASTQ("Seq1", 1, "ACGT", "1234")  # pyright: ignore[reportGeneralTypeIssues]
+        FASTQ("Seq1", 1, "ACGT", "1234")  # pyright: ignore[reportArgumentType]
 
 
 def test_fastq__constructor__seq_must_be_string_type() -> None:
     with pytest.raises(FASTQError, match="FASTQ sequence must be a string"):
-        FASTQ("Seq1", None, 1, "1234")  # pyright: ignore[reportGeneralTypeIssues]
+        FASTQ("Seq1", None, 1, "1234")  # pyright: ignore[reportArgumentType]
 
 
 def test_fastq__constructor__qual_must_be_string_type() -> None:
     with pytest.raises(FASTQError, match="FASTQ qualities must be a string"):
-        FASTQ("Seq1", None, "ACGT", 1234)  # pyright: ignore[reportGeneralTypeIssues]
+        FASTQ("Seq1", None, "ACGT", 1234)  # pyright: ignore[reportArgumentType]
 
 
 def test_fastq__constructor__seq_and_qual_must_have_same_len() -> None:

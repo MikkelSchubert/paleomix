@@ -134,7 +134,7 @@ def test_split_before__split_empty_list() -> None:
 
 
 def test_split_before__split_list_with_no_true_pred() -> None:
-    assert split_before(list(range(10)), lambda x: False) == [list(range(10))]
+    assert split_before(list(range(10)), lambda _: False) == [list(range(10))]
 
 
 def test_split_before__split_list_true_pred_at_first_position() -> None:
@@ -193,11 +193,11 @@ def test_group_by_pred__empty_list() -> None:
 
 
 def test_group_by_pred__always_false() -> None:
-    assert utils.group_by_pred(lambda x: False, [1, 2, 3]) == ([], [1, 2, 3])
+    assert utils.group_by_pred(lambda _: False, [1, 2, 3]) == ([], [1, 2, 3])
 
 
 def test_group_by_pred__always_true() -> None:
-    assert utils.group_by_pred(lambda x: True, [1, 2, 3]) == ([1, 2, 3], [])
+    assert utils.group_by_pred(lambda _: True, [1, 2, 3]) == ([1, 2, 3], [])
 
 
 def test_group_by_pred__is_even() -> None:
@@ -257,12 +257,12 @@ def test_fragment__range() -> None:
 
 def test_fragment__iterable() -> None:
     with pytest.raises(TypeError):
-        fragment(3, iter(range(6)))  # pyright: ignore[reportGeneralTypeIssues]
+        fragment(3, iter(range(6)))  # pyright: ignore[reportArgumentType]
 
 
 def test_fragment__set() -> None:
     with pytest.raises(TypeError):
-        fragment(3, set(range(6)))  # pyright: ignore[reportGeneralTypeIssues]
+        fragment(3, set(range(6)))  # pyright: ignore[reportArgumentType]
 
 
 ###############################################################################
@@ -307,12 +307,12 @@ def test_fill_dict__source_not_modified() -> None:
 
 def test_fill_dict__destination_must_be_dict() -> None:
     with pytest.raises(TypeError):
-        utils.fill_dict([], {})  # pyright: ignore[reportGeneralTypeIssues]
+        utils.fill_dict([], {})  # pyright: ignore[reportArgumentType]
 
 
 def test_fill_dict__source_must_be_dict() -> None:
     with pytest.raises(TypeError):
-        utils.fill_dict({}, [])  # pyright: ignore[reportGeneralTypeIssues]
+        utils.fill_dict({}, [])  # pyright: ignore[reportArgumentType]
 
 
 ###############################################################################

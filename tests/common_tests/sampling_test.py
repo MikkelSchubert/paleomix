@@ -151,7 +151,7 @@ def test_reservoir_sampling__downsample_to_float_raises_type_error() -> None:
     with pytest.raises(TypeError):
         sampling.reservoir_sampling(
             list(range(5)),
-            1.0,  # pyright: ignore[reportGeneralTypeIssues]
+            1.0,  # pyright: ignore[reportArgumentType]
         )
 
 
@@ -159,5 +159,5 @@ def test_reservoir_sampling__downsample_to_non_number_raises_type_error() -> Non
     with pytest.raises(TypeError):
         sampling.reservoir_sampling(
             list(range(5)),
-            "Eh?",  # pyright: ignore[reportGeneralTypeIssues]
+            "Eh?",  # pyright: ignore[reportArgumentType]
         )

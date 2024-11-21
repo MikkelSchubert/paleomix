@@ -205,7 +205,7 @@ class Genome:
         return self.name
 
 
-def validate_and_index_resources(args, settings):
+def validate_and_index_resources(settings):
     # GATK resource files (VCFs); should be tabix indexed
     gatk_resources = set()
     for mode, options in settings["Genotyping"]["VariantRecalibrator"].items():
@@ -218,7 +218,7 @@ def validate_and_index_resources(args, settings):
         yield TabixIndexNode(infile=filename, preset="vcf")
 
 
-def fastqc_sample_runs(args, genome, samples, settings):
+def fastqc_sample_runs(args, _genome, samples, settings):
     settings = settings["Preprocessing"]
     nodes = []
 
@@ -254,7 +254,7 @@ def fastqc_sample_runs(args, genome, samples, settings):
     yield from nodes
 
 
-def process_fastq_files(args, genome, samples, settings):
+def process_fastq_files(args, _genome, samples, settings):
     metadata = settings["Metadata"]
     settings = settings["Preprocessing"]
 
@@ -323,7 +323,7 @@ def process_fastq_files(args, genome, samples, settings):
     )
 
 
-def fastqc_trimmed_reads(args, genome, samples, settings):
+def fastqc_trimmed_reads(args, _genome, samples, settings):
     settings = settings["Preprocessing"]
     nodes = []
 
@@ -556,7 +556,7 @@ def recalibrate_nucleotides(args, genome, samples, settings):
                 yield model
 
 
-def final_bam_stats(args, genome, samples, settings):
+def final_bam_stats(args, genome, samples, _settings):
     fastqc_nodes = []
     for sample in samples:
         for method in ("stats", "idxstats", "flagstats"):
@@ -738,7 +738,7 @@ def _haplotype_n_samples_n_interval(args, genome, settings, layout, gvcfs):
     yield TabixIndexNode(infile=layout["vcf_merged"])
 
 
-def recalibrate_haplotype(args, genome, samples, settings):
+def recalibrate_haplotype(args, genome, _samples, settings):
     settings = settings["Genotyping"]
     layout = args.layout.update(genome=genome)
 
@@ -794,7 +794,8 @@ def build_pipeline(args, project):
     genome = project["Genome"]
 
     # FIXME: Maybe allow different tools to have different options
-    args.jre_options = list(settings["JavaOptions"]) + [
+    args.jre_options = [
+        *settings["JavaOptions"],
         # Performance profile for longer running tasks
         "-server",
         # Default temporary directory used by individual commands
@@ -821,7 +822,7 @@ def build_pipeline(args, project):
     pipeline.extend(genome.dependencies)
 
     # 2. Validate and index resource files
-    pipeline.extend(validate_and_index_resources(args, settings))
+    pipeline.extend(validate_and_index_resources(settings))
 
     if not samples:
         logger = logging.getLogger(__name__)

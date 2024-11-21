@@ -199,7 +199,7 @@ class MSA(FrozenSet[FASTA]):
         def _fasta_to_str(fst: FASTA) -> str:
             return f"FASTA({fst.name!r}, {fst.meta!r}, {fst.sequence!r})"
 
-        return "MSA(%s)" % (", ".join(map(_fasta_to_str, sorted(self))))
+        return "MSA({})".format(", ".join(map(_fasta_to_str, sorted(self))))
 
     def names(self) -> set[str]:
         return {record.name for record in self}
@@ -211,13 +211,13 @@ class MSA(FrozenSet[FASTA]):
     ) -> tuple[list[FASTA], list[FASTA], FASTA | None]:
         selection = safe_coerce_to_frozenset(selection)
         if extra in selection:
-            raise MSAError("Key used for multiple selections: %r" % extra)
+            raise MSAError(f"Key used for multiple selections: {extra!r}")
         elif not selection:
             raise ValueError("No FASTA names given")
 
         missing_keys = selection - self.names()
         if missing_keys:
-            raise KeyError("Key(s) not found: %r" % (", ".join(map(str, missing_keys))))
+            raise KeyError("Key(s) not found: {!r}".format(", ".join(missing_keys)))
 
         included: list[FASTA] = []
         excluded: list[FASTA] = []

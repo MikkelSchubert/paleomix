@@ -64,7 +64,7 @@ def test_newick__constructor__leaf_nodes_must_have_children() -> None:
 
 def test_newick__constructor__children_must_be_newick() -> None:
     with pytest.raises(TypeError):
-        Newick(children=["A", "B"])  # pyright: ignore[reportGeneralTypeIssues]
+        Newick(children=["A", "B"])  # pyright: ignore[reportArgumentType]
 
 
 ###############################################################################
@@ -607,7 +607,7 @@ def test_newick__wikipedia_example_8() -> None:
 
 
 def test_newick__str__non_string_name() -> None:
-    child = Newick(name=17, length="1.3")  # pyright: ignore[reportGeneralTypeIssues]
+    child = Newick(name=17, length="1.3")  # pyright: ignore[reportArgumentType]
     node = Newick(children=[child])
     assert str(node) == "(17:1.3);"
 

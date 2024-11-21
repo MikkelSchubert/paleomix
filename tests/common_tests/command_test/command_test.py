@@ -101,13 +101,13 @@ def test_atomiccmd__paths__invalid_values(
     cls: type[IOFileTypes], value: object
 ) -> None:
     with pytest.raises(TypeError, match="expected str, bytes or os.PathLike object"):
-        cls(value)  # pyright: ignore[reportGeneralTypeIssues]
+        cls(value)  # pyright: ignore[reportArgumentType]
 
 
 @pytest.mark.parametrize("cls", _ATOMICFILE_CLASSES)
 def test_atomiccmd__paths__byte_path(cls: type[IOFileTypes]) -> None:
     with pytest.raises(TypeError, match="invalid path"):
-        cls(b"/byte/path")  # pyright: ignore[reportGeneralTypeIssues]
+        cls(b"/byte/path")  # pyright: ignore[reportArgumentType]
 
 
 # Subpaths are not allowed for temp IN/OUT files, neither relative nor asbsolute
@@ -202,7 +202,7 @@ def test_atomiccmd__paths() -> None:
 @pytest.mark.parametrize("value", _ATOMICFILE_INVALID_VALUES)
 def test_atomiccmd__values_in_path(value: object) -> None:
     # FIXME: AtomicCmd should throw on most of these types
-    cmd = AtomicCmd(["echo", value])  # pyright: ignore[reportGeneralTypeIssues]
+    cmd = AtomicCmd(["echo", value])  # pyright: ignore[reportArgumentType]
     assert cmd.to_call("/tmp") == ["echo", str(value)]
 
 
@@ -232,7 +232,7 @@ def test_atomiccmd__extra_files() -> None:
 @pytest.mark.parametrize("value", _ATOMICFILE_INVALID_VALUES)
 def test_atomiccmd__invalid_extra_paths(value: object) -> None:
     with pytest.raises(TypeError, match=escape_match(value)):
-        AtomicCmd("ls", extra_files=[value])  # pyright: ignore[reportGeneralTypeIssues]
+        AtomicCmd("ls", extra_files=[value])  # pyright: ignore[reportArgumentType]
 
 
 ########################################################################################
@@ -304,7 +304,7 @@ def test_atomicmcd__callable_as_requirements() -> None:
     with pytest.raises(TypeError):
         AtomicCmd(
             "true",
-            requirements=[bool],  # pyright: ignore[reportGeneralTypeIssues]
+            requirements=[bool],  # pyright: ignore[reportArgumentType]
         )
 
 
@@ -312,7 +312,7 @@ def test_atomiccmd__invalid_requirements() -> None:
     with pytest.raises(TypeError):
         AtomicCmd(
             "ls",
-            requirements=["ls"],  # pyright: ignore[reportGeneralTypeIssues]
+            requirements=["ls"],  # pyright: ignore[reportArgumentType]
         )
 
 
@@ -342,7 +342,7 @@ _INVALID_STDIN_VALUES = (
 @pytest.mark.parametrize("value", _INVALID_STDIN_VALUES)
 def test_atomiccmd__stdin_invalid_values(value: object) -> None:
     with pytest.raises(ValueError, match=escape_match(value)):
-        AtomicCmd("true", stdin=value)  # pyright: ignore[reportGeneralTypeIssues]
+        AtomicCmd("true", stdin=value)  # pyright: ignore[reportArgumentType]
 
 
 def test_atomiccmd__stdin_basic(tmp_path: Path) -> None:
@@ -432,13 +432,13 @@ _INVALID_STDOUT_STDERR_VALUES = (
 @pytest.mark.parametrize("value", _INVALID_STDOUT_STDERR_VALUES)
 def test_atomiccmd__stdout_invalid_values(value: object) -> None:
     with pytest.raises(ValueError, match=escape_match(value)):
-        AtomicCmd("true", stdout=value)  # pyright: ignore[reportGeneralTypeIssues]
+        AtomicCmd("true", stdout=value)  # pyright: ignore[reportArgumentType]
 
 
 @pytest.mark.parametrize("value", _INVALID_STDOUT_STDERR_VALUES)
 def test_atomiccmd__stderr_invalid_values(value: object) -> None:
     with pytest.raises(ValueError, match=escape_match(value)):
-        AtomicCmd("true", stderr=value)  # pyright: ignore[reportGeneralTypeIssues]
+        AtomicCmd("true", stderr=value)  # pyright: ignore[reportArgumentType]
 
 
 def test_atomiccmd__stderr_invalid_values__pipe() -> None:
@@ -1137,20 +1137,20 @@ def test_append_options__custom_filtering() -> None:
 def test_append_options__invalid_type() -> None:
     cmd = AtomicCmd("touch")
     with pytest.raises(TypeError):
-        cmd.append_options("-foo")  # pyright: ignore[reportGeneralTypeIssues]
+        cmd.append_options("-foo")  # pyright: ignore[reportArgumentType]
 
 
 def test_append_options__invalid_key() -> None:
     cmd = AtomicCmd("touch")
     with pytest.raises(TypeError, match="17"):
-        cmd.append_options({17: "yes"})  # pyright: ignore[reportGeneralTypeIssues]
+        cmd.append_options({17: "yes"})  # pyright: ignore[reportArgumentType]
 
 
 @pytest.mark.parametrize("value", [object()])
 def test_append_options__invalid_values(value: object) -> None:
     cmd = AtomicCmd("touch")
     with pytest.raises(TypeError, match=escape_match(value)):
-        cmd.append_options({"--foo": value})  # pyright: ignore[reportGeneralTypeIssues]
+        cmd.append_options({"--foo": value})  # pyright: ignore[reportArgumentType]
 
 
 @pytest.mark.parametrize("value", [object()])
@@ -1158,7 +1158,7 @@ def test_append_options__invalid_values_in_list(value: object) -> None:
     cmd = AtomicCmd("touch")
     with pytest.raises(TypeError, match=escape_match(value)):
         cmd.append_options(
-            {"--foo": [1, 2, value]}  # pyright: ignore[reportGeneralTypeIssues]
+            {"--foo": [1, 2, value]}  # pyright: ignore[reportArgumentType]
         )
 
 
@@ -1182,7 +1182,7 @@ def test_atomiccmd__add_extra_files_invalid_values(value: object) -> None:
     cmd = AtomicCmd("ls")
 
     with pytest.raises(TypeError, match=escape_match(value)):
-        cmd.add_extra_files([value])  # pyright: ignore[reportGeneralTypeIssues]
+        cmd.add_extra_files([value])  # pyright: ignore[reportArgumentType]
 
 
 def test_atomiccmd__add_extra_files_overlapping_output_1() -> None:

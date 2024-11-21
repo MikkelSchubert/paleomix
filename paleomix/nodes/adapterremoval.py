@@ -240,8 +240,9 @@ class IdentifyAdaptersNode(CommandNode):
             self,
             command=command,
             threads=threads,
-            description="identifying PE adapters in %s"
-            % fileutils.describe_paired_files(input_file_1, input_file_2),
+            description="identifying PE adapters in {}".format(
+                fileutils.describe_paired_files(input_file_1, input_file_2)
+            ),
             dependencies=dependencies,
         )
 

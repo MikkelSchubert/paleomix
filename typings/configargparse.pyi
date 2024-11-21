@@ -24,7 +24,7 @@ Namespace = argparse.Namespace
 
 _ArgumentParserT = TypeVar("_ArgumentParserT", bound=ArgumentParser)
 
-class _SubParsersAction(argparse._SubParsersAction[_ArgumentParserT]):
+class _SubParsersAction(argparse._SubParsersAction[_ArgumentParserT]):  # noqa: SLF001
     def add_parser(
         self,
         name: str,
@@ -78,7 +78,7 @@ class YAMLConfigFileParser(ConfigFileParser):
     def serialize(
         self,
         items: _ConfigDict,
-        default_flow_style: bool = ...,  # noqa: FBT001
+        default_flow_style: bool = ...,
     ) -> str: ...
 
 class _FormatterClass(Protocol):
@@ -130,13 +130,13 @@ class ArgumentParser(argparse.ArgumentParser):
         namespace: Namespace | None = ...,
         config_file_contents: Incomplete | None = ...,
         env_vars: dict[Any, Any] = ...,
-        ignore_help_args: bool = ...,  # noqa: FBT001
+        ignore_help_args: bool = ...,
     ) -> Namespace: ...
     def write_config_file(
         self,
         parsed_namespace: Namespace,
         output_file_paths: Sequence[str],
-        exit_after: bool = ...,  # noqa: FBT001
+        exit_after: bool = ...,
     ) -> None: ...
     def get_possible_config_keys(self, action: Action) -> list[str]: ...
     def convert_item_to_command_line_arg(
@@ -153,7 +153,7 @@ class ArgumentParser(argparse.ArgumentParser):
         option_string: str = ...,
         dest: str | None = ...,
         required: bool = ...,
-        help: str | None = ...,  # noqa: A002
+        help: str | None = ...,
         metavar: str | None = ...,
     ) -> _SubParsersAction[_ArgumentParserType]: ...
     @overload
@@ -168,7 +168,7 @@ class ArgumentParser(argparse.ArgumentParser):
         option_string: str = ...,
         dest: str | None = ...,
         required: bool = ...,
-        help: str | None = ...,  # noqa: A002
+        help: str | None = ...,
         metavar: str | None = ...,
     ) -> _SubParsersAction[_ArgumentParserType]: ...
 

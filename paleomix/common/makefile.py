@@ -241,10 +241,10 @@ def process_makefile(
 
         for cur_key in data:
             ref_key = _get_matching_spec_or_value(
-                cur_key, specification, path + (cur_key,)
+                cur_key, specification, (*path, cur_key)
             )
             data[cur_key] = process_makefile(
-                data[cur_key], specification[ref_key], path + (cur_key,), apply_defaults
+                data[cur_key], specification[ref_key], (*path, cur_key), apply_defaults
             )
     elif isinstance(data, (list, type(None))) and isinstance(specification, list):
         if not _is_spec_list(specification):
@@ -372,7 +372,7 @@ class IsAny(MakefileSpec):
     ) -> None:
         MakefileSpec.__init__(self, description, default)
 
-    def meets_spec(self, value: object) -> bool:
+    def meets_spec(self, _value: object) -> bool:
         return True
 
 
@@ -714,7 +714,7 @@ class FASTQPath(IsStr):
     """String path with optional, case-insensitive {pair} key to specify where the
     mate 1/2 identifier is located."""
 
-    _PAIR_KEY = re.compile("{pair}", re.I)
+    _PAIR_KEY = re.compile("{pair}", re.IGNORECASE)
 
     def __init__(
         self,
@@ -937,8 +937,9 @@ def _process_default_values(
                     continue
                 elif default_value.default is REQUIRED_VALUE:
                     raise MakefileError(
-                        "A value MUST be supplied for %r"
-                        % (_path_to_str((*path, cur_key)))
+                        "A value MUST be supplied for {!r}".format(
+                            _path_to_str((*path, cur_key))
+                        )
                     )
                 default_value = default_value.default
                 default_value_from_spec = True

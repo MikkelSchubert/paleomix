@@ -32,7 +32,7 @@ from typing import Any, Iterable
 
 from paleomix.common import sequences
 from paleomix.common.bamfiles import BAM_PLATFORMS
-from paleomix.common.fileutils import get_files_glob
+from paleomix.common.fileutils import PathTypes, get_files_glob
 from paleomix.common.formats.fasta import FASTA
 from paleomix.common.makefile import (
     REQUIRED_VALUE,
@@ -68,7 +68,7 @@ _READ_TYPES = {"Single", "Singleton", "Collapsed", "CollapsedTruncated", "Paired
 _BAM_MAX_SEQUENCE_LENGTH = 2**29 - 1
 
 
-def read_makefiles(filenames: Iterable[str], pipeline_variant: str = "bam"):
+def read_makefiles(filenames: Iterable[PathTypes], pipeline_variant: str = "bam"):
     logger = logging.getLogger(__name__)
 
     makefiles = []
@@ -95,8 +95,9 @@ def read_makefiles(filenames: Iterable[str], pipeline_variant: str = "bam"):
 
 
 def _alphanum_check(whitelist, min_len=1):
-    description = "characters a-z, A-Z, 0-9%s allowed"
-    description %= (", and %r" % whitelist,) if whitelist else ""
+    description = "characters a-z, A-Z, 0-9{} allowed".format(
+        f", and {whitelist!r}" if whitelist else ""
+    )
 
     whitelist += string.ascii_letters + string.digits
 
@@ -270,9 +271,10 @@ def _postprocess_genomes(genomes):
         if "*" in name[:-1]:
             raise MakefileError(
                 "The character '*' is not allowed in Genome names; if you wish to "
-                "select multiple .fasta files using a search-string, then use the "
-                "genome name '%s*' instead and specify the wildcards in the 'Path'."
-                % (name.replace("*", ""))
+                "select multiple FASTA files using a search-string, then use the name "
+                "'{}*' instead and include wildcards in the path.".format(
+                    name.replace("*", "")
+                )
             )
         elif name.endswith("*"):
             for name, filename in _glob_genomes(values["Path"]):
@@ -522,10 +524,10 @@ def _validate_makefile_options(makefile):
                 f"continuing: {_path_to_str(path)}"
             )
 
-        _validate_makefile_adapters(record, path)
+        _validate_makefile_adapters(record)
 
 
-def _validate_makefile_adapters(record, path):
+def _validate_makefile_adapters(record):
     """Checks for the default adapter sequences specified in the wrong
     orientation for AdapterRemoval, which is a typical mistake when using
     the --pcr2 option.

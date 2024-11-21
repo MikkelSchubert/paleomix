@@ -154,7 +154,7 @@ class ReportNode(Node):
             row = dict(row)
             groups = []
             for key in self._data.groups:
-                groups.append("          <td>%s</td>" % self._data.groups[key][name])
+                groups.append(f"          <td>{self._data.groups[key][name]}</td>")
             row["Groups"] = "\n".join(groups)
 
             pub = row["Publication"]
@@ -296,7 +296,7 @@ class ReportNode(Node):
             outgroups = ", ".join(map(repr, self._treemix_outgroup))
             outgroups = (
                 ". The tree was rooted on the clade containing the "
-                "sample(s) %s" % (outgroups)
+                f"sample(s) {outgroups}"
             )
 
         treemix_v = _fmt_v(nuclear.TREEMIX_VERSION)

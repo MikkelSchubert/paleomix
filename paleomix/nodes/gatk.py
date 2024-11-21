@@ -346,7 +346,7 @@ class FastqToSamNode(CommandNode):
 class GatherVcfsNode(CommandNode):
     def __init__(
         self,
-        in_vcfs: str,
+        in_vcfs: Iterable[str],
         out_vcf: str,
         options: OptionsType | None = None,
         java_options: Iterable[str] = (),
@@ -368,7 +368,7 @@ class GatherVcfsNode(CommandNode):
         CommandNode.__init__(
             self,
             command=command,
-            description=f"gathering {len(in_vcfs)} VCFs into {out_vcf!r}",
+            description=f"gathering {len(command.input_files)} VCFs into {out_vcf!r}",
             dependencies=dependencies,
         )
 

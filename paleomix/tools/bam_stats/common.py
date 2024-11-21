@@ -222,7 +222,7 @@ def main_wrapper(
         try:
             args.regions = collect_bed_regions(args.regions_fpath)
         except ValueError as error:
-            log.error("Failed to parse BED file %r: %s", args.regions_fpath, error)  # noqa: TRY400
+            log.error("Failed to parse BED file %r: %s", args.regions_fpath, error)
             return 1
 
     log.info("Opening %r", args.infile)

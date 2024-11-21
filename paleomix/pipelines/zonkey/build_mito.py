@@ -106,21 +106,22 @@ def align_majority(reference, majority):
     return "".join(aligned)
 
 
-def truncate_sequences(sequences, name):
-    result = {}
-    to_len = len(sequences[name].sequence)
-    for name, record in sequences.items():
-        result[name] = FASTA(
-            name=record.name, meta=record.meta, sequence=record.sequence[:to_len]
+def truncate_sequences(sequences: dict[str, FASTA], length: int) -> dict[str, FASTA]:
+    return {
+        name: FASTA(
+            name=record.name,
+            meta=record.meta,
+            sequence=record.sequence[:length],
         )
+        for name, record in sequences.items()
+    }
 
-    return result
 
-
-def filter_sequences(sequences):
-    selection = {}
+def filter_sequences(sequences: dict[str, FASTA]) -> dict[str, FASTA]:
+    selection: dict[str, FASTA] = {}
     for key, record in sequences.items():
-        if "EXCLUDE" not in map(str.strip, record.meta.upper().split(";")):
+        meta = [] if record.meta is None else record.meta.split(";")
+        if not ("EXCLUDE" in value for value in meta):
             selection[key] = record
 
     return selection
@@ -182,7 +183,9 @@ def main(argv):
         )
 
         # Truncate all sequences to match the (now) unpadded sample sequence
-        sequences = truncate_sequences(sequences, "Sample")
+        sequences = truncate_sequences(
+            sequences, length=len(sequences["Sample"].sequence)
+        )
 
         sequences = filter_sequences(sequences)
 

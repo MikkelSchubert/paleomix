@@ -131,12 +131,12 @@ def test_layout__unknown_field__in_update() -> None:
 
 def test_layout__non_string_name() -> None:
     with pytest.raises(LayoutError, match="invalid key 17"):
-        Layout({17: "my_file"})  # pyright: ignore[reportGeneralTypeIssues]
+        Layout({17: "my_file"})  # pyright: ignore[reportArgumentType]
 
 
 def test_layout__non_string_dict_value() -> None:
     with pytest.raises(LayoutError, match="invalid value 17"):
-        Layout({"{root}": 17})  # pyright: ignore[reportGeneralTypeIssues]
+        Layout({"{root}": 17})  # pyright: ignore[reportArgumentType]
 
 
 def test_layout__duplicate_path_names() -> None:

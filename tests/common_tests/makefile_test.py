@@ -67,7 +67,7 @@ _DUMMY_PATH_STR = " :: ".join(_DUMMY_PATH)
 
 
 class Unhashable:
-    __hash__ = None  # pyright: ignore[reportGeneralTypeIssues]
+    __hash__ = None  # pyright: ignore[reportAssignmentType]
 
 
 _COMMON_INVALID_VALUES = {
@@ -767,7 +767,7 @@ def test_and__rejects_no_tests() -> None:
 
 def test_and__rejects_non_spec_tests() -> None:
     with pytest.raises(TypeError):
-        And(id)  # pyright: ignore[reportGeneralTypeIssues]
+        And(id)  # pyright: ignore[reportArgumentType]
 
 
 def test_and__default_not_set() -> None:
@@ -821,7 +821,7 @@ def test_or__rejects_no_tests() -> None:
 
 def test_or__rejects_non_spec_tests() -> None:
     with pytest.raises(TypeError):
-        Or(id)  # pyright: ignore[reportGeneralTypeIssues]
+        Or(id)  # pyright: ignore[reportArgumentType]
 
 
 def test_or__default_not_set() -> None:
@@ -1478,7 +1478,7 @@ def test_read_makefile__simple_file(tmp_path: Path) -> None:
 
 
 class _PreProcess(PreProcessMakefile):
-    def __call__(self, path: SpecPath, value: object) -> tuple[object, SpecTree]:
+    def __call__(self, _path: SpecPath, value: object) -> tuple[object, SpecTree]:
         if isinstance(value, str):
             return int(value), IsInt
 
@@ -1487,17 +1487,17 @@ class _PreProcess(PreProcessMakefile):
 
 def test__preprocess_makefile__missing_value() -> None:
     spec: SpecTree = {"Key": _PreProcess()}
-    assert {} == process_makefile({}, spec)
+    assert process_makefile({}, spec) == {}
 
 
 def test__preprocess_makefile__expected_value() -> None:
     spec: SpecTree = {"Key": _PreProcess()}
-    assert {"Key": 13} == process_makefile({"Key": 13}, spec)
+    assert process_makefile({"Key": 13}, spec) == {"Key": 13}
 
 
 def test__preprocess_makefile__processed_value() -> None:
     spec: SpecTree = {"Key": _PreProcess()}
-    assert {"Key": 14} == process_makefile({"Key": "14"}, spec)
+    assert process_makefile({"Key": "14"}, spec) == {"Key": 14}
 
 
 def test__preprocess_makefile__invalid_value() -> None:
@@ -1517,7 +1517,7 @@ class _PreProcessWithDefault(PreProcessMakefile):
     def __init__(self, default: object) -> None:
         self._default = default
 
-    def __call__(self, path: SpecPath, value: object) -> tuple[object, SpecTree]:
+    def __call__(self, _path: SpecPath, value: object) -> tuple[object, SpecTree]:
         if isinstance(value, str):
             return int(value), IsInt
 
@@ -1526,9 +1526,9 @@ class _PreProcessWithDefault(PreProcessMakefile):
 
 def test__preprocess_makefile__with_default__missing_value() -> None:
     spec: SpecTree = {"Key": _PreProcessWithDefault(314)}
-    assert {"Key": 314} == process_makefile({}, spec)
+    assert process_makefile({}, spec) == {"Key": 314}
 
 
 def test__preprocess_makefile__with_default__expected_value() -> None:
     spec: SpecTree = {"Key": _PreProcessWithDefault(314)}
-    assert {"Key": 14} == process_makefile({"Key": "14"}, spec)
+    assert process_makefile({"Key": "14"}, spec) == {"Key": 14}

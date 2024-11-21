@@ -130,7 +130,7 @@ class ArgumentParser(ArgumentParserBase):
 
 
 class _ChoicesPseudoAction(configargparse.Action):
-    def __init__(self, name, aliases, help):  # noqa: A002
+    def __init__(self, name, _aliases, help):
         super().__init__(
             option_strings=[],
             dest=name,

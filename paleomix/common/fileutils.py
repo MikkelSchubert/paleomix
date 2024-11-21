@@ -45,7 +45,7 @@ def file_or_stdout(filename: PathTypes) -> contextlib.AbstractContextManager[IO[
         # Prevent stdout from being closed
         return contextlib.nullcontext(sys.stdout)
 
-    return open(filename, "w")  # noqa: SIM115
+    return open(filename, "w")
 
 
 def add_postfix(filename: PathTypes, postfix: str) -> str:
@@ -281,7 +281,7 @@ def get_files_glob(
             glob_fname.append("?")
         elif len(frozenset(chars)) > 1:
             if show_differences:
-                glob_fname.append("[%s]" % "".join(sorted(chars)))
+                glob_fname.append("[{}]".format("".join(sorted(chars))))
             else:
                 glob_fname.append("?")
 

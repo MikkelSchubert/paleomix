@@ -138,7 +138,7 @@ class GenotypeSites:
 
 class GenotypeReader:
     def __init__(self, filename):
-        self._tar_handle = tarfile.open(filename)
+        self._tar_handle = tarfile.open(filename)  # noqa: SIM115
         handle = self._tar_handle.extractfile("genotypes.txt")
         if handle is None:
             raise FileNotFoundError("genotypes.txt")

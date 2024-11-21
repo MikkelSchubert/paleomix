@@ -92,7 +92,7 @@ class Worker:
 
         signal.signal(signal.SIGINT, self._sigint_handler)
 
-    def run(self):
+    def run(self) -> bool:
         log = logging.getLogger(__name__)
         log.info("Starting worker with %i threads", self._threads)
         if not self._threads:
@@ -248,7 +248,7 @@ class Worker:
         cwd: str,
         version: str,
         requirements: Collection[Requirement],
-        **kwargs: Any,
+        **_kwargs: object,
     ) -> Events:
         if version != paleomix.__version__:
             self._log.error("Version mismatch: %r != %r", version, paleomix.__version__)
@@ -277,7 +277,7 @@ class Worker:
             {"event": EVT_CAPACITY, "threads": self._threads},
         ]
 
-    def _manager_start(self, task: Node, temp_root: str, **kwargs: Any) -> Events:
+    def _manager_start(self, task: Node, temp_root: str, **_kwargs: object) -> Events:
         self._log.info("Starting %s using %i threads", task, task.threads)
         if self._temp_root:
             temp_root = self._temp_root
@@ -298,7 +298,7 @@ class Worker:
 
         return ()
 
-    def _join(self, handle: Any) -> EventType:
+    def _join(self, handle: object) -> EventType:
         key, task, proc = self._handles.pop(handle)
 
         proc.join()
@@ -335,11 +335,11 @@ class Worker:
             "backtrace": backtrace,
         }
 
-    def _unknown(self, **event: Any):
+    def _unknown(self, **event: object) -> Events:
         self._log.error("Unknown event: %r", event)
         return ()
 
-    def _sigint_handler(self, signum: int, frame: Any) -> None:
+    def _sigint_handler(self, signum: int, _frame: object) -> None:
         log = logging.getLogger(__name__)
         if self._conn and not self._interrupted:
             self._interrupted = True

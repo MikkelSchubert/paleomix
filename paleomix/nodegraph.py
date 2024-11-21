@@ -409,7 +409,7 @@ class NodeGraph:
         max_items: int = 4,
     ) -> None:
         self._log.error("Multiple tasks write to the same output files:")
-        for fpath in _summarize(clobbers, max_items=max_items, start=1):
+        for fpath in _summarize(clobbers, max_items=max_items):
             self._log.error("  File %s", quote(fpath))
 
             tasks = clobbers[fpath]
@@ -622,7 +622,7 @@ class NodeGraph:
 T = TypeVar("T")
 
 
-def _summarize(items: Iterable[T], max_items: int = 4, start: int = 0) -> Iterable[T]:
+def _summarize(items: Iterable[T], max_items: int = 4) -> Iterable[T]:
     unique_items = {str(it): it for it in items}
     sorted_items = sorted(unique_items.items())
 

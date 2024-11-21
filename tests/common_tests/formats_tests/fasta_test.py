@@ -68,17 +68,17 @@ def test_fasta__constructor__name_must_be_non_empty() -> None:
 
 def test_fasta__constructor__name_must_be_string_type() -> None:
     with pytest.raises(FASTAError):
-        FASTA(1, None, "ACGT")  # pyright: ignore[reportGeneralTypeIssues]
+        FASTA(1, None, "ACGT")  # pyright: ignore[reportArgumentType]
 
 
 def test_fasta__constructor__name_must_be_string_type_or_none() -> None:
     with pytest.raises(FASTAError):
-        FASTA("Seq1", 1, "ACGT")  # pyright: ignore[reportGeneralTypeIssues]
+        FASTA("Seq1", 1, "ACGT")  # pyright: ignore[reportArgumentType]
 
 
 def test_fasta__constructor__sequence_must_be_string_type() -> None:
     with pytest.raises(FASTAError):
-        FASTA("Seq1", None, 1)  # pyright: ignore[reportGeneralTypeIssues]
+        FASTA("Seq1", None, 1)  # pyright: ignore[reportArgumentType]
 
 
 ###############################################################################

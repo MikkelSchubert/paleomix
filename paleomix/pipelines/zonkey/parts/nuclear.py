@@ -263,7 +263,7 @@ class SelectBestAdmixtureNode(Node):
             dependencies=tuple(dependencies) + tuple(replicates),
         )
 
-    def _run(self, temp):
+    def _run(self, _temp):
         likelihoods = []
         for fileset in self._files:
             for filename in fileset:
@@ -296,7 +296,7 @@ class SelectBestAdmixtureNode(Node):
 class AdmixturePlotNode(CommandNode):
     def __init__(self, input_file, output_prefix, order, samples, dependencies=()):
         self._samples = samples
-        self._order = tuple(order) + ("Sample",)
+        self._order = (*order, "Sample")
 
         command = factory.rscript(
             (
@@ -445,7 +445,7 @@ class FreqToTreemixNode(Node):
                 if header is None:
                     rows = tuple(rows)  # Must not consume iterator
                     header = sorted(row[2] for row in rows)
-                    handle.write("%s\n" % (" ".join(header)))
+                    handle.write("{}\n".format(" ".join(header)))
 
                 result = []
                 rows = {row[2]: row for row in rows}
@@ -617,7 +617,7 @@ class PlotTreemixNode(CommandNode):
 
         CommandNode.__init__(
             self,
-            description="plotting treemix results to %s.*" % output_prefix,
+            description=f"plotting treemix results to {output_prefix}.*",
             command=SequentialCmds((cmd_1, cmd_2, cmd_3)),
             dependencies=dependencies,
         )

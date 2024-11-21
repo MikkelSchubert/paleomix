@@ -218,7 +218,7 @@ class Newick(TotallyOrdered, Immutable):
         if self.children:
             fields.append("(")
             for child in self.children:
-                fields.append(child._to_str())
+                fields.append(child._to_str())  # noqa: SLF001
                 fields.append(",")
             fields.pop()
             fields.append(")")

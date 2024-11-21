@@ -59,7 +59,7 @@ def check_run(call: list[str], expected_returncode: int = 0) -> tuple[str, str]:
 
 
 # Simple test of the paleomxi command
-@pytest.mark.slow()
+@pytest.mark.slow
 def test_paleomix_command() -> None:
     stdout, stderr = check_run(["paleomix"])
 
@@ -68,7 +68,7 @@ def test_paleomix_command() -> None:
 
 
 # Simple test that all commands can be executed
-@pytest.mark.slow()
+@pytest.mark.slow
 @pytest.mark.parametrize("command", main.COMMANDS)
 def test_factory__command_usage(command: str) -> None:
     cmd = factory.new(command)
@@ -82,7 +82,7 @@ def test_factory__command_usage(command: str) -> None:
 
 
 # Simple test that all commands support '--version'
-@pytest.mark.slow()
+@pytest.mark.slow
 @pytest.mark.parametrize("arg", ["-v", "--version"])
 @pytest.mark.parametrize("command", main.COMMANDS)
 def test_factory__command_versions(arg: str, command: str) -> None:

@@ -37,7 +37,7 @@ class AdmixtureError(RuntimeError):
 
 
 def read_admixture_results(filename, data, k_groups, cutoff=CUTOFF):
-    names = tuple(data.sample_order) + ("-",)
+    names = (*data.sample_order, "-")
     table = _admixture_read_results(filename, names)
     _admixture_validate_ancestral_groups(data, table, k_groups, cutoff)
 
@@ -174,6 +174,7 @@ def _admixture_validate_ancestral_groups(data, table, k_groups, cutoff):
 
     if mixed_groups:
         raise AdmixtureError(
-            "Inconsistent ADMIXTURE results: %s; "
-            "cannot determine ancestry!" % ("; ".join(mixed_groups))
+            "Inconsistent ADMIXTURE results: {}; cannot determine ancestry!".format(
+                "; ".join(mixed_groups)
+            )
         )

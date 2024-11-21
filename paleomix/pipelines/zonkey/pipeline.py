@@ -46,7 +46,7 @@ if TYPE_CHECKING:
     from paleomix.node import Node
 
 
-def build_plink_nodes(config, data, root, bamfile, dependencies=()):
+def build_plink_nodes(config, root, bamfile, dependencies=()):
     root = os.path.join(root, "results", "plink")
     plink: dict[str, str | Node] = {"root": root}
 
@@ -178,7 +178,7 @@ def build_treemix_nodes(config, data, root, plink):
     return nodes
 
 
-def build_pca_nodes(config, data, root, plink):
+def build_pca_nodes(data, root, plink):
     pca_root = os.path.join(root, "results", "pca")
 
     nodes = []
@@ -274,9 +274,7 @@ def build_pipeline(config, root, nuc_bam, mito_bam, cache):
         if index is None:
             index = cache[nuc_bam] = BAMIndexNode(infile=nuc_bam)
 
-        plink = build_plink_nodes(
-            config, config.database, root, nuc_bam, dependencies=(samples, index)
-        )
+        plink = build_plink_nodes(config, root, nuc_bam, dependencies=(samples, index))
 
         nodes.extend(build_admixture_nodes(config, config.database, root, plink))
 
@@ -290,7 +288,7 @@ def build_pipeline(config, root, nuc_bam, mito_bam, cache):
                     dependencies=(index,),
                 )
             )
-            nodes.extend(build_pca_nodes(config, config.database, root, plink))
+            nodes.extend(build_pca_nodes(config.database, root, plink))
             nodes.extend(build_treemix_nodes(config, config.database, root, plink))
 
     if mito_bam is not None and not config.admixture_only:

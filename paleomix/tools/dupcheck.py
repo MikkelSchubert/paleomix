@@ -62,11 +62,8 @@ def print_duplicates(
 ) -> None:
     record = duplicates[0]
     print(
-        "Found {} duplicates at {}:{}".format(
-            len(duplicates),
-            record.reference_name,
-            record.reference_start,
-        )
+        f"Found {len(duplicates)} duplicates at "
+        f"{record.reference_name}:{record.reference_start}"
     )
 
     samples = {}
@@ -263,9 +260,7 @@ def main(argv: list[str]) -> int:
                 elif not truncated_output_warning:
                     truncated_output_warning = True
                     print(
-                        "No further errors will be printed (max = {}) ..".format(
-                            args.max_output
-                        )
+                        f"No further errors will be printed (max = {args.max_output}).."
                     )
 
     if not total_filtered_duplicates:
@@ -275,10 +270,8 @@ def main(argv: list[str]) -> int:
     print()
     print()
     print(
-        "A total of {} reads with duplicates were found, with {} remaining ".format(
-            total_duplicates,
-            total_filtered_duplicates,
-        )
+        f"A total of {total_duplicates} reads with duplicates were found, "
+        f"with {total_filtered_duplicates} remaining "
     )
     print("after excluding low-complexity reads.")
     print()

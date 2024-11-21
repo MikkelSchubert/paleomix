@@ -684,7 +684,7 @@ def task_wrapper(queue: QueueType, task: Node, temp_root: str) -> None:
         terminate_all_processes()
 
 
-def _task_wrapper_sigterm_handler(signum: int, frame: object) -> NoReturn:
+def _task_wrapper_sigterm_handler(signum: int, _frame: object) -> NoReturn:
     signal.signal(signal.SIGHUP, signal.SIG_DFL)
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
 

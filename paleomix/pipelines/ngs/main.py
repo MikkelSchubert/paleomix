@@ -92,7 +92,7 @@ def _main_run(args):
     return pipeline.run(args.pipeline_mode)
 
 
-def _main_new(args) -> int:
+def _main_new(_args) -> int:
     print(resources.read_template("ngs.yaml"))
 
     return 0

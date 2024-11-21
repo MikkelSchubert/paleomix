@@ -134,7 +134,7 @@ _CONSTUCTOR_SINGLE_VALUES = (
 def test_constructor(key: str, value: str) -> None:
     defaults = {"input_files": _EMPTY_FILE}
     defaults[key] = value
-    node = Node(**defaults)  # pyright: ignore[reportGeneralTypeIssues]
+    node = Node(**defaults)  # pyright: ignore[reportArgumentType]
     expected = safe_coerce_to_frozenset(value)
     assert getattr(node, key) == expected
 
@@ -150,7 +150,7 @@ _CONSTUCTOR_INVALID_VALUES = (
 @pytest.mark.parametrize(("key", "value"), _CONSTUCTOR_INVALID_VALUES)
 def test_constructor__invalid_values(key: str, value: object) -> None:
     with pytest.raises(TypeError):
-        Node(**{key: value})  # pyright: ignore[reportGeneralTypeIssues]
+        Node(**{key: value})  # pyright: ignore[reportArgumentType]
 
 
 ###############################################################################
@@ -170,7 +170,7 @@ def test_constructor__requirements() -> None:
 @pytest.mark.parametrize("value", [17, "867-5309"])
 def test_constructor__requirements__wrong_type(value: object) -> None:
     with pytest.raises(TypeError):
-        Node(requirements=value)  # pyright: ignore[reportGeneralTypeIssues]
+        Node(requirements=value)  # pyright: ignore[reportArgumentType]
 
 
 ###############################################################################
@@ -180,7 +180,7 @@ def test_constructor__requirements__wrong_type(value: object) -> None:
 
 def test_constructor__nodes_is_none() -> None:
     with pytest.raises(TypeError):
-        Node(dependencies=None)  # pyright: ignore[reportGeneralTypeIssues]
+        Node(dependencies=None)  # pyright: ignore[reportArgumentType]
 
 
 def test_constructor__single_node() -> None:
@@ -197,7 +197,7 @@ def test_constructor__iterable() -> None:
 
 def test_constructor__not_a_node() -> None:
     with pytest.raises(TypeError):
-        Node(dependencies=(1,))  # pyright: ignore[reportGeneralTypeIssues]
+        Node(dependencies=(1,))  # pyright: ignore[reportArgumentType]
 
 
 ###############################################################################
@@ -221,7 +221,7 @@ def test_constructor__description__default(cls: type[Node]) -> None:
 @pytest.mark.parametrize("value", [1, {}])
 def test_constructor__description__non_string(cls: type[Node], value: object) -> None:
     with pytest.raises(TypeError):
-        cls(description=value)  # pyright: ignore[reportGeneralTypeIssues]
+        cls(description=value)  # pyright: ignore[reportArgumentType]
 
 
 ###############################################################################
@@ -247,7 +247,7 @@ def test_constructor__threads_invalid_range(cls: type[Node], nthreads: int) -> N
 @pytest.mark.parametrize("nthreads", ["1", {}, 2.7])
 def test_constructor__threads_invalid_type(cls: type[Node], nthreads: object) -> None:
     with pytest.raises(TypeError, match="'threads' must be a positive integer"):
-        cls(threads=nthreads)  # pyright: ignore[reportGeneralTypeIssues]
+        cls(threads=nthreads)  # pyright: ignore[reportArgumentType]
 
 
 ###############################################################################
@@ -543,7 +543,7 @@ _SETUP_FILES_EXIST = (
 
 @pytest.mark.parametrize("kwargs", _SETUP_FILES_EXIST)
 def test_commandnode_setup__files_exist(kwargs: dict[str, object]) -> None:
-    cmd_mock = _build_cmd_mock(**kwargs)  # pyright: ignore[reportGeneralTypeIssues]
+    cmd_mock = _build_cmd_mock(**kwargs)  # pyright: ignore[reportArgumentType]
     node = CommandNode(cmd_mock)
     node._setup(Path())
 
@@ -557,7 +557,7 @@ _SETUP_FILES_MISSING = (
 
 @pytest.mark.parametrize("kwargs", _SETUP_FILES_MISSING)
 def test_commandnode_setup__files_missing(kwargs: dict[str, object]) -> None:
-    cmd_mock = _build_cmd_mock(**kwargs)  # pyright: ignore[reportGeneralTypeIssues]
+    cmd_mock = _build_cmd_mock(**kwargs)  # pyright: ignore[reportArgumentType]
     node = CommandNode(cmd_mock)
     with pytest.raises(NodeError):
         node._setup(Path())

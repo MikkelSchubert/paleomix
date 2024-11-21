@@ -45,7 +45,7 @@ _FILE_MESSAGE_FORMAT: str = "%(asctime)s %(name)s %(levelname)s %(status)s%(mess
 
 
 class BasicFormatter(coloredlogs.ColoredFormatter):
-    def format(self, record: LogRecord) -> str:  # noqa: A003
+    def format(self, record: LogRecord) -> str:
         record = copy.copy(record)
         record.status = self._process_status(record)
 

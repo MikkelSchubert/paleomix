@@ -510,7 +510,7 @@ def test_pformat__sets__nested() -> None:
 @pytest.mark.parametrize("value", [1, {}, ""])
 def test_pformat__bad_input(value: object) -> None:
     with pytest.raises(TypeError):
-        pformat(value)  # pyright: ignore[reportGeneralTypeIssues]
+        pformat(value)  # pyright: ignore[reportArgumentType]
 
 
 ###############################################################################

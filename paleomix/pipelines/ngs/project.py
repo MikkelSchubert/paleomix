@@ -121,7 +121,6 @@ _VALIDATION: SpecTree = {
         "Metadata": {
             "Platform": ValueIn(BAM_PLATFORMS, default=REQUIRED_VALUE),
         },
-        #
         "Constants": {
             IsStr: _COMMAND_LINE_VALUE,
         },
@@ -188,7 +187,7 @@ def _replace_constants(data):
         {"Settings": {"Constants": constants}},
         {"Settings": {"Constants": {IsStr: _COMMAND_LINE_VALUE}}},
     )
-    constants = {("${%s}" % (key)): value for key, value in constants.items()}
+    constants = {f"${{{key}}}": value for key, value in constants.items()}
     if not constants:
         return None
 

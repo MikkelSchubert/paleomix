@@ -52,7 +52,7 @@ from paleomix.common import argparse
 _SE_FLAGS_MASK = ~(0x2 | 0x8 | 0x20 | 0x40 | 0x80)
 
 
-def _on_sigterm(signum: int, frame: object) -> NoReturn:
+def _on_sigterm(signum: int, _frame: object) -> NoReturn:
     sys.exit(-signum)
 
 

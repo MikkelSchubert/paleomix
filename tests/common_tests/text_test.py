@@ -118,7 +118,7 @@ def parse_lines(
 
 
 def test_parse_lines__empty_file() -> None:
-    def _assert_false(value: str, length: int) -> NoReturn:
+    def _assert_false(_value: str, _length: int) -> NoReturn:
         pytest.fail("parse should not be called")  # pragma: no coverage
 
     value: list[str] = []
@@ -157,7 +157,7 @@ def test_parse_lines__padding__newlines(postfix: str) -> None:
 def test_parse_lines__uncallable() -> None:
     value: list[str] = []
     with pytest.raises(TypeError):
-        parse_lines(value, 1)  # pyright: ignore[reportGeneralTypeIssues]
+        parse_lines(value, 1)  # pyright: ignore[reportArgumentType]
 
 
 def test_parse_lines__binary() -> None:

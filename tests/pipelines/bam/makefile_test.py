@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import copy
 import textwrap
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -113,7 +113,7 @@ TEMPLATE_BAM = {
 }
 
 
-def _trim_template():
+def _trim_template() -> dict[str, Any]:
     data = copy.deepcopy(TEMPLATE_BAM)
     del data["Genomes"]["NAME_OF_PREFIX"]
     del data["Options"]["Aligners"]["Bowtie2"]["--very-sensitive"]
@@ -174,7 +174,7 @@ def test_basic__read_makefiles__bam_template(tmp_path: Path) -> None:
 # Tests for genome specifications
 
 
-def _write_genome_yaml(tmp_path, genomes):
+def _write_genome_yaml(tmp_path: Path, genomes: dict[str, str]) -> Path:
     filepath = tmp_path / "temp.yaml"
     with filepath.open("wt") as handle:
         for filename in TEMPLATE_FILES[:-2]:
@@ -274,7 +274,7 @@ def test_genomes__wildcard_in_name__invalid_file(tmp_path: Path) -> None:
 # Tests for sample specifications
 
 
-def _sample_template(filepath):
+def _sample_template(filepath: Path) -> dict[str, Any]:
     data = copy.deepcopy(TEMPLATE_BAM)
     data["Filename"] = filepath
     options = data["Options"]
@@ -315,7 +315,7 @@ def _sample_template(filepath):
     return data
 
 
-def _write_sample_yaml(tmp_path, text):
+def _write_sample_yaml(tmp_path: Path, text: str) -> Path:
     filepath = tmp_path / "temp.yaml"
     with filepath.open("wt") as handle:
         for filename in TEMPLATE_FILES[:-1]:
@@ -528,7 +528,7 @@ FEATURES = ("Coverage", "Depths", "mapDamage", "PCRDuplicates", "Summary")
 
 
 @pytest.mark.parametrize("key", FEATURES)
-def test_makefile__sample__features__group(tmp_path, key) -> None:
+def test_makefile__sample__features__group(tmp_path: Path, key: str) -> None:
     filepath = _write_sample_yaml(
         tmp_path,
         f"""
@@ -548,7 +548,7 @@ def test_makefile__sample__features__group(tmp_path, key) -> None:
 
 
 @pytest.mark.parametrize("key", FEATURES)
-def test_makefile__sample__features__sample(tmp_path, key) -> None:
+def test_makefile__sample__features__sample(tmp_path: Path, key: str) -> None:
     filepath = _write_sample_yaml(
         tmp_path,
         f"""
@@ -568,7 +568,7 @@ def test_makefile__sample__features__sample(tmp_path, key) -> None:
 
 
 @pytest.mark.parametrize("key", ["mapDamage", "PCRDuplicates"])
-def test_makefile__sample__features__library__allowed(tmp_path, key) -> None:
+def test_makefile__sample__features__library__allowed(tmp_path: Path, key: str) -> None:
     filepath = _write_sample_yaml(
         tmp_path,
         f"""
@@ -588,7 +588,9 @@ def test_makefile__sample__features__library__allowed(tmp_path, key) -> None:
 
 
 @pytest.mark.parametrize("key", ["Coverage", "Depths", "Summary"])
-def test_makefile__sample__features__library__prohibited(tmp_path, key) -> None:
+def test_makefile__sample__features__library__prohibited(
+    tmp_path: Path, key: str
+) -> None:
     filepath = _write_sample_yaml(
         tmp_path,
         f"""
@@ -607,7 +609,7 @@ def test_makefile__sample__features__library__prohibited(tmp_path, key) -> None:
 
 
 @pytest.mark.parametrize("key", FEATURES)
-def test_makefile__sample__features__lane(tmp_path, key) -> None:
+def test_makefile__sample__features__lane(tmp_path: Path, key: str) -> None:
     filepath = _write_sample_yaml(
         tmp_path,
         f"""
@@ -716,7 +718,9 @@ def test_makefile__sample__pretrimmed_reads__including_untrimmed(
 
 
 @pytest.mark.parametrize("offset", [64, "Solexa"])
-def test_makefile__validation__trimmed_qualities_must_be_33(tmp_path, offset) -> None:
+def test_makefile__validation__trimmed_qualities_must_be_33(
+    tmp_path: Path, offset: str | int
+) -> None:
     filepath = _write_sample_yaml(
         tmp_path,
         f"""

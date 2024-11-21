@@ -106,7 +106,7 @@ class Node:
         # changes to the input, and nodes with output but no input are not
         # expected based on current usage.
         if not self.input_files and self.output_files:
-            raise NodeError("Task not dependent upon input files: %s" % self)
+            raise NodeError(f"Task not dependent upon input files: {self}")
 
         # Globally unique node ID
         self.id = next(_GLOBAL_ID)
@@ -150,7 +150,7 @@ class Node:
                 ),
                 path=temp,
             ) from None
-        except Exception as error:  # noqa: BLE001
+        except Exception as error:
             self._write_error_log(temp, error)
             raise NodeUnhandledError(
                 f"Error while running {self}", path=temp

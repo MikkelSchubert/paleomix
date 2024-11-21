@@ -39,7 +39,7 @@ def parse_args(argv: list[str]) -> Namespace:
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
 
-    if not re.match(r"^[a-z]+/[a-z]+\.r$", args.script, flags=re.I):
+    if not re.match(r"^[a-z]+/[a-z]+\.r$", args.script, flags=re.IGNORECASE):
         print(f"ERROR: Invalid resource {args.script!r}")
         return 1
 

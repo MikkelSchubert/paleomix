@@ -318,12 +318,12 @@ def test_parallel_commands__reject_sets(
     command = AtomicCmd(["ls"])
     seqcmd = cls([command])
     with pytest.raises(CmdError):
-        ParallelCmds([seqcmd])  # pyright: ignore[reportGeneralTypeIssues]
+        ParallelCmds([seqcmd])  # pyright: ignore[reportArgumentType]
 
 
 def test_parallel_commands__reject_noncommand() -> None:
     with pytest.raises(CmdError):
-        ParallelCmds([object()])  # pyright: ignore[reportGeneralTypeIssues]
+        ParallelCmds([object()])  # pyright: ignore[reportArgumentType]
 
 
 def test_parallel_commands__reject_empty_commandset() -> None:
@@ -411,7 +411,7 @@ def test_sequential_commands__accept_sequential() -> None:
 
 def test_sequential_commands__reject_noncommand() -> None:
     with pytest.raises(CmdError):
-        SequentialCmds([object()])  # pyright: ignore[reportGeneralTypeIssues]
+        SequentialCmds([object()])  # pyright: ignore[reportArgumentType]
 
 
 def test_sequential_commands__reject_empty_commandset() -> None:

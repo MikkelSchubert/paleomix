@@ -130,7 +130,7 @@ def _write_genotypes(args, data, filename):
 
     with open(filename, "w") as handle:
         header = ("Chrom", "Pos", "Ref", ";".join(keys))
-        handle.write("%s\n" % ("\t".join(header)))
+        handle.write("{}\n".format("\t".join(header)))
 
         for contig, size in sorted(data["contigs"].items()):
             # Skip non-autosomal contigs

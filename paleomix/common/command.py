@@ -19,6 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+# ruff: noqa:  SLF001
 from __future__ import annotations
 
 import collections
@@ -461,7 +462,7 @@ class AtomicCmd:
         missing_files = expected_files - set(os.listdir(self._temp))
         if missing_files:
             raise CmdError(
-                "Expected files not created: %s" % (", ".join(missing_files))
+                "Expected files not created: {}".format(", ".join(missing_files))
             )
 
         committed_files: list[str] = []
@@ -643,9 +644,9 @@ class AtomicCmd:
             return pipe._proc.stdout
 
         if pipe.temporary or isinstance(pipe, OutputFile):
-            return open(fileutils.reroot_path(temp_dir, pipe.path), mode)  # noqa: SIM115
+            return open(fileutils.reroot_path(temp_dir, pipe.path), mode)
 
-        return open(pipe.path, mode)  # noqa: SIM115
+        return open(pipe.path, mode)
 
     def __enter__(self) -> Self:
         return self
@@ -878,13 +879,13 @@ def _build_status(command: AtomicCmd, indent: int, lines: list[str]) -> None:
     prefix = " " * indent + "Status  = "
     if command._proc:
         if command.ready():
-            return_code = tuple(command.join())
+            (return_code,) = command.join()
             if command.terminated:
-                lines.append(prefix + "Automatically terminated by PALEOMIX")
-            elif isinstance(return_code[0], str):
-                lines.append(prefix + "Terminated with signal %s" % return_code)
+                lines.append(f"{prefix}Automatically terminated by PALEOMIX")
+            elif isinstance(return_code, str):
+                lines.append(f"{prefix}Terminated with signal {return_code}")
             else:
-                lines.append(prefix + "Exited with return-code %i" % return_code)
+                lines.append(f"{prefix}Exited with return-code {return_code}")
         else:
             lines.append(prefix + "Running")
 

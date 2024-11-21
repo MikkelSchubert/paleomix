@@ -65,7 +65,7 @@ class Pypeline:
         self._nodes = safe_coerce_to_tuple(nodes)
         for node in self._nodes:
             if not isinstance(node, Node):
-                raise TypeError("Node object expected, received %s" % repr(node))
+                raise TypeError(f"Node object expected, received {node!r}")
 
         self._logger = logging.getLogger(__name__)
         # Set if a keyboard-interrupt (SIGINT) has been caught
@@ -243,7 +243,7 @@ class Pypeline:
         tasks: dict[Node, _TaskInfo],
         worker: str,
         worker_name: str,
-        **event: Any,
+        **_kwargs: Any,
     ):
         self._logger.error("PALEOMIX worker %s terminated", worker_name)
 
@@ -288,9 +288,9 @@ class Pypeline:
         self,
         nodegraph: NodeGraph,
         task: Node,
-        error: Any,
+        error: object,
         backtrace: list[str] | None,
-        **kwargs: Any,
+        **_kwargs: object,
     ):
         self._set_node_state(nodegraph, task, nodegraph.ERROR)
 
@@ -354,7 +354,7 @@ class Pypeline:
                 "again within the next 5 seconds to terminate immediately."
             )
 
-    def _sigterm_handler(self, signum: int, frame: object) -> NoReturn:
+    def _sigterm_handler(self, signum: int, _frame: object) -> NoReturn:
         self._logger.warning("Terminating due to signal %i", signum)
 
         signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -394,16 +394,16 @@ class Pypeline:
             self._logger.info("Pipeline completed successfully")
 
     def _set_node_state(self, graph: NodeGraph, node: Node, state: StatusEnum) -> None:
-        for node, old_state, new_state in graph.set_node_status(node, state):
+        for child, old_state, new_state in graph.set_node_status(node, state):
             if new_state in (NodeGraph.RUNNING, NodeGraph.DONE):
                 runtime = ""
                 if new_state == NodeGraph.RUNNING:
-                    self._start_times[node] = time.time()
+                    self._start_times[child] = time.time()
                     event = "Started"
                 elif old_state == NodeGraph.RUNNING:
                     event = "Finished"
                     end_time = time.time()
-                    start_time = self._start_times.pop(node)
+                    start_time = self._start_times.pop(child)
                     runtime = f" in {format_timespan(end_time - start_time)}"
                 else:
                     event = "Already finished"
@@ -411,7 +411,7 @@ class Pypeline:
                 status = _Progress(graph.get_state_counts(), self._progress_color)
                 extra = {"status": status}
 
-                self._logger.info("%s %s%s", event, node, runtime, extra=extra)
+                self._logger.info("%s %s%s", event, child, runtime, extra=extra)
             elif new_state == graph.ERROR:
                 self._progress_color = "red"
 

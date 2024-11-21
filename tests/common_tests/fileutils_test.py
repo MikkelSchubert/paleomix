@@ -313,7 +313,7 @@ def test_make_dirs__creation_preemted(tmp_path: Path) -> None:
     def _wrap_os_makedirs(
         name: str | bytes,
         mode: int = 511,
-        exist_ok: bool = False,  #  noqa: FBT001,FBT002
+        exist_ok: bool = False,
     ) -> None:
         # Simulate somebody else creating the directory first
         makedirs(name, mode, exist_ok)
@@ -440,7 +440,7 @@ def test_move_file__enoent_reraised_if_not_due_to_missing_folder() -> None:
 def test_move_file__destination_removed_if_out_of_space(tmp_path: Path) -> None:
     shutil_copy2 = shutil.copy2
 
-    def _rename(source: Path, destination: Path) -> NoReturn:
+    def _rename(_source: Path, _destination: Path) -> NoReturn:
         # Simulated move across devices
         raise OSError(errno.EXDEV, "error message")
 
@@ -721,7 +721,7 @@ def test_describe_files__iterable() -> None:
 
 def test_describe_files__non_str() -> None:
     with pytest.raises(TypeError):
-        describe_files(1)  # pyright: ignore[reportGeneralTypeIssues]
+        describe_files(1)  # pyright: ignore[reportArgumentType]
 
 
 ###############################################################################
@@ -800,10 +800,10 @@ def test_describe_paired_files__files_2_longer() -> None:
 
 def test_describe_paired_files__non_str() -> None:
     with pytest.raises(TypeError):
-        describe_paired_files((), 1)  # pyright: ignore[reportGeneralTypeIssues]
+        describe_paired_files((), 1)  # pyright: ignore[reportArgumentType]
 
     with pytest.raises(TypeError):
-        describe_paired_files(1, ())  # pyright: ignore[reportGeneralTypeIssues]
+        describe_paired_files(1, ())  # pyright: ignore[reportArgumentType]
 
     with pytest.raises(TypeError):
-        describe_paired_files(1, 1)  # pyright: ignore[reportGeneralTypeIssues]
+        describe_paired_files(1, 1)  # pyright: ignore[reportArgumentType]
