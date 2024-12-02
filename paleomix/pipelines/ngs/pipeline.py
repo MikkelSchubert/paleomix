@@ -504,9 +504,6 @@ def merge_samples_alignments(args, genome, samples, settings):
             threads=args.max_threads_samtools,
         )
 
-        if bsqr_enabled:
-            split.mark_intermediate_files(out_passed)
-
         samples[sample] = BAMIndexNode(
             infile=out_passed,
             dependencies=[split],
@@ -515,7 +512,9 @@ def merge_samples_alignments(args, genome, samples, settings):
             },
         )
 
-        samples[sample].mark_intermediate_files()
+        if bsqr_enabled:
+            split.mark_intermediate_files(out_passed)
+            samples[sample].mark_intermediate_files()
 
         yield samples[sample]
 
