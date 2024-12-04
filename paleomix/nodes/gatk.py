@@ -64,9 +64,6 @@ class ApplyBQSRNode(CommandNode):
         if options is None:
             options = {}
 
-        if not isinstance(in_node, BaseRecalibratorNode):
-            raise TypeError(in_node)
-
         # WORKAROUND: ApplyBQSR defaults to using compression level 2 for output,
         #             resulting in significantly larger BAMs. Revert that behavior
         #             unless the user has already done so. GATK 4.2.3.0 and more.
@@ -108,7 +105,7 @@ class ApplyVQSRNode(CommandNode):
         self,
         mode: Literal["INDEL", "SNP"],
         in_vcf: str,
-        in_node: str,
+        in_node: VariantRecalibratorNode,
         out_vcf: str,
         out_log: str | None = None,
         options: OptionsType | None = None,
@@ -117,11 +114,6 @@ class ApplyVQSRNode(CommandNode):
     ) -> None:
         if options is None:
             options = {}
-
-        if not isinstance(in_node, VariantRecalibratorNode):
-            raise TypeError(in_node)
-        elif mode not in ("INDEL", "SNP"):
-            raise ValueError(mode)
 
         self.out_vcf = out_vcf
 

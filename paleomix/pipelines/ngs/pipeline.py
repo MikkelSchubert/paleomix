@@ -91,14 +91,14 @@ _LAYOUT = {
             },
             "{genome}.uncalibrated.g.vcf.gz": "gvcf_merged",
             "{genome}.uncalibrated.vcf.gz": "vcf_merged",
-            "{genome}.recalibrated.snp.vcf.gz": "vcf_recal_snp",
+            "{genome}.recalibrated.snp.vcf.gz": "vcf_recal_SNP",
         },
     },
     "haplotypes": {
         "{sample}.{genome}.g.vcf.gz": "gvcf_per_sample",
     },
     "genotypes": {
-        "{genome}.vcf.gz": "vcf_recal_indel",
+        "{genome}.vcf.gz": "vcf_recal_INDEL",
     },
     "statistics": {
         "alignments_multiQC": "bam_multiqc_prefix",
@@ -109,12 +109,12 @@ _LAYOUT = {
             "fastqc": "bam_fastqc_dir",
         },
         "genotyping": {
-            "{genome}.recalibration.snp.r": "vcf_recal_training_snp_r",
-            "{genome}.recalibration.snp.tranches": "vcf_recal_training_snp_trances",
-            "{genome}.recalibration.indel.r": "vcf_recal_training_indel_r",
-            "{genome}.recalibration.indel.tranches": "vcf_recal_training_indel_trances",
-            "{genome}.recalibration.indel.vcf.gz": "vcf_recal_training_indel_vcf",
-            "{genome}.recalibration.snp.vcf.gz": "vcf_recal_training_snp_vcf",
+            "{genome}.recalibration.snp.r": "vcf_recal_training_SNP_r",
+            "{genome}.recalibration.snp.tranches": "vcf_recal_training_SNP_trances",
+            "{genome}.recalibration.indel.r": "vcf_recal_training_INDEL_r",
+            "{genome}.recalibration.indel.tranches": "vcf_recal_training_INDEL_trances",
+            "{genome}.recalibration.indel.vcf.gz": "vcf_recal_training_INDEL_vcf",
+            "{genome}.recalibration.snp.vcf.gz": "vcf_recal_training_SNP_vcf",
         },
         "reads_pre_trimmed_multiQC": "stats_fastqc_multiqc_pre",
         "reads_trimming_multiQC": "stats_fastp_multiqc",
@@ -744,17 +744,17 @@ def recalibrate_haplotype(args, genome, _samples, settings):
     if settings["VariantRecalibrator"]["Enabled"]:
         intermediate_vcf = layout["vcf_merged"]
 
-        for mode in ("snp", "indel"):
+        for mode in ("SNP", "INDEL"):
             # 1. Build models for SNP/INDEL recalibration
             model_node = VariantRecalibratorNode(
-                mode=mode.upper(),
+                mode=mode,
                 in_reference=genome.filename,
                 # Train on the merged VCF to allow SNP/INDEL model building in parallel
                 in_variant=layout["vcf_merged"],
                 out_recal=layout[f"vcf_recal_training_{mode}_vcf"],
                 out_tranches=layout[f"vcf_recal_training_{mode}_trances"],
                 out_r_plot=layout[f"vcf_recal_training_{mode}_r"],
-                options=settings["VariantRecalibrator"][mode.upper()],
+                options=settings["VariantRecalibrator"][mode],
                 java_options=args.jre_options,
             )
 
@@ -768,15 +768,15 @@ def recalibrate_haplotype(args, genome, _samples, settings):
             if settings["ApplyVQSR"]["Enabled"]:
                 # 3. Apply SNP/INDEL recalibration to current BAM
                 recal_node = ApplyVQSRNode(
-                    mode=mode.upper(),
+                    mode=mode,
                     in_vcf=intermediate_vcf,
                     in_node=model_node,
                     out_vcf=layout[f"vcf_recal_{mode}"],
-                    options=settings["ApplyVQSR"][mode.upper()],
+                    options=settings["ApplyVQSR"][mode],
                     java_options=args.jre_options,
                 )
 
-                if mode == "snp":
+                if mode == "SNP":
                     # Only the final INDEL + SNP recalibrated BAM is kept
                     recal_node.mark_intermediate_files()
                     # The merged BAM is SNP recalibrated and then indel recalibrated
