@@ -156,12 +156,13 @@ class Node:
                 f"Error while running {self}", path=temp
             ) from error
 
-    def mark_intermediate_files(self, glob: str = "*") -> None:
+    def mark_intermediate_files(self, glob: str = "*") -> Node:
         if glob == "*":
             self.intermediate_output_files = set(self.output_files)
-            return
+            return self
 
         self.intermediate_output_files.update(fnmatch.filter(self.output_files, glob))
+        return self
 
     def _create_temp_dir(self, temp_root: PathTypes) -> str:
         """Called by 'run' in order to create a temporary folder."""
