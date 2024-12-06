@@ -19,14 +19,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+# ruff: noqa: E501
+#
 from __future__ import annotations
 
 import logging
 import os
+from typing import Generator, Literal
 
 from paleomix.common.command import InputFile
 from paleomix.common.fileutils import swap_ext
 from paleomix.common.layout import Layout
+from paleomix.node import Node
 from paleomix.nodes.bwa import BWAAlgorithmNode, BWAIndexNode, BWAMem2IndexNode
 from paleomix.nodes.commands import FilterCollapsedBAMNode, FinalizeBAMNode
 from paleomix.nodes.fastp import FastpNode
@@ -66,39 +70,41 @@ _LAYOUT = {
         "{sample}.{genome}.junk.bam": "aln_split_failed_bam",
     },
     "cache": {
-        "{sample}": {
-            "alignments": {
-                "{sample}.{genome}.{library}.{run}.{kind}.bam": "aln_run_bam",
-                "{sample}.{genome}.{library}.rmdup.merged.bam": "aln_rmdup_merged_bam",
-                "{sample}.{genome}.{library}.rmdup.paired.bam": "aln_rmdup_paired_bam",
-                "{sample}.{genome}.{library}.rmdup.paired.metrics.txt": "aln_rmdup_paired_metrics",  # noqa: E501
-                "{sample}.{genome}.good.bam": "aln_split_passed_bam",
-            },
-            "reads": {
-                "{sample}.{library}.{run}.paired_1.fastq.gz": "fastp_paired_1",
-                "{sample}.{library}.{run}.paired_2.fastq.gz": "fastp_paired_2",
-                "{sample}.{library}.{run}.fastq.gz": "fastp_merged",
-                "{sample}.{library}.{run}.unpaired.fastq.gz": "fastp_unpaired",
-                "{sample}.{library}.{run}.unpaired.bam": "fastp_unpaired_bam",
-                "{sample}.{library}.{run}.failed.fastq.gz": "fastp_failed",
-                "{sample}.{library}.{run}.failed.bam": "fastp_failed_bam",
-            },
+        "samples": {
+            "{sample}": {
+                "alignments": {
+                    "{sample}.{genome}.{library}.{run}.{kind}.bam": "aln_run_bam",
+                    "{sample}.{genome}.{library}.rmdup.merged.bam": "aln_rmdup_merged_bam",
+                    "{sample}.{genome}.{library}.rmdup.paired.bam": "aln_rmdup_paired_bam",
+                    "{sample}.{genome}.{library}.rmdup.paired.metrics.txt": "aln_rmdup_paired_metrics",
+                    "{sample}.{genome}.good.bam": "aln_split_passed_bam",
+                },
+                "reads": {
+                    "{sample}.{library}.{run}.paired_1.fastq.gz": "fastp_paired_1",
+                    "{sample}.{library}.{run}.paired_2.fastq.gz": "fastp_paired_2",
+                    "{sample}.{library}.{run}.fastq.gz": "fastp_merged",
+                    "{sample}.{library}.{run}.unpaired.fastq.gz": "fastp_unpaired",
+                    "{sample}.{library}.{run}.unpaired.bam": "fastp_unpaired_bam",
+                    "{sample}.{library}.{run}.failed.fastq.gz": "fastp_failed",
+                    "{sample}.{library}.{run}.failed.bam": "fastp_failed_bam",
+                },
+                "haplotypes": {
+                    "{sample}.{genome}.{part}.g.vcf.gz": "gvcf_sample_part",
+                },
+            }
         },
         "haplotypes": {
-            "{genome}.uncalibrated": {
-                "{part}.g.vcf.gz": "gvcf_merged_part",
-                "{part}.vcf.gz": "vcf_merged_part",
-            },
-            "{genome}.uncalibrated.g.vcf.gz": "gvcf_merged",
-            "{genome}.uncalibrated.vcf.gz": "vcf_merged",
-            "{genome}.recalibrated.snp.vcf.gz": "vcf_recal_SNP",
+            "{genome}.{part}.g.vcf.gz": "gvcf_part",
+            "{genome}.{part}.vcf.gz": "vcf_part",
+            "{genome}.{part}.snp.vcf.gz": "vcf_part_SNP",
+            "{genome}.{part}.indel.vcf.gz": "vcf_part_INDEL",
         },
     },
     "haplotypes": {
         "{sample}.{genome}.g.vcf.gz": "gvcf_per_sample",
     },
     "genotypes": {
-        "{genome}.vcf.gz": "vcf_recal_INDEL",
+        "{genome}.vcf.gz": "vcf_recal",
     },
     "statistics": {
         "alignments_multiQC": "bam_multiqc_prefix",
@@ -601,13 +607,28 @@ def haplotype_samples(args, genome, samples, settings):
 
     for sample in samples:
         layout = args.layout.update(genome=genome, sample=sample)
-        out_vcf = layout["gvcf_per_sample"]
 
-        yield HaplotypeCallerNode(
-            in_reference=genome.filename,
-            in_bam=layout["aln_final_bam"],
-            out_vcf=out_vcf,
-            options=settings["HaplotypeCaller"],
+        gvcfs: list[str] = []
+        for interval in genome.intervals:
+            out_gvcf = layout.get("gvcf_sample_part", part=interval["name"])
+            gvcfs.append(out_gvcf)
+
+            yield HaplotypeCallerNode(
+                in_reference=genome.filename,
+                in_bam=layout["aln_final_bam"],
+                out_vcf=out_gvcf,
+                options={
+                    "--intervals": InputFile(interval["filename"]),
+                    **settings["HaplotypeCaller"],
+                },
+                java_options=args.jre_options,
+            ).mark_intermediate_files()
+
+        # The final gVCFs are used to ease addition of new samples to old runs
+        yield GatherVcfsNode(
+            # Note that in_vcfs must be in genomic order
+            in_vcfs=gvcfs,
+            out_vcf=layout["gvcf_per_sample"],
             java_options=args.jre_options,
         )
 
@@ -616,173 +637,126 @@ def genotype_samples(args, genome, samples, settings):
     layout = args.layout.update(genome=genome)
     settings = settings["Genotyping"]
 
-    gvcfs = []
-    for sample in samples:
-        gvcfs.append(layout.get("gvcf_per_sample", genome=genome, sample=sample))
+    vcfs: list[str] = []
+    for interval in genome.intervals:
+        layout = args.layout.update(
+            genome=genome,
+            part=interval["name"],
+        )
 
-    if len(gvcfs) == 1 and len(genome.intervals) == 1:
-        haplotyping_func = _haplotype_1_sample_1_interval
-    elif len(gvcfs) == 1:
-        haplotyping_func = _haplotype_1_sample_n_intervals
-    elif len(genome.intervals) == 1:
-        haplotyping_func = _haplotype_n_samples_1_interval
-    else:
-        haplotyping_func = _haplotype_n_samples_n_interval
+        gvcfs = []
+        for sample in samples:
+            gvcfs.append(layout.get("gvcf_sample_part", sample=sample))
 
-    for task in haplotyping_func(
+        # Combine partial per-sample gVCFs into into multi-sample paritial gVCF
+        yield CombineGVCFsNode(
+            in_reference=genome.filename,
+            in_variants=gvcfs,
+            out_vcf=layout["gvcf_part"],
+            java_options=args.jre_options,
+        ).mark_intermediate_files()
+
+        # Genotype partial multi-sample gVCF
+        yield GenotypeGVCFs(
+            in_reference=genome.filename,
+            in_gvcf=layout["gvcf_part"],
+            out_vcf=layout["vcf_part"],
+            options=settings["GenotypeGVCFs"],
+            java_options=args.jre_options,
+        ).mark_intermediate_files()
+
+        vcfs.append(layout["vcf_part"])
+
+
+def recalibrate_genotypes(args, genome, _samples, settings):
+    settings = settings["Genotyping"]
+    if not settings["VariantRecalibrator"]["Enabled"]:
+        return
+
+    layout = args.layout.update(genome=genome)
+
+    yield from _recalibrate_vcf_files(
         args=args,
         genome=genome,
         settings=settings,
         layout=layout,
-        gvcfs=gvcfs,
-    ):
-        task.mark_intermediate_files()
-        yield task
-
-
-def _haplotype_1_sample_1_interval(args, genome, settings, layout, gvcfs):
-    # In the simplest case, we only have a single GVCFs. No additional work is
-    # needed to obtain a "merged" file.
-    (in_gvcf,) = gvcfs
-
-    yield GenotypeGVCFs(
-        in_reference=genome.filename,
-        in_gvcf=in_gvcf,
-        out_vcf=layout["vcf_merged"],
-        options=settings["GenotypeGVCFs"],
-        java_options=args.jre_options,
+        mode="SNP",
+        in_vcf_key="vcf_part",
+        out_vcf_key="vcf_part_SNP",
     )
 
-
-def _haplotype_n_samples_1_interval(args, genome, settings, layout, gvcfs):
-    yield CombineGVCFsNode(
-        in_reference=genome.filename,
-        in_variants=gvcfs,
-        out_vcf=layout["gvcf_merged"],
-        java_options=args.jre_options,
+    # INDEL training and recalibration (training is done in parallel, see below)
+    yield from _recalibrate_vcf_files(
+        args=args,
+        genome=genome,
+        settings=settings,
+        layout=layout,
+        mode="INDEL",
+        in_vcf_key="vcf_part_SNP",
+        out_vcf_key="vcf_part_INDEL",
     )
 
-    yield GenotypeGVCFs(
-        in_reference=genome.filename,
-        in_gvcf=layout["gvcf_merged"],
-        out_vcf=layout["vcf_merged"],
-        options=settings["GenotypeGVCFs"],
-        java_options=args.jre_options,
-    )
+    if settings["ApplyVQSR"]["Enabled"]:
+        vcfs: list[str] = [
+            layout.get("vcf_part_INDEL", part=interval["name"])
+            for interval in genome.intervals
+        ]
 
-
-def _haplotype_1_sample_n_intervals(args, genome, settings, layout, gvcfs):
-    (in_gvcf,) = gvcfs
-    vcfs = []
-
-    for interval in genome.intervals:
-        layout = args.layout.update(genome=genome, part=interval["name"])
-
-        options = dict(settings["GenotypeGVCFs"])
-        options["--intervals"] = InputFile(interval["filename"])
-
-        yield GenotypeGVCFs(
-            in_reference=genome.filename,
-            in_gvcf=in_gvcf,
-            out_vcf=layout["vcf_merged_part"],
-            options=options,
+        yield GatherVcfsNode(
+            # Note that in_vcfs must be in genomic order
+            in_vcfs=vcfs,
+            out_vcf=layout["vcf_recal"],
             java_options=args.jre_options,
         )
 
-        vcfs.append(layout["vcf_merged_part"])
 
-    yield GatherVcfsNode(
-        # Note that in_vcfs must be in genomic order
-        in_vcfs=vcfs,
-        out_vcf=layout["vcf_merged"],
+def _recalibrate_vcf_files(
+    args,
+    genome: Genome,
+    settings,
+    layout: Layout,
+    in_vcf_key: str,
+    out_vcf_key: str,
+    mode: Literal["SNP", "INDEL"],
+) -> Generator[Node]:
+    # Training is always done on the "raw" VCF to allow SNP/INDEL training in parallel
+    in_variants: list[str] = [
+        layout.get("vcf_part", part=interval["name"]) for interval in genome.intervals
+    ]
+
+    # 1. Build models for SNP/INDEL recalibration
+    model_node = VariantRecalibratorNode(
+        mode=mode,
+        in_reference=genome.filename,
+        in_variants=in_variants,
+        out_recal=layout[f"vcf_recal_training_{mode}_vcf"],
+        out_tranches=layout[f"vcf_recal_training_{mode}_trances"],
+        out_r_plot=layout[f"vcf_recal_training_{mode}_r"],
+        options=settings["VariantRecalibrator"][mode],
         java_options=args.jre_options,
     )
 
-    yield TabixIndexNode(infile=layout["vcf_merged"])
-
-
-def _haplotype_n_samples_n_interval(args, genome, settings, layout, gvcfs):
-    vcfs = []
-    for interval in genome.intervals:
-        layout = args.layout.update(genome=genome, part=interval["name"])
-
-        yield CombineGVCFsNode(
-            in_reference=genome.filename,
-            in_variants=gvcfs,
-            out_vcf=layout["gvcf_merged_part"],
-            options={
-                "--intervals": InputFile(interval["filename"]),
-                "--ignore-variants-starting-outside-interval": "true",
-            },
-            java_options=args.jre_options,
-        )
-
-        yield GenotypeGVCFs(
-            in_reference=genome.filename,
-            in_gvcf=layout["gvcf_merged_part"],
-            out_vcf=layout["vcf_merged_part"],
-            options=settings["GenotypeGVCFs"],
-            java_options=args.jre_options,
-        )
-
-        vcfs.append(layout["vcf_merged_part"])
-
-    yield GatherVcfsNode(
-        # Note that in_vcfs must be in genomic order
-        in_vcfs=vcfs,
-        out_vcf=layout["vcf_merged"],
-        java_options=args.jre_options,
+    # 2. Custom tranche plot/table for SNPs/indels
+    yield TranchesPlotsNode(
+        input_table=layout[f"vcf_recal_training_{mode}_trances"],
+        output_prefix=layout[f"vcf_recal_training_{mode}_trances"],
+        dependencies=[model_node],
     )
 
-    yield TabixIndexNode(infile=layout["vcf_merged"])
+    if settings["ApplyVQSR"]["Enabled"]:
+        for interval in genome.intervals:
+            layout = layout.update(part=interval["name"])
 
-
-def recalibrate_haplotype(args, genome, _samples, settings):
-    settings = settings["Genotyping"]
-    layout = args.layout.update(genome=genome)
-
-    if settings["VariantRecalibrator"]["Enabled"]:
-        intermediate_vcf = layout["vcf_merged"]
-
-        for mode in ("SNP", "INDEL"):
-            # 1. Build models for SNP/INDEL recalibration
-            model_node = VariantRecalibratorNode(
+            # 3. Apply SNP/INDEL recalibration to partial BAMs
+            # The VCFs are gathered (see above) and can safely be deleted afterwards
+            yield ApplyVQSRNode(
                 mode=mode,
-                in_reference=genome.filename,
-                # Train on the merged VCF to allow SNP/INDEL model building in parallel
-                in_variant=layout["vcf_merged"],
-                out_recal=layout[f"vcf_recal_training_{mode}_vcf"],
-                out_tranches=layout[f"vcf_recal_training_{mode}_trances"],
-                out_r_plot=layout[f"vcf_recal_training_{mode}_r"],
-                options=settings["VariantRecalibrator"][mode],
+                in_vcf=layout.get(in_vcf_key, part=interval["name"]),
+                in_node=model_node,
+                out_vcf=layout.get(out_vcf_key, part=interval["name"]),
+                options=settings["ApplyVQSR"][mode],
                 java_options=args.jre_options,
-            )
-
-            # 2. Custom tranche plot/table for SNPs/indels
-            yield TranchesPlotsNode(
-                input_table=layout[f"vcf_recal_training_{mode}_trances"],
-                output_prefix=layout[f"vcf_recal_training_{mode}_trances"],
-                dependencies=[model_node],
-            )
-
-            if settings["ApplyVQSR"]["Enabled"]:
-                # 3. Apply SNP/INDEL recalibration to current BAM
-                recal_node = ApplyVQSRNode(
-                    mode=mode,
-                    in_vcf=intermediate_vcf,
-                    in_node=model_node,
-                    out_vcf=layout[f"vcf_recal_{mode}"],
-                    options=settings["ApplyVQSR"][mode],
-                    java_options=args.jre_options,
-                )
-
-                if mode == "SNP":
-                    # Only the final INDEL + SNP recalibrated BAM is kept
-                    recal_node.mark_intermediate_files()
-                    # The merged BAM is SNP recalibrated and then indel recalibrated
-                    intermediate_vcf = recal_node.out_vcf
-
-                yield recal_node
+            ).mark_intermediate_files()
 
 
 def build_pipeline(args, project):
@@ -861,7 +835,7 @@ def build_pipeline(args, project):
             # 12. Call genotypes for the combined set of samples
             genotype_samples,
             # 13. Recalibrate haplotype qualities using known variants
-            recalibrate_haplotype,
+            recalibrate_genotypes,
         ),
     }
 

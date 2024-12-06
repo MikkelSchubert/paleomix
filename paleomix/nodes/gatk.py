@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING, Iterable, Sequence
 
 import pysam
 
@@ -196,7 +196,7 @@ class CombineGVCFsNode(CommandNode):
     def __init__(
         self,
         in_reference: str,
-        in_variants: str,
+        in_variants: Sequence[str],
         out_vcf: str,
         out_log: str | None = None,
         options: OptionsType | None = None,
@@ -546,7 +546,7 @@ class VariantRecalibratorNode(CommandNode):
         *,
         mode: Literal["INDEL", "SNP"],
         in_reference: str,
-        in_variant: str,
+        in_variants: Iterable[str],
         out_recal: str,
         out_tranches: str,
         out_r_plot: str,
@@ -558,11 +558,8 @@ class VariantRecalibratorNode(CommandNode):
         if options is None:
             options = {}
 
-        if mode not in ("INDEL", "SNP"):
-            raise ValueError(mode)
-
         self.in_reference = in_reference
-        self.in_variant = in_variant
+        self.in_variants = tuple(in_variants)
         self.out_recal = out_recal
         self.out_tranches = out_tranches
         self.out_r_plot = out_r_plot
@@ -573,10 +570,12 @@ class VariantRecalibratorNode(CommandNode):
             InputFile(in_reference + ".fai"),
             InputFile(swap_ext(in_reference, ".dict")),
             # FIXME: Extension depends on fname: .idx for .vcf, .tbi for vcf.gz, ..
-            InputFile(self.in_variant + ".tbi"),
             OutputFile(self.out_recal + ".tbi"),
             OutputFile(self.out_r_plot + ".pdf"),
         ]
+
+        for in_file in self.in_variants:
+            extra_files.append(InputFile(in_file + ".tbi"))
 
         # WORKAROUND: GATK creates unreadable tranche plots due to unsorted data, so we
         #             use a custom R-script instead (via TranchesPlotsNode). This issue
@@ -597,7 +596,7 @@ class VariantRecalibratorNode(CommandNode):
             tool_options={
                 "--mode": mode,
                 "--reference": InputFile(in_reference),
-                "--variant": InputFile(in_variant),
+                "--variant": [InputFile(in_file) for in_file in self.in_variants],
                 "--output": OutputFile(self.out_recal),
                 "--tranches-file": OutputFile(self.out_tranches),
                 "--rscript-file": OutputFile(self.out_r_plot),
@@ -611,7 +610,7 @@ class VariantRecalibratorNode(CommandNode):
         CommandNode.__init__(
             self,
             command=command,
-            description=f"training {mode} recalibrator for {in_variant!r}",
+            description=f"training {mode} recalibrator",
             dependencies=dependencies,
         )
 
