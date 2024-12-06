@@ -27,6 +27,7 @@ from typing import IO, TYPE_CHECKING, Iterable
 
 from humanfriendly.terminal import ansi_wrap, terminal_supports_colors
 
+from paleomix.common.text import padded_table
 from paleomix.common.versions import RequirementError
 from paleomix.nodegraph import FileStatusCache, NodeGraph, StatusEnum
 
@@ -71,16 +72,20 @@ def output_files(
         missing_files = frozenset(fscache.missing_files(node.output_files))
 
         if state == StatusEnum.DONE:
-            _set_output_file_state(node.output_files, "Ready      ")
-            _set_output_file_state(missing_files, "Skipped    ")
+            _set_output_file_state(node.output_files, "Ready")
+            _set_output_file_state(missing_files, "Skipped")
             continue
 
         # Pending/queued nodes may have outdated output files
-        _set_output_file_state(missing_files, "Missing    ")
-        _set_output_file_state(node.output_files - missing_files, "Outdated   ")
+        _set_output_file_state(missing_files, "Missing")
+        _set_output_file_state(node.output_files - missing_files, "Outdated")
 
-    for filename, state in sorted(output_files.items()):
-        print(state, filename, file=file)
+    table = ((v, k) for k, v in sorted(output_files.items()))
+    if file.isatty():
+        table = ((row,) for row in padded_table(table))
+
+    for row in table:
+        print(*row, sep="\t", file=file)
 
     return 0
 
