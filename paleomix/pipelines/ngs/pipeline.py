@@ -107,12 +107,14 @@ _LAYOUT = {
         "{genome}.vcf.gz": "vcf_final",
     },
     "statistics": {
-        "alignments_multiQC": "bam_multiqc_prefix",
+        "alignments_passed_multiQC": "bam_passed_multiqc_prefix",
+        "alignments_failed_multiQC": "bam_failed_multiqc_prefix",
         "alignments": {
             "{sample}.{genome}.recalibration.txt": "bam_recal_training_table",
             "{sample}.{genome}.mapping.json": "bam_split_statistics",
             "{sample}.{genome}.{method}.txt": "bam_stats",
-            "fastqc": "bam_fastqc_dir",
+            "fastqc.passed": "bam_fastqc_passed",
+            "fastqc.failed": "bam_fastqc_failed",
         },
         "genotyping": {
             "{genome}.recalibration.snp.r": "vcf_recal_training_SNP_r",
@@ -553,7 +555,8 @@ def recalibrate_nucleotides(args, genome, samples, settings):
 
 
 def final_bam_stats(args, genome, samples, _settings):
-    fastqc_nodes = []
+    fastqc_passed_nodes: list[Node] = []
+    fastqc_failed_nodes: list[Node] = []
     for sample in samples:
         for method in ("stats", "idxstats", "flagstats"):
             layout = args.layout.update(genome=genome, sample=sample, method=method)
@@ -571,25 +574,31 @@ def final_bam_stats(args, genome, samples, _settings):
         layout = args.layout.update(genome=genome, sample=sample)
 
         # FastQC of proper alignments
-        fastqc_nodes.append(
+        fastqc_passed_nodes.append(
             FastQCNode(
                 in_file=layout["bam_final_passed"],
-                out_folder=layout["bam_fastqc_dir"],
+                out_folder=layout["bam_fastqc_passed"],
             )
         )
 
         # FastQC of unmapped/filtered reads
-        fastqc_nodes.append(
+        fastqc_failed_nodes.append(
             FastQCNode(
                 in_file=layout["bam_final_failed"],
-                out_folder=layout["bam_fastqc_dir"],
+                out_folder=layout["bam_fastqc_failed"],
             )
         )
 
     yield MultiQCNode(
         source="fastqc",
-        output_prefix=args.layout["bam_multiqc_prefix"],
-        dependencies=fastqc_nodes,
+        output_prefix=args.layout["bam_passed_multiqc_prefix"],
+        dependencies=fastqc_passed_nodes,
+    )
+
+    yield MultiQCNode(
+        source="fastqc",
+        output_prefix=args.layout["bam_failed_multiqc_prefix"],
+        dependencies=fastqc_failed_nodes,
     )
 
 
