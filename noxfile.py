@@ -54,7 +54,6 @@ def typing(session: nox.Session) -> None:
 @nox.session()
 def tests(session: nox.Session) -> None:
     session.install(
-        "-e",
         ".",
         Requirements.PYTEST,
         Requirements.COVERAGE,

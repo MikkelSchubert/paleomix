@@ -139,3 +139,6 @@ ignore = [
     "S108", # hardcoded-temp-file -- Probable insecure usage of temporary file or dir
     "S311", # suspicious-non-cryptographic-random-usage
 ]
+
+[tool.uv]
+reinstall-package = ["paleomix"]
