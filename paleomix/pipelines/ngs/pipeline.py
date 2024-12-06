@@ -399,7 +399,7 @@ def map_sample_runs(args, genome, samples, settings):
                     out_bam = layout.get("bam_run", kind=name)
                     mapped_reads[name].append(out_bam)
 
-                    task = BWAAlgorithmNode(
+                    yield BWAAlgorithmNode(
                         reference=genome.filename,
                         input_file_1=filename_1,
                         input_file_2=filename_2,
@@ -423,10 +423,7 @@ def map_sample_runs(args, genome, samples, settings):
                                 "DS:" + name.title() + " reads",
                             ],
                         },
-                    )
-
-                    task.mark_intermediate_files()
-                    yield task
+                    ).mark_intermediate_files()
 
             libraries[library] = mapped_reads
 
@@ -456,24 +453,18 @@ def filter_pcr_duplicates(args, genome, samples, settings):
         for library, read_types in libraries.items():
             layout = args.layout.update(genome=genome, sample=sample, library=library)
 
-            task = MarkDupNode(
+            yield MarkDupNode(
                 in_bams=read_types["paired"],
                 out_bam=layout["bam_rmdup_paired"],
                 out_stats=layout["bam_rmdup_paired_metrics"],
                 options=markdup_options,
-            )
+            ).mark_intermediate_files()
 
-            task.mark_intermediate_files()
-            yield task
-
-            task = FilterCollapsedBAMNode(
+            yield FilterCollapsedBAMNode(
                 input_bams=read_types["merged"],
                 output_bam=layout["bam_rmdup_merged"],
                 keep_dupes=mode == "mark",
-            )
-
-            task.mark_intermediate_files()
-            yield task
+            ).mark_intermediate_files()
 
             libraries[library] = [
                 layout["bam_rmdup_paired"],
