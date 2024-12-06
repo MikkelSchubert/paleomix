@@ -445,11 +445,18 @@ class HaplotypeCallerNode(CommandNode):
             ],
         )
 
+        hmm_threads = options.get("--native-pair-hmm-threads", 4)
+        if not isinstance(hmm_threads, int) or hmm_threads < 1:
+            raise NodeError(
+                "HaplotypeCaller argument --native-pair-hmm-threads must be a positive "
+                f"number, not {hmm_threads}"
+            )
+
         CommandNode.__init__(
             self,
             command=command,
             description=f"calling haplotypes for {in_bam!r}",
-            threads=options.get("--native-pair-hmm-threads", 4),
+            threads=hmm_threads,
             dependencies=dependencies,
         )
 
