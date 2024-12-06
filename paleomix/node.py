@@ -161,7 +161,11 @@ class Node:
             self.intermediate_output_files = set(self.output_files)
             return self
 
-        self.intermediate_output_files.update(fnmatch.filter(self.output_files, glob))
+        filenames = fnmatch.filter(self.output_files, glob)
+        if not filenames:
+            raise ValueError(f"no files were marked intermediate by glob {glob!r}")
+
+        self.intermediate_output_files.update(filenames)
         return self
 
     def _create_temp_dir(self, temp_root: PathTypes) -> str:
