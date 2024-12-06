@@ -66,18 +66,18 @@ from paleomix.pipelines.ngs.config import PipelineTarget
 # File structure with leaf values representing labels used to refer a given path
 _LAYOUT = {
     "alignments": {
-        "{sample}.{genome}.bam": "aln_final_bam",
-        "{sample}.{genome}.junk.bam": "aln_split_failed_bam",
+        "{sample}.{genome}.bam": "bam_final_passed",
+        "{sample}.{genome}.junk.bam": "bam_final_failed",
     },
     "cache": {
         "samples": {
             "{sample}": {
                 "alignments": {
-                    "{sample}.{genome}.{library}.{run}.{kind}.bam": "aln_run_bam",
-                    "{sample}.{genome}.{library}.rmdup.merged.bam": "aln_rmdup_merged_bam",
-                    "{sample}.{genome}.{library}.rmdup.paired.bam": "aln_rmdup_paired_bam",
-                    "{sample}.{genome}.{library}.rmdup.paired.metrics.txt": "aln_rmdup_paired_metrics",
-                    "{sample}.{genome}.good.bam": "aln_split_passed_bam",
+                    "{sample}.{genome}.{library}.{run}.{kind}.bam": "bam_run",
+                    "{sample}.{genome}.{library}.rmdup.merged.bam": "bam_rmdup_merged",
+                    "{sample}.{genome}.{library}.rmdup.paired.bam": "bam_rmdup_paired",
+                    "{sample}.{genome}.{library}.rmdup.paired.metrics.txt": "bam_rmdup_paired_metrics",
+                    "{sample}.{genome}.good.bam": "bam_split_passed",
                 },
                 "reads": {
                     "{sample}.{library}.{run}.paired_1.fastq.gz": "fastp_paired_1",
@@ -94,23 +94,23 @@ _LAYOUT = {
             }
         },
         "haplotypes": {
-            "{genome}.{part}.g.vcf.gz": "gvcf_part",
-            "{genome}.{part}.vcf.gz": "vcf_part",
-            "{genome}.{part}.snp.vcf.gz": "vcf_part_SNP",
-            "{genome}.{part}.indel.vcf.gz": "vcf_part_INDEL",
+            "{genome}.{part}.g.vcf.gz": "gvcf_merged_part",
+            "{genome}.{part}.vcf.gz": "vcf_merged_part",
+            "{genome}.{part}.snp.vcf.gz": "vcf_recalibrated_SNP_part",
+            "{genome}.{part}.indel.vcf.gz": "vcf_recalibrated_INDEL_part",
         },
     },
     "haplotypes": {
-        "{sample}.{genome}.g.vcf.gz": "gvcf_per_sample",
+        "{sample}.{genome}.g.vcf.gz": "gvcf_final",
     },
     "genotypes": {
-        "{genome}.vcf.gz": "vcf_recal",
+        "{genome}.vcf.gz": "vcf_final",
     },
     "statistics": {
         "alignments_multiQC": "bam_multiqc_prefix",
         "alignments": {
-            "{sample}.{genome}.recalibration.txt": "aln_recal_training_table",
-            "{sample}.{genome}.mapping.json": "aln_split_statistics",
+            "{sample}.{genome}.recalibration.txt": "bam_recal_training_table",
+            "{sample}.{genome}.mapping.json": "bam_split_statistics",
             "{sample}.{genome}.{method}.txt": "bam_stats",
             "fastqc": "bam_fastqc_dir",
         },
@@ -396,7 +396,7 @@ def map_sample_runs(args, genome, samples, settings):
 
                 for name, (filename_1, filename_2) in filenames.items():
                     layout = layout.update(kind=name)
-                    out_bam = layout.get("aln_run_bam", kind=name)
+                    out_bam = layout.get("bam_run", kind=name)
                     mapped_reads[name].append(out_bam)
 
                     task = BWAAlgorithmNode(
@@ -458,8 +458,8 @@ def filter_pcr_duplicates(args, genome, samples, settings):
 
             task = MarkDupNode(
                 in_bams=read_types["paired"],
-                out_bam=layout["aln_rmdup_paired_bam"],
-                out_stats=layout["aln_rmdup_paired_metrics"],
+                out_bam=layout["bam_rmdup_paired"],
+                out_stats=layout["bam_rmdup_paired_metrics"],
                 options=markdup_options,
             )
 
@@ -468,7 +468,7 @@ def filter_pcr_duplicates(args, genome, samples, settings):
 
             task = FilterCollapsedBAMNode(
                 input_bams=read_types["merged"],
-                output_bam=layout["aln_rmdup_merged_bam"],
+                output_bam=layout["bam_rmdup_merged"],
                 keep_dupes=mode == "mark",
             )
 
@@ -476,8 +476,8 @@ def filter_pcr_duplicates(args, genome, samples, settings):
             yield task
 
             libraries[library] = [
-                layout["aln_rmdup_paired_bam"],
-                layout["aln_rmdup_merged_bam"],
+                layout["bam_rmdup_paired"],
+                layout["bam_rmdup_merged"],
             ]
 
             libraries[library].extend(read_types["unmapped"])
@@ -498,15 +498,15 @@ def merge_samples_alignments(args, genome, samples, settings):
 
         # Write final BAM directly if BSQR is not enabled
         out_passed = (
-            layout["aln_split_passed_bam"] if bsqr_enabled else layout["aln_final_bam"]
+            layout["bam_split_passed"] if bsqr_enabled else layout["bam_final_passed"]
         )
 
         # Split BAM into file containing proper alignment and BAM containing junk
         split = FinalizeBAMNode(
             in_bams=input_libraries,
             out_passed=out_passed,
-            out_failed=layout["aln_split_failed_bam"],
-            out_json=layout["aln_split_statistics"],
+            out_failed=layout["bam_final_failed"],
+            out_json=layout["bam_split_statistics"],
             threads=args.max_threads_samtools,
         )
 
@@ -543,8 +543,8 @@ def recalibrate_nucleotides(args, genome, samples, settings):
             model = BaseRecalibratorNode(
                 in_reference=genome.filename,
                 in_known_sites=train_bsqr_known_sites,
-                in_bam=layout["aln_split_passed_bam"],
-                out_table=layout["aln_recal_training_table"],
+                in_bam=layout["bam_split_passed"],
+                out_table=layout["bam_recal_training_table"],
                 options=train_bsqr_options,
                 java_options=args.jre_options,
             )
@@ -552,7 +552,7 @@ def recalibrate_nucleotides(args, genome, samples, settings):
             if apply_bsqr_enabled:
                 yield ApplyBQSRNode(
                     in_node=model,
-                    out_bam=layout["aln_final_bam"],
+                    out_bam=layout["bam_final_passed"],
                     options=apply_bsqr_options,
                     java_options=args.jre_options,
                     dependencies=[model],
@@ -569,7 +569,7 @@ def final_bam_stats(args, genome, samples, _settings):
 
             yield BAMStatsNode(
                 method=method,
-                infile=layout["aln_final_bam"],
+                infile=layout["bam_final_passed"],
                 outfile=layout["bam_stats"],
                 options={
                     # Reasonable performance gains from using up to 3-4 threads
@@ -582,7 +582,7 @@ def final_bam_stats(args, genome, samples, _settings):
         # FastQC of proper alignments
         fastqc_nodes.append(
             FastQCNode(
-                in_file=layout["aln_final_bam"],
+                in_file=layout["bam_final_passed"],
                 out_folder=layout["bam_fastqc_dir"],
             )
         )
@@ -590,7 +590,7 @@ def final_bam_stats(args, genome, samples, _settings):
         # FastQC of unmapped/filtered reads
         fastqc_nodes.append(
             FastQCNode(
-                in_file=layout["aln_split_failed_bam"],
+                in_file=layout["bam_final_failed"],
                 out_folder=layout["bam_fastqc_dir"],
             )
         )
@@ -615,7 +615,7 @@ def haplotype_samples(args, genome, samples, settings):
 
             yield HaplotypeCallerNode(
                 in_reference=genome.filename,
-                in_bam=layout["aln_final_bam"],
+                in_bam=layout["bam_final_passed"],
                 out_vcf=out_gvcf,
                 options={
                     "--intervals": InputFile(interval["filename"]),
@@ -628,7 +628,7 @@ def haplotype_samples(args, genome, samples, settings):
         yield GatherVcfsNode(
             # Note that in_vcfs must be in genomic order
             in_vcfs=gvcfs,
-            out_vcf=layout["gvcf_per_sample"],
+            out_vcf=layout["gvcf_final"],
             java_options=args.jre_options,
         )
 
@@ -652,20 +652,20 @@ def genotype_samples(args, genome, samples, settings):
         yield CombineGVCFsNode(
             in_reference=genome.filename,
             in_variants=gvcfs,
-            out_vcf=layout["gvcf_part"],
+            out_vcf=layout["gvcf_merged_part"],
             java_options=args.jre_options,
         ).mark_intermediate_files()
 
         # Genotype partial multi-sample gVCF
         yield GenotypeGVCFs(
             in_reference=genome.filename,
-            in_gvcf=layout["gvcf_part"],
-            out_vcf=layout["vcf_part"],
+            in_gvcf=layout["gvcf_merged_part"],
+            out_vcf=layout["vcf_merged_part"],
             options=settings["GenotypeGVCFs"],
             java_options=args.jre_options,
         ).mark_intermediate_files()
 
-        vcfs.append(layout["vcf_part"])
+        vcfs.append(layout["vcf_merged_part"])
 
 
 def recalibrate_genotypes(args, genome, _samples, settings):
@@ -681,8 +681,8 @@ def recalibrate_genotypes(args, genome, _samples, settings):
         settings=settings,
         layout=layout,
         mode="SNP",
-        in_vcf_key="vcf_part",
-        out_vcf_key="vcf_part_SNP",
+        in_vcf_key="vcf_merged_part",
+        out_vcf_key="vcf_recalibrated_SNP_part",
     )
 
     # INDEL training and recalibration (training is done in parallel, see below)
@@ -692,20 +692,20 @@ def recalibrate_genotypes(args, genome, _samples, settings):
         settings=settings,
         layout=layout,
         mode="INDEL",
-        in_vcf_key="vcf_part_SNP",
-        out_vcf_key="vcf_part_INDEL",
+        in_vcf_key="vcf_recalibrated_SNP_part",
+        out_vcf_key="vcf_recalibrated_INDEL_part",
     )
 
     if settings["ApplyVQSR"]["Enabled"]:
         vcfs: list[str] = [
-            layout.get("vcf_part_INDEL", part=interval["name"])
+            layout.get("vcf_recalibrated_INDEL_part", part=interval["name"])
             for interval in genome.intervals
         ]
 
         yield GatherVcfsNode(
             # Note that in_vcfs must be in genomic order
             in_vcfs=vcfs,
-            out_vcf=layout["vcf_recal"],
+            out_vcf=layout["vcf_final"],
             java_options=args.jre_options,
         )
 
@@ -721,7 +721,8 @@ def _recalibrate_vcf_files(
 ) -> Generator[Node]:
     # Training is always done on the "raw" VCF to allow SNP/INDEL training in parallel
     in_variants: list[str] = [
-        layout.get("vcf_part", part=interval["name"]) for interval in genome.intervals
+        layout.get("vcf_merged_part", part=interval["name"])
+        for interval in genome.intervals
     ]
 
     # 1. Build models for SNP/INDEL recalibration
