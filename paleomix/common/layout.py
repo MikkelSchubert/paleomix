@@ -82,9 +82,14 @@ class Layout:
                 raise LayoutError(f"unknown key {key!r}")
 
     def _build_path(self, key: str, kwargs: dict[str, str | int]) -> str:
-        components = (it.format(**kwargs) for it in self._layout[key])
-
-        return os.path.join(*components)
+        try:
+            path = self._layout[key]
+        except KeyError:
+            raise KeyError(f"unknown layout key {key!r}") from None
+        try:
+            return os.path.join(*(it.format(**kwargs) for it in path))
+        except KeyError as error:
+            raise KeyError(f"value {error} missing for layout key {key!r}") from None
 
     @classmethod
     def _flatten_layout(
