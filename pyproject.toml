@@ -55,7 +55,7 @@ dev = [
 paleomix = "paleomix.__main__:main"
 
 [tool.hatch.version]
-path = "paleomix/__init__.py"
+path = "src/paleomix/__init__.py"
 
 [tool.coverage.run]
 branch = true
@@ -78,7 +78,7 @@ profile = "black"
 
 [tool.pyright]
 # Used since `strict = [...]` prevents individual `reportX` settings:
-include = ["paleomix", "tests", "typings","noxfile.py"]
+include = ["src", "tests", "typings","noxfile.py"]
 # typeCheckingMode = "strict"
 
 # Location of custom stub files
