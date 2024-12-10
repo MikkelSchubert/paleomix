@@ -38,7 +38,7 @@ def interleaved_phy(
     max_name_length: int = _MAX_NAME_LENGTH,
 ) -> str:
     MSA.validate(msa)
-    header = "%i %i" % (len(msa), msa.seqlen())
+    header = f"{len(msa)} {msa.seqlen()}"
     if add_flag:
         header += " I"
     result = [header, ""]

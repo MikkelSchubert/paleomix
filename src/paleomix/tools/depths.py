@@ -251,7 +251,7 @@ def build_table(
 ) -> Iterator[list[str] | str]:
     header = ["Name", "Sample", "Library", "Contig", "Size", "MaxDepth"]
     for index in range(1, _MAX_DEPTH + 1):
-        header.append("MD_%03i" % (index,))
+        header.append(f"MD_{index:03d}")
 
     yield header
     last_sm = last_lb = None

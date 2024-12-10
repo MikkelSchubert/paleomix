@@ -30,8 +30,8 @@ from ruamel.yaml.constructor import DuplicateKeyError
 from ruamel.yaml.error import YAMLError
 
 __all__ = [
-    "YAMLError",
     "DuplicateKeyError",
+    "YAMLError",
     "safe_load",
 ]
 

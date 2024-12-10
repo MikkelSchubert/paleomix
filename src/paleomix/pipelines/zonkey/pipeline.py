@@ -26,6 +26,8 @@ import os
 import shutil
 import string
 import tarfile
+from collections.abc import Sequence
+from typing import Any
 
 import pysam
 
@@ -33,6 +35,7 @@ import paleomix
 import paleomix.common.logging
 import paleomix.pipelines.zonkey.config as zonkey_config
 from paleomix.common import fileutils, resources
+from paleomix.common.argparse import ArgumentParserBase, Namespace
 from paleomix.common.formats.fasta import FASTA
 from paleomix.node import Node
 from paleomix.nodes.raxml import RAxMLRapidBSNode
@@ -43,7 +46,12 @@ from paleomix.pipelines.zonkey.parts import mitochondria, nuclear, report, summa
 from paleomix.pipelines.zonkey.parts.common import WriteSampleList
 
 
-def build_plink_nodes(config, root, bamfile, dependencies=()):
+def build_plink_nodes(
+    config,
+    root: str,
+    bamfile: pysam.AlignmentFile,
+    dependencies: Sequence[Node] = (),
+) -> dict[str, str | Node]:
     root = os.path.join(root, "results", "plink")
     plink: dict[str, str | Node] = {"root": root}
 
@@ -79,7 +87,7 @@ def build_admixture_nodes(config, data, root, plink):
 
             input_file = os.path.join(plink["root"], postfix + ".bed")
             for replicate in range(config.admixture_replicates):
-                output_root = os.path.join(admix_root, "%02i" % (replicate,))
+                output_root = os.path.join(admix_root, f"{replicate:02d}")
 
                 node = nuclear.AdmixtureNode(
                     input_file=input_file,
@@ -100,12 +108,8 @@ def build_admixture_nodes(config, data, root, plink):
             else:
                 samples = os.path.join(root, "figures", "samples.txt")
                 plot = nuclear.AdmixturePlotNode(
-                    input_file=os.path.join(
-                        admix_root, "%s.%i.Q" % (postfix, k_groups)
-                    ),
-                    output_prefix=os.path.join(
-                        report_root, "%s_k%i" % (postfix, k_groups)
-                    ),
+                    input_file=os.path.join(admix_root, f"{postfix}.{k_groups}.Q"),
+                    output_prefix=os.path.join(report_root, f"{postfix}_k{k_groups}"),
                     samples=samples,
                     order=data.sample_order,
                     dependencies=node,
@@ -147,7 +151,7 @@ def build_treemix_nodes(config, data, root, plink):
             )
 
         for n_migrations in (0, 1):
-            n_prefix = "%s.%i" % (tmix_prefix, n_migrations)
+            n_prefix = f"{tmix_prefix}.{n_migrations}"
 
             tmix_node = nuclear.TreemixNode(
                 data=data,
@@ -161,7 +165,7 @@ def build_treemix_nodes(config, data, root, plink):
 
             samples = os.path.join(root, "figures", "samples.txt")
             output_prefix = os.path.join(
-                root, "figures", "treemix", "%s_%i" % (postfix, n_migrations)
+                root, "figures", "treemix", f"{postfix}_{n_migrations}"
             )
             plot_node = nuclear.PlotTreemixNode(
                 samples=samples,
@@ -256,8 +260,14 @@ def build_mito_nodes(config, root, bamfile, dependencies=()):
     return (trees,)
 
 
-def build_pipeline(config, root, nuc_bam, mito_bam, cache):
-    nodes = []
+def build_pipeline(
+    config: Namespace,
+    root: str,
+    nuc_bam: dict[Any, Any] | None,
+    mito_bam: str | None,
+    cache: dict[str, Node],
+) -> list[Node]:
+    nodes: list[Node] = []
     sample_tbl = os.path.join(root, "figures", "samples.txt")
     samples = WriteSampleList(config=config, output_file=sample_tbl)
 
@@ -305,7 +315,7 @@ def build_pipeline(config, root, nuc_bam, mito_bam, cache):
     return nodes
 
 
-def run_admix_pipeline(config):
+def run_admix_pipeline(config: Namespace) -> int:
     log = logging.getLogger(__name__)
     log.info("Building %i Zonkey pipeline(s):", len(config.samples))
     config.temp_root = os.path.join(config.destination, "temp")
@@ -313,7 +323,7 @@ def run_admix_pipeline(config):
         fileutils.make_dirs(config.temp_root)
 
     cache = {}
-    nodes = []
+    nodes: list[Node] = []
     items = iter(config.samples.items())
     for idx, (name, sample) in enumerate(sorted(items), start=1):
         root = sample["Root"]
@@ -349,7 +359,7 @@ def run_admix_pipeline(config):
     return pipeline.run(config.pipeline_mode)
 
 
-def setup_mito_mapping(config):
+def setup_mito_mapping(config: Namespace) -> int:
     genomes_root = os.path.join(config.destination, "genomes")
     if not os.path.exists(genomes_root):
         fileutils.make_dirs(genomes_root)
@@ -413,7 +423,7 @@ def setup_mito_mapping(config):
     return 0
 
 
-def setup_example(config):
+def setup_example(config: Namespace) -> int:
     root = os.path.join(config.destination, "zonkey_pipeline")
     log = logging.getLogger(__name__)
     log.info("Copying example project to %r", root)
@@ -457,7 +467,7 @@ def setup_example(config):
     return 0
 
 
-def _process_samples(config):
+def _process_samples(config: Namespace) -> bool:
     log = logging.getLogger(__name__)
     for name, info in sorted(config.samples.items()):
         files = {}
@@ -509,7 +519,7 @@ def _process_samples(config):
     return True
 
 
-def _read_sample_table(config, filename):
+def _read_sample_table(config: Namespace, filename: str) -> None | bool:
     """Parses a 2 - 3 column tab-seperated table containing, on each row, a
     name to be used for a sample in the first row, and then the paths two
     either one or to two BAM files, which must represent a single nuclear or
@@ -563,7 +573,10 @@ def _read_sample_table(config, filename):
     return True
 
 
-def finalize_run_config(parser, args):
+def finalize_run_config(
+    parser: ArgumentParserBase,
+    args: Namespace,
+) -> None | Namespace:
     log = logging.getLogger(__name__)
     if args.command in ("run", "dryrun") and not (1 <= len(args.files) <= 3):
         parser.print_usage()
@@ -618,7 +631,7 @@ def finalize_run_config(parser, args):
     return args
 
 
-def _is_bamfile(filename):
+def _is_bamfile(filename: str) -> bool:
     """Returns true if a file is a BAM file, false otherwise."""
     try:
         with pysam.AlignmentFile(filename, "rb"):
@@ -629,11 +642,11 @@ def _is_bamfile(filename):
         return False
 
 
-def main(argv):
+def main(argv: list[str]) -> int:
     parser, run_parser = zonkey_config.build_parser()
     if not argv:
         parser.print_help()
-        return None
+        return 0
 
     args = parser.parse_args(argv)
     log = logging.getLogger(__name__)
@@ -642,7 +655,7 @@ def main(argv):
         args.database = database.ZonkeyDB(args.database)
     except database.ZonkeyDBError as error:
         log.error("Error reading database %r: %s", args.database, error)
-        return None
+        return 1
 
     if args.command in ("run", "dryrun"):
         args = finalize_run_config(run_parser, args)

@@ -455,9 +455,9 @@ def test_atomiccmd__stdout_implicit_filename(
     cmd.run(tmp_path)
     assert cmd.join() == [0]
 
-    stdout_path = tmp_path / ("pipe_echo_%i.stdout" % (id(cmd),))
+    stdout_path = tmp_path / (f"pipe_echo_{id(cmd)}.stdout")
     assert stdout_path.read_text() == "foo\n"
-    stderr_path = tmp_path / ("pipe_echo_%i.stderr" % (id(cmd),))
+    stderr_path = tmp_path / (f"pipe_echo_{id(cmd)}.stderr")
     assert stderr_path.read_text() == ""
 
 
@@ -471,9 +471,9 @@ def test_atomiccmd__stdout_implicit_filename__python(
 
     executable = os.path.basename(sys.executable)
 
-    stdout_path = tmp_path / ("pipe_%s_%i.stdout" % (executable, id(cmd)))
+    stdout_path = tmp_path / (f"pipe_{executable}_{id(cmd)}.stdout")
     assert stdout_path.read_text() == "foo\n"
-    stderr_path = tmp_path / ("pipe_%s_%i.stderr" % (executable, id(cmd)))
+    stderr_path = tmp_path / (f"pipe_{executable}_{id(cmd)}.stderr")
     assert stderr_path.read_text() == ""
 
 
@@ -484,7 +484,7 @@ def test_atomiccmd__stdout_explicit_filename(tmp_path: Path) -> None:
 
     stdout_path = tmp_path / "my_output.txt"
     assert stdout_path.read_text() == "foo\n"
-    stderr_path = tmp_path / ("pipe_echo_%i.stderr" % (id(cmd),))
+    stderr_path = tmp_path / (f"pipe_echo_{id(cmd)}.stderr")
     assert stderr_path.read_text() == ""
 
 
@@ -494,9 +494,9 @@ def test_atomiccmd__stderr_implicit_filename(exe: str, tmp_path: Path) -> None:
     cmd.run(tmp_path)
     assert cmd.join() == [0]
 
-    stdout_path = tmp_path / ("pipe_bash_%i.stdout" % (id(cmd),))
+    stdout_path = tmp_path / (f"pipe_bash_{id(cmd)}.stdout")
     assert stdout_path.read_text() == ""
-    stderr_path = tmp_path / ("pipe_bash_%i.stderr" % (id(cmd),))
+    stderr_path = tmp_path / (f"pipe_bash_{id(cmd)}.stderr")
     assert stderr_path.read_text() == "foo\n"
 
 
@@ -508,7 +508,7 @@ def test_atomiccmd__stderr_explicit_filename(tmp_path: Path) -> None:
     cmd.run(tmp_path)
     assert cmd.join() == [0]
 
-    stdout_path = tmp_path / ("pipe_bash_%i.stdout" % (id(cmd),))
+    stdout_path = tmp_path / (f"pipe_bash_{id(cmd)}.stdout")
     assert stdout_path.read_text() == ""
     stderr_path = tmp_path / "my_output.txt"
     assert stderr_path.read_text() == "foo\n"

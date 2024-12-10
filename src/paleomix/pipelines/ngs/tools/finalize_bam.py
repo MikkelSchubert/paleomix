@@ -25,13 +25,16 @@ import functools
 import json
 import logging
 import sys
+from array import array
 from collections import defaultdict
+from collections.abc import Iterator, Sequence
 from itertools import groupby
 from pathlib import Path
+from typing import Any
 
 import pysam
 
-from paleomix.common.argparse import ArgumentParser
+from paleomix.common.argparse import ArgumentParser, Namespace
 from paleomix.common.bamfiles import (
     BAM_IS_FIRST_SEGMENT,
     BAM_IS_LAST_SEGMENT,
@@ -48,12 +51,12 @@ from paleomix.common.logging import initialize_console_logging
 from paleomix.common.timer import BAMTimer
 
 
-def identify_read(record):
+def identify_read(record: pysam.AlignedSegment) -> str | int | float | array[Any]:
     return record.get_tag("RG")
 
 
 @functools.lru_cache
-def count_mapped_bases(cigar):
+def count_mapped_bases(cigar: Sequence[tuple[int, int]]) -> int:
     total_matches = 0
     for cigar_op, num in cigar:
         if cigar_op in (0, 7, 8):
@@ -63,7 +66,12 @@ def count_mapped_bases(cigar):
 
 
 class FilteredRecord:
-    def __init__(self, args, record, statistics):
+    def __init__(
+        self,
+        args: Namespace,
+        record: pysam.AlignedSegment,
+        statistics: dict[Any, Any],
+    ) -> None:
         # Flip bit so that 1 represents improper segments
         flag = record.flag ^ BAM_PROPER_SEGMENTS
 
@@ -105,7 +113,7 @@ class FilteredRecord:
         self.passes_filters = passes_filters
         self.cigarmatches = cigarmatches
 
-    def finalize(self):
+    def finalize(self) -> tuple[bool, pysam.AlignedSegment]:
         record = self.record
 
         key = "passed" if self else "failed"
@@ -121,39 +129,43 @@ class FilteredRecord:
 
         return bool(self), record
 
-    def set_orphan(self):
+    def set_orphan(self) -> None:
         self.passes_filters = False
         self.statistics["filters"]["orphan_reads"] += 1
 
     @property
-    def is_mate_1(self):
+    def is_mate_1(self) -> bool:
         flag = self.record.flag
-        return (
+        return bool(
             (flag & BAM_SEGMENTED)
             and (flag & BAM_IS_FIRST_SEGMENT)
             and not (flag & BAM_IS_LAST_SEGMENT)
         )
 
     @property
-    def is_mate_2(self):
+    def is_mate_2(self) -> bool:
         flag = self.record.flag
-        return (
+        return bool(
             (flag & BAM_SEGMENTED)
             and (flag & BAM_IS_LAST_SEGMENT)
             and not (flag & BAM_IS_FIRST_SEGMENT)
         )
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return self.passes_filters
 
 
-def evaluate_alignments(args, records, statistics):
+def evaluate_alignments(
+    args: Namespace,
+    records: Sequence[pysam.AlignedSegment],
+    statistics: dict[Any, Any],
+) -> Iterator[tuple[bool, pysam.AlignedSegment]]:
     # Group statistics by type (merged, paired, etc.)
     statistics = statistics[identify_read(records[0])]
 
     mate_1_record = None
     mate_2_record = None
-    filtered_records = []
+    filtered_records: list[FilteredRecord] = []
     for record in records:
         filtered_record = FilteredRecord(args, record, statistics)
 
@@ -179,12 +191,20 @@ def evaluate_alignments(args, records, statistics):
         yield record.finalize()
 
 
-def process_reads_by_queryname(args, handle, statistics):
+def process_reads_by_queryname(
+    args: Namespace,
+    handle: pysam.AlignmentFile,
+    statistics: dict[Any, Any],
+) -> Iterator[tuple[bool, pysam.AlignedSegment]]:
     for _, records in groupby(BAMTimer(handle), lambda it: it.query_name):
         yield from evaluate_alignments(args, tuple(records), statistics)
 
 
-def process_individual_reads(args, handle, statistics):
+def process_individual_reads(
+    args: Namespace,
+    handle: pysam.AlignmentFile,
+    statistics: dict[Any, Any],
+) -> Iterator[tuple[bool, pysam.AlignedSegment]]:
     for record in BAMTimer(handle):
         filtered_record = FilteredRecord(
             args, record, statistics[identify_read(record)]
@@ -193,7 +213,7 @@ def process_individual_reads(args, handle, statistics):
         yield filtered_record.finalize()
 
 
-def calculate_flag_statistics(args, statistics):
+def calculate_flag_statistics(args: Namespace, statistics: dict[Any, Any]) -> None:
     for metrics in statistics.values():
         filter_counts = metrics["filters"]
 
@@ -208,7 +228,7 @@ def calculate_flag_statistics(args, statistics):
                     filter_counts[label] += count
 
 
-def calculate_coverage_statistics(statistics, genome_size):
+def calculate_coverage_statistics(statistics: dict[Any, Any], genome_size: int) -> None:
     for metrics in statistics.values():
         for key, counts in metrics["matches"].items():
             total_matches = 0
@@ -219,7 +239,7 @@ def calculate_coverage_statistics(statistics, genome_size):
             metrics["totals"][key]["coverage"] = total_matches / genome_size
 
 
-def normalize_pe_insert_sizes(statistics):
+def normalize_pe_insert_sizes(statistics: dict[Any, Any]) -> None:
     for group in statistics.values():
         insert_sizes = group["insert_sizes"]
         for key, distribution in insert_sizes.items():
@@ -229,7 +249,7 @@ def normalize_pe_insert_sizes(statistics):
             }
 
 
-def calculate_totals(src, dst):
+def calculate_totals(src: dict[Any, Any], dst: dict[Any, Any]) -> None:
     for key, value in src.items():
         if isinstance(value, (int, float)):
             dst[key] = dst.get(key, 0) + value
@@ -239,7 +259,11 @@ def calculate_totals(src, dst):
             raise TypeError(key)
 
 
-def calculate_statistics(args, handle, statistics):
+def calculate_statistics(
+    args: Namespace,
+    handle: pysam.AlignmentFile,
+    statistics: dict[str, Any],
+) -> dict[str, Any]:
     genome_size = sum(handle.lengths)
 
     normalize_pe_insert_sizes(statistics)
@@ -263,7 +287,11 @@ def calculate_statistics(args, handle, statistics):
     return statistics
 
 
-def write_json(args, in_bam, statistics):
+def write_json(
+    args: Namespace,
+    in_bam: pysam.AlignmentFile,
+    statistics: dict[Any, Any],
+) -> None:
     lengths = in_bam.lengths
     statistics = calculate_statistics(args, in_bam, statistics)
 
@@ -288,8 +316,11 @@ def write_json(args, in_bam, statistics):
         )
 
 
-def initialize_statistics(args, handle):
-    def _passed_and_failed():
+def initialize_statistics(
+    args: Namespace,
+    handle: pysam.AlignmentFile,
+) -> tuple[dict[Any, Any], dict[Any, Any]]:
+    def _passed_and_failed() -> dict[str, defaultdict[Any, int]]:
         return {
             "passed": defaultdict(int),
             "failed": defaultdict(int),
@@ -340,7 +371,7 @@ def initialize_statistics(args, handle):
     return statistics, {key: statistics[group] for key, group in readgroups.items()}
 
 
-def configure_flag_filters(args):
+def configure_flag_filters(args: Namespace) -> None:
     args.named_se_filters = {
         "unmapped": BAM_READ_IS_UNMAPPED,
         "secondary": BAM_SECONDARY_ALIGNMENT,
@@ -362,21 +393,24 @@ def configure_flag_filters(args):
     args.pe_filter_mask = sum(args.named_pe_filters.values())
 
 
-def is_queryname_ordering_required(args):
+def is_queryname_ordering_required(args: Namespace) -> bool:
     return (
-        args.min_insert_size > 0
-        or args.max_insert_size < float("inf")
-        or args.min_matches > 0
-        or args.min_mapped_fraction > 0
-        or args.min_mapping_quality > 0
-    ) and not args.allow_orphan_mates
+        bool(
+            args.min_insert_size > 0
+            or args.max_insert_size < float("inf")
+            or args.min_matches > 0
+            or args.min_mapped_fraction > 0
+            or args.min_mapping_quality > 0
+        )
+        and not args.allow_orphan_mates
+    )
 
 
-def is_queryname_ordered(handle):
+def is_queryname_ordered(handle: pysam.AlignmentFile) -> bool:
     return handle.header.get("HD", {}).get("SO") == "queryname"
 
 
-def parse_args(argv):
+def parse_args(argv: list[str]) -> Namespace:
     parser = ArgumentParser("paleomix ngs:finalize_bam")
     parser.add_argument("in_bam", type=Path, default=Path("-"), nargs="?")
 
@@ -464,7 +498,7 @@ def parse_args(argv):
     return parser.parse_args(argv)
 
 
-def main(argv):
+def main(argv: list[str]) -> int:
     args = parse_args(argv)
     initialize_console_logging()
 

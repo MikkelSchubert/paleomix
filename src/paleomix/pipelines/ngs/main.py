@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import logging
 import os
+from argparse import Namespace
 
 import paleomix.common.logging
 import paleomix.node
@@ -35,7 +36,7 @@ from paleomix.pipelines.ngs.pipeline import build_pipeline
 from paleomix.pipelines.ngs.project import MakefileError, load_project
 
 
-def main(argv):
+def main(argv: list[str]) -> int:
     parser = build_parser()
     if not argv:
         parser.print_help()
@@ -51,7 +52,7 @@ def main(argv):
     return 0
 
 
-def _main_run(args):
+def _main_run(args: Namespace) -> int:
     if args.output is None:
         args.output = swap_ext(args.project, ".output")
     # FIXME: Add cli option
@@ -92,7 +93,7 @@ def _main_run(args):
     return pipeline.run(args.pipeline_mode)
 
 
-def _main_new(_args) -> int:
+def _main_new(_args: Namespace) -> int:
     print(resources.read_template("ngs.yaml"))
 
     return 0

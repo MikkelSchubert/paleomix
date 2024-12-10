@@ -128,11 +128,11 @@ def fill_dict(destination: dict[Any, Any], source: dict[Any, Any]) -> dict[Any, 
         raise TypeError("Non-dictionary parameters in 'fill_dict'")
 
     def _fill_dict(cur_dest: dict[Any, Any], cur_src: dict[Any, Any]) -> dict[Any, Any]:
-        for key in cur_src:
-            if isinstance(cur_src[key], dict) and isinstance(cur_dest.get(key), dict):
-                _fill_dict(cur_dest[key], cur_src[key])
+        for key, value in cur_src.items():
+            if isinstance(value, dict) and isinstance(cur_dest.get(key), dict):
+                _fill_dict(cur_dest[key], value)
             elif key not in cur_dest:
-                cur_dest[key] = cur_src[key]
+                cur_dest[key] = value
         return cur_dest
 
     return _fill_dict(copy.deepcopy(destination), copy.deepcopy(source))

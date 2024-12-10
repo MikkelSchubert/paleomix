@@ -139,8 +139,7 @@ def parse_arguments(argv: list[str], ext: str) -> Args:
         "--target-name",
         default=None,
         metavar="NAME",
-        help="Name used for 'Target' column; defaults to the "
-        "filename of the BAM file.",
+        help="Name used for 'Target' column; defaults to the filename of the BAM file.",
     )
     parser.add_argument(
         "--regions-file",

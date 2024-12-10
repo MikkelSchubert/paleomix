@@ -28,8 +28,10 @@ import logging
 import os
 import re
 import string
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from typing import Any
+
+from typing_extensions import Literal
 
 from paleomix.common import sequences
 from paleomix.common.bamfiles import BAM_PLATFORMS
@@ -51,7 +53,9 @@ from paleomix.common.makefile import (
     MakefileError,
     Not,
     Or,
+    SpecPath,
     SpecTree,
+    SpecType,
     StringStartsWith,
     ValueIn,
     ValuesIntersect,
@@ -69,7 +73,10 @@ _READ_TYPES = {"Single", "Singleton", "Collapsed", "CollapsedTruncated", "Paired
 _BAM_MAX_SEQUENCE_LENGTH = 2**29 - 1
 
 
-def read_makefiles(filenames: Iterable[PathTypes], pipeline_variant: str = "bam"):
+def read_makefiles(
+    filenames: Iterable[PathTypes],
+    pipeline_variant: Literal["bam", "trim"] = "bam",
+):
     logger = logging.getLogger(__name__)
 
     makefiles = []
@@ -95,7 +102,7 @@ def read_makefiles(filenames: Iterable[PathTypes], pipeline_variant: str = "bam"
     return finalize_makefiles(makefiles, pipeline_variant)
 
 
-def _alphanum_check(whitelist, min_len=1):
+def _alphanum_check(whitelist: str, min_len: int = 1) -> SpecType:
     description = "characters a-z, A-Z, 0-9{} allowed".format(
         f", and {whitelist!r}" if whitelist else ""
     )
@@ -108,7 +115,7 @@ def _alphanum_check(whitelist, min_len=1):
 
 
 # Valid names for genomes
-_VALID_GENOME_NAME: SpecTree = And(
+_VALID_GENOME_NAME = And(
     _alphanum_check(whitelist="._-*"),
     Not(ValueIn(["Options"])),
 )
@@ -297,7 +304,7 @@ def _postprocess_genomes(genomes):
     return result
 
 
-def _glob_genomes(pattern):
+def _glob_genomes(pattern: str) -> Iterator[tuple[str, str]]:
     filename = None
     for filename in glob.iglob(pattern):
         name = os.path.basename(filename).split(".")[0]
@@ -452,9 +459,9 @@ def _collect_files(path, template) -> Iterable[tuple[str, str | None]]:
 
         if len(files_1) != len(files_2):
             raise MakefileError(
-                "Unequal number of mate 1 and mate 2 files found at %r; found %i "
-                "mate 1 files and %i mate 2 files; specified in makefile at %r. "
-                % (template, len(files_1), len(files_2), _path_to_str(path))
+                f"Unequal number of mate 1 and mate 2 files found at {template!r}; "
+                f"found {len(files_1)} mate 1 files and {len(files_2)} mate 2 files; "
+                f"specified in makefile at {_path_to_str(path)!r}. "
             )
         elif not (files_1 and files_2):
             return [(template, None)]
@@ -468,7 +475,7 @@ def _collect_files(path, template) -> Iterable[tuple[str, str | None]]:
         return [(filename, None) for filename in files]
 
 
-def _sorted_glob(filename):
+def _sorted_glob(filename: str) -> list[str]:
     if _GLOB_MAGIC.search(filename):
         return sorted(glob.iglob(filename))
 
@@ -481,7 +488,7 @@ _GLOB_MAGIC = re.compile("[*?[]")
 ########################################################################################
 
 
-def finalize_makefiles(makefiles, pipeline_variant):
+def finalize_makefiles(makefiles, pipeline_variant: Literal["bam", "trim"]):
     sample_names = set()
     duplicate_samples = set()
     for makefile in makefiles:
@@ -656,8 +663,8 @@ def _validate_prefixes(makefiles, pipeline_variant):
             already_validated[path] = prefix
 
 
-def _path_to_str(path):
-    return " :: ".join(path)
+def _path_to_str(path: SpecPath) -> str:
+    return " :: ".join(str(value) for value in path)
 
 
 def _iterate_over_records(makefile):

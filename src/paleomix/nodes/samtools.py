@@ -248,10 +248,7 @@ class BAMMergeNode(CommandNode):
                 # The location of the output index (and its format) can be specified by
                 # writing the output file as "${outfile}##idx##${outindex}"
                 cmd.append(
-                    "%(TEMP_DIR)s/{}##idx##%(TEMP_DIR)s/{}".format(
-                        os.path.basename(out_file),
-                        os.path.basename(self.index),
-                    )
+                    f"%(TEMP_DIR)s/{os.path.basename(out_file)}##idx##%(TEMP_DIR)s/{os.path.basename(self.index)}"
                 )
             else:
                 cmd.append(OutputFile(out_file))
@@ -266,7 +263,7 @@ class BAMMergeNode(CommandNode):
         CommandNode.__init__(
             self,
             command=cmd,
-            description="merging %i files into %s" % (len(in_files), out_file),
+            description=f"merging {len(in_files)} files into {out_file}",
             threads=threads,
             dependencies=dependencies,
         )

@@ -42,7 +42,7 @@ def weighted_sampling(
     if not weights or (len(weights) != len(choices)):
         raise ValueError(
             "Choices and probabilities must be non-empty lists "
-            "of identical length, not lengths %i and %i" % (len(choices), len(weights))
+            f"of identical length, not lengths {len(choices)} and {len(weights)}"
         )
 
     total: float = 0
@@ -50,7 +50,7 @@ def weighted_sampling(
     for index, weight in enumerate(weights, start=1):
         if weight <= 0:
             raise ValueError(
-                "Probabilities must be > 0, not %r for weight %i" % (weight, index)
+                f"Probabilities must be > 0, not {weight!r} for weight {index}"
             )
         total += weight
         totals.append(total)

@@ -22,6 +22,7 @@
 from __future__ import annotations
 
 import argparse
+from collections.abc import Sequence
 from typing import Any
 
 import configargparse
@@ -29,12 +30,12 @@ import configargparse
 import paleomix
 
 __all__ = [
+    "SUPPRESS",
     "ArgumentDefaultsHelpFormatter",
     "ArgumentGroup",
     "ArgumentParser",
     "Namespace",
     "SubParsersAction",
-    "SUPPRESS",
 ]
 
 Action = configargparse.Action
@@ -100,8 +101,8 @@ class ArgumentParser(ArgumentParserBase):
             version="%(prog)s v" + paleomix.__version__,
         )
 
-    def get_possible_config_keys(self, *args: Any, **kwargs: Any) -> list[str]:
-        keys = super().get_possible_config_keys(*args, **kwargs)
+    def get_possible_config_keys(self, action: Action) -> list[str]:
+        keys = super().get_possible_config_keys(action)
         for key in keys:
             key = key.strip("-").replace("-", "_")
             if key not in keys:
@@ -109,7 +110,12 @@ class ArgumentParser(ArgumentParserBase):
 
         return keys
 
-    def convert_item_to_command_line_arg(self, action, key, value) -> list[str]:
+    def convert_item_to_command_line_arg(
+        self,
+        action: Action,
+        key: str,
+        value: str | list[str],
+    ) -> list[str]:
         # Ignore empty options from old config files
         if action and value in ("", "="):
             return []
@@ -130,10 +136,5 @@ class ArgumentParser(ArgumentParserBase):
 
 
 class _ChoicesPseudoAction(configargparse.Action):
-    def __init__(self, name, _aliases, help):
-        super().__init__(
-            option_strings=[],
-            dest=name,
-            help=help,
-            metavar=name,
-        )
+    def __init__(self, name: str, _aliases: Sequence[str], help: str | None) -> None:
+        super().__init__(option_strings=[], dest=name, help=help, metavar=name)

@@ -225,8 +225,8 @@ def describe_files(files: Iterable[str]) -> str:
 
     paths = {os.path.dirname(filename) for filename in files}
     if len(paths) == 1:
-        return "%i files in '%s'" % (len(files), paths.pop())
-    return "%i files" % (len(files),)
+        return f"{len(files)} files in '{paths.pop()}'"
+    return f"{len(files)} files"
 
 
 def describe_paired_files(files_1: Iterable[str], files_2: Iterable[str]) -> str:
@@ -243,8 +243,8 @@ def describe_paired_files(files_1: Iterable[str], files_2: Iterable[str]) -> str
         return describe_files(files_1)
     elif len(files_1) != len(files_2):
         raise ValueError(
-            "Unequal number of files for mate 1 vs mate 2 reads: %i vs %i"
-            % (len(files_1), len(files_2))
+            "Unequal number of files for mate 1 vs mate 2 reads: "
+            f"{len(files_1)} vs {len(files_2)}"
         )
 
     glob_files_1 = get_files_glob(files_1, max_differences=3)
@@ -258,8 +258,8 @@ def describe_paired_files(files_1: Iterable[str], files_2: Iterable[str]) -> str
 
     paths = {os.path.dirname(fname) for fname in (files_1 + files_2)}
     if len(paths) == 1:
-        return "%i pair(s) of files in '%s'" % (len(files_1), paths.pop())
-    return "%i pair(s) of files" % (len(files_1),)
+        return f"{len(files_1)} pair(s) of files in '{paths.pop()}'"
+    return f"{len(files_1)} pair(s) of files"
 
 
 def get_files_glob(

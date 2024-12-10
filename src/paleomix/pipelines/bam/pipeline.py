@@ -364,8 +364,8 @@ def _build_bwa_backtrack_pe_task(
         "dependencies": dependencies,
     }
 
-    output_sai_1 = swap_ext(output_file, "%i.sai" % (1,))
-    output_sai_2 = swap_ext(output_file, "%i.sai" % (2,))
+    output_sai_1 = swap_ext(output_file, "1.sai")
+    output_sai_2 = swap_ext(output_file, "2.sai")
 
     task_sai_1 = BWABacktrack(
         input_file=input_file_1,

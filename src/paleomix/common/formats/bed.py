@@ -50,7 +50,7 @@ class BEDRecord(TotallyOrdered):
     Fields past these 6 are ignored when parsing BED records.
     """
 
-    __slots__ = ["contig", "start", "end", "name", "score", "strand"]
+    __slots__ = ["contig", "end", "name", "score", "start", "strand"]
 
     def __init__(
         self,

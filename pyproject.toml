@@ -82,6 +82,8 @@ stubPath = "typings"
 
 # FIXME: Disabled until project is fully typed
 reportUnnecessaryIsInstance = "none"
+# Disabled due to large number of unhelpful warnings
+reportUnusedCallResult = "none"
 
 [tool.pytest.ini_options]
 markers = ["slow"]
@@ -96,8 +98,7 @@ exclude = ["docs/**"]
 select = ["ALL"]
 
 ignore = [
-    # Rules either deemed too burdonsome to implement or not useful
-    "ANN", # flake8-annotations
+    # Rules either deemed too burdensome to implement or not useful
     "B",   # flake8-bugbear
     "C90", # mccabe -- Complexity measures not deemed useful
     "COM", # flake8-commas -- Formatting handled by ruff/black
@@ -111,11 +112,11 @@ ignore = [
     "PTH", # flake8-use-pathlib
     "S",   # flake8-bandit
     "TRY", # tryceratops
-    # Individual rules deemed too burdonsome or not useful
-    "A001",    # builtin-variable-shadowing -- id/help/etc. are often useful variables
-    "A002",    # builtin-argument-shadowing -- id/help/etc. are often useful arguments
-    "ANN101",  # missing-type-self -- Missing type annotation for `self` in method
-    "ANN102",  # missing-type-cls -- Missing type annotation for `cls` in classmethod
+    # Individual rules deemed too burdensome or not useful
+    "A001", # builtin-variable-shadowing -- id/help/etc. are often useful variables
+    "A002", # builtin-argument-shadowing -- id/help/etc. are often useful arguments
+    "A005", # stdlib-module-shadowing -- to be fixed later
+    "ANN401",  # any-type -- disabled until type anotation has been completed
     "ISC001",  # single-line-implicit-string-concatenation -- conflict with `ruff format`
     "PERF401", # manual-list-comprehension -- a manual loop is clearer in many cases
     "PLR09",   # too-many-* -- complexity warnings disabled for now
@@ -126,10 +127,10 @@ ignore = [
     "RET507",  # superfluous-else-continue --stylistic preference
     "RET508",  # superfluous-else-break -- stylistic preference
     "S603",    # subprocess-without-shell-equals-true -- `shell=True` is never used
-    # TCH001-TCH003 are disabled to minimize runtime/type-checking discrepancies
-    "TCH001", # typing-only-first-party-import
-    "TCH002", # typing-only-third-party-import
-    "TCH003", # typing-only-standard-library-import
+    # TC001-TC003 are disabled to minimize runtime/type-checking discrepancies
+    "TC001",  # typing-only-first-party-import
+    "TC002",  # typing-only-third-party-import
+    "TC003",  # typing-only-standard-library-import
     "TRY003", # raise-vanilla-args
     "UP032",  # f-string -- replacing `format` may decrease readability in some cases
 ]
@@ -141,6 +142,12 @@ ignore = [
     "S108", # hardcoded-temp-file -- Probable insecure usage of temporary file or dir
     "S311", # suspicious-non-cryptographic-random-usage
 ]
+
+# flake8-annotations - pending rework using typesafe framework
+"src/paleomix/pipelines/*/makefile.py" = ["ANN"]
+"src/paleomix/pipelines/*/pipeline.py" = ["ANN"]
+"src/paleomix/pipelines/*/project.py" = ["ANN"]
+"src/paleomix/pipelines/zonkey/**.py" = ["ANN"]
 
 [tool.uv]
 reinstall-package = ["paleomix"]

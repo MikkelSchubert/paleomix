@@ -229,7 +229,7 @@ def process(args: Namespace, infile: AlignmentFile, outfile: AlignmentFile) -> i
             if not is_trailing_unmapped_read(read):
                 sys.stderr.write(
                     "ERROR: Input file is not sorted by "
-                    "coordinates at read %i. Aborting!\n" % (read_num,)
+                    f"coordinates at read {read_num}. Aborting!\n"
                 )
                 return 1
 
@@ -253,7 +253,7 @@ def process(args: Namespace, infile: AlignmentFile, outfile: AlignmentFile) -> i
         if not is_trailing_unmapped_read(read):
             sys.stderr.write(
                 "ERROR: Input file is not sorted by "
-                "coordinates at read %i. Aborting!\n" % (read_num,)
+                f"coordinates at read {read_num}. Aborting!\n"
             )
             return 1
 

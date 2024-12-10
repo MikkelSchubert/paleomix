@@ -52,9 +52,9 @@ def test_pformat__simple() -> None:
     cmd = AtomicCmd(("touch", "something"))
     assert pformat(cmd) == (
         "Command = touch something\n"
-        "STDOUT  = '${TEMP_DIR}/pipe_touch_%i.stdout'\n"
-        "STDERR  = '${TEMP_DIR}/pipe_touch_%i.stderr'"
-    ) % (id(cmd), id(cmd))
+        f"STDOUT  = '${{TEMP_DIR}}/pipe_touch_{id(cmd)}.stdout'\n"
+        f"STDERR  = '${{TEMP_DIR}}/pipe_touch_{id(cmd)}.stderr'"
+    )
 
 
 def test_pformat__simple__running(tmp_path: Path) -> None:
@@ -177,38 +177,38 @@ def test_pformat__atomiccmd__simple_with_infile() -> None:
     cmd = AtomicCmd(("cat", InputFile("/etc/fstab")))
     assert pformat(cmd) == (
         "Command = cat /etc/fstab\n"
-        "STDOUT  = '${TEMP_DIR}/pipe_cat_%i.stdout'\n"
-        "STDERR  = '${TEMP_DIR}/pipe_cat_%i.stderr'"
-    ) % (id(cmd), id(cmd))
+        f"STDOUT  = '${{TEMP_DIR}}/pipe_cat_{id(cmd)}.stdout'\n"
+        f"STDERR  = '${{TEMP_DIR}}/pipe_cat_{id(cmd)}.stderr'"
+    )
 
 
 def test_pformat__atomiccmd__simple_with_infile__set_cwd() -> None:
     cmd = AtomicCmd(("cat", InputFile("/etc/fstab")), set_cwd=True)
     assert pformat(cmd) == (
         "Command = cat /etc/fstab\n"
-        "STDOUT  = pipe_cat_%i.stdout\n"
-        "STDERR  = pipe_cat_%i.stderr\n"
+        f"STDOUT  = pipe_cat_{id(cmd)}.stdout\n"
+        f"STDERR  = pipe_cat_{id(cmd)}.stderr\n"
         "CWD     = '${TEMP_DIR}'"
-    ) % (id(cmd), id(cmd))
+    )
 
 
 def test_pformat__atomiccmd__simple_with_temp_infile() -> None:
     cmd = AtomicCmd(("cat", TempInputFile("infile.txt")))
     assert pformat(cmd) == (
         "Command = cat '${TEMP_DIR}/infile.txt'\n"
-        "STDOUT  = '${TEMP_DIR}/pipe_cat_%i.stdout'\n"
-        "STDERR  = '${TEMP_DIR}/pipe_cat_%i.stderr'"
-    ) % (id(cmd), id(cmd))
+        f"STDOUT  = '${{TEMP_DIR}}/pipe_cat_{id(cmd)}.stdout'\n"
+        f"STDERR  = '${{TEMP_DIR}}/pipe_cat_{id(cmd)}.stderr'"
+    )
 
 
 def test_pformat__atomiccmd__simple_with_temp_infile__set_cwd() -> None:
     cmd = AtomicCmd(("zcat", TempInputFile("infile.gz")), set_cwd=True)
     assert pformat(cmd) == (
         "Command = zcat infile.gz\n"
-        "STDOUT  = pipe_zcat_%i.stdout\n"
-        "STDERR  = pipe_zcat_%i.stderr\n"
+        f"STDOUT  = pipe_zcat_{id(cmd)}.stdout\n"
+        f"STDERR  = pipe_zcat_{id(cmd)}.stderr\n"
         "CWD     = '${TEMP_DIR}'"
-    ) % (id(cmd), id(cmd))
+    )
 
 
 ###############################################################################
@@ -220,9 +220,9 @@ def test_pformat__atomiccmd__simple_with_outfile() -> None:
     cmd = AtomicCmd(("touch", OutputFile("/etc/bashrc")))
     assert pformat(cmd) == (
         "Command = touch '${TEMP_DIR}/bashrc'\n"
-        "STDOUT  = '${TEMP_DIR}/pipe_touch_%i.stdout'\n"
-        "STDERR  = '${TEMP_DIR}/pipe_touch_%i.stderr'"
-    ) % (id(cmd), id(cmd))
+        f"STDOUT  = '${{TEMP_DIR}}/pipe_touch_{id(cmd)}.stdout'\n"
+        f"STDERR  = '${{TEMP_DIR}}/pipe_touch_{id(cmd)}.stderr'"
+    )
 
 
 def test_pformat__atomiccmd__simple_with_outfile__set_cwd() -> None:
@@ -230,10 +230,10 @@ def test_pformat__atomiccmd__simple_with_outfile__set_cwd() -> None:
 
     assert pformat(cmd) == (
         "Command = touch bashrc\n"
-        "STDOUT  = pipe_touch_%i.stdout\n"
-        "STDERR  = pipe_touch_%i.stderr\n"
+        f"STDOUT  = pipe_touch_{id(cmd)}.stdout\n"
+        f"STDERR  = pipe_touch_{id(cmd)}.stderr\n"
         "CWD     = '${TEMP_DIR}'"
-    ) % (id(cmd), id(cmd))
+    )
 
 
 def test_pformat__atomiccmd__simple_with_temp_outfile() -> None:
@@ -241,9 +241,9 @@ def test_pformat__atomiccmd__simple_with_temp_outfile() -> None:
 
     assert pformat(cmd) == (
         "Command = touch '${TEMP_DIR}/bashrc'\n"
-        "STDOUT  = '${TEMP_DIR}/pipe_touch_%i.stdout'\n"
-        "STDERR  = '${TEMP_DIR}/pipe_touch_%i.stderr'"
-    ) % (id(cmd), id(cmd))
+        f"STDOUT  = '${{TEMP_DIR}}/pipe_touch_{id(cmd)}.stdout'\n"
+        f"STDERR  = '${{TEMP_DIR}}/pipe_touch_{id(cmd)}.stderr'"
+    )
 
 
 def test_pformat__atomiccmd__simple_with_temp_outfile__set_cwd() -> None:
@@ -251,10 +251,10 @@ def test_pformat__atomiccmd__simple_with_temp_outfile__set_cwd() -> None:
 
     assert pformat(cmd) == (
         "Command = touch bashrc\n"
-        "STDOUT  = pipe_touch_%i.stdout\n"
-        "STDERR  = pipe_touch_%i.stderr\n"
+        f"STDOUT  = pipe_touch_{id(cmd)}.stdout\n"
+        f"STDERR  = pipe_touch_{id(cmd)}.stderr\n"
         "CWD     = '${TEMP_DIR}'"
-    ) % (id(cmd), id(cmd))
+    )
 
 
 ###############################################################################
@@ -267,9 +267,9 @@ def test_pformat__atomiccmd__simple_with_stdin() -> None:
     assert pformat(cmd) == (
         "Command = gzip\n"
         "STDIN   = /etc/fstab\n"
-        "STDOUT  = '${TEMP_DIR}/pipe_gzip_%i.stdout'\n"
-        "STDERR  = '${TEMP_DIR}/pipe_gzip_%i.stderr'"
-    ) % (id(cmd), id(cmd))
+        f"STDOUT  = '${{TEMP_DIR}}/pipe_gzip_{id(cmd)}.stdout'\n"
+        f"STDERR  = '${{TEMP_DIR}}/pipe_gzip_{id(cmd)}.stderr'"
+    )
 
 
 def test_pformat__atomiccmd__simple_with_stdin__set_cwd() -> None:
@@ -277,10 +277,10 @@ def test_pformat__atomiccmd__simple_with_stdin__set_cwd() -> None:
     assert pformat(cmd) == (
         "Command = gzip\n"
         "STDIN   = /etc/fstab\n"
-        "STDOUT  = pipe_gzip_%i.stdout\n"
-        "STDERR  = pipe_gzip_%i.stderr\n"
+        f"STDOUT  = pipe_gzip_{id(cmd)}.stdout\n"
+        f"STDERR  = pipe_gzip_{id(cmd)}.stderr\n"
         "CWD     = '${TEMP_DIR}'"
-    ) % (id(cmd), id(cmd))
+    )
 
 
 def test_pformat__atomiccmd__simple_with_temp_stdin() -> None:
@@ -288,9 +288,9 @@ def test_pformat__atomiccmd__simple_with_temp_stdin() -> None:
     assert pformat(cmd) == (
         "Command = gzip\n"
         "STDIN   = '${TEMP_DIR}/stabstabstab'\n"
-        "STDOUT  = '${TEMP_DIR}/pipe_gzip_%i.stdout'\n"
-        "STDERR  = '${TEMP_DIR}/pipe_gzip_%i.stderr'"
-    ) % (id(cmd), id(cmd))
+        f"STDOUT  = '${{TEMP_DIR}}/pipe_gzip_{id(cmd)}.stdout'\n"
+        f"STDERR  = '${{TEMP_DIR}}/pipe_gzip_{id(cmd)}.stderr'"
+    )
 
 
 def test_pformat__atomiccmd__simple_with_temp_stdin__set_cwd() -> None:
@@ -298,10 +298,10 @@ def test_pformat__atomiccmd__simple_with_temp_stdin__set_cwd() -> None:
     assert pformat(cmd) == (
         "Command = gzip\n"
         "STDIN   = stabstabstab\n"
-        "STDOUT  = pipe_gzip_%i.stdout\n"
-        "STDERR  = pipe_gzip_%i.stderr\n"
+        f"STDOUT  = pipe_gzip_{id(cmd)}.stdout\n"
+        f"STDERR  = pipe_gzip_{id(cmd)}.stderr\n"
         "CWD     = '${TEMP_DIR}'"
-    ) % (id(cmd), id(cmd))
+    )
 
 
 def test_pformat__atomiccmd__simple_with_stdin__cmd() -> None:
@@ -310,9 +310,9 @@ def test_pformat__atomiccmd__simple_with_stdin__cmd() -> None:
     assert pformat(cmd_2) == (
         "Command = gzip\n"
         "STDIN   = <PIPE>\n"
-        "STDOUT  = '${TEMP_DIR}/pipe_gzip_%i.stdout'\n"
-        "STDERR  = '${TEMP_DIR}/pipe_gzip_%i.stderr'"
-    ) % (id(cmd_2), id(cmd_2))
+        f"STDOUT  = '${{TEMP_DIR}}/pipe_gzip_{id(cmd_2)}.stdout'\n"
+        f"STDERR  = '${{TEMP_DIR}}/pipe_gzip_{id(cmd_2)}.stderr'"
+    )
 
 
 ###############################################################################
@@ -325,8 +325,8 @@ def test_pformat__atomiccmd__simple_with_stdout() -> None:
     assert pformat(cmd) == (
         "Command = echo 'Water. Water.'\n"
         "STDOUT  = '${TEMP_DIR}/ls'\n"
-        "STDERR  = '${TEMP_DIR}/pipe_echo_%i.stderr'"
-    ) % (id(cmd),)
+        f"STDERR  = '${{TEMP_DIR}}/pipe_echo_{id(cmd)}.stderr'"
+    )
 
 
 def test_pformat__atomiccmd__simple_with_stdout__set_cwd() -> None:
@@ -334,9 +334,9 @@ def test_pformat__atomiccmd__simple_with_stdout__set_cwd() -> None:
     assert pformat(cmd) == (
         "Command = echo '*pant*. *pant*.'\n"
         "STDOUT  = barf\n"
-        "STDERR  = pipe_echo_%i.stderr\n"
+        f"STDERR  = pipe_echo_{id(cmd)}.stderr\n"
         "CWD     = '${TEMP_DIR}'"
-    ) % (id(cmd),)
+    )
 
 
 def test_pformat__atomiccmd__simple_with_temp_stdout() -> None:
@@ -344,8 +344,8 @@ def test_pformat__atomiccmd__simple_with_temp_stdout() -> None:
     assert pformat(cmd) == (
         "Command = echo 'Oil. Oil.'\n"
         "STDOUT  = '${TEMP_DIR}/dm'\n"
-        "STDERR  = '${TEMP_DIR}/pipe_echo_%i.stderr'"
-    ) % (id(cmd),)
+        f"STDERR  = '${{TEMP_DIR}}/pipe_echo_{id(cmd)}.stderr'"
+    )
 
 
 def test_pformat__atomiccmd__simple_with_temp_stdout__set_cwd() -> None:
@@ -357,9 +357,9 @@ def test_pformat__atomiccmd__simple_with_temp_stdout__set_cwd() -> None:
     assert pformat(cmd) == (
         "Command = echo 'Room service. Room service.'\n"
         "STDOUT  = pv\n"
-        "STDERR  = pipe_echo_%i.stderr\n"
+        f"STDERR  = pipe_echo_{id(cmd)}.stderr\n"
         "CWD     = '${TEMP_DIR}'"
-    ) % (id(cmd),)
+    )
 
 
 def test_pformat__atomiccmd__simple_with_stdout_pipe() -> None:
@@ -367,8 +367,8 @@ def test_pformat__atomiccmd__simple_with_stdout_pipe() -> None:
     assert pformat(cmd) == (
         "Command = echo '!'\n"
         "STDOUT  = <PIPE>\n"
-        "STDERR  = '${TEMP_DIR}/pipe_echo_%i.stderr'"
-    ) % (id(cmd),)
+        f"STDERR  = '${{TEMP_DIR}}/pipe_echo_{id(cmd)}.stderr'"
+    )
 
 
 def test_pformat__atomiccmd__simple_with_stdout_devnull() -> None:
@@ -376,8 +376,8 @@ def test_pformat__atomiccmd__simple_with_stdout_devnull() -> None:
     assert pformat(cmd) == (
         "Command = echo '!'\n"
         "STDOUT  = /dev/null\n"
-        "STDERR  = '${TEMP_DIR}/pipe_echo_%i.stderr'"
-    ) % (id(cmd),)
+        f"STDERR  = '${{TEMP_DIR}}/pipe_echo_{id(cmd)}.stderr'"
+    )
 
 
 ###############################################################################
@@ -389,28 +389,28 @@ def test_pformat__atomiccmd__simple_with_stderr() -> None:
     cmd = AtomicCmd(("echo", "Water. Water."), stderr="/dev/ls")
     assert pformat(cmd) == (
         "Command = echo 'Water. Water.'\n"
-        "STDOUT  = '${TEMP_DIR}/pipe_echo_%i.stdout'\n"
+        f"STDOUT  = '${{TEMP_DIR}}/pipe_echo_{id(cmd)}.stdout'\n"
         "STDERR  = '${TEMP_DIR}/ls'"
-    ) % (id(cmd),)
+    )
 
 
 def test_pformat__atomiccmd__simple_with_stderr__set_cwd() -> None:
     cmd = AtomicCmd(("echo", "*pant*. *pant*."), stderr="/dev/barf", set_cwd=True)
     assert pformat(cmd) == (
         "Command = echo '*pant*. *pant*.'\n"
-        "STDOUT  = pipe_echo_%i.stdout\n"
+        f"STDOUT  = pipe_echo_{id(cmd)}.stdout\n"
         "STDERR  = barf\n"
         "CWD     = '${TEMP_DIR}'"
-    ) % (id(cmd),)
+    )
 
 
 def test_pformat__atomiccmd__simple_with_temp_stderr() -> None:
     cmd = AtomicCmd(("echo", "Oil. Oil."), stderr=TempOutputFile("dm"))
     assert pformat(cmd) == (
         "Command = echo 'Oil. Oil.'\n"
-        "STDOUT  = '${TEMP_DIR}/pipe_echo_%i.stdout'\n"
+        f"STDOUT  = '${{TEMP_DIR}}/pipe_echo_{id(cmd)}.stdout'\n"
         "STDERR  = '${TEMP_DIR}/dm'"
-    ) % (id(cmd),)
+    )
 
 
 def test_pformat__atomiccmd__simple_with_temp_stderr__set_cwd() -> None:
@@ -421,19 +421,19 @@ def test_pformat__atomiccmd__simple_with_temp_stderr__set_cwd() -> None:
     )
     assert pformat(cmd) == (
         "Command = echo 'Room service. Room service.'\n"
-        "STDOUT  = pipe_echo_%i.stdout\n"
+        f"STDOUT  = pipe_echo_{id(cmd)}.stdout\n"
         "STDERR  = pv\n"
         "CWD     = '${TEMP_DIR}'"
-    ) % (id(cmd),)
+    )
 
 
 def test_pformat__atomiccmd__simple_with_stderr_devnull() -> None:
     cmd = AtomicCmd(("echo", "!"), stderr=AtomicCmd.DEVNULL)
     assert pformat(cmd) == (
         "Command = echo '!'\n"
-        "STDOUT  = '${TEMP_DIR}/pipe_echo_%i.stdout'\n"
+        f"STDOUT  = '${{TEMP_DIR}}/pipe_echo_{id(cmd)}.stdout'\n"
         "STDERR  = /dev/null"
-    ) % (id(cmd),)
+    )
 
 
 ###############################################################################

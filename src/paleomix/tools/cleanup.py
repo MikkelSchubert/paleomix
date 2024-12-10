@@ -39,7 +39,8 @@ from __future__ import annotations
 
 import signal
 import sys
-from typing import NoReturn
+from collections.abc import Iterable
+from typing import Any, NoReturn
 
 import pysam
 
@@ -56,13 +57,13 @@ def _on_sigterm(signum: int, _frame: object) -> NoReturn:
     sys.exit(-signum)
 
 
-def _set_sort_order(header) -> None:
+def _set_sort_order(header: dict[Any, Any]) -> None:
     """Updates a BAM header to indicate coordinate sorting."""
     hd_dict = header.setdefault("HD", {"GO": "none", "VN": "1.0"})
     hd_dict["SO"] = "coordinate"
 
 
-def _set_pg_tags(header, tags):
+def _set_pg_tags(header: dict[Any, Any], tags: Iterable[str]) -> None:
     """Updates PG tags in a BAM header, taking a sequence of ID:TAG:VALUEs."""
     for tag in tags:
         pg_id, pg_field, pg_value = tag.split(":")
@@ -75,7 +76,7 @@ def _set_pg_tags(header, tags):
             header["PG"].append({"ID": pg_id, pg_field: pg_value})
 
 
-def _set_rg_tags(header, rg_id, rg_tags):
+def _set_rg_tags(header: dict[Any, Any], rg_id: str, rg_tags: Iterable[str]) -> None:
     """Updates RG tags in a BAM header, taking a sequence of TAG:VALUEs."""
     readgroup = {"ID": rg_id}
     for tag in rg_tags:

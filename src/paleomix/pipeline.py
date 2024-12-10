@@ -240,8 +240,8 @@ class Pypeline:
         tasks: dict[Node, _TaskInfo],
         worker: str,
         worker_name: str,
-        **_kwargs: Any,
-    ):
+        **_kwargs: object,
+    ) -> bool:
         self._logger.error("PALEOMIX worker %s terminated", worker_name)
 
         any_errors = False
@@ -265,7 +265,7 @@ class Pypeline:
 
         return not any_errors
 
-    def _prune_tasks(self, nodegraph: NodeGraph, tasks: dict[Node, _TaskInfo]):
+    def _prune_tasks(self, nodegraph: NodeGraph, tasks: dict[Node, _TaskInfo]) -> None:
         # The completion or failure of a task may result in the failure/completion of
         # any number of other tasks, the latter when tasks depend on validation steps
         for task in tuple(tasks):
@@ -288,7 +288,7 @@ class Pypeline:
         error: object,
         backtrace: list[str] | None,
         **_kwargs: object,
-    ):
+    ) -> None:
         self._set_node_state(nodegraph, task, nodegraph.ERROR)
 
         if not isinstance(error, NodeError):

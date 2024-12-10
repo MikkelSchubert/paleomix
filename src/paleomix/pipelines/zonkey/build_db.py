@@ -139,7 +139,7 @@ def _write_genotypes(args, data, filename):
 
             sys.stderr.write(f"  - {contig}:   0%\r")
             for pos in range(0, size, _CHUNK_SIZE):
-                sys.stderr.write("  - %s: % 3i%%\r" % (contig, (100 * pos) / size))
+                sys.stderr.write(f"  - {contig}: {(100 * pos) / size: 3}%%\r")
 
                 chunks = []
                 real_name = None
@@ -162,8 +162,9 @@ def _write_genotypes(args, data, filename):
 
                     if len(nucleotides) == 2:
                         handle.write(
-                            "%s\t%i\t%s\t%s\n"
-                            % (contig, pos + idx + 1, ref_chunk[idx], "".join(row))
+                            "{}\t{}\t{}\t{}\n".format(
+                                contig, pos + idx + 1, ref_chunk[idx], "".join(row)
+                            )
                         )
             sys.stderr.write(f"  - {contig}: 100%\n")
 
@@ -196,14 +197,15 @@ def _write_contigs(args, filename):
         sys.stderr.write(f"  - {name}:   0%\r")
         n_uncalled = 0
         for pos in range(0, size, _CHUNK_SIZE):
-            sys.stderr.write("  - %s: % 3i%%\r" % (name, (100 * pos) / size))
+            sys.stderr.write(f"  - {name}: {(100 * pos) / size: 3}%%\r")
+
             chunk = fasta_handle.fetch(real_name, pos, pos + _CHUNK_SIZE)
             n_uncalled += chunk.count("n")
             n_uncalled += chunk.count("N")
             n_uncalled += chunk.count("-")
 
         sys.stderr.write(f"  - {name}: 100%\n")
-        lines.append("%s\t%i\t%i\t%s" % (name, size, n_uncalled, "NA"))
+        lines.append(f"{name}\t{size}\t{n_uncalled}\tNA")
     lines.append("")
 
     with open(filename, "w") as handle:
@@ -242,9 +244,8 @@ def _process_contigs(reference, samples):
             obs_name, obs_size = obs_contigs[ref_name]
             if obs_size != ref_size:
                 raise ZonkeyError(
-                    "Contig %r for sample %r has wrong size; "
-                    "%i observed vs %i expected"
-                    % (obs_name, sample_name, obs_size, ref_size)
+                    f"Contig {obs_name!r} for sample {sample_name!r} has wrong size; "
+                    f"{obs_size} observed vs {ref_size} expected"
                 )
 
             obs_contigs[ref_name] = obs_name

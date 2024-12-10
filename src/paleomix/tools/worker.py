@@ -36,6 +36,8 @@ from multiprocessing import ProcessError, Queue, cpu_count
 from multiprocessing.connection import Connection, Listener, wait
 from typing import Any
 
+from typing_extensions import Self
+
 import paleomix
 import paleomix.common.logging
 from paleomix.common.argparse import ArgumentParser, Namespace
@@ -220,7 +222,7 @@ class Worker:
 
         return self._send({"event": EVT_CAPACITY, "threads": self._threads})
 
-    def _handle_commandline_list_tasks(self):
+    def _handle_commandline_list_tasks(self) -> bool:
         tasks = sorted(self.tasks, key=lambda it: it.id)
         threads = sum(task.threads for task in tasks)
 
@@ -254,9 +256,8 @@ class Worker:
             return [
                 {
                     "event": EVT_HANDSHAKE_RESPONSE,
-                    "error": "Client ({!r}) and worker ({!r}) version mismatch".format(
-                        version, paleomix.__version__
-                    ),
+                    "error": f"Client ({version!r}) and "
+                    f"worker ({paleomix.__version__!r}) version mismatch",
                 }
             ]
 
@@ -355,7 +356,7 @@ class Worker:
                 self._conn.close()
             sys.exit(-signum)
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, typ: object, exc: object, tb: object) -> None:

@@ -309,9 +309,7 @@ class Node:
         if not isinstance(threads, int):
             raise TypeError(f"'threads' must be a positive integer, not {threads!r}")
         elif threads < 1:
-            raise ValueError(
-                "'threads' must be a positive integer, not %i" % (threads,)
-            )
+            raise ValueError(f"'threads' must be a positive integer, not {threads}")
         return threads
 
     @staticmethod

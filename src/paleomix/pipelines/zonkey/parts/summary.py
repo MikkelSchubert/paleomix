@@ -154,7 +154,7 @@ class SummaryNode(Node):
                 admix_root = os.path.join(self._root, sample, "results", "admixture")
 
                 for k_groups in sorted(self._data.groups):
-                    filename = os.path.join(admix_root, "%s.%i.Q" % (postfix, k_groups))
+                    filename = os.path.join(admix_root, f"{postfix}.{k_groups}.Q")
 
                     result = admixture.read_admixture_results(
                         filename, self._data, k_groups
@@ -199,7 +199,7 @@ class SummaryNode(Node):
             admix_root = os.path.join(self._root, sample, "results", "admixture")
 
             for k_groups in sorted(self._data.groups):
-                filename = os.path.join(admix_root, "%s.%i.Q" % (postfix, k_groups))
+                filename = os.path.join(admix_root, f"{postfix}.{k_groups}.Q")
 
                 lines.append("<td>")
                 try:

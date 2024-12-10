@@ -51,8 +51,9 @@ def check_run(call: list[str], expected_returncode: int = 0) -> tuple[str, str]:
     stdout, stderr = proc.communicate()
     if proc.returncode != expected_returncode:
         raise ProcError(
-            "Command returned %i: %r:\nSTDOUT: %r\nSTDERR: %r"
-            % (proc.returncode, call, stdout, stderr)
+            f"Command returned {proc.returncode}: {call!r}:\n"
+            f"STDOUT: {stdout!r}\n"
+            f"STDERR: {stderr!r}"
         )
 
     return stdout, stderr

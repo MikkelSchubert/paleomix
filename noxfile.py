@@ -18,10 +18,10 @@ SOURCES = (
 class Requirements:
     COVERAGE = "coverage[toml]~=7.6"
     NOX = "nox~=2024.3.2"
-    PYRIGHT = "basedpyright==1.21.1"
+    PYRIGHT = "basedpyright==1.26.0"
     PYTEST = "pytest~=8.3"
     PYTEST_COV = "pytest-cov~=6.0"
-    RUFF = "ruff==0.7.4"
+    RUFF = "ruff==0.9.3"
 
 
 @nox.session

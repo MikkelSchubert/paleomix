@@ -46,21 +46,21 @@ _SETTINGS_KEYS = (
 
 
 class BAMInfo:
-    def __init__(self):
+    def __init__(self) -> None:
         self.nuclear_contigs = {}
         self.mt_contig = None
         self.mt_length = None
         self.mt_padding = None
 
     @property
-    def is_nuclear(self):
+    def is_nuclear(self) -> bool:
         return bool(self.nuclear_contigs)
 
     @property
-    def is_mitochondrial(self):
+    def is_mitochondrial(self) -> bool:
         return bool(self.mt_contig)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         tmpl = "BAMInfo(nuclear=%r, mt_contig=%r, mt_length=%r, mt_padding=%r)"
 
         return tmpl % (
@@ -90,7 +90,7 @@ class ZonkeyDBError(RuntimeError):
 
 
 class ZonkeyDB:
-    def __init__(self, filename):
+    def __init__(self, filename) -> None:
         self.filename = filename
 
         log = logging.getLogger(__name__)
@@ -122,7 +122,7 @@ class ZonkeyDB:
 
         self._cross_validate()
 
-    def validate_bam(self, filename):
+    def validate_bam(self, filename: str) -> None | BAMInfo:
         """Validates a sample BAM file, checking that it is either a valid
         mitochondrial BAM (aligned against one of the referenc mt sequences),
         or that it is a valid nuclear BAM (aligned against the reference).
@@ -140,7 +140,7 @@ class ZonkeyDB:
 
         return self.validate_bam_handle(handle)
 
-    def validate_bam_handle(self, handle):
+    def validate_bam_handle(self, handle: pysam.AlignmentFile) -> None | BAMInfo:
         if len(get_sample_names(handle)) > 1:
             log = logging.getLogger(__name__)
             log.warning(
@@ -157,7 +157,7 @@ class ZonkeyDB:
 
         return info
 
-    def _cross_validate(self):
+    def _cross_validate(self) -> None:
         """Cross validates tables to ensure consistency."""
         genotypes = set(self.sample_order)
         samples = set(self.samples)
@@ -180,7 +180,11 @@ class ZonkeyDB:
                     raise ZonkeyDBError(f"Unexpected mitochondrial sequence: {name!r}")
 
     @classmethod
-    def _read_contigs_table(cls, tar_handle, filename):
+    def _read_contigs_table(
+        cls,
+        tar_handle: tarfile.TarFile,
+        filename: str,
+    ) -> dict[Any, Any]:
         cls._check_required_file(tar_handle, filename)
 
         table = cls._read_table(tar_handle, filename, _CONTIGS_TABLE_COLUMNS)
@@ -202,7 +206,11 @@ class ZonkeyDB:
         return table
 
     @classmethod
-    def _read_samples_table(cls, tar_handle, filename):
+    def _read_samples_table(
+        cls,
+        tar_handle: tarfile.TarFile,
+        filename: str,
+    ) -> tuple[dict[Any, Any], dict[Any, Any]]:
         cls._check_required_file(tar_handle, filename)
 
         samples = cls._read_table(tar_handle, "samples.txt", _SAMPLES_TABLE_COLUMNS)
@@ -243,8 +251,9 @@ class ZonkeyDB:
                 raise ZonkeyDBError(f"Not all samples column {key!r} assignd a group")
             elif len(group_labels) != k_value:
                 raise ZonkeyDBError(
-                    "Expected %i groups in column %r, found %i"
-                    % (k_value, key, len(group_labels))
+                    "Expected {} groups in column {!r}, found {}".format(
+                        k_value, key, len(group_labels)
+                    )
                 )
 
             groups[k_value] = group
@@ -255,7 +264,11 @@ class ZonkeyDB:
         return samples, groups
 
     @classmethod
-    def _read_sample_order(cls, tar_handle, filename):
+    def _read_sample_order(
+        cls,
+        tar_handle: tarfile.TarFile,
+        filename: str,
+    ) -> tuple[str, ...]:
         cls._check_required_file(tar_handle, filename)
 
         handle = TextIOWrapper(tar_handle.extractfile(filename))
@@ -309,8 +322,7 @@ class ZonkeyDB:
             raise ZonkeyDBError(
                 "At most two different sequence lengths "
                 "expected for mitochondrial sequences, but "
-                "found %i different lengths in %r: %s"
-                % (len(lengths), filename, lengths_s)
+                f"found {len(lengths)} different lengths in {filename!r}: {lengths_s}"
             )
         elif len(lengths) != 1:
             # Unpadded sequences are allowed
@@ -319,17 +331,15 @@ class ZonkeyDB:
 
             if delta_len != mito_padding:
                 raise ZonkeyDBError(
-                    "Length difference between mitochondrial "
-                    "sequences in %r does not match the "
-                    "padding; expected a difference of %i bp, "
-                    "but found a %i bp difference."
-                    % (filename, mito_padding, delta_len)
+                    "Length difference between mitochondrial sequences in "
+                    f"{filename!r} does not match the padding; expected a difference "
+                    f"of {mito_padding} bp, but found a {delta_len} bp difference."
                 )
 
         return results
 
     @classmethod
-    def _read_settings(cls, tar_handle, filename):
+    def _read_settings(cls, tar_handle: tarfile.TarFile, filename: str) -> object:
         cls._check_required_file(tar_handle, filename)
 
         handle = TextIOWrapper(tar_handle.extractfile(filename))
@@ -355,25 +365,26 @@ class ZonkeyDB:
         if result["Format"] > _SUPPORTED_DB_FORMAT_MAJOR:
             raise ZonkeyDBError(
                 "Database version is too old; this version of "
-                "PALEOMIX supports the Zonkey DB v%i, but the "
-                "database is v%i; download an updated "
-                "database to continue." % (_SUPPORTED_DB_FORMAT_MAJOR, result["Format"])
+                "PALEOMIX supports the Zonkey DB v{}, but the "
+                "database is v{}; download an updated "
+                "database to continue.".format(
+                    _SUPPORTED_DB_FORMAT_MAJOR, result["Format"]
+                )
             )
         elif result["Format"] < _SUPPORTED_DB_FORMAT_MAJOR:
             raise ZonkeyDBError(
                 "Database version is too new; this version of "
-                "PALEOMIX supports the Zonkey DB v%i, but the "
-                "database is v%i; upgrade PALEOMIX to "
-                "continue." % (_SUPPORTED_DB_FORMAT_MAJOR, result["Format"])
+                "PALEOMIX supports the Zonkey DB v{}, but the "
+                "database is v{}; upgrade PALEOMIX to "
+                "continue.".format(_SUPPORTED_DB_FORMAT_MAJOR, result["Format"])
             )
         elif result["Revision"] < _SUPPORTED_DB_FORMAT_MINOR:
             raise ZonkeyDBError(
                 "Database version is too old; this version of "
-                "PALEOMIX supports the Zonkey DB v%i, rev. %i "
-                "or newer, but the database is v%i rev. %i; "
+                "PALEOMIX supports the Zonkey DB v{}, rev. {} "
+                "or newer, but the database is v{} rev. {}; "
                 "please download an updated database to "
-                "continue."
-                % (
+                "continue.".format(
                     _SUPPORTED_DB_FORMAT_MAJOR,
                     _SUPPORTED_DB_FORMAT_MINOR,
                     result["Format"],
@@ -415,10 +426,9 @@ class ZonkeyDB:
             fields = line.strip().split("\t")
             if len(fields) != len(header):
                 raise ZonkeyDBError(
-                    "Line %i in simulations table %r, does "
-                    "not contain the expected number of "
-                    "columns; expected %i, but found %i!"
-                    % (linenum, filename, len(header), len(fields))
+                    f"Line {linenum} in simulations table {filename!r}, does not "
+                    f"contain the expected number of columns; expected {len(header)}, "
+                    f"but found {len(fields)}!"
                 )
 
             row: dict[str, Any] = dict(zip(header, fields))
@@ -433,9 +443,9 @@ class ZonkeyDB:
                     row[key] = int(row[key])
                 except ValueError:  # noqa: PERF203
                     raise ZonkeyDBError(
-                        "Malformed value for column %r at "
-                        "line %i in simulations table %r; "
-                        "expected int, found %r" % (key, linenum, filename, row[key])
+                        f"Malformed value for column {key!r} at line {linenum} in "
+                        f"simulations table {filename!r}; expected int, found "
+                        f"{row[key]!r}"
                     )
 
             for key in ("Percentile", "Value"):
@@ -443,9 +453,9 @@ class ZonkeyDB:
                     row[key] = float(row[key])
                 except ValueError:  # noqa: PERF203
                     raise ZonkeyDBError(
-                        "Malformed value for column %r at "
-                        "line %i in simulations table %r; "
-                        "expected float, found %r" % (key, linenum, filename, row[key])
+                        f"Malformed value for column {key!r} at line {linenum} in "
+                        f"simulations table {filename!r}; expected float, found "
+                        f"{row[key]!r}"
                     )
 
             for key in ("Sample1", "Sample2"):
@@ -504,9 +514,8 @@ class ZonkeyDB:
 
                 if len(fields) != len(header):
                     raise ZonkeyDBError(
-                        "Error reading %r at line %i; "
-                        "expected  %i columns, found %i "
-                        "columns!" % (filename, linenum, len(header), len(fields))
+                        f"Error reading {filename!r} at line {linenum}; expected "
+                        f"{len(header)} columns, found {len(fields)} columns!"
                     )
 
                 row = dict(zip(header, fields))

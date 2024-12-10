@@ -143,7 +143,7 @@ def _admixture_read_results(filename, samples):
     if len(samples) != len(lines):
         raise AdmixtureError(
             "unexpected number of lines in admixture file; "
-            "expected %i samples, found %i" % (len(samples), len(lines))
+            f"expected {len(samples)} samples, found {len(lines)}"
         )
 
     result = {}
@@ -168,8 +168,8 @@ def _admixture_validate_ancestral_groups(data, table, k_groups, cutoff):
 
         if count > 1:
             mixed_groups.append(
-                "member(s) of reference group %s assigned to "
-                "%i ancestral populations" % (group, count)
+                f"member(s) of reference group {group} assigned to "
+                f"{count} ancestral populations"
             )
 
     if mixed_groups:

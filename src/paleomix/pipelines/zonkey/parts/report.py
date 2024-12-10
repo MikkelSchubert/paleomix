@@ -147,7 +147,7 @@ class ReportNode(Node):
 
         group_headers = []
         for k_value in sorted(self._data.groups):
-            group_headers.append("          <th>Group(%i)</th>" % k_value)
+            group_headers.append(f"          <th>Group({k_value})</th>")
         output_handle.write(_SAMPLE_LIST_HEADER % ("\n".join(group_headers),))
 
         for name, row in sorted(self._data.samples.items()):
@@ -371,14 +371,14 @@ class AnalysisReport:
                 # which are required to build admixture figures in the reports.
                 for k_groups in sorted(self._data.groups):
                     input_files.append(
-                        os.path.join(admix_root, "%s.%i.Q" % (postfix, k_groups))
+                        os.path.join(admix_root, f"{postfix}.{k_groups}.Q")
                     )
 
                 # Include files tabulating variance explained by models
                 figures_path = os.path.join(self._root, "figures", "treemix")
                 for n_edges in (0, 1):
                     variance_path = os.path.join(
-                        figures_path, "%s_%i_variance.txt" % (postfix, n_edges)
+                        figures_path, f"{postfix}_{n_edges}_variance.txt"
                     )
 
                     input_files.append(variance_path)
@@ -403,7 +403,7 @@ class AnalysisReport:
     def admixture_results(self, k_groups, incl_ts, cutoff=admixture.CUTOFF):
         prefix = "incl_ts" if incl_ts else "excl_ts"
         filename = os.path.join(
-            self._root, "results", "admixture", "%s.%i.Q" % (prefix, k_groups)
+            self._root, "results", "admixture", f"{prefix}.{k_groups}.Q"
         )
 
         return admixture.read_admixture_results(

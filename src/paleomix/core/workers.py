@@ -448,7 +448,7 @@ class LocalWorker:
 
         return True
 
-    def get(self, handle: HandleType):
+    def get(self, handle: HandleType) -> list[EventType]:
         self._check_running()
 
         # The process for this task has completed, but the results may already have been
@@ -499,7 +499,12 @@ class LocalWorker:
 
 class RemoteWorker:
     def __init__(
-        self, id: str, host: str, port: int, secret: bytes, **_kwargs: Any
+        self,
+        id: str,
+        host: str,
+        port: int,
+        secret: bytes,
+        **_kwargs: object,
     ) -> None:
         self.id = id
         self._conn: Any = None

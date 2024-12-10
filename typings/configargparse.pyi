@@ -16,31 +16,6 @@ Action = argparse.Action
 FileType = argparse.FileType
 Namespace = argparse.Namespace
 
-_ArgumentParserT = TypeVar("_ArgumentParserT", bound=ArgumentParser)
-
-class _SubParsersAction(argparse._SubParsersAction[_ArgumentParserT]):  # noqa: SLF001
-    def add_parser(
-        self,
-        name: str,
-        *,
-        help: str | None = ...,
-        aliases: Sequence[str] = ...,
-        # Kwargs from ArgumentParser constructor
-        prog: str | None = ...,
-        usage: str | None = ...,
-        description: str | None = ...,
-        epilog: str | None = ...,
-        parents: Sequence[ArgumentParser] = ...,
-        formatter_class: _FormatterClass = ...,
-        prefix_chars: str = ...,
-        fromfile_prefix_chars: str | None = ...,
-        argument_default: object = ...,
-        conflict_handler: str = ...,
-        add_help: bool = ...,
-        allow_abbrev: bool = ...,
-        default_config_files: Sequence[str] = ...,
-    ) -> ArgumentParser: ...
-
 class ArgumentDefaultsRawHelpFormatter(
     argparse.ArgumentDefaultsHelpFormatter,
     argparse.RawTextHelpFormatter,
@@ -52,7 +27,7 @@ _ConfigDict: TypeAlias = OrderedDict[str, str | list[str]]
 class ConfigFileParser:
     def get_syntax_description(self) -> str: ...
     def parse(self, stream: IO[str]) -> _ConfigDict: ...
-    def serialize(self, items: IO[str]) -> None: ...
+    def serialize(self, items: _ConfigDict) -> str: ...
 
 class ConfigFileParserException(Exception): ...  # noqa: N818
 
@@ -76,7 +51,7 @@ class YAMLConfigFileParser(ConfigFileParser):
     ) -> str: ...
 
 class _FormatterClass(Protocol):
-    def __call__(self, prog: str) -> HelpFormatter: ...
+    def __call__(self, *, prog: str) -> HelpFormatter: ...
 
 _ArgumentParserType = TypeVar("_ArgumentParserType", bound=ArgumentParser)
 
@@ -113,19 +88,20 @@ class ArgumentParser(argparse.ArgumentParser):
     ) -> None: ...
     def parse_args(
         self,
-        args: str | list[str] | None = ...,
+        args: Sequence[str] | None = ...,
         namespace: Namespace | None = ...,
         config_file_contents: str | None = ...,
         env_vars: dict[Any, Any] = ...,
     ) -> Namespace: ...
     def parse_known_args(
         self,
-        args: str | list[str] | None = ...,
+        *,
+        args: Sequence[str] | None = ...,
         namespace: Namespace | None = ...,
         config_file_contents: Incomplete | None = ...,
         env_vars: dict[Any, Any] = ...,
         ignore_help_args: bool = ...,
-    ) -> Namespace: ...
+    ) -> tuple[Namespace, list[str]]: ...
     def write_config_file(
         self,
         parsed_namespace: Namespace,
@@ -149,7 +125,7 @@ class ArgumentParser(argparse.ArgumentParser):
         required: bool = ...,
         help: str | None = ...,
         metavar: str | None = ...,
-    ) -> _SubParsersAction[_ArgumentParserType]: ...
+    ) -> argparse._SubParsersAction[_ArgumentParserType]: ...  # pyright: ignore[reportPrivateUsage]
     @overload
     def add_subparsers(
         self,
@@ -164,7 +140,7 @@ class ArgumentParser(argparse.ArgumentParser):
         required: bool = ...,
         help: str | None = ...,
         metavar: str | None = ...,
-    ) -> _SubParsersAction[_ArgumentParserType]: ...
+    ) -> argparse._SubParsersAction[_ArgumentParserType]: ...  # pyright: ignore[reportPrivateUsage]
 
 ONE_OR_MORE = argparse.ONE_OR_MORE
 OPTIONAL = argparse.OPTIONAL

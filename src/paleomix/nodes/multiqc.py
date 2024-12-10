@@ -91,6 +91,6 @@ class MultiQCNode(CommandNode):
         CommandNode.__init__(
             self,
             command=command,
-            description="multiQC of %i reports" % (len(dependencies),),
+            description=f"multiQC of {len(dependencies)} reports",
             dependencies=dependencies,
         )

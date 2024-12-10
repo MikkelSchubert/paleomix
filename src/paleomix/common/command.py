@@ -615,7 +615,7 @@ class AtomicCmd:
         executable = os.path.basename(executable)
 
         # TODO: Use more sensible filename, e.g. log_{exec}_{counter}.{stdout/err}
-        filename = "pipe_%s_%i.%s" % (executable, id(self), out_name)
+        filename = f"pipe_{executable}_{id(self)}.{out_name}"
 
         return filetype(filename, temporary=True)
 
@@ -893,7 +893,7 @@ def _build_stdin(
     prefix = "{}{}   = ".format(" " * indent, "STDIN")
     if isinstance(pipe, AtomicCmd):
         if pipe in ids:
-            lines.append("%sPiped from process %i" % (prefix, ids[pipe]))
+            lines.append(f"{prefix}Piped from process {ids[pipe]}")
         else:
             lines.append(f"{prefix}<PIPE>")
     elif isinstance(pipe, (InputFile, TempInputFile)):
@@ -914,7 +914,7 @@ def _build_stdout(
     pipe = command.stdout
     if command in pipes:
         pipe = pipes[command]
-        lines.append("%sPiped to process %i" % (prefix, ids[pipe]))
+        lines.append(f"{prefix}Piped to process {ids[pipe]}")
     elif isinstance(pipe, (OutputFile, TempOutputFile)):
         temp = "${TEMP_DIR}" if command.temp_dir is None else command.temp_dir
         path = command._to_path(temp, pipe)
@@ -968,7 +968,7 @@ def _pformat(
         s_prefix = " " * indent
         if isinstance(command, AtomicCmd):
             cmd_id = ids[command]
-            lines.append(s_prefix + "Process %i:" % (cmd_id,))
+            lines.append(s_prefix + f"Process {cmd_id}:")
             s_prefix += "  "
     s_prefix_len = len(s_prefix)
 

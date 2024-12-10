@@ -256,7 +256,7 @@ def process_bam(args, data, bam_handle, mapping):
     references = [reverse_mapping.get(name, name) for name in raw_references]
 
     if args.downsample:
-        sys.stderr.write("Downsampling to at most %i BAM records\n" % (args.downsample))
+        sys.stderr.write(f"Downsampling to at most {args.downsample} BAM records\n")
         bam_handle = DownsampledBAM(bam_handle, args.downsample, references)
 
     statistics = {

@@ -39,7 +39,7 @@ from paleomix.common.command import (
     TempOutputFile,
 )
 from paleomix.common.utilities import safe_coerce_to_tuple
-from paleomix.node import CommandNode, Node, NodeError
+from paleomix.node import CommandNode, Node, NodeError, PathTypes
 from paleomix.pipelines.zonkey.common import read_summary
 from paleomix.tools import factory
 
@@ -162,7 +162,7 @@ class AdmixtureNode(CommandNode):
         self._input_file = input_file
 
         prefix = os.path.splitext(os.path.basename(input_file))[0]
-        output_prefix = os.path.join(output_root, "%s.%i" % (prefix, k_groups))
+        output_prefix = os.path.join(output_root, f"{prefix}.{k_groups}")
 
         command = AtomicCmd(
             [
@@ -451,7 +451,7 @@ class FreqToTreemixNode(Node):
                 rows = {row[2]: row for row in rows}
                 for sample in header:
                     _, _, _, mac, nchroms = rows[sample]
-                    result.append("%s,%i" % (mac, int(nchroms) - int(mac)))
+                    result.append(f"{mac},{int(nchroms) - int(mac)}")
 
                 handle.write("{}\n".format(" ".join(result)))
 
@@ -553,10 +553,10 @@ class TreemixNode(CommandNode):
 
         super()._setup(temp)
 
-    def _teardown(self, temp: str):
+    def _teardown(self, temp: PathTypes) -> None:
         with open(fileutils.reroot_path(temp, self._params_file), "w") as out:
-            out.write("k: %i\n" % (self._param_k,))
-            out.write("m: %i\n" % (self._param_m,))
+            out.write(f"k: {self._param_k}\n")
+            out.write(f"m: {self._param_m}\n")
             out.write(f"outgroup: {list(self._param_outgroup)!r}\n")
 
         open(fileutils.reroot_path(temp, self._parameters_hash), "w").close()
