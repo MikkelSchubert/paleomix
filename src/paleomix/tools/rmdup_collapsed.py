@@ -45,7 +45,8 @@ import random
 import sys
 from argparse import Namespace
 from collections import defaultdict, deque
-from typing import Optional, Sequence, Tuple, cast
+from collections.abc import Sequence
+from typing import Optional, cast
 
 from pysam import AlignedSegment, AlignmentFile
 from typing_extensions import TypeAlias
@@ -64,8 +65,8 @@ _CIGAR_SOFTCLIP = 4
 _CIGAR_HARDCLIP = 5
 
 
-AlignmentCoords: TypeAlias = Tuple[int, bool, int, int]
-ReadAndAlignment: TypeAlias = Tuple[AlignedSegment, Optional[AlignmentCoords]]
+AlignmentCoords: TypeAlias = tuple[int, bool, int, int]
+ReadAndAlignment: TypeAlias = tuple[AlignedSegment, Optional[AlignmentCoords]]
 
 
 def read_quality(read: AlignedSegment) -> float | int:
@@ -298,9 +299,10 @@ def main(argv: list[str]) -> int:
         sys.stderr.write("STDOUT is a terminal, terminating!\n")
         return 1
 
-    with AlignmentFile(args.input, "rb") as infile, AlignmentFile(
-        "-", "wb", template=infile
-    ) as outfile:
+    with (
+        AlignmentFile(args.input, "rb") as infile,
+        AlignmentFile("-", "wb", template=infile) as outfile,
+    ):
         return process(args, infile, outfile)
 
     return 0

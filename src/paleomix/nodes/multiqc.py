@@ -30,7 +30,8 @@ from __future__ import annotations
 
 import fnmatch
 import os
-from typing import Iterable, Literal
+from collections.abc import Iterable
+from typing import Literal
 
 from paleomix.common.command import AtomicCmd, InputFile, OptionsType, OutputFile
 from paleomix.node import CommandNode, Node, NodeError

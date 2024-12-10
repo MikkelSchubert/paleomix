@@ -177,23 +177,23 @@ from __future__ import annotations
 import copy
 import logging
 import re
-from collections.abc import Collection
-from typing import Dict, Hashable, List, Sequence, Tuple, Type, Union
+from collections.abc import Collection, Hashable, Sequence
+from typing import Union
 
-from typing_extensions import TypeGuard
+from typing_extensions import TypeAlias, TypeGuard
 
 from paleomix.common import yaml
 from paleomix.common.fileutils import PathTypes, fspath
 
-BasicType = Union[str, int, float, bool, None]
-SpecType = Union["_SpecBase", "Type[_SpecBase]"]
-SpecTree = Union[
+BasicType: TypeAlias = Union[str, int, float, bool, None]
+SpecType: TypeAlias = Union["_SpecBase", type["_SpecBase"]]
+SpecTree: TypeAlias = Union[
     BasicType,
     SpecType,
-    Dict[Union[str, SpecType], "SpecTree"],
-    List["SpecTree"],
+    dict[Union[str, SpecType], "SpecTree"],
+    list["SpecTree"],
 ]
-SpecPath = Tuple[BasicType, ...]
+SpecPath: TypeAlias = tuple[BasicType, ...]
 
 
 class MakefileError(RuntimeError):
@@ -398,7 +398,7 @@ class IsUnsignedInt(IsInt):
     ) -> None:
         IsInt.__init__(self, description, default)
 
-    def meets_spec(self, value: object) -> bool:
+    def meets_spec(self, value: object) -> TypeGuard[bool]:
         return super().meets_spec(value) and value >= 0
 
 
@@ -412,7 +412,7 @@ class IsFloat(MakefileSpec):
     ) -> None:
         MakefileSpec.__init__(self, description, default)
 
-    def meets_spec(self, value: bool) -> TypeGuard[float]:
+    def meets_spec(self, value: object) -> TypeGuard[float]:
         return isinstance(value, float)
 
 

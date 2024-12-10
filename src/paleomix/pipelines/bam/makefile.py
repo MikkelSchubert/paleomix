@@ -28,7 +28,8 @@ import logging
 import os
 import re
 import string
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 from paleomix.common import sequences
 from paleomix.common.bamfiles import BAM_PLATFORMS

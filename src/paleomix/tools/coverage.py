@@ -24,8 +24,9 @@ from __future__ import annotations
 import copy
 import sys
 from collections import defaultdict
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Dict, Iterator, Mapping, Optional, Sequence, Union
+from typing import Optional, Union
 
 import pysam
 from typing_extensions import TypeAlias
@@ -41,11 +42,11 @@ from paleomix.tools.bam_stats.common import (
     main_wrapper,
 )
 
-CoverageTable: TypeAlias = Dict[str, Dict[str, Dict[str, Dict[str, "CoverageStats"]]]]
+CoverageTable: TypeAlias = dict[str, dict[str, dict[str, dict[str, "CoverageStats"]]]]
 CoverageTableComponent: TypeAlias = Mapping[
     str, Union["CoverageStats", "CoverageTableComponent"]
 ]
-CountsTable: TypeAlias = Dict[str, Dict[Optional[str], "CoverageStats"]]
+CountsTable: TypeAlias = dict[str, dict[Optional[str], "CoverageStats"]]
 
 
 # Header prepended to output tables

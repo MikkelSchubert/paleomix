@@ -23,7 +23,8 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import IO, Iterable
+from collections.abc import Iterable
+from typing import IO
 
 from humanfriendly.terminal import ansi_wrap, terminal_supports_colors
 

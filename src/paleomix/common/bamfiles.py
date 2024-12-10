@@ -22,7 +22,7 @@
 from __future__ import annotations
 
 import itertools
-from typing import Generator, Iterable, Iterator
+from collections.abc import Generator, Iterable, Iterator
 
 from pysam import AlignedSegment, AlignmentFile
 

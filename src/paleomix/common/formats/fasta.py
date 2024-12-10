@@ -23,7 +23,8 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import IO, Iterable, Iterator
+from collections.abc import Iterable, Iterator
+from typing import IO
 
 import pysam
 

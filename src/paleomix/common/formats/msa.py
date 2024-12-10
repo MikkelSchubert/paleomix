@@ -22,7 +22,8 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import IO, FrozenSet, Iterable, Sequence
+from collections.abc import Iterable, Sequence
+from typing import IO
 
 from typing_extensions import Self
 
@@ -36,7 +37,7 @@ class MSAError(FASTAError):
     pass
 
 
-class MSA(FrozenSet[FASTA]):
+class MSA(frozenset[FASTA]):
     """Represents a Multiple Sequence Alignment of FASTA records."""
 
     def __new__(cls, sequences: Iterable[FASTA]) -> Self:

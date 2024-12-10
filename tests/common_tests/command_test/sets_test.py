@@ -22,10 +22,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Type, Union
+from typing import Any, Union
 from unittest.mock import Mock, call
 
 import pytest
+from typing_extensions import TypeAlias
 
 import paleomix.common.command
 from paleomix.common.command import (
@@ -42,7 +43,7 @@ from paleomix.common.command import (
 from paleomix.common.versions import Requirement
 
 _SET_CLASSES = (ParallelCmds, SequentialCmds)
-SetTypes = Union[Type[ParallelCmds], Type[SequentialCmds]]
+SetTypes: TypeAlias = Union[type[ParallelCmds], type[SequentialCmds]]
 
 ###############################################################################
 ###############################################################################

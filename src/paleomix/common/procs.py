@@ -30,10 +30,11 @@ import subprocess
 import sys
 import time
 from collections import defaultdict
+from collections.abc import Iterable, Sequence
 from multiprocessing import Process
 from pathlib import Path
 from subprocess import Popen, TimeoutExpired
-from typing import IO, TYPE_CHECKING, Any, Iterable, Sequence, Union, cast
+from typing import IO, TYPE_CHECKING, Any, Union, cast
 
 from typing_extensions import TypeAlias
 

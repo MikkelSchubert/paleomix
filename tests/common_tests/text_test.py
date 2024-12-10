@@ -21,7 +21,8 @@
 #
 from __future__ import annotations
 
-from typing import AnyStr, Callable, Iterable, NoReturn, TypeVar
+from collections.abc import Iterable
+from typing import AnyStr, Callable, NoReturn, TypeVar
 
 import pytest
 

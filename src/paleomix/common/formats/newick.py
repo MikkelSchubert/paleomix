@@ -22,7 +22,8 @@
 from __future__ import annotations
 
 import re
-from typing import Generator, Iterable, Iterator, Optional, Sequence
+from collections.abc import Generator, Iterable, Iterator, Sequence
+from typing import Optional
 
 from paleomix.common.formats import FormatError
 from paleomix.common.utilities import Immutable, TotallyOrdered

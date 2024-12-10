@@ -21,7 +21,8 @@
 #
 from __future__ import annotations
 
-from typing import Any, Generator, Iterable, Mapping, TypeVar
+from collections.abc import Generator, Iterable, Mapping
+from typing import Any, TypeVar
 
 from pysam import AlignmentFile
 

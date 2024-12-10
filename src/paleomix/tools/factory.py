@@ -28,8 +28,9 @@ is not available from the users' PATH.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, TypeVar
+from typing import TypeVar
 
 from paleomix.common.command import (
     ArgsType,

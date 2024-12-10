@@ -25,7 +25,8 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Generator, Literal
+from collections.abc import Generator
+from typing import Literal
 
 from paleomix.common.command import InputFile
 from paleomix.common.fileutils import swap_ext

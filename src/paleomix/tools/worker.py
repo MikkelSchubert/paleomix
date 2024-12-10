@@ -31,9 +31,10 @@ import signal
 import socket
 import sys
 import uuid
+from collections.abc import Collection, Iterable, Iterator
 from multiprocessing import ProcessError, Queue, cpu_count
 from multiprocessing.connection import Connection, Listener, wait
-from typing import Any, Collection, Dict, Iterable, Iterator
+from typing import Any
 
 import paleomix
 import paleomix.common.logging
@@ -63,7 +64,7 @@ from paleomix.core.workers import (
 from paleomix.node import Node, NodeError, NodeMissingFilesError
 from paleomix.nodegraph import NodeGraph
 
-EventType = Dict[str, Any]
+EventType = dict[str, Any]
 Events = Iterable[EventType]
 
 

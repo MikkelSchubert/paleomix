@@ -452,9 +452,11 @@ def test_move_file__destination_removed_if_out_of_space(tmp_path: Path) -> None:
     source.write_text("...")
     destination = tmp_path / "destination"
 
-    with pytest.raises(OSError, match="Out of space"), patch(
-        "shutil.copy2", wraps=_copy2
-    ), patch("os.rename", wraps=_rename):
+    with (
+        pytest.raises(OSError, match="Out of space"),
+        patch("shutil.copy2", wraps=_copy2),
+        patch("os.rename", wraps=_rename),
+    ):
         move_file(source, destination)
 
     assert list(tmp_path.iterdir()) == [source]
@@ -556,8 +558,9 @@ def test_copy_file__destination_removed_if_out_of_space(tmp_path: Path) -> None:
     source.write_text("...")
     destination = tmp_path / "destination"
 
-    with pytest.raises(OSError, match="Out of space"), patch(
-        "shutil.copy", wraps=_copy
+    with (
+        pytest.raises(OSError, match="Out of space"),
+        patch("shutil.copy", wraps=_copy),
     ):
         copy_file(source, destination)
 

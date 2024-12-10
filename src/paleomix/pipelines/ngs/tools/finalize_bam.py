@@ -52,7 +52,7 @@ def identify_read(record):
     return record.get_tag("RG")
 
 
-@functools.lru_cache()
+@functools.lru_cache
 def count_mapped_bases(cigar):
     total_matches = 0
     for cigar_op, num in cigar:

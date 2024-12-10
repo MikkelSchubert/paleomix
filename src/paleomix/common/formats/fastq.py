@@ -22,9 +22,10 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import Iterable, Iterator
 from enum import Enum
 from pathlib import Path
-from typing import IO, Iterable, Iterator
+from typing import IO
 
 from paleomix.common.fileutils import open_rt
 from paleomix.common.formats._common import FormatError

@@ -24,9 +24,12 @@ from __future__ import annotations
 import copy
 import os.path
 import string
-from typing import Dict, Iterator, Union
+from collections.abc import Iterator
+from typing import Union
 
-LayoutType = Dict[str, Union[str, "LayoutType"]]
+from typing_extensions import TypeAlias
+
+LayoutType: TypeAlias = dict[str, Union[str, "LayoutType"]]
 
 
 class LayoutError(Exception):

@@ -29,7 +29,7 @@ from __future__ import annotations
 
 import os
 import re
-from typing import Iterable
+from collections.abc import Iterable
 
 from paleomix.common.command import AtomicCmd, InputFile, OptionsType, OutputFile
 from paleomix.common.versions import Requirement

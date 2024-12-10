@@ -28,9 +28,10 @@ import logging
 import os
 import sys
 import time
+from collections.abc import Iterator
 from io import TextIOWrapper
 from logging import LogRecord
-from typing import Any, Iterator
+from typing import Any
 
 import coloredlogs
 from humanfriendly.terminal import ansi_wrap, terminal_supports_colors

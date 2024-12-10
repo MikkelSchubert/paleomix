@@ -21,7 +21,8 @@
 #
 from __future__ import annotations
 
-from typing import Iterable, Literal
+from collections.abc import Iterable
+from typing import Literal
 
 from paleomix.common.command import InputFile
 from paleomix.common.fileutils import describe_files

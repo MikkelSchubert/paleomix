@@ -22,7 +22,8 @@
 from __future__ import annotations
 
 import operator
-from typing import Callable, Iterable, Sequence, TypeVar
+from collections.abc import Iterable, Sequence
+from typing import Callable, TypeVar
 
 import pytest
 

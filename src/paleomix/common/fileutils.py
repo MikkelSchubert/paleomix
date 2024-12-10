@@ -31,9 +31,10 @@ import random
 import shutil
 import sys
 import tempfile
+from collections.abc import Iterable, Sequence
 from datetime import datetime
 from os import fspath
-from typing import IO, Any, Callable, Iterable, Sequence, Union, cast
+from typing import IO, Any, Callable, Union, cast
 
 from .utilities import safe_coerce_to_tuple
 

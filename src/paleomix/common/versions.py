@@ -24,8 +24,8 @@ from __future__ import annotations
 import re
 import subprocess
 import sys
+from collections.abc import Iterable
 from shlex import quote
-from typing import Iterable
 
 from packaging.specifiers import SpecifierSet
 

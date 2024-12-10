@@ -23,8 +23,9 @@ from __future__ import annotations
 
 import functools
 import os
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, Literal
+from typing import Literal
 
 from paleomix.common import versions
 from paleomix.common.command import (
@@ -403,7 +404,7 @@ def _new_bwa_command(
     )
 
 
-@functools.lru_cache()
+@functools.lru_cache
 def get_max_threads(reference: str, threads: int) -> int:
     """Returns the maximum number of threads to use when mapping against a
     given reference sequence. This is done since very little gain is obtained

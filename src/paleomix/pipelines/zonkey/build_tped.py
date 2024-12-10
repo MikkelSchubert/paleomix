@@ -268,9 +268,11 @@ def process_bam(args, data, bam_handle, mapping):
 
     fileutils.make_dirs(args.root)
 
-    with open(os.path.join(args.root, "incl_ts.tped"), "w") as output_incl, open(
-        os.path.join(args.root, "excl_ts.tped"), "w"
-    ) as output_excl, GenotypeReader(args.database) as reader:
+    with (
+        open(os.path.join(args.root, "incl_ts.tped"), "w") as output_incl,
+        open(os.path.join(args.root, "excl_ts.tped"), "w") as output_excl,
+        GenotypeReader(args.database) as reader,
+    ):
         for ref, sites in reader:
             records = set()
             raw_ref = raw_references[references.index(ref)]

@@ -1,13 +1,7 @@
 import argparse
-from typing import (
-    IO,
-    Any,
-    Callable,
-    OrderedDict,
-    Sequence,
-    TypeVar,
-    overload,
-)
+from collections import OrderedDict
+from collections.abc import Sequence
+from typing import IO, Any, Callable, TypeVar, overload
 
 from _typeshed import Incomplete
 from typing_extensions import Protocol, TypeAlias

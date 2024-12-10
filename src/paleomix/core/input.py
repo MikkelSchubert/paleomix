@@ -28,8 +28,9 @@ import socket
 import sys
 import termios
 import tty
+from collections.abc import Iterator
 from multiprocessing.connection import Connection
-from typing import Iterator, Union
+from typing import Union
 
 from typing_extensions import Self, TypeAlias
 

@@ -27,7 +27,7 @@ https://github.com/OpenGene/fastp
 
 from __future__ import annotations
 
-from typing import Iterable
+from collections.abc import Iterable
 
 from paleomix.common.command import AtomicCmd, InputFile, OptionsType, OutputFile
 from paleomix.common.fileutils import describe_paired_files

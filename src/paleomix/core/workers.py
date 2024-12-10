@@ -34,23 +34,10 @@ import sys
 import time
 import traceback
 import uuid
+from collections.abc import Collection, Iterable, Iterator, MutableMapping
 from multiprocessing import ProcessError
 from multiprocessing.connection import Client, Connection, wait
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Collection,
-    Dict,
-    Iterable,
-    Iterator,
-    List,
-    MutableMapping,
-    NoReturn,
-    Optional,
-    Tuple,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, Callable, NoReturn, Optional, Union
 
 import setproctitle
 from typing_extensions import Self, TypeAlias
@@ -66,8 +53,8 @@ from paleomix.core.input import CommandLine, ListTasksEvent, ThreadsEvent
 from paleomix.node import Node, NodeError
 from paleomix.nodegraph import NodeGraph
 
-EventType: TypeAlias = Dict[str, Any]
-MessageType: TypeAlias = Tuple[int, Optional[BaseException], Optional[List[str]]]
+EventType: TypeAlias = dict[str, Any]
+MessageType: TypeAlias = tuple[int, Optional[BaseException], Optional[list[str]]]
 WorkerType: TypeAlias = Union["LocalWorker", "RemoteWorker"]
 HandleType: TypeAlias = Union[Connection, socket.socket, int]
 QueueType: TypeAlias = "multiprocessing.Queue[MessageType]"

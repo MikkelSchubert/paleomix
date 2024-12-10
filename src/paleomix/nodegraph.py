@@ -26,10 +26,11 @@ import errno
 import fnmatch
 import logging
 import os
+from collections.abc import Iterable
 from enum import Enum
 from itertools import islice
 from shlex import quote
-from typing import Iterable, TypeVar
+from typing import TypeVar
 
 from paleomix.common.fileutils import missing_executables
 from paleomix.common.versions import Requirement, RequirementError

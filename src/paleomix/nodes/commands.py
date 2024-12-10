@@ -28,7 +28,7 @@ Each node is equivalent to a particular command:
 from __future__ import annotations
 
 import os
-from typing import Iterable
+from collections.abc import Iterable
 
 from paleomix.common.command import InputFile, OptionsType, OutputFile, ParallelCmds
 from paleomix.common.fileutils import describe_files

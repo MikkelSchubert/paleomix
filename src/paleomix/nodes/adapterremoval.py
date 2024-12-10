@@ -21,7 +21,8 @@
 #
 from __future__ import annotations
 
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 from paleomix.common import fileutils, versions
 from paleomix.common.command import (

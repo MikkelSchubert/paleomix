@@ -28,8 +28,9 @@ import os
 import signal
 import sys
 import time
+from collections.abc import Iterable
 from shlex import quote
-from typing import Any, Iterable, NoReturn
+from typing import Any, NoReturn
 
 import paleomix.common.logging
 import paleomix.core.reports

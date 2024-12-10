@@ -23,15 +23,8 @@ from __future__ import annotations
 
 import copy
 import itertools
-from typing import (
-    Any,
-    Callable,
-    Iterable,
-    Iterator,
-    Sequence,
-    TypeVar,
-    overload,
-)
+from collections.abc import Iterable, Iterator, Sequence
+from typing import Any, Callable, TypeVar, overload
 
 T = TypeVar("T")
 

@@ -23,8 +23,8 @@ from __future__ import annotations
 
 import collections
 import sys
+from collections.abc import Iterable, Iterator
 from itertools import groupby
-from typing import Iterable, Iterator
 
 import pysam
 from pysam import AlignedSegment

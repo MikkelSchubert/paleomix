@@ -29,7 +29,8 @@ https://github.com/samtools/samtools
 from __future__ import annotations
 
 import os
-from typing import Iterable, Literal
+from collections.abc import Iterable
+from typing import Literal
 
 from paleomix.common import versions
 from paleomix.common.command import (

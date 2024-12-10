@@ -24,15 +24,8 @@ from __future__ import annotations
 import collections
 import itertools
 import sys
-from typing import (
-    Dict,
-    Iterable,
-    Iterator,
-    List,
-    NewType,
-    Optional,
-    Tuple,
-)
+from collections.abc import Iterable, Iterator
+from typing import NewType, Optional
 
 import pysam
 from typing_extensions import TypeAlias
@@ -47,16 +40,16 @@ from paleomix.tools.bam_stats.common import (
     main_wrapper,
 )
 
-SampleLibraryKey = NewType("SampleLibraryKey", Tuple[str, str])
+SampleLibraryKey = NewType("SampleLibraryKey", tuple[str, str])
 SampleLibraryID = NewType("SampleLibraryID", int)
 
-CountsCache: TypeAlias = "collections.deque[list[int]]"
-CountsDict: TypeAlias = Dict[int, int]
-TotalsKey: TypeAlias = Tuple[str, str, str]
-TotalsDict: TypeAlias = Dict[TotalsKey, CountsDict]
+CountsCache: TypeAlias = collections.deque[list[int]]
+CountsDict: TypeAlias = dict[int, int]
+TotalsKey: TypeAlias = tuple[str, str, str]
+TotalsDict: TypeAlias = dict[TotalsKey, CountsDict]
 
-ReadGroupToID: TypeAlias = Dict[Optional[str], SampleLibraryID]
-IDToLibrary: TypeAlias = List[SampleLibraryKey]
+ReadGroupToID: TypeAlias = dict[Optional[str], SampleLibraryID]
+IDToLibrary: TypeAlias = list[SampleLibraryKey]
 
 
 ##############################################################################

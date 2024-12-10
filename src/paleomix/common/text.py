@@ -22,7 +22,8 @@
 from __future__ import annotations
 
 import itertools
-from typing import Any, AnyStr, Callable, Iterable, Iterator, TypeVar
+from collections.abc import Iterable, Iterator
+from typing import Any, AnyStr, Callable, TypeVar
 
 T = TypeVar("T")
 

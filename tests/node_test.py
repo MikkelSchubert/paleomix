@@ -30,8 +30,9 @@ import os
 import random
 import re
 import uuid
+from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import Any, Iterable, Sequence, TypeVar
+from typing import Any, TypeVar
 from unittest.mock import Mock, call
 
 import pytest

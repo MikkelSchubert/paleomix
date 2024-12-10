@@ -30,34 +30,22 @@ from pathlib import Path
 
 from paleomix.common.fileutils import copy_file
 
-if sys.version_info < (3, 9):
-
-    def _parse_resource(resource: str) -> tuple[str, str]:
-        *modules, filename = resource.split(os.path.sep)
-        return ".".join(modules), filename
-
-    def read_text(resource: str) -> str:
-        module, filename = _parse_resource(resource)
-        return resources.read_text(f"paleomix.resources.{module}", filename)
-
-    def access(resource: str) -> AbstractContextManager[Path]:
-        module, filename = _parse_resource(resource)
-        return resources.path(f"paleomix.resources.{module}", filename)
-
+if sys.version_info < (3, 11):
+    from importlib.abc import Traversable
 else:
-    if sys.version_info < (3, 11):
-        from importlib.abc import Traversable
-    else:
-        from importlib.resources.abc import Traversable
+    from importlib.resources.abc import Traversable
 
-    def _as_traversable(resource: str) -> Traversable:
-        return resources.files("paleomix").joinpath("resources").joinpath(resource)
 
-    def read_text(resource: str) -> str:
-        return _as_traversable(resource).read_text(encoding="utf-8")
+def _as_traversable(resource: str) -> Traversable:
+    return resources.files("paleomix").joinpath("resources").joinpath(resource)
 
-    def access(resource: str) -> AbstractContextManager[Path]:
-        return resources.as_file(_as_traversable(resource))
+
+def read_text(resource: str) -> str:
+    return _as_traversable(resource).read_text(encoding="utf-8")
+
+
+def access(resource: str) -> AbstractContextManager[Path]:
+    return resources.as_file(_as_traversable(resource))
 
 
 def copy_resource(resource: str, destination: str) -> None:

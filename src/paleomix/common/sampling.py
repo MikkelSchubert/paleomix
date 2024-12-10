@@ -23,7 +23,8 @@ from __future__ import annotations
 
 import bisect
 import random
-from typing import Iterable, Iterator, TypeVar
+from collections.abc import Iterable, Iterator
+from typing import TypeVar
 
 T = TypeVar("T")
 

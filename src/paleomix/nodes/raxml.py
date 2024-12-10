@@ -24,7 +24,7 @@ from __future__ import annotations
 import os
 import random
 import re
-from typing import Iterable
+from collections.abc import Iterable
 
 from paleomix.common import fileutils, versions
 from paleomix.common.command import (

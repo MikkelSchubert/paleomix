@@ -28,10 +28,11 @@ import shlex
 import signal
 import subprocess
 import sys
+from collections.abc import Iterable
 from pathlib import Path
-from typing import IO, Callable, Dict, Iterable, List, Tuple, Union
+from typing import IO, Callable, Union
 
-from typing_extensions import Self
+from typing_extensions import Self, TypeAlias
 
 from paleomix.common import fileutils
 from paleomix.common.fileutils import PathTypes
@@ -99,27 +100,21 @@ class TempOutputFile(OutputFile):
         super().__init__(os.path.basename(path), temporary=True)
 
 
-IOFileTypes = Union[InputFile, OutputFile, TempInputFile, TempOutputFile]
-AtomicFileTypes = Union[AuxiliaryFile, Executable, IOFileTypes]
+IOFileTypes: TypeAlias = Union[InputFile, OutputFile, TempInputFile, TempOutputFile]
+AtomicFileTypes: TypeAlias = Union[AuxiliaryFile, Executable, IOFileTypes]
 
 # Possible types of .stdin/.stdout/.stderr, int being either DEVNULL or PIPE
-WrappedPipeType = Union[int, IOFileTypes, "AtomicCmd"]
+WrappedPipeType: TypeAlias = Union[int, IOFileTypes, "AtomicCmd"]
 # Types that can be passed as values for STDIN, STDOUT, and STDERR
-PipeType = Union[None, str, Path, WrappedPipeType]
+PipeType: TypeAlias = Union[None, str, Path, WrappedPipeType]
 
-# Pos
-OptionValueType = Union[str, float, IOFileTypes, None]
-OptionsType = Dict[
-    str,
-    Union[
-        OptionValueType,
-        List[OptionValueType],
-        Tuple[OptionValueType, ...],
-    ],
+OptionValueType: TypeAlias = Union[str, float, IOFileTypes, None]
+OptionsType: TypeAlias = dict[
+    str, Union[OptionValueType, list[OptionValueType], tuple[OptionValueType, ...]]
 ]
 
-ArgsType = Union[str, int, Path, AtomicFileTypes]
-JoinType = List[Union[str, None, int]]
+ArgsType: TypeAlias = Union[str, int, Path, AtomicFileTypes]
+JoinType: TypeAlias = list[Union[str, None, int]]
 
 
 class AtomicCmd:
