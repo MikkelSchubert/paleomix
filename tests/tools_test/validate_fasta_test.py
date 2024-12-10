@@ -22,14 +22,11 @@
 from __future__ import annotations
 
 import io
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import pytest
 
 from paleomix.tools.validate_fasta import FormatError, check_fasta_file, main
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def test_empty_file() -> None:

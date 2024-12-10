@@ -1,7 +1,5 @@
 from pathlib import Path
-from typing import IO
-
-from typing_extensions import Literal
+from typing import IO, Literal
 
 class YAML:
     version: tuple[int, int] | None

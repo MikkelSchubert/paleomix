@@ -25,7 +25,8 @@ import bz2
 import copy
 import gzip
 import io
-from typing import IO, TYPE_CHECKING, Callable
+from pathlib import Path
+from typing import IO, Callable
 from unittest.mock import patch
 
 import pytest
@@ -33,9 +34,6 @@ import pytest
 from paleomix.common.fileutils import fspath
 from paleomix.common.formats.fasta import FASTA
 from paleomix.common.formats.msa import MSA, FASTAError, MSAError
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 ###############################################################################
 ###############################################################################

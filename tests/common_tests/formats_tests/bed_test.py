@@ -22,7 +22,8 @@
 from __future__ import annotations
 
 import copy
-from typing import TYPE_CHECKING, Any
+from pathlib import Path
+from typing import Any
 from unittest.mock import Mock
 
 import pytest
@@ -35,10 +36,6 @@ from paleomix.common.formats.bed import (
     read_bed_file,
     sort_bed_by_bamfile,
 )
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
 
 ########################################################################################
 # BEDRecord constructor

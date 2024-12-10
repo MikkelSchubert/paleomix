@@ -31,13 +31,13 @@ import sys
 import time
 from collections import defaultdict
 from multiprocessing import Process
+from pathlib import Path
 from subprocess import Popen, TimeoutExpired
 from typing import IO, TYPE_CHECKING, Any, Iterable, Sequence, Union, cast
 
-if TYPE_CHECKING:
-    from pathlib import Path
+from typing_extensions import TypeAlias
 
-    ProcessTypes = Union[Popen[str], Popen[bytes], Process]
+ProcessTypes: TypeAlias = Union["Popen[str]", "Popen[bytes]", Process]
 
 
 PIPE = subprocess.PIPE

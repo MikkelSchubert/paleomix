@@ -21,7 +21,8 @@
 #
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Iterable, Sequence
+from pathlib import Path
+from typing import Any, Iterable, Sequence
 
 import pytest
 
@@ -57,9 +58,6 @@ from paleomix.common.makefile import (
     process_makefile,
     read_makefile,
 )
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 # Dummy value for the path parameters
 _DUMMY_PATH = ("a", "random", "path")

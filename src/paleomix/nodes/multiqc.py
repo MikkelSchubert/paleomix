@@ -30,13 +30,10 @@ from __future__ import annotations
 
 import fnmatch
 import os
-from typing import TYPE_CHECKING, Iterable
+from typing import Iterable, Literal
 
 from paleomix.common.command import AtomicCmd, InputFile, OptionsType, OutputFile
 from paleomix.node import CommandNode, Node, NodeError
-
-if TYPE_CHECKING:
-    from typing_extensions import Literal
 
 # Supported modules and their expected files
 # For more, see https://multiqc.info/docs/#multiqc-modules

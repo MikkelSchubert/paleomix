@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import TYPE_CHECKING, Iterable, Sequence
+from typing import Iterable, Literal, Sequence
 
 import pysam
 
@@ -46,9 +46,6 @@ from paleomix.common.fileutils import (
 )
 from paleomix.node import CommandNode, Node, NodeError
 from paleomix.tools import factory
-
-if TYPE_CHECKING:
-    from typing_extensions import Literal
 
 
 class ApplyBQSRNode(CommandNode):

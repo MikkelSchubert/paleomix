@@ -22,15 +22,14 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import IO, TYPE_CHECKING, FrozenSet, Iterable, Sequence
+from typing import IO, FrozenSet, Iterable, Sequence
+
+from typing_extensions import Self
 
 from paleomix.common.fileutils import PathTypes, open_rt
 from paleomix.common.formats.fasta import FASTA, FASTAError
 from paleomix.common.sequences import NT_CODES, encode_genotype, split
 from paleomix.common.utilities import safe_coerce_to_frozenset
-
-if TYPE_CHECKING:
-    from typing_extensions import Self
 
 
 class MSAError(FASTAError):

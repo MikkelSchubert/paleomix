@@ -28,7 +28,8 @@ is not available from the users' PATH.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Iterable, TypeVar
+from pathlib import Path
+from typing import Iterable, TypeVar
 
 from paleomix.common.command import (
     ArgsType,
@@ -39,9 +40,6 @@ from paleomix.common.command import (
 )
 from paleomix.common.utilities import safe_coerce_to_tuple
 from paleomix.common.versions import Requirement
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 PYTHON_VERSION = Requirement(
     ["%(PYTHON)s", "--version"],

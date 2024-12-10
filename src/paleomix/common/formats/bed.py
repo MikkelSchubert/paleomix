@@ -21,14 +21,12 @@
 #
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generator, Iterable, Mapping, TypeVar
+from typing import Any, Generator, Iterable, Mapping, TypeVar
+
+from pysam import AlignmentFile
 
 from paleomix.common.fileutils import open_rt
 from paleomix.common.utilities import TotallyOrdered
-
-if TYPE_CHECKING:
-    from pysam import AlignmentFile
-
 
 T = TypeVar("T")
 

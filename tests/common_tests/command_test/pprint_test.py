@@ -27,7 +27,7 @@ from __future__ import annotations
 import os
 import shlex
 import signal
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import pytest
 
@@ -42,10 +42,6 @@ from paleomix.common.command import (
     _pformat_list,
     pformat,
 )
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
 
 ###############################################################################
 ###############################################################################

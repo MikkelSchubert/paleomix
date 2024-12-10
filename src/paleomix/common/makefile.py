@@ -177,15 +177,13 @@ from __future__ import annotations
 import copy
 import logging
 import re
-from typing import TYPE_CHECKING, Dict, Hashable, List, Sequence, Tuple, Type, Union
+from collections.abc import Collection
+from typing import Dict, Hashable, List, Sequence, Tuple, Type, Union
 
 from typing_extensions import TypeGuard
 
 from paleomix.common import yaml
 from paleomix.common.fileutils import PathTypes, fspath
-
-if TYPE_CHECKING:
-    from collections.abc import Collection
 
 BasicType = Union[str, int, float, bool, None]
 SpecType = Union["_SpecBase", "Type[_SpecBase]"]

@@ -28,17 +28,14 @@ import logging
 import os
 import sys
 import time
+from io import TextIOWrapper
 from logging import LogRecord
-from typing import TYPE_CHECKING, Any, Iterator
+from typing import Any, Iterator
 
 import coloredlogs
 from humanfriendly.terminal import ansi_wrap, terminal_supports_colors
 
-if TYPE_CHECKING:
-    from io import TextIOWrapper
-
-    from paleomix.common.argparse import ArgumentParserBase
-
+from paleomix.common.argparse import ArgumentParserBase
 
 _CONSOLE_MESSAGE_FORMAT: str = "%(asctime)s %(levelname)s %(status)s%(message)s"
 _FILE_MESSAGE_FORMAT: str = "%(asctime)s %(name)s %(levelname)s %(status)s%(message)s"

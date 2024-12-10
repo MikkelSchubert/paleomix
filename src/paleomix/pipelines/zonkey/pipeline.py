@@ -26,7 +26,6 @@ import os
 import shutil
 import string
 import tarfile
-from typing import TYPE_CHECKING
 
 import pysam
 
@@ -35,15 +34,13 @@ import paleomix.common.logging
 import paleomix.pipelines.zonkey.config as zonkey_config
 from paleomix.common import fileutils, resources
 from paleomix.common.formats.fasta import FASTA
+from paleomix.node import Node
 from paleomix.nodes.raxml import RAxMLRapidBSNode
 from paleomix.nodes.samtools import BAMIndexNode
 from paleomix.pipeline import Pypeline
 from paleomix.pipelines.zonkey import database
 from paleomix.pipelines.zonkey.parts import mitochondria, nuclear, report, summary
 from paleomix.pipelines.zonkey.parts.common import WriteSampleList
-
-if TYPE_CHECKING:
-    from paleomix.node import Node
 
 
 def build_plink_nodes(config, root, bamfile, dependencies=()):

@@ -21,15 +21,15 @@
 #
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import paleomix
 import paleomix.common.logging
 import paleomix.pipeline
-from paleomix.common.argparse import SUPPRESS, ArgumentParser, SubParsersAction
-
-if TYPE_CHECKING:
-    from paleomix.common.argparse import ArgumentParserBase
+from paleomix.common.argparse import (
+    SUPPRESS,
+    ArgumentParser,
+    ArgumentParserBase,
+    SubParsersAction,
+)
 
 _RUN_USAGE = """%(prog)s [..] <database.tar> <samples.txt> [destination]
        %(prog)s [..] <database.tar> <sample.bam> [destination]

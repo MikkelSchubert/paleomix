@@ -23,10 +23,9 @@ from __future__ import annotations
 
 import sys
 import time
-from typing import IO, TYPE_CHECKING, Iterator
+from typing import IO, Iterator
 
-if TYPE_CHECKING:
-    from pysam import AlignedSegment, AlignmentFile
+from pysam import AlignedSegment, AlignmentFile
 
 
 class BAMTimer:

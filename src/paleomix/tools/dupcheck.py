@@ -24,16 +24,14 @@ from __future__ import annotations
 import collections
 import sys
 from itertools import groupby
-from typing import TYPE_CHECKING, Iterable, Iterator
+from typing import Iterable, Iterator
 
 import pysam
+from pysam import AlignedSegment
 
 from paleomix.common.argparse import ArgumentParser
 from paleomix.common.text import padded_table
 from paleomix.common.timer import BAMTimer
-
-if TYPE_CHECKING:
-    from pysam import AlignedSegment
 
 
 def key_with_name(record: AlignedSegment) -> tuple[str | None, int, int]:

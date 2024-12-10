@@ -29,17 +29,15 @@ import signal
 import subprocess
 import sys
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Callable, Dict, Iterable, List, Tuple, Union
+from typing import IO, Callable, Dict, Iterable, List, Tuple, Union
+
+from typing_extensions import Self
 
 from paleomix.common import fileutils
+from paleomix.common.fileutils import PathTypes
 from paleomix.common.procs import RegisteredPopen
 from paleomix.common.utilities import safe_coerce_to_tuple
 from paleomix.common.versions import Requirement
-
-if TYPE_CHECKING:
-    from typing_extensions import Self
-
-    from paleomix.common.fileutils import PathTypes
 
 
 class CmdError(RuntimeError):

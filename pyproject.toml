@@ -45,11 +45,7 @@ Repository = "https://github.com/MikkelSchubert/paleomix.git"
 Issues = "https://github.com/MikkelSchubert/paleomix/issues"
 
 [project.optional-dependencies]
-dev = [
-    "nox",
-    "pytest-cov",
-    "pytest",
-]
+dev = ["nox", "pytest-cov", "pytest"]
 
 [project.scripts]
 paleomix = "paleomix.__main__:main"
@@ -78,7 +74,7 @@ profile = "black"
 
 [tool.pyright]
 # Used since `strict = [...]` prevents individual `reportX` settings:
-include = ["src", "tests", "typings","noxfile.py"]
+include = ["src", "tests", "typings", "noxfile.py"]
 # typeCheckingMode = "strict"
 
 # Location of custom stub files
@@ -128,8 +124,12 @@ ignore = [
     "RET507",  # superfluous-else-continue --stylistic preference
     "RET508",  # superfluous-else-break -- stylistic preference
     "S603",    # subprocess-without-shell-equals-true -- `shell=True` is never used
-    "TRY003",  # raise-vanilla-args
-    "UP032",   # f-string -- replacing `format` may decrease readability in some cases
+    # TCH001-TCH003 are disabled to minimize runtime/type-checking discrepancies
+    "TCH001", # typing-only-first-party-import
+    "TCH002", # typing-only-third-party-import
+    "TCH003", # typing-only-standard-library-import
+    "TRY003", # raise-vanilla-args
+    "UP032",  # f-string -- replacing `format` may decrease readability in some cases
 ]
 
 [tool.ruff.lint.per-file-ignores]

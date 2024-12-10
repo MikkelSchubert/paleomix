@@ -24,15 +24,17 @@ from __future__ import annotations
 import logging
 import os
 import select
+import socket
 import sys
 import termios
 import tty
-from typing import TYPE_CHECKING, Iterator
+from multiprocessing.connection import Connection
+from typing import Iterator, Union
 
-if TYPE_CHECKING:
-    from typing_extensions import Self
+from typing_extensions import Self, TypeAlias
 
-    from paleomix.core.workers import HandleType
+HandleType: TypeAlias = Union[Connection, socket.socket, int]
+
 
 _COMMANDS = {
     "h": "Prints this message.",

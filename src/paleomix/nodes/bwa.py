@@ -23,7 +23,8 @@ from __future__ import annotations
 
 import functools
 import os
-from typing import TYPE_CHECKING, Iterable
+from pathlib import Path
+from typing import Iterable, Literal
 
 from paleomix.common import versions
 from paleomix.common.command import (
@@ -40,11 +41,6 @@ from paleomix.common.fileutils import PathTypes, describe_paired_files
 from paleomix.node import CommandNode, Node
 from paleomix.nodes.samtools import SAMTOOLS_VERSION
 from paleomix.tools import factory
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from typing_extensions import Literal
 
 # Index files used by BWA and BWA-MEM2 respectively
 BWA_INDEX_EXT = (".amb", ".ann", ".bwt", ".pac", ".sa")

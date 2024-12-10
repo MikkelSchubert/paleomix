@@ -21,17 +21,15 @@
 #
 from __future__ import annotations
 
+import os
 import sys
-from typing import IO, TYPE_CHECKING, Iterable, Iterator
+from typing import IO, Iterable, Iterator
 
 import pysam
 
 from paleomix.common.fileutils import fspath, open_rt
 from paleomix.common.formats._common import FormatError
 from paleomix.common.utilities import Immutable, TotallyOrdered, fragment, split_before
-
-if TYPE_CHECKING:
-    import os
 
 
 class FASTAError(FormatError):

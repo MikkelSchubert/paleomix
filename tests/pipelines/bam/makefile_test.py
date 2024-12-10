@@ -23,16 +23,14 @@ from __future__ import annotations
 
 import copy
 import textwrap
-from typing import TYPE_CHECKING, Any
+from pathlib import Path
+from typing import Any
 
 import pytest
 
 from paleomix.common.makefile import MakefileError
 from paleomix.common.resources import read_template
 from paleomix.pipelines.bam.makefile import read_makefiles
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def _read_makefile(filepath: Path) -> object:

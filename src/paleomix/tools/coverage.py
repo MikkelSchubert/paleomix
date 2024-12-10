@@ -25,7 +25,10 @@ import copy
 import sys
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, Iterator, Mapping, Sequence, Union
+from typing import Dict, Iterator, Mapping, Optional, Sequence, Union
+
+import pysam
+from typing_extensions import TypeAlias
 
 from paleomix.common.bamfiles import BAMRegion, BAMRegionsIter
 from paleomix.common.fileutils import file_or_stdout
@@ -38,17 +41,11 @@ from paleomix.tools.bam_stats.common import (
     main_wrapper,
 )
 
-if TYPE_CHECKING:
-    import pysam
-    from typing_extensions import TypeAlias
-
-    CoverageTable: TypeAlias = defaultdict[
-        str, defaultdict[str, defaultdict[str, Dict[str, "CoverageStats"]]]
-    ]
-    CoverageTableComponent: TypeAlias = Mapping[
-        str, Union["CoverageStats", "CoverageTableComponent"]
-    ]
-    CountsTable: TypeAlias = Dict[str, Dict[str | None, "CoverageStats"]]
+CoverageTable: TypeAlias = Dict[str, Dict[str, Dict[str, Dict[str, "CoverageStats"]]]]
+CoverageTableComponent: TypeAlias = Mapping[
+    str, Union["CoverageStats", "CoverageTableComponent"]
+]
+CountsTable: TypeAlias = Dict[str, Dict[Optional[str], "CoverageStats"]]
 
 
 # Header prepended to output tables

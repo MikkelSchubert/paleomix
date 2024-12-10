@@ -28,18 +28,17 @@ import logging
 import os
 import shutil
 import sys
+from collections.abc import Iterable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Iterable
+from typing import Any
 
 import paleomix
 from paleomix.common import fileutils
 from paleomix.common.command import AtomicCmd, CmdError, ParallelCmds, SequentialCmds
+from paleomix.common.fileutils import PathTypes
 from paleomix.common.procs import quote_args
 from paleomix.common.utilities import safe_coerce_to_frozenset
 from paleomix.common.versions import Requirement
-
-if TYPE_CHECKING:
-    from paleomix.common.fileutils import PathTypes
 
 _GLOBAL_ID = itertools.count()
 

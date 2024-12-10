@@ -24,15 +24,13 @@ from __future__ import annotations
 import bz2
 import gzip
 import io
-from typing import IO, TYPE_CHECKING, Callable
+from pathlib import Path
+from typing import IO, Callable
 
 import pytest
 
 from paleomix.common.fileutils import fspath
 from paleomix.common.formats.fasta import FASTA, FASTAError
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 _SEQ_FRAG = "AAGTCC"  # len() = 6
 

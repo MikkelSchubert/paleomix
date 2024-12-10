@@ -29,10 +29,11 @@ import signal
 import sys
 import time
 from shlex import quote
-from typing import TYPE_CHECKING, Any, Iterable, NoReturn
+from typing import Any, Iterable, NoReturn
 
 import paleomix.common.logging
 import paleomix.core.reports
+from paleomix.common.argparse import ArgumentGroup, ArgumentParser
 from paleomix.common.fileutils import try_remove
 from paleomix.common.procs import terminate_all_processes
 from paleomix.common.text import format_timespan, padded_table
@@ -46,11 +47,6 @@ from paleomix.nodegraph import (
     NodeGraphError,
     StatusEnum,
 )
-
-if TYPE_CHECKING:
-    from configargparse import ArgumentParser
-
-    from paleomix.common.argparse import ArgumentGroup
 
 
 class Pypeline:

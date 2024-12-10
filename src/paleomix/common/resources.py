@@ -24,16 +24,11 @@ from __future__ import annotations
 import os
 import shutil
 import sys
+from contextlib import AbstractContextManager
 from importlib import resources
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 from paleomix.common.fileutils import copy_file
-
-if TYPE_CHECKING:
-    from contextlib import AbstractContextManager
-    from importlib.abc import Traversable
-    from pathlib import Path
-
 
 if sys.version_info < (3, 9):
 
@@ -50,6 +45,10 @@ if sys.version_info < (3, 9):
         return resources.path(f"paleomix.resources.{module}", filename)
 
 else:
+    if sys.version_info < (3, 11):
+        from importlib.abc import Traversable
+    else:
+        from importlib.resources.abc import Traversable
 
     def _as_traversable(resource: str) -> Traversable:
         return resources.files("paleomix").joinpath("resources").joinpath(resource)

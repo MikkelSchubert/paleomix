@@ -23,14 +23,12 @@ from __future__ import annotations
 
 import sys
 from enum import Enum
-from typing import IO, TYPE_CHECKING, Iterable, Iterator
+from pathlib import Path
+from typing import IO, Iterable, Iterator
 
 from paleomix.common.fileutils import open_rt
 from paleomix.common.formats._common import FormatError
 from paleomix.common.utilities import Immutable, TotallyOrdered
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 class FASTQError(FormatError):

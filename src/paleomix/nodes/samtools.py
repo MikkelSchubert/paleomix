@@ -29,7 +29,7 @@ https://github.com/samtools/samtools
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Iterable
+from typing import Iterable, Literal
 
 from paleomix.common import versions
 from paleomix.common.command import (
@@ -44,9 +44,6 @@ from paleomix.common.command import (
 )
 from paleomix.common.fileutils import describe_files
 from paleomix.node import CommandNode, Node
-
-if TYPE_CHECKING:
-    from typing_extensions import Literal
 
 _VERSION_REGEX = r"Version: (\d+\.\d+)(?:\.(\d+))?"
 

@@ -43,17 +43,14 @@ from __future__ import annotations
 
 import random
 import sys
+from argparse import Namespace
 from collections import defaultdict, deque
-from typing import TYPE_CHECKING, Optional, Sequence, Tuple, cast
+from typing import Optional, Sequence, Tuple, cast
 
 from pysam import AlignedSegment, AlignmentFile
+from typing_extensions import TypeAlias
 
 from paleomix.common.argparse import ArgumentParser
-
-if TYPE_CHECKING:
-    from argparse import Namespace
-
-    from typing_extensions import TypeAlias
 
 _FILTERED_FLAGS = (
     0x1  # PE reads

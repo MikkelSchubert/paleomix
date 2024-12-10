@@ -21,15 +21,12 @@
 #
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Iterable
+from typing import Iterable, Literal
 
 from paleomix.common.command import InputFile
 from paleomix.common.fileutils import describe_files
 from paleomix.node import CommandNode, Node
 from paleomix.tools import factory
-
-if TYPE_CHECKING:
-    from typing_extensions import Literal
 
 
 class ValidateFASTQFilesNode(CommandNode):

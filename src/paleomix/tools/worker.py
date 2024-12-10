@@ -33,7 +33,7 @@ import sys
 import uuid
 from multiprocessing import ProcessError, Queue, cpu_count
 from multiprocessing.connection import Connection, Listener, wait
-from typing import TYPE_CHECKING, Any, Collection, Dict, Iterable, Iterator
+from typing import Any, Collection, Dict, Iterable, Iterator
 
 import paleomix
 import paleomix.common.logging
@@ -44,6 +44,7 @@ from paleomix.common.procs import (
     terminate_all_processes,
     terminate_processes,
 )
+from paleomix.common.versions import Requirement
 from paleomix.core.input import CommandLine, ListTasksEvent, ThreadsEvent
 from paleomix.core.workers import (
     AUTO_REGISTER_DIR,
@@ -53,17 +54,14 @@ from paleomix.core.workers import (
     EVT_SHUTDOWN,
     EVT_TASK_DONE,
     EVT_TASK_START,
+    HandleType,
+    QueueType,
     RemoteAdapter,
     address_to_name,
     task_wrapper,
 )
 from paleomix.node import Node, NodeError, NodeMissingFilesError
 from paleomix.nodegraph import NodeGraph
-
-if TYPE_CHECKING:
-    from paleomix.common.versions import Requirement
-    from paleomix.core.workers import HandleType, QueueType
-
 
 EventType = Dict[str, Any]
 Events = Iterable[EventType]

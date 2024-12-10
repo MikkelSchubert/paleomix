@@ -22,13 +22,11 @@
 from __future__ import annotations
 
 import itertools
-from typing import TYPE_CHECKING, Generator, Iterable, Iterator
+from typing import Generator, Iterable, Iterator
 
-if TYPE_CHECKING:
-    from pysam import AlignedSegment, AlignmentFile
+from pysam import AlignedSegment, AlignmentFile
 
-    from paleomix.common.formats.bed import BEDRecord
-
+from paleomix.common.formats.bed import BEDRecord
 
 # BAM flags as defined in the BAM specification
 BAM_SUPPLEMENTARY_ALIGNMENT = 0x800

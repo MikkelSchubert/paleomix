@@ -21,7 +21,8 @@
 #
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Type, Union
+from pathlib import Path
+from typing import Any, Type, Union
 from unittest.mock import Mock, call
 
 import pytest
@@ -39,10 +40,6 @@ from paleomix.common.command import (
     TempOutputFile,
 )
 from paleomix.common.versions import Requirement
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
 
 _SET_CLASSES = (ParallelCmds, SequentialCmds)
 SetTypes = Union[Type[ParallelCmds], Type[SequentialCmds]]

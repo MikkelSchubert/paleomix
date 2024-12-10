@@ -23,16 +23,14 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import IO, TYPE_CHECKING, Iterable
+from typing import IO, Iterable
 
 from humanfriendly.terminal import ansi_wrap, terminal_supports_colors
 
 from paleomix.common.text import padded_table
 from paleomix.common.versions import RequirementError
+from paleomix.node import Node
 from paleomix.nodegraph import FileStatusCache, NodeGraph, StatusEnum
-
-if TYPE_CHECKING:
-    from paleomix.node import Node
 
 
 def input_files(

@@ -22,16 +22,13 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING
 
 from paleomix.common import rtools
 from paleomix.common.command import InputFile, OutputFile, TempOutputFile
+from paleomix.common.fileutils import PathTypes
 from paleomix.common.formats.newick import Newick
 from paleomix.node import CommandNode
 from paleomix.tools import factory
-
-if TYPE_CHECKING:
-    from paleomix.common.fileutils import PathTypes
 
 
 class MitoConsensusNode(CommandNode):

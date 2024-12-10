@@ -26,10 +26,11 @@ import re
 import signal
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, NoReturn
+from typing import NoReturn, Union
 from unittest.mock import call, patch
 
 import pytest
+from typing_extensions import TypeAlias
 
 import paleomix
 import paleomix.common.command
@@ -393,8 +394,7 @@ def test_atomiccmd__stdin_explicit_dev_null(tmp_path: Path, value: None | int) -
 ########################################################################################
 # STDOUT/STDERR
 
-if TYPE_CHECKING:
-    OutPipeTypes = int | str | Path | OutputFile | None
+OutPipeTypes: TypeAlias = Union[int, str, Path, OutputFile, None]
 
 _VALID_STDOUT_STDERR_VALUES: list[OutPipeTypes] = [
     None,

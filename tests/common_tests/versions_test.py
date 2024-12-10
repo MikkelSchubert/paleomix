@@ -24,16 +24,12 @@ from __future__ import annotations
 import re
 import subprocess
 import sys
-from typing import TYPE_CHECKING
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
 
 from paleomix.common.versions import Requirement, RequirementError
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
 
 ###############################################################################
 ###############################################################################

@@ -41,14 +41,19 @@ from typing import (
     Any,
     Callable,
     Collection,
+    Dict,
     Iterable,
     Iterator,
+    List,
     MutableMapping,
     NoReturn,
+    Optional,
+    Tuple,
     Union,
 )
 
 import setproctitle
+from typing_extensions import Self, TypeAlias
 
 import paleomix
 from paleomix.common.procs import (
@@ -56,23 +61,20 @@ from paleomix.common.procs import (
     terminate_all_processes,
     terminate_processes,
 )
+from paleomix.common.versions import Requirement
 from paleomix.core.input import CommandLine, ListTasksEvent, ThreadsEvent
 from paleomix.node import Node, NodeError
 from paleomix.nodegraph import NodeGraph
 
+EventType: TypeAlias = Dict[str, Any]
+MessageType: TypeAlias = Tuple[int, Optional[BaseException], Optional[List[str]]]
+WorkerType: TypeAlias = Union["LocalWorker", "RemoteWorker"]
+HandleType: TypeAlias = Union[Connection, socket.socket, int]
+QueueType: TypeAlias = "multiprocessing.Queue[MessageType]"
+
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
-    from paleomix.common.versions import Requirement
-
-    EventType = dict[str, Any]
-    MessageType = tuple[int, BaseException | None, list[str] | None]
-    QueueType = multiprocessing.Queue[MessageType]
-    WorkerType = Union["LocalWorker", "RemoteWorker"]
-    HandleType = Connection | socket.socket | int
     AdapterType = logging.LoggerAdapter[logging.Logger]
 else:
-    QueueType = multiprocessing.Queue
     AdapterType = logging.LoggerAdapter
 
 

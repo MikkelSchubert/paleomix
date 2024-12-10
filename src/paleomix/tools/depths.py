@@ -24,7 +24,18 @@ from __future__ import annotations
 import collections
 import itertools
 import sys
-from typing import TYPE_CHECKING, NewType, Tuple
+from typing import (
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    NewType,
+    Optional,
+    Tuple,
+)
+
+import pysam
+from typing_extensions import TypeAlias
 
 from paleomix.common.bamfiles import BAMRegion, BAMRegionsIter
 from paleomix.common.fileutils import file_or_stdout
@@ -39,19 +50,13 @@ from paleomix.tools.bam_stats.common import (
 SampleLibraryKey = NewType("SampleLibraryKey", Tuple[str, str])
 SampleLibraryID = NewType("SampleLibraryID", int)
 
-if TYPE_CHECKING:
-    from typing import Dict, Iterable, Iterator
+CountsCache: TypeAlias = "collections.deque[list[int]]"
+CountsDict: TypeAlias = Dict[int, int]
+TotalsKey: TypeAlias = Tuple[str, str, str]
+TotalsDict: TypeAlias = Dict[TotalsKey, CountsDict]
 
-    import pysam
-    from typing_extensions import TypeAlias
-
-    CountsCache: TypeAlias = collections.deque[list[int]]
-    CountsDict: TypeAlias = Dict[int, int]
-    TotalsKey: TypeAlias = Tuple[str, str, str]
-    TotalsDict: TypeAlias = Dict[TotalsKey, CountsDict]
-
-    ReadGroupToID: TypeAlias = Dict[str | None, SampleLibraryID]
-    IDToLibrary: TypeAlias = list[SampleLibraryKey]
+ReadGroupToID: TypeAlias = Dict[Optional[str], SampleLibraryID]
+IDToLibrary: TypeAlias = List[SampleLibraryKey]
 
 
 ##############################################################################
