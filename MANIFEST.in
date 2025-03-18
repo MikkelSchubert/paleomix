@@ -1,4 +1,3 @@
-include .coveragerc
 include CHANGES.md
 include LICENSE
 include MANIFEST.in
@@ -7,7 +6,7 @@ include paleomix/yaml/CHANGES
 include paleomix/yaml/LICENSE
 include paleomix/yaml/PKG-INFO
 include paleomix/yaml/README
-include pylint.conf
+include pyproject.toml
 include README.rst
 include tox.ini
 
