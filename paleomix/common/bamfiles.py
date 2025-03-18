@@ -109,8 +109,7 @@ class BAMRegionsIter:
     def _filter(self, records):
         """Filters records by flags, if 'exclude_flags' is set."""
         if self._excluded:
-            pred = lambda record: not record.flag & self._excluded
-            return filter(pred, records)
+            return (record for record in records if not record.flag & self._excluded)
         return records
 
 

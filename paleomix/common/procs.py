@@ -24,12 +24,18 @@
 Tools used for working with subprocesses.
 """
 
-import os
 import sys
 import time
-from subprocess import *
+from subprocess import DEVNULL, PIPE, STDOUT, Popen
 
-DEVNULL = object()
+__all__ = [
+    "DEVNULL",
+    "join_procs",
+    "open_proc",
+    "PIPE",
+    "Popen",
+    "STDOUT",
+]
 
 
 def open_proc(call, *args, **kwargs):
@@ -45,22 +51,10 @@ def open_proc(call, *args, **kwargs):
     # Unless specifically requested
     kwargs.setdefault("stdin", DEVNULL)
 
-    devnull = None
+    proc = Popen(call, *args, **kwargs)
+    proc.call = tuple(call)
 
-    try:
-        for key in ("stdin", "stderr", "stdout"):
-            if kwargs.get(key) is DEVNULL:
-                if devnull is None:
-                    devnull = os.open(os.devnull, os.O_RDWR)
-                kwargs[key] = devnull
-
-        proc = Popen(call, *args, **kwargs)
-        proc.call = tuple(call)
-
-        return proc
-    finally:
-        if devnull is not None:
-            os.close(devnull)
+    return proc
 
 
 def join_procs(procs, out=sys.stderr):
