@@ -22,17 +22,16 @@
 #
 
 
-import os
 import copy
+import os
 
 import pysam
 
 import paleomix.common.fileutils as fileutils
 import paleomix.common.utilities as utilities
-
 from paleomix.common.formats.fasta import FASTA
 from paleomix.common.formats.msa import MSA
-from paleomix.node import NodeError, Node
+from paleomix.node import Node, NodeError
 
 
 class CollectSequencesNode(Node):
@@ -88,13 +87,13 @@ class CollectSequencesNode(Node):
 
     def _run(self, _config, temp):
         fasta_files = []
-        for (name, filename) in sorted(self._infiles.items()):
+        for name, filename in sorted(self._infiles.items()):
             fasta_files.append((name, pysam.FastaFile(filename)))
 
         for sequence_name in sorted(self._sequences):
             filename = os.path.join(temp, sequence_name + ".fasta")
             with open(filename, "w") as out_handle:
-                for (sample, fasta_file) in fasta_files:
+                for sample, fasta_file in fasta_files:
                     sequence = fasta_file.fetch(sequence_name)
                     fasta = FASTA(sample, sequence_name, sequence)
                     fasta.write(out_handle)
@@ -110,7 +109,7 @@ class FilterSingletonsNode(Node):
         self._input_file = input_file
         self._output_file = output_file
         self._filter_by = dict(filter_by)
-        for (to_filter, groups) in self._filter_by.items():
+        for to_filter, groups in self._filter_by.items():
             # The taxa to be filtered is implied to be part of the group,
             # but is not needed when actually carrying out the filtering
             groups = utilities.safe_coerce_to_frozenset(
@@ -133,7 +132,7 @@ class FilterSingletonsNode(Node):
 
     def _run(self, _config, temp):
         alignment = MSA.from_file(self._input_file)
-        for (to_filter, groups) in self._filter_by.items():
+        for to_filter, groups in self._filter_by.items():
             alignment = alignment.filter_singletons(to_filter, groups)
 
         temp_filename = fileutils.reroot_path(temp, self._output_file)

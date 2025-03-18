@@ -30,7 +30,6 @@ import weakref
 import paleomix.atomiccmd.pprint as atomicpp
 import paleomix.common.fileutils as fileutils
 import paleomix.common.procs as procs
-
 from paleomix.common.utilities import safe_coerce_to_tuple
 
 _PIPES = (("IN", "IN_STDIN"), ("OUT", "OUT_STDOUT"), ("OUT", "OUT_STDERR"))
@@ -267,7 +266,7 @@ class AtomicCmd:
         filenames = self._generate_filenames(self._files, temp)
         committed_files = set()
         try:
-            for (key, filename) in filenames.items():
+            for key, filename in filenames.items():
                 if isinstance(filename, str):
                     if key.startswith("OUT_"):
                         fileutils.move_file(filename, self._files[key])
@@ -307,7 +306,7 @@ class AtomicCmd:
     @classmethod
     def _process_arguments(cls, proc_id, command, kwargs):
         arguments = collections.defaultdict(dict)
-        for (key, value) in kwargs.items():
+        for key, value in kwargs.items():
             match = _KEY_RE.match(key)
             if not match:
                 raise ValueError("Invalid keyword argument %r" % (key,))
@@ -336,7 +335,7 @@ class AtomicCmd:
     def _validate_arguments(cls, arguments):
         # Output files
         for group in ("OUT", "TEMP_OUT"):
-            for (key, value) in arguments.get(group, {}).items():
+            for key, value in arguments.get(group, {}).items():
                 if isinstance(value, str):
                     continue
 
@@ -356,7 +355,7 @@ class AtomicCmd:
 
         # Input files, including executables and auxiliary files
         for group in ("IN", "TEMP_IN", "EXEC", "AUX"):
-            for (key, value) in arguments.get(group, {}).items():
+            for key, value in arguments.get(group, {}).items():
                 if isinstance(value, str):
                     continue
 
@@ -369,12 +368,12 @@ class AtomicCmd:
                 else:
                     raise TypeError("%s must be string, not %r" % (key, value))
 
-        for (key, value) in arguments.get("CHECK", {}).items():
+        for key, value in arguments.get("CHECK", {}).items():
             if not callable(value):
                 raise TypeError("%s must be callable, not %r" % (key, value))
 
         for group in ("TEMP_IN", "TEMP_OUT"):
-            for (key, value) in arguments.get(group, {}).items():
+            for key, value in arguments.get(group, {}).items():
                 is_string = isinstance(value, str)
                 if is_string and os.path.dirname(value):
                     raise ValueError(
@@ -387,12 +386,12 @@ class AtomicCmd:
     def _validate_output_files(cls, arguments):
         output_files = collections.defaultdict(list)
         for group in ("OUT", "TEMP_OUT"):
-            for (key, value) in arguments.get(group, {}).items():
+            for key, value in arguments.get(group, {}).items():
                 if isinstance(value, str):
                     filename = os.path.basename(value)
                     output_files[filename].append(key)
 
-        for (filename, keys) in output_files.items():
+        for filename, keys in output_files.items():
             if len(keys) > 1:
                 raise ValueError(
                     "Same output filename (%s) is specified for "
@@ -401,7 +400,7 @@ class AtomicCmd:
 
     @classmethod
     def _validate_pipes(cls, arguments):
-        for (group, pipe) in _PIPES:
+        for group, pipe in _PIPES:
             has_pipe = pipe in arguments[group]
             has_temp_pipe = ("TEMP_" + pipe) in arguments["TEMP_" + group]
             if has_pipe and has_temp_pipe:
@@ -420,7 +419,7 @@ class AtomicCmd:
     @classmethod
     def _generate_filenames(cls, files, root):
         filenames = {"TEMP_DIR": root}
-        for (key, filename) in files.items():
+        for key, filename in files.items():
             if isinstance(filename, str):
                 if key.startswith("TEMP_") or key.startswith("OUT_"):
                     filename = os.path.join(root, os.path.basename(filename))
@@ -434,7 +433,7 @@ class AtomicCmd:
     def _build_files_dict(cls, arguments):
         files = {}
         for groups in arguments.values():
-            for (key, value) in groups.items():
+            for key, value in groups.items():
                 files[key] = value
 
         return files

@@ -22,7 +22,6 @@
 import os
 
 import paleomix.common.versions as versions
-
 from paleomix.tools.factory import rscript_command
 
 

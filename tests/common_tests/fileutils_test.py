@@ -26,33 +26,30 @@ import gzip
 import os
 import shutil
 import stat
-
 from pathlib import Path
 from typing import Any
-from unittest.mock import ANY, call, DEFAULT, Mock, patch
+from unittest.mock import ANY, DEFAULT, Mock, call, patch
 
 import pytest
 
-from paleomix.common.testing import SetWorkingDirectory
-
 from paleomix.common.fileutils import (
     add_postfix,
-    swap_ext,
-    reroot_path,
-    create_temp_dir,
-    missing_files,
-    missing_executables,
-    make_dirs,
-    move_file,
     copy_file,
-    open_ro,
-    try_remove,
-    try_rmtree,
+    create_temp_dir,
     describe_files,
     describe_paired_files,
     fspath,
+    make_dirs,
+    missing_executables,
+    missing_files,
+    move_file,
+    open_ro,
+    reroot_path,
+    swap_ext,
+    try_remove,
+    try_rmtree,
 )
-
+from paleomix.common.testing import SetWorkingDirectory
 
 ###############################################################################
 ###############################################################################

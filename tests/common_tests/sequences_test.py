@@ -26,11 +26,10 @@ import pytest
 
 from paleomix.common.sequences import (
     complement,
-    reverse_complement,
     encode_genotype,
+    reverse_complement,
     split,
 )
-
 
 ###############################################################################
 ###############################################################################

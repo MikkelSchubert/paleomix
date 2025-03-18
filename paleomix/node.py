@@ -25,14 +25,12 @@ import os
 import shutil
 import sys
 import traceback
-
 from pathlib import Path
 
 import paleomix
 import paleomix.common.fileutils as fileutils
-from paleomix.common.utilities import safe_coerce_to_frozenset
-
 from paleomix.atomiccmd.command import CmdError
+from paleomix.common.utilities import safe_coerce_to_frozenset
 
 
 class NodeError(RuntimeError):
@@ -64,7 +62,6 @@ class Node:
         requirements=(),
         dependencies=(),
     ):
-
         if not isinstance(description, _DESC_TYPES):
             raise TypeError(
                 "'description' must be None or a string, not %r"

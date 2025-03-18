@@ -26,9 +26,8 @@ import signal
 import pytest
 
 from paleomix.atomiccmd.command import AtomicCmd
+from paleomix.atomiccmd.pprint import _pformat_list, pformat
 from paleomix.atomiccmd.sets import ParallelCmds, SequentialCmds
-from paleomix.atomiccmd.pprint import pformat, _pformat_list
-
 
 ###############################################################################
 ###############################################################################

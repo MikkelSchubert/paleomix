@@ -26,7 +26,6 @@ import logging
 import os
 
 import paleomix.common.versions as versions
-
 from paleomix.common.fileutils import missing_executables, missing_files
 from paleomix.common.utilities import safe_coerce_to_frozenset
 
@@ -176,7 +175,7 @@ class NodeGraph:
 
         cache = self._cache_factory()
         while any(requires_update.values()):
-            for (node, count) in tuple(intersections.items()):
+            for node, count in tuple(intersections.items()):
                 if not count:
                     has_changed = False
                     if requires_update[node]:
@@ -207,7 +206,7 @@ class NodeGraph:
     def _refresh_states(self):
         states = {}
         cache = self._cache_factory()
-        for (node, state) in self._states.items():
+        for node, state in self._states.items():
             if state in (self.ERROR, self.RUNNING):
                 states[node] = state
         self._states = states
@@ -425,7 +424,7 @@ class NodeGraph:
         dependencies = self._collect_dependencies(nodes, {})
         any_errors = False
 
-        for (filename, nodes) in sorted(input_files.items(), key=lambda v: v[0]):
+        for filename, nodes in sorted(input_files.items(), key=lambda v: v[0]):
             if filename in output_files:
                 producers = output_files[filename]
                 bad_nodes = set()

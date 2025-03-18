@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from unittest.mock import call, Mock
+from unittest.mock import Mock, call
 
 import pytest
 
@@ -80,6 +80,7 @@ _NO_CLOBBERING_KWARGS = (
     ({"OUT_A": "/foo/out.txt"}, {"OUT_STDERR": "/bar/out.txt"}),
     ({"OUT_A": "/foo/out.txt"}, {"TEMP_OUT_STDERR": "out.txt"}),
 )
+
 
 # Ensure that commands in a set doesn't clobber eachothers OUT files
 @pytest.mark.parametrize("cls", _SET_CLASSES)

@@ -20,9 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from paleomix.common.utilities import safe_coerce_to_frozenset, get_in, set_in
-
 from paleomix.common.formats import FormatError
+from paleomix.common.utilities import get_in, safe_coerce_to_frozenset, set_in
 
 
 class GraphError(FormatError):
@@ -54,7 +53,7 @@ class _Graph:
             return None
 
         path_length = 0.0
-        for (node_a, node_b) in zip(nodes, nodes[1:]):
+        for node_a, node_b in zip(nodes, nodes[1:]):
             segment_length = float(self.connections[node_a][node_b])
             path_length += segment_length
 
@@ -108,7 +107,7 @@ class _Graph:
         For a node to be pruned, both adjacent nodes must have a
         length specified, or both must not have a length specified."""
         while True:
-            for (cur_node, connections) in self.connections.items():
+            for cur_node, connections in self.connections.items():
                 if not self.names[cur_node] and (len(connections) == 2):
                     conn_a, conn_b = connections
 
@@ -156,7 +155,7 @@ class _Graph:
                 if other not in key:
                     _collect_paths(list(guide), length, c_node, other)
 
-        for (p_node, connections) in self.connections.items():
+        for p_node, connections in self.connections.items():
             for c_node in connections:
                 _collect_paths([p_node], 0, p_node, c_node)
 
@@ -176,7 +175,7 @@ class _Graph:
 
         The id of the new / selected node is returned. New
         nodes (if created) are always given the id None."""
-        for (c_node, n_node) in zip(path, path[1:]):
+        for c_node, n_node in zip(path, path[1:]):
             branch_length = self.get_path_length(c_node, n_node)
 
             if branch_length > root_at:
@@ -211,7 +210,7 @@ class _Graph:
 
     def _collect_nodes_from_names(self, taxa):
         known_taxa = set()
-        for (node_id, name) in self.names.items():
+        for node_id, name in self.names.items():
             if self.is_leaf(node_id):
                 known_taxa.add(name)
 
@@ -227,7 +226,7 @@ class _Graph:
 
     def _collect_clades(self):
         clades = {}
-        for (node_a, connections) in self.connections.items():
+        for node_a, connections in self.connections.items():
             for node_b in connections:
                 self._collect_clade_from(clades, node_a, node_b)
         return clades
@@ -246,8 +245,8 @@ class _Graph:
 
     def _create_root_with_clade(self, clades, taxa):
         root_key, root_clade, root_length = None, None, None
-        for (p_node, connections) in clades.items():
-            for (n_node, clade) in connections.items():
+        for p_node, connections in clades.items():
+            for n_node, clade in connections.items():
                 if (root_clade is None) or (len(clade) < len(root_clade)):
                     if taxa.issubset(clade):
                         root_key = (p_node, n_node)
@@ -269,7 +268,7 @@ class _Graph:
     # Functions relating to calculating bootstrap support
     def get_clade_names(self):
         result = set()
-        for (_, connections) in self._collect_clades().items():
-            for (_, clade) in connections.items():
+        for _, connections in self._collect_clades().items():
+            for _, clade in connections.items():
                 result.add(frozenset(self.names[node_id] for node_id in clade))
         return result

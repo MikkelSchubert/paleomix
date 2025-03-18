@@ -20,8 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import re
 import glob
+import re
 
 from paleomix.common.makefile import MakefileError
 
@@ -32,9 +32,7 @@ def is_paired_end(template):
 
 
 def collect_files(path, template):
-    """
-
-    """
+    """ """
     if is_paired_end(template):
         if _has_glob_magic(template):
             result = {

@@ -24,22 +24,20 @@ import logging
 import os
 import random
 import uuid
-
-from unittest.mock import call, Mock
+from unittest.mock import Mock, call
 
 import pytest
 
 import paleomix.node
-
 from paleomix.atomiccmd.command import AtomicCmd
+from paleomix.common.utilities import safe_coerce_to_frozenset
 from paleomix.node import (
-    Node,
+    CmdNodeError,
     CommandNode,
+    Node,
     NodeError,
     NodeUnhandledException,
-    CmdNodeError,
 )
-from paleomix.common.utilities import safe_coerce_to_frozenset
 
 
 def create_test_dir():

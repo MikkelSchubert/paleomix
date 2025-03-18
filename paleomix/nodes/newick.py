@@ -22,9 +22,9 @@
 #
 import os
 
+from paleomix.common.fileutils import describe_files, move_file
 from paleomix.common.formats.newick import Newick
 from paleomix.common.utilities import safe_coerce_to_tuple
-from paleomix.common.fileutils import describe_files, move_file
 from paleomix.node import Node
 
 

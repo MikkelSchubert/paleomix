@@ -29,7 +29,6 @@ import pytest
 from paleomix.common.fileutils import fspath
 from paleomix.common.formats.fasta import FASTA, FASTAError
 
-
 _SEQ_FRAG = "AAGTCC"  # len() = 6
 
 

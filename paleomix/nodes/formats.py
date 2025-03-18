@@ -22,13 +22,11 @@
 #
 import copy
 
-from paleomix.node import Node
-from paleomix.common.fileutils import move_file, reroot_path, describe_files
+from paleomix.common.fileutils import describe_files, move_file, reroot_path
 from paleomix.common.formats.msa import MSA
 from paleomix.common.formats.phylip import interleaved_phy
-
 from paleomix.common.utilities import safe_coerce_to_frozenset, safe_coerce_to_tuple
-
+from paleomix.node import Node
 
 _VALID_KEYS = frozenset(["partitions", "filenames"])
 
@@ -53,7 +51,7 @@ class FastaToPartitionedInterleavedPhyNode(Node):
             raise TypeError("'infiles' must be a dictionary of dictionaries")
 
         input_filenames = []
-        for (name, subdd) in infiles.items():
+        for name, subdd in infiles.items():
             if set(subdd) - _VALID_KEYS:
                 raise ValueError(
                     "Invalid keys found for %r: %s"
@@ -85,7 +83,7 @@ class FastaToPartitionedInterleavedPhyNode(Node):
 
     def _run(self, _config, temp):
         merged_msas = []
-        for (name, files_dd) in sorted(self._infiles.items()):
+        for name, files_dd in sorted(self._infiles.items()):
             partitions = files_dd["partitions"]
             msas = dict((key, []) for key in partitions)
             for filename in files_dd["filenames"]:
@@ -93,11 +91,11 @@ class FastaToPartitionedInterleavedPhyNode(Node):
                 if self._excluded:
                     msa = msa.exclude(self._excluded)
 
-                for (key, msa_part) in msa.split(partitions).items():
+                for key, msa_part in msa.split(partitions).items():
                     msas[key].append(msa_part)
 
             msas.pop("X", None)
-            for (key, msa_parts) in sorted(msas.items()):
+            for key, msa_parts in sorted(msas.items()):
                 merged_msa = MSA.join(*msa_parts)
                 if self._reduce:
                     merged_msa = merged_msa.reduce()
@@ -113,7 +111,7 @@ class FastaToPartitionedInterleavedPhyNode(Node):
         partition_end = 0
         out_fname_parts = reroot_path(temp, self._out_prefix + ".partitions")
         with open(out_fname_parts, "w") as output_part:
-            for (name, msa) in merged_msas:
+            for name, msa in merged_msas:
                 length = msa.seqlen()
                 output_part.write(
                     "DNA, %s = %i-%i\n"

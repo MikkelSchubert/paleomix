@@ -24,9 +24,9 @@ import sys
 
 import pysam
 
-from paleomix.common.utilities import fragment, split_before, Immutable, TotallyOrdered
-from paleomix.common.fileutils import open_ro, fspath
+from paleomix.common.fileutils import fspath, open_ro
 from paleomix.common.formats._common import FormatError
+from paleomix.common.utilities import Immutable, TotallyOrdered, fragment, split_before
 
 
 class FASTAError(FormatError):

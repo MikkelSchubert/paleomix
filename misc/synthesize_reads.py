@@ -203,7 +203,7 @@ class Damage:
     def _damage_sequence(self, sequence):
         result = []
         length = len(sequence)
-        for (position, nucleotide) in enumerate(sequence):
+        for position, nucleotide in enumerate(sequence):
             if nucleotide == "C":
                 if self._random.random() < self._rates[position]:
                     nucleotide = "T"
@@ -277,7 +277,7 @@ class Lane:
         )
 
         self._sequences = []
-        for (name, forward, reverse) in reads:
+        for name, forward, reverse in reads:
             forward, _ = _mutate_sequence(
                 rng, choices, forward, options.reads_indel_lambda
             )
@@ -393,9 +393,9 @@ def main(argv):
     damage = Damage(options, sample)
     library = Library(options, damage)
 
-    for (lnum, lane) in enumerate(library.lanes, start=1):
+    for lnum, lane in enumerate(library.lanes, start=1):
         fragments = fragment(options.lanes_per_file, lane.sequences)
-        for (readsnum, reads) in enumerate(fragments, start=1):
+        for readsnum, reads in enumerate(fragments, start=1):
             templ = "%s%s_L%i_R%%s_%02i.fastq.gz" % (
                 options.output_prefix,
                 library.barcode,
@@ -406,7 +406,7 @@ def main(argv):
             print("  Writing %s" % (templ % "{Pair}",))
             with gzip.open(templ % 1, "wt") as out_1:
                 with gzip.open(templ % 2, "wt") as out_2:
-                    for (name, seq_1, seq_2) in reads:
+                    for name, seq_1, seq_2 in reads:
                         out_1.write("@%s%s/1\n%s\n" % (library.barcode, name, seq_1))
                         out_1.write("+\n%s\n" % ("I" * len(seq_1),))
                         out_2.write("@%s%s/2\n%s\n" % (library.barcode, name, seq_2))

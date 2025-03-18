@@ -23,10 +23,9 @@
 
 from collections import defaultdict
 
-from paleomix.common.sequences import split
 from paleomix.common.fileutils import open_ro
 from paleomix.common.formats.fasta import FASTA, FASTAError
-from paleomix.common.sequences import NT_CODES, encode_genotype
+from paleomix.common.sequences import NT_CODES, encode_genotype, split
 from paleomix.common.utilities import safe_coerce_to_frozenset
 
 
@@ -79,7 +78,7 @@ class MSA(frozenset):
             return None
 
         records = []
-        for (record, sequence) in zip(self, zip(*columns)):
+        for record, sequence in zip(self, zip(*columns)):
             records.append(FASTA(record.name, record.meta, "".join(sequence)))
 
         return MSA(records)
@@ -89,7 +88,7 @@ class MSA(frozenset):
 
         sequence = list(to_filter.sequence)
         sequences = [record.sequence.upper() for record in included]
-        for (index, nts) in enumerate(zip(*sequences)):
+        for index, nts in enumerate(zip(*sequences)):
             current_nt = sequence[index].upper()
             if current_nt in "N-":
                 continue
@@ -120,10 +119,10 @@ class MSA(frozenset):
 
         results = dict((key, set()) for key in split_by)
         for record in self:
-            for (key, partition) in split(record.sequence, split_by).items():
+            for key, partition in split(record.sequence, split_by).items():
                 results[key].add(FASTA(record.name, None, partition))
 
-        for (key, value) in results.items():
+        for key, value in results.items():
             results[key] = MSA(value)
 
         return results
@@ -142,7 +141,7 @@ class MSA(frozenset):
                 merged[record.name].append(record.sequence)
 
         sequences = []
-        for (name, sequence) in merged.items():
+        for name, sequence in merged.items():
             sequences.append(FASTA(name, None, "".join(sequence)))
         return MSA(sequences)
 

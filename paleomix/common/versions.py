@@ -43,13 +43,12 @@ For example, to check that the Java version is v1.7 or later:
     except VersionRequirementError:
         pass  # requirements not met, or failure to determine version
 """
+
 import operator
 import re
 
-from paleomix.common.utilities import TotallyOrdered, safe_coerce_to_tuple, try_cast
-
 import paleomix.common.procs as procs
-
+from paleomix.common.utilities import TotallyOrdered, safe_coerce_to_tuple, try_cast
 
 # Cache used to store the output of cmd-line / function calls
 _CALL_CACHE = {}
@@ -114,8 +113,7 @@ class RequirementObj:
     """Represents a version requirement."""
 
     def __init__(self, call, search, checks, name=None, priority=0):
-        """See function 'Requrement' for a description of parameters.
-        """
+        """See function 'Requrement' for a description of parameters."""
         self._call = safe_coerce_to_tuple(call)
         self._done = None
         self.name = str(name or self._call[0])
@@ -327,10 +325,10 @@ class Operator(Check):
 
     def __init__(self, keyword, func, *checks):
         """Arguments:
-          keyword -- Keyword to join description of checks by.
-          func -- Function implementing the logical operation; is called as
-                  func(*checks). See the 'func' argument for Check.__init__.
-          checks -- Zero or more Checks.
+        keyword -- Keyword to join description of checks by.
+        func -- Function implementing the logical operation; is called as
+                func(*checks). See the 'func' argument for Check.__init__.
+        checks -- Zero or more Checks.
         """
         descriptions = []
         for check in checks:

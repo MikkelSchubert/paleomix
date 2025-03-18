@@ -20,15 +20,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from paleomix.node import CommandNode, NodeError
+import paleomix.common.versions as versions
 from paleomix.atomiccmd.builder import (
     AtomicCmdBuilder,
     apply_options,
 )
 from paleomix.common.fileutils import reroot_path
 from paleomix.common.formats.msa import MSA, MSAError
-import paleomix.common.versions as versions
-
+from paleomix.node import CommandNode, NodeError
 
 MAFFT_VERSION = versions.Requirement(
     call=("mafft", "--version"), search=r"v(\d+)\.(\d+)", checks=versions.GE(7, 307)

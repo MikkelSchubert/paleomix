@@ -35,12 +35,11 @@ to contain a certain amount of padding around the regions of interest.
 
 """
 
-
 import copy
 import itertools
 import os
-import sys
 import re
+import sys
 
 import pysam
 
@@ -49,9 +48,7 @@ import paleomix.common.sequences as sequences
 import paleomix.common.text as text
 import paleomix.common.utilities as utilities
 import paleomix.common.vcfwrap as vcfwrap
-
 from paleomix.common.bedtools import BEDRecord
-
 
 # Max number of positions to keep in memory / genotype at once
 _SEQUENCE_CHUNK = 1024 * 1024  # 1kbp
@@ -204,7 +201,7 @@ def build_genes(options, genotype, regions):
 
     regions.sort(key=keyfunc)
 
-    for (gene, beds) in itertools.groupby(regions, lambda x: x.name):
+    for gene, beds in itertools.groupby(regions, lambda x: x.name):
         beds = split_beds(beds)
         reverse_compl = False
         if any((bed.strand == "-") for bed in beds):
@@ -218,8 +215,8 @@ def build_genes(options, genotype, regions):
 
 
 def genotype_genes(options, intervals, genotype):
-    for (_, beds) in sorted(intervals.items()):
-        for (name, fragments) in build_genes(options, genotype, beds):
+    for _, beds in sorted(intervals.items()):
+        for name, fragments in build_genes(options, genotype, beds):
             print(">%s" % (name,))
 
             sequence = ""
@@ -240,7 +237,7 @@ def read_intervals(filename):
     with open(filename) as bed_file:
         intervals = text.parse_lines_by_contig(bed_file, BEDRecord)
 
-        for (key, beds) in intervals.items():
+        for key, beds in intervals.items():
             bed_tuples = []
             for bed in beds:
                 if len(bed) < 6:

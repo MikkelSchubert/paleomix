@@ -28,15 +28,13 @@ import os
 import re
 import sys
 
-from paleomix.node import Node, NodeError
-from paleomix.common.utilities import set_in, get_in
-from paleomix.common.fileutils import move_file, reroot_path
-from paleomix.tools.bam_stats.coverage import read_table as read_coverage_table
-from paleomix.common.bedtools import BEDRecord
-from paleomix.common.formats.fasta import FASTA
-
 import paleomix.common.text as text
-
+from paleomix.common.bedtools import BEDRecord
+from paleomix.common.fileutils import move_file, reroot_path
+from paleomix.common.formats.fasta import FASTA
+from paleomix.common.utilities import get_in, set_in
+from paleomix.node import Node, NodeError
+from paleomix.tools.bam_stats.coverage import read_table as read_coverage_table
 
 _PE_READS = frozenset(("Paired", "Singleton", "Collapsed", "CollapsedTruncated"))
 _SE_READS = frozenset(("Single",))
@@ -122,7 +120,7 @@ class SummaryTableNode(Node):
     def _write_genomes(self, table, genomes):
         table.write("# Genomes:\n")
         rows = [["Name", "Contigs", "Size", "Prefix"]]
-        for (_, prefix) in sorted(self._prefixes.items()):
+        for _, prefix in sorted(self._prefixes.items()):
             stats = genomes[prefix["Name"]]
             rows.append(
                 (
@@ -139,7 +137,7 @@ class SummaryTableNode(Node):
     def _write_areas_of_interest(self, table, rois):
         table.write("# Regions Of Interest:\n")
         rows = [["Genome", "ROI", "Size", "NFeatures", "NIntervals", "Path"]]
-        for (_, roi) in sorted(rois.items()):
+        for _, roi in sorted(rois.items()):
             rows.append(
                 [
                     roi[key]
@@ -164,11 +162,11 @@ class SummaryTableNode(Node):
     def _build_tables(self, genomes):
         yield ["Target", "Sample", "Library", "Measure", "Value", "# Description"]
 
-        for (target, samples) in sorted(
+        for target, samples in sorted(
             self._read_tables(self._prefixes, genomes).items()
         ):
-            for (sample, libraries) in sorted(samples.items()):
-                for (library, prefixes) in sorted(libraries.items()):
+            for sample, libraries in sorted(samples.items()):
+                for library, prefixes in sorted(libraries.items()):
                     ordered = (
                         [("reads", prefixes.pop("reads"))]
                         if "reads" in prefixes
@@ -176,12 +174,10 @@ class SummaryTableNode(Node):
                     )
                     ordered.extend(sorted(prefixes.items()))
 
-                    for (prefix, table) in ordered:
+                    for prefix, table in ordered:
                         table.pop("hits_unique_nts(%s)" % prefix, None)
 
-                        for (key, value) in sorted(
-                            table.items(), key=_measure_ordering
-                        ):
+                        for key, value in sorted(table.items(), key=_measure_ordering):
                             if isinstance(value, numbers.Number) and math.isnan(value):
                                 value = "NA"
 
@@ -202,12 +198,12 @@ class SummaryTableNode(Node):
         self._read_raw_bam_stats(table)
         self._read_lib_bam_stats(table)
 
-        for (target, samples) in table.items():
+        for target, samples in table.items():
             merged_samples = {}
-            for (sample, libraries) in samples.items():
+            for sample, libraries in samples.items():
                 merged_libraries = {}
-                for (library, subtables) in libraries.items():
-                    for (tblname, subtable) in subtables.items():
+                for library, subtables in libraries.items():
+                    for tblname, subtable in subtables.items():
                         merged_libraries[tblname] = self._merge_tables(
                             (merged_libraries.get(tblname, {}), subtable)
                         )
@@ -230,7 +226,7 @@ class SummaryTableNode(Node):
 
     @classmethod
     def _annotate_subtables(cls, subtables, genomes):
-        for (tblname, subtable) in subtables.items():
+        for tblname, subtable in subtables.items():
             if tblname == "reads":
                 fractions = [
                     ("seq_trash_se", "seq_reads_se", "seq_trash_se_frac"),
@@ -240,7 +236,7 @@ class SummaryTableNode(Node):
                     ("seq_retained_nts", "seq_retained_reads", "seq_retained_length"),
                 ]
 
-                for (numerator, denominator, measure) in fractions:
+                for numerator, denominator, measure in fractions:
                     if (numerator in subtable) and (denominator in subtable):
                         value = subtable[numerator] / float(
                             subtable[denominator] or "NaN"
@@ -279,9 +275,9 @@ class SummaryTableNode(Node):
             key = (self._target, sample, library, "reads", barcode)
             set_in(table, key, self._stat_read_settings(filetype, filenames))
 
-        for (_, samples) in table.items():
-            for (sample, libraries) in samples.items():
-                for (library, prefixes) in libraries.items():
+        for _, samples in table.items():
+            for sample, libraries in samples.items():
+                for library, prefixes in libraries.items():
                     prefixes["reads"] = self._merge_tables(
                         list(prefixes["reads"].values())
                     )
@@ -289,7 +285,7 @@ class SummaryTableNode(Node):
         return table
 
     def _read_raw_bam_stats(self, table):
-        for ((genome, target, sample, library), filenames) in self._in_raw_bams.items():
+        for (genome, target, sample, library), filenames in self._in_raw_bams.items():
             key = (target, sample, library)
             hits, _ = self._read_coverage_tables(key, filenames)
 
@@ -298,7 +294,7 @@ class SummaryTableNode(Node):
             )
 
     def _read_lib_bam_stats(self, table):
-        for ((genome, target, sample, library), filenames) in self._in_lib_bams.items():
+        for (genome, target, sample, library), filenames in self._in_lib_bams.items():
             key = (target, sample, library)
             hits, nts = self._read_coverage_tables(key, filenames)
 
@@ -340,7 +336,7 @@ class SummaryTableNode(Node):
     def _merge_tables(cls, tables):
         merged = {}
         for table in tables:
-            for (measure, value) in table.items():
+            for measure, value in table.items():
                 if not isinstance(value, numbers.Number):
                     other = merged.get(measure, value)
                     merged[measure] = value if (value == other) else "*"
@@ -425,8 +421,8 @@ class SummaryTableNode(Node):
         """Returns (size, number of named intervals, total number of intervals)
         for a set of areas of interest."""
         areas_of_interest = {}
-        for (prefix_name, prefix) in prefixes.items():
-            for (roi_name, roi_filename) in prefix.get("RegionsOfInterest", {}).items():
+        for prefix_name, prefix in prefixes.items():
+            for roi_name, roi_filename in prefix.get("RegionsOfInterest", {}).items():
                 count, names, size = 0, set(), 0
                 with open(roi_filename) as handle:
                     for line in handle:

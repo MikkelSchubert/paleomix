@@ -26,34 +26,33 @@ import os
 import pysam
 
 import paleomix.common.makefile
+from paleomix.common.bedtools import BEDError, read_bed_file
+from paleomix.common.fileutils import swap_ext
+from paleomix.common.formats.fasta import FASTA
 from paleomix.common.makefile import (
-    MakefileError,
+    CLI_PARAMETERS,
     REQUIRED_VALUE,
-    IsDictOf,
-    IsListOf,
-    IsInt,
-    IsStr,
-    StringIn,
-    IsFloat,
-    IsUnsignedInt,
+    And,
     IsBoolean,
+    IsDictOf,
+    IsFloat,
+    IsInt,
+    IsListOf,
     IsNone,
+    IsStr,
+    IsUnsignedInt,
+    MakefileError,
+    Not,
+    Or,
     RemovedOption,
+    StringEndsWith,
+    StringIn,
+    StringStartsWith,
     ValueIn,
     ValuesSubsetOf,
-    StringStartsWith,
-    StringEndsWith,
-    CLI_PARAMETERS,
-    And,
-    Or,
-    Not,
 )
-
-from paleomix.common.fileutils import swap_ext
-from paleomix.common.utilities import fill_dict
 from paleomix.common.text import parse_padded_table
-from paleomix.common.bedtools import read_bed_file, BEDError
-from paleomix.common.formats.fasta import FASTA
+from paleomix.common.utilities import fill_dict
 
 
 def read_makefiles(options, commands):
@@ -92,7 +91,7 @@ def _collapse_samples(mkfile):
 
     def _collect_samples(samples_dict, path=()):
         current_samples = {}
-        for (key, subdd) in samples_dict.items():
+        for key, subdd in samples_dict.items():
             if key.startswith("<") and key.endswith(">"):
                 key = key.lstrip("<").rstrip(">")
                 current_samples.update(_collect_samples(subdd, path + (key,)))
@@ -137,11 +136,10 @@ def _update_regions(options, mkfile):
 
     if not mkfile["Project"]["Regions"]:
         raise MakefileError(
-            "No regions of interest have been specified; "
-            "no analyses will be performed."
+            "No regions of interest have been specified; no analyses will be performed."
         )
 
-    for (name, subdd) in mkfile["Project"]["Regions"].items():
+    for name, subdd in mkfile["Project"]["Regions"].items():
         if "Prefix" not in subdd:
             raise MakefileError("No genome specified for regions %r" % (name,))
 
@@ -155,7 +153,7 @@ def _update_regions(options, mkfile):
             ("Reference sequence", subdd["FASTA"]),
         )
 
-        for (desc, path) in required_files:
+        for desc, path in required_files:
             if not os.path.isfile(path):
                 raise MakefileError(
                     "%s does not exist for %r:\n  Path = %r" % (desc, name, path)
@@ -269,8 +267,8 @@ def _update_subsets(mkfile, steps):
         subsets_by_regions[roi]["Sequences"][subset] = frozenset(sequences)
 
     if "phylogeny:examl" in steps:
-        for (key, subdd) in mkfile["PhylogeneticInference"].items():
-            for (subkey, roidd) in subdd["RegionsOfInterest"].items():
+        for key, subdd in mkfile["PhylogeneticInference"].items():
+            for subkey, roidd in subdd["RegionsOfInterest"].items():
                 if subkey not in subsets_by_regions:
                     message = (
                         "Unknown regions name in phylogenetic inference:\n"
@@ -295,7 +293,7 @@ def _update_filtering(mkfile):
     log = logging.getLogger(__name__)
 
     filtering = {}
-    for (target, filter_by) in mkfile["Project"]["FilterSingletons"].items():
+    for target, filter_by in mkfile["Project"]["FilterSingletons"].items():
         if target.startswith("<") and target.endswith(">"):
             raise MakefileError(
                 "Singleton-filtering must be specified per "
@@ -368,11 +366,11 @@ def _check_bam_sequences(options, mkfile, steps):
             if os.path.exists(filename):
                 bam_files[filename] = _collect_fasta_contigs(regions["FASTA"])
 
-    for (filename, contigs) in bam_files.items():
+    for filename, contigs in bam_files.items():
         with pysam.AlignmentFile(filename) as handle:
             bam_contigs = dict(list(zip(handle.references, handle.lengths)))
 
-            for (contig, length) in contigs.items():
+            for contig, length in contigs.items():
                 bam_length = bam_contigs.get(contig)
 
                 if bam_length is None:
@@ -452,7 +450,7 @@ def _update_and_check_max_read_depth(options, mkfile):
         log = logging.getLogger(__name__)
         log.info("Determinining max-depth from depth-histograms")
 
-    for (key, settings) in mkfile["Genotyping"].items():
+    for key, settings in mkfile["Genotyping"].items():
         required_keys = set()
         for sample in mkfile["Project"]["Samples"].values():
             required_keys.add(sample["Name"])
@@ -524,7 +522,6 @@ def _read_max_depth(filename, prefix, sample):
                     and row["Library"] == "*"
                     and row["Contig"] == "*"
                 ):
-
                     if row["Name"] in max_depths:
                         raise MakefileError(
                             "Depth histogram %r contains "
@@ -593,7 +590,7 @@ _DEPTHS_CACHE = {}
 def _check_indels_and_msa(mkfile):
     msa = mkfile["MultipleSequenceAlignment"]
     regions = mkfile["Project"]["Regions"]
-    for (name, subdd) in regions.items():
+    for name, subdd in regions.items():
         msa_enabled = msa[name]["Enabled"]
 
         if subdd["IncludeIndels"] and not msa_enabled:
@@ -606,7 +603,7 @@ def _update_sample_sets(mkfile):
     samples = mkfile["Project"]["Samples"]
     groups = mkfile["Project"]["Groups"]
 
-    for (key, subdd) in mkfile["PhylogeneticInference"].items():
+    for key, subdd in mkfile["PhylogeneticInference"].items():
         subdd["ExcludeSamples"] = _select_samples(
             subdd["ExcludeSamples"],
             groups,
@@ -630,7 +627,7 @@ def _update_genotyping(mkfile):
     defaults.setdefault("Padding", 5)
     defaults["VCF_Filter"].setdefault("MaxReadDepth", 0)
 
-    for (key, subdd) in genotyping.items():
+    for key, subdd in genotyping.items():
         if subdd.get("GenotypeEntirePrefix"):
             message = (
                 "GenotypeEntirePrefix is only allowed for prefixes "

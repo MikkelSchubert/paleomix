@@ -23,8 +23,7 @@
 import sys
 import time
 
-from paleomix.common.utilities import fragment, cumsum
-
+from paleomix.common.utilities import cumsum, fragment
 
 _DESC = "Processed {Records} records ({Progress}) in {Time}, est. {Remaining} left. Last {RecordsDelta} records in {TimeDelta}, now at {Contig}: {Position}"
 _FINAL = (

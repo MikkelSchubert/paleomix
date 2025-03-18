@@ -21,18 +21,16 @@
 # SOFTWARE.
 #
 import os
-
 from copy import deepcopy
 
-from paleomix.nodes.samtools import TabixIndexNode, FastaIndexNode, BAMIndexNode
+from paleomix.common.fileutils import add_postfix, swap_ext
 from paleomix.nodes.bedtools import PaddedBedNode
-from paleomix.common.fileutils import swap_ext, add_postfix
 from paleomix.nodes.commands import (
-    VCFFilterNode,
     BuildRegionsNode,
     GenotypeRegionsNode,
+    VCFFilterNode,
 )
-
+from paleomix.nodes.samtools import BAMIndexNode, FastaIndexNode, TabixIndexNode
 
 ###############################################################################
 ###############################################################################

@@ -20,20 +20,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import sys
 import copy
+import sys
 
-from paleomix.common.utilities import get_in, set_in
-from paleomix.common.timer import BAMTimer
 from paleomix.common.bamfiles import BAMRegionsIter
-
+from paleomix.common.timer import BAMTimer
+from paleomix.common.utilities import get_in, set_in
 from paleomix.tools.bam_stats.common import (
     collect_readgroups,
     collect_references,
     main_wrapper,
 )
 from paleomix.tools.bam_stats.coverage import ReadGroup, write_table
-
 
 ##############################################################################
 ##############################################################################
@@ -74,7 +72,7 @@ def build_table(args, handle, counts):
     references = collect_references(args, handle)
 
     table = {}
-    for (key, readgroup) in collect_readgroups(args, handle).items():
+    for key, readgroup in collect_readgroups(args, handle).items():
         sample = readgroup["SM"]
         library = readgroup["LB"]
 
@@ -87,7 +85,7 @@ def build_table(args, handle, counts):
             else:
                 continue
 
-        for (reference, size) in references.items():
+        for reference, size in references.items():
             subtable_key = (args.target_name, sample, library, reference)
             subtable = create_or_get_subtable(table, subtable_key, size)
 
@@ -122,7 +120,7 @@ def process_record(subtable, record, flags, region):
     start = region.start
     end = region.end
 
-    for (cigar, num) in record.cigar:
+    for cigar, num in record.cigar:
         left = min(max(position, start), end)
         right = min(max(position + num, start), end)
         bases_in_region = right - left
@@ -156,7 +154,7 @@ def process_file(handle, args):
 
         last_pos = 0
         region_table = get_region_table(counts, name, region_template)
-        for (position, records) in region:
+        for position, records in region:
             for record in records:
                 readgroup = args.get_readgroup_func(record)
                 readgroup_table = region_table.get(readgroup)

@@ -24,9 +24,7 @@ import multiprocessing
 
 import paleomix
 import paleomix.common.logging
-
-from paleomix.common.argparse import ArgumentParser, SUPPRESS
-
+from paleomix.common.argparse import SUPPRESS, ArgumentParser
 
 _RUN_USAGE = """%(prog)s [..] <database.tar> <samples.txt> [destination]
        %(prog)s [..] <database.tar> <sample.bam> [destination]
@@ -131,7 +129,10 @@ def add_run_command(subparsers):
     )
 
     group.add_argument(
-        "--admixture-only", help=SUPPRESS, default=False, action="store_true",
+        "--admixture-only",
+        help=SUPPRESS,
+        default=False,
+        action="store_true",
     )
 
     paleomix.common.logging.add_argument_group(parser)

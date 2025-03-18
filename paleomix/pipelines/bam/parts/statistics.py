@@ -20,12 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
 import collections
+import os
 
 from paleomix.common.fileutils import swap_ext
-
-from paleomix.nodes.commands import CoverageNode, MergeCoverageNode, DepthHistogramNode
+from paleomix.nodes.commands import CoverageNode, DepthHistogramNode, MergeCoverageNode
 from paleomix.pipelines.bam.parts.summary import SummaryTableNode
 
 
@@ -64,7 +63,7 @@ def _build_summary_node(config, makefile, target, coverage):
 def _build_depth(config, target, prefixes):
     nodes = []
     for prefix in target.prefixes:
-        for (roi_name, roi_filename) in _get_roi(prefix, name_prefix="."):
+        for roi_name, roi_filename in _get_roi(prefix, name_prefix="."):
             ((input_file, dependencies),) = prefix.bams.items()
 
             output_filename = "%s.%s%s.depths" % (target.name, prefix.name, roi_name)
@@ -87,7 +86,7 @@ def _build_depth(config, target, prefixes):
 def _aggregate_for_prefix(cov, prefix, roi_name=None, into=None):
     prefix = _get_prefix_label(prefix, roi_name)
     results = {} if into is None else into
-    for (key, files_and_nodes) in cov.items():
+    for key, files_and_nodes in cov.items():
         if prefix is None or (key[0] == prefix):
             results.update(files_and_nodes)
     return results
@@ -97,7 +96,7 @@ def _build_coverage(config, target, make_summary):
     merged_nodes = []
     coverage = _build_coverage_nodes(target)
     for prefix in target.prefixes:
-        for (roi_name, _) in _get_roi(prefix):
+        for roi_name, _ in _get_roi(prefix):
             label = _get_prefix_label(prefix.name, roi_name)
             if not roi_name:
                 postfix = prefix.name
@@ -139,7 +138,7 @@ def _build_coverage_nodes(target):
 
     cache = {}
     for prefix in target.prefixes:
-        for (roi_name, roi_filename) in _get_roi(prefix):
+        for roi_name, roi_filename in _get_roi(prefix):
             prefix_label = _get_prefix_label(prefix.name, roi_name)
 
             for sample in prefix.samples:
@@ -169,7 +168,7 @@ def _build_coverage_nodes_cached(
         output_ext = ".%s.coverage" % roi_name
 
     coverages = {}
-    for (input_filename, node) in files_and_nodes.items():
+    for input_filename, node in files_and_nodes.items():
         output_filename = swap_ext(input_filename, output_ext)
 
         cache_key = (roi_filename, input_filename)
@@ -188,7 +187,7 @@ def _build_coverage_nodes_cached(
 
 def _get_roi(prefix, name_prefix=""):
     roi = [("", None)]
-    for (name, path) in prefix.roi.items():
+    for name, path in prefix.roi.items():
         roi.append((name_prefix + name, path))
     return roi
 

@@ -180,7 +180,7 @@ def read_bed_file(filename, min_columns=3, contigs=None):
     try:
         handle = open_ro(filename)
 
-        for (line_num, line) in enumerate(handle):
+        for line_num, line in enumerate(handle):
             line = line.strip()
             if not line or line.startswith("#"):
                 continue

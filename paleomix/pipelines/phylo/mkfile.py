@@ -22,7 +22,6 @@
 #
 import sys
 
-
 _TEMPLATE = """# -*- mode: Yaml; -*-
 Project:
   Title: PROJECT_NAME

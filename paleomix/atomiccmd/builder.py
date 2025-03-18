@@ -67,8 +67,7 @@ class AtomicCmdBuilder:
     """
 
     def __init__(self, call, **kwargs):
-        """See AtomiCmd.__init__ for parameters / keyword arguments.
-        """
+        """See AtomiCmd.__init__ for parameters / keyword arguments."""
         self._call = safe_coerce_to_tuple(call)
         self._options = []
         self._values = []
@@ -214,7 +213,7 @@ class AtomicCmdBuilder:
         If the value of an argument is an AtomicCmdBuilder, then the builder
         is finalized and the resulting value is used."""
         kwargs = {}
-        for (key, value) in self._kwargs.items():
+        for key, value in self._kwargs.items():
             if isinstance(value, AtomicCmdBuilder):
                 value = value.finalize()
             kwargs[key] = value
@@ -269,13 +268,13 @@ class AtomicJavaCmdBuilder(AtomicCmdBuilder):
         self, jar, jre_options=(), temp_root="%(TEMP_DIR)s", gc_threads=1, **kwargs
     ):
         """Parameters:
-            jar         -- Path to a JAR file to be executed; is included as an
-                           auxiliary file dependency in the final command.
-            jre_options -- List of CLI options to be passed to 'java' command.
-            temp_root   -- Temp folder to use for java process; if not set, the
-                           process specific temp folder is used.
-            gc_threads  -- Number of threads to use during garbage collections.
-            ...         -- Key-word args are passed to AtomicCmdBuilder.
+        jar         -- Path to a JAR file to be executed; is included as an
+                       auxiliary file dependency in the final command.
+        jre_options -- List of CLI options to be passed to 'java' command.
+        temp_root   -- Temp folder to use for java process; if not set, the
+                       process specific temp folder is used.
+        gc_threads  -- Number of threads to use during garbage collections.
+        ...         -- Key-word args are passed to AtomicCmdBuilder.
         """
         call = [
             "java",
@@ -348,7 +347,7 @@ def apply_options(builder, options, pred=lambda s: s.startswith("-")):
         allows easy setting/unsetting of '--do-something' type options.
 
     """
-    for (key, values) in dict(options).items():
+    for key, values in dict(options).items():
         if not isinstance(key, str):
             raise TypeError("Keys must be strings, not %r" % (key.__class__.__name__,))
         elif pred(key):

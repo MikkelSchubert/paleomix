@@ -32,16 +32,13 @@ import paleomix.common.fileutils as fileutils
 import paleomix.common.rtools as rtools
 import paleomix.common.versions as versions
 import paleomix.tools.factory as factory
-
 from paleomix.atomiccmd.builder import AtomicCmdBuilder
 from paleomix.atomiccmd.command import AtomicCmd
 from paleomix.atomiccmd.sets import SequentialCmds
 from paleomix.node import CommandNode, Node, NodeError
-
 from paleomix.pipelines.zonkey.common import (
     read_summary,
 )
-
 
 ADMIXTURE_VERSION = versions.Requirement(
     call=("admixture", "--version"), search=r"(\d+)\.(\d+)", checks=versions.GE(1, 3)
@@ -163,7 +160,7 @@ class AdmixtureNode(CommandNode):
             set_cwd=True,
         )
 
-        cmd.set_option("-s", random.randint(0, 2 ** 16 - 1))
+        cmd.set_option("-s", random.randint(0, 2**16 - 1))
         cmd.set_option("--supervised")
 
         cmd.add_value("%(TEMP_OUT_FILE_BED)s")
@@ -689,7 +686,7 @@ class PlotCoverageNode(CommandNode):
             (
                 os.path.join("zonkey", "coverage.r"),
                 "%(TEMP_OUT_TABLE)s",
-                "%(TEMP_OUT_PREFIX)s"
+                "%(TEMP_OUT_PREFIX)s",
             ),
             IN_FILE=input_file,
             TEMP_OUT_TABLE="contigs.table",

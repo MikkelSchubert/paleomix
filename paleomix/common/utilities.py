@@ -39,9 +39,7 @@ def _safe_coerce(cls):
         and returns the content wrapped in a {0}. In the case of strings,
         and dictionaries the original string object is returned in a {0},
         and not as a {0} of chars. A TypeError is raised if this is not
-        possible (e.g. dict in frozenset).""".format(
-        cls.__name__
-    )
+        possible (e.g. dict in frozenset).""".format(cls.__name__)
     _do_safe_coerce.__name__ = "safe_coerce_to_{0}".format(cls.__name__)
 
     return _do_safe_coerce
@@ -60,13 +58,13 @@ def try_cast(value, cast_to):
 
 def set_in(dictionary, keys, value):
     """Traverses a set of nested dictionaries using the given keys,
-       and assigns the specified value to the inner-most
-       dictionary (obtained from the second-to-last key), using
-       the last key in keys. Thus calling set_in is(d, [X, Y, Z], v)
-       is equivalent to calling
-         d.setdefault(X, {}).setdefault(Y, {})[Z] = v
+    and assigns the specified value to the inner-most
+    dictionary (obtained from the second-to-last key), using
+    the last key in keys. Thus calling set_in is(d, [X, Y, Z], v)
+    is equivalent to calling
+      d.setdefault(X, {}).setdefault(Y, {})[Z] = v
 
-       Behavior on non-dictionaries is undefined."""
+    Behavior on non-dictionaries is undefined."""
     keys = list(keys)
     if not keys:
         raise ValueError("No keys passed to 'set_in'!")
@@ -84,13 +82,13 @@ def set_in(dictionary, keys, value):
 
 def get_in(dictionary, keys, default=None):
     """Traverses a set of nested dictionaries using the keys in
-       kws, and returns the value assigned to the final keyword
-       in the innermost dictionary. Calling get_in(d, [X, Y])
-       is equivalent to calling d.get(X).get(Y), with the
-       difference that any missing keys causes the default value
-       to be returned.
+    kws, and returns the value assigned to the final keyword
+    in the innermost dictionary. Calling get_in(d, [X, Y])
+    is equivalent to calling d.get(X).get(Y), with the
+    difference that any missing keys causes the default value
+    to be returned.
 
-       Behavior on non-dictgionaries is undefined."""
+    Behavior on non-dictgionaries is undefined."""
     keys = list(keys)
     for key in keys[:-1]:
         try:
@@ -231,7 +229,7 @@ class Immutable:
 
     def __init__(self, **kwargs):
         object.__init__(self)
-        for (key, value) in kwargs.items():
+        for key, value in kwargs.items():
             object.__setattr__(self, key, value)
 
     def __setattr__(self, _name, _value):

@@ -24,11 +24,10 @@
 
 import itertools
 
-
 # Pairs of complementary bases and ambigious basees
 _COMPL = ["AT", "CG", "NN", "RY", "KM", "SS", "WW", "BV", "DH", "XX"]
 _COMPL_TABLE = ["N"] * 256
-for (_a, _b) in _COMPL:
+for _a, _b in _COMPL:
     # Complement both upper/lower-case bases
     for _func in (str.upper, str.lower):
         _COMPL_TABLE[ord(_func(_a))] = _func(_b)
@@ -60,7 +59,7 @@ NT_CODES = [
 ]
 
 _NT_CODES_TABLE = {}
-for (_abr, _nts) in NT_CODES:
+for _abr, _nts in NT_CODES:
     _NT_CODES_TABLE[frozenset(_nts)] = _abr
     _NT_CODES_TABLE[frozenset(_nts + ",")] = _abr
 
@@ -103,7 +102,7 @@ def split(sequence, split_by="123"):
 
     results = dict((key, []) for key in split_by)
     keys = itertools.chain(itertools.cycle(split_by))
-    for (key, nucleotide) in zip(keys, sequence):
+    for key, nucleotide in zip(keys, sequence):
         results[key].append(nucleotide)
 
     for key in results:

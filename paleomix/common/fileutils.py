@@ -20,18 +20,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
 import bz2
-import gzip
-import uuid
 import errno
+import gzip
+import os
 import shutil
-
+import uuid
 from pathlib import Path, PosixPath
-from typing import Any, Callable, IO, Iterable, List, Optional, Tuple, Union
+from typing import IO, Any, Callable, Iterable, List, Optional, Tuple, Union
 
 from .utilities import safe_coerce_to_tuple
-
 
 try:
     import pathlib2
@@ -108,7 +106,7 @@ def missing_files(filenames: Iterable[Union[str, Path]]) -> List[Union[str, Path
 
 
 def missing_executables(
-    filenames: Iterable[Union[str, Path]]
+    filenames: Iterable[Union[str, Path]],
 ) -> List[Union[str, Path]]:
     missing = []
     for filename in safe_coerce_to_tuple(filenames):

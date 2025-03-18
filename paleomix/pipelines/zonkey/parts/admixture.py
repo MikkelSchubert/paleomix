@@ -25,8 +25,8 @@
 Parsing and validation of admixture results.
 
 """
-import collections
 
+import collections
 
 CUTOFF = 0.001
 

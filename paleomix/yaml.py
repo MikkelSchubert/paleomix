@@ -23,7 +23,6 @@
 import warnings
 
 import ruamel.yaml
-
 from ruamel.yaml import YAMLError  # noqa: F401
 
 

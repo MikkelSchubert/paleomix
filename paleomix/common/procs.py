@@ -23,12 +23,11 @@
 """
 Tools used for working with subprocesses.
 """
+
 import os
 import sys
 import time
-
 from subprocess import *
-
 
 DEVNULL = object()
 
@@ -77,7 +76,7 @@ def join_procs(procs, out=sys.stderr):
     return_codes = [None] * len(commands)
     out.write("Joinining subprocesses:\n")
     while commands:
-        for (index, command) in list(commands):
+        for index, command in list(commands):
             if command.poll() is not None:
                 return_codes[index] = command.wait()
                 commands.remove((index, command))

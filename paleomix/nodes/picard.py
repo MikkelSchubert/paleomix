@@ -20,14 +20,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
 import getpass
+import os
 
-from paleomix.node import CommandNode
-from paleomix.atomiccmd.builder import AtomicJavaCmdBuilder
-from paleomix.common.fileutils import swap_ext, try_rmtree, describe_files
-import paleomix.common.versions as versions
 import paleomix.common.system
+import paleomix.common.versions as versions
+from paleomix.atomiccmd.builder import AtomicJavaCmdBuilder
+from paleomix.common.fileutils import describe_files, swap_ext, try_rmtree
+from paleomix.node import CommandNode
 
 
 class PicardNode(CommandNode):

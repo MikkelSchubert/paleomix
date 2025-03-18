@@ -22,28 +22,24 @@
 #
 
 
-import os
 import logging
+import os
 
 import paleomix
 import paleomix.common.logging
-from paleomix.common import resources
-import paleomix.yaml
-
-from paleomix.pipeline import Pypeline
-from paleomix.node import NodeError
-from paleomix.nodes.samtools import FastaIndexNode
-from paleomix.nodes.bwa import BWAIndexNode
-from paleomix.nodes.bowtie2 import Bowtie2IndexNode
-from paleomix.nodes.validation import ValidateFASTAFilesNode
-
-from paleomix.pipelines.bam.makefile import MakefileError, read_makefiles
-
-from paleomix.pipelines.bam.parts import Reads
-
-import paleomix.pipelines.bam.parts as parts
 import paleomix.pipelines.bam.config as bam_config
 import paleomix.pipelines.bam.mkfile as bam_mkfile
+import paleomix.pipelines.bam.parts as parts
+import paleomix.yaml
+from paleomix.common import resources
+from paleomix.node import NodeError
+from paleomix.nodes.bowtie2 import Bowtie2IndexNode
+from paleomix.nodes.bwa import BWAIndexNode
+from paleomix.nodes.samtools import FastaIndexNode
+from paleomix.nodes.validation import ValidateFASTAFilesNode
+from paleomix.pipeline import Pypeline
+from paleomix.pipelines.bam.makefile import MakefileError, read_makefiles
+from paleomix.pipelines.bam.parts import Reads
 
 
 def build_pipeline_trimming(config, makefile):
@@ -51,7 +47,7 @@ def build_pipeline_trimming(config, makefile):
     This reduces the required complexity of the makefile to a minimum."""
 
     nodes = []
-    for (_, samples) in makefile["Targets"].items():
+    for _, samples in makefile["Targets"].items():
         for libraries in samples.values():
             for barcodes in libraries.values():
                 for record in barcodes.values():
@@ -67,15 +63,15 @@ def build_pipeline_trimming(config, makefile):
 def build_pipeline_full(config, makefile, return_nodes=True):
     result = []
     features = makefile["Options"]["Features"]
-    for (target_name, sample_records) in makefile["Targets"].items():
+    for target_name, sample_records in makefile["Targets"].items():
         prefixes = []
-        for (_, prefix) in makefile["Prefixes"].items():
+        for _, prefix in makefile["Prefixes"].items():
             samples = []
-            for (sample_name, library_records) in sample_records.items():
+            for sample_name, library_records in sample_records.items():
                 libraries = []
-                for (library_name, barcode_records) in library_records.items():
+                for library_name, barcode_records in library_records.items():
                     lanes = []
-                    for (barcode, record) in barcode_records.items():
+                    for barcode, record in barcode_records.items():
                         lane = parts.Lane(config, prefix, record, barcode)
 
                         # ExcludeReads settings may exlude entire lanes

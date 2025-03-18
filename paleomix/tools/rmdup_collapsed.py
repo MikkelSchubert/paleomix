@@ -20,6 +20,7 @@ By default, filtered reads are flagged using the "duplicate" flag (0x400), and
 written to the output. Use the --remove-duplicates command-line option to
 instead remove these records from the output.
 """
+
 import collections
 import random
 import sys
@@ -27,7 +28,6 @@ import sys
 import pysam
 
 from paleomix.common.argparse import ArgumentParser
-
 
 _FILTERED_FLAGS = 0x1  # PE reads
 _FILTERED_FLAGS |= 0x4  # Unmapped
@@ -128,7 +128,7 @@ def can_write_read(read_and_alignment, current_position):
 def clipped_bases_at_front(cigartuples):
     """Returns number of bases soft or hard clipped at start of the CIGAR."""
     total = 0
-    for (operation, length) in cigartuples:
+    for operation, length in cigartuples:
         if operation != _CIGAR_SOFTCLIP and operation != _CIGAR_HARDCLIP:
             break
 

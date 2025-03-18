@@ -30,11 +30,9 @@ from argparse import ArgumentParser
 
 import pysam
 
-from paleomix.common.fileutils import open_ro
-from paleomix.common.utilities import set_in, get_in
-
 import paleomix.common.text as text
-
+from paleomix.common.fileutils import open_ro
+from paleomix.common.utilities import get_in, set_in
 
 ###############################################################################
 ###############################################################################
@@ -115,7 +113,7 @@ def get_introns(exons):
         lst = lst[::-1]
 
     introns = []
-    for (record_a, record_b) in zip(lst, lst[1:]):
+    for record_a, record_b in zip(lst, lst[1:]):
         if record_a["end"] == record_b["start"] - 1:
             # Intron has been lost?
             continue
@@ -133,9 +131,9 @@ def get_introns(exons):
 
 def split_exon(exon, cds):
     """Takes an exon and a CDS, and returns a map of regions for each
-       feature (UTR5/3, CDS) that may be inferred from the arguments.
-       Note that the CDS is simply returned as is, to simplify
-       downstream handling of these features."""
+    feature (UTR5/3, CDS) that may be inferred from the arguments.
+    Note that the CDS is simply returned as is, to simplify
+    downstream handling of these features."""
     results = [cds]
 
     if exon["start"] < cds["start"]:
@@ -159,7 +157,7 @@ def split_exons(exons, func):
     # By looping over the list sorted by exon-number, we can easily
     # determine whether or not we are dealing with a 5' or 3' UTR.
     seen_cds = False
-    for (_, exon) in sorted(exons.items()):
+    for _, exon in sorted(exons.items()):
         if "CDS" in exon:
             seen_cds = True
             cds, exon = exon["CDS"], exon["exon"]
@@ -223,13 +221,13 @@ def _do_build_feature_table(options, table, features, protein_coding):
 
 def build_coding_seqs_table(options, table):
     """Takes a table generated from a GTF file, and constructs a table for each
-       feature, inferring introns and UTRs from the exons and CDSs of the input
-       table."""
+    feature, inferring introns and UTRs from the exons and CDSs of the input
+    table."""
     print("Building table of features for coding sequences")
     features = {"UTR5": [], "UTR3": [], "CDS": [], "intron": []}
 
     feature_table = _do_build_feature_table(options, table, features, True)
-    for (exons, add_records) in feature_table:
+    for exons, add_records in feature_table:
         split_exons(exons, add_records)
     return features
 
@@ -239,7 +237,7 @@ def build_noncoding_seqs_table(options, table):
     features = {"exon": [], "intron": []}
 
     feature_table = _do_build_feature_table(options, table, features, False)
-    for (exons, add_records) in feature_table:
+    for exons, add_records in feature_table:
         add_records(record["exon"] for record in exons.values())
     return features
 
@@ -303,7 +301,9 @@ def parse_arguments(argv):
         "length of the CDS is not divisible by 3",
     )
     parser.add_argument(
-        "--contig-prefix", default="", help="Add prefix to contig names (e.g. 'chr')",
+        "--contig-prefix",
+        default="",
+        help="Add prefix to contig names (e.g. 'chr')",
     )
 
     return parser.parse_args(argv)
@@ -321,7 +321,7 @@ def main(argv):
         print("Reading GTF from %r" % (args.infile,))
         src_table = read_gtf(gtf_file, scaffolds, args.contig_prefix)
 
-    for (source, table) in src_table.items():
+    for source, table in src_table.items():
         print("Writing tables for '%s'" % source)
 
         if source.startswith("protein"):

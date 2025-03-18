@@ -25,7 +25,6 @@ import logging
 import os
 import sys
 
-
 _TEMPLATE_TOP = """# -*- mode: Yaml; -*-
 # Default options.
 # Can also be specific for a set of samples, libraries, and lanes,
@@ -311,10 +310,10 @@ def read_sample_sheets(filenames):
 
 def print_samples(records):
     print()
-    for (sample, libraries) in sorted(records.items()):
+    for sample, libraries in sorted(records.items()):
         print("%s:" % sample)
         print("  %s:" % sample)
-        for (library, barcodes) in sorted(libraries.items()):
+        for library, barcodes in sorted(libraries.items()):
             print("    %s:" % library)
             for key, path in sorted(barcodes.items()):
                 print("      %s: %s" % (key, path))

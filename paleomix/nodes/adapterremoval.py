@@ -22,15 +22,13 @@
 #
 import os
 
-from paleomix.node import CommandNode
+import paleomix.common.fileutils as fileutils
+import paleomix.common.versions as versions
 from paleomix.atomiccmd.builder import (
     AtomicCmdBuilder,
     apply_options,
 )
-
-import paleomix.common.fileutils as fileutils
-import paleomix.common.versions as versions
-
+from paleomix.node import CommandNode
 
 _VERSION_CHECK = versions.Requirement(
     call=("AdapterRemoval", "--version"),

@@ -20,21 +20,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
 import copy
+import os
 
 import paleomix.pipelines.bam.paths as paths
-
-from paleomix.common.makefile import MakefileError
-
-from paleomix.nodes.bwa import BWAAlgorithmNode, BWABacktrack, BWASampe, BWASamse
-from paleomix.nodes.bowtie2 import Bowtie2Node
-
-from paleomix.pipelines.bam.parts import Reads
-from paleomix.pipelines.bam.nodes import index_and_validate_bam
-
 from paleomix.common.fileutils import swap_ext
-
+from paleomix.common.makefile import MakefileError
+from paleomix.nodes.bowtie2 import Bowtie2Node
+from paleomix.nodes.bwa import BWAAlgorithmNode, BWABacktrack, BWASampe, BWASamse
+from paleomix.pipelines.bam.nodes import index_and_validate_bam
+from paleomix.pipelines.bam.parts.reads import Reads
 
 #
 _TRIMMED_READS_CACHE = {}
@@ -72,7 +67,7 @@ class Lane:
     def _init_unaligned_lane(self, config, prefix, record):
         prefix_key = "Nodes:%s" % (self.options["Aligners"]["Program"],)
 
-        for (key, input_filename) in self.reads.files.items():
+        for key, input_filename in self.reads.files.items():
             # Common parameters between BWA / Bowtie2
             output_filename = os.path.join(self.folder, "%s.bam" % (key.lower(),))
 
@@ -91,7 +86,9 @@ class Lane:
 
             self.bams[key] = {
                 output_filename: self._finalize_nodes(
-                    config=config, prefix=prefix, node=alignment_node,
+                    config=config,
+                    prefix=prefix,
+                    node=alignment_node,
                 )
             }
 
@@ -138,7 +135,7 @@ class Lane:
     def _build_bwa_backtrack_aln(self, parameters, input_file, output_file):
         options = dict(self.options["Aligners"]["BWA"])
         if not self.options["Aligners"]["BWA"]["UseSeed"]:
-            options["-l"] = 2 ** 16 - 1
+            options["-l"] = 2**16 - 1
 
         if self.options["QualityOffset"] in (64, "Solexa"):
             options["-I"] = None

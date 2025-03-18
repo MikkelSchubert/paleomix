@@ -20,10 +20,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from paleomix.node import Node, NodeError
-
-from paleomix.common.bedtools import read_bed_file, pad_bed_records, merge_bed_records
+from paleomix.common.bedtools import merge_bed_records, pad_bed_records, read_bed_file
 from paleomix.common.fileutils import move_file, reroot_path
+from paleomix.node import Node, NodeError
 
 
 class PaddedBedNode(Node):

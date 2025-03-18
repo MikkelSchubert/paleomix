@@ -29,7 +29,6 @@ import pytest
 from paleomix.common.fileutils import fspath
 from paleomix.common.formats.fastq import FASTQ, FASTQError, FASTQualities
 
-
 _SEQ_FRAG = "AAGTCC"  # len() = 6
 _QUAL_FRAG = "123456"  # len() = 6
 

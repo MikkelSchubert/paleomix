@@ -26,19 +26,14 @@ import os
 import pysam
 
 import paleomix
-from paleomix.common import resources
-
-from paleomix.node import Node
-
 import paleomix.common.fileutils as fileutils
-
 import paleomix.pipelines.zonkey.parts.admixture as admixture
 import paleomix.pipelines.zonkey.parts.nuclear as nuclear
-
-from paleomix.pipelines.zonkey.common import read_summary
-
-from paleomix.nodes.samtools import SAMTOOLS_VERSION
+from paleomix.common import resources
+from paleomix.node import Node
 from paleomix.nodes.raxml import RAXML_VERSION
+from paleomix.nodes.samtools import SAMTOOLS_VERSION
+from paleomix.pipelines.zonkey.common import read_summary
 from paleomix.tools.factory import RSCRIPT_VERSION
 
 

@@ -30,11 +30,9 @@ import paleomix.pipelines.phylo.parts.genotype as genotype
 import paleomix.pipelines.phylo.parts.msa as msa
 import paleomix.pipelines.phylo.parts.phylo as phylo
 import paleomix.yaml
-
 from paleomix.pipeline import Pypeline
 from paleomix.pipelines.phylo.config import build_parser
 from paleomix.pipelines.phylo.makefile import MakefileError, read_makefiles
-
 
 _COMMANDS = {
     "genotype": genotype.chain,
@@ -95,7 +93,7 @@ def main(argv):
         log.error("Error reading makefiles:\n%s", error)
         return 1
 
-    for (command_key, command_func) in commands:
+    for command_key, command_func in commands:
         log.info("Building %s pipeline", command_key)
         command_func(pipeline, config, makefiles)
 

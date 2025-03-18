@@ -22,13 +22,11 @@
 #
 import os
 
-from paleomix.node import CommandNode
+import paleomix.common.versions as versions
 from paleomix.atomiccmd.builder import AtomicCmdBuilder
 from paleomix.atomiccmd.command import AtomicCmd
-
 from paleomix.common.fileutils import reroot_path
-import paleomix.common.versions as versions
-
+from paleomix.node import CommandNode
 
 _VERSION_REGEX = r"Version: (\d+)\.(\d+)(?:\.(\d+))?"
 

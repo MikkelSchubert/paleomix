@@ -25,7 +25,6 @@ import os
 
 import paleomix.common.versions as versions
 import paleomix.tools.factory as factory
-
 from paleomix.atomiccmd.builder import (
     AtomicCmdBuilder,
     apply_options,
@@ -35,7 +34,6 @@ from paleomix.atomiccmd.sets import ParallelCmds
 from paleomix.common.fileutils import describe_paired_files
 from paleomix.node import CommandNode, NodeError
 from paleomix.nodes.samtools import SAMTOOLS_VERSION
-
 
 BWA_VERSION = versions.Requirement(
     name="BWA",
@@ -78,7 +76,10 @@ class BWABacktrack(CommandNode):
         threads = _get_max_threads(reference, threads)
 
         aln = _new_bwa_command(
-            ("bwa", "aln"), prefix, IN_FILE=input_file, OUT_STDOUT=output_file,
+            ("bwa", "aln"),
+            prefix,
+            IN_FILE=input_file,
+            OUT_STDOUT=output_file,
         )
         aln.add_value(prefix)
         aln.add_value("%(IN_FILE)s")
@@ -290,7 +291,7 @@ def _get_max_threads(reference, threads):
     reference falls below this size, only 1 thread is used (returned),
     otherwise the requested number of threads is returned.
     """
-    if os.path.exists(reference) and os.path.getsize(reference) < 2 ** 20:
+    if os.path.exists(reference) and os.path.getsize(reference) < 2**20:
         return 1
 
     return threads

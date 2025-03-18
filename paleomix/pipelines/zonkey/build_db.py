@@ -25,12 +25,10 @@ import sys
 
 import pysam
 
-from paleomix.common.sequences import NT_CODES
-
 import paleomix.common.argparse as argparse
 import paleomix.common.fileutils as fileutils
 import paleomix.pipelines.zonkey.common as common
-
+from paleomix.common.sequences import NT_CODES
 
 _CHUNK_SIZE = 1000000
 

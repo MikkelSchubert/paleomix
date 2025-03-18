@@ -35,7 +35,7 @@ def weighted_sampling(choices, weights, rng=random):
 
     total = 0
     totals = []
-    for (index, weight) in enumerate(weights, start=1):
+    for index, weight in enumerate(weights, start=1):
         if weight <= 0:
             raise ValueError(
                 "Probablities must be > 0, not %r for weight %i" % (weight, index)
@@ -58,7 +58,7 @@ def reservoir_sampling(items, downsample_to, rng=random):
         raise ValueError("Negative value for 'downsample_to': %i" % (downsample_to,))
 
     reservoir = []
-    for (index, item) in enumerate(items):
+    for index, item in enumerate(items):
         if index >= downsample_to:
             index = rng.randint(0, index)
             if index < downsample_to:

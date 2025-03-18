@@ -21,15 +21,13 @@
 # SOFTWARE.
 #
 import os
-import re
 import random
+import re
 
 import paleomix.common.fileutils as fileutils
 import paleomix.common.versions as versions
-
-from paleomix.node import CommandNode
 from paleomix.atomiccmd.builder import AtomicCmdBuilder
-
+from paleomix.node import CommandNode
 
 RAXML_VERSION = versions.Requirement(
     call=("raxmlHPC", "-version"),
@@ -113,9 +111,9 @@ class RAxMLRapidBSNode(CommandNode):
         command.set_option("-m", model, fixed=False)
         # Enable Rapid Boostrapping and set random seed. May be set to a fixed value to
         # allow replicability.
-        command.set_option("-x", int(random.random() * 2 ** 31 - 1), fixed=False)
+        command.set_option("-x", int(random.random() * 2**31 - 1), fixed=False)
         # Set random seed for parsimony inference. May be set to allow replicability.
-        command.set_option("-p", int(random.random() * 2 ** 31 - 1), fixed=False)
+        command.set_option("-p", int(random.random() * 2**31 - 1), fixed=False)
         # Terminate bootstrapping upon convergence, not after N repetitions
         command.set_option("-N", replicates, fixed=False)
 
@@ -166,7 +164,7 @@ class RAxMLParsimonyTreeNode(CommandNode):
         # Ensures that output is saved to the temporary directory
         command.set_option("-w", "%(TEMP_DIR)s")
         # Set random seed for bootstrap generation. May be set to allow replicability
-        command.set_option("-p", int(random.random() * 2 ** 31 - 1), fixed=False)
+        command.set_option("-p", int(random.random() * 2**31 - 1), fixed=False)
 
         # Symlink to sequence and partitions, to prevent the creation of *.reduced files
         # outside temp folder

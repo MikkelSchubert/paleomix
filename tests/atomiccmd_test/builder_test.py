@@ -20,10 +20,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from unittest.mock import call, Mock, patch
+from unittest.mock import Mock, call, patch
 
 import pytest
-
 
 from paleomix.atomiccmd.builder import (
     AtomicCmdBuilder,
@@ -32,7 +31,6 @@ from paleomix.atomiccmd.builder import (
     AtomicMPICmdBuilder,
     apply_options,
 )
-
 
 ###############################################################################
 ###############################################################################

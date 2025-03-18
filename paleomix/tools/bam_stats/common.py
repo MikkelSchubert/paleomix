@@ -21,13 +21,12 @@
 # SOFTWARE.
 #
 import collections
-import os
 import logging
+import os
 
 import pysam
 
 import paleomix.common.argparse as argparse
-
 from paleomix.common.bedtools import read_bed_file, sort_bed_by_bamfile
 from paleomix.common.fileutils import swap_ext
 
@@ -103,8 +102,7 @@ def parse_arguments(argv, ext):
         "--target-name",
         default=None,
         metavar="NAME",
-        help="Name used for 'Target' column; defaults to the "
-        "filename of the BAM file.",
+        help="Name used for 'Target' column; defaults to the filename of the BAM file.",
     )
     parser.add_argument(
         "--regions-file",

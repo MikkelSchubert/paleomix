@@ -20,11 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import re
 import random
+import re
 
-from paleomix.node import Node, NodeError
 from paleomix.common.fileutils import move_file, reroot_path
+from paleomix.node import Node, NodeError
 
 
 class PHYLIPBootstrapNode(Node):
@@ -73,7 +73,7 @@ class PHYLIPBootstrapNode(Node):
         with open(temp_fpath, "w") as output_phy:
             output_phy.write(header)
 
-            for (name, fragments) in zip(names, bootstraps):
+            for name, fragments in zip(names, bootstraps):
                 output_phy.write(name)
                 output_phy.write(" ")
                 for sequence in fragments:
@@ -85,13 +85,13 @@ class PHYLIPBootstrapNode(Node):
     @classmethod
     def _bootstrap_sequences(cls, sequences, partitions, rng):
         final_partitions = [[] for _ in sequences]
-        for (start, end) in partitions:
+        for start, end in partitions:
             # Convert alignment to columns, and randomly select among those
             columns = list(zip(*(sequence[start:end] for sequence in sequences)))
             bootstrap_partition = (rng.choice(columns) for _ in columns)
 
             # Convert randomly selected columns back into sequences
-            for (dest, partition) in zip(final_partitions, zip(*bootstrap_partition)):
+            for dest, partition in zip(final_partitions, zip(*bootstrap_partition)):
                 dest.append("".join(partition))
 
         return final_partitions
@@ -111,7 +111,7 @@ def _read_partitions(filename):
     Multiple regions, or skips are not supported."""
     partitions = []
     with open(filename) as handle:
-        for (line_num, line) in enumerate(handle):
+        for line_num, line in enumerate(handle):
             result = _RE_PARTITION.match(line.rstrip())
             if result:
                 start, end = result.groups()
@@ -174,7 +174,7 @@ def _read_sequences(filename):
         ) % (num_sequences, len(sequences), filename)
         raise NodeError(message)
 
-    for (index, fragments) in enumerate(sequences):
+    for index, fragments in enumerate(sequences):
         sequences[index] = "".join(fragments)
         if len(sequences[index]) != num_bases:
             raise NodeError(

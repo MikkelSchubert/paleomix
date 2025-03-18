@@ -20,16 +20,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import collections
 import os
 import random
-import collections
 
-from paleomix.nodes.formats import FastaToPartitionedInterleavedPhyNode as ToPhylipNode
-from paleomix.nodes.raxml import RAxMLParsimonyTreeNode
-from paleomix.nodes.phylip import PHYLIPBootstrapNode
+from paleomix.common.fileutils import add_postfix, swap_ext
 from paleomix.nodes.examl import ExaMLNode, ExaMLParserNode
+from paleomix.nodes.formats import FastaToPartitionedInterleavedPhyNode as ToPhylipNode
 from paleomix.nodes.newick import NewickRerootNode, NewickSupportNode
-from paleomix.common.fileutils import swap_ext, add_postfix
+from paleomix.nodes.phylip import PHYLIPBootstrapNode
+from paleomix.nodes.raxml import RAxMLParsimonyTreeNode
 
 
 def _build_supermatrix(
@@ -153,7 +153,7 @@ def _build_examl_bootstraps(
             input_alignment=input_alignment,
             input_partition=input_partition,
             output_alignment=bootstrap_alignment,
-            seed=random.randint(1, 2 ** 32 - 1),
+            seed=random.randint(1, 2**32 - 1),
             dependencies=dependencies,
         )
 
@@ -269,7 +269,7 @@ def _build_examl_regions_nodes(
 ):
     input_files = collections.defaultdict(dict)
     subset_files = []
-    for (roi_name, roi_dd) in run_dd["RegionsOfInterest"].items():
+    for roi_name, roi_dd in run_dd["RegionsOfInterest"].items():
         regions = settings["Project"]["Regions"][roi_name]
         subset_key = roi_dd.get("SubsetRegions")
         sequences = regions["Sequences"][subset_key]
@@ -305,7 +305,7 @@ def _build_examl_regions_nodes(
 
 def build_phylogeny_nodes(options, settings, filtering, dependencies):
     nodes = []
-    for (run_name, run_dd) in settings["PhylogeneticInference"].items():
+    for run_name, run_dd in settings["PhylogeneticInference"].items():
         destination = os.path.join(options.destination, "phylogenies", run_name)
 
         if run_dd["PerGeneTrees"]:

@@ -21,8 +21,8 @@
 # SOFTWARE.
 #
 import os
-import sys
 import resource
+import sys
 
 
 def set_procname(name=os.path.basename(sys.argv[0])):

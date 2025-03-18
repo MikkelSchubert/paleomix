@@ -35,15 +35,14 @@ command will not work:
 $ samtools view -H INPUT.BAM | samtools view -Sbu -
 
 """
+
 import sys
 
 import pysam
 
-import paleomix.tools.factory
-
 import paleomix.common.argparse as argparse
 import paleomix.common.procs as processes
-
+import paleomix.tools.factory
 
 # Mask to select flags that are relevant to SE reads; this excludes flags where
 # no assumptions can if 0x1 is not set, per the SAM specification (see below).

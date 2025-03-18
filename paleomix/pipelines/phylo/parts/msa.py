@@ -22,10 +22,9 @@
 #
 import os
 
-from paleomix.nodes.sequences import CollectSequencesNode, FilterSingletonsNode
-from paleomix.nodes.mafft import MAFFTNode
-
 import paleomix.common.fileutils as fileutils
+from paleomix.nodes.mafft import MAFFTNode
+from paleomix.nodes.sequences import CollectSequencesNode, FilterSingletonsNode
 
 
 def build_msa_nodes(options, settings, regions, filtering, dependencies):
@@ -67,7 +66,7 @@ def build_msa_nodes(options, settings, regions, filtering, dependencies):
     filtering = dict(filtering)
     filtered_nodes = []
 
-    for (filename, node) in fasta_files.items():
+    for filename, node in fasta_files.items():
         output_filename = fileutils.reroot_path(destination, filename)
         filtered_node = FilterSingletonsNode(
             input_file=filename,

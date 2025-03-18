@@ -21,9 +21,8 @@
 # SOFTWARE.
 #
 
-from paleomix.common.utilities import grouper
 from paleomix.common.formats.msa import MSA
-
+from paleomix.common.utilities import grouper
 
 _NUM_BLOCKS = 6
 _BLOCK_SIZE = 10

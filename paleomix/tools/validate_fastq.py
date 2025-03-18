@@ -20,8 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import sys
 import json
+import sys
 
 from paleomix.common.argparse import ArgumentParser
 from paleomix.common.formats.fastq import FASTQ, FASTQualities

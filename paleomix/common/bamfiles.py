@@ -70,8 +70,8 @@ class BAMRegionsIter:
 
     def __init__(self, handle, regions=None, exclude_flags=EXCLUDED_FLAGS):
         """
-          - handle: BAM file handle (c.f. module 'pysam')
-          - regions: List of BED-like regions (see above)
+        - handle: BAM file handle (c.f. module 'pysam')
+        - regions: List of BED-like regions (see above)
         """
         self._handle = handle
         self._regions = regions
@@ -97,7 +97,7 @@ class BAMRegionsIter:
             records = self._filter(self._handle)
             records = itertools.groupby(records, key=_by_tid)
 
-            for (tid, items) in records:
+            for tid, items in records:
                 if tid >= 0:
                     name = names[tid]
                     length = lengths[tid]

@@ -24,14 +24,11 @@ import os
 
 import paleomix.common.rtools as rtools
 import paleomix.common.versions as versions
-
-from paleomix.common.fileutils import describe_files
-
-from paleomix.node import NodeError, CommandNode
-from paleomix.nodes.samtools import merge_bam_files_command
 from paleomix.atomiccmd.builder import AtomicCmdBuilder, apply_options
 from paleomix.atomiccmd.sets import ParallelCmds
-
+from paleomix.common.fileutils import describe_files
+from paleomix.node import CommandNode, NodeError
+from paleomix.nodes.samtools import merge_bam_files_command
 from paleomix.tools.factory import RSCRIPT_VERSION
 
 MAPDAMAGE_VERSION = versions.Requirement(

@@ -23,17 +23,14 @@
 import os
 import signal
 import weakref
-
-from unittest.mock import call, Mock, patch
+from unittest.mock import Mock, call, patch
 
 import pytest
 
 import paleomix.atomiccmd.command
 import paleomix.common.fileutils as fileutils
-
-from paleomix.common.versions import RequirementObj
 from paleomix.atomiccmd.command import AtomicCmd, CmdError
-
+from paleomix.common.versions import RequirementObj
 
 ###############################################################################
 ###############################################################################
@@ -106,6 +103,7 @@ def test_atomiccmd__set_cwd__temp_in_out(tmp_path, set_cwd, key):
 ###############################################################################
 ###############################################################################
 # Constructor: Paths / pipes
+
 
 # Check that specified paths/etc. are available via getters
 def test_atomiccmd__paths():
@@ -211,7 +209,7 @@ def test_atomiccmd__pipes_out(tmp_path, stdout, stderr, kwargs):
     assert cmd.join() == [0]
 
     expected_files = []
-    for (tmpl, text) in ((stdout, "STDOUT!"), (stderr, "STDERR!")):
+    for tmpl, text in ((stdout, "STDOUT!"), (stderr, "STDERR!")):
         if tmpl is not None:
             fname = tmpl.format(id(cmd))
             result = (tmp_path / fname).read_text()
@@ -295,6 +293,7 @@ _OVERLAPPING_OUT_FILENAMES = (
     {"TEMP_OUT_FILE_1": "outfile", "TEMP_OUT_STDERR": "outfile"},
 )
 
+
 # All OUT_ files must be unique, including all TEMP_OUT_
 @pytest.mark.parametrize("kwargs", _OVERLAPPING_OUT_FILENAMES)
 def test_atomiccmd__paths__overlapping_output(kwargs):
@@ -313,6 +312,7 @@ def test_atomiccmd__pipes__duplicates(key):
 ###############################################################################
 ###############################################################################
 # CHECK_ / EXEC_
+
 
 # RequirementObjs are the standard way to do tests
 def test_atomicmcd__exec__reqobj():
@@ -612,7 +612,9 @@ def test_atomiccmd__commit_simple(tmp_path):
 def test_atomiccmd__commit_temp_out(tmp_path):
     dest, temp = _setup_for_commit(tmp_path, create_cmd=False)
     cmd = AtomicCmd(
-        ("echo", "foo"), OUT_STDOUT=str(dest / "foo.txt"), TEMP_OUT_FOO="bar.txt",
+        ("echo", "foo"),
+        OUT_STDOUT=str(dest / "foo.txt"),
+        TEMP_OUT_FOO="bar.txt",
     )
     cmd.run(temp)
     assert cmd.join() == [0]
@@ -754,6 +756,7 @@ def test_atomiccmd__str__():
 # FIXME: Needs better tracking of procs
 #        1. track for termination until joined
 #        2. don't use weak references to avoid accidental leaks
+
 
 # Test that the internal list of processes is kept clean of old objects
 def test_atomiccmd__cleanup_proc__commit(tmp_path):

@@ -24,9 +24,8 @@ import sys
 
 import pysam
 
-import paleomix.common.system
 import paleomix.common.logging
-
+import paleomix.common.system
 
 _COMMANDS = {
     # BAM/FASTQ pipeline

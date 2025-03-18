@@ -25,7 +25,6 @@ import collections
 
 import paleomix.common.vcfwrap as vcfwrap
 
-
 _INF = float("inf")
 # Rough number of records to keep in memory at once
 _CHUNK_SIZE = 10000
@@ -65,10 +64,18 @@ def add_varfilter_options(parser):
         help="Minimum RMS mapping quality for SNPs",
     )
     parser.add_argument(
-        "-d", "--min-read-depth", type=int, default=8, help="Minimum read depth",
+        "-d",
+        "--min-read-depth",
+        type=int,
+        default=8,
+        help="Minimum read depth",
     )
     parser.add_argument(
-        "-D", "--max-read-depth", type=int, default=10000000, help="Maximum read depth",
+        "-D",
+        "--max-read-depth",
+        type=int,
+        default=10000000,
+        help="Maximum read depth",
     )
     parser.add_argument(
         "-a",

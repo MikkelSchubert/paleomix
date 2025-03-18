@@ -28,45 +28,42 @@ import logging
 import os
 import string
 
+import paleomix.common.bedtools as bedtools
+import paleomix.common.sequences as sequences
 import paleomix.pipelines.bam.paths as paths
-
 from paleomix.common.fileutils import get_files_glob
-from paleomix.common.utilities import fill_dict
+from paleomix.common.formats.fasta import FASTA, FASTAError
 from paleomix.common.makefile import (
-    MakefileError,
     REQUIRED_VALUE,
-    WithoutDefaults,
-    read_makefile,
-    IsInt,
-    IsUnsignedInt,
-    IsFloat,
-    IsStr,
-    IsNone,
-    IsBoolean,
     And,
-    Or,
+    DeprecatedOption,
+    IsBoolean,
+    IsDictOf,
+    IsFloat,
+    IsInt,
+    IsListOf,
+    IsNone,
+    IsStr,
+    IsUnsignedInt,
+    MakefileError,
     Not,
+    Or,
+    RemovedOption,
+    StringIn,
+    StringStartsWith,
     ValueIn,
     ValuesIntersect,
     ValuesSubsetOf,
-    StringIn,
-    StringStartsWith,
-    IsListOf,
-    IsDictOf,
-    DeprecatedOption,
-    RemovedOption,
+    WithoutDefaults,
+    read_makefile,
 )
-from paleomix.common.formats.fasta import FASTA, FASTAError
-
-import paleomix.common.bedtools as bedtools
-import paleomix.common.sequences as sequences
-
+from paleomix.common.utilities import fill_dict
 
 _READ_TYPES = set(("Single", "Singleton", "Collapsed", "CollapsedTruncated", "Paired"))
 
 # The maximum reference sequence length supported by the BAI index format:
 #   https://samtools.github.io/hts-specs/SAMv1.pdf
-_BAM_MAX_SEQUENCE_LENGTH = 2 ** 29 - 1
+_BAM_MAX_SEQUENCE_LENGTH = 2**29 - 1
 
 
 def read_makefiles(filenames, pipeline_variant="bam"):
@@ -330,7 +327,7 @@ def _mangle_options(makefile):
 
 def _mangle_prefixes(makefile):
     records = []
-    for (name, values) in makefile.get("Prefixes", {}).items():
+    for name, values in makefile.get("Prefixes", {}).items():
         if "*" in name[:-1]:
             raise MakefileError(
                 "The character '*' is not allowed in Prefix "
@@ -346,7 +343,7 @@ def _mangle_prefixes(makefile):
             records.append((name, values))
 
     prefixes = {}
-    for (name, record) in records:
+    for name, record in records:
         if name in prefixes:
             raise MakefileError("Multiple prefixes with the same name: %s" % name)
 
@@ -385,12 +382,12 @@ def _glob_prefixes(template, pattern):
 def _mangle_lanes(makefile):
     formatter = string.Formatter()
     prefixes = makefile["Prefixes"]
-    for (target_name, samples) in makefile["Targets"].items():
-        for (sample_name, libraries) in samples.items():
-            for (library_name, lanes) in libraries.items():
+    for target_name, samples in makefile["Targets"].items():
+        for sample_name, libraries in samples.items():
+            for library_name, lanes in libraries.items():
                 options = lanes.pop("Options")
 
-                for (lane, data) in lanes.items():
+                for lane, data in lanes.items():
                     path = (target_name, sample_name, library_name, lane)
 
                     _validate_lane_paths(data, path, formatter)
@@ -448,7 +445,7 @@ def _determine_lane_type(prefixes, data, path):
         return "Raw"
     elif isinstance(data, dict):
         if all((key in _READ_TYPES) for key in data):
-            for (key, files) in data.items():
+            for key, files in data.items():
                 is_paired = paths.is_paired_end(files)
 
                 if is_paired and (key != "Paired"):
@@ -476,10 +473,10 @@ def _determine_lane_type(prefixes, data, path):
 
 
 def _mangle_tags(makefile):
-    for (target, samples) in makefile["Targets"].items():
-        for (sample, libraries) in samples.items():
-            for (library, barcodes) in libraries.items():
-                for (barcode, record) in barcodes.items():
+    for target, samples in makefile["Targets"].items():
+        for sample, libraries in samples.items():
+            for library, barcodes in libraries.items():
+                for barcode, record in barcodes.items():
                     record["Tags"] = {
                         "Target": target,
                         "ID": library,
@@ -494,7 +491,7 @@ def _mangle_tags(makefile):
 
 
 def _split_lanes_by_filenames(makefile):
-    for (target, sample, library, barcode, record) in _iterate_over_records(makefile):
+    for target, sample, library, barcode, record in _iterate_over_records(makefile):
         if record["Type"] == "Raw":
             path = (target, sample, library, barcode)
             filenames = paths.collect_files(path, record["Data"])
@@ -505,7 +502,7 @@ def _split_lanes_by_filenames(makefile):
 
             input_files = [filenames[key] for key in filename_keys]
             input_files_iter = itertools.zip_longest(*input_files)
-            for (index, filenames) in enumerate(input_files_iter, start=1):
+            for index, filenames in enumerate(input_files_iter, start=1):
                 current = copy.deepcopy(template)
 
                 assert len(filenames) == len(filename_keys), filenames
@@ -567,7 +564,7 @@ def _validate_makefile_adapters(makefile):
                 results[key] = True
 
     results = dict.fromkeys(tests, False)
-    for (_, _, _, _, record) in _iterate_over_records(makefile):
+    for _, _, _, _, record in _iterate_over_records(makefile):
         adapterrm_opt = record.get("Options", {}).get("AdapterRemoval", {})
         check_options(adapterrm_opt, results)
 
@@ -599,10 +596,10 @@ def _validate_makefile_adapters(makefile):
 def _validate_makefile_libraries(makefile):
     libraries = collections.defaultdict(set)
     iterator = _iterate_over_records(makefile)
-    for (target, sample, library, _, _) in iterator:
+    for target, sample, library, _, _ in iterator:
         libraries[(target, library)].add(sample)
 
-    for ((target, library), samples) in libraries.items():
+    for (target, library), samples in libraries.items():
         if len(samples) > 1:
             raise MakefileError(
                 "Library '%s' in target '%s' spans multiple "
@@ -614,18 +611,18 @@ def _validate_makefiles_duplicate_files(makefiles):
     filenames = collections.defaultdict(list)
     for makefile in makefiles:
         iterator = _iterate_over_records(makefile)
-        for (target, sample, library, barcode, record) in iterator:
+        for target, sample, library, barcode, record in iterator:
             for realpath in map(os.path.realpath, record["Data"].values()):
                 filenames[realpath].append((target, sample, library, barcode))
 
     has_overlap = {}
-    for (filename, records) in filenames.items():
+    for filename, records in filenames.items():
         if len(records) > 1:
             has_overlap[filename] = list(set(records))
 
     logger = logging.getLogger(__name__)
     by_records = sorted(zip(list(has_overlap.values()), list(has_overlap.keys())))
-    for (records, pairs) in itertools.groupby(by_records, lambda x: x[0]):
+    for records, pairs in itertools.groupby(by_records, lambda x: x[0]):
         pairs = list(pairs)
         description = _describe_files_in_multiple_records(records, pairs)
 
@@ -638,13 +635,13 @@ def _validate_makefiles_duplicate_files(makefiles):
 
 def _describe_files_in_multiple_records(records, pairs):
     descriptions = []
-    for (index, record) in enumerate(sorted(records), start=1):
+    for index, record in enumerate(sorted(records), start=1):
         descriptions.append(
             "\t- Record {0}: Name: {1},  Sample: {2},  "
             "Library: {3},  Barcode: {4}".format(index, *record)
         )
 
-    for (index, (_, filename)) in enumerate(sorted(pairs), start=1):
+    for index, (_, filename) in enumerate(sorted(pairs), start=1):
         message = "\t- Canonical path {0}: {1}"
         descriptions.append(message.format(index, filename))
 
@@ -689,7 +686,7 @@ def _validate_prefixes(makefiles):
                 raise MakefileError("Error indexing FASTA:\n %s" % (error,))
 
             regions_of_interest = prefix.get("RegionsOfInterest", {})
-            for (name, fpath) in regions_of_interest.items():
+            for name, fpath in regions_of_interest.items():
                 try:
                     # read_bed_file returns iterator
                     for _ in bedtools.read_bed_file(fpath, contigs=contigs):
@@ -714,8 +711,8 @@ def _validate_prefixes(makefiles):
 
 
 def _iterate_over_records(makefile):
-    for (target, samples) in tuple(makefile["Targets"].items()):
-        for (sample, libraries) in tuple(samples.items()):
-            for (library, barcodes) in tuple(libraries.items()):
-                for (barcode, record) in tuple(barcodes.items()):
+    for target, samples in tuple(makefile["Targets"].items()):
+        for sample, libraries in tuple(samples.items()):
+            for library, barcodes in tuple(libraries.items()):
+                for barcode, record in tuple(barcodes.items()):
                     yield target, sample, library, barcode, record

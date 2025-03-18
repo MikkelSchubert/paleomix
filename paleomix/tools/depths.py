@@ -20,19 +20,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import sys
-import itertools
 import collections
+import itertools
+import sys
 
-from paleomix.common.timer import BAMTimer
 from paleomix.common.bamfiles import BAMRegionsIter
-
+from paleomix.common.timer import BAMTimer
 from paleomix.tools.bam_stats.common import (
-    collect_references,
     collect_readgroups,
+    collect_references,
     main_wrapper,
 )
-
 
 ##############################################################################
 ##############################################################################
@@ -103,17 +101,17 @@ class MappingToTotals:
 
     def finalize(self):
         """Process cached counts."""
-        for (count, multiplier) in self._cache.items():
+        for count, multiplier in self._cache.items():
             self._update_totals(count, multiplier)
         self._cache.clear()
 
     def _update_totals(self, count, multiplier=1):
-        for (smlbid, count) in enumerate(count):
+        for smlbid, count in enumerate(count):
             if count:
                 for lst in self._map_by_smlbid[smlbid]:
                     lst[0] += count
 
-        for (dst_counts, src_count) in self._totals_src_and_dst:
+        for dst_counts, src_count in self._totals_src_and_dst:
             if src_count[0]:
                 dst_counts[src_count[0]] += multiplier
                 src_count[0] = 0
@@ -125,7 +123,7 @@ class MappingToTotals:
         # Accumulators mapped by the corresponding table keys
         totals_by_table_key = {}
 
-        for (smlbid, (sm_key, lb_key)) in enumerate(smlbid_to_smlb):
+        for smlbid, (sm_key, lb_key) in enumerate(smlbid_to_smlb):
             keys = [
                 ("*", "*", "*"),
                 (sm_key, "*", "*"),
@@ -138,7 +136,7 @@ class MappingToTotals:
             totals_by_smlbid[smlbid] = mappings
 
         totals_src_and_dst = []
-        for (key, dst) in totals_by_table_key.items():
+        for key, dst in totals_by_table_key.items():
             totals_src_and_dst.append((totals[key], dst))
 
         return totals_by_smlbid, totals_src_and_dst
@@ -175,7 +173,7 @@ def calc_max_depth(counts):
         return "NA"
 
     total = float(running_total)
-    for (index, count) in sorted(counts.items()):
+    for index, count in sorted(counts.items()):
         # Stop when less than the 0.5% most extreme values are included
         if running_total / total < 0.005:
             # The max is inclusive, so return the depth just before this one
@@ -204,7 +202,7 @@ def print_table(handle, args, totals):
 
 def calculate_depth_pc(counts, length):
     final_counts = [0] * (_MAX_DEPTH + 1)
-    for (depth, count) in counts.items():
+    for depth, count in counts.items():
         final_counts[min(_MAX_DEPTH, depth)] += count
 
     running_total = sum(final_counts)
@@ -221,7 +219,7 @@ def build_table(name, totals, lengths):
 
     yield header
     last_sm = last_lb = None
-    for ((sm_key, lb_key, ct_key), counts) in sorted(totals.items()):
+    for (sm_key, lb_key, ct_key), counts in sorted(totals.items()):
         if (sm_key != last_sm) and (last_sm is not None):
             yield "#"
             yield "#"
@@ -271,7 +269,7 @@ def build_totals_dict(args, handle):
     structure = build_key_struct(args, handle)
 
     totals = {}
-    for (sm_key, libraries) in structure.items():
+    for sm_key, libraries in structure.items():
         for lb_key in libraries:
             if len(references) == 1:
                 key = references[0]
@@ -306,7 +304,7 @@ def count_bases(args, counts, record, rg_to_smlbid, template):
         key = rg_to_smlbid[None]
 
     index = 0
-    for (cigar, count) in record.cigar:
+    for cigar, count in record.cigar:
         if cigar in (0, 7, 8):
             for counter in itertools.islice(counts, index, index + count):
                 counter[key] += 1
@@ -325,7 +323,7 @@ def build_rg_to_smlbid_keys(args, handle):
     rg_to_lbsmid = {}
     lbsm_to_lbsmid = {}
     lbsmid_to_smlb = []
-    for (key_rg, readgroup) in collect_readgroups(args, handle).items():
+    for key_rg, readgroup in collect_readgroups(args, handle).items():
         key_sm = readgroup["SM"]
         key_lb = readgroup["LB"]
 
@@ -356,7 +354,7 @@ def process_file(handle, args):
         last_pos = 0
         counts = collections.deque()
         mapping = MappingToTotals(totals, region, smlbid_to_smlb)
-        for (position, records) in region:
+        for position, records in region:
             mapping.process_counts(counts, last_pos, position)
 
             for record in records:

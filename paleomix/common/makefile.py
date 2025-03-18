@@ -172,11 +172,11 @@ value has accidentically been left blank ('IsStr' requires a NON-EMPTY string):
 |    Observed value: ''
 -------------------------------------------------------------------------------
 """
+
 import copy
 import logging
 
 import paleomix.yaml
-
 from paleomix.common.fileutils import fspath
 from paleomix.common.utilities import group_by_pred
 
@@ -296,8 +296,8 @@ class MakefileSpec:
 
     def __init__(self, description, default=DEFAULT_NOT_SET):
         """description -- A string describing the specification.
-           default     -- A default value, or DEFAULT_NOT_SET if not used. If a
-                          value is set, it is copied before being applied."""
+        default     -- A default value, or DEFAULT_NOT_SET if not used. If a
+                       value is set, it is copied before being applied."""
 
         self.description = description
         self.default = default
@@ -752,7 +752,7 @@ class IsDictOf(MakefileSpec):
         if not isinstance(value, dict):
             return False
 
-        for (key, value) in value.items():
+        for key, value in value.items():
             if not (
                 self._key_spec.meets_spec(key) and self._value_spec.meets_spec(value)
             ):

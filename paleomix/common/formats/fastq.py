@@ -22,9 +22,9 @@
 #
 import sys
 
-from paleomix.common.utilities import Immutable, TotallyOrdered
 from paleomix.common.fileutils import open_ro
 from paleomix.common.formats._common import FormatError
+from paleomix.common.utilities import Immutable, TotallyOrdered
 
 
 class FASTQError(FormatError):

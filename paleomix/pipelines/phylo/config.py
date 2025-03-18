@@ -20,13 +20,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
 import multiprocessing
+import os
 
 import paleomix
 import paleomix.common.logging
-
-from paleomix.common.argparse import ArgumentParser, SUPPRESS
+from paleomix.common.argparse import SUPPRESS, ArgumentParser
 
 _DEFAULT_CONFIG_FILES = [
     "/etc/paleomix/phylo_pipeline.ini",
@@ -36,7 +35,8 @@ _DEFAULT_CONFIG_FILES = [
 
 def build_parser():
     parser = ArgumentParser(
-        prog="paleomix phylo_pipeline", default_config_files=_DEFAULT_CONFIG_FILES,
+        prog="paleomix phylo_pipeline",
+        default_config_files=_DEFAULT_CONFIG_FILES,
     )
     parser.add_argument(
         "commands",

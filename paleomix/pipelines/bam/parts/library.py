@@ -23,16 +23,15 @@
 import os
 
 from paleomix.common.utilities import safe_coerce_to_tuple
-
-from paleomix.nodes.picard import MarkDuplicatesNode
+from paleomix.nodes.commands import FilterCollapsedBAMNode
 from paleomix.nodes.mapdamage import (
-    MapDamagePlotNode,
     MapDamageModelNode,
+    MapDamagePlotNode,
     MapDamageRescaleNode,
 )
-from paleomix.pipelines.bam.nodes import index_and_validate_bam
-from paleomix.nodes.commands import FilterCollapsedBAMNode
+from paleomix.nodes.picard import MarkDuplicatesNode
 from paleomix.nodes.validation import DetectInputDuplicationNode
+from paleomix.pipelines.bam.nodes import index_and_validate_bam
 
 
 class Library:
@@ -112,7 +111,7 @@ class Library:
             keep_duplicates = True
 
         results = {}
-        for (key, files_and_nodes) in bams.items():
+        for key, files_and_nodes in bams.items():
             output_filename = self.folder + ".rmdup.%s.bam" % key
             node = rmdup_cls[key](
                 config=config,
@@ -151,14 +150,18 @@ class Library:
         elif run_type == "model":
             # Run of mapDamage including both plots and damage models
             node = self._mapdamage_model(
-                destination=destination, prefix=prefix, files_and_nodes=files_and_nodes,
+                destination=destination,
+                prefix=prefix,
+                files_and_nodes=files_and_nodes,
             )
 
             return files_and_nodes, (node,)
         elif run_type in ("plot", True):
             # Basic run of mapDamage, only generates plots / tables
             node = self._mapdamage_plot(
-                destination=destination, prefix=prefix, files_and_nodes=files_and_nodes,
+                destination=destination,
+                prefix=prefix,
+                files_and_nodes=files_and_nodes,
             )
 
             return files_and_nodes, (node,)
@@ -181,7 +184,9 @@ class Library:
     def _mapdamage_model(self, destination, prefix, files_and_nodes):
         # Generates basic plots / table files
         plot = self._mapdamage_plot(
-            destination=destination, prefix=prefix, files_and_nodes=files_and_nodes,
+            destination=destination,
+            prefix=prefix,
+            files_and_nodes=files_and_nodes,
         )
 
         # Builds model of post-mortem DNA damage
@@ -194,7 +199,9 @@ class Library:
 
     def _mapdamage_rescale(self, config, destination, prefix, files_and_nodes):
         model = self._mapdamage_model(
-            destination=destination, prefix=prefix, files_and_nodes=files_and_nodes,
+            destination=destination,
+            prefix=prefix,
+            files_and_nodes=files_and_nodes,
         )
 
         # Rescales BAM quality scores using model built above

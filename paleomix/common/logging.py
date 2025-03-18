@@ -28,7 +28,6 @@ import time
 
 import coloredlogs
 
-
 _LOG_LEVELS = {
     "info": logging.INFO,
     "warning": logging.WARNING,

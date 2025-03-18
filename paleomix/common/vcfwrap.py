@@ -25,7 +25,6 @@ the VCF data-structures from pysam."""
 
 import collections
 
-
 Indel = collections.namedtuple(
     "Indel", ["in_reference", "pos", "prefix", "what", "postfix"]
 )

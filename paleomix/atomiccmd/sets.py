@@ -20,14 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import time
 import collections
+import time
 
 import paleomix.atomiccmd.pprint as atomicpp
-
 from paleomix.atomiccmd.command import AtomicCmd, CmdError
-from paleomix.common.utilities import safe_coerce_to_tuple
 from paleomix.common.fileutils import try_remove
+from paleomix.common.utilities import safe_coerce_to_tuple
 
 
 class _CommandSet:
@@ -139,7 +138,7 @@ class ParallelCmds(_CommandSet):
         commands = list(enumerate(self._commands))
         return_codes = [[None]] * len(commands)
         while commands and self._joinable:
-            for (index, command) in list(commands):
+            for index, command in list(commands):
                 if command.ready():
                     return_codes[index] = command.join()
                     commands.remove((index, command))

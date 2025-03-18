@@ -26,10 +26,10 @@ import re
 
 import pysam
 
-from paleomix.node import CommandNode, Node, NodeError
 from paleomix.common.fileutils import describe_files, make_dirs
-from paleomix.common.utilities import chain_sorted
 from paleomix.common.sequences import reverse_complement
+from paleomix.common.utilities import chain_sorted
+from paleomix.node import CommandNode, Node, NodeError
 from paleomix.tools import factory
 
 
@@ -148,7 +148,7 @@ def check_bam_files(input_files, err_func):
         reads_iter = _open_samfiles(handles, input_files)
         references = handles[0].references
 
-        for (record, filename) in reads_iter:
+        for record, filename in reads_iter:
             curr_pos = (record.pos, record.tid)
             if curr_pos != last_pos:
                 _process_bam_reads(observed_reads, references, last_pos, err_func)
@@ -315,8 +315,7 @@ def check_fasta_file(filename):
 
         if state == _NA:
             raise NodeError(
-                "File does not contain any sequences:\n"
-                "    Filename = %r" % (filename,)
+                "File does not contain any sequences:\n    Filename = %r" % (filename,)
             )
         elif state == _IN_HEADER:
             raise NodeError(
@@ -325,7 +324,7 @@ def check_fasta_file(filename):
 
 
 # Standard nucleotides + UIPAC codes
-_VALID_CHARS_STR = "ACGTN" "RYSWKMBDHV"
+_VALID_CHARS_STR = "ACGTNRYSWKMBDHV"
 _VALID_CHARS = frozenset(_VALID_CHARS_STR.upper() + _VALID_CHARS_STR.lower())
 _NA, _IN_HEADER, _IN_SEQUENCE, _IN_WHITESPACE = range(4)
 

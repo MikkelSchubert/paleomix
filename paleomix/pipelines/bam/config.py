@@ -20,15 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
 import multiprocessing
+import os
 
 import paleomix
 import paleomix.common.logging
-
+from paleomix.common.argparse import SUPPRESS, ArgumentParser
 from paleomix.common.resources import add_copy_example_command
-from paleomix.common.argparse import ArgumentParser, SUPPRESS
-
 
 _DEFAULT_CONFIG_FILES = [
     "/etc/paleomix/bam_pipeline.ini",
@@ -128,7 +126,9 @@ def add_run_command(subparsers):
         help="Location for temporary files and folders",
     )
     group.add_argument(
-        "--destination", default=".", help="The destination folder for result files.",
+        "--destination",
+        default=".",
+        help="The destination folder for result files.",
     )
 
     group = parser.add_argument_group("Files and executables")

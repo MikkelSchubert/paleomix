@@ -27,7 +27,6 @@ import pysam
 
 import paleomix.common.argparse as argparse
 import paleomix.common.vcffilter as vcffilter
-
 from paleomix.common.fileutils import open_ro
 
 

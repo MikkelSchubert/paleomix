@@ -21,9 +21,7 @@
 # SOFTWARE.
 #
 import paleomix.common.fileutils as fileutils
-
 from paleomix.node import Node
-
 
 _DEFAULT_COLORS = (
     "#E69F00",

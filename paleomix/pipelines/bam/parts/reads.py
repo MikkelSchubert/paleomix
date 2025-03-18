@@ -22,7 +22,7 @@
 #
 import os
 
-from paleomix.nodes.adapterremoval import SE_AdapterRemovalNode, PE_AdapterRemovalNode
+from paleomix.nodes.adapterremoval import PE_AdapterRemovalNode, SE_AdapterRemovalNode
 from paleomix.nodes.validation import ValidateFASTQFilesNode
 
 

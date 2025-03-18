@@ -22,21 +22,19 @@
 #
 import os
 
-from paleomix.node import CommandNode, NodeError
-from paleomix.atomiccmd.command import AtomicCmd
+import paleomix.common.versions as versions
 from paleomix.atomiccmd.builder import (
     AtomicCmdBuilder,
     apply_options,
 )
+from paleomix.atomiccmd.command import AtomicCmd
 from paleomix.atomiccmd.sets import ParallelCmds
+from paleomix.node import CommandNode, NodeError
 from paleomix.nodes.bwa import (
+    _get_max_threads,
     _get_node_description,
     _new_cleanup_command,
-    _get_max_threads,
 )
-
-import paleomix.common.versions as versions
-
 
 BOWTIE2_VERSION = versions.Requirement(
     call=("bowtie2", "--version"),

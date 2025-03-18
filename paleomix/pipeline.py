@@ -27,16 +27,14 @@ import os
 import signal
 import sys
 import traceback
-
 from queue import Empty
 
 import paleomix.common.logging
-
-from paleomix.node import Node, NodeError, NodeUnhandledException
-from paleomix.nodegraph import FileStatusCache, NodeGraph, NodeGraphError
 from paleomix.common.text import padded_table
 from paleomix.common.utilities import safe_coerce_to_tuple
 from paleomix.common.versions import VersionRequirementError
+from paleomix.node import Node, NodeError, NodeUnhandledException
+from paleomix.nodegraph import FileStatusCache, NodeGraph, NodeGraphError
 
 
 class Pypeline:
@@ -291,7 +289,7 @@ class Pypeline:
         pipeline_executables = self.list_required_executables()
         print_func(template.format("Executable", "Version", "Required version"))
 
-        for (name, requirements) in sorted(pipeline_executables.items()):
+        for name, requirements in sorted(pipeline_executables.items()):
             if not requirements:
                 print_func(template.format(name, "-", "any version"))
                 continue
