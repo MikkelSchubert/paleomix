@@ -42,7 +42,7 @@ Repository = "https://github.com/MikkelSchubert/paleomix.git"
 Issues = "https://github.com/MikkelSchubert/paleomix/issues"
 
 [project.optional-dependencies]
-dev = ["pytest", "pytest-cov"]
+dev = ["nox", "pytest", "pytest-cov"]
 
 [project.scripts]
 paleomix = "paleomix.main:entry_point"
