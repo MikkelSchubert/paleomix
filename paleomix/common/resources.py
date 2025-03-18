@@ -32,26 +32,7 @@ def _parse_resource(resource):
     return ".".join(modules), filename
 
 
-if sys.version_info < (3, 7):
-    from pkg_resources import cleanup_resources, resource_filename
-
-    class _ResourceContext:
-        def __init__(self, resource):
-            self._resource = resource
-            self._source = None
-
-        def __enter__(self):
-            module, filename = _parse_resource(self._resource)
-            self._source = resource_filename(module, filename)
-            return self
-
-        def __exit__(self, type, value, traceback):
-            cleanup_resources()
-
-    def access(resource):
-        return _ResourceContext(resource)
-
-elif sys.version_info < (3, 9):
+if sys.version_info < (3, 9):
     from importlib import resources
 
     def access(resource):

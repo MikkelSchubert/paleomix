@@ -25,9 +25,9 @@ import sys
 
 from setuptools import find_packages, setup
 
-if sys.version_info < (3, 5):
+if sys.version_info < (3, 8):
     sys.stderr.write("FATAL ERROR: ")
-    sys.stderr.write("PALEOMIX requires at least Python 3.5, but setup.py ")
+    sys.stderr.write("PALEOMIX requires at least Python 3.8, but setup.py ")
     sys.stderr.write("was run using Python %s.%s!\n" % sys.version_info[:2])
     sys.exit(1)
 
@@ -62,9 +62,6 @@ setup(
         "Topic :: Scientific/Engineering :: Bio-Informatics",
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 3 :: Only",
-        "Programming Language :: Python :: 3.5",
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
