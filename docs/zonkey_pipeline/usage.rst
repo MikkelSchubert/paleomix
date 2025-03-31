@@ -22,13 +22,13 @@ Briefly, it is possible to run the pipeline on a single sample by specifying the
     Runs the Zonkey pipeline on a single BAM alignment <sample.bam>, which is expected to contain a nuclear and / or a mitochondrial alignment. If <destination> is specified, a directory at that location is created, and the resulting output saved there. If <destination> is not specified, the default location is chosen by replacing the file-extension of the alignment file (typically '.bam') with '.zonkey'.
 
 **paleomix zonkey run <panel> <nuclear.bam> <mitochondrial.bam> <destination>**
-    This commands allow for the combined analyses of the nuclear and mitochondrial genomes, in cases where these alignments have been carried out seperately. In this case, specifying a <destination> location is madatory.
+    This commands allow for the combined analyses of the nuclear and mitochondrial genomes, in cases where these alignments have been carried out separately. In this case, specifying a <destination> location is mandatory.
 
 **paleomix zonkey run <panel> <samples.txt> [<destination>]**
-    It is possible to run the pipeline on multiple samples at once, by specifying a list of BAM files (here <samples.txt>), which lists a sample name and one or two BAM files per line, with each column seperated by tabs). A destination may (optionally) be specified, as when specifying a single BAM file (see above).
+    It is possible to run the pipeline on multiple samples at once, by specifying a list of BAM files (here <samples.txt>), which lists a sample name and one or two BAM files per line, with each column separated by tabs). A destination may (optionally) be specified, as when specifying a single BAM file (see above).
 
 **paleomix zonkey dryrun <panel> [...]**
-    The 'dryrun' command is equivalent to the 'run' command, but does not actually carry out the analytical steps; this command is useful to test for problems before excuting the pipeline, such as missing or outdated software requirements (see :ref:`zonkey_requirements`).
+    The 'dryrun' command is equivalent to the 'run' command, but does not actually carry out the analytical steps; this command is useful to test for problems before executing the pipeline, such as missing or outdated software requirements (see :ref:`zonkey_requirements`).
 
 **paleomix zonkey mito <panel> <destination>**
     The 'mito' command is included to create a :ref:`bam_pipeline` project template for mapping FASTQ reads against the mitochondrial genomes of the samples included in the Zonkey reference panel samples (see Prerequisites below) for a list of samples).

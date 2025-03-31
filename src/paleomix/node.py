@@ -133,7 +133,7 @@ class Node:
             self._remove_temp_dir(temp)
         except NodeMissingFilesError:
             try:
-                # The folder is most likely empty, but it is possible to re-use temp
+                # The folder is most likely empty, but it is possible to reuse temp
                 # directories for resumable tasks so we cannot delete it outrigth
                 if temp is not None:
                     os.rmdir(temp)

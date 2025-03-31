@@ -87,7 +87,7 @@ class RAxMLRapidBSNode(CommandNode):
             "-w": "%(TEMP_DIR)s",
             # Use the GTRGAMMA model of NT substitution by default
             "-m": model,
-            # Enable Rapid Boostrapping and set random seed
+            # Enable Rapid Bootstrapping and set random seed
             "-x": rng.randint(0, 2**31 - 1),
             # Set random seed for parsimony inference
             "-p": rng.randint(0, 2**31 - 1),
@@ -107,7 +107,7 @@ class RAxMLRapidBSNode(CommandNode):
         ]
 
         # Symlink to sequence and partitions, to prevent the creation of *.reduced files
-        # outside temp folder. In addition, it may be nessesary to remove the .reduced
+        # outside temp folder. In addition, it may be necessary to remove the .reduced
         # files if created
         alignment_basename = os.path.basename(input_alignment)
         options["-s"] = TempOutputFile(alignment_basename)

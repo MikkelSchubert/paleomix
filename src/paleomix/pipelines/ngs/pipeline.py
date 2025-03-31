@@ -649,7 +649,7 @@ def genotype_samples(args, genome, samples, settings):
         for sample in samples:
             gvcfs.append(layout.get("gvcf_sample_part", sample=sample))
 
-        # Combine partial per-sample gVCFs into into multi-sample paritial gVCF
+        # Combine partial per-sample gVCFs into into multi-sample partial gVCF
         yield CombineGVCFsNode(
             in_reference=genome.filename,
             in_variants=gvcfs,
@@ -782,7 +782,7 @@ def build_pipeline(args, project):
     ]
 
     # It is difficult to predict exactly how much memory a given task will use so
-    # instead the limits are losened and users are encouraged to use tools like
+    # instead the limits are loosened and users are encouraged to use tools like
     # `earlyoom` to avoid running out of memory.
     for value in args.jre_options:
         if value.startswith(("-Xmx", "-XX:MaxRAMPercentage=")):

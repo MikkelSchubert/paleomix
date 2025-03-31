@@ -80,6 +80,6 @@ def _main_copy_example(destination: str) -> int:
 
     resources.copy_resource(os.path.join("examples", "bam_pipeline"), destination)
 
-    log.info("Sucessfully saved example in %r", destination)
+    log.info("Successfully saved example in %r", destination)
 
     return 0

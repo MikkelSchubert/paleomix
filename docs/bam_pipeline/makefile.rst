@@ -137,7 +137,7 @@ The "AdapterRemoval" subsection allows for options that are applied when Adapter
     The minimum length required after read merging, adapter trimming, and base-quality quality trimming; resulting reads shorter than this length are discarded, and thereby excluded from further analyses by the pipeline. A value of at least 25 bp is recommended to cut down on the rate of spurious alignments; if possible, a value of 30 bp may be used to greatly reduce the fraction of spurious alignments, with smaller gains for greater minimums [Schubert2012]_.
 
     .. warning::
-        The default value used by PALEOMIX for `--minlength` (25 bp) differs from the default value for AdapterRemoval (15 bp). Thus, if a minimum length of 15 bp is desired, it is nessesarily to explicitly state so in the makefile, simply commenting out this command-line argument is not sufficient.
+        The default value used by PALEOMIX for `--minlength` (25 bp) differs from the default value for AdapterRemoval (15 bp). Thus, if a minimum length of 15 bp is desired, it is necessarily to explicitly state so in the makefile, simply commenting out this command-line argument is not sufficient.
 
 
 **Options \:\: AdapterRemoval \:\: --collapse**
@@ -248,7 +248,7 @@ Short read aligners - BWA
             :lineno-start: 41
             :lines: 41-42
 
-        Specifies wether or not unmapped reads (reads not aligned to a target sequence) are to be retained in the resulting BAM files. If set to 'yes' (without quotes), all unmapped reads are discarded during the mapping process, while setting the option to 'no' (without quotes) retains these reads in the BAM. By convention, paired reads in which one mate is unmapped are assigned the same chromosome and position, while no chromosome / position are assigned to unmapped single-end reads. To change this setting, replace the value with either 'yes' or 'no' (without quotes)::
+        Specifies whether unmapped reads (reads not aligned to a target sequence) are to be retained in the resulting BAM files. If set to 'yes' (without quotes), all unmapped reads are discarded during the mapping process, while setting the option to 'no' (without quotes) retains these reads in the BAM. By convention, paired reads in which one mate is unmapped are assigned the same chromosome and position, while no chromosome / position are assigned to unmapped single-end reads. To change this setting, replace the value with either 'yes' or 'no' (without quotes)::
 
             FilterUnmappedReads: yes  # Remove unmapped reads during alignment
             FilterUnmappedReads: no   # Keep unmapped reads

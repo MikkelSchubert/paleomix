@@ -278,7 +278,7 @@ def _process_recalibrator_settings(data):
     # we require that both be enabled for ApplyVQSR to be carried out. It would be
     # possible to run ApplyVQSR with the prior step disabled, provided that the models
     # had been built, but this would result in unexpected behavior if upstream files
-    # changed (models not beeing updated).
+    # changed (models not being updated).
     genotyping = data["Settings"]["Genotyping"]
     if (
         not genotyping["VariantRecalibrator"]["Enabled"]

@@ -68,7 +68,7 @@ def main(argv: list[str]) -> int:
                 print("FASTQ file is empty.", file=sys.stderr)
 
                 return 1
-        elif offsets not in (FASTQOffsets.AMBIGIOUS, expected_offsets):
+        elif offsets not in (FASTQOffsets.AMBIGUOUS, expected_offsets):
             print(
                 "FASTQ file contains quality scores with wrong quality score offset "
                 f"({offsets}); expected reads with quality score offset "

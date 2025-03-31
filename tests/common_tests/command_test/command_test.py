@@ -814,7 +814,7 @@ def test_atomiccmd__terminate_exception(tmp_path: Path) -> None:
 
     def _killpg(pid: int, sig: int) -> NoReturn:
         killpg(pid, sig)
-        raise OSError("Proccess not found")
+        raise OSError("Process not found")
 
     with patch("os.killpg", wraps=_killpg) as os_killpg:
         cmd.terminate()

@@ -140,7 +140,7 @@ ExampleProject:
       # Library contains a SE lane
       Lane_1: data/GCTCTG_L1_R1_*.fastq.gz
 
-    # Libray containing both a PE and a SE lane
+    # Library containing both a PE and a SE lane
     TGCTCA:
       # Options can be overridden at any level up to this level
       # Any option not specified here is inherited from the

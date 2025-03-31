@@ -410,7 +410,7 @@ class AtomicCmd:
 
     def ready(self) -> bool:
         """Returns true if the command has been run to completion,
-        regardless of wether or not an error occured."""
+        regardless of whether or not an error occurred."""
         return bool(self._proc and self._proc.poll() is not None)
 
     def join(self, timeout: float | None = None) -> JoinType:
@@ -668,7 +668,7 @@ class _CommandSet:
                 committed_files.update(command.output_files)
         except Exception:
             # Cleanup after failed commit; files belonging to the command currently
-            # being comitted are cleaned up in `AtomicCmd.commit`
+            # being committed are cleaned up in `AtomicCmd.commit`
             for fpath in committed_files:
                 fileutils.try_remove(fpath)
             raise

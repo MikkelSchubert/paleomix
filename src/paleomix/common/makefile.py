@@ -45,7 +45,7 @@ Such a makefile can be parsed into a dictionary using YAML, but to help us
 ensure that the makefile fits the expected layout (as above), we need to
 specify the structure of the makefile.
 
-Firstly, note that the options are specified twice, so we will make a re-usable
+Firstly, note that the options are specified twice, so we will make a reusable
 specification for those. In this case, this can accomplished like so:
 -------------------------------------------------------------------------------
 |  _SPECIFICATION_OF_OPTIONS = {
@@ -953,7 +953,7 @@ def _process_default_values(
                     # Lists of specs defaults to empty lists
                     default_value = []
 
-                # Prevent clobbering of values when re-using sub-specs
+                # Prevent clobbering of values when reusing sub-specs
                 data[cur_key] = copy.deepcopy(default_value)
 
 

@@ -44,7 +44,7 @@ The example directory contains 3 BAM files; one containing a nuclear alignment (
     $ paleomix zonkey run database.tar mitochondrial.bam
 
     # Process both the nuclear and the mitochondrial BAMs;
-    # note that is nessesary to specify an output directory
+    # note that is necessary to specify an output directory
     $ paleomix zonkey run database.tar nuclear.bam mitochondrial.bam results
 
     # Process both the combined nuclear and the mitochondrial BAM;

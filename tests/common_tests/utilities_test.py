@@ -124,7 +124,7 @@ def test_try_cast__list_to_int() -> None:
 
 
 def split_before(iterable: Iterable[T], pred: Callable[[T], bool]) -> list[list[T]]:
-    # Convertion to list allows the implementation to be
+    # Conversion to list allows the implementation to be
     # lazy, while making comparisons for asserts easier
     return list(utils.split_before(iterable, pred))
 

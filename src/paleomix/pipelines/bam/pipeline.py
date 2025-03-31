@@ -128,7 +128,7 @@ def index_genomes(log, makefiles):
             abspath = os.path.abspath(path)
 
             if abspath not in tasks:
-                # Basic validation is preformed since downstream tools may produce
+                # Basic validation is performed since downstream tools may produce
                 # inconsistent/unexpected results when run on malformed files, such
                 # as `samtools faidx` ignoring any sequence with a previously used name.
                 validation = ValidateFASTAFilesNode(

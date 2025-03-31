@@ -302,7 +302,7 @@ def process_record(
 
     end = region.end
     cigartuples = record.cigartuples
-    # Reads are filterd and should normally have cigars/end-coordinates
+    # Reads are filtered and should normally have cigars/end-coordinates
     if cigartuples is not None and end is not None:
         for cigar, num in cigartuples:
             left = min(max(position, start), end)

@@ -43,7 +43,7 @@ To determine the cause of the failure (indicated by the non-zero return-code), e
     [...]
 
 
-This particular error indicates that the same reads have been included multiple times in the makefile (see section [sub:Troubleshooting-BAM]). Normally it is nessesary to consult the documentation of the specified program in order to determine the cause of the failure.
+This particular error indicates that the same reads have been included multiple times in the makefile (see section [sub:Troubleshooting-BAM]). Normally it is necessary to consult the documentation of the specified program in order to determine the cause of the failure.
 
 In addition, the pipeline performs a number of which during startup, which may result in the following issues being detected:
 
@@ -70,7 +70,7 @@ In addition, the pipeline performs a number of which during startup, which may r
         Errors detected during graph construction (max 20 shown):
           Required executables are missing: bwa
 
-    In that case, please verify that all required programs are installed (see sections TODO) and ensure that these are accessible via the current user's PATH (i.e. can be excuted on the command-line using just the executable name).
+    In that case, please verify that all required programs are installed (see sections TODO) and ensure that these are accessible via the current user's PATH (i.e. can be executed on the command-line using just the executable name).
 
 
 **Version requirement not met**:

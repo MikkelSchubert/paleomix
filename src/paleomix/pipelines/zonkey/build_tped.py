@@ -184,7 +184,7 @@ def process_record(
     if not nucleotides:
         return
     elif len(nucleotides) == 1:
-        # Avoid unnessary random() call in 'random.choice'
+        # Avoid unnecessary random() call in 'random.choice'
         record_id, nucleotide = nucleotides[0]
     else:
         record_id, nucleotide = random.choice(nucleotides)

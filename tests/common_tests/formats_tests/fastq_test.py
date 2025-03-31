@@ -232,7 +232,7 @@ def test_fasta__from_file(
 
 _33_READ = FASTQ("33", None, "ACGT", "!02I")
 _64_READ = FASTQ("33", None, "ACGT", "@UXi")
-_AMBIGIOUS_read = FASTQ("33", None, "ACGT", ";CDI")
+_AMBIGUOUS_READ = FASTQ("33", None, "ACGT", ";CDI")
 
 
 def test_fastqualities__no_qualities() -> None:
@@ -255,11 +255,11 @@ def test_fastqualities__phred_64() -> None:
     assert quals.offsets() == FASTQOffsets.OFFSET_64
 
 
-def test_fastqualities__phred_ambigious() -> None:
+def test_fastqualities__phred_ambiguous() -> None:
     quals = FASTQualities()
-    quals.update(_AMBIGIOUS_read)
+    quals.update(_AMBIGUOUS_READ)
 
-    assert quals.offsets() == FASTQOffsets.AMBIGIOUS
+    assert quals.offsets() == FASTQOffsets.AMBIGUOUS
 
 
 def test_fastqualities__phred_both() -> None:

@@ -156,7 +156,7 @@ class FASTQOffsets(Enum):
     MISSING = "MISSING"
     # Quality scores are in the ASCII range 59 .. 74, which could signify
     # low-quality reads with offset 64, or high-quality reads with offset 33
-    AMBIGIOUS = "AMBIGIOUS"
+    AMBIGUOUS = "AMBIGUOUS"
 
     def __str__(self) -> str:
         return str(self.value)
@@ -171,7 +171,7 @@ class FASTQualities:
     - OFFSET_64: Offset identified as being 64
     - BOTH: Both offset 33 and 64 found, mixed file? (error)
     - MISSING: No quality scores found, wrong file? (error)
-    - AMBIGIOUS: Qualities could be either offset. (warning)
+    - AMBIGUOUS: Qualities could be either offset. (warning)
     """
 
     def __init__(self) -> None:
@@ -185,12 +185,12 @@ class FASTQualities:
         for quality in self._qualities:
             qualities[ord(quality)] = True
 
-        # The range of scores that can unambigiously be identified
+        # The range of scores that can unambiguously be identified
         # as belonging to Phred scores with offset 33 or 64. Scores
         # in between could potentially signify either offset
         # See e.g. http://en.wikipedia.org/wiki/FASTQ_format#Encoding
         has_offset_33_scores = any(qualities[33:59])
-        has_ambigious_scores = any(qualities[59:75])
+        has_ambiguous_scores = any(qualities[59:75])
         has_offset_64_scores = any(qualities[75:105])
 
         if has_offset_33_scores:
@@ -199,7 +199,7 @@ class FASTQualities:
             return FASTQOffsets.OFFSET_33
         elif has_offset_64_scores:
             return FASTQOffsets.OFFSET_64
-        elif has_ambigious_scores:
-            return FASTQOffsets.AMBIGIOUS
+        elif has_ambiguous_scores:
+            return FASTQOffsets.AMBIGUOUS
 
         return FASTQOffsets.MISSING
