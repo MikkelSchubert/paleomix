@@ -380,7 +380,7 @@ def setup_mito_mapping(config):
         filename for filename in filenames if os.path.exists(filename)
     ]
 
-    # A bit strict, but avoid accidential overwrites
+    # A bit strict, but avoid accidental overwrites
     if existing_filenames:
         log = logging.getLogger(__name__)
         log.error("Output file(s) already exists, cannot proceed:")
@@ -467,7 +467,7 @@ def setup_example(config):
             with open(destination, "wb") as out_handle:
                 shutil.copyfileobj(src_handle, out_handle)
 
-    log.info("Sucessfully saved example data in %r", root)
+    log.info("Successfully saved example data in %r", root)
 
     return 0
 

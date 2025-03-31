@@ -45,8 +45,8 @@ class CmdError(RuntimeError):
 
 class AtomicCmd:
     """Executes a command, only moving resulting files to the destination
-    directory if the command was succesful. This helps prevent the
-    accidential use of partial files in downstream analysis, and eases
+    directory if the command was successful. This helps prevent the
+    accidental use of partial files in downstream analysis, and eases
     restarting of a pipeline following errors (no cleanup).
 
     Inividual files/paths in the command are specified using keywords (see
@@ -84,7 +84,7 @@ class AtomicCmd:
            EXEC_  -- Name of / path to executable. The first item in the
                      command is always one of the executables, even if not
                      specified in this manner.
-           AUX_   -- Auxillery files required by the executable(s), which are
+           AUX_   -- Auxiliary files required by the executable(s), which are
                      themselves not executable. Examples include scripts,
                      config files, data-bases, and the like.
            CHECK_ -- A callable, which upon calling does version checking,
@@ -202,7 +202,7 @@ class AtomicCmd:
             message = "Error running commands:\n  Call = %r\n  Error = %r"
             raise CmdError(message % (self._command, error))
         finally:
-            # Close pipes to allow the command to recieve SIGPIPE
+            # Close pipes to allow the command to receive SIGPIPE
             for handle in (stdin, stdout, stderr):
                 if handle not in (None, self.PIPE, self.DEVNULL):
                     handle.close()
@@ -212,7 +212,7 @@ class AtomicCmd:
 
     def ready(self):
         """Returns true if the command has been run to completion,
-        regardless of wether or not an error occured."""
+        regardless of whether or not an error occurred."""
         return self._proc and self._proc.poll() is not None
 
     def join(self):

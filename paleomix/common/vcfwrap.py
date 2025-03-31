@@ -53,7 +53,7 @@ def parse_indel(vcf):
     # The length of the insertion / deletion
     len_diff = abs(alt_len - ref_len)
 
-    # Wheter or not the sequence 'what' is found in the reference
+    # Whether or not the sequence 'what' is found in the reference
     in_reference = ref_len >= alt_len
 
     # The sequence added or removed from the reference

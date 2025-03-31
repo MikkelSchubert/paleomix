@@ -203,7 +203,7 @@ def _process_bam_reads(observed_reads, references, position, err_func):
 
         for (is_reverse, name, seq, qual), filenames in result.items():
             if len(filenames) == 1:
-                # Two reads had same name, but different characterstics
+                # Two reads had same name, but different characteristics
                 continue
 
             records = collections.defaultdict(list)

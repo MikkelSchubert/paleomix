@@ -60,7 +60,7 @@ def main(argv):
     parser.add_argument(
         "filenames",
         nargs="*",
-        help="VCF files; may be gzip/bzip2 compresssed. Leave blank or use '-' to "
+        help="VCF files; may be gzip/bzip2 compressed. Leave blank or use '-' to "
         "read from STDIN",
         metavar="file",
     )

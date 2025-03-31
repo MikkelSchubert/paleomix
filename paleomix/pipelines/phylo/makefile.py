@@ -117,14 +117,14 @@ def _select_samples(select, groups, samples, path):
             key = tuple(group[1:-1].split("/"))
             if key not in groups:
                 raise MakefileError(
-                    "Unknown group specifed for filtering %r: %r" % (path, key)
+                    "Unknown group specified for filtering %r: %r" % (path, key)
                 )
             selection.update(groups[key])
         elif group in samples:
             selection.add(group)
         else:
             raise MakefileError(
-                "Unknown/Invalid group specifed for filtering %r: %r" % (path, group)
+                "Unknown/Invalid group specified for filtering %r: %r" % (path, group)
             )
     return selection
 
@@ -301,7 +301,7 @@ def _update_filtering(mkfile):
             )
         elif target not in samples:
             raise MakefileError(
-                "Unknown/Invalid sample specifed for singleton filtering: %r"
+                "Unknown/Invalid sample specified for singleton filtering: %r"
                 % (target,)
             )
         elif target in filter_by:
@@ -414,7 +414,7 @@ def _check_sexes(mkfile):
     if not regions_sexes:
         raise MakefileError(
             "No sexes have been specified in makefile; "
-            "please list all sample sexes and assosiated "
+            "please list all sample sexes and associated "
             "homozygous contigs (if any)."
         )
 
@@ -448,7 +448,7 @@ def _update_and_check_max_read_depth(options, mkfile):
         for subdd in mkfile["Genotyping"].values()
     ):
         log = logging.getLogger(__name__)
-        log.info("Determinining max-depth from depth-histograms")
+        log.info("Determining max-depth from depth-histograms")
 
     for key, settings in mkfile["Genotyping"].items():
         required_keys = set()
@@ -551,7 +551,7 @@ def _read_max_depth(filename, prefix, sample):
             # This is typical if 'paleomix depths' has been run manually.
             max_depth = max_depths[name_mapping[sample]]
         elif len(max_depths) == 1:
-            # Just one sampel in the depth histogram; even though it does not
+            # Just one sample in the depth histogram; even though it does not
             # match, we assuem that this is the correct table. This is because
             # manually generating files / renaming files would otherwise cause
             # failure when using 'MaxDepth: auto'.
@@ -695,7 +695,7 @@ _VALIDATION_GENOTYPES = {
         "MaxReadDepth": Or(
             IsUnsignedInt, IsDictOf(IsStr, IsUnsignedInt), StringIn(("auto",))
         ),
-        "--keep-ambigious-genotypes": IsNone,
+        "--keep-ambigious-genotypes": IsNone,  # codespell:ignore ambigious
         "--min-quality": IsUnsignedInt,
         "--min-allele-frequency": RemovedOption,
         "--min-mapping-quality": IsUnsignedInt,

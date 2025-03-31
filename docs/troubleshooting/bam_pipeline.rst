@@ -124,7 +124,7 @@ Troubleshooting validation of BAM files
 
     This error message may occur during validation of the final BAM, if the input files specified for different libraries contained duplicates reads (*not* PCR duplicate). In that case, the final BAM will contain multiple copies of the same data, thereby risking a significant bias in downstream analyses.
 
-    The following demonstrates this problem, using a contrieved example based on the examples/bam_example project included with the pipeline::
+    The following demonstrates this problem, using a contrived example based on the examples/bam_example project included with the pipeline::
 
         $ paleomix bam run makefile.yaml
         [...]

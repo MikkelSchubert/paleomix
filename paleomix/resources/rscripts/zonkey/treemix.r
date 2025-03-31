@@ -573,7 +573,7 @@ check_cov <- function(stem)
              ylim=c(0, 1))
 
         text(x=0.5, y=0.5, adj=c(0.5, 0.5), cex=5.0,
-             labels="Insufficent data\nto run TreeMix!",)
+             labels="Insufficient data\nto run TreeMix!",)
 
         return(FALSE)
     } else {

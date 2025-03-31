@@ -38,7 +38,7 @@ def weighted_sampling(choices, weights, rng=random):
     for index, weight in enumerate(weights, start=1):
         if weight <= 0:
             raise ValueError(
-                "Probablities must be > 0, not %r for weight %i" % (weight, index)
+                "Probabilities must be > 0, not %r for weight %i" % (weight, index)
             )
         total += weight
         totals.append(total)

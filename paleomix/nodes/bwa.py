@@ -301,7 +301,7 @@ def _get_max_threads(reference, threads):
 def _check_bwa_prefix(prefix):
     """Checks that a given prefix is compatible with the currently required version of
     BWA. Older index files are incompatible with BWA v0.7.x, but may be identified by
-    the presense of a small number of additional files not present when an index is
+    the presence of a small number of additional files not present when an index is
     produced using BWA v0.7.x.
     """
     if any(os.path.exists(prefix + ext) for ext in (".rbwt", ".rpac", ".rsa.")):

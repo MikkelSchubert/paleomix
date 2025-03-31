@@ -20,7 +20,7 @@ During a typical analyses, the Zonkey pipeline will proceed through the followin
 
     1. Input BAMs are indexed using the equivalent of 'samtools index'.
 
-    2. Nucleotides at sites overlapping SNPs in the reference panel are sampled to produce a pseudo-haploid sequence, one in which transitions are included and one in which transitions are excluded, in order to account for the presence of *post-mortem* deamination causing base substitutions. The resulting tables are processed using PLINK to generate the prerequisite files for further analyses.
+    2. Nucleotides at sites overlapping SNPs in the reference panel are sampled to produce a pseudo-haploid sequence, one in which transitions are included and one in which transitions are excluded, in order to account for the presence of *postmortem* deamination causing base substitutions. The resulting tables are processed using PLINK to generate the prerequisite files for further analyses.
 
     3. PCA plots are generated using SmartPCA from the EIGENSOFT suite of tools for both panels of SNPs (including and excluding transitions).
 

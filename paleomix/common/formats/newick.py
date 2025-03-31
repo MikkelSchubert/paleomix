@@ -43,13 +43,13 @@ class Newick(TotallyOrdered, Immutable):
     Nodes are classified as either internal nodes (have children),
     or leaf nodes (does not have children). A node MUST either have
     1 or more child-nodes, or have a name and/or a length. This is to
-    ensure that nodes can be represented in an unambigious manner
+    ensure that nodes can be represented in an unambiguous manner
     using the Newick format.
 
     No assumptions are made about the type of the 'name' and the 'length'
     properties when simply parsing the tree, and these are simply converted
     into strings when the Newick string is generated. However, additional
-    contraints apply when unrooting/rerooting trees (see below)."""
+    constraints apply when unrooting/rerooting trees (see below)."""
 
     def __init__(self, name=None, length=None, children=None):
         """See class documentation for constraints."""
@@ -123,10 +123,10 @@ class Newick(TotallyOrdered, Immutable):
     def add_support(self, bootstraps, fmt="{Support}"):
         """Adds support values to the current tree, based on a set of trees containing
         the same taxa. It is assumed that the support trees represent unrooted or
-        arbitarily rooted trees, and no weight is given to the rooted topology of these
+        arbitrarily rooted trees, and no weight is given to the rooted topology of these
         trees.
 
-        The main tree should itself be rooted, and the the toplogy and ordering of this
+        The main tree should itself be rooted, and the the topology and ordering of this
         tree is preserved, with node-names updated using the formatting string 'fmt'.
 
         Formatting is carried out using str.format, with these fields:
@@ -165,7 +165,7 @@ class Newick(TotallyOrdered, Immutable):
         See e.g. http://en.wikipedia.org/wiki/Newick_format
 
         Note that implicit nodes, such as (), (A,), and the like are not
-        allowed, as they cannot always be represented/parsed in an unambigious
+        allowed, as they cannot always be represented/parsed in an unambiguous
         manner. Thus all leaf nodes must have a name and/or a length."""
         tokens = _tokenize(string)
         if tokens and tokens[0] == "(":
@@ -276,7 +276,7 @@ def _parse_tokens(tokens):
         )
     elif not tokens or (tokens[0] != ")"):
         raise NewickParseError(
-            "Malformed Newick string, contains unbalanced parantheses"
+            "Malformed Newick string, contains unbalanced parentheses"
         )
     tokens.pop(0)
 

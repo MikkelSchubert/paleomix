@@ -74,7 +74,7 @@ def build_pipeline_full(config, makefile, return_nodes=True):
                     for barcode, record in barcode_records.items():
                         lane = parts.Lane(config, prefix, record, barcode)
 
-                        # ExcludeReads settings may exlude entire lanes
+                        # ExcludeReads settings may exclude entire lanes
                         if lane.bams:
                             lanes.append(lane)
 

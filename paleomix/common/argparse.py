@@ -32,7 +32,7 @@ class ArgumentDefaultsHelpFormatter(configargparse.ArgumentDefaultsHelpFormatter
 
 class ArgumentParser(configargparse.ArgumentParser):
     """Supports keys with underscores instead of dashes, for backwards compatibility
-    with old paleomix config files, provided that these do not use per-host setions.
+    with old paleomix config files, provided that these do not use per-host sections.
     """
 
     def __init__(self, *args, **kwargs):

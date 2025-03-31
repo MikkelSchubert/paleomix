@@ -72,7 +72,7 @@ _TEMPLATE_BAM_OPTIONS = """  # Settings for aligners supported by the pipeline
       # Filter reads that did not map to the reference sequence
       FilterUnmappedReads: yes
       # May be disabled ("no") for aDNA alignments with the 'aln' algorithm.
-      # Post-mortem damage localizes to the seed region, which BWA expects to
+      # Postmortem damage localizes to the seed region, which BWA expects to
       # have few errors (sets "-l"). See http://pmid.us/22574660
       UseSeed: yes
       # Additional command-line options may be specified below. For 'backtrack' these
@@ -124,7 +124,7 @@ _TEMPLATE_BAM_OPTIONS = """  # Settings for aligners supported by the pipeline
     # output files; if set to 'no', the reads are assumed to not have been amplified.
     PCRDuplicates: filter
     # Set to 'no' to disable mapDamage; set to 'plots' to build basic mapDamage plots;
-    # set to 'model' to build plots and post-mortem damage models; and set to 'rescale'
+    # set to 'model' to build plots and postmortem damage models; and set to 'rescale'
     # to build plots, models, and BAMs with rescaled quality scores. All analyses are
     # carried out per library.
     mapDamage: plot

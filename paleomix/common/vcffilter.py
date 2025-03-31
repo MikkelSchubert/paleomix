@@ -49,7 +49,7 @@ def add_varfilter_options(parser):
     parser.add_argument("-b", "--pileup", help=argparse.SUPPRESS)
     parser.add_argument(
         "-k",
-        "--keep-ambigious-genotypes",
+        "--keep-ambigious-genotypes",  # codespell:ignore ambigious
         default=False,
         action="store_true",
         help="Keep SNPs without a most likely genotype (based on PL)",
@@ -211,7 +211,7 @@ def _group_indels_near_position(indels, distance):
 
     for vcf in indels:
         # The number of bases covered (excluding the prefix)
-        # For ambigious indels (e.g. in low complexity regions), this ensures
+        # For ambiguous indels (e.g. in low complexity regions), this ensures
         # that the entire region is considered. Note that we do not need to
         # consider the alternative sequence(s)
         length = len(vcf.ref) - 1
@@ -229,7 +229,7 @@ def _group_indels_near_position(indels, distance):
 
 def _select_best_indel(indels):
     """Select the highest quality indel, based on the quality,
-    prefering low earlier positions above later positions in
+    preferring low earlier positions above later positions in
     case of ties."""
 
     def _indel_by_quality_and_position(indel):
@@ -309,7 +309,9 @@ def _filter_by_properties(options, vcfs):
                 _mark_as_filtered(vcf, "a:%i" % options.min_num_alt_bases)
 
             ml_genotype = vcfwrap.get_ml_genotype(vcf)
-            if (ml_genotype == ("N", "N")) and not options.keep_ambigious_genotypes:
+            if (
+                ml_genotype == ("N", "N")
+            ) and not options.keep_ambigious_genotypes:  # codespell:ignore ambigious
                 # No most likely genotype
                 _mark_as_filtered(vcf, "k")
 

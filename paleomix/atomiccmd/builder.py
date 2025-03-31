@@ -44,8 +44,8 @@ class AtomicCmdBuilder:
                   complex set of values for nested calls (e.g. java/scripts).
       <option>  - A flag, typically prefixed with one or two dashes, followed
                   by an optional value. The flag may be joined with the value
-                  by an seperator (e.g. '='), otherwise they are added to the
-                  final call as seperate values.
+                  by an separator (e.g. '='), otherwise they are added to the
+                  final call as separate values.
       <values>  - One or more values, e.g. paths or similar.
 
     Options are divided into two classes; singletons and non-singletons:
@@ -57,7 +57,7 @@ class AtomicCmdBuilder:
                        parameters.
 
     Furthermore, any parameter may be marked as fixed (typically because the
-    node dependends on that option being set), which prevents any subsequent
+    node depends on that option being set), which prevents any subsequent
     call from modifying this option. By default, all options are fixed.
 
     Any number of keywords may be set, which are passed to the AtomicCmd object
@@ -91,7 +91,7 @@ class AtomicCmdBuilder:
 
         if old_option:
             if old_option["Fixed"]:
-                message = "Attemping to overwrite fixed option: %r" % key
+                message = "Attempting to overwrite fixed option: %r" % key
                 raise AtomicCmdBuilderError(message)
             old_option.update(new_option)
         else:

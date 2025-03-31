@@ -108,7 +108,7 @@ class ParallelCmds(_CommandSet):
 
     In case of any one sub-command failing, the remaining commands are
     automatically terminated. This is done to ensure that commands waiting
-    on pipes are not left running indefinetly.
+    on pipes are not left running indefinitely.
 
     Note that only AtomicCmds and ParallelCmds are allowed as
     sub-commands for this class, since the model requires non-
@@ -157,14 +157,14 @@ class ParallelCmds(_CommandSet):
 class SequentialCmds(_CommandSet):
     """This class wraps a set of AtomicCmds, running them sequentially.
     This class therefore corresponds a set of lines in a bash script,
-    each of which invokes a forground job. For example:
+    each of which invokes a foreground job. For example:
     $ bcftools view snps.bcf | bgzip > snps.vcf.bgz
     $ tabix snps.vcf.bgz
 
     The list of commands may include any type of command. Note that
     the run function only returns once each sub-command has completed.
     A command is only executed if the previous command in the sequence
-    was succesfully completed, and as a consequence the return codes
+    was successfully completed, and as a consequence the return codes
     of a failed SequentialCommand may contain None."""
 
     def __init__(self, commands):

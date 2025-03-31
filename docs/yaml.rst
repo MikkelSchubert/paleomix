@@ -7,7 +7,7 @@ YAML usage in PALEOMIX
 `YAML`_ is a simple markup language adopted for use in configuration files by pipelines included in PALEOMIX. YAML was chosen because it is a plain-text format that is easy to read and write by hand. Since YAML files are plain-text, they may be edited using any standard text editors, with the following caveats:
 
 * YAML exclusively uses spaces for indentation, not tabs; attempting to use tabs in YAML files will cause failures when the file is read by the pipelines.
-* YAML is case-sensitive; an option such as `QualityOffset` is not the same as  `qualityoffset`.
+* YAML is case-sensitive; an option such as `QualityOffset` is not the same as `qualityoffset`.
 * It is strongly recommended that all files be named using the `.yaml` file-extension; setting the extension helps ensure proper handling by editors that natively support the YAML format.
 
 Only a subset of YAML features are actually used by PALEOMIX, which are described below. These include **mappings**, by which values are identified by names; **lists** of values; and **numbers**, **text-strings**, and **true** / **false** values, typically representing program options, file-paths, and the like. In addition, comments prefixed by the hash-sign (`#`) are frequently used to provide documentation.
@@ -51,7 +51,7 @@ Numbers in YAML file include whole numbers (integers) as well as real numbers (f
 Truth-values (booleans)
 -----------------------
 
-Truth values (*true* and *false*) are frequently used to enable or disable options in PALEOMIX configuration files. Several synonyms are available which helps improve readability. More specifically, all of the following values are interpreted as *true* by the pipelines::
+Truth values (*true* and *false*) are frequently used to enable or disable options in PALEOMIX configuration files. Several synonyms are available which helps improve readability. More specifically, all the following values are interpreted as *true* by the pipelines::
 
     true
     yes
@@ -149,7 +149,7 @@ In some cases, it is possible to specify zero or more values with labels. This i
       - Second value
       - Third value
 
-Note that the indentation of each item must be the same, similar to how indentation of sub-sections must be the same (see above).
+Note that the indentation of each item must be the same, similar to how indentation of subsections must be the same (see above).
 
 
 Full example

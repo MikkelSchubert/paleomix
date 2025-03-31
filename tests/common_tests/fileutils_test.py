@@ -201,7 +201,7 @@ def test_create_temp_dir__permissions(tmp_path: Path) -> None:
 def test_create_temp_dir__creation_preempted(tmp_path: Path) -> None:
     makedirs = os.makedirs
     mock = Mock(wraps=makedirs)
-    # Raise expection first, then pass second call to wrapped function
+    # Raise exception first, then pass second call to wrapped function
     mock.side_effect = [OSError(errno.EEXIST, "dir exists"), DEFAULT]
     with patch("os.makedirs", mock):
         work_dir = create_temp_dir(tmp_path)
@@ -216,9 +216,9 @@ def test_create_temp_dir__creation_preempted(tmp_path: Path) -> None:
 
 def test_create_temp_dir__permission_denied() -> None:
     with patch("os.makedirs") as mock:
-        mock.side_effect = OSError(errno.EACCES, "Simulated premission denied")
+        mock.side_effect = OSError(errno.EACCES, "Simulated permission denied")
 
-        with pytest.raises(OSError, match="Simulated premission denied"):
+        with pytest.raises(OSError, match="Simulated permission denied"):
             create_temp_dir("/tmp")
 
 

@@ -95,7 +95,7 @@ def join_procs(procs, out=sys.stderr):
         sleep_time = min(1, sleep_time * 2)
 
     if any(return_codes):
-        out.write("Errors occured during processing!\n")
+        out.write("Errors occurred during processing!\n")
         out.flush()
 
     return return_codes

@@ -278,7 +278,7 @@ TTNode <- setRefClass("TTNode",
 
                 "is_leaf" = function() {
                     '
-                    Convinience function; returns true if the node is a leaf.
+                    Convenience function; returns true if the node is a leaf.
                     '
                     return(length(children) == 0)
                 },

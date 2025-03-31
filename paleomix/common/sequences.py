@@ -24,7 +24,7 @@
 
 import itertools
 
-# Pairs of complementary bases and ambigious basees
+# Pairs of complementary bases and ambiguous basees
 _COMPL = ["AT", "CG", "NN", "RY", "KM", "SS", "WW", "BV", "DH", "XX"]
 _COMPL_TABLE = ["N"] * 256
 for _a, _b in _COMPL:
@@ -35,7 +35,7 @@ for _a, _b in _COMPL:
 _COMPL_TABLE = "".join(_COMPL_TABLE)
 
 
-# Table of nt codes (IUPAC codes) used to encode (ambigious) bases:
+# Table of nt codes (IUPAC codes) used to encode (ambiguous) bases:
 #   Nomenclature for incompletely specified bases in nucleic acid sequences.
 #   Recommendations 1984. J Biol Chem. 1986 Jan 5;261(1):13-7.
 #   PubMed PMID: 2416744.

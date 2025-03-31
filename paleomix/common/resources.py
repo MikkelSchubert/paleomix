@@ -84,6 +84,6 @@ def copy_example(tool, args):
 
     copy_resource(os.path.join("examples", "bam_pipeline"), destination)
 
-    log.info("Sucessfully saved example in %r", destination)
+    log.info("Successfully saved example in %r", destination)
 
     return 0

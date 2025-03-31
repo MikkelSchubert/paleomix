@@ -65,7 +65,7 @@ def padded_table(table):
 
 def parse_padded_table(lines, header=None):
     """Parses a padded table generated using 'padded_table', or any table which
-    consists of a fixed number of columns seperated by whitespace, with no
+    consists of a fixed number of columns separated by whitespace, with no
     whitespace in the cells. Empty lines and lines starting with '#' (comments)
     are ignored. Each row is returned as a dictionary, using the values found
     in the first row as keys.

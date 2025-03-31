@@ -51,7 +51,7 @@ class Pypeline:
         for subnodes in safe_coerce_to_tuple(nodes):
             for node in safe_coerce_to_tuple(subnodes):
                 if not isinstance(node, Node):
-                    raise TypeError("Node object expected, recieved %s" % repr(node))
+                    raise TypeError("Node object expected, received %s" % repr(node))
                 self._nodes.append(node)
 
     def run(self, max_threads=1, dry_run=False):
@@ -322,7 +322,7 @@ class Pypeline:
     def _get_finished_node(cls, queue, running, blocking):
         """Returns a tuple containing a node that has finished running
         and it's async-result, or None for both if no such node could
-        be found (and blocking is False), or if an interrupt occured
+        be found (and blocking is False), or if an interrupt occurred
         while waiting for a node to finish.
 
         If blocking is True, the function will timeout after 0.1s.

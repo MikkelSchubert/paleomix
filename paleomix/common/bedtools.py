@@ -201,7 +201,7 @@ def read_bed_file(filename, min_columns=3, contigs=None):
                     "Region at line #%i (%s) does not "
                     "contain the expected number of fields; "
                     "the first %i fields are required. C.f. "
-                    "defination at\n   %s\n\nPath = %r"
+                    "definition at\n   %s\n\nPath = %r"
                     % (line_num, name, min_columns, url, filename)
                 )
 

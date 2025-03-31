@@ -117,13 +117,13 @@ def build_genotyping_nodes_cached(options, genotyping, sample, regions, dependen
                     interest, corresponding to Genotyping:NAME in the makefile.
         sample: The name of the sample to be genotyped.
         egions: A dictionary for a 'RegionsOfInterest' from the makefile.
-        dependencies: Depenencies that must be met before genotyping starts.
+        dependencies: Dependencies that must be met before genotyping starts.
 
     Returns a tuple containing the filename of the filtered and tabix-indexed
     VCF file, and the top-level node generating this file. Multiple calls for
     the same BAM and prefix will return the same VCF and nodes if the option
     for 'GenotypeEntirePrefix' is enabled, otherwise each ROI is genotyped
-    individiually.
+    individually.
 
     Output files are generated in ./results/PROJECT/genotyping. If the option
     for 'GenotypeEntirePrefix' is enabled, the following files are generated:
@@ -196,7 +196,7 @@ def build_genotyping_nodes(options, genotyping, sample, regions, dependencies):
     The function returns a sequence of the top-level nodes generating the files.
 
     """
-    # 1. Get path of the filtered VCF file, and the assosiated node
+    # 1. Get path of the filtered VCF file, and the associated node
     filtered, node = build_genotyping_nodes_cached(
         options=options,
         genotyping=genotyping,
@@ -222,7 +222,7 @@ def build_genotyping_nodes(options, genotyping, sample, regions, dependencies):
         dependencies=node,
     )
 
-    # 3. Index sequences to make retrival easier for MSA
+    # 3. Index sequences to make retrieval easier for MSA
     faidx = FastaIndexNode(infile=output_fasta, dependencies=builder)
 
     return (faidx,)

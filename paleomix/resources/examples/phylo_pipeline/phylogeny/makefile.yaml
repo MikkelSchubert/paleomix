@@ -59,7 +59,7 @@ Genotyping:
     # The final sequences does not include the padding.
     Padding: 10
 
-    # By default, each set of regions of interest are genotyped seperately,
+    # By default, each set of regions of interest are genotyped separately,
     # even if these overlap. By setting this option to true, the entire prefix
     # is genotyped once, and all regions of interest are extracted from this.
     # This can only be done for prefixes that only use genotyping defaults.
@@ -138,7 +138,7 @@ PhylogeneticInference:
 
     # If 'yes', a tree is generated per named sequence in the areas of
     # interest; otherwise a super-matrix is created from the combined set
-    # of regions specfied below.
+    # of regions specified below.
     PerGeneTrees: no
 
     # Which Regions Of Interest to build the phylogeny from.
@@ -146,7 +146,7 @@ PhylogeneticInference:
        protein_coding.CDS:
          # Partitioning scheme for sequences: Numbers specify which group a
          # position belongs to, while 'X' excludes the position from the final
-         # partioned sequence; thus "123" splits sequences by codon-positions,
+         # partitioned sequence; thus "123" splits sequences by codon-positions,
          # while "111" produces a single partition per gene. If set to 'no',
          # a single partition is used for the entire set of regions.
          Partitions: "112"

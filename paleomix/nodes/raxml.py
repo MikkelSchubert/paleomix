@@ -80,7 +80,7 @@ class RAxMLRapidBSNode(CommandNode):
         # Ensures that output is saved to the temporary directory
         command.set_option("-w", "%(TEMP_DIR)s")
         # Symlink to sequence and partitions, to prevent the creation of *.reduced files
-        # outside temp folder. In addition, it may be nessesary to remove the .reduced
+        # outside temp folder. In addition, it may be necessary to remove the .reduced
         # files if created
         command.set_option("-s", "%(TEMP_OUT_ALN)s")
 
@@ -109,7 +109,7 @@ class RAxMLRapidBSNode(CommandNode):
 
         # Use the GTRGAMMA model of NT substitution by default
         command.set_option("-m", model, fixed=False)
-        # Enable Rapid Boostrapping and set random seed. May be set to a fixed value to
+        # Enable Rapid Bootstrapping and set random seed. May be set to a fixed value to
         # allow replicability.
         command.set_option("-x", int(random.random() * 2**31 - 1), fixed=False)
         # Set random seed for parsimony inference. May be set to allow replicability.

@@ -26,7 +26,7 @@ During a typical analyses, the BAM pipeline will proceed through the following s
 
     1. If enabled, PCR duplicates are filtered using Picard `MarkDuplicates` for SE and PE reads and using `paleomix rmdup_collapsed` for collapsed reads (see the :ref:`other_tools` section). PCR filtering is carried out per library.
 
-    2. If mapDamage based rescaling of quality scores is, quality scores of bases that are potentially the result of *post-mortem* DNA damage are recalculated using a damage model built using mapDamage2.0 [Jonsson2013]_.
+    2. If mapDamage based rescaling of quality scores is, quality scores of bases that are potentially the result of *postmortem* DNA damage are recalculated using a damage model built using mapDamage2.0 [Jonsson2013]_.
 
     3. The resulting BAMs are indexed and validated using Picard `ValidateSamFile`. Mapped reads at each position of the alignments are compared using the query name, sequence, and qualities. If a match is found, it is assumed to represent a duplication of input data (see :ref:`troubleshooting_bam`).
 
@@ -40,4 +40,4 @@ During a typical analyses, the BAM pipeline will proceed through the following s
 
     2. Coverage statistics and depth histograms are calculated for the intermediate and final BAM files using `paleomix coverage` and `paleomix depths`, if enabled. Statistics are calculated genome-wide and for any regions of interest specified by the user.
 
-    3. If mapDamage is enabled, mapDamage plots are generated; if modeling or rescaling is enabled, a model of the post-mortem DNA damage is also generated.
+    3. If mapDamage is enabled, mapDamage plots are generated; if modeling or rescaling is enabled, a model of the postmortem DNA damage is also generated.

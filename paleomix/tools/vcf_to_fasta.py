@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-"""Creats consensus sequence from a VCF and BED file:
+"""Creates consensus sequence from a VCF and BED file:
 vcf_to_fasta --intervals PATH_TO.bed --genotype PATH_TO.vcf
 
 The VCF file is expected to have been created using SAMTools, and makes use

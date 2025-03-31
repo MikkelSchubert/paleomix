@@ -98,7 +98,7 @@ Finally, note the "Padding" option; this option specifies a number of bases to i
 Multiple sequence alignment
 ---------------------------
 
-Multiple sequence alignment (MSA) is currently carried out using MAFFT, if enabled. Note that it is still nessesary to run the MSA command (see below), even if the multiple sequence alignment itself is disabled (for example in the case where indels are not called in the genotyping step). This is because the MSA step is responsible for generating both the unaligned multi-FASTA files, and the aligned multi-FASTA files. It is nessesary to run the 'genotyping' step prior to running the MSA step (see above).
+Multiple sequence alignment (MSA) is currently carried out using MAFFT, if enabled. Note that it is still necessary to run the MSA command (see below), even if the multiple sequence alignment itself is disabled (for example in the case where indels are not called in the genotyping step). This is because the MSA step is responsible for generating both the unaligned multi-FASTA files, and the aligned multi-FASTA files. It is necessary to run the 'genotyping' step prior to running the MSA step (see above).
 
 It is possible to select among the various MAFFT algorithms using the "Algorithm" key, and additionally to specify command-line options for the selected algorithm::
 
@@ -128,7 +128,7 @@ Command line options are specified as key / value pairs, as shown above for the 
 Phylogenetic inference
 ----------------------
 
-Maximum likelyhood Phylogenetic inference is carried out using the ExaML program. A phylogeny consists of a named (subsets of) one or more sets of regions of interest, with individual regions partitioned according to some scheme, and rooted on the midpoint of the tree or one or more taxa::
+Maximum likelihood Phylogenetic inference is carried out using the ExaML program. A phylogeny consists of a named (subsets of) one or more sets of regions of interest, with individual regions partitioned according to some scheme, and rooted on the midpoint of the tree or one or more taxa::
 
     PhylogeneticInference:
       PHYLOGENY_NAME:
@@ -198,7 +198,7 @@ For each phylogeny, the following files are generated:
 Executing the pipeline
 ----------------------
 
-The phylogenetic pipeline is excuted similarly to the BAM pipeline, except that a command is provided for each step ('genotyping', 'msa', and 'phylogeny'):
+The phylogenetic pipeline is executed similarly to the BAM pipeline, except that a command is provided for each step ('genotyping', 'msa', and 'phylogeny'):
 
 .. code-block:: bash
 

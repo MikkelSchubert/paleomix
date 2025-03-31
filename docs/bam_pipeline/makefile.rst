@@ -6,7 +6,7 @@ Makefile description
 
 .. contents::
 
-The following sections reviews the options available in the BAM pipeline makefiles. As described in the :ref:`bam_usage` section, a default makefile may be generated using the 'paleomix bam\_pipeline makefile' command. For clarity, the location of options in subsections are specified by concatenating the names using '\:\:' as a separator. Thus, in the following (simplified example), the 'UseSeed' option (line 13) would be referred to as 'Options \:\: Aligners \:\: BWA \:\: UseSeed':
+The following sections review the options available in the BAM pipeline makefiles. As described in the :ref:`bam_usage` section, a default makefile may be generated using the 'paleomix bam\_pipeline makefile' command. For clarity, the location of options in subsections are specified by concatenating the names using '\:\:' as a separator. Thus, in the following (simplified example), the 'UseSeed' option (line 13) would be referred to as 'Options \:\: Aligners \:\: BWA \:\: UseSeed':
 
 .. code-block:: yaml
     :emphasize-lines: 13
@@ -22,7 +22,7 @@ The following sections reviews the options available in the BAM pipeline makefil
         # Settings for mappings performed using BWA
         BWA:
           # May be disabled ("no") for aDNA alignments with the 'aln' algorithm.
-          # Post-mortem damage localizes to the seed region, which BWA expects to
+          # Postmortem damage localizes to the seed region, which BWA expects to
           # have few errors (sets "-l"). See http://pmid.us/22574660
           UseSeed: yes
 
@@ -137,7 +137,7 @@ The "AdapterRemoval" subsection allows for options that are applied when Adapter
     The minimum length required after read merging, adapter trimming, and base-quality quality trimming; resulting reads shorter than this length are discarded, and thereby excluded from further analyses by the pipeline. A value of at least 25 bp is recommended to cut down on the rate of spurious alignments; if possible, a value of 30 bp may be used to greatly reduce the fraction of spurious alignments, with smaller gains for greater minimums [Schubert2012]_.
 
     .. warning::
-        The default value used by PALEOMIX for `--minlength` (25 bp) differs from the default value for AdapterRemoval (15 bp). Thus, if a minimum length of 15 bp is desired, it is nessesarily to explicitly state so in the makefile, simply commenting out this command-line argument is not sufficient.
+        The default value used by PALEOMIX for `--minlength` (25 bp) differs from the default value for AdapterRemoval (15 bp). Thus, if a minimum length of 15 bp is desired, it is necessarily to explicitly state so in the makefile, simply commenting out this command-line argument is not sufficient.
 
 
 **Options \:\: AdapterRemoval \:\: --collapse**
@@ -185,7 +185,7 @@ The "AdapterRemoval" subsection allows for options that are applied when Adapter
 Short read aligners
 ^^^^^^^^^^^^^^^^^^^
 
-This section allow selection between supported short read aligners (currently BWA [Li2009a]_ and Bowtie2 [Langmead2012]_), as well as setting options for these, individually:
+This section allows selection between supported short read aligners (currently BWA [Li2009a]_ and Bowtie2 [Langmead2012]_), as well as setting options for these, individually:
 
 .. literalinclude:: makefile.yaml
     :language: yaml
@@ -226,7 +226,7 @@ Short read aligners - BWA
 
         .. warning::
 
-            Alignment algorithms 'bwasw' and 'mem' currently cannot be used with input data that is encoded using QualityOffset 64 or 'Solexa'. This is a limitation of PALEOMIX, and will be resolved in future versions. In the mean time, this can be circumvented by converting FASTQ reads to the standard quality-offset 33, using for example `seqtk`_.
+            Alignment algorithms 'bwasw' and 'mem' currently cannot be used with input data that is encoded using QualityOffset 64 or 'Solexa'. This is a limitation of PALEOMIX, and will be resolved in future versions. In the meantime, this can be circumvented by converting FASTQ reads to the standard quality-offset 33, using for example `seqtk`_.
 
 
     **Options \:\: Aligners \:\: BWA \:\: MinQuality**
@@ -248,7 +248,7 @@ Short read aligners - BWA
             :lineno-start: 41
             :lines: 41-42
 
-        Specifies wether or not unmapped reads (reads not aligned to a target sequence) are to be retained in the resulting BAM files. If set to 'yes' (without quotes), all unmapped reads are discarded during the mapping process, while setting the option to 'no' (without quotes) retains these reads in the BAM. By convention, paired reads in which one mate is unmapped are assigned the same chromosome and position, while no chromosome / position are assigned to unmapped single-end reads. To change this setting, replace the value with either 'yes' or 'no' (without quotes)::
+        Specifies whether unmapped reads (reads not aligned to a target sequence) are to be retained in the resulting BAM files. If set to 'yes' (without quotes), all unmapped reads are discarded during the mapping process, while setting the option to 'no' (without quotes) retains these reads in the BAM. By convention, paired reads in which one mate is unmapped are assigned the same chromosome and position, while no chromosome / position are assigned to unmapped single-end reads. To change this setting, replace the value with either 'yes' or 'no' (without quotes)::
 
             FilterUnmappedReads: yes  # Remove unmapped reads during alignment
             FilterUnmappedReads: no   # Keep unmapped reads
@@ -300,15 +300,15 @@ mapDamage options
         :lineno-start: 67
         :lines: 67-71
 
-    This subsection is used to specify options for mapDamage2.0, when plotting *post-mortem* DNA damage, when building models of the *post-mortem* damage, and when rescaling quality scores to account for this damage. In order to enable plotting, modeling, or rescaling of quality scores, please see the 'mapDamage' option in the 'Features' section below.
+    This subsection is used to specify options for mapDamage2.0, when plotting *postmortem* DNA damage, when building models of the *postmortem* damage, and when rescaling quality scores to account for this damage. In order to enable plotting, modeling, or rescaling of quality scores, please see the 'mapDamage' option in the 'Features' section below.
 
     .. note::
-        It may be worthwhile to tweak mapDamage parameters before building a model of *post-mortem* DNA damage; this may be accomplished by running the pipeline without rescaling, running with the 'mapDamage' feature set to 'plot' (with or without quotes), inspecting the plots generated per-library, and then tweaking parameters as appropriate, before setting 'mapDamage' to 'model' (with or without quotes).
+        It may be worthwhile to tweak mapDamage parameters before building a model of *postmortem* DNA damage; this may be accomplished by running the pipeline without rescaling, running with the 'mapDamage' feature set to 'plot' (with or without quotes), inspecting the plots generated per-library, and then tweaking parameters as appropriate, before setting 'mapDamage' to 'model' (with or without quotes).
 
         Should you wish to change the modeling and rescaling parameters, after having already run the pipeline with rescaling enabled, simply remove the mapDamage files generated for the relevant libraries (see the :ref:`bam_filestructure` section).
 
     .. warning::
-        Rescaling requires a certain minimum number of C>T and G>A substitutions, before it is possible to construct a model of *post-mortem* DNA damage. If mapDamage fails with an error indicating that "DNA damage levels are too low", then it is necessary to disable rescaling for that library to continue.
+        Rescaling requires a certain minimum number of C>T and G>A substitutions, before it is possible to construct a model of *postmortem* DNA damage. If mapDamage fails with an error indicating that "DNA damage levels are too low", then it is necessary to disable rescaling for that library to continue.
 
 
 **Options \:\: mapDamage :: --downsample**
@@ -318,7 +318,7 @@ mapDamage options
         :lineno-start: 69
         :lines: 69-71
 
-    By default the BAM pipeline only samples 100k reads for use in constructing mapDamage plots; in our experience, this is sufficient for accurate plots and models. If no downsampling is to be done, this value can set to 0 to disable this features::
+    By default, the BAM pipeline only samples 100k reads for use in constructing mapDamage plots; in our experience, this is sufficient for accurate plots and models. If no downsampling is to be done, this value can set to 0 to disable this features::
 
         --downsample: 100000   # Sample 100 thousand reads
         --downsample: 1000000  # Sample 1 million reads
@@ -377,7 +377,7 @@ Optional features
 
 
     *mapDamage*
-        The 'mapDamage' option accepts four possible values: 'no', 'plot', 'model', and 'rescale'. By default value ('plot'), will cause mapDamage to be run in order to generate simple plots of the *post-mortem* DNA damage rates, as well as base composition plots, and more. If set to 'model', mapDamage will firstly generate the plots described for 'plot', but also construct models of DNA damage parameters, as described in [Jonsson2013]_. Note that a minimum amount of DNA damage is required to be present in order to build these models. If the option is set to 'rescale', both plots and models will be constructed using mapDamage, and in addition, the quality scores of bases will be down-graded based on how likely they are to represent *post-mortem* DNA damage (see above).
+        The 'mapDamage' option accepts four possible values: 'no', 'plot', 'model', and 'rescale'. By default, value ('plot'), will cause mapDamage to be run in order to generate simple plots of the *postmortem* DNA damage rates, as well as base composition plots, and more. If set to 'model', mapDamage will firstly generate the plots described for 'plot', but also construct models of DNA damage parameters, as described in [Jonsson2013]_. Note that a minimum amount of DNA damage is required to be present in order to build these models. If the option is set to 'rescale', both plots and models will be constructed using mapDamage, and in addition, the quality scores of bases will be down-graded based on how likely they are to represent *postmortem* DNA damage (see above).
 
     *Coverage*
         If enabled, a table summarizing the number of hits, the number of aligned bases, bases inserted, and bases deleted, as well as the mean coverage, is generated for each reference sequence, stratified by sample, library, and contig.

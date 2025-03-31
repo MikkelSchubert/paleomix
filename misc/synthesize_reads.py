@@ -144,7 +144,7 @@ class Sample:
         self._contam_id = 0
 
     def get_fragment(self):
-        """Returns either a DNA fragmnet, representing either a fragment of
+        """Returns either a DNA fragment, representing either a fragment of
         the sample genome, or a randomly generated DNA sequence representing
         contaminant DNA that is not related to the species."""
         if self._random.random() <= self._frac_endog:

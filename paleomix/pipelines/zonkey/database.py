@@ -110,7 +110,7 @@ class ZonkeyDB:
                 self.mitochondria = self._read_mitochondria(
                     tar_handle, "mitochondria.fasta"
                 )
-                log.info("Reading emperical admixture distribution")
+                log.info("Reading empirical admixture distribution")
                 self.simulations = self._read_simulations(tar_handle, "simulations.txt")
                 log.info("Determining sample order")
                 self.sample_order = self._read_sample_order(tar_handle, "genotypes.txt")
@@ -121,7 +121,7 @@ class ZonkeyDB:
 
     def validate_bam(self, filename):
         """Validates a sample BAM file, checking that it is either a valid
-        mitochondrial BAM (aligned against one of the referenc mt sequences),
+        mitochondrial BAM (aligned against one of the reference mt sequences),
         or that it is a valid nuclear BAM (aligned against the reference).
 
         Returns one of INVALID_BAMFILE, NUC_BAMFILE, and MITO_BAMFILE.
@@ -489,7 +489,7 @@ class ZonkeyDB:
 
             if requied_columns - set(header):
                 raise ZonkeyDBError(
-                    "Required columns are missign in table "
+                    "Required columns are missing in table "
                     "%r: %s" % (filename, ", ".join())
                 )
 

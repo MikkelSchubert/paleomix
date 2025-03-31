@@ -141,7 +141,7 @@ def fragment(size, lstlike):
 
 
 def cumsum(lst, initial=0):
-    """Yields the cummulative sums of the values in a
+    """Yields the cumulative sums of the values in a
     iterable, starting with the specified initial value."""
     for item in lst:
         initial += item

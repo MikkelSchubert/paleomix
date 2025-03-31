@@ -224,7 +224,7 @@ class Check(TotallyOrdered):
     either True or False, depending on whether or not the specified check
     passed.
 
-    The contructor takes a string describing the check ('description'), a
+    The constructor takes a string describing the check ('description'), a
     function with the signature 'func(version, values)', where version is the
     version determined for a app/library, and where values are the values
     passed to the Check constructor.

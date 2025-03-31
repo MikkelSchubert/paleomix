@@ -37,12 +37,12 @@ from paleomix.pipelines.bam.nodes import index_and_validate_bam
 class Library:
     """Represents a single library in a BAM pipeline.
 
-    Is reponsible for aggregating per-lane BAMS, removal of PCR duplicates,
+    Is responsible for aggregating per-lane BAMS, removal of PCR duplicates,
     rescaling of quality-scores using mapDamage, as well as running mapDamage
     for QC purposes.
 
     Properties:
-      name      -- Name of the libray (as specified in makefile)
+      name      -- Name of the library (as specified in makefile)
       lanes     -- Tuple of lanes assosisated with the library
       options   -- Makefile options that apply to the current library
       folder    -- Folder containing files assosisated with library. Is used as
@@ -121,7 +121,7 @@ class Library:
                 dependencies=list(files_and_nodes.values()),
             )
 
-            # Indexing is required if we wish to calulate per-region statistics
+            # Indexing is required if we wish to calculate per-region statistics
             validated_node = index_and_validate_bam(
                 config=config,
                 prefix=prefix,
@@ -189,7 +189,7 @@ class Library:
             files_and_nodes=files_and_nodes,
         )
 
-        # Builds model of post-mortem DNA damage
+        # Builds model of postmortem DNA damage
         return MapDamageModelNode(
             reference=prefix["Reference"],
             directory=destination,

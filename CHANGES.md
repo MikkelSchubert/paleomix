@@ -30,8 +30,8 @@
     data with BWA mem/bwasw.
   - Fixed regressions that prevented the use of "regions of interest" in the BAM
     pipeline.
-  - Fixed failure when using `--list-output-files` and auxilary files were missing
-    or dependecies were unmet. Output files are now printed.
+  - Fixed failure when using `--list-output-files` and auxiliary files were missing
+    or dependencies were unmet. Output files are now printed.
 
 
 ## [1.3.6] - 2021-11-28
@@ -58,7 +58,7 @@
 ### Changed
   - Avoid creating log files on invalid commandline arguments.
   - The directory for the log-file is created automatically if it does not exist.
-  - No longer prints stack-trace if the user terminates a pipeline wiht Ctrl + C.
+  - No longer prints stack-trace if the user terminates a pipeline with Ctrl + C.
   - Log-level command-line options are now case insensitive.
   - The default number of threads used by AdapterRemova, Bowtie2, and BWA are now scaled
     based on the available number of cores instead of defaulting to 1 thread.
@@ -70,7 +70,7 @@
   - Fixed --log-level not having an effect.
   - Fixed possible infinite recursion when using lazily created log-files.
   - Fixed BAM pipeline failing if mapDamage feature was not explicitly set.
-  - Fixed default values of 0 or 1 not being listed in commnad-line help text.
+  - Fixed default values of 0 or 1 not being listed in command-line help text.
 
 
 ## [1.3.3] - 2021-04-06
@@ -354,7 +354,7 @@ Please open an issue if features or options import to your work have been remove
     breaking on whitespace. Trailing whitespace is stripped.
   - Show more verbose output when building Zonkey pipelines.
   - Picard tools version 1.137 or later is now required by the BAM pipeline.
-    This is nessesary as newer BAM files (header version 1.5) would fail to
+    This is necessary as newer BAM files (header version 1.5) would fail to
     validate when using earlier versions of Picard tools.
 
 ### Fixed
@@ -584,7 +584,7 @@ the (partially) updated documentation now hosted on ReadTheDocs.
     if neither attribute can be found; also support reading of gz / bz2 files.
   - The "ExcludeReads" section of the BAM Pipeline makefile is now a dictionary
     rather a list of strings. Furthermore, 'Singleton' reads are now considered
-    seperately from 'Single'-end reads, and may be excluded independently of
+    separately from 'Single'-end reads, and may be excluded independently of
     those. This does not break backwards compatibility, but as a consequence
     'Single' includes both single-end and singleton reads when using old
     makefiles.
@@ -605,12 +605,12 @@ the (partially) updated documentation now hosted on ReadTheDocs.
     list of adapter sequences using --adapter-list, and to specify the number
     of threads uses by AdapterRemoval via the --adapterremoval-max-threads
     command-line option.
-  - Renamed module from 'pypeline' to 'paleomix' to aviod conflicts.
+  - Renamed module from 'pypeline' to 'paleomix' to avoid conflicts.
   - Improved handling FASTQ paths containing wildcards in the BAM pipeline,
     including additional checks to catch unequal numbers of files for paired-
     end reads.
-  - Switch to setuptools in preperation for PyPI registration.
-  - Avoid seperate indexing of intermediate BAMs when possible, reducing the
+  - Switch to setuptools in preparation for PyPI registration.
+  - Avoid separate indexing of intermediate BAMs when possible, reducing the
     total number of steps required for typical runs.
   - Restructure tests, removing (mostly unused) node tests.
   - Reworked sub-command handling to enable migration to setup-tools, and
@@ -699,7 +699,7 @@ the (partially) updated documentation now hosted on ReadTheDocs.
     of regions are to be called; this is useful in the context of larger
     projects, and when multiple overlapping regions are to be genotyped.
   - Added validation of FASTA files for the BAM pipeline, in order to catch
-    serveral types of errors that may lead to failure during mapping.
+    several types of errors that may lead to failure during mapping.
   - Added options to BAM / Phylo pipelines for writing Dot-file of the full
     dependency tree of a pipeline.
   - Added the ability to change the number of threads, and more, while the
@@ -719,7 +719,7 @@ the (partially) updated documentation now hosted on ReadTheDocs.
     versions have never been tested, or are known to contain bugs that result
     in invalid BAM files.
   - The memory limit it no longer increased for 32-bit JREs by default, as the
-    value used by the pipeline exceeded the maxmimum for this architecture.
+    value used by the pipeline exceeded the maximum for this architecture.
   - Improved verification of singleton-filtering settings in makefiles.
   - Reworked the 'sample_pileup' command, to reduce the memory usage for larger
     regions (e.g. entire chromosomes) by an order of magnitude. Also fixed some
@@ -779,7 +779,7 @@ the (partially) updated documentation now hosted on ReadTheDocs.
     custom temporary directory, when running Picard tools.
   - Cleanup of error-message displayed if Pysam version is outdated.
   - Ensure that file-handles are closed in the main process before subprocess
-    execution, to ensure that these recieve SIGPIPE upon broken pipes.
+    execution, to ensure that these receive SIGPIPE upon broken pipes.
   - Improvements to handling of implicit empty lists in makefiles; it is now
     no longer required to explicitly specify an empty list. Thus, the following
     is equivalent assuming that the pipeline expects a list:

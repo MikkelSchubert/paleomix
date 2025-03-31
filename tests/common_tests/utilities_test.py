@@ -244,7 +244,7 @@ def test_get_in__iterator_keywords():
 
 
 def _do_split(lst, key):
-    # Convertion to list allows the implementation to be
+    # Conversion to list allows the implementation to be
     # lazy, while making comparisons for asserts easier
     return list(utils.split_before(lst, key))
 

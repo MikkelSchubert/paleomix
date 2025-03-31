@@ -46,7 +46,7 @@ Such a makefile can be parsed into a dictionary using YAML, but to help us
 ensure that the makefile fits the expected layout (as above), we need to
 specify the structure of the makefile.
 
-Firstly, note that the options are specified twice, so we will make a re-usable
+Firstly, note that the options are specified twice, so we will make a reusable
 specification for those. In this case, this can accomplished like so:
 -------------------------------------------------------------------------------
 |  _SPECIFICATION_OF_OPTIONS = {
@@ -74,7 +74,7 @@ as so:
 Note that specification objects that do not take any parameters (IsInt, etc.)
 do not need to be instantiated. Thus one can use both 'IsInt' or 'IsInt()',
 whereas 'IsListOf', 'IsDictOf', etc. needs to be instantiated. This is purely
-for convinience.
+for convenience.
 
 
 Having specified the expected structure of the options, we can specify the
@@ -165,7 +165,7 @@ Which yields the following structure following processing:
 
 If the file contents does not match the expected structure, a MakefileError is
 raised which describes the problem. For example, suppose that an "Output_File"
-value has accidentically been left blank ('IsStr' requires a NON-EMPTY string):
+value has accidentally been left blank ('IsStr' requires a NON-EMPTY string):
 -------------------------------------------------------------------------------
 |  Makefile requirement not met at ...:
 |    Expected value: a non-empty string
@@ -626,7 +626,7 @@ class Not(_MultipleSpecs):
 #
 # In addition to providing string-specific operators (is uppercase, ends/starts
 # with), "in" and set operators are provided which do case-insensitive
-# comparsions. For case-sensitive operations, use the Value* specifications.
+# comparisons. For case-sensitive operations, use the Value* specifications.
 
 
 class StringIn(_BinaryOperator):
@@ -639,7 +639,7 @@ class StringIn(_BinaryOperator):
         self,
         rvalues,
         key=None,
-        description="one of {rvalue}, case-insentive",
+        description="one of {rvalue}, case-insensitive",
         default=DEFAULT_NOT_SET,
     ):
         description = description.format(rvalue=_list_values(rvalues, "or"))
@@ -726,7 +726,7 @@ class IsListOf(_MultipleSpecs):
 class IsDictOf(MakefileSpec):
     """Require that the value is a list, the keys/values of which matches
     the specifications provided for keys/values; if no default value (ie. a
-    dictioanry) is required, then using the following syntax is preferred:
+    dictionary) is required, then using the following syntax is preferred:
       {IsType1: IsType2}
 
     This is equivalent to the following:
@@ -886,7 +886,7 @@ def _process_default_values(data, specification, path, apply_defaults):
                     if not default_value_from_spec:
                         default_value = []
 
-                # Prevent clobbering of values when re-using sub-specs
+                # Prevent clobbering of values when reusing sub-specs
                 data[cur_key] = copy.deepcopy(default_value)
 
 

@@ -118,7 +118,7 @@ def missing_executables(
 
 def make_dirs(directory: Union[str, Path], mode: int = 0o777) -> bool:
     """Wrapper around os.makedirs to make it suitable for using
-    in a multithreaded/multiprocessing enviroment: Unlike the
+    in a multithreaded/multiprocessing environment: Unlike the
     regular function, this wrapper does not throw an exception if
     the directory already exists, which may happen if another
     thread/process created the directory during the function call.
@@ -307,7 +307,7 @@ def _sh_wrapper(
 
 def _try_rm_wrapper(func: Callable[[Any], Any], fpath: Union[str, Path]) -> bool:
     """Takes a function (e.g. os.remove / os.rmdir), and attempts to remove a
-    path; returns true if that path was succesfully remove, and false if it did
+    path; returns true if that path was successfully remove, and false if it did
     not exist."""
     try:
         func(fspath(fpath))

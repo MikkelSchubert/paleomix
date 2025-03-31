@@ -33,7 +33,7 @@ from paleomix.node import CommandNode
 class PicardNode(CommandNode):
     """Base class for nodes using Picard Tools; adds an additional cleanup
     step, in order to allow the jars to be run using the same temporary folder
-    as any other commands associated with the node. This is nessesary as some
+    as any other commands associated with the node. This is necessary as some
     Picard tools create a large number of temporary files, leading to potential
     performance issues if these are located in the same folder.
     """

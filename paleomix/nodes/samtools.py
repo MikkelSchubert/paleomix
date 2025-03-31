@@ -58,7 +58,7 @@ class TabixIndexNode(CommandNode):
         elif preset == "vcf":
             call = ["tabix", "-p", preset]
         else:
-            assert False, "Unxpected preset: %r" % preset
+            assert False, "Unexpected preset: %r" % preset
 
         self._infile = infile
         cmd_tabix = AtomicCmd(

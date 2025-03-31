@@ -394,7 +394,7 @@ _SAMPLE_OVERVIEW_INCL_NUCL_NEGATIVE = """
 _SAMPLE_OVERVIEW_EXCL_NUCL = """
     <div class="tabContent small" id="sample{sample_idx}.page1">
       <div>
-        Nuclear BAM not provided; no admixture were tests perfomed.
+        Nuclear BAM not provided; no admixture were tests performed.
       </div>
 """
 

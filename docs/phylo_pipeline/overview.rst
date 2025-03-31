@@ -18,4 +18,4 @@ During a typical analyses, the Phylogenetic pipeline will proceed through the fo
 
 3. Phylogenetic inference
 
-    Following construction of (aligned) multi-FASTA sequences, phylogenetic inference may be carried out using a partioned maximum likelihood approach via ExaML.
+    Following construction of (aligned) multi-FASTA sequences, phylogenetic inference may be carried out using a partitioned maximum likelihood approach via ExaML.
