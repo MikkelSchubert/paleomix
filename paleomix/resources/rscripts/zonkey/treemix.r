@@ -42,7 +42,7 @@ set_y_coords = function(d){
 
 	for (j in 1:nrow(d)){
 		d = set_y_coord(d, j)
-	}	
+	}
 	return(d)
 }
 
@@ -76,8 +76,8 @@ set_y_coord = function(d, i){
 		d[i,]$y = py-f*(py-pymin)
                 if (d[i,5]== "TIP"){
                         d[i,]$y = (pymin+py)/2
-                }	
-	
+                }
+
 	}
 	return(d)
 }
@@ -118,7 +118,7 @@ set_x_coords = function(d, e){
                 tmpx = 0
         }
         d[ni,]$x = tmpx
-        
+
         for (j in 1:nrow(d)){
                 d = set_x_coord(d, e, j)
         }
@@ -230,7 +230,7 @@ plot_tree_internal = function(d, e, samples, o = NA, cex = 1, disp = 0.005, plus
 		}
 		text(0, yma+0.06, lab = "Migration", adj = 0 , cex = 0.6)
 		text(0, yma+0.03, lab = "weight", adj = 0 , cex = 0.6)
-        }	
+        }
 }
 
 set_mig_coords = function(d, e){
@@ -244,7 +244,7 @@ set_mig_coords = function(d, e){
 			x1 = p[1,]$x
 			x2 = c[1,]$x
 
-			mf = tmpe[1,6]	
+			mf = tmpe[1,6]
 			if (is.nan(mf)){
 				mf = 0
 			}
@@ -253,7 +253,7 @@ set_mig_coords = function(d, e){
                         d[j,]$y = y1+(y2-y1)* mf
 			print(paste(mf, x1, x2))
                         d[j,]$x = x1+(x2-x1) *mf
-		}	
+		}
 
 	}
 	return(d)
@@ -292,7 +292,7 @@ plot_tree = function(stem, samples, o = NA, cex = 1, disp = 0.003, plus = 0.01, 
 	}
 	e[,3] = e[,3]*e[,4]
 	e[,3] = e[,3]*e[,4]
-	
+
 	se = read.table(gzfile(se), as.is = T, comment.char = "", quote = "")
 	m1 = apply(se, 1, mean)
 	m = mean(m1)
@@ -395,7 +395,7 @@ plot_resid = function(stem, pop_order, min = -0.009, max = 0.009, cex = 1, usema
 	mse = mean(mse)
 	c = c[order(names(c)), order(names(c))]
 	m = m[order(names(m)), order(names(m))]
-	tmp = c -m 
+	tmp = c -m
 	#tmp = m - c
 	#tmp = (m-c)/m
 	#print(tmp)
@@ -416,7 +416,7 @@ plot_resid = function(stem, pop_order, min = -0.009, max = 0.009, cex = 1, usema
 	if (usemax){
 		m1 = max(abs(toplot), na.rm = T)
 		max = m1*1.02
-		min = -(m1*1.02)	
+		min = -(m1*1.02)
 	}
 	names(toplot) = o[,1]
 	toreturn = plot_resid_internal(toplot, max = max, min = min, wcols = wcols, mse = mse, o = o, cex = cex)

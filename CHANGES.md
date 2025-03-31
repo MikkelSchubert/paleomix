@@ -3,7 +3,7 @@
 ## [1.3.9] - 2025-03-19
 
 #### Fixed
-  - Fixed use of deprecated `pipes` module 
+  - Fixed use of deprecated `pipes` module
   - Fixed use of deprecated functions for accessing bundled resources
   - Fixed regression in tests
   - Fixed the `dupcheck` command not being exposed, despite error commands
