@@ -1,5 +1,6 @@
 import nox
 
+nox.options.default_venv_backend = "uv|virtualenv"
 nox.options.sessions = [
     "style",
     "lints",
@@ -53,8 +54,9 @@ def typing(session: nox.Session) -> None:
 
 @nox.session()
 def tests(session: nox.Session) -> None:
+    # Install in development mode to for coverage analysis
+    session.install("-e", ".")
     session.install(
-        ".",
         Requirements.PYTEST,
         Requirements.COVERAGE,
         Requirements.PYTEST_COV,
@@ -88,7 +90,7 @@ def tests(session: nox.Session) -> None:
     )
 
 
-@nox.session(python=["3.9", "3.10", "3.11", "3.12"])
+@nox.session(python=["3.9", "3.10", "3.11", "3.12", "3.13"])
 def full_tests(session: nox.Session) -> None:
     session.install(
         ".",
