@@ -148,9 +148,11 @@ def index_references(config, makefiles):
                 bwa_node = BWAIndexNode(
                     input_file=reference, dependencies=(valid_node,)
                 )
-                # Indexing of FASTA file using ''
+                # Indexing of FASTA file using 'bowtie2-build'
                 bowtie2_node = Bowtie2IndexNode(
-                    input_file=reference, dependencies=(valid_node,)
+                    input_file=reference,
+                    threads=config.bowtie2_max_threads,
+                    dependencies=(valid_node,),
                 )
 
                 references[reference] = (valid_node, faidx_node)

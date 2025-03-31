@@ -44,7 +44,7 @@ BOWTIE2_VERSION = versions.Requirement(
 
 
 class Bowtie2IndexNode(CommandNode):
-    def __init__(self, input_file, prefix=None, dependencies=()):
+    def __init__(self, input_file, prefix=None, threads=1, dependencies=()):
         prefix = prefix if prefix else input_file
         builder = _bowtie2_template(
             ("bowtie2-build"),
@@ -55,6 +55,7 @@ class Bowtie2IndexNode(CommandNode):
             CHECK_VERSION=BOWTIE2_VERSION,
         )
 
+        builder.add_option("--threads", threads)
         builder.add_value("%(IN_FILE)s")
         # Destination prefix, in temp folder
         builder.add_value("%(TEMP_OUT_PREFIX)s")
