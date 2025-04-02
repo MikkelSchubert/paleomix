@@ -152,6 +152,7 @@ def index_references(config, makefiles):
                 bowtie2_node = Bowtie2IndexNode(
                     input_file=reference,
                     threads=config.bowtie2_max_threads,
+                    index_format=subdd["IdxFmt:Bowtie2"],
                     dependencies=(valid_node,),
                 )
 
