@@ -220,6 +220,7 @@ class Lane:
     def _build_bowtie2(self, config, prefix, record, parameters):
         parameters = self._set_pe_input_files(parameters)
         parameters["threads"] = config.bowtie2_max_threads
+        parameters["index_format"] = prefix["IdxFmt:Bowtie2"]
 
         parameters["mapping_options"] = dict(self.options["Aligners"]["Bowtie2"])
         parameters["cleanup_options"] = self._cleanup_options("Bowtie2")

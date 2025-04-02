@@ -93,8 +93,6 @@ class DepthHistogramNode(CommandNode):
         regions_file=None,
         dependencies=(),
     ):
-        index_format = regions_file and prefix["IndexFormat"]
-
         builder = factory.new("depths")
         builder.add_value("%(IN_BAM)s")
         builder.add_value("%(OUT_FILE)s")
@@ -105,7 +103,7 @@ class DepthHistogramNode(CommandNode):
             builder.set_option("--regions-file", "%(IN_REGIONS)s")
             builder.set_kwargs(
                 IN_REGIONS=regions_file,
-                IN_INDEX=input_file + index_format,
+                IN_INDEX=input_file + prefix["IdxFmt:BAM"],
             )
 
         CommandNode.__init__(

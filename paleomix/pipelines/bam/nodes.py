@@ -32,10 +32,12 @@ def index_and_validate_bam(
     create_index=True,
     validation_levels=("full",),
 ):
-    input_file, index_file = _get_input_files(node, prefix["IndexFormat"])
+    input_file, index_file = _get_input_files(node, prefix["IdxFmt:BAM"])
     if not index_file and create_index:
         node = BAMIndexNode(
-            infile=input_file, index_format=prefix["IndexFormat"], dependencies=node
+            infile=input_file,
+            index_format=prefix["IdxFmt:BAM"],
+            dependencies=node,
         )
         (index_file,) = node.output_files
 
@@ -57,17 +59,17 @@ def index_and_validate_bam(
         input_bam=input_file,
         input_index=index_file,
         ignored_checks=ignored_checks,
-        big_genome_mode=prefix["IndexFormat"] == ".csi",
+        big_genome_mode=prefix["IdxFmt:BAM"] == ".csi",
         output_log=log_file,
         dependencies=node,
     )
 
 
-def _get_input_files(node, index_format):
+def _get_input_files(node, bam_index):
     index_filename = None
     input_filename = None
     for filename in node.output_files:
-        if filename.lower().endswith(index_format):
+        if filename.lower().endswith(bam_index):
             index_filename = True
         elif filename.lower().endswith(".bam"):
             input_filename = filename

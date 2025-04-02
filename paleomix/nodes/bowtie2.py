@@ -44,16 +44,30 @@ BOWTIE2_VERSION = versions.Requirement(
 
 
 class Bowtie2IndexNode(CommandNode):
-    def __init__(self, input_file, prefix=None, dependencies=()):
+    def __init__(
+        self,
+        input_file,
+        index_format,
+        prefix=None,
+        threads=1,
+        dependencies=(),
+    ):
         prefix = prefix if prefix else input_file
         builder = _bowtie2_template(
             ("bowtie2-build"),
             prefix,
             iotype="OUT",
+            index_format=index_format,
             IN_FILE=input_file,
             TEMP_OUT_PREFIX=os.path.basename(prefix),
             CHECK_VERSION=BOWTIE2_VERSION,
         )
+
+        builder.add_option("--threads", threads)
+        if index_format == ".bt2l":
+            builder.add_value("--large-index")
+        elif index_format != ".bt2":
+            raise ValueError(index_format)
 
         builder.add_value("%(IN_FILE)s")
         # Destination prefix, in temp folder
@@ -75,6 +89,7 @@ class Bowtie2Node(CommandNode):
         output_file,
         reference,
         prefix,
+        index_format,
         threads=2,
         log_file=None,
         mapping_options={},
@@ -85,6 +100,7 @@ class Bowtie2Node(CommandNode):
         aln = _bowtie2_template(
             ("bowtie2",),
             prefix,
+            index_format=index_format,
             OUT_STDOUT=AtomicCmd.PIPE,
             CHECK_VERSION=BOWTIE2_VERSION,
         )
@@ -134,9 +150,12 @@ class Bowtie2Node(CommandNode):
         )
 
 
-def _bowtie2_template(call, prefix, iotype="IN", **kwargs):
-    for postfix in ("1.bt2", "2.bt2", "3.bt2", "4.bt2", "rev.1.bt2", "rev.2.bt2"):
-        key = "%s_PREFIX_%s" % (iotype, postfix.upper())
-        kwargs[key] = prefix + "." + postfix
+def _bowtie2_template(call, prefix, iotype="IN", index_format=".bt2", **kwargs):
+    if index_format not in (".bt2", ".bt2l"):
+        raise ValueError(index_format)
+
+    for postfix in ("1", "2", "3", "4", "rev.1", "rev.2"):
+        key = "{}_PREFIX_{}{}".format(iotype, postfix, index_format).upper()
+        kwargs[key] = "{}.{}{}".format(prefix, postfix, index_format)
 
     return AtomicCmdBuilder(call, **kwargs)

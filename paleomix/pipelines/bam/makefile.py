@@ -57,6 +57,7 @@ from paleomix.common.makefile import (
     WithoutDefaults,
     read_makefile,
 )
+from paleomix.common.procs import PIPE, open_proc
 from paleomix.common.utilities import fill_dict
 
 _READ_TYPES = set(("Single", "Singleton", "Collapsed", "CollapsedTruncated", "Paired"))
@@ -662,52 +663,147 @@ def _validate_makefiles_duplicate_targets(makefiles):
 
 def _validate_prefixes(makefiles):
     logger = logging.getLogger(__name__)
+    bowtie2_formats = _determine_bowtie2_index_formats(logger, makefiles)
+
     already_validated = {}
     logger.info("Validating FASTA files")
     for makefile in makefiles:
         for prefix in makefile["Prefixes"].values():
             path = prefix["Path"]
             if path in already_validated:
-                prefix["IndexFormat"] = already_validated[path]["IndexFormat"]
+                prefix["IdxFmt:BAM"] = already_validated[path]["IdxFmt:BAM"]
+                prefix["IdxFmt:Bowtie2"] = already_validated[path]["IdxFmt:Bowtie2"]
                 continue
 
             # Must be set to a valid value, even if FASTA file does not exist
-            prefix["IndexFormat"] = ".bai"
+            prefix["IdxFmt:BAM"] = ".bai"
+            prefix["IdxFmt:Bowtie2"] = bowtie2_formats[path]
 
             if not os.path.exists(path):
                 logger.error("Reference FASTA file does not exist: %r", path)
                 continue
-            elif not os.path.exists(path + ".fai"):
-                logger.info("Indexing FASTA at %r", path)
 
-            try:
-                contigs = FASTA.index_and_collect_contigs(path)
-            except FASTAError as error:
-                raise MakefileError("Error indexing FASTA:\n %s" % (error,))
+            contigs = _read_fasta_lengths(logger, path)
+            _validate_regions_of_interest(
+                prefix.get("RegionsOfInterest", {}),
+                contigs=contigs,
+                name=prefix["Name"],
+            )
 
-            regions_of_interest = prefix.get("RegionsOfInterest", {})
-            for name, fpath in regions_of_interest.items():
-                try:
-                    # read_bed_file returns iterator
-                    for _ in bedtools.read_bed_file(fpath, contigs=contigs):
-                        pass
-                except (bedtools.BEDError, IOError) as error:
-                    raise MakefileError(
-                        "Error reading regions-of-"
-                        "interest %r for prefix %r:\n%s" % (name, prefix["Name"], error)
-                    )
-
-            if max(contigs.values()) > _BAM_MAX_SEQUENCE_LENGTH:
-                logger.warn(
-                    "FASTA file %r contains sequences longer "
-                    "than %i! CSI index files will be used instead "
-                    "of BAI index files.",
-                    path,
-                    _BAM_MAX_SEQUENCE_LENGTH,
-                )
-                prefix["IndexFormat"] = ".csi"
+            prefix["IdxFmt:BAM"] = _determine_bam_index_format(logger, path, contigs)
 
             already_validated[path] = prefix
+
+
+def _read_fasta_lengths(logger, path):
+    if not os.path.exists(path + ".fai"):
+        logger.info("Indexing FASTA at %r", path)
+
+    try:
+        return FASTA.index_and_collect_contigs(path)
+    except FASTAError as error:
+        raise MakefileError("Error indexing FASTA:\n %s" % (error,))
+
+
+def _validate_regions_of_interest(regions, contigs, name):
+    for region_name, fpath in regions.items():
+        try:
+            # read_bed_file returns iterator
+            for _ in bedtools.read_bed_file(fpath, contigs=contigs):
+                pass
+        except (bedtools.BEDError, IOError) as error:
+            raise MakefileError(
+                "Error reading regions-of-"
+                "interest %r for prefix %r:\n%s" % (region_name, name, error)
+            )
+
+
+def _determine_bam_index_format(logger, path, contigs):
+    if max(contigs.values()) > _BAM_MAX_SEQUENCE_LENGTH:
+        logger.warn(
+            "FASTA file %r contains sequences longer "
+            "than %i! CSI index files will be used instead "
+            "of BAI index files.",
+            path,
+            _BAM_MAX_SEQUENCE_LENGTH,
+        )
+
+        return ".csi"
+    return ".bai"
+
+
+def _determine_bowtie2_index_formats(logger, makefiles):
+    prefixes = {}
+    for makefile in makefiles:
+        is_using_bowtie2 = _is_using_bowtie2(makefile)
+
+        for prefix in makefile["Prefixes"].values():
+            path = prefix["Path"]
+            prefixes[path] = prefixes.get(path, False) or is_using_bowtie2
+
+    any_errors = False
+    for key, value in prefixes.items():
+        bowtie2_format = ".bt2"
+        if value and not any_errors:
+            fmt = _determine_bowtie2_index_format(logger, key)
+            if fmt is None:
+                any_errors = True
+            else:
+                bowtie2_format = fmt
+                if bowtie2_format == ".bt2l":
+                    logger.info("Using large Bowtie2 index for %s", key)
+
+        prefixes[key] = bowtie2_format
+
+    return prefixes
+
+
+def _determine_bowtie2_index_format(logger, path):
+    try:
+        stats: os.stat_result = os.stat(path)
+    except OSError:
+        # An error will be shown above
+        return ".bt2"
+
+    # Sizes taken from bowtie2-build
+    if stats.st_size <= 2**31 - 200:
+        return ".bt2"
+    elif stats.st_size > 2**32 - 200:
+        return ".bt2l"
+
+    # format for size range ]2**31 - 200; 2**32 - 200] depends on compile time options
+    cmd = ["bowtie2-build-s", "--version"]
+
+    try:
+        proc = open_proc(
+            cmd,
+            stdout=PIPE,
+            stderr=PIPE,
+            encoding="utf-8",
+            errors="replace",
+        )
+
+        stdout, stderr = proc.communicate()
+        if proc.returncode:
+            logger.error("Error running %s:", cmd)
+            for line in stderr.splitlines():
+                logger.error("  %s", line.rstrip())
+        elif "USE_SAIS" in stdout:
+            return ".bt2" if stats.st_size < 2**31 - 200 else ".bt2l"
+        else:
+            return ".bt2"
+    except OSError as error:
+        logger.error("Error running %s: %s", cmd, error)
+
+    logger.error("Could not determine if bowtie2-build requires a large index")
+    return ".bt2"
+
+
+def _is_using_bowtie2(makefile):
+    return any(
+        record["Options"]["Aligners"]["Program"] == "Bowtie2"
+        for _, _, _, _, record in _iterate_over_records(makefile)
+    )
 
 
 def _iterate_over_records(makefile):
