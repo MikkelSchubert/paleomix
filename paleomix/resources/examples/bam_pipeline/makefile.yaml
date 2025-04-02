@@ -96,7 +96,7 @@ Options:
     # set to 'model' to build plots and postmortem damage models; and set to 'rescale'
     # to build plots, models, and BAMs with rescaled quality scores. All analyses are
     # carried out per library.
-    mapDamage: plot
+    mapDamage: off
     # Generate coverage information for the final BAM and for each 'RegionsOfInterest'
     # specified in 'Prefixes' (yes / no).
     Coverage: yes
@@ -105,6 +105,10 @@ Options:
     Depths: yes
     # Generate summary table for each target (yes / no)
     Summary: yes
+    # Validation BAM files: 'full' to validate all files, including intermediate
+    # files, 'partial' to validate only the final output, or 'off' to disable. This
+    # is generally only required for troubleshooting.
+    Validation: off
 
 # Map of prefixes by name, each having a Path, which specifies the location of the
 # BWA/Bowtie2 index, and optional regions for which additional statistics are produced.
