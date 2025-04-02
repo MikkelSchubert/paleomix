@@ -127,6 +127,7 @@ _VALID_FEATURES_DICT = {
     "RawBAM": RemovedOption(),
     "RealignedBAM": RemovedOption(),
     "Summary": IsBoolean(default=True),
+    "Validation": StringIn(("full", "partial", "off", True, False), default=False),
 }
 
 _VALID_EXCLUDE_DICT = {

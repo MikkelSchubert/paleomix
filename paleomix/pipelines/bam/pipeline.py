@@ -20,8 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-
-
+import copy
 import logging
 import os
 
@@ -63,6 +62,13 @@ def build_pipeline_trimming(config, makefile):
 def build_pipeline_full(config, makefile, return_nodes=True):
     result = []
     features = makefile["Options"]["Features"]
+
+    if config.validation is None:
+        config = copy.copy(config)
+        config.validation = features["Validation"]
+        if config.validation in (True, False):
+            config.validation = "full" if config.validation else "off"
+
     for target_name, sample_records in makefile["Targets"].items():
         prefixes = []
         for _, prefix in makefile["Prefixes"].items():
