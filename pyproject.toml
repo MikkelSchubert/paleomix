@@ -41,11 +41,12 @@ Documentation = "https://paleomix.readthedocs.io"
 Repository = "https://github.com/MikkelSchubert/paleomix.git"
 Issues = "https://github.com/MikkelSchubert/paleomix/issues"
 
-[project.optional-dependencies]
-dev = ["nox", "pytest", "pytest-cov"]
-
 [project.scripts]
 paleomix = "paleomix.main:entry_point"
+
+[dependency-groups]
+dev = ["coverage[toml]", "pytest", "pytest-cov"]
+lint = ["ruff==0.11.2"]
 
 [tool.hatch.version]
 path = "paleomix/__init__.py"
@@ -79,4 +80,5 @@ output-format = "concise"
 exclude = ["docs/**"]
 
 [tool.uv]
+default-groups = []
 reinstall-package = ["paleomix"]

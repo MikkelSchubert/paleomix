@@ -1,6 +1,6 @@
 import nox
 
-nox.options.default_venv_backend = "uv|virtualenv"
+nox.options.default_venv_backend = "uv"
 nox.options.sessions = [
     "style",
     "lints",
@@ -16,17 +16,9 @@ SOURCES = (
 )
 
 
-class Requirements:
-    COVERAGE = "coverage[toml]~=7.6"
-    NOX = "nox~=2024.3.2"
-    PYTEST = "pytest~=8.3"
-    PYTEST_COV = "pytest-cov~=6.0"
-    RUFF = "ruff==0.11.0"
-
-
 @nox.session
 def style(session: nox.Session) -> None:
-    session.install(Requirements.RUFF)
+    session.install("--group", "lint", ".")
     # Replaces `black --check`
     session.run("ruff", "format", "--check", *SOURCES)
     # Replaces `isort --check-only`
@@ -35,20 +27,14 @@ def style(session: nox.Session) -> None:
 
 @nox.session
 def lints(session: nox.Session) -> None:
-    session.install(Requirements.RUFF)
+    session.install("--group", "lint", ".")
     session.run("ruff", "check", *SOURCES)
 
 
 @nox.session()
 def tests(session: nox.Session) -> None:
     # Install in development mode to for coverage analysis
-    session.install("-e", ".")
-    session.install(
-        Requirements.PYTEST,
-        Requirements.COVERAGE,
-        Requirements.PYTEST_COV,
-    )
-
+    session.install("--group", "dev", "-e", ".")
     session.run(
         "python3",
         # Run tests in development mode (enables extra checks)
@@ -79,11 +65,7 @@ def tests(session: nox.Session) -> None:
 
 @nox.session(python=["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"])
 def full_tests(session: nox.Session) -> None:
-    session.install(
-        ".",
-        Requirements.PYTEST,
-    )
-
+    session.install("--group", "dev", ".")
     session.run(
         "python3",
         # Run tests in development mode (enables extra checks)
