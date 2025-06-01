@@ -94,3 +94,10 @@ def test_factory__command_versions(arg, command):
     assert stdout.startswith("paleomix {}".format(command))
     assert stdout.endswith(" v{}\n".format(paleomix.__version__))
     assert not stderr
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("command", ("bam", "phylo"))
+def test_factory__example_commands(tmp_path, command):
+    cmd = factory.new(command)
+    check_run(cmd.finalized_call + ["example"], cwd=tmp_path)
