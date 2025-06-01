@@ -82,7 +82,7 @@ def copy_example(tool, args):
         log.error("Example folder already exists at %r", destination)
         return 1
 
-    copy_resource(os.path.join("examples", "bam_pipeline"), destination)
+    copy_resource(os.path.join("examples", tool), destination)
 
     log.info("Successfully saved example in %r", destination)
 
