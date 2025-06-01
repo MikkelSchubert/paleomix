@@ -104,5 +104,8 @@ def join_procs(procs, out=sys.stderr):
 
 def max_processes():
     """Returns the number of processes that can be run simultaneously"""
+    sched_getaffinity = getattr(os, "sched_getaffinity", None)
+    if sched_getaffinity:
+        return max(1, len(sched_getaffinity(0)))
 
-    return max(1, len(os.sched_getaffinity(0)))
+    return os.cpu_count()
