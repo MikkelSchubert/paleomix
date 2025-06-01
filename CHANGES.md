@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.3.10] - 2025-06-01
+
+#### Fixed
+  - Fixed `example` command for the phylogenetic pipeline failing.
+
+
 ## [1.3.9] - 2025-03-19
 
 #### Fixed
@@ -802,6 +808,9 @@ the (partially) updated documentation now hosted on ReadTheDocs.
   - Switching to more traditional version-number tracking.
 
 
+[1.3.10]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.9...v1.3.10
+[1.3.9]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.8...v1.3.9
+[1.3.8]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.7...v1.3.8
 [1.3.7]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.6...v1.3.7
 [1.3.6]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.5...v1.3.6
 [1.3.5]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.4...v1.3.5
