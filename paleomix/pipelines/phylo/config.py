@@ -20,12 +20,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import multiprocessing
 import os
 
 import paleomix
 import paleomix.common.logging
 from paleomix.common.argparse import SUPPRESS, ArgumentParser
+from paleomix.common.procs import max_processes
 
 _DEFAULT_CONFIG_FILES = [
     "/etc/paleomix/phylo_pipeline.ini",
@@ -60,7 +60,7 @@ def build_parser():
     group.add_argument(
         "--max-threads",
         type=int,
-        default=max(2, multiprocessing.cpu_count()),
+        default=max(2, max_processes()),
         help="Max number of threads to use in total",
     )
     group.add_argument(

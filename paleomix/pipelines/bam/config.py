@@ -20,12 +20,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import multiprocessing
 import os
 
 import paleomix
 import paleomix.common.logging
 from paleomix.common.argparse import SUPPRESS, ArgumentParser
+from paleomix.common.procs import max_processes
 from paleomix.common.resources import add_copy_example_command
 
 _DEFAULT_CONFIG_FILES = [
@@ -91,25 +91,25 @@ def add_run_command(subparsers):
     group.add_argument(
         "--max-threads",
         type=int,
-        default=max(2, multiprocessing.cpu_count()),
+        default=max(2, max_processes()),
         help="Max number of threads to use in total",
     )
     group.add_argument(
         "--adapterremoval-max-threads",
         type=int,
-        default=min(3, multiprocessing.cpu_count()),
+        default=min(3, max_processes()),
         help="Max number of threads to use per AdapterRemoval instance",
     )
     group.add_argument(
         "--bowtie2-max-threads",
         type=int,
-        default=max(1, min(8, multiprocessing.cpu_count() // 2)),
+        default=max(1, min(8, max_processes() // 2)),
         help="Max number of threads to use per Bowtie2 instance",
     )
     group.add_argument(
         "--bwa-max-threads",
         type=int,
-        default=max(1, min(8, multiprocessing.cpu_count() // 2)),
+        default=max(1, min(8, max_processes() // 2)),
         help="Max number of threads to use per BWA instance",
     )
 

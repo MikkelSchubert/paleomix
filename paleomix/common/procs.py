@@ -24,6 +24,7 @@
 Tools used for working with subprocesses.
 """
 
+import os
 import sys
 import time
 from subprocess import DEVNULL, PIPE, STDOUT, Popen
@@ -99,3 +100,9 @@ def join_procs(procs, out=sys.stderr):
         out.flush()
 
     return return_codes
+
+
+def max_processes():
+    """Returns the number of processes that can be run simultaneously"""
+
+    return max(1, len(os.sched_getaffinity(0)))
