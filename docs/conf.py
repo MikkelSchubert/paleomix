@@ -26,7 +26,7 @@ author = "Mikkel Schubert"
 # The short X.Y version
 version = "1.3"
 # The full version, including alpha/beta/rc tags
-release = "1.3.9"
+release = "1.3.10"
 
 
 # -- General configuration ---------------------------------------------------
