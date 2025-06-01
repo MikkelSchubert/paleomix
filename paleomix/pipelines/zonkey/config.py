@@ -20,11 +20,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import multiprocessing
-
 import paleomix
 import paleomix.common.logging
 from paleomix.common.argparse import SUPPRESS, ArgumentParser
+from paleomix.common.procs import max_processes
 
 _RUN_USAGE = """%(prog)s [..] <database.tar> <samples.txt> [destination]
        %(prog)s [..] <database.tar> <sample.bam> [destination]
@@ -149,7 +148,7 @@ def add_run_command(subparsers):
     group.add_argument(
         "--max-threads",
         type=int,
-        default=max(2, multiprocessing.cpu_count()),
+        default=max(2, max_processes()),
         help="Maximum number of threads to use",
     )
     group.add_argument(
