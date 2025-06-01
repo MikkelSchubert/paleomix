@@ -4,6 +4,7 @@
 
 #### Fixed
   - Fixed `example` command for the phylogenetic pipeline failing.
+  - Removed 'defaults' conda channel
 
 
 ## [1.3.9] - 2025-03-19
