@@ -78,7 +78,7 @@ To install `conda` and also set it up so it can use the `bioconda`_ bioinformati
 
 Next, run the following commands to download the conda environment template for this release of PALEOMIX and to create a new conda environment named `paleomix` using that template::
 
-    $ curl -fL https://github.com/MikkelSchubert/paleomix/releases/download/v1.3.9/paleomix_environment.yaml > paleomix_environment.yaml
+    $ curl -fL https://github.com/MikkelSchubert/paleomix/releases/download/v1.3.10/paleomix_environment.yaml > paleomix_environment.yaml
     $ conda env create -n paleomix -f paleomix_environment.yaml
 
 You can now activate the paleomix environment with::
