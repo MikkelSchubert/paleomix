@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import logging
 import string
+from collections import defaultdict
 
 from paleomix.common import yaml
 from paleomix.common.bamfiles import BAM_PLATFORMS
@@ -112,6 +113,12 @@ _VALIDATION: SpecTree = {
                 _VALID_NAME: FASTQPath(paired_end=True),  # Lane
             },
         },
+    },
+    "ExternalSamples": {
+        _VALID_SAMPLE_NAME: {
+            "BAM": Or(IsStr, IsNone, default=None),
+            "gVCF": Or(IsStr, IsNone, default=None),
+        }
     },
     "Genome": {
         "Name": _VALID_NAME,
@@ -215,6 +222,7 @@ def _replace_constants_recursive(data, constants):
 def _post_process_project(data):
     post_processing_steps = [
         _process_fastq_paths,
+        _process_sample_names,
         _process_gatk_resources,
         _process_recalibrator_settings,
     ]
@@ -240,6 +248,28 @@ def _process_fastq_paths(data):
                 }
 
     return True
+
+
+def _process_sample_names(data) -> bool:
+    log = logging.getLogger(__name__)
+
+    names: dict[str, list[tuple[str, str]]] = defaultdict(list)
+    for key in ("Samples", "ExternalSamples"):
+        for name in data[key]:
+            names[name.lower()].append((name, key))
+
+    any_errors = False
+    for values in names.values():
+        if len(values) > 1:
+            desc = [f"sample {name!r} in {section!r}" for name, section in values]
+            log.error(
+                "Found %i samples with too similar names: %s",
+                len(desc),
+                ", ".join(desc),
+            )
+            any_errors = True
+
+    return not any_errors
 
 
 def _process_gatk_resources(data):
