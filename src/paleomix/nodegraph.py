@@ -120,7 +120,6 @@ class CleanupStrategy(Enum):
 class TaskStatus:
     obj: Task
     status: StatusEnum
-    outdated: bool
     dependencies: set[TaskStatus]
     rev_dependencies: set[TaskStatus]
 
@@ -467,6 +466,12 @@ class NodeGraph:
         for task in tasks:
             timestamp = fscache.oldest_mtime_ns(task.output_files)
             if timestamp is not None:
+                in_timestamp = fscache.oldest_mtime_ns(task.input_files)
+                if in_timestamp is not None and in_timestamp > timestamp:
+                    self._log.debug(" - [%s] %s", StatusEnum.QUEUED, task)
+                    task.status = StatusEnum.QUEUED
+                    continue
+
                 for dependency in task.dependencies:
                     in_timestamp = _calculate_implied_output_age(dependency)
                     if in_timestamp is not None and in_timestamp > timestamp:
