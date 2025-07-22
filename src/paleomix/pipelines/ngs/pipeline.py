@@ -227,7 +227,7 @@ def validate_and_index_resources(settings):
         yield TabixIndexNode(infile=filename, preset="vcf")
 
 
-def fastqc_sample_runs(args, _genome, samples, settings):
+def fastqc_sample_runs(args, _genome, samples, _external_samples, settings):
     settings = settings["Preprocessing"]
     nodes = []
 
@@ -263,7 +263,7 @@ def fastqc_sample_runs(args, _genome, samples, settings):
     yield from nodes
 
 
-def process_fastq_files(args, _genome, samples, settings):
+def process_fastq_files(args, _genome, samples, _external_samples, settings):
     metadata = settings["Metadata"]
     settings = settings["Preprocessing"]
 
@@ -332,7 +332,7 @@ def process_fastq_files(args, _genome, samples, settings):
     )
 
 
-def fastqc_trimmed_reads(args, _genome, samples, settings):
+def fastqc_trimmed_reads(args, _genome, samples, _external_samples, settings):
     settings = settings["Preprocessing"]
     nodes = []
 
@@ -368,7 +368,7 @@ def fastqc_trimmed_reads(args, _genome, samples, settings):
     return nodes
 
 
-def map_sample_runs(args, genome, samples, settings):
+def map_sample_runs(args, genome, samples, _external_samples, settings):
     metadata = settings["Metadata"]
     bwa_settings = dict(settings["ReadMapping"]["BWAMem"])
     bwa_threads = args.max_threads_bwa
@@ -431,7 +431,7 @@ def map_sample_runs(args, genome, samples, settings):
             libraries[library] = mapped_reads
 
 
-def filter_pcr_duplicates(args, genome, samples, settings):
+def filter_pcr_duplicates(args, genome, samples, _external_samples, settings):
     mode = settings["ReadMapping"]["PCRDuplicates"]["mode"]
     if mode == "skip":
         for libraries in samples.values():
@@ -477,7 +477,7 @@ def filter_pcr_duplicates(args, genome, samples, settings):
             libraries[library].extend(read_types["unmapped"])
 
 
-def merge_samples_alignments(args, genome, samples, settings):
+def merge_samples_alignments(args, genome, samples, _external_samples, settings):
     bsqr_enabled = (
         settings["ReadMapping"]["BaseRecalibrator"]["Enabled"]
         and settings["ReadMapping"]["ApplyBQSR"]["Enabled"]
@@ -519,7 +519,7 @@ def merge_samples_alignments(args, genome, samples, settings):
         yield samples[sample]
 
 
-def recalibrate_nucleotides(args, genome, samples, settings):
+def recalibrate_nucleotides(args, genome, samples, _external_samples, settings):
     settings = settings["ReadMapping"]
 
     train_bsqr_options = dict(settings["BaseRecalibrator"])
@@ -555,7 +555,7 @@ def recalibrate_nucleotides(args, genome, samples, settings):
                 yield model
 
 
-def final_bam_stats(args, genome, samples, _settings):
+def final_bam_stats(args, genome, samples, _external_samples, _settings):
     fastqc_passed_nodes: list[Node] = []
     fastqc_failed_nodes: list[Node] = []
     for sample in samples:
@@ -603,11 +603,24 @@ def final_bam_stats(args, genome, samples, _settings):
     )
 
 
-def haplotype_samples(args, genome, samples, settings):
+def haplotype_samples(args, genome, samples, external_samples, settings):
     settings = settings["Genotyping"]
+    layout = args.layout.update(genome=genome.name)
 
-    for sample in samples:
-        layout = args.layout.update(genome=genome, sample=sample)
+    # Collect list of sample names and source (BAM) files
+    sample_files = [
+        (sample, layout.get("bam_final_passed", sample=sample)) for sample in samples
+    ]
+
+    # Genotype external samples if required
+    for sample, files in external_samples.items():
+        if files["BAM"] is not None and files["gVCF"] is None:
+            yield BAMIndexNode(infile=files["BAM"])
+
+            sample_files.append((sample, files["BAM"]))
+
+    for sample, source_bam in sorted(sample_files):
+        layout = layout.update(sample=sample)
 
         gvcfs: list[str] = []
         for interval in genome.intervals:
@@ -616,7 +629,7 @@ def haplotype_samples(args, genome, samples, settings):
 
             yield HaplotypeCallerNode(
                 in_reference=genome.filename,
-                in_bam=layout["bam_final_passed"],
+                in_bam=source_bam,
                 out_vcf=out_gvcf,
                 options={
                     "--intervals": InputFile(interval["filename"]),
@@ -634,9 +647,26 @@ def haplotype_samples(args, genome, samples, settings):
         )
 
 
-def genotype_samples(args, genome, samples, settings):
+def genotype_samples(args, genome, samples, external_samples, settings):
     layout = args.layout.update(genome=genome)
     settings = settings["Genotyping"]
+
+    # Collect list of sample names and source (gVCF) files
+    sample_files = [
+        (sample, layout.get("gvcf_final", sample=sample)) for sample in samples
+    ]
+
+    # Genotype external samples if required
+    for sample, files in external_samples.items():
+        if files["gVCF"] is not None:
+            sample_files.append((sample, files["gVCF"]))
+        elif files["BAM"] is not None:
+            # gVCF will have been generated in `haplotype_samples`
+            sample_files.append((sample, layout.get("gvcf_final", sample=sample)))
+
+    gvcfs = [filename for _sample, filename in sorted(sample_files)]
+    for filename in gvcfs:
+        yield TabixIndexNode(infile=filename, preset="vcf")
 
     vcfs: list[str] = []
     for interval in genome.intervals:
@@ -645,16 +675,16 @@ def genotype_samples(args, genome, samples, settings):
             part=interval["name"],
         )
 
-        gvcfs = []
-        for sample in samples:
-            gvcfs.append(layout.get("gvcf_sample_part", sample=sample))
-
-        # Combine partial per-sample gVCFs into into multi-sample partial gVCF
+        # Combine per-sample gVCFs into into multi-sample partial gVCF
         yield CombineGVCFsNode(
             in_reference=genome.filename,
             in_variants=gvcfs,
             out_vcf=layout["gvcf_merged_part"],
             java_options=args.jre_options,
+            options={
+                "--intervals": InputFile(interval["filename"]),
+                "--ignore-variants-starting-outside-interval": "true",
+            },
         ).mark_intermediate_files()
 
         # Genotype partial multi-sample gVCF
@@ -669,7 +699,7 @@ def genotype_samples(args, genome, samples, settings):
         vcfs.append(layout["vcf_merged_part"])
 
 
-def recalibrate_genotypes(args, genome, _samples, settings):
+def recalibrate_genotypes(args, genome, _samples, _external_samples, settings):
     settings = settings["Genotyping"]
     if not settings["VariantRecalibrator"]["Enabled"]:
         return
@@ -765,8 +795,8 @@ def build_pipeline(args, project):
     pipeline = []
 
     samples = project["Samples"]
+    external_samples = project["ExternalSamples"]
     settings = project["Settings"]
-    genome = project["Genome"]
 
     # FIXME: Maybe allow different tools to have different options
     args.jre_options = [
@@ -793,13 +823,13 @@ def build_pipeline(args, project):
     args.layout = Layout({"{root}": _LAYOUT}, root=args.output)
 
     # 1. Validate and process genome
-    genome = Genome(args, genome["Name"], genome["Path"])
+    genome = Genome(args, project["Genome"]["Name"], project["Genome"]["Path"])
     pipeline.extend(genome.dependencies)
 
     # 2. Validate and index resource files
     pipeline.extend(validate_and_index_resources(settings))
 
-    if not samples:
+    if not (samples or external_samples):
         logger = logging.getLogger(__name__)
         logger.warning(
             "Project does not contain any samples; genomes will be prepared for later "
@@ -843,7 +873,7 @@ def build_pipeline(args, project):
 
     for target, functions in analytical_steps.items():
         for func in functions:
-            pipeline.extend(func(args, genome, samples, settings))
+            pipeline.extend(func(args, genome, samples, external_samples, settings))
 
         if target == args.target:
             break
