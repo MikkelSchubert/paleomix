@@ -163,7 +163,7 @@ def test_bedrecord__parse__invalid_values_1_() -> None:
     tmpl = "contig\t0\t%s\t\t0\t-"
     BEDRecord.parse(tmpl % (1,))  # check template
 
-    with pytest.raises(BEDError, match=""):
+    with pytest.raises(BEDError, match="Expected int in column 3"):
         BEDRecord.parse(tmpl % ("not a number",))
 
 
