@@ -36,9 +36,34 @@ from datetime import datetime
 from os import fspath
 from typing import IO, Any, Callable, Union, cast
 
+from typing_extensions import Self
+
 from .utilities import safe_coerce_to_tuple
 
 PathTypes = Union[str, "os.PathLike[str]"]
+
+
+class OverrideEnviron:
+    """Override or clear an environment variable during this context"""
+
+    def __init__(self, **kwargs: str | None) -> None:
+        self._environ = kwargs
+
+    def __enter__(self) -> Self:
+        self._swap_environ()
+        return self
+
+    def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
+        self._swap_environ()
+
+    def _swap_environ(self) -> None:
+        for key, value in self._environ.items():
+            self._environ[key] = os.environ.get(key, None)
+
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
 
 
 def file_or_stdout(filename: PathTypes) -> contextlib.AbstractContextManager[IO[str]]:

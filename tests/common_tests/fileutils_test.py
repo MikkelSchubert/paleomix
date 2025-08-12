@@ -34,6 +34,7 @@ from unittest.mock import Mock, call, patch
 import pytest
 
 from paleomix.common.fileutils import (
+    OverrideEnviron,
     add_postfix,
     copy_file,
     create_temp_dir,
@@ -814,3 +815,62 @@ def test_describe_paired_files__non_str() -> None:
 
     with pytest.raises(TypeError):
         describe_paired_files(1, 1)  # pyright: ignore[reportArgumentType]
+
+
+###############################################################################
+###############################################################################
+# Tests for 'OverrideEnviron'
+
+
+def test_override_environ__no_values() -> None:
+    environ = dict(os.environ)
+    with OverrideEnviron():
+        assert environ == dict(os.environ)
+
+    assert environ == dict(os.environ)
+
+
+def test_override_environ__set_new_value() -> None:
+    environ = dict(os.environ)
+
+    key = "PALEOMIX_TEST_48F3C53A7611"
+    assert key not in environ
+
+    with OverrideEnviron(**{key: "test-value"}):
+        assert dict(os.environ) == {**environ, key: "test-value"}
+
+    assert environ == dict(os.environ)
+
+
+def test_override_environ__override_value() -> None:
+    key = "PALEOMIX_TEST_2DA6D02D0220"
+    assert key not in os.environ
+
+    try:
+        os.environ[key] = "initial-value"
+        environ = dict(os.environ)
+
+        with OverrideEnviron(**{key: "test-value"}):
+            assert dict(os.environ) == {**environ, key: "test-value"}
+
+        assert environ == dict(os.environ)
+    finally:
+        os.environ.pop(key, None)
+
+
+def test_override_environ__clear_value() -> None:
+    key = "PALEOMIX_TEST_2DA6D02D0220"
+    assert key not in os.environ
+
+    try:
+        os.environ[key] = "initial-value"
+        environ = dict(os.environ)
+        expected_environ = dict(environ)
+        expected_environ.pop(key)
+
+        with OverrideEnviron(**{key: None}):
+            assert dict(os.environ) == expected_environ
+
+        assert environ == dict(os.environ)
+    finally:
+        os.environ.pop(key, None)
