@@ -35,7 +35,7 @@ from typing import Any
 import paleomix
 from paleomix.common import fileutils
 from paleomix.common.command import AtomicCmd, CmdError, ParallelCmds, SequentialCmds
-from paleomix.common.fileutils import PathTypes
+from paleomix.common.fileutils import OverrideEnviron, PathTypes
 from paleomix.common.procs import quote_args
 from paleomix.common.utilities import safe_coerce_to_frozenset
 from paleomix.common.versions import Requirement
@@ -127,10 +127,12 @@ class Node:
             # Generate directory name and create dir at temp_root
             temp = self._create_temp_dir(temp_root)
 
-            self._setup(temp)
-            self._run(temp)
-            self._teardown(temp)
-            self._remove_temp_dir(temp)
+            # prefer `temp_root` for temporary files where possible
+            with OverrideEnviron(TMPDIR=os.fspath(temp)):
+                self._setup(temp)
+                self._run(temp)
+                self._teardown(temp)
+                self._remove_temp_dir(temp)
         except NodeMissingFilesError:
             try:
                 # The folder is most likely empty, but it is possible to reuse temp
