@@ -275,11 +275,11 @@ class BWAAlgorithmNode(CommandNode):
             mapping_options = {}
 
         if algorithm in ("mem", "bwasw"):
-            aln_call = ("bwa", algorithm, reference, InputFile(input_file_1))
+            aln_call = ("bwa", algorithm)
             index_ext = BWA_INDEX_EXT
             requirements = [BWA_VERSION]
         elif algorithm == "mem2":
-            aln_call = ("bwa-mem2", "mem", reference, InputFile(input_file_1))
+            aln_call = ("bwa-mem2", "mem")
             index_ext = BWA_MEM2_INDEX_EXT
             requirements = [BWA_MEM2_VERSION]
         else:
@@ -292,9 +292,6 @@ class BWAAlgorithmNode(CommandNode):
             requirements=requirements,
             stdout=AtomicCmd.PIPE,
         )
-
-        if input_file_2:
-            aln.append(InputFile(input_file_2))
 
         if alt_aware or alt_optimize:
             if algorithm == "bwasw":
@@ -312,6 +309,11 @@ class BWAAlgorithmNode(CommandNode):
                 "-M": None,
             },
         )
+
+        # Positional arguments must be last on OSX
+        aln.append(reference, InputFile(input_file_1))
+        if input_file_2:
+            aln.append(InputFile(input_file_2))
 
         cleanup = new_cleanup_command(
             stdin=aln,
