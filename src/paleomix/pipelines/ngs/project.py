@@ -123,6 +123,15 @@ _VALIDATION: SpecTree = {
     "Genome": {
         "Name": _VALID_NAME,
         "Path": _VALID_GENOME_PATH,
+        "ScatterCount": IsInt(default=10),
+        "SubdivisionMode": ValueIn(
+            (
+                "INTERVAL_SUBDIVISION",
+                "BALANCING_WITHOUT_INTERVAL_SUBDIVISION",
+                "BALANCING_WITHOUT_INTERVAL_SUBDIVISION_WITH_OVERFLOW",
+            ),
+            default="INTERVAL_SUBDIVISION",
+        ),
     },
     "Settings": {
         "Metadata": {

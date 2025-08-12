@@ -23,13 +23,12 @@
 #
 from __future__ import annotations
 
+import argparse
 import logging
-import os
 from collections.abc import Generator
 from typing import Literal
 
 from paleomix.common.command import InputFile
-from paleomix.common.fileutils import swap_ext
 from paleomix.common.layout import Layout
 from paleomix.node import Node
 from paleomix.nodes.bwa import BWAAlgorithmNode, BWAIndexNode, BWAMem2IndexNode
@@ -100,6 +99,9 @@ _LAYOUT = {
             "{genome}.{part}.snp.vcf.gz": "vcf_recalibrated_SNP_part",
             "{genome}.{part}.indel.vcf.gz": "vcf_recalibrated_INDEL_part",
         },
+        "intervals": {
+            "{genome}.{scatter_count:04}": "genome_intervals",
+        },
     },
     "haplotypes": {
         "{sample}.{genome}.g.vcf.gz": "gvcf_final",
@@ -160,7 +162,16 @@ _LAYOUT = {
 
 
 class Genome:
-    def __init__(self, args, name, filename):
+    def __init__(
+        self,
+        *,
+        args: argparse.Namespace,
+        layout: Layout,
+        name: str,
+        filename: str,
+        scatter_count: int,
+        subdivision_mode: str,
+    ) -> None:
         self.validation_node = ValidateFASTAFilesNode(
             input_file=filename,
             output_file=filename + ".validated",
@@ -192,11 +203,17 @@ class Genome:
             dependencies=[self.validation_node],
         )
 
-        # FIXME: Variable number of intervals; disable if 1?
         self.intervals_node = SplitIntervalsNode(
             in_reference=filename,
-            out_folder=os.path.join(swap_ext(filename, ".intervals"), "0010"),
-            scatter_count=10,
+            out_folder=layout.get(
+                "genome_intervals",
+                genome=name,
+                scatter_count=scatter_count,
+            ),
+            options={
+                "--subdivision-mode": subdivision_mode,
+            },
+            scatter_count=scatter_count,
             dependencies=(self.faidx_node, self.dict_node),
         )
 
@@ -823,7 +840,15 @@ def build_pipeline(args, project):
     args.layout = Layout({"{root}": _LAYOUT}, root=args.output)
 
     # 1. Validate and process genome
-    genome = Genome(args, project["Genome"]["Name"], project["Genome"]["Path"])
+    genome = Genome(
+        args=args,
+        layout=args.layout,
+        name=project["Genome"]["Name"],
+        filename=project["Genome"]["Path"],
+        scatter_count=project["Genome"]["ScatterCount"],
+        subdivision_mode=project["Genome"]["SubdivisionMode"],
+    )
+
     pipeline.extend(genome.dependencies)
 
     # 2. Validate and index resource files
