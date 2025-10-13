@@ -757,6 +757,8 @@ def recalibrate_genotypes(args, genome, _samples, _external_samples, settings):
             java_options=args.jre_options,
         )
 
+        yield TabixIndexNode(infile=layout["vcf_final"], preset="vcf")
+
 
 def _recalibrate_vcf_files(
     args,
