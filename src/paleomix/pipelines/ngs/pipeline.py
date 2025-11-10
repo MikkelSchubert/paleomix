@@ -399,12 +399,7 @@ def map_sample_runs(args, genome, samples, _external_samples, settings):
             }
 
             for run in runs:
-                layout = args.layout.update(
-                    genome=genome,
-                    sample=sample,
-                    library=library,
-                    run=run,
-                )
+                layout = args.layout.update(sample=sample, library=library, run=run)
 
                 for read_type in ("fastp_failed_bam", "fastp_unpaired_bam"):
                     mapped_reads["unmapped"].append(layout[read_type])
@@ -448,7 +443,7 @@ def map_sample_runs(args, genome, samples, _external_samples, settings):
             libraries[library] = mapped_reads
 
 
-def filter_pcr_duplicates(args, genome, samples, _external_samples, settings):
+def filter_pcr_duplicates(args, _genome, samples, _external_samples, settings):
     mode = settings["ReadMapping"]["PCRDuplicates"]["mode"]
     if mode == "skip":
         for libraries in samples.values():
@@ -471,7 +466,7 @@ def filter_pcr_duplicates(args, genome, samples, _external_samples, settings):
 
     for sample, libraries in samples.items():
         for library, read_types in libraries.items():
-            layout = args.layout.update(genome=genome, sample=sample, library=library)
+            layout = args.layout.update(sample=sample, library=library)
 
             yield MarkDupNode(
                 in_bams=read_types["paired"],
@@ -494,7 +489,7 @@ def filter_pcr_duplicates(args, genome, samples, _external_samples, settings):
             libraries[library].extend(read_types["unmapped"])
 
 
-def merge_samples_alignments(args, genome, samples, _external_samples, settings):
+def merge_samples_alignments(args, _genome, samples, _external_samples, settings):
     bsqr_enabled = settings["ReadMapping"]["ApplyBQSR"]["Enabled"]
 
     for sample, libraries in samples.items():
@@ -502,7 +497,7 @@ def merge_samples_alignments(args, genome, samples, _external_samples, settings)
         for library in libraries.values():
             input_libraries.extend(library)
 
-        layout = args.layout.update(genome=genome, sample=sample)
+        layout = args.layout.update(sample=sample)
 
         # Write final BAM directly if BSQR is not enabled
         out_passed = (
@@ -545,7 +540,7 @@ def recalibrate_nucleotides(args, genome, samples, _external_samples, settings):
         apply_bsqr_options.pop("Enabled")
 
         for sample in samples:
-            layout = args.layout.update(genome=genome, sample=sample)
+            layout = args.layout.update(sample=sample)
 
             model = BaseRecalibratorNode(
                 in_reference=genome.filename,
@@ -565,12 +560,12 @@ def recalibrate_nucleotides(args, genome, samples, _external_samples, settings):
             )
 
 
-def final_bam_stats(args, genome, samples, _external_samples, _settings):
+def final_bam_stats(args, _genome, samples, _external_samples, _settings):
     fastqc_passed_nodes: list[Node] = []
     fastqc_failed_nodes: list[Node] = []
     for sample in samples:
         for method in ("stats", "idxstats", "flagstats"):
-            layout = args.layout.update(genome=genome, sample=sample, method=method)
+            layout = args.layout.update(sample=sample, method=method)
 
             yield BAMStatsNode(
                 method=method,
@@ -582,7 +577,7 @@ def final_bam_stats(args, genome, samples, _external_samples, _settings):
                 },
             )
 
-        layout = args.layout.update(genome=genome, sample=sample)
+        layout = args.layout.update(sample=sample)
 
         # FastQC of proper alignments
         fastqc_passed_nodes.append(
@@ -680,10 +675,7 @@ def genotype_samples(args, genome, samples, external_samples, settings):
 
     vcfs: list[str] = []
     for interval in genome.intervals:
-        layout = args.layout.update(
-            genome=genome,
-            part=interval["name"],
-        )
+        layout = args.layout.update(part=interval["name"])
 
         # Combine per-sample gVCFs into into multi-sample partial gVCF
         yield CombineGVCFsNode(
@@ -832,7 +824,12 @@ def build_pipeline(args, project):
     else:
         args.jre_options.append("-XX:MaxRAMPercentage=95.0")
 
-    args.layout = Layout({"{root}": _LAYOUT}, root=args.output)
+    args.layout = Layout(
+        {"{root}": _LAYOUT},
+        root=args.output,
+        # Configure genome for all steps; only one genome supported per project
+        genome=project["Genome"]["Name"],
+    )
 
     # 1. Validate and process genome
     genome = Genome(
