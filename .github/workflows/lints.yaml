@@ -3,7 +3,7 @@ name: lints
 on:
   pull_request:
   push:
-    branches: [master, v1.4.x]
+    branches: [main, v1.4.x]
 
 permissions:
   contents: read
