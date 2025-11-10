@@ -61,10 +61,11 @@ Settings:
       mode: mark  # [mark] or [filter] duplicates, or [skip] duplicate scan entirely
 
     BaseRecalibrator:
+      # Only enabled if ApplyBQSR is 'Enabled'
       --known-sites: ${DBSNP}
 
     ApplyBQSR:
-      # ...
+      Enabled: False  # Disabled by default
 
   Genotyping:
     HaplotypeCaller:
