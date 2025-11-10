@@ -8,7 +8,7 @@ repos:
       - id: check-yaml
         args: [--allow-multiple-documents]
       - id: no-commit-to-branch
-        args: [--branch, master, --branch, v1.3.x, --branch, v1.4.x]
+        args: [--branch, main, --branch, v1.3.x, --branch, v1.4.x]
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: 2c8dce6094fa2b4b668e74f694ca63ceffd38614 # v0.9.9
     hooks:
