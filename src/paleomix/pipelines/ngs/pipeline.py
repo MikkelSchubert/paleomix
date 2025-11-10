@@ -495,10 +495,7 @@ def filter_pcr_duplicates(args, genome, samples, _external_samples, settings):
 
 
 def merge_samples_alignments(args, genome, samples, _external_samples, settings):
-    bsqr_enabled = (
-        settings["ReadMapping"]["BaseRecalibrator"]["Enabled"]
-        and settings["ReadMapping"]["ApplyBQSR"]["Enabled"]
-    )
+    bsqr_enabled = settings["ReadMapping"]["ApplyBQSR"]["Enabled"]
 
     for sample, libraries in samples.items():
         input_libraries = []
@@ -539,15 +536,14 @@ def merge_samples_alignments(args, genome, samples, _external_samples, settings)
 def recalibrate_nucleotides(args, genome, samples, _external_samples, settings):
     settings = settings["ReadMapping"]
 
-    train_bsqr_options = dict(settings["BaseRecalibrator"])
-    train_bsqr_enabled = train_bsqr_options.pop("Enabled")
-    # FIXME: Nicer way to specify known sites. Maybe just remove known_sites param?
-    train_bsqr_known_sites = train_bsqr_options.pop("--known-sites")
+    if settings["ApplyBQSR"]["Enabled"]:
+        train_bsqr_options = dict(settings["BaseRecalibrator"])
+        # FIXME: Nicer way to specify known sites. Maybe just remove known_sites param?
+        train_bsqr_known_sites = train_bsqr_options.pop("--known-sites")
 
-    apply_bsqr_options = dict(settings["ApplyBQSR"])
-    apply_bsqr_enabled = apply_bsqr_options.pop("Enabled")
+        apply_bsqr_options = dict(settings["ApplyBQSR"])
+        apply_bsqr_options.pop("Enabled")
 
-    if train_bsqr_enabled:
         for sample in samples:
             layout = args.layout.update(genome=genome, sample=sample)
 
@@ -560,16 +556,13 @@ def recalibrate_nucleotides(args, genome, samples, _external_samples, settings):
                 java_options=args.jre_options,
             )
 
-            if apply_bsqr_enabled:
-                yield ApplyBQSRNode(
-                    in_node=model,
-                    out_bam=layout["bam_final_passed"],
-                    options=apply_bsqr_options,
-                    java_options=args.jre_options,
-                    dependencies=[model],
-                )
-            else:
-                yield model
+            yield ApplyBQSRNode(
+                in_node=model,
+                out_bam=layout["bam_final_passed"],
+                options=apply_bsqr_options,
+                java_options=args.jre_options,
+                dependencies=[model],
+            )
 
 
 def final_bam_stats(args, genome, samples, _external_samples, _settings):
