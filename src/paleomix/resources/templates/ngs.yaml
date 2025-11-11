@@ -53,6 +53,9 @@ Settings:
       --dirs-depth: 3  # Include sample, library, and run in names
 
   ReadMapping:
+    # Store final alignments as either BAMs ('bam') or CRAMs ('cram')
+    StorageFormat: bam
+
     BWAMem:
       # -M: # mark shorter split hits as secondary [maybe? Currently default behavior]
       -Y: # use soft clipping for supplementary alignments [maybe?]

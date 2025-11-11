@@ -53,6 +53,7 @@ from paleomix.nodes.multiqc import MultiQCNode
 from paleomix.nodes.samtools import (
     BAMIndexNode,
     BAMStatsNode,
+    BAMToCRAMNode,
     FastaIndexNode,
     MarkDupNode,
     TabixIndexNode,
@@ -66,8 +67,8 @@ from paleomix.pipelines.ngs.config import PipelineTarget
 # File structure with leaf values representing labels used to refer a given path
 _LAYOUT = {
     "alignments": {
-        "{sample}.{genome}.bam": "bam_final_passed",
-        "{sample}.{genome}.junk.bam": "bam_final_failed",
+        "{sample}.{genome}.{storage_format}": "aln_final_passed",
+        "{sample}.{genome}.junk.{storage_format}": "aln_final_failed",
     },
     "cache": {
         "samples": {
@@ -78,6 +79,8 @@ _LAYOUT = {
                     "{sample}.{genome}.{library}.rmdup.paired.bam": "bam_rmdup_paired",
                     "{sample}.{genome}.{library}.rmdup.paired.metrics.txt": "bam_rmdup_paired_metrics",
                     "{sample}.{genome}.good.bam": "bam_split_passed",
+                    "{sample}.{genome}.good.bsqr.bam": "bam_split_passed_bsqr",
+                    "{sample}.{genome}.junk.bam": "bam_split_failed",
                 },
                 "reads": {
                     "{sample}.{library}.{run}.paired_1.fastq.gz": "fastp_paired_1",
@@ -490,54 +493,62 @@ def filter_pcr_duplicates(args, _genome, samples, _external_samples, settings):
 
 
 def merge_samples_alignments(args, _genome, samples, _external_samples, settings):
-    bsqr_enabled = settings["ReadMapping"]["ApplyBQSR"]["Enabled"]
+    bsqr_on = settings["ReadMapping"]["ApplyBQSR"]["Enabled"]
+    cram_on = settings["ReadMapping"]["StorageFormat"] == "cram"
+
+    out_passed_key = "bam_split_passed" if (cram_on or bsqr_on) else "aln_final_passed"
+    out_failed_key = "bam_split_failed" if cram_on else "aln_final_failed"
+    settings[":alignments:"] = {"pass": out_passed_key, "fail": out_failed_key}
 
     for sample, libraries in samples.items():
         input_libraries = []
         for library in libraries.values():
             input_libraries.extend(library)
 
+        # BAM may require additional processing following filtering
         layout = args.layout.update(sample=sample)
-
-        # Write final BAM directly if BSQR is not enabled
-        out_passed = (
-            layout["bam_split_passed"] if bsqr_enabled else layout["bam_final_passed"]
-        )
 
         # Split BAM into file containing proper alignment and BAM containing junk
         split = FinalizeBAMNode(
             in_bams=input_libraries,
-            out_passed=out_passed,
-            out_failed=layout["bam_final_failed"],
+            out_passed=layout[out_passed_key],
+            out_failed=layout[out_failed_key],
             out_json=layout["bam_split_statistics"],
             threads=args.max_threads_samtools,
         )
 
-        samples[sample] = BAMIndexNode(
-            infile=out_passed,
+        index = samples[sample] = BAMIndexNode(
+            infile=layout[out_passed_key],
             dependencies=[split],
             options={
                 "-@": args.max_threads_samtools,
             },
         )
 
-        if bsqr_enabled:
-            split.mark_intermediate_files(out_passed)
-            samples[sample].mark_intermediate_files()
+        if bsqr_on:
+            split.mark_intermediate_files(layout[out_passed_key])
+            index.mark_intermediate_files()
+        elif cram_on:
+            split.mark_intermediate_files("*.bam")
+            index.mark_intermediate_files()
 
-        yield samples[sample]
+        yield index
 
 
 def recalibrate_nucleotides(args, genome, samples, _external_samples, settings):
-    settings = settings["ReadMapping"]
-
-    if settings["ApplyBQSR"]["Enabled"]:
-        train_bsqr_options = dict(settings["BaseRecalibrator"])
+    if settings["ReadMapping"]["ApplyBQSR"]["Enabled"]:
+        train_bsqr_options = dict(settings["ReadMapping"]["BaseRecalibrator"])
         # FIXME: Nicer way to specify known sites. Maybe just remove known_sites param?
         train_bsqr_known_sites = train_bsqr_options.pop("--known-sites")
 
-        apply_bsqr_options = dict(settings["ApplyBQSR"])
+        apply_bsqr_options = dict(settings["ReadMapping"]["ApplyBQSR"])
         apply_bsqr_options.pop("Enabled")
+
+        storage_format = settings["ReadMapping"]["StorageFormat"]
+        in_passed_key = settings[":alignments:"]["pass"]
+        out_passed_key = settings[":alignments:"]["pass"] = (
+            "bam_split_passed_bsqr" if storage_format == "cram" else "aln_final_passed"
+        )
 
         for sample in samples:
             layout = args.layout.update(sample=sample)
@@ -545,22 +556,30 @@ def recalibrate_nucleotides(args, genome, samples, _external_samples, settings):
             model = BaseRecalibratorNode(
                 in_reference=genome.filename,
                 in_known_sites=train_bsqr_known_sites,
-                in_bam=layout["bam_split_passed"],
+                in_bam=layout[in_passed_key],
                 out_table=layout["bam_recal_training_table"],
                 options=train_bsqr_options,
                 java_options=args.jre_options,
             )
 
-            yield ApplyBQSRNode(
+            apply = ApplyBQSRNode(
                 in_node=model,
-                out_bam=layout["bam_final_passed"],
+                out_bam=layout[out_passed_key],
                 options=apply_bsqr_options,
                 java_options=args.jre_options,
                 dependencies=[model],
             )
 
+            if storage_format == "cram":
+                apply.mark_intermediate_files("*.bam")
 
-def final_bam_stats(args, _genome, samples, _external_samples, _settings):
+            yield apply
+
+
+def final_bam_stats(args, genome, samples, _external_samples, settings):
+    in_passed_key = settings[":alignments:"]["pass"]
+    in_failed_key = settings[":alignments:"]["fail"]
+
     fastqc_passed_nodes: list[Node] = []
     fastqc_failed_nodes: list[Node] = []
     for sample in samples:
@@ -569,8 +588,9 @@ def final_bam_stats(args, _genome, samples, _external_samples, _settings):
 
             yield BAMStatsNode(
                 method=method,
-                infile=layout["bam_final_passed"],
+                infile=layout[in_passed_key],
                 outfile=layout["bam_stats"],
+                reference=genome.filename,
                 options={
                     # Reasonable performance gains from using up to 3-4 threads
                     "--threads": 3,
@@ -582,7 +602,7 @@ def final_bam_stats(args, _genome, samples, _external_samples, _settings):
         # FastQC of proper alignments
         fastqc_passed_nodes.append(
             FastQCNode(
-                in_file=layout["bam_final_passed"],
+                in_file=layout[in_passed_key],
                 out_folder=layout["bam_fastqc_passed"],
             )
         )
@@ -590,7 +610,7 @@ def final_bam_stats(args, _genome, samples, _external_samples, _settings):
         # FastQC of unmapped/filtered reads
         fastqc_failed_nodes.append(
             FastQCNode(
-                in_file=layout["bam_final_failed"],
+                in_file=layout[in_failed_key],
                 out_folder=layout["bam_fastqc_failed"],
             )
         )
@@ -608,13 +628,33 @@ def final_bam_stats(args, _genome, samples, _external_samples, _settings):
     )
 
 
+def convert_to_cram(args, genome, samples, _external_samples, settings):
+    if settings["ReadMapping"]["StorageFormat"] == "cram":
+        in_passed_key = settings[":alignments:"]["pass"]
+        in_failed_key = settings[":alignments:"]["fail"]
+
+        for sample in samples:
+            layout = args.layout.update(sample=sample)
+
+            for in_key, out_key in (
+                (in_passed_key, "aln_final_passed"),
+                (in_failed_key, "aln_final_failed"),
+            ):
+                yield BAMToCRAMNode(
+                    in_bam=layout[in_key],
+                    out_cram=layout[out_key],
+                    reference=genome.filename,
+                    threads=args.max_threads_samtools,
+                )
+
+
 def haplotype_samples(args, genome, samples, external_samples, settings):
     settings = settings["Genotyping"]
     layout = args.layout.update(genome=genome.name)
 
     # Collect list of sample names and source (BAM) files
     sample_files = [
-        (sample, layout.get("bam_final_passed", sample=sample)) for sample in samples
+        (sample, layout.get("aln_final_passed", sample=sample)) for sample in samples
     ]
 
     # Genotype external samples if required
@@ -829,6 +869,7 @@ def build_pipeline(args, project):
         root=args.output,
         # Configure genome for all steps; only one genome supported per project
         genome=project["Genome"]["Name"],
+        storage_format=settings["ReadMapping"]["StorageFormat"],
     )
 
     # 1. Validate and process genome
@@ -875,15 +916,17 @@ def build_pipeline(args, project):
             recalibrate_nucleotides,
             # 10. Collect statistics for the final, processed BAM files
             final_bam_stats,
+            # 11. (Optionally) convert BAMs to CRAM
+            convert_to_cram,
         ),
         PipelineTarget.HAPLOTYPES: (
-            # 11. Call haplotypes for each sample
+            # 12. Call haplotypes for each sample
             haplotype_samples,
         ),
         PipelineTarget.GENOTYPES: (
-            # 12. Call genotypes for the combined set of samples
+            # 13. Call genotypes for the combined set of samples
             genotype_samples,
-            # 13. Recalibrate haplotype qualities using known variants
+            # 14. Recalibrate haplotype qualities using known variants
             recalibrate_genotypes,
         ),
     }
