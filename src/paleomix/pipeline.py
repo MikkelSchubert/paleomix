@@ -54,6 +54,7 @@ class Pypeline:
     def __init__(
         self,
         nodes: Iterable[Node],
+        group: str | None = None,
         temp_root: str = "/tmp",
         max_threads: int = 1,
         intermediate_files: CleanupStrategy = CleanupStrategy.DELETE,
@@ -67,6 +68,7 @@ class Pypeline:
         self._logger = logging.getLogger(__name__)
         # Set if a keyboard-interrupt (SIGINT) has been caught
         self._interrupted = 0
+        self._group = group
         self._threads = max(0, max_threads)
         self._temp_root = temp_root
         self._intermediate_files_strategy = intermediate_files
@@ -103,6 +105,7 @@ class Pypeline:
             return 1
 
         manager = Manager(
+            group=self._group,
             threads=self._threads,
             temp_root=self._temp_root,
             requirements=nodegraph.requirements,
@@ -434,6 +437,13 @@ def add_scheduling_argument_group(parser: ArgumentParser) -> ArgumentGroup:
         type=int,
         default=max(2, multiprocessing.cpu_count()),
         help="Max number of threads to use in total",
+    )
+    group.add_argument(
+        "--work-group",
+        type=str,
+        default=None,
+        help="If set, this pipeline may connect to remote workers with the same "
+        "--work-group, in addition to remote workers with no --work-group",
     )
 
     group = parser.add_argument_group("Intermediate files")
