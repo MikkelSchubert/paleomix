@@ -22,10 +22,13 @@
 from __future__ import annotations
 
 import itertools
+import os
 from collections.abc import Generator, Iterable, Iterator
+from typing import Literal
 
 from pysam import AlignedSegment, AlignmentFile
 
+from paleomix.common.fileutils import PathTypes
 from paleomix.common.formats.bed import BEDRecord
 
 # BAM flags as defined in the BAM specification
@@ -169,3 +172,17 @@ class BAMRegion:
     def _by_pos(record: AlignedSegment) -> int:
         """Group by position."""
         return record.reference_start
+
+
+def get_idx_filename(filename: PathTypes, bam_index: Literal[".bai", ".csi"]) -> str:
+    return f"{filename}{get_idx_extension(filename, bam_index)}"
+
+
+def get_idx_extension(filename: PathTypes, bam_index: Literal[".bai", ".csi"]) -> str:
+    filename_lc = os.path.basename(filename).lower()
+    if filename_lc.endswith(".bam"):
+        return bam_index
+    elif filename_lc.endswith(".cram"):
+        return ".crai"
+
+    raise ValueError(filename)

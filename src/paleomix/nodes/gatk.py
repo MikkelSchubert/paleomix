@@ -28,6 +28,7 @@ from typing import Literal
 
 import pysam
 
+from paleomix.common.bamfiles import get_idx_extension, get_idx_filename
 from paleomix.common.command import (
     AtomicCmd,
     AtomicFileTypes,
@@ -81,13 +82,13 @@ class ApplyBQSRNode(CommandNode):
             java_options=java_options,
             stderr=out_log,
             extra_files=[
-                InputFile(in_node.in_bam + ".bai"),
+                InputFile(get_idx_filename(in_node.in_bam, ".bai")),
                 InputFile(in_node.in_reference + ".fai"),
                 InputFile(swap_ext(in_node.in_reference, ".dict")),
             ],
         )
 
-        # Rename ${FILENAME}.bai to ${FILENAME}.bam.bai
+        # Rename ${FILENAME}.${IDX} to ${FILENAME}.${FMT}.${IDX}
         command = _normalize_idx_extension(command, out_bam)
 
         CommandNode.__init__(
@@ -176,7 +177,7 @@ class BaseRecalibratorNode(CommandNode):
             java_options=java_options,
             stderr=out_log,
             extra_files=[
-                InputFile(in_bam + ".bai"),
+                InputFile(get_idx_filename(in_bam, ".bai")),
                 InputFile(in_reference + ".fai"),
                 InputFile(swap_ext(in_reference, ".dict")),
             ],
@@ -435,7 +436,7 @@ class HaplotypeCallerNode(CommandNode):
             java_options=java_options,
             stderr=out_log,
             extra_files=[
-                InputFile(in_bam + ".bai"),
+                InputFile(get_idx_filename(in_bam, ".bai")),
                 InputFile(in_reference + ".fai"),
                 InputFile(swap_ext(in_reference, ".dict")),
                 # FIXME: Index depends on vcf extension
@@ -648,9 +649,9 @@ def _gatk_command(
     return command
 
 
-def _normalize_idx_extension(command: AtomicCmd, out_bam: str) -> SequentialCmds:
-    # FIXME: Support for other index formats?
-    in_index = swap_ext(os.path.basename(out_bam), ".bai")
+def _normalize_idx_extension(command: AtomicCmd, out_file: str) -> SequentialCmds:
+    idx_ext = get_idx_extension(out_file, ".bai")
+    in_index = swap_ext(os.path.basename(out_file), idx_ext)
 
     command.add_extra_files([TempOutputFile(in_index)])
 
@@ -658,7 +659,7 @@ def _normalize_idx_extension(command: AtomicCmd, out_bam: str) -> SequentialCmds
         [
             "mv",
             TempInputFile(in_index),
-            OutputFile(out_bam + ".bai"),
+            OutputFile(out_file + idx_ext),
         ]
     )
 

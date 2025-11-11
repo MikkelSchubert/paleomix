@@ -582,7 +582,7 @@ def merge_libraries(args, layout, genome, records):
     task = BAMMergeNode(
         in_files=[record["Path"] for record in records],
         out_file=layout["final_bam"],
-        index_format=genome["IndexFormat"],
+        bam_index=genome["IndexFormat"],
         options={
             "--threads": args.samtools_max_threads,
         },
@@ -593,7 +593,7 @@ def merge_libraries(args, layout, genome, records):
     if task.index is None:
         task = BAMIndexNode(
             infile=layout["final_bam"],
-            index_format=genome["IndexFormat"],
+            bam_index=genome["IndexFormat"],
             options={
                 "-@": args.samtools_max_threads,
             },

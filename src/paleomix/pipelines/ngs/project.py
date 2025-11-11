@@ -41,6 +41,7 @@ from paleomix.common.makefile import (
     Not,
     Or,
     SpecTree,
+    StringEndsWith,
     StringStartsWith,
     ValueIn,
     ValuesIntersect,
@@ -116,8 +117,13 @@ _VALIDATION: SpecTree = {
     },
     "ExternalSamples": {
         _VALID_SAMPLE_NAME: {
-            "BAM": Or(IsStr, IsNone, default=None),
-            "gVCF": Or(IsStr, IsNone, default=None),
+            "BAM": Or(
+                StringEndsWith(".bam"),
+                StringEndsWith(".cram"),
+                IsNone,
+                default=None,
+            ),
+            "gVCF": Or(StringEndsWith(".vcf.gz"), IsNone, default=None),
         }
     },
     "Genome": {
@@ -153,6 +159,7 @@ _VALIDATION: SpecTree = {
             "MultiQC": _LONG_COMMAND_LINE_OPTIONS,
         },
         "ReadMapping": {
+            "StorageFormat": ValueIn(("bam", "cram"), default="bam"),
             # FIXME: Should be grouped with other mapping-step programs (fixmate, etc.)
             "BWAMem": _SHORT_COMMAND_LINE_OPTIONS,
             "PCRDuplicates": {

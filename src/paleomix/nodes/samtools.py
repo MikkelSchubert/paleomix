@@ -33,6 +33,7 @@ from collections.abc import Iterable
 from typing import Literal
 
 from paleomix.common import versions
+from paleomix.common.bamfiles import get_idx_filename
 from paleomix.common.command import (
     AtomicCmd,
     InputFile,
@@ -140,7 +141,7 @@ class BAMIndexNode(CommandNode):
         self,
         *,
         infile: str,
-        index_format: Literal[".bai", ".csi"] = ".bai",
+        bam_index: Literal[".bai", ".csi"] = ".bai",
         options: OptionsType | None = None,
         dependencies: Iterable[Node] = (),
     ) -> None:
@@ -152,21 +153,21 @@ class BAMIndexNode(CommandNode):
             requirements=[SAMTOOLS_VERSION],
         )
 
-        if index_format == ".csi":
+        if bam_index == ".csi":
             command.append("-c")
-        elif index_format != ".bai":
-            raise ValueError(f"Unknown BAM index format {index_format!r}")
+        elif bam_index != ".bai":
+            raise ValueError(f"Unknown BAM index format {bam_index!r}")
 
         command.append_options(options)
         command.append(
             InputFile(infile),
-            OutputFile(infile + index_format),
+            OutputFile(get_idx_filename(infile, bam_index)),
         )
 
         CommandNode.__init__(
             self,
             command=command,
-            description=f"creating {index_format[1:].upper()} index for {infile}",
+            description=f"creating index for {infile}",
             threads=_get_number_of_threads(options),
             dependencies=dependencies,
         )
@@ -179,15 +180,13 @@ class BAMStatsNode(CommandNode):
         method: Literal["stats", "idxstats", "flagstats"],
         infile: str,
         outfile: str,
-        index_format: str = ".bai",
+        reference: str,
+        bam_index: Literal[".bai", ".csi"] = ".bai",
         options: OptionsType | None = None,
         dependencies: Iterable[Node] = (),
     ) -> None:
         if options is None:
             options = {}
-
-        if method not in ("stats", "idxstats", "flagstats"):
-            raise ValueError(method)
 
         command = AtomicCmd(
             ["samtools", method, InputFile(infile)],
@@ -197,8 +196,13 @@ class BAMStatsNode(CommandNode):
 
         command.append_options(options)
 
-        if method == "idxstats":
-            command.add_extra_files([InputFile(infile + index_format)])
+        if method == "stats":
+            command.append("--reference", InputFile(reference))
+            command.add_extra_files([InputFile(f"{reference}.fai")])
+        elif method == "idxstats":
+            command.add_extra_files([InputFile(get_idx_filename(infile, bam_index))])
+        elif method != "flagstats":
+            raise ValueError(method)
 
         CommandNode.__init__(
             self,
@@ -215,7 +219,7 @@ class BAMMergeNode(CommandNode):
         *,
         in_files: Iterable[str],
         out_file: str,
-        index_format: Literal[".bai", ".csi"] | None = None,
+        bam_index: Literal[".bai", ".csi"] = ".bai",
         options: OptionsType | None = None,
         dependencies: Iterable[Node] = (),
     ) -> None:
@@ -232,11 +236,7 @@ class BAMMergeNode(CommandNode):
 
             threads = 1
         else:
-            self.index = f"{out_file}{index_format}"
-
-            # The location of the output index (and its format) can be specified by
-            # writing the output file as "${outfile}##idx##${outindex}"
-            basename = os.path.basename(out_file)
+            self.index = get_idx_filename(out_file, bam_index)
 
             cmd = AtomicCmd(
                 ["samtools", "merge", "--write-index"],
@@ -245,7 +245,12 @@ class BAMMergeNode(CommandNode):
                 extra_files=[OutputFile(self.index), OutputFile(out_file)],
             )
             cmd.append_options(options)
-            cmd.append(f"{basename}##idx##{basename}{index_format}")
+
+            # The location of the output index (and its format) can be specified by
+            # writing the output file as "${outfile}##idx##${outindex}"
+            cmd.append(
+                f"{os.path.basename(out_file)}##idx##{os.path.basename(self.index)}"
+            )
 
             for in_file in in_files:
                 cmd.append(InputFile(in_file))
@@ -257,6 +262,45 @@ class BAMMergeNode(CommandNode):
             command=cmd,
             description=f"merging {len(in_files)} files into {out_file}",
             threads=threads,
+            dependencies=dependencies,
+        )
+
+
+class BAMToCRAMNode(CommandNode):
+    def __init__(
+        self,
+        *,
+        in_bam: str,
+        out_cram: str,
+        reference: str,
+        threads: int,
+        dependencies: Iterable[Node] = (),
+    ) -> None:
+        command = AtomicCmd(
+            [
+                "samtools",
+                "view",
+                "--cram",
+                "--write-index",
+                "--threads",
+                threads,
+                "--reference",
+                InputFile(reference),
+                "--output",
+                OutputFile(out_cram),
+                InputFile(in_bam),
+            ],
+            extra_files=[
+                OutputFile(f"{out_cram}.crai"),
+            ],
+            requirements=[SAMTOOLS_VERSION],
+        )
+
+        CommandNode.__init__(
+            self,
+            command=command,
+            description=f"converting {in_bam} to {out_cram}",
+            threads=max(1, threads),
             dependencies=dependencies,
         )
 
