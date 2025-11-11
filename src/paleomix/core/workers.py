@@ -120,6 +120,7 @@ class Manager:
     def __init__(
         self,
         *,
+        group: str | None = None,
         threads: int,
         requirements: Collection[Requirement],
         temp_root: str,
@@ -127,6 +128,7 @@ class Manager:
     ) -> None:
         self._local: LocalWorker | None = None
         self._interface = CommandLine()
+        self._group = group
         self._workers: dict[str, LocalWorker | RemoteWorker] = {}
         self._json_blacklist: set[str] = set()
         self._worker_blacklist: set[str] = set()
@@ -325,6 +327,9 @@ class Manager:
         if self._next_auto_connect <= time.monotonic():
             for info in self._collect_workers():
                 if info["id"] in self._worker_blacklist:
+                    continue
+                elif info["group"] not in (self._group, None):
+                    self._worker_blacklist.add(info["id"])
                     continue
 
                 self._log.info("Connecting to %s:%s", info["host"], info["port"])

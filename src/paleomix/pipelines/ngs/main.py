@@ -84,6 +84,7 @@ def _main_run(args: Namespace) -> int:
 
     pipeline = Pypeline(
         nodes=nodes,
+        group=args.work_group,
         temp_root=args.temp_root,
         max_threads=args.max_threads,
         intermediate_files=args.intermediate_files,

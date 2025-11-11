@@ -733,6 +733,7 @@ def run(config):
 
     pipeline = Pypeline(
         nodes=nodes,
+        group=config.work_group,
         temp_root=config.temp_root,
         max_threads=config.max_threads,
         intermediate_files=config.intermediate_files,

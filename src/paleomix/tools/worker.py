@@ -93,7 +93,7 @@ class Worker:
 
         signal.signal(signal.SIGINT, self._sigint_handler)
 
-    def run(self) -> bool:
+    def run(self, group: str | None) -> bool:
         log = logging.getLogger(__name__)
         log.info("Starting worker with %i threads", self._threads)
         if not self._threads:
@@ -112,7 +112,7 @@ class Worker:
                 log.warning("Worker is listening for local connections only!")
 
             # Create json file containing hostname, port, and secret
-            self._filename = self._register(AUTO_REGISTER_DIR, listener.address)
+            self._filename = self._register(AUTO_REGISTER_DIR, listener.address, group)
 
             try:
                 self._conn = listener.accept()
@@ -170,7 +170,7 @@ class Worker:
 
             self._send({"event": EVT_SHUTDOWN})
 
-    def _register(self, root: str, address: tuple[str, int]) -> str:
+    def _register(self, root: str, address: tuple[str, int], group: str | None) -> str:
         filename = os.path.join(root, f"{uuid.uuid4()}.json")
         host, port = address
 
@@ -182,6 +182,7 @@ class Worker:
                     "id": self._id,
                     "host": host,
                     "port": port,
+                    "group": group,
                     "secret": codecs.encode(self._authkey, "base64").decode("utf-8"),
                 },
                 handle,
@@ -412,6 +413,13 @@ def parse_args(argv: list[str]) -> Namespace:
         help="Worker will normally serve pipelines indefintely. With this option the "
         "worker will instead terminate after the first pipeline disconnects.",
     )
+    group.add_argument(
+        "--work-group",
+        type=str,
+        default=None,
+        help="If set, this worker will only be available to pipelines started with the "
+        "same --work-group. If not set, this worker will be available to all pipelines",
+    )
 
     paleomix.common.logging.add_argument_group(parser, log_file=False)
 
@@ -429,7 +437,7 @@ def main(argv: list[str]) -> int:
             args.authkey = secrets.token_bytes(64)
 
             with Worker(args) as worker:
-                if not worker.run() or args.once:
+                if not worker.run(group=args.work_group) or args.once:
                     break
     finally:
         terminate_all_processes()
