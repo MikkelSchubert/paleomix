@@ -51,15 +51,9 @@ _VERSION_REGEX = r"Version: (\d+\.\d+)(?:\.(\d+))?"
 SAMTOOLS_VERSION = versions.Requirement(
     call=("samtools",),
     regexp=_VERSION_REGEX,
-    specifiers=">=1.6.0",
-)
-
-# Version required for --write-index
-SAMTOOLS_VERSION_1_10 = versions.Requirement(
-    call=("samtools",),
-    regexp=_VERSION_REGEX,
     specifiers=">=1.10.0",
 )
+
 
 TABIX_VERSION = versions.Requirement(
     call=("tabix",),
@@ -238,25 +232,23 @@ class BAMMergeNode(CommandNode):
 
             threads = 1
         else:
-            cmd = AtomicCmd(["samtools", "merge"])
-            cmd.append_options(options)
+            self.index = f"{out_file}{index_format}"
 
-            self.index, requirement = _try_write_index(out_file, index_format)
-            if self.index is not None:
-                cmd.add_extra_files([OutputFile(self.index), OutputFile(out_file)])
-                cmd.append("--write-index")
-                # The location of the output index (and its format) can be specified by
-                # writing the output file as "${outfile}##idx##${outindex}"
-                cmd.append(
-                    f"%(TEMP_DIR)s/{os.path.basename(out_file)}##idx##%(TEMP_DIR)s/{os.path.basename(self.index)}"
-                )
-            else:
-                cmd.append(OutputFile(out_file))
+            # The location of the output index (and its format) can be specified by
+            # writing the output file as "${outfile}##idx##${outindex}"
+            basename = os.path.basename(out_file)
+
+            cmd = AtomicCmd(
+                ["samtools", "merge", "--write-index"],
+                set_cwd=True,
+                requirements=[SAMTOOLS_VERSION],
+                extra_files=[OutputFile(self.index), OutputFile(out_file)],
+            )
+            cmd.append_options(options)
+            cmd.append(f"{basename}##idx##{basename}{index_format}")
 
             for in_file in in_files:
                 cmd.append(InputFile(in_file))
-
-            cmd.add_requirement(requirement)
 
             threads = _get_number_of_threads(options)
 
@@ -352,19 +344,3 @@ def _get_number_of_threads(options: OptionsType, default: int = 1) -> int:
     # -@/--threads specify threads in *addition* to the main thread, but in practice
     # the number of cores used seems to be closer to the that value and not value + 1
     return max(1, value)
-
-
-def _try_write_index(
-    out_bam: str,
-    index_format: str | None,
-) -> tuple[str | None, versions.Requirement]:
-    if index_format not in (None, ".bai", ".csi"):
-        raise ValueError(index_format)
-
-    try:
-        if index_format is not None and SAMTOOLS_VERSION_1_10.check():
-            return out_bam + index_format, SAMTOOLS_VERSION_1_10
-    except versions.RequirementError:
-        pass
-
-    return None, SAMTOOLS_VERSION
