@@ -129,7 +129,10 @@ _VALIDATION: SpecTree = {
     "Genome": {
         "Name": _VALID_NAME,
         "Path": _VALID_GENOME_PATH,
-        "ScatterCount": IsInt(default=10),
+        "ScatterCount": {
+            "Haplotyping": IsInt(default=10),
+            "Genotyping": IsInt(default=100),
+        },
         "SubdivisionMode": ValueIn(
             (
                 "INTERVAL_SUBDIVISION",
