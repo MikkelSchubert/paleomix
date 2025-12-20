@@ -172,7 +172,7 @@ class Genome:
         layout: Layout,
         name: str,
         filename: str,
-        scatter_count: int,
+        scatter_counts: dict[str, int],
         subdivision_mode: str,
     ) -> None:
         self.validation_node = ValidateFASTAFilesNode(
@@ -206,28 +206,33 @@ class Genome:
             dependencies=[self.validation_node],
         )
 
-        self.intervals_node = SplitIntervalsNode(
-            in_reference=filename,
-            out_folder=layout.get(
-                "genome_intervals",
-                genome=name,
-                scatter_count=scatter_count,
-            ),
-            options={
-                "--subdivision-mode": subdivision_mode,
-            },
-            scatter_count=scatter_count,
-            dependencies=(self.faidx_node, self.dict_node),
-        )
+        intervals: dict[int, SplitIntervalsNode] = {}
+        for count in set(scatter_counts.values()):
+            intervals[count] = SplitIntervalsNode(
+                in_reference=filename,
+                out_folder=layout.get(
+                    "genome_intervals",
+                    genome=name,
+                    scatter_count=count,
+                ),
+                options={
+                    "--subdivision-mode": subdivision_mode,
+                },
+                scatter_count=count,
+                dependencies=(self.faidx_node, self.dict_node),
+            )
 
         self.name = name
         self.filename = filename
-        self.intervals = self.intervals_node.intervals
+
+        self.haplotyping_intervals = intervals[scatter_counts["Haplotyping"]].intervals
+        self.genotyping_intervals = intervals[scatter_counts["Genotyping"]].intervals
+
         self.dependencies = (
             self.faidx_node,
             self.bwa_node,
             self.dict_node,
-            self.intervals_node,
+            *intervals.values(),
         )
 
     def __str__(self):
@@ -668,7 +673,7 @@ def haplotype_samples(args, genome, samples, external_samples, settings):
         layout = layout.update(sample=sample)
 
         gvcfs: list[str] = []
-        for interval in genome.intervals:
+        for interval in genome.haplotyping_intervals:
             out_gvcf = layout.get("gvcf_sample_part", part=interval["name"])
             gvcfs.append(out_gvcf)
 
@@ -714,7 +719,7 @@ def genotype_samples(args, genome, samples, external_samples, settings):
         yield TabixIndexNode(infile=filename, preset="vcf")
 
     vcfs: list[str] = []
-    for interval in genome.intervals:
+    for interval in genome.genotyping_intervals:
         layout = args.layout.update(part=interval["name"])
 
         # Combine per-sample gVCFs into into multi-sample partial gVCF
@@ -772,7 +777,7 @@ def recalibrate_genotypes(args, genome, _samples, _external_samples, settings):
     if settings["ApplyVQSR"]["Enabled"]:
         vcfs: list[str] = [
             layout.get("vcf_recalibrated_INDEL_part", part=interval["name"])
-            for interval in genome.intervals
+            for interval in genome.genotyping_intervals
         ]
 
         yield GatherVcfsNode(
@@ -797,7 +802,7 @@ def _recalibrate_vcf_files(
     # Training is always done on the "raw" VCF to allow SNP/INDEL training in parallel
     in_variants: list[str] = [
         layout.get("vcf_merged_part", part=interval["name"])
-        for interval in genome.intervals
+        for interval in genome.genotyping_intervals
     ]
 
     # 1. Build models for SNP/INDEL recalibration
@@ -820,7 +825,7 @@ def _recalibrate_vcf_files(
     )
 
     if settings["ApplyVQSR"]["Enabled"]:
-        for interval in genome.intervals:
+        for interval in genome.genotyping_intervals:
             layout = layout.update(part=interval["name"])
 
             # 3. Apply SNP/INDEL recalibration to partial BAMs
@@ -878,7 +883,7 @@ def build_pipeline(args, project):
         layout=args.layout,
         name=project["Genome"]["Name"],
         filename=project["Genome"]["Path"],
-        scatter_count=project["Genome"]["ScatterCount"],
+        scatter_counts=project["Genome"]["ScatterCount"],
         subdivision_mode=project["Genome"]["SubdivisionMode"],
     )
 

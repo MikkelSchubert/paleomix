@@ -12,6 +12,9 @@ Genome:
   Name: "NAME_OF_GENOME"
   Path: "/path/to/genome.fasta"
 
+  ScatterCount:
+    Haplotyping: 10
+    Genotyping: 100
 
 Settings:
   Metadata:
