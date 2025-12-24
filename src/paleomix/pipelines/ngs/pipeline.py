@@ -696,6 +696,8 @@ def haplotype_samples(args, genome, samples, external_samples, settings):
             java_options=args.jre_options,
         )
 
+        yield TabixIndexNode(infile=layout["gvcf_final"], preset="vcf")
+
 
 def genotype_samples(args, genome, samples, external_samples, settings):
     layout = args.layout.update(genome=genome)
@@ -714,11 +716,8 @@ def genotype_samples(args, genome, samples, external_samples, settings):
             # gVCF will have been generated in `haplotype_samples`
             sample_files.append((sample, layout.get("gvcf_final", sample=sample)))
 
-    gvcfs = [filename for _sample, filename in sorted(sample_files)]
-    for filename in gvcfs:
-        yield TabixIndexNode(infile=filename, preset="vcf")
-
     vcfs: list[str] = []
+    gvcfs = [filename for _sample, filename in sorted(sample_files)]
     for interval in genome.genotyping_intervals:
         layout = args.layout.update(part=interval["name"])
 
