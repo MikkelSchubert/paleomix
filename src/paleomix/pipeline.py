@@ -153,6 +153,7 @@ class Pypeline:
         # Keep looping as long as there are tasks left to run or tasks running
         while (tasks and not self._interrupted) or any(manager.tasks):
             for event in manager.poll():
+                self._logger.debug("handling event %r", event)
                 handler = self._event_handlers.get(event["event"])
                 if handler is None:
                     self._logger.error("Unknown event in pipeline: %r", event)

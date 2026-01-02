@@ -28,12 +28,14 @@ import logging
 import multiprocessing
 import os
 import os.path
+import queue
 import signal
 import socket
 import sys
 import time
 import traceback
 import uuid
+from collections import defaultdict
 from collections.abc import Collection, Iterable, Iterator, MutableMapping
 from multiprocessing import ProcessError
 from multiprocessing.connection import Client, Connection, wait
@@ -239,18 +241,13 @@ class Manager:
         return worker.start_task(task, self._temp_root)
 
     def _collect_events(self) -> list[tuple[WorkerType, EventType]]:
-        events: list[tuple[WorkerType, EventType]] = []
-        timeout = 5.0
-        while self._local and self._local.events:
-            for event in self._local.events:
-                events.append((self._local, event))
-
-            self._local.events.clear()
-            # No need to block if we already have events to act on
-            timeout = 0
-
+        workers_with_events: dict[WorkerType, list[HandleType]] = defaultdict(list)
         handles: dict[HandleType, WorkerType | None] = {}
         for worker in self._workers.values():
+            if worker.has_events():
+                self._log.debug("Worker has pending events: %r", worker)
+                workers_with_events[worker] = []
+
             for handle in worker.handles:
                 handles[handle] = worker
 
@@ -258,16 +255,21 @@ class Manager:
         for handle in self._interface.handles:
             handles[handle] = None
 
-        self._log.debug("Waiting for handles %r with timeout %r", handles, timeout)
+        # No need to block if we already have events to act on
+        timeout = 0 if workers_with_events else 5.0
         for handle in wait(handles, timeout):
             worker = handles[handle]
+            self._log.debug("Worker has live handle: %r / %r", worker, handle)
             if worker is None:
                 self._handle_keyboard_input()
             else:
-                for event in worker.get(handle):
-                    events.append((worker, event))
+                workers_with_events[worker].append(handle)
 
-        self._log.debug("Retrieved events for handles %r", handles)
+        events: list[tuple[WorkerType, EventType]] = []
+        for worker, live_handles in workers_with_events.items():
+            for event in worker.get_events(live_handles):
+                self._log.debug("Worker has event: %r / %r", worker, event)
+                events.append((worker, event))
 
         return events
 
@@ -402,19 +404,20 @@ class RemoteAdapter(AdapterType):
 class LocalWorker:
     def __init__(self, manager: Manager, threads: int) -> None:
         self.id = str(uuid.uuid4())
+        self._events: list[EventType] = []
         self._manager = manager
         self._queue: QueueType = multiprocessing.Queue()
         self._handles: dict[HandleType, tuple[multiprocessing.Process, Node]] = {}
-        self._running: dict[int, Node] = {}
+        self._pending_results: dict[int, Node] = {}
         self._status = _UNINITIALIZED
         self._log = logging.getLogger(__name__)
         self.name = "localhost"
         self.threads = threads
-        self.events: list[EventType] = []
 
     @property
     def tasks(self) -> Iterator[Node]:
-        yield from self._running.values()
+        for _, task in self._handles.values():
+            yield task
 
     @property
     def handles(self) -> Iterator[HandleType]:
@@ -433,7 +436,7 @@ class LocalWorker:
             return False
 
         self._status = _RUNNING
-        self.events.append({"event": EVT_HANDSHAKE_RESPONSE, "error": None})
+        self._events.append({"event": EVT_HANDSHAKE_RESPONSE, "error": None})
 
         return True
 
@@ -449,40 +452,67 @@ class LocalWorker:
 
         proc.start()
         self._handles[proc.sentinel] = (proc, task)
-        self._running[task.id] = task
+        self._pending_results[task.id] = task
 
         return True
 
-    def get(self, handle: HandleType) -> list[EventType]:
+    def has_events(self) -> bool:
+        try:
+            return bool(self._events) or not self._queue.empty()
+        except OSError:
+            return False
+
+    def get_events(self, handles: list[HandleType]) -> list[EventType]:
         self._check_running()
 
-        # The process for this task has completed, but the results may already have been
-        # returned to the pipeline in an earlier call, since it is returned via a queue.
-        proc, task = self._handles.pop(handle)
+        # Messages are given priority, since a process may fail after the message
+        events, self._events = self._events, []
 
-        proc.join()
-        if proc.exitcode:
-            self._log.debug("Local join of task %s with failed", task)
-            message = f"Process terminated with exit code {proc.exitcode}"
+        while True:
+            try:
+                key, error, backtrace = self._queue.get(block=False)
+            except queue.Empty:
+                break
 
-            error = NodeError(message)
-            backtrace = None
-        else:
-            self._log.debug("Joined local task %s", task)
+            # task may have been handled previous, due to the process returning first
+            task = self._pending_results.pop(key, None)
+            if task is not None:
+                events.append(
+                    {
+                        "event": EVT_TASK_DONE,
+                        "task": task,
+                        "error": error,
+                        "backtrace": backtrace,
+                    },
+                )
 
-            # This can return results for a different task than the one joined above
-            key, error, backtrace = self._queue.get()
-            task = self._running.pop(key)
+        # clean up wrapper processes
+        for handle in handles:
+            proc, task = self._handles.pop(handle)
 
-        # Signal that the task is done
-        return [
-            {
-                "event": EVT_TASK_DONE,
-                "task": task,
-                "error": error,
-                "backtrace": backtrace,
-            },
-        ]
+            # `join` should not be required, but is recommended:
+            #  https://docs.python.org/3.12/library/multiprocessing.html#all-start-methods
+            proc.join()
+            if proc.exitcode:
+                self._log.debug("Joining local task failed: %s", task)
+
+                # Signal that the task failed, if this has not been done previously
+                if self._pending_results.pop(task.id, None):
+                    events.append(
+                        {
+                            "event": EVT_TASK_DONE,
+                            "task": task,
+                            "error": NodeError(
+                                "Worker process for task terminated with exit code "
+                                f"{proc.exitcode}: {task}"
+                            ),
+                            "backtrace": None,
+                        },
+                    )
+            else:
+                self._log.debug("Joined local task %s", task)
+
+        return events
 
     def shutdown(self) -> None:
         if self._status != _TERMINATED:
@@ -492,7 +522,7 @@ class LocalWorker:
             terminate_processes([proc for proc, _ in self._handles.values()])
 
             self._handles.clear()
-            self._running.clear()
+            self._pending_results.clear()
 
     def _check_running(self) -> None:
         if self._status != _RUNNING:
@@ -578,10 +608,11 @@ class RemoteWorker:
         self._running[task.id] = task
         return True
 
-    def get(self, handle: object) -> Iterator[EventType]:
+    def has_events(self) -> bool:
+        return False
+
+    def get_events(self, _handles: list[HandleType]) -> Iterator[EventType]:
         self._check_running()
-        if handle is not self._conn:
-            raise ValueError(handle)
 
         while not self._conn.closed and self._conn.poll():
             try:
@@ -652,18 +683,18 @@ class RemoteWorker:
 
 
 def task_wrapper(queue: QueueType, task: Node, temp_root: str) -> None:
-    name = "paleomix task"
-    if len(sys.argv) > 1:
-        name = f"paleomix {sys.argv[1]} task"
-
-    setproctitle.setproctitle(name)
-    # SIGINTs are handled in the main thread only
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
-    # SIGTERM and SIGHUP are caught to allow proper termination of all sub-commands
-    signal.signal(signal.SIGHUP, _task_wrapper_sigterm_handler)
-    signal.signal(signal.SIGTERM, _task_wrapper_sigterm_handler)
-
     try:
+        name = "paleomix task"
+        if len(sys.argv) > 1:
+            name = f"paleomix {sys.argv[1]} task"
+
+        setproctitle.setproctitle(name)
+        # SIGINTs are handled in the main thread only
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        # SIGTERM and SIGHUP are caught to allow proper termination of all sub-commands
+        signal.signal(signal.SIGHUP, _task_wrapper_sigterm_handler)
+        signal.signal(signal.SIGTERM, _task_wrapper_sigterm_handler)
+
         task.run(temp_root)
         queue.put((task.id, None, None))
     except NodeError as error:
@@ -673,13 +704,13 @@ def task_wrapper(queue: QueueType, task: Node, temp_root: str) -> None:
             backtrace.append(f"  {error.__cause__!r}")
 
         queue.put((task.id, error, backtrace))
-    except Exception:  # noqa: BLE001
-        _, exc_value, exc_traceback = sys.exc_info()
-        backtrace = traceback.format_tb(exc_traceback)
-        backtrace.append(f"  {exc_value!r}")
+    except Exception as error:  # noqa: BLE001
+        backtrace = traceback.format_tb(error.__traceback__)
+        backtrace.append(f"  {error!r}")
 
-        queue.put((task.id, exc_value, backtrace))
+        queue.put((task.id, error, backtrace))
     finally:
+        queue.close()
         terminate_all_processes()
 
 
