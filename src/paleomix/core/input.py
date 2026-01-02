@@ -24,6 +24,7 @@ from __future__ import annotations
 import logging
 import os
 import select
+import signal
 import socket
 import sys
 import termios
@@ -64,6 +65,9 @@ class CommandLine:
         self._tty_settings = None
         self._log = logging.getLogger(__name__)
 
+        # Self-socket used to interrupt polling on interrupts
+        self._csock = self._csock = None
+
     def __enter__(self) -> Self:
         self.setup()
 
@@ -98,18 +102,47 @@ class CommandLine:
         else:
             self._log.debug("Command-line interface disabled; not in interactive mode")
 
+        if self._csock is None and self._csock is None:
+            self._ssock, self._csock = socket.socketpair()
+            self._ssock.setblocking(False)
+            self._csock.setblocking(False)
+
+            signal.set_wakeup_fd(self._csock.fileno(), warn_on_full_buffer=False)
+
     def teardown(self) -> None:
         if self._tty_settings is not None:
             self._log.debug("Restoring terminal settings (enabling echo, etc.)")
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self._tty_settings)
             self._tty_settings = None
 
+        if self._ssock is not None:
+            signal.set_wakeup_fd(-1)
+            self._ssock.close()
+            self._ssock = None
+
+        if self._csock is not None:
+            self._csock.close()
+            self._csock = None
+
     @property
     def handles(self) -> Iterator[HandleType]:
         if self._tty_settings is not None:
             yield sys.stdin.fileno()
 
+        if self._ssock is not None:
+            yield self._ssock.fileno()
+
     def process_key_presses(self) -> Iterator[CLIEvent]:
+        while self._ssock is not None:
+            try:
+                data = self._ssock.recv(8)
+                if not data:
+                    break
+            except InterruptedError:
+                continue
+            except BlockingIOError:
+                break
+
         if self._tty_settings is not None:
             characters: list[str] = []
             while self._poll_stdin():
