@@ -19,7 +19,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import faulthandler
 import logging
+import signal
 import sys
 
 import pysam
@@ -96,6 +98,11 @@ def main(argv):
     paleomix.common.logging.initialize_console_logging()
     # Silence log-messages from HTSLIB
     pysam.set_verbosity(0)
+
+    # Add handlers to print backtraces on SIGSEGV, SIGFPE, SIGABRT, SIGBUS and SIGILL
+    faulthandler.enable()
+    # Add handler to print backtraces on SIGUSR1
+    faulthandler.register(signal.SIGUSR1)
 
     if not argv or argv[0] in ("-h", "--help", "help"):
         print(_HELP.format(version=paleomix.__version__))
