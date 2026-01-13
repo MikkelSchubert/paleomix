@@ -45,11 +45,9 @@ def _read_makefile(filepath: Path) -> object:
 # Options specified in a basic YAML file
 TEMPLATE_BAM_OPTIONS = {
     "AdapterRemoval": {
-        "Version": 2,
+        "Version": 3,
         "--collapse": None,
         "--minlength": 25,
-        "--trimns": None,
-        "--trimqualities": None,
     },
     "Aligners": {
         "Program": "BWA",
