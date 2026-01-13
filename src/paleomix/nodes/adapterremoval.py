@@ -44,8 +44,8 @@ _VERSION_2_CHECK = versions.Requirement(
 _VERSION_3_CHECK = versions.Requirement(
     call=("adapterremoval3", "--version"),
     # Currently fixed to specify development version
-    regexp=r"AdapterRemoval v(\d+\.\d+\.\d+-alpha\d+)",
-    specifiers=">=3.0.0-alpha2",
+    regexp=r"AdapterRemoval v(\d+\.\d+\.\d+(?:-alpha\d+)?)",
+    specifiers=">=3.0.0-alpha3",
 )
 
 
@@ -148,16 +148,14 @@ class AdapterRemoval3Node(CommandNode):
 
         # Options that cannot be overwritten
         fixed_options: OptionsType = {
-            "--file1": InputFile(input_file_1),
-            # Gzip compress FASTQ files
-            "--gzip": None,
+            "--in-file1": InputFile(input_file_1),
             # Fix number of threads to ensure consistency when scheduling node
             "--threads": threads,
             # Prefix for output files, ensure that all end up in temp folder
-            "--basename": TempOutputFile(output_prefix),
-            # Possibly non-standard locations for settings
+            "--out-prefix": TempOutputFile(output_prefix),
+            # Possibly nonstandard locations for settings
             "--out-json": OutputFile(output_json),
-            # Possibly non-standard locations for settings
+            # Possibly nonstandard locations for settings
             "--out-html": OutputFile(output_html),
         }
 
@@ -168,7 +166,6 @@ class AdapterRemoval3Node(CommandNode):
         if input_file_2 is None:
             self.out_fastq = {
                 "Single": (f"{output_prefix}.r1.fastq.gz", None),
-                "Discarded": (f"{output_prefix}.discarded.fastq.gz", None),
             }
         else:
             self.out_fastq = {
@@ -177,14 +174,16 @@ class AdapterRemoval3Node(CommandNode):
                     f"{output_prefix}.r2.fastq.gz",
                 ),
                 "Singleton": (f"{output_prefix}.singleton.fastq.gz", None),
-                "Discarded": (f"{output_prefix}.discarded.fastq.gz", None),
             }
 
-            fixed_options["--file2"] = InputFile(input_file_2)
+            fixed_options["--in-file2"] = InputFile(input_file_2)
 
             # merging is enabled if any of the --merge/--collapse arguments are used
             if any(key.startswith(("--collapse", "--merge")) for key in options):
                 self.out_fastq["Collapsed"] = (f"{output_prefix}.merged.fastq.gz", None)
+
+        out_discarded = output_prefix + ".discarded.fastq.gz"
+        fixed_options["--out-discarded"] = OutputFile(out_discarded)
 
         command = _finalize_options(
             command=AtomicCmd(
@@ -195,6 +194,8 @@ class AdapterRemoval3Node(CommandNode):
             user_options=options,
             fixed_options=fixed_options,
         )
+
+        self.out_fastq["Discarded"] = (out_discarded, None)
 
         CommandNode.__init__(
             self,
