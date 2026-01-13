@@ -16,16 +16,17 @@ Options:
   AdapterRemoval:
     Version: 3
 
-     # Uncomment to override defaults adapter sequences
-#     --adapter1: AGATCGGAAGAGCACACGTCTGAACTCCAGTCA
-#     --adapter2: AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT
-     # Discard reads shorter than this length
-     --minlength: 25
-     # Merge overlapping reads
-     --collapse:
+    # Uncomment to override defaults adapter sequences
+    # --adapter1: AGATCGGAAGAGCACACGTCTGAACTCCAGTCA
+    # --adapter2: AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT
 
-     # AdapterRemoval v2 trimming options
-     # Trim uncalled bases (Ns)
-     # --trimns:
-     # Trim low-quality bases
-     # --trimqualities:
+    # Discard reads shorter than this length
+    --minlength: 25
+    # Merge overlapping reads
+    --collapse:
+
+    # AdapterRemoval v2 trimming options
+    # Trim uncalled bases (Ns)
+    # --trimns:
+    # Trim low-quality bases
+    # --trimqualities:
