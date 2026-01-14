@@ -31,8 +31,14 @@ from typing import Literal
 from paleomix.common.command import InputFile
 from paleomix.common.layout import Layout
 from paleomix.node import Node
+from paleomix.nodes.bcftools import BCFMergeNode
 from paleomix.nodes.bwa import BWAAlgorithmNode, BWAIndexNode, BWAMem2IndexNode
-from paleomix.nodes.commands import FilterCollapsedBAMNode, FinalizeBAMNode
+from paleomix.nodes.commands import (
+    FilterCollapsedBAMNode,
+    FinalizeBAMNode,
+    IntervalsToBedNode,
+    MaskFASTANode,
+)
 from paleomix.nodes.fastp import FastpNode
 from paleomix.nodes.fastqc import FastQCNode
 from paleomix.nodes.gatk import (
@@ -105,6 +111,9 @@ _LAYOUT = {
         "intervals": {
             "{genome}.{scatter_count:04}": "genome_intervals",
         },
+        "genome": {
+            "{genome}.masked.fasta": "genome_masked",
+        },
     },
     "haplotypes": {
         "{sample}.{genome}.g.vcf.gz": "gvcf_final",
@@ -174,6 +183,7 @@ class Genome:
         filename: str,
         scatter_counts: dict[str, int],
         subdivision_mode: str,
+        bcftools_enabled: bool,
     ) -> None:
         self.validation_node = ValidateFASTAFilesNode(
             input_file=filename,
@@ -224,15 +234,44 @@ class Genome:
 
         self.name = name
         self.filename = filename
+        self.filename_masked: str | None = None
 
         self.haplotyping_intervals = intervals[scatter_counts["Haplotyping"]].intervals
         self.genotyping_intervals = intervals[scatter_counts["Genotyping"]].intervals
+
+        bcftools: list[Node] = []
+        if bcftools_enabled:
+            self.filename_masked = layout.get("genome_masked", genome=name)
+
+            # Mask non-ACGT bases in the reference to prevent errors when using BCFtools
+            bcftools.append(
+                MaskFASTANode(
+                    in_fasta=self.filename,
+                    out_fasta=self.filename_masked,
+                    dependencies=[self.validation_node],
+                )
+            )
+
+            bcftools.append(FastaIndexNode(self.filename_masked))
+
+            # BCFtools does not support GATK style interval files
+            for node in intervals.values():
+                for it in node.intervals:
+                    it["filename:bed"] = it["filename"] + ".bed"
+                    bcftools.append(
+                        IntervalsToBedNode(
+                            in_intervals=it["filename"],
+                            out_bed=it["filename:bed"],
+                            dependencies=(node,),
+                        )
+                    )
 
         self.dependencies = (
             self.faidx_node,
             self.bwa_node,
             self.dict_node,
             *intervals.values(),
+            *bcftools,
         )
 
     def __str__(self):
@@ -722,16 +761,38 @@ def genotype_samples(args, genome, samples, external_samples, settings):
         layout = args.layout.update(part=interval["name"])
 
         # Combine per-sample gVCFs into into multi-sample partial gVCF
-        yield CombineGVCFsNode(
-            in_reference=genome.filename,
-            in_variants=gvcfs,
-            out_vcf=layout["gvcf_merged_part"],
-            java_options=args.jre_options,
-            options={
-                "--intervals": InputFile(interval["filename"]),
-                "--ignore-variants-starting-outside-interval": "true",
-            },
-        ).mark_intermediate_files()
+        method = settings["CombineGVCFs"]["Method"]
+        if method == "GATK":
+            node = CombineGVCFsNode(
+                in_reference=genome.filename,
+                in_variants=gvcfs,
+                out_vcf=layout["gvcf_merged_part"],
+                java_options=args.jre_options,
+                options={
+                    "--intervals": InputFile(interval["filename"]),
+                    "--ignore-variants-starting-outside-interval": "true",
+                },
+            )
+        elif method == "bcftools":
+            node = BCFMergeNode(
+                in_variants=gvcfs,
+                out_variants=layout["gvcf_merged_part"],
+                options={
+                    **settings["CombineGVCFs"],
+                    "--output-type": "z4",
+                    # BCFtools requires a masked FASTA since it will use non-ACGTN as is
+                    "--gvcf": InputFile(genome.filename_masked),
+                    "--merge": "none",
+                    "--regions-overlap": "pos",
+                    "--regions-file": InputFile(interval["filename:bed"]),
+                    "--write-index=tbi": None,
+                },
+            )
+        else:
+            raise NotImplementedError(settings["CombineGVCFs"])
+
+        node.mark_intermediate_files()
+        yield node
 
         # Genotype partial multi-sample gVCF
         yield GenotypeGVCFs(
@@ -884,6 +945,8 @@ def build_pipeline(args, project):
         filename=project["Genome"]["Path"],
         scatter_counts=project["Genome"]["ScatterCount"],
         subdivision_mode=project["Genome"]["SubdivisionMode"],
+        bcftools_enabled=project["Settings"]["Genotyping"]["CombineGVCFs"]["Method"]
+        == "bcftools",
     )
 
     pipeline.extend(genome.dependencies)
