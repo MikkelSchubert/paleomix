@@ -36,6 +36,8 @@ COMMANDS = {
     # CMBR NGS pipeline
     "ngs": "paleomix.pipelines.ngs",
     "ngs:finalize_bam": "paleomix.pipelines.ngs.tools.finalize_bam",
+    "ngs:intervals_to_bed": "paleomix.pipelines.ngs.tools.intervals_to_bed",
+    "ngs:mask_fasta": "paleomix.pipelines.ngs.tools.mask_fasta",
     # BAM/FASTQ pipeline
     "bam": "paleomix.pipelines.bam.main",
     "bam_pipeline": "paleomix.pipelines.bam.main",

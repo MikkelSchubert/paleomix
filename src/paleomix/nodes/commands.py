@@ -180,3 +180,39 @@ class FinalizeBAMNode(CommandNode):
             dependencies=dependencies,
             threads=threads,
         )
+
+
+class MaskFASTANode(CommandNode):
+    def __init__(
+        self,
+        in_fasta: str,
+        out_fasta: str,
+        dependencies: Iterable[Node] = (),
+    ) -> None:
+        CommandNode.__init__(
+            self,
+            description=f"creating masked FASTQ file {out_fasta!r}",
+            command=factory.new(
+                ["ngs:mask_fasta", InputFile(in_fasta)],
+                stdout=OutputFile(out_fasta),
+            ),
+            dependencies=dependencies,
+        )
+
+
+class IntervalsToBedNode(CommandNode):
+    def __init__(
+        self,
+        in_intervals: str,
+        out_bed: str,
+        dependencies: Iterable[Node] = (),
+    ) -> None:
+        CommandNode.__init__(
+            self,
+            description=f"converting intervals to BED for {in_intervals!r}",
+            command=factory.new(
+                ["ngs:intervals_to_bed", InputFile(in_intervals)],
+                stdout=OutputFile(out_bed),
+            ),
+            dependencies=dependencies,
+        )

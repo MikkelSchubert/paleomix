@@ -77,6 +77,10 @@ Settings:
     HaplotypeCaller:
       --emit-ref-confidence: GVCF
 
+    CombineGVCFs:
+      # Merge using either `bcftools merge` (bcftools) or `GATK CombineGVCFs` (GATK)
+      Method: bcftools
+
     GenotypeGVCFs:
       # ...
 
