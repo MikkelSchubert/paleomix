@@ -179,13 +179,17 @@ _VALIDATION: SpecTree = {
         },
         "Genotyping": {
             "HaplotypeCaller": _LONG_COMMAND_LINE_OPTIONS,
-            "GenotypeGVCFs": _LONG_COMMAND_LINE_OPTIONS,
+            "ReblockGVCFs": {
+                "Enabled": IsBoolean(default=False),
+                StringStartsWith("-"): _COMMAND_LINE_VALUE,
+            },
             "CombineGVCFs": {
                 "Method": ValueIn(("bcftools", "GATK"), default="GATK"),
                 "-g": IsStr,  # bcftools
                 "--gvcf": IsStr,  # bcftools
                 StringStartsWith("-"): _COMMAND_LINE_VALUE,
             },
+            "GenotypeGVCFs": _LONG_COMMAND_LINE_OPTIONS,
             "VariantRecalibrator": {
                 "Enabled": IsBoolean(default=True),
                 "INDEL": _LONG_COMMAND_LINE_OPTIONS,

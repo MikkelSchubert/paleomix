@@ -51,6 +51,7 @@ from paleomix.nodes.gatk import (
     GatherVcfsNode,
     GenotypeGVCFs,
     HaplotypeCallerNode,
+    ReblockGVCFNode,
     SplitIntervalsNode,
     TranchesPlotsNode,
     VariantRecalibratorNode,
@@ -117,6 +118,7 @@ _LAYOUT = {
     },
     "haplotypes": {
         "{sample}.{genome}.g.vcf.gz": "gvcf_final",
+        "{sample}.{genome}.reblocked.g.vcf.gz": "gvcf_final_reblocked",
     },
     "genotypes": {
         "{genome}.vcf.gz": "vcf_final",
@@ -737,15 +739,28 @@ def haplotype_samples(args, genome, samples, external_samples, settings):
 
         yield TabixIndexNode(infile=layout["gvcf_final"], preset="vcf")
 
+        if settings["ReblockGVCFs"]["Enabled"]:
+            yield ReblockGVCFNode(
+                in_reference=genome.filename,
+                in_vcf=layout.get("gvcf_final"),
+                out_vcf=layout.get("gvcf_final_reblocked"),
+                options=settings["ReblockGVCFs"],
+                java_options=args.jre_options,
+            )
+
+            yield TabixIndexNode(infile=layout["gvcf_final_reblocked"], preset="vcf")
+
 
 def genotype_samples(args, genome, samples, external_samples, settings):
     layout = args.layout.update(genome=genome)
     settings = settings["Genotyping"]
 
+    gvcf_key = (
+        "gvcf_final_reblocked" if settings["ReblockGVCFs"]["Enabled"] else "gvcf_final"
+    )
+
     # Collect list of sample names and source (gVCF) files
-    sample_files = [
-        (sample, layout.get("gvcf_final", sample=sample)) for sample in samples
-    ]
+    sample_files = [(sample, layout.get(gvcf_key, sample=sample)) for sample in samples]
 
     # Genotype external samples if required
     for sample, files in external_samples.items():
@@ -753,7 +768,7 @@ def genotype_samples(args, genome, samples, external_samples, settings):
             sample_files.append((sample, files["gVCF"]))
         elif files["BAM"] is not None:
             # gVCF will have been generated in `haplotype_samples`
-            sample_files.append((sample, layout.get("gvcf_final", sample=sample)))
+            sample_files.append((sample, layout.get(gvcf_key, sample=sample)))
 
     vcfs: list[str] = []
     gvcfs = [filename for _sample, filename in sorted(sample_files)]
