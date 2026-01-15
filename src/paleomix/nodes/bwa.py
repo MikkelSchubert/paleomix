@@ -351,9 +351,6 @@ def new_cleanup_command(
     alt_optimize: bool = False,
     options: OptionsType | None = None,
 ) -> AtomicCmd:
-    if options is None:
-        options = {}
-
     convert = factory.new(
         "cleanup",
         stdin=stdin,

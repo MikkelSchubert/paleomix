@@ -141,9 +141,6 @@ class FinalizeBAMNode(CommandNode):
         options: OptionsType | None = None,
         dependencies: Iterable[Node] = (),
     ) -> None:
-        if options is None:
-            options = {}
-
         in_bams = tuple(in_bams)
         if len(in_bams) > 1:
             merge = merge_bam_files_command(in_bams)

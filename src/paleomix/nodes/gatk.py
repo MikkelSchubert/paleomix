@@ -60,9 +60,6 @@ class ApplyBQSRNode(CommandNode):
         java_options: Iterable[str] = (),
         dependencies: Iterable[Node] = (),
     ) -> None:
-        if options is None:
-            options = {}
-
         # WORKAROUND: ApplyBQSR defaults to using compression level 2 for output,
         #             resulting in significantly larger BAMs. Revert that behavior
         #             unless the user has already done so. GATK 4.2.3.0 and more.
@@ -111,9 +108,6 @@ class ApplyVQSRNode(CommandNode):
         java_options: Iterable[str] = (),
         dependencies: Iterable[Node] = (),
     ) -> None:
-        if options is None:
-            options = {}
-
         self.out_vcf = out_vcf
 
         command = _gatk_command(
@@ -158,9 +152,6 @@ class BaseRecalibratorNode(CommandNode):
         java_options: Iterable[str] = (),
         dependencies: Iterable[Node] = (),
     ) -> None:
-        if options is None:
-            options = {}
-
         self.in_reference = in_reference
         self.in_bam = in_bam
         self.out_table = out_table
@@ -202,9 +193,6 @@ class CombineGVCFsNode(CommandNode):
         java_options: Iterable[str] = (),
         dependencies: Iterable[Node] = (),
     ) -> None:
-        if options is None:
-            options = {}
-
         command = _gatk_command(
             tool="CombineGVCFs",
             tool_options={
@@ -243,9 +231,6 @@ class CreateSequenceDictionaryNode(CommandNode):
         java_options: Iterable[str] = (),
         dependencies: Iterable[Node] = (),
     ) -> None:
-        if options is None:
-            options = {}
-
         command = _gatk_command(
             tool="CreateSequenceDictionary",
             tool_options={
@@ -281,7 +266,7 @@ class FastqToSamNode(CommandNode):
         self._out_bam = out_bam
         self._sort_order = options.get("--SORT-ORDER")
 
-        if "--SAMPLE_NAME" not in dict(options):
+        if "--SAMPLE_NAME" not in options:
             raise NodeError("--SAMPLE_NAME must be specified for FastqToSamNode")
 
         command = _gatk_command(
@@ -343,9 +328,6 @@ class GatherVcfsNode(CommandNode):
         java_options: Iterable[str] = (),
         dependencies: Iterable[Node] = (),
     ) -> None:
-        if options is None:
-            options = {}
-
         command = _gatk_command(
             tool="GatherVcfs",
             tool_options={
@@ -376,9 +358,6 @@ class GenotypeGVCFs(CommandNode):
         java_options: Iterable[str] = (),
         dependencies: Iterable[Node] = (),
     ) -> None:
-        if options is None:
-            options = {}
-
         self.out_vcf = out_vcf
 
         command = _gatk_command(
@@ -470,9 +449,6 @@ class SplitIntervalsNode(CommandNode):
         java_options: Iterable[str] = (),
         dependencies: Iterable[Node] = (),
     ) -> None:
-        if options is None:
-            options = {}
-
         if scatter_count < 1:
             raise ValueError(f"scatter_count must be >= 1, not {scatter_count}")
 
@@ -561,9 +537,6 @@ class VariantRecalibratorNode(CommandNode):
         java_options: Iterable[str] = (),
         dependencies: Iterable[Node] = (),
     ) -> None:
-        if options is None:
-            options = {}
-
         self.in_reference = in_reference
         self.in_variants = tuple(in_variants)
         self.out_recal = out_recal
@@ -571,7 +544,6 @@ class VariantRecalibratorNode(CommandNode):
         self.out_r_plot = out_r_plot
         self.out_log = out_log
 
-        options = dict(options)
         extra_files = [
             InputFile(in_reference + ".fai"),
             InputFile(swap_ext(in_reference, ".dict")),
@@ -588,6 +560,7 @@ class VariantRecalibratorNode(CommandNode):
         #             applies to GATK 4.2.4.1 and others.
         extra_files.append(TempOutputFile(self.out_tranches + ".pdf"))
 
+        options = {} if options is None else dict(options)
         for key, value in options.items():
             if key.startswith("--resource"):
                 if not isinstance(value, str):
@@ -624,8 +597,8 @@ class VariantRecalibratorNode(CommandNode):
 def _gatk_command(
     tool: str,
     java_options: Iterable[str],
-    tool_options: OptionsType,
-    user_tool_options: OptionsType,
+    tool_options: OptionsType | None,
+    user_tool_options: OptionsType | None,
     stdout: int | str | OutputFile | None = None,
     stderr: int | str | OutputFile | None = None,
     extra_files: Iterable[AtomicFileTypes] = (),

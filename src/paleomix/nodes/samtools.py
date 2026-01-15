@@ -74,9 +74,6 @@ class TabixIndexNode(CommandNode):
         options: OptionsType | None = None,
         dependencies: Iterable[Node] = (),
     ) -> None:
-        if options is None:
-            options = {}
-
         if preset not in ("vcf", "gff", "bed", "sam"):
             raise ValueError(preset)
 
@@ -145,9 +142,6 @@ class BAMIndexNode(CommandNode):
         options: OptionsType | None = None,
         dependencies: Iterable[Node] = (),
     ) -> None:
-        if options is None:
-            options = {}
-
         command = AtomicCmd(
             ["samtools", "index"],
             requirements=[SAMTOOLS_VERSION],
@@ -185,9 +179,6 @@ class BAMStatsNode(CommandNode):
         options: OptionsType | None = None,
         dependencies: Iterable[Node] = (),
     ) -> None:
-        if options is None:
-            options = {}
-
         command = AtomicCmd(
             ["samtools", method, InputFile(infile)],
             stdout=outfile,
@@ -223,9 +214,6 @@ class BAMMergeNode(CommandNode):
         options: OptionsType | None = None,
         dependencies: Iterable[Node] = (),
     ) -> None:
-        if options is None:
-            options = {}
-
         in_files = tuple(in_files)
         if not in_files:
             raise ValueError("no input files for samtools merge")
@@ -315,9 +303,6 @@ class MarkDupNode(CommandNode):
         options: OptionsType | None = None,
         dependencies: Iterable[Node] = (),
     ) -> None:
-        if options is None:
-            options = {}
-
         in_bams = tuple(in_bams)
         if len(in_bams) > 1:
             merge = AtomicCmd(
@@ -377,8 +362,10 @@ def merge_bam_files_command(input_files: Iterable[str]) -> AtomicCmd:
     return merge
 
 
-def _get_number_of_threads(options: OptionsType, default: int = 1) -> int:
-    if "-@" in options and "--threads" in options:
+def _get_number_of_threads(options: OptionsType | None, default: int = 1) -> int:
+    if options is None:
+        return default
+    elif "-@" in options and "--threads" in options:
         raise ValueError(f"cannot use both -@ and --threads: {options!r}")
 
     value = options.get("-@", options.get("--threads", default))

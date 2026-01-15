@@ -49,9 +49,6 @@ class FastQCNode(CommandNode):
         options: OptionsType | None = None,
         dependencies: Iterable[Node] = (),
     ) -> None:
-        if options is None:
-            options = {}
-
         out_prefix = _FASTQC_EXCLUDED_EXTENSIONS.sub("", os.path.basename(in_file))
         command = AtomicCmd(
             ["fastqc", InputFile(in_file)],

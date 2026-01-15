@@ -143,9 +143,6 @@ class AdapterRemoval3Node(CommandNode):
         options: OptionsType | None = None,
         dependencies: Iterable[Node] = (),
     ) -> None:
-        if options is None:
-            options = {}
-
         # Options that cannot be overwritten
         fixed_options: OptionsType = {
             "--in-file1": InputFile(input_file_1),
@@ -159,7 +156,7 @@ class AdapterRemoval3Node(CommandNode):
             "--out-html": OutputFile(output_html),
         }
 
-        options = dict(options)
+        options = {} if options is None else dict(options)
         # Option is no longer supported (output is always Phred+33)
         options.pop("--qualitybase-output", None)
 
@@ -216,9 +213,6 @@ class IdentifyAdaptersNode(CommandNode):
         options: OptionsType | None = None,
         dependencies: Iterable[Node] = (),
     ) -> None:
-        if options is None:
-            options = {}
-
         command = AtomicCmd(
             "AdapterRemoval",
             stdout=output_file,

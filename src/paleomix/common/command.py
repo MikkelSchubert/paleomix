@@ -276,10 +276,12 @@ class AtomicCmd:
 
     def append_options(
         self,
-        options: OptionsType,
+        options: OptionsType | None,
         pred: Callable[[str], bool] = lambda s: s.startswith("-"),
     ) -> None:
-        if not isinstance(options, dict):
+        if options is None:
+            return
+        elif not isinstance(options, dict):
             raise TypeError(f"options must be dict, not {options!r}")
 
         for key, values in options.items():
@@ -311,6 +313,9 @@ class AtomicCmd:
         blacklisted_options: Iterable[str] = (),
         pred: Callable[[str], bool] = lambda s: s.startswith("-"),
     ) -> None:
+        user_options = {} if user_options is None else user_options
+        fixed_options = {} if fixed_options is None else fixed_options
+
         if not isinstance(fixed_options, dict):
             raise TypeError(f"options must be dict, not {fixed_options!r}")
         elif not isinstance(user_options, dict):
