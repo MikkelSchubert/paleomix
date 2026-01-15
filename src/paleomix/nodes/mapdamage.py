@@ -60,9 +60,6 @@ class MapDamagePlotNode(CommandNode):
         options: OptionsType | None = None,
         dependencies: Iterable[Node] = (),
     ) -> None:
-        if options is None:
-            options = {}
-
         merge = None
         input_files = tuple(input_files)
         if len(input_files) > 1:
@@ -134,9 +131,6 @@ class MapDamageModelNode(CommandNode):
         options: OptionsType | None = None,
         dependencies: Iterable[Node] = (),
     ) -> None:
-        if options is None:
-            options = {}
-
         command = AtomicCmd(
             ["mapDamage"],
             extra_files=[
@@ -223,9 +217,6 @@ class MapDamageRescaleNode(CommandNode):
         options: OptionsType | None = None,
         dependencies: Iterable[Node] = (),
     ) -> None:
-        if options is None:
-            options = {}
-
         merge = None
         input_files = tuple(input_files)
         if len(input_files) > 1:
