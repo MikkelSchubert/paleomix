@@ -748,8 +748,6 @@ def haplotype_samples(args, genome, samples, external_samples, settings):
                 java_options=args.jre_options,
             )
 
-            yield TabixIndexNode(infile=layout["gvcf_final_reblocked"], preset="vcf")
-
 
 def genotype_samples(args, genome, samples, external_samples, settings):
     layout = args.layout.update(genome=genome)
