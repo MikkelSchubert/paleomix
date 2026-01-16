@@ -506,10 +506,14 @@ class ReblockGVCFNode(CommandNode):
                 "--reference": InputFile(in_reference),
                 "--variant": InputFile(in_vcf),
                 "--output": OutputFile(out_vcf),
+                "--create-output-variant-index": None,
             },
             user_tool_options=options,
             java_options=java_options,
-            extra_files=[InputFile(f"{in_reference}.fai")],
+            extra_files=[
+                InputFile(f"{in_reference}.fai"),
+                OutputFile(f"{out_vcf}.tbi"),
+            ],
         )
 
         CommandNode.__init__(
