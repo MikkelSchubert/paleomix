@@ -26,8 +26,6 @@ def main(argv: list[str]) -> int:
                 chrom, start, end, *_ = line.split(b"\t", 3)
                 buffer.write(b"%s\t%s\t%s\n" % (chrom, start, end))
 
-            buffer.write(line)
-
     return 0
 
 
