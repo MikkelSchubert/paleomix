@@ -51,7 +51,7 @@ def _main_run(args: Namespace) -> int:
 
     try:
         logger.info("Reading project from %r", args.project)
-        project = load_project(args.project)
+        project = load_project(args.project, args.sample_table)
     except (OSError, MakefileError, YAMLError) as error:
         logger.error("Error reading project: %s", error)
         return 1
