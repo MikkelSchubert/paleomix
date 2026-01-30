@@ -60,9 +60,9 @@ def _build_run_parser(subparsers: SubParsersAction[ArgumentParser]) -> None:
 
     parser.add_argument(
         "--sample-table",
+        metavar="TSV",
         help="Tab separatd table containing columns 'Sample', 'Library', 'Lane', and "
         "'Files', corresponding to the 'Samples' section in a project YAML file",
-        metavar="tsv",
     )
 
     parser.add_argument(
