@@ -5,9 +5,11 @@ from __future__ import annotations
 import logging
 import string
 from collections import defaultdict
+from collections.abc import Iterable
 
 from paleomix.common import yaml
 from paleomix.common.bamfiles import BAM_PLATFORMS
+from paleomix.common.fileutils import read_tsv
 from paleomix.common.makefile import (
     REQUIRED_VALUE,
     And,
@@ -31,7 +33,7 @@ from paleomix.common.makefile import (
 )
 
 
-def load_project(filename):
+def load_project(filename, sample_table):
     try:
         with open(filename) as handle:
             data = yaml.safe_load(handle)
@@ -42,6 +44,9 @@ def load_project(filename):
     # to processing and validating the structure, since the constant names themselves
     # may not be valid values where they are used.
     data = _replace_constants(data)
+
+    if sample_table is not None:
+        _load_sample_table(data, sample_table)
 
     data = process_makefile(data, _VALIDATION)
 
@@ -332,3 +337,58 @@ def _process_recalibrator_settings(data):
         )
 
     return True
+
+
+def _get_or_set_dicts(
+    data: object,
+    keys: Iterable[str],
+) -> object:
+    for key in keys:
+        # Type errors are ignored here, since they will be caught during validation
+        if not isinstance(data, dict):
+            return None
+
+        value = data.get(key)
+        if value is None:
+            value = data[key] = {}
+
+        data = value
+
+    return data
+
+
+def _load_sample_table(data, sample_table) -> None:
+    """
+    Load samples from a TSV file and inject them into the project dict; this only
+    checks for duplicate keys, since everything else will get caught in the subsequent
+    validation step.
+    """
+
+    def _add_sample(row: dict[str, str]) -> None:
+        lanes = _get_or_set_dicts(data, ("Samples", row["Sample"], row["Library"]))
+        if isinstance(lanes, dict):
+            if row["Lane"] in lanes:
+                raise MakefileError(
+                    f"Lane {row['Sample']!r} > {row['Library']!r} > "
+                    f"{row['Lane']!r} has been specified multiple times"
+                )
+
+            lanes[row["Lane"]] = row["Files"]
+
+    reader = iter(read_tsv(sample_table))
+    try:
+        row = next(reader)
+        missing_columns = set(row) - {"Sample", "Library", "Lane", "Files"}
+        if missing_columns:
+            raise MakefileError(
+                f"Sample table {sample_table!r} is missing columns "
+                f"{', '.join(missing_columns)}"
+            )
+
+        _add_sample(row)
+        for row in reader:
+            _add_sample(row)
+    except ValueError as error:
+        raise MakefileError(f"Error reading samples from {sample_table!r}: {error}")
+    except StopIteration:
+        return

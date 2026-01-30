@@ -402,3 +402,28 @@ class _BZ2File(bz2.BZ2File):
         super().close()
         if hasattr(fileobj, "close"):
             fileobj.close()
+
+
+def read_tsv(
+    filepath: PathTypes,
+    comment: str | None = "#",
+) -> Iterable[dict[str, str]]:
+    """
+    Read TSV file, which is required to have the same number of columns on all lines
+    """
+
+    with open(os.fspath(filepath)) as handle:
+        header = handle.readline().rstrip("\r\n").split("\t")
+
+        for linenum, line in enumerate(handle, start=2):
+            line = line.rstrip("\r\n")
+
+            if line and (comment is None or not line.startswith(comment)):
+                row = line.split("\t")
+                if len(row) != len(header):
+                    raise ValueError(
+                        f"Expected {len(header)} columns on line {linenum}, "
+                        f"but found {len(row)}"
+                    )
+
+                yield dict(zip(header, row, strict=True))
