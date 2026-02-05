@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import multiprocessing
+import shutil
 from enum import Enum
 
 import paleomix
@@ -79,7 +80,7 @@ def _build_run_parser(subparsers: SubParsersAction[ArgumentParser]) -> None:
         metavar="NAME",
         type=str.lower,
         choices=("mem", "mem2"),
-        default="mem2",
+        default="mem2" if shutil.which("bwa-mem2") else "mem",
         help="Mapping algorithm to use. Output should be identical, but BWA MEM2 is "
         "faster at the cost of 3x greater RAM usage",
     )
