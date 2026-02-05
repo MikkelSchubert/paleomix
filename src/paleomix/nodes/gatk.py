@@ -297,7 +297,7 @@ class FastqToSamNode(CommandNode):
 
         move_file(filename, self._out_bam)
 
-        return super()._teardown(temp)
+        return None
 
 
 class GatherVcfsNode(CommandNode):
