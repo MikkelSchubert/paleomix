@@ -426,4 +426,4 @@ def read_tsv(
                         f"but found {len(row)}"
                     )
 
-                yield dict(zip(header, row, strict=True))
+                yield dict(zip(header, row))
