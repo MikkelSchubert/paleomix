@@ -381,7 +381,7 @@ def _load_sample_table(data, sample_table) -> None:
     reader = iter(read_tsv(sample_table))
     try:
         row = next(reader)
-        missing_columns = set(row) - {"Sample", "Library", "Lane", "Files"}
+        missing_columns = {"Sample", "Library", "Lane", "Files"} - set(row)
         if missing_columns:
             raise MakefileError(
                 f"Sample table {sample_table!r} is missing columns "
