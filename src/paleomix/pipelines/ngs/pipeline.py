@@ -5,12 +5,14 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import logging
-from collections.abc import Generator
+from collections.abc import Generator, Iterable
 from typing import Literal
 
 from paleomix.common.command import InputFile
 from paleomix.common.layout import Layout
+from paleomix.common.utilities import fragment
 from paleomix.node import Node
 from paleomix.nodes.bcftools import BCFMergeNode
 from paleomix.nodes.bwa import BWAAlgorithmNode, BWAIndexNode, BWAMem2IndexNode
@@ -85,6 +87,7 @@ _LAYOUT = {
             }
         },
         "haplotypes": {
+            "{genome}.{part}.{digest}{ext}": "gvcf_merged_part_batch",
             "{genome}.{part}.g.vcf.gz": "gvcf_merged_part",
             "{genome}.{part}.vcf.gz": "vcf_merged_part",
             "{genome}.{part}.snp.vcf.gz": "vcf_recalibrated_SNP_part",
@@ -730,6 +733,33 @@ def haplotype_samples(args, genome, samples, external_samples, settings):
             )
 
 
+def _batch_vcf_merges(
+    layout: Layout,
+    batch_key: str,
+    final_key: str,
+    filenames: list[str],
+    max_files: int = 100,
+) -> Iterable[tuple[bool, str, list[str]]]:
+    filenames = sorted(filenames)
+
+    while len(filenames) > max_files:
+        new_filenames: list[str] = []
+        for batch in fragment(max_files, filenames):
+            hasher = hashlib.new("md5")
+            for filename in batch:
+                hasher.update(filename.encode())
+                hasher.update(b"\0")
+            digest = hasher.hexdigest()
+
+            filename = layout.get(batch_key, digest=digest)
+            new_filenames.append(filename)
+            yield False, filename, list(batch)
+
+        filenames = new_filenames
+
+    yield True, layout[final_key], filenames
+
+
 def genotype_samples(args, genome, samples, external_samples, settings):
     layout = args.layout.update(genome=genome)
     settings = settings["Genotyping"]
@@ -752,41 +782,56 @@ def genotype_samples(args, genome, samples, external_samples, settings):
     vcfs: list[str] = []
     gvcfs = [filename for _sample, filename in sorted(sample_files)]
     for interval in genome.genotyping_intervals:
-        layout = args.layout.update(part=interval["name"])
-
         # Combine per-sample gVCFs into into multi-sample partial gVCF
         method = settings["CombineGVCFs"]["Method"]
-        if method == "GATK":
-            node = CombineGVCFsNode(
-                in_reference=genome.filename,
-                in_variants=gvcfs,
-                out_vcf=layout["gvcf_merged_part"],
-                java_options=args.jre_options,
-                options={
-                    "--intervals": InputFile(interval["filename"]),
-                    "--ignore-variants-starting-outside-interval": "true",
-                },
-            )
-        elif method == "bcftools":
-            node = BCFMergeNode(
-                in_variants=gvcfs,
-                out_variants=layout["gvcf_merged_part"],
-                options={
-                    **settings["CombineGVCFs"],
-                    "--output-type": "z4",
-                    # BCFtools requires a masked FASTA since it will use non-ACGTN as is
-                    "--gvcf": InputFile(genome.filename_masked),
-                    "--merge": "none",
-                    "--regions-overlap": "pos",
-                    "--regions-file": InputFile(interval["filename:bed"]),
-                    "--write-index=tbi": None,
-                },
-            )
-        else:
-            raise NotImplementedError(settings["CombineGVCFs"])
+        layout = args.layout.update(
+            part=interval["name"],
+            ext=".g.vcf.gz" if method == "GATK" else ".bcf",
+        )
 
-        node.mark_intermediate_files()
-        yield node
+        batches = _batch_vcf_merges(
+            layout=layout,
+            batch_key="gvcf_merged_part_batch",
+            final_key="gvcf_merged_part",
+            filenames=gvcfs,
+        )
+
+        for is_final, out_file, in_files in batches:
+            if method == "GATK":
+                node = CombineGVCFsNode(
+                    in_reference=genome.filename,
+                    in_variants=in_files,
+                    out_vcf=out_file,
+                    java_options=args.jre_options,
+                    options={
+                        **settings["CombineGVCFs"]["GATK"],
+                        "--intervals": InputFile(interval["filename"]),
+                        "--ignore-variants-starting-outside-interval": "true",
+                    },
+                )
+            elif method == "bcftools":
+                output_type = "z4" if is_final else "b"
+                index_fmt = "tbi" if is_final else "csi"
+
+                node = BCFMergeNode(
+                    in_variants=in_files,
+                    out_variants=out_file,
+                    options={
+                        **settings["CombineGVCFs"]["BCFTools"],
+                        "--output-type": output_type,
+                        # BCFtools requires a masked FASTA since it will use non-ACGTN as is
+                        "--gvcf": InputFile(genome.filename_masked),
+                        "--merge": "none",
+                        "--regions-overlap": "pos",
+                        "--regions-file": InputFile(interval["filename:bed"]),
+                        f"--write-index={index_fmt}": None,
+                    },
+                )
+            else:
+                raise NotImplementedError(settings["CombineGVCFs"])
+
+            node.mark_intermediate_files()
+            yield node
 
         # Genotype partial multi-sample gVCF
         yield GenotypeGVCFs(

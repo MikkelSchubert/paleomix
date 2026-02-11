@@ -171,9 +171,12 @@ _VALIDATION: SpecTree = {
             },
             "CombineGVCFs": {
                 "Method": ValueIn(("bcftools", "GATK"), default="GATK"),
-                "-g": IsStr,  # bcftools
-                "--gvcf": IsStr,  # bcftools
-                StringStartsWith("-"): _COMMAND_LINE_VALUE,
+                "BCFTools": {
+                    StringStartsWith("-"): _COMMAND_LINE_VALUE,
+                },
+                "GATK": {
+                    StringStartsWith("-"): _COMMAND_LINE_VALUE,
+                },
             },
             "GenotypeGVCFs": _LONG_COMMAND_LINE_OPTIONS,
             "VariantRecalibrator": {
