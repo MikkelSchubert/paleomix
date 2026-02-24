@@ -137,8 +137,8 @@ def _get_common_parameters(options, threads=1):
     # Ensure that any user-specified list of adapters is tracked
     adapter_list = options.pop("--adapter-list", None)
     if adapter_list is not None:
-        cmd.cmd.set_option("--adapter-list", "%(IN_ADAPTER_LIST)s")
-        cmd.command.set_kwargs(IN_ADAPTER_LIST=adapter_list)
+        cmd.set_option("--adapter-list", "%(IN_ADAPTER_LIST)s")
+        cmd.set_kwargs(IN_ADAPTER_LIST=adapter_list)
 
     for key in ("--trim5p", "--trim3p"):
         values = options.pop(key, None)
