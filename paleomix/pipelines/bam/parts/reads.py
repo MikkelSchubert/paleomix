@@ -91,12 +91,10 @@ class Reads:
         collapse_reads = ar_options.pop("--collapse")
         collapse_reads = collapse_reads or collapse_reads is None
 
-        output_quality = self.quality_offset
-        if output_quality == "Solexa":
-            output_quality = "64"
-
+        # Always convert output to Phred+33, to normalize ARv2 and ARv3 behavior
         ar_options["--qualitybase"] = self.quality_offset
-        ar_options["--qualitybase-output"] = output_quality
+        ar_options["--qualitybase-output"] = "33"
+        self.quality_offset = "33"
 
         init_args = {
             "output_prefix": os.path.join(self.folder, "reads"),
