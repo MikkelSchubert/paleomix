@@ -22,7 +22,12 @@
 #
 import os
 
-from paleomix.nodes.adapterremoval import PE_AdapterRemovalNode, SE_AdapterRemovalNode
+from paleomix.nodes.adapterremoval import (
+    PE_AdapterRemoval2Node,
+    PE_AdapterRemoval3Node,
+    SE_AdapterRemoval2Node,
+    SE_AdapterRemoval3Node,
+)
 from paleomix.nodes.validation import ValidateFASTQFilesNode
 
 
@@ -87,6 +92,8 @@ class Reads:
 
     def _init_raw_reads(self, config, record):
         ar_options = dict(record["Options"]["AdapterRemoval"])
+        ar_version = ar_options["Version"]
+
         # Setup of "--collapsed" is handled by the node itself
         collapse_reads = ar_options.pop("--collapse")
         collapse_reads = collapse_reads or collapse_reads is None
@@ -102,26 +109,23 @@ class Reads:
             "options": ar_options,
         }
 
-        output_tmpl = "{output_prefix}.%s.gz".format(**init_args)
-
         if "SE" in record["Data"]:
-            self.files["Single"] = output_tmpl % ("truncated",)
             init_args["input_file"] = record["Data"]["SE"]
-            command = SE_AdapterRemovalNode(**init_args)
+            command = (
+                SE_AdapterRemoval2Node(**init_args)
+                if ar_version == 2
+                else SE_AdapterRemoval3Node(**init_args)
+            )
         else:
-            self.files["Singleton"] = output_tmpl % ("singleton.truncated",)
-            self.files["Paired"] = output_tmpl % ("pair{Pair}.truncated",)
-
-            if collapse_reads:
-                self.files["Collapsed"] = output_tmpl % ("collapsed",)
-                self.files["CollapsedTruncated"] = output_tmpl % (
-                    "collapsed.truncated",
-                )
-
             init_args["collapse"] = collapse_reads
             init_args["input_file_1"] = record["Data"]["PE_1"]
             init_args["input_file_2"] = record["Data"]["PE_2"]
-            command = PE_AdapterRemovalNode(**init_args)
+            command = (
+                PE_AdapterRemoval2Node(**init_args)
+                if ar_version == 2
+                else PE_AdapterRemoval3Node(**init_args)
+            )
 
-        self.stats = os.path.join(self.folder, "reads.settings")
         self.nodes = (command,)
+        self.files = dict(command.files)
+        self.stats = self.files.pop("Statistics")
