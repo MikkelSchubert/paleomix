@@ -374,47 +374,84 @@ class SummaryTableNode(Node):
 
             return stats
 
-        assert len(filenames) == 1, filenames
-        with open(filenames[0]) as settings_file:
+        (filename,) = filenames
+        with open(filename) as settings_file:
             settings = settings_file.read()
-
-            def _re_search(regexp, default=None):
-                match = re.search(regexp, settings)
-                if not match:
-                    if default is not None:
-                        return default
-                    raise KeyError(
-                        "Could not find match with RegExp %s in file '%s'"
-                        % (repr(regexp), filename)
-                    )
-
-                return int(match.groups()[0])
-
-            if "Paired end mode" in settings or "paired-end reads" in settings:
-                return {
-                    "lib_type": "PE",
-                    "seq_reads_pairs": _re_search("number of read pairs: ([0-9]+)"),
-                    "seq_trash_pe_1": _re_search("discarded mate 1 reads: ([0-9]+)"),
-                    "seq_trash_pe_2": _re_search("discarded mate 2 reads: ([0-9]+)"),
-                    "seq_retained_nts": _re_search("retained nucleotides: ([0-9]+)"),
-                    "seq_retained_reads": _re_search("retained reads: ([0-9]+)"),
-                    "seq_collapsed": _re_search(
-                        "of (?:full-length )?collapsed pairs: ([0-9]+)", 0
-                    )
-                    + _re_search("of truncated collapsed pairs: ([0-9]+)", 0),
-                }
-            elif "Single end mode" in settings or "single-end reads" in settings:
-                return {
-                    "lib_type": "SE",
-                    "seq_reads_se": _re_search(
-                        "number of (?:reads|read pairs): ([0-9]+)"
-                    ),
-                    "seq_trash_se": _re_search("discarded mate 1 reads: ([0-9]+)"),
-                    "seq_retained_nts": _re_search("retained nucleotides: ([0-9]+)"),
-                    "seq_retained_reads": _re_search("retained reads: ([0-9]+)"),
-                }
+            if filename.endswith(".json"):
+                return cls._stat_read_settings_v3(filename, settings)
             else:
-                assert False, filename
+                return cls._stat_read_settings_v2(filename, settings)
+
+    @classmethod
+    def _stat_read_settings_v2(cls, filename, settings):
+        def _re_search(regexp, default=None):
+            match = re.search(regexp, settings)
+            if not match:
+                if default is not None:
+                    return default
+                raise KeyError(
+                    "Could not find match with RegExp %s in file '%s'"
+                    % (repr(regexp), filename)
+                )
+
+            return int(match.groups()[0])
+
+        if "Paired end mode" in settings or "paired-end reads" in settings:
+            return {
+                "lib_type": "PE",
+                "seq_reads_pairs": _re_search("number of read pairs: ([0-9]+)"),
+                "seq_trash_pe_1": _re_search("discarded mate 1 reads: ([0-9]+)"),
+                "seq_trash_pe_2": _re_search("discarded mate 2 reads: ([0-9]+)"),
+                "seq_retained_nts": _re_search("retained nucleotides: ([0-9]+)"),
+                "seq_retained_reads": _re_search("retained reads: ([0-9]+)"),
+                "seq_collapsed": _re_search(
+                    "of (?:full-length )?collapsed pairs: ([0-9]+)", 0
+                )
+                + _re_search("of truncated collapsed pairs: ([0-9]+)", 0),
+            }
+        elif "Single end mode" in settings or "single-end reads" in settings:
+            return {
+                "lib_type": "SE",
+                "seq_reads_se": _re_search("number of (?:reads|read pairs): ([0-9]+)"),
+                "seq_trash_se": _re_search("discarded mate 1 reads: ([0-9]+)"),
+                "seq_retained_nts": _re_search("retained nucleotides: ([0-9]+)"),
+                "seq_retained_reads": _re_search("retained reads: ([0-9]+)"),
+            }
+        else:
+            assert False, filename
+
+    @classmethod
+    def _stat_read_settings_v3(cls, filename, settings):
+        data = json.loads(settings)
+
+        seq_collapsed = 0
+        if data["output"]["merged"]:
+            seq_collapsed = data["output"]["merged"]["output_reads"]
+
+        # Count both merged reads as "retained"
+        seq_retained_reads = seq_collapsed + data["summary"]["output"]["reads"]
+
+        if data["input"]["read2"]:
+            # FIXME: ARv3 currently does not track discarded PE 1 vs 2 reads separately
+            seq_trash = data["output"]["discarded"]["input_reads"]
+
+            return {
+                "lib_type": "PE",
+                "seq_reads_pairs": data["input"]["read1"]["input_reads"],
+                "seq_trash_pe_1": int((seq_trash + 1) / 2),
+                "seq_trash_pe_2": int(seq_trash / 2),
+                "seq_retained_nts": data["summary"]["output"]["bases"],
+                "seq_retained_reads": seq_retained_reads,
+                "seq_collapsed": seq_collapsed,
+            }
+        else:
+            return {
+                "lib_type": "SE",
+                "seq_reads_se": data["input"]["read1"]["input_reads"],
+                "seq_trash_se": data["output"]["discarded"]["input_reads"],
+                "seq_retained_nts": data["summary"]["output"]["bases"],
+                "seq_retained_reads": seq_retained_reads,
+            }
 
     @classmethod
     def _stat_areas_of_interest(cls, prefixes):

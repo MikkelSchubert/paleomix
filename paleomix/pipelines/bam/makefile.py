@@ -151,7 +151,7 @@ _VALIDATION_OPTIONS = {
     "SplitLanesByFilenames": RemovedOption(),
     "CompressionFormat": RemovedOption(),
     "AdapterRemoval": {
-        "Version": RemovedOption(),
+        "Version": ValueIn((2, 3), default=2),
         "--adapter1": IsStr,
         "--adapter2": IsStr,
         "--adapter-list": IsStr,

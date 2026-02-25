@@ -30,19 +30,26 @@ from paleomix.atomiccmd.builder import (
 )
 from paleomix.node import CommandNode
 
-_VERSION_CHECK = versions.Requirement(
+_VERSION_2_CHECK = versions.Requirement(
     call=("AdapterRemoval", "--version"),
     search=r"ver. (\d+)\.(\d+)\.(\d+)",
     checks=versions.GE(2, 2, 0),
 )
 
+_VERSION_3_CHECK = versions.Requirement(
+    call=("adapterremoval3", "--version"),
+    search=r"v(\d+)\.(\d+)\.(\d+)",
+    checks=versions.GE(3, 0, 0),
+)
 
-class SE_AdapterRemovalNode(CommandNode):
+
+class SE_AdapterRemoval2Node(CommandNode):
     def __init__(
         self, input_file, output_prefix, threads=1, options={}, dependencies=()
     ):
         # See below for parameters in common between SE/PE
-        cmd = _get_common_parameters(threads=threads, options=options)
+        cmd = AtomicCmdBuilder("AdapterRemoval", CHECK_VERSION=_VERSION_2_CHECK)
+        cmd = _set_common_parameters(cmd, threads=threads, options=options)
 
         # Prefix for output files, ensure that all end up in temp folder
         cmd.set_option("--basename", "%(TEMP_OUT_BASENAME)s")
@@ -60,6 +67,11 @@ class SE_AdapterRemovalNode(CommandNode):
 
         apply_options(cmd, options)
 
+        self.files = {
+            "Statistics": output_prefix + ".settings",
+            "Single": output_tmpl % ("truncated",),
+        }
+
         CommandNode.__init__(
             self,
             command=cmd.finalize(),
@@ -70,7 +82,7 @@ class SE_AdapterRemovalNode(CommandNode):
         )
 
 
-class PE_AdapterRemovalNode(CommandNode):
+class PE_AdapterRemoval2Node(CommandNode):
     def __init__(
         self,
         input_file_1,
@@ -81,7 +93,9 @@ class PE_AdapterRemovalNode(CommandNode):
         options={},
         dependencies=(),
     ):
-        cmd = _get_common_parameters(threads=threads, options=options)
+        # See below for parameters in common between SE/PE
+        cmd = AtomicCmdBuilder("AdapterRemoval", CHECK_VERSION=_VERSION_2_CHECK)
+        cmd = _set_common_parameters(cmd, threads=threads, options=options)
 
         # Prefix for output files, to ensure that all end up in temp folder
         cmd.set_option("--basename", "%(TEMP_OUT_BASENAME)s")
@@ -96,13 +110,21 @@ class PE_AdapterRemovalNode(CommandNode):
             OUT_DISCARDED=output_tmpl % ("discarded",),
         )
 
+        self.files = {
+            "Statistics": output_prefix + ".settings",
+            "Singleton": output_tmpl % ("singleton.truncated",),
+            "Paired": output_tmpl % ("pair{Pair}.truncated",),
+        }
+
         if collapse:
             cmd.set_option("--collapse")
-
             cmd.set_kwargs(
                 OUT_COLLAPSED=output_tmpl % ("collapsed",),
                 OUT_COLLAPSED_TRUNC=output_tmpl % ("collapsed.truncated",),
             )
+
+            self.files["Collapsed"] = output_tmpl % ("collapsed",)
+            self.files["CollapsedTruncated"] = output_tmpl % ("collapsed.truncated",)
 
         cmd.set_option("--file1", "%(IN_READS_1)s")
         cmd.set_option("--file2", "%(IN_READS_2)s")
@@ -120,9 +142,118 @@ class PE_AdapterRemovalNode(CommandNode):
         )
 
 
-def _get_common_parameters(options, threads=1):
-    cmd = AtomicCmdBuilder("AdapterRemoval", CHECK_VERSION=_VERSION_CHECK)
+class SE_AdapterRemoval3Node(CommandNode):
+    def __init__(
+        self,
+        input_file,
+        output_prefix,
+        threads=1,
+        options=None,
+        dependencies=(),
+    ):
+        options = {} if options is None else dict(options)
+        # Option is no longer supported (output is always Phred+33)
+        options.pop("--qualitybase-output", None)
 
+        # See below for parameters in common between SE/PE
+        cmd = AtomicCmdBuilder("adapterremoval3", CHECK_VERSION=_VERSION_3_CHECK)
+        cmd = _set_common_parameters(cmd, threads=threads, options=options)
+
+        # Prefix for output files, ensure that all end up in temp folder
+        cmd.set_option("--out-prefix", "%(TEMP_OUT_BASENAME)s")
+
+        output_tmpl = output_prefix + ".%s.fastq.gz"
+        cmd.set_kwargs(
+            TEMP_OUT_BASENAME=os.path.basename(output_prefix),
+            OUT_JSON=output_prefix + ".json",
+            OUT_HTML=output_prefix + ".html",
+            OUT_MATE_1=output_tmpl % ("r1",),
+            OUT_DISCARDED=output_tmpl % ("discarded",),
+            IN_READS_1=input_file,
+        )
+
+        cmd.set_option("--in-file1", "%(IN_READS_1)s")
+        cmd.set_option("--out-discarded", "%(OUT_DISCARDED)s")
+
+        apply_options(cmd, options)
+
+        self.files = {
+            "Statistics": output_prefix + ".json",
+            "Single": output_tmpl % ("r1",),
+        }
+
+        CommandNode.__init__(
+            self,
+            command=cmd.finalize(),
+            threads=threads,
+            description="trimming SE adapters from %s"
+            % fileutils.describe_files(input_file),
+            dependencies=dependencies,
+        )
+
+
+class PE_AdapterRemoval3Node(CommandNode):
+    def __init__(
+        self,
+        input_file_1,
+        input_file_2,
+        output_prefix,
+        collapse=True,
+        threads=1,
+        options={},
+        dependencies=(),
+    ):
+        options = {} if options is None else dict(options)
+        # Option is no longer supported (output is always Phred+33)
+        options.pop("--qualitybase-output", None)
+
+        # See below for parameters in common between SE/PE
+        cmd = AtomicCmdBuilder("adapterremoval3", CHECK_VERSION=_VERSION_3_CHECK)
+        cmd = _set_common_parameters(cmd, threads=threads, options=options)
+
+        # Prefix for output files, to ensure that all end up in temp folder
+        cmd.set_option("--out-prefix", "%(TEMP_OUT_BASENAME)s")
+
+        output_tmpl = output_prefix + ".%s.fastq.gz"
+        cmd.set_kwargs(
+            TEMP_OUT_BASENAME=os.path.basename(output_prefix),
+            OUT_JSON=output_prefix + ".json",
+            OUT_HTML=output_prefix + ".html",
+            OUT_READS_1=output_tmpl % ("r1",),
+            OUT_READS_2=output_tmpl % ("r2",),
+            OUT_SINGLETON=output_tmpl % ("singleton",),
+            OUT_DISCARDED=output_tmpl % ("discarded",),
+        )
+
+        self.files = {
+            "Statistics": output_prefix + ".json",
+            "Singleton": output_tmpl % ("singleton",),
+            "Paired": output_tmpl % ("r{Pair}",),
+        }
+
+        if collapse:
+            cmd.set_option("--merge")
+            cmd.set_kwargs(OUT_MERGED=output_tmpl % ("merged",))
+            self.files["Collapsed"] = output_tmpl % ("merged",)
+
+        cmd.set_option("--in-file1", "%(IN_READS_1)s")
+        cmd.set_option("--in-file2", "%(IN_READS_2)s")
+        cmd.set_kwargs(IN_READS_1=input_file_1, IN_READS_2=input_file_2)
+        cmd.set_option("--out-discarded", "%(OUT_DISCARDED)s")
+
+        apply_options(cmd, options)
+
+        CommandNode.__init__(
+            self,
+            command=cmd.finalize(),
+            threads=threads,
+            description="trimming PE adapters from %s"
+            % fileutils.describe_paired_files(input_file_1, input_file_2),
+            dependencies=dependencies,
+        )
+
+
+def _set_common_parameters(cmd, options, threads=1):
     # Gzip compress FASTQ files
     cmd.set_option("--gzip")
 
