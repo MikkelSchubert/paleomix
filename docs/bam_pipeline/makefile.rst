@@ -116,10 +116,10 @@ The "AdapterRemoval" subsection allows for options that are applied when Adapter
         :lineno-start: 20
         :lines: 20-22
 
-    These two options are used to specify the adapter sequences used to identify and trim reads that contain adapter contamination. Thus, the sequence provided for `--adapter1` is expected to be found in the mate 1 reads, and the sequence specified for `--adapter2`` is expected to be found in the mate 2 reads. In both cases, these should be specified as in the orientation that appear in these files (i.e. it should be possible to grep the files for these, assuming that the reads were long enough, and treating Ns as wildcards). It is very important that these be specified correctly. When using AdapterRemoval v3, appropriate adapters will automatically be selected, if not manually specified. Please refer to the `AdapterRemoval documentation`_ for more information.
+    These two options are used to specify the adapter sequences used to identify and trim reads that contain adapter contamination. Thus, the sequence provided for `--adapter1` is expected to be found in the mate 1 reads, and the sequence specified for `--adapter2` is expected to be found in the mate 2 reads. In both cases, these should be specified as in the orientation that appear in these files (i.e. it should be possible to grep the files for these, assuming that the reads were long enough, and treating Ns as wildcards). It is very important that these be specified correctly. When using AdapterRemoval v3, appropriate adapters will automatically be selected, if not manually specified. Please refer to the `AdapterRemoval documentation`_ for more information.
 
     .. note::
-        As of version AdapterRemoval 2.1, it is possible to use multiple threads to speed up trimming of adapter sequences. This is accomplished not by setting the ``--threads`` command-line option in the makefile, but by supplying the ``--adapterremoval-max-threads`` option to the BAM pipeline itself:
+        As of version AdapterRemoval 2.1, it is possible to use multiple threads to speed up trimming of adapter sequences. This is accomplished not by setting the `--threads` command-line option in the makefile, but by supplying the `--adapterremoval-max-threads` option to the BAM pipeline itself:
 
         .. code-block:: bash
 
@@ -137,7 +137,7 @@ The "AdapterRemoval" subsection allows for options that are applied when Adapter
     The minimum length required after read merging, adapter trimming, and base-quality quality trimming; resulting reads shorter than this length are discarded, and thereby excluded from further analyses by the pipeline. A value of at least 25 bp is recommended to cut down on the rate of spurious alignments; if possible, a value of 30 bp may be used to greatly reduce the fraction of spurious alignments, with smaller gains for greater minimums [Schubert2012]_.
 
     .. warning::
-        The default value used by PALEOMIX for ``--minlength`` (25 bp) differs from the default value for AdapterRemoval (15 bp). Thus, if a minimum length of 15 bp is desired, it is necessarily to explicitly state so in the makefile, simply commenting out this command-line argument is not sufficient.
+        The default value used by PALEOMIX for `--minlength` (25 bp) differs from the default value for AdapterRemoval (15 bp). Thus, if a minimum length of 15 bp is desired, it is necessarily to explicitly state so in the makefile, simply commenting out this command-line argument is not sufficient.
 
 
 **Options \:\: AdapterRemoval \:\: --collapse**
@@ -147,7 +147,7 @@ The "AdapterRemoval" subsection allows for options that are applied when Adapter
         :lineno-start: 27
         :lines: 27
 
-    If enabled, AdapterRemoval will attempt to combine overlapping paired-end reads into a single (potentially longer) sequence. This has at least two advantages, namely that longer reads allow for less ambiguous alignments against the target reference genome, and that the fidelity of the overlapping region (potentially the entire read) is improved by selecting the highest quality base when discrepancies are observed. The names of reads thus merged are prefixed with either ``M_`` or ``MT_``, with the latter marking reads that have been trimmed from the 5' or 3' termini following collapse, and which therefore do not represent the full insert. To disable this behavior, set the option to ``no`` (without quotes)::
+    If enabled, AdapterRemoval will attempt to combine overlapping paired-end reads into a single (potentially longer) sequence. This has at least two advantages, namely that longer reads allow for less ambiguous alignments against the target reference genome, and that the fidelity of the overlapping region (potentially the entire read) is improved by selecting the highest quality base when discrepancies are observed. The names of reads thus merged are prefixed with either `M_` or `MT_`, with the latter marking reads that have been trimmed from the 5' or 3' termini following collapse, and which therefore do not represent the full insert. To disable this behavior, set the option to `no` (without quotes)::
 
         --collapse: yes  # Option enabled
         --collapse: no   # Option disabled
