@@ -46,7 +46,6 @@ Options:
 #     --adapter2: AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT
      # Some BAM pipeline defaults differ from AR defaults;
      # To override, change these value(s):
-     --mm: 3
      --minlength: 25
      # Extra features enabled by default; change 'yes' to 'no' to disable
      --collapse: yes
