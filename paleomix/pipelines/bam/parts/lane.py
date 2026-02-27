@@ -231,6 +231,8 @@ class Lane:
 
     def _cleanup_options(self, aligner):
         options = {
+            # Add mate-score tag required by `samtools markdup`
+            "--add-mate-score": None,
             "--rg-id": self.tags["ID"],
             "--rg": [
                 "%s:%s" % (tag_name, self.tags[tag_name])

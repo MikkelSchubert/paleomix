@@ -26,7 +26,7 @@ import os
 import paleomix.common.system
 import paleomix.common.versions as versions
 from paleomix.atomiccmd.builder import AtomicJavaCmdBuilder
-from paleomix.common.fileutils import describe_files, swap_ext, try_rmtree
+from paleomix.common.fileutils import swap_ext, try_rmtree
 from paleomix.node import CommandNode
 
 
@@ -98,61 +98,6 @@ class ValidateBAMNode(PicardNode):
                 builder.add_option("IGNORE", "REF_SEQ_TOO_LONG_FOR_BAI", sep="=")
         except versions.VersionRequirementError:
             pass  # Ignored here, handled elsewhere
-
-
-class MarkDuplicatesNode(PicardNode):
-    def __init__(
-        self,
-        config,
-        input_bams,
-        output_bam,
-        output_metrics=None,
-        keep_dupes=False,
-        dependencies=(),
-    ):
-        params = picard_command(config, "MarkDuplicates")
-        _set_max_open_files(params, "MAX_FILE_HANDLES")
-
-        params.set_option("OUTPUT", "%(OUT_BAM)s", sep="=")
-        params.set_option("METRICS_FILE", "%(OUT_METRICS)s", sep="=")
-        # Validation is mostly left to manual ValidateSamFile runs; required
-        # because .csi indexed BAM records can have "invalid" bins.
-        params.set_option("VALIDATION_STRINGENCY", "LENIENT", sep="=")
-        params.add_multiple_options("I", input_bams, sep="=")
-
-        if not keep_dupes:
-            # Remove duplicates from output by default to save disk-space
-            params.set_option("REMOVE_DUPLICATES", "True", sep="=", fixed=False)
-
-        output_metrics = output_metrics or swap_ext(output_bam, ".metrics")
-        params.set_kwargs(OUT_BAM=output_bam, OUT_METRICS=output_metrics)
-
-        PicardNode.__init__(
-            self,
-            command=params.finalize(),
-            description="detecting PCR duplicates in %s"
-            % (describe_files(input_bams),),
-            dependencies=dependencies,
-        )
-
-
-class MergeSamFilesNode(PicardNode):
-    def __init__(self, config, input_bams, output_bam, dependencies=()):
-        builder = picard_command(config, "MergeSamFiles")
-        builder.set_option("OUTPUT", "%(OUT_BAM)s", sep="=")
-        builder.set_option("SO", "coordinate", sep="=")
-        # Validation is mostly left to manual ValidateSamFile runs; required
-        # because .csi indexed BAM records can have "invalid" bins.
-        builder.set_option("VALIDATION_STRINGENCY", "LENIENT", sep="=")
-        builder.add_multiple_options("I", input_bams, sep="=")
-
-        builder.set_kwargs(OUT_BAM=output_bam)
-        PicardNode.__init__(
-            self,
-            command=builder.finalize(),
-            description="merging %i file(s) into %s" % (len(input_bams), output_bam),
-            dependencies=dependencies,
-        )
 
 
 ###############################################################################

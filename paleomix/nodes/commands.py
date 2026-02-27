@@ -115,9 +115,7 @@ class DepthHistogramNode(CommandNode):
 
 
 class FilterCollapsedBAMNode(CommandNode):
-    def __init__(
-        self, config, input_bams, output_bam, keep_dupes=True, dependencies=()
-    ):
+    def __init__(self, input_bams, output_bam, keep_dupes=True, dependencies=()):
         merge = merge_bam_files_command(input_bams)
 
         builder = factory.new("rmdup_collapsed")

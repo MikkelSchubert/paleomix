@@ -29,7 +29,7 @@ from paleomix.nodes.mapdamage import (
     MapDamagePlotNode,
     MapDamageRescaleNode,
 )
-from paleomix.nodes.picard import MarkDuplicatesNode
+from paleomix.nodes.samtools import MarkDupNode
 from paleomix.nodes.validation import DetectInputDuplicationNode
 from paleomix.pipelines.bam.nodes import index_and_validate_bam
 
@@ -104,22 +104,29 @@ class Library:
         return files_and_nodes
 
     def _remove_pcr_duplicates(self, config, prefix, bams, strategy):
-        rmdup_cls = {"collapsed": FilterCollapsedBAMNode, "normal": MarkDuplicatesNode}
-
-        keep_duplicates = False
-        if isinstance(strategy, str) and (strategy.lower() == "mark"):
-            keep_duplicates = True
+        keep_duplicates = isinstance(strategy, str) and strategy.lower() == "mark"
 
         results = {}
         for key, files_and_nodes in bams.items():
-            output_filename = self.folder + ".rmdup.%s.bam" % key
-            node = rmdup_cls[key](
-                config=config,
-                input_bams=list(files_and_nodes.keys()),
-                output_bam=output_filename,
-                keep_dupes=keep_duplicates,
-                dependencies=list(files_and_nodes.values()),
-            )
+            output_filename = "{}.rmdup.{}.bam".format(self.folder, key)
+
+            if key == "collapsed":
+                node = FilterCollapsedBAMNode(
+                    input_bams=list(files_and_nodes.keys()),
+                    output_bam=output_filename,
+                    keep_dupes=keep_duplicates,
+                    dependencies=list(files_and_nodes.values()),
+                )
+            elif key == "normal":
+                node = MarkDupNode(
+                    in_bams=list(files_and_nodes.keys()),
+                    out_bam=output_filename,
+                    out_stats="{}.rmdup.{}.stats".format(self.folder, key),
+                    keep_duplicates=keep_duplicates,
+                    dependencies=list(files_and_nodes.values()),
+                )
+            else:
+                raise RuntimeError("unexpected read type {!r}".format(key))
 
             # Indexing is required if we wish to calculate per-region statistics
             validated_node = index_and_validate_bam(
