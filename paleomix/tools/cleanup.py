@@ -233,7 +233,7 @@ def _run_cleanup_pipeline(args):
 
         return int(any(processes.join_procs(procs)))
     except Exception:
-        for proc in procs.values():
+        for proc in procs:
             proc.terminate()
         raise
 
