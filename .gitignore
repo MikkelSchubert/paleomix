@@ -16,10 +16,12 @@ sdist/
 *.egg/
 *.egg-info/
 .eggs/
+.nox/
 .tox/
 .vscode/
 .mypy_cache/
 
 # Misc
 venv
+.venv
 docs/_build/
