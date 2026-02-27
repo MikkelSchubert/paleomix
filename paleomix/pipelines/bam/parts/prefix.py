@@ -23,7 +23,7 @@
 import os
 
 from paleomix.common.utilities import safe_coerce_to_tuple
-from paleomix.nodes.picard import MergeSamFilesNode
+from paleomix.nodes.samtools import BAMMergeNode
 from paleomix.nodes.validation import DetectInputDuplicationNode
 from paleomix.pipelines.bam.nodes import index_and_validate_bam
 
@@ -57,8 +57,7 @@ class Prefix:
             self.folder, self.target, prefix["Name"] + ".validated"
         )
 
-        node = MergeSamFilesNode(
-            config=config,
+        node = BAMMergeNode(
             input_bams=list(files_and_bams),
             output_bam=output_filename,
             dependencies=self.datadup_check,
