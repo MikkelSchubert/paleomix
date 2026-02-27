@@ -8,10 +8,10 @@ Software requirements
 In addition to the requirements listed in the :ref:`installation` section, the BAM pipeline requires several other pieces of software. The version numbers indicates the oldest supported version of each program:
 
 * `AdapterRemoval`_ v2.2.0 [Schubert2016]_
-* `SAMTools`_ v1.3.1 [Li2009b]_
-* `Picard Tools`_ v1.137
+* `SAMTools`_ v1.6.0 [Li2009b]_
+* `Picard Tools`_ v1.137 (optional)
 
-The Picard Tools JAR-file (`picard.jar`) is expected to be located in `~/install/jar_root` by default, but this behavior may be changed using either the `--jar-root` command-line option, or via the global configuration file (see section :ref:`bam_configuration`)::
+If validation is enabled (this is generally not needed), then the Picard Tools JAR-file (`picard.jar`) is expected to be located in `~/install/jar_root` by default, but this behavior may be changed using either the `--jar-root` command-line option, or via the global configuration file (see section :ref:`bam_configuration`)::
 
     $ mkdir -p ~/install/jar_root
     $ wget -O ~/install/jar_root/picard.jar https://github.com/broadinstitute/picard/releases/download/2.23.3/picard.jar
