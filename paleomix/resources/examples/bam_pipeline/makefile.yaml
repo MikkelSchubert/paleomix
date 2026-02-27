@@ -133,8 +133,9 @@ Prefixes:
 
 
 # Targets are specified using the following structure:
-# The output-files will be prefixed with 'ExampleProject.'
-ExampleProject:
+
+# The output-files for this target will be prefixed with 'Example_Sample_1'.
+Example_Sample_1:
   # The Sample tag will be set to 'Synthetic_Sample_1'
   Synthetic_Sample_1:
     # In this example, libraries are named using their DNA barcode:
@@ -154,6 +155,11 @@ ExampleProject:
       # Library contains a SE lane
       Lane_1: data/GCTCTG_L1_R1_*.fastq.gz
 
+# The output-files for this target will be prefixed with 'Example_Sample_2'.
+# You can specify any number of targets, provided that the names are unique
+Example_Sample_2:
+  # The Sample tag will be set to 'Synthetic_Sample_2'
+  Synthetic_Sample_2:
     # Library containing both a PE and a SE lane
     TGCTCA:
       # Options can be overridden at any level up to this level
