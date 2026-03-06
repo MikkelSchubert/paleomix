@@ -7,7 +7,7 @@ dependencies:
   - adapterremoval>=2.3,<3
   - samtools>=1.6,<2
   - picard>=2.10,<3
-  - bowtie2>=2.3,<2.5
+  - bowtie2>=2.3,<3
   - bwa>=0.7.15,<0.8
   - mapDamage2>=2.2.1,<2.3
   - r-base
