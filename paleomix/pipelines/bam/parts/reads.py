@@ -101,7 +101,7 @@ class Reads:
         # Always convert output to Phred+33, to normalize ARv2 and ARv3 behavior
         ar_options["--qualitybase"] = self.quality_offset
         ar_options["--qualitybase-output"] = "33"
-        self.quality_offset = "33"
+        self.quality_offset = 33
 
         init_args = {
             "output_prefix": os.path.join(self.folder, "reads"),
