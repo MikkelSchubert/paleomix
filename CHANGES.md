@@ -1,5 +1,63 @@
 # Changelog
 
+## [1.4.1] - 2026-06-01
+
+### Fixed
+
+- Fixed spurious "Phred+64 not supported" error error when using BWA mem (#126)
+
+## [1.4.0] - 2026-03-06
+
+PALEOMIX v1.4.0 represents the last major update to the 1.x branch of PALEOMIX,
+excluding any potential bug-fix releases, as all feature development takes place
+on the 2.x (`main`) branch.
+
+This update fixes several pain-points that do not require large-scale changes to
+the pipeline, add some requested features, and fix some minor bugs.
+
+#### Added
+
+ - added support for large Bowtie2 index files (#67)
+ - added support for AdapterRemoval v3 (#116)
+
+#### Changed
+
+ - Python 3.8+ is now required
+ - Bowtie2 indexing is now run in multi-threaded mode, reducing the time needed
+   to index a genome
+ - mapDamage plotting is no longer enabled by default
+ - Validation of BAM files using `picard ValidateSamFile` is no longer enabled
+   by default, but can be enabled via `Features` options.
+ - The `--validation` command-line option has been deprecated, but is still
+   respected for now, and takes priority over `Feature` settings
+ - Default to using available CPUs rather than total CPUs. This improves
+   compatibility with workload managers like Slurm (#76)
+ - Reads in Phred+64/Solexa format are now always converted to Phred+33 (#115)
+ - Switched to using SAMTools for duplicate removal and file merging. This
+   removes the dependency on Picard, unless validation is enabled (#117)
+ - The AdapterRemoval option `--mm` no longer defaults to 3, but instead uses the
+   program default: 3 for AdapterRemoval v2, 1/6 for AdapterRemoval v3 (#121)
+
+#### Fixed
+
+ - fixed handling of --adapter-list option for AdapterRemoval (#114)
+ - fixed cascading errors in script used for pre-processing of BAM files (#118)
+
+## [1.3.10] - 2025-06-01
+
+#### Fixed
+  - Fixed `example` command for the phylogenetic pipeline failing.
+  - Removed 'defaults' conda channel
+
+## [1.3.9] - 2025-03-19
+
+#### Fixed
+  - Fixed use of deprecated `pipes` module
+  - Fixed use of deprecated functions for accessing bundled resources
+  - Fixed regression in tests
+  - Fixed the `dupcheck` command not being exposed, despite error commands
+    indicating how to run it
+
 ## [1.3.8] - 2023-05-19
 
 #### Fixed
@@ -793,6 +851,9 @@ the (partially) updated documentation now hosted on ReadTheDocs.
   - Switching to more traditional version-number tracking.
 
 
+[1.4.1]: https://github.com/MikkelSchubert/paleomix/compare/v1.4.0...v1.4.1
+[1.4.0]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.9...v1.4.0
+[1.3.9]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.8...v1.3.9
 [1.3.8]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.7...v1.3.8
 [1.3.7]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.6...v1.3.7
 [1.3.6]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.5...v1.3.6
