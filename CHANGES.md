@@ -1,6 +1,12 @@
 # Changelog
 
-## [1.4.0] - Unreleased
+## [1.4.1] - 2026-06-01
+
+### Fixed
+
+- Fixed spurious "Phred+64 not supported" error error when using BWA mem (#126)
+
+## [1.4.0] - 2026-03-06
 
 PALEOMIX v1.4.0 represents the last major update to the 1.x branch of PALEOMIX,
 excluding any potential bug-fix releases, as all feature development takes place
@@ -34,9 +40,14 @@ the pipeline, add some requested features, and fix some minor bugs.
 
 #### Fixed
 
- - fixed `example` commands always producing the BAM pipeline example files (#71)
  - fixed handling of --adapter-list option for AdapterRemoval (#114)
  - fixed cascading errors in script used for pre-processing of BAM files (#118)
+
+## [1.3.10] - 2025-06-01
+
+#### Fixed
+  - Fixed `example` command for the phylogenetic pipeline failing.
+  - Removed 'defaults' conda channel
 
 ## [1.3.9] - 2025-03-19
 
@@ -840,6 +851,7 @@ the (partially) updated documentation now hosted on ReadTheDocs.
   - Switching to more traditional version-number tracking.
 
 
+[1.4.1]: https://github.com/MikkelSchubert/paleomix/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.9...v1.4.0
 [1.3.9]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.8...v1.3.9
 [1.3.8]: https://github.com/MikkelSchubert/paleomix/compare/v1.3.7...v1.3.8
