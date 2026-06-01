@@ -20,13 +20,13 @@
 # -- Project information -----------------------------------------------------
 
 project = "PALEOMIX"
-copyright = "2015, Mikkel Schubert"
+copyright = "%Y, Mikkel Schubert"
 author = "Mikkel Schubert"
 
 # The short X.Y version
-version = "1.3"
+version = "1.4"
 # The full version, including alpha/beta/rc tags
-release = "1.4.0"
+release = "1.4.1"
 
 
 # -- General configuration ---------------------------------------------------
