@@ -493,6 +493,7 @@ class ReblockGVCFNode(CommandNode):
             java_options=java_options,
             extra_files=[
                 InputFile(f"{in_reference}.fai"),
+                InputFile(f"{in_vcf}.tbi"),
                 OutputFile(f"{out_vcf}.tbi"),
             ],
         )
