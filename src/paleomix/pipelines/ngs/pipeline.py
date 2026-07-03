@@ -821,7 +821,6 @@ def genotype_samples(args, genome, samples, external_samples, settings):
                         "--output-type": output_type,
                         # BCFtools requires a masked FASTA since it will use non-ACGTN as is
                         "--gvcf": InputFile(genome.filename_masked),
-                        "--merge": "none",
                         "--regions-overlap": "pos",
                         "--regions-file": InputFile(interval["filename:bed"]),
                         f"--write-index={index_fmt}": None,
