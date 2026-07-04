@@ -81,6 +81,9 @@ class TempOutputFile(OutputFile):
         super().__init__(os.path.basename(path), temporary=True)
 
 
+# May be passed to stdout/stderr arguments to disable automatic capture of output
+NOT_CAPTURED = -100
+
 IOFileTypes: TypeAlias = Union[InputFile, OutputFile, TempInputFile, TempOutputFile]
 AtomicFileTypes: TypeAlias = Union[AuxiliaryFile, Executable, IOFileTypes]
 
@@ -89,7 +92,7 @@ WrappedPipeType: TypeAlias = Union[int, IOFileTypes, "AtomicCmd"]
 # Types that can be passed as values for STDIN, STDOUT, and STDERR
 PipeType: TypeAlias = Union[None, str, Path, WrappedPipeType]
 
-OptionValueType: TypeAlias = Union[str, float, IOFileTypes, None]
+OptionValueType: TypeAlias = Union[str, int, float, IOFileTypes, None]
 OptionsType: TypeAlias = dict[
     str, Union[OptionValueType, list[OptionValueType], tuple[OptionValueType, ...]]
 ]
@@ -160,8 +163,8 @@ class AtomicCmd:
         Keyword arguments:
             stdin -- A string path, InputFile, DEVNULL, or an AtomicCmd instance.
                      If stdin is an AtomicCmd instance, stdin is read from its stdout.
-            stdout -- A string path, OutputFile, PIPE, or DEVNULL.
-            stderr -- A string path, OutputFile, or DEVNULL.
+            stdout -- A string path, OutputFile, PIPE, DEVNULL, or NOT_CAPTURED.
+            stderr -- A string path, OutputFile, or DEVNULL, or NOT_CAPTURED.
             set_cwd -- If true, cwd is set to the temporary folder before executing the
                        command. InputFiles, OutputFiles, and AuxiliaryFiles are
                        automatically converted to paths relative to the temporary dir.
@@ -566,8 +569,10 @@ class AtomicCmd:
         if pipe is None:
             return self._wrap_pipe_default(filetype=filetype, out_name=out_name)
         elif isinstance(pipe, int):
-            if pipe == AtomicCmd.DEVNULL or (
-                pipe == AtomicCmd.PIPE and out_name == "stdout"
+            if (
+                pipe == AtomicCmd.DEVNULL
+                or (pipe == AtomicCmd.PIPE and out_name == "stdout")
+                or (pipe == NOT_CAPTURED and out_name in ("stdout", "stderr"))
             ):
                 return pipe
         elif isinstance(pipe, _AtomicFile):
@@ -613,7 +618,7 @@ class AtomicCmd:
         mode: str,
     ) -> int | IO[bytes] | None:
         if isinstance(pipe, int):
-            return pipe
+            return None if pipe == NOT_CAPTURED else pipe
         elif isinstance(pipe, AtomicCmd):
             if pipe._proc is None:
                 raise CmdError("attempted to pipe non-running command")
@@ -910,6 +915,8 @@ def _build_stdout(
         lines.append(f"{prefix}<PIPE>")
     elif pipe == command.DEVNULL:
         lines.append(f"{prefix}/dev/null")
+    elif pipe == NOT_CAPTURED:
+        lines.append(f"{prefix}<NOT_CAPTURED>")
     else:
         raise TypeError(pipe)  # pragma: no coverage
 
@@ -925,6 +932,8 @@ def _build_stderr(command: AtomicCmd, indent: int, lines: list[str]) -> None:
         lines.append(f"{prefix}{shlex.quote(path)}")
     elif pipe == command.DEVNULL:
         lines.append(f"{prefix}/dev/null")
+    elif pipe == NOT_CAPTURED:
+        lines.append(f"{prefix}<NOT_CAPTURED>")
     else:
         raise TypeError(pipe)  # pragma: no coverage
 
