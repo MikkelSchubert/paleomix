@@ -5,7 +5,7 @@ from __future__ import annotations
 import copy
 import os.path
 import string
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from typing import Union
 
 from typing_extensions import TypeAlias
@@ -18,9 +18,11 @@ class LayoutError(Exception):
 
 
 class Layout:
+    __slots__ = ("_fields", "_layout", "kwargs")
+
     kwargs: dict[str, str | int]
-    _layout: dict[str, tuple[str, ...]]
-    _fields: set[str]
+    _layout: Mapping[str, tuple[str, ...]]
+    _fields: frozenset[str]
 
     def __init__(self, layout: LayoutType, **kwargs: str | int) -> None:
         self.kwargs = kwargs
@@ -49,8 +51,8 @@ class Layout:
     def update(self, **kwargs: str | int) -> Layout:
         self._validate_kwargs(kwargs)
 
-        layout = copy.deepcopy(self)
-        layout.kwargs.update(kwargs)
+        layout = copy.copy(self)
+        layout.kwargs = {**self.kwargs, **kwargs}
 
         return layout
 
@@ -92,7 +94,7 @@ class Layout:
                 raise LayoutError(f"invalid value {value!r}")
 
     @staticmethod
-    def _collect_fields(layout: dict[str, tuple[str, ...]]) -> set[str]:
+    def _collect_fields(layout: dict[str, tuple[str, ...]]) -> frozenset[str]:
         fmt = string.Formatter()
         fields: set[str] = set()
         for path in layout.values():
@@ -105,4 +107,4 @@ class Layout:
                     elif name is not None:
                         fields.add(name)
 
-        return fields
+        return frozenset(fields)
