@@ -636,7 +636,7 @@ def test_try_remove__missing(tmp_path: Path) -> None:
 
 
 def test_try_remove__non_file(tmp_path: Path) -> None:
-    with pytest.raises(OSError, match="Is a directory"):
+    with pytest.raises(OSError, match=r"Is a directory|Operation not permitted"):
         try_remove(tmp_path)
 
 
