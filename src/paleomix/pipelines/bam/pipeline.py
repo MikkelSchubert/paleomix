@@ -9,7 +9,7 @@ from collections import defaultdict
 import paleomix
 import paleomix.common.logging
 import paleomix.node
-from paleomix.common.fileutils import swap_ext, try_rmdirs
+from paleomix.common.fileutils import prune_empty_dirs, swap_ext
 from paleomix.common.layout import Layout
 from paleomix.common.yaml import YAMLError
 from paleomix.nodegraph import CleanupStrategy
@@ -731,6 +731,6 @@ def run(config):
         logger.info("Cleaning up temporary directories")
         for makefile in makefiles:
             for sample in makefile["Samples"]:
-                try_rmdirs(os.path.join(config.destination, f"{sample}.cache"))
+                prune_empty_dirs(os.path.join(config.destination, f"{sample}.cache"))
 
     return returncode

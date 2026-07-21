@@ -190,6 +190,13 @@ def try_remove(filename: PathTypes) -> bool:
     return _try_rm_wrapper(os.remove, filename)
 
 
+def try_rmdir(dirname: PathTypes) -> bool:
+    """Tries to rmdir a directory. Unlike os.rmdir, the function does not raise an
+    exception if the dir does not exist, but does raise exceptions on other errors. The
+    return value reflects whether or not the dir was actually removed."""
+    return _try_rm_wrapper(os.rmdir, dirname)
+
+
 def try_rmtree(filename: PathTypes) -> bool:
     """Tries to remove a dir-tree. Unlike shutil.rmtree, the function does not raise
     an exception if the file does not exist, but does raise exceptions on other
@@ -198,20 +205,23 @@ def try_rmtree(filename: PathTypes) -> bool:
     return _try_rm_wrapper(shutil.rmtree, filename)
 
 
-def try_rmdirs(dirpath: PathTypes) -> bool:
+def prune_empty_dirs(root: PathTypes) -> bool:
+    """Remove all empty directories from a subtree, including empty dirs resulting from
+    the removal of other empty dirs. If the final tree is empty, the root folder is
+    removed as well. Returns true if the root was removed."""
     try:
-        items = os.scandir(dirpath)
+        items = os.scandir(root)
     except FileNotFoundError:
         return True
 
     is_empty = True
     for it in items:
-        if it.is_symlink() or not it.is_dir() or not try_rmdirs(it.path):
+        if it.is_symlink() or not it.is_dir() or not prune_empty_dirs(it.path):
             is_empty = False
 
     if is_empty:
         # If _try_rm_wrapper returns then the folder no longer exists
-        _try_rm_wrapper(os.rmdir, dirpath)
+        _try_rm_wrapper(os.rmdir, root)
 
     return is_empty
 
@@ -350,7 +360,7 @@ def _atomic_file_copy(
 
 
 def _sh_wrapper(
-    func: Callable[[PathTypes, PathTypes], Any],
+    func: Callable[[PathTypes, PathTypes], None],
     source: PathTypes,
     destination: PathTypes,
 ) -> None:
@@ -368,7 +378,8 @@ def _sh_wrapper(
     except FileNotFoundError:
         if source and destination and os.path.exists(source):
             make_dirs(os.path.dirname(destination))
-            return func(source, destination)
+            func(source, destination)
+            return
         raise
 
 
