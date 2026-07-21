@@ -21,16 +21,17 @@ from paleomix.common.fileutils import (
     create_temp_dir,
     describe_files,
     describe_paired_files,
-    fspath,
     make_dirs,
     missing_executables,
     missing_files,
     move_file,
     open_rb,
     open_rt,
+    prune_empty_dirs,
     reroot_path,
     swap_ext,
     try_remove,
+    try_rmdir,
     try_rmtree,
 )
 from paleomix.common.testing import SetWorkingDirectory
@@ -566,7 +567,7 @@ IOFunc = Callable[[str, str], IO[str]]
 @pytest.mark.parametrize("func", [open, gzip.open, bz2.open])
 def test_open_ro(func: IOFunc, tmp_path: Path) -> None:
     filename = tmp_path / "file.fasta"
-    with func(fspath(filename), "wt") as handle:
+    with func(os.fspath(filename), "wt") as handle:
         handle.write(_FASTA_TEXT)
 
     with open_rt(filename) as handle:
@@ -576,7 +577,7 @@ def test_open_ro(func: IOFunc, tmp_path: Path) -> None:
 @pytest.mark.parametrize("func", [open, gzip.open, bz2.open])
 def test_open_ro__mode(func: IOFunc, tmp_path: Path) -> None:
     filename = tmp_path / "file.fasta"
-    with func(fspath(filename), "wt") as handle:
+    with func(os.fspath(filename), "wt") as handle:
         handle.write(_FASTA_TEXT)
 
     with open_rt(filename) as handle:
@@ -586,7 +587,7 @@ def test_open_ro__mode(func: IOFunc, tmp_path: Path) -> None:
 @pytest.mark.parametrize("func", [open, gzip.open, bz2.open])
 def test_open_ro__binary(func: IOFunc, tmp_path: Path) -> None:
     filename = tmp_path / "file.fasta"
-    with func(fspath(filename), "wt") as handle:
+    with func(os.fspath(filename), "wt") as handle:
         handle.write(_FASTA_TEXT)
 
     with open_rb(filename) as handle:
@@ -634,10 +635,97 @@ def test_try_remove__missing(tmp_path: Path) -> None:
     assert not fpath.exists()
 
 
-@pytest.mark.skip(reason="fails on OSX; throws PermissionError")
 def test_try_remove__non_file(tmp_path: Path) -> None:
-    with pytest.raises(OSError, match="Is a directory"):
+    with pytest.raises(OSError, match=r"Is a directory|Operation not permitted"):
         try_remove(tmp_path)
+
+
+###############################################################################
+###############################################################################
+# Tests for 'try_rmdir'
+
+
+def test_try_rmdir(tmp_path: Path) -> None:
+    dirname = tmp_path / "test"
+    dirname.mkdir()
+    assert try_rmdir(dirname)
+    assert not dirname.exists()
+
+
+def test_try_rmdir__missing(tmp_path: Path) -> None:
+    dirname = tmp_path / "test"
+    assert not try_rmdir(dirname)
+    assert not dirname.exists()
+
+
+def test_try_rmdir__non_file(tmp_path: Path) -> None:
+    dirname = tmp_path / "test"
+    dirname.touch()
+    with pytest.raises(OSError, match="Not a directory"):
+        try_rmdir(dirname)
+
+
+###############################################################################
+###############################################################################
+# Tests for 'prune_empty_dirs'
+
+
+def test_prune_empty_dirs(tmp_path: Path) -> None:
+    dirname = tmp_path / "test"
+    dirname.mkdir()
+    assert prune_empty_dirs(dirname)
+    assert not dirname.exists()
+
+
+def test_prune_empty_dirs_recursive(tmp_path: Path) -> None:
+    dirname = tmp_path / "test"
+    dirname.mkdir()
+
+    (dirname / "foo" / "bar").mkdir(parents=True)
+    (dirname / "zod").mkdir()
+
+    assert prune_empty_dirs(dirname)
+    assert not dirname.exists()
+
+
+def test_prune_empty_dirs_recursive_keeps_non_dirs_1(tmp_path: Path) -> None:
+    dirname = tmp_path / "test"
+    dirname.mkdir()
+
+    (dirname / "foo" / "bar").mkdir(parents=True)
+    (dirname / "zod").touch()
+
+    assert not prune_empty_dirs(dirname)
+    assert dirname.exists()
+    assert not (dirname / "foo").exists()
+    assert (dirname / "zod").exists()
+
+
+def test_prune_empty_dirs_recursive_keeps_non_dirs_2(tmp_path: Path) -> None:
+    dirname = tmp_path / "test"
+    dirname.mkdir()
+
+    (dirname / "foo").mkdir()
+    (dirname / "foo" / "bar").touch()
+    (dirname / "zod").mkdir()
+
+    assert not prune_empty_dirs(dirname)
+    assert dirname.exists()
+    assert (dirname / "foo" / "bar").exists()
+    assert not (dirname / "zod").exists()
+
+
+def test_prune_empty_dirs__missing(tmp_path: Path) -> None:
+    dirname = tmp_path / "test"
+    assert prune_empty_dirs(dirname)
+    assert not dirname.exists()
+
+
+def test_prune_empty_dirs__non_file(tmp_path: Path) -> None:
+    dirname = tmp_path / "test"
+    dirname.touch()
+    with pytest.raises(OSError, match="Not a directory"):
+        prune_empty_dirs(dirname)
 
 
 ###############################################################################
