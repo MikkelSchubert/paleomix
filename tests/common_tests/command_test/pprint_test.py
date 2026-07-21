@@ -1,12 +1,11 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2023 Mikkel Schubert <mikkelsch@gmail.com>
 # pyright: reportPrivateUsage=none
-# ruff: noqa: SLF001, UP032
+# ruff: noqa: SLF001
 #
 from __future__ import annotations
 
 import os
-import shlex
 import signal
 from pathlib import Path
 
@@ -136,18 +135,23 @@ def test_pformat__simple__killed_by_signal(tmp_path: Path) -> None:
     ).format(id=id(cmd), temp_dir=tmp_path, cwd=os.getcwd())
 
 
-@pytest.mark.skip(reason="fails on OSX runner due to long tmp_path")
 def test_pformat__simple__temp_root_in_arguments(tmp_path: Path) -> None:
     cmd = AtomicCmd(("echo", "%(TEMP_DIR)s"))
     cmd.run(tmp_path)
     assert cmd.join() == [0]
-    assert pformat(cmd) == (
-        "Command = echo {temp_dir}\n"
+    formatted_cmd = pformat(cmd)
+
+    # depending on the length of tmp_path, a line break may be inserted
+    short_command = f"Command = echo {tmp_path}\n"
+    long_command = f"Command = echo \\\n              {tmp_path}\n"
+
+    assert formatted_cmd.startswith((short_command, long_command))
+    assert formatted_cmd.endswith(
         "Status  = Exited with return-code 0\n"
-        "STDOUT  = {temp_dir}/pipe_echo_{id}.stdout\n"
-        "STDERR  = {temp_dir}/pipe_echo_{id}.stderr\n"
-        "CWD     = {cwd}"
-    ).format(id=id(cmd), temp_dir=shlex.quote(str(tmp_path)), cwd=os.getcwd())
+        f"STDOUT  = {tmp_path}/pipe_echo_{id(cmd)}.stdout\n"
+        f"STDERR  = {tmp_path}/pipe_echo_{id(cmd)}.stderr\n"
+        f"CWD     = {os.getcwd()}"
+    )
 
 
 ###############################################################################
