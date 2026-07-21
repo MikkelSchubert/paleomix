@@ -43,11 +43,37 @@ Documentation = "https://paleomix.readthedocs.io"
 Repository = "https://github.com/MikkelSchubert/paleomix.git"
 Issues = "https://github.com/MikkelSchubert/paleomix/issues"
 
-[project.optional-dependencies]
-dev = ["nox", "pytest-cov", "pytest"]
-
 [project.scripts]
 paleomix = "paleomix.__main__:main"
+
+[dependency-groups]
+nox = [
+    "nox~=2026.7.11",
+]
+
+testing = [
+    "coverage[toml]~=7.6",
+    "pytest~=8.3",
+    "pytest-cov~=6.0",
+]
+
+linting = [
+    "ruff==0.9.3",
+]
+
+typing = [
+    "basedpyright==1.26.0",
+    { include-group = "testing" },
+    { include-group = "nox" },
+]
+
+dev = [
+    { include-group = "nox" },
+    { include-group = "testing" },
+    { include-group = "linting" },
+    { include-group = "typing" },
+]
+
 
 [tool.hatch.version]
 path = "src/paleomix/__init__.py"

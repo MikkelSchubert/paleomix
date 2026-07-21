@@ -16,18 +16,10 @@ SOURCES = (
 )
 
 
-class Requirements:
-    COVERAGE = "coverage[toml]~=7.6"
-    NOX = "nox~=2024.3.2"
-    PYRIGHT = "basedpyright==1.26.0"
-    PYTEST = "pytest~=8.3"
-    PYTEST_COV = "pytest-cov~=6.0"
-    RUFF = "ruff==0.9.3"
-
-
 @nox.session
 def style(session: nox.Session) -> None:
-    session.install(Requirements.RUFF)
+    session.install("--group", "linting")
+
     # Replaces `black --check`
     session.run("ruff", "format", "--check", *SOURCES)
     # Replaces `isort --check-only`
@@ -36,18 +28,14 @@ def style(session: nox.Session) -> None:
 
 @nox.session
 def lints(session: nox.Session) -> None:
-    session.install(Requirements.RUFF)
+    session.install("--group", "linting")
+
     session.run("ruff", "check", *SOURCES)
 
 
 @nox.session()
 def typing(session: nox.Session) -> None:
-    session.install(
-        ".",
-        Requirements.PYTEST,
-        Requirements.NOX,
-        Requirements.PYRIGHT,
-    )
+    session.install("-e", ".", "--group", "typing")
 
     session.run("basedpyright", *SOURCES)
 
@@ -55,12 +43,7 @@ def typing(session: nox.Session) -> None:
 @nox.session()
 def tests(session: nox.Session) -> None:
     # Install in development mode to for coverage analysis
-    session.install("-e", ".")
-    session.install(
-        Requirements.PYTEST,
-        Requirements.COVERAGE,
-        Requirements.PYTEST_COV,
-    )
+    session.install("-e", ".", "--group", "testing")
 
     session.run(
         "python3",
@@ -92,10 +75,7 @@ def tests(session: nox.Session) -> None:
 
 @nox.session(python=["3.10", "3.11", "3.12", "3.13", "3.14"])
 def full_tests(session: nox.Session) -> None:
-    session.install(
-        ".",
-        Requirements.PYTEST,
-    )
+    session.install("-e", ".", "--group", "testing")
 
     session.run(
         "python3",

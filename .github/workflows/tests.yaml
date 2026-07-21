@@ -29,4 +29,4 @@ jobs:
           enable-cache: true
 
       - name: nox (tests)
-        run: uv run --with nox nox -s full_tests
+        run: uv run nox -s full_tests
