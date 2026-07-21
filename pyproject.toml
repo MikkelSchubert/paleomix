@@ -11,7 +11,7 @@ license = { file = "LICENSE" }
 description = "Bioinformatics pipelines for HTS data"
 readme = { file = "README.rst", content-type = "text/x-rst" }
 
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "coloredlogs>=10.0",
     "configargparse>=0.13.0",
@@ -30,13 +30,12 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
-
 
 [project.urls]
 Homepage = "https://github.com/MikkelSchubert/paleomix"
@@ -113,9 +112,9 @@ ignore = [
     "S",   # flake8-bandit
     "TRY", # tryceratops
     # Individual rules deemed too burdensome or not useful
-    "A001", # builtin-variable-shadowing -- id/help/etc. are often useful variables
-    "A002", # builtin-argument-shadowing -- id/help/etc. are often useful arguments
-    "A005", # stdlib-module-shadowing -- to be fixed later
+    "A001",    # builtin-variable-shadowing -- id/help/etc. are often useful variables
+    "A002",    # builtin-argument-shadowing -- id/help/etc. are often useful arguments
+    "A005",    # stdlib-module-shadowing -- to be fixed later
     "ANN401",  # any-type -- disabled until type annotation has been completed
     "ISC001",  # single-line-implicit-string-concatenation -- conflict with `ruff format`
     "PERF401", # manual-list-comprehension -- a manual loop is clearer in many cases
