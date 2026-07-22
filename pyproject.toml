@@ -192,4 +192,5 @@ reinstall-package = [
 ]
 
 [tool.zuban]
+mypy_path = "typings"
 strict = true
