@@ -10,7 +10,7 @@ repos:
       - id: no-commit-to-branch
         args: [--branch, main, --branch, v1.3.x, --branch, v1.4.x]
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 2c8dce6094fa2b4b668e74f694ca63ceffd38614 # v0.9.9
+    rev: 2700fd5671c633760d912769c041bfcde2b9a01b # v0.15.22
     hooks:
       - id: ruff
       - id: ruff-format
