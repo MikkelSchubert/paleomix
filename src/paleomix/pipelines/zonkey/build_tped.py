@@ -234,7 +234,7 @@ def write_summary(args, filename, statistics):
 
 
 def process_bam(args, data, bam_handle, mapping):
-    reverse_mapping = dict(zip(mapping.values(), mapping))
+    reverse_mapping = dict(zip(mapping.values(), mapping, strict=True))
     raw_references = bam_handle.references
     references = [reverse_mapping.get(name, name) for name in raw_references]
 

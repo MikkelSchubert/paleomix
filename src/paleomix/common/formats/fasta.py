@@ -9,7 +9,7 @@ from typing import IO
 
 import pysam
 
-from paleomix.common.fileutils import fspath, open_rt
+from paleomix.common.fileutils import open_rt
 from paleomix.common.formats._common import FormatError
 from paleomix.common.utilities import Immutable, TotallyOrdered, fragment, split_before
 
@@ -76,8 +76,8 @@ class FASTA(TotallyOrdered, Immutable):
         pysam, and returns a dictionary of {contig: length} listed in that file.
         """
         # If an index does not already exist, then it is created automatically
-        with pysam.FastaFile(fspath(filename)) as handle:
-            return dict(zip(handle.references, handle.lengths))
+        with pysam.FastaFile(os.fspath(filename)) as handle:
+            return dict(zip(handle.references, handle.lengths, strict=True))
 
     def __lt__(self, other: object) -> bool:
         if not isinstance(other, FASTA):

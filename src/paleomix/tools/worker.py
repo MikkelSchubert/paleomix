@@ -140,8 +140,8 @@ class Worker:
                             return
 
                         func = self._commands.get(event["event"], self._unknown)
-                        for event in func(**event):
-                            if not self._send(event):
+                        for response in func(**event):
+                            if not self._send(response):
                                 return
                     elif handle in interface.handles:
                         if not self._poll_commandline(interface):

@@ -412,7 +412,7 @@ class ZonkeyDB:
                     f"but found {len(fields)}!"
                 )
 
-            row: dict[str, Any] = dict(zip(header, fields))
+            row: dict[str, Any] = dict(zip(header, fields, strict=True))
 
             if row["HasTS"] not in ("TRUE", "FALSE"):
                 pass
@@ -422,7 +422,7 @@ class ZonkeyDB:
             for key in ("NReads", "K"):
                 try:
                     row[key] = int(row[key])
-                except ValueError:  # noqa: PERF203
+                except ValueError:
                     raise ZonkeyDBError(
                         f"Malformed value for column {key!r} at line {linenum} in "
                         f"simulations table {filename!r}; expected int, found "
@@ -432,7 +432,7 @@ class ZonkeyDB:
             for key in ("Percentile", "Value"):
                 try:
                     row[key] = float(row[key])
-                except ValueError:  # noqa: PERF203
+                except ValueError:
                     raise ZonkeyDBError(
                         f"Malformed value for column {key!r} at line {linenum} in "
                         f"simulations table {filename!r}; expected float, found "
@@ -499,7 +499,7 @@ class ZonkeyDB:
                         f"{len(header)} columns, found {len(fields)} columns!"
                     )
 
-                row = dict(zip(header, fields))
+                row = dict(zip(header, fields, strict=True))
                 if row["ID"] in result:
                     raise ZonkeyDBError(
                         "Duplicate IDs in {!r}: {}".format(filename, row["ID"])
@@ -521,7 +521,7 @@ def _validate_mito_bam(data, handle, info):
     min_length = min((len(record.sequence)) for record in data.mitochondria.values())
     log = logging.getLogger(__name__)
 
-    for bam_contig, bam_length in zip(references, handle.lengths):
+    for bam_contig, bam_length in zip(references, handle.lengths, strict=True):
         if bam_contig not in data.mitochondria:
             continue
 
@@ -571,7 +571,7 @@ def _validate_nuclear_bam(data, handle, info):
     # Match reference panel contigs with BAM contigs; identification is done
     # by size since different repositories use different naming schemes.
     bam_contigs = collections.defaultdict(list)
-    for name, length in zip(handle.references, handle.lengths):
+    for name, length in zip(handle.references, handle.lengths, strict=True):
         bam_contigs[length].append(name)
 
     log = logging.getLogger(__name__)

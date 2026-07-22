@@ -745,7 +745,7 @@ def _batch_vcf_merges(
     while len(filenames) > max_files:
         new_filenames: list[str] = []
         for batch in fragment(max_files, filenames):
-            hasher = hashlib.new("md5")
+            hasher = hashlib.new("md5")  # noqa: S324
             for filename in batch:
                 hasher.update(filename.encode())
                 hasher.update(b"\0")

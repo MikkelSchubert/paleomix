@@ -1,7 +1,5 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2023 Mikkel Schubert <mikkelsch@gmail.com>
-# ruff: noqa: SLF001
-#
 from __future__ import annotations
 
 import os

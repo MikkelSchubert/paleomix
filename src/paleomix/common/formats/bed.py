@@ -2,6 +2,7 @@
 # SPDX-FileCopyrightText: 2023 Mikkel Schubert <mikkelsch@gmail.com>
 from __future__ import annotations
 
+import itertools
 from collections.abc import Generator, Iterable, Mapping
 from typing import Any, TypeVar
 
@@ -114,7 +115,9 @@ class BEDRecord(TotallyOrdered):
             values.pop()
 
         return "BEDRecord({})".format(
-            ", ".join(f"{key}={value!r}" for key, value in zip(keys, values))
+            ", ".join(
+                f"{key}={value!r}" for key, value in zip(keys, values, strict=False)
+            )
         )
 
     def __lt__(self, obj: object) -> bool:
@@ -175,7 +178,7 @@ def sort_bed_by_bamfile(bamfile: AlignmentFile, regions: list[BEDRecord]) -> Non
         return
 
     references = bamfile.references
-    indices = dict(zip(references, range(len(references))))
+    indices = dict(zip(references, itertools.count(), strict=False))
     infinite = float("inf")
 
     def _by_bam_layout(it: BEDRecord) -> tuple[float, str, int, int]:

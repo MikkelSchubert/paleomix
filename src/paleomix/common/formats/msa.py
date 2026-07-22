@@ -55,7 +55,7 @@ class MSA(frozenset[FASTA]):
     def reduce(self) -> MSA | None:
         columns: list[Sequence[str]] = []
         uncalled = frozenset("Nn-")
-        for column in zip(*(record.sequence for record in self)):
+        for column in zip(*(record.sequence for record in self), strict=True):
             if frozenset(column) - uncalled:
                 columns.append(column)
 
@@ -63,7 +63,7 @@ class MSA(frozenset[FASTA]):
             return None
 
         records: list[FASTA] = []
-        for record, sequence in zip(self, zip(*columns)):
+        for record, sequence in zip(self, zip(*columns, strict=True), strict=True):
             records.append(FASTA(record.name, record.meta, "".join(sequence)))
 
         return MSA(records)
@@ -75,7 +75,7 @@ class MSA(frozenset[FASTA]):
 
         sequence = list(to_filter_.sequence)
         sequences = [record.sequence.upper() for record in included]
-        for index, nts in enumerate(zip(*sequences)):
+        for index, nts in enumerate(zip(*sequences, strict=True)):
             current_nt = sequence[index].upper()
             if current_nt in "N-":
                 continue

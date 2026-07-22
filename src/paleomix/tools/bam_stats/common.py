@@ -67,7 +67,7 @@ def collect_references(args: Args, handle: pysam.AlignmentFile) -> dict[str, int
 
         lengths = dict(lengths)
     elif handle.nreferences <= args.max_contigs:
-        lengths = dict(zip(handle.references, handle.lengths))
+        lengths = dict(zip(handle.references, handle.lengths, strict=True))
     else:
         lengths = {"<Genome>": sum(handle.lengths)}
 
