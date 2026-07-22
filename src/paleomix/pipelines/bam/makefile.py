@@ -629,7 +629,7 @@ def _validate_prefixes(makefiles, pipeline_variant):
             except (OSError, ValueError) as error:
                 if pipeline_variant == "bam":
                     raise MakefileError(f"Error reading/indexing FASTA: {error}")
-                logging.warning("Error reading/indexing FASTA: %s", error)
+                logger.warning("Error reading/indexing FASTA: %s", error)
             else:
                 if max(contigs.values()) > _BAM_MAX_SEQUENCE_LENGTH:
                     logger.warning(

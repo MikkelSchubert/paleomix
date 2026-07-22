@@ -56,7 +56,7 @@ class Requirement:
     def call(self) -> tuple[str, ...]:
         call = self._call
         if call[0] == "%(PYTHON)s":
-            return (sys.executable,) + call[1:]
+            return (sys.executable, *call[1:])
 
         return call
 

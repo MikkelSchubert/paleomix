@@ -184,7 +184,7 @@ def test_genomes__simple_genome(tmp_path: Path) -> None:
 def test_genomes__bad_wildcard_in_name(tmp_path: Path) -> None:
     filepath = _write_genome_yaml(tmp_path, {"T*est": "/path/to/genome.fasta"})
 
-    with pytest.raises(MakefileError, match="'*' is not allowed in Genome names"):
+    with pytest.raises(MakefileError, match=r"'*' is not allowed in Genome names"):
         _read_makefile(filepath)
 
 
@@ -727,5 +727,8 @@ def test_makefile__validation__paired_must_have_key(tmp_path: Path) -> None:
     """,
     )
 
-    with pytest.raises(MakefileError, match="Expected value: a path with a {pair} key"):
+    with pytest.raises(
+        MakefileError,
+        match=r"Expected value: a path with a {pair} key",
+    ):
         _read_makefile(filepath)

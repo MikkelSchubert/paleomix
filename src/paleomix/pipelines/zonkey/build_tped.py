@@ -227,8 +227,10 @@ def write_summary(args, filename, statistics):
         handle.write(f"name: {args.name}\n")
         handle.write(f"filename: {os.path.abspath(args.bam)}\n")
 
-        for key in ("n_reads", "n_reads_used", "n_sites_incl_ts", "n_sites_excl_ts"):
-            handle.write("{}: {}\n".format(key, statistics.get(key, "MISSING")))
+        handle.writelines(
+            "{}: {}\n".format(key, statistics.get(key, "MISSING"))
+            for key in ("n_reads", "n_reads_used", "n_sites_incl_ts", "n_sites_excl_ts")
+        )
 
 
 def process_bam(args, data, bam_handle, mapping):

@@ -126,6 +126,11 @@ class BEDRecord(TotallyOrdered):
 
         return bed_1 < bed_2
 
+    def __hash__(self) -> int:
+        return hash(
+            (self.contig, self.start, self.end, self.name, self.score, self.strand)
+        )
+
 
 def read_bed_file(
     filename: str,

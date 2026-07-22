@@ -528,7 +528,7 @@ def run_mapdamage(layout: Layout, genome, records):
             dependencies=(extra_task,),
         )
 
-    if run_type in ("rescale",):
+    if run_type == "rescale":
         # Rescales BAM quality scores using model built above
         assert extra_task is not None
         task = MapDamageRescaleNode(

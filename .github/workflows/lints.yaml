@@ -20,4 +20,4 @@ jobs:
           enable-cache: true
 
       - name: nox (lints and style)
-        run: uv run --with nox nox -s lints style
+        run: uv run -s lints style

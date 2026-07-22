@@ -119,7 +119,7 @@ def test_requirement__version__command_not_found() -> None:
 def test_requirement__version__command_not_executable() -> None:
     obj = Requirement(call=("./README.rst",), regexp=r"v(\d+\.\d+)")
 
-    with pytest.raises(RequirementError, match="[Errno 13]"):
+    with pytest.raises(RequirementError, match=r"[Errno 13]"):
         obj.version()
 
 

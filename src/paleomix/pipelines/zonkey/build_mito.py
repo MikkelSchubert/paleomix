@@ -173,8 +173,7 @@ def main(argv):
     with open(args.output_prefix + ".summary", "w") as handle:
         stats["filename"] = os.path.abspath(args.bam)
 
-        for key, value in sorted(stats.items()):
-            handle.write(f"{key}: {value}\n")
+        handle.writelines(f"{key}: {value}\n" for key, value in sorted(stats.items()))
 
     with open(args.output_prefix + ".phy", "w") as handle:
         handle.write(interleaved_phy(sequences_to_msa(sequences)))
@@ -182,8 +181,7 @@ def main(argv):
     with open(args.output_prefix + ".fasta", "w") as handle:
         for key, record in sorted(sequences.items()):
             handle.write(f">{key}\n")
-            for line in fragment(60, record.sequence):
-                handle.write(f"{line}\n")
+            handle.writelines(f"{line}\n" for line in fragment(60, record.sequence))
 
         return 0
 

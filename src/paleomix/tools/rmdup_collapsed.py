@@ -64,7 +64,7 @@ def copy_number(read: AlignedSegment) -> int:
     if read.has_tag("XP"):
         value, tag_type = read.get_tag("XP", with_value_type=True)
         if tag_type == "i":
-            return cast(int, value)
+            return cast("int", value)
 
     return 0
 

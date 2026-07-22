@@ -77,7 +77,7 @@ def main(argv: list[str] | None = None) -> int:
     if not argv or argv[0] in ("-h", "--help", "help"):
         print(_HELP.format(version=paleomix.__version__))
         return 0
-    elif argv[0] in ("--version",):
+    elif argv[0] == "--version":
         print(f"paleomix v{paleomix.__version__}")
         return 0
 

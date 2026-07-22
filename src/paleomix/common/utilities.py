@@ -177,3 +177,6 @@ class TotallyOrdered:
         if not isinstance(other, type(self)):
             return NotImplemented
         return other < self
+
+    def __hash__(self) -> int:
+        raise NotImplementedError

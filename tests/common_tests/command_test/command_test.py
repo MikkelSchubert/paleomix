@@ -82,7 +82,7 @@ def test_atomicfile__valid_paths() -> None:
 def test_atomiccmd__paths__invalid_values(
     cls: type[IOFileTypes], value: object
 ) -> None:
-    with pytest.raises(TypeError, match="expected str, bytes or os.PathLike object"):
+    with pytest.raises(TypeError, match=r"expected str, bytes or os.PathLike object"):
         cls(value)  # pyright: ignore[reportArgumentType]
 
 
