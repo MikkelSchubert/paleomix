@@ -31,9 +31,9 @@ ADMIXTURE_VERSION = versions.Requirement(
 )
 
 PLINK_VERSION = versions.Requirement(
-    call=("plink", "--noweb", "--help", "--out", "/tmp/plink"),
+    call=("plink", "--version"),
     regexp=r"v(\d+\.\d+)",
-    specifiers=">=1.7",
+    specifiers=">=1.9",
 )
 
 SMARTPCA_VERSION = versions.Requirement(
