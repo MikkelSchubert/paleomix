@@ -21,7 +21,7 @@ _REF_SRC = "ACGTMRWSYKVHDBNX"
 _REF_DST = "TGCAKYWSRMBDHVNX"
 
 
-@pytest.mark.parametrize(("src", "dst"), zip(_REF_SRC, _REF_DST))
+@pytest.mark.parametrize(("src", "dst"), tuple(zip(_REF_SRC, _REF_DST)))
 def test_complement__single_nt(src: str, dst: str) -> None:
     assert complement(src) == dst
     assert complement(src.lower()) == dst.lower()
@@ -72,7 +72,7 @@ _IUB_SRC = (
 _IUB_DST = "ACGTMRWSYKVHDB"
 
 
-@pytest.mark.parametrize(("src", "dst"), zip(_IUB_SRC, _IUB_DST))
+@pytest.mark.parametrize(("src", "dst"), tuple(zip(_IUB_SRC, _IUB_DST)))
 def test_genotype__permutations(src: str, dst: str) -> None:
     for seq in itertools.permutations(src):
         assert encode_genotype("".join(seq)) == dst

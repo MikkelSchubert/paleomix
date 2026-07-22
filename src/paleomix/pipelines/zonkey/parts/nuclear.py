@@ -390,8 +390,7 @@ class BuildFreqFilesNode(CommandNode):
             samples = [line.split(None, 1)[0] for line in in_handle]
 
         with open(os.path.join(temp, "samples.clust"), "w") as handle:
-            for sample in samples:
-                handle.write(f"{sample} {sample} {sample}\n")
+            handle.writelines(f"{sample} {sample} {sample}\n" for sample in samples)
 
     def _teardown(self, temp: fileutils.PathTypes) -> None:
         for ext in ("log", "nosex"):
@@ -524,9 +523,7 @@ class TreemixNode(CommandNode):
         if self._k_file is not None:
             stats = read_summary(self._k_file)
             n_sites = float(stats[self._k_field])
-            k = max(
-                1, int(math.ceil(self._snp_distance / (self._genome_size / n_sites)))
-            )
+            k = max(1, math.ceil(self._snp_distance / (self._genome_size / n_sites)))
 
             self._param_k = k
             assert isinstance(self._command, AtomicCmd)
@@ -758,7 +755,7 @@ class PlotCoverageNode(CommandNode):
                 if not line:
                     continue
 
-                name, size, hits, _ = line.split("\t")
+                name, _, hits, _ = line.split("\t")
                 name = self._mapping.get(name, name)
                 if name not in self._contigs:
                     # Excluding contigs is allowed

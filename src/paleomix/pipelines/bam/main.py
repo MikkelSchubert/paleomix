@@ -23,7 +23,7 @@ def main(argv: list[str], pipeline: str = "bam") -> int:
     args = parser.parse_args(argv)
     if args.command in ("new", "makefile", "mkfile"):
         return _main_template()
-    elif args.command in ("example",):
+    elif args.command == "example":
         return _main_copy_example(args.destination)
 
     if args.command.startswith("dry") and args.pipeline_mode == "run":

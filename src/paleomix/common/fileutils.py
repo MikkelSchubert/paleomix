@@ -168,7 +168,7 @@ def open_rb(filename: PathTypes) -> IO[bytes]:
         header = handle.peek(2)
 
         if header.startswith(b"\x1f\x8b"):
-            return cast(IO[bytes], _GzipFile(mode="rb", fileobj=handle))
+            return cast("IO[bytes]", _GzipFile(mode="rb", fileobj=handle))
         elif header.startswith(b"BZ"):
             return _BZ2File(handle, "rb")
         else:

@@ -29,7 +29,7 @@ def quote_args(args: object) -> str:
     objects: Iterable[object]
     if isinstance(args, os.PathLike):
         # WORKAROUND for pyright warning about "partially unknown" types
-        objects = [cast(object, args)]
+        objects = [cast("object", args)]
     elif isinstance(args, (str, bytes)) or not isinstance(args, Iterable):
         objects = [args]
     else:
@@ -38,7 +38,7 @@ def quote_args(args: object) -> str:
     values: list[str] = []
     for value in objects:
         if isinstance(value, os.PathLike):
-            value = os.fsdecode(cast(Any, value))
+            value = os.fsdecode(cast("Any", value))
 
         if isinstance(value, bytes):
             value = value.decode("utf-8", errors="replace")

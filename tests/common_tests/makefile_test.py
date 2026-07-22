@@ -1005,17 +1005,20 @@ def test_fastq_path__path_must_meet_spec() -> None:
     assert accept_any(_DUMMY_PATH, se_reads) == se_reads
     assert accept_any(_DUMMY_PATH, pe_reads) == pe_reads
 
-    with pytest.raises(MakefileError, match="Expected value: a path without a {pair}"):
+    with pytest.raises(MakefileError, match=r"Expected value: a path without a {pair}"):
         accept_se(_DUMMY_PATH, pe_reads)
 
-    with pytest.raises(MakefileError, match="Expected value: a path with a {pair} key"):
+    with pytest.raises(
+        MakefileError,
+        match=r"Expected value: a path with a {pair} key",
+    ):
         accept_pe(_DUMMY_PATH, se_reads)
 
 
 @pytest.mark.parametrize("value", _common_invalid_values(extra=(1,)))
 def test_fastq_path__rejects_non_strings(value: object) -> None:
     spec = FASTQPath()
-    with pytest.raises(MakefileError, match="Expected value: a path without a {pair}"):
+    with pytest.raises(MakefileError, match=r"Expected value: a path without a {pair}"):
         spec(_DUMMY_PATH, value)
 
 
