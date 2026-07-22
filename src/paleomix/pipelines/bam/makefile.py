@@ -10,9 +10,7 @@ import os
 import re
 import string
 from collections.abc import Iterable, Iterator
-from typing import Any
-
-from typing_extensions import Literal
+from typing import Any, Literal
 
 from paleomix.common import sequences
 from paleomix.common.bamfiles import BAM_PLATFORMS

@@ -5,8 +5,8 @@ from __future__ import annotations
 import collections
 import logging
 import os
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable
 
 import pysam
 

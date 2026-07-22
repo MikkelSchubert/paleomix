@@ -27,10 +27,9 @@ import sys
 from argparse import Namespace
 from collections import defaultdict, deque
 from collections.abc import Sequence
-from typing import Optional, cast
+from typing import TypeAlias, cast
 
 from pysam import AlignedSegment, AlignmentFile
-from typing_extensions import TypeAlias
 
 from paleomix.common.argparse import ArgumentParser
 
@@ -47,7 +46,7 @@ _CIGAR_HARDCLIP = 5
 
 
 AlignmentCoords: TypeAlias = tuple[int, bool, int, int]
-ReadAndAlignment: TypeAlias = tuple[AlignedSegment, Optional[AlignmentCoords]]
+ReadAndAlignment: TypeAlias = tuple[AlignedSegment, AlignmentCoords | None]
 
 
 def read_quality(read: AlignedSegment) -> float | int:

@@ -12,10 +12,10 @@ import random
 import shutil
 import sys
 import tempfile
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from datetime import datetime
 from os import fspath
-from typing import IO, Any, Callable, Union, cast
+from typing import IO, Any, Union, cast
 
 from typing_extensions import Self
 

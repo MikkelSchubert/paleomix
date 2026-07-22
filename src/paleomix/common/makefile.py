@@ -159,21 +159,16 @@ import copy
 import logging
 import re
 from collections.abc import Collection, Hashable, Sequence
-from typing import Union
-
-from typing_extensions import TypeAlias, TypeGuard
+from typing import TypeAlias, TypeGuard, Union
 
 from paleomix.common import yaml
 from paleomix.common.fileutils import PathTypes, fspath
 
-BasicType: TypeAlias = Union[str, int, float, bool, None]
+BasicType: TypeAlias = str | int | float | bool | None
 SpecType: TypeAlias = Union["_SpecBase", type["_SpecBase"]]
-SpecTree: TypeAlias = Union[
-    BasicType,
-    SpecType,
-    dict[Union[str, SpecType], "SpecTree"],
-    list["SpecTree"],
-]
+SpecTree: TypeAlias = (
+    BasicType | SpecType | dict[str | SpecType, "SpecTree"] | list["SpecTree"]
+)
 SpecPath: TypeAlias = tuple[BasicType, ...]
 
 

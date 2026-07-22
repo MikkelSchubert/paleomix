@@ -2,8 +2,8 @@
 # SPDX-FileCopyrightText: 2023 Mikkel Schubert <mikkelsch@gmail.com>
 from __future__ import annotations
 
-from collections.abc import Iterable
-from typing import AnyStr, Callable, NoReturn, TypeVar
+from collections.abc import Callable, Iterable
+from typing import AnyStr, NoReturn, TypeVar
 
 import pytest
 

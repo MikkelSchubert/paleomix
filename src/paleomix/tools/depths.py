@@ -6,10 +6,9 @@ import collections
 import itertools
 import sys
 from collections.abc import Iterable, Iterator
-from typing import NewType, Optional
+from typing import NewType, TypeAlias
 
 import pysam
-from typing_extensions import TypeAlias
 
 from paleomix.common.bamfiles import BAMRegion, BAMRegionsIter
 from paleomix.common.fileutils import file_or_stdout
@@ -29,7 +28,7 @@ CountsDict: TypeAlias = dict[int, int]
 TotalsKey: TypeAlias = tuple[str, str, str]
 TotalsDict: TypeAlias = dict[TotalsKey, CountsDict]
 
-ReadGroupToID: TypeAlias = dict[Optional[str], SampleLibraryID]
+ReadGroupToID: TypeAlias = dict[str | None, SampleLibraryID]
 IDToLibrary: TypeAlias = list[SampleLibraryKey]
 
 

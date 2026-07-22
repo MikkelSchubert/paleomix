@@ -6,8 +6,9 @@ import bz2
 import copy
 import gzip
 import io
+from collections.abc import Callable
 from pathlib import Path
-from typing import IO, Callable
+from typing import IO
 from unittest.mock import patch
 
 import pytest

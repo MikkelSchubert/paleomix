@@ -2,15 +2,16 @@
 # SPDX-FileCopyrightText: 2023 Mikkel Schubert <mikkelsch@gmail.com>
 from __future__ import annotations
 
+import itertools
 import re
 from collections.abc import Generator, Iterable, Iterator, Sequence
-from typing import Optional
+from typing import TypeAlias
 
 from paleomix.common.formats import FormatError
 from paleomix.common.utilities import Immutable, TotallyOrdered
 
-NodeID = Optional[int]
-NodeName = Optional[str]
+NodeID: TypeAlias = int | None
+NodeName: TypeAlias = str | None
 
 
 class NewickError(FormatError):
@@ -348,7 +349,7 @@ class _NewickGraph:
             return None
 
         path_length = 0.0
-        for node_a, node_b in zip(nodes, nodes[1:]):
+        for node_a, node_b in itertools.pairwise(nodes):
             segment_length = self.connections[node_a][node_b]
             if segment_length is None:
                 raise AssertionError("segment_length is unexpectedly None")
@@ -501,7 +502,7 @@ class _NewickGraph:
 
         The id of the new / selected node is returned. New
         nodes (if created) are always given the id None."""
-        for c_node, n_node in zip(path, path[1:]):
+        for c_node, n_node in itertools.pairwise(path):
             branch_length = self.get_path_length(c_node, n_node)
             assert branch_length is not None
 
