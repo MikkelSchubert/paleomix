@@ -1,6 +1,5 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2023 Mikkel Schubert <mikkelsch@gmail.com>
-# pyright: reportPrivateUsage=none
 # ruff: noqa: SLF001
 #
 from __future__ import annotations
@@ -492,7 +491,7 @@ def test_pformat__sets__nested() -> None:
 @pytest.mark.parametrize("value", [1, {}, ""])
 def test_pformat__bad_input(value: object) -> None:
     with pytest.raises(TypeError):
-        pformat(value)  # pyright: ignore[reportArgumentType]
+        pformat(value)  # type: ignore[arg-type]
 
 
 ###############################################################################

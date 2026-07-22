@@ -82,7 +82,7 @@ def test_weighted_sampling__non_numerical_weight_raises_type_error() -> None:
     weights = [1, "foo", 3]
     iterator = sampling.weighted_sampling(
         choices,
-        weights,  # pyright: ignore[reportGeneralTypeIssues]
+        weights,  # type: ignore[arg-type]
     )
     with pytest.raises(TypeError):
         iterator.__next__()
@@ -132,7 +132,7 @@ def test_reservoir_sampling__downsample_to_float_raises_type_error() -> None:
     with pytest.raises(TypeError):
         sampling.reservoir_sampling(
             list(range(5)),
-            1.0,  # pyright: ignore[reportArgumentType]
+            1.0,  # type: ignore[arg-type]
         )
 
 
@@ -140,5 +140,5 @@ def test_reservoir_sampling__downsample_to_non_number_raises_type_error() -> Non
     with pytest.raises(TypeError):
         sampling.reservoir_sampling(
             list(range(5)),
-            "Eh?",  # pyright: ignore[reportArgumentType]
+            "Eh?",  # type: ignore[arg-type]
         )

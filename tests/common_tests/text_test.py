@@ -139,7 +139,7 @@ def test_parse_lines__padding__newlines(postfix: str) -> None:
 def test_parse_lines__uncallable() -> None:
     value: list[str] = []
     with pytest.raises(TypeError):
-        parse_lines(value, 1)  # pyright: ignore[reportArgumentType]
+        parse_lines(value, 1)  # type: ignore[arg-type]
 
 
 def test_parse_lines__binary() -> None:

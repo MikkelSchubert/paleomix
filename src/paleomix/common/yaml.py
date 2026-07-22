@@ -19,7 +19,7 @@ __all__ = [
 
 def safe_load(stream: IO[str]) -> object:
     yaml = ruamel.yaml.YAML(typ="safe", pure=True)
-    yaml.version = (1, 1)  # pyright: ignore[reportGeneralTypeIssues]
+    yaml.version = (1, 1)
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", ruamel.yaml.error.MantissaNoDotYAML1_1Warning)

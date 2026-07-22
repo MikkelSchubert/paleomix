@@ -47,7 +47,7 @@ _DUMMY_PATH_STR = " :: ".join(_DUMMY_PATH)
 
 
 class Unhashable:
-    __hash__ = None  # pyright: ignore[reportAssignmentType]
+    __hash__ = None
 
 
 _COMMON_INVALID_VALUES = {
@@ -747,7 +747,7 @@ def test_and__rejects_no_tests() -> None:
 
 def test_and__rejects_non_spec_tests() -> None:
     with pytest.raises(TypeError):
-        And(id)  # pyright: ignore[reportArgumentType]
+        And(id)  # type: ignore[arg-type]
 
 
 def test_and__default_not_set() -> None:
@@ -801,7 +801,7 @@ def test_or__rejects_no_tests() -> None:
 
 def test_or__rejects_non_spec_tests() -> None:
     with pytest.raises(TypeError):
-        Or(id)  # pyright: ignore[reportArgumentType]
+        Or(id)  # type: ignore[arg-type]
 
 
 def test_or__default_not_set() -> None:
