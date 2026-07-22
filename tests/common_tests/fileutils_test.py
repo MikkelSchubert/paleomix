@@ -796,7 +796,7 @@ def test_describe_files__iterable() -> None:
 
 def test_describe_files__non_str() -> None:
     with pytest.raises(TypeError):
-        describe_files(1)  # pyright: ignore[reportArgumentType]
+        describe_files(1)  # type: ignore[arg-type]
 
 
 ###############################################################################
@@ -875,13 +875,13 @@ def test_describe_paired_files__files_2_longer() -> None:
 
 def test_describe_paired_files__non_str() -> None:
     with pytest.raises(TypeError):
-        describe_paired_files((), 1)  # pyright: ignore[reportArgumentType]
+        describe_paired_files((), 1)  # type: ignore[arg-type]
 
     with pytest.raises(TypeError):
-        describe_paired_files(1, ())  # pyright: ignore[reportArgumentType]
+        describe_paired_files(1, ())  # type: ignore[arg-type]
 
     with pytest.raises(TypeError):
-        describe_paired_files(1, 1)  # pyright: ignore[reportArgumentType]
+        describe_paired_files(1, 1)  # type: ignore[arg-type]
 
 
 ###############################################################################

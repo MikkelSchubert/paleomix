@@ -239,12 +239,12 @@ def test_fragment__range() -> None:
 
 def test_fragment__iterable() -> None:
     with pytest.raises(TypeError):
-        fragment(3, iter(range(6)))  # pyright: ignore[reportArgumentType]
+        fragment(3, iter(range(6)))  # type: ignore[arg-type]
 
 
 def test_fragment__set() -> None:
     with pytest.raises(TypeError):
-        fragment(3, set(range(6)))  # pyright: ignore[reportArgumentType]
+        fragment(3, set(range(6)))  # type: ignore[arg-type]
 
 
 ###############################################################################
@@ -289,12 +289,12 @@ def test_fill_dict__source_not_modified() -> None:
 
 def test_fill_dict__destination_must_be_dict() -> None:
     with pytest.raises(TypeError):
-        utils.fill_dict([], {})  # pyright: ignore[reportArgumentType]
+        utils.fill_dict([], {})  # type: ignore[arg-type]
 
 
 def test_fill_dict__source_must_be_dict() -> None:
     with pytest.raises(TypeError):
-        utils.fill_dict({}, [])  # pyright: ignore[reportArgumentType]
+        utils.fill_dict({}, [])  # type: ignore[arg-type]
 
 
 ###############################################################################

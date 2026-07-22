@@ -37,7 +37,7 @@ def lints(session: nox.Session) -> None:
 def typing(session: nox.Session) -> None:
     session.install("-e", ".", "--group", "typing")
 
-    session.run("basedpyright", *SOURCES)
+    session.run("zuban", "check", *SOURCES)
 
 
 @nox.session()

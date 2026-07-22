@@ -73,7 +73,7 @@ linting = [
 ]
 
 typing = [
-    "basedpyright==1.26.0",
+    "zuban==0.9.0",
     { include-group = "testing" },
     { include-group = "nox" },
 ]
@@ -107,24 +107,6 @@ output = "cov.xml"
 
 [tool.isort]
 profile = "black"
-
-[tool.pyright]
-# Used since `strict = [...]` prevents individual `reportX` settings:
-include = [
-    "src",
-    "tests",
-    "typings",
-    "noxfile.py",
-]
-# typeCheckingMode = "strict"
-
-# Location of custom stub files
-stubPath = "typings"
-
-# FIXME: Disabled until project is fully typed
-reportUnnecessaryIsInstance = "none"
-# Disabled due to large number of unhelpful warnings
-reportUnusedCallResult = "none"
 
 [tool.pytest.ini_options]
 markers = [
@@ -208,3 +190,6 @@ ignore = [
 reinstall-package = [
     "paleomix",
 ]
+
+[tool.zuban]
+strict = true

@@ -17,7 +17,7 @@ def safe_coerce_to_tuple(value: object) -> tuple[Any, ...]:
         return (value,)
 
     try:
-        return tuple(value)  # pyright: ignore[reportArgumentType]
+        return tuple(value)  # type: ignore[arg-type]
     except TypeError:
         return (value,)
 
@@ -29,7 +29,7 @@ def safe_coerce_to_frozenset(value: object) -> frozenset[Any]:
         return frozenset((value,))
 
     try:
-        return frozenset(value)  # pyright: ignore[reportArgumentType]
+        return frozenset(value)  # type: ignore[call-overload, no-any-return]
     except TypeError:
         return frozenset((value,))
 

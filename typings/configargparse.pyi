@@ -125,7 +125,7 @@ class ArgumentParser(argparse.ArgumentParser):
         required: bool = ...,
         help: str | None = ...,
         metavar: str | None = ...,
-    ) -> argparse._SubParsersAction[_ArgumentParserType]: ...  # pyright: ignore[reportPrivateUsage]
+    ) -> argparse._SubParsersAction[_ArgumentParserType]: ...
     @overload
     def add_subparsers(
         self,
@@ -140,7 +140,7 @@ class ArgumentParser(argparse.ArgumentParser):
         required: bool = ...,
         help: str | None = ...,
         metavar: str | None = ...,
-    ) -> argparse._SubParsersAction[_ArgumentParserType]: ...  # pyright: ignore[reportPrivateUsage]
+    ) -> argparse._SubParsersAction[_ArgumentParserType]: ...
 
 ONE_OR_MORE = argparse.ONE_OR_MORE
 OPTIONAL = argparse.OPTIONAL

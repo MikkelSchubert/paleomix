@@ -20,10 +20,10 @@ __all__ = [
 ]
 
 Action = configargparse.Action
-ArgumentGroup = argparse._ArgumentGroup  # pyright: ignore[reportPrivateUsage]  # noqa: SLF001
+ArgumentGroup = argparse._ArgumentGroup  # noqa: SLF001
 ArgumentParserBase = configargparse.ArgumentParser
 Namespace = configargparse.Namespace
-SubParsersAction = argparse._SubParsersAction  # pyright: ignore[reportPrivateUsage]  # noqa: SLF001
+SubParsersAction = argparse._SubParsersAction  # noqa: SLF001
 SUPPRESS = configargparse.SUPPRESS
 
 

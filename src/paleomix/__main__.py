@@ -86,7 +86,7 @@ def main(argv: list[str] | None = None) -> int:
     # Setup basic logging to STDERR
     paleomix.common.logging.initialize_console_logging()
     # Silence log-messages from HTSLIB
-    pysam.set_verbosity(0)  # pyright: ignore[reportUnknownMemberType]
+    pysam.set_verbosity(0)
     # Add handlers to print backtraces on SIGSEGV, SIGFPE, SIGABRT, SIGBUS and SIGILL
     faulthandler.enable()
     # Add handler to print backtraces on SIGUSR1

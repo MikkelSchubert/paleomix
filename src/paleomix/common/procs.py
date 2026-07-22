@@ -15,7 +15,7 @@ from collections.abc import Iterable, Sequence
 from multiprocessing import Process
 from pathlib import Path
 from subprocess import Popen, TimeoutExpired
-from typing import IO, TYPE_CHECKING, Any, TypeAlias, Union, cast
+from typing import IO, TYPE_CHECKING, Any, TypeAlias, Union
 
 ProcessTypes: TypeAlias = Union["Popen[str]", "Popen[bytes]", Process]
 
@@ -25,10 +25,7 @@ PIPE = subprocess.PIPE
 
 def quote_args(args: object) -> str:
     objects: Iterable[object]
-    if isinstance(args, os.PathLike):
-        # WORKAROUND for pyright warning about "partially unknown" types
-        objects = [cast("object", args)]
-    elif isinstance(args, (str, bytes)) or not isinstance(args, Iterable):
+    if isinstance(args, (str, bytes, os.PathLike)) or not isinstance(args, Iterable):
         objects = [args]
     else:
         objects = args
@@ -36,7 +33,7 @@ def quote_args(args: object) -> str:
     values: list[str] = []
     for value in objects:
         if isinstance(value, os.PathLike):
-            value = os.fsdecode(cast("Any", value))
+            value = os.fsdecode(value)
 
         if isinstance(value, bytes):
             value = value.decode("utf-8", errors="replace")
