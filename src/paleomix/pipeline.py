@@ -35,8 +35,9 @@ class Pypeline:
     def __init__(
         self,
         nodes: Iterable[Node],
+        *,
+        temp_root: str,
         group: str | None = None,
-        temp_root: str = "/tmp",
         max_threads: int = 1,
         intermediate_files: CleanupStrategy = CleanupStrategy.DELETE,
         required_files: Iterable[str] = (),

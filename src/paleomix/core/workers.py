@@ -685,7 +685,7 @@ def task_wrapper(queue: QueueType, task: Node, temp_root: str) -> None:
             backtrace.append(f"  {error.__cause__!r}")
 
         queue.put((task.id, error, backtrace))
-    except Exception as error:  # noqa: BLE001
+    except Exception as error:
         backtrace = traceback.format_tb(error.__traceback__)
         backtrace.append(f"  {error!r}")
 

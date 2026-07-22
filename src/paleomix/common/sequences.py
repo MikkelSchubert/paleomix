@@ -43,7 +43,7 @@ IUPAC_TABLE = {
 # Table for complementing sequences using `str.translate`
 NT_COMPLEMENTS = _build_complement_table()
 # IUPAC code to A, C, G, T nucleotides.
-NT_CODES = dict(zip(IUPAC_TABLE.values(), IUPAC_TABLE))
+NT_CODES = dict(zip(IUPAC_TABLE.values(), IUPAC_TABLE, strict=True))
 
 
 def complement(sequence: str) -> str:
@@ -83,7 +83,7 @@ def split(sequence: str, split_by: str = "123") -> dict[str, str]:
 
     results: dict[str, list[str]] = {key: [] for key in split_by}
     keys = itertools.chain(itertools.cycle(split_by))
-    for key, nucleotide in zip(keys, sequence):
+    for key, nucleotide in zip(keys, sequence, strict=False):
         results[key].append(nucleotide)
 
     return {key: "".join(value) for key, value in results.items()}

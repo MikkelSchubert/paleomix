@@ -52,7 +52,9 @@ def check_fasta_file(handle: IO[bytes]) -> None:
     sequence_names: set[bytes] = set()
     state, linelength, linelengthchanged = _NA, -1, False
     try:
-        for linenum, line in enumerate(handle, start=1):
+        for line in handle:
+            linenum += 1
+
             # Only \n is allowed as not all tools handle \r
             line = line.rstrip(b"\n")
 

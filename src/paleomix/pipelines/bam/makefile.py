@@ -445,7 +445,7 @@ def _collect_files(path, template) -> Iterable[tuple[str, str | None]]:
         elif not (files_1 and files_2):
             return [(template, None)]
 
-        return zip(files_1, files_2)
+        return zip(files_1, files_2, strict=True)
     else:
         files = _sorted_glob(template)
         if not files:
@@ -572,7 +572,7 @@ def _validate_makefiles_duplicate_files(makefiles):
             has_overlap[filename] = list(set(records))
 
     logger = logging.getLogger(__name__)
-    by_records = sorted(zip(list(has_overlap.values()), list(has_overlap.keys())))
+    by_records = sorted(zip(has_overlap.values(), has_overlap, strict=True))
     for records, pairs in itertools.groupby(by_records, lambda x: x[0]):
         description = _describe_files_in_multiple_records(records, pairs)
 

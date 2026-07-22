@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2023 Mikkel Schubert <mikkelsch@gmail.com>
 # FIXME: Reduce need for touching private members
-# ruff: noqa: SLF001
-#
 from __future__ import annotations
 
 import logging

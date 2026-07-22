@@ -87,7 +87,7 @@ def create_temp_dir(root: PathTypes) -> str:
     """
     make_dirs(root)
 
-    now = datetime.now()  # noqa: DTZ005
+    now = datetime.now()
     return tempfile.mkdtemp(
         prefix=now.strftime("%Y%m%d_%H%M%S_"),
         dir=root,
@@ -293,7 +293,7 @@ def get_files_glob(
 
     glob_fname: list[str] = []
     differences = 0
-    for chars in zip(*filenames):
+    for chars in zip(*filenames, strict=True):
         if "?" in chars:
             glob_fname.append("?")
         elif len(frozenset(chars)) > 1:
@@ -437,4 +437,4 @@ def read_tsv(
                         f"but found {len(row)}"
                     )
 
-                yield dict(zip(header, row))
+                yield dict(zip(header, row, strict=True))

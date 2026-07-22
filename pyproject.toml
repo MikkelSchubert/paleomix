@@ -123,53 +123,53 @@ exclude = [
 
 [tool.ruff.lint]
 select = [
-    "ALL",
+    "ANN", # flake8-annotations
+    "ARG", # flake8-unused-arguments
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "E",   # pycodestyle
+    "F",   # pyflakes
+    "FA",  # flake8-future-annotations
+    # "FBT",  # flake8-boolean-trap (TODO)
+    "FLY", # flynt
+    "I",   # isort
+    "INP", # flake8-no-pep420
+    "LOG", # flake8-logging
+    "G",   # flake8-logging-format
+    # "PTH",  # flake8-use-pathlib (TODO)
+    "S",    # flake8-bandit
+    "UP",   # pyupgrade
+    "PT",   # flake8-pytest-style
+    "W",    # warning, pycodestyle
+    "N",    # pep8-naming (N)
+    "SIM",  # flake8-simplify
+    "PIE",  # flake8-pie
+    "PLE",  # pylint errors
+    "PYI",  # flake8-pyi
+    "RUF",  # ruff specific rules
+    "FURB", # refurb
+    "TID",  # flake8-tidy-imports"
+    "PL",   # pylint
+    # "TRY",  # tryceratops (TODO
 ]
 
 ignore = [
-    # Rules either deemed too burdensome to implement or not useful
-    "B",   # flake8-bugbear
-    "C90", # mccabe -- Complexity measures not deemed useful
-    "COM", # flake8-commas -- Formatting handled by ruff/black
-    "D",   # pydocstyle
-    "ERA", # eradicate -- too many false positives
-    "EM",  # flake8-errmsg
-    "T20", # flake8-print
-    "FBT", # flake8-boolean-trap
-    "TD",  # flake8-todos
-    "FIX", # flake8-fixme
-    "PTH", # flake8-use-pathlib
-    "S",   # flake8-bandit
-    "TRY", # tryceratops
-    # Individual rules deemed too burdensome or not useful
-    "A001",    # builtin-variable-shadowing -- id/help/etc. are often useful variables
-    "A002",    # builtin-argument-shadowing -- id/help/etc. are often useful arguments
-    "A005",    # stdlib-module-shadowing -- to be fixed later
-    "ANN401",  # any-type -- disabled until type annotation has been completed
-    "ISC001",  # single-line-implicit-string-concatenation -- conflict with `ruff format`
-    "PERF401", # manual-list-comprehension -- a manual loop is clearer in many cases
-    "PLR09",   # too-many-* -- complexity warnings disabled for now
-    "PLR2004", # magic-value-comparison -- Produces too many false positives
-    "PLW2901", # redefined-loop-name -- commonly used to prevent using the old variable
-    "RET505",  # superfluous-else-return -- stylistic preference
-    "RET506",  # superfluous-else-raise -- stylistic preference
-    "RET507",  # superfluous-else-continue --stylistic preference
-    "RET508",  # superfluous-else-break -- stylistic preference
-    "S603",    # subprocess-without-shell-equals-true -- `shell=True` is never used
-    # TC001-TC003 are disabled to minimize runtime/type-checking discrepancies
-    "TC001",  # typing-only-first-party-import
-    "TC002",  # typing-only-third-party-import
-    "TC003",  # typing-only-standard-library-import
-    "TRY003", # raise-vanilla-args
-    "UP032",  # f-string -- replacing `format` may decrease readability in some cases
+    "ANN401",  # flake8-annotations -- any-type (TODO)
+    "B904",    # flake8-bugbear -- raise-without-from-inside-except (TODO)
+    "S101",    # flake8-bandit -- assert
+    "S311",    # flake8-bandit -- suspicious-non-cryptographic-random-usage
+    "S603",    # flake8-bandit -- subprocess-without-shell-equals-true
+    "S607",    # flake8-bandit -- start-process-with-partial-path
+    "UP032",   # pyupgrade -- f-string
+    "PLR09",   # pylint -- too-many-*
+    "PLR2004", # pylint -- magic-value-comparison
+    "PLW2901", # pylint -- redefined-loop-name
 ]
 
 [tool.ruff.lint.per-file-ignores]
-
 "tests/**.py" = [
     "S101", # assert -- Use of assert detected
     "S108", # hardcoded-temp-file -- Probable insecure usage of temporary file or dir
-    "S311", # suspicious-non-cryptographic-random-usage
 ]
 
 # flake8-annotations - pending rework using typesafe framework

@@ -46,7 +46,7 @@ def interleaved_phy(
         lines.append("".join(line))
         streams.append(lines)
 
-    for rows in zip(*streams):
+    for rows in zip(*streams, strict=True):
         result.extend(row for row in rows)
         result.append("")
     result.pop()

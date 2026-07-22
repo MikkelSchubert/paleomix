@@ -110,7 +110,7 @@ def filter_sequences(sequences: dict[str, FASTA]) -> dict[str, FASTA]:
 
 def sequences_to_msa(sequences):
     records = []
-    for name, record in sorted(sequences.items()):
+    for _, record in sorted(sequences.items()):
         records.append(record)
 
     return MSA(records)

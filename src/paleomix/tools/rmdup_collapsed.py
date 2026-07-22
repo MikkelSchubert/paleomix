@@ -200,9 +200,9 @@ def process(args: Namespace, infile: AlignmentFile, outfile: AlignmentFile) -> i
     cache: deque[ReadAndAlignment] = deque()
     duplicates_by_alignment = {}
     last_position = (0, 0)
-    read_num = 1
 
-    for read_num, read in enumerate(infile, start=read_num):
+    reads = enumerate(infile, start=1)
+    for read_num, read in reads:
         current_position = (read.reference_id, read.reference_start)
         if last_position > current_position:
             # Check also catches trailing unmapped reads mapped to (-1, -1).
@@ -229,7 +229,7 @@ def process(args: Namespace, infile: AlignmentFile, outfile: AlignmentFile) -> i
 
     assert not duplicates_by_alignment, duplicates_by_alignment
 
-    for read_num, read in enumerate(infile, start=read_num + 1):
+    for read_num, read in reads:
         if not is_trailing_unmapped_read(read):
             sys.stderr.write(
                 "ERROR: Input file is not sorted by "

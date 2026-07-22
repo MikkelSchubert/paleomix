@@ -128,7 +128,7 @@ def _admixture_read_results(filename, samples):
         )
 
     result = {}
-    for name, line in zip(samples, lines):
+    for name, line in zip(samples, lines, strict=True):
         result[name] = [float(value) for value in line.split()]
 
     return result

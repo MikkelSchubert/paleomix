@@ -20,10 +20,10 @@ __all__ = [
 ]
 
 Action = configargparse.Action
-ArgumentGroup = argparse._ArgumentGroup  # noqa: SLF001
+ArgumentGroup = argparse._ArgumentGroup
 ArgumentParserBase = configargparse.ArgumentParser
 Namespace = configargparse.Namespace
-SubParsersAction = argparse._SubParsersAction  # noqa: SLF001
+SubParsersAction = argparse._SubParsersAction
 SUPPRESS = configargparse.SUPPRESS
 
 
@@ -111,7 +111,7 @@ class ArgumentParser(ArgumentParserBase):
 
         # Hack to hide aliases from subcommand help text, since aliases are only used
         # for deprecated commands/command-names
-        subparsers._ChoicesPseudoAction = _ChoicesPseudoAction  # noqa: SLF001
+        subparsers._ChoicesPseudoAction = _ChoicesPseudoAction
 
         return subparsers
 

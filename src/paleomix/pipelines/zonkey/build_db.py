@@ -133,7 +133,7 @@ def _write_genotypes(args, data, filename):
 
                 ref_chunk = ref_handle.fetch(real_name, pos, pos + _CHUNK_SIZE)
 
-                for idx, row in enumerate(zip(*chunks)):
+                for idx, row in enumerate(zip(*chunks, strict=True)):
                     if "N" in row:
                         continue
 

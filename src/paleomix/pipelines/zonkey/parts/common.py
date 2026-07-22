@@ -34,7 +34,10 @@ class WriteSampleList(Node):
         samples = self._samples
 
         group = self._groups[max(self._groups)]
-        group_colors = dict(zip(sorted(set(group.values())), _DEFAULT_COLORS))
+        group_names = sorted(set(group.values()))
+        if len(group_names) > len(_DEFAULT_COLORS):
+            raise NotImplementedError(f"more than {len(_DEFAULT_COLORS)} not supported")
+        group_colors = dict(zip(group_names, _DEFAULT_COLORS, strict=False))
 
         with open(fileutils.reroot_path(temp, output_file), "w") as handle:
             handle.write("Name\tGroup\tColor\n")

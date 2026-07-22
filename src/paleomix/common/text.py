@@ -51,7 +51,8 @@ def padded_table(
     for row in str_rows:
         if not isinstance(row, str):
             row = "".join(
-                field.ljust(padding) for (field, padding) in zip(row, sizes)
+                field.ljust(padding)
+                for (field, padding) in zip(row, sizes, strict=True)
             ).rstrip()
         yield row
 

@@ -153,8 +153,8 @@ def group_by_qualities(
 def filter_candidate_duplicates(
     candidates: Iterable[AlignedSegment], min_complexity: float
 ) -> Iterator[tuple[list[AlignedSegment], list[AlignedSegment]]]:
-    for group in group_by_sequences(filter_records(candidates)):
-        for group in group_by_qualities(group):
+    for sequence_group in group_by_sequences(filter_records(candidates)):
+        for group in group_by_qualities(sequence_group):
             filtered_records = group
             if min_complexity > 0:
                 filtered_records = [

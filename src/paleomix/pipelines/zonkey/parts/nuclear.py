@@ -310,7 +310,7 @@ class AdmixturePlotNode(CommandNode):
         with open(self._samples) as handle:
             header = handle.readline().strip().split("\t")
             for line in handle:
-                row = dict(zip(header, line.strip().split("\t")))
+                row = dict(zip(header, line.strip().split("\t"), strict=True))
                 samples[row["Name"]] = row
 
         with open(os.path.join(temp, "samples.txt"), "w") as handle:
@@ -718,7 +718,7 @@ class PlotPCANode(CommandNode):
 class PlotCoverageNode(CommandNode):
     def __init__(self, contigs, mapping, input_file, output_prefix, dependencies=()):
         self._contigs = contigs
-        self._mapping = dict(zip(mapping.values(), mapping))
+        self._mapping = dict(zip(mapping.values(), mapping, strict=True))
         self._input_file = input_file
 
         cmd = factory.rscript(
@@ -774,4 +774,4 @@ class PlotCoverageNode(CommandNode):
 
 
 def hash_params(*args, **kwargs):
-    return hashlib.md5(repr([args, kwargs]).encode("utf-8")).hexdigest()
+    return hashlib.md5(repr([args, kwargs]).encode("utf-8")).hexdigest()  # noqa: S324
