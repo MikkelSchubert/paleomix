@@ -25,8 +25,8 @@ _VERSION_2_CHECK = versions.Requirement(
 _VERSION_3_CHECK = versions.Requirement(
     call=("adapterremoval3", "--version"),
     # Currently fixed to specify development version
-    regexp=r"AdapterRemoval v(\d+\.\d+\.\d+(?:-alpha\d+)?)",
-    specifiers=">=3.0.0-alpha3",
+    regexp=r"adapterremoval3 v(\d+\.\d+\.\d+(?:-alpha\d+)?)",
+    specifiers=">=3.0.0",
 )
 
 
