@@ -8,8 +8,9 @@ import gzip
 import os
 import shutil
 import stat
+from collections.abc import Callable
 from pathlib import Path
-from typing import IO, Any, Callable, NoReturn
+from typing import IO, Any, NoReturn
 from unittest.mock import Mock, call, patch
 
 import pytest

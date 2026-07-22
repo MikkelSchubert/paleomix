@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import operator
-from collections.abc import Iterable, Sequence
-from typing import Callable, TypeVar
+from collections.abc import Callable, Iterable, Sequence
+from typing import TypeVar
 
 import pytest
 

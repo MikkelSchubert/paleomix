@@ -12,11 +12,11 @@ import termios
 import tty
 from collections.abc import Iterator
 from multiprocessing.connection import Connection
-from typing import Union
+from typing import TypeAlias
 
-from typing_extensions import Self, TypeAlias
+from typing_extensions import Self
 
-HandleType: TypeAlias = Union[Connection, socket.socket, int]
+HandleType: TypeAlias = Connection | socket.socket | int
 
 
 _COMMANDS = {

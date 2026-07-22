@@ -1,6 +1,4 @@
-from typing import IO, AnyStr
-
-from typing_extensions import TypeAlias
+from typing import IO, AnyStr, TypeAlias
 
 Color: TypeAlias = str | int | tuple[int, int, int] | None
 

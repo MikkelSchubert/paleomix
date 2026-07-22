@@ -6,9 +6,7 @@ import copy
 import os.path
 import string
 from collections.abc import Iterator, Mapping
-from typing import Union
-
-from typing_extensions import TypeAlias
+from typing import TypeAlias, Union
 
 LayoutType: TypeAlias = dict[str, Union[str, "LayoutType"]]
 

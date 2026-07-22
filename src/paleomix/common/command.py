@@ -9,11 +9,11 @@ import shlex
 import signal
 import subprocess
 import sys
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from pathlib import Path
-from typing import IO, Callable, Union
+from typing import IO, TypeAlias, Union
 
-from typing_extensions import Self, TypeAlias
+from typing_extensions import Self
 
 from paleomix.common import fileutils
 from paleomix.common.fileutils import PathTypes
@@ -84,21 +84,21 @@ class TempOutputFile(OutputFile):
 # May be passed to stdout/stderr arguments to disable automatic capture of output
 NOT_CAPTURED = -100
 
-IOFileTypes: TypeAlias = Union[InputFile, OutputFile, TempInputFile, TempOutputFile]
-AtomicFileTypes: TypeAlias = Union[AuxiliaryFile, Executable, IOFileTypes]
+IOFileTypes: TypeAlias = InputFile | OutputFile | TempInputFile | TempOutputFile
+AtomicFileTypes: TypeAlias = AuxiliaryFile | Executable | IOFileTypes
 
 # Possible types of .stdin/.stdout/.stderr, int being either DEVNULL or PIPE
 WrappedPipeType: TypeAlias = Union[int, IOFileTypes, "AtomicCmd"]
 # Types that can be passed as values for STDIN, STDOUT, and STDERR
-PipeType: TypeAlias = Union[None, str, Path, WrappedPipeType]
+PipeType: TypeAlias = None | str | Path | WrappedPipeType
 
-OptionValueType: TypeAlias = Union[str, int, float, IOFileTypes, None]
+OptionValueType: TypeAlias = str | int | float | IOFileTypes | None
 OptionsType: TypeAlias = dict[
-    str, Union[OptionValueType, list[OptionValueType], tuple[OptionValueType, ...]]
+    str, OptionValueType | list[OptionValueType] | tuple[OptionValueType, ...]
 ]
 
-ArgsType: TypeAlias = Union[str, int, Path, AtomicFileTypes]
-JoinType: TypeAlias = list[Union[str, None, int]]
+ArgsType: TypeAlias = str | int | Path | AtomicFileTypes
+JoinType: TypeAlias = list[str | None | int]
 
 
 class AtomicCmd:
@@ -831,7 +831,7 @@ class SequentialCmds(_CommandSet):
         return pformat(self)
 
 
-CommandTypes = Union[AtomicCmd, ParallelCmds, SequentialCmds]
+CommandTypes: TypeAlias = AtomicCmd | ParallelCmds | SequentialCmds
 
 
 def _describe_cls(command: ParallelCmds | SequentialCmds) -> str:

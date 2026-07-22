@@ -1,10 +1,10 @@
 import argparse
 from collections import OrderedDict
-from collections.abc import Sequence
-from typing import IO, Any, Callable, TypeVar, overload
+from collections.abc import Callable, Sequence
+from typing import IO, Any, TypeAlias, TypeVar, overload
 
 from _typeshed import Incomplete
-from typing_extensions import Protocol, TypeAlias
+from typing_extensions import Protocol
 
 HelpFormatter = argparse.HelpFormatter
 RawDescriptionHelpFormatter = argparse.RawDescriptionHelpFormatter

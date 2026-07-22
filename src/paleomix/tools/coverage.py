@@ -7,10 +7,9 @@ import sys
 from collections import defaultdict
 from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import TypeAlias, Union
 
 import pysam
-from typing_extensions import TypeAlias
 
 from paleomix.common.bamfiles import BAMRegion, BAMRegionsIter
 from paleomix.common.fileutils import file_or_stdout
@@ -27,7 +26,7 @@ CoverageTable: TypeAlias = dict[str, dict[str, dict[str, dict[str, "CoverageStat
 CoverageTableComponent: TypeAlias = Mapping[
     str, Union["CoverageStats", "CoverageTableComponent"]
 ]
-CountsTable: TypeAlias = dict[str, dict[Optional[str], "CoverageStats"]]
+CountsTable: TypeAlias = dict[str, dict[str | None, "CoverageStats"]]
 
 
 # Header prepended to output tables
