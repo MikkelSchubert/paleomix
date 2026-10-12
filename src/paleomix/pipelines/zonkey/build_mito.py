@@ -102,7 +102,7 @@ def filter_sequences(sequences: dict[str, FASTA]) -> dict[str, FASTA]:
     selection: dict[str, FASTA] = {}
     for key, record in sequences.items():
         meta = [] if record.meta is None else record.meta.split(";")
-        if not ("EXCLUDE" in value for value in meta):
+        if not any("EXCLUDE" in value for value in meta):
             selection[key] = record
 
     return selection
